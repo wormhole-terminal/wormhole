@@ -811,3 +811,19 @@ pub const NATIVE_NOT_TRUSTED_5C8E115D: Key = Key::new(1160);
 pub const NATIVE_TRUSTED_102C70DC: Key = Key::new(1161);
 /// "Restore after restart"
 pub const NATIVE_RESTORE_AFTER_RESTART_FE30C778: Key = Key::new(1162);
+/// "Back"
+pub const NATIVE_BACK_C2954BC2: Key = Key::new(1163);
+/// "Forward"
+pub const NATIVE_FORWARD_E50883BA: Key = Key::new(1164);
+/// "Try a different word or choose a section in the sidebar."
+pub const NATIVE_TRY_A_DIFFERENT_WORD_OR_CHOOSE_A_SECTION_C259D794: Key = Key::new(1165);
+/// "Show in Settings"
+pub const NATIVE_SHOW_IN_SETTINGS_3CC2477C: Key = Key::new(1166);
+/// "About %@"
+pub const NATIVE_ABOUT_7DEF22D7: Key = Key::new(1167);
+/// "Reset %@ to default"
+pub const NATIVE_RESET_TO_DEFAULT_CF848C0B: Key = Key::new(1168);
+/// "Font size"
+pub const NATIVE_FONT_SIZE_3248EF01: Key = Key::new(1169);
+/// "Esc cancels. Delete clears the shortcut."
+pub const NATIVE_ESC_CANCELS_DELETE_CLEARS_THE_SHORTCUT_9050EA2D: Key = Key::new(1170);

@@ -6,6 +6,7 @@ import SwiftUI
 enum Space {
     static let s1: CGFloat = 4, s2: CGFloat = 8, s3: CGFloat = 12, s4: CGFloat = 16
     static let sidebarWidth: CGFloat = 240, contentWidth: CGFloat = 600, pageInset: CGFloat = 30
+    static let headerHeight: CGFloat = 52
 }
 
 /// The sidebar's sub-pages: the guide line beside them, their indent, the gap after an open group, and the motion.

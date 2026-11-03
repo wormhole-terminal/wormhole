@@ -131,13 +131,15 @@ func wordID(_ english: String) -> String {
     var search = ""
     /// The pages that show their sub-pages in the sidebar, and the selections back and forward walk.
     var expanded: Set<String> = []
-    @ObservationIgnored var back: [Sel] = []
-    @ObservationIgnored var fwd: [Sel] = []
+    var back: [Sel] = []
+    var fwd: [Sel] = []
     @ObservationIgnored var navigating = false
     var hoverFont: String? = nil
     var specimenTab = "Terminal"
     /// The explanation sheet that is open (a sheet's id), nil when none.
     var infoSheet: String? = nil
+
+    var isSearching: Bool { !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     init(store: HostStore, page: String) {
         self.store = store; self.sel = Sel(page: page)

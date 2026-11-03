@@ -5,11 +5,13 @@ struct MotionPreview: View {
     @Environment(\.tok) var t
     @Environment(SettingsModel.self) var m
     @Environment(\.accessibilityReduceMotion) var reduce
+    @Environment(\.controlActiveState) private var activeState
+    private var paused: Bool { reduce || activeState == .inactive }
     var body: some View {
         let th = m.theme(light: !t.dark)
         HStack(spacing: 0) {
-            TimelineView(.animation(paused: reduce)) { ctx in
-                let p = reduce ? (1.0, 0.0) : phase(ctx.date)
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: paused)) { ctx in
+                let p = paused ? (1.0, 0.0) : phase(ctx.date)
                 VStack(spacing: 2) {
                     row("scratch", "Idle", t.button, .idle, false)
                     row("Sidebar cards", "Working · 4m", Palette.claude, .work, true).opacity(p.0).offset(x: p.1)

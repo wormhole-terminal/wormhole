@@ -17,7 +17,10 @@ struct PreviewCard: View {
             }
             .listRowInsets(EdgeInsets()).listRowBackground(Color.clear)
         } header: {
-            HStack(spacing: 6) { Text(m.w("PREVIEW")).role(.caption, weight: .bold).tracking(0.6); Text("· " + m.w(previewName[page.preview] ?? "")).role(.caption).foregroundStyle(.tertiary) }
+            HStack(spacing: Space.s2) {
+                Text(m.w("Preview"))
+                Text(m.w(previewName[page.preview] ?? "")).foregroundStyle(.secondary)
+            }.textCase(nil)
         }
     }
 

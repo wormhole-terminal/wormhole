@@ -25,11 +25,12 @@ struct RowText: View {
             HStack(spacing: 6) {
                 Text(m.w(row.label))
                 if !row.chip.isEmpty { Chip(text: m.w(row.chip), fill: t.primary, ink: t.onPrimary) }
-                if changedDot { Circle().fill(t.primary).frame(width: 6, height: 6).help(m.w("Changed from its default")) }
+                if changedDot { Circle().fill(t.primary).frame(width: 6, height: 6).help(m.w("Changed from its default")).accessibilityHidden(true) }
                 if let c = stateChip { Chip(text: c.0, fill: c.1) }
                 if !infoText.isEmpty && row.kind != .danger {
                     Button { showInfo.toggle() } label: { Image(systemName: "info.circle").foregroundStyle(.secondary) }
                         .buttonStyle(.borderless)
+                        .help(m.w("About %@", m.w(row.label)) + "\n\n" + infoText).accessibilityLabel(m.w(row.label))
                         .popover(isPresented: $showInfo) { Text(infoText).padding(Space.s3).frame(width: 260, alignment: .leading).fixedSize(horizontal: false, vertical: true) }
                 }
             }
@@ -37,6 +38,9 @@ struct RowText: View {
             if !row.warnWhenOff.isEmpty && row.kind == .toggle && !m.isOn(row.key, row) { Text(m.w(row.warnWhenOff)).role(.body).foregroundStyle(t.warning).fixedSize(horizontal: false, vertical: true) }
             if !row.note.isEmpty { Text(m.w(row.note)).role(.body).foregroundStyle(row.kind == .probe ? t.warning : .secondary) }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(m.w(row.label))
+        .accessibilityValue([stateChip?.0 ?? "", m.w(row.chip)].filter { !$0.isEmpty }.joined(separator: ", "))
     }
 }
 
@@ -50,6 +54,11 @@ struct RowView: View {
     var tall: Bool { row.tile != nil || [.project, .probe, .agent, .skill, .review].contains(row.kind) }
     var tileColour: Color { Color(css: row.tile ?? (row.kind == .project ? "#32ade6" : row.kind == .probe ? "#a2845e" : "#3b4252")) }
     var tileSymbol: String { Tile.symbol(for: row.icon) ?? (row.kind == .project ? "folder.fill" : row.kind == .probe ? "puzzlepiece.extension.fill" : "sparkle") }
+    var spokenHelp: String {
+        let changed = row.isSetting && m.isChanged(row.key) ? [m.w("Changed from its default")] : []
+        let warning = row.kind == .toggle && !m.isOn(row.key, row) ? m.w(row.warnWhenOff) : ""
+        return ([m.w(row.hint), m.w(row.info), m.w(row.note), warning] + changed).filter { !$0.isEmpty }.joined(separator: " ")
+    }
 
     var body: some View {
         switch row.kind {
@@ -66,8 +75,10 @@ struct RowView: View {
             LabeledContent {
                 HStack(spacing: Space.s2) {
                     ControlView(row: row, confirming: $confirming)
+                        .accessibilityHint(spokenHelp)
                     if showReset {
-                        Button { m.store.reset(row.key) } label: { Image(systemName: "arrow.counterclockwise") }.buttonStyle(.borderless).help(m.w("Reset to default")).frame(width: 20)
+                        Button { m.store.reset(row.key) } label: { Image(systemName: "arrow.counterclockwise") }
+                            .buttonStyle(.borderless).help(m.w("Reset to default")).accessibilityLabel(m.w("Reset %@ to default", m.w(row.label))).frame(width: 20)
                     }
                 }
             } label: {
@@ -79,6 +90,11 @@ struct RowView: View {
             if row.kind == .checks || (row.kind == .skill && !row.checks.isEmpty) { ChecksControl(row: row).padding(.leading, tall ? 40 : 0) }
         }
         .opacity(row.dim ? 0.5 : 1)
+        .contextMenu {
+            if row.isSetting && !row.listed && m.isChanged(row.key) {
+                Button { m.store.reset(row.key) } label: { Label(m.w("Reset to default"), systemImage: "arrow.counterclockwise") }
+            }
+        }
         .confirmationDialog(row.confirm.isEmpty ? m.w("Reset all settings?") : m.w(row.confirm), isPresented: $confirming, titleVisibility: .visible) {
             Button(m.w(row.action.isEmpty ? (row.actions.first ?? "Reset") : row.action), role: row.kind == .danger ? .destructive : nil) { if row.resetAll { m.store.resetAll() } else { m.perform(row.actionID.isEmpty ? "confirm" : row.actionID, row.key) } }
         } message: { Text(m.w(row.confirmText)) }
@@ -115,10 +131,14 @@ struct ControlView: View {
         case .font: FontControl(row: row)
         case .key: KeyControl(row: row)
         case .link:
-            HStack(spacing: 4) {
-                Text(row.fontLink ? "\(m.value("Fonts:0:0")), \(m.value("Fonts:0:0#size")) pt" : row.value).foregroundStyle(.secondary)
-                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
-            }.contentShape(Rectangle()).onTapGesture { if row.fontLink { m.search = ""; m.page = "Fonts" } else if !row.sheet.isEmpty { m.infoSheet = row.sheet } }
+            Button {
+                if row.fontLink { m.go("Fonts") } else if !row.sheet.isEmpty { m.infoSheet = row.sheet }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(row.fontLink ? "\(m.value("Fonts:0:0")), \(m.value("Fonts:0:0#size")) pt" : row.value).foregroundStyle(.secondary)
+                    Image(systemName: "chevron.forward").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
+                }.contentShape(Rectangle())
+            }.buttonStyle(.borderless).accessibilityLabel(m.w(row.label))
         case .button: Btn(m.get(row.key, row)) { if row.confirm.isEmpty { m.perform(row.actionID.isEmpty ? snakeID(row.value) : row.actionID, row.key) } else { confirming = true } }
         case .danger: Btn(row.value, destructive: true) { confirming = true }
         case .value: Text(m.value(row.key)).foregroundStyle(.secondary)

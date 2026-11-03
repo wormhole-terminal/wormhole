@@ -10,7 +10,7 @@ struct PopupControl: View {
     let row: Row
     @Environment(SettingsModel.self) var m
     var body: some View {
-        Picker(row.label, selection: Binding(get: { row.listed ? row.value : m.get(row.key, row) }, set: { v in
+        Picker(m.w(row.label), selection: Binding(get: { row.listed ? row.value : m.get(row.key, row) }, set: { v in
             if row.listed { m.perform("=" + v, row.key) }
             // The menu's last items are not values: they open a panel or the config file, and the menu keeps its pick.
             else if v == "choose_app" { FilePanel.app(m, row.key) }
@@ -22,7 +22,7 @@ struct PopupControl: View {
                 else if row.appIcons, let img = AppIcons.icon(bundle: o.id) ?? AppIcons.icon(named: o.label) { Label { Text(m.w(o.label)) } icon: { Image(nsImage: img) }.tag(o.id) }
                 else { Text(m.w(o.label)).tag(o.id) }
             }
-        }.labelsHidden().pickerStyle(.menu).fixedSize()
+        }.labelsHidden().pickerStyle(.menu).fixedSize().accessibilityLabel(m.w(row.label))
     }
 }
 
@@ -30,7 +30,7 @@ struct SwitchControl: View {
     let key: String; let row: Row; var disabled = false
     @Environment(SettingsModel.self) var m
     var body: some View {
-        Toggle(row.label, isOn: Binding(get: { row.listed ? row.value == "on" : m.isOn(key, row) }, set: { on in if row.listed { m.perform(on ? "on" : "off", key) } else { m.set(key, on ? "on" : "off") } })).labelsHidden().toggleStyle(.switch).disabled(disabled)
+        Toggle(m.w(row.label), isOn: Binding(get: { row.listed ? row.value == "on" : m.isOn(key, row) }, set: { on in if row.listed { m.perform(on ? "on" : "off", key) } else { m.set(key, on ? "on" : "off") } })).labelsHidden().toggleStyle(.switch).disabled(disabled).accessibilityLabel(m.w(row.label))
     }
 }
 
@@ -42,15 +42,15 @@ struct FieldControl: View {
     var body: some View {
         if row.listed {
             // A profile's text: written when the person is done with it (return or leaving the field), not per key.
-            TextField(row.label, text: $draft, axis: row.multiline ? .vertical : .horizontal).lineLimit(row.multiline ? 1...5 : 1...1)
-                .labelsHidden().textFieldStyle(.plain).multilineTextAlignment(.trailing).frame(width: row.multiline ? 260 : 200)
+            TextField(m.w(row.label), text: $draft, axis: row.multiline ? .vertical : .horizontal).lineLimit(row.multiline ? 1...5 : 1...1)
+                .labelsHidden().accessibilityLabel(m.w(row.label)).textFieldStyle(.plain).multilineTextAlignment(.trailing).frame(width: row.multiline ? 260 : 200)
                 .focused($focused)
                 .onAppear { draft = row.value }
                 .onChange(of: row.value) { _, v in if !focused { draft = v } }
                 .onChange(of: focused) { _, f in if !f && draft != row.value { m.perform("=" + draft, row.key) } }
                 .onSubmit { if draft != row.value { m.perform("=" + draft, row.key) } }
         } else {
-            TextField(row.label, text: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })).labelsHidden()
+            TextField(m.w(row.label), text: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })).labelsHidden()
                 .textFieldStyle(.plain).multilineTextAlignment(.trailing).frame(width: 200)
         }
     }
@@ -63,12 +63,12 @@ struct FontControl: View {
     var body: some View {
         let size = Int(m.value(row.key + "#size")) ?? row.size
         HStack(spacing: Space.s2) {
-            Picker(row.label, selection: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })) {
+            Picker(m.w(row.label), selection: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })) {
                 if row.same { Text(m.w("Same as terminal")).tag("same_as_terminal"); Divider() }
                 Section(m.w("Monospaced")) { ForEach(m.fontList.filter { $0.1 }, id: \.0) { Text($0.0).tag($0.0) } }
                 Section(m.w("Proportional")) { ForEach(m.fontList.filter { !$0.1 }, id: \.0) { Text($0.0).tag($0.0) } }
-            }.labelsHidden().pickerStyle(.menu).fixedSize().font(.system(size: 13, design: row.mono ? .monospaced : .default))
-            Stepper("\(size) pt", value: Binding(get: { size }, set: { m.set(row.key + "#size", String($0)) }), in: 8...36).monospacedDigit()
+            }.labelsHidden().pickerStyle(.menu).fixedSize().accessibilityLabel(m.w(row.label)).font(.system(size: 13, design: row.mono ? .monospaced : .default))
+            Stepper("\(size) pt", value: Binding(get: { size }, set: { m.set(row.key + "#size", String($0)) }), in: 8...36).monospacedDigit().accessibilityLabel(m.w("Font size"))
         }
     }
 }
@@ -91,6 +91,8 @@ struct KeyControl: View {
                 else if cur.isEmpty { Text(m.w("Record…")) }
                 else { HStack(spacing: 3) { ForEach(Array(Self.caps(cur).enumerated()), id: \.offset) { _, c in cap(c) } } }
             }.buttonStyle(.bordered)
+                .accessibilityLabel(m.w(row.label))
+                .help(m.w("Esc cancels. Delete clears the shortcut."))
             if let note = m.store.notes[row.key] {
                 Text(note).role(.caption).foregroundStyle(.orange).multilineTextAlignment(.trailing)
             }

@@ -5,30 +5,22 @@ struct ContentView: View {
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
     @Environment(\.accessibilityReduceMotion) var reduceMotion
-    var title: String {
-        m.search.isEmpty ? (m.page == "Changed" ? m.w("Changed") : m.catalog.page(m.page).map { m.w($0.title) } ?? "") : m.w("Search")
-    }
     var body: some View {
         GeometryReader { geo in
             // The page's column is centred and capped, but the scroller stays at the window's right edge:
             // the Form spans the whole detail and its content margins make the column.
             let side = max(0, (geo.size.width - Space.contentWidth) / 2)
             VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: Space.s2) {
-                    Text(title).role(.title, weight: .semibold)
-                    if m.search.isEmpty, m.catalog.page(m.page)?.badge == true { Chip(text: m.w("Preview"), fill: t.primary, ink: t.onPrimary) }
-                }.padding(.horizontal, side + Space.pageInset).padding(.top, Space.s2).padding(.bottom, Space.s1)
+                PageHeader().padding(.horizontal, side + Space.pageInset).padding(.top, Space.s2).padding(.bottom, Space.s2)
                 if let banner = m.store.banner { ConfigBanner(banner: banner).padding(.horizontal, side) }
                 Group {
-                    if !m.search.isEmpty { SearchResults() }
+                    if m.isSearching { SearchResults() }
                     else if m.page == "Changed" { ChangedPage() }
                     else if let p = m.catalog.page(m.page) { PageView(page: p, group: p.subpages.isEmpty ? nil : m.shownGroup) }
-                }.id(m.search.isEmpty ? m.sel : Sel(page: "")).transition(.opacity)
+                }.id(m.isSearching ? Sel(page: "") : m.sel).transition(.opacity)
                 .formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading).contentMargins(.horizontal, side, for: .scrollContent)
             }.frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(nsColor: .windowBackgroundColor))
             .animation(Nav.motion(reduceMotion), value: m.sel)
-            .background(NavKeys())
             .sheet(isPresented: Binding(get: { m.store.sheets["new-profile"]?["open"] as? Bool ?? false }, set: { if !$0 { m.perform("new_profile_cancel", "Profile:") } })) { NewProfileSheet() }
             .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { if m.store.sheets[m.infoSheet ?? ""]?["kind"] as? String == "compare" { CompareSheet(id: m.infoSheet ?? "") } else { InfoSheet(id: m.infoSheet ?? "") } }
           }
@@ -102,30 +94,26 @@ extension PageView {
     }
 }
 
-struct SearchResults: View {
-    @Environment(SettingsModel.self) var m
-    var body: some View {
-        let q = m.search.lowercased()
-        let hits = m.catalog.pages.map { p in
-            (p, p.groups.flatMap(\.rows).filter { !$0.label.isEmpty && ($0.label + $0.hint + $0.info).lowercased().contains(q) })
-        }.filter { !$0.1.isEmpty }
-        Form {
-            ForEach(hits, id: \.0.id) { p, rows in Section(m.w(p.title)) { ForEach(rows, id: \.key) { RowView(row: $0) } } }
-            if hits.isEmpty { Text(m.w("No settings match “%@”", m.search)).foregroundStyle(.secondary) }
-        }
-    }
-}
-
 struct ChangedPage: View {
     @Environment(SettingsModel.self) var m
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var confirming = false
+    @State private var copied = false
     var body: some View {
         let ch = m.changed
         Form {
             Section {
                 LabeledContent {
                     if !ch.isEmpty {
-                        HStack(spacing: Space.s2) { Btn("Copy as JSON") { copyJSON(ch.map(\.1)) }; Btn("Reset All…") { confirming = true } }
+                        HStack(spacing: Space.s2) {
+                            Button {
+                                copied = copyJSON(ch.map(\.1))
+                            } label: {
+                                Label(m.w("Copy as JSON"), systemImage: copied ? "checkmark" : "doc.on.doc")
+                            }.buttonStyle(.bordered)
+                                .animation(Nav.motion(reduceMotion), value: copied)
+                            Btn("Reset All…") { confirming = true }
+                        }
                     }
                 } label: {
                     HStack(spacing: Space.s3) {
@@ -140,18 +128,22 @@ struct ChangedPage: View {
             ForEach(m.catalog.pages.filter { p in ch.contains { $0.0.id == p.id } }) { p in
                 Section(m.w(p.title)) { ForEach(ch.filter { $0.0.id == p.id }.map(\.1), id: \.key) { RowView(row: $0, showReset: true) } }
             }
+        }.task(id: copied) {
+            guard copied else { return }
+            try? await Task.sleep(for: .seconds(2))
+            if !Task.isCancelled { copied = false }
         }.confirmationDialog(m.counted("reset", ch.count, "Reset \(ch.count) settings?"), isPresented: $confirming, titleVisibility: .visible) {
             Button(m.w("Reset"), role: .destructive) { m.store.resetAll() }
         } message: { Text(m.w("They go back to their defaults.")) }
     }
 
     /// The changed settings as `{ "key": "value" }`, sorted, for pasting into a bug report or another Mac.
-    private func copyJSON(_ rows: [Row]) {
+    private func copyJSON(_ rows: [Row]) -> Bool {
         let pairs = Dictionary(rows.map { ($0.key, m.store.values[$0.key] ?? "") }, uniquingKeysWith: { a, _ in a })
         guard let data = try? JSONSerialization.data(withJSONObject: pairs, options: [.prettyPrinted, .sortedKeys]),
-              let text = String(data: data, encoding: .utf8) else { return }
+              let text = String(data: data, encoding: .utf8) else { return false }
         NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        return NSPasteboard.general.setString(text, forType: .string)
     }
 }
 

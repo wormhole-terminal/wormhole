@@ -5,8 +5,9 @@ import SwiftUI
 struct ThemePicker: View {
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showAll = false
-    let cols = Array(repeating: GridItem(.flexible(), spacing: Space.s2), count: 4)
+    let cols = [GridItem(.adaptive(minimum: 104), spacing: Space.s2)]
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s3) {
@@ -21,7 +22,7 @@ struct ThemePicker: View {
             }
             HStack(spacing: Space.s2) {
                 if m.themeData.pairs.count > 8 {
-                    Button(showAll ? m.w("Show fewer") : m.w("Show all %@", String(m.themeData.pairs.count))) { showAll.toggle() }.buttonStyle(.link)
+                    Button(showAll ? m.w("Show fewer") : m.w("Show all %@", String(m.themeData.pairs.count))) { withAnimation(Nav.motion(reduceMotion)) { showAll.toggle() } }.buttonStyle(.link)
                 }
                 Spacer()
                 Btn("Import Theme…") { FilePanel.theme(m, m.themeRowKey) }; Btn("Theme Studio") { m.perform("theme_studio", m.themeRowKey) }
@@ -42,17 +43,9 @@ struct ThemePicker: View {
     }
 
     func card(name: String, selected: Bool, halves: [String], pick: @escaping () -> Void) -> some View {
-        Button(action: pick) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 0) { ForEach(halves, id: \.self) { half($0) } }.frame(height: 60)
-                    .clipShape(RoundedRectangle(cornerRadius: Radius.tile))
-                    .overlay(RoundedRectangle(cornerRadius: Radius.tile).strokeBorder(selected ? t.primary : .clear, lineWidth: 2))
-                HStack(spacing: 4) {
-                    Text(name).role(.heading, weight: selected ? .bold : .regular).lineLimit(1)
-                    if selected { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(t.primary) }
-                }.foregroundStyle(selected ? t.text : t.muted).padding(.leading, 4)
-            }.contentShape(Rectangle())
-        }.buttonStyle(.plain)
+        ThemeCard(name: name, selected: selected, pick: pick) {
+            HStack(spacing: 0) { ForEach(halves, id: \.self) { half($0) } }
+        }
     }
 
     /// One half of a card's picture: the theme's background, a sidebar strip and five lines in its colours.
@@ -69,5 +62,51 @@ struct ThemePicker: View {
                 }
             }.padding(.horizontal, 6).padding(.vertical, 10).frame(maxWidth: .infinity, alignment: .leading)
         }.frame(maxWidth: .infinity).background(c.bg)
+    }
+}
+
+/// Hover and press feedback stay local to a single card; selection keeps a stable label and checkmark slot.
+private struct ThemeCard<Preview: View>: View {
+    let name: String
+    let selected: Bool
+    let pick: () -> Void
+    @ViewBuilder let preview: () -> Preview
+    @Environment(\.tok) private var t
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: pick) {
+            VStack(alignment: .leading, spacing: Space.s2) {
+                preview().frame(height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.tile))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: Radius.tile)
+                            .strokeBorder(selected ? t.primary : Color.primary.opacity(hovering ? 0.3 : 0.12), lineWidth: selected ? 2 : 1)
+                    }
+                HStack(spacing: Space.s1) {
+                    Text(name).role(.body, weight: selected ? .semibold : .regular).lineLimit(1)
+                    Spacer(minLength: 0)
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(t.primary)
+                        .opacity(selected ? 1 : 0).accessibilityHidden(true)
+                }.foregroundStyle(selected ? Color.primary : .secondary)
+            }.contentShape(Rectangle())
+        }
+        .buttonStyle(ThemeCardStyle(reduceMotion: reduceMotion))
+        .onHover { hovering = $0 }
+        .animation(Nav.motion(reduceMotion), value: hovering)
+        .animation(Nav.motion(reduceMotion), value: selected)
+        .help(name).accessibilityLabel(name)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+private struct ThemeCardStyle: ButtonStyle {
+    let reduceMotion: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.8 : 1)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(Nav.motion(reduceMotion), value: configuration.isPressed)
     }
 }

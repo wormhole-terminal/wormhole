@@ -402,3 +402,11 @@ Needs repair
 Not trusted
 Trusted
 Restore after restart
+Back
+Forward
+Try a different word or choose a section in the sidebar.
+Show in Settings
+About %@
+Reset %@ to default
+Font size
+Esc cancels. Delete clears the shortcut.

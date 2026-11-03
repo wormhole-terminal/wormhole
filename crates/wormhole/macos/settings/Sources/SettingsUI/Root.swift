@@ -18,12 +18,29 @@ struct SettingsView: View {
             NavigationSplitView {
                 SidebarView().navigationSplitViewColumnWidth(Space.sidebarWidth)
             } detail: {
-                ContentView().toolbarBackground(.hidden, for: .windowToolbar).modifier(NoToolbarTitle())
+                ContentView()
+                    .toolbar { ToolbarItemGroup(placement: .navigation) { NavigationButtons() } }
+                    .toolbarBackground(.hidden, for: .windowToolbar).modifier(NoToolbarTitle())
             }
             .navigationTitle("Settings")
             .searchable(text: $s.search, placement: .sidebar, prompt: m.w("Search"))
+            .modifier(SettingsSearchFocus())
             .environment(\.tok, t).tint(t.primary)
         }
+    }
+}
+
+/// Programmatic search focus is native from macOS 15; macOS 14 keeps its standard searchable field.
+private struct SettingsSearchFocus: ViewModifier {
+    @Environment(SettingsModel.self) private var m
+    @FocusState private var focused: Bool
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) {
+            content.searchFocused($focused).background {
+                Button(m.w("Search")) { focused = true }.keyboardShortcut("f", modifiers: .command)
+                    .hidden().accessibilityHidden(true)
+            }
+        } else { content }
     }
 }
 
@@ -35,7 +52,7 @@ struct SidebarView: View {
     @Environment(\.accessibilityReduceMotion) var reduceMotion
 
     var body: some View {
-        List(selection: Binding(get: { m.search.isEmpty ? m.sel : nil }, set: { if let v = $0 { m.sel = v; m.search = "" } })) {
+        List(selection: Binding(get: { m.isSearching ? nil : m.sel }, set: { if let v = $0 { m.sel = v; m.search = "" } })) {
             profileRow.tag(Sel(page: "Profile"))
             if !m.changed.isEmpty || m.page == "Changed", let n = m.catalog.navItems["Changed"] { navRow(n, badge: m.changed.count).tag(Sel(page: "Changed")) }
             // A page this build doesn't show (Feature flags in a release, a Preview page whose flag is off) is left out.
@@ -66,7 +83,7 @@ struct SidebarView: View {
 
     /// One sub-page: indented under its page, with a thin guide line on its left that takes the accent when it is the one shown.
     func subRow(_ p: Page, _ g: Int) -> some View {
-        let on = m.page == p.id && m.search.isEmpty && m.shownGroup == g
+        let on = m.page == p.id && !m.isSearching && m.shownGroup == g
         let last = g == p.subpages.last
         return HStack(spacing: Nav.indent) {
             Rectangle().fill(on ? t.primary : Color.secondary.opacity(0.25)).frame(width: on ? Nav.guideSelectedWidth : Nav.guideWidth).frame(maxHeight: .infinity)
@@ -82,7 +99,6 @@ struct SidebarView: View {
             Avatar(letter: m.profileInfo.letter, fill: t.primary, ink: t.onPrimary)
             VStack(alignment: .leading, spacing: 0) { Text(m.profileInfo.name).fontWeight(.semibold); Text(m.w("Profile")).role(.caption).foregroundStyle(.secondary) }
             Spacer(minLength: 0)
-            Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
         }.padding(.vertical, 2)
     }
 

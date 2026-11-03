@@ -6,44 +6,44 @@
 use crate::key::Key;
 
 /// "Folder"
-pub const TITLE_ROW_PART_FOLDER: Key = Key::new(1715);
+pub const TITLE_ROW_PART_FOLDER: Key = Key::new(1723);
 /// "Branch"
-pub const TITLE_ROW_PART_BRANCH: Key = Key::new(1716);
+pub const TITLE_ROW_PART_BRANCH: Key = Key::new(1724);
 /// "Branch status"
-pub const TITLE_ROW_PART_BRANCH_STATUS: Key = Key::new(1717);
+pub const TITLE_ROW_PART_BRANCH_STATUS: Key = Key::new(1725);
 /// "Terminal name"
-pub const TITLE_ROW_PART_TERMINAL: Key = Key::new(1718);
+pub const TITLE_ROW_PART_TERMINAL: Key = Key::new(1726);
 /// "Terminal status"
-pub const TITLE_ROW_PART_TERMINAL_STATUS: Key = Key::new(1719);
+pub const TITLE_ROW_PART_TERMINAL_STATUS: Key = Key::new(1727);
 /// "Flexible space"
-pub const TITLE_ROW_PART_SPACE: Key = Key::new(1720);
+pub const TITLE_ROW_PART_SPACE: Key = Key::new(1728);
 /// "Agent model and context"
-pub const TITLE_ROW_PART_AGENT_GAUGE: Key = Key::new(1721);
+pub const TITLE_ROW_PART_AGENT_GAUGE: Key = Key::new(1729);
 /// "Open ports"
-pub const TITLE_ROW_PART_PORTS: Key = Key::new(1722);
+pub const TITLE_ROW_PART_PORTS: Key = Key::new(1730);
 /// "Pull request"
-pub const TITLE_ROW_PART_PULL_REQUEST: Key = Key::new(1723);
+pub const TITLE_ROW_PART_PULL_REQUEST: Key = Key::new(1731);
 /// "Open in…"
-pub const TITLE_ROW_PART_OPEN_IN: Key = Key::new(1724);
+pub const TITLE_ROW_PART_OPEN_IN: Key = Key::new(1732);
 /// "Split buttons"
-pub const TITLE_ROW_PART_SPLITS: Key = Key::new(1725);
+pub const TITLE_ROW_PART_SPLITS: Key = Key::new(1733);
 /// "Show in title row"
-pub const TITLE_ROW_MENU_HEADER: Key = Key::new(1726);
+pub const TITLE_ROW_MENU_HEADER: Key = Key::new(1734);
 /// "Reset title row"
-pub const TITLE_ROW_MENU_RESET: Key = Key::new(1727);
+pub const TITLE_ROW_MENU_RESET: Key = Key::new(1735);
 /// "Customize title row…"
-pub const TITLE_ROW_MENU_CUSTOMIZE: Key = Key::new(1728);
+pub const TITLE_ROW_MENU_CUSTOMIZE: Key = Key::new(1736);
 /// "Open in, split"
-pub const TITLE_ROW_MORE_OPEN_IN_SPLIT: Key = Key::new(1729);
+pub const TITLE_ROW_MORE_OPEN_IN_SPLIT: Key = Key::new(1737);
 /// "Open in"
-pub const TITLE_ROW_MORE_OPEN_IN: Key = Key::new(1730);
+pub const TITLE_ROW_MORE_OPEN_IN: Key = Key::new(1738);
 /// "Split"
-pub const TITLE_ROW_MORE_SPLIT: Key = Key::new(1731);
+pub const TITLE_ROW_MORE_SPLIT: Key = Key::new(1739);
 /// "Open in Finder"
-pub const TITLE_ROW_PATH_OPEN_IN_FINDER: Key = Key::new(1732);
+pub const TITLE_ROW_PATH_OPEN_IN_FINDER: Key = Key::new(1740);
 /// "Copy path"
-pub const TITLE_ROW_PATH_COPY: Key = Key::new(1733);
+pub const TITLE_ROW_PATH_COPY: Key = Key::new(1741);
 /// "Copied"
-pub const TITLE_ROW_PATH_COPIED: Key = Key::new(1734);
+pub const TITLE_ROW_PATH_COPIED: Key = Key::new(1742);
 /// "Path copied"
-pub const TITLE_ROW_PATH_SPOKEN_COPIED: Key = Key::new(1735);
+pub const TITLE_ROW_PATH_SPOKEN_COPIED: Key = Key::new(1743);

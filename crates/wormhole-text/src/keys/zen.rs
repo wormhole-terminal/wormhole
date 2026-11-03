@@ -6,8 +6,8 @@
 use crate::key::Key;
 
 /// "Zen mode on"
-pub const ZEN_ON: Key = Key::new(1736);
+pub const ZEN_ON: Key = Key::new(1744);
 /// "Zen mode off"
-pub const ZEN_OFF: Key = Key::new(1737);
+pub const ZEN_OFF: Key = Key::new(1745);
 /// "Zen mode hides the right panel · Click to leave Zen mode"
-pub const ZEN_PANEL_HIDDEN: Key = Key::new(1738);
+pub const ZEN_PANEL_HIDDEN: Key = Key::new(1746);

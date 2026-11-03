@@ -45,8 +45,8 @@ extension SettingsModel {
         search = ""
     }
 
-    func goBack() { guard let s = back.popLast() else { return }; navigating = true; fwd.append(sel); sel = s; navigating = false }
-    func goForward() { guard let s = fwd.popLast() else { return }; navigating = true; back.append(sel); sel = s; navigating = false }
+    func goBack() { guard let s = back.popLast() else { return }; navigating = true; fwd.append(sel); sel = s; search = ""; navigating = false }
+    func goForward() { guard let s = fwd.popLast() else { return }; navigating = true; back.append(sel); sel = s; search = ""; navigating = false }
     var canGoBack: Bool { !back.isEmpty }
     var canGoForward: Bool { !fwd.isEmpty }
 
@@ -57,13 +57,13 @@ extension SettingsModel {
     }
 }
 
-/// The two navigation shortcuts, as zero-size buttons in the content: ⌘[ back, ⌘] forward.
-struct NavKeys: View {
+/// Native toolbar buttons also expose the standard history shortcuts.
+struct NavigationButtons: View {
     @Environment(SettingsModel.self) var m
     var body: some View {
-        ZStack {
-            Button("") { m.goBack() }.keyboardShortcut("[", modifiers: .command).disabled(!m.canGoBack)
-            Button("") { m.goForward() }.keyboardShortcut("]", modifiers: .command).disabled(!m.canGoForward)
-        }.frame(width: 0, height: 0).opacity(0).accessibilityHidden(true)
+        Button { m.goBack() } label: { Label(m.w("Back"), systemImage: "chevron.backward") }
+            .keyboardShortcut("[", modifiers: .command).disabled(!m.canGoBack).help(m.w("Back"))
+        Button { m.goForward() } label: { Label(m.w("Forward"), systemImage: "chevron.forward") }
+            .keyboardShortcut("]", modifiers: .command).disabled(!m.canGoForward).help(m.w("Forward"))
     }
 }

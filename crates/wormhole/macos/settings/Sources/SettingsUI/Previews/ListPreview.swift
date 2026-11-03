@@ -4,11 +4,17 @@ import SwiftUI
 struct Pulse: ViewModifier {
     var on: Bool
     @Environment(\.accessibilityReduceMotion) var reduce
-    @State private var phase = false
+    @Environment(\.controlActiveState) private var activeState
     func body(content: Content) -> some View {
-        content.shadow(color: Palette.yellow.opacity(on ? (phase ? 0.35 : 0) : 0), radius: 0, x: 0, y: 0)
-            .background(Circle().fill(Palette.yellow.opacity(on ? (phase ? 0.35 : 0) : 0)).scaleEffect(phase ? 1.9 : 1))
-            .onAppear { if on && !reduce { withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) { phase = true } } }
+        content.background {
+            // No repeating animation survives a change to Reduce Motion or an inactive window.
+            if on && !reduce && activeState != .inactive {
+                TimelineView(.animation(minimumInterval: 1.0 / 30)) { context in
+                    let phase = (1 - cos(context.date.timeIntervalSinceReferenceDate * .pi / 0.8)) / 2
+                    Circle().fill(Palette.yellow.opacity(phase * 0.35)).scaleEffect(1 + phase * 0.9)
+                }.allowsHitTesting(false).accessibilityHidden(true)
+            }
+        }
     }
 }
 

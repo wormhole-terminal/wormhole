@@ -14,6 +14,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- Settings adds back and forward buttons, section-aware search across translated labels and installed items,
+  direct links from results, and reset-to-default context menus. Theme choices adapt to the window width and
+  respond to hover and press; preview animations pause when the window is inactive or Reduce Motion is on.
 - A change to `config.json`, a theme file or the custom fonts folder applies at once (within a tenth of a
   second) instead of at the next check, up to 0.4 seconds later; the check that remains runs every 10 seconds,
   for a folder the system cannot watch.

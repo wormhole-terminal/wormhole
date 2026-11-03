@@ -6,5 +6,8 @@ let package = Package(
     name: "WormholeSettings",
     platforms: [.macOS(.v14)],
     products: [.library(name: "SettingsUI", type: .static, targets: ["SettingsUI"])],
-    targets: [.target(name: "SettingsUI", path: "Sources/SettingsUI")]
+    targets: [
+        .target(name: "SettingsUI", path: "Sources/SettingsUI"),
+        .testTarget(name: "SettingsUITests", dependencies: ["SettingsUI"])
+    ]
 )

@@ -571,4 +571,18 @@ pub(super) const WORDS: &[(&str, Key)] = &[
     ("native-not-trusted-5c8e115d", keys::NATIVE_NOT_TRUSTED_5C8E115D),
     ("native-trusted-102c70dc", keys::NATIVE_TRUSTED_102C70DC),
     ("native-restore-after-restart-fe30c778", keys::NATIVE_RESTORE_AFTER_RESTART_FE30C778),
+    ("native-back-c2954bc2", keys::NATIVE_BACK_C2954BC2),
+    ("native-forward-e50883ba", keys::NATIVE_FORWARD_E50883BA),
+    (
+        "native-try-a-different-word-or-choose-a-section-c259d794",
+        keys::NATIVE_TRY_A_DIFFERENT_WORD_OR_CHOOSE_A_SECTION_C259D794,
+    ),
+    ("native-show-in-settings-3cc2477c", keys::NATIVE_SHOW_IN_SETTINGS_3CC2477C),
+    ("native-about-7def22d7", keys::NATIVE_ABOUT_7DEF22D7),
+    ("native-reset-to-default-cf848c0b", keys::NATIVE_RESET_TO_DEFAULT_CF848C0B),
+    ("native-font-size-3248ef01", keys::NATIVE_FONT_SIZE_3248EF01),
+    (
+        "native-esc-cancels-delete-clears-the-shortcut-9050ea2d",
+        keys::NATIVE_ESC_CANCELS_DELETE_CLEARS_THE_SHORTCUT_9050EA2D,
+    ),
 ];
