@@ -360,6 +360,13 @@ pub const TOKEN_USES: &[TokenUse] = &[
             "metrics.border_width",
         ],
     ),
+    u(
+        "tint.chip",
+        "tinted chip",
+        Settings,
+        &["chip.tint", "sidebar.row.selected.text", "metrics.radius_chip"],
+    ),
+    u("link", "link", Settings, &["text.link"]),
     u("neutral.chip", "neutral chip", Chrome, &["band.hover", "text.primary", "metrics.radius_chip"]),
     u(
         "title.extras",

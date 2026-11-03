@@ -6,7 +6,7 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use style::BannerKind;
+use style::{BannerKind, TextRole};
 
 use super::Env;
 use super::view::GalleryView;
@@ -51,8 +51,11 @@ fn controls(env: &Env) -> Div {
                 .enumerate()
                 .map(|(ix, color)| style::swatch(("g-swatch", ix), ui, color, ix == 0)),
         )
-        .child(style::tint_chip(ui, Some(IconName::Folder), "api-server")) // text: sample (the gallery's specimen)
-        .child(style::tint_chip(ui, None, "Bundled")) // text: sample (the gallery's specimen)
+        .child(env.mark("tint.chip", style::tint_chip(ui, Some(IconName::Folder), "api-server"))) // text: sample (the gallery's specimen)
+        .child(env.mark("tint.chip", style::tint_chip(ui, None, "Bundled"))) // text: sample (the gallery's specimen)
+        .child(
+            env.mark("link", div().text_body().text_color(env.tk("text.link")).underline().child("A link")),
+        ) // text: sample (the gallery's specimen)
         .child(style::changed_dot(ui))
 }
 
