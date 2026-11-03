@@ -18,7 +18,7 @@ use crate::style::{self, RowKeys, SettingParts, SettingState};
 
 /// The line under a feature's name: core's words for a file that is missing or sets nothing, what
 /// the feature does otherwise, with the wait for trust when something is held back.
-pub(super) fn feature_description(feature: Feature, standing: FeatureStanding) -> String {
+pub(in crate::settings_window) fn feature_description(feature: Feature, standing: FeatureStanding) -> String {
     match (feature, standing) {
         // The switch is how the file gets made.
         (Feature::Notes, FeatureStanding::Missing) => {

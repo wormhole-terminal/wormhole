@@ -9,7 +9,7 @@ struct PopupControl: View {
     let row: Row
     @Environment(SettingsModel.self) var m
     var body: some View {
-        Picker(row.label, selection: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })) {
+        Picker(row.label, selection: Binding(get: { row.listed ? row.value : m.get(row.key, row) }, set: { v in if row.listed { m.perform("=" + v, row.key) } else { m.set(row.key, v) } })) {
             ForEach(Array(m.options(row).enumerated()), id: \.offset) { _, o in
                 if o == .divider { Divider() }
                 else if row.appIcons, let img = AppIcons.icon(o.label) { Label { Text(m.w(o.label)) } icon: { Image(nsImage: img) }.tag(o.id) }

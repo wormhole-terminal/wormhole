@@ -6,6 +6,7 @@
 
 mod defaults;
 mod features;
+pub(in crate::settings_window) use features::feature_description;
 mod one;
 mod picker;
 

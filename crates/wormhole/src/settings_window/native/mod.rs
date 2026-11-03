@@ -66,6 +66,11 @@ pub(super) fn open(section: Option<Section>, cx: &mut App) {
             cx.observe_global::<SettingsStore>(push),
             cx.observe_global::<FontCatalog>(push),
             cx.observe_global::<crate::update::Updates>(push),
+            // An approval that finishes later, a trust, a preference: the lists show it when it happens.
+            crate::features::project::observe(cx, |cx| {
+                lists::projects_changed(cx);
+                push(cx);
+            }),
         ];
         cx.set_global(Native {
             separate: None,

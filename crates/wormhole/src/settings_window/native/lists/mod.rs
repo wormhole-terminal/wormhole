@@ -26,6 +26,8 @@ pub(crate) struct Cache {
     projects: Vec<PathBuf>,
     /// The Probes folder as last read.
     probes: Option<probes::Probes>,
+    /// The project "For" shows on the Project folders page.
+    selected: projects::Selected,
     /// The terminals found to import from; `None` until the scan finishes.
     import: Option<Vec<wormhole_core::import::Found>>,
 }
@@ -93,6 +95,11 @@ pub(super) fn load(cx: &mut App) {
     projects::load(cx);
     probes::load(cx);
     import::load(cx);
+}
+
+/// The hubs changed: the chosen project's files are read again.
+pub(super) fn projects_changed(cx: &mut App) {
+    projects::refresh(cx);
 }
 
 /// The Extensions page's footer buttons.

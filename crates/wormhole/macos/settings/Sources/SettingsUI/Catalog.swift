@@ -68,6 +68,8 @@ struct Row: Identifiable {
     /// A row the host listed (an agent, a project, a probe): it acts through buttons, never by being set.
     var listed = false
     var multiline = false
+    /// A listed row that does not apply now (its file is missing): drawn faint.
+    var dim = false
 
     init(_ label: String, _ hint: String, _ kind: Kind, options: [String] = [], value: String = "", info: String = "",
          tile: String? = nil, actions: [String] = [], checks: [String] = [], checksOn: [String] = [], needs: Int? = nil,
@@ -84,7 +86,9 @@ struct Row: Identifiable {
         self.fontLink = fontLink; self.resetAll = resetAll; self.action = action
     }
 
-    var choices: [Choice] { options.map(Choice.init(source:)) }
+    /// A listed row brings its options with their ids; the catalog's come from `options`.
+    var choiceList: [Choice]? = nil
+    var choices: [Choice] { choiceList ?? options.map(Choice.init(source:)) }
     /// The first option's id for a menu, else the row's value.
     var defaultValue: String { kind == .popup ? (choices.first { $0 != .divider }?.id ?? "") : value }
     var isSetting: Bool { [.toggle, .popup, .field, .font, .key].contains(kind) }
@@ -233,6 +237,8 @@ extension Row {
         actionIDs = e["actionIds"] as? [String] ?? actionIDs
         checkIDs = e["checkIds"] as? [String] ?? checkIDs
         actionID = s("actionId")
+        choiceList = (e["choices"] as? [[String]])?.filter { $0.count == 2 }.map { Choice(id: $0[0], label: $0[1]) }
+        dim = e["dim"] as? Bool ?? false
         listed = true
         multiline = e["multiline"] as? Bool ?? false
     }

@@ -74,6 +74,7 @@ pub(super) use profile_form::{LOGIN_AGENTS, ProfileForm, parse_env};
 pub(super) use profile_sheet::NewProfileSheet;
 pub(crate) use profile_sheet::open_new_profile_sheet;
 pub(super) use projects::ProjectPicker;
+pub(super) use projects::feature_description;
 pub(super) use split_preview::draw_split_preview;
 pub(super) use terminal::TerminalRows;
 pub(super) use theme_picker::ThemePicker;

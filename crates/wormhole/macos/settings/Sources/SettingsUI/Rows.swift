@@ -88,6 +88,7 @@ struct RowView: View {
             }
             if row.kind == .checks || (row.kind == .skill && !row.checks.isEmpty) { ChecksControl(row: row).padding(.leading, tall ? 40 : 0) }
         }
+        .opacity(row.dim ? 0.5 : 1)
         .confirmationDialog(row.confirm.isEmpty ? m.w("Reset all settings?") : m.w(row.confirm), isPresented: $confirming, titleVisibility: .visible) {
             Button(m.w(row.action.isEmpty ? (row.actions.first ?? "Reset") : row.action), role: row.kind == .danger ? .destructive : nil) { if row.resetAll { m.store.resetAll() } else { m.perform(row.actionID.isEmpty ? "confirm" : row.actionID, row.key) } }
         } message: { Text(m.w(row.confirmText)) }
