@@ -13,7 +13,7 @@ mod colors;
 mod image;
 mod lines;
 mod read;
-#[cfg(test)]
+#[cfg(all(test, feature = "devctl"))]
 mod tests;
 
 use std::cell::Cell;

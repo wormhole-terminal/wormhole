@@ -87,7 +87,7 @@ mod group_folder;
 #[cfg(test)]
 mod group_folder_tests;
 mod group_ops;
-#[cfg(test)]
+#[cfg(all(test, feature = "devctl"))]
 mod group_tests;
 pub(crate) mod grow;
 mod host_close;
@@ -108,7 +108,7 @@ mod menu_tests;
 mod motion_tests;
 #[cfg(test)]
 mod notes_tab_tests;
-#[cfg(test)]
+#[cfg(all(test, feature = "devctl"))]
 mod notice_tests;
 mod notices;
 #[cfg(test)]
@@ -135,7 +135,7 @@ mod plays_motion;
 mod profile_look_tests;
 mod published;
 mod quit_question;
-#[cfg(test)]
+#[cfg(all(test, feature = "devctl"))]
 mod read_tests;
 mod regions;
 #[cfg(test)]
@@ -185,10 +185,10 @@ mod summaries;
 #[cfg(test)]
 mod summary_tests;
 pub(crate) mod tear_off;
-#[cfg(test)]
+#[cfg(all(test, feature = "devctl"))]
 mod tear_off_tests;
 mod terminal_move;
-#[cfg(test)]
+#[cfg(all(test, feature = "devctl"))]
 mod terminal_tests;
 mod terminals;
 #[cfg(test)]

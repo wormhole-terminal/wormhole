@@ -34,10 +34,10 @@ mod open;
 mod pins;
 mod read;
 mod rename;
-#[cfg(test)]
+#[cfg(all(test, feature = "devctl"))]
 mod rename_tests;
 mod row;
-#[cfg(test)]
+#[cfg(all(test, feature = "devctl"))]
 mod tests;
 mod view;
 mod viewer;

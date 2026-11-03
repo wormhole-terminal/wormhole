@@ -111,7 +111,7 @@ pub(crate) fn trash(
     Ok(())
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "devctl"))]
 mod tests {
     use gpui_kit::TestAppContext;
 
