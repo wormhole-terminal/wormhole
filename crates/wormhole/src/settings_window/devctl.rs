@@ -238,6 +238,78 @@ pub(crate) fn shot(path: PathBuf, out: PathBuf, cx: &mut App) {
     });
 }
 
+/// devctl `settings-outline`: the settings window's accessibility tree as one JSON line in `out`,
+/// `outline {"page": …, "nodes": [{"depth", "role", "label", "value", "toggled", "expanded",
+/// "selected", "level", "numeric"}]}`, in reading order. Compared against the board's outline by
+/// `design-markup/compare/outline`.
+pub(crate) fn outline(out: PathBuf, cx: &mut App) {
+    let window = current_window(cx);
+    cx.spawn(async move |cx| {
+        let result = match window {
+            None => Err(anyhow::anyhow!("settings window not open")),
+            Some((handle, page)) => {
+                let _ = handle.update(cx, |_, window, _| crate::platform::a11y::wake_tree(window));
+                let mut tree = None;
+                for _ in 0..60 {
+                    let got = handle.update(cx, |_, window, cx| {
+                        window.refresh();
+                        window.draw(cx).clear(cx);
+                        window.is_a11y_active().then(|| window.debug_a11y_tree_json()).flatten()
+                    });
+                    if let Ok(Some(json)) = got {
+                        tree = Some(json);
+                        break;
+                    }
+                    cx.background_executor().timer(std::time::Duration::from_millis(50)).await;
+                }
+                let section = cx.read_entity(&page, |page, _| format!("{:?}", page.section));
+                match (tree, section) {
+                    (Some(json), section) => outline_json(&section, &json),
+                    _ => Err(anyhow::anyhow!("the accessibility tree never came up")),
+                }
+            }
+        };
+        let line = match result {
+            Ok(json) => format!("outline {json}\n"),
+            Err(err) => format!("settings-outline failed: {err:#}\n"),
+        };
+        let appended = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&out)
+            .and_then(|mut f| std::io::Write::write_all(&mut f, line.as_bytes()));
+        if let Err(err) = appended {
+            tracing::warn!("devctl: {err}");
+        }
+    })
+    .detach();
+}
+
+/// GPUI's tree flattened in reading order, one object a node.
+fn outline_json(section: &str, tree: &str) -> anyhow::Result<String> {
+    use serde_json::{Value, json};
+    let tree: Value = serde_json::from_str(tree)?;
+    let nodes = tree.get("nodes").and_then(Value::as_object).ok_or_else(|| anyhow::anyhow!("no nodes"))?;
+    let root = tree.get("root").and_then(Value::as_str).ok_or_else(|| anyhow::anyhow!("no root"))?;
+    let mut list = Vec::new();
+    let mut stack = vec![(root.to_string(), 0usize)];
+    while let Some((id, depth)) = stack.pop() {
+        let Some(node) = nodes.get(&id) else { continue };
+        let aria = node.get("aria");
+        let get = |key: &str| aria.and_then(|a| a.get(key)).cloned().unwrap_or(Value::Null);
+        list.push(json!({
+            "depth": depth, "role": get("role"), "label": get("label"), "value": get("value"),
+            "toggled": get("toggled"), "expanded": get("expanded"), "selected": get("selected"),
+            "level": get("level"), "numeric": get("numeric_value"),
+        }));
+        let children = node.get("children").and_then(Value::as_array).cloned().unwrap_or_default();
+        for child in children.iter().rev().filter_map(Value::as_str) {
+            stack.push((child.to_string(), depth + 1));
+        }
+    }
+    Ok(serde_json::to_string(&json!({ "page": section, "nodes": list }))?)
+}
+
 /// devctl: expand a font picker in the settings window, optionally searching
 /// (the window opens deferred, so the first call on a closed window only opens it).
 pub(crate) fn font_picker(arg: &str, cx: &mut App) {

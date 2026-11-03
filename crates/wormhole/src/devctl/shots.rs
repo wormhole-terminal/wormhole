@@ -67,6 +67,12 @@ pub(super) fn settings_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `settings-outline`: the settings window's accessibility tree as one JSON line in the results.
+pub(super) fn settings_outline(ctx: &mut Ctx, _: &str) -> Result<String> {
+    crate::settings_window::devctl::outline(ctx.out.to_path_buf(), ctx.cx);
+    Ok(String::new())
+}
+
 /// `bounds <x> <y> [levels]`: the element at a point and `levels - 1` of its parents, as the
 /// inspector picks them, one line each: `bounds x=… y=… w=… h=… <file:line> <id path>`.
 #[cfg(any(feature = "inspector", debug_assertions))]

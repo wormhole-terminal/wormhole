@@ -22,6 +22,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "state" => shots::state,
         "studio-shot" => shots::studio_shot,
         "settings-shot" => shots::settings_shot,
+        "settings-outline" => shots::settings_outline,
         "frames" => shots::frames,
         "paints" => shots::paints,
         "refresh" => shots::refresh,

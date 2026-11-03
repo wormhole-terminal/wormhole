@@ -247,6 +247,7 @@
 //!   menu-new-window | menu-updates   the Shell > New Window / Check for Updates… menu actions,
 //!                   dispatched through this window like a menu click
 //!   settings | settings-section <name> | settings-shot <name>   (the settings window)
+//!   settings-outline  the settings window's accessibility tree as one `outline {json}` line: page, nodes in reading order
 //!   import-scan [<fixture home>]   Settings → Import over a folder standing in for the home (`~/…` is the
 //!                   instance's; `tools/visual/fixtures/import/`; never the real one), shown and open; without a folder the page scans the
 //!                   instance's own home. Shot it with settings-shot in a later batch
