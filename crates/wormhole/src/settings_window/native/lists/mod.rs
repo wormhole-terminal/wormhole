@@ -1,0 +1,53 @@
+//! The rows the native window cannot have in its catalog because they are things found on this Mac: the agents,
+//! the projects, the Probes, the terminals to import from, the profile. A list is a group's rows after its
+//! catalog ones (`"<page>:<group>"`), each an entry with an `id` (the row's key is the group's plus the id) and
+//! what the window draws. A button on one comes back as an action `{"k": row key, "v": the button's words}`,
+//! which the module of the list carries out through the code the GPUI window uses.
+
+mod agents;
+
+use gpui_kit::App;
+use serde_json::{Map, Value, json};
+
+pub(super) use agents::AgentsCache;
+
+/// One entry of a list, built up field by field.
+pub(super) struct Entry(Map<String, Value>);
+
+impl Entry {
+    pub(super) fn new(id: &str, kind: &str, label: &str) -> Self {
+        let mut map = Map::new();
+        map.insert("id".into(), id.into());
+        map.insert("kind".into(), kind.into());
+        map.insert("label".into(), label.into());
+        Self(map)
+    }
+
+    pub(super) fn with(mut self, field: &str, value: impl Into<Value>) -> Self {
+        self.0.insert(field.into(), value.into());
+        self
+    }
+
+    pub(super) fn into_value(self) -> Value {
+        Value::Object(self.0)
+    }
+}
+
+/// Every list and sheet, for the snapshot: `({"<page>:<group>": [entry…]}, {"<id>": sheet})`.
+pub(super) fn build(cx: &mut App) -> (Value, Value) {
+    let mut lists = Map::new();
+    let sheets = Map::new();
+    agents::lists(&mut lists, cx);
+    (json!(lists), json!(sheets))
+}
+
+/// Carry out a button of a listed row. Whether the row was one of the lists'.
+pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
+    agents::perform(key, name, cx)
+}
+
+/// Read what the lists need from disk or the database, in the background where it is slow; the window is
+/// pushed a snapshot when it arrives.
+pub(super) fn load(cx: &mut App) {
+    agents::load(cx);
+}

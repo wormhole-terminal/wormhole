@@ -132,16 +132,16 @@ struct ControlView: View {
         case .value: Text(row.value).foregroundStyle(.secondary)
         case .agent:
             switch cur {
-            case "on": Menu { Button("Repair Hooks") {}; Button("Remove Hooks", role: .destructive) { m.set(row.key, "off") } } label: { Text("Hooks on") }.fixedSize()
-            case "off": Btn("Add Hooks", primary: true) { m.set(row.key, "on") }
-            default: Btn("Repair Hooks", primary: true) { m.set(row.key, "on") }
+            case "on": Menu { Button("Repair Hooks") { m.perform("Repair Hooks", row.key) }; Button("Remove Hooks", role: .destructive) { m.perform("Remove Hooks", row.key) } } label: { Text("Hooks on") }.fixedSize()
+            case "off": Btn("Add Hooks", primary: true) { m.perform("Add Hooks", row.key) }
+            default: Btn("Repair Hooks", primary: true) { m.perform("Repair Hooks", row.key) }
             }
         case .skill: HStack { ForEach(Array(row.actions.enumerated()), id: \.offset) { i, a in Btn(a, primary: row.primary == i) { if a == "Reset All…" { confirming = true } else { m.perform(a, row.key) } } } }
-        case .project: Btn(cur == "trusted" ? "Revoke" : "Trust with Touch ID…") { m.set(row.key, cur == "trusted" ? "untrusted" : "trusted") }
+        case .project: Btn(cur == "trusted" ? "Revoke" : "Trust with Touch ID…") { m.perform(cur == "trusted" ? "Revoke" : "Trust with Touch ID…", row.key) }
         case .probe:
-            if cur == "off" && !row.sheet.isEmpty { Btn("Turn on…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.set(row.key, "on") } } }
-            else if cur == "on" || cur == "off" { SwitchControl(key: row.key, row: row) }
-            else if cur == "changed" && !row.sheet.isEmpty { Btn("Approve Again…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.set(row.key, "on") } } }
+            if cur == "off" && !row.sheet.isEmpty { Btn("Turn on…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.perform("Approve", row.key) } } }
+            else if cur == "on" || cur == "off" { Toggle(row.label, isOn: Binding(get: { cur == "on" }, set: { m.perform($0 ? "Turn on" : "Turn off", row.key) })).labelsHidden().toggleStyle(.switch) }
+            else if cur == "changed" && !row.sheet.isEmpty { Btn("Approve Again…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.perform("Approve", row.key) } } }
             else { Toggle(row.label, isOn: .constant(false)).labelsHidden().toggleStyle(.switch).disabled(true) }
         default: EmptyView()
         }
@@ -188,7 +188,8 @@ struct ApprovalSheet: View {
     let row: Row; let approve: () -> Void
     @Environment(\.dismiss) var dismiss
     static let permSymbol = ["run": "terminal", "notify": "bell", "link": "link"]
-    var data: ApprovalSheetData? { approvalSheets[row.sheet] }
+    @Environment(SettingsModel.self) var m
+    var data: ApprovalSheetData? { m.sheetData(row.sheet) }
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s3) {
             Text(data?.title ?? "Approve \(row.label)").font(.headline)

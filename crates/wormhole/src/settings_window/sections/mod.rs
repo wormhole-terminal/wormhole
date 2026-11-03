@@ -53,7 +53,7 @@ mod theme_picker;
 mod title_row;
 mod updates;
 
-pub(super) use agents::AgentsSnapshot;
+pub(super) use agents::{AgentRow, AgentsSnapshot};
 pub(super) use cli_tool::CliToolPanel;
 pub(super) use color_rows::in_force as colors_in_force;
 pub(super) use diff_preview::draw_diff_preview;

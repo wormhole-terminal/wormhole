@@ -16,7 +16,7 @@ mod installed;
 mod others;
 mod snapshot;
 
-pub(crate) use snapshot::AgentsSnapshot;
+pub(crate) use snapshot::{AgentRow, AgentsSnapshot};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("agents-preview", |_, cx| super::draw_agents_preview(cx)),

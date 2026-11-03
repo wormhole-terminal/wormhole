@@ -37,6 +37,8 @@ struct Row: Identifiable {
     var fontLink = false
     var resetAll = false
     var action = ""
+    /// A row the host listed (an agent, a project, a probe): it acts through buttons, never by being set.
+    var listed = false
 
     init(_ label: String, _ hint: String, _ kind: Kind, options: [String] = [], value: String = "", info: String = "",
          tile: String? = nil, actions: [String] = [], checks: [String] = [], checksOn: [String] = [], needs: Int? = nil,
@@ -173,4 +175,26 @@ struct ApprovalSheetData {
     let title, identity: String
     let since: [String]
     let perms: [(icon: String, title: String, detail: String)]
+
+    init(entry e: [String: Any]) {
+        title = e["title"] as? String ?? ""
+        identity = e["identity"] as? String ?? ""
+        since = e["since"] as? [String] ?? []
+        perms = (e["perms"] as? [[String]] ?? []).filter { $0.count == 3 }.map { ($0[0], $0[1], $0[2]) }
+    }
+}
+
+extension Row {
+    /// A row the host listed: its fields by name. The key is the group's plus the entry's id.
+    init?(entry e: [String: Any], group: String) {
+        guard let id = e["id"] as? String, let kind = Kind(rawValue: e["kind"] as? String ?? "") else { return nil }
+        func s(_ k: String) -> String { e[k] as? String ?? "" }
+        func list(_ k: String) -> [String] { e[k] as? [String] ?? [] }
+        self.init(s("label"), s("hint"), kind, options: list("options"), value: s("value"), info: s("info"),
+                  tile: e["tile"] as? String, actions: list("actions"), checks: list("checks"), checksOn: list("checksOn"),
+                  chip: s("chip"), note: s("note"), confirm: s("confirm"), confirmText: s("confirmText"),
+                  icon: e["icon"] as? String, primary: e["primary"] as? Int, sheet: s("sheet"), action: s("action"))
+        key = "\(group):\(id)"
+        listed = true
+    }
 }

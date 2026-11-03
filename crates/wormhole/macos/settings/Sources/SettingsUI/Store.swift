@@ -25,6 +25,10 @@ public protocol SettingsStore: AnyObject {
     var themes: ThemeData? { get }
     /// The installed font families (name, monospaced), when the host has them.
     var fonts: [FontChoice]? { get }
+    /// Rows the host adds to the end of a group ("<page>:<group>"): things that exist on this Mac, not in the catalog.
+    func list(for group: String) -> [[String: Any]]
+    /// What an extension's approval sheet shows, by the id its list entry names.
+    func sheet(for id: String) -> [String: Any]?
 }
 
 public struct FontChoice: Hashable {
@@ -38,6 +42,8 @@ public extension SettingsStore {
     func options(for key: String) -> [String]? { nil }
     var themes: ThemeData? { nil }
     var fonts: [FontChoice]? { nil }
+    func list(for group: String) -> [[String: Any]] { [] }
+    func sheet(for id: String) -> [String: Any]? { nil }
 }
 
 /// The default store: values in memory only, nothing is written anywhere.
@@ -94,6 +100,17 @@ public struct Words {
     var fontList: [(String, Bool)] { _ = store.revision; return store.fonts?.map { ($0.name, $0.mono) } ?? fontChoices }
     var themeData: ThemeData { _ = store.revision; return store.themes ?? .standard }
     func perform(_ action: String, _ key: String) { store.perform(action, for: key) }
+
+    /// The rows of a group: the catalog's that apply, then the host's own (agents, projects, probes found on this Mac).
+    func rows(_ page: Page, _ g: Int) -> [Row] {
+        _ = store.revision
+        let group = "\(page.id):\(g)"
+        return page.groups[g].rows.filter { visible($0, in: page, group: g) } + store.list(for: group).compactMap { Row(entry: $0, group: group) }
+    }
+    func sheetData(_ id: String) -> ApprovalSheetData? {
+        _ = store.revision
+        return store.sheet(for: id).flatMap(ApprovalSheetData.init(entry:))
+    }
     func isChanged(_ key: String) -> Bool { _ = store.revision; return store.changedKeys.contains(key) }
 
     // Reading a setting by place, as the previews do.

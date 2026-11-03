@@ -1,0 +1,298 @@
+//! Coding agents: the agents on this Mac with their hooks, "Other agents", the programs let in, the skills.
+//! The reads are the GPUI page's (`sections::AgentsSnapshot`), the writes the integrations' own.
+
+use std::path::Path;
+
+use gpui_kit::App;
+use serde_json::{Map, Value, json};
+use wormhole_core::agents::integrations::{self, State};
+use wormhole_core::agents::skill::{self, State as SkillState};
+use wormhole_core::agents::{self, AGENTS, Agent, AgentId, Tile};
+use wormhole_core::ipc::access::Capability;
+use wormhole_core::ipc::control::doctor::mcp_add_command;
+use wormhole_text::keys::*;
+use wormhole_text::{text, whole};
+
+use super::Entry;
+use crate::agent_access::{self, Approved, How};
+use crate::app_state::app;
+use crate::settings_window::sections::AgentsSnapshot;
+
+/// What the Agents page reads from disk: a few hundred `stat`s, so read in the background and kept here.
+#[derive(Default)]
+pub(crate) struct AgentsCache(pub(in crate::settings_window::native) Option<AgentsSnapshot>);
+
+const GROUP_AGENTS: &str = "Agents:0";
+const GROUP_ACCESS: &str = "Agents:2";
+const GROUP_SKILLS: &str = "Agents:3";
+
+fn id_of(agent: &Agent) -> String {
+    format!("agent-{:?}", agent.id).to_lowercase()
+}
+
+fn agent_of(id: &str) -> Option<&'static Agent> {
+    AGENTS.iter().find(|agent| id_of(agent) == id)
+}
+
+fn tile_of(agent: &Agent) -> String {
+    match agent.tile {
+        Tile::Black => "#111111".into(),
+        Tile::Solid(rgb) | Tile::Gradient(rgb, _) => format!("#{rgb:06x}"),
+    }
+}
+
+fn icon_of(agent: &Agent) -> &'static str {
+    if agent.id == AgentId::Claude { "claude" } else { "prompt" }
+}
+
+fn tiled(entry: Entry, agent: &Agent) -> Entry {
+    entry.with("tile", tile_of(agent)).with("icon", icon_of(agent))
+}
+
+pub(super) fn lists(out: &mut Map<String, Value>, cx: &mut App) {
+    let snapshot =
+        cx.try_global::<crate::settings_window::native::Native>().and_then(|n| n.agents.0.as_ref());
+    let (mut agents_list, mut skills_list) = (Vec::new(), Vec::new());
+    if let Some(snapshot) = snapshot {
+        let home = snapshot.home().to_path_buf();
+        for row in snapshot.installed() {
+            agents_list.push(agent_entry(row, &home));
+        }
+        let others = snapshot.others().count();
+        if others > 0 {
+            agents_list.push(
+                Entry::new("others", "value", text(SETTINGS_AGENTS_OTHER))
+                    .with("value", whole(others).to_string())
+                    .into_value(),
+            );
+        }
+        skills_list = skills(snapshot);
+    }
+    out.insert(GROUP_AGENTS.into(), Value::Array(agents_list));
+    out.insert(GROUP_SKILLS.into(), Value::Array(skills_list));
+    out.insert(GROUP_ACCESS.into(), Value::Array(programs(cx)));
+}
+
+fn agent_entry(row: &crate::settings_window::sections::AgentRow, home: &Path) -> Value {
+    let agent = row.agent;
+    let path = row.spec.map(|spec| spec.display_path(home));
+    let (hint, detail, value) = match row.hooks() {
+        Some(State::Installed) => (SETTINGS_AGENTS_HINT_HOOKS, SETTINGS_AGENTS_INSTALLED_HOOKS_IN, "on"),
+        Some(State::Partial) => {
+            (SETTINGS_AGENTS_HINT_PARTIAL, SETTINGS_AGENTS_INSTALLED_HOOKS_INCOMPLETE_IN, "repair")
+        }
+        Some(State::NotInstalled) => {
+            (SETTINGS_AGENTS_HINT_OUTPUT, SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_HOOKS_GO, "off")
+        }
+        None => (SETTINGS_AGENTS_HINT_OUTPUT, SETTINGS_AGENTS_INSTALLED_STATUS_FROM_OUTPUT_NO_HOOK, "none"),
+    };
+    let more = match &path {
+        Some(shown) => format!("{} {shown}", text(detail)),
+        None => text(detail).to_string(),
+    };
+    // An agent without hooks has nothing to add, so it is a plain line.
+    let kind = if row.spec.is_some() { "agent" } else { "value" };
+    let mut entry = tiled(Entry::new(&id_of(agent), kind, agent.name), agent)
+        .with("hint", text(hint))
+        .with("info", more)
+        .with("value", if value == "none" { "" } else { value });
+    if let Some(Err(err)) = &row.state {
+        entry = entry.with("note", err.as_str());
+    } else if let Some(note) =
+        row.spec.and_then(|spec| spec.note).filter(|_| row.hooks() != Some(State::NotInstalled))
+    {
+        entry = entry.with("note", note);
+    }
+    entry.into_value()
+}
+
+fn skills(snapshot: &AgentsSnapshot) -> Vec<Value> {
+    let mut list = Vec::new();
+    for row in
+        snapshot.skills.iter().filter(|row| row.found || !matches!(row.state, Ok(SkillState::NotInstalled)))
+    {
+        let agent = agents::agent(row.target.agent);
+        let state = row.state.as_ref().ok().copied();
+        let (hint, actions, primary): (String, Vec<&str>, Option<usize>) = match state {
+            Some(SkillState::NotInstalled) if row.covered.is_some() => (
+                format!(
+                    "{} {}",
+                    text(SETTINGS_AGENTS_SKILL_COVERED),
+                    row.covered.as_deref().unwrap_or_default()
+                ),
+                vec![],
+                None,
+            ),
+            Some(SkillState::Current) => {
+                (text(SETTINGS_AGENTS_SKILL_HINT_CURRENT).into(), vec![text(SETTINGS_AGENTS_UNINSTALL)], None)
+            }
+            Some(SkillState::Outdated) => (
+                text(SETTINGS_AGENTS_SKILL_HINT_OUTDATED).into(),
+                vec![text(SETTINGS_AGENTS_UPDATE), text(SETTINGS_AGENTS_UNINSTALL)],
+                Some(0),
+            ),
+            Some(SkillState::Foreign) => (text(SETTINGS_AGENTS_SKILL_HINT_FOREIGN).into(), vec![], None),
+            _ => (text(SETTINGS_AGENTS_SKILL_HINT_NONE).into(), vec![text(SETTINGS_AGENTS_INSTALL)], Some(0)),
+        };
+        let mut entry =
+            tiled(Entry::new(&format!("skill-{}", row.target.word()), "skill", agent.name), agent)
+                .with("hint", hint)
+                .with(
+                    "info",
+                    format!(
+                        "{} {}",
+                        row.covered.as_deref().unwrap_or(&row.shown),
+                        text(SETTINGS_AGENTS_SKILLS_DESCRIPTION)
+                    ),
+                )
+                .with("actions", json!(actions));
+        if let Some(primary) = primary {
+            entry = entry.with("primary", primary);
+        }
+        if let Err(err) = &row.state {
+            entry = entry.with("note", err.as_str());
+        }
+        list.push(entry.into_value());
+    }
+    list.push(
+        Entry::new("mcp", "button", text(SETTINGS_AGENTS_COPY_COMMAND))
+            .with("hint", mcp_add_command())
+            .with("value", text(SETTINGS_AGENTS_COPY_COMMAND))
+            .into_value(),
+    );
+    list
+}
+
+const CAPABILITIES: [Capability; 4] = [Capability::Read, Capability::Type, Capability::Run, Capability::Open];
+
+fn capability_word(capability: Capability) -> &'static str {
+    text(match capability {
+        Capability::Read => SETTINGS_AGENTS_ACCESS_CAP_READ,
+        Capability::Type => SETTINGS_AGENTS_ACCESS_CAP_TYPE,
+        Capability::Run => SETTINGS_AGENTS_ACCESS_CAP_RUN,
+        Capability::Open | Capability::Close => SETTINGS_AGENTS_ACCESS_CAP_OPEN,
+    })
+}
+
+fn how_long(how: How) -> &'static str {
+    text(match how {
+        How::Session => SETTINGS_AGENTS_ACCESS_SESSION,
+        How::UntilQuit => SETTINGS_AGENTS_ACCESS_UNTIL_QUIT,
+        How::Always => SETTINGS_AGENTS_ACCESS_ALWAYS,
+    })
+}
+
+fn programs(cx: &mut App) -> Vec<Value> {
+    agent_access::approved(cx)
+        .iter()
+        .enumerate()
+        .map(|(ix, row): (usize, &Approved)| {
+            let mut entry = Entry::new(&format!("program-{ix}"), "skill", &row.label)
+                .with("hint", how_long(row.how))
+                .with("tile", "#111111")
+                .with("icon", "prompt")
+                .with("actions", json!([text(SETTINGS_AGENTS_ACCESS_REVOKE)]))
+                .with("checks", json!(CAPABILITIES.map(capability_word)))
+                .with(
+                    "checksOn",
+                    json!(
+                        CAPABILITIES
+                            .iter()
+                            .filter(|c| row.caps.contains(**c))
+                            .map(|c| capability_word(*c))
+                            .collect::<Vec<_>>()
+                    ),
+                );
+            if !row.location.is_empty() {
+                entry = entry.with("info", row.location.as_str());
+            }
+            entry.into_value()
+        })
+        .collect()
+}
+
+pub(super) fn load(cx: &mut App) {
+    let profiles = app(cx).profiles.profiles().to_vec();
+    cx.spawn(async move |cx| {
+        let snapshot = cx
+            .background_executor()
+            .spawn(async move { AgentsSnapshot::load(&integrations::home(), &profiles) })
+            .await;
+        cx.update(|cx| {
+            if cx.has_global::<crate::settings_window::native::Native>() {
+                cx.global_mut::<crate::settings_window::native::Native>().agents =
+                    AgentsCache(Some(snapshot));
+                crate::settings_window::native::push(cx);
+            }
+        })
+    })
+    .detach();
+}
+
+pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
+    let Some((group, id)) = key.rsplit_once(':') else { return false };
+    match group {
+        GROUP_AGENTS => {
+            hooks(id, name, cx);
+            true
+        }
+        GROUP_SKILLS => {
+            if id == "mcp" {
+                crate::platform::clipboard::write(mcp_add_command(), cx);
+            } else {
+                skill_action(id, name, cx);
+            }
+            true
+        }
+        GROUP_ACCESS => {
+            program(id, name, cx);
+            true
+        }
+        _ => false,
+    }
+}
+
+fn hooks(id: &str, name: &str, cx: &mut App) {
+    let Some(agent) = agent_of(id) else { return };
+    let Some(spec) = integrations::spec(agent.id) else { return };
+    let home = integrations::home();
+    let result =
+        if name == text(SETTINGS_AGENTS_REMOVE_HOOKS) { spec.uninstall(&home) } else { spec.install(&home) };
+    if let Err(err) = result {
+        tracing::warn!("{} hooks: {err}", agent.name);
+    }
+    load(cx);
+}
+
+fn skill_action(id: &str, name: &str, cx: &mut App) {
+    let Some(target) = skill::TARGETS.iter().find(|t| format!("skill-{}", t.word()) == id) else { return };
+    let home = integrations::home();
+    let result = if name == text(SETTINGS_AGENTS_UNINSTALL) {
+        skill::uninstall(target, &home).map(drop)
+    } else {
+        skill::install(target, &home).map(drop)
+    };
+    if let Err(err) = result {
+        tracing::warn!("{} skill: {err}", agents::agent(target.agent).name);
+    }
+    load(cx);
+}
+
+fn program(id: &str, name: &str, cx: &mut App) {
+    let Some(row) = id
+        .strip_prefix("program-")
+        .and_then(|ix| ix.parse::<usize>().ok())
+        .and_then(|ix| agent_access::approved(cx).get(ix).cloned())
+    else {
+        return;
+    };
+    if name == text(SETTINGS_AGENTS_ACCESS_REVOKE) {
+        agent_access::revoke(row.which, cx);
+        return;
+    }
+    // "<capability> on|off"
+    let Some((word, on)) = name.rsplit_once(' ') else { return };
+    if let Some(capability) = CAPABILITIES.into_iter().find(|c| capability_word(*c) == word) {
+        agent_access::set_capability(row.which, capability, on == "on", cx);
+    }
+}

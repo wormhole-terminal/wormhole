@@ -138,10 +138,6 @@ let standardPages: [Page] = [
   ]),
   Page(id: "Agents", title: "Coding agents", preview: "agents", notice: nil, footer: "When an agent notifies you is set in Notifications.", footerButtons: ["Open Notifications", "How status works"], groups: [
     SettingGroup(title: "Agents on this Mac", rows: [
-      Row("Claude Code", "Exact status through hooks", .agent, options: [], value: "on", info: "", tile: "#d97757", icon: "claude"),
-      Row("Codex CLI", "Status read from its output", .agent, options: [], value: "off", info: "", tile: "#111111", icon: "prompt"),
-      Row("Gemini CLI", "Some hook events are missing (it may have been updated)", .agent, options: [], value: "repair", info: "", tile: "#1a73e8", icon: "spark"),
-      Row("Other agents Wormhole recognises", "", .link, options: [], value: "17", info: ""),
     ]),
     SettingGroup(title: "Command line", rows: [
       Row("Command line tool", "The wh command in any terminal", .button, options: [], value: "Install", info: ""),
@@ -149,12 +145,8 @@ let standardPages: [Page] = [
     ]),
     SettingGroup(title: "Agent access", rows: [
       Row("Scripts and agents", "", .popup, options: ["Off", "Ask", "Allowed while open"], value: "", info: "What programs that drive Wormhole through its command line, MCP or socket may do."),
-      Row("Codex CLI", "until Wormhole quits · signed by OpenAI", .skill, options: [], value: "", info: "Closing a terminal always asks.", tile: "#111111", actions: ["Revoke"], checks: ["Read", "Type", "Run", "Open"], checksOn: ["Read", "Type"], icon: "prompt"),
     ]),
     SettingGroup(title: "Skill and MCP", rows: [
-      Row("Claude Code", "Skill installed · MCP added", .skill, options: [], value: "", info: "The skill teaches an agent to drive Wormhole and goes in the agent's own skills folder. MCP lets it call Wormhole's tools.", tile: "#d97757", actions: ["Uninstall Skill", "Copy MCP Command"], icon: "claude"),
-      Row("Codex CLI", "No skill · no MCP", .skill, options: [], value: "", info: "", tile: "#111111", actions: ["Install Skill", "Copy MCP Command"], icon: "prompt", primary: 0),
-      Row("Gemini CLI", "Skill installed", .skill, options: [], value: "", info: "", tile: "#1a73e8", actions: ["Uninstall Skill", "Copy MCP Command"], icon: "spark"),
     ]),
   ]),
   Page(id: "MenuBar", title: "Menu bar & hotkey", preview: "menubar", notice: nil, footer: "", footerButtons: [], groups: [
@@ -171,8 +163,6 @@ let standardPages: [Page] = [
   ]),
   Page(id: "Import", title: "Import", preview: "", notice: nil, footer: "", footerButtons: [], groups: [
     SettingGroup(title: "Found on this Mac", rows: [
-      Row("Ghostty", "~/.config/ghostty/config", .button, options: [], value: "Import…", info: "", tile: "#3b3b8f", icon: "prompt"),
-      Row("kitty", "~/.config/kitty/kitty.conf", .button, options: [], value: "Import…", info: "", tile: "#6b4f2a", icon: "prompt"),
     ]),
     SettingGroup(title: "", rows: [
       Row("Compare with Wormhole", "", .link, options: [], value: "", info: ""),
@@ -218,9 +208,6 @@ let standardPages: [Page] = [
   ], badge: true),
   Page(id: "Projects", title: "Project folders", preview: "", notice: nil, footer: "A project’s own choice is only for you: nothing is written into the project folder.", footerButtons: [], groups: [
     SettingGroup(title: "Trusted projects", rows: [
-      Row("api", "~/Projects/api", .project, options: [], value: "trusted", info: ""),
-      Row("wormhole", "~/Projects/wormhole", .project, options: [], value: "changed", info: ""),
-      Row("website", "~/Projects/website", .project, options: [], value: "untrusted", info: ""),
     ]),
     SettingGroup(title: "Use from projects", rows: [
       Row("For", "", .popup, options: ["All projects (defaults)", "-", "api", "wormhole", "website"], value: "", info: ""),
@@ -233,11 +220,6 @@ let standardPages: [Page] = [
   ], badge: true),
   Page(id: "Extensions", title: "Extensions", preview: "", notice: nil, footer: "Probes live in the Probes folder, one folder each with a probe.toml.", footerButtons: ["Show in Finder", "Scan Again"], groups: [
     SettingGroup(title: "Probes", rows: [
-      Row("GitHub pull requests", "gh-prs · version 0.3.0 · by wormhole-terminal", .probe, options: [], value: "on", info: ""),
-      Row("Port watcher", "ports · version 1.1.0 · by acme", .probe, options: [], value: "changed", info: "", note: "Its files changed since you approved it, so it is off until you approve it again.", sheet: "ports"),
-      Row("Docker status", "docker · version 0.9.2 · by acme", .probe, options: [], value: "off", info: "", sheet: "docker"),
-      Row("Notes sync", "notes-sync · version 0.1.0 · by acme", .probe, options: [], value: "unsupported", info: "", note: "It runs code, which this version of Wormhole does not support yet."),
-      Row("ports2", "A folder in the Probes folder", .probe, options: [], value: "invalid", info: "", note: "Its probe.toml says its id is ports, not the folder’s name."),
     ]),
   ], badge: true),
   Page(id: "FeatureFlags", title: "Feature flags", preview: "", notice: ("info", "Switches for features that aren’t finished. Only development builds show this page; a release uses each feature’s default.", ""), footer: "", footerButtons: [], groups: [
@@ -272,18 +254,6 @@ let titlePartLayout: [(name: String, on: Bool, note: String)] = [
   ("Pull request", false, "Asks gh, only in a trusted project"),
   ("Open in…", true, ""),
   ("Split buttons", true, ""),
-]
-
-let approvalSheets: [String: ApprovalSheetData] = [
-  "docker": ApprovalSheetData(title: "Turn on Docker status", identity: "docker · version 0.9.2 · by acme", since: [], perms: [
-    ("run", "Run docker", "docker can run anything it is given."),
-    ("notify", "Show notifications", ""),
-    ("link", "Open links on hub.docker.com", ""),
-  ]),
-  "ports": ApprovalSheetData(title: "Approve Port watcher again", identity: "ports · version 1.1.0 · by acme", since: ["Its files changed.", "Now also asks for: Open links on localhost"], perms: [
-    ("run", "Run lsof", "A script from its own folder, exactly as approved."),
-    ("link", "Open links on localhost", ""),
-  ]),
 ]
 
 let previewCaptionOverride = ["specimen": "The font you chose, at its size and line height."]

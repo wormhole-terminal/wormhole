@@ -32,14 +32,14 @@ pub(super) const MCP: Setting = Setting::custom("agent-mcp", draw_mcp).below(mcp
 
 /// One agent's skill as the files have it, read with the rest of the page (`AgentsSnapshot::load`).
 pub(crate) struct SkillRow {
-    target: &'static Target,
+    pub(in crate::settings_window) target: &'static Target,
     /// Whether the agent's command is on this Mac's `PATH`.
-    found: bool,
-    state: Result<State, String>,
+    pub(in crate::settings_window) found: bool,
+    pub(in crate::settings_window) state: Result<State, String>,
     /// Where the skill's folder is, as a person says it.
-    shown: String,
+    pub(in crate::settings_window) shown: String,
     /// The folder, read by this agent as well, that has the skill when its own has not.
-    covered: Option<String>,
+    pub(in crate::settings_window) covered: Option<String>,
 }
 
 pub(crate) fn load(home: &Path) -> Vec<SkillRow> {

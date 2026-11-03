@@ -43,7 +43,7 @@ struct PageView: View {
             if !page.preview.isEmpty { PreviewCard(page: page) }
             ForEach(Array(page.groups.enumerated()), id: \.offset) { g, grp in
                 Section {
-                    ForEach(grp.rows.filter { m.visible($0, in: page, group: g) }, id: \.key) { RowView(row: $0) }
+                    ForEach(m.rows(page, g), id: \.key) { RowView(row: $0) }
                 } header: { if !grp.title.isEmpty { Text(grp.title) } }.id(grp.title)
             }
             if !page.footer.isEmpty {

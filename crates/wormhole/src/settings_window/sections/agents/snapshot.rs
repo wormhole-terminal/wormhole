@@ -18,9 +18,9 @@ use crate::settings_window::SettingsWindow;
 /// background executor, and not on every frame the window draws.
 pub(crate) struct AgentsSnapshot {
     home: PathBuf,
-    pub(super) rows: Vec<AgentRow>,
+    pub(in crate::settings_window) rows: Vec<AgentRow>,
     /// The Wormhole skill in each skills folder (`agent_skills`).
-    pub(in crate::settings_window::sections) skills: Vec<agent_skills::SkillRow>,
+    pub(in crate::settings_window) skills: Vec<agent_skills::SkillRow>,
 }
 
 pub(crate) struct AgentRow {
@@ -44,7 +44,7 @@ pub(crate) struct LoginRow {
 }
 
 impl AgentRow {
-    pub(super) fn hooks(&self) -> Option<State> {
+    pub(in crate::settings_window) fn hooks(&self) -> Option<State> {
         self.state.as_ref().and_then(|state| state.as_ref().ok()).copied()
     }
 }
@@ -89,7 +89,7 @@ impl AgentsSnapshot {
         self.rows.iter().filter(|row| row.installed)
     }
 
-    pub(super) fn others(&self) -> impl Iterator<Item = &AgentRow> {
+    pub(in crate::settings_window) fn others(&self) -> impl Iterator<Item = &AgentRow> {
         self.rows.iter().filter(|row| !row.installed)
     }
 

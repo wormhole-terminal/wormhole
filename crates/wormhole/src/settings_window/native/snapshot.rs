@@ -9,7 +9,7 @@ use wormhole_core::config::Settings;
 use wormhole_core::config::settings_index::{self, Values};
 
 use super::codec::{self, Ctx};
-use super::{rows, themes};
+use super::{lists, rows, themes};
 use crate::fonts::FontCatalog;
 use crate::settings::SettingsStore;
 
@@ -43,9 +43,10 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
         }
     }
     let themes = themes::snapshot(&entries, s);
+    let (lists, sheets) = lists::build(cx);
     json!({
         "values": values, "defaults": default_values, "options": options,
-        "changed": changed, "known": known, "themes": themes, "fonts": fonts(cx),
+        "changed": changed, "known": known, "themes": themes, "fonts": fonts(cx), "lists": lists, "sheets": sheets,
     })
 }
 

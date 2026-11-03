@@ -13,6 +13,7 @@
 mod actions;
 mod apply;
 mod codec;
+mod lists;
 mod rows;
 mod snapshot;
 mod themes;
@@ -31,6 +32,8 @@ use crate::settings::{SettingsStore, settings};
 struct Native {
     /// The pairing the person chose in Appearance; until chosen it follows whether the picks are a pair.
     separate: Option<bool>,
+    /// What the Agents page reads from disk, loaded in the background.
+    agents: lists::AgentsCache,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -53,12 +56,18 @@ pub(super) fn open(section: Option<Section>, cx: &mut App) {
     if cx.try_global::<Native>().is_none() {
         let subscriptions =
             vec![cx.observe_global::<SettingsStore>(push), cx.observe_global::<FontCatalog>(push)];
-        cx.set_global(Native { separate: None, _subscriptions: subscriptions });
+        cx.set_global(Native {
+            separate: None,
+            agents: lists::AgentsCache::default(),
+            _subscriptions: subscriptions,
+        });
     }
     ASYNC.with(|slot| *slot.borrow_mut() = Some(cx.to_async()));
     let behind = crate::background::keeps_new_windows_behind(cx);
     let page = section.map(|s| format!("{s:?}")).unwrap_or_default();
     platform::open(&page, behind, on_event);
+    crate::agent_access::forget_listing(cx);
+    lists::load(cx);
     push(cx);
 }
 

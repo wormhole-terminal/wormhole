@@ -102,7 +102,7 @@ struct ChecksControl: View {
     var body: some View {
         HStack(spacing: Space.s4) {
             ForEach(row.checks, id: \.self) { c in
-                Toggle(c, isOn: Binding(get: { m.on(row.key + c) }, set: { m.set(row.key + c, $0 ? "on" : "off") })).toggleStyle(.checkbox)
+                Toggle(c, isOn: Binding(get: { row.listed ? row.checksOn.contains(c) : m.on(row.key + c) }, set: { on in if row.listed { m.perform("\(c) \(on ? "on" : "off")", row.key) } else { m.set(row.key + c, on ? "on" : "off") } })).toggleStyle(.checkbox)
             }
         }
     }
