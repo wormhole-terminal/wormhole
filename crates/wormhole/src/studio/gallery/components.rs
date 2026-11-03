@@ -53,10 +53,14 @@ fn controls(env: &Env) -> Div {
         )
         .child(env.mark("tint.chip", style::tint_chip(ui, Some(IconName::Folder), "api-server"))) // text: sample (the gallery's specimen)
         .child(env.mark("tint.chip", style::tint_chip(ui, None, "Bundled"))) // text: sample (the gallery's specimen)
-        .child(
-            env.mark("link", div().text_body().text_color(env.tk("text.link")).underline().child("A link")),
-        ) // text: sample (the gallery's specimen)
+        .child(link_sample(env))
         .child(style::changed_dot(ui))
+}
+
+/// The link colour as the interface draws it.
+fn link_sample(env: &Env) -> AnyElement {
+    let link = div().text_body().text_color(env.tk("text.link")).underline().child("A link"); // text: sample (the gallery's specimen)
+    env.mark("link", link)
 }
 
 /// A profile's avatar at the sizes the app draws it, and the edge a window in another profile wears.
