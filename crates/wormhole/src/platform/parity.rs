@@ -129,6 +129,7 @@ pub(super) fn signatures_match() {
     #[cfg(feature = "devctl")]
     same! {
         notice::force_material: fn(Option<super::notice::Material>);
+        native_settings::look: fn() -> Option<String>;
     }
     #[cfg(feature = "devctl")]
     same_method! {

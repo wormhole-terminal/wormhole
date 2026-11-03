@@ -37,3 +37,9 @@ pub fn is_open() -> bool {
 pub fn shot(path: &str) -> bool {
     available() && os::shot(path)
 }
+
+/// The window's look as AppKit holds it (devctl's `native-look`); `None` while it is closed.
+#[cfg(feature = "devctl")]
+pub fn look() -> Option<String> {
+    if available() { os::look() } else { None }
+}

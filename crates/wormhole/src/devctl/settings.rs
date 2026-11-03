@@ -59,6 +59,10 @@ pub(super) fn native_shot(_: &mut Ctx, arg: &str) -> Result<String> {
     Ok(path.to_string())
 }
 
+pub(super) fn native_look(_: &mut Ctx, _: &str) -> Result<String> {
+    crate::platform::native_settings::look().ok_or_else(|| anyhow!("the native Settings window is not open"))
+}
+
 /// `settings-reveal <id>`: the settings window at that row, as the palette opens it.
 pub(super) fn reveal(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let id = arg.trim();

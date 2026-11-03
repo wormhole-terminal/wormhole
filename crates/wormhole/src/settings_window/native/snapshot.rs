@@ -21,6 +21,7 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     let ctx = Ctx { themes: &entries, separate };
     let store = cx.global::<SettingsStore>();
     let s = store.user_settings();
+    let window = window_look(s, store.system().opaque());
     let defaults = Settings::default();
     let values_now = Values::of(s);
 
@@ -80,10 +81,20 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     };
     let counts = counted(changed.len());
     json!({
+        "window": window,
         "counts": counts, "values": values, "defaults": default_values, "options": options,
         "changed": changed, "known": known, "themes": themes, "fonts": fonts(cx), "lists": lists, "sheets": sheets, "profile": lists::profile(cx),
         "recording": recording, "notes": notes, "preview": preview, "words": words::snapshot(),
         "update": system::update_card(cx), "quiet": system::quiet_notices(cx), "banner": system::banner(cx),
+    })
+}
+
+/// The window's own look: "Also translucent → Settings" gives it the main windows' opacity, blur and Liquid Glass,
+/// unless the system wants windows opaque (Reduce Transparency, Increase Contrast).
+fn window_look(s: &Settings, system_opaque: bool) -> Value {
+    json!({
+        "translucent": s.settings_translucent && !system_opaque,
+        "opacity": s.opacity, "blur": s.blur, "glass": s.glass_on(true, system_opaque),
     })
 }
 

@@ -114,6 +114,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     private(set) var window: NSWindow?
     private let store = HostStore()
     private var model: SettingsModel?
+    private(set) var look: WindowLook?
 
     func open(page: String, behind: Bool, handler: EventHandler) {
         store.send = { text in text.withCString { handler($0) } }
@@ -127,7 +128,9 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
         let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 840, height: 720),
                          styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
         w.title = "Settings"
-        w.contentView = host
+        let look = WindowLook(window: w, content: host)
+        self.look = look
+        w.contentView = look.root
         w.titlebarAppearsTransparent = true
         w.titleVisibility = .hidden
         w.contentMinSize = NSSize(width: 720, height: 520)
@@ -151,6 +154,11 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
 
     func update(_ json: [String: Any]) {
         store.apply(json)
+        if let l = look, let w = json["window"] as? [String: Any] {
+            let dark = model?.colourScheme.map { $0 == .dark } ?? (store.value(for: "System:appearance") != "light")
+            l.apply(.init(translucent: w["translucent"] as? Bool ?? false, blur: w["blur"] as? Bool ?? false,
+                          glass: w["glass"] as? Bool ?? false, dark: dark, opacity: w["opacity"] as? Double ?? 1))
+        }
         // Where the app wants the window to go (the palette's setting, a script): a page, a row to scroll to, a search.
         if let show = json["show"] as? [String: Any] {
             if let page = show["page"] as? String, !page.isEmpty { model?.page = page; model?.search = "" }
@@ -173,6 +181,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
         store.emit(["t": "closed"])
         window?.delegate = nil
         window = nil
+        look = nil
         model = nil
     }
 }
@@ -201,4 +210,16 @@ public func wh_settings_close() { MainActor.assumeIsolated { SettingsHost.shared
 public func wh_settings_shot(_ path: UnsafePointer<CChar>?) -> Bool {
     guard let path = text(path) else { return false }
     return MainActor.assumeIsolated { SettingsHost.shared.shot(to: path) }
+}
+
+@_cdecl("wh_settings_look")
+public func wh_settings_look(_ out: UnsafeMutablePointer<CChar>?, _ cap: Int) -> Bool {
+    guard let out, cap > 1 else { return false }
+    return MainActor.assumeIsolated {
+        guard let l = SettingsHost.shared.look else { return false }
+        let bytes = Array(l.readout().utf8.prefix(cap - 1))
+        for (i, b) in bytes.enumerated() { out[i] = CChar(bitPattern: b) }
+        out[bytes.count] = 0
+        return true
+    }
 }

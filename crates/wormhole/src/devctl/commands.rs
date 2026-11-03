@@ -201,6 +201,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "native-set" => settings::native_set,
         "native-event" => settings::native_event,
         "native-shot" => settings::native_shot,
+        "native-look" => settings::native_look,
         "profile-sheet" => settings::profile_sheet,
         "settings-reveal" => settings::reveal,
         "settings-hooks" => settings::hooks,

@@ -15,3 +15,7 @@ pub fn is_open() -> bool {
 pub fn shot(_: &str) -> bool {
     false
 }
+
+pub fn look() -> Option<String> {
+    None
+}
