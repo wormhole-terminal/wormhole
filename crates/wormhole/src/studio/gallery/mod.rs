@@ -7,6 +7,7 @@
 mod ambient;
 mod buttons;
 mod chrome;
+mod components;
 mod diff;
 mod find;
 mod inputs;
@@ -221,6 +222,15 @@ const SPECIMENS: &[Specimen] = &[
         part_gap: 0.0,
         parts: &[175.0],
         render: shape::render,
+    },
+    Specimen {
+        title: "Profile and controls", // text: sample (the gallery's specimen)
+        description: "profile chip and menu, stepper, switch, chips, banners", // text: sample (the gallery's specimen)
+        area: Some(Area::Settings),
+        column: Column::Both,
+        part_gap: 24.0,
+        parts: &[420.0, 60.0, 260.0],
+        render: components::render,
     },
     Specimen {
         title: "Buttons",                  // text: sample (the gallery's specimen)

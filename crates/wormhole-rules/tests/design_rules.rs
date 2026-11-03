@@ -48,8 +48,9 @@ const RAW_SHAPES: [&str; 8] = [
 ];
 
 /// Files that still draw with them and are being moved onto the metrics. (`style/` is
-/// where the type roles are defined, in terms of GPUI's sizes.)
-const RAW_SHAPE_EXEMPT: [&str; 1] = ["/style/"];
+/// where the type roles are defined, in terms of GPUI's sizes; `ui/generated/` is compiled from the design's
+/// markup, whose own sizes they are.)
+const RAW_SHAPE_EXEMPT: [&str; 2] = ["/style/", "/ui/generated/"];
 
 #[test]
 fn borders_corners_and_text_sizes_come_from_the_theme() {

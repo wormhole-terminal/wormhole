@@ -148,6 +148,7 @@ impl RenderOnce for Checkbox {
 
 /// A form's checkbox with its label: the `CheckboxControl` component (16 pt, the outline kept whatever Borders
 /// says) and the label, which takes the clicks too.
+#[track_caller]
 fn form_checkbox(
     id: ElementId,
     ui: UiColors,
