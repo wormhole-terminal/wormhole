@@ -7,11 +7,16 @@ enum Space {
     static let s1: CGFloat = 4, s2: CGFloat = 8, s3: CGFloat = 12, s4: CGFloat = 16, s6: CGFloat = 24, s8: CGFloat = 32
     /// A row's inner gutter and its two heights.
     static let rowInset: CGFloat = 14, rowHeight: CGFloat = 40, tileRowHeight: CGFloat = 56
-    static let sidebarWidth: CGFloat = 240, contentWidth: CGFloat = 536
+    static let sidebarWidth: CGFloat = 240, contentWidth: CGFloat = 600, pageInset: CGFloat = 30
 }
 
 enum Radius {
     static let chip: CGFloat = 5, control: CGFloat = 6, tile: CGFloat = 7, window: CGFloat = 8, card: CGFloat = 10, banner: CGFloat = 14
+}
+
+/// The icon tiles of the sidebar and of tile rows: one side, one corner, the symbol inside an even inset.
+enum TileSize {
+    static let side: CGFloat = 24, radius: CGFloat = 6, symbol: CGFloat = 14, letter: CGFloat = 12, inset: CGFloat = 4
 }
 
 enum TextRole {

@@ -40,16 +40,6 @@ struct RowText: View {
     }
 }
 
-/// A tile in a tile row: coloured rounded square with a symbol.
-struct Tile: View {
-    let colour: Color; let symbol: String
-    static func symbol(for icon: String?) -> String? { ["claude": "asterisk", "prompt": "chevron.right", "spark": "sparkle"][icon ?? ""] }
-    var body: some View {
-        RoundedRectangle(cornerRadius: Radius.tile).fill(colour).frame(width: 28, height: 28)
-            .overlay(Image(systemName: symbol).font(.system(size: 13)).foregroundStyle(.white))
-    }
-}
-
 struct RowView: View {
     let row: Row
     var showReset = false

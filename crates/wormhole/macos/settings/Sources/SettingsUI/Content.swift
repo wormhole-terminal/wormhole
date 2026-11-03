@@ -13,14 +13,15 @@ struct ContentView: View {
                 HStack(spacing: Space.s2) {
                     Text(title).role(.title, weight: .semibold)
                     if m.search.isEmpty, m.catalog.page(m.page)?.badge == true { Chip(text: m.w("Preview"), fill: t.primary, ink: t.onPrimary) }
-                }.padding(.horizontal, Space.s6 + Space.s2).padding(.top, 44).padding(.bottom, Space.s1)
+                }.padding(.horizontal, Space.pageInset).padding(.top, Space.s2).padding(.bottom, Space.s1)
                 if let banner = m.banner { ConfigBanner(banner: banner) }
                 Group {
                     if !m.search.isEmpty { SearchResults() }
                     else if m.page == "Changed" { ChangedPage() }
                     else if let p = m.catalog.page(m.page) { PageView(page: p) }
                 }.formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading)
-            }.background(Color(nsColor: .windowBackgroundColor)).ignoresSafeArea(edges: .top)
+            }.frame(maxWidth: Space.contentWidth, alignment: .leading).frame(maxWidth: .infinity)
+            .background(Color(nsColor: .windowBackgroundColor))
             .onChange(of: m.scrollTo) { _, v in if let v { withAnimation { proxy.scrollTo(v, anchor: .top) } } }
             .sheet(isPresented: Binding(get: { m.sheetDict("new-profile")?["open"] as? Bool ?? false }, set: { if !$0 { m.perform("new_profile_cancel", "Profile:") } })) { NewProfileSheet() }
             .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { if m.sheetDict(m.infoSheet ?? "")?["kind"] as? String == "compare" { CompareSheet(id: m.infoSheet ?? "") } else { InfoSheet(id: m.infoSheet ?? "") } }
@@ -157,6 +158,6 @@ struct ConfigBanner: View {
             Text(banner["text"] ?? "").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             if let action = banner["action"], !action.isEmpty { Button(banner["button"] ?? "") { m.perform(action, "Advanced:") }.buttonStyle(.bordered) }
-        }.padding(.horizontal, Space.s6 + Space.s2).padding(.vertical, Space.s2)
+        }.padding(.horizontal, Space.pageInset).padding(.vertical, Space.s2)
     }
 }

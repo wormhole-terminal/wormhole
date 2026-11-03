@@ -24,8 +24,9 @@ public struct SettingsView: View {
             NavigationSplitView {
                 SidebarView().navigationSplitViewColumnWidth(Space.sidebarWidth)
             } detail: {
-                ContentView().toolbarBackground(.hidden, for: .windowToolbar)
+                ContentView().toolbarBackground(.hidden, for: .windowToolbar).modifier(NoToolbarTitle())
             }
+            .navigationTitle("Settings")
             .searchable(text: $s.search, placement: .sidebar, prompt: m.w("Search"))
             .environment(\.tok, t).tint(t.primary)
         }
@@ -65,19 +66,25 @@ struct SidebarView: View {
 
     var profileRow: some View {
         HStack(spacing: Space.s2) {
-            Circle().fill(t.primary).frame(width: 28, height: 28).overlay(Text(m.profileInfo.letter).fontWeight(.semibold).foregroundStyle(t.onPrimary))
+            Avatar(letter: m.profileInfo.letter, fill: t.primary, ink: t.onPrimary)
             VStack(alignment: .leading, spacing: 0) { Text(m.profileInfo.name).fontWeight(.semibold); Text(m.w("Profile")).role(.caption).foregroundStyle(.secondary) }
             Spacer(minLength: 0)
             Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
-        }.padding(.vertical, Space.s1)
+        }.padding(.vertical, 2)
     }
 
     func navRow(_ n: NavItem, badge: Int = 0) -> some View {
         Label {
             HStack { Text(m.w(n.title)); Spacer(); if badge > 0 { Chip(text: "\(badge)", fill: t.primary, ink: t.onPrimary) } }
         } icon: {
-            RoundedRectangle(cornerRadius: Radius.control).fill(Color(css: n.colour)).frame(width: 20, height: 20)
-                .overlay(Image(systemName: n.symbol).font(.system(size: 11, weight: .medium)).foregroundStyle(.white))
+            Tile(colour: Color(css: n.colour), symbol: n.symbol)
         }
+    }
+}
+
+/// The window keeps its title ("Settings", for the Window menu and VoiceOver) but the toolbar does not draw it: the page has its own.
+private struct NoToolbarTitle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 15.0, *) { content.toolbar(removing: .title) } else { content }
     }
 }
