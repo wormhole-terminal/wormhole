@@ -3,15 +3,17 @@
 //! (hover, pressed, focus) forced through [`Force`], so a screenshot of the window can be held against the
 //! board without a pointer. Not shipped: the module is built with devctl only.
 
+mod lists;
+
 use gpui_kit::assets::IconName;
 use gpui_kit::*;
 
 use crate::settings::SettingsStore;
 use crate::theme_bridge::token;
 use crate::ui::{
-    CheckboxControlProps, Force, FormButtonProps, Look, MenuFaceProps, MenuItemProps, MenuPanelProps,
-    MoreRowProps, NavEntry, NoticeBarProps, PageTitleProps, SettingsNavProps, SettingsRowProps,
-    SidebarProfileProps, SolidChipProps, StepperProps, SwitchControlProps, TileRowProps,
+    Force, FormButtonProps, Look, MenuFaceProps, MenuItemProps, MenuPanelProps, NavEntry, NoticeBarProps,
+    PageTitleProps, SettingsNavProps, SettingsRowProps, SidebarProfileProps, SolidChipProps,
+    SwitchControlProps,
 };
 
 /// Where the board puts each section (x, y, width), so each is compared on its own whatever the others take.
@@ -23,6 +25,7 @@ const SPOTS: &[(&str, f32, f32, f32)] = &[
     ("Checkbox", 40.0, 1037.0, 413.3),
     ("Buttons", 40.0, 1246.0, 413.3),
     ("Row that opens more, text field, value", 40.0, 1383.0, 413.3),
+    ("Shortcut recorder", 40.0, 1555.0, 413.3),
     ("Hint, (i) and a warning under a row", 40.0, 1728.0, 413.3),
     ("Key, changed, reset, set by a project", 493.3, 40.0, 413.3),
     ("Status chips: solid, white text", 493.3, 387.0, 413.3),
@@ -58,6 +61,7 @@ pub(super) fn render(from: f32, cx: &App) -> AnyElement {
                 cards.checkboxes(),
                 cards.buttons(),
                 cards.more_rows(),
+                cards.recorder(cx),
                 cards.hints(cx),
                 cards.rows(),
                 cards.chips(),
@@ -100,7 +104,7 @@ impl Cards<'_> {
                     div()
                         .ml(px(4.0))
                         .text_size(px(13.0))
-                        .line_height(px(11.0))
+                        .line_height(px(15.0))
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_color(self.t("text.muted"))
                         .child(SharedString::from(title.to_string())),
@@ -108,6 +112,16 @@ impl Cards<'_> {
                 .child(body)
                 .into_any_element(),
         ]
+    }
+
+    /// A section's caption, as the board's `.cap`: under the card, faint.
+    fn caption(&self, text: &str) -> AnyElement {
+        div()
+            .ml(px(4.0))
+            .text_size(px(12.0))
+            .text_color(self.t("text.faint"))
+            .child(SharedString::from(text.to_string()))
+            .into_any_element()
     }
 
     /// The board's `.card`: the band's wash, 10 round.
@@ -364,100 +378,6 @@ impl Cards<'_> {
         out
     }
 
-    fn checkboxes(&self) -> Vec<AnyElement> {
-        let boxed = |id: &'static str, on| {
-            CheckboxControlProps { id: id.into(), label: id.into(), on, on_click: None }
-                .render(&(self.look)(Force::None))
-                .into_any_element()
-        };
-        let card = self
-            .card()
-            .child(self.row("cb-on", "Ticked", Force::None, boxed("cb-on-c", true)))
-            .child(self.row("cb-off", "Not ticked", Force::None, boxed("cb-off-c", false)));
-        self.section("Checkbox", card)
-    }
-
-    fn buttons(&self) -> Vec<AnyElement> {
-        let card = self
-            .card()
-            .p(px(14.0))
-            .flex()
-            .flex_wrap()
-            .items_center()
-            .gap(px(10.0))
-            .child(self.button("b1", "Show in Finder", false, false, false, Force::None))
-            .child(self.button("b2", "Install Update", true, false, false, Force::None))
-            .child(self.button("b3", "Reset…", false, true, false, Force::None))
-            .child(self.button("b4", "Make Default", false, false, true, Force::None));
-        self.section("Buttons", card)
-    }
-
-    fn more_rows(&self) -> Vec<AnyElement> {
-        let look = (self.look)(Force::None);
-        let card = self.card().child(
-            MoreRowProps {
-                id: "sheet-more".into(),
-                label: "Approved programs".into(),
-                value: Some("None".into()),
-                open: false,
-                closed: true,
-                on_click: None,
-            }
-            .render(&look),
-        );
-        let stepper = StepperProps {
-            id: "sheet-stepper".into(),
-            label: "Font size".into(),
-            smaller: "Smaller".into(),
-            larger: "Larger".into(),
-            value: "14 pt".into(),
-            on_smaller: None,
-            on_larger: None,
-        }
-        .render(&look);
-        self.section(
-            "Row that opens more, text field, value",
-            div().flex().flex_col().gap(px(8.0)).child(card).child(stepper),
-        )
-    }
-
-    fn rows(&self) -> Vec<AnyElement> {
-        let look = (self.look)(Force::None);
-        let keyed = |id: &'static str, name: &'static str, changed: bool, control: AnyElement| {
-            SettingsRowProps {
-                id: id.into(),
-                name: name.into(),
-                description: None,
-                label: div().child(name).into_any_element(),
-                tall: false,
-                disabled: false,
-                changed,
-                project: None,
-                chip: None,
-                info: None,
-                key_text: Some("scrollback_lines".into()),
-                key_name: "scrollback_lines".into(),
-                copy_label: "Copy Key".into(),
-                on_copy: None,
-                dormant: false,
-                copied: false,
-                hint: None,
-                under: None,
-                on_reset: None,
-                reset_label: "Reset to Default".into(),
-                extra: None,
-                control,
-            }
-            .render(&look)
-            .into_any_element()
-        };
-        let card = self
-            .card()
-            .child(keyed("kr-key", "Scrollback", false, self.face("10,000 lines", false, Force::None)))
-            .child(keyed("kr-changed", "Minimap", true, self.switch("kr-sw", true, false, Force::None)));
-        self.section("Key, changed, reset, set by a project", card)
-    }
-
     fn chips(&self) -> Vec<AnyElement> {
         let chip = |text: &'static str, good, warn, danger, primary| {
             SolidChipProps { text: text.into(), good, warn, danger, primary }
@@ -480,128 +400,6 @@ impl Cards<'_> {
             .child(chip("Can't be enabled", false, false, true, false))
             .child(chip("Preview", false, false, false, true));
         self.section("Status chips: solid, white text", card)
-    }
-
-    fn tile_rows(&self) -> Vec<AnyElement> {
-        let look = (self.look)(Force::None);
-        let row = |id: &'static str,
-                   name: &'static str,
-                   hint: &'static str,
-                   chip: Option<&'static str>,
-                   action: &'static str,
-                   primary: bool| {
-            TileRowProps {
-                id: id.into(),
-                name: name.into(),
-                spoken: None,
-                name_color: self.t("text.primary"),
-                tile_fill: self.t("settings.nav.tile.agents"),
-                brand: None,
-                icon: Some(IconName::Sparkles.into()),
-                info: None,
-                chip: chip.map(Into::into),
-                good: false,
-                warn: chip.is_some(),
-                danger: false,
-                primary: false,
-                hint: Some(hint.into()),
-                note: None,
-                note_color: self.t("text.muted"),
-                controls: self.button(id, action, primary, false, false, Force::None),
-            }
-            .render(&look)
-            .into_any_element()
-        };
-        let card = self
-            .card()
-            .child(row("tr-1", "Codex CLI", "Status read from its output", None, "Add Hooks", true))
-            .child(row(
-                "tr-2",
-                "Gemini CLI",
-                "Some hook events are missing",
-                Some("Needs repair"),
-                "Repair Hooks",
-                true,
-            ));
-        self.section("List rows with a tile: one height, controls on one edge", card)
-    }
-
-    fn hints(&self, cx: &App) -> Vec<AnyElement> {
-        let look = (self.look)(Force::None);
-        let ui = crate::settings::ui(cx);
-        let plain = |id: &'static str,
-                     name: &'static str,
-                     description: Option<&'static str>,
-                     info: Option<AnyElement>,
-                     under: Option<AnyElement>,
-                     on: bool| {
-            let info_none = info.is_none();
-            SettingsRowProps {
-                id: id.into(),
-                name: name.into(),
-                description: description.map(Into::into),
-                label: div().child(name).into_any_element(),
-                tall: false,
-                disabled: false,
-                changed: false,
-                project: None,
-                chip: None,
-                info,
-                key_text: None,
-                key_name: SharedString::default(),
-                copy_label: SharedString::default(),
-                on_copy: None,
-                dormant: true,
-                copied: false,
-                hint: description.filter(|_| info_none).map(Into::into),
-                under,
-                on_reset: None,
-                reset_label: SharedString::default(),
-                extra: None,
-                control: self.switch(id, on, false, Force::None),
-            }
-            .render(&look)
-            .into_any_element()
-        };
-        let readback = div()
-            .px(px(10.0))
-            .py(px(7.0))
-            .rounded(px(6.0))
-            .bg(self.t("button.background"))
-            .text_size(px(11.0))
-            .line_height(px(15.0))
-            .text_color(self.t("text.muted"))
-            .child("DECRQCRA: lets a program read the screen cell by cell, over ssh too.")
-            .into_any_element();
-        let blur = crate::style::notice(
-            ui,
-            crate::style::NoticeKind::Warning,
-            "Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read.",
-        )
-        .into_any_element();
-        let card = self
-            .card()
-            .child(plain(
-                "hn-1",
-                "Restore text after restart",
-                Some("Encrypted, on this Mac only. Off erases what’s saved"),
-                None,
-                None,
-                true,
-            ))
-            .child(plain(
-                "hn-2",
-                "Screen read-back",
-                Some("DECRQCRA"),
-                Some(
-                    crate::style::setting_info("hn-2".into(), ui, "DECRQCRA".into(), Vec::new())
-                        .into_any_element(),
-                ),
-                Some(readback),
-                false,
-            ))
-            .child(plain("hn-3", "Blur behind the window", None, None, Some(blur), false));
-        self.section("Hint, (i) and a warning under a row", card)
     }
 
     fn notices(&self, cx: &App) -> Vec<AnyElement> {

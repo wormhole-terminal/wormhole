@@ -8,7 +8,7 @@ use gpui_kit::*;
 
 use gpui_kit::component::Sizable;
 
-use super::scale::CONTROL_H;
+use super::scale::CONTROL_H_SM;
 use crate::settings::UiColors;
 use crate::ui::{Look, NoticeBarProps};
 
@@ -75,7 +75,7 @@ impl RenderOnce for Notice {
 }
 
 /// A button on a notice's fill, for the action the notice asks for: the words' color as its
-/// fill and the notice's fill as its text, a [`CONTROL_H`] tall button like every other in
+/// fill and the notice's fill as its text, a [`CONTROL_H_SM`] tall button like every other in
 /// Settings. Add the label, an icon and `.on_click(…)`.
 ///
 /// GPUI Kit's custom variant draws its fill at a fifth of its alpha, so the resting fill is
@@ -92,7 +92,9 @@ pub fn notice_button(id: impl Into<ElementId>, ui: UiColors, kind: NoticeKind, c
                 .active(ink.opacity(ACTIVE_OPACITY)),
         )
         .small()
-        .h(px(CONTROL_H))
+        .h(px(CONTROL_H_SM))
+        .px(px(10.0))
+        .text_size(px(12.0))
         .bg(ink)
 }
 
@@ -109,7 +111,9 @@ pub fn notice_button_quiet(id: impl Into<ElementId>, ui: UiColors, kind: NoticeK
                 .active(ink.opacity(2.0 * WASH_OPACITY)),
         )
         .small()
-        .h(px(CONTROL_H))
+        .h(px(CONTROL_H_SM))
+        .px(px(10.0))
+        .text_size(px(12.0))
 }
 
 /// How much of the filled button's color stays under the pointer and while pressed.

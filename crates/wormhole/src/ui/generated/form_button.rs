@@ -41,7 +41,7 @@ impl FormButtonProps {
             .items_center()
             .justify_center()
             .flex_shrink_0()
-            .h(px(26.0))
+            .h(px(24.0))
             .py(px(0.0)).px(px(12.0))
             .rule(borders, Sides::ALL, 1.0, t_border, false)
             .rounded(px(6.0))

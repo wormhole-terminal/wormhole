@@ -86,7 +86,6 @@ impl SettingsRowProps {
                 .flex()
                 .items_center()
                 .gap(px(12.0))
-                .min_h(px(24.0))
                 .when(tall, |this| this.items_start())
                 .child(div()
                     .flex_1()

@@ -24,7 +24,6 @@ impl SolidChipProps {
         let t_chip_solid_text = token(look.tokens, "chip.solid.text");
         let t_chip_warn_fill = token(look.tokens, "chip.warn.fill");
         let t_primary = token(look.tokens, "primary");
-        let t_text_on_primary = token(look.tokens, "text.on_primary");
         let Self { text, good, warn, danger, primary } = self;
 
         div()
@@ -43,11 +42,7 @@ impl SolidChipProps {
             .when(good, |this| this.bg(t_chip_good_fill))
             .when(warn, |this| this.bg(t_chip_warn_fill))
             .when(danger, |this| this.bg(t_chip_danger_fill))
-            .when(primary, |this| {
-                this
-                    .bg(t_primary)
-                    .text_color(t_text_on_primary)
-            })
+            .when(primary, |this| this.bg(t_primary))
             .child(text.clone())
     }
 }
