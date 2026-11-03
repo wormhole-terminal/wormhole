@@ -6,7 +6,7 @@ use wormhole_core::config::Settings;
 use wormhole_core::config::settings_index::{self};
 
 use super::codec::{self, Ctx};
-use super::{actions, push, rows, themes};
+use super::{actions, push, recorder, rows, themes};
 use crate::settings::{SettingsStore, update_settings};
 
 pub(super) fn event(text: &str, cx: &mut App) {
@@ -20,7 +20,12 @@ pub(super) fn event(text: &str, cx: &mut App) {
         "reset" => reset(&field("k"), cx),
         "reset_all" => update_settings(cx, |s| *s = Settings::default()),
         "action" => actions::perform(&field("k"), &field("v"), cx),
-        "closed" => {}
+        "record" => match field("a").as_str() {
+            "start" => recorder::start(&field("k"), cx),
+            "stop" => recorder::stop(cx),
+            _ => recorder::key(&field("m"), &field("n"), cx),
+        },
+        "closed" => recorder::stop(cx),
         other => tracing::warn!("native settings: unknown event {other}"),
     }
     // The window shows what the person set at once; this puts back what the app made of it.

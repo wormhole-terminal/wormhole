@@ -15,8 +15,10 @@ mod actions;
 mod apply;
 mod codec;
 mod lists;
+mod recorder;
 mod rows;
 mod snapshot;
+mod system;
 mod themes;
 
 use std::cell::RefCell;
@@ -35,6 +37,8 @@ struct Native {
     separate: Option<bool>,
     /// What the lists read from disk (agents, projects).
     lists: lists::Cache,
+    /// The shortcut row that records, or the keys it refused.
+    recording: Option<recorder::Recording>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -55,11 +59,15 @@ pub(super) fn enabled(cx: &App) -> bool {
 pub(super) fn open(section: Option<Section>, cx: &mut App) {
     FontCatalog::ensure_loaded(cx);
     if cx.try_global::<Native>().is_none() {
-        let subscriptions =
-            vec![cx.observe_global::<SettingsStore>(push), cx.observe_global::<FontCatalog>(push)];
+        let subscriptions = vec![
+            cx.observe_global::<SettingsStore>(push),
+            cx.observe_global::<FontCatalog>(push),
+            cx.observe_global::<crate::update::Updates>(push),
+        ];
         cx.set_global(Native {
             separate: None,
             lists: lists::Cache::default(),
+            recording: None,
             _subscriptions: subscriptions,
         });
     }

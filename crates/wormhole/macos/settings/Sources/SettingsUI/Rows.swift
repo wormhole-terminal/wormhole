@@ -127,9 +127,9 @@ struct ControlView: View {
                 Text(row.fontLink ? "\(m.value("Fonts:0:0")), \(m.value("Fonts:0:0#size")) pt" : row.value).foregroundStyle(.secondary)
                 Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
             }.contentShape(Rectangle()).onTapGesture { if row.fontLink { m.search = ""; m.page = "Fonts" } }
-        case .button: Btn(row.value) { if row.confirm.isEmpty { m.perform(row.value, row.key) } else { confirming = true } }
+        case .button: Btn(m.get(row.key, row)) { if row.confirm.isEmpty { m.perform(m.get(row.key, row), row.key) } else { confirming = true } }
         case .danger: Btn(row.value, destructive: true) { confirming = true }
-        case .value: Text(row.value).foregroundStyle(.secondary)
+        case .value: Text(m.value(row.key)).foregroundStyle(.secondary)
         case .agent:
             switch cur {
             case "on": Menu { Button("Repair Hooks") { m.perform("Repair Hooks", row.key) }; Button("Remove Hooks", role: .destructive) { m.perform("Remove Hooks", row.key) } } label: { Text("Hooks on") }.fixedSize()
@@ -172,6 +172,39 @@ struct UpdateRow: View {
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
     var body: some View {
+        if let card = m.updateCard { hosted(card) } else { sample }
+    }
+
+    /// The real state, from the app.
+    func hosted(_ c: [String: Any]) -> some View {
+        let tone = c["tone"] as? String ?? "muted"
+        let buttons = c["buttons"] as? [String] ?? []
+        let percent = c["percent"] as? Int ?? -1
+        let busy = c["busy"] as? Bool ?? false
+        let primary = c["primary"] as? Int ?? -1
+        let colour: Color = tone == "ok" ? Palette.green : tone == "warn" ? t.warning : Color.secondary
+        let symbol = tone == "ok" ? "checkmark" : tone == "warn" ? "exclamationmark" : "arrow.triangle.2.circlepath"
+        return LabeledContent {
+            HStack(spacing: Space.s2) {
+                if percent >= 0 { ProgressView(value: Double(percent), total: 100).frame(width: 120); Text("\(percent)%").monospacedDigit().foregroundStyle(.secondary) }
+                else if busy { ProgressView().controlSize(.small) }
+                ForEach(Array(buttons.enumerated()), id: \.offset) { i, name in
+                    Btn(name, primary: i == primary) { m.perform(name, "Updates:") }
+                }
+            }
+        } label: {
+            HStack(spacing: Space.s3) {
+                Circle().fill(colour).frame(width: 28, height: 28).overlay(Image(systemName: symbol).foregroundStyle(.white))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(c["status"] as? String ?? "")
+                    if let hint = c["hint"] as? String, !hint.isEmpty { Text(hint).role(.body).foregroundStyle(.secondary) }
+                }
+            }
+        }
+    }
+
+    /// The design board's sample.
+    var sample: some View {
         LabeledContent {
             Btn("Check Now") { m.perform("Check Now", "Updates:") }
         } label: {

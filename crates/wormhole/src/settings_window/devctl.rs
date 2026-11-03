@@ -437,3 +437,8 @@ pub(crate) fn native_set(arg: &str, cx: &mut App) {
     let event = serde_json::json!({ "t": "set", "k": key, "v": value }).to_string();
     super::native::event(&event, cx);
 }
+
+/// devctl `native-event <json>`: an event of the native Settings window as the window would send it.
+pub(crate) fn native_event(arg: &str, cx: &mut App) {
+    super::native::event(arg.trim(), cx);
+}

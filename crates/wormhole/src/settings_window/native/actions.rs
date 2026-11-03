@@ -9,6 +9,9 @@ pub(super) fn perform(key: &str, name: &str, cx: &mut App) {
     if super::lists::perform(key, name, cx) {
         return;
     }
+    if super::system::perform(key, name, cx) {
+        return;
+    }
     match (key, name) {
         ("Advanced:0:0", _) => super::super::sections::open_in_editor(&SettingsStore::config_path()), // text: not shown (the native window's own button and row names)
         (_, "Edit config.json") => super::super::sections::open_in_editor(&SettingsStore::config_path()), // text: not shown (the native window's own button and row names)

@@ -31,7 +31,7 @@ struct PageView: View {
     @Environment(\.tok) var t
     var body: some View {
         Form {
-            if let n = page.notice {
+            if let n = page.notice, !m.store.quiet(page.id) {
                 Section {
                     LabeledContent {
                         if !n.2.isEmpty { Btn(n.2) { m.perform(n.2, "\(page.id):") } }

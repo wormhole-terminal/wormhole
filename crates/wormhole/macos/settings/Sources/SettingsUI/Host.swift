@@ -22,6 +22,10 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     private var lists: [String: [[String: Any]]] = [:]
     private var sheets: [String: [String: Any]] = [:]
     private var profileInfo: (name: String, letter: String)?
+    private var recordingRow = ""
+    private var notes: [String: String] = [:]
+    private var updateCard: [String: Any]?
+    private var quietPages: Set<String> = []
     @ObservationIgnored var send: (String) -> Void = { _ in }
 
     func value(for key: String) -> String? { values[key] }
@@ -33,6 +37,14 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     func list(for group: String) -> [[String: Any]] { lists[group] ?? [] }
     func sheet(for id: String) -> [String: Any]? { sheets[id] }
     var profile: (name: String, letter: String)? { profileInfo }
+    var update: [String: Any]? { updateCard }
+    func quiet(_ page: String) -> Bool { quietPages.contains(page) }
+    var recordsInHost: Bool { true }
+    var recording: String { recordingRow }
+    func note(for key: String) -> String? { notes[key] }
+    func record(_ action: String, for key: String, mods: String, key name: String) {
+        emit(["t": "record", "a": action, "k": key, "m": mods, "n": name])
+    }
 
     func set(_ value: String, for key: String) {
         // A row the app does not own keeps what was set until the window closes, so it still reacts.
@@ -64,6 +76,10 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
         }
         lists = json["lists"] as? [String: [[String: Any]]] ?? [:]
         sheets = json["sheets"] as? [String: [String: Any]] ?? [:]
+        updateCard = json["update"] as? [String: Any]
+        quietPages = Set(json["quiet"] as? [String] ?? [])
+        recordingRow = json["recording"] as? String ?? ""
+        notes = json["notes"] as? [String: String] ?? [:]
         if let p = json["profile"] as? [String], p.count == 2 { profileInfo = (p[0], p[1]) }
         revision += 1
     }

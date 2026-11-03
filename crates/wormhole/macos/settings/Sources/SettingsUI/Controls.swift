@@ -66,21 +66,33 @@ struct FontControl: View {
     }
 }
 
-/// The shortcut recorder: click, press the keys, they show as key caps. Esc cancels, Delete clears.
+/// The shortcut recorder: click, press the keys, they show as key caps. Esc cancels, Delete clears. With a host
+/// the host decides what the keys mean (it refuses taken ones and says who has them); this only captures them.
 struct KeyControl: View {
     let row: Row
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
-    @State private var recording = false
+    @State private var localRecording = false
     @State private var monitor: Any?
+
+    private var hosted: Bool { m.store.recordsInHost }
+    private var recording: Bool { hosted ? m.recordingKey == row.key : localRecording }
 
     var body: some View {
         let cur = m.get(row.key, row)
-        Button { recording ? stop() : start() } label: {
-            if recording { Text("Type shortcut…").foregroundStyle(t.primary) }
-            else if cur.isEmpty { Text("Record…") }
-            else { HStack(spacing: 3) { ForEach(Array(Self.caps(cur).enumerated()), id: \.offset) { _, c in cap(c) } } }
-        }.buttonStyle(.bordered).onDisappear { stop() }
+        VStack(alignment: .trailing, spacing: 4) {
+            Button { toggle() } label: {
+                if recording { Text("Type shortcut…").foregroundStyle(t.primary) }
+                else if cur.isEmpty { Text("Record…") }
+                else { HStack(spacing: 3) { ForEach(Array(Self.caps(cur).enumerated()), id: \.offset) { _, c in cap(c) } } }
+            }.buttonStyle(.bordered)
+            if let note = m.note(row.key) {
+                Text(note).role(.caption).foregroundStyle(.orange).multilineTextAlignment(.trailing)
+            }
+        }
+        .onChange(of: recording) { _, on in on ? listen() : unlisten() }
+        .onAppear { if recording { listen() } }
+        .onDisappear { unlisten(); if hosted && recording { m.store.record("stop", for: row.key, mods: "", key: "") } }
     }
 
     func cap(_ s: String) -> some View {
@@ -93,19 +105,50 @@ struct KeyControl: View {
         if !rest.isEmpty { out.append(rest) }
         return out
     }
-    func start() {
-        recording = true
+
+    func toggle() {
+        if hosted { m.store.record(recording ? "stop" : "start", for: row.key, mods: "", key: "") }
+        else { localRecording.toggle() }
+    }
+
+    /// Capture keys while recording; every key is swallowed so none reaches the window.
+    func listen() {
+        guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
-            if e.keyCode == 53 { stop(); return nil }
-            if e.keyCode == 51 { m.set(row.key, ""); stop(); return nil }
-            let f = e.modifierFlags
-            guard f.contains(.command) || f.contains(.control) || f.contains(.option) else { return nil }
-            let mods = (f.contains(.control) ? "⌃" : "") + (f.contains(.option) ? "⌥" : "") + (f.contains(.shift) ? "⇧" : "") + (f.contains(.command) ? "⌘" : "")
-            let key = e.keyCode == 49 ? "Space" : (e.charactersIgnoringModifiers ?? "").uppercased()
-            m.set(row.key, mods + key); stop(); return nil
+            if hosted { m.store.record("key", for: row.key, mods: Self.mods(e.modifierFlags), key: Self.name(e)) }
+            else { local(e) }
+            return nil
         }
     }
-    func stop() { recording = false; if let monitor { NSEvent.removeMonitor(monitor) }; monitor = nil }
+    func unlisten() { if let monitor { NSEvent.removeMonitor(monitor) }; monitor = nil }
+
+    /// Without a host (the design board): the old local behaviour.
+    func local(_ e: NSEvent) {
+        if e.keyCode == 53 { localRecording = false; return }
+        if e.keyCode == 51 { m.set(row.key, ""); localRecording = false; return }
+        let f = e.modifierFlags
+        guard f.contains(.command) || f.contains(.control) || f.contains(.option) else { return }
+        let mods = (f.contains(.control) ? "⌃" : "") + (f.contains(.option) ? "⌥" : "") + (f.contains(.shift) ? "⇧" : "") + (f.contains(.command) ? "⌘" : "")
+        let key = e.keyCode == 49 ? "Space" : (e.charactersIgnoringModifiers ?? "").uppercased()
+        m.set(row.key, mods + key); localRecording = false
+    }
+
+    static func mods(_ f: NSEvent.ModifierFlags) -> String {
+        [(f.contains(.control), "ctrl"), (f.contains(.option), "alt"), (f.contains(.shift), "shift"), (f.contains(.command), "cmd")]
+            .filter { $0.0 }.map { $0.1 }.joined(separator: ",")
+    }
+
+    /// The key as the app names it (GPUI's names): letters and digits lowercase, the rest by key code.
+    static func name(_ e: NSEvent) -> String {
+        if let special = named[e.keyCode] { return special }
+        return (e.charactersIgnoringModifiers ?? "").lowercased()
+    }
+    private static let named: [UInt16: String] = [
+        49: "space", 36: "enter", 76: "enter", 48: "tab", 53: "escape", 51: "backspace", 117: "delete",
+        123: "left", 124: "right", 125: "down", 126: "up", 115: "home", 119: "end", 116: "pageup", 121: "pagedown",
+        122: "f1", 120: "f2", 99: "f3", 118: "f4", 96: "f5", 97: "f6", 98: "f7", 100: "f8", 101: "f9", 109: "f10",
+        103: "f11", 111: "f12", 105: "f13", 107: "f14", 113: "f15", 106: "f16", 64: "f17", 79: "f18", 80: "f19", 90: "f20",
+    ]
 }
 
 /// A row's checkboxes (Also translucent: Settings, Theme Studio).

@@ -155,7 +155,7 @@ const COUNT_HEADERS: [&str; 2] = ["Wormhole-Count: day", "Wormhole-Count: month"
 const METER_W: f32 = 120.0;
 
 /// "Checked 4 minutes ago", from the last check's time.
-fn checked_ago(last: u64, now: u64) -> String {
+pub(in crate::settings_window) fn checked_ago(last: u64, now: u64) -> String {
     let minutes = now.saturating_sub(last) / 60;
     match minutes {
         0 => text(SETTINGS_UPDATES_CHECKED_JUST_NOW).into(),
@@ -168,7 +168,7 @@ fn checked_ago(last: u64, now: u64) -> String {
 }
 
 /// "Security update available: Wormhole 0.3.1." for a security update, else "Version 0.3.1 is available."
-fn available_text(release: &Release) -> String {
+pub(in crate::settings_window) fn available_text(release: &Release) -> String {
     if release.is_security_update() {
         settings_updates_security_available(&release.version.to_string())
     } else {

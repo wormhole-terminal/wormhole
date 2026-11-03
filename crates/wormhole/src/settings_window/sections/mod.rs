@@ -77,6 +77,7 @@ pub(super) use projects::ProjectPicker;
 pub(super) use split_preview::draw_split_preview;
 pub(super) use terminal::TerminalRows;
 pub(super) use theme_picker::ThemePicker;
+pub(super) use updates::{available_text, checked_ago};
 #[cfg(feature = "devctl")]
 pub(super) use {
     appearance::draw_theme, color_rows::draw_primary, fonts::draw_specimen, stage::draw_stage,

@@ -57,6 +57,12 @@ pub(super) fn native_set(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `native-event <json>`: any event of the native window (a button, a recorded key), as it would send it.
+pub(super) fn native_event(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::native_event(arg, ctx.cx);
+    Ok(String::new())
+}
+
 pub(super) fn native_shot(_: &mut Ctx, arg: &str) -> Result<String> {
     let path = arg.trim();
     anyhow::ensure!(crate::platform::native_settings::shot(path), "the native Settings window is not open");

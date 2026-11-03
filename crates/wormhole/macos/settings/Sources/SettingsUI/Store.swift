@@ -31,6 +31,18 @@ public protocol SettingsStore: AnyObject {
     func sheet(for id: String) -> [String: Any]?
     /// The profile Wormhole is in: its name and the letter of its avatar.
     var profile: (name: String, letter: String)? { get }
+    /// Whether the host records shortcuts itself (it validates and saves them); else the control does, locally.
+    /// Where an update stands: status, hint, tone (ok, warn, muted), buttons, busy, percent (-1 when no download). nil: the card shows nothing real.
+    var update: [String: Any]? { get }
+    /// Whether a page's fixed notice does not apply now.
+    func quiet(_ page: String) -> Bool
+    var recordsInHost: Bool { get }
+    /// The shortcut row the host waits for keys on, "" when none.
+    var recording: String { get }
+    /// A warning to show on a row (keys already taken, a hotkey that did not register).
+    func note(for key: String) -> String?
+    /// The recorder of a row starts or stops; a key press is sent with its held modifiers ("ctrl,alt,shift,cmd") and name.
+    func record(_ action: String, for key: String, mods: String, key name: String)
 }
 
 public struct FontChoice: Hashable {
@@ -47,6 +59,12 @@ public extension SettingsStore {
     func list(for group: String) -> [[String: Any]] { [] }
     func sheet(for id: String) -> [String: Any]? { nil }
     var profile: (name: String, letter: String)? { nil }
+    var update: [String: Any]? { nil }
+    func quiet(_ page: String) -> Bool { false }
+    var recordsInHost: Bool { false }
+    var recording: String { "" }
+    func note(for key: String) -> String? { nil }
+    func record(_ action: String, for key: String, mods: String, key name: String) {}
 }
 
 /// The default store: values in memory only, nothing is written anywhere.
@@ -104,6 +122,9 @@ public struct Words {
     var fontList: [(String, Bool)] { _ = store.revision; return store.fonts?.map { ($0.name, $0.mono) } ?? fontChoices }
     var themeData: ThemeData { _ = store.revision; return store.themes ?? .standard }
     func perform(_ action: String, _ key: String) { store.perform(action, for: key) }
+    var updateCard: [String: Any]? { _ = store.revision; return store.update }
+    func note(_ key: String) -> String? { _ = store.revision; return store.note(for: key) }
+    var recordingKey: String { _ = store.revision; return store.recording }
 
     /// The rows of a group: the catalog's that apply, then the host's own (agents, projects, probes found on this Mac).
     func rows(_ page: Page, _ g: Int) -> [Row] {

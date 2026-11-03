@@ -82,6 +82,7 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
         return accent::read_colour(id, s);
     }
     match id {
+        "default-shell" => vec![("", super::system::shell(s).0)],
         "title-row" => accent::read_title(s),
         "icon-theme" => accent::read_icon_theme(s),
         "theme-pairing" => {
@@ -109,6 +110,7 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
                     Current::Other(other) => other,
                 },
             )],
+            Some(Control::Recorder(row)) => vec![("", super::recorder::glyphs((row.get)(s)))],
             _ => Vec::new(),
         },
     }
@@ -118,6 +120,9 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
 pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<String>> {
     if id == "icon-theme" {
         return Some(accent::icon_theme_options(s));
+    }
+    if id == "default-shell" {
+        return Some(super::system::shell(s).1);
     }
     if id == "density" {
         return Some(Density::ALL.iter().map(|d| d.label().to_string()).collect());
@@ -151,6 +156,7 @@ pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: 
         return accent::write_colour(id, suffix, s, value);
     }
     match id {
+        "default-shell" => super::system::set_shell(s, value),
         "title-row" => accent::write_title(suffix, s, value),
         "icon-theme" => accent::write_icon_theme(s, value),
         "density" => match Density::ALL.iter().find(|d| d.label() == value) {

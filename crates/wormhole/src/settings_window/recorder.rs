@@ -57,7 +57,7 @@ fn mods_of(modifiers: &Modifiers) -> KeyMods {
 }
 
 /// The row whose recorder sets the global hotkey.
-const HOTKEY_ROW: &str = "hotkey";
+pub(super) const HOTKEY_ROW: &str = "hotkey";
 
 /// Whether the global hotkey is to be held off: only while its own field waits for keys. A
 /// field showing keys it refused isn't recording any more.

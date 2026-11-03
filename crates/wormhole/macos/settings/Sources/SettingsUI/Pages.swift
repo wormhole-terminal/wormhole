@@ -182,7 +182,7 @@ let standardPages: [Page] = [
     ]),
     SettingGroup(title: "", rows: [
       Row("Closed tips", "", .button, options: [], value: "Show Again", info: ""),
-      Row("Skip malware scans of new programs", "", .toggle, options: [], value: "off", info: "Adds Wormhole to Developer Tools, so programs started in it skip the first-run scan. Only if you trust what you run."),
+      Row("Skip malware scans of new programs", "", .button, options: [], value: "Open Developer Tools", info: "Adds Wormhole to Developer Tools, so programs started in it skip the first-run scan. Only if you trust what you run."),
     ]),
     SettingGroup(title: "", rows: [
       Row("Reset all settings", "Terminals, notes and themes are kept", .danger, options: [], value: "Reset…", info: "", confirm: "Reset all settings?", confirmText: "Every setting goes back to its default. Your terminals, notes and themes are kept.", resetAll: true, action: "Reset"),
