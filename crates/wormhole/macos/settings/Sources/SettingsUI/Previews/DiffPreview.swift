@@ -7,9 +7,9 @@ struct DiffPreview: View {
     struct FileRow { let name, badge: String; let depth: Int; let dir: Bool }
 
     var body: some View {
-        let tree = m.str("Git", 0, 0) == "Tree", untracked = m.on("Git", 0, 1)
-        let split = m.str("Git", 1, 0) == "Split", wrap = m.on("Git", 1, 1)
-        let indent = String(repeating: " ", count: Int(m.str("Git", 1, 2)) ?? 4)
+        let tree = m.str("Git", 0, 0) == "settings_git_tree", untracked = m.on("Git", 0, 1)
+        let split = m.str("Git", 1, 0) == "settings_git_split", wrap = m.on("Git", 1, 1)
+        let indent = String(repeating: " ", count: Int(m.str("Git", 1, 2).dropFirst()) ?? 4)
         let ln = m.line(t)
         let files: [FileRow] = (tree
             ? [.init(name: "src/", badge: "", depth: 0, dir: true), .init(name: "limits.rs", badge: "M", depth: 1, dir: false), .init(name: "lib.rs", badge: "M", depth: 1, dir: false),

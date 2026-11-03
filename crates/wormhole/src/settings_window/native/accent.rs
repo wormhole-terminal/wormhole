@@ -1,7 +1,7 @@
 //! The rows of Appearance that are not a plain switch or menu: the primary and branch colours (Theme, one of
 //! eight swatches, or Custom from the native colour well), the title row's parts and the icon theme.
 //!
-//! A colour row reads as its pick (`Theme`, `Primary` for the branch, a swatch name or `Custom`) and a `#custom`
+//! A colour row reads as its pick (`theme`, `primary` for the branch, a swatch id or `custom`) and a `#custom`
 //! sub-value holding the hex of the custom colour. A swatch is stored as its hex, so a hand-edited file that
 //! happens to hold a swatch's hex shows that swatch.
 
@@ -9,21 +9,21 @@ use wormhole_core::config::BranchColor;
 use wormhole_core::config::Settings;
 use wormhole_core::view::layout::title_parts::TitlePart;
 
-/// The eight swatches: the window's name and the hex a pick stores. The same table as the window's.
+/// The eight swatches: the window's id and the hex a pick stores. The same table as the window's.
 const SWATCHES: [(&str, &str); 8] = [
-    ("Blue", "#0a84ff"),
-    ("Purple", "#bf5af2"),
-    ("Pink", "#ff375f"),
-    ("Red", "#ff453a"),
-    ("Orange", "#ff9f0a"),
-    ("Yellow", "#ffd60a"),
-    ("Green", "#30d158"),
-    ("Graphite", "#8e8e93"),
+    ("blue", "#0a84ff"),
+    ("purple", "#bf5af2"),
+    ("pink", "#ff375f"),
+    ("red", "#ff453a"),
+    ("orange", "#ff9f0a"),
+    ("yellow", "#ffd60a"),
+    ("green", "#30d158"),
+    ("graphite", "#8e8e93"),
 ];
 
-const THEME: &str = "Theme";
-const PRIMARY: &str = "Primary";
-const CUSTOM: &str = "Custom";
+const THEME: &str = "theme";
+const PRIMARY: &str = "primary";
+const CUSTOM: &str = "custom";
 
 fn swatch_named(hex: &str) -> Option<&'static str> {
     SWATCHES.iter().find(|(_, h)| h.eq_ignore_ascii_case(hex.trim())).map(|(name, _)| *name)
@@ -166,12 +166,12 @@ mod tests {
     #[test]
     fn a_swatch_round_trips_and_custom_keeps_its_hex() {
         let mut s = Settings::default();
-        assert_eq!(read_colour("primary-color", &s)[0].1, "Theme");
-        assert!(write_colour("primary-color", "", &mut s, "Orange"));
-        assert_eq!(read_colour("primary-color", &s)[0].1, "Orange");
+        assert_eq!(read_colour("primary-color", &s)[0].1, "theme");
+        assert!(write_colour("primary-color", "", &mut s, "orange"));
+        assert_eq!(read_colour("primary-color", &s)[0].1, "orange");
         assert!(write_colour("primary-color", "#custom", &mut s, "#123456"));
-        assert_eq!(read_colour("primary-color", &s)[0].1, "Custom");
-        assert!(write_colour("primary-color", "", &mut s, "Theme"));
+        assert_eq!(read_colour("primary-color", &s)[0].1, "custom");
+        assert!(write_colour("primary-color", "", &mut s, "theme"));
         assert!(s.uses_theme_primary());
         assert!(!write_colour("primary-color", "#custom", &mut s, "not a colour"));
     }
@@ -179,8 +179,8 @@ mod tests {
     #[test]
     fn the_branch_can_follow_the_primary() {
         let mut s = Settings::default();
-        assert!(write_colour("branch-color", "", &mut s, "Primary"));
-        assert_eq!(read_colour("branch-color", &s)[0].1, "Primary");
+        assert!(write_colour("branch-color", "", &mut s, "primary"));
+        assert_eq!(read_colour("branch-color", &s)[0].1, "primary");
     }
 
     #[test]

@@ -6,12 +6,6 @@ use std::path::{Path, PathBuf};
 use gpui_kit::App;
 use serde_json::{Map, Value};
 use wormhole_core::project::Feature;
-#[allow(
-    clippy::wildcard_imports,
-    reason = "the keys are generated, one constant per message: naming each would list them twice"
-)]
-use wormhole_text::keys::*;
-use wormhole_text::text;
 
 use super::Entry;
 use crate::features::project;
@@ -76,7 +70,7 @@ pub(super) fn load(cx: &mut App) {
     });
 }
 
-pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
+pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let mut parts = key.splitn(3, ':');
     let (Some("Projects"), Some(group), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
@@ -88,7 +82,7 @@ pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
     match group {
         "0" => {
             let root = PathBuf::from(id);
-            if name == text(SETTINGS_PROJECTS_REVOKE) {
+            if action == "revoke" {
                 project::revoke_project(&profile, &root, cx);
             } else {
                 project::approve_project(&profile, &root, cx);
@@ -96,7 +90,7 @@ pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
         }
         "1" => {
             if let Some(feature) = Feature::from_key(id) {
-                project::set_feature_default(&profile, feature, name == "on", cx);
+                project::set_feature_default(&profile, feature, action == "on", cx);
             }
         }
         _ => return false,

@@ -8,6 +8,30 @@ public enum Kind: String {
     case field, popup, link, danger, toggle, button, themes, swatches, checks, parts, font, agent, skill, key, update, value, project, probe
 }
 
+/// The stable id of a word: lowercase ASCII letters and digits, anything else one underscore. Ids of the catalog's own
+/// options, buttons and checkboxes come from it, so what crosses to the app never depends on the language; the host's
+/// options and buttons bring their own ids.
+func snakeID(_ source: String) -> String {
+    var id = ""
+    for ch in source.lowercased() where ch.isASCII {
+        if ch.isLetter || ch.isNumber { id.append(ch) } else if !id.hasSuffix("_") { id.append("_") }
+    }
+    return id.trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+}
+
+/// One option of a menu: the id the store holds and sends, and the words shown. A catalog option may name its id,
+/// `"id|English"`, where the window itself depends on it (a preview); else the id is `snakeID` of the English.
+public struct Choice: Hashable {
+    public let id: String, label: String
+    static let divider = Choice(id: "-", label: "-")
+    public init(id: String, label: String) { self.id = id; self.label = label }
+    init(source: String) {
+        if source == "-" { self = .divider; return }
+        if let bar = source.firstIndex(of: "|") { id = String(source[..<bar]); label = String(source[source.index(after: bar)...]) }
+        else { id = snakeID(source); label = source }
+    }
+}
+
 struct Row: Identifiable {
     var key = ""   // stable setting key "<page>:<group>:<row>", stamped by SettingsCatalog
     var id: String { key }
@@ -18,6 +42,10 @@ struct Row: Identifiable {
     var info = ""
     var tile: String? = nil
     var actions: [String] = []
+    /// The ids of `actions` and `checks` (the buttons' and boxes' words only show), and of the row's own button.
+    var actionIDs: [String] = []
+    var checkIDs: [String] = []
+    var actionID = ""
     var checks: [String] = []
     var checksOn: [String] = []
     var needs: Int? = nil
@@ -48,15 +76,17 @@ struct Row: Identifiable {
          mono: Bool = false, same: Bool = false, appIcons: Bool = false, fontLink: Bool = false, resetAll: Bool = false,
          action: String = "") {
         self.label = label; self.hint = hint; self.kind = kind; self.options = options; self.value = value
-        self.info = info; self.tile = tile; self.actions = actions; self.checks = checks; self.checksOn = checksOn
+        self.info = info; self.tile = tile; self.actions = actions; self.checks = checks; self.checksOn = checksOn.map(snakeID)
+        self.actionIDs = actions.map(snakeID); self.checkIDs = checks.map(snakeID)
         self.needs = needs; self.chip = chip; self.note = note; self.confirm = confirm; self.confirmText = confirmText
         self.size = size; self.icon = icon; self.primary = primary; self.sheet = sheet; self.swatches = swatches
         self.warnWhenOff = warnWhenOff; self.mono = mono; self.same = same; self.appIcons = appIcons
         self.fontLink = fontLink; self.resetAll = resetAll; self.action = action
     }
 
-    /// The first option for a menu, else the row's value.
-    var defaultValue: String { kind == .popup ? (options.first { $0 != "-" } ?? "") : value }
+    var choices: [Choice] { options.map(Choice.init(source:)) }
+    /// The first option's id for a menu, else the row's value.
+    var defaultValue: String { kind == .popup ? (choices.first { $0 != .divider }?.id ?? "") : value }
     var isSetting: Bool { [.toggle, .popup, .field, .font, .key].contains(kind) }
 }
 
@@ -116,7 +146,7 @@ public struct SettingsCatalog {
         for p in pages { for g in p.groups { for row in g.rows {
             d[row.key] = row.defaultValue
             if row.kind == .font { d[row.key + "#size"] = String(row.size) }
-            for c in row.checks { d[row.key + c] = row.checksOn.contains(c) ? "on" : "off" }
+            for c in row.checkIDs { d[row.key + "#" + c] = row.checksOn.contains(c) ? "on" : "off" }
             if row.kind == .parts { for (name, on) in titleParts { d[row.key + "#" + titlePartID[name, default: name]] = on ? "on" : "off" } }
         } } }
         return d
@@ -200,6 +230,9 @@ extension Row {
                   chip: s("chip"), note: s("note"), confirm: s("confirm"), confirmText: s("confirmText"),
                   icon: e["icon"] as? String, primary: e["primary"] as? Int, sheet: s("sheet"), action: s("action"))
         key = "\(group):\(id)"
+        actionIDs = e["actionIds"] as? [String] ?? actionIDs
+        checkIDs = e["checkIds"] as? [String] ?? checkIDs
+        actionID = s("actionId")
         listed = true
         multiline = e["multiline"] as? Bool ?? false
     }

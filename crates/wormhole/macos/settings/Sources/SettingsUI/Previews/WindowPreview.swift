@@ -6,7 +6,7 @@ struct WindowPreview: View {
     @Environment(SettingsModel.self) var m
     var body: some View {
         let th = m.theme(light: !t.dark)
-        let opacity = (Double(m.str("Appearance", 2, 0).split(separator: " ").first ?? "100") ?? 100) / 100
+        let opacity = (Double(m.str("Appearance", 2, 0).dropFirst()) ?? 100) / 100
         let blur = m.on("Appearance", 2, 1), glass = m.on("Appearance", 2, 2)
         let dividers = m.on("Appearance", 3, 1), status = m.on("Appearance", 3, 2)
         let ln = m.line(t)

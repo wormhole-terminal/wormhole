@@ -112,7 +112,7 @@ fn skills(snapshot: &AgentsSnapshot) -> Vec<Value> {
     {
         let agent = agents::agent(row.target.agent);
         let state = row.state.as_ref().ok().copied();
-        let (hint, actions, primary): (String, Vec<&str>, Option<usize>) = match state {
+        let (hint, actions, primary): (String, Vec<(&str, &str)>, Option<usize>) = match state {
             Some(SkillState::NotInstalled) if row.covered.is_some() => (
                 format!(
                     "{} {}",
@@ -122,16 +122,25 @@ fn skills(snapshot: &AgentsSnapshot) -> Vec<Value> {
                 vec![],
                 None,
             ),
-            Some(SkillState::Current) => {
-                (text(SETTINGS_AGENTS_SKILL_HINT_CURRENT).into(), vec![text(SETTINGS_AGENTS_UNINSTALL)], None)
-            }
+            Some(SkillState::Current) => (
+                text(SETTINGS_AGENTS_SKILL_HINT_CURRENT).into(),
+                vec![("uninstall", text(SETTINGS_AGENTS_UNINSTALL))],
+                None,
+            ),
             Some(SkillState::Outdated) => (
                 text(SETTINGS_AGENTS_SKILL_HINT_OUTDATED).into(),
-                vec![text(SETTINGS_AGENTS_UPDATE), text(SETTINGS_AGENTS_UNINSTALL)],
+                vec![
+                    ("update", text(SETTINGS_AGENTS_UPDATE)),
+                    ("uninstall", text(SETTINGS_AGENTS_UNINSTALL)),
+                ],
                 Some(0),
             ),
             Some(SkillState::Foreign) => (text(SETTINGS_AGENTS_SKILL_HINT_FOREIGN).into(), vec![], None),
-            _ => (text(SETTINGS_AGENTS_SKILL_HINT_NONE).into(), vec![text(SETTINGS_AGENTS_INSTALL)], Some(0)),
+            _ => (
+                text(SETTINGS_AGENTS_SKILL_HINT_NONE).into(),
+                vec![("install", text(SETTINGS_AGENTS_INSTALL))],
+                Some(0),
+            ),
         };
         let mut entry =
             tiled(Entry::new(&format!("skill-{}", row.target.word()), "skill", agent.name), agent)
@@ -144,7 +153,8 @@ fn skills(snapshot: &AgentsSnapshot) -> Vec<Value> {
                         text(SETTINGS_AGENTS_SKILLS_DESCRIPTION)
                     ),
                 )
-                .with("actions", json!(actions));
+                .with("actions", json!(actions.iter().map(|(_, words)| words).collect::<Vec<_>>()))
+                .with("actionIds", json!(actions.iter().map(|(id, _)| id).collect::<Vec<_>>()));
         if let Some(primary) = primary {
             entry = entry.with("primary", primary);
         }
@@ -173,6 +183,16 @@ fn capability_word(capability: Capability) -> &'static str {
     })
 }
 
+/// A capability's id on the wire: the name of its check, never its words.
+fn capability_id(capability: Capability) -> &'static str {
+    match capability {
+        Capability::Read => "read",
+        Capability::Type => "type",
+        Capability::Run => "run",
+        Capability::Open | Capability::Close => "open",
+    }
+}
+
 fn how_long(how: How) -> &'static str {
     text(match how {
         How::Session => SETTINGS_AGENTS_ACCESS_SESSION,
@@ -191,14 +211,16 @@ fn programs(cx: &mut App) -> Vec<Value> {
                 .with("tile", "#111111")
                 .with("icon", "prompt")
                 .with("actions", json!([text(SETTINGS_AGENTS_ACCESS_REVOKE)]))
+                .with("actionIds", json!(["revoke"]))
                 .with("checks", json!(CAPABILITIES.map(capability_word)))
+                .with("checkIds", json!(CAPABILITIES.map(capability_id)))
                 .with(
                     "checksOn",
                     json!(
                         CAPABILITIES
                             .iter()
                             .filter(|c| row.caps.contains(**c))
-                            .map(|c| capability_word(*c))
+                            .map(|c| capability_id(*c))
                             .collect::<Vec<_>>()
                     ),
                 );
@@ -227,7 +249,7 @@ pub(super) fn load(cx: &mut App) {
     .detach();
 }
 
-pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
+pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let mut parts = key.splitn(3, ':');
     let (Some(page), Some(group), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
@@ -235,41 +257,40 @@ pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
     let group = &key[..page.len() + 1 + group.len()];
     match group {
         GROUP_AGENTS => {
-            hooks(id, name, cx);
+            hooks(id, action, cx);
             true
         }
         GROUP_SKILLS => {
             if id == "mcp" {
                 crate::platform::clipboard::write(mcp_add_command(), cx);
             } else {
-                skill_action(id, name, cx);
+                skill_action(id, action, cx);
             }
             true
         }
         GROUP_ACCESS => {
-            program(id, name, cx);
+            program(id, action, cx);
             true
         }
         _ => false,
     }
 }
 
-fn hooks(id: &str, name: &str, cx: &mut App) {
+fn hooks(id: &str, action: &str, cx: &mut App) {
     let Some(agent) = agent_of(id) else { return };
     let Some(spec) = integrations::spec(agent.id) else { return };
     let home = integrations::home();
-    let result =
-        if name == text(SETTINGS_AGENTS_REMOVE_HOOKS) { spec.uninstall(&home) } else { spec.install(&home) };
+    let result = if action == "remove_hooks" { spec.uninstall(&home) } else { spec.install(&home) };
     if let Err(err) = result {
         tracing::warn!("{} hooks: {err}", agent.name);
     }
     load(cx);
 }
 
-fn skill_action(id: &str, name: &str, cx: &mut App) {
+fn skill_action(id: &str, action: &str, cx: &mut App) {
     let Some(target) = skill::TARGETS.iter().find(|t| format!("skill-{}", t.word()) == id) else { return };
     let home = integrations::home();
-    let result = if name == text(SETTINGS_AGENTS_UNINSTALL) {
+    let result = if action == "uninstall" {
         skill::uninstall(target, &home).map(drop)
     } else {
         skill::install(target, &home).map(drop)
@@ -280,7 +301,7 @@ fn skill_action(id: &str, name: &str, cx: &mut App) {
     load(cx);
 }
 
-fn program(id: &str, name: &str, cx: &mut App) {
+fn program(id: &str, action: &str, cx: &mut App) {
     let Some(row) = id
         .strip_prefix("program-")
         .and_then(|ix| ix.parse::<usize>().ok())
@@ -288,13 +309,13 @@ fn program(id: &str, name: &str, cx: &mut App) {
     else {
         return;
     };
-    if name == text(SETTINGS_AGENTS_ACCESS_REVOKE) {
+    if action == "revoke" {
         agent_access::revoke(row.which, cx);
         return;
     }
     // "<capability> on|off"
-    let Some((word, on)) = name.rsplit_once(' ') else { return };
-    if let Some(capability) = CAPABILITIES.into_iter().find(|c| capability_word(*c) == word) {
+    let Some((word, on)) = action.rsplit_once(' ') else { return };
+    if let Some(capability) = CAPABILITIES.into_iter().find(|c| capability_id(*c) == word) {
         agent_access::set_capability(row.which, capability, on == "on", cx);
     }
 }

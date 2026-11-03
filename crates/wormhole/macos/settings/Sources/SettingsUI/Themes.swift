@@ -91,13 +91,13 @@ extension SettingsModel {
         let v = value(themeRowKey + (light ? "#light" : "#dark"))
         return v.isEmpty ? (light ? themeData.lights.first : themeData.darks.first) ?? "" : v
     }
-    var separateThemes: Bool { str("Appearance", 0, 1) != "One theme for both" }
+    var separateThemes: Bool { str("Appearance", 0, 1) != "pairing_both" }
 
     /// The window's own light or dark: Mode, else what macOS says.
     func isLight(system: ColorScheme) -> Bool {
-        switch str("Appearance", 0, 0) { case "Dark": false; case "Light": true; default: system == .light }
+        switch str("Appearance", 0, 0) { case "settings_appearance_dark": false; case "settings_appearance_light": true; default: system == .light }
     }
-    var colourScheme: ColorScheme? { switch str("Appearance", 0, 0) { case "Dark": .dark; case "Light": .light; default: nil } }
+    var colourScheme: ColorScheme? { switch str("Appearance", 0, 0) { case "settings_appearance_dark": .dark; case "settings_appearance_light": .light; default: nil } }
 
     /// The theme the previews use for this mode.
     func theme(light: Bool) -> ThemePalette {
@@ -118,8 +118,8 @@ extension SettingsModel {
     /// A swatch row's colour: nil for Theme.
     func swatch(_ key: String) -> Color? {
         let n = value(key)
-        if n == "Custom" { return customColour(key) }
-        return accentColours.first { $0.0 == n }.map { Color(hex: $0.1) }
+        if n == "custom" { return customColour(key) }
+        return accentColours.first { snakeID($0.0) == n }.map { Color(hex: $0.1) }
     }
     var accent: Color? { swatch("Appearance:1:0") }
 }

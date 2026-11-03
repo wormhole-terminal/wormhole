@@ -37,10 +37,7 @@ fn set(key: &str, value: &str, cx: &mut App) {
     let (suffix, Some(id)) = (&key[base.len()..], rows::id_of(base)) else { return };
     let entries = themes::entries(cx);
     if id == "theme-pairing" {
-        super::set_separate(
-            value != wormhole_text::text(wormhole_text::keys::SETTINGS_APPEARANCE_PAIRING_BOTH),
-            cx,
-        );
+        super::set_separate(value != codec::PAIRING_BOTH, cx);
     }
     let ctx = Ctx { themes: &entries, separate: super::separate(cx) };
     let (suffix, value) = (suffix.to_string(), value.to_string());

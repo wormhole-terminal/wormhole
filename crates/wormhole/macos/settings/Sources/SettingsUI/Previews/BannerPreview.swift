@@ -8,7 +8,7 @@ struct BannerPreview: View {
         var banners: [(String, String)] = []
         if m.on("Notifications", 0, 0) { banners.append(("api needs input", "Allow edit of src/limits.rs?")) }
         if m.on("Notifications", 0, 1) { banners.append(("Release notes finished", "Claude Code · 12m")) }
-        if m.str("Notifications", 0, 2) != "Off" { banners.append(("cargo build finished", "2m 14s · ~/Projects/api")) }
+        if m.str("Notifications", 0, 2) != "settings_notifications_off" { banners.append(("cargo build finished", "2m 14s · ~/Projects/api")) }
         if m.on("Notifications", 0, 3) { banners.append(("cargo test failed", "Exit code 101 · ~/Projects/api")) }
         if m.on("Notifications", 0, 4) { banners.append(("scratch rang the bell", "At most once a minute per terminal")) }
         if m.on("Notifications", 1, 3) && banners.count >= 3 { banners = [("\(banners.count) terminals need you", banners.map(\.0).joined(separator: " · "))] }

@@ -93,6 +93,7 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
                     .with("value", text(SETTINGS_PROFILE_DELETE_PROFILE))
                     .with("confirm", settings_profile_delete_question(&profile.name))
                     .with("action", text(SETTINGS_PROFILE_DELETE_BUTTON))
+                    .with("actionId", "delete")
                     .into_value(),
             );
         } else {
@@ -107,14 +108,14 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
     out.insert(GROUP_DELETE.into(), Value::Array(delete));
 }
 
-pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
+pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let mut parts = key.splitn(3, ':');
     let (Some("Profile"), Some(group), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
     };
     let Some(profile_id) = active(cx).map(|p| p.id) else { return true };
     if group == "1" {
-        if id == "delete" && name == text(SETTINGS_PROFILE_DELETE_BUTTON) && !profile_id.is_default() {
+        if id == "delete" && action == "delete" && !profile_id.is_default() {
             // After this event: the profile's windows close, this one with them.
             cx.defer(move |cx| {
                 if let Err(message) = AppState::delete_profile(&profile_id, cx) {
@@ -124,7 +125,7 @@ pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
         }
         return true;
     }
-    let Some(value) = name.strip_prefix('=') else { return true };
+    let Some(value) = action.strip_prefix('=') else { return true };
     let value = value.trim().to_string();
     let change: Result<Change, String> = match id {
         "name" if value.is_empty() => Err("a profile needs a name".into()),

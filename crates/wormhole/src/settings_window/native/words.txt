@@ -337,10 +337,6 @@ No settings match “%@”
 Nothing changed
 Every setting is at its default
 Everything else is at its default
-%@ settings changed
-1 setting changed
-Reset %@ settings?
-Reset 1 setting?
 Copy as JSON
 Reset All…
 Changed from its default

@@ -77,20 +77,23 @@ pub(super) fn update_card(cx: &App) -> Value {
         UpdatePhase::Installed(_) | UpdatePhase::UpToDate => "ok",
         _ => "muted",
     };
-    let words = |key| text(key).to_string();
-    let buttons: Vec<String> = match &phase {
+    // (id, words): the window sends the id back.
+    let button = |id: &str, key| [id.to_string(), text(key).to_string()];
+    let buttons: Vec<[String; 2]> = match &phase {
         UpdatePhase::Available(release) if release.is_security_update() => {
-            vec![words(SETTINGS_UPDATES_INSTALL_UPDATE)]
+            vec![button("install_update", SETTINGS_UPDATES_INSTALL_UPDATE)]
         }
-        UpdatePhase::Available(_) => {
-            vec![words(SETTINGS_UPDATES_SKIP_THIS_VERSION), words(SETTINGS_UPDATES_INSTALL_UPDATE)]
-        }
-        UpdatePhase::Installed(_) if pending => {
-            vec![words(SETTINGS_UPDATES_DONT_RESTART), words(SETTINGS_UPDATES_RESTART_NOW)]
-        }
-        UpdatePhase::Installed(_) => vec![words(SETTINGS_UPDATES_RESTART_NOW)],
+        UpdatePhase::Available(_) => vec![
+            button("skip_this_version", SETTINGS_UPDATES_SKIP_THIS_VERSION),
+            button("install_update", SETTINGS_UPDATES_INSTALL_UPDATE),
+        ],
+        UpdatePhase::Installed(_) if pending => vec![
+            button("dont_restart", SETTINGS_UPDATES_DONT_RESTART),
+            button("restart_now", SETTINGS_UPDATES_RESTART_NOW),
+        ],
+        UpdatePhase::Installed(_) => vec![button("restart_now", SETTINGS_UPDATES_RESTART_NOW)],
         UpdatePhase::Checking | UpdatePhase::Downloading => Vec::new(),
-        _ => vec![words(SETTINGS_UPDATES_CHECK_NOW)],
+        _ => vec![button("check_now", SETTINGS_UPDATES_CHECK_NOW)],
     };
     // Installing and restarting are the next step; checking again is not.
     let primary = if matches!(phase, UpdatePhase::Available(_) | UpdatePhase::Installed(_)) {
@@ -117,18 +120,14 @@ fn shell_choices(s: &Settings) -> Vec<(String, String)> {
     out
 }
 
-/// The default shell as the window names it, and the names to choose from.
-pub(super) fn shell(s: &Settings) -> (String, Vec<String>) {
-    let choices = shell_choices(s);
-    let current = shells::default_key(s).to_string();
-    let name =
-        choices.iter().find(|(key, _)| *key == current).map(|(_, name)| name.clone()).unwrap_or(current);
-    (name, choices.into_iter().map(|(_, name)| name).collect())
+/// The default shell's key (its id in the window), and the shells to choose from as (key, name).
+pub(super) fn shell(s: &Settings) -> (String, Vec<(String, String)>) {
+    (shells::default_key(s).to_string(), shell_choices(s))
 }
 
-/// Make the shell called `name` the default. Whether there is one.
-pub(super) fn set_shell(s: &mut Settings, name: &str) -> bool {
-    match shell_choices(s).into_iter().find(|(_, shown)| shown == name) {
+/// Make the shell with this key the default. Whether there is one.
+pub(super) fn set_shell(s: &mut Settings, id: &str) -> bool {
+    match shell_choices(s).into_iter().find(|(key, _)| key == id) {
         Some((key, _)) => {
             s.default_shell = key;
             true
@@ -138,25 +137,25 @@ pub(super) fn set_shell(s: &mut Settings, name: &str) -> bool {
 }
 
 /// A button of the Updates, Terminal or Advanced pages. Whether it was one of these.
-pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
-    let is = |k| text(k) == name;
+pub(super) fn perform(key: &str, id: &str, cx: &mut App) -> bool {
+    let is = |wanted: &str| id == wanted;
     match key {
         "Updates:" => {
-            if is(SETTINGS_UPDATES_CHECK_NOW) {
+            if is("check_now") {
                 if !cx.global::<Updates>().busy() {
                     update::check_for_updates(true, cx);
                 }
-            } else if is(SETTINGS_UPDATES_INSTALL_UPDATE) || is(SETTINGS_UPDATES_SKIP_THIS_VERSION) {
+            } else if is("install_update") || is("skip_this_version") {
                 if let UpdatePhase::Available(release) = cx.global::<Updates>().phase.clone() {
-                    if is(SETTINGS_UPDATES_INSTALL_UPDATE) {
+                    if is("install_update") {
                         update::install_update(*release, cx);
                     } else if !release.is_security_update() {
                         update::skip_update(&release, cx);
                     }
                 }
-            } else if is(SETTINGS_UPDATES_DONT_RESTART) {
+            } else if is("dont_restart") {
                 update::cancel_restart_when_idle(cx);
-            } else if is(SETTINGS_UPDATES_RESTART_NOW) {
+            } else if is("restart_now") {
                 restart(cx);
             }
             true

@@ -64,7 +64,8 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
                     entry = entry
                         .with("confirm", format!("{name}: {}", text(SETTINGS_IMPORT_TAKE)))
                         .with("confirmText", rows.join("\n"))
-                        .with("action", text(SETTINGS_IMPORT_APPLY));
+                        .with("action", text(SETTINGS_IMPORT_APPLY))
+                        .with("actionId", "apply");
                 }
                 list.push(entry.into_value());
             }
@@ -86,12 +87,12 @@ pub(super) fn load(cx: &mut App) {
     .detach();
 }
 
-pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
+pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let mut parts = key.splitn(3, ':');
     let (Some("Import"), Some(_), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
     };
-    if name != text(SETTINGS_IMPORT_APPLY) {
+    if action != "apply" {
         return true;
     }
     let found = super::cache(cx)

@@ -51,8 +51,16 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     let preview = preview::build(&entries, s, cx);
     let (lists, sheets) = lists::build(cx);
     let (recording, notes) = recorder::snapshot(cx);
+    let counted = |count: usize| {
+        let count = wormhole_text::whole(count);
+        json!({ "n": count, "words": {
+            "changed": wormhole_text::keys::settings_native_changed_count(count),
+            "reset": wormhole_text::keys::settings_native_reset_count(count),
+        } })
+    };
+    let counts = counted(changed.len());
     json!({
-        "values": values, "defaults": default_values, "options": options,
+        "counts": counts, "values": values, "defaults": default_values, "options": options,
         "changed": changed, "known": known, "themes": themes, "fonts": fonts(cx), "lists": lists, "sheets": sheets, "profile": lists::profile(cx),
         "recording": recording, "notes": notes, "preview": preview, "words": words::snapshot(),
         "update": system::update_card(cx), "quiet": system::quiet_notices(cx),

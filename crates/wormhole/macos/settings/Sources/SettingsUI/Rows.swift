@@ -89,7 +89,7 @@ struct RowView: View {
             if row.kind == .checks || (row.kind == .skill && !row.checks.isEmpty) { ChecksControl(row: row).padding(.leading, tall ? 40 : 0) }
         }
         .confirmationDialog(row.confirm.isEmpty ? m.w("Reset all settings?") : m.w(row.confirm), isPresented: $confirming, titleVisibility: .visible) {
-            Button(m.w(row.action.isEmpty ? (row.actions.first ?? "Reset") : row.action), role: row.kind == .danger ? .destructive : nil) { if row.resetAll { m.store.resetAll() } else { m.perform(row.action.isEmpty ? "confirm" : row.action, row.key) } }
+            Button(m.w(row.action.isEmpty ? (row.actions.first ?? "Reset") : row.action), role: row.kind == .danger ? .destructive : nil) { if row.resetAll { m.store.resetAll() } else { m.perform(row.actionID.isEmpty ? "confirm" : row.actionID, row.key) } }
         } message: { Text(m.w(row.confirmText)) }
     }
     var stateChip: (String, Color)? {
@@ -127,21 +127,21 @@ struct ControlView: View {
                 Text(row.fontLink ? "\(m.value("Fonts:0:0")), \(m.value("Fonts:0:0#size")) pt" : row.value).foregroundStyle(.secondary)
                 Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
             }.contentShape(Rectangle()).onTapGesture { if row.fontLink { m.search = ""; m.page = "Fonts" } }
-        case .button: Btn(m.get(row.key, row)) { if row.confirm.isEmpty { m.perform(m.get(row.key, row), row.key) } else { confirming = true } }
+        case .button: Btn(m.get(row.key, row)) { if row.confirm.isEmpty { m.perform(row.actionID.isEmpty ? snakeID(row.value) : row.actionID, row.key) } else { confirming = true } }
         case .danger: Btn(row.value, destructive: true) { confirming = true }
         case .value: Text(m.value(row.key)).foregroundStyle(.secondary)
         case .agent:
             switch cur {
-            case "on": Menu { Button(m.w("Repair Hooks")) { m.perform("Repair Hooks", row.key) }; Button(m.w("Remove Hooks"), role: .destructive) { m.perform("Remove Hooks", row.key) } } label: { Text(m.w("Hooks on")) }.fixedSize()
-            case "off": Btn("Add Hooks", primary: true) { m.perform("Add Hooks", row.key) }
-            default: Btn("Repair Hooks", primary: true) { m.perform("Repair Hooks", row.key) }
+            case "on": Menu { Button(m.w("Repair Hooks")) { m.perform("repair_hooks", row.key) }; Button(m.w("Remove Hooks"), role: .destructive) { m.perform("remove_hooks", row.key) } } label: { Text(m.w("Hooks on")) }.fixedSize()
+            case "off": Btn("Add Hooks", primary: true) { m.perform("add_hooks", row.key) }
+            default: Btn("Repair Hooks", primary: true) { m.perform("repair_hooks", row.key) }
             }
-        case .skill: HStack { ForEach(Array(row.actions.enumerated()), id: \.offset) { i, a in Btn(a, primary: row.primary == i) { if a == "Reset All…" { confirming = true } else { m.perform(a, row.key) } } } }
-        case .project: Btn(cur == "trusted" ? "Revoke" : "Trust with Touch ID…") { m.perform(cur == "trusted" ? "Revoke" : "Trust with Touch ID…", row.key) }
+        case .skill: HStack { ForEach(Array(row.actions.enumerated()), id: \.offset) { i, a in Btn(a, primary: row.primary == i) { if a == "Reset All…" { confirming = true } else { m.perform(row.actionIDs[i], row.key) } } } }
+        case .project: Btn(cur == "trusted" ? "Revoke" : "Trust with Touch ID…") { m.perform(cur == "trusted" ? "revoke" : "trust", row.key) }
         case .probe:
-            if cur == "off" && !row.sheet.isEmpty { Btn("Turn on…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.perform("Approve", row.key) } } }
-            else if cur == "on" || cur == "off" { Toggle(row.label, isOn: Binding(get: { cur == "on" }, set: { m.perform($0 ? "Turn on" : "Turn off", row.key) })).labelsHidden().toggleStyle(.switch) }
-            else if cur == "changed" && !row.sheet.isEmpty { Btn("Approve Again…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.perform("Approve", row.key) } } }
+            if cur == "off" && !row.sheet.isEmpty { Btn("Turn on…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.perform("approve", row.key) } } }
+            else if cur == "on" || cur == "off" { Toggle(row.label, isOn: Binding(get: { cur == "on" }, set: { m.perform($0 ? "turn_on" : "turn_off", row.key) })).labelsHidden().toggleStyle(.switch) }
+            else if cur == "changed" && !row.sheet.isEmpty { Btn("Approve Again…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.perform("approve", row.key) } } }
             else { Toggle(row.label, isOn: .constant(false)).labelsHidden().toggleStyle(.switch).disabled(true) }
         default: EmptyView()
         }
@@ -178,7 +178,7 @@ struct UpdateRow: View {
     /// The real state, from the app.
     func hosted(_ c: [String: Any]) -> some View {
         let tone = c["tone"] as? String ?? "muted"
-        let buttons = c["buttons"] as? [String] ?? []
+        let buttons = (c["buttons"] as? [[String]] ?? []).filter { $0.count == 2 }
         let percent = c["percent"] as? Int ?? -1
         let busy = c["busy"] as? Bool ?? false
         let primary = c["primary"] as? Int ?? -1
@@ -188,8 +188,8 @@ struct UpdateRow: View {
             HStack(spacing: Space.s2) {
                 if percent >= 0 { ProgressView(value: Double(percent), total: 100).frame(width: 120); Text("\(percent)%").monospacedDigit().foregroundStyle(.secondary) }
                 else if busy { ProgressView().controlSize(.small) }
-                ForEach(Array(buttons.enumerated()), id: \.offset) { i, name in
-                    Btn(name, primary: i == primary) { m.perform(name, "Updates:") }
+                ForEach(Array(buttons.enumerated()), id: \.offset) { i, b in
+                    Btn(b[1], primary: i == primary) { m.perform(b[0], "Updates:") }
                 }
             }
         } label: {
@@ -206,7 +206,7 @@ struct UpdateRow: View {
     /// The design board's sample.
     var sample: some View {
         LabeledContent {
-            Btn("Check Now") { m.perform("Check Now", "Updates:") }
+            Btn("Check Now") { m.perform("check_now", "Updates:") }
         } label: {
             HStack(spacing: Space.s3) {
                 Circle().fill(Palette.green).frame(width: 28, height: 28).overlay(Image(systemName: "checkmark").foregroundStyle(.white))

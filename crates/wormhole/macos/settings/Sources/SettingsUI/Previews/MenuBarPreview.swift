@@ -13,8 +13,8 @@ struct MenuBarPreview: View {
                     HStack(spacing: Space.s1) {
                         RoundedRectangle(cornerRadius: 2).stroke(t.text, lineWidth: 1.4).frame(width: 12, height: 9)
                             .overlay { GlyphIcon(d: GlyphPath.prompt, size: 9, colour: t.text, line: 1.4) }
-                        if shows != "Icon only" { Circle().fill(Palette.yellow).frame(width: 6, height: 6) }
-                        if shows == "Status and count" { Text("2") }
+                        if shows != "settings_menu_bar_icon_only" { Circle().fill(Palette.yellow).frame(width: 6, height: 6) }
+                        if shows == "settings_menu_bar_status_and_count" { Text("2") }
                     }.padding(.horizontal, 5).frame(height: 18).background(RoundedRectangle(cornerRadius: 4).fill(t.buttonHover))
                 }
                 Text("Thu 09:41")

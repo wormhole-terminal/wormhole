@@ -17,10 +17,10 @@ public protocol SettingsStore: AnyObject {
     func set(_ value: String, for key: String)
     func reset(_ key: String)
     func resetAll()
-    /// A button was pressed: its name (the button's words) and the row (or "<page>:" for a page's footer) it belongs to.
+    /// A button was pressed: its id (never its words) and the row (or "<page>:" for a page's footer) it belongs to.
     func perform(_ action: String, for key: String)
-    /// The options a menu row offers, when the host knows better than the catalog (the app's real choices, in its language).
-    func options(for key: String) -> [String]?
+    /// The options a menu row offers, when the host knows better than the catalog (the app's real choices: stable ids, words in its language).
+    func options(for key: String) -> [Choice]?
     /// The real fonts, themes and accent the previews draw with.
     var preview: PreviewData? { get }
     /// A word of the window in the app's language, by its id (`wordID`); nil shows the English it was made from.
@@ -45,6 +45,8 @@ public protocol SettingsStore: AnyObject {
     var recording: String { get }
     /// A warning to show on a row (keys already taken, a hotkey that did not register).
     func note(for key: String) -> String?
+    /// A message that says a number, in the app's language with its plural form, for `count`: nil when the host has none for it.
+    func counted(_ name: String, _ count: Int) -> String?
     /// The recorder of a row starts or stops; a key press is sent with its held modifiers ("ctrl,alt,shift,cmd") and name.
     func record(_ action: String, for key: String, mods: String, key name: String)
 }
@@ -57,7 +59,7 @@ public struct FontChoice: Hashable {
 
 public extension SettingsStore {
     func perform(_ action: String, for key: String) {}
-    func options(for key: String) -> [String]? { nil }
+    func options(for key: String) -> [Choice]? { nil }
     var themes: ThemeData? { nil }
     var preview: PreviewData? { nil }
     func word(_ id: String) -> String? { nil }
@@ -70,6 +72,7 @@ public extension SettingsStore {
     var recordsInHost: Bool { false }
     var recording: String { "" }
     func note(for key: String) -> String? { nil }
+    func counted(_ name: String, _ count: Int) -> String? { nil }
     func record(_ action: String, for key: String, mods: String, key name: String) {}
 }
 
@@ -84,7 +87,7 @@ public extension SettingsStore {
         self.values = initial.filter { defaults[$0.key] != $0.value }
     }
     /// The board's seeded differences, so the Changed page has something to show.
-    public static let demoSeed = ["Terminal:0:0": "50,000 lines", "Sessions:0:1": "Compact", "Terminal:0:2": "on", "Notifications:0:4": "on", "Git:1:1": "on"]
+    public static let demoSeed = ["Terminal:0:0": "50_000_lines", "Sessions:0:1": "compact", "Terminal:0:2": "on", "Notifications:0:4": "on", "Git:1:1": "on"]
 
     public func value(for key: String) -> String? { values[key] }
     public func defaultValue(for key: String) -> String? { defaults[key] }
@@ -146,7 +149,7 @@ struct Words {
     func get(_ key: String, _ row: Row) -> String { _ = store.revision; return store.value(for: key) ?? store.defaultValue(for: key) ?? row.defaultValue }
     func isOn(_ key: String, _ row: Row) -> Bool { get(key, row) == "on" }
     func set(_ key: String, _ v: String) { store.set(v, for: key) }
-    func options(_ row: Row) -> [String] { _ = store.revision; return store.options(for: row.key) ?? row.options }
+    func options(_ row: Row) -> [Choice] { _ = store.revision; return store.options(for: row.key) ?? row.choices }
     var profileInfo: (name: String, letter: String) { _ = store.revision; return store.profile ?? ("Default", "D") }
     var fontList: [(String, Bool)] { _ = store.revision; return store.fonts?.map { ($0.name, $0.mono) } ?? fontChoices }
     var themeData: ThemeData { _ = store.revision; return store.themes ?? .standard }
@@ -165,6 +168,8 @@ struct Words {
         _ = store.revision
         return store.sheet(for: id).flatMap(ApprovalSheetData.init(entry:))
     }
+    /// A plural message from the host (the count it was made for must be the one shown), else the English fallback.
+    func counted(_ name: String, _ count: Int, _ fallback: String) -> String { _ = store.revision; return store.counted(name, count) ?? fallback }
     func isChanged(_ key: String) -> Bool { _ = store.revision; return store.changedKeys.contains(key) }
 
     // Reading a setting by place, as the previews do.

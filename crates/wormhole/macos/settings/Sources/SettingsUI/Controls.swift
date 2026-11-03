@@ -11,9 +11,9 @@ struct PopupControl: View {
     var body: some View {
         Picker(row.label, selection: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })) {
             ForEach(Array(m.options(row).enumerated()), id: \.offset) { _, o in
-                if o == "-" { Divider() }
-                else if row.appIcons, let img = AppIcons.icon(o) { Label { Text(m.w(o)) } icon: { Image(nsImage: img) }.tag(o) }
-                else { Text(m.w(o)).tag(o) }
+                if o == .divider { Divider() }
+                else if row.appIcons, let img = AppIcons.icon(o.label) { Label { Text(m.w(o.label)) } icon: { Image(nsImage: img) }.tag(o.id) }
+                else { Text(m.w(o.label)).tag(o.id) }
             }
         }.labelsHidden().pickerStyle(.menu).fixedSize()
     }
@@ -57,7 +57,7 @@ struct FontControl: View {
         let size = Int(m.value(row.key + "#size")) ?? row.size
         HStack(spacing: Space.s2) {
             Picker(row.label, selection: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })) {
-                if row.same { Text(m.w("Same as terminal")).tag("Same as terminal"); Divider() }
+                if row.same { Text(m.w("Same as terminal")).tag("same_as_terminal"); Divider() }
                 Section(m.w("Monospaced")) { ForEach(m.fontList.filter { $0.1 }, id: \.0) { Text($0.0).tag($0.0) } }
                 Section(m.w("Proportional")) { ForEach(m.fontList.filter { !$0.1 }, id: \.0) { Text($0.0).tag($0.0) } }
             }.labelsHidden().pickerStyle(.menu).fixedSize().font(.system(size: 13, design: row.mono ? .monospaced : .default))
@@ -157,8 +157,9 @@ struct ChecksControl: View {
     @Environment(SettingsModel.self) var m
     var body: some View {
         HStack(spacing: Space.s4) {
-            ForEach(row.checks, id: \.self) { c in
-                Toggle(m.w(c), isOn: Binding(get: { row.listed ? row.checksOn.contains(c) : m.on(row.key + c) }, set: { on in if row.listed { m.perform("\(c) \(on ? "on" : "off")", row.key) } else { m.set(row.key + c, on ? "on" : "off") } })).toggleStyle(.checkbox)
+            ForEach(Array(row.checks.enumerated()), id: \.offset) { i, c in
+                let id = row.checkIDs[i], key = row.key + "#" + id
+                Toggle(m.w(c), isOn: Binding(get: { row.listed ? row.checksOn.contains(id) : m.on(key) }, set: { on in if row.listed { m.perform("\(id) \(on ? "on" : "off")", row.key) } else { m.set(key, on ? "on" : "off") } })).toggleStyle(.checkbox)
             }
         }
     }

@@ -12,7 +12,7 @@ struct FontPreview: View {
         let slot = ["Terminal": 0, "Code": 1, "Interface": 2][tab] ?? 0
         let real = m.preview?.fonts[["terminal", "code", "interface"][slot]]
         var name = m.hoverFont ?? real?.family ?? m.value("Fonts:\(slot):0")
-        if name == "Same as terminal" { name = m.value("Fonts:0:0") }
+        if name == "same_as_terminal" { name = m.value("Fonts:0:0") }
         let size = CGFloat(real?.size ?? Double(Int(m.value("Fonts:\(slot):0#size")) ?? [14, 13, 13][slot]))
         let drawn = min(size, 18)
         let lh = tab == "Terminal" ? (m.preview.map { String(format: "%.2f", $0.lineHeight) } ?? m.str("Fonts", 0, 1)) : "1.40"

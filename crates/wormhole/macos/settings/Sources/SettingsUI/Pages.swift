@@ -33,8 +33,8 @@ let standardPages: [Page] = [
   ]),
   Page(id: "Appearance", title: "Appearance", preview: "window", notice: nil, footer: "Add an icon theme by putting it in the icon themes folder.", footerButtons: ["Show in Finder"], groups: [
     SettingGroup(title: "Theme", rows: [
-      Row("Mode", "", .popup, options: ["Match system", "Dark", "Light"], value: "", info: ""),
-      Row("Choose", "", .popup, options: ["One theme for both", "Dark and light separately"], value: "", info: ""),
+      Row("Mode", "", .popup, options: ["settings_appearance_match_system|Match system", "settings_appearance_dark|Dark", "settings_appearance_light|Light"], value: "", info: ""),
+      Row("Choose", "", .popup, options: ["pairing_both|One theme for both", "pairing_separate|Dark and light separately"], value: "", info: ""),
       Row("", "", .themes, options: [], value: "", info: ""),
     ]),
     SettingGroup(title: "Accent", rows: [
@@ -42,7 +42,7 @@ let standardPages: [Page] = [
       Row("Branch colour", "", .swatches, options: [], value: "Theme", info: "The git branch on folders, in the title row and in the status bar. Any colour is kept readable.", swatches: "branch"),
     ]),
     SettingGroup(title: "Window", rows: [
-      Row("Opacity", "", .popup, options: ["100 %", "95 %", "90 %", "80 %", "70 %"], value: "", info: ""),
+      Row("Opacity", "", .popup, options: ["n100|100 %", "n95|95 %", "n90|90 %", "n80|80 %", "n70|70 %"], value: "", info: ""),
       Row("Blur behind the window", "Below 100 % opacity", .toggle, options: [], value: "on", info: "", warnWhenOff: "Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read."),
       Row("Liquid Glass", "", .toggle, options: [], value: "on", info: "Glass under the sidebar's and the panel's cards. Off: every surface painted.", chip: "Preview"),
       Row("Also translucent", "", .checks, options: [], value: "", info: "Use the opacity and blur above for these windows too.", checks: ["Settings", "Theme Studio"]),
@@ -67,7 +67,7 @@ let standardPages: [Page] = [
       Row("Ligatures", "Shows => and != as one glyph", .toggle, options: [], value: "on", info: ""),
     ]),
     SettingGroup(title: "Code", rows: [
-      Row("Font", "Diffs, file lists, Theme Studio", .font, options: [], value: "Same as terminal", info: "", size: 13, mono: true, same: true),
+      Row("Font", "Diffs, file lists, Theme Studio", .font, options: [], value: "same_as_terminal", info: "", size: 13, mono: true, same: true),
     ]),
     SettingGroup(title: "Interface", rows: [
       Row("Font", "Its size scales the interface", .font, options: [], value: "SF Pro", info: "", size: 13),
@@ -76,7 +76,7 @@ let standardPages: [Page] = [
   Page(id: "Sessions", title: "Terminals & sidebar", preview: "sidebar", notice: nil, footer: "", footerButtons: [], groups: [
     SettingGroup(title: "Layout", rows: [
       Row("Show terminals in", "", .popup, options: ["Sidebar", "Tabs"], value: "", info: ""),
-      Row("Density", "", .popup, options: ["Regular", "Compact", "Dense"], value: "", info: ""),
+      Row("Density", "", .popup, options: ["regular|Regular", "compact|Compact", "dense|Dense"], value: "", info: ""),
     ]),
     SettingGroup(title: "Groups", rows: [
       Row("Groups as cards", "", .toggle, options: [], value: "on", info: ""),
@@ -99,13 +99,13 @@ let standardPages: [Page] = [
   ]),
   Page(id: "Git", title: "Changes & diffs", preview: "diff", notice: nil, footer: "", footerButtons: [], groups: [
     SettingGroup(title: "Changes panel", rows: [
-      Row("File view", "", .popup, options: ["List", "Tree"], value: "", info: ""),
+      Row("File view", "", .popup, options: ["settings_git_list|List", "settings_git_tree|Tree"], value: "", info: ""),
       Row("Untracked files separately", "", .toggle, options: [], value: "on", info: ""),
     ]),
     SettingGroup(title: "Diff view", rows: [
-      Row("Layout", "", .popup, options: ["Split", "Unified"], value: "", info: ""),
+      Row("Layout", "", .popup, options: ["settings_git_split|Split", "settings_git_unified|Unified"], value: "", info: ""),
       Row("Wrap long lines", "", .toggle, options: [], value: "off", info: ""),
-      Row("Tab width", "", .popup, options: ["4", "2", "8"], value: "", info: ""),
+      Row("Tab width", "", .popup, options: ["n4|4", "n2|2", "n8|8"], value: "", info: ""),
       Row("File sizes", "", .popup, options: ["MB", "MiB"], value: "", info: "Decimal like Finder (12.4 MB), or binary like git (11.8 MiB)."),
     ]),
   ]),
@@ -113,7 +113,7 @@ let standardPages: [Page] = [
     SettingGroup(title: "Notify me when", rows: [
       Row("A terminal needs input", "", .toggle, options: [], value: "on", info: ""),
       Row("An agent finishes", "", .toggle, options: [], value: "on", info: ""),
-      Row("A long command finishes", "", .popup, options: ["After 10 s", "After 30 s", "After 1 min", "Off"], value: "", info: ""),
+      Row("A long command finishes", "", .popup, options: ["n10|After 10 s", "n30|After 30 s", "n60|After 1 min", "settings_notifications_off|Off"], value: "", info: ""),
       Row("A command fails", "zsh, bash and fish", .toggle, options: [], value: "on", info: ""),
       Row("The bell rings", "", .toggle, options: [], value: "off", info: ""),
     ]),
@@ -144,7 +144,7 @@ let standardPages: [Page] = [
   Page(id: "MenuBar", title: "Menu bar & hotkey", preview: "menubar", notice: nil, footer: "", footerButtons: [], groups: [
     SettingGroup(title: "Menu bar", rows: [
       Row("Show in the menu bar", "", .toggle, options: [], value: "on", info: ""),
-      Row("Icon shows", "", .popup, options: ["Status and count", "Status", "Icon only"], value: "", info: ""),
+      Row("Icon shows", "", .popup, options: ["settings_menu_bar_status_and_count|Status and count", "settings_menu_bar_status|Status", "settings_menu_bar_icon_only|Icon only"], value: "", info: ""),
       Row("Animate while working", "", .toggle, options: [], value: "on", info: ""),
     ]),
     SettingGroup(title: "Global hotkey", rows: [

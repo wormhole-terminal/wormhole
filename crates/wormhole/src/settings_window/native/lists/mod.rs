@@ -1,7 +1,7 @@
 //! The rows the native window cannot have in its catalog because they are things found on this Mac: the agents,
 //! the projects, the Probes, the terminals to import from, the profile. A list is a group's rows after its
 //! catalog ones (`"<page>:<group>"`), each an entry with an `id` (the row's key is the group's plus the id) and
-//! what the window draws. A button on one comes back as an action `{"k": row key, "v": the button's words}`,
+//! what the window draws. A button on one comes back as an action `{"k": row key, "v": the button's id}`,
 //! which the module of the list carries out through the code the GPUI window uses.
 
 mod agents;
@@ -78,12 +78,12 @@ pub(super) fn build(cx: &mut App) -> (Value, Value) {
 }
 
 /// Carry out a button of a listed row. Whether the row was one of the lists'.
-pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
-    agents::perform(key, name, cx)
-        || projects::perform(key, name, cx)
-        || probes::perform(key, name, cx)
-        || import::perform(key, name, cx)
-        || profile::perform(key, name, cx)
+pub(super) fn perform(key: &str, id: &str, cx: &mut App) -> bool {
+    agents::perform(key, id, cx)
+        || projects::perform(key, id, cx)
+        || probes::perform(key, id, cx)
+        || import::perform(key, id, cx)
+        || profile::perform(key, id, cx)
 }
 
 /// Read what the lists need from disk or the database, in the background where it is slow; the window is
@@ -96,10 +96,10 @@ pub(super) fn load(cx: &mut App) {
 }
 
 /// The Extensions page's footer buttons.
-pub(super) fn extensions_footer(name: &str, cx: &mut App) {
-    match name {
-        "Show in Finder" => probes::show_folder(cx),
-        "Scan Again" => probes::load(cx),
+pub(super) fn extensions_footer(id: &str, cx: &mut App) {
+    match id {
+        "show_in_finder" => probes::show_folder(cx),
+        "scan_again" => probes::load(cx),
         _ => {}
     }
 }

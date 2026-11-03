@@ -15,7 +15,33 @@ use wormhole_text::keys::{SETTINGS_APPEARANCE_PAIRING_BOTH, SETTINGS_APPEARANCE_
 use wormhole_text::text;
 
 use super::{accent, themes};
-use crate::settings_window::registry::{self, Control, Current};
+use crate::settings_window::registry::{self, Control, Current, Label, MenuOption};
+
+/// One option of a menu: the stable id the window stores and sends, and the words it shows.
+pub(super) type Choice = (String, String);
+
+/// The id of a registry option: its message's id for a message, `n<number>` for a counted one. Ids are
+/// snake_case and never change with the language or the wording.
+fn option_id(option: &MenuOption) -> String {
+    match &option.label {
+        Label::Message(key) => key.id().replace(['-', '.'], "_"),
+        Label::Counted(_, n) => format!("n{n}"),
+    }
+}
+
+/// The id of a value written by hand into `config.json` that is none of a menu's options.
+pub(super) const OTHER: &str = "other";
+
+fn density_id(density: Density) -> String {
+    density.label().to_lowercase()
+}
+
+/// The two pairing choices' ids.
+pub(super) const PAIRING_BOTH: &str = "pairing_both";
+pub(super) const PAIRING_SEPARATE: &str = "pairing_separate";
+
+/// The id of the font the interface uses when none is named, and of "same as the terminal's".
+pub(super) const SAME_AS_TERMINAL: &str = "same_as_terminal";
 
 /// What the codecs may need besides the settings: the themes.
 pub(super) struct Ctx<'a> {
@@ -30,7 +56,6 @@ impl Ctx<'_> {
     }
 }
 
-const SAME_AS_TERMINAL: &str = "Same as terminal"; // text: not shown (values of the native window's own catalog)
 const SYSTEM_NAME: &str = "SF Pro"; // text: not shown (values of the native window's own catalog)
 
 fn font_slot(id: &str) -> Option<FontSlot> {
@@ -85,13 +110,9 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
         "default-shell" => vec![("", super::system::shell(s).0)],
         "title-row" => accent::read_title(s),
         "icon-theme" => accent::read_icon_theme(s),
+        "density" => vec![("", density_id(s.density))],
         "theme-pairing" => {
-            let words = if ctx.separate(s) {
-                SETTINGS_APPEARANCE_PAIRING_SEPARATE
-            } else {
-                SETTINGS_APPEARANCE_PAIRING_BOTH
-            };
-            vec![("", text(words).to_string())]
+            vec![("", if ctx.separate(s) { PAIRING_SEPARATE } else { PAIRING_BOTH }.to_string())]
         }
         "theme" => vec![
             ("", themes::pair_name(ctx.themes, s)),
@@ -106,8 +127,8 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
             Some(Control::Menu(menu)) => vec![(
                 "",
                 match menu.current(s) {
-                    Current::At(at) => menu.options[at].label.words().to_string(),
-                    Current::Other(other) => other,
+                    Current::At(at) => option_id(&menu.options[at]),
+                    Current::Other(_) => OTHER.to_string(),
                 },
             )],
             Some(Control::Recorder(row)) => vec![("", super::recorder::glyphs((row.get)(s)))],
@@ -117,30 +138,31 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
 }
 
 /// The options a row offers, when it is a menu.
-pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<String>> {
+pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<Choice>> {
     if id == "icon-theme" {
-        return Some(accent::icon_theme_options(s));
+        return Some(accent::icon_theme_options(s).into_iter().map(|name| (name.clone(), name)).collect());
     }
     if id == "default-shell" {
         return Some(super::system::shell(s).1);
     }
     if id == "density" {
-        return Some(Density::ALL.iter().map(|d| d.label().to_string()).collect());
+        return Some(Density::ALL.iter().map(|d| (density_id(*d), d.label().to_string())).collect());
     }
     if id == "theme-pairing" {
         return Some(vec![
-            text(SETTINGS_APPEARANCE_PAIRING_BOTH).into(),
-            text(SETTINGS_APPEARANCE_PAIRING_SEPARATE).into(),
+            (PAIRING_BOTH.into(), text(SETTINGS_APPEARANCE_PAIRING_BOTH).into()),
+            (PAIRING_SEPARATE.into(), text(SETTINGS_APPEARANCE_PAIRING_SEPARATE).into()),
         ]);
     }
     let Some(Control::Menu(menu)) = registry::control(id).map(|setting| &setting.control) else {
         return None;
     };
-    let mut words: Vec<String> = menu.options.iter().map(|option| option.label.words().to_string()).collect();
+    let mut choices: Vec<Choice> =
+        menu.options.iter().map(|option| (option_id(option), option.label.words().to_string())).collect();
     if let Current::Other(other) = menu.current(s) {
-        words.push(other);
+        choices.push((OTHER.into(), other));
     }
-    Some(words)
+    Some(choices)
 }
 
 /// Write `value` into the row `id` (`suffix` names a sub-value). Whether it was understood.
@@ -159,7 +181,7 @@ pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: 
         "default-shell" => super::system::set_shell(s, value),
         "title-row" => accent::write_title(suffix, s, value),
         "icon-theme" => accent::write_icon_theme(s, value),
-        "density" => match Density::ALL.iter().find(|d| d.label() == value) {
+        "density" => match Density::ALL.iter().find(|d| density_id(**d) == value) {
             Some(density) => {
                 s.density = *density;
                 true
@@ -167,7 +189,7 @@ pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: 
             None => false,
         },
         "theme-pairing" => {
-            if value == text(SETTINGS_APPEARANCE_PAIRING_BOTH) {
+            if value == PAIRING_BOTH {
                 themes::pair_with_dark(ctx.themes, s);
             }
             true
@@ -199,7 +221,7 @@ pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: 
                 set(s, value == "on");
                 true
             }
-            Some(Control::Menu(menu)) => match menu.options.iter().position(|o| o.label.words() == value) {
+            Some(Control::Menu(menu)) => match menu.options.iter().position(|o| option_id(o) == value) {
                 Some(at) => {
                     (menu.set)(s, at);
                     true
@@ -231,5 +253,72 @@ fn write_font(slot: FontSlot, suffix: &str, s: &mut Settings, value: &str) -> bo
             true
         }
         _ => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ids(row: &str) -> Vec<String> {
+        options(row, &Settings::default()).unwrap_or_default().into_iter().map(|(id, _)| id).collect()
+    }
+
+    /// The ids the window's own code compares (previews, the colour scheme): `macos/settings/.../Pages.swift` names
+    /// them in its catalog as `"id|English"`.
+    #[test]
+    fn the_ids_the_window_depends_on_exist() {
+        for (row, wanted) in [
+            (
+                "theme-mode",
+                &[
+                    "settings_appearance_match_system",
+                    "settings_appearance_dark",
+                    "settings_appearance_light",
+                ][..],
+            ),
+            ("changes-view", &["settings_git_list", "settings_git_tree"]),
+            ("diff-layout", &["settings_git_split", "settings_git_unified"]),
+            (
+                "menu-bar-icon",
+                &[
+                    "settings_menu_bar_status_and_count",
+                    "settings_menu_bar_status",
+                    "settings_menu_bar_icon_only",
+                ],
+            ),
+            ("notify-command-done", &["settings_notifications_off"]),
+            ("density", &["regular", "compact", "dense"]),
+            ("theme-pairing", &[PAIRING_BOTH, PAIRING_SEPARATE]),
+            ("opacity", &["n100", "n95", "n90", "n80", "n70"]),
+            ("tab-width", &["n4", "n2", "n8"]),
+        ] {
+            let have = ids(row);
+            for id in wanted {
+                assert!(have.iter().any(|h| h == id), "{row}: no option {id} among {have:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn an_option_is_read_and_written_by_its_id_in_any_language() {
+        let mut s = Settings::default();
+        let ctx = Ctx { themes: &[], separate: None };
+        assert!(write("density", "", &mut s, "dense", &ctx));
+        assert_eq!(read("density", &s, &ctx)[0].1, "dense");
+        assert!(!write("density", "", &mut s, "Dense", &ctx), "the words are not the id");
+        assert!(write("theme-mode", "", &mut s, "settings_appearance_dark", &ctx));
+        assert_eq!(read("theme-mode", &s, &ctx)[0].1, "settings_appearance_dark");
+    }
+
+    #[test]
+    fn option_ids_are_snake_case_and_distinct_within_a_row() {
+        for (_, id) in super::super::rows::all() {
+            let have = ids(id);
+            let mut sorted = have.clone();
+            sorted.sort_unstable();
+            sorted.dedup();
+            assert_eq!(sorted.len(), have.len(), "{id}: an id twice in {have:?}");
+        }
     }
 }

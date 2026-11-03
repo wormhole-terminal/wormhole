@@ -34,7 +34,7 @@ struct PageView: View {
             if let n = page.notice, !m.store.quiet(page.id) {
                 Section {
                     LabeledContent {
-                        if !n.2.isEmpty { Btn(n.2) { m.perform(n.2, "\(page.id):") } }
+                        if !n.2.isEmpty { Btn(n.2) { m.perform(snakeID(n.2), "\(page.id):") } }
                     } label: {
                         Label { Text(m.w(n.1)).foregroundStyle(.secondary) } icon: { Image(systemName: n.0 == "warn" ? "exclamationmark.triangle.fill" : "info.circle.fill").foregroundStyle(n.0 == "warn" ? t.warning : t.primary) }
                     }
@@ -47,7 +47,7 @@ struct PageView: View {
                 } header: { if !grp.title.isEmpty { Text(m.w(grp.title)) } }.id(grp.title)
             }
             if !page.footer.isEmpty {
-                Section { HStack(spacing: Space.s2) { Text(m.w(page.footer)).role(.caption).foregroundStyle(.secondary); ForEach(page.footerButtons, id: \.self) { b in Btn(b) { m.perform(b, "\(page.id):") } } } }
+                Section { HStack(spacing: Space.s2) { Text(m.w(page.footer)).role(.caption).foregroundStyle(.secondary); ForEach(page.footerButtons, id: \.self) { b in Btn(b) { m.perform(snakeID(b), "\(page.id):") } } } }
             }
         }
     }
@@ -82,7 +82,7 @@ struct ChangedPage: View {
                     HStack(spacing: Space.s3) {
                         Tile(colour: Palette.tileSlate, symbol: "arrow.counterclockwise")
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(ch.isEmpty ? m.w("Nothing changed") : ch.count == 1 ? m.w("1 setting changed") : m.w("%@ settings changed", String(ch.count)))
+                            Text(ch.isEmpty ? m.w("Nothing changed") : m.counted("changed", ch.count, "\(ch.count) settings changed"))
                             Text(ch.isEmpty ? m.w("Every setting is at its default") : m.w("Everything else is at its default")).role(.body).foregroundStyle(.secondary)
                         }
                     }
@@ -91,7 +91,7 @@ struct ChangedPage: View {
             ForEach(m.catalog.pages.filter { p in ch.contains { $0.0.id == p.id } }) { p in
                 Section(m.w(p.title)) { ForEach(ch.filter { $0.0.id == p.id }.map(\.1), id: \.key) { RowView(row: $0, showReset: true) } }
             }
-        }.confirmationDialog(ch.count == 1 ? m.w("Reset 1 setting?") : m.w("Reset %@ settings?", String(ch.count)), isPresented: $confirming, titleVisibility: .visible) {
+        }.confirmationDialog(m.counted("reset", ch.count, "Reset \(ch.count) settings?"), isPresented: $confirming, titleVisibility: .visible) {
             Button(m.w("Reset"), role: .destructive) { m.store.resetAll() }
         } message: { Text(m.w("They go back to their defaults.")) }
     }

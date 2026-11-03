@@ -55,7 +55,7 @@ struct ListPreview: View {
     @Environment(SettingsModel.self) var m
     var body: some View {
         let th = m.theme(light: !t.dark)
-        let density = sessions ? m.str("Sessions", 0, 1) : "Regular"
+        let density = sessions ? m.str("Sessions", 0, 1) : "regular"
         let cards = sessions ? m.on("Sessions", 1, 0) : true
         let fade = sessions && m.on("Sessions", 1, 1)
         let folders = sessions ? m.on("Sessions", 1, 2) : true
@@ -75,7 +75,7 @@ struct ListPreview: View {
                 if folders { Text("~/Projects/api").role(.caption).foregroundStyle(t.muted) }
             }.frame(maxWidth: .infinity, alignment: .leading).padding(.leading, 6).padding(.trailing, 6).padding(.top, 2).padding(.bottom, 6)
             ForEach(Array(rows.enumerated()), id: \.offset) { i, r in
-                SessionRow(spec: r, height: h, dense: density == "Dense", selected: i == 1, dot: dot, changes: changes, notes: notes, tileFill: tiles[r.tile] ?? t.button)
+                SessionRow(spec: r, height: h, dense: density == "dense", selected: i == 1, dot: dot, changes: changes, notes: notes, tileFill: tiles[r.tile] ?? t.button)
             }
         }
         return HStack(spacing: 0) {

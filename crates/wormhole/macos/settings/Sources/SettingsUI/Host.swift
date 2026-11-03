@@ -4,7 +4,8 @@ import AppKit
 // The C interface the Wormhole app (Rust) drives the window through. Everything crosses as JSON text: the app
 // sends a snapshot of its settings (`wh_settings_update`) and gets back one event per change of the person's
 // (`handler`): {"t":"set","k":key,"v":value}, {"t":"reset","k":key}, {"t":"reset_all"},
-// {"t":"action","k":key,"v":button} and {"t":"closed"}. The window reads and writes no file.
+// {"t":"action","k":key,"v":button's id} and {"t":"closed"}. A menu's value is its option's id, a button's is its id:
+// neither is ever the words shown. The window reads and writes no file.
 
 typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
 
@@ -14,7 +15,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     private(set) var revision = 0
     private var values: [String: String] = [:]
     private var defaults: [String: String] = [:]
-    private var choices: [String: [String]] = [:]
+    private var choices: [String: [Choice]] = [:]
     private var changed: Set<String> = []
     private var known: Set<String> = []
     private var themeData: ThemeData?
@@ -28,12 +29,13 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     private var updateCard: [String: Any]?
     private var quietPages: Set<String> = []
     private var wordTable: [String: String] = [:]
+    private var countedWords: (count: Int, words: [String: String]) = (-1, [:])
     @ObservationIgnored var send: (String) -> Void = { _ in }
 
     func value(for key: String) -> String? { values[key] }
     func defaultValue(for key: String) -> String? { defaults[key] }
     var changedKeys: Set<String> { changed }
-    func options(for key: String) -> [String]? { choices[key] }
+    func options(for key: String) -> [Choice]? { choices[key] }
     var themes: ThemeData? { themeData }
     func word(_ id: String) -> String? { wordTable[id] }
     var preview: PreviewData? { previewData }
@@ -46,6 +48,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     var recordsInHost: Bool { true }
     var recording: String { recordingRow }
     func note(for key: String) -> String? { notes[key] }
+    func counted(_ name: String, _ count: Int) -> String? { countedWords.count == count ? countedWords.words[name] : nil }
     func record(_ action: String, for key: String, mods: String, key name: String) {
         emit(["t": "record", "a": action, "k": key, "m": mods, "n": name])
     }
@@ -72,10 +75,11 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
         known = Set(owned)
         values = (json["values"] as? [String: String] ?? [:]).merging(localOnly) { a, _ in a }
         defaults = json["defaults"] as? [String: String] ?? [:]
-        choices = json["options"] as? [String: [String]] ?? [:]
+        choices = (json["options"] as? [String: [[String]]] ?? [:]).mapValues { $0.filter { $0.count == 2 }.map { Choice(id: $0[0], label: $0[1]) } }
         changed = Set(json["changed"] as? [String] ?? []).union(localOnly.keys)
         if let t = json["themes"] as? [String: Any] { themeData = Self.themes(t) }
         wordTable = json["words"] as? [String: String] ?? [:]
+        if let c = json["counts"] as? [String: Any] { countedWords = (c["n"] as? Int ?? -1, c["words"] as? [String: String] ?? [:]) }
         previewData = (json["preview"] as? [String: Any]).flatMap(PreviewData.init(json:))
         if let f = json["fonts"] as? [[Any]] {
             fontList = f.compactMap { e in (e.first as? String).map { FontChoice(name: $0, mono: (e.last as? Bool) ?? false) } }

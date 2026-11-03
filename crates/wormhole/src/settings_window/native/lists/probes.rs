@@ -213,13 +213,13 @@ pub(super) fn show_folder(cx: &mut App) {
     crate::settings_window::open_folder(&DataRoot::current().probes_dir(), cx);
 }
 
-pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
+pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let mut parts = key.splitn(3, ':');
     let (Some("Extensions"), Some(_), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
     };
-    match name {
-        "Turn off" => turn_off(id.to_string(), cx),
+    match action {
+        "turn_off" => turn_off(id.to_string(), cx),
         _ => approve(id, cx),
     }
     true
