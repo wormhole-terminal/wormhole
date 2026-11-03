@@ -578,6 +578,46 @@ pub fn refers_to(src: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
+
+    /// Tokens no component of the app draws with any more (the Settings window and its notices and chips are the
+    /// system's now, not drawn from tokens). A theme can still set them, so they stay valid; the Studio shows
+    /// no "Used by" for them.
+    const UNDRAWN: &[&str] = &[
+        "settings.group",
+        "settings.search_mark",
+        "settings.nav.selected",
+        "settings.nav.tile.changed",
+        "settings.nav.tile.terminal",
+        "settings.nav.tile.appearance",
+        "settings.nav.tile.fonts",
+        "settings.nav.tile.sidebar",
+        "settings.nav.tile.git",
+        "settings.nav.tile.notifications",
+        "settings.nav.tile.agents",
+        "settings.nav.tile.menubar",
+        "settings.nav.tile.import",
+        "settings.nav.tile.updates",
+        "settings.nav.tile.advanced",
+        "settings.nav.tile.motion",
+        "settings.nav.tile.projects",
+        "settings.tile.project",
+        "settings.nav.tile.extensions",
+        "settings.nav.tile.flags",
+        "text.link",
+        "banner.info.solid",
+        "banner.info.solid.text",
+        "banner.warning.solid",
+        "banner.warning.solid.text",
+        "banner.danger.solid",
+        "banner.danger.solid.text",
+        "chip.good.fill",
+        "chip.warn.fill",
+        "chip.danger.fill",
+        "chip.quiet.fill",
+        "chip.solid.text",
+        "chip.tint",
+    ];
+
     use std::collections::BTreeSet;
 
     use super::{Area, TOKEN_USES, followers, refers_to, used_in, uses_of};
@@ -608,8 +648,12 @@ mod tests {
     /// "Used by" is never empty: every token the Studio lists draws something.
     #[test]
     fn every_token_has_a_use() {
-        let unused: Vec<&str> =
-            UI_TOKENS.iter().chain(METRIC_TOKENS).map(|t| t.name).filter(|n| uses_of(n).is_empty()).collect();
+        let unused: Vec<&str> = UI_TOKENS
+            .iter()
+            .chain(METRIC_TOKENS)
+            .map(|t| t.name)
+            .filter(|n| uses_of(n).is_empty() && !UNDRAWN.contains(n))
+            .collect();
         assert!(unused.is_empty(), "no component uses {unused:?}");
         assert!(!uses_of("terminal.ansi.4").is_empty());
         assert!(!uses_of("syntax.keyword").is_empty());
@@ -617,11 +661,9 @@ mod tests {
     }
 
     #[test]
-    fn the_selected_row_tint_is_the_sidebars_and_the_settings_nav_has_its_own_selection() {
+    fn the_selected_row_tint_is_the_sidebars() {
         let ids: Vec<&str> = uses_of("sidebar.row.selected").iter().map(|u| u.id).collect();
-        assert!(ids.contains(&"sidebar.row") && !ids.contains(&"settings.nav"), "{ids:?}");
-        let nav: Vec<&str> = uses_of("settings.nav.selected").iter().map(|u| u.id).collect();
-        assert_eq!(nav, ["settings.nav"]);
+        assert!(ids.contains(&"sidebar.row"), "{ids:?}");
         let chip: Vec<&str> = uses_of("metrics.radius_chip").iter().map(|u| u.id).collect();
         assert!(chip.contains(&"keycap") && chip.contains(&"badge"), "{chip:?}");
     }
@@ -640,9 +682,7 @@ mod tests {
     #[test]
     fn a_token_is_in_the_areas_whose_components_draw_with_it() {
         assert!(used_in("sidebar.row.selected", Area::Sidebar));
-        assert!(!used_in("sidebar.row.selected", Area::Settings), "the settings nav has its own");
-        assert!(used_in("settings.nav.selected", Area::Settings), "the settings nav");
-        assert!(!used_in("settings.nav.selected", Area::Sidebar));
+        assert!(!used_in("sidebar.row.selected", Area::Settings));
         assert!(!used_in("sidebar.row.selected", Area::Ambient));
         assert!(used_in("metrics.radius_chip", Area::Sidebar), "the branch chip");
         assert!(!used_in("primary", Area::Ambient));
@@ -654,7 +694,7 @@ mod tests {
             .iter()
             .chain(METRIC_TOKENS)
             .map(|t| t.name)
-            .filter(|name| !parts.iter().any(|area| used_in(name, *area)))
+            .filter(|name| !UNDRAWN.contains(name) && !parts.iter().any(|area| used_in(name, *area)))
             .collect();
         assert!(nowhere.is_empty(), "{nowhere:?}");
     }
