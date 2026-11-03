@@ -35,7 +35,7 @@ impl MenuFaceProps {
             .items_center()
             .gap(px(8.0))
             .flex_shrink_0()
-            .h(px(24.0))
+            .h(px(26.0))
             .py(px(0.0)).pl(px(10.0)).pr(px(7.0))
             .rule(borders, Sides::ALL, 1.0, t_border, false)
             .rounded(px(6.0))

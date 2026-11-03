@@ -44,7 +44,7 @@ impl BannerMockProps {
             .flex_col()
             .items_end()
             .gap(px(8.0))
-            .min_h(px(64.0))
+            .min_h(px(88.0))
             .p(px(12.0))
             .bg(t_surface_panel)
             .children(banners.into_iter().flat_map(|b| {
