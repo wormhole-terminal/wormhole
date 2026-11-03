@@ -83,9 +83,11 @@ fn part(subject: Subject, comparison: &wormhole_core::import::Comparison, label:
                     json!([words, url])
                 })
                 .collect();
-            let as_of = (drawback.date != CHECKED || drawback.recheck)
-                .then(|| settings_import_as_of(drawback.date))
-                .unwrap_or_default();
+            let as_of = if drawback.date != CHECKED || drawback.recheck {
+                settings_import_as_of(drawback.date)
+            } else {
+                String::new()
+            };
             json!({ "text": gap_text(subject, drawback.id).unwrap_or_default(), "asOf": as_of, "sources": sources })
         })
         .collect();
