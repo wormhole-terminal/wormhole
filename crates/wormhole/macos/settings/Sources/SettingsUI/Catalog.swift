@@ -213,13 +213,13 @@ let titlePartText = ["Folder": "wormhole", "Branch": "main", "Branch status": "â
 struct ApprovalSheetData {
     let title, identity: String
     let since: [String]
-    let perms: [(icon: String, title: String, detail: String)]
+    let perms: [(icon: String, title: String, detail: String, id: String, on: Bool)]
 
     init(entry e: [String: Any]) {
         title = e["title"] as? String ?? ""
         identity = e["identity"] as? String ?? ""
         since = e["since"] as? [String] ?? []
-        perms = (e["perms"] as? [[String]] ?? []).filter { $0.count == 3 }.map { ($0[0], $0[1], $0[2]) }
+        perms = (e["perms"] as? [[Any]] ?? []).filter { $0.count == 5 }.map { ($0[0] as? String ?? "", $0[1] as? String ?? "", $0[2] as? String ?? "", $0[3] as? String ?? "", $0[4] as? Bool ?? false) }
     }
 }
 

@@ -164,24 +164,27 @@ fn sheet(request: &Request) -> Value {
         since.extend(changes.removed.iter().map(|gone| settings_extensions_no_longer_asks(&reveal(gone))));
     }
     let summary = request.summary();
+    let grants = request.initial_grants();
+    // [icon, words, detail, the permission's place (what the tick sends back), whether it starts ticked]
     let mut perms: Vec<Value> = summary
         .permissions
         .iter()
-        .map(|p| {
+        .enumerate()
+        .map(|(at, p)| {
             let icon = match p.key {
                 "process" => "run",
                 "notify" => "notify",
                 "open" => "link",
                 _ => "other",
             };
-            json!([icon, describe_permission(p), ""])
+            json!([icon, describe_permission(p), "", at.to_string(), grants.is_granted(p)])
         })
         .collect();
     perms.extend(
         summary
             .combinations
             .iter()
-            .map(|c| json!(["run", settings_extensions_combination(&reveal(&c.description)), ""])),
+            .map(|c| json!(["run", settings_extensions_combination(&reveal(&c.description)), "", "", false])),
     );
     json!({
         "title": title,
@@ -220,7 +223,12 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     };
     match action {
         "turn_off" => turn_off(id.to_string(), cx),
-        _ => approve(id, cx),
+        // "approve=<the places of the permissions left ticked>"
+        _ => {
+            if let Some(ticked) = action.strip_prefix("approve=") {
+                approve(id, ticked, cx);
+            }
+        }
     }
     true
 }
@@ -238,13 +246,17 @@ fn turn_off(id: String, cx: &mut App) {
 }
 
 /// Approve exactly what the sheet showed: the grants it opened with, confirmed by what they need.
-fn approve(id: &str, cx: &mut App) {
+fn approve(id: &str, ticked: &str, cx: &mut App) {
     let Some(request) =
         super::cache(cx).and_then(|cache| cache.probes.as_ref()).and_then(|p| p.requests.get(id).cloned())
     else {
         return;
     };
-    let grants = request.initial_grants();
+    let places: Vec<usize> = ticked.split(',').filter_map(|at| at.parse().ok()).collect();
+    let mut grants = request.initial_grants();
+    for (at, permission) in request.summary().permissions.iter().enumerate() {
+        grants.set(permission, places.contains(&at));
+    }
     match request.confirmation(&grants) {
         Confirmation::Click => finish(request, grants, approval::Proof::Click, Ok(()), cx),
         Confirmation::TouchId => {

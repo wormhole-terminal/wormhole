@@ -143,9 +143,9 @@ struct ControlView: View {
         case .compare: Button { sheeting = true } label: { HStack(spacing: 4) { Text(row.value).foregroundStyle(.secondary); Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary) } }.buttonStyle(.borderless).sheet(isPresented: $sheeting) { CompareSheet(row: row) }
         case .project: Btn(cur == "trusted" ? "Revoke" : "Trust with Touch ID…") { m.perform(cur == "trusted" ? "revoke" : "trust", row.key) }
         case .probe:
-            if cur == "off" && !row.sheet.isEmpty { Btn("Turn on…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.perform("approve", row.key) } } }
+            if cur == "off" && !row.sheet.isEmpty { Btn("Turn on…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { ticked in approving = false; m.perform("approve=" + ticked, row.key) } } }
             else if cur == "on" || cur == "off" { Toggle(row.label, isOn: Binding(get: { cur == "on" }, set: { m.perform($0 ? "turn_on" : "turn_off", row.key) })).labelsHidden().toggleStyle(.switch) }
-            else if cur == "changed" && !row.sheet.isEmpty { Btn("Approve Again…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.perform("approve", row.key) } } }
+            else if cur == "changed" && !row.sheet.isEmpty { Btn("Approve Again…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { ticked in approving = false; m.perform("approve=" + ticked, row.key) } } }
             else { Toggle(row.label, isOn: .constant(false)).labelsHidden().toggleStyle(.switch).disabled(true) }
         default: EmptyView()
         }
@@ -222,12 +222,14 @@ struct UpdateRow: View {
 
 /// An extension's approval sheet: what it asks for, before it is turned on.
 struct ApprovalSheet: View {
-    let row: Row; let approve: () -> Void
+    let row: Row; let approve: (String) -> Void
+    @State private var ticked: Set<String>? = nil
     @Environment(\.dismiss) var dismiss
     static let permSymbol = ["run": "terminal", "notify": "bell", "link": "link"]
     @Environment(SettingsModel.self) var m
     var data: ApprovalSheetData? { m.sheetData(row.sheet) }
     var body: some View {
+        let on = ticked ?? Set((data?.perms ?? []).filter { $0.on }.map(\.id))
         VStack(alignment: .leading, spacing: Space.s3) {
             Text(data?.title ?? m.w("Approve %@", row.label)).font(.headline)
             Text(data?.identity ?? "").foregroundStyle(.secondary)
@@ -241,11 +243,16 @@ struct ApprovalSheet: View {
                                 Text(p.title)
                                 if !p.detail.isEmpty { Text(p.detail).role(.body).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
                             }
+                            // What the Probe asks for the person may leave off: a combination is a warning, not a grant.
+                            if !p.id.isEmpty {
+                                Spacer()
+                                Toggle(p.title, isOn: Binding(get: { on.contains(p.id) }, set: { v in var next = on; if v { next.insert(p.id) } else { next.remove(p.id) }; ticked = next })).labelsHidden().toggleStyle(.checkbox)
+                            }
                         }
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(Space.s1)
             }
-            HStack { Spacer(); Button(m.w("Cancel")) { dismiss() }.keyboardShortcut(.cancelAction); Button(m.w("Approve"), action: approve).keyboardShortcut(.defaultAction) }
+            HStack { Spacer(); Button(m.w("Cancel")) { dismiss() }.keyboardShortcut(.cancelAction); Button(m.w("Approve")) { approve(on.sorted { (Int($0) ?? 0) < (Int($1) ?? 0) }.joined(separator: ",")) }.keyboardShortcut(.defaultAction) }
         }.padding(Space.s4).frame(width: 380)
     }
 }
