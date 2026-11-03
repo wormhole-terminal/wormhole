@@ -6,7 +6,6 @@
 //! setting is and how it is changed; the few the registry draws by hand are here.
 
 use wormhole_core::config::Settings;
-use wormhole_core::config::features::{self, FeatureFlag, FlagMode};
 use wormhole_core::theme::catalog::ThemeEntry;
 use wormhole_core::theme::fonts::{FontSlot, SYSTEM_FONT};
 use wormhole_core::theme::tokens::Appearance;
@@ -82,24 +81,12 @@ fn family_words(slot: FontSlot, s: &Settings) -> String {
     }
 }
 
-/// `flag-<n>`: the n-th feature flag, in `FeatureFlag::ALL`'s order (the Feature flags page's).
-fn flag(id: &str) -> Option<FeatureFlag> {
-    FeatureFlag::ALL.get(id.strip_prefix("flag-")?.parse::<usize>().ok()?).copied()
-}
-
-fn flag_mode(s: &Settings) -> FlagMode {
-    FlagMode::of(features::dev_build(), s.update_channel, features::unlocked(&s.feature_flags))
-}
-
 fn on(value: bool) -> String {
     if value { "on" } else { "off" }.into()
 }
 
 /// The values of the row `id`: (suffix, value) pairs, the row's own first.
 pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, String)> {
-    if let Some(flag) = flag(id) {
-        return vec![("", on(features::enabled_in(flag, &s.feature_flags, flag_mode(s))))];
-    }
     if let Some(slot) = font_slot(id) {
         return vec![("", family_words(slot, s)), ("#size", format!("{}", s.slot_size(slot).round()))];
     }
@@ -174,10 +161,6 @@ const SETTINGS_WINDOW: &str = "Settings"; // text: not shown (a part of the nati
 const THEME_STUDIO: &str = "Theme Studio"; // text: not shown (a part of the native window's own row)
 
 pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: &Ctx) -> bool {
-    if let Some(flag) = flag(id) {
-        s.feature_flags.insert(flag.key().to_string(), value == "on");
-        return true;
-    }
     if let Some(slot) = font_slot(id) {
         return write_font(slot, suffix, s, value);
     }

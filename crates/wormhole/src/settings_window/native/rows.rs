@@ -58,10 +58,7 @@ mod tests {
         keys.dedup();
         assert_eq!(keys.len(), rows().len(), "a row key twice");
         for (key, id) in rows() {
-            assert!(
-                id.starts_with("flag-") || wormhole_core::config::settings_index::entry(id).is_some(),
-                "{key}: no setting {id}"
-            );
+            assert!(wormhole_core::config::settings_index::entry(id).is_some(), "{key}: no setting {id}");
         }
     }
 

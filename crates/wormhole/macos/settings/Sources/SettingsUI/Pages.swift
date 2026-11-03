@@ -210,18 +210,6 @@ let standardPages: [Page] = [
   ], badge: true),
   Page(id: "FeatureFlags", title: "Feature flags", preview: "", notice: ("info", "Switches for features that aren’t finished. Only development builds show this page; a release uses each feature’s default.", ""), footer: "", footerButtons: [], groups: [
     SettingGroup(title: "", rows: [
-      Row("Project folders", "", .toggle, options: [], value: "off", info: ""),
-      Row("Terminal welcome", "", .toggle, options: [], value: "off", info: ""),
-      Row("Notes and tasks", "", .toggle, options: [], value: "on", info: ""),
-      Row("Persistent terminals", "", .toggle, options: [], value: "off", info: ""),
-      Row("Automation", "", .toggle, options: [], value: "on", info: ""),
-      Row("Motion", "", .toggle, options: [], value: "off", info: ""),
-      Row("Tear off a terminal", "", .toggle, options: [], value: "on", info: ""),
-      Row("Live resize", "", .toggle, options: [], value: "on", info: ""),
-      Row("Notice chip", "", .toggle, options: [], value: "on", info: ""),
-      Row("Probes", "", .toggle, options: [], value: "off", info: ""),
-      Row("Files", "", .toggle, options: [], value: "on", info: ""),
-      Row("Folder picker", "", .toggle, options: [], value: "off", info: ""),
     ]),
   ], badge: true),
 ]

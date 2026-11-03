@@ -5,6 +5,7 @@
 //! which the module of the list carries out through the code the GPUI window uses.
 
 mod agents;
+mod flags;
 mod import;
 mod import_sheets;
 mod import_words;
@@ -81,6 +82,7 @@ pub(super) fn build(cx: &mut App) -> (Value, Value) {
     import::lists(&mut lists, &mut sheets, cx);
     profile::lists(&mut lists, cx);
     probes::lists(&mut lists, &mut sheets, cx);
+    flags::lists(&mut lists, cx);
     info::sheets(&mut sheets, cx);
     sheets.insert(new_profile::SHEET.into(), new_profile::sheet(super::new_profile_state(cx), cx));
     (json!(lists), json!(sheets))
@@ -94,6 +96,7 @@ pub(super) fn perform(key: &str, id: &str, cx: &mut App) -> bool {
         || probes::perform(key, id, cx)
         || import::perform(key, id, cx)
         || profile::perform(key, id, cx)
+        || flags::perform(key, id, cx)
 }
 
 /// Read what the lists need from disk or the database, in the background where it is slow; the window is
