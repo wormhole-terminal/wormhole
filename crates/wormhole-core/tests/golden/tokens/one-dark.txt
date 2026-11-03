@@ -13,18 +13,12 @@ band.hover #abb2bf14
 band.solid #22262b
 banner.danger.background #e06c751a
 banner.danger.border #e06c7559
-banner.danger.solid #d9342b
-banner.danger.solid.text #ffffff
 banner.info.background #56b6c21a
 banner.info.border #56b6c259
-banner.info.solid #0a6fdb
-banner.info.solid.text #ffffff
 banner.success.background #98c3791a
 banner.success.border #98c37959
 banner.warning.background #e5c07b1a
 banner.warning.border #e5c07b59
-banner.warning.solid #ff9f0a
-banner.warning.solid.text #1f1400
 border #abb2bf1f
 border.focus #61afef
 border.strong #abb2bf3d
@@ -37,13 +31,8 @@ checkbox.background #1a1d22
 checkbox.border #6a6f79
 checkbox.checked #61afef
 chip.border #abb2bf3d
-chip.danger.fill #c42b20
-chip.good.fill #1f7a35
-chip.quiet.fill #545b68
 chip.selected #61afef
-chip.solid.text #ffffff
 chip.tint #61afef29
-chip.warn.fill #a35200
 diff.added #98c379
 diff.added.background #323b36
 diff.filler #abb2bf1f
@@ -72,26 +61,6 @@ resize.handle.active #61afef
 resize.handle.hover #61afef80
 scrollbar.thumb #abb2bf40
 selection.ui #61afef4d
-settings.group #abb2bf14
-settings.nav.selected #61afef
-settings.nav.tile.advanced #8e8e93
-settings.nav.tile.agents #bf5af2
-settings.nav.tile.appearance #0a84ff
-settings.nav.tile.changed #3b4252
-settings.nav.tile.extensions #a2845e
-settings.nav.tile.flags #ff6b35
-settings.nav.tile.fonts #636366
-settings.nav.tile.git #ff9f0a
-settings.nav.tile.import #30b0c7
-settings.nav.tile.menubar #64748b
-settings.nav.tile.motion #ff375f
-settings.nav.tile.notifications #ff453a
-settings.nav.tile.projects #32ade6
-settings.nav.tile.sidebar #5e5ce6
-settings.nav.tile.terminal #2c2c2e
-settings.nav.tile.updates #30d158
-settings.search_mark #61afef59
-settings.tile.project #2c5d8a
 shadow #00000080
 sidebar.background #1b1e23
 sidebar.row.hover #abb2bf0d
@@ -223,7 +192,6 @@ increase_contrast list.selected #384e62
 increase_contrast list.selected.muted #b5bcc7
 increase_contrast list.selected.text #79c2ff
 increase_contrast scrollbar.thumb #c2c9d640
-increase_contrast settings.group #c2c9d614
 increase_contrast sidebar.row.hover #c2c9d61a
 increase_contrast sidebar.row.selected #2c4154
 increase_contrast sidebar.row.selected.muted #a4aab5

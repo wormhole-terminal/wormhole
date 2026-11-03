@@ -54,36 +54,6 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "band" => "text.primary / 5%",
         "band.hover" => "text.primary / 8%",
         "band.solid" => "over(band, sidebar.background)",
-        // A Settings group's card: the band's step above a hovered row (5%), so a row under the pointer
-        // still shows on it. The board's `band-hover` fill, in Dark and Light alike.
-        "settings.group" => "text.primary / 8%",
-        // The words a search found: the primary's tint, strong enough to read on the card in both modes
-        // (`state.highlight`, a drop target's wash, is too faint for a word).
-        "settings.search_mark" => "primary / 35%",
-        // The primary itself, never a tint of it: the settings nav's current page, with `text.on_primary`
-        // on it. Its own token, so the main sidebar's selected row stays as it is.
-        "settings.nav.selected" => "primary",
-        // The nav's tiles, one colour per page under a white icon (`tile.mark.brand`), as macOS System
-        // Settings draws its sidebar. They are the design's own colours, like the agents' brands, so a
-        // theme's palette doesn't move them; a light window takes darker ones, each 3:1 or better against
-        // the white icon.
-        "settings.nav.tile.changed" => p("#3b4252", "#4a5266"),
-        "settings.nav.tile.terminal" => p("#2c2c2e", "#3a3a3c"),
-        "settings.nav.tile.appearance" => p("#0a84ff", "#0a6fd6"),
-        "settings.nav.tile.fonts" => p("#636366", "#636366"),
-        "settings.nav.tile.sidebar" => p("#5e5ce6", "#5e5ce6"),
-        "settings.nav.tile.git" => p("#ff9f0a", "#b86500"),
-        "settings.nav.tile.notifications" => p("#ff453a", "#e0352b"),
-        "settings.nav.tile.agents" => p("#bf5af2", "#a63fd9"),
-        "settings.nav.tile.menubar" => p("#64748b", "#64748b"),
-        "settings.nav.tile.import" => p("#30b0c7", "#10829a"),
-        "settings.nav.tile.updates" => p("#30d158", "#1f8a3b"),
-        "settings.nav.tile.advanced" => p("#8e8e93", "#7a7a80"),
-        "settings.nav.tile.motion" => p("#ff375f", "#e0264d"),
-        "settings.tile.project" => p("#2c5d8a", "#2c5d8a"),
-        "settings.nav.tile.projects" => p("#32ade6", "#1a78b0"),
-        "settings.nav.tile.extensions" => p("#a2845e", "#8f7048"),
-        "settings.nav.tile.flags" => p("#ff6b35", "#d9501a"),
         // UI text gets 7:1 (AAA) even when the terminal foreground is softer:
         // UI labels are smaller and thinner than terminal text.
         "text.primary" => {
@@ -155,21 +125,6 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "banner.danger.border" => "status.danger / 35%",
         "banner.success.background" => "status.success / 10%",
         "banner.success.border" => "status.success / 35%",
-        // The Settings window's notices are solid: the design's own colours, like the nav's tiles, so a
-        // theme's palette doesn't move them. The words on each are the ink that reads on it (4.5:1).
-        "banner.info.solid" => p("#0a6fdb", "#0a64c8"),
-        "banner.info.solid.text" => "readable(#fff, banner.info.solid, 4.5)",
-        "banner.warning.solid" => p("#ff9f0a", "#eb9a00"),
-        "banner.warning.solid.text" => "readable(#1f1400, banner.warning.solid, 4.5)",
-        "banner.danger.solid" => p("#d9342b", "#cf2f26"),
-        "banner.danger.solid.text" => "readable(#fff, banner.danger.solid, 4.5)",
-        // The chips of a Settings list (`style::tile_row`) are solid, in the design's own colours like the
-        // notices, so a theme's palette doesn't move them. White words on each reach 4.5:1.
-        "chip.good.fill" => p("#1f7a35", "#1b7330"),
-        "chip.warn.fill" => p("#a35200", "#9a4d00"),
-        "chip.danger.fill" => p("#c42b20", "#bd271d"),
-        "chip.quiet.fill" => p("#545b68", "#5b6270"),
-        "chip.solid.text" => "#ffffff",
         // The commands a project wants to run, told apart from what runs them: the
         // info color read as text, on the warning callout's tint and in the opaque window.
         "trust.command" => {

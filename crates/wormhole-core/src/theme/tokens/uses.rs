@@ -579,45 +579,6 @@ pub fn refers_to(src: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
 
-    /// Tokens no component of the app draws with any more (the Settings window and its notices and chips are the
-    /// system's now, not drawn from tokens). A theme can still set them, so they stay valid; the Studio shows
-    /// no "Used by" for them.
-    const UNDRAWN: &[&str] = &[
-        "settings.group",
-        "settings.search_mark",
-        "settings.nav.selected",
-        "settings.nav.tile.changed",
-        "settings.nav.tile.terminal",
-        "settings.nav.tile.appearance",
-        "settings.nav.tile.fonts",
-        "settings.nav.tile.sidebar",
-        "settings.nav.tile.git",
-        "settings.nav.tile.notifications",
-        "settings.nav.tile.agents",
-        "settings.nav.tile.menubar",
-        "settings.nav.tile.import",
-        "settings.nav.tile.updates",
-        "settings.nav.tile.advanced",
-        "settings.nav.tile.motion",
-        "settings.nav.tile.projects",
-        "settings.tile.project",
-        "settings.nav.tile.extensions",
-        "settings.nav.tile.flags",
-        "text.link",
-        "banner.info.solid",
-        "banner.info.solid.text",
-        "banner.warning.solid",
-        "banner.warning.solid.text",
-        "banner.danger.solid",
-        "banner.danger.solid.text",
-        "chip.good.fill",
-        "chip.warn.fill",
-        "chip.danger.fill",
-        "chip.quiet.fill",
-        "chip.solid.text",
-        "chip.tint",
-    ];
-
     use std::collections::BTreeSet;
 
     use super::{Area, TOKEN_USES, followers, refers_to, used_in, uses_of};
@@ -648,12 +609,8 @@ mod tests {
     /// "Used by" is never empty: every token the Studio lists draws something.
     #[test]
     fn every_token_has_a_use() {
-        let unused: Vec<&str> = UI_TOKENS
-            .iter()
-            .chain(METRIC_TOKENS)
-            .map(|t| t.name)
-            .filter(|n| uses_of(n).is_empty() && !UNDRAWN.contains(n))
-            .collect();
+        let unused: Vec<&str> =
+            UI_TOKENS.iter().chain(METRIC_TOKENS).map(|t| t.name).filter(|n| uses_of(n).is_empty()).collect();
         assert!(unused.is_empty(), "no component uses {unused:?}");
         assert!(!uses_of("terminal.ansi.4").is_empty());
         assert!(!uses_of("syntax.keyword").is_empty());
@@ -694,7 +651,7 @@ mod tests {
             .iter()
             .chain(METRIC_TOKENS)
             .map(|t| t.name)
-            .filter(|name| !UNDRAWN.contains(name) && !parts.iter().any(|area| used_in(name, *area)))
+            .filter(|name| !parts.iter().any(|area| used_in(name, *area)))
             .collect();
         assert!(nowhere.is_empty(), "{nowhere:?}");
     }
