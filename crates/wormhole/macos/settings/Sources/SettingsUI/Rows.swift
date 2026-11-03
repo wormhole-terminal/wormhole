@@ -139,6 +139,17 @@ struct ControlView: View {
             default: Btn("Repair Hooks", primary: true) { m.perform("repair_hooks", row.key) }
             }
         case .skill: HStack { ForEach(Array(row.actions.enumerated()), id: \.offset) { i, a in Btn(a, primary: row.primary == i) { if a == "Reset All…" { confirming = true } else { m.perform(row.actionIDs[i], row.key) } } } }
+        case .dots:
+            HStack(spacing: Space.s2) {
+                ForEach(row.dots, id: \.self) { d in
+                    Button { m.perform("=" + d[0], row.key) } label: {
+                        Circle().fill(Color(css: d[2])).frame(width: 18, height: 18)
+                            .overlay { if row.value == d[0] { Circle().strokeBorder(Color(css: d[2]), lineWidth: 2).padding(-4) } }.padding(4)
+                    }.buttonStyle(.plain).help(d[1])
+                }
+            }
+        case .folder:
+            Button { m.perform(row.actionID, row.key) } label: { Image(systemName: "xmark") }.buttonStyle(.borderless).help(row.action)
         case .review: Btn(row.value) { sheeting = true }.sheet(isPresented: $sheeting) { ImportReviewSheet(row: row) }
         case .compare: Button { sheeting = true } label: { HStack(spacing: 4) { Text(row.value).foregroundStyle(.secondary); Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary) } }.buttonStyle(.borderless).sheet(isPresented: $sheeting) { CompareSheet(row: row) }
         case .project: Btn(cur == "trusted" ? "Revoke" : "Trust with Touch ID…") { m.perform(cur == "trusted" ? "revoke" : "trust", row.key) }

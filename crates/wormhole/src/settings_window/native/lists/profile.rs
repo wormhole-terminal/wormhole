@@ -16,8 +16,10 @@ use wormhole_text::{text, whole};
 
 use super::Entry;
 use crate::app_state::{AppState, app, app_mut};
+use crate::settings::SettingsStore;
 use crate::settings_window::registry::row_label;
 use crate::settings_window::sections::{LOGIN_AGENTS, parse_env};
+use wormhole_core::view::sidebar::GroupColor;
 
 /// One edit of the profile, chosen by the field that was left.
 type Change = Box<dyn FnOnce(&mut Profile)>;
@@ -50,6 +52,22 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
             profile.agent_logins.iter().find(|l| l.agent == agent).map(|l| l.dir.clone()).unwrap_or_default()
         };
         fields.push(field("name", row_label("profile-name"), &profile.name).into_value());
+        // The avatar's letter and the profile's colour, beside the name they belong to.
+        fields.push(
+            field("avatar", &super::super::words::word("Avatar letter"), &profile.avatar.to_string()) // text: a native word, translated by its id
+                .into_value(),
+        );
+        let tokens = &cx.global::<SettingsStore>().tokens;
+        let dots: Vec<Value> = GroupColor::ALL
+            .iter()
+            .map(|color| serde_json::json!([color.key(), color.label(), color.color(tokens).to_hex()]))
+            .collect();
+        fields.push(
+            Entry::new("color", "dots", &super::super::words::word("Colour")) // text: a native word, translated by its id
+                .with("dots", dots)
+                .with("value", profile.color.key())
+                .into_value(),
+        );
         fields.push(
             field("start", row_label("profile-start"), &profile.start_dir)
                 .with("hint", text(SETTINGS_PROFILE_THE_HOME_FOLDER))
@@ -74,6 +92,21 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
                     .into_value(),
             );
         }
+        // The folders that open in this profile: each can be taken out, and one added.
+        for (at, folder) in profile.folders.iter().enumerate() {
+            fields.push(
+                Entry::new(&format!("folder-{at}"), "folder", folder)
+                    .with("action", text(SETTINGS_PROFILE_STOP_OPENING_FOLDER))
+                    .with("actionId", "remove")
+                    .into_value(),
+            );
+        }
+        fields.push(
+            Entry::new("add-folder", "button", text(SETTINGS_PROFILE_ADD_A_FOLDER))
+                .with("value", text(SETTINGS_PROFILE_ADD_A_FOLDER))
+                .with("actionId", "add_folder")
+                .into_value(),
+        );
         let logins = profile.agent_logins.len();
         fields.push(
             Entry::new("logins-count", "value", row_label("profile-logins"))
@@ -125,6 +158,24 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
         }
         return true;
     }
+    if id == "add-folder" {
+        add_folder(profile_id, cx);
+        return true;
+    }
+    if let Some(at) = id.strip_prefix("folder-").and_then(|at| at.parse::<usize>().ok()) {
+        if action == "remove" {
+            save(
+                &profile_id,
+                Box::new(move |p| {
+                    if at < p.folders.len() {
+                        drop(p.folders.remove(at))
+                    }
+                }),
+                cx,
+            );
+        }
+        return true;
+    }
     let Some(value) = action.strip_prefix('=') else { return true };
     let value = value.trim().to_string();
     let change: Result<Change, String> = match id {
@@ -132,6 +183,17 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
         "name" => Ok(Box::new(move |p| {
             p.name = value.clone();
         })),
+        "avatar" => Ok(Box::new(move |p| {
+            p.avatar = value
+                .chars()
+                .next()
+                .map(|c| c.to_ascii_uppercase())
+                .unwrap_or_else(|| wormhole_core::config::profile::first_letter(&p.name));
+        })),
+        "color" => match GroupColor::ALL.into_iter().find(|c| c.key() == value) {
+            Some(color) => Ok(Box::new(move |p| p.color = color)),
+            None => Err(format!("no profile colour {value}")),
+        },
         "start" => Ok(Box::new(move |p| p.start_dir = value.clone())),
         "env" => parse_env(&value).map(|env: BTreeMap<String, String>| -> Box<dyn FnOnce(&mut Profile)> {
             Box::new(move |p| p.env = env)
@@ -158,17 +220,50 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
         }
     };
     match change {
-        Ok(change) => {
-            let state = app_mut(cx);
-            let result =
-                state.profiles.edit(&profile_id, change).and_then(|()| state.profiles.save(&state.root));
-            match result {
-                // The chip, the avatar and the odd window's edge read the profile.
-                Ok(()) => cx.refresh_windows(),
-                Err(err) => tracing::warn!("saving the profile: {err}"),
-            }
-        }
+        Ok(change) => save(&profile_id, change, cx),
         Err(why) => tracing::warn!("profile: {why}"),
     }
     true
+}
+
+/// Apply one edit to the profile and write `profiles.json`, as the GPUI page does.
+fn save(profile_id: &wormhole_core::storage::paths::ProfileId, change: Change, cx: &mut App) {
+    let state = app_mut(cx);
+    let result = state.profiles.edit(profile_id, change).and_then(|()| state.profiles.save(&state.root));
+    match result {
+        // The chip, the avatar and the odd window's edge read the profile.
+        Ok(()) => cx.refresh_windows(),
+        Err(err) => tracing::warn!("saving the profile: {err}"),
+    }
+}
+
+/// Ask for a folder and add it to the folders that open in the profile (`~/…` under the home folder).
+fn add_folder(profile_id: wormhole_core::storage::paths::ProfileId, cx: &mut App) {
+    let paths = cx.prompt_for_paths(gpui_kit::PathPromptOptions {
+        files: false,
+        directories: true,
+        multiple: false,
+        prompt: Some(text(SETTINGS_PROFILE_CHOOSE).into()),
+    });
+    cx.spawn(async move |cx| {
+        let Ok(Ok(Some(paths))) = paths.await else { return };
+        let Some(path) = paths.into_iter().next() else { return };
+        let shown = match crate::settings_window::home() {
+            Some(home) => wormhole_core::onboarding::tilde(&path, &home),
+            None => path.display().to_string(),
+        };
+        cx.update(|cx| {
+            save(
+                &profile_id,
+                Box::new(move |p| {
+                    if !p.folders.contains(&shown) {
+                        p.folders.push(shown);
+                    }
+                }),
+                cx,
+            );
+            crate::settings_window::native::push(cx);
+        })
+    })
+    .detach();
 }

@@ -5,7 +5,7 @@ import SwiftUI
 /// Words are a key plus English text: `Row.key + ".label"`, `".hint"`, `Page.id + ".title"`.
 
 public enum Kind: String {
-    case field, popup, link, danger, toggle, button, themes, swatches, checks, parts, font, agent, skill, key, update, value, project, probe, review, compare
+    case field, popup, link, danger, toggle, button, themes, swatches, checks, parts, font, agent, skill, key, update, value, project, probe, review, compare, dots, folder
 }
 
 /// The stable id of a word: lowercase ASCII letters and digits, anything else one underscore. Ids of the catalog's own
@@ -70,6 +70,8 @@ struct Row: Identifiable {
     var multiline = false
     /// A listed row that does not apply now (its file is missing): drawn faint.
     var dim = false
+    /// A row of colour dots from the host: (id, words, hex).
+    var dots: [[String]] = []
 
     init(_ label: String, _ hint: String, _ kind: Kind, options: [String] = [], value: String = "", info: String = "",
          tile: String? = nil, actions: [String] = [], checks: [String] = [], checksOn: [String] = [], needs: Int? = nil,
@@ -239,6 +241,7 @@ extension Row {
         actionID = s("actionId")
         choiceList = (e["choices"] as? [[String]])?.filter { $0.count == 2 }.map { Choice(id: $0[0], label: $0[1]) }
         dim = e["dim"] as? Bool ?? false
+        dots = (e["dots"] as? [[String]] ?? []).filter { $0.count == 3 }
         listed = true
         multiline = e["multiline"] as? Bool ?? false
     }

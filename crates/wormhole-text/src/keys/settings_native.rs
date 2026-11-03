@@ -775,3 +775,9 @@ pub const NATIVE_NOW_28B19AF7: Key = Key::new(1333);
 pub const NATIVE_WAITING_FOR_YOU_E8233AFC: Key = Key::new(1334);
 /// "Rate limits"
 pub const NATIVE_RATE_LIMITS_BAE91DE5: Key = Key::new(1335);
+/// "Avatar letter"
+pub const NATIVE_AVATAR_LETTER_8EA165F4: Key = Key::new(1336);
+/// "Colour"
+pub const NATIVE_COLOUR_2ECCA61D: Key = Key::new(1337);
+/// "Remove"
+pub const NATIVE_REMOVE_21A5901D: Key = Key::new(1338);

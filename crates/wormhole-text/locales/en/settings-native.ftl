@@ -387,3 +387,6 @@ native-nothing-turned-on-no-banners-6d6bba07 = Nothing turned on: no banners.
 native-now-28b19af7 = now
 native-waiting-for-you-e8233afc = Waiting for you
 native-rate-limits-bae91de5 = Rate limits
+native-avatar-letter-8ea165f4 = Avatar letter
+native-colour-2ecca61d = Colour
+native-remove-21a5901d = Remove

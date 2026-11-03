@@ -384,3 +384,6 @@ Nothing turned on: no banners.
 now
 Waiting for you
 Rate limits
+Avatar letter
+Colour
+Remove

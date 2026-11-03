@@ -553,4 +553,7 @@ pub(super) const WORDS: &[(&str, Key)] = &[
     ("native-now-28b19af7", keys::NATIVE_NOW_28B19AF7),
     ("native-waiting-for-you-e8233afc", keys::NATIVE_WAITING_FOR_YOU_E8233AFC),
     ("native-rate-limits-bae91de5", keys::NATIVE_RATE_LIMITS_BAE91DE5),
+    ("native-avatar-letter-8ea165f4", keys::NATIVE_AVATAR_LETTER_8EA165F4),
+    ("native-colour-2ecca61d", keys::NATIVE_COLOUR_2ECCA61D),
+    ("native-remove-21a5901d", keys::NATIVE_REMOVE_21A5901D),
 ];
