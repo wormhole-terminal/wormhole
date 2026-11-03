@@ -619,6 +619,7 @@ impl TerminalView {
             PtyEvent::Notify(notification) => self.on_notice(notification),
             PtyEvent::ProgramStatus => {
                 self.sync_reported(true);
+                self.sync_progress_timer(cx);
             }
             PtyEvent::HostResponsiveness => {
                 self.host_answers_again();

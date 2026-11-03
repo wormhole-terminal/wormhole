@@ -89,8 +89,7 @@ impl TerminalView {
     }
 
     /// Drop the OSC 9;4 progress its program has not renewed for `wormhole_term::program_status::PROGRESS_TIMEOUT` by `now` (the
-    /// store has no clock; the window's tick brings one). Returns whether it did, which the tick
-    /// passes on so the chrome is told outside a draw.
+    /// store has no clock; the timer of `progress_timer` brings one). Returns whether it did.
     pub(super) fn expire_progress_at(&mut self, now: Instant) -> bool {
         let Some(pty) = &self.pty else { return false };
         if !pty.program_status().expire_progress(now) {
@@ -152,9 +151,9 @@ impl TerminalView {
         }
     }
 
-    /// The window's tick at `now`, as far as the OSC 9;4 timeout goes.
-    pub(crate) fn expire_progress_for_test(&mut self, now: Instant) -> bool {
-        self.expire_progress_at(now)
+    /// Whether the OSC 9;4 timer stands.
+    pub(crate) fn progress_timer_armed_for_test(&self) -> bool {
+        self.progress_timer.is_some()
     }
 
     /// A shell prompt began (OSC 133 `A`): the PTY thread drops what only the running program could

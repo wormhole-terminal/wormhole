@@ -35,6 +35,7 @@ mod input;
 mod line_size;
 mod links;
 mod pane_bar;
+mod progress_timer;
 mod render;
 mod reported;
 mod restored;
@@ -146,6 +147,8 @@ pub struct TerminalView {
     scroll_remainder_x: f32,
     /// A folder check waiting for a burst of output to settle.
     cwd_check: Option<Task<()>>,
+    /// The one-shot timer for the OSC 9;4 progress' deadline (`progress_timer`), while one stands.
+    progress_timer: Option<Task<()>>,
     /// A program other than the shell held the terminal when last checked, so
     /// output can't come with a folder change.
     program_in_foreground: bool,
@@ -338,6 +341,7 @@ impl TerminalView {
             scroll_remainder: 0.0,
             scroll_remainder_x: 0.0,
             cwd_check: None,
+            progress_timer: None,
             program_in_foreground: false,
             agent_hidden: false,
             foreground: None,

@@ -58,14 +58,8 @@ impl TerminalView {
     /// Settle busy → idle/done/failed: once the output has been quiet for a while, or at once when
     /// the shell's marks said the command finished. Seen at once, there is nothing to settle into:
     /// the result is on screen (and a failure's cue stays on the row, see [`super::Failure`]). Run by the
-    /// window when the terminal says [`TerminalEvent::Quiet`]. Also where a progress bar its program
-    /// stopped renewing ends.
+    /// window when the terminal says [`TerminalEvent::Quiet`].
     pub fn tick(&mut self, is_active: bool, window_active: bool) -> bool {
-        let expired = self.expire_progress_at(Instant::now());
-        self.settle(is_active, window_active) | expired
-    }
-
-    fn settle(&mut self, is_active: bool, window_active: bool) -> bool {
         if self.reported() {
             return false;
         }
