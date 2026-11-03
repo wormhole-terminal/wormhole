@@ -79,7 +79,7 @@ pub enum FeatureFlag {
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 12] = [
+    pub const ALL: [FeatureFlag; 13] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
