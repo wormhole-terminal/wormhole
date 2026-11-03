@@ -21,6 +21,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     private var fontList: [FontChoice]?
     private var lists: [String: [[String: Any]]] = [:]
     private var sheets: [String: [String: Any]] = [:]
+    private var profileInfo: (name: String, letter: String)?
     @ObservationIgnored var send: (String) -> Void = { _ in }
 
     func value(for key: String) -> String? { values[key] }
@@ -31,6 +32,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     var fonts: [FontChoice]? { fontList }
     func list(for group: String) -> [[String: Any]] { lists[group] ?? [] }
     func sheet(for id: String) -> [String: Any]? { sheets[id] }
+    var profile: (name: String, letter: String)? { profileInfo }
 
     func set(_ value: String, for key: String) {
         // A row the app does not own keeps what was set until the window closes, so it still reacts.
@@ -62,6 +64,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
         }
         lists = json["lists"] as? [String: [[String: Any]]] ?? [:]
         sheets = json["sheets"] as? [String: [String: Any]] ?? [:]
+        if let p = json["profile"] as? [String], p.count == 2 { profileInfo = (p[0], p[1]) }
         revision += 1
     }
 

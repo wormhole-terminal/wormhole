@@ -29,6 +29,8 @@ public protocol SettingsStore: AnyObject {
     func list(for group: String) -> [[String: Any]]
     /// What an extension's approval sheet shows, by the id its list entry names.
     func sheet(for id: String) -> [String: Any]?
+    /// The profile Wormhole is in: its name and the letter of its avatar.
+    var profile: (name: String, letter: String)? { get }
 }
 
 public struct FontChoice: Hashable {
@@ -44,6 +46,7 @@ public extension SettingsStore {
     var fonts: [FontChoice]? { nil }
     func list(for group: String) -> [[String: Any]] { [] }
     func sheet(for id: String) -> [String: Any]? { nil }
+    var profile: (name: String, letter: String)? { nil }
 }
 
 /// The default store: values in memory only, nothing is written anywhere.
@@ -97,6 +100,7 @@ public struct Words {
     func isOn(_ key: String, _ row: Row) -> Bool { get(key, row) == "on" }
     func set(_ key: String, _ v: String) { store.set(v, for: key) }
     func options(_ row: Row) -> [String] { _ = store.revision; return store.options(for: row.key) ?? row.options }
+    var profileInfo: (name: String, letter: String) { _ = store.revision; return store.profile ?? ("Default", "D") }
     var fontList: [(String, Bool)] { _ = store.revision; return store.fonts?.map { ($0.name, $0.mono) } ?? fontChoices }
     var themeData: ThemeData { _ = store.revision; return store.themes ?? .standard }
     func perform(_ action: String, _ key: String) { store.perform(action, for: key) }

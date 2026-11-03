@@ -1,16 +1,8 @@
 // The rows the window shows, by page. A host replaces a row's options and values through the store; this is the layout.
 let standardPages: [Page] = [
   Page(id: "Profile", title: "Profile", preview: "", notice: nil, footer: "", footerButtons: [], groups: [
-    SettingGroup(title: "", rows: [
-      Row("Name", "", .field, options: [], value: "Default", info: ""),
-      Row("Start new terminals in", "", .popup, options: ["Home folder", "Last folder used", "Choose folder…"], value: "", info: ""),
-      Row("Environment", "", .link, options: [], value: "None", info: "Variables this profile's terminals start with."),
-      Row("Git identity", "Only in this profile’s terminals", .link, options: [], value: "From ~/.gitconfig", info: "Wormhole never writes to a repository."),
-      Row("Agent logins", "A separate login per agent", .link, options: [], value: "Shared", info: ""),
-    ]),
-    SettingGroup(title: "", rows: [
-      Row("Delete profile", "Its terminals, notes and windows go too", .danger, options: [], value: "Delete…", info: "", confirm: "Delete the profile “Default”?", confirmText: "Its terminals, notes, tasks and settings are removed and its windows close.", action: "Delete"),
-    ]),
+    SettingGroup(title: "", rows: []),
+    SettingGroup(title: "", rows: []),
   ]),
   Page(id: "Terminal", title: "Terminal", preview: "terminal", notice: nil, footer: "The worktree folder and the shells list are in config.json.", footerButtons: ["Edit config.json"], groups: [
     SettingGroup(title: "Behaviour", rows: [

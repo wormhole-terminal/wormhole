@@ -46,7 +46,7 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     let (lists, sheets) = lists::build(cx);
     json!({
         "values": values, "defaults": default_values, "options": options,
-        "changed": changed, "known": known, "themes": themes, "fonts": fonts(cx), "lists": lists, "sheets": sheets,
+        "changed": changed, "known": known, "themes": themes, "fonts": fonts(cx), "lists": lists, "sheets": sheets, "profile": lists::profile(cx),
     })
 }
 

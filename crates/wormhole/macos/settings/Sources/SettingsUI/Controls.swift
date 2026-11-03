@@ -30,9 +30,22 @@ struct SwitchControl: View {
 struct FieldControl: View {
     let row: Row
     @Environment(SettingsModel.self) var m
+    @State private var draft = ""
+    @FocusState private var focused: Bool
     var body: some View {
-        TextField(row.label, text: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })).labelsHidden()
-            .textFieldStyle(.plain).multilineTextAlignment(.trailing).frame(width: 200)
+        if row.listed {
+            // A profile's text: written when the person is done with it (return or leaving the field), not per key.
+            TextField(row.label, text: $draft, axis: row.multiline ? .vertical : .horizontal).lineLimit(row.multiline ? 1...5 : 1...1)
+                .labelsHidden().textFieldStyle(.plain).multilineTextAlignment(.trailing).frame(width: row.multiline ? 260 : 200)
+                .focused($focused)
+                .onAppear { draft = row.value }
+                .onChange(of: row.value) { _, v in if !focused { draft = v } }
+                .onChange(of: focused) { _, f in if !f && draft != row.value { m.perform("=" + draft, row.key) } }
+                .onSubmit { if draft != row.value { m.perform("=" + draft, row.key) } }
+        } else {
+            TextField(row.label, text: Binding(get: { m.get(row.key, row) }, set: { m.set(row.key, $0) })).labelsHidden()
+                .textFieldStyle(.plain).multilineTextAlignment(.trailing).frame(width: 200)
+        }
     }
 }
 

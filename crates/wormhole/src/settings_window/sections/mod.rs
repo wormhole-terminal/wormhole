@@ -70,7 +70,7 @@ pub(super) use motion_preview::MotionPreview;
 pub(super) use motion_preview::{MotionPreviews, Scene as MotionScene};
 pub(super) use notifications_preview::draw_notifications_preview;
 pub(super) use profile::ProfileRows;
-pub(super) use profile_form::ProfileForm;
+pub(super) use profile_form::{LOGIN_AGENTS, ProfileForm, parse_env};
 pub(super) use profile_sheet::NewProfileSheet;
 pub(crate) use profile_sheet::open_new_profile_sheet;
 pub(super) use projects::ProjectPicker;

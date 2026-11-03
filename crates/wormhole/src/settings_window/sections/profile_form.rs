@@ -23,7 +23,7 @@ use crate::app_state::{app, app_mut};
 use crate::settings_window::SettingsWindow;
 
 /// The agents that have a login folder of their own, in the order the page lists them.
-pub(super) const LOGIN_AGENTS: [(AgentId, &str, &str); 2] = [
+pub(in crate::settings_window) const LOGIN_AGENTS: [(AgentId, &str, &str); 2] = [
     (AgentId::Claude, "Claude", "~/.claude-work"), // text: name (the agent's own name)
     (AgentId::Codex, "Codex", "~/.codex-work"),    // text: name (the agent's own name)
 ];
@@ -43,6 +43,11 @@ pub(in crate::settings_window) struct ProfileForm {
     /// Why the last edit was refused.
     pub error: Option<SharedString>,
     _subscriptions: Vec<Subscription>,
+}
+
+/// `NAME=value` lines as an environment (the field's rules).
+pub(in crate::settings_window) fn parse_env(text: &str) -> Result<BTreeMap<String, String>, String> {
+    Typed::parse_env(text)
 }
 
 /// What the fields hold, read at once.

@@ -65,8 +65,8 @@ struct SidebarView: View {
 
     var profileRow: some View {
         HStack(spacing: Space.s2) {
-            Circle().fill(t.primary).frame(width: 28, height: 28).overlay(Text("D").fontWeight(.semibold).foregroundStyle(t.onPrimary))
-            VStack(alignment: .leading, spacing: 0) { Text("Default").fontWeight(.semibold); Text("Profile").role(.caption).foregroundStyle(.secondary) }
+            Circle().fill(t.primary).frame(width: 28, height: 28).overlay(Text(m.profileInfo.letter).fontWeight(.semibold).foregroundStyle(t.onPrimary))
+            VStack(alignment: .leading, spacing: 0) { Text(m.profileInfo.name).fontWeight(.semibold); Text("Profile").role(.caption).foregroundStyle(.secondary) }
             Spacer(minLength: 0)
             Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(.secondary)
         }.padding(.vertical, Space.s1)

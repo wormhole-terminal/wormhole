@@ -7,6 +7,7 @@
 mod agents;
 mod import;
 mod probes;
+mod profile;
 mod projects;
 
 use std::path::PathBuf;
@@ -59,6 +60,11 @@ impl Entry {
     }
 }
 
+/// The profile's name and avatar letter, for the window's sidebar row.
+pub(super) fn profile(cx: &App) -> Value {
+    profile::identity(cx)
+}
+
 /// Every list and sheet, for the snapshot: `({"<page>:<group>": [entry…]}, {"<id>": sheet})`.
 pub(super) fn build(cx: &mut App) -> (Value, Value) {
     let mut lists = Map::new();
@@ -66,6 +72,7 @@ pub(super) fn build(cx: &mut App) -> (Value, Value) {
     agents::lists(&mut lists, cx);
     projects::lists(&mut lists, cx);
     import::lists(&mut lists, cx);
+    profile::lists(&mut lists, cx);
     probes::lists(&mut lists, &mut sheets, cx);
     (json!(lists), json!(sheets))
 }
@@ -76,6 +83,7 @@ pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
         || projects::perform(key, name, cx)
         || probes::perform(key, name, cx)
         || import::perform(key, name, cx)
+        || profile::perform(key, name, cx)
 }
 
 /// Read what the lists need from disk or the database, in the background where it is slow; the window is

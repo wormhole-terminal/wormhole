@@ -39,6 +39,7 @@ struct Row: Identifiable {
     var action = ""
     /// A row the host listed (an agent, a project, a probe): it acts through buttons, never by being set.
     var listed = false
+    var multiline = false
 
     init(_ label: String, _ hint: String, _ kind: Kind, options: [String] = [], value: String = "", info: String = "",
          tile: String? = nil, actions: [String] = [], checks: [String] = [], checksOn: [String] = [], needs: Int? = nil,
@@ -196,5 +197,6 @@ extension Row {
                   icon: e["icon"] as? String, primary: e["primary"] as? Int, sheet: s("sheet"), action: s("action"))
         key = "\(group):\(id)"
         listed = true
+        multiline = e["multiline"] as? Bool ?? false
     }
 }
