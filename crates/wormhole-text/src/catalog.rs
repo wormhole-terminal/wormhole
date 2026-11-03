@@ -187,7 +187,7 @@ mod tests {
     const GERMAN: &[(&str, &str)] = &[(
         "settings.ftl",
         "settings-section-fonts = Schriftarten\n\
-         settings-window-open-section = { $section } öffnen\n\
+         settings-profile-start-from-copy = Kopie von { $profile }\n\
          settings-agents-other = Andere\n\
          \x20   .description = Agenten, die { -brand } erkennt\n",
     )];
@@ -212,20 +212,20 @@ mod tests {
         let english = english();
         let german = Loaded::translation("de", GERMAN, LOCALES[0].files, &english);
         let mut args = FluentArgs::new();
-        args.set("section", "Fonts");
+        args.set("profile", "Work");
         assert_eq!(
-            german.format(index("settings-window-open-section"), &args).as_deref(),
-            Some("Fonts öffnen")
+            german.format(index("settings-profile-start-from-copy"), &args).as_deref(),
+            Some("Kopie von Work")
         );
         assert_eq!(
-            english.format(index("settings-window-open-section"), &args).as_deref(),
-            Some("Open Fonts")
+            english.format(index("settings-profile-start-from-copy"), &args).as_deref(),
+            Some("A copy of Work")
         );
         let mut count = FluentArgs::new();
         count.set("count", 5);
-        // German has no font count of its own: the caller formats English's.
-        assert_eq!(german.format(index("settings-fonts-count"), &count), None);
-        assert_eq!(english.format(index("settings-fonts-count"), &count).as_deref(), Some("5 fonts"));
+        // German has no setting count of its own: the caller formats English's.
+        assert_eq!(german.format(index("settings-import-count"), &count), None);
+        assert_eq!(english.format(index("settings-import-count"), &count).as_deref(), Some("5 settings"));
     }
 
     #[test]
@@ -234,10 +234,10 @@ mod tests {
         let pseudo = Loaded::pseudo("en-XA", LOCALES[0].files, &english);
         assert_eq!(pseudo.plain(SETTINGS_SECTION_FONTS.index()), "⟦Föñtš··⟧");
         let mut args = FluentArgs::new();
-        args.set("section", "Fonts");
+        args.set("profile", "Work");
         assert_eq!(
-            pseudo.format(index("settings-window-open-section"), &args).as_deref(),
-            Some("⟦Öpéñ Fonts····⟧")
+            pseudo.format(index("settings-profile-start-from-copy"), &args).as_deref(),
+            Some("⟦Å çöpý öf Work······⟧")
         );
     }
 }

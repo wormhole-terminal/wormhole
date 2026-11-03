@@ -32,8 +32,6 @@ pub const ROW_TWO_LINE_H: f32 = 44.0;
 pub const NAME_LINE: f32 = 1.25;
 /// The second line of a two-line row, in rems (16).
 pub const META_LINE: f32 = 1.0;
-/// The settings nav's profile card: its inset from the edges and the gap after its avatar, `_2`, named where a sum needs it.
-pub const NAV_STEP: f32 = 8.0;
 /// A folder band in the sidebar, a section band in the right panel.
 pub const BAND_H: f32 = 32.0;
 /// A folder band with its second line (the folder's path, ±N and branch): the height of a

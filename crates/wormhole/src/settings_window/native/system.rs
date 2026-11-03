@@ -15,14 +15,17 @@ use wormhole_text::keys::{
     SETTINGS_UPDATES_CHECKING, SETTINGS_UPDATES_DONT_RESTART, SETTINGS_UPDATES_DOWNLOADING,
     SETTINGS_UPDATES_INSTALL_UPDATE, SETTINGS_UPDATES_NOT_CHECKED_YET, SETTINGS_UPDATES_RESTART_NOW,
     SETTINGS_UPDATES_SKIP_THIS_VERSION, SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE,
-    settings_agents_cli_foreign_at, settings_agents_cli_installed_at, settings_agents_cli_not_installed,
-    settings_updates_installed_restart, settings_updates_installed_waits,
+    SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO, SETTINGS_WINDOW_OPEN, settings_agents_cli_foreign_at,
+    settings_agents_cli_installed_at, settings_agents_cli_not_installed, settings_updates_installed_restart,
+    settings_updates_installed_waits,
 };
 use wormhole_text::text;
 
+use super::cli_tool::{binary as cli_binary, current_status as cli_status, shown as cli_shown};
+use super::update_words::{available_text, checked_ago};
 use crate::app_state::app_mut;
 use crate::platform::default_app;
-use crate::settings_window::sections::{available_text, checked_ago, cli_binary, cli_shown, cli_status};
+use crate::settings::SettingsStore;
 use crate::update::{self, UpdatePhase, Updates};
 use wormhole_core::ipc::control::COMMAND_NAME;
 use wormhole_core::terminal::cli_tool::{self, Status as CliStatus};
@@ -80,6 +83,21 @@ fn cli_tool_press() {
             Err(cli_tool::Error::Foreign(_)) => {}
             Err(err) => tracing::warn!("installing the command line tool: {err}"),
         },
+    }
+}
+
+/// What is wrong with config.json, for the top of every page: the parse error with the way to the file, or that
+/// changes are not saved while it cannot be read. `null` when it is fine.
+pub(super) fn banner(cx: &App) -> Value {
+    let store = cx.global::<SettingsStore>();
+    match &store.error {
+        Some(error) => {
+            json!({ "text": error.to_string(), "action": "edit_config_json", "button": text(SETTINGS_WINDOW_OPEN) })
+        }
+        None if store.config_unreadable() => {
+            json!({ "text": text(SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO), "action": "", "button": "" })
+        }
+        None => Value::Null,
     }
 }
 
@@ -219,11 +237,11 @@ pub(super) fn perform(key: &str, id: &str, cx: &mut App) -> bool {
             true
         }
         "Advanced:0:1" => {
-            crate::settings_window::open_folder(&data_dir(), cx);
+            crate::settings_window::native::paths::open_folder(&data_dir(), cx);
             true
         }
         "Advanced:0:2" => {
-            crate::settings_window::open_folder(&data_dir().join("logs"), cx);
+            crate::settings_window::native::paths::open_folder(&data_dir().join("logs"), cx);
             true
         }
         "Advanced:1:0" => {

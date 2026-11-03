@@ -12,16 +12,9 @@ use std::rc::Rc;
 use super::icon_motion::{IconMotion, MenuMark, StripFill};
 use super::motion::TOOLTIP_DELAY;
 use super::scale::{
-    CONTROL_H, CONTROL_H_SM, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_CONTROL_H, TITLE_GLYPH, TextRole,
+    CONTROL_H_SM, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_CONTROL_H, TITLE_GLYPH, TextRole,
 };
 use crate::settings::UiColors;
-
-/// An icon-only button in a Settings row (a folder chooser, a remove ×): GPUI Kit's small button made
-/// [`CONTROL_H`] tall. A button with words is a [`super::form_button`].
-#[track_caller]
-pub fn form_icon_button(id: impl Into<ElementId>) -> Button {
-    Button::new(id).small().h(px(CONTROL_H))
-}
 
 /// The face of a band's +: smaller than a button's, so it sits inside the band's 32 pt
 /// height with room above and below.

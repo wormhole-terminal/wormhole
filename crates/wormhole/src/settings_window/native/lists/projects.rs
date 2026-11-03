@@ -11,13 +11,27 @@ use serde_json::{Map, Value, json};
 use wormhole_core::project::{Feature, FeatureStanding};
 use wormhole_text::keys::{
     SETTINGS_PROJECTS_ALL_PROJECTS_DEFAULTS, SETTINGS_PROJECTS_DEFAULT_OFF, SETTINGS_PROJECTS_DEFAULT_ON,
-    SETTINGS_PROJECTS_FOR, SETTINGS_PROJECTS_FOR_NOTE, SETTINGS_PROJECTS_OFF, SETTINGS_PROJECTS_ON,
+    SETTINGS_PROJECTS_FOR, SETTINGS_PROJECTS_FOR_NOTE, SETTINGS_PROJECTS_NO_NOTES_MD_YET_ON_CREATES,
+    SETTINGS_PROJECTS_OFF, SETTINGS_PROJECTS_ON, settings_projects_feature_needs_trust,
     settings_projects_missing_folder,
 };
 use wormhole_text::text;
 
 use super::Entry;
 use crate::features::project::{self, LoadedProject};
+
+/// The line under a feature's name: core's words for a file that is missing or sets nothing, what the feature does
+/// otherwise, with the wait for trust when something is held back.
+fn feature_description(feature: Feature, standing: FeatureStanding) -> String {
+    match (feature, standing) {
+        // The switch is how the file gets made.
+        (Feature::Notes, FeatureStanding::Missing) => {
+            text(SETTINGS_PROJECTS_NO_NOTES_MD_YET_ON_CREATES).to_string()
+        }
+        (_, FeatureStanding::NeedsTrust) => settings_projects_feature_needs_trust(feature.description()),
+        (_, standing) => standing.hint(feature).unwrap_or_else(|| feature.description().to_string()),
+    }
+}
 
 const GROUP_PROJECTS: &str = "Projects:0";
 const GROUP_DEFAULTS: &str = "Projects:1";
@@ -41,7 +55,7 @@ fn name_of(root: &Path) -> String {
 }
 
 fn shown(root: &Path) -> String {
-    match crate::settings_window::home() {
+    match crate::settings_window::native::paths::home() {
         Some(home) if root.starts_with(&home) => {
             format!("~/{}", root.strip_prefix(&home).unwrap_or(root).display())
         }
@@ -111,7 +125,7 @@ fn feature_entries(root: &Path, cx: &App) -> Vec<Value> {
                 text(if on_default { SETTINGS_PROJECTS_DEFAULT_ON } else { SETTINGS_PROJECTS_DEFAULT_OFF })
             };
             Entry::new(&format!("feature-{}", feature.key()), "popup", feature.label())
-                .with("hint", crate::settings_window::sections::feature_description(feature, standing))
+                .with("hint", feature_description(feature, standing))
                 .with(
                     "choices",
                     json!([
@@ -215,4 +229,32 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
         _ => return false,
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use wormhole_core::project::{Feature, FeatureStanding};
+
+    use super::feature_description;
+
+    /// The page words a feature the way the Project tab does: a file that sets nothing says so
+    /// rather than waiting for trust, and what is held back says it waits.
+    #[test]
+    fn a_feature_row_says_what_the_project_tab_says() {
+        assert_eq!(
+            feature_description(Feature::Settings, FeatureStanding::Empty),
+            "Nothing set yet in config.json"
+        );
+        assert_eq!(
+            feature_description(Feature::Actions, FeatureStanding::Missing),
+            "No actions.json in this project"
+        );
+        assert_eq!(
+            feature_description(Feature::Settings, FeatureStanding::NeedsTrust),
+            format!("{}. Only after you trust the project", Feature::Settings.description())
+        );
+        assert_eq!(feature_description(Feature::Theme, FeatureStanding::Ready), Feature::Theme.description());
+        // Notes can be switched on without the file: that makes it.
+        assert!(feature_description(Feature::Notes, FeatureStanding::Missing).contains("On creates it"));
+    }
 }

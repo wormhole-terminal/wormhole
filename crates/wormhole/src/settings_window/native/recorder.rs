@@ -11,10 +11,10 @@ use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
 use wormhole_core::keys::shortcut_record::{self, Recorded};
 use wormhole_text::keys::settings_menu_bar_key_conflict;
 
+use super::controls;
 use super::{Native, rows};
 use crate::settings::{settings, update_settings};
-use crate::settings_window::recorder::HOTKEY_ROW;
-use crate::settings_window::registry;
+use crate::settings_window::native::controls::HOTKEY_ROW;
 
 /// A recording in progress, or the keys it refused.
 pub(super) struct Recording {
@@ -38,7 +38,7 @@ fn replace(recording: Option<Recording>, cx: &mut App) {
 /// The row `key` starts to record.
 pub(super) fn start(key: &str, cx: &mut App) {
     let Some(id) = rows::id_of(key) else { return };
-    if registry::recorder_row(id).is_some() {
+    if controls::recorder_row(id).is_some() {
         replace(Some(Recording { key: key.to_string(), id, taken: None }), cx);
     }
 }
@@ -56,7 +56,7 @@ pub(super) fn key(mods: &str, name: &str, cx: &mut App) {
         return;
     }
     let (key, id) = (recording.key.clone(), recording.id);
-    let Some(row) = registry::recorder_row(id) else { return };
+    let Some(row) = controls::recorder_row(id) else { return };
     let held = |word: &str| mods.split(',').any(|m| m == word);
     let mods = KeyMods { cmd: held("cmd"), ctrl: held("ctrl"), alt: held("alt"), shift: held("shift") };
     match shortcut_record::record(mods, name) {
@@ -89,7 +89,7 @@ pub(super) fn snapshot(cx: &App) -> (String, Value) {
     let active = recording.filter(|r| r.taken.is_none()).map(|r| r.key.clone()).unwrap_or_default();
     let mut notes = Map::new();
     for (key, id) in rows::all() {
-        let Some(row) = registry::recorder_row(id) else { continue };
+        let Some(row) = controls::recorder_row(id) else { continue };
         let note = match recording {
             Some(r) if r.key == *key && r.taken.is_some() => {
                 r.taken.as_deref().map(settings_menu_bar_key_conflict)

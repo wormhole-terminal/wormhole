@@ -4,8 +4,6 @@
 @size 1440 900
 settings-section git
 @batch
-settings-resize 1024 900
-@batch
 @shot git settings
 settings-section projects
 @batch

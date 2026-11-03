@@ -20,7 +20,7 @@ use wormhole_text::{text, whole};
 use super::Entry;
 use crate::agent_access::{self, Approved, How};
 use crate::app_state::app;
-use crate::settings_window::sections::AgentsSnapshot;
+use crate::settings_window::native::agents_read::AgentsSnapshot;
 
 const GROUP_AGENTS: &str = "Agents:0";
 const GROUP_COMMAND_LINE: &str = "Agents:1";
@@ -82,7 +82,7 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &mut App) {
     out.insert(GROUP_ACCESS.into(), Value::Array(programs(cx)));
 }
 
-fn agent_entry(row: &crate::settings_window::sections::AgentRow, home: &Path) -> Value {
+fn agent_entry(row: &crate::settings_window::native::agents_read::AgentRow, home: &Path) -> Value {
     let agent = row.agent;
     let path = row.spec.map(|spec| spec.display_path(home));
     let (hint, detail, value) = match row.hooks() {
@@ -117,7 +117,11 @@ fn agent_entry(row: &crate::settings_window::sections::AgentRow, home: &Path) ->
 
 /// A profile's login of an agent: where its config is and the state of the hooks there, as the agent's own row has
 /// them for the default location.
-fn login_entry(agent: &Agent, at: usize, login: &crate::settings_window::sections::LoginRow) -> Value {
+fn login_entry(
+    agent: &Agent,
+    at: usize,
+    login: &crate::settings_window::native::agents_read::LoginRow,
+) -> Value {
     let state = login.state.as_ref().ok().copied();
     let (badge, value) = match state {
         Some(State::Installed) => (text(SETTINGS_AGENTS_STATUS_HOOKS_ON), "on"),
@@ -128,7 +132,7 @@ fn login_entry(agent: &Agent, at: usize, login: &crate::settings_window::section
         Entry::new(&login_id(agent, at), "agent", &settings_agents_login_state(&login.profile, badge)),
         agent,
     )
-    .with("hint", crate::settings_window::with_tilde(&login.dir))
+    .with("hint", crate::settings_window::native::paths::with_tilde(&login.dir))
     .with("value", value);
     if let Err(err) = &login.state {
         entry = entry.with("note", err.as_str());

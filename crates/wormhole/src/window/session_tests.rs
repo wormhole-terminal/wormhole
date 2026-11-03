@@ -5,16 +5,14 @@
 use std::path::PathBuf;
 use std::rc::Rc;
 
-use gpui_kit::test::TestWindowExt as _;
 use gpui_kit::{App, Context, TestAppContext, Window};
 use wormhole_core::git::{ChangeKind, DiffSpec, FileChange};
 
-use crate::app_state::app;
 use crate::features::git::changes::Changes;
 use crate::features::git::picker::PickerHost as _;
 use crate::features::notes::testing as notes;
 use crate::window::Workspace;
-use crate::window::test_harness::{draw, drive, isolate_in, own_window, read, read_cx, start};
+use crate::window::test_harness::{drive, isolate_in, read, read_cx, start};
 
 fn some_change() -> FileChange {
     FileChange {
@@ -175,26 +173,4 @@ fn a_terminal_keeps_its_shell_profile_through_a_restart_and_a_save(cx: &mut Test
         assert_eq!(ws.sessions.len(), 3);
         assert_eq!(ws.active_session().pane.shell.as_deref(), Some("/bin/bash"));
     });
-}
-
-/// Settings shows the front window's grouping (Terminals & sidebar) and project without its
-/// frame reading that window's workspace, which would otherwise tick in Settings and stop when
-/// Settings closed.
-#[gpui_kit::test]
-fn closing_settings_leaves_the_window_in_front_its_tick(cx: &mut TestAppContext) {
-    if isolate_in(module_path!(), "closing_settings_leaves_the_window_in_front_its_tick") {
-        return;
-    }
-    let window = start(cx, 1);
-    cx.update(|cx| {
-        crate::settings_window::open_settings(Some(crate::settings_window::Section::Sessions), cx)
-    });
-    cx.run_until_parked();
-    let (settings_window, _) =
-        cx.update(|cx| crate::app_state::live(&app(cx).settings_window)).expect("Settings opened");
-    draw(cx, &window);
-    cx.update(|cx| settings_window.update(cx, |_, window, cx| window.render_frame(cx))).expect("open");
-    cx.update(|cx| settings_window.update(cx, |_, window, _| window.remove_window())).expect("open");
-    cx.run_until_parked();
-    assert_eq!(own_window(cx, &window), Some(window.handle.window_id()));
 }

@@ -37,9 +37,6 @@ settings-appearance-branch-color = Branch colour
     .description = The git branch on folders, in the title row and in the status bar. Any colour is kept readable
     .keywords = git branch chip accent color colour magenta purple primary swatch custom own
 
-# The branch colour's choice besides the theme's own, the presets and a colour of your own: the primary.
-settings-appearance-branch-primary = Primary
-
 ## Window
 
 settings-appearance-group-window = Window
@@ -57,7 +54,6 @@ settings-appearance-blur = Blur behind the window
 settings-appearance-liquid-glass = Liquid Glass
     .description = Glass under the sidebar's and the panel's cards. Off: every surface painted.
     .keywords = glass translucent material apple tahoe cards beta
-
 
 settings-appearance-translucent = Also translucent
     .description = Use the opacity and blur above for these windows too
@@ -95,8 +91,6 @@ settings-appearance-icon-theme = Icon theme
     .description = Zed icon themes work too
     .keywords = icon theme
 
-settings-appearance-icon-themes-footer = Add an icon theme by putting it in the icon themes folder.
-
 settings-appearance-icon-themes-folder = Icon themes folder
     .description = Put a Zed icon theme folder here; it's listed above within seconds
     .keywords = zed folder
@@ -116,62 +110,22 @@ settings-appearance-group-interface = Interface
 
 ## Your fonts
 
-
 ## settings_window/sections/appearance.rs (labels, hints and notes drawn by this page's code)
 
 settings-appearance-dark = Dark
 settings-appearance-light = Light
 settings-appearance-match-system = Match system
-settings-appearance-opaque-reduce-transparency = Reduce Transparency is on in System Settings, so every window is opaque. Your opacity applies again when it's off.
-settings-appearance-opaque-increase-contrast = Increase Contrast is on in System Settings, so every window is opaque. Your opacity applies again when it's off.
-settings-appearance-blur-off-warning = Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read.
-settings-appearance-turn-on-blur = Turn on blur
-settings-appearance-liquid-glass-beta = Preview
-settings-appearance-glass-held-by-accessibility = Reduce Transparency or Increase Contrast is on in System Settings, so every surface stays painted. The glass returns when it's off.
-settings-appearance-settings = Settings
-settings-appearance-theme-studio = Theme Studio
-settings-appearance-project-settings = Project settings
 
 ## The primary colour row's quiet line, and the project theme note
 
-# The line under "Primary colour" once a colour was picked. { $color } is its hex code.
-settings-appearance-primary-yours = Yours · { $color }, in every theme
-
-# The same line while the theme's primary is in use. { $color } is its hex code and { $description } the
-# row's own description, which follows after a full stop.
-settings-appearance-primary-theme = The theme's · { $color }. { $description }
-
-# Over the theme picker in a project's terminal. { $project } is the project's name.
-settings-appearance-project-theme-note = This terminal shows { $project }'s theme. Your own is kept for everything else.
-
 ## settings_window/sections/stage.rs (labels, hints and notes drawn by this page's code)
-
-settings-appearance-stage-caption = Your theme, opacity, blur, glass, dividers, status bar and title row, as one window draws them.
 
 ## settings_window/sections/theme_picker/mod.rs (labels, hints and notes drawn by this page's code)
 
-settings-appearance-filter-themes = Filter themes
-# Over the theme cards under Match system: the themes of each mode, one of them its pick.
-settings-appearance-in-dark-mode = In Dark Mode
-settings-appearance-in-light-mode = In Light Mode
-settings-appearance-show-fewer = Show fewer
-settings-appearance-import-theme = Import Theme…
-settings-appearance-no-themes-match-the-filter = No themes match the filter.
-
 ## Sentences with a hole in them
-
-# The theme filter's placeholder. { $count } is how many themes there are to filter.
-settings-appearance-filter-themes-count = { $count ->
-    [one] Filter { $count } theme
-   *[other] Filter { $count } themes
-}
-
-# The link under the theme cards that shows the rest. { $total } is how many cards there are.
-settings-appearance-show-all-themes = Show all { $total }
 
 ## settings_window/sections/theme_picker (hiding themes)
 
-settings-appearance-hide-theme = Hide theme
 settings-appearance-move-to-trash = Move to Trash
 # The question before a theme file goes to the Trash (the Settings card and the Theme Studio both ask it).
 # { $name } is the theme.
@@ -186,13 +140,4 @@ settings-appearance-trash-both = Your dark theme changes to { $dark } and your l
 settings-appearance-trash-edits = Its unsaved changes are lost.
 # { $name } is the theme.
 settings-appearance-trash-failed = “{ $name }” could not be moved to the Trash.
-settings-appearance-show-theme = Show
 
-# The disclosure under the theme cards that lists the hidden ones. { $count } is how many.
-settings-appearance-hidden-themes = Hidden themes ({ $count })
-
-# On a theme card: the file was made with a newer Wormhole. { $count } is how many entries were skipped.
-settings-appearance-theme-newer = { $count ->
-    [one] Made with a newer Wormhole: 1 value was skipped
-   *[other] Made with a newer Wormhole: { $count } values were skipped
-}

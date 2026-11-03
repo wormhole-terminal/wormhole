@@ -176,7 +176,6 @@ MiB
 Minimap
 Mode
 Motion
-Native Settings window
 Needs input
 Needs input and finished
 Needs input only
@@ -397,3 +396,4 @@ Working · 4m
 Finished · 1m
 Needs input · Allow edit?
 3 changed
+New profile…

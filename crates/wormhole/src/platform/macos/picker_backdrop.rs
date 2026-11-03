@@ -56,6 +56,7 @@ impl Backdrop {
         }
     }
 
+    #[cfg(feature = "devctl")]
     pub fn material(&self) -> Material {
         match self {
             Self::Glass(_) => Material::Glass,

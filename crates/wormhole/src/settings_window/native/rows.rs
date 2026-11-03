@@ -17,6 +17,11 @@ fn rows() -> &'static [(&'static str, &'static str)] {
     &ROWS
 }
 
+/// The name of the row `id` in the settings index.
+pub(in crate::settings_window) fn row_label(id: &str) -> &'static str {
+    wormhole_core::config::settings_index::entry(id).map_or("", |(_, _, entry)| entry.label())
+}
+
 pub(super) fn all() -> &'static [(&'static str, &'static str)] {
     rows()
 }

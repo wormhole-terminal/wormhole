@@ -14,8 +14,8 @@ use wormhole_core::view::sidebar::Density;
 use wormhole_text::keys::{SETTINGS_APPEARANCE_PAIRING_BOTH, SETTINGS_APPEARANCE_PAIRING_SEPARATE};
 use wormhole_text::text;
 
+use super::controls::{self, Control, Current, Label, MenuOption};
 use super::{accent, themes};
-use crate::settings_window::registry::{self, Control, Current, Label, MenuOption};
 
 /// One option of a menu: the stable id the window stores and sends, and the words it shows.
 pub(super) type Choice = (String, String);
@@ -122,7 +122,7 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
         "translucent" => {
             vec![("Settings", on(s.settings_translucent)), ("Theme Studio", on(s.studio_translucent))] // text: not shown (values of the native window's own catalog)
         }
-        _ => match registry::control(id).map(|setting| &setting.control) {
+        _ => match controls::control(id).map(|setting| &setting.control) {
             Some(Control::Toggle { get, .. }) => vec![("", on(get(s)))],
             Some(Control::Menu(menu)) => vec![(
                 "",
@@ -157,7 +157,7 @@ pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<Choice>> {
             (PAIRING_SEPARATE.into(), text(SETTINGS_APPEARANCE_PAIRING_SEPARATE).into()),
         ]);
     }
-    let Some(Control::Menu(menu)) = registry::control(id).map(|setting| &setting.control) else {
+    let Some(Control::Menu(menu)) = controls::control(id).map(|setting| &setting.control) else {
         return None;
     };
     let mut choices: Vec<Choice> =
@@ -220,7 +220,7 @@ pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: 
             }
             _ => false,
         },
-        _ => match registry::control(id).map(|setting| &setting.control) {
+        _ => match controls::control(id).map(|setting| &setting.control) {
             Some(Control::Toggle { set, .. }) => {
                 set(s, value == "on");
                 true
@@ -317,7 +317,7 @@ mod tests {
 
     #[test]
     fn option_ids_are_snake_case_and_distinct_within_a_row() {
-        for (_, id) in super::super::rows::all() {
+        for (_, id) in crate::settings_window::native::rows::all() {
             let have = ids(id);
             let mut sorted = have.clone();
             sorted.sort_unstable();

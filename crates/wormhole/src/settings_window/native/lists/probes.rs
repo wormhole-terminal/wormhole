@@ -22,9 +22,9 @@ use wormhole_text::keys::*;
 use wormhole_text::text;
 
 use super::Entry;
+use super::probe_words::{describe as describe_permission, verify_text};
 use crate::platform::auth::{self, AuthError};
 use crate::settings::settings;
-use crate::settings_window::sections::{describe_permission, verify_text};
 
 const GROUP: &str = "Extensions:0";
 
@@ -213,7 +213,7 @@ pub(super) fn load(cx: &mut App) {
 
 /// The folder in the Finder (the footer's button).
 pub(super) fn show_folder(cx: &mut App) {
-    crate::settings_window::open_folder(&DataRoot::current().probes_dir(), cx);
+    crate::settings_window::native::paths::open_folder(&DataRoot::current().probes_dir(), cx);
 }
 
 pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {

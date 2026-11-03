@@ -14,14 +14,33 @@ use wormhole_core::config::profile::{AgentLogin, GitIdentity, Profile};
 use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
+use wormhole_core::agents::AgentId;
+
 use super::Entry;
 use crate::app_state::{AppState, app, app_mut};
 use crate::settings::SettingsStore;
-use crate::settings_window::registry::row_label;
-use crate::settings_window::sections::{LOGIN_AGENTS, parse_env};
+use crate::settings_window::native::rows::row_label;
 use wormhole_core::view::sidebar::GroupColor;
 
 /// One edit of the profile, chosen by the field that was left.
+/// The agents that have a login folder of their own, in the order the page lists them.
+const LOGIN_AGENTS: [(AgentId, &str, &str); 2] = [
+    (AgentId::Claude, "Claude", "~/.claude-work"), // text: name (the agent's own name)
+    (AgentId::Codex, "Codex", "~/.codex-work"),    // text: name (the agent's own name)
+];
+
+/// `NAME=value` lines as an environment. Blank lines and `#` comments are skipped.
+fn parse_env(text: &str) -> Result<BTreeMap<String, String>, String> {
+    let mut env = BTreeMap::new();
+    for line in text.lines().map(str::trim).filter(|l| !l.is_empty() && !l.starts_with('#')) {
+        let Some((name, value)) = line.split_once('=') else {
+            return Err(settings_profile_env_not_a_pair(line));
+        };
+        env.insert(name.trim().to_string(), value.trim().to_string());
+    }
+    Ok(env)
+}
+
 type Change = Box<dyn FnOnce(&mut Profile)>;
 
 const GROUP_FIELDS: &str = "Profile:0";
@@ -46,6 +65,12 @@ fn field(id: &str, label: &str, value: &str) -> Entry {
 
 pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
     let (mut fields, mut delete) = (Vec::new(), Vec::new());
+    // The profiles file could not be read: Wormhole runs on Default until it is put right.
+    if let Some(error) = &app(cx).profiles_error {
+        fields.push(
+            Entry::new("unreadable", "value", &settings_window_profiles_unreadable(error)).into_value(),
+        );
+    }
     if let Some(profile) = active(cx) {
         let env: Vec<String> = profile.env.iter().map(|(name, value)| format!("{name}={value}")).collect();
         let login = |agent| {
@@ -138,6 +163,14 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
             );
         }
     }
+    // A new profile is made from the page of any, so the button is there even while the active one is unreadable.
+    delete.insert(
+        0,
+        Entry::new("new", "button", "")
+            .with("value", super::super::words::word("New profile…")) // text: a native word, translated by its id
+            .with("actionId", super::new_profile::OPEN)
+            .into_value(),
+    );
     out.insert(GROUP_FIELDS.into(), Value::Array(fields));
     out.insert(GROUP_DELETE.into(), Value::Array(delete));
 }
@@ -147,6 +180,9 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let (Some("Profile"), Some(group), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
     };
+    if id == "new" {
+        return true;
+    }
     let Some(profile_id) = active(cx).map(|p| p.id) else { return true };
     if group == "1" {
         if id == "delete" && action == "delete" && !profile_id.is_default() {
@@ -249,7 +285,7 @@ fn add_folder(profile_id: wormhole_core::storage::paths::ProfileId, cx: &mut App
     cx.spawn(async move |cx| {
         let Ok(Ok(Some(paths))) = paths.await else { return };
         let Some(path) = paths.into_iter().next() else { return };
-        let shown = match crate::settings_window::home() {
+        let shown = match crate::settings_window::native::paths::home() {
             Some(home) => wormhole_core::onboarding::tilde(&path, &home),
             None => path.display().to_string(),
         };

@@ -13,10 +13,8 @@ use wormhole_core::import::{
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
+use super::import_words::{Subject, gap_text, reason_text, setting_label, strength_text, value_text};
 use crate::settings::import::terminal_name;
-use crate::settings_window::sections::{
-    Subject, gap_text, reason_text, setting_label, strength_text, value_text,
-};
 
 /// The id of the compare sheet and of a terminal's review sheet.
 pub(super) const COMPARE: &str = "import-compare";

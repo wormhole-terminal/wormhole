@@ -134,13 +134,6 @@ pub(crate) fn trusted_roots(cx: &App) -> Vec<PathBuf> {
     super::hub(cx).trust.list().into_iter().map(|trusted| trusted.root.clone()).collect()
 }
 
-/// An approval is being asked for in the shown profile, and the last thing that went wrong with a project
-/// in it, for Settings' Projects page.
-pub(crate) fn approval(cx: &App) -> (bool, Option<SharedString>) {
-    let hub = super::hub(cx);
-    (hub.approving, hub.error.clone())
-}
-
 /// One row of the Projects page per feature, for the project at `root` as the shown profile has it: the
 /// feature, where it stands, the project's own switch for it, and the default it falls back to.
 pub(crate) fn feature_rows(

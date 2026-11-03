@@ -96,6 +96,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   repository costs no git runs. The timer stays as a backstop every 30 seconds, and as before where file events
   are not available (a network volume). Build output in ignored folders no longer causes reads.
 - Drawing the title row no longer asks the system where the apps in Open in… are on every frame.
+- Settings is now a native macOS window: the Mac's own sidebar, controls, menus, sheets and file panels, with
+  live previews, the same settings and the same keys in `config.json`. It opens from ⌘, the menu bar, the command
+  palette and the menu bar extra, and its words follow the interface language. The window Wormhole drew itself,
+  and the Native Settings window feature flag that chose between the two, are gone.
 - Settings rows are more compact. Explanations open from an info button, while warnings stay visible;
   the full descriptions remain searchable and available to VoiceOver.
 

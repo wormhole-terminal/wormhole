@@ -13,12 +13,9 @@ settings-import-group-found = Found on this Mac
 settings-import-found = Terminals found
     .keywords = import migrate switch move settings config configuration ghostty iterm iterm2 terminal.app alacritty kitty wezterm warp zed vscode vs code font theme colours colors shell
 
-settings-import-scan-again = Scan again
 settings-import-scanning = Looking for terminals…
 settings-import-none = No other terminal's settings found
 settings-import-none-detail = { -brand } looked for Ghostty, iTerm2, Terminal.app, Alacritty, kitty, WezTerm, Warp, Zed and VS Code in the places they keep their settings, and found none.
-
-settings-import-files-read = Files read
 
 # { $count } is a whole number.
 settings-import-count = { $count ->
@@ -34,15 +31,7 @@ settings-import-leave = Doesn't carry over
 settings-import-nothing-to-take = Nothing in these settings can be brought over.
 settings-import-runs-everywhere = { -brand } would run this in every new terminal, so it isn't ticked until you tick it.
 
-# { $selected } of { $total } rows are ticked.
-settings-import-selected = { $selected } of { $total } selected
 settings-import-apply = Import selected
-
-# { $brought } is how many settings were brought over and { $left } how many didn't carry over: both whole numbers.
-settings-import-summary = { $brought ->
-    [one] { $brought } setting brought over, { $left } didn't
-   *[other] { $brought } settings brought over, { $left } didn't
-}
 
 # { $error } is what went wrong when saving the colours.
 settings-import-failed = Couldn't import: { $error }

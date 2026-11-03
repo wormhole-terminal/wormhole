@@ -93,4 +93,3 @@ settings-sessions-changes-shared-none = Nobody counts it
 
 ## settings_window/sections/list_preview.rs (what the page's preview card says)
 
-settings-sessions-preview-caption = How the list draws a group and its terminals at this density, with the row details you keep.

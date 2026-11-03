@@ -1,7 +1,7 @@
-//! The Settings window drawn by SwiftUI (`macos/settings/`), behind the `native_settings` flag. The app keeps the
-//! settings: this module gives the window a snapshot of them (`snapshot`) whenever they change, and carries out
-//! each change the person makes there (`apply`) through the same `update_settings` the GPUI window uses, so the
-//! terminals, the file watcher, the Changed page and the profiles behave as they always did.
+//! The Settings window, drawn by SwiftUI (`macos/settings/`). The app keeps the settings: this module gives the
+//! window a snapshot of them (`snapshot`) whenever they change, and carries out each change the person makes there
+//! (`apply`) through `update_settings`, so the terminals, the file watcher, the Changed page and the profiles
+//! behave as they always did.
 //!
 //! The window calls back on the main thread, outside any call of the app's; its events are queued and carried out
 //! on the app's executor, bursts (a slider drag) coalesced to the last value of each key.
@@ -12,16 +12,21 @@
 
 mod accent;
 mod actions;
+mod agents_read;
 mod apply;
+mod cli_tool;
 mod codec;
+mod controls;
 mod lists;
 mod open_in;
+mod paths;
 mod preview;
 mod recorder;
 mod rows;
 mod snapshot;
 mod system;
 mod themes;
+mod update_words;
 mod words;
 mod words_table;
 
@@ -29,12 +34,11 @@ use std::cell::RefCell;
 use std::collections::VecDeque;
 
 use gpui_kit::{App, AsyncApp, Global, Subscription};
-use wormhole_core::config::features::FeatureFlag;
 
 use super::Section;
 use crate::fonts::FontCatalog;
 use crate::platform::native_settings as platform;
-use crate::settings::{SettingsStore, settings};
+use crate::settings::SettingsStore;
 
 struct Native {
     /// The pairing the person chose in Appearance; until chosen it follows whether the picks are a pair.
@@ -45,6 +49,10 @@ struct Native {
     recording: Option<recorder::Recording>,
     /// Why the last theme import failed, until the next one.
     import_failure: Option<String>,
+    /// The "New profile" sheet, while it is up.
+    new_profile: Option<lists::new_profile::State>,
+    /// The page the window was last asked to show.
+    page: String,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -56,14 +64,8 @@ thread_local! {
     static ASYNC: RefCell<Option<AsyncApp>> = const { RefCell::new(None) };
 }
 
-/// Whether Settings opens as the native window.
-pub(super) fn enabled(cx: &App) -> bool {
-    platform::available() && settings(cx).feature_enabled(FeatureFlag::NativeSettings)
-}
-
 /// Show the window (on `section`, else where it was), and keep it current while it is open.
 pub(super) fn open(section: Option<Section>, cx: &mut App) {
-    FontCatalog::ensure_loaded(cx);
     if cx.try_global::<Native>().is_none() {
         let subscriptions = vec![
             cx.observe_global::<SettingsStore>(push),
@@ -80,12 +82,24 @@ pub(super) fn open(section: Option<Section>, cx: &mut App) {
             lists: lists::Cache::default(),
             recording: None,
             import_failure: None,
+            new_profile: None,
+            page: String::new(),
             _subscriptions: subscriptions,
         });
     }
+    let page = section.map(|s| format!("{s:?}")).unwrap_or_default();
+    if !page.is_empty() {
+        cx.global_mut::<Native>().page.clone_from(&page);
+    }
+    // Off macOS and in a test there is no window to fill.
+    if !platform::available() {
+        return;
+    }
+    FontCatalog::ensure_loaded(cx);
+    // An app installed or removed since last time shows in the folder menu.
+    crate::open_in::OpenIn::refresh(cx);
     ASYNC.with(|slot| *slot.borrow_mut() = Some(cx.to_async()));
     let behind = crate::background::keeps_new_windows_behind(cx);
-    let page = section.map(|s| format!("{s:?}")).unwrap_or_default();
     platform::open(&page, behind, on_event);
     crate::agent_access::forget_listing(cx);
     lists::load(cx);
@@ -155,4 +169,51 @@ pub(super) fn set_import_failure(failure: Option<String>, cx: &mut App) {
 pub(super) fn import_failure(cx: &App) -> Option<String> {
     let reason = cx.try_global::<Native>()?.import_failure.as_deref()?;
     Some(wormhole_text::keys::settings_window_import_failed(reason))
+}
+
+fn set_new_profile(state: Option<lists::new_profile::State>, cx: &mut App) {
+    if cx.has_global::<Native>() {
+        cx.global_mut::<Native>().new_profile = state;
+    }
+    push(cx);
+}
+
+fn new_profile_state(cx: &App) -> Option<&lists::new_profile::State> {
+    cx.try_global::<Native>()?.new_profile.as_ref()
+}
+
+/// Open the window with the "New profile" sheet up (the File menu, the palette).
+pub(super) fn open_new_profile(cx: &mut App) {
+    open(Some(Section::Profile), cx);
+    lists::new_profile::open(cx);
+}
+
+/// What the window is told to do besides showing the snapshot: go to a page, scroll to a row, search.
+#[derive(Default)]
+pub(super) struct Show {
+    pub page: Option<String>,
+    pub scroll: Option<String>,
+    pub search: Option<String>,
+}
+
+/// Show the window and make it go where `show` says (the palette's setting, devctl).
+pub(super) fn show(show: Show, cx: &mut App) {
+    open(None, cx);
+    if !platform::is_open() {
+        return;
+    }
+    let mut snapshot = snapshot::build(cx.try_global::<Native>().and_then(|n| n.separate), cx);
+    snapshot["show"] = serde_json::json!({ "page": show.page, "scroll": show.scroll, "search": show.search });
+    platform::update(&snapshot.to_string());
+}
+
+/// The row of the window that stands for the setting `id`, if the window has one.
+pub(super) fn row_of(id: &str) -> Option<&'static str> {
+    rows::all().iter().find(|(_, row)| *row == id).map(|(key, _)| *key)
+}
+
+/// The page the window was last asked to show, once it was opened at all.
+#[cfg(test)]
+pub(super) fn page(cx: &App) -> Option<String> {
+    cx.try_global::<Native>().map(|native| native.page.clone())
 }

@@ -232,6 +232,7 @@ impl<V> Choice<V> {
         Self { value, label: label.into(), detail: None, mark: None }
     }
 
+    #[cfg(test)]
     pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
         self.detail = Some(detail.into());
         self
@@ -307,8 +308,6 @@ pub fn filter<V: Clone>(options: &[Choice<V>], query: &str) -> Vec<Choice<V>> {
 enum Options<V> {
     /// Built by the caller already.
     Eager(Rc<[Choice<V>]>),
-    /// Built when the menu is drawn open.
-    Lazy(Rc<dyn Fn() -> Rc<[Choice<V>]>>),
 }
 
 type OpenChange = Rc<dyn Fn(bool, &mut Window, &mut App)>;
@@ -368,14 +367,6 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
 
     pub fn options(mut self, options: Vec<Choice<V>>) -> Self {
         self.options = Options::Eager(options.into());
-        self
-    }
-
-    /// The options, built only while the menu is open. A select that is built on every
-    /// frame of a busy view (the branch picker in a panel header) should take this: the
-    /// closed select then costs nothing for however many options it has.
-    pub fn options_with(mut self, build: impl Fn() -> Rc<[Choice<V>]> + 'static) -> Self {
-        self.options = Options::Lazy(Rc::new(build));
         self
     }
 
@@ -457,7 +448,6 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
         menu_surface(popover, ui, menu_width, bg).content(move |_, _, _| {
             let all: Rc<[Choice<V>]> = match &options {
                 Options::Eager(options) => options.clone(),
-                Options::Lazy(build) => build(),
             };
             let needle = Needle::new(&query);
             let matches: Vec<usize> = (0..all.len()).filter(|&ix| all[ix].matches(&needle)).collect();
@@ -572,16 +562,8 @@ fn option_row<V: Clone + PartialEq + 'static>(
         })
 }
 
-mod color_pick;
 mod menu;
-#[cfg(feature = "devctl")]
-pub use color_pick::devctl_open as devctl_open_color;
-pub use color_pick::{ColorChoice, ColorPickState, Picked, Swatch, Value, color_select};
-#[cfg(feature = "devctl")]
-pub use menu::devctl_open;
-pub use menu::{MenuLine, MenuOptions, menu_select};
+pub use menu::{MenuOptions, menu_select};
 
 #[cfg(test)]
 mod tests;
-#[cfg(all(test, feature = "devctl"))]
-mod window_tests;

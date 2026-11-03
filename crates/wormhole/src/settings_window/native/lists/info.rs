@@ -15,8 +15,8 @@ use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
 use crate::settings::settings;
-use crate::settings_window::registry::row_label;
-use crate::settings_window::sections::COUNT_HEADERS;
+use crate::settings_window::native::rows::row_label;
+use crate::settings_window::native::update_words::COUNT_HEADERS;
 use crate::update::Updates;
 
 /// The id of the status explanation's sheet and of the update check's.

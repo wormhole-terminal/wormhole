@@ -14,6 +14,7 @@ struct ContentView: View {
                     Text(title).role(.title, weight: .semibold)
                     if m.search.isEmpty, m.catalog.page(m.page)?.badge == true { Chip(text: m.w("Preview"), fill: t.primary, ink: t.onPrimary) }
                 }.padding(.horizontal, Space.s6 + Space.s2).padding(.top, 44).padding(.bottom, Space.s1)
+                if let banner = m.banner { ConfigBanner(banner: banner) }
                 Group {
                     if !m.search.isEmpty { SearchResults() }
                     else if m.page == "Changed" { ChangedPage() }
@@ -21,6 +22,7 @@ struct ContentView: View {
                 }.formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading)
             }.background(Color(nsColor: .windowBackgroundColor)).ignoresSafeArea(edges: .top)
             .onChange(of: m.scrollTo) { _, v in if let v { withAnimation { proxy.scrollTo(v, anchor: .top) } } }
+            .sheet(isPresented: Binding(get: { m.sheetDict("new-profile")?["open"] as? Bool ?? false }, set: { if !$0 { m.perform("new_profile_cancel", "Profile:") } })) { NewProfileSheet() }
             .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { if m.sheetDict(m.infoSheet ?? "")?["kind"] as? String == "compare" { CompareSheet(id: m.infoSheet ?? "") } else { InfoSheet(id: m.infoSheet ?? "") } }
         }
     }
@@ -141,5 +143,20 @@ struct ChangedPage: View {
               let text = String(data: data, encoding: .utf8) else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
+    }
+}
+
+/// A problem with the app's own config file, above the page (a warning, with the way to the file when there is one).
+struct ConfigBanner: View {
+    let banner: [String: String]
+    @Environment(SettingsModel.self) var m
+    @Environment(\.tok) var t
+    var body: some View {
+        HStack(spacing: Space.s2) {
+            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(t.warning)
+            Text(banner["text"] ?? "").foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            if let action = banner["action"], !action.isEmpty { Button(banner["button"] ?? "") { m.perform(action, "Advanced:") }.buttonStyle(.bordered) }
+        }.padding(.horizontal, Space.s6 + Space.s2).padding(.vertical, Space.s2)
     }
 }

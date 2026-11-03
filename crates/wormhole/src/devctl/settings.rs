@@ -37,16 +37,6 @@ pub(super) fn update_state(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
-pub(super) fn project(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::project(arg.trim(), ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn project_menu(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::project_menu(arg.trim(), ctx.cx);
-    Ok(String::new())
-}
-
 pub(super) fn search(ctx: &mut Ctx, arg: &str) -> Result<String> {
     crate::settings_window::devctl::search(arg.trim(), ctx.cx);
     Ok(String::new())
@@ -69,16 +59,6 @@ pub(super) fn native_shot(_: &mut Ctx, arg: &str) -> Result<String> {
     Ok(path.to_string())
 }
 
-pub(super) fn preview(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::preview(arg, ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn record(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::record(arg, ctx.cx);
-    Ok(String::new())
-}
-
 /// `settings-reveal <id>`: the settings window at that row, as the palette opens it.
 pub(super) fn reveal(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let id = arg.trim();
@@ -89,94 +69,9 @@ pub(super) fn reveal(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
-/// `import-scan [<fixture home>]`: Settings → Import over a folder standing in for the home.
-pub(super) fn import_scan(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    // `~/…` is the instance's own home, so a scenario can name its fixture without the scratch path.
-    let home = (!arg.trim().is_empty()).then(|| match arg.trim().strip_prefix("~/") {
-        Some(rest) => wormhole_core::platform::paths::home().unwrap_or_default().join(rest),
-        None => PathBuf::from(arg.trim()),
-    });
-    if let Some(home) = &home
-        && !home.is_dir()
-    {
-        return Err(anyhow!("no folder {}", home.display()));
-    }
-    crate::settings_window::devctl::import_scan(home, ctx.cx);
-    Ok(String::new())
-}
-
-/// `import-open <source>`: open that terminal's card (`ghostty`, `iterm2`, …).
-pub(super) fn import_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let source = wormhole_core::import::Source::from_key(arg.trim())
-        .ok_or_else(|| anyhow!("no terminal {:?}", arg.trim()))?;
-    crate::settings_window::devctl::import_open(source, ctx.cx);
-    Ok(String::new())
-}
-
-/// `agents-open others|status|-`: open Coding agents' "Other agents Wormhole recognises" list or "How
-/// status works" (`-`: close both), to see them.
-pub(super) fn agents_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let (others, status) = match arg.trim() {
-        "others" => (true, false),
-        "status" => (false, true),
-        "-" => (false, false),
-        other => return Err(anyhow!("agents-open others|status|-, not {other:?}")),
-    };
-    crate::settings_window::devctl::agents_open(others, status, ctx.cx);
-    Ok(String::new())
-}
-
-/// `import-apply <source>`: press "Import selected" for that terminal (`ghostty`, `iterm2`, …).
-pub(super) fn import_apply(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let source = wormhole_core::import::Source::from_key(arg.trim())
-        .ok_or_else(|| anyhow!("no terminal {:?}", arg.trim()))?;
-    crate::settings_window::devctl::import_apply(source, ctx.cx);
-    Ok(String::new())
-}
-
 /// `profile-sheet`: the "New profile" sheet over the settings window.
 pub(super) fn profile_sheet(ctx: &mut Ctx, _: &str) -> Result<String> {
     crate::settings_window::devctl::profile_sheet(ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn scroll(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let by: f32 = arg.trim().parse().map_err(|_| anyhow!("expected <px>"))?;
-    crate::settings_window::devctl::scroll(by, ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn pointer(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::pointer(arg, ctx.cx).map_err(|err| anyhow!(err))?;
-    Ok(String::new())
-}
-
-pub(super) fn key(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::key(arg, ctx.cx).map_err(|err| anyhow!(err))?;
-    Ok(String::new())
-}
-
-pub(super) fn resize(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let mut dims = arg.split_whitespace().filter_map(|n| n.parse::<f32>().ok());
-    let (Some(w), Some(h)) = (dims.next(), dims.next()) else {
-        return Err(anyhow!("expected <w> <h>"));
-    };
-    crate::settings_window::devctl::resize(w, h, ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn select(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::select(arg.trim(), ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn reset_confirm(ctx: &mut Ctx, _: &str) -> Result<String> {
-    crate::settings_window::devctl::reset_confirm(ctx.cx);
-    Ok(String::new())
-}
-
-pub(super) fn cli_tool(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::cli_tool(arg, ctx.cx);
     Ok(String::new())
 }
 
@@ -196,11 +91,6 @@ pub(super) fn hooks(_: &mut Ctx, arg: &str) -> Result<String> {
     let home = wormhole_core::agents::integrations::home();
     let done = if remove { spec.uninstall(&home) } else { spec.install(&home) };
     Ok(done.map_or_else(|e| e, |()| "ok".into()))
-}
-
-pub(super) fn font_picker(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::font_picker(arg, ctx.cx);
-    Ok(String::new())
 }
 
 /// `set key=value` (a JSON value): edits config.json the way a user would.
@@ -319,13 +209,5 @@ pub(super) fn reduce_transparency(ctx: &mut Ctx, arg: &str) -> Result<String> {
 pub(super) fn theme(ctx: &mut Ctx, arg: &str) -> Result<String> {
     SettingsStore::update(ctx.cx, |s| s.theme = arg.to_string());
     ctx.cx.refresh_windows();
-    Ok(String::new())
-}
-
-/// `settings-components [<y>|off]`: the Settings window shows every compiled component in its states.
-pub(super) fn components(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let arg = arg.trim();
-    let from = (arg != "off").then(|| arg.parse().unwrap_or(0.0));
-    crate::settings_window::devctl::components(from, ctx.cx);
     Ok(String::new())
 }

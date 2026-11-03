@@ -5,9 +5,6 @@
 settings-section appearance
 # The settings window opens at the end of this tick: its follow-ups go in a later batch.
 @batch
-settings-resize 1024 900
-@batch
 @shot appearance settings
-settings-scroll 700
 @batch
 @shot appearance-window settings

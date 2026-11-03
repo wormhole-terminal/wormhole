@@ -31,30 +31,8 @@ settings-motion-column = The sidebar and panel hide or show
 
 ## Options
 
-settings-motion-classic = Classic
-settings-motion-insert-reveal = Reveal
-settings-motion-insert-from-side = From the side
-settings-motion-insert-soft-spring = Soft spring
-settings-motion-fold-drawer = Drawer
-settings-motion-fold-tuck = Rows tuck in
-settings-motion-status-crossfade = Crossfade
-settings-motion-status-badge-pop = Badge pops
-settings-motion-status-wash = Card wash
-settings-motion-status-flare = Amber flare
-settings-motion-status-nudge = Nudge
-settings-motion-status-line-roll = Line rolls
-settings-motion-column-soft-spring = Soft spring
-settings-motion-column-content-after = Content after
-
 ## Previews (drawn by settings_window/sections/motion_preview/)
 
-settings-motion-insert-preview-label = Preview of a terminal opening and closing in the list
-settings-motion-fold-preview-label = Preview of a group folding and opening
-settings-motion-status-preview-label = Preview of a terminal's status changing
-settings-motion-column-preview-label = Preview of the sidebar hiding and showing
 settings-motion-preview = Live preview
     .keywords = preview loop animation motion
 
-settings-motion-preview-label = Preview of how the terminals list moves
-settings-motion-preview-caption = Loops while you look. Under Reduce Motion it holds still.
-settings-motion-column-terminal = Terminal

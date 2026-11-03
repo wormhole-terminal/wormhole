@@ -2,7 +2,6 @@
 //! one's name and icon, shared with Settings' list of them, and the menu a right-click on the row
 //! opens, which shows or hides each of them in place.
 
-use gpui_kit::assets::IconName;
 use gpui_kit::*;
 use wormhole_core::view::layout::title_parts::{TitlePart, TitleRow};
 #[allow(
@@ -34,24 +33,6 @@ pub(crate) fn label(part: TitlePart) -> Key {
         TitlePart::PullRequest => TITLE_ROW_PART_PULL_REQUEST,
         TitlePart::OpenIn => TITLE_ROW_PART_OPEN_IN,
         TitlePart::Splits => TITLE_ROW_PART_SPLITS,
-    }
-}
-
-/// The icon Settings' list shows before a part's name: the glyph the row draws it with, where it
-/// has one.
-pub(crate) fn icon(part: TitlePart) -> IconName {
-    match part {
-        TitlePart::Folder => IconName::Folder,
-        TitlePart::Branch => IconName::GitBranch,
-        TitlePart::BranchStatus => IconName::GitCommitHorizontal,
-        TitlePart::Terminal => IconName::Terminal,
-        TitlePart::TerminalStatus => IconName::Clock,
-        TitlePart::Space => IconName::ArrowRightLeft,
-        TitlePart::AgentGauge => IconName::Gauge,
-        TitlePart::Ports => IconName::Globe,
-        TitlePart::PullRequest => IconName::GitPullRequest,
-        TitlePart::OpenIn => IconName::ExternalLink,
-        TitlePart::Splits => IconName::Columns2,
     }
 }
 

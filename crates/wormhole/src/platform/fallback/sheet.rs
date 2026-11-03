@@ -3,13 +3,9 @@
 use gpui_kit::Window;
 use smol::channel::Receiver;
 
-use crate::platform::sheet::{Choice, Destructive, Question};
+use crate::platform::sheet::{Choice, Question};
 
 pub fn ask_with_checkbox(_: &Window, _: &Question) -> Option<Receiver<Option<bool>>> {
-    None
-}
-
-pub fn confirm_destructive(_: &Window, _: &Destructive) -> Option<Receiver<bool>> {
     None
 }
 

@@ -14,7 +14,9 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::storage::store::WindowRecord;
 use wormhole_core::view::panes::Rect;
 use wormhole_core::view::sidebar::WindowSidebar;
-use wormhole_core::view::tear_off::{Landing, Occupant, Placed, Screen, Spot, landing, place, to_global};
+#[cfg(feature = "devctl")]
+use wormhole_core::view::tear_off::Spot;
+use wormhole_core::view::tear_off::{Landing, Occupant, Placed, Screen, landing, place, to_global};
 
 use crate::app_state::{AppState, OpenWindow, app, app_mut};
 use crate::platform;

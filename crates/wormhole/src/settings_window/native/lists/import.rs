@@ -14,7 +14,7 @@ use wormhole_text::text;
 
 use super::{Entry, import_sheets};
 use crate::settings::import::{self as shared, terminal_name};
-use crate::settings_window::with_tilde;
+use crate::settings_window::native::paths::with_tilde;
 
 const GROUP: &str = "Import:0";
 

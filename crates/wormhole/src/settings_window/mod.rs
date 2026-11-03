@@ -1,233 +1,79 @@
-//! The settings window: the nav on the left (title, search, the sections in four
-//! groups), a section's page on the right. Opens with ⌘,. Typing in the search shows the
-//! settings it finds as live rows; Esc clears the search, then closes the window.
+//! Settings: a native macOS window drawn by SwiftUI (`macos/settings/`). The app keeps the settings and gives the
+//! window a snapshot of them; the window answers each change of the person's as an event. Everything of that
+//! exchange is in `native`; this is how the rest of the app opens the window.
 //!
-//! By file: `open` where it opens and how a row from the palette is shown, `window` the window as a
-//! view (its page and what its controls do), `nav` the left column, `sections` the pages and
-//! `registry`, `recorder` and `font_picker` what the pages share. A page's preview is its first block, a card
-//! (`sections::card`).
-//!
-//! Above the window and the shared state: it may use them; the app root, the palette and the status
-//! item use it. The shared state keeps its page untyped.
+//! Above the window and the shared state: it may use them; the app root, the palette and the status item use it.
 
-mod changed;
-#[cfg(test)]
-mod changed_tests;
-#[cfg(test)]
-mod close_tests;
-#[cfg(test)]
-mod color_tests;
 #[cfg(feature = "devctl")]
-mod components_sheet;
-#[cfg(test)]
-mod default_words_tests;
 pub(crate) mod devctl;
-#[cfg(test)]
-mod extensions_tests;
-mod font_picker;
-#[cfg(test)]
-mod frame_tests;
-#[cfg(test)]
-mod info_tests;
-#[cfg(test)]
-mod menu_tests;
-#[cfg(test)]
-mod motion_tests;
 mod native;
-mod nav;
-#[cfg(test)]
-mod nav_tests;
-mod open;
-mod recorder;
-mod registry;
-#[cfg(test)]
-mod row_keys_tests;
-mod sections;
-#[cfg(test)]
-mod unlock_tests;
-mod window;
-#[cfg(test)]
-mod words_tests;
-mod zen_note;
 
-use std::path::{Path, PathBuf};
-
+use gpui_kit::App;
 use gpui_kit::assets::IconName;
-use gpui_kit::component::input::InputState;
-use gpui_kit::*;
-use wormhole_core::platform::paths;
-use wormhole_core::theme::fonts::FontSlot;
-use wormhole_core::view::sidebar::Density;
+use wormhole_core::config::settings_index;
 
-use crate::app_state::AppState;
-use crate::platform::vibrancy::Blur;
-use crate::select::ColorPickState;
-use crate::settings::{UiColors, settings};
-use font_picker::FontPickerState;
+use crate::settings::settings;
 
-use open::current_window;
-pub(crate) use open::{open_settings, reveal_row};
-pub(crate) use sections::open_new_profile_sheet;
 pub(crate) use wormhole_core::config::settings_index::SectionId as Section;
 
-/// The design's page (`ui/settings_page.dc.html`): the title's row is 26 high and the page's blocks stand 22
-/// apart.
-const PAGE_TITLE_H: f32 = 26.0;
-const PAGE_GAP: f32 = 22.0;
-/// A page's intro line wraps at a readable length, not across the whole column.
-const INTRO_W: f32 = 560.0;
-/// The card that says nothing matched.
-const NO_RESULTS_W: f32 = 420.0;
-/// The window: the size of a page (the nav and the content column) and the least the window
-/// shrinks to.
-const WINDOW_SIZE: (f32, f32) = (840.0, 720.0);
-const WINDOW_MIN: (f32, f32) = (640.0, 420.0);
-
-/// What the Terminals & sidebar preview shows beside the current look while the pointer is
-/// over another option.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum SidebarLook {
-    Density(Density),
+/// Bring up the Settings window (showing `section`), or bring it forward if it is open.
+pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
+    native::open(section, cx);
 }
 
-/// The settings window's colours: an opaque window keeps the theme's own text colours, a
-/// translucent one the main window's. It shadows `settings::ui` for everything drawn in this
-/// window, whose files import it.
-fn ui(cx: &App) -> UiColors {
-    crate::settings::window_ui(cx, settings(cx).settings_translucent)
-}
-
-/// What the pages show of the window in front: its terminal's project (the "set by this project"
-/// marks). Read when Settings opens and once a
-/// second after, never in a frame: GPUI makes an entity read while a window draws that window's,
-/// so the workspace would run its tick in Settings, and lose it when Settings closed.
-#[derive(Clone, Debug, Default, PartialEq)]
-struct FrontWindow {
-    project: Option<PathBuf>,
-}
-
-impl FrontWindow {
-    fn read(cx: &App) -> Self {
-        AppState::front_window(cx)
-            .and_then(|window| {
-                window
-                    .workspace
-                    .read_with(cx, |ws, cx| Self {
-                        project: crate::features::project::api::active_root(ws, cx),
-                    })
-                    .ok()
-            })
-            .unwrap_or_default()
+/// Bring up Settings at the row `id` itself (the command palette): its page, scrolled to the row.
+pub(crate) fn reveal_row(id: &str, cx: &mut App) {
+    let Some((section, _, _)) = settings_index::entry(id) else { return };
+    // Never open a section this build hides (a Preview section whose flag is off): a stale recent id could still
+    // name one.
+    if !section.is_visible(settings(cx)) {
+        return;
     }
+    // A setting the window has no row for is shown by its page alone.
+    let row = native::row_of(id);
+    native::show(
+        native::Show {
+            page: Some(
+                row.and_then(|key| key.split(':').next())
+                    .map_or_else(|| format!("{section:?}"), str::to_string),
+            ),
+            scroll: row.map(str::to_string),
+            search: None,
+        },
+        cx,
+    );
 }
 
-pub(crate) struct SettingsWindow {
-    section: Section,
-    /// The window in front, as the last refresh read it.
-    front: FrontWindow,
-    search: Entity<InputState>,
-    /// The search shows its results page; picking a section from it shows that section with
-    /// the matches marked, until the search changes again.
-    show_results: bool,
-    font_picker: FontPickerState,
-    /// Motion → the four previews, there while the page is.
-    motion_previews: Option<sections::MotionPreviews>,
-    /// A shortcut field waiting for keys, or showing keys it refused.
-    recording: Option<recorder::Recording>,
-    /// Appearance → the primary's colour control: its editor, its field and where the keyboard is.
-    primary_pick: Entity<ColorPickState>,
-    /// Appearance → the branch colour's.
-    branch_pick: Entity<ColorPickState>,
-    /// Fonts → which font the specimen shows.
-    specimen: FontSlot,
-    /// Appearance → every theme, not just the first rows.
-    themes_all: bool,
-    /// devctl `settings-components`: the window shows the component sheet, from this y of the board, instead of a page.
-    #[cfg(feature = "devctl")]
-    components_sheet: Option<f32>,
-    /// Appearance → Choose: a card per kind of theme (Some(true)), or pairs (Some(false)); until chosen it
-    /// follows whether the two picks are halves of one pair.
-    themes_separate: Option<bool>,
-    /// Terminals & sidebar → the option under the pointer, previewed beside the current look.
-    sidebar_preview: Option<SidebarLook>,
-    /// Changed → Copy as JSON has just copied: it says Copied for a moment.
-    changed_copied: bool,
-    /// Coding agents → the agents that aren't on PATH are listed.
-    others_open: bool,
-    /// Coding agents → "How status works" is open under the last line.
-    status_open: bool,
-    /// Updates → Privacy: what an update check sends is shown under its row.
-    updates_details_open: bool,
-    /// Terminal → the Shells and Worktrees folder rows are open.
-    terminal_rows: sections::TerminalRows,
-    /// Profile → the Environment, Git identity and Agent logins rows are open.
-    profile_rows: sections::ProfileRows,
-    /// Profile → the fields of the profile Wormhole is in (made again when it changes).
-    profile_form: Option<sections::ProfileForm>,
-    /// Profile → "Delete profile…" was pressed: the row asks before it deletes.
-    confirm_delete_profile: bool,
-    /// The "New profile" sheet over the window.
-    new_profile: Option<sections::NewProfileSheet>,
-    /// Something that went wrong on a page (an import, writing an agent's hooks), shown at the
-    /// top of that page until the page changes.
-    notice: Option<(Section, SharedString)>,
-    /// The page's scroll position: a page opens at its top.
-    content_scroll: ScrollHandle,
-    /// The group picked in the nav under the open page, and the scroll to it.
-    group: nav::GroupPick,
-    /// The row the palette asked for (`reveal_row`): marked, and its anchor in the page, until
-    /// another section or a search takes over.
-    revealed: Option<(&'static str, ScrollAnchor)>,
-    /// The revealed row still has to be scrolled to (once the page is laid out).
-    reveal_pending: bool,
-    projects: sections::ProjectPicker,
-    theme_picker: sections::ThemePicker,
-    /// What the Agents page shows; read in the background (see `AgentsSnapshot`).
-    agents: Option<sections::AgentsSnapshot>,
-    agents_task: Option<Task<()>>,
-    /// Import → the terminals found, which is open and what is ticked; scanned when the page is
-    /// first shown.
-    import: sections::ImportPage,
-    /// Coding agents → Command line tool: where it stands.
-    cli_tool: sections::CliToolPanel,
-    /// Extensions → the Probes found, the approval sheet and the work behind them.
-    extensions: sections::Extensions,
-    /// The window's rem size as of the last draw, for boxes that are sized in rems and drawn
-    /// from a cache (the theme cards).
-    rem: Pixels,
-    blur: Blur,
-    focus_handle: FocusHandle,
-    _subscriptions: Vec<Subscription>,
-    /// Keeps the project picker's list current.
-    _refresh: Task<()>,
+/// The "New profile" sheet over the Settings window, from anywhere (the File menu, the palette).
+pub(crate) fn open_new_profile_sheet(cx: &mut App) {
+    native::open_new_profile(cx);
 }
 
-/// The user's home folder, asked each time: the pages that show a path as `~/…` or
-/// look under it are cold code, so nothing is cached.
-fn home() -> Option<PathBuf> {
-    paths::home()
+/// The page the Settings window was last asked to show; `None` until it was opened at all.
+#[cfg(test)]
+pub(crate) fn shown_page(cx: &App) -> Option<String> {
+    native::page(cx)
 }
 
-/// `dir` as `~/…` when it is under the home folder, as the default location is shown.
-fn with_tilde(dir: &Path) -> String {
-    match home().as_deref().and_then(|home| dir.strip_prefix(home).ok()) {
-        Some(rest) => format!("~/{}", rest.display()),
-        None => dir.display().to_string(),
-    }
-}
-
-/// The icon the settings nav gives a section (the palette's settings show it too).
+/// The icon the palette gives a section's settings.
 pub(crate) fn section_icon(section: Section) -> IconName {
-    nav::section_icon(section)
-}
-
-/// Show one of our folders in the Finder (the icon themes, the fonts),
-/// creating it first so there's somewhere to drop files.
-// GPUI's test platform panics on `open_with_system` (gpui-pre 0.3.9, `platform/test/platform.rs`), so a view
-// test that clicks this needs a stand-in first.
-fn open_folder(dir: &Path, cx: &App) {
-    match wormhole_core::storage::files::create_dir_all_private(dir) {
-        Ok(()) => cx.open_with_system(dir),
-        Err(err) => tracing::warn!("opening {}: {err}", dir.display()),
+    match section {
+        Section::Profile => IconName::CircleUser,
+        Section::Changed => IconName::RotateCcw,
+        Section::Appearance => IconName::Palette,
+        Section::Fonts => IconName::ALargeSmall,
+        Section::Motion => IconName::Play,
+        Section::Terminal => IconName::SquareTerminal,
+        Section::Sessions => IconName::PanelLeft,
+        Section::Git => IconName::GitCompare,
+        Section::Agents => IconName::Sparkles,
+        Section::Import => IconName::ArrowDownToLine,
+        Section::Projects => IconName::Folder,
+        Section::Extensions => IconName::Puzzle,
+        Section::FeatureFlags => IconName::FlaskConical,
+        Section::Notifications => IconName::Bell,
+        Section::MenuBar => IconName::Command,
+        Section::Updates => IconName::Download,
+        Section::Advanced => IconName::SlidersHorizontal,
     }
 }

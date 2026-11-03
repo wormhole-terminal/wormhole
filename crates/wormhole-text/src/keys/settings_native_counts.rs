@@ -13,7 +13,7 @@ use crate::args::Arg;
 /// }
 /// ```
 pub fn settings_native_changed_count(count: i64) -> String {
-    crate::active::message(949, &[("count", Arg::Int(count))])
+    crate::active::message(757, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -23,5 +23,5 @@ pub fn settings_native_changed_count(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_native_reset_count(count: i64) -> String {
-    crate::active::message(950, &[("count", Arg::Int(count))])
+    crate::active::message(758, &[("count", Arg::Int(count))])
 }

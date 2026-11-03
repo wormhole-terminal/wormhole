@@ -80,7 +80,7 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
         "counts": counts, "values": values, "defaults": default_values, "options": options,
         "changed": changed, "known": known, "themes": themes, "fonts": fonts(cx), "lists": lists, "sheets": sheets, "profile": lists::profile(cx),
         "recording": recording, "notes": notes, "preview": preview, "words": words::snapshot(),
-        "update": system::update_card(cx), "quiet": system::quiet_notices(cx),
+        "update": system::update_card(cx), "quiet": system::quiet_notices(cx), "banner": system::banner(cx),
     })
 }
 

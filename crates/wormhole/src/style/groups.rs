@@ -25,8 +25,6 @@ use crate::settings::UiColors;
 
 /// A folded head's summary (its tiles and count) fading in once the rows that folded are gone.
 pub enum SummaryFade {
-    /// Shown at this opacity: for a preview that knows what moment it draws.
-    Opacity(f32),
     /// Fading as an animation of its own: the animation's `id` (new to each fold), how long it takes
     /// `over`-all and the opacity at each moment of it (`t`, 0.0..=1.0, of that time).
     Over { id: ElementId, over: Duration, opacity: Box<dyn Fn(f32) -> f32> },
@@ -210,7 +208,6 @@ pub fn group_head(id: impl Into<ElementId>, ui: UiColors, parts: GroupHead) -> S
             Some(SummaryFade::Over { id, over, opacity }) => summary
                 .with_animation(id, Animation::new(over), move |summary, t| summary.opacity(opacity(t)))
                 .into_any_element(),
-            Some(SummaryFade::Opacity(opacity)) => summary.opacity(opacity).into_any_element(),
             None => summary.into_any_element(),
         }
     });

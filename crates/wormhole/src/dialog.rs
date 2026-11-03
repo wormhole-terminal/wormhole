@@ -121,52 +121,6 @@ pub(crate) fn ask_with_cancel(
         .detach();
 }
 
-/// What a question before something that can't be undone says.
-pub(crate) struct DestructiveQuestion {
-    pub title: SharedString,
-    pub detail: SharedString,
-    /// The destructive button's words ("Reset").
-    pub confirm: &'static str,
-}
-
-/// Ask `question` in a sheet on `window`: the destructive button in red, Cancel the default (Return and a
-/// stray press keep everything, Esc backs out too). `on_confirm` runs only for the destructive button; the
-/// window going first (the app quitting) answers with nothing, as Cancel. Where the window can't show the
-/// native sheet (a test, a platform without one) GPUI's own prompt asks the same, Cancel first.
-pub(crate) fn ask_destructive(
-    window: &mut Window,
-    cx: &mut App,
-    question: DestructiveQuestion,
-    on_confirm: impl FnOnce(&mut Window, &mut App) + 'static,
-) {
-    let cancel = text(keys::DIALOG_CANCEL);
-    let sheet = sheet::Destructive {
-        title: &question.title,
-        detail: &question.detail,
-        confirm: question.confirm,
-        cancel,
-    };
-    if let Some(answer) = sheet::confirm_destructive(window, &sheet) {
-        window
-            .spawn(cx, async move |cx| {
-                if answer.recv().await == Ok(true) {
-                    cx.update(|window, cx| on_confirm(window, cx)).ok();
-                }
-            })
-            .detach();
-        return;
-    }
-    let buttons = [PromptButton::cancel(cancel), PromptButton::ok(question.confirm)];
-    let answer = window.prompt(PromptLevel::Warning, &question.title, Some(&question.detail), &buttons, cx);
-    window
-        .spawn(cx, async move |cx| {
-            if answer.await.ok() == Some(1) {
-                cx.update(|window, cx| on_confirm(window, cx)).ok();
-            }
-        })
-        .detach();
-}
-
 /// The checkbox of the question before quitting: whether the terminals in session hosts stay.
 const KEEP_RUNNING: &str = "Keep terminals running in the background";
 

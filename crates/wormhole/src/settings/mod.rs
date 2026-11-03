@@ -438,19 +438,13 @@ impl SettingsStore {
 
     /// The user's own settings, without the project's: what "changed from its default" and
     /// the reset arrows of the settings window look at.
-    pub fn user_settings(&self) -> &Settings {
-        &self.config.settings
-    }
-
-    /// The keys the active project's `.wormhole/config.json` sets (sorted).
-    pub fn project_keys(&self) -> &[String] {
-        &self.project_keys
-    }
-
-    /// Whether config.json failed to read in full, so that changes made in the app are not
-    /// saved until it is fixed: the settings page says so.
+    /// Whether config.json failed to read in full, so that changes made in the app are not saved until it is fixed.
     pub fn config_unreadable(&self) -> bool {
         self.config.is_unreadable()
+    }
+
+    pub fn user_settings(&self) -> &Settings {
+        &self.config.settings
     }
 
     /// Use (or stop using) the active project's theme.

@@ -76,14 +76,10 @@ pub enum FeatureFlag {
     /// the picked folder's path at the cursor (it never changes directory). Off, ⌘J does nothing and the
     /// menu and the palette don't list it.
     FolderPicker,
-    /// The Settings window drawn by the system's own UI toolkit (SwiftUI) instead of by Wormhole's
-    /// renderer: native controls, the Mac's look, the same settings. Off, the window Wormhole draws
-    /// itself opens.
-    NativeSettings,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 13] = [
+    pub const ALL: [FeatureFlag; 12] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -97,7 +93,6 @@ impl FeatureFlag {
         Self::Probes,
         Self::Files,
         Self::FolderPicker,
-        Self::NativeSettings,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -116,7 +111,6 @@ impl FeatureFlag {
             Self::Probes => "probes",
             Self::Files => "files",
             Self::FolderPicker => "folder_picker",
-            Self::NativeSettings => "native_settings",
         }
     }
 
@@ -140,7 +134,6 @@ impl FeatureFlag {
             Self::Probes => "Probes",
             Self::Files => "Files",
             Self::FolderPicker => "Folder picker",
-            Self::NativeSettings => "Native Settings window",
         }
     }
 
@@ -200,10 +193,6 @@ impl FeatureFlag {
                 "⌘J at the prompt: pick a folder below the current one, or walk a path, and its path is put \
                  at the cursor."
             }
-            Self::NativeSettings => {
-                "The Settings window drawn by macOS's own UI toolkit, with the Mac's controls, instead of by \
-                 Wormhole."
-            }
         }
     }
 
@@ -236,8 +225,6 @@ impl FeatureFlag {
             Self::Files => false,
             // New: off until it has been through its visual check and approved.
             Self::FolderPicker => false,
-            // Being built: pages are wired one by one, and not every row works yet.
-            Self::NativeSettings => false,
         }
     }
 }

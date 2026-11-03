@@ -4,65 +4,14 @@
 //! The messages of `locales/en/settings-changed.ftl`.
 
 use crate::key::Key;
-use crate::args::Arg;
 
 /// "Changed"
-pub const SETTINGS_SECTION_CHANGED: Key = Key::new(566);
+pub const SETTINGS_SECTION_CHANGED: Key = Key::new(475);
 /// "Every setting that differs from its default, with its default beside it. Reset them one by one, or all at once."
-pub const SETTINGS_SECTION_CHANGED_INTRO: Key = Key::new(567);
-/// "Everything else is at its default"
-pub const SETTINGS_CHANGED_SUMMARY_DETAIL: Key = Key::new(569);
-/// "Every setting is at its default"
-pub const SETTINGS_CHANGED_NONE: Key = Key::new(570);
-/// "Nothing differs from what Wormhole ships with"
-pub const SETTINGS_CHANGED_NONE_DETAIL: Key = Key::new(571);
-/// "Copy as JSON"
-pub const SETTINGS_CHANGED_COPY: Key = Key::new(572);
-/// "Copied"
-pub const SETTINGS_CHANGED_COPIED: Key = Key::new(573);
-/// "Reset All…"
-pub const SETTINGS_CHANGED_RESET_ALL: Key = Key::new(574);
+pub const SETTINGS_SECTION_CHANGED_INTRO: Key = Key::new(476);
 /// "On"
-pub const SETTINGS_CHANGED_ON: Key = Key::new(577);
+pub const SETTINGS_CHANGED_ON: Key = Key::new(477);
 /// "Off"
-pub const SETTINGS_CHANGED_OFF: Key = Key::new(578);
+pub const SETTINGS_CHANGED_OFF: Key = Key::new(478);
 /// "none"
-pub const SETTINGS_CHANGED_DEFAULT_EMPTY: Key = Key::new(579);
-/// "Your terminals, notes and themes are kept."
-pub const SETTINGS_CHANGED_QUESTION_DETAIL: Key = Key::new(581);
-/// "Reset"
-pub const SETTINGS_CHANGED_QUESTION_CONFIRM: Key = Key::new(582);
-
-/// ```text
-/// { $count ->
-///     [one] { $count } setting changed
-///    *[other] { $count } settings changed
-/// }
-/// ```
-pub fn settings_changed_summary(count: i64) -> String {
-    crate::active::message(568, &[("count", Arg::Int(count))])
-}
-
-/// ```text
-/// Default: { $value }
-/// ```
-pub fn settings_changed_default(value: &str) -> String {
-    crate::active::message(575, &[("value", Arg::Str(value))])
-}
-
-/// ```text
-/// { $group } · Default: { $value }
-/// ```
-pub fn settings_changed_default_in_group(group: &str, value: &str) -> String {
-    crate::active::message(576, &[("group", Arg::Str(group)), ("value", Arg::Str(value))])
-}
-
-/// ```text
-/// { $count ->
-///     [one] Reset { $count } setting to its default?
-///    *[other] Reset { $count } settings to their defaults?
-/// }
-/// ```
-pub fn settings_changed_question(count: i64) -> String {
-    crate::active::message(580, &[("count", Arg::Int(count))])
-}
+pub const SETTINGS_CHANGED_DEFAULT_EMPTY: Key = Key::new(479);

@@ -246,50 +246,20 @@
 //!                   tab (`-`: from outside any); the reply's JSON line is appended after the batch
 //!   menu-new-window | menu-updates   the Shell > New Window / Check for Updates… menu actions,
 //!                   dispatched through this window like a menu click
-//!   settings | settings-section <name> | settings-shot <name>   (the settings window)
-//!   settings-outline  the settings window's accessibility tree as one `outline {json}` line: page, nodes in reading order
-//!   import-scan [<fixture home>]   Settings → Import over a folder standing in for the home (`~/…` is the
-//!                   instance's; `tools/visual/fixtures/import/`; never the real one), shown and open; without a folder the page scans the
-//!                   instance's own home. Shot it with settings-shot in a later batch
-//!   agents-open <others|status|->   Coding agents: open the other agents list or How status works (`-`: shut both)
-//!   import-open <ghostty|iterm2|…>   open that terminal's card on the Import page
-//!   import-apply <ghostty|iterm2|terminal-app|alacritty|kitty|wezterm|warp|zed|vscode>   press "Import
-//!                   selected" on that terminal's card, rows ticked as shown (settings change, colours are saved
-//!                   as theme files in the instance's data dir)
+//!   settings | settings-section <name> | settings-shot <name>   the Settings window, on that page; its content as <name>.png
 //!   update-installed <version> [pending]   Settings → Updates as after an install: Restart, or with
 //!                   `pending` the line "Restarts when your terminals are idle."
 //!   update-state <idle|checking|up-to-date|available|downloading|installed|failed|removed|stays>
 //!                   Settings → Updates in that state from fixtures, nothing downloaded or installed
 //!                   (`removed`, `stays`: the notes after going back to Stable)
-//!   font-picker <interface|code|terminal> [query]   expand a font picker (open settings first)
 //!   picker <compare|history> [query]   open the branch select in the Changes / History tab
-//!   settings-project-menu [query]   open the project select in Settings → Project folders
-//!   native-set <row key> <value>   what the native Settings window sends when a row changes (a menu's value is its option id, e.g. `Terminal:0:0 n100000`)
-//!   native-event <json>   any event the native Settings window sends (`{"t":"action","k":"Updates:","v":"check_now"}`)
-//!   native-shot <file.png>   the native Settings window's content as a PNG
-//!   settings-search [text]   type into the settings search (empty clears it; open settings first)
-//!   settings-record <id> [keys]   start a shortcut field (hotkey) recording, and press keys into it
-//!   settings-reveal <id>   open the settings window at that row, scrolled to it and marked (what
-//!                   the palette does for a setting)
-//!   settings-preview <regular|compact|dense|off>   Terminals & sidebar's preview of a density, as on hover
-//!   profile-sheet   the New profile sheet over the settings window (shot it with settings-shot next batch)
-//!   probe-approve <id>   Settings → Extensions: open the approval sheet for that Probe and press Approve with
-//!                   every permission on, as a person would (a Touch ID level one asks `WORMHOLE_AUTH`;
-//!                   open the page first with `settings-section extensions`; needs the `probes` flag, set with
-//!                   `set feature_flags {"probes": true}`); `state` lists each Probe as `probe <folder> <state>`
-//!   probe-off <id>  turn that Probe off, with no question: its approval and its copy go
-//!   settings-scroll <px>   scroll the settings page (negative = up)
-//!   settings-pointer <move|click|right-click|wheel|alt-on|alt-off> [x y [dy]]   the pointer, the wheel
-//!                   or ⌥ held, in the settings window (logical pixels as in settings-shot); hover shows a
-//!                   row's key and (i); `wheel x y -80` scrolls down 80 under that point
-//!   settings-key <keystroke>   a key pressed in the settings window (`key` goes to the main window): escape, ctrl-enter, …
-//!   settings-components [<y>|off]   the window shows every component in its states (hover, pressed, focus forced), from the board's y
-//!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
-//!   settings-select <row id>   open that row's select or menu in the settings window (scrollback, tab-width, theme-mode…)
-//!   settings-reset-confirm   press Advanced → Reset to defaults… (shows its question, resets nothing)
+//!   native-set <row key> <value>   what the Settings window sends when a row changes (a menu's value is its option id, e.g. `Terminal:0:0 n100000`)
+//!   native-event <json>   any event the Settings window sends (`{"t":"action","k":"Updates:","v":"check_now"}`)
+//!   native-shot <file.png>   the Settings window's content as a PNG at that path
+//!   settings-search [text]   type into the Settings window's search (empty clears it)
+//!   settings-reveal <id>   open the Settings window at that row, scrolled to it (what the palette does for a setting)
+//!   profile-sheet   the New profile sheet over the Settings window (shot it with settings-shot next batch)
 //!   settings-hooks <agent id> [remove]   add (or remove) that agent's hooks in the instance's agent home, to seed it
-//!   settings-cli-tool [install|uninstall]   Coding agents → Command line tool: show it, or press its
-//!                   Install / Uninstall (into the instance's own cli-bin folder, `WORMHOLE_CLI_DIR`)
 //!   panel-tab <changes|history|notes|usage|project|files>   show that tab of the right panel
 //!   files           the Files tab as text: its folder (following the terminal, or chosen), the pinned
 //!                   folders and each row (`v` open folder, `>` closed, `~` link, `*` selected)

@@ -272,7 +272,7 @@
     "features-siblings": {},
     "frame-names-no-feature": {},
     "state-fields": {
-      "wormhole :: AppState": 27,
+      "wormhole :: AppState": 26,
       "wormhole :: Session": 10,
       "wormhole :: Workspace": 50
     }

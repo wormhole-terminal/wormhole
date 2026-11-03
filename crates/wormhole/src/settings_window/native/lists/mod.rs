@@ -7,7 +7,10 @@
 mod agents;
 mod import;
 mod import_sheets;
+mod import_words;
 mod info;
+pub(super) mod new_profile;
+mod probe_words;
 mod probes;
 mod profile;
 mod projects;
@@ -17,7 +20,7 @@ use std::path::PathBuf;
 use gpui_kit::App;
 use serde_json::{Map, Value, json};
 
-use crate::settings_window::sections::AgentsSnapshot;
+use crate::settings_window::native::agents_read::AgentsSnapshot;
 
 /// What the lists read from disk, kept between snapshots: reading it is slow, and nothing changes it but the
 /// window's own buttons, which read it again.
@@ -79,12 +82,14 @@ pub(super) fn build(cx: &mut App) -> (Value, Value) {
     profile::lists(&mut lists, cx);
     probes::lists(&mut lists, &mut sheets, cx);
     info::sheets(&mut sheets, cx);
+    sheets.insert(new_profile::SHEET.into(), new_profile::sheet(super::new_profile_state(cx), cx));
     (json!(lists), json!(sheets))
 }
 
 /// Carry out a button of a listed row. Whether the row was one of the lists'.
 pub(super) fn perform(key: &str, id: &str, cx: &mut App) -> bool {
-    agents::perform(key, id, cx)
+    new_profile::perform(id, cx)
+        || agents::perform(key, id, cx)
         || projects::perform(key, id, cx)
         || probes::perform(key, id, cx)
         || import::perform(key, id, cx)

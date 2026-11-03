@@ -38,12 +38,3 @@ settings-advanced-skip-scans = Skip malware scans of new programs
 
 ## settings_window/sections/advanced.rs (labels, hints and notes drawn by this page's code)
 
-settings-advanced-open = Open
-settings-advanced-open-developer-tools = Open Developer Tools Settings
-settings-advanced-show-in-finder = Show in Finder
-settings-advanced-reset-tips-button = Show Again
-settings-advanced-no-tip-was-closed-for-good = No tip was closed for good
-settings-advanced-they-show-again-where-they-belong = They show again where they belong
-settings-advanced-reset-to-defaults = Reset…
-settings-advanced-every-setting-is-at-its-default = Every setting is at its default
-settings-advanced-asks-first = Asks first

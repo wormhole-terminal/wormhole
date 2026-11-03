@@ -48,25 +48,16 @@ settings-agents-access-programs = Approved programs
 settings-agents-access-off = Off
 settings-agents-access-ask = Ask
 settings-agents-access-open = Allowed while open
-settings-agents-access-none = Nothing has asked yet.
 settings-agents-access-revoke = Revoke
 settings-agents-access-until-quit = until { -brand } quits
 settings-agents-access-session = while it runs
 settings-agents-access-always = always
-settings-agents-access-never-used = never used
-# What a row says it was last used. { $when } is a time ago ("3m ago").
-settings-agents-access-last-used = Used { $when }
 
 # The switches of an approved program: what it may do. Closing a terminal is not one of them: it always asks.
 settings-agents-access-cap-read = Read
 settings-agents-access-cap-type = Type
 settings-agents-access-cap-run = Run
 settings-agents-access-cap-open = Open
-# Under the list of approved programs.
-settings-agents-access-caps-note = Closing a terminal always asks. A program uses the terminals it opened and the one it runs in; for any other it asks you first.
-
-settings-agents-access-not-signed = not signed
-settings-agents-access-ad-hoc = ad hoc signature
 
 ## Skill and MCP
 
@@ -89,20 +80,8 @@ settings-agents-skill-hint-outdated = Skill out of date
 settings-agents-skill-hint-foreign = Another skill is in the way
 settings-agents-skill-hint-none = No skill
 
-settings-agents-skill-none = No coding agent that loads skills was found on this Mac's PATH.
-settings-agents-skill-not-installed = No skill installed in
-settings-agents-skill-current = Skill installed in
-settings-agents-skill-outdated = Skill out of date in
-settings-agents-skill-chip-outdated = Out of date
-settings-agents-skill-chip-foreign = In the way
 settings-agents-skill-covered = Skill covered by
-settings-agents-skill-foreign = Another skill is in the way in
-settings-agents-skill-foreign-tooltip = A skill with this name is there that { -brand } didn't write; it never replaces it
 settings-agents-copy-command = Copy command
-
-# The notice after installing, updating or removing the skill failed. { $agent } is the agent's name and
-# { $error } the reason, in English.
-settings-agents-skill-failed = { $agent } skill: { $error }
 
 ## The page's last line, with the buttons after it. Its words in search: where status comes from, and what has its own page
 
@@ -112,33 +91,17 @@ settings-agents-footer = Notifications and how status works
 
 ## settings_window/sections/agents (labels, hints and notes drawn by this page's code)
 
-settings-agents-footer-line = When an agent notifies you is set in Notifications.
-settings-agents-open-notifications = Open Notifications
-settings-agents-how-status-works = How status works
-settings-agents-looking-for-agents = Looking for agents…
-settings-agents-needs-repair = Needs repair
 # The quiet line under an agent: how its status gets to { -brand }.
 settings-agents-hint-hooks = Exact status through hooks
 settings-agents-hint-output = Status read from its output
 settings-agents-hint-partial = Some hook events are missing (it may have been updated)
-settings-agents-hooks-on = Hooks on
-settings-agents-none-title = No coding agents found
-settings-agents-no-coding-agent-on-this-macs = No coding agent on this Mac's PATH. Install Claude Code, Codex or one of the others below: { -brand } recognises it in any terminal, and offers its hooks here.
 settings-agents-status-hooks-on = Status hooks on
 settings-agents-hooks-incomplete = Hooks incomplete
 settings-agents-installed-hooks-in = Installed · hooks in
 settings-agents-installed-hooks-incomplete-in = Installed · hooks incomplete in
 settings-agents-installed-status-from-output-hooks-go = Installed · status from output; hooks go in
 settings-agents-installed-status-from-output-no-hook = Installed · status from output (no hook support)
-settings-agents-remove-hooks = Remove Hooks
-settings-agents-repair-hooks = Repair Hooks
-settings-agents-add-hooks = Add Hooks
-settings-agents-reveal-in-finder = Reveal in Finder
-settings-agents-reveal-hook-file = Reveal Hook File in Finder
 settings-agents-no-hooks = No hooks
-settings-agents-not-on-path = Not on PATH
-settings-agents-status-hooks-available = status hooks available
-settings-agents-status-from-output = status from output
 settings-agents-with-status-hooks = With status hooks
 settings-agents-the-agent-tells-wormhole-the-moment = The agent tells { -brand } the moment it starts working, waits for you or finishes.
 settings-agents-without = Without
@@ -150,29 +113,14 @@ settings-agents-hooks-do-nothing-outside-wormhole-only = Hooks do nothing outsid
 settings-agents-uninstall = Uninstall
 settings-agents-install = Install
 settings-agents-update = Update
-settings-agents-checking-your-shells-path = Checking your shell's PATH…
-settings-agents-copy-line = Copy line
 
 ## Sentences with a hole in them
-
-# The notice after installing, repairing or removing an agent's hooks failed. { $agent } is the agent's
-# name and { $error } the system's reason, in English.
-settings-agents-hooks-failed = { $agent } hooks: { $error }
-
-# The warning under an agent whose hooks are only partly there. { $agent } is its name.
-settings-agents-hooks-partial = Some of { $agent }'s hook events are missing (it may have been updated). Repair adds them back; your own entries stay.
 
 # A profile's own login of an agent. { $profile } is the profile's name and { $badge } the state of the
 # hooks there ("Status hooks on"); the folder follows.
 settings-agents-login-state = { $profile } profile · { $badge } in
 
 ## The command line tool row. In every message { $command } is the tool's name, as the terminal types it.
-
-# The row failed to install. { $error } is the reason, in English.
-settings-agents-cli-install-failed = Couldn't install { $command }: { $error }
-
-# The row failed to remove. { $error } is the reason, in English.
-settings-agents-cli-remove-failed = Couldn't remove { $command }: { $error }
 
 # The row's quiet line while the tool is not installed.
 settings-agents-cli-not-installed = { $command } in any terminal. Not installed
@@ -183,28 +131,5 @@ settings-agents-cli-installed-at = { $command } in any terminal. Installed at { 
 # The same while another program of that name is in the way. { $path } is where it is.
 settings-agents-cli-foreign-at = { $command } in any terminal. Another { $command } is at { $path }
 
-# The Install button's tooltip. The folders are the ones the tool goes into.
-settings-agents-cli-install-tooltip = Puts { $command } in /usr/local/bin, or in ~/.local/bin when that can't be written
-
-# The disabled Install button's tooltip.
-settings-agents-cli-foreign-tooltip = Another { $command } is in the way; { -brand } never replaces it
-
-# Under the row, when another program of that name is in the way.
-settings-agents-cli-foreign-note = { -brand } never replaces a command it didn't write. Move that { $command } away to install this one.
-
-# Under the row, when the installed copy belongs to another { -brand }.
-settings-agents-cli-stale-note = The installed { $command } runs a copy of { -brand } that is somewhere else. Update points it at this one.
-
-# Under the row, when the tool's folder is on the shell's PATH. { $dir } is that folder.
-settings-agents-cli-path-on = { $dir } is on your shell's PATH: { $command } works in new terminals.
-
-# Under the row, when it is not. { $dir } is the tool's folder and { $file } the shell's startup file the
-# line below it goes in.
-settings-agents-cli-path-off = { $dir } isn't on your shell's PATH, so new terminals won't find { $command }. Add this line to { $file }, then open a new terminal:
-
-# Under the row, when the shell's PATH could not be read. { $dir } is the tool's folder.
-settings-agents-cli-path-unknown = Couldn't read your shell's PATH. If { $command } isn't found, add { $dir } to it.
-
 ## settings_window/sections/preview.rs (the Coding agents preview)
 
-settings-agents-preview-caption = How the Terminals list shows each agent: working, asking you, finished. With status hooks it knows the moment; without, it reads the agent's output.

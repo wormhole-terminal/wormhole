@@ -6,133 +6,27 @@
 use crate::key::Key;
 use crate::args::Arg;
 
-/// "Rescan PATH"
-pub const SETTINGS_WINDOW_RESCAN_PATH: Key = Key::new(1717);
-/// "New profile…"
-pub const SETTINGS_WINDOW_NEW_PROFILE: Key = Key::new(1718);
-/// "Import theme"
-pub const SETTINGS_WINDOW_IMPORT_THEME: Key = Key::new(1719);
-/// "Search"
-pub const SETTINGS_WINDOW_SEARCH_SETTINGS: Key = Key::new(1720);
-/// "No setting has these words in its name, description or config key."
-pub const SETTINGS_WINDOW_NO_RESULTS: Key = Key::new(1721);
-/// "Results"
-pub const SETTINGS_WINDOW_RESULTS: Key = Key::new(1722);
-/// "clears the search, then closes"
-pub const SETTINGS_WINDOW_CLEARS_THE_SEARCH_THEN_CLOSES: Key = Key::new(1723);
-/// "Feature flags"
-pub const SETTINGS_WINDOW_FEATURE_FLAGS: Key = Key::new(1724);
 /// "Open"
-pub const SETTINGS_WINDOW_OPEN: Key = Key::new(1725);
+pub const SETTINGS_WINDOW_OPEN: Key = Key::new(1446);
 /// "config.json can't be read, so changes made here aren't saved until it is fixed (see Advanced)."
-pub const SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO: Key = Key::new(1726);
-/// "Some settings live only in config.json, and projects can bring their own actions."
-pub const SETTINGS_WINDOW_SOME_SETTINGS_LIVE_ONLY_IN_CONFIG: Key = Key::new(1727);
-/// "Open config.json"
-pub const SETTINGS_WINDOW_OPEN_CONFIG_JSON: Key = Key::new(1728);
-/// "Clear search"
-pub const SETTINGS_WINDOW_CLEAR_SEARCH: Key = Key::new(1729);
-/// "Settings"
-pub const SETTINGS_WINDOW_SETTINGS: Key = Key::new(1730);
-/// "Edit in project"
-pub const SETTINGS_WINDOW_EDIT_IN_PROJECT: Key = Key::new(1731);
-/// "Window"
-pub const SETTINGS_WINDOW_WINDOW: Key = Key::new(1732);
-/// "Fonts"
-pub const SETTINGS_WINDOW_FONTS: Key = Key::new(1733);
-/// "Terminal font"
-pub const SETTINGS_WINDOW_TERMINAL_FONT: Key = Key::new(1734);
-/// "Terminals list"
-pub const SETTINGS_WINDOW_TERMINALS_LIST: Key = Key::new(1735);
-/// "Notifications"
-pub const SETTINGS_WINDOW_NOTIFICATIONS: Key = Key::new(1736);
-/// "Menu bar"
-pub const SETTINGS_WINDOW_MENU_BAR: Key = Key::new(1737);
-/// "Preview of the window with your current settings"
-pub const SETTINGS_WINDOW_PREVIEW_WINDOW_LABEL: Key = Key::new(1738);
-/// "Preview of your fonts in a sample of terminal text"
-pub const SETTINGS_WINDOW_PREVIEW_FONTS_LABEL: Key = Key::new(1739);
-/// "Preview of the Terminals list with your current settings"
-pub const SETTINGS_WINDOW_PREVIEW_TERMINALS_LABEL: Key = Key::new(1740);
-/// "Preview of the Terminals list with coding agents at work"
-pub const SETTINGS_WINDOW_PREVIEW_AGENTS_LABEL: Key = Key::new(1741);
-/// "Preview of how a notification looks"
-pub const SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL: Key = Key::new(1742);
-/// "Preview of the menu bar item and the quick panel"
-pub const SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL: Key = Key::new(1743);
-/// "Preview"
-pub const SETTINGS_WINDOW_PREVIEW: Key = Key::new(1744);
-/// "Split terminals"
-pub const SETTINGS_WINDOW_SPLIT_TERMINALS: Key = Key::new(1745);
-/// "Changes panel and diff"
-pub const SETTINGS_WINDOW_DIFF: Key = Key::new(1746);
-/// "Preview of two split terminals with your current settings"
-pub const SETTINGS_WINDOW_PREVIEW_TERMINAL_LABEL: Key = Key::new(1747);
-/// "Preview of the Changes panel and a diff with your current settings"
-pub const SETTINGS_WINDOW_PREVIEW_DIFF_LABEL: Key = Key::new(1748);
+pub const SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO: Key = Key::new(1447);
 /// "Value"
-pub const SETTINGS_WINDOW_STEPPER_LABEL: Key = Key::new(1756);
+pub const SETTINGS_WINDOW_STEPPER_LABEL: Key = Key::new(1450);
 /// "Smaller"
-pub const SETTINGS_WINDOW_STEPPER_SMALLER: Key = Key::new(1757);
+pub const SETTINGS_WINDOW_STEPPER_SMALLER: Key = Key::new(1451);
 /// "Larger"
-pub const SETTINGS_WINDOW_STEPPER_LARGER: Key = Key::new(1758);
-
-/// ```text
-/// Open { $section }
-/// ```
-pub fn settings_window_open_section(section: &str) -> String {
-    crate::active::message(1749, &[("section", Arg::Str(section))])
-}
+pub const SETTINGS_WINDOW_STEPPER_LARGER: Key = Key::new(1452);
 
 /// ```text
 /// Import failed: { $error }
 /// ```
 pub fn settings_window_import_failed(error: &str) -> String {
-    crate::active::message(1750, &[("error", Arg::Str(error))])
-}
-
-/// ```text
-/// { $hits ->
-///     [one]
-///         { $hits } setting in { $sections ->
-///             [one] { $sections } section
-///            *[other] { $sections } sections
-///         } match “{ $query }”. Pick a section to see it in context.
-///    *[other]
-///         { $hits } settings in { $sections ->
-///             [one] { $sections } section
-///            *[other] { $sections } sections
-///         } match “{ $query }”. Pick a section to see it in context.
-/// }
-/// ```
-pub fn settings_window_results_summary(hits: i64, sections: i64, query: &str) -> String {
-    crate::active::message(1751, &[("hits", Arg::Int(hits)), ("sections", Arg::Int(sections)), ("query", Arg::Str(query))])
-}
-
-/// ```text
-/// Preview feature, behind the “{ $flag }” flag — a release build doesn't have it yet.
-/// ```
-pub fn settings_window_preview_feature_note(flag: &str) -> String {
-    crate::active::message(1752, &[("flag", Arg::Str(flag))])
+    crate::active::message(1448, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// The list of profiles couldn't be read, so it was set aside and rebuilt: { $message }
 /// ```
 pub fn settings_window_profiles_unreadable(message: &str) -> String {
-    crate::active::message(1753, &[("message", Arg::Str(message))])
-}
-
-/// ```text
-/// Nothing matches “{ $query }”
-/// ```
-pub fn settings_window_nothing_matches(query: &str) -> String {
-    crate::active::message(1754, &[("query", Arg::Str(query))])
-}
-
-/// ```text
-/// Set by { $project }/{ $dir }/{ $file } while one of its terminals is in front; yours is kept
-/// ```
-pub fn settings_window_set_by_project(project: &str, dir: &str, file: &str) -> String {
-    crate::active::message(1755, &[("project", Arg::Str(project)), ("dir", Arg::Str(dir)), ("file", Arg::Str(file))])
+    crate::active::message(1449, &[("message", Arg::Str(message))])
 }

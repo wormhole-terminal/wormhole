@@ -71,7 +71,6 @@ settings-notifications-dock-bounce = Bounce when a terminal needs input
 
 ## settings_window/sections/notifications.rs (labels, hints and notes drawn by this page's code)
 
-settings-notifications-time-sensitive = Time Sensitive
 settings-notifications-banner = Banner
 settings-notifications-nothing = Nothing
 settings-notifications-needs-you-only = Needs input only
@@ -80,31 +79,6 @@ settings-notifications-none = None
 settings-notifications-off = Off
 settings-notifications-needs-you = Needs input
 settings-notifications-needs-you-finished = Needs input + finished
-settings-notifications-asking-macos = Asking macOS…
-settings-notifications-not-asked-yet = Not asked yet
-settings-notifications-macos-asks-once-nothing-is-sent = macOS asks once; nothing is sent before
-settings-notifications-allowed-in-system-settings = Allowed in System Settings
-settings-notifications-banners-sounds-and-time-sensitive = Banners, sounds and Time Sensitive
-settings-notifications-banners-and-sounds = Banners and sounds
-settings-notifications-off-in-system-settings = Off in System Settings
-settings-notifications-off-hint = Nothing is delivered until turned on there
-settings-notifications-outside-the-app-bundle = Outside the app bundle
-settings-notifications-outside-bundle-hint = cargo run: osascript, no actions or grouping
-settings-notifications-send-test = Send test
-settings-notifications-open-system-settings = Open System Settings
-settings-notifications-allow-notifications = Allow notifications
-settings-notifications-needs-you-hint = An agent asks a question or for permission
-settings-notifications-needs-you-hint-plain = An agent asks a question or for permission. Delivered as a normal notification in this build
-
-# The footer's line under "Banner style and Focus are set by macOS". { $state } is what macOS allows and
-# { $detail } what that means.
-settings-notifications-state = { $state } · { $detail }
-
-# The notice above the page while notifications are off in System Settings.
-settings-notifications-notice-off = Off in System Settings: { -brand } can’t show banners until you allow them.
-
-# The same before macOS was asked.
-settings-notifications-notice-not-asked = { -brand } hasn’t asked macOS yet: nothing is sent until you allow it.
 
 ## The command threshold in "A command finishes"
 
@@ -115,10 +89,3 @@ settings-notifications-after-seconds = After { $count } s
 
 ## settings_window/sections/notifications_preview.rs
 
-# When the banner in the preview arrived.
-settings-notifications-preview-now = now
-# The banners the preview shows when no notification is turned on.
-settings-notifications-preview-empty = Nothing turned on: no banners.
-# One banner standing for several, when they are grouped. { $count } is a whole number.
-settings-notifications-preview-grouped = { $count } terminals need you
-settings-notifications-preview-caption = The banners you would get. macOS decides where they show and for how long (System Settings › Notifications › Wormhole).

@@ -4,60 +4,6 @@
 //! The messages of `locales/en/settings.ftl`.
 
 use crate::key::Key;
-use crate::args::Arg;
 
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1759);
-/// "More information"
-pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1765);
-/// "Copied"
-pub const SETTINGS_ROW_COPIED: Key = Key::new(1766);
-/// "Copy Key"
-pub const SETTINGS_ROW_COPY_KEY: Key = Key::new(1767);
-/// "Copy as JSON"
-pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1768);
-/// "Reset to Default"
-pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1769);
-/// "Reset to default"
-pub const SETTINGS_ROW_RESET: Key = Key::new(1770);
-
-/// ```text
-/// { $name }, needs attention
-/// ```
-pub fn settings_nav_spoken_attention(name: &str) -> String {
-    crate::active::message(1760, &[("name", Arg::Str(name))])
-}
-
-/// ```text
-/// { $name }, preview
-/// ```
-pub fn settings_nav_spoken_preview(name: &str) -> String {
-    crate::active::message(1761, &[("name", Arg::Str(name))])
-}
-
-/// ```text
-/// { $name }, no matches
-/// ```
-pub fn settings_nav_spoken_no_matches(name: &str) -> String {
-    crate::active::message(1762, &[("name", Arg::Str(name))])
-}
-
-/// ```text
-/// { $name }, { $count ->
-///     [one] 1 match
-///    *[other] { $count } matches
-/// }
-/// ```
-pub fn settings_nav_spoken_matches(name: &str, count: i64) -> String {
-    crate::active::message(1763, &[("name", Arg::Str(name)), ("count", Arg::Int(count))])
-}
-
-/// ```text
-/// { $name }, { $count ->
-///     [one] 1 setting changed
-///    *[other] { $count } settings changed
-/// }
-/// ```
-pub fn settings_nav_spoken_changed(name: &str, count: i64) -> String {
-    crate::active::message(1764, &[("name", Arg::Str(name)), ("count", Arg::Int(count))])
-}
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1453);

@@ -4,8 +4,6 @@
 settings-section-terminal = Terminal
     .intro = How the terminal behaves. Its font is in Fonts.
 
-settings-terminal-preview-caption = Two split terminals as your settings draw them: the gaps between them and the minimap.
-
 settings-terminal-preview = Live preview
     .keywords = preview split terminals gaps minimap scrollbar
 
@@ -43,9 +41,6 @@ settings-terminal-group-opening = Opening
 settings-terminal-open-in = Open folders in
     .description = The Open in… button in a terminal's title row opens its folder here; its menu lists the others
     .keywords = editor ide zed code vscode cursor sublime xcode jetbrains phpstorm finder app
-
-# What Open folders in is by default, on the Changed page: the app is found on each Mac.
-settings-terminal-open-in-default = The first editor found, else Finder
 
 settings-terminal-default-terminal = Default terminal
     .description = Double-clicked .command files and programs run in a new { -brand } terminal instead of Terminal
@@ -113,35 +108,16 @@ settings-terminal-off = Off
 settings-terminal-left = Left
 settings-terminal-right = Right
 settings-terminal-both = Both
-settings-terminal-edit-in-config-json = Edit in config.json
-# What the Worktrees folder row says while no folder is set.
-settings-terminal-worktrees-beside = Beside the repository
 settings-terminal-ask = Ask
 settings-terminal-allow = Allow
 settings-terminal-deny = Deny
 settings-terminal-wormhole-is-the-default = { -brand } is the default
-settings-terminal-to-change-it-pick-another-app = To change it, pick another app for a .command file in Finder's Get Info
 settings-terminal-make-default = Make Default
-settings-terminal-instead-of-terminal = Instead of Terminal
-settings-terminal-default-only-app = Only { -brand }.app can be the default terminal
 settings-terminal-not-installed-the-title-row-opens = Not installed: the title row opens it in another app
-settings-terminal-choose-app = Choose app…
-settings-terminal-choose = Choose
-settings-terminal-not-found-the-login-shell-runs = Not found: the login shell runs instead
 
 ## Sentences with a hole in them
-
-# Under the Terminal page's switch when making the app the default terminal failed. { $error } is the
-# system's reason, in English.
-settings-terminal-default-failed = Couldn't make { -brand } the default: { $error }
-
-# The Worktrees folder row's quiet line once a folder is set. { $folder } is that folder, as the
-# terminal title row would show it.
-settings-terminal-worktree-base-under = Under { $folder }, in a folder named after the repository (worktree_base in config.json)
 
 # A scrollback size in the select. { $count } is the number of lines, already written with its
 # thousands separators ("10,000").
 settings-terminal-scrollback-lines = { $count } lines
 
-# A shell in the Default shell select: what runs under its name. { $command } is the command line.
-settings-terminal-login-shell = Login shell · { $command }

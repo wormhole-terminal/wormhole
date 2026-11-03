@@ -4,8 +4,6 @@
 settings-section-git = Changes & diffs
     .intro = The Changes panel and the diff view.
 
-settings-git-preview-caption = The Changes panel and a diff as you set them up: list or tree, split or unified, wrapped or not.
-
 settings-git-preview = Live preview
     .keywords = preview diff changes panel list tree split unified wrap
 
@@ -57,5 +55,3 @@ settings-git-tab-width-value = { $count }
 
 ## settings_window/sections/diff_preview.rs (the words of the sample Changes panel)
 
-settings-git-preview-changes = Changes
-settings-git-preview-untracked = Untracked

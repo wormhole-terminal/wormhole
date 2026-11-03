@@ -2,8 +2,6 @@
 //! three styles, a label and no icon). This is its builder: the call sites say what the button is, and the
 //! look is the design's.
 
-use std::rc::Rc;
-
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::component::{Disableable, Selectable};
 use gpui_kit::prelude::*;
@@ -45,28 +43,6 @@ impl FormButton {
 
     pub fn primary(mut self) -> Self {
         self.primary = true;
-        self
-    }
-
-    /// The destructive style: red text on the normal fill.
-    pub fn danger(mut self) -> Self {
-        self.destructive = true;
-        self
-    }
-
-    /// A spinner is not part of the design: the button is off and shows its words, if any.
-    pub fn loading(mut self, loading: bool) -> Self {
-        self.disabled |= loading;
-        self
-    }
-
-    pub fn on_click(mut self, handler: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static) -> Self {
-        self.on_click = Some(Rc::new(handler));
-        self
-    }
-
-    pub fn tooltip(mut self, text: impl Into<SharedString>) -> Self {
-        self.tooltip = Some(text.into());
         self
     }
 }

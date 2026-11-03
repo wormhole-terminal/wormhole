@@ -136,13 +136,6 @@ pub fn status_tile_shifting(
         .into_any_element()
 }
 
-/// A tile without a status: the agent's (or the terminal's) face on its colour, with the sheen and the hairline edge
-/// of a [`status_tile`] but no light, edge or badge round it. What a list of agents (Settings) draws.
-#[track_caller]
-pub fn brand_tile(ui: UiColors, face: TileFace, size: f32) -> AnyElement {
-    div().relative().flex_none().size(px(size)).child(face_box(ui, face, size)).into_any_element()
-}
-
 /// The rounded square a tile is: its paint, the face on it, the sheen across its top and the edge.
 #[track_caller]
 fn face_box(ui: UiColors, face: TileFace, size: f32) -> Div {

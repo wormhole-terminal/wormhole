@@ -7,14 +7,12 @@ mod card;
 mod commits;
 mod detail;
 mod files;
-mod nav;
 mod session;
 
 pub use card::*;
 pub use commits::*;
 pub use detail::DetailRoll;
 pub use files::*;
-pub use nav::*;
 pub use session::*;
 
 use gpui_kit::prelude::*;

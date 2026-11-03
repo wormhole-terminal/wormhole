@@ -30,8 +30,7 @@ pub(super) struct Row {
 
 pub(super) fn row(cx: &App) -> Row {
     let resolved = OpenIn::resolved(cx);
-    let mut options: Vec<Choice> =
-        OpenIn::apps(cx).into_iter().map(|app| (app.bundle, app.name)).collect();
+    let mut options: Vec<Choice> = OpenIn::apps(cx).into_iter().map(|app| (app.bundle, app.name)).collect();
     let value = match &resolved.missing {
         // An app that is gone is shown as written, with what happens instead.
         Some(missing) => {

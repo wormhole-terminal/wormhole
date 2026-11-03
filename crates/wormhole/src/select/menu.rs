@@ -64,26 +64,6 @@ impl MenuLine {
     pub fn new(label: impl Into<SharedString>) -> Self {
         Self { label: label.into(), detail: None, icon: None, action: false }
     }
-
-    /// A second line under the label, in the muted colour.
-    pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
-        self.detail = Some(detail.into());
-        self
-    }
-
-    /// A picture before the label (an app's icon).
-    pub fn icon(mut self, icon: impl IntoElement) -> Self {
-        self.icon = Some(icon.into_any_element());
-        self
-    }
-
-    /// An item that does something rather than choosing a value ("Choose app…"): listed after a rule (none when
-    /// it is the first),
-    /// never checked.
-    pub fn action(mut self) -> Self {
-        self.action = true;
-        self
-    }
 }
 
 /// What the open menu offers. Built by the caller only when the menu opens.
@@ -136,13 +116,7 @@ pub fn menu_select<B: FnOnce(&mut App) -> MenuOptions + 'static>(
     MenuSelect { row: row.into(), ui, label: label.into(), value: value.into(), leading: None, options }
 }
 
-impl<B: FnOnce(&mut App) -> MenuOptions + 'static> MenuSelect<B> {
-    /// A picture before the value in the face.
-    pub fn leading(mut self, icon: impl IntoElement) -> Self {
-        self.leading = Some(icon.into_any_element());
-        self
-    }
-}
+impl<B: FnOnce(&mut App) -> MenuOptions + 'static> MenuSelect<B> {}
 
 impl<B: FnOnce(&mut App) -> MenuOptions + 'static> RenderOnce for MenuSelect<B> {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
@@ -319,11 +293,4 @@ fn card(ui: UiColors, row: ElementId, menu: MenuOptions, at: usize, cx: &App) ->
         deferred(anchored().anchor(Anchor::TopRight).snap_to_window_with_margin(px(EDGE)).child(list))
             .with_priority(gpui_kit::base::POPUP_PRIORITY),
     )
-}
-
-/// devctl `settings-select`: open the menu of the row `row`, as a click on it does.
-#[cfg(feature = "devctl")]
-pub fn devctl_open(row: &'static str, window: &mut Window, cx: &mut App) {
-    cx.default_global::<Highlight>().row = None;
-    Open::toggle(&ElementId::from(row), window, cx);
 }

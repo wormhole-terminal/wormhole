@@ -40,8 +40,6 @@ pub(in crate::studio) struct GalleryView {
     scroll: ScrollHandle,
     /// The gallery's text field and the item editor's, shown by the specimens that have one.
     pub(super) sample_input: Entity<InputState>,
-    /// The colour control's editor and field, for its specimen.
-    pub(super) sample_color: Entity<crate::select::ColorPickState>,
     pub(super) item_editor: Entity<InputState>,
     /// The syntax sample, parsed once.
     pub(super) sample: RefCell<Option<CodeSample>>,
@@ -69,11 +67,6 @@ impl GalleryView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let sample_color = cx.new(|cx| crate::select::ColorPickState::new(window, cx));
-        // The editor starts from the specimen's colour, as a page's does from the one in force.
-        if let Ok(color) = wormhole_core::theme::tokens::Color::from_hex(super::selects::SAMPLE_COLOR) {
-            sample_color.update(cx, |state, cx| state.follow(color, window, cx));
-        }
         Self {
             studio: studio.downgrade(),
             selected: None,
@@ -83,7 +76,6 @@ impl GalleryView {
             measures: Rc::default(),
             scroll: ScrollHandle::new(),
             sample_input: cx.new(|cx| InputState::new(window, cx).placeholder("Search themes")), // text: sample (the gallery's specimen)
-            sample_color,
             item_editor: cx.new(|cx| InputState::new(window, cx).default_value("Rename this task")), // text: sample (the gallery's specimen)
             sample: RefCell::new(None),
             #[cfg(feature = "devctl")]
@@ -239,12 +231,7 @@ impl Render for GalleryView {
         let ui = ui(cx);
         let tokens = tokens_of(cx);
         let uses = self.selected.as_deref().map(uses_of).unwrap_or_default();
-        let env = Env {
-            ui,
-            tokens: &tokens,
-            code_font: crate::fonts::code_font(cx).0,
-            uses: uses.iter().map(|u| u.id).collect(),
-        };
+        let env = Env { ui, tokens: &tokens, uses: uses.iter().map(|u| u.id).collect() };
 
         // The viewport and a stretch of overdraw on either side, in points down the page; the
         // pieces that meet it are built.

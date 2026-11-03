@@ -28,6 +28,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     private var notes: [String: String] = [:]
     private var updateCard: [String: Any]?
     private var quietPages: Set<String> = []
+    private var bannerData: [String: String]?
     private var wordTable: [String: String] = [:]
     private var countedWords: (count: Int, words: [String: String]) = (-1, [:])
     @ObservationIgnored var send: (String) -> Void = { _ in }
@@ -45,6 +46,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     var profile: (name: String, letter: String)? { profileInfo }
     var update: [String: Any]? { updateCard }
     func quiet(_ page: String) -> Bool { quietPages.contains(page) }
+    var banner: [String: String]? { bannerData }
     var recordsInHost: Bool { true }
     var recording: String { recordingRow }
     func note(for key: String) -> String? { notes[key] }
@@ -88,6 +90,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
         sheets = json["sheets"] as? [String: [String: Any]] ?? [:]
         updateCard = json["update"] as? [String: Any]
         quietPages = Set(json["quiet"] as? [String] ?? [])
+        bannerData = json["banner"] as? [String: String]
         recordingRow = json["recording"] as? String ?? ""
         notes = json["notes"] as? [String: String] ?? [:]
         if let p = json["profile"] as? [String], p.count == 2 { profileInfo = (p[0], p[1]) }
@@ -146,7 +149,15 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
         }
     }
 
-    func update(_ json: [String: Any]) { store.apply(json) }
+    func update(_ json: [String: Any]) {
+        store.apply(json)
+        // Where the app wants the window to go (the palette's setting, a script): a page, a row to scroll to, a search.
+        if let show = json["show"] as? [String: Any] {
+            if let page = show["page"] as? String, !page.isEmpty { model?.page = page; model?.search = "" }
+            if let search = show["search"] as? String { model?.search = search }
+            if let row = show["scroll"] as? String, !row.isEmpty { model?.scrollTo = row }
+        }
+    }
 
     func close() { window?.close() }
 

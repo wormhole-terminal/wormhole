@@ -12,7 +12,7 @@ use objc2_foundation::NSString;
 use smol::channel::Receiver;
 
 use super::appkit::ns_window;
-use crate::platform::sheet::{Choice, Destructive, Question, Style};
+use crate::platform::sheet::{Choice, Question, Style};
 
 /// `NSAlertFirstButtonReturn`: buttons answer 1000 + their place in the order they were added.
 const FIRST_BUTTON: isize = 1000;
@@ -59,36 +59,6 @@ pub fn ask_with_checkbox(window: &Window, question: &Question) -> Option<Receive
     #[cfg(feature = "devctl")]
     up::begin(&alert, false);
     // AppKit copies the block and keeps the alert until the sheet is answered.
-    alert.beginSheetModalForWindow_completionHandler(&ns_window, Some(&done));
-    Some(rx)
-}
-
-pub fn confirm_destructive(window: &Window, question: &Destructive) -> Option<Receiver<bool>> {
-    let mtm = MainThreadMarker::new()?;
-    let ns_window = ns_window(window)?;
-    let alert = NSAlert::new(mtm);
-    alert.setAlertStyle(NSAlertStyle::Warning);
-    alert.setMessageText(&NSString::from_str(question.title));
-    alert.setInformativeText(&NSString::from_str(question.detail));
-    // Cancel first: the first button is the one Return presses, and the one that backs out. The destructive
-    // button after it is drawn red by AppKit.
-    alert.addButtonWithTitle(&NSString::from_str(question.cancel));
-    alert.addButtonWithTitle(&NSString::from_str(question.confirm)).setHasDestructiveAction(true);
-
-    let (tx, rx) = smol::channel::bounded(1);
-    #[cfg(feature = "devctl")]
-    let sheet = alert.clone();
-    let done = RcBlock::new(move |response: NSModalResponse| {
-        #[cfg(feature = "devctl")]
-        up::end(&sheet);
-        match response {
-            FIRST_BUTTON => tx.try_send(false).ok(),
-            SECOND_BUTTON => tx.try_send(true).ok(),
-            _ => None,
-        };
-    });
-    #[cfg(feature = "devctl")]
-    up::begin(&alert, true);
     alert.beginSheetModalForWindow_completionHandler(&ns_window, Some(&done));
     Some(rx)
 }

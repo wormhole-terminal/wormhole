@@ -8,7 +8,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use super::groups::PopoverTrigger;
-use super::scale::{CONTROL_H, Edges, TextRole};
+use super::scale::TextRole;
 use crate::settings::UiColors;
 
 /// The avatar of a profile in the chips and rows: a `size` circle of the profile's colour with
@@ -98,42 +98,3 @@ pub const PROFILE_EDGE_H: f32 = 3.0;
 pub fn profile_edge(color: Hsla) -> Div {
     div().flex_none().w_full().h(px(PROFILE_EDGE_H)).bg(color)
 }
-
-/// One option of a short list of exclusive choices (the "New profile" sheet's START FROM): a
-/// round mark, filled when chosen, then the label. Add `.on_click(…)`.
-#[track_caller]
-pub fn choice_row(
-    id: impl Into<ElementId>,
-    ui: UiColors,
-    label: impl Into<SharedString>,
-    chosen: bool,
-) -> Stateful<Div> {
-    let mark = div()
-        .flex_none()
-        .size(px(CHOICE_MARK))
-        .flex()
-        .items_center()
-        .justify_center()
-        .rounded_full()
-        // An unchosen mark keeps its outline whatever Borders says, as the checkbox does: without it the
-        // choice would not be there to pick.
-        .outlined_always(ui, if chosen { ui.primary } else { ui.border_strong })
-        .when(chosen, |d| d.child(div().size(px(CHOICE_DOT)).rounded_full().bg(ui.primary)));
-    div()
-        .id(id)
-        .role(Role::RadioButton)
-        .aria_selected(chosen)
-        .flex()
-        .items_center()
-        .gap_2()
-        .h(px(CONTROL_H))
-        .cursor_pointer()
-        .text_body()
-        .text_color(ui.text)
-        .child(mark)
-        .child(label.into())
-}
-
-/// The round mark of a [`choice_row`] and the dot in it when chosen.
-const CHOICE_MARK: f32 = 16.0;
-const CHOICE_DOT: f32 = 8.0;

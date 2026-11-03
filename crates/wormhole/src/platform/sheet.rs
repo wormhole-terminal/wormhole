@@ -39,24 +39,6 @@ pub fn ask_with_checkbox(window: &Window, question: &Question) -> Option<Receive
     os::ask_with_checkbox(window, question)
 }
 
-/// What a sheet asks before something that can't be undone: the destructive button, and Cancel, which is the
-/// default.
-pub struct Destructive<'a> {
-    pub title: &'a str,
-    pub detail: &'a str,
-    /// The destructive button ("Reset"), drawn red.
-    pub confirm: &'a str,
-    /// The button that backs out, and Return's: a stray key press keeps everything.
-    pub cancel: &'a str,
-}
-
-/// Show `question` as a sheet on `window`. The answer arrives on the channel: `true` for the destructive
-/// button, `false` for Cancel; a sheet that goes away without either (its window closing, the app
-/// quitting) sends nothing, and the channel closes. `None` from the call: no sheet can go on this window.
-pub fn confirm_destructive(window: &Window, question: &Destructive) -> Option<Receiver<bool>> {
-    os::confirm_destructive(window, question)
-}
-
 /// Answer the sheet that is up on `window`, as if its button number `button` (0 is the closing one, in the
 /// order they were added) had been pressed: whatever asked reads the answer as it reads a click. A number
 /// no button has is the one that backs out (Cancel). `tick` sets the checkbox first, as a click on it would (`None`: as it stands).

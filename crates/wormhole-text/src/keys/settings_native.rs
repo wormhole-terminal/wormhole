@@ -6,798 +6,798 @@
 use crate::key::Key;
 
 /// "1.20"
-pub const NATIVE_1_20_2F0D54B4: Key = Key::new(951);
+pub const NATIVE_1_20_2F0D54B4: Key = Key::new(759);
 /// "1.30"
-pub const NATIVE_1_30_350F9CBD: Key = Key::new(952);
+pub const NATIVE_1_30_350F9CBD: Key = Key::new(760);
 /// "1.40"
-pub const NATIVE_1_40_A307FB22: Key = Key::new(953);
+pub const NATIVE_1_40_A307FB22: Key = Key::new(761);
 /// "1.50"
-pub const NATIVE_1_50_A90A432B: Key = Key::new(954);
+pub const NATIVE_1_50_A90A432B: Key = Key::new(762);
 /// "10,000 lines"
-pub const NATIVE_10_000_LINES_887300B3: Key = Key::new(955);
+pub const NATIVE_10_000_LINES_887300B3: Key = Key::new(763);
 /// "100 %"
-pub const NATIVE_100_761BA203: Key = Key::new(956);
+pub const NATIVE_100_761BA203: Key = Key::new(764);
 /// "100,000 lines"
-pub const NATIVE_100_000_LINES_2D0A680B: Key = Key::new(957);
+pub const NATIVE_100_000_LINES_2D0A680B: Key = Key::new(765);
 /// "⌘1–⌘9 numbers"
-pub const NATIVE_1_9_NUMBERS_0971CE58: Key = Key::new(958);
+pub const NATIVE_1_9_NUMBERS_0971CE58: Key = Key::new(766);
 /// "2"
-pub const NATIVE_2_370CABD5: Key = Key::new(959);
+pub const NATIVE_2_370CABD5: Key = Key::new(767);
 /// "4"
-pub const NATIVE_4_310CA263: Key = Key::new(960);
+pub const NATIVE_4_310CA263: Key = Key::new(768);
 /// "50,000 lines"
-pub const NATIVE_50_000_LINES_D81AA1AF: Key = Key::new(961);
+pub const NATIVE_50_000_LINES_D81AA1AF: Key = Key::new(769);
 /// "70 %"
-pub const NATIVE_70_F4CC4D89: Key = Key::new(962);
+pub const NATIVE_70_F4CC4D89: Key = Key::new(770);
 /// "8"
-pub const NATIVE_8_3D0CB547: Key = Key::new(963);
+pub const NATIVE_8_3D0CB547: Key = Key::new(771);
 /// "80 %"
-pub const NATIVE_80_3BD471BE: Key = Key::new(964);
+pub const NATIVE_80_3BD471BE: Key = Key::new(772);
 /// "90 %"
-pub const NATIVE_90_97255E73: Key = Key::new(965);
+pub const NATIVE_90_97255E73: Key = Key::new(773);
 /// "95 %"
-pub const NATIVE_95_E0714E04: Key = Key::new(966);
+pub const NATIVE_95_E0714E04: Key = Key::new(774);
 /// "A command fails"
-pub const NATIVE_A_COMMAND_FAILS_0812D6B0: Key = Key::new(967);
+pub const NATIVE_A_COMMAND_FAILS_0812D6B0: Key = Key::new(775);
 /// "A group folds"
-pub const NATIVE_A_GROUP_FOLDS_7BB829CB: Key = Key::new(968);
+pub const NATIVE_A_GROUP_FOLDS_7BB829CB: Key = Key::new(776);
 /// "A long command finishes"
-pub const NATIVE_A_LONG_COMMAND_FINISHES_548F51E2: Key = Key::new(969);
+pub const NATIVE_A_LONG_COMMAND_FINISHES_548F51E2: Key = Key::new(777);
 /// "A project’s own choice is only for you: nothing is written into the project folder."
-pub const NATIVE_A_PROJECT_S_OWN_CHOICE_IS_ONLY_FOR_YOU_45CD63F4: Key = Key::new(970);
+pub const NATIVE_A_PROJECT_S_OWN_CHOICE_IS_ONLY_FOR_YOU_45CD63F4: Key = Key::new(778);
 /// "A side set to Meta can’t type @ { [ on some layouts"
-pub const NATIVE_A_SIDE_SET_TO_META_CAN_T_TYPE_ON_S_2E839DC0: Key = Key::new(971);
+pub const NATIVE_A_SIDE_SET_TO_META_CAN_T_TYPE_ON_S_2E839DC0: Key = Key::new(779);
 /// "A status changes"
-pub const NATIVE_A_STATUS_CHANGES_60BA1237: Key = Key::new(972);
+pub const NATIVE_A_STATUS_CHANGES_60BA1237: Key = Key::new(780);
 /// "A terminal needs input"
-pub const NATIVE_A_TERMINAL_NEEDS_INPUT_DA19BB29: Key = Key::new(973);
+pub const NATIVE_A_TERMINAL_NEEDS_INPUT_DA19BB29: Key = Key::new(781);
 /// "A terminal opens or closes"
-pub const NATIVE_A_TERMINAL_OPENS_OR_CLOSES_37A4995F: Key = Key::new(974);
+pub const NATIVE_A_TERMINAL_OPENS_OR_CLOSES_37A4995F: Key = Key::new(782);
 /// "Accent"
-pub const NATIVE_ACCENT_5C71CCD7: Key = Key::new(975);
+pub const NATIVE_ACCENT_5C71CCD7: Key = Key::new(783);
 /// "Add an icon theme by putting it in the icon themes folder."
-pub const NATIVE_ADD_AN_ICON_THEME_BY_PUTTING_IT_IN_THE_I_55AF3CC3: Key = Key::new(976);
+pub const NATIVE_ADD_AN_ICON_THEME_BY_PUTTING_IT_IN_THE_I_55AF3CC3: Key = Key::new(784);
 /// "Adds Wormhole to Developer Tools, so programs started in it skip the first-run scan. Only if you trust what you run."
-pub const NATIVE_ADDS_WORMHOLE_TO_DEVELOPER_TOOLS_SO_PRO_CB236CFD: Key = Key::new(977);
+pub const NATIVE_ADDS_WORMHOLE_TO_DEVELOPER_TOOLS_SO_PRO_CB236CFD: Key = Key::new(785);
 /// "Advanced"
-pub const NATIVE_ADVANCED_60F3DE7B: Key = Key::new(978);
+pub const NATIVE_ADVANCED_60F3DE7B: Key = Key::new(786);
 /// "After 1 min"
-pub const NATIVE_AFTER_1_MIN_03337DFE: Key = Key::new(979);
+pub const NATIVE_AFTER_1_MIN_03337DFE: Key = Key::new(787);
 /// "After 10 s"
-pub const NATIVE_AFTER_10_S_E1A17327: Key = Key::new(980);
+pub const NATIVE_AFTER_10_S_E1A17327: Key = Key::new(788);
 /// "After 30 s"
-pub const NATIVE_AFTER_30_S_9EF6C9F1: Key = Key::new(981);
+pub const NATIVE_AFTER_30_S_9EF6C9F1: Key = Key::new(789);
 /// "Agent access"
-pub const NATIVE_AGENT_ACCESS_38405B14: Key = Key::new(982);
+pub const NATIVE_AGENT_ACCESS_38405B14: Key = Key::new(790);
 /// "Agent model and context"
-pub const NATIVE_AGENT_MODEL_AND_CONTEXT_BE6D2685: Key = Key::new(983);
+pub const NATIVE_AGENT_MODEL_AND_CONTEXT_BE6D2685: Key = Key::new(791);
 /// "Agents on this Mac"
-pub const NATIVE_AGENTS_ON_THIS_MAC_EA8662E7: Key = Key::new(984);
+pub const NATIVE_AGENTS_ON_THIS_MAC_EA8662E7: Key = Key::new(792);
 /// "Allow"
-pub const NATIVE_ALLOW_546D19D2: Key = Key::new(985);
+pub const NATIVE_ALLOW_546D19D2: Key = Key::new(793);
 /// "Allowed while open"
-pub const NATIVE_ALLOWED_WHILE_OPEN_8C06FE96: Key = Key::new(986);
+pub const NATIVE_ALLOWED_WHILE_OPEN_8C06FE96: Key = Key::new(794);
 /// "Also translucent"
-pub const NATIVE_ALSO_TRANSLUCENT_24F3DA5D: Key = Key::new(987);
+pub const NATIVE_ALSO_TRANSLUCENT_24F3DA5D: Key = Key::new(795);
 /// "Always"
-pub const NATIVE_ALWAYS_AD4BBD04: Key = Key::new(988);
+pub const NATIVE_ALWAYS_AD4BBD04: Key = Key::new(796);
 /// "Amber flare"
-pub const NATIVE_AMBER_FLARE_11808624: Key = Key::new(989);
+pub const NATIVE_AMBER_FLARE_11808624: Key = Key::new(797);
 /// "An agent finishes"
-pub const NATIVE_AN_AGENT_FINISHES_76C5D632: Key = Key::new(990);
+pub const NATIVE_AN_AGENT_FINISHES_76C5D632: Key = Key::new(798);
 /// "Animate icons"
-pub const NATIVE_ANIMATE_ICONS_CCED3B46: Key = Key::new(991);
+pub const NATIVE_ANIMATE_ICONS_CCED3B46: Key = Key::new(799);
 /// "Animate while working"
-pub const NATIVE_ANIMATE_WHILE_WORKING_D8A036B6: Key = Key::new(992);
+pub const NATIVE_ANIMATE_WHILE_WORKING_D8A036B6: Key = Key::new(800);
 /// "Any program"
-pub const NATIVE_ANY_PROGRAM_B588DAF9: Key = Key::new(993);
+pub const NATIVE_ANY_PROGRAM_B588DAF9: Key = Key::new(801);
 /// "Appearance"
-pub const NATIVE_APPEARANCE_31018B9F: Key = Key::new(994);
+pub const NATIVE_APPEARANCE_31018B9F: Key = Key::new(802);
 /// "Applies to new terminals"
-pub const NATIVE_APPLIES_TO_NEW_TERMINALS_37B30313: Key = Key::new(995);
+pub const NATIVE_APPLIES_TO_NEW_TERMINALS_37B30313: Key = Key::new(803);
 /// "Ask"
-pub const NATIVE_ASK_7CFD61B2: Key = Key::new(996);
+pub const NATIVE_ASK_7CFD61B2: Key = Key::new(804);
 /// "Asks gh, only in a trusted project"
-pub const NATIVE_ASKS_GH_ONLY_IN_A_TRUSTED_PROJECT_2EC25A1A: Key = Key::new(997);
+pub const NATIVE_ASKS_GH_ONLY_IN_A_TRUSTED_PROJECT_2EC25A1A: Key = Key::new(805);
 /// "Automation"
-pub const NATIVE_AUTOMATION_4463804A: Key = Key::new(998);
+pub const NATIVE_AUTOMATION_4463804A: Key = Key::new(806);
 /// "Badge"
-pub const NATIVE_BADGE_09D96E18: Key = Key::new(999);
+pub const NATIVE_BADGE_09D96E18: Key = Key::new(807);
 /// "Badge pops"
-pub const NATIVE_BADGE_POPS_7217AE74: Key = Key::new(1000);
+pub const NATIVE_BADGE_POPS_7217AE74: Key = Key::new(808);
 /// "Banner"
-pub const NATIVE_BANNER_2EC891AF: Key = Key::new(1001);
+pub const NATIVE_BANNER_2EC891AF: Key = Key::new(809);
 /// "Banner style and Focus are set by macOS."
-pub const NATIVE_BANNER_STYLE_AND_FOCUS_ARE_SET_BY_MACOS_4518237F: Key = Key::new(1002);
+pub const NATIVE_BANNER_STYLE_AND_FOCUS_ARE_SET_BY_MACOS_4518237F: Key = Key::new(810);
 /// "bash"
-pub const NATIVE_BASH_3ADC901F: Key = Key::new(1003);
+pub const NATIVE_BASH_3ADC901F: Key = Key::new(811);
 /// "Behaviour"
-pub const NATIVE_BEHAVIOUR_3856D9B4: Key = Key::new(1004);
+pub const NATIVE_BEHAVIOUR_3856D9B4: Key = Key::new(812);
 /// "Bell"
-pub const NATIVE_BELL_E94DAD58: Key = Key::new(1005);
+pub const NATIVE_BELL_E94DAD58: Key = Key::new(813);
 /// "Below 100 % opacity"
-pub const NATIVE_BELOW_100_OPACITY_CCBC5ED3: Key = Key::new(1006);
+pub const NATIVE_BELOW_100_OPACITY_CCBC5ED3: Key = Key::new(814);
 /// "Blue"
-pub const NATIVE_BLUE_E9DD1FED: Key = Key::new(1007);
+pub const NATIVE_BLUE_E9DD1FED: Key = Key::new(815);
 /// "Blur behind the window"
-pub const NATIVE_BLUR_BEHIND_THE_WINDOW_A067B365: Key = Key::new(1008);
+pub const NATIVE_BLUR_BEHIND_THE_WINDOW_A067B365: Key = Key::new(816);
 /// "Borders"
-pub const NATIVE_BORDERS_1905F5AC: Key = Key::new(1009);
+pub const NATIVE_BORDERS_1905F5AC: Key = Key::new(817);
 /// "Both"
-pub const NATIVE_BOTH_516318C2: Key = Key::new(1010);
+pub const NATIVE_BOTH_516318C2: Key = Key::new(818);
 /// "Bounce when a terminal needs input"
-pub const NATIVE_BOUNCE_WHEN_A_TERMINAL_NEEDS_INPUT_1D659055: Key = Key::new(1011);
+pub const NATIVE_BOUNCE_WHEN_A_TERMINAL_NEEDS_INPUT_1D659055: Key = Key::new(819);
 /// "Branch"
-pub const NATIVE_BRANCH_A3E27665: Key = Key::new(1012);
+pub const NATIVE_BRANCH_A3E27665: Key = Key::new(820);
 /// "Branch colour"
-pub const NATIVE_BRANCH_COLOUR_7448F90F: Key = Key::new(1013);
+pub const NATIVE_BRANCH_COLOUR_7448F90F: Key = Key::new(821);
 /// "Branch status"
-pub const NATIVE_BRANCH_STATUS_34412909: Key = Key::new(1014);
+pub const NATIVE_BRANCH_STATUS_34412909: Key = Key::new(822);
 /// "Buttons show what a click did with their icon. Reduce Motion turns this off too."
-pub const NATIVE_BUTTONS_SHOW_WHAT_A_CLICK_DID_WITH_THEIR_9E33AE11: Key = Key::new(1015);
+pub const NATIVE_BUTTONS_SHOW_WHAT_A_CLICK_DID_WITH_THEIR_9E33AE11: Key = Key::new(823);
 /// "Buttons, focus rings, selection and links, in every theme."
-pub const NATIVE_BUTTONS_FOCUS_RINGS_SELECTION_AND_LINK_B6086DA6: Key = Key::new(1016);
+pub const NATIVE_BUTTONS_FOCUS_RINGS_SELECTION_AND_LINK_B6086DA6: Key = Key::new(824);
 /// "Card wash"
-pub const NATIVE_CARD_WASH_11EFF506: Key = Key::new(1017);
+pub const NATIVE_CARD_WASH_11EFF506: Key = Key::new(825);
 /// "Catppuccin Icons"
-pub const NATIVE_CATPPUCCIN_ICONS_CDE65745: Key = Key::new(1018);
+pub const NATIVE_CATPPUCCIN_ICONS_CDE65745: Key = Key::new(826);
 /// "Changed"
-pub const NATIVE_CHANGED_89C5203B: Key = Key::new(1019);
+pub const NATIVE_CHANGED_89C5203B: Key = Key::new(827);
 /// "Changed files"
-pub const NATIVE_CHANGED_FILES_1040739C: Key = Key::new(1020);
+pub const NATIVE_CHANGED_FILES_1040739C: Key = Key::new(828);
 /// "Changes & diffs"
-pub const NATIVE_CHANGES_DIFFS_DA623FB4: Key = Key::new(1021);
+pub const NATIVE_CHANGES_DIFFS_DA623FB4: Key = Key::new(829);
 /// "Changes panel"
-pub const NATIVE_CHANGES_PANEL_9F550BFC: Key = Key::new(1022);
+pub const NATIVE_CHANGES_PANEL_9F550BFC: Key = Key::new(830);
 /// "Changes panel and diff"
-pub const NATIVE_CHANGES_PANEL_AND_DIFF_6C4F3904: Key = Key::new(1023);
+pub const NATIVE_CHANGES_PANEL_AND_DIFF_6C4F3904: Key = Key::new(831);
 /// "Channel"
-pub const NATIVE_CHANNEL_655D8A44: Key = Key::new(1024);
+pub const NATIVE_CHANNEL_655D8A44: Key = Key::new(832);
 /// "Choose"
-pub const NATIVE_CHOOSE_73C66160: Key = Key::new(1025);
+pub const NATIVE_CHOOSE_73C66160: Key = Key::new(833);
 /// "Choose app…"
-pub const NATIVE_CHOOSE_APP_67AABA35: Key = Key::new(1026);
+pub const NATIVE_CHOOSE_APP_67AABA35: Key = Key::new(834);
 /// "Classic"
-pub const NATIVE_CLASSIC_7B47B1F3: Key = Key::new(1027);
+pub const NATIVE_CLASSIC_7B47B1F3: Key = Key::new(835);
 /// "Clones the main checkout's node_modules and target into a new worktree, so builds start warm. Only on the same APFS volume."
-pub const NATIVE_CLONES_THE_MAIN_CHECKOUT_S_NODE_MODULES_87306165: Key = Key::new(1028);
+pub const NATIVE_CLONES_THE_MAIN_CHECKOUT_S_NODE_MODULES_87306165: Key = Key::new(836);
 /// "Closed tips"
-pub const NATIVE_CLOSED_TIPS_7CE424C1: Key = Key::new(1029);
+pub const NATIVE_CLOSED_TIPS_7CE424C1: Key = Key::new(837);
 /// "Code"
-pub const NATIVE_CODE_795DB914: Key = Key::new(1030);
+pub const NATIVE_CODE_795DB914: Key = Key::new(838);
 /// "Coding agents"
-pub const NATIVE_CODING_AGENTS_6CD5BF8F: Key = Key::new(1031);
+pub const NATIVE_CODING_AGENTS_6CD5BF8F: Key = Key::new(839);
 /// "Column dividers"
-pub const NATIVE_COLUMN_DIVIDERS_941D0B2F: Key = Key::new(1032);
+pub const NATIVE_COLUMN_DIVIDERS_941D0B2F: Key = Key::new(840);
 /// "Command line"
-pub const NATIVE_COMMAND_LINE_254B47FC: Key = Key::new(1033);
+pub const NATIVE_COMMAND_LINE_254B47FC: Key = Key::new(841);
 /// "Command line tool"
-pub const NATIVE_COMMAND_LINE_TOOL_64A04A6E: Key = Key::new(1034);
+pub const NATIVE_COMMAND_LINE_TOOL_64A04A6E: Key = Key::new(842);
 /// "Commands that finish"
-pub const NATIVE_COMMANDS_THAT_FINISH_8C1BCF2F: Key = Key::new(1035);
+pub const NATIVE_COMMANDS_THAT_FINISH_8C1BCF2F: Key = Key::new(843);
 /// "Compact"
-pub const NATIVE_COMPACT_B89EAD86: Key = Key::new(1036);
+pub const NATIVE_COMPACT_B89EAD86: Key = Key::new(844);
 /// "Compare with Wormhole"
-pub const NATIVE_COMPARE_WITH_WORMHOLE_7FD0A089: Key = Key::new(1037);
+pub const NATIVE_COMPARE_WITH_WORMHOLE_7FD0A089: Key = Key::new(845);
 /// "config.json, edits apply live"
-pub const NATIVE_CONFIG_JSON_EDITS_APPLY_LIVE_626BE654: Key = Key::new(1038);
+pub const NATIVE_CONFIG_JSON_EDITS_APPLY_LIVE_626BE654: Key = Key::new(846);
 /// "Content after"
-pub const NATIVE_CONTENT_AFTER_E985B00C: Key = Key::new(1039);
+pub const NATIVE_CONTENT_AFTER_E985B00C: Key = Key::new(847);
 /// "Copy build folders into new worktrees"
-pub const NATIVE_COPY_BUILD_FOLDERS_INTO_NEW_WORKTREES_E94136F5: Key = Key::new(1040);
+pub const NATIVE_COPY_BUILD_FOLDERS_INTO_NEW_WORKTREES_E94136F5: Key = Key::new(848);
 /// "Count"
-pub const NATIVE_COUNT_E1E7B894: Key = Key::new(1041);
+pub const NATIVE_COUNT_E1E7B894: Key = Key::new(849);
 /// "Count this Mac anonymously"
-pub const NATIVE_COUNT_THIS_MAC_ANONYMOUSLY_D9516F19: Key = Key::new(1042);
+pub const NATIVE_COUNT_THIS_MAC_ANONYMOUSLY_D9516F19: Key = Key::new(850);
 /// "Crossfade"
-pub const NATIVE_CROSSFADE_10D15B45: Key = Key::new(1043);
+pub const NATIVE_CROSSFADE_10D15B45: Key = Key::new(851);
 /// "Cursor"
-pub const NATIVE_CURSOR_558A502F: Key = Key::new(1044);
+pub const NATIVE_CURSOR_558A502F: Key = Key::new(852);
 /// "Dark"
-pub const NATIVE_DARK_45570065: Key = Key::new(1045);
+pub const NATIVE_DARK_45570065: Key = Key::new(853);
 /// "Dark and light separately"
-pub const NATIVE_DARK_AND_LIGHT_SEPARATELY_B127FAC2: Key = Key::new(1046);
+pub const NATIVE_DARK_AND_LIGHT_SEPARATELY_B127FAC2: Key = Key::new(854);
 /// "Data folder"
-pub const NATIVE_DATA_FOLDER_90610AAB: Key = Key::new(1047);
+pub const NATIVE_DATA_FOLDER_90610AAB: Key = Key::new(855);
 /// "Decimal like Finder (12.4 MB), or binary like git (11.8 MiB)."
-pub const NATIVE_DECIMAL_LIKE_FINDER_12_4_MB_OR_BINARY_17D2C238: Key = Key::new(1048);
+pub const NATIVE_DECIMAL_LIKE_FINDER_12_4_MB_OR_BINARY_17D2C238: Key = Key::new(856);
 /// "DECRQCRA: lets a program read the screen cell by cell, over ssh too."
-pub const NATIVE_DECRQCRA_LETS_A_PROGRAM_READ_THE_SCREEN_D4840F51: Key = Key::new(1049);
+pub const NATIVE_DECRQCRA_LETS_A_PROGRAM_READ_THE_SCREEN_D4840F51: Key = Key::new(857);
 /// "Default terminal"
-pub const NATIVE_DEFAULT_TERMINAL_051BCFB2: Key = Key::new(1050);
+pub const NATIVE_DEFAULT_TERMINAL_051BCFB2: Key = Key::new(858);
 /// "Delivery"
-pub const NATIVE_DELIVERY_48F38D75: Key = Key::new(1051);
+pub const NATIVE_DELIVERY_48F38D75: Key = Key::new(859);
 /// "Dense"
-pub const NATIVE_DENSE_53CB1350: Key = Key::new(1052);
+pub const NATIVE_DENSE_53CB1350: Key = Key::new(860);
 /// "Density"
-pub const NATIVE_DENSITY_E00D253B: Key = Key::new(1053);
+pub const NATIVE_DENSITY_E00D253B: Key = Key::new(861);
 /// "Deny"
-pub const NATIVE_DENY_07D5FA87: Key = Key::new(1054);
+pub const NATIVE_DENY_07D5FA87: Key = Key::new(862);
 /// "Details"
-pub const NATIVE_DETAILS_0EC24245: Key = Key::new(1055);
+pub const NATIVE_DETAILS_0EC24245: Key = Key::new(863);
 /// "Development build: updates only work in released builds."
-pub const NATIVE_DEVELOPMENT_BUILD_UPDATES_ONLY_WORK_IN_8E8C3262: Key = Key::new(1056);
+pub const NATIVE_DEVELOPMENT_BUILD_UPDATES_ONLY_WORK_IN_8E8C3262: Key = Key::new(864);
 /// "Diff view"
-pub const NATIVE_DIFF_VIEW_7468FF8F: Key = Key::new(1057);
+pub const NATIVE_DIFF_VIEW_7468FF8F: Key = Key::new(865);
 /// "Diffs, file lists, Theme Studio"
-pub const NATIVE_DIFFS_FILE_LISTS_THEME_STUDIO_63D79099: Key = Key::new(1058);
+pub const NATIVE_DIFFS_FILE_LISTS_THEME_STUDIO_63D79099: Key = Key::new(866);
 /// "Dock"
-pub const NATIVE_DOCK_A7CAF1BA: Key = Key::new(1059);
+pub const NATIVE_DOCK_A7CAF1BA: Key = Key::new(867);
 /// "Drawer"
-pub const NATIVE_DRAWER_02E1EC30: Key = Key::new(1060);
+pub const NATIVE_DRAWER_02E1EC30: Key = Key::new(868);
 /// "Each counts it"
-pub const NATIVE_EACH_COUNTS_IT_ED5A8D79: Key = Key::new(1061);
+pub const NATIVE_EACH_COUNTS_IT_ED5A8D79: Key = Key::new(869);
 /// "Edit config.json"
-pub const NATIVE_EDIT_CONFIG_JSON_95D71E6B: Key = Key::new(1062);
+pub const NATIVE_EDIT_CONFIG_JSON_95D71E6B: Key = Key::new(870);
 /// "Edit shells…"
-pub const NATIVE_EDIT_SHELLS_24F5B4C8: Key = Key::new(1063);
+pub const NATIVE_EDIT_SHELLS_24F5B4C8: Key = Key::new(871);
 /// "Encrypted, on this Mac only. Off erases what’s saved"
-pub const NATIVE_ENCRYPTED_ON_THIS_MAC_ONLY_OFF_ERASES_AFF70FCA: Key = Key::new(1064);
+pub const NATIVE_ENCRYPTED_ON_THIS_MAC_ONLY_OFF_ERASES_AFF70FCA: Key = Key::new(872);
 /// "Every setting goes back to its default. Your terminals, notes and themes are kept."
-pub const NATIVE_EVERY_SETTING_GOES_BACK_TO_ITS_DEFAULT_8550D40B: Key = Key::new(1065);
+pub const NATIVE_EVERY_SETTING_GOES_BACK_TO_ITS_DEFAULT_8550D40B: Key = Key::new(873);
 /// "Extensions"
-pub const NATIVE_EXTENSIONS_9EACE8EB: Key = Key::new(1066);
+pub const NATIVE_EXTENSIONS_9EACE8EB: Key = Key::new(874);
 /// "Fade group colours"
-pub const NATIVE_FADE_GROUP_COLOURS_A48633D5: Key = Key::new(1067);
+pub const NATIVE_FADE_GROUP_COLOURS_A48633D5: Key = Key::new(875);
 /// "Feature flags"
-pub const NATIVE_FEATURE_FLAGS_128745DE: Key = Key::new(1068);
+pub const NATIVE_FEATURE_FLAGS_128745DE: Key = Key::new(876);
 /// "File icons"
-pub const NATIVE_FILE_ICONS_6A20BA65: Key = Key::new(1069);
+pub const NATIVE_FILE_ICONS_6A20BA65: Key = Key::new(877);
 /// "File sizes"
-pub const NATIVE_FILE_SIZES_96E61181: Key = Key::new(1070);
+pub const NATIVE_FILE_SIZES_96E61181: Key = Key::new(878);
 /// "File view"
-pub const NATIVE_FILE_VIEW_D02D84E4: Key = Key::new(1071);
+pub const NATIVE_FILE_VIEW_D02D84E4: Key = Key::new(879);
 /// "Files"
-pub const NATIVE_FILES_E71D1B30: Key = Key::new(1072);
+pub const NATIVE_FILES_E71D1B30: Key = Key::new(880);
 /// "Files changed at once"
-pub const NATIVE_FILES_CHANGED_AT_ONCE_7D48965E: Key = Key::new(1073);
+pub const NATIVE_FILES_CHANGED_AT_ONCE_7D48965E: Key = Key::new(881);
 /// "Finder"
-pub const NATIVE_FINDER_63B875AD: Key = Key::new(1074);
+pub const NATIVE_FINDER_63B875AD: Key = Key::new(882);
 /// "fish"
-pub const NATIVE_FISH_AFAD8963: Key = Key::new(1075);
+pub const NATIVE_FISH_AFAD8963: Key = Key::new(883);
 /// "Flash the terminal edge"
-pub const NATIVE_FLASH_THE_TERMINAL_EDGE_B0A67E3F: Key = Key::new(1076);
+pub const NATIVE_FLASH_THE_TERMINAL_EDGE_B0A67E3F: Key = Key::new(884);
 /// "Folder"
-pub const NATIVE_FOLDER_06357AFD: Key = Key::new(1077);
+pub const NATIVE_FOLDER_06357AFD: Key = Key::new(885);
 /// "Folder picker"
-pub const NATIVE_FOLDER_PICKER_CDF01E0D: Key = Key::new(1078);
+pub const NATIVE_FOLDER_PICKER_CDF01E0D: Key = Key::new(886);
 /// "Follow the list"
-pub const NATIVE_FOLLOW_THE_LIST_7958BB9D: Key = Key::new(1079);
+pub const NATIVE_FOLLOW_THE_LIST_7958BB9D: Key = Key::new(887);
 /// "Font"
-pub const NATIVE_FONT_A77A5EB0: Key = Key::new(1080);
+pub const NATIVE_FONT_A77A5EB0: Key = Key::new(888);
 /// "Fonts"
-pub const NATIVE_FONTS_68A32CF9: Key = Key::new(1081);
+pub const NATIVE_FONTS_68A32CF9: Key = Key::new(889);
 /// "Found on this Mac"
-pub const NATIVE_FOUND_ON_THIS_MAC_1F545DF7: Key = Key::new(1082);
+pub const NATIVE_FOUND_ON_THIS_MAC_1F545DF7: Key = Key::new(890);
 /// "From the side"
-pub const NATIVE_FROM_THE_SIDE_BE2FB64D: Key = Key::new(1083);
+pub const NATIVE_FROM_THE_SIDE_BE2FB64D: Key = Key::new(891);
 /// "Gaps between split terminals"
-pub const NATIVE_GAPS_BETWEEN_SPLIT_TERMINALS_34D8CD3D: Key = Key::new(1084);
+pub const NATIVE_GAPS_BETWEEN_SPLIT_TERMINALS_34D8CD3D: Key = Key::new(892);
 /// "Glass under the sidebar's and the panel's cards. Off: every surface painted."
-pub const NATIVE_GLASS_UNDER_THE_SIDEBAR_S_AND_THE_PANEL_C9DB3633: Key = Key::new(1085);
+pub const NATIVE_GLASS_UNDER_THE_SIDEBAR_S_AND_THE_PANEL_C9DB3633: Key = Key::new(893);
 /// "Global hotkey"
-pub const NATIVE_GLOBAL_HOTKEY_E5F54E44: Key = Key::new(1086);
+pub const NATIVE_GLOBAL_HOTKEY_E5F54E44: Key = Key::new(894);
 /// "Graphite"
-pub const NATIVE_GRAPHITE_CC5F9DAD: Key = Key::new(1087);
+pub const NATIVE_GRAPHITE_CC5F9DAD: Key = Key::new(895);
 /// "Green"
-pub const NATIVE_GREEN_A953C75C: Key = Key::new(1088);
+pub const NATIVE_GREEN_A953C75C: Key = Key::new(896);
 /// "Group bursts"
-pub const NATIVE_GROUP_BURSTS_BF795373: Key = Key::new(1089);
+pub const NATIVE_GROUP_BURSTS_BF795373: Key = Key::new(897);
 /// "Groups"
-pub const NATIVE_GROUPS_F57F458D: Key = Key::new(1090);
+pub const NATIVE_GROUPS_F57F458D: Key = Key::new(898);
 /// "Groups as cards"
-pub const NATIVE_GROUPS_AS_CARDS_211C33B8: Key = Key::new(1091);
+pub const NATIVE_GROUPS_AS_CARDS_211C33B8: Key = Key::new(899);
 /// "How status works"
-pub const NATIVE_HOW_STATUS_WORKS_834ADE67: Key = Key::new(1092);
+pub const NATIVE_HOW_STATUS_WORKS_834ADE67: Key = Key::new(900);
 /// "How the list draws a group and its terminals at this density, with the row details you keep."
-pub const NATIVE_HOW_THE_LIST_DRAWS_A_GROUP_AND_ITS_TERMI_977173FB: Key = Key::new(1093);
+pub const NATIVE_HOW_THE_LIST_DRAWS_A_GROUP_AND_ITS_TERMI_977173FB: Key = Key::new(901);
 /// "How the Terminals list shows each agent: working, asking you, finished. With hooks it knows the moment; without, it reads the agent’s output."
-pub const NATIVE_HOW_THE_TERMINALS_LIST_SHOWS_EACH_AGENT_A55A2274: Key = Key::new(1094);
+pub const NATIVE_HOW_THE_TERMINALS_LIST_SHOWS_EACH_AGENT_A55A2274: Key = Key::new(902);
 /// "Icon only"
-pub const NATIVE_ICON_ONLY_5D656D02: Key = Key::new(1095);
+pub const NATIVE_ICON_ONLY_5D656D02: Key = Key::new(903);
 /// "Icon shows"
-pub const NATIVE_ICON_SHOWS_0D30D8AE: Key = Key::new(1096);
+pub const NATIVE_ICON_SHOWS_0D30D8AE: Key = Key::new(904);
 /// "Icon theme"
-pub const NATIVE_ICON_THEME_58B87DD5: Key = Key::new(1097);
+pub const NATIVE_ICON_THEME_58B87DD5: Key = Key::new(905);
 /// "Import"
-pub const NATIVE_IMPORT_573E0AF4: Key = Key::new(1098);
+pub const NATIVE_IMPORT_573E0AF4: Key = Key::new(906);
 /// "Inside Wormhole"
-pub const NATIVE_INSIDE_WORMHOLE_659934EA: Key = Key::new(1099);
+pub const NATIVE_INSIDE_WORMHOLE_659934EA: Key = Key::new(907);
 /// "Install"
-pub const NATIVE_INSTALL_B50CBD40: Key = Key::new(1100);
+pub const NATIVE_INSTALL_B50CBD40: Key = Key::new(908);
 /// "Installs on the next restart"
-pub const NATIVE_INSTALLS_ON_THE_NEXT_RESTART_3FBAFE11: Key = Key::new(1101);
+pub const NATIVE_INSTALLS_ON_THE_NEXT_RESTART_3FBAFE11: Key = Key::new(909);
 /// "Interface"
-pub const NATIVE_INTERFACE_7D000DD0: Key = Key::new(1102);
+pub const NATIVE_INTERFACE_7D000DD0: Key = Key::new(910);
 /// "Its size scales the interface"
-pub const NATIVE_ITS_SIZE_SCALES_THE_INTERFACE_487482BD: Key = Key::new(1103);
+pub const NATIVE_ITS_SIZE_SCALES_THE_INTERFACE_487482BD: Key = Key::new(911);
 /// "Layout"
-pub const NATIVE_LAYOUT_F788421F: Key = Key::new(1104);
+pub const NATIVE_LAYOUT_F788421F: Key = Key::new(912);
 /// "Left"
-pub const NATIVE_LEFT_92773890: Key = Key::new(1105);
+pub const NATIVE_LEFT_92773890: Key = Key::new(913);
 /// "Let it type and open terminals"
-pub const NATIVE_LET_IT_TYPE_AND_OPEN_TERMINALS_85B66AA5: Key = Key::new(1106);
+pub const NATIVE_LET_IT_TYPE_AND_OPEN_TERMINALS_85B66AA5: Key = Key::new(914);
 /// "Ligatures"
-pub const NATIVE_LIGATURES_9F93340D: Key = Key::new(1107);
+pub const NATIVE_LIGATURES_9F93340D: Key = Key::new(915);
 /// "Light"
-pub const NATIVE_LIGHT_8AD2F8CF: Key = Key::new(1108);
+pub const NATIVE_LIGHT_8AD2F8CF: Key = Key::new(916);
 /// "Line height"
-pub const NATIVE_LINE_HEIGHT_64697AA2: Key = Key::new(1109);
+pub const NATIVE_LINE_HEIGHT_64697AA2: Key = Key::new(917);
 /// "Line rolls"
-pub const NATIVE_LINE_ROLLS_0FA68C77: Key = Key::new(1110);
+pub const NATIVE_LINE_ROLLS_0FA68C77: Key = Key::new(918);
 /// "Lines around cards, columns and the sidebar. Off: surfaces are told apart by their shade alone."
-pub const NATIVE_LINES_AROUND_CARDS_COLUMNS_AND_THE_SIDE_DBE8F27A: Key = Key::new(1111);
+pub const NATIVE_LINES_AROUND_CARDS_COLUMNS_AND_THE_SIDE_DBE8F27A: Key = Key::new(919);
 /// "Liquid Glass"
-pub const NATIVE_LIQUID_GLASS_26A48755: Key = Key::new(1112);
+pub const NATIVE_LIQUID_GLASS_26A48755: Key = Key::new(920);
 /// "List"
-pub const NATIVE_LIST_8D2937A1: Key = Key::new(1113);
+pub const NATIVE_LIST_8D2937A1: Key = Key::new(921);
 /// "Live resize"
-pub const NATIVE_LIVE_RESIZE_561DBEF9: Key = Key::new(1114);
+pub const NATIVE_LIVE_RESIZE_561DBEF9: Key = Key::new(922);
 /// "Login shell (zsh)"
-pub const NATIVE_LOGIN_SHELL_ZSH_00CA716C: Key = Key::new(1115);
+pub const NATIVE_LOGIN_SHELL_ZSH_00CA716C: Key = Key::new(923);
 /// "Logs"
-pub const NATIVE_LOGS_51A96DA6: Key = Key::new(1116);
+pub const NATIVE_LOGS_51A96DA6: Key = Key::new(924);
 /// "Loops while you look. Under Reduce Motion it holds still."
-pub const NATIVE_LOOPS_WHILE_YOU_LOOK_UNDER_REDUCE_MOTIO_3FCB164E: Key = Key::new(1117);
+pub const NATIVE_LOOPS_WHILE_YOU_LOOK_UNDER_REDUCE_MOTIO_3FCB164E: Key = Key::new(925);
 /// "Make Default"
-pub const NATIVE_MAKE_DEFAULT_E3C21016: Key = Key::new(1118);
+pub const NATIVE_MAKE_DEFAULT_E3C21016: Key = Key::new(926);
 /// "Match system"
-pub const NATIVE_MATCH_SYSTEM_9FA7A70B: Key = Key::new(1119);
+pub const NATIVE_MATCH_SYSTEM_9FA7A70B: Key = Key::new(927);
 /// "Material Icon Theme"
-pub const NATIVE_MATERIAL_ICON_THEME_421598CC: Key = Key::new(1120);
+pub const NATIVE_MATERIAL_ICON_THEME_421598CC: Key = Key::new(928);
 /// "MB"
-pub const NATIVE_MB_44DFD4AE: Key = Key::new(1121);
+pub const NATIVE_MB_44DFD4AE: Key = Key::new(929);
 /// "Menu bar"
-pub const NATIVE_MENU_BAR_3F9B08F7: Key = Key::new(1122);
+pub const NATIVE_MENU_BAR_3F9B08F7: Key = Key::new(930);
 /// "Menu bar & hotkey"
-pub const NATIVE_MENU_BAR_HOTKEY_C425F3C9: Key = Key::new(1123);
+pub const NATIVE_MENU_BAR_HOTKEY_C425F3C9: Key = Key::new(931);
 /// "MiB"
-pub const NATIVE_MIB_42946573: Key = Key::new(1124);
+pub const NATIVE_MIB_42946573: Key = Key::new(932);
 /// "Minimap"
-pub const NATIVE_MINIMAP_3553BEE4: Key = Key::new(1125);
+pub const NATIVE_MINIMAP_3553BEE4: Key = Key::new(933);
 /// "Mode"
-pub const NATIVE_MODE_534E7732: Key = Key::new(1126);
+pub const NATIVE_MODE_534E7732: Key = Key::new(934);
 /// "Motion"
-pub const NATIVE_MOTION_AAD07647: Key = Key::new(1127);
-/// "Native Settings window"
-pub const NATIVE_NATIVE_SETTINGS_WINDOW_18531F51: Key = Key::new(1128);
+pub const NATIVE_MOTION_AAD07647: Key = Key::new(935);
 /// "Needs input"
-pub const NATIVE_NEEDS_INPUT_96C916B2: Key = Key::new(1129);
+pub const NATIVE_NEEDS_INPUT_96C916B2: Key = Key::new(936);
 /// "Needs input and finished"
-pub const NATIVE_NEEDS_INPUT_AND_FINISHED_FD00F2CB: Key = Key::new(1130);
+pub const NATIVE_NEEDS_INPUT_AND_FINISHED_FD00F2CB: Key = Key::new(937);
 /// "Needs input only"
-pub const NATIVE_NEEDS_INPUT_ONLY_52AB25A0: Key = Key::new(1131);
+pub const NATIVE_NEEDS_INPUT_ONLY_52AB25A0: Key = Key::new(938);
 /// "Never"
-pub const NATIVE_NEVER_B2FF2B29: Key = Key::new(1132);
+pub const NATIVE_NEVER_B2FF2B29: Key = Key::new(939);
 /// "Next waiting terminal"
-pub const NATIVE_NEXT_WAITING_TERMINAL_56F08EA1: Key = Key::new(1133);
+pub const NATIVE_NEXT_WAITING_TERMINAL_56F08EA1: Key = Key::new(940);
 /// "No analytics, telemetry or crash reports. The first check of a day and of a month says so, with nothing that tells one Mac from another."
-pub const NATIVE_NO_ANALYTICS_TELEMETRY_OR_CRASH_REPORTS_7790001A: Key = Key::new(1134);
+pub const NATIVE_NO_ANALYTICS_TELEMETRY_OR_CRASH_REPORTS_7790001A: Key = Key::new(941);
 /// "Nobody counts it"
-pub const NATIVE_NOBODY_COUNTS_IT_C7793D8F: Key = Key::new(1135);
+pub const NATIVE_NOBODY_COUNTS_IT_C7793D8F: Key = Key::new(942);
 /// "None yet: the fonts folder is empty."
-pub const NATIVE_NONE_YET_THE_FONTS_FOLDER_IS_EMPTY_0C9A7421: Key = Key::new(1136);
+pub const NATIVE_NONE_YET_THE_FONTS_FOLDER_IS_EMPTY_0C9A7421: Key = Key::new(943);
 /// "Notes and tasks"
-pub const NATIVE_NOTES_AND_TASKS_A7B438AD: Key = Key::new(1137);
+pub const NATIVE_NOTES_AND_TASKS_A7B438AD: Key = Key::new(944);
 /// "Nothing"
-pub const NATIVE_NOTHING_2CEA492A: Key = Key::new(1138);
+pub const NATIVE_NOTHING_2CEA492A: Key = Key::new(945);
 /// "Notice chip"
-pub const NATIVE_NOTICE_CHIP_5F233609: Key = Key::new(1139);
+pub const NATIVE_NOTICE_CHIP_5F233609: Key = Key::new(946);
 /// "Notifications"
-pub const NATIVE_NOTIFICATIONS_381D190F: Key = Key::new(1140);
+pub const NATIVE_NOTIFICATIONS_381D190F: Key = Key::new(947);
 /// "Notify me when"
-pub const NATIVE_NOTIFY_ME_WHEN_189F0ABE: Key = Key::new(1141);
+pub const NATIVE_NOTIFY_ME_WHEN_189F0ABE: Key = Key::new(948);
 /// "Nudge"
-pub const NATIVE_NUDGE_3E614A58: Key = Key::new(1142);
+pub const NATIVE_NUDGE_3E614A58: Key = Key::new(949);
 /// "Off"
-pub const NATIVE_OFF_0DC6B4AA: Key = Key::new(1143);
+pub const NATIVE_OFF_0DC6B4AA: Key = Key::new(950);
 /// "Off in System Settings: Wormhole can’t show banners until you allow them."
-pub const NATIVE_OFF_IN_SYSTEM_SETTINGS_WORMHOLE_CAN_T_S_17FE3267: Key = Key::new(1144);
+pub const NATIVE_OFF_IN_SYSTEM_SETTINGS_WORMHOLE_CAN_T_S_17FE3267: Key = Key::new(951);
 /// "One theme for both"
-pub const NATIVE_ONE_THEME_FOR_BOTH_C63866E4: Key = Key::new(1145);
+pub const NATIVE_ONE_THEME_FOR_BOTH_C63866E4: Key = Key::new(952);
 /// "Only for terminals I’m not looking at"
-pub const NATIVE_ONLY_FOR_TERMINALS_I_M_NOT_LOOKING_AT_7AEE5F43: Key = Key::new(1146);
+pub const NATIVE_ONLY_FOR_TERMINALS_I_M_NOT_LOOKING_AT_7AEE5F43: Key = Key::new(953);
 /// "Opacity"
-pub const NATIVE_OPACITY_DE1F0406: Key = Key::new(1147);
+pub const NATIVE_OPACITY_DE1F0406: Key = Key::new(954);
 /// "Open"
-pub const NATIVE_OPEN_538B10E9: Key = Key::new(1148);
+pub const NATIVE_OPEN_538B10E9: Key = Key::new(955);
 /// "Open Developer Tools"
-pub const NATIVE_OPEN_DEVELOPER_TOOLS_B852B030: Key = Key::new(1149);
+pub const NATIVE_OPEN_DEVELOPER_TOOLS_B852B030: Key = Key::new(956);
 /// "Open folders in"
-pub const NATIVE_OPEN_FOLDERS_IN_90F88253: Key = Key::new(1150);
+pub const NATIVE_OPEN_FOLDERS_IN_90F88253: Key = Key::new(957);
 /// "Open in…"
-pub const NATIVE_OPEN_IN_3E890E04: Key = Key::new(1151);
+pub const NATIVE_OPEN_IN_3E890E04: Key = Key::new(958);
 /// "Open Notifications"
-pub const NATIVE_OPEN_NOTIFICATIONS_C890EAA5: Key = Key::new(1152);
+pub const NATIVE_OPEN_NOTIFICATIONS_C890EAA5: Key = Key::new(959);
 /// "Open ports"
-pub const NATIVE_OPEN_PORTS_86567CC5: Key = Key::new(1153);
+pub const NATIVE_OPEN_PORTS_86567CC5: Key = Key::new(960);
 /// "Open System Settings"
-pub const NATIVE_OPEN_SYSTEM_SETTINGS_D22799A3: Key = Key::new(1154);
+pub const NATIVE_OPEN_SYSTEM_SETTINGS_D22799A3: Key = Key::new(961);
 /// "Opening"
-pub const NATIVE_OPENING_015825B7: Key = Key::new(1155);
+pub const NATIVE_OPENING_015825B7: Key = Key::new(962);
 /// "Opens"
-pub const NATIVE_OPENS_1DEB226E: Key = Key::new(1156);
+pub const NATIVE_OPENS_1DEB226E: Key = Key::new(963);
 /// "Opens .command files and scripts"
-pub const NATIVE_OPENS_COMMAND_FILES_AND_SCRIPTS_E478FD8F: Key = Key::new(1157);
+pub const NATIVE_OPENS_COMMAND_FILES_AND_SCRIPTS_E478FD8F: Key = Key::new(964);
 /// "Option key as Meta"
-pub const NATIVE_OPTION_KEY_AS_META_37C370C6: Key = Key::new(1158);
+pub const NATIVE_OPTION_KEY_AS_META_37C370C6: Key = Key::new(965);
 /// "Orange"
-pub const NATIVE_ORANGE_727B390B: Key = Key::new(1159);
+pub const NATIVE_ORANGE_727B390B: Key = Key::new(966);
 /// "OSC 52, over ssh too. The clipboard often holds a password."
-pub const NATIVE_OSC_52_OVER_SSH_TOO_THE_CLIPBOARD_OFTE_419979F8: Key = Key::new(1160);
+pub const NATIVE_OSC_52_OVER_SSH_TOO_THE_CLIPBOARD_OFTE_419979F8: Key = Key::new(967);
 /// "Persistent terminals"
-pub const NATIVE_PERSISTENT_TERMINALS_BC10C041: Key = Key::new(1161);
+pub const NATIVE_PERSISTENT_TERMINALS_BC10C041: Key = Key::new(968);
 /// "Pink"
-pub const NATIVE_PINK_8BB8038D: Key = Key::new(1162);
+pub const NATIVE_PINK_8BB8038D: Key = Key::new(969);
 /// "Plain terminals count"
-pub const NATIVE_PLAIN_TERMINALS_COUNT_D503E559: Key = Key::new(1163);
+pub const NATIVE_PLAIN_TERMINALS_COUNT_D503E559: Key = Key::new(970);
 /// "Preview"
-pub const NATIVE_PREVIEW_FDDA4CF7: Key = Key::new(1164);
+pub const NATIVE_PREVIEW_FDDA4CF7: Key = Key::new(971);
 /// "Primary colour"
-pub const NATIVE_PRIMARY_COLOUR_7DB00E4B: Key = Key::new(1165);
+pub const NATIVE_PRIMARY_COLOUR_7DB00E4B: Key = Key::new(972);
 /// "Privacy"
-pub const NATIVE_PRIVACY_EBFA87E7: Key = Key::new(1166);
+pub const NATIVE_PRIVACY_EBFA87E7: Key = Key::new(973);
 /// "Probes"
-pub const NATIVE_PROBES_DB32C586: Key = Key::new(1167);
+pub const NATIVE_PROBES_DB32C586: Key = Key::new(974);
 /// "Probes live in the Probes folder, one folder each with a probe.toml."
-pub const NATIVE_PROBES_LIVE_IN_THE_PROBES_FOLDER_ONE_FO_9FE6E62F: Key = Key::new(1168);
+pub const NATIVE_PROBES_LIVE_IN_THE_PROBES_FOLDER_ONE_FO_9FE6E62F: Key = Key::new(975);
 /// "Profile"
-pub const NATIVE_PROFILE_CD17328E: Key = Key::new(1169);
+pub const NATIVE_PROFILE_CD17328E: Key = Key::new(976);
 /// "Programs reading the clipboard"
-pub const NATIVE_PROGRAMS_READING_THE_CLIPBOARD_49FE5001: Key = Key::new(1170);
+pub const NATIVE_PROGRAMS_READING_THE_CLIPBOARD_49FE5001: Key = Key::new(977);
 /// "Programs setting the clipboard"
-pub const NATIVE_PROGRAMS_SETTING_THE_CLIPBOARD_579E6C09: Key = Key::new(1171);
+pub const NATIVE_PROGRAMS_SETTING_THE_CLIPBOARD_579E6C09: Key = Key::new(978);
 /// "Project folders"
-pub const NATIVE_PROJECT_FOLDERS_11068FA3: Key = Key::new(1172);
+pub const NATIVE_PROJECT_FOLDERS_11068FA3: Key = Key::new(979);
 /// "Projects"
-pub const NATIVE_PROJECTS_64FDA4D7: Key = Key::new(1173);
+pub const NATIVE_PROJECTS_64FDA4D7: Key = Key::new(980);
 /// "Pull request"
-pub const NATIVE_PULL_REQUEST_F671DEF7: Key = Key::new(1174);
+pub const NATIVE_PULL_REQUEST_F671DEF7: Key = Key::new(981);
 /// "Purple"
-pub const NATIVE_PURPLE_B682BA1F: Key = Key::new(1175);
+pub const NATIVE_PURPLE_B682BA1F: Key = Key::new(982);
 /// "Quick panel"
-pub const NATIVE_QUICK_PANEL_3FEA61E2: Key = Key::new(1176);
+pub const NATIVE_QUICK_PANEL_3FEA61E2: Key = Key::new(983);
 /// "Red"
-pub const NATIVE_RED_A37F187C: Key = Key::new(1177);
+pub const NATIVE_RED_A37F187C: Key = Key::new(984);
 /// "Regular"
-pub const NATIVE_REGULAR_E750F2B7: Key = Key::new(1178);
+pub const NATIVE_REGULAR_E750F2B7: Key = Key::new(985);
 /// "Remember after restart"
-pub const NATIVE_REMEMBER_AFTER_RESTART_2135D4DF: Key = Key::new(1179);
+pub const NATIVE_REMEMBER_AFTER_RESTART_2135D4DF: Key = Key::new(986);
 /// "Reset…"
-pub const NATIVE_RESET_44109A9C: Key = Key::new(1180);
+pub const NATIVE_RESET_44109A9C: Key = Key::new(987);
 /// "Reset all settings"
-pub const NATIVE_RESET_ALL_SETTINGS_BF0E2774: Key = Key::new(1181);
+pub const NATIVE_RESET_ALL_SETTINGS_BF0E2774: Key = Key::new(988);
 /// "Reset all settings?"
-pub const NATIVE_RESET_ALL_SETTINGS_0E47DB11: Key = Key::new(1182);
+pub const NATIVE_RESET_ALL_SETTINGS_0E47DB11: Key = Key::new(989);
 /// "Restore text after restart"
-pub const NATIVE_RESTORE_TEXT_AFTER_RESTART_478CB075: Key = Key::new(1183);
+pub const NATIVE_RESTORE_TEXT_AFTER_RESTART_478CB075: Key = Key::new(990);
 /// "Reveal"
-pub const NATIVE_REVEAL_BBA2A3F0: Key = Key::new(1184);
+pub const NATIVE_REVEAL_BBA2A3F0: Key = Key::new(991);
 /// "Right"
-pub const NATIVE_RIGHT_1E9E9F85: Key = Key::new(1185);
+pub const NATIVE_RIGHT_1E9E9F85: Key = Key::new(992);
 /// "Row details"
-pub const NATIVE_ROW_DETAILS_FB18B1F9: Key = Key::new(1186);
+pub const NATIVE_ROW_DETAILS_FB18B1F9: Key = Key::new(993);
 /// "Rows tuck in"
-pub const NATIVE_ROWS_TUCK_IN_F386CC60: Key = Key::new(1187);
+pub const NATIVE_ROWS_TUCK_IN_F386CC60: Key = Key::new(994);
 /// "Scan Again"
-pub const NATIVE_SCAN_AGAIN_E34C2194: Key = Key::new(1188);
+pub const NATIVE_SCAN_AGAIN_E34C2194: Key = Key::new(995);
 /// "Screen read-back"
-pub const NATIVE_SCREEN_READ_BACK_AC6CD84D: Key = Key::new(1189);
+pub const NATIVE_SCREEN_READ_BACK_AC6CD84D: Key = Key::new(996);
 /// "Scripts and agents"
-pub const NATIVE_SCRIPTS_AND_AGENTS_CB5DEA68: Key = Key::new(1190);
+pub const NATIVE_SCRIPTS_AND_AGENTS_CB5DEA68: Key = Key::new(997);
 /// "Scrollback"
-pub const NATIVE_SCROLLBACK_C94C2BE7: Key = Key::new(1191);
+pub const NATIVE_SCROLLBACK_C94C2BE7: Key = Key::new(998);
 /// "Send a test"
-pub const NATIVE_SEND_A_TEST_E12DA618: Key = Key::new(1192);
+pub const NATIVE_SEND_A_TEST_E12DA618: Key = Key::new(999);
 /// "send-text types into a terminal and new-terminal opens one, as a paste; never into one waiting for your answer."
-pub const NATIVE_SEND_TEXT_TYPES_INTO_A_TERMINAL_AND_NEW_D4777550: Key = Key::new(1193);
+pub const NATIVE_SEND_TEXT_TYPES_INTO_A_TERMINAL_AND_NEW_D4777550: Key = Key::new(1000);
 /// "Settings"
-pub const NATIVE_SETTINGS_4B058728: Key = Key::new(1194);
+pub const NATIVE_SETTINGS_4B058728: Key = Key::new(1001);
 /// "Settings file"
-pub const NATIVE_SETTINGS_FILE_1303D72E: Key = Key::new(1195);
+pub const NATIVE_SETTINGS_FILE_1303D72E: Key = Key::new(1002);
 /// "Shell"
-pub const NATIVE_SHELL_BA1969A1: Key = Key::new(1196);
+pub const NATIVE_SHELL_BA1969A1: Key = Key::new(1003);
 /// "Shortcut"
-pub const NATIVE_SHORTCUT_97DCC893: Key = Key::new(1197);
+pub const NATIVE_SHORTCUT_97DCC893: Key = Key::new(1004);
 /// "Shortcuts"
-pub const NATIVE_SHORTCUTS_F09038A0: Key = Key::new(1198);
+pub const NATIVE_SHORTCUTS_F09038A0: Key = Key::new(1005);
 /// "Show Again"
-pub const NATIVE_SHOW_AGAIN_DD1C1F68: Key = Key::new(1199);
+pub const NATIVE_SHOW_AGAIN_DD1C1F68: Key = Key::new(1006);
 /// "Show group folders"
-pub const NATIVE_SHOW_GROUP_FOLDERS_401DE80A: Key = Key::new(1200);
+pub const NATIVE_SHOW_GROUP_FOLDERS_401DE80A: Key = Key::new(1007);
 /// "Show in Finder"
-pub const NATIVE_SHOW_IN_FINDER_A9442AA9: Key = Key::new(1201);
+pub const NATIVE_SHOW_IN_FINDER_A9442AA9: Key = Key::new(1008);
 /// "Show in the menu bar"
-pub const NATIVE_SHOW_IN_THE_MENU_BAR_E962B92A: Key = Key::new(1202);
+pub const NATIVE_SHOW_IN_THE_MENU_BAR_E962B92A: Key = Key::new(1009);
 /// "Show numbers while ⌘ is held"
-pub const NATIVE_SHOW_NUMBERS_WHILE_IS_HELD_E5D17A3A: Key = Key::new(1203);
+pub const NATIVE_SHOW_NUMBERS_WHILE_IS_HELD_E5D17A3A: Key = Key::new(1010);
 /// "Show terminals in"
-pub const NATIVE_SHOW_TERMINALS_IN_CDD86204: Key = Key::new(1204);
+pub const NATIVE_SHOW_TERMINALS_IN_CDD86204: Key = Key::new(1011);
 /// "Shows => and != as one glyph"
-pub const NATIVE_SHOWS_AND_AS_ONE_GLYPH_6CEE2BDD: Key = Key::new(1205);
+pub const NATIVE_SHOWS_AND_AS_ONE_GLYPH_6CEE2BDD: Key = Key::new(1012);
 /// "Sidebar"
-pub const NATIVE_SIDEBAR_A2E5D767: Key = Key::new(1206);
+pub const NATIVE_SIDEBAR_A2E5D767: Key = Key::new(1013);
 /// "Skill and MCP"
-pub const NATIVE_SKILL_AND_MCP_8BA875E7: Key = Key::new(1207);
+pub const NATIVE_SKILL_AND_MCP_8BA875E7: Key = Key::new(1014);
 /// "Skip malware scans of new programs"
-pub const NATIVE_SKIP_MALWARE_SCANS_OF_NEW_PROGRAMS_1252CC9F: Key = Key::new(1208);
+pub const NATIVE_SKIP_MALWARE_SCANS_OF_NEW_PROGRAMS_1252CC9F: Key = Key::new(1015);
 /// "Soft spring"
-pub const NATIVE_SOFT_SPRING_AA31D3C6: Key = Key::new(1209);
+pub const NATIVE_SOFT_SPRING_AA31D3C6: Key = Key::new(1016);
 /// "Sound"
-pub const NATIVE_SOUND_B3CA9A34: Key = Key::new(1210);
+pub const NATIVE_SOUND_B3CA9A34: Key = Key::new(1017);
 /// "Split"
-pub const NATIVE_SPLIT_16A15383: Key = Key::new(1211);
+pub const NATIVE_SPLIT_16A15383: Key = Key::new(1018);
 /// "Split buttons"
-pub const NATIVE_SPLIT_BUTTONS_A78DF85A: Key = Key::new(1212);
+pub const NATIVE_SPLIT_BUTTONS_A78DF85A: Key = Key::new(1019);
 /// "Split terminals"
-pub const NATIVE_SPLIT_TERMINALS_34126D5A: Key = Key::new(1213);
+pub const NATIVE_SPLIT_TERMINALS_34126D5A: Key = Key::new(1020);
 /// "Stable"
-pub const NATIVE_STABLE_02B032B6: Key = Key::new(1214);
+pub const NATIVE_STABLE_02B032B6: Key = Key::new(1021);
 /// "Status"
-pub const NATIVE_STATUS_005EF20F: Key = Key::new(1215);
+pub const NATIVE_STATUS_005EF20F: Key = Key::new(1022);
 /// "Status and count"
-pub const NATIVE_STATUS_AND_COUNT_0C7A9D31: Key = Key::new(1216);
+pub const NATIVE_STATUS_AND_COUNT_0C7A9D31: Key = Key::new(1023);
 /// "Status bar"
-pub const NATIVE_STATUS_BAR_A6F3F302: Key = Key::new(1217);
+pub const NATIVE_STATUS_BAR_A6F3F302: Key = Key::new(1024);
 /// "Status dot"
-pub const NATIVE_STATUS_DOT_237CA4F8: Key = Key::new(1218);
+pub const NATIVE_STATUS_DOT_237CA4F8: Key = Key::new(1025);
 /// "Stay with the terminal"
-pub const NATIVE_STAY_WITH_THE_TERMINAL_E9FD220D: Key = Key::new(1219);
+pub const NATIVE_STAY_WITH_THE_TERMINAL_E9FD220D: Key = Key::new(1026);
 /// "Switches for features that aren’t finished. Only development builds show this page; a release uses each feature’s default."
-pub const NATIVE_SWITCHES_FOR_FEATURES_THAT_AREN_T_FINISH_592DC656: Key = Key::new(1220);
+pub const NATIVE_SWITCHES_FOR_FEATURES_THAT_AREN_T_FINISH_592DC656: Key = Key::new(1027);
 /// "Tab width"
-pub const NATIVE_TAB_WIDTH_D50C0220: Key = Key::new(1221);
+pub const NATIVE_TAB_WIDTH_D50C0220: Key = Key::new(1028);
 /// "Tabs"
-pub const NATIVE_TABS_8EC4824D: Key = Key::new(1222);
+pub const NATIVE_TABS_8EC4824D: Key = Key::new(1029);
 /// "Tear off a terminal"
-pub const NATIVE_TEAR_OFF_A_TERMINAL_DC303D6D: Key = Key::new(1223);
+pub const NATIVE_TEAR_OFF_A_TERMINAL_DC303D6D: Key = Key::new(1030);
 /// "Terminal"
-pub const NATIVE_TERMINAL_93C562D1: Key = Key::new(1224);
+pub const NATIVE_TERMINAL_93C562D1: Key = Key::new(1031);
 /// "Terminal font"
-pub const NATIVE_TERMINAL_FONT_EB78756A: Key = Key::new(1225);
+pub const NATIVE_TERMINAL_FONT_EB78756A: Key = Key::new(1032);
 /// "Terminal name"
-pub const NATIVE_TERMINAL_NAME_842A5FA8: Key = Key::new(1226);
+pub const NATIVE_TERMINAL_NAME_842A5FA8: Key = Key::new(1033);
 /// "Terminal status"
-pub const NATIVE_TERMINAL_STATUS_A71F5A95: Key = Key::new(1227);
+pub const NATIVE_TERMINAL_STATUS_A71F5A95: Key = Key::new(1034);
 /// "Terminal welcome"
-pub const NATIVE_TERMINAL_WELCOME_71EC9D31: Key = Key::new(1228);
+pub const NATIVE_TERMINAL_WELCOME_71EC9D31: Key = Key::new(1035);
 /// "Terminals & sidebar"
-pub const NATIVE_TERMINALS_SIDEBAR_44058EE0: Key = Key::new(1229);
+pub const NATIVE_TERMINALS_SIDEBAR_44058EE0: Key = Key::new(1036);
 /// "Terminals list"
-pub const NATIVE_TERMINALS_LIST_07B2500E: Key = Key::new(1230);
+pub const NATIVE_TERMINALS_LIST_07B2500E: Key = Key::new(1037);
 /// "Terminals, notes and themes are kept"
-pub const NATIVE_TERMINALS_NOTES_AND_THEMES_ARE_KEPT_1419E48A: Key = Key::new(1231);
+pub const NATIVE_TERMINALS_NOTES_AND_THEMES_ARE_KEPT_1419E48A: Key = Key::new(1038);
 /// "The banners you would get. macOS decides where they show and for how long (System Settings › Notifications › Wormhole)."
-pub const NATIVE_THE_BANNERS_YOU_WOULD_GET_MACOS_DECIDES_D235A289: Key = Key::new(1232);
+pub const NATIVE_THE_BANNERS_YOU_WOULD_GET_MACOS_DECIDES_D235A289: Key = Key::new(1039);
 /// "The bell rings"
-pub const NATIVE_THE_BELL_RINGS_D92CA7B6: Key = Key::new(1233);
+pub const NATIVE_THE_BELL_RINGS_D92CA7B6: Key = Key::new(1040);
 /// "The Changes panel and a diff as you set them up: list or tree, split or unified, wrapped or not."
-pub const NATIVE_THE_CHANGES_PANEL_AND_A_DIFF_AS_YOU_SET_3B2970B1: Key = Key::new(1234);
+pub const NATIVE_THE_CHANGES_PANEL_AND_A_DIFF_AS_YOU_SET_3B2970B1: Key = Key::new(1041);
 /// "The font you chose, at its size and line height."
-pub const NATIVE_THE_FONT_YOU_CHOSE_AT_ITS_SIZE_AND_LINE_7BC32F0C: Key = Key::new(1235);
+pub const NATIVE_THE_FONT_YOU_CHOSE_AT_ITS_SIZE_AND_LINE_7BC32F0C: Key = Key::new(1042);
 /// "The git branch on folders, in the title row and in the status bar. Any colour is kept readable."
-pub const NATIVE_THE_GIT_BRANCH_ON_FOLDERS_IN_THE_TITLE_A7D4F796: Key = Key::new(1236);
+pub const NATIVE_THE_GIT_BRANCH_ON_FOLDERS_IN_THE_TITLE_A7D4F796: Key = Key::new(1043);
 /// "The menu bar extra and its menu of terminals waiting for you."
-pub const NATIVE_THE_MENU_BAR_EXTRA_AND_ITS_MENU_OF_TERMI_9155A191: Key = Key::new(1237);
+pub const NATIVE_THE_MENU_BAR_EXTRA_AND_ITS_MENU_OF_TERMI_9155A191: Key = Key::new(1044);
 /// "The scrollback drawn small along the terminal's right edge. Click or drag it to scroll."
-pub const NATIVE_THE_SCROLLBACK_DRAWN_SMALL_ALONG_THE_TER_1285A41A: Key = Key::new(1238);
+pub const NATIVE_THE_SCROLLBACK_DRAWN_SMALL_ALONG_THE_TER_1285A41A: Key = Key::new(1045);
 /// "The sidebar and panel hide or show"
-pub const NATIVE_THE_SIDEBAR_AND_PANEL_HIDE_OR_SHOW_387947FB: Key = Key::new(1239);
+pub const NATIVE_THE_SIDEBAR_AND_PANEL_HIDE_OR_SHOW_387947FB: Key = Key::new(1046);
 /// "The wh command in any terminal"
-pub const NATIVE_THE_WH_COMMAND_IN_ANY_TERMINAL_822A0951: Key = Key::new(1240);
+pub const NATIVE_THE_WH_COMMAND_IN_ANY_TERMINAL_822A0951: Key = Key::new(1047);
 /// "The worktree folder and the shells list are in config.json."
-pub const NATIVE_THE_WORKTREE_FOLDER_AND_THE_SHELLS_LIST_4B916C2B: Key = Key::new(1241);
+pub const NATIVE_THE_WORKTREE_FOLDER_AND_THE_SHELLS_LIST_4B916C2B: Key = Key::new(1048);
 /// "Theme"
-pub const NATIVE_THEME_4EAF7C92: Key = Key::new(1242);
+pub const NATIVE_THEME_4EAF7C92: Key = Key::new(1049);
 /// "Theme Studio"
-pub const NATIVE_THEME_STUDIO_3E095DA4: Key = Key::new(1243);
+pub const NATIVE_THEME_STUDIO_3E095DA4: Key = Key::new(1050);
 /// "This terminal"
-pub const NATIVE_THIS_TERMINAL_C1A8710F: Key = Key::new(1244);
+pub const NATIVE_THIS_TERMINAL_C1A8710F: Key = Key::new(1051);
 /// "Three or more in 10 s become one"
-pub const NATIVE_THREE_OR_MORE_IN_10_S_BECOME_ONE_86D598AD: Key = Key::new(1245);
+pub const NATIVE_THREE_OR_MORE_IN_10_S_BECOME_ONE_86D598AD: Key = Key::new(1052);
 /// "Title read-back"
-pub const NATIVE_TITLE_READ_BACK_4AD89925: Key = Key::new(1246);
+pub const NATIVE_TITLE_READ_BACK_4AD89925: Key = Key::new(1053);
 /// "Title row"
-pub const NATIVE_TITLE_ROW_E0E98371: Key = Key::new(1247);
+pub const NATIVE_TITLE_ROW_E0E98371: Key = Key::new(1054);
 /// "Tree"
-pub const NATIVE_TREE_EDB780F5: Key = Key::new(1248);
+pub const NATIVE_TREE_EDB780F5: Key = Key::new(1055);
 /// "Two split terminals as your settings draw them: the gaps between them and the minimap."
-pub const NATIVE_TWO_SPLIT_TERMINALS_AS_YOUR_SETTINGS_DRA_6BF64AC1: Key = Key::new(1249);
+pub const NATIVE_TWO_SPLIT_TERMINALS_AS_YOUR_SETTINGS_DRA_6BF64AC1: Key = Key::new(1056);
 /// "Unified"
-pub const NATIVE_UNIFIED_FE61954D: Key = Key::new(1250);
+pub const NATIVE_UNIFIED_FE61954D: Key = Key::new(1057);
 /// "Unlimited"
-pub const NATIVE_UNLIMITED_2D283A80: Key = Key::new(1251);
+pub const NATIVE_UNLIMITED_2D283A80: Key = Key::new(1058);
 /// "Unstable"
-pub const NATIVE_UNSTABLE_68DF172D: Key = Key::new(1252);
+pub const NATIVE_UNSTABLE_68DF172D: Key = Key::new(1059);
 /// "Unstable also gets a build of every change once it passes the tests, and shows the feature flags."
-pub const NATIVE_UNSTABLE_ALSO_GETS_A_BUILD_OF_EVERY_CHAN_F3EF9CB8: Key = Key::new(1253);
+pub const NATIVE_UNSTABLE_ALSO_GETS_A_BUILD_OF_EVERY_CHAN_F3EF9CB8: Key = Key::new(1060);
 /// "Untracked files separately"
-pub const NATIVE_UNTRACKED_FILES_SEPARATELY_1E09DEE7: Key = Key::new(1254);
+pub const NATIVE_UNTRACKED_FILES_SEPARATELY_1E09DEE7: Key = Key::new(1061);
 /// "Update automatically"
-pub const NATIVE_UPDATE_AUTOMATICALLY_E3BC7CF5: Key = Key::new(1255);
+pub const NATIVE_UPDATE_AUTOMATICALLY_E3BC7CF5: Key = Key::new(1062);
 /// "Updates"
-pub const NATIVE_UPDATES_483075A5: Key = Key::new(1256);
+pub const NATIVE_UPDATES_483075A5: Key = Key::new(1063);
 /// "Use from projects"
-pub const NATIVE_USE_FROM_PROJECTS_543FEF16: Key = Key::new(1257);
+pub const NATIVE_USE_FROM_PROJECTS_543FEF16: Key = Key::new(1064);
 /// "Use the opacity and blur above for these windows too."
-pub const NATIVE_USE_THE_OPACITY_AND_BLUR_ABOVE_FOR_THESE_DF6FD7A0: Key = Key::new(1258);
+pub const NATIVE_USE_THE_OPACITY_AND_BLUR_ABOVE_FOR_THESE_DF6FD7A0: Key = Key::new(1065);
 /// "Version"
-pub const NATIVE_VERSION_5DCDD537: Key = Key::new(1259);
+pub const NATIVE_VERSION_5DCDD537: Key = Key::new(1066);
 /// "Visual Studio Code"
-pub const NATIVE_VISUAL_STUDIO_CODE_0C3C7B7A: Key = Key::new(1260);
+pub const NATIVE_VISUAL_STUDIO_CODE_0C3C7B7A: Key = Key::new(1067);
 /// "What an update check sends"
-pub const NATIVE_WHAT_AN_UPDATE_CHECK_SENDS_956A3BB0: Key = Key::new(1261);
+pub const NATIVE_WHAT_AN_UPDATE_CHECK_SENDS_956A3BB0: Key = Key::new(1068);
 /// "What programs that drive Wormhole through its command line, MCP or socket may do."
-pub const NATIVE_WHAT_PROGRAMS_THAT_DRIVE_WORMHOLE_THROUG_52EEB1E4: Key = Key::new(1262);
+pub const NATIVE_WHAT_PROGRAMS_THAT_DRIVE_WORMHOLE_THROUG_52EEB1E4: Key = Key::new(1069);
 /// "When an agent notifies you is set in Notifications."
-pub const NATIVE_WHEN_AN_AGENT_NOTIFIES_YOU_IS_SET_IN_NOT_D66F4950: Key = Key::new(1263);
+pub const NATIVE_WHEN_AN_AGENT_NOTIFIES_YOU_IS_SET_IN_NOT_D66F4950: Key = Key::new(1070);
 /// "When several terminals worked at the same time, whose file it is can't be told."
-pub const NATIVE_WHEN_SEVERAL_TERMINALS_WORKED_AT_THE_SAM_FBF2086B: Key = Key::new(1264);
+pub const NATIVE_WHEN_SEVERAL_TERMINALS_WORKED_AT_THE_SAM_FBF2086B: Key = Key::new(1071);
 /// "Which programs make a terminal without an agent count the files changed while they run."
-pub const NATIVE_WHICH_PROGRAMS_MAKE_A_TERMINAL_WITHOUT_A_9CCDBCDF: Key = Key::new(1265);
+pub const NATIVE_WHICH_PROGRAMS_MAKE_A_TERMINAL_WITHOUT_A_9CCDBCDF: Key = Key::new(1072);
 /// "While Wormhole is in front"
-pub const NATIVE_WHILE_WORMHOLE_IS_IN_FRONT_EC43165B: Key = Key::new(1266);
+pub const NATIVE_WHILE_WORMHOLE_IS_IN_FRONT_EC43165B: Key = Key::new(1073);
 /// "Whole repository"
-pub const NATIVE_WHOLE_REPOSITORY_B087B860: Key = Key::new(1267);
+pub const NATIVE_WHOLE_REPOSITORY_B087B860: Key = Key::new(1074);
 /// "Window"
-pub const NATIVE_WINDOW_E78631FD: Key = Key::new(1268);
+pub const NATIVE_WINDOW_E78631FD: Key = Key::new(1075);
 /// "Window control"
-pub const NATIVE_WINDOW_CONTROL_8C7AE508: Key = Key::new(1269);
+pub const NATIVE_WINDOW_CONTROL_8C7AE508: Key = Key::new(1076);
 /// "Without blur the desktop shows sharp behind the text: below 95 % opacity it may not read."
-pub const NATIVE_WITHOUT_BLUR_THE_DESKTOP_SHOWS_SHARP_BEH_368D5E45: Key = Key::new(1270);
+pub const NATIVE_WITHOUT_BLUR_THE_DESKTOP_SHOWS_SHARP_BEH_368D5E45: Key = Key::new(1077);
 /// "Works from any app"
-pub const NATIVE_WORKS_FROM_ANY_APP_1EC32BB2: Key = Key::new(1271);
+pub const NATIVE_WORKS_FROM_ANY_APP_1EC32BB2: Key = Key::new(1078);
 /// "Wormhole"
-pub const NATIVE_WORMHOLE_4D1F3598: Key = Key::new(1272);
+pub const NATIVE_WORMHOLE_4D1F3598: Key = Key::new(1079);
 /// "Wrap long lines"
-pub const NATIVE_WRAP_LONG_LINES_347FD776: Key = Key::new(1273);
+pub const NATIVE_WRAP_LONG_LINES_347FD776: Key = Key::new(1080);
 /// "Xcode"
-pub const NATIVE_XCODE_B012D8C6: Key = Key::new(1274);
+pub const NATIVE_XCODE_B012D8C6: Key = Key::new(1081);
 /// "xterm's window operations: move, resize, minimise or raise the window."
-pub const NATIVE_XTERM_S_WINDOW_OPERATIONS_MOVE_RESIZE_ACA3A821: Key = Key::new(1275);
+pub const NATIVE_XTERM_S_WINDOW_OPERATIONS_MOVE_RESIZE_ACA3A821: Key = Key::new(1082);
 /// "XTWINOPS 20 and 21. Over ssh this lets a program type a command line."
-pub const NATIVE_XTWINOPS_20_AND_21_OVER_SSH_THIS_LETS_A_8434D636: Key = Key::new(1276);
+pub const NATIVE_XTWINOPS_20_AND_21_OVER_SSH_THIS_LETS_A_8434D636: Key = Key::new(1083);
 /// "Yellow"
-pub const NATIVE_YELLOW_D9CDEC69: Key = Key::new(1277);
+pub const NATIVE_YELLOW_D9CDEC69: Key = Key::new(1084);
 /// "Your theme, opacity, blur, glass, dividers, status bar and title row, as one window draws them."
-pub const NATIVE_YOUR_THEME_OPACITY_BLUR_GLASS_DIVIDE_42E4C324: Key = Key::new(1278);
+pub const NATIVE_YOUR_THEME_OPACITY_BLUR_GLASS_DIVIDE_42E4C324: Key = Key::new(1085);
 /// "Zed"
-pub const NATIVE_ZED_1A161894: Key = Key::new(1279);
+pub const NATIVE_ZED_1A161894: Key = Key::new(1086);
 /// "Zed icon themes work too"
-pub const NATIVE_ZED_ICON_THEMES_WORK_TOO_94CB3CB0: Key = Key::new(1280);
+pub const NATIVE_ZED_ICON_THEMES_WORK_TOO_94CB3CB0: Key = Key::new(1087);
 /// "zsh, bash and fish"
-pub const NATIVE_ZSH_BASH_AND_FISH_78A33C79: Key = Key::new(1281);
+pub const NATIVE_ZSH_BASH_AND_FISH_78A33C79: Key = Key::new(1088);
 /// "Reset"
-pub const NATIVE_RESET_0AC8A560: Key = Key::new(1282);
+pub const NATIVE_RESET_0AC8A560: Key = Key::new(1089);
 /// "They go back to their defaults."
-pub const NATIVE_THEY_GO_BACK_TO_THEIR_DEFAULTS_75437FAB: Key = Key::new(1283);
+pub const NATIVE_THEY_GO_BACK_TO_THEIR_DEFAULTS_75437FAB: Key = Key::new(1090);
 /// "Search"
-pub const NATIVE_SEARCH_C646A2C9: Key = Key::new(1284);
+pub const NATIVE_SEARCH_C646A2C9: Key = Key::new(1091);
 /// "No settings match “%@”"
-pub const NATIVE_NO_SETTINGS_MATCH_1470A9BE: Key = Key::new(1285);
+pub const NATIVE_NO_SETTINGS_MATCH_1470A9BE: Key = Key::new(1092);
 /// "Nothing changed"
-pub const NATIVE_NOTHING_CHANGED_F8F5312A: Key = Key::new(1286);
+pub const NATIVE_NOTHING_CHANGED_F8F5312A: Key = Key::new(1093);
 /// "Every setting is at its default"
-pub const NATIVE_EVERY_SETTING_IS_AT_ITS_DEFAULT_E2C1934A: Key = Key::new(1287);
+pub const NATIVE_EVERY_SETTING_IS_AT_ITS_DEFAULT_E2C1934A: Key = Key::new(1094);
 /// "Everything else is at its default"
-pub const NATIVE_EVERYTHING_ELSE_IS_AT_ITS_DEFAULT_60E4282B: Key = Key::new(1288);
+pub const NATIVE_EVERYTHING_ELSE_IS_AT_ITS_DEFAULT_60E4282B: Key = Key::new(1095);
 /// "Copy as JSON"
-pub const NATIVE_COPY_AS_JSON_26F33AD6: Key = Key::new(1289);
+pub const NATIVE_COPY_AS_JSON_26F33AD6: Key = Key::new(1096);
 /// "Reset All…"
-pub const NATIVE_RESET_ALL_A26A5F6D: Key = Key::new(1290);
+pub const NATIVE_RESET_ALL_A26A5F6D: Key = Key::new(1097);
 /// "Changed from its default"
-pub const NATIVE_CHANGED_FROM_ITS_DEFAULT_B5591C76: Key = Key::new(1291);
+pub const NATIVE_CHANGED_FROM_ITS_DEFAULT_B5591C76: Key = Key::new(1098);
 /// "Reset to default"
-pub const NATIVE_RESET_TO_DEFAULT_0DB9F7DC: Key = Key::new(1292);
+pub const NATIVE_RESET_TO_DEFAULT_0DB9F7DC: Key = Key::new(1099);
 /// "Repair Hooks"
-pub const NATIVE_REPAIR_HOOKS_20D77538: Key = Key::new(1293);
+pub const NATIVE_REPAIR_HOOKS_20D77538: Key = Key::new(1100);
 /// "Remove Hooks"
-pub const NATIVE_REMOVE_HOOKS_DB6F9E99: Key = Key::new(1294);
+pub const NATIVE_REMOVE_HOOKS_DB6F9E99: Key = Key::new(1101);
 /// "Add Hooks"
-pub const NATIVE_ADD_HOOKS_718676F8: Key = Key::new(1295);
+pub const NATIVE_ADD_HOOKS_718676F8: Key = Key::new(1102);
 /// "Hooks on"
-pub const NATIVE_HOOKS_ON_E721FF4C: Key = Key::new(1296);
+pub const NATIVE_HOOKS_ON_E721FF4C: Key = Key::new(1103);
 /// "Flexible space"
-pub const NATIVE_FLEXIBLE_SPACE_629765B4: Key = Key::new(1297);
+pub const NATIVE_FLEXIBLE_SPACE_629765B4: Key = Key::new(1104);
 /// "Parts above sit at the left, below at the right"
-pub const NATIVE_PARTS_ABOVE_SIT_AT_THE_LEFT_BELOW_AT_TH_DB586B38: Key = Key::new(1298);
+pub const NATIVE_PARTS_ABOVE_SIT_AT_THE_LEFT_BELOW_AT_TH_DB586B38: Key = Key::new(1105);
 /// "Wormhole is up to date."
-pub const NATIVE_WORMHOLE_IS_UP_TO_DATE_824D1B34: Key = Key::new(1299);
+pub const NATIVE_WORMHOLE_IS_UP_TO_DATE_824D1B34: Key = Key::new(1106);
 /// "Checked 4 minutes ago."
-pub const NATIVE_CHECKED_4_MINUTES_AGO_07AD1E88: Key = Key::new(1300);
+pub const NATIVE_CHECKED_4_MINUTES_AGO_07AD1E88: Key = Key::new(1107);
 /// "Check Now"
-pub const NATIVE_CHECK_NOW_B19A3117: Key = Key::new(1301);
+pub const NATIVE_CHECK_NOW_B19A3117: Key = Key::new(1108);
 /// "Cancel"
-pub const NATIVE_CANCEL_35AFCA3B: Key = Key::new(1302);
+pub const NATIVE_CANCEL_35AFCA3B: Key = Key::new(1109);
 /// "Approve"
-pub const NATIVE_APPROVE_E6EDF55A: Key = Key::new(1303);
+pub const NATIVE_APPROVE_E6EDF55A: Key = Key::new(1110);
 /// "Approve %@"
-pub const NATIVE_APPROVE_B03F7B63: Key = Key::new(1304);
+pub const NATIVE_APPROVE_B03F7B63: Key = Key::new(1111);
 /// "Turn on…"
-pub const NATIVE_TURN_ON_BEC93B71: Key = Key::new(1305);
+pub const NATIVE_TURN_ON_BEC93B71: Key = Key::new(1112);
 /// "Approve Again…"
-pub const NATIVE_APPROVE_AGAIN_11C61C76: Key = Key::new(1306);
+pub const NATIVE_APPROVE_AGAIN_11C61C76: Key = Key::new(1113);
 /// "Revoke"
-pub const NATIVE_REVOKE_2219C453: Key = Key::new(1307);
+pub const NATIVE_REVOKE_2219C453: Key = Key::new(1114);
 /// "Trust with Touch ID…"
-pub const NATIVE_TRUST_WITH_TOUCH_ID_217D6D1B: Key = Key::new(1308);
+pub const NATIVE_TRUST_WITH_TOUCH_ID_217D6D1B: Key = Key::new(1115);
 /// "Same as terminal"
-pub const NATIVE_SAME_AS_TERMINAL_30490967: Key = Key::new(1309);
+pub const NATIVE_SAME_AS_TERMINAL_30490967: Key = Key::new(1116);
 /// "Monospaced"
-pub const NATIVE_MONOSPACED_9AF24520: Key = Key::new(1310);
+pub const NATIVE_MONOSPACED_9AF24520: Key = Key::new(1117);
 /// "Proportional"
-pub const NATIVE_PROPORTIONAL_3ED3074A: Key = Key::new(1311);
+pub const NATIVE_PROPORTIONAL_3ED3074A: Key = Key::new(1118);
 /// "Type shortcut…"
-pub const NATIVE_TYPE_SHORTCUT_94ED691B: Key = Key::new(1312);
+pub const NATIVE_TYPE_SHORTCUT_94ED691B: Key = Key::new(1119);
 /// "Record…"
-pub const NATIVE_RECORD_B8CF2748: Key = Key::new(1313);
+pub const NATIVE_RECORD_B8CF2748: Key = Key::new(1120);
 /// "PREVIEW"
-pub const NATIVE_PREVIEW_9C238977: Key = Key::new(1314);
+pub const NATIVE_PREVIEW_9C238977: Key = Key::new(1121);
 /// "Primary"
-pub const NATIVE_PRIMARY_C7827F79: Key = Key::new(1315);
+pub const NATIVE_PRIMARY_C7827F79: Key = Key::new(1122);
 /// "Custom"
-pub const NATIVE_CUSTOM_9525B78E: Key = Key::new(1316);
+pub const NATIVE_CUSTOM_9525B78E: Key = Key::new(1123);
 /// "The theme’s · %@"
-pub const NATIVE_THE_THEME_S_2D98F167: Key = Key::new(1317);
+pub const NATIVE_THE_THEME_S_2D98F167: Key = Key::new(1124);
 /// "The primary colour · %@"
-pub const NATIVE_THE_PRIMARY_COLOUR_2784A3BE: Key = Key::new(1318);
+pub const NATIVE_THE_PRIMARY_COLOUR_2784A3BE: Key = Key::new(1125);
 /// "Yours · %@, in every theme"
-pub const NATIVE_YOURS_IN_EVERY_THEME_0B20FAB2: Key = Key::new(1319);
+pub const NATIVE_YOURS_IN_EVERY_THEME_0B20FAB2: Key = Key::new(1126);
 /// "In Dark Mode"
-pub const NATIVE_IN_DARK_MODE_4BF5CB79: Key = Key::new(1320);
+pub const NATIVE_IN_DARK_MODE_4BF5CB79: Key = Key::new(1127);
 /// "In Light Mode"
-pub const NATIVE_IN_LIGHT_MODE_FF6F8461: Key = Key::new(1321);
+pub const NATIVE_IN_LIGHT_MODE_FF6F8461: Key = Key::new(1128);
 /// "Show fewer"
-pub const NATIVE_SHOW_FEWER_40E1838D: Key = Key::new(1322);
+pub const NATIVE_SHOW_FEWER_40E1838D: Key = Key::new(1129);
 /// "Show all %@"
-pub const NATIVE_SHOW_ALL_9C7253B8: Key = Key::new(1323);
+pub const NATIVE_SHOW_ALL_9C7253B8: Key = Key::new(1130);
 /// "Import Theme…"
-pub const NATIVE_IMPORT_THEME_EDB9A7CF: Key = Key::new(1324);
+pub const NATIVE_IMPORT_THEME_EDB9A7CF: Key = Key::new(1131);
 /// "Shows the font you chose"
-pub const NATIVE_SHOWS_THE_FONT_YOU_CHOSE_E6AC41DC: Key = Key::new(1325);
+pub const NATIVE_SHOWS_THE_FONT_YOU_CHOSE_E6AC41DC: Key = Key::new(1132);
 /// "line height %@"
-pub const NATIVE_LINE_HEIGHT_C53D111B: Key = Key::new(1326);
+pub const NATIVE_LINE_HEIGHT_C53D111B: Key = Key::new(1133);
 /// "ligatures on"
-pub const NATIVE_LIGATURES_ON_7FE76012: Key = Key::new(1327);
+pub const NATIVE_LIGATURES_ON_7FE76012: Key = Key::new(1134);
 /// "ligatures off"
-pub const NATIVE_LIGATURES_OFF_BD504524: Key = Key::new(1328);
+pub const NATIVE_LIGATURES_OFF_BD504524: Key = Key::new(1135);
 /// "%@ colours"
-pub const NATIVE_COLOURS_313A9A95: Key = Key::new(1329);
+pub const NATIVE_COLOURS_313A9A95: Key = Key::new(1136);
 /// "System font"
-pub const NATIVE_SYSTEM_FONT_96549D01: Key = Key::new(1330);
+pub const NATIVE_SYSTEM_FONT_96549D01: Key = Key::new(1137);
 /// "Changes · 4"
-pub const NATIVE_CHANGES_4_1454A57D: Key = Key::new(1331);
+pub const NATIVE_CHANGES_4_1454A57D: Key = Key::new(1138);
 /// "Nothing turned on: no banners."
-pub const NATIVE_NOTHING_TURNED_ON_NO_BANNERS_6D6BBA07: Key = Key::new(1332);
+pub const NATIVE_NOTHING_TURNED_ON_NO_BANNERS_6D6BBA07: Key = Key::new(1139);
 /// "now"
-pub const NATIVE_NOW_28B19AF7: Key = Key::new(1333);
+pub const NATIVE_NOW_28B19AF7: Key = Key::new(1140);
 /// "Waiting for you"
-pub const NATIVE_WAITING_FOR_YOU_E8233AFC: Key = Key::new(1334);
+pub const NATIVE_WAITING_FOR_YOU_E8233AFC: Key = Key::new(1141);
 /// "Rate limits"
-pub const NATIVE_RATE_LIMITS_BAE91DE5: Key = Key::new(1335);
+pub const NATIVE_RATE_LIMITS_BAE91DE5: Key = Key::new(1142);
 /// "Avatar letter"
-pub const NATIVE_AVATAR_LETTER_8EA165F4: Key = Key::new(1336);
+pub const NATIVE_AVATAR_LETTER_8EA165F4: Key = Key::new(1143);
 /// "Colour"
-pub const NATIVE_COLOUR_2ECCA61D: Key = Key::new(1337);
+pub const NATIVE_COLOUR_2ECCA61D: Key = Key::new(1144);
 /// "Remove"
-pub const NATIVE_REMOVE_21A5901D: Key = Key::new(1338);
+pub const NATIVE_REMOVE_21A5901D: Key = Key::new(1145);
 /// "scratch"
-pub const NATIVE_SCRATCH_C462A115: Key = Key::new(1339);
+pub const NATIVE_SCRATCH_C462A115: Key = Key::new(1146);
 /// "Sidebar cards"
-pub const NATIVE_SIDEBAR_CARDS_02B77544: Key = Key::new(1340);
+pub const NATIVE_SIDEBAR_CARDS_02B77544: Key = Key::new(1147);
 /// "cargo test"
-pub const NATIVE_CARGO_TEST_B2B09A25: Key = Key::new(1341);
+pub const NATIVE_CARGO_TEST_B2B09A25: Key = Key::new(1148);
 /// "Flaky login test"
-pub const NATIVE_FLAKY_LOGIN_TEST_4600E19D: Key = Key::new(1342);
+pub const NATIVE_FLAKY_LOGIN_TEST_4600E19D: Key = Key::new(1149);
 /// "Release notes"
-pub const NATIVE_RELEASE_NOTES_C52AB62F: Key = Key::new(1343);
+pub const NATIVE_RELEASE_NOTES_C52AB62F: Key = Key::new(1150);
 /// "Idle"
-pub const NATIVE_IDLE_45AA17B3: Key = Key::new(1344);
+pub const NATIVE_IDLE_45AA17B3: Key = Key::new(1151);
 /// "Working · 4m"
-pub const NATIVE_WORKING_4M_04857B66: Key = Key::new(1345);
+pub const NATIVE_WORKING_4M_04857B66: Key = Key::new(1152);
 /// "Finished · 1m"
-pub const NATIVE_FINISHED_1M_34A0CA68: Key = Key::new(1346);
+pub const NATIVE_FINISHED_1M_34A0CA68: Key = Key::new(1153);
 /// "Needs input · Allow edit?"
-pub const NATIVE_NEEDS_INPUT_ALLOW_EDIT_CEC49945: Key = Key::new(1347);
+pub const NATIVE_NEEDS_INPUT_ALLOW_EDIT_CEC49945: Key = Key::new(1154);
 /// "3 changed"
-pub const NATIVE_3_CHANGED_045754E2: Key = Key::new(1348);
+pub const NATIVE_3_CHANGED_045754E2: Key = Key::new(1155);
+/// "New profile…"
+pub const NATIVE_NEW_PROFILE_4C402928: Key = Key::new(1156);

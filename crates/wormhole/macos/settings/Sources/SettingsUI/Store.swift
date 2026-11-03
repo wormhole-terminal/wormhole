@@ -40,6 +40,8 @@ public protocol SettingsStore: AnyObject {
     var update: [String: Any]? { get }
     /// Whether a page's fixed notice does not apply now.
     func quiet(_ page: String) -> Bool
+    /// What is wrong with the app's own config file, for the top of every page: `text`, and `action` + `button` when it can be opened.
+    var banner: [String: String]? { get }
     var recordsInHost: Bool { get }
     /// The shortcut row the host waits for keys on, "" when none.
     var recording: String { get }
@@ -69,6 +71,7 @@ public extension SettingsStore {
     var profile: (name: String, letter: String)? { nil }
     var update: [String: Any]? { nil }
     func quiet(_ page: String) -> Bool { false }
+    var banner: [String: String]? { nil }
     var recordsInHost: Bool { false }
     var recording: String { "" }
     func note(for key: String) -> String? { nil }
@@ -156,6 +159,7 @@ struct Words {
     var fontList: [(String, Bool)] { _ = store.revision; return store.fonts?.map { ($0.name, $0.mono) } ?? fontChoices }
     var themeData: ThemeData { _ = store.revision; return store.themes ?? .standard }
     func perform(_ action: String, _ key: String) { store.perform(action, for: key) }
+    var banner: [String: String]? { _ = store.revision; return store.banner }
     var updateCard: [String: Any]? { _ = store.revision; return store.update }
     func note(_ key: String) -> String? { _ = store.revision; return store.note(for: key) }
     var recordingKey: String { _ = store.revision; return store.recording }

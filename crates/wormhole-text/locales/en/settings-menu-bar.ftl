@@ -55,6 +55,3 @@ settings-menu-bar-key-conflict = { $conflict }. Press other keys.
 
 ## settings_window/sections/menu_bar_preview.rs
 
-# The head of the menu the menu bar extra opens, over the terminals that need you.
-settings-menu-bar-preview-waiting = Waiting for you
-settings-menu-bar-preview-caption = The menu bar extra and its menu of terminals waiting for you.

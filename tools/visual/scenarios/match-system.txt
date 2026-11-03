@@ -11,6 +11,4 @@ appearance light
 @shot light
 settings-section appearance
 @batch
-settings-resize 1024 900
-@batch
 @shot settings-light settings

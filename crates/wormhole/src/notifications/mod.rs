@@ -39,8 +39,8 @@ use std::time::{Instant, SystemTime};
 use gpui_kit::*;
 use wormhole_core::notify::{self, Announcer, Bursts, Kind, Priority, Said, Throttle};
 
+use crate::app_state::AppState;
 use crate::app_state::attention::{self, Attention};
-use crate::app_state::{AppState, app};
 use crate::platform::notifications::{
     self as system, Button, ButtonKind, Category, Center, FromCenter, Notice, Permission, Response,
 };
@@ -55,11 +55,7 @@ use watch::{Event, Watch};
 #[cfg(feature = "devctl")]
 use wormhole_core::notify::Seen;
 
-#[cfg(test)]
-pub(crate) use permission::permission_refreshes;
-pub(crate) use permission::{
-    ask_permission, ask_permission_if_new, open_system_settings, permission, refresh_permission,
-};
+pub(crate) use permission::{ask_permission_if_new, open_system_settings, permission, refresh_permission};
 #[cfg(any(test, feature = "devctl"))]
 pub(crate) use permission::{permission_asks, pretend_permission};
 #[cfg(test)]
@@ -161,7 +157,7 @@ pub(crate) fn init(cx: &mut App) {
 /// allows notifications.
 pub(crate) fn tick(ticks: u64, cx: &mut App) {
     sweep(cx);
-    if ticks.is_multiple_of(5) && crate::app_state::live(&app(cx).settings_window).is_some() {
+    if ticks.is_multiple_of(5) && crate::platform::native_settings::is_open() {
         refresh_permission(cx);
     }
 }

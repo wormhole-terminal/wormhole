@@ -9,6 +9,5 @@
 set control_write=true
 settings-section agents
 @batch
-settings-resize 1024 1300
 @sleep 1500
 @shot command-line settings

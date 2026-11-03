@@ -36,13 +36,6 @@ use crate::window::Workspace;
 /// A secondary window that exists at most once: its handle, and its view (for devctl).
 pub(crate) type Slot = Option<(AnyWindowHandle, AnyWeakEntity)>;
 
-/// The window and view in `slot` if the view is still alive: `None` for an empty slot and for a window
-/// that has closed (its weak handle no longer upgrades).
-pub(crate) fn live(slot: &Slot) -> Option<(AnyWindowHandle, AnyEntity)> {
-    let (handle, view) = slot.as_ref()?;
-    Some((*handle, view.upgrade()?))
-}
-
 /// A window showing a [`Workspace`].
 #[derive(Clone)]
 pub(crate) struct OpenWindow {
@@ -69,11 +62,6 @@ pub(crate) struct AppState {
     pub tips: DismissedTips,
     /// The projects worked in lately (Open Recent), most recent first.
     pub recent_projects: RecentProjects,
-    /// The settings window, while open, and its page: untyped (the page is `settings_window::SettingsWindow`,
-    /// which sits above the shared state and reads it back typed with `current_window`). Weak, like the
-    /// Studio's: closing the window drops the page, and the page's release (the global hotkey comes back
-    /// if its field was recording) must run then, not when the window is opened again.
-    pub settings_window: Slot,
     /// The Theme Studio window, while open. Weak, so closing the window drops
     /// the Studio (which clears its preview); the Studio module reads it typed.
     pub studio_window: Slot,
@@ -143,7 +131,6 @@ impl AppState {
             store,
             tips,
             recent_projects: recent,
-            settings_window: None,
             studio_window: None,
             about_window: None,
             licenses_window: None,
@@ -190,7 +177,6 @@ impl AppState {
             store: None,
             tips: DismissedTips::default(),
             recent_projects: RecentProjects::default(),
-            settings_window: None,
             studio_window: None,
             about_window: None,
             licenses_window: None,

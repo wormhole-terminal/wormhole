@@ -29,7 +29,6 @@ use wormhole_core::update::{
     UpdateSchedule, UpdateStatus, UpdaterConfig,
 };
 
-use crate::app_state::app;
 use crate::settings::{SettingsStore, settings};
 use crate::update::restart::IdleWatch;
 
@@ -243,14 +242,12 @@ fn channel_changed(cx: &mut App) {
         (OnSwitch::CallOff, Some(version)) => updates.call_off_install(version),
         (OnSwitch::StaysInstalled, Some(version)) => {
             updates.channel_note = Some(ChannelNote::Stays(version.to_string()));
-            notify_settings(cx);
             return;
         }
         (_, None) => {}
     }
     let updates = cx.global_mut::<Updates>();
     if !updates.available() || updates.busy() || matches!(updates.phase, UpdatePhase::Installed(_)) {
-        notify_settings(cx);
         return;
     }
     check_for_updates(true, cx);
@@ -306,7 +303,6 @@ pub(crate) fn watch_bundle(ticks: u64, cx: &mut App) {
             if let Some(replaced) = replaced.filter(|_| free) {
                 tracing::info!(version = %replaced.version, "the app bundle was replaced while running");
                 updates.phase = UpdatePhase::Installed(replaced.version);
-                notify_settings(cx);
                 prompt::announce(cx);
             }
         });
@@ -321,7 +317,6 @@ pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
     let updates = cx.global_mut::<Updates>();
     let Some(mut config) = updates.config.clone() else {
         updates.phase = UpdatePhase::Failed("This is a development build; it doesn't update itself.".into());
-        notify_settings(cx);
         return;
     };
     if updates.busy() {
@@ -331,7 +326,6 @@ pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
     config.count = if counting { updates.schedule.count_due(SystemTime::now()) } else { None };
     let count = config.count;
     updates.phase = UpdatePhase::Checking;
-    notify_settings(cx);
     let check = cx.background_executor().spawn(async move { update::check_counted(&config) });
     let task = cx.spawn(async move |cx| {
         let result = check.await;
@@ -345,16 +339,6 @@ pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
 /// at the next opportunity, not in six hours.
 fn should_record<T>(result: &Result<T, UpdateError>) -> bool {
     !matches!(result, Err(UpdateError::Network(_)))
-}
-
-/// Only the settings window shows the updater's state, so it is the only one to redraw (and not
-/// every window, several times a second while downloading). Notifying by id rather than updating
-/// the entity: this is called from the window's own click handlers, which have it leased.
-fn notify_settings(cx: &mut App) {
-    if let Some((_, view)) = crate::app_state::live(&app(cx).settings_window) {
-        let id = view.entity_id();
-        cx.notify(id);
-    }
 }
 
 /// `count`: what the check said for the anonymous count, recorded with the check so each day and
@@ -390,7 +374,6 @@ fn finish_check(result: Result<Checked, UpdateError>, manual: bool, count: Optio
             if settings(cx).auto_update && (manual || !failed_before) {
                 install_update(release, cx);
             }
-            notify_settings(cx);
             return;
         }
         Err(err) => {
@@ -400,7 +383,6 @@ fn finish_check(result: Result<Checked, UpdateError>, manual: bool, count: Optio
         }
     };
     cx.global_mut::<Updates>().phase = phase;
-    notify_settings(cx);
 }
 
 /// Download, verify and swap in the new bundle; the running app keeps going until restart.
@@ -409,13 +391,11 @@ pub(crate) fn install_update(release: Release, cx: &mut App) {
     let Some(config) = updates.config.clone() else { return };
     let Some(bundle) = update::current_app_bundle() else {
         updates.phase = UpdatePhase::Failed("Wormhole isn't running from an app bundle.".into());
-        notify_settings(cx);
         return;
     };
     // Catch "move me to Applications" and permission problems before downloading.
     if let Err(err) = update::preflight(&bundle) {
         updates.phase = UpdatePhase::Failed(err.to_string());
-        notify_settings(cx);
         return;
     }
     updates.phase = UpdatePhase::Downloading;
@@ -425,7 +405,6 @@ pub(crate) fn install_update(release: Release, cx: &mut App) {
     progress.1.store(release.asset.size, Ordering::Relaxed);
     updates.installing =
         Some(Installing { version: release.version.clone(), called_off: called_off.clone() });
-    notify_settings(cx);
 
     let version = release.version.to_string();
     let semver = release.version.clone();
@@ -455,7 +434,6 @@ pub(crate) fn install_update(release: Release, cx: &mut App) {
                     UpdatePhase::Failed(err.to_string())
                 }
             };
-            notify_settings(cx);
             prompt::announce(cx);
         });
     });
@@ -464,10 +442,8 @@ pub(crate) fn install_update(release: Release, cx: &mut App) {
     cx.spawn(async move |cx| {
         loop {
             cx.background_executor().timer(Duration::from_millis(250)).await;
-            let downloading = cx.update(|cx| {
-                notify_settings(cx);
-                matches!(cx.global::<Updates>().phase, UpdatePhase::Downloading)
-            });
+            let downloading =
+                cx.update(|cx| matches!(cx.global::<Updates>().phase, UpdatePhase::Downloading));
             if !downloading {
                 break;
             }
@@ -485,7 +461,6 @@ pub(crate) fn skip_update(release: &Release, cx: &mut App) {
     updates.schedule.skip(&release.version);
     updates.phase = UpdatePhase::Idle;
     save_update_schedule(cx);
-    notify_settings(cx);
 }
 
 /// Restart into the installed update now, whatever runs (the callers have asked, or checked).
@@ -493,7 +468,6 @@ pub(crate) fn restart_to_update(cx: &mut App) {
     // Whatever happens next, the request is answered: a failed restart is reported, not retried.
     cx.global_mut::<Updates>().restart_when_idle = None;
     let Some(bundle) = update::current_app_bundle() else {
-        notify_settings(cx);
         return;
     };
     match update::relaunch(&bundle) {
@@ -503,7 +477,6 @@ pub(crate) fn restart_to_update(cx: &mut App) {
             cx.global_mut::<Updates>().phase = UpdatePhase::Failed(format!("Couldn't restart: {err}"));
         }
     }
-    notify_settings(cx);
 }
 
 /// Restart once the terminals have been idle for a while (the tick settles it).
@@ -511,14 +484,12 @@ pub(crate) fn restart_when_idle(cx: &mut App) {
     let updates = cx.global_mut::<Updates>();
     if matches!(updates.phase, UpdatePhase::Installed(_)) {
         updates.restart_when_idle = Some(IdleWatch::default());
-        notify_settings(cx);
     }
 }
 
 /// Drop the request to restart when idle.
 pub(crate) fn cancel_restart_when_idle(cx: &mut App) {
     cx.global_mut::<Updates>().restart_when_idle = None;
-    notify_settings(cx);
 }
 
 /// devctl `update-installed`: Settings → Updates as it is once an update is installed, with
@@ -528,7 +499,6 @@ pub(crate) fn devctl_installed(version: &str, pending: bool, cx: &mut App) {
     let updates = cx.global_mut::<Updates>();
     updates.phase = UpdatePhase::Installed(version.to_string());
     updates.restart_when_idle = pending.then(IdleWatch::default);
-    notify_settings(cx);
     prompt::announce(cx);
 }
 
@@ -577,7 +547,6 @@ pub(crate) fn devctl_state(state: &str, cx: &mut App) -> Result<(), String> {
         }
         other => return Err(format!("unknown update state {other:?}")),
     };
-    notify_settings(cx);
     Ok(())
 }
 

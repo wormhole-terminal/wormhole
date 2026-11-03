@@ -14,17 +14,14 @@ mod labels;
 mod layout;
 mod metrics;
 mod navigation;
-mod notices;
 mod panel;
 mod panes;
 mod selects;
-mod settings;
 mod shape;
 mod sidebar;
 mod sketch;
 mod syntax;
 mod terminal;
-mod tile_rows;
 mod tiles;
 mod typography;
 mod view;
@@ -46,8 +43,6 @@ pub(super) use view::GalleryView;
 struct Env<'a> {
     ui: UiColors,
     tokens: &'a ThemeTokens,
-    /// The code font, for the components drawn in the draft theme.
-    code_font: SharedString,
     /// The ids (core `TOKEN_USES`) of what the selected token is drawn on.
     uses: Vec<&'static str>,
 }
@@ -226,15 +221,6 @@ const SPECIMENS: &[Specimen] = &[
         part_gap: 0.0,
         parts: &[175.0],
         render: shape::render,
-    },
-    Specimen {
-        title: "Settings",                           // text: sample (the gallery's specimen)
-        description: "rows, nav, controls, banners", // text: sample (the gallery's specimen)
-        area: Some(Area::Settings),
-        column: Column::Both,
-        part_gap: 24.0,
-        parts: &[654.0, 368.0, 705.0],
-        render: settings::render,
     },
     Specimen {
         title: "Buttons",                  // text: sample (the gallery's specimen)

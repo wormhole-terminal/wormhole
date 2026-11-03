@@ -33,6 +33,7 @@ pub fn is_open() -> bool {
 }
 
 /// The window's content as a PNG at `path` (devctl's `native-shot`); whether it was written.
+#[cfg(feature = "devctl")]
 pub fn shot(path: &str) -> bool {
     available() && os::shot(path)
 }

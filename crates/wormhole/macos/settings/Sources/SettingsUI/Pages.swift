@@ -222,7 +222,6 @@ let standardPages: [Page] = [
       Row("Probes", "", .toggle, options: [], value: "off", info: ""),
       Row("Files", "", .toggle, options: [], value: "on", info: ""),
       Row("Folder picker", "", .toggle, options: [], value: "off", info: ""),
-      Row("Native Settings window", "", .toggle, options: [], value: "on", info: ""),
     ]),
   ], badge: true),
 ]
