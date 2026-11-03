@@ -8,8 +8,10 @@ struct Tile: View {
     var body: some View {
         RoundedRectangle(cornerRadius: TileSize.radius, style: .continuous).fill(colour)
             .frame(width: TileSize.side, height: TileSize.side)
-            .overlay(Image(systemName: symbol).font(.system(size: TileSize.symbol, weight: .medium)).foregroundStyle(.white)
-                .minimumScaleFactor(0.5).lineLimit(1).padding(TileSize.inset))
+            // A sidebar list scales its rows' symbols up (imageScale .large); the tile fixes its own scale and box
+            // so the symbol keeps even padding wherever the tile is drawn.
+            .overlay(Image(systemName: symbol).font(.system(size: TileSize.symbol, weight: .medium)).imageScale(.medium)
+                .foregroundStyle(.white).frame(width: TileSize.side - 2 * TileSize.inset, height: TileSize.side - 2 * TileSize.inset))
     }
 }
 

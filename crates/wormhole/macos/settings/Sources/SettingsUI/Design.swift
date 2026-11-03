@@ -16,7 +16,7 @@ enum Radius {
 
 /// The icon tiles of the sidebar and of tile rows: one side, one corner, the symbol inside an even inset.
 enum TileSize {
-    static let side: CGFloat = 24, radius: CGFloat = 6, symbol: CGFloat = 14, letter: CGFloat = 12, inset: CGFloat = 4
+    static let side: CGFloat = 24, radius: CGFloat = 6, symbol: CGFloat = 13, letter: CGFloat = 12, inset: CGFloat = 5
 }
 
 enum TextRole {
@@ -30,7 +30,7 @@ extension View {
     }
 }
 
-/// Colours from the board's tokens (`.wh-dark` / `.wh-light` in All-Pages.dc.html).
+/// Colours from the design's tokens, dark and light.
 struct Tok {
     let dark: Bool
     var accentOverride: Color? = nil
