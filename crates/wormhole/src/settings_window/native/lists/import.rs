@@ -4,7 +4,7 @@
 
 use gpui_kit::App;
 use serde_json::{Map, Value};
-use wormhole_core::import::{Found, Proposed, Setting, visible};
+use wormhole_core::import::{Proposed, visible};
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -12,23 +12,13 @@ use wormhole_core::import::{Found, Proposed, Setting, visible};
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use super::Entry;
+use super::{Entry, import_sheets};
 use crate::settings::import::{self as shared, terminal_name};
-use crate::settings_window::sections::{setting_label, value_text};
 use crate::settings_window::with_tilde;
 
 const GROUP: &str = "Import:0";
 
-fn pair(found: &Found) -> bool {
-    let has = |wanted: Setting| found.proposal.values.iter().any(|p| p.setting == wanted);
-    has(Setting::Theme) && has(Setting::ThemeLight)
-}
-
-fn defaults(found: &Found) -> Vec<Proposed> {
-    found.proposal.values.iter().filter(|proposed| proposed.default_on).cloned().collect()
-}
-
-pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
+pub(super) fn lists(out: &mut Map<String, Value>, sheets: &mut Map<String, Value>, cx: &App) {
     let mut list = Vec::new();
     match super::cache(cx).and_then(|cache| cache.import.as_ref()) {
         None => list.push(Entry::new("scanning", "value", text(SETTINGS_IMPORT_SCANNING)).into_value()),
@@ -42,12 +32,9 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
         Some(all) => {
             for found in all {
                 let name = terminal_name(found.source);
-                let pair = pair(found);
-                let rows: Vec<String> = defaults(found)
-                    .iter()
-                    .map(|p| format!("{}: {}", setting_label(p.setting, pair), value_text(&p.value)))
-                    .collect();
-                let mut entry = Entry::new(found.source.key(), "button", name)
+                sheets.insert(import_sheets::review_id(found), import_sheets::review(found));
+                let entry = Entry::new(found.source.key(), "review", name)
+                    .with("sheet", import_sheets::review_id(found))
                     .with(
                         "hint",
                         found
@@ -60,16 +47,18 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
                     .with("value", text(SETTINGS_IMPORT_REVIEW))
                     .with("tile", "#30b0c7")
                     .with("icon", "prompt");
-                if !rows.is_empty() {
-                    entry = entry
-                        .with("confirm", format!("{name}: {}", text(SETTINGS_IMPORT_TAKE)))
-                        .with("confirmText", rows.join("\n"))
-                        .with("action", text(SETTINGS_IMPORT_APPLY))
-                        .with("actionId", "apply");
-                }
                 list.push(entry.into_value());
             }
         }
+    }
+    if let Some(all) = super::cache(cx).and_then(|cache| cache.import.as_ref()) {
+        sheets.insert(import_sheets::COMPARE.into(), import_sheets::compare(all));
+        list.push(
+            Entry::new(import_sheets::COMPARE, "compare", text(SETTINGS_IMPORT_COMPARE))
+                .with("sheet", import_sheets::COMPARE)
+                .with("value", wormhole_text::whole(all.len()).to_string())
+                .into_value(),
+        );
     }
     out.insert(GROUP.into(), Value::Array(list));
 }
@@ -92,15 +81,22 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     let (Some("Import"), Some(_), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
         return false;
     };
-    if action != "apply" {
-        return true;
-    }
+    // "apply=<the places in the proposal left ticked>"
+    let Some(ticked) = action.strip_prefix("apply=") else { return true };
     let found = super::cache(cx)
         .and_then(|cache| cache.import.as_ref())
         .and_then(|all| all.iter().find(|f| f.source.key() == id))
         .cloned();
     if let Some(found) = found {
-        let chosen = defaults(&found);
+        let places: Vec<usize> = ticked.split(',').filter_map(|at| at.parse().ok()).collect();
+        let chosen: Vec<Proposed> = found
+            .proposal
+            .values
+            .iter()
+            .enumerate()
+            .filter(|(at, _)| places.contains(at))
+            .map(|(_, proposed)| proposed.clone())
+            .collect();
         if let Err(why) = shared::apply(cx, &found, &chosen) {
             tracing::warn!("importing from {}: {why}", found.source.key());
         }

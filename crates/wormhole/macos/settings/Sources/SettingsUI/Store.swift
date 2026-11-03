@@ -164,6 +164,7 @@ struct Words {
         let group = "\(page.id):\(g)"
         return page.groups[g].rows.filter { visible($0, in: page, group: g) && !(store.recordsInHost && $0.kind == .update && store.update == nil) } + store.list(for: group).compactMap { Row(entry: $0, group: group) }
     }
+    func sheetDict(_ id: String) -> [String: Any]? { _ = store.revision; return store.sheet(for: id) }
     func sheetData(_ id: String) -> ApprovalSheetData? {
         _ = store.revision
         return store.sheet(for: id).flatMap(ApprovalSheetData.init(entry:))

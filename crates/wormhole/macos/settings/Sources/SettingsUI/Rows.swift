@@ -57,7 +57,7 @@ struct RowView: View {
     @Environment(\.tok) var t
     @State private var confirming = false
 
-    var tall: Bool { row.tile != nil || [.project, .probe, .agent, .skill].contains(row.kind) }
+    var tall: Bool { row.tile != nil || [.project, .probe, .agent, .skill, .review].contains(row.kind) }
     var tileColour: Color { Color(css: row.tile ?? (row.kind == .project ? "#32ade6" : row.kind == .probe ? "#a2845e" : "#3b4252")) }
     var tileSymbol: String { Tile.symbol(for: row.icon) ?? (row.kind == .project ? "folder.fill" : row.kind == .probe ? "puzzlepiece.extension.fill" : "sparkle") }
 
@@ -114,6 +114,7 @@ struct ControlView: View {
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
     @State private var approving = false
+    @State private var sheeting = false
 
     var body: some View {
         let cur = m.get(row.key, row)
@@ -138,6 +139,8 @@ struct ControlView: View {
             default: Btn("Repair Hooks", primary: true) { m.perform("repair_hooks", row.key) }
             }
         case .skill: HStack { ForEach(Array(row.actions.enumerated()), id: \.offset) { i, a in Btn(a, primary: row.primary == i) { if a == "Reset All…" { confirming = true } else { m.perform(row.actionIDs[i], row.key) } } } }
+        case .review: Btn(row.value) { sheeting = true }.sheet(isPresented: $sheeting) { ImportReviewSheet(row: row) }
+        case .compare: Button { sheeting = true } label: { HStack(spacing: 4) { Text(row.value).foregroundStyle(.secondary); Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary) } }.buttonStyle(.borderless).sheet(isPresented: $sheeting) { CompareSheet(row: row) }
         case .project: Btn(cur == "trusted" ? "Revoke" : "Trust with Touch ID…") { m.perform(cur == "trusted" ? "revoke" : "trust", row.key) }
         case .probe:
             if cur == "off" && !row.sheet.isEmpty { Btn("Turn on…") { approving = true }.sheet(isPresented: $approving) { ApprovalSheet(row: row) { approving = false; m.perform("approve", row.key) } } }

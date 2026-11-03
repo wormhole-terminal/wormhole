@@ -62,7 +62,7 @@ pub(super) use extensions_sheet::describe as describe_permission;
 pub(super) use extensions_text::verify_text;
 pub(super) use feature_flags::is_unlock_key;
 pub(crate) use import::ImportPage;
-pub(super) use import::{setting_label, value_text};
+pub(super) use import::{Subject, gap_text, reason_text, setting_label, strength_text, value_text};
 pub(super) use list_preview::{draw_agents_preview, draw_sidebar_preview};
 pub(super) use menu_bar_preview::draw_menu_bar_preview;
 #[cfg(test)]

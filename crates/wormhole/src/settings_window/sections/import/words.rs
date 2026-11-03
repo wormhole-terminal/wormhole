@@ -16,7 +16,7 @@ use wormhole_text::text;
 
 /// Whose comparison a card shows: a terminal's, or Wormhole's own.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Subject {
+pub(in crate::settings_window) enum Subject {
     Terminal(Source),
     Wormhole,
 }
@@ -30,7 +30,7 @@ impl Subject {
         }
     }
 
-    pub(super) fn name(self) -> &'static str {
+    pub(in crate::settings_window) fn name(self) -> &'static str {
         match self {
             Subject::Terminal(source) => crate::settings::import::terminal_name(source),
             Subject::Wormhole => text(SETTINGS_IMPORT_TERMINAL_WORMHOLE),
@@ -89,7 +89,7 @@ fn number_text(number: f32) -> String {
 }
 
 /// Why a key of the other terminal's settings is not taken.
-pub(super) fn reason_text(reason: &Reason) -> String {
+pub(in crate::settings_window) fn reason_text(reason: &Reason) -> String {
     let said = |key: Key| text(key).to_string();
     match reason {
         Reason::NoSuchSetting(kind) => said(match kind {
@@ -120,7 +120,10 @@ pub(super) fn reason_text(reason: &Reason) -> String {
 }
 
 /// The one-line strength of a subject.
-pub(super) fn strength_text(subject: Subject, comparison: &Comparison) -> Option<&'static str> {
+pub(in crate::settings_window) fn strength_text(
+    subject: Subject,
+    comparison: &Comparison,
+) -> Option<&'static str> {
     let key = match (subject.key(), comparison.strength) {
         ("ghostty", "native_tabs_graphics") => SETTINGS_IMPORT_STRENGTH_GHOSTTY_NATIVE_TABS_GRAPHICS,
         ("iterm2", "broadest_features") => SETTINGS_IMPORT_STRENGTH_ITERM2_BROADEST_FEATURES,
@@ -138,7 +141,7 @@ pub(super) fn strength_text(subject: Subject, comparison: &Comparison) -> Option
 }
 
 /// A drawback's sentence.
-pub(super) fn gap_text(subject: Subject, id: &str) -> Option<&'static str> {
+pub(in crate::settings_window) fn gap_text(subject: Subject, id: &str) -> Option<&'static str> {
     let key = match (subject.key(), id) {
         ("ghostty", "no_session_persistence") => SETTINGS_IMPORT_GAP_GHOSTTY_NO_SESSION_PERSISTENCE,
         ("ghostty", "agent_status_not_shown") => SETTINGS_IMPORT_GAP_GHOSTTY_AGENT_STATUS_NOT_SHOWN,

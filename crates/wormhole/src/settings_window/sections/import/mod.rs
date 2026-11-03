@@ -12,7 +12,9 @@ mod found;
 mod review;
 mod words;
 
-pub(in crate::settings_window) use words::{setting_label, value_text};
+pub(in crate::settings_window) use words::{
+    Subject, gap_text, reason_text, setting_label, strength_text, value_text,
+};
 
 use std::collections::HashMap;
 
