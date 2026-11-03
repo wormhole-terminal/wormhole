@@ -9,7 +9,7 @@ use wormhole_core::config::Settings;
 use wormhole_core::config::settings_index::{self, Values};
 
 use super::codec::{self, Ctx};
-use super::{lists, recorder, rows, system, themes};
+use super::{lists, preview, recorder, rows, system, themes};
 use crate::fonts::FontCatalog;
 use crate::settings::SettingsStore;
 
@@ -48,12 +48,13 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
         known.push(key);
     }
     let themes = themes::snapshot(&entries, s);
+    let preview = preview::build(&entries, s, cx);
     let (lists, sheets) = lists::build(cx);
     let (recording, notes) = recorder::snapshot(cx);
     json!({
         "values": values, "defaults": default_values, "options": options,
         "changed": changed, "known": known, "themes": themes, "fonts": fonts(cx), "lists": lists, "sheets": sheets, "profile": lists::profile(cx),
-        "recording": recording, "notes": notes,
+        "recording": recording, "notes": notes, "preview": preview,
         "update": system::update_card(cx), "quiet": system::quiet_notices(cx),
     })
 }

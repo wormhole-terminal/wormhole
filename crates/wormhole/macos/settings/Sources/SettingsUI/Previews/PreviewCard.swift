@@ -53,7 +53,8 @@ struct Rule: View {
 /// The terminal lines a pane shows: text in a theme colour, in the terminal font.
 struct TermLine: View {
     let text: String; let colour: Color; var size: CGFloat = 11
-    var body: some View { Text(text).font(terminalFont(size)).foregroundStyle(colour).lineLimit(1).truncationMode(.tail) }
+    @Environment(SettingsModel.self) var m
+    var body: some View { Text(text).font(m.terminalFont(size)).foregroundStyle(colour).lineLimit(1).truncationMode(.tail) }
 }
 
 struct AgentPane: View {

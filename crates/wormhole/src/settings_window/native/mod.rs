@@ -15,6 +15,7 @@ mod actions;
 mod apply;
 mod codec;
 mod lists;
+mod preview;
 mod recorder;
 mod rows;
 mod snapshot;

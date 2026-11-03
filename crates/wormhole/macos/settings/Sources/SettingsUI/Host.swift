@@ -18,6 +18,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     private var changed: Set<String> = []
     private var known: Set<String> = []
     private var themeData: ThemeData?
+    private var previewData: PreviewData?
     private var fontList: [FontChoice]?
     private var lists: [String: [[String: Any]]] = [:]
     private var sheets: [String: [String: Any]] = [:]
@@ -33,6 +34,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
     var changedKeys: Set<String> { changed }
     func options(for key: String) -> [String]? { choices[key] }
     var themes: ThemeData? { themeData }
+    var preview: PreviewData? { previewData }
     var fonts: [FontChoice]? { fontList }
     func list(for group: String) -> [[String: Any]] { lists[group] ?? [] }
     func sheet(for id: String) -> [String: Any]? { sheets[id] }
@@ -71,6 +73,7 @@ typealias EventHandler = @convention(c) (UnsafePointer<CChar>) -> Void
         choices = json["options"] as? [String: [String]] ?? [:]
         changed = Set(json["changed"] as? [String] ?? []).union(localOnly.keys)
         if let t = json["themes"] as? [String: Any] { themeData = Self.themes(t) }
+        previewData = (json["preview"] as? [String: Any]).flatMap(PreviewData.init(json:))
         if let f = json["fonts"] as? [[Any]] {
             fontList = f.compactMap { e in (e.first as? String).map { FontChoice(name: $0, mono: (e.last as? Bool) ?? false) } }
         }

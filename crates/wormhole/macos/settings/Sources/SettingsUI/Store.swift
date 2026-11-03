@@ -21,6 +21,8 @@ public protocol SettingsStore: AnyObject {
     func perform(_ action: String, for key: String)
     /// The options a menu row offers, when the host knows better than the catalog (the app's real choices, in its language).
     func options(for key: String) -> [String]?
+    /// The real fonts, themes and accent the previews draw with.
+    var preview: PreviewData? { get }
     /// The themes to pick from, when the host has its own.
     var themes: ThemeData? { get }
     /// The installed font families (name, monospaced), when the host has them.
@@ -55,6 +57,7 @@ public extension SettingsStore {
     func perform(_ action: String, for key: String) {}
     func options(for key: String) -> [String]? { nil }
     var themes: ThemeData? { nil }
+    var preview: PreviewData? { nil }
     var fonts: [FontChoice]? { nil }
     func list(for group: String) -> [[String: Any]] { [] }
     func sheet(for id: String) -> [String: Any]? { nil }

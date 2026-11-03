@@ -75,7 +75,7 @@ let fontChoices: [(String, Bool)] = [("JetBrains Mono", true), ("SF Mono", true)
 /// The font to draw a family in: the installed one, else what the board's CSS stack falls back to.
 func specimenFont(_ name: String, size: CGFloat) -> Font {
     switch name {
-    case "SF Pro": return .system(size: size)
+    case "SF Pro", ".SystemUIFont": return .system(size: size)
     case "SF Mono": return .system(size: size, design: .monospaced)
     case "New York": return .system(size: size, design: .serif)
     default:
@@ -83,8 +83,6 @@ func specimenFont(_ name: String, size: CGFloat) -> Font {
         return fontChoices.first { $0.0 == name }?.1 == false ? .system(size: size) : .system(size: size, design: .monospaced)
     }
 }
-/// The terminal's own face in the mocks: JetBrains Mono if installed, else SF Mono.
-func terminalFont(_ size: CGFloat) -> Font { specimenFont("JetBrains Mono", size: size) }
 
 extension SettingsModel {
     var themeRowKey: String { "Appearance:0:2" }
@@ -103,6 +101,7 @@ extension SettingsModel {
 
     /// The theme the previews use for this mode.
     func theme(light: Bool) -> ThemePalette {
+        if let real = preview?.side(light: light).palette { return ThemePalette(real) }
         let key = separateThemes ? themeChoice(light: light)
             : { let p = themeData.pairs.first { $0.name == pairName } ?? themeData.pairs[0]; return light ? p.light : p.dark }()
         return themePalette(key)

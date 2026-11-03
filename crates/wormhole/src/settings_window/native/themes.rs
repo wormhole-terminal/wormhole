@@ -77,17 +77,30 @@ pub(super) fn pick(entries: &[ThemeEntry], s: &Settings, appearance: Appearance)
         .unwrap_or_default()
 }
 
+/// The theme in effect for one appearance: what the setting selects, else the first of that appearance.
+pub(super) fn effective<'a>(
+    entries: &'a [ThemeEntry],
+    s: &Settings,
+    appearance: Appearance,
+) -> Option<&'a ThemeEntry> {
+    let setting = if appearance == Appearance::Dark { &s.theme } else { &s.theme_light };
+    entries
+        .iter()
+        .find(|e| e.tokens.appearance == appearance && e.is_selected_by(setting))
+        .or_else(|| entries.iter().find(|e| e.tokens.appearance == appearance))
+}
+
 /// The pair card that is picked, by name; empty when none is.
 pub(super) fn pair_name(entries: &[ThemeEntry], s: &Settings) -> String {
     picked_pair(entries, s).map(|pair| pair.name).unwrap_or_default()
 }
 
-fn hex(c: Color) -> u32 {
+pub(super) fn hex(c: Color) -> u32 {
     u32::from_str_radix(c.to_hex().trim_start_matches('#').get(..6).unwrap_or("000000"), 16).unwrap_or(0)
 }
 
 /// A theme as the window draws it: background, foreground, then ANSI blue, green, yellow, red, magenta.
-fn palette(entry: &ThemeEntry) -> Value {
+pub(super) fn palette(entry: &ThemeEntry) -> Value {
     let t = &entry.tokens.terminal;
     json!([
         hex(t.background),

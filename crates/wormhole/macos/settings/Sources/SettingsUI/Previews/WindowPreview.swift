@@ -33,7 +33,7 @@ struct WindowPreview: View {
                 VStack(spacing: 6) {
                     ForEach(0..<3, id: \.self) { i in
                         RoundedRectangle(cornerRadius: Radius.chip)
-                            .fill(glass ? th.fg.opacity(i == 0 ? 0.16 : 0.07) : (i == 0 ? (m.accent ?? th.blue).opacity(0.85) : th.fg.opacity(0.12)))
+                            .fill(glass ? th.fg.opacity(i == 0 ? 0.16 : 0.07) : (i == 0 ? (m.previewAccent(light: !t.dark) ?? m.accent ?? th.blue).opacity(0.85) : th.fg.opacity(0.12)))
                             .overlay { if glass { RoundedRectangle(cornerRadius: Radius.chip).strokeBorder(m.tileLine) } }
                             .frame(height: 16)
                     }
@@ -42,7 +42,7 @@ struct WindowPreview: View {
                 if dividers { Rule(colour: th.fg.opacity(0.12), vertical: true) }
                 VStack(alignment: .leading, spacing: Space.s1) {
                     TermLine(text: "~/wormhole $ cargo test", colour: th.blue)
-                    Text("   Compiling wormhole v1.5.0").font(terminalFont(11)).foregroundStyle(th.fg).lineLimit(1)
+                    Text("   Compiling wormhole v1.5.0").font(m.terminalFont(11)).foregroundStyle(th.fg).lineLimit(1)
                     TermLine(text: "test result: ok. 412 passed", colour: th.green)
                     TermLine(text: "~/wormhole $ ", colour: th.blue)
                     Spacer(minLength: 0)
