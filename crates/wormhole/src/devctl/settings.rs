@@ -163,6 +163,24 @@ pub(super) fn cli_tool(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `settings-hooks <agent id> [remove]`: add (or remove) an agent's hooks in the instance's agent home,
+/// as the Coding agents page's Add Hooks and Remove Hooks do, to seed a scratch instance.
+pub(super) fn hooks(_: &mut Ctx, arg: &str) -> Result<String> {
+    let mut words = arg.split_whitespace();
+    let Some(name) = words.next() else { return Ok("settings-hooks <agent id> [remove]".into()) };
+    let remove = words.next() == Some("remove");
+    let Some(agent) = wormhole_core::agents::AGENTS.iter().find(|a| a.command.eq_ignore_ascii_case(name))
+    else {
+        return Ok(format!("no agent {name}"));
+    };
+    let Some(spec) = wormhole_core::agents::integrations::spec(agent.id) else {
+        return Ok(format!("{name} has no hooks"));
+    };
+    let home = wormhole_core::agents::integrations::home();
+    let done = if remove { spec.uninstall(&home) } else { spec.install(&home) };
+    Ok(done.map_or_else(|e| e, |()| "ok".into()))
+}
+
 pub(super) fn font_picker(ctx: &mut Ctx, arg: &str) -> Result<String> {
     crate::settings_window::devctl::font_picker(arg, ctx.cx);
     Ok(String::new())

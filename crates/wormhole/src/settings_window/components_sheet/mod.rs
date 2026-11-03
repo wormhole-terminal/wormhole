@@ -4,6 +4,7 @@
 //! board without a pointer. Not shipped: the module is built with devctl only.
 
 mod lists;
+mod pages;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::*;
@@ -31,11 +32,21 @@ const SPOTS: &[(&str, f32, f32, f32)] = &[
     ("Status chips: solid, white text", 493.3, 387.0, 413.3),
     ("List rows with a tile: one height, controls on one edge", 493.3, 510.0, 413.3),
     ("Notices: solid", 946.7, 40.0, 413.3),
+    ("Colours: the theme’s, eight presets, your own", 493.3, 1382.0, 413.3),
+    ("Theme cards", 493.3, 1726.0, 413.3),
+    ("Title row parts", 493.3, 1941.0, 413.3),
+    ("Preview cards: one frame, nine contents, drawn by the pages’ own", 40.0, 2145.0, 1320.0),
     ("Hover and keyboard focus", 946.7, 1716.0, 413.3),
     ("Sidebar rows", 946.7, 1888.0, 413.3),
 ];
 
-pub(super) fn render(from: f32, cx: &App) -> AnyElement {
+pub(super) fn render(
+    from: f32,
+    window: &super::SettingsWindow,
+    cx: &mut Context<super::SettingsWindow>,
+) -> AnyElement {
+    let pages = pages::Pages::of(window, cx);
+    let cx: &App = cx;
     let store = cx.global::<SettingsStore>();
     let tokens = &store.tokens;
     let t = |name: &str| token(tokens, name);
@@ -69,6 +80,7 @@ pub(super) fn render(from: f32, cx: &App) -> AnyElement {
                 cards.notices(cx),
                 cards.forced(),
                 cards.nav(),
+                cards.pages(pages),
             ]
             .into_iter()
             .flatten(),
@@ -112,6 +124,44 @@ impl Cards<'_> {
                 .child(body)
                 .into_any_element(),
         ]
+    }
+
+    fn pages(&self, pages: pages::Pages) -> Vec<AnyElement> {
+        let pages::Pages { colours, themes, title_parts, previews } = pages;
+        let mut out = Vec::new();
+        let look = (self.look)(Force::None);
+        let primary = SettingsRowProps {
+            hint: Some("Yours · #A35CF2, in every theme".into()),
+            description: Some("Yours · #A35CF2, in every theme".into()),
+            under: Some(colours),
+            ..self.plain_row("colours", "Primary colour", div().into_any_element())
+        };
+        out.extend(self.section("Colours: the theme’s, eight presets, your own", self.card().h(px(293.0)).child(primary.render(&look))));
+        out.extend(self.section("Theme cards", self.card().h(px(164.0)).p(px(14.0)).child(themes)));
+        out.extend(self.section(
+            "Title row parts",
+            self.card().h(px(110.0)).pt(px(6.0)).px(px(8.0)).pb(px(10.0)).child(title_parts),
+        ));
+        let heading = SPOTS.iter().find(|s| s.0.starts_with("Preview cards")).map_or((40.0, 2145.0), |s| (s.1, s.2));
+        out.push(
+            div()
+                .absolute()
+                .left(px(heading.0))
+                .top(px(heading.1 - self.from))
+                .ml(px(4.0))
+                .text_size(px(13.0))
+                .line_height(px(15.0))
+                .font_weight(FontWeight::SEMIBOLD)
+                .text_color(self.t("text.muted"))
+                .child("Preview cards: one frame, nine contents, drawn by the pages’ own")
+                .into_any_element(),
+        );
+        for (x, y, body) in previews {
+            out.push(
+                div().absolute().left(px(x)).top(px(y - self.from)).w(px(536.0)).child(body).into_any_element(),
+            );
+        }
+        out
     }
 
     /// A section's caption, as the board's `.cap`: under the card, faint.

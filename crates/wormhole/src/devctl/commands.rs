@@ -218,6 +218,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "settings-select" => settings::select,
         "settings-reset-confirm" => settings::reset_confirm,
         "settings-cli-tool" => settings::cli_tool,
+        "settings-hooks" => settings::hooks,
         "font-picker" => settings::font_picker,
         "language" => language::language,
         "a11y" => a11y::a11y,

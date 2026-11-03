@@ -315,7 +315,7 @@ impl Render for SettingsWindow {
             return div()
                 .id("settings-window")
                 .size_full()
-                .child(super::components_sheet::render(from, cx))
+                .child(super::components_sheet::render(from, self, cx))
                 .into_any_element();
         }
         self.sync_color_picks(window, cx);

@@ -132,7 +132,7 @@ impl Cards<'_> {
     }
 
     /// A row with no hint, key or extras, as the board's plain `.row`.
-    fn plain_row(&self, id: &'static str, name: &'static str, control: AnyElement) -> SettingsRowProps {
+    pub(super) fn plain_row(&self, id: &'static str, name: &'static str, control: AnyElement) -> SettingsRowProps {
         SettingsRowProps {
             id: id.into(),
             name: name.into(),

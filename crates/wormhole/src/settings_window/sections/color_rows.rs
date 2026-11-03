@@ -72,7 +72,7 @@ pub(in crate::settings_window) fn in_force(store: &SettingsStore) -> (Color, Col
 }
 
 /// The primary's control.
-pub(super) fn draw_primary(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+pub(in crate::settings_window) fn draw_primary(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let store = cx.global::<SettingsStore>();
     let base = store.base_tokens();

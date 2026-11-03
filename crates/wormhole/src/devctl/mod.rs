@@ -283,6 +283,7 @@
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
 //!   settings-select <row id>   open that row's select or menu in the settings window (scrollback, tab-width, theme-mode…)
 //!   settings-reset-confirm   press Advanced → Reset to defaults… (shows its question, resets nothing)
+//!   settings-hooks <agent id> [remove]   add (or remove) that agent's hooks in the instance's agent home, to seed it
 //!   settings-cli-tool [install|uninstall]   Coding agents → Command line tool: show it, or press its
 //!                   Install / Uninstall (into the instance's own cli-bin folder, `WORMHOLE_CLI_DIR`)
 //!   panel-tab <changes|history|notes|usage|project|files>   show that tab of the right panel

@@ -224,7 +224,7 @@ fn draw_pairing(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> An
 }
 
 /// The project's theme notice, the filter and the cards, and the ways to more themes.
-fn draw_theme(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+pub(in crate::settings_window) fn draw_theme(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let project = ProjectSource::current(&window.front, cx).filter(|project| project.theme);
     div()

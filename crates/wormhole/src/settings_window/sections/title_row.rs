@@ -36,7 +36,7 @@ pub(super) fn default_parts() -> SharedString {
 }
 
 /// The parts, shown ones first in their order, then the hidden ones.
-pub(super) fn draw_parts(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+pub(in crate::settings_window) fn draw_parts(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let ui = ui(cx);
     // The person's own arrangement, whatever Zen mode shows meanwhile.
     let own = crate::settings::settings_without_zen(cx);
