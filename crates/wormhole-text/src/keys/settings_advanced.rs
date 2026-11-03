@@ -6,44 +6,44 @@
 use crate::key::Key;
 
 /// "Advanced"
-pub const SETTINGS_SECTION_ADVANCED: Key = Key::new(306);
+pub const SETTINGS_SECTION_ADVANCED: Key = Key::new(307);
 /// "Files, folders and a way back to the defaults."
-pub const SETTINGS_SECTION_ADVANCED_INTRO: Key = Key::new(307);
+pub const SETTINGS_SECTION_ADVANCED_INTRO: Key = Key::new(308);
 /// "Files"
-pub const SETTINGS_ADVANCED_GROUP_FILES: Key = Key::new(308);
+pub const SETTINGS_ADVANCED_GROUP_FILES: Key = Key::new(309);
 /// "Settings file"
-pub const SETTINGS_ADVANCED_OPEN_CONFIG: Key = Key::new(309);
+pub const SETTINGS_ADVANCED_OPEN_CONFIG: Key = Key::new(310);
 /// "config.json: edits apply live"
-pub const SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION: Key = Key::new(310);
+pub const SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION: Key = Key::new(311);
 /// "json config"
-pub const SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS: Key = Key::new(311);
+pub const SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS: Key = Key::new(312);
 /// "Data folder"
-pub const SETTINGS_ADVANCED_OPEN_DATA: Key = Key::new(312);
+pub const SETTINGS_ADVANCED_OPEN_DATA: Key = Key::new(313);
 /// "Terminals, notes, themes, logs"
-pub const SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION: Key = Key::new(313);
+pub const SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION: Key = Key::new(314);
 /// "finder database"
-pub const SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS: Key = Key::new(314);
+pub const SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS: Key = Key::new(315);
 /// "Logs"
-pub const SETTINGS_ADVANCED_OPEN_LOGS: Key = Key::new(315);
+pub const SETTINGS_ADVANCED_OPEN_LOGS: Key = Key::new(316);
 /// "Set WORMHOLE_LOG=debug for more detail"
-pub const SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION: Key = Key::new(316);
+pub const SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION: Key = Key::new(317);
 /// "debug log"
-pub const SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS: Key = Key::new(317);
+pub const SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS: Key = Key::new(318);
 /// "Reset all settings"
-pub const SETTINGS_ADVANCED_RESET_SETTINGS: Key = Key::new(318);
+pub const SETTINGS_ADVANCED_RESET_SETTINGS: Key = Key::new(319);
 /// "Your terminals, notes and themes are kept"
-pub const SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION: Key = Key::new(319);
+pub const SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION: Key = Key::new(320);
 /// "defaults reset restore"
-pub const SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS: Key = Key::new(320);
+pub const SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS: Key = Key::new(321);
 /// "Closed tips"
-pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(321);
+pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(322);
 /// "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note"
-pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(322);
+pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(323);
 /// "hints tips reset show again dismissed"
-pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(323);
+pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(324);
 /// "Skip malware scans of new programs"
-pub const SETTINGS_ADVANCED_SKIP_SCANS: Key = Key::new(324);
+pub const SETTINGS_ADVANCED_SKIP_SCANS: Key = Key::new(325);
 /// "macOS scans each new program for malware the first time it runs, which slows builds, tests and coding agents. Adding Wormhole to Developer Tools lets programs started in Wormhole skip that scan. Only do this if you trust what you run. Terminals opened after you restart Wormhole get it. If Developer Tools isn't listed, run spctl developer-mode enable-terminal in a terminal first."
-pub const SETTINGS_ADVANCED_SKIP_SCANS_DESCRIPTION: Key = Key::new(325);
+pub const SETTINGS_ADVANCED_SKIP_SCANS_DESCRIPTION: Key = Key::new(326);
 /// "developer tools xprotect gatekeeper malware scan speed slow first run build privacy security spctl"
-pub const SETTINGS_ADVANCED_SKIP_SCANS_KEYWORDS: Key = Key::new(326);
+pub const SETTINGS_ADVANCED_SKIP_SCANS_KEYWORDS: Key = Key::new(327);

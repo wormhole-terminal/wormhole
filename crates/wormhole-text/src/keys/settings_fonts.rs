@@ -6,46 +6,46 @@
 use crate::key::Key;
 
 /// "Fonts"
-pub const SETTINGS_SECTION_FONTS: Key = Key::new(518);
+pub const SETTINGS_SECTION_FONTS: Key = Key::new(519);
 /// "Terminal first: it's what you read most. Code follows it and Interface uses the system font until you pick one."
-pub const SETTINGS_SECTION_FONTS_INTRO: Key = Key::new(519);
+pub const SETTINGS_SECTION_FONTS_INTRO: Key = Key::new(520);
 /// "Specimen"
-pub const SETTINGS_FONTS_FONT_SPECIMEN: Key = Key::new(520);
+pub const SETTINGS_FONTS_FONT_SPECIMEN: Key = Key::new(521);
 /// "preview sample"
-pub const SETTINGS_FONTS_FONT_SPECIMEN_KEYWORDS: Key = Key::new(521);
+pub const SETTINGS_FONTS_FONT_SPECIMEN_KEYWORDS: Key = Key::new(522);
 /// "Font"
-pub const SETTINGS_FONTS_FONT_TERMINAL: Key = Key::new(522);
+pub const SETTINGS_FONTS_FONT_TERMINAL: Key = Key::new(523);
 /// "The terminal grid"
-pub const SETTINGS_FONTS_FONT_TERMINAL_DESCRIPTION: Key = Key::new(523);
+pub const SETTINGS_FONTS_FONT_TERMINAL_DESCRIPTION: Key = Key::new(524);
 /// "terminal font typeface size monospace jetbrains bundled"
-pub const SETTINGS_FONTS_FONT_TERMINAL_KEYWORDS: Key = Key::new(524);
+pub const SETTINGS_FONTS_FONT_TERMINAL_KEYWORDS: Key = Key::new(525);
 /// "Line height"
-pub const SETTINGS_FONTS_LINE_HEIGHT: Key = Key::new(525);
+pub const SETTINGS_FONTS_LINE_HEIGHT: Key = Key::new(526);
 /// "Terminal rows, as a multiple of the font size"
-pub const SETTINGS_FONTS_LINE_HEIGHT_DESCRIPTION: Key = Key::new(526);
+pub const SETTINGS_FONTS_LINE_HEIGHT_DESCRIPTION: Key = Key::new(527);
 /// "spacing leading"
-pub const SETTINGS_FONTS_LINE_HEIGHT_KEYWORDS: Key = Key::new(527);
+pub const SETTINGS_FONTS_LINE_HEIGHT_KEYWORDS: Key = Key::new(528);
 /// "Ligatures"
-pub const SETTINGS_FONTS_FONT_LIGATURES: Key = Key::new(528);
+pub const SETTINGS_FONTS_FONT_LIGATURES: Key = Key::new(529);
 /// "Shows => and != as one glyph"
-pub const SETTINGS_FONTS_FONT_LIGATURES_DESCRIPTION: Key = Key::new(529);
+pub const SETTINGS_FONTS_FONT_LIGATURES_DESCRIPTION: Key = Key::new(530);
 /// "ligature"
-pub const SETTINGS_FONTS_FONT_LIGATURES_KEYWORDS: Key = Key::new(530);
+pub const SETTINGS_FONTS_FONT_LIGATURES_KEYWORDS: Key = Key::new(531);
 /// "Font"
-pub const SETTINGS_FONTS_FONT_CODE: Key = Key::new(531);
+pub const SETTINGS_FONTS_FONT_CODE: Key = Key::new(532);
 /// "Diffs, file lists, Theme Studio"
-pub const SETTINGS_FONTS_FONT_CODE_DESCRIPTION: Key = Key::new(532);
+pub const SETTINGS_FONTS_FONT_CODE_DESCRIPTION: Key = Key::new(533);
 /// "code font typeface size monospace diff"
-pub const SETTINGS_FONTS_FONT_CODE_KEYWORDS: Key = Key::new(533);
+pub const SETTINGS_FONTS_FONT_CODE_KEYWORDS: Key = Key::new(534);
 /// "Font"
-pub const SETTINGS_FONTS_FONT_INTERFACE: Key = Key::new(534);
+pub const SETTINGS_FONTS_FONT_INTERFACE: Key = Key::new(535);
 /// "Its size scales the interface"
-pub const SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION: Key = Key::new(535);
+pub const SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION: Key = Key::new(536);
 /// "interface font typeface size system ui"
-pub const SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS: Key = Key::new(536);
+pub const SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS: Key = Key::new(537);
 /// "Fonts folder"
-pub const SETTINGS_FONTS_FOLDER: Key = Key::new(537);
+pub const SETTINGS_FONTS_FOLDER: Key = Key::new(538);
 /// "JetBrains Mono comes with Wormhole. To use other fonts without installing them, put .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within seconds"
-pub const SETTINGS_FONTS_FOLDER_DESCRIPTION: Key = Key::new(538);
+pub const SETTINGS_FONTS_FOLDER_DESCRIPTION: Key = Key::new(539);
 /// "custom bundled ttf otf ttc folder families"
-pub const SETTINGS_FONTS_FOLDER_KEYWORDS: Key = Key::new(539);
+pub const SETTINGS_FONTS_FOLDER_KEYWORDS: Key = Key::new(540);

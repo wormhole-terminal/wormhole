@@ -6,12 +6,12 @@
 use crate::key::Key;
 
 /// "Feature flags"
-pub const SETTINGS_SECTION_FEATURE_FLAGS: Key = Key::new(513);
+pub const SETTINGS_SECTION_FEATURE_FLAGS: Key = Key::new(514);
 /// "Switches for features that aren’t finished. Only development builds show this page; a release uses each feature’s default."
-pub const SETTINGS_SECTION_FEATURE_FLAGS_INTRO: Key = Key::new(514);
+pub const SETTINGS_SECTION_FEATURE_FLAGS_INTRO: Key = Key::new(515);
 /// "Feature flags"
-pub const SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS: Key = Key::new(515);
+pub const SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS: Key = Key::new(516);
 /// "Turn features that are still being built on or off in this build"
-pub const SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS_DESCRIPTION: Key = Key::new(516);
+pub const SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS_DESCRIPTION: Key = Key::new(517);
 /// "feature flag preview experimental development dev in progress beta unstable project folders"
-pub const SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS_KEYWORDS: Key = Key::new(517);
+pub const SETTINGS_FEATURE_FLAGS_FEATURE_FLAGS_KEYWORDS: Key = Key::new(518);

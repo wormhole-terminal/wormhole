@@ -7,26 +7,26 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Open"
-pub const SETTINGS_WINDOW_OPEN: Key = Key::new(1446);
+pub const SETTINGS_WINDOW_OPEN: Key = Key::new(1447);
 /// "config.json can't be read, so changes made here aren't saved until it is fixed (see Advanced)."
-pub const SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO: Key = Key::new(1447);
+pub const SETTINGS_WINDOW_CONFIG_JSON_CANT_BE_READ_SO: Key = Key::new(1448);
 /// "Value"
-pub const SETTINGS_WINDOW_STEPPER_LABEL: Key = Key::new(1450);
+pub const SETTINGS_WINDOW_STEPPER_LABEL: Key = Key::new(1451);
 /// "Smaller"
-pub const SETTINGS_WINDOW_STEPPER_SMALLER: Key = Key::new(1451);
+pub const SETTINGS_WINDOW_STEPPER_SMALLER: Key = Key::new(1452);
 /// "Larger"
-pub const SETTINGS_WINDOW_STEPPER_LARGER: Key = Key::new(1452);
+pub const SETTINGS_WINDOW_STEPPER_LARGER: Key = Key::new(1453);
 
 /// ```text
 /// Import failed: { $error }
 /// ```
 pub fn settings_window_import_failed(error: &str) -> String {
-    crate::active::message(1448, &[("error", Arg::Str(error))])
+    crate::active::message(1449, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// The list of profiles couldn't be read, so it was set aside and rebuilt: { $message }
 /// ```
 pub fn settings_window_profiles_unreadable(message: &str) -> String {
-    crate::active::message(1449, &[("message", Arg::Str(message))])
+    crate::active::message(1450, &[("message", Arg::Str(message))])
 }

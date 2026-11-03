@@ -6,12 +6,12 @@
 use crate::key::Key;
 
 /// "Changed"
-pub const SETTINGS_SECTION_CHANGED: Key = Key::new(475);
+pub const SETTINGS_SECTION_CHANGED: Key = Key::new(476);
 /// "Every setting that differs from its default, with its default beside it. Reset them one by one, or all at once."
-pub const SETTINGS_SECTION_CHANGED_INTRO: Key = Key::new(476);
+pub const SETTINGS_SECTION_CHANGED_INTRO: Key = Key::new(477);
 /// "On"
-pub const SETTINGS_CHANGED_ON: Key = Key::new(477);
+pub const SETTINGS_CHANGED_ON: Key = Key::new(478);
 /// "Off"
-pub const SETTINGS_CHANGED_OFF: Key = Key::new(478);
+pub const SETTINGS_CHANGED_OFF: Key = Key::new(479);
 /// "none"
-pub const SETTINGS_CHANGED_DEFAULT_EMPTY: Key = Key::new(479);
+pub const SETTINGS_CHANGED_DEFAULT_EMPTY: Key = Key::new(480);
