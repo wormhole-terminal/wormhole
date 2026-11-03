@@ -143,7 +143,10 @@ pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<Choice>> {
         return Some(accent::icon_theme_options(s).into_iter().map(|name| (name.clone(), name)).collect());
     }
     if id == "default-shell" {
-        return Some(super::system::shell(s).1);
+        let mut shells = super::system::shell(s).1;
+        shells.push(("-".into(), "-".into()));
+        shells.push(("edit_shells".into(), super::words::word("Edit shells…")));
+        return Some(shells);
     }
     if id == "density" {
         return Some(Density::ALL.iter().map(|d| (density_id(*d), d.label().to_string())).collect());
@@ -178,6 +181,7 @@ pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: 
         return accent::write_colour(id, suffix, s, value);
     }
     match id {
+        super::open_in::ROW => super::open_in::write(s, value),
         "default-shell" => super::system::set_shell(s, value),
         "title-row" => accent::write_title(suffix, s, value),
         "icon-theme" => accent::write_icon_theme(s, value),

@@ -22,7 +22,7 @@ struct MenuBarPreview: View {
             if shown {
                 VStack(spacing: 2) {
                     Text(m.w("Waiting for you")).role(.micro, weight: .semibold).foregroundStyle(t.muted).padding(.horizontal, 6).padding(.vertical, 2).frame(maxWidth: .infinity, alignment: .leading)
-                    HStack { Text("Flaky login test"); Spacer(); Text("⌘1") }.padding(.horizontal, 6).padding(.vertical, 4)
+                    HStack { Text(m.w("Flaky login test")); Spacer(); Text("⌘1") }.padding(.horizontal, 6).padding(.vertical, 4)
                         .background(RoundedRectangle(cornerRadius: Radius.chip).fill(t.primary))
                     HStack { Text(m.w("Rate limits")); Spacer(); Text("⌘2").foregroundStyle(t.muted) }.padding(.horizontal, 6).padding(.vertical, 4)
                 }.role(.body).padding(6).frame(width: 240)

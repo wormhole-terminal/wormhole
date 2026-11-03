@@ -24,8 +24,9 @@ struct ThemePicker: View {
                     Button(showAll ? m.w("Show fewer") : m.w("Show all %@", String(m.themeData.pairs.count))) { showAll.toggle() }.buttonStyle(.link)
                 }
                 Spacer()
-                Btn("Import Theme…") { m.perform("import_theme", m.themeRowKey) }; Btn("Theme Studio") { m.perform("theme_studio", m.themeRowKey) }
+                Btn("Import Theme…") { FilePanel.theme(m, m.themeRowKey) }; Btn("Theme Studio") { m.perform("theme_studio", m.themeRowKey) }
             }
+            if let failure = m.note(m.themeRowKey) { Text(failure).role(.caption).foregroundStyle(t.warning) }
         }.padding(.vertical, Space.s1)
     }
 

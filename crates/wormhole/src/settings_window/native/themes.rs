@@ -151,3 +151,12 @@ pub(super) fn snapshot(entries: &[ThemeEntry], s: &Settings) -> Value {
     let lights = kind(Appearance::Light);
     json!({ "palettes": palettes, "names": names, "pairs": pair_list, "darks": darks, "lights": lights })
 }
+
+/// Import the theme file the person picked in the window; a failure is said under the theme picker.
+pub(super) fn import(path: &std::path::Path, cx: &mut App) {
+    let failure = crate::settings::SettingsStore::import_theme(cx, path).err();
+    if failure.is_some() {
+        tracing::warn!("importing a theme: {failure:?}");
+    }
+    super::set_import_failure(failure, cx);
+}

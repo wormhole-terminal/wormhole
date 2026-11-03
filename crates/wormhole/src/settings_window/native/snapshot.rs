@@ -9,9 +9,12 @@ use wormhole_core::config::Settings;
 use wormhole_core::config::settings_index::{self, Values};
 
 use super::codec::{self, Ctx};
-use super::{lists, preview, recorder, rows, system, themes, words};
+use super::{lists, open_in, preview, recorder, rows, system, themes, words};
 use crate::fonts::FontCatalog;
 use crate::settings::SettingsStore;
+
+/// The row of the theme picker, which carries the import's failure.
+const THEME_ROW: &str = "Appearance:0:2";
 
 pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     let entries = themes::entries(cx);
@@ -24,6 +27,17 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     let (mut values, mut default_values, mut options) = (Map::new(), Map::new(), Map::new());
     let (mut changed, mut known) = (Vec::new(), Vec::new());
     for (key, id) in rows::all() {
+        if *id == open_in::ROW {
+            let row = open_in::row(cx);
+            values.insert((*key).into(), Value::String(row.value.clone()));
+            default_values.insert((*key).into(), Value::String(row.default.clone()));
+            options.insert((*key).into(), json!(row.options));
+            known.push((*key).to_string());
+            if row.value != row.default {
+                changed.push(*key);
+            }
+            continue;
+        }
         let now = codec::read(id, s, &ctx);
         if now.is_empty() {
             continue;
@@ -50,7 +64,10 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     let themes = themes::snapshot(&entries, s);
     let preview = preview::build(&entries, s, cx);
     let (lists, sheets) = lists::build(cx);
-    let (recording, notes) = recorder::snapshot(cx);
+    let (recording, mut notes) = recorder::snapshot(cx);
+    if let (Some(failure), Some(notes)) = (super::import_failure(cx), notes.as_object_mut()) {
+        notes.insert(THEME_ROW.into(), Value::String(failure));
+    }
     let counted = |count: usize| {
         let count = wormhole_text::whole(count);
         json!({ "n": count, "words": {

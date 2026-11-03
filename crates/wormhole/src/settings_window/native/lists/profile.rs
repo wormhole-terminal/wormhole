@@ -102,7 +102,8 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
             );
         }
         fields.push(
-            Entry::new("add-folder", "button", text(SETTINGS_PROFILE_ADD_A_FOLDER))
+            // The button says it; a label beside it would say it twice.
+            Entry::new("add-folder", "button", "")
                 .with("value", text(SETTINGS_PROFILE_ADD_A_FOLDER))
                 .with("actionId", "add_folder")
                 .into_value(),

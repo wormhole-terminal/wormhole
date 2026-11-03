@@ -51,7 +51,7 @@ struct WindowPreview: View {
             if status {
                 Rule(colour: ln)
                 HStack(spacing: 10) {
-                    Text("main"); Text("3 changed"); Spacer(minLength: 0); Text("zsh")
+                    Text("main"); Text(m.w("3 changed")); Spacer(minLength: 0); Text("zsh")
                 }.role(.micro).foregroundStyle(th.fg.opacity(0.7)).padding(.horizontal, 10).frame(height: 20)
             }
         }

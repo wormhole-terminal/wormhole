@@ -15,6 +15,7 @@ mod actions;
 mod apply;
 mod codec;
 mod lists;
+mod open_in;
 mod preview;
 mod recorder;
 mod rows;
@@ -42,6 +43,8 @@ struct Native {
     lists: lists::Cache,
     /// The shortcut row that records, or the keys it refused.
     recording: Option<recorder::Recording>,
+    /// Why the last theme import failed, until the next one.
+    import_failure: Option<String>,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -76,6 +79,7 @@ pub(super) fn open(section: Option<Section>, cx: &mut App) {
             separate: None,
             lists: lists::Cache::default(),
             recording: None,
+            import_failure: None,
             _subscriptions: subscriptions,
         });
     }
@@ -139,4 +143,16 @@ pub(super) fn set_separate(separate: bool, cx: &mut App) {
 
 pub(super) fn separate(cx: &App) -> Option<bool> {
     cx.try_global::<Native>().and_then(|n| n.separate)
+}
+
+pub(super) fn set_import_failure(failure: Option<String>, cx: &mut App) {
+    if cx.has_global::<Native>() {
+        cx.global_mut::<Native>().import_failure = failure;
+    }
+}
+
+/// The failure of the last theme import, in words.
+pub(super) fn import_failure(cx: &App) -> Option<String> {
+    let reason = cx.try_global::<Native>()?.import_failure.as_deref()?;
+    Some(wormhole_text::keys::settings_window_import_failed(reason))
 }

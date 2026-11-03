@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 import AppKit
 
 /// Native controls wherever macOS has one (Picker, Toggle, Stepper, TextField, ColorPicker, Button).
@@ -9,10 +10,16 @@ struct PopupControl: View {
     let row: Row
     @Environment(SettingsModel.self) var m
     var body: some View {
-        Picker(row.label, selection: Binding(get: { row.listed ? row.value : m.get(row.key, row) }, set: { v in if row.listed { m.perform("=" + v, row.key) } else { m.set(row.key, v) } })) {
+        Picker(row.label, selection: Binding(get: { row.listed ? row.value : m.get(row.key, row) }, set: { v in
+            if row.listed { m.perform("=" + v, row.key) }
+            // The menu's last items are not values: they open a panel or the config file, and the menu keeps its pick.
+            else if v == "choose_app" { FilePanel.app(m, row.key) }
+            else if v == "edit_shells" { m.perform("edit_shells", row.key) }
+            else { m.set(row.key, v) }
+        })) {
             ForEach(Array(m.options(row).enumerated()), id: \.offset) { _, o in
                 if o == .divider { Divider() }
-                else if row.appIcons, let img = AppIcons.icon(o.label) { Label { Text(m.w(o.label)) } icon: { Image(nsImage: img) }.tag(o.id) }
+                else if row.appIcons, let img = AppIcons.icon(bundle: o.id) ?? AppIcons.icon(named: o.label) { Label { Text(m.w(o.label)) } icon: { Image(nsImage: img) }.tag(o.id) }
                 else { Text(m.w(o.label)).tag(o.id) }
             }
         }.labelsHidden().pickerStyle(.menu).fixedSize()
@@ -189,8 +196,35 @@ struct Btn: View {
 enum AppIcons {
     static let ids = ["Zed": "dev.zed.Zed", "Visual Studio Code": "com.microsoft.VSCode", "Cursor": "com.todesktop.230313mzl4w4u92",
                       "Xcode": "com.apple.dt.Xcode", "Finder": "com.apple.finder"]
-    static func icon(_ name: String) -> NSImage? {
-        guard let id = ids[name], let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) else { return nil }
+    static func icon(named name: String) -> NSImage? { ids[name].flatMap { icon(bundle: $0) } }
+    static func icon(bundle id: String) -> NSImage? {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) else { return nil }
         let img = NSWorkspace.shared.icon(forFile: url.path); img.size = NSSize(width: 16, height: 16); return img
+    }
+}
+
+/// The file panels of the window: they run here, as a sheet of the Settings window, and hand the host the path.
+enum FilePanel {
+    /// "Choose app…": an app from anywhere; the host keeps it by its bundle identifier.
+    @MainActor static func app(_ m: SettingsModel, _ key: String) {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.application]
+        panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = m.w("Choose")
+        run(panel) { m.perform("app:" + $0.path, key) }
+    }
+    /// "Import Theme…": a theme file; the host reads it.
+    @MainActor static func theme(_ m: SettingsModel, _ key: String) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
+        panel.prompt = m.w("Import")
+        run(panel) { m.perform("import:" + $0.path, key) }
+    }
+    @MainActor private static func run(_ panel: NSOpenPanel, _ done: @escaping @MainActor (URL) -> Void) {
+        let finish: (NSApplication.ModalResponse) -> Void = { response in
+            if response == .OK, let url = panel.url { Task { @MainActor in done(url) } }
+        }
+        if let window = NSApp.keyWindow { panel.beginSheetModal(for: window, completionHandler: finish) } else { panel.begin(completionHandler: finish) }
     }
 }

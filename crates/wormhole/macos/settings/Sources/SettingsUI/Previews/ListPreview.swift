@@ -35,8 +35,8 @@ struct SessionRow: View {
                     }
                 }
             VStack(alignment: .leading, spacing: 0) {
-                Text(spec.name).role(.body, weight: selected ? .semibold : .regular).lineLimit(1).foregroundStyle(selected ? t.onPrimary : t.text)
-                if !dense { Text(spec.status).role(.caption).lineLimit(1).foregroundStyle(selected ? t.onPrimary : tone) }
+                Text(m.w(spec.name)).role(.body, weight: selected ? .semibold : .regular).lineLimit(1).foregroundStyle(selected ? t.onPrimary : t.text)
+                if !dense { Text(m.w(spec.status)).role(.caption).lineLimit(1).foregroundStyle(selected ? t.onPrimary : tone) }
             }
             Spacer(minLength: 0)
             if changes && !spec.added.isEmpty {

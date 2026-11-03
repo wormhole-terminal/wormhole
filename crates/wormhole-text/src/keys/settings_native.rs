@@ -781,3 +781,23 @@ pub const NATIVE_AVATAR_LETTER_8EA165F4: Key = Key::new(1336);
 pub const NATIVE_COLOUR_2ECCA61D: Key = Key::new(1337);
 /// "Remove"
 pub const NATIVE_REMOVE_21A5901D: Key = Key::new(1338);
+/// "scratch"
+pub const NATIVE_SCRATCH_C462A115: Key = Key::new(1339);
+/// "Sidebar cards"
+pub const NATIVE_SIDEBAR_CARDS_02B77544: Key = Key::new(1340);
+/// "cargo test"
+pub const NATIVE_CARGO_TEST_B2B09A25: Key = Key::new(1341);
+/// "Flaky login test"
+pub const NATIVE_FLAKY_LOGIN_TEST_4600E19D: Key = Key::new(1342);
+/// "Release notes"
+pub const NATIVE_RELEASE_NOTES_C52AB62F: Key = Key::new(1343);
+/// "Idle"
+pub const NATIVE_IDLE_45AA17B3: Key = Key::new(1344);
+/// "Working · 4m"
+pub const NATIVE_WORKING_4M_04857B66: Key = Key::new(1345);
+/// "Finished · 1m"
+pub const NATIVE_FINISHED_1M_34A0CA68: Key = Key::new(1346);
+/// "Needs input · Allow edit?"
+pub const NATIVE_NEEDS_INPUT_ALLOW_EDIT_CEC49945: Key = Key::new(1347);
+/// "3 changed"
+pub const NATIVE_3_CHANGED_045754E2: Key = Key::new(1348);
