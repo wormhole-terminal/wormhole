@@ -191,6 +191,13 @@ impl Cards<'_> {
         div().bg(self.t("band.hover")).rounded(px(10.0)).overflow_hidden()
     }
 
+    /// A settings row in the board's card. The Components board's rows share a hairline (a row's 40 px
+    /// include it) where a page's rows each keep their own above them, which `GroupCard` lifts off the
+    /// first; here every row climbs by its line and the card's clip takes the first one's.
+    fn lifted(row: Stateful<Div>) -> Stateful<Div> {
+        row.mt(px(-1.0))
+    }
+
     fn row(&self, id: &'static str, name: &'static str, force: Force, control: AnyElement) -> AnyElement {
         SettingsRowProps {
             id: id.into(),
@@ -217,6 +224,7 @@ impl Cards<'_> {
             control,
         }
         .render(&(self.look)(force))
+        .mt(px(-1.0))
         .into_any_element()
     }
 
@@ -243,6 +251,7 @@ impl Cards<'_> {
             active: chosen,
             muted: false,
             destructive: false,
+            bare: false,
             on_click: None,
         }
         .render(&(self.look)(Force::None))
@@ -266,6 +275,7 @@ impl Cards<'_> {
             active: chosen,
             muted: false,
             destructive,
+            bare: false,
             on_click: None,
         }
         .render(&(self.look)(force))
@@ -273,9 +283,15 @@ impl Cards<'_> {
     }
 
     fn panel(&self, id: &'static str, items: Vec<AnyElement>) -> AnyElement {
+        self.panel_sized(id, items, false)
+    }
+
+    /// `compact`: the narrower menu of the board's right-click row.
+    fn panel_sized(&self, id: &'static str, items: Vec<AnyElement>, compact: bool) -> AnyElement {
         MenuPanelProps {
             id: id.into(),
             label: SharedString::default(),
+            compact,
             rows: div().flex().flex_col().children(items).into_any_element(),
         }
         .render(&(self.look)(Force::None))
@@ -421,6 +437,7 @@ impl Cards<'_> {
                         active: false,
                         muted: true,
                         destructive: false,
+                        bare: false,
                         on_click: None,
                     }
                     .render(&(self.look)(Force::None))

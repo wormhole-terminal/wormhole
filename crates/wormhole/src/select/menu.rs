@@ -283,6 +283,7 @@ fn card(ui: UiColors, row: ElementId, menu: MenuOptions, at: usize, cx: &App) ->
                 active: ix == at,
                 muted: action,
                 destructive: false,
+                bare: false,
                 on_click: Some(click),
             }
             .render(&look)
@@ -300,6 +301,7 @@ fn card(ui: UiColors, row: ElementId, menu: MenuOptions, at: usize, cx: &App) ->
     let list = MenuPanelProps {
         id: ElementId::from("menu-select-card"),
         label: SharedString::default(),
+        compact: false,
         rows: div().flex().flex_col().children(rows).into_any_element(),
     }
     .render(&look)

@@ -28,7 +28,7 @@ use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[
-    Setting::custom("profile-name", draw_name).tall(),
+    Setting::custom("profile-name", draw_name).under(colour_row),
     Setting::custom("profile-start", draw_start).describe(start_caption).below(folder_list),
     Setting::rows("profile-env", draw_env),
     Setting::rows("profile-git", draw_git),
@@ -73,6 +73,7 @@ fn color_of(palette: &ColorPalette, color: GroupColor) -> Hsla {
     palette.iter().find(|(c, _)| *c == color).map_or(palette[0].1, |(_, hsla)| *hsla)
 }
 
+/// The name's own line, as the design draws the row: the avatar, the name field and the avatar's letter.
 fn draw_name(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let (Some((profile, palette)), Some(form)) = (shown(window, cx), window.profile_form.as_ref()) else {
@@ -87,36 +88,38 @@ fn draw_name(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEl
         .unwrap_or_else(|| wormhole_core::config::profile::first_letter(&form.name.read(cx).value()));
     div()
         .flex()
-        .flex_col()
-        .items_end()
+        .items_center()
         .gap_2()
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .gap_2()
-                .child(style::profile_avatar(
-                    ui,
-                    color_of(&palette, profile.color),
-                    typed_letter,
-                    style::TITLE_GLYPH,
-                ))
-                .child(field(&form.name, NAME_W))
-                .child(field(&form.avatar, AVATAR_FIELD_W)),
-        )
-        .child(div().flex().items_center().children(palette.iter().enumerate().map(|(ix, (color, hsla))| {
-            let color = *color;
-            style::color_choice(
-                ("profile-color", ix),
-                ui,
-                color.label(),
-                Some(*hsla),
-                color == profile.color,
-                true,
-            )
-            .on_click(cx.listener(move |this, _, _, cx| this.set_profile_color(color, cx)))
-        })))
+        .child(style::profile_avatar(ui, color_of(&palette, profile.color), typed_letter, style::TITLE_GLYPH))
+        .child(field(&form.name, NAME_W))
+        .child(field(&form.avatar, AVATAR_FIELD_W))
         .into_any_element()
+}
+
+/// The profile's colour, a line under the name: the design has no such row, so it sits with the row it
+/// colours rather than as one of its own.
+fn colour_row(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
+    let ui = ui(cx);
+    let (profile, palette) = shown(window, cx)?;
+    Some(
+        div()
+            .flex()
+            .justify_end()
+            .items_center()
+            .children(palette.iter().enumerate().map(|(ix, (color, hsla))| {
+                let color = *color;
+                style::color_choice(
+                    ("profile-color", ix),
+                    ui,
+                    color.label(),
+                    Some(*hsla),
+                    color == profile.color,
+                    true,
+                )
+                .on_click(cx.listener(move |this, _, _, cx| this.set_profile_color(color, cx)))
+            }))
+            .into_any_element(),
+    )
 }
 
 fn draw_start(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {

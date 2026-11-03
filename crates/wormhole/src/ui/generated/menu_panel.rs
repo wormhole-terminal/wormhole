@@ -10,6 +10,7 @@ use crate::ui::{Look, Rule, Sides};
 pub struct MenuPanelProps {
     pub id: ElementId,
     pub label: SharedString,
+    pub compact: bool,
     pub rows: AnyElement,
 }
 
@@ -20,7 +21,7 @@ impl MenuPanelProps {
         let t_shadow = token(look.tokens, "shadow");
         let t_surface_elevated = token(look.tokens, "surface.elevated");
         let borders = look.borders;
-        let Self { id, label, rows } = self;
+        let Self { id, label, compact, rows } = self;
 
         div()
             .id(id)
@@ -34,6 +35,7 @@ impl MenuPanelProps {
             .rounded(px(8.0))
             .bg(t_surface_elevated)
             .shadow(vec![BoxShadow { color: t_shadow, offset: point(px(0.0), px(10.0)), blur_radius: px(28.0), spread_radius: px(0.0), inset: false }])
+            .when(compact, |this| this.min_w(px(170.0)))
             .child(rows)
     }
 }

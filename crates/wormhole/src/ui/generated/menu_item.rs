@@ -18,6 +18,7 @@ pub struct MenuItemProps {
     pub active: bool,
     pub muted: bool,
     pub destructive: bool,
+    pub bare: bool,
     pub on_click: Option<Handler>,
 }
 
@@ -30,7 +31,7 @@ impl MenuItemProps {
         let t_text_on_primary = token(look.tokens, "text.on_primary");
         let t_text_primary = token(look.tokens, "text.primary");
         let force = look.force;
-        let Self { id, name, hint, lead, chosen, active, muted, destructive, on_click } = self;
+        let Self { id, name, hint, lead, chosen, active, muted, destructive, bare, on_click } = self;
 
         div()
             .id(id)
@@ -49,7 +50,7 @@ impl MenuItemProps {
             .bg(transparent_black())
             .text_color(t_text_primary)
             .text_size(rems(0.8125))
-            .line_height(rems(1.0))
+            .line_height(rems(0.9375))
             .whitespace_nowrap()
             .text_left()
             .cursor_pointer()
@@ -65,6 +66,7 @@ impl MenuItemProps {
             })
             .when(muted, |this| this.text_color(t_text_muted))
             .when(destructive, |this| this.text_color(t_status_danger_text))
+            .when(bare, |this| this.pl(px(10.0)))
             .when(muted && chosen, |this| this.text_color(t_text_on_primary))
             .when(muted && active, |this| this.text_color(t_text_on_primary))
             .when(destructive && active, |this| this.text_color(t_text_on_primary))
@@ -97,6 +99,7 @@ impl MenuItemProps {
                 .flex_shrink_0()
                 .w(px(14.0))
                 .h(px(14.0))
+                .when(bare, |this| this.hidden())
                 .when(chosen, |this| {
                     this
                         .child(Icon::new(IconName::Check).with_size(px(12.0)))

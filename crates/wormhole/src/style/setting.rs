@@ -156,7 +156,7 @@ pub struct SettingParts {
 }
 
 /// How faint a control is while a project sets its value.
-const SET_ELSEWHERE_OPACITY: f32 = 0.55;
+const SET_ELSEWHERE_OPACITY: f32 = 0.4;
 
 /// One setting in the settings window: drawn by the `SettingsRow` component (`ui/settings_row.dc.html`,
 /// which is also the design), with this function giving it the row's words, state and behaviour: the

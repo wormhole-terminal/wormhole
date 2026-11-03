@@ -33,13 +33,12 @@ impl Cards<'_> {
             label: div().flex().flex_col().child("Also translucent").child(both).into_any_element(),
             ..self.plain_row("cb-tr", "Also translucent", div().into_any_element())
         }
-        .render(&look)
-        .into_any_element();
+        .render(&look);
         let card = self
             .card()
             .child(self.row("cb-on", "Ticked", Force::None, boxed("cb-on-c", true)))
             .child(self.row("cb-off", "Not ticked", Force::None, boxed("cb-off-c", false)))
-            .child(translucent);
+            .child(Self::lifted(translucent));
         self.section(
             "Checkbox",
             div()
@@ -201,13 +200,14 @@ impl Cards<'_> {
                 self.switch("kr-sw2", true, true, Force::None),
             )
         };
-        let menu = self.panel(
+        let menu = self.panel_sized(
             "sheet-menu-key",
             vec![
                 self.hot_item("k1", "Copy Key", true),
                 self.hot_item("k2", "Copy as JSON", false),
                 self.hot_item("k3", "Reset to Default", false),
             ],
+            true,
         );
         let right_click = SettingsRowProps {
             tall: true,
@@ -217,10 +217,8 @@ impl Cards<'_> {
         };
         let card = self
             .card()
-            .child(keyed.render(&look))
-            .child(changed.render(&look))
-            .child(project.render(&look))
-            .child(div().h(px(112.0)).child(right_click.render(&look)));
+            .children([keyed, changed, project].map(|row| Self::lifted(row.render(&look))))
+            .child(div().h(px(112.0)).mt(px(-1.0)).child(right_click.render(&look)));
         self.section(
             "Key, changed, reset, set by a project",
             div().flex().flex_col().gap(px(8.0)).child(card).child(self.caption(
@@ -391,8 +389,9 @@ impl Cards<'_> {
                 self.switch("hn-3c", false, false, Force::None),
             )
         };
-        let card =
-            self.card().child(hinted.render(&look)).child(info.render(&look)).child(warned.render(&look));
+        let card = self
+            .card()
+            .children([hinted, info, warned].map(|row| Self::lifted(row.render(&look))));
         self.section("Hint, (i) and a warning under a row", card)
     }
 
@@ -407,6 +406,7 @@ impl Cards<'_> {
             active,
             muted: false,
             destructive: false,
+            bare: true,
             on_click: None,
         }
         .render(&(self.look)(Force::None))

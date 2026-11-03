@@ -62,13 +62,13 @@ impl SettingsRowProps {
             .justify_center()
             .items_stretch()
             .gap(px(12.0))
-            .min_h(px(40.0))
+            .min_h(px(41.0))
             .py(px(8.0)).px(px(14.0))
             .rule(borders, Sides::TOP, 1.0, t_border, false)
             .rounded(px(10.0))
             .text_color(t_text_primary)
             .text_size(rems(0.8125))
-            .line_height(rems(1.0))
+            .line_height(rems(0.9375))
             .when(force == Force::Hover, |this| {
                 this
                     .bg(t_sidebar_row_hover)
@@ -129,7 +129,6 @@ impl SettingsRowProps {
                                     .font_weight(FontWeight::SEMIBOLD)
                                     .line_height(rems(0.875))
                                     .whitespace_nowrap()
-                                    .child(Icon::new(IconName::Folder).with_size(px(11.0)))
                                     .child(project.clone()))
                         })
                         .when_some(chip.clone(), |this, chip| {
@@ -278,7 +277,9 @@ impl SettingsRowProps {
                     .child(control)))
             .when_some(under, |this, under| {
                 this
-                    .child(under)
+                    .child(div()
+                        .pb(px(2.0))
+                        .child(under))
             })
     }
 }
