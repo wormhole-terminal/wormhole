@@ -79,6 +79,7 @@ Motion:0:1 motion-fold
 Motion:0:2 motion-status
 Motion:1:0 motion-column
 Agents:1:1 control-write
+Agents:2:0 agent-access
 FeatureFlags:0:0 flag-0
 FeatureFlags:0:1 flag-1
 FeatureFlags:0:2 flag-2
