@@ -264,6 +264,8 @@
 //!   font-picker <interface|code|terminal> [query]   expand a font picker (open settings first)
 //!   picker <compare|history> [query]   open the branch select in the Changes / History tab
 //!   settings-project-menu [query]   open the project select in Settings → Project folders
+//!   native-set <row key> <value>   what the native Settings window sends when a row changes (e.g. `Terminal:0:0 100,000 lines`)
+//!   native-shot <file.png>   the native Settings window's content as a PNG
 //!   settings-search [text]   type into the settings search (empty clears it; open settings first)
 //!   settings-record <id> [keys]   start a shortcut field (hotkey) recording, and press keys into it
 //!   settings-reveal <id>   open the settings window at that row, scrolled to it and marked (what

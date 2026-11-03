@@ -429,3 +429,11 @@ pub(crate) fn pointer(arg: &str, cx: &mut App) -> Result<(), String> {
 pub(crate) fn components(from: Option<f32>, cx: &mut App) {
     with_page(cx, move |page, _, _| page.components_sheet = from);
 }
+
+/// devctl `native-set <row key> <value>`: a change in the native Settings window, through the path its events take.
+pub(crate) fn native_set(arg: &str, cx: &mut App) {
+    // The row key has no spaces; a value may.
+    let Some((key, value)) = arg.trim().split_once(' ') else { return };
+    let event = serde_json::json!({ "t": "set", "k": key, "v": value }).to_string();
+    super::native::event(&event, cx);
+}

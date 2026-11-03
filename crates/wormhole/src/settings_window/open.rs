@@ -25,6 +25,10 @@ pub(super) fn current_window(cx: &App) -> Option<(AnyWindowHandle, Entity<Settin
 
 /// Bring up the settings window (showing `section`), or focus it if it is open.
 pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
+    if super::native::enabled(cx) {
+        super::native::open(section, cx);
+        return;
+    }
     // What the page lists of agent access is read again now, not from the last time.
     crate::agent_access::forget_listing(cx);
     if let Some((handle, page)) = current_window(cx) {

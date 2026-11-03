@@ -33,6 +33,7 @@ mod info_tests;
 mod menu_tests;
 #[cfg(test)]
 mod motion_tests;
+mod native;
 mod nav;
 #[cfg(test)]
 mod nav_tests;

@@ -52,6 +52,17 @@ pub(super) fn search(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+pub(super) fn native_set(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::native_set(arg, ctx.cx);
+    Ok(String::new())
+}
+
+pub(super) fn native_shot(_: &mut Ctx, arg: &str) -> Result<String> {
+    let path = arg.trim();
+    anyhow::ensure!(crate::platform::native_settings::shot(path), "the native Settings window is not open");
+    Ok(path.to_string())
+}
+
 pub(super) fn preview(ctx: &mut Ctx, arg: &str) -> Result<String> {
     crate::settings_window::devctl::preview(arg, ctx.cx);
     Ok(String::new())
