@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// What the Settings window shows, as data. A host may hand over its own `SettingsCatalog`;
-/// `SettingsCatalog.standard` is the app's own (Pages.swift).
-/// Words are a key plus English text: `Row.key + ".label"`, `".hint"`, `Page.id + ".title"`.
+/// What the Settings window shows, as data: `SettingsCatalog.standard` (Pages.swift). Its English is the source of
+/// each word's id (`wordID`); what shows is the app's word for it.
 
 public enum Kind: String {
     case field, popup, link, danger, toggle, button, themes, swatches, checks, parts, font, agent, skill, key, update, value, project, probe, review, dots, folder
@@ -145,18 +144,6 @@ public struct SettingsCatalog {
         guard p.count == 3, let g = Int(p[1]), let r = Int(p[2]), let page = page(p[0]), g < page.groups.count, r < page.groups[g].rows.count else { return nil }
         return page.groups[g].rows[r]
     }
-
-    /// Every key's default, including the parts of a row (font size, checkboxes, title-row parts).
-    public var defaults: [String: String] {
-        var d: [String: String] = [:]
-        for p in pages { for g in p.groups { for row in g.rows {
-            d[row.key] = row.defaultValue
-            if row.kind == .font { d[row.key + "#size"] = String(row.size) }
-            for c in row.checkIDs { d[row.key + "#" + c] = row.checksOn.contains(c) ? "on" : "off" }
-            if row.kind == .parts { for (name, on) in titleParts { d[row.key + "#" + titlePartID[name, default: name]] = on ? "on" : "off" } }
-        } } }
-        return d
-    }
 }
 
 let standardNav: [String: NavItem] = Dictionary(uniqueKeysWithValues: [
@@ -188,15 +175,14 @@ let standardNavGroups: [(String?, [String])] = [
 
 let previewName = ["window": "Window", "terminal": "Split terminals", "sidebar": "Terminals list", "diff": "Changes panel and diff",
                    "agents": "Terminals list", "banner": "Notifications", "specimen": "Terminal font", "menubar": "Menu bar", "motion": "Terminals list"]
-let previewCaption = previewCaptionBase.merging(previewCaptionOverride) { _, new in new }
-let previewCaptionBase = [
+let previewCaption = [
     "window": "Your theme, opacity, blur, glass, dividers, status bar and title row, as one window draws them.",
     "terminal": "Two split terminals as your settings draw them: the gaps between them and the minimap.",
     "sidebar": "How the list draws a group and its terminals at this density, with the row details you keep.",
     "diff": "The Changes panel and a diff as you set them up: list or tree, split or unified, wrapped or not.",
     "agents": "How the Terminals list shows each agent: working, asking you, finished. With hooks it knows the moment; without, it reads the agent’s output.",
     "banner": "The banners you would get. macOS decides where they show and for how long (System Settings › Notifications › Wormhole).",
-    "specimen": "The terminal font at its size and line height. In a font menu, the font under the pointer shows here.",
+    "specimen": "The font you chose, at its size and line height.",
     "menubar": "The menu bar extra and its menu of terminals waiting for you.",
     "motion": "Loops while you look. Under Reduce Motion it holds still.",
 ]

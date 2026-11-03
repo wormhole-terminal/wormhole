@@ -228,5 +228,3 @@ let titlePartLayout: [(name: String, on: Bool, note: String)] = [
   ("Open in…", true, ""),
   ("Split buttons", true, ""),
 ]
-
-let previewCaptionOverride = ["specimen": "The font you chose, at its size and line height."]

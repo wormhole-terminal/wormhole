@@ -1,111 +1,116 @@
 import SwiftUI
 
-/// All settings values, by setting key ("<page>:<group>:<row>", plus "#size" / the check's name / the part's
-/// name for a row's sub-values). The window never reads or writes a file: a host implements this over its own
-/// config (the Wormhole app's Rust side, over FFI) and hands it to `SettingsView`.
+/// The app's settings as the window sees them: the last snapshot the app sent (`apply`), keyed "<page>:<group>:<row>"
+/// (plus "#size", a checkbox's or a part's id for a row's sub-values). A write shows at once and goes to the app as
+/// an event; the app answers with a snapshot that agrees or corrects it. The window reads and writes no file.
 ///
-/// Implement it as an `@Observable` class (or bump `revision` inside `withMutation`) so SwiftUI redraws on change.
-public protocol SettingsStore: AnyObject {
-    /// Changes with every write; the views read it to know they must redraw.
-    var revision: Int { get }
-    /// The value set for the key, nil when it is at its default.
-    func value(for key: String) -> String?
-    /// The key's default, nil when the host has none (the catalog's is used).
-    func defaultValue(for key: String) -> String?
+/// Each field is observed on its own and replaced only when the snapshot changed it, so a change redraws only the
+/// views that read it.
+@Observable final class HostStore {
+    private(set) var values: [String: String] = [:]
+    private(set) var defaults: [String: String] = [:]
+    /// The options of a menu row, the app's (stable ids, words in its language).
+    private(set) var choices: [String: [Choice]] = [:]
     /// Keys whose value differs from their default (the Changed page).
-    var changedKeys: Set<String> { get }
-    func set(_ value: String, for key: String)
-    func reset(_ key: String)
-    func resetAll()
-    /// A button was pressed: its id (never its words) and the row (or "<page>:" for a page's footer) it belongs to.
-    func perform(_ action: String, for key: String)
-    /// The options a menu row offers, when the host knows better than the catalog (the app's real choices: stable ids, words in its language).
-    func options(for key: String) -> [Choice]?
-    /// The real fonts, themes and accent the previews draw with.
-    var preview: PreviewData? { get }
-    /// A word of the window in the app's language, by its id (`wordID`); nil shows the English it was made from.
-    func word(_ id: String) -> String?
-    /// The themes to pick from, when the host has its own.
-    var themes: ThemeData? { get }
-    /// The installed font families (name, monospaced), when the host has them.
-    var fonts: [FontChoice]? { get }
-    /// Rows the host adds to the end of a group ("<page>:<group>"): things that exist on this Mac, not in the catalog.
-    func list(for group: String) -> [[String: Any]]
-    /// What an extension's approval sheet shows, by the id its list entry names.
-    func sheet(for id: String) -> [String: Any]?
-    /// The profile Wormhole is in: its name and the letter of its avatar.
-    var profile: (name: String, letter: String)? { get }
-    /// Whether the host records shortcuts itself (it validates and saves them); else the control does, locally.
-    /// Where an update stands: status, hint, tone (ok, warn, muted), buttons, busy, percent (-1 when no download). nil: the card shows nothing real.
-    var update: [String: Any]? { get }
-    /// Whether a page's fixed notice does not apply now.
-    func quiet(_ page: String) -> Bool
-    /// What is wrong with the app's own config file, for the top of every page: `text`, and `action` + `button` when it can be opened.
-    var banner: [String: String]? { get }
-    var recordsInHost: Bool { get }
-    /// The shortcut row the host waits for keys on, "" when none.
-    var recording: String { get }
+    private(set) var changed: Set<String> = []
+    private var known: Set<String> = []
+    private(set) var themes: ThemeData?
+    private(set) var preview: PreviewData?
+    private(set) var fonts: [FontChoice] = []
+    /// Rows the app adds to the end of a group ("<page>:<group>"): things that exist on this Mac.
+    private(set) var lists: [String: [[String: Any]]] = [:]
+    /// What a sheet shows, by the id a row names.
+    private(set) var sheets: [String: [String: Any]] = [:]
+    private(set) var profile: [String] = []
+    /// The shortcut row the app waits for keys on, "" when none.
+    private(set) var recording = ""
     /// A warning to show on a row (keys already taken, a hotkey that did not register).
-    func note(for key: String) -> String?
-    /// A message that says a number, in the app's language with its plural form, for `count`: nil when the host has none for it.
-    func counted(_ name: String, _ count: Int) -> String?
-    /// The recorder of a row starts or stops; a key press is sent with its held modifiers ("ctrl,alt,shift,cmd") and name.
-    func record(_ action: String, for key: String, mods: String, key name: String)
-}
+    private(set) var notes: [String: String] = [:]
+    /// Where an update stands; nil where there is no feed to ask.
+    private(set) var update: [String: Any]?
+    /// Pages whose fixed notice does not apply now, and pages this build doesn't show.
+    private(set) var quiet: Set<String> = []
+    private(set) var hidden: Set<String> = []
+    /// What is wrong with the app's own config file: `text`, and `action` + `button` when it can be opened.
+    private(set) var banner: [String: String]?
+    /// The window's words in the app's language, by `wordID`.
+    private(set) var words: [String: String] = [:]
+    private var counts: [String: Any] = [:]
+    @ObservationIgnored var send: (String) -> Void = { _ in }
 
-public struct FontChoice: Hashable {
-    public var name: String
-    public var mono: Bool
-    public init(name: String, mono: Bool) { self.name = name; self.mono = mono }
-}
-
-public extension SettingsStore {
-    func perform(_ action: String, for key: String) {}
-    func options(for key: String) -> [Choice]? { nil }
-    var themes: ThemeData? { nil }
-    var preview: PreviewData? { nil }
-    func word(_ id: String) -> String? { nil }
-    var fonts: [FontChoice]? { nil }
-    func list(for group: String) -> [[String: Any]] { [] }
-    func sheet(for id: String) -> [String: Any]? { nil }
-    var profile: (name: String, letter: String)? { nil }
-    var update: [String: Any]? { nil }
-    func quiet(_ page: String) -> Bool { false }
-    var banner: [String: String]? { nil }
-    var recordsInHost: Bool { false }
-    var recording: String { "" }
-    func note(for key: String) -> String? { nil }
-    func counted(_ name: String, _ count: Int) -> String? { nil }
-    func record(_ action: String, for key: String, mods: String, key name: String) {}
-}
-
-/// The default store: values in memory only, nothing is written anywhere.
-@Observable public final class InMemorySettings: SettingsStore {
-    public private(set) var revision = 0
-    private var values: [String: String]
-    private let defaults: [String: String]
-
-    public init(defaults: [String: String] = SettingsCatalog.standard.defaults, initial: [String: String] = InMemorySettings.demoSeed) {
-        self.defaults = defaults
-        self.values = initial.filter { defaults[$0.key] != $0.value }
+    /// A message that says a number in the app's language: nil unless the app made it for `count`.
+    func counted(_ name: String, _ count: Int) -> String? {
+        counts["n"] as? Int == count ? (counts["words"] as? [String: String])?[name] : nil
     }
-    /// The board's seeded differences, so the Changed page has something to show.
-    public static let demoSeed = ["Terminal:0:0": "50_000_lines", "Sessions:0:1": "compact", "Terminal:0:2": "on", "Notifications:0:4": "on", "Git:1:1": "on"]
 
-    public func value(for key: String) -> String? { values[key] }
-    public func defaultValue(for key: String) -> String? { defaults[key] }
-    public var changedKeys: Set<String> { Set(values.keys) }
-    public func set(_ value: String, for key: String) {
-        if defaults[key] == value { values[key] = nil } else { values[key] = value }
-        revision += 1
+    func set(_ value: String, for key: String) {
+        // A row the app does not own keeps what was set until the window closes, so it still reacts.
+        values[key] = value
+        if !known.contains(key) { changed.insert(key) }
+        emit(["t": "set", "k": key, "v": value])
     }
-    public func reset(_ key: String) { values[key] = nil; revision += 1 }
-    public func resetAll() { values = [:]; revision += 1 }
+    func reset(_ key: String) { values[key] = nil; changed.remove(key); emit(["t": "reset", "k": key]) }
+    func resetAll() { values = [:]; changed = []; emit(["t": "reset_all"]) }
+    /// A button: its id (never its words) and the row (or "<page>:" for a page's own buttons).
+    func perform(_ action: String, for key: String) { emit(["t": "action", "k": key, "v": action]) }
+    /// A shortcut row starts or stops recording; a key press goes with its held modifiers ("ctrl,alt,shift,cmd").
+    func record(_ action: String, for key: String, mods: String = "", key name: String = "") {
+        emit(["t": "record", "a": action, "k": key, "m": mods, "n": name])
+    }
+
+    func emit(_ event: [String: String]) {
+        guard let data = try? JSONSerialization.data(withJSONObject: event), let text = String(data: data, encoding: .utf8) else { return }
+        send(text)
+    }
+
+    /// Replace everything the app owns with its snapshot.
+    func apply(_ json: [String: Any]) {
+        let localOnly = values.filter { !known.contains($0.key) }
+        known = Set(json["known"] as? [String] ?? [])
+        values = (json["values"] as? [String: String] ?? [:]).merging(localOnly) { a, _ in a }
+        defaults = json["defaults"] as? [String: String] ?? [:]
+        choices = (json["options"] as? [String: [[String]]] ?? [:]).mapValues { $0.filter { $0.count == 2 }.map { Choice(id: $0[0], label: $0[1]) } }
+        changed = Set(json["changed"] as? [String] ?? []).union(localOnly.keys)
+        if let t = json["themes"] as? [String: Any] { themes = Self.themes(t) }
+        words = json["words"] as? [String: String] ?? [:]
+        counts = json["counts"] as? [String: Any] ?? [:]
+        let p = (json["preview"] as? [String: Any]).flatMap(PreviewData.init(json:))
+        if p != preview { preview = p }
+        if let f = json["fonts"] as? [[Any]] {
+            fonts = f.compactMap { e in (e.first as? String).map { FontChoice(name: $0, mono: (e.last as? Bool) ?? false) } }
+        }
+        // Not Equatable as Swift sees them: compared as the property lists they are, so an unchanged one stays.
+        let l = json["lists"] as? [String: [[String: Any]]] ?? [:], s = json["sheets"] as? [String: [String: Any]] ?? [:]
+        let u = json["update"] as? [String: Any]
+        if (l as NSDictionary) != (lists as NSDictionary) { lists = l }
+        if (s as NSDictionary) != (sheets as NSDictionary) { sheets = s }
+        if (u as NSDictionary?) != (update as NSDictionary?) { update = u }
+        quiet = Set(json["quiet"] as? [String] ?? [])
+        hidden = Set(json["hidden"] as? [String] ?? [])
+        banner = json["banner"] as? [String: String]
+        recording = json["recording"] as? String ?? ""
+        notes = json["notes"] as? [String: String] ?? [:]
+        if let p = json["profile"] as? [String], p.count == 2 { profile = p }
+    }
+
+    private static func themes(_ t: [String: Any]) -> ThemeData? {
+        let raw = t["palettes"] as? [String: [Int]] ?? [:]
+        let palettes = raw.mapValues { $0.map { UInt32($0) } }.filter { $0.value.count >= 7 }
+        guard !palettes.isEmpty else { return nil }
+        let pairs = (t["pairs"] as? [[String]] ?? []).filter { $0.count == 3 }.map { ThemeData.Pair(name: $0[0], dark: $0[1], light: $0[2]) }
+        return ThemeData(palettes: palettes, names: t["names"] as? [String: String] ?? [:], pairs: pairs,
+                         darks: t["darks"] as? [String] ?? [], lights: t["lights"] as? [String] ?? [])
+    }
+}
+
+struct FontChoice: Hashable {
+    var name: String
+    var mono: Bool
 }
 
 /// The id a word has in the app's catalogs: a slug of its English and the FNV-1a hash of all of it
 /// (`scripts/native-words.py` makes the same id). The English is only the source of the id; what shows is the
-/// host's word for it.
+/// app's word for it.
 func wordID(_ english: String) -> String {
     var h: UInt32 = 0x811C9DC5
     for b in english.utf8 { h = (h ^ UInt32(b)) &* 0x01000193 }
@@ -114,25 +119,14 @@ func wordID(_ english: String) -> String {
         if ch.isASCII && (ch.isLetter || ch.isNumber) { slug.append(ch) } else if !slug.hasSuffix("-") { slug.append("-") }
     }
     slug = slug.trimmingCharacters(in: CharacterSet(charactersIn: "-"))
-    let hex = String(h, radix: 16).leftPad(8)
+    let hex = String(repeating: "0", count: max(0, 8 - String(h, radix: 16).count)) + String(h, radix: 16)
     return slug.isEmpty ? "native-\(hex)" : "native-\(slug)-\(hex)"
 }
 
-private extension String {
-    func leftPad(_ n: Int) -> String { String(repeating: "0", count: max(0, n - count)) + self }
-}
-
-/// Words by their English source: `words("", "Reset")`, the host's text for it.
-struct Words {
-    let lookup: (String) -> String
-    func callAsFunction(_ key: String, _ english: String) -> String { lookup(english) }
-    func callAsFunction(_ english: String) -> String { lookup(english) }
-}
-
 /// The window's state: the store (values), the catalog (rows) and what only the window knows (page, search).
-@MainActor @Observable public final class SettingsModel {
-    let store: any SettingsStore
-    let catalog: SettingsCatalog
+@MainActor @Observable final class SettingsModel {
+    let store: HostStore
+    let catalog = SettingsCatalog.standard
     var sel: Sel { didSet { record(from: oldValue) } }
     var search = ""
     /// The pages that show their sub-pages in the sidebar, and the selections back and forward walk.
@@ -142,46 +136,36 @@ struct Words {
     @ObservationIgnored var navigating = false
     var hoverFont: String? = nil
     var specimenTab = "Terminal"
-    /// The explanation sheet that is open (a host sheet's id), nil when none.
+    /// The explanation sheet that is open (a sheet's id), nil when none.
     var infoSheet: String? = nil
 
-    public init(store: any SettingsStore, catalog: SettingsCatalog = .standard, page: String = "Terminal") {
-        self.store = store; self.catalog = catalog; self.sel = Sel(page: page)
+    init(store: HostStore, page: String) {
+        self.store = store; self.sel = Sel(page: page)
     }
-    /// The words of the window, in the host's language.
-    var words: Words { let s = store; return Words { _ = s.revision; return s.word(wordID($0)) ?? $0 } }
-    /// A word with a value in it: the host's text has `%@` where the value goes.
-    func w(_ english: String, _ value: String) -> String { words(english).replacingOccurrences(of: "%@", with: value) }
-    func w(_ english: String) -> String { words(english) }
+    /// A word of the window in the app's language (its English when the app has none); `%@` is where `value` goes.
+    func w(_ english: String) -> String { store.words[wordID(english)] ?? english }
+    func w(_ english: String, _ value: String) -> String { w(english).replacingOccurrences(of: "%@", with: value) }
 
-    func value(_ key: String) -> String { _ = store.revision; return store.value(for: key) ?? store.defaultValue(for: key) ?? catalog.defaults[key] ?? "" }
-    func get(_ key: String, _ row: Row) -> String { _ = store.revision; return store.value(for: key) ?? store.defaultValue(for: key) ?? row.defaultValue }
+    func value(_ key: String) -> String { store.values[key] ?? store.defaults[key] ?? "" }
+    func get(_ key: String, _ row: Row) -> String { store.values[key] ?? store.defaults[key] ?? row.defaultValue }
     func isOn(_ key: String, _ row: Row) -> Bool { get(key, row) == "on" }
     func set(_ key: String, _ v: String) { store.set(v, for: key) }
-    func options(_ row: Row) -> [Choice] { _ = store.revision; return store.options(for: row.key) ?? row.choices }
-    var profileInfo: (name: String, letter: String) { _ = store.revision; return store.profile ?? ("Default", "D") }
-    var fontList: [(String, Bool)] { _ = store.revision; return store.fonts?.map { ($0.name, $0.mono) } ?? fontChoices }
-    var themeData: ThemeData { _ = store.revision; return store.themes ?? .standard }
+    func options(_ row: Row) -> [Choice] { store.choices[row.key] ?? row.choices }
+    var profileInfo: (name: String, letter: String) { store.profile.count == 2 ? (store.profile[0], store.profile[1]) : ("Default", "D") }
+    var fontList: [(String, Bool)] { store.fonts.map { ($0.name, $0.mono) } }
+    var themeData: ThemeData { store.themes ?? ThemeData() }
     func perform(_ action: String, _ key: String) { store.perform(action, for: key) }
-    var banner: [String: String]? { _ = store.revision; return store.banner }
-    var updateCard: [String: Any]? { _ = store.revision; return store.update }
-    func note(_ key: String) -> String? { _ = store.revision; return store.note(for: key) }
-    var recordingKey: String { _ = store.revision; return store.recording }
 
-    /// The rows of a group: the catalog's that apply, then the host's own (agents, projects, probes found on this Mac).
+    /// The rows of a group: the catalog's that apply, then the app's own (agents, projects, probes found on this Mac).
     func rows(_ page: Page, _ g: Int) -> [Row] {
-        _ = store.revision
         let group = "\(page.id):\(g)"
-        return page.groups[g].rows.filter { visible($0, in: page, group: g) && !(store.recordsInHost && $0.kind == .update && store.update == nil) } + store.list(for: group).compactMap { Row(entry: $0, group: group) }
+        return page.groups[g].rows.filter { visible($0, in: page, group: g) && !($0.kind == .update && store.update == nil) }
+            + (store.lists[group] ?? []).compactMap { Row(entry: $0, group: group) }
     }
-    func sheetDict(_ id: String) -> [String: Any]? { _ = store.revision; return store.sheet(for: id) }
-    func sheetData(_ id: String) -> ApprovalSheetData? {
-        _ = store.revision
-        return store.sheet(for: id).flatMap(ApprovalSheetData.init(entry:))
-    }
-    /// A plural message from the host (the count it was made for must be the one shown), else the English fallback.
-    func counted(_ name: String, _ count: Int, _ fallback: String) -> String { _ = store.revision; return store.counted(name, count) ?? fallback }
-    func isChanged(_ key: String) -> Bool { _ = store.revision; return store.changedKeys.contains(key) }
+    func sheetData(_ id: String) -> ApprovalSheetData? { store.sheets[id].map(ApprovalSheetData.init(entry:)) }
+    /// A plural message from the app (the count it was made for must be the one shown), else the English fallback.
+    func counted(_ name: String, _ count: Int, _ fallback: String) -> String { store.counted(name, count) ?? fallback }
+    func isChanged(_ key: String) -> Bool { store.changed.contains(key) }
 
     // Reading a setting by place, as the previews do.
     func str(_ page: String, _ g: Int, _ r: Int) -> String { value("\(page):\(g):\(r)") }
@@ -195,8 +179,7 @@ struct Words {
 
     /// Rows whose value differs from the default.
     var changed: [(Page, Row)] {
-        _ = store.revision
-        let keys = store.changedKeys
+        let keys = store.changed
         return catalog.pages.flatMap { p in p.groups.flatMap { $0.rows }.filter { $0.isSetting && keys.contains($0.key) }.map { (p, $0) } }
     }
 }

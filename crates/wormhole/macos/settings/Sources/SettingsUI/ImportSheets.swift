@@ -11,7 +11,7 @@ struct ImportReviewSheet: View {
     @Environment(\.dismiss) var dismiss
     @State private var ticked: Set<String>? = nil
 
-    var data: [String: Any] { m.sheetDict(row.sheet) ?? [:] }
+    var data: [String: Any] { m.store.sheets[row.sheet] ?? [:] }
     var rows: [[String: Any]] { data["rows"] as? [[String: Any]] ?? [] }
     var skipped: [[String]] { data["skipped"] as? [[String]] ?? [] }
     func word(_ key: String) -> String { data[key] as? String ?? "" }
@@ -67,7 +67,7 @@ struct CompareSheet: View {
     @Environment(SettingsModel.self) var m
     @Environment(\.dismiss) var dismiss
 
-    var data: [String: Any] { m.sheetDict(id) ?? [:] }
+    var data: [String: Any] { m.store.sheets[id] ?? [:] }
     var sections: [[String: Any]] { data["sections"] as? [[String: Any]] ?? [] }
 
     var body: some View {

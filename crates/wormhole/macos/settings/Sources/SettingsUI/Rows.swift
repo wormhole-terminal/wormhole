@@ -176,7 +176,7 @@ struct UpdateRow: View {
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
     var body: some View {
-        if let card = m.updateCard { hosted(card) } else { sample }
+        if let card = m.store.update { hosted(card) }
     }
 
     /// The real state, from the app.
@@ -203,18 +203,6 @@ struct UpdateRow: View {
                     Text(m.w(c["status"] as? String ?? ""))
                     if let hint = c["hint"] as? String, !hint.isEmpty { Text(hint).role(.body).foregroundStyle(.secondary) }
                 }
-            }
-        }
-    }
-
-    /// The design board's sample.
-    var sample: some View {
-        LabeledContent {
-            Btn("Check Now") { m.perform("check_now", "Updates:") }
-        } label: {
-            HStack(spacing: Space.s3) {
-                Circle().fill(Palette.green).frame(width: 28, height: 28).overlay(Image(systemName: "checkmark").foregroundStyle(.white))
-                VStack(alignment: .leading, spacing: 1) { Text(m.w("Wormhole is up to date.")); Text(m.w("Checked 4 minutes ago.")).role(.body).foregroundStyle(.secondary) }
             }
         }
     }

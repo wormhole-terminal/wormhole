@@ -1,17 +1,11 @@
 import SwiftUI
 import AppKit
 
-/// The Settings window's content. A host builds it with its own `SettingsStore` (and optionally catalog and words).
-public struct SettingsView: View {
-    @State private var model: SettingsModel
-    public init(store: any SettingsStore, catalog: SettingsCatalog = .standard, page: String = "Terminal") {
-        _model = State(initialValue: MainActor.assumeIsolated { SettingsModel(store: store, catalog: catalog, page: page) })
-    }
+/// The Settings window's content, over the model the host keeps (to move the page of a window that is already open).
+struct SettingsView: View {
+    @State var model: SettingsModel
 
-    /// A host that keeps the model itself (to move the page of a window that is already open).
-    init(model: SettingsModel) { _model = State(initialValue: model) }
-
-    public var body: some View {
+    var body: some View {
         Inner().environment(model).preferredColorScheme(model.colourScheme ?? (model.value("System:appearance") == "light" ? .light : .dark))
     }
 
@@ -44,7 +38,8 @@ struct SidebarView: View {
         List(selection: Binding(get: { m.search.isEmpty ? m.sel : nil }, set: { if let v = $0 { m.sel = v; m.search = "" } })) {
             profileRow.tag(Sel(page: "Profile"))
             if !m.changed.isEmpty || m.page == "Changed", let n = m.catalog.navItems["Changed"] { navRow(n, badge: m.changed.count).tag(Sel(page: "Changed")) }
-            ForEach(Array(m.catalog.navGroups.enumerated()), id: \.offset) { _, grp in
+            // A page this build doesn't show (Feature flags in a release, a Preview page whose flag is off) is left out.
+            ForEach(Array(m.catalog.navGroups.map { ($0.0, $0.1.filter { !m.store.hidden.contains($0) }) }.filter { !$0.1.isEmpty }.enumerated()), id: \.offset) { _, grp in
                 Section {
                     ForEach(grp.1, id: \.self) { id in
                         if let n = m.catalog.navItems[id] {

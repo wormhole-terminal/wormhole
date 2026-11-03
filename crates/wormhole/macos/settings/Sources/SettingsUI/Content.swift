@@ -18,7 +18,7 @@ struct ContentView: View {
                     Text(title).role(.title, weight: .semibold)
                     if m.search.isEmpty, m.catalog.page(m.page)?.badge == true { Chip(text: m.w("Preview"), fill: t.primary, ink: t.onPrimary) }
                 }.padding(.horizontal, side + Space.pageInset).padding(.top, Space.s2).padding(.bottom, Space.s1)
-                if let banner = m.banner { ConfigBanner(banner: banner).padding(.horizontal, side) }
+                if let banner = m.store.banner { ConfigBanner(banner: banner).padding(.horizontal, side) }
                 Group {
                     if !m.search.isEmpty { SearchResults() }
                     else if m.page == "Changed" { ChangedPage() }
@@ -29,8 +29,8 @@ struct ContentView: View {
             .background(Color(nsColor: .windowBackgroundColor))
             .animation(Nav.motion(reduceMotion), value: m.sel)
             .background(NavKeys())
-            .sheet(isPresented: Binding(get: { m.sheetDict("new-profile")?["open"] as? Bool ?? false }, set: { if !$0 { m.perform("new_profile_cancel", "Profile:") } })) { NewProfileSheet() }
-            .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { if m.sheetDict(m.infoSheet ?? "")?["kind"] as? String == "compare" { CompareSheet(id: m.infoSheet ?? "") } else { InfoSheet(id: m.infoSheet ?? "") } }
+            .sheet(isPresented: Binding(get: { m.store.sheets["new-profile"]?["open"] as? Bool ?? false }, set: { if !$0 { m.perform("new_profile_cancel", "Profile:") } })) { NewProfileSheet() }
+            .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { if m.store.sheets[m.infoSheet ?? ""]?["kind"] as? String == "compare" { CompareSheet(id: m.infoSheet ?? "") } else { InfoSheet(id: m.infoSheet ?? "") } }
           }
     }
 }
@@ -40,7 +40,7 @@ struct InfoSheet: View {
     let id: String
     @Environment(SettingsModel.self) var m
     @Environment(\.dismiss) var dismiss
-    var data: [String: Any] { m.sheetDict(id) ?? [:] }
+    var data: [String: Any] { m.store.sheets[id] ?? [:] }
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s3) {
             Text(data["title"] as? String ?? "").font(.headline)
@@ -69,7 +69,7 @@ struct PageView: View {
     @Environment(\.tok) var t
     var body: some View {
         Form {
-            if let n = page.notice, !m.store.quiet(page.id) {
+            if let n = page.notice, !m.store.quiet.contains(page.id) {
                 Section {
                     LabeledContent {
                         if !n.2.isEmpty { Btn(n.2) { m.perform(snakeID(n.2), "\(page.id):") } }
@@ -147,7 +147,7 @@ struct ChangedPage: View {
 
     /// The changed settings as `{ "key": "value" }`, sorted, for pasting into a bug report or another Mac.
     private func copyJSON(_ rows: [Row]) {
-        let pairs = Dictionary(rows.map { ($0.key, m.store.value(for: $0.key) ?? "") }, uniquingKeysWith: { a, _ in a })
+        let pairs = Dictionary(rows.map { ($0.key, m.store.values[$0.key] ?? "") }, uniquingKeysWith: { a, _ in a })
         guard let data = try? JSONSerialization.data(withJSONObject: pairs, options: [.prettyPrinted, .sortedKeys]),
               let text = String(data: data, encoding: .utf8) else { return }
         NSPasteboard.general.clearContents()

@@ -14,9 +14,11 @@ use super::open_settings;
 pub(crate) fn section(name: &str, cx: &mut App) {
     let (page, group) = name.split_once('/').map_or((name, None), |(page, group)| (page, Some(group)));
     let section = Section::ALL.into_iter().find(|s| format!("{s:?}").eq_ignore_ascii_case(page));
-    open_settings(section, cx);
-    if let (Some(section), Some(group)) = (section, group) {
-        native::show(Show { page: Some(format!("{section:?}/{group}")), ..Show::default() }, cx);
+    match (section, group) {
+        (Some(section), Some(group)) => {
+            native::show(Show { page: Some(format!("{section:?}/{group}")), ..Show::default() }, cx);
+        }
+        _ => open_settings(section, cx),
     }
 }
 
@@ -48,7 +50,7 @@ pub(crate) fn native_event(arg: &str, cx: &mut App) {
     native::event(arg.trim(), cx);
 }
 
-/// devctl `settings-shot` / `native-shot`: the window's content as a PNG at `path`; whether it was written.
+/// devctl `settings-shot`: the window's content as a PNG at `path`; whether it was written.
 pub(crate) fn shot(path: &Path) -> bool {
     crate::platform::native_settings::shot(&path.to_string_lossy())
 }

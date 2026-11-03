@@ -24,6 +24,7 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
     let window = window_look(s, store.system().opaque());
     let defaults = Settings::default();
     let values_now = Values::of(s);
+    let hidden = hidden(s);
 
     let (mut values, mut default_values, mut options) = (Map::new(), Map::new(), Map::new());
     let (mut changed, mut known) = (Vec::new(), Vec::new());
@@ -86,6 +87,7 @@ pub(super) fn build(separate: Option<bool>, cx: &mut App) -> Value {
         "changed": changed, "known": known, "themes": themes, "fonts": fonts(cx), "lists": lists, "sheets": sheets, "profile": lists::profile(cx),
         "recording": recording, "notes": notes, "preview": preview, "words": words::snapshot(),
         "update": system::update_card(cx), "quiet": system::quiet_notices(cx), "banner": system::banner(cx),
+        "hidden": hidden, "show": super::take_show(),
     })
 }
 
@@ -112,6 +114,15 @@ fn fonts(cx: &App) -> Value {
         }
     }
     Value::Array(names.into_iter().map(|n| json!([n, mono.is_some_and(|m| m.contains(&n))])).collect())
+}
+
+/// The pages this build doesn't show: Feature flags in a release, a Preview page while its flag is off.
+fn hidden(s: &Settings) -> Vec<String> {
+    settings_index::SectionId::ALL
+        .into_iter()
+        .filter(|page| !page.is_visible(s))
+        .map(|page| format!("{page:?}"))
+        .collect()
 }
 
 fn s_is_light(cx: &App) -> bool {

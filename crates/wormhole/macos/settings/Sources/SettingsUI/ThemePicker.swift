@@ -26,7 +26,7 @@ struct ThemePicker: View {
                 Spacer()
                 Btn("Import Theme…") { FilePanel.theme(m, m.themeRowKey) }; Btn("Theme Studio") { m.perform("theme_studio", m.themeRowKey) }
             }
-            if let failure = m.note(m.themeRowKey) { Text(failure).role(.caption).foregroundStyle(t.warning) }
+            if let failure = m.store.notes[m.themeRowKey] { Text(failure).role(.caption).foregroundStyle(t.warning) }
         }.padding(.vertical, Space.s1)
     }
 

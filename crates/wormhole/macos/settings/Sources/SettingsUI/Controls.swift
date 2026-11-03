@@ -73,17 +73,15 @@ struct FontControl: View {
     }
 }
 
-/// The shortcut recorder: click, press the keys, they show as key caps. Esc cancels, Delete clears. With a host
-/// the host decides what the keys mean (it refuses taken ones and says who has them); this only captures them.
+/// The shortcut recorder: click, press the keys, they show as key caps. Esc cancels, Delete clears. The app decides
+/// what the keys mean (it refuses taken ones and says who has them) and which row records; this only captures them.
 struct KeyControl: View {
     let row: Row
     @Environment(SettingsModel.self) var m
     @Environment(\.tok) var t
-    @State private var localRecording = false
     @State private var monitor: Any?
 
-    private var hosted: Bool { m.store.recordsInHost }
-    private var recording: Bool { hosted ? m.recordingKey == row.key : localRecording }
+    private var recording: Bool { m.store.recording == row.key }
 
     var body: some View {
         let cur = m.get(row.key, row)
@@ -93,13 +91,13 @@ struct KeyControl: View {
                 else if cur.isEmpty { Text(m.w("Record…")) }
                 else { HStack(spacing: 3) { ForEach(Array(Self.caps(cur).enumerated()), id: \.offset) { _, c in cap(c) } } }
             }.buttonStyle(.bordered)
-            if let note = m.note(row.key) {
+            if let note = m.store.notes[row.key] {
                 Text(note).role(.caption).foregroundStyle(.orange).multilineTextAlignment(.trailing)
             }
         }
         .onChange(of: recording) { _, on in on ? listen() : unlisten() }
         .onAppear { if recording { listen() } }
-        .onDisappear { unlisten(); if hosted && recording { m.store.record("stop", for: row.key, mods: "", key: "") } }
+        .onDisappear { unlisten(); if recording { m.store.record("stop", for: row.key) } }
     }
 
     func cap(_ s: String) -> some View {
@@ -113,32 +111,17 @@ struct KeyControl: View {
         return out
     }
 
-    func toggle() {
-        if hosted { m.store.record(recording ? "stop" : "start", for: row.key, mods: "", key: "") }
-        else { localRecording.toggle() }
-    }
+    func toggle() { m.store.record(recording ? "stop" : "start", for: row.key) }
 
     /// Capture keys while recording; every key is swallowed so none reaches the window.
     func listen() {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { e in
-            if hosted { m.store.record("key", for: row.key, mods: Self.mods(e.modifierFlags), key: Self.name(e)) }
-            else { local(e) }
+            m.store.record("key", for: row.key, mods: Self.mods(e.modifierFlags), key: Self.name(e))
             return nil
         }
     }
     func unlisten() { if let monitor { NSEvent.removeMonitor(monitor) }; monitor = nil }
-
-    /// Without a host (the design board): the old local behaviour.
-    func local(_ e: NSEvent) {
-        if e.keyCode == 53 { localRecording = false; return }
-        if e.keyCode == 51 { m.set(row.key, ""); localRecording = false; return }
-        let f = e.modifierFlags
-        guard f.contains(.command) || f.contains(.control) || f.contains(.option) else { return }
-        let mods = (f.contains(.control) ? "⌃" : "") + (f.contains(.option) ? "⌥" : "") + (f.contains(.shift) ? "⇧" : "") + (f.contains(.command) ? "⌘" : "")
-        let key = e.keyCode == 49 ? "Space" : (e.charactersIgnoringModifiers ?? "").uppercased()
-        m.set(row.key, mods + key); localRecording = false
-    }
 
     static func mods(_ f: NSEvent.ModifierFlags) -> String {
         [(f.contains(.control), "ctrl"), (f.contains(.option), "alt"), (f.contains(.shift), "shift"), (f.contains(.command), "cmd")]

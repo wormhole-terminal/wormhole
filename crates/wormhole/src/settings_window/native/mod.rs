@@ -62,6 +62,8 @@ thread_local! {
     /// What the window said, until the executor gets to it.
     static EVENTS: RefCell<VecDeque<String>> = const { RefCell::new(VecDeque::new()) };
     static ASYNC: RefCell<Option<AsyncApp>> = const { RefCell::new(None) };
+    /// Where the next snapshot sends the window (`show`), once.
+    static SHOW: RefCell<serde_json::Value> = const { RefCell::new(serde_json::Value::Null) };
 }
 
 /// Show the window (on `section`, else where it was), and keep it current while it is open.
@@ -149,6 +151,16 @@ pub(super) fn push(cx: &mut App) {
     platform::update(&snapshot.to_string());
 }
 
+/// The window closed: a recording ends, and a reopened window shows neither the sheet nor the import's failure.
+fn closed(cx: &mut App) {
+    recorder::stop(cx);
+    if cx.has_global::<Native>() {
+        let native = cx.global_mut::<Native>();
+        native.new_profile = None;
+        native.import_failure = None;
+    }
+}
+
 pub(super) fn set_separate(separate: bool, cx: &mut App) {
     if cx.has_global::<Native>() {
         cx.global_mut::<Native>().separate = Some(separate);
@@ -196,15 +208,16 @@ pub(super) struct Show {
     pub search: Option<String>,
 }
 
-/// Show the window and make it go where `show` says (the palette's setting, devctl).
+/// Show the window and make it go where `show` says (the palette's setting, devctl): the snapshot `open` pushes
+/// carries it.
 pub(super) fn show(show: Show, cx: &mut App) {
+    let show = serde_json::json!({ "page": show.page, "scroll": show.scroll, "search": show.search });
+    SHOW.with(|slot| *slot.borrow_mut() = show);
     open(None, cx);
-    if !platform::is_open() {
-        return;
-    }
-    let mut snapshot = snapshot::build(cx.try_global::<Native>().and_then(|n| n.separate), cx);
-    snapshot["show"] = serde_json::json!({ "page": show.page, "scroll": show.scroll, "search": show.search });
-    platform::update(&snapshot.to_string());
+}
+
+fn take_show() -> serde_json::Value {
+    SHOW.with(|slot| slot.take())
 }
 
 /// The row of the window that stands for the setting `id`, if the window has one.

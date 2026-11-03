@@ -7,7 +7,7 @@ struct NewProfileSheet: View {
     @State private var name = ""
     @State private var from: String?
     @FocusState private var focused: Bool
-    var data: [String: Any] { m.sheetDict("new-profile") ?? [:] }
+    var data: [String: Any] { m.store.sheets["new-profile"] ?? [:] }
     var options: [[String]] { data["options"] as? [[String]] ?? [] }
 
     var body: some View {

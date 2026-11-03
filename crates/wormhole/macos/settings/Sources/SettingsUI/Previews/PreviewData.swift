@@ -1,14 +1,14 @@
 import SwiftUI
 import AppKit
 
-/// What the previews draw from when a host has real values: the terminal's fonts, the themes in effect for dark and
-/// light, and the accent. Without a host the previews use the catalog's samples.
-public struct PreviewData {
-    public struct Side { public var palette: [UInt32]?; public var accent: UInt32? }
-    public var fonts: [String: (family: String, size: Double)] = [:]
-    public var lineHeight = 1.3
-    public var ligatures = true
-    public var dark = Side(), light = Side()
+/// What the previews draw from: the terminal's fonts, the themes in effect for dark and light, and the accent.
+struct PreviewData: Equatable {
+    struct Side: Equatable { var palette: [UInt32]?; var accent: UInt32? }
+    struct Face: Equatable { var family: String; var size: Double }
+    var fonts: [String: Face] = [:]
+    var lineHeight = 1.3
+    var ligatures = true
+    var dark = Side(), light = Side()
 
     init?(json: [String: Any]) {
         func side(_ k: String) -> Side {
@@ -17,7 +17,7 @@ public struct PreviewData {
             return Side(palette: (p?.count ?? 0) >= 7 ? p : nil, accent: (d["accent"] as? Int).map { UInt32($0) })
         }
         guard let f = json["fonts"] as? [String: [Any]] else { return nil }
-        for (slot, v) in f { if let n = v.first as? String, let s = (v.last as? NSNumber)?.doubleValue { fonts[slot] = (n, s) } }
+        for (slot, v) in f { if let n = v.first as? String, let s = (v.last as? NSNumber)?.doubleValue { fonts[slot] = Face(family: n, size: s) } }
         lineHeight = (json["line_height"] as? NSNumber)?.doubleValue ?? 1.3
         ligatures = json["ligatures"] as? Bool ?? true
         dark = side("dark"); light = side("light")
@@ -26,7 +26,7 @@ public struct PreviewData {
 }
 
 extension SettingsModel {
-    var preview: PreviewData? { _ = store.revision; return store.preview }
+    var preview: PreviewData? { store.preview }
     /// The terminal's own face, as the app resolved it.
     func terminalFont(_ size: CGFloat) -> Font {
         specimenFont(preview?.fonts["terminal"]?.family ?? "JetBrains Mono", size: size)

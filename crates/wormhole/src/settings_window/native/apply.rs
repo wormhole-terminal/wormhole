@@ -25,7 +25,7 @@ pub(super) fn event(text: &str, cx: &mut App) {
             "stop" => recorder::stop(cx),
             _ => recorder::key(&field("m"), &field("n"), cx),
         },
-        "closed" => recorder::stop(cx),
+        "closed" => super::closed(cx),
         other => tracing::warn!("native settings: unknown event {other}"),
     }
     // The window shows what the person set at once; this puts back what the app made of it.

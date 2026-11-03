@@ -4,9 +4,7 @@ import SwiftUI
 
 /// 4-pt spacing grid.
 enum Space {
-    static let s1: CGFloat = 4, s2: CGFloat = 8, s3: CGFloat = 12, s4: CGFloat = 16, s6: CGFloat = 24, s8: CGFloat = 32
-    /// A row's inner gutter and its two heights.
-    static let rowInset: CGFloat = 14, rowHeight: CGFloat = 40, tileRowHeight: CGFloat = 56
+    static let s1: CGFloat = 4, s2: CGFloat = 8, s3: CGFloat = 12, s4: CGFloat = 16
     static let sidebarWidth: CGFloat = 240, contentWidth: CGFloat = 600, pageInset: CGFloat = 30
 }
 
@@ -55,11 +53,8 @@ struct Tok {
     var buttonHover: Color { c(0x2b3640, 0xdee1e4) }
     var input: Color { c(0x060f17, 0xfdfdfe) }
     var border: Color { dark ? Color(hex: 0xe3ebf2).opacity(0.12) : Color(hex: 0x13202d).opacity(0.14) }
-    var hover: Color { dark ? Color(hex: 0xe3ebf2).opacity(0.08) : Color(hex: 0x13202d).opacity(0.08) }
-    var danger: Color { c(0xff5f6d, 0xbd1735) }
     var warning: Color { c(0xffc857, 0x805900) }
     var removed: Color { c(0xff5f6d, 0xbd1735) }
-    var shadow: Color { dark ? .black.opacity(0.5) : .black.opacity(0.16) }
 }
 
 /// Status colours that are the same in both themes.
