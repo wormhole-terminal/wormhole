@@ -43,6 +43,11 @@ fn load(profile: &ProfileId, cx: &App) -> ProjectHub {
     hub
 }
 
+/// Whether the feature has made its hubs (a window that lists projects asks before it reads one).
+pub(crate) fn present(cx: &App) -> bool {
+    cx.has_global::<Hubs>()
+}
+
 /// The shown profile's hub: what Settings, the status item and the tests read. A window reads
 /// [`hub_of`].
 pub(crate) fn hub(cx: &App) -> &ProjectHub {

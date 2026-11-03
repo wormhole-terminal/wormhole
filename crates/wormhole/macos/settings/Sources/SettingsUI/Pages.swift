@@ -207,15 +207,9 @@ let standardPages: [Page] = [
     ]),
   ], badge: true),
   Page(id: "Projects", title: "Project folders", preview: "", notice: nil, footer: "A project’s own choice is only for you: nothing is written into the project folder.", footerButtons: [], groups: [
-    SettingGroup(title: "Trusted projects", rows: [
+    SettingGroup(title: "Projects", rows: [
     ]),
     SettingGroup(title: "Use from projects", rows: [
-      Row("For", "", .popup, options: ["All projects (defaults)", "-", "api", "wormhole", "website"], value: "", info: ""),
-      Row("Settings", "", .toggle, options: [], value: "on", info: ""),
-      Row("Theme", "", .toggle, options: [], value: "on", info: ""),
-      Row("Actions", "", .toggle, options: [], value: "off", info: ""),
-      Row("Layout", "", .toggle, options: [], value: "on", info: ""),
-      Row("Shared notes", "", .toggle, options: [], value: "on", info: ""),
     ]),
   ], badge: true),
   Page(id: "Extensions", title: "Extensions", preview: "", notice: nil, footer: "Probes live in the Probes folder, one folder each with a probe.toml.", footerButtons: ["Show in Finder", "Scan Again"], groups: [

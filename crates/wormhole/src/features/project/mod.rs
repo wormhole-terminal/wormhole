@@ -55,7 +55,7 @@ pub(crate) use hub::{LoadedProject, ProjectHub, load_project};
 #[cfg(test)]
 pub(crate) use hubs::hub_mut;
 use hubs::profiles;
-pub(crate) use hubs::{hub, hub_of, hub_of_mut, shown_profile};
+pub(crate) use hubs::{hub, hub_of, hub_of_mut, present, shown_profile};
 pub(crate) use projects::{known_projects, load_project_info, prune_projects};
 use projects::{load_projects, projects_changed, reload_projects};
 pub(crate) use trust::{approve_project, revoke_project, set_feature_default, set_feature_for};

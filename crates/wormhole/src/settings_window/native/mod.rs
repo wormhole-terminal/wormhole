@@ -32,8 +32,8 @@ use crate::settings::{SettingsStore, settings};
 struct Native {
     /// The pairing the person chose in Appearance; until chosen it follows whether the picks are a pair.
     separate: Option<bool>,
-    /// What the Agents page reads from disk, loaded in the background.
-    agents: lists::AgentsCache,
+    /// What the lists read from disk (agents, projects).
+    lists: lists::Cache,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -58,7 +58,7 @@ pub(super) fn open(section: Option<Section>, cx: &mut App) {
             vec![cx.observe_global::<SettingsStore>(push), cx.observe_global::<FontCatalog>(push)];
         cx.set_global(Native {
             separate: None,
-            agents: lists::AgentsCache::default(),
+            lists: lists::Cache::default(),
             _subscriptions: subscriptions,
         });
     }

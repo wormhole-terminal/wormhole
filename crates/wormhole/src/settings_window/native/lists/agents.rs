@@ -18,10 +18,6 @@ use crate::agent_access::{self, Approved, How};
 use crate::app_state::app;
 use crate::settings_window::sections::AgentsSnapshot;
 
-/// What the Agents page reads from disk: a few hundred `stat`s, so read in the background and kept here.
-#[derive(Default)]
-pub(crate) struct AgentsCache(pub(in crate::settings_window::native) Option<AgentsSnapshot>);
-
 const GROUP_AGENTS: &str = "Agents:0";
 const GROUP_ACCESS: &str = "Agents:2";
 const GROUP_SKILLS: &str = "Agents:3";
@@ -50,8 +46,7 @@ fn tiled(entry: Entry, agent: &Agent) -> Entry {
 }
 
 pub(super) fn lists(out: &mut Map<String, Value>, cx: &mut App) {
-    let snapshot =
-        cx.try_global::<crate::settings_window::native::Native>().and_then(|n| n.agents.0.as_ref());
+    let snapshot = super::cache(cx).and_then(|cache| cache.agents.as_ref());
     let (mut agents_list, mut skills_list) = (Vec::new(), Vec::new());
     if let Some(snapshot) = snapshot {
         let home = snapshot.home().to_path_buf();
@@ -220,8 +215,7 @@ pub(super) fn load(cx: &mut App) {
             .await;
         cx.update(|cx| {
             if cx.has_global::<crate::settings_window::native::Native>() {
-                cx.global_mut::<crate::settings_window::native::Native>().agents =
-                    AgentsCache(Some(snapshot));
+                super::cache_mut(cx).agents = Some(snapshot);
                 crate::settings_window::native::push(cx);
             }
         })
@@ -230,7 +224,11 @@ pub(super) fn load(cx: &mut App) {
 }
 
 pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
-    let Some((group, id)) = key.rsplit_once(':') else { return false };
+    let mut parts = key.splitn(3, ':');
+    let (Some(page), Some(group), Some(id)) = (parts.next(), parts.next(), parts.next()) else {
+        return false;
+    };
+    let group = &key[..page.len() + 1 + group.len()];
     match group {
         GROUP_AGENTS => {
             hooks(id, name, cx);

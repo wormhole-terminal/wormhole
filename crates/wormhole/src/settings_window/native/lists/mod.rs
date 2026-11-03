@@ -5,11 +5,31 @@
 //! which the module of the list carries out through the code the GPUI window uses.
 
 mod agents;
+mod projects;
+
+use std::path::PathBuf;
 
 use gpui_kit::App;
 use serde_json::{Map, Value, json};
 
-pub(super) use agents::AgentsCache;
+use crate::settings_window::sections::AgentsSnapshot;
+
+/// What the lists read from disk, kept between snapshots: reading it is slow, and nothing changes it but the
+/// window's own buttons, which read it again.
+#[derive(Default)]
+pub(crate) struct Cache {
+    agents: Option<AgentsSnapshot>,
+    /// Projects worth offering (`project::known_projects`: file checks).
+    projects: Vec<PathBuf>,
+}
+
+fn cache(cx: &App) -> Option<&Cache> {
+    cx.try_global::<super::Native>().map(|native| &native.lists)
+}
+
+fn cache_mut(cx: &mut App) -> &mut Cache {
+    &mut cx.global_mut::<super::Native>().lists
+}
 
 /// One entry of a list, built up field by field.
 pub(super) struct Entry(Map<String, Value>);
@@ -38,16 +58,18 @@ pub(super) fn build(cx: &mut App) -> (Value, Value) {
     let mut lists = Map::new();
     let sheets = Map::new();
     agents::lists(&mut lists, cx);
+    projects::lists(&mut lists, cx);
     (json!(lists), json!(sheets))
 }
 
 /// Carry out a button of a listed row. Whether the row was one of the lists'.
 pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
-    agents::perform(key, name, cx)
+    agents::perform(key, name, cx) || projects::perform(key, name, cx)
 }
 
 /// Read what the lists need from disk or the database, in the background where it is slow; the window is
 /// pushed a snapshot when it arrives.
 pub(super) fn load(cx: &mut App) {
     agents::load(cx);
+    projects::load(cx);
 }

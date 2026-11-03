@@ -23,7 +23,7 @@ struct SwitchControl: View {
     let key: String; let row: Row; var disabled = false
     @Environment(SettingsModel.self) var m
     var body: some View {
-        Toggle(row.label, isOn: Binding(get: { m.isOn(key, row) }, set: { m.set(key, $0 ? "on" : "off") })).labelsHidden().toggleStyle(.switch).disabled(disabled)
+        Toggle(row.label, isOn: Binding(get: { row.listed ? row.value == "on" : m.isOn(key, row) }, set: { on in if row.listed { m.perform(on ? "on" : "off", key) } else { m.set(key, on ? "on" : "off") } })).labelsHidden().toggleStyle(.switch).disabled(disabled)
     }
 }
 
