@@ -27,7 +27,7 @@ impl PageTitleProps {
             .child(div()
                 .m(px(0.0))
                 .text_size(rems(1.375))
-                .line_height(rems(1.75))
+                .line_height(rems(1.625))
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_color(t_text_primary)
                 .child(title.clone()))

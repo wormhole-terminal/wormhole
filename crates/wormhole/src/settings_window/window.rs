@@ -23,12 +23,11 @@ use crate::settings::SettingsStore;
 use crate::settings::{UiColors, settings};
 use crate::style::TitleDrag as _;
 use crate::style::{self, TextRole};
-use crate::ui::{Look, PageTitleProps};
+use crate::ui::{Look, PageTitleProps, SettingsPageProps, SettingsShellProps};
 
 use super::open::REVEAL_INSET;
 use super::{
-    COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, PAGE_GAP, PAGE_TITLE_H, PAGE_TOP, Section, SettingsWindow,
-    sections, ui,
+    FrontWindow, INTRO_W, NO_RESULTS_W, PAGE_GAP, PAGE_TITLE_H, Section, SettingsWindow, sections, ui,
 };
 
 impl SettingsWindow {
@@ -344,31 +343,24 @@ impl Render for SettingsWindow {
         };
         self.scroll_to_revealed(window, cx);
         self.scroll_to_group(window, cx);
-        let content = div()
+        let column = div()
+            .flex()
+            .flex_col()
+            .gap(px(PAGE_GAP))
+            .child(self.render_header(&query, hits, ui, cx))
+            .children(self.render_problems(ui, cx))
+            .child(body);
+        let nav = self.render_nav(&query, changed, surfaces.panel, cx);
+        let look = Look::of(cx);
+        // Each region paints its own surface: stacked translucent layers would make the nav less
+        // see-through than the main window's.
+        let page = div()
             .id("settings-content")
-            // Each region paints its own surface: stacked translucent layers
-            // would make the nav less see-through than the main window's.
+            .size_full()
             .bg(surfaces.background)
-            .flex_1()
-            .min_w_0()
-            .h_full()
             .overflow_y_scroll()
             .track_scroll(&self.content_scroll)
-            .px_8()
-            .pb_8()
-            .pt(px(PAGE_TOP))
-            .child(
-                div()
-                    .w_full()
-                    .max_w(px(COLUMN_W))
-                    .mx_auto()
-                    .flex()
-                    .flex_col()
-                    .gap(px(PAGE_GAP))
-                    .child(self.render_header(&query, hits, ui, cx))
-                    .children(self.render_problems(ui, cx))
-                    .child(body),
-            );
+            .child(SettingsPageProps { content: column.into_any_element() }.render(&look));
 
         div()
             .id("settings-window")
@@ -396,13 +388,11 @@ impl Render for SettingsWindow {
             }))
             .size_full()
             .relative()
-            .flex()
             .text_color(ui.text)
             // Drag the window by its top strip (the title bar is transparent); first, so it is
             // behind what is drawn over it (`style::TitleDrag`).
             .child(div().absolute().top_0().left_0().right_0().h(px(style::TITLE_ROW_H)).title_drag())
-            .child(self.render_nav(&query, changed, surfaces.panel, cx))
-            .child(content)
+            .child(SettingsShellProps { nav, page: page.into_any_element() }.render(&look))
             .children(self.render_new_profile(cx))
             .children(self.render_probe_sheet(window, cx))
             .children(self.render_import_sheet(window, cx))

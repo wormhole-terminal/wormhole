@@ -32,9 +32,6 @@ use std::rc::Rc;
 
 use crate::ui::{Look, SettingsNavProps, SidebarProfileProps};
 
-/// The nav's width.
-pub(super) const NAV_W: f32 = 240.0;
-
 /// The space between the profile card and the first run of rows.
 const PROFILE_GAP: f32 = 16.0;
 
@@ -116,13 +113,10 @@ impl SettingsWindow {
             .id("settings-nav")
             .flex()
             .flex_col()
-            .w(px(NAV_W))
-            .flex_none()
-            .h_full()
+            .size_full()
             // The design's nav: 44 down, under the traffic lights.
             .pt(px(44.0))
             .bg(fill)
-            .rule_right(ui)
             .child(
                 // The design's field: 28 high, the input's own shade, a ring only with Borders on.
                 div().flex_none().px(px(LIST_INSET)).pb(px(PROFILE_GAP)).child(

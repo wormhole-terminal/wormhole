@@ -389,9 +389,7 @@ impl Cards<'_> {
                 self.switch("hn-3c", false, false, Force::None),
             )
         };
-        let card = self
-            .card()
-            .children([hinted, info, warned].map(|row| Self::lifted(row.render(&look))));
+        let card = self.card().children([hinted, info, warned].map(|row| Self::lifted(row.render(&look))));
         self.section("Hint, (i) and a warning under a row", card)
     }
 

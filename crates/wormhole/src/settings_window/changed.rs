@@ -27,6 +27,7 @@ use crate::dialog::{self, DestructiveQuestion};
 use crate::platform::clipboard;
 use crate::settings::{Settings, SettingsStore, UiColors, settings, update_settings};
 use crate::style::{self, RowTile, TileRowParts};
+use crate::ui::{Look, SettingsGroupProps};
 
 /// How long Copy as JSON says Copied.
 const COPIED_FOR: Duration = Duration::from_millis(1500);
@@ -43,7 +44,8 @@ impl SettingsWindow {
         let page = PageState::new(&self.front, cx);
         let ui = page.ui;
         let rows = page.values.changed_rows(settings(cx));
-        let mut column = div().flex().flex_col().gap_6().child(self.changed_summary(ui, rows.len(), cx));
+        let mut column =
+            div().flex().flex_col().gap(px(super::PAGE_GAP)).child(self.changed_summary(ui, rows.len(), cx));
         let mut start = 0;
         while start < rows.len() {
             let section = rows[start].section;
@@ -63,11 +65,12 @@ impl SettingsWindow {
                 }
             }
             column = column.child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .child(style::setting_group_head(ui, section.title()))
-                    .child(style::group_card(ui, list)),
+                SettingsGroupProps {
+                    id: ("changed-group", start).into(),
+                    title: Some(section.title().into()),
+                    body: style::group_card(ui, list).into_any_element(),
+                }
+                .render(&Look::of(cx)),
             );
             start = end;
         }

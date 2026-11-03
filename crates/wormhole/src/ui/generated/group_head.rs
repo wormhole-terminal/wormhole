@@ -21,7 +21,7 @@ impl GroupHeadProps {
             .m(px(0.0))
             .py(px(0.0)).pl(px(4.0)).pr(px(0.0))
             .text_size(rems(0.8125))
-            .line_height(rems(1.0))
+            .line_height(rems(0.9375))
             .font_weight(FontWeight::SEMIBOLD)
             .text_color(t_text_muted)
             .child(title.clone())

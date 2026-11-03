@@ -31,6 +31,7 @@ use crate::select::{self, MenuOptions};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::style::{self, RowKeys, SettingParts, SettingState, TextRole};
+use crate::ui::{Look, SettingsGroupProps};
 
 /// The widest the summary of a block's value grows on the Changed page before it is cut.
 const SUMMARY_MAX_W: f32 = 240.0;
@@ -248,11 +249,6 @@ impl Setting {
     pub(super) const fn present(self, present: fn(&App) -> bool) -> Self {
         Self { present: Some(present), ..self }
     }
-
-    /// A control of more than one line: the label sits beside its first line.
-    pub(super) const fn tall(self) -> Self {
-        Self { tall: true, ..self }
-    }
 }
 
 /// A switch for a `bool` field of the settings.
@@ -403,16 +399,7 @@ impl SettingsWindow {
             .children(super::zen_note::draw(section, cx))
             .children(super::sections::page_notice(section, cx));
         for (at, group) in section.groups().iter().enumerate() {
-            // Each group is where its sub-row in the nav scrolls to: only the picked one carries the anchor.
-            let mut rows = div()
-                .id(("settings-group", at))
-                .flex()
-                .flex_col()
-                .gap_2()
-                .anchor_scroll(self.group.anchor_of(at));
-            if !group.title().is_empty() {
-                rows = rows.child(style::setting_group_head(page.ui, group.title()));
-            }
+            let mut body: Vec<AnyElement> = Vec::new();
             // The rows of a group share one card; a block that stands on its own (a preview, a notice) is
             // drawn as it is and closes the card, so the rows after it start another.
             let mut card: Vec<AnyElement> = Vec::new();
@@ -426,9 +413,9 @@ impl SettingsWindow {
                 let element = self.render_entry(entry, setting, &page, hits.get(entry.id), None, cx);
                 if !setting.control.in_card() {
                     if !card.is_empty() {
-                        rows = rows.child(style::group_card(page.ui, std::mem::take(&mut card)));
+                        body.push(style::group_card(page.ui, std::mem::take(&mut card)).into_any_element());
                     }
-                    rows = rows.child(element);
+                    body.push(element);
                     continue;
                 }
                 card.push(element);
@@ -441,16 +428,18 @@ impl SettingsWindow {
                 continue;
             }
             if !card.is_empty() {
-                rows = rows.child(style::group_card(page.ui, card));
+                body.push(style::group_card(page.ui, card).into_any_element());
             }
-            // The group its sub-row in the nav picked is where the page scrolls to; it alone has an anchor
-            // (and so an id), which costs the others nothing.
-            column = column.child(match self.group.anchor_of(at) {
-                Some(anchor) => {
-                    rows.id(("settings-group", at)).anchor_scroll(Some(anchor)).into_any_element()
+            // Each group is where its sub-row in the nav scrolls to: only the picked one carries the anchor.
+            column = column.child(
+                SettingsGroupProps {
+                    id: ("settings-group", at).into(),
+                    title: Some(group.title()).filter(|title| !title.is_empty()).map(Into::into),
+                    body: div().flex().flex_col().gap_2().children(body).into_any_element(),
                 }
-                None => rows.into_any_element(),
-            });
+                .render(&Look::of(cx))
+                .anchor_scroll(self.group.anchor_of(at)),
+            );
         }
         column.children(self.page_footer(cx)).into_any_element()
     }
@@ -663,7 +652,8 @@ impl SettingsWindow {
                     rows.push(self.render_entry(hit.entry, setting, &page, Some(hit), None, cx));
                 }
             }
-            column = column.child(div().flex().flex_col().child(head).child(style::group_card(ui, rows)));
+            column =
+                column.child(div().flex().flex_col().gap_2().child(head).child(style::group_card(ui, rows)));
             start = end;
         }
         column.into_any_element()

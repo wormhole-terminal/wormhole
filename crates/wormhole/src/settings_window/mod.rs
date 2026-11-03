@@ -69,17 +69,10 @@ pub(crate) use open::{open_settings, reveal_row};
 pub(crate) use sections::open_new_profile_sheet;
 pub(crate) use wormhole_core::config::settings_index::SectionId as Section;
 
-/// Where a page's title row starts: under the traffic lights, which the nav runs beneath like
-/// System Settings.
-/// The design's page: the title's row starts 44 down (under the traffic lights) and is 26 high, and the
-/// page's blocks stand 22 apart.
-const PAGE_TOP: f32 = 44.0;
+/// The design's page (`ui/settings_page.dc.html`): the title's row is 26 high and the page's blocks stand 22
+/// apart.
 const PAGE_TITLE_H: f32 = 26.0;
 const PAGE_GAP: f32 = 22.0;
-/// The content column: the widest a page grows, with or without a preview, so a row's name and its
-/// control stay close enough to read as one line in a wide window. The column is centred in the room
-/// left over.
-const COLUMN_W: f32 = 680.0;
 /// A page's intro line wraps at a readable length, not across the whole column.
 const INTRO_W: f32 = 560.0;
 /// The card that says nothing matched.
