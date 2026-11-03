@@ -1,7 +1,7 @@
 //! The shortcut recorders of the native window (the global hotkey, the jump to the next waiting terminal). The
 //! window captures the key press (AppKit's event monitor) and sends it as an event; what it means is decided here
-//! by the code the GPUI recorder uses (`shortcut_record`, the row's `accepts`, the key table's conflicts), so both
-//! windows accept and refuse the same keys. The state lives here, not in the window: the snapshot says which row
+//! by the app's own rules (`shortcut_record`, the row's `accepts`, the key table's conflicts). The state lives
+//! here, not in the window: the snapshot says which row
 //! records (the window then listens for keys) and carries the warning of a row (keys taken, a hotkey that did not
 //! register).
 

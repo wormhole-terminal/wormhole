@@ -1,5 +1,5 @@
 //! Extensions: the Probes in the Probes folder with their states, and the approval sheet's data. The reads
-//! are the GPUI page's (`probe::approval::list` and `read_one`, in the background), and an approval goes the
+//! are `probe::approval::list` and `read_one`, in the background, and an approval goes the
 //! way its sheet's does: the grants the sheet opened with, a click or Touch ID by what they need, then
 //! `approval::approve` of exactly the bytes that were read for the sheet.
 

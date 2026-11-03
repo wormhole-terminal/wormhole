@@ -1,5 +1,5 @@
 //! The themes the native window picks from: the catalog (built-in and the profile's themes folder), kept while the
-//! folder is unchanged, as the GPUI picker keeps it.
+//! folder is unchanged.
 
 use std::rc::Rc;
 

@@ -1,4 +1,4 @@
-//! Import: the terminals found on this Mac, each with a button that brings over what the GPUI page ticks to
+//! Import: the terminals found on this Mac, each with a button that brings over what is ticked to
 //! start with (the rows `default_on` says; a shell command is never among them) after a question that lists it.
 //! The scan reads the real home, so it runs in the background when the window opens and never at launch.
 

@@ -41,7 +41,7 @@ const GROUP_DEFAULTS: &str = "Projects:1"; // text: not shown (a key or page id 
 /// The id of the "For" row (no feature is called that).
 const FOR: &str = "for";
 
-/// The most projects listed; the picker of the GPUI page is a search, a list here is not.
+/// The most projects listed: a list is not a search.
 const MOST: usize = 40;
 
 /// The project "For" shows, with its files as read when it was chosen (reading them is file I/O, so it is kept until
@@ -114,7 +114,7 @@ fn for_entry(cx: &App) -> Value {
 
 fn feature_entries(root: &Path, cx: &App) -> Vec<Value> {
     let Some(info) = super::cache(cx).and_then(|cache| cache.selected.info.as_ref()) else {
-        // A folder that is no project (or is gone): say so, as the GPUI page does.
+        // A folder that is no project (or is gone): say so.
         return vec![
             Entry::new("missing", "value", &settings_projects_missing_folder(&root.display().to_string()))
                 .into_value(),

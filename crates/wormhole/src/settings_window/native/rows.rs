@@ -1,6 +1,6 @@
 //! Which setting each row of the native window is. The window's catalog (`macos/settings/.../Pages.swift`) keys a
-//! row `"<page>:<group>:<row>"`; this table says which entry of the settings index (the id the GPUI window and the
-//! palette use) it stands for. A row not listed is not wired: the window shows it and keeps what is set in it
+//! row `"<page>:<group>:<row>"`; this table says which entry of the settings index (the id the palette uses) it
+//! stands for. A row not listed is not wired: the window shows it and keeps what is set in it
 //! until it closes, but nothing is written. The table is `rows.txt`, read once.
 
 use std::sync::LazyLock;

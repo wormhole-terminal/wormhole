@@ -1,5 +1,5 @@
 //! Coding agents: the agents on this Mac with their hooks, "Other agents", the programs let in, the skills.
-//! The reads are the GPUI page's (`sections::AgentsSnapshot`), the writes the integrations' own.
+//! The reads are `agents_read::AgentsSnapshot`'s, the writes the integrations' own.
 
 use std::path::Path;
 

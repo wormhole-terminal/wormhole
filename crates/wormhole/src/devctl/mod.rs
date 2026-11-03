@@ -256,7 +256,6 @@
 //!   native-set <row key> <value>   what the Settings window sends when a row changes (a menu's value is its option id, e.g. `Terminal:0:0 n100000`)
 //!   native-event <json>   any event the Settings window sends (`{"t":"action","k":"Updates:","v":"check_now"}`)
 //!   native-look   the Settings window's own look as AppKit holds it (opaque, alpha, blur and glass layers)
-//!   native-shot <file.png>   the Settings window's content as a PNG at that path
 //!   settings-search [text]   type into the Settings window's search (empty clears it)
 //!   settings-reveal <id>   open the Settings window at that row, scrolled to it (what the palette does for a setting)
 //!   profile-sheet   the New profile sheet over the Settings window (shot it with settings-shot next batch)

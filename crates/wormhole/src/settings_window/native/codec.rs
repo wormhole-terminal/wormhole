@@ -1,9 +1,9 @@
-//! How a setting becomes the text the native window shows and back. A switch is `on` or `off`; a menu is the words
-//! of its current option (the options themselves go with it, in the app's language); a font is its family.
-//! Anything else a row keeps is a sub-value with a suffix (`#size`, the name of a checkbox).
+//! How a setting becomes the text the native window shows and back. A switch is `on` or `off`; a menu is the id
+//! of its current option (the options go with it, each an id and its words in the app's language); a font is its
+//! family. Anything else a row keeps is a sub-value with a suffix (`#size`, the name of a checkbox).
 //!
-//! Most rows are read from the GPUI window's own controls (`registry`), so there is one definition of what a
-//! setting is and how it is changed; the few the registry draws by hand are here.
+//! Most rows are read and written through `controls`, one definition of what a setting is and how it is changed;
+//! the few that are more than a switch or a menu are here.
 
 use wormhole_core::config::Settings;
 use wormhole_core::theme::catalog::ThemeEntry;
@@ -155,11 +155,11 @@ pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<Choice>> {
     Some(choices)
 }
 
-/// Write `value` into the row `id` (`suffix` names a sub-value). Whether it was understood.
 /// The two checkboxes of the translucent row, by the names the window gives them.
 const SETTINGS_WINDOW: &str = "Settings"; // text: not shown (a part of the native window's own row)
 const THEME_STUDIO: &str = "Theme Studio"; // text: not shown (a part of the native window's own row)
 
+/// Write `value` into the row `id` (`suffix` names a sub-value). Whether it was understood.
 pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: &Ctx) -> bool {
     if let Some(slot) = font_slot(id) {
         return write_font(slot, suffix, s, value);

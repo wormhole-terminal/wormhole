@@ -1,5 +1,5 @@
 //! Profile: the name, where terminals start, the environment, the git identity, the agent logins and deleting
-//! the profile Wormhole is in. They live in `profiles.json`, written the way the GPUI page writes them
+//! the profile Wormhole is in. They live in `profiles.json`, written through
 //! (`profiles.edit` then `save`), when the person is done with a field.
 
 use std::collections::BTreeMap;
@@ -265,7 +265,7 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
     true
 }
 
-/// Apply one edit to the profile and write `profiles.json`, as the GPUI page does.
+/// Apply one edit to the profile and write `profiles.json`.
 fn save(profile_id: &wormhole_core::storage::paths::ProfileId, change: Change, cx: &mut App) {
     let state = app_mut(cx);
     let result = state.profiles.edit(profile_id, change).and_then(|()| state.profiles.save(&state.root));

@@ -53,12 +53,6 @@ pub(super) fn native_event(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
-pub(super) fn native_shot(_: &mut Ctx, arg: &str) -> Result<String> {
-    let path = arg.trim();
-    anyhow::ensure!(crate::platform::native_settings::shot(path), "the native Settings window is not open");
-    Ok(path.to_string())
-}
-
 pub(super) fn native_look(_: &mut Ctx, _: &str) -> Result<String> {
     crate::platform::native_settings::look().ok_or_else(|| anyhow!("the native Settings window is not open"))
 }

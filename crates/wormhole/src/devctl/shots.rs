@@ -59,7 +59,7 @@ pub(super) fn studio_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(format!("saved {}\n", path.display()))
 }
 
-/// `settings-shot <name>`: the Settings window drawn to `<name>.png`, as `native-shot` does with a path.
+/// `settings-shot <name>`: the Settings window drawn to `<name>.png`.
 pub(super) fn settings_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let name = super::file_name(arg, "settings")?;
     let path = ctx.dir.join(format!("{name}.png"));

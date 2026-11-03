@@ -3,7 +3,7 @@
 //! window a snapshot of them as JSON; the window answers each change of the person's as one JSON event. It reads
 //! and writes no file.
 //!
-//! One window at a time. Off macOS, or in a test, there is no such window and the app draws its own.
+//! One window at a time. Off macOS, or in a test, there is no window: opening it does nothing.
 
 use super::os::native_settings as os;
 
@@ -32,7 +32,7 @@ pub fn is_open() -> bool {
     available() && os::is_open()
 }
 
-/// The window's content as a PNG at `path` (devctl's `native-shot`); whether it was written.
+/// The window's content as a PNG at `path` (devctl's `settings-shot`); whether it was written.
 #[cfg(feature = "devctl")]
 pub fn shot(path: &str) -> bool {
     available() && os::shot(path)

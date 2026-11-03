@@ -25,7 +25,8 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &App) {
 
 /// A flag's switch: the row is `FeatureFlags:0:<flag key>`, the action `on` or `off`.
 pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
-    let Some(flag) = key.strip_prefix(GROUP).and_then(|id| id.strip_prefix(':')).and_then(FeatureFlag::from_key)
+    let Some(flag) =
+        key.strip_prefix(GROUP).and_then(|id| id.strip_prefix(':')).and_then(FeatureFlag::from_key)
     else {
         return false;
     };

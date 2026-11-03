@@ -1,5 +1,5 @@
 //! Two explanations the window opens as a sheet: how an agent's status is known with hooks and without, and what an
-//! update check sends. Both are the GPUI page's own words and table, as data: `{title, done, intro, rows}`, each row a
+//! update check sends. Both are the app's words and table, as data: `{title, done, intro, rows}`, each row a
 //! `label` over `values` (shown as code when `code`) with a `why` under it.
 
 use std::sync::OnceLock;

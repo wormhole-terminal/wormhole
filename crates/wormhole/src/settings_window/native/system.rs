@@ -1,6 +1,6 @@
 //! What the native window shows of this Mac and of the app's own state, and the buttons that act on it: where an
 //! update stands (the card of the Updates page), the default terminal, the login shell's choices, and the
-//! Advanced page's files and tips. Each reads the same state the GPUI window does and calls the same code.
+//! Advanced page's files and tips. Each reads the app's own state and calls the code the rest of the app uses.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -74,7 +74,7 @@ pub(super) fn cli_tool_line() -> String {
     }
 }
 
-/// Install, update or uninstall the `wh` command, as the GPUI page's button does.
+/// Install, update or uninstall the `wh` command.
 fn cli_tool_press() {
     let targets = cli_tool::Targets::from_env();
     match cli_status() {

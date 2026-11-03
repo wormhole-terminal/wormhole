@@ -2,7 +2,7 @@
 //! the projects, the Probes, the terminals to import from, the profile. A list is a group's rows after its
 //! catalog ones (`"<page>:<group>"`), each an entry with an `id` (the row's key is the group's plus the id) and
 //! what the window draws. A button on one comes back as an action `{"k": row key, "v": the button's id}`,
-//! which the module of the list carries out through the code the GPUI window uses.
+//! which the module of the list carries out through the app's own code.
 
 mod agents;
 mod flags;
