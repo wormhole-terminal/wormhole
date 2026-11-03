@@ -1,0 +1,107 @@
+import SwiftUI
+
+/// The content: a native grouped Form per page (or search results, or Changed).
+struct ContentView: View {
+    @Environment(SettingsModel.self) var m
+    @Environment(\.tok) var t
+    var title: String {
+        m.search.isEmpty ? (m.page == "Changed" ? "Changed" : m.catalog.page(m.page).map { m.words($0.id + ".title", $0.title) } ?? "") : "Search"
+    }
+    var body: some View {
+        ScrollViewReader { proxy in
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: Space.s2) {
+                    Text(title).role(.title, weight: .semibold)
+                    if m.search.isEmpty, m.catalog.page(m.page)?.badge == true { Chip(text: "Preview", fill: t.primary, ink: t.onPrimary) }
+                }.padding(.horizontal, Space.s6 + Space.s2).padding(.top, 44).padding(.bottom, Space.s1)
+                Group {
+                    if !m.search.isEmpty { SearchResults() }
+                    else if m.page == "Changed" { ChangedPage() }
+                    else if let p = m.catalog.page(m.page) { PageView(page: p) }
+                }.formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading)
+            }.background(Color(nsColor: .windowBackgroundColor)).ignoresSafeArea(edges: .top)
+            .onChange(of: m.scrollTo) { _, v in if let v { withAnimation { proxy.scrollTo(v, anchor: .top) } } }
+        }
+    }
+}
+
+struct PageView: View {
+    let page: Page
+    @Environment(SettingsModel.self) var m
+    @Environment(\.tok) var t
+    var body: some View {
+        Form {
+            if let n = page.notice {
+                Section {
+                    LabeledContent {
+                        if !n.2.isEmpty { Btn(n.2) { m.perform(n.2, "\(page.id):") } }
+                    } label: {
+                        Label { Text(n.1).foregroundStyle(.secondary) } icon: { Image(systemName: n.0 == "warn" ? "exclamationmark.triangle.fill" : "info.circle.fill").foregroundStyle(n.0 == "warn" ? t.warning : t.primary) }
+                    }
+                }
+            }
+            if !page.preview.isEmpty { PreviewCard(page: page) }
+            ForEach(Array(page.groups.enumerated()), id: \.offset) { g, grp in
+                Section {
+                    ForEach(grp.rows.filter { m.visible($0, in: page, group: g) }, id: \.key) { RowView(row: $0) }
+                } header: { if !grp.title.isEmpty { Text(grp.title) } }.id(grp.title)
+            }
+            if !page.footer.isEmpty {
+                Section { HStack(spacing: Space.s2) { Text(page.footer).role(.caption).foregroundStyle(.secondary); ForEach(page.footerButtons, id: \.self) { b in Btn(b) { m.perform(b, "\(page.id):") } } } }
+            }
+        }
+    }
+}
+
+struct SearchResults: View {
+    @Environment(SettingsModel.self) var m
+    var body: some View {
+        let q = m.search.lowercased()
+        let hits = m.catalog.pages.map { p in
+            (p, p.groups.flatMap(\.rows).filter { !$0.label.isEmpty && ($0.label + $0.hint + $0.info).lowercased().contains(q) })
+        }.filter { !$0.1.isEmpty }
+        Form {
+            ForEach(hits, id: \.0.id) { p, rows in Section(p.title) { ForEach(rows, id: \.key) { RowView(row: $0) } } }
+            if hits.isEmpty { Text("No settings match “\(m.search)”").foregroundStyle(.secondary) }
+        }
+    }
+}
+
+struct ChangedPage: View {
+    @Environment(SettingsModel.self) var m
+    @State private var confirming = false
+    var body: some View {
+        let ch = m.changed
+        Form {
+            Section {
+                LabeledContent {
+                    if !ch.isEmpty {
+                        HStack(spacing: Space.s2) { Btn("Copy as JSON") { copyJSON(ch.map(\.1)) }; Btn("Reset All…") { confirming = true } }
+                    }
+                } label: {
+                    HStack(spacing: Space.s3) {
+                        Tile(colour: Palette.tileSlate, symbol: "arrow.counterclockwise")
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(ch.isEmpty ? "Nothing changed" : "\(ch.count) setting\(ch.count == 1 ? "" : "s") changed")
+                            Text(ch.isEmpty ? "Every setting is at its default" : "Everything else is at its default").role(.body).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            ForEach(m.catalog.pages.filter { p in ch.contains { $0.0.id == p.id } }) { p in
+                Section(p.title) { ForEach(ch.filter { $0.0.id == p.id }.map(\.1), id: \.key) { RowView(row: $0, showReset: true) } }
+            }
+        }.confirmationDialog("Reset \(ch.count) setting\(ch.count == 1 ? "" : "s")?", isPresented: $confirming, titleVisibility: .visible) {
+            Button("Reset", role: .destructive) { m.store.resetAll() }
+        } message: { Text("They go back to their defaults.") }
+    }
+
+    /// The changed settings as `{ "key": "value" }`, sorted, for pasting into a bug report or another Mac.
+    private func copyJSON(_ rows: [Row]) {
+        let pairs = Dictionary(rows.map { ($0.key, m.store.value(for: $0.key) ?? "") }, uniquingKeysWith: { a, _ in a })
+        guard let data = try? JSONSerialization.data(withJSONObject: pairs, options: [.prettyPrinted, .sortedKeys]),
+              let text = String(data: data, encoding: .utf8) else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+}

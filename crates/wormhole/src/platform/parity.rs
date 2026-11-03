@@ -92,6 +92,11 @@ pub(super) fn signatures_match() {
         sheet::ask_with_checkbox: fn(&Window, &super::sheet::Question) -> Option<smol::channel::Receiver<Option<bool>>>;
         sheet::choose: fn(&Window, &super::sheet::Choice) -> Option<smol::channel::Receiver<Option<usize>>>;
         sheet::dismiss: fn(&Window);
+        native_settings::available: fn() -> bool;
+        native_settings::open: fn(&str, bool, fn(&str));
+        native_settings::update: fn(&str);
+        native_settings::is_open: fn() -> bool;
+        native_settings::shot: fn(&str) -> bool;
         panel::hide_window_buttons: fn(&Window);
         panel::set_height_keeping_top: fn(&mut Window, f32, &mut App);
         panel::pointer_display_id: fn() -> Option<u64>;

@@ -53,6 +53,7 @@ pub mod look;
 #[cfg(target_os = "macos")]
 pub mod macos;
 pub mod menu;
+pub mod native_settings;
 pub mod notice;
 pub mod notifications;
 pub mod panel;
