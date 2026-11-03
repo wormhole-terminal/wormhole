@@ -48,7 +48,7 @@ pub(super) const SETTINGS: &[Setting] = &[
         },
     ),
     Setting::custom("theme-pairing", draw_pairing),
-    Setting::block("theme", draw_theme),
+    Setting::rows("theme", draw_theme),
     Setting::custom("primary-color", color_rows::draw_primary)
         .describe(describe_primary)
         .default_words(color_rows::theme_words),
