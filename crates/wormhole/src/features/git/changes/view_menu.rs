@@ -48,7 +48,7 @@ mod tests {
         with_language(Language::ENGLISH, || {
             assert_eq!(
                 menu(true, false).outline(),
-                ["- List", "- Tree [x]", "---", "- Group untracked files separately"]
+                ["- List", "- Tree [x]", "---", "- Untracked files separately"]
             );
             assert_eq!(menu(false, true).outline()[0], "- List [x]");
             assert!(menu(false, true).outline()[3].ends_with("[x]"));
