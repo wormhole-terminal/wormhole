@@ -346,9 +346,7 @@ Add Hooks
 Hooks on
 Flexible space
 Parts above sit at the left, below at the right
-Wormhole is up to date.
 Checked 4 minutes ago.
-Check Now
 Cancel
 Approve
 Approve %@
@@ -385,7 +383,6 @@ Waiting for you
 Rate limits
 Avatar letter
 Colour
-Remove
 scratch
 Sidebar cards
 cargo test
@@ -397,3 +394,11 @@ Finished · 1m
 Needs input · Allow edit?
 3 changed
 New profile…
+Approved
+Can’t be enabled
+Changed since you trusted it
+Needs code
+Needs repair
+Not trusted
+Trusted
+Restore after restart

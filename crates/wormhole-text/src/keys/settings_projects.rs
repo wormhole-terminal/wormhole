@@ -7,42 +7,42 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Project folders"
-pub const SETTINGS_SECTION_PROJECTS: Key = Key::new(1248);
+pub const SETTINGS_SECTION_PROJECTS: Key = Key::new(1253);
 /// "Change the defaults for every project, or pick one to set it up just for you."
-pub const SETTINGS_SECTION_PROJECTS_INTRO: Key = Key::new(1249);
+pub const SETTINGS_SECTION_PROJECTS_INTRO: Key = Key::new(1254);
 /// "Project folders"
-pub const SETTINGS_PROJECTS_PROJECTS: Key = Key::new(1250);
+pub const SETTINGS_PROJECTS_PROJECTS: Key = Key::new(1255);
 /// "The .wormhole folder of a project: trust, and which of its files you use"
-pub const SETTINGS_PROJECTS_PROJECTS_DESCRIPTION: Key = Key::new(1251);
+pub const SETTINGS_PROJECTS_PROJECTS_DESCRIPTION: Key = Key::new(1256);
 /// ".wormhole project folder trust touch id actions prompts layout notes theme settings"
-pub const SETTINGS_PROJECTS_PROJECTS_KEYWORDS: Key = Key::new(1252);
+pub const SETTINGS_PROJECTS_PROJECTS_KEYWORDS: Key = Key::new(1257);
 /// "All projects (defaults)"
-pub const SETTINGS_PROJECTS_ALL_PROJECTS_DEFAULTS: Key = Key::new(1253);
+pub const SETTINGS_PROJECTS_ALL_PROJECTS_DEFAULTS: Key = Key::new(1258);
 /// "For"
-pub const SETTINGS_PROJECTS_FOR: Key = Key::new(1254);
+pub const SETTINGS_PROJECTS_FOR: Key = Key::new(1259);
 /// "All projects sets the defaults. A project can still turn a feature on or off just for you: pick it here."
-pub const SETTINGS_PROJECTS_FOR_NOTE: Key = Key::new(1255);
+pub const SETTINGS_PROJECTS_FOR_NOTE: Key = Key::new(1260);
 /// "Default (on)"
-pub const SETTINGS_PROJECTS_DEFAULT_ON: Key = Key::new(1256);
+pub const SETTINGS_PROJECTS_DEFAULT_ON: Key = Key::new(1261);
 /// "Default (off)"
-pub const SETTINGS_PROJECTS_DEFAULT_OFF: Key = Key::new(1257);
+pub const SETTINGS_PROJECTS_DEFAULT_OFF: Key = Key::new(1262);
 /// "On"
-pub const SETTINGS_PROJECTS_ON: Key = Key::new(1258);
+pub const SETTINGS_PROJECTS_ON: Key = Key::new(1263);
 /// "Off"
-pub const SETTINGS_PROJECTS_OFF: Key = Key::new(1259);
+pub const SETTINGS_PROJECTS_OFF: Key = Key::new(1264);
 /// "No notes.md yet. On creates it and syncs this project's terminals' notes"
-pub const SETTINGS_PROJECTS_NO_NOTES_MD_YET_ON_CREATES: Key = Key::new(1260);
+pub const SETTINGS_PROJECTS_NO_NOTES_MD_YET_ON_CREATES: Key = Key::new(1265);
 
 /// ```text
 /// { $folder } has no .wormhole folder anymore.
 /// ```
 pub fn settings_projects_missing_folder(folder: &str) -> String {
-    crate::active::message(1261, &[("folder", Arg::Str(folder))])
+    crate::active::message(1266, &[("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// { $description }. Only after you trust the project
 /// ```
 pub fn settings_projects_feature_needs_trust(description: &str) -> String {
-    crate::active::message(1262, &[("description", Arg::Str(description))])
+    crate::active::message(1267, &[("description", Arg::Str(description))])
 }

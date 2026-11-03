@@ -699,105 +699,115 @@ pub const NATIVE_HOOKS_ON_E721FF4C: Key = Key::new(1104);
 pub const NATIVE_FLEXIBLE_SPACE_629765B4: Key = Key::new(1105);
 /// "Parts above sit at the left, below at the right"
 pub const NATIVE_PARTS_ABOVE_SIT_AT_THE_LEFT_BELOW_AT_TH_DB586B38: Key = Key::new(1106);
-/// "Wormhole is up to date."
-pub const NATIVE_WORMHOLE_IS_UP_TO_DATE_824D1B34: Key = Key::new(1107);
 /// "Checked 4 minutes ago."
-pub const NATIVE_CHECKED_4_MINUTES_AGO_07AD1E88: Key = Key::new(1108);
-/// "Check Now"
-pub const NATIVE_CHECK_NOW_B19A3117: Key = Key::new(1109);
+pub const NATIVE_CHECKED_4_MINUTES_AGO_07AD1E88: Key = Key::new(1107);
 /// "Cancel"
-pub const NATIVE_CANCEL_35AFCA3B: Key = Key::new(1110);
+pub const NATIVE_CANCEL_35AFCA3B: Key = Key::new(1108);
 /// "Approve"
-pub const NATIVE_APPROVE_E6EDF55A: Key = Key::new(1111);
+pub const NATIVE_APPROVE_E6EDF55A: Key = Key::new(1109);
 /// "Approve %@"
-pub const NATIVE_APPROVE_B03F7B63: Key = Key::new(1112);
+pub const NATIVE_APPROVE_B03F7B63: Key = Key::new(1110);
 /// "Turn on…"
-pub const NATIVE_TURN_ON_BEC93B71: Key = Key::new(1113);
+pub const NATIVE_TURN_ON_BEC93B71: Key = Key::new(1111);
 /// "Approve Again…"
-pub const NATIVE_APPROVE_AGAIN_11C61C76: Key = Key::new(1114);
+pub const NATIVE_APPROVE_AGAIN_11C61C76: Key = Key::new(1112);
 /// "Revoke"
-pub const NATIVE_REVOKE_2219C453: Key = Key::new(1115);
+pub const NATIVE_REVOKE_2219C453: Key = Key::new(1113);
 /// "Trust with Touch ID…"
-pub const NATIVE_TRUST_WITH_TOUCH_ID_217D6D1B: Key = Key::new(1116);
+pub const NATIVE_TRUST_WITH_TOUCH_ID_217D6D1B: Key = Key::new(1114);
 /// "Same as terminal"
-pub const NATIVE_SAME_AS_TERMINAL_30490967: Key = Key::new(1117);
+pub const NATIVE_SAME_AS_TERMINAL_30490967: Key = Key::new(1115);
 /// "Monospaced"
-pub const NATIVE_MONOSPACED_9AF24520: Key = Key::new(1118);
+pub const NATIVE_MONOSPACED_9AF24520: Key = Key::new(1116);
 /// "Proportional"
-pub const NATIVE_PROPORTIONAL_3ED3074A: Key = Key::new(1119);
+pub const NATIVE_PROPORTIONAL_3ED3074A: Key = Key::new(1117);
 /// "Type shortcut…"
-pub const NATIVE_TYPE_SHORTCUT_94ED691B: Key = Key::new(1120);
+pub const NATIVE_TYPE_SHORTCUT_94ED691B: Key = Key::new(1118);
 /// "Record…"
-pub const NATIVE_RECORD_B8CF2748: Key = Key::new(1121);
+pub const NATIVE_RECORD_B8CF2748: Key = Key::new(1119);
 /// "PREVIEW"
-pub const NATIVE_PREVIEW_9C238977: Key = Key::new(1122);
+pub const NATIVE_PREVIEW_9C238977: Key = Key::new(1120);
 /// "Primary"
-pub const NATIVE_PRIMARY_C7827F79: Key = Key::new(1123);
+pub const NATIVE_PRIMARY_C7827F79: Key = Key::new(1121);
 /// "Custom"
-pub const NATIVE_CUSTOM_9525B78E: Key = Key::new(1124);
+pub const NATIVE_CUSTOM_9525B78E: Key = Key::new(1122);
 /// "The theme’s · %@"
-pub const NATIVE_THE_THEME_S_2D98F167: Key = Key::new(1125);
+pub const NATIVE_THE_THEME_S_2D98F167: Key = Key::new(1123);
 /// "The primary colour · %@"
-pub const NATIVE_THE_PRIMARY_COLOUR_2784A3BE: Key = Key::new(1126);
+pub const NATIVE_THE_PRIMARY_COLOUR_2784A3BE: Key = Key::new(1124);
 /// "Yours · %@, in every theme"
-pub const NATIVE_YOURS_IN_EVERY_THEME_0B20FAB2: Key = Key::new(1127);
+pub const NATIVE_YOURS_IN_EVERY_THEME_0B20FAB2: Key = Key::new(1125);
 /// "In Dark Mode"
-pub const NATIVE_IN_DARK_MODE_4BF5CB79: Key = Key::new(1128);
+pub const NATIVE_IN_DARK_MODE_4BF5CB79: Key = Key::new(1126);
 /// "In Light Mode"
-pub const NATIVE_IN_LIGHT_MODE_FF6F8461: Key = Key::new(1129);
+pub const NATIVE_IN_LIGHT_MODE_FF6F8461: Key = Key::new(1127);
 /// "Show fewer"
-pub const NATIVE_SHOW_FEWER_40E1838D: Key = Key::new(1130);
+pub const NATIVE_SHOW_FEWER_40E1838D: Key = Key::new(1128);
 /// "Show all %@"
-pub const NATIVE_SHOW_ALL_9C7253B8: Key = Key::new(1131);
+pub const NATIVE_SHOW_ALL_9C7253B8: Key = Key::new(1129);
 /// "Import Theme…"
-pub const NATIVE_IMPORT_THEME_EDB9A7CF: Key = Key::new(1132);
+pub const NATIVE_IMPORT_THEME_EDB9A7CF: Key = Key::new(1130);
 /// "Shows the font you chose"
-pub const NATIVE_SHOWS_THE_FONT_YOU_CHOSE_E6AC41DC: Key = Key::new(1133);
+pub const NATIVE_SHOWS_THE_FONT_YOU_CHOSE_E6AC41DC: Key = Key::new(1131);
 /// "line height %@"
-pub const NATIVE_LINE_HEIGHT_C53D111B: Key = Key::new(1134);
+pub const NATIVE_LINE_HEIGHT_C53D111B: Key = Key::new(1132);
 /// "ligatures on"
-pub const NATIVE_LIGATURES_ON_7FE76012: Key = Key::new(1135);
+pub const NATIVE_LIGATURES_ON_7FE76012: Key = Key::new(1133);
 /// "ligatures off"
-pub const NATIVE_LIGATURES_OFF_BD504524: Key = Key::new(1136);
+pub const NATIVE_LIGATURES_OFF_BD504524: Key = Key::new(1134);
 /// "%@ colours"
-pub const NATIVE_COLOURS_313A9A95: Key = Key::new(1137);
+pub const NATIVE_COLOURS_313A9A95: Key = Key::new(1135);
 /// "System font"
-pub const NATIVE_SYSTEM_FONT_96549D01: Key = Key::new(1138);
+pub const NATIVE_SYSTEM_FONT_96549D01: Key = Key::new(1136);
 /// "Changes · 4"
-pub const NATIVE_CHANGES_4_1454A57D: Key = Key::new(1139);
+pub const NATIVE_CHANGES_4_1454A57D: Key = Key::new(1137);
 /// "Nothing turned on: no banners."
-pub const NATIVE_NOTHING_TURNED_ON_NO_BANNERS_6D6BBA07: Key = Key::new(1140);
+pub const NATIVE_NOTHING_TURNED_ON_NO_BANNERS_6D6BBA07: Key = Key::new(1138);
 /// "now"
-pub const NATIVE_NOW_28B19AF7: Key = Key::new(1141);
+pub const NATIVE_NOW_28B19AF7: Key = Key::new(1139);
 /// "Waiting for you"
-pub const NATIVE_WAITING_FOR_YOU_E8233AFC: Key = Key::new(1142);
+pub const NATIVE_WAITING_FOR_YOU_E8233AFC: Key = Key::new(1140);
 /// "Rate limits"
-pub const NATIVE_RATE_LIMITS_BAE91DE5: Key = Key::new(1143);
+pub const NATIVE_RATE_LIMITS_BAE91DE5: Key = Key::new(1141);
 /// "Avatar letter"
-pub const NATIVE_AVATAR_LETTER_8EA165F4: Key = Key::new(1144);
+pub const NATIVE_AVATAR_LETTER_8EA165F4: Key = Key::new(1142);
 /// "Colour"
-pub const NATIVE_COLOUR_2ECCA61D: Key = Key::new(1145);
-/// "Remove"
-pub const NATIVE_REMOVE_21A5901D: Key = Key::new(1146);
+pub const NATIVE_COLOUR_2ECCA61D: Key = Key::new(1143);
 /// "scratch"
-pub const NATIVE_SCRATCH_C462A115: Key = Key::new(1147);
+pub const NATIVE_SCRATCH_C462A115: Key = Key::new(1144);
 /// "Sidebar cards"
-pub const NATIVE_SIDEBAR_CARDS_02B77544: Key = Key::new(1148);
+pub const NATIVE_SIDEBAR_CARDS_02B77544: Key = Key::new(1145);
 /// "cargo test"
-pub const NATIVE_CARGO_TEST_B2B09A25: Key = Key::new(1149);
+pub const NATIVE_CARGO_TEST_B2B09A25: Key = Key::new(1146);
 /// "Flaky login test"
-pub const NATIVE_FLAKY_LOGIN_TEST_4600E19D: Key = Key::new(1150);
+pub const NATIVE_FLAKY_LOGIN_TEST_4600E19D: Key = Key::new(1147);
 /// "Release notes"
-pub const NATIVE_RELEASE_NOTES_C52AB62F: Key = Key::new(1151);
+pub const NATIVE_RELEASE_NOTES_C52AB62F: Key = Key::new(1148);
 /// "Idle"
-pub const NATIVE_IDLE_45AA17B3: Key = Key::new(1152);
+pub const NATIVE_IDLE_45AA17B3: Key = Key::new(1149);
 /// "Working · 4m"
-pub const NATIVE_WORKING_4M_04857B66: Key = Key::new(1153);
+pub const NATIVE_WORKING_4M_04857B66: Key = Key::new(1150);
 /// "Finished · 1m"
-pub const NATIVE_FINISHED_1M_34A0CA68: Key = Key::new(1154);
+pub const NATIVE_FINISHED_1M_34A0CA68: Key = Key::new(1151);
 /// "Needs input · Allow edit?"
-pub const NATIVE_NEEDS_INPUT_ALLOW_EDIT_CEC49945: Key = Key::new(1155);
+pub const NATIVE_NEEDS_INPUT_ALLOW_EDIT_CEC49945: Key = Key::new(1152);
 /// "3 changed"
-pub const NATIVE_3_CHANGED_045754E2: Key = Key::new(1156);
+pub const NATIVE_3_CHANGED_045754E2: Key = Key::new(1153);
 /// "New profile…"
-pub const NATIVE_NEW_PROFILE_4C402928: Key = Key::new(1157);
+pub const NATIVE_NEW_PROFILE_4C402928: Key = Key::new(1154);
+/// "Approved"
+pub const NATIVE_APPROVED_C699109A: Key = Key::new(1155);
+/// "Can’t be enabled"
+pub const NATIVE_CAN_T_BE_ENABLED_56D9990A: Key = Key::new(1156);
+/// "Changed since you trusted it"
+pub const NATIVE_CHANGED_SINCE_YOU_TRUSTED_IT_FD768F62: Key = Key::new(1157);
+/// "Needs code"
+pub const NATIVE_NEEDS_CODE_C4C9DA13: Key = Key::new(1158);
+/// "Needs repair"
+pub const NATIVE_NEEDS_REPAIR_25CCB963: Key = Key::new(1159);
+/// "Not trusted"
+pub const NATIVE_NOT_TRUSTED_5C8E115D: Key = Key::new(1160);
+/// "Trusted"
+pub const NATIVE_TRUSTED_102C70DC: Key = Key::new(1161);
+/// "Restore after restart"
+pub const NATIVE_RESTORE_AFTER_RESTART_FE30C778: Key = Key::new(1162);

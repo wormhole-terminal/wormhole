@@ -6,4 +6,4 @@
 use crate::key::Key;
 
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1454);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1459);
