@@ -89,7 +89,7 @@ struct RowView: View {
             if row.kind == .checks || (row.kind == .skill && !row.checks.isEmpty) { ChecksControl(row: row).padding(.leading, tall ? 40 : 0) }
         }
         .confirmationDialog(row.confirm.isEmpty ? "Reset all settings?" : row.confirm, isPresented: $confirming, titleVisibility: .visible) {
-            Button(row.action.isEmpty ? (row.actions.first ?? "Reset") : row.action, role: .destructive) { if row.resetAll { m.store.resetAll() } else { m.perform(row.action.isEmpty ? "confirm" : row.action, row.key) } }
+            Button(row.action.isEmpty ? (row.actions.first ?? "Reset") : row.action, role: row.kind == .danger ? .destructive : nil) { if row.resetAll { m.store.resetAll() } else { m.perform(row.action.isEmpty ? "confirm" : row.action, row.key) } }
         } message: { Text(row.confirmText) }
     }
     var stateChip: (String, Color)? {
@@ -127,7 +127,7 @@ struct ControlView: View {
                 Text(row.fontLink ? "\(m.value("Fonts:0:0")), \(m.value("Fonts:0:0#size")) pt" : row.value).foregroundStyle(.secondary)
                 Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
             }.contentShape(Rectangle()).onTapGesture { if row.fontLink { m.search = ""; m.page = "Fonts" } }
-        case .button: Btn(row.value) { m.perform(row.value, row.key) }
+        case .button: Btn(row.value) { if row.confirm.isEmpty { m.perform(row.value, row.key) } else { confirming = true } }
         case .danger: Btn(row.value, destructive: true) { confirming = true }
         case .value: Text(row.value).foregroundStyle(.secondary)
         case .agent:

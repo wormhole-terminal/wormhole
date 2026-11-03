@@ -40,7 +40,7 @@ impl Subject {
 
 /// What a setting is called. `pair`: the proposal has a palette for each appearance, so the dark
 /// one says so.
-pub(super) fn setting_label(setting: Setting, pair: bool) -> &'static str {
+pub(in crate::settings_window) fn setting_label(setting: Setting, pair: bool) -> &'static str {
     text(match setting {
         Setting::FontFamily => SETTINGS_IMPORT_SETTING_FONT_FAMILY,
         Setting::FontSize => SETTINGS_IMPORT_SETTING_FONT_SIZE,
@@ -62,7 +62,7 @@ pub(super) fn setting_label(setting: Setting, pair: bool) -> &'static str {
 
 /// What Wormhole would set, as a short value; text from the other terminal's files is spelled out
 /// where it holds anything invisible.
-pub(super) fn value_text(value: &SettingValue) -> String {
+pub(in crate::settings_window) fn value_text(value: &SettingValue) -> String {
     let flag = |on: bool| text(if on { SETTINGS_IMPORT_VALUE_ON } else { SETTINGS_IMPORT_VALUE_OFF });
     match value {
         SettingValue::Font(font) => visible(&font.name),

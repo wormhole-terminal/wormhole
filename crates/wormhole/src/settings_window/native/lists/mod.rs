@@ -5,6 +5,7 @@
 //! which the module of the list carries out through the code the GPUI window uses.
 
 mod agents;
+mod import;
 mod probes;
 mod projects;
 
@@ -24,6 +25,8 @@ pub(crate) struct Cache {
     projects: Vec<PathBuf>,
     /// The Probes folder as last read.
     probes: Option<probes::Probes>,
+    /// The terminals found to import from; `None` until the scan finishes.
+    import: Option<Vec<wormhole_core::import::Found>>,
 }
 
 fn cache(cx: &App) -> Option<&Cache> {
@@ -62,13 +65,17 @@ pub(super) fn build(cx: &mut App) -> (Value, Value) {
     let mut sheets = Map::new();
     agents::lists(&mut lists, cx);
     projects::lists(&mut lists, cx);
+    import::lists(&mut lists, cx);
     probes::lists(&mut lists, &mut sheets, cx);
     (json!(lists), json!(sheets))
 }
 
 /// Carry out a button of a listed row. Whether the row was one of the lists'.
 pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
-    agents::perform(key, name, cx) || projects::perform(key, name, cx) || probes::perform(key, name, cx)
+    agents::perform(key, name, cx)
+        || projects::perform(key, name, cx)
+        || probes::perform(key, name, cx)
+        || import::perform(key, name, cx)
 }
 
 /// Read what the lists need from disk or the database, in the background where it is slow; the window is
@@ -77,6 +84,7 @@ pub(super) fn load(cx: &mut App) {
     agents::load(cx);
     projects::load(cx);
     probes::load(cx);
+    import::load(cx);
 }
 
 /// The Extensions page's footer buttons.

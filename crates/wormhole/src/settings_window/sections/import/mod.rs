@@ -12,6 +12,8 @@ mod found;
 mod review;
 mod words;
 
+pub(in crate::settings_window) use words::{setting_label, value_text};
+
 use std::collections::HashMap;
 
 use gpui_kit::*;
