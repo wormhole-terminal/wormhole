@@ -78,3 +78,16 @@ Motion:0:1 motion-fold
 Motion:0:2 motion-status
 Motion:1:0 motion-column
 Agents:1:1 control-write
+FeatureFlags:0:0 flag-0
+FeatureFlags:0:1 flag-1
+FeatureFlags:0:2 flag-2
+FeatureFlags:0:3 flag-3
+FeatureFlags:0:4 flag-4
+FeatureFlags:0:5 flag-5
+FeatureFlags:0:6 flag-6
+FeatureFlags:0:7 flag-7
+FeatureFlags:0:8 flag-8
+FeatureFlags:0:9 flag-9
+FeatureFlags:0:10 flag-10
+FeatureFlags:0:11 flag-11
+FeatureFlags:0:12 flag-12

@@ -6,9 +6,11 @@
 //! setting is and how it is changed; the few the registry draws by hand are here.
 
 use wormhole_core::config::Settings;
+use wormhole_core::config::features::{self, FeatureFlag, FlagMode};
 use wormhole_core::theme::catalog::ThemeEntry;
 use wormhole_core::theme::fonts::{FontSlot, SYSTEM_FONT};
 use wormhole_core::theme::tokens::Appearance;
+use wormhole_core::view::sidebar::Density;
 use wormhole_text::keys::{SETTINGS_APPEARANCE_PAIRING_BOTH, SETTINGS_APPEARANCE_PAIRING_SEPARATE};
 use wormhole_text::text;
 
@@ -55,12 +57,24 @@ fn family_words(slot: FontSlot, s: &Settings) -> String {
     }
 }
 
+/// `flag-<n>`: the n-th feature flag, in `FeatureFlag::ALL`'s order (the Feature flags page's).
+fn flag(id: &str) -> Option<FeatureFlag> {
+    FeatureFlag::ALL.get(id.strip_prefix("flag-")?.parse::<usize>().ok()?).copied()
+}
+
+fn flag_mode(s: &Settings) -> FlagMode {
+    FlagMode::of(features::dev_build(), s.update_channel, features::unlocked(&s.feature_flags))
+}
+
 fn on(value: bool) -> String {
     if value { "on" } else { "off" }.into()
 }
 
 /// The values of the row `id`: (suffix, value) pairs, the row's own first.
 pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, String)> {
+    if let Some(flag) = flag(id) {
+        return vec![("", on(features::enabled_in(flag, &s.feature_flags, flag_mode(s))))];
+    }
     if let Some(slot) = font_slot(id) {
         return vec![("", family_words(slot, s)), ("#size", format!("{}", s.slot_size(slot).round()))];
     }
@@ -97,6 +111,9 @@ pub(super) fn read(id: &str, s: &Settings, ctx: &Ctx) -> Vec<(&'static str, Stri
 
 /// The options a row offers, when it is a menu.
 pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<String>> {
+    if id == "density" {
+        return Some(Density::ALL.iter().map(|d| d.label().to_string()).collect());
+    }
     if id == "theme-pairing" {
         return Some(vec![
             text(SETTINGS_APPEARANCE_PAIRING_BOTH).into(),
@@ -115,10 +132,21 @@ pub(super) fn options(id: &str, s: &Settings) -> Option<Vec<String>> {
 
 /// Write `value` into the row `id` (`suffix` names a sub-value). Whether it was understood.
 pub(super) fn write(id: &str, suffix: &str, s: &mut Settings, value: &str, ctx: &Ctx) -> bool {
+    if let Some(flag) = flag(id) {
+        s.feature_flags.insert(flag.key().to_string(), value == "on");
+        return true;
+    }
     if let Some(slot) = font_slot(id) {
         return write_font(slot, suffix, s, value);
     }
     match id {
+        "density" => match Density::ALL.iter().find(|d| d.label() == value) {
+            Some(density) => {
+                s.density = *density;
+                true
+            }
+            None => false,
+        },
         "theme-pairing" => {
             if value == text(SETTINGS_APPEARANCE_PAIRING_BOTH) {
                 themes::pair_with_dark(ctx.themes, s);
