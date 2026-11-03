@@ -149,7 +149,8 @@ fn count_details(cx: &mut Context<SettingsWindow>) -> AnyElement {
 /// The width of the labels of what an update check sends.
 const DETAIL_LABEL_W: f32 = 220.0;
 /// The header of the first check of a day and of a month, as `update::Count` sends it.
-const COUNT_HEADERS: [&str; 2] = ["Wormhole-Count: day", "Wormhole-Count: month"]; // text: protocol, sent as is
+pub(in crate::settings_window) const COUNT_HEADERS: [&str; 2] =
+    ["Wormhole-Count: day", "Wormhole-Count: month"]; // text: protocol, sent as is
 
 /// The meter of a download.
 const METER_W: f32 = 120.0;

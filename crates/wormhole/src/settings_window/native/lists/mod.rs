@@ -7,6 +7,7 @@
 mod agents;
 mod import;
 mod import_sheets;
+mod info;
 mod probes;
 mod profile;
 mod projects;
@@ -77,6 +78,7 @@ pub(super) fn build(cx: &mut App) -> (Value, Value) {
     import::lists(&mut lists, &mut sheets, cx);
     profile::lists(&mut lists, cx);
     probes::lists(&mut lists, &mut sheets, cx);
+    info::sheets(&mut sheets, cx);
     (json!(lists), json!(sheets))
 }
 

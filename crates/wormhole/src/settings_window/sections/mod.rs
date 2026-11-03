@@ -53,8 +53,10 @@ mod theme_picker;
 mod title_row;
 mod updates;
 
-pub(super) use agents::{AgentRow, AgentsSnapshot};
-pub(super) use cli_tool::CliToolPanel;
+pub(super) use agents::{AgentRow, AgentsSnapshot, LoginRow};
+pub(super) use cli_tool::{
+    CliToolPanel, binary as cli_binary, current_status as cli_status, shown as cli_shown,
+};
 pub(super) use color_rows::in_force as colors_in_force;
 pub(super) use diff_preview::draw_diff_preview;
 pub(super) use extensions::Extensions;
@@ -78,7 +80,7 @@ pub(super) use projects::feature_description;
 pub(super) use split_preview::draw_split_preview;
 pub(super) use terminal::TerminalRows;
 pub(super) use theme_picker::ThemePicker;
-pub(super) use updates::{available_text, checked_ago};
+pub(super) use updates::{COUNT_HEADERS, available_text, checked_ago};
 #[cfg(feature = "devctl")]
 pub(super) use {
     appearance::draw_theme, color_rows::draw_primary, fonts::draw_specimen, stage::draw_stage,

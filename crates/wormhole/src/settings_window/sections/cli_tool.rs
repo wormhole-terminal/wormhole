@@ -55,16 +55,16 @@ impl CliToolPanel {
 }
 
 /// The running binary, which the script runs.
-fn binary() -> PathBuf {
+pub(in crate::settings_window) fn binary() -> PathBuf {
     std::env::current_exe().unwrap_or_default()
 }
 
-fn current_status() -> Status {
+pub(in crate::settings_window) fn current_status() -> Status {
     cli_tool::status(&Targets::from_env(), &binary())
 }
 
 /// `path` as a person says it (`~/.local/bin/wh`).
-fn shown(path: &Path) -> String {
+pub(in crate::settings_window) fn shown(path: &Path) -> String {
     wormhole_core::view::sidebar::display_path(path, crate::settings_window::home().as_deref())
 }
 

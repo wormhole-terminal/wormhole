@@ -23,6 +23,7 @@ use crate::app_state::app;
 use crate::settings_window::sections::AgentsSnapshot;
 
 const GROUP_AGENTS: &str = "Agents:0";
+const GROUP_COMMAND_LINE: &str = "Agents:1";
 const GROUP_ACCESS: &str = "Agents:2";
 const GROUP_SKILLS: &str = "Agents:3";
 
@@ -56,6 +57,10 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &mut App) {
         let home = snapshot.home().to_path_buf();
         for row in snapshot.installed() {
             agents_list.push(agent_entry(row, &home));
+            // Each profile's own login of the agent: a second place for the hooks, with its own button.
+            for (at, login) in row.logins.iter().enumerate() {
+                agents_list.push(login_entry(row.agent, at, login));
+            }
         }
         let others = snapshot.others().count();
         if others > 0 {
@@ -68,6 +73,11 @@ pub(super) fn lists(out: &mut Map<String, Value>, cx: &mut App) {
         skills_list = skills(snapshot);
     }
     out.insert(GROUP_AGENTS.into(), Value::Array(agents_list));
+    // Under the Command line tool button: where the command is, or whose it is.
+    out.insert(
+        GROUP_COMMAND_LINE.into(),
+        json!([Entry::new("cli-status", "value", &super::super::system::cli_tool_line()).into_value()]),
+    );
     out.insert(GROUP_SKILLS.into(), Value::Array(skills_list));
     out.insert(GROUP_ACCESS.into(), Value::Array(programs(cx)));
 }
@@ -103,6 +113,31 @@ fn agent_entry(row: &crate::settings_window::sections::AgentRow, home: &Path) ->
         entry = entry.with("note", note);
     }
     entry.into_value()
+}
+
+/// A profile's login of an agent: where its config is and the state of the hooks there, as the agent's own row has
+/// them for the default location.
+fn login_entry(agent: &Agent, at: usize, login: &crate::settings_window::sections::LoginRow) -> Value {
+    let state = login.state.as_ref().ok().copied();
+    let (badge, value) = match state {
+        Some(State::Installed) => (text(SETTINGS_AGENTS_STATUS_HOOKS_ON), "on"),
+        Some(State::Partial) => (text(SETTINGS_AGENTS_HOOKS_INCOMPLETE), "repair"),
+        _ => (text(SETTINGS_AGENTS_NO_HOOKS), "off"),
+    };
+    let mut entry = tiled(
+        Entry::new(&login_id(agent, at), "agent", &settings_agents_login_state(&login.profile, badge)),
+        agent,
+    )
+    .with("hint", crate::settings_window::with_tilde(&login.dir))
+    .with("value", value);
+    if let Err(err) = &login.state {
+        entry = entry.with("note", err.as_str());
+    }
+    entry.into_value()
+}
+
+fn login_id(agent: &Agent, at: usize) -> String {
+    format!("{}-login-{at}", id_of(agent))
 }
 
 fn skills(snapshot: &AgentsSnapshot) -> Vec<Value> {
@@ -277,10 +312,27 @@ pub(super) fn perform(key: &str, action: &str, cx: &mut App) -> bool {
 }
 
 fn hooks(id: &str, action: &str, cx: &mut App) {
-    let Some(agent) = agent_of(id) else { return };
+    // "agent-<id>" is the default location; "agent-<id>-login-<n>" the n-th profile's login folder.
+    let (base, login) = match id.split_once("-login-") {
+        Some((base, at)) => (base, at.parse::<usize>().ok()),
+        None => (id, None),
+    };
+    let Some(agent) = agent_of(base) else { return };
     let Some(spec) = integrations::spec(agent.id) else { return };
-    let home = integrations::home();
-    let result = if action == "remove_hooks" { spec.uninstall(&home) } else { spec.install(&home) };
+    let remove = action == "remove_hooks";
+    let result = match login {
+        None if remove => spec.uninstall(&integrations::home()),
+        None => spec.install(&integrations::home()),
+        Some(at) => {
+            let dir = super::cache(cx)
+                .and_then(|cache| cache.agents.as_ref())
+                .and_then(|snapshot| snapshot.installed().find(|row| row.agent.id == agent.id))
+                .and_then(|row| row.logins.get(at))
+                .map(|login| login.dir.clone());
+            let Some(dir) = dir else { return };
+            if remove { spec.uninstall_in(&dir) } else { spec.install_in(&dir) }
+        }
+    };
     if let Err(err) = result {
         tracing::warn!("{} hooks: {err}", agent.name);
     }

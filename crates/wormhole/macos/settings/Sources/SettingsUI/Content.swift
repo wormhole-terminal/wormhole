@@ -21,7 +21,34 @@ struct ContentView: View {
                 }.formStyle(.grouped).scrollContentBackground(.hidden).multilineTextAlignment(.leading)
             }.background(Color(nsColor: .windowBackgroundColor)).ignoresSafeArea(edges: .top)
             .onChange(of: m.scrollTo) { _, v in if let v { withAnimation { proxy.scrollTo(v, anchor: .top) } } }
+            .sheet(isPresented: Binding(get: { m.infoSheet != nil }, set: { if !$0 { m.infoSheet = nil } })) { InfoSheet(id: m.infoSheet ?? "") }
         }
+    }
+}
+
+/// An explanation the host gives as data: a title, rows of a label over its values (code when marked), an intro and a closing note.
+struct InfoSheet: View {
+    let id: String
+    @Environment(SettingsModel.self) var m
+    @Environment(\.dismiss) var dismiss
+    var data: [String: Any] { m.sheetDict(id) ?? [:] }
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.s3) {
+            Text(data["title"] as? String ?? "").font(.headline)
+            ForEach(data["intro"] as? [String] ?? [], id: \.self) { Text($0).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+            ForEach(Array((data["rows"] as? [[String: Any]] ?? []).enumerated()), id: \.offset) { _, r in
+                Divider()
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(r["label"] as? String ?? "").role(.body, weight: .semibold)
+                    ForEach(r["values"] as? [String] ?? [], id: \.self) { v in
+                        if r["code"] as? Bool ?? false { Text(v).role(.body, mono: true).textSelection(.enabled) } else { Text(v) }
+                    }
+                    if let why = r["why"] as? String, !why.isEmpty { Text(why).role(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if let note = data["note"] as? String, !note.isEmpty { Text(note).role(.caption).foregroundStyle(.secondary) }
+            HStack { Spacer(); Button(data["done"] as? String ?? "") { dismiss() }.keyboardShortcut(.defaultAction) }
+        }.padding(Space.s4).frame(width: 480)
     }
 }
 
@@ -47,8 +74,19 @@ struct PageView: View {
                 } header: { if !grp.title.isEmpty { Text(m.w(grp.title)) } }.id(grp.title)
             }
             if !page.footer.isEmpty {
-                Section { HStack(spacing: Space.s2) { Text(m.w(page.footer)).role(.caption).foregroundStyle(.secondary); ForEach(page.footerButtons, id: \.self) { b in Btn(b) { m.perform(snakeID(b), "\(page.id):") } } } }
+                Section { HStack(spacing: Space.s2) { Text(m.w(page.footer)).role(.caption).foregroundStyle(.secondary); ForEach(page.footerButtons, id: \.self) { b in Btn(b) { footer(snakeID(b)) } } } }
             }
+        }
+    }
+}
+
+extension PageView {
+    /// A page's footer button: some only move inside the window (to another page, to an explanation), the rest are the app's.
+    func footer(_ id: String) {
+        switch id {
+        case "open_notifications": m.search = ""; m.page = "Notifications"
+        case "how_status_works": m.infoSheet = "status-how"
+        default: m.perform(id, "\(page.id):")
         }
     }
 }

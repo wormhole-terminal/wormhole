@@ -38,9 +38,9 @@ pub(crate) struct AgentRow {
 
 /// Where a profile's login of an agent keeps its config, and the state of the hooks there.
 pub(crate) struct LoginRow {
-    pub(super) profile: String,
-    pub(super) dir: PathBuf,
-    pub(super) state: Result<State, String>,
+    pub(in crate::settings_window) profile: String,
+    pub(in crate::settings_window) dir: PathBuf,
+    pub(in crate::settings_window) state: Result<State, String>,
 }
 
 impl AgentRow {

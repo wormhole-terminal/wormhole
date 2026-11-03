@@ -171,7 +171,7 @@ let standardPages: [Page] = [
     ]),
     SettingGroup(title: "Privacy", rows: [
       Row("Count this Mac anonymously", "", .toggle, options: [], value: "on", info: "No analytics, telemetry or crash reports. The first check of a day and of a month says so, with nothing that tells one Mac from another."),
-      Row("What an update check sends", "", .link, options: [], value: "", info: ""),
+      Row("What an update check sends", "", .link, options: [], value: "", info: "", sheet: "update-sends"),
     ]),
   ]),
   Page(id: "Advanced", title: "Advanced", preview: "", notice: nil, footer: "", footerButtons: [], groups: [

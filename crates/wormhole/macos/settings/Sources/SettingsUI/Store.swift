@@ -135,6 +135,8 @@ struct Words {
     var scrollTo: String? = nil
     var hoverFont: String? = nil
     var specimenTab = "Terminal"
+    /// The explanation sheet that is open (a host sheet's id), nil when none.
+    var infoSheet: String? = nil
 
     public init(store: any SettingsStore, catalog: SettingsCatalog = .standard, page: String = "Terminal") {
         self.store = store; self.catalog = catalog; self.page = page

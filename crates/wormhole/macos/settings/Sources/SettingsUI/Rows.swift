@@ -128,7 +128,7 @@ struct ControlView: View {
             HStack(spacing: 4) {
                 Text(row.fontLink ? "\(m.value("Fonts:0:0")), \(m.value("Fonts:0:0#size")) pt" : row.value).foregroundStyle(.secondary)
                 Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(.tertiary)
-            }.contentShape(Rectangle()).onTapGesture { if row.fontLink { m.search = ""; m.page = "Fonts" } }
+            }.contentShape(Rectangle()).onTapGesture { if row.fontLink { m.search = ""; m.page = "Fonts" } else if !row.sheet.isEmpty { m.infoSheet = row.sheet } }
         case .button: Btn(m.get(row.key, row)) { if row.confirm.isEmpty { m.perform(row.actionID.isEmpty ? snakeID(row.value) : row.actionID, row.key) } else { confirming = true } }
         case .danger: Btn(row.value, destructive: true) { confirming = true }
         case .value: Text(m.value(row.key)).foregroundStyle(.secondary)

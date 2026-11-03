@@ -10,21 +10,27 @@ use wormhole_core::config::Settings;
 use wormhole_core::storage::paths::data_dir;
 use wormhole_core::terminal::shells;
 use wormhole_text::keys::{
+    SETTINGS_AGENTS_INSTALL, SETTINGS_AGENTS_UNINSTALL, SETTINGS_AGENTS_UPDATE,
     SETTINGS_TERMINAL_MAKE_DEFAULT, SETTINGS_TERMINAL_WORMHOLE_IS_THE_DEFAULT, SETTINGS_UPDATES_CHECK_NOW,
     SETTINGS_UPDATES_CHECKING, SETTINGS_UPDATES_DONT_RESTART, SETTINGS_UPDATES_DOWNLOADING,
     SETTINGS_UPDATES_INSTALL_UPDATE, SETTINGS_UPDATES_NOT_CHECKED_YET, SETTINGS_UPDATES_RESTART_NOW,
     SETTINGS_UPDATES_SKIP_THIS_VERSION, SETTINGS_UPDATES_WORMHOLE_IS_UP_TO_DATE,
+    settings_agents_cli_foreign_at, settings_agents_cli_installed_at, settings_agents_cli_not_installed,
     settings_updates_installed_restart, settings_updates_installed_waits,
 };
 use wormhole_text::text;
 
 use crate::app_state::app_mut;
 use crate::platform::default_app;
-use crate::settings_window::sections::{available_text, checked_ago};
+use crate::settings_window::sections::{available_text, checked_ago, cli_binary, cli_shown, cli_status};
 use crate::update::{self, UpdatePhase, Updates};
+use wormhole_core::ipc::control::COMMAND_NAME;
+use wormhole_core::terminal::cli_tool::{self, Status as CliStatus};
 
 /// The row of the Updates page that shows the version.
 const VERSION_ROW: &str = "Updates:1:0";
+/// The Command line tool button of the Coding agents page.
+const CLI_TOOL_ROW: &str = "Agents:1:0";
 /// The Terminal page's Default terminal button.
 const DEFAULT_TERMINAL_ROW: &str = "Terminal:1:1";
 
@@ -34,7 +40,47 @@ fn facts() -> Vec<(&'static str, String)> {
         Some(true) => text(SETTINGS_TERMINAL_WORMHOLE_IS_THE_DEFAULT),
         _ => text(SETTINGS_TERMINAL_MAKE_DEFAULT),
     };
-    vec![(VERSION_ROW, env!("CARGO_PKG_VERSION").to_string()), (DEFAULT_TERMINAL_ROW, default.to_string())]
+    // One button for the tool: Install, Update when the script is older than this app, Uninstall when it is current.
+    let cli = match cli_status() {
+        CliStatus::Installed { current: true, .. } => text(SETTINGS_AGENTS_UNINSTALL),
+        CliStatus::Installed { .. } => text(SETTINGS_AGENTS_UPDATE),
+        _ => text(SETTINGS_AGENTS_INSTALL),
+    };
+    vec![
+        (VERSION_ROW, env!("CARGO_PKG_VERSION").to_string()),
+        (DEFAULT_TERMINAL_ROW, default.to_string()),
+        (CLI_TOOL_ROW, cli.to_string()),
+    ]
+}
+
+/// Where the `wh` command stands, in words, for the line under the Command line tool button.
+pub(super) fn cli_tool_line() -> String {
+    match cli_status() {
+        CliStatus::NotInstalled => settings_agents_cli_not_installed(COMMAND_NAME),
+        CliStatus::Installed { path, .. } => {
+            settings_agents_cli_installed_at(COMMAND_NAME, &cli_shown(&path))
+        }
+        CliStatus::Foreign { path } => settings_agents_cli_foreign_at(COMMAND_NAME, &cli_shown(&path)),
+    }
+}
+
+/// Install, update or uninstall the `wh` command, as the GPUI page's button does.
+fn cli_tool_press() {
+    let targets = cli_tool::Targets::from_env();
+    match cli_status() {
+        CliStatus::Installed { current: true, .. } => {
+            if let Err(err) = cli_tool::uninstall(&targets) {
+                tracing::warn!("removing the command line tool: {err}");
+            }
+        }
+        // Someone else's `wh` is in the way: the line says whose, and nothing is overwritten.
+        CliStatus::Foreign { .. } => {}
+        _ => match cli_tool::install(&targets, &cli_binary()) {
+            Ok(done) => tracing::info!(path = %done.path.display(), "installed the command line tool"),
+            Err(cli_tool::Error::Foreign(_)) => {}
+            Err(err) => tracing::warn!("installing the command line tool: {err}"),
+        },
+    }
 }
 
 /// Pages whose fixed notice does not apply now: a build with an update feed has no "development build" note.
@@ -166,6 +212,10 @@ pub(super) fn perform(key: &str, id: &str, cx: &mut App) -> bool {
             {
                 tracing::warn!("making Wormhole the default terminal: {err:#}");
             }
+            true
+        }
+        CLI_TOOL_ROW => {
+            cli_tool_press();
             true
         }
         "Advanced:0:1" => {
