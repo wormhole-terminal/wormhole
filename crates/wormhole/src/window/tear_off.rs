@@ -14,7 +14,7 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::storage::store::WindowRecord;
 use wormhole_core::view::panes::Rect;
 use wormhole_core::view::sidebar::WindowSidebar;
-#[cfg(feature = "devctl")]
+#[cfg(any(test, feature = "devctl"))]
 use wormhole_core::view::tear_off::Spot;
 use wormhole_core::view::tear_off::{Landing, Occupant, Placed, Screen, landing, place, to_global};
 
