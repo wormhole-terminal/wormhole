@@ -455,7 +455,7 @@ fn changes_block(ui: crate::settings::UiColors, changes: &Changes) -> Div {
 }
 
 /// A permission as a sentence, for the places that list it without a switch.
-fn describe(permission: &DeclaredPermission) -> String {
+pub(in crate::settings_window) fn describe(permission: &DeclaredPermission) -> String {
     let detail = reveal(&permission.detail);
     match permission.key {
         "process" => settings_extensions_perm_process(&detail),

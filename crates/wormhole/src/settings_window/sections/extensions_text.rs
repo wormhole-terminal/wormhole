@@ -43,7 +43,7 @@ pub(super) fn approve_error_text(err: &ApproveError) -> String {
 }
 
 /// What a row says when the approved copy of its Probe is not what was approved.
-pub(super) fn verify_text(err: &VerifyError) -> String {
+pub(in crate::settings_window) fn verify_text(err: &VerifyError) -> String {
     match err {
         VerifyError::Missing => text(SETTINGS_EXTENSIONS_COPY_MISSING).to_string(),
         VerifyError::Unreadable(why) => settings_extensions_copy_unreadable(&reveal(why)),

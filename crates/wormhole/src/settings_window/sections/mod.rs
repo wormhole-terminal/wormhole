@@ -58,6 +58,8 @@ pub(super) use cli_tool::CliToolPanel;
 pub(super) use color_rows::in_force as colors_in_force;
 pub(super) use diff_preview::draw_diff_preview;
 pub(super) use extensions::Extensions;
+pub(super) use extensions_sheet::describe as describe_permission;
+pub(super) use extensions_text::verify_text;
 pub(super) use feature_flags::is_unlock_key;
 pub(crate) use import::ImportPage;
 pub(super) use list_preview::{draw_agents_preview, draw_sidebar_preview};

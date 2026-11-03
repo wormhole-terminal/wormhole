@@ -5,6 +5,7 @@
 //! which the module of the list carries out through the code the GPUI window uses.
 
 mod agents;
+mod probes;
 mod projects;
 
 use std::path::PathBuf;
@@ -21,6 +22,8 @@ pub(crate) struct Cache {
     agents: Option<AgentsSnapshot>,
     /// Projects worth offering (`project::known_projects`: file checks).
     projects: Vec<PathBuf>,
+    /// The Probes folder as last read.
+    probes: Option<probes::Probes>,
 }
 
 fn cache(cx: &App) -> Option<&Cache> {
@@ -56,15 +59,16 @@ impl Entry {
 /// Every list and sheet, for the snapshot: `({"<page>:<group>": [entry…]}, {"<id>": sheet})`.
 pub(super) fn build(cx: &mut App) -> (Value, Value) {
     let mut lists = Map::new();
-    let sheets = Map::new();
+    let mut sheets = Map::new();
     agents::lists(&mut lists, cx);
     projects::lists(&mut lists, cx);
+    probes::lists(&mut lists, &mut sheets, cx);
     (json!(lists), json!(sheets))
 }
 
 /// Carry out a button of a listed row. Whether the row was one of the lists'.
 pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
-    agents::perform(key, name, cx) || projects::perform(key, name, cx)
+    agents::perform(key, name, cx) || projects::perform(key, name, cx) || probes::perform(key, name, cx)
 }
 
 /// Read what the lists need from disk or the database, in the background where it is slow; the window is
@@ -72,4 +76,14 @@ pub(super) fn perform(key: &str, name: &str, cx: &mut App) -> bool {
 pub(super) fn load(cx: &mut App) {
     agents::load(cx);
     projects::load(cx);
+    probes::load(cx);
+}
+
+/// The Extensions page's footer buttons.
+pub(super) fn extensions_footer(name: &str, cx: &mut App) {
+    match name {
+        "Show in Finder" => probes::show_folder(cx),
+        "Scan Again" => probes::load(cx),
+        _ => {}
+    }
 }
