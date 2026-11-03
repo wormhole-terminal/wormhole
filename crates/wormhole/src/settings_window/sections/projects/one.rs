@@ -70,7 +70,13 @@ impl SettingsWindow {
                     this.projects.forget_info();
                 }))
         };
-        let tile = style::RowTile::Icon { fill: crate::theme_bridge::token(&cx.global::<crate::settings::SettingsStore>().tokens, "settings.tile.project"), icon: IconName::Folder };
+        let tile = style::RowTile::Icon {
+            fill: crate::theme_bridge::token(
+                &cx.global::<crate::settings::SettingsStore>().tokens,
+                "settings.tile.project",
+            ),
+            icon: IconName::Folder,
+        };
         let mut parts = style::TileRowParts::new(tile, choice_label(root));
         parts.chip = Some((kind, status.into()));
         parts.hint = Some(short_home(root).into());

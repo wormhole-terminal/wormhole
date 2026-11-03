@@ -132,7 +132,12 @@ impl Cards<'_> {
     }
 
     /// A row with no hint, key or extras, as the board's plain `.row`.
-    pub(super) fn plain_row(&self, id: &'static str, name: &'static str, control: AnyElement) -> SettingsRowProps {
+    pub(super) fn plain_row(
+        &self,
+        id: &'static str,
+        name: &'static str,
+        control: AnyElement,
+    ) -> SettingsRowProps {
         SettingsRowProps {
             id: id.into(),
             name: name.into(),
@@ -161,7 +166,7 @@ impl Cards<'_> {
 
     pub(super) fn rows(&self) -> Vec<AnyElement> {
         let look = (self.look)(Force::None);
-        let none: Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)> = Rc::new(|_, _, _| {});
+        let none: crate::ui::Handler = Rc::new(|_, _, _| {});
         let keyed = SettingsRowProps {
             key_text: Some("scrollback_lines".into()),
             key_name: "scrollback_lines".into(),
@@ -406,5 +411,85 @@ impl Cards<'_> {
         }
         .render(&(self.look)(Force::None))
         .into_any_element()
+    }
+
+    /// The board's "Preview card, empty state, footer line": a preview's label and frame with one banner in
+    /// it, a caption, an empty state and the footer's line.
+    pub(super) fn empties(&self) -> Vec<AnyElement> {
+        let banner = div()
+            .w(px(300.0))
+            .flex()
+            .items_center()
+            .gap(px(10.0))
+            .px(px(12.0))
+            .py(px(10.0))
+            .rounded(px(14.0))
+            .bg(self.t("surface.elevated"))
+            .text_size(px(12.0))
+            .child(div().size(px(28.0)).flex_shrink_0().rounded(px(7.0)).bg(self.t("primary")))
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .child(div().font_weight(FontWeight::BOLD).child("api needs input"))
+                    .child(div().text_color(self.t("text.muted")).child("Allow edit of src/limits.rs?")),
+            );
+        let frame = div()
+            .rounded(px(10.0))
+            .overflow_hidden()
+            .bg(self.t("surface.panel"))
+            .p(px(12.0))
+            .flex()
+            .justify_end()
+            .child(banner);
+        let label = div()
+            .ml(px(4.0))
+            .flex()
+            .items_baseline()
+            .gap(px(6.0))
+            .text_size(px(11.0))
+            .child(div().font_weight(FontWeight::BOLD).text_color(self.t("text.muted")).child("PREVIEW"))
+            .child(div().text_color(self.t("text.faint")).child("· Notifications"));
+        let empty = self
+            .card()
+            .flex()
+            .flex_col()
+            .items_center()
+            .gap(px(6.0))
+            .px(px(24.0))
+            .py(px(22.0))
+            .child(div().font_weight(FontWeight::BOLD).child("No Probes yet"))
+            .child(
+                div()
+                    .text_size(px(12.0))
+                    .text_color(self.t("text.muted"))
+                    .child("Make one with wh probe new, or copy a folder in."),
+            )
+            .child(
+                div()
+                    .flex()
+                    .gap(px(8.0))
+                    .mt(px(6.0))
+                    .child(self.button("em-1", "Show in Finder", false, false, false, Force::None))
+                    .child(self.button("em-2", "Scan Again", false, false, false, Force::None)),
+            );
+        let footer = div()
+            .ml(px(4.0))
+            .text_size(px(12.0))
+            .text_color(self.t("text.muted"))
+            .child("The worktree folder and the shells list are in config.json. ")
+            .child(div().text_color(self.t("primary")).child("Edit config.json"));
+        self.section(
+            "Preview card, empty state, footer line",
+            div()
+                .flex()
+                .flex_col()
+                .gap(px(8.0))
+                .child(label)
+                .child(frame)
+                .child(self.caption("The caption under a preview says what it shows."))
+                .child(empty)
+                .child(footer),
+        )
     }
 }

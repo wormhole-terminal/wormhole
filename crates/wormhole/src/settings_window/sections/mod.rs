@@ -57,11 +57,6 @@ pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
 pub(super) use color_rows::in_force as colors_in_force;
 pub(super) use diff_preview::draw_diff_preview;
-#[cfg(feature = "devctl")]
-pub(super) use {
-    appearance::draw_theme, color_rows::draw_primary, fonts::draw_specimen, stage::draw_stage,
-    title_row::draw_parts,
-};
 pub(super) use extensions::Extensions;
 pub(super) use feature_flags::is_unlock_key;
 pub(crate) use import::ImportPage;
@@ -79,6 +74,11 @@ pub(super) use projects::ProjectPicker;
 pub(super) use split_preview::draw_split_preview;
 pub(super) use terminal::TerminalRows;
 pub(super) use theme_picker::ThemePicker;
+#[cfg(feature = "devctl")]
+pub(super) use {
+    appearance::draw_theme, color_rows::draw_primary, fonts::draw_specimen, stage::draw_stage,
+    title_row::draw_parts,
+};
 
 /// The controls of a section's rows (their names and words are in core's settings index).
 pub(super) fn controls(section: Section) -> &'static [Setting] {

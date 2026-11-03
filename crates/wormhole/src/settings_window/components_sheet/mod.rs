@@ -36,6 +36,7 @@ const SPOTS: &[(&str, f32, f32, f32)] = &[
     ("Theme cards", 493.3, 1726.0, 413.3),
     ("Title row parts", 493.3, 1941.0, 413.3),
     ("Preview cards: one frame, nine contents, drawn by the pages’ own", 40.0, 2145.0, 1320.0),
+    ("Preview card, empty state, footer line", 946.7, 1403.0, 413.3),
     ("Hover and keyboard focus", 946.7, 1716.0, 413.3),
     ("Sidebar rows", 946.7, 1888.0, 413.3),
 ];
@@ -80,6 +81,7 @@ pub(super) fn render(
                 cards.notices(cx),
                 cards.forced(),
                 cards.nav(),
+                cards.empties(),
                 cards.pages(pages),
             ]
             .into_iter()
@@ -136,13 +138,17 @@ impl Cards<'_> {
             under: Some(colours),
             ..self.plain_row("colours", "Primary colour", div().into_any_element())
         };
-        out.extend(self.section("Colours: the theme’s, eight presets, your own", self.card().h(px(293.0)).child(primary.render(&look))));
+        out.extend(self.section(
+            "Colours: the theme’s, eight presets, your own",
+            self.card().h(px(293.0)).child(primary.render(&look)),
+        ));
         out.extend(self.section("Theme cards", self.card().h(px(164.0)).p(px(14.0)).child(themes)));
         out.extend(self.section(
             "Title row parts",
             self.card().h(px(110.0)).pt(px(6.0)).px(px(8.0)).pb(px(10.0)).child(title_parts),
         ));
-        let heading = SPOTS.iter().find(|s| s.0.starts_with("Preview cards")).map_or((40.0, 2145.0), |s| (s.1, s.2));
+        let heading =
+            SPOTS.iter().find(|s| s.0.starts_with("Preview cards")).map_or((40.0, 2145.0), |s| (s.1, s.2));
         out.push(
             div()
                 .absolute()
@@ -158,7 +164,13 @@ impl Cards<'_> {
         );
         for (x, y, body) in previews {
             out.push(
-                div().absolute().left(px(x)).top(px(y - self.from)).w(px(536.0)).child(body).into_any_element(),
+                div()
+                    .absolute()
+                    .left(px(x))
+                    .top(px(y - self.from))
+                    .w(px(536.0))
+                    .child(body)
+                    .into_any_element(),
             );
         }
         out
@@ -536,7 +548,12 @@ impl Cards<'_> {
     }
 
     fn nav(&self) -> Vec<AnyElement> {
-        let item = |key: usize, name: &'static str, tile: &str, force: Force, selected: bool| {
+        let item = |key: usize,
+                    name: &'static str,
+                    tile: &str,
+                    force: Force,
+                    selected: bool,
+                    count: Option<&'static str>| {
             let entry = NavEntry {
                 key,
                 is_item: true,
@@ -545,20 +562,41 @@ impl Cards<'_> {
                 icon: Some(IconName::Sparkles.into()),
                 tile: self.t(tile),
                 selected,
+                count: count.map(Into::into),
                 ..NavEntry::default()
             };
             (entry, force)
         };
+        let sub = |key: usize, name: &'static str, current: bool, first: bool| {
+            let entry = NavEntry {
+                key,
+                is_sub: true,
+                name: name.into(),
+                spoken: name.into(),
+                current,
+                first,
+                ..NavEntry::default()
+            };
+            (entry, Force::None)
+        };
         let mut rows = div().flex().flex_col().gap(px(2.0));
         for (entry, force) in [
-            item(0, "Changed", "settings.nav.tile.changed", Force::None, false),
-            item(1, "Changes & diffs", "settings.nav.tile.git", Force::None, false),
-            item(2, "Notifications (hover)", "settings.nav.tile.notifications", Force::Hover, false),
-            item(3, "Coding agents", "settings.nav.tile.agents", Force::None, true),
+            item(0, "Changed", "settings.nav.tile.changed", Force::None, false, Some("5")),
+            item(1, "Changes & diffs", "settings.nav.tile.git", Force::None, false, None),
+            item(2, "Notifications (hover)", "settings.nav.tile.notifications", Force::Hover, false, None),
+            item(3, "Coding agents", "settings.nav.tile.agents", Force::None, true, None),
+            sub(4, "Agents on this Mac", true, true),
+            sub(5, "Command line", false, false),
         ] {
             rows = rows.child(SettingsNavProps { rows: vec![entry] }.render(&(self.look)(force)));
         }
-        let body = self.card().p(px(8.0)).bg(self.t("sidebar.background")).w(px(240.0)).child(rows);
+        let body = div()
+            .w(px(240.0))
+            .px(px(12.0))
+            .py(px(10.0))
+            .rounded(px(10.0))
+            .bg(self.t("sidebar.background"))
+            .child(rows);
         self.section("Sidebar rows", body)
     }
 }

@@ -333,7 +333,10 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
     };
     let mut parts = style::TileRowParts::new(
         style::RowTile::Icon {
-            fill: crate::theme_bridge::token(&cx.global::<crate::settings::SettingsStore>().tokens, "settings.nav.tile.changed"),
+            fill: crate::theme_bridge::token(
+                &cx.global::<crate::settings::SettingsStore>().tokens,
+                "settings.nav.tile.changed",
+            ),
             icon: IconName::Puzzle,
         },
         title,

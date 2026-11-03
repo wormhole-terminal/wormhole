@@ -88,7 +88,11 @@ pub const UI_TOKENS: &[TokenInfo] = &[
         "Chrome",
         "The settings nav's tile for Project folders, under its white icon",
     ),
-    t("settings.tile.project", "Chrome", "The tile of a trusted project's row in Settings, under its white icon"),
+    t(
+        "settings.tile.project",
+        "Chrome",
+        "The tile of a trusted project's row in Settings, under its white icon",
+    ),
     t(
         "settings.nav.tile.extensions",
         "Chrome",
