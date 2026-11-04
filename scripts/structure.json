@@ -87,7 +87,6 @@
           "fonts",
           "syntax"
         ],
-        "ui",
         "style",
         "notice",
         "picker",
@@ -272,7 +271,7 @@
     "features-siblings": {},
     "frame-names-no-feature": {},
     "state-fields": {
-      "wormhole :: AppState": 26,
+      "wormhole :: AppState": 27,
       "wormhole :: Session": 10,
       "wormhole :: Workspace": 50
     }
