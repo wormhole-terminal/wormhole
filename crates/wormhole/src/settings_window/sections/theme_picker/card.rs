@@ -39,8 +39,6 @@ const PREVIEW_PAD: f32 = 8.0;
 const PREVIEW_GAP: f32 = 5.0;
 /// The name strip under the miniature.
 const STRIP_H: f32 = 28.0;
-/// The ring round the card that is its shelf's pick, outside its edge.
-const RING_WIDTH: f32 = 2.0;
 /// The group the hide button answers to, shown while the pointer is on its card.
 const CARD_GROUP: &str = "theme-card";
 
@@ -134,6 +132,8 @@ impl Render for ThemeCard {
         let name_color = if picked { t("primary") } else { t("text.primary") };
         let hide_value = entry.value.clone();
         let menu_entry = self.entry;
+        // The radius of what sits inside the card's outline: the card's less the outline's width.
+        let inner = (ui.radius_lg - ui.border_width).max(px(0.0));
         div()
             .id(("theme-card", self.entry))
             .group(CARD_GROUP)
@@ -145,9 +145,7 @@ impl Render for ThemeCard {
             .rounded(ui.radius_lg)
             .overflow_hidden()
             .cursor_pointer()
-            .map(
-                |d| if picked { d.ringed(ui, ui.primary, px(RING_WIDTH)) } else { d.outlined(ui, ui.border) },
-            )
+            .map(|d| if picked { d.outlined_always(ui, ui.primary) } else { d.outlined(ui, ui.border) })
             .when(!picked, |d| d.hover(|d| d.border_color(ui.line(ui.border_strong))))
             .on_click(cx.listener(move |_, _, _, cx| {
                 let value = value.clone();
@@ -160,7 +158,7 @@ impl Render for ThemeCard {
                     platform::show_menu(menu, event.position, window, cx);
                 }),
             )
-            .child(preview(tokens, ui))
+            .child(preview(tokens, ui, inner))
             // The theme in use can't be hidden: its card keeps its place while it is a pick.
             .when(!picked, |d| {
                 d.child(
@@ -195,6 +193,7 @@ impl Render for ThemeCard {
                     .h(px(STRIP_H))
                     .flex_none()
                     .px_3()
+                    .corners(px(0.0), px(0.0), inner, inner)
                     .bg(solid(tokens, "surface.panel"))
                     .rule_top(UiColors { border: t("border"), ..ui })
                     .child(
@@ -222,6 +221,10 @@ impl Render for ThemeCard {
                         d.child(Icon::new(IconName::Check).xsmall().text_color(t("primary")).flex_none())
                     }),
             )
+            // The second line of the pick's ring, inside the outline and as round as the card.
+            .when(picked, |d| {
+                d.child(div().absolute().inset_0().rounded(inner).outlined_always(ui, ui.primary))
+            })
     }
 }
 
@@ -236,7 +239,7 @@ fn solid(tokens: &ThemeTokens, name: &str) -> Hsla {
 
 /// A miniature of the app in `tokens`: the sidebar with three rows, the first one selected, and
 /// the terminal with lines in the theme's colors.
-fn preview(tokens: &ThemeTokens, ui: UiColors) -> AnyElement {
+fn preview(tokens: &ThemeTokens, ui: UiColors, inner: Pixels) -> AnyElement {
     let t = |name: &str| token(tokens, name);
     let ansi = |i: usize| hsla(tokens.terminal.ansi[i]);
     let bar =
@@ -249,6 +252,7 @@ fn preview(tokens: &ThemeTokens, ui: UiColors) -> AnyElement {
         .flex_col()
         .gap(px(PREVIEW_GAP))
         .p(px(PREVIEW_PAD))
+        .corners(inner, px(0.0), px(0.0), px(0.0))
         .bg(solid(tokens, "sidebar.background"))
         .border_r(px(PREVIEW_RULE))
         .border_color(ui.line(t("border")))
@@ -263,6 +267,7 @@ fn preview(tokens: &ThemeTokens, ui: UiColors) -> AnyElement {
         .flex_col()
         .gap(px(PREVIEW_GAP))
         .p(px(PREVIEW_PAD))
+        .corners(px(0.0), inner, px(0.0), px(0.0))
         .bg(hsla(tokens.terminal.background))
         .child(bar(t("primary"), 0.55))
         .child(bar(ansi(2), 0.8))

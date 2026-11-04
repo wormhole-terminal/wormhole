@@ -248,6 +248,23 @@ pub trait Edges: Styled + Sized {
         }])
     }
 
+    /// A radius for each corner, clockwise from the top left. A child that sits flush in a rounded parent
+    /// rounds its own outer corners to the parent's radius less its border, since the parent's clip is square.
+    fn corners(
+        mut self,
+        top_left: Pixels,
+        top_right: Pixels,
+        bottom_right: Pixels,
+        bottom_left: Pixels,
+    ) -> Self {
+        let c = &mut self.style().corner_radii;
+        c.top_left = Some(top_left.into());
+        c.top_right = Some(top_right.into());
+        c.bottom_right = Some(bottom_right.into());
+        c.bottom_left = Some(bottom_left.into());
+        self
+    }
+
     fn rule_top(mut self, ui: UiColors) -> Self {
         self.style().border_widths.top = Some(ui.border_width.into());
         self.border_color(ui.line(ui.border))
