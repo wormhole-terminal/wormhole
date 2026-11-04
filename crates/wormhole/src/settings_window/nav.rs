@@ -5,12 +5,6 @@
 //! a section shows how many settings it holds that match, and dims when it holds none.
 
 use std::collections::HashMap;
-#[allow(
-    clippy::wildcard_imports,
-    reason = "the keys are generated, one constant per message: naming each would list them twice"
-)]
-use wormhole_text::keys::*;
-use wormhole_text::text;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
@@ -109,16 +103,6 @@ impl SettingsWindow {
             .bg(fill)
             .rule_right(ui)
             .child(
-                div()
-                    .flex_none()
-                    .flex()
-                    .items_center()
-                    .h(px(style::TITLE_ROW_H))
-                    .px_4()
-                    .child(style::panel_title(ui, text(SETTINGS_WINDOW_SETTINGS))),
-            )
-            .child(self.render_profile_line(ui, cx))
-            .child(
                 div().flex_none().px_4().pt_2().pb_2().child(
                     Input::new(&self.search)
                         .small()
@@ -135,26 +119,50 @@ impl SettingsWindow {
                         }),
                 ),
             )
+            .child(self.render_profile_select(ui, cx))
             .child(rows)
             .into_any_element()
     }
 }
 
 impl SettingsWindow {
-    /// Whose settings these are: the avatar and name of the profile Wormhole is in, under the title.
-    fn render_profile_line(&self, ui: UiColors, cx: &App) -> Div {
+    /// Whose settings these are: the profile Wormhole is in, drawn as a pop-up button that is quiet (muted,
+    /// nothing to choose from here) and still clickable: it opens the Profile page.
+    fn render_profile_select(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
         let state = app(cx);
         let profile = state.profiles.active();
         let color = crate::theme_bridge::hsla(profile.color.color(&cx.global::<SettingsStore>().tokens));
         div()
-            .flex()
-            .items_center()
             .flex_none()
-            .gap_2()
             .px_4()
-            .mt_1()
-            .h(px(style::ROW_H))
-            .child(style::profile_avatar(ui, color, profile.avatar, style::TITLE_GLYPH))
-            .child(div().min_w_0().truncate().text_label().child(profile.name.clone()))
+            .pb_2()
+            .child(
+                div()
+                    .id("settings-profile-select")
+                    .role(Role::Button)
+                    .aria_label(Section::Profile.title())
+                    .flex()
+                    .items_center()
+                    .gap_2()
+                    .h(px(style::CONTROL_H))
+                    .px_2()
+                    .rounded(ui.radius)
+                    .outlined(ui, ui.border)
+                    .cursor_pointer()
+                    .hover(move |d| d.bg(ui.band_hover))
+                    .child(style::profile_avatar(ui, color, profile.avatar, style::TITLE_GLYPH))
+                    .child(
+                        div()
+                            .flex_1()
+                            .min_w_0()
+                            .truncate()
+                            .text_label()
+                            .text_color(ui.muted)
+                            .child(profile.name.clone()),
+                    )
+                    .child(style::icon(IconName::ChevronsUpDown).text_color(ui.muted))
+                    .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Profile, cx))),
+            )
+            .into_any_element()
     }
 }

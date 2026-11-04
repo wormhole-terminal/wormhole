@@ -396,7 +396,7 @@ impl Render for SettingsWindow {
                     .max_w(px(COLUMN_W))
                     .flex()
                     .flex_col()
-                    .gap_6()
+                    .gap_4()
                     .child(self.render_header(&query, hits, ui, cx))
                     .children(self.render_problems(ui, cx))
                     // The page's preview, at most a quarter of the window's height.
