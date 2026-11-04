@@ -58,7 +58,17 @@ impl SettingsWindow {
         let attention = self.agents.as_ref().is_some_and(|agents| agents.needs_repair() > 0);
 
         // A 4 pt gap between the items, so a row's selected fill doesn't touch the next one's.
-        let mut rows = div().flex_none().flex().flex_col().gap_1().px_2();
+        // The 16 pt under the last row is the sidebar's old bottom padding, now inside the scrolling list.
+        let mut rows = div()
+            .id("settings-nav-list")
+            .flex_1()
+            .min_h_0()
+            .flex()
+            .flex_col()
+            .overflow_y_scroll()
+            .gap_1()
+            .px_2()
+            .pb_4();
         let mut group = None;
         // Only the sections shown for this build: the Preview group (feature flags, and a feature's
         // own section while its flag is on) is there only in a dev build, so a release never lists it.
@@ -95,6 +105,9 @@ impl SettingsWindow {
                 .on_click(cx.listener(move |this, _, _, cx| this.show_section(section, cx))),
             );
         }
+        // The strip under the traffic lights, the search field and the profile select are a fixed header:
+        // only the page list scrolls, so nothing slides up under the traffic lights, which don't move.
+        // `min_h_0` lets the list shrink to the space left below the header instead of growing the column.
         div()
             .id("settings-nav")
             .flex()
@@ -102,31 +115,37 @@ impl SettingsWindow {
             .w(px(NAV_W))
             .flex_none()
             .h_full()
-            .overflow_y_scroll()
-            .pt(px(style::TITLE_ROW_H))
-            .pb_4()
             .bg(fill)
             .rule_right(ui)
             .child(
-                // Inset 8 like the rows below (`px_2`), so the field's edges line up with their fill.
-                // 12 under it keeps the select from crowding the field.
-                div().flex_none().px_2().pt_2().pb_3().child(
-                    Input::new(&self.search)
-                        .small()
-                        .cleanable(true)
-                        .prefix(style::icon(IconName::Search).text_color(ui.muted))
-                        .when(searching, |input| {
-                            input.suffix(
-                                div()
-                                    .text_caption()
-                                    .tabular_nums()
-                                    .text_color(ui.muted)
-                                    .child(total.to_string()),
-                            )
-                        }),
-                ),
+                div()
+                    .flex_none()
+                    .pt(px(style::TITLE_ROW_H))
+                    .child(
+                        // Inset 8 like the rows below (`px_2`), so the field's edges line up with their fill.
+                        // 12 under it keeps the select from crowding the field.
+                        div().flex_none().px_2().pt_2().pb_3().child(
+                            Input::new(&self.search)
+                                .small()
+                                .cleanable(true)
+                                .prefix(style::icon(IconName::Search).text_color(ui.muted))
+                                .when(searching, |input| {
+                                    input.suffix(
+                                        div()
+                                            .text_caption()
+                                            .tabular_nums()
+                                            .text_color(ui.muted)
+                                            .child(total.to_string()),
+                                    )
+                                }),
+                        ),
+                    )
+                    .child(self.render_profile_select(
+                        ui,
+                        self.section == Section::Profile && !self.show_results,
+                        cx,
+                    )),
             )
-            .child(self.render_profile_select(ui, self.section == Section::Profile && !self.show_results, cx))
             .child(rows)
             .into_any_element()
     }
