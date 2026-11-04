@@ -445,6 +445,18 @@ impl Settings {
         if self.motion_feature_on() { self.motion } else { MotionChoices::CLASSIC }
     }
 
+    /// The file icon theme the app draws: the person's `icon_theme` while the File icon themes feature is on
+    /// in this build, otherwise the built-in one, so a build that has not shipped the choice shows the
+    /// same icons whatever `config.json` holds. The stored value is never touched, so turning the flag on
+    /// brings the choice back.
+    pub fn icon_theme_in_force(&self) -> &str {
+        if self.feature_enabled(FeatureFlag::IconThemes) {
+            &self.icon_theme
+        } else {
+            &crate::theme::icon_theme::builtin_family().name
+        }
+    }
+
     /// Whether the Live resize feature is on in this build: windows resize in steps of the terminal's cell,
     /// and the program in it is told the size calmly while a window is dragged.
     pub fn live_resize_on(&self) -> bool {

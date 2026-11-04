@@ -374,6 +374,35 @@ mod tests {
     }
 
     #[test]
+    fn the_file_icons_rows_are_shown_only_while_the_icon_themes_flag_is_on() {
+        use crate::config::features::FeatureFlag;
+        use crate::config::settings_index::{Query, search_visible};
+        let on = Settings::default();
+        let mut off = Settings::default();
+        off.feature_flags.insert(FeatureFlag::IconThemes.key().into(), false);
+        for id in ["icon-theme", "icon-themes-folder"] {
+            let (_, _, row) = entries().find(|(_, _, e)| e.id == id).expect("the row");
+            assert!(row.is_shown(&on), "{id} on");
+            assert!(!row.is_shown(&off), "{id} off");
+        }
+        let found = |settings: &Settings, id: &str| {
+            ["File icons", "Icon themes folder"]
+                .iter()
+                .flat_map(|q| search_visible(&Query::new(q), settings))
+                .any(|hit| hit.entry.id == id)
+        };
+        assert!(found(&on, "icon-theme") && found(&on, "icon-themes-folder"));
+        assert!(!found(&off, "icon-theme") && !found(&off, "icon-themes-folder"), "the search skips them");
+        // The stored choice stays; only what the app draws with follows the flag.
+        let (mut on, mut off) = (on, off);
+        on.icon_theme = "My Theme".into();
+        off.icon_theme = "My Theme".into();
+        assert_eq!(on.icon_theme_in_force(), "My Theme");
+        assert_eq!(off.icon_theme_in_force(), crate::theme::icon_theme::builtin_family().name);
+        assert_eq!(off.icon_theme, "My Theme");
+    }
+
+    #[test]
     fn the_choices_of_the_changed_files_count_are_shown_only_while_it_is_shown() {
         let shown = |id: &str, settings: &Settings| {
             let (_, _, row) = entries().find(|(_, _, e)| e.id == id).expect("the row");

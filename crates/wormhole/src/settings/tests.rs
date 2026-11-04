@@ -53,6 +53,23 @@ fn a_setting_outside_the_theme_derives_nothing() {
 }
 
 #[test]
+fn a_stored_icon_theme_changes_no_icon_while_the_file_icon_themes_flag_is_off() {
+    let mut store = store();
+    assert!(store.icons.is_some(), "the built-in theme");
+    // "None" is the one choice that is visible without a user's theme on disk: it turns file icons off.
+    update(&mut store, |s| s.icon_theme = crate::icons::NONE.into());
+    assert!(store.icons.is_none(), "a dev build has the flag on: the choice applies");
+
+    update(&mut store, |s| _ = s.feature_flags.insert("icon_themes".into(), false));
+    assert!(store.icons.is_some(), "flag off: the built-in theme, whatever icon_theme says");
+    assert_eq!(store.icon_key.0, wormhole_core::theme::icon_theme::builtin_family().name);
+    assert_eq!(store.settings.icon_theme, crate::icons::NONE, "the stored choice is left alone");
+
+    update(&mut store, |s| _ = s.feature_flags.insert("icon_themes".into(), true));
+    assert!(store.icons.is_none(), "flag on again: the stored choice is back");
+}
+
+#[test]
 fn saving_the_same_settings_changes_nothing() {
     let mut store = store();
     update(&mut store, |s| s.diff_wrap = !s.diff_wrap);

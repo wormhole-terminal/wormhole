@@ -1,6 +1,7 @@
 //! The Appearance and Fonts sections: theme, accent, window, title row, file icons and the type.
 
 use super::{entry, group, untitled};
+use crate::config::features::FeatureFlag;
 use crate::config::settings_index::Group;
 #[allow(
     clippy::wildcard_imports,
@@ -77,9 +78,11 @@ pub(super) const APPEARANCE: &[Group] = &[
         SETTINGS_APPEARANCE_GROUP_FILE_ICONS,
         &[
             entry("icon-theme", SETTINGS_APPEARANCE_ICON_THEME, &["icon_theme"])
+                .with_flag(FeatureFlag::IconThemes)
                 .with_description(SETTINGS_APPEARANCE_ICON_THEME_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_ICON_THEME_KEYWORDS),
             entry("icon-themes-folder", SETTINGS_APPEARANCE_ICON_THEMES_FOLDER, &[])
+                .with_flag(FeatureFlag::IconThemes)
                 .with_description(SETTINGS_APPEARANCE_ICON_THEMES_FOLDER_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_ICON_THEMES_FOLDER_KEYWORDS),
         ],

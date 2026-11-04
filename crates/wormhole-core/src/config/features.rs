@@ -76,10 +76,14 @@ pub enum FeatureFlag {
     /// the picked folder's path at the cursor (it never changes directory). Off, ⌘J does nothing and the
     /// menu and the palette don't list it.
     FolderPicker,
+    /// File icon themes: Settings → Appearance → File icons, a choice among the icon themes in the icon
+    /// themes folder beside the built-in Wormhole Icons. Off, those rows are not in Settings and every
+    /// file shows the built-in Wormhole Icons, whatever `icon_theme` in `config.json` holds.
+    IconThemes,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 13] = [
+    pub const ALL: [FeatureFlag; 14] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -93,6 +97,7 @@ impl FeatureFlag {
         Self::Probes,
         Self::Files,
         Self::FolderPicker,
+        Self::IconThemes,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -111,6 +116,7 @@ impl FeatureFlag {
             Self::Probes => "probes",
             Self::Files => "files",
             Self::FolderPicker => "folder_picker",
+            Self::IconThemes => "icon_themes",
         }
     }
 
@@ -134,6 +140,7 @@ impl FeatureFlag {
             Self::Probes => "Probes",
             Self::Files => "Files",
             Self::FolderPicker => "Folder picker",
+            Self::IconThemes => "File icon themes",
         }
     }
 
@@ -193,6 +200,10 @@ impl FeatureFlag {
                 "⌘J at the prompt: pick a folder below the current one, or walk a path, and its path is put \
                  at the cursor."
             }
+            Self::IconThemes => {
+                "Settings → Appearance → File icons: pick a file icon theme, or add your own in the icon \
+                 themes folder. Off, files show the built-in Wormhole Icons."
+            }
         }
     }
 
@@ -225,6 +236,8 @@ impl FeatureFlag {
             Self::Files => false,
             // New: off until it has been through its visual check and approved.
             Self::FolderPicker => false,
+            // New: off until the Settings rows have been through their visual check and approved.
+            Self::IconThemes => false,
         }
     }
 }
@@ -481,6 +494,22 @@ mod tests {
         assert!(!flag.released());
         assert!(!enabled_in(flag, &BTreeMap::from([("files".to_string(), true)]), RELEASE));
         assert!(enabled_in(flag, &BTreeMap::new(), DEV));
+    }
+
+    #[test]
+    fn icon_themes_is_off_in_a_release_and_on_in_a_dev_build() {
+        let flag = FeatureFlag::IconThemes;
+        assert_eq!(flag.key(), "icon_themes");
+        assert_eq!(FeatureFlag::from_key("icon_themes"), Some(flag));
+        assert!(FeatureFlag::ALL.contains(&flag));
+        assert_eq!(FeatureFlag::ALL.last(), Some(&flag), "new flags go last");
+        assert!(!flag.released());
+        assert!(!enabled_in(flag, &BTreeMap::new(), RELEASE));
+        assert!(!enabled_in(flag, &BTreeMap::from([("icon_themes".to_string(), true)]), RELEASE));
+        assert!(!enabled_in(flag, &BTreeMap::new(), FlagMode::Unstable), "off until a tester turns it on");
+        assert!(enabled_in(flag, &BTreeMap::from([("icon_themes".to_string(), true)]), FlagMode::Unstable));
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
+        assert!(!enabled_in(flag, &BTreeMap::from([("icon_themes".to_string(), false)]), DEV));
     }
 
     #[test]

@@ -195,7 +195,7 @@ impl SettingsStore {
         let mut choices_memo = None;
         let tokens = themed(None, None, &config_tokens, settings.color_choices(), &mut choices_memo);
         let (palette, highlight) = theme_parts(&tokens);
-        let icon_key = (settings.icon_theme.clone(), tokens.appearance == Appearance::Light);
+        let icon_key = (settings.icon_theme_in_force().to_string(), tokens.appearance == Appearance::Light);
         tally("icons");
         Self {
             asked_opacity: settings.opacity,
@@ -313,11 +313,11 @@ impl SettingsStore {
         // its files shows up on the next change, as it always did); the bundled one and
         // "None" only change with the name or the appearance.
         let light = self.tokens.appearance == Appearance::Light;
-        let name = &self.settings.icon_theme;
-        if !crate::icons::is_bundled(name) || self.icon_key.0 != *name || self.icon_key.1 != light {
+        let name = self.settings.icon_theme_in_force();
+        if !crate::icons::is_bundled(name) || self.icon_key.0 != name || self.icon_key.1 != light {
             tally("icons");
             self.icons = crate::icons::resolve(name, light);
-            self.icon_key = (name.clone(), light);
+            self.icon_key = (name.to_string(), light);
             self.revisions.icons += 1;
             changed.icons = true;
         }
