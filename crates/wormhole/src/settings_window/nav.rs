@@ -1,5 +1,6 @@
 //! The settings window's nav: "Settings" under the traffic lights, the
-//! search field with its count and clear button, then the sections under their group labels,
+//! search field with its count and clear button, the profile select (the Profile section's entry, so it
+//! has no row of its own), then the sections under their group labels,
 //! 28 high and inset 8 from the nav's edges (rounded, like System Settings), the current one on
 //! the sidebar's selected tint. Each group starts a clear step below the one before. While searching,
 //! a section shows how many settings it holds that match, and dims when it holds none.
@@ -62,6 +63,10 @@ impl SettingsWindow {
         // Only the sections shown for this build: the Preview group (feature flags, and a feature's
         // own section while its flag is on) is there only in a dev build, so a release never lists it.
         for section in Section::visible(settings(cx)) {
+            // The profile select above the list is this section's entry; a row would repeat it.
+            if section == Section::Profile {
+                continue;
+            }
             let nav_group = section.info().nav;
             if group != Some(nav_group) {
                 group = Some(nav_group);
@@ -103,7 +108,9 @@ impl SettingsWindow {
             .bg(fill)
             .rule_right(ui)
             .child(
-                div().flex_none().px_4().pt_2().pb_2().child(
+                // Inset 8 like the rows below (`px_2`), so the field's edges line up with their fill.
+                // 12 under it keeps the select from crowding the field.
+                div().flex_none().px_2().pt_2().pb_3().child(
                     Input::new(&self.search)
                         .small()
                         .cleanable(true)
@@ -119,7 +126,7 @@ impl SettingsWindow {
                         }),
                 ),
             )
-            .child(self.render_profile_select(ui, cx))
+            .child(self.render_profile_select(ui, self.section == Section::Profile && !self.show_results, cx))
             .child(rows)
             .into_any_element()
     }
@@ -127,15 +134,17 @@ impl SettingsWindow {
 
 impl SettingsWindow {
     /// Whose settings these are: the profile Wormhole is in, drawn as a pop-up button that is quiet (muted,
-    /// nothing to choose from here) and still clickable: it opens the Profile page.
-    fn render_profile_select(&self, ui: UiColors, cx: &mut Context<Self>) -> AnyElement {
+    /// nothing to choose from here) and still clickable: it opens the Profile page, and it is the nav's
+    /// only entry for it, so on that page it wears a nav row's selected look.
+    fn render_profile_select(&self, ui: UiColors, selected: bool, cx: &mut Context<Self>) -> AnyElement {
         let state = app(cx);
         let profile = state.profiles.active();
         let color = crate::theme_bridge::hsla(profile.color.color(&cx.global::<SettingsStore>().tokens));
         div()
             .flex_none()
-            .px_4()
-            .pb_2()
+            // The rows' 8 pt inset, and 12 below to the first group label.
+            .px_2()
+            .pb_3()
             .child(
                 div()
                     .id("settings-profile-select")
@@ -147,9 +156,11 @@ impl SettingsWindow {
                     .h(px(style::CONTROL_H))
                     .px_2()
                     .rounded(ui.radius)
-                    .outlined(ui, ui.border)
+                    // The ring takes the fill's colour when selected, so the box keeps its size.
+                    .outlined(ui, if selected { ui.selected_row } else { ui.border })
                     .cursor_pointer()
-                    .hover(move |d| d.bg(ui.band_hover))
+                    .when(selected, |d| d.bg(ui.selected_row))
+                    .hover(move |d| if selected { d } else { d.bg(ui.band_hover) })
                     .child(style::profile_avatar(ui, color, profile.avatar, style::TITLE_GLYPH))
                     .child(
                         div()
@@ -157,10 +168,15 @@ impl SettingsWindow {
                             .min_w_0()
                             .truncate()
                             .text_label()
-                            .text_color(ui.muted)
+                            .font_weight(if selected { FontWeight::SEMIBOLD } else { FontWeight::NORMAL })
+                            .text_color(if selected { ui.selected_text } else { ui.muted })
                             .child(profile.name.clone()),
                     )
-                    .child(style::icon(IconName::ChevronsUpDown).text_color(ui.muted))
+                    .child(style::icon(IconName::ChevronsUpDown).text_color(if selected {
+                        ui.selected_text
+                    } else {
+                        ui.muted
+                    }))
                     .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Profile, cx))),
             )
             .into_any_element()
