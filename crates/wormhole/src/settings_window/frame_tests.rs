@@ -91,8 +91,9 @@ const SLACK: u64 = 20;
 /// [`SLACK`] more.
 const BUDGET: [(&str, u64); 17] = [
     ("Profile", 6862),
-    // With the Liquid Glass row (16,810 before it came back).
-    ("Appearance", 17367),
+    // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
+    // key line, 425 more.
+    ("Appearance", 17792),
     ("Fonts", 7750),
     ("Motion", 6462),
     // With the Worktrees group's switch for cloning build folders (356).
@@ -127,7 +128,8 @@ const BUDGET: [(&str, u64); 17] = [
     ("FeatureFlags", 7290),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
-    ("search", 12250),
+    // The search finds the Borders row too, as one more result: 196 more.
+    ("search", 12466),
 ];
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on

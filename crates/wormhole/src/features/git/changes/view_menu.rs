@@ -22,7 +22,7 @@ fn menu(tree: bool, group_untracked: bool) -> Menu {
         )
         .separator()
         .item(
-            Item::new(text(keys::SETTINGS_GIT_GROUP_UNTRACKED))
+            Item::new(text(keys::CHANGES_VIEW_GROUP_UNTRACKED))
                 .checked(group_untracked)
                 .on_select(|_, cx| update_settings(cx, |s| s.group_untracked = !s.group_untracked)),
         )
@@ -48,7 +48,7 @@ mod tests {
         with_language(Language::ENGLISH, || {
             assert_eq!(
                 menu(true, false).outline(),
-                ["- List", "- Tree [x]", "---", "- Untracked files separately"]
+                ["- List", "- Tree [x]", "---", "- Group untracked files separately"]
             );
             assert_eq!(menu(false, true).outline()[0], "- List [x]");
             assert!(menu(false, true).outline()[3].ends_with("[x]"));

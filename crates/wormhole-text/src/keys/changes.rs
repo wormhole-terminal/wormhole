@@ -7,3 +7,5 @@ use crate::key::Key;
 
 /// "View options"
 pub const CHANGES_VIEW_OPTIONS: Key = Key::new(51);
+/// "Group untracked files separately"
+pub const CHANGES_VIEW_GROUP_UNTRACKED: Key = Key::new(52);
