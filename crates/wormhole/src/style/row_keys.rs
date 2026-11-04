@@ -216,9 +216,9 @@ pub(super) fn with_menu(
 /// A control with a context menu of its own (a text field's cut, copy and paste): a right press on it
 /// goes no further up, so the row's menu does not open beside it, and the row's menu stays everywhere
 /// else on the row. `Input` handles that press on its way up and leaves it to go on, and shows its menu
-/// on the release, which this does not stop. Wrap every text field that sits in a row with keys.
+/// on the release, which this does not stop. `style::text_field` does this for every text field of Settings.
 #[track_caller]
-pub fn own_menu<E: InteractiveElement>(control: E) -> E {
+pub(super) fn own_menu<E: InteractiveElement>(control: E) -> E {
     control.on_mouse_down(MouseButton::Right, |_, _, cx| cx.stop_propagation())
 }
 

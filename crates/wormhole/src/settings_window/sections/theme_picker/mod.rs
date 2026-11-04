@@ -32,7 +32,7 @@ use self::card::ThemeCard;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::Button;
-use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
@@ -301,8 +301,7 @@ impl SettingsWindow {
         }
 
         let toolbar = div().w(px(FILTER_W)).child(
-            Input::new(&self.theme_picker.filter)
-                .small()
+            style::text_field(ui, &self.theme_picker.filter)
                 .cleanable(true)
                 .prefix(style::icon(IconName::Search).text_color(ui.muted)),
         );

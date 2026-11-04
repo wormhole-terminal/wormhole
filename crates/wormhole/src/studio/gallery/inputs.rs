@@ -1,7 +1,5 @@
 //! Form controls in their states.
 
-use gpui_kit::component::Sizable;
-use gpui_kit::component::input::Input;
 use gpui_kit::component::radio::Radio;
 use gpui_kit::component::switch::Switch;
 use gpui_kit::*;
@@ -24,12 +22,26 @@ pub(super) fn render(
         .child(
             div()
                 .flex()
+                .flex_wrap()
+                .items_center()
                 .gap_2()
-                .child(env.mark(
-                    "input",
-                    style::own_menu(div().w(px(220.0)).child(Input::new(&studio.sample_input).small())),
-                ))
-                .child(div().text_caption().text_color(ui.muted).child("← a real input")), // text: sample (the gallery's specimen)
+                .child(
+                    env.mark(
+                        "input",
+                        div()
+                            .flex()
+                            .gap_2()
+                            // Empty (the hint), filled (the text), and the outline while it has the keyboard.
+                            .child(style::text_field(ui, &studio.sample_input).w(style::FIELD_W_PAIR))
+                            .child(style::text_field(ui, &studio.sample_filled).w(style::FIELD_W_PAIR))
+                            .child(
+                                style::text_field(ui, &studio.sample_focused)
+                                    .w(style::FIELD_W_PAIR)
+                                    .show_focus(true),
+                            ),
+                    ),
+                )
+                .child(div().text_caption().text_color(ui.muted).child("← real inputs: hint, text, focused")), // text: sample (the gallery's specimen)
         )
         .child(
             div()

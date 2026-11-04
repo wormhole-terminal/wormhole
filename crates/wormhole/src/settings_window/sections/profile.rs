@@ -7,7 +7,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
-use gpui_kit::component::input::{Input, InputState, Textarea};
+use gpui_kit::component::input::InputState;
 use gpui_kit::*;
 use wormhole_core::config::profile::Profile;
 use wormhole_core::config::settings_index::SectionId as Section;
@@ -21,7 +21,7 @@ use wormhole_text::text;
 
 use super::profile_form::{LOGIN_AGENTS, Pick, ProfileForm};
 use crate::app_state::{AppState, app};
-use crate::settings::SettingsStore;
+use crate::settings::{SettingsStore, UiColors};
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
@@ -35,18 +35,12 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("profile-delete", draw_delete).describe(delete_caption).below(delete_question),
 ];
 
-/// The widths of the fields.
-const NAME_W: f32 = 180.0;
-const AVATAR_FIELD_W: f32 = 48.0;
-const PATH_W: f32 = 240.0;
-const GIT_NAME_W: f32 = 140.0;
-const GIT_EMAIL_W: f32 = 200.0;
-const ENV_W: f32 = 340.0;
+/// Width of the label before an agent's login field.
 const AGENT_LABEL_W: f32 = 48.0;
 
-/// A text field of `width`.
-fn field(input: &Entity<InputState>, width: f32) -> Div {
-    style::own_menu(div().flex_none().w(px(width)).child(Input::new(input).small()))
+/// A text field of `width`, in the one look of every field (`style::text_field`).
+fn field(ui: UiColors, input: &Entity<InputState>, width: f32) -> style::TextField {
+    style::text_field(ui, input).w(width)
 }
 
 /// The profile Wormhole is in, copied out so no borrow of the app is held while a row is built.
@@ -92,8 +86,8 @@ fn draw_name(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEl
                     typed_letter,
                     style::TITLE_GLYPH,
                 ))
-                .child(field(&form.name, NAME_W))
-                .child(field(&form.avatar, AVATAR_FIELD_W)),
+                .child(field(ui, &form.name, style::FIELD_W_PAIR))
+                .child(field(ui, &form.avatar, style::FIELD_W_LETTER)),
         )
         .child(div().flex().items_center().children(palette.iter().enumerate().map(|(ix, (color, hsla))| {
             let color = *color;
@@ -111,21 +105,24 @@ fn draw_name(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEl
 }
 
 fn draw_start(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
     let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
     div()
         .flex()
         .items_center()
         .gap_2()
-        .child(field(&form.start, PATH_W))
+        .child(field(ui, &form.start, style::FIELD_W))
         .child(choose("profile-start-choose", Pick::Start, cx))
         .into_any_element()
 }
 
 /// The button that picks a folder for a field.
+/// It is a square as tall as the field beside it (the Kit's small button is a little shorter).
 fn choose(id: impl Into<ElementId>, pick: Pick, cx: &mut Context<SettingsWindow>) -> Button {
     Button::new(id)
         .outline()
         .small()
+        .size(px(style::CONTROL_H))
         .icon(IconName::Folder)
         .tooltip(text(SETTINGS_PROFILE_CHOOSE_A_FOLDER))
         .on_click(cx.listener(move |this, _, window, cx| this.pick_profile_folder(pick, window, cx)))
@@ -188,19 +185,21 @@ fn folder_list(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
     )
 }
 
-fn draw_env(window: &SettingsWindow, _: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_env(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
     let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
-    div().flex_none().w(px(ENV_W)).child(Textarea::new(&form.env).small()).into_any_element()
+    style::TextField::multiline(ui, &form.env).w(style::FIELD_W_BOX).into_any_element()
 }
 
-fn draw_git(window: &SettingsWindow, _: &mut Context<SettingsWindow>) -> AnyElement {
+fn draw_git(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
     let Some(form) = window.profile_form.as_ref() else { return div().into_any_element() };
     div()
         .flex()
         .items_center()
         .gap_2()
-        .child(field(&form.git_name, GIT_NAME_W))
-        .child(field(&form.git_email, GIT_EMAIL_W))
+        .child(field(ui, &form.git_name, style::FIELD_W_PAIR))
+        .child(field(ui, &form.git_email, style::FIELD_W_PAIR))
         .into_any_element()
 }
 
@@ -218,7 +217,7 @@ fn draw_logins(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                 .items_center()
                 .gap_2()
                 .child(div().w(px(AGENT_LABEL_W)).text_body().text_color(ui.muted).child(*name))
-                .child(field(input, PATH_W))
+                .child(field(ui, input, style::FIELD_W))
                 .child(choose(("profile-login-choose", ix), Pick::Login(ix), cx))
         }))
         .into_any_element()

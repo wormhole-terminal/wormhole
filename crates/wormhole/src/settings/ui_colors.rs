@@ -97,6 +97,11 @@ pub struct UiColors {
     pub focus: Hsla,
     /// A text field's or stepper's fill (`input.background`).
     pub input: Hsla,
+    /// A text field's outline at rest (`input.border`), its outline while it has the keyboard
+    /// (`input.border.focus`) and the hint in it while it is empty (`input.placeholder`).
+    pub input_border: Hsla,
+    pub input_border_focus: Hsla,
+    pub input_placeholder: Hsla,
     /// What floats casts this (`shadow`): the palette, the find bar, popovers.
     pub shadow: Hsla,
     /// A tooltip, and the readout beside a resize handle (`tooltip.*`).
@@ -230,6 +235,9 @@ const COLORS: &[Field] = fields! {
     border_strong = "border.strong";
     focus = "border.focus";
     input = "input.background";
+    input_border = "input.border";
+    input_border_focus = "input.border.focus";
+    input_placeholder = "input.placeholder";
     shadow = "shadow";
     tooltip = "tooltip.background";
     tooltip_text = "tooltip.text";

@@ -40,6 +40,9 @@ pub(in crate::studio) struct GalleryView {
     scroll: ScrollHandle,
     /// The gallery's text field and the item editor's, shown by the specimens that have one.
     pub(super) sample_input: Entity<InputState>,
+    /// A field that holds text, beside the empty one that shows its hint.
+    pub(super) sample_filled: Entity<InputState>,
+    pub(super) sample_focused: Entity<InputState>,
     pub(super) item_editor: Entity<InputState>,
     /// The syntax sample, parsed once.
     pub(super) sample: RefCell<Option<CodeSample>>,
@@ -76,6 +79,8 @@ impl GalleryView {
             measures: Rc::default(),
             scroll: ScrollHandle::new(),
             sample_input: cx.new(|cx| InputState::new(window, cx).placeholder("Search themes")), // text: sample (the gallery's specimen)
+            sample_filled: cx.new(|cx| InputState::new(window, cx).default_value("Tokyo Night")), // text: sample (the gallery's specimen)
+            sample_focused: cx.new(|cx| InputState::new(window, cx).placeholder("Search themes")), // text: sample (the gallery's specimen)
             item_editor: cx.new(|cx| InputState::new(window, cx).default_value("Rename this task")), // text: sample (the gallery's specimen)
             sample: RefCell::new(None),
             #[cfg(feature = "devctl")]

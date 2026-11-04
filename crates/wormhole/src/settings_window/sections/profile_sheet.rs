@@ -4,7 +4,7 @@
 
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
-use gpui_kit::component::input::{Input, InputEvent, InputState};
+use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::*;
 use wormhole_core::config::profile::{NewProfile, StartFrom, first_letter};
 use wormhole_core::config::settings_index::SectionId as Section;
@@ -112,7 +112,7 @@ impl SettingsWindow {
                     .items_center()
                     .gap_2()
                     .child(style::profile_avatar(ui, color, letter, PREVIEW_AVATAR))
-                    .child(div().flex_1().child(Input::new(&sheet.name))),
+                    .child(div().flex_1().child(style::text_field(ui, &sheet.name))),
             )
             .child(style::section_label(ui, text(SETTINGS_PROFILE_START_FROM)))
             .child(div().flex().flex_col().children(sheet.options.iter().enumerate().map(
