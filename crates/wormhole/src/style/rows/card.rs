@@ -148,6 +148,9 @@ pub enum NavMark {
     Attention,
     /// A search found this many settings on the page.
     Hits(usize),
+    /// How many settings the page lists (the Changed page: the ones that differ from their defaults), in
+    /// the same badge. Zero draws no badge.
+    Count(usize),
     /// A search found nothing on the page: the row dims.
     NoHits,
     /// A feature-flagged section still being built: an outlined "Preview" tag, so it's obvious
@@ -202,7 +205,10 @@ pub fn nav_row(
             NavMark::Attention => {
                 d.child(div().flex_none().size(px(MARK_DOT)).rounded_full().bg(ui.agent_attention))
             }
-            NavMark::Hits(n) => d.child(count_badge(ui, crate::style::scale::count_label(n))),
+            NavMark::Count(0) => d,
+            NavMark::Hits(n) | NavMark::Count(n) => {
+                d.child(count_badge(ui, crate::style::scale::count_label(n)))
+            }
             NavMark::Preview => d.child(crate::style::status_badge(ui, ui.info, "Preview")),
             NavMark::None | NavMark::NoHits => d,
         })

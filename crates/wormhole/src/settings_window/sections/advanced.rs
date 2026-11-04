@@ -18,7 +18,7 @@ use wormhole_text::{text, whole};
 use super::{open_button, open_in_editor, reveal};
 use crate::app_state::{app, app_mut};
 use crate::settings::update_settings;
-use crate::settings::{Settings, SettingsStore};
+use crate::settings::{Settings, SettingsStore, UiColors};
 use crate::settings_window::registry::{Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style;
@@ -103,29 +103,45 @@ impl SettingsWindow {
         let ui = ui(cx);
         let changed = Values::of(cx.global::<SettingsStore>().user_settings()).changed_keys().len();
         Some(
-            style::banner(
+            reset_question(
                 ui,
-                style::BannerKind::Danger,
-                false,
-                settings_advanced_reset_question(whole(changed)),
-            )
-            .child(
-                Button::new("reset-cancel").ghost().small().label(text(SETTINGS_ADVANCED_CANCEL)).on_click(
-                    cx.listener(|this, _, _, cx| {
-                        this.confirm_reset = false;
-                        cx.notify();
-                    }),
-                ),
-            )
-            .child(
-                Button::new("reset-confirm").danger().small().label(text(SETTINGS_ADVANCED_RESET)).on_click(
-                    cx.listener(|this, _, _, cx| {
-                        this.confirm_reset = false;
-                        update_settings(cx, |s| *s = Settings::default());
-                    }),
-                ),
+                changed,
+                cx.listener(|this, _, _, cx| {
+                    this.confirm_reset = false;
+                    cx.notify();
+                }),
+                cx.listener(|this, _, _, cx| {
+                    this.confirm_reset = false;
+                    update_settings(cx, |s| *s = Settings::default());
+                }),
             )
             .into_any_element(),
         )
     }
+}
+
+/// The question before settings go back to their defaults: a banner that says how many (`count`) and keeps
+/// the rest, with Cancel and Reset. One way to ask, for this page's "Reset to defaults…" and the Changed page's
+/// "Reset All…".
+pub(in crate::settings_window) fn reset_question(
+    ui: UiColors,
+    count: usize,
+    cancel: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+    confirm: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> Div {
+    style::banner(ui, style::BannerKind::Danger, false, settings_advanced_reset_question(whole(count)))
+        .child(
+            Button::new("reset-cancel")
+                .ghost()
+                .small()
+                .label(text(SETTINGS_ADVANCED_CANCEL))
+                .on_click(cancel),
+        )
+        .child(
+            Button::new("reset-confirm")
+                .danger()
+                .small()
+                .label(text(SETTINGS_ADVANCED_RESET))
+                .on_click(confirm),
+        )
 }

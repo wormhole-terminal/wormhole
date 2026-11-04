@@ -71,6 +71,11 @@
 //! Appearance rose from 17,241 to 17,367, Fonts from 7,655 to 7,750, Motion from 6,441 to 6,462, Terminal
 //! from 10,381 to 10,705, Sessions from 15,496 to 15,764, Git from 4,668 to 4,746, Notifications from
 //! 8,037 to 8,246, MenuBar from 6,344 to 6,476 and Updates from 5,750 to 5,786.
+//! Every page rose by 81 when the nav gained its Changed row (the row itself, and the count behind its badge,
+//! which reads the settings as JSON once more), the Changed page being new at 6,486 with the five settings of
+//! [`change`] listed. `Values` keeps the defaults it compares with from the first read on (they never change),
+//! which every frame used to serialise again, so the search fell by 70 and Advanced, which reads them most,
+//! by 57.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -81,6 +86,7 @@ use wormhole_core::config::settings_index::Query;
 use super::sections::{MotionPreview, MotionScene as Scene};
 use super::{Section, current_window, open_settings};
 use crate::perf::allocations::thread_counts;
+use crate::settings::{settings, update_settings};
 use crate::window::test_harness::{isolate_in, start};
 
 /// Allocations a frame may make over what the pages made when this budget was set.
@@ -91,38 +97,41 @@ const SLACK: u64 = 20;
 /// [`SLACK`] more.
 // Measured with Show config keys off (the default): a page does not build its rows' key lines then, which
 // is why these are lower than they were when the lines were always built.
-const BUDGET: [(&str, u64); 17] = [
-    ("Profile", 6753),
+const BUDGET: [(&str, u64); 18] = [
+    ("Profile", 6834),
+    // Measured with [`change`]'s settings differing from their defaults, so the page has rows: five settings
+    // on four pages, each a row of its own page with a dot, a reset arrow and a menu.
+    ("Changed", 6486),
     // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
     // key line, 425 more.
-    ("Appearance", 17024),
-    ("Fonts", 7285),
-    ("Motion", 6205),
+    ("Appearance", 17105),
+    ("Fonts", 7366),
+    ("Motion", 6286),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 9649),
+    ("Terminal", 9730),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 12046),
-    ("Git", 4373),
+    ("Sessions", 12127),
+    ("Git", 4454),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 9601),
-    ("Import", 49101),
-    ("Notifications", 7573),
-    ("MenuBar", 6115),
-    ("Updates", 4999),
+    ("Agents", 9682),
+    ("Import", 49182),
+    ("Notifications", 7654),
+    ("MenuBar", 6196),
+    ("Updates", 5080),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
     // The Show config keys switch is a row more, 4,941 measured; with the keys hidden by default every
     // other page fell (their key lines are not built).
-    ("Advanced", 5019),
-    ("Projects", 9087),
+    ("Advanced", 4962),
+    ("Projects", 9168),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2667),
+    ("Extensions", 2748),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
@@ -130,12 +139,23 @@ const BUDGET: [(&str, u64); 17] = [
     // 6,912 measured, a row fewer.
     // The Restore after restart flag is one switch row more again: 7,271 measured (about 340 a row).
     // The File icon themes flag is one switch row more again: 7,577 measured (about 305 a row).
-    ("FeatureFlags", 7657),
+    ("FeatureFlags", 7738),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     // The search finds the Borders row too, as one more result: 196 more.
-    ("search", 12004),
+    ("search", 11934),
 ];
+
+/// What the Changed page is measured with: five settings that differ from their defaults, on four pages
+/// (Appearance, Terminal, Sessions, Git).
+fn change(s: &mut crate::settings::Settings) {
+    let defaults = crate::settings::Settings::default();
+    s.blur = !defaults.blur;
+    s.tab_width = 8;
+    s.diff_wrap = !defaults.diff_wrap;
+    s.minimap = !defaults.minimap;
+    s.sidebar_changes = !defaults.sidebar_changes;
+}
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on
 /// macOS 26 and later only, so a Mac before that draws the page without it.
@@ -177,6 +197,12 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
     let (handle, page) = cx.update(|cx| current_window(cx)).expect("the settings window opened");
     let mut measured = Vec::new();
     for section in Section::ALL {
+        // The Changed page lists what differs; every other page is measured with nothing different, as it is
+        // for most people (a changed row draws a dot, a reset arrow and a closure more).
+        let kept = cx.update(|cx| settings(cx).clone());
+        if section == Section::Changed {
+            cx.update(|cx| update_settings(cx, change));
+        }
         cx.update(|cx| page.update(cx, |page, cx| page.show_section(section, cx)));
         cx.run_until_parked();
         if section == Section::Import {
@@ -191,6 +217,9 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
         let before = thread_counts();
         draw(cx, handle);
         measured.push((format!("{section:?}"), thread_counts().since(before)));
+        if section == Section::Changed {
+            cx.update(|cx| update_settings(cx, |s| *s = kept));
+        }
     }
     // A search: the results of a word found in several pages, over the pages' rows.
     cx.update(|cx| {

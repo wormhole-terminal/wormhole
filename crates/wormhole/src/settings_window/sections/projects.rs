@@ -634,6 +634,7 @@ fn feature_row(
             tall: false,
             extra: None,
             on_reset: None,
+            reset_arrow: crate::style::ResetArrow::OnHover,
         },
         cx,
     )

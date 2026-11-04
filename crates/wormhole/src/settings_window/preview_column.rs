@@ -86,6 +86,7 @@ impl SettingsWindow {
             Section::Notifications => Some(PreviewKind::Notifications),
             Section::MenuBar => Some(PreviewKind::MenuBar),
             Section::Profile
+            | Section::Changed
             | Section::Motion
             | Section::Terminal
             | Section::Git
@@ -176,6 +177,7 @@ impl SettingsWindow {
                 tall: false,
                 extra: None,
                 on_reset: None,
+                reset_arrow: crate::style::ResetArrow::OnHover,
             },
             cx,
         )

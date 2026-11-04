@@ -32,6 +32,8 @@ mod settings_agents;
 #[rustfmt::skip]
 mod settings_appearance;
 #[rustfmt::skip]
+mod settings_changed;
+#[rustfmt::skip]
 mod settings_extensions;
 #[rustfmt::skip]
 mod settings_feature_flags;
@@ -87,6 +89,7 @@ pub use settings::*;
 pub use settings_advanced::*;
 pub use settings_agents::*;
 pub use settings_appearance::*;
+pub use settings_changed::*;
 pub use settings_extensions::*;
 pub use settings_feature_flags::*;
 pub use settings_fonts::*;
@@ -112,7 +115,7 @@ pub use zen::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 1323] = [
+pub const ALL: [Key; 1329] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -258,7 +261,9 @@ pub const ALL: [Key; 1323] = [
     SETTINGS_APPEARANCE_FILTER_THEMES, SETTINGS_APPEARANCE_IN_DARK_MODE, SETTINGS_APPEARANCE_IN_LIGHT_MODE,
     SETTINGS_APPEARANCE_SHOW_FEWER, SETTINGS_APPEARANCE_IMPORT_THEME, SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER,
     SETTINGS_APPEARANCE_HIDE_THEME, SETTINGS_APPEARANCE_MOVE_TO_TRASH, SETTINGS_APPEARANCE_TRASH_DETAIL,
-    SETTINGS_APPEARANCE_TRASH_EDITS, SETTINGS_APPEARANCE_SHOW_THEME, SETTINGS_SECTION_EXTENSIONS,
+    SETTINGS_APPEARANCE_TRASH_EDITS, SETTINGS_APPEARANCE_SHOW_THEME, SETTINGS_SECTION_CHANGED,
+    SETTINGS_SECTION_CHANGED_INTRO, SETTINGS_CHANGED_SUMMARY_DETAIL, SETTINGS_CHANGED_NONE,
+    SETTINGS_CHANGED_NONE_DETAIL, SETTINGS_CHANGED_RESET_ALL, SETTINGS_SECTION_EXTENSIONS,
     SETTINGS_SECTION_EXTENSIONS_INTRO, SETTINGS_EXTENSIONS_PROBES, SETTINGS_EXTENSIONS_PROBES_DESCRIPTION,
     SETTINGS_EXTENSIONS_PROBES_KEYWORDS, SETTINGS_EXTENSIONS_REFRESH, SETTINGS_EXTENSIONS_LOOKING,
     SETTINGS_EXTENSIONS_NONE_TITLE, SETTINGS_EXTENSIONS_SHOW_FOLDER, SETTINGS_EXTENSIONS_STATE_OFF,
@@ -703,6 +708,8 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-appearance-hidden-themes", settings_appearance_hidden_themes("Sample")),
         ("settings-appearance-theme-newer", settings_appearance_theme_newer(1)),
         ("settings-appearance-theme-newer", settings_appearance_theme_newer(5)),
+        ("settings-changed-summary", settings_changed_summary(1)),
+        ("settings-changed-summary", settings_changed_summary(5)),
         ("settings-extensions-none-where", settings_extensions_none_where("Sample")),
         ("settings-extensions-none-new", settings_extensions_none_new("Sample")),
         ("settings-extensions-too-many", settings_extensions_too_many("Sample")),

@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Settings has a Changed page at the top of its list, with a badge that counts the settings that differ from
+  their defaults. It shows each of them in its own control, under the name of its page, with an arrow that puts
+  just that one back, and a card with Copy as JSON for what differs and Reset All…, which asks first and puts
+  back only the settings it lists. With nothing changed it says so.
 - Help → Session Hosts (while Persistent terminals is on) opens a window that shows every session host:
   its processes, version and protocol against the app's, whether it answers, which terminal holds it
   and how that connection is doing, with End, Forget and a copy of the details for a bug report.

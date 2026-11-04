@@ -184,6 +184,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
             tall: false,
             extra: None,
             on_reset: None,
+            reset_arrow: crate::style::ResetArrow::OnHover,
         },
         cx,
     )

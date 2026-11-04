@@ -170,6 +170,12 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
                 tall: false,
                 extra: None,
                 on_reset: Some(Rc::new(|_, _| {})),
+                // The Changed page's rows, where every one differs, keep the arrow in view at the right end.
+                reset_arrow: if id == "g-setting-reset-end" {
+                    style::ResetArrow::Always
+                } else {
+                    style::ResetArrow::OnHover
+                },
             },
             cx,
         )
@@ -198,6 +204,15 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             None,
             style::stepper(ui, "g-setting-line", "1.45".into(), |_, _, _| {}, |_, _, _| {})
                 .into_any_element(),
+        ))
+        .child(row(
+            "g-setting-reset-end",
+            "Tab width",                  // text: sample (the gallery's specimen)
+            "Columns a tab stop is wide", // text: sample (the gallery's specimen)
+            &["tab_width"],
+            SettingState::Changed,
+            None,
+            style::stepper(ui, "g-setting-tab", "8".into(), |_, _, _| {}, |_, _, _| {}).into_any_element(),
         ))
         .child(row(
             "g-setting-project",
@@ -265,7 +280,7 @@ fn slider_track(ui: UiColors) -> AnyElement {
 const SLIDER_TRACK: f32 = 4.0;
 const SLIDER_KNOB: f32 = 16.0;
 
-/// The settings nav's group labels and items: normal, current, needs attention, search hits, none.
+/// The settings nav's group labels and items: normal, current, needs attention, search hits, a count, none.
 fn nav(ui: UiColors) -> Div {
     div()
         .flex()
@@ -274,6 +289,14 @@ fn nav(ui: UiColors) -> Div {
         .bg(ui.panel)
         .outlined(ui, ui.border)
         .p_2()
+        .child(style::nav_row(
+            "g-nav-changed",
+            ui,
+            IconName::RotateCcw,
+            "Changed", // text: sample (the gallery's specimen)
+            false,
+            NavMark::Count(7),
+        ))
         .child(style::nav_group_label(ui, "Look")) // text: sample (the gallery's specimen)
         .child(style::nav_row("g-nav-look", ui, IconName::Palette, "Appearance", false, NavMark::None)) // text: sample (the gallery's specimen)
         .child(style::nav_row("g-nav-fonts", ui, IconName::ALargeSmall, "Fonts", true, NavMark::None)) // text: sample (the gallery's specimen)

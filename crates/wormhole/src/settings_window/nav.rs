@@ -1,6 +1,7 @@
 //! The settings window's nav: "Settings" under the traffic lights, the
 //! search field with its count and clear button, the profile select (the Profile section's entry, so it
-//! has no row of its own), then the sections under their group labels,
+//! has no row of its own), then the Changed page (a run without a label, with a badge that counts the
+//! settings that differ from their defaults) and the other sections under their group labels,
 //! 28 high and inset 8 from the nav's edges (rounded, like System Settings), the current one on
 //! the sidebar's selected tint. Each group starts a clear step below the one before. While searching,
 //! a section shows how many settings it holds that match, and dims when it holds none.
@@ -28,6 +29,7 @@ pub(super) const NAV_W: f32 = 220.0;
 pub(super) fn section_icon(section: Section) -> IconName {
     match section {
         Section::Profile => IconName::CircleUser,
+        Section::Changed => IconName::RotateCcw,
         Section::Appearance => IconName::Palette,
         Section::Fonts => IconName::ALargeSmall,
         Section::Motion => IconName::Play,
@@ -55,6 +57,8 @@ impl SettingsWindow {
         }
         let searching = !query.is_empty();
         let total: usize = hits.values().sum();
+        // What the Changed row counts is read only for the badge it wears when not searching.
+        let changed = if searching { 0 } else { super::changed::differing(cx) };
         let attention = self.agents.as_ref().is_some_and(|agents| agents.needs_repair() > 0);
 
         // A 4 pt gap between the items, so a row's selected fill doesn't touch the next one's.
@@ -85,6 +89,7 @@ impl SettingsWindow {
                 }
             }
             let mark = match hits.get(&section) {
+                _ if !searching && section == Section::Changed => NavMark::Count(changed),
                 _ if !searching && section == Section::Agents && attention => NavMark::Attention,
                 // A preview section wears its tag when not searching; search marks override it.
                 _ if !searching && section.is_preview() => NavMark::Preview,

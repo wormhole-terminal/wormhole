@@ -53,6 +53,7 @@ mod theme_picker;
 mod title_row;
 mod updates;
 
+pub(super) use advanced::reset_question;
 pub(super) use agents::AgentsSnapshot;
 pub(super) use cli_tool::CliToolPanel;
 pub(super) use extensions::Extensions;
@@ -76,6 +77,8 @@ pub(super) use theme_picker::ThemePicker;
 pub(super) fn controls(section: Section) -> &'static [Setting] {
     match section {
         Section::Profile => profile::SETTINGS,
+        // Other pages' rows, laid out by the page itself (`changed`).
+        Section::Changed => &[],
         Section::Appearance => appearance::SETTINGS,
         Section::Fonts => fonts::SETTINGS,
         Section::Motion => motion::SETTINGS,
@@ -119,6 +122,9 @@ pub(super) fn select_id(id: &str) -> Option<&'static str> {
 
 impl SettingsWindow {
     pub(super) fn render_section(&self, section: Section, cx: &mut Context<Self>) -> AnyElement {
+        if section == Section::Changed {
+            return self.render_changed(cx);
+        }
         self.render_page(section, cx)
     }
 

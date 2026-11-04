@@ -3,12 +3,16 @@
 //! settings it finds as live rows; Esc clears the search, then closes the window.
 //!
 //! By file: `open` where it opens and how a row from the palette is shown, `window` the window as a
-//! view (its page and what its controls do), `nav` the left column, `sections` the pages and
-//! `registry`, `recorder`, `font_picker` and `preview_column` what the pages share.
+//! view (its page and what its controls do), `nav` the left column, `sections` the pages, `changed` the one
+//! page that shows the others' rows, and `registry`, `recorder`, `font_picker` and `preview_column` what the
+//! pages share.
 //!
 //! Above the window and the shared state: it may use them; the app root, the palette and the status
 //! item use it. The shared state keeps its page untyped.
 
+mod changed;
+#[cfg(test)]
+mod changed_tests;
 #[cfg(test)]
 mod close_tests;
 pub(crate) mod devctl;
@@ -136,8 +140,11 @@ pub(crate) struct SettingsWindow {
     themes_all: bool,
     /// Terminals & sidebar → the option under the pointer, previewed beside the current look.
     sidebar_preview: Option<SidebarLook>,
-    /// Advanced → "Reset to defaults…" was pressed: the row asks before it resets.
+    /// Advanced → "Reset to defaults…", or Changed → "Reset All…", was pressed: the page asks before it
+    /// resets (a page change or Esc withdraws the question).
     confirm_reset: bool,
+    /// Changed → Copy as JSON has just copied: it says Copied until this timer ends.
+    changed_copied: Option<Task<()>>,
     /// Coding agents → the agents that aren't on PATH are listed.
     others_open: bool,
     /// Profile → the fields of the profile Wormhole is in (made again when it changes).

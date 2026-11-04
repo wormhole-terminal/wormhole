@@ -86,6 +86,7 @@ impl SettingsWindow {
                             s.feature_flags.remove(key);
                         });
                     })),
+                    reset_arrow: crate::style::ResetArrow::OnHover,
                 },
                 cx,
             ));

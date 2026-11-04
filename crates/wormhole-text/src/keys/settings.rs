@@ -6,24 +6,24 @@
 use crate::key::Key;
 
 /// "Look"
-pub const SETTINGS_NAV_LOOK: Key = Key::new(1320);
+pub const SETTINGS_NAV_LOOK: Key = Key::new(1327);
 /// "Work"
-pub const SETTINGS_NAV_WORK: Key = Key::new(1321);
+pub const SETTINGS_NAV_WORK: Key = Key::new(1328);
 /// "Agents"
-pub const SETTINGS_NAV_AGENTS: Key = Key::new(1322);
+pub const SETTINGS_NAV_AGENTS: Key = Key::new(1329);
 /// "App"
-pub const SETTINGS_NAV_APP: Key = Key::new(1323);
+pub const SETTINGS_NAV_APP: Key = Key::new(1330);
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1324);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1331);
 /// "More information"
-pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1325);
+pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1332);
 /// "Copied"
-pub const SETTINGS_ROW_COPIED: Key = Key::new(1326);
+pub const SETTINGS_ROW_COPIED: Key = Key::new(1333);
 /// "Copy Key"
-pub const SETTINGS_ROW_COPY_KEY: Key = Key::new(1327);
+pub const SETTINGS_ROW_COPY_KEY: Key = Key::new(1334);
 /// "Copy as JSON"
-pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1328);
+pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1335);
 /// "Reset to Default"
-pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1329);
+pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1336);
 /// "Reset to default"
-pub const SETTINGS_ROW_RESET: Key = Key::new(1330);
+pub const SETTINGS_ROW_RESET: Key = Key::new(1337);

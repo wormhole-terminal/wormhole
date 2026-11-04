@@ -20,6 +20,8 @@ use wormhole_text::keys::{
 };
 use wormhole_text::{Key, Language, text, text_in};
 
+use std::sync::LazyLock;
+
 use serde_json::{Map, Value};
 
 use crate::config::{PROJECT_SETTINGS, Settings};
@@ -30,6 +32,10 @@ pub use search::{Hit, Query, search, search_visible};
 pub enum SectionId {
     /// The profile Wormhole is in: its name, folders, environment, git identity and agent logins.
     Profile,
+    /// Every setting that differs from its default, in its own control, reset one by one or all at once.
+    /// It holds no settings of its own (no group): it shows the other pages' rows, found by what differs
+    /// ([`Values::changed_rows`]).
+    Changed,
     Appearance,
     Fonts,
     /// How the app moves, one choice and live preview each. Behind [`crate::config::features::FeatureFlag::Motion`].
@@ -55,6 +61,8 @@ pub enum SectionId {
 pub enum NavGroup {
     /// The profile page, first and without a heading of its own.
     Profile,
+    /// The Changed page, a run of its own after the profile select and without a heading.
+    Changed,
     Look,
     Work,
     Agents,
@@ -66,7 +74,7 @@ pub enum NavGroup {
 impl NavGroup {
     pub fn title(self) -> &'static str {
         match self {
-            NavGroup::Profile => "",
+            NavGroup::Profile | NavGroup::Changed => "",
             NavGroup::Look => text(SETTINGS_NAV_LOOK),
             NavGroup::Work => text(SETTINGS_NAV_WORK),
             NavGroup::Agents => text(SETTINGS_NAV_AGENTS),
@@ -186,8 +194,9 @@ impl Entry {
 }
 
 impl SectionId {
-    pub const ALL: [SectionId; 16] = [
+    pub const ALL: [SectionId; 17] = [
         SectionId::Profile,
+        SectionId::Changed,
         SectionId::Appearance,
         SectionId::Fonts,
         SectionId::Motion,
@@ -289,6 +298,13 @@ pub fn entry(id: &str) -> Option<(SectionId, &'static Group, &'static Entry)> {
 /// Settings has a page of them.
 pub const UNLISTED: &[&str] = &["notifications", "folder_colors", "files_pinned", "features"];
 
+/// The defaults as values, made once: they never change, and every frame of the settings window reads them
+/// beside the current ones.
+fn default_map() -> &'static Map<String, Value> {
+    static DEFAULTS: LazyLock<Map<String, Value>> = LazyLock::new(|| as_map(&Settings::default()));
+    &DEFAULTS
+}
+
 fn as_map(settings: &Settings) -> Map<String, Value> {
     match serde_json::to_value(settings) {
         Ok(Value::Object(map)) => map,
@@ -299,22 +315,49 @@ fn as_map(settings: &Settings) -> Map<String, Value> {
 /// The settings as values to compare, and the defaults beside them.
 pub struct Values {
     current: Map<String, Value>,
-    defaults: Map<String, Value>,
+    defaults: &'static Map<String, Value>,
 }
 
 impl Values {
     pub fn of(settings: &Settings) -> Self {
-        Self { current: as_map(settings), defaults: as_map(&Settings::default()) }
+        Self { current: as_map(settings), defaults: default_map() }
     }
 
     /// Whether `key` is set to something other than its default.
     pub fn changed(&self, key: &str) -> bool {
-        key_path::get(&self.current, key) != key_path::get(&self.defaults, key)
+        key_path::get(&self.current, key) != key_path::get(self.defaults, key)
     }
 
     /// Whether any key of `entry` differs from its default.
     pub fn entry_changed(&self, entry: &Entry) -> bool {
         entry.keys.iter().any(|key| self.changed(key))
+    }
+
+    /// Every row that differs from its default and that `settings` shows, in the order of the pages: what the
+    /// Changed page lists. A row of a page that is hidden (its feature flag is off) or that sits behind a
+    /// switch that is off is left out with its page, as the pages leave it out, and the Changed page itself
+    /// has no rows to list. `settings` are the ones in force (flags, switches), `self` the person's own.
+    pub fn changed_rows(&self, settings: &Settings) -> Vec<ChangedRow> {
+        SectionId::ALL
+            .into_iter()
+            .filter(|section| section.is_visible(settings))
+            .flat_map(|section| {
+                section.entries().map(move |(group, entry)| ChangedRow { section, group, entry })
+            })
+            .filter(|row| self.entry_changed(row.entry) && row.entry.is_shown(settings))
+            .collect()
+    }
+
+    /// The keys of `rows` that differ from their default, each once, in the rows' order: what the Changed
+    /// page copies and what its Reset All puts back.
+    pub fn changed_keys_of<'a>(&self, rows: impl IntoIterator<Item = &'a ChangedRow>) -> Vec<&'static str> {
+        let mut keys: Vec<&'static str> = Vec::new();
+        for key in rows.into_iter().flat_map(|row| row.entry.keys.iter().copied()) {
+            if self.changed(key) && !keys.contains(&key) {
+                keys.push(key);
+            }
+        }
+        keys
     }
 
     /// Every key that differs from its default, sorted: what "Reset all settings" puts back.
@@ -326,12 +369,20 @@ impl Values {
     }
 }
 
+/// One row of the Changed page: a setting that differs from its default, and where it lives.
+#[derive(Clone, Copy)]
+pub struct ChangedRow {
+    pub section: SectionId,
+    pub group: &'static Group,
+    pub entry: &'static Entry,
+}
+
 /// `settings` with `keys` back at their defaults (the reset arrow of a row).
 pub fn reset(settings: &Settings, keys: &[&str]) -> Settings {
     let mut map = as_map(settings);
-    let defaults = as_map(&Settings::default());
+    let defaults = default_map();
     for key in keys {
-        match key_path::get(&defaults, key) {
+        match key_path::get(defaults, key) {
             Some(value) => key_path::set(&mut map, key, value.clone()),
             // Stored only while it differs (the motion choices): its default is that it isn't there.
             None => key_path::remove(&mut map, key),
@@ -356,7 +407,7 @@ pub fn set_by_project(entry: &Entry, overridden: &[String]) -> bool {
 mod tests {
     use std::collections::HashSet;
 
-    use super::{Entry, SectionId, UNLISTED, Values, entries, entry, reset, set_by_project};
+    use super::{Entry, NavGroup, SectionId, UNLISTED, Values, entries, entry, reset, set_by_project};
     use super::{as_map, key_path};
     use crate::config::{APP_SETTINGS, ChangesScope, PROJECT_SETTINGS, Settings, keys};
 
@@ -530,7 +581,8 @@ mod tests {
     fn every_section_has_a_page() {
         for section in SectionId::ALL {
             assert!(!section.title().is_empty());
-            assert!(!section.groups().is_empty(), "{section:?} has nothing to show");
+            // The Changed page shows the other pages' rows, not rows of its own.
+            assert_eq!(section.groups().is_empty(), section == SectionId::Changed, "{section:?}");
         }
     }
 
@@ -548,6 +600,94 @@ mod tests {
         assert_eq!(back.tab_width, Settings::default().tab_width);
         assert!(back.diff_wrap, "the other changes stay");
         assert!(Values::of(&Settings::default()).changed_keys().is_empty());
+    }
+
+    fn listed(settings: &Settings) -> Vec<&'static str> {
+        Values::of(settings).changed_rows(settings).iter().map(|row| row.entry.id).collect()
+    }
+
+    #[test]
+    fn nothing_changed_lists_no_rows() {
+        let defaults = Settings::default();
+        assert!(Values::of(&defaults).changed_rows(&defaults).is_empty());
+    }
+
+    #[test]
+    fn a_changed_switch_and_a_changed_menu_are_listed_with_their_page_in_the_order_of_the_pages() {
+        let defaults = Settings::default();
+        let settings = Settings {
+            diff_wrap: !defaults.diff_wrap,
+            tab_width: 8,
+            blur: !defaults.blur,
+            ..Settings::default()
+        };
+        let values = Values::of(&settings);
+        let rows = values.changed_rows(&settings);
+        let ids: Vec<&str> = rows.iter().map(|row| row.entry.id).collect();
+        assert_eq!(ids.len(), 3, "{ids:?}");
+        for id in ["diff-wrap", "tab-width", "blur"] {
+            assert!(ids.contains(&id), "{id} in {ids:?}");
+        }
+        // Each row names the page it lives on.
+        for row in &rows {
+            assert_eq!(
+                entry(row.entry.id).map(|(section, _, _)| section),
+                Some(row.section),
+                "{}",
+                row.entry.id
+            );
+        }
+        let places: Vec<usize> = rows
+            .iter()
+            .map(|row| SectionId::ALL.iter().position(|s| *s == row.section).expect("a section"))
+            .collect();
+        assert!(places.windows(2).all(|pair| pair[0] <= pair[1]), "in the order of the pages: {places:?}");
+        assert!(rows.iter().all(|row| row.section != SectionId::Changed));
+
+        // Only what differs is copied and put back, each key once.
+        let keys = values.changed_keys_of(&rows);
+        assert_eq!(keys.len(), 3, "{keys:?}");
+        let json = values.json(&keys);
+        assert!(json.contains("\"tab_width\": 8") && json.contains("\"diff_wrap\": true"), "{json}");
+        assert!(reset(&settings, &keys) == defaults, "resetting the listed keys puts everything back");
+    }
+
+    #[test]
+    fn a_row_of_a_hidden_page_or_behind_an_off_switch_is_not_listed() {
+        use crate::view::motion::{FoldMotion, MotionChoices};
+        // The Motion page is behind a feature flag: with the flag off it has no page and no rows here.
+        let mut settings = Settings {
+            motion: MotionChoices { fold: FoldMotion::Drawer, ..Default::default() },
+            ..Settings::default()
+        };
+        assert_eq!(listed(&settings), ["motion-fold"]);
+        settings.feature_flags.insert("motion".into(), false);
+        // (Turning the flag off is itself a change, listed on the flags' page.)
+        assert_eq!(listed(&settings), ["feature-flags"]);
+        assert!(Values::of(&settings).changed("motion"), "the choice itself is still stored");
+
+        // A choice beside a switch that is off is not on its page, so it is not listed; the switch is.
+        let off = Settings {
+            sidebar_changes: false,
+            sidebar_changes_scope: ChangesScope::Repository,
+            ..Settings::default()
+        };
+        assert!(Values::of(&off).changed("sidebar_changes_scope"), "the choice differs from its default");
+        assert_eq!(listed(&off), ["sidebar-changes"]);
+    }
+
+    #[test]
+    fn the_changed_page_has_no_rows_of_its_own_and_is_never_listed() {
+        assert!(SectionId::Changed.groups().is_empty());
+        assert!(entries().all(|(section, _, _)| section != SectionId::Changed));
+        let settings = Settings { tab_width: 8, ..Settings::default() };
+        let rows = Values::of(&settings).changed_rows(&settings);
+        assert!(!rows.is_empty() && rows.iter().all(|row| row.section != SectionId::Changed));
+        // It is first in the nav after the profile, in a run without a heading.
+        assert_eq!(SectionId::ALL[..2], [SectionId::Profile, SectionId::Changed]);
+        assert_eq!(SectionId::Changed.info().nav, NavGroup::Changed);
+        assert!(NavGroup::Changed.title().is_empty());
+        assert!(SectionId::Changed.is_visible(&settings) && !SectionId::Changed.is_preview());
     }
 
     #[test]

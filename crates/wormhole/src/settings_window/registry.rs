@@ -32,6 +32,9 @@ use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
 
+/// The widest the summary of a block's value grows on the Changed page before it is cut.
+const SUMMARY_MAX_W: f32 = 240.0;
+
 /// Draws part of a page that is more than a switch, a segmented control or a stepper.
 pub(super) type Draw = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> AnyElement;
 /// Says something more current than the table's description (the font in use).
@@ -170,7 +173,7 @@ fn controls() -> &'static HashMap<&'static str, (Section, &'static Setting)> {
 }
 
 /// The control of the row `id`.
-fn control(id: &str) -> Option<&'static Setting> {
+pub(super) fn control(id: &str) -> Option<&'static Setting> {
     controls().get(id).map(|(_, setting)| *setting)
 }
 
@@ -216,20 +219,34 @@ impl ProjectSource {
 }
 
 /// What every row of a page needs to know, read once per draw.
-struct PageState {
-    ui: UiColors,
+pub(super) struct PageState {
+    pub(super) ui: UiColors,
     /// The user's own settings against the defaults.
-    values: Values,
+    pub(super) values: Values,
     project: Option<ProjectSource>,
+    /// The rows are drawn on the Changed page, not on their own: each differs from its default, so its reset
+    /// arrow is always there, and a block, which draws a whole page's worth, is a row that says what it is
+    /// set to.
+    changed_page: bool,
 }
 
 impl PageState {
-    fn new(front: &FrontWindow, cx: &App) -> Self {
+    pub(super) fn new(front: &FrontWindow, cx: &App) -> Self {
+        Self::read(front, false, cx)
+    }
+
+    /// For the rows of the Changed page.
+    pub(super) fn for_changed_page(front: &FrontWindow, cx: &App) -> Self {
+        Self::read(front, true, cx)
+    }
+
+    fn read(front: &FrontWindow, changed_page: bool, cx: &App) -> Self {
         let store = cx.global::<SettingsStore>();
         Self {
             ui: ui(cx),
             values: Values::of(store.user_settings()),
             project: ProjectSource::current(front, cx),
+            changed_page,
         }
     }
 }
@@ -238,6 +255,19 @@ impl PageState {
 /// a project overlays: the file is what is copied.
 fn current_json(cx: &App, keys: &[&str]) -> String {
     Values::of(cx.global::<SettingsStore>().user_settings()).json(keys)
+}
+
+/// What a block's row says on the Changed page, where the block cannot draw its whole page: the values of the
+/// keys that differ, as the snippet Copy as JSON would give, in one muted line.
+fn block_summary(ui: UiColors, values: &Values, entry: &Entry) -> AnyElement {
+    let changed: Vec<&str> = entry.keys.iter().copied().filter(|key| values.changed(key)).collect();
+    div()
+        .max_w(px(SUMMARY_MAX_W))
+        .truncate()
+        .text_caption()
+        .text_color(ui.muted)
+        .child(values.json(&changed))
+        .into_any_element()
 }
 
 /// What a setting shows right now, read before the row is built so no copy of the settings
@@ -308,8 +338,9 @@ impl SettingsWindow {
         column.into_any_element()
     }
 
-    /// One setting: a block as it draws itself, anything else in a `style::setting` row.
-    fn render_entry(
+    /// One setting: a block as it draws itself, anything else in a `style::setting` row. On the Changed page
+    /// (`page.changed_page`) a block is a row too, as the rest are.
+    pub(super) fn render_entry(
         &self,
         entry: &'static Entry,
         setting: &'static Setting,
@@ -321,7 +352,10 @@ impl SettingsWindow {
         if self.in_column(entry.id) {
             return self.render_preview_note(entry, hit, cx);
         }
-        if let Control::Block(draw) = &setting.control {
+        let listed = page.changed_page;
+        if let Control::Block(draw) = &setting.control
+            && !listed
+        {
             return draw(self, cx);
         }
         // The person's own values: Zen mode draws the window with less, and says so at the top of the page.
@@ -364,7 +398,11 @@ impl SettingsWindow {
         });
         let keys = entry.keys;
         let chip = setting.chip.and_then(|chip| chip(self, cx));
-        let control = self.render_control(setting, current, ui, cx);
+        let control = if listed && matches!(setting.control, Control::Block(_)) {
+            block_summary(ui, &page.values, entry)
+        } else {
+            self.render_control(setting, current, ui, cx)
+        };
         // The row the palette asked for (`reveal_row`): marked as a search hit on its whole
         // label, and anchored so the page can scroll to it.
         let revealed = self.revealed_row().filter(|(id, _)| *id == entry.id).map(|(_, anchor)| anchor);
@@ -390,6 +428,11 @@ impl SettingsWindow {
                 on_reset: (!keys.is_empty() && changed).then(|| -> style::Reset {
                     Rc::new(move |_, cx| update_settings(cx, |s| *s = settings_index::reset(s, keys)))
                 }),
+                reset_arrow: if listed {
+                    crate::style::ResetArrow::Always
+                } else {
+                    crate::style::ResetArrow::OnHover
+                },
             },
             cx,
         )

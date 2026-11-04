@@ -111,6 +111,11 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             intro: SETTINGS_SECTION_PROFILE_INTRO,
             nav: NavGroup::Profile,
         },
+        SectionId::Changed => &SectionInfo {
+            title: SETTINGS_SECTION_CHANGED,
+            intro: SETTINGS_SECTION_CHANGED_INTRO,
+            nav: NavGroup::Changed,
+        },
         SectionId::Appearance => &SectionInfo {
             title: SETTINGS_SECTION_APPEARANCE,
             intro: SETTINGS_SECTION_APPEARANCE_INTRO,
@@ -192,6 +197,8 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
 pub(super) fn groups(id: SectionId) -> &'static [Group] {
     match id {
         SectionId::Profile => profile::PROFILE,
+        // The other pages' rows, found by what differs (`Values::changed_rows`), not a table of its own.
+        SectionId::Changed => &[],
         SectionId::Appearance => appearance::APPEARANCE,
         SectionId::Fonts => appearance::FONTS,
         SectionId::Motion => motion::MOTION,

@@ -8,6 +8,10 @@ group ""
 group "Danger zone"
   blurb ""
   aside ""
+section Changed
+  title "Changed"
+  intro "Every setting that differs from its default, with its own control. Reset one, or all at once."
+  nav ""
 section Appearance
   title "Appearance"
   intro "What every window looks like. Changes apply as you make them."

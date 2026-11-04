@@ -18,7 +18,7 @@ use super::info::{marked, setting_info};
 use super::labels::{changed_dot, tint_chip};
 use super::row_keys::{KeyView, Reset, RowKeys, key_label, with_menu};
 use super::scale::{
-    CONTROL_H, Edges, MARK_DOT, NAME_LINE, RECORDER_W, SETTING_ROW_MIN_H, SLIDER_W, TextRole,
+    CONTROL_H, Edges, HIT_MIN, MARK_DOT, NAME_LINE, RECORDER_W, SETTING_ROW_MIN_H, SLIDER_W, TextRole,
 };
 use super::section::ClickHandler;
 use crate::settings::UiColors;
@@ -91,6 +91,17 @@ pub enum SettingState {
     Disabled,
 }
 
+/// When a changed [`setting`] row shows its reset arrow.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ResetArrow {
+    /// Under the pointer, before the control: on a setting's own page, where most rows are at their
+    /// defaults and an arrow on each would only be noise.
+    OnHover,
+    /// Always, at the right end of the row, in a column of its own so the controls line up: on the
+    /// Changed page, where every row differs and putting it back is what the page is for.
+    Always,
+}
+
 /// The parts of a [`setting`] row.
 pub struct SettingParts {
     pub label: SharedString,
@@ -119,6 +130,8 @@ pub struct SettingParts {
     /// Puts the default back; the reset arrow shows, and the row's menu offers it, while the value is
     /// changed.
     pub on_reset: Option<Reset>,
+    /// Where the reset arrow shows while the value is changed.
+    pub reset_arrow: ResetArrow,
 }
 
 /// How far a [`setting`] row's hover fill reaches past its text on each side.
@@ -149,6 +162,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
         tall,
         extra,
         on_reset,
+        reset_arrow,
     } = parts;
     let id = id.into();
     let group = SharedString::from(format!("setting-{id}"));
@@ -239,7 +253,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                 .flex_none()
                 .items_center()
                 .gap_2()
-                .when_some(reset, |d, reset| {
+                .when_some(reset.clone().filter(|_| reset_arrow == ResetArrow::OnHover), |d, reset| {
                     d.child(
                         div().invisible().group_hover(group.clone(), |s| s.visible()).child(
                             icon_button(
@@ -254,7 +268,21 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                     )
                 })
                 .children(extra)
-                .child(if elsewhere { out_of_reach((id, "control"), control) } else { control }),
+                .child(if elsewhere { out_of_reach((id.clone(), "control"), control) } else { control })
+                // The column is there for every row, so a row without an arrow (a project sets its value)
+                // keeps its control where the others have theirs.
+                .when(reset_arrow == ResetArrow::Always, |d| {
+                    d.child(div().flex_none().w(px(HIT_MIN)).children(reset.map(|reset| {
+                        icon_button(
+                            (id.clone(), "reset"),
+                            ui,
+                            IconName::RotateCcw,
+                            text(keys::SETTINGS_ROW_RESET),
+                        )
+                        .still()
+                        .on_click(move |_, window, cx| reset(window, cx))
+                    })))
+                }),
         );
     // What a project sets or a layout lacks keeps its row as it was: no key, no menu.
     if elsewhere { row } else { with_menu(row, menu_id, keys, menu_reset) }
