@@ -476,11 +476,11 @@ fn the_agent_access_mode_reads_by_its_words() {
 }
 
 #[test]
-fn borders_are_off_until_turned_on_and_the_persons_own() {
+fn borders_are_on_until_turned_off_and_the_persons_own() {
     let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
-    assert!(!unset.borders, "an old config without the key reads as off");
-    let on: Settings = jsonc::parse(r#"{ "borders": true }"#).expect("valid jsonc");
-    assert!(on.borders);
+    assert!(unset.borders, "a config without the key reads as on");
+    let off: Settings = jsonc::parse(r#"{ "borders": false }"#).expect("valid jsonc");
+    assert!(!off.borders);
     assert!(keys().contains(&"borders".to_string()));
     assert!(APP_SETTINGS.contains(&"borders") && !PROJECT_SETTINGS.contains(&"borders"));
 }

@@ -201,8 +201,8 @@ pub struct Settings {
     /// still resize. Increase Contrast keeps them.
     pub column_dividers: bool,
     /// The lines the interface draws around its parts: rows, controls, menus, the search field,
-    /// cards, columns and the sidebar. Off (the default), surfaces are told apart by their shade
-    /// alone. Selection and focus rings, menu separators, the checkbox's outline, Column dividers
+    /// cards, columns and the sidebar. On (the default); off, surfaces are told apart by their
+    /// shade alone. Selection and focus rings, menu separators, the checkbox's outline, Column dividers
     /// and the split hairline have their own say and stay; Increase Contrast keeps every line.
     pub borders: bool,
     /// Icon buttons show what a click did with their own drawing (the toggles' strip filling and
@@ -380,7 +380,7 @@ impl Default for Settings {
             minimap: false,
             split_gaps: true,
             column_dividers: true,
-            borders: false,
+            borders: true,
             icon_animations: true,
             open_in: String::new(),
             title_row: Some(TitleRow::default()),

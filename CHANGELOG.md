@@ -30,11 +30,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Settings is the window Wormhole draws itself, as it was before the redesign and the SwiftUI window: the page
   list, its rows and menus, and the settings and keys in `config.json` as they were. The SwiftUI window and the
   Native Settings window feature flag are gone.
-- The lines around cards, columns, the sidebar and panels, between settings rows, and around buttons, menus and
-  fields are off by default: surfaces are told apart by their shade. After updating, Wormhole looks flatter.
-  Settings → Appearance → Borders (`borders` in `config.json`) brings the lines back; Increase Contrast
-  keeps them. Selection and focus rings, menu separators, the checkbox's outline, Column dividers and the
-  split terminals' hairline are not affected.
+- Settings → Appearance → Borders (`borders` in `config.json`, on by default) turns off the lines around cards,
+  columns, the sidebar and panels, between settings rows, and around buttons, menus and fields, so surfaces are
+  told apart by their shade alone; Increase Contrast keeps them. Selection and focus rings, menu separators, the
+  checkbox's outline, Column dividers and the split terminals' hairline are not affected.
 
 ### Fixed
 
