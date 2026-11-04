@@ -126,23 +126,21 @@ pub const SETTINGS_SESSIONS_CHANGES_PLAIN_NONE: Key = Key::new(1127);
 pub const SETTINGS_SESSIONS_CHANGES_SHARED_EACH: Key = Key::new(1128);
 /// "Nobody counts it"
 pub const SETTINGS_SESSIONS_CHANGES_SHARED_NONE: Key = Key::new(1129);
-/// "Live preview of the Terminals list. Hovering a density previews it under the current one"
-pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED: Key = Key::new(1130);
 /// "Live preview of the Terminals list. Hovering a density previews it next to the current one"
-pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE: Key = Key::new(1131);
+pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE: Key = Key::new(1130);
 /// "Terminals"
-pub const SETTINGS_SESSIONS_TERMINALS: Key = Key::new(1132);
+pub const SETTINGS_SESSIONS_TERMINALS: Key = Key::new(1131);
 
 /// ```text
 /// Now · { $density }
 /// ```
 pub fn settings_sessions_preview_now(density: &str) -> String {
-    crate::active::message(1133, &[("density", Arg::Str(density))])
+    crate::active::message(1132, &[("density", Arg::Str(density))])
 }
 
 /// ```text
 /// Previewed while hovering { $density }
 /// ```
 pub fn settings_sessions_preview_hovering(density: &str) -> String {
-    crate::active::message(1134, &[("density", Arg::Str(density))])
+    crate::active::message(1133, &[("density", Arg::Str(density))])
 }

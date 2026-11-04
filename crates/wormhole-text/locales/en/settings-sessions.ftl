@@ -91,7 +91,6 @@ settings-sessions-changes-shared-none = Nobody counts it
 
 ## settings_window/sections/preview.rs (labels, hints and notes drawn by this page's code)
 
-settings-sessions-preview-caption-stacked = Live preview of the Terminals list. Hovering a density previews it under the current one
 settings-sessions-preview-caption-side-by-side = Live preview of the Terminals list. Hovering a density previews it next to the current one
 settings-sessions-terminals = Terminals
 

@@ -30,6 +30,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Settings is the window Wormhole draws itself, as it was before the redesign and the SwiftUI window: the page
   list, its rows and menus, and the settings and keys in `config.json` as they were. The SwiftUI window and the
   Native Settings window feature flag are gone.
+- Settings has more space between the items of its sidebar, cannot go full screen or be made wider than its
+  page (its green light is dimmed), and shows a page's preview at the top of the page, at most a quarter of the
+  window's height, instead of in a column at the right.
 - Settings → Appearance → Borders (`borders` in `config.json`, on by default) turns off the lines around cards,
   columns, the sidebar and panels, between settings rows, and around buttons, menus and fields, so surfaces are
   told apart by their shade alone; Increase Contrast keeps them. Selection and focus rings, menu separators, the

@@ -34,9 +34,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
     let now = Look::of(&s);
     let label =
         |text: String| div().text_caption().font_weight(FontWeight::MEDIUM).text_color(ui.muted).child(text);
-    // In the column the two lists stack: a column's width fits one.
-    let column = window.preview_column;
-    let mut panes = div().flex().when(column, |d| d.flex_col()).gap_4().w_full().child(
+    let mut panes = div().flex().gap_4().w_full().child(
         div()
             .flex_1()
             .min_w_0()
@@ -68,11 +66,12 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
         .flex_col()
         .gap_2()
         .child(style::preview_frame(ui).child(panes))
-        .child(div().text_caption().text_color(ui.muted).child(if column {
-            text(SETTINGS_SESSIONS_PREVIEW_CAPTION_STACKED)
-        } else {
-            text(SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE)
-        }))
+        .child(
+            div()
+                .text_caption()
+                .text_color(ui.muted)
+                .child(text(SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE)),
+        )
         .into_any_element()
 }
 

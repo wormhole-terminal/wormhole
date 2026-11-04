@@ -1,7 +1,5 @@
-//! The preview column: the right-hand strip of a wide Settings window that always shows the live
-//! preview that belongs to the page. The window opens wider to the right by the column's width,
-//! so the page keeps the width it always had; narrower than [`COLUMN_SWITCH_W`] the column goes
-//! away and the same previews sit inline in their pages, as before.
+//! The preview strip: at the top of a page that has one, the live preview that belongs to the page, at most
+//! a quarter of the window's height (it scrolls on its own when it is taller).
 //!
 //! - Appearance, and a search's results, show the window in miniature (`sections::draw_stage`):
 //!   theme, primary, opacity, status bar and fonts as they are now.
@@ -11,9 +9,9 @@
 //! - Coding agents shows the Terminals list with agents at work in it (`draw_agents_preview`).
 //! - Notifications shows two banners (`draw_notifications_preview`).
 //! - Menu bar & hotkey shows the menu bar item and the quick panel (`draw_menu_bar_preview`).
-//! - Every other page has nothing to show there: no column, and the page takes its width.
+//! - Every other page has nothing to show there.
 //!
-//! The column holds nothing to operate: no focus stop, so ⇥ and F6 pass over it, and one labelled
+//! The strip holds nothing to operate: no focus stop, so ⇥ and F6 pass over it, and one labelled
 //! group for VoiceOver. A search result for a preview names where it went instead of drawing it.
 
 use gpui_kit::*;
@@ -25,15 +23,10 @@ use wormhole_core::config::settings_index::{self, SectionId as Section};
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use super::{PAGE_TOP, SettingsWindow, nav, sections, ui};
-use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
+use super::{SettingsWindow, sections, ui};
+use crate::style::{self, RowKeys, SettingParts, SettingState, TextRole};
 
-/// The column's width, border to border: a 16 pt inset round the miniature window.
-pub(super) const PREVIEW_W: f32 = 448.0 + 2.0 * 16.0;
-/// The window is at least this wide for the column to show; the page keeps 600 and more.
-pub(super) const COLUMN_SWITCH_W: f32 = nav::NAV_W + 600.0 + PREVIEW_W;
-
-/// Which preview the column shows.
+/// Which preview the strip shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum PreviewKind {
     /// The window in miniature over a wallpaper.
@@ -51,7 +44,7 @@ pub(super) enum PreviewKind {
 }
 
 impl PreviewKind {
-    /// What the column's head says.
+    /// What the strip's head says.
     fn title(self) -> &'static str {
         match self {
             Self::Window => text(SETTINGS_WINDOW_WINDOW),
@@ -62,7 +55,7 @@ impl PreviewKind {
         }
     }
 
-    /// What VoiceOver says for the column: that it is a picture of the settings, not controls.
+    /// What VoiceOver says for the strip: that it is a picture of the settings, not controls.
     fn spoken(self) -> &'static str {
         match self {
             Self::Window => text(SETTINGS_WINDOW_PREVIEW_WINDOW_LABEL),
@@ -75,8 +68,7 @@ impl PreviewKind {
     }
 }
 
-/// The rows that the column shows in place of the page: they are not drawn again inline while it
-/// is there.
+/// The rows the strip shows in place of the page: they are not drawn again in it.
 const IN_COLUMN: [&str; 3] = ["appearance-preview", "font-specimen", "sidebar-preview"];
 
 impl SettingsWindow {
@@ -106,19 +98,18 @@ impl SettingsWindow {
         }
     }
 
-    /// Whether the column is drawn: the window is wide enough and the page has a preview.
-    pub(super) fn column_shown(&self) -> bool {
-        self.preview_column && self.preview_kind().is_some()
-    }
-
-    /// Whether the column shows the preview row `id` (so the page leaves it out).
+    /// Whether the strip shows the preview row `id` (so the page leaves it out).
     pub(super) fn in_column(&self, id: &str) -> bool {
-        self.preview_column && IN_COLUMN.contains(&id)
+        IN_COLUMN.contains(&id)
     }
 
-    /// The column: its head, then the page's preview, scrolling on its own when a window is short.
-    /// `None` for a page without a preview.
-    pub(super) fn render_preview_column(&self, fill: Hsla, cx: &mut Context<Self>) -> Option<AnyElement> {
+    /// The strip: its head, then the page's preview, no taller than `max_height` and scrolling on its own
+    /// when it is. `None` for a page without a preview.
+    pub(super) fn render_preview_strip(
+        &self,
+        max_height: Pixels,
+        cx: &mut Context<Self>,
+    ) -> Option<AnyElement> {
         let ui = ui(cx);
         let kind = self.preview_kind()?;
         let preview = match kind {
@@ -135,17 +126,12 @@ impl SettingsWindow {
                 .role(Role::Group)
                 .aria_label(kind.spoken())
                 .flex_none()
-                .w(px(PREVIEW_W))
-                .h_full()
+                .w_full()
+                .max_h(max_height)
                 .flex()
                 .flex_col()
                 .overflow_y_scroll()
-                .px_4()
-                .pt(px(PAGE_TOP))
-                .pb_6()
                 .gap_2()
-                .bg(fill)
-                .rule_left(ui)
                 .child(
                     div()
                         .flex_none()
@@ -166,8 +152,7 @@ impl SettingsWindow {
         )
     }
 
-    /// A preview row in the search's results while the column is showing it: a note saying where it
-    /// is, instead of a second copy.
+    /// A preview row in the search's results: a note saying where it is, instead of a second copy.
     pub(super) fn render_preview_note(
         &self,
         entry: &'static settings_index::Entry,

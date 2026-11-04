@@ -67,11 +67,12 @@ const COLUMN_W: f32 = 760.0;
 const INTRO_W: f32 = 560.0;
 /// The card that says nothing matched.
 const NO_RESULTS_W: f32 = 420.0;
-/// The window: the size of a page (the nav and the content column) and the least the window
-/// shrinks to. It opens wider than the page by the preview column (`preview_column`), to the
-/// right, so the page keeps its width.
+/// The window: the size of a page (the nav and the content column), the least the window shrinks to, and
+/// the most it widens to: the nav, the column and the page's 32 pt of padding on each side. The preview
+/// is at the top of its page (`preview_column`), so the window has no width for it.
 const WINDOW_SIZE: (f32, f32) = (920.0, 720.0);
 const WINDOW_MIN: (f32, f32) = (640.0, 420.0);
+const WINDOW_MAX_W: f32 = nav::NAV_W + COLUMN_W + 64.0;
 
 /// What the Terminals & sidebar preview shows beside the current look while the pointer is
 /// over another option.
@@ -139,9 +140,6 @@ pub(crate) struct SettingsWindow {
     themes_all: bool,
     /// Terminals & sidebar → the option under the pointer, previewed beside the current look.
     sidebar_preview: Option<SidebarLook>,
-    /// The window is wide enough for the preview column (read at each draw): the previews are in
-    /// it, and their pages leave them out.
-    preview_column: bool,
     /// Advanced → "Reset to defaults…" was pressed: the row asks before it resets.
     confirm_reset: bool,
     /// Coding agents → the agents that aren't on PATH are listed.

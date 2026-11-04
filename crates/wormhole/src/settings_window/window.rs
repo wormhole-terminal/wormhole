@@ -20,7 +20,6 @@ use wormhole_core::config::settings_index::{self, Query};
 use wormhole_core::theme::fonts::FontSlot;
 
 use super::font_picker::FontPickerState;
-use super::preview_column::COLUMN_SWITCH_W;
 use crate::app_state::app;
 use crate::platform::vibrancy::Blur;
 use crate::settings::{SettingsStore, update_settings};
@@ -144,7 +143,6 @@ impl SettingsWindow {
             specimen: FontSlot::Terminal,
             themes_all: false,
             sidebar_preview: None,
-            preview_column: false,
             confirm_reset: false,
             others_open: false,
             profile_form: None,
@@ -371,8 +369,6 @@ impl Render for SettingsWindow {
         let query = Query::new(&self.search.read(cx).value());
         let hits = settings_index::search_visible(&query, settings(cx)).len();
 
-        // The column comes with width: the page is drawn knowing whether it has the previews.
-        self.preview_column = window.viewport_size().width >= px(COLUMN_SWITCH_W);
         let body = if self.show_results && hits == 0 {
             self.render_no_results(&query, ui, cx)
         } else if self.show_results {
@@ -396,17 +392,14 @@ impl Render for SettingsWindow {
             .pt(px(PAGE_TOP))
             .child(
                 div()
-                    // A page without a preview takes the column's width too.
-                    .max_w(px(if self.preview_column && !self.column_shown() {
-                        COLUMN_W + super::preview_column::PREVIEW_W
-                    } else {
-                        COLUMN_W
-                    }))
+                    .max_w(px(COLUMN_W))
                     .flex()
                     .flex_col()
                     .gap_6()
                     .child(self.render_header(&query, hits, ui, cx))
                     .children(self.render_problems(ui, cx))
+                    // The page's preview, at most a quarter of the window's height.
+                    .children(self.render_preview_strip(window.viewport_size().height / 4.0, cx))
                     .child(body),
             );
 
@@ -443,9 +436,6 @@ impl Render for SettingsWindow {
             .child(div().absolute().top_0().left_0().right_0().h(px(style::TITLE_ROW_H)).title_drag())
             .child(self.render_nav(&query, surfaces.panel, cx))
             .child(content)
-            .children(
-                self.preview_column.then(|| self.render_preview_column(surfaces.panel_right, cx)).flatten(),
-            )
             .children(self.render_new_profile(cx))
             .children(self.render_probe_sheet(window, cx))
     }

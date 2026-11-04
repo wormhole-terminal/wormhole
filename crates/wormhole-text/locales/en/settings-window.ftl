@@ -42,7 +42,7 @@ settings-window-preview-agents-label = Preview of the Terminals list with coding
 settings-window-preview-notifications-label = Preview of how a notification looks
 settings-window-preview-menu-bar-label = Preview of the menu bar item and the quick panel
 settings-window-preview = Preview
-settings-window-preview-column-hint = Shown in the preview column at the right of the window
+settings-window-preview-column-hint = Shown in the preview at the top of the page
 
 ## Sentences with a hole in them
 
