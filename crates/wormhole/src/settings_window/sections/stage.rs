@@ -1,4 +1,4 @@
-//! Appearance's live preview: a window over a wallpaper at its real size, cut off where the column
+//! Appearance's live preview: a window on a plain backdrop at its real size, cut off where the column
 //! ends. It is built from the parts the window itself draws: the sidebar's Terminals list (the same
 //! list as Terminals & sidebar's preview, `preview::list`), the title row's crumbs and branch chip,
 //! the status bar's items, and a terminal in the terminal's own font, size and colours. A change to
@@ -24,11 +24,11 @@ use wormhole_text::text;
 use super::preview::{self, Look};
 use super::samples::SAMPLES;
 use crate::settings::{SettingsStore, UiColors, settings};
-use crate::settings_window::SettingsWindow;
+use crate::settings_window::{SettingsWindow, ui as window_ui};
 use crate::style::{self, Edges, StatusGlyph, StatusTile, TextRole, TileFace};
 use crate::theme_bridge::hsla;
 
-/// The wallpaper's height, and how far in from its top left corner the window sits.
+/// The backdrop's height, and how far in from its top left corner the window sits.
 const STAGE_H: f32 = 400.0;
 const WINDOW_INSET: f32 = 24.0;
 /// The window: as wide as the app opens one, so the column shows its left part.
@@ -39,11 +39,8 @@ const LIGHT_GAP: f32 = 8.0;
 /// The terminal's inset: 16 at the sides, 12 at the top (Aligned A-01).
 const TERM_INSET_X: f32 = 16.0;
 const TERM_INSET_Y: f32 = 12.0;
-/// The wallpaper's two washes, from the theme's own colours.
-const WASH_ALPHA: f32 = 0.55;
-const WASH_ANGLE: f32 = 135.0;
 
-/// Appearance → the window over the desktop: theme, primary, opacity, fonts, density and the status
+/// Appearance → the window in miniature: theme, primary, opacity, fonts, density and the status
 /// bar as they are now.
 pub(in crate::settings_window) fn draw_stage(
     _: &SettingsWindow,
@@ -52,18 +49,18 @@ pub(in crate::settings_window) fn draw_stage(
     // The main window's colours, whatever this window's look.
     let ui = crate::settings::ui(cx);
     let store = cx.global::<SettingsStore>();
-    let base = hsla(store.tokens.terminal.background.with_alpha(1.0));
     let status_bar = store.settings_without_zen().status_bar;
     let surfaces = style::window_surfaces(cx, true);
     let look = Look::of(settings(cx));
-    // The theme's own branch magenta, not the one in effect: a branch color picked below recolors
-    // the chips, never the desktop behind the window.
-    let magenta = store.base_tokens().get("git.branch").map(hsla).unwrap_or(ui.branch);
-    let wallpaper = linear_gradient(
-        WASH_ANGLE,
-        linear_color_stop(Hsla { a: WASH_ALPHA, ..magenta }, 0.0),
-        linear_color_stop(Hsla { a: WASH_ALPHA, ..ui.info }, 1.0),
-    );
+    // The backdrop and its outline are this window's, like the other previews' frames; only the
+    // miniature wears the main window's colours.
+    let chrome = window_ui(cx);
+    // The miniature's outline takes a line of the border's width, so what sits flush inside it rounds
+    // to the window's radius less that width (the clip is square, `Edges::corners`).
+    let inner = (ui.radius_lg - ui.border_width).max(px(0.0));
+    let flat = px(0.0);
+    // With a status bar it closes the window's bottom, otherwise the sidebar and the terminal do.
+    let (side_bottom, term_bottom) = if status_bar { (flat, flat) } else { (inner, inner) };
     let lights = div()
         .flex_none()
         .flex()
@@ -80,11 +77,18 @@ pub(in crate::settings_window) fn draw_stage(
         .flex_col()
         .overflow_hidden()
         .bg(surfaces.panel)
+        .corners(inner, flat, flat, side_bottom)
         .rule_right(ui)
         .child(lights)
         .child(preview::list("stage", look, SAMPLES, false, ui, cx));
-    let content =
-        div().flex_1().min_w_0().h_full().flex().flex_col().child(title_row(ui, cx)).child(terminal(cx));
+    let content = div()
+        .flex_1()
+        .min_w_0()
+        .h_full()
+        .flex()
+        .flex_col()
+        .child(title_row(ui, cx))
+        .child(terminal(cx).corners(flat, flat, term_bottom, flat));
     let window = div()
         .absolute()
         .top(px(WINDOW_INSET))
@@ -98,7 +102,7 @@ pub(in crate::settings_window) fn draw_stage(
         .outlined(ui, ui.border_strong)
         .bg(surfaces.background)
         .child(div().flex_1().min_h_0().flex().child(sidebar).child(content))
-        .when(status_bar, |d| d.child(status(ui, cx)));
+        .when(status_bar, |d| d.child(status(ui, cx).corners(flat, flat, inner, inner)));
     div()
         .flex()
         .flex_col()
@@ -108,11 +112,10 @@ pub(in crate::settings_window) fn draw_stage(
                 .relative()
                 .h(px(STAGE_H))
                 .w_full()
-                .rounded(ui.radius_lg)
+                .rounded(chrome.radius_lg)
                 .overflow_hidden()
-                .outlined(ui, ui.border)
-                .bg(base)
-                .child(div().absolute().size_full().bg(wallpaper))
+                .outlined(chrome, chrome.border)
+                .bg(chrome.panel)
                 .child(window),
         )
         .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_APPEARANCE_STAGE_CAPTION)))

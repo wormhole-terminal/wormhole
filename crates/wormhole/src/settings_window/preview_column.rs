@@ -29,7 +29,7 @@ use crate::style::{self, RowKeys, SettingParts, SettingState, TextRole};
 /// Which preview the strip shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum PreviewKind {
-    /// The window in miniature over a wallpaper.
+    /// The window in miniature on a plain backdrop.
     Window,
     /// The font specimen.
     Fonts,
