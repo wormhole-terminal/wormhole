@@ -89,38 +89,40 @@ const SLACK: u64 = 20;
 /// Allocations a third draw of each page made when the budget was set (the first two build what a window
 /// keeps), and of the results page of a search for a word found in several pages; a frame may make
 /// [`SLACK`] more.
+// Measured with Show config keys off (the default): a page does not build its rows' key lines then, which
+// is why these are lower than they were when the lines were always built.
 const BUDGET: [(&str, u64); 17] = [
-    ("Profile", 6862),
+    ("Profile", 6753),
     // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
     // key line, 425 more.
-    ("Appearance", 17792),
-    ("Fonts", 7750),
-    ("Motion", 6462),
+    ("Appearance", 17024),
+    ("Fonts", 7285),
+    ("Motion", 6205),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 10705),
+    ("Terminal", 9649),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 15764),
-    ("Git", 4746),
+    ("Sessions", 12046),
+    ("Git", 4373),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 9679),
-    ("Import", 53166),
-    ("Notifications", 8246),
-    ("MenuBar", 6476),
-    ("Updates", 5786),
+    ("Agents", 9601),
+    ("Import", 49101),
+    ("Notifications", 7573),
+    ("MenuBar", 6115),
+    ("Updates", 4999),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
     // The Show config keys switch is a row more, 4,941 measured; with the keys hidden by default every
     // other page fell (their key lines are not built).
-    ("Advanced", 4941),
-    ("Projects", 9138),
+    ("Advanced", 5019),
+    ("Projects", 9087),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2686),
+    ("Extensions", 2667),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
@@ -128,11 +130,11 @@ const BUDGET: [(&str, u64); 17] = [
     // 6,912 measured, a row fewer.
     // The Restore after restart flag is one switch row more again: 7,271 measured (about 340 a row).
     // The File icon themes flag is one switch row more again: 7,577 measured (about 305 a row).
-    ("FeatureFlags", 7600),
+    ("FeatureFlags", 7657),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     // The search finds the Borders row too, as one more result: 196 more.
-    ("search", 12466),
+    ("search", 12004),
 ];
 
 /// What Appearance's Liquid Glass row adds, a switch with its line and Beta chip: it is on the page on
