@@ -390,6 +390,9 @@ impl Render for SettingsWindow {
             .overflow_y_scroll()
             .track_scroll(&self.content_scroll)
             .px_8()
+            // On the scrolling element, so the space scrolls away with the page; the title row
+            // would otherwise sit flush against the window's top edge.
+            .pt_4()
             .pb_8()
             .child(
                 div()
