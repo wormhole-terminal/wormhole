@@ -62,7 +62,8 @@ impl SettingsWindow {
         let total: usize = hits.values().sum();
         let attention = self.agents.as_ref().is_some_and(|agents| agents.needs_repair() > 0);
 
-        let mut rows = div().flex_none().flex().flex_col().px_2();
+        // A 4 pt gap between the items, so a row's selected fill doesn't touch the next one's.
+        let mut rows = div().flex_none().flex().flex_col().gap_1().px_2();
         let mut group = None;
         // Only the sections shown for this build: the Preview group (feature flags, and a feature's
         // own section while its flag is on) is there only in a dev build, so a release never lists it.
