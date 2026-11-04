@@ -30,8 +30,7 @@ use crate::theme_bridge;
 
 use super::open::REVEAL_INSET;
 use super::{
-    COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, PAGE_TOP, Section, SettingsWindow, sections, slider,
-    slider_value, ui,
+    COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, Section, SettingsWindow, sections, slider, slider_value, ui,
 };
 
 impl SettingsWindow {
@@ -309,7 +308,8 @@ impl SettingsWindow {
         ui: UiColors,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        let (title, intro): (SharedString, SharedString) = if self.show_results {
+        // A page says what it is by its title; only a search's results say more (how many, and where).
+        let (title, intro): (SharedString, Option<SharedString>) = if self.show_results {
             let sections = settings_index::search_visible(query, settings(cx))
                 .iter()
                 .map(|hit| hit.section)
@@ -319,9 +319,9 @@ impl SettingsWindow {
                 0 => text(SETTINGS_WINDOW_NO_RESULTS).to_string(),
                 _ => settings_window_results_summary(whole(hits), whole(sections), &query.text()),
             };
-            (text(SETTINGS_WINDOW_RESULTS).into(), intro.into())
+            (text(SETTINGS_WINDOW_RESULTS).into(), Some(intro.into()))
         } else {
-            (self.section.title().into(), self.section.info().intro().into())
+            (self.section.title().into(), None)
         };
         let action = if self.show_results {
             Some(
@@ -345,7 +345,9 @@ impl SettingsWindow {
                     .child(div().text_title().font_weight(FontWeight::BOLD).child(title))
                     .children(action),
             )
-            .child(div().max_w(px(INTRO_W)).text_body().text_color(ui.muted).child(intro))
+            .children(
+                intro.map(|intro| div().max_w(px(INTRO_W)).text_body().text_color(ui.muted).child(intro)),
+            )
             .into_any_element()
     }
 }
@@ -389,7 +391,6 @@ impl Render for SettingsWindow {
             .track_scroll(&self.content_scroll)
             .px_8()
             .pb_8()
-            .pt(px(PAGE_TOP))
             .child(
                 div()
                     .max_w(px(COLUMN_W))

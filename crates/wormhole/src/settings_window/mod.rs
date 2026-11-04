@@ -50,7 +50,6 @@ use wormhole_core::view::sidebar::Density;
 use crate::app_state::AppState;
 use crate::platform::vibrancy::Blur;
 use crate::settings::{UiColors, settings};
-use crate::style::{self};
 use font_picker::FontPickerState;
 
 use open::current_window;
@@ -58,9 +57,6 @@ pub(crate) use open::{open_settings, reveal_row};
 pub(crate) use sections::open_new_profile_sheet;
 pub(crate) use wormhole_core::config::settings_index::SectionId as Section;
 
-/// Where a page's title row starts: under the traffic lights, which the nav runs beneath like
-/// System Settings.
-const PAGE_TOP: f32 = style::TITLE_ROW_H;
 /// The content column: the widest a page grows.
 const COLUMN_W: f32 = 760.0;
 /// A page's intro line wraps at a readable length, not across the whole column.
