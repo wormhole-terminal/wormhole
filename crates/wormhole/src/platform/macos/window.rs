@@ -12,7 +12,7 @@ use objc2_app_kit::{
     NSWindowDidExitFullScreenNotification, NSWindowOcclusionState, NSWindowStyleMask,
     NSWindowWillEnterFullScreenNotification, NSWindowWillExitFullScreenNotification,
 };
-use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSPoint};
+use objc2_foundation::{NSNotification, NSNotificationCenter, NSOperationQueue, NSPoint, NSSize};
 use wormhole_core::view::motion::live_resize::{Dragged, settled_frame, tiled};
 use wormhole_core::view::motion::window_animation::Behaviour;
 
@@ -108,6 +108,27 @@ pub fn allow_fullscreen(window: &Window) {
         ns_window.setCollectionBehavior(
             ns_window.collectionBehavior() | NSWindowCollectionBehavior::FullScreenPrimary,
         );
+    }
+}
+
+/// The window never enters full screen, and its green light is dimmed: a Settings window is sized to its
+/// pages (Apple's HIG), and zooming it would only stretch the page.
+pub fn forbid_fullscreen(window: &Window) {
+    if let Some(ns_window) = ns_window(window) {
+        ns_window.setCollectionBehavior(
+            (ns_window.collectionBehavior() - NSWindowCollectionBehavior::FullScreenPrimary)
+                | NSWindowCollectionBehavior::FullScreenNone,
+        );
+        if let Some(zoom) = ns_window.standardWindowButton(NSWindowButton::ZoomButton) {
+            zoom.setEnabled(false);
+        }
+    }
+}
+
+/// The widest the window can be dragged to, in points of its content. No limit on its height.
+pub fn set_max_width(window: &Window, width: f32) {
+    if let Some(ns_window) = ns_window(window) {
+        ns_window.setContentMaxSize(NSSize::new(f64::from(width), f64::from(f32::MAX)));
     }
 }
 

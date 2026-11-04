@@ -111,6 +111,8 @@ pub(super) fn signatures_match() {
         window::is_minimised: fn(&Window) -> bool;
         window::is_visible: fn(&Window) -> bool;
         window::allow_fullscreen: fn(&Window);
+        window::forbid_fullscreen: fn(&Window);
+        window::set_max_width: fn(&Window, f32);
         window::miniaturize: fn(&Window);
         window::deminiaturize: fn(&Window);
         window::hide: fn(&Window);

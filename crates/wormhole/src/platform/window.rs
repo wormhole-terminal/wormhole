@@ -110,6 +110,16 @@ pub fn allow_fullscreen(window: &Window) {
     os::allow_fullscreen(window);
 }
 
+/// Keep the window out of full screen and dim its zoom light: what a Settings window is.
+pub fn forbid_fullscreen(window: &Window) {
+    os::forbid_fullscreen(window);
+}
+
+/// The widest the window can be made, in points.
+pub fn set_max_width(window: &Window, width: f32) {
+    os::set_max_width(window, width);
+}
+
 /// Put the window in the Dock, as its yellow light does. A window that was never on the screen
 /// (`show: false`) goes there without the genie: what a window restored minimised gets.
 pub fn minimise(window: &Window) {

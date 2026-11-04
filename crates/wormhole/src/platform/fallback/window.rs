@@ -41,6 +41,10 @@ pub fn is_visible(_: &Window) -> bool {
 
 pub fn allow_fullscreen(_: &Window) {}
 
+pub fn forbid_fullscreen(_: &Window) {}
+
+pub fn set_max_width(_: &Window, _: f32) {}
+
 pub fn miniaturize(_: &Window) {}
 
 pub fn deminiaturize(_: &Window) {}
