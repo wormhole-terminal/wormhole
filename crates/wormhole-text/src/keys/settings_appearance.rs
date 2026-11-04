@@ -12,7 +12,7 @@ pub const SETTINGS_SECTION_APPEARANCE: Key = Key::new(461);
 pub const SETTINGS_SECTION_APPEARANCE_INTRO: Key = Key::new(462);
 /// "Live preview"
 pub const SETTINGS_APPEARANCE_PREVIEW: Key = Key::new(463);
-/// "preview wallpaper window"
+/// "preview window"
 pub const SETTINGS_APPEARANCE_PREVIEW_KEYWORDS: Key = Key::new(464);
 /// "Theme"
 pub const SETTINGS_APPEARANCE_GROUP_THEME: Key = Key::new(465);
@@ -154,7 +154,7 @@ pub const SETTINGS_APPEARANCE_SETTINGS: Key = Key::new(532);
 pub const SETTINGS_APPEARANCE_THEME_STUDIO: Key = Key::new(533);
 /// "Project settings"
 pub const SETTINGS_APPEARANCE_PROJECT_SETTINGS: Key = Key::new(534);
-/// "Live preview: your windows over the desktop, with everything below applied as you change it (the blur behind a window isn't drawn here)"
+/// "Live preview of a window, with everything below applied as you change it (the blur behind a window isn't drawn here)"
 pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(540);
 /// "Filter themes"
 pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(541);
