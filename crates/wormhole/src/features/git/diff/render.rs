@@ -6,7 +6,6 @@
 //! (`review`), and a line with a comment wears a primary bar along its left edge.
 
 use std::rc::Rc;
-use std::sync::Arc;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
