@@ -19,7 +19,7 @@ use super::{open_button, open_in_editor, reveal};
 use crate::app_state::{app, app_mut};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore};
-use crate::settings_window::registry::Setting;
+use crate::settings_window::registry::{Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style;
 
@@ -39,6 +39,7 @@ pub(super) const SETTINGS: &[Setting] = &[
             reveal(&data_dir().join("logs"), cx)
         })
     }),
+    toggle!("show-config-keys", show_config_keys),
     Setting::custom("reset-settings", draw_reset).below(|w, cx| w.render_reset_question(cx)),
     Setting::custom("reset-tips", draw_reset_tips),
     Setting::custom("skip-scans", |_, _| {

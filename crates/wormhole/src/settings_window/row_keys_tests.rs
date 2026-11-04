@@ -65,6 +65,11 @@ fn change(cx: &mut TestAppContext, handle: AnyWindowHandle) -> bool {
     default
 }
 
+/// Settings → Advanced → Show config keys, which is off until the person turns it on.
+fn show_config_keys(cx: &mut TestAppContext, on: bool) {
+    cx.update(|cx| update_settings(cx, |s| s.show_config_keys = on));
+}
+
 fn minimap(cx: &mut TestAppContext) -> bool {
     cx.update(|cx| settings(cx).minimap)
 }
@@ -231,6 +236,7 @@ fn holding_option_shows_every_key_and_letting_go_hides_them(cx: &mut TestAppCont
         return;
     }
     start(cx, 1);
+    show_config_keys(cx, true);
     let handle = open(cx);
     assert!(shown_keys(cx, handle).is_empty(), "the keys wait for the pointer");
     let mut keys = VisualTestContext::from_window(handle, cx);
@@ -255,6 +261,7 @@ fn a_click_on_the_key_copies_it_and_says_copied_for_a_moment_and_changes_nothing
         return;
     }
     start(cx, 1);
+    show_config_keys(cx, true);
     let handle = open(cx);
     let before = minimap(cx);
     let button = key_button(cx, handle);
@@ -278,6 +285,7 @@ fn voiceover_can_press_the_key_while_it_is_hidden(cx: &mut TestAppContext) {
         return;
     }
     start(cx, 1);
+    show_config_keys(cx, true);
     let handle = open(cx);
     let target = key_button(cx, handle);
     cx.update(|cx| {
@@ -304,6 +312,7 @@ fn a_copied_left_over_from_a_closed_window_is_not_shown_in_the_next_one(cx: &mut
         return;
     }
     start(cx, 1);
+    show_config_keys(cx, true);
     let handle = open(cx);
     let button = key_button(cx, handle);
     let at = centre(cx, handle, button);
@@ -321,4 +330,30 @@ fn a_copied_left_over_from_a_closed_window_is_not_shown_in_the_next_one(cx: &mut
     cx.run_until_parked();
     let reopened = open(cx);
     assert!(shown_keys(cx, reopened).is_empty(), "a new window does not inherit the old Copied");
+}
+
+#[gpui_kit::test]
+fn with_show_config_keys_off_no_row_draws_a_key_not_even_with_option_held_and_the_menu_still_works(
+    cx: &mut TestAppContext,
+) {
+    if isolate_in(
+        module_path!(),
+        "with_show_config_keys_off_no_row_draws_a_key_not_even_with_option_held_and_the_menu_still_works",
+    ) {
+        return;
+    }
+    start(cx, 1);
+    assert!(!cx.update(|cx| settings(cx).show_config_keys), "hidden by default");
+    let handle = open(cx);
+    let mut keys = VisualTestContext::from_window(handle, cx);
+    let modifiers = Modifiers { alt: true, ..Modifiers::none() };
+    keys.simulate_event(ModifiersChangedEvent { modifiers, capslock: Capslock::default() });
+    assert!(shown_keys(&mut keys, handle).is_empty(), "⌥ shows no key while the setting is off");
+    let at = on_the_row(&mut keys, handle);
+    right_click(&mut keys, at);
+    assert_eq!(menu_titles(), ["Copy Key", "Copy as JSON", "Reset to Default"]);
+    pick(&mut keys, handle, "Copy Key");
+    assert_eq!(clipboard(&mut keys).as_deref(), Some(KEY), "Copy Key still copies the key");
+    show_config_keys(&mut keys, true);
+    assert!(shown_keys(&mut keys, handle).contains(&KEY.to_string()), "on: ⌥ shows the keys again");
 }

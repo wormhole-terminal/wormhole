@@ -484,3 +484,13 @@ fn borders_are_on_until_turned_off_and_the_persons_own() {
     assert!(keys().contains(&"borders".to_string()));
     assert!(APP_SETTINGS.contains(&"borders") && !PROJECT_SETTINGS.contains(&"borders"));
 }
+
+#[test]
+fn config_keys_are_hidden_until_turned_on_and_the_persons_own() {
+    let unset: Settings = jsonc::parse("{}").expect("valid jsonc");
+    assert!(!unset.show_config_keys, "a config without the key reads as off");
+    let on: Settings = jsonc::parse(r#"{ "show_config_keys": true }"#).expect("valid jsonc");
+    assert!(on.show_config_keys);
+    assert!(keys().contains(&"show_config_keys".to_string()));
+    assert!(APP_SETTINGS.contains(&"show_config_keys") && !PROJECT_SETTINGS.contains(&"show_config_keys"));
+}

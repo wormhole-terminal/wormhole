@@ -37,6 +37,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   columns, the sidebar and panels, between settings rows, and around buttons, menus and fields, so surfaces are
   told apart by their shade alone; Increase Contrast keeps them. Selection and focus rings, menu separators, the
   checkbox's outline, Column dividers and the split terminals' hairline are not affected.
+- Settings no longer shows the `config.json` key under each row (on hover, with ⌥ held, after a copy) unless
+  Settings → Advanced → Show config keys (`show_config_keys`, off by default) is on; a row's right-click menu still
+  copies its key.
 
 ### Fixed
 

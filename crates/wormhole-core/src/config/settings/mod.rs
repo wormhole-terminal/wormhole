@@ -205,6 +205,9 @@ pub struct Settings {
     /// shade alone. Selection and focus rings, menu separators, the checkbox's outline, Column dividers
     /// and the split hairline have their own say and stay; Increase Contrast keeps every line.
     pub borders: bool,
+    /// The Settings window draws each row's `config.json` key under its label (on hover, with ⌥ held
+    /// and after a copy). Off (the default), no row draws one; the row's menu still copies the key.
+    pub show_config_keys: bool,
     /// Icon buttons show what a click did with their own drawing (the toggles' strip filling and
     /// draining). Off, they change at once; Reduce Motion turns them off too.
     pub icon_animations: bool,
@@ -381,6 +384,7 @@ impl Default for Settings {
             split_gaps: true,
             column_dividers: true,
             borders: true,
+            show_config_keys: false,
             icon_animations: true,
             open_in: String::new(),
             title_row: Some(TitleRow::default()),

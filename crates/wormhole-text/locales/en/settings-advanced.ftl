@@ -20,6 +20,10 @@ settings-advanced-open-logs = Logs
     .description = Set WORMHOLE_LOG=debug for more detail
     .keywords = debug log
 
+settings-advanced-show-config-keys = Show config keys
+    .description = Settings shows each setting's name in config.json under its label. Off: hidden. Right-click a row to copy its key either way
+    .keywords = config json key keys name names raw developer option
+
 settings-advanced-reset-settings = Reset all settings
     .description = Your terminals, notes and themes are kept
     .keywords = defaults reset restore

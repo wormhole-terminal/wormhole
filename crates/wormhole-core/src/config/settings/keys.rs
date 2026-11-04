@@ -72,6 +72,8 @@ pub const APP_SETTINGS: &[&str] = &[
     "split_gaps",
     "column_dividers",
     "borders",
+    // What the Settings window draws under a row: the person's own habit, never a project's.
+    "show_config_keys",
     "icon_animations",
     // The person's own habit: what ⌘1–9 reach, whatever project is in front.
     "sidebar_numbers",

@@ -11,6 +11,9 @@
 //! costs a frame is three listeners on the row and one on the key (`frame_tests` says how much); the
 //! menu and the JSON exist only once the menu is open.
 //!
+//! The key line is drawn only while Show config keys is on (Settings → Advanced, off by default):
+//! `key_label` is the one place that decides; the menu works either way.
+//!
 //! Two small facts live in one global, read once per row: whether ⌥ is held (every key of the page is
 //! shown) and which row has just copied (it says Copied for a moment).
 
@@ -24,7 +27,7 @@ use wormhole_text::{keys, text};
 
 use super::scale::TextRole as _;
 use crate::platform::{self, Item, Menu};
-use crate::settings::UiColors;
+use crate::settings::{SettingsStore, UiColors};
 
 /// What a row's reset does, from a click on the arrow or the menu.
 pub type Reset = Rc<dyn Fn(&mut Window, &mut App)>;
@@ -80,6 +83,9 @@ pub(crate) fn option_held(cx: &App) -> bool {
 /// What every row of a frame needs of [`Shown`], read once.
 #[derive(Clone, Copy)]
 pub(super) struct KeyView {
+    /// Show config keys (Settings → Advanced): off, no row draws its key, whatever else is true. The
+    /// one gate of the key line; the row's menu does not look at it.
+    enabled: bool,
     option: bool,
     copied: Option<u64>,
 }
@@ -88,6 +94,7 @@ impl KeyView {
     pub(super) fn read(row: &ElementId, cx: &App) -> Self {
         let shown = cx.try_global::<Shown>();
         Self {
+            enabled: cx.try_global::<SettingsStore>().is_some_and(|store| store.settings.show_config_keys),
             option: shown.is_some_and(|shown| shown.option),
             copied: shown
                 .and_then(|shown| shown.copied.as_ref())
@@ -116,6 +123,9 @@ pub(super) fn key_label(
     group: &SharedString,
     code_font: SharedString,
 ) -> Option<Stateful<Div>> {
+    if !view.enabled {
+        return None;
+    }
     let key = *keys.keys.first()?;
     let always = view.option || view.copied.is_some();
     #[cfg(test)]

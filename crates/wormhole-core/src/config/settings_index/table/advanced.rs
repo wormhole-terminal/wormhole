@@ -21,6 +21,9 @@ pub(super) const ADVANCED: &[Group] = &[
             entry("open-logs", SETTINGS_ADVANCED_OPEN_LOGS, &[])
                 .with_description(SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION)
                 .with_keywords(SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS),
+            entry("show-config-keys", SETTINGS_ADVANCED_SHOW_CONFIG_KEYS, &["show_config_keys"])
+                .with_description(SETTINGS_ADVANCED_SHOW_CONFIG_KEYS_DESCRIPTION)
+                .with_keywords(SETTINGS_ADVANCED_SHOW_CONFIG_KEYS_KEYWORDS),
             entry("reset-settings", SETTINGS_ADVANCED_RESET_SETTINGS, &[])
                 .with_description(SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION)
                 .with_visible_hint()
