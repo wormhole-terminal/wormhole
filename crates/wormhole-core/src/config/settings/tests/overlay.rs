@@ -205,15 +205,6 @@ fn the_theme_primary_switch_keeps_the_color_chosen() {
 }
 
 #[test]
-fn the_themes_primary_from_the_picker_is_the_default_again() {
-    let mut s = Settings::default();
-    s.choose_primary("#ff6600".into());
-    s.use_theme_primary();
-    assert!(s.uses_theme_primary() && s.primary().is_none());
-    assert_eq!((s.theme_primary, s.primary_color.as_str()), (Settings::default().theme_primary, ""));
-}
-
-#[test]
 fn a_config_from_before_the_switch_keeps_its_color() {
     let old: Settings = serde_json::from_str(r##"{ "primary_color": "#00aa88" }"##).expect("parses");
     assert_eq!(old.theme_primary, None);

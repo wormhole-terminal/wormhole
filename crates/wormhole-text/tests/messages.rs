@@ -27,18 +27,18 @@ fn a_term_is_filled_in_where_a_message_uses_it() {
 
 #[test]
 fn messages_with_variables_are_typed_functions() {
-    assert_eq!(settings_profile_start_from_copy("Work"), "A copy of Work");
-    assert_eq!(settings_import_count(1), "1 setting");
-    assert_eq!(settings_import_count(0), "0 settings");
-    assert_eq!(settings_import_count(5), "5 settings");
-    assert_eq!(settings_git_tab_width_value("1"), "1");
-    assert_eq!(settings_git_tab_width_value("4"), "4");
+    assert_eq!(settings_window_open_section("Fonts"), "Open Fonts");
+    assert_eq!(settings_fonts_count(1), "1 font");
+    assert_eq!(settings_fonts_count(0), "0 fonts");
+    assert_eq!(settings_fonts_count(5), "5 fonts");
+    assert_eq!(settings_git_tab_width_value(1), "1 space");
+    assert_eq!(settings_git_tab_width_value(4), "4 spaces");
 }
 
 #[test]
 fn a_variable_keeps_what_it_is_given_without_isolation_marks() {
-    let shown = settings_profile_start_from_copy("Terminals & sidebar");
-    assert_eq!(shown, "A copy of Terminals & sidebar");
+    let shown = settings_window_open_section("Terminals & sidebar");
+    assert_eq!(shown, "Open Terminals & sidebar");
     assert!(!shown.contains(['\u{2068}', '\u{2069}']));
 }
 
@@ -70,9 +70,9 @@ fn every_message_in_the_pseudo_language_is_wrapped_accented_and_longer() {
 #[test]
 fn a_message_with_variables_keeps_its_plural_in_the_pseudo_language() {
     with_language(Language::PSEUDO, || {
-        assert_eq!(settings_import_count(1), "⟦1 šéttíñĝ····⟧");
-        assert_eq!(settings_import_count(5), "⟦5 šéttíñĝš····⟧");
-        assert_eq!(settings_profile_start_from_copy("Work"), "⟦Å çöpý öf Work······⟧");
+        assert_eq!(settings_fonts_count(1), "⟦1 föñt···⟧");
+        assert_eq!(settings_fonts_count(5), "⟦5 föñtš···⟧");
+        assert_eq!(settings_window_open_section("Fonts"), "⟦Öpéñ Fonts····⟧");
         for (id, text) in wormhole_text::keys::samples() {
             assert!(text.starts_with('⟦') && text.ends_with('⟧'), "{id}: {text}");
         }

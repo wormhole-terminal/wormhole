@@ -7,6 +7,7 @@ title-row-part-branch-status = Branch status
 title-row-part-terminal = Terminal name
 title-row-part-terminal-status = Terminal status
 title-row-part-space = Flexible space
+    .description = Parts above it sit at the left, parts below it at the right
 title-row-part-agent-gauge = Agent model and context
 title-row-part-ports = Open ports
 title-row-part-pull-request = Pull request
@@ -26,6 +27,11 @@ title-row-more-open-in = Open in
 title-row-more-split = Split
 
 ## Settings
+
+# Over the parts the row doesn't show.
+title-row-hidden = Hidden
+# Beside Terminal status while the status bar is on, which says it instead.
+title-row-status-in-bar = The status bar shows it while it's on
 
 ## The card under the folder in the title row, and the menu of a right-click on it
 

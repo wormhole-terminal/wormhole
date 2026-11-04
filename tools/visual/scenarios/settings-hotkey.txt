@@ -1,0 +1,14 @@
+# Settings → Menu bar & hotkey's recorder: recording, and keys macOS already has.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+settings-section menubar
+@batch
+settings-resize 1024 900
+@batch
+settings-record hotkey
+@batch
+@shot recording settings
+settings-record hotkey cmd-space
+@batch
+@shot conflict settings

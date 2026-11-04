@@ -55,7 +55,7 @@ impl Feature {
             Self::Theme => "Theme",
             Self::Actions => "Actions",
             Self::Prompts => "Prompts",
-            Self::Layout => "Layout",
+            Self::Layout => "Terminal layout",
             Self::Notes => "Shared notes",
         }
     }

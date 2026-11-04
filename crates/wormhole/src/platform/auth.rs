@@ -89,15 +89,8 @@ pub(super) fn map_error(domain: &str, code: isize, message: String) -> AuthError
 
 /// How long an availability answer is reused. Asking means creating an `LAContext` and a round
 /// trip to the system, and the UI asks while rendering; enrolling Touch ID shows up after this.
-/// Whether any owner authentication (Touch ID / password / Watch) is possible.
-#[cfg(test)]
-pub fn available() -> bool {
-    cached(&AVAILABLE, AVAILABILITY_TTL, || imp::can_evaluate(false).is_ok())
-}
-
 const AVAILABILITY_TTL: Duration = Duration::from_secs(10);
 
-#[cfg(test)]
 static AVAILABLE: Mutex<Option<(Instant, bool)>> = Mutex::new(None);
 static BIOMETRICS: Mutex<Option<(Instant, bool)>> = Mutex::new(None);
 
@@ -112,6 +105,11 @@ fn cached(slot: &Mutex<Option<(Instant, bool)>>, ttl: Duration, ask: impl FnOnce
             answer
         }
     }
+}
+
+/// Whether any owner authentication (Touch ID / password / Watch) is possible.
+pub fn available() -> bool {
+    cached(&AVAILABLE, AVAILABILITY_TTL, || imp::can_evaluate(false).is_ok())
 }
 
 /// Whether Touch ID specifically is set up (to word the UI: "Approve with Touch ID" vs "…with your

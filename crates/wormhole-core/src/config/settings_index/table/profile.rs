@@ -1,6 +1,6 @@
 //! The Profile section: a profile's name, start folder, environment, git identity and agent logins, and deleting it.
 
-use super::{entry, untitled};
+use super::{entry, group, untitled};
 use crate::config::settings_index::Group;
 #[allow(
     clippy::wildcard_imports,
@@ -17,15 +17,16 @@ pub(super) const PROFILE: &[Group] = &[
             .with_keywords(SETTINGS_PROFILE_ENV_KEYWORDS),
         entry("profile-git", SETTINGS_PROFILE_GIT, &[])
             .with_description(SETTINGS_PROFILE_GIT_DESCRIPTION)
-            .with_visible_hint()
             .with_keywords(SETTINGS_PROFILE_GIT_KEYWORDS),
         entry("profile-logins", SETTINGS_PROFILE_LOGINS, &[])
             .with_description(SETTINGS_PROFILE_LOGINS_DESCRIPTION)
-            .with_visible_hint()
             .with_keywords(SETTINGS_PROFILE_LOGINS_KEYWORDS),
     ]),
-    untitled(&[entry("profile-delete", SETTINGS_PROFILE_DELETE, &[])
-        .with_description(SETTINGS_PROFILE_DELETE_DESCRIPTION)
-        .with_visible_hint()
-        .with_keywords(SETTINGS_PROFILE_DELETE_KEYWORDS)]),
+    group(
+        SETTINGS_PROFILE_GROUP_DANGER_ZONE,
+        &[entry("profile-delete", SETTINGS_PROFILE_DELETE, &[])
+            .with_description(SETTINGS_PROFILE_DELETE_DESCRIPTION)
+            .with_visible_hint()
+            .with_keywords(SETTINGS_PROFILE_DELETE_KEYWORDS)],
+    ),
 ];

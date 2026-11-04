@@ -23,15 +23,6 @@ impl Settings {
         self.branch_color = BranchColor::Custom;
     }
 
-    /// Use the theme's own branch colour (`BranchColor::Theme`) or the primary, and forget the custom
-    /// colour, so the setting is back at its default (the colour picker has no switch to keep it for).
-    pub fn choose_branch_source(&mut self, source: BranchColor) {
-        self.branch_color = source;
-        if source != BranchColor::Custom {
-            self.branch_color_custom.clear();
-        }
-    }
-
     /// Every color picked over the theme's, for [`ThemeTokens::with_choices`].
     ///
     /// [`ThemeTokens::with_choices`]: crate::theme::tokens::ThemeTokens::with_choices
@@ -77,21 +68,6 @@ mod tests {
         s.branch_color = BranchColor::Theme;
         assert_eq!(s.branch_tint(), None);
         assert_eq!(s.branch_color_custom, "#ff8800");
-    }
-
-    #[test]
-    fn the_themes_and_the_primarys_branch_colour_leave_nothing_of_a_custom_one() {
-        let mut s = Settings::default();
-        s.choose_branch_color("#ff8800".into());
-        s.choose_branch_source(BranchColor::Primary);
-        assert_eq!((s.branch_color, s.branch_color_custom.as_str()), (BranchColor::Primary, ""));
-        s.choose_branch_color("#ff8800".into());
-        s.choose_branch_source(BranchColor::Theme);
-        assert_eq!(
-            (s.branch_color, s.branch_color_custom.as_str()),
-            (Settings::default().branch_color, Settings::default().branch_color_custom.as_str()),
-            "back at the defaults, so the row is not marked as changed"
-        );
     }
 
     #[test]

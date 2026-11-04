@@ -32,7 +32,7 @@
 //! | `radius_sm` | tiny elements | [`close_x`], color swatches |
 //! | `radius` | controls | buttons, [`icon_button`], [`icon_tab`], inputs, selects, banners, inset [`row`]s |
 //! | `radius_lg` | cards and floating surfaces | [`card`], menus, popovers, theme cards |
-//! | none | lists | [`flush_row`], [`session_row`], [`band`], flush banners |
+//! | none | lists | [`flush_row`], [`session_row`], [`nav_row`], [`band`], flush banners |
 //! | full | dots | agent status dots |
 //!
 //! `radius_chip` follows `radius_sm` unless the theme sets it. A new chip-like
@@ -42,8 +42,8 @@
 //! [`icon_button`] is [`HIT_MIN`] square with a 14 pt glyph, 16 in a title row.
 //!
 //! **Controls** come in two heights, [`CONTROL_H`] and the compact
-//! [`CONTROL_H_SM`] used inside panels. Buttons are GPUI Kit's `Button`: [`form_button`]
-//! (a `small` one as tall as [`CONTROL_H`]) in forms and Settings, `xsmall` in panels, `primary` for the one main action; a glyph-only
+//! [`CONTROL_H_SM`] used inside panels. Buttons are GPUI Kit's `Button`: `small`
+//! in forms, `xsmall` in panels, `primary` for the one main action; a glyph-only
 //! button is an [`icon_button`], never a text character. Anything smaller than
 //! [`HIT_MIN`] that you click gets a [`hit_area`].
 //!
@@ -64,17 +64,16 @@ mod controls;
 mod extras;
 mod find_bar;
 mod folder_colors;
-mod form_button;
 mod groups;
 mod home;
 mod icon_motion;
+mod info;
 mod labels;
 mod lights;
 pub(crate) mod menu_layer;
 mod messages;
 mod metrics;
 pub mod motion;
-mod open_one;
 mod palette;
 mod panel;
 pub(crate) mod panel_list;
@@ -82,6 +81,7 @@ mod panes;
 mod path_crumb;
 mod popover;
 pub(crate) mod popover_layer;
+mod preview;
 mod profile;
 mod reorder;
 mod rolling_number;
@@ -111,26 +111,28 @@ pub use controls::*;
 pub use extras::*;
 pub use find_bar::*;
 pub use folder_colors::*;
-pub use form_button::form_button;
 pub use groups::*;
 pub(crate) use home::home_dir;
 pub use icon_motion::{Half, IconMotion, MenuMark, StripFill, StripSide};
+#[cfg(test)]
+pub(crate) use info::{LAST_CARD, is_open_in, open_row_in};
 pub use labels::*;
 pub(crate) use lights::{
     ASSUMED_LIGHTS_SPAN, LIGHTS_X, lights_end, shown_lights_end, traffic_light_position,
 };
 pub use messages::*;
 pub use metrics::Metrics;
-pub(crate) use open_one::OpenOne;
 pub use palette::*;
 pub use panel::*;
 pub use panes::*;
 pub use path_crumb::*;
 pub use popover::*;
+pub use preview::*;
 pub use profile::*;
 pub use reorder::*;
 pub use rolling_number::*;
-pub use row_keys::own_menu;
+pub use row_keys::{Reset, RowKeys, own_menu};
+pub(crate) use row_keys::{option_held, sync_option};
 pub use rows::*;
 pub use scale::*;
 pub use section::*;

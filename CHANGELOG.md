@@ -14,9 +14,6 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
-- Settings adds back and forward buttons, section-aware search across translated labels and installed items,
-  direct links from results, and reset-to-default context menus. Theme choices adapt to the window width and
-  respond to hover and press; preview animations pause when the window is inactive or Reduce Motion is on.
 - A change to `config.json`, a theme file or the custom fonts folder applies at once (within a tenth of a
   second) instead of at the next check, up to 0.4 seconds later; the check that remains runs every 10 seconds,
   for a folder the system cannot watch.
@@ -30,14 +27,12 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   repository costs no git runs. The timer stays as a backstop every 30 seconds, and as before where file events
   are not available (a network volume). Build output in ignored folders no longer causes reads.
 - Drawing the title row no longer asks the system where the apps in Open in… are on every frame.
-- Settings is now a native macOS window: the Mac's own sidebar, controls, menus, sheets and file panels, with
-  live previews that follow each page's options. The pages keep their purpose, the settings and the keys in
-  `config.json` are the same, and it opens from ⌘, the menu bar, the command palette and the menu bar extra. Its
-  words follow the interface language, and the Native Settings window feature flag that chose between this
-  window and the one Wormhole drew itself is gone.
+- Settings is the window Wormhole draws itself, as it was before the redesign and the SwiftUI window: the page
+  list, its rows and menus, and the settings and keys in `config.json` as they were. The SwiftUI window and the
+  Native Settings window feature flag are gone.
 - The lines around cards, columns, the sidebar and panels, between settings rows, and around buttons, menus and
   fields are off by default: surfaces are told apart by their shade. After updating, Wormhole looks flatter.
-  Settings → Appearance → Details → Borders (`borders` in `config.json`) brings the lines back; Increase Contrast
+  Settings → Appearance → Borders (`borders` in `config.json`) brings the lines back; Increase Contrast
   keeps them. Selection and focus rings, menu separators, the checkbox's outline, Column dividers and the
   split terminals' hairline are not affected.
 

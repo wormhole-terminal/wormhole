@@ -1,0 +1,18 @@
+# Settings search and states: results for 'line', no results, and Advanced's reset asking in place.
+@fixture repo-basic
+@theme Tokyo Night
+@size 1440 900
+settings-section appearance
+@batch
+settings-resize 1024 900
+@batch
+settings-search line
+@batch
+@shot results settings
+settings-search vim mode
+@batch
+@shot no-results settings
+settings-search
+settings-reset-confirm
+@batch
+@shot reset-confirm settings

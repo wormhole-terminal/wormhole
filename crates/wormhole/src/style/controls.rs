@@ -60,8 +60,6 @@ pub fn pill(id: impl Into<ElementId>, ui: UiColors, active: bool, compact: bool)
         .when(!compact, |d| d.text_body())
         .text_color(if active { ui.on_selected } else { ui.muted })
         .when(!compact, |d| d.outlined(ui, if active { ui.selected_chip } else { ui.border }))
-        // An outlined chip that is not chosen keeps its shape without the outline: the button's fill.
-        .when(!compact && !active && !ui.borders, |d| d.bg(ui.button))
         .when(active, |d| d.bg(ui.selected_chip))
         // Hovering the active one keeps its fill rather than trading it for the lighter hover.
         .hover(move |d| if active { d } else { d.bg(ui.hover).text_color(ui.text) })
@@ -212,10 +210,13 @@ pub fn keycap(ui: UiColors, text: impl Into<SharedString>) -> Div {
 
 /// How far a segmented control's track reaches around its segments.
 const SEGMENT_INSET: f32 = 2.0;
+/// The gap between a [`form_segment`]'s icon and its label.
+const SEGMENT_ICON_GAP: f32 = 6.0;
 
 /// A switch between two or three views of the same thing in a panel ("Split |
 /// Unified"): the [`segment`]s sit in one rounded track, so they read as one control, and
 /// the active one is filled like a selected chip. Add the segments with `.child(…)`.
+/// In a form, where it stands beside selects and buttons, it is a [`segmented_form`].
 #[track_caller]
 pub fn segmented(ui: UiColors) -> Div {
     div()
@@ -248,6 +249,49 @@ pub fn segment(
         .text_color(if active { ui.on_selected } else { ui.muted })
         .when(active, |d| d.bg(ui.selected_chip))
         .hover(move |d| if active { d } else { d.text_color(ui.text) })
+        .child(label.into())
+}
+
+/// The segmented control of a settings row: as tall as the selects and buttons
+/// around it ([`CONTROL_H`]), the track in `state.hover` with the control corners, the
+/// chosen [`form_segment`] the solid primary. Add the segments with `.child(…)`.
+#[track_caller]
+pub fn segmented_form(ui: UiColors) -> Div {
+    div()
+        .flex()
+        .flex_none()
+        .items_center()
+        .h(px(CONTROL_H))
+        .p(px(SEGMENT_INSET))
+        .rounded(ui.radius)
+        .bg(ui.hover)
+}
+
+/// One option of a [`segmented_form`], with an optional icon before its label ("Dark",
+/// "Light", "Match system"); add `.on_click(…)`.
+#[track_caller]
+pub fn form_segment(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    icon: Option<IconName>,
+    label: impl Into<SharedString>,
+    active: bool,
+) -> Stateful<Div> {
+    div()
+        .id(id)
+        .flex()
+        .items_center()
+        .gap(px(SEGMENT_ICON_GAP))
+        .px_2()
+        .h(px(CONTROL_H - 2.0 * SEGMENT_INSET))
+        .rounded(ui.radius_chip)
+        .text_label()
+        .font_weight(if active { FontWeight::SEMIBOLD } else { FontWeight::NORMAL })
+        .cursor_pointer()
+        .text_color(if active { ui.on_selected } else { ui.muted })
+        .when(active, |d| d.bg(ui.selected_chip))
+        .hover(move |d| if active { d } else { d.text_color(ui.text) })
+        .children(icon.map(|icon| Icon::new(icon).with_size(px(super::scale::GLYPH))))
         .child(label.into())
 }
 

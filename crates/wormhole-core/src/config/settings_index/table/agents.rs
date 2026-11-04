@@ -11,18 +11,30 @@ use wormhole_text::keys::*;
 
 pub(super) const AGENTS: &[Group] = &[
     untitled(&[
-        entry("agents-preview", SETTINGS_AGENTS_PREVIEW, &[]).with_keywords(SETTINGS_AGENTS_PREVIEW_KEYWORDS)
+        entry("agents-summary", SETTINGS_AGENTS_SUMMARY, &[]).with_keywords(SETTINGS_AGENTS_SUMMARY_KEYWORDS)
     ]),
-    // The agents on this Mac and the ones Wormhole only recognises: tile rows and a row that opens more.
+    group(
+        SETTINGS_AGENTS_GROUP_NOTIFICATIONS,
+        &[entry("agents-notifications", SETTINGS_AGENTS_NOTIFICATIONS, &[])
+            .with_description(SETTINGS_AGENTS_NOTIFICATIONS_DESCRIPTION)
+            .with_keywords(SETTINGS_AGENTS_NOTIFICATIONS_KEYWORDS)],
+    ),
     group(
         SETTINGS_AGENTS_GROUP_INSTALLED,
-        &[
-            entry("agents-installed", SETTINGS_AGENTS_INSTALLED, &[])
-                .with_keywords(SETTINGS_AGENTS_INSTALLED_KEYWORDS),
-            entry("agents-other", SETTINGS_AGENTS_OTHER, &[])
-                .with_description(SETTINGS_AGENTS_OTHER_DESCRIPTION)
-                .with_keywords(SETTINGS_AGENTS_OTHER_KEYWORDS),
-        ],
+        &[entry("agents-installed", SETTINGS_AGENTS_INSTALLED, &[])
+            .with_keywords(SETTINGS_AGENTS_INSTALLED_KEYWORDS)],
+    ),
+    group(
+        SETTINGS_AGENTS_GROUP_OTHER_AGENTS,
+        &[entry("agents-other", SETTINGS_AGENTS_OTHER, &[])
+            .with_description(SETTINGS_AGENTS_OTHER_DESCRIPTION)
+            .with_keywords(SETTINGS_AGENTS_OTHER_KEYWORDS)],
+    ),
+    group(
+        SETTINGS_AGENTS_GROUP_HOW_STATUS_WORKS,
+        &[entry("agents-how", SETTINGS_AGENTS_HOW, &[])
+            .with_description(SETTINGS_AGENTS_HOW_DESCRIPTION)
+            .with_keywords(SETTINGS_AGENTS_HOW_KEYWORDS)],
     ),
     group(
         SETTINGS_AGENTS_GROUP_COMMAND_LINE,
@@ -69,10 +81,6 @@ pub(super) const AGENTS: &[Group] = &[
         ],
     )
     .with_blurb(SETTINGS_AGENTS_GROUP_SKILL_BLURB),
-    // Where notifications are set, and how status works: the page's last line.
-    untitled(&[entry("agents-footer", SETTINGS_AGENTS_FOOTER, &[])
-        .with_description(SETTINGS_AGENTS_FOOTER_DESCRIPTION)
-        .with_keywords(SETTINGS_AGENTS_FOOTER_KEYWORDS)]),
 ];
 
 pub(super) const PROJECTS: &[Group] = &[untitled(&[entry("projects", SETTINGS_PROJECTS_PROJECTS, &[])

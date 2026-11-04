@@ -43,17 +43,6 @@ fn load(profile: &ProfileId, cx: &App) -> ProjectHub {
     hub
 }
 
-/// Calls `f` whenever a hub changes (an approval, a trust, a preference, a project loaded), for a window that
-/// shows them and must not wait for some other event to find out.
-pub(crate) fn observe(cx: &mut App, f: impl FnMut(&mut App) + 'static) -> Subscription {
-    cx.observe_global::<Hubs>(f)
-}
-
-/// Whether the feature has made its hubs (a window that lists projects asks before it reads one).
-pub(crate) fn present(cx: &App) -> bool {
-    cx.has_global::<Hubs>()
-}
-
 /// The shown profile's hub: what Settings, the status item and the tests read. A window reads
 /// [`hub_of`].
 pub(crate) fn hub(cx: &App) -> &ProjectHub {

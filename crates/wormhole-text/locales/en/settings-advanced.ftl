@@ -26,11 +26,15 @@ settings-advanced-reset-settings = Reset all settings
 
 ## Tips
 
+settings-advanced-group-tips = Tips
+
 settings-advanced-reset-tips = Closed tips
     .description = Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note
     .keywords = hints tips reset show again dismissed
 
 ## Programs
+
+settings-advanced-group-programs = New programs
 
 settings-advanced-skip-scans = Skip malware scans of new programs
     .description = macOS scans each new program for malware the first time it runs, which slows builds, tests and coding agents. Adding Wormhole to Developer Tools lets programs started in Wormhole skip that scan. Only do this if you trust what you run. Terminals opened after you restart Wormhole get it. If Developer Tools isn't listed, run spctl developer-mode enable-terminal in a terminal first.
@@ -38,3 +42,23 @@ settings-advanced-skip-scans = Skip malware scans of new programs
 
 ## settings_window/sections/advanced.rs (labels, hints and notes drawn by this page's code)
 
+settings-advanced-open = Open
+settings-advanced-open-developer-tools = Open Developer Tools Settings
+settings-advanced-show-in-finder = Show in Finder
+settings-advanced-reset-tips-button = Reset tips
+settings-advanced-no-tip-was-closed-for-good = No tip was closed for good
+settings-advanced-they-show-again-where-they-belong = They show again where they belong
+settings-advanced-reset-to-defaults = Reset to defaults…
+settings-advanced-every-setting-is-at-its-default = Every setting is at its default
+settings-advanced-asks-first = Asks first
+settings-advanced-cancel = Cancel
+settings-advanced-reset = Reset
+
+## The reset question
+
+# The question over the Reset button. { $count } is how many settings differ from their defaults (at least
+# one: the button is off otherwise).
+settings-advanced-reset-question = { $count ->
+    [one] Reset { $count } changed setting to its default? Your terminals, notes and themes are kept.
+   *[other] Reset { $count } changed settings to their default? Your terminals, notes and themes are kept.
+}

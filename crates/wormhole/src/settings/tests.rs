@@ -381,9 +381,11 @@ fn project_overrides_layer_over_the_settings_and_back() {
     assert_eq!(store.settings.diff_wrap, !diff_wrap);
     // The user's own value is untouched underneath.
     assert_eq!(store.config.settings.diff_wrap, diff_wrap);
+    assert_eq!(store.project_keys(), ["diff_wrap"], "what the settings window marks as the project's");
     store.project_overrides = None;
     store.derive();
     assert_eq!(store.settings.diff_wrap, diff_wrap);
+    assert!(store.project_keys().is_empty());
 }
 
 #[test]

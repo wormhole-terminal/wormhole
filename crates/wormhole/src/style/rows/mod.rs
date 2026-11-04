@@ -1,7 +1,7 @@
 //! The lists' rows: square, edge to edge, inset 16, with
 //! one lead column at x 16–32 and the text at x 40. A selection is the primary's tint,
 //! hover a 5 % fill, and neither moves anything. By file: `session` a terminal's row, `card` the sidebar's
-//! cards, `nav` the Settings nav's profile card, `files` the Changes tab's rows, `commits` the two-line rows.
+//! cards and Settings' navigation row, `files` the Changes tab's rows, `commits` the two-line rows.
 
 mod card;
 mod commits;

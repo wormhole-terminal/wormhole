@@ -13,9 +13,12 @@ settings-import-group-found = Found on this Mac
 settings-import-found = Terminals found
     .keywords = import migrate switch move settings config configuration ghostty iterm iterm2 terminal.app alacritty kitty wezterm warp zed vscode vs code font theme colours colors shell
 
+settings-import-scan-again = Scan again
 settings-import-scanning = Looking for terminals…
 settings-import-none = No other terminal's settings found
 settings-import-none-detail = { -brand } looked for Ghostty, iTerm2, Terminal.app, Alacritty, kitty, WezTerm, Warp, Zed and VS Code in the places they keep their settings, and found none.
+
+settings-import-files-read = Files read
 
 # { $count } is a whole number.
 settings-import-count = { $count ->
@@ -23,15 +26,24 @@ settings-import-count = { $count ->
    *[other] { $count } settings
 }
 
-# The button of a terminal's row: opens the list of what it would bring over.
-settings-import-review = Import…
+# { $terminal } is a terminal's name, { $count } how many settings it has ("13 settings"). What a screen reader
+# says for the card's header, which opens and closes the card.
+settings-import-card-label = { $terminal }, { $count }
 
 settings-import-take = Brings over
 settings-import-leave = Doesn't carry over
 settings-import-nothing-to-take = Nothing in these settings can be brought over.
 settings-import-runs-everywhere = { -brand } would run this in every new terminal, so it isn't ticked until you tick it.
 
+# { $selected } of { $total } rows are ticked.
+settings-import-selected = { $selected } of { $total } selected
 settings-import-apply = Import selected
+
+# { $brought } is how many settings were brought over and { $left } how many didn't carry over: both whole numbers.
+settings-import-summary = { $brought ->
+    [one] { $brought } setting brought over, { $left } didn't
+   *[other] { $brought } settings brought over, { $left } didn't
+}
 
 # { $error } is what went wrong when saving the colours.
 settings-import-failed = Couldn't import: { $error }
@@ -108,10 +120,8 @@ settings-import-reason-built-in-theme = { $theme } is built into the other termi
 
 settings-import-group-compare = Compared with { -brand }
 
-settings-import-compare = Compare with { -brand }
+settings-import-compare = How they compare
     .keywords = drawbacks limits strengths differences versus comparison alternatives
-
-settings-import-done = Done
 
 settings-import-compare-none = When another terminal's settings are found, you see here how it compares with { -brand }.
 

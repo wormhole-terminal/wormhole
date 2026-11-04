@@ -1,7 +1,7 @@
 //! The Motion section: one choice of animation for each thing that moves. Each writes a key inside
 //! `config.json`'s `motion` object (`motion.insert`, …), so its changed mark and reset are its own.
 
-use super::{entry, group, untitled};
+use super::{entry, group};
 use crate::config::settings_index::Group;
 #[allow(
     clippy::wildcard_imports,
@@ -10,9 +10,6 @@ use crate::config::settings_index::Group;
 use wormhole_text::keys::*;
 
 pub(super) const MOTION: &[Group] = &[
-    untitled(&[
-        entry("motion-preview", SETTINGS_MOTION_PREVIEW, &[]).with_keywords(SETTINGS_MOTION_PREVIEW_KEYWORDS)
-    ]),
     group(
         SETTINGS_MOTION_GROUP_TERMINALS,
         &[

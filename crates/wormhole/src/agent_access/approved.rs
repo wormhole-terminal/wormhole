@@ -1,6 +1,5 @@
 //! What the user has allowed, for Settings to list and take back.
 
-#[cfg(feature = "devctl")]
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use gpui_kit::*;
@@ -185,7 +184,6 @@ pub(crate) fn set_capability(which: Which, capability: Capability, on: bool, cx:
 }
 
 /// Seconds since the epoch, for a row's "used … ago".
-#[cfg(feature = "devctl")]
 pub(crate) fn now_seconds() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)

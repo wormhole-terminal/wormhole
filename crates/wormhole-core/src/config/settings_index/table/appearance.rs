@@ -17,8 +17,6 @@ pub(super) const APPEARANCE: &[Group] = &[
             entry("theme-mode", SETTINGS_APPEARANCE_THEME_MODE, &["theme_mode"])
                 .with_description(SETTINGS_APPEARANCE_THEME_MODE_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_THEME_MODE_KEYWORDS),
-            entry("theme-pairing", SETTINGS_APPEARANCE_THEME_PAIRING, &[])
-                .with_keywords(SETTINGS_APPEARANCE_THEME_PAIRING_KEYWORDS),
             entry("theme", SETTINGS_APPEARANCE_THEME, &["theme", "theme_light", "hidden_themes"])
                 .with_keywords(SETTINGS_APPEARANCE_THEME_KEYWORDS),
         ],
@@ -55,11 +53,6 @@ pub(super) const APPEARANCE: &[Group] = &[
             )
             .with_description(SETTINGS_APPEARANCE_TRANSLUCENT_DESCRIPTION)
             .with_keywords(SETTINGS_APPEARANCE_TRANSLUCENT_KEYWORDS),
-        ],
-    ),
-    group(
-        SETTINGS_APPEARANCE_GROUP_DETAILS,
-        &[
             entry("borders", SETTINGS_APPEARANCE_BORDERS, &["borders"])
                 .with_description(SETTINGS_APPEARANCE_BORDERS_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_BORDERS_KEYWORDS),
@@ -123,7 +116,14 @@ pub(super) const FONTS: &[Group] = &[
             .with_description(SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION)
             .with_keywords(SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS)],
     ),
-    untitled(&[entry("fonts-folder", SETTINGS_FONTS_FOLDER, &[])
-        .with_description(SETTINGS_FONTS_FOLDER_DESCRIPTION)
-        .with_keywords(SETTINGS_FONTS_FOLDER_KEYWORDS)]),
+    group(
+        SETTINGS_APPEARANCE_GROUP_YOUR_FONTS,
+        &[
+            entry("fonts-folder", SETTINGS_FONTS_FOLDER, &[])
+                .with_description(SETTINGS_FONTS_FOLDER_DESCRIPTION)
+                .with_keywords(SETTINGS_FONTS_FOLDER_KEYWORDS),
+            entry("custom-fonts", SETTINGS_FONTS_CUSTOM_FONTS, &[])
+                .with_keywords(SETTINGS_FONTS_CUSTOM_FONTS_KEYWORDS),
+        ],
+    ),
 ];

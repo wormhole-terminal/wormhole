@@ -23,7 +23,11 @@ pub const UI_TOKENS: &[TokenInfo] = &[
     t("titlebar.background", "Chrome", "Title bar / tab strip background"),
     t("sidebar.background", "Chrome", "Terminal sidebar background"),
     t("sidebar.row.hover", "Chrome", "Sidebar row under the pointer (overlay)"),
-    t("sidebar.row.selected", "Chrome", "The current terminal's row in the sidebar (opaque tint)"),
+    t(
+        "sidebar.row.selected",
+        "Chrome",
+        "The current terminal's row in the sidebar, and the settings nav (opaque tint)",
+    ),
     t("sidebar.row.selected.text", "Chrome", "Name and icon on a selected row; also right-panel rows"),
     t(
         "sidebar.row.selected.muted",

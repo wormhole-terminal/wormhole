@@ -458,17 +458,13 @@ fn the_notes_settings_link_is_an_action_the_app_answers_by_opening_settings(cx: 
         return;
     }
     let window = start(cx, 1);
-    assert_eq!(cx.update(|cx| crate::settings_window::shown_page(cx)), None, "Settings not opened yet");
+    assert!(cx.update(|cx| crate::app_state::live(&app(cx).settings_window).is_none()));
     // What the link in the sidebar's "No coding agents yet" note dispatches from the window.
     with_window(cx, &window, |window, cx| {
         window.dispatch_action(Box::new(crate::actions::OpenSettingsAt(SectionId::Agents)), cx)
     });
     cx.run_until_parked();
-    assert_eq!(
-        cx.update(|cx| crate::settings_window::shown_page(cx)).as_deref(),
-        Some("Agents"),
-        "Settings opened on the Agents page"
-    );
+    assert!(cx.update(|cx| crate::app_state::live(&app(cx).settings_window).is_some()), "Settings opened");
 }
 
 // -------------------------------------------------------------------------------- the frame

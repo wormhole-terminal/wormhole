@@ -115,31 +115,6 @@ pub fn status_tile_shifting(
     let id: ElementId = id.into();
     let corner = size * SQUIRCLE;
     let still = cx.reduce_motion();
-    // The light round the edge, or the amber edge breathing, and the badge: as they are, or the layer
-    // that plays the change from the old ones.
-    let phase = phase_of(&id);
-    let (ring, badge, shifting) = match shift.filter(|shift| !still && shift.is_shown(state)) {
-        None => (light(&id, ui, state, (size, corner), phase, still), badge(ui, state, size, surface), None),
-        Some(shift) => {
-            let shape = transition::Shape { id: id.clone(), ui, size, corner, surface, phase };
-            (None, None, Some(transition::shifting(shape, shift, state)))
-        }
-    };
-    div()
-        .relative()
-        .flex_none()
-        .size(px(size))
-        .child(face_box(ui, face, size))
-        .children(ring)
-        .children(badge)
-        .children(shifting)
-        .into_any_element()
-}
-
-/// The rounded square a tile is: its paint, the face on it, the sheen across its top and the edge.
-#[track_caller]
-fn face_box(ui: UiColors, face: TileFace, size: f32) -> Div {
-    let corner = size * SQUIRCLE;
     let (paint, mark_color, face) = resolve(ui, face);
     let face_size = size * FACE_SHARE;
     let face_el = match face {
@@ -155,6 +130,16 @@ fn face_box(ui: UiColors, face: TileFace, size: f32) -> Div {
             .text_color(mark_color)
             .child(letters)
             .into_any_element(),
+    };
+    // The light round the edge, or the amber edge breathing, and the badge: as they are, or the layer
+    // that plays the change from the old ones.
+    let phase = phase_of(&id);
+    let (ring, badge, shifting) = match shift.filter(|shift| !still && shift.is_shown(state)) {
+        None => (light(&id, ui, state, (size, corner), phase, still), badge(ui, state, size, surface), None),
+        Some(shift) => {
+            let shape = transition::Shape { id: id.clone(), ui, size, corner, surface, phase };
+            (None, None, Some(transition::shifting(shape, shift, state)))
+        }
     };
     let sheen = div().absolute().top_0().left_0().size_full().rounded(px(corner)).bg(linear_gradient(
         180.0,
@@ -185,7 +170,15 @@ fn face_box(ui: UiColors, face: TileFace, size: f32) -> Div {
     let edge = Some(ui.border_width.into());
     let b = &mut face_box.style().border_widths;
     (b.top, b.right, b.bottom, b.left) = (edge, edge, edge, edge);
-    face_box.child(sheen).child(face_el)
+    div()
+        .relative()
+        .flex_none()
+        .size(px(size))
+        .child(face_box.child(sheen).child(face_el))
+        .children(ring)
+        .children(badge)
+        .children(shifting)
+        .into_any_element()
 }
 
 /// How far down the tile the sheen reaches, from its full strength at the top.

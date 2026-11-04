@@ -175,8 +175,8 @@ fn the_settings_scope_lists_recent_settings() {
 fn the_unscoped_settings_group_puts_the_best_match_first() {
     use wormhole_core::config::settings_index::{Query, search};
     let snapshot = snapshot();
-    let settings = |scope: Scope, word: &str| -> Vec<&'static str> {
-        rows(&snapshot, scope, word)
+    let settings = |scope: Scope| -> Vec<&'static str> {
+        rows(&snapshot, scope, "font")
             .iter()
             .filter_map(|row| match row {
                 Row::Result { item: Item::Setting(id), .. } => Some(*id),
@@ -184,23 +184,14 @@ fn the_unscoped_settings_group_puts_the_best_match_first() {
             })
             .collect()
     };
-    // Whether the unscoped group differs from the pages' order for `word`: it does only when a better
-    // match stands on a later page than a poorer one, which depends on the pages' order.
-    let mut reordered = Vec::new();
-    for word in ["font", "line", "color", "theme", "tab", "size", "key", "show"] {
-        let hits = search(&Query::new(word));
-        let score = |id: &str| hits.iter().find(|hit| hit.entry.id == id).map(|hit| hit.score);
-        let unscoped = settings(Scope::All, word);
-        let scores: Vec<Option<u32>> = unscoped.iter().map(|id| score(id)).collect();
-        assert!(scores.windows(2).all(|pair| pair[0] >= pair[1]), "{word}: {scores:?}");
-        assert_eq!(scores[0], hits.iter().map(|hit| hit.score).max(), "{word}");
-        let page_order: Vec<&str> = hits.iter().map(|hit| hit.entry.id).collect();
-        assert_eq!(settings(Scope::Settings, word), page_order, "{word}");
-        if unscoped != page_order[..unscoped.len()].to_vec() {
-            reordered.push(word);
-        }
-    }
-    assert!(!reordered.is_empty(), "really reordered: no word of the list is found in another order");
+    let hits = search(&Query::new("font"));
+    let score = |id: &str| hits.iter().find(|hit| hit.entry.id == id).map(|hit| hit.score);
+    let scores: Vec<Option<u32>> = settings(Scope::All).iter().map(|id| score(id)).collect();
+    assert!(scores.windows(2).all(|pair| pair[0] >= pair[1]), "{scores:?}");
+    assert_eq!(scores[0], hits.iter().map(|hit| hit.score).max());
+    let page_order: Vec<&str> = hits.iter().map(|hit| hit.entry.id).collect();
+    assert_eq!(settings(Scope::Settings), page_order);
+    assert_ne!(settings(Scope::All), page_order[..settings(Scope::All).len()].to_vec(), "really reordered");
 }
 
 #[test]

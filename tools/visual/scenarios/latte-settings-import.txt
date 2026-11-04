@@ -1,0 +1,16 @@
+# Settings → Import in Catppuccin Latte: the same page as settings-import, in a light theme.
+@fixture import-home
+@theme Catppuccin Latte
+@size 1440 900
+settings-section import
+@batch
+import-scan ~/import-home
+settings-resize 1024 1300
+@sleep 1500
+@shot import settings
+settings-scroll 700
+@batch
+@shot import-compare settings
+settings-scroll 1400
+@batch
+@shot import-compare-end settings

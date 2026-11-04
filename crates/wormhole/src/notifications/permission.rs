@@ -68,3 +68,9 @@ pub(crate) fn pretend_permission(permission: Permission, cx: &mut App) {
 pub(crate) fn open_system_settings(cx: &App) {
     system::open_settings(cx);
 }
+
+/// How many times the permission was read again.
+#[cfg(test)]
+pub(crate) fn permission_refreshes(cx: &App) -> u32 {
+    cx.try_global::<Notifier>().map_or(0, |n| n.refreshes)
+}

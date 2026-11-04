@@ -111,30 +111,25 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             intro: SETTINGS_SECTION_PROFILE_INTRO,
             nav: NavGroup::Profile,
         },
-        SectionId::Changed => &SectionInfo {
-            title: SETTINGS_SECTION_CHANGED,
-            intro: SETTINGS_SECTION_CHANGED_INTRO,
-            nav: NavGroup::Changed,
-        },
         SectionId::Appearance => &SectionInfo {
             title: SETTINGS_SECTION_APPEARANCE,
             intro: SETTINGS_SECTION_APPEARANCE_INTRO,
-            nav: NavGroup::Terminal,
+            nav: NavGroup::Look,
         },
         SectionId::Fonts => &SectionInfo {
             title: SETTINGS_SECTION_FONTS,
             intro: SETTINGS_SECTION_FONTS_INTRO,
-            nav: NavGroup::Terminal,
+            nav: NavGroup::Look,
         },
         SectionId::Motion => &SectionInfo {
             title: SETTINGS_SECTION_MOTION,
             intro: SETTINGS_SECTION_MOTION_INTRO,
-            nav: NavGroup::Preview,
+            nav: NavGroup::Look,
         },
         SectionId::Terminal => &SectionInfo {
             title: SETTINGS_SECTION_TERMINAL,
             intro: SETTINGS_SECTION_TERMINAL_INTRO,
-            nav: NavGroup::Terminal,
+            nav: NavGroup::Work,
         },
         SectionId::Sessions => &SectionInfo {
             title: SETTINGS_SECTION_SESSIONS,
@@ -149,7 +144,7 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
         SectionId::Agents => &SectionInfo {
             title: SETTINGS_SECTION_AGENTS,
             intro: SETTINGS_SECTION_AGENTS_INTRO,
-            nav: NavGroup::Work,
+            nav: NavGroup::Agents,
         },
         SectionId::Projects => &SectionInfo {
             title: SETTINGS_SECTION_PROJECTS,
@@ -174,7 +169,7 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
         SectionId::Notifications => &SectionInfo {
             title: SETTINGS_SECTION_NOTIFICATIONS,
             intro: SETTINGS_SECTION_NOTIFICATIONS_INTRO,
-            nav: NavGroup::Work,
+            nav: NavGroup::App,
         },
         SectionId::MenuBar => &SectionInfo {
             title: SETTINGS_SECTION_MENU_BAR,
@@ -197,8 +192,6 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
 pub(super) fn groups(id: SectionId) -> &'static [Group] {
     match id {
         SectionId::Profile => profile::PROFILE,
-        // Rows of the other pages, found by what differs (`Values::changed_rows`), not a table of its own.
-        SectionId::Changed => &[],
         SectionId::Appearance => appearance::APPEARANCE,
         SectionId::Fonts => appearance::FONTS,
         SectionId::Motion => motion::MOTION,

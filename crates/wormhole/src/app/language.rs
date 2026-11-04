@@ -44,7 +44,6 @@ fn apply(language: Language) {
 pub(crate) fn change(language: Language, cx: &mut App) {
     apply(language);
     cx.refresh_windows();
-    crate::settings_window::devctl::words_changed(cx);
 }
 
 /// The tag GPUI Kit's widgets are given: the pseudo-language is English to them (a tag they lack

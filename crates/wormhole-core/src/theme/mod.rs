@@ -14,7 +14,6 @@ pub mod catalog;
 pub mod folder_color;
 pub mod fonts;
 pub mod icon_theme;
-pub mod pairs;
 pub mod registry;
 pub mod saved_versions;
 pub mod tokens;

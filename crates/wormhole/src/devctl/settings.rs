@@ -37,24 +37,29 @@ pub(super) fn update_state(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+pub(super) fn project(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::project(arg.trim(), ctx.cx);
+    Ok(String::new())
+}
+
+pub(super) fn project_menu(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::project_menu(arg.trim(), ctx.cx);
+    Ok(String::new())
+}
+
 pub(super) fn search(ctx: &mut Ctx, arg: &str) -> Result<String> {
     crate::settings_window::devctl::search(arg.trim(), ctx.cx);
     Ok(String::new())
 }
 
-pub(super) fn native_set(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::native_set(arg, ctx.cx);
+pub(super) fn preview(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::preview(arg, ctx.cx);
     Ok(String::new())
 }
 
-/// `native-event <json>`: any event of the native window (a button, a recorded key), as it would send it.
-pub(super) fn native_event(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    crate::settings_window::devctl::native_event(arg, ctx.cx);
+pub(super) fn record(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::record(arg, ctx.cx);
     Ok(String::new())
-}
-
-pub(super) fn native_look(_: &mut Ctx, _: &str) -> Result<String> {
-    crate::platform::native_settings::look().ok_or_else(|| anyhow!("the native Settings window is not open"))
 }
 
 /// `settings-reveal <id>`: the settings window at that row, as the palette opens it.
@@ -67,28 +72,77 @@ pub(super) fn reveal(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(String::new())
 }
 
+/// `import-scan [<fixture home>]`: Settings → Import over a folder standing in for the home.
+pub(super) fn import_scan(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    // `~/…` is the instance's own home, so a scenario can name its fixture without the scratch path.
+    let home = (!arg.trim().is_empty()).then(|| match arg.trim().strip_prefix("~/") {
+        Some(rest) => wormhole_core::platform::paths::home().unwrap_or_default().join(rest),
+        None => PathBuf::from(arg.trim()),
+    });
+    if let Some(home) = &home
+        && !home.is_dir()
+    {
+        return Err(anyhow!("no folder {}", home.display()));
+    }
+    crate::settings_window::devctl::import_scan(home, ctx.cx);
+    Ok(String::new())
+}
+
+/// `import-open <source>`: open that terminal's card (`ghostty`, `iterm2`, …).
+pub(super) fn import_open(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let source = wormhole_core::import::Source::from_key(arg.trim())
+        .ok_or_else(|| anyhow!("no terminal {:?}", arg.trim()))?;
+    crate::settings_window::devctl::import_open(source, ctx.cx);
+    Ok(String::new())
+}
+
+/// `import-apply <source>`: press "Import selected" for that terminal (`ghostty`, `iterm2`, …).
+pub(super) fn import_apply(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let source = wormhole_core::import::Source::from_key(arg.trim())
+        .ok_or_else(|| anyhow!("no terminal {:?}", arg.trim()))?;
+    crate::settings_window::devctl::import_apply(source, ctx.cx);
+    Ok(String::new())
+}
+
 /// `profile-sheet`: the "New profile" sheet over the settings window.
 pub(super) fn profile_sheet(ctx: &mut Ctx, _: &str) -> Result<String> {
     crate::settings_window::devctl::profile_sheet(ctx.cx);
     Ok(String::new())
 }
 
-/// `settings-hooks <agent id> [remove]`: add (or remove) an agent's hooks in the instance's agent home,
-/// as the Coding agents page's Add Hooks and Remove Hooks do, to seed a scratch instance.
-pub(super) fn hooks(_: &mut Ctx, arg: &str) -> Result<String> {
-    let mut words = arg.split_whitespace();
-    let Some(name) = words.next() else { return Ok("settings-hooks <agent id> [remove]".into()) };
-    let remove = words.next() == Some("remove");
-    let Some(agent) = wormhole_core::agents::AGENTS.iter().find(|a| a.command.eq_ignore_ascii_case(name))
-    else {
-        return Ok(format!("no agent {name}"));
+pub(super) fn scroll(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let by: f32 = arg.trim().parse().map_err(|_| anyhow!("expected <px>"))?;
+    crate::settings_window::devctl::scroll(by, ctx.cx);
+    Ok(String::new())
+}
+
+pub(super) fn resize(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let mut dims = arg.split_whitespace().filter_map(|n| n.parse::<f32>().ok());
+    let (Some(w), Some(h)) = (dims.next(), dims.next()) else {
+        return Err(anyhow!("expected <w> <h>"));
     };
-    let Some(spec) = wormhole_core::agents::integrations::spec(agent.id) else {
-        return Ok(format!("{name} has no hooks"));
-    };
-    let home = wormhole_core::agents::integrations::home();
-    let done = if remove { spec.uninstall(&home) } else { spec.install(&home) };
-    Ok(done.map_or_else(|e| e, |()| "ok".into()))
+    crate::settings_window::devctl::resize(w, h, ctx.cx);
+    Ok(String::new())
+}
+
+pub(super) fn select(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::select(arg.trim(), ctx.cx);
+    Ok(String::new())
+}
+
+pub(super) fn reset_confirm(ctx: &mut Ctx, _: &str) -> Result<String> {
+    crate::settings_window::devctl::reset_confirm(ctx.cx);
+    Ok(String::new())
+}
+
+pub(super) fn cli_tool(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::cli_tool(arg, ctx.cx);
+    Ok(String::new())
+}
+
+pub(super) fn font_picker(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    crate::settings_window::devctl::font_picker(arg, ctx.cx);
+    Ok(String::new())
 }
 
 /// `set key=value` (a JSON value): edits config.json the way a user would.

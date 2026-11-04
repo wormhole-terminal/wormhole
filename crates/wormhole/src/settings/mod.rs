@@ -430,21 +430,26 @@ impl SettingsStore {
     }
 
     /// The opacity the settings ask for, which Reduce Transparency and Increase Contrast overrule
-    /// while one is on.
-    #[cfg(test)]
+    /// while one is on: what the opacity slider shows.
     pub fn asked_opacity(&self) -> f32 {
         self.asked_opacity
     }
 
     /// The user's own settings, without the project's: what "changed from its default" and
     /// the reset arrows of the settings window look at.
-    /// Whether config.json failed to read in full, so that changes made in the app are not saved until it is fixed.
-    pub fn config_unreadable(&self) -> bool {
-        self.config.is_unreadable()
-    }
-
     pub fn user_settings(&self) -> &Settings {
         &self.config.settings
+    }
+
+    /// The keys the active project's `.wormhole/config.json` sets (sorted).
+    pub fn project_keys(&self) -> &[String] {
+        &self.project_keys
+    }
+
+    /// Whether config.json failed to read in full, so that changes made in the app are not
+    /// saved until it is fixed: the settings page says so.
+    pub fn config_unreadable(&self) -> bool {
+        self.config.is_unreadable()
     }
 
     /// Use (or stop using) the active project's theme.

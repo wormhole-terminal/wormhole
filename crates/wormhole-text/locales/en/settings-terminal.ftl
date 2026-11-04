@@ -4,22 +4,19 @@
 settings-section-terminal = Terminal
     .intro = How the terminal behaves. Its font is in Fonts.
 
-settings-terminal-preview = Live preview
-    .keywords = preview split terminals gaps minimap scrollbar
-
 ## Behaviour
 
 settings-terminal-group-behaviour = Behaviour
 
 settings-terminal-scrollback = Scrollback
-    .description = Applies to new terminals
+    .description = Lines kept per terminal (applies to new terminals)
     .keywords = history buffer lines
 
-settings-terminal-restore-text = Restore text after restart
-    .description = Encrypted, on this Mac only. Off erases what's saved
+settings-terminal-restore-text = Restore terminal text after restart
+    .description = Encrypted and kept only on this Mac. Off erases what's saved
     .keywords = scrollback history saved restore privacy secrets encrypted keychain
 
-settings-terminal-minimap = Minimap
+settings-terminal-minimap = Show minimap
     .description = The scrollback drawn small along the terminal's right edge. Click or drag it to scroll
     .keywords = overview scrollbar map outline
 
@@ -27,9 +24,9 @@ settings-terminal-split-gaps = Gaps between split terminals
     .description = Each terminal of a split is its own rounded surface, a small gap apart. Off joins them with a hairline
     .keywords = panes divider spacing rounded margin
 
-settings-terminal-meta = Option key as Meta
-    .description = A side set to Meta can't type @ { "{" } [ on some layouts
-    .keywords = alt option escape keyboard left right emacs readline
+settings-terminal-meta = Use Option as Meta
+    .description = For emacs and readline shortcuts. A side set to Meta can't type @ { "{" } [ on some keyboard layouts
+    .keywords = alt option escape keyboard left right
 
 settings-terminal-font = Font
     .keywords = typeface size line height
@@ -48,7 +45,9 @@ settings-terminal-default-terminal = Default terminal
 
 ## Shell
 
-settings-terminal-default-shell = Shell
+settings-terminal-group-shell = Shell
+
+settings-terminal-default-shell = Default shell
     .description = What a new terminal runs: your login shell, a shell on this Mac, or a profile below. Right-click a + for the others
     .keywords = shell zsh bash fish nu nushell login program default
 
@@ -58,11 +57,13 @@ settings-terminal-shells = Shells
 
 ## Worktrees
 
+settings-terminal-group-worktrees = Worktrees
+
 settings-terminal-worktree-base = Worktrees folder
     .description = Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in <name>-worktrees, or under the folder worktree_base names in config.json
     .keywords = worktree worktrees git branch folder base parallel agents
 
-settings-terminal-worktree-clone-build-folders = Copy build folders into new worktrees
+settings-terminal-worktree-clone-build-folders = Start new worktrees with build folders
     .description = When Wormhole makes a worktree, it clones the main checkout's ignored node_modules and target folders into it, so installs and builds start warm. Clones share disk space with the originals until a file changes. Only when both are on the same APFS volume; the clones are left out of Time Machine.
     .keywords = worktree worktrees clone copy node_modules target cargo pnpm npm build cache install apfs warm
 
@@ -70,11 +71,11 @@ settings-terminal-worktree-clone-build-folders = Copy build folders into new wor
 
 settings-terminal-group-bell = Bell
 
-settings-terminal-bell-sound = Sound
+settings-terminal-bell-sound = Play a sound
     .description = The system beep when a program in a terminal rings the bell
     .keywords = bell beep audible alert
 
-settings-terminal-bell-visual = Flash the terminal edge
+settings-terminal-bell-visual = Flash the window edge
     .description = A short glow along the terminal's edge when it rings the bell
     .keywords = bell visual flash glow
 
@@ -90,15 +91,15 @@ settings-terminal-clipboard-write = Programs setting the clipboard
     .description = Lets a program put text on the clipboard (OSC 52), which replaces what you copied. The terminal says when one does
     .keywords = osc 52 clipboard write copy set security ssh notice
 
-settings-terminal-screen-checksum = Screen read-back
+settings-terminal-screen-checksum = Let programs read the screen back
     .description = Answers a program's request for the checksum of part of the screen (DECRQCRA), which also lets a program, over ssh too, read the screen cell by cell. Applies to new terminals
     .keywords = decrqcra checksum screen read capture esctest security ssh
 
-settings-terminal-window-ops = Window control
+settings-terminal-window-ops = Let programs control the window
     .description = Lets a program move, resize, minimise, raise or full-screen the window (xterm's window operations). Applies to new terminals
     .keywords = xtwinops window operations resize move iconify fullscreen maximize security ssh
 
-settings-terminal-title-report = Title read-back
+settings-terminal-title-report = Let programs read the window title back
     .description = Answers a program's request for the window title and icon name (XTWINOPS 20 and 21). A title is text a program chose, and the answer is typed into the shell, so over ssh this lets a program type a command line. Applies to new terminals
     .keywords = xtwinops title icon name report read back window security ssh esctest
 
@@ -108,16 +109,41 @@ settings-terminal-off = Off
 settings-terminal-left = Left
 settings-terminal-right = Right
 settings-terminal-both = Both
+settings-terminal-edit-in-fonts = Edit in Fonts
+settings-terminal-edit-in-config-json = Edit in config.json
 settings-terminal-ask = Ask
 settings-terminal-allow = Allow
 settings-terminal-deny = Deny
 settings-terminal-wormhole-is-the-default = { -brand } is the default
-settings-terminal-make-default = Make Default
+settings-terminal-to-change-it-pick-another-app = To change it, pick another app for a .command file in Finder's Get Info
+settings-terminal-make-default = Make default
+settings-terminal-instead-of-terminal = Instead of Terminal
+settings-terminal-default-only-app = Only { -brand }.app can be the default terminal
 settings-terminal-not-installed-the-title-row-opens = Not installed: the title row opens it in another app
+settings-terminal-choose-app = Choose app…
+settings-terminal-choose = Choose
+settings-terminal-not-found-the-login-shell-runs = Not found: the login shell runs instead
 
 ## Sentences with a hole in them
+
+# Under the Terminal page's switch when making the app the default terminal failed. { $error } is the
+# system's reason, in English.
+settings-terminal-default-failed = Couldn't make { -brand } the default: { $error }
+
+# The Font row's quiet line in Fonts. { $family } is the font's name, { $size } its size in points and
+# { $line_height } the line height as a multiple, both already formatted as numbers. The two messages
+# are the same sentence with ligatures on and off.
+settings-terminal-font-summary-ligatures-on = { $family } { $size } pt · line height { $line_height } · ligatures on
+# The same sentence with ligatures off.
+settings-terminal-font-summary-ligatures-off = { $family } { $size } pt · line height { $line_height } · ligatures off
+
+# The Worktrees folder row's quiet line once a folder is set. { $folder } is that folder, as the
+# terminal title row would show it.
+settings-terminal-worktree-base-under = Under { $folder }, in a folder named after the repository (worktree_base in config.json)
 
 # A scrollback size in the select. { $count } is the number of lines, already written with its
 # thousands separators ("10,000").
 settings-terminal-scrollback-lines = { $count } lines
 
+# A shell in the Default shell select: what runs under its name. { $command } is the command line.
+settings-terminal-login-shell = Login shell · { $command }

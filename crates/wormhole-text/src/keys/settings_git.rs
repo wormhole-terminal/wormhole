@@ -7,69 +7,68 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Changes & diffs"
-pub const SETTINGS_SECTION_GIT: Key = Key::new(541);
+pub const SETTINGS_SECTION_GIT: Key = Key::new(675);
 /// "The Changes panel and the diff view."
-pub const SETTINGS_SECTION_GIT_INTRO: Key = Key::new(542);
-/// "Live preview"
-pub const SETTINGS_GIT_PREVIEW: Key = Key::new(543);
-/// "preview diff changes panel list tree split unified wrap"
-pub const SETTINGS_GIT_PREVIEW_KEYWORDS: Key = Key::new(544);
+pub const SETTINGS_SECTION_GIT_INTRO: Key = Key::new(676);
 /// "Changes panel"
-pub const SETTINGS_GIT_GROUP_CHANGES_PANEL: Key = Key::new(545);
+pub const SETTINGS_GIT_GROUP_CHANGES_PANEL: Key = Key::new(677);
 /// "File view"
-pub const SETTINGS_GIT_CHANGES_VIEW: Key = Key::new(546);
+pub const SETTINGS_GIT_CHANGES_VIEW: Key = Key::new(678);
 /// "A flat list, or folders as a tree"
-pub const SETTINGS_GIT_CHANGES_VIEW_DESCRIPTION: Key = Key::new(547);
+pub const SETTINGS_GIT_CHANGES_VIEW_DESCRIPTION: Key = Key::new(679);
 /// "folders files list tree"
-pub const SETTINGS_GIT_CHANGES_VIEW_KEYWORDS: Key = Key::new(548);
-/// "Untracked files separately"
-pub const SETTINGS_GIT_GROUP_UNTRACKED: Key = Key::new(549);
+pub const SETTINGS_GIT_CHANGES_VIEW_KEYWORDS: Key = Key::new(680);
+/// "Group untracked files separately"
+pub const SETTINGS_GIT_GROUP_UNTRACKED: Key = Key::new(681);
 /// "New files get their own section under the changes"
-pub const SETTINGS_GIT_GROUP_UNTRACKED_DESCRIPTION: Key = Key::new(550);
+pub const SETTINGS_GIT_GROUP_UNTRACKED_DESCRIPTION: Key = Key::new(682);
 /// "untracked new files"
-pub const SETTINGS_GIT_GROUP_UNTRACKED_KEYWORDS: Key = Key::new(551);
+pub const SETTINGS_GIT_GROUP_UNTRACKED_KEYWORDS: Key = Key::new(683);
 /// "Diff view"
-pub const SETTINGS_GIT_GROUP_DIFF_VIEW: Key = Key::new(552);
-/// "Layout"
-pub const SETTINGS_GIT_DIFF_LAYOUT: Key = Key::new(553);
+pub const SETTINGS_GIT_GROUP_DIFF_VIEW: Key = Key::new(684);
+/// "Default layout"
+pub const SETTINGS_GIT_DIFF_LAYOUT: Key = Key::new(685);
 /// "Split keeps old and new side by side, even for a new or deleted file. The diff's own toolbar switches one diff"
-pub const SETTINGS_GIT_DIFF_LAYOUT_DESCRIPTION: Key = Key::new(554);
+pub const SETTINGS_GIT_DIFF_LAYOUT_DESCRIPTION: Key = Key::new(686);
 /// "split unified side by side"
-pub const SETTINGS_GIT_DIFF_LAYOUT_KEYWORDS: Key = Key::new(555);
+pub const SETTINGS_GIT_DIFF_LAYOUT_KEYWORDS: Key = Key::new(687);
 /// "Wrap long lines"
-pub const SETTINGS_GIT_DIFF_WRAP: Key = Key::new(556);
+pub const SETTINGS_GIT_DIFF_WRAP: Key = Key::new(688);
 /// "Otherwise the diff scrolls sideways"
-pub const SETTINGS_GIT_DIFF_WRAP_DESCRIPTION: Key = Key::new(557);
+pub const SETTINGS_GIT_DIFF_WRAP_DESCRIPTION: Key = Key::new(689);
 /// "wrap"
-pub const SETTINGS_GIT_DIFF_WRAP_KEYWORDS: Key = Key::new(558);
+pub const SETTINGS_GIT_DIFF_WRAP_KEYWORDS: Key = Key::new(690);
 /// "Tab width"
-pub const SETTINGS_GIT_TAB_WIDTH: Key = Key::new(559);
+pub const SETTINGS_GIT_TAB_WIDTH: Key = Key::new(691);
 /// "Spaces per tab in diffs"
-pub const SETTINGS_GIT_TAB_WIDTH_DESCRIPTION: Key = Key::new(560);
+pub const SETTINGS_GIT_TAB_WIDTH_DESCRIPTION: Key = Key::new(692);
 /// "indent tabs"
-pub const SETTINGS_GIT_TAB_WIDTH_KEYWORDS: Key = Key::new(561);
+pub const SETTINGS_GIT_TAB_WIDTH_KEYWORDS: Key = Key::new(693);
 /// "File sizes"
-pub const SETTINGS_GIT_SIZE_UNITS: Key = Key::new(562);
+pub const SETTINGS_GIT_SIZE_UNITS: Key = Key::new(694);
 /// "Decimal like Finder (12.4 MB), or binary like git (11.8 MiB)"
-pub const SETTINGS_GIT_SIZE_UNITS_DESCRIPTION: Key = Key::new(563);
+pub const SETTINGS_GIT_SIZE_UNITS_DESCRIPTION: Key = Key::new(695);
 /// "size units bytes kilobytes megabytes kb mb kib mib finder binary decimal"
-pub const SETTINGS_GIT_SIZE_UNITS_KEYWORDS: Key = Key::new(564);
+pub const SETTINGS_GIT_SIZE_UNITS_KEYWORDS: Key = Key::new(696);
 /// "List"
-pub const SETTINGS_GIT_LIST: Key = Key::new(565);
+pub const SETTINGS_GIT_LIST: Key = Key::new(697);
 /// "Tree"
-pub const SETTINGS_GIT_TREE: Key = Key::new(566);
+pub const SETTINGS_GIT_TREE: Key = Key::new(698);
 /// "Split"
-pub const SETTINGS_GIT_SPLIT: Key = Key::new(567);
+pub const SETTINGS_GIT_SPLIT: Key = Key::new(699);
 /// "Unified"
-pub const SETTINGS_GIT_UNIFIED: Key = Key::new(568);
+pub const SETTINGS_GIT_UNIFIED: Key = Key::new(700);
 /// "MB"
-pub const SETTINGS_GIT_MB: Key = Key::new(569);
+pub const SETTINGS_GIT_MB: Key = Key::new(701);
 /// "MiB"
-pub const SETTINGS_GIT_MIB: Key = Key::new(570);
+pub const SETTINGS_GIT_MIB: Key = Key::new(702);
 
 /// ```text
-/// { $count }
+/// { $count ->
+///     [one] { $count } space
+///    *[other] { $count } spaces
+/// }
 /// ```
-pub fn settings_git_tab_width_value(count: &str) -> String {
-    crate::active::message(571, &[("count", Arg::Str(count))])
+pub fn settings_git_tab_width_value(count: i64) -> String {
+    crate::active::message(703, &[("count", Arg::Int(count))])
 }

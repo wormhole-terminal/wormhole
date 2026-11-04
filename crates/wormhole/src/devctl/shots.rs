@@ -59,12 +59,12 @@ pub(super) fn studio_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     Ok(format!("saved {}\n", path.display()))
 }
 
-/// `settings-shot <name>`: the Settings window drawn to `<name>.png`.
+/// The settings window is drawn later (it reads app state that this tick is changing), so
+/// its result is appended to this window's results file when it is ready.
 pub(super) fn settings_shot(ctx: &mut Ctx, arg: &str) -> Result<String> {
     let name = super::file_name(arg, "settings")?;
-    let path = ctx.dir.join(format!("{name}.png"));
-    anyhow::ensure!(crate::settings_window::devctl::shot(&path), "the Settings window is not open");
-    Ok(format!("saved {}\n", path.display()))
+    crate::settings_window::devctl::shot(ctx.dir.join(format!("{name}.png")), ctx.out.to_path_buf(), ctx.cx);
+    Ok(String::new())
 }
 
 /// `bounds <x> <y> [levels]`: the element at a point and `levels - 1` of its parents, as the

@@ -7,7 +7,6 @@
 mod ambient;
 mod buttons;
 mod chrome;
-mod components;
 mod diff;
 mod find;
 mod inputs;
@@ -18,6 +17,7 @@ mod navigation;
 mod panel;
 mod panes;
 mod selects;
+mod settings;
 mod shape;
 mod sidebar;
 mod sketch;
@@ -224,13 +224,13 @@ const SPECIMENS: &[Specimen] = &[
         render: shape::render,
     },
     Specimen {
-        title: "Profile and controls", // text: sample (the gallery's specimen)
-        description: "profile chip and menu, stepper, switch, chips, banners", // text: sample (the gallery's specimen)
+        title: "Settings",                           // text: sample (the gallery's specimen)
+        description: "rows, nav, controls, banners", // text: sample (the gallery's specimen)
         area: Some(Area::Settings),
         column: Column::Both,
         part_gap: 24.0,
-        parts: &[420.0, 60.0, 260.0],
-        render: components::render,
+        parts: &[654.0, 368.0, 705.0],
+        render: settings::render,
     },
     Specimen {
         title: "Buttons",                  // text: sample (the gallery's specimen)

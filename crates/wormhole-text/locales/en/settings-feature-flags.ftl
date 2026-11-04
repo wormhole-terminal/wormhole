@@ -2,7 +2,7 @@
 # A row is its label, with the quiet line under it (.description) and the extra words search finds it by (.keywords).
 
 settings-section-feature-flags = Feature flags
-    .intro = Switches for features that aren’t finished. Only development builds show this page; a release uses each feature’s default.
+    .intro = Features still being built. They show here in a development build and on the Unstable update channel; otherwise a release has them off until they're finished.
 
 settings-feature-flags-feature-flags = Feature flags
     .description = Turn features that are still being built on or off in this build

@@ -4,9 +4,6 @@
 settings-section-git = Changes & diffs
     .intro = The Changes panel and the diff view.
 
-settings-git-preview = Live preview
-    .keywords = preview diff changes panel list tree split unified wrap
-
 ## Changes panel
 
 settings-git-group-changes-panel = Changes panel
@@ -15,7 +12,7 @@ settings-git-changes-view = File view
     .description = A flat list, or folders as a tree
     .keywords = folders files list tree
 
-settings-git-group-untracked = Untracked files separately
+settings-git-group-untracked = Group untracked files separately
     .description = New files get their own section under the changes
     .keywords = untracked new files
 
@@ -23,7 +20,7 @@ settings-git-group-untracked = Untracked files separately
 
 settings-git-group-diff-view = Diff view
 
-settings-git-diff-layout = Layout
+settings-git-diff-layout = Default layout
     .description = Split keeps old and new side by side, even for a new or deleted file. The diff's own toolbar switches one diff
     .keywords = split unified side by side
 
@@ -51,7 +48,7 @@ settings-git-mib = MiB
 ## Sentences with a hole in them
 
 # The tab width stepper's value. { $count } is a whole number of spaces.
-settings-git-tab-width-value = { $count }
-
-## settings_window/sections/diff_preview.rs (the words of the sample Changes panel)
-
+settings-git-tab-width-value = { $count ->
+    [one] { $count } space
+   *[other] { $count } spaces
+}

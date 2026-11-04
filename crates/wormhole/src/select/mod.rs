@@ -96,15 +96,11 @@ impl RenderOnce for SelectTrigger {
             .when_some(self.width, |d, width| d.w(width))
             .rounded(ui.radius)
             .cursor_pointer()
-            // With Borders off the outline that gave the select its shape is gone: the button's fill does.
-            .when(!ui.borders, |d| d.bg(ui.button))
-            .hover(move |d| d.bg(if ui.borders { ui.hover } else { ui.button_hover }))
+            .hover(|d| d.bg(ui.hover))
             // A soft ring around the open select, like a focused input (the panel's picker
             // marks itself with the outline alone).
-            // The ring is a shadow under the select; with nothing painted in the select it would show through
-            // and tint the inside, so an open select is filled with the page's own colour.
             .when(self.open && !self.compact, |d| {
-                d.bg(ui.background).shadow(vec![BoxShadow {
+                d.shadow(vec![BoxShadow {
                     color: Hsla { a: 0.3, ..ui.primary },
                     offset: point(px(0.0), px(0.0)),
                     blur_radius: px(0.0),
@@ -232,7 +228,6 @@ impl<V> Choice<V> {
         Self { value, label: label.into(), detail: None, mark: None }
     }
 
-    #[cfg(test)]
     pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
         self.detail = Some(detail.into());
         self
@@ -308,6 +303,8 @@ pub fn filter<V: Clone>(options: &[Choice<V>], query: &str) -> Vec<Choice<V>> {
 enum Options<V> {
     /// Built by the caller already.
     Eager(Rc<[Choice<V>]>),
+    /// Built when the menu is drawn open.
+    Lazy(Rc<dyn Fn() -> Rc<[Choice<V>]>>),
 }
 
 type OpenChange = Rc<dyn Fn(bool, &mut Window, &mut App)>;
@@ -333,6 +330,8 @@ pub struct SearchSelect<V> {
     menu_width: Pixels,
     bg: Hsla,
     compact: bool,
+    /// Whether the menu has its search box (a list of a few options doesn't need one).
+    searchable: bool,
     on_open_change: Option<OpenChange>,
     on_pick: Option<Pick<V>>,
 }
@@ -360,13 +359,28 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             menu_width: px(280.0),
             bg: menu_bg(ui, cx),
             compact: false,
+            searchable: true,
             on_open_change: None,
             on_pick: None,
         }
     }
 
+    /// The menu without its search box: a handful of options (scrollback sizes, icon themes).
+    pub fn without_search(mut self) -> Self {
+        self.searchable = false;
+        self
+    }
+
     pub fn options(mut self, options: Vec<Choice<V>>) -> Self {
         self.options = Options::Eager(options.into());
+        self
+    }
+
+    /// The options, built only while the menu is open. A select that is built on every
+    /// frame of a busy view (the branch picker in a panel header) should take this: the
+    /// closed select then costs nothing for however many options it has.
+    pub fn options_with(mut self, build: impl Fn() -> Rc<[Choice<V>]> + 'static) -> Self {
+        self.options = Options::Lazy(Rc::new(build));
         self
     }
 
@@ -430,6 +444,7 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             menu_width,
             bg,
             compact,
+            searchable,
             on_open_change,
             on_pick,
         } = self;
@@ -448,6 +463,7 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
         menu_surface(popover, ui, menu_width, bg).content(move |_, _, _| {
             let all: Rc<[Choice<V>]> = match &options {
                 Options::Eager(options) => options.clone(),
+                Options::Lazy(build) => build(),
             };
             let needle = Needle::new(&query);
             let matches: Vec<usize> = (0..all.len()).filter(|&ix| all[ix].matches(&needle)).collect();
@@ -500,10 +516,12 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             div()
                 .flex()
                 .flex_col()
-                .child(search_row(ui, compact, {
-                    let input = Input::new(&search).appearance(false);
-                    if compact { input.xsmall() } else { input.small() }
-                }))
+                .when(searchable, |d| {
+                    d.child(search_row(ui, compact, {
+                        let input = Input::new(&search).appearance(false);
+                        if compact { input.xsmall() } else { input.small() }
+                    }))
+                })
                 .child(list)
                 .children(footer)
         })
@@ -562,8 +580,7 @@ fn option_row<V: Clone + PartialEq + 'static>(
         })
 }
 
-mod menu;
-pub use menu::{MenuOptions, menu_select};
-
 #[cfg(test)]
 mod tests;
+#[cfg(all(test, feature = "devctl"))]
+mod window_tests;

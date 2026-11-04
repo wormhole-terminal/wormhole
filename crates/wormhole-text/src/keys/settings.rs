@@ -5,5 +5,25 @@
 
 use crate::key::Key;
 
+/// "Look"
+pub const SETTINGS_NAV_LOOK: Key = Key::new(1317);
+/// "Work"
+pub const SETTINGS_NAV_WORK: Key = Key::new(1318);
+/// "Agents"
+pub const SETTINGS_NAV_AGENTS: Key = Key::new(1319);
+/// "App"
+pub const SETTINGS_NAV_APP: Key = Key::new(1320);
 /// "Preview"
-pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1467);
+pub const SETTINGS_NAV_PREVIEW: Key = Key::new(1321);
+/// "More information"
+pub const SETTINGS_MORE_INFORMATION: Key = Key::new(1322);
+/// "Copied"
+pub const SETTINGS_ROW_COPIED: Key = Key::new(1323);
+/// "Copy Key"
+pub const SETTINGS_ROW_COPY_KEY: Key = Key::new(1324);
+/// "Copy as JSON"
+pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1325);
+/// "Reset to Default"
+pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1326);
+/// "Reset to default"
+pub const SETTINGS_ROW_RESET: Key = Key::new(1327);

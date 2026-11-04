@@ -360,13 +360,7 @@ pub const TOKEN_USES: &[TokenUse] = &[
             "metrics.border_width",
         ],
     ),
-    u(
-        "tint.chip",
-        "tinted chip",
-        Settings,
-        &["chip.tint", "sidebar.row.selected.text", "metrics.radius_chip"],
-    ),
-    u("link", "link", Settings, &["text.link"]),
+    u("tint.chip", "tint chip", Settings, &["chip.tint", "sidebar.row.selected.text", "metrics.radius_chip"]),
     u("neutral.chip", "neutral chip", Chrome, &["band.hover", "text.primary", "metrics.radius_chip"]),
     u(
         "title.extras",
@@ -387,6 +381,37 @@ pub const TOKEN_USES: &[TokenUse] = &[
     u("tooltip", "tooltip", Chrome, &["tooltip.background", "tooltip.text", "shadow", "metrics.radius"]),
     u("focus.ring", "focus ring", Chrome, &["border.focus", "metrics.focus_ring_width"]),
     u(
+        "settings.nav",
+        "settings nav",
+        Settings,
+        &[
+            "sidebar.background",
+            "sidebar.row.selected",
+            "sidebar.row.selected.text",
+            "state.hover",
+            "text.primary",
+            "text.muted",
+            "text.faint",
+            "agent.attention",
+        ],
+    ),
+    u(
+        "setting.row",
+        "setting row",
+        Settings,
+        &[
+            "surface.window",
+            "state.hover",
+            "state.highlight",
+            "text.primary",
+            "text.muted",
+            "text.faint",
+            "text.link",
+            "primary",
+            "metrics.radius",
+        ],
+    ),
+    u(
         "switch",
         "switch",
         Settings,
@@ -406,6 +431,28 @@ pub const TOKEN_USES: &[TokenUse] = &[
             "text.muted",
             "metrics.radius",
             "metrics.radius_chip",
+        ],
+    ),
+    u(
+        "stepper",
+        "stepper",
+        Settings,
+        &["input.background", "border.strong", "text.primary", "metrics.radius", "metrics.border_width"],
+    ),
+    u(
+        "recorder",
+        "shortcut recorder",
+        Settings,
+        &[
+            "input.background",
+            "border.strong",
+            "border.focus",
+            "status.danger",
+            "status.warning",
+            "text.muted",
+            "text.faint",
+            "metrics.radius",
+            "metrics.focus_ring_width",
         ],
     ),
     u(
@@ -470,6 +517,28 @@ pub const TOKEN_USES: &[TokenUse] = &[
             "text.muted",
             "status.danger",
             "metrics.radius_lg",
+        ],
+    ),
+    u(
+        "banner",
+        "banner",
+        Settings,
+        &[
+            "banner.info.background",
+            "banner.info.border",
+            "banner.warning.background",
+            "banner.warning.border",
+            "banner.danger.background",
+            "banner.danger.border",
+            "banner.success.background",
+            "banner.success.border",
+            "status.info",
+            "status.warning",
+            "status.danger",
+            "status.success",
+            "text.primary",
+            "metrics.radius",
+            "metrics.border_width",
         ],
     ),
     u(
@@ -585,7 +654,6 @@ pub fn refers_to(src: &str) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-
     use std::collections::BTreeSet;
 
     use super::{Area, TOKEN_USES, followers, refers_to, used_in, uses_of};
@@ -625,9 +693,9 @@ mod tests {
     }
 
     #[test]
-    fn the_selected_row_tint_is_the_sidebars() {
+    fn the_selected_row_tint_is_used_by_the_sidebar_and_the_settings_nav() {
         let ids: Vec<&str> = uses_of("sidebar.row.selected").iter().map(|u| u.id).collect();
-        assert!(ids.contains(&"sidebar.row"), "{ids:?}");
+        assert!(ids.contains(&"sidebar.row") && ids.contains(&"settings.nav"), "{ids:?}");
         let chip: Vec<&str> = uses_of("metrics.radius_chip").iter().map(|u| u.id).collect();
         assert!(chip.contains(&"keycap") && chip.contains(&"badge"), "{chip:?}");
     }
@@ -646,7 +714,7 @@ mod tests {
     #[test]
     fn a_token_is_in_the_areas_whose_components_draw_with_it() {
         assert!(used_in("sidebar.row.selected", Area::Sidebar));
-        assert!(!used_in("sidebar.row.selected", Area::Settings));
+        assert!(used_in("sidebar.row.selected", Area::Settings), "the settings nav");
         assert!(!used_in("sidebar.row.selected", Area::Ambient));
         assert!(used_in("metrics.radius_chip", Area::Sidebar), "the branch chip");
         assert!(!used_in("primary", Area::Ambient));

@@ -4,4 +4,6 @@
 @size 1440 900
 settings-section fonts
 @batch
+settings-resize 1024 1000
+@batch
 @shot fonts settings

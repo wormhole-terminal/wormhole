@@ -57,7 +57,7 @@ pub fn ask_with_checkbox(window: &Window, question: &Question) -> Option<Receive
         };
     });
     #[cfg(feature = "devctl")]
-    up::begin(&alert, false);
+    up::begin(&alert);
     // AppKit copies the block and keeps the alert until the sheet is answered.
     alert.beginSheetModalForWindow_completionHandler(&ns_window, Some(&done));
     Some(rx)
@@ -71,15 +71,14 @@ pub fn answer(window: &Window, button: isize, tick: Option<bool>) -> bool {
     let Some(sheet) = ns_window.attachedSheet() else { return false };
     // An alert answers 1000 + its button's place; GPUI's own prompt answers with the place itself.
     let code = match up::alert_of(&sheet) {
-        Some((alert, cancel_first)) => {
+        Some(alert) => {
             if let Some(tick) = tick
                 && let Some(checkbox) = alert.suppressionButton()
             {
                 checkbox.setState(if tick { NSControlStateValueOn } else { NSControlStateValueOff });
             }
             // The alert has the closing button and the one that backs out; anything but the first is the latter.
-            // A question about something destructive has Cancel first, and its closing button second.
-            FIRST_BUTTON + isize::from((button != 0) != cancel_first)
+            FIRST_BUTTON + isize::from(button != 0)
         }
         None => button,
     };
@@ -139,20 +138,19 @@ mod up {
     use objc2_app_kit::{NSAlert, NSWindow};
 
     thread_local! {
-        /// Each alert, and whether its Cancel is the first button (a question before something destructive).
-        static UP: RefCell<Vec<(Retained<NSAlert>, bool)>> = const { RefCell::new(Vec::new()) };
+        static UP: RefCell<Vec<Retained<NSAlert>>> = const { RefCell::new(Vec::new()) };
     }
 
-    pub(super) fn begin(alert: &Retained<NSAlert>, cancel_first: bool) {
-        UP.with(|up| up.borrow_mut().push((alert.clone(), cancel_first)));
+    pub(super) fn begin(alert: &Retained<NSAlert>) {
+        UP.with(|up| up.borrow_mut().push(alert.clone()));
     }
 
     pub(super) fn end(alert: &Retained<NSAlert>) {
-        UP.with(|up| up.borrow_mut().retain(|(other, _)| !std::ptr::eq(&**other, &**alert)));
+        UP.with(|up| up.borrow_mut().retain(|other| !std::ptr::eq(&**other, &**alert)));
     }
 
     /// The alert shown in `sheet`.
-    pub(super) fn alert_of(sheet: &NSWindow) -> Option<(Retained<NSAlert>, bool)> {
-        UP.with(|up| up.borrow().iter().find(|(alert, _)| std::ptr::eq(&*alert.window(), sheet)).cloned())
+    pub(super) fn alert_of(sheet: &NSWindow) -> Option<Retained<NSAlert>> {
+        UP.with(|up| up.borrow().iter().find(|alert| std::ptr::eq(&*alert.window(), sheet)).cloned())
     }
 }

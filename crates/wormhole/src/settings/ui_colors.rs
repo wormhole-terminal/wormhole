@@ -95,10 +95,6 @@ pub struct UiColors {
     pub border_strong: Hsla,
     /// The keyboard focus ring (`border.focus`).
     pub focus: Hsla,
-    /// A secondary button's fill and its fill under the pointer (`button.background`, `button.hover`):
-    /// also what an outlined control is filled with while Borders is off, so it still reads as one.
-    pub button: Hsla,
-    pub button_hover: Hsla,
     /// A text field's or stepper's fill (`input.background`).
     pub input: Hsla,
     /// What floats casts this (`shadow`): the palette, the find bar, popovers.
@@ -215,8 +211,6 @@ const COLORS: &[Field] = fields! {
     highlight = "state.highlight";
     selected = "state.selected";
     selected_row = "sidebar.row.selected";
-    button = "button.background";
-    button_hover = "button.hover";
     selected_text = "sidebar.row.selected.text";
     selected_muted = "sidebar.row.selected.muted";
     selected_inset = "state.selected.inset";

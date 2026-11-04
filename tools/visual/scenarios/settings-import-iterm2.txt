@@ -1,0 +1,16 @@
+# Settings → Import with iTerm2's card open: it names its font by PostScript name (JetBrainsMono-Regular),
+# which this Mac may not have installed, so the font is under "Doesn't carry over" with its name.
+# `import-scan` reads only the fixture folder, never the real home; nothing is applied.
+@fixture import-home
+@theme Tokyo Night
+@size 1440 900
+settings-section import
+@batch
+import-scan ~/import-home
+import-open iterm2
+settings-resize 1024 1300
+@sleep 1500
+@shot import settings
+settings-scroll 700
+@batch
+@shot import-skipped settings

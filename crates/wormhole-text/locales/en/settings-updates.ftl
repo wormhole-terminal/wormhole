@@ -6,11 +6,13 @@ settings-section-updates = Updates
 
 ## Updates
 
+settings-updates-group-updates = Updates
+
 settings-updates-version = Version
     .keywords = release build
 
 settings-updates-auto-update = Update automatically
-    .description = Installs on the next restart
+    .description = Checks in the background and installs on the next restart
     .keywords = download auto
 
 settings-updates-update-channel = Channel
@@ -26,7 +28,7 @@ settings-updates-group-privacy = Privacy
     .blurb = { -brand } has no analytics, telemetry or crash reports. Update checks are counted, so we know how many people use { -brand } and which Macs and macOS versions to keep supporting, with nothing that tells one Mac from another.
 
 settings-updates-anonymous-count = Count this Mac anonymously
-    .description = No analytics, telemetry or crash reports. The first check of a day and of a month says so, with nothing that tells one Mac from another.
+    .description = The first update check of a day and of a month says so. Off, a check sends the version alone
     .keywords = analytics telemetry privacy usage statistics count tracking
 
 settings-updates-count-details = What an update check sends
@@ -39,12 +41,14 @@ settings-updates-unstable = Unstable
 settings-updates-checked-just-now = Checked just now.
 settings-updates-checked-a-minute-ago = Checked a minute ago.
 settings-updates-checked-an-hour-ago = Checked an hour ago.
+settings-updates-fixes-a-security-issue = Fixes a security issue.
+settings-updates-development-build = Development build: updates only work in released builds.
 settings-updates-not-checked-yet = Not checked yet.
 settings-updates-checking = Checking…
 settings-updates-wormhole-is-up-to-date = { -brand } is up to date.
 settings-updates-downloading = Downloading…
-settings-updates-skip-this-version = Skip This Version
-settings-updates-install-update = Install Update
+settings-updates-skip-this-version = Skip this version
+settings-updates-install-update = Install update
 settings-updates-dont-restart = Don't restart
 settings-updates-restart-now = Restart now
 settings-updates-check-now = Check now
@@ -83,11 +87,20 @@ settings-updates-checked-days-ago = { $count ->
    *[other] Checked { $count } days ago.
 }
 
+# After a check that found nothing new. { $checked } is when it was ("Checked 4 minutes ago.").
+settings-updates-up-to-date-checked = { -brand } is up to date. { $checked }
+
 # A release that fixes a security issue. { $version } is its number.
 settings-updates-security-available = Security update available: { -brand } { $version }.
 
 # Any other release. { $version } is its number.
 settings-updates-version-available = Version { $version } is available.
+
+# What a security update fixes, by the severity its feed gives it.
+settings-updates-fixes-critical = Fixes a critical-severity security issue.
+settings-updates-fixes-high = Fixes a high-severity security issue.
+settings-updates-fixes-medium = Fixes a medium-severity security issue.
+settings-updates-fixes-low = Fixes a low-severity security issue.
 
 # After an update was downloaded and installed. { $version } is its number. The first is while the
 # app waits for the terminals to be idle before it restarts by itself.
@@ -95,5 +108,12 @@ settings-updates-installed-waits = Version { $version } is installed. Restarts w
 # The same once the app has no reason to wait. { $version } is its number.
 settings-updates-installed-restart = Version { $version } is installed. Restart to use it.
 
+# The heading over a release's notes. { $version } is its number.
+settings-updates-whats-new = What's new in { $version }
+
 ## After the channel changed with a build of the old one in hand
 
+# Going back to Stable while an Unstable build was downloading or being installed. { $version } is its number.
+settings-updates-unstable-removed = The Unstable build { $version } was removed before it replaced anything. Stable offers its own releases.
+# Going back to Stable after an Unstable build was installed; it cannot be taken off again. { $version } is its number.
+settings-updates-unstable-stays = This Mac has the Unstable build { $version } installed. Stable takes over with the first Stable release newer than it.

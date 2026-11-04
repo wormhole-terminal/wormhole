@@ -18,9 +18,7 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::storage::paths::ProfileId;
 use wormhole_core::theme::tokens::Appearance;
 use wormhole_core::view::motion::notice::Entrance;
-#[cfg(any(test, feature = "devctl"))]
-use wormhole_core::view::notice::Press;
-use wormhole_core::view::notice::{Buttons, ChipRules, Effect, Glyph, Notice, Reaction, Spot};
+use wormhole_core::view::notice::{Buttons, ChipRules, Effect, Glyph, Notice, Press, Reaction, Spot};
 use wormhole_core::view::panes::Rect;
 use wormhole_text::{keys, text};
 

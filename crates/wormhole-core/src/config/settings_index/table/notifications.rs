@@ -1,6 +1,6 @@
 //! The Notifications section: the permission, which events notify, delivery and the Dock.
 
-use super::{entry, group, untitled};
+use super::{entry, group};
 use crate::config::settings_index::Group;
 #[allow(
     clippy::wildcard_imports,
@@ -9,8 +9,11 @@ use crate::config::settings_index::Group;
 use wormhole_text::keys::*;
 
 pub(super) const NOTIFICATIONS: &[Group] = &[
-    untitled(&[entry("notifications-preview", SETTINGS_NOTIFICATIONS_PREVIEW, &[])
-        .with_keywords(SETTINGS_NOTIFICATIONS_PREVIEW_KEYWORDS)]),
+    group(
+        SETTINGS_NOTIFICATIONS_GROUP_MACOS,
+        &[entry("notify-permission", SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION, &[])
+            .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS)],
+    ),
     group(
         SETTINGS_NOTIFICATIONS_GROUP_NOTIFY_ME_WHEN,
         &[
@@ -70,7 +73,4 @@ pub(super) const NOTIFICATIONS: &[Group] = &[
                 .with_keywords(SETTINGS_NOTIFICATIONS_DOCK_BOUNCE_KEYWORDS),
         ],
     ),
-    // The footer: what macOS decides, with the permission's state and a way to test it.
-    untitled(&[entry("notify-permission", SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION, &[])
-        .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS)]),
 ];

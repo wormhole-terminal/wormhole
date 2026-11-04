@@ -4,14 +4,11 @@
 settings-section-menu-bar = Menu bar & hotkey
     .intro = { -brand } in the macOS menu bar, and a shortcut that works from any app.
 
-settings-menu-bar-preview = Live preview
-    .keywords = preview menu bar item quick panel
-
 ## Menu bar
 
 settings-menu-bar-group-menu-bar = Menu bar
 
-settings-menu-bar-menu-bar = Show in the menu bar
+settings-menu-bar-menu-bar = Show { -brand } in the menu bar
     .description = Terminals by status and quick actions
     .keywords = status bar tray item menubar
 
@@ -19,7 +16,7 @@ settings-menu-bar-icon = Icon shows
     .description = The dot and count on the status item
     .keywords = status item icon count
 
-settings-menu-bar-animate = Animate while working
+settings-menu-bar-animate = Animate menu bar icon while working
     .description = The prompt in the icon types itself out while something runs. Off: a still, filled icon
     .keywords = animation
 
@@ -28,15 +25,15 @@ settings-menu-bar-animate = Animate while working
 settings-menu-bar-group-global-hotkey = Global hotkey
 
 settings-menu-bar-hotkey = Shortcut
-    .description = Works from any app
+    .description = Works from any app. Click, then press the keys
     .keywords = global shortcut quake record hotkey
 
-settings-menu-bar-hotkey-action = Opens
+settings-menu-bar-hotkey-action = Hotkey opens
     .description = Pressing it again with the panel open shows { -brand }
     .keywords = quick panel toggle
 
-settings-menu-bar-jump-waiting-key = Next waiting terminal
-    .description = Inside { -brand }
+settings-menu-bar-jump-waiting-key = Jump to next waiting terminal
+    .description = Inside { -brand }, in any window
     .keywords = needs input needs you waiting shortcut
 
 ## settings_window/sections/menu_bar.rs (labels, hints and notes drawn by this page's code)
@@ -55,3 +52,7 @@ settings-menu-bar-key-conflict = { $conflict }. Press other keys.
 
 ## settings_window/sections/menu_bar_preview.rs
 
+settings-menu-bar-preview-search = Search terminals and actions
+settings-menu-bar-preview-needs-input = Needs input
+settings-menu-bar-preview-working = Working
+settings-menu-bar-preview-caption = The menu bar item, with a dot and a count while a terminal needs input, and the quick panel it and the hotkey open.
