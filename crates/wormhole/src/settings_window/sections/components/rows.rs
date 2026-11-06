@@ -9,7 +9,7 @@ use gpui_kit::*;
 
 use super::{SIZE_DEFAULT, Sheet, category, parts, specimen};
 use crate::select::{Choice, SearchSelect, SelectTrigger};
-use crate::style::{self, Edges, ResetArrow, RowKeys, SettingParts, SettingState, TextRole};
+use crate::style::{self, ResetArrow, RowKeys, SettingParts, SettingState};
 
 pub(super) fn draw(sheet: &Sheet, cx: &App) -> AnyElement {
     let ui = sheet.ui;
@@ -22,9 +22,9 @@ pub(super) fn draw(sheet: &Sheet, cx: &App) -> AnyElement {
         .into_any_element()
 }
 
-/// Rows with a hairline above each and one under the last, as a page's group draws them.
+/// Rows on one card with a divider between each two, as a page's group draws them.
 fn group(sheet: &Sheet, rows: impl IntoIterator<Item = AnyElement>) -> Div {
-    div().flex().flex_col().children(rows).rule_bottom(sheet.ui)
+    style::setting_group(sheet.ui, rows)
 }
 
 fn row(sheet: &Sheet, id: &'static str, parts: SettingParts, cx: &App) -> AnyElement {
@@ -135,18 +135,21 @@ fn states(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
     vec![
         specimen(
             ui,
-            "setting_group_head with a blurb", // text: sample (a specimen's name)
+            "setting_group_head, setting_group_blurb, setting_group · three rows, a divider between each", // text: sample (a specimen's name)
             div()
                 .flex()
                 .flex_col()
+                .gap_2()
                 .child(style::setting_group_head(ui, "Window", Some("A note at the right of the head"))) // text: sample (a group's head)
-                .child(
-                    div()
-                        .pb_2()
-                        .text_body()
-                        .text_color(ui.muted)
-                        .child("A paragraph under the head, in muted body text."), // text: sample (a group's blurb)
-                ),
+                .child(style::setting_group_blurb(ui, "A paragraph under the head, in muted caption text.")) // text: sample (a group's blurb)
+                .child(group(
+                    sheet,
+                    [
+                        row(sheet, "components-group-a", default(), cx),
+                        row(sheet, "components-group-b", changed(), cx),
+                        row(sheet, "components-group-c", keys(), cx),
+                    ],
+                )),
         )
         .into_any_element(),
         specimen(

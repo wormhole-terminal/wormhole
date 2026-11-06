@@ -27,7 +27,7 @@ use super::registry::{PageState, control};
 use super::{SettingsWindow, sections};
 use crate::platform::{a11y, clipboard};
 use crate::settings::{SettingsStore, UiColors, settings, update_settings};
-use crate::style::{self, Edges as _, TextRole as _};
+use crate::style::{self, TextRole as _};
 
 /// How long Copy as JSON says Copied.
 const COPIED_FOR: Duration = Duration::from_millis(1500);
@@ -48,16 +48,22 @@ impl SettingsWindow {
         let mut column = div().flex().flex_col().gap_6().child(self.changed_summary(ui, rows.len(), cx));
         // The rows come in the order of the pages, so one page's rows are next to each other.
         for (at, run) in rows.chunk_by(|a, b| a.section == b.section).enumerate() {
-            let mut list = div().flex().flex_col();
+            let mut list = Vec::new();
             for row in run {
                 let Some(setting) = control(row.entry.id) else {
                     tracing::warn!("settings: no control for {}", row.entry.id);
                     continue;
                 };
-                list = list.child(self.render_entry(row.entry, setting, &page, None, cx));
-                if let Some(below) = setting.below.and_then(|below| below(self, cx)) {
-                    list = list.child(div().pb_2().child(below));
-                }
+                let entry = self.render_entry(row.entry, setting, &page, None, cx);
+                list.push(match setting.below.and_then(|below| below(self, cx)) {
+                    Some(below) => div()
+                        .flex()
+                        .flex_col()
+                        .child(entry)
+                        .child(div().pb_2().child(below))
+                        .into_any_element(),
+                    None => entry,
+                });
             }
             let title = run[0].section.title();
             column = column.child(
@@ -68,8 +74,9 @@ impl SettingsWindow {
                     .aria_label(title)
                     .flex()
                     .flex_col()
+                    .gap_2()
                     .child(style::setting_group_head(ui, title, None))
-                    .child(list.rule_bottom(ui)),
+                    .child(style::setting_group(ui, list)),
             );
         }
         column.into_any_element()
@@ -129,16 +136,18 @@ impl SettingsWindow {
                         cx.notify();
                     })),
             );
-        let card = style::card(ui, ui.border)
-            .id("changed-summary")
-            .role(Role::Group)
-            .aria_label(title)
+        let summary = div()
             .flex()
             .items_center()
             .gap_3()
+            .py_3()
             .child(tile)
             .child(words)
             .when(count > 0, |d| d.child(buttons));
+        let card = style::setting_group(ui, [summary.into_any_element()])
+            .id("changed-summary")
+            .role(Role::Group)
+            .aria_label(title);
         div()
             .flex()
             .flex_col()

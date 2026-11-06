@@ -30,7 +30,7 @@ use super::extensions_text::verify_text;
 use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{Section, SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("probes", draw_probes)];
 
@@ -211,10 +211,7 @@ fn draw_probes(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
             let rows = if entries.is_empty() {
                 empty(ui, cx)
             } else {
-                div()
-                    .flex()
-                    .flex_col()
-                    .children(entries.iter().map(|entry| probe_row(ui, entry, cx)))
+                style::setting_group(ui, entries.iter().map(|entry| probe_row(ui, entry, cx)))
                     .into_any_element()
             };
             let Some(problem) = key_problem else { return rows };
@@ -240,11 +237,11 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let shown = crate::settings_window::with_tilde(&folder);
     let to_open = folder.clone();
     let command = format!("{COMMAND_NAME} probe new"); // text: a command line, not interface text
-    style::card(ui, ui.border)
+    let content = div()
         .flex()
         .flex_col()
         .gap_2()
-        .p_4()
+        .py_3()
         .child(style::icon(IconName::Puzzle).text_color(ui.muted))
         .child(
             div().text_body().font_weight(FontWeight::SEMIBOLD).child(text(SETTINGS_EXTENSIONS_NONE_TITLE)),
@@ -267,8 +264,8 @@ fn empty(ui: UiColors, cx: &mut Context<SettingsWindow>) -> AnyElement {
                         cx.listener(move |_, _, _, cx| crate::settings_window::open_folder(&to_open, cx)),
                     ),
             ),
-        )
-        .into_any_element()
+        );
+    style::setting_group(ui, [content.into_any_element()]).into_any_element()
 }
 
 /// One Probe: its mark, name and state, who and which version, what it says it is, and the switch.
@@ -352,7 +349,6 @@ fn probe_row(ui: UiColors, entry: &Entry, cx: &mut Context<SettingsWindow>) -> A
         .flex_col()
         .gap_2()
         .py_2()
-        .rule_top(ui)
         .child(
             div()
                 .flex()

@@ -28,8 +28,8 @@ use crate::style::{self, RowKeys, SettingParts, SettingState};
 const AFTER: [u32; 5] = [5, 10, 30, 60, 300];
 
 pub(super) const SETTINGS: &[Setting] = &[
-    Setting::block("notify-permission", draw_permission),
-    Setting::block("notify-test", draw_test),
+    Setting::item("notify-permission", draw_permission),
+    Setting::item("notify-test", draw_test),
     Setting::toggle(
         "notify-needs-you",
         |s| kind_on(s, s.notify_needs_you),

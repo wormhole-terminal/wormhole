@@ -79,6 +79,11 @@
 //! The Fonts page gained the Settings text size row, a select like the Appearance page's icon theme (the
 //! trigger, the search select's state and the row's own listeners): Fonts rose from 7,366 to 7,766.
 //!
+//! Settings' groups became one rounded card each: the rows' lines became the dividers the group draws
+//! between them, and the lists some pages built by hand went into the same group. Every page was measured
+//! again (the card, a divider element between each two rows and a gap between a head and its card cost a
+//! few allocations a group; a row's hairline cost none).
+//!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
 use gpui_kit::test::TestWindowExt as _;
@@ -107,45 +112,45 @@ const SLACK: u64 = 20;
 // the specimen's facts are one string (Fonts 80 more). The nav's divider, an element of its own, is 3 on
 // every page.
 const BUDGET: [(&str, u64); 20] = [
-    ("Profile", 7002),
+    ("Profile", 7088),
     // Measured with [`change`]'s settings differing from their defaults, so the page has rows: five settings
     // on four pages, each a row of its own page with a dot, a reset arrow and a menu.
-    ("Changed", 6654),
+    ("Changed", 6336),
     // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
     // key line, 425 more.
-    ("Appearance", 14682),
-    ("Fonts", 7756),
-    ("Motion", 4569),
+    ("Appearance", 14948),
+    ("Fonts", 8054),
+    ("Motion", 4707),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 9898),
+    ("Terminal", 10145),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 9094),
-    ("Git", 5459),
+    ("Sessions", 9141),
+    ("Git", 5537),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 8781),
+    ("Agents", 8719),
     // Fell from 49,182 when the comparison left the page: the open card and its rows are what is drawn.
-    ("Import", 22969),
-    ("Notifications", 7826),
+    ("Import", 23034),
+    ("Notifications", 7980),
     // The page was split into MenuBar and Hotkey, each with a preview that is a view of its own (a menu bar
     // twice, and the shortcut's keys with the quick panel or the window sketch); both measured at the split.
     // Every other page rose by 68 with the nav's one row more, Hotkey, and was measured again.
-    ("MenuBar", 3736),
-    ("Hotkey", 3885),
-    ("Updates", 5248),
+    ("MenuBar", 3727),
+    ("Hotkey", 3876),
+    ("Updates", 4925),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
     // The Show config keys switch is a row more, 4,941 measured; with the keys hidden by default every
     // other page fell (their key lines are not built).
-    ("Advanced", 5133),
-    ("Projects", 9336),
+    ("Advanced", 5314),
+    ("Projects", 10715),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2916),
+    ("Extensions", 2836),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
@@ -153,15 +158,15 @@ const BUDGET: [(&str, u64); 20] = [
     // 6,912 measured, a row fewer.
     // The Restore after restart flag is one switch row more again: 7,271 measured (about 340 a row).
     // The File icon themes flag is one switch row more again: 7,577 measured (about 305 a row).
-    ("FeatureFlags", 8299),
+    ("FeatureFlags", 7232),
     // Settings → Components, a development tool: every specimen of the controls on one page, many times what any
     // other page draws (nobody opens it but the owner tuning the look). The nav's one row more, Components, raised
     // every other page by 91, and Feature flags by 464 more with the flag's switch row.
-    ("Components", 59148),
+    ("Components", 55282),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     // The search finds the Borders row too, as one more result: 196 more.
-    ("search", 9357),
+    ("search", 9487),
 ];
 
 /// What the Changed page is measured with: five settings that differ from their defaults, on four pages

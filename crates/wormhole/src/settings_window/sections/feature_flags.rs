@@ -14,7 +14,7 @@ use crate::settings::settings;
 use crate::settings::update_settings;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{Section, SettingsWindow, ui};
-use crate::style::{self, Edges, RowKeys, SettingParts};
+use crate::style::{self, RowKeys, SettingParts};
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("feature-flags", |w, cx| w.draw_feature_flags(cx))];
 
@@ -46,7 +46,7 @@ impl SettingsWindow {
 
     fn draw_feature_flags(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
-        let mut rows = div().flex().flex_col().rule_bottom(ui);
+        let mut rows = Vec::new();
         for flag in FeatureFlag::ALL {
             let on = settings(cx).feature_enabled(flag);
             let key = flag.key();
@@ -66,31 +66,34 @@ impl SettingsWindow {
                 });
             })
             .into_any_element();
-            rows = rows.child(style::setting(
-                SharedString::from(format!("feature-flag-{key}")),
-                ui,
-                SettingParts {
-                    label: flag.title().into(),
-                    description: Some(flag.description().into()),
-                    visible_hint: false,
-                    chip: None,
-                    keys: RowKeys::NONE,
-                    state,
-                    found: None,
-                    found_description: None,
-                    control,
-                    tall: false,
-                    extra: None,
-                    on_reset: Some(Rc::new(move |_, cx| {
-                        update_settings(cx, |s| {
-                            s.feature_flags.remove(key);
-                        });
-                    })),
-                    reset_arrow: crate::style::ResetArrow::OnHover,
-                },
-                cx,
-            ));
+            rows.push(
+                style::setting(
+                    SharedString::from(format!("feature-flag-{key}")),
+                    ui,
+                    SettingParts {
+                        label: flag.title().into(),
+                        description: Some(flag.description().into()),
+                        visible_hint: false,
+                        chip: None,
+                        keys: RowKeys::NONE,
+                        state,
+                        found: None,
+                        found_description: None,
+                        control,
+                        tall: false,
+                        extra: None,
+                        on_reset: Some(Rc::new(move |_, cx| {
+                            update_settings(cx, |s| {
+                                s.feature_flags.remove(key);
+                            });
+                        })),
+                        reset_arrow: crate::style::ResetArrow::OnHover,
+                    },
+                    cx,
+                )
+                .into_any_element(),
+            );
         }
-        rows.into_any_element()
+        style::setting_group(ui, rows).into_any_element()
     }
 }

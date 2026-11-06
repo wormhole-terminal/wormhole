@@ -23,7 +23,7 @@ use crate::agent_access::{self, Approved, How, Which};
 use crate::settings::UiColors;
 use crate::settings_window::registry::{Segment, Setting};
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 
 pub(super) const MODE: Setting = Setting::segmented(
     "agent-access",
@@ -47,28 +47,13 @@ fn draw_programs(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEle
     let ui = ui(cx);
     let rows = agent_access::approved(cx);
     if rows.is_empty() {
-        return div()
-            .py_3()
-            .rule_top(ui)
-            .text_body()
-            .text_color(ui.muted)
-            .child(text(SETTINGS_AGENTS_ACCESS_NONE))
-            .into_any_element();
+        let none = div().py_3().text_body().text_color(ui.muted).child(text(SETTINGS_AGENTS_ACCESS_NONE));
+        return style::setting_group(ui, [none.into_any_element()]).into_any_element();
     }
     let now = agent_access::now_seconds();
-    div()
-        .flex()
-        .flex_col()
-        .children(rows.into_iter().enumerate().map(|(ix, row)| program_row(ix, row, now, cx)))
-        .child(
-            div()
-                .py_2()
-                .rule_top(ui)
-                .text_caption()
-                .text_color(ui.muted)
-                .child(text(SETTINGS_AGENTS_ACCESS_CAPS_NOTE)),
-        )
-        .into_any_element()
+    let note = div().py_2().text_caption().text_color(ui.muted).child(text(SETTINGS_AGENTS_ACCESS_CAPS_NOTE));
+    let programs = rows.into_iter().enumerate().map(|(ix, row)| program_row(ix, row, now, cx));
+    style::setting_group(ui, programs.chain([note.into_any_element()])).into_any_element()
 }
 
 /// What a program may do, one tick each. Closing is not among them: it always asks.
@@ -167,7 +152,6 @@ fn program_row(ix: usize, row: Approved, now: i64, cx: &mut Context<SettingsWind
         .items_center()
         .gap_3()
         .py_2()
-        .rule_top(ui)
         .child(tile)
         .child(
             div()

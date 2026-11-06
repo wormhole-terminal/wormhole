@@ -25,6 +25,10 @@ pub struct UiColors {
     /// `rule_*`) keeps its space and draws nothing, and a surface is told apart by its shade alone.
     /// Rings, separators and anything with a setting of its own do not ask (`outlined_always`).
     pub borders: bool,
+    /// Accessibility → Display → Increase Contrast is on: surfaces told apart by a faint fill alone (a
+    /// settings group's card) take the edge their `card.edge` token gives them. Unlike `borders`, which
+    /// the person can turn off, this is only ever the system's setting.
+    pub increase_contrast: bool,
     /// The line between the window's columns (`metrics.divider_width`), 0 for none; the main
     /// window's also follows the Column dividers setting (`without_dividers`).
     pub divider_width: Pixels,
@@ -295,6 +299,11 @@ impl UiColors {
     /// These colors with the Borders setting applied (`borders` is whether lines are drawn).
     pub(crate) fn with_borders(self, borders: bool) -> Self {
         Self { borders, ..self }
+    }
+
+    /// These colors with Increase Contrast (the system's setting) applied.
+    pub(crate) fn with_increase_contrast(self, increase_contrast: bool) -> Self {
+        Self { increase_contrast, ..self }
     }
 
     /// These colors with no line between the columns: the Column dividers setting, off.

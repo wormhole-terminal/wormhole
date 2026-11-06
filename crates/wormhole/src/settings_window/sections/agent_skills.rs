@@ -28,7 +28,7 @@ use wormhole_core::ipc::control::doctor::mcp_add_command;
 use super::agents::mark;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 
 pub(super) const SKILLS: Setting = Setting::block("agent-skills", draw_skills);
 pub(super) const MCP: Setting = Setting::custom("agent-mcp", draw_mcp);
@@ -81,16 +81,23 @@ impl SettingsWindow {
 fn draw_skills(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let Some(snapshot) = &window.agents else { return div().into_any_element() };
-    let rows: Vec<AnyElement> = snapshot
+    let mut rows: Vec<AnyElement> = snapshot
         .skills
         .iter()
         .filter(|row| row.found || !matches!(row.state, Ok(State::NotInstalled)))
         .map(|row| skill_row(row, cx))
         .collect();
-    let none = rows.is_empty().then(|| {
-        div().py_3().rule_top(ui).text_body().text_color(ui.muted).child(text(SETTINGS_AGENTS_SKILL_NONE))
-    });
-    div().flex().flex_col().children(rows).children(none).into_any_element()
+    if rows.is_empty() {
+        rows.push(
+            div()
+                .py_3()
+                .text_body()
+                .text_color(ui.muted)
+                .child(text(SETTINGS_AGENTS_SKILL_NONE))
+                .into_any_element(),
+        );
+    }
+    style::setting_group(ui, rows).into_any_element()
 }
 
 fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
@@ -150,7 +157,6 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
         .flex_col()
         .gap_2()
         .py_2()
-        .rule_top(ui)
         .child(
             div()
                 .flex()

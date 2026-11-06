@@ -24,7 +24,7 @@ use wormhole_core::update::{
 use crate::settings::{UiColors, settings};
 use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 use crate::update::{ChannelNote, UpdatePhase, Updates};
 
 pub(super) const SETTINGS: &[Setting] = &[
@@ -75,7 +75,6 @@ fn draw_count_details(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> A
             .flex()
             .gap_4()
             .py_2()
-            .rule_bottom(ui)
             .child(div().w(px(DETAIL_LABEL_W)).flex_none().text_body().text_color(ui.muted).child(label))
             .child(
                 div()
@@ -116,13 +115,15 @@ fn draw_count_details(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> A
     div()
         .flex()
         .flex_col()
-        .pt_2()
-        .when_some(starts, |d, starts| {
-            d.child(div().pb_2().child(style::banner(ui, style::BannerKind::Info, false, starts)))
-        })
-        .child(every)
-        .children(first)
-        .child(never)
+        .gap_2()
+        .children(starts.map(|starts| style::banner(ui, style::BannerKind::Info, false, starts)))
+        .child(style::setting_group(
+            ui,
+            [every.into_any_element()]
+                .into_iter()
+                .chain(first.map(IntoElement::into_any_element))
+                .chain([never.into_any_element()]),
+        ))
         .into_any_element()
 }
 
@@ -313,80 +314,77 @@ fn draw_status(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyEleme
         _ => None,
     };
 
-    div()
+    let head = div()
         .flex()
-        .flex_col()
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_between()
-                .gap_4()
-                .min_h(px(style::SETTING_ROW_MIN_H))
-                .py_2()
-                .rule_top(ui)
-                .child(div().text_body().text_color(status_color).child(status))
-                .child(actions),
-        )
-        .children(
-            channel_note
-                .map(|note| div().py_2().rule_top(ui).text_caption().text_color(ui.muted).child(note)),
-        )
-        .children(security.map(|security| {
-            div()
-                .flex()
-                .flex_col()
-                .gap_1()
-                .py_3()
-                .rule_top(ui)
-                .child(
-                    div()
-                        .text_body()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(security_color(ui, security.severity))
-                        .child(security_line(&security)),
-                )
-                .when(!security.advisories.is_empty(), |d| {
-                    d.child(div().flex().flex_wrap().items_center().gap_1().children(
-                        security.advisories.iter().enumerate().map(|(ix, id)| {
-                            let url = advisory_url(id);
-                            style::link_button(("update-advisory", ix), ui, id.to_uppercase(), true)
-                                .on_click(move |_, _, cx| cx.open_url(&url))
-                        }),
-                    ))
-                })
-        }))
-        .children(notes.map(|(version, notes)| {
-            div()
-                .flex()
-                .flex_col()
-                .gap_1()
-                .py_3()
-                .rule_top(ui)
-                .child(
-                    div()
-                        .text_caption()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(ui.muted)
-                        .child(settings_updates_whats_new(&version)),
-                )
-                .children(
-                    notes
-                        .lines()
-                        .map(|line| line.trim().trim_start_matches(['-', '*']).trim().to_string())
-                        .filter(|line| !line.is_empty())
-                        .map(|line| {
-                            div()
-                                .flex()
-                                .gap_2()
-                                .text_body()
-                                .text_color(ui.muted)
-                                .child(div().flex_none().text_color(ui.faint).child("–"))
-                                .child(div().min_w_0().child(line))
-                        }),
-                )
-        }))
-        .into_any_element()
+        .items_center()
+        .justify_between()
+        .gap_4()
+        .min_h(px(style::SETTING_ROW_MIN_H))
+        .py_2()
+        .child(div().text_body().text_color(status_color).child(status))
+        .child(actions);
+    let channel_note = channel_note.map(|note| div().py_2().text_caption().text_color(ui.muted).child(note));
+    let security = security.map(|security| {
+        div()
+            .flex()
+            .flex_col()
+            .gap_1()
+            .py_3()
+            .child(
+                div()
+                    .text_body()
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(security_color(ui, security.severity))
+                    .child(security_line(&security)),
+            )
+            .when(!security.advisories.is_empty(), |d| {
+                d.child(div().flex().flex_wrap().items_center().gap_1().children(
+                    security.advisories.iter().enumerate().map(|(ix, id)| {
+                        let url = advisory_url(id);
+                        style::link_button(("update-advisory", ix), ui, id.to_uppercase(), true)
+                            .on_click(move |_, _, cx| cx.open_url(&url))
+                    }),
+                ))
+            })
+    });
+    let notes = notes.map(|(version, notes)| {
+        div()
+            .flex()
+            .flex_col()
+            .gap_1()
+            .py_3()
+            .child(
+                div()
+                    .text_caption()
+                    .font_weight(FontWeight::SEMIBOLD)
+                    .text_color(ui.muted)
+                    .child(settings_updates_whats_new(&version)),
+            )
+            .children(
+                notes
+                    .lines()
+                    .map(|line| line.trim().trim_start_matches(['-', '*']).trim().to_string())
+                    .filter(|line| !line.is_empty())
+                    .map(|line| {
+                        div()
+                            .flex()
+                            .gap_2()
+                            .text_body()
+                            .text_color(ui.muted)
+                            .child(div().flex_none().text_color(ui.faint).child("–"))
+                            .child(div().min_w_0().child(line))
+                    }),
+            )
+    });
+    let items = [Some(head.into_any_element())]
+        .into_iter()
+        .chain([
+            channel_note.map(IntoElement::into_any_element),
+            security.map(IntoElement::into_any_element),
+            notes.map(IntoElement::into_any_element),
+        ])
+        .flatten();
+    style::setting_group(ui, items).into_any_element()
 }
 
 #[cfg(test)]

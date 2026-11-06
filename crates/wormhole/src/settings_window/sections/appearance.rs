@@ -26,7 +26,7 @@ use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::settings_window::registry::{ProjectSource, Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
-use crate::style::{self, Edges};
+use crate::style::{self};
 use crate::theme_bridge;
 
 const MODES: &[Segment] = &[
@@ -296,7 +296,6 @@ fn draw_theme(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         .gap_3()
         .pt_3()
         .pb_3()
-        .rule_top(ui)
         .children(project.map(|project| {
             let root = project.root.clone();
             style::banner(

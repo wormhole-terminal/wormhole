@@ -30,6 +30,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- Settings groups its rows in rounded cards without lines between them, like System Settings.
 - Terminal and agent icons in the sidebar no longer have a drop shadow.
 - Settings → Import no longer lists what other terminals lack compared with Wormhole.
 - Settings: the Menu bar & hotkey page is two pages, Menu bar and Hotkey, each with a preview that follows its

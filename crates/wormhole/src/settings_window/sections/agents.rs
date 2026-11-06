@@ -27,7 +27,7 @@ use crate::app_state::app;
 use crate::settings::UiColors;
 use crate::settings_window::registry::{Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("agents-notifications", |_, cx| {
@@ -174,17 +174,19 @@ fn draw_installed(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> 
             .child(text(SETTINGS_AGENTS_LOOKING_FOR_AGENTS))
             .into_any_element();
     };
-    let rows: Vec<AnyElement> =
+    let mut rows: Vec<AnyElement> =
         snapshot.installed().map(|row| agent_row(ui, row, snapshot.home(), cx)).collect();
-    let none = rows.is_empty().then(|| {
-        div()
-            .py_3()
-            .rule_top(ui)
-            .text_body()
-            .text_color(ui.muted)
-            .child(text(SETTINGS_AGENTS_NO_CODING_AGENT_ON_THIS_MACS))
-    });
-    div().flex().flex_col().children(rows).children(none).into_any_element()
+    if rows.is_empty() {
+        rows.push(
+            div()
+                .py_3()
+                .text_body()
+                .text_color(ui.muted)
+                .child(text(SETTINGS_AGENTS_NO_CODING_AGENT_ON_THIS_MACS))
+                .into_any_element(),
+        );
+    }
+    style::setting_group(ui, rows).into_any_element()
 }
 
 /// An agent's tile: the one the sidebar's rows draw it with (its logo or monogram on the colour the
@@ -275,7 +277,6 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
         .flex_col()
         .gap_2()
         .py_2()
-        .rule_top(ui)
         .child(
             div()
                 .flex()
@@ -450,15 +451,12 @@ fn draw_others(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
         .items_center()
         .gap_2()
         .py_2()
-        .rule_top(ui)
         .cursor_pointer()
-        .hover(move |d| d.bg(ui.hover))
         .on_click(cx.listener(|this, _, _, cx| {
             this.others_open = !this.others_open;
             cx.notify();
         }))
-        .relative()
-        .child(hang(style::lead(style::disclosure(ui, !open))).bottom_0().flex().items_center())
+        .child(style::lead(style::disclosure(ui, !open)))
         .child(
             div()
                 .flex_1()
@@ -476,64 +474,46 @@ fn draw_others(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
         .child(
             div().flex_none().text_caption().text_color(ui.faint).child(text(SETTINGS_AGENTS_NOT_ON_PATH)),
         );
-    div()
-        .flex()
-        .flex_col()
-        .child(head)
-        .when(open, |d| {
-            d.children(others.into_iter().map(|row| {
-                let hooks = if row.spec.is_some() {
-                    text(SETTINGS_AGENTS_STATUS_HOOKS_AVAILABLE)
-                } else {
-                    text(SETTINGS_AGENTS_STATUS_FROM_OUTPUT)
-                };
-                div()
-                    .flex()
-                    .items_center()
-                    .gap_3()
-                    .py_1()
-                    .child(mark(ui, row.agent, style::TILE_MINI, cx))
-                    .child(div().flex_1().min_w_0().text_body().text_color(ui.muted).child(row.agent.name))
-                    .child(div().text_caption().text_color(ui.faint).child(hooks))
-            }))
-        })
-        .into_any_element()
-}
-
-/// How far a lead icon hangs left of its text: its width and the gap after it, so the text
-/// lines up with the labels of the rows around it.
-const HANG: f32 = style::ITEM_LEAD_W + 8.0;
-
-/// A lead icon hung in the margin before its text (see [`HANG`]), at the top of its
-/// `.relative()` parent. Placed outside the layout: a negative margin would measure the text
-/// around it again in every frame.
-fn hang(lead: Div) -> Div {
-    div().absolute().top_0().left(px(-HANG)).child(lead)
+    let list = open.then(|| {
+        div().flex().flex_col().pb_2().children(others.into_iter().map(|row| {
+            let hooks = if row.spec.is_some() {
+                text(SETTINGS_AGENTS_STATUS_HOOKS_AVAILABLE)
+            } else {
+                text(SETTINGS_AGENTS_STATUS_FROM_OUTPUT)
+            };
+            div()
+                .flex()
+                .items_center()
+                .gap_3()
+                .py_1()
+                .child(mark(ui, row.agent, style::TILE_MINI, cx))
+                .child(div().flex_1().min_w_0().text_body().text_color(ui.muted).child(row.agent.name))
+                .child(div().text_caption().text_color(ui.faint).child(hooks))
+        }))
+    });
+    style::setting_group(
+        ui,
+        std::iter::once(head.into_any_element()).chain(list.map(IntoElement::into_any_element)),
+    )
+    .into_any_element()
 }
 
 /// With hooks and without, side by side, and the promise about the files.
 fn draw_how(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let column = |icon: IconName, color: Hsla, title: &'static str, text: &'static str| {
-        div()
-            .flex_1()
-            .min_w_0()
-            .relative()
-            .flex()
-            .gap_2()
-            .child(hang(style::lead(style::icon(icon).text_color(color))))
-            .child(
-                // Its own width, so the words wrap in the column rather than run into the next one.
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .flex()
-                    .flex_col()
-                    .child(div().text_body().font_weight(FontWeight::MEDIUM).child(title))
-                    .child(div().text_caption().text_color(ui.muted).child(text)),
-            )
+        div().flex_1().min_w_0().flex().gap_2().child(style::lead(style::icon(icon).text_color(color))).child(
+            // Its own width, so the words wrap in the column rather than run into the next one.
+            div()
+                .flex_1()
+                .min_w_0()
+                .flex()
+                .flex_col()
+                .child(div().text_body().font_weight(FontWeight::MEDIUM).child(title))
+                .child(div().text_caption().text_color(ui.muted).child(text)),
+        )
     };
-    div()
+    let body = div()
         .flex()
         .flex_col()
         .gap_2()
@@ -541,8 +521,7 @@ fn draw_how(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement 
         .child(
             div()
                 .flex()
-                // Room for the second column's hanging icon, and as much again before it.
-                .gap(px(2.0 * HANG))
+                .gap_6()
                 .child(column(
                     IconName::Check,
                     ui.success,
@@ -561,8 +540,8 @@ fn draw_how(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement 
                 .text_caption()
                 .text_color(ui.muted)
                 .child(text(SETTINGS_AGENTS_HOOKS_DO_NOTHING_OUTSIDE_WORMHOLE_ONLY)),
-        )
-        .into_any_element()
+        );
+    style::setting_group(ui, [body.into_any_element()]).into_any_element()
 }
 
 #[cfg(test)]

@@ -78,13 +78,16 @@ pub(super) fn translucency(settings: &Settings) -> Translucency {
 pub(super) fn main_ui(tokens: &ThemeTokens, settings: &Settings, increase_contrast: bool) -> UiColors {
     let ui = UiColors::new(tokens, translucency(settings));
     let ui = if dividers(settings, increase_contrast) { ui } else { ui.without_dividers() };
-    with_icon_motion(ui, settings).with_borders(lines(settings, increase_contrast))
+    with_icon_motion(ui, settings)
+        .with_borders(lines(settings, increase_contrast))
+        .with_increase_contrast(increase_contrast)
 }
 
 /// The other windows' colours (Settings, the Studio, About): the tokens as they are.
 pub(super) fn opaque_ui(tokens: &ThemeTokens, settings: &Settings, increase_contrast: bool) -> UiColors {
     with_icon_motion(UiColors::new(tokens, OPAQUE_LOOK), settings)
         .with_borders(lines(settings, increase_contrast))
+        .with_increase_contrast(increase_contrast)
 }
 
 /// Whether the lines between columns are drawn: the Column dividers setting, and always under Increase

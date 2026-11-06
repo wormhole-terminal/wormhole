@@ -30,7 +30,7 @@ use wormhole_text::{Key, text};
 use super::{FrontWindow, SettingsWindow, section_icon, sections, ui};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
-use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
+use crate::style::{self, RowKeys, SettingParts, SettingState, TextRole};
 
 /// The widest the summary of a block's value grows on the Changed page before it is cut.
 const SUMMARY_MAX_W: f32 = 240.0;
@@ -81,6 +81,9 @@ pub(super) enum Control {
     Custom(Draw),
     /// Content that stands on its own, with no row around it (the theme cards, a preview).
     Block(Draw),
+    /// A whole row the page draws itself (a permission and its button): it sits on the group's card with
+    /// the rows around it, and is no setting of its own, so the Changed page never lists it.
+    Item(Draw),
 }
 
 pub(super) struct Setting {
@@ -135,6 +138,10 @@ impl Setting {
 
     pub(super) const fn block(id: &'static str, draw: Draw) -> Self {
         Self::new(id, Control::Block(draw))
+    }
+
+    pub(super) const fn item(id: &'static str, draw: Draw) -> Self {
+        Self::new(id, Control::Item(draw))
     }
 
     /// A description that says what is in use now, instead of the table's.
@@ -294,7 +301,7 @@ fn shown(control: &Control, settings: &Settings) -> Shown {
         Control::Toggle { get, .. } => Shown::Toggle(get(settings)),
         Control::Segmented { get, .. } => Shown::Segmented(get(settings)),
         Control::Stepper { show, .. } => Shown::Stepper(show(settings)),
-        Control::Recorder(_) | Control::Custom(_) | Control::Block(_) => Shown::Drawn,
+        Control::Recorder(_) | Control::Custom(_) | Control::Block(_) | Control::Item(_) => Shown::Drawn,
     }
 }
 
@@ -310,18 +317,19 @@ impl SettingsWindow {
             .collect();
         let mut column = div().flex().flex_col().gap_6().children(super::zen_note::draw(section, cx));
         for group in section.groups() {
-            let mut rows = div().flex().flex_col();
+            let mut page_group = div().flex().flex_col().gap_2();
             if !group.title().is_empty() {
-                rows = rows.child(style::setting_group_head(
+                page_group = page_group.child(style::setting_group_head(
                     page.ui,
                     group.title(),
                     (!group.aside().is_empty()).then_some(group.aside()),
                 ));
             }
             if !group.blurb().is_empty() {
-                rows = rows.child(div().pb_2().text_body().text_color(page.ui.muted).child(group.blurb()));
+                page_group = page_group.child(style::setting_group_blurb(page.ui, group.blurb()));
             }
-            let mut any_row = false;
+            // The rows go on one card; a block draws itself, so it ends the card and stands between two.
+            let mut rows: Vec<AnyElement> = Vec::new();
             let mut shown = 0;
             for entry in group.entries.iter().filter(|entry| !self.in_column(entry.id)) {
                 // A row behind a feature flag that is off is not on the page at all.
@@ -333,17 +341,34 @@ impl SettingsWindow {
                     continue;
                 };
                 shown += 1;
-                any_row |= !matches!(setting.control, Control::Block(_));
-                rows = rows.child(self.render_entry(entry, setting, &page, hits.get(entry.id), cx));
-                if let Some(below) = setting.below.and_then(|below| below(self, cx)) {
-                    rows = rows.child(div().pb_2().child(below));
+                let entry_view = self.render_entry(entry, setting, &page, hits.get(entry.id), cx);
+                if matches!(setting.control, Control::Block(_)) {
+                    if !rows.is_empty() {
+                        page_group =
+                            page_group.child(style::setting_group(page.ui, std::mem::take(&mut rows)));
+                    }
+                    page_group = page_group.child(entry_view);
+                    continue;
                 }
+                // What hangs under a row belongs to it: one item of the card, with no divider between.
+                rows.push(match setting.below.and_then(|below| below(self, cx)) {
+                    Some(below) => div()
+                        .flex()
+                        .flex_col()
+                        .child(entry_view)
+                        .child(div().pb_2().child(below))
+                        .into_any_element(),
+                    None => entry_view,
+                });
             }
             // A group that only held the preview the column shows has nothing left to draw.
             if shown == 0 {
                 continue;
             }
-            column = column.child(if any_row { rows.rule_bottom(page.ui) } else { rows });
+            if !rows.is_empty() {
+                page_group = page_group.child(style::setting_group(page.ui, rows));
+            }
+            column = column.child(page_group);
         }
         column.into_any_element()
     }
@@ -363,6 +388,9 @@ impl SettingsWindow {
             return self.render_preview_note(entry, hit, cx);
         }
         let listed = page.changed_page;
+        if let Control::Item(draw) = &setting.control {
+            return draw(self, cx);
+        }
         if let Control::Block(draw) = &setting.control
             && !listed
         {
@@ -491,7 +519,7 @@ impl SettingsWindow {
                 .into_any_element()
             }
             (Control::Recorder(row), _) => self.render_recorder(id, *row, cx),
-            (Control::Custom(draw) | Control::Block(draw), _) => draw(self, cx),
+            (Control::Custom(draw) | Control::Block(draw) | Control::Item(draw), _) => draw(self, cx),
             // `shown` reads each control as its own kind.
             _ => div().into_any_element(),
         }
@@ -516,6 +544,7 @@ impl SettingsWindow {
                 .items_center()
                 .gap_2()
                 .h(px(style::CONTROL_H))
+                .px_4()
                 .pb_1()
                 .child(style::icon(section_icon(section)).text_color(ui.muted))
                 .child(div().text_label().text_color(ui.text).child(section.title()))
@@ -532,13 +561,14 @@ impl SettingsWindow {
                     )
                     .on_click(cx.listener(move |this, _, _, cx| this.show_section(section, cx))),
                 );
-            let mut rows = div().flex().flex_col().child(head);
+            let mut rows = Vec::new();
             for hit in &hits[start..end] {
                 if let Some(setting) = control(hit.entry.id) {
-                    rows = rows.child(self.render_entry(hit.entry, setting, &page, Some(hit), cx));
+                    rows.push(self.render_entry(hit.entry, setting, &page, Some(hit), cx));
                 }
             }
-            column = column.child(rows.rule_bottom(ui));
+            column = column
+                .child(div().flex().flex_col().gap_2().child(head).child(style::setting_group(ui, rows)));
             start = end;
         }
         column.into_any_element()

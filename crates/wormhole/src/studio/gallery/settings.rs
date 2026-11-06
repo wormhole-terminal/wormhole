@@ -181,13 +181,8 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             cx,
         )
     };
-    div()
-        .flex()
-        .flex_col()
-        .w_full()
-        .max_w(px(COLUMN_W))
-        .child(style::setting_group_head(ui, "Window", Some("A note at the right of the head"))) // text: sample (the gallery's specimen)
-        .child(row(
+    let rows = [
+        row(
             "g-setting-default",
             "Blur what's behind the window", // text: sample (the gallery's specimen)
             "Only visible below 100 % opacity", // text: sample (the gallery's specimen)
@@ -195,8 +190,9 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             SettingState::Default,
             None,
             style::toggle("g-setting-blur", true, |_, _, _| {}).into_any_element(),
-        ))
-        .child(row(
+        )
+        .into_any_element(),
+        row(
             "g-setting-changed",
             "Line height", // text: sample (the gallery's specimen)
             "Terminal rows, as a multiple of the font size", // text: sample (the gallery's specimen)
@@ -205,8 +201,9 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             None,
             style::stepper(ui, "g-setting-line", "1.45".into(), |_, _, _| {}, |_, _, _| {})
                 .into_any_element(),
-        ))
-        .child(row(
+        )
+        .into_any_element(),
+        row(
             "g-setting-reset-end",
             "Tab width",                  // text: sample (the gallery's specimen)
             "Columns a tab stop is wide", // text: sample (the gallery's specimen)
@@ -214,8 +211,9 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             SettingState::Changed,
             None,
             style::stepper(ui, "g-setting-tab", "8".into(), |_, _, _| {}, |_, _, _| {}).into_any_element(),
-        ))
-        .child(row(
+        )
+        .into_any_element(),
+        row(
             "g-setting-project",
             "Theme", // text: sample (the gallery's specimen)
             "Set by api-server/.wormhole/theme.json while this terminal is active", // text: sample (the gallery's specimen)
@@ -223,8 +221,9 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             SettingState::Project("api-server".into()),
             None,
             style::link_button("g-setting-edit", ui, "Edit in project", false).into_any_element(), // text: sample (the gallery's specimen)
-        ))
-        .child(row(
+        )
+        .into_any_element(),
+        row(
             "g-setting-slider",
             "Background opacity", // text: sample (the gallery's specimen)
             "30–100 %. Below 100 % the desktop shows through", // text: sample (the gallery's specimen)
@@ -233,8 +232,9 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             None,
             style::slider_control(ui, slider_track(ui), "80 %", &["30", "65", "100"], false)
                 .into_any_element(),
-        ))
-        .child(row(
+        )
+        .into_any_element(),
+        row(
             "g-setting-link",
             "Font",                                    // text: sample (the gallery's specimen)
             "JetBrains Mono 14 pt · line height 1.30", // text: sample (the gallery's specimen)
@@ -242,8 +242,9 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             SettingState::Default,
             None,
             style::link_button("g-setting-fonts", ui, "Edit in Fonts", true).into_any_element(), // text: sample (the gallery's specimen)
-        ))
-        .child(row(
+        )
+        .into_any_element(),
+        row(
             "g-setting-found",
             "Wrap long lines",                     // text: sample (the gallery's specimen)
             "Otherwise the diff scrolls sideways", // text: sample (the gallery's specimen)
@@ -251,8 +252,9 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             SettingState::Default,
             Some(10..14),
             style::toggle("g-setting-wrap", false, |_, _, _| {}).into_any_element(),
-        ))
-        .child(row(
+        )
+        .into_any_element(),
+        row(
             "g-setting-disabled",
             "Terminal layout",                // text: sample (the gallery's specimen)
             "No layout.json in this project", // text: sample (the gallery's specimen)
@@ -260,7 +262,18 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             SettingState::Disabled,
             None,
             style::toggle("g-setting-layout", false, |_, _, _| {}).disabled(true).into_any_element(),
-        ))
+        )
+        .into_any_element(),
+    ];
+    div()
+        .flex()
+        .flex_col()
+        .gap_2()
+        .w_full()
+        .max_w(px(COLUMN_W))
+        .child(style::setting_group_head(ui, "Window", Some("A note at the right of the head"))) // text: sample (the gallery's specimen)
+        .child(style::setting_group_blurb(ui, "A paragraph under the head, in muted caption text.")) // text: sample (the gallery's specimen)
+        .child(style::setting_group(ui, rows))
 }
 
 /// A slider's track and knob as drawn (the real one is GPUI Kit's, and needs a state).

@@ -143,8 +143,9 @@ const SET_ELSEWHERE_OPACITY: f32 = 0.55;
 /// One setting in the settings window: the label (14 / 500) at the left with, after it, an (i) that
 /// opens the description in a card (VoiceOver reads the description from the row), or, for a
 /// warning that must not be missed ([`SettingParts::visible_hint`]), the description under the label
-/// (12, muted); the control at the right edge of the column, a hairline above and at least
-/// [`SETTING_ROW_MIN_H`] tall, no card. Hovering fills it with `state.hover`, [`ROW_FILL_PAD`]
+/// (12, muted); the control at the right edge of the row, at least
+/// [`SETTING_ROW_MIN_H`] tall. It has no line of its own: a [`setting_group`](super::setting_group)
+/// puts its rows on one card and draws the dividers between them. Hovering fills it with `state.hover`, [`ROW_FILL_PAD`]
 /// past its text on each side. See [`SettingState`] for what a changed, project-set or disabled
 /// value adds.
 #[track_caller]
@@ -188,7 +189,6 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
         .w_full()
         .min_h(px(SETTING_ROW_MIN_H))
         .py_1()
-        .rule_top(ui)
         .relative()
         // The hover fill reaches past the text on both sides, so the words don't touch its edges,
         // while the text keeps the column of the group heads. Out of the layout, as a layer.
@@ -299,34 +299,6 @@ fn out_of_reach(id: impl Into<ElementId>, control: AnyElement) -> AnyElement {
         .child(div().id(id).absolute().top_0().left_0().size_full().occlude())
         .into_any_element()
 }
-
-/// The head of a group of [`setting`] rows: the group's name as a heading (16 / 600) with a
-/// step of space above it, and a quiet note at the right ("Same values as the funnel"). The
-/// rows follow with their hairlines; end the group with `rule_bottom`.
-#[track_caller]
-pub fn setting_group_head(ui: UiColors, title: &str, aside: Option<&str>) -> Div {
-    div()
-        .flex()
-        .items_end()
-        .justify_between()
-        .gap_4()
-        .h(px(GROUP_HEAD_H))
-        .pb_2()
-        .child(
-            div()
-                .text_heading()
-                .font_weight(FontWeight::SEMIBOLD)
-                .text_color(ui.text)
-                .child(title.to_string()),
-        )
-        .children(aside.map(|aside| {
-            div().min_w_0().truncate().text_caption().text_color(ui.faint).child(aside.to_string())
-        }))
-}
-
-/// A group head's height: its name sits at the bottom, a clear step below the group above and a
-/// small one above the first row's hairline.
-const GROUP_HEAD_H: f32 = 40.0;
 
 /// A text button in the link color ("Edit in Fonts", "Open Notifications"), with an arrow
 /// after it when it takes you to another page. Its text lines up with the edge it is placed

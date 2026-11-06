@@ -308,14 +308,18 @@ fn flipping_the_look_gives_what_a_fresh_derivation_does() {
         assert_eq!(fresh.ui, store.ui, "after {what}");
         let look = Translucency { opacity: store.settings.opacity, blur: store.settings.blur };
         assert_eq!(
-            UiColors::new(&fresh.tokens, look).with_borders(store.ui.borders),
+            UiColors::new(&fresh.tokens, look)
+                .with_borders(store.ui.borders)
+                .with_increase_contrast(store.system().increase_contrast),
             store.ui,
             "after {what}"
         );
         // An opaque window's colours follow the same flips.
         assert_eq!(fresh.ui_for(false), store.ui_for(false), "after {what}");
         assert_eq!(
-            UiColors::new(&fresh.tokens, OPAQUE_LOOK).with_borders(store.ui.borders),
+            UiColors::new(&fresh.tokens, OPAQUE_LOOK)
+                .with_borders(store.ui.borders)
+                .with_increase_contrast(store.system().increase_contrast),
             store.ui_for(false),
             "after {what}"
         );

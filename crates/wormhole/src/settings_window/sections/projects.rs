@@ -28,7 +28,7 @@ use crate::select::{Choice, SearchSelect, SelectTrigger};
 use crate::settings::UiColors;
 use crate::settings_window::registry::Setting;
 use crate::settings_window::{SettingsWindow, ui};
-use crate::style::{self, Edges, RowKeys, SettingParts, SettingState, TextRole};
+use crate::style::{self, RowKeys, SettingParts, SettingState, TextRole};
 use crate::window::window_lifecycle::with_front_workspace;
 
 pub(super) const SETTINGS: &[Setting] = &[Setting::block("projects", |w, cx| w.draw_projects(cx))];
@@ -231,18 +231,20 @@ impl SettingsWindow {
         let picker = div()
             .flex()
             .flex_col()
+            .gap_2()
             .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_PROJECT), None))
-            .child(
-                div()
+            .child(style::setting_group(
+                ui,
+                [div()
                     .flex()
                     .items_center()
                     .justify_between()
                     .gap_4()
                     .py_2()
-                    .rule_top(ui)
                     .child(self.project_select(ui, cx))
-                    .children(all_projects),
-            );
+                    .children(all_projects)
+                    .into_any_element()],
+            ));
         let body = match self.projects.selected.clone() {
             None => self.render_project_defaults(cx),
             Some(root) => self.render_project(&root, cx),
@@ -252,13 +254,13 @@ impl SettingsWindow {
 
     fn render_project_defaults(&self, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
-        let mut defaults = div()
+        let defaults_head = div()
             .flex()
             .flex_col()
+            .gap_2()
             .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_PROJECTS_BY_DEFAULT), None))
-            .child(
-                div().pb_2().text_body().text_color(ui.muted).child(text(SETTINGS_PROJECTS_DEFAULTS_NOTE)),
-            );
+            .child(style::setting_group_blurb(ui, text(SETTINGS_PROJECTS_DEFAULTS_NOTE)));
+        let mut defaults = Vec::new();
         for feature in Feature::ALL {
             let on = project::api::default_enabled(feature, cx);
             let profile = project::shown_profile(cx).clone();
@@ -272,7 +274,7 @@ impl SettingsWindow {
             } else {
                 feature.description().to_string()
             };
-            defaults = defaults.child(feature_row(
+            defaults.push(feature_row(
                 ui,
                 feature,
                 description,
@@ -281,34 +283,35 @@ impl SettingsWindow {
                 cx,
             ));
         }
-        let defaults = defaults.rule_bottom(ui);
+        let defaults =
+            div().flex().flex_col().gap_2().child(defaults_head).child(style::setting_group(ui, defaults));
 
-        let mut trusted = div().flex().flex_col().child(style::setting_group_head(
+        let mut trusted = div().flex().flex_col().gap_2().child(style::setting_group_head(
             ui,
             text(SETTINGS_PROJECTS_TRUSTED_PROJECTS),
             Some(text(SETTINGS_PROJECTS_PROJECTS_ALLOWED_TO_RUN_COMMANDS)),
         ));
         let list: Vec<PathBuf> = project::api::trusted_roots(cx);
+        let mut trusted_rows: Vec<AnyElement> = Vec::new();
         if list.is_empty() {
-            trusted = trusted.child(
+            trusted_rows.push(
                 div()
                     .py_3()
-                    .rule_top(ui)
                     .text_body()
                     .text_color(ui.faint)
-                    .child(text(SETTINGS_PROJECTS_NONE_YET)),
+                    .child(text(SETTINGS_PROJECTS_NONE_YET))
+                    .into_any_element(),
             );
         }
         for (ix, root) in list.into_iter().enumerate() {
             let (open, revoke) = (root.clone(), root.clone());
-            trusted = trusted.child(
+            trusted_rows.push(
                 div()
                     .flex()
                     .items_center()
                     .justify_between()
                     .gap_2()
                     .min_h(px(style::ROW_H + 8.0))
-                    .rule_top(ui)
                     .child(div().text_body().truncate().child(short_home(&root)))
                     .child(
                         div()
@@ -339,9 +342,11 @@ impl SettingsWindow {
                                         this.projects.forget_info();
                                     })),
                             ),
-                    ),
+                    )
+                    .into_any_element(),
             );
         }
+        trusted = trusted.child(style::setting_group(ui, trusted_rows));
         if !*self.projects.can_approve.get_or_init(crate::platform::auth::available) {
             trusted = trusted.child(div().pb_2().child(style::banner(
                 ui,
@@ -350,7 +355,7 @@ impl SettingsWindow {
                 text(SETTINGS_PROJECTS_APPROVAL_ISNT_AVAILABLE_ON_THIS_MAC),
             )));
         }
-        div().flex().flex_col().gap_6().child(defaults).child(trusted.rule_bottom(ui)).into_any_element()
+        div().flex().flex_col().gap_6().child(defaults).child(trusted).into_any_element()
     }
 
     fn render_project(&self, root: &Path, cx: &mut Context<Self>) -> AnyElement {
@@ -408,16 +413,17 @@ impl SettingsWindow {
         let mut trust = div()
             .flex()
             .flex_col()
+            .gap_2()
             .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_TRUST), None))
-            .child(
-                div()
+            .child(style::setting_group(
+                ui,
+                [div()
                     .flex()
                     .items_center()
                     .justify_between()
                     .gap_4()
                     .min_h(px(style::SETTING_ROW_MIN_H))
                     .py_2()
-                    .rule_top(ui)
                     .child(
                         div()
                             .flex()
@@ -437,38 +443,32 @@ impl SettingsWindow {
                             )
                             .child(div().text_caption().text_color(ui.muted).child(detail)),
                     )
-                    .child(trust_button),
-            );
+                    .child(trust_button)
+                    .into_any_element()],
+            ));
         if let Some(request) = project.request.as_ref().filter(|r| !trusted && !r.commands.is_empty()) {
             trust = trust.child(
-                div().pb_2().child(
-                    style::card(ui, ui.border)
-                        .flex()
-                        .flex_col()
-                        .gap_1()
-                        .text_caption()
-                        .font_family(crate::fonts::code_font(cx).0)
-                        .children(request.commands.iter().map(|c| div().child(c.to_string()))),
-                ),
+                style::card(ui, ui.border)
+                    .flex()
+                    .flex_col()
+                    .gap_1()
+                    .text_caption()
+                    .font_family(crate::fonts::code_font(cx).0)
+                    .children(request.commands.iter().map(|c| div().child(c.to_string()))),
             );
         }
         if let Some(error) = hub_error {
-            trust =
-                trust.child(div().pb_2().child(style::banner(ui, style::BannerKind::Danger, false, error)));
+            trust = trust.child(style::banner(ui, style::BannerKind::Danger, false, error));
         }
 
         // Features: default / on / off per project, as the panel's small segmented control.
-        let mut features = div()
+        let features_head = div()
             .flex()
             .flex_col()
+            .gap_2()
             .child(style::setting_group_head(ui, text(SETTINGS_PROJECTS_USE_FROM_THIS_PROJECT), None))
-            .child(
-                div()
-                    .pb_2()
-                    .text_body()
-                    .text_color(ui.muted)
-                    .child(text(SETTINGS_PROJECTS_ONLY_FOR_YOU_NOTHING_IS_WRITTEN)),
-            );
+            .child(style::setting_group_blurb(ui, text(SETTINGS_PROJECTS_ONLY_FOR_YOU_NOTHING_IS_WRITTEN)));
+        let mut features = Vec::new();
         for (feature, standing, current, default) in prefs {
             let description = feature_description(feature, standing);
             let key = feature.key();
@@ -511,9 +511,10 @@ impl SettingsWindow {
             } else {
                 SettingState::Default
             };
-            features = features.child(feature_row(ui, feature, description, state, control, cx));
+            features.push(feature_row(ui, feature, description, state, control, cx));
         }
-        let features = features.rule_bottom(ui);
+        let features =
+            div().flex().flex_col().gap_2().child(features_head).child(style::setting_group(ui, features));
 
         let errors = (!project.errors.is_empty()).then(|| {
             div()
@@ -560,7 +561,7 @@ impl SettingsWindow {
             .flex()
             .flex_col()
             .gap_6()
-            .child(trust.rule_bottom(ui))
+            .child(trust)
             .child(features)
             .children(errors)
             .child(actions)

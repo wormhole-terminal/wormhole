@@ -22,7 +22,7 @@ use wormhole_core::theme::tokens::ThemeTokens;
 
 use crate::settings::{SettingsStore, UiColors};
 use crate::settings_window::ui;
-use crate::style::{self, ResetArrow, RowKeys, SettingParts, SettingState, TextRole};
+use crate::style::{ResetArrow, RowKeys, SettingParts, SettingState, TextRole};
 
 // The specimens carry the marker that says their words are samples on the line of the word (`// text:`), which
 // rustfmt would move when it breaks a call across lines; their layout is kept as written.
@@ -185,7 +185,15 @@ fn category(
         .flex()
         .flex_col()
         .gap_4()
-        .child(style::setting_group_head(ui, title, Some(aside)))
+        .child(
+            div()
+                .flex()
+                .items_end()
+                .justify_between()
+                .gap_4()
+                .child(div().text_label().text_color(ui.muted).child(title))
+                .child(div().min_w_0().truncate().text_caption().text_color(ui.faint).child(aside)),
+        )
         .children(specimens)
 }
 
