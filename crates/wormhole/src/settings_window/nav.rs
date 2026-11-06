@@ -9,8 +9,6 @@
 use std::collections::HashMap;
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::input::Input;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::NavMark;
@@ -139,8 +137,7 @@ impl SettingsWindow {
                         // Inset 8 like the rows below (`px_2`), so the field's edges line up with their fill.
                         // 12 under it keeps the select from crowding the field.
                         div().flex_none().px_2().pt_2().pb_3().child(
-                            Input::new(&self.search)
-                                .small()
+                            style::text_field(ui, &self.search)
                                 .cleanable(true)
                                 .prefix(style::icon(IconName::Search).text_color(ui.muted))
                                 .when(searching, |input| {

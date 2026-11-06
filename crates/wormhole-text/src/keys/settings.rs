@@ -27,3 +27,5 @@ pub const SETTINGS_ROW_COPY_JSON: Key = Key::new(1289);
 pub const SETTINGS_ROW_RESET_MENU: Key = Key::new(1290);
 /// "Reset to default"
 pub const SETTINGS_ROW_RESET: Key = Key::new(1291);
+/// "Clear"
+pub const SETTINGS_FIELD_CLEAR: Key = Key::new(1292);

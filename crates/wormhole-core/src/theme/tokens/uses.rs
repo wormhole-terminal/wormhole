@@ -462,7 +462,8 @@ pub const TOKEN_USES: &[TokenUse] = &[
         "shortcut recorder",
         Settings,
         &[
-            "input.background",
+            "control.background",
+            "control.hover",
             "border.strong",
             "border.focus",
             "status.danger",
@@ -499,7 +500,8 @@ pub const TOKEN_USES: &[TokenUse] = &[
         "text field",
         Settings,
         &[
-            "input.background",
+            "control.background",
+            "control.hover",
             "input.border",
             "input.border.focus",
             "input.placeholder",

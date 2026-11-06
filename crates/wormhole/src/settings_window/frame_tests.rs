@@ -111,8 +111,11 @@ const SLACK: u64 = 20;
 // card without its header (2,400 fewer), and the diff sample is two rows shorter (Changes & diffs 450 fewer);
 // the specimen's facts are one string (Fonts 80 more). The nav's divider, an element of its own, is 3 on
 // every page.
+// The flat text fields (an id for the hover, the round clear button) and the nav's search moving onto them:
+// Profile, which has four fields of its own, rose by 57, and Terminal, Agents, MenuBar, Hotkey and Updates
+// by 21 to 29 each (the Hotkey page's recorder is flat now too).
 const BUDGET: [(&str, u64); 20] = [
-    ("Profile", 7088),
+    ("Profile", 7145),
     // Measured with [`change`]'s settings differing from their defaults, so the page has rows: five settings
     // on four pages, each a row of its own page with a dot, a reset arrow and a menu.
     ("Changed", 6473),
@@ -124,7 +127,7 @@ const BUDGET: [(&str, u64); 20] = [
     ("Fonts", 8436),
     ("Motion", 4707),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 10145),
+    ("Terminal", 10174),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
     ("Sessions", 9165),
@@ -134,16 +137,16 @@ const BUDGET: [(&str, u64); 20] = [
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 8719),
+    ("Agents", 8740),
     // Fell from 49,182 when the comparison left the page: the open card and its rows are what is drawn.
     ("Import", 23034),
     ("Notifications", 8125),
     // The page was split into MenuBar and Hotkey, each with a preview that is a view of its own (a menu bar
     // twice, and the shortcut's keys with the quick panel or the window sketch); both measured at the split.
     // Every other page rose by 68 with the nav's one row more, Hotkey, and was measured again.
-    ("MenuBar", 3727),
-    ("Hotkey", 3876),
-    ("Updates", 4925),
+    ("MenuBar", 3748),
+    ("Hotkey", 3899),
+    ("Updates", 4946),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).

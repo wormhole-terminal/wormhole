@@ -21,6 +21,7 @@ use super::scale::{
     CONTROL_H, Edges, HIT_MIN, MARK_DOT, NAME_LINE, RECORDER_W, SETTING_ROW_MIN_H, SLIDER_W, TextRole,
 };
 use super::section::ClickHandler;
+use super::text_field::{RING_ALPHA, ring};
 use crate::settings::UiColors;
 
 /// A small whole number with a minus and a plus, as System Settings draws a stepper: the value as
@@ -441,9 +442,9 @@ pub enum RecorderState {
     Empty,
     /// The shortcut's keys as key caps, and a × that clears it.
     Set(Vec<SharedString>),
-    /// Waiting for keys: the focus ring, a red dot, the modifiers held so far, "esc".
+    /// Waiting for keys: the soft focus ring, a red dot, the modifiers held so far, "esc".
     Recording(Vec<SharedString>),
-    /// The keys are taken by something else: a warning outline (say what takes them under it).
+    /// The keys are taken by something else: a warning outline and ring (say what takes them under it).
     Conflict(Vec<SharedString>),
 }
 
@@ -458,11 +459,6 @@ pub fn shortcut_recorder(
     on_clear: Option<ClickHandler>,
 ) -> Stateful<Div> {
     let id = id.into();
-    let (outline, ring) = match &state {
-        RecorderState::Recording(_) => (ui.focus, true),
-        RecorderState::Conflict(_) => (ui.warning, true),
-        RecorderState::Empty | RecorderState::Set(_) => (ui.border_strong, false),
-    };
     let caps = |keys: Vec<SharedString>| keys.into_iter().map(|key| keycap(ui, key));
     let frame = div()
         .id(id.clone())
@@ -474,9 +470,27 @@ pub fn shortcut_recorder(
         .h(px(CONTROL_H))
         .px_2()
         .rounded(ui.radius)
-        .bg(ui.input)
+        .bg(ui.control)
         .cursor_pointer()
-        .map(|d| if ring { d.ringed(ui, outline, ui.focus_ring_width) } else { d.outlined(ui, outline) })
+        // Flat like the text fields: a fill, no outline (Increase Contrast adds one), the soft
+        // focus ring while it waits for keys, and a warning outline inside a ring for a conflict.
+        .map(|d| match &state {
+            RecorderState::Recording(_) if ui.increase_contrast => {
+                d.relative().child(ring(ui, ui.focus, 1.0))
+            }
+            RecorderState::Recording(_) => d.relative().child(ring(ui, ui.focus, RING_ALPHA)),
+            RecorderState::Conflict(_) if ui.increase_contrast => {
+                d.relative().child(ring(ui, ui.warning, 1.0))
+            }
+            RecorderState::Conflict(_) => {
+                d.outlined_always(ui, ui.warning).relative().child(ring(ui, ui.warning, RING_ALPHA))
+            }
+            RecorderState::Empty | RecorderState::Set(_) if ui.increase_contrast => {
+                d.outlined_always(ui, ui.border_strong)
+            }
+            RecorderState::Empty | RecorderState::Set(_) => d,
+        })
+        .when(!matches!(state, RecorderState::Recording(_)), |d| d.hover(move |d| d.bg(ui.control_hover)))
         .text_label()
         .font_weight(FontWeight::NORMAL);
     match state {

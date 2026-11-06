@@ -21,3 +21,6 @@ settings-row-copy-json = Copy as JSON
 # The menu item. The arrow beside a changed value is named the same, in sentence case.
 settings-row-reset-menu = Reset to Default
 settings-row-reset = Reset to default
+
+# What VoiceOver says for the round × inside a text field that holds text, which empties it.
+settings-field-clear = Clear

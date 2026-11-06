@@ -1,15 +1,20 @@
 //! The text field: the one look of every single-line field in Settings (and the box for
 //! several lines), so a field beside a button, a select or a stepper has their height, corners
-//! and outline. GPUI Kit's `Input` brings the editing; its own frame is switched off
-//! (`appearance(false)`) and drawn here from the `input.*` tokens, because the Kit's frame fills
-//! from its `input` colour (which is `input.border` here, a line colour), rings the focus in
-//! its one `ring` and cannot tell an empty field's hint from a filled one's text.
+//! and fill. It is flat, as System Settings draws a field: a filled rounded box with no outline,
+//! the focus a soft ring round it. GPUI Kit's `Input` brings the editing; its own frame is
+//! switched off (`appearance(false)`) and drawn here, because the Kit's frame fills from its
+//! `input` colour (which is `input.border` here, a line colour), rings the focus in its one
+//! `ring` and cannot tell an empty field's hint from a filled one's text.
 
+use gpui_kit::assets::IconName;
 use gpui_kit::component::input::{Input, InputState, Textarea, TextareaState};
 use gpui_kit::component::{Sizable, Theme as KitTheme};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 
+use wormhole_text::{keys, text};
+
+use super::buttons::icon;
 use super::row_keys::own_menu;
 use super::scale::{CONTROL_H, Edges};
 use crate::settings::UiColors;
@@ -29,11 +34,12 @@ enum Body {
     Lines(Entity<TextareaState>),
 }
 
-/// A text field in `input.background`, [`CONTROL_H`] tall (a box of lines is as tall as its
-/// lines need), with the `ui.radius` corners of the controls round it and an outline of
-/// `input.border`; while it has the keyboard the outline is `input.border.focus` (the primary)
-/// drawn as a ring, the way a picked theme card's is. An empty field shows its hint in
-/// `input.placeholder`, a value is `text.primary`.
+/// A flat text field on `control.background` (a little more under the pointer, `control.hover`),
+/// [`CONTROL_H`] tall (a box of lines is as tall as its lines need), with the `ui.radius` corners
+/// of the controls round it and no outline. While it has the keyboard it wears a soft ring of
+/// `input.border.focus` (the primary) a few points wide; Increase Contrast draws an outline of
+/// `input.border` at rest and the ring solid and thicker (`metrics.focus_ring_width`). An empty
+/// field shows its hint in `input.placeholder`, a value is `text.primary`.
 #[derive(IntoElement)]
 pub struct TextField {
     ui: UiColors,
@@ -41,8 +47,20 @@ pub struct TextField {
     width: Option<f32>,
     focused: Option<bool>,
     prefix: Option<AnyElement>,
+    suffix: Option<AnyElement>,
     cleanable: bool,
+    /// Where the field was built, so one input drawn twice in a page (the Components page does) gives
+    /// each a node of its own in the accessibility tree.
+    place: u64,
 }
+
+/// The round clear glyph's size: a 4-pt multiple that sits in the field's height with room round it.
+const CLEAR_SIZE: f32 = 16.0;
+/// How much of the primary the focus ring shows: soft, so the field keeps its flat look.
+pub(super) const RING_ALPHA: f32 = 0.35;
+/// The ring's width beyond `metrics.focus_ring_width`'s one point inside the edge: a field has no
+/// outline to hide it in, so it is a point wider than a select's.
+const RING_EXTRA: f32 = 1.0;
 
 /// A single-line field for `input`, as wide as the box it is put in; give it a width with
 /// [`TextField::w`] ([`FIELD_W`] and its siblings).
@@ -52,8 +70,13 @@ pub fn text_field(ui: UiColors, input: &Entity<InputState>) -> TextField {
 }
 
 impl TextField {
+    #[track_caller]
     fn new(ui: UiColors, body: Body) -> Self {
-        Self { ui, body, width: None, focused: None, prefix: None, cleanable: false }
+        let at = std::panic::Location::caller();
+        let mut hasher = std::hash::DefaultHasher::new();
+        std::hash::Hash::hash(&(at.file(), at.line(), at.column()), &mut hasher);
+        let place = std::hash::Hasher::finish(&hasher);
+        Self { ui, body, width: None, focused: None, prefix: None, suffix: None, cleanable: false, place }
     }
 
     /// A box of several lines for `input` (an environment, a list), framed like the one-line field.
@@ -84,7 +107,14 @@ impl TextField {
         self
     }
 
-    /// A button that empties the field while it holds text (one line only).
+    /// Something after the text, a count of hits (one line only), after the clear button.
+    #[must_use]
+    pub fn suffix(mut self, suffix: impl IntoElement) -> Self {
+        self.suffix = Some(suffix.into_any_element());
+        self
+    }
+
+    /// A button that empties the field while it holds text (one line only): a small round glyph.
     #[must_use]
     pub fn cleanable(mut self, cleanable: bool) -> Self {
         self.cleanable = cleanable;
@@ -94,13 +124,32 @@ impl TextField {
 
 impl RenderOnce for TextField {
     fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
-        let TextField { ui, body, width, focused, prefix, cleanable } = self;
+        let TextField { ui, body, width, focused, prefix, suffix, cleanable, place } = self;
         let handle = match &body {
             Body::Line(input) => input.read(cx).focus_handle(cx),
             Body::Lines(input) => input.read(cx).focus_handle(cx),
         };
         let focused = focused.unwrap_or_else(|| handle.contains_focused(window, cx));
         let one_line = matches!(body, Body::Line(_));
+        let id = match &body {
+            Body::Line(input) => input.entity_id(),
+            Body::Lines(input) => input.entity_id(),
+        };
+        // The Kit's own clear button is a ghost button with an × that cannot be restyled; the round
+        // glyph is ours, and shows only while the field holds text.
+        let clear = match &body {
+            Body::Line(input) if cleanable && !input.read(cx).value().is_empty() => {
+                Some(clear_button(ui, input.clone(), place))
+            }
+            _ => None,
+        };
+        let suffix = match (clear, suffix) {
+            (None, suffix) => suffix,
+            (Some(clear), None) => Some(clear.into_any_element()),
+            (Some(clear), Some(suffix)) => {
+                Some(div().flex().items_center().gap_1().child(clear).child(suffix).into_any_element())
+            }
+        };
 
         // The Kit's editor paints an empty field's hint in `muted_foreground`, which it reads from
         // its theme while it renders and which is `text.muted` here (the colour of labels and
@@ -113,9 +162,9 @@ impl RenderOnce for TextField {
                 let field = Input::new(&input)
                     .small()
                     .appearance(false)
-                    .cleanable(cleanable)
                     .h_full()
-                    .when_some(prefix, |field, prefix| field.prefix(prefix));
+                    .when_some(prefix, |field, prefix| field.prefix(prefix))
+                    .when_some(suffix, |field, suffix| field.suffix(suffix));
                 RenderOnce::render(field, window, cx).into_any_element()
             }
             Body::Lines(input) => {
@@ -127,22 +176,74 @@ impl RenderOnce for TextField {
 
         own_menu(
             div()
+                .id(ElementId::NamedInteger("text-field".into(), id.as_u64() ^ place))
                 .flex()
                 .flex_none()
                 .when_some(width, |well, width| well.w(px(width)))
                 .when(width.is_none(), |well| well.w_full())
                 .when(one_line, |well| well.h(px(CONTROL_H)))
                 .rounded(ui.radius)
-                .bg(ui.input)
+                .bg(ui.control)
                 .text_color(ui.text)
-                .map(|well| {
-                    if focused {
-                        well.outlined_always(ui, ui.input_border_focus)
-                    } else {
-                        well.outlined(ui, ui.input_border)
-                    }
+                .when(!focused, |well| well.hover(move |d| d.bg(ui.control_hover)))
+                .map(|well| match (focused, ui.increase_contrast) {
+                    // A faint fill alone is no edge, so Increase Contrast keeps the field's outline.
+                    (false, true) => well.outlined_always(ui, ui.input_border),
+                    (false, false) => well,
+                    (true, true) => well.relative().child(ring(ui, ui.input_border_focus, 1.0)),
+                    (true, false) => well.relative().child(ring(ui, ui.input_border_focus, RING_ALPHA)),
                 })
                 .child(inner),
         )
     }
+}
+
+/// The ring of a focused flat field: a band of `color` at `alpha` ([`RING_ALPHA`] soft, 1 solid under Increase Contrast,
+/// 1 for Increase Contrast's), `metrics.focus_ring_width` and a point wide just
+/// outside the field's edge, for the field to hold as a child (it must be `relative`). It is drawn as a
+/// border of its own over nothing, not as the field's shadow, because the field's fill is a translucent
+/// overlay and a shadow shows through it as a solid block. It takes no clicks and moves nothing. The
+/// shortcut recorder wears the same ring while it waits for keys.
+#[track_caller]
+pub(super) fn ring(ui: UiColors, color: Hsla, alpha: f32) -> Div {
+    let w = ui.focus_ring_width + px(RING_EXTRA);
+    let mut ring = div()
+        .absolute()
+        .top(-w)
+        .right(-w)
+        .bottom(-w)
+        .left(-w)
+        .rounded(ui.radius + w)
+        .border_color(Hsla { a: alpha, ..color });
+    let widths = &mut ring.style().border_widths;
+    (widths.top, widths.right, widths.bottom, widths.left) =
+        (Some(w.into()), Some(w.into()), Some(w.into()), Some(w.into()));
+    ring
+}
+
+/// The × of a cleanable field: a [`CLEAR_SIZE`] round glyph, quiet until the pointer is on it. It
+/// leaves the keyboard where it was (the field), so it is no tab stop.
+#[track_caller]
+fn clear_button(ui: UiColors, input: Entity<InputState>, place: u64) -> impl IntoElement {
+    div()
+        .id(ElementId::NamedInteger("text-field-clear".into(), input.entity_id().as_u64() ^ place))
+        .role(Role::Button)
+        .aria_label(text(keys::SETTINGS_FIELD_CLEAR))
+        .flex_none()
+        .flex()
+        .items_center()
+        .justify_center()
+        .size(px(CLEAR_SIZE))
+        .rounded_full()
+        .bg(ui.control_hover)
+        .text_color(ui.muted)
+        .cursor_pointer()
+        .hover(move |d| d.text_color(ui.text))
+        .child(icon(IconName::X).xsmall())
+        .on_click(move |_, window, cx| {
+            input.update(cx, |input, cx| {
+                input.clean(window, cx);
+                input.focus(window, cx);
+            });
+        })
 }

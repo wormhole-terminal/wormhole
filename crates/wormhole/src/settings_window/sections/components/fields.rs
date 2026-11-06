@@ -1,8 +1,6 @@
 //! The text fields: one line and several, the states a field has, and the search field of the nav.
 
 use gpui_kit::assets::IconName;
-use gpui_kit::component::Sizable;
-use gpui_kit::component::input::Input;
 use gpui_kit::*;
 
 use super::{Sheet, category, specimen};
@@ -35,8 +33,7 @@ pub(super) fn draw(sheet: &Sheet, _cx: &App) -> AnyElement {
         style::text_field(ui, &now.letter).w(style::FIELD_W_LETTER).into_any_element(),
     ]);
     let nav_search = div().w(px(crate::settings_window::nav::NAV_W)).child(
-        Input::new(&now.search)
-            .small()
+        style::text_field(ui, &now.search)
             .cleanable(true)
             .prefix(style::icon(IconName::Search).text_color(ui.muted))
             .suffix(div().text_caption().tabular_nums().text_color(ui.muted).child("12")), // text: sample (a hit count)
@@ -54,7 +51,7 @@ pub(super) fn draw(sheet: &Sheet, _cx: &App) -> AnyElement {
                 style::TextField::multiline(ui, &now.lines).w(style::FIELD_W_BOX),
             )
             .into_any_element(),
-            specimen(ui, "nav search · Input with prefix, clear and a hit count", nav_search) // text: sample (a developer label)
+            specimen(ui, "nav search · text_field with prefix, clear and a hit count", nav_search) // text: sample (a developer label)
                 .into_any_element(), // text: sample (a specimen's name)
         ],
     )
