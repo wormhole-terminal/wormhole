@@ -44,7 +44,7 @@
 //! this budget had before, but that is not the Import row: the commit before it already drew 9,600 and
 //! 5,478 there, inside [`SLACK`] of the old 9,588 and 5,458, and the same goes for 2 on Appearance, Feature
 //! flags and the search. The Import page is measured over the visual checks' fixture home (three terminals,
-//! Ghostty's card open with its 13 rows and what doesn't carry over, and the comparison), not over the
+//! Ghostty's card open with its 13 rows and what doesn't carry over), not over the
 //! "Looking for terminals" line a fresh page shows.
 //! Feature flags rose by about 380 when the page gained a row for the Folder picker flag (6,874 measured).
 //! On main's frame (the strip fills, the icon motions and the Motion page) it measured 53,067.
@@ -119,7 +119,8 @@ const BUDGET: [(&str, u64); 18] = [
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
     ("Agents", 9682),
-    ("Import", 49182),
+    // Fell from 49,182 when the comparison left the page: the open card and its rows are what is drawn.
+    ("Import", 22801),
     ("Notifications", 7654),
     ("MenuBar", 6196),
     ("Updates", 5080),
@@ -207,7 +208,7 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
         cx.run_until_parked();
         if section == Section::Import {
             // The page's own scan has run over the scratch home and found nothing; measure the page
-            // that has something to show: the cards, the open one's rows, the comparison.
+            // that has something to show: the cards and the open one's rows.
             let found = fixture_scan();
             cx.update(|cx| page.update(cx, |page, cx| page.set_import(found, cx)));
             cx.run_until_parked();

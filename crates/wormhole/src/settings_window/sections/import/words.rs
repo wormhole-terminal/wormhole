@@ -1,11 +1,9 @@
-//! The Import page's words: which catalog message says each setting, value, reason and comparison.
-//! Core hands over enums and ids (it writes no sentence); each is mapped to its key here, and a test
-//! walks the data so a new id without a message fails.
+//! The Import page's words: which catalog message says each setting, value and reason.
+//! Core hands over enums (it writes no sentence); each is mapped to its key here, and the compiler
+//! fails on a variant without a message.
 
 use wormhole_core::config::OptionAsMeta;
-use wormhole_core::import::{
-    Comparison, Reason, Setting, SettingValue, SkippedKind, Source, command_line, visible,
-};
+use wormhole_core::import::{Reason, Setting, SettingValue, SkippedKind, command_line, visible};
 use wormhole_text::Key;
 #[allow(
     clippy::wildcard_imports,
@@ -13,30 +11,6 @@ use wormhole_text::Key;
 )]
 use wormhole_text::keys::*;
 use wormhole_text::text;
-
-/// Whose comparison a card shows: a terminal's, or Wormhole's own.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Subject {
-    Terminal(Source),
-    Wormhole,
-}
-
-impl Subject {
-    /// The name its messages carry (`settings-import-gap-<key>-<id>`).
-    fn key(self) -> &'static str {
-        match self {
-            Subject::Terminal(source) => source.key(),
-            Subject::Wormhole => "wormhole",
-        }
-    }
-
-    pub(super) fn name(self) -> &'static str {
-        match self {
-            Subject::Terminal(source) => crate::settings::import::terminal_name(source),
-            Subject::Wormhole => text(SETTINGS_IMPORT_TERMINAL_WORMHOLE),
-        }
-    }
-}
 
 /// What a setting is called. `pair`: the proposal has a palette for each appearance, so the dark
 /// one says so.
@@ -119,97 +93,9 @@ pub(super) fn reason_text(reason: &Reason) -> String {
     }
 }
 
-/// The one-line strength of a subject.
-pub(super) fn strength_text(subject: Subject, comparison: &Comparison) -> Option<&'static str> {
-    let key = match (subject.key(), comparison.strength) {
-        ("ghostty", "native_tabs_graphics") => SETTINGS_IMPORT_STRENGTH_GHOSTTY_NATIVE_TABS_GRAPHICS,
-        ("iterm2", "broadest_features") => SETTINGS_IMPORT_STRENGTH_ITERM2_BROADEST_FEATURES,
-        ("terminal-app", "built_into_macos") => SETTINGS_IMPORT_STRENGTH_TERMINAL_APP_BUILT_INTO_MACOS,
-        ("alacritty", "minimal_fast") => SETTINGS_IMPORT_STRENGTH_ALACRITTY_MINIMAL_FAST,
-        ("kitty", "fast_scriptable") => SETTINGS_IMPORT_STRENGTH_KITTY_FAST_SCRIPTABLE,
-        ("wezterm", "multiplexer_lua") => SETTINGS_IMPORT_STRENGTH_WEZTERM_MULTIPLEXER_LUA,
-        ("warp", "agent_focused") => SETTINGS_IMPORT_STRENGTH_WARP_AGENT_FOCUSED,
-        ("zed", "terminal_in_editor") => SETTINGS_IMPORT_STRENGTH_ZED_TERMINAL_IN_EDITOR,
-        ("vscode", "terminal_in_editor") => SETTINGS_IMPORT_STRENGTH_VSCODE_TERMINAL_IN_EDITOR,
-        ("wormhole", "agent_sidebar") => SETTINGS_IMPORT_STRENGTH_WORMHOLE_AGENT_SIDEBAR,
-        _ => return None,
-    };
-    Some(text(key))
-}
-
-/// A drawback's sentence.
-pub(super) fn gap_text(subject: Subject, id: &str) -> Option<&'static str> {
-    let key = match (subject.key(), id) {
-        ("ghostty", "no_session_persistence") => SETTINGS_IMPORT_GAP_GHOSTTY_NO_SESSION_PERSISTENCE,
-        ("ghostty", "agent_status_not_shown") => SETTINGS_IMPORT_GAP_GHOSTTY_AGENT_STATUS_NOT_SHOWN,
-        ("ghostty", "command_notify_off") => SETTINGS_IMPORT_GAP_GHOSTTY_COMMAND_NOTIFY_OFF,
-        ("ghostty", "no_sixel") => SETTINGS_IMPORT_GAP_GHOSTTY_NO_SIXEL,
-        ("ghostty", "config_file_only") => SETTINGS_IMPORT_GAP_GHOSTTY_CONFIG_FILE_ONLY,
-        ("iterm2", "quit_ends_programs") => SETTINGS_IMPORT_GAP_ITERM2_QUIT_ENDS_PROGRAMS,
-        ("iterm2", "ligatures_disable_gpu") => SETTINGS_IMPORT_GAP_ITERM2_LIGATURES_DISABLE_GPU,
-        ("iterm2", "ai_setup_required") => SETTINGS_IMPORT_GAP_ITERM2_AI_SETUP_REQUIRED,
-        ("terminal-app", "no_kitty_keyboard") => SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_KITTY_KEYBOARD,
-        ("terminal-app", "no_inline_images") => SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_INLINE_IMAGES,
-        ("terminal-app", "no_agent_status") => SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_AGENT_STATUS,
-        ("alacritty", "no_tabs_or_splits") => SETTINGS_IMPORT_GAP_ALACRITTY_NO_TABS_OR_SPLITS,
-        ("alacritty", "no_images") => SETTINGS_IMPORT_GAP_ALACRITTY_NO_IMAGES,
-        ("alacritty", "no_ligatures") => SETTINGS_IMPORT_GAP_ALACRITTY_NO_LIGATURES,
-        ("alacritty", "config_file_only") => SETTINGS_IMPORT_GAP_ALACRITTY_CONFIG_FILE_ONLY,
-        ("alacritty", "no_agent_status") => SETTINGS_IMPORT_GAP_ALACRITTY_NO_AGENT_STATUS,
-        ("kitty", "no_session_persistence") => SETTINGS_IMPORT_GAP_KITTY_NO_SESSION_PERSISTENCE,
-        ("kitty", "gui_launch_env") => SETTINGS_IMPORT_GAP_KITTY_GUI_LAUNCH_ENV,
-        ("kitty", "no_sixel") => SETTINGS_IMPORT_GAP_KITTY_NO_SIXEL,
-        ("kitty", "config_file_only") => SETTINGS_IMPORT_GAP_KITTY_CONFIG_FILE_ONLY,
-        ("wezterm", "no_release_since_2024") => SETTINGS_IMPORT_GAP_WEZTERM_NO_RELEASE_SINCE_2024,
-        ("wezterm", "persistence_needs_setup") => SETTINGS_IMPORT_GAP_WEZTERM_PERSISTENCE_NEEDS_SETUP,
-        ("wezterm", "kitty_keyboard_off") => SETTINGS_IMPORT_GAP_WEZTERM_KITTY_KEYBOARD_OFF,
-        ("wezterm", "config_is_lua") => SETTINGS_IMPORT_GAP_WEZTERM_CONFIG_IS_LUA,
-        ("wezterm", "macos_26_reports") => SETTINGS_IMPORT_GAP_WEZTERM_MACOS_26_REPORTS,
-        ("warp", "programs_end_on_relaunch") => SETTINGS_IMPORT_GAP_WARP_PROGRAMS_END_ON_RELAUNCH,
-        ("warp", "telemetry_for_free_ai") => SETTINGS_IMPORT_GAP_WARP_TELEMETRY_FOR_FREE_AI,
-        ("warp", "login_for_some_features") => SETTINGS_IMPORT_GAP_WARP_LOGIN_FOR_SOME_FEATURES,
-        ("warp", "offline_requested") => SETTINGS_IMPORT_GAP_WARP_OFFLINE_REQUESTED,
-        ("warp", "no_sixel") => SETTINGS_IMPORT_GAP_WARP_NO_SIXEL,
-        ("zed", "editor_panel") => SETTINGS_IMPORT_GAP_ZED_EDITOR_PANEL,
-        ("zed", "no_images") => SETTINGS_IMPORT_GAP_ZED_NO_IMAGES,
-        ("zed", "no_kitty_keyboard") => SETTINGS_IMPORT_GAP_ZED_NO_KITTY_KEYBOARD,
-        ("zed", "terminal_ligatures") => SETTINGS_IMPORT_GAP_ZED_TERMINAL_LIGATURES,
-        ("zed", "telemetry_on") => SETTINGS_IMPORT_GAP_ZED_TELEMETRY_ON,
-        ("vscode", "editor_panel") => SETTINGS_IMPORT_GAP_VSCODE_EDITOR_PANEL,
-        ("vscode", "programs_relaunched") => SETTINGS_IMPORT_GAP_VSCODE_PROGRAMS_RELAUNCHED,
-        ("vscode", "images_off") => SETTINGS_IMPORT_GAP_VSCODE_IMAGES_OFF,
-        ("vscode", "scrollback_1000") => SETTINGS_IMPORT_GAP_VSCODE_SCROLLBACK_1000,
-        ("vscode", "telemetry_on") => SETTINGS_IMPORT_GAP_VSCODE_TELEMETRY_ON,
-        ("wormhole", "macos_only") => SETTINGS_IMPORT_GAP_WORMHOLE_MACOS_ONLY,
-        ("wormhole", "young_project") => SETTINGS_IMPORT_GAP_WORMHOLE_YOUNG_PROJECT,
-        ("wormhole", "programs_end_on_quit") => SETTINGS_IMPORT_GAP_WORMHOLE_PROGRAMS_END_ON_QUIT,
-        ("wormhole", "voiceover_no_terminal_text") => SETTINGS_IMPORT_GAP_WORMHOLE_VOICEOVER_NO_TERMINAL_TEXT,
-        ("wormhole", "kitty_keyboard_partial") => SETTINGS_IMPORT_GAP_WORMHOLE_KITTY_KEYBOARD_PARTIAL,
-        _ => return None,
-    };
-    Some(text(key))
-}
-
 #[cfg(test)]
 mod tests {
-    use wormhole_core::import::{WORMHOLE, comparison};
-
     use super::*;
-
-    #[test]
-    fn every_strength_and_drawback_has_its_sentence() {
-        let subjects = Source::ALL
-            .into_iter()
-            .map(|source| (Subject::Terminal(source), comparison(source)))
-            .chain([(Subject::Wormhole, &WORMHOLE)]);
-        for (subject, comparison) in subjects {
-            assert!(strength_text(subject, comparison).is_some_and(|t| !t.is_empty()), "{:?}", subject);
-            for drawback in comparison.drawbacks {
-                let said = gap_text(subject, drawback.id);
-                assert!(said.is_some_and(|t| !t.is_empty()), "{:?} {}", subject, drawback.id);
-            }
-        }
-    }
 
     #[test]
     fn a_font_that_is_not_installed_is_named() {

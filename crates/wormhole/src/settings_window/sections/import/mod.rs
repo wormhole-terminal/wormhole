@@ -1,12 +1,10 @@
-//! Import: the terminals found on this Mac, what each would bring over (and what it can't), and how
-//! each compares with Wormhole. The page is two blocks drawn from the scan the window keeps
-//! (`found`, `review`, `compare`); the words are in `words`.
+//! Import: the terminals found on this Mac, and what each would bring over (and what it can't). The
+//! page is one block drawn from the scan the window keeps (`found`, `review`); the words are in `words`.
 //!
 //! The scan reads files under the real home, so it runs on the background executor and only when
 //! the page is first shown or "Scan again" is pressed, never at launch. Nothing is written until
 //! "Import selected".
 
-mod compare;
 mod found;
 mod review;
 mod words;
@@ -21,8 +19,7 @@ use crate::settings::import::{self as shared, Brought};
 use crate::settings_window::SettingsWindow;
 use crate::settings_window::registry::Setting;
 
-pub(super) const SETTINGS: &[Setting] =
-    &[Setting::block("import-found", found::draw), Setting::block("import-compare", compare::draw)];
+pub(super) const SETTINGS: &[Setting] = &[Setting::block("import-found", found::draw)];
 
 /// What the page keeps of its scan: the terminals found, the one open, which rows are ticked.
 #[derive(Default)]
@@ -43,11 +40,6 @@ pub(crate) struct ImportPage {
 impl ImportPage {
     pub(crate) fn scanning(&self) -> bool {
         self.task.is_some()
-    }
-
-    fn open_found(&self) -> Option<&Found> {
-        let open = self.open?;
-        self.found.as_ref()?.iter().find(|found| found.source == open)
     }
 
     /// The rows of `found` that are ticked, as the page shows them.

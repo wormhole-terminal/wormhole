@@ -146,9 +146,6 @@ section Import
 group "Found on this Mac"
   blurb ""
   aside ""
-group "Compared with Wormhole"
-  blurb ""
-  aside ""
 section Notifications
   title "Notifications"
   intro "What Wormhole tells you about terminals you aren't looking at."
@@ -563,10 +560,6 @@ entry Import import-found
   label "Terminals found"
   description ""
   keywords "import migrate switch move settings config configuration ghostty iterm iterm2 terminal.app alacritty kitty wezterm warp zed vscode vs code font theme colours colors shell"
-entry Import import-compare
-  label "How they compare"
-  description ""
-  keywords "drawbacks limits strengths differences versus comparison alternatives"
 entry Notifications notify-permission
   label "Notifications in System Settings"
   description ""
