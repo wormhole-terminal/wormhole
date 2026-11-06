@@ -247,7 +247,7 @@ fn glass_held_note(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opti
     })
 }
 
-/// The settings and Studio windows in one row of checkboxes.
+/// The settings, Studio and Session Hosts windows in one row of checkboxes.
 fn draw_translucent(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let (ui, s) = (ui(cx), settings(cx));
     div()
@@ -263,6 +263,11 @@ fn draw_translucent(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
             style::checkbox("translucent-studio", ui, s.studio_translucent)
                 .in_form(text(SETTINGS_APPEARANCE_THEME_STUDIO))
                 .on_change(|checked, _, cx| update_settings(cx, |s| s.studio_translucent = checked)),
+        )
+        .child(
+            style::checkbox("translucent-hosts", ui, s.hosts_translucent)
+                .in_form(text(SETTINGS_APPEARANCE_SESSION_HOSTS))
+                .on_change(|checked, _, cx| update_settings(cx, |s| s.hosts_translucent = checked)),
         )
         .into_any_element()
 }

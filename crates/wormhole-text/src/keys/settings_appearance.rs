@@ -70,7 +70,7 @@ pub const SETTINGS_APPEARANCE_LIQUID_GLASS_KEYWORDS: Key = Key::new(492);
 pub const SETTINGS_APPEARANCE_TRANSLUCENT: Key = Key::new(493);
 /// "Use the opacity and blur above for these windows too"
 pub const SETTINGS_APPEARANCE_TRANSLUCENT_DESCRIPTION: Key = Key::new(494);
-/// "settings theme studio window"
+/// "settings theme studio session hosts window"
 pub const SETTINGS_APPEARANCE_TRANSLUCENT_KEYWORDS: Key = Key::new(495);
 /// "Borders"
 pub const SETTINGS_APPEARANCE_BORDERS: Key = Key::new(496);
@@ -152,66 +152,68 @@ pub const SETTINGS_APPEARANCE_GLASS_HELD_BY_ACCESSIBILITY: Key = Key::new(533);
 pub const SETTINGS_APPEARANCE_SETTINGS: Key = Key::new(534);
 /// "Theme Studio"
 pub const SETTINGS_APPEARANCE_THEME_STUDIO: Key = Key::new(535);
+/// "Session Hosts"
+pub const SETTINGS_APPEARANCE_SESSION_HOSTS: Key = Key::new(536);
 /// "Project settings"
-pub const SETTINGS_APPEARANCE_PROJECT_SETTINGS: Key = Key::new(536);
+pub const SETTINGS_APPEARANCE_PROJECT_SETTINGS: Key = Key::new(537);
 /// "Live preview of a window, with everything below applied as you change it (the blur behind a window isn't drawn here)"
-pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(542);
+pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(543);
 /// "Filter themes"
-pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(543);
+pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(544);
 /// "In Dark Mode"
-pub const SETTINGS_APPEARANCE_IN_DARK_MODE: Key = Key::new(544);
+pub const SETTINGS_APPEARANCE_IN_DARK_MODE: Key = Key::new(545);
 /// "In Light Mode"
-pub const SETTINGS_APPEARANCE_IN_LIGHT_MODE: Key = Key::new(545);
+pub const SETTINGS_APPEARANCE_IN_LIGHT_MODE: Key = Key::new(546);
 /// "Show fewer"
-pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(546);
+pub const SETTINGS_APPEARANCE_SHOW_FEWER: Key = Key::new(547);
 /// "Import theme…"
-pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(547);
+pub const SETTINGS_APPEARANCE_IMPORT_THEME: Key = Key::new(548);
 /// "No themes match the filter."
-pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(548);
+pub const SETTINGS_APPEARANCE_NO_THEMES_MATCH_THE_FILTER: Key = Key::new(549);
 /// "Hide theme"
-pub const SETTINGS_APPEARANCE_HIDE_THEME: Key = Key::new(551);
+pub const SETTINGS_APPEARANCE_HIDE_THEME: Key = Key::new(552);
 /// "Move to Trash"
-pub const SETTINGS_APPEARANCE_MOVE_TO_TRASH: Key = Key::new(552);
+pub const SETTINGS_APPEARANCE_MOVE_TO_TRASH: Key = Key::new(553);
 /// "You can get it back from the Trash."
-pub const SETTINGS_APPEARANCE_TRASH_DETAIL: Key = Key::new(554);
+pub const SETTINGS_APPEARANCE_TRASH_DETAIL: Key = Key::new(555);
 /// "Its unsaved changes are lost."
-pub const SETTINGS_APPEARANCE_TRASH_EDITS: Key = Key::new(558);
+pub const SETTINGS_APPEARANCE_TRASH_EDITS: Key = Key::new(559);
 /// "Show"
-pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(560);
+pub const SETTINGS_APPEARANCE_SHOW_THEME: Key = Key::new(561);
 
 /// ```text
 /// Yours · { $color }, in every theme
 /// ```
 pub fn settings_appearance_primary_yours(color: &str) -> String {
-    crate::active::message(537, &[("color", Arg::Str(color))])
+    crate::active::message(538, &[("color", Arg::Str(color))])
 }
 
 /// ```text
 /// Pick a colour below · the theme's is { $color }
 /// ```
 pub fn settings_appearance_primary_pick(color: &str) -> String {
-    crate::active::message(538, &[("color", Arg::Str(color))])
+    crate::active::message(539, &[("color", Arg::Str(color))])
 }
 
 /// ```text
 /// The theme's · { $color }. { $description }
 /// ```
 pub fn settings_appearance_primary_theme(color: &str, description: &str) -> String {
-    crate::active::message(539, &[("color", Arg::Str(color)), ("description", Arg::Str(description))])
+    crate::active::message(540, &[("color", Arg::Str(color)), ("description", Arg::Str(description))])
 }
 
 /// ```text
 /// Pick a colour below · the theme's is { $color }
 /// ```
 pub fn settings_appearance_branch_pick(color: &str) -> String {
-    crate::active::message(540, &[("color", Arg::Str(color))])
+    crate::active::message(541, &[("color", Arg::Str(color))])
 }
 
 /// ```text
 /// This terminal shows { $project }'s theme. Your own is kept for everything else.
 /// ```
 pub fn settings_appearance_project_theme_note(project: &str) -> String {
-    crate::active::message(541, &[("project", Arg::Str(project))])
+    crate::active::message(542, &[("project", Arg::Str(project))])
 }
 
 /// ```text
@@ -221,56 +223,56 @@ pub fn settings_appearance_project_theme_note(project: &str) -> String {
 /// }
 /// ```
 pub fn settings_appearance_filter_themes_count(count: i64) -> String {
-    crate::active::message(549, &[("count", Arg::Int(count))])
+    crate::active::message(550, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Show all { $total }
 /// ```
 pub fn settings_appearance_show_all_themes(total: &str) -> String {
-    crate::active::message(550, &[("total", Arg::Str(total))])
+    crate::active::message(551, &[("total", Arg::Str(total))])
 }
 
 /// ```text
 /// Move “{ $name }” to the Trash?
 /// ```
 pub fn settings_appearance_trash_message(name: &str) -> String {
-    crate::active::message(553, &[("name", Arg::Str(name))])
+    crate::active::message(554, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Your dark theme changes to { $to }.
 /// ```
 pub fn settings_appearance_trash_dark(to: &str) -> String {
-    crate::active::message(555, &[("to", Arg::Str(to))])
+    crate::active::message(556, &[("to", Arg::Str(to))])
 }
 
 /// ```text
 /// Your light theme changes to { $to }.
 /// ```
 pub fn settings_appearance_trash_light(to: &str) -> String {
-    crate::active::message(556, &[("to", Arg::Str(to))])
+    crate::active::message(557, &[("to", Arg::Str(to))])
 }
 
 /// ```text
 /// Your dark theme changes to { $dark } and your light theme to { $light }.
 /// ```
 pub fn settings_appearance_trash_both(dark: &str, light: &str) -> String {
-    crate::active::message(557, &[("dark", Arg::Str(dark)), ("light", Arg::Str(light))])
+    crate::active::message(558, &[("dark", Arg::Str(dark)), ("light", Arg::Str(light))])
 }
 
 /// ```text
 /// “{ $name }” could not be moved to the Trash.
 /// ```
 pub fn settings_appearance_trash_failed(name: &str) -> String {
-    crate::active::message(559, &[("name", Arg::Str(name))])
+    crate::active::message(560, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Hidden themes ({ $count })
 /// ```
 pub fn settings_appearance_hidden_themes(count: &str) -> String {
-    crate::active::message(561, &[("count", Arg::Str(count))])
+    crate::active::message(562, &[("count", Arg::Str(count))])
 }
 
 /// ```text
@@ -280,5 +282,5 @@ pub fn settings_appearance_hidden_themes(count: &str) -> String {
 /// }
 /// ```
 pub fn settings_appearance_theme_newer(count: i64) -> String {
-    crate::active::message(562, &[("count", Arg::Int(count))])
+    crate::active::message(563, &[("count", Arg::Int(count))])
 }

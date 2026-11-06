@@ -39,6 +39,7 @@ fn every_setting_is_either_for_projects_or_app_wide() {
         "notifications",
         "settings_translucent",
         "studio_translucent",
+        "hosts_translucent",
         // One switch for every window, so View → Show Status Bar says the same everywhere.
         "status_bar",
         "minimap",

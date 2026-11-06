@@ -135,6 +135,8 @@ pub struct Settings {
     pub settings_translucent: bool,
     /// Theme Studio window: translucent like the main window.
     pub studio_translucent: bool,
+    /// Session Hosts window: translucent like the main window.
+    pub hosts_translucent: bool,
 
     // Fonts outside the terminal (the terminal uses `font_family` / `font_size`).
     /// Interface font (sidebar, panels, settings); empty = the system font.
@@ -357,8 +359,9 @@ impl Default for Settings {
             auto_update: true,
             anonymous_count: true,
             update_channel: UpdateChannel::Stable,
-            settings_translucent: false,
-            studio_translucent: false,
+            settings_translucent: true,
+            studio_translucent: true,
+            hosts_translucent: true,
             ui_font_family: String::new(),
             ui_font_size: 13.0,
             code_font_family: String::new(),

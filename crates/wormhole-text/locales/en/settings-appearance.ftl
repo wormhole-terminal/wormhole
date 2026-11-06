@@ -54,7 +54,7 @@ settings-appearance-liquid-glass = Liquid Glass
 
 settings-appearance-translucent = Also translucent
     .description = Use the opacity and blur above for these windows too
-    .keywords = settings theme studio window
+    .keywords = settings theme studio session hosts window
 
 settings-appearance-borders = Borders
     .description = Lines around cards, columns and the sidebar. Off: surfaces are told apart by their shade alone
@@ -123,6 +123,7 @@ settings-appearance-liquid-glass-beta = Beta
 settings-appearance-glass-held-by-accessibility = Reduce Transparency or Increase Contrast is on in System Settings, so every surface stays painted. The glass returns when it's off.
 settings-appearance-settings = Settings
 settings-appearance-theme-studio = Theme Studio
+settings-appearance-session-hosts = Session Hosts
 settings-appearance-project-settings = Project settings
 
 ## The primary colour row's quiet line, and the project theme note

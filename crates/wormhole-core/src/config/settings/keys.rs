@@ -67,6 +67,7 @@ pub const APP_SETTINGS: &[&str] = &[
     "notifications",
     "settings_translucent",
     "studio_translucent",
+    "hosts_translucent",
     "status_bar",
     "minimap",
     "split_gaps",

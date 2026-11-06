@@ -50,7 +50,7 @@ pub(super) const APPEARANCE: &[Group] = &[
             entry(
                 "translucent",
                 SETTINGS_APPEARANCE_TRANSLUCENT,
-                &["settings_translucent", "studio_translucent"],
+                &["settings_translucent", "studio_translucent", "hosts_translucent"],
             )
             .with_description(SETTINGS_APPEARANCE_TRANSLUCENT_DESCRIPTION)
             .with_keywords(SETTINGS_APPEARANCE_TRANSLUCENT_KEYWORDS),

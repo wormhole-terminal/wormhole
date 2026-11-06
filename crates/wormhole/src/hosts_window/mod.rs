@@ -29,6 +29,8 @@ use wormhole_text::text;
 
 use crate::aux_window;
 use crate::dialog::{self, CloseQuestion};
+use crate::platform::vibrancy::Blur;
+use crate::settings::settings;
 use crate::style;
 use gather::Gather;
 
@@ -66,6 +68,8 @@ pub(crate) struct HostsWindow {
     report: Option<Report>,
     scroll: ScrollHandle,
     focus_handle: FocusHandle,
+    /// The blur behind the window while it is translucent (`hosts_translucent`).
+    blur: Blur,
     copied: Option<Copied>,
     /// The hosts whose cards are opened, by id.
     open: HashSet<String>,
@@ -112,10 +116,12 @@ impl HostsWindow {
     fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let focus_handle = cx.focus_handle();
         window.focus(&focus_handle, cx);
+        let blur = Blur::install(window, style::wants_blur(settings(cx), settings(cx).hosts_translucent));
         let mut this = Self {
             report: None,
             scroll: ScrollHandle::new(),
             focus_handle,
+            blur,
             copied: None,
             open: HashSet::new(),
             _refresh: None,
@@ -254,8 +260,10 @@ impl HostsWindow {
 
 impl Render for HostsWindow {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let ui = crate::settings::window_ui(cx, false);
-        let surfaces = style::window_surfaces(cx, false);
+        let translucent = settings(cx).hosts_translucent;
+        self.blur.set_enabled(style::wants_blur(settings(cx), translucent));
+        let ui = crate::settings::window_ui(cx, translucent);
+        let surfaces = style::window_surfaces(cx, translucent);
         let body: AnyElement = match &self.report {
             None => style::empty_note(ui, text(HOSTS_LOADING)).into_any_element(),
             Some(report) if report.rows.is_empty() => {

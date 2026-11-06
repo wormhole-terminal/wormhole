@@ -278,7 +278,7 @@ entry Appearance liquid-glass
 entry Appearance translucent
   label "Also translucent"
   description "Use the opacity and blur above for these windows too"
-  keywords "settings theme studio window"
+  keywords "settings theme studio session hosts window"
 entry Appearance borders
   label "Borders"
   description "Lines around cards, columns and the sidebar. Off: surfaces are told apart by their shade alone"
