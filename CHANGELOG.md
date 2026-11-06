@@ -53,6 +53,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   already says whether its hooks are on or need repair), each agent is drawn with the coloured tile the sidebar
   gives it, here and in Agent access and the Wormhole skill, and its preview shows an agent working, one asking
   and one finished side by side, whole in the strip.
+- Settings and the Theme Studio are translucent by default, like the main window (Settings → Appearance → Also
+  translucent turns each off).
 - Settings has more space between the items of its sidebar, cannot go full screen or be made wider than its
   page (its green light is dimmed), and shows a page's preview at the top of the page, at most a quarter of the
   window's height, instead of in a column at the right.

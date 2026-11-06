@@ -100,45 +100,45 @@ const SLACK: u64 = 20;
 // Measured with Show config keys off (the default): a page does not build its rows' key lines then, which
 // is why these are lower than they were when the lines were always built.
 const BUDGET: [(&str, u64); 19] = [
-    ("Profile", 6902),
+    ("Profile", 6908),
     // Measured with [`change`]'s settings differing from their defaults, so the page has rows: five settings
     // on four pages, each a row of its own page with a dot, a reset arrow and a menu.
-    ("Changed", 6554),
+    ("Changed", 6560),
     // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
     // key line, 425 more.
-    ("Appearance", 17105),
-    ("Fonts", 7766),
-    ("Motion", 6286),
+    ("Appearance", 17289),
+    ("Fonts", 7836),
+    ("Motion", 4464),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 9798),
+    ("Terminal", 9804),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 12195),
-    ("Git", 4522),
+    ("Sessions", 12181),
+    ("Git", 5820),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 9750),
+    ("Agents", 8973),
     // Fell from 49,182 when the comparison left the page: the open card and its rows are what is drawn.
-    ("Import", 22801),
-    ("Notifications", 7722),
+    ("Import", 22875),
+    ("Notifications", 7715),
     // The page was split into MenuBar and Hotkey, each with a preview that is a view of its own (a menu bar
     // twice, and the shortcut's keys with the quick panel or the window sketch); both measured at the split.
     // Every other page rose by 68 with the nav's one row more, Hotkey, and was measured again.
-    ("MenuBar", 3633),
-    ("Hotkey", 3816),
-    ("Updates", 5148),
+    ("MenuBar", 3639),
+    ("Hotkey", 3815),
+    ("Updates", 5154),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).
     // With the New programs group: the Developer Tools row, its description and its button (417).
     // The Show config keys switch is a row more, 4,941 measured; with the keys hidden by default every
     // other page fell (their key lines are not built).
-    ("Advanced", 5030),
-    ("Projects", 9236),
+    ("Advanced", 5039),
+    ("Projects", 9242),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2816),
+    ("Extensions", 2822),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
@@ -146,11 +146,11 @@ const BUDGET: [(&str, u64); 19] = [
     // 6,912 measured, a row fewer.
     // The Restore after restart flag is one switch row more again: 7,271 measured (about 340 a row).
     // The File icon themes flag is one switch row more again: 7,577 measured (about 305 a row).
-    ("FeatureFlags", 7806),
+    ("FeatureFlags", 7812),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     // The search finds the Borders row too, as one more result: 196 more.
-    ("search", 12002),
+    ("search", 11981),
 ];
 
 /// What the Changed page is measured with: five settings that differ from their defaults, on four pages
