@@ -623,6 +623,8 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("history-spoken-parents", history_spoken_parents("Sample")),
         ("history-open-parent", history_open_parent("Sample")),
         ("hosts-header-app", hosts_header_app("Sample", "Sample")),
+        ("hosts-row-label", hosts_row_label("Sample", "Sample", "Sample")),
+        ("hosts-problem", hosts_problem("Sample", "Sample")),
         ("hosts-empty", hosts_empty("Sample")),
         ("hosts-standing-attached-to", hosts_standing_attached_to("Sample", "Sample")),
         ("hosts-started", hosts_started("Sample", "Sample")),

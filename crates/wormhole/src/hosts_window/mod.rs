@@ -1,23 +1,23 @@
 //! The Session Hosts window (Help → Session Hosts, while persistent terminals are on): what the
 //! processes that keep terminals running behind the app are doing, so a person can see whether
-//! things are right. Every host in the hosts folder is a card: its ids and processes, its version
-//! and protocol against this app's, whether it answers, and for an attached one the connection's
-//! counters. The data is core's `ipc::hosts::report` (collected off the main thread when the hosts folder
+//! things are right. Every host in the hosts folder is a card: its state and the terminal that holds it, what
+//! is wrong with it; opened, its ids and processes, its version and protocol against this app's, whether it
+//! answers, and for an attached one the connection's counters. The data is core's `ipc::hosts::report` (collected off the main thread when the hosts folder
 //! changes, and on a slow look while the window is open: `follow`); this module only draws it and carries
 //! out End, Forget and Copy.
 
-mod card;
+mod detail;
 #[cfg(feature = "devctl")]
 mod devctl;
 mod follow;
 mod gather;
 mod header;
+mod row;
 mod words;
 
+use std::collections::HashSet;
 use std::time::Duration;
 
-use gpui_kit::component::Sizable as _;
-use gpui_kit::component::button::Button;
 use gpui_kit::*;
 use wormhole_core::ipc::hosts::report::Report;
 use wormhole_core::ipc::hosts::{self, EndHow};
@@ -67,6 +67,8 @@ pub(crate) struct HostsWindow {
     scroll: ScrollHandle,
     focus_handle: FocusHandle,
     copied: Option<Copied>,
+    /// The hosts whose cards are opened, by id.
+    open: HashSet<String>,
     _refresh: Option<Task<()>>,
     _copied_reset: Option<Task<()>>,
 }
@@ -115,6 +117,7 @@ impl HostsWindow {
             scroll: ScrollHandle::new(),
             focus_handle,
             copied: None,
+            open: HashSet::new(),
             _refresh: None,
             _copied_reset: None,
         };
@@ -240,9 +243,12 @@ impl HostsWindow {
         .detach();
     }
 
-    /// A small outlined button.
-    fn button(id: impl Into<ElementId>, label: &'static str) -> Button {
-        Button::new(id).outline().small().label(label)
+    /// Open a host's card, or fold it.
+    fn toggle(&mut self, id: &str, cx: &mut Context<Self>) {
+        if !self.open.remove(id) {
+            self.open.insert(id.to_string());
+        }
+        cx.notify();
     }
 }
 
@@ -262,7 +268,7 @@ impl Render for HostsWindow {
                     .enumerate()
                     .map(|(ix, row)| self.card(ix, row, report, ui, cx))
                     .collect();
-                div().flex().flex_col().gap_3().children(cards).into_any_element()
+                div().flex().flex_col().gap_2().children(cards).into_any_element()
             }
         };
         let header = self.report.as_ref().map(|report| self.header(report, ui, cx));
@@ -289,8 +295,8 @@ impl Render for HostsWindow {
                     .min_h_0()
                     .overflow_y_scroll()
                     .track_scroll(&self.scroll)
-                    .px_4()
-                    .pb_4()
+                    .px_6()
+                    .pb_6()
                     .child(body),
             )
     }

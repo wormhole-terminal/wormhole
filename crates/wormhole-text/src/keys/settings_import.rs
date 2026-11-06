@@ -7,259 +7,259 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Import"
-pub const SETTINGS_SECTION_IMPORT: Key = Key::new(715);
+pub const SETTINGS_SECTION_IMPORT: Key = Key::new(717);
 /// "Bring your font, colours, shell and more over from the terminal you used before. Nothing changes until you choose what to import, and the other terminal's own files are never touched."
-pub const SETTINGS_SECTION_IMPORT_INTRO: Key = Key::new(716);
+pub const SETTINGS_SECTION_IMPORT_INTRO: Key = Key::new(718);
 /// "Found on this Mac"
-pub const SETTINGS_IMPORT_GROUP_FOUND: Key = Key::new(717);
+pub const SETTINGS_IMPORT_GROUP_FOUND: Key = Key::new(719);
 /// "Terminals found"
-pub const SETTINGS_IMPORT_FOUND: Key = Key::new(718);
+pub const SETTINGS_IMPORT_FOUND: Key = Key::new(720);
 /// "import migrate switch move settings config configuration ghostty iterm iterm2 terminal.app alacritty kitty wezterm warp zed vscode vs code font theme colours colors shell"
-pub const SETTINGS_IMPORT_FOUND_KEYWORDS: Key = Key::new(719);
+pub const SETTINGS_IMPORT_FOUND_KEYWORDS: Key = Key::new(721);
 /// "Scan again"
-pub const SETTINGS_IMPORT_SCAN_AGAIN: Key = Key::new(720);
+pub const SETTINGS_IMPORT_SCAN_AGAIN: Key = Key::new(722);
 /// "Looking for terminals…"
-pub const SETTINGS_IMPORT_SCANNING: Key = Key::new(721);
+pub const SETTINGS_IMPORT_SCANNING: Key = Key::new(723);
 /// "No other terminal's settings found"
-pub const SETTINGS_IMPORT_NONE: Key = Key::new(722);
+pub const SETTINGS_IMPORT_NONE: Key = Key::new(724);
 /// "Wormhole looked for Ghostty, iTerm2, Terminal.app, Alacritty, kitty, WezTerm, Warp, Zed and VS Code in the places they keep their settings, and found none."
-pub const SETTINGS_IMPORT_NONE_DETAIL: Key = Key::new(723);
+pub const SETTINGS_IMPORT_NONE_DETAIL: Key = Key::new(725);
 /// "Files read"
-pub const SETTINGS_IMPORT_FILES_READ: Key = Key::new(724);
+pub const SETTINGS_IMPORT_FILES_READ: Key = Key::new(726);
 /// "Brings over"
-pub const SETTINGS_IMPORT_TAKE: Key = Key::new(727);
+pub const SETTINGS_IMPORT_TAKE: Key = Key::new(729);
 /// "Doesn't carry over"
-pub const SETTINGS_IMPORT_LEAVE: Key = Key::new(728);
+pub const SETTINGS_IMPORT_LEAVE: Key = Key::new(730);
 /// "Nothing in these settings can be brought over."
-pub const SETTINGS_IMPORT_NOTHING_TO_TAKE: Key = Key::new(729);
+pub const SETTINGS_IMPORT_NOTHING_TO_TAKE: Key = Key::new(731);
 /// "Wormhole would run this in every new terminal, so it isn't ticked until you tick it."
-pub const SETTINGS_IMPORT_RUNS_EVERYWHERE: Key = Key::new(730);
+pub const SETTINGS_IMPORT_RUNS_EVERYWHERE: Key = Key::new(732);
 /// "Import selected"
-pub const SETTINGS_IMPORT_APPLY: Key = Key::new(732);
+pub const SETTINGS_IMPORT_APPLY: Key = Key::new(734);
 /// "Ghostty"
-pub const SETTINGS_IMPORT_TERMINAL_GHOSTTY: Key = Key::new(735);
+pub const SETTINGS_IMPORT_TERMINAL_GHOSTTY: Key = Key::new(737);
 /// "iTerm2"
-pub const SETTINGS_IMPORT_TERMINAL_ITERM2: Key = Key::new(736);
+pub const SETTINGS_IMPORT_TERMINAL_ITERM2: Key = Key::new(738);
 /// "Terminal.app"
-pub const SETTINGS_IMPORT_TERMINAL_TERMINAL_APP: Key = Key::new(737);
+pub const SETTINGS_IMPORT_TERMINAL_TERMINAL_APP: Key = Key::new(739);
 /// "Alacritty"
-pub const SETTINGS_IMPORT_TERMINAL_ALACRITTY: Key = Key::new(738);
+pub const SETTINGS_IMPORT_TERMINAL_ALACRITTY: Key = Key::new(740);
 /// "kitty"
-pub const SETTINGS_IMPORT_TERMINAL_KITTY: Key = Key::new(739);
+pub const SETTINGS_IMPORT_TERMINAL_KITTY: Key = Key::new(741);
 /// "WezTerm"
-pub const SETTINGS_IMPORT_TERMINAL_WEZTERM: Key = Key::new(740);
+pub const SETTINGS_IMPORT_TERMINAL_WEZTERM: Key = Key::new(742);
 /// "Warp"
-pub const SETTINGS_IMPORT_TERMINAL_WARP: Key = Key::new(741);
+pub const SETTINGS_IMPORT_TERMINAL_WARP: Key = Key::new(743);
 /// "Zed"
-pub const SETTINGS_IMPORT_TERMINAL_ZED: Key = Key::new(742);
+pub const SETTINGS_IMPORT_TERMINAL_ZED: Key = Key::new(744);
 /// "VS Code"
-pub const SETTINGS_IMPORT_TERMINAL_VSCODE: Key = Key::new(743);
+pub const SETTINGS_IMPORT_TERMINAL_VSCODE: Key = Key::new(745);
 /// "Wormhole"
-pub const SETTINGS_IMPORT_TERMINAL_WORMHOLE: Key = Key::new(744);
+pub const SETTINGS_IMPORT_TERMINAL_WORMHOLE: Key = Key::new(746);
 /// "Font"
-pub const SETTINGS_IMPORT_SETTING_FONT_FAMILY: Key = Key::new(745);
+pub const SETTINGS_IMPORT_SETTING_FONT_FAMILY: Key = Key::new(747);
 /// "Font size"
-pub const SETTINGS_IMPORT_SETTING_FONT_SIZE: Key = Key::new(746);
+pub const SETTINGS_IMPORT_SETTING_FONT_SIZE: Key = Key::new(748);
 /// "Line height"
-pub const SETTINGS_IMPORT_SETTING_LINE_HEIGHT: Key = Key::new(747);
+pub const SETTINGS_IMPORT_SETTING_LINE_HEIGHT: Key = Key::new(749);
 /// "Ligatures"
-pub const SETTINGS_IMPORT_SETTING_LIGATURES: Key = Key::new(748);
+pub const SETTINGS_IMPORT_SETTING_LIGATURES: Key = Key::new(750);
 /// "Colours"
-pub const SETTINGS_IMPORT_SETTING_THEME: Key = Key::new(749);
+pub const SETTINGS_IMPORT_SETTING_THEME: Key = Key::new(751);
 /// "Colours, dark mode"
-pub const SETTINGS_IMPORT_SETTING_THEME_DARK: Key = Key::new(750);
+pub const SETTINGS_IMPORT_SETTING_THEME_DARK: Key = Key::new(752);
 /// "Colours, light mode"
-pub const SETTINGS_IMPORT_SETTING_THEME_LIGHT: Key = Key::new(751);
+pub const SETTINGS_IMPORT_SETTING_THEME_LIGHT: Key = Key::new(753);
 /// "Opacity"
-pub const SETTINGS_IMPORT_SETTING_OPACITY: Key = Key::new(752);
+pub const SETTINGS_IMPORT_SETTING_OPACITY: Key = Key::new(754);
 /// "Background blur"
-pub const SETTINGS_IMPORT_SETTING_BLUR: Key = Key::new(753);
+pub const SETTINGS_IMPORT_SETTING_BLUR: Key = Key::new(755);
 /// "Option as Meta"
-pub const SETTINGS_IMPORT_SETTING_OPTION_AS_META: Key = Key::new(754);
+pub const SETTINGS_IMPORT_SETTING_OPTION_AS_META: Key = Key::new(756);
 /// "Scrollback lines"
-pub const SETTINGS_IMPORT_SETTING_SCROLLBACK: Key = Key::new(755);
+pub const SETTINGS_IMPORT_SETTING_SCROLLBACK: Key = Key::new(757);
 /// "Bell sound"
-pub const SETTINGS_IMPORT_SETTING_BELL_SOUND: Key = Key::new(756);
+pub const SETTINGS_IMPORT_SETTING_BELL_SOUND: Key = Key::new(758);
 /// "Visual bell"
-pub const SETTINGS_IMPORT_SETTING_BELL_VISUAL: Key = Key::new(757);
+pub const SETTINGS_IMPORT_SETTING_BELL_VISUAL: Key = Key::new(759);
 /// "Shell"
-pub const SETTINGS_IMPORT_SETTING_DEFAULT_SHELL: Key = Key::new(758);
+pub const SETTINGS_IMPORT_SETTING_DEFAULT_SHELL: Key = Key::new(760);
 /// "Shell command"
-pub const SETTINGS_IMPORT_SETTING_SHELL_PROFILE: Key = Key::new(759);
+pub const SETTINGS_IMPORT_SETTING_SHELL_PROFILE: Key = Key::new(761);
 /// "On"
-pub const SETTINGS_IMPORT_VALUE_ON: Key = Key::new(760);
+pub const SETTINGS_IMPORT_VALUE_ON: Key = Key::new(762);
 /// "Off"
-pub const SETTINGS_IMPORT_VALUE_OFF: Key = Key::new(761);
+pub const SETTINGS_IMPORT_VALUE_OFF: Key = Key::new(763);
 /// "Left Option key"
-pub const SETTINGS_IMPORT_VALUE_META_LEFT: Key = Key::new(762);
+pub const SETTINGS_IMPORT_VALUE_META_LEFT: Key = Key::new(764);
 /// "Right Option key"
-pub const SETTINGS_IMPORT_VALUE_META_RIGHT: Key = Key::new(763);
+pub const SETTINGS_IMPORT_VALUE_META_RIGHT: Key = Key::new(765);
 /// "Both Option keys"
-pub const SETTINGS_IMPORT_VALUE_META_BOTH: Key = Key::new(764);
+pub const SETTINGS_IMPORT_VALUE_META_BOTH: Key = Key::new(766);
 /// "Wormhole has no setting for the cursor's shape yet."
-pub const SETTINGS_IMPORT_REASON_CURSOR_SHAPE: Key = Key::new(765);
+pub const SETTINGS_IMPORT_REASON_CURSOR_SHAPE: Key = Key::new(767);
 /// "Wormhole has no setting for a blinking cursor yet."
-pub const SETTINGS_IMPORT_REASON_CURSOR_BLINK: Key = Key::new(766);
+pub const SETTINGS_IMPORT_REASON_CURSOR_BLINK: Key = Key::new(768);
 /// "Wormhole has no setting for the space around the text yet."
-pub const SETTINGS_IMPORT_REASON_PADDING: Key = Key::new(767);
+pub const SETTINGS_IMPORT_REASON_PADDING: Key = Key::new(769);
 /// "Wormhole has no copy-on-select setting yet."
-pub const SETTINGS_IMPORT_REASON_COPY_ON_SELECT: Key = Key::new(768);
+pub const SETTINGS_IMPORT_REASON_COPY_ON_SELECT: Key = Key::new(770);
 /// "Wormhole has no setting for confirming before a terminal closes."
-pub const SETTINGS_IMPORT_REASON_CONFIRM_CLOSE: Key = Key::new(769);
+pub const SETTINGS_IMPORT_REASON_CONFIRM_CLOSE: Key = Key::new(771);
 /// "Wormhole has no setting for the folder a new terminal starts in."
-pub const SETTINGS_IMPORT_REASON_WORKING_DIRECTORY: Key = Key::new(770);
+pub const SETTINGS_IMPORT_REASON_WORKING_DIRECTORY: Key = Key::new(772);
 /// "Wormhole has no file for your own key bindings yet."
-pub const SETTINGS_IMPORT_REASON_KEYBINDING: Key = Key::new(771);
+pub const SETTINGS_IMPORT_REASON_KEYBINDING: Key = Key::new(773);
 /// "Environment variables are set per profile in Settings, not imported."
-pub const SETTINGS_IMPORT_REASON_ENVIRONMENT: Key = Key::new(772);
+pub const SETTINGS_IMPORT_REASON_ENVIRONMENT: Key = Key::new(774);
 /// "Wormhole has no separate bold or italic fonts, or a second font for other text."
-pub const SETTINGS_IMPORT_REASON_FONT_VARIANT: Key = Key::new(773);
+pub const SETTINGS_IMPORT_REASON_FONT_VARIANT: Key = Key::new(775);
 /// "Wormhole has no setting for letter spacing or cell width."
-pub const SETTINGS_IMPORT_REASON_CELL_WIDTH: Key = Key::new(774);
+pub const SETTINGS_IMPORT_REASON_CELL_WIDTH: Key = Key::new(776);
 /// "Wormhole has no such setting."
-pub const SETTINGS_IMPORT_REASON_OTHER: Key = Key::new(775);
+pub const SETTINGS_IMPORT_REASON_OTHER: Key = Key::new(777);
 /// "Wormhole can't show this value."
-pub const SETTINGS_IMPORT_REASON_UNSUPPORTED_VALUE: Key = Key::new(776);
+pub const SETTINGS_IMPORT_REASON_UNSUPPORTED_VALUE: Key = Key::new(778);
 /// "It's computed in Lua, which Wormhole never runs."
-pub const SETTINGS_IMPORT_REASON_DYNAMIC_LUA: Key = Key::new(777);
+pub const SETTINGS_IMPORT_REASON_DYNAMIC_LUA: Key = Key::new(779);
 /// "It runs a program, which an import never does."
-pub const SETTINGS_IMPORT_REASON_EXECUTES: Key = Key::new(778);
+pub const SETTINGS_IMPORT_REASON_EXECUTES: Key = Key::new(780);
 /// "The file couldn't be read: it's missing, too big or not valid."
-pub const SETTINGS_IMPORT_REASON_UNREADABLE: Key = Key::new(779);
+pub const SETTINGS_IMPORT_REASON_UNREADABLE: Key = Key::new(781);
 /// "A file that includes itself, so it was read once."
-pub const SETTINGS_IMPORT_REASON_INCLUDE_CYCLE: Key = Key::new(780);
+pub const SETTINGS_IMPORT_REASON_INCLUDE_CYCLE: Key = Key::new(782);
 /// "Files include each other too deep, or there are too many to read."
-pub const SETTINGS_IMPORT_REASON_INCLUDE_LIMIT: Key = Key::new(781);
+pub const SETTINGS_IMPORT_REASON_INCLUDE_LIMIT: Key = Key::new(783);
 /// "A settings file in a format that isn't read any more."
-pub const SETTINGS_IMPORT_REASON_OLD_FORMAT: Key = Key::new(782);
+pub const SETTINGS_IMPORT_REASON_OLD_FORMAT: Key = Key::new(784);
 /// "It's outside your home folder, or a link leads out of it, so it wasn't read."
-pub const SETTINGS_IMPORT_REASON_OUTSIDE_HOME: Key = Key::new(783);
+pub const SETTINGS_IMPORT_REASON_OUTSIDE_HOME: Key = Key::new(785);
 /// "It sets only some colours; a theme needs at least a background and a foreground."
-pub const SETTINGS_IMPORT_REASON_PARTIAL_PALETTE: Key = Key::new(784);
+pub const SETTINGS_IMPORT_REASON_PARTIAL_PALETTE: Key = Key::new(786);
 /// "Compared with Wormhole"
-pub const SETTINGS_IMPORT_GROUP_COMPARE: Key = Key::new(787);
+pub const SETTINGS_IMPORT_GROUP_COMPARE: Key = Key::new(789);
 /// "How they compare"
-pub const SETTINGS_IMPORT_COMPARE: Key = Key::new(788);
+pub const SETTINGS_IMPORT_COMPARE: Key = Key::new(790);
 /// "drawbacks limits strengths differences versus comparison alternatives"
-pub const SETTINGS_IMPORT_COMPARE_KEYWORDS: Key = Key::new(789);
+pub const SETTINGS_IMPORT_COMPARE_KEYWORDS: Key = Key::new(791);
 /// "When another terminal's settings are found, you see here how it compares with Wormhole."
-pub const SETTINGS_IMPORT_COMPARE_NONE: Key = Key::new(790);
+pub const SETTINGS_IMPORT_COMPARE_NONE: Key = Key::new(792);
 /// "What Wormhole doesn't do yet"
-pub const SETTINGS_IMPORT_WORMHOLE_GAPS: Key = Key::new(792);
+pub const SETTINGS_IMPORT_WORMHOLE_GAPS: Key = Key::new(794);
 /// "Source"
-pub const SETTINGS_IMPORT_SOURCE: Key = Key::new(794);
+pub const SETTINGS_IMPORT_SOURCE: Key = Key::new(796);
 /// "Settings → Import brings them over."
-pub const SETTINGS_IMPORT_WELCOME_TOUR: Key = Key::new(800);
+pub const SETTINGS_IMPORT_WELCOME_TOUR: Key = Key::new(802);
 /// "Native macOS app with native tabs and splits, kitty graphics and keyboard protocols, ligatures."
-pub const SETTINGS_IMPORT_STRENGTH_GHOSTTY_NATIVE_TABS_GRAPHICS: Key = Key::new(801);
+pub const SETTINGS_IMPORT_STRENGTH_GHOSTTY_NATIVE_TABS_GRAPHICS: Key = Key::new(803);
 /// "Running programs end when the app quits; window layout can be restored."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_NO_SESSION_PERSISTENCE: Key = Key::new(802);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_NO_SESSION_PERSISTENCE: Key = Key::new(804);
 /// "Its library reads program status (OSC 7501); the app doesn't show it yet."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_AGENT_STATUS_NOT_SHOWN: Key = Key::new(803);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_AGENT_STATUS_NOT_SHOWN: Key = Key::new(805);
 /// "Notifications when a command finishes are off by default."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_COMMAND_NOTIFY_OFF: Key = Key::new(804);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_COMMAND_NOTIFY_OFF: Key = Key::new(806);
 /// "No Sixel images; the kitty graphics protocol is offered instead."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_NO_SIXEL: Key = Key::new(805);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_NO_SIXEL: Key = Key::new(807);
 /// "Settings live in a text file; a settings window is planned."
-pub const SETTINGS_IMPORT_GAP_GHOSTTY_CONFIG_FILE_ONLY: Key = Key::new(806);
+pub const SETTINGS_IMPORT_GAP_GHOSTTY_CONFIG_FILE_ONLY: Key = Key::new(808);
 /// "The broadest macOS feature set: tmux integration, all image protocols, agent Session Status."
-pub const SETTINGS_IMPORT_STRENGTH_ITERM2_BROADEST_FEATURES: Key = Key::new(807);
+pub const SETTINGS_IMPORT_STRENGTH_ITERM2_BROADEST_FEATURES: Key = Key::new(809);
 /// "Programs survive crashes and updates; quitting with ⌘Q or rebooting ends them."
-pub const SETTINGS_IMPORT_GAP_ITERM2_QUIT_ENDS_PROGRAMS: Key = Key::new(808);
+pub const SETTINGS_IMPORT_GAP_ITERM2_QUIT_ENDS_PROGRAMS: Key = Key::new(810);
 /// "Turning on ligatures disables the GPU renderer."
-pub const SETTINGS_IMPORT_GAP_ITERM2_LIGATURES_DISABLE_GPU: Key = Key::new(809);
+pub const SETTINGS_IMPORT_GAP_ITERM2_LIGATURES_DISABLE_GPU: Key = Key::new(811);
 /// "AI features need a plugin, explicit consent and your own API key."
-pub const SETTINGS_IMPORT_GAP_ITERM2_AI_SETUP_REQUIRED: Key = Key::new(810);
+pub const SETTINGS_IMPORT_GAP_ITERM2_AI_SETUP_REQUIRED: Key = Key::new(812);
 /// "Built into macOS, fully native, no install; 24-bit colour and Powerline glyphs since macOS 26."
-pub const SETTINGS_IMPORT_STRENGTH_TERMINAL_APP_BUILT_INTO_MACOS: Key = Key::new(811);
+pub const SETTINGS_IMPORT_STRENGTH_TERMINAL_APP_BUILT_INTO_MACOS: Key = Key::new(813);
 /// "No kitty keyboard protocol or other modern key reporting, in third-party tests."
-pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_KITTY_KEYBOARD: Key = Key::new(812);
+pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_KITTY_KEYBOARD: Key = Key::new(814);
 /// "No documented image protocol (Sixel, kitty or iTerm2)."
-pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_INLINE_IMAGES: Key = Key::new(813);
+pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_INLINE_IMAGES: Key = Key::new(815);
 /// "No agent or program-status features."
-pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_AGENT_STATUS: Key = Key::new(814);
+pub const SETTINGS_IMPORT_GAP_TERMINAL_APP_NO_AGENT_STATUS: Key = Key::new(816);
 /// "Minimal and fast, cross-platform, vi mode, regex hints and the kitty keyboard protocol."
-pub const SETTINGS_IMPORT_STRENGTH_ALACRITTY_MINIMAL_FAST: Key = Key::new(815);
+pub const SETTINGS_IMPORT_STRENGTH_ALACRITTY_MINIMAL_FAST: Key = Key::new(817);
 /// "No tabs or splits by design; a multiplexer or window manager is expected."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_TABS_OR_SPLITS: Key = Key::new(816);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_TABS_OR_SPLITS: Key = Key::new(818);
 /// "No image protocols; Sixel exists only in a community fork."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_IMAGES: Key = Key::new(817);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_IMAGES: Key = Key::new(819);
 /// "No font ligatures (requested since 2017)."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_LIGATURES: Key = Key::new(818);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_LIGATURES: Key = Key::new(820);
 /// "No settings window; configuration is a TOML file."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_CONFIG_FILE_ONLY: Key = Key::new(819);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_CONFIG_FILE_ONLY: Key = Key::new(821);
 /// "No program-status or agent features among its escape sequences."
-pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_AGENT_STATUS: Key = Key::new(820);
+pub const SETTINGS_IMPORT_GAP_ALACRITTY_NO_AGENT_STATUS: Key = Key::new(822);
 /// "Fast and scriptable; the origin of the kitty graphics and keyboard protocols; layouts and splits."
-pub const SETTINGS_IMPORT_STRENGTH_KITTY_FAST_SCRIPTABLE: Key = Key::new(821);
+pub const SETTINGS_IMPORT_STRENGTH_KITTY_FAST_SCRIPTABLE: Key = Key::new(823);
 /// "Sessions re-create windows; running programs don't survive quitting."
-pub const SETTINGS_IMPORT_GAP_KITTY_NO_SESSION_PERSISTENCE: Key = Key::new(822);
+pub const SETTINGS_IMPORT_GAP_KITTY_NO_SESSION_PERSISTENCE: Key = Key::new(824);
 /// "Started from the Dock, it often lacks your shell's environment variables."
-pub const SETTINGS_IMPORT_GAP_KITTY_GUI_LAUNCH_ENV: Key = Key::new(823);
+pub const SETTINGS_IMPORT_GAP_KITTY_GUI_LAUNCH_ENV: Key = Key::new(825);
 /// "No Sixel images; kitty's own graphics protocol is used instead."
-pub const SETTINGS_IMPORT_GAP_KITTY_NO_SIXEL: Key = Key::new(824);
+pub const SETTINGS_IMPORT_GAP_KITTY_NO_SIXEL: Key = Key::new(826);
 /// "Configuration is a single text file; no settings window."
-pub const SETTINGS_IMPORT_GAP_KITTY_CONFIG_FILE_ONLY: Key = Key::new(825);
+pub const SETTINGS_IMPORT_GAP_KITTY_CONFIG_FILE_ONLY: Key = Key::new(827);
 /// "Built-in multiplexer, ligatures, iTerm2 and kitty images, Lua config, every major platform."
-pub const SETTINGS_IMPORT_STRENGTH_WEZTERM_MULTIPLEXER_LUA: Key = Key::new(826);
+pub const SETTINGS_IMPORT_STRENGTH_WEZTERM_MULTIPLEXER_LUA: Key = Key::new(828);
 /// "No tagged release since February 2024; nightly builds continue."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_NO_RELEASE_SINCE_2024: Key = Key::new(827);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_NO_RELEASE_SINCE_2024: Key = Key::new(829);
 /// "Keeping programs running needs a configured multiplexer domain."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_PERSISTENCE_NEEDS_SETUP: Key = Key::new(828);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_PERSISTENCE_NEEDS_SETUP: Key = Key::new(830);
 /// "The kitty keyboard protocol is off by default."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_KITTY_KEYBOARD_OFF: Key = Key::new(829);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_KITTY_KEYBOARD_OFF: Key = Key::new(831);
 /// "Configuration is Lua code; no settings window."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_CONFIG_IS_LUA: Key = Key::new(830);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_CONFIG_IS_LUA: Key = Key::new(832);
 /// "Open reports of a crash and high GPU use on macOS 26."
-pub const SETTINGS_IMPORT_GAP_WEZTERM_MACOS_26_REPORTS: Key = Key::new(831);
+pub const SETTINGS_IMPORT_GAP_WEZTERM_MACOS_26_REPORTS: Key = Key::new(833);
 /// "Agent-focused: a built-in agent, a Claude Code plugin with tab status, block-based output."
-pub const SETTINGS_IMPORT_STRENGTH_WARP_AGENT_FOCUSED: Key = Key::new(832);
+pub const SETTINGS_IMPORT_STRENGTH_WARP_AGENT_FOCUSED: Key = Key::new(834);
 /// "Running programs end when Warp relaunches or updates (an open request)."
-pub const SETTINGS_IMPORT_GAP_WARP_PROGRAMS_END_ON_RELAUNCH: Key = Key::new(833);
+pub const SETTINGS_IMPORT_GAP_WARP_PROGRAMS_END_ON_RELAUNCH: Key = Key::new(835);
 /// "On the Free plan, AI features require telemetry to be on."
-pub const SETTINGS_IMPORT_GAP_WARP_TELEMETRY_FOR_FREE_AI: Key = Key::new(834);
+pub const SETTINGS_IMPORT_GAP_WARP_TELEMETRY_FOR_FREE_AI: Key = Key::new(836);
 /// "The terminal works without an account; some features need signing in."
-pub const SETTINGS_IMPORT_GAP_WARP_LOGIN_FOR_SOME_FEATURES: Key = Key::new(835);
+pub const SETTINGS_IMPORT_GAP_WARP_LOGIN_FOR_SOME_FEATURES: Key = Key::new(837);
 /// "Full offline support is an open request."
-pub const SETTINGS_IMPORT_GAP_WARP_OFFLINE_REQUESTED: Key = Key::new(836);
+pub const SETTINGS_IMPORT_GAP_WARP_OFFLINE_REQUESTED: Key = Key::new(838);
 /// "No Sixel images; kitty graphics and iTerm2 images are supported."
-pub const SETTINGS_IMPORT_GAP_WARP_NO_SIXEL: Key = Key::new(837);
+pub const SETTINGS_IMPORT_GAP_WARP_NO_SIXEL: Key = Key::new(839);
 /// "A terminal inside the editor; agents in the Agent Panel can run terminal commands."
-pub const SETTINGS_IMPORT_STRENGTH_ZED_TERMINAL_IN_EDITOR: Key = Key::new(838);
+pub const SETTINGS_IMPORT_STRENGTH_ZED_TERMINAL_IN_EDITOR: Key = Key::new(840);
 /// "A panel inside the editor, not a standalone terminal app."
-pub const SETTINGS_IMPORT_GAP_ZED_EDITOR_PANEL: Key = Key::new(839);
+pub const SETTINGS_IMPORT_GAP_ZED_EDITOR_PANEL: Key = Key::new(841);
 /// "No image protocols in the terminal (closed as not planned)."
-pub const SETTINGS_IMPORT_GAP_ZED_NO_IMAGES: Key = Key::new(840);
+pub const SETTINGS_IMPORT_GAP_ZED_NO_IMAGES: Key = Key::new(842);
 /// "No kitty keyboard protocol encoding in its terminal."
-pub const SETTINGS_IMPORT_GAP_ZED_NO_KITTY_KEYBOARD: Key = Key::new(841);
+pub const SETTINGS_IMPORT_GAP_ZED_NO_KITTY_KEYBOARD: Key = Key::new(843);
 /// "Ligatures can't be turned on for the terminal (open since 2024)."
-pub const SETTINGS_IMPORT_GAP_ZED_TERMINAL_LIGATURES: Key = Key::new(842);
+pub const SETTINGS_IMPORT_GAP_ZED_TERMINAL_LIGATURES: Key = Key::new(844);
 /// "Crash reports and usage data are sent by default; both can be turned off."
-pub const SETTINGS_IMPORT_GAP_ZED_TELEMETRY_ON: Key = Key::new(843);
+pub const SETTINGS_IMPORT_GAP_ZED_TELEMETRY_ON: Key = Key::new(845);
 /// "A terminal in the editor with tabs, splits and shell integration; kitty keyboard by default."
-pub const SETTINGS_IMPORT_STRENGTH_VSCODE_TERMINAL_IN_EDITOR: Key = Key::new(844);
+pub const SETTINGS_IMPORT_STRENGTH_VSCODE_TERMINAL_IN_EDITOR: Key = Key::new(846);
 /// "A panel inside the editor, not a standalone terminal app."
-pub const SETTINGS_IMPORT_GAP_VSCODE_EDITOR_PANEL: Key = Key::new(845);
+pub const SETTINGS_IMPORT_GAP_VSCODE_EDITOR_PANEL: Key = Key::new(847);
 /// "After a restart, programs are started again, not kept running."
-pub const SETTINGS_IMPORT_GAP_VSCODE_PROGRAMS_RELAUNCHED: Key = Key::new(846);
+pub const SETTINGS_IMPORT_GAP_VSCODE_PROGRAMS_RELAUNCHED: Key = Key::new(848);
 /// "Images (Sixel, iTerm2, kitty) are off by default."
-pub const SETTINGS_IMPORT_GAP_VSCODE_IMAGES_OFF: Key = Key::new(847);
+pub const SETTINGS_IMPORT_GAP_VSCODE_IMAGES_OFF: Key = Key::new(849);
 /// "Scrollback keeps 1,000 lines by default."
-pub const SETTINGS_IMPORT_GAP_VSCODE_SCROLLBACK_1000: Key = Key::new(848);
+pub const SETTINGS_IMPORT_GAP_VSCODE_SCROLLBACK_1000: Key = Key::new(850);
 /// "Telemetry is on unless turned off in settings."
-pub const SETTINGS_IMPORT_GAP_VSCODE_TELEMETRY_ON: Key = Key::new(849);
+pub const SETTINGS_IMPORT_GAP_VSCODE_TELEMETRY_ON: Key = Key::new(851);
 /// "A native macOS terminal with a sidebar of terminals showing each agent's status, and a git diff panel."
-pub const SETTINGS_IMPORT_STRENGTH_WORMHOLE_AGENT_SIDEBAR: Key = Key::new(850);
+pub const SETTINGS_IMPORT_STRENGTH_WORMHOLE_AGENT_SIDEBAR: Key = Key::new(852);
 /// "macOS only (macOS 14 or later)."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_MACOS_ONLY: Key = Key::new(851);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_MACOS_ONLY: Key = Key::new(853);
 /// "A young project: first released in October 2026."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_YOUNG_PROJECT: Key = Key::new(852);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_YOUNG_PROJECT: Key = Key::new(854);
 /// "Running programs end when the app quits; windows and recent output come back."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_PROGRAMS_END_ON_QUIT: Key = Key::new(853);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_PROGRAMS_END_ON_QUIT: Key = Key::new(855);
 /// "VoiceOver can't read the terminal's text yet; the controls around it are labelled."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_VOICEOVER_NO_TERMINAL_TEXT: Key = Key::new(854);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_VOICEOVER_NO_TERMINAL_TEXT: Key = Key::new(856);
 /// "The kitty keyboard protocol's key-release and repeat events aren't sent."
-pub const SETTINGS_IMPORT_GAP_WORMHOLE_KITTY_KEYBOARD_PARTIAL: Key = Key::new(855);
+pub const SETTINGS_IMPORT_GAP_WORMHOLE_KITTY_KEYBOARD_PARTIAL: Key = Key::new(857);
 
 /// ```text
 /// { $count ->
@@ -268,21 +268,21 @@ pub const SETTINGS_IMPORT_GAP_WORMHOLE_KITTY_KEYBOARD_PARTIAL: Key = Key::new(85
 /// }
 /// ```
 pub fn settings_import_count(count: i64) -> String {
-    crate::active::message(725, &[("count", Arg::Int(count))])
+    crate::active::message(727, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $terminal }, { $count }
 /// ```
 pub fn settings_import_card_label(terminal: &str, count: &str) -> String {
-    crate::active::message(726, &[("terminal", Arg::Str(terminal)), ("count", Arg::Str(count))])
+    crate::active::message(728, &[("terminal", Arg::Str(terminal)), ("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $selected } of { $total } selected
 /// ```
 pub fn settings_import_selected(selected: &str, total: &str) -> String {
-    crate::active::message(731, &[("selected", Arg::Str(selected)), ("total", Arg::Str(total))])
+    crate::active::message(733, &[("selected", Arg::Str(selected)), ("total", Arg::Str(total))])
 }
 
 /// ```text
@@ -292,56 +292,56 @@ pub fn settings_import_selected(selected: &str, total: &str) -> String {
 /// }
 /// ```
 pub fn settings_import_summary(brought: i64, left: &str) -> String {
-    crate::active::message(733, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
+    crate::active::message(735, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
 }
 
 /// ```text
 /// Couldn't import: { $error }
 /// ```
 pub fn settings_import_failed(error: &str) -> String {
-    crate::active::message(734, &[("error", Arg::Str(error))])
+    crate::active::message(736, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// The font { $font } isn't installed on this Mac.
 /// ```
 pub fn settings_import_reason_font_not_installed(font: &str) -> String {
-    crate::active::message(785, &[("font", Arg::Str(font))])
+    crate::active::message(787, &[("font", Arg::Str(font))])
 }
 
 /// ```text
 /// { $theme } is built into the other terminal, so its colours aren't in any file.
 /// ```
 pub fn settings_import_reason_built_in_theme(theme: &str) -> String {
-    crate::active::message(786, &[("theme", Arg::Str(theme))])
+    crate::active::message(788, &[("theme", Arg::Str(theme))])
 }
 
 /// ```text
 /// Where { $terminal } falls short today
 /// ```
 pub fn settings_import_compare_gaps(terminal: &str) -> String {
-    crate::active::message(791, &[("terminal", Arg::Str(terminal))])
+    crate::active::message(793, &[("terminal", Arg::Str(terminal))])
 }
 
 /// ```text
 /// As of { $date }
 /// ```
 pub fn settings_import_as_of(date: &str) -> String {
-    crate::active::message(793, &[("date", Arg::Str(date))])
+    crate::active::message(795, &[("date", Arg::Str(date))])
 }
 
 /// ```text
 /// Source { $number }
 /// ```
 pub fn settings_import_source_numbered(number: &str) -> String {
-    crate::active::message(795, &[("number", Arg::Str(number))])
+    crate::active::message(797, &[("number", Arg::Str(number))])
 }
 
 /// ```text
 /// Use my { $terminal } settings
 /// ```
 pub fn settings_import_use_mine(terminal: &str) -> String {
-    crate::active::message(796, &[("terminal", Arg::Str(terminal))])
+    crate::active::message(798, &[("terminal", Arg::Str(terminal))])
 }
 
 /// ```text
@@ -351,7 +351,7 @@ pub fn settings_import_use_mine(terminal: &str) -> String {
 /// }
 /// ```
 pub fn settings_import_onboarding_summary(brought: i64, left: &str) -> String {
-    crate::active::message(797, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
+    crate::active::message(799, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
 }
 
 /// ```text
@@ -361,12 +361,12 @@ pub fn settings_import_onboarding_summary(brought: i64, left: &str) -> String {
 /// }
 /// ```
 pub fn settings_import_onboarding_all(brought: i64) -> String {
-    crate::active::message(798, &[("brought", Arg::Int(brought))])
+    crate::active::message(800, &[("brought", Arg::Int(brought))])
 }
 
 /// ```text
 /// Your { $terminal } settings were found.
 /// ```
 pub fn settings_import_welcome_found(terminal: &str) -> String {
-    crate::active::message(799, &[("terminal", Arg::Str(terminal))])
+    crate::active::message(801, &[("terminal", Arg::Str(terminal))])
 }

@@ -66,6 +66,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "hosts-window" => |ctx, arg| menus::hosts_window(ctx, "hosts-window", arg),
         "hosts-shot" => |ctx, arg| menus::hosts_window(ctx, "hosts-shot", arg),
         "hosts-scroll" => |ctx, arg| menus::hosts_window(ctx, "hosts-scroll", arg),
+        "hosts-toggle" => |ctx, arg| menus::hosts_window(ctx, "hosts-toggle", arg),
         "hosts-text" => |ctx, arg| menus::hosts_window(ctx, "hosts-text", arg),
         "about-shot" => |ctx, arg| menus::about(ctx, "about-shot", arg),
         "licenses-shot" => |ctx, arg| menus::about(ctx, "licenses-shot", arg),

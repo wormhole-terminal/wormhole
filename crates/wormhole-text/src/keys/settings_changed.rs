@@ -7,17 +7,17 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Changed"
-pub const SETTINGS_SECTION_CHANGED: Key = Key::new(561);
+pub const SETTINGS_SECTION_CHANGED: Key = Key::new(563);
 /// "Every setting that differs from its default, with its own control. Reset one, or all at once."
-pub const SETTINGS_SECTION_CHANGED_INTRO: Key = Key::new(562);
+pub const SETTINGS_SECTION_CHANGED_INTRO: Key = Key::new(564);
 /// "Everything else is at its default"
-pub const SETTINGS_CHANGED_SUMMARY_DETAIL: Key = Key::new(564);
+pub const SETTINGS_CHANGED_SUMMARY_DETAIL: Key = Key::new(566);
 /// "No settings changed"
-pub const SETTINGS_CHANGED_NONE: Key = Key::new(565);
+pub const SETTINGS_CHANGED_NONE: Key = Key::new(567);
 /// "Everything is at its default"
-pub const SETTINGS_CHANGED_NONE_DETAIL: Key = Key::new(566);
+pub const SETTINGS_CHANGED_NONE_DETAIL: Key = Key::new(568);
 /// "Reset All…"
-pub const SETTINGS_CHANGED_RESET_ALL: Key = Key::new(567);
+pub const SETTINGS_CHANGED_RESET_ALL: Key = Key::new(569);
 
 /// ```text
 /// { $count ->
@@ -26,5 +26,5 @@ pub const SETTINGS_CHANGED_RESET_ALL: Key = Key::new(567);
 /// }
 /// ```
 pub fn settings_changed_summary(count: i64) -> String {
-    crate::active::message(563, &[("count", Arg::Int(count))])
+    crate::active::message(565, &[("count", Arg::Int(count))])
 }

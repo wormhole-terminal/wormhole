@@ -7,79 +7,79 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Advanced"
-pub const SETTINGS_SECTION_ADVANCED: Key = Key::new(307);
+pub const SETTINGS_SECTION_ADVANCED: Key = Key::new(309);
 /// "Files, folders and a way back to the defaults."
-pub const SETTINGS_SECTION_ADVANCED_INTRO: Key = Key::new(308);
+pub const SETTINGS_SECTION_ADVANCED_INTRO: Key = Key::new(310);
 /// "Files"
-pub const SETTINGS_ADVANCED_GROUP_FILES: Key = Key::new(309);
+pub const SETTINGS_ADVANCED_GROUP_FILES: Key = Key::new(311);
 /// "Settings file"
-pub const SETTINGS_ADVANCED_OPEN_CONFIG: Key = Key::new(310);
+pub const SETTINGS_ADVANCED_OPEN_CONFIG: Key = Key::new(312);
 /// "config.json: edits apply live"
-pub const SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION: Key = Key::new(311);
+pub const SETTINGS_ADVANCED_OPEN_CONFIG_DESCRIPTION: Key = Key::new(313);
 /// "json config"
-pub const SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS: Key = Key::new(312);
+pub const SETTINGS_ADVANCED_OPEN_CONFIG_KEYWORDS: Key = Key::new(314);
 /// "Data folder"
-pub const SETTINGS_ADVANCED_OPEN_DATA: Key = Key::new(313);
+pub const SETTINGS_ADVANCED_OPEN_DATA: Key = Key::new(315);
 /// "Terminals, notes, themes, logs"
-pub const SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION: Key = Key::new(314);
+pub const SETTINGS_ADVANCED_OPEN_DATA_DESCRIPTION: Key = Key::new(316);
 /// "finder database"
-pub const SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS: Key = Key::new(315);
+pub const SETTINGS_ADVANCED_OPEN_DATA_KEYWORDS: Key = Key::new(317);
 /// "Logs"
-pub const SETTINGS_ADVANCED_OPEN_LOGS: Key = Key::new(316);
+pub const SETTINGS_ADVANCED_OPEN_LOGS: Key = Key::new(318);
 /// "Set WORMHOLE_LOG=debug for more detail"
-pub const SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION: Key = Key::new(317);
+pub const SETTINGS_ADVANCED_OPEN_LOGS_DESCRIPTION: Key = Key::new(319);
 /// "debug log"
-pub const SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS: Key = Key::new(318);
+pub const SETTINGS_ADVANCED_OPEN_LOGS_KEYWORDS: Key = Key::new(320);
 /// "Show config keys"
-pub const SETTINGS_ADVANCED_SHOW_CONFIG_KEYS: Key = Key::new(319);
+pub const SETTINGS_ADVANCED_SHOW_CONFIG_KEYS: Key = Key::new(321);
 /// "Settings shows each setting's name in config.json under its label. Off: hidden. Right-click a row to copy its key either way"
-pub const SETTINGS_ADVANCED_SHOW_CONFIG_KEYS_DESCRIPTION: Key = Key::new(320);
+pub const SETTINGS_ADVANCED_SHOW_CONFIG_KEYS_DESCRIPTION: Key = Key::new(322);
 /// "config json key keys name names raw developer option"
-pub const SETTINGS_ADVANCED_SHOW_CONFIG_KEYS_KEYWORDS: Key = Key::new(321);
+pub const SETTINGS_ADVANCED_SHOW_CONFIG_KEYS_KEYWORDS: Key = Key::new(323);
 /// "Reset all settings"
-pub const SETTINGS_ADVANCED_RESET_SETTINGS: Key = Key::new(322);
+pub const SETTINGS_ADVANCED_RESET_SETTINGS: Key = Key::new(324);
 /// "Your terminals, notes and themes are kept"
-pub const SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION: Key = Key::new(323);
+pub const SETTINGS_ADVANCED_RESET_SETTINGS_DESCRIPTION: Key = Key::new(325);
 /// "defaults reset restore"
-pub const SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS: Key = Key::new(324);
+pub const SETTINGS_ADVANCED_RESET_SETTINGS_KEYWORDS: Key = Key::new(326);
 /// "Tips"
-pub const SETTINGS_ADVANCED_GROUP_TIPS: Key = Key::new(325);
+pub const SETTINGS_ADVANCED_GROUP_TIPS: Key = Key::new(327);
 /// "Closed tips"
-pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(326);
+pub const SETTINGS_ADVANCED_RESET_TIPS: Key = Key::new(328);
 /// "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note"
-pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(327);
+pub const SETTINGS_ADVANCED_RESET_TIPS_DESCRIPTION: Key = Key::new(329);
 /// "hints tips reset show again dismissed"
-pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(328);
+pub const SETTINGS_ADVANCED_RESET_TIPS_KEYWORDS: Key = Key::new(330);
 /// "New programs"
-pub const SETTINGS_ADVANCED_GROUP_PROGRAMS: Key = Key::new(329);
+pub const SETTINGS_ADVANCED_GROUP_PROGRAMS: Key = Key::new(331);
 /// "Skip malware scans of new programs"
-pub const SETTINGS_ADVANCED_SKIP_SCANS: Key = Key::new(330);
+pub const SETTINGS_ADVANCED_SKIP_SCANS: Key = Key::new(332);
 /// "macOS scans each new program for malware the first time it runs, which slows builds, tests and coding agents. Adding Wormhole to Developer Tools lets programs started in Wormhole skip that scan. Only do this if you trust what you run. Terminals opened after you restart Wormhole get it. If Developer Tools isn't listed, run spctl developer-mode enable-terminal in a terminal first."
-pub const SETTINGS_ADVANCED_SKIP_SCANS_DESCRIPTION: Key = Key::new(331);
+pub const SETTINGS_ADVANCED_SKIP_SCANS_DESCRIPTION: Key = Key::new(333);
 /// "developer tools xprotect gatekeeper malware scan speed slow first run build privacy security spctl"
-pub const SETTINGS_ADVANCED_SKIP_SCANS_KEYWORDS: Key = Key::new(332);
+pub const SETTINGS_ADVANCED_SKIP_SCANS_KEYWORDS: Key = Key::new(334);
 /// "Open"
-pub const SETTINGS_ADVANCED_OPEN: Key = Key::new(333);
+pub const SETTINGS_ADVANCED_OPEN: Key = Key::new(335);
 /// "Open Developer Tools Settings"
-pub const SETTINGS_ADVANCED_OPEN_DEVELOPER_TOOLS: Key = Key::new(334);
+pub const SETTINGS_ADVANCED_OPEN_DEVELOPER_TOOLS: Key = Key::new(336);
 /// "Show in Finder"
-pub const SETTINGS_ADVANCED_SHOW_IN_FINDER: Key = Key::new(335);
+pub const SETTINGS_ADVANCED_SHOW_IN_FINDER: Key = Key::new(337);
 /// "Reset tips"
-pub const SETTINGS_ADVANCED_RESET_TIPS_BUTTON: Key = Key::new(336);
+pub const SETTINGS_ADVANCED_RESET_TIPS_BUTTON: Key = Key::new(338);
 /// "No tip was closed for good"
-pub const SETTINGS_ADVANCED_NO_TIP_WAS_CLOSED_FOR_GOOD: Key = Key::new(337);
+pub const SETTINGS_ADVANCED_NO_TIP_WAS_CLOSED_FOR_GOOD: Key = Key::new(339);
 /// "They show again where they belong"
-pub const SETTINGS_ADVANCED_THEY_SHOW_AGAIN_WHERE_THEY_BELONG: Key = Key::new(338);
+pub const SETTINGS_ADVANCED_THEY_SHOW_AGAIN_WHERE_THEY_BELONG: Key = Key::new(340);
 /// "Reset to defaults…"
-pub const SETTINGS_ADVANCED_RESET_TO_DEFAULTS: Key = Key::new(339);
+pub const SETTINGS_ADVANCED_RESET_TO_DEFAULTS: Key = Key::new(341);
 /// "Every setting is at its default"
-pub const SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT: Key = Key::new(340);
+pub const SETTINGS_ADVANCED_EVERY_SETTING_IS_AT_ITS_DEFAULT: Key = Key::new(342);
 /// "Asks first"
-pub const SETTINGS_ADVANCED_ASKS_FIRST: Key = Key::new(341);
+pub const SETTINGS_ADVANCED_ASKS_FIRST: Key = Key::new(343);
 /// "Cancel"
-pub const SETTINGS_ADVANCED_CANCEL: Key = Key::new(342);
+pub const SETTINGS_ADVANCED_CANCEL: Key = Key::new(344);
 /// "Reset"
-pub const SETTINGS_ADVANCED_RESET: Key = Key::new(343);
+pub const SETTINGS_ADVANCED_RESET: Key = Key::new(345);
 
 /// ```text
 /// { $count ->
@@ -88,5 +88,5 @@ pub const SETTINGS_ADVANCED_RESET: Key = Key::new(343);
 /// }
 /// ```
 pub fn settings_advanced_reset_question(count: i64) -> String {
-    crate::active::message(344, &[("count", Arg::Int(count))])
+    crate::active::message(346, &[("count", Arg::Int(count))])
 }

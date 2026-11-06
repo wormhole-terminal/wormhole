@@ -1,5 +1,5 @@
-//! devctl's `hosts-window`, `hosts-shot [name]` and `hosts-text`: open the window, save a picture of
-//! it, print what Copy all would copy.
+//! devctl's `hosts-window`, `hosts-shot [name]`, `hosts-toggle [id]` and `hosts-text`: open the window,
+//! save a picture of it, open or fold a host's card, print what Copy all would copy.
 
 use std::path::Path;
 
@@ -34,6 +34,21 @@ pub(crate) fn command(cmd: &str, arg: &str, dir: &Path, cx: &mut App) -> Result<
                 window.scroll.set_offset(gpui_kit::point(gpui_kit::px(0.0), gpui_kit::px(-y)));
                 cx.notify();
             });
+            Ok(Some(String::new()))
+        }
+        "hosts-toggle" => {
+            // `hosts-toggle [id]`: open or fold a host's card, the first one without an id.
+            let view = open_view(cx).ok_or_else(|| anyhow!("the hosts window is not open"))?;
+            let id = view
+                .read(cx)
+                .report()
+                .and_then(|report| {
+                    let arg = arg.trim();
+                    if arg.is_empty() { report.rows.first() } else { report.row(arg) }
+                })
+                .map(|row| row.id.clone())
+                .ok_or_else(|| anyhow!("no such host"))?;
+            view.update(cx, |window, cx| window.toggle(&id, cx));
             Ok(Some(String::new()))
         }
         "hosts-text" => {

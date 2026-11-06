@@ -15,6 +15,13 @@ hosts-header-binary = Host program
 hosts-header-binary-missing = Not found beside the app
 hosts-header-binary-disposable = None: the app runs from a disk image or a temporary copy
 
+# What a host's row says to a screen reader: { $standing } is its state, { $id } its id, { $note } where its terminal is
+# or why its files are left.
+hosts-row-label = { $standing }: { $id }, { $note }
+
+# A fact that is wrong, under the host's row while it is folded: { $field } is the fact's name, { $value } what it says.
+hosts-problem = { $field }: { $value }
+
 # The counts under the header.
 hosts-count-attached = Attached
 hosts-count-detached = Detached

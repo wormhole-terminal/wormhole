@@ -105,6 +105,7 @@
 //!   hosts-window | hosts-shot [name] | hosts-text   the Session Hosts window (Help → Session Hosts, while
 //!                   persistent terminals are on): open it, save a picture of it (it looks again once a
 //!                   second: send the shot in a later batch), print what its Copy all button copies
+//!   hosts-toggle [id]   open or fold a host's card in that window (the first host without an id)
 //!   hosts-scroll <px>   scroll the Session Hosts window's list down by that much
 //!   about | licenses | about-shot [name] | licenses-shot [name]   the About and Licenses windows
 //!   intro [style]   play the intro around this window: emerge, vortex, collapse, ftl, aurora, tentacles,
