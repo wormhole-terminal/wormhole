@@ -1,9 +1,10 @@
-//! Buttons as the pages use them: GPUI Kit's variants at the sizes of a form, our icon button, and links.
+//! Buttons as the pages use them: `style::Button` (GPUI Kit's variants, drawn flat) at the sizes of a form, our icon button, and links.
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
+use crate::style::Button;
 use gpui_kit::*;
 
 use super::{Sheet, category, specimen};
@@ -68,7 +69,7 @@ pub(super) fn draw(sheet: &Sheet, _cx: &App) -> AnyElement {
     category(
         ui,
         "Buttons",                                          // text: sample (a category's head)
-        "GPUI Kit's Button, style/buttons.rs, link_button", // text: sample (a category's head)
+        "style/button.rs (the Kit's Button, flat), buttons.rs, link_button", // text: sample (a category's head)
         [
             specimen(ui, "Button · small, the variants the pages use", kit).into_any_element(), // text: sample (a specimen's name)
             specimen(ui, "Button · with an icon, loading, disabled", with_icon).into_any_element(), // text: sample (a specimen's name)

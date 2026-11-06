@@ -152,7 +152,8 @@ const BUDGET: [(&str, u64); 20] = [
     // With the New programs group: the Developer Tools row, its description and its button (417).
     // The Show config keys switch is a row more, 4,941 measured; with the keys hidden by default every
     // other page fell (their key lines are not built).
-    ("Advanced", 5314),
+    // The flat buttons (`style::Button`) read the window's colours as they are drawn: 3 more, 5,337 measured.
+    ("Advanced", 5337),
     ("Projects", 10715),
     // Measured with the nav's Motion and Import rows, which came after the page.
     ("Extensions", 2836),

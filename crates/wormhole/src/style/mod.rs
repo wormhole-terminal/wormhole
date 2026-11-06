@@ -57,6 +57,7 @@
 //! (⇧⌥⌘I) points at the view that used them rather than at this file.
 
 mod bands;
+mod button;
 mod buttons;
 mod checkbox;
 mod choice_card;
@@ -108,6 +109,7 @@ mod window_sketch;
 mod window_surfaces;
 
 pub use bands::*;
+pub use button::Button;
 pub use buttons::*;
 pub use checkbox::*;
 pub use choice_card::*;

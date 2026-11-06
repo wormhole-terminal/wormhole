@@ -1,10 +1,11 @@
 //! Advanced: what is wrong in config.json, the files and folders, and a way back to the
 //! defaults that asks first.
 
+use crate::style::Button;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::Values;
 use wormhole_core::storage::paths::data_dir;

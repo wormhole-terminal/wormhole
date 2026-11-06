@@ -19,12 +19,13 @@ pub enum BannerKind {
     Success,
 }
 
-/// An inline message next to what it is about: the status color's icon and one
-/// or two lines of text on that color's 10 % tint inside a 35 % outline
-/// (`banner.<kind>.*`). Add a small button (`Button::new(…).small()`, ghost or outlined)
-/// with `.child(…)`; it sits at the right. `flush` is the full-width, square banner of a
-/// panel (the project's trust notice), drawn between hairlines of its color instead of
-/// in a box.
+/// An inline message next to what it is about, flat as System Settings draws a note: the status
+/// color's icon and one or two lines of text on that color's 10 % tint (`banner.<kind>.background`)
+/// in the control corners, with no outline. Increase Contrast draws the kind's outline
+/// (`banner.<kind>.border`), since a faint tint alone is no edge. Add a small button
+/// (`style::Button::new(…).small()`, plain, primary or ghost) with `.child(…)`; it sits at the right.
+/// `flush` is the full-width, square banner of a panel (the project's trust notice), drawn between
+/// hairlines of its color instead of in a box.
 #[track_caller]
 pub fn banner(ui: UiColors, kind: BannerKind, flush: bool, text: impl Into<SharedString>) -> Div {
     let (icon_color, fill, border, icon) = match kind {
@@ -41,7 +42,7 @@ pub fn banner(ui: UiColors, kind: BannerKind, flush: bool, text: impl Into<Share
     let frame = if flush {
         frame.w_full().px_4().rule_top(ui).rule_bottom(ui).border_color(ui.line(border))
     } else {
-        frame.pl_3().pr_2().rounded(ui.radius).outlined(ui, border)
+        frame.pl_3().pr_2().rounded(ui.radius).when(ui.increase_contrast, |d| d.outlined_always(ui, border))
     };
     frame
         .child(Icon::new(icon).with_size(px(super::scale::TITLE_GLYPH)).text_color(icon_color).flex_none())
@@ -61,9 +62,9 @@ pub fn banner(ui: UiColors, kind: BannerKind, flush: bool, text: impl Into<Share
 const BANNER_PAD_Y: f32 = 6.0;
 
 /// A full-width notice in a panel that asks for something (the project's trust
-/// callout): square, on the kind's tint between two hairlines of its color, the icon in the
-/// lead column and the title (14 / 600) at x 40, then `body` (a line of explanation, the
-/// commands, the one button) lined up under the title.
+/// callout), flat like a [`banner`]: the kind's tint in the control corners with no outline (Increase
+/// Contrast draws the kind's), the icon in the lead column and the title (14 / 600) at x 40, then
+/// `body` (a line of explanation, the commands, the one button) lined up under the title.
 #[track_caller]
 pub fn callout(
     ui: UiColors,
@@ -87,9 +88,8 @@ pub fn callout(
         .px_4()
         .py_3()
         .bg(fill)
-        .rule_top(ui)
-        .rule_bottom(ui)
-        .border_color(ui.line(border))
+        .rounded(ui.radius)
+        .when(ui.increase_contrast, |d| d.outlined_always(ui, border))
         .child(
             div()
                 .flex()

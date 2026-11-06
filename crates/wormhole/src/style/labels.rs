@@ -61,11 +61,21 @@ pub fn selected_count_badge(ui: UiColors, text: impl Into<SharedString>) -> Div 
         .child(text.into())
 }
 
-/// A short status word in a color (trusted, changed): the outlined sibling of
-/// [`count_badge`], with the same size and corners.
+/// How much of a status badge's colour its tint shows: a little more than a banner's 10 %, since a
+/// badge is small and its text is the colour itself.
+const STATUS_TINT_ALPHA: f32 = 0.15;
+
+/// A short status word in a color (trusted, changed): the flat sibling of [`count_badge`], with the
+/// same size and corners: the word in `color` on a tint of it, no outline. Increase Contrast draws the
+/// outline back, in the colour.
 #[track_caller]
 pub fn status_badge(ui: UiColors, color: Hsla, text: impl Into<SharedString>) -> Div {
-    badge(ui).px_2().outlined(ui, color).text_color(color).child(text.into())
+    badge(ui)
+        .px_2()
+        .bg(Hsla { a: STATUS_TINT_ALPHA, ..color })
+        .text_color(color)
+        .when(ui.increase_contrast, |d| d.outlined_always(ui, color))
+        .child(text.into())
 }
 
 /// The box both badges share: caption text centered in [`BADGE_H`] by at least

@@ -1,10 +1,11 @@
 //! One terminal's settings as rows: what it says, what Wormhole would set, a tick; a shell command
 //! shown whole with what it would do; then what doesn't carry over and why; then "Import selected".
 
+use crate::style::Button;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::import::{Found, Proposed, Setting, SettingValue, Source, command_line, visible};

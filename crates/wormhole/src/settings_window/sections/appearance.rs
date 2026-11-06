@@ -4,9 +4,10 @@
 //! Transparency the opacity slider is off and says why; with the blur off below 95 % the
 //! blur's row warns.
 
+use crate::style::Button;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::color_picker::{ColorPicker, ColorPickerState};
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, SectionId as Section};

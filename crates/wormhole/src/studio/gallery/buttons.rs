@@ -1,7 +1,8 @@
 //! GPUI Kit's button variants and sizes.
 
+use crate::style::Button;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 
 use super::Env;

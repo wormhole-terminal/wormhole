@@ -29,9 +29,9 @@ mod card;
 #[cfg(test)]
 use self::card::CARD_RENDERS;
 use self::card::ThemeCard;
+use crate::style::Button;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::Button;
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::prelude::*;
 use gpui_kit::*;

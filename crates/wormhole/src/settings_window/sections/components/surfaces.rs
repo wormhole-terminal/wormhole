@@ -3,7 +3,8 @@
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
+use crate::style::Button;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{BannerKind, StatusGlyph, StatusTile, TileFace};

@@ -2,8 +2,9 @@
 //! settings window, opened from the Profile page, the File menu and the command palette. Create
 //! makes the profile and switches Wormhole to it.
 
+use crate::style::Button;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::input::{InputEvent, InputState};
 use gpui_kit::*;
 use wormhole_core::config::profile::{NewProfile, StartFrom, first_letter};

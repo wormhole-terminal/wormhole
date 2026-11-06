@@ -11,8 +11,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
+use crate::style::Button;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::progress::Progress;
 use gpui_kit::prelude::*;
 use gpui_kit::*;

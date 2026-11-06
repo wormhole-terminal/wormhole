@@ -10,10 +10,10 @@ use std::path::Path;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
+use crate::style::Button;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::Button;
 use gpui_kit::*;
 use wormhole_core::config::OptionAsMeta;
 use wormhole_core::config::clipboard::{ClipboardRead, ClipboardWrite};

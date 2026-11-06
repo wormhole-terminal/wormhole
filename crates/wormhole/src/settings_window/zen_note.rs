@@ -5,8 +5,9 @@
 //! Only the pages with a row Zen mode overrides carry it: the title row, the status bar, the minimap
 //! and the lines between the columns.
 
+use crate::style::Button;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_text::keys::{ZEN_SETTINGS_LEAVE, ZEN_SETTINGS_NOTE};

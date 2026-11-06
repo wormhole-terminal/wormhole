@@ -184,9 +184,9 @@ impl RenderOnce for Disclosure {
 const QUARTER_TURN: f32 = std::f32::consts::FRAC_PI_2;
 
 /// A shortcut drawn as a key cap: one for every hint (the sidebar's ⌘1–9, the palette,
-/// the shortcut sheet, settings). `surface.elevated` with a `border.strong`
-/// outline and the label in `text.primary`, [`KEYCAP_H`] tall and at least
-/// [`KEYCAP_MIN_W`] wide, so ⌘1 and esc line up.
+/// the shortcut sheet, settings). A flat `control.background` pill with the label in
+/// `text.primary`, [`KEYCAP_H`] tall and at least [`KEYCAP_MIN_W`] wide, so ⌘1 and esc
+/// line up. Increase Contrast gives it its `border.strong` outline back.
 #[track_caller]
 pub fn keycap(ui: UiColors, text: impl Into<SharedString>) -> Div {
     div()
@@ -198,8 +198,8 @@ pub fn keycap(ui: UiColors, text: impl Into<SharedString>) -> Div {
         .min_w(px(KEYCAP_MIN_W))
         .px_1()
         .rounded(ui.radius_chip)
-        .outlined(ui, ui.border_strong)
-        .bg(ui.elevated)
+        .bg(ui.control)
+        .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.border_strong))
         .text_caption()
         .font_weight(FontWeight::MEDIUM)
         .tabular_nums()

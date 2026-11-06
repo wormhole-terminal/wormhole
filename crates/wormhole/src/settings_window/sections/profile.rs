@@ -3,10 +3,11 @@
 //! These live in `profiles.json`, not in `config.json`, so no row has a reset arrow; the text
 //! fields are made in `profile_form`.
 
+use crate::style::Button;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
-use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::input::InputState;
 use gpui_kit::*;
 use wormhole_core::config::profile::Profile;
