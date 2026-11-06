@@ -8,7 +8,6 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::color_picker::{ColorPicker, ColorPickerState};
-use gpui_kit::component::slider::Slider;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
 use wormhole_core::config::{BranchColor, ThemeMode};
@@ -200,7 +199,7 @@ fn draw_opacity(w: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElem
     let ui = ui(cx);
     // The value goes quiet with the slider.
     let shown = if reduced { UiColors { text: ui.faint, ..ui } } else { ui };
-    let slider = Slider::new(&w.opacity_slider).disabled(reduced);
+    let slider = style::slider(ui, &w.opacity_slider).disabled(reduced);
     style::slider_control(shown, slider, value, &["30", "65", "100"], false).into_any_element()
 }
 

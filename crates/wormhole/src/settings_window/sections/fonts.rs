@@ -30,7 +30,7 @@ pub(super) const SETTINGS: &[Setting] = &[
         let value = format!("{:.2}", settings(cx).line_height);
         style::slider_control(
             ui,
-            gpui_kit::component::slider::Slider::new(&w.line_height_slider),
+            style::slider(ui, &w.line_height_slider),
             value,
             &["1.0", "1.5", "2.0"],
             false,

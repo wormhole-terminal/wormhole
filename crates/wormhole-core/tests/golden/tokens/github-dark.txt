@@ -33,6 +33,9 @@ checkbox.checked #6ca4f8
 chip.border #969faa3d
 chip.selected #6ca4f8
 chip.tint #6ca4f829
+control.background #969faa1f
+control.hover #969faa2e
+control.selected #969faa3d
 diff.added #56d364
 diff.added.background #1a2d21
 diff.filler #969faa1f
@@ -61,6 +64,7 @@ resize.handle.active #6ca4f8
 resize.handle.hover #6ca4f880
 scrollbar.thumb #969faa40
 selection.ui #6ca4f84d
+settings.group #969faa12
 shadow #00000080
 sidebar.background #0d0f12
 sidebar.row.hover #969faa0d
@@ -84,6 +88,7 @@ surface.overlay #00000080
 surface.panel #0d0f12
 surface.window #101216
 switch.knob #ffffff
+switch.track #969faa33
 tab.active.background #191b20
 tab.inactive.text #7d848c
 text.disabled #474b51
@@ -179,6 +184,9 @@ increase_contrast card #b3bcc70f
 increase_contrast card.edge #b3bcc747
 increase_contrast checkbox.border #767b83
 increase_contrast chip.border #b3bcc77a
+increase_contrast control.background #b3bcc71f
+increase_contrast control.hover #b3bcc72e
+increase_contrast control.selected #b3bcc73d
 increase_contrast diff.filler #b3bcc71f
 increase_contrast diff.hunk.text #969da6
 increase_contrast diff.line_number #767b83
@@ -191,6 +199,7 @@ increase_contrast list.selected #2d3c53
 increase_contrast list.selected.muted #9fa6ae
 increase_contrast list.selected.text #6ea6fa
 increase_contrast scrollbar.thumb #b3bcc740
+increase_contrast settings.group #b3bcc712
 increase_contrast sidebar.row.hover #b3bcc71a
 increase_contrast sidebar.row.selected #243349
 increase_contrast sidebar.row.selected.muted #969da6
@@ -198,6 +207,7 @@ increase_contrast state.active #b3bcc729
 increase_contrast state.hover #b3bcc71a
 increase_contrast state.selected #6ca4f83d
 increase_contrast state.selected.inset #6ca4f847
+increase_contrast switch.track #b3bcc780
 increase_contrast tab.inactive.text #969da6
 increase_contrast text.disabled #575c62
 increase_contrast text.faint #767b83

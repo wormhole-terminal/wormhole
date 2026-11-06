@@ -50,6 +50,9 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         // (on white, say): a light theme's fill is 3% and its edge 12%, as the board's GitHub Light.
         "card" => p("text.primary / 3.5%", "text.primary / 3%"),
         "card.edge" => p("text.primary / 10%", "text.primary / 12%"),
+        // A Settings group's card: a light veil on a dark page, a white one on a light page, so rows and
+        // controls read as lying on a raised surface. Overlays, so a translucent window shows through.
+        "settings.group" => p("text.primary / 7%", "#fff / 80%"),
         // Group heads and section bands, one step above a hovered row and below a pressed one.
         "band" => "text.primary / 5%",
         "band.hover" => "text.primary / 8%",
@@ -205,6 +208,13 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         "checkbox.border" => "text.faint",
         // Light on both the off (border) and on (primary) track, in either scheme.
         "switch.knob" => "#fff",
+        // Quiet and neutral: the off track is a tint of the text, as in System Settings, not an outlined grey.
+        "switch.track" => p("text.primary / 20%", "text.primary / 16%"),
+        // Flat controls on a Settings card: a step darker than the card on light, lighter on dark; the
+        // chosen segment rises above its track (white on light) instead of taking the primary.
+        "control.background" => p("text.primary / 12%", "text.primary / 7%"),
+        "control.hover" => p("text.primary / 18%", "text.primary / 11%"),
+        "control.selected" => p("text.primary / 24%", "#fff"),
         // The raised neutral the title tab sits on; the window colour would vanish into the row.
         "tab.active.background" => "surface.elevated",
         "tab.inactive.text" => "readable(text.muted, titlebar.background, 4.5)",

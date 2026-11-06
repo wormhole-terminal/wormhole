@@ -36,7 +36,7 @@ pub fn setting_group_blurb(ui: UiColors, text: impl Into<SharedString>) -> Div {
     div().px_4().text_caption().text_color(ui.muted).child(text.into())
 }
 
-/// A group's rows in one card (`radius_lg`, the `card` fill, 16 pt of padding at the sides), a divider
+/// A group's rows in one card (`radius_lg`, the `settings.group` fill, 16 pt of padding at the sides), a divider
 /// between each two. Each element is one row: a [`setting`](super::setting) with what hangs under it, or
 /// a list item a page builds itself. They carry no line of their own.
 ///
@@ -51,7 +51,7 @@ pub fn setting_group(ui: UiColors, rows: impl IntoIterator<Item = AnyElement>) -
         .px_4()
         .py_1()
         .rounded(ui.radius_lg)
-        .bg(ui.band)
+        .bg(ui.group)
         .when(ui.increase_contrast, |card| card.outlined_always(ui, ui.card_edge));
     for (ix, row) in rows.into_iter().enumerate() {
         if ix > 0 {

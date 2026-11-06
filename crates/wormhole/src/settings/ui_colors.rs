@@ -89,6 +89,15 @@ pub struct UiColors {
     /// A sidebar card's fill and edge (`card`, `card.edge`).
     pub card: Hsla,
     pub card_edge: Hsla,
+    /// A Settings group's card (`settings.group`), and what its controls are drawn with on it: a flat
+    /// control's fill and its fill under the pointer (`control.background`, `control.hover`), the
+    /// chosen segment of a segmented control (`control.selected`), a switch's off track
+    /// (`switch.track`) and the knob of a switch or slider (`switch.knob`).
+    pub group: Hsla,
+    pub control: Hsla,
+    pub control_hover: Hsla,
+    pub control_selected: Hsla,
+    pub knob: Hsla,
     pub band: Hsla,
     pub band_hover: Hsla,
     pub band_solid: Hsla,
@@ -231,6 +240,11 @@ const COLORS: &[Field] = fields! {
     list_selected_muted = "list.selected.muted";
     card = "card";
     card_edge = "card.edge";
+    group = "settings.group";
+    control = "control.background";
+    control_hover = "control.hover";
+    control_selected = "control.selected";
+    knob = "switch.knob";
     band = "band";
     band_hover = "band.hover";
     band_solid = "band.solid";

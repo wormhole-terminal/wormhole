@@ -33,6 +33,9 @@ checkbox.checked #c8ff00
 chip.border #ebede33d
 chip.selected #c8ff00
 chip.tint #c8ff0029
+control.background #ebede31f
+control.hover #ebede32e
+control.selected #ebede33d
 diff.added #4fd6a0
 diff.added.background #1c3120
 diff.filler #ebede31f
@@ -61,6 +64,7 @@ resize.handle.active #c8ff00
 resize.handle.hover #c8ff0080
 scrollbar.thumb #ebede340
 selection.ui #c8ff004d
+settings.group #ebede312
 shadow #00000080
 sidebar.background #101209
 sidebar.row.hover #ebede30d
@@ -84,6 +88,7 @@ surface.overlay #00000080
 surface.panel #101209
 surface.window #14160b
 switch.knob #ffffff
+switch.track #ebede333
 tab.active.background #23251a
 tab.inactive.text #a0a297
 text.disabled #585a4f
@@ -191,6 +196,7 @@ increase_contrast state.hover #ebede31a
 increase_contrast state.selected #c8ff003d
 increase_contrast state.selected.inset #c8ff0047
 increase_contrast status.danger.text #ff9598
+increase_contrast switch.track #ebede380
 increase_contrast text.disabled #5c5e54
 increase_contrast text.faint #7b7d73
 increase_contrast metrics.focus_ring_width 3

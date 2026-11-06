@@ -9,7 +9,6 @@ use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
 use gpui_kit::component::color_picker::ColorPicker;
 use gpui_kit::component::input::Input;
-use gpui_kit::component::slider::Slider;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::tokens::{METRIC_TOKENS, ThemeTokens, UI_TOKENS};
@@ -334,7 +333,7 @@ impl StudioWindow {
                         step(-1.0),
                         step(1.0),
                     ))
-                    .child(div().flex_1().child(Slider::new(&self.slider))),
+                    .child(div().flex_1().child(style::slider(ui, &self.slider))),
             )
             .children(follow)
             .child(div().text_caption().text_color(ui.faint).child(help))

@@ -115,18 +115,20 @@ const BUDGET: [(&str, u64); 20] = [
     ("Profile", 7088),
     // Measured with [`change`]'s settings differing from their defaults, so the page has rows: five settings
     // on four pages, each a row of its own page with a dot, a reset arrow and a menu.
-    ("Changed", 6336),
+    ("Changed", 6473),
     // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
     // key line, 425 more.
     ("Appearance", 14948),
-    ("Fonts", 8054),
+    // With the flat controls: a stepper is two halves, each a box with the Kit's button in it, and the
+    // slider is built from the Kit's parts; a page with either costs a few hundred allocations more.
+    ("Fonts", 8436),
     ("Motion", 4707),
     // With the Worktrees group's switch for cloning build folders (356).
     ("Terminal", 10145),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 9141),
-    ("Git", 5537),
+    ("Sessions", 9165),
+    ("Git", 5682),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
@@ -135,7 +137,7 @@ const BUDGET: [(&str, u64); 20] = [
     ("Agents", 8719),
     // Fell from 49,182 when the comparison left the page: the open card and its rows are what is drawn.
     ("Import", 23034),
-    ("Notifications", 7980),
+    ("Notifications", 8125),
     // The page was split into MenuBar and Hotkey, each with a preview that is a view of its own (a menu bar
     // twice, and the shortcut's keys with the quick panel or the window sketch); both measured at the split.
     // Every other page rose by 68 with the nav's one row more, Hotkey, and was measured again.
@@ -162,7 +164,7 @@ const BUDGET: [(&str, u64); 20] = [
     // Settings → Components, a development tool: every specimen of the controls on one page, many times what any
     // other page draws (nobody opens it but the owner tuning the look). The nav's one row more, Components, raised
     // every other page by 91, and Feature flags by 464 more with the flag's switch row.
-    ("Components", 55282),
+    ("Components", 55842),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     // The search finds the Borders row too, as one more result: 196 more.

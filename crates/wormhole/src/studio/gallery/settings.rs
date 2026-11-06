@@ -7,6 +7,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::{Button, ButtonVariants};
+use gpui_kit::component::slider::SliderState;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{BannerKind, NavMark, RecorderState, RowKeys, SettingParts, SettingState};
@@ -26,7 +27,7 @@ const COLUMN_W: f32 = 560.0;
 const NAV_W: f32 = 220.0;
 
 pub(super) fn render(
-    _studio: &GalleryView,
+    studio: &GalleryView,
     env: &Env,
     part: usize,
     cx: &mut Context<GalleryView>,
@@ -38,7 +39,7 @@ pub(super) fn render(
             .flex()
             .flex_wrap()
             .gap_6()
-            .child(env.mark("setting.row", setting_rows(ui, cx)))
+            .child(env.mark("setting.row", setting_rows(ui, &studio.sample_slider, cx)))
             .child(env.mark("settings.nav", nav(ui)))
             .into_any_element(),
         1 => controls(env).into_any_element(),
@@ -146,7 +147,7 @@ const PROFILE_MENU_W: f32 = 280.0;
 const PROFILE_EDGE_SAMPLE_H: f32 = 24.0;
 
 /// The setting row in each of its states.
-fn setting_rows(ui: UiColors, cx: &App) -> Div {
+fn setting_rows(ui: UiColors, slider: &Entity<SliderState>, cx: &App) -> Div {
     let row = |id: &'static str,
                label: &'static str,
                description: &'static str,
@@ -230,7 +231,7 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
             &["opacity"],
             SettingState::Default,
             None,
-            style::slider_control(ui, slider_track(ui), "80 %", &["30", "65", "100"], false)
+            style::slider_control(ui, style::slider(ui, slider), "80 %", &["30", "65", "100"], false)
                 .into_any_element(),
         )
         .into_any_element(),
@@ -275,24 +276,6 @@ fn setting_rows(ui: UiColors, cx: &App) -> Div {
         .child(style::setting_group_blurb(ui, "A paragraph under the head, in muted caption text.")) // text: sample (the gallery's specimen)
         .child(style::setting_group(ui, rows))
 }
-
-/// A slider's track and knob as drawn (the real one is GPUI Kit's, and needs a state).
-fn slider_track(ui: UiColors) -> AnyElement {
-    div()
-        .relative()
-        .w_full()
-        .h(px(SLIDER_KNOB))
-        .flex()
-        .items_center()
-        .child(div().w_full().h(px(SLIDER_TRACK)).rounded_full().bg(ui.border))
-        .child(div().absolute().left_0().w(relative(0.7)).h(px(SLIDER_TRACK)).rounded_full().bg(ui.primary))
-        .child(div().absolute().left(relative(0.66)).size(px(SLIDER_KNOB)).rounded_full().bg(ui.text))
-        .into_any_element()
-}
-
-/// The drawn slider's track and knob.
-const SLIDER_TRACK: f32 = 4.0;
-const SLIDER_KNOB: f32 = 16.0;
 
 /// The settings nav's group labels and items: normal, current, needs attention, search hits, a count, none.
 fn nav(ui: UiColors) -> Div {

@@ -4,7 +4,6 @@ use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
-use gpui_kit::component::slider::Slider;
 use gpui_kit::*;
 
 use super::{SIZE_DEFAULT, Sheet, category, parts, specimen};
@@ -337,12 +336,12 @@ fn controls(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
     });
     let slider = style::slider_control(
         ui,
-        Slider::new(&now.slider),
+        style::slider(ui, &now.slider),
         format!("{} %", now.slider_value), // text: sample (a slider's value)
         &["30", "65", "100"],
         false,
     );
-    let compact = style::slider_control(ui, Slider::new(&now.slider), "80 %", &["30", "100"], true); // text: sample (a slider's value)
+    let compact = style::slider_control(ui, style::slider(ui, &now.slider), "80 %", &["30", "100"], true); // text: sample (a slider's value)
     let select = {
         let (open, pick) = (sheet.state.clone(), sheet.state.clone());
         let width = style::SELECT_W;

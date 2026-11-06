@@ -36,7 +36,10 @@ pub(super) fn render(
         .flex_wrap()
         .gap_4()
         .items_start()
-        .child(select::SelectTrigger::new("g-select", ui, "Tokyo Night").width(px(220.0))) // text: sample (the gallery's specimen)
+        .child(env.mark(
+            "select",
+            select::SelectTrigger::new("g-select", ui, "Tokyo Night").width(px(220.0)), // text: sample (the gallery's specimen)
+        ))
         .child(select::SelectTrigger::new("g-select-compact", ui, "main").compact())
         .child(env.mark("menu", menu))
         .into_any_element()

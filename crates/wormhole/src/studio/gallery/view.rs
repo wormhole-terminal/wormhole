@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use gpui_kit::assets::IconName;
 use gpui_kit::component::input::InputState;
+use gpui_kit::component::slider::SliderState;
 use gpui_kit::*;
 use wormhole_core::theme::tokens::{TokenUse, uses_of};
 
@@ -44,6 +45,8 @@ pub(in crate::studio) struct GalleryView {
     pub(super) sample_filled: Entity<InputState>,
     pub(super) sample_focused: Entity<InputState>,
     pub(super) item_editor: Entity<InputState>,
+    /// The state of the slider specimen (a value part-way along its scale).
+    pub(super) sample_slider: Entity<SliderState>,
     /// The syntax sample, parsed once.
     pub(super) sample: RefCell<Option<CodeSample>>,
     /// devctl `studio-scroll`: where to scroll to, and how many frames it may take until the page
@@ -82,6 +85,7 @@ impl GalleryView {
             sample_filled: cx.new(|cx| InputState::new(window, cx).default_value("Tokyo Night")), // text: sample (the gallery's specimen)
             sample_focused: cx.new(|cx| InputState::new(window, cx).placeholder("Search themes")), // text: sample (the gallery's specimen)
             item_editor: cx.new(|cx| InputState::new(window, cx).default_value("Rename this task")), // text: sample (the gallery's specimen)
+            sample_slider: cx.new(|_| SliderState::new().min(30.0).max(100.0).step(1.0).default_value(80.0)),
             sample: RefCell::new(None),
             #[cfg(feature = "devctl")]
             scroll_to: None,

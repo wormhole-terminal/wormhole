@@ -252,9 +252,10 @@ pub fn segment(
         .child(label.into())
 }
 
-/// The segmented control of a settings row: as tall as the selects and buttons
-/// around it ([`CONTROL_H`]), the track in `state.hover` with the control corners, the
-/// chosen [`form_segment`] the solid primary. Add the segments with `.child(…)`.
+/// The segmented control of a settings row, flat as in System Settings: as tall as the selects and
+/// buttons around it ([`CONTROL_H`]), a track in the `control.background` fill with the control
+/// corners and no outline, the chosen [`form_segment`] raised on it. Under Increase Contrast the track
+/// gets an outline, since a faint fill alone is no edge. Add the segments with `.child(…)`.
 #[track_caller]
 pub fn segmented_form(ui: UiColors) -> Div {
     div()
@@ -264,11 +265,13 @@ pub fn segmented_form(ui: UiColors) -> Div {
         .h(px(CONTROL_H))
         .p(px(SEGMENT_INSET))
         .rounded(ui.radius)
-        .bg(ui.hover)
+        .bg(ui.control)
+        .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.border_strong))
 }
 
 /// One option of a [`segmented_form`], with an optional icon before its label ("Dark",
-/// "Light", "Match system"); add `.on_click(…)`.
+/// "Light", "Match system"); add `.on_click(…)`. The chosen one is a pill in `control.selected` with
+/// a soft shadow, in the text colour; the others are muted and fill on hover.
 #[track_caller]
 pub fn form_segment(
     id: impl Into<ElementId>,
@@ -284,15 +287,28 @@ pub fn form_segment(
         .gap(px(SEGMENT_ICON_GAP))
         .px_2()
         .h(px(CONTROL_H - 2.0 * SEGMENT_INSET))
-        .rounded(ui.radius_chip)
+        // Concentric with the track, which is `radius` round the segments' inset.
+        .rounded((ui.radius - px(SEGMENT_INSET)).max(px(0.0)))
         .text_label()
-        .font_weight(if active { FontWeight::SEMIBOLD } else { FontWeight::NORMAL })
+        .font_weight(FontWeight::MEDIUM)
         .cursor_pointer()
-        .text_color(if active { ui.on_selected } else { ui.muted })
-        .when(active, |d| d.bg(ui.selected_chip))
-        .hover(move |d| if active { d } else { d.text_color(ui.text) })
+        .text_color(if active { ui.text } else { ui.muted })
+        .when(active, |d| d.bg(ui.control_selected).shadow(segment_lift(ui)))
+        .when(active && ui.increase_contrast, |d| d.outlined_always(ui, ui.border_strong))
+        .hover(move |d| if active { d } else { d.bg(ui.control_hover).text_color(ui.text) })
         .children(icon.map(|icon| Icon::new(icon).with_size(px(super::scale::GLYPH))))
         .child(label.into())
+}
+
+/// The lift of a chosen segment: a hair of shadow under it, enough to read as raised on the track.
+fn segment_lift(ui: UiColors) -> Vec<BoxShadow> {
+    vec![BoxShadow {
+        color: Hsla { a: 0.18, ..ui.shadow },
+        offset: point(px(0.0), px(1.0)),
+        blur_radius: px(2.0),
+        spread_radius: px(0.0),
+        inset: false,
+    }]
 }
 
 /// A color to pick (the primary in Settings → Appearance): a [`SWATCH`] square in the

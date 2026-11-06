@@ -23,9 +23,11 @@ use super::scale::{
 use super::section::ClickHandler;
 use crate::settings::UiColors;
 
-/// A small whole number with a minus and a plus: one outlined control as tall as a
-/// select, the value between hairlines in the middle. Add nothing: `minus` and `plus` are
-/// the click handlers. `id` names the two buttons.
+/// A small whole number with a minus and a plus, as System Settings draws a stepper: the value as
+/// plain text, and beside it one compact control of two halves ([`STEPPER_HALF_W`] wide, as tall as a
+/// select) on the `control.background` fill, a hair of the card between them and no outline
+/// (Increase Contrast adds one). Add nothing: `minus` and `plus` are the click handlers. `id` names the
+/// two buttons.
 #[track_caller]
 pub fn stepper(
     ui: UiColors,
@@ -34,36 +36,71 @@ pub fn stepper(
     minus: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     plus: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> Div {
+    let (round, flat) = (ui.radius, px(0.0));
     div()
         .flex()
         .flex_none()
         .items_center()
-        .h(px(CONTROL_H))
-        .rounded(ui.radius)
-        .outlined(ui, ui.border_strong)
-        .bg(ui.input)
-        .child(Button::new((id, 0usize)).ghost().small().icon(IconName::Minus).on_click(minus))
+        .gap_3()
         .child(
             div()
                 .w(px(STEPPER_VALUE_W))
-                .h_full()
                 .flex()
-                .items_center()
-                .justify_center()
-                .rule_left(ui)
-                .rule_right(ui)
+                .justify_end()
                 .text_label()
                 .font_weight(FontWeight::NORMAL)
                 .tabular_nums()
                 .text_color(ui.text)
                 .child(value),
         )
-        .child(Button::new((id, 1usize)).ghost().small().icon(IconName::Plus).on_click(plus))
+        .child(
+            div()
+                .flex()
+                .flex_none()
+                .gap(px(STEPPER_SPLIT))
+                .child(stepper_half(ui, (id, 0), IconName::Minus, [round, flat, flat, round], minus))
+                .child(stepper_half(ui, (id, 1), IconName::Plus, [flat, round, round, flat], plus)),
+        )
 }
 
-/// Width of the value between a [`stepper`]'s buttons, so "10000" and "80 %" don't
-/// move the buttons.
-const STEPPER_VALUE_W: f32 = 72.0;
+/// One half of a [`stepper`]: a filled box that fills a little more under the pointer, with the Kit's
+/// button in it for the focus, the keyboard and VoiceOver. Only its outer corners are round, as
+/// `[top left, top right, bottom right, bottom left]` says.
+#[track_caller]
+fn stepper_half(
+    ui: UiColors,
+    id: (&'static str, usize),
+    icon: IconName,
+    corners: [Pixels; 4],
+    on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
+) -> Stateful<Div> {
+    let [tl, tr, br, bl] = corners;
+    div()
+        .id((id.0, id.1 + 2))
+        .flex_none()
+        .w(px(STEPPER_HALF_W))
+        .h(px(CONTROL_H))
+        .corners(tl, tr, br, bl)
+        .bg(ui.control)
+        .hover(move |d| d.bg(ui.control_hover))
+        .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.border_strong))
+        .child(
+            Button::new(id)
+                .ghost()
+                .small()
+                .icon(icon)
+                .w_full()
+                .h_full()
+                .corners(tl, tr, br, bl)
+                .on_click(on_click),
+        )
+}
+
+/// Width of the value before a [`stepper`]'s halves, so "10000" and "80 %" don't move them.
+const STEPPER_VALUE_W: f32 = 56.0;
+/// A [`stepper`] half's width, and the gap between the two halves that shows the card through.
+const STEPPER_HALF_W: f32 = 28.0;
+const STEPPER_SPLIT: f32 = 1.0;
 
 /// A switch. `on_change` gets the new state.
 pub fn toggle(

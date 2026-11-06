@@ -86,6 +86,8 @@ fn high_contrast_rule(name: &str, dark: bool) -> Option<Cow<'static, str>> {
         // Hover (10 %) now sits above the band (8 %); the steps above it move up to stay
         // steps, hover < band.hover < active, as 5 < 8 < 12 do by default.
         "band" => "text.primary / 8%",
+        // The off switch has no outline to carry it, so its track is stronger (3:1 is out of reach of a tint).
+        "switch.track" => p("text.primary / 50%", "text.primary / 56%"),
         "card" => "text.primary / 6%",
         "card.edge" => "text.primary / 28%",
         "state.hover" => "text.primary / 10%",
@@ -381,6 +383,7 @@ mod tests {
             "state.hover",
             "state.selected",
             "state.selected.inset",
+            "switch.track",
             "text.faint",
             "text.muted",
             "text.primary",

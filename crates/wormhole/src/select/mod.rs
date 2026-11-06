@@ -20,7 +20,9 @@ const PICKER_H: f32 = 24.0;
 /// The widest a panel picker grows before its branch name truncates.
 const PICKER_MAX_W: f32 = 160.0;
 
-/// The closed select: current value on the left, chevrons on the right.
+/// The closed select: current value on the left, chevrons on the right. In a form it is a flat
+/// filled field (`control.background`); the panel's [`compact`](SelectTrigger::compact) one keeps
+/// its outline.
 /// Pass it to `Popover::trigger`, which marks it open while the menu shows.
 #[derive(IntoElement)]
 pub struct SelectTrigger {
@@ -63,7 +65,7 @@ impl Selectable for SelectTrigger {
 
 impl RenderOnce for SelectTrigger {
     fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
-        let ui = self.ui;
+        let (ui, compact) = (self.ui, self.compact);
         div()
             .id(self.id)
             .flex()
@@ -88,15 +90,20 @@ impl RenderOnce for SelectTrigger {
                         }
                     })
             })
+            // Flat, a pop-up button as System Settings draws it: a filled field and no outline.
+            // Increase Contrast gives it its edge back, since a faint fill alone is none.
             .when(!self.compact, |d| {
-                d.h(px(CONTROL_H)).px_2().text_body().map(|d| {
-                    if self.open { d.outlined_always(ui, ui.primary) } else { d.outlined(ui, ui.border) }
-                })
+                d.h(px(CONTROL_H))
+                    .pl_3()
+                    .pr_2()
+                    .text_body()
+                    .bg(if self.open { ui.control_hover } else { ui.control })
+                    .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.border_strong))
             })
             .when_some(self.width, |d, width| d.w(width))
             .rounded(ui.radius)
             .cursor_pointer()
-            .hover(|d| d.bg(ui.hover))
+            .hover(move |d| if compact { d.bg(ui.hover) } else { d.bg(ui.control_hover) })
             // A soft ring around the open select, like a focused input (the panel's picker
             // marks itself with the outline alone).
             .when(self.open && !self.compact, |d| {
