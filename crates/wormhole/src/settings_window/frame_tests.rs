@@ -110,14 +110,14 @@ const BUDGET: [(&str, u64); 19] = [
     ("Profile", 6908),
     // Measured with [`change`]'s settings differing from their defaults, so the page has rows: five settings
     // on four pages, each a row of its own page with a dot, a reset arrow and a menu.
-    ("Changed", 6560),
+    ("Changed", 6651),
     // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
     // key line, 425 more.
     ("Appearance", 14591),
     ("Fonts", 7665),
     ("Motion", 4478),
     // With the Worktrees group's switch for cloning build folders (356).
-    ("Terminal", 9804),
+    ("Terminal", 9895),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
     ("Sessions", 8989),
@@ -142,10 +142,10 @@ const BUDGET: [(&str, u64); 19] = [
     // With the New programs group: the Developer Tools row, its description and its button (417).
     // The Show config keys switch is a row more, 4,941 measured; with the keys hidden by default every
     // other page fell (their key lines are not built).
-    ("Advanced", 5039),
-    ("Projects", 9242),
+    ("Advanced", 5130),
+    ("Projects", 9333),
     // Measured with the nav's Motion and Import rows, which came after the page.
-    ("Extensions", 2822),
+    ("Extensions", 2913),
     // The switches for Automation, Tear off, Live resize, Notice chip and Probes are five rows more; the
     // `agent_access` key, which every page reads as JSON each frame, a few more.
     // The Files flag is one switch row more: 6,478 before it, 6,875 with it (397, as each earlier row cost
@@ -153,7 +153,11 @@ const BUDGET: [(&str, u64); 19] = [
     // 6,912 measured, a row fewer.
     // The Restore after restart flag is one switch row more again: 7,271 measured (about 340 a row).
     // The File icon themes flag is one switch row more again: 7,577 measured (about 305 a row).
-    ("FeatureFlags", 7812),
+    ("FeatureFlags", 8296),
+    // Settings → Components, a development tool: every specimen of the controls on one page, many times what any
+    // other page draws (nobody opens it but the owner tuning the look). The nav's one row more, Components, raised
+    // every other page by 91, and Feature flags by 464 more with the flag's switch row.
+    ("Components", 59135),
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     // The search finds the Borders row too, as one more result: 196 more.

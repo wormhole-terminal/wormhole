@@ -27,6 +27,7 @@ pub(crate) const LOCALES: [Locale; 1] = [
             ("settings-agents.ftl", include_str!("../../locales/en/settings-agents.ftl")),
             ("settings-appearance.ftl", include_str!("../../locales/en/settings-appearance.ftl")),
             ("settings-changed.ftl", include_str!("../../locales/en/settings-changed.ftl")),
+            ("settings-components.ftl", include_str!("../../locales/en/settings-components.ftl")),
             ("settings-extensions.ftl", include_str!("../../locales/en/settings-extensions.ftl")),
             ("settings-feature-flags.ftl", include_str!("../../locales/en/settings-feature-flags.ftl")),
             ("settings-fonts.ftl", include_str!("../../locales/en/settings-fonts.ftl")),

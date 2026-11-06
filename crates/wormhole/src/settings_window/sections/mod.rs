@@ -28,6 +28,7 @@ mod agents;
 mod appearance;
 mod bar_previews;
 mod cli_tool;
+mod components;
 mod extensions;
 mod extensions_sheet;
 mod extensions_text;
@@ -95,6 +96,8 @@ pub(super) fn controls(section: Section) -> &'static [Setting] {
         Section::Projects => projects::SETTINGS,
         Section::Extensions => extensions::SETTINGS,
         Section::FeatureFlags => feature_flags::SETTINGS,
+        // Specimens of the controls, drawn by the page itself (`components`): no row of the table.
+        Section::Components => &[],
         Section::Notifications => notifications::SETTINGS,
         Section::MenuBar => menu_bar::SETTINGS,
         Section::Hotkey => hotkey::SETTINGS,
@@ -131,6 +134,9 @@ impl SettingsWindow {
     pub(super) fn render_section(&self, section: Section, cx: &mut Context<Self>) -> AnyElement {
         if section == Section::Changed {
             return self.render_changed(cx);
+        }
+        if section == Section::Components {
+            return components::draw(cx);
         }
         self.render_page(section, cx)
     }

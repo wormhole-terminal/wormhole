@@ -167,6 +167,11 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             intro: SETTINGS_SECTION_FEATURE_FLAGS_INTRO,
             nav: NavGroup::Preview,
         },
+        SectionId::Components => &SectionInfo {
+            title: SETTINGS_SECTION_COMPONENTS,
+            intro: SETTINGS_SECTION_COMPONENTS_INTRO,
+            nav: NavGroup::Preview,
+        },
         SectionId::Import => &SectionInfo {
             title: SETTINGS_SECTION_IMPORT,
             intro: SETTINGS_SECTION_IMPORT_INTRO,
@@ -204,7 +209,8 @@ pub(super) fn groups(id: SectionId) -> &'static [Group] {
     match id {
         SectionId::Profile => profile::PROFILE,
         // The other pages' rows, found by what differs (`Values::changed_rows`), not a table of its own.
-        SectionId::Changed => &[],
+        // Components draws specimens of the controls, and stores nothing.
+        SectionId::Changed | SectionId::Components => &[],
         SectionId::Appearance => appearance::APPEARANCE,
         SectionId::Fonts => appearance::FONTS,
         SectionId::Motion => motion::MOTION,

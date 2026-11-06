@@ -139,7 +139,8 @@ impl SettingsWindow {
             | Section::Advanced
             | Section::Projects
             | Section::Extensions
-            | Section::FeatureFlags => None,
+            | Section::FeatureFlags
+            | Section::Components => None,
         }
     }
 

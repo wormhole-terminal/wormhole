@@ -80,10 +80,14 @@ pub enum FeatureFlag {
     /// themes folder beside the built-in Wormhole Icons. Off, those rows are not in Settings and every
     /// file shows the built-in Wormhole Icons, whatever `icon_theme` in `config.json` holds.
     IconThemes,
+    /// Settings → Components: every control and block the Settings pages are built from, drawn in one
+    /// place with sample state, so their look can be tuned. The page shows only while the flag is on and
+    /// holds no setting of its own.
+    Components,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 14] = [
+    pub const ALL: [FeatureFlag; 15] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -98,6 +102,7 @@ impl FeatureFlag {
         Self::Files,
         Self::FolderPicker,
         Self::IconThemes,
+        Self::Components,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -117,6 +122,7 @@ impl FeatureFlag {
             Self::Files => "files",
             Self::FolderPicker => "folder_picker",
             Self::IconThemes => "icon_themes",
+            Self::Components => "components",
         }
     }
 
@@ -141,6 +147,7 @@ impl FeatureFlag {
             Self::Files => "Files",
             Self::FolderPicker => "Folder picker",
             Self::IconThemes => "File icon themes",
+            Self::Components => "Settings components",
         }
     }
 
@@ -204,6 +211,10 @@ impl FeatureFlag {
                 "Settings → Appearance → File icons: pick a file icon theme, or add your own in the icon \
                  themes folder. Off, files show the built-in Wormhole Icons."
             }
+            Self::Components => {
+                "Settings → Components: every control the Settings pages are built from, in one place with \
+                 sample state, to tune how they look."
+            }
         }
     }
 
@@ -238,6 +249,8 @@ impl FeatureFlag {
             Self::FolderPicker => false,
             // New: off until the Settings rows have been through their visual check and approved.
             Self::IconThemes => false,
+            // A tool for tuning the Settings controls' look: never for a release's users.
+            Self::Components => false,
         }
     }
 }
@@ -502,7 +515,6 @@ mod tests {
         assert_eq!(flag.key(), "icon_themes");
         assert_eq!(FeatureFlag::from_key("icon_themes"), Some(flag));
         assert!(FeatureFlag::ALL.contains(&flag));
-        assert_eq!(FeatureFlag::ALL.last(), Some(&flag), "new flags go last");
         assert!(!flag.released());
         assert!(!enabled_in(flag, &BTreeMap::new(), RELEASE));
         assert!(!enabled_in(flag, &BTreeMap::from([("icon_themes".to_string(), true)]), RELEASE));
@@ -510,6 +522,21 @@ mod tests {
         assert!(enabled_in(flag, &BTreeMap::from([("icon_themes".to_string(), true)]), FlagMode::Unstable));
         assert!(enabled_in(flag, &BTreeMap::new(), DEV));
         assert!(!enabled_in(flag, &BTreeMap::from([("icon_themes".to_string(), false)]), DEV));
+    }
+
+    #[test]
+    fn components_is_off_in_a_release_and_on_in_a_dev_build() {
+        let flag = FeatureFlag::Components;
+        assert_eq!(flag.key(), "components");
+        assert_eq!(FeatureFlag::from_key("components"), Some(flag));
+        assert_eq!(FeatureFlag::ALL.last(), Some(&flag), "new flags go last");
+        assert!(!flag.released());
+        assert!(!enabled_in(flag, &BTreeMap::new(), RELEASE));
+        assert!(!enabled_in(flag, &BTreeMap::from([("components".to_string(), true)]), RELEASE));
+        assert!(!enabled_in(flag, &BTreeMap::new(), FlagMode::Unstable), "off until a tester turns it on");
+        assert!(enabled_in(flag, &BTreeMap::from([("components".to_string(), true)]), FlagMode::Unstable));
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
+        assert!(!enabled_in(flag, &BTreeMap::from([("components".to_string(), false)]), DEV));
     }
 
     #[test]

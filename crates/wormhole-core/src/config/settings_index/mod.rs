@@ -57,6 +57,10 @@ pub enum SectionId {
     Projects,
     Extensions,
     FeatureFlags,
+    /// Every control the pages are built from, in one place with sample state (a development tool). It
+    /// holds no settings (no group): the page draws specimens, as Changed draws the other pages' rows.
+    /// Behind [`crate::config::features::FeatureFlag::Components`].
+    Components,
 }
 
 /// The headings the nav groups its sections under.
@@ -197,7 +201,7 @@ impl Entry {
 }
 
 impl SectionId {
-    pub const ALL: [SectionId; 18] = [
+    pub const ALL: [SectionId; 19] = [
         SectionId::Profile,
         SectionId::Changed,
         SectionId::Appearance,
@@ -217,6 +221,7 @@ impl SectionId {
         SectionId::Projects,
         SectionId::Extensions,
         SectionId::FeatureFlags,
+        SectionId::Components,
     ];
 
     pub fn info(self) -> &'static SectionInfo {
@@ -269,6 +274,7 @@ impl SectionId {
             SectionId::Projects => Some(crate::config::features::FeatureFlag::ProjectFolders),
             SectionId::Motion => Some(crate::config::features::FeatureFlag::Motion),
             SectionId::Extensions => Some(crate::config::features::FeatureFlag::Probes),
+            SectionId::Components => Some(crate::config::features::FeatureFlag::Components),
             _ => None,
         }
     }
@@ -538,8 +544,13 @@ mod tests {
     #[test]
     fn the_preview_sections_show_only_in_a_dev_build_or_on_unstable_and_while_their_flag_is_on() {
         use crate::config::features::FlagMode::{Dev as DEV, Release as RELEASE, Unstable as UNSTABLE};
-        let preview =
-            [SectionId::Projects, SectionId::Extensions, SectionId::FeatureFlags, SectionId::Motion];
+        let preview = [
+            SectionId::Projects,
+            SectionId::Extensions,
+            SectionId::FeatureFlags,
+            SectionId::Motion,
+            SectionId::Components,
+        ];
         let defaults = Settings::default();
         // A release build: no flag list, and a flagged feature stays hidden whatever the file says.
         let asked_on = Settings {
@@ -567,6 +578,16 @@ mod tests {
             Settings { feature_flags: [("motion".to_string(), false)].into(), ..Settings::default() };
         assert!(!SectionId::Motion.is_visible_in(&motion_off, DEV));
         assert!(SectionId::Projects.is_visible_in(&motion_off, DEV));
+        // Components has its own flag too, and shows nothing in a release or on Unstable until asked.
+        assert!(SectionId::Components.is_visible_in(&defaults, DEV));
+        let components_off =
+            Settings { feature_flags: [("components".to_string(), false)].into(), ..Settings::default() };
+        assert!(!SectionId::Components.is_visible_in(&components_off, DEV));
+        assert!(!SectionId::Components.is_visible_in(&defaults, UNSTABLE));
+        assert!(SectionId::Components.is_visible_in(
+            &Settings { feature_flags: [("components".to_string(), true)].into(), ..Settings::default() },
+            UNSTABLE
+        ));
         // Every other section ships in both.
         for section in SectionId::ALL.into_iter().filter(|s| !preview.contains(s)) {
             assert!(!section.is_preview());
@@ -585,8 +606,9 @@ mod tests {
     fn every_section_has_a_page() {
         for section in SectionId::ALL {
             assert!(!section.title().is_empty());
-            // The Changed page shows the other pages' rows, not rows of its own.
-            assert_eq!(section.groups().is_empty(), section == SectionId::Changed, "{section:?}");
+            // The Changed page shows the other pages' rows, and Components its specimens: no rows of their own.
+            let drawn = matches!(section, SectionId::Changed | SectionId::Components);
+            assert_eq!(section.groups().is_empty(), drawn, "{section:?}");
         }
     }
 

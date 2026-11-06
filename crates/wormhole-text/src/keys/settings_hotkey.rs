@@ -7,37 +7,37 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Hotkey"
-pub const SETTINGS_SECTION_HOTKEY: Key = Key::new(722);
+pub const SETTINGS_SECTION_HOTKEY: Key = Key::new(724);
 /// "A shortcut that works from any app."
-pub const SETTINGS_SECTION_HOTKEY_INTRO: Key = Key::new(723);
+pub const SETTINGS_SECTION_HOTKEY_INTRO: Key = Key::new(725);
 /// "Shortcut"
-pub const SETTINGS_HOTKEY_HOTKEY: Key = Key::new(724);
+pub const SETTINGS_HOTKEY_HOTKEY: Key = Key::new(726);
 /// "Works from any app. Click, then press the keys"
-pub const SETTINGS_HOTKEY_HOTKEY_DESCRIPTION: Key = Key::new(725);
+pub const SETTINGS_HOTKEY_HOTKEY_DESCRIPTION: Key = Key::new(727);
 /// "global shortcut quake record hotkey"
-pub const SETTINGS_HOTKEY_HOTKEY_KEYWORDS: Key = Key::new(726);
+pub const SETTINGS_HOTKEY_HOTKEY_KEYWORDS: Key = Key::new(728);
 /// "Hotkey opens"
-pub const SETTINGS_HOTKEY_ACTION: Key = Key::new(727);
+pub const SETTINGS_HOTKEY_ACTION: Key = Key::new(729);
 /// "Pressing it again with the panel open shows Wormhole"
-pub const SETTINGS_HOTKEY_ACTION_DESCRIPTION: Key = Key::new(728);
+pub const SETTINGS_HOTKEY_ACTION_DESCRIPTION: Key = Key::new(730);
 /// "quick panel toggle"
-pub const SETTINGS_HOTKEY_ACTION_KEYWORDS: Key = Key::new(729);
+pub const SETTINGS_HOTKEY_ACTION_KEYWORDS: Key = Key::new(731);
 /// "Jump to next waiting terminal"
-pub const SETTINGS_HOTKEY_JUMP_WAITING_KEY: Key = Key::new(730);
+pub const SETTINGS_HOTKEY_JUMP_WAITING_KEY: Key = Key::new(732);
 /// "Inside Wormhole, in any window"
-pub const SETTINGS_HOTKEY_JUMP_WAITING_KEY_DESCRIPTION: Key = Key::new(731);
+pub const SETTINGS_HOTKEY_JUMP_WAITING_KEY_DESCRIPTION: Key = Key::new(733);
 /// "needs input needs you waiting shortcut"
-pub const SETTINGS_HOTKEY_JUMP_WAITING_KEY_KEYWORDS: Key = Key::new(732);
+pub const SETTINGS_HOTKEY_JUMP_WAITING_KEY_KEYWORDS: Key = Key::new(734);
 /// "Quick panel"
-pub const SETTINGS_HOTKEY_QUICK_PANEL: Key = Key::new(733);
+pub const SETTINGS_HOTKEY_QUICK_PANEL: Key = Key::new(735);
 /// "Show or hide Wormhole"
-pub const SETTINGS_HOTKEY_SHOW_OR_HIDE_WORMHOLE: Key = Key::new(734);
+pub const SETTINGS_HOTKEY_SHOW_OR_HIDE_WORMHOLE: Key = Key::new(736);
 /// "Search terminals and actions"
-pub const SETTINGS_HOTKEY_PREVIEW_SEARCH: Key = Key::new(736);
+pub const SETTINGS_HOTKEY_PREVIEW_SEARCH: Key = Key::new(738);
 
 /// ```text
 /// { $conflict }. Press other keys.
 /// ```
 pub fn settings_hotkey_key_conflict(conflict: &str) -> String {
-    crate::active::message(735, &[("conflict", Arg::Str(conflict))])
+    crate::active::message(737, &[("conflict", Arg::Str(conflict))])
 }

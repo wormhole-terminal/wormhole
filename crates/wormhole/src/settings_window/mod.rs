@@ -15,6 +15,8 @@ mod changed;
 mod changed_tests;
 #[cfg(test)]
 mod close_tests;
+#[cfg(test)]
+mod components_tests;
 pub(crate) mod devctl;
 #[cfg(test)]
 mod extensions_tests;

@@ -16,6 +16,7 @@ use super::view::GalleryView;
 use crate::settings::UiColors;
 use crate::style::{self, Edges, TextRole};
 use crate::theme_bridge;
+use wormhole_core::theme::tokens::ThemeTokens;
 
 /// The letters of the sample row's tiles.
 const LETTERS: &str = "DWPCSRABX"; // text: sample (the gallery's specimen)
@@ -528,4 +529,28 @@ fn banners(ui: UiColors) -> Div {
             true,
             "The settings file changed on disk. Reload to use it.", // text: sample (the gallery's specimen)
         ))
+}
+
+// What the Settings window's Components page shows of these specimens: the same functions the gallery calls,
+// with nothing of the Studio's state in them (no token is selected, so nothing is outlined).
+
+/// The nav's group labels and items in each state.
+pub(crate) fn nav_samples(ui: UiColors) -> Div {
+    nav(ui)
+}
+
+/// The banners of each kind.
+pub(crate) fn banner_samples(ui: UiColors) -> Div {
+    banners(ui)
+}
+
+/// The settings controls that are ours: segmented controls, stepper, swatches, chips, key caps, the
+/// preview's frame, stage and surface, the shortcut recorder in each state and the arranged list.
+pub(crate) fn control_samples(ui: UiColors, tokens: &ThemeTokens) -> Div {
+    controls(&Env { ui, tokens, uses: Vec::new() })
+}
+
+/// A profile's avatar, choice rows, chip, menu and edge.
+pub(crate) fn profile_samples(ui: UiColors, tokens: &ThemeTokens) -> Div {
+    profile_marks(&Env { ui, tokens, uses: Vec::new() })
 }

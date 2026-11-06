@@ -8,6 +8,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Settings → Components (a development build, behind the `components` flag) shows every Settings control in
+  one place, each working on sample state that is kept in the page and never saved, so how they look can be
+  tuned.
 - Settings → Fonts → Interface has a Settings text size row (`settings_text_size` in `config.json`: Small,
   Default, Large or Larger) that scales the text of the Settings and Theme Studio windows, with the spacing
   in step, at once and without a restart. Default is what both windows always drew; the terminal and the main

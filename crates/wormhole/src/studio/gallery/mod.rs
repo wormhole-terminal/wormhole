@@ -37,6 +37,7 @@ use crate::settings::UiColors;
 use crate::studio::t;
 use crate::style::{self, TextRole};
 
+pub(crate) use settings::{banner_samples, control_samples, nav_samples, profile_samples};
 pub(super) use view::GalleryView;
 
 /// What a specimen draws with: the interface colors, the resolved tokens, and what the

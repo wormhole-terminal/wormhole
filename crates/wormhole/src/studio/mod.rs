@@ -61,6 +61,7 @@ use document::history::{StepLabel, UndoStack};
 use document::{Document, is_metric, number, places};
 use draft::group_of;
 use gallery::{Area, GalleryView};
+pub(crate) use gallery::{banner_samples, control_samples, nav_samples, profile_samples};
 use save::Notice;
 use themes::Themes;
 use title::SaveAction;

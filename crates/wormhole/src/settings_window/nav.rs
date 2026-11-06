@@ -41,6 +41,7 @@ pub(super) fn section_icon(section: Section) -> IconName {
         Section::Projects => IconName::Folder,
         Section::Extensions => IconName::Puzzle,
         Section::FeatureFlags => IconName::FlaskConical,
+        Section::Components => IconName::Layers,
         Section::Notifications => IconName::Bell,
         Section::MenuBar => IconName::PanelTop,
         Section::Hotkey => IconName::Command,
