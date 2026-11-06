@@ -31,9 +31,6 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   repository costs no git runs. The timer stays as a backstop every 30 seconds, and as before where file events
   are not available (a network volume). Build output in ignored folders no longer causes reads.
 - Drawing the title row no longer asks the system where the apps in Open in… are on every frame.
-- Settings is the window Wormhole draws itself, as it was before the redesign and the SwiftUI window: the page
-  list, its rows and menus, and the settings and keys in `config.json` as they were. The SwiftUI window and the
-  Native Settings window feature flag are gone.
 - Settings has more space between the items of its sidebar, cannot go full screen or be made wider than its
   page (its green light is dimmed), and shows a page's preview at the top of the page, at most a quarter of the
   window's height, instead of in a column at the right.
