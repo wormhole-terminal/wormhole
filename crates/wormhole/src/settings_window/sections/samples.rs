@@ -72,15 +72,6 @@ pub(super) const CARGO_TEST: Sample = Sample {
     notes: 0,
     agent: None,
 };
-const ZSH: Sample = Sample {
-    name: "zsh",
-    glyph: StatusGlyph::Idle,
-    detail: "~/Projects/terminal/wormhole", // text: sample (a made-up folder of the preview)
-    tone: RowTone::Plain,
-    selected: false,
-    notes: 0,
-    agent: None,
-};
 pub(super) const RATE_LIMITS: Sample = Sample {
     name: "Rate limits", // text: sample (a made-up terminal of the preview)
     glyph: StatusGlyph::Working,
@@ -109,20 +100,16 @@ pub(super) const RELEASE_NOTES: Sample = Sample {
     agent: Some(AgentId::OpenCode),
 };
 
-/// The Terminals list of Terminals & sidebar and of Appearance's window.
-pub(super) const SAMPLES: &[Card] = &[
-    Card { group: None, folder: None, rows: &[SCRATCH] },
-    Card {
-        group: Some("Release 1.2"),          // text: sample (a made-up group of the preview)
-        folder: Some("~/Projects/wormhole"), // text: sample (a made-up folder of the preview)
-        rows: &[SIDEBAR_CARDS, FIX_PILE, CARGO_TEST],
-    },
-    Card { group: None, folder: None, rows: &[ZSH] },
-];
+/// Terminals & sidebar's list: one group's card, a head and a row, which is what the strip holds whole at
+/// the roomiest density (it never scrolls or cuts a list off, so the sample is the part that fits).
+pub(super) const SIDEBAR_SAMPLES: &[Card] = &[Card {
+    group: Some("Release 1.2"),          // text: sample (a made-up group of the preview)
+    folder: Some("~/Projects/wormhole"), // text: sample (a made-up folder of the preview)
+    rows: &[SIDEBAR_CARDS],
+}];
 
-/// What Terminals & sidebar shows: the group's card first, since the strip cuts the list off after a row or
-/// two and a head with its rows says more of a density than a lone terminal does.
-pub(super) const SIDEBAR_SAMPLES: &[Card] = SAMPLES.split_at(1).1;
+/// Appearance's window: its sidebar holds one terminal, the selected one.
+pub(super) const STAGE_SAMPLES: &[Card] = &[Card { group: None, folder: None, rows: &[SIDEBAR_CARDS] }];
 
 /// What Coding agents shows, one agent each: one working, one asking and one finished.
 pub(super) const AGENT_SAMPLES: &[Sample] = &[RATE_LIMITS, FLAKY_LOGIN, RELEASE_NOTES];

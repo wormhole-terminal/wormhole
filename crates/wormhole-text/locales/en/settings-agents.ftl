@@ -207,4 +207,4 @@ settings-agents-cli-path-unknown = Couldn't read your shell's PATH. If { $comman
 
 ## settings_window/sections/preview.rs (the Coding agents preview)
 
-settings-agents-preview-caption = How the Terminals list shows each agent: working, asking you, finished. With status hooks it knows the moment; without, it reads the agent's output.
+settings-agents-preview-caption = Working, asking you, finished: how the list shows an agent

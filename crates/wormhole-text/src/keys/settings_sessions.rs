@@ -126,7 +126,7 @@ pub const SETTINGS_SESSIONS_CHANGES_PLAIN_NONE: Key = Key::new(1086);
 pub const SETTINGS_SESSIONS_CHANGES_SHARED_EACH: Key = Key::new(1087);
 /// "Nobody counts it"
 pub const SETTINGS_SESSIONS_CHANGES_SHARED_NONE: Key = Key::new(1088);
-/// "Live preview of the Terminals list. Hovering a density previews it next to the current one"
+/// "Hover a density to see it next to the current one"
 pub const SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE: Key = Key::new(1089);
 /// "Terminals"
 pub const SETTINGS_SESSIONS_TERMINALS: Key = Key::new(1090);

@@ -135,8 +135,14 @@ fn quick_panel(cx: &App) -> AnyElement {
         .min_w_0()
         .max_w(px(style::QUICK_PANEL_W))
         .child(
-            style::palette_search(ui)
-                .child(div().flex_1().text_color(ui.faint).child(text(SETTINGS_HOTKEY_PREVIEW_SEARCH))),
+            style::palette_search(ui).child(
+                div()
+                    .flex_1()
+                    .min_w_0()
+                    .truncate()
+                    .text_color(ui.faint)
+                    .child(text(SETTINGS_HOTKEY_PREVIEW_SEARCH)),
+            ),
         )
         .child(style::palette_result("hotkey-preview-needs-row", ui, true, needs))
         .into_any_element()

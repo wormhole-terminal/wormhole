@@ -16,16 +16,25 @@ use wormhole_text::text;
 use super::samples::{AGENT_SAMPLES, Card, SIDEBAR_SAMPLES, SampleHead};
 use crate::settings::SettingsStore;
 use crate::settings::{Settings, UiColors, settings};
+use crate::settings_window::preview_column::FRAMED_H;
 use crate::settings_window::{SettingsWindow, SidebarLook, ui};
 use crate::style::{self, Metrics, TextRole, TileFace};
 use crate::theme_bridge;
 
 /// A preview list is as wide as the sidebar at its least.
 const SIDEBAR_W: f32 = 320.0;
-/// The frame of Terminals & sidebar's lists: the strip's scene room (`preview_column::PREVIEW_H` less its
-/// head) less the caption under the frame and the gap to it. The lists are taller than this by nature and
-/// are cut off at the frame's edge, the density showing in the rows that are in.
-const SIDEBAR_FRAME_H: f32 = 192.0;
+
+/// The narrowest an agent's card in Coding agents' preview gets: a tile and the start of its two lines.
+/// The cards wrap, so a narrow column shows two and then one, and a wide one all three side by side;
+/// either is under the strip's height.
+const AGENT_CARD_MIN_W: f32 = 160.0;
+
+/// A scene's caption: one line, cut with an ellipsis where the column is narrower than it, so it never
+/// pushes the scene out of the strip's fixed room (`preview_column::CAPTION_ROW` is what it takes).
+#[track_caller]
+pub(super) fn caption(ui: UiColors, words: &'static str) -> Div {
+    div().text_caption().text_color(ui.muted).truncate().child(words)
+}
 
 /// Terminals & sidebar → the Terminals list as the options make it, and beside it the list
 /// with the option under the pointer.
@@ -36,8 +45,9 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
     let ui = ui(cx);
     let s = settings(cx).clone();
     let now = Look::of(&s);
-    let label =
-        |text: String| div().text_caption().font_weight(FontWeight::MEDIUM).text_color(ui.muted).child(text);
+    let label = |text: String| {
+        div().text_caption().font_weight(FontWeight::MEDIUM).text_color(ui.muted).truncate().child(text)
+    };
     let mut panes = div().flex().gap_4().w_full().child(
         div()
             .flex_1()
@@ -47,7 +57,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
             .flex_col()
             .gap_2()
             .child(label(settings_sessions_preview_now(now.density.label())))
-            .child(list("now", now, SIDEBAR_SAMPLES, true, ui, cx)),
+            .child(cards("now", now, SIDEBAR_SAMPLES, true, false, ui, cx)),
     );
     if let Some(SidebarLook::Density(density)) = window.sidebar_preview
         && density != now.density
@@ -62,26 +72,22 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
                 .flex_col()
                 .gap_2()
                 .child(label(settings_sessions_preview_hovering(previewed.density.label())))
-                .child(list("previewed", previewed, SIDEBAR_SAMPLES, true, ui, cx)),
+                .child(cards("previewed", previewed, SIDEBAR_SAMPLES, true, false, ui, cx)),
         );
     }
     div()
         .flex()
         .flex_col()
         .gap_2()
-        .child(style::preview_frame(ui).p_3().h(px(SIDEBAR_FRAME_H)).child(panes))
-        .child(
-            div()
-                .text_caption()
-                .text_color(ui.muted)
-                .child(text(SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE)),
-        )
+        .child(style::preview_frame(ui).p_3().h(px(FRAMED_H)).child(panes))
+        .child(caption(ui, text(SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE)))
         .into_any_element()
 }
 
 /// Coding agents → three terminals side by side, each in a card of its own, with an agent working, one
-/// asking and one finished: what the hooks (or the output) tell the sidebar. Side by side because the
-/// strip is short and wide: stacked in a list they would not fit its height.
+/// asking and one finished: what the hooks (or the output) tell the sidebar. Side by side where the column
+/// has the width, two and one under them where it has not: stacked in a list they would not fit the
+/// strip's height.
 pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let look = Look::of(settings(cx));
@@ -94,7 +100,7 @@ pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsW
             let row = sample.row(&format!("preview-agents-{ix}"), ui, metrics, &plain, look.notes, cx);
             style::preview_surface(ui)
                 .flex_1()
-                .min_w_0()
+                .min_w(px(AGENT_CARD_MIN_W))
                 .py_2()
                 .child(style::card_segment_solo(ui, metrics, sample.selected, row))
                 .into_any_element()
@@ -104,8 +110,8 @@ pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsW
         .flex()
         .flex_col()
         .gap_2()
-        .child(style::preview_frame(ui).flex().gap_4().children(cards))
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_AGENTS_PREVIEW_CAPTION)))
+        .child(style::preview_frame(ui).p_3().flex().flex_wrap().gap_2().children(cards))
+        .child(caption(ui, text(SETTINGS_AGENTS_PREVIEW_CAPTION)))
         .into_any_element()
 }
 
@@ -139,7 +145,7 @@ impl Look {
     }
 }
 
-/// The sample list in `look`, with the sidebar's own cards, heads and rows; `framed` draws it as a
+/// The sample list in `look`, with the sidebar's own header, cards, heads and rows; `framed` draws it as a
 /// card of its own, else it fills the sidebar it is put in (Appearance's window).
 pub(super) fn list(
     id: &'static str,
@@ -149,9 +155,22 @@ pub(super) fn list(
     ui: UiColors,
     cx: &App,
 ) -> AnyElement {
+    cards(id, look, samples, framed, true, ui, cx)
+}
+
+/// [`list`] with or without the header ("Terminals" and the +): a preview short of room leaves it out.
+pub(super) fn cards(
+    id: &'static str,
+    look: Look,
+    samples: &[Card],
+    framed: bool,
+    header: bool,
+    ui: UiColors,
+    cx: &App,
+) -> AnyElement {
     let metrics = Metrics::of(look.density, look.cards).fading(look.fade).with_group_folders(look.folders);
     // The sidebar's own header: its title and the + (drawn, not working).
-    let header = div()
+    let head = div()
         .flex()
         .items_center()
         .gap_2()
@@ -165,7 +184,7 @@ pub(super) fn list(
         .flex()
         .flex_col()
         .pb(px(metrics.card_gap))
-        .child(header);
+        .when(header, |column| column.child(head));
     for (cx_ix, card) in samples.iter().enumerate() {
         let mut lines: Vec<AnyElement> = Vec::new();
         let tokens = &cx.global::<SettingsStore>().tokens;

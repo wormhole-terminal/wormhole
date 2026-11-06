@@ -94,10 +94,10 @@ fn describe_custom(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opti
 /// The specimen's text: a prompt, a result, code with the pairs ligatures join, and the
 /// characters that tell fonts apart.
 const SPECIMEN: [&str; 4] = [
-    "→ wormhole (main) cargo test --workspace", // text: sample (the specimen's terminal text)
-    "test result: ok. 57 passed; 0 failed",     // text: sample (the specimen's terminal text)
-    "fn resolve(&self) -> Result<Tokens> { a != b && c >= d }", // text: sample (the specimen's terminal text)
-    "0O 1lI {}[] => != ~ |> <= www // ligatures", // text: sample (the specimen's terminal text)
+    "→ wormhole (main) cargo test", // text: sample (the specimen's terminal text)
+    "test result: ok. 57 passed; 0 failed", // text: sample (the specimen's terminal text)
+    "fn resolve(&self) -> Result<Tokens>", // text: sample (the specimen's terminal text)
+    "0O 1lI {}[] => != ~ |> <= www //", // text: sample (the specimen's terminal text)
 ];
 
 /// One specimen, Terminal | Code | Interface, in the theme's terminal colors at the slot's
@@ -131,8 +131,10 @@ pub(in crate::settings_window) fn draw_specimen(
             },
         ))
     }));
+    // A line never wraps, so the specimen is four lines tall at any width; the column cuts one that is
+    // longer, as a terminal's edge does.
     let line = |parts: Vec<(Hsla, &'static str)>| {
-        div().flex().flex_wrap().children(
+        div().flex().overflow_hidden().children(
             parts
                 .into_iter()
                 .map(|(color, text)| div().flex_none().whitespace_nowrap().text_color(color).child(text)),
@@ -154,36 +156,36 @@ pub(in crate::settings_window) fn draw_specimen(
             (ansi(2), "→ "),
             (ansi(4), "wormhole "), // text: sample (the specimen's terminal text)
             (ansi(5), "(main) "),   // text: sample (the specimen's terminal text)
-            (fg, "cargo test --workspace"), // text: sample (the specimen's terminal text)
+            (fg, "cargo test"),     // text: sample (the specimen's terminal text)
         ]))
         .child(line(vec![(fg, "test result: "), (ansi(2), "ok"), (fg, ". 57 passed; 0 failed")])) // text: sample (the specimen's terminal text)
         .child(line(vec![
             (ansi(5), "fn "), // text: sample (the specimen's terminal text)
             (ansi(4), "resolve"),
-            (fg, "(&self) -> Result<Tokens> { a != b && c >= d }"), // text: sample (the specimen's terminal text)
+            (fg, "(&self) -> Result<Tokens>"), // text: sample (the specimen's terminal text)
         ]))
+        .child(line(vec![(fg, "{ a != b && c >= d }")])) // text: sample (the specimen's terminal text)
         .child(line(vec![(ui.muted, SPECIMEN[3])]));
+    // What the specimen is set in, on one line that an ellipsis cuts where the column is narrow.
+    let mut facts = vec![settings_fonts_specimen_size(display_name(&family), &format!("{size:.0}"))];
+    if slot == FontSlot::Terminal {
+        facts.push(settings_fonts_specimen_line_height(&format!("{:.2}", s.line_height)));
+    }
+    if slot != FontSlot::Interface {
+        facts.push(
+            text(if s.font_ligatures { SETTINGS_FONTS_LIGATURES_ON } else { SETTINGS_FONTS_LIGATURES_OFF })
+                .to_string(),
+        );
+    }
+    facts.push(settings_fonts_specimen_colours(&theme_name));
     let facts = div()
-        .flex()
-        .flex_wrap()
-        .gap_x_4()
         .px_4()
         .py_2()
         .rule_top(ui)
         .text_caption()
         .text_color(ui.muted)
-        .child(settings_fonts_specimen_size(display_name(&family), &format!("{size:.0}")))
-        .when(slot == FontSlot::Terminal, |d| {
-            d.child(settings_fonts_specimen_line_height(&format!("{:.2}", s.line_height)))
-        })
-        .when(slot != FontSlot::Interface, |d| {
-            d.child(if s.font_ligatures {
-                text(SETTINGS_FONTS_LIGATURES_ON)
-            } else {
-                text(SETTINGS_FONTS_LIGATURES_OFF)
-            })
-        })
-        .child(settings_fonts_specimen_colours(&theme_name));
+        .truncate()
+        .child(facts.join("   "));
     div()
         .flex()
         .flex_col()

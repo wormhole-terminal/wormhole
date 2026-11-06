@@ -45,7 +45,7 @@ pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<Se
                     "Allow edit of src/limits.rs?", // text: sample (a made-up notification of the preview)
                 )),
         )
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION)))
+        .child(super::preview::caption(ui, text(SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION)))
         .into_any_element()
 }
 

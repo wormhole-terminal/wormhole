@@ -1,19 +1,18 @@
-//! Appearance's live preview: a window on a plain backdrop at its real size, cut off where the column
-//! ends. It is built from the parts the window itself draws: the sidebar's Terminals list (the same
-//! list as Terminals & sidebar's preview, `preview::list`), the title row's crumbs and branch chip,
-//! the status bar's items, and a terminal in the terminal's own font, size and colours. A change to
-//! any of those parts shows here by itself; only the arrangement is this file's.
+//! Appearance's live preview: a small whole window on a plain backdrop, as wide as the narrowest column
+//! has room for. It is built from the parts the window itself draws, at their real size: the sidebar's
+//! Terminals list (`preview::list`) with its one terminal, the title row's branch chip and tile, the status
+//! bar's items, and a terminal in the terminal's own font, size and colours. A change to any of those
+//! parts shows here by itself; only the arrangement is this file's, and it is short of what a window
+//! shows (a sidebar's one terminal, four lines of a transcript) so that all of the window's edges are in.
 //!
 //! The traffic lights are the system's, drawn here as a window in the background has them; the blur
 //! behind a window isn't drawn (it is the window's own effect view, behind everything GPUI paints),
 //! which the caption says.
 
-use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::theme::fonts::FontSlot;
-use wormhole_core::view::layout::SIDEBAR_MIN;
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -21,26 +20,29 @@ use wormhole_core::view::layout::SIDEBAR_MIN;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use super::preview::{self, Look};
-use super::samples::SAMPLES;
+use super::preview::{self, Look, caption};
+use super::samples::STAGE_SAMPLES;
 use crate::settings::{SettingsStore, UiColors, settings};
+use crate::settings_window::preview_column::FRAMED_H;
 use crate::settings_window::{SettingsWindow, ui as window_ui};
 use crate::style::{self, Edges, StatusGlyph, StatusTile, TextRole, TileFace};
 use crate::theme_bridge::hsla;
 
-/// The backdrop's height, and how far in from its top left corner the window sits. The strip is one
-/// height on every page (`preview_column::PREVIEW_H`): its scene's room, less the caption under the
-/// backdrop and the gap to it, so the window shows its top left part and is cut off at the backdrop's edge.
-const STAGE_H: f32 = 176.0; // 220 less the caption's two lines (36) and the gap (8)
-const WINDOW_INSET: f32 = 16.0;
-/// The window: as wide as the app opens one, so the column shows its left part.
-const WINDOW_W: f32 = 1100.0;
+/// The backdrop fills the scene's frame. The window in it is the Terminals list's own parts at their size:
+/// the traffic lights' row, the list's header and one terminal's card (66 pt at the roomiest density), and
+/// the status bar's row under them, with `WINDOW_INSET` round it. Its width fits the narrowest column
+/// (`WINDOW_MIN`: 640 less the nav and the page's padding is 356, less the backdrop's line).
+const STAGE_H: f32 = FRAMED_H;
+const WINDOW_INSET: f32 = 8.0;
+const WINDOW_W: f32 = 340.0;
+/// The sidebar's width in the miniature.
+const SIDEBAR_W: f32 = 140.0;
 /// The traffic lights as macOS draws them (`style::LIGHTS_X`, `style::ASSUMED_LIGHTS_SPAN`).
 const LIGHT: f32 = 12.0;
 const LIGHT_GAP: f32 = 8.0;
 /// The terminal's inset: 16 at the sides, 12 at the top (Aligned A-01).
 const TERM_INSET_X: f32 = 16.0;
-const TERM_INSET_Y: f32 = 12.0;
+const TERM_INSET_Y: f32 = 8.0;
 
 /// Appearance → the window in miniature: theme, primary, opacity, fonts, density and the status
 /// bar as they are now.
@@ -72,7 +74,7 @@ pub(in crate::settings_window) fn draw_stage(
         .pl(px(style::LIGHTS_X))
         .children((0..3).map(|_| div().size(px(LIGHT)).rounded_full().bg(ui.border_strong)));
     let sidebar = div()
-        .w(px(SIDEBAR_MIN))
+        .w(px(SIDEBAR_W))
         .flex_none()
         .h_full()
         .flex()
@@ -82,7 +84,7 @@ pub(in crate::settings_window) fn draw_stage(
         .corners(inner, flat, flat, side_bottom)
         .rule_right(ui)
         .child(lights)
-        .child(preview::list("stage", look, SAMPLES, false, ui, cx));
+        .child(preview::list("stage", look, STAGE_SAMPLES, false, ui, cx));
     let content = div()
         .flex_1()
         .min_w_0()
@@ -92,9 +94,7 @@ pub(in crate::settings_window) fn draw_stage(
         .child(title_row(ui, cx))
         .child(terminal(cx).corners(flat, flat, term_bottom, flat));
     let window = div()
-        .absolute()
-        .top(px(WINDOW_INSET))
-        .left(px(WINDOW_INSET))
+        .flex_none()
         .w(px(WINDOW_W))
         .h(px(STAGE_H - 2.0 * WINDOW_INSET))
         .flex()
@@ -111,7 +111,9 @@ pub(in crate::settings_window) fn draw_stage(
         .gap_2()
         .child(
             div()
-                .relative()
+                .flex()
+                .items_center()
+                .justify_center()
                 .h(px(STAGE_H))
                 .w_full()
                 .rounded(chrome.radius_lg)
@@ -120,7 +122,7 @@ pub(in crate::settings_window) fn draw_stage(
                 .bg(chrome.panel)
                 .child(window),
         )
-        .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_APPEARANCE_STAGE_CAPTION)))
+        .child(caption(ui, text(SETTINGS_APPEARANCE_STAGE_CAPTION)))
         .into_any_element()
 }
 
@@ -144,16 +146,19 @@ fn title_row(ui: UiColors, cx: &App) -> Div {
         .items_center()
         .gap_2()
         .h(px(style::TITLE_ROW_H))
-        .px_4()
+        .px_3()
         .rule_bottom(ui)
         .text_body()
-        .child(style::icon(IconName::Folder).text_color(ui.muted))
-        .child(div().text_color(ui.muted).child("~/Projects/wormhole")) // text: sample (a made-up folder of the preview)
-        .child(style::icon(IconName::ChevronRight).text_color(ui.faint))
-        .child(style::branch_chip(ui, Some("sidebar-cards"), Some(3))) // text: sample (a made-up branch of the preview)
-        .child(style::icon(IconName::ChevronRight).text_color(ui.faint))
-        .child(tile)
-        .child(div().font_weight(FontWeight::MEDIUM).text_color(ui.text).child("Sidebar cards")) // text: sample (a made-up terminal of the preview)
+        .child(style::branch_chip(ui, Some("main"), None)) // text: sample (a made-up branch of the preview)
+        .child(div().flex_none().child(tile))
+        .child(
+            div()
+                .min_w_0()
+                .truncate()
+                .font_weight(FontWeight::MEDIUM)
+                .text_color(ui.text)
+                .child("Sidebar cards"), // text: sample (a made-up terminal of the preview)
+        )
 }
 
 /// The terminal: an agent's transcript in the terminal's font, size, line height and colours.
@@ -184,15 +189,10 @@ fn terminal(cx: &App) -> Div {
         .text_size(px(store.settings.font_size))
         .line_height(relative(store.settings.line_height))
         .text_color(fg)
-        .child(line(&[("~/Projects/wormhole", blue), (" on ", muted), ("sidebar-cards", green)])) // text: sample
+        .child(line(&[("wormhole", blue), (" on ", muted), ("main", green)])) // text: sample
         .child(line(&[("$ ", muted), ("claude", fg)])) // text: sample
-        .child(line(&[("● ", green), ("Read ", fg), ("crates/wormhole/src/sidebar/rows.rs", muted)])) // text: sample
-        .child(line(&[("● ", green), ("Update ", fg), ("crates/wormhole/src/style/tile.rs", muted)])) // text: sample
-        .child(line(&[("  ⎿ ", muted), ("+18 −11", fg)])) // text: sample
-        .child(line(&[("● ", green), ("Bash ", fg), ("cargo test -p wormhole", muted)])) // text: sample
-        .child(line(&[("  ⎿ ", muted), ("test result: ", fg), ("ok", green), (". 57 passed; 0 failed", fg)])) // text: sample
-        .child(line(&[("✻ ", yellow), ("Working… ", yellow), ("(esc to interrupt)", muted)])) // text: sample
-        .child(line(&[("> ", fg), ("█", fg)])) // text: sample
+        .child(line(&[("● ", green), ("Read ", fg), ("rows.rs", muted)])) // text: sample
+        .child(line(&[("✻ ", yellow), ("Working…", yellow)])) // text: sample
 }
 
 /// The status bar with what it shows while an agent waits and another works.
@@ -213,7 +213,6 @@ fn status(ui: UiColors, cx: &App) -> Div {
         .child(
             style::status_attention("stage-status-attention", ui, false)
                 .child(tile)
-                .child(div().child("Flaky login test")) // text: sample (a made-up terminal of the preview)
                 .child(div().text_color(ui.attention_text).child("needs input · 2m")), // text: sample (the preview's made-up wait)
         )
         .child(style::status_item("stage-status-working", ui, false, false).child("1 working")) // text: sample (a made-up count)

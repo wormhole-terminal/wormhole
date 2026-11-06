@@ -147,7 +147,7 @@ settings-appearance-project-theme-note = This terminal shows { $project }'s them
 
 ## settings_window/sections/stage.rs (labels, hints and notes drawn by this page's code)
 
-settings-appearance-stage-caption = Live preview of a window, with everything below applied as you change it (the blur behind a window isn't drawn here)
+settings-appearance-stage-caption = Live preview of a window. Its blur isn't drawn here
 
 ## settings_window/sections/theme_picker/mod.rs (labels, hints and notes drawn by this page's code)
 

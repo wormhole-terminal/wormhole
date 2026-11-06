@@ -28,6 +28,7 @@ use crate::style::TitleDrag as _;
 use crate::style::{self, TextRole};
 use crate::theme_bridge;
 
+use super::nav::NAV_W;
 use super::open::REVEAL_INSET;
 use super::{
     COLUMN_W, FrontWindow, INTRO_W, NO_RESULTS_W, Section, SettingsWindow, sections, slider, slider_value, ui,
@@ -380,6 +381,9 @@ impl Render for SettingsWindow {
         let query = Query::new(&self.search.read(cx).value());
         let hits = settings_index::search_visible(&query, settings(cx)).len();
 
+        // The page's width, for the one preview that lays itself out as its view does at a width (Changes &
+        // diffs' diff: Split only where it fits): the window less the nav and the page's 32 pt sides.
+        self.git_preview.body_width = (f32::from(window.viewport_size().width) - NAV_W - 64.0).min(COLUMN_W);
         let body = if self.show_results && hits == 0 {
             self.render_no_results(&query, ui, cx)
         } else if self.show_results {

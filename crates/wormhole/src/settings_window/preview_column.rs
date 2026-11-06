@@ -1,8 +1,8 @@
 //! The preview strip: at the top of a page that has one, the live preview that belongs to the page, always
 //! [`PREVIEW_H`] tall, whatever the page and the window's size: the head, then the scene in the room that
-//! is left. A scene is composed to fit whole (Appearance's window and the Terminals list are cut off at
-//! the strip's bottom, as a window is at a screenshot's edge); one that cannot be, scrolls inside the
-//! strip, which never changes height.
+//! is left, the scene at its top. Nothing in the strip scrolls: every scene is composed to fit its room whole
+//! (Appearance's window and the Terminals list are small compositions of their own, not cut-off big ones),
+//! and a caption is one line that an ellipsis cuts where the column is narrow.
 //!
 //! - Appearance, and a search's results, show the window in miniature (`sections::draw_stage`):
 //!   theme, primary, opacity, status bar and fonts as they are now.
@@ -97,13 +97,19 @@ impl PreviewKind {
 }
 
 /// The strip's height, head and scene together, on every page and at every window size (4-pt grid). Its
-/// number is the smallest that holds the compact scenes whole: the head (`CONTROL_H`, 28) and its gap (8)
-/// leave the scene 220 pt, which holds Coding agents' three cards with their caption (about 160 measured),
-/// the font specimen (about 175) and the Motion scenes (about 150), the compact ones, whole; the Terminals
-/// list and Appearance's window are taller by nature (about 510 and 480) and are cut off at the room
-/// they get. A strip taller than this would take most of a window at `WINDOW_MIN`'s 420 pt before the
-/// page's first row (the page scrolls, so it stays reachable either way).
+/// number is the smallest that holds the largest scene whole: Appearance's window (a 176 pt window with its
+/// sidebar, title row, terminal and status bar, framed, with its caption) and the Changes panel's list
+/// (about 217 pt) set it; the others are smaller. The page scrolls, so it stays reachable under it at
+/// `WINDOW_MIN`'s 420 pt.
 pub(super) const PREVIEW_H: f32 = 256.0;
+/// The gap under the head (`gap_2`).
+const HEAD_GAP: f32 = 8.0;
+/// The room the scene has: the strip less its head and the gap under it.
+pub(super) const SCENE_H: f32 = PREVIEW_H - style::CONTROL_H - HEAD_GAP;
+/// What a caption under a scene takes: the gap (`gap_2`) and its one line (`text_caption`, 20 pt).
+pub(super) const CAPTION_ROW: f32 = 28.0;
+/// A scene's frame when a caption goes under it: the room less the caption.
+pub(super) const FRAMED_H: f32 = SCENE_H - CAPTION_ROW;
 
 /// The rows the strip shows in place of the page: they are not drawn again in it.
 const IN_COLUMN: [&str; 4] = ["appearance-preview", "font-specimen", "sidebar-preview", "changes-preview"];
@@ -142,8 +148,8 @@ impl SettingsWindow {
         IN_COLUMN.contains(&id)
     }
 
-    /// The strip: its head, then the page's preview, [`PREVIEW_H`] tall in all (a scene that is taller
-    /// scrolls in its room). `None` for a page without a preview.
+    /// The strip: its head, then the page's preview, [`PREVIEW_H`] tall in all, with nothing that scrolls.
+    /// `None` for a page without a preview.
     pub(super) fn render_preview_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let ui = ui(cx);
         let kind = self.preview_kind(cx)?;
@@ -179,10 +185,14 @@ impl SettingsWindow {
                         .flex()
                         .items_center()
                         .h(px(style::CONTROL_H))
-                        .child(style::section_label(ui, text(SETTINGS_WINDOW_PREVIEW)))
+                        .child(
+                            div().flex_none().child(style::section_label(ui, text(SETTINGS_WINDOW_PREVIEW))),
+                        )
                         .child(
                             div()
                                 .ml_2()
+                                .min_w_0()
+                                .truncate()
                                 .text_caption()
                                 .text_color(ui.faint)
                                 .child(format!("· {}", kind.title())),
@@ -198,18 +208,13 @@ impl SettingsWindow {
                                 .text_color(ui.muted)
                                 .child(aside)
                         }))
-                        .children(tabs.map(|tabs| div().ml_auto().child(tabs))),
+                        .children(tabs.map(|tabs| div().flex_none().ml_auto().child(tabs))),
                 )
                 .child(
-                    // The room under the head. `flex_none` on the scene keeps it its own height, so one that
-                    // is taller than the room scrolls here instead of being squeezed.
-                    div()
-                        .id("settings-preview-scene")
-                        .flex_1()
-                        .min_h_0()
-                        .w_full()
-                        .overflow_y_scroll()
-                        .child(div().flex_none().child(preview)),
+                    // The room under the head, the same on every page: the scene sits at its top, next to the
+                    // head that names it. It is clipped, never scrolled: a scene is made to fit (a font size
+                    // far above the default can still outgrow the specimen's frame, which then cuts the text).
+                    div().flex_1().min_h_0().w_full().overflow_hidden().child(preview),
                 )
                 .into_any_element(),
         )

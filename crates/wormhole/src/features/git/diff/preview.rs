@@ -19,8 +19,8 @@ use crate::settings::{SettingsStore, UiColors};
 use crate::style::{self, Edges, TextRole};
 
 /// The sample file, before and after. Tab-indented, as Go or a Makefile is, so the tab width shows,
-/// and the changed line longer than a column, so wrapping does. The change comes early: the strip is a
-/// quarter of the window at most.
+/// and the changed line longer than a column, so wrapping does. The change comes early: the strip is one
+/// fixed height, and the sample is short enough to stand whole in it, wrapped, at the narrowest window.
 const OLD: &str = "fn report(order: &Order) {\n\tlet total = order.total();\n\tif total > 0 {\n\t\tlog(\"total {}\", total);\n\t}\n}\n"; // text: sample (the preview's file)
 const NEW: &str = "fn report(order: &Order) {\n\tlet total = order.total();\n\tif total > 0 {\n\t\tlog(\"total of order {} is {} once the discounts and the tax of every line are in\", order.id, total);\n\t}\n}\n"; // text: sample (the preview's file)
 /// Where the sample file is, for the grammar the colours come from.
@@ -41,20 +41,18 @@ fn line(kind: LineKind, old: Option<u32>, new: Option<u32>, text: &str) -> DiffL
     DiffLine { kind, old, new, text: text.into(), no_newline: false }
 }
 
-/// The sample's diff: lines 2 to 5 of the file, the fourth replaced, as the diff of a file would hand them.
+/// The sample's diff: lines 3 and 4 of the file, the fourth replaced, as the diff of a file would hand them.
 fn sample_diff() -> FileDiff {
     use LineKind::{Added, Context, Removed};
     let (old, new): (Vec<&str>, Vec<&str>) = (OLD.lines().collect(), NEW.lines().collect());
     let (o, n) = (|at: usize| old[at - 1], |at: usize| new[at - 1]);
     FileDiff {
         hunks: vec![Hunk {
-            header: "@@ -2,4 +2,4 @@ fn report".into(), // text: sample (the preview's hunk)
+            header: "@@ -3,2 +3,2 @@ fn report".into(), // text: sample (the preview's hunk)
             lines: vec![
-                line(Context, Some(2), Some(2), n(2)),
                 line(Context, Some(3), Some(3), n(3)),
                 line(Removed, Some(4), None, o(4)),
                 line(Added, None, Some(4), n(4)),
-                line(Context, Some(5), Some(5), n(5)),
             ],
         }],
         old_text: Some(OLD.into()),
@@ -75,15 +73,15 @@ fn divider(ui: UiColors, colors: DiffColors) -> Div {
 
 /// A small diff of a file with a tab-indented line and a long one, laid out by `settings`: Split or
 /// Unified, wrapped or cut, the tab as wide as the setting says, coloured by the theme's syntax colours.
-pub(crate) fn diff(ui: UiColors, settings: &Settings, cx: &App) -> Div {
+pub(crate) fn diff(ui: UiColors, settings: &Settings, split_fits: bool, cx: &App) -> Div {
     let store = cx.global::<SettingsStore>();
     let colors = DiffColors::new(&store.tokens);
     let (font_family, font_size) = crate::fonts::code_font(cx);
     let font_size = f32::from(font_size);
     let diff = sample_diff();
     let highlights = Highlights::for_diff(&diff, PATH, &store.highlight);
-    // The preview is as wide as the column, so the sample always has room for a split view.
-    let key = BuildKey::of(settings, true, 0);
+    // As the diff view does at its width: a body too narrow for two sides shows the unified diff.
+    let key = BuildKey::of(settings, split_fits, 0);
     let (rows, stats) = build_rows(&diff, key, highlights.as_ref());
     let style = RowStyle {
         font_family,

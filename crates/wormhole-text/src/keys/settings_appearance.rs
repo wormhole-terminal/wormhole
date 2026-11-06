@@ -156,7 +156,7 @@ pub const SETTINGS_APPEARANCE_THEME_STUDIO: Key = Key::new(530);
 pub const SETTINGS_APPEARANCE_SESSION_HOSTS: Key = Key::new(531);
 /// "Project settings"
 pub const SETTINGS_APPEARANCE_PROJECT_SETTINGS: Key = Key::new(532);
-/// "Live preview of a window, with everything below applied as you change it (the blur behind a window isn't drawn here)"
+/// "Live preview of a window. Its blur isn't drawn here"
 pub const SETTINGS_APPEARANCE_STAGE_CAPTION: Key = Key::new(538);
 /// "Filter themes"
 pub const SETTINGS_APPEARANCE_FILTER_THEMES: Key = Key::new(539);

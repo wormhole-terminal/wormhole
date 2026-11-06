@@ -190,7 +190,7 @@ pub const SETTINGS_AGENTS_UPDATE: Key = Key::new(438);
 pub const SETTINGS_AGENTS_CHECKING_YOUR_SHELLS_PATH: Key = Key::new(439);
 /// "Copy line"
 pub const SETTINGS_AGENTS_COPY_LINE: Key = Key::new(440);
-/// "How the Terminals list shows each agent: working, asking you, finished. With status hooks it knows the moment; without, it reads the agent's output."
+/// "Working, asking you, finished: how the list shows an agent"
 pub const SETTINGS_AGENTS_PREVIEW_CAPTION: Key = Key::new(457);
 
 /// ```text

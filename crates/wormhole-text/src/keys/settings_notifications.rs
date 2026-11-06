@@ -150,7 +150,7 @@ pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT: Key = Key::new(935);
 pub const SETTINGS_NOTIFICATIONS_NEEDS_YOU_HINT_PLAIN: Key = Key::new(936);
 /// "now"
 pub const SETTINGS_NOTIFICATIONS_PREVIEW_NOW: Key = Key::new(939);
-/// "How a notification looks. macOS decides where it shows and for how long (System Settings → Notifications → Wormhole)."
+/// "How a notification looks. macOS decides where it shows"
 pub const SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION: Key = Key::new(940);
 
 /// ```text

@@ -71,12 +71,16 @@ impl Knobs {
 pub(in crate::settings_window) struct GitPreview {
     scene: GitScene,
     seen: Knobs,
+    /// How wide the page's column is, as the window last drew it: the diff scene lays itself out as the
+    /// diff view does at that width (Split only where `diff_split_fits`), so a narrow window shows the
+    /// unified diff, which is shorter, and the scene stays whole in the strip.
+    pub(in crate::settings_window) body_width: f32,
 }
 
 impl GitPreview {
     /// On the first group's scene, as the page opens.
     pub(in crate::settings_window) fn new(s: &Settings) -> Self {
-        Self { scene: GitScene::Panel, seen: Knobs::of(s) }
+        Self { scene: GitScene::Panel, seen: Knobs::of(s), body_width: f32::INFINITY }
     }
 
     /// A setting changed (from the page, a reset arrow or `config.json`): the strip moves to the scene
@@ -102,12 +106,13 @@ pub(in crate::settings_window) fn draw_git_preview(
 ) -> AnyElement {
     let ui = ui(cx);
     let s = settings(cx).clone();
+    let split_fits = wormhole_core::view::limits::diff_split_fits(window.git_preview.body_width);
     match window.git_preview.scene {
         GitScene::Panel => div().max_w(px(PANEL_DEFAULT)).child(
             style::preview_surface(ui).child(changes_sample::list(s.changes_tree, s.group_untracked, ui, cx)),
         ),
-        GitScene::Diff => diff_preview::diff(ui, &s, cx),
-        GitScene::Sizes => diff_preview::binary(ui, s.diff_split, s.size_units, cx),
+        GitScene::Diff => diff_preview::diff(ui, &s, split_fits, cx),
+        GitScene::Sizes => diff_preview::binary(ui, s.diff_split && split_fits, s.size_units, cx),
     }
     .into_any_element()
 }

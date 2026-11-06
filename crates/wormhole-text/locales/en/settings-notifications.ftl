@@ -117,4 +117,4 @@ settings-notifications-after-seconds = { $count } s
 
 # When the banner in the preview arrived.
 settings-notifications-preview-now = now
-settings-notifications-preview-caption = How a notification looks. macOS decides where it shows and for how long (System Settings → Notifications → Wormhole).
+settings-notifications-preview-caption = How a notification looks. macOS decides where it shows
