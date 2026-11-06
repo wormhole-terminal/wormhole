@@ -36,7 +36,7 @@ pub const fn factor(size: TextSize) -> f32 {
 
 /// Set this window's rem size for the person's step. Called first in a window's `render`: the Kit's root
 /// has just set the theme's size, and what is laid out after this call (the whole window) takes ours.
-pub fn apply(window: &mut Window, cx: &App) {
+pub(crate) fn apply(window: &mut Window, cx: &App) {
     let rem = cx.theme().font_size * factor(settings(cx).settings_text_size);
     if window.rem_size() != rem {
         window.set_rem_size(rem);
@@ -45,7 +45,7 @@ pub fn apply(window: &mut Window, cx: &App) {
 
 /// A width in points that holds text (a column of lists and chips), grown with the step so the text in it
 /// keeps its room: the Studio's token list and editor. At the default step it is `width` itself.
-pub fn scaled(width: f32, cx: &App) -> Pixels {
+pub(crate) fn scaled(width: f32, cx: &App) -> Pixels {
     px(width * factor(settings(cx).settings_text_size))
 }
 
