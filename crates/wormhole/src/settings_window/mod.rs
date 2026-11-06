@@ -123,6 +123,8 @@ pub(crate) struct SettingsWindow {
     font_picker: FontPickerState,
     /// Motion → the four previews, there while the page is.
     motion_previews: Option<sections::MotionPreviews>,
+    /// Menu bar's and Hotkey's preview, there while its page is.
+    bar_preview: Option<sections::BarPreview>,
     /// A shortcut field waiting for keys, or showing keys it refused.
     recording: Option<recorder::Recording>,
     /// Appearance → the "+" after the primary swatches: any color.

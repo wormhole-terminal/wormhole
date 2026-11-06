@@ -17,7 +17,7 @@ use style::RecorderState;
 use wormhole_core::keys::keymap::ActionId;
 use wormhole_core::keys::keyspec::{KeyMods, KeySpec};
 use wormhole_core::keys::shortcut_record::{self, Recorded};
-use wormhole_text::keys::settings_menu_bar_key_conflict;
+use wormhole_text::keys::settings_hotkey_key_conflict;
 
 use super::{SettingsWindow, registry, ui};
 use crate::settings::update_settings;
@@ -33,7 +33,7 @@ pub(super) enum Recording {
 }
 
 /// The keys of a spec as key caps: the modifiers in ⌃⌥⇧⌘ order, then the key.
-fn caps(mods: KeyMods, key: Option<&str>) -> Vec<SharedString> {
+pub(super) fn caps(mods: KeyMods, key: Option<&str>) -> Vec<SharedString> {
     let mut caps: Vec<SharedString> = [(mods.ctrl, "⌃"), (mods.alt, "⌥"), (mods.shift, "⇧"), (mods.cmd, "⌘")]
         .into_iter()
         .filter(|(on, _)| *on)
@@ -107,7 +107,7 @@ impl SettingsWindow {
             }
             Some(Recording::Taken { id: taken, spec, conflict }) if *taken == id => (
                 RecorderState::Conflict(caps(spec.mods, Some(&spec.key))),
-                Some(settings_menu_bar_key_conflict(conflict)),
+                Some(settings_hotkey_key_conflict(conflict)),
             ),
             _ => match parsed {
                 Some(spec) if problem.is_some() => {

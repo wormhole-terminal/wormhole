@@ -1,4 +1,4 @@
-//! The global hotkey (Settings → Menu bar): registered with the system as the shown profile sets it, held
+//! The global hotkey (Settings → Hotkey): registered with the system as the shown profile sets it, held
 //! off while the settings window records a new one, and reporting why it didn't register. It is a global of
 //! its own, set at launch with the sender the status item's menu commands arrive on, so the settings
 //! window (below the status item) can hold it off and read its error.

@@ -163,13 +163,17 @@ group "Dock"
   blurb ""
   aside ""
 section MenuBar
-  title "Menu bar & hotkey"
-  intro "Wormhole in the macOS menu bar, and a shortcut that works from any app."
+  title "Menu bar"
+  intro "Wormhole in the macOS menu bar."
   nav "App"
-group "Menu bar"
+group ""
   blurb ""
   aside ""
-group "Global hotkey"
+section Hotkey
+  title "Hotkey"
+  intro "A shortcut that works from any app."
+  nav "App"
+group ""
   blurb ""
   aside ""
 section Updates
@@ -628,15 +632,15 @@ entry MenuBar menu-bar-animate
   label "Animate menu bar icon while working"
   description "The prompt in the icon types itself out while something runs. Off: a still, filled icon"
   keywords "animation"
-entry MenuBar hotkey
+entry Hotkey hotkey
   label "Shortcut"
   description "Works from any app. Click, then press the keys"
   keywords "global shortcut quake record hotkey"
-entry MenuBar hotkey-action
+entry Hotkey hotkey-action
   label "Hotkey opens"
   description "Pressing it again with the panel open shows Wormhole"
   keywords "quick panel toggle"
-entry MenuBar jump-waiting-key
+entry Hotkey jump-waiting-key
   label "Jump to next waiting terminal"
   description "Inside Wormhole, in any window"
   keywords "needs input needs you waiting shortcut"

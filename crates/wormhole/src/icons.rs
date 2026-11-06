@@ -59,6 +59,8 @@ gpui_kit::assets::icon_assets!(
         Puzzle,
         // The command palette: a project's actions.
         Zap,
+        // Settings → Menu bar: the nav icon (a bar along the top of the screen).
+        PanelTop,
         // Theme Studio: Export… and the gallery's "uses of" line.
         Upload,
         Target,

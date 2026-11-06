@@ -35,12 +35,14 @@ settings-window-fonts = Fonts
 settings-window-terminals-list = Terminals list
 settings-window-notifications = Notifications
 settings-window-menu-bar = Menu bar
+settings-window-hotkey = Hotkey
 settings-window-preview-window-label = Preview of the window with your current settings
 settings-window-preview-fonts-label = Preview of your fonts in a sample of terminal text
 settings-window-preview-terminals-label = Preview of the Terminals list with your current settings
 settings-window-preview-agents-label = Preview of the Terminals list with coding agents at work
 settings-window-preview-notifications-label = Preview of how a notification looks
-settings-window-preview-menu-bar-label = Preview of the menu bar item and the quick panel
+settings-window-preview-menu-bar-label = Preview of the menu bar item with your current settings
+settings-window-preview-hotkey-label = Preview of what the hotkey opens, with your shortcut
 settings-window-preview = Preview
 settings-window-preview-column-hint = Shown in the preview at the top of the page
 

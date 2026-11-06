@@ -42,7 +42,8 @@ pub(super) fn section_icon(section: Section) -> IconName {
         Section::Extensions => IconName::Puzzle,
         Section::FeatureFlags => IconName::FlaskConical,
         Section::Notifications => IconName::Bell,
-        Section::MenuBar => IconName::Command,
+        Section::MenuBar => IconName::PanelTop,
+        Section::Hotkey => IconName::Command,
         Section::Updates => IconName::Download,
         Section::Advanced => IconName::SlidersHorizontal,
     }

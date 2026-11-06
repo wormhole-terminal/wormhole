@@ -8,7 +8,8 @@
 //!   density under the pointer.
 //! - Coding agents shows the Terminals list with agents at work in it (`draw_agents_preview`).
 //! - Notifications shows two banners (`draw_notifications_preview`).
-//! - Menu bar & hotkey shows the menu bar item and the quick panel (`draw_menu_bar_preview`).
+//! - Menu bar shows the menu bar item as the settings make it (`MenuBarPreview`), Hotkey the shortcut and
+//!   what it opens (`HotkeyPreview`); both are views of their own (`BarPreview`).
 //! - Every other page has nothing to show there.
 //!
 //! The strip holds nothing to operate: no focus stop, so ⇥ and F6 pass over it, and one labelled
@@ -39,8 +40,10 @@ pub(super) enum PreviewKind {
     Agents,
     /// Notification banners.
     Notifications,
-    /// The menu bar item and the quick panel.
+    /// The menu bar item in each of its states.
     MenuBar,
+    /// The hotkey's keys and what they open.
+    Hotkey,
 }
 
 impl PreviewKind {
@@ -52,6 +55,7 @@ impl PreviewKind {
             Self::Sidebar | Self::Agents => text(SETTINGS_WINDOW_TERMINALS_LIST),
             Self::Notifications => text(SETTINGS_WINDOW_NOTIFICATIONS),
             Self::MenuBar => text(SETTINGS_WINDOW_MENU_BAR),
+            Self::Hotkey => text(SETTINGS_WINDOW_HOTKEY),
         }
     }
 
@@ -64,6 +68,7 @@ impl PreviewKind {
             Self::Agents => text(SETTINGS_WINDOW_PREVIEW_AGENTS_LABEL),
             Self::Notifications => text(SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL),
             Self::MenuBar => text(SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL),
+            Self::Hotkey => text(SETTINGS_WINDOW_PREVIEW_HOTKEY_LABEL),
         }
     }
 }
@@ -85,6 +90,7 @@ impl SettingsWindow {
             Section::Agents => Some(PreviewKind::Agents),
             Section::Notifications => Some(PreviewKind::Notifications),
             Section::MenuBar => Some(PreviewKind::MenuBar),
+            Section::Hotkey => Some(PreviewKind::Hotkey),
             Section::Profile
             | Section::Changed
             | Section::Motion
@@ -119,7 +125,10 @@ impl SettingsWindow {
             PreviewKind::Sidebar => sections::draw_sidebar_preview(self, cx),
             PreviewKind::Agents => sections::draw_agents_preview(cx),
             PreviewKind::Notifications => sections::draw_notifications_preview(cx),
-            PreviewKind::MenuBar => sections::draw_menu_bar_preview(cx),
+            PreviewKind::MenuBar | PreviewKind::Hotkey => self
+                .bar_preview
+                .as_ref()
+                .map_or_else(|| div().into_any_element(), sections::BarPreview::element),
         };
         Some(
             div()

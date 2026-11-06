@@ -132,6 +132,7 @@ impl SettingsWindow {
             show_results: false,
             font_picker,
             motion_previews: None,
+            bar_preview: None,
             recording: None,
             primary_picker,
             branch_picker,
@@ -182,6 +183,7 @@ impl SettingsWindow {
         if this.section == Section::Extensions {
             this.scan_probes(cx);
         }
+        this.bar_preview = sections::BarPreview::for_section(this.section, None, cx);
         // The nav marks an agent whose hooks need repair, so the agents are read up front.
         this.load_agents(cx);
         this.load_cli_tool(cx);
@@ -212,6 +214,7 @@ impl SettingsWindow {
         // The previews run a clock each: they are there while their page is, and not otherwise.
         self.motion_previews = (section == Section::Motion)
             .then(|| self.motion_previews.take().unwrap_or_else(|| sections::MotionPreviews::new(cx)));
+        self.bar_preview = sections::BarPreview::for_section(section, self.bar_preview.take(), cx);
         if section == Section::Terminal {
             crate::open_in::OpenIn::refresh(cx);
         }

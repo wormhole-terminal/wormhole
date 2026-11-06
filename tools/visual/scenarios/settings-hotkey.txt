@@ -1,8 +1,8 @@
-# Settings → Menu bar & hotkey's recorder: recording, and keys macOS already has.
+# Settings → Hotkey's recorder: recording, and keys macOS already has.
 @fixture repo-basic
 @theme Tokyo Night
 @size 1440 900
-settings-section menubar
+settings-section hotkey
 @batch
 settings-resize 1024 900
 @batch

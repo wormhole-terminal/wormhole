@@ -25,6 +25,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 - Terminal and agent icons in the sidebar no longer have a drop shadow.
 - Settings → Import no longer lists what other terminals lack compared with Wormhole.
+- Settings: the Menu bar & hotkey page is two pages, Menu bar and Hotkey, each with a preview that follows its
+  settings. Menu bar shows the status item in the menu bar while a terminal needs input and while one works,
+  as the Icon shows choice makes it, gone when the item is off, with the prompt typing when Animate is on
+  (still under Reduce Motion). Hotkey shows the shortcut's keys and what they open: the quick panel, or a
+  Wormhole window that comes and goes. No setting changed.
 - A change to `config.json`, a theme file or the custom fonts folder applies at once (within a tenth of a
   second) instead of at the next check, up to 0.4 seconds later; the check that remains runs every 10 seconds,
   for a folder the system cannot watch.

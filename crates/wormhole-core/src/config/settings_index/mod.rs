@@ -47,7 +47,10 @@ pub enum SectionId {
     /// Other terminals' settings, brought over, and how they compare.
     Import,
     Notifications,
+    /// The status item in the menu bar and what its icon shows.
     MenuBar,
+    /// The global hotkey, what it opens, and the key that jumps to the waiting terminal.
+    Hotkey,
     Updates,
     Advanced,
     // Preview (dev builds only): sections behind a feature flag, listed last.
@@ -194,7 +197,7 @@ impl Entry {
 }
 
 impl SectionId {
-    pub const ALL: [SectionId; 17] = [
+    pub const ALL: [SectionId; 18] = [
         SectionId::Profile,
         SectionId::Changed,
         SectionId::Appearance,
@@ -207,6 +210,7 @@ impl SectionId {
         SectionId::Import,
         SectionId::Notifications,
         SectionId::MenuBar,
+        SectionId::Hotkey,
         SectionId::Updates,
         SectionId::Advanced,
         // Preview, last: behind a feature flag and shown only in a dev build.

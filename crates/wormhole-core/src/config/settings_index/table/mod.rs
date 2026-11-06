@@ -16,6 +16,7 @@ use crate::config::features::FeatureFlag;
 mod advanced;
 mod agents;
 mod appearance;
+mod hotkey;
 mod import;
 mod menu_bar;
 mod motion;
@@ -181,6 +182,11 @@ pub(super) fn section(id: SectionId) -> &'static SectionInfo {
             intro: SETTINGS_SECTION_MENU_BAR_INTRO,
             nav: NavGroup::App,
         },
+        SectionId::Hotkey => &SectionInfo {
+            title: SETTINGS_SECTION_HOTKEY,
+            intro: SETTINGS_SECTION_HOTKEY_INTRO,
+            nav: NavGroup::App,
+        },
         SectionId::Updates => &SectionInfo {
             title: SETTINGS_SECTION_UPDATES,
             intro: SETTINGS_SECTION_UPDATES_INTRO,
@@ -211,6 +217,7 @@ pub(super) fn groups(id: SectionId) -> &'static [Group] {
         SectionId::Extensions => agents::EXTENSIONS,
         SectionId::Notifications => notifications::NOTIFICATIONS,
         SectionId::MenuBar => menu_bar::MENU_BAR,
+        SectionId::Hotkey => hotkey::HOTKEY,
         SectionId::FeatureFlags => agents::FEATURE_FLAGS,
         SectionId::Updates => updates::UPDATES,
         SectionId::Advanced => advanced::ADVANCED,

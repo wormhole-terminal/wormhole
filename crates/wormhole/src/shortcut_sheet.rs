@@ -299,8 +299,10 @@ impl Render for ShortcutSheet {
                     Some(hotkey) => d
                         .child("Show or hide Wormhole from any app")
                         .child(style::keycap(ui, hotkey.clone()))
-                        .child(div().text_color(ui.faint).child("set in Settings › Menu bar & hotkey")),
-                    None => d.child("A key that shows or hides Wormhole from any app is set in Settings › Menu bar & hotkey"),
+                        .child(div().text_color(ui.faint).child("set in Settings › Hotkey")),
+                    None => {
+                        d.child("A key that shows or hides Wormhole from any app is set in Settings › Hotkey")
+                    }
                 })
                 .child(div().flex_1())
                 .child("Also in Help › Keyboard Shortcuts and the palette")

@@ -26,6 +26,7 @@ mod agent_access;
 mod agent_skills;
 mod agents;
 mod appearance;
+mod bar_previews;
 mod cli_tool;
 mod extensions;
 mod extensions_sheet;
@@ -33,6 +34,8 @@ mod extensions_text;
 mod feature_flags;
 mod fonts;
 mod git;
+mod hotkey;
+mod hotkey_preview;
 mod import;
 mod menu_bar;
 mod menu_bar_preview;
@@ -55,12 +58,12 @@ mod updates;
 
 pub(super) use advanced::reset_question;
 pub(super) use agents::AgentsSnapshot;
+pub(super) use bar_previews::BarPreview;
 pub(super) use cli_tool::CliToolPanel;
 pub(super) use extensions::Extensions;
 pub(super) use feature_flags::is_unlock_key;
 pub(super) use fonts::draw_specimen;
 pub(crate) use import::ImportPage;
-pub(super) use menu_bar_preview::draw_menu_bar_preview;
 #[cfg(test)]
 pub(super) use motion_preview::MotionPreview;
 pub(super) use motion_preview::{MotionPreviews, Scene as MotionScene};
@@ -92,6 +95,7 @@ pub(super) fn controls(section: Section) -> &'static [Setting] {
         Section::FeatureFlags => feature_flags::SETTINGS,
         Section::Notifications => notifications::SETTINGS,
         Section::MenuBar => menu_bar::SETTINGS,
+        Section::Hotkey => hotkey::SETTINGS,
         Section::Updates => updates::SETTINGS,
         Section::Advanced => advanced::SETTINGS,
     }
