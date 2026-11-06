@@ -1,5 +1,8 @@
-//! The preview strip: at the top of a page that has one, the live preview that belongs to the page, at most
-//! a quarter of the window's height (it scrolls on its own when it is taller).
+//! The preview strip: at the top of a page that has one, the live preview that belongs to the page, always
+//! [`PREVIEW_H`] tall, whatever the page and the window's size: the head, then the scene in the room that
+//! is left. A scene is composed to fit whole (Appearance's window and the Terminals list are cut off at
+//! the strip's bottom, as a window is at a screenshot's edge); one that cannot be, scrolls inside the
+//! strip, which never changes height.
 //!
 //! - Appearance, and a search's results, show the window in miniature (`sections::draw_stage`):
 //!   theme, primary, opacity, status bar and fonts as they are now.
@@ -93,6 +96,15 @@ impl PreviewKind {
     }
 }
 
+/// The strip's height, head and scene together, on every page and at every window size (4-pt grid). Its
+/// number is the smallest that holds the compact scenes whole: the head (`CONTROL_H`, 28) and its gap (8)
+/// leave the scene 220 pt, which holds Coding agents' three cards with their caption (about 160 measured),
+/// the font specimen (about 175) and the Motion scenes (about 150), the compact ones, whole; the Terminals
+/// list and Appearance's window are taller by nature (about 510 and 480) and are cut off at the room
+/// they get. A strip taller than this would take most of a window at `WINDOW_MIN`'s 420 pt before the
+/// page's first row (the page scrolls, so it stays reachable either way).
+pub(super) const PREVIEW_H: f32 = 256.0;
+
 /// The rows the strip shows in place of the page: they are not drawn again in it.
 const IN_COLUMN: [&str; 4] = ["appearance-preview", "font-specimen", "sidebar-preview", "changes-preview"];
 
@@ -130,13 +142,9 @@ impl SettingsWindow {
         IN_COLUMN.contains(&id)
     }
 
-    /// The strip: its head, then the page's preview, no taller than `max_height` and scrolling on its own
-    /// when it is. `None` for a page without a preview.
-    pub(super) fn render_preview_strip(
-        &self,
-        max_height: Pixels,
-        cx: &mut Context<Self>,
-    ) -> Option<AnyElement> {
+    /// The strip: its head, then the page's preview, [`PREVIEW_H`] tall in all (a scene that is taller
+    /// scrolls in its room). `None` for a page without a preview.
+    pub(super) fn render_preview_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let ui = ui(cx);
         let kind = self.preview_kind(cx)?;
         let preview = match kind {
@@ -161,10 +169,9 @@ impl SettingsWindow {
                 .aria_label(kind.spoken())
                 .flex_none()
                 .w_full()
-                .max_h(max_height)
+                .h(px(PREVIEW_H))
                 .flex()
                 .flex_col()
-                .overflow_y_scroll()
                 .gap_2()
                 .child(
                     div()
@@ -193,7 +200,17 @@ impl SettingsWindow {
                         }))
                         .children(tabs.map(|tabs| div().ml_auto().child(tabs))),
                 )
-                .child(preview)
+                .child(
+                    // The room under the head. `flex_none` on the scene keeps it its own height, so one that
+                    // is taller than the room scrolls here instead of being squeezed.
+                    div()
+                        .id("settings-preview-scene")
+                        .flex_1()
+                        .min_h_0()
+                        .w_full()
+                        .overflow_y_scroll()
+                        .child(div().flex_none().child(preview)),
+                )
                 .into_any_element(),
         )
     }

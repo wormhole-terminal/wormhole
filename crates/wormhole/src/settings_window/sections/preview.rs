@@ -13,7 +13,7 @@ use wormhole_core::view::sidebar::Density;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use super::samples::{AGENT_SAMPLES, Card, SAMPLES, SampleHead};
+use super::samples::{AGENT_SAMPLES, Card, SIDEBAR_SAMPLES, SampleHead};
 use crate::settings::SettingsStore;
 use crate::settings::{Settings, UiColors, settings};
 use crate::settings_window::{SettingsWindow, SidebarLook, ui};
@@ -22,6 +22,10 @@ use crate::theme_bridge;
 
 /// A preview list is as wide as the sidebar at its least.
 const SIDEBAR_W: f32 = 320.0;
+/// The frame of Terminals & sidebar's lists: the strip's scene room (`preview_column::PREVIEW_H` less its
+/// head) less the caption under the frame and the gap to it. The lists are taller than this by nature and
+/// are cut off at the frame's edge, the density showing in the rows that are in.
+const SIDEBAR_FRAME_H: f32 = 192.0;
 
 /// Terminals & sidebar → the Terminals list as the options make it, and beside it the list
 /// with the option under the pointer.
@@ -43,7 +47,7 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
             .flex_col()
             .gap_2()
             .child(label(settings_sessions_preview_now(now.density.label())))
-            .child(list("now", now, SAMPLES, true, ui, cx)),
+            .child(list("now", now, SIDEBAR_SAMPLES, true, ui, cx)),
     );
     if let Some(SidebarLook::Density(density)) = window.sidebar_preview
         && density != now.density
@@ -58,14 +62,14 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
                 .flex_col()
                 .gap_2()
                 .child(label(settings_sessions_preview_hovering(previewed.density.label())))
-                .child(list("previewed", previewed, SAMPLES, true, ui, cx)),
+                .child(list("previewed", previewed, SIDEBAR_SAMPLES, true, ui, cx)),
         );
     }
     div()
         .flex()
         .flex_col()
         .gap_2()
-        .child(style::preview_frame(ui).child(panes))
+        .child(style::preview_frame(ui).p_3().h(px(SIDEBAR_FRAME_H)).child(panes))
         .child(
             div()
                 .text_caption()

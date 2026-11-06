@@ -42,7 +42,7 @@ use wormhole_core::theme::tokens::{Appearance, ColorChoices, ThemeTokens};
 
 use crate::palette::Palette;
 use crate::theme_bridge;
-use derive::{contrasted, main_ui, opaque_ui, tally, theme_parts, themed, translucency};
+use derive::{contrasted, dividers, main_ui, opaque_ui, tally, theme_parts, themed, translucency};
 pub use profile::{ParkedSettings, edits_in, features_in, settings_in, store_in, ui_in, update_in};
 pub use ui_colors::UiColors;
 pub use zen::{set_zen_mode, settings_without_zen, toggle_zen_mode, zen};
@@ -402,6 +402,13 @@ impl SettingsStore {
     /// window's look) or opaque.
     pub fn ui_for(&self, translucent: bool) -> UiColors {
         if translucent { self.ui } else { self.ui_opaque }
+    }
+
+    /// Whether a window draws the line between its columns: Column dividers, and Increase Contrast
+    /// keeps it. The main window's colours carry this in `divider_width`; the other windows' keep the
+    /// theme's width (the Studio shows it), so a window with columns of its own asks here.
+    pub fn column_dividers(&self) -> bool {
+        dividers(&self.settings, self.system.increase_contrast)
     }
 
     /// Which features are on under the settings in force.

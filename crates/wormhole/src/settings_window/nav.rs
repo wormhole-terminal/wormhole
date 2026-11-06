@@ -114,15 +114,22 @@ impl SettingsWindow {
         // The strip under the traffic lights, the search field and the profile select are a fixed header:
         // only the page list scrolls, so nothing slides up under the traffic lights, which don't move.
         // `min_h_0` lets the list shrink to the space left below the header instead of growing the column.
+        // The line between the nav and the page is a column divider, as the main window's: the theme's
+        // `divider` over the nav's edge, gone with the Column dividers setting (Increase Contrast keeps it),
+        // and not one of the Borders' lines.
+        let divider = cx
+            .global::<SettingsStore>()
+            .column_dividers()
+            .then(|| div().absolute().top_0().bottom_0().right_0().w(ui.divider_width).bg(ui.divider));
         div()
             .id("settings-nav")
+            .relative()
             .flex()
             .flex_col()
             .w(px(NAV_W))
             .flex_none()
             .h_full()
             .bg(fill)
-            .rule_right(ui)
             .child(
                 div()
                     .flex_none()
@@ -153,6 +160,7 @@ impl SettingsWindow {
                     )),
             )
             .child(rows)
+            .children(divider)
             .into_any_element()
     }
 }

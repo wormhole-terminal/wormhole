@@ -120,6 +120,10 @@ pub(super) const SAMPLES: &[Card] = &[
     Card { group: None, folder: None, rows: &[ZSH] },
 ];
 
+/// What Terminals & sidebar shows: the group's card first, since the strip cuts the list off after a row or
+/// two and a head with its rows says more of a density than a lone terminal does.
+pub(super) const SIDEBAR_SAMPLES: &[Card] = SAMPLES.split_at(1).1;
+
 /// What Coding agents shows, one agent each: one working, one asking and one finished.
 pub(super) const AGENT_SAMPLES: &[Sample] = &[RATE_LIMITS, FLAKY_LOGIN, RELEASE_NOTES];
 

@@ -112,8 +112,8 @@ pub(in crate::settings_window) fn draw_git_preview(
     .into_any_element()
 }
 
-/// The tabs for the scenes, at the right of the strip's head: the strip is a quarter of the window at
-/// most, and a row of tabs over the preview would take a fifth of it.
+/// The tabs for the scenes, at the right of the strip's head: the strip is one fixed height
+/// (`preview_column::PREVIEW_H`), and a row of tabs over the preview would take a fifth of it.
 pub(in crate::settings_window) fn git_preview_tabs(
     window: &SettingsWindow,
     cx: &mut Context<SettingsWindow>,

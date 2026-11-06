@@ -99,6 +99,11 @@ const SLACK: u64 = 20;
 /// [`SLACK`] more.
 // Measured with Show config keys off (the default): a page does not build its rows' key lines then, which
 // is why these are lower than they were when the lines were always built.
+//
+// The pages with a preview were measured again when the strip became one fixed height (the scene in a scroll
+// room of its own under the head: a few allocations each; the Terminals list is cut off at its frame, with
+// one group's card instead of three, which took 770 off). The nav's divider, an element of its own, is 3 on
+// every page.
 const BUDGET: [(&str, u64); 19] = [
     ("Profile", 6908),
     // Measured with [`change`]'s settings differing from their defaults, so the page has rows: five settings
@@ -107,28 +112,28 @@ const BUDGET: [(&str, u64); 19] = [
     // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
     // key line, 425 more.
     ("Appearance", 17289),
-    ("Fonts", 7836),
-    ("Motion", 4464),
+    ("Fonts", 7588),
+    ("Motion", 4479),
     // With the Worktrees group's switch for cloning build folders (356).
     ("Terminal", 9804),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 12181),
-    ("Git", 5820),
+    ("Sessions", 11410),
+    ("Git", 5874),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 8973),
+    ("Agents", 8504),
     // Fell from 49,182 when the comparison left the page: the open card and its rows are what is drawn.
     ("Import", 22875),
-    ("Notifications", 7715),
+    ("Notifications", 7728),
     // The page was split into MenuBar and Hotkey, each with a preview that is a view of its own (a menu bar
     // twice, and the shortcut's keys with the quick panel or the window sketch); both measured at the split.
     // Every other page rose by 68 with the nav's one row more, Hotkey, and was measured again.
-    ("MenuBar", 3639),
-    ("Hotkey", 3815),
+    ("MenuBar", 3646),
+    ("Hotkey", 3789),
     ("Updates", 5154),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).

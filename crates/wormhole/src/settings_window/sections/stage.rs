@@ -28,9 +28,11 @@ use crate::settings_window::{SettingsWindow, ui as window_ui};
 use crate::style::{self, Edges, StatusGlyph, StatusTile, TextRole, TileFace};
 use crate::theme_bridge::hsla;
 
-/// The backdrop's height, and how far in from its top left corner the window sits.
-const STAGE_H: f32 = 400.0;
-const WINDOW_INSET: f32 = 24.0;
+/// The backdrop's height, and how far in from its top left corner the window sits. The strip is one
+/// height on every page (`preview_column::PREVIEW_H`): its scene's room, less the caption under the
+/// backdrop and the gap to it, so the window shows its top left part and is cut off at the backdrop's edge.
+const STAGE_H: f32 = 176.0; // 220 less the caption's two lines (36) and the gap (8)
+const WINDOW_INSET: f32 = 16.0;
 /// The window: as wide as the app opens one, so the column shows its left part.
 const WINDOW_W: f32 = 1100.0;
 /// The traffic lights as macOS draws them (`style::LIGHTS_X`, `style::ASSUMED_LIGHTS_SPAN`).

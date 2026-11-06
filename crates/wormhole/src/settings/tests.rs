@@ -189,15 +189,18 @@ fn column_dividers_off_hides_them_in_the_main_window_unless_contrast_is_increase
     assert_eq!(store.ui.divider_width, gpui_kit::px(0.0));
     assert_eq!(store.ui.divider, crate::theme_bridge::token(&store.tokens, "divider"), "the color stays");
     assert_eq!(store.ui_for(false).divider_width, theme_width, "the Studio and Settings show the theme's");
+    assert!(!store.column_dividers(), "Settings' nav asks, and draws none");
 
     system(&mut store, CONTRAST);
     assert_eq!(store.ui.divider_width, gpui_kit::px(store.tokens.metrics.divider_width));
     assert!(store.ui.divider_width > gpui_kit::px(0.0), "Increase Contrast keeps the lines");
+    assert!(store.column_dividers(), "and Settings' nav keeps its line");
 
     system(&mut store, SystemLook::default());
     assert_eq!(store.ui.divider_width, gpui_kit::px(0.0), "off again with the setting");
     update(&mut store, |s| s.column_dividers = true);
     assert_eq!(store.ui.divider_width, theme_width);
+    assert!(store.column_dividers());
 }
 
 /// Animate icons off holds every window's icons still, Settings and the Studio as well as the main

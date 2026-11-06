@@ -1,6 +1,6 @@
 //! Notifications' preview: a banner as macOS shows it, for a terminal that needs input, drawn in the
-//! theme's colours over the window's own surface. One banner, not two: the preview strip is at most a
-//! quarter of the window tall, and a second banner was cut off at its edge.
+//! theme's colours over the window's own surface. One banner, not two: the preview strip is one
+//! fixed height (`preview_column::PREVIEW_H`), and a second banner would be cut off at its edge.
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;

@@ -411,8 +411,8 @@ impl Render for SettingsWindow {
                     .gap_4()
                     .child(self.render_header(&query, hits, ui, cx))
                     .children(self.render_problems(ui, cx))
-                    // The page's preview, at most a quarter of the window's height.
-                    .children(self.render_preview_strip(window.viewport_size().height / 4.0, cx))
+                    // The page's preview, the same height on every page and at every window size.
+                    .children(self.render_preview_strip(cx))
                     .child(body),
             );
 

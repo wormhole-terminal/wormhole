@@ -77,7 +77,7 @@ pub(super) fn translucency(settings: &Settings) -> Translucency {
 /// window's columns would otherwise be told apart by a tint alone.
 pub(super) fn main_ui(tokens: &ThemeTokens, settings: &Settings, increase_contrast: bool) -> UiColors {
     let ui = UiColors::new(tokens, translucency(settings));
-    let ui = if settings.column_dividers || increase_contrast { ui } else { ui.without_dividers() };
+    let ui = if dividers(settings, increase_contrast) { ui } else { ui.without_dividers() };
     with_icon_motion(ui, settings).with_borders(lines(settings, increase_contrast))
 }
 
@@ -85,6 +85,12 @@ pub(super) fn main_ui(tokens: &ThemeTokens, settings: &Settings, increase_contra
 pub(super) fn opaque_ui(tokens: &ThemeTokens, settings: &Settings, increase_contrast: bool) -> UiColors {
     with_icon_motion(UiColors::new(tokens, OPAQUE_LOOK), settings)
         .with_borders(lines(settings, increase_contrast))
+}
+
+/// Whether the lines between columns are drawn: the Column dividers setting, and always under Increase
+/// Contrast, where columns told apart by a tint alone would not be told apart enough.
+pub(super) fn dividers(settings: &Settings, increase_contrast: bool) -> bool {
+    settings.column_dividers || increase_contrast
 }
 
 /// Whether the windows draw their lines: the Borders setting, and always under Increase Contrast, where

@@ -6,9 +6,9 @@
 //! parts are put on.
 //!
 //! The scenes are drawn at the sidebar's Dense rows (Status at Regular: its second line is what one of its
-//! options moves), so the strip, which is a quarter of the window at most, shows the whole of any of them
-//! without scrolling. The strip is as tall as the tallest, so it never changes height under the pointer
-//! while another row is hovered.
+//! options moves), so the strip, one fixed height (`preview_column::PREVIEW_H`), shows the whole of any of
+//! them without scrolling. Each stage is centred in a slot as tall as the tallest, so nothing moves under
+//! the pointer while another row is hovered.
 //!
 //! The preview is a view of its own, so the clock that redraws it is its own and the Settings window's
 //! page is not what ticks. It reads the time itself instead of animating built elements: a scene is a

@@ -56,8 +56,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 - Settings and the Theme Studio are translucent by default, like the main window (Settings → Appearance → Also
   translucent turns each off).
 - Settings has more space between the items of its sidebar, cannot go full screen or be made wider than its
-  page (its green light is dimmed), and shows a page's preview at the top of the page, at most a quarter of the
-  window's height, instead of in a column at the right.
+  page (its green light is dimmed), and shows a page's preview at the top of the page, always the same size
+  whatever the page and the window's size, instead of in a column at the right.
 - Settings → Appearance → Borders (`borders` in `config.json`, on by default) turns off the lines around cards,
   columns, the sidebar and panels, between settings rows, and around buttons, menus and fields, so surfaces are
   told apart by their shade alone; Increase Contrast keeps them. Selection and focus rings, menu separators, the
@@ -68,6 +68,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- Settings: the line between its sidebar and the page now goes with Settings → Appearance → Column dividers,
+  like the lines between the main window's columns (Increase Contrast keeps it); it stayed whatever that
+  setting said, and was taken away by Borders instead.
 - Settings → Notifications: "Send test" was only offered once macOS had allowed notifications, and when it
   did nothing it said nothing. It is now a row of its own, "Send a test notification", always there: it
   asks macOS first when that has not been asked and sends once you allow it, says when notifications are off
