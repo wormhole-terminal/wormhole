@@ -94,6 +94,8 @@ pub struct UiColors {
     /// chosen segment of a segmented control (`control.selected`), a switch's off track
     /// (`switch.track`) and the knob of a switch or slider (`switch.knob`).
     pub group: Hsla,
+    /// The line between two rows of a Settings group (`settings.divider`).
+    pub group_divider: Hsla,
     pub control: Hsla,
     pub control_hover: Hsla,
     pub control_selected: Hsla,
@@ -241,6 +243,7 @@ const COLORS: &[Field] = fields! {
     card = "card";
     card_edge = "card.edge";
     group = "settings.group";
+    group_divider = "settings.divider";
     control = "control.background";
     control_hover = "control.hover";
     control_selected = "control.selected";

@@ -66,5 +66,5 @@ pub fn setting_group(ui: UiColors, rows: impl IntoIterator<Item = AnyElement>) -
 /// controls' edge.
 #[track_caller]
 fn divider(ui: UiColors) -> Div {
-    div().flex_none().w_full().h(ui.border_width).bg(ui.line(ui.border))
+    div().flex_none().w_full().h(ui.border_width).bg(ui.line(ui.group_divider))
 }

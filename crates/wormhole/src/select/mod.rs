@@ -13,7 +13,7 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 
 use crate::settings::UiColors;
-use crate::style::{CONTROL_H, Edges, ROW_H, TextRole};
+use crate::style::{CONTROL_H, Edges, FLAT_RING_ALPHA, ROW_H, TextRole, flat_ring};
 
 /// The panel picker's trigger: 24 high, between the 22 of a chip and a control's 28.
 const PICKER_H: f32 = 24.0;
@@ -104,16 +104,12 @@ impl RenderOnce for SelectTrigger {
             .rounded(ui.radius)
             .cursor_pointer()
             .hover(move |d| if compact { d.bg(ui.hover) } else { d.bg(ui.control_hover) })
-            // A soft ring around the open select, like a focused input (the panel's picker
-            // marks itself with the outline alone).
+            // The ring of a focused field round the open select (the panel's picker marks itself with
+            // the outline alone). An overlay border, not a shadow: a shadow shows through the select's
+            // translucent fill as a solid block. Increase Contrast draws it solid.
             .when(self.open && !self.compact, |d| {
-                d.shadow(vec![BoxShadow {
-                    color: Hsla { a: 0.3, ..ui.primary },
-                    offset: point(px(0.0), px(0.0)),
-                    blur_radius: px(0.0),
-                    spread_radius: px(2.0),
-                    inset: false,
-                }])
+                let alpha = if ui.increase_contrast { 1.0 } else { FLAT_RING_ALPHA };
+                d.relative().child(flat_ring(ui, ui.input_border_focus, alpha))
             })
             .child(div().min_w_0().truncate().child(self.label))
             .child(chevrons(ui))

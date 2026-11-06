@@ -53,6 +53,10 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
         // A Settings group's card: a light veil on a dark page, a white one on a light page, so rows and
         // controls read as lying on a raised surface. Overlays, so a translucent window shows through.
         "settings.group" => p("text.primary / 7%", "#fff / 80%"),
+        // The line between two rows of a group, as faint as the flat controls beside it: the same tint of
+        // the text as `control.background` (12 % on a dark card, 7 % on a light one, where the hairline
+        // `border` at 14 % is twice a control's fill).
+        "settings.divider" => p("text.primary / 12%", "text.primary / 7%"),
         // Group heads and section bands, one step above a hovered row and below a pressed one.
         "band" => "text.primary / 5%",
         "band.hover" => "text.primary / 8%",

@@ -88,6 +88,8 @@ fn high_contrast_rule(name: &str, dark: bool) -> Option<Cow<'static, str>> {
         "band" => "text.primary / 8%",
         // The off switch has no outline to carry it, so its track is stronger (3:1 is out of reach of a tint).
         "switch.track" => p("text.primary / 50%", "text.primary / 56%"),
+        // The faint line between a group's rows is a plain border again: faint is no line to someone who needs contrast.
+        "settings.divider" => "border",
         "card" => "text.primary / 6%",
         "card.edge" => "text.primary / 28%",
         "state.hover" => "text.primary / 10%",
@@ -378,6 +380,7 @@ mod tests {
             "card",
             "card.edge",
             "list.selected",
+            "settings.divider",
             "sidebar.row.selected",
             "state.active",
             "state.hover",

@@ -21,7 +21,7 @@ use super::scale::{
     CONTROL_H, Edges, HIT_MIN, MARK_DOT, NAME_LINE, RECORDER_W, SETTING_ROW_MIN_H, SLIDER_W, TextRole,
 };
 use super::section::ClickHandler;
-use super::text_field::{RING_ALPHA, ring};
+use super::text_field::{FLAT_RING_ALPHA, flat_ring};
 use crate::settings::UiColors;
 
 /// A small whole number with a minus and a plus, as System Settings draws a stepper: the value as
@@ -476,14 +476,14 @@ pub fn shortcut_recorder(
         // focus ring while it waits for keys, and a warning outline inside a ring for a conflict.
         .map(|d| match &state {
             RecorderState::Recording(_) if ui.increase_contrast => {
-                d.relative().child(ring(ui, ui.focus, 1.0))
+                d.relative().child(flat_ring(ui, ui.focus, 1.0))
             }
-            RecorderState::Recording(_) => d.relative().child(ring(ui, ui.focus, RING_ALPHA)),
+            RecorderState::Recording(_) => d.relative().child(flat_ring(ui, ui.focus, FLAT_RING_ALPHA)),
             RecorderState::Conflict(_) if ui.increase_contrast => {
-                d.relative().child(ring(ui, ui.warning, 1.0))
+                d.relative().child(flat_ring(ui, ui.warning, 1.0))
             }
             RecorderState::Conflict(_) => {
-                d.outlined_always(ui, ui.warning).relative().child(ring(ui, ui.warning, RING_ALPHA))
+                d.outlined_always(ui, ui.warning).relative().child(flat_ring(ui, ui.warning, FLAT_RING_ALPHA))
             }
             RecorderState::Empty | RecorderState::Set(_) if ui.increase_contrast => {
                 d.outlined_always(ui, ui.border_strong)

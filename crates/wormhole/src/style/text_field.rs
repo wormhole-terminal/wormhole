@@ -56,8 +56,12 @@ pub struct TextField {
 
 /// The round clear glyph's size: a 4-pt multiple that sits in the field's height with room round it.
 const CLEAR_SIZE: f32 = 16.0;
-/// How much of the primary the focus ring shows: soft, so the field keeps its flat look.
-pub(super) const RING_ALPHA: f32 = 0.35;
+/// How much of the primary the focus ring shows: half, which keeps the field flat and still reads as a
+/// focus indicator on a light card (35 % was too soft there) as well as on a dark one.
+pub(crate) const FLAT_RING_ALPHA: f32 = 0.5;
+/// The height of a box of several lines before it holds any: three lines of text and the field's padding,
+/// on the 4-pt grid, so an empty one is a box to click into, not a strip.
+const MULTILINE_MIN_H: f32 = 76.0;
 /// The ring's width beyond `metrics.focus_ring_width`'s one point inside the edge: a field has no
 /// outline to hide it in, so it is a point wider than a select's.
 const RING_EXTRA: f32 = 1.0;
@@ -168,7 +172,8 @@ impl RenderOnce for TextField {
                 RenderOnce::render(field, window, cx).into_any_element()
             }
             Body::Lines(input) => {
-                let field = Textarea::new(&input).small().appearance(false);
+                // Fills the box, which is at least `MULTILINE_MIN_H` tall, so a click below the lines focuses it.
+                let field = Textarea::new(&input).small().appearance(false).h_full();
                 RenderOnce::render(field, window, cx).into_any_element()
             }
         };
@@ -182,6 +187,7 @@ impl RenderOnce for TextField {
                 .when_some(width, |well, width| well.w(px(width)))
                 .when(width.is_none(), |well| well.w_full())
                 .when(one_line, |well| well.h(px(CONTROL_H)))
+                .when(!one_line, |well| well.min_h(px(MULTILINE_MIN_H)))
                 .rounded(ui.radius)
                 .bg(ui.control)
                 .text_color(ui.text)
@@ -190,22 +196,24 @@ impl RenderOnce for TextField {
                     // A faint fill alone is no edge, so Increase Contrast keeps the field's outline.
                     (false, true) => well.outlined_always(ui, ui.input_border),
                     (false, false) => well,
-                    (true, true) => well.relative().child(ring(ui, ui.input_border_focus, 1.0)),
-                    (true, false) => well.relative().child(ring(ui, ui.input_border_focus, RING_ALPHA)),
+                    (true, true) => well.relative().child(flat_ring(ui, ui.input_border_focus, 1.0)),
+                    (true, false) => {
+                        well.relative().child(flat_ring(ui, ui.input_border_focus, FLAT_RING_ALPHA))
+                    }
                 })
                 .child(inner),
         )
     }
 }
 
-/// The ring of a focused flat field: a band of `color` at `alpha` ([`RING_ALPHA`] soft, 1 solid under Increase Contrast,
-/// 1 for Increase Contrast's), `metrics.focus_ring_width` and a point wide just
-/// outside the field's edge, for the field to hold as a child (it must be `relative`). It is drawn as a
-/// border of its own over nothing, not as the field's shadow, because the field's fill is a translucent
-/// overlay and a shadow shows through it as a solid block. It takes no clicks and moves nothing. The
-/// shortcut recorder wears the same ring while it waits for keys.
+/// The ring of a focused flat control: a band of `color` at `alpha` ([`FLAT_RING_ALPHA`], or 1 under Increase
+/// Contrast), `metrics.focus_ring_width` and a point wide just outside the control's edge, for the control to
+/// hold as a child (it must be `relative`). It is drawn as a border of its own over nothing, not as the
+/// control's shadow, because a flat control's fill is a translucent overlay and a shadow shows through it as
+/// a solid block. It takes no clicks and moves nothing. The text field, the shortcut recorder and an open
+/// select wear it.
 #[track_caller]
-pub(super) fn ring(ui: UiColors, color: Hsla, alpha: f32) -> Div {
+pub(crate) fn flat_ring(ui: UiColors, color: Hsla, alpha: f32) -> Div {
     let w = ui.focus_ring_width + px(RING_EXTRA);
     let mut ring = div()
         .absolute()

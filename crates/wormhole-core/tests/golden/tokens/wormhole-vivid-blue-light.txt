@@ -64,6 +64,7 @@ resize.handle.active #0070ba
 resize.handle.hover #0070ba80
 scrollbar.thumb #12202b4d
 selection.ui #0070ba40
+settings.divider #12202b12
 settings.group #ffffffcc
 shadow #00000029
 sidebar.background #edeff1
@@ -196,6 +197,7 @@ increase_contrast input.placeholder #666d73
 increase_contrast list.selected #bfdbed
 increase_contrast list.selected.muted #485158
 increase_contrast list.selected.text #0061a1
+increase_contrast settings.divider #12202b66
 increase_contrast sidebar.row.hover #12202b1a
 increase_contrast sidebar.row.selected #b4d1e4
 increase_contrast sidebar.row.selected.muted #485158

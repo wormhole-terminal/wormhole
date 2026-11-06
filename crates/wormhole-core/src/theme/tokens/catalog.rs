@@ -41,6 +41,11 @@ pub const UI_TOKENS: &[TokenInfo] = &[
         "Chrome",
         "A Settings group's card, lifted from the page: its rows and controls sit on it (overlay)",
     ),
+    t(
+        "settings.divider",
+        "Chrome",
+        "The line between two rows of a Settings group: as faint as the controls' fill on a light page (overlay)",
+    ),
     t("band", "Chrome", "Folder bands in the sidebar and section bands in the right panel (overlay)"),
     t("band.hover", "Chrome", "A band under the pointer; also the hover of an icon button (overlay)"),
     t("band.solid", "Chrome", "A band over the sidebar, opaque: the fill of a band that sticks to the top"),

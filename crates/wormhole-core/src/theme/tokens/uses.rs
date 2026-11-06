@@ -409,6 +409,7 @@ pub const TOKEN_USES: &[TokenUse] = &[
             "text.link",
             "primary",
             "settings.group",
+            "settings.divider",
             "card.edge",
             "metrics.radius",
             "metrics.radius_lg",
