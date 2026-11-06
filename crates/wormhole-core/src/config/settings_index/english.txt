@@ -105,6 +105,9 @@ section Git
   title "Changes & diffs"
   intro "The Changes panel and the diff view."
   nav "Work"
+group ""
+  blurb ""
+  aside ""
 group "Changes panel"
   blurb ""
   aside ""
@@ -493,6 +496,10 @@ entry Sessions sidebar-notes
   label "Notes and tasks"
   description "Note icon with the number of notes and open tasks"
   keywords "notes tasks next steps count"
+entry Git changes-preview
+  label "Live preview"
+  description ""
+  keywords "preview changes diff panel list tree"
 entry Git changes-view
   label "File view"
   description "A flat list, or folders as a tree"

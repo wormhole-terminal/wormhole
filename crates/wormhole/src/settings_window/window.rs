@@ -101,6 +101,9 @@ impl SettingsWindow {
             }),
         ];
         subscriptions.extend(project_subscriptions);
+        // The strip of Changes & diffs moves to the scene of the setting that changed.
+        subscriptions
+            .push(cx.observe_global::<SettingsStore>(|this, cx| this.git_preview.follow(settings(cx))));
         // Closed while its field records: the hotkey comes back with the window gone.
         subscriptions.push(cx.on_release(|_, cx| {
             crate::hotkey::pause(false, cx);
@@ -143,6 +146,7 @@ impl SettingsWindow {
             specimen: FontSlot::Terminal,
             themes_all: false,
             sidebar_preview: None,
+            git_preview: sections::GitPreview::new(&current),
             confirm_reset: false,
             changed_copied: None,
             others_open: false,

@@ -43,6 +43,7 @@ settings-window-preview-agents-label = Preview of the Terminals list with coding
 settings-window-preview-notifications-label = Preview of how a notification looks
 settings-window-preview-menu-bar-label = Preview of the menu bar item with your current settings
 settings-window-preview-hotkey-label = Preview of what the hotkey opens, with your shortcut
+settings-window-preview-git-label = Preview of the Changes panel and the diff view with your current settings
 settings-window-preview = Preview
 settings-window-preview-column-hint = Shown in the preview at the top of the page
 

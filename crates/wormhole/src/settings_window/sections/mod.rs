@@ -36,6 +36,7 @@ mod fonts;
 mod git;
 mod hotkey;
 mod hotkey_preview;
+mod git_preview;
 mod import;
 mod menu_bar;
 mod menu_bar_preview;
@@ -63,6 +64,7 @@ pub(super) use cli_tool::CliToolPanel;
 pub(super) use extensions::Extensions;
 pub(super) use feature_flags::is_unlock_key;
 pub(super) use fonts::draw_specimen;
+pub(super) use git_preview::{GitPreview, draw_git_preview, git_preview_tabs};
 pub(crate) use import::ImportPage;
 #[cfg(test)]
 pub(super) use motion_preview::MotionPreview;

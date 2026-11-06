@@ -36,32 +36,12 @@ pub(super) fn change_row(
     let Placement { in_tree, depth, selected, width } = place;
     // A nested repository comes from git as "dir/": a folder, named without its slash.
     let is_dir = file.path.ends_with('/');
-    let (folder, name) = match file.path.trim_end_matches('/').rsplit_once('/') {
-        Some((folder, name)) => (if in_tree { "" } else { folder }, name),
-        None => ("", file.path.trim_end_matches('/')),
-    };
-    let lines = if is_dir {
-        FileLines::Folder
-    } else if file.lfs {
-        FileLines::Lfs
-    } else {
-        match (file.added, file.removed) {
-            (Some(added), removed) => FileLines::Counts(added as usize, removed.unwrap_or(0) as usize),
-            (None, _) => FileLines::Binary,
-        }
-    };
+    let (folder, name) = split_path(file, in_tree);
+    let lines = lines_of(file);
     let Renamed { from: renamed_from, moved } = renamed(file);
     let fitted = fit(name, folder, lines, renamed_from, moved, selected, width, depth, window, cx);
     let shortened = fitted.name != name || fitted.folder != folder;
-    let icon_color = if selected { ui.selected_muted } else { ui.muted };
-    let icons = cx.global::<SettingsStore>().icons.as_deref();
-    let icon = if is_dir {
-        crate::icons::folder(icons, name, false, icon_color)
-            .unwrap_or_else(|| style::icon(IconName::Folder).text_color(icon_color).into_any_element())
-    } else {
-        crate::icons::file(icons, name, icon_color)
-            .unwrap_or_else(|| style::icon(IconName::File).text_color(icon_color).into_any_element())
-    };
+    let icon = row_icon(is_dir, name, selected, ui, cx);
     let row = style::file_row(
         SharedString::from(format!("change-{depth}-{}", file.path)),
         ui,
@@ -96,6 +76,70 @@ pub(super) fn change_row(
         })
         .build(window, cx)
     })
+}
+
+/// A file's folder (empty in a tree, where the folder rows above say it) and name. A nested
+/// repository comes from git as "dir/": a folder, named without its slash.
+fn split_path(file: &FileChange, in_tree: bool) -> (&str, &str) {
+    match file.path.trim_end_matches('/').rsplit_once('/') {
+        Some((folder, name)) => (if in_tree { "" } else { folder }, name),
+        None => ("", file.path.trim_end_matches('/')),
+    }
+}
+
+/// What a file's row says of its lines.
+fn lines_of(file: &FileChange) -> FileLines {
+    if file.path.ends_with('/') {
+        FileLines::Folder
+    } else if file.lfs {
+        FileLines::Lfs
+    } else {
+        match (file.added, file.removed) {
+            (Some(added), removed) => FileLines::Counts(added as usize, removed.unwrap_or(0) as usize),
+            (None, _) => FileLines::Binary,
+        }
+    }
+}
+
+/// The icon of a row: the icon theme's, else the plain file or folder.
+fn row_icon(is_dir: bool, name: &str, selected: bool, ui: UiColors, cx: &App) -> AnyElement {
+    let icon_color = if selected { ui.selected_muted } else { ui.muted };
+    let icons = cx.global::<SettingsStore>().icons.as_deref();
+    if is_dir {
+        crate::icons::folder(icons, name, false, icon_color)
+            .unwrap_or_else(|| style::icon(IconName::Folder).text_color(icon_color).into_any_element())
+    } else {
+        crate::icons::file(icons, name, icon_color)
+            .unwrap_or_else(|| style::icon(IconName::File).text_color(icon_color).into_any_element())
+    }
+}
+
+/// A file's row as Settings' preview draws it: the same row, its name and folder as they are, not
+/// fitted to a panel's width (a preview's paths are short, and it has no window to measure with).
+/// No tooltip, no click.
+pub(super) fn preview_row(
+    file: &FileChange,
+    in_tree: bool,
+    depth: usize,
+    ui: UiColors,
+    cx: &App,
+) -> Stateful<Div> {
+    let (folder, name) = split_path(file, in_tree);
+    style::file_row(
+        SharedString::from(format!("preview-change-{depth}-{}", file.path)),
+        ui,
+        style::FileRow {
+            icon: row_icon(false, name, false, ui, cx),
+            name: name.to_string().into(),
+            folder: folder.to_string().into(),
+            renamed_from: None,
+            moved: false,
+            kind: file.kind,
+            lines: lines_of(file),
+            depth,
+            selected: false,
+        },
+    )
 }
 
 /// How a renamed file's row says where it came from: the old name before the new one

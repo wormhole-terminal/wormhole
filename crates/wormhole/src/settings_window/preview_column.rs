@@ -11,6 +11,8 @@
 //! - Menu bar shows the menu bar item as the settings make it (`MenuBarPreview`), Hotkey the shortcut and
 //!   what it opens (`HotkeyPreview`); both are views of their own (`BarPreview`).
 //! - Motion shows the scene of the row touched last, looping (`MotionStrip`).
+//! - Changes & diffs shows the Changes panel's list, a diff or a binary file's diff (`draw_git_preview`),
+//!   on the scene of the setting last changed, or the tab picked.
 //! - Every other page has nothing to show there.
 //!
 //! The strip holds nothing to operate: no focus stop, so ⇥ and F6 pass over it, and one labelled
@@ -47,6 +49,8 @@ pub(super) enum PreviewKind {
     Hotkey,
     /// One of the Motion page's scenes.
     Motion(sections::MotionScene),
+    /// The Changes panel and the diff view.
+    Git,
 }
 
 impl PreviewKind {
@@ -59,6 +63,7 @@ impl PreviewKind {
             Self::Notifications => text(SETTINGS_WINDOW_NOTIFICATIONS),
             Self::MenuBar => text(SETTINGS_WINDOW_MENU_BAR),
             Self::Hotkey => text(SETTINGS_WINDOW_HOTKEY),
+            Self::Git => text(SETTINGS_SECTION_GIT),
             // The setting it shows, so the head says which row the picture is of.
             Self::Motion(scene) => scene.label(),
         }
@@ -83,12 +88,13 @@ impl PreviewKind {
             Self::MenuBar => text(SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL),
             Self::Hotkey => text(SETTINGS_WINDOW_PREVIEW_HOTKEY_LABEL),
             Self::Motion(scene) => scene.spoken(),
+            Self::Git => text(SETTINGS_WINDOW_PREVIEW_GIT_LABEL),
         }
     }
 }
 
 /// The rows the strip shows in place of the page: they are not drawn again in it.
-const IN_COLUMN: [&str; 3] = ["appearance-preview", "font-specimen", "sidebar-preview"];
+const IN_COLUMN: [&str; 4] = ["appearance-preview", "font-specimen", "sidebar-preview", "changes-preview"];
 
 impl SettingsWindow {
     /// The preview of the page in front, if it has one. A search's results are not a page: they
@@ -106,10 +112,10 @@ impl SettingsWindow {
             Section::MenuBar => Some(PreviewKind::MenuBar),
             Section::Hotkey => Some(PreviewKind::Hotkey),
             Section::Motion => self.motion_strip.as_ref().map(|strip| PreviewKind::Motion(strip.scene(cx))),
+            Section::Git => Some(PreviewKind::Git),
             Section::Profile
             | Section::Changed
             | Section::Terminal
-            | Section::Git
             | Section::Import
             | Section::Updates
             | Section::Advanced
@@ -144,7 +150,10 @@ impl SettingsWindow {
                 .as_ref()
                 .map_or_else(|| div().into_any_element(), sections::BarPreview::element),
             PreviewKind::Motion(_) => self.motion_strip.as_ref().map(|strip| strip.view())?,
+            PreviewKind::Git => sections::draw_git_preview(self, cx),
         };
+        // A preview with scenes puts their tabs at the head's right.
+        let tabs = (kind == PreviewKind::Git).then(|| sections::git_preview_tabs(self, cx));
         Some(
             div()
                 .id("settings-preview")
@@ -181,7 +190,8 @@ impl SettingsWindow {
                                 .text_caption()
                                 .text_color(ui.muted)
                                 .child(aside)
-                        })),
+                        }))
+                        .children(tabs.map(|tabs| div().ml_auto().child(tabs))),
                 )
                 .child(preview)
                 .into_any_element(),

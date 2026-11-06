@@ -321,27 +321,40 @@ impl ChangesView {
         } else {
             Vec::new()
         };
-        style::section_card(
-            SharedString::from(format!("changes-band-{}", group.tag())),
-            ui,
-            style::BandParts {
-                kind: style::BandKind::Section,
-                section: style::Section::of(count, folded),
-                title: group.title().into(),
-                detail: None,
-                count: (count > 0).then(|| count_grouped(count).into()),
-                waiting: None,
-                add: None,
-                on_toggle: Some(Box::new(move |_, _, cx| {
-                    this.update(cx, |this, cx| this.toggle_section(session, group, count, cx)).ok();
-                })),
-                drop_target: false,
-                sticky: false,
-                joined: false,
-            },
-            trailing,
-        )
-        .aria_label(spoken::section_band(group.title(), count, spoken::Counted::Files))
-        .into_any_element()
+        let on_toggle: style::ClickHandler = Box::new(move |_, _, cx| {
+            this.update(cx, |this, cx| this.toggle_section(session, group, count, cx)).ok();
+        });
+        band_card(group, count, folded, Some(on_toggle), trailing, ui).into_any_element()
     }
+}
+
+/// A section's card head: its title and file count; `on_toggle` folds it. The list draws it with
+/// the controls, Settings' preview (`sample`) without.
+pub(super) fn band_card(
+    group: Group,
+    count: usize,
+    folded: bool,
+    on_toggle: Option<style::ClickHandler>,
+    trailing: Vec<AnyElement>,
+    ui: UiColors,
+) -> Stateful<Div> {
+    style::section_card(
+        SharedString::from(format!("changes-band-{}", group.tag())),
+        ui,
+        style::BandParts {
+            kind: style::BandKind::Section,
+            section: style::Section::of(count, folded),
+            title: group.title().into(),
+            detail: None,
+            count: (count > 0).then(|| count_grouped(count).into()),
+            waiting: None,
+            add: None,
+            on_toggle,
+            drop_target: false,
+            sticky: false,
+            joined: false,
+        },
+        trailing,
+    )
+    .aria_label(spoken::section_band(group.title(), count, spoken::Counted::Files))
 }

@@ -4,6 +4,9 @@
 settings-section-git = Changes & diffs
     .intro = The Changes panel and the diff view.
 
+settings-git-preview = Live preview
+    .keywords = preview changes diff panel list tree
+
 ## Changes panel
 
 settings-git-group-changes-panel = Changes panel

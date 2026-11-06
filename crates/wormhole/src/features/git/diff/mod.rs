@@ -9,6 +9,7 @@ mod header;
 mod highlight;
 mod load;
 mod notes;
+pub(crate) mod preview;
 pub(crate) mod render;
 mod review;
 mod rows;

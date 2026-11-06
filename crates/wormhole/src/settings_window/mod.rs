@@ -142,6 +142,8 @@ pub(crate) struct SettingsWindow {
     themes_all: bool,
     /// Terminals & sidebar → the option under the pointer, previewed beside the current look.
     sidebar_preview: Option<SidebarLook>,
+    /// Changes & diffs → which of the three previews the strip shows.
+    git_preview: sections::GitPreview,
     /// Advanced → "Reset to defaults…", or Changed → "Reset All…", was pressed: the page asks before it
     /// resets (a page change or Esc withdraws the question).
     confirm_reset: bool,

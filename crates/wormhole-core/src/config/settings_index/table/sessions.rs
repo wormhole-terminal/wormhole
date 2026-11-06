@@ -93,6 +93,9 @@ pub(super) const SESSIONS: &[Group] = &[
 ];
 
 pub(super) const GIT: &[Group] = &[
+    untitled(&[
+        entry("changes-preview", SETTINGS_GIT_PREVIEW, &[]).with_keywords(SETTINGS_GIT_PREVIEW_KEYWORDS)
+    ]),
     group(
         SETTINGS_GIT_GROUP_CHANGES_PANEL,
         &[

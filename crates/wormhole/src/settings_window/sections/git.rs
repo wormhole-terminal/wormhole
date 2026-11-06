@@ -10,9 +10,11 @@ use wormhole_core::config::SizeUnits;
 use wormhole_text::keys::*;
 use wormhole_text::whole;
 
+use super::git_preview;
 use crate::settings_window::registry::{Segment, Setting, toggle};
 
 pub(super) const SETTINGS: &[Setting] = &[
+    Setting::block("changes-preview", git_preview::draw_git_preview),
     Setting::segmented(
         "changes-view",
         &[Segment::text(SETTINGS_GIT_LIST), Segment::text(SETTINGS_GIT_TREE)],

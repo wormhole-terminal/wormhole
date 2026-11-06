@@ -27,6 +27,7 @@ mod def;
 pub(crate) mod devctl;
 mod list;
 mod rows;
+pub(crate) mod sample;
 #[cfg(test)]
 mod tests;
 mod view;
