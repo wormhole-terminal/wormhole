@@ -270,6 +270,20 @@ pub trait Edges: Styled + Sized {
         self.border_color(ui.line(ui.border))
     }
 
+    /// The faint line of a Settings card (`settings.divider`, the one between a group's rows) along the top,
+    /// for a card whose header or footer sits apart from its body. A decorative line: Borders off keeps
+    /// its width and draws nothing.
+    fn divider_top(mut self, ui: UiColors) -> Self {
+        self.style().border_widths.top = Some(ui.border_width.into());
+        self.border_color(ui.line(ui.group_divider))
+    }
+
+    /// [`divider_top`](Edges::divider_top) along the bottom.
+    fn divider_bottom(mut self, ui: UiColors) -> Self {
+        self.style().border_widths.bottom = Some(ui.border_width.into());
+        self.border_color(ui.line(ui.group_divider))
+    }
+
     fn rule_bottom(mut self, ui: UiColors) -> Self {
         self.style().border_widths.bottom = Some(ui.border_width.into());
         self.border_color(ui.line(ui.border))

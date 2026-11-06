@@ -205,6 +205,20 @@ pub fn card(ui: UiColors, border: Hsla) -> Div {
     div().p_3().rounded(ui.radius_lg).outlined(ui, border)
 }
 
+/// The flat sibling of [`card`], as a Settings page sets a block apart: the `settings.group` fill with the
+/// group's `radius_lg` corners and 16 pt at the sides, no outline (Increase Contrast draws `card.edge`, as
+/// [`setting_group`](super::setting_group) does). Release notes, the commands a project wants to run, an
+/// importable app's list. A sheet that floats keeps [`card`], whose outline separates it from the page.
+#[track_caller]
+pub fn flat_card(ui: UiColors) -> Div {
+    div()
+        .px_4()
+        .py_3()
+        .rounded(ui.radius_lg)
+        .bg(ui.group)
+        .when(ui.increase_contrast, |card| card.outlined_always(ui, ui.card_edge))
+}
+
 /// A line of quiet text where a list would be: loading, empty, not a repository.
 #[track_caller]
 pub fn empty_note(ui: UiColors, text: impl Into<SharedString>) -> Div {

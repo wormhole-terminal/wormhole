@@ -60,7 +60,9 @@ pub fn window_sketch(ui: UiColors, shown: &Shown, tools_offered: usize) -> Div {
         // The corner of a sketch inside a card is the small one: the card's own, less its inset.
         .rounded(ui.radius_sm)
         .overflow_hidden()
-        .outlined(ui, ui.border)
+        // No outline: the sketch is the window's own colour on a card of a different fill, which is
+        // edge enough; Increase Contrast, where it may not be, draws one.
+        .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.border))
         .bg(ui.background)
         .child(
             canvas(

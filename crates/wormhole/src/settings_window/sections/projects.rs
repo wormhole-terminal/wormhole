@@ -449,7 +449,7 @@ impl SettingsWindow {
             ));
         if let Some(request) = project.request.as_ref().filter(|r| !trusted && !r.commands.is_empty()) {
             trust = trust.child(
-                style::card(ui, ui.border)
+                style::flat_card(ui)
                     .flex()
                     .flex_col()
                     .gap_1()

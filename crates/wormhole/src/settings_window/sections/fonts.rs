@@ -181,7 +181,7 @@ pub(in crate::settings_window) fn draw_specimen(
     let facts = div()
         .px_4()
         .py_2()
-        .rule_top(ui)
+        .divider_top(ui)
         .text_caption()
         .text_color(ui.muted)
         .truncate()
@@ -196,8 +196,8 @@ pub(in crate::settings_window) fn draw_specimen(
                 .flex_col()
                 .rounded(ui.radius_lg)
                 .overflow_hidden()
-                .outlined(ui, ui.border)
-                .bg(ui.elevated)
+                .bg(ui.group)
+                .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.card_edge))
                 .child(
                     div()
                         .flex()
@@ -205,7 +205,7 @@ pub(in crate::settings_window) fn draw_specimen(
                         .justify_between()
                         .px_2()
                         .py_2()
-                        .rule_bottom(ui)
+                        .divider_bottom(ui)
                         .child(tabs)
                         .child(
                             div()

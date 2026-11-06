@@ -127,26 +127,18 @@ impl Render for ThemeCard {
         let entry = &self.catalog[self.entry];
         let (ui, picked) = (self.ui, self.picked);
         let tokens = &entry.tokens;
-        let t = |name: &str| token(tokens, name);
         let (value, appearance) = (entry.value.clone(), tokens.appearance);
-        let name_color = if picked { t("primary") } else { t("text.primary") };
+        let name_color = if picked { ui.primary } else { ui.text };
         let hide_value = entry.value.clone();
         let menu_entry = self.entry;
-        // The radius of what sits inside the card's outline: the card's less the outline's width.
-        let inner = (ui.radius_lg - ui.border_width).max(px(0.0));
-        div()
-            .id(("theme-card", self.entry))
+        // The miniature sits flush in the card, which does not clip (its ring is outside it): it rounds
+        // its own top corners to the card's.
+        let inner = ui.radius_lg;
+        style::choice_card(("theme-card", self.entry), ui, picked)
+            .aria_label(self.label.clone())
             .group(CARD_GROUP)
-            .relative()
             .w_full()
             .h(card_height(px(0.0)))
-            .flex()
-            .flex_col()
-            .rounded(ui.radius_lg)
-            .overflow_hidden()
-            .cursor_pointer()
-            .map(|d| if picked { d.outlined_always(ui, ui.primary) } else { d.outlined(ui, ui.border) })
-            .when(!picked, |d| d.hover(|d| d.border_color(ui.line(ui.border_strong))))
             .on_click(cx.listener(move |_, _, _, cx| {
                 let value = value.clone();
                 update_settings(cx, |s| set_pick(s, value, appearance));
@@ -169,22 +161,27 @@ impl Render for ThemeCard {
                         .invisible()
                         .group_hover(CARD_GROUP, |s| s.visible())
                         .child(
-                            div().rounded(ui.radius).bg(ui.panel).outlined(ui, ui.border).child(
-                                style::icon_button(
-                                    ("theme-hide", self.entry),
-                                    ui,
-                                    IconName::EyeOff,
-                                    text(SETTINGS_APPEARANCE_HIDE_THEME),
-                                )
-                                .on_click(move |_, _, cx| {
-                                    // The card under it would choose the theme.
-                                    cx.stop_propagation();
-                                    hide(&hide_value, cx);
-                                }),
-                            ),
+                            div()
+                                .rounded(ui.radius)
+                                .bg(ui.elevated)
+                                .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.border))
+                                .child(
+                                    style::icon_button(
+                                        ("theme-hide", self.entry),
+                                        ui,
+                                        IconName::EyeOff,
+                                        text(SETTINGS_APPEARANCE_HIDE_THEME),
+                                    )
+                                    .on_click(move |_, _, cx| {
+                                        // The card under it would choose the theme.
+                                        cx.stop_propagation();
+                                        hide(&hide_value, cx);
+                                    }),
+                                ),
                         ),
                 )
             })
+            // The name is the card's own text (the app's colours), under the miniature in the theme's.
             .child(
                 div()
                     .flex()
@@ -193,9 +190,6 @@ impl Render for ThemeCard {
                     .h(px(STRIP_H))
                     .flex_none()
                     .px_3()
-                    .corners(px(0.0), px(0.0), inner, inner)
-                    .bg(solid(tokens, "surface.panel"))
-                    .rule_top(UiColors { border: t("border"), ..ui })
                     .child(
                         div()
                             .flex_1()
@@ -218,13 +212,9 @@ impl Render for ThemeCard {
                             .child(Icon::new(IconName::TriangleAlert).xsmall().text_color(ui.warning))
                     }))
                     .when(picked, |d| {
-                        d.child(Icon::new(IconName::Check).xsmall().text_color(t("primary")).flex_none())
+                        d.child(Icon::new(IconName::Check).xsmall().text_color(ui.primary).flex_none())
                     }),
             )
-            // The second line of the pick's ring, inside the outline and as round as the card.
-            .when(picked, |d| {
-                d.child(div().absolute().inset_0().rounded(inner).outlined_always(ui, ui.primary))
-            })
     }
 }
 

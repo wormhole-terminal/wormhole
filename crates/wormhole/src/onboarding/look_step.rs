@@ -336,6 +336,10 @@ fn theme_card(ix: usize, tokens: &ThemeTokens, current: bool, ui: UiColors) -> S
                 .flex_1()
                 .min_h_0()
                 .flex()
+                // The card does not clip its children (its ring sits outside it), so the miniature
+                // rounds its own top corners.
+                .rounded_t(ui.radius_lg)
+                .overflow_hidden()
                 .child(
                     div()
                         .w(relative(0.3))
@@ -372,13 +376,12 @@ fn theme_card(ix: usize, tokens: &ThemeTokens, current: bool, ui: UiColors) -> S
                 .h(px(CARD_STRIP_H))
                 .flex_none()
                 .px_2()
-                .bg(solid("surface.panel"))
                 .text_caption()
                 .font_weight(if current { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM })
-                .text_color(if current { t("primary") } else { t("text.primary") })
+                .text_color(if current { ui.primary } else { ui.text })
                 .child(div().flex_1().min_w_0().truncate().child(tokens.name.clone()))
-                .when(light && !current, |d| d.child(style::icon(IconName::Sun).text_color(t("text.muted"))))
-                .when(current, |d| d.child(style::icon(IconName::Check).text_color(t("primary")))),
+                .when(light && !current, |d| d.child(style::icon(IconName::Sun).text_color(ui.muted)))
+                .when(current, |d| d.child(style::icon(IconName::Check).text_color(ui.primary))),
         )
 }
 

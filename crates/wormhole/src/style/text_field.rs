@@ -214,6 +214,13 @@ impl RenderOnce for TextField {
 /// select wear it.
 #[track_caller]
 pub(crate) fn flat_ring(ui: UiColors, color: Hsla, alpha: f32) -> Div {
+    flat_ring_round(ui, color, alpha, ui.radius)
+}
+
+/// [`flat_ring`] round a control whose corners are `radius`: a selectable card's ring follows the card's
+/// `radius_lg`, not the controls' `radius`.
+#[track_caller]
+pub(crate) fn flat_ring_round(ui: UiColors, color: Hsla, alpha: f32, radius: Pixels) -> Div {
     let w = ui.focus_ring_width + px(RING_EXTRA);
     let mut ring = div()
         .absolute()
@@ -221,7 +228,7 @@ pub(crate) fn flat_ring(ui: UiColors, color: Hsla, alpha: f32) -> Div {
         .right(-w)
         .bottom(-w)
         .left(-w)
-        .rounded(ui.radius + w)
+        .rounded(radius + w)
         .border_color(Hsla { a: alpha, ..color });
     let widths = &mut ring.style().border_widths;
     (widths.top, widths.right, widths.bottom, widths.left) =

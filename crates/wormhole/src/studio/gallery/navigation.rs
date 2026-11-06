@@ -200,6 +200,14 @@ pub(super) fn render(
         .gap_1()
         .child(div().text_body().child("A card sets a few lines apart")) // text: sample (the gallery's specimen)
         .child(div().text_caption().text_color(ui.muted).child("Release notes, a hint.")); // text: sample (the gallery's specimen)
+    let flat = style::flat_card(ui)
+        .w_full()
+        .max_w(px(280.0))
+        .flex()
+        .flex_col()
+        .gap_1()
+        .child(div().text_body().child("A flat card, as a Settings page draws one")) // text: sample (the gallery's specimen)
+        .child(div().text_caption().text_color(ui.muted).child("The commands a project wants to run.")); // text: sample (the gallery's specimen)
     let navigation = div()
         .flex()
         .flex_col()
@@ -213,6 +221,7 @@ pub(super) fn render(
         .child(neutral)
         .child(list)
         .child(env.mark("card", card))
+        .child(flat)
         .child(
             env.mark(
                 "tooltip",

@@ -76,11 +76,7 @@ fn card(window: &SettingsWindow, found: &Found, ix: usize, cx: &mut Context<Sett
         .child(
             style::icon(if open { IconName::ChevronUp } else { IconName::ChevronDown }).text_color(ui.muted),
         );
-    let mut card = style::card(ui, if open { ui.border_strong } else { ui.border })
-        .flex()
-        .flex_col()
-        .gap_3()
-        .child(header);
+    let mut card = style::flat_card(ui).flex().flex_col().gap_3().child(header);
     if open {
         card = card.child(files_read(ui, found, cx)).child(window.render_review(found, cx));
     }

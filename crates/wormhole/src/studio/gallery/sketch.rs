@@ -6,7 +6,7 @@ use wormhole_core::config::presets::{Preset, Shown};
 
 use super::Env;
 use super::view::GalleryView;
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 
 /// The names under the sketches; the Studio's gallery is not interface text.
 const NAMES: [&str; 3] = ["Zen", "Balanced", "Everything"]; // text: sample (the gallery's specimen)
@@ -27,11 +27,11 @@ pub(super) fn render(
         .children(Preset::ALL.iter().zip(NAMES).enumerate().map(|(ix, (preset, name))| {
             style::choice_card(("g-sketch-card", ix), ui, ix == 1)
                 .flex_1()
-                .child(div().p_1().child(style::window_sketch(ui, &Shown::of(*preset), TOOLS)))
+                .child(div().p_2().child(style::window_sketch(ui, &Shown::of(*preset), TOOLS)))
                 .child(
                     div()
-                        .p_1()
-                        .rule_top(ui)
+                        .px_2()
+                        .pb_2()
                         .text_caption()
                         .text_color(if ix == 1 { ui.primary } else { ui.text })
                         .child(name),

@@ -545,7 +545,7 @@ impl SettingsWindow {
         ui: UiColors,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        style::card(ui, ui.border)
+        style::flat_card(ui)
             .max_w(px(NO_RESULTS_W))
             .flex()
             .flex_col()

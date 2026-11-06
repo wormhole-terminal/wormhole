@@ -13,7 +13,7 @@ use wormhole_core::config::presets::{Preset, Shown};
 
 use super::{Sheet, category, specimen};
 use crate::studio;
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 
 /// The tabs "all of the tools" draws in a window sketch.
 const SKETCH_TOOLS: usize = 4;
@@ -33,7 +33,7 @@ pub(super) fn draw(sheet: &Sheet, cx: &App) -> AnyElement {
         .child(category(
             ui,
             "Cards, groups and disclosure",  // text: sample (a category's head)
-            "card, choice_card, disclosure", // text: sample (a category's head)
+            "flat_card, choice_card, disclosure", // text: sample (a category's head)
             cards(sheet, cx),
         ))
         .child(category(
@@ -100,7 +100,7 @@ fn banners(sheet: &Sheet) -> Vec<AnyElement> {
 fn cards(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
     let ui = sheet.ui;
     let now = &sheet.now;
-    let summary = style::card(ui, ui.border)
+    let summary = style::flat_card(ui)
         .flex()
         .items_center()
         .gap_3()
@@ -129,12 +129,6 @@ fn cards(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
         )
         .child(Button::new("components-copy").outline().small().icon(IconName::Copy).label("Copy as JSON")) // text: sample (a button's label)
         .child(Button::new("components-reset").danger().outline().small().label("Reset all…")); // text: sample (a button's label)
-    let hairline = div().flex().flex_col().rule_top(ui).children(
-        ["First line of a list", "Second line", "Third line"].map(|label| { // text: sample (a developer label)
-            // text: sample (a list's lines)
-            div().h(px(style::ROW_H)).flex().items_center().px_2().rule_bottom(ui).text_body().child(label)
-        }),
-    );
     let choices = div().flex().gap_2().w_full().children(
         Preset::ALL.iter().zip(["Zen", "Balanced", "Everything"]).enumerate().map(|(ix, (preset, name))| { // text: sample (a developer label)
             let state = sheet.state.clone();
@@ -146,11 +140,11 @@ fn cards(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
                         cx.notify();
                     })
                 })
-                .child(div().p_1().child(style::window_sketch(ui, &Shown::of(*preset), SKETCH_TOOLS)))
+                .child(div().p_2().child(style::window_sketch(ui, &Shown::of(*preset), SKETCH_TOOLS)))
                 .child(
                     div()
-                        .p_1()
-                        .rule_top(ui)
+                        .px_2()
+                        .pb_2()
                         .text_caption()
                         .text_color(if ix == now.card { ui.primary } else { ui.text })
                         .child(name),
@@ -159,7 +153,7 @@ fn cards(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
     );
     let folded = now.folded;
     let state = sheet.state.clone();
-    let disclosure = style::card(ui, ui.border)
+    let disclosure = style::flat_card(ui)
         .flex()
         .flex_col()
         .gap_2()
@@ -189,10 +183,9 @@ fn cards(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
             ) // text: sample (a card's body)
         });
     vec![
-        specimen(ui, "card · the summary of the Changed page", summary).into_any_element(), // text: sample (a specimen's name)
-        specimen(ui, "hairline group · rows between rules", hairline).into_any_element(), // text: sample (a specimen's name)
+        specimen(ui, "flat_card · a block set apart on a page", summary).into_any_element(), // text: sample (a specimen's name)
         specimen(ui, "choice_card · window_sketch, chosen on click", choices).into_any_element(), // text: sample (a specimen's name)
-        specimen(ui, "card · disclosure, folds on click", disclosure).into_any_element(), // text: sample (a specimen's name)
+        specimen(ui, "flat_card · disclosure, folds on click", disclosure).into_any_element(), // text: sample (a specimen's name)
     ]
 }
 
