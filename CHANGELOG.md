@@ -30,6 +30,8 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   as the Icon shows choice makes it, gone when the item is off, with the prompt typing when Animate is on
   (still under Reduce Motion). Hotkey shows the shortcut's keys and what they open: the quick panel, or a
   Wormhole window that comes and goes. No setting changed.
+- Settings → Motion shows one preview at the top of the page, for the setting you last touched (hovered, opened
+  or changed), instead of one under each setting; its four settings are rows like those of the other pages.
 - A change to `config.json`, a theme file or the custom fonts folder applies at once (within a tenth of a
   second) instead of at the next check, up to 0.4 seconds later; the check that remains runs every 10 seconds,
   for a folder the system cannot watch.

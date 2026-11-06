@@ -131,8 +131,8 @@ impl SettingsWindow {
             search,
             show_results: false,
             font_picker,
-            motion_previews: None,
             bar_preview: None,
+            motion_strip: None,
             recording: None,
             primary_picker,
             branch_picker,
@@ -211,10 +211,10 @@ impl SettingsWindow {
             self.content_scroll.set_offset(point(px(0.0), px(0.0)));
         }
         self.section = section;
-        // The previews run a clock each: they are there while their page is, and not otherwise.
-        self.motion_previews = (section == Section::Motion)
-            .then(|| self.motion_previews.take().unwrap_or_else(|| sections::MotionPreviews::new(cx)));
         self.bar_preview = sections::BarPreview::for_section(section, self.bar_preview.take(), cx);
+        // The preview runs a clock: it is there while its page is, and not otherwise.
+        self.motion_strip = (section == Section::Motion)
+            .then(|| self.motion_strip.take().unwrap_or_else(|| sections::MotionStrip::new(cx)));
         if section == Section::Terminal {
             crate::open_in::OpenIn::refresh(cx);
         }

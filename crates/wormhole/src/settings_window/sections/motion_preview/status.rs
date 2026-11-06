@@ -1,4 +1,4 @@
-//! A terminal's status changing: one row between two quiet ones goes from idle to working, to asking
+//! A terminal's status changing: one row above a quiet one goes from idle to working, to asking
 //! for input, to done and back to idle, as the chosen `StatusMotion` plays each change. The row is the
 //! sidebar's own, drawn from the pose core gives (`pose::status`) at the time the loop says, so its
 //! tile's light, edge and badge, the card's wash, the row's nudge and the second line's roll are what
@@ -7,7 +7,7 @@
 use gpui_kit::*;
 use wormhole_core::view::motion::StatusMotion;
 
-use super::{IDLE, RUNNING, Spot, metrics, progress, row, since};
+use super::{IDLE, RUNNING, Scene, Spot, progress, since, two_line_metrics};
 use crate::settings::{UiColors, settings};
 use crate::settings_window::sections::samples::{FLAKY_LOGIN, RATE_LIMITS, RELEASE_NOTES, Sample};
 use crate::style::{ShiftClock, StatusShift, TileFace, preview_stage};
@@ -55,7 +55,7 @@ fn at(motion: StatusMotion, t: f32) -> (usize, Option<StatusShift>) {
 }
 
 pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
-    let row_h = metrics().row_h;
+    let row_h = two_line_metrics().row_h;
     let (now, shift) = at(settings(cx).motion.status, t);
     let sample = &STATES[now];
     let nudge = shift.map_or(0.0, |shift| match shift.clock {
@@ -66,13 +66,14 @@ pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
         let from = STATES.iter().find(|state| state.glyph == shift.from).unwrap_or(&STATES[0]);
         (from, shift)
     });
-    let changing = Spot::row(row_h, row_h)
-        .moved(nudge, 0.0)
-        .put(|| sample.row_shifting("motion-status", ui, metrics(), (&TileFace::Terminal, false), was, cx));
-    preview_stage(ui, 3.0 * row_h)
-        .children(Spot::row(0.0, row_h).put(|| row(&IDLE, "motion-status-above", ui, cx)))
-        .children(changing)
-        .children(Spot::row(2.0 * row_h, row_h).put(|| row(&RUNNING, "motion-status-below", ui, cx)))
+    let changing = Spot::row(0.0, row_h).moved(nudge, 0.0).put(|| {
+        sample.row_shifting("motion-status", ui, two_line_metrics(), (&TileFace::Terminal, false), was, cx)
+    });
+    preview_stage(ui, Scene::Status.height()).children(changing).children(
+        Spot::row(row_h, row_h).put(|| {
+            RUNNING.row("motion-status-below", ui, two_line_metrics(), &TileFace::Terminal, false, cx)
+        }),
+    )
 }
 
 #[cfg(test)]

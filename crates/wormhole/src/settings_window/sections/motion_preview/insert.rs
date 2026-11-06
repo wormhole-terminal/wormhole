@@ -1,4 +1,4 @@
-//! A terminal opening and closing: a stage of three terminals, a fourth coming in at the top and
+//! A terminal opening and closing: a stage of two terminals, a third coming in at the top and
 //! going again, drawn from the poses of the chosen `InsertMotion` (core's `pose::insert`), the same
 //! ones the sidebar draws. The rows under the new one make room as the motion says (`room_at`): they
 //! follow its height, or slide on the motion's spring.
@@ -7,7 +7,7 @@ use gpui_kit::*;
 use wormhole_core::view::motion::InsertMotion;
 use wormhole_core::view::motion::pose::{Phase, Pose, insert};
 
-use super::{ASKING, IDLE, RUNNING, Spot, WORKING, metrics, progress, row, since};
+use super::{ASKING, IDLE, Scene, Spot, WORKING, metrics, progress, row, since};
 use crate::settings::{UiColors, settings};
 use crate::style::preview_stage;
 
@@ -33,12 +33,12 @@ pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
         .showing(pose.opacity)
         .clipped(pose.clip)
         .put(|| row(&IDLE, "motion-insert-new", ui, cx));
-    let existing = [WORKING, ASKING, RUNNING].into_iter().enumerate().filter_map(|(at, sample)| {
+    let existing = [WORKING, ASKING].into_iter().enumerate().filter_map(|(at, sample)| {
         Spot::row(at as f32 * row_h, row_h)
             .moved(0.0, slide)
             .put(|| row(&sample, &format!("motion-insert-{at}"), ui, cx))
     });
-    preview_stage(ui, 4.0 * row_h).children(new).children(existing)
+    preview_stage(ui, Scene::Insert.height()).children(new).children(existing)
 }
 
 #[cfg(test)]

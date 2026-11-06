@@ -3,7 +3,7 @@
 # words search finds it by (.keywords).
 
 settings-section-motion = Motion
-    .intro = How things move. Pick one for each, and watch it loop in the preview under it.
+    .intro = How things move. Pick one for each, and watch the one you touched last loop in the preview at the top.
 
 ## Terminals list
 

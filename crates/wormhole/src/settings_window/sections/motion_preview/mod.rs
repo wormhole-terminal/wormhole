@@ -1,17 +1,24 @@
-//! Settings → Motion's previews: under each choice, a small stage made of the app's own rows, heads
-//! and tiles that loops through the thing the choice is about. Each scene is a file (`insert`, `fold`,
-//! `status`, `column`) that says where its parts are at a moment of the loop; this is what they share:
-//! the view that runs the loop, the frame and the spots the parts are put on.
+//! Settings → Motion's preview: one stage in the page's preview strip, made of the app's own rows,
+//! heads and tiles, that loops through the thing the choice is about. It shows the scene of the row the
+//! person touched last: the one under the pointer, the one whose menu is open, the one whose option
+//! changed. Each scene is a file (`insert`, `fold`, `status`, `column`) that says where its parts are at a
+//! moment of the loop; this is what they share: the view that runs the loop, the frame and the spots the
+//! parts are put on.
 //!
-//! A preview is a view of its own, so the clock that redraws it is its own and the Settings window's
+//! The scenes are drawn at the sidebar's Dense rows (Status at Regular: its second line is what one of its
+//! options moves), so the strip, which is a quarter of the window at most, shows the whole of any of them
+//! without scrolling. The strip is as tall as the tallest, so it never changes height under the pointer
+//! while another row is hovered.
+//!
+//! The preview is a view of its own, so the clock that redraws it is its own and the Settings window's
 //! page is not what ticks. It reads the time itself instead of animating built elements: a scene is a
 //! function of the loop's time `t` (0.0..1.0) that builds only what shows at `t`, so a part that is
 //! away (a row not there yet, the statuses it is not in) is not in the layout, the accessibility tree
 //! or running an animation of its own. `t = 0` is the picture before anything moves, which is what
-//! Reduce Motion holds. A preview exists while its page is open (`MotionPreviews`), so nothing ticks
-//! while another page is.
+//! Reduce Motion holds. It exists while its page is open (`MotionStrip`), so nothing ticks while another
+//! page is.
 //!
-//! Picking another option starts the loop again from `t = 0`. Every scene draws every option from the
+//! Picking another option, or another row's scene, starts the loop again from `t = 0`. Every scene draws every option from the
 //! same poses the app does (core's `view::motion::pose`): the sidebar's rows, the status changes and the
 //! column hiding and showing, so the preview shows exactly what the window will do.
 
@@ -25,20 +32,20 @@ use std::time::{Duration, Instant};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
+use wormhole_core::config::settings_index;
 use wormhole_core::view::motion::MotionChoice;
 use wormhole_core::view::sidebar::Density;
 use wormhole_text::keys::{
     SETTINGS_MOTION_COLUMN_PREVIEW_LABEL, SETTINGS_MOTION_FOLD_PREVIEW_LABEL,
-    SETTINGS_MOTION_INSERT_PREVIEW_LABEL, SETTINGS_MOTION_PREVIEW_CAPTION,
-    SETTINGS_MOTION_STATUS_PREVIEW_LABEL,
+    SETTINGS_MOTION_INSERT_PREVIEW_LABEL, SETTINGS_MOTION_STATUS_PREVIEW_LABEL,
 };
 use wormhole_text::text;
 
 use super::samples::{CARGO_TEST, FIX_PILE, SCRATCH, SIDEBAR_CARDS, Sample};
 use crate::settings::{SettingsStore, UiColors, settings};
-use crate::settings_window::ui;
+use crate::settings_window::{SettingsWindow, ui};
 use crate::style::motion::ANIMATION_FPS;
-use crate::style::{self, Metrics, TextRole, TileFace};
+use crate::style::{self, Metrics, TileFace};
 
 /// The widest a preview grows: the sidebar's rows read best at about the width the sidebar has.
 const STAGE_MAX_W: f32 = 480.0;
@@ -60,8 +67,14 @@ fn since(t: f32, start: f32) -> Duration {
     Duration::from_secs_f32((t - start).max(0.0) * LOOP.as_secs_f32())
 }
 
-/// The sidebar's rows at the density most people have, in cards.
+/// The sidebar's rows at its smallest density, in cards: what most scenes are drawn at, so the strip is
+/// short.
 fn metrics() -> Metrics {
+    Metrics::of(Density::Dense, true)
+}
+
+/// The sidebar's rows with two lines (Regular), for the scene whose option moves the second line.
+fn two_line_metrics() -> Metrics {
     Metrics::of(Density::Regular, true)
 }
 
@@ -138,44 +151,39 @@ impl Spot {
     }
 }
 
-/// The four previews of the page, as long as the page is up.
-pub(in crate::settings_window) struct MotionPreviews {
-    insert: Entity<MotionPreview>,
-    fold: Entity<MotionPreview>,
-    status: Entity<MotionPreview>,
-    column: Entity<MotionPreview>,
+/// The page's preview, as long as the page is up: the view, and the window's ear for the scene it shows.
+pub(in crate::settings_window) struct MotionStrip {
+    preview: Entity<MotionPreview>,
+    /// Tells the window (whose strip names the scene) when the scene changed by itself.
+    _shown: Subscription,
 }
 
-impl MotionPreviews {
-    pub(in crate::settings_window) fn new(cx: &mut App) -> Self {
-        let mut view = |kind| cx.new(|cx| MotionPreview::new(kind, cx));
-        Self {
-            insert: view(Scene::Insert),
-            fold: view(Scene::Fold),
-            status: view(Scene::Status),
-            column: view(Scene::Column),
-        }
+impl MotionStrip {
+    pub(in crate::settings_window) fn new(cx: &mut Context<SettingsWindow>) -> Self {
+        let preview = cx.new(|cx| MotionPreview::new(Scene::Insert, cx));
+        let shown = cx.subscribe(&preview, |_, _, _: &SceneShown, cx| cx.notify());
+        Self { preview, _shown: shown }
     }
 
-    /// The preview of `scene`, to put under its row.
-    pub(in crate::settings_window) fn of(&self, scene: Scene, ui: UiColors) -> AnyElement {
-        let view = match scene {
-            Scene::Insert => &self.insert,
-            Scene::Fold => &self.fold,
-            Scene::Status => &self.status,
-            Scene::Column => &self.column,
-        };
-        div()
-            .w_full()
-            .max_w(px(STAGE_MAX_W))
-            .flex()
-            .flex_col()
-            .gap_2()
-            .child(view.clone())
-            .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_MOTION_PREVIEW_CAPTION)))
-            .into_any_element()
+    /// The scene being shown.
+    pub(in crate::settings_window) fn scene(&self, cx: &App) -> Scene {
+        self.preview.read(cx).scene
+    }
+
+    /// Show `scene`, starting its loop again if it was another.
+    pub(in crate::settings_window) fn show(&self, scene: Scene, cx: &mut App) {
+        self.preview.update(cx, |preview, cx| preview.show(scene, cx));
+    }
+
+    /// The view, to put in the strip.
+    pub(in crate::settings_window) fn view(&self) -> AnyElement {
+        self.preview.clone().into_any_element()
     }
 }
+
+/// The preview's scene changed without a hover or a menu asking: its option was changed (a pick, the
+/// file, a reset arrow).
+struct SceneShown;
 
 /// What a preview is a preview of.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -187,6 +195,8 @@ pub(in crate::settings_window) enum Scene {
 }
 
 impl Scene {
+    const ALL: [Self; 4] = [Self::Insert, Self::Fold, Self::Status, Self::Column];
+
     /// The option of the scene's choice in use, as its place among the options.
     fn shown(self, cx: &App) -> usize {
         fn at<T: MotionChoice>(current: T) -> usize {
@@ -202,7 +212,7 @@ impl Scene {
     }
 
     /// What VoiceOver says of the preview: a picture of the choice, not something to operate.
-    fn spoken(self) -> &'static str {
+    pub(in crate::settings_window) fn spoken(self) -> &'static str {
         text(match self {
             Self::Insert => SETTINGS_MOTION_INSERT_PREVIEW_LABEL,
             Self::Fold => SETTINGS_MOTION_FOLD_PREVIEW_LABEL,
@@ -211,6 +221,7 @@ impl Scene {
         })
     }
 
+    /// The id of the row the scene belongs to.
     fn id(self) -> &'static str {
         match self {
             Self::Insert => "motion-insert",
@@ -218,6 +229,27 @@ impl Scene {
             Self::Status => "motion-status",
             Self::Column => "motion-column",
         }
+    }
+
+    /// What the row is called: the strip's head says which setting it shows.
+    pub(in crate::settings_window) fn label(self) -> &'static str {
+        settings_index::entry(self.id()).map_or("", |(_, _, entry)| entry.label())
+    }
+
+    /// How tall the scene's stage is, in points.
+    fn height(self) -> f32 {
+        let dense = metrics();
+        match self {
+            Self::Insert | Self::Column => 3.0 * dense.row_h,
+            Self::Fold => dense.head_h + 3.0 * dense.row_h,
+            Self::Status => 2.0 * two_line_metrics().row_h,
+        }
+    }
+
+    /// The room every scene is given: the tallest's height, so the strip keeps its size while another row
+    /// is hovered.
+    fn slot() -> f32 {
+        Self::ALL.into_iter().map(Self::height).fold(0.0, f32::max)
     }
 
     /// The stage at `t`: its parts where they are then.
@@ -231,16 +263,21 @@ impl Scene {
     }
 }
 
-/// One preview: a scene, its frame and the clock that loops it.
+/// The preview: the scene shown, its frame and the clock that loops it.
 pub(in crate::settings_window) struct MotionPreview {
     scene: Scene,
-    /// The option shown (its place among the options) and when its loop began.
-    began: Option<(usize, Instant)>,
+    /// The option each scene's choice had when last looked at, to tell which one was changed (read at the
+    /// first draw: a preview is made before the settings are looked at).
+    seen: Option<[usize; 4]>,
+    /// The scene and its option shown (its place among the options), and when its loop began.
+    began: Option<((Scene, usize), Instant)>,
     /// Redraws the preview between frames; dropped with it.
     _clock: Task<()>,
     /// A choice changed, or the theme did: draw again.
     _settings: Subscription,
 }
+
+impl EventEmitter<SceneShown> for MotionPreview {}
 
 impl MotionPreview {
     pub(in crate::settings_window) fn new(scene: Scene, cx: &mut Context<Self>) -> Self {
@@ -263,9 +300,38 @@ impl MotionPreview {
         });
         Self {
             scene,
+            seen: None,
             began: None,
             _clock: clock,
-            _settings: cx.observe_global::<SettingsStore>(|_, cx| cx.notify()),
+            _settings: cx.observe_global::<SettingsStore>(|this, cx| {
+                this.follow_changes(cx);
+                cx.notify()
+            }),
+        }
+    }
+
+    /// Show `scene`: its loop starts again from the picture before anything moves.
+    fn show(&mut self, scene: Scene, cx: &mut Context<Self>) {
+        if self.scene != scene {
+            self.scene = scene;
+            cx.notify();
+        }
+    }
+
+    /// The scene of the choice that was just changed is the one to show, whoever changed it.
+    fn follow_changes(&mut self, cx: &mut Context<Self>) {
+        let now = Scene::ALL.map(|scene| scene.shown(cx));
+        let changed = self.seen.replace(now).and_then(|before| {
+            Scene::ALL
+                .into_iter()
+                .zip(now.into_iter().zip(before))
+                .find_map(|(scene, (now, was))| (now != was).then_some(scene))
+        });
+        if let Some(scene) = changed
+            && scene != self.scene
+        {
+            self.scene = scene;
+            cx.emit(SceneShown);
         }
     }
 
@@ -276,11 +342,12 @@ impl MotionPreview {
             self.began = None;
             return 0.0;
         }
+        let key = (self.scene, shown);
         let began = match self.began {
-            Some((option, at)) if option == shown => at,
+            Some((began, at)) if began == key => at,
             _ => {
                 let now = Instant::now();
-                self.began = Some((shown, now));
+                self.began = Some((key, now));
                 now
             }
         };
@@ -291,12 +358,18 @@ impl MotionPreview {
 impl Render for MotionPreview {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let ui = ui(cx);
+        if self.seen.is_none() {
+            self.seen = Some(Scene::ALL.map(|scene| scene.shown(cx)));
+        }
         let t = self.time(self.scene.shown(cx), cx.reduce_motion());
-        div()
-            .id(self.scene.id())
-            .role(Role::Group)
-            .aria_label(self.scene.spoken())
-            .child(style::preview_frame(ui).child(self.scene.stage(ui, t, cx)))
+        // The strip says what this is to VoiceOver (a group named for the scene): not twice.
+        div().id("motion-preview").w_full().child(
+            style::preview_frame(ui).child(
+                div().h(px(Scene::slot())).flex().flex_col().justify_center().child(
+                    div().flex_none().w_full().max_w(px(STAGE_MAX_W)).child(self.scene.stage(ui, t, cx)),
+                ),
+            ),
+        )
     }
 }
 

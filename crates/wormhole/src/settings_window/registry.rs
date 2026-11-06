@@ -45,6 +45,10 @@ pub(super) type Chip = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> Opti
 /// question).
 pub(super) type Below = fn(&SettingsWindow, &mut Context<SettingsWindow>) -> Option<AnyElement>;
 
+/// What a row does when the person's attention comes to it (the pointer over it, its menu opened): the
+/// page's preview takes up its setting.
+pub(super) type Touched = fn(&mut SettingsWindow, &mut Context<SettingsWindow>);
+
 /// One option of a [`Control::Segmented`].
 pub(super) struct Segment {
     /// The option's name, a message of the catalogs: a table of options is a `const`, which cannot
@@ -86,13 +90,14 @@ pub(super) struct Setting {
     pub describe: Option<Describe>,
     pub below: Option<Below>,
     pub chip: Option<Chip>,
+    pub touched: Option<Touched>,
     /// The control runs over more than one line (see `SettingParts::tall`).
     pub tall: bool,
 }
 
 impl Setting {
     pub(super) const fn new(id: &'static str, control: Control) -> Self {
-        Self { id, control, describe: None, below: None, chip: None, tall: false }
+        Self { id, control, describe: None, below: None, chip: None, touched: None, tall: false }
     }
 
     pub(super) const fn toggle(
@@ -145,6 +150,11 @@ impl Setting {
     /// Something under the row, across the column, while there is something to say.
     pub(super) const fn below(self, below: Below) -> Self {
         Self { below: Some(below), ..self }
+    }
+
+    /// Something to do when the row is hovered or its menu opened.
+    pub(super) const fn touched(self, touched: Touched) -> Self {
+        Self { touched: Some(touched), ..self }
     }
 
     /// A control of more than one line: the label sits beside its first line.
@@ -437,6 +447,13 @@ impl SettingsWindow {
             cx,
         )
         .anchor_scroll(revealed)
+        .when_some(setting.touched, |row, touched| {
+            row.on_hover(cx.listener(move |this, hovered: &bool, _, cx| {
+                if *hovered {
+                    touched(this, cx);
+                }
+            }))
+        })
         .into_any_element()
     }
 

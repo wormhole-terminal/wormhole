@@ -10,6 +10,7 @@
 //! - Notifications shows two banners (`draw_notifications_preview`).
 //! - Menu bar shows the menu bar item as the settings make it (`MenuBarPreview`), Hotkey the shortcut and
 //!   what it opens (`HotkeyPreview`); both are views of their own (`BarPreview`).
+//! - Motion shows the scene of the row touched last, looping (`MotionStrip`).
 //! - Every other page has nothing to show there.
 //!
 //! The strip holds nothing to operate: no focus stop, so ⇥ and F6 pass over it, and one labelled
@@ -44,6 +45,8 @@ pub(super) enum PreviewKind {
     MenuBar,
     /// The hotkey's keys and what they open.
     Hotkey,
+    /// One of the Motion page's scenes.
+    Motion(sections::MotionScene),
 }
 
 impl PreviewKind {
@@ -56,6 +59,16 @@ impl PreviewKind {
             Self::Notifications => text(SETTINGS_WINDOW_NOTIFICATIONS),
             Self::MenuBar => text(SETTINGS_WINDOW_MENU_BAR),
             Self::Hotkey => text(SETTINGS_WINDOW_HOTKEY),
+            // The setting it shows, so the head says which row the picture is of.
+            Self::Motion(scene) => scene.label(),
+        }
+    }
+
+    /// A line at the head's right end: what to know of how the picture moves.
+    fn aside(self) -> Option<&'static str> {
+        match self {
+            Self::Motion(_) => Some(text(SETTINGS_MOTION_PREVIEW_CAPTION)),
+            _ => None,
         }
     }
 
@@ -69,6 +82,7 @@ impl PreviewKind {
             Self::Notifications => text(SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL),
             Self::MenuBar => text(SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL),
             Self::Hotkey => text(SETTINGS_WINDOW_PREVIEW_HOTKEY_LABEL),
+            Self::Motion(scene) => scene.spoken(),
         }
     }
 }
@@ -79,7 +93,7 @@ const IN_COLUMN: [&str; 3] = ["appearance-preview", "font-specimen", "sidebar-pr
 impl SettingsWindow {
     /// The preview of the page in front, if it has one. A search's results are not a page: they
     /// show the window.
-    pub(super) fn preview_kind(&self) -> Option<PreviewKind> {
+    pub(super) fn preview_kind(&self, cx: &App) -> Option<PreviewKind> {
         if self.show_results {
             return Some(PreviewKind::Window);
         }
@@ -91,9 +105,9 @@ impl SettingsWindow {
             Section::Notifications => Some(PreviewKind::Notifications),
             Section::MenuBar => Some(PreviewKind::MenuBar),
             Section::Hotkey => Some(PreviewKind::Hotkey),
+            Section::Motion => self.motion_strip.as_ref().map(|strip| PreviewKind::Motion(strip.scene(cx))),
             Section::Profile
             | Section::Changed
-            | Section::Motion
             | Section::Terminal
             | Section::Git
             | Section::Import
@@ -118,7 +132,7 @@ impl SettingsWindow {
         cx: &mut Context<Self>,
     ) -> Option<AnyElement> {
         let ui = ui(cx);
-        let kind = self.preview_kind()?;
+        let kind = self.preview_kind(cx)?;
         let preview = match kind {
             PreviewKind::Window => sections::draw_stage(self, cx),
             PreviewKind::Fonts => sections::draw_specimen(self, cx),
@@ -129,6 +143,7 @@ impl SettingsWindow {
                 .bar_preview
                 .as_ref()
                 .map_or_else(|| div().into_any_element(), sections::BarPreview::element),
+            PreviewKind::Motion(_) => self.motion_strip.as_ref().map(|strip| strip.view())?,
         };
         Some(
             div()
@@ -155,7 +170,18 @@ impl SettingsWindow {
                                 .text_caption()
                                 .text_color(ui.faint)
                                 .child(format!("· {}", kind.title())),
-                        ),
+                        )
+                        .children(kind.aside().map(|aside| {
+                            div()
+                                .flex_1()
+                                .min_w_0()
+                                .ml_4()
+                                .truncate()
+                                .text_right()
+                                .text_caption()
+                                .text_color(ui.muted)
+                                .child(aside)
+                        })),
                 )
                 .child(preview)
                 .into_any_element(),

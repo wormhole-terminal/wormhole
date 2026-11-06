@@ -12,7 +12,7 @@ use wormhole_core::view::motion::pose::column::{self, ColumnPose};
 use wormhole_text::keys::SETTINGS_MOTION_COLUMN_TERMINAL;
 use wormhole_text::text;
 
-use super::{ASKING, Spot, WORKING, metrics, row, since};
+use super::{ASKING, Scene, Spot, WORKING, metrics, row, since};
 use crate::settings::{UiColors, settings};
 use crate::style::{Edges, TextRole, preview_stage};
 
@@ -36,7 +36,7 @@ fn at(variant: wormhole_core::view::motion::ColumnMotion, t: f32) -> ColumnPose 
 
 pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
     let row_h = metrics().row_h;
-    let height = 3.0 * row_h;
+    let height = Scene::Column.height();
     let ColumnPose { shown, content } = at(settings(cx).motion.column, t);
     // The terminal rides the column's edge, whole: it is moved, not sized.
     let terminal = Spot::row(0.0, height).moved(SIDEBAR_W * shown, 0.0).put(|| {

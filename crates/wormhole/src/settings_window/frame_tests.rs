@@ -263,9 +263,10 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
 
 /// Allocations a third draw of each Motion preview makes on its own (a window holding nothing else),
 /// when the budget was set: what a tick of one costs, since a preview builds only what shows at its
-/// moment of the loop. The four are redrawn by their own clocks, a few times a second each.
+/// moment of the loop. The one the page shows is redrawn by its own clock, a few times a second; the scenes
+/// are the strip's, drawn at Dense rows (Status at Regular).
 const PREVIEW_BUDGET: [(Scene, u64); 4] =
-    [(Scene::Insert, 487), (Scene::Fold, 543), (Scene::Status, 437), (Scene::Column, 476)];
+    [(Scene::Insert, 258), (Scene::Fold, 434), (Scene::Status, 312), (Scene::Column, 358)];
 
 // A tick draws the window like any other draw: GPUI renders the root view on every draw and marks the
 // ancestors of the view that asked for it dirty, so the page is built again with the previews. What the

@@ -1,7 +1,8 @@
-//! Motion: a select for each thing that moves, and under it a preview that loops through the choice
-//! (`motion_preview`). Which animation each choice names is core's (`view::motion`); the words of
-//! the options are in the catalogs. Picking an option writes `motion.<choice>` in `config.json` and
-//! the preview starts over with it.
+//! Motion: a select for each thing that moves, as any other row. The page's preview strip loops through
+//! the choice of the row touched last (`motion_preview`): hovering a row or opening its menu shows its
+//! scene, and so does changing it. Which animation each choice names is core's (`view::motion`); the
+//! words of the options are in the catalogs. Picking an option writes `motion.<choice>` in `config.json`
+//! and the preview starts over with it.
 
 use gpui_kit::*;
 use wormhole_core::view::motion::{ColumnMotion, FoldMotion, InsertMotion, MotionChoice, StatusMotion};
@@ -16,8 +17,8 @@ use wormhole_text::text;
 use super::MotionScene;
 use crate::select::Choice;
 use crate::settings::{Settings, settings};
+use crate::settings_window::SettingsWindow;
 use crate::settings_window::registry::Setting;
-use crate::settings_window::{SettingsWindow, ui};
 use crate::style;
 
 /// What the options of a choice are called, in the order the menu lists them.
@@ -64,20 +65,33 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("motion-insert", |w, cx| {
         select(w, "motion-insert", INSERT, settings(cx).motion.insert, pick!(insert), cx)
     })
-    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Insert, ui(cx)))),
+    .touched(|w, cx| w.show_motion(MotionScene::Insert, cx)),
     Setting::custom("motion-fold", |w, cx| {
         select(w, "motion-fold", FOLD, settings(cx).motion.fold, pick!(fold), cx)
     })
-    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Fold, ui(cx)))),
+    .touched(|w, cx| w.show_motion(MotionScene::Fold, cx)),
     Setting::custom("motion-status", |w, cx| {
         select(w, "motion-status", STATUS, settings(cx).motion.status, pick!(status), cx)
     })
-    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Status, ui(cx)))),
+    .touched(|w, cx| w.show_motion(MotionScene::Status, cx)),
     Setting::custom("motion-column", |w, cx| {
         select(w, "motion-column", COLUMN, settings(cx).motion.column, pick!(column), cx)
     })
-    .below(|w, cx| w.motion_previews.as_ref().map(|p| p.of(MotionScene::Column, ui(cx)))),
+    .touched(|w, cx| w.show_motion(MotionScene::Column, cx)),
 ];
+
+impl SettingsWindow {
+    /// The preview shows `scene`: a row of its was touched. Nothing, when the page's preview is not up
+    /// (a search's results hold these rows too).
+    pub(in crate::settings_window) fn show_motion(&mut self, scene: MotionScene, cx: &mut Context<Self>) {
+        if let Some(strip) = &self.motion_strip
+            && strip.scene(cx) != scene
+        {
+            strip.show(scene, cx);
+            cx.notify();
+        }
+    }
+}
 
 /// The select of one choice: the option in use in its face, every option in its menu.
 fn select<T: MotionChoice>(

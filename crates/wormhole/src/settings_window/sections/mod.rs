@@ -66,7 +66,7 @@ pub(super) use fonts::draw_specimen;
 pub(crate) use import::ImportPage;
 #[cfg(test)]
 pub(super) use motion_preview::MotionPreview;
-pub(super) use motion_preview::{MotionPreviews, Scene as MotionScene};
+pub(super) use motion_preview::{MotionStrip, Scene as MotionScene};
 pub(super) use notifications_preview::draw_notifications_preview;
 pub(super) use preview::{draw_agents_preview, draw_sidebar_preview};
 pub(super) use profile_form::ProfileForm;
@@ -206,6 +206,9 @@ impl SettingsWindow {
             on_open
                 .update(cx, |this, cx| {
                     this.open_select = open.then_some(id);
+                    if open && let Some(touched) = super::registry::control(id).and_then(|s| s.touched) {
+                        touched(this, cx);
+                    }
                     cx.notify();
                 })
                 .ok();

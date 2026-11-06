@@ -1,5 +1,5 @@
 //! The live previews of Menu bar and Hotkey, which run a clock each: one exists while its page is up
-//! and not otherwise, as Motion's do (`MotionPreviews`).
+//! and not otherwise, as Motion's does (`MotionStrip`).
 
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;

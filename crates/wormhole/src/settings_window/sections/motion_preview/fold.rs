@@ -7,7 +7,7 @@ use gpui_kit::*;
 use wormhole_core::view::motion::FoldMotion;
 use wormhole_core::view::motion::pose::{Phase, Pose, fold, fold::Slot};
 
-use super::{ASKING, IDLE, Spot, WORKING, metrics, progress, row, since};
+use super::{ASKING, IDLE, Scene, Spot, WORKING, metrics, progress, row, since};
 use crate::settings::{UiColors, settings};
 use crate::settings_window::sections::samples::SampleHead;
 use crate::style::{SummaryFade, preview_stage};
@@ -77,7 +77,7 @@ pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
     );
     let under =
         Spot::row(head_h + ROWS as f32 * row_h * open, row_h).put(|| row(&IDLE, "motion-fold-under", ui, cx));
-    preview_stage(ui, head_h + 3.0 * row_h).children(head).children(rows).children(under)
+    preview_stage(ui, Scene::Fold.height()).children(head).children(rows).children(under)
 }
 
 #[cfg(test)]

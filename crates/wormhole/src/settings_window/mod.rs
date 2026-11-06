@@ -121,10 +121,10 @@ pub(crate) struct SettingsWindow {
     /// the matches marked, until the search changes again.
     show_results: bool,
     font_picker: FontPickerState,
-    /// Motion → the four previews, there while the page is.
-    motion_previews: Option<sections::MotionPreviews>,
     /// Menu bar's and Hotkey's preview, there while its page is.
     bar_preview: Option<sections::BarPreview>,
+    /// Motion → the preview, there while the page is.
+    motion_strip: Option<sections::MotionStrip>,
     /// A shortcut field waiting for keys, or showing keys it refused.
     recording: Option<recorder::Recording>,
     /// Appearance → the "+" after the primary swatches: any color.
