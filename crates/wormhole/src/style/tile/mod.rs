@@ -153,13 +153,6 @@ pub fn status_tile_shifting(
         .items_center()
         .justify_center()
         .rounded(px(corner))
-        .shadow(vec![BoxShadow {
-            color: ui.shadow,
-            offset: point(px(0.0), px(1.0)),
-            blur_radius: px(1.5),
-            spread_radius: px(0.0),
-            inset: false,
-        }])
         .border_color(ui.tile_edge);
     face_box = match paint {
         Paint::Flat(color) => face_box.bg(color),

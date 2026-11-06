@@ -310,7 +310,7 @@ impl Workspace {
         let Facts { id, status, agent, told, label, agent_hidden, .. } = &plan.facts;
         let tile = terminal_tile(("terminal-tile", *id as u64), *agent, *told, *status, ui, cx);
         // Room round the tile: the box clips a long name sideways, and GPUI's clip is never one axis
-        // only, so a box hugging the tile would cut its shadow off at the left and the bottom. The
+        // only, so a box hugging the tile would cut its badge and light off at the left and the bottom. The
         // room on the left is taken back by the margin, so nothing moves.
         div()
             .id("crumb-process")
@@ -381,7 +381,7 @@ impl Workspace {
 /// The breadcrumb's spacing (`gap_2`, `px_2`), and the least of a cut text worth showing (about
 /// three letters and the ellipsis).
 pub(in crate::window) const CRUMB_GAP: f32 = 8.0;
-/// The room the crumb's clip leaves round the terminal's tile, for its shadow.
+/// The room the crumb's clip leaves round the terminal's tile, for its badge and light.
 const SHADOW_ROOM: f32 = 4.0;
 pub(in crate::window) const CRUMB_PAD: f32 = 8.0;
 const CRUMB_TEXT_MIN: f32 = 24.0;

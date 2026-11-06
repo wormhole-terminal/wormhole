@@ -18,6 +18,7 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Changed
 
+- Terminal and agent icons in the sidebar no longer have a drop shadow.
 - A change to `config.json`, a theme file or the custom fonts folder applies at once (within a tenth of a
   second) instead of at the next check, up to 0.4 seconds later; the check that remains runs every 10 seconds,
   for a folder the system cannot watch.
