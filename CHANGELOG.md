@@ -8,6 +8,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Settings → Fonts → Interface has a Settings text size row (`settings_text_size` in `config.json`: Small,
+  Default, Large or Larger) that scales the text of the Settings and Theme Studio windows, with the spacing
+  in step, at once and without a restart. Default is what both windows always drew; the terminal and the main
+  window keep their sizes.
 - Settings has a Changed page at the top of its list, with a badge that counts the settings that differ from
   their defaults. It shows each of them in its own control, under the name of its page, with an arrow that puts
   just that one back, and a card with Copy as JSON for what differs and Reset All…, which asks first and puts

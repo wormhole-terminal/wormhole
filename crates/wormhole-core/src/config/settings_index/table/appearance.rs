@@ -115,9 +115,14 @@ pub(super) const FONTS: &[Group] = &[
     .with_aside(SETTINGS_APPEARANCE_GROUP_CODE_ASIDE),
     group(
         SETTINGS_APPEARANCE_GROUP_INTERFACE,
-        &[entry("font-interface", SETTINGS_FONTS_FONT_INTERFACE, &["ui_font_family", "ui_font_size"])
-            .with_description(SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION)
-            .with_keywords(SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS)],
+        &[
+            entry("font-interface", SETTINGS_FONTS_FONT_INTERFACE, &["ui_font_family", "ui_font_size"])
+                .with_description(SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION)
+                .with_keywords(SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS),
+            entry("settings-text-size", SETTINGS_FONTS_SETTINGS_TEXT_SIZE, &["settings_text_size"])
+                .with_description(SETTINGS_FONTS_SETTINGS_TEXT_SIZE_DESCRIPTION)
+                .with_keywords(SETTINGS_FONTS_SETTINGS_TEXT_SIZE_KEYWORDS),
+        ],
     ),
     group(
         SETTINGS_APPEARANCE_GROUP_YOUR_FONTS,

@@ -4,6 +4,7 @@
 use gpui_kit::assets::IconName;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::config::TextSize;
 use wormhole_core::theme::fonts::{FontSlot, display_name};
 #[allow(
     clippy::wildcard_imports,
@@ -14,6 +15,7 @@ use wormhole_text::{text, whole};
 
 use super::open_button;
 use crate::fonts::LoadedFonts;
+use crate::select::Choice;
 use crate::settings::{SettingsStore, settings};
 use crate::settings_window::registry::{Setting, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
@@ -38,6 +40,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("font-ligatures", font_ligatures),
     Setting::custom("font-code", |w, cx| w.font_control(FontSlot::Code, cx)),
     Setting::custom("font-interface", |w, cx| w.font_control(FontSlot::Interface, cx)),
+    Setting::custom("settings-text-size", draw_text_size),
     Setting::custom("fonts-folder", |_, _| {
         open_button("fonts-folder", IconName::ExternalLink, text(SETTINGS_FONTS_OPEN_FONTS_FOLDER), |cx| {
             open_folder(&crate::active_profile::paths().fonts_dir(), cx)
@@ -45,6 +48,39 @@ pub(super) const SETTINGS: &[Setting] = &[
     }),
     Setting::custom("custom-fonts", |_, _| div().into_any_element()).describe(describe_custom),
 ];
+
+/// The words of a step of the Settings text size.
+fn text_size_label(size: TextSize) -> &'static str {
+    text(match size {
+        TextSize::Small => SETTINGS_FONTS_TEXT_SIZE_SMALL,
+        TextSize::Default => SETTINGS_FONTS_TEXT_SIZE_DEFAULT,
+        TextSize::Large => SETTINGS_FONTS_TEXT_SIZE_LARGE,
+        TextSize::Larger => SETTINGS_FONTS_TEXT_SIZE_LARGER,
+    })
+}
+
+/// The Settings text size: a select of the four steps, applied to this window and the Theme Studio as
+/// soon as it is picked (`style::text_scale`).
+fn draw_text_size(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let current = settings(cx).settings_text_size;
+    let choices = TextSize::ALL
+        .iter()
+        .map(|size| Choice::new(size.name().to_string(), text_size_label(*size)))
+        .collect();
+    window.select(
+        "settings-text-size",
+        div().child(text_size_label(current)).into_any_element(),
+        style::SELECT_W,
+        choices,
+        current.name().to_string(),
+        |s, name| {
+            if let Some(size) = TextSize::from_name(name) {
+                s.settings_text_size = size;
+            }
+        },
+        cx,
+    )
+}
 
 /// "2 families found: Berkeley Mono, Monaspace Neon".
 fn describe_custom(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<SharedString> {

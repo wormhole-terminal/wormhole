@@ -35,7 +35,7 @@ use self::folder_colors::folder_color_key;
 
 pub use self::choices::{
     AgentAccess, BranchColor, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
-    ShellProfile, SizeUnits, ThemeMode,
+    ShellProfile, SizeUnits, TextSize, ThemeMode,
 };
 pub use self::keys::{APP_SETTINGS, PROJECT_SETTINGS};
 pub(crate) use self::keys::{LEGACY_SETTINGS, keys};
@@ -137,6 +137,9 @@ pub struct Settings {
     pub studio_translucent: bool,
     /// Session Hosts window: translucent like the main window.
     pub hosts_translucent: bool,
+    /// How large the text of the Settings and Theme Studio windows is (and the spacing in step with
+    /// it): `small`, `default`, `large` or `larger`. Only those two windows.
+    pub settings_text_size: TextSize,
 
     // Fonts outside the terminal (the terminal uses `font_family` / `font_size`).
     /// Interface font (sidebar, panels, settings); empty = the system font.
@@ -362,6 +365,7 @@ impl Default for Settings {
             settings_translucent: true,
             studio_translucent: true,
             hosts_translucent: true,
+            settings_text_size: TextSize::Default,
             ui_font_family: String::new(),
             ui_font_size: 13.0,
             code_font_family: String::new(),

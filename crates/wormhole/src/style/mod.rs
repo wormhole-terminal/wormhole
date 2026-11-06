@@ -98,6 +98,7 @@ mod submodule;
 mod tab_selection;
 mod tabs;
 mod text_field;
+pub(crate) mod text_scale;
 mod tile;
 mod tint;
 mod title_drag;

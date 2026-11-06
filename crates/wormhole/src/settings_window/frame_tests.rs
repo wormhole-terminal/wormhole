@@ -76,6 +76,8 @@
 //! [`change`] listed. `Values` keeps the defaults it compares with from the first read on (they never change),
 //! which every frame used to serialise again, so the search fell by 70 and Advanced, which reads them most,
 //! by 57.
+//! The Fonts page gained the Settings text size row, a select like the Appearance page's icon theme (the
+//! trigger, the search select's state and the row's own listeners): Fonts rose from 7,366 to 7,766.
 //!
 //! The window runs in a child process with a scratch data dir (`isolate_in`), like the whole-window tests.
 
@@ -105,7 +107,7 @@ const BUDGET: [(&str, u64); 18] = [
     // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
     // key line, 425 more.
     ("Appearance", 17105),
-    ("Fonts", 7366),
+    ("Fonts", 7766),
     ("Motion", 6286),
     // With the Worktrees group's switch for cloning build folders (356).
     ("Terminal", 9730),

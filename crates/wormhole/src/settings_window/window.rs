@@ -358,6 +358,7 @@ impl Render for SettingsWindow {
         self.sync_color_pickers(window, cx);
         self.sync_sliders(window, cx);
         self.sync_profile_form(window, cx);
+        style::text_scale::apply(window, cx);
         self.rem = window.rem_size();
         style::sync_option(window.modifiers().alt, cx);
         let ui = ui(cx);

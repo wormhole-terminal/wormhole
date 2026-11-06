@@ -27,6 +27,10 @@ settings-fonts-font-interface = Font
     .description = Sidebar, panels, settings and controls. The size scales the whole interface
     .keywords = interface font typeface size system ui
 
+settings-fonts-settings-text-size = Settings text size
+    .description = The text of the Settings and Theme Studio windows, on top of the interface font's size. The terminal and the main window keep theirs
+    .keywords = text size zoom larger bigger smaller scale settings studio window accessibility
+
 settings-fonts-folder = Fonts folder
     .description = JetBrains Mono comes with { -brand }. To use other fonts without installing them, put .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within seconds
     .keywords = custom bundled ttf otf ttc folder
@@ -41,6 +45,12 @@ settings-fonts-none-yet = None yet: the fonts folder is empty.
 settings-fonts-ligatures-on = ligatures on
 settings-fonts-ligatures-off = ligatures off
 settings-fonts-hover-a-font-in-a-list = Hover a font in a list to preview it here
+
+# The choices of the Settings text size row.
+settings-fonts-text-size-small = Small
+settings-fonts-text-size-default = Default
+settings-fonts-text-size-large = Large
+settings-fonts-text-size-larger = Larger
 
 ## settings_window/font_picker.rs (labels, hints and notes drawn by this page's code)
 

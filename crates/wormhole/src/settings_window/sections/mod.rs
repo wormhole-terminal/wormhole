@@ -109,6 +109,7 @@ pub(super) fn select_id(id: &str) -> Option<&'static str> {
     [
         "scrollback",
         "icon-theme",
+        "settings-text-size",
         "default-shell",
         "open-in",
         "motion-insert",

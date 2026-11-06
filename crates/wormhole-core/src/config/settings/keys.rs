@@ -68,6 +68,8 @@ pub const APP_SETTINGS: &[&str] = &[
     "settings_translucent",
     "studio_translucent",
     "hosts_translucent",
+    // How large those two windows' text is: the person's own habit, never a project's.
+    "settings_text_size",
     "status_bar",
     "minimap",
     "split_gaps",

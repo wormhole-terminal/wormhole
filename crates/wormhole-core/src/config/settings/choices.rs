@@ -25,6 +25,39 @@ pub enum SizeUnits {
     Binary,
 }
 
+/// How large the text of the Settings and Theme Studio windows is, one of a few steps. `Default` is the
+/// interface font's own size, so a config that never names the setting draws what it always did. The
+/// factor each step stands for is the app's (`style::text_scale`): this is only the person's choice.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TextSize {
+    Small,
+    #[default]
+    Default,
+    Large,
+    Larger,
+}
+
+impl TextSize {
+    /// Every step, smallest first: the order of the select's menu.
+    pub const ALL: [TextSize; 4] = [TextSize::Small, TextSize::Default, TextSize::Large, TextSize::Larger];
+
+    /// The step as the file spells it, which is also the id of its menu entry.
+    pub fn name(self) -> &'static str {
+        match self {
+            TextSize::Small => "small",
+            TextSize::Default => "default",
+            TextSize::Large => "large",
+            TextSize::Larger => "larger",
+        }
+    }
+
+    /// The step a file's word names.
+    pub fn from_name(name: &str) -> Option<TextSize> {
+        TextSize::ALL.into_iter().find(|size| size.name() == name)
+    }
+}
+
 /// What a notification looks like while Wormhole is the front app: a system banner, or nothing
 /// (the sidebar, the Dock badge, the menu bar item and ⌥⌘J carry the status). Older builds had
 /// an in-window toast as well: a config.json that still says `"toast"` reads as nothing rather

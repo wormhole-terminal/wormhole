@@ -328,6 +328,10 @@ entry Fonts font-interface
   label "Font"
   description "Sidebar, panels, settings and controls. The size scales the whole interface"
   keywords "interface font typeface size system ui"
+entry Fonts settings-text-size
+  label "Settings text size"
+  description "The text of the Settings and Theme Studio windows, on top of the interface font's size. The terminal and the main window keep theirs"
+  keywords "text size zoom larger bigger smaller scale settings studio window accessibility"
 entry Fonts fonts-folder
   label "Fonts folder"
   description "JetBrains Mono comes with Wormhole. To use other fonts without installing them, put .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within seconds"

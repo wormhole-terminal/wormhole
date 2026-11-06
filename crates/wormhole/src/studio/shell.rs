@@ -23,6 +23,7 @@ impl StudioWindow {
 
 impl Render for StudioWindow {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        style::text_scale::apply(window, cx);
         let ui = ui(cx);
         let translucent = settings(cx).studio_translucent;
         self.blur.set_enabled(style::wants_blur(settings(cx), translucent));
@@ -54,17 +55,23 @@ impl Render for StudioWindow {
                     .flex()
                     // Each region paints its own surface (no stacked translucent layers).
                     .child(
-                        self.list
-                            .clone()
-                            .cached(StyleRefinement::default().w(px(LIST_W)).h_full().flex_none()),
+                        self.list.clone().cached(
+                            StyleRefinement::default()
+                                .w(style::text_scale::scaled(LIST_W, cx))
+                                .h_full()
+                                .flex_none(),
+                        ),
                     )
                     .child(div().flex_1().min_w_0().h_full().flex().bg(surfaces.background).child(
                         self.gallery.clone().cached(StyleRefinement::default().flex_1().min_w_0().h_full()),
                     ))
                     .child(
-                        self.editor
-                            .clone()
-                            .cached(StyleRefinement::default().w(px(EDITOR_W)).h_full().flex_none()),
+                        self.editor.clone().cached(
+                            StyleRefinement::default()
+                                .w(style::text_scale::scaled(EDITOR_W, cx))
+                                .h_full()
+                                .flex_none(),
+                        ),
                     ),
             )
             .children(self.render_modal(cx))
