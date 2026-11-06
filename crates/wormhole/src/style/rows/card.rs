@@ -158,11 +158,13 @@ pub enum NavMark {
     Preview,
 }
 
-/// An item of the settings nav, like a row of System Settings' sidebar: [`ROW_H`] tall, its
+/// An item of the settings nav, flat like a row of System Settings' sidebar: [`ROW_H`] tall, its
 /// 16 pt icon in the lead column and its name (13) a gap after it. The row sits in a container
 /// inset by `_2` (`nav_inset`), so its rounded hover and selection float in from the nav's edges
 /// while the icon still starts at x 16. The current page is the opaque tint of the sidebar's
-/// selected row, its icon and name (600) in the tint's text color.
+/// selected row with the control corners, its icon and name (500) in the tint's text colour, the primary:
+/// no outline, so Borders and Increase Contrast have nothing to add or take away. A count wears
+/// the flat `control.background` chip, on the selected tint the tint's own inset.
 #[track_caller]
 pub fn nav_row(
     id: impl Into<ElementId>,
@@ -186,7 +188,7 @@ pub fn nav_row(
         .w_full()
         .h(px(ROW_H))
         .px_2()
-        .rounded(ui.radius_sm)
+        .rounded(ui.radius)
         .text_label()
         .cursor_pointer()
         .when(selected, |d| d.bg(ui.selected_row))
@@ -197,7 +199,7 @@ pub fn nav_row(
                 .flex_1()
                 .min_w_0()
                 .truncate()
-                .font_weight(if selected { FontWeight::SEMIBOLD } else { FontWeight::NORMAL })
+                .font_weight(if selected { FontWeight::MEDIUM } else { FontWeight::NORMAL })
                 .text_color(text_color)
                 .child(label.into()),
         )
@@ -207,7 +209,12 @@ pub fn nav_row(
             }
             NavMark::Count(0) => d,
             NavMark::Hits(n) | NavMark::Count(n) => {
-                d.child(count_badge(ui, crate::style::scale::count_label(n)))
+                let count = crate::style::scale::count_label(n);
+                d.child(if selected {
+                    crate::style::selected_count_badge(ui, count)
+                } else {
+                    count_badge(ui, count).bg(ui.control)
+                })
             }
             NavMark::Preview => d.child(crate::style::status_badge(ui, ui.info, "Preview")),
             NavMark::None | NavMark::NoHits => d,

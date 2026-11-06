@@ -187,11 +187,13 @@ impl SettingsWindow {
                     .h(px(style::CONTROL_H))
                     .px_2()
                     .rounded(ui.radius)
-                    // The ring takes the fill's colour when selected, so the box keeps its size.
-                    .outlined(ui, if selected { ui.selected_row } else { ui.border })
                     .cursor_pointer()
-                    .when(selected, |d| d.bg(ui.selected_row))
-                    .hover(move |d| if selected { d } else { d.bg(ui.band_hover) })
+                    // Flat like a select on a card: the control fill (a little more under the pointer),
+                    // the nav's selected tint while its page is open. Increase Contrast is the one case
+                    // that draws an outline, since a faint fill alone is no edge.
+                    .bg(if selected { ui.selected_row } else { ui.control })
+                    .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.input_border))
+                    .hover(move |d| if selected { d } else { d.bg(ui.control_hover) })
                     .child(style::profile_avatar(ui, color, profile.avatar, style::TITLE_GLYPH))
                     .child(
                         div()
