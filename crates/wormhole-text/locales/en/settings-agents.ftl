@@ -4,9 +4,6 @@
 settings-section-agents = Coding agents
     .intro = { -brand } recognises the agent running in each terminal. With status hooks it knows exactly when it's working, waiting for you, or done.
 
-settings-agents-summary = Agents found
-    .keywords = installed hooks repair path summary
-
 ## Notifications
 
 settings-agents-group-notifications = Notifications
@@ -120,9 +117,6 @@ settings-agents-skill-failed = { $agent } skill: { $error }
 
 settings-agents-open-notifications = Open Notifications
 settings-agents-looking-for-agents = Looking for agents…
-settings-agents-reporting-through-hooks = reporting through hooks
-settings-agents-needs-repair = needs repair
-settings-agents-recognised-not-on-path = recognised, not on PATH
 settings-agents-no-coding-agent-on-this-macs = No coding agent on this Mac's PATH. Install Claude Code, Codex or one of the others below: { -brand } recognises it in any terminal, and offers its hooks here.
 settings-agents-status-hooks-on = Status hooks on
 settings-agents-hooks-incomplete = Hooks incomplete

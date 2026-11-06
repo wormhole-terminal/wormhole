@@ -1,4 +1,4 @@
-//! Coding agents: how many there are and how they report, a pointer to Notifications,
+//! Coding agents: a pointer to Notifications,
 //! one row per installed agent with its hooks' state and the one action that fits (Install,
 //! Repair, Remove), the agents that aren't on PATH folded into one row, and how status works.
 //!
@@ -30,7 +30,6 @@ use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, Edges, TextRole};
 
 pub(super) const SETTINGS: &[Setting] = &[
-    Setting::block("agents-summary", draw_summary),
     Setting::custom("agents-notifications", |_, cx| {
         let ui = ui(cx);
         style::link_button("open-notifications", ui, text(SETTINGS_AGENTS_OPEN_NOTIFICATIONS), true)
@@ -164,9 +163,8 @@ impl SettingsWindow {
     }
 }
 
-/// Four counts across the column: installed, reporting through hooks, needing repair, and the
-/// ones Wormhole knows that aren't on PATH.
-fn draw_summary(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+/// The installed agents, one row each.
+fn draw_installed(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let Some(snapshot) = &window.agents else {
         return div()
@@ -176,54 +174,6 @@ fn draw_summary(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> An
             .child(text(SETTINGS_AGENTS_LOOKING_FOR_AGENTS))
             .into_any_element();
     };
-    let installed = snapshot.installed().count();
-    let hooked = snapshot.installed().filter(|row| row.hooks() == Some(State::Installed)).count();
-    let repair = snapshot.needs_repair();
-    let others = snapshot.others().count();
-    let cell = |n: usize, label: &'static str, color: Hsla, first: bool| {
-        div()
-            .flex_1()
-            .min_w_0()
-            .flex()
-            .flex_col()
-            .px_4()
-            .py_2()
-            .when(!first, |d| d.rule_left(ui))
-            .child(
-                div()
-                    .text_title()
-                    .font_weight(FontWeight::SEMIBOLD)
-                    .tabular_nums()
-                    .text_color(color)
-                    .child(n.to_string()),
-            )
-            .child(div().text_caption().text_color(ui.muted).child(label))
-    };
-    div()
-        .flex()
-        .rule_top(ui)
-        .rule_bottom(ui)
-        .child(cell(installed, "installed", ui.text, true))
-        .child(cell(
-            hooked,
-            text(SETTINGS_AGENTS_REPORTING_THROUGH_HOOKS),
-            if hooked > 0 { ui.success_text } else { ui.text },
-            false,
-        ))
-        .child(cell(
-            repair,
-            text(SETTINGS_AGENTS_NEEDS_REPAIR),
-            if repair > 0 { ui.warning_text } else { ui.text },
-            false,
-        ))
-        .child(cell(others, text(SETTINGS_AGENTS_RECOGNISED_NOT_ON_PATH), ui.muted, false))
-        .into_any_element()
-}
-
-/// The installed agents, one row each.
-fn draw_installed(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let ui = ui(cx);
-    let Some(snapshot) = &window.agents else { return div().into_any_element() };
     let rows: Vec<AnyElement> =
         snapshot.installed().map(|row| agent_row(ui, row, snapshot.home(), cx)).collect();
     let none = rows.is_empty().then(|| {
@@ -237,22 +187,28 @@ fn draw_installed(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> 
     div().flex().flex_col().children(rows).children(none).into_any_element()
 }
 
-/// An agent's logo in a square, or its monogram (CX, AI…) for an agent without a bundled logo.
-pub(super) fn mark(ui: UiColors, agent: &Agent) -> AnyElement {
-    let tile = div()
-        .flex_none()
-        .flex()
-        .items_center()
-        .justify_center()
-        .size(px(style::CONTROL_H))
-        .rounded(ui.radius)
-        .bg(ui.hover);
-    match agent.icon() {
-        Some(logo) => tile.child(style::agent_logo(Some(logo), agent.monogram, style::GLYPH, ui.text)),
-        None => tile.text_caption().font_weight(FontWeight::BOLD).text_color(ui.text).child(agent.monogram),
-    }
-    .into_any_element()
+/// An agent's tile: the one the sidebar's rows draw it with (its logo or monogram on the colour the
+/// registry gives it), `size` points square and without a status, so it shows who the agent is and
+/// nothing about what it is doing.
+#[track_caller]
+pub(super) fn mark(ui: UiColors, agent: &Agent, size: f32, cx: &App) -> AnyElement {
+    style::status_tile_at(
+        SharedString::from(format!("agent-tile-{:?}", agent.id)),
+        ui,
+        style::StatusTile {
+            face: style::TileFace::Agent(agent.id),
+            glyph: style::StatusGlyph::Idle,
+            selected: false,
+            mini: false,
+        },
+        size,
+        cx,
+    )
 }
+
+/// How far a row's text is from its left edge: the tile and the gap after it. What hangs under a
+/// row (a note, a warning, a profile's login) lines up with it.
+const TEXT_INSET: f32 = style::TILE + 12.0;
 
 /// One installed agent: its mark and name with the hooks' badge, where the hooks are
 /// (Reveal), the one action that fits, and what needs doing under it.
@@ -325,7 +281,7 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
                 .flex()
                 .items_center()
                 .gap_3()
-                .child(mark(ui, agent))
+                .child(mark(ui, agent, style::TILE, cx))
                 .child(
                     div()
                         .flex_1()
@@ -384,13 +340,13 @@ fn agent_row(ui: UiColors, row: &AgentRow, home: &Path, cx: &mut Context<Setting
                 .flex()
                 .items_center()
                 .gap_2()
-                .pl(px(style::CONTROL_H + 12.0))
+                .pl(px(TEXT_INSET))
                 .text_caption()
                 .text_color(ui.muted)
                 .child(style::icon(IconName::Info))
                 .child(note)
         }))
-        .children(problem.map(|banner| div().pl(px(style::CONTROL_H + 12.0)).child(banner)))
+        .children(problem.map(|banner| div().pl(px(TEXT_INSET)).child(banner)))
         .children(row.spec.map(|spec| {
             div().flex().flex_col().children(
                 row.logins.iter().enumerate().map(|(ix, login)| login_row(ui, agent, spec, ix, login, cx)),
@@ -428,7 +384,7 @@ fn login_row(
         .flex()
         .items_center()
         .gap_2()
-        .pl(px(style::CONTROL_H + 12.0))
+        .pl(px(TEXT_INSET))
         .py_1()
         .child(
             div()
@@ -536,7 +492,7 @@ fn draw_others(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
                     .items_center()
                     .gap_3()
                     .py_1()
-                    .child(mark(ui, row.agent))
+                    .child(mark(ui, row.agent, style::TILE_MINI, cx))
                     .child(div().flex_1().min_w_0().text_body().text_color(ui.muted).child(row.agent.name))
                     .child(div().text_caption().text_color(ui.faint).child(hooks))
             }))

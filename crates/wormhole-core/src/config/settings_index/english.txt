@@ -115,9 +115,6 @@ section Agents
   title "Coding agents"
   intro "Wormhole recognises the agent running in each terminal. With status hooks it knows exactly when it's working, waiting for you, or done."
   nav "Agents"
-group ""
-  blurb ""
-  aside ""
 group "Notifications"
   blurb ""
   aside ""
@@ -520,10 +517,6 @@ entry Git size-units
   label "File sizes"
   description "Decimal like Finder (12.4 MB), or binary like git (11.8 MiB)"
   keywords "size units bytes kilobytes megabytes kb mb kib mib finder binary decimal"
-entry Agents agents-summary
-  label "Agents found"
-  description ""
-  keywords "installed hooks repair path summary"
 entry Agents agents-notifications
   label "Notify me when an agent needs input or finishes"
   description "These, and notifications about long commands and the bell, have their own section"

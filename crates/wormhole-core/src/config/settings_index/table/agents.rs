@@ -10,9 +10,6 @@ use crate::config::settings_index::Group;
 use wormhole_text::keys::*;
 
 pub(super) const AGENTS: &[Group] = &[
-    untitled(&[
-        entry("agents-summary", SETTINGS_AGENTS_SUMMARY, &[]).with_keywords(SETTINGS_AGENTS_SUMMARY_KEYWORDS)
-    ]),
     group(
         SETTINGS_AGENTS_GROUP_NOTIFICATIONS,
         &[entry("agents-notifications", SETTINGS_AGENTS_NOTIFICATIONS, &[])

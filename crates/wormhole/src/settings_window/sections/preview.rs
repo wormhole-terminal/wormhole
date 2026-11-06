@@ -75,25 +75,42 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
         .into_any_element()
 }
 
-/// Coding agents → the Terminals list as the options make it, with an agent working, one asking and
-/// one finished: what the hooks (or the output) tell the sidebar.
+/// Coding agents → three terminals side by side, each in a card of its own, with an agent working, one
+/// asking and one finished: what the hooks (or the output) tell the sidebar. Side by side because the
+/// strip is short and wide: stacked in a list they would not fit its height.
 pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let look = Look::of(settings(cx));
+    let metrics = Metrics::of(look.density, look.cards).fading(look.fade).with_group_folders(look.folders);
+    let plain = plain_face();
+    let cards: Vec<AnyElement> = AGENT_SAMPLES
+        .iter()
+        .enumerate()
+        .map(|(ix, sample)| {
+            let row = sample.row(&format!("preview-agents-{ix}"), ui, metrics, &plain, look.notes, cx);
+            style::preview_surface(ui)
+                .flex_1()
+                .min_w_0()
+                .py_2()
+                .child(style::card_segment_solo(ui, metrics, sample.selected, row))
+                .into_any_element()
+        })
+        .collect();
     div()
         .flex()
         .flex_col()
         .gap_2()
-        .child(style::preview_frame(ui).child(div().max_w(px(SIDEBAR_W)).child(list(
-            "agents",
-            look,
-            AGENT_SAMPLES,
-            true,
-            ui,
-            cx,
-        ))))
+        .child(style::preview_frame(ui).flex().gap_4().children(cards))
         .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_AGENTS_PREVIEW_CAPTION)))
         .into_any_element()
+}
+
+/// A terminal without an agent shows the first agent's logo, as any agent would.
+fn plain_face() -> TileFace {
+    wormhole_core::agents::AGENTS
+        .first()
+        .and_then(|agent| agent.icon())
+        .map_or(TileFace::Terminal, TileFace::Logo)
 }
 
 /// The options a list is drawn with.
@@ -139,11 +156,7 @@ pub(super) fn list(
         .child(style::panel_title(ui, text(SETTINGS_SESSIONS_TERMINALS)))
         .child(div().flex_1())
         .child(style::icon(IconName::Plus).text_color(ui.muted));
-    // A terminal without an agent shows the first agent's logo, as any agent would.
-    let plain = wormhole_core::agents::AGENTS
-        .first()
-        .and_then(|agent| agent.icon())
-        .map_or(TileFace::Terminal, TileFace::Logo);
+    let plain = plain_face();
     let mut column = if framed { style::preview_surface(ui) } else { div() }
         .flex()
         .flex_col()

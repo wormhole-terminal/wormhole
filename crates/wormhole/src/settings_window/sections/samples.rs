@@ -120,12 +120,8 @@ pub(super) const SAMPLES: &[Card] = &[
     Card { group: None, folder: None, rows: &[ZSH] },
 ];
 
-/// The list of Coding agents: a group with an agent working, one asking and one finished.
-pub(super) const AGENT_SAMPLES: &[Card] = &[Card {
-    group: Some("api"),             // text: sample (a made-up project of the preview)
-    folder: Some("~/Projects/api"), // text: sample (a made-up folder of the preview)
-    rows: &[RATE_LIMITS, FLAKY_LOGIN, RELEASE_NOTES],
-}];
+/// What Coding agents shows, one agent each: one working, one asking and one finished.
+pub(super) const AGENT_SAMPLES: &[Sample] = &[RATE_LIMITS, FLAKY_LOGIN, RELEASE_NOTES];
 
 impl Sample {
     /// The sidebar's own row for it, with its status tile: `plain` is the face of a terminal without an

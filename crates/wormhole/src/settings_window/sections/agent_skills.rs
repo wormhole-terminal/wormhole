@@ -138,7 +138,7 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
         _ => actions.child(install(cx, text(SETTINGS_AGENTS_INSTALL), true)),
     };
     let problem = row.state.as_ref().err().map(|err| {
-        div().pl(px(style::CONTROL_H + 12.0)).child(style::banner(
+        div().pl(px(style::TILE + 12.0)).child(style::banner(
             ui,
             style::BannerKind::Danger,
             false,
@@ -156,7 +156,7 @@ fn skill_row(row: &SkillRow, cx: &mut Context<SettingsWindow>) -> AnyElement {
                 .flex()
                 .items_center()
                 .gap_3()
-                .child(mark(ui, agent))
+                .child(mark(ui, agent, style::TILE, cx))
                 .child(
                     div()
                         .flex_1()

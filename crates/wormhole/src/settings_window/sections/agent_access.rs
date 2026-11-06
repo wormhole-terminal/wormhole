@@ -147,8 +147,20 @@ fn program_row(ix: usize, row: Approved, now: i64, cx: &mut Context<SettingsWind
     let (code_font, _) = crate::fonts::code_font(cx);
     let which = row.which;
     let tile = match row.agent {
-        Some(id) => mark(ui, wormhole_core::agents::agent(id)),
-        None => style::icon(gpui_kit::assets::IconName::Terminal).text_color(ui.muted).into_any_element(),
+        Some(id) => mark(ui, wormhole_core::agents::agent(id), style::TILE, cx),
+        // A program that is not a registered agent: the sidebar's own face for a terminal.
+        None => style::status_tile_at(
+            SharedString::from(format!("program-tile-{ix}")),
+            ui,
+            style::StatusTile {
+                face: style::TileFace::Terminal,
+                glyph: style::StatusGlyph::Idle,
+                selected: false,
+                mini: false,
+            },
+            style::TILE,
+            cx,
+        ),
     };
     div()
         .flex()
