@@ -132,7 +132,9 @@ pub(super) fn banner(happened: &Happened, settings: &Settings, cx: &mut App) {
         return;
     }
     match notifier(cx).bursts.add(Instant::now(), facts.tab, &facts.name, kind) {
-        Grouped::Single => post(single, cx),
+        Grouped::Single => {
+            post(single, cx);
+        }
         Grouped::Summary { text, retract } => {
             for tab in retract {
                 dismiss(tab, cx);

@@ -567,7 +567,11 @@ entry Import import-found
 entry Notifications notify-permission
   label "Notifications in System Settings"
   description ""
-  keywords "permission allow system settings send test banner"
+  keywords "permission allow system settings"
+entry Notifications notify-test
+  label "Send a test notification"
+  description ""
+  keywords "test banner try check send permission"
 entry Notifications notify-needs-you
   label "A terminal needs input"
   description "An agent asks a question or for permission"

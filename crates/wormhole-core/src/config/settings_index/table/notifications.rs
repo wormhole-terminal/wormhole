@@ -11,8 +11,12 @@ use wormhole_text::keys::*;
 pub(super) const NOTIFICATIONS: &[Group] = &[
     group(
         SETTINGS_NOTIFICATIONS_GROUP_MACOS,
-        &[entry("notify-permission", SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION, &[])
-            .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS)],
+        &[
+            entry("notify-permission", SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION, &[])
+                .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_PERMISSION_KEYWORDS),
+            entry("notify-test", SETTINGS_NOTIFICATIONS_NOTIFY_TEST, &[])
+                .with_keywords(SETTINGS_NOTIFICATIONS_NOTIFY_TEST_KEYWORDS),
+        ],
     ),
     group(
         SETTINGS_NOTIFICATIONS_GROUP_NOTIFY_ME_WHEN,

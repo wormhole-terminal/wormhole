@@ -16,7 +16,7 @@ use wormhole_core::config::{DockBadge, InFront, NotifySound};
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use crate::notifications;
+use crate::notifications::{self, Test};
 use crate::platform::notifications::Permission;
 use crate::settings::update_settings;
 use crate::settings::{Settings, settings};
@@ -29,6 +29,7 @@ const AFTER: [u32; 5] = [5, 10, 30, 60, 300];
 
 pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("notify-permission", draw_permission),
+    Setting::block("notify-test", draw_test),
     Setting::toggle(
         "notify-needs-you",
         |s| kind_on(s, s.notify_needs_you),
@@ -138,13 +139,6 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
     let ui = ui(cx);
     let permission = notifications::permission(cx);
     let (title, hint) = permission_text(permission);
-    let send_test = || {
-        Button::new("notify-send-test")
-            .small()
-            .outline()
-            .label(text(SETTINGS_NOTIFICATIONS_SEND_TEST))
-            .on_click(|_, _, cx| notifications::send_test(cx))
-    };
     let system_settings = || {
         Button::new("notify-open-settings")
             .small()
@@ -153,9 +147,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
             .on_click(|_, _, cx| notifications::open_system_settings(cx))
     };
     let buttons: Vec<AnyElement> = match permission {
-        Permission::Allowed { .. } => {
-            vec![send_test().into_any_element(), system_settings().into_any_element()]
-        }
+        Permission::Allowed { .. } => vec![system_settings().into_any_element()],
         Permission::NotAsked => vec![
             Button::new("notify-allow")
                 .small()
@@ -165,8 +157,7 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
                 .into_any_element(),
         ],
         Permission::Denied => vec![system_settings().into_any_element()],
-        Permission::OutsideBundle => vec![send_test().into_any_element()],
-        Permission::Checking => Vec::new(),
+        Permission::OutsideBundle | Permission::Checking => Vec::new(),
     };
     style::setting(
         "setting-notify-permission",
@@ -174,6 +165,65 @@ fn draw_permission(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
         SettingParts {
             label: title.into(),
             description: (!hint.is_empty()).then(|| hint.into()),
+            visible_hint: true,
+            chip: None,
+            keys: RowKeys::NONE,
+            state: SettingState::Default,
+            found: None,
+            found_description: None,
+            control: div().flex().gap_2().children(buttons).into_any_element(),
+            tall: false,
+            extra: None,
+            on_reset: None,
+            reset_arrow: crate::style::ResetArrow::OnHover,
+        },
+        cx,
+    )
+    .into_any_element()
+}
+
+/// What the test row says, by how the last test stands.
+fn test_hint(test: &Test) -> String {
+    match test {
+        Test::Idle => text(SETTINGS_NOTIFICATIONS_TEST_IDLE).into(),
+        Test::Waiting { .. } => text(SETTINGS_NOTIFICATIONS_TEST_WAITING).into(),
+        Test::Sent => text(SETTINGS_NOTIFICATIONS_TEST_SENT).into(),
+        Test::Denied => text(SETTINGS_NOTIFICATIONS_TEST_DENIED).into(),
+        Test::Unanswered => text(SETTINGS_NOTIFICATIONS_TEST_UNANSWERED).into(),
+        Test::Refused(error) => settings_notifications_test_refused(error),
+    }
+}
+
+/// The test's row: a banner sent the way real ones are, and what came of it. Pressing it never ends
+/// silent (`notifications::send_test`): it asks macOS first when that has not been asked, and says so
+/// when notifications are off.
+fn draw_test(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let ui = ui(cx);
+    let test = notifications::test_state(cx);
+    let mut buttons: Vec<AnyElement> = vec![
+        Button::new("notify-send-test")
+            .small()
+            .outline()
+            .label(text(SETTINGS_NOTIFICATIONS_SEND_TEST))
+            .on_click(|_, _, cx| notifications::send_test(cx))
+            .into_any_element(),
+    ];
+    if matches!(test, Test::Denied | Test::Unanswered) {
+        buttons.push(
+            Button::new("notify-test-open-settings")
+                .small()
+                .outline()
+                .label(text(SETTINGS_NOTIFICATIONS_OPEN_SYSTEM_SETTINGS))
+                .on_click(|_, _, cx| notifications::open_system_settings(cx))
+                .into_any_element(),
+        );
+    }
+    style::setting(
+        "setting-notify-test",
+        ui,
+        SettingParts {
+            label: text(SETTINGS_NOTIFICATIONS_NOTIFY_TEST).into(),
+            description: Some(test_hint(&test).into()),
             visible_hint: true,
             chip: None,
             keys: RowKeys::NONE,

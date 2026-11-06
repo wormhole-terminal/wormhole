@@ -8,9 +8,9 @@ use wormhole_core::notify::{Kind, Level, Source, State};
 use super::announce::{Happened, category, spoken_words};
 use super::respond::{dismiss, tag};
 use super::route::{Route, logs, route_for, settled};
-use super::{actions, init, post};
+use super::{Test, actions, init, permission, post, test_banner};
 use crate::platform::notifications::ButtonKind;
-use crate::platform::notifications::{Category, Notice};
+use crate::platform::notifications::{Category, Notice, Permission};
 use crate::terminal_view::Failure;
 use crate::window::ambient::TabFacts;
 
@@ -188,4 +188,86 @@ fn a_response_to_someone_elses_notification_changes_nothing(cx: &mut TestAppCont
     });
     cx.run_until_parked();
     assert_eq!(cx.delivered_system_notifications().len(), 1, "ours stays up");
+}
+
+/// "Send test" never ends silent: it asks macOS first when that has not been asked, and sends once
+/// the answer is yes (a test has no macOS to ask, so the question counts as answered yes).
+#[gpui_kit::test]
+fn send_test_asks_macos_first_and_then_sends(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        cx.set_app_identity("app.getwormhole.terminal", "Wormhole");
+        cx.set_global(crate::settings::SettingsStore::for_test());
+        cx.set_global(crate::app_state::AppState::for_test(1));
+        init(cx);
+        super::pretend_permission(Permission::NotAsked, cx);
+        super::send_test(cx);
+        assert_eq!(super::permission_asks(cx), 1);
+        assert_eq!(super::test_state(cx), Test::Sent);
+    });
+    assert_eq!(cx.delivered_system_notifications().len(), 1);
+}
+
+/// Off in System Settings, the system would drop a banner without a word: nothing is posted and the
+/// row says why.
+#[gpui_kit::test]
+fn send_test_says_so_when_notifications_are_off(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        cx.set_app_identity("app.getwormhole.terminal", "Wormhole");
+        cx.set_global(crate::settings::SettingsStore::for_test());
+        cx.set_global(crate::app_state::AppState::for_test(1));
+        init(cx);
+        super::pretend_permission(Permission::Denied, cx);
+        super::send_test(cx);
+        assert_eq!(super::test_state(cx), Test::Denied);
+        assert_eq!(super::permission_asks(cx), 0, "after a no only System Settings can change it");
+    });
+    assert!(cx.delivered_system_notifications().is_empty());
+}
+
+/// While the permission is read or macOS's question is up, the press waits; polling the permission
+/// while the question is open is not an answer, the question's own answer is.
+#[gpui_kit::test]
+fn send_test_waits_for_macos_and_gives_up_only_on_its_answer(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        cx.set_app_identity("app.getwormhole.terminal", "Wormhole");
+        cx.set_global(crate::settings::SettingsStore::for_test());
+        cx.set_global(crate::app_state::AppState::for_test(1));
+        init(cx);
+        super::pretend_permission(Permission::Checking, cx);
+        super::send_test(cx);
+        assert_eq!(super::test_state(cx), Test::Waiting { asked: false });
+        // Read: not asked yet, so now it asks.
+        permission::learned(Permission::NotAsked, false, cx);
+        assert_eq!(super::test_state(cx), Test::Waiting { asked: true });
+        assert_eq!(super::permission_asks(cx), 1);
+        // A poll while the question is up.
+        permission::learned(Permission::NotAsked, false, cx);
+        assert_eq!(super::test_state(cx), Test::Waiting { asked: true });
+        // Its answer is still "not asked": no question ever showed.
+        permission::learned(Permission::NotAsked, true, cx);
+        assert_eq!(super::test_state(cx), Test::Unanswered);
+        // Nothing waits any more, so a later answer sends nothing.
+        permission::learned(Permission::Allowed { time_sensitive: false }, true, cx);
+        assert_eq!(super::test_state(cx), Test::Unanswered);
+    });
+    assert!(cx.delivered_system_notifications().is_empty());
+}
+
+#[gpui_kit::test]
+fn send_test_sends_when_the_answer_is_yes_and_shows_a_refusal(cx: &mut TestAppContext) {
+    cx.update(|cx| {
+        cx.set_app_identity("app.getwormhole.terminal", "Wormhole");
+        cx.set_global(crate::settings::SettingsStore::for_test());
+        cx.set_global(crate::app_state::AppState::for_test(1));
+        init(cx);
+        super::pretend_permission(Permission::Checking, cx);
+        super::send_test(cx);
+        permission::learned(Permission::Allowed { time_sensitive: false }, false, cx);
+        assert_eq!(super::test_state(cx), Test::Sent);
+        // The centre's completion handler reports a refusal later.
+        test_banner::posted("something else", Some("no".into()), cx);
+        assert_eq!(super::test_state(cx), Test::Sent, "only the test's own answer counts");
+        test_banner::posted(super::TEST_ID, Some("not allowed".into()), cx);
+        assert_eq!(super::test_state(cx), Test::Refused("not allowed".into()));
+    });
 }

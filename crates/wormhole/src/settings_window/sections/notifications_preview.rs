@@ -1,5 +1,6 @@
-//! Notifications' preview: two banners as macOS shows them, one for a terminal that needs input and
-//! one for an agent that finished, drawn in the theme's colours over the window's own surface.
+//! Notifications' preview: a banner as macOS shows it, for a terminal that needs input, drawn in the
+//! theme's colours over the window's own surface. One banner, not two: the preview strip is at most a
+//! quarter of the window tall, and a second banner was cut off at its edge.
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -20,7 +21,7 @@ const BANNER_W: f32 = 344.0;
 /// The app's icon in a banner.
 const BANNER_ICON: f32 = 32.0;
 
-/// The banners, and what they show under them.
+/// The banner, and what it shows under it.
 pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
     let icon = app_icon_for(cx.global::<SettingsStore>().tokens.appearance);
@@ -33,8 +34,7 @@ pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<Se
                 .flex()
                 .flex_col()
                 .items_center()
-                .gap_3()
-                .p_4()
+                .p_3()
                 .rounded(ui.radius_lg)
                 .outlined(ui, ui.border)
                 .bg(ui.background)
@@ -43,12 +43,6 @@ pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<Se
                     icon,
                     "api needs input", // text: sample (a made-up notification of the preview)
                     "Allow edit of src/limits.rs?", // text: sample (a made-up notification of the preview)
-                ))
-                .child(banner(
-                    ui,
-                    icon,
-                    "Release notes finished", // text: sample (a made-up notification of the preview)
-                    "Claude Code · 12m",      // text: sample (a made-up notification of the preview)
                 )),
         )
         .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION)))

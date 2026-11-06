@@ -21,7 +21,8 @@
 //! agent moving on) takes it down.
 //!
 //! By file: `route` which way a run posts, `announce` what an event says and where it goes, `respond`
-//! what a click does and taking one down, `permission` macOS's say, `watch` what changed; this file
+//! what a click does and taking one down, `permission` macOS's say, `test_banner` the Settings test and its
+//! answer, `watch` what changed; this file
 //! holds the shared state, the tick and the posting.
 
 mod watch;
@@ -30,6 +31,7 @@ mod announce;
 mod permission;
 mod respond;
 mod route;
+mod test_banner;
 #[cfg(test)]
 mod tests;
 
@@ -66,6 +68,7 @@ pub(crate) use permission::{permission_asks, pretend_permission};
 pub(crate) use respond::tag;
 pub(crate) use respond::{dismiss, reply, respond};
 use route::{Route, route, settled};
+pub(crate) use test_banner::{Test, send_test, state as test_state};
 
 /// The actions a notification can carry (`Notice::category` picks which).
 pub(crate) const OPEN: &str = "open";
@@ -89,6 +92,8 @@ struct Notifier {
     /// there is something to take down (the tick checks the tab in front every 400 ms).
     up: HashSet<String>,
     permission: Option<Permission>,
+    /// Where "Send test" stands.
+    test: Test,
     /// What the `Log` route would have posted (devctl reads it).
     log: Vec<Notice>,
     /// How many times macOS was asked for permission (a test or test instance has no macOS to ask:
@@ -145,11 +150,9 @@ pub(crate) fn init(cx: &mut App) {
         while let Ok(message) = rx.recv().await {
             cx.update(|cx| match message {
                 FromCenter::Response(response) => respond(response, cx),
-                FromCenter::Permission(permission) => {
-                    if notifier(cx).permission.replace(permission) != Some(permission) {
-                        cx.refresh_windows();
-                    }
-                }
+                FromCenter::Permission(permission) => permission::learned(permission, false, cx),
+                FromCenter::Asked(permission) => permission::learned(permission, true, cx),
+                FromCenter::Posted { id, error } => test_banner::posted(&id, error, cx),
             });
         }
     })
@@ -212,7 +215,9 @@ pub(crate) fn time_sensitive(cx: &mut App) -> bool {
     notifier(cx).route == Route::Center && system::entitled_to_time_sensitive()
 }
 
-fn post(notice: Notice, cx: &mut App) {
+/// Hand `notice` to the route. Returns why it could not be, for the routes that know at once; the
+/// centre answers later (`FromCenter::Posted`).
+fn post(notice: Notice, cx: &mut App) -> Option<String> {
     let notifier = notifier(cx);
     notifier.up.insert(notice.id.clone());
     match notifier.route {
@@ -224,6 +229,7 @@ fn post(notice: Notice, cx: &mut App) {
         Route::Script => {
             if let Err(err) = system::post_by_script(&notice) {
                 tracing::warn!("could not show a notification: {err}");
+                return Some(err.to_string());
             }
         }
         Route::Gpui => {
@@ -241,6 +247,7 @@ fn post(notice: Notice, cx: &mut App) {
         Route::Log => notifier.log.push(notice),
         _ => {}
     }
+    None
 }
 
 /// A category's buttons. Open and Show Changes bring the app forward; typing a reply needs no
@@ -259,28 +266,6 @@ pub(crate) fn actions(category: Category) -> &'static [Button] {
 /// The last command that ended by itself in each tab, and how long it ran.
 pub(crate) fn finished_commands(cx: &App) -> Option<&HashMap<i64, (String, std::time::Duration)>> {
     cx.try_global::<Notifier>().map(|notifier| &notifier.watch.finished)
-}
-
-/// "Send test": a real banner, as "needs input" would be, about the terminal in front.
-pub(crate) fn send_test(cx: &mut App) {
-    let name = AppState::front_window(cx)
-        .and_then(|front| front.workspace.read_with(cx, |ws, _| ws.active_session_name()).ok())
-        .unwrap_or_else(|| "Terminal".into());
-    let level = notify::interruption_level(Kind::NeedsYou, time_sensitive(cx));
-    let sound = notify::sound(Kind::NeedsYou, level, settings(cx).notify_sound);
-    post(
-        Notice {
-            id: TEST_ID.to_string(),
-            thread: TEST_ID.to_string(),
-            title: format!("{name} needs input"),
-            subtitle: "Wormhole · test".to_string(),
-            body: "This is how a terminal that needs input is announced.".to_string(),
-            level,
-            sound,
-            category: Category::Plain,
-        },
-        cx,
-    );
 }
 
 /// devctl: what the `Log` route kept, oldest first.

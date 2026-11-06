@@ -72,7 +72,16 @@ pub enum Permission {
 /// What the notification centre reports back, from any thread.
 pub enum FromCenter {
     Response(Response),
+    /// The permission as read.
     Permission(Permission),
+    /// The permission as it stands after macOS was asked (its question answered or never shown).
+    Asked(Permission),
+    /// The centre took the request `id`, or refused it with `error`. Accepting it is not showing it:
+    /// Focus and the alert style can still keep the banner away.
+    Posted {
+        id: String,
+        error: Option<String>,
+    },
 }
 
 /// A button of a notification: what it answers with, its label, and what pressing it does.

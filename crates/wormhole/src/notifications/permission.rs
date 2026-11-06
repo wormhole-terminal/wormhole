@@ -12,6 +12,15 @@ pub(crate) fn permission(cx: &App) -> Permission {
     cx.try_global::<Notifier>().and_then(|n| n.permission).unwrap_or(Permission::OutsideBundle)
 }
 
+/// macOS said `permission` (`to_ask`: in answer to our question). A press of "Send test" that was
+/// waiting for it goes on.
+pub(super) fn learned(permission: Permission, to_ask: bool, cx: &mut App) {
+    if notifier(cx).permission.replace(permission) != Some(permission) {
+        cx.refresh_windows();
+    }
+    super::test_banner::permission_arrived(permission, to_ask, cx);
+}
+
 /// Read the permission again (the answer arrives a moment later).
 pub(crate) fn refresh_permission(cx: &mut App) {
     #[cfg(test)]

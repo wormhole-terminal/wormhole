@@ -51,6 +51,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- Settings → Notifications: "Send test" was only offered once macOS had allowed notifications, and when it
+  did nothing it said nothing. It is now a row of its own, "Send a test notification", always there: it
+  asks macOS first when that has not been asked and sends once you allow it, says when notifications are off
+  in System Settings (with a button to open them) or when macOS refused the request, and says it was sent
+  otherwise. The preview shows one banner, which fits its strip, instead of two with the second cut off.
 - Starting many terminals at the same moment (a relaunch attaching a window full of them, or a script opening
   several) now and then failed for one of them with "Unknown error: -6": while others were being made, the
   system's `openpty` call sometimes failed to name the new pseudo-terminal's device (`ENXIO`, which it reported

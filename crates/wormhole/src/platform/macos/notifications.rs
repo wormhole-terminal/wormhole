@@ -99,10 +99,13 @@ impl Center {
             &content,
             None,
         );
-        let done = RcBlock::new(|error: *mut NSError| {
-            if let Some(error) = error_of(error) {
+        let (tx, id) = (self.tx.clone(), notice.id.clone());
+        let done = RcBlock::new(move |error: *mut NSError| {
+            let error = error_of(error);
+            if let Some(error) = &error {
                 tracing::warn!("posting a notification failed: {error}");
             }
+            let _ = tx.try_send(FromCenter::Posted { id: id.clone(), error });
         });
         self.center.addNotificationRequest_withCompletionHandler(&request, Some(&done));
     }
@@ -122,7 +125,7 @@ impl Center {
             if let Some(error) = error_of(error) {
                 tracing::warn!("asking for notification permission failed: {error}");
             }
-            read_permission(&center, tx.clone());
+            read_permission(&center, tx.clone(), FromCenter::Asked);
         });
         self.center.requestAuthorizationWithOptions_completionHandler(
             UNAuthorizationOptions::Alert | UNAuthorizationOptions::Sound,
@@ -132,12 +135,16 @@ impl Center {
 
     /// Read the permission; the answer arrives on the channel.
     pub fn refresh_permission(&self) {
-        read_permission(&self.center, self.tx.clone());
+        read_permission(&self.center, self.tx.clone(), FromCenter::Permission);
     }
 }
 
 #[allow(unsafe_code)]
-fn read_permission(center: &UNUserNotificationCenter, tx: Sender<FromCenter>) {
+fn read_permission(
+    center: &UNUserNotificationCenter,
+    tx: Sender<FromCenter>,
+    message: fn(Permission) -> FromCenter,
+) {
     let done = RcBlock::new(move |settings: std::ptr::NonNull<UNNotificationSettings>| {
         // SAFETY: the center hands the handler a valid settings object for the call's duration.
         let settings = unsafe { settings.as_ref() };
@@ -148,7 +155,7 @@ fn read_permission(center: &UNUserNotificationCenter, tx: Sender<FromCenter>) {
                 time_sensitive: settings.timeSensitiveSetting() == UNNotificationSetting::Enabled,
             },
         };
-        let _ = tx.try_send(FromCenter::Permission(permission));
+        let _ = tx.try_send(message(permission));
     });
     center.getNotificationSettingsWithCompletionHandler(&done);
 }

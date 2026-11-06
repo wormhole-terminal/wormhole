@@ -9,7 +9,10 @@ settings-section-notifications = Notifications
 settings-notifications-group-macos = macOS
 
 settings-notifications-notify-permission = Notifications in System Settings
-    .keywords = permission allow system settings send test banner
+    .keywords = permission allow system settings
+
+settings-notifications-notify-test = Send a test notification
+    .keywords = test banner try check send permission
 
 ## Notify me when
 
@@ -90,6 +93,13 @@ settings-notifications-off-hint = Nothing is delivered until turned on there
 settings-notifications-outside-the-app-bundle = Outside the app bundle
 settings-notifications-outside-bundle-hint = cargo run: osascript, no actions or grouping
 settings-notifications-send-test = Send test
+settings-notifications-test-idle = Shows a banner the way a terminal that needs input does
+settings-notifications-test-waiting = Waiting for macOS. Answer its question and the test is sent
+settings-notifications-test-sent = Sent. No banner? Check Focus, and the alert style in System Settings
+settings-notifications-test-denied = Off in System Settings. Turn { -brand } on there, then try again
+settings-notifications-test-unanswered = macOS did not turn notifications on. Turn { -brand } on in System Settings, then try again
+# { $error } is the reason macOS gave for refusing the notification, in its own words.
+settings-notifications-test-refused = macOS refused the notification: { $error }
 settings-notifications-open-system-settings = Open System Settings
 settings-notifications-allow-notifications = Allow notifications
 settings-notifications-needs-you-hint = An agent asks a question or for permission
