@@ -9,6 +9,7 @@ import PanelModel
 import PanelUI
 import PanesModel
 import PanesUI
+import SidebarUI
 import TerminalUI
 import WorkspaceModel
 
@@ -18,6 +19,10 @@ public final class WindowHub {
     public let terminals: TerminalViews
     public let notices = NoticeCenter()
     public let drag = PaneDragSession()
+    /// ⌘F while the sidebar has the keyboard is its search's, else the terminal's find.
+    public let sidebarSearch = SidebarSearch()
+    /// A terminal dragged out of the sidebar over the panes: the list reports it, the pane area takes the drop.
+    public let terminalDrag = TerminalDragPointer()
     public var actions = HubActions()
     /// The title row's parts as arranged (View ▸ Title Row, the row's own menu).
     public var titleRow = TitleRow.default

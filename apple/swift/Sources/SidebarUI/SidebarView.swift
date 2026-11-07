@@ -16,6 +16,11 @@ public struct SidebarView: View {
     public let appearance: SidebarAppearance
     /// How the window answers closing a group (it asks first when something works in it); nil sends the close at once.
     public let closeGroup: (@MainActor (GroupID) -> Void)?
+    /// What ⌘F asks of the list; the window keeps it, so it can tell whether the sidebar has the keyboard.
+    public let search: SidebarSearch
+    @State var searchText: String
+    @State var searchOpen = false
+    @FocusState var searchFocused: Bool
     @State var hold = CommandHoldMonitor()
     @State var cursor: SidebarStop?
     @State var keysLead = false
@@ -25,22 +30,33 @@ public struct SidebarView: View {
     @State var frames: [DropSlot: CGRect] = [:]
     @State var drag: LiveDrag?
     @State var shifts: [TerminalID: Int] = [:]
+    /// The list's frame in the window, and where a drag's pointer stands in it: what tells a drag over the list from one
+    /// that has left it for the panes.
+    @State var viewport: CGRect = .zero
+    @State var windowPoint: CGPoint = .zero
+    @State var outside = false
     @FocusState var focused: Bool
     @Environment(\.dropPlanner) var dropPlanner
+    @Environment(\.terminalDrag) var terminalDrag
+    @Environment(\.accessibilityReduceMotion) var reduce
     public init(
         state: WorkspaceState, appearance: SidebarAppearance = SidebarAppearance(),
-        closeGroup: (@MainActor (GroupID) -> Void)? = nil, send: @escaping @MainActor (WorkspaceAction) -> Void
+        closeGroup: (@MainActor (GroupID) -> Void)? = nil, search: SidebarSearch = SidebarSearch(),
+        send: @escaping @MainActor (WorkspaceAction) -> Void
     ) {
-        self.init(state: state, appearance: appearance, closeGroup: closeGroup, caught: nil, send: send)
+        self.init(state: state, appearance: appearance, closeGroup: closeGroup, search: search, caught: nil, send: send)
     }
 
     /// A list caught mid-edit, for pictures and tests: a name half typed, a drag in flight, a group's popover open.
     /// The window starts every list at rest.
     init(
-        state: WorkspaceState, appearance: SidebarAppearance, closeGroup: (@MainActor (GroupID) -> Void)?, caught: Caught?,
-        send: @escaping @MainActor (WorkspaceAction) -> Void
+        state: WorkspaceState, appearance: SidebarAppearance, closeGroup: (@MainActor (GroupID) -> Void)?,
+        search: SidebarSearch = SidebarSearch(), caught: Caught?, send: @escaping @MainActor (WorkspaceAction) -> Void
     ) {
         self.state = state
+        self.search = search
+        _searchText = State(initialValue: state.search)
+        _searchOpen = State(initialValue: caught?.searchOpen ?? false)
         self.appearance = appearance
         self.closeGroup = closeGroup
         self.send = send
@@ -53,12 +69,25 @@ public struct SidebarView: View {
         var renaming: TerminalID?
         var drag: LiveDrag?
         var popover: GroupID?
+        var searchOpen = false
     }
 
     public var body: some View {
         let sections = state.sections
         let walk = SidebarWalk(sections)
         let context = context(sections)
+        VStack(spacing: 0) {
+            searchBar
+            list(sections, walk, context)
+        }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { viewport = $0 }
+        .onChange(of: search.requests) { revealSearch() }
+        .onChange(of: state.search) { _, text in if searchText != text { searchText = text } }
+        .onChange(of: searchText) { _, text in if text != state.search { send(.search(text)) } }
+        .onChange(of: focused || searchFocused, initial: true) { _, has in search.hasKeyboard = has }
+    }
+
+    private func list(_ sections: [SidebarSection], _ walk: SidebarWalk, _ context: SidebarContext) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
@@ -76,6 +105,7 @@ public struct SidebarView: View {
             .onChange(of: cursor) { _, stop in if let stop { withAnimation(SidebarMotion.state) { proxy.scrollTo(stop) } } }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .overlay(alignment: .top) { if sections.isEmpty && searching { NothingFound() } }
         .environment(\.sidebarMetrics, SidebarMetrics(density: appearance.density, cards: appearance.cards))
         .environment(\.sidebarLook, appearance)
         .environment(\.showsHints, appearance.forcesHints || hold.showing)
@@ -91,6 +121,7 @@ public struct SidebarView: View {
         .onDisappear { hold.stop() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Terminals")
+        .accessibilityAction(named: SidebarText.searchPlaceholder) { search.reveal() }
     }
 
     private func context(_ sections: [SidebarSection]) -> SidebarContext {
@@ -100,7 +131,9 @@ public struct SidebarView: View {
                 section.head.map { SidebarContext.GroupChoice(id: $0.id, name: $0.name, members: section.rows.map(\.id)) }
             },
             send: send, renaming: renaming, rename: { renaming = $0 }, shifts: shifts,
-            drag: DragHooks(item: drag?.item, moved: { dragMoved($0, $1, sections) }, ended: { dragEnded($0, $1, sections) }),
+            drag: DragHooks(
+                item: drag?.item, moved: { dragMoved($0, $1, sections) }, ended: { dragEnded($0, $1, sections) },
+                window: { dragWindow($0, $1) }),
             everyTerminal: state.all, newInGroup: { newInGroup($0) },
             closeGroup: { closeGroup?($0) ?? send(.closeGroup($0)) }, popover: popover, openPopover: { popover = $0 })
     }

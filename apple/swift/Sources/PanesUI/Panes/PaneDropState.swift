@@ -1,6 +1,7 @@
 // A terminal on its way over the panes: which pane and edge the pointer is on, and what would become of a
 // drop there (`window/panes/drop.rs`).
 
+import CoreGraphics
 import PanesModel
 
 struct PaneDropState: Equatable {
@@ -9,6 +10,18 @@ struct PaneDropState: Equatable {
     var zone: Zone?
 
     var isHovering: Bool { dragged != nil && target != nil }
+
+    /// The pane and edge under `point`, in the area's coordinates (neither when it is over no pane).
+    mutating func aim(at point: CGPoint, in panes: TabPanes, size: CGSize) {
+        let hit = DropBand.target(panes.shown(width: size.width, height: size.height), at: (point.x, point.y))
+        (target, zone) = (hit?.pane, hit?.zone)
+    }
+
+    /// Let go on what the pointer is over: the terminal that was dragged when the tree took it, else nil.
+    func perform(on panes: inout TabPanes, size: CGSize) -> DraggedTerminal? {
+        guard let dragged, let target, let zone else { return nil }
+        return panes.drop(dragged, on: target, zone, room: PaneRoom(size.width, size.height)) == nil ? dragged : nil
+    }
 }
 
 extension TabPanes {

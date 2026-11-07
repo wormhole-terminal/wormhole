@@ -63,7 +63,7 @@ final class SettingsApplier {
         if changed("split_gaps") { look.splitGaps = values["split_gaps"]?.bool ?? look.splitGaps }
         if changed("column_dividers") { look.columnDividers = values["column_dividers"]?.bool ?? look.columnDividers }
         if changed("terminals_in") { look.tabsOnTop = values["terminals_in"]?.string == "tabs" }
-        if changed("density", "show_groups_as_cards", "fade_group_colors", "show_group_folders", "sidebar_notes", "sidebar_changes", "motion.status") {
+        if changed("density", "show_groups_as_cards", "fade_group_colors", "show_group_folders", "sidebar_notes", "sidebar_changes", "restore_terminal_text", "motion.status") {
             look.sidebar = SidebarSettingsMaker.appearance(values, current: look.sidebar)
         }
     }

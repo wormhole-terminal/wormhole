@@ -30,7 +30,7 @@ extension ActionRouter {
     func findActions() -> [ActionID: Handler] {
         let hub = app.hub
         return [
-            "find": { hub.find(.open) },
+            "find": { if !hub.sidebarSearch.revealIfFocused() { hub.find(.open) } },
             "findNext": { hub.find(.next) },
             "findPrevious": { hub.find(.previous) },
             "useSelectionForFind": { hub.find(.useSelection) },

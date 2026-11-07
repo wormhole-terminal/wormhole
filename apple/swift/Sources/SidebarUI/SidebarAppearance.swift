@@ -33,6 +33,8 @@ public struct SidebarAppearance: Equatable {
     public var showsNotes: Bool
     public var showsChanges: Bool
     public var statusMotion: StatusMotion
+    /// Terminal text is kept between launches (`restore_terminal_text`): while it is not, "Don't keep this terminal's text" is greyed.
+    public var restoresText: Bool
     /// Shows the ⌘1–9 keycaps whatever ⌘ is doing: for pictures and tests.
     public var forcesHints: Bool
     /// The row drawn as if the pointer were over it: for pictures and tests.
@@ -41,7 +43,7 @@ public struct SidebarAppearance: Equatable {
     public init(
         density: SidebarDensity = .regular, cards: Bool = true, fadesGroupColours: Bool = false,
         showsGroupFolders: Bool = true, showsNotes: Bool = true, showsChanges: Bool = true,
-        statusMotion: StatusMotion = .badgePop, forcesHints: Bool = false, hovered: TerminalID? = nil
+        statusMotion: StatusMotion = .badgePop, restoresText: Bool = true, forcesHints: Bool = false, hovered: TerminalID? = nil
     ) {
         self.density = density
         self.cards = cards
@@ -50,6 +52,7 @@ public struct SidebarAppearance: Equatable {
         self.showsNotes = showsNotes
         self.showsChanges = showsChanges
         self.statusMotion = statusMotion
+        self.restoresText = restoresText
         self.forcesHints = forcesHints
         self.hovered = hovered
     }

@@ -10,6 +10,8 @@ struct DragHooks {
     var item: DragItem?
     var moved: @MainActor (DragItem, CGPoint) -> Void
     var ended: @MainActor (DragItem, CGPoint) -> Void
+    /// Where the pointer is in the window's coordinates, for a drag that leaves the list for the panes.
+    var window: @MainActor (DragItem, CGPoint) -> Void = { _, _ in }
 
     func lifts(_ candidate: DragItem) -> Bool { item == candidate }
 
@@ -31,7 +33,10 @@ extension View {
         simultaneousGesture(
             DragGesture(minimumDistance: DragLift.slop, coordinateSpace: .named(DragLift.space))
                 .onChanged { hooks.moved(item, $0.location) }
-                .onEnded { hooks.ended(item, $0.location) })
+                .onEnded { hooks.ended(item, $0.location) }
+        )
+        .simultaneousGesture(
+            DragGesture(minimumDistance: DragLift.slop, coordinateSpace: .global).onChanged { hooks.window(item, $0.location) })
     }
 
     /// Reports where this line stands in the list, for the drop to find it.

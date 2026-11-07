@@ -25,11 +25,11 @@ struct PaneDropDelegate: DropDelegate {
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        let rects = panes.shown(width: size.width, height: size.height)
-        let hit = DropBand.target(rects, at: (info.location.x, info.location.y))
-        (state.target, state.zone) = (hit?.pane, hit?.zone)
-        guard let dragged = state.dragged, let hit else { return DropProposal(operation: .cancel) }
-        let refused = panes.dropRefusal(dragged, on: hit.pane, hit.zone, room: room) != nil
+        state.aim(at: info.location, in: panes, size: size)
+        guard let dragged = state.dragged, let target = state.target, let zone = state.zone else {
+            return DropProposal(operation: .cancel)
+        }
+        let refused = panes.dropRefusal(dragged, on: target, zone, room: room) != nil
         return DropProposal(operation: refused ? .forbidden : .move)
     }
 
@@ -37,8 +37,7 @@ struct PaneDropDelegate: DropDelegate {
 
     func performDrop(info: DropInfo) -> Bool {
         defer { state = PaneDropState() }
-        guard let dragged = state.dragged, let target = state.target, let zone = state.zone else { return false }
-        guard panes.drop(dragged, on: target, zone, room: room) == nil else { return false }
+        guard let dragged = state.perform(on: &panes, size: size) else { return false }
         onDropped(dragged)
         return true
     }

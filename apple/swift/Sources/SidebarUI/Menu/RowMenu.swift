@@ -10,6 +10,7 @@ import WorkspaceModel
 struct RowMenu: View {
     let terminal: TerminalSummary
     let context: SidebarContext
+    @Environment(\.sidebarLook) private var look
 
     var body: some View {
         let id = terminal.id
@@ -33,6 +34,7 @@ struct RowMenu: View {
         if terminal.splitID != nil { Button("Remove from split") { context.send(.leaveSplit(id)) } }
         Button(terminal.isPinned ? "Unpin" : "Pin to top") { context.send(.togglePin(id)) }
         Toggle("Don't keep this terminal's text", isOn: Binding(get: { terminal.forgetsText }, set: { context.send(.setForgetText(id, $0)) }))
+            .disabled(!look.restoresText)
         Toggle("Hide from Agents", isOn: Binding(get: { terminal.isAgentHidden }, set: { context.send(.setAgentHidden(id, $0)) }))
         Divider()
         let path = terminal.folder.map { NSString(string: $0).expandingTildeInPath }

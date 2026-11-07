@@ -13,6 +13,12 @@ struct LiveDrag: Equatable {
 }
 
 extension EnvironmentValues {
+    /// Where a terminal dragged out of the list is over the window, for the pane area to take its drop; the window's
+    /// root sets it. Without one a row dragged out of the list lands nowhere.
+    @Entry public var terminalDrag: TerminalDragPointer?
+}
+
+extension EnvironmentValues {
     /// The store to ask what dropping a terminal here would do (the core's answer); the window's root sets it. Without
     /// one nothing would change, so a drag drops nothing.
     @Entry public var dropPlanner: WorkspaceStore?
@@ -37,13 +43,33 @@ extension SidebarView {
         }
     }
 
+    /// A terminal dragged past the list's sides is over the panes (or the panel), not over a line of the list; a group never is.
+    private func leftList(_ item: DragItem, _ point: CGPoint) -> Bool {
+        guard case .terminal = item, viewport.width > 0 else { return false }
+        return point.x < 0 || point.x > viewport.width
+    }
+
     func dragMoved(_ item: DragItem, _ point: CGPoint, _ sections: [SidebarSection]) {
-        drag = LiveDrag(item: item, point: point, aim: aim(item, at: point, sections))
+        outside = leftList(item, point)
+        drag = LiveDrag(item: item, point: point, aim: outside ? nil : aim(item, at: point, sections))
+        if case .terminal(let id) = item { if outside { terminalDrag?.move(id, to: windowPoint) } else { terminalDrag?.leave() } }
+    }
+
+    /// The pointer in the window's coordinates, as its second gesture reports it.
+    func dragWindow(_ item: DragItem, _ point: CGPoint) {
+        windowPoint = point
+        if outside, case .terminal(let id) = item { terminalDrag?.move(id, to: point) }
     }
 
     func dragEnded(_ item: DragItem, _ point: CGPoint, _ sections: [SidebarSection]) {
         // Esc ended it already.
         guard drag != nil else { return }
+        defer { outside = false }
+        if outside, case .terminal(let id) = item {
+            terminalDrag?.release(id, at: windowPoint)
+            drag = nil
+            return
+        }
         if let action = aim(item, at: point, sections)?.action { withAnimation(SidebarMotion.list) { send(action) } }
         drag = nil
     }

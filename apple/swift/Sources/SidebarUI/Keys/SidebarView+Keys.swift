@@ -7,6 +7,12 @@ extension SidebarView {
     func handle(_ press: KeyPress, _ walk: SidebarWalk) -> KeyPress.Result {
         if press.key == .escape, drag != nil {
             drag = nil
+            outside = false
+            terminalDrag?.leave()
+            return .handled
+        }
+        if press.key == .escape, searching || searchOpen {
+            endSearch()
             return .handled
         }
         keysLead = true

@@ -43,6 +43,25 @@ final class WorkspaceFFITests: XCTestCase {
         XCTAssertEqual(store.send(.select(99)), .unknown)
     }
 
+    func testASearchCutsTheListAndANewTerminalEndsIt() {
+        let (store, _) = make()
+        (0..<3).forEach { _ in store.send(.newTerminal) }
+        store.send(.rename(1, "build docs"))
+        store.send(.rename(2, "vim notes"))
+        store.send(.newGroup([3]))
+        store.send(.search("VIM  notes"))
+        XCTAssertEqual(store.state.search, "VIM  notes")
+        XCTAssertEqual(store.state.terminals.map(\.id), [2], "every word, any case")
+        XCTAssertEqual(store.state.sections.compactMap(\.head).count, 0, "a group with nothing found is not listed")
+        XCTAssertEqual(store.state.all.count, 3, "the total stays")
+        XCTAssertEqual(store.state.sections.first?.rows.first?.number, 2, "numbers do not move under a search")
+        store.send(.search("zzz"))
+        XCTAssertTrue(store.state.sections.isEmpty)
+        store.send(.newTerminal)
+        XCTAssertEqual(store.state.search, "", "a terminal that a search would hide ends it")
+        XCTAssertEqual(store.state.terminals.count, 4)
+    }
+
     func testGroupsFoldAndTheirRowsLeaveTheSnapshot() {
         let (store, _) = make()
         (0..<3).forEach { _ in store.send(.newTerminal) }

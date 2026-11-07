@@ -14,7 +14,7 @@ struct TerminalPanes: View {
     var body: some View {
         let state = hub.state
         PaneArea(
-            panes: hub.panesBinding, gaps: look.splitGaps, session: hub.drag, actions: hub.paneActions,
+            panes: hub.panesBinding, gaps: look.splitGaps, session: hub.drag, sidebarDrag: hub.terminalDrag, actions: hub.paneActions,
             info: { info($0, in: state) }
         ) { id in
             TerminalSurface(hub: hub, id: id).id(hub.restarts[id, default: 0])

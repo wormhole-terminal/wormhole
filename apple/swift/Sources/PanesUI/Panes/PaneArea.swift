@@ -7,6 +7,7 @@
 import DesignSystem
 import PanesModel
 import SwiftUI
+import WorkspaceModel
 
 enum PaneSpace { static let name = "pane-area" }
 
@@ -16,31 +17,38 @@ public struct PaneArea<Content: View>: View {
     let info: (PaneID) -> PaneInfo
     let actions: PaneActions
     let session: PaneDragSession
+    /// A terminal dragged out of the sidebar's list, which the list reports as it goes (the list's drag is its own gesture).
+    let sidebarDrag: TerminalDragPointer?
     @ViewBuilder let content: (PaneID) -> Content
-    @State private var drop = PaneDropState()
+    @State var drop = PaneDropState()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(
-        panes: Binding<TabPanes>, gaps: Bool, session: PaneDragSession, actions: PaneActions = PaneActions(),
-        info: @escaping (PaneID) -> PaneInfo, @ViewBuilder content: @escaping (PaneID) -> Content
+        panes: Binding<TabPanes>, gaps: Bool, session: PaneDragSession, sidebarDrag: TerminalDragPointer? = nil,
+        actions: PaneActions = PaneActions(), info: @escaping (PaneID) -> PaneInfo, @ViewBuilder content: @escaping (PaneID) -> Content
     ) {
-        (_panes, self.gaps, self.session, self.actions, self.info, self.content) = (panes, gaps, session, actions, info, content)
+        (_panes, self.gaps, self.session, self.sidebarDrag, self.actions, self.info, self.content) =
+            (panes, gaps, session, sidebarDrag, actions, info, content)
     }
 
     public var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
+            let origin = proxy.frame(in: .global).origin
             ZStack(alignment: .topLeading) {
                 ForEach(panes.tree.rects(width: size.width, height: size.height), id: \.id) { pane in
                     frame(pane.id, rect: pane.rect, size: size)
                 }
                 PaneDividers(panes: $panes, size: size, gaps: gaps, session: session)
                 PaneDropZones(panes: panes, state: drop, size: size, names: { info($0).title })
+                if let over = sidebarDrag?.over { ghost(over, origin: origin) }
             }
             .frame(width: size.width, height: size.height, alignment: .topLeading)
             .coordinateSpace(.named(PaneSpace.name))
             .onDrop(of: [.plainText], delegate: PaneDropDelegate(state: $drop, panes: $panes, size: size, onDropped: actions.dropped))
             .animation(reduceMotion ? Motion.fade : Motion.layout, value: panes)
+            .onChange(of: sidebarDrag?.over, initial: true) { _, over in follow(over, size: size, origin: origin) }
+            .onChange(of: sidebarDrag?.released) { _, released in if let released { land(released, size: size, origin: origin) } }
         }
     }
 
