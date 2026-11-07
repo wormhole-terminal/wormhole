@@ -12,7 +12,7 @@ use gpui_kit::*;
 use super::scale::{Edges, TextRole};
 use crate::settings::UiColors;
 
-/// The head of a group, above its [`setting_group`] card: the name as a quiet label (13 / 600, muted)
+/// The head of a group, above its [`setting_group`] card: the name as a semibold label (13 / 600)
 /// from the card's inner edge, and a note at the right ("Same values as the funnel", caption, faint).
 /// It has no space below it: what holds the head and the card puts `gap_2` between them.
 #[track_caller]
@@ -23,7 +23,7 @@ pub fn setting_group_head(ui: UiColors, title: &str, aside: Option<&str>) -> Div
         .justify_between()
         .gap_4()
         .px_4()
-        .child(div().text_label().text_color(ui.muted).child(title.to_string()))
+        .child(div().text_label().text_color(ui.text).child(title.to_string()))
         .children(aside.map(|aside| {
             div().min_w_0().truncate().text_caption().text_color(ui.faint).child(aside.to_string())
         }))
