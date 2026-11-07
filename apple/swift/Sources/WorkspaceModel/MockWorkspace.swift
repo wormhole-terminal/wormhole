@@ -50,7 +50,7 @@ public enum MockWorkspace {
         let groups = [
             TerminalGroup(id: "wormhole", name: "Wormhole", members: [1, 2, 3, 4], color: .blue, folder: app),
             TerminalGroup(id: "website", name: "Website", members: [5, 6, 7], color: .purple, folder: web),
-            TerminalGroup(id: "infra", name: "Infra", members: [8, 9], isCollapsed: true, color: .teal, folder: "~/infra"),
+            TerminalGroup(id: "infra", name: "Infra", members: [8, 9], isCollapsed: true, color: .cyan, folder: "~/infra"),
         ]
         // Groups and loose terminals side by side; the pinned loose ones (10, 12) lead whatever the order says.
         let arrangement: [TopItem] = [.group("wormhole"), .group("website"), .terminal(11), .group("infra"), .terminal(13)]

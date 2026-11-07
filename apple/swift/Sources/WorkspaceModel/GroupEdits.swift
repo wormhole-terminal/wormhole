@@ -14,7 +14,7 @@ extension WorkspaceState {
         return "Group \((1...).first { !names.contains("Group \($0)") } ?? 1)"
     }
 
-    private var nextGroupColor: FolderColor { FolderColor.allCases[groups.count % FolderColor.allCases.count] }
+    private var nextGroupColor: GroupColor { GroupColor.inTurn[groups.count % GroupColor.inTurn.count] }
 
     private func groupName(_ name: String?) -> String {
         let name = name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""

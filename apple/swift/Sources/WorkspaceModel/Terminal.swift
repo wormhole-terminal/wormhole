@@ -92,7 +92,7 @@ public struct TerminalGroup: Sendable, Equatable, Identifiable {
     public var name: String
     public var members: [TerminalID]
     public var isCollapsed: Bool
-    public var color: FolderColor?
+    public var color: GroupColor?
     /// The folder the group stands for, as a path.
     public var folder: String?
     /// A pinned group stays as a head with no terminal in it.
@@ -100,7 +100,7 @@ public struct TerminalGroup: Sendable, Equatable, Identifiable {
 
     public init(
         id: String, name: String, members: [TerminalID], isCollapsed: Bool = false,
-        color: FolderColor? = nil, folder: String? = nil, isPinned: Bool = false
+        color: GroupColor? = nil, folder: String? = nil, isPinned: Bool = false
     ) {
         self.id = id
         self.name = name

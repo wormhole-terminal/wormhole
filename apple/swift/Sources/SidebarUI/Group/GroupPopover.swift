@@ -25,7 +25,7 @@ struct GroupPopover: View {
                 .onSubmit { commit(); close() }
                 .onKeyPress(.escape) { close(); return .handled }
             HStack(spacing: Space._2) {
-                ForEach(FolderColor.allCases, id: \.self) { colour in
+                ForEach(GroupColor.allCases, id: \.self) { colour in
                     Button { edits.setColor(group.id, colour) } label: { swatch(colour) }
                         .buttonStyle(.plain)
                         .accessibilityLabel(colour.rawValue.capitalized)
@@ -45,7 +45,7 @@ struct GroupPopover: View {
         .onDisappear(perform: commit)
     }
 
-    private func swatch(_ colour: FolderColor) -> some View {
+    private func swatch(_ colour: GroupColor) -> some View {
         Circle().fill(colour.mark(tokens).color)
             .frame(width: Self.swatch, height: Self.swatch)
             .overlay { if group.color == colour { Circle().strokeBorder(tokens.textPrimary, lineWidth: tokens.metrics.focusRingWidth) } }

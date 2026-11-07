@@ -19,7 +19,7 @@ struct GroupMenu: View {
             Divider()
             Button("Rename…") { context.openPopover(group.id) }
             Menu("Colour") {
-                ForEach(FolderColor.allCases, id: \.self) { colour in
+                ForEach(GroupColor.allCases, id: \.self) { colour in
                     Toggle(colour.rawValue.capitalized, isOn: Binding(get: { group.color == colour }, set: { _ in edits.setColor(group.id, colour) }))
                 }
                 Divider()

@@ -75,15 +75,16 @@ enum GroupWash {
     }
 }
 
-extension FolderColor {
+extension GroupColor {
     /// Where on the colour wheel (OKLCH hue, degrees) the name is.
     var hue: Double {
         switch self {
+        case .grey: 0  // unused: grey has no chroma
         case .red: 25
         case .orange: 55
         case .yellow: 95
         case .green: 145
-        case .teal: 190
+        case .cyan: 190
         case .blue: 255
         case .purple: 305
         case .pink: 350
@@ -91,7 +92,7 @@ extension FolderColor {
     }
 
     /// The colour as the head's dot and the menu show it.
-    func mark(_ tokens: ThemeTokens) -> RGBA { GroupWash.swatch(hue: hue, tokens) }
+    func mark(_ tokens: ThemeTokens) -> RGBA { GroupWash.swatch(hue: hue, grey: self == .grey, tokens) }
 
     /// The colour its card is washed with.
     func wash(_ tokens: ThemeTokens) -> RGBA { GroupWash.tint(mark(tokens), tokens) }

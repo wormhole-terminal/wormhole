@@ -98,7 +98,7 @@ final class GroupActionTests: XCTestCase {
         let made = group(state, "group-1")
         XCTAssertEqual(made?.name, "Group 1")
         XCTAssertEqual(made?.members, [11])
-        XCTAssertEqual(made?.color, FolderColor.allCases[3])
+        XCTAssertEqual(made?.color, GroupColor.inTurn[3])
         XCTAssertEqual(sectionIDs(state), ["loose-10", "wormhole", "website", "group-1", "infra", "loose-13"])
         XCTAssertEqual(group(reduce(mock, .newGroupWithTerminal(11, name: " Notes ")), "group-1")?.name, "Notes")
     }
@@ -117,5 +117,33 @@ final class GroupActionTests: XCTestCase {
         for _ in 1...2 { state = reduce(state, .newGroup("")) }
         XCTAssertEqual(state.groups.suffix(2).map(\.name), ["Group 1", "Group 2"])
         XCTAssertEqual(state.groups.suffix(2).map(\.id), ["group-1", "group-2"])
+    }
+}
+
+final class GroupColorTests: XCTestCase {
+    func testTheNineNamesInTheMenusOrder() {
+        XCTAssertEqual(
+            GroupColor.allCases.map(\.rawValue),
+            ["grey", "blue", "red", "yellow", "green", "pink", "purple", "cyan", "orange"])
+    }
+
+    func testNewGroupsTakeTheNextColourInTurnAndNeverGrey() {
+        XCTAssertEqual(GroupColor.inTurn.count, 8)
+        XCTAssertFalse(GroupColor.inTurn.contains(.grey))
+        var state = WorkspaceState()
+        for _ in 0..<9 { state = reduce(state, .newGroup("")) }
+        XCTAssertEqual(state.groups.map(\.color), (0..<9).map { GroupColor.inTurn[$0 % 8] })
+    }
+
+    func testOldSavedNamesStillMean() {
+        XCTAssertEqual(GroupColor(key: "teal"), .cyan)
+        XCTAssertEqual(GroupColor(key: "gray"), .grey)
+        XCTAssertEqual(GroupColor(key: "blue"), .blue)
+        XCTAssertNil(GroupColor(key: "mauve"))
+    }
+
+    func testAFolderHasItsOwnEight() {
+        XCTAssertEqual(FolderColor.allCases.count, 8)
+        XCTAssertTrue(FolderColor.allCases.map(\.rawValue).contains("teal"))
     }
 }

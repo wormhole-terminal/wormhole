@@ -91,6 +91,5 @@ final class WordingTests: XCTestCase {
         XCTAssertEqual(AgentID.codex.shortName, "Codex")
         XCTAssertEqual(AgentID.copilot.shortName, "GitHub Copilot")
         XCTAssertEqual(AgentID.fm.shortName, "Foundation Models")
-        XCTAssertEqual(FolderColor.allCases.count, 8)
     }
 }

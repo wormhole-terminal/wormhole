@@ -8,12 +8,12 @@ import WorkspaceModel
 @MainActor
 public struct GroupEdits {
     public var rename: (_ group: String, _ name: String) -> Void
-    public var setColor: (_ group: String, _ colour: FolderColor?) -> Void
+    public var setColor: (_ group: String, _ colour: GroupColor?) -> Void
     public var togglePin: (_ group: String) -> Void
     public var ungroup: (_ group: String) -> Void
     public var close: (_ group: String) -> Void
     public init(
-        rename: @escaping (String, String) -> Void, setColor: @escaping (String, FolderColor?) -> Void,
+        rename: @escaping (String, String) -> Void, setColor: @escaping (String, GroupColor?) -> Void,
         togglePin: @escaping (String) -> Void, ungroup: @escaping (String) -> Void, close: @escaping (String) -> Void
     ) {
         (self.rename, self.setColor, self.togglePin, self.ungroup, self.close) = (rename, setColor, togglePin, ungroup, close)

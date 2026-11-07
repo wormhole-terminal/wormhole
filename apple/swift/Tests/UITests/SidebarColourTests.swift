@@ -47,7 +47,7 @@ final class SidebarColourTests: XCTestCase {
 
     func testANameIsTheHueItSaysInEveryThemeAndTheEightAreToldApart() throws {
         for (name, tokens) in allTokens {
-            let all = FolderColor.allCases.map { ($0, $0.mark(tokens).oklch) }
+            let all = GroupColor.allCases.filter { $0 != .grey }.sorted { $0.hue < $1.hue }.map { ($0, $0.mark(tokens).oklch) }
             for (colour, lch) in all {
                 XCTAssertLessThan(apart(lch.hue, colour.hue), 8, "\(name): \(colour) is \(lch.hue) deg")
                 XCTAssertGreaterThanOrEqual(lch.chroma, 0.05, "\(name): \(colour) is \(lch.chroma)")
@@ -60,7 +60,7 @@ final class SidebarColourTests: XCTestCase {
 
     func testAColourIsOpaqueAndSeenOnTheWindowAndTheSidebar() throws {
         for (name, tokens) in allTokens {
-            for colour in FolderColor.allCases {
+            for colour in GroupColor.allCases {
                 let shown = colour.mark(tokens)
                 XCTAssertEqual(shown.alpha, 1)
                 for surface in ["surface.window", "surface.panel"] {
@@ -74,7 +74,7 @@ final class SidebarColourTests: XCTestCase {
     func testTextOnAGroupsWashReadsInEveryTheme() throws {
         for (name, tokens) in allTokens {
             let card = try XCTUnwrap(GroupWash.backdrop(tokens))
-            for colour in FolderColor.allCases {
+            for colour in GroupColor.allCases {
                 let wash = colour.wash(tokens).withAlpha(GroupWash.peak).over(card)
                 for (token, ratio) in GroupWash.text {
                     let got = RGBA.contrast(try rgba(tokens, token).over(wash), wash)
@@ -87,7 +87,7 @@ final class SidebarColourTests: XCTestCase {
     func testAWashKeepsItsColourAndOnlyGivesUpLightness() throws {
         var moved = 0
         for (name, tokens) in allTokens {
-            for colour in FolderColor.allCases {
+            for colour in GroupColor.allCases where colour != .grey {
                 let (mark, wash) = (colour.mark(tokens), colour.wash(tokens))
                 if mark == wash { continue }
                 moved += 1
@@ -99,7 +99,7 @@ final class SidebarColourTests: XCTestCase {
     }
 
     func testTheColoursFollowTheThemeAndItsLightOrDarkSide() throws {
-        func blue(_ id: String) throws -> RGBA { FolderColor.blue.mark(try XCTUnwrap(library.theme(id: id)).tokens()) }
+        func blue(_ id: String) throws -> RGBA { GroupColor.blue.mark(try XCTUnwrap(library.theme(id: id)).tokens()) }
         XCTAssertLessThan(try blue("catppuccin_latte").luminance, try blue("catppuccin_mocha").luminance, "a light theme gets the darker blue")
         XCTAssertNotEqual(try blue("nord").hex, try blue("dracula").hex)
         XCTAssertLessThan(try blue("nord").oklch.chroma, try blue("dracula").oklch.chroma, "Nord is muted, Dracula is not")
@@ -113,10 +113,10 @@ final class SidebarColourTests: XCTestCase {
                 cursorText: nil, selectionBackground: base.terminal.selectionBackground, selectionForeground: nil,
                 ansi: base.terminal.ansi.enumerated().map { $0 >= 1 && $0 <= 6 ? RGBA(0.54, 0.54, 0.54) : $1 }),
             metrics: base.metrics, ui: base.ui, syntax: base.syntax)
-        let (teal, green) = (FolderColor.teal.mark(grey).oklch, FolderColor.green.mark(grey).oklch)
-        XCTAssertGreaterThanOrEqual(teal.chroma, GroupWash.chromaMin - 0.01)
+        let (cyan, green) = (GroupColor.cyan.mark(grey).oklch, GroupColor.green.mark(grey).oklch)
+        XCTAssertGreaterThanOrEqual(cyan.chroma, GroupWash.chromaMin - 0.01)
         XCTAssertGreaterThanOrEqual(green.chroma, GroupWash.chromaMin - 0.01)
-        XCTAssertGreaterThanOrEqual(apart(teal.hue, green.hue), 25)
+        XCTAssertGreaterThanOrEqual(apart(cyan.hue, green.hue), 25)
     }
 
     func testAColourOfOnesOwnIsMovedOnlyWhereTheThemeWouldHideIt() throws {

@@ -75,7 +75,7 @@ public enum WorkspaceAction: Sendable, Equatable {
     case splitRight(TerminalID)
 
     case renameGroup(String, String)
-    case setGroupColor(String, FolderColor?)
+    case setGroupColor(String, GroupColor?)
     case setGroupFolder(String, String?)
     /// Pin the group (it stays as a head when its last terminal goes) or let it go again.
     case pinGroup(String)
