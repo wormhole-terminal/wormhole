@@ -54,6 +54,8 @@ mod samples;
 mod sessions;
 mod stage;
 mod terminal;
+#[cfg(all(feature = "devctl", target_os = "macos"))]
+pub(super) use terminal::scrollback_menu;
 mod theme_picker;
 mod title_row;
 mod updates;

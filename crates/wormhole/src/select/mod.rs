@@ -63,8 +63,41 @@ impl Selectable for SelectTrigger {
     }
 }
 
-impl RenderOnce for SelectTrigger {
-    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+impl SelectTrigger {
+    /// Use the same face for a short list drawn by the platform's menu.
+    pub(crate) fn with_menu(
+        self,
+        label: &'static str,
+        value: SharedString,
+        menu: impl Fn(&App) -> crate::platform::Menu + 'static,
+    ) -> Stateful<Div> {
+        let ui = self.ui;
+        let anchor = crate::platform::Anchor::default();
+        let probe = anchor.probe();
+        let open = Rc::new(move |window: &mut Window, cx: &mut App| {
+            crate::platform::show_menu(menu(cx), anchor.below(), window, cx);
+        });
+        let click = open.clone();
+        self.face()
+            .relative()
+            .role(Role::ComboBox)
+            .aria_label(label)
+            .aria_value(value)
+            .focusable()
+            .tab_stop(true)
+            .focus_visible(move |d| d.ringed(ui, ui.focus, ui.focus_ring_width))
+            .child(probe)
+            .on_click(move |_, window, cx| click(window, cx))
+            .on_key_down(move |event, window, cx| {
+                let key = &event.keystroke;
+                if matches!(key.key.as_str(), "up" | "down") && key.modifiers == Modifiers::none() {
+                    cx.stop_propagation();
+                    open(window, cx);
+                }
+            })
+    }
+
+    fn face(self) -> Stateful<Div> {
         let (ui, compact) = (self.ui, self.compact);
         div()
             .id(self.id)
@@ -113,6 +146,12 @@ impl RenderOnce for SelectTrigger {
             })
             .child(div().min_w_0().truncate().child(self.label))
             .child(chevrons(ui))
+    }
+}
+
+impl RenderOnce for SelectTrigger {
+    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+        self.face()
     }
 }
 

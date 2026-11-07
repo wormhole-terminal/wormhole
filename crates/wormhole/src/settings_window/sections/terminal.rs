@@ -25,7 +25,8 @@ use super::open_in_editor;
 use crate::open_in::OpenIn;
 use crate::platform::apps;
 use crate::platform::default_app;
-use crate::select::Choice;
+use crate::platform::{Item, Menu};
+use crate::select::{Choice, SelectTrigger};
 use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::settings_window::registry::{Segment, Setting, toggle};
@@ -173,14 +174,37 @@ fn lines(n: usize) -> String {
     settings_terminal_scrollback_lines(&grouped)
 }
 
-fn draw_scrollback(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let current = settings(cx).scrollback_lines;
+fn scrollback_sizes(current: usize) -> Vec<usize> {
     let mut sizes = SCROLLBACK.to_vec();
     if !sizes.contains(&current) {
         sizes.push(current);
         sizes.sort_unstable();
     }
-    let choices = sizes.into_iter().map(|n| Choice::new(n.to_string(), lines(n))).collect();
+    sizes
+}
+
+pub(in crate::settings_window) fn scrollback_menu(cx: &App) -> Menu {
+    let current = settings(cx).scrollback_lines;
+    scrollback_sizes(current).into_iter().fold(Menu::new(), |menu, size| {
+        menu.item(
+            Item::new(lines(size))
+                .checked(size == current)
+                .on_select(move |_, cx| update_settings(cx, |s| s.scrollback_lines = size)),
+        )
+    })
+}
+
+fn draw_scrollback(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    let current = settings(cx).scrollback_lines;
+    if cfg!(target_os = "macos") {
+        let value: SharedString = lines(current).into();
+        return SelectTrigger::new("select-scrollback-trigger", ui(cx), value.clone())
+            .width(px(SCROLLBACK_W))
+            .with_menu(text(SETTINGS_TERMINAL_SCROLLBACK), value, scrollback_menu)
+            .into_any_element();
+    }
+    let choices =
+        scrollback_sizes(current).into_iter().map(|n| Choice::new(n.to_string(), lines(n))).collect();
     window.select(
         "scrollback",
         div().child(lines(current)).into_any_element(),

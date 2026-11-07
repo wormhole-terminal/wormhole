@@ -131,6 +131,12 @@ pub(crate) fn cli_tool(action: &str, cx: &mut App) {
 /// devctl `settings-select <id>`: open the select of the row `id` (scrollback, icon-theme).
 pub(crate) fn select(id: &str, cx: &mut App) {
     let id = super::sections::select_id(id);
+    #[cfg(target_os = "macos")]
+    if id == Some("scrollback") {
+        return with_page(cx, |_, window, cx| {
+            crate::platform::show_menu(sections::scrollback_menu(cx), Point::default(), window, cx);
+        });
+    }
     with_page(cx, move |page, _, _| page.open_select = id);
 }
 
