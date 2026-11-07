@@ -154,7 +154,8 @@
         "ipc",
         "terminal",
         "import",
-        "onboarding"
+        "onboarding",
+        "workspace"
       ],
       "wormhole-wire": [
         [
