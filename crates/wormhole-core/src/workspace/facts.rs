@@ -47,10 +47,23 @@ pub struct TerminalFacts {
     pub failure: Option<Failure>,
     /// The command is done and left output nobody has seen.
     pub unread: bool,
-    /// Files changed in its repository, when known.
+    /// Files this terminal changed in its repository (`git::attribution`), when known.
     pub changes: Option<usize>,
     /// Notes and tasks still open.
     pub notes: usize,
+    /// The command that just finished, while its result is unseen (done, failed): it still names the
+    /// terminal. Not a running command: `command` is that.
+    pub finished_command: Option<String>,
+    /// The repository the terminal is in, as git names its root: terminals with the same one share a
+    /// repository (`workspace::git_feed`).
+    pub repo: Option<PathBuf>,
+    /// The working tree has uncommitted changes (the tree's own, whatever `changes` counts).
+    pub dirty: bool,
+    /// Commits the branch has that its upstream hasn't, and the other way round.
+    pub ahead: u32,
+    pub behind: u32,
+    /// How many files are changed in the repository, whoever changed them.
+    pub repo_files: Option<usize>,
 }
 
 impl Default for TerminalFacts {
@@ -72,6 +85,12 @@ impl Default for TerminalFacts {
             unread: false,
             changes: None,
             notes: 0,
+            finished_command: None,
+            repo: None,
+            dirty: false,
+            ahead: 0,
+            behind: 0,
+            repo_files: None,
         }
     }
 }

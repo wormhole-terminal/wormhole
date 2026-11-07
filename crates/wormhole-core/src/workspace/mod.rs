@@ -11,19 +11,26 @@
 //! terminal list and its splits. Settings, features, focus areas, saving and the app's other windows
 //! join it as they are extracted.
 //!
-//! Layers inside, lowest first: `facts`, `session`, `action` and `event`, `model` and its `impl`s
-//! (`terminals`, `groups`, `drops`, `splits`, `close`), then `words` and `snapshot`.
+//! Layers inside, lowest first: `facts`, then `status` (a terminal's status machine) and `git_feed`
+//! (what git says of its folder), `session`, `action` and `event`, `model` and its `impl`s
+//! (`terminals`, `groups`, `drops`, `splits`, `close`, `status_feed`, `git_sync`), then `words` and
+//! `snapshot`.
 
 mod action;
 mod close;
 mod drops;
 mod event;
 mod facts;
+mod git_feed;
+mod git_sync;
 mod groups;
 mod model;
+mod open_items;
 mod session;
 mod snapshot;
 mod splits;
+mod status;
+mod status_feed;
 mod terminals;
 mod words;
 
@@ -35,9 +42,14 @@ pub use close::session_after_close;
 pub use drops::DropPlan;
 pub use event::{Event, Refusal, Revisions};
 pub use facts::{Failure, Millis, TerminalFacts};
+pub use git_feed::{
+    ChangeRules, GitFacts, GitFeed, GitJob, PROBE_CONFIRM, Repo, Sight, Ticket, WATCHED_READ, Wanted,
+};
 pub use model::{ModelConfig, WorkspaceModel};
+pub use open_items::open_items;
 pub use snapshot::{
     AgentInfo, ChromeSnapshot, GroupHead, PaneRect, PanesSnapshot, SidebarRow, SidebarSection,
     SidebarSnapshot, SplitInfo,
 };
+pub use status::{Ask, Context, ForegroundLook, Front, StatusEvent, StatusMachine, status_of};
 pub use words::{SecondLine, Tone};

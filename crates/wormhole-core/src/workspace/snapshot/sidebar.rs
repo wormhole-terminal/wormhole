@@ -173,6 +173,11 @@ impl WorkspaceModel {
             of: of as u32,
             spoken,
             name,
+            repo: facts.repo.as_deref().map(|repo| repo.to_string_lossy().into_owned()),
+            dirty: facts.dirty,
+            ahead: facts.ahead,
+            behind: facts.behind,
+            repo_files: facts.repo_files.map(|n| n as u32),
         }
     }
 

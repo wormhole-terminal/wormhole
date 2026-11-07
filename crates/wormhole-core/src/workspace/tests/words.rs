@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use crate::agents::AgentId;
 use crate::view::sidebar::Status;
-use crate::workspace::{Action, Failure, ModelConfig, SecondLine, Tone, WorkspaceModel};
+use crate::workspace::{Action, Failure, ModelConfig, SecondLine, StatusEvent, Tone, WorkspaceModel};
 
 use super::model;
 
@@ -102,12 +102,13 @@ fn the_snapshot_says_when_its_words_next_move_and_an_idle_window_asks_for_nothin
 #[test]
 fn voiceover_reads_name_state_selection_place_and_shortcut() {
     let mut m = model(3);
-    m.update_facts(2, |f| {
-        f.agent = Some(AgentId::Claude);
-        f.status = Status::Attention;
-        f.title = Some("Fix the login".into());
-        f.message = Some("Approve cargo test?".into());
-    });
+    m.update_facts(2, |f| f.title = Some("Fix the login".into()));
+    let asks = StatusEvent::Hook {
+        agent: AgentId::Claude,
+        event: "PermissionRequest".into(),
+        message: Some("Approve cargo test?".into()),
+    };
+    m.feed(2, asks, 0);
     m.apply(Action::Select(2));
     let spoken = m.sidebar_snapshot(0).sections[0].rows[1].spoken.clone();
     assert_eq!(spoken, "Fix the login, needs input, Approve cargo test?, selected, 2 of 3, Command 2");

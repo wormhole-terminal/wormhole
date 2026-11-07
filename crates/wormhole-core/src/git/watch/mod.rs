@@ -13,8 +13,10 @@ mod debounce;
 mod filter;
 mod ignored;
 mod layout;
+mod marks;
 
 pub use debounce::{Debounce, MAX_WAIT, MIN_GAP, QUIET};
 pub use filter::{Filter, Relevance};
 pub use ignored::Ignored;
 pub use layout::Layout;
+pub use marks::{Marks, on_batch};

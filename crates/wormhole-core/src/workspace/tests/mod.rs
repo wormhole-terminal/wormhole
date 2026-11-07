@@ -8,6 +8,7 @@ mod feed;
 mod groups;
 mod listing;
 mod splits;
+mod status;
 mod words;
 
 use super::{Action, Event, ModelConfig, SidebarSnapshot, WorkspaceModel};

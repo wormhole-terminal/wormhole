@@ -33,7 +33,7 @@ impl Session {
         let named = names::process_name(&names::NameFacts {
             title: facts.title.as_deref(),
             agent,
-            command: facts.command.as_deref(),
+            command: facts.command.as_deref().or(facts.finished_command.as_deref()),
             shell: &facts.shell,
         });
         // text: the fallback for a terminal nothing has said anything about yet.

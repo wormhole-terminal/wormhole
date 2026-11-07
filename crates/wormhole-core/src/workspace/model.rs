@@ -14,7 +14,9 @@ use crate::view::sidebar::{ListInput, Listing, NUMBERED, SidebarNumbers, SplitId
 use super::action::{Action, Overlay};
 use super::event::{Event, Out, Revisions};
 use super::facts::TerminalFacts;
+use super::git_feed::{ChangeRules, GitFeed};
 use super::session::Session;
+use super::status::StatusBook;
 
 /// What the shell knows about the machine and the settings, once (settings join the model later).
 #[derive(Clone, Debug, Default)]
@@ -28,6 +30,8 @@ pub struct ModelConfig {
     /// What a pane's header adds to the least height of a pane (the grid's minimum sits under it); the
     /// shell's own metric, which the model has no way to know.
     pub pane_header_h: f32,
+    /// What a row's ±N counts (Settings → Terminals & sidebar → Changed files).
+    pub changes: ChangeRules,
 }
 
 /// A split: its id (one counter with the terminals') and the layout its members share.
@@ -76,11 +80,16 @@ pub struct WorkspaceModel {
     pub(super) order_rev: u64,
     frozen: RefCell<FrozenNumbers<i64>>,
     revisions: Revisions,
-    out: Out,
+    pub(super) out: Out,
+    /// One status machine per terminal that has been told anything (`status`).
+    pub(super) status: StatusBook,
+    /// What git says of each terminal's folder (`git_feed`).
+    pub(super) git: GitFeed,
 }
 
 impl WorkspaceModel {
     pub fn new(cfg: ModelConfig) -> Self {
+        let git = GitFeed::new(cfg.changes);
         Self {
             cfg,
             sessions: Vec::new(),
@@ -95,6 +104,8 @@ impl WorkspaceModel {
             frozen: RefCell::default(),
             revisions: Revisions::default(),
             out: Out::default(),
+            status: StatusBook::default(),
+            git,
         }
     }
 

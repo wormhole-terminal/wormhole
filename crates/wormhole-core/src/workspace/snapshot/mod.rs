@@ -65,6 +65,15 @@ pub struct SidebarRow {
     pub of: u32,
     /// What VoiceOver reads for the row.
     pub spoken: String,
+    /// The repository the terminal is in (its root): rows with the same one share it.
+    pub repo: Option<String>,
+    /// The working tree has uncommitted changes.
+    pub dirty: bool,
+    /// Commits the branch is ahead of and behind its upstream.
+    pub ahead: u32,
+    pub behind: u32,
+    /// Files changed in the repository, whoever changed them (`changes` is this terminal's own).
+    pub repo_files: Option<u32>,
 }
 
 /// A group's head.

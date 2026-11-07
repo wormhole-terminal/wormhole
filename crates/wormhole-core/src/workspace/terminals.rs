@@ -2,7 +2,6 @@
 
 use std::path::PathBuf;
 
-use crate::view::sidebar::Status;
 use crate::view::sidebar::order::shortcut_target;
 
 use super::event::{Event, Refusal};
@@ -66,37 +65,6 @@ impl WorkspaceModel {
             // The selected row's marks, and the on-screen mates', follow the selection.
             self.emit(Event::Listing);
         }
-    }
-
-    /// What is in front of the person counts as seen: a finished or failed result is spent, a bell
-    /// and unread output are heard, on the selected terminal and the panes shown with it. A question
-    /// an agent asks stays until it is answered. Whether anything changed.
-    fn acknowledge_on_screen(&mut self) -> bool {
-        let Some(selected) = self.selected_index() else { return false };
-        let shown: Vec<usize> = match self.sessions[selected].split.and_then(|id| self.split_of(id)) {
-            Some(split) => {
-                let zoomed = split.layout.zoomed();
-                let id = split.id;
-                self.members(id)
-                    .into_iter()
-                    .filter(|&ix| zoomed.is_none_or(|zoomed| zoomed == self.sessions[ix].id))
-                    .collect()
-            }
-            None => vec![selected],
-        };
-        let mut changed = false;
-        for ix in shown {
-            let facts = &mut self.sessions[ix].facts;
-            let before = facts.clone();
-            facts.unread = false;
-            facts.bell = false;
-            let spent = matches!(facts.status, Status::Done | Status::Failed);
-            if spent || (!facts.told() && facts.status == Status::Attention) {
-                facts.status = Status::Idle;
-            }
-            changed |= *facts != before;
-        }
-        changed
     }
 
     /// ⌘⇧[ and ⌘⇧]: through what the list shows, wrapping round.

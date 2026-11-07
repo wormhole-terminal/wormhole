@@ -3,7 +3,7 @@
 
 use crate::agents::AgentId;
 use crate::view::sidebar::{RowState, Status};
-use crate::workspace::{Action, Event, TerminalFacts};
+use crate::workspace::{Action, Event, StatusEvent, TerminalFacts};
 
 use super::model;
 
@@ -92,10 +92,9 @@ fn what_is_in_front_of_the_person_counts_as_seen_and_a_question_waits_for_its_an
         f.status = Status::Done;
         f.unread = true;
     });
-    m.update_facts(3, |f| {
-        f.agent = Some(AgentId::Claude);
-        f.status = Status::Attention;
-    });
+    // Its hooks say it asks: a question the person looking does not answer (`status.rs`).
+    let asks = StatusEvent::Hook { agent: AgentId::Claude, event: "PermissionRequest".into(), message: None };
+    m.feed(3, asks, 0);
     let events = m.apply(Action::Select(2));
     assert!(events.contains(&Event::Listing));
     assert_eq!(row_of(&m, 2).state, RowState::Idle, "finished, then looked at");
