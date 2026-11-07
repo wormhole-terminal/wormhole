@@ -43,6 +43,17 @@ impl Pty {
         self.term.lock().scroll_display(scroll);
     }
 
+    /// Scroll by `rows` rows as they are shown (up when positive): a folded span is one row. The
+    /// wheel's and a drag's way of scrolling; [`scroll`](Self::scroll) counts grid lines.
+    pub fn scroll_rows(&self, rows: i32) {
+        let mut term = self.term.lock();
+        if term.has_folds() {
+            term.scroll_shown_rows(rows);
+        } else {
+            term.scroll_display(Scroll::Delta(rows));
+        }
+    }
+
     /// How many lines the view is scrolled up into the history.
     pub fn display_offset(&self) -> usize {
         self.term.lock().display_offset()
@@ -52,6 +63,10 @@ impl Pty {
     /// of view comes to the middle of the screen; one in view leaves the view where it is.
     pub fn reveal(&self, line: Line) {
         let mut term = self.term.lock();
+        if term.has_folds() {
+            term.reveal_shown(line);
+            return;
+        }
         let offset = term.display_offset();
         let wanted = find::reveal_offset(line, term.screen_lines(), offset, term.history_size());
         if let Some(wanted) = wanted {
@@ -63,6 +78,10 @@ impl Pty {
     /// screen brings the view back to it).
     pub fn scroll_line_to_top(&self, line: Line) {
         let mut term = self.term.lock();
+        if term.has_folds() {
+            term.scroll_line_to_top_shown(line);
+            return;
+        }
         let offset = term.display_offset() as i32;
         let wanted = (-line.0).clamp(0, term.history_size() as i32);
         if wanted != offset {

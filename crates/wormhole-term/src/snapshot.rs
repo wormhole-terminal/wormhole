@@ -9,11 +9,10 @@
 use std::ops::Range;
 
 use wormhole_vt::image::ImagePlacement;
-use wormhole_vt::{
-    Cell, Colors, CursorShape, Damage, Line, LineSize, Modes, Point, RowExtras, SelectionRange,
-};
+use wormhole_vt::{Cell, Colors, CursorShape, Damage, Line, LineSize, Modes, RowExtras, SelectionRange};
 
 use super::blocks::BlockState;
+use super::folds::{FoldSpan, Shown, Walk};
 use super::marks;
 use super::row_mark::RowMark;
 use super::screen::Screen;
@@ -35,6 +34,10 @@ pub struct SnapshotRow {
     size: LineSize,
     /// The row's text goes on in the row below (a soft wrap), as of its last copy.
     wraps: bool,
+    /// The grid line the row shows (a fold's marker row: the fold's first line).
+    line: Line,
+    /// Set on a fold's marker row, which has no cells of its own: the app draws it.
+    fold: Option<FoldSpan>,
 }
 
 impl SnapshotRow {
@@ -56,6 +59,16 @@ impl SnapshotRow {
     /// Whether the text goes on in the next row: one logical line over several rows.
     pub fn wraps(&self) -> bool {
         self.wraps
+    }
+
+    /// The grid line the row shows: the viewport row less `display_offset`, unless folds are in view.
+    pub fn line(&self) -> Line {
+        self.line
+    }
+
+    /// The fold this row is the marker of (its cells are blank).
+    pub fn fold(&self) -> Option<&FoldSpan> {
+        self.fold.as_ref()
     }
 
     /// Whether the row was copied anew in the last snapshot (its content may
@@ -108,6 +121,9 @@ pub struct ScreenSnapshot {
     placements: Vec<ImagePlacement>,
     /// A block mark was seen at some point: the shell has integration, so blocks are looked for.
     saw_marks: bool,
+    /// The folds of the terminal, scratch kept for the rows' walk (none: the view is the grid's rows).
+    folds: Vec<FoldSpan>,
+    shown: Vec<Shown>,
 }
 
 impl Default for ScreenSnapshot {
@@ -125,6 +141,8 @@ impl Default for ScreenSnapshot {
             spans: Vec::new(),
             placements: Vec::new(),
             saw_marks: false,
+            folds: Vec::new(),
+            shown: Vec::new(),
         }
     }
 }
@@ -168,12 +186,23 @@ impl ScreenSnapshot {
         self.history_size > self.display_offset
     }
 
-    /// The columns `[first, last]` of viewport `row` that are selected.
+    /// The viewport row that shows grid `line`, if it is in view (a line hidden in a fold: none).
+    pub fn row_of_line(&self, line: Line) -> Option<usize> {
+        row_of(&self.rows, self.display_offset, line, !self.folds.is_empty())
+    }
+
+    /// The columns `[first, last]` of viewport `row` that are selected. A fold's marker row is
+    /// selected when the selection touches the rows it hides.
     pub fn selected_columns(&self, row: usize) -> Option<(usize, usize)> {
         let range = self.selection?;
-        let line = Line(row as i32 - self.display_offset as i32);
-        if line < range.start.line || line > range.end.line || self.cols == 0 {
+        let shown = self.rows.get(row)?;
+        let line = shown.line;
+        let (first, last) = shown.fold.map_or((line, line), |fold| (fold.first, fold.last));
+        if last < range.start.line || first > range.end.line || self.cols == 0 {
             return None;
+        }
+        if shown.fold.is_some() {
+            return Some((0, self.cols - 1));
         }
         if range.is_block {
             return Some((range.start.column.0, range.end.column.0));
@@ -203,15 +232,39 @@ impl ScreenSnapshot {
         self.cols = cols;
         self.display_offset = display_offset;
         self.rows.resize_with(lines, SnapshotRow::default);
-        for (row, snapshot) in self.rows.iter_mut().enumerate() {
-            snapshot.changed = full || self.damage.contains(row);
-            if snapshot.changed {
-                let line = Line(row as i32 - display_offset as i32);
+        // The view is anchored at its bottom line; with no fold in it that is the grid's own rows.
+        screen.fold_spans(&mut self.folds);
+        let bottom = Line(lines as i32 - 1 - display_offset as i32);
+        let walk = Walk::new(&self.folds, screen.topmost_line(), screen.bottommost_line());
+        walk.view(bottom, lines, &mut self.shown);
+        for (snapshot, item) in self.rows.iter_mut().zip(&self.shown) {
+            let (line, fold) = match *item {
+                Shown::Line(line) => (line, None),
+                Shown::Marker(ix) => (self.folds[ix].first, Some(self.folds[ix])),
+            };
+            // History rows never change under the damage, so only the live screen's are asked.
+            let damaged = fold.is_none()
+                && usize::try_from(line.0 + display_offset as i32)
+                    .ok()
+                    .is_some_and(|row| row < lines && self.damage.contains(row));
+            snapshot.changed = full || snapshot.line != line || snapshot.fold != fold || damaged;
+            if !snapshot.changed {
+                continue;
+            }
+            (snapshot.line, snapshot.fold) = (line, fold);
+            if fold.is_some() {
+                snapshot.cells.clear();
+                snapshot.cells.resize(cols, Cell::default());
+                snapshot.extras.clear();
+                snapshot.mark = screen.row_mark(line);
+                snapshot.size = LineSize::Single;
+                snapshot.wraps = false;
+            } else {
                 snapshot.mark = screen.copy_row(line, &mut snapshot.cells, Some(&mut snapshot.extras));
                 snapshot.size = screen.line_size(line);
                 snapshot.wraps = screen.wraps(line);
-                self.saw_marks |= snapshot.mark.is_some();
             }
+            self.saw_marks |= snapshot.mark.is_some();
         }
         self.resolve_blocks(screen);
 
@@ -219,7 +272,7 @@ impl ScreenSnapshot {
         self.selection = screen.selection_range();
         self.colors = screen.colors();
         let cursor = screen.cursor();
-        self.cursor = cursor_row(cursor.point, display_offset, lines)
+        self.cursor = row_of(&self.rows, display_offset, cursor.point.line, !self.folds.is_empty())
             .filter(|_| cursor.shape != CursorShape::Hidden)
             .map(|row| SnapshotCursor {
                 row,
@@ -230,6 +283,16 @@ impl ScreenSnapshot {
             });
         self.history_size = screen.history_size();
         screen.placements(&mut self.placements);
+        if !self.folds.is_empty() {
+            // A picture is placed by grid line: under folds it goes where its line is shown (one in a
+            // fold, or off the view, is not drawn).
+            let rows = &self.rows;
+            self.placements.retain_mut(|placement| {
+                let Some(row) = row_of(rows, display_offset, placement.line, true) else { return false };
+                placement.line = Line(row as i32 - display_offset as i32);
+                true
+            });
+        }
     }
 
     /// Which block each row is in, from the rows' own marks: a row without one continues the
@@ -243,7 +306,8 @@ impl ScreenSnapshot {
         }
         // Also when the top row is marked: a prompt row whose block began above (a secondary
         // prompt) doesn't start it.
-        let mut current = block_above(screen, Line(-(self.display_offset as i32)));
+        let top = self.rows.first().map_or(Line(-(self.display_offset as i32)), |row| row.line);
+        let mut current = block_above(screen, top);
         let last_marked = self.rows.iter().rposition(|row| row.mark.is_some());
         let live_screen = self.display_offset == 0;
         for (row, snapshot) in self.rows.iter().enumerate() {
@@ -279,10 +343,15 @@ fn block_above(screen: &Screen, top: Line) -> Option<u64> {
     None
 }
 
-/// The viewport row of a grid point, if it is on screen.
-fn cursor_row(point: Point, display_offset: usize, lines: usize) -> Option<usize> {
-    let row = point.line.0 + display_offset as i32;
-    (0..lines as i32).contains(&row).then_some(row as usize)
+/// The viewport row that shows grid `line`: row `line + display_offset` unless folds moved it.
+fn row_of(rows: &[SnapshotRow], display_offset: usize, line: Line, folded: bool) -> Option<usize> {
+    let shows = |row: &SnapshotRow| row.fold.is_none() && row.line == line;
+    let direct = usize::try_from(line.0 + display_offset as i32).ok();
+    match direct.filter(|&row| rows.get(row).is_some_and(shows)) {
+        Some(row) => Some(row),
+        None if folded => rows.iter().position(shows),
+        None => None,
+    }
 }
 
 #[cfg(test)]
