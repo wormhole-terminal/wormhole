@@ -131,6 +131,9 @@ mod panel_switch_tests;
 mod panel_tab_tests;
 mod panes;
 mod plays_motion;
+mod probes;
+#[cfg(test)]
+mod probes_tests;
 #[cfg(test)]
 mod profile_look_tests;
 #[cfg(test)]

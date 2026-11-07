@@ -7,6 +7,7 @@
 //! apart from that ([`target`]), because only a ⌘-click needs it.
 //!
 //! - `compile`: the rules of a manifest, with the limits `validate` checks them with.
+//! - `display`: what a rule's `look` leaves showing of a match (display only).
 //! - `matching`: [`matches`], with the caps and the overlap rules.
 //! - `target`: what an action would open, copy or run for a match.
 //!
@@ -15,12 +16,14 @@
 //! Must not use anything above `validate`; it reads no file and knows no settings.
 
 mod compile;
+mod display;
 mod matching;
 mod target;
 
 pub use compile::{CompileError, CompiledRule, CompiledRules};
+pub use display::BLOCK;
 pub use matching::{MAX_MATCHES_PER_RULE, MAX_SCAN_BYTES, Match, matches, matches_into, scanned};
-pub use target::{Target, target};
+pub use target::{Target, hover, target};
 
 #[cfg(test)]
 mod tests;

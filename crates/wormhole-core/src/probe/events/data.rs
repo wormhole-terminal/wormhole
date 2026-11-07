@@ -29,6 +29,21 @@ impl EventData {
         Self(fields.into_iter().collect())
     }
 
+    /// These fields and one more (a fact the app adds: `front`, `kind`, `folder_name`).
+    #[must_use]
+    pub fn with(mut self, name: &str, value: Value) -> Self {
+        self.0.insert(name.to_string(), value);
+        self
+    }
+
+    /// The fields of an `event` that are not [`FieldKind::Text`]: what a Probe that may not read what is on
+    /// the terminals is told. A hook that needs one of the others does not match.
+    #[must_use]
+    pub fn without_text(&self, spec: &EventSpec) -> Self {
+        let text = |name: &String| spec.field(name).is_some_and(|field| field.kind == FieldKind::Text);
+        Self(self.0.iter().filter(|(name, _)| !text(name)).map(|(n, v)| (n.clone(), v.clone())).collect())
+    }
+
     pub fn get(&self, name: &str) -> Option<&Value> {
         self.0.get(name)
     }

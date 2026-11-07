@@ -95,7 +95,7 @@ impl Found {
                 Some(crate::probe::rules::Target::Command { args, .. }) => Some(args.clone()),
                 _ => None,
             },
-            target: target.map(|target| target.text().to_string()),
+            target: target.map(|target| target.text().into_owned()),
         }
     }
 

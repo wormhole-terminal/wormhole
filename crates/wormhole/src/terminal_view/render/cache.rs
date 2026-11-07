@@ -9,6 +9,7 @@
 use wormhole_term::ScreenSnapshot;
 use wormhole_term::types::{Cell, Color, RowExtras};
 
+use super::decor::Decor;
 use super::rows::Marks;
 
 struct Entry<T> {
@@ -50,7 +51,7 @@ impl<K, T> Default for RowCache<K, T> {
 
 impl<K: PartialEq, T> RowCache<K, T> {
     /// Bring the cache in line with `snapshot`, building rows it can't reuse. `found` is find's
-    /// matches on each row (rows past its end have none); a row `redo` says of is built again,
+    /// matches on each row (rows past its end have none) and `decor` what Probes add to each; a row `redo` says of is built again,
     /// changed or not (one drawn before all its words were shaped).
     ///
     /// `build` is given the spare of a row that was replaced and found no match, if one is left,
@@ -62,6 +63,7 @@ impl<K: PartialEq, T> RowCache<K, T> {
         key: K,
         snapshot: &ScreenSnapshot,
         found: &[Vec<(usize, usize, bool)>],
+        decor: &Decor,
         redo: impl Fn(&T) -> bool,
         mut build: impl FnMut(&[Cell], &RowExtras, &Marks, Option<T>) -> T,
     ) -> SyncStats {
@@ -76,6 +78,8 @@ impl<K: PartialEq, T> RowCache<K, T> {
             size: rows[row].size(),
             selected: snapshot.selected_columns(row),
             found: found.get(row).cloned().unwrap_or_default(),
+            rules: decor.rules(row).to_vec(),
+            block_tone: decor.block(row),
         };
         let mut stats = SyncStats::default();
         let mut stale = std::mem::take(&mut self.stale);
@@ -85,6 +89,8 @@ impl<K: PartialEq, T> RowCache<K, T> {
                 e.marks.size == rows[row].size()
                     && e.marks.selected == snapshot.selected_columns(row)
                     && e.marks.found.as_slice() == found.get(row).map_or(&[][..], Vec::as_slice)
+                    && e.marks.rules.as_slice() == decor.rules(row)
+                    && e.marks.block_tone == decor.block(row)
             };
             let keep =
                 !rows[row].changed() && entry.as_ref().is_some_and(|e| same_marks(e) && !redo(&e.value));
@@ -186,7 +192,7 @@ mod tests {
     use wormhole_term::types::{Cell, Column, Line, Point, RowExtras, SelectionType, Side};
 
     use super::super::rows::Marks;
-    use super::{RowCache, SyncStats};
+    use super::{Decor, RowCache, SyncStats};
 
     fn term(cols: u16, rows: u16) -> TestTerm {
         TestTerm::new(cols, rows, 100)
@@ -200,8 +206,14 @@ mod tests {
     fn sync(cache: &mut RowCache<u32, String>, term: &mut TestTerm, key: u32) -> SyncStats {
         let mut snapshot = ScreenSnapshot::default();
         term.snapshot(&mut snapshot);
-        let stats =
-            cache.sync(key, &snapshot, &[], |_| false, |cells, _, _, _| cells.iter().map(|c| c.c).collect());
+        let stats = cache.sync(
+            key,
+            &snapshot,
+            &[],
+            &Decor::default(),
+            |_| false,
+            |cells, _, _, _| cells.iter().map(|c| c.c).collect(),
+        );
         for (row, text) in cache.rows() {
             let expected: String = snapshot.rows()[row].cells().iter().map(|c| c.c).collect();
             assert_eq!(*text, expected, "row {row} shows stale content");
@@ -257,7 +269,14 @@ mod tests {
         let mut sync = |found: &[Vec<(usize, usize, bool)>]| {
             term.snapshot(&mut snapshot);
             cache
-                .sync(0, &snapshot, found, |_| false, |cells, _, _, _| cells.iter().map(|c| c.c).collect())
+                .sync(
+                    0,
+                    &snapshot,
+                    found,
+                    &Decor::default(),
+                    |_| false,
+                    |cells, _, _, _| cells.iter().map(|c| c.c).collect(),
+                )
                 .built
         };
         sync(&[]);
@@ -281,12 +300,18 @@ mod tests {
             if text.starts_with('b') { format!("{text}?") } else { text }
         }
         let redo = |value: &String| value.ends_with('?');
-        assert_eq!(cache.sync(0, &snapshot, &[], redo, build).built, 3);
+        assert_eq!(cache.sync(0, &snapshot, &[], &Decor::default(), redo, build).built, 3);
         term.snapshot(&mut snapshot);
-        let stats = cache.sync(0, &snapshot, &[], redo, |cells, _, _, _| cells.iter().map(|c| c.c).collect());
+        let stats = cache.sync(0, &snapshot, &[], &Decor::default(), redo, |cells, _, _, _| {
+            cells.iter().map(|c| c.c).collect()
+        });
         assert_eq!((stats.built, stats.kept + stats.moved), (1, 2), "the provisional row, though unchanged");
         term.snapshot(&mut snapshot);
-        assert_eq!(cache.sync(0, &snapshot, &[], redo, build).built, 0, "built in full now");
+        assert_eq!(
+            cache.sync(0, &snapshot, &[], &Decor::default(), redo, build).built,
+            0,
+            "built in full now"
+        );
     }
 
     #[test]
@@ -330,6 +355,7 @@ mod tests {
                 0,
                 &snapshot,
                 &[],
+                &Decor::default(),
                 |_| false,
                 |cells, _, _, spare| {
                     spares.push(spare.is_some());

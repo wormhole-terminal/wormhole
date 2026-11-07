@@ -7,12 +7,14 @@
 //! ([`Notice`]: heartbeat, lagged, closed) carry no seq, since they are not events.
 
 mod filter;
+mod hook;
 mod topic;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub use filter::{EventFilter, EventsSpec, Subscribed, TERMINALS_MAX, WINDOWS_MAX};
+pub use hook::{hook_event, topics as hook_topics};
 pub use topic::{Topic, Topics};
 
 use super::{PROTOCOL_VERSION, TerminalState};

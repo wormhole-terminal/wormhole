@@ -2,7 +2,7 @@
 //! runs the app's tick and what arrives between ticks (`tick`), binds the app-wide actions and
 //! handles them (`handlers`), builds the menu bar (`menus`), answers the control socket (`control`),
 //! takes the files macOS hands over (`default_terminal`), sets the interface's language (`language`),
-//! follows the profile's own files (`own_files`), keeps a terminal's saved text (`saved_text`) and logs (`logging`).
+//! follows the profile's own files (`own_files`), runs the Probes that are on (`probes`), keeps a terminal's saved text (`saved_text`) and logs (`logging`).
 //!
 //! The top of the order: it may use every surface, and nothing below it may call into it.
 
@@ -14,6 +14,7 @@ pub(crate) mod launch;
 pub(crate) mod logging;
 pub(crate) mod menus;
 mod own_files;
+pub(crate) mod probes;
 mod saved_text;
 #[cfg(test)]
 mod saved_text_tests;

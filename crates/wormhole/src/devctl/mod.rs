@@ -339,6 +339,7 @@
 //!                   (`perf-profile`), and the table in the results; the rest of the batch waits
 //!                   (`scripts/profile-app.sh` runs it under a fixed load and compares)
 //!   hover <x> <y>   move the pointer there (no click)
+//!   hover-cmd <x> <y>   the same with ⌘ held: a link under it is underlined and its chip shows
 //!   scroll <x> <y> <dy>   turn the wheel over that point, dy logical pixels down (negative = up),
 //!                   in steps with a frame between them, as a trackpad's scroll arrives: a long
 //!                   list's end is reached (unlike `panel-scroll`). The rest of the batch waits

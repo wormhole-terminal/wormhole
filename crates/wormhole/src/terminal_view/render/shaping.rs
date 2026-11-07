@@ -26,6 +26,9 @@ pub(super) struct ShapeKey {
     /// The colors programs set (OSC 4/10/11): a cell keeps its content when its
     /// palette entry changes, so a row found again by content would be stale.
     pub colors: u64,
+    /// Which Probe rules the rows were built with (`probe_runtime::generation`): a row found again by its
+    /// content would otherwise keep the marks of rules that are gone.
+    pub rules: u64,
 }
 
 /// What a word's glyphs were shaped with: the font (its features carry the

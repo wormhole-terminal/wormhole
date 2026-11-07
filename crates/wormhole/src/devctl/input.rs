@@ -112,8 +112,16 @@ pub(super) fn scroll(ctx: &mut Ctx, arg: &str) -> Result<String> {
 }
 
 pub(super) fn hover(ctx: &mut Ctx, arg: &str) -> Result<String> {
-    let event =
-        MouseMoveEvent { position: coordinates(arg)?, pressed_button: None, modifiers: Modifiers::default() };
+    move_pointer(ctx, arg, Modifiers::default())
+}
+
+/// `hover-cmd`: [`hover`] with ⌘ held, which underlines a link and shows where it goes.
+pub(super) fn hover_cmd(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    move_pointer(ctx, arg, Modifiers::command())
+}
+
+fn move_pointer(ctx: &mut Ctx, arg: &str, modifiers: Modifiers) -> Result<String> {
+    let event = MouseMoveEvent { position: coordinates(arg)?, pressed_button: None, modifiers };
     ctx.window.defer(ctx.cx, move |window, cx| {
         window.dispatch_event(PlatformInput::MouseMove(event), cx);
     });

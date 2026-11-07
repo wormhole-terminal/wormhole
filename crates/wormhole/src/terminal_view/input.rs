@@ -402,6 +402,7 @@ impl TerminalView {
         if !self.selecting {
             if event.pressed_button.is_none() {
                 self.hover_link(event.position, event.modifiers.platform, cx);
+                self.update_reveal(event.position, event.modifiers, cx);
                 self.hover_block(event.position, cx);
             }
             let button = self.mouse_button.unwrap_or(mouse::MouseButton::None);

@@ -216,6 +216,10 @@ pub struct TerminalView {
     cursor_blink: Option<Task<()>>,
     /// The link under the pointer while ⌘ is held (see `links`).
     hovered_link: Option<wormhole_term::Link>,
+    /// This terminal's id as its session has it (what events and hooks call it); 0 for a view with none.
+    tab: i64,
+    /// A shortened or redacted span the pointer is over, shown as it is written (see `links`).
+    reveal: links::Reveal,
     /// Points over the font size in Settings (⌘+ / ⌘- in this window; ⌘0 is 0). Where a zoom is going; the
     /// size drawn eases to it (`scaling`).
     font_zoom: f32,
@@ -277,6 +281,7 @@ impl TerminalView {
         options.colors = Some(palette.engine_colors());
         options.color_scheme = Some(palette.color_scheme());
         let cwd = options.cwd.clone();
+        let tab = options.tab_id.parse().unwrap_or(0);
         let restored = options.restore.clone().unwrap_or_default();
         // The saved text is the seed a new shell starts above: dim, with the divider that says when.
         options.restore = options.restore.take().map(|text| {
@@ -371,6 +376,8 @@ impl TerminalView {
             blink_held: false,
             cursor_blink: None,
             hovered_link: None,
+            tab,
+            reveal: links::Reveal::default(),
             font_zoom: 0.0,
             scaling: Default::default(),
             minimap_grab: None,

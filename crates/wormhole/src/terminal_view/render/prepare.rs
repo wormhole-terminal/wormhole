@@ -149,6 +149,7 @@ impl Prepare {
             span.end(Part::Snapshot);
             found = this.found_rows(&cache.snapshot);
             ticks = this.found_ticks(&cache.snapshot);
+            this.probe_marks(&mut cache.decor, &cache.snapshot, cx);
             this.mode = cache.snapshot.mode;
             let blinking = cache.snapshot.cursor.is_some_and(|cursor| cursor.blinking);
             this.blink_wanted(blinking && self.focused && !self.reduce_motion, cx);
@@ -172,6 +173,7 @@ impl Prepare {
             font_size,
             cell_width,
             colors: colors_key(&cache.snapshot.colors),
+            rules: crate::probe_runtime::generation(cx),
         };
         words.sync((font_id, font_size, cell_width));
         words.start_frame(Some(std::time::Instant::now() + words::SHAPE_BUDGET));

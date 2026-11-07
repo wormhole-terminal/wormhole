@@ -16,6 +16,8 @@
 //! - `rules`: a Probe's text rules compiled and run over a line, as `probe test` and the terminal do.
 //! - `events`: the vocabulary of hooks as data: each event, its fields and matchers, and where it comes from.
 //! - `hooks`: a Probe's hooks compiled and planned over one event, as `probe test` and the app will.
+//! - `tone`: the design tokens a rule or hook may name.
+//! - `active`: the Probes that are on, loaded and compiled for the app to run, and the hooks' delivery.
 //! - `scan`: the Probes in `<data dir>/probes/`.
 //! - `approval`: what the user approved, the state that gives each Probe, and the copy it runs from.
 //!
@@ -23,6 +25,7 @@
 //! uses `storage` and `keys` (a command's shortcut) and the agent registry in `wormhole-term`; it is
 //! in the tier of `git` and `notify` so that `ipc` can offer it on the command line.
 
+pub mod active;
 pub mod approval;
 pub mod cli;
 pub mod events;
@@ -31,10 +34,12 @@ pub mod fixture;
 pub mod hidden;
 pub mod hooks;
 pub mod manifest;
+pub mod open_path;
 pub mod read;
 pub mod rules;
 pub mod scaffold;
 pub mod scan;
+pub mod tone;
 pub mod validate;
 
 pub use fingerprint::{FINGERPRINT_VERSION, fingerprint};

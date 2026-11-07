@@ -1,4 +1,5 @@
 use gpui_kit::{Hsla, rgb};
+use wormhole_core::probe::tone::Tone;
 use wormhole_term::types::{COLOR_COUNT, Cell, Color, ColorScheme, Colors, Flags, NamedColor, Rgb};
 
 /// Terminal colors, resolved from the active theme. Comparable, so a settings
@@ -20,10 +21,15 @@ pub struct Palette {
     pub find_match: Hsla,
     pub find_current: Hsla,
     pub find_current_text: Hsla,
+    /// What a Probe's tones are drawn with (`Tone::ALL`'s order): design tokens, so they follow the theme.
+    tones: [Hsla; 5],
     /// Indexed colors 16–255 (the 6×6×6 cube and the gray ramp), converted
     /// once instead of per cell and frame.
     extended: [Hsla; 240],
 }
+
+/// How much of its tone a marked block's background takes.
+const TONE_TINT: f32 = 0.16;
 
 impl Palette {
     pub fn from_theme(theme: &wormhole_core::theme::Theme) -> Self {
@@ -41,6 +47,8 @@ impl Palette {
             find_match: yellow.opacity(0.32),
             find_current: yellow,
             find_current_text: color(0),
+            // The tokens' say better (`with_tokens`): the closest of the theme's own colors until then.
+            tones: [4, 1, 3, 2, 8].map(|ansi| color(theme.palette[ansi])),
             extended: std::array::from_fn(|i| to_hsla(extended_rgb(i as u8 + 16))),
         }
     }
@@ -51,7 +59,20 @@ impl Palette {
         self.find_match = token("find.match");
         self.find_current = token("find.match.current");
         self.find_current_text = token("find.match.current.text");
+        self.tones = Tone::ALL.map(|tone| token(tone.token()));
         self
+    }
+
+    /// The color of a Probe's tone.
+    pub fn tone(&self, tone: Tone) -> Hsla {
+        self.tones[Tone::ALL.iter().position(|t| *t == tone).unwrap_or(0)]
+    }
+
+    /// A tone's tint over a cell's background, for a block a hook marked: faint, so the text keeps its
+    /// own colors and the cell's background shows through.
+    pub fn tone_tint(&self, tone: Tone, bg: Hsla) -> Hsla {
+        let tint = self.tone(tone).opacity(TONE_TINT);
+        if bg == self.background { tint } else { bg.blend(tint) }
     }
 
     /// A match's background over a cell's: a tint, so the cell's own color still shows through.

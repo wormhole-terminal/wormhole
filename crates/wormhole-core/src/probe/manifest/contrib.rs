@@ -42,6 +42,9 @@ pub enum ActionKind {
     Copy,
     /// Runs one of the Probe's own commands with the captures as arguments.
     Command,
+    /// Opens a file of the terminal's folder in the user's editor: `path`, `path:line` or
+    /// `path:line:col`. Never runs it.
+    OpenPath,
     None,
 }
 
@@ -57,6 +60,9 @@ pub struct Action {
     pub command: Option<String>,
     /// `copy`: what is copied, with `{n}` for a capture; the whole match when absent.
     pub text: Option<String>,
+    /// `open-path`: the file as `path[:line[:col]]`, with `{n}` for a capture; the whole match when
+    /// absent.
+    pub path: Option<String>,
     #[serde(flatten)]
     pub(crate) unknown: Unknown,
 }

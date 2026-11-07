@@ -128,6 +128,16 @@ pub(crate) fn open(bundle: &str, folder: &Path) {
     }
 }
 
+/// Ask the app with this bundle identifier to open the file `path`, at `line` where it can. `path` is a real
+/// path of a regular file that was checked to lie inside the folder it came from (`files::resolve_within`):
+/// the app is asked to open it, never to run it, and a path is an argument, not a shell string.
+pub(crate) fn open_file_in(bundle: &str, path: &Path, line: Option<u32>) {
+    let Some(launch) = open_file::launch(bundle, path, line) else { return };
+    if let Err(err) = apps::launch(bundle, launch) {
+        tracing::warn!("opening {} in {bundle}: {err}", path.display());
+    }
+}
+
 /// The table's apps that the system knows by their bundle identifier.
 fn installed() -> Vec<String> {
     EDITORS

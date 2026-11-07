@@ -15,12 +15,14 @@
 //!   layers in order); `frame`, `cache`, `rows`, `words` and `shaping` are what they build on
 //! - the grid's parts: `glyphs` (box drawing), `underline`, `cursor`, `images`, `blink`,
 //!   `sized` (double-width and double-height rows)
+//! - what Probes add: `decor` (tones, masks and a marked block's tint on the rows)
 //! - beside the grid: `overlays` (block marks, find ticks, the bell, the drag), `scrollbar`,
 //!   `minimap`, `exited` (the bar of a finished shell)
 
 mod blink;
 mod cache;
 mod cursor;
+mod decor;
 mod exited;
 mod frame;
 mod glyphs;
@@ -244,6 +246,7 @@ impl Render for TerminalView {
             .on_hover(cx.listener(|this, hovered: &bool, _, cx| {
                 if !hovered {
                     this.leave_blocks(cx);
+                    this.end_reveal(cx);
                 }
             }))
             .size_full()
@@ -265,6 +268,7 @@ impl Render for TerminalView {
             })
             .on_modifiers_changed(cx.listener(|this, event: &ModifiersChangedEvent, window, cx| {
                 this.hover_link(window.mouse_position(), event.modifiers.platform, cx);
+                this.update_reveal(window.mouse_position(), event.modifiers, cx);
             }))
             .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
             .on_mouse_down(MouseButton::Right, cx.listener(Self::on_mouse_down))
@@ -288,6 +292,7 @@ impl Render for TerminalView {
             .when(!minimap, |this| this.child(self.render_scrollbar(cx)))
             .children(self.render_block_readout(cx))
             .children(self.render_size_readout(window, cx))
+            .children(self.render_link_readout(cx))
             .children(bell_glow.map(|color| bell_edge(ui, color)))
             .when(exited, |this| this.child(self.render_exited(cx)))
             .children(self.render_pane_bar(exited, cx))

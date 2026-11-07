@@ -1,9 +1,13 @@
 //! What an action would do for a match: the final link, the text to copy, the command and what it is
 //! given. Only a ⌘-click needs it, so it is worked out apart from [`matches`](super::matches).
 
+use std::borrow::Cow;
+
 use super::compile::CompiledRules;
 use super::matching::{Match, scanned};
+use crate::probe::hidden::is_hidden;
 use crate::probe::manifest::ActionKind;
+use crate::probe::open_path::PathRef;
 use crate::probe::validate::{capture_index, has_dot_segment};
 
 /// What a rule's action comes to for one match.
@@ -15,14 +19,18 @@ pub enum Target {
     Copy(String),
     /// One of the Probe's commands, with the values of its `$n` arguments, in order.
     Command { id: String, args: Vec<String> },
+    /// A file to open in the editor: the path as written, with its line and column. Not yet looked for on
+    /// disk, which is [`open_path::resolve`](crate::probe::open_path::resolve)'s.
+    OpenPath(PathRef),
 }
 
 impl Target {
-    /// The target as one line: the link, the text, or the command's id.
-    pub fn text(&self) -> &str {
+    /// The target as one line: the link, the text, the command's id, or the path with its line and column.
+    pub fn text(&self) -> Cow<'_, str> {
         match self {
-            Self::OpenUrl(text) | Self::Copy(text) => text,
-            Self::Command { id, .. } => id,
+            Self::OpenUrl(text) | Self::Copy(text) => Cow::Borrowed(text),
+            Self::Command { id, .. } => Cow::Borrowed(id),
+            Self::OpenPath(path) => Cow::Owned(path.text()),
         }
     }
 }
@@ -31,7 +39,8 @@ impl Target {
 /// `None` when the rule has no action, or when the action must not run: a capture that starts with
 /// `-` would be read as an option by the program it is handed to, so the command is refused (the
 /// pattern `validate` accepts cannot produce one, but a Probe that skipped `validate` can); and a link
-/// that came out with a `.` or `..` segment in its path, because of what was captured, is refused.
+/// that came out with a `.` or `..` segment in its path, because of what was captured, is refused; so is a
+/// file path that is not one (`PathRef::parse`).
 pub fn target(rules: &CompiledRules, found: &Match, line: &str) -> Option<Target> {
     let rule = rules.rules.get(found.rule)?;
     let action = rule.rule.action.as_ref()?;
@@ -57,6 +66,13 @@ pub fn target(rules: &CompiledRules, found: &Match, line: &str) -> Option<Target
             Some(template) => expand(template, |n| capture(n).to_string()),
             None => whole.as_str().to_string(),
         })),
+        ActionKind::OpenPath => {
+            let written = match &action.path {
+                Some(template) => expand(template, |n| capture(n).to_string()),
+                None => whole.as_str().to_string(),
+            };
+            PathRef::parse(&written).map(Target::OpenPath)
+        }
         ActionKind::Command => {
             let id = action.command.clone()?;
             let args: Vec<String> = rule
@@ -72,6 +88,26 @@ pub fn target(rules: &CompiledRules, found: &Match, line: &str) -> Option<Target
             Some(Target::Command { id, args })
         }
     }
+}
+
+/// The longest hover text kept, in characters: the manifest's template is at most 120, and what its captures
+/// add is cut here.
+const HOVER_CHARS: usize = 160;
+
+/// The text a rule says about `found` on ⌘-hover: its `hover` template with the match as `{0}` and the groups
+/// as `{1}`…, written out (a capture is a program's text: control, bidi and invisible characters are dropped)
+/// and cut to what a line can show. `None` for a rule without one.
+pub fn hover(rules: &CompiledRules, found: &Match, line: &str) -> Option<String> {
+    let rule = rules.rules.get(found.rule)?;
+    let template = rule.rule.hover.as_deref()?;
+    let caps = rule.regex.captures_at(scanned(line), found.start)?;
+    if caps.get(0).is_none_or(|whole| whole.start() != found.start || whole.end() != found.end) {
+        return None;
+    }
+    let text = expand(template, |n| {
+        caps.get(n).map_or("", |m| m.as_str()).chars().filter(|c| !is_hidden(*c) && !c.is_control()).collect()
+    });
+    Some(text.chars().take(HOVER_CHARS).collect())
 }
 
 /// `template` with each `{n}` replaced by `value(n)`. A `{` that does not open a `{n}` stays as written

@@ -33,6 +33,8 @@ pub struct SnapshotRow {
     mark: Option<RowMark>,
     /// How big the row is drawn, as of its last copy (a change of it damages the row).
     size: LineSize,
+    /// The row's text goes on in the row below (a soft wrap), as of its last copy.
+    wraps: bool,
 }
 
 impl SnapshotRow {
@@ -49,6 +51,11 @@ impl SnapshotRow {
     /// show half the columns, each twice as wide.
     pub fn size(&self) -> LineSize {
         self.size
+    }
+
+    /// Whether the text goes on in the next row: one logical line over several rows.
+    pub fn wraps(&self) -> bool {
+        self.wraps
     }
 
     /// Whether the row was copied anew in the last snapshot (its content may
@@ -202,6 +209,7 @@ impl ScreenSnapshot {
                 let line = Line(row as i32 - display_offset as i32);
                 snapshot.mark = screen.copy_row(line, &mut snapshot.cells, Some(&mut snapshot.extras));
                 snapshot.size = screen.line_size(line);
+                snapshot.wraps = screen.wraps(line);
                 self.saw_marks |= snapshot.mark.is_some();
             }
         }

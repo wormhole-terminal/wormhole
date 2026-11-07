@@ -38,7 +38,7 @@ pub(crate) use identity::MAX_RULES;
 pub(crate) use pattern::{MAX_ARGUMENT_BYTES, SIZE_LIMIT};
 pub use permissions::{Combination, Confirmation, DeclaredPermission, ProgramClass, ProgramNote, Summary};
 pub(crate) use rules::TONES;
-pub(crate) use template::has_dot_segment;
+pub(crate) use template::{has_dot_segment, https_host};
 
 /// How much a finding matters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

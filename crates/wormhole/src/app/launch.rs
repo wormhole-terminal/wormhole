@@ -180,6 +180,8 @@ pub(crate) fn start(
     tell_data_folder(cx);
     crate::window::hosting::adopt_orphans(cx);
     crate::window::restart_restore::launch(cx);
+    // After the windows: what a Probe's hooks set is drawn by them.
+    crate::app::probes::follow(cx);
     menus::sync(cx);
 }
 

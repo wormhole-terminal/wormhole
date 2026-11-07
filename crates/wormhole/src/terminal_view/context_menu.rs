@@ -234,7 +234,7 @@ impl TerminalView {
             at_prompt: self.pty.as_ref().and_then(|pty| pty.at_prompt()) == Some(true),
         });
         let facts = MenuFacts {
-            link: self.link_uri_under(position),
+            link: self.link_uri_under(position, cx),
             can_copy: self.selection_text().is_some(),
             can_paste: platform::clipboard::read(cx).is_some_and(|text| !text.is_empty()),
             block,

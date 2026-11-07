@@ -144,10 +144,7 @@ pub(crate) fn open(bundle: &str, root: &Path, relative: &str, line: Option<u32>)
             return;
         }
     };
-    let Some(launch) = open_file::launch(bundle, &path, line) else { return };
-    if let Err(err) = crate::platform::apps::launch(bundle, launch) {
-        tracing::warn!("opening {} in {bundle}: {err}", path.display());
-    }
+    crate::open_in::open_file_in(bundle, &path, line);
 }
 
 #[cfg(test)]

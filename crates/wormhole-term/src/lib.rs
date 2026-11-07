@@ -111,7 +111,7 @@ pub use command_to_prompt::{Refusal, command_to_prompt};
 pub use contents::prompt_in;
 use events::Shared;
 pub use events::{PtyEvent, PtyEvents, Reply, TextFormatter};
-pub use links::{Link, Openable};
+pub use links::{LineRules, Link, Openable, RevealWhen, RuleHit, RuleLink, RuleSpan, RuleTarget};
 pub use marks::Direction;
 pub use osc::percent_decode;
 pub use osc::{BODY_MAX_CHARS, Mark, Notification, PromptKind, TITLE_MAX_CHARS, clean, is_invisible};

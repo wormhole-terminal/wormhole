@@ -422,3 +422,50 @@ fn percent_encoding_keeps_unreserved_characters() {
     assert_eq!(target::percent_encode(" /?#&=+%"), "%20%2F%3F%23%26%3D%2B%25");
     assert_eq!(target::percent_encode(""), "");
 }
+
+#[test]
+fn an_open_path_target_is_the_whole_match_or_a_template_read_as_path_line_column() {
+    let r = rules(&format!(
+        "{}{}",
+        rule("whole", r"[a-z/]+\.rs:[0-9]+(?::[0-9]+)?", "action = { type = \"open-path\" }"),
+        rule(
+            "named",
+            r"at ([a-z/.]+) line ([0-9]+)",
+            "action = { type = \"open-path\", path = \"{1}:{2}\" }"
+        )
+    ));
+    let line = "src/a.rs:12:5 and at lib/b.rs line 7";
+    let found = matches(&r, line);
+    let path = |ix: usize| match target(&r, &found[ix], line) {
+        Some(Target::OpenPath(p)) => Some((p.path, p.line, p.column)),
+        other => panic!("{other:?}"),
+    };
+    assert_eq!(path(0), Some(("src/a.rs".into(), Some(12), Some(5))));
+    assert_eq!(path(1), Some(("lib/b.rs".into(), Some(7), None)));
+    assert_eq!(target(&r, &found[0], line).map(|t| t.text().into_owned()).as_deref(), Some("src/a.rs:12:5"));
+}
+
+#[test]
+fn an_open_path_that_walks_up_or_names_a_link_has_no_target() {
+    let r = rules(&rule("p", r"[a-z./]+:[0-9]+", "action = { type = \"open-path\" }"));
+    assert_eq!(target_of(&r, "../etc/x:1"), None);
+    assert_eq!(target_of(&r, "a/../b:1"), None);
+    assert!(target_of(&r, "a/b:1").is_some());
+}
+
+#[test]
+fn a_hover_is_its_template_with_the_match_written_out() {
+    let r = rules(&rule("t", r"(?-u:\b)(ACME-[0-9]+)", "hover = \"Open {1} in Jira ({0})\""));
+    let line = "x ACME-12";
+    let found = matches(&r, line);
+    assert_eq!(hover(&r, &found[0], line).as_deref(), Some("Open ACME-12 in Jira (ACME-12)"));
+    let plain = rules(&rule("t", "x", "tone = \"link\""));
+    assert_eq!(hover(&plain, &matches(&plain, "x")[0], "x"), None, "no template");
+    let hostile = rules(&rule("t", "a(.)b", "hover = \"<{1}>\""));
+    let line = "a\u{202e}b";
+    assert_eq!(
+        hover(&hostile, &matches(&hostile, line)[0], line).as_deref(),
+        Some("<>"),
+        "hidden characters are dropped"
+    );
+}
