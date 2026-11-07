@@ -100,3 +100,9 @@ A row's grades only go down when a regression is found. When a feature is split 
 2026-11-07, second grade, at f01a8a642 (the gap-filling modules merged, the window running on the core's workspace through
 the FFI): works split into mock and real, `wired` added. The Studio, the folder picker, global hotkey, notifications,
 minimap, command blocks, text zoom, print/export and agent card are merged but nothing in the app opens them.
+
+2026-11-07, third grade, at 27b545ef3 (the backends wired): the git panel, Files/Project/Usage/Notes, Settings, the aux
+windows, the keymap menu bar, palette matcher and words, the workspace's status machine and git feed, the hook socket and
+the Theme Studio launcher are real in a window started with a program (`--shell`) on the FFI build; looks 63.5 %,
+works_real 69.3 %, works_mock 65.5 %, combined 69.9 %. Real grades come from the code and its tests, not from a live
+run of every row. Still merged but unwired: minimap, command blocks, print/export (T10, T13, T22).
