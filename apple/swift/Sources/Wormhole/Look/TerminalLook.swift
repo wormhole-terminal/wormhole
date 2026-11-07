@@ -17,6 +17,10 @@ final class TerminalLook {
     /// The Dock bounce is not the bell's: Settings' "Bounce once when a terminal needs input" is the notifications'.
     private(set) var bell = BellStyle(dock: false)
     private(set) var bellColor = NSColor.systemOrange
+    /// The glow's corners are the pane's (`radius_lg`, as `bell_edge`).
+    private(set) var bellRadius: CGFloat = 8
+    /// What a program may do with the clipboard (Settings → Clipboard): the core's defaults until Settings says.
+    private(set) var clipboard: (read: ClipboardReadRule, write: Bool) = (.ask, true)
     /// The terminals of every window, asked for when a change is to reach them.
     private let terminals: () -> [TerminalViews]
     private let themes: ThemeStore
@@ -40,15 +44,22 @@ final class TerminalLook {
         terminals().forEach { $0.forEach { $0.bell = bell } }
     }
 
+    /// `clipboard_read` and `clipboard_write` from Settings.
+    func use(clipboardRead read: ClipboardReadRule, write: Bool) {
+        guard (read, write) != clipboard else { return }
+        clipboard = (read, write)
+        terminals().forEach { $0.forEach { $0.setClipboardRules(read: read, writeAllowed: write) } }
+    }
+
     /// Takes the theme's colours now and again whenever the theme changes (a pick, the appearance, the Studio's preview).
     func followTheme() {
         let tokens = withObservationTracking { themes.tokens } onChange: { [weak self] in
             Task { @MainActor in self?.followTheme() }
         }
-        let glow = NSColor(tokens.agentAttention)
-        if glow != bellColor {
-            bellColor = glow
-            terminals().forEach { $0.forEach { $0.bellColor = glow } }
+        let glow = NSColor(tokens.agentAttention), radius = CGFloat(tokens.metrics.radiusLg)
+        if glow != bellColor || radius != bellRadius {
+            (bellColor, bellRadius) = (glow, radius)
+            terminals().forEach { $0.forEach { ($0.bellColor, $0.bellCornerRadius) = (glow, radius) } }
         }
         let next = PaletteMaker.palette(for: tokens)
         guard next != palette else { return }
@@ -62,5 +73,7 @@ final class TerminalLook {
         if let palette { view.setPalette(palette) }
         view.bell = bell
         view.bellColor = bellColor
+        view.bellCornerRadius = bellRadius
+        view.setClipboardRules(read: clipboard.read, writeAllowed: clipboard.write)
     }
 }

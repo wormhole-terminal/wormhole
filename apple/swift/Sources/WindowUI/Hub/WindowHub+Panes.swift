@@ -3,6 +3,7 @@
 import PanesModel
 import PanesUI
 import SwiftUI
+import TerminalMetal
 import WorkspaceModel
 
 extension WindowHub {
@@ -85,5 +86,14 @@ extension WindowHub {
         case .split(let axis, let children):
             (axis == .row ? "row(" : "col(") + children.map { describe($0.node) }.joined(separator: ",") + ")"
         }
+    }
+}
+
+extension WindowHub {
+    /// The cell and the strip beyond the grid of the one terminal that fills the area, in points, for a window that resizes
+    /// in steps of a cell; nil in a split, whose panes share no grid.
+    public var gridFacts: (cell: CGSize, spare: CGSize)? {
+        guard !paneFacts.isSplit || paneFacts.isZoomed else { return nil }
+        return state.selected.flatMap { terminals.existing($0) }?.cellAndSpare
     }
 }

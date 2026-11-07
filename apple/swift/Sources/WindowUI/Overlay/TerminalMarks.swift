@@ -24,7 +24,7 @@ struct TerminalMarks: View {
                 if let id = overlay.blocks.hovered, let span = spans.first(where: { $0.id == id }) {
                     BlockReadout(controller: overlay.blocks, id: id, state: span.state)
                         .padding(Space._2)
-                        .padding(.trailing, minimapWidth)
+                        .padding(.trailing, minimapWidth + MetalRenderer.padding)
                 }
             }
             if minimapShown {

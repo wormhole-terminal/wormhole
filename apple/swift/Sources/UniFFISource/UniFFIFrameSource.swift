@@ -84,12 +84,38 @@ public final class UniFFIFrameSource: FrameSource {
             case .resetTitle: .resetTitle
             case .bell: .bell
             case .exited(let code): .exited(code: code)
+            case .clipboardWrite(let text): .clipboardWrite(text)
+            case .clipboardRead: .clipboardRead
+            case .clipboardAsk: .clipboardAsk
+            case .clipboardAskClosed: .clipboardAskClosed
             @unknown default: nil
             }
         }
     }
 
     public func write(_ bytes: Data) { current?.write(bytes: bytes) }
+
+    public func setClipboardRules(read: TerminalCore.ClipboardReadRule, writeAllowed: Bool) {
+        let rule: WormholeBindings.ClipboardReadRule = switch read {
+        case .ask: .ask
+        case .allow: .allow
+        case .deny: .deny
+        }
+        current?.setClipboardRules(read: rule, writeAllowed: writeAllowed)
+    }
+
+    public func setOnScreen(_ onScreen: Bool) { current?.setOnScreen(onScreen: onScreen) }
+    public func giveClipboard(_ text: String) { current?.clipboardGive(text: text) }
+    public func foregroundProgram() -> String? { current?.foregroundProgram() }
+
+    public func answerClipboard(_ choice: TerminalCore.ClipboardChoice, text: String) {
+        let answer: WormholeBindings.ClipboardChoice = switch choice {
+        case .once: .once
+        case .always: .always
+        case .deny: .deny
+        }
+        current?.clipboardAnswer(choice: answer, text: text)
+    }
 
     public var encodesKeys: Bool { true }
 

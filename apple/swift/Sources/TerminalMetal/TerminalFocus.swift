@@ -7,6 +7,7 @@ import AppKit
 extension MetalTerminalView {
     @objc func keyStateChanged(_ note: Notification) {
         renderer.setFocused(window?.isKeyWindow ?? false)
+        reportOnScreen()
         if window?.isKeyWindow != true { endComposition() }
         reportFocus()
         updateBlink()

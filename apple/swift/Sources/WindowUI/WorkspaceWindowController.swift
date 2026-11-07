@@ -4,6 +4,7 @@
 
 import AppKit
 import SwiftUI
+import TerminalCore
 
 @MainActor
 public final class WorkspaceWindowController: NSWindowController, NSWindowDelegate {
@@ -16,6 +17,11 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     public var onFrameChange: (() -> Void)?
     /// Asked when the person closes the window: false keeps it open (the app asks a question first, or quits instead).
     public var shouldClose: (() -> Bool)?
+    /// The cell of the one terminal that fills the window and the strip its area has beyond the grid, both in points; nil
+    /// where a split's panes share no grid. Asked when a drag starts and ends (`view::motion::live_resize`).
+    public var gridFacts: (() -> (cell: CGSize, spare: CGSize)?)?
+    /// The frame a window drag began at: what tells the edges the person held.
+    private var dragStart = NSRect.zero
     /// The rectangle the window had before it was zoomed or made full screen: what a record of it comes back to.
     public private(set) var windowedFrame = NSRect.zero
 
@@ -59,6 +65,25 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
         reportState()
         onFrameChange?()
     }
+    /// A drag steps by the terminal's cell, so no part of a cell is left at the right or bottom (as Terminal does).
+    public func windowWillStartLiveResize(_ notification: Notification) {
+        guard let window else { return }
+        dragStart = window.frame
+        window.resizeIncrements = gridFacts?().map { ResizeSteps.increments(cell: $0.cell) } ?? NSSize(width: 1, height: 1)
+    }
+
+    /// AppKit keeps the steps in whole points, so a window may end off the cell grid: it gives up the strip, from the side
+    /// the person was not holding. Full screen, zoomed and tiled windows are the system's size and stay.
+    public func windowDidEndLiveResize(_ notification: Notification) {
+        guard let window, !window.isZoomed, !window.styleMask.contains(.fullScreen), let facts = gridFacts?(),
+            let strip = ResizeSteps.settle(spare: facts.spare, cell: facts.cell), let visible = window.screen?.visibleFrame,
+            let settled = ResizeSteps.settledFrame(
+                window.frame, strip: strip, visible: visible, heldLeft: abs(window.frame.minX - dragStart.minX) > 0.5,
+                heldTop: abs(window.frame.maxY - dragStart.maxY) > 0.5)
+        else { return }
+        window.setFrame(settled, display: true)
+    }
+
     public func windowDidMove(_ notification: Notification) { frameChanged() }
     public func windowDidResize(_ notification: Notification) {
         centreTrafficLights()

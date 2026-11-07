@@ -4,8 +4,6 @@
 
 import Foundation
 
-public enum ClipboardChoice: Sendable { case once, always, deny }
-
 /// Why a terminal's session host cannot be shown (`UnavailableKind`).
 public enum HostUnavailableKind: Sendable, CaseIterable {
     case refused, tooOld, tooNew, busy, timedOut, unreachable, failed
@@ -22,6 +20,14 @@ public enum PaneBar: Equatable, Sendable {
     /// The host runs and this app cannot show it; what went wrong ending it, if that failed.
     case hostUnavailable(HostUnavailableKind, endFailure: String?)
     case hostNotResponding(endFailure: String?)
+}
+
+extension PaneBar {
+    /// A program asks to read the clipboard; `program` is the one in front, "A program" when none is known.
+    public static func asking(_ program: String?) -> PaneBar { .ask(program: program ?? L10n.programUnnamed) }
+
+    /// What the question says, for VoiceOver (`ask_words`).
+    public var askWords: String? { if case let .ask(program) = self { L10n.clipboardAsk(program) } else { nil } }
 }
 
 @MainActor

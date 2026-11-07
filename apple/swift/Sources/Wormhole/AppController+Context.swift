@@ -11,12 +11,14 @@ extension AppController {
     /// The menu for terminal `id`, built as it is asked for so its facts are current.
     func terminalMenu(for id: TerminalID, in session: WindowSession? = nil) -> NSMenu? {
         var facts = TerminalMenuFacts()
-        facts.canPaste = NSPasteboard.general.string(forType: .string) != nil
-        facts.canCopy = true
+        facts.canPaste = NSPasteboard.general.string(forType: .string)?.isEmpty == false
         facts.splitRight = router.table["splitRight"] != nil
         facts.splitDown = router.table["splitDown"] != nil
         let holder = session ?? self.session(holding: id) ?? front
         holder.hub.send(.select(id))
+        let view = holder.hub.terminals.existing(id)
+        facts.canCopy = view?.canCopy ?? false
+        facts.link = view?.linkAddressUnderPointer
         facts.block = holder.hub.contextBlock(in: id)
         return contextMenus.menu(TerminalMenu.nodes(facts))
     }
@@ -35,9 +37,12 @@ extension AppController {
         case .copyCommand: hub.blockAction(.copyCommand, on: action.subject.map(UInt64.init(bitPattern:)))
         case .copyOutput: hub.blockAction(.copyOutput, on: action.subject.map(UInt64.init(bitPattern:)))
         case .putCommandAtPrompt: hub.blockAction(.putAtPrompt, on: action.subject.map(UInt64.init(bitPattern:)))
-        case .openLink, .copyLink, .clear:
-            // Links come with the engine's marks through the FFI.
-            break
+        case .openLink: if let address = action.argument { selectedView?.openLink(address: address) }
+        case .copyLink:
+            guard let address = action.argument else { return }
+            selectedView?.copyLink(address: address)
+            hub.notices.post(.copied(text: address))
+        case .clear: selectedView?.clearBuffer(nil)
         }
     }
 }

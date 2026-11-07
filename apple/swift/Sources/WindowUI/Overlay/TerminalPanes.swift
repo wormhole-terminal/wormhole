@@ -4,6 +4,7 @@
 import DesignSystem
 import PanesUI
 import SwiftUI
+import TerminalMetal
 import TerminalUI
 import WorkspaceModel
 
@@ -40,6 +41,8 @@ struct TerminalSurface: View {
 
     var body: some View {
         if let overlay = hub.overlay(for: id) {
+            // The minimap takes the scroll bar's place at the right of the grid, and the bars stay clear of it.
+            let minimap = look.minimap && overlay.hasScrollback ? MinimapGeometry.width : 0
             GeometryReader { proxy in
                 ZStack(alignment: .topTrailing) {
                     TerminalHost(views: hub.terminals, id: id, overlay: overlay) { hub.actions.terminalMenu(id) }
@@ -49,8 +52,8 @@ struct TerminalSurface: View {
                     }
                     SizeReadoutChip(model: overlay.size)
                     PaneOverlays(
-                        state: overlay.bars, shell: hub.shell, exitCode: overlay.exitCode, gridWidth: proxy.size.width,
-                        actions: overlay.actions)
+                        state: overlay.bars, shell: hub.shell, exitCode: overlay.exitCode,
+                        gridWidth: proxy.size.width - minimap - 2 * MetalRenderer.padding, trailingInset: minimap, actions: overlay.actions)
                 }
             }
         } else {

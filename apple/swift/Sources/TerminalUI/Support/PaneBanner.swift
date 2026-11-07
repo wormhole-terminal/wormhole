@@ -18,7 +18,8 @@ struct PaneBanner<Actions: View>: View {
             Image(systemName: symbol).font(.system(size: Metric.titleGlyph)).foregroundStyle(glyphColor)
             Text(text).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            actions
+            // The words give way, never the buttons' labels.
+            actions.fixedSize()
         }
         .padding(.leading, Space._3).padding(.trailing, Space._2).padding(.vertical, Self.padY)
         .frame(minHeight: Self.minHeight)

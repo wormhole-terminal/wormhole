@@ -10,7 +10,7 @@ extension MetalTerminalView {
     /// The grid as the last frame drew it.
     var cellGrid: CellGrid {
         let cell = renderer.cellPixels, scale = CGFloat(renderer.scale), size = renderer.gridSize
-        return CellGrid(cellWidth: CGFloat(cell.width) / scale, cellHeight: CGFloat(cell.height) / scale, columns: size.cols, rows: size.rows, rowSizes: renderer.scene.sizes)
+        return CellGrid(cellWidth: CGFloat(cell.width) / scale, cellHeight: CGFloat(cell.height) / scale, columns: size.cols, rows: size.rows, rowSizes: renderer.scene.sizes, origin: MetalRenderer.padding)
     }
 
     /// The viewport row under the pointer as of its last move, for the context menu's block.

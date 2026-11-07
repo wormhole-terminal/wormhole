@@ -29,6 +29,9 @@ extension WindowHub {
     /// A terminal's shell ended: its exited bar shows.
     public func noteExit(of id: TerminalID, code: Int32?) { overlay(for: id)?.exited(code: code) }
 
+    /// The question on the selected terminal's bar answered, as its buttons do (the control folder's `clipboard-answer`).
+    public func answerClipboard(_ choice: ClipboardChoice) { selectedOverlay?.actions.answerClipboard(choice) }
+
     public enum FindStep { case open, next, previous, useSelection }
 
     /// ⌘F, ⌘G, ⇧⌘G, ⌘E.

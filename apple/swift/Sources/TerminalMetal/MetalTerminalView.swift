@@ -23,12 +23,20 @@ public final class MetalTerminalView: NSView {
     /// Rows were rebuilt by a frame (output, a scroll): what is drawn from the terminal's state beside the grid (block
     /// marks, the minimap, find's ticks) may be read again.
     public var onContentChanged: (() -> Void)?
+    /// A program set the clipboard (OSC 52): the host may say so.
+    public var onProgramCopy: ((String) -> Void)?
+    /// A program asks to read the clipboard (the name of the program in front, if known): the host asks the person and
+    /// answers with `answerClipboard`. Closed unanswered when it times out.
+    public var onClipboardAsk: ((String?) -> Void)?
+    public var onClipboardAskClosed: (() -> Void)?
     /// The pointer is over viewport row `row` of the grid (`nil`: it left, or is past the grid): block hover.
     public var onPointerRow: ((Int?) -> Void)?
     /// Find's bar is open: the matches among the viewport rows are painted after each frame (`+Find`).
     public var findActive = false { didSet { if findActive != oldValue { refreshFound() } } }
     /// Width the grid leaves free on the right for the minimap, which takes the scroll bar's place (`+Minimap`).
     public var minimapWidth: CGFloat = 0 { didSet { if minimapWidth != oldValue { minimapChanged() } } }
+    /// The context menu for the click that is being handled (the window's: `TerminalMenu`); `nil` opens none.
+    public var contextMenu: (@MainActor () -> NSMenu?)?
     /// Records every draw's phases when set (the measuring mode).
     public var sampler: FrameSampler?
     public internal(set) var statistics = ViewStatistics()
@@ -64,6 +72,9 @@ public final class MetalTerminalView: NSView {
     var textBlinkItem: DispatchWorkItem?
     var glowLayer: CALayer?
     var glowItem: DispatchWorkItem?
+    /// When the program may next be told a size while the window is dragged, and the layout that comes when one held back is due.
+    var resizeGate = ResizeGate()
+    var resizeItem: DispatchWorkItem?
     /// The grid the program was last told (`syncSurface`).
     private(set) var gridSize = GridSize(cols: 0, rows: 0)
     private let wake = WakeRelay()
@@ -128,6 +139,7 @@ public final class MetalTerminalView: NSView {
         super.viewDidMoveToWindow()
         if window == nil {
             invalidateLink()
+            source.setOnScreen(false)
             return
         }
         // `NSView.displayLink` follows the screen the view is on and (unlike CVDisplayLink) needs no setup
@@ -141,6 +153,7 @@ public final class MetalTerminalView: NSView {
             self, selector: #selector(keyStateChanged), name: NSWindow.didBecomeKeyNotification, object: window)
         NotificationCenter.default.addObserver(
             self, selector: #selector(keyStateChanged), name: NSWindow.didResignKeyNotification, object: window)
+        reportOnScreen()
         for name in [NSScroller.preferredScrollerStyleDidChangeNotification] {
             NotificationCenter.default.addObserver(self, selector: #selector(scrollerStyleChanged), name: name, object: nil)
         }
@@ -214,11 +227,28 @@ public final class MetalTerminalView: NSView {
         // A zoom on its way keeps the grid the program has: it is told once, when the size has arrived.
         guard zoomEase == nil else { return }
         // The legacy scroll bar's gutter is not grid.
-        let gridWidth = max(1, Int(((bounds.width - scroller.gutterWidth - minimapWidth) * scale).rounded(.down)))
-        let (cols, rows) = fixedGrid ?? renderer.grid(fittingPixels: gridWidth, Int(pixels.height))
+        // The padding is on every side, and the right one also keeps the scroller's or minimap's strip clear.
+        let padding = CGFloat(renderer.paddingPixels)
+        let gridWidth = max(1, Int(((bounds.width - scroller.gutterWidth - minimapWidth) * scale - 2 * padding).rounded(.down)))
+        let (cols, rows) = fixedGrid ?? renderer.grid(fittingPixels: gridWidth, Int(pixels.height - 2 * padding))
         let cell = renderer.cellPixels
         let size = GridSize(cols: cols, rows: rows, cellWidth: Float(Double(cell.width) / renderer.scale), cellHeight: Float(Double(cell.height) / renderer.scale))
         guard size != gridSize else { return }
+        // A window being dragged tells the program a size at most every 100 ms (the last one always, and once more when the
+        // drag ends: `viewDidEndLiveResize`), as a full-screen program redraws everything for each size.
+        if started {
+            let step = resizeGate.step(now: Date(), live: inLiveResize, differs: true)
+            guard step.apply else {
+                if let wake = step.wakeIn {
+                    resizeItem?.cancel()
+                    let item = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.syncSurface() } }
+                    resizeItem = item
+                    DispatchQueue.main.asyncAfter(deadline: .now() + wake, execute: item)
+                }
+                return
+            }
+            resizeItem?.cancel()
+        }
         gridSize = size
         if started {
             source.resize(size)
@@ -226,6 +256,11 @@ public final class MetalTerminalView: NSView {
         } else {
             startSourceIfNeeded()
         }
+    }
+
+    public override func viewDidEndLiveResize() {
+        super.viewDidEndLiveResize()
+        syncSurface()
     }
 
     // MARK: the display link
@@ -276,6 +311,7 @@ public final class MetalTerminalView: NSView {
                 ringBell()
                 onBell?()
             case .exited(let code): onExit?(code)
+            case .clipboardWrite, .clipboardRead, .clipboardAsk, .clipboardAskClosed: handleClipboard(event)
             }
         }
         return output
@@ -321,7 +357,7 @@ public final class MetalTerminalView: NSView {
 
     /// Write a PNG of what the renderer holds, read back from a texture (no window, no Screen Recording).
     public func writeScreenshot(to url: URL) throws {
-        try renderer.renderToImage().writePNG(to: url)
+        try renderer.renderToImage(padded: true).writePNG(to: url)
     }
 }
 

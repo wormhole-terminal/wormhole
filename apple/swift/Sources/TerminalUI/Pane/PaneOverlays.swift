@@ -20,12 +20,14 @@ public struct PaneOverlays: View {
     let exitCode: Int?
     let hostLost: Bool
     let gridWidth: CGFloat
+    /// What the pane keeps clear at the right of the grid (the minimap), beside the padding.
+    let trailingInset: CGFloat
     let actions: PaneBarActions
 
     public init(state: PaneOverlayState, shell: String, exitCode: Int? = nil, hostLost: Bool = false,
-                gridWidth: CGFloat, actions: PaneBarActions) {
-        (self.state, self.shell, self.exitCode, self.hostLost, self.gridWidth, self.actions) =
-            (state, shell, exitCode, hostLost, gridWidth, actions)
+                gridWidth: CGFloat, trailingInset: CGFloat = 0, actions: PaneBarActions) {
+        (self.state, self.shell, self.exitCode, self.hostLost, self.gridWidth, self.trailingInset, self.actions) =
+            (state, shell, exitCode, hostLost, gridWidth, trailingInset, actions)
     }
 
     public var body: some View {
@@ -34,7 +36,7 @@ public struct PaneOverlays: View {
             Spacer(minLength: 0).allowsHitTesting(false)
             if let bar = state.bar {
                 PaneBarView(bar: bar, actions: actions, gridWidth: gridWidth)
-                    .padding(.horizontal, Space._1).padding(.bottom, Space._2)
+                    .padding(.leading, Space._1).padding(.trailing, Space._1 + trailingInset).padding(.bottom, Space._2)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             if state.exited {

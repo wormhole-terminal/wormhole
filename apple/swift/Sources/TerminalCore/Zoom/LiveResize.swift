@@ -57,3 +57,20 @@ public enum ResizeSteps {
         return dx > 0 || dy > 0 ? CGSize(width: dx, height: dy) : nil
     }
 }
+
+extension ResizeSteps {
+    /// How near a screen's edges a window's sides are for it to count as tiled or snapped (`TILE_MARGIN`).
+    static let tileMargin: CGFloat = 24
+
+    /// The frame (AppKit's space: `origin.y` is the bottom edge) the window is to take off `strip`, or nil when the window
+    /// is the system's size, not the person's: tiled or filling the screen's width or height. The edges the person did not
+    /// hold stay where they are (`settled_frame`, `tiled`). `heldLeft` and `heldTop` are the edges the drag moved.
+    public static func settledFrame(_ frame: CGRect, strip: CGSize, visible: CGRect, heldLeft: Bool, heldTop: Bool) -> CGRect? {
+        let across = frame.minX <= visible.minX + tileMargin && frame.maxX >= visible.maxX - tileMargin
+        let down = frame.minY <= visible.minY + tileMargin && frame.maxY >= visible.maxY - tileMargin
+        guard !across, !down else { return nil }
+        return CGRect(
+            x: heldLeft ? frame.minX + strip.width : frame.minX, y: heldTop ? frame.minY : frame.minY + strip.height,
+            width: frame.width - strip.width, height: frame.height - strip.height)
+    }
+}

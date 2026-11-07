@@ -2,6 +2,7 @@
 // for the marks, and VoiceOver's word for a jump.
 
 import AppKit
+import TerminalMetal
 import TerminalUI
 
 extension TerminalOverlay {
@@ -9,7 +10,7 @@ extension TerminalOverlay {
     var blockGeometry: BlockGeometry? {
         guard let renderer = view?.renderer, renderer.gridSize.rows > 0 else { return nil }
         let cell = renderer.cellPixels
-        return BlockGeometry(rows: renderer.gridSize.rows, cellHeight: CGFloat(cell.height) / CGFloat(renderer.scale), gutter: 0)
+        return BlockGeometry(rows: renderer.gridSize.rows, cellHeight: CGFloat(cell.height) / CGFloat(renderer.scale), top: MetalRenderer.padding, gutter: MetalRenderer.padding)
     }
 
     /// The terminal has a real scrollback (blocks and the minimap exist only over the engine).

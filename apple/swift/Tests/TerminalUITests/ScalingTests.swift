@@ -2,6 +2,7 @@ import CoreGraphics
 import Foundation
 import Testing
 
+@testable import TerminalCore
 @testable import TerminalUI
 
 @MainActor @Suite struct ScalingTests {
@@ -71,5 +72,16 @@ import Testing
         #expect(ResizeSteps.settle(spare: CGSize(width: 3, height: 0.5), cell: cell) == CGSize(width: 3, height: 0))
         #expect(ResizeSteps.settle(spare: CGSize(width: 0.5, height: 0.9), cell: cell) == nil)
         #expect(ResizeSteps.settle(spare: CGSize(width: 8, height: 17), cell: cell) == nil)
+    }
+
+    @Test func theStripComesOffTheSideThePersonDidNotHoldAndTiledWindowsStay() {
+        let screen = CGRect(x: 0, y: 0, width: 1600, height: 1000)
+        let window = CGRect(x: 200, y: 100, width: 800, height: 600)
+        let strip = CGSize(width: 3, height: 5)
+        #expect(ResizeSteps.settledFrame(window, strip: strip, visible: screen, heldLeft: false, heldTop: false)
+            == CGRect(x: 200, y: 105, width: 797, height: 595), "the top edge stays: the bottom one moves up")
+        #expect(ResizeSteps.settledFrame(window, strip: strip, visible: screen, heldLeft: true, heldTop: true)
+            == CGRect(x: 203, y: 100, width: 797, height: 595), "the right and bottom edges stay")
+        #expect(ResizeSteps.settledFrame(CGRect(x: 0, y: 0, width: 800, height: 990), strip: strip, visible: screen, heldLeft: false, heldTop: false) == nil)
     }
 }

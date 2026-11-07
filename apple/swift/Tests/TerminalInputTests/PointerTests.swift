@@ -103,11 +103,13 @@ import TerminalCore
 
     @Test func theContextMenuHasTheAppsItemsAndAProgramThatHasTheMouseKeepsTheClick() throws {
         let harness = try ViewHarness(text: Self.text)
+        // The menu is the window's (`TerminalMenu`); the view says whose click it is and what is under the pointer.
+        harness.view.contextMenu = { NSMenu() }
         let event = harness.mouse(.rightMouseDown, at: harness.point(row: 1, column: 8))
-        let titles = try #require(harness.view.menu(for: event)).items.map(\.title).filter { !$0.isEmpty }
-        #expect(titles == ["Open Link", "Copy Link", "Copy", "Paste", "Select All", "Find…", "Split Right", "Split Down", "Clear Buffer"])
-        let plain = try #require(harness.view.menu(for: harness.mouse(.rightMouseDown, at: harness.point(row: 0, column: 1)))).items.map(\.title)
-        #expect(!plain.contains("Open Link"))
+        #expect(harness.view.menu(for: event) != nil)
+        #expect(harness.view.linkAddressUnderPointer != nil)
+        _ = harness.view.menu(for: harness.mouse(.rightMouseDown, at: harness.point(row: 0, column: 1)))
+        #expect(harness.view.linkAddressUnderPointer == nil)
         harness.interaction.programTakesPointer = true
         #expect(harness.view.menu(for: event) == nil)
         #expect(harness.view.menu(for: harness.mouse(.rightMouseDown, at: harness.point(row: 1, column: 8), flags: .shift)) != nil)

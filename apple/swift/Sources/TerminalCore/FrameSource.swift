@@ -27,6 +27,14 @@ public enum TerminalEvent: Sendable, Equatable {
     case resetTitle
     case bell
     case exited(code: Int32?)
+    /// A program set the clipboard and Settings allow it: put `text` on the pasteboard.
+    case clipboardWrite(String)
+    /// A program may read the clipboard: `giveClipboard` its text.
+    case clipboardRead
+    /// A program asks to read the clipboard and the person decides: `answerClipboard`.
+    case clipboardAsk
+    /// The question went away unanswered (it timed out).
+    case clipboardAskClosed
 }
 
 /// A key press in the app's key vocabulary ("enter", "left", "f5", "a"), as `Terminal::send_key` takes it.
@@ -103,6 +111,17 @@ public protocol FrameSource: AnyObject, Sendable {
     var interaction: (any TerminalInteraction)? { get }
     /// Find, command blocks and the minimap over the whole history, when the source has one (the real engine).
     var scrollback: (any TerminalScrollback)? { get }
+
+    /// What programs may do with the clipboard (OSC 52): Settings' `clipboard_read` and `clipboard_write`.
+    func setClipboardRules(read: ClipboardReadRule, writeAllowed: Bool)
+    /// The terminal is shown where the person can see it: the only state in which a read is asked about.
+    func setOnScreen(_ onScreen: Bool)
+    /// The text a read that was let through gets.
+    func giveClipboard(_ text: String)
+    /// The person's answer to the question; `text` is the pasteboard's, read only for a yes.
+    func answerClipboard(_ choice: ClipboardChoice, text: String)
+    /// The program in front as the sidebar names it, who a question names.
+    func foregroundProgram() -> String?
 }
 
 extension FrameSource {
@@ -116,4 +135,15 @@ extension FrameSource {
     public func plainText(history: Bool) -> String? { nil }
     public var interaction: (any TerminalInteraction)? { nil }
     public var scrollback: (any TerminalScrollback)? { nil }
+    public func setClipboardRules(read: ClipboardReadRule, writeAllowed: Bool) {}
+    public func setOnScreen(_ onScreen: Bool) {}
+    public func giveClipboard(_ text: String) {}
+    public func answerClipboard(_ choice: ClipboardChoice, text: String) {}
+    public func foregroundProgram() -> String? { nil }
 }
+
+/// `clipboard_read` in Settings.
+public enum ClipboardReadRule: String, Sendable { case ask, allow, deny }
+
+/// What the person chose on a program's question about the clipboard.
+public enum ClipboardChoice: Sendable { case once, always, deny }

@@ -13,6 +13,7 @@
 mod app_actions;
 mod aux_backends;
 mod blocks;
+mod clipboard;
 mod cli_tool;
 mod contents;
 mod error;

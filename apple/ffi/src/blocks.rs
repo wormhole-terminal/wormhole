@@ -152,9 +152,12 @@ impl Terminal {
         self.with_pty(|pty| pty.scroll_line_to_top(Line(line)));
     }
 
-    /// Select whole lines `first...=last` (a block's output).
+    /// Select whole lines `first...=last` (a block's output) and bring them into view, as GPUI's Select Output does.
     pub fn select_lines(&self, first: i32, last: i32) {
-        self.with_pty(|pty| pty.select_lines(Line(first), Line(last)));
+        self.with_pty(|pty| {
+            pty.select_lines(Line(first), Line(last));
+            pty.reveal(Line(first));
+        });
     }
 
     /// The text of lines `first...=last`.

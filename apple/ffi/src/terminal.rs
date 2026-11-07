@@ -34,7 +34,7 @@ pub struct Terminal {
     /// The copy `frame` reads the screen into; the engine's damage is consumed by it, so there
     /// is exactly one.
     pub(crate) snapshot: Mutex<ScreenSnapshot>,
-    events: Arc<EventQueue>,
+    pub(crate) events: Arc<EventQueue>,
     /// What the pointer calls remember between calls (`interaction/`).
     pub(crate) interaction: crate::interaction::Interaction,
     /// Which placements the last frame carried (`inline_images`); held with `snapshot`'s lock.

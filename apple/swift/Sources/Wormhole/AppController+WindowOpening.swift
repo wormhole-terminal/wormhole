@@ -2,6 +2,7 @@
 // and the NSWindow's events on their way to the session.
 
 import AppKit
+import TerminalMetal
 import WindowUI
 import WindowsModel
 import WorkspaceModel
@@ -47,7 +48,8 @@ extension AppController {
         let size = options.grid.flatMap { grid in
             first.map { view in
                 let terminal = view.renderer.pointSize(forGrid: grid.cols, grid.rows)
-                return CGSize(width: terminal.width, height: terminal.height + 62)
+                let pad = 2 * MetalRenderer.padding
+                return CGSize(width: terminal.width + pad, height: terminal.height + pad + 62)
             }
         } ?? CGSize(width: 1320, height: 820)
         let title = "Wormhole (Swift experiment)" + (sessions.first === session ? "" : " \(session.id)")
@@ -83,6 +85,7 @@ extension AppController {
             guard let session else { return true }
             return self?.shouldClose(session) ?? true
         }
+        controller.gridFacts = { [weak session] in session?.hub.gridFacts }
         controller.onState = { [weak self, weak session] active, seen in
             guard let session else { return }
             session.hub.store.windowState(active: active, seen: seen)

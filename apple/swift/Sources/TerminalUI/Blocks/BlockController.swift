@@ -37,6 +37,8 @@ public final class BlockController {
 
     public var spans: [BlockSpan] { source.spans }
     public var isAtPrompt: Bool { source.shellAtPrompt }
+    /// How far the view is scrolled back into the history.
+    public var displayOffset: Int { source.displayOffset }
 
     /// The pointer is over viewport `row` (nil: outside the grid): the finished block under it gets the tint.
     public func hover(row: Int?) {

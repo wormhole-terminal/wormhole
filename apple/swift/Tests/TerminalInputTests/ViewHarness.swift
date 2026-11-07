@@ -32,9 +32,9 @@ final class ViewHarness {
 
     deinit { MainActor.assumeIsolated { view.shutdown() } }
 
-    /// The centre of a cell, in the view's coordinates (the view is flipped, the grid at its top-left).
+    /// The centre of a cell, in the view's coordinates (the view is flipped, the grid inside the pane's padding at its top-left).
     func point(row: Int, column: Int, half: CGFloat = 0.5) -> CGPoint {
-        CGPoint(x: (CGFloat(column) + half) * cell.width, y: (CGFloat(row) + 0.5) * cell.height)
+        CGPoint(x: MetalRenderer.padding + (CGFloat(column) + half) * cell.width, y: MetalRenderer.padding + (CGFloat(row) + 0.5) * cell.height)
     }
 
     func mouse(_ type: NSEvent.EventType, at point: CGPoint, clicks: Int = 1, flags: NSEvent.ModifierFlags = []) -> NSEvent {

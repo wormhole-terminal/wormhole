@@ -2,6 +2,7 @@
 
 import AppKit
 import Foundation
+import TerminalCore
 import TerminalMetal
 import WorkspaceModel
 
@@ -34,6 +35,17 @@ extension AppController {
             } catch {
                 reply("error: shot failed: \(error)")
             }
+        // A background instance is never the key window, where a program's clipboard read is refused: this says it is in front.
+        case "clipboard-front": view.source.setOnScreen(argument == "on"); reply("clipboard-front \(argument)")
+        case "context-menu":
+            // What a right-click on the selected terminal would show: each item's title, key and whether it is on.
+            guard let id = hub.state.selected, let menu = terminalMenu(for: id) else { return reply("error: no menu") }
+            reply(menu.items.map { $0.isSeparatorItem ? "---" : "\($0.title) [\($0.keyEquivalent == "" ? "-" : $0.keyEquivalent)\($0.isEnabled ? "" : " off")]" }.joined(separator: "\n"))
+        case "block": reply(hub.blockTargetSummary)
+        case "clipboard-answer":
+            guard let choice = ["once": ClipboardChoice.once, "always": .always, "deny": .deny][argument] else { return reply("error: once, always or deny") }
+            hub.answerClipboard(choice)
+            reply("clipboard-answer \(argument)")
         case "state": reply(state(view))
         case "screen":
             let grid = view.renderer.gridSize

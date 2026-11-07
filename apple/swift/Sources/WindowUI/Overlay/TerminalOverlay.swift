@@ -34,6 +34,7 @@ final class TerminalOverlay {
             terminal: { [weak view] in view?.source.scrollback }, palette: { [weak view] in view?.renderer.palette ?? .spike })
         self.actions = actions
         view.onPointerRow = { [weak blocks] in blocks?.hover(row: $0) }
+        wireClipboard(view: view, notices: notices)
         view.onContentChanged = { [weak self] in self?.contentChanged() }
     }
 
@@ -50,14 +51,16 @@ final class TerminalOverlay {
     }
 }
 
-/// `PaneBarActions` over closures: what needs the Rust session host (attaching again, ending it, the clipboard
-/// question) has nothing to do yet and does nothing; restarting and closing are the window's.
+/// `PaneBarActions` over closures: what needs the Rust session host (attaching again, ending it)
+/// has nothing to do yet and does nothing; restarting and closing are the window's.
 @MainActor
 final class BarActions: PaneBarActions {
     var onRestart: () -> Void = {}
     var onClose: () -> Void = {}
 
-    func answerClipboard(_ choice: ClipboardChoice) {}
+    /// The person's choice: the core answers the program (`TerminalOverlay+Clipboard`).
+    var onAnswer: (ClipboardChoice) -> Void = { _ in }
+    func answerClipboard(_ choice: ClipboardChoice) { onAnswer(choice) }
     func tryAttachAgain() {}
     func openNewTerminalHere() {}
     func endHost(hard: Bool) {}

@@ -13,6 +13,13 @@ import TerminalCore
         #expect(grid.hit(CGPoint(x: 41, y: 20))?.x == 41 && grid.hit(CGPoint(x: 41, y: 20))?.y == 20, "pixels from the corner")
     }
 
+    @Test func thePaddingShiftsTheGridAndAPointInItIsOutside() {
+        var padded = grid
+        padded.origin = 4
+        #expect(padded.hit(CGPoint(x: 4 + 41, y: 4 + 20)).map { ($0.row, $0.column) }! == (1, 5))
+        #expect(!padded.contains(CGPoint(x: 3, y: 100)) && padded.contains(CGPoint(x: 4, y: 4)))
+    }
+
     @Test func aSizedRowsCellsAreTwiceAsWideAndItShowsHalfItsColumns() {
         var sized = grid
         sized.rowSizes = [.single, .doubleWidth, .doubleHeightTop, .doubleHeightBottom]

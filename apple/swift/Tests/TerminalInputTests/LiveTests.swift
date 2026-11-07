@@ -44,7 +44,7 @@ final class LiveHarness {
 
     /// `half` 0.25 is the left half of the cell, 0.75 the right: a selection includes a cell from the half it started in.
     func point(row: Int, column: Int, half: CGFloat = 0.5) -> CGPoint {
-        CGPoint(x: (CGFloat(column) + half) * cell.width, y: (CGFloat(row) + 0.5) * cell.height)
+        CGPoint(x: MetalRenderer.padding + (CGFloat(column) + half) * cell.width, y: MetalRenderer.padding + (CGFloat(row) + 0.5) * cell.height)
     }
 
     func mouse(_ type: NSEvent.EventType, _ point: CGPoint, clicks: Int = 1, flags: NSEvent.ModifierFlags = []) -> NSEvent {

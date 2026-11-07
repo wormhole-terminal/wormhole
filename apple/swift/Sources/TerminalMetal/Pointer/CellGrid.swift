@@ -22,15 +22,21 @@ struct CellGrid: Equatable {
     /// How each row is drawn, when any is not single: a double-width or double-height row's cells are twice as wide
     /// and it shows half of its columns (`terminal_view/line_size.rs`), so the same x is another column there.
     var rowSizes: [LineSize] = []
+    /// Where the grid's corner is in the view: the pane's padding.
+    var origin: CGFloat = 0
+
+    private func shifted(_ point: CGPoint) -> CGPoint { CGPoint(x: point.x - origin, y: point.y - origin) }
 
     var size: CGSize { CGSize(width: cellWidth * CGFloat(columns), height: cellHeight * CGFloat(rows)) }
 
-    func contains(_ point: CGPoint) -> Bool {
-        point.x >= 0 && point.y >= 0 && point.x < size.width && point.y < size.height
+    func contains(_ viewPoint: CGPoint) -> Bool {
+        let point = shifted(viewPoint)
+        return point.x >= 0 && point.y >= 0 && point.x < size.width && point.y < size.height
     }
 
     /// The cell under `point`, clamped to the grid: a drag past an edge selects up to the edge cell.
-    func hit(_ point: CGPoint) -> CellHit? {
+    func hit(_ viewPoint: CGPoint) -> CellHit? {
+        let point = shifted(viewPoint)
         guard columns > 0, rows > 0, cellWidth > 0, cellHeight > 0 else { return nil }
         let x = max(0, point.x), y = max(0, point.y)
         let row = min(Int(y / cellHeight), rows - 1)
@@ -44,7 +50,8 @@ struct CellGrid: Equatable {
     /// Lines to scroll (up is positive) for a drag at `point`, or `nil` while it is over the grid. The
     /// distance past the top or bottom, in cells (the app's rule: `terminal_view/input.rs` `drag_scroll_lines`);
     /// 0 beside the grid, where the selection only follows.
-    func dragScroll(_ point: CGPoint) -> Int? {
+    func dragScroll(_ viewPoint: CGPoint) -> Int? {
+        let point = shifted(viewPoint)
         guard rows > 0, cellHeight > 0 else { return nil }
         if point.y < 0 { return Int((-point.y / cellHeight).rounded(.up)) }
         if point.y >= size.height { return -(Int(((point.y - size.height) / cellHeight).rounded(.down)) + 1) }

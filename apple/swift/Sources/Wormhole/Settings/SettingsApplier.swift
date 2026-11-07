@@ -10,6 +10,7 @@ import PanesUI
 import SettingsModel
 import SettingsUI
 import SidebarUI
+import TerminalCore
 import TerminalMetal
 import WindowUI
 
@@ -49,6 +50,11 @@ final class SettingsApplier {
             app.terminalLook.use(
                 bell: BellStyle(
                     sound: values["bell_sound"]?.bool ?? true, visual: values["bell_visual"]?.bool ?? true, dock: false))
+        }
+        if changed("clipboard_read", "clipboard_write") {
+            app.terminalLook.use(
+                clipboardRead: values["clipboard_read"]?.string.flatMap(ClipboardReadRule.init(rawValue:)) ?? .ask,
+                write: values["clipboard_write"]?.string != "deny")
         }
         applyLook(values, changed: changed)
         app.ambient?.apply(values, changed: changed)

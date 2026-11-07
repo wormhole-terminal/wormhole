@@ -33,3 +33,13 @@ extension WindowHub {
             atPrompt: overlay.blocks.isAtPrompt)
     }
 }
+
+extension WindowHub {
+    /// The block the Edit menu's actions act on, as one line (the control folder's `block`), and how far the view is scrolled back.
+    public var blockTargetSummary: String {
+        guard let overlay = selectedOverlay else { return "no terminal" }
+        let offset = overlay.blocks.displayOffset
+        guard let block = overlay.blocks.target else { return "no target offset=\(offset)" }
+        return "target lines=\(block.start)...\(block.end) output=\(block.outputLines.map { "\($0)" } ?? "none") command=\(block.command) offset=\(offset)"
+    }
+}

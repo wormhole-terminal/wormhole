@@ -145,6 +145,13 @@ public final class MetalRenderer {
     public var cellPixels: (width: Int, height: Int) { (scene.fonts.metrics.width, scene.fonts.metrics.height) }
     public var scale: Double { configuration.scale }
 
+    /// The pane's padding around the grid in points (`PADDING_X` and `PADDING_Y`, `terminal_view/mod.rs`): the grid is
+    /// drawn that far from the left, top and bottom edges.
+    public static let padding: CGFloat = 4
+
+    /// The padding in pixels, which `encode` leaves clear.
+    var paddingPixels: Int { Int((Self.padding * CGFloat(scale)).rounded()) }
+
     /// The cells that fit a surface of this many pixels.
     public func grid(fittingPixels width: Int, _ height: Int) -> (cols: Int, rows: Int) {
         let cell = cellPixels
@@ -274,7 +281,7 @@ public final class MetalRenderer {
         pass.colorAttachments[0].storeAction = .store
         pass.colorAttachments[0].clearColor = clearColor
         let buffer = queue.makeCommandBuffer()!
-        encode(into: buffer, pass: pass, size: layer.drawableSize, slot: slot, counts: counts)
+        encode(into: buffer, pass: pass, size: layer.drawableSize, inset: paddingPixels, slot: slot, counts: counts)
         buffer.present(drawable)
         let semaphore = inflight
         let times = gpuTimes
@@ -318,15 +325,18 @@ public final class MetalRenderer {
     }
 
     private func encode(
-        into buffer: MTLCommandBuffer, pass: MTLRenderPassDescriptor, size: CGSize, slot index: Int,
+        into buffer: MTLCommandBuffer, pass: MTLRenderPassDescriptor, size full: CGSize, inset: Int = 0, slot index: Int,
         counts: (backgrounds: Int, decorations: Int, glyphs: Int)
     ) {
         let slot = slots[index]
         images.prepare(in: buffer)
+        // The padding is left clear (the clear colour is the terminal's background) and the grid is drawn in what is left.
+        let size = CGSize(width: full.width - CGFloat(2 * inset), height: full.height - CGFloat(2 * inset))
         var uniforms = Uniforms(viewport: SIMD2(Float(size.width), Float(size.height)))
         if blinkFaded { uniforms.blink = Self.blinkFadedFactor }
         let colors = palette.floats()
         let encoder = buffer.makeRenderCommandEncoder(descriptor: pass)!
+        encoder.setViewport(MTLViewport(originX: Double(inset), originY: Double(inset), width: size.width, height: size.height, znear: 0, zfar: 1))
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<Uniforms>.size, index: 1)
         colors.withUnsafeBytes { encoder.setVertexBytes($0.baseAddress!, length: $0.count, index: 2) }
 
@@ -361,8 +371,10 @@ public final class MetalRenderer {
     /// Render the scene into a texture of its own and read it back: BGRA, top row first. This is what the
     /// screenshots are made from (`cacheDisplay` does not see a Metal layer), and it needs neither a window
     /// nor a drawable. Waits for the GPU.
-    public func renderToImage(width: Int? = nil, height: Int? = nil) -> RenderedImage {
-        let width = width ?? max(1, gridPixels.width), height = height ?? max(1, gridPixels.height)
+    public func renderToImage(width: Int? = nil, height: Int? = nil, padded: Bool = false) -> RenderedImage {
+        // `padded` is the pane as drawn: the grid with its padding around it.
+        let pad = padded ? paddingPixels : 0
+        let width = (width ?? max(1, gridPixels.width)) + 2 * pad, height = (height ?? max(1, gridPixels.height)) + 2 * pad
         let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false)
         descriptor.usage = [.renderTarget, .shaderRead]
         descriptor.storageMode = .shared
@@ -377,7 +389,7 @@ public final class MetalRenderer {
         defer { for _ in 0..<3 { inflight.signal() } }
         let buffer = queue.makeCommandBuffer()!
         let counts = assemble(slot: nextSlot)
-        encode(into: buffer, pass: pass, size: CGSize(width: width, height: height), slot: nextSlot, counts: counts)
+        encode(into: buffer, pass: pass, size: CGSize(width: width, height: height), inset: pad, slot: nextSlot, counts: counts)
         buffer.commit()
         buffer.waitUntilCompleted()
         var pixels = [UInt8](repeating: 0, count: width * height * 4)

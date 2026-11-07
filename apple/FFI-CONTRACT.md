@@ -993,3 +993,19 @@ Additive; nothing existing changed meaning. Code: `ffi/src/settings/{skills,flag
   on/off), `trustedProjects()`, `knownProjects(folders:)` (the project of each open terminal's folder, then the trusted
   ones), `projectPage(root:) -> ProjectPageRecord?` (trust, its sentence, the commands while untrusted, a row per
   feature with `choice`/`defaultOn`, problems) and `missingFolderNote(root:)`; `approve`/`revoke` are the existing ones.
+## A program's clipboard (OSC 52): more `Terminal` methods (`clipboard.rs`)
+
+Core's rules, Swift's pasteboard. Core's `ReadGate` decides (one question at a time, only where it can be seen);
+the object holds the engine's reply slot until every path out has answered it, with the text or with nothing.
+
+- `set_clipboard_rules(read: ClipboardReadRule, write_allowed: bool)`: Settings' `clipboard_read` (`ask`, `allow`,
+  `deny`) and `clipboard_write`. Ask and write-allowed until said.
+- `set_on_screen(bool)`: the terminal is shown in the window in front. A read that would be asked about is refused while
+  it is false (GPUI's `in_front`); false until Swift says.
+- Events (`TermEvent`, added at the end): `ClipboardWrite { text }` (a program set the clipboard and the setting allows
+  it: Swift writes the pasteboard), `ClipboardRead` (let through: `clipboard_give(text)` answers the oldest one),
+  `ClipboardAsk` (the person decides: `clipboard_answer(choice, text)`, `text` read only for a yes) and
+  `ClipboardAskClosed` (the question timed out after 30 s and counted as Deny).
+- `foreground_program() -> Option<String>`: the program in front as the sidebar names it, cleaned and cut, who the
+  question names; `None` when the shell holds the terminal.
+- `select_lines(first, last)` (blocks) now also brings the first line into view, as GPUI's Select Output does.

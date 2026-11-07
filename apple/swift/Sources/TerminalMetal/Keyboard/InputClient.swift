@@ -70,7 +70,7 @@ extension MetalTerminalView: @preconcurrency NSTextInputClient {
         let grid = cellGrid
         let position = renderer.cursorCell ?? (0, 0)
         let column = position.column + composition.columns(before: range.location)
-        let local = NSRect(x: CGFloat(column) * grid.cellWidth, y: CGFloat(position.row) * grid.cellHeight, width: grid.cellWidth, height: grid.cellHeight)
+        let local = NSRect(x: grid.origin + CGFloat(column) * grid.cellWidth, y: grid.origin + CGFloat(position.row) * grid.cellHeight, width: grid.cellWidth, height: grid.cellHeight)
         guard let window else { return local }
         return window.convertToScreen(convert(local, to: nil))
     }

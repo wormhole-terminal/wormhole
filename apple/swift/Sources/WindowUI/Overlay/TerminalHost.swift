@@ -47,6 +47,7 @@ struct TerminalHost: NSViewRepresentable {
             view.removeFromSuperview()
             view.frame = bounds
             view.autoresizingMask = [.width, .height]
+            view.contextMenu = { [weak self] in self?.contextMenu() }
             addSubview(view)
             // The keys go to the terminal that was just shown, not to whatever had focus.
             window?.makeFirstResponder(view)

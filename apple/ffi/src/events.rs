@@ -51,6 +51,16 @@ pub enum TermEvent {
     Exited {
         code: Option<i32>,
     },
+    /// A program set the clipboard (OSC 52) and `clipboard_write` allows it.
+    ClipboardWrite {
+        text: String,
+    },
+    /// A program may read the clipboard: `clipboard_give` the text.
+    ClipboardRead,
+    /// A program asks to read the clipboard and the person decides: `clipboard_answer`.
+    ClipboardAsk,
+    /// The question went away unanswered (it timed out).
+    ClipboardAskClosed,
 }
 
 /// Events waiting for a drain, and whether the listener was told.
@@ -61,6 +71,8 @@ pub(crate) struct EventQueue {
     listener: Arc<dyn TerminalListener>,
     /// Set once, by the workspace the terminal is registered with.
     feed: OnceLock<Arc<dyn EventFeed>>,
+    /// What programs may do with the clipboard (`clipboard.rs`).
+    pub(crate) clipboard: crate::clipboard::Clipboard,
 }
 
 impl EventQueue {
@@ -70,6 +82,7 @@ impl EventQueue {
             woken: AtomicBool::new(false),
             listener,
             feed: OnceLock::new(),
+            clipboard: Default::default(),
         })
     }
 
@@ -83,6 +96,10 @@ impl EventQueue {
         if let Some(feed) = self.feed.get() {
             feed.on_touch(touch);
         }
+    }
+
+    pub(crate) fn push_event(&self, event: TermEvent) {
+        self.push(event);
     }
 
     fn push(&self, event: TermEvent) {
@@ -114,7 +131,7 @@ pub(crate) fn spawn_receiver(events: PtyEvents, queue: Arc<EventQueue>) -> std::
             if let Some(feed) = queue.feed.get() {
                 feed.on_event(&event);
             }
-            if let Some(event) = translate(event) {
+            if let Some(event) = translate(event, &queue) {
                 queue.push(event);
             }
         }
@@ -122,8 +139,10 @@ pub(crate) fn spawn_receiver(events: PtyEvents, queue: Arc<EventQueue>) -> std::
     Ok(())
 }
 
-fn translate(event: PtyEvent) -> Option<TermEvent> {
+fn translate(event: PtyEvent, queue: &Arc<EventQueue>) -> Option<TermEvent> {
     Some(match event {
+        PtyEvent::ClipboardStore(text) => return queue.clipboard.store(text),
+        PtyEvent::ClipboardLoad(format, reply) => return queue.clipboard.load(queue, format, reply),
         PtyEvent::Output => TermEvent::Output,
         PtyEvent::Title(title) => TermEvent::Title { title },
         PtyEvent::ResetTitle => TermEvent::ResetTitle,
