@@ -6,12 +6,12 @@ import Dispatch
 import PlatformModel
 import WormholeBindings
 
-final class OwnerAuthentication: OwnerAuthenticator, @unchecked Sendable {
+public final class OwnerAuthentication: OwnerAuthenticator, @unchecked Sendable {
     private let authenticator: any Authenticating
 
-    init(_ authenticator: any Authenticating) { self.authenticator = authenticator }
+    public init(_ authenticator: any Authenticating) { self.authenticator = authenticator }
 
-    func authenticate(reason: String) -> OwnerAnswer {
+    public func authenticate(reason: String) -> OwnerAnswer {
         let outcome = Outcome()
         let done = DispatchSemaphore(value: 0)
         let authenticator = authenticator

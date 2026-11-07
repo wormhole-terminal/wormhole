@@ -19,6 +19,11 @@ struct PanelView: View {
         case "agentsOther": AgentList(records: records.agents.filter { $0.state == .notInstalled }, host: model.host)
         case "importFound": ImportList(records: records.imports)
         case "agentAccessPrograms": ApprovalList(records: records.approvals, host: model.host)
+        case "agentsHow": HowStatusWorks()
+        case "agent-skills": SkillList(records: records.skills, host: model.host)
+        case "feature-flags": FlagList(model: model)
+        case "probes": ProbesPanel(model: model)
+        case "projects": ProjectsPanel(model: model)
         default: PanelNote(text: entry.description.isEmpty ? entry.label : entry.description)
         }
     }
@@ -28,7 +33,7 @@ extension ControlSpec {
     /// Panels that are one line of status at the right of a labelled row, not a block of records.
     var isRowPanel: Bool {
         guard case .panel(let name) = self else { return false }
-        return !["agentsInstalled", "agentsOther", "agentsHow", "importFound", "count-details", "projects", "probes", "feature-flags", "agentAccessPrograms"].contains(name)
+        return !["agentsInstalled", "agentsOther", "agentsHow", "agent-skills", "importFound", "count-details", "projects", "probes", "feature-flags", "agentAccessPrograms"].contains(name)
     }
 }
 
@@ -38,18 +43,5 @@ struct PanelNote: View {
     var body: some View {
         Text(text).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, Space._3)
-    }
-}
-
-/// Why the last button did nothing (a hook that could not be installed, `wh` that could not be written), on the page until
-/// the next one.
-struct ProblemNote: View {
-    let text: String
-    @Environment(\.tokens) private var tokens
-    var body: some View {
-        Text(text).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.statusDangerText)
-            .frame(maxWidth: .infinity, alignment: .leading).padding(Space._3)
-            .background(tokens.settingsGroup, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusLg))
-            .accessibilityAddTraits(.isStaticText)
     }
 }

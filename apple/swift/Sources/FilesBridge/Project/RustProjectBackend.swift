@@ -9,7 +9,7 @@ import WormholeBindings
 import WorkspaceModel
 
 public final class RustProjectBackend: ProjectBackend, @unchecked Sendable {
-    let service: ProjectService
+    public let service: ProjectService
     private let effects: any PanelEffectPerforming
 
     public init(service: ProjectService, effects: any PanelEffectPerforming) {

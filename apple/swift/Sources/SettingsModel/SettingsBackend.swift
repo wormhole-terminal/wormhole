@@ -44,6 +44,18 @@ public protocol SettingsHost: AnyObject {
     func removeProfile(_ id: String) -> String?
     /// The Settings window was opened: what a page reads from the disk is read again.
     func windowOpened()
+    /// The Probes and the projects behind the Extensions and Project folders pages; nil where there are none (the mock).
+    var probes: (any ProbesBackend)? { get }
+    var projects: (any ProjectsBackend)? { get }
+    /// Installs, updates or removes the Wormhole skill of the agent `id` (a row's button).
+    func perform(skill id: String, install: Bool)
+    /// The Feature flags page: a switch per flag, flipped, and the unlisted key that unlocks them in a release.
+    func flags() -> [FlagRecord]
+    func setFlag(_ key: String, on: Bool)
+    /// Whether they are unlocked now.
+    @discardableResult func toggleFlagsUnlocked() -> Bool
+    /// The pages the nav shows for this build and these settings; nil shows every page.
+    func shownSections() -> Set<String>?
 }
 
 extension SettingsHost {
@@ -54,6 +66,13 @@ extension SettingsHost {
     public func revoke(_ approval: ApprovalRecord) {}
     public func makeProfile(name: String, copyOf: String?) -> String? { Self.noProfiles }
     public func windowOpened() {}
+    public var probes: (any ProbesBackend)? { nil }
+    public var projects: (any ProjectsBackend)? { nil }
+    public func perform(skill id: String, install: Bool) {}
+    public func flags() -> [FlagRecord] { [] }
+    public func setFlag(_ key: String, on: Bool) {}
+    public func toggleFlagsUnlocked() -> Bool { false }
+    public func shownSections() -> Set<String>? { nil }
     public func removeProfile(_ id: String) -> String? { Self.noProfiles }
     private static var noProfiles: String {
         String(localized: "settings-profile-unavailable", defaultValue: "Profiles are not available in this build.")

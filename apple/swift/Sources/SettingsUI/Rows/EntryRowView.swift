@@ -13,7 +13,7 @@ struct EntryRowView: View {
     var body: some View {
         switch entry.control.layout {
         case .strip: EmptyView()
-        case .block: BlockView(model: model, entry: entry)
+        case .block, .bare: BlockView(model: model, entry: entry)
         case .row, .tallRow:
             SettingRow(
                 label: entry.label, description: projectNote ?? entry.description, visibleHint: entry.visibleHint || projectNote != nil,

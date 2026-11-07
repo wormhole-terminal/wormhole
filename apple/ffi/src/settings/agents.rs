@@ -123,7 +123,7 @@ pub(crate) fn set_hooks_in(home: &Path, agent: &str, install: bool) -> Result<()
 }
 
 /// Where hooks may be written: `WORMHOLE_AGENT_HOME`, never the real home.
-fn agent_home_for_writing() -> Result<PathBuf, SettingsError> {
+pub(super) fn agent_home_for_writing() -> Result<PathBuf, SettingsError> {
     let home = std::env::var_os("WORMHOLE_AGENT_HOME")
         .map(PathBuf::from)
         .filter(|home| !home.as_os_str().is_empty() && Some(home) != paths::home().as_ref());

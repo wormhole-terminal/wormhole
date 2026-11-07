@@ -27,6 +27,14 @@ public final class RustSettingsHost: SettingsHost {
         /// Takes an approval back (`stored`: a database row; else one held in memory): the hook server ends the
         /// streams it let in, which only the app can reach.
         public var revokeApproval: @MainActor (_ number: UInt64, _ stored: Bool) -> Void = { _, _ in }
+        /// The project service the Project tab uses, so trust given in Settings is what the tab shows; nil: no Project folders page.
+        public var projects: @MainActor () -> ProjectService? = { nil }
+        /// Asked before a Probe that needs it is approved (Touch ID, or the password); nil: no Extensions page.
+        public var owner: @MainActor () -> (any OwnerAuthenticator)? = { nil }
+        /// The folders of the open terminals, whose projects the Project folders page offers.
+        public var projectFolders: @MainActor () -> [String] = { [] }
+        /// A new terminal in a project's folder.
+        public var openTerminal: @MainActor (String) -> Void = { _ in }
         public init() {}
     }
 
@@ -36,16 +44,27 @@ public final class RustSettingsHost: SettingsHost {
     let platform: Platform
     let importHome: String?
     var records: PanelRecords
+    public let probes: (any ProbesBackend)?
+    public let projects: (any ProjectsBackend)?
     /// Why the last hook install or removal failed (core's sentence); nil after one that worked.
     public internal(set) var failure: String?
 
     init(handle: SettingsHandle, backend: RustSettingsBackend, platform: Platform, importHome: String?) {
         (self.handle, self.backend, self.platform, self.importHome) = (handle, backend, platform, importHome)
+        if let owner = platform.owner(), let desk = try? ProbesDesk(authenticator: owner) {
+            probes = RustProbesBackend(desk: desk)
+        } else {
+            probes = nil
+        }
+        projects = platform.projects().map {
+            RustProjectsBackend(service: $0, folders: platform.projectFolders, terminal: platform.openTerminal)
+        }
         let profile = RecordMapping.profile((try? settingsProfiles()) ?? [])
         records = PanelRecords(
             agents: [], imports: [],
             profile: profile ?? ProfileRecord(name: "", startFolder: "~", gitName: "", gitEmail: ""))
         refreshAgents()
+        refreshSkills()
         refreshImports()
         refreshProfiles()
         refreshCommandLine()
@@ -70,6 +89,7 @@ public final class RustSettingsHost: SettingsHost {
     /// The window opened: what the pages read from the disk is read again.
     public func windowOpened() {
         refreshAgents()
+        refreshSkills()
         refreshProfiles()
         refreshCommandLine()
         refreshApprovals()
@@ -88,7 +108,9 @@ public final class RustSettingsHost: SettingsHost {
         case .resetAll:
             _ = handle.resetAll()
             backend.reload()
-        case .rescanAgents: refreshAgents()
+        case .rescanAgents:
+            refreshAgents()
+            refreshSkills()
         case .scanImports: refreshImports()
         case .installCommandLine: installCommandLine()
         case .uninstallCommandLine: uninstallCommandLine()

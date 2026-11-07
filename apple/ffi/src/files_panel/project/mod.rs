@@ -9,6 +9,7 @@ mod overrides;
 mod paint;
 mod records;
 mod service;
+mod settings_page;
 mod state;
 mod trust;
 
@@ -20,4 +21,7 @@ pub use records::{
     ProjectStateRecord, TrustLineRecord, TrustStatusRecord,
 };
 pub use service::ProjectService;
+pub use settings_page::{
+    ProjectChoiceRecord, ProjectDefaultRecord, ProjectFeatureRowRecord, ProjectPageRecord,
+};
 pub use trust::{ApproveOutcome, OwnerAnswer, OwnerAuthenticator};

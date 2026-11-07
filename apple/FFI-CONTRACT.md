@@ -966,3 +966,30 @@ their traits stay CoreText's on the Swift side, as `fonts.rs` and `platform/maco
 - `fontBundledFamily() -> String`: `JetBrains Mono`. A custom family of that name replaces it (list it once, as custom).
 - Swift: `SettingsBridge.RustFontRules` implements `FontPickerModel.FontRules`; `RustSettingsHost.fontRules` hands it out.
   `LocalFontRules` is the same rules in Swift for a build without the core, and a test keeps the two equal.
+## Settings panels: skills, MCP, feature flags, Extensions, Project folders (round P)
+
+Additive; nothing existing changed meaning. Code: `ffi/src/settings/{skills,flags}.rs`, `settings/probes/`,
+`files_panel/project/settings_page.rs`.
+
+- **Skills and MCP.** `settingsSkillRows() -> [SettingsSkillRow]` (the agents that load skills and are on the PATH, or
+  have it already: `id` is the target's word, `state`, the catalogs' `detail`, `shown` the folder), 
+  `settingsSetSkill(word:install:)` (writes only under `WORMHOLE_AGENT_HOME`, as the hooks do) and
+  `settingsMcpCommand()` (the `claude mcp add …` line to copy; nothing edits another app's MCP settings).
+- **Feature flags and the nav.** On `SettingsHandle`: `featureFlags() -> [SettingsFlagRow]` (key, title, description,
+  `on`, `default`), `setFeatureFlag(key:on:)` (the default takes the entry out), `toggleFlagsUnlocked() -> Bool` (the
+  unlisted ⌃⌥⌘F) and `visibleSections() -> [String]` (core's `SectionId::is_visible`: the Preview pages follow their
+  flags and the build; section ids are the schema's).
+- **Extensions: `ProbesDesk(authenticator:)`** (isolated only). `list()` (reads and tidies: off the main thread) ->
+  `ProbeListRecord` (rows with `id`, `state` = `on|off|changed|unsupported|invalid`, the catalogs' words, `note`,
+  `canApprove`, `canForget`; `keyProblem`; `tooMany`), `sheet(id:)` reads the Probe once and keeps that request,
+  `needsTouchId(id:granted:)` (core's `Request::confirmation` for the permissions left on), `approve(id:granted:)`
+  -> `ProbeApprovalOutcome` (`approved|cancelled|failed(message)`; it calls `OwnerAuthenticator` only when core says Touch
+  ID, blocks while the owner answers, and records exactly the bytes the sheet showed) and `turnOff(id:)` (also forgets).
+  Words a Probe's author wrote pass `reveal`. **`wormhole-core`'s `dev-key` feature is on for the FFI**: approvals (and
+  the other sealed stores) keep their keys in files of the experiment's own data folder, never in the login Keychain;
+  drop the feature in `ffi/Cargo.toml` when the Swift app ships.
+- **Project folders** (more `ProjectService` methods, the same hub as the Project tab): `projectDefaults()`,
+  `setProjectDefault(feature:on:)`, `clearFeatureChoice(root:feature:)` (with the existing `setFeature` for a choice of
+  on/off), `trustedProjects()`, `knownProjects(folders:)` (the project of each open terminal's folder, then the trusted
+  ones), `projectPage(root:) -> ProjectPageRecord?` (trust, its sentence, the commands while untrusted, a row per
+  feature with `choice`/`defaultOn`, problems) and `missingFolderNote(root:)`; `approve`/`revoke` are the existing ones.

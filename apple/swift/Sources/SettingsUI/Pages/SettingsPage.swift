@@ -12,11 +12,13 @@ struct SettingsPage: View {
 
     var body: some View {
         PageScaffold(title: section.title, intro: section.intro, revealed: model.revealed, clearReveal: model.clearReveal, action: { HeaderAction(model: model, section: section.id) }) {
-            if let problem = model.host.panelRecords().problem { ProblemNote(text: problem) }
+            if let problem = model.host.panelRecords().problem { Banner(kind: .danger, text: problem) }
             if let scene = PreviewScene(section: section.id) { PreviewStrip(model: model, scene: scene) }
             ForEach(Array(section.groups.enumerated()), id: \.offset) { _, group in
                 let rows = group.entries.filter { $0.isShown(values: model.values) && $0.control.layout != .strip }
-                if !rows.isEmpty {
+                if let bare = rows.first(where: { $0.control.layout == .bare }) {
+                    EntryRowView(model: model, entry: bare)
+                } else if !rows.isEmpty {
                     SettingGroup(title: group.title, aside: group.aside, blurb: group.blurb) {
                         ForEach(rows) { EntryRowView(model: model, entry: $0) }
                     }

@@ -12,7 +12,9 @@ publish.workspace = true
 crate-type = ["staticlib", "lib"]
 
 [dependencies]
-wormhole-core = { path = "../../crates/wormhole-core" }
+# `dev-key`: Probe approvals and the other sealed stores keep their keys in files of the experiment's own data
+# folder, never in the login Keychain (the experiment never touches it); drop it when the Swift app ships.
+wormhole-core = { path = "../../crates/wormhole-core", features = ["dev-key"] }
 wormhole-term = { path = "../../crates/wormhole-term" }
 wormhole-text = { path = "../../crates/wormhole-text" }
 anyhow = "1"

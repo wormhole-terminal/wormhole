@@ -33,6 +33,7 @@ public struct SettingsView: View {
         .environment(\.fontLibrary, fonts)
         .onKeyPress(.escape) { escape() }
         .onKeyPress(keys: [Self.f6], phases: .down) { cycle(backwards: $0.modifiers.contains(.shift)) }
+        .onKeyPress(keys: ["f"], phases: .down) { unlockFlags($0) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(SettingsText.settings)
         .motion(Motion.selection, value: model.selection)
@@ -68,6 +69,13 @@ public struct SettingsView: View {
         } else {
             onClose()
         }
+        return .handled
+    }
+
+    /// ⌃⌥⌘F, in no menu on purpose: unlocks the feature flags in a release (and opens their page), or locks them again.
+    private func unlockFlags(_ press: KeyPress) -> KeyPress.Result {
+        guard press.modifiers == [.control, .option, .command] else { return .ignored }
+        if model.host.toggleFlagsUnlocked() { model.show("featureFlags") }
         return .handled
     }
 

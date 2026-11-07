@@ -10,3 +10,9 @@ enum SettingsFailure {
         }
     }
 }
+
+/// A sentence thrown across the model's seam, which prints as the sentence and nothing else.
+struct Sentence: Error, CustomStringConvertible {
+    let description: String
+    init(_ error: any Error) { description = SettingsFailure.sentence(error) }
+}

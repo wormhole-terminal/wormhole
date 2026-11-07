@@ -5,7 +5,10 @@
 #if WITH_UNIFFI
     import AppKit
     import AuxBridge
+    import FilesBridge
     import PanesUI
+    import PlatformModel
+    import PlatformUI
     import SettingsBridge
     import SettingsModel
     import WormholeBindings
@@ -26,6 +29,15 @@
                 if let hooks = app?.hooks { return hooks.revokeApproval(number, stored: stored) }
                 // No server (a second launch, an unlinked socket): the desk alone takes it back.
                 if stored { _ = desk(of: app)?.revokeStored(id: number) } else { _ = desk(of: app)?.revoke(id: number) }
+            }
+            // The Project folders page shares the Project tab's service, so trust given here is what the tab shows.
+            platform.projects = { [weak app] in (app?.panelBackends.project as? RustProjectBackend)?.service }
+            platform.projectFolders = { [weak app] in app?.hub.state.all.compactMap(\.folder) ?? [] }
+            platform.openTerminal = { [weak app] in app?.hub.send(.newTerminalIn($0)) }
+            // Owner authentication is Touch ID in a real run and WORMHOLE_AUTH's answer in a test instance.
+            platform.owner = { [weak app] in
+                guard let policy = app?.policy else { return nil }
+                return OwnerAuthentication(policy.touchesSystem ? LocalAuthenticator() : ScriptedAuthenticator())
             }
             return platform
         }

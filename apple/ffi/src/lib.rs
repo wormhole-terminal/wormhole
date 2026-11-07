@@ -12,9 +12,9 @@
 
 mod app_actions;
 mod aux_backends;
-mod contents;
 mod blocks;
 mod cli_tool;
+mod contents;
 mod error;
 mod events;
 mod files_panel;
@@ -24,8 +24,8 @@ pub mod folder_picker;
 mod frame;
 mod git;
 mod hook_server;
-mod inline_images;
 mod hosting;
+mod inline_images;
 mod interaction;
 mod isolation;
 pub mod keymap;
@@ -54,22 +54,22 @@ pub use app_actions::{
     profile_delete_question, reset_tips,
 };
 pub use aux_backends::*;
-pub use contents::ContentsScope;
 pub use blocks::{BlockRecord, BlockSpanRecord, BlockStatus, PutResult};
 pub use cli_tool::{
     CliToolError, CliToolPathRecord, CliToolPathVerdict, CliToolRecord, CliToolState, cli_tool_install,
     cli_tool_keep_current, cli_tool_path_note, cli_tool_status, cli_tool_uninstall,
 };
+pub use contents::ContentsScope;
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
 pub use files_panel::{
     ApproveOutcome, DirectoryRecord, EntryRecord, FileContentRecord, FileEntryKind, FileProblem,
     FilesFailure, FilesService, FolderPaintRecord, FolderWatch, NewTerminalRecord, NoteSaved, NotesDocRecord,
     NotesSaved, NotesSyncOutcome, OwnerAnswer, OwnerAuthenticator, PanelListener, PlanLimitRecord,
-    ProjectActionRecord, ProjectEffect, ProjectFailure, ProjectFeatureRecord, ProjectPromptRecord,
-    ProjectService, ProjectSettingsRecord, ProjectStateRecord, RenameFailure, SessionNotesStore,
-    TaskDocRecord, TaskSaved, TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord,
-    UsageService,
+    ProjectActionRecord, ProjectChoiceRecord, ProjectDefaultRecord, ProjectEffect, ProjectFailure,
+    ProjectFeatureRecord, ProjectFeatureRowRecord, ProjectPageRecord, ProjectPromptRecord, ProjectService,
+    ProjectSettingsRecord, ProjectStateRecord, RenameFailure, SessionNotesStore, TaskDocRecord, TaskSaved,
+    TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord, UsageService,
 };
 pub use find::{FindOutcome, FoundSpan};
 pub use fonts::{
@@ -82,22 +82,25 @@ pub use git::{
     GitWorktree, GitWorktreePlan, WorktreeService,
 };
 pub use hook_server::{HookError, HookEvent, HookListener, HookServer, cli_exit_code};
-pub use inline_images::InlineImage;
 pub use hosting::{
     HostedStart, HostedTerminals, HostingError, HostingProgram, LaunchPlan, OrphanHost, SavedTerminal,
     TerminalHosting,
 };
+pub use inline_images::InlineImage;
 pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,
 };
 pub use minimap::{MinimapGeometryRecord, MinimapRunRecord};
 pub use settings::{
-    SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsHandle, SettingsHealth, SettingsHit,
-    SettingsHookState, SettingsImportRow, SettingsListener, SettingsOptionRow, SettingsPaths,
-    SettingsProfileRow, SettingsTextSpan, ShortcutVerdict, check_shortcut, settings_agent_rows,
-    settings_create_profile, settings_delete_profile, settings_import_rows, settings_profiles,
-    settings_schema_json, settings_set_agent_hooks, settings_switch_profile,
+    ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,
+    ProbeSheetRecord, ProbesDesk, SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsFlagRow,
+    SettingsHandle, SettingsHealth, SettingsHit, SettingsHookState, SettingsImportRow, SettingsListener,
+    SettingsOptionRow, SettingsPaths, SettingsProfileRow, SettingsSkillRow, SettingsSkillState,
+    SettingsTextSpan, ShortcutVerdict, check_shortcut, settings_agent_rows, settings_create_profile,
+    settings_delete_profile, settings_import_rows, settings_mcp_command, settings_profiles,
+    settings_schema_json, settings_set_agent_hooks, settings_set_skill, settings_skill_rows,
+    settings_switch_profile,
 };
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};

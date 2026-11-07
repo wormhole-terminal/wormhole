@@ -24,6 +24,9 @@ public final class SettingsModel {
     public var fontPreview: FontPreview?
     /// A row to bring into view and mark for a moment, after a search result was chosen.
     public private(set) var revealed: String?
+    /// The Extensions and Project folders pages' state, made once the first time a page asks (nil where the host has none).
+    @ObservationIgnored public private(set) lazy var probesModel = host.probes.map { ProbesModel(backend: $0) }
+    @ObservationIgnored public private(set) lazy var projectsModel = host.projects.map { ProjectsModel(backend: $0) }
     @ObservationIgnored private var observation: SettingsObservation?
     @ObservationIgnored private let searcher: any SettingsSearching
     /// Core's rules for a recorded shortcut; `nil` leaves the recorder to its own plain rule.
@@ -85,7 +88,12 @@ public final class SettingsModel {
     }
 
     /// Sections in nav order, the Profile page (reached from the select above the list) apart.
-    public var navSections: [SettingsSchema.Section] { schema.sections.filter { $0.id != "profile" && $0.id != Self.changedID } }
+    public var navSections: [SettingsSchema.Section] {
+        // `values` is read so a flag turned on (which shows its page) redraws the nav.
+        _ = values
+        let shown = host.shownSections()
+        return schema.sections.filter { $0.id != "profile" && $0.id != Self.changedID && shown?.contains($0.id) ?? true }
+    }
 
     public var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 

@@ -48,6 +48,9 @@ public struct PanelRecords: Sendable, Equatable {
     /// The `wh` script's standing, and whether its folder is on the PATH (nil until asked); nil tool: not offered here.
     public var commandLine: CommandLineToolRecord?
     public var commandLinePath: CommandLinePathNote?
+    /// The Wormhole skill of each agent that loads skills and is here, and the line that adds `wh mcp` to Claude Code.
+    public var skills: [SkillRecord] = []
+    public var mcpCommand = ""
     /// The programs let in, for Agent access.
     public var approvals: [ApprovalRecord] = []
     /// The project in front and the rows its settings set; nil when its terminal sets nothing.

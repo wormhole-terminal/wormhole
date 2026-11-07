@@ -21,6 +21,7 @@ struct PanelControl: View {
         case "profile-git": field(profile.gitName.isEmpty ? SettingsText.notSet : "\(profile.gitName) <\(profile.gitEmail)>")
         case "profile-env", "profile-logins": field(SettingsText.noneSet)
         case "cliTool": CommandLineControl(model: model)
+        case "agent-mcp": McpControl(command: model.host.panelRecords().mcpCommand)
         // Who may drive Wormhole from outside: nothing beyond listing, a question the first time, or everything while it runs.
         case "agentAccess":
             FlatSegmented(

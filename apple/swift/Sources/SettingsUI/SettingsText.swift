@@ -35,6 +35,7 @@ enum SettingsText {
     static var install: String { Words.text("settings-agents-install", fallback: "Install") }
     static var update: String { Words.text("settings-agents-update", fallback: "Update") }
     static var uninstall: String { Words.text("settings-agents-uninstall", fallback: "Uninstall") }
+    static var copyCommand: String { Words.text("settings-agents-copy-command", fallback: "Copy command") }
     static var copyLine: String { Words.text("settings-agents-copy-line", fallback: "Copy line") }
     static var checkingPath: String {
         Words.text("settings-agents-checking-your-shells-path", fallback: "Checking your shell's PATH…")

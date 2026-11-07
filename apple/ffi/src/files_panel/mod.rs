@@ -27,9 +27,10 @@ pub use listener::PanelListener;
 pub use notes_store::{NoteSaved, NotesSaved, SessionNotesStore, TaskSaved};
 pub use project::{
     ApproveOutcome, FolderPaintRecord, NewTerminalRecord, NotesDocRecord, NotesSyncOutcome, OwnerAnswer,
-    OwnerAuthenticator, ProjectActionRecord, ProjectEffect, ProjectFailure, ProjectFeatureRecord,
-    ProjectPromptRecord, ProjectService, ProjectSettingsRecord, ProjectStateRecord, TaskDocRecord,
-    TerminalPlace, TrustLineRecord, TrustStatusRecord,
+    OwnerAuthenticator, ProjectActionRecord, ProjectChoiceRecord, ProjectDefaultRecord, ProjectEffect,
+    ProjectFailure, ProjectFeatureRecord, ProjectFeatureRowRecord, ProjectPageRecord, ProjectPromptRecord,
+    ProjectService, ProjectSettingsRecord, ProjectStateRecord, TaskDocRecord, TerminalPlace, TrustLineRecord,
+    TrustStatusRecord,
 };
 pub use usage::{PlanLimitRecord, UsageReportRecord, UsageService};
 pub use watch::FolderWatch;

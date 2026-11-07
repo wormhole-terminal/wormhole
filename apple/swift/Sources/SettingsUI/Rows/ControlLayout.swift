@@ -11,6 +11,8 @@ enum ControlLayout {
     case block
     /// The scene of the preview strip: no row.
     case strip
+    /// The page's whole body, in cards of its own: no card around it (Project folders).
+    case bare
 }
 
 extension ControlSpec {
@@ -18,7 +20,7 @@ extension ControlSpec {
         switch self {
         case .preview: .strip
         case .themeCards: .block
-        case .panel: isRowPanel ? .row : .block
+        case .panel(let name): name == "projects" ? .bare : isRowPanel ? .row : .block
         case .partsList: .tallRow
         default: .row
         }
