@@ -11,6 +11,8 @@ enum SidebarMotion {
     static let fold = Animation.timingCurve(0.4, 0, 0.2, 1, duration: 0.16)
     /// A folded head's tiles and count arriving once the rows are gone (`SUMMARY_FADE`).
     static let summary = Animation.easeOut(duration: 0.12)
+    /// The old light, edge and badge fading out while the new ones fade in (`CROSSFADE`, 160 ms ease-in-out).
+    static let crossfade = fold
     /// A card taking or losing the selection's tint, and hover: quick and symmetrical, so it can be reversed mid-way.
     static let state = Animation.snappy(duration: 0.18)
     /// A badge growing in past its size and settling, as the GPUI app's status change does.

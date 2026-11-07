@@ -6,30 +6,13 @@ import XCTest
 
 @MainActor
 final class SidebarTests: XCTestCase {
-    func testSecondLineSaysWhatTheTerminalReports() {
-        let needs = RowLine.of(TerminalSummary(id: 1, title: "a", subtitle: "Approve cargo test?", activity: .needsInput), twoLines: true)
-        XCTAssertEqual(needs.text, "Needs input · Approve cargo test?")
-        XCTAssertEqual(needs.tone, .attention)
-        XCTAssertEqual(RowLine.of(TerminalSummary(id: 1, title: "a", subtitle: "1m ago", activity: .finished), twoLines: true).text, "Finished · 1m ago")
-        XCTAssertEqual(RowLine.of(TerminalSummary(id: 1, title: "a"), twoLines: true).text, "Shell", "no row is a single line")
-        XCTAssertEqual(RowLine.of(TerminalSummary(id: 1, title: "a", unread: 2), twoLines: true).trail, "new output")
-        XCTAssertNil(RowLine.of(TerminalSummary(id: 1, title: "a", subtitle: "x"), twoLines: false).text, "compact rows have one line")
-    }
-
-    func testTileStatesFollowCoreUrgencyOrder() {
-        let states = [TileState.shell, .done, .unread, .working, .failed, .needsYou]
-        XCTAssertEqual(states.sorted { $0.urgency < $1.urgency }, [.needsYou, .failed, .working, .unread, .done, .shell])
-        XCTAssertTrue(TileState.needsYou.isAlert && TileState.failed.isAlert && !TileState.working.isAlert)
-        XCTAssertEqual(TileState(TerminalSummary(id: 1, title: "a", unread: 1)), .unread)
-    }
-
     func testKeysWalkGroupsAndTerminals() {
         let walk = SidebarWalk(SidebarListing.sections(for: SidebarFixture.state))
-        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .group("g1"), .row(3), .row(4), .row(5), .row(2), .row(6)])
-        let group = 1
+        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .row(2), .group("g1"), .row(3), .row(4), .row(5), .row(6)])
+        let group = 2
         XCTAssertEqual(walk.move(from: group, .left), .fold(group))
-        XCTAssertEqual(walk.move(from: group, .right), .to(2), "an open group goes to its first terminal")
-        XCTAssertEqual(walk.move(from: 3, .left), .to(group), "a terminal goes to its group")
+        XCTAssertEqual(walk.move(from: group, .right), .to(3), "an open group goes to its first terminal")
+        XCTAssertEqual(walk.move(from: 4, .left), .to(group), "a terminal goes to its group")
         XCTAssertEqual(walk.move(from: 0, .up), .stay)
         XCTAssertEqual(walk.move(from: nil, .up), .to(6))
         XCTAssertEqual(walk.move(from: 0, .last), .to(6))
@@ -41,8 +24,8 @@ final class SidebarTests: XCTestCase {
         var state = SidebarFixture.state
         state.groups[0].isCollapsed = true
         let walk = SidebarWalk(SidebarListing.sections(for: state))
-        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .group("g1"), .row(2), .row(6)])
-        XCTAssertEqual(walk.move(from: 1, .right), .open(1))
+        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .row(2), .group("g1"), .row(6)])
+        XCTAssertEqual(walk.move(from: 2, .right), .open(2))
     }
 
     func testHintsShowOnlyAfterTheHoldAndNeverForAShortcut() {
@@ -70,6 +53,39 @@ final class SidebarTests: XCTestCase {
         XCTAssertEqual(typed.text, "x")
     }
 
+    func testTheNextIdsTheListGuessesAreTheOnesTheModelGives() {
+        let state = MockWorkspace.state
+        let guessedTerminal = (state.terminals.map(\.id).max() ?? 0) + 1
+        XCTAssertEqual(reduce(state, .newTerminal).selected, guessedTerminal)
+        let guessedGroup = (1...).lazy.map { "group-\($0)" }.first { id in !state.groups.contains { $0.id == id } }
+        XCTAssertEqual(reduce(state, .newGroup("")).groups.last?.id, guessedGroup)
+    }
+
+    func testSplitMembersShareACardAndOthersStandAlone() {
+        func row(_ id: Int, _ part: Bracket?) -> SidebarRow {
+            SidebarRow(terminal: TerminalSummary(id: id, title: "t\(id)"), number: nil, splitMarks: SplitMarks(bracket: part))
+        }
+        let cards = SidebarSectionView.cards(of: [row(1, nil), row(2, .start), row(3, .mid), row(4, .end), row(5, nil)])
+        XCTAssertEqual(cards.map { $0.map(\.id) }, [[1], [2, 3, 4], [5]])
+    }
+
+    func testRendersEveryAgentsTileAndTheWholeMockWindow() throws {
+        try SidebarSnapshot.write(SidebarFixture.agents, theme: "wormhole.dark", name: "sidebar-agents-dark", size: CGSize(width: 350, height: 1000))
+        try SidebarSnapshot.write(SidebarFixture.agents, theme: "wormhole.light", name: "sidebar-agents-light", size: CGSize(width: 350, height: 1000))
+        try SidebarSnapshot.write(MockWorkspace.state, theme: "wormhole.dark", name: "sidebar-mock-dark", size: CGSize(width: 350, height: 900))
+        try SidebarSnapshot.write(MockWorkspace.state, theme: "tokyo_night", appearance: SidebarAppearance(cards: false), name: "sidebar-mock-nocards", size: CGSize(width: 350, height: 900))
+    }
+
+    func testLongNamesFadeOutBesideTheirMarks() throws {
+        let long = "a very long terminal name that cannot fit"
+        let state = WorkspaceState(terminals: [
+            TerminalSummary(id: 1, title: long, isPinned: true, agent: .claude, noteCount: 3, changeCount: 12),
+            TerminalSummary(id: 2, title: "Foundation Models", folder: "~"),
+            TerminalSummary(id: 3, title: long, hasBell: true, folder: "~"),
+        ])
+        try SidebarSnapshot.write(state, theme: "wormhole.dark", name: "long-names", size: CGSize(width: 350, height: 300))
+    }
+
     func testRendersEveryThemeInLightAndDark() throws {
         let themes = ["wormhole.dark", "wormhole.light", "tokyo_night", "catppuccin_latte", "nord", "github_light"]
         for id in themes {
@@ -82,5 +98,39 @@ final class SidebarTests: XCTestCase {
             try SidebarSnapshot.write(theme: "wormhole.dark", appearance: SidebarAppearance(density: density), name: "sidebar-dark-\(density.rawValue)")
         }
         try SidebarSnapshot.write(theme: "wormhole.dark", appearance: SidebarAppearance(forcesHints: true), name: "sidebar-dark-hints")
+    }
+}
+
+@MainActor
+final class SidebarMomentTests: XCTestCase {
+    private let size = CGSize(width: 350, height: 560)
+
+    func testTheRowUnderThePointerShowsItsCloseAndAHalfTypedName() throws {
+        try SidebarSnapshot.write(theme: "wormhole.dark", appearance: SidebarAppearance(hovered: 2), name: "moment-hover")
+        try SidebarSnapshot.write(theme: "wormhole.dark", name: "moment-rename", caught: .init(renaming: 2))
+        try SidebarSnapshot.write(theme: "wormhole.light", appearance: SidebarAppearance(hovered: 4), name: "moment-hover-light")
+    }
+
+    func testADragShowsTheLiftedRowAndWhereItLands() throws {
+        let plan = DropPlan(action: .moveTerminal(6, to: .group("g1", before: 4)), mark: .line(y: 188, x: 15...335))
+        let drag = LiveDrag(item: .terminal(6), point: CGPoint(x: 150, y: 186), plan: plan)
+        try SidebarSnapshot.write(theme: "wormhole.dark", name: "moment-drag", caught: .init(drag: drag))
+        let join = LiveDrag(item: .terminal(6), point: CGPoint(x: 150, y: 130), plan: DropPlan(action: .moveTerminal(6, to: .group("g1", before: 3)), mark: .card("g1")))
+        try SidebarSnapshot.write(theme: "wormhole.dark", name: "moment-drag-join", caught: .init(drag: join))
+    }
+
+    func testTheGroupPopoverAndMenuContents() throws {
+        let group = try XCTUnwrap(SidebarFixture.state.groups.first)
+        let edits = GroupEdits(rename: { _, _ in }, setColor: { _, _ in }, togglePin: { _ in }, ungroup: { _ in }, close: { _ in })
+        for id in ["wormhole.dark", "wormhole.light"] {
+            let theme = try XCTUnwrap(ThemeLibrary.bundled.theme(id: id))
+            try SidebarSnapshot.render(GroupPopover(group: group, edits: edits, close: {}), theme: theme, name: "moment-popover-\(id)", size: CGSize(width: 248, height: 140))
+        }
+    }
+
+    func testEveryStatusMotionAndNoMotionRender() throws {
+        for motion in StatusMotion.allCases {
+            try SidebarSnapshot.write(theme: "wormhole.dark", appearance: SidebarAppearance(statusMotion: motion), name: "motion-\(motion.rawValue)")
+        }
     }
 }

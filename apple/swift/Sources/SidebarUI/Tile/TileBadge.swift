@@ -1,5 +1,5 @@
 // The badge in a tile's bottom-right corner for the states the edge doesn't tell: needs input (!), finished (✓),
-// failed (×) and unseen output (a plain dot). It is cut out of the tile by a rim in the surface's colour, and it
+// failed (×), the bell and unseen output (a plain dot). It is cut out of the tile by a rim in the surface's colour, and it
 // grows in with a spring when the state arrives (`style/tile/badge.rs`).
 
 import DesignSystem
@@ -31,8 +31,9 @@ struct TileBadge: View {
         case .needsYou: tokens.agentAttention
         case .done: tokens.agentDone
         case .failed: tokens.statusDanger
+        case .bell: tokens.agentBell
         case .unread: tokens.primary
-        case .working, .shell: nil
+        case .working, .running, .shell: nil
         }
     }
 
@@ -41,6 +42,7 @@ struct TileBadge: View {
         case .needsYou: NeedsYouMark(size: size).foregroundStyle(surface)
         case .done: GlyphView(glyph: .check, size: size).foregroundStyle(surface)
         case .failed: GlyphView(glyph: .failed, size: size).foregroundStyle(surface)
+        case .bell: GlyphView(glyph: .bell, size: size).foregroundStyle(surface)
         default: EmptyView()
         }
     }
