@@ -120,7 +120,7 @@ pub const RUN_TIMEOUT_DEFAULT: u64 = 10;
 pub const RUN_TIMEOUT_MAX: u64 = 60;
 /// What a `run` may print that is read, in bytes.
 pub const RUN_OUTPUT_MAX: usize = 4096;
-/// What it may print before it is killed: more than is read, so a chatty program is not cut mid-line by a
+/// What it may print before it is killed: more than is read, so a noisy program is not cut mid-line by a
 /// closed pipe.
 pub const RUN_PRINT_MAX: usize = 64 * 1024;
 

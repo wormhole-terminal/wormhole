@@ -252,11 +252,11 @@ mod tests {
     }
 
     #[test]
-    fn a_slow_or_chatty_program_is_stopped() {
+    fn a_slow_or_noisy_program_is_stopped() {
         let slow = folder("exec sleep 5");
         assert_eq!(ran(&slow, &["./run.sh"], Duration::from_millis(300)), RunEnd::TimedOut);
-        let chatty = folder("exec yes");
-        assert_eq!(ran(&chatty, &["./run.sh"], SECONDS), RunEnd::TooMuchOutput);
+        let noisy = folder("exec yes");
+        assert_eq!(ran(&noisy, &["./run.sh"], SECONDS), RunEnd::TooMuchOutput);
     }
 
     #[test]
