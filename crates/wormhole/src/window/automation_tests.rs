@@ -386,7 +386,7 @@ fn events_are_answered_with_the_state_and_a_stream_or_a_reason_why_not(cx: &mut 
     assert_eq!(result["boot"].as_str().map(str::len), Some(16));
     let first_seq = result["seq"].as_u64().expect("a seq");
     assert_eq!(result["listing"]["windows"][0]["terminals"].as_array().map(Vec::len), Some(2));
-    assert!(result["topics"].as_array().is_some_and(|t| t.len() == 8 && !t.iter().any(|n| n == "output")));
+    assert!(result["topics"].as_array().is_some_and(|t| t.len() == 9 && !t.iter().any(|n| n == "output")));
     hook(cx, &window, 1, "PermissionRequest:Bash", Some("Allow?"));
     let heard = told(&subscription);
     assert!(!heard.is_empty() && heard.iter().all(|p| p.seq > first_seq));
