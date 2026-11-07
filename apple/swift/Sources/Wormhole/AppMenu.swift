@@ -9,6 +9,7 @@ enum AppMenu {
     static func make(target: AppController) -> NSMenu {
         let main = NSMenu()
         add(to: main, title: "Wormhole", [
+            item("Settings…", #selector(AppController.showSettings), ",", target: target),
             item("Quit", #selector(NSApplication.terminate(_:)), "q", target: NSApp)
         ])
         add(to: main, title: "File", [

@@ -56,7 +56,9 @@ var targets: [Target] = [
     .testTarget(name: "UITests", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI"]),
 ]
 
-var appDependencies: [Target.Dependency] = ["TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI"]
+var appDependencies: [Target.Dependency] = [
+    "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI", "SettingsModel", "SettingsUI",
+]
 var appSettings: [SwiftSetting] = []
 
 if ffiLinked {

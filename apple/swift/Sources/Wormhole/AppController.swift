@@ -1,6 +1,8 @@
 // The app: opens the workspace window over the chosen sources and keeps the control folder and the idle check.
 
 import AppKit
+import SettingsModel
+import SettingsUI
 import SwiftUI
 import TerminalCore
 import TerminalMetal
@@ -16,6 +18,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     let look = WindowLook()
     private(set) var terminals = TerminalViews { _ in nil }
     private var windowController: WorkspaceWindowController?
+    private var settingsController: SettingsWindowController?
     private var configuration: RendererConfiguration?
 
     init(options: Options) {
@@ -112,6 +115,14 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     // MARK: menu actions
 
+    /// Over an in-memory backend until the settings come through the FFI: edits live for this run only.
+    @objc func showSettings() {
+        if settingsController == nil {
+            let model = SettingsModel(backend: MockSettingsBackend(), host: MockSettingsHost())
+            settingsController = SettingsWindowController(model: model)
+        }
+        settingsController?.show()
+    }
     @objc func toggleSidebar() { store.send(.toggleSidebar) }
     @objc func togglePanel() { store.send(.togglePanel) }
     @objc func showPalette() { store.send(.showOverlay(store.state.overlay == .palette ? nil : .palette)) }
