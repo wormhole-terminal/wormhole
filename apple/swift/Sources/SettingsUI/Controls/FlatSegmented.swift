@@ -22,6 +22,8 @@ struct FlatSegmented: View {
                     .onHover { onHover($0 ? option.value : nil) }
             }
         }
+        // Whole labels: the row's label column gives way (`segmented_form` is as wide as its options).
+        .fixedSize(horizontal: true, vertical: false)
         .padding(2)
         .background(tokens.controlBackground.opacity(0.6), in: RoundedRectangle(cornerRadius: tokens.metrics.radius + 2))
         .motion(Motion.selection, value: selected)

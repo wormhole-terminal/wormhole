@@ -62,4 +62,14 @@ public final class MockSettingsHost: SettingsHost {
 
     public func perform(_ action: SettingsAction) { performed.append(action) }
     public func panelRecords() -> PanelRecords { records }
+
+    /// The sample profile as fields; a save always sticks.
+    public func profileForm() -> ProfileForm? {
+        ProfileForm(
+            id: "default", name: records.profile.name, startDir: records.profile.startFolder == "~" ? "" : records.profile.startFolder,
+            gitName: records.profile.gitName, gitEmail: records.profile.gitEmail,
+            logins: [.init(agent: "claude", name: "Claude", placeholder: "~/.claude-work", dir: ""), .init(agent: "codex", name: "Codex", placeholder: "~/.codex-work", dir: "")],
+            startCaption: "Where a new terminal starts. A folder you add below opens in \(records.profile.name) too.")
+    }
+    public func saveProfile(_ form: ProfileForm) -> String? { nil }
 }

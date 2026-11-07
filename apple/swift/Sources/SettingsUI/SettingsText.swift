@@ -11,6 +11,8 @@ enum SettingsText {
     static var searchSettings: String {
         Words.text("settings-window-search-settings", fallback: "Search settings")
     }
+    /// The running app's version, as the Updates page's Version row and its update header say it.
+    static var appVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0" }
     static var clearSearch: String { Words.text("settings-window-clear-search", fallback: "Clear search") }
     static var results: String { Words.text("settings-window-results", fallback: "Results") }
     static var noResults: String {

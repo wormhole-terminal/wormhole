@@ -92,7 +92,7 @@ extension GroupColor {
     }
 
     /// The colour as the head's dot and the menu show it.
-    func mark(_ tokens: ThemeTokens) -> RGBA { GroupWash.swatch(hue: hue, grey: self == .grey, tokens) }
+    public func mark(_ tokens: ThemeTokens) -> RGBA { GroupWash.swatch(hue: hue, grey: self == .grey, tokens) }
 
     /// The colour its card is washed with.
     func wash(_ tokens: ThemeTokens) -> RGBA { GroupWash.tint(mark(tokens), tokens) }

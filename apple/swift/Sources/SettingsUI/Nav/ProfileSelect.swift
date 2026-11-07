@@ -7,6 +7,8 @@ import WordsModel
 
 struct ProfileSelect: View {
     let name: String
+    let letter: String
+    let color: String
     let isSelected: Bool
     let action: () -> Void
     @Environment(\.tokens) private var tokens
@@ -15,9 +17,7 @@ struct ProfileSelect: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: Space._2) {
-                Text(String(name.prefix(1)).uppercased())
-                    .font(.system(size: TextRole.caption.size, weight: .bold)).foregroundStyle(tokens.textOnPrimary)
-                    .frame(width: Metric.titleGlyph + 4, height: Metric.titleGlyph + 4).background(tokens.primary, in: Circle())
+                ProfileChip(letter: letter, color: color)
                 Text(name).font(.system(size: TextRole.label.size, weight: isSelected ? .semibold : .regular)).lineLimit(1)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: Metric.chevron, weight: .semibold))

@@ -8,7 +8,7 @@ struct InfoValue: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Text(name == "version" ? (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0") : "")
+        Text(name == "version" ? SettingsText.appVersion : "")
             .font(.system(size: TextRole.body.size)).monospacedDigit().foregroundStyle(tokens.textMuted)
     }
 }

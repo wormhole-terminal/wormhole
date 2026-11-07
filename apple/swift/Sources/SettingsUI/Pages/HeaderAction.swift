@@ -12,7 +12,7 @@ struct HeaderAction: View {
     var body: some View {
         switch section {
         case "agents": button(SettingsText.rescanPath, "arrow.clockwise", .rescanAgents)
-        case "import": button(SettingsText.scanAgain, "arrow.clockwise", .scanImports)
+        case "import": ActionButton(title: SettingsText.scanAgain, symbol: "arrow.clockwise") { model.importDraft.reset(); model.host.perform(.scanImports) }
         case "extensions":
             if let probes = model.probesModel {
                 IconButton(symbol: "arrow.clockwise", label: LocalizedStringKey(ExtensionsText.refresh)) { Task { await probes.refresh() } }

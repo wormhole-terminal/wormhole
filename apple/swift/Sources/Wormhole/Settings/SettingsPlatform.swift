@@ -21,6 +21,7 @@
             platform.bundledFonts = { [weak app] in
                 (app?.options.fontDirectory ?? Options.findBundledFonts()).map { bundledFiles(in: $0) } ?? []
             }
+            platform.isDefaultTerminal = { DefaultTerminal.isDefault() }
             platform.openApps = {
                 SystemOpenIn().apps().map { SettingOption(value: .string($0.bundle), label: $0.name) }
             }

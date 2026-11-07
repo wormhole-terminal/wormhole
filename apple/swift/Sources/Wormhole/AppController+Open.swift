@@ -1,6 +1,7 @@
 // Opening the window and starting everything that goes with it.
 
 import AppKit
+import AuxModel
 import PlatformModel
 import SettingsModel
 import SettingsUI
@@ -34,7 +35,7 @@ extension AppController {
 
     /// The core's settings where the window is real, in memory (this run only) elsewhere.
     func showSettings() {
-        if settingsController == nil { settingsController = SettingsWindowController(model: settingsModel) }
+        if settingsController == nil { settingsController = SettingsWindowController(model: settingsModel, updates: UpdateViewModel(backend: aux.updateBackend())) }
         settingsController?.show()
     }
 

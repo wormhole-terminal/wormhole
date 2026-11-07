@@ -14,6 +14,12 @@ public protocol SettingsBackend: AnyObject {
     func reset(_ keys: [String])
     /// Calls `onChange` after any write, from anywhere (a hand edit of the file, another window).
     func observe(_ onChange: @escaping @MainActor () -> Void) -> SettingsObservation
+    /// What is wrong with the file (it does not read, the last save failed), for the Advanced page; nil when nothing.
+    func banner() -> String?
+}
+
+extension SettingsBackend {
+    public func banner() -> String? { nil }
 }
 
 /// Keeps an observation alive; dropping it stops it. `cancel` may run on any thread (a deinit does), so it
@@ -56,6 +62,27 @@ public protocol SettingsHost: AnyObject {
     @discardableResult func toggleFlagsUnlocked() -> Bool
     /// The pages the nav shows for this build and these settings; nil shows every page.
     func shownSections() -> Set<String>?
+    /// The fields of the profile Wormhole is in, and writing them back: core's sentence when it refuses, or nil.
+    func profileForm() -> ProfileForm?
+    func saveProfile(_ form: ProfileForm) -> String?
+    /// One terminal's settings as the Import page lists them (nil: none found), and taking the ticked rows (indexes
+    /// into its items, of `shown` rows): the line that says what happened.
+    func importReview(_ id: String) async -> ImportReview?
+    func applyImport(_ id: String, ticked: [Int], shown: Int) -> (text: String, failed: Bool)
+    /// Whether Wormhole is what macOS opens scripts with: nil when this build cannot be (no bundle to name).
+    func isDefaultTerminal() -> Bool?
+    /// The pages' counted sentences in the catalogs' plurals: "17 more agents Wormhole recognises", "3 of 5 selected".
+    func othersHead(count: Int) -> String
+    func importSelectedLine(selected: Int, total: Int) -> String
+    /// The question before settings go back to their defaults, with how many.
+    func resetQuestion(count: Int) -> String
+    /// What a preview section says at its top, naming the feature flag it is behind; nil for one that always ships.
+    func previewNote(section: String) -> String?
+    /// The shell profiles listed under the Shells row, and where worktrees go once a folder is named.
+    func shellProfiles() -> [ShellLine]
+    func worktreeCaption(base: String) -> String?
+    /// The header an update check carries (what "What an update check sends" shows): nil without the core.
+    func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String?
 }
 
 extension SettingsHost {
@@ -73,8 +100,28 @@ extension SettingsHost {
     public func setFlag(_ key: String, on: Bool) {}
     public func toggleFlagsUnlocked() -> Bool { false }
     public func shownSections() -> Set<String>? { nil }
+    public func profileForm() -> ProfileForm? { nil }
+    public func shellProfiles() -> [ShellLine] { [] }
+    public func worktreeCaption(base: String) -> String? { nil }
+    public func isDefaultTerminal() -> Bool? { nil }
+    public func othersHead(count: Int) -> String { "\(count) more agent\(count == 1 ? "" : "s") Wormhole recognises" }
+    public func importSelectedLine(selected: Int, total: Int) -> String { "\(selected) of \(total) selected" }
+    public func previewNote(section: String) -> String? { nil }
+    public func resetQuestion(count: Int) -> String { "Reset \(count) changed setting\(count == 1 ? "" : "s") to their default? Your terminals, notes and themes are kept." }
+    public func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String? { nil }
+    public func saveProfile(_ form: ProfileForm) -> String? { Self.noProfiles }
+    public func importReview(_ id: String) async -> ImportReview? { nil }
+    public func applyImport(_ id: String, ticked: [Int], shown: Int) -> (text: String, failed: Bool) { (Self.noProfiles, true) }
     public func removeProfile(_ id: String) -> String? { Self.noProfiles }
     private static var noProfiles: String {
         String(localized: "settings-profile-unavailable", defaultValue: "Profiles are not available in this build.")
     }
+}
+
+/// A shell profile of `config.json`: its name and what it runs.
+public struct ShellLine: Sendable, Equatable {
+    public let name: String
+    public let commandLine: String
+
+    public init(name: String, commandLine: String) { (self.name, self.commandLine) = (name, commandLine) }
 }

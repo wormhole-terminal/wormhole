@@ -14,12 +14,8 @@ struct PanelControl: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        let profile = model.host.panelRecords().profile
         switch name {
-        case "profile-name": field(profile.name)
-        case "profile-start": field(profile.startFolder)
-        case "profile-git": field(profile.gitName.isEmpty ? SettingsText.notSet : "\(profile.gitName) <\(profile.gitEmail)>")
-        case "profile-env", "profile-logins": field(SettingsText.noneSet)
+        case "profile-name", "profile-start", "profile-env", "profile-git", "profile-logins": ProfileControl(draft: model.profile, name: name)
         case "cliTool": CommandLineControl(model: model)
         case "agent-mcp": McpControl(command: model.host.panelRecords().mcpCommand)
         // Who may drive Wormhole from outside: nothing beyond listing, a question the first time, or everything while it runs.
@@ -34,11 +30,6 @@ struct PanelControl: View {
                 .disabled(model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault ?? true)
         case "notify-permission": button(Words.text("settings-notifications-open-system", fallback: "Open System Settings"), "gearshape", .openNotificationSettings)
         case "notify-test": button(Words.text("settings-notifications-send-test", fallback: "Send test"), "bell", .sendTestNotification)
-        case "update-status":
-            HStack(spacing: Space._3) {
-                Text(Words.text("settings-updates-up-to-date", fallback: "Wormhole is up to date")).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textMuted)
-                button(Words.text("settings-updates-check-now", fallback: "Check now"), "arrow.clockwise", .checkForUpdates)
-            }
         default: Text(SettingsText.notBuilt).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textFaint)
         }
     }
@@ -47,10 +38,4 @@ struct PanelControl: View {
         ActionButton(title: title, symbol: symbol, isDestructive: danger) { model.host.perform(action) }
     }
 
-    private func field(_ text: String) -> some View {
-        Text(text).font(.system(size: TextRole.label.size)).lineLimit(1).foregroundStyle(tokens.textPrimary)
-            .padding(.horizontal, Space._3).frame(width: SettingsMetric.controlWidth, height: Metric.control, alignment: .leading)
-            .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
-            .overlay(RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.inputBorder, lineWidth: tokens.metrics.borderWidth))
-    }
 }

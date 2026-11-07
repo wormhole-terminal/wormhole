@@ -11,6 +11,15 @@
 
     @MainActor
     enum DefaultTerminal {
+        /// Whether every kind opens with this app; nil for a bare executable, which cannot be anyone's default.
+        static func isDefault() -> Bool? {
+            let bundle = Bundle.main.bundleURL
+            guard bundle.pathExtension == "app" else { return nil }
+            return defaultTerminalScriptTypes().compactMap { UTType($0) }.allSatisfy {
+                NSWorkspace.shared.urlForApplication(toOpen: $0)?.standardizedFileURL == bundle.standardizedFileURL
+            }
+        }
+
         /// Asks the system, once per kind. The sentence for what went wrong (core's catalog), or nil when it is done.
         static func make(policy: PlatformPolicy) async -> String? {
             let bundle = Bundle.main.bundleURL

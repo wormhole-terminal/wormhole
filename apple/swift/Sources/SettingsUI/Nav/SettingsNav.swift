@@ -16,7 +16,9 @@ struct SettingsNav: View {
         VStack(spacing: 0) {
             VStack(spacing: Space._3) {
                 NavSearchField(model: model, focus: focus)
-                ProfileSelect(name: SettingsText.profileDefault, isSelected: model.selection == "profile" && !model.isSearching) {
+                ProfileSelect(
+                    name: model.profile.form?.name ?? SettingsText.profileDefault, letter: model.profile.form?.letter ?? "D",
+                    color: model.profile.form?.color ?? "blue", isSelected: model.selection == "profile" && !model.isSearching) {
                     model.show("profile")
                 }
             }

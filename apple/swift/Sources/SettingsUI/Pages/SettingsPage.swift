@@ -5,6 +5,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct SettingsPage: View {
     let model: SettingsModel
@@ -12,6 +13,10 @@ struct SettingsPage: View {
 
     var body: some View {
         PageScaffold(title: section.title, intro: section.intro, revealed: model.revealed, clearReveal: model.clearReveal, action: { HeaderAction(model: model, section: section.id) }) {
+            if let note = model.host.previewNote(section: section.id) {
+                Banner(kind: .info, text: note) { ActionButton(title: Words.text("settings-window-feature-flags", fallback: "Feature flags"), symbol: nil) { model.show("featureFlags") } }
+            }
+            if section.id == "advanced", let broken = model.backend.banner() { Banner(kind: .warning, text: broken) }
             if let problem = model.host.panelRecords().problem { Banner(kind: .danger, text: problem) }
             if let scene = PreviewScene(section: section.id) { PreviewStrip(model: model, scene: scene) }
             ForEach(Array(section.groups.enumerated()), id: \.offset) { _, group in

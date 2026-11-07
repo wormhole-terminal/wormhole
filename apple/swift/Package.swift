@@ -61,7 +61,7 @@ var targets: [Target] = [
     // values, search, change tracking and the backend seam. Foundation only.
     .target(name: "SettingsModel", dependencies: ["FontPickerModel"], resources: [.copy("Resources/settings.json")]),
     // The settings window: nav, search, preview strip, the rows and their controls, drawn from the schema.
-    .target(name: "SettingsUI", dependencies: ["SettingsModel", "DesignSystem", "WordsModel", "FontPickerUI"]),
+    .target(name: "SettingsUI", dependencies: ["SettingsModel", "DesignSystem", "WordsModel", "WorkspaceModel", "SidebarUI", "AuxModel", "FontPickerModel", "FontPickerUI"]),
     .testTarget(name: "SettingsTests", dependencies: ["SettingsModel", "SettingsUI", "DesignSystem", "FontPickerModel", "FontPickerUI"]),
     // The font picker's state and rules as plain values: the families and where each comes from, the list for a query
     // (core's rules, or the same in Swift), the highlight and its keys, recents, the preview's text. Foundation only.

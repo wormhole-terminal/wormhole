@@ -4,6 +4,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct EntryControl: View {
     let model: SettingsModel
@@ -19,6 +20,7 @@ struct EntryControl: View {
             FlatSegmented(options: options, selected: current(fallback), label: entry.label) { model.set(key, $0) }
         case .select(let options, let fallback):
             FlatSelect(options: options, selected: current(fallback), label: entry.label) { model.set(key, $0) }
+        case .dynamicSelect(.openIn): OpenInControl(model: model, key: key, label: entry.label)
         case .dynamicSelect(let source):
             FlatSelect(options: model.host.options(for: source), selected: model.value(key), label: entry.label) {
                 model.set(key, $0)
@@ -43,6 +45,8 @@ struct EntryControl: View {
             }
         case .colorToggle: PrimaryColorControl(model: model, entry: entry)
         case .link(let section, let label): LinkButton(title: label, goes: true) { model.show(section) }
+        case .action(.makeDefaultTerminal, let label, let icon): defaultTerminal(label, icon)
+        case .action(.resetAll, let label, let icon): ResetAllButton(model: model, label: label, icon: icon)
         case .action(let action, let label, let icon):
             ActionButton(title: label, symbol: icon) { model.host.perform(action) }
         case .info(let name): InfoValue(name: name)
@@ -50,6 +54,16 @@ struct EntryControl: View {
         case .panel(let name): PanelControl(model: model, entry: entry, name: name)
         case .themeCards, .preview: EmptyView()
         }
+    }
+
+    /// Make default, or that Wormhole already is (disabled, as GPUI's); disabled too where this build cannot be.
+    private func defaultTerminal(_ label: String, _ icon: String) -> some View {
+        let state = model.host.isDefaultTerminal()
+        return ActionButton(
+            title: state == true ? Words.text("settings-terminal-wormhole-is-the-default", fallback: "Wormhole is the default") : label,
+            symbol: state == true ? "checkmark" : icon
+        ) { model.host.perform(.makeDefaultTerminal) }
+        .disabled(state != false)
     }
 
     /// The stored value, or what the row shows while the file says nothing.

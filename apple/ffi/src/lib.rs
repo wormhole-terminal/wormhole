@@ -105,6 +105,12 @@ pub use settings::{
     settings_schema_json, settings_set_agent_hooks, settings_set_skill, settings_skill_rows,
     settings_switch_profile,
 };
+pub use settings::{
+    FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
+    SettingsLoginField, SettingsProfileForm, SettingsShellLine, settings_import_review, settings_import_selected_line,
+    settings_others_head, settings_preview_note, settings_profile_form, settings_profile_save,
+    settings_reset_question, settings_update_user_agent,
+};
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};

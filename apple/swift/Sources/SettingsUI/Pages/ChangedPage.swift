@@ -39,7 +39,7 @@ struct ChangedPage: View {
         .confirmationDialog(SettingsText.resetAll, isPresented: $confirming) {
             Button(SettingsText.resetAll, role: .destructive) { model.resetAll() }
         } message: {
-            Text(Words.text("settings-changed-reset-all-confirm", fallback: "Every changed setting goes back to its default."))
+            Text(model.host.resetQuestion(count: model.changedKeyCount))
         }
     }
 }

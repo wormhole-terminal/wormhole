@@ -7,7 +7,9 @@ import WormholeBindings
 enum RecordMapping {
     static func agent(_ row: SettingsAgentRow) -> AgentRecord {
         let make = { (state: AgentRecord.State, hooks: AgentRecord.HookAction?, detail: String) in
-            AgentRecord(id: row.id, name: row.name, detail: detail, state: state, hooks: hooks)
+            AgentRecord(
+                id: row.id, name: row.name, detail: detail, state: state, hooks: hooks, mark: row.twoLetterMark,
+                configPath: row.configPath, note: row.note)
         }
         guard row.onPath else { return make(.notInstalled, nil, row.detail) }
         switch row.hooks {

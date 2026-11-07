@@ -1054,3 +1054,26 @@ the object holds the engine's reply slot until every path out has answered it, w
 (`now_ms`). `Workspace.waited(sinceMs) -> Waited(words, nextInMs)` says how long ago that was as the core's status bar
 does ("<1m", "4m", "1h 5m": `view::layout::status_bar::elapsed`) and in how many milliseconds the words next read
 differently: arm one timer for it. Core change (additive): `TerminalSummary.since`.
+
+## Settings pages: profile fields, import review, page sentences (round P)
+
+Additive; `wormhole-ffi` `settings/`. Everything blocking: call off the main thread when a page reads files.
+
+```
+// Profile page (profile_edit.rs): the fields of a profile besides its list row, saved through core's ProfileList::edit.
+record SettingsProfileForm { id, name, avatar, color /* GroupColor key */, startDir, folders: [String], env /* NAME=value lines */,
+                             gitName, gitEmail, logins: [SettingsLoginField { agent, name, placeholder, dir }], startCaption }
+func settingsProfileForm(id: String?) throws -> SettingsProfileForm   // nil: the profile Wormhole is in
+func settingsProfileSave(form:) throws -> Bool                        // true: changed; core's sentence on refusal, profile unchanged
+
+// Import page (import_review.rs): one terminal's proposal as rows, and taking the ticked ones.
+protocol FontFamilyResolver { func family(postscriptName:) -> String? }    // Swift: CoreText; an unresolved font stays under "Doesn't carry over"
+func settingsImportReview(home: String?, source: String, fonts:) -> SettingsImportReview?   // files, items {label, from, value, command?, defaultOn}, skipped {key, reason}
+SettingsHandle.importApply(home:, source:, ticked: [UInt32], shown: UInt32, fonts:) throws -> SettingsImportDone {brought, summary}
+   // re-reads the terminal's files; refuses when the proposal no longer has `shown` rows; palettes saved as theme files, then one settings update.
+   // The write is core's own, so no wake follows: the caller reloads its values.
+
+// Sentences that carry a number or a header (page_text.rs), in the catalogs' words and plurals.
+func settingsUpdateUserAgent(version:, counting:, unstable:) -> String?    // core's counted_user_agent / plain_user_agent
+func settingsOthersHead(count:), settingsImportSelectedLine(selected:, total:), settingsResetQuestion(count:), settingsPreviewNote(section:) -> String?
+```

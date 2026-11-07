@@ -29,11 +29,14 @@ final class AuxController {
     /// The project of the terminal in front, when the core found one.
     func showTrust() { TrustWindow.show(backend: backends.trust(root: app.hub.panel.project.state?.root)) }
 
-    func showUpdates() {
+    /// The one updater the Updates window and the Settings page share.
+    func updateBackend() -> any UpdateBackend {
         let backend = updates ?? backends.updates()
         updates = backend
-        UpdateWindow.show(backend: backend, version: AppInfo.from(bundle: .main).version)
+        return backend
     }
+
+    func showUpdates() { UpdateWindow.show(backend: updateBackend(), version: AppInfo.from(bundle: .main).version) }
 
     /// Agents' questions (the control API's approval) as sheets on the window, one at a time, as they arrive.
     func startAccess() {

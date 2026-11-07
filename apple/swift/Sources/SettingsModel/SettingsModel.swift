@@ -14,6 +14,9 @@ public final class SettingsModel {
     public let backend: any SettingsBackend
     public let host: any SettingsHost
     public private(set) var values: [String: JSONValue]
+    /// The Profile page's fields and the Import page's open card: pages with state of their own.
+    public let profile: ProfileDraft
+    public let importDraft: ImportDraft
     /// The open page: a section id or `changed`.
     public var selection: String
     public var query = ""
@@ -39,6 +42,8 @@ public final class SettingsModel {
     ) {
         (self.schema, self.backend, self.host, self.selection) = (schema, backend, host, selection)
         self.shortcuts = shortcuts
+        profile = ProfileDraft(host: host)
+        importDraft = ImportDraft(host: host)
         self.searcher = searcher ?? SchemaSearch(schema: schema)
         values = backend.values
         observation = backend.observe { [weak self] in self?.values = self?.backend.values ?? [:] }
@@ -56,7 +61,11 @@ public final class SettingsModel {
 
     public func reset(_ entry: SettingsSchema.Entry) { backend.reset(entry.keys) }
 
-    public func resetAll() { backend.reset(changedEntries.flatMap(\.entry.keys).filter(isChanged)) }
+    public func resetAll() { backend.reset(changedKeys) }
+
+    /// Every key that differs from its default: what Reset all puts back, and what its question counts.
+    public var changedKeys: [String] { changedEntries.flatMap(\.entry.keys).filter(isChanged) }
+    public var changedKeyCount: Int { changedKeys.count }
 
     // MARK: Pages
 

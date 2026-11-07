@@ -16,14 +16,17 @@ struct PanelView: View {
         let records = model.host.panelRecords()
         switch name {
         case "agentsInstalled": AgentList(records: records.agents.filter { $0.state != .notInstalled }, host: model.host)
-        case "agentsOther": AgentList(records: records.agents.filter { $0.state == .notInstalled }, host: model.host)
-        case "importFound": ImportList(records: records.imports)
+        case "agentsOther": OtherAgents(records: records.agents.filter { $0.state == .notInstalled }, host: model.host)
+        case "agentsHow": HowStatusWorks()
+        case "importFound": ImportCards(model: model)
         case "agentAccessPrograms": ApprovalList(records: records.approvals, host: model.host)
         case "agentsHow": HowStatusWorks()
         case "agent-skills": SkillList(records: records.skills, host: model.host)
         case "feature-flags": FlagList(model: model)
         case "probes": ProbesPanel(model: model)
         case "projects": ProjectsPanel(model: model)
+        case "update-status": UpdateStatusBlock()
+        case "count-details": UpdateDetails(model: model)
         default: PanelNote(text: entry.description.isEmpty ? entry.label : entry.description)
         }
     }
@@ -33,7 +36,7 @@ extension ControlSpec {
     /// Panels that are one line of status at the right of a labelled row, not a block of records.
     var isRowPanel: Bool {
         guard case .panel(let name) = self else { return false }
-        return !["agentsInstalled", "agentsOther", "agentsHow", "agent-skills", "importFound", "count-details", "projects", "probes", "feature-flags", "agentAccessPrograms"].contains(name)
+        return !["agentsInstalled", "agentsOther", "agentsHow", "agent-skills", "importFound", "count-details", "projects", "probes", "feature-flags", "agentAccessPrograms", "update-status"].contains(name)
     }
 }
 

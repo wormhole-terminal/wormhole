@@ -3,6 +3,7 @@
 // close it. ⌘, belongs to the app's menu, which calls `show()`.
 
 import AppKit
+import AuxModel
 import DesignSystem
 import SettingsModel
 import SwiftUI
@@ -12,21 +13,25 @@ public final class SettingsWindowController: NSWindowController {
     public let model: SettingsModel
     private var observation: SettingsObservation?
 
-    public init(model: SettingsModel, themeStore: ThemeStore = .shared) {
+    public init(model: SettingsModel, updates: UpdateViewModel? = nil, themeStore: ThemeStore = .shared) {
         self.model = model
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 980, height: 720),
+            contentRect: NSRect(origin: .zero, size: SettingsMetric.windowSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
         window.title = SettingsText.settings
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
-        window.minSize = NSSize(width: 760, height: 520)
+        window.minSize = NSSize(width: SettingsMetric.windowMin.width, height: SettingsMetric.windowMin.height)
+        // The page's column is as wide as it goes: a wider window would only add empty space (`WINDOW_MAX_W`).
+        window.maxSize = NSSize(width: SettingsMetric.windowMaxWidth, height: .greatestFiniteMagnitude)
+        // The Settings window is never full screen (`forbid_fullscreen`).
+        window.collectionBehavior.insert(.fullScreenNone)
         window.isReleasedWhenClosed = false
         window.setFrameAutosaveName("WormholeSettings")
         super.init(window: window)
         window.contentView = NSHostingView(
-            rootView: SettingsView(model: model) { [weak window] in window?.performClose(nil) }.themed(themeStore))
+            rootView: SettingsView(model: model) { [weak window] in window?.performClose(nil) }.environment(\.settingsUpdates, updates).themed(themeStore))
         ThemeSync.apply(model.values, to: themeStore)
         observation = model.backend.observe { [weak model] in
             if let model { ThemeSync.apply(model.values, to: themeStore) }
@@ -39,6 +44,7 @@ public final class SettingsWindowController: NSWindowController {
     public func show(section: String? = nil) {
         if let section { model.show(section) }
         model.host.windowOpened()
+        model.profile.reload()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
     }

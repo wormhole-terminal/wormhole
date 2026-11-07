@@ -22,7 +22,10 @@ struct ShortcutRecorder: View {
     var body: some View {
         Button { recording.toggle() } label: {
             HStack(spacing: Space._1) {
-                if recording {
+                if let refusal {
+                    // Keys that macOS, the app or the shell already answer to are said, not taken (`Recording::Taken`).
+                    Text(refusal).lineLimit(1).foregroundStyle(tokens.statusWarningText)
+                } else if recording {
                     Text(SettingsText.recorderPrompt).foregroundStyle(tokens.textMuted)
                 } else if spec.isEmpty {
                     Text(SettingsText.recorderNone).foregroundStyle(tokens.textFaint)
@@ -43,6 +46,13 @@ struct ShortcutRecorder: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .overlay(alignment: .trailing) {
+            // Delete clears, and so does the ×.
+            if !spec.isEmpty, !recording {
+                IconButton(symbol: "xmark", label: LocalizedStringKey(SettingsText.clearSearch)) { onChange("") }
+                    .frame(width: Metric.controlSmall, height: Metric.controlSmall).padding(.trailing, Space._1)
+            }
+        }
         .accessibilityLabel(label)
         .accessibilityValue(spec.isEmpty ? SettingsText.recorderNone : KeySpecText.caps(spec).joined(separator: " "))
         .accessibilityHint(refusal ?? SettingsText.recorderPrompt)

@@ -19,6 +19,8 @@ public final class RustSettingsHost: SettingsHost {
         public var perform: @MainActor (SettingsAction) -> Void = { _ in }
         /// The bundled font's files (JetBrains Mono's four), so its name draws in its own face; none if the app has no folder.
         public var bundledFonts: @MainActor () -> [URL] = { [] }
+        /// Whether Wormhole is the app macOS opens scripts with; nil without a bundle to name.
+        public var isDefaultTerminal: @MainActor () -> Bool? = { nil }
         /// The "Open in" select: the apps installed (a system list).
         public var openApps: @MainActor () -> [SettingOption] = { [] }
         public var open: @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) }
@@ -45,7 +47,10 @@ public final class RustSettingsHost: SettingsHost {
     let importHome: String?
     var records: PanelRecords
     public let probes: (any ProbesBackend)?
-    public let projects: (any ProjectsBackend)?
+    /// Read on first use: the settings model is made before the first window, and the service is the window's.
+    @ObservationIgnored public private(set) lazy var projects: (any ProjectsBackend)? = platform.projects().map {
+        RustProjectsBackend(service: $0, folders: platform.projectFolders, terminal: platform.openTerminal)
+    }
     /// Why the last hook install or removal failed (core's sentence); nil after one that worked.
     public internal(set) var failure: String?
 
@@ -55,9 +60,6 @@ public final class RustSettingsHost: SettingsHost {
             probes = RustProbesBackend(desk: desk)
         } else {
             probes = nil
-        }
-        projects = platform.projects().map {
-            RustProjectsBackend(service: $0, folders: platform.projectFolders, terminal: platform.openTerminal)
         }
         let profile = RecordMapping.profile((try? settingsProfiles()) ?? [])
         records = PanelRecords(
@@ -79,6 +81,7 @@ public final class RustSettingsHost: SettingsHost {
     }
 
     public var fontRules: any FontRules { RustFontRules(fontsDir: handle.paths().fontsDir, bundledFiles: platform.bundledFonts()) }
+    public func isDefaultTerminal() -> Bool? { platform.isDefaultTerminal() }
 
     /// Says why the last button did nothing (nil: it did something), until the next one.
     public func problem(_ sentence: String?) {
@@ -139,9 +142,10 @@ public final class RustSettingsHost: SettingsHost {
     /// Looks for other terminals' settings again (Scan again).
     public func refreshImports() {
         let home = importHome
+        records.scanningImports = true
         Task.detached {
             let rows = settingsImportRows(home: home).map(RecordMapping.imported)
-            await MainActor.run { self.records.imports = rows }
+            await MainActor.run { (self.records.imports, self.records.scanningImports) = (rows, false) }
         }
     }
 

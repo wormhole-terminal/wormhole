@@ -66,6 +66,14 @@ impl State {
         Ok(self.replace(next))
     }
 
+    /// Lets `change` edit a copy of the settings and saves it (an import brings several keys at once).
+    /// `false` when nothing differed.
+    pub(crate) fn update(&mut self, change: impl FnOnce(&mut Settings)) -> bool {
+        let mut next = self.config.settings.clone();
+        change(&mut next);
+        self.replace(next)
+    }
+
     /// Puts `keys` back at their defaults and saves. `Ok(false)` when they already were.
     pub(crate) fn reset(&mut self, keys: &[String]) -> bool {
         let keys: Vec<&str> = keys.iter().map(String::as_str).collect();

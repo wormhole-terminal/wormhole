@@ -16,11 +16,15 @@ enum ControlLayout {
 }
 
 extension ControlSpec {
+    /// Row panels whose control runs over more than one line.
+    private static let tallPanels: Set<String> = ["profile-name", "profile-start", "profile-env", "profile-logins"]
+
     var layout: ControlLayout {
         switch self {
         case .preview: .strip
         case .themeCards: .block
-        case .panel(let name): name == "projects" ? .bare : isRowPanel ? .row : .block
+        case .panel(let name):
+            if name == "projects" { .bare } else if !isRowPanel { .block } else if Self.tallPanels.contains(name) { .tallRow } else { .row }
         case .partsList: .tallRow
         default: .row
         }

@@ -14,9 +14,17 @@ public struct AgentRecord: Sendable, Equatable, Identifiable {
     public let state: State
     /// The button the row offers, none for an agent that has no hook support.
     public let hooks: HookAction?
+    /// The two letters on its tile, the file its hooks are in (to reveal) and what to do in the agent afterwards.
+    public let mark: String
+    public let configPath: String?
+    public let note: String?
 
-    public init(id: String, name: String, detail: String, state: State, hooks: HookAction? = nil) {
+    public init(
+        id: String, name: String, detail: String, state: State, hooks: HookAction? = nil, mark: String = "", configPath: String? = nil,
+        note: String? = nil
+    ) {
         (self.id, self.name, self.detail, self.state, self.hooks) = (id, name, detail, state, hooks)
+        (self.mark, self.configPath, self.note) = (mark, configPath, note)
     }
 }
 
@@ -57,6 +65,8 @@ public struct PanelRecords: Sendable, Equatable {
     public var project: ProjectSettingsMark?
     /// Why the last button did nothing (a hook install, the command line tool, a new profile), until the next one.
     public var problem: String?
+    /// The scan for other terminals is running (the Import page says so instead of "none found").
+    public var scanningImports = false
 
     public init(agents: [AgentRecord], imports: [ImportRecord], profile: ProfileRecord) {
         (self.agents, self.imports, self.profile) = (agents, imports, profile)
