@@ -143,8 +143,11 @@ pub(super) fn render(
                 .flex()
                 .items_center()
                 .gap_3()
-                .child(style::block_readout(ui, Some(101), Some("3.5s")).child(
-                    style::icon_button("g-block-copy", ui, IconName::Copy, "Copy output").in_row(), // text: sample (the gallery's specimen)
+                .child(env.mark(
+                    "readout.block",
+                    style::block_readout(ui, Some(101), Some("3.5s")).child(
+                        style::icon_button("g-block-copy", ui, IconName::Copy, "Copy output").in_row(), // text: sample (the gallery's specimen)
+                    ),
                 ))
                 .child(style::block_readout(ui, Some(0), Some("12s")))
                 .child(div().text_caption().text_color(ui.muted).child("← a hovered command block")), // text: sample (the gallery's specimen)

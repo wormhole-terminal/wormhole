@@ -122,6 +122,9 @@ pub struct UiColors {
     /// A tooltip, and the readout beside a resize handle (`tooltip.*`).
     pub tooltip: Hsla,
     pub tooltip_text: Hsla,
+    /// Success and danger as text on that fill (`tooltip.success`, `tooltip.danger`).
+    pub tooltip_success: Hsla,
+    pub tooltip_danger: Hsla,
     pub primary: Hsla,
     /// Status colors for icons, dots and outlines (3:1).
     pub success: Hsla,
@@ -262,6 +265,8 @@ const COLORS: &[Field] = fields! {
     shadow = "shadow";
     tooltip = "tooltip.background";
     tooltip_text = "tooltip.text";
+    tooltip_success = "tooltip.success";
+    tooltip_danger = "tooltip.danger";
     primary = "primary";
     success = "status.success";
     warning = "status.warning";

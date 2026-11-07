@@ -165,6 +165,8 @@ pub const UI_TOKENS: &[TokenInfo] = &[
     t("resize.handle.active", "Misc", "The line of a resize handle while dragging"),
     t("tooltip.background", "Misc", "Tooltip fill"),
     t("tooltip.text", "Misc", "Tooltip text"),
+    t("tooltip.success", "Misc", "Success as text on a tooltip or readout (4.5:1 on the tooltip fill)"),
+    t("tooltip.danger", "Misc", "Danger as text on a tooltip or readout (4.5:1 on the tooltip fill)"),
     t("shadow", "Misc", "Drop shadow color"),
     t("selection.ui", "Misc", "Text selection in UI text fields"),
 ];

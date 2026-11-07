@@ -601,6 +601,12 @@ pub const TOKEN_USES: &[TokenUse] = &[
         ],
     ),
     u("readout", "resize readout", Ambient, &["tooltip.background", "tooltip.text", "metrics.radius"]),
+    u(
+        "readout.block",
+        "command block readout",
+        Ambient,
+        &["tooltip.background", "tooltip.text", "tooltip.success", "tooltip.danger", "metrics.radius"],
+    ),
     u("resize.handle", "resize handle", Ambient, &["resize.handle.hover", "resize.handle.active"]),
     u(
         "dialog",

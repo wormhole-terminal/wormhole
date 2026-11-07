@@ -235,6 +235,11 @@ pub(super) fn ui_rule(name: &str, dark: bool) -> Option<&'static str> {
             "readable(text.primary, tooltip.background, 4.5)",
             "readable(surface.window, tooltip.background, 4.5)",
         ),
+        // The tooltip's fill is the one surface whose lightness is the opposite of the window's (dark on a
+        // light theme, light on a dark one), so the status colours, which are judged on the window and the
+        // panel, are judged again on it where a readout writes them (a command block's exit code).
+        "tooltip.success" => "readable(status.success, tooltip.background, 4.5)",
+        "tooltip.danger" => "readable(status.danger, tooltip.background, 4.5)",
         "shadow" => p("#000 / 50%", "#000 / 16%"),
         "selection.ui" => p("primary / 30%", "primary / 25%"),
         _ => return None,
@@ -482,6 +487,29 @@ mod tests {
         expected.extend(accents.iter().map(String::as_str));
         expected.extend(["Crimson Light", "Soltari Light"]);
         assert_eq!(light, expected);
+    }
+
+    /// The tooltip fill is the opposite of the window's lightness, so the status colours (judged on the
+    /// window and the panel) would not read on it; the `tooltip.*` ones are judged on it, in every theme.
+    #[test]
+    fn status_text_on_the_tooltip_reads_in_every_builtin() {
+        let all = builtin_tokens();
+        let (mut light, mut dark, mut status_alone_failed) = (0, 0, false);
+        for t in &all {
+            let n = &t.name;
+            match t.appearance {
+                Appearance::Light => light += 1,
+                Appearance::Dark => dark += 1,
+            }
+            for (text, status) in [("tooltip.success", "status.success"), ("tooltip.danger", "status.danger")]
+            {
+                let on_tooltip = ratio(t, text, "tooltip.background");
+                assert!(on_tooltip >= 4.5, "{n}: {text} on the tooltip is {on_tooltip:.2}");
+                status_alone_failed |= ratio(t, status, "tooltip.background") < 4.5;
+            }
+        }
+        assert!(light > 0 && dark > 0);
+        assert!(status_alone_failed, "the plain status colours already read: the tokens are not needed");
     }
 
     #[test]

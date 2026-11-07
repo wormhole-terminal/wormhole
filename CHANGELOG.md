@@ -77,6 +77,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- A hovered command block's exit code ("exit 101", in red or green) was hard to read on the dark readout
+  of a light theme and on the light readout of a dark one. Themes get two tokens for it, `tooltip.success`
+  and `tooltip.danger`, which are the status colors made readable (4.5:1) on `tooltip.background`; no
+  theme file changes, and a theme can set them. The Theme Studio checks both.
 - Settings: the line between its sidebar and the page now goes with Settings → Appearance → Column dividers,
   like the lines between the main window's columns (Increase Contrast keeps it); it stayed whatever that
   setting said, and was taken away by Borders instead.

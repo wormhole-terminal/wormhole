@@ -122,13 +122,13 @@ pub fn readout(ui: UiColors, text: impl Into<SharedString>) -> Div {
 }
 
 /// What a hovered command block says at the pane's bottom right: its exit code in the
-/// status's color ("exit 101"), how long it took ("3.5s"), and room for the Copy output button
+/// status's color for the tooltip fill, which is dark on a light theme ("exit 101"), how long it took ("3.5s"), and room for the Copy output button
 /// beside them (`.child(…)`). A control's height, so the button fits in it.
 #[track_caller]
 pub fn block_readout(ui: UiColors, code: Option<i32>, took: Option<impl Into<SharedString>>) -> Div {
     let mut out = readout_pill(ui).h(px(CONTROL_H)).flex().items_center().gap_1().pl_2().pr_1();
     if let Some(code) = code {
-        let color = if code == 0 { ui.success } else { ui.danger };
+        let color = if code == 0 { ui.tooltip_success } else { ui.tooltip_danger };
         out = out.child(div().text_color(color).child(format!("exit {code}")));
     }
     if let Some(took) = took {

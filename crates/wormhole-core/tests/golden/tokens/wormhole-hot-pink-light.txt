@@ -107,6 +107,8 @@ tile.mark.brand #ffffff
 tile.sheen #ffffff24
 titlebar.background #f1edee
 tooltip.background #2b121d
+tooltip.danger #e74856
+tooltip.success #429165
 tooltip.text #fbf7f8
 trust.command #00707e
 syntax.attribute #8a5a00 italic

@@ -107,6 +107,8 @@ tile.mark.brand #ffffff
 tile.sheen #ffffff24
 titlebar.background #001920
 tooltip.background #153139
+tooltip.danger #ff5d56
+tooltip.success #869e2a
 tooltip.text #96a9ab
 trust.command #299589
 syntax.attribute #b58725 italic
@@ -226,5 +228,7 @@ increase_contrast text.faint #69838a
 increase_contrast text.muted #8ea5aa
 increase_contrast text.primary #b1c4c6
 increase_contrast tooltip.background #19353d
+increase_contrast tooltip.danger #ff675e
+increase_contrast tooltip.success #8aa330
 increase_contrast tooltip.text #b1c4c6
 increase_contrast metrics.focus_ring_width 3

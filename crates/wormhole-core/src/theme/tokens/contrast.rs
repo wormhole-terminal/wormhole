@@ -55,6 +55,9 @@ pub const CONTRAST_PAIRS: &[ContrastPair] = &[
     pair("checkbox.border", "surface.panel", 3.0),
     pair("tab.inactive.text", "titlebar.background", 3.0),
     pair("tooltip.text", "tooltip.background", 4.5),
+    // Status colours as text on the tooltip's fill, which is the opposite of the window's lightness.
+    pair("tooltip.success", "tooltip.background", 4.5),
+    pair("tooltip.danger", "tooltip.background", 4.5),
     pair("diff.added", "diff.added.background", 4.5),
     pair("diff.removed", "diff.removed.background", 4.5),
     pair("diff.hunk.text", "diff.hunk.background", 4.5),
