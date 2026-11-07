@@ -22,9 +22,11 @@ struct WorkspaceHost {
         let host: WorkspaceHost
         #if WITH_UNIFFI
             if let program = options.program {
-                let backend = RustWorkspaceBackend(setup: WorkspaceSetup(program: program))
+                // Persistent terminals follow Settings' flag (off in a release build unless unlocked); the terminals the
+                // last run left in session hosts come back, else the window starts with one.
+                let backend = RustWorkspaceBackend(setup: WorkspaceSetup(program: program, hosting: HostingSetup()))
                 host = WorkspaceHost(store: WorkspaceStore(backend: backend), source: { backend.frameSource(for: $0) })
-                host.store.send(.newTerminal)
+                if backend.restoreSaved() == 0 { host.store.send(.newTerminal) }
             } else {
                 host = sample
             }

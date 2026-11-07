@@ -12,7 +12,10 @@ extension AppController {
         let endAll = endsAllOnQuit
         endsAllOnQuit = false
         guard confirmsQuit else { return .terminateNow }
-        return QuitFlow.shouldTerminate(facts: quitFacts, endAll: endAll, window: window) { _ in }
+        // The answer decides what happens to the session hosts when the app goes (`applicationWillTerminate`).
+        return QuitFlow.shouldTerminate(facts: quitFacts, endAll: endAll, window: window) { [weak self] endHosts in
+            self?.endsHostsOnQuit = endHosts
+        }
     }
 
     func quit(endAll: Bool) {
@@ -34,10 +37,14 @@ extension AppController {
     }
 
     private var quitFacts: QuitFacts {
-        let running = hub.state.sections.flatMap(\.rows).filter(\.runsSomething)
+        let rows = hub.state.sections.flatMap(\.rows)
+        let running = rows.filter(\.runsSomething)
+        // Terminals in a session host are left running by a plain quit; only the rest would end.
+        let counts = HostedCounts(running: running.map(\.id), all: rows.map(\.id)) { hub.store.hosting(of: $0) }
         return QuitFacts(
             running: running.map { StillRunning.Fact(status: $0.terminal.runStatus, commandRunning: $0.runningCommand != nil) },
-            programs: running.compactMap { $0.runningCommand }, localRunning: running.count)
+            programs: running.compactMap { $0.runningCommand }, hostedRunning: counts.hostedRunning,
+            localRunning: counts.localRunning, anyHosted: counts.anyHosted)
     }
 
     /// Closes a terminal, asking first when an agent or a command runs in it.

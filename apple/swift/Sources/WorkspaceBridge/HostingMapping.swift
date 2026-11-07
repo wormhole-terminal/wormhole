@@ -34,7 +34,7 @@ enum HostingWords {
     static var recoveredGroup: String { String(localized: "hosting-recovered-group", defaultValue: "Recovered") }
 
     static func failure(_ error: any Error) -> String {
-        if case HostingError.unavailable(let reason, _) = error { return unavailable(reason) }
+        if case HostingError.Unavailable(let reason, _) = error { return unavailable(reason) }
         return "\(error)"
     }
 }

@@ -4,6 +4,7 @@
 
 import Foundation
 import TerminalCore
+import UniFFISource
 import WorkspaceModel
 import WormholeBindings
 
@@ -16,13 +17,13 @@ extension RustWorkspaceBackend {
         let entry = restoring.isEmpty ? nil : restoring.removeFirst()
         let what = request(id, in: entry?.folder ?? folder)
         if case .attach(let host, _)? = entry {
-            do { return try hosted.desk.attach(hostId: host, what: what, visible: true, listener: relay) } catch HostingError.gone {
+            do { return try hosted.desk.attach(hostId: host, what: what, visible: true, listener: relay) } catch HostingError.Gone {
                 // Its program went with its host: a new terminal where it was.
             }
         }
         do {
             return try hosted.desk.start(what: what, listener: relay)
-        } catch HostingError.start(let reason), HostingError.noProgram(let reason) {
+        } catch HostingError.Start(let reason), HostingError.NoProgram(let reason) {
             hostingFallback = hostingFallback ?? HostingWords.fallback(reason)
             FileHandle.standardError.write(Data("terminal \(id): \(HostingWords.fallback(reason))\n".utf8))
             return try startLocal(id, in: folder, relay: relay)
@@ -38,6 +39,8 @@ extension RustWorkspaceBackend {
         openRestored(entries)
         try? hosted.desk.finishRestore()
         if let first = live.first, !entries.isEmpty { _ = apply(.select(first)) }
+        // Opened behind the store's back: it pulls what changed.
+        onWake?()
         let desk = hosted.desk
         Task.detached { [weak self] in
             let orphans = desk.adoptableOrphans().map(\.hostId)

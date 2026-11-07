@@ -2,6 +2,7 @@
 // host that outlives the app, "In app" when it ends with the app. Shown only while persistent terminals are on; a terminal
 // whose host is gone says nothing (nothing runs there to be persistent or not).
 
+import DesignSystem
 import SwiftUI
 import WorkspaceModel
 

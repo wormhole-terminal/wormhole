@@ -31,7 +31,17 @@ struct AuxBackends {
     func hosts() -> any HostsBackend {
         #if WITH_UNIFFI
             if real {
-                do { return try AuxBridge.makeHostsBackend() } catch { fallback("session hosts", error) }
+                do {
+                    let backend = try AuxBridge.makeHostsBackend()
+                    // The window knows which terminals hold a host; the folder does not.
+                    let rows = app.hub.state.sections.flatMap(\.rows)
+                    let attached = rows.compactMap { row in
+                        app.hub.store.hosting(of: row.id)?.hostID.map { (hostID: $0, window: 1, title: row.terminal.title) }
+                    }
+                    backend.setAttachments(attached)
+                    backend.setPersistentTerminals(app.hub.store.hosting(of: app.hub.state.selected ?? 0) != nil)
+                    return backend
+                } catch { fallback("session hosts", error) }
             }
         #endif
         return SampleHostsBackend()

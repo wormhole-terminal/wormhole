@@ -42,6 +42,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// Quitting asks first while something runs, except when a control command or the idle check quits.
     var confirmsQuit = true
     var endsAllOnQuit = false
+    /// The quit question's answer for the session hosts: end them with the app, or leave them running (the default).
+    var endsHostsOnQuit = false
     let activityClock = ActivityClock()
     /// The fonts and colours every terminal is drawn with: Settings' and the theme's.
     private(set) lazy var terminalLook = TerminalLook(terminals: hub.terminals)
@@ -103,6 +105,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationWillTerminate(_ notification: Notification) {
         hooks?.stop()
+        // Before the views go: a terminal let go of is not ended by its view closing.
+        hub.store.finishQuit(endHosts: endsHostsOnQuit)
         hub.terminals.shutdown()
     }
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { ambient?.dockMenu() }
