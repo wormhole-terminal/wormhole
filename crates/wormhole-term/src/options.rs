@@ -41,6 +41,10 @@ pub struct StartOptions<'a> {
     /// (`checkpoint::text_seed` for saved text, a checkpoint's screen otherwise). Drawn filtered to text and SGR.
     pub restore: Option<&'a str>,
     pub scrollback_lines: usize,
+    /// Most the terminal's inline images may take, decoded (`image_memory_mib`); `None` is the
+    /// default, [`images::STORE_BUDGET`](crate::images::STORE_BUDGET). Brought into
+    /// [`images::STORE_BUDGET_MIN`](crate::images::STORE_BUDGET_MIN)..=[`images::STORE_BUDGET_MAX`](crate::images::STORE_BUDGET_MAX).
+    pub image_budget: Option<usize>,
     /// Answer DECRQCRA, a program's request for the checksum of a rectangle of the screen
     /// (`allow_screen_checksum`); the engine ignores it otherwise.
     pub allow_screen_checksum: bool,

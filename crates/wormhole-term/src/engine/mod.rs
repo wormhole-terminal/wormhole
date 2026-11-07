@@ -113,6 +113,9 @@ pub(super) fn spawn(
     proxy: EventProxy,
     shared: &Arc<Shared>,
 ) -> anyhow::Result<Spawned> {
+    if let Some(bytes) = options.image_budget {
+        shared.images().set_budget(bytes);
+    }
     let mut screen = Screen::new(size, options.scrollback_lines);
     screen.set_screen_checksum(options.allow_screen_checksum);
     screen.set_window_ops(options.allow_window_ops);

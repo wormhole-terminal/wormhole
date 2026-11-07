@@ -97,6 +97,21 @@ fn deccolm_clears_but_keeps_the_pane_width_and_asks_the_ui_for_nothing_by_defaul
 }
 
 #[test]
+fn a_terminal_starts_with_the_image_budget_it_is_given() {
+    use crate::images::{STORE_BUDGET, STORE_BUDGET_MAX, STORE_BUDGET_MIN};
+
+    let start = |image_budget| {
+        let options = StartOptions { image_budget, ..options() };
+        Pty::spawn_program(SIZE, &options, "/bin/sh", &["-c", "sleep 5"]).expect("spawn").0
+    };
+    assert_eq!(start(None).images().budget(), STORE_BUDGET);
+    assert_eq!(start(Some(256 * 1024 * 1024)).images().budget(), 256 * 1024 * 1024);
+    // Whatever a settings file says stays within the range.
+    assert_eq!(start(Some(0)).images().budget(), STORE_BUDGET_MIN);
+    assert_eq!(start(Some(usize::MAX)).images().budget(), STORE_BUDGET_MAX);
+}
+
+#[test]
 fn a_kitty_picture_is_decoded_kept_placed_and_freed() {
     let script = format!(
         "printf '\\033_Ga=T,f=100,i=7,c=3,r=2,q=2;{PNG}\\033\\\\'; printf 'done\\n'; read go; \

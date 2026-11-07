@@ -434,6 +434,7 @@ fn spawn_options(
         tab_id: tab_id.to_string(),
         restore,
         scrollback_lines: 0,
+        image_budget: None,
         allow_screen_checksum: false,
         allow_window_ops: false,
         allow_title_report: false,

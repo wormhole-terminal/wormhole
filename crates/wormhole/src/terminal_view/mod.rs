@@ -266,6 +266,7 @@ impl TerminalView {
         let shell: SharedString = wormhole_core::terminal::shell_name(&options).into();
         let store = store_in(&profile, cx);
         options.scrollback_lines = store.settings.scrollback_lines;
+        options.image_budget = Some(store.settings.image_memory_bytes());
         options.allow_screen_checksum = store.settings.allow_screen_checksum;
         options.allow_window_ops = store.settings.allow_window_ops;
         options.allow_title_report = store.settings.allow_title_report;

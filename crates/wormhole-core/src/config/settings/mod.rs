@@ -23,6 +23,7 @@ mod branch_color;
 mod choices;
 mod files_pinned;
 mod folder_colors;
+mod image_memory;
 mod keys;
 mod overlay;
 mod primary;
@@ -37,6 +38,7 @@ pub use self::choices::{
     AgentAccess, BranchColor, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
     ShellProfile, SizeUnits, TextSize, ThemeMode,
 };
+pub use self::image_memory::{IMAGE_MEMORY_DEFAULT_MIB, IMAGE_MEMORY_MIB, IMAGE_MEMORY_STEPS_MIB};
 pub use self::keys::{APP_SETTINGS, PROJECT_SETTINGS};
 pub(crate) use self::keys::{LEGACY_SETTINGS, keys};
 pub use self::row_changes::{ChangesScope, PlainChanges, SharedChanges};
@@ -98,6 +100,10 @@ pub struct Settings {
     /// Which Option keys send Esc+key (a side set to Meta can't type @ { [ on some layouts).
     pub option_as_meta: OptionAsMeta,
     pub scrollback_lines: usize,
+    /// Most one terminal's inline images (kitty, iTerm2, Sixel) may take, decoded, in MiB
+    /// (`IMAGE_MEMORY_MIB`); all terminals together get four times that, at most 2 GiB. Read when a
+    /// terminal starts.
+    pub image_memory_mib: u32,
     /// Save each terminal's last lines (encrypted, in the profile's `scrollback.db`) and show them
     /// again after a restart. Off: nothing is saved, and what was is erased.
     pub restore_terminal_text: bool,
@@ -348,6 +354,7 @@ impl Default for Settings {
             compact_sidebar: false,
             option_as_meta: OptionAsMeta::Off,
             scrollback_lines: 10_000,
+            image_memory_mib: IMAGE_MEMORY_DEFAULT_MIB,
             restore_terminal_text: true,
             notifications: true,
             changes_tree: true,
@@ -532,6 +539,7 @@ impl Settings {
         self.opacity = self.opacity.clamp(*OPACITY.start(), *OPACITY.end());
         self.scrollback_lines =
             self.scrollback_lines.clamp(*SCROLLBACK_LINES.start(), *SCROLLBACK_LINES.end());
+        self.sanitize_image_memory();
         self.tab_width = self.tab_width.clamp(1, 16);
         self.notify_command_after = self.notify_command_after.clamp(5, 300);
         if self.font_family.trim().is_empty() {

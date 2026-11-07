@@ -16,7 +16,10 @@ pub(super) mod decode;
 mod store;
 
 pub use decode::{DecodeError, Decoded, Format, Limits, decode, dimensions};
-pub use store::{GLOBAL_BUDGET, Image, ImageStore, STORE_BUDGET, global_bytes};
+pub use store::{
+    GLOBAL_BUDGET, GLOBAL_BUDGET_MAX, Image, ImageStore, STORE_BUDGET, STORE_BUDGET_MAX, STORE_BUDGET_MIN,
+    clamp_budget, global_budget_for, global_bytes,
+};
 pub use wormhole_vt::image::{PLACEHOLDER, Placeholder, placeholder_at, strip_placeholders};
 
 /// Where a placeholder cell's picture is in the store, and how many tiles it spans (kitty's

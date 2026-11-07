@@ -83,6 +83,12 @@ pub(super) const TERMINAL: &[Group] = &[
         ],
     ),
     group(
+        SETTINGS_TERMINAL_GROUP_IMAGES,
+        &[entry("image-memory", SETTINGS_TERMINAL_IMAGE_MEMORY, &["image_memory_mib"])
+            .with_description(SETTINGS_TERMINAL_IMAGE_MEMORY_DESCRIPTION)
+            .with_keywords(SETTINGS_TERMINAL_IMAGE_MEMORY_KEYWORDS)],
+    ),
+    group(
         SETTINGS_TERMINAL_GROUP_PRIVACY,
         &[
             entry("clipboard-read", SETTINGS_TERMINAL_CLIPBOARD_READ, &["clipboard_read"])

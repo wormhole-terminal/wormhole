@@ -37,9 +37,10 @@ pub use self::feature_table::{FEATURES, FeatureId, FeatureInfo, FeatureKind, Fea
 #[cfg(test)]
 pub(crate) use self::settings::keys;
 pub use self::settings::{
-    APP_SETTINGS, AgentAccess, BranchColor, ChangesScope, DockBadge, HotkeyAction, InFront, LINE_HEIGHT,
-    MenuBarIcon, NotifySound, OPACITY, OptionAsMeta, PROJECT_SETTINGS, PlainChanges, SCROLLBACK_LINES,
-    Settings, SharedChanges, ShellProfile, SizeUnits, TextSize, ThemeMode,
+    APP_SETTINGS, AgentAccess, BranchColor, ChangesScope, DockBadge, HotkeyAction, IMAGE_MEMORY_DEFAULT_MIB,
+    IMAGE_MEMORY_MIB, IMAGE_MEMORY_STEPS_MIB, InFront, LINE_HEIGHT, MenuBarIcon, NotifySound, OPACITY,
+    OptionAsMeta, PROJECT_SETTINGS, PlainChanges, SCROLLBACK_LINES, Settings, SharedChanges, ShellProfile,
+    SizeUnits, TextSize, ThemeMode,
 };
 pub use self::tab::TabId;
 use self::theme_setting::{ThemeStamp, default_tokens, resolve_theme};

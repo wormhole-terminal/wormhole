@@ -372,6 +372,11 @@ pub(crate) fn hosted(
     let HostFacts { pid, minor, features, replay } = host;
     let (proxy, events) = EventProxy::new();
     let shared = proxy.shared().clone();
+    // The replica decodes the pictures it draws itself. The host keeps its own store, at the default
+    // budget: the wire carries no image budget yet (a new minor would).
+    if let Some(bytes) = options.image_budget {
+        shared.images().set_budget(bytes);
+    }
     let replica_options = ReplicaOptions::of(options);
     let mut screen = replica_options.screen(replica);
     // What the host draws before the program's first byte (see `start_hosted`): the same here, so the

@@ -8,6 +8,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Added
 
+- Settings → Terminal → Inline images has an Image memory per terminal row (`image_memory_mib` in
+  `config.json`: 64, 128, 256, 512 or 1024 MiB, 128 by default) for how much memory the pictures a program
+  draws in one terminal (kitty, iTerm2, Sixel) may take, decoded. When it is full the pictures drawn longest
+  ago go first; all terminals together get four times that, at most 2 GiB. It applies to terminals you open
+  afterwards; a terminal kept running by a session host keeps the default on the host's side.
 - Settings → Components (a development build, behind the `components` flag) shows every Settings control in
   one place, each working on sample state that is kept in the page and never saved, so how they look can be
   tuned.

@@ -20,6 +20,9 @@ pub struct SpawnOptions {
     /// `wormhole_term::StartOptions::restore`).
     pub restore: Option<String>,
     pub scrollback_lines: usize,
+    /// Most the terminal's inline images may take, decoded, in bytes (`Settings::image_memory_bytes`);
+    /// `None` is the terminal layer's default.
+    pub image_budget: Option<usize>,
     /// Answer DECRQCRA, a program's request for the checksum of a rectangle of the screen
     /// (`allow_screen_checksum`); the engine ignores it otherwise.
     pub allow_screen_checksum: bool,

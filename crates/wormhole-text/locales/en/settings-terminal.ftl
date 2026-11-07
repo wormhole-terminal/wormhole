@@ -79,6 +79,17 @@ settings-terminal-bell-visual = Flash the window edge
     .description = A short glow along the terminal's edge when it rings the bell
     .keywords = bell visual flash glow
 
+## Inline images
+
+settings-terminal-group-images = Inline images
+
+settings-terminal-image-memory = Image memory per terminal
+    .description = Most memory the pictures a program draws in one terminal may take, decoded. The oldest go first when it is full. Applies to new terminals; all terminals together get four times this, at most 2 GiB
+    .keywords = images graphics kitty sixel iterm2 pictures memory ram budget
+
+# A size in the Image memory select. { $mib } is the number of MiB.
+settings-terminal-image-memory-size = { $mib } MiB
+
 ## Privacy
 
 settings-terminal-group-privacy = Privacy

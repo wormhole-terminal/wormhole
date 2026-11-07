@@ -1,9 +1,11 @@
 //! A terminal's images, under a budget.
 //!
-//! Each terminal keeps its decoded images here, least recently drawn first to go, within
-//! [`STORE_BUDGET`] of its own and [`GLOBAL_BUDGET`] across every terminal of the process. An
-//! image that doesn't fit after evicting everything else of this terminal is dropped (another
-//! terminal holds the rest of the global budget). An image is reserved with its size while it is
+//! Each terminal keeps its decoded images here, least recently drawn first to go, within a
+//! budget of its own ([`STORE_BUDGET`] unless the terminal was started with another, always within
+//! [`STORE_BUDGET_MIN`]..=[`STORE_BUDGET_MAX`]) and a budget across every terminal of the process
+//! that follows from it ([`global_budget_for`]). An image that doesn't fit after evicting
+//! everything else of this terminal is dropped (another terminal holds the rest of the global
+//! budget). An image is reserved with its size while it is
 //! being decoded, so a placement can already refer to it. Where a picture is shown is the
 //! engine's (placements in its grid, virtual placements); this holds the pixels, by the key the
 //! host gave each picture.
@@ -14,10 +16,41 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::MAX_IMAGES;
 
-/// Most one terminal's images may take, decoded.
-pub const STORE_BUDGET: usize = 128 * 1024 * 1024;
-/// Most all terminals' images may take together.
-pub const GLOBAL_BUDGET: usize = 512 * 1024 * 1024;
+/// Most one terminal's images may take, decoded, unless it was started with another budget.
+pub const STORE_BUDGET: usize = 128 * MIB;
+/// The least a terminal may be given: room for a few screenshots.
+pub const STORE_BUDGET_MIN: usize = 64 * MIB;
+/// The most a terminal may be given, whatever is asked: a hard ceiling for a value from a
+/// settings file, which anyone may edit and a cloned repository may try to.
+pub const STORE_BUDGET_MAX: usize = 1024 * MIB;
+/// How many terminals' worth of images all terminals may hold together.
+const GLOBAL_BUDGET_TERMINALS: usize = 4;
+/// Most all terminals' images may take together, whatever the terminals' budgets.
+pub const GLOBAL_BUDGET_MAX: usize = 2048 * MIB;
+/// Most all terminals' images may take together at the default budget per terminal.
+pub const GLOBAL_BUDGET: usize = global_budget_for(STORE_BUDGET);
+
+const MIB: usize = 1024 * 1024;
+
+/// `bytes` brought into the range a terminal's budget may have.
+pub const fn clamp_budget(bytes: usize) -> usize {
+    if bytes < STORE_BUDGET_MIN {
+        STORE_BUDGET_MIN
+    } else if bytes > STORE_BUDGET_MAX {
+        STORE_BUDGET_MAX
+    } else {
+        bytes
+    }
+}
+
+/// What all terminals may hold together for a terminal budget of `store`: four terminals' worth,
+/// never more than [`GLOBAL_BUDGET_MAX`]. Each store applies the figure of its own budget to the
+/// process's total, so a terminal started with a small budget also refuses to add to a large
+/// total.
+pub const fn global_budget_for(store: usize) -> usize {
+    let budget = clamp_budget(store) * GLOBAL_BUDGET_TERMINALS;
+    if budget > GLOBAL_BUDGET_MAX { GLOBAL_BUDGET_MAX } else { budget }
+}
 
 static GLOBAL_BYTES: AtomicUsize = AtomicUsize::new(0);
 
@@ -55,14 +88,33 @@ impl Slot {
     }
 }
 
-#[derive(Default)]
 pub struct ImageStore {
     images: HashMap<u32, Slot>,
     bytes: usize,
     tick: u64,
+    /// Most this terminal's images may take; within [`STORE_BUDGET_MIN`]..=[`STORE_BUDGET_MAX`].
+    budget: usize,
+}
+
+impl Default for ImageStore {
+    fn default() -> Self {
+        Self { images: HashMap::new(), bytes: 0, tick: 0, budget: STORE_BUDGET }
+    }
 }
 
 impl ImageStore {
+    /// Give this terminal another budget, clamped into its range. A store that holds more than the
+    /// new budget keeps it until the next image arrives, which evicts the least recently drawn
+    /// until it fits.
+    pub fn set_budget(&mut self, bytes: usize) {
+        self.budget = clamp_budget(bytes);
+    }
+
+    /// Most this terminal's images may take.
+    pub fn budget(&self) -> usize {
+        self.budget
+    }
+
     /// How much this terminal's images take.
     pub fn bytes(&self) -> usize {
         self.bytes
@@ -84,18 +136,19 @@ impl ImageStore {
     /// Make room for `bytes` more by evicting the least recently drawn images of this terminal.
     /// `false` when there is no room even then.
     fn make_room(&mut self, bytes: usize) -> bool {
-        if bytes > STORE_BUDGET {
+        let global = global_budget_for(self.budget);
+        if bytes > self.budget {
             return false;
         }
-        while self.bytes + bytes > STORE_BUDGET
-            || global_bytes() + bytes > GLOBAL_BUDGET
+        while self.bytes + bytes > self.budget
+            || global_bytes() + bytes > global
             || self.images.len() >= MAX_IMAGES
         {
             if !self.evict_oldest() {
                 break;
             }
         }
-        self.bytes + bytes <= STORE_BUDGET && global_bytes() + bytes <= GLOBAL_BUDGET
+        self.bytes + bytes <= self.budget && global_bytes() + bytes <= global
     }
 
     /// An image of this size is on its way (being decoded): its id is taken and placements may
@@ -192,7 +245,10 @@ impl Drop for ImageStore {
 mod tests {
     use std::sync::Arc;
 
-    use super::{Image, ImageStore, STORE_BUDGET};
+    use super::{
+        GLOBAL_BUDGET, GLOBAL_BUDGET_MAX, Image, ImageStore, STORE_BUDGET, STORE_BUDGET_MAX,
+        STORE_BUDGET_MIN, clamp_budget, global_budget_for,
+    };
 
     fn image(bytes: usize) -> Arc<Image> {
         Arc::new(Image { width: (bytes / 4) as u32, height: 1, rgba: vec![0; bytes] })
@@ -217,6 +273,66 @@ mod tests {
         // Replacing an image frees the old one.
         assert!(store.insert(4, image(8)));
         assert_eq!(store.bytes(), 2 * third + 8);
+    }
+
+    #[test]
+    fn a_budget_asked_for_stays_within_its_range() {
+        // A settings file is hostile input: nothing it says gets past the ceiling or under the floor.
+        for (asked, kept) in [
+            (0, STORE_BUDGET_MIN),
+            (STORE_BUDGET_MIN - 1, STORE_BUDGET_MIN),
+            (200 * 1024 * 1024, 200 * 1024 * 1024),
+            (STORE_BUDGET_MAX, STORE_BUDGET_MAX),
+            (STORE_BUDGET_MAX + 1, STORE_BUDGET_MAX),
+            (usize::MAX, STORE_BUDGET_MAX),
+        ] {
+            assert_eq!(clamp_budget(asked), kept);
+            let mut store = ImageStore::default();
+            store.set_budget(asked);
+            assert_eq!(store.budget(), kept);
+        }
+        assert_eq!(ImageStore::default().budget(), STORE_BUDGET);
+    }
+
+    #[test]
+    fn all_terminals_together_get_four_budgets_up_to_a_ceiling() {
+        assert_eq!(GLOBAL_BUDGET, 4 * STORE_BUDGET, "the default keeps its 512 MiB");
+        assert_eq!(global_budget_for(STORE_BUDGET_MIN), 4 * STORE_BUDGET_MIN);
+        assert_eq!(global_budget_for(STORE_BUDGET_MAX), GLOBAL_BUDGET_MAX);
+        assert_eq!(global_budget_for(usize::MAX), GLOBAL_BUDGET_MAX);
+        assert!(GLOBAL_BUDGET_MAX < 4 * STORE_BUDGET_MAX, "the ceiling is what caps the largest");
+    }
+
+    #[test]
+    fn a_smaller_budget_evicts_instead_of_growing() {
+        let mut store = ImageStore::default();
+        store.set_budget(STORE_BUDGET_MIN);
+        let quarter = STORE_BUDGET_MIN / 4;
+        for id in 1..=4 {
+            assert!(store.insert(id, image(quarter)));
+        }
+        assert_eq!(store.bytes(), STORE_BUDGET_MIN);
+        // One more evicts the oldest; the total never passes the budget.
+        assert!(store.insert(5, image(quarter)));
+        assert!(!store.contains(1) && store.contains(5));
+        assert_eq!(store.bytes(), STORE_BUDGET_MIN);
+        // Bigger than the budget, though it would fit the default one: refused, nothing evicted.
+        assert!(!store.insert(6, image(STORE_BUDGET_MIN + 4)));
+        assert_eq!(store.len(), 4);
+        assert_eq!(store.bytes(), STORE_BUDGET_MIN);
+    }
+
+    #[test]
+    fn a_store_given_a_smaller_budget_makes_room_with_its_next_image() {
+        let mut store = ImageStore::default();
+        let half = STORE_BUDGET / 2;
+        assert!(store.insert(1, image(half)));
+        assert!(store.insert(2, image(half)));
+        store.set_budget(STORE_BUDGET_MIN);
+        assert_eq!(store.bytes(), STORE_BUDGET, "nothing is dropped until something arrives");
+        assert!(store.insert(3, image(8)));
+        assert_eq!(store.len(), 1);
+        assert!(store.bytes() <= STORE_BUDGET_MIN);
     }
 
     #[test]

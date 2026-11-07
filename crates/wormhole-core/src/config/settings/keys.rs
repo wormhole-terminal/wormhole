@@ -116,6 +116,9 @@ pub const APP_SETTINGS: &[&str] = &[
     // Programs to run are the person's own choice; a project names its shell with `shell`.
     "default_shell",
     "shells",
+    // How much memory a terminal's pictures may take is the person's own call on their Mac; a cloned
+    // repository must not be able to ask for more.
+    "image_memory_mib",
     // Whether terminals' text is kept on disk: a cloned repository must not be able to turn that
     // on for itself.
     "restore_terminal_text",

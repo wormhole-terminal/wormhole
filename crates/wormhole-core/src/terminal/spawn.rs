@@ -11,6 +11,7 @@ impl SpawnOptions {
         StartOptions {
             restore: self.restore.as_deref(),
             scrollback_lines: self.scrollback_lines,
+            image_budget: self.image_budget,
             allow_screen_checksum: self.allow_screen_checksum,
             allow_window_ops: self.allow_window_ops,
             allow_title_report: self.allow_title_report,

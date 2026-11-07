@@ -15,9 +15,9 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::Disableable as _;
 use gpui_kit::component::Sizable;
 use gpui_kit::*;
-use wormhole_core::config::OptionAsMeta;
 use wormhole_core::config::clipboard::{ClipboardRead, ClipboardWrite};
 use wormhole_core::config::settings_index::SectionId as Section;
+use wormhole_core::config::{IMAGE_MEMORY_STEPS_MIB, OptionAsMeta};
 use wormhole_core::platform::open_in::{self, Installed, Resolved};
 use wormhole_core::terminal::shells::{self, ShellChoice, ShellKind};
 use wormhole_core::theme::fonts::FontSlot;
@@ -53,6 +53,24 @@ pub(super) const SETTINGS: &[Setting] = &[
         },
     ),
     toggle!("restore-text", restore_terminal_text),
+    Setting::select(
+        "image-memory",
+        IMAGE_MEMORY_W,
+        |s| {
+            image_memory_steps(s.image_memory_mib)
+                .into_iter()
+                .map(|mib| {
+                    Choice::new(mib.to_string(), settings_terminal_image_memory_size(&mib.to_string()))
+                })
+                .collect()
+        },
+        |s| s.image_memory_mib.to_string(),
+        |s, value| {
+            if let Ok(mib) = value.parse() {
+                s.image_memory_mib = mib;
+            }
+        },
+    ),
     toggle!("minimap", minimap),
     toggle!("split-gaps", split_gaps),
     Setting::segmented(
@@ -196,6 +214,19 @@ fn scrollback_sizes(current: usize) -> Vec<usize> {
     }
     sizes
 }
+
+/// The image memory sizes offered (core's steps); a value set in config.json shows as it is.
+fn image_memory_steps(current: u32) -> Vec<u32> {
+    let mut steps = IMAGE_MEMORY_STEPS_MIB.to_vec();
+    if !steps.contains(&current) {
+        steps.push(current);
+        steps.sort_unstable();
+    }
+    steps
+}
+
+/// The image memory select: wide enough for "1024 MiB".
+const IMAGE_MEMORY_W: f32 = 120.0;
 
 /// The scrollback select: wide enough for "200,000 lines".
 const SCROLLBACK_W: f32 = 160.0;
