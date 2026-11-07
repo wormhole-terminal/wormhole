@@ -96,7 +96,6 @@ var appDependencies: [Target.Dependency] = [
 var inputTestDependencies: [Target.Dependency] = ["TerminalCore", "TerminalMetal"]
 var inputTestSettings: [SwiftSetting] = []
 
-var appDependencies: [Target.Dependency] = ["TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI"]
 var appSettings: [SwiftSetting] = []
 
 if ffiLinked {
