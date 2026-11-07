@@ -9,7 +9,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use wormhole_core::config::profile::ProfileList;
 use wormhole_core::ipc::host_binary::{HostProgram, host_program};
-use wormhole_core::ipc::hosts::report::{AppFacts, Answer, Attachment, HostRow, Inputs, Report, Standing};
+use wormhole_core::ipc::hosts::report::{Answer, AppFacts, Attachment, HostRow, Inputs, Report, Standing};
 use wormhole_core::ipc::hosts::{self, Survey};
 use wormhole_core::platform::watch::{self as os_watch, Watch};
 use wormhole_core::storage::paths::DataRoot;

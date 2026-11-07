@@ -19,18 +19,18 @@ mod frame;
 mod git;
 mod interaction;
 mod isolation;
-mod settings;
 pub mod keymap;
 pub mod notify;
 pub mod palette_search;
+mod settings;
 pub mod settings_dump;
 mod terminal;
 pub mod theme_dump;
 mod theme_json;
 mod theme_resolve;
 mod themes;
-pub mod words;
 mod title_fit;
+pub mod words;
 mod workspace;
 mod workspace_feed;
 mod workspace_git;
@@ -41,11 +41,6 @@ mod workspace_watch;
 pub use aux_backends::*;
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
-pub use git::{
-    Git, GitBackendError, GitChange, GitChangeKind, GitCommitDetails, GitDiff, GitEnvVar, GitListener,
-    GitLog, GitLogCommit, GitRef, GitRefKind, GitRev, GitRevKind, GitSignature, GitStatus, GitWatch,
-    GitWorktree, GitWorktreePlan, WorktreeService,
-};
 pub use files_panel::{
     ApproveOutcome, DirectoryRecord, EntryRecord, FileContentRecord, FileEntryKind, FileProblem,
     FilesFailure, FilesService, FolderPaintRecord, FolderWatch, NewTerminalRecord, NoteSaved, NotesDocRecord,
@@ -53,6 +48,11 @@ pub use files_panel::{
     ProjectActionRecord, ProjectEffect, ProjectFailure, ProjectFeatureRecord, ProjectPromptRecord,
     ProjectService, ProjectStateRecord, RenameFailure, SessionNotesStore, TaskDocRecord, TaskSaved,
     TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord, UsageService,
+};
+pub use git::{
+    Git, GitBackendError, GitChange, GitChangeKind, GitCommitDetails, GitDiff, GitEnvVar, GitListener,
+    GitLog, GitLogCommit, GitRef, GitRefKind, GitRev, GitRevKind, GitSignature, GitStatus, GitWatch,
+    GitWorktree, GitWorktreePlan, WorktreeService,
 };
 pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,

@@ -148,7 +148,10 @@ impl AccessDesk {
 impl AccessDesk {
     /// Queues a question for `resolved` (or joins the one its program has open); `waiter` hears the decision.
     /// The control socket's gate calls this; the question's id.
-    #[cfg_attr(not(test), allow(dead_code, reason = "the control socket gate calls it once it is in this crate"))]
+    #[cfg_attr(
+        not(test),
+        allow(dead_code, reason = "the control socket gate calls it once it is in this crate")
+    )]
     pub(crate) fn ask(
         &self,
         resolved: Resolved,
@@ -257,7 +260,8 @@ impl AccessDesk {
         let Some(agent) = resolved.identity.agent else { return false };
         let key = resolved.identity.key();
         let word = agent_word(agent);
-        stored_rows(&self.profile_dir).is_some_and(|rows| rows.iter().any(|r| r.key.agent == word && r.key != key))
+        stored_rows(&self.profile_dir)
+            .is_some_and(|rows| rows.iter().any(|r| r.key.agent == word && r.key != key))
     }
 }
 

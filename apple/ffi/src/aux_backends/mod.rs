@@ -27,13 +27,14 @@ pub use first_run::{
     AgentScanRecord, FirstRun, FoundAgentRecord, HookState, LookRecord, PlaceKindRecord, PlaceRecord,
 };
 pub use hosts::{
-    HostAttachmentRecord, HostCardRecord, HostFactRecord, HostFieldRecord, HostProgramKind, HostStandingRecord,
-    HostToneRecord, HostsDesk, HostsReportRecord,
+    HostAttachmentRecord, HostCardRecord, HostFactRecord, HostFieldRecord, HostProgramKind,
+    HostStandingRecord, HostToneRecord, HostsDesk, HostsReportRecord,
 };
 pub use imports::{ImportFoundRecord, ImportRowRecord, import_apply, import_scan};
 pub use licenses::{LicensePackageRecord, LicensesRecord, licenses};
-pub use trust::{TrustDesk, ReviewLineRecord, TrustReviewRecord, ReviewStatusRecord};
+pub use trust::{ReviewLineRecord, ReviewStatusRecord, TrustDesk, TrustReviewRecord};
 pub use update_records::{
-    UpdateChannelNote, UpdateChannelRecord, UpdatePhaseRecord, UpdateReleaseRecord, UpdateSetup, UpdateStateRecord,
+    UpdateChannelNote, UpdateChannelRecord, UpdatePhaseRecord, UpdateReleaseRecord, UpdateSetup,
+    UpdateStateRecord,
 };
 pub use updater::UpdateEngine;

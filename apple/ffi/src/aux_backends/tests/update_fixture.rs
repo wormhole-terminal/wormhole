@@ -123,7 +123,10 @@ pub(super) fn publish(offer: Offer) -> Published {
     let base = format!("http://{}", server.server_addr().to_ip().expect("an ip address"));
     let mut routes: HashMap<String, Vec<u8>> = HashMap::new();
     routes.insert(ARCHIVE_PATH.into(), body.clone());
-    routes.insert("/stable/latest.json".into(), feed(&base, "0.2.0", &body, &signature, "New stuff").into_bytes());
+    routes.insert(
+        "/stable/latest.json".into(),
+        feed(&base, "0.2.0", &body, &signature, "New stuff").into_bytes(),
+    );
     if let Some(version) = offer.preview {
         let preview = feed(&base, version, &body, &signature, "A build of main");
         routes.insert("/unstable/latest.json".into(), preview.into_bytes());

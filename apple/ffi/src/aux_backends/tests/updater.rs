@@ -49,7 +49,9 @@ fn install_downloads_verifies_and_swaps_the_scratch_bundle_only() {
     assert_eq!(marker_of(&published.bundle), "#!/bin/sh\necho old\n");
 
     published.engine.install("0.2.0".into()).expect("started");
-    let state = wait_for(&published, |s| matches!(s.phase, UpdatePhaseRecord::Installed { .. } | UpdatePhaseRecord::Failed { .. }));
+    let state = wait_for(&published, |s| {
+        matches!(s.phase, UpdatePhaseRecord::Installed { .. } | UpdatePhaseRecord::Failed { .. })
+    });
     assert_eq!(state.phase, UpdatePhaseRecord::Installed { version: "0.2.0".into() }, "{state:?}");
     assert_eq!(marker_of(&published.bundle), "#!/bin/sh\necho new\n", "the scratch bundle was replaced");
     // Nothing else was left beside it.
@@ -67,7 +69,9 @@ fn an_archive_signed_by_another_key_is_refused_and_nothing_is_swapped() {
     published.engine.check(true);
     wait_for(&published, |s| offered(s).is_some());
     published.engine.install("0.2.0".into()).expect("started");
-    let state = wait_for(&published, |s| matches!(s.phase, UpdatePhaseRecord::Installed { .. } | UpdatePhaseRecord::Failed { .. }));
+    let state = wait_for(&published, |s| {
+        matches!(s.phase, UpdatePhaseRecord::Installed { .. } | UpdatePhaseRecord::Failed { .. })
+    });
     let UpdatePhaseRecord::Failed { message } = state.phase else { panic!("{state:?}") };
     assert!(message.contains("signature"), "{message}");
     assert_eq!(marker_of(&published.bundle), "#!/bin/sh\necho old\n");

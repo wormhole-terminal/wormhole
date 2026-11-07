@@ -22,7 +22,8 @@ fn fake_path() -> &'static Path {
 
 fn run(data: &Path, agent_home: &Path) -> std::sync::Arc<FirstRun> {
     fake_path();
-    FirstRun::new(Some(agent_home.display().to_string()), Some(data.display().to_string())).expect("a first run")
+    FirstRun::new(Some(agent_home.display().to_string()), Some(data.display().to_string()))
+        .expect("a first run")
 }
 
 #[test]
@@ -40,7 +41,13 @@ fn the_first_step_offers_recent_folders_then_the_standard_places() {
     let kinds: Vec<_> = places.iter().map(|p| p.kind).collect();
     assert_eq!(
         kinds,
-        [PlaceKindRecord::Recent, PlaceKindRecord::Home, PlaceKindRecord::Desktop, PlaceKindRecord::Documents, PlaceKindRecord::Developer],
+        [
+            PlaceKindRecord::Recent,
+            PlaceKindRecord::Home,
+            PlaceKindRecord::Desktop,
+            PlaceKindRecord::Documents,
+            PlaceKindRecord::Developer
+        ],
         "a recent folder that is gone is not offered; Developer only when it is there"
     );
     assert_eq!((places[0].name.as_str(), places[0].detail.as_str()), ("api", "~/work"));
@@ -55,7 +62,10 @@ fn agents_on_path_are_listed_and_their_hooks_written_where_told() {
     assert_eq!(scan.found.len(), 1, "only the fake claude is on the path: {:?}", scan.found);
     assert!(scan.others > 0);
     let claude = &scan.found[0];
-    assert_eq!((claude.id.as_str(), claude.name.as_str(), claude.hooks), ("claude", "Claude Code", HookState::NotInstalled));
+    assert_eq!(
+        (claude.id.as_str(), claude.name.as_str(), claude.hooks),
+        ("claude", "Claude Code", HookState::NotInstalled)
+    );
 
     let after = run.install_hooks("claude".into()).expect("installed");
     assert_eq!(after.hooks, HookState::Installed);
@@ -86,7 +96,8 @@ fn the_look_steps_choices_are_written_through_core_settings() {
         notifications: false,
         notify_command_done: false,
     });
-    let text = std::fs::read_to_string(data.join("config.json")).expect("config.json in the scratch data folder");
+    let text =
+        std::fs::read_to_string(data.join("config.json")).expect("config.json in the scratch data folder");
     let json: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
     assert_eq!(json["font_family"], "Menlo");
     assert_eq!(json["font_size"], 15.0);

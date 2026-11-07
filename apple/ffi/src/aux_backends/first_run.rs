@@ -130,7 +130,10 @@ impl FirstRun {
 
     /// Writes the hooks of agent `id` (an `id` of a scan) and reads them back, so the row says what is there.
     pub fn install_hooks(&self, id: String) -> Result<FoundAgentRecord, AuxError> {
-        let agent = AGENTS.iter().find(|a| agent_word(a.id) == id).ok_or_else(|| AuxError::failed("no such agent"))?;
+        let agent = AGENTS
+            .iter()
+            .find(|a| agent_word(a.id) == id)
+            .ok_or_else(|| AuxError::failed("no such agent"))?;
         let spec = integrations::spec(agent.id).ok_or_else(|| AuxError::failed("this agent has no hooks"))?;
         spec.install(&self.agent_home)
             .map_err(|err| AuxError::failed(format!("Couldn't write the hooks: {err}")))?;

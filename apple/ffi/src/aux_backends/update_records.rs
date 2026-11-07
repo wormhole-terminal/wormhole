@@ -44,12 +44,23 @@ pub enum UpdatePhaseRecord {
     Idle,
     Checking,
     UpToDate,
-    Available { release: UpdateReleaseRecord },
+    Available {
+        release: UpdateReleaseRecord,
+    },
     /// A newer version exists but needs a newer macOS (said), or this build cannot update itself.
-    Unsupported { reason: String },
-    Downloading { received: u64, expected: u64 },
-    Installed { version: String },
-    Failed { message: String },
+    Unsupported {
+        reason: String,
+    },
+    Downloading {
+        received: u64,
+        expected: u64,
+    },
+    Installed {
+        version: String,
+    },
+    Failed {
+        message: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]

@@ -14,7 +14,12 @@ const TYPE: Need = Need::Capability(Capability::Type);
 
 fn agent(pin: &str) -> Resolved {
     Resolved {
-        identity: Identity { kind: Kind::AdHoc, agent: Some(AgentId::Claude), pin: pin.into(), ..Identity::scripts() },
+        identity: Identity {
+            kind: Kind::AdHoc,
+            agent: Some(AgentId::Claude),
+            pin: pin.into(),
+            ..Identity::scripts()
+        },
         label: "Claude Code".into(),
         process: Some(ProcessRef { pid: u32::MAX, started: SystemTime::UNIX_EPOCH }),
         program: Some(Program {
@@ -72,10 +77,16 @@ fn a_question_carries_the_programs_facts_and_one_is_on_screen_at_a_time() {
 
     let shown = desk.next_question().expect("the first");
     assert_eq!(shown.id, first);
-    assert_eq!((shown.label.as_str(), shown.capability, shown.kind), ("Claude Code", AccessCapability::Type, AccessKindRecord::AdHoc));
+    assert_eq!(
+        (shown.label.as_str(), shown.capability, shown.kind),
+        ("Claude Code", AccessCapability::Type, AccessKindRecord::AdHoc)
+    );
     assert!(shown.unusual_signer && shown.can_be_remembered && shown.about_terminal.is_none());
     let program = shown.program.expect("a program");
-    assert_eq!((program.path.as_str(), program.signer, program.started_by.as_deref()), ("/opt/tools/claude", AccessSignerKind::AdHoc, Some("zsh")));
+    assert_eq!(
+        (program.path.as_str(), program.signer, program.started_by.as_deref()),
+        ("/opt/tools/claude", AccessSignerKind::AdHoc, Some("zsh"))
+    );
     assert!(desk.next_question().is_none(), "the first is still up");
 
     desk.answer(first, AccessAnswer::Deny);

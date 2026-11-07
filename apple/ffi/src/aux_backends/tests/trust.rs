@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::aux_backends::common::test_support::{Wakes, scratch};
-use crate::aux_backends::{AuxError, TrustDesk, ReviewStatusRecord};
+use crate::aux_backends::{AuxError, ReviewStatusRecord, TrustDesk};
 
 fn project(root: &Path, config: &str) {
     let dir = root.join("api").join(".wormhole");
@@ -10,8 +10,13 @@ fn project(root: &Path, config: &str) {
 }
 
 fn desk(root: &Path, data: &Path, wakes: &std::sync::Arc<Wakes>) -> std::sync::Arc<TrustDesk> {
-    TrustDesk::new(root.join("api").display().to_string(), None, Some(data.display().to_string()), wakes.clone())
-        .expect("a desk")
+    TrustDesk::new(
+        root.join("api").display().to_string(),
+        None,
+        Some(data.display().to_string()),
+        wakes.clone(),
+    )
+    .expect("a desk")
 }
 
 #[test]
