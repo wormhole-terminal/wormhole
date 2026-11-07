@@ -476,15 +476,16 @@ offset  size  field
 12      4     rows
 16      4     changed: number of row records that follow
 20      4     flags: bit 0 = full (every row is in this frame: the first, after a resize,
-                after a scroll, after the engine cleared history)
+                after a scroll, after the engine cleared history); bit 1 = a placements section
+                follows the rows (see "Inline images" below)
 24      4     cursor row (0xFFFFFFFF = no cursor: hidden, or scrolled out of view)
 28      4     cursor column
 32      4     cursor style: bits 0-7 shape (0 block, 1 underline, 2 beam, 3 hollow block);
                 bit 8 = over a wide character; bit 9 = the program asked for blinking
 36      4     display offset: lines the view is scrolled up into history (0 = live screen)
 40      4     history size: lines of history above the live screen
-44      4     reserved (0)
-48      ...   `changed` row records, ascending by row
+44      4     reserved (0); with flag bit 1, the number of placement records
+48      ...   `changed` row records, ascending by row, then (flag bit 1) the placement records
 ```
 
 Row record (`8 + cols * 16` bytes):
@@ -550,7 +551,7 @@ Flags (bit values of the engine's `Flags`):
 
 **Not in frame version 1** (the renderer must not expect them yet): zero-width and combining characters
 (`RowExtras`: the cell carries only its base character), underline colours (SGR 58), hyperlinks,
-inline-image placements, command-block spans, selection ranges, the program's OSC palette changes.
+kitty's Unicode-placeholder pictures (they need the cells' underline colour and combining marks), command-block spans, selection ranges, the program's OSC palette changes.
 Each arrives as an additive change to this file (a new header flag or a second call), with the
 version bumped only if an existing field changes meaning.
 
@@ -590,6 +591,34 @@ conflicts), `settingsAgentRows()` / `settingsSetAgentHooks(agent:install:)` (hoo
 `WORMHOLE_AGENT_HOME`, never the real home; reading uses it or the home), `settingsImportRows(home:)` (read-only
 scan; `nil` is the real home), `settingsProfiles()`, `settingsSwitchProfile`, `settingsCreateProfile`,
 `settingsDeleteProfile` (`profiles.json`; isolated only).
+
+## Inline images and the terminal's text (`inline_images/`, `contents.rs`)
+
+Additive to frame layout version 1 (the version stays 1: a reader that does not know bit 1 of the flags reads
+the rows and stops; the Swift reader ignores unknown flag bits and trailing bytes). The engine decodes kitty,
+iTerm2 and Sixel pictures and owns where they are; Swift draws them as textures.
+
+**Placements.** When the header's flag bit 1 is set, `reserved` holds a count and that many 64-byte records follow
+the rows, 16 words each: `key`, `z` (i32), `line` (i32: grid line, 0 the live screen's top row, negative history;
+add the header's display offset for the viewport row), `column`, `cols`, `rows` (cells, already cut to the screen's
+width), source `x y width height` (pixels of the picture; zero size means all of it), offset `x y` (points from
+the first cell's corner), extent kind (0 fill, 1 fit inside the cells keeping shape, 2 pixels) with its `width
+height` in points (kind 2 only: a cell is as many points as `start`/`resize` said), one reserved word. The list is
+those placements that touch the view, in the engine's order (lowest `z` first). A frame carries it when it differs
+from what the last frame carried (a scroll that brings one into view, a reflow, a new picture, an erase) and always
+in `full_frame()`; a frame without the flag says "as before". Pixel offsets and extents are in the same points as
+the cell size, so the view multiplies them by its scale.
+
+**Pixels.** `Terminal.inline_image(key) -> InlineImage?` (`width`, `height`, straight RGBA, `width * height * 4`
+bytes) returns the picture a record names, copied once; ask once per key and keep the texture. `nil` while the
+engine is still decoding it (it wakes the view with an `Output` event when done: ask again on the next frame) and
+for a picture its store has let go of (the engine's budget: at most 1,024 images, 128 MiB per terminal, 512 MiB
+for all terminals, the least recently drawn going first). A key is never reused for other pixels. A frame that
+carries a list touches the pictures it names in the store, so what is on screen is the last to be evicted.
+
+**Text.** `Terminal.contents(scope) -> String` with `ContentsScope.screen` (the live screen, one line per row, as
+`screen_text`) or `.everything` (history and screen, soft-wrapped rows joined, a picture's placeholder cells as
+blanks; the screen alone while a full-screen program has the alternate screen). Print and Export Text As use it.
 
 ## What the Rust side does not do for you
 

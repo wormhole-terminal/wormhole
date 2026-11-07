@@ -19,6 +19,7 @@ use wormhole_term::{GridSize, Pty, ScreenSnapshot};
 
 use crate::error::FfiError;
 use crate::events::{EventFeed, EventQueue, TermEvent, TerminalListener, Touch, spawn_receiver};
+use crate::inline_images::PlacementsSent;
 use crate::{frame, isolation};
 
 /// How much history a terminal keeps (the app's default is the same order).
@@ -35,6 +36,8 @@ pub struct Terminal {
     events: Arc<EventQueue>,
     /// What the pointer calls remember between calls (`interaction/`).
     pub(crate) interaction: crate::interaction::Interaction,
+    /// Which placements the last frame carried (`inline_images`); held with `snapshot`'s lock.
+    placements: Mutex<PlacementsSent>,
     timing: Timing,
     /// The program's name ("zsh"), which names the terminal until something better does.
     name: String,
@@ -291,6 +294,7 @@ impl Terminal {
             snapshot: Mutex::new(ScreenSnapshot::default()),
             events,
             interaction: Default::default(),
+            placements: Mutex::default(),
             timing: Timing::default(),
             name,
         }))
@@ -352,7 +356,12 @@ impl Terminal {
         let started = Instant::now();
         pty.snapshot(&mut snapshot);
         let snapshotted = Instant::now();
-        let bytes = frame::pack(&snapshot, all);
+        let mut bytes = frame::pack(&snapshot, all);
+        self.placements.lock().unwrap_or_else(PoisonError::into_inner).append(
+            &mut bytes,
+            snapshot.placements(),
+            all,
+        );
         let packed = Instant::now();
 
         let t = &self.timing;

@@ -11,6 +11,7 @@
 #![allow(unsafe_code, reason = "UniFFI's generated scaffolding")]
 
 mod aux_backends;
+mod contents;
 mod error;
 mod events;
 mod files_panel;
@@ -18,6 +19,7 @@ pub mod folder_picker;
 mod frame;
 mod git;
 mod hook_server;
+mod inline_images;
 mod interaction;
 mod isolation;
 pub mod keymap;
@@ -40,6 +42,7 @@ mod workspace_types;
 mod workspace_watch;
 
 pub use aux_backends::*;
+pub use contents::ContentsScope;
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
 pub use files_panel::{
@@ -56,6 +59,7 @@ pub use git::{
     GitWorktree, GitWorktreePlan, WorktreeService,
 };
 pub use hook_server::{HookError, HookEvent, HookListener, HookServer, cli_exit_code};
+pub use inline_images::InlineImage;
 pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,

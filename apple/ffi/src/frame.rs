@@ -30,6 +30,11 @@ const ROW_HEADER_BYTES: usize = 8;
 /// "No cursor" in the header (hidden, or scrolled out of view).
 const NONE: u32 = u32::MAX;
 
+/// The header words the placements section (`inline_images/section.rs`) patches: the flags, and the
+/// reserved word, which then carries the placement count.
+pub(crate) const FLAGS_WORD: usize = 5;
+pub(crate) const IMAGES_WORD: usize = 11;
+
 /// Set in the header's flags: every row is in the frame (the first frame, a resize, a scroll).
 const FLAG_FULL: u32 = 1;
 
