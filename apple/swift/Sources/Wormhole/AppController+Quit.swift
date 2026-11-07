@@ -27,21 +27,22 @@ extension AppController {
     }
 
     private var quitFacts: QuitFacts {
-        let running = hub.state.terminals.filter(\.runsSomething)
+        let running = hub.state.sections.flatMap(\.rows).filter(\.runsSomething)
         return QuitFacts(
-            running: running.map { StillRunning.Fact(status: $0.runStatus, commandRunning: $0.runningCommand != nil) },
+            running: running.map { StillRunning.Fact(status: $0.terminal.runStatus, commandRunning: $0.runningCommand != nil) },
             programs: running.compactMap { $0.runningCommand }, localRunning: running.count)
     }
 
     /// Closes a terminal, asking first when an agent or a command runs in it.
     func closeTerminal(_ id: TerminalID) {
-        guard let terminal = hub.state.terminals.first(where: { $0.id == id }) else { return }
-        guard terminal.runsSomething else { return finishClosing(id) }
+        guard let row = hub.state.sections.flatMap(\.rows).first(where: { $0.id == id }) else { return }
+        let terminal = row.terminal
+        guard row.runsSomething else { return finishClosing(id) }
         let question = Question(
             title: CloseQuestions.sessionTitle(terminal.title),
             detail: CloseQuestions.session(
                 agent: terminal.agent?.name, stakes: [], status: terminal.runStatus,
-                commandRunning: terminal.runningCommand != nil, programs: terminal.runningCommand.map { [$0] } ?? []),
+                commandRunning: row.runningCommand != nil, programs: row.runningCommand.map { [$0] } ?? []),
             confirm: "Close")
         Task {
             if case .confirm = await QuestionSheet(question).ask(in: window) { finishClosing(id) }
@@ -50,14 +51,19 @@ extension AppController {
 
     private func finishClosing(_ id: TerminalID) {
         hub.send(.close(id))
-        if hub.state.terminals.isEmpty { window?.close() }
+        if hub.state.live.isEmpty { window?.close() }
     }
 }
 
-extension TerminalSummary {
-    /// An agent works or waits, or a command that ends by itself runs: closing this ends something.
-    var runsSomething: Bool { activity == .working || activity == .needsInput || runningCommand != nil }
+extension SidebarRow {
+    /// The command a shell runs, when the row's second line is one (the core words it).
+    var runningCommand: String? { secondLine.isCommand ? secondLine.text : nil }
 
+    /// An agent works or waits, or a command that ends by itself runs: closing this ends something.
+    var runsSomething: Bool { terminal.activity == .working || terminal.activity == .needsInput || runningCommand != nil }
+}
+
+extension TerminalSummary {
     var runStatus: RunningTerminal.Status {
         switch activity {
         case .needsInput: .attention

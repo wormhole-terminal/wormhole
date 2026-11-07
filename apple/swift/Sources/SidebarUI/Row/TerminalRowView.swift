@@ -11,9 +11,6 @@ struct TerminalRowView: View {
     let row: SidebarRow
     let isSelected: Bool
     let solo: Bool
-    /// Its place among the visible rows, for VoiceOver.
-    let position: Int
-    let count: Int
     let context: SidebarContext
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
@@ -60,7 +57,7 @@ struct TerminalRowView: View {
         .dropFrame(.row(terminal.id))
         .contextMenu { RowMenu(terminal: terminal, context: context) }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(SidebarListing.spokenLabel(for: row, selected: isSelected, position: position, of: count))
+        .accessibilityLabel(row.spoken)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { context.send(.select(terminal.id)) }
         .accessibilityAction(named: terminal.isPinned ? "Unpin" : "Pin") { context.send(.togglePin(terminal.id)) }

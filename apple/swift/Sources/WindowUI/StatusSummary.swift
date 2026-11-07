@@ -19,7 +19,7 @@ struct StatusSummary: Equatable {
             case .needsInput: number == 1 ? "1 needs input" : "\(number) need input"
             case .finished: "\(number) done"
             case .failed: "\(number) failed"
-            case .idle: "\(number)"
+            case .idle, .exited: "\(number)"
             }
         }
     }

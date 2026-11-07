@@ -4,13 +4,13 @@ import WorkspaceModel
 
 enum DragItem: Hashable, Sendable {
     case terminal(TerminalID)
-    case group(String)
+    case group(GroupID)
 }
 
 /// Where the pointer can land, measured in the list's own coordinates (`DropSlot` frames).
 enum DropSlot: Hashable, Sendable {
     case row(TerminalID)
-    case head(String)
+    case head(GroupID)
     /// A group's whole card, for the outline that says a drop joins it.
-    case card(String)
+    case card(GroupID)
 }

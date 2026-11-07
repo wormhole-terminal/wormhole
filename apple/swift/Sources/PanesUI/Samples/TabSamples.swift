@@ -12,8 +12,8 @@ public enum TabSamples {
     ]
 
     public static let sets = [
-        TabSet(groupID: "agents", label: "Agents", members: [2, 3, 4]),
-        TabSet(groupID: "docs", label: "Docs", members: []),
+        TabSet(groupID: 1, label: "Agents", members: [2, 3, 4]),
+        TabSet(groupID: 2, label: "Docs", members: []),
         TabSet(groupID: nil, label: TabSets.ungrouped, members: [1, 5]),
     ]
 

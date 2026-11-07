@@ -2,15 +2,16 @@
 // list; the bar shows the selected terminal's set as tabs and the others one step away.
 
 import Foundation
+import WorkspaceModel
 
 public struct TabSet: Sendable, Equatable {
     /// Nil for the terminals in no group.
-    public var groupID: String?
+    public var groupID: GroupID?
     public var label: String
     /// Its terminals in the list's order, folded ones too: the tab bar has no folds.
     public var members: [Int]
 
-    public init(groupID: String?, label: String, members: [Int]) { (self.groupID, self.label, self.members) = (groupID, label, members) }
+    public init(groupID: GroupID?, label: String, members: [Int]) { (self.groupID, self.label, self.members) = (groupID, label, members) }
 }
 
 public enum TabSets {

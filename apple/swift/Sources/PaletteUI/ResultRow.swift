@@ -78,7 +78,7 @@ extension StatusKind {
     init(_ activity: Activity) {
         self =
             switch activity {
-            case .idle: .idle
+            case .idle, .exited: .idle
             case .working: .working
             case .needsInput: .attention
             case .finished: .done

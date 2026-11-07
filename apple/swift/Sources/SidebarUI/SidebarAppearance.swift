@@ -37,16 +37,11 @@ public struct SidebarAppearance: Equatable {
     public var forcesHints: Bool
     /// The row drawn as if the pointer were over it: for pictures and tests.
     public var hovered: TerminalID?
-    /// A fixed clock for pictures and tests: the second lines read as at this instant and no timer runs.
-    public var now: Date?
-    /// The folder `~` stands for in a row's place.
-    public var home: String
 
     public init(
         density: SidebarDensity = .regular, cards: Bool = true, fadesGroupColours: Bool = false,
         showsGroupFolders: Bool = true, showsNotes: Bool = true, showsChanges: Bool = true,
-        statusMotion: StatusMotion = .badgePop, forcesHints: Bool = false, hovered: TerminalID? = nil, now: Date? = nil,
-        home: String = NSHomeDirectory()
+        statusMotion: StatusMotion = .badgePop, forcesHints: Bool = false, hovered: TerminalID? = nil
     ) {
         self.density = density
         self.cards = cards
@@ -57,8 +52,6 @@ public struct SidebarAppearance: Equatable {
         self.statusMotion = statusMotion
         self.forcesHints = forcesHints
         self.hovered = hovered
-        self.now = now
-        self.home = home
     }
 }
 
@@ -67,8 +60,6 @@ extension EnvironmentValues {
     @Entry var sidebarMetrics = SidebarMetrics()
     /// What the person chose; the rows read the parts that are theirs.
     @Entry var sidebarLook = SidebarAppearance()
-    /// The instant the second lines read as: moved on by the list's one timer.
-    @Entry var sidebarNow = Date()
     /// The ⌘N keycaps are showing (⌘ held on its own for a moment).
     @Entry var showsHints = false
     /// The stop the keys are on, while the list has the keyboard: it wears the focus ring.

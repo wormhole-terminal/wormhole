@@ -32,6 +32,7 @@ private extension Activity {
         case .needsInput: "needs input"
         case .finished: "finished"
         case .failed: "failed"
+        case .exited: "exited"
         }
     }
 }

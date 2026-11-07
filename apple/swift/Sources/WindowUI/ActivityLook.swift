@@ -9,7 +9,7 @@ import WorkspaceModel
 extension Activity {
     var status: StatusKind {
         switch self {
-        case .idle: .idle
+        case .idle, .exited: .idle
         case .working: .working
         case .needsInput: .attention
         case .finished: .done
@@ -21,6 +21,7 @@ extension Activity {
     var stateWords: String? {
         switch self {
         case .idle: nil
+        case .exited: "exited"
         case .working: "working"
         case .needsInput: "needs you"
         case .finished: "done"
@@ -32,7 +33,7 @@ extension Activity {
         switch self {
         case .needsInput: colours.attentionText
         case .failed: colours.dangerText
-        case .idle, .working, .finished: colours.muted
+        case .idle, .working, .finished, .exited: colours.muted
         }
     }
 }

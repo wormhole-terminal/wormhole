@@ -12,7 +12,9 @@ extension AppController {
         let argument = parts.count > 1 ? parts[1] : ""
         // A window behind others is not drawn; the commands that read it want what the last change made.
         window?.contentView?.layoutSubtreeIfNeeded()
-        if runLook(command: command, argument: argument) || runWindow(command: command, argument: argument) { return }
+        if runLook(command: command, argument: argument) || runWindow(command: command, argument: argument)
+            || runWorkspace(command: command, argument: argument)
+        { return }
         guard let view = selectedView else { return reply("error: no terminal is shown") }
         run(command: command, argument: argument, on: view)
     }
@@ -55,7 +57,7 @@ extension AppController {
             + "busy_skips=\(stats.busySkips) blink_fires=\(stats.blinkFires) link=\(view.isLinkRunning ? "running" : "paused") "
             + "words_shaped=\(counters.wordsShaped) word_hits=\(counters.wordHits) glyphs_rasterised=\(counters.glyphsRasterised) "
             + "atlas_resets=\(counters.atlasResets) "
-            + "terminals=\(shown.terminals.count) selected=\(shown.selected.map(String.init) ?? "none") "
+            + "terminals=\(shown.live.count) selected=\(shown.selected.map(String.init) ?? "none") "
             + "sidebar=\(shown.sidebarVisible) panel=\(shown.panelVisible) tab=\(shown.panelTab.rawValue) "
             + "window=\(window?.windowNumber ?? 0) " + lookState + " " + hub.paneState
     }

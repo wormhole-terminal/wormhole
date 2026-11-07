@@ -66,11 +66,12 @@ final class AmbientController {
 extension AppController {
     /// Every terminal of the window as the ambient surfaces list them.
     var ambientTerminals: [AmbientTerminal] {
-        hub.state.terminals.map { terminal in
-            AmbientTerminal(
+        hub.state.sections.flatMap(\.rows).map { row in
+            let terminal = row.terminal
+            return AmbientTerminal(
                 session: Int64(terminal.id), name: terminal.title, state: terminal.activity.ambient,
-                since: terminal.activitySince ?? Date(), source: terminal.agent == nil ? .plain : .agent,
-                who: terminal.agent?.name, message: terminal.message, command: terminal.runningCommand,
+                since: activityClock.since(terminal.id, terminal.activity), source: terminal.agent == nil ? .plain : .agent,
+                who: terminal.agent?.name, message: terminal.message, command: row.runningCommand,
                 folder: terminal.folder, branch: terminal.branch)
         }
     }
@@ -84,6 +85,7 @@ private extension Activity {
         case .needsInput: .needsYou
         case .finished: .done
         case .failed: .failed
+        case .exited: .idle
         }
     }
 }

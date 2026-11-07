@@ -111,8 +111,8 @@ import PanesModel
 
     @Test func tabSetsStepWrapAndSearch() {
         let sets = [
-            TabSet(groupID: "a", label: "A", members: [0]), TabSet(groupID: "d", label: "Docs", members: []),
-            TabSet(groupID: "b", label: "B", members: [1, 2]), TabSet(groupID: nil, label: TabSets.ungrouped, members: [3]),
+            TabSet(groupID: 1, label: "A", members: [0]), TabSet(groupID: 4, label: "Docs", members: []),
+            TabSet(groupID: 2, label: "B", members: [1, 2]), TabSet(groupID: nil, label: TabSets.ungrouped, members: [3]),
         ]
         #expect(TabSets.step(sets, from: 0, forward: true) == 2 && TabSets.step(sets, from: 3, forward: true) == 0)
         #expect(TabSets.step(sets, from: 0, forward: false) == 3)

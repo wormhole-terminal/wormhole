@@ -125,10 +125,16 @@ if ffiLinked {
             ]
         ),
         .target(name: "UniFFISource", dependencies: ["TerminalCore", "WormholeBindings", "DesignSystem"]),
+        // The window's state kept by the Rust workspace: actions in, snapshots out as WorkspaceModel's values, and the
+        // programs started for the terminals it opens.
+        .target(
+            name: "WorkspaceBridge", dependencies: ["WorkspaceModel", "WormholeBindings", "UniFFISource", "TerminalCore"]),
+        // The theme resolver against the real Rust loader: a user theme file, colour picks, an opacity.
+        .testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]),
+        // The mapping and the real workspace behind the store: an action through the FFI, a snapshot back.
+        .testTarget(name: "WorkspaceBridgeTests", dependencies: ["WorkspaceBridge", "WorkspaceModel"]),
     ]
-    // The theme resolver against the real Rust loader: a user theme file, colour picks, an opacity.
-    targets.append(.testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]))
-    appDependencies.append("UniFFISource")
+    appDependencies += ["UniFFISource", "WorkspaceBridge"]
     appSettings.append(.define("WITH_UNIFFI"))
     inputTestDependencies.append("UniFFISource")
     inputTestSettings.append(.define("WITH_UNIFFI"))

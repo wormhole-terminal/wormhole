@@ -1,17 +1,22 @@
-// What the window shows, as plain values. No UI framework, no I/O: the Rust core fills it later
-// (`swift-headless-workspace.md`); until then `MockWorkspace` does. Every UI module reads only this.
+// What the window shows, as plain values. No UI framework, no I/O: the Rust core's workspace fills it
+// (`WorkspaceBridge` maps its snapshots), and `MockWorkspace` does for previews and tests. Every UI module reads
+// only this and sends `WorkspaceAction`s; none of them decides an order, a number or a word.
 
 import Foundation
 
 public typealias TerminalID = Int
+/// A group's id is core's: a number that is stable while the group exists.
+public typealias GroupID = UInt32
 
-/// What a terminal is doing, in the words of the sidebar's status dot.
+/// What a terminal is doing, in the words of the sidebar's status dot (core's `RowState`).
 public enum Activity: Sendable, Equatable {
     case idle
     case working
     case needsInput
     case finished
     case failed
+    /// The shell ended; its screen stays readable.
+    case exited
 }
 
 /// The right panel's tabs.
@@ -24,74 +29,35 @@ public enum Overlay: Sendable, Equatable {
     case palette, shortcuts
 }
 
-/// The whole window's state.
+/// The whole window's state: the sidebar as the core listed it, and the window's own switches.
 public struct WorkspaceState: Sendable, Equatable {
-    public var terminals: [TerminalSummary]
-    public var groups: [TerminalGroup]
+    /// The list top to bottom (a search has already cut it down).
+    public var sections: [SidebarSection]
     public var selected: TerminalID?
+    /// Every terminal that exists, listed or folded away: what keeps a terminal's view alive.
+    public var live: [TerminalID]
     public var sidebarVisible: Bool
     public var panelVisible: Bool
     public var panelTab: PanelTab
     public var search: String
     public var overlay: Overlay?
-    /// The top level of the list as the person last arranged it (`arranged()` completes it).
-    public var arrangement: [TopItem]
+
+    /// The terminals the list shows, in list order. Those folded away with their group are not here.
+    public var terminals: [TerminalSummary] { sections.flatMap(\.rows).map(\.terminal) }
+    public var groups: [GroupHead] { sections.compactMap(\.head) }
 
     public init(
-        terminals: [TerminalSummary] = [], groups: [TerminalGroup] = [], selected: TerminalID? = nil,
+        sections: [SidebarSection] = [], selected: TerminalID? = nil, live: [TerminalID]? = nil,
         sidebarVisible: Bool = true, panelVisible: Bool = true, panelTab: PanelTab = .changes, search: String = "",
-        overlay: Overlay? = nil, arrangement: [TopItem] = []
+        overlay: Overlay? = nil
     ) {
-        self.terminals = terminals
-        self.groups = groups
+        self.sections = sections
         self.selected = selected
+        self.live = live ?? sections.flatMap(\.rows).map(\.id)
         self.sidebarVisible = sidebarVisible
         self.panelVisible = panelVisible
         self.panelTab = panelTab
         self.search = search
         self.overlay = overlay
-        self.arrangement = arrangement
     }
-}
-
-/// Everything a person can do to the window. The UI sends these; it never edits state itself.
-public enum WorkspaceAction: Sendable, Equatable {
-    case select(TerminalID)
-    case newTerminal
-    case close(TerminalID)
-    case togglePin(TerminalID)
-    case toggleGroup(String)
-    case toggleSidebar
-    case togglePanel
-    case showPanelTab(PanelTab)
-    case search(String)
-    case showOverlay(Overlay?)
-    case rename(TerminalID, String)
-    case newGroup(String)
-    case addToGroup(TerminalID, String)
-    case moveTerminal(TerminalID, to: Landing)
-    case moveGroup(String, before: TopItem?)
-    /// A new terminal in the same split as this one, in its folder; it takes the selection.
-    case splitRight(TerminalID)
-
-    case renameGroup(String, String)
-    case setGroupColor(String, GroupColor?)
-    case setGroupFolder(String, String?)
-    /// Pin the group (it stays as a head when its last terminal goes) or let it go again.
-    case pinGroup(String)
-    /// Take the group apart; its terminals stand where it stood.
-    case ungroup(String)
-    /// End every terminal in the group.
-    case closeGroup(String)
-    /// Take a terminal (and its split) out of its group: it stands right after it.
-    case removeFromGroup(TerminalID)
-    case newTerminalInGroup(String)
-    /// A group holding the terminal and its split, named `name` or "Group N".
-    case newGroupWithTerminal(TerminalID, name: String?)
-
-    /// The first terminal shows beside the second ("Show beside…", a drop on the middle of a row).
-    case joinSplit(TerminalID, with: TerminalID)
-    case leaveSplit(TerminalID)
-    case toggleForgetText(TerminalID)
-    case toggleAgentHidden(TerminalID)
 }

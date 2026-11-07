@@ -19,7 +19,7 @@ struct TerminalPanes: View {
         ) { id in
             TerminalSurface(hub: hub, id: id).id(hub.restarts[id, default: 0])
         }
-        .onChange(of: state.terminals.map { $0.id }, initial: true) { _, ids in
+        .onChange(of: state.live, initial: true) { _, ids in
             hub.terminals.retain(only: Set(ids))
             hub.forgetOverlays(keeping: Set(ids))
         }

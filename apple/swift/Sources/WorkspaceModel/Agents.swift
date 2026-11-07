@@ -8,6 +8,21 @@ public enum AgentID: String, Sendable, CaseIterable {
     case claude, codex, gemini, copilot, cursor, openCode, aider, amp, goose, qwen, crush, droid, auggie, kiro,
         cline, pi, fm
 
+    /// The agent a command names (core's `Agent::command`, which `AgentInfo.key` carries).
+    public init?(command: String) {
+        guard let agent = Self.allCases.first(where: { $0.command == command }) else { return nil }
+        self = agent
+    }
+
+    var command: String {
+        switch self {
+        case .cursor: "cursor-agent"
+        case .openCode: "opencode"
+        case .kiro: "kiro-cli"
+        default: rawValue
+        }
+    }
+
     /// The agent's product name.
     public var name: String {
         switch self {

@@ -23,7 +23,6 @@ struct HeadChevron: View {
 }
 
 struct HeadAddButton: View {
-    let group: String
     let action: () -> Void
     @State private var hovering = false
     @Environment(\.tokens) private var tokens

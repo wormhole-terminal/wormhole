@@ -15,11 +15,9 @@ struct RowLines: View {
     @Environment(\.tokens) private var tokens
     @Environment(\.sidebarMetrics) private var metrics
     @Environment(\.sidebarLook) private var look
-    @Environment(\.sidebarNow) private var now
     @Environment(\.showsHints) private var showsHints
 
     private var terminal: TerminalSummary { row.terminal }
-    private var line: SecondLine { SidebarWording.secondLine(for: terminal, now: now, home: look.home) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -31,7 +29,7 @@ struct RowLines: View {
             }
             .frame(height: RowGeometry.nameLine)
             if metrics.density.twoLines {
-                SecondLineView(line: line, isSelected: isSelected, rolls: look.statusMotion == .lineRoll)
+                SecondLineView(line: row.secondLine, isSelected: isSelected, rolls: look.statusMotion == .lineRoll)
             }
         }
         .animation(SidebarMotion.hint, value: showsHints)
@@ -43,7 +41,7 @@ struct RowLines: View {
             RenameField(name: terminal.title, rename: rename)
         } else {
             NameText(
-                name: terminal.title, font: TextRole.body.font.weight(isSelected || terminal.unread > 0 ? .semibold : .medium),
+                name: terminal.title, font: TextRole.body.font.weight(isSelected || terminal.unread ? .semibold : .medium),
                 color: isSelected ? tokens.sidebarRowSelectedText : tokens.textPrimary, reserve: hovering ? RowGeometry.closeRoom : 0)
         }
     }

@@ -12,7 +12,7 @@ extension ActionRouter {
             "newTerminal": { hub.send(.newTerminal) },
             "newTerminalNoGroup": {
                 hub.send(.newTerminal)
-                if let id = hub.state.selected { hub.send(.moveTerminal(id, to: .top(before: nil))) }
+                if let id = hub.state.selected { hub.send(.removeFromGroup(id)) }
             },
             "closeTerminal": { [unowned self] in if let id = hub.state.selected { app.closeTerminal(id) } },
             "closeWindow": { [unowned self] in app.window?.performClose(nil) },

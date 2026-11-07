@@ -55,12 +55,12 @@ import WorkspaceModel
     private var state: WorkspaceState {
         WorkspaceState(
             terminals: [
-                TerminalSummary(id: 1, title: "zsh", subtitle: "~/scratchpad/ref-repo", isPinned: true),
-                TerminalSummary(id: 2, title: "build docs", subtitle: "~"),
-                TerminalSummary(id: 3, title: "sidebar polish", subtitle: "~/scratchpad/ref-repo", branch: "main", activity: .working),
-                TerminalSummary(id: 4, title: "diff perf", subtitle: "~/scratchpad/ref-repo", activity: .needsInput),
-                TerminalSummary(id: 5, title: "rate limits", subtitle: "~/scratchpad/ref-repo", activity: .finished),
-                TerminalSummary(id: 6, title: "scratch", subtitle: "~"),
+                TerminalSummary(id: 1, title: "zsh", folder: "~/scratchpad/ref-repo", isPinned: true),
+                TerminalSummary(id: 2, title: "build docs", folder: "~"),
+                TerminalSummary(id: 3, title: "sidebar polish", folder: "~/scratchpad/ref-repo", branch: "main", activity: .working),
+                TerminalSummary(id: 4, title: "diff perf", folder: "~/scratchpad/ref-repo", activity: .needsInput),
+                TerminalSummary(id: 5, title: "rate limits", folder: "~/scratchpad/ref-repo", activity: .finished),
+                TerminalSummary(id: 6, title: "scratch", folder: "~"),
             ], selected: 1)
     }
 

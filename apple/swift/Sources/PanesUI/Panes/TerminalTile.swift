@@ -34,7 +34,7 @@ public struct TerminalTile: View {
     /// The state's dot at the tile's corner: shape as well as colour, so it survives colour blindness.
     @ViewBuilder private var state: some View {
         switch activity {
-        case .idle: EmptyView()
+        case .idle, .exited: EmptyView()
         case .working: dot(tokens.agentWorking)
         case .needsInput: dot(tokens.agentAttention)
         case .finished: dot(tokens.agentDone)

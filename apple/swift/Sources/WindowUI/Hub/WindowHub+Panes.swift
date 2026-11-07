@@ -11,9 +11,7 @@ extension WindowHub {
     var panesBinding: Binding<TabPanes> {
         Binding(
             get: { self.layouts.panes(in: self.state) ?? .single(0) },
-            set: { panes in
-                for action in self.layouts.store(panes, in: self.state) { self.send(action) }
-            })
+            set: { self.commit($0) })
     }
 
     var paneActions: PaneActions {
@@ -25,7 +23,18 @@ extension WindowHub {
 
     /// ⌘D / ⇧⌘D, the split buttons and the pane menu.
     public func split(_ axis: SplitAxis) {
-        if let action = layouts.split(axis, in: state) { send(action) }
+        guard let selected = state.selected, var panes = layouts.panes(in: state), panes.canSplit(axis, room: PaneRoom(0, 0))
+        else { return }
+        // The core makes the terminal beside this one, in its split, and selects it; where it sits on screen is ours.
+        guard store.send(.splitRight(selected)) == nil, let new = state.selected, new != selected, panes.split(axis, new: new) else { return }
+        layouts.save(panes, anchor: selected, in: state)
+    }
+
+    /// Apply what the panes' change means to the workspace, then keep the layout under the split that came of it.
+    func commit(_ panes: TabPanes) {
+        guard let anchor = state.selected else { return }
+        for action in layouts.actions(for: panes, in: state) { send(action) }
+        layouts.save(panes, anchor: anchor, in: state)
     }
 
     public func canSplit(_ axis: SplitAxis) -> Bool {
@@ -35,7 +44,7 @@ extension WindowHub {
     /// ⇧⌘↩ and the pane header's zoom button.
     public func toggleZoom() {
         guard var panes = layouts.panes(in: state), panes.toggleZoom() else { return }
-        for action in layouts.store(panes, in: state) { send(action) }
+        commit(panes)
     }
 
     /// ⌥⌘← → ↑ ↓: the neighbouring pane takes the keyboard.
@@ -43,7 +52,7 @@ extension WindowHub {
         guard var panes = layouts.panes(in: state), let next = panes.neighbour(direction, room: PaneRoom(1, 1)),
             panes.focus(next)
         else { return }
-        for action in layouts.store(panes, in: state) { send(action) }
+        commit(panes)
     }
 }
 

@@ -7,7 +7,7 @@ import Foundation
 import WorkspaceModel
 
 enum SidebarStop: Hashable, Sendable {
-    case group(String)
+    case group(GroupID)
     case row(TerminalID)
 }
 
@@ -15,11 +15,6 @@ enum ListKey: Sendable { case up, down, left, right, first, last }
 
 enum ListMove: Equatable, Sendable {
     case to(Int), open(Int), fold(Int), stay
-}
-
-extension SidebarSection {
-    /// Terminals in no group stand as cards of their own: the ungrouped run, and the pins that come before it.
-    var isHeadless: Bool { title == nil || id == "pinned" }
 }
 
 struct SidebarWalk: Equatable, Sendable {
@@ -35,8 +30,8 @@ struct SidebarWalk: Equatable, Sendable {
 
     init(_ sections: [SidebarSection]) {
         for section in sections {
-            if !section.isHeadless {
-                items.append(Item(stop: .group(section.id), level: 0, isOpen: !section.isCollapsed, name: section.title ?? ""))
+            if let head = section.head {
+                items.append(Item(stop: .group(head.id), level: 0, isOpen: !head.isFolded, name: head.name))
             }
             for row in section.rows {
                 items.append(Item(stop: .row(row.id), level: section.isHeadless ? 0 : 1, isOpen: nil, name: row.terminal.title))

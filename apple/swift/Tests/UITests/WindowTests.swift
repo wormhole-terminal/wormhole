@@ -14,8 +14,8 @@ import WorkspaceModel
         fileURLWithPath: "/private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/window")
 
     private static let terminals = [
-        TerminalSummary(id: 1, title: "zsh", subtitle: "~/Projects/wormhole", branch: "main"),
-        TerminalSummary(id: 2, title: "agent", subtitle: "~/Projects/wormhole", branch: "exp/swift-ui", activity: .working),
+        TerminalSummary(id: 1, title: "zsh", folder: "~/Projects/wormhole", branch: "main"),
+        TerminalSummary(id: 2, title: "agent", folder: "~/Projects/wormhole", branch: "exp/swift-ui", activity: .working),
     ]
 
     private func snapshot(
@@ -27,7 +27,7 @@ import WorkspaceModel
         if let theme { ThemeStore.shared.setTheme(theme) }
         let look = WindowLook()
         look.statusBar = statusBar
-        let root = WorkspaceRootView(hub: WindowHub(store: WorkspaceStore(state: state), terminals: TerminalViews { _ in nil }), look: look)
+        let root = WorkspaceRootView(hub: WindowHub(store: WorkspaceStore(backend: MockWorkspaceBackend(items: state.terminals.map { .loose(MockTerminal($0)) }, selected: state.selected, chrome: ChromeState(sidebarVisible: state.sidebarVisible, panelVisible: state.panelVisible, panelTab: state.panelTab))), terminals: TerminalViews { _ in nil }), look: look)
         let hosting = NSHostingView(rootView: root)
         hosting.sizingOptions = []
         let window = NSWindow(

@@ -7,8 +7,8 @@ import XCTest
 @MainActor
 final class SidebarTests: XCTestCase {
     func testKeysWalkGroupsAndTerminals() {
-        let walk = SidebarWalk(SidebarListing.sections(for: SidebarFixture.state))
-        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .row(2), .group("g1"), .row(3), .row(4), .row(5), .row(6)])
+        let walk = SidebarWalk(SidebarFixture.state.sections)
+        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .row(2), .group(1), .row(3), .row(4), .row(5), .row(6)])
         let group = 2
         XCTAssertEqual(walk.move(from: group, .left), .fold(group))
         XCTAssertEqual(walk.move(from: group, .right), .to(3), "an open group goes to its first terminal")
@@ -21,10 +21,8 @@ final class SidebarTests: XCTestCase {
     }
 
     func testFoldedGroupsAreSkippedByKeys() {
-        var state = SidebarFixture.state
-        state.groups[0].isCollapsed = true
-        let walk = SidebarWalk(SidebarListing.sections(for: state))
-        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .row(2), .group("g1"), .row(6)])
+        let walk = SidebarWalk(SidebarFixture.folded.sections)
+        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .row(2), .group(1), .row(6)])
         XCTAssertEqual(walk.move(from: 2, .right), .open(2))
     }
 
@@ -53,14 +51,6 @@ final class SidebarTests: XCTestCase {
         XCTAssertEqual(typed.text, "x")
     }
 
-    func testTheNextIdsTheListGuessesAreTheOnesTheModelGives() {
-        let state = MockWorkspace.state
-        let guessedTerminal = (state.terminals.map(\.id).max() ?? 0) + 1
-        XCTAssertEqual(reduce(state, .newTerminal).selected, guessedTerminal)
-        let guessedGroup = (1...).lazy.map { "group-\($0)" }.first { id in !state.groups.contains { $0.id == id } }
-        XCTAssertEqual(reduce(state, .newGroup("")).groups.last?.id, guessedGroup)
-    }
-
     func testSplitMembersShareACardAndOthersStandAlone() {
         func row(_ id: Int, _ part: Bracket?) -> SidebarRow {
             SidebarRow(terminal: TerminalSummary(id: id, title: "t\(id)"), number: nil, splitMarks: SplitMarks(bracket: part))
@@ -81,7 +71,7 @@ final class SidebarTests: XCTestCase {
         let state = WorkspaceState(terminals: [
             TerminalSummary(id: 1, title: long, isPinned: true, agent: .claude, noteCount: 3, changeCount: 12),
             TerminalSummary(id: 2, title: "Foundation Models", folder: "~"),
-            TerminalSummary(id: 3, title: long, hasBell: true, folder: "~"),
+            TerminalSummary(id: 3, title: long, folder: "~", hasBell: true),
         ])
         try SidebarSnapshot.write(state, theme: "wormhole.dark", name: "long-names", size: CGSize(width: 350, height: 300))
     }
@@ -112,19 +102,21 @@ final class SidebarMomentTests: XCTestCase {
     }
 
     func testADragShowsTheLiftedRowAndWhereItLands() throws {
-        let plan = DropPlan(action: .moveTerminal(6, to: .group("g1", before: 4)), mark: .line(y: 188, x: 15...335))
-        let drag = LiveDrag(item: .terminal(6), point: CGPoint(x: 150, y: 186), plan: plan)
+        let aim = DropAim(action: .dropTerminal(6, over: .row(4, .top)), mark: .line(y: 188, x: 15...335))
+        let drag = LiveDrag(item: .terminal(6), point: CGPoint(x: 150, y: 186), aim: aim)
         try SidebarSnapshot.write(theme: "wormhole.dark", name: "moment-drag", caught: .init(drag: drag))
-        let join = LiveDrag(item: .terminal(6), point: CGPoint(x: 150, y: 130), plan: DropPlan(action: .moveTerminal(6, to: .group("g1", before: 3)), mark: .card("g1")))
+        let join = LiveDrag(item: .terminal(6), point: CGPoint(x: 150, y: 130), aim: DropAim(action: .dropTerminal(6, over: .head(1, .middle)), mark: .card(1)))
         try SidebarSnapshot.write(theme: "wormhole.dark", name: "moment-drag-join", caught: .init(drag: join))
     }
 
     func testTheGroupPopoverAndMenuContents() throws {
-        let group = try XCTUnwrap(SidebarFixture.state.groups.first)
-        let edits = GroupEdits(rename: { _, _ in }, setColor: { _, _ in }, togglePin: { _ in }, ungroup: { _ in }, close: { _ in })
+        let section = try XCTUnwrap(SidebarFixture.state.sections.first { $0.head != nil })
+        let context = SidebarContext(
+            selected: nil, groups: [], send: { _ in }, renaming: nil, rename: { _ in }, shifts: [:], drag: .none,
+            groupEdits: GroupEdits(setColor: { _, _ in }), popover: nil, openPopover: { _ in })
         for id in ["wormhole.dark", "wormhole.light"] {
             let theme = try XCTUnwrap(ThemeLibrary.bundled.theme(id: id))
-            try SidebarSnapshot.render(GroupPopover(group: group, edits: edits, close: {}), theme: theme, name: "moment-popover-\(id)", size: CGSize(width: 248, height: 140))
+            try SidebarSnapshot.render(GroupPopover(head: try XCTUnwrap(section.head), rows: section.rows, context: context, close: {}), theme: theme, name: "moment-popover-\(id)", size: CGSize(width: 248, height: 140))
         }
     }
 

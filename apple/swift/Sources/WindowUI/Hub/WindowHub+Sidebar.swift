@@ -1,5 +1,6 @@
-// The sidebar's seams filled by the workspace's actions: the group's own edits (its menu and popover), and the
-// terminals as tabs when the person shows them there instead.
+// The terminals as tabs when the person shows them there instead of in the sidebar. A group's own edits (rename, pin,
+// ungroup, close) are the core's actions, sent by the sidebar itself; the one with no core action yet, a group's colour,
+// is left out of its menu and popover (the window hands the sidebar no `GroupEdits`).
 
 import PanesModel
 import PanesUI
@@ -7,23 +8,15 @@ import SidebarUI
 import WorkspaceModel
 
 extension WindowHub {
-    /// A group's name, colour, pin, ungroup and close, as actions on the workspace.
-    var groupEdits: GroupEdits {
-        GroupEdits(
-            rename: { [unowned self] in send(.renameGroup($0, $1)) },
-            setColor: { [unowned self] in send(.setGroupColor($0, $1)) },
-            togglePin: { [unowned self] in send(.pinGroup($0)) },
-            ungroup: { [unowned self] in send(.ungroup($0)) },
-            close: { [unowned self] in send(.closeGroup($0)) })
-    }
-
     /// The tab bar for the terminals as they are: the groups as sets, the loose terminals as the last one.
     var tabBar: TabBarModel {
         let state = state
-        let grouped = Set(state.groups.flatMap(\.members))
+        // A folded group lists no rows, so its set is empty until it is opened in the sidebar.
         let sets = TabSets.of(
-            groups: state.groups.map { TabSet(groupID: $0.id, label: $0.name, members: $0.members) },
-            loose: state.terminals.map(\.id).filter { !grouped.contains($0) })
+            groups: state.sections.compactMap { section in
+                section.head.map { TabSet(groupID: $0.id, label: $0.name, members: section.rows.map(\.id)) }
+            },
+            loose: state.sections.filter { $0.head == nil }.flatMap(\.rows).map(\.id))
         let current = state.selected.flatMap { TabSets.current(sets, containing: $0) } ?? 0
         return TabBarModel.make(
             sets: sets, current: current, selected: state.selected,
@@ -41,12 +34,9 @@ extension WindowHub {
         TabBarActions(
             select: { [unowned self] in send(.select($0)) },
             close: { [unowned self] in actions.closeTerminal($0) },
-            newTerminal: { [unowned self] group in
-                send(.newTerminal)
-                if let group, let id = state.selected { send(.addToGroup(id, group)) }
-            },
+            newTerminal: { [unowned self] group in send(group.map { .newTerminalInGroup($0) } ?? .newTerminal) },
             openSet: { [unowned self] in openSet($0) },
-            newGroup: { [unowned self] in send(.newGroup("")) },
+            newGroup: { [unowned self] in send(.newGroup([])) },
             showGroupsInSidebar: { [unowned self] in actions.showTerminalsInSidebar() })
     }
 

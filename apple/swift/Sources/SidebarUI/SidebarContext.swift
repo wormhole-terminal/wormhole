@@ -7,7 +7,8 @@ import WorkspaceModel
 
 struct SidebarContext {
     let selected: TerminalID?
-    /// Every group, in list order, for a terminal's "Add terminal to group" and the group a terminal is in.
+    /// Every group, in list order, for a terminal's "Add terminal to group" and the group a terminal is in (a folded
+    /// group lists no members: its rows are folded away).
     let groups: [GroupChoice]
     let send: @MainActor (WorkspaceAction) -> Void
     /// The terminal whose name is a field, and the closure that starts and ends a rename (nil ends it, keeping the
@@ -17,17 +18,13 @@ struct SidebarContext {
     /// How many status changes each terminal has had since the list appeared: what plays the wash.
     let shifts: [TerminalID: Int]
     let drag: DragHooks
-    /// What the window can do to a group beyond the model's actions, and the group whose popover is open.
+    /// What the window can do to a group beyond the core's actions, and the group whose popover is open.
     let groupEdits: GroupEdits?
-    let popover: String?
-    let openPopover: @MainActor (String?) -> Void
-    /// The ids the next terminal and the next group get (`WorkspaceState.addTerminal`, `addGroup`), so a terminal made in
-    /// one action can be put in a group by the next.
-    let nextTerminalID: TerminalID
-    let nextGroupID: String
+    let popover: GroupID?
+    let openPopover: @MainActor (GroupID?) -> Void
 
     struct GroupChoice: Identifiable {
-        let id: String
+        let id: GroupID
         let name: String
         let members: [TerminalID]
     }

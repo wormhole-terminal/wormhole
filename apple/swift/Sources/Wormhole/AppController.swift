@@ -29,6 +29,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// Quitting asks first while something runs, except when a control command or the idle check quits.
     var confirmsQuit = true
     var endsAllOnQuit = false
+    let activityClock = ActivityClock()
     private(set) lazy var router = ActionRouter(app: self)
     private(set) lazy var aux = AuxController(app: self, dataDirectory: dataDirectory)
 
@@ -36,10 +37,11 @@ final class AppController: NSObject, NSApplicationDelegate {
         self.options = options
         self.dataDirectory = dataDirectory
         policy = PlatformPolicy(background: options.background)
-        let factory = TerminalFactory(options: options)
+        // The core's workspace when a real program is asked for (it also starts the terminals' programs), else the sample.
+        let host = WorkspaceHost.make(options)
+        let factory = TerminalFactory(options: options, source: host.source)
         self.factory = factory
-        let store = WorkspaceStore(state: Self.initialState(real: options.program != nil, collapsed: options.grid != nil))
-        hub = WindowHub(store: store, terminals: TerminalViews { factory.make($0) })
+        hub = WindowHub(store: host.store, terminals: TerminalViews { factory.make($0) })
         super.init()
     }
 
@@ -59,17 +61,4 @@ final class AppController: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationWillTerminate(_ notification: Notification) { hub.terminals.shutdown() }
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { ambient?.dockMenu() }
-
-    /// Some rows to look at when the sources are mock; a real shell starts with the one.
-    private static func initialState(real: Bool, collapsed: Bool) -> WorkspaceState {
-        var state = MockWorkspace.state
-        if real {
-            state.terminals = [TerminalSummary(id: 1, title: "zsh", subtitle: "~/Projects/wormhole", branch: "main", folder: "~/Projects/wormhole")]
-            state.groups = []
-            state.selected = 1
-        }
-        // A fixed grid is a measuring mode: the terminal is all the window shows.
-        if collapsed { state.sidebarVisible = false; state.panelVisible = false }
-        return state
-    }
 }

@@ -74,5 +74,5 @@ public struct TabBarView: View {
         Rectangle().fill(tokens.border).frame(width: tokens.metrics.borderWidth, height: TabMetrics.ruleHeight)
     }
 
-    private var currentGroup: String? { model.sets.first { $0.members.contains { $0 == model.selected } }?.groupID }
+    private var currentGroup: GroupID? { model.sets.first { $0.members.contains { $0 == model.selected } }?.groupID }
 }

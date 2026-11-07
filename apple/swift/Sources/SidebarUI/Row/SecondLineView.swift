@@ -1,6 +1,6 @@
 // A row's second line (`row/second_line.rs`): what the terminal has to report, else where it is, in the tone's colour
 // (amber asks, green is done, red failed), a command in the code font, and at its end a faint clock or "new output".
-// The words are `SidebarWording`'s, read at the list's instant, so the line changes by the list's one timer.
+// The words are the core's, read again by the store's one timer when they move with time.
 // Under LineRoll a changed line rolls up to its new words instead of cross-fading.
 
 import DesignSystem

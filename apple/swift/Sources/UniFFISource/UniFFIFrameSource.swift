@@ -13,10 +13,22 @@ public final class UniFFIFrameSource: FrameSource {
     private let program: String
     private let arguments: [String]
     private let terminal = Mutex<Terminal?>(nil)
+    /// The wake of a terminal that was started before its view: `start` hands the view's wake to it.
+    private let relay: TerminalRelay?
 
     public init(program: String, arguments: [String] = []) {
         self.program = program
         self.arguments = arguments
+        relay = nil
+    }
+
+    /// A source over a terminal that already runs (the workspace started it, `WorkspaceBridge`): `start` only fits it to
+    /// the view and gives the view's wake to its relay.
+    public init(adopting terminal: Terminal, relay: TerminalRelay) {
+        program = ""
+        arguments = []
+        self.relay = relay
+        self.terminal.withLock { $0 = terminal }
     }
 
     /// The Rust side's own time in the frames so far (snapshot and pack), for the measuring mode.
@@ -28,6 +40,11 @@ public final class UniFFIFrameSource: FrameSource {
     }
 
     public func start(size: GridSize, wake: @escaping @Sendable () -> Void) throws {
+        if let relay, let adopted = current {
+            relay.attach(wake)
+            adopted.resize(cols: UInt16(size.cols), rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight)
+            return
+        }
         // The layouts must agree before one byte of a frame is read.
         guard frameFormatVersion() == FrameLayout.version else {
             throw SourceError.wrongFrameFormat(rust: frameFormatVersion(), swift: FrameLayout.version)

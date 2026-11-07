@@ -20,6 +20,10 @@ executable) and a data folder called `Wormhole-swift*`. It never reads the real 
 The real engine: `apple/scripts/build-ffi.sh apple/swift` links `WormholeFFI.xcframework` and the generated
 bindings into this package, and the next `swift build` adds `Sources/UniFFISource`; then
 `WORMHOLE_SHELL=/bin/zsh .build/release/Wormhole` (or `--shell <program>`) runs it on the real terminal.
+With the FFI linked the window is the Rust workspace's too: `WorkspaceBridge` keeps the terminal list (order, pins, groups,
+splits, numbers, wording) in `wormhole-core`, starts the program of every terminal it opens and feeds each row from it; without
+the FFI (or without `--shell`) `MockWorkspaceBackend` stands in over the same `WorkspaceStore`. `WORMHOLE_DEVCTL` gains `rows`,
+`rename`, `pin`, `group`, `drop`, `plan`, `split` and `window-shot` (see `AppController+Workspace.swift`).
 
 Screenshots without a window or Screen Recording permission (a texture readback of the same instance data):
 

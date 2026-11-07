@@ -63,11 +63,10 @@ enum MenuStateMaker {
     }
 }
 
-/// The terminals ⌘1–9 reach, in the order the list shows them.
+/// The terminals ⌘1–9 reach: the numbers the core gave the list's rows, in order.
 enum SidebarNumbering {
     static func numbered(_ state: WorkspaceState) -> [TerminalSummary] {
-        SidebarListing.sections(for: state).flatMap(\.rows)
-            .compactMap { row in row.number.map { ($0, row.terminal) } }
+        state.sections.flatMap(\.rows).compactMap { row in row.number.map { ($0, row.terminal) } }
             .sorted { $0.0 < $1.0 }.map(\.1)
     }
 }

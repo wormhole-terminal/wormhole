@@ -5,43 +5,63 @@ import SwiftUI
 import WorkspaceModel
 import XCTest
 
-/// The instant the fixture's second lines read as, so "Working · 1m" stays that.
-let sidebarNow = Date(timeIntervalSinceReferenceDate: 800_000_000)
-
 /// The data of the GPUI reference screenshots (`gpui-ref/dark-sidebar-crop-opaque.png`): one pinned terminal, a plain one,
-/// a group of three (working, needs input, finished; the first selected) and a scratch terminal, all Claude's. The pinned one
-/// is not in the arrangement: pinned terminals lead the loose ones wherever it puts them.
+/// a group of three (working, needs input, finished; the first selected) and a scratch terminal, all Claude's, with the
+/// words the core gives their second lines.
 enum SidebarFixture {
     static let home = "/Users/ref"
     static let state: WorkspaceState = {
-        func ago(_ seconds: TimeInterval) -> Date { sidebarNow.addingTimeInterval(-seconds) }
-        let terminals = [
-            TerminalSummary(
-                id: 1, title: "zsh", isPinned: true, agent: .claude,
-                folder: "/private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/ref-repo"),
-            TerminalSummary(id: 2, title: "build docs", agent: .claude, folder: home),
-            TerminalSummary(id: 3, title: "sidebar polish", activity: .working, agent: .claude, activitySince: ago(70), folder: home),
-            TerminalSummary(
-                id: 4, title: "diff perf", activity: .needsInput, agent: .claude, message: "Approve cargo test?",
-                activitySince: ago(30), folder: home),
-            TerminalSummary(id: 5, title: "rate limits", activity: .finished, agent: .claude, activitySince: ago(70), folder: home),
-            TerminalSummary(id: 6, title: "scratch", agent: .claude, folder: home),
+        func claude(_ id: Int, _ title: String, _ activity: Activity = .idle, pinned: Bool = false, message: String? = nil,
+                    folder: String = "~", line: SecondLine? = nil) -> MockTerminal {
+            MockTerminal(
+                TerminalSummary(id: id, title: title, folder: folder, activity: activity, isPinned: pinned, agent: .claude, message: message), line)
+        }
+        let head = GroupHead(id: 1, name: "Agents", color: .blue)
+        let items: [MockItem] = [
+            .loose(claude(1, "zsh", pinned: true, folder: "…/scratchpad/ref-repo")),
+            .loose(claude(2, "build docs")),
+            .group(
+                head,
+                [
+                    claude(3, "sidebar polish", .working, line: SecondLine(text: "Working · 1m")),
+                    claude(4, "diff perf", .needsInput, message: "Approve cargo test?", line: SecondLine(text: "Needs input · Approve cargo test?", tone: .attention)),
+                    claude(5, "rate limits", .finished, line: SecondLine(text: "Finished · 1m ago", tone: .done)),
+                ]),
+            .loose(claude(6, "scratch")),
         ]
-        let group = TerminalGroup(id: "g1", name: "Agents", members: [3, 4, 5], color: .blue)
-        return WorkspaceState(terminals: terminals, groups: [group], selected: 3, arrangement: [.terminal(2), .group("g1"), .terminal(6)])
+        return WorkspaceState(sections: MockWorkspace.sections(items, selected: 3), selected: 3)
     }()
+
+    /// The same list with the group folded.
+    static var folded: WorkspaceState {
+        var state = state
+        state.sections = state.sections.map { section in
+            guard var head = section.head else { return section }
+            head.isFolded = true
+            return SidebarSection(id: section.id, head: head, rows: [], terminalCount: section.terminalCount, alertCount: section.alertCount)
+        }
+        return state
+    }
 }
 
 extension SidebarFixture {
     /// One terminal per agent the registry knows, in a mix of states: every logo, monogram and brand colour.
     static let agents: WorkspaceState = {
         let states: [Activity] = [.working, .idle, .needsInput, .finished, .failed]
-        let terminals = AgentID.allCases.enumerated().map { at, agent in
-            TerminalSummary(
-                id: at + 1, title: agent.name, activity: states[at % states.count], agent: agent,
-                activitySince: sidebarNow.addingTimeInterval(-120), folder: home)
+        func line(_ activity: Activity) -> SecondLine {
+            switch activity {
+            case .working: SecondLine(text: "Working · 2m")
+            case .needsInput: SecondLine(text: "Needs input", tone: .attention)
+            case .finished: SecondLine(text: "Finished · 2m ago", tone: .done)
+            case .failed: SecondLine(text: "Failed · 2m ago", tone: .failed)
+            case .idle, .exited: SecondLine(text: "~")
+            }
         }
-        return WorkspaceState(terminals: terminals, selected: 2)
+        let terminals = AgentID.allCases.enumerated().map { at, agent in
+            let activity = states[at % states.count]
+            return MockTerminal(TerminalSummary(id: at + 1, title: agent.name, folder: "~", activity: activity, agent: agent), line(activity))
+        }
+        return WorkspaceState(sections: MockWorkspace.sections(terminals.map { .loose($0) }, selected: 2), selected: 2)
     }()
 }
 
@@ -61,9 +81,6 @@ enum SidebarSnapshot {
         let library = ThemeLibrary.bundled
         ThemeStore.shared.increaseContrast = contrast
         let theme = try XCTUnwrap(library.theme(id: theme))
-        var appearance = appearance
-        appearance.now = sidebarNow
-        appearance.home = SidebarFixture.home
         return try render(
             SidebarView(state: state, appearance: appearance, groupEdits: groupEdits, caught: caught, send: { _ in }),
             theme: theme, contrast: contrast, name: name, size: size, settle: settle)

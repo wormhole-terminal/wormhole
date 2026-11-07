@@ -1,5 +1,5 @@
 // The mark where a drop would land: a 2-point line in the primary colour between two lines of the list, or a group's
-// card outlined while a drop would join it (`style::drop_line`, the card's focus outline), and the lifted item that
+// card (or a row) outlined while a drop would join it (`style::drop_line`, the card's focus outline), and the lifted item that
 // follows the pointer, a card with the shadow of something floating.
 
 import DesignSystem
@@ -7,8 +7,8 @@ import SwiftUI
 import WorkspaceModel
 
 struct DropMarkView: View {
-    let mark: DropPlan.Mark
-    let cards: [String: CGRect]
+    let mark: DropMark
+    let lines: DropLines
     @Environment(\.tokens) private var tokens
     @Environment(\.sidebarMetrics) private var metrics
 
@@ -20,13 +20,17 @@ struct DropMarkView: View {
             Capsule().fill(tokens.primary)
                 .frame(width: x.upperBound - x.lowerBound, height: Self.line)
                 .position(x: (x.lowerBound + x.upperBound) / 2, y: y)
-        case .card(let group):
-            if let frame = cards[group] {
-                RoundedRectangle(cornerRadius: metrics.cardRadius)
-                    .strokeBorder(tokens.primary, lineWidth: tokens.metrics.focusRingWidth)
-                    .frame(width: frame.width, height: frame.height)
-                    .position(x: frame.midX, y: frame.midY)
-            }
+        case .card(let group): outline(lines.cards[group], radius: metrics.cardRadius)
+        case .row(let id): outline(lines.rows[id], radius: metrics.rowRadius)
+        }
+    }
+
+    @ViewBuilder private func outline(_ frame: CGRect?, radius: CGFloat) -> some View {
+        if let frame {
+            RoundedRectangle(cornerRadius: radius)
+                .strokeBorder(tokens.primary, lineWidth: tokens.metrics.focusRingWidth)
+                .frame(width: frame.width, height: frame.height)
+                .position(x: frame.midX, y: frame.midY)
         }
     }
 }

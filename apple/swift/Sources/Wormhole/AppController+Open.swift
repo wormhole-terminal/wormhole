@@ -45,7 +45,6 @@ extension AppController {
     /// The views' events and what the window asks of the app.
     private func connectFactory() {
         hub.shell = factory.shellName
-        factory.onTitle = { [weak self] id, title in self?.hub.store.setTitle(title, of: id) }
         factory.onExit = { [weak self] id, code in
             self?.hub.noteExit(of: id, code: code)
             self?.devctl?.append("exited terminal=\(id) code=\(code.map(String.init) ?? "unknown")")

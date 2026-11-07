@@ -15,38 +15,35 @@ extension WindowHub {
                 implemented: implemented))
     }
 
-    /// ⌘1–9: the terminal with this number in the list.
-    public func selectNumbered(_ number: Int) {
-        let numbered = SidebarNumbering.numbered(state)
-        if numbered.indices.contains(number - 1) { send(.select(numbered[number - 1].id)) }
-    }
+    /// ⌘1–9: the terminal with this number in the list (the core numbers them).
+    public func selectNumbered(_ number: Int) { send(.selectNumber(number)) }
 
-    /// ⌃⌘↓ / ⌃⌘↑: the next or previous terminal in the list, round the ends.
-    public func selectNeighbour(forward: Bool) {
-        let order = SidebarListing.sections(for: state).flatMap(\.rows).map(\.id)
-        guard !order.isEmpty else { return }
-        let at = state.selected.flatMap { order.firstIndex(of: $0) } ?? (forward ? -1 : 0)
-        send(.select(order[(at + (forward ? 1 : order.count - 1)) % order.count]))
-    }
+    /// ⌃⌘↓ / ⌃⌘↑: the next or previous terminal in the list, round the ends (the core walks the list).
+    public func selectNeighbour(forward: Bool) { send(.selectStep(forward ? 1 : -1)) }
 
     /// ⌥⌘J, ⇧⌥⌘J: the terminal that waits for you, or has finished.
     public func goTo(_ activity: Activity) {
-        let order = SidebarListing.sections(for: state).flatMap(\.rows).map(\.terminal)
+        let order = state.terminals
         let after = state.selected.flatMap { id in order.firstIndex { $0.id == id } } ?? -1
         let found = (order.dropFirst(after + 1) + order.prefix(max(after, 0))).first { $0.activity == activity }
         if let found { send(.select(found.id)) }
     }
 
     /// ⌃⌥]/[ and ⌃⌥1–9: the first terminal of the group `offset` steps from the selected terminal's, or number `n`.
+    /// A folded group lists no rows, so it has none to go to until it is opened.
     public func selectGroup(number: Int) {
-        guard state.groups.indices.contains(number - 1), let first = state.groups[number - 1].members.first else { return }
-        send(.select(first))
+        let groups = groupSections
+        guard groups.indices.contains(number - 1), let first = groups[number - 1].rows.first else { return }
+        send(.select(first.id))
     }
 
     public func selectGroup(step: Int) {
-        guard !state.groups.isEmpty else { return }
-        let current = state.groups.firstIndex { $0.members.contains { $0 == state.selected } } ?? (step > 0 ? -1 : 0)
-        let next = (current + step + state.groups.count) % state.groups.count
-        if let first = state.groups[next].members.first { send(.select(first)) }
+        let groups = groupSections
+        guard !groups.isEmpty else { return }
+        let current = groups.firstIndex { $0.rows.contains { $0.id == state.selected } } ?? (step > 0 ? -1 : 0)
+        let next = (current + step + groups.count) % groups.count
+        if let first = groups[next].rows.first { send(.select(first.id)) }
     }
+
+    private var groupSections: [SidebarSection] { state.sections.filter { $0.head != nil } }
 }

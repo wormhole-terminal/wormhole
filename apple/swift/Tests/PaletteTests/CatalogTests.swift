@@ -27,8 +27,8 @@ import WorkspaceModel
 
     @Test func foldersCountTheirTerminals() {
         let state = WorkspaceState(terminals: [
-            TerminalSummary(id: 1, title: "a", subtitle: "~/api"), TerminalSummary(id: 2, title: "b", subtitle: "~/api"),
-            TerminalSummary(id: 3, title: "c", subtitle: "zsh"),
+            TerminalSummary(id: 1, title: "a", folder: "~/api"), TerminalSummary(id: 2, title: "b", folder: "~/api"),
+            TerminalSummary(id: 3, title: "c", folder: "zsh"),
         ])
         let folders = CommandCatalog.commands(for: state).filter { $0.group == .folders }
         #expect(folders.map(\.title) == ["api"])
@@ -106,8 +106,8 @@ import WorkspaceModel
 func sample() -> WorkspaceState {
     WorkspaceState(
         terminals: [
-            TerminalSummary(id: 1, title: "api server", subtitle: "~/api", branch: "main", activity: .working),
-            TerminalSummary(id: 2, title: "web", subtitle: "~/web", branch: "redesign"),
+            TerminalSummary(id: 1, title: "api server", folder: "~/api", branch: "main", activity: .working),
+            TerminalSummary(id: 2, title: "web", folder: "~/web", branch: "redesign"),
             TerminalSummary(id: 3, title: "notes"),
         ], selected: 2)
 }

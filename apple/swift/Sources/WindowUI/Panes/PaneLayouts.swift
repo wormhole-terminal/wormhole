@@ -28,30 +28,19 @@ struct PaneLayouts: Equatable {
         return panes
     }
 
-    /// What a change of the panes (a drop, a divider, a focus click) means for the workspace, and the layout kept.
-    /// Terminals the panes gained join the split; the pane that took the keyboard is selected.
-    mutating func store(_ panes: TabPanes, in state: WorkspaceState) -> [WorkspaceAction] {
+    /// What a change of the panes (a drop, a divider, a focus click) means for the workspace: terminals the panes gained
+    /// join the split, and the pane that took the keyboard is selected (the core's join leaves the selection alone).
+    func actions(for panes: TabPanes, in state: WorkspaceState) -> [WorkspaceAction] {
         guard let terminal = state.selectedTerminal else { return [] }
         let members = Set(Self.members(in: state))
         var actions: [WorkspaceAction] = panes.panes.filter { !members.contains($0) }.map { .joinSplit($0, with: terminal.id) }
-        // A joiner or a click on another pane takes the keyboard (the workspace's join leaves the selection alone).
         if panes.focused != terminal.id { actions.append(.select(panes.focused)) }
-        // The split may be named by this very change (a lone terminal gaining a pane).
-        let next = actions.reduce(state, reduce)
-        if let anchor = next.terminals.first(where: { $0.id == terminal.id }) { saved[Self.key(anchor)] = panes }
         return actions
     }
 
-    /// ⌘D / ⇧⌘D: a new terminal beside the selected one along `axis`. Nil when nothing is selected or the room
-    /// refuses it.
-    mutating func split(_ axis: SplitAxis, in state: WorkspaceState, room: PaneRoom = PaneRoom(0, 0)) -> WorkspaceAction? {
-        guard let selected = state.selected, var panes = panes(in: state), panes.canSplit(axis, room: room) else { return nil }
-        let action = WorkspaceAction.splitRight(selected)
-        let next = reduce(state, action)
-        guard let new = next.selected, new != selected, panes.split(axis, new: new),
-            let anchor = next.terminals.first(where: { $0.id == selected })
-        else { return nil }
-        saved[Self.key(anchor)] = panes
-        return action
+    /// Keep `panes` under the split `anchor` is in now. Called after the actions were applied, because the core names a
+    /// split when the first terminal joins it (a lone terminal gaining a pane).
+    mutating func save(_ panes: TabPanes, anchor: TerminalID, in state: WorkspaceState) {
+        if let terminal = state.terminals.first(where: { $0.id == anchor }) { saved[Self.key(terminal)] = panes }
     }
 }

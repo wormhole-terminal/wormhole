@@ -2,7 +2,7 @@
 // the folder under it (after the name in Dense); a dot of the group's colour before the name where there is no card to wash;
 // at the right a chevron that turns when the group folds, a + under the pointer, and, folded, its terminals' tiles, their
 // count and a dot while one needs input or failed. A group with nothing in it says "No terminals". The whole head folds
-// and opens it; the name opens the group's popover when the window can edit groups.
+// and opens it; the name opens the group's popover.
 
 import DesignSystem
 import SwiftUI
@@ -10,8 +10,7 @@ import WorkspaceModel
 
 struct GroupHeadView: View {
     let section: SidebarSection
-    /// The group's terminals, for the tiles it keeps while folded.
-    let members: [TerminalSummary]
+    let head: GroupHead
     let mark: Color?
     let context: SidebarContext
     @State private var hovering = false
@@ -20,31 +19,27 @@ struct GroupHeadView: View {
     @Environment(\.sidebarLook) private var look
     @Environment(\.keyedStop) private var keyed
 
-    private var group: TerminalGroup? { section.group }
-    private var isEmpty: Bool { section.terminalCount == 0 && group?.isPinned == true }
-    private var folder: String? {
-        guard look.showsGroupFolders, let path = group?.folder else { return nil }
-        // A quiet shell's second line is its folder, `~`-shortened and cut from the front: the group's line reads alike.
-        return SidebarWording.secondLine(for: TerminalSummary(id: 0, title: "", folder: path), now: Date(), home: look.home).text
-    }
+    private var isEmpty: Bool { section.terminalCount == 0 && head.isPinned }
+    /// The core has `~`-shortened it; a long one is cut from the front, as a row's place is.
+    private var folder: String? { look.showsGroupFolders ? head.folder : nil }
     private var twoLines: Bool { folder != nil && metrics.density != .dense }
     private var height: CGFloat { twoLines ? metrics.headTwoLineHeight : isEmpty ? metrics.emptyHeight : metrics.headHeight }
 
     var body: some View {
-        Button { context.send(.toggleGroup(section.id)) } label: {
+        Button { context.send(.toggleGroup(head.id)) } label: {
             HStack(spacing: Space._2) {
                 if !metrics.cards, let mark {
                     Circle().fill(mark).frame(width: Metric.statusDot, height: Metric.statusDot)
                 }
                 label
                 Spacer(minLength: 0)
-                if section.isCollapsed { FoldedSummary(members: members, count: section.terminalCount).transition(.opacity) }
-                if hovering && !isEmpty, let group { HeadAddButton(group: group.id) { newTerminal(in: group.id) } }
-                if isEmpty, let group {
+                if head.isFolded { FoldedSummary(count: section.terminalCount, alerts: section.alertCount).transition(.opacity) }
+                if hovering && !isEmpty { HeadAddButton { context.send(.newTerminalInGroup(head.id)) } }
+                if isEmpty {
                     Text("No terminals").font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
-                    HeadAddButton(group: group.id) { newTerminal(in: group.id) }
+                    HeadAddButton { context.send(.newTerminalInGroup(head.id)) }
                 } else {
-                    HeadChevron(isFolded: section.isCollapsed)
+                    HeadChevron(isFolded: head.isFolded)
                 }
             }
             .padding(.horizontal, metrics.rowInset)
@@ -54,17 +49,17 @@ struct GroupHeadView: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .overlay {
-            if keyed == .group(section.id) {
+            if keyed == .group(head.id) {
                 RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
             }
         }
-        .animation(SidebarMotion.summary, value: section.isCollapsed)
-        .opacity(context.drag.lifts(.group(section.id)) ? DragLift.opacity : 1)
-        .dragSource(.group(section.id), hooks: context.drag)
-        .dropFrame(.head(section.id))
-        .contextMenu { GroupMenu(section: section, context: context) }
+        .animation(SidebarMotion.summary, value: head.isFolded)
+        .opacity(context.drag.lifts(.group(head.id)) ? DragLift.opacity : 1)
+        .dragSource(.group(head.id), hooks: context.drag)
+        .dropFrame(.head(head.id))
+        .contextMenu { GroupMenu(section: section, head: head, context: context) }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(SidebarListing.spokenLabel(for: section, position: 1, of: 1))
+        .accessibilityLabel(head.spoken)
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Folds or opens the group")
     }
@@ -72,8 +67,8 @@ struct GroupHeadView: View {
     @ViewBuilder private var label: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Space._1) {
-                Text(section.title ?? "").font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
-                if group?.isPinned == true { LucideView(icon: .pin, size: RowGeometry.pin).foregroundStyle(tokens.textFaint) }
+                Text(head.name).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                if head.isPinned { LucideView(icon: .pin, size: RowGeometry.pin).foregroundStyle(tokens.textFaint) }
                 if let folder, !twoLines { folderText(folder) }
             }
             if let folder, twoLines { folderText(folder) }
@@ -81,11 +76,6 @@ struct GroupHeadView: View {
     }
 
     private func folderText(_ folder: String) -> some View {
-        Text(folder).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1)
-    }
-
-    private func newTerminal(in group: String) {
-        context.send(.newTerminal)
-        context.send(.addToGroup(context.nextTerminalID, group))
+        Text(folder).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.head)
     }
 }

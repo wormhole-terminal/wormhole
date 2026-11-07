@@ -17,7 +17,7 @@ public enum CommandCatalog {
     static func actions(for state: WorkspaceState) -> [Command] {
         let selected = state.terminals.first { $0.id == state.selected }
         var out = [command("new-terminal", "New terminal", "plus", .newTerminal, Shortcuts.newTerminal, .terminal)]
-        out[0].detail = selected?.subtitle.map { "in \($0)" }
+        out[0].detail = selected?.folder.map { "in \($0)" }
         if let selected {
             out.append(command("close-terminal", "Close terminal", "xmark", .close(selected.id), Shortcuts.closeTerminal, .terminal))
         }
@@ -75,13 +75,13 @@ public enum CommandCatalog {
 
     private static func terminals(in state: WorkspaceState) -> [Command] {
         state.terminals.enumerated().map { index, terminal in
-            let folder = terminal.subtitle
+            let folder = terminal.folder
             return Command(
                 id: "terminal-\(terminal.id)", title: terminal.title,
                 detail: doing(terminal), scopedDetail: (["Window 1"] + [folder].compactMap { $0 }).joined(separator: " · "),
                 group: .terminals, lead: .status(terminal.activity),
                 shortcut: index < 9 ? Shortcuts.terminal(number: index + 1) : nil, action: .select(terminal.id),
-                isStrong: true, searchText: [terminal.subtitle, terminal.branch].compactMap { $0 })
+                isStrong: true, searchText: [terminal.folder, terminal.branch].compactMap { $0 })
         }
     }
 
@@ -91,16 +91,16 @@ public enum CommandCatalog {
         case .needsInput: "Needs input"
         case .finished: "Finished"
         case .failed: "Failed"
-        case .working, .idle: terminal.subtitle
+        case .working, .idle, .exited: terminal.folder
         }
     }
 
-    /// The folders terminals are in, with how many each holds. A subtitle that is a program, not a path, is not one.
+    /// The folders terminals are in, with how many each holds. A folder that is a program, not a path, is not one.
     private static func folders(in state: WorkspaceState) -> [Command] {
         var order: [String] = []
         var counts: [String: Int] = [:]
         for terminal in state.terminals {
-            guard let path = terminal.subtitle, path.hasPrefix("~") || path.hasPrefix("/") else { continue }
+            guard let path = terminal.folder, path.hasPrefix("~") || path.hasPrefix("/") else { continue }
             if counts[path] == nil { order.append(path) }
             counts[path, default: 0] += 1
         }
@@ -113,7 +113,7 @@ public enum CommandCatalog {
                 id: "folder-\(path)", title: name,
                 detail: [origin, "\(count) terminal\(count == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " · "),
                 group: .folders, lead: .symbol("folder"),
-                action: state.terminals.first { $0.subtitle == path }.map { .select($0.id) })
+                action: state.terminals.first { $0.folder == path }.map { .select($0.id) })
         }
     }
 }
