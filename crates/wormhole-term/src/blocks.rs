@@ -451,7 +451,7 @@ pub(super) mod tests {
         assert!(found[1].state.failed());
         assert_eq!(found[2].state, BlockState::Prompt);
         assert_eq!(found[1].output_lines(), Some((Line(4), Line(4))), "the blank line after is nobody's");
-        let rows: Vec<u64> = found.iter().map(Block::output_rows).collect();
+        let rows: Vec<u64> = found.iter().map(super::Block::output_rows).collect();
         assert_eq!(rows, [2, 1, 0], "what `output_lines` of a hook counts");
         assert_eq!(lines_text(term.screen(), Line(1), Line(2)), "a.rs\nb.rs");
         // By a line in it, and by id.
