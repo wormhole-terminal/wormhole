@@ -18,30 +18,47 @@ public final class MetalTerminalView: NSView {
     public var onTitle: ((String) -> Void)?
     public var onBell: (() -> Void)?
     public var onExit: ((Int32?) -> Void)?
+    /// Something was copied (the selection, a link): the host may say so.
+    public var onCopied: ((String) -> Void)?
     /// Records every draw's phases when set (the measuring mode).
     public var sampler: FrameSampler?
-    public private(set) var statistics = ViewStatistics()
+    public internal(set) var statistics = ViewStatistics()
     public var isLinkRunning: Bool { link.map { !$0.isPaused } ?? false }
     /// Option on the left side sends ESC before the character.
     public var leftOptionAsMeta = true
     /// A grid of this size whatever the view's size (the measuring mode's 200 x 69).
     public var fixedGrid: (cols: Int, rows: Int)?
-    /// How long a blinking cursor is on and off; `nil` keeps it steady.
+    /// How long a blinking cursor is on and off; `nil` keeps it steady (xterm's and macOS's own text cursor rate).
     public var blinkInterval: Duration? = .milliseconds(530)
+    /// How a link is opened (the system's; tests replace it).
+    public var linkOpener: (OpenTarget) -> Void = { LinkOpener.system($0) }
+    /// Which parts of the bell happen, and the colour and corner of its glow (the host's tokens).
+    public var bell = BellStyle()
+    public var bellColor = NSColor.systemOrange
+    public var bellCornerRadius: CGFloat = 8
 
     private var link: CADisplayLink?
     private var started = false
     private var redrawRequested = true
-    private var blinkItem: DispatchWorkItem?
+    var blinkItem: DispatchWorkItem?
+    var glowLayer: CALayer?
+    var glowItem: DispatchWorkItem?
     private var gridSize = GridSize(cols: 0, rows: 0)
     private let wake = WakeRelay()
 
-    // Input method state (see TerminalInput.swift).
-    var markedString = ""
-    var markedCaret = 0
+    // Input method state (see Keyboard/).
+    var composition = MarkedTextModel()
     var pendingKey: KeyInput?
-    var scrollRemainder: CGFloat = 0
     var handledByInputMethod = false
+
+    // Pointer, selection and scroller (see Pointer/, Scroller/).
+    var interaction: (any TerminalInteraction)?
+    var pointer = PointerState()
+    /// A selection may exist: ask for its spans after each frame until one comes back empty.
+    var selectionMayExist = false
+    var hasSelection = false
+    var focusReported = false
+    let scroller = TerminalScroller()
 
     public init(source: any FrameSource, configuration: RendererConfiguration, frame: NSRect = NSRect(x: 0, y: 0, width: 960, height: 600)) throws {
         self.source = source
@@ -58,6 +75,9 @@ public final class MetalTerminalView: NSView {
             layer.colorspace = CGColorSpace(name: CGColorSpace.sRGB)
             layer.contentsScale = CGFloat(configuration.scale)
         }
+        addSubview(scroller.view)
+        scroller.onScroll = { [weak self] offset in self?.scroll(toOffset: offset) }
+        registerForDraggedTypes([.fileURL, .string])
     }
 
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError("not decoded") }
@@ -87,6 +107,11 @@ public final class MetalTerminalView: NSView {
             self, selector: #selector(keyStateChanged), name: NSWindow.didBecomeKeyNotification, object: window)
         NotificationCenter.default.addObserver(
             self, selector: #selector(keyStateChanged), name: NSWindow.didResignKeyNotification, object: window)
+        for name in [NSScroller.preferredScrollerStyleDidChangeNotification] {
+            NotificationCenter.default.addObserver(self, selector: #selector(scrollerStyleChanged), name: name, object: nil)
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self, selector: #selector(accessibilityOptionsChanged), name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification, object: nil)
         renderer.setFocused(window?.isKeyWindow ?? false)
         syncSurface()
         startSourceIfNeeded()
@@ -98,6 +123,7 @@ public final class MetalTerminalView: NSView {
         started = true
         let relay = wake
         do {
+            defer { interaction = source.interaction }
             try source.start(size: gridSize) { [weak self] in
                 // Any thread, no lock held: note the wake and hop. One hop per drain, however much output.
                 guard !relay.queued.exchange(true, ordering: .acquiringAndReleasing) else { return }
@@ -125,12 +151,14 @@ public final class MetalTerminalView: NSView {
         link?.invalidate()
         link = nil
         NotificationCenter.default.removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
 
     // MARK: size
 
     public override func layout() {
         super.layout()
+        scroller.layout(in: bounds)
         syncSurface()
     }
 
@@ -149,7 +177,9 @@ public final class MetalTerminalView: NSView {
             layer.drawableSize = pixels
             requestRedraw()
         }
-        let (cols, rows) = fixedGrid ?? renderer.grid(fittingPixels: Int(pixels.width), Int(pixels.height))
+        // The legacy scroll bar's gutter is not grid.
+        let gridWidth = max(1, Int(((bounds.width - scroller.gutterWidth) * scale).rounded(.down)))
+        let (cols, rows) = fixedGrid ?? renderer.grid(fittingPixels: gridWidth, Int(pixels.height))
         let cell = renderer.cellPixels
         let size = GridSize(cols: cols, rows: rows, cellWidth: Float(Double(cell.width) / renderer.scale), cellHeight: Float(Double(cell.height) / renderer.scale))
         guard size != gridSize else { return }
@@ -205,7 +235,9 @@ public final class MetalTerminalView: NSView {
             case .output: output = true
             case .title(let title): onTitle?(title)
             case .resetTitle: onTitle?("")
-            case .bell: onBell?()
+            case .bell:
+                ringBell()
+                onBell?()
             case .exited(let code): onExit?(code)
             }
         }
@@ -226,6 +258,8 @@ public final class MetalTerminalView: NSView {
             FileHandle.standardError.write(Data("bad frame: \(error)\n".utf8))
         }
         let t2 = MonotonicClock.now()
+        refreshSelection()
+        updateScroller()
         var timings = DrawTimings(outcome: .drawn)
         if force || renderer.needsDraw {
             if let layer = metalLayer {
@@ -242,51 +276,6 @@ public final class MetalTerminalView: NSView {
             changedRows: renderer.scene.header?.changedRows ?? 0, outcome: timings.outcome)
         sampler?.record(sample)
         return sample
-    }
-
-    // MARK: focus and blink
-
-    @objc private func keyStateChanged(_ note: Notification) {
-        renderer.setFocused(window?.isKeyWindow ?? false)
-        updateBlink()
-        requestRedraw()
-    }
-
-    public override func becomeFirstResponder() -> Bool {
-        renderer.setFocused(true)
-        requestRedraw()
-        return true
-    }
-
-    public override func resignFirstResponder() -> Bool {
-        renderer.setFocused(false)
-        requestRedraw()
-        return true
-    }
-
-    /// A blinking cursor in the key window flips every interval with a one-shot timer, armed when the flip
-    /// is due and never otherwise.
-    private func updateBlink() {
-        let blinking = renderer.scene.cursor?.blinking == true && window?.isKeyWindow == true && blinkInterval != nil
-        if blinking {
-            guard blinkItem == nil, let interval = blinkInterval else { return }
-            let item = DispatchWorkItem { [weak self] in
-                MainActor.assumeIsolated {
-                    guard let self else { return }
-                    self.blinkItem = nil
-                    self.statistics.blinkFires += 1
-                    self.renderer.setCursorBlinkOn(!self.renderer.scene.cursorOn)
-                    self.requestRedraw()
-                }
-            }
-            blinkItem = item
-            DispatchQueue.main.asyncAfter(deadline: .now() + .nanoseconds(Int(interval.components.attoseconds / 1_000_000_000) + Int(interval.components.seconds) * 1_000_000_000), execute: item)
-        } else if blinkItem != nil || !renderer.scene.cursorOn {
-            blinkItem?.cancel()
-            blinkItem = nil
-            renderer.setCursorBlinkOn(true)
-            requestRedraw()
-        }
     }
 
     // MARK: screenshots

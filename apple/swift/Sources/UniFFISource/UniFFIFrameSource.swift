@@ -38,6 +38,9 @@ public final class UniFFIFrameSource: FrameSource {
         terminal.withLock { $0 = created }
     }
 
+    /// A new small object per call: the view takes it once, after the source started.
+    public var interaction: (any TerminalInteraction)? { current.map(UniFFIInteraction.init) }
+
     public func stop() {
         terminal.withLock { current in
             current?.close()
@@ -79,6 +82,8 @@ public final class UniFFIFrameSource: FrameSource {
     }
 
     public func scroll(lines: Int) { current?.scroll(lines: Int32(clamping: lines)) }
+
+    public func paste(_ text: String) { current?.paste(text: text) }
 
     /// The visible screen as plain text.
     public func screenText() -> String { current?.screenText() ?? "" }

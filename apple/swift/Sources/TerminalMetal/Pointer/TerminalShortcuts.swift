@@ -1,0 +1,49 @@
+// The Command shortcuts that belong to the terminal, by the app's keymap (`keymap::terminal_action`): copy,
+// paste, select all, clear, and the three that edit the shell's line (as Terminal.app and iTerm2 do). The
+// rest of the Command keys are the application's menus.
+
+import AppKit
+
+enum TerminalShortcut: Equatable {
+    case copy, paste, selectAll, clear
+    /// Bytes for the shell's line editor: ⌘⌫ deletes the line (^U), ⌘← and ⌘→ jump (^A, ^E).
+    case send([UInt8])
+
+    /// `keyCode` is the US-layout virtual key code, `characters` the key with no modifiers.
+    static func of(characters: String?, keyCode: UInt16, flags: NSEvent.ModifierFlags) -> TerminalShortcut? {
+        let flags = flags.intersection(.deviceIndependentFlagsMask)
+        guard flags.contains(.command), flags.isDisjoint(with: [.control, .option]) else { return nil }
+        // ⇧⌘C copies too (the app has always done so); every other shortcut is ⌘ alone, since ⇧⌘A and the
+        // like are the application's.
+        if characters?.lowercased() == "c", flags.subtracting(.shift) == .command { return .copy }
+        guard flags == .command else { return nil }
+        switch characters?.lowercased() {
+        case "v": return .paste
+        case "a": return .selectAll
+        case "k": return .clear
+        default: break
+        }
+        switch keyCode {
+        case 51: return .send([0x15])
+        case 123: return .send([0x01])
+        case 124: return .send([0x05])
+        default: return nil
+        }
+    }
+}
+
+extension MetalTerminalView {
+    public override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard window?.firstResponder === self,
+            let shortcut = TerminalShortcut.of(characters: event.charactersIgnoringModifiers, keyCode: event.keyCode, flags: event.modifierFlags)
+        else { return super.performKeyEquivalent(with: event) }
+        switch shortcut {
+        case .copy: copy(nil)
+        case .paste: paste(nil)
+        case .selectAll: selectAll(nil)
+        case .clear: clearBuffer(nil)
+        case .send(let bytes): source.write(Data(bytes))
+        }
+        return true
+    }
+}

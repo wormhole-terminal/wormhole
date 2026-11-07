@@ -11,6 +11,8 @@ struct MarkedText: Equatable {
     var text: String
     /// The caret's offset in `text`, in characters.
     var caret: Int
+    /// How many characters from the caret are the clause being converted (drawn as a selection); 0: none.
+    var clause = 0
 }
 
 struct SceneCounters {
@@ -40,6 +42,8 @@ final class TerminalScene {
     private(set) var cursorOn = true
     private(set) var focused = true
     private(set) var marked: MarkedText?
+    /// The selection and the hovered link, per row; setting one rebuilds only the rows it changed on.
+    private var marks: [RowMarks] = []
 
     init(fonts: FontSet, device: MTLDevice) {
         self.fonts = fonts
@@ -78,6 +82,7 @@ final class TerminalScene {
         self.columns = columns
         self.rows = rows
         geometry = (0..<rows).map { _ in RowGeometry() }
+        marks = Array(repeating: .none, count: rows)
         dirty = Array(repeating: true, count: rows)
         cursor = nil
     }
@@ -105,6 +110,29 @@ final class TerminalScene {
         guard value != marked else { return }
         marked = value
         markCursorRow()
+    }
+
+    /// The selected columns on each row (empty: none). Rows whose marks changed are rebuilt.
+    func setSelection(_ spans: [RowSpan]) { update(\.selected, spans) }
+
+    /// The columns of the link under the pointer.
+    func setLink(_ spans: [RowSpan]) { update(\.link, spans) }
+
+    /// With no selection text colour in the theme the selection keeps the text's own; a change rebuilds
+    /// the selected rows.
+    func setKeepsTextInSelection(_ value: Bool) {
+        guard value != builder.keepsTextInSelection else { return }
+        builder.keepsTextInSelection = value
+        for row in marks.indices where marks[row].selected != nil { dirty[row] = true }
+    }
+
+    private func update(_ field: WritableKeyPath<RowMarks, ClosedRange<Int>?>, _ spans: [RowSpan]) {
+        var next = [Int: ClosedRange<Int>]()
+        for span in spans where span.row < rows && span.first <= span.last { next[span.row] = span.first...span.last }
+        for row in 0..<rows where marks[row][keyPath: field] != next[row] {
+            marks[row][keyPath: field] = next[row]
+            dirty[row] = true
+        }
     }
 
     private func markCursorRow() {
@@ -151,7 +179,7 @@ final class TerminalScene {
             draw = CursorDraw(column: cursor.column, shape: cursor.shape, wide: cursor.wide, focused: focused)
         }
         guard let marked, let cursor, cursor.row == row, !marked.text.isEmpty else {
-            builder.build(row: row, cells: UnsafeBufferPointer(start: start, count: columns), into: geometry[row], cursor: draw)
+            builder.build(row: row, cells: UnsafeBufferPointer(start: start, count: columns), into: geometry[row], cursor: draw, marks: marks[row])
             return
         }
         // Composed text replaces the cells from the cursor on, underlined, and the caret moves to its end.
@@ -162,6 +190,7 @@ final class TerminalScene {
             let width = CellWidth.of(scalar.value)
             guard width > 0, column + width <= columns else { continue }
             var cell = PackedCell(scalar: scalar.value, flags: .underline)
+            if offset >= marked.caret, offset < marked.caret + marked.clause { cell.bg = PackedColor.selectionBackground }
             if width == 2 {
                 cell.flags |= CellFlags.wideChar.rawValue
                 cells[column] = cell
@@ -176,7 +205,7 @@ final class TerminalScene {
         }
         draw?.column = min(caretColumn, columns - 1)
         draw?.shape = .beam
-        cells.withUnsafeBufferPointer { builder.build(row: row, cells: $0, into: geometry[row], cursor: draw) }
+        cells.withUnsafeBufferPointer { builder.build(row: row, cells: $0, into: geometry[row], cursor: draw, marks: marks[row]) }
     }
 
     // MARK: handing instances to the GPU

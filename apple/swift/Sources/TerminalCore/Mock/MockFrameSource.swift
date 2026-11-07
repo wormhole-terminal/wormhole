@@ -144,6 +144,16 @@ public final class MockFrameSource: FrameSource {
         notify(.output)
     }
 
+    private let pointerAndSelection = Mutex<MockInteraction?>(nil)
+
+    /// One object for the source's life: it holds the selection.
+    public var interaction: (any TerminalInteraction)? {
+        pointerAndSelection.withLock { made in
+            if made == nil { made = MockInteraction { [unowned self] in self.state.withLock { $0.screen.visibleText() } } }
+            return made
+        }
+    }
+
     // MARK: events
 
     private func notify(_ event: TerminalEvent) {

@@ -95,6 +95,16 @@ struct MockScreen: Sendable {
         }
     }
 
+    /// The visible rows as text, one character per column (a wide character's second cell is a space).
+    func visibleText() -> [String] {
+        (0..<rows).map { row in
+            String((0..<cols).map { column in
+                let cell = cells[row * cols + column]
+                return cell.cellFlags.contains(.wideCharSpacer) ? " " : Character(Unicode.Scalar(cell.scalar) ?? " ")
+            })
+        }
+    }
+
     mutating func clearRow(_ row: Int, bg: UInt32 = PackedColor.background) {
         for c in 0..<cols { self[row, c] = PackedCell(bg: bg) }
     }

@@ -91,6 +91,12 @@ var targets: [Target] = [
 var appDependencies: [Target.Dependency] = [
     "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI", "SettingsModel", "SettingsUI",
 ]
+// The view's input: pointer, selection, links, keyboard and input method, on the mock and (when the FFI is
+// linked) on the real engine.
+var inputTestDependencies: [Target.Dependency] = ["TerminalCore", "TerminalMetal"]
+var inputTestSettings: [SwiftSetting] = []
+
+var appDependencies: [Target.Dependency] = ["TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI"]
 var appSettings: [SwiftSetting] = []
 
 if ffiLinked {
@@ -118,7 +124,11 @@ if ffiLinked {
     targets.append(.testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]))
     appDependencies.append("UniFFISource")
     appSettings.append(.define("WITH_UNIFFI"))
+    inputTestDependencies.append("UniFFISource")
+    inputTestSettings.append(.define("WITH_UNIFFI"))
 }
+
+targets.append(.testTarget(name: "TerminalInputTests", dependencies: inputTestDependencies, swiftSettings: inputTestSettings))
 
 targets.append(
     .executableTarget(

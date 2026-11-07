@@ -11,7 +11,8 @@ enum KeyMap {
         36: "enter", 76: "enter", 48: "tab", 49: "space", 51: "backspace", 117: "delete", 53: "escape",
         123: "left", 124: "right", 125: "down", 126: "up", 115: "home", 119: "end", 116: "pageup",
         121: "pagedown", 114: "insert", 122: "f1", 120: "f2", 99: "f3", 118: "f4", 96: "f5", 97: "f6",
-        98: "f7", 100: "f8", 101: "f9", 109: "f10", 103: "f11", 111: "f12",
+        98: "f7", 100: "f8", 101: "f9", 109: "f10", 103: "f11", 111: "f12", 105: "f13", 107: "f14",
+        113: "f15", 106: "f16", 64: "f17", 79: "f18", 80: "f19", 90: "f20",
     ]
 
     /// The device-dependent bit for the left Option key (`NX_DEVICELALTKEYMASK`): option acts as meta only

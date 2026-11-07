@@ -5,7 +5,7 @@
 import Foundation
 
 public struct TerminalPalette: Sendable, Equatable {
-    public static let slotCount = 259
+    public static let slotCount = 261
 
     /// RGB, 0...255, in slot order.
     public private(set) var slots: [SIMD3<UInt8>]
@@ -13,8 +13,17 @@ public struct TerminalPalette: Sendable, Equatable {
     public var foreground: SIMD3<UInt8> { slots[256] }
     public var background: SIMD3<UInt8> { slots[257] }
     public var cursor: SIMD3<UInt8> { slots[258] }
+    public var selectionBackground: SIMD3<UInt8> { slots[259] }
+    /// Text on selected cells; when the theme sets none (`keepsTextInSelection`) the cell's own colour stays.
+    public var selectionForeground: SIMD3<UInt8> { slots[260] }
+    public let keepsTextInSelection: Bool
 
-    public init(ansi: [SIMD3<UInt8>], foreground: SIMD3<UInt8>, background: SIMD3<UInt8>, cursor: SIMD3<UInt8>) {
+    /// `selection` and `selectionText` are the theme's selection colours; without a background one the
+    /// foreground over the background at a third is used, readable under any text.
+    public init(
+        ansi: [SIMD3<UInt8>], foreground: SIMD3<UInt8>, background: SIMD3<UInt8>, cursor: SIMD3<UInt8>,
+        selection: SIMD3<UInt8>? = nil, selectionText: SIMD3<UInt8>? = nil
+    ) {
         precondition(ansi.count == 16)
         var table = ansi
         // The 6x6x6 colour cube and the 24-step grey ramp are fixed by xterm, not by a theme.
@@ -31,7 +40,16 @@ public struct TerminalPalette: Sendable, Equatable {
         table.append(foreground)
         table.append(background)
         table.append(cursor)
+        table.append(selection ?? Self.mix(foreground, over: background, amount: 0.33))
+        table.append(selectionText ?? foreground)
+        keepsTextInSelection = selectionText == nil
         slots = table
+    }
+
+    private static func mix(_ top: SIMD3<UInt8>, over bottom: SIMD3<UInt8>, amount: Float) -> SIMD3<UInt8> {
+        let t = SIMD3<Float>(top), b = SIMD3<Float>(bottom)
+        let m = b + (t - b) * amount
+        return SIMD3(UInt8(m.x.rounded()), UInt8(m.y.rounded()), UInt8(m.z.rounded()))
     }
 
     /// The spike's own dark theme (not core's; see the file's note).

@@ -90,6 +90,9 @@ public protocol FrameSource: AnyObject, Sendable {
     func resize(_ size: GridSize)
     /// Scroll the view by `lines` (positive: back into history).
     func scroll(lines: Int)
+
+    /// The pointer, selection and links, when the source has them (the real engine and the mock do).
+    var interaction: (any TerminalInteraction)? { get }
 }
 
 extension FrameSource {
@@ -99,4 +102,5 @@ extension FrameSource {
         write(Data(text.replacingOccurrences(of: "\r\n", with: "\r").replacingOccurrences(of: "\n", with: "\r").utf8))
     }
     public func scroll(lines: Int) {}
+    public var interaction: (any TerminalInteraction)? { nil }
 }

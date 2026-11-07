@@ -119,6 +119,7 @@ public final class MetalRenderer {
                 solids: device.makeBuffer(length: 64 * 1024, options: [.storageModeShared, .cpuCacheModeWriteCombined])!,
                 glyphs: device.makeBuffer(length: 64 * 1024, options: [.storageModeShared, .cpuCacheModeWriteCombined])!)
         }
+        scene.setKeepsTextInSelection(configuration.palette.keepsTextInSelection)
     }
 
     // MARK: geometry
@@ -143,7 +144,20 @@ public final class MetalRenderer {
 
     public func setPalette(_ value: TerminalPalette) {
         palette = value
+        scene.setKeepsTextInSelection(value.keepsTextInSelection)
+        scene.rebuildDirty()
         scene.touch()
+    }
+
+    /// The selected columns per row of the frame last applied, and the link under the pointer.
+    public func setSelection(_ spans: [RowSpan]) {
+        scene.setSelection(spans)
+        scene.rebuildDirty()
+    }
+
+    public func setLinkHighlight(_ spans: [RowSpan]) {
+        scene.setLink(spans)
+        scene.rebuildDirty()
     }
 
     // MARK: frames
@@ -158,8 +172,8 @@ public final class MetalRenderer {
 
     public func setCursorBlinkOn(_ on: Bool) { scene.setCursorOn(on); scene.rebuildDirty() }
     public func setFocused(_ focused: Bool) { scene.setFocused(focused); scene.rebuildDirty() }
-    public func setMarked(text: String?, caret: Int = 0) {
-        scene.setMarked(text.map { MarkedText(text: $0, caret: caret) })
+    func setMarked(_ marked: MarkedText?) {
+        scene.setMarked(marked)
         scene.rebuildDirty()
     }
 

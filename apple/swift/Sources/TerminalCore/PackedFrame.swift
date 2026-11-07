@@ -74,6 +74,9 @@ public enum PackedColor {
     public static let foreground: UInt32 = 256
     public static let background: UInt32 = 257
     public static let cursor: UInt32 = 258
+    /// Slots the palette adds for the view's own overlays (a selection's colours).
+    public static let selectionBackground: UInt32 = 259
+    public static let selectionForeground: UInt32 = 260
 
     @inline(__always) public static func named(_ slot: Int) -> UInt32 { UInt32(slot) }
     @inline(__always) public static func indexed(_ index: Int) -> UInt32 { 1 << 24 | UInt32(index) }
