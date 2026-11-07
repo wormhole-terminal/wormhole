@@ -14,6 +14,7 @@ mod english;
 mod key_path;
 mod search;
 mod table;
+mod write;
 
 use wormhole_text::keys::{
     SETTINGS_NAV_AGENTS, SETTINGS_NAV_APP, SETTINGS_NAV_LOOK, SETTINGS_NAV_PREVIEW, SETTINGS_NAV_WORK,
@@ -26,6 +27,7 @@ use serde_json::{Map, Value};
 
 use crate::config::{PROJECT_SETTINGS, Settings};
 pub use search::{Hit, Query, search, search_visible};
+pub use write::set;
 
 /// A page of the settings window, in nav order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
