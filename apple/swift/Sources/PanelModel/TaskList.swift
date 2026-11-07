@@ -45,3 +45,33 @@ public struct TaskList: Equatable, Sendable {
         items.removeAll(where: \.done)
     }
 }
+
+/// One line of the Next steps card (`view::panel::steps`).
+public enum StepRow: Identifiable, Equatable, Sendable {
+    case step(PanelTask)
+    /// "N done": the done steps folded under the open ones.
+    case doneFold(Int)
+
+    public var id: String {
+        switch self {
+        case let .step(task): task.id.uuidString
+        case .doneFold: "done-fold"
+        }
+    }
+}
+
+extension TaskList {
+    /// More done steps than this fold into one "N done" row after the open ones.
+    public static let doneFoldAbove = 5
+
+    /// Every step where it is while few are done; otherwise the open ones, then the "N done" row, with the done
+    /// steps under it only while `showDone`.
+    public func rows(showDone: Bool) -> [StepRow] {
+        let done = items.filter(\.done)
+        guard done.count > Self.doneFoldAbove else { return items.map(StepRow.step) }
+        var rows = items.filter { !$0.done }.map(StepRow.step)
+        rows.append(.doneFold(done.count))
+        if showDone { rows += done.map(StepRow.step) }
+        return rows
+    }
+}
