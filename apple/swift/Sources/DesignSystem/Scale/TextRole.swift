@@ -1,6 +1,6 @@
 // The four type roles of the GPUI app plus its label role (`style/scale.rs` `TextRole`): sizes are rems of
-// the interface font (13 pt, `DEFAULT_UI_FONT_SIZE`, in the system font), so at the default they are
-// 12 / 13 / 14 / 16 / 20. Line height is GPUI's own ratio unless a row fixes it (`NAME_LINE`, `META_LINE`).
+// the interface font (the theme's `ui_font_size`, 13 pt by default, in its `ui_font_family` or the system
+// font), so at the default they are 12 / 13 / 14 / 16 / 20. Line height is GPUI's own ratio unless a row fixes it (`NAME_LINE`, `META_LINE`).
 
 import SwiftUI
 
@@ -16,29 +16,45 @@ public enum TextRole: CaseIterable, Sendable {
     /// The top of a page.
     case title
 
-    public var size: CGFloat {
+    /// The role's size in rems (a rem is the interface font's size scaled 16 / 13, `rem_size`).
+    var rems: CGFloat {
         switch self {
-        case .caption: 12
-        case .label: 13
-        case .body: 14
-        case .heading: 16
-        case .title: 20
+        case .caption: 0.75
+        case .label: 0.8125
+        case .body: 0.875
+        case .heading: 1
+        case .title: 1.25
         }
+    }
+
+    /// Points at the theme's interface font size (13 by default: 12 / 13 / 14 / 16 / 20).
+    @MainActor public var size: CGFloat {
+        rems * ThemeStore.shared.tokens.metrics.uiFontSize * 16 / TextRole.defaultInterfaceSize
     }
 
     public var weight: Font.Weight {
         switch self {
         case .caption, .body: .regular
-        case .label: .semibold
-        case .heading, .title: .semibold
+        case .label, .heading, .title: .semibold
         }
     }
 
+    /// `DEFAULT_UI_FONT_SIZE`: the size a rem is 16 points at.
+    public static let defaultInterfaceSize: CGFloat = 13
     /// GPUI's default line box as a multiple of the size (the golden ratio).
     public static let lineHeightRatio: CGFloat = 1.618_034
-    public var lineHeight: CGFloat { size * Self.lineHeightRatio }
+    @MainActor public var lineHeight: CGFloat { size * Self.lineHeightRatio }
 
-    public var font: Font { .system(size: size, weight: weight) }
+    /// The theme's interface font (`metrics.ui_font_family`), or the system font when it sets none.
+    @MainActor public var font: Font {
+        if let family = ThemeStore.shared.tokens.metrics.uiFontFamily, family != Self.systemFont {
+            return .custom(family, size: size).weight(weight)
+        }
+        return .system(size: size, weight: weight)
+    }
+
+    /// `SYSTEM_FONT`: what core's font settings call the system UI font.
+    private static let systemFont = ".SystemUIFont"
 }
 
 extension View {

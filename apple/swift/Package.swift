@@ -68,8 +68,10 @@ if ffiLinked {
                 .linkedLibrary("iconv"),
             ]
         ),
-        .target(name: "UniFFISource", dependencies: ["TerminalCore", "WormholeBindings"]),
+        .target(name: "UniFFISource", dependencies: ["TerminalCore", "WormholeBindings", "DesignSystem"]),
     ]
+    // The theme resolver against the real Rust loader: a user theme file, colour picks, an opacity.
+    targets.append(.testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]))
     appDependencies.append("UniFFISource")
     appSettings.append(.define("WITH_UNIFFI"))
 }

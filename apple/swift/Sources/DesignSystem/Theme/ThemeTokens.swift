@@ -10,6 +10,8 @@ public struct ThemeTokens: Sendable, Equatable {
     public let metrics: ThemeMetrics
     let ui: [String: RGBA]
     let syntax: [String: SyntaxStyle]
+    /// The text core judged for a window at the settings' default look, when the variant carries it.
+    let translucent: TranslucentText?
 
     /// What a missing token shows as, magenta like the GPUI app's, so a typo is easy to spot.
     public static let missing = RGBA(1, 0, 1)
@@ -26,7 +28,11 @@ public struct ThemeTokens: Sendable, Equatable {
     /// Every UI token name, sorted: what the Studio and tests walk.
     public var names: [String] { ui.keys.sorted() }
 
-    init(terminal: TerminalPalette, metrics: ThemeMetrics, ui: [String: RGBA], syntax: [String: SyntaxStyle]) {
+    init(
+        terminal: TerminalPalette, metrics: ThemeMetrics, ui: [String: RGBA], syntax: [String: SyntaxStyle],
+        translucent: TranslucentText?
+    ) {
         (self.terminal, self.metrics, self.ui, self.syntax) = (terminal, metrics, ui, syntax)
+        self.translucent = translucent
     }
 }

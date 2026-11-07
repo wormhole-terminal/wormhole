@@ -11,10 +11,12 @@ public struct TokenInfo: Sendable, Equatable {
 }
 
 public struct ThemeLibrary: Sendable {
-    public static let formatVersion = 1
+    public static let formatVersion = 2
     public let themes: [Theme]
     public let defaultDark: String
     public let defaultLight: String
+    /// The window opacity and blur the app starts with; the dump's `translucent` colours are for this look.
+    public let defaultLook: WindowLook
     /// Every token with its group and what it is for, in the Studio's order (`UI_TOKENS` then `METRIC_TOKENS`).
     public let catalog: [TokenInfo]
 
@@ -32,6 +34,7 @@ public struct ThemeLibrary: Sendable {
         themes = dump.themes.map(\.theme)
         defaultDark = dump.defaultDark
         defaultLight = dump.defaultLight
+        defaultLook = dump.defaultLook
         catalog = dump.catalog.map { TokenInfo(name: $0[0], group: $0[1], description: $0[2]) }
     }
 

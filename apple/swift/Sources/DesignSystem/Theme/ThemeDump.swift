@@ -4,6 +4,7 @@ struct Dump: Decodable {
     let format: Int
     let defaultDark: String
     let defaultLight: String
+    let defaultLook: WindowLook
     let catalog: [[String]]
     let themes: [DumpTheme]
 }
@@ -28,8 +29,9 @@ struct DumpVariant: Decodable {
     let ui: [String: RGBA]
     let syntax: [String: SyntaxStyle]
     let metrics: ThemeMetrics
+    let translucent: TranslucentText?
 
     func tokens(_ terminal: TerminalPalette) -> ThemeTokens {
-        ThemeTokens(terminal: terminal, metrics: metrics, ui: ui, syntax: syntax)
+        ThemeTokens(terminal: terminal, metrics: metrics, ui: ui, syntax: syntax, translucent: translucent)
     }
 }

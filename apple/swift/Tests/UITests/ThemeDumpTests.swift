@@ -11,7 +11,7 @@ final class ThemeDumpTests: XCTestCase {
 
     func testTheBundledFileIsTheFormatTheLoaderReads() throws {
         XCTAssertNoThrow(try ThemeLibrary(json: Data(contentsOf: resource)))
-        let wrong = Data(#"{"format": 99, "defaultDark": "", "defaultLight": "", "catalog": [], "themes": []}"#.utf8)
+        let wrong = Data(#"{"format": 99, "defaultLook": {"opacity": 1, "blur": false}, "defaultDark": "", "defaultLight": "", "catalog": [], "themes": []}"#.utf8)
         XCTAssertThrowsError(try ThemeLibrary(json: wrong))
     }
 }

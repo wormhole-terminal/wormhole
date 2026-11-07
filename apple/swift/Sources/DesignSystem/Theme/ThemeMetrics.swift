@@ -15,9 +15,14 @@ public struct ThemeMetrics: Sendable, Equatable, Decodable {
     /// The lines between the window's columns; 0 draws none.
     public let dividerWidth: Double
     public let focusRingWidth: Double
+    /// The interface font's size (13 unless the theme sets another); the type roles are rems of it.
+    public let uiFontSize: Double
+    /// The theme's own interface font; `nil` is the system font.
+    public let uiFontFamily: String?
 
     enum CodingKeys: String, CodingKey {
         case radiusSm = "radius_sm", radiusChip = "radius_chip", radius, radiusLg = "radius_lg"
         case borderWidth = "border_width", dividerWidth = "divider_width", focusRingWidth = "focus_ring_width"
+        case uiFontSize = "ui_font_size", uiFontFamily = "ui_font_family"
     }
 }

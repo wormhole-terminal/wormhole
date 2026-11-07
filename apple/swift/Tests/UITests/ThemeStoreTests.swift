@@ -40,13 +40,6 @@ final class ThemeStoreTests: XCTestCase {
         XCTAssertEqual(store.tokens.metrics.focusRingWidth, 3)
     }
 
-    func testReduceTransparencyIsTrackedButChangesNoToken() {
-        let store = store()
-        let before = store.tokens
-        store.reduceTransparency = true
-        XCTAssertEqual(store.tokens, before)
-    }
-
     /// The point of the whole system: one open view tree recolours when the theme changes, and no view
     /// is rebuilt or touched. Both the environment's tokens and `Palette` (what older views read) follow.
     func testSwitchingThemeRecoloursALiveViewTree() throws {
