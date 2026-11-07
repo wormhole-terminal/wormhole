@@ -98,7 +98,8 @@ public indirect enum MenuNode: Hashable, Sendable {
     case header(String)
     /// The system's Services submenu.
     case services
-    case submenu(title: String, items: [MenuNode], enabled: Bool = true)
+    /// `trailing`: a count shown right-aligned on the title's line ("Other Terminals  3").
+    case submenu(title: String, items: [MenuNode], enabled: Bool = true, trailing: String? = nil)
     /// A greyed line saying why a submenu has nothing in it ("No Recent Folders"), as Finder's do.
     case placeholder(String)
     case swatches(SwatchRow)

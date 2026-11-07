@@ -63,7 +63,7 @@ public enum StatusMenu {
             if sections.other.count > maxSessions {
                 others.append(.item(MenuItem(.ambient(.showApp), "\(sections.other.count - maxSessions) more…")))
             }
-            nodes.append(.submenu(title: "Other Terminals  \(sections.other.count)", items: others))
+            nodes.append(.submenu(title: "Other Terminals", items: others, trailing: String(sections.other.count)))
         }
         nodes += [.separator, key(.ambient(.newTerminal), "New Terminal", .newTerminal, keymap), key(.ambient(.openFolder), "Open Folder…", .openFolder, keymap)]
         if !snapshot.recent.isEmpty || !snapshot.actions.isEmpty {

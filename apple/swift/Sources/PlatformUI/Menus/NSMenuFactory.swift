@@ -45,8 +45,9 @@ public struct NSMenuFactory {
             let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
             item.isEnabled = false
             menu.addItem(item)
-        case .submenu(let title, let items, let enabled):
+        case .submenu(let title, let items, let enabled, let trailing):
             let holder = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            if let trailing { holder.attributedTitle = Self.titled(title, trailing: trailing) }
             holder.submenu = self.menu(title: title, items)
             holder.isEnabled = enabled
             menu.addItem(holder)

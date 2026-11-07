@@ -84,7 +84,7 @@ import Testing
                 switch node {
                 case .item(let item):
                     if case .action(let id) = item.command { #expect(Keymap.bundled.entry(id)?.isLive == true, "\(id)") }
-                case .submenu(_, let inner, _): walk(inner)
+                case .submenu(_, let inner, _, _): walk(inner)
                 default: break
                 }
             }

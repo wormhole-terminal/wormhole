@@ -17,11 +17,12 @@ public enum MenuDump {
             case .header(let title): "\(indent)# \(title)\n"
             case .placeholder(let title): "\(indent)\(title)  (disabled)\n"
             case .swatches(let row): "\(indent)Swatches \(row.swatches.map(\.name).joined(separator: ", "))\n"
-            case .submenu(let title, let inner, let enabled):
-                "\(indent)\(title) ▸\(enabled ? "" : "  (disabled)")\n" + lines(inner, depth: depth + 1)
+            case .submenu(let title, let inner, let enabled, let trailing):
+                "\(indent)\(title)\(trailing.map { "  ⇥ " + $0 } ?? "") ▸\(enabled ? "" : "  (disabled)")\n" + lines(inner, depth: depth + 1)
             case .item(let item):
-                "\(indent)\(item.checked ? "✓ " : "")\(item.title)\(item.key.map { "  " + $0.glyphText } ?? "")"
-                    + "\(item.enabled ? "" : "  (disabled)")\n"
+                "\(indent)\(item.checked ? "✓ " : "")\(item.title)\(item.trailing.map { "  ⇥ " + $0 } ?? "")"
+                    + "\(item.key.map { "  " + $0.glyphText } ?? "")\(item.enabled ? "" : "  (disabled)")\n"
+                    + (item.subtitle.map { "\(indent)    \($0)\n" } ?? "")
             }
         }.joined()
     }
