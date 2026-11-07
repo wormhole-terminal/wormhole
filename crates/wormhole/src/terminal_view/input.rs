@@ -242,8 +242,13 @@ impl TerminalView {
     pub(super) fn grid_point(&self, position: Point<Pixels>) -> Option<(GridPoint, Side)> {
         self.pty.as_ref()?;
         let (col, row, side) = cell_at(&self.layout.get(), position, |row| self.row_size(row))?;
-        let offset = self.render_state.borrow().display_offset() as i32;
-        Some((GridPoint::new(Line(row as i32 - offset), Column(col)), side))
+        Some((GridPoint::new(self.line_of_row(row)?, Column(col)), side))
+    }
+
+    /// The grid line viewport `row` showed in the last frame: the row less the scrollback offset, unless
+    /// folds are in view (a fold's marker row: the fold's first line).
+    pub(super) fn line_of_row(&self, row: usize) -> Option<Line> {
+        self.render_state.borrow().snapshot().rows().get(row).map(|row| row.line())
     }
 
     /// Viewport cell under the pointer (0-based, ignores scrollback offset).
@@ -433,13 +438,12 @@ impl TerminalView {
         let Some(pty) = &self.pty else { return };
         let Some(lines) = drag_scroll_lines(&layout, event.position) else { return };
         if lines != 0 {
-            pty.scroll(Scroll::Delta(lines));
+            pty.scroll_rows(lines);
         }
         let Some((col, row, side)) = cell_at(&layout, event.position, |row| self.row_size(row)) else {
             return;
         };
-        let offset = pty.display_offset() as i32;
-        pty.update_selection(GridPoint::new(Line(row as i32 - offset), Column(col)), side);
+        pty.update_selection(GridPoint::new(pty.line_at_row(row), Column(col)), side);
         cx.notify();
     }
 
@@ -499,7 +503,7 @@ impl TerminalView {
             };
             pty.write(key.repeat(whole.unsigned_abs() as usize));
         } else {
-            pty.scroll(Scroll::Delta(whole));
+            pty.scroll_rows(whole);
             self.forget_block_cursor();
         }
         cx.notify();

@@ -13,7 +13,6 @@ use std::ops::Range;
 
 use gpui_kit::{App, Context, IntoElement, Modifiers, ParentElement, Pixels, Point, Styled, div};
 use wormhole_core::probe::open_path::{self, PathRef};
-use wormhole_term::types::Line;
 use wormhole_term::{Link, Openable, RevealWhen};
 
 use super::{Layout, TerminalView};
@@ -140,8 +139,7 @@ impl TerminalView {
             RevealWhen::Deliberate => alt,
             RevealWhen::Never => false,
         };
-        let offset = self.render_state.borrow().display_offset() as i32;
-        let row = usize::try_from(span.start.line.0 + offset).ok()?;
+        let row = self.render_state.borrow().snapshot().row_of_line(span.start.line)?;
         (span.hit.masked && allowed).then_some((row, span.start.column.0))
     }
 
@@ -173,14 +171,13 @@ impl TerminalView {
     }
 
     /// The hovered link's columns on each row of the viewport it shows on.
-    pub(super) fn hovered_link_rows(&self, display_offset: usize) -> Vec<(usize, Range<usize>)> {
+    pub(super) fn hovered_link_rows(&self) -> Vec<(usize, Range<usize>)> {
         let Some(link) = &self.hovered_link else { return Vec::new() };
         let layout = self.layout.get();
-        (0..layout.rows)
-            .filter_map(|row| {
-                let line = Line(row as i32 - display_offset as i32);
-                Some((row, link.columns_on(line, layout.cols)?))
-            })
+        let state = self.render_state.borrow();
+        let rows = state.snapshot().rows().iter().enumerate().take(layout.rows);
+        rows.filter(|(_, shown)| shown.fold().is_none())
+            .filter_map(|(row, shown)| Some((row, link.columns_on(shown.line(), layout.cols)?)))
             .collect()
     }
 }

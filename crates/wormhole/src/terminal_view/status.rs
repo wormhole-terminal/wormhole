@@ -268,6 +268,10 @@ impl TerminalView {
         if status != self.status {
             self.status = status;
             self.status_since = Instant::now();
+            // What needs the person is never under a fold (`wormhole_term::folds`).
+            if let Some(pty) = &self.pty {
+                pty.set_fold_needs_you(status == Status::Attention);
+            }
             // The deadline was for the status that just ended.
             self.settle = None;
             // Seen, or at work again: the finished command is history.

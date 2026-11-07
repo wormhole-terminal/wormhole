@@ -75,6 +75,8 @@ pub(super) struct BlockFacts {
     pub(super) has_output: bool,
     /// The shell waits at its prompt, which is when a command can be typed there.
     pub(super) at_prompt: bool,
+    /// The Fold output feature is on and the block has output to fold.
+    pub(super) can_fold: bool,
 }
 
 fn key(id: ActionId) -> Option<KeyEquivalent> {
@@ -161,7 +163,7 @@ pub(super) fn terminal_menu(facts: MenuFacts, this: &WeakEntity<TerminalView>) -
                     terminal.open_find(seed, window, cx);
                 })),
         );
-    if let Some(BlockFacts { id, has_command, has_output, at_prompt }) = block {
+    if let Some(BlockFacts { id, has_command, has_output, at_prompt, can_fold }) = block {
         menu = menu
             .separator()
             .item(block_item(
@@ -188,6 +190,15 @@ pub(super) fn terminal_menu(facts: MenuFacts, this: &WeakEntity<TerminalView>) -
                 has_command && at_prompt,
                 BlockAction::PutAtPrompt,
             ));
+        if can_fold {
+            menu = menu.item(
+                Item::new(text(keys::TERMINAL_MENU_FOLD_OUTPUT))
+                    .icon(symbol("rectangle.compress.vertical"))
+                    .on_select(platform::run_on(this, move |terminal, _, cx| {
+                        terminal.block_action_on(id, BlockAction::FoldOutput, cx)
+                    })),
+            );
+        }
     }
     menu.separator()
         .item(split(
@@ -232,6 +243,7 @@ impl TerminalView {
             has_command: !block.command.is_empty(),
             has_output: block.output_lines().is_some(),
             at_prompt: self.pty.as_ref().and_then(|pty| pty.at_prompt()) == Some(true),
+            can_fold: self.folds_on(cx) && block.output_lines().is_some(),
         });
         let facts = MenuFacts {
             link: self.link_uri_under(position, cx),
@@ -284,14 +296,21 @@ mod tests {
     #[test]
     fn command_items_only_over_a_block_and_greyed_by_what_it_has() {
         assert!(!outline(MenuFacts::default()).iter().any(|row| row.contains("Command")));
-        let block = BlockFacts { id: 7, has_command: true, has_output: false, at_prompt: false };
+        let block =
+            BlockFacts { id: 7, has_command: true, has_output: false, at_prompt: false, can_fold: false };
         let rows = outline(MenuFacts { block: Some(block), ..MenuFacts::default() });
         for expected in ["- Copy Command", "- Copy Output [off]", "- Put Command at Prompt [off]"] {
             assert!(rows.contains(&expected.to_string()), "{expected} in {rows:?}");
         }
-        let block = BlockFacts { id: 7, has_command: true, has_output: true, at_prompt: true };
+        let block =
+            BlockFacts { id: 7, has_command: true, has_output: true, at_prompt: true, can_fold: false };
         let rows = outline(MenuFacts { block: Some(block), ..MenuFacts::default() });
         assert!(rows.contains(&"- Put Command at Prompt".to_string()));
+        assert!(!rows.iter().any(|row| row.contains("Fold")), "off with the feature: {rows:?}");
+        let block =
+            BlockFacts { id: 7, has_command: true, has_output: true, at_prompt: true, can_fold: true };
+        let rows = outline(MenuFacts { block: Some(block), ..MenuFacts::default() });
+        assert!(rows.contains(&"- Fold Output".to_string()), "{rows:?}");
     }
 
     #[test]

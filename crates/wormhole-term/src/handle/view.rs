@@ -43,6 +43,12 @@ impl Pty {
         self.term.lock().scroll_display(scroll);
     }
 
+    /// The grid line view row `row` shows now, which differs from the row less the offset when folds are in
+    /// view.
+    pub fn line_at_row(&self, row: usize) -> Line {
+        self.term.lock().line_at_row(row)
+    }
+
     /// Scroll by `rows` rows as they are shown (up when positive): a folded span is one row. The
     /// wheel's and a drag's way of scrolling; [`scroll`](Self::scroll) counts grid lines.
     pub fn scroll_rows(&self, rows: i32) {

@@ -28,6 +28,7 @@ mod failed;
 mod find;
 mod find_bar;
 mod first_command;
+mod folds;
 mod grid_layout;
 mod host_problem;
 mod hosted;
@@ -493,12 +494,6 @@ impl TerminalView {
     /// [`Self::shell`], borrowed: names are worked out on every frame.
     pub fn shell_name(&self) -> &str {
         &self.shell
-    }
-
-    /// The grid's columns and rows as of the last frame.
-    pub fn grid_size(&self) -> (usize, usize) {
-        let layout = self.layout.get();
-        (layout.cols, layout.rows)
     }
 
     /// A handle on the grid's size that outlives a read of the terminal: what the window shows of

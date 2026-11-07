@@ -84,10 +84,15 @@ pub enum FeatureFlag {
     /// place with sample state, so their look can be tuned. The page shows only while the flag is on and
     /// holds no setting of its own.
     Components,
+    /// Folding the output of a finished command into one line ("124 lines hidden"): Fold Output on a
+    /// command block's menu, and the marker that opens it again. Display only: copy, find and `wh read`
+    /// see every line (`repo-docs/docs/research/probes-hooks-and-fold.md`, section 4). Off, the menu has
+    /// no such item.
+    OutputFolds,
 }
 
 impl FeatureFlag {
-    pub const ALL: [FeatureFlag; 15] = [
+    pub const ALL: [FeatureFlag; 16] = [
         Self::ProjectFolders,
         Self::TerminalWelcome,
         Self::NotesAndTasks,
@@ -103,6 +108,7 @@ impl FeatureFlag {
         Self::FolderPicker,
         Self::IconThemes,
         Self::Components,
+        Self::OutputFolds,
     ];
 
     /// The key this flag has under `feature_flags` in `config.json`.
@@ -123,6 +129,7 @@ impl FeatureFlag {
             Self::FolderPicker => "folder_picker",
             Self::IconThemes => "icon_themes",
             Self::Components => "components",
+            Self::OutputFolds => "output_folds",
         }
     }
 
@@ -148,6 +155,7 @@ impl FeatureFlag {
             Self::FolderPicker => "Folder picker",
             Self::IconThemes => "File icon themes",
             Self::Components => "Settings components",
+            Self::OutputFolds => "Fold output",
         }
     }
 
@@ -215,6 +223,10 @@ impl FeatureFlag {
                 "Settings → Components: every control the Settings pages are built from, in one place with \
                  sample state, to tune how they look."
             }
+            Self::OutputFolds => {
+                "Fold the output of a finished command into one line from its context menu. Only the view \
+                 changes: copying, finding and reading the terminal still see every line."
+            }
         }
     }
 
@@ -251,6 +263,8 @@ impl FeatureFlag {
             Self::IconThemes => false,
             // A tool for tuning the Settings controls' look: never for a release's users.
             Self::Components => false,
+            // A spike: it measures what folding costs before anything is promised.
+            Self::OutputFolds => false,
         }
     }
 }
@@ -529,7 +543,7 @@ mod tests {
         let flag = FeatureFlag::Components;
         assert_eq!(flag.key(), "components");
         assert_eq!(FeatureFlag::from_key("components"), Some(flag));
-        assert_eq!(FeatureFlag::ALL.last(), Some(&flag), "new flags go last");
+        assert!(FeatureFlag::ALL.contains(&flag));
         assert!(!flag.released());
         assert!(!enabled_in(flag, &BTreeMap::new(), RELEASE));
         assert!(!enabled_in(flag, &BTreeMap::from([("components".to_string(), true)]), RELEASE));
@@ -537,6 +551,17 @@ mod tests {
         assert!(enabled_in(flag, &BTreeMap::from([("components".to_string(), true)]), FlagMode::Unstable));
         assert!(enabled_in(flag, &BTreeMap::new(), DEV));
         assert!(!enabled_in(flag, &BTreeMap::from([("components".to_string(), false)]), DEV));
+    }
+
+    #[test]
+    fn output_folds_is_off_in_a_release_and_on_in_a_dev_build() {
+        let flag = FeatureFlag::OutputFolds;
+        assert_eq!(flag.key(), "output_folds");
+        assert_eq!(FeatureFlag::from_key("output_folds"), Some(flag));
+        assert_eq!(FeatureFlag::ALL.last(), Some(&flag), "new flags go last");
+        assert!(!enabled_in(flag, &BTreeMap::from([("output_folds".to_string(), true)]), RELEASE));
+        assert!(!enabled_in(flag, &BTreeMap::new(), FlagMode::Unstable), "off until a tester turns it on");
+        assert!(enabled_in(flag, &BTreeMap::new(), DEV));
     }
 
     #[test]

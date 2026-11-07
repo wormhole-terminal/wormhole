@@ -43,6 +43,14 @@ impl<'a> Walk<'a> {
         }
     }
 
+    /// The grid line an item stands for (a marker: its fold's first line).
+    pub(crate) fn line_of(&self, item: Shown) -> Line {
+        match item {
+            Shown::Line(line) => line,
+            Shown::Marker(ix) => self.spans[ix].first,
+        }
+    }
+
     /// The row above `item`, if the grid has one.
     fn up(&self, item: Shown) -> Option<Shown> {
         let above = match item {

@@ -35,6 +35,10 @@ terminal-menu-copy-output = Copy Output
 # Context menu, over a finished command: types the command again at the prompt, for the person to run.
 terminal-menu-put-command-at-prompt = Put Command at Prompt
 
+# Context menu, over a finished command (needs shell integration): folds what the command printed into one
+# line of the terminal that says how many lines are hidden. Only the view changes; the text is still there.
+terminal-menu-fold-output = Fold Output
+
 # Context menu: shows a new terminal to the right of this one, in a split.
 terminal-menu-split-right = Split Right
 
@@ -65,3 +69,17 @@ terminal-progress-paused = Paused
 # (OSC 9;4 state 2), which is a state it still holds, not a failure; the percentage follows it
 # when the program gave one ("Error · 50%").
 terminal-progress-error = Error
+
+# The line a fold leaves in a terminal's text where finished output is hidden, and what VoiceOver says for it.
+# Clicking it, or choosing Show, shows the lines. { $count } is a whole number of lines.
+terminal-fold-hidden = { $count ->
+    [one] 1 line hidden
+   *[other] { $count } lines hidden
+}
+
+# The same line while the folded output is shown (clicking it folds the output again), and what VoiceOver
+# announces when a fold is opened. { $count } is a whole number of lines.
+terminal-fold-shown = { $count ->
+    [one] 1 line shown
+   *[other] { $count } lines shown
+}

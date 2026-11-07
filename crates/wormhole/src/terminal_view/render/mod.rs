@@ -16,7 +16,7 @@
 //! - the grid's parts: `glyphs` (box drawing), `underline`, `cursor`, `images`, `blink`,
 //!   `sized` (double-width and double-height rows)
 //! - what Probes add: `decor` (tones, masks and a marked block's tint on the rows)
-//! - beside the grid: `overlays` (block marks, find ticks, the bell, the drag), `scrollbar`,
+//! - beside the grid: `overlays` (block marks, find ticks, the bell, the drag), `folds` (a fold's marker row), `scrollbar`,
 //!   `minimap`, `exited` (the bar of a finished shell)
 
 mod blink;
@@ -24,6 +24,7 @@ mod cache;
 mod cursor;
 mod decor;
 mod exited;
+mod folds;
 mod frame;
 mod glyphs;
 mod images;
@@ -104,11 +105,6 @@ impl RenderState {
         &self.frame.snapshot
     }
 
-    /// How far the last frame was scrolled into the history.
-    pub(super) fn display_offset(&self) -> usize {
-        self.frame.snapshot.display_offset
-    }
-
     /// How long the history was in the last frame.
     pub(super) fn history_size(&self) -> usize {
         self.frame.snapshot.history_size
@@ -143,7 +139,7 @@ impl Render for TerminalView {
         let minimap = store.settings.minimap;
         let paint_state = self.render_state.clone();
         let weak = entity.downgrade();
-        let link_rows = self.hovered_link_rows(self.render_state.borrow().display_offset());
+        let link_rows = self.hovered_link_rows();
         let link_color = palette.foreground;
         let hovered_block = self.hovered_block();
         let background_override =
@@ -160,6 +156,7 @@ impl Render for TerminalView {
             draws_cursor,
             reduce_motion,
             live_resize: self.live_on(cx),
+            ui,
             dock,
             layout: layout_cell,
             state: prepaint_state,
@@ -184,7 +181,7 @@ impl Render for TerminalView {
                 frame
             },
             move |bounds, frame, window, cx| {
-                let Some(frame) = frame else { return };
+                let Some(mut frame) = frame else { return };
                 #[cfg(feature = "devctl")]
                 PAINTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 let span = perf::span();
@@ -194,6 +191,9 @@ impl Render for TerminalView {
                         paint.run(bounds, &frame, window, cx)
                     }),
                     None => paint.run(bounds, &frame, window, cx),
+                }
+                for marker in &mut frame.folds {
+                    marker.paint(window, cx);
                 }
                 span.end(perf::Part::Paint);
             },

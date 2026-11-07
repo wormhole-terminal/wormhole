@@ -237,9 +237,9 @@ impl TerminalView {
         self.find.revision = revision;
         self.find.task = None;
         if fresh {
-            let (_, rows) = self.grid_size();
-            let bottom = Line(rows as i32 - 1 - self.render_state.borrow().display_offset() as i32);
-            self.find.current = self.find.results.nearest(bottom + self.history_growth());
+            let bottom = self.render_state.borrow().snapshot().rows().last().map(|row| row.line());
+            self.find.current =
+                bottom.and_then(|bottom| self.find.results.nearest(bottom + self.history_growth()));
             self.reveal_current();
         } else {
             self.find.current = self.find.current.map(|ix| ix.min(len.saturating_sub(1))).filter(|_| len > 0);
@@ -278,7 +278,10 @@ impl TerminalView {
     fn reveal_current(&self) {
         let Some(m) = self.find.current.and_then(|ix| self.find.results.matches.get(ix)) else { return };
         if let Some(pty) = &self.pty {
-            pty.reveal(m.start.line - self.history_growth());
+            let line = m.start.line - self.history_growth();
+            // A match inside a fold opens it, and stays open.
+            pty.fold_expand_at(line);
+            pty.reveal(line);
         }
     }
 
@@ -301,16 +304,19 @@ impl TerminalView {
         }
         // Lines in the results' coordinates: what was at `line` then is at `line - grown` now.
         let grown = snapshot.history_size.saturating_sub(find.history) as i32;
-        let offset = snapshot.display_offset as i32;
         let cols = snapshot.columns();
-        let row_of = |line: Line| usize::try_from(line.0 - grown + offset).ok();
+        let row_of = |line: Line| snapshot.row_of_line(line - grown);
         let cells = |line: Line| {
             let row = snapshot.rows().get(row_of(line)?)?;
             Some((row.cells(), row.extras()))
         };
         let mut rows = vec![Vec::new(); snapshot.rows().len()];
         for (row, found) in rows.iter_mut().enumerate() {
-            let line = Line(row as i32 - offset + grown);
+            let shown = &snapshot.rows()[row];
+            if shown.fold().is_some() {
+                continue;
+            }
+            let line = shown.line() + grown;
             for (ix, m) in find.results.on_line(line) {
                 // Gone from under it (redrawn, or scrolled further than the history shows).
                 if m.holds(cells, cols) == Some(false) {

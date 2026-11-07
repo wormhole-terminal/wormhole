@@ -47,6 +47,17 @@ impl TestTerm {
         self.screen_mut().scroll_display(scroll);
     }
 
+    /// Fold grid lines `first..=last` as a finished block's output would be (see `folds`).
+    pub fn fold_lines(&mut self, first: i32, last: i32) -> Result<u64, crate::folds::Refused> {
+        let request = crate::folds::Request { finished: true, failed: false };
+        self.screen_mut().fold_add(Line(first), Line(last), request)
+    }
+
+    /// Open or close fold `id`.
+    pub fn toggle_fold(&mut self, id: u64) -> bool {
+        self.screen_mut().fold_toggle(id)
+    }
+
     pub fn clear_history(&mut self) {
         self.screen_mut().clear_history();
     }

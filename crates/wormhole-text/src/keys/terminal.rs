@@ -24,18 +24,20 @@ pub const TERMINAL_MENU_COPY_COMMAND: Key = Key::new(1549);
 pub const TERMINAL_MENU_COPY_OUTPUT: Key = Key::new(1550);
 /// "Put Command at Prompt"
 pub const TERMINAL_MENU_PUT_COMMAND_AT_PROMPT: Key = Key::new(1551);
+/// "Fold Output"
+pub const TERMINAL_MENU_FOLD_OUTPUT: Key = Key::new(1552);
 /// "Split Right"
-pub const TERMINAL_MENU_SPLIT_RIGHT: Key = Key::new(1552);
+pub const TERMINAL_MENU_SPLIT_RIGHT: Key = Key::new(1553);
 /// "Split Down"
-pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(1553);
+pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(1554);
 /// "Clear Buffer"
-pub const TERMINAL_MENU_CLEAR: Key = Key::new(1554);
+pub const TERMINAL_MENU_CLEAR: Key = Key::new(1555);
 /// "A program"
-pub const TERMINAL_PROGRAM_UNNAMED: Key = Key::new(1555);
+pub const TERMINAL_PROGRAM_UNNAMED: Key = Key::new(1556);
 /// "Paused"
-pub const TERMINAL_PROGRESS_PAUSED: Key = Key::new(1558);
+pub const TERMINAL_PROGRESS_PAUSED: Key = Key::new(1559);
 /// "Error"
-pub const TERMINAL_PROGRESS_ERROR: Key = Key::new(1559);
+pub const TERMINAL_PROGRESS_ERROR: Key = Key::new(1560);
 
 /// ```text
 /// { $columns } × { $rows }
@@ -48,12 +50,32 @@ pub fn terminal_size_readout(columns: &str, rows: &str) -> String {
 /// { $program } wants to read the clipboard
 /// ```
 pub fn terminal_clipboard_ask(program: &str) -> String {
-    crate::active::message(1556, &[("program", Arg::Str(program))])
+    crate::active::message(1557, &[("program", Arg::Str(program))])
 }
 
 /// ```text
 /// restored { $year }-{ $month }-{ $day } { $hour }:{ $minute }
 /// ```
 pub fn terminal_restored_at(year: &str, month: &str, day: &str, hour: &str, minute: &str) -> String {
-    crate::active::message(1557, &[("year", Arg::Str(year)), ("month", Arg::Str(month)), ("day", Arg::Str(day)), ("hour", Arg::Str(hour)), ("minute", Arg::Str(minute))])
+    crate::active::message(1558, &[("year", Arg::Str(year)), ("month", Arg::Str(month)), ("day", Arg::Str(day)), ("hour", Arg::Str(hour)), ("minute", Arg::Str(minute))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 line hidden
+///    *[other] { $count } lines hidden
+/// }
+/// ```
+pub fn terminal_fold_hidden(count: i64) -> String {
+    crate::active::message(1561, &[("count", Arg::Int(count))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] 1 line shown
+///    *[other] { $count } lines shown
+/// }
+/// ```
+pub fn terminal_fold_shown(count: i64) -> String {
+    crate::active::message(1562, &[("count", Arg::Int(count))])
 }

@@ -15,7 +15,7 @@ use super::cursor::{CursorPaint, cursor_frame};
 use super::frame::Geometry;
 use super::rows::Style;
 use super::shaping::{ShapeKey, colors_key, shape_word, text_run};
-use super::{RenderState, blink, images, words};
+use super::{RenderState, blink, folds, images, words};
 use crate::palette::Palette;
 use crate::perf::{self, Count, Part};
 use crate::terminal_view::{Layout, PADDING_X, PADDING_Y, TerminalView};
@@ -45,6 +45,8 @@ pub(super) struct Frame {
     /// Where the grid must stay inside when it is not the size the pane makes (a text zoom or a live
     /// resize holds the PTY's size, so the grid may be larger than the pane): the pane with its padding.
     pub clip: Option<Bounds<Pixels>>,
+    /// The markers of the folds in view (`folds`), painted over the grid.
+    pub folds: Vec<gpui_kit::AnyElement>,
 }
 
 /// What a frame's preparation reads from the view: copied out of `render`, which has the view and
@@ -61,6 +63,7 @@ pub(super) struct Prepare {
     /// The window is resized like Terminal does (Live resize feature): the grid tolerates a pixel's rounding
     /// of the window's size.
     pub live_resize: bool,
+    pub ui: crate::settings::UiColors,
     pub dock: Option<wormhole_core::onboarding::welcome::DockCell>,
     pub layout: Rc<Cell<Layout>>,
     pub state: Rc<RefCell<RenderState>>,
@@ -245,6 +248,7 @@ impl Prepare {
             (paints, over)
         });
         images_span.end(Part::Images);
+        let folds = folds::markers(&cache.snapshot, geometry, cols, self.ui, &self.entity, window, cx);
         Some(Frame {
             geometry,
             reach,
@@ -259,6 +263,7 @@ impl Prepare {
             images,
             overlay,
             clip,
+            folds,
         })
     }
 }

@@ -227,6 +227,21 @@ impl Screen {
         self.folds.needs_you = needs_you;
     }
 
+    /// The grid line view row `row` shows now (a marker row: its fold's first line): what the next frame
+    /// will show at that row after a scroll.
+    pub(crate) fn line_at_row(&mut self, row: usize) -> Line {
+        let rows = self.screen_lines();
+        let plain = Line(row as i32 - self.display_offset() as i32);
+        if !self.has_folds() {
+            return plain;
+        }
+        self.walk(|walk, bottom| {
+            let mut view = Vec::new();
+            walk.view(bottom, rows, &mut view);
+            view.get(row).map_or(plain, |&item| walk.line_of(item))
+        })
+    }
+
     /// Scroll the view by `rows` shown rows (up when positive, as `Scroll::Delta`): a fold is one step.
     pub(crate) fn scroll_shown_rows(&mut self, rows: i32) {
         let target = self.walk(|walk, bottom| walk.step(bottom, rows.unsigned_abs() as usize, rows > 0));
