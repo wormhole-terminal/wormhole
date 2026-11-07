@@ -54,6 +54,8 @@ pub fn color_choice(
         .role(Role::RadioButton)
         .aria_label(name.into())
         .aria_selected(chosen)
+        .aria_toggled(if chosen { Toggled::True } else { Toggled::False })
+        .when(enabled, |d| d.focusable().tab_stop(true).focus_visible(move |d| d.focus_outline(ui)))
         .flex_none()
         .flex()
         .items_center()

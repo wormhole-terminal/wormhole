@@ -95,6 +95,19 @@ pub fn boot_volume_name() -> String {
     "/".to_string()
 }
 
+/// Whether the native menu shows the second line of an item. Use a drawn select when a
+/// second line is needed and the platform does not display it.
+pub(crate) fn native_menu_subtitles() -> bool {
+    #[cfg(target_os = "macos")]
+    {
+        macos::menu::supports_subtitles()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        false
+    }
+}
+
 /// Open `menu` at `at` (window coordinates) as the platform's own menu, and run what is chosen.
 ///
 /// Returns at once: the menu opens, and its item runs, a moment later, outside the borrow of the

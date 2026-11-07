@@ -28,14 +28,7 @@ pub(super) fn render(
             style::choice_card(("g-sketch-card", ix), ui, ix == 1)
                 .flex_1()
                 .child(div().p_2().child(style::window_sketch(ui, &Shown::of(*preset), TOOLS)))
-                .child(
-                    div()
-                        .px_2()
-                        .pb_2()
-                        .text_caption()
-                        .text_color(if ix == 1 { ui.primary } else { ui.text })
-                        .child(name),
-                )
+                .child(div().px_2().pb_2().text_caption().child(name))
         }))
         .into_any_element()
 }

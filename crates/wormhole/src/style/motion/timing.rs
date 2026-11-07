@@ -3,11 +3,11 @@
 
 use std::time::Duration;
 
-/// Hover, selection, a tab switch: no animation.
+/// Pointer hover and direct pointer tracking: no animation.
 pub const MOTION_INSTANT: Duration = Duration::ZERO;
 /// The ⌘ hints going away.
 pub const MOTION_EXIT_FAST: Duration = Duration::from_millis(80);
-/// Fades in, a drag's lift, the ⌘ hints coming in.
+/// Selection fills, a drag's lift, the ⌘ hints coming in.
 pub const MOTION_FAST: Duration = Duration::from_millis(120);
 /// Menus, the palette and tooltips coming in (GPUI Kit's dropdown).
 pub const MOTION_POPOVER: Duration = Duration::from_millis(150);

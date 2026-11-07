@@ -8,6 +8,7 @@ use gpui_kit::*;
 use crate::settings::UiColors;
 use crate::style::labels::count_badge;
 use crate::style::metrics::Metrics;
+use crate::style::motion::SelectionFill;
 use crate::style::scale::{Edges, MARK_DOT, ROW_H, TITLE_GLYPH, TextRole};
 use wormhole_core::view::sidebar::{WASH_FAR, WASH_PEAK, WASH_SPAN};
 
@@ -174,6 +175,7 @@ pub fn nav_row(
     selected: bool,
     mark: NavMark,
 ) -> Stateful<Div> {
+    let label = label.into();
     let dim = mark == NavMark::NoHits;
     let (icon_color, text_color) = match (selected, dim) {
         (true, _) => (ui.selected_text, ui.selected_text),
@@ -182,6 +184,12 @@ pub fn nav_row(
     };
     div()
         .id(id)
+        .role(Role::ListBoxOption)
+        .aria_label(label.clone())
+        .aria_selected(selected)
+        .focusable()
+        .focus_visible(move |d| d.focus_outline(ui))
+        .relative()
         .flex()
         .items_center()
         .gap_2()
@@ -191,8 +199,8 @@ pub fn nav_row(
         .rounded(ui.radius)
         .text_label()
         .cursor_pointer()
-        .when(selected, |d| d.bg(ui.selected_row))
         .hover(move |d| if selected { d } else { d.bg(ui.hover) })
+        .child(SelectionFill { selected, color: ui.selected_row, radius: ui.radius })
         .child(lead(Icon::new(icon).with_size(px(TITLE_GLYPH)).text_color(icon_color)))
         .child(
             div()
@@ -201,7 +209,7 @@ pub fn nav_row(
                 .truncate()
                 .font_weight(if selected { FontWeight::MEDIUM } else { FontWeight::NORMAL })
                 .text_color(text_color)
-                .child(label.into()),
+                .child(label),
         )
         .map(|d| match mark {
             NavMark::Attention => {

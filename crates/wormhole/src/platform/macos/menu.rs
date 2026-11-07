@@ -150,6 +150,11 @@ pub fn inspect(menu: &Menu, press: Option<usize>) -> Option<String> {
                 format!(" [icon {}x{} ink {}%]", image.size().width, image.size().height, ink(&image))
             });
             out.push_str(&format!("{}{}\n", item.title(), icon.unwrap_or_default()));
+            if supports_subtitles()
+                && let Some(subtitle) = item.subtitle()
+            {
+                out.push_str(&format!("  {subtitle}\n"));
+            }
         }
     }
     out.push_str(&format!("chosen dot: {:?}\n", parts.chosen.get()));
@@ -233,6 +238,10 @@ fn build(mtm: MainThreadMarker, menu: &Menu, target: &Target, parts: &mut Parts)
     ns_menu
 }
 
+pub(in crate::platform) fn supports_subtitles() -> bool {
+    objc2::available!(macos = 14.4)
+}
+
 #[allow(unsafe_code)]
 fn item_for(
     mtm: MainThreadMarker,
@@ -242,6 +251,11 @@ fn item_for(
 ) -> Retained<NSMenuItem> {
     let ns_item = NSMenuItem::new(mtm);
     ns_item.setTitle(&NSString::from_str(&item.title));
+    if supports_subtitles()
+        && let Some(detail) = &item.detail
+    {
+        ns_item.setSubtitle(Some(&NSString::from_str(detail)));
+    }
     ns_item.setEnabled(item.enabled);
     ns_item.setState(match item.check {
         Check::Off => 0,

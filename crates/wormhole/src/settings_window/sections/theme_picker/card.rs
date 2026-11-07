@@ -52,6 +52,8 @@ pub(crate) struct ThemeCard {
     pub(super) label: SharedString,
     /// It is the pick of its kind.
     pub(super) picked: bool,
+    pub(super) focus: FocusHandle,
+    pub(super) tab_stop: bool,
     pub(super) ui: UiColors,
 }
 
@@ -128,7 +130,6 @@ impl Render for ThemeCard {
         let (ui, picked) = (self.ui, self.picked);
         let tokens = &entry.tokens;
         let (value, appearance) = (entry.value.clone(), tokens.appearance);
-        let name_color = if picked { ui.primary } else { ui.text };
         let hide_value = entry.value.clone();
         let menu_entry = self.entry;
         // The miniature sits flush in the card, which does not clip (its ring is outside it): it rounds
@@ -136,6 +137,7 @@ impl Render for ThemeCard {
         let inner = ui.radius_lg;
         style::choice_card(("theme-card", self.entry), ui, picked)
             .aria_label(self.label.clone())
+            .track_focus(&self.focus.clone().tab_stop(self.tab_stop))
             .group(CARD_GROUP)
             .w_full()
             .h(card_height(px(0.0)))
@@ -197,7 +199,6 @@ impl Render for ThemeCard {
                             .truncate()
                             .text_label()
                             .font_weight(if picked { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM })
-                            .text_color(name_color)
                             .child(self.label.clone()),
                     )
                     // Made with a newer Wormhole: it loads what this version knows.

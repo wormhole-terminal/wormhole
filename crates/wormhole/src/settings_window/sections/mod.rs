@@ -16,9 +16,8 @@ use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 
 use crate::select::{Choice, SearchSelect, SelectTrigger};
-use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore};
-use crate::settings_window::registry::Setting;
+use crate::settings_window::registry::{Setting, update_row};
 use crate::settings_window::{SettingsWindow, ui};
 
 mod advanced;
@@ -54,8 +53,6 @@ mod samples;
 mod sessions;
 mod stage;
 mod terminal;
-#[cfg(all(feature = "devctl", target_os = "macos"))]
-pub(super) use terminal::scrollback_menu;
 mod theme_picker;
 mod title_row;
 mod updates;
@@ -79,6 +76,8 @@ pub(super) use profile_sheet::NewProfileSheet;
 pub(crate) use profile_sheet::open_new_profile_sheet;
 pub(super) use projects::ProjectPicker;
 pub(super) use stage::draw_stage;
+#[cfg(feature = "devctl")]
+pub(super) use terminal::rich_select_menu;
 pub(super) use theme_picker::ThemePicker;
 
 /// The controls of a section's rows (their names and words are in core's settings index).
@@ -117,19 +116,10 @@ pub(super) fn recorder_id(id: &str) -> Option<&'static str> {
 /// The selects of the pages, by their row's id (devctl opens them by name).
 #[cfg(feature = "devctl")]
 pub(super) fn select_id(id: &str) -> Option<&'static str> {
-    [
-        "scrollback",
-        "icon-theme",
-        "settings-text-size",
-        "default-shell",
-        "open-in",
-        "motion-insert",
-        "motion-fold",
-        "motion-status",
-        "motion-column",
-    ]
-    .into_iter()
-    .find(|known| *known == id)
+    let setting = super::registry::control(id)?;
+    (matches!(setting.control, super::registry::Control::Select { .. })
+        || matches!(setting.id, "default-shell" | "open-in"))
+    .then_some(setting.id)
 }
 
 impl SettingsWindow {
@@ -199,10 +189,17 @@ impl SettingsWindow {
         let ui = ui(cx);
         let this = cx.weak_entity();
         let on_open = this.clone();
+        let name = wormhole_core::config::settings_index::entry(id).map_or("", |(_, _, entry)| entry.label());
+        let value = choices
+            .iter()
+            .find(|choice| choice.value == current)
+            .map_or_else(|| current.clone().into(), |choice| choice.label().clone());
         SearchSelect::new(
             SharedString::from(format!("select-{id}")),
             ui,
-            SelectTrigger::new(SharedString::from(format!("select-{id}-trigger")), ui, face).width(px(width)),
+            SelectTrigger::new(SharedString::from(format!("select-{id}-trigger")), ui, face)
+                .accessibility(name, value)
+                .width(px(width)),
             &self.menu_search,
             cx,
         )
@@ -230,7 +227,7 @@ impl SettingsWindow {
                 cx.notify();
             })
             .ok();
-            update_settings(cx, |s| pick(s, &value));
+            update_row(id, cx, |s| pick(s, &value));
         })
         .into_popover()
         .into_any_element()

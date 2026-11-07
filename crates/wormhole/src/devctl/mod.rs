@@ -273,7 +273,10 @@
 //!   probe-off <id>  turn that Probe off, with no question: its approval and its copy go
 //!   settings-scroll <px>   scroll the settings page (negative = up)
 //!   settings-resize <w> <h>   the settings window's size (a tall one shows a whole page in one shot)
-//!   settings-select <scrollback|icon-theme>   open that row's select in the settings window
+//!   settings-select <id>   open that row's select in the settings window
+//!   settings-key <keystroke>   press and release a key in the settings window
+//!   settings-click <x> <y>   click a point in the settings window
+//!   settings-a11y   the settings window's accessibility tree
 //!   settings-reset-confirm   press Advanced → Reset to defaults… (shows its question, resets nothing)
 //!   settings-cli-tool [install|uninstall]   Coding agents → Command line tool: show it, or press its
 //!                   Install / Uninstall (into the instance's own cli-bin folder, `WORMHOLE_CLI_DIR`)

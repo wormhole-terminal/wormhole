@@ -11,8 +11,7 @@ use wormhole_text::keys::*;
 
 use super::preview;
 use crate::settings::settings;
-use crate::settings::update_settings;
-use crate::settings_window::registry::{Segment, Setting, toggle};
+use crate::settings_window::registry::{Segment, Setting, toggle, update_row};
 use crate::settings_window::{SettingsWindow, SidebarLook, ui};
 use crate::style;
 
@@ -100,7 +99,7 @@ fn draw_density(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElem
                         cx.notify();
                     }
                 }))
-                .on_click(move |_, _, cx| update_settings(cx, |s| s.density = density))
+                .on_click(move |_, _, cx| update_row("density", cx, |s| s.density = density))
         }))
         .into_any_element()
 }

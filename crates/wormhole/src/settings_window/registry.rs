@@ -16,10 +16,13 @@ use std::rc::Rc;
 use std::sync::OnceLock;
 
 use gpui_kit::assets::IconName;
+use gpui_kit::component::{Disableable as _, switch::Switch};
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::SectionId as Section;
 use wormhole_core::config::settings_index::{self, Entry, Hit, Query, Values};
+use wormhole_core::theme::fonts::{FontSlot, SYSTEM_FONT, display_name};
+use wormhole_core::theme::tokens::BranchTint;
 #[allow(
     clippy::wildcard_imports,
     reason = "the keys are generated, one constant per message: naming each would list them twice"
@@ -28,6 +31,8 @@ use wormhole_text::keys::*;
 use wormhole_text::{Key, text};
 
 use super::{FrontWindow, SettingsWindow, section_icon, sections, ui};
+use crate::platform::{Item, Menu};
+use crate::select::{Choice, SelectTrigger};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::style::{self, RowKeys, SettingParts, SettingState, TextRole};
@@ -75,6 +80,13 @@ pub(super) enum Control {
     /// A small number with a minus and a plus: `show` reads it as text, `nudge` moves it one
     /// step (`-1` or `1`; the settings are clamped when they are saved).
     Stepper { show: fn(&Settings) -> String, nudge: fn(&mut Settings, i32) },
+    /// A short list of labelled values, opened as a platform menu.
+    Select {
+        width: f32,
+        options: fn(&Settings) -> Vec<Choice<String>>,
+        get: fn(&Settings) -> String,
+        set: fn(&mut Settings, &str),
+    },
     /// A shortcut, recorded by pressing it (empty is none).
     Recorder(super::recorder::RecorderRow),
     /// The control of a row, drawn by the page.
@@ -126,6 +138,16 @@ impl Setting {
         nudge: fn(&mut Settings, i32),
     ) -> Self {
         Self::new(id, Control::Stepper { show, nudge })
+    }
+
+    pub(super) const fn select(
+        id: &'static str,
+        width: f32,
+        options: fn(&Settings) -> Vec<Choice<String>>,
+        get: fn(&Settings) -> String,
+        set: fn(&mut Settings, &str),
+    ) -> Self {
+        Self::new(id, Control::Select { width, options, get, set })
     }
 
     pub(super) const fn recorder(id: &'static str, row: super::recorder::RecorderRow) -> Self {
@@ -192,6 +214,37 @@ fn controls() -> &'static HashMap<&'static str, (Section, &'static Setting)> {
 /// The control of the row `id`.
 pub(super) fn control(id: &str) -> Option<&'static Setting> {
     controls().get(id).map(|(_, setting)| *setting)
+}
+
+/// The current ownership is checked at activation as well as at render time: a popup may have been
+/// opened while the setting was still editable.
+pub(super) fn project_sets(id: &str, cx: &App) -> bool {
+    let store = cx.global::<SettingsStore>();
+    (id == "theme" && store.has_project_theme())
+        || settings_index::entry(id)
+            .is_some_and(|(_, _, entry)| settings_index::set_by_project(entry, store.project_keys()))
+}
+
+pub(super) fn update_row(id: &str, cx: &mut App, edit: impl FnOnce(&mut Settings)) {
+    if !project_sets(id, cx) {
+        update_settings(cx, edit);
+    }
+}
+
+/// Read the current choices when the menu opens, including custom saved values.
+pub(super) fn select_menu(id: &str, cx: &App) -> Option<Menu> {
+    let setting = control(id)?;
+    let id = setting.id;
+    if project_sets(id, cx) {
+        return None;
+    }
+    let Control::Select { options, get, set, .. } = &setting.control else { return None };
+    let current = get(settings(cx));
+    let set = *set;
+    Some(options(settings(cx)).into_iter().fold(Menu::new(), |menu, option| {
+        let item = Item::new(option.label().clone()).checked(option.value == current);
+        menu.item(item.on_select(move |_, cx| update_row(id, cx, |s| set(s, &option.value))))
+    }))
 }
 
 /// What the recorder of row `id` records into and checks.
@@ -301,8 +354,83 @@ fn shown(control: &Control, settings: &Settings) -> Shown {
         Control::Toggle { get, .. } => Shown::Toggle(get(settings)),
         Control::Segmented { get, .. } => Shown::Segmented(get(settings)),
         Control::Stepper { show, .. } => Shown::Stepper(show(settings)),
-        Control::Recorder(_) | Control::Custom(_) | Control::Block(_) | Control::Item(_) => Shown::Drawn,
+        Control::Select { .. }
+        | Control::Recorder(_)
+        | Control::Custom(_)
+        | Control::Block(_)
+        | Control::Item(_) => Shown::Drawn,
     }
+}
+
+/// A disabled switch still conveys its state. Other project values are readouts, so the
+/// editable element, including any menu or focus handle in it, is never mounted.
+fn project_control(entry: &Entry, setting: &Setting, current: Shown, ui: UiColors, cx: &App) -> AnyElement {
+    let store = cx.global::<SettingsStore>();
+    let settings = store.settings_without_zen();
+    let value: SharedString = match (&setting.control, current) {
+        (Control::Toggle { .. }, Shown::Toggle(on)) => {
+            return div()
+                .flex()
+                .items_center()
+                .gap_2()
+                .children(
+                    (entry.id == "primary-color")
+                        .then(|| settings.primary())
+                        .flatten()
+                        .map(|color| project_readout(ui, color.to_hex().into())),
+                )
+                .child(Switch::new(entry.id).checked(on).disabled(true).accessibility_label(entry.label()))
+                .into_any_element();
+        }
+        (Control::Segmented { options, .. }, Shown::Segmented(active)) => {
+            let label = options.get(active).map_or("", |option| text(option.label));
+            match (entry.id, settings.branch_tint()) {
+                ("branch-color", Some(BranchTint::Color(color))) => {
+                    format!("{label} · {}", color.to_hex()).into()
+                }
+                _ => label.into(),
+            }
+        }
+        (Control::Stepper { .. }, Shown::Stepper(value)) => value.into(),
+        (Control::Select { options, get, .. }, _) => {
+            let value = get(settings);
+            options(settings)
+                .into_iter()
+                .find(|option| option.value == value)
+                .map_or_else(|| value.into(), |option| option.label().clone())
+        }
+        _ => match entry.id {
+            "theme" => store.base_tokens().name.clone().into(),
+            "opacity" => format!("{:.0} %", store.asked_opacity() * 100.0).into(),
+            "line-height" => format!("{:.2}", settings.line_height).into(),
+            "density" => settings.density.label().into(),
+            "font-terminal" => project_font_value(store, FontSlot::Terminal),
+            "font-interface" => project_font_value(store, FontSlot::Interface),
+            "font-code" => project_font_value(store, FontSlot::Code),
+            // A new project-scoped custom row still renders read-only if it has no formatted readout yet.
+            _ => return Empty.into_any_element(),
+        },
+    };
+    project_readout(ui, value).into_any_element()
+}
+
+fn project_readout(ui: UiColors, value: SharedString) -> Stateful<Div> {
+    div()
+        .id("project-readout")
+        .role(Role::Label)
+        .aria_label(value.clone())
+        .max_w(px(SUMMARY_MAX_W))
+        .truncate()
+        .text_label()
+        .text_color(ui.muted)
+        .child(value)
+}
+
+fn project_font_value(store: &SettingsStore, slot: FontSlot) -> SharedString {
+    let family = store.fonts.family(slot);
+    let name = if family == SYSTEM_FONT { "SF Pro" } else { display_name(family) }; // text: name (the system font)
+    let size = settings_fonts_size_points(&format!("{:.0}", store.settings.slot_size(slot)));
+    format!("{name} · {size}").into()
 }
 
 impl SettingsWindow {
@@ -428,15 +556,17 @@ impl SettingsWindow {
                 text(SETTINGS_WINDOW_EDIT_IN_PROJECT),
                 false,
             )
-            .on_click(cx.listener(move |this, _, _, cx| {
+            .on_click(cx.listener(move |this, _, window, cx| {
                 this.projects.select(root.clone());
-                this.show_section(Section::Projects, cx);
+                this.navigate_to(Section::Projects, window, cx);
             }))
             .into_any_element()
         });
         let keys = entry.keys;
         let chip = setting.chip.and_then(|chip| chip(self, cx));
-        let control = if listed && matches!(setting.control, Control::Block(_)) {
+        let control = if project.is_some() {
+            project_control(entry, setting, current, ui, cx)
+        } else if listed && matches!(setting.control, Control::Block(_)) {
             block_summary(ui, &page.values, entry)
         } else {
             self.render_control(setting, current, ui, cx)
@@ -464,7 +594,7 @@ impl SettingsWindow {
                 extra,
                 // Only a changed row can reset, so only it makes the closure.
                 on_reset: (!keys.is_empty() && changed).then(|| -> style::Reset {
-                    Rc::new(move |_, cx| update_settings(cx, |s| *s = settings_index::reset(s, keys)))
+                    Rc::new(move |_, cx| update_row(entry.id, cx, |s| *s = settings_index::reset(s, keys)))
                 }),
                 reset_arrow: if listed {
                     crate::style::ResetArrow::Always
@@ -496,16 +626,21 @@ impl SettingsWindow {
         match (&setting.control, current) {
             (Control::Toggle { set, .. }, Shown::Toggle(on)) => {
                 let set = *set;
-                style::toggle(id, on, move |on, _, cx| update_settings(cx, |s| set(s, on))).into_any_element()
+                let label = settings_index::entry(id).map_or("", |(_, _, entry)| entry.label());
+                style::toggle(id, on, move |on, _, cx| update_row(id, cx, |s| set(s, on)))
+                    .accessibility_label(label)
+                    .into_any_element()
             }
             (Control::Segmented { options, set, .. }, Shown::Segmented(active)) => {
                 let set = *set;
-                style::segmented_form(ui)
-                    .children(options.iter().enumerate().map(|(ix, option)| {
-                        style::form_segment((id, ix), ui, option.icon, text(option.label), ix == active)
-                            .on_click(move |_, _, cx| update_settings(cx, |s| set(s, ix)))
-                    }))
-                    .into_any_element()
+                style::form_segments(
+                    id,
+                    ui,
+                    options.iter().map(|option| (option.icon, text(option.label).into())),
+                    active,
+                    move |ix, _, cx| update_row(id, cx, |s| set(s, ix)),
+                )
+                .into_any_element()
             }
             (Control::Stepper { nudge, .. }, Shown::Stepper(value)) => {
                 let nudge = *nudge;
@@ -513,10 +648,36 @@ impl SettingsWindow {
                     ui,
                     id,
                     value,
-                    move |_, _, cx| update_settings(cx, |s| nudge(s, -1)),
-                    move |_, _, cx| update_settings(cx, |s| nudge(s, 1)),
+                    move |_, _, cx| update_row(id, cx, |s| nudge(s, -1)),
+                    move |_, _, cx| update_row(id, cx, |s| nudge(s, 1)),
                 )
                 .into_any_element()
+            }
+            (Control::Select { width, options, get, set }, _) => {
+                let current = get(settings(cx));
+                let choices = options(settings(cx));
+                let label = choices
+                    .iter()
+                    .find(|option| option.value == current)
+                    .map_or_else(|| current.clone().into(), |option| option.label().clone());
+                if cfg!(target_os = "macos") {
+                    let spoken = settings_index::entry(id).map_or("", |(_, _, entry)| entry.label());
+                    let owner = cx.weak_entity();
+                    return SelectTrigger::new(
+                        SharedString::from(format!("select-{id}-trigger")),
+                        ui,
+                        label.clone(),
+                    )
+                    .width(px(*width))
+                    .with_menu(spoken, label, move |cx| {
+                        if let Some(touched) = setting.touched {
+                            owner.update(cx, |this, cx| touched(this, cx)).ok();
+                        }
+                        select_menu(id, cx).unwrap_or_default()
+                    })
+                    .into_any_element();
+                }
+                self.select(id, div().child(label).into_any_element(), *width, choices, current, *set, cx)
             }
             (Control::Recorder(row), _) => self.render_recorder(id, *row, cx),
             (Control::Custom(draw) | Control::Block(draw) | Control::Item(draw), _) => draw(self, cx),
@@ -559,7 +720,7 @@ impl SettingsWindow {
                         settings_window_open_section(section.title()),
                         true,
                     )
-                    .on_click(cx.listener(move |this, _, _, cx| this.show_section(section, cx))),
+                    .on_click(cx.listener(move |this, _, window, cx| this.navigate_to(section, window, cx))),
                 );
             let mut rows = Vec::new();
             for hit in &hits[start..end] {
@@ -627,6 +788,49 @@ mod tests {
                     let mut s = Settings::default();
                     set(&mut s, ix);
                     assert_eq!(get(&s), ix, "{} option {ix}", setting.id);
+                }
+            }
+        }
+    }
+
+    #[cfg(feature = "devctl")]
+    #[gpui_kit::test]
+    fn a_stale_row_activation_cannot_write_a_new_project_override(cx: &mut gpui_kit::TestAppContext) {
+        use crate::settings::SettingsStore;
+
+        cx.update(|cx| {
+            gpui_kit::init(cx);
+            cx.set_global(SettingsStore::for_test());
+            let before = cx.global::<SettingsStore>().user_settings().diff_wrap;
+            let activate = |cx: &mut gpui_kit::App| {
+                super::update_row("diff-wrap", cx, |s| s.diff_wrap = !before);
+            };
+            let overlay = serde_json::json!({ "diff_wrap": !before });
+            SettingsStore::set_project_overrides(cx, overlay.as_object().cloned());
+            activate(cx);
+            assert_eq!(cx.global::<SettingsStore>().user_settings().diff_wrap, before);
+            SettingsStore::set_project_overrides(cx, None);
+            activate(cx);
+            assert_ne!(cx.global::<SettingsStore>().user_settings().diff_wrap, before);
+        });
+    }
+
+    #[test]
+    fn a_select_reads_back_each_offered_value() {
+        for setting in every_setting() {
+            if let Control::Select { options, get, set, .. } = &setting.control {
+                let defaults = Settings::default();
+                let choices = options(&defaults);
+                assert!(!choices.is_empty(), "{} has no choices", setting.id);
+                assert!(
+                    choices.iter().any(|choice| choice.value == get(&defaults)),
+                    "{} does not offer its default",
+                    setting.id
+                );
+                for choice in choices {
+                    let mut changed = defaults.clone();
+                    set(&mut changed, &choice.value);
+                    assert_eq!(get(&changed), choice.value, "{} does not read its choice", setting.id);
                 }
             }
         }

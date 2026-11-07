@@ -14,6 +14,7 @@ use gpui_kit::*;
 use style::NavMark;
 use wormhole_core::config::settings_index::Query;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
+use wormhole_text::{keys, text};
 
 use super::{SettingsWindow, ui};
 use crate::app_state::app;
@@ -65,6 +66,9 @@ impl SettingsWindow {
         // The 16 pt under the last row is the sidebar's old bottom padding, now inside the scrolling list.
         let mut rows = div()
             .id("settings-nav-list")
+            .role(Role::ListBox)
+            .aria_label(text(keys::SETTINGS_WINDOW_SETTINGS))
+            .track_scroll(&self.nav_scroll)
             .flex_1()
             .min_h_0()
             .flex()
@@ -73,6 +77,11 @@ impl SettingsWindow {
             .gap_1()
             .px_2()
             .pb_4();
+        let tab_section = if self.section == Section::Profile {
+            Section::visible(settings(cx)).find(|section| *section != Section::Profile)
+        } else {
+            Some(self.section)
+        };
         let mut group = None;
         // Only the sections shown for this build: the Preview group (feature flags, and a feature's
         // own section while its flag is on) is there only in a dev build, so a release never lists it.
@@ -107,7 +116,16 @@ impl SettingsWindow {
                     selected,
                     mark,
                 )
-                .on_click(cx.listener(move |this, _, _, cx| this.show_section(section, cx))),
+                .track_focus(&self.nav_focus[&section].clone().tab_stop(Some(section) == tab_section))
+                .on_click(cx.listener(move |this, _, _, cx| this.show_section(section, cx)))
+                .on_key_down(cx.listener(move |this, event: &KeyDownEvent, window, cx| {
+                    if event.keystroke.modifiers == Modifiers::none()
+                        && matches!(event.keystroke.key.as_str(), "up" | "down" | "home" | "end")
+                    {
+                        cx.stop_propagation();
+                        this.move_nav(section, &event.keystroke.key, window, cx);
+                    }
+                })),
             );
         }
         // The strip under the traffic lights, the search field and the profile select are a fixed header:
@@ -164,6 +182,32 @@ impl SettingsWindow {
 }
 
 impl SettingsWindow {
+    fn move_nav(&mut self, from: Section, key: &str, window: &mut Window, cx: &mut Context<Self>) {
+        let visible: Vec<_> =
+            Section::visible(settings(cx)).filter(|section| *section != Section::Profile).collect();
+        let Some(current) = visible.iter().position(|section| *section == from) else { return };
+        let next = match key {
+            "up" => current.saturating_sub(1),
+            "down" => (current + 1).min(visible.len() - 1),
+            "home" => 0,
+            "end" => visible.len() - 1,
+            _ => return,
+        };
+        let section = visible[next];
+        self.show_section(section, cx);
+        self.nav_focus[&section].focus(window, cx);
+        let mut previous = None;
+        let mut headers = 0;
+        for section in &visible[..=next] {
+            let group = section.info().nav;
+            if previous != Some(group) && !group.title().is_empty() {
+                headers += 1;
+            }
+            previous = Some(group);
+        }
+        self.nav_scroll.scroll_to_item(next + headers);
+    }
+
     /// Whose settings these are: the profile Wormhole is in, drawn as a pop-up button that is quiet (muted,
     /// nothing to choose from here) and still clickable: it opens the Profile page, and it is the nav's
     /// only entry for it, so on that page it wears a nav row's selected look.
@@ -181,6 +225,9 @@ impl SettingsWindow {
                     .id("settings-profile-select")
                     .role(Role::Button)
                     .aria_label(Section::Profile.title())
+                    .focusable()
+                    .tab_stop(true)
+                    .focus_visible(move |d| d.focus_outline(ui))
                     .flex()
                     .items_center()
                     .gap_2()

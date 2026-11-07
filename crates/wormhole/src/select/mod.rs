@@ -1,12 +1,13 @@
-//! The app's select look: a bordered trigger with an up/down chevron that
-//! shows a focus ring while its menu is open, and a menu with a search box and
-//! roomy rows. The menu floats in GPUI Kit's `Popover` on a lifted surface, so
-//! opening one never pushes the page around and it reads clearly above it.
+//! The app's select face, shared by native short menus and searchable GPUI menus.
+//! Settings opens short lists with the platform menu. Searchable lists use GPUI Kit's
+//! popover with the same face, a search field, and roomy option rows.
 
 use std::rc::Rc;
 
+use gpui_kit::accesskit::Action as AccessibilityAction;
 use gpui_kit::assets::IconName;
-use gpui_kit::component::input::{Input, InputState};
+use gpui_kit::base::actions::Confirm;
+use gpui_kit::component::input::{Enter, Input, InputState, MoveDown, MoveUp};
 use gpui_kit::component::popover::Popover;
 use gpui_kit::component::{ActiveTheme as _, Icon, Selectable, Sizable};
 use gpui_kit::prelude::*;
@@ -32,11 +33,33 @@ pub struct SelectTrigger {
     open: bool,
     compact: bool,
     width: Option<Pixels>,
+    popup: bool,
+    popup_accessibility: Option<(SharedString, SharedString)>,
 }
 
 impl SelectTrigger {
     pub fn new(id: impl Into<ElementId>, ui: UiColors, label: impl IntoElement) -> Self {
-        Self { id: id.into(), ui, label: label.into_any_element(), open: false, compact: false, width: None }
+        Self {
+            id: id.into(),
+            ui,
+            label: label.into_any_element(),
+            open: false,
+            compact: false,
+            width: None,
+            popup: false,
+            popup_accessibility: None,
+        }
+    }
+
+    /// Use this face as the keyboard and accessibility trigger of a Kit popover.
+    pub(crate) fn focusable_popup(mut self) -> Self {
+        self.popup = true;
+        self
+    }
+
+    pub fn accessibility(mut self, name: impl Into<SharedString>, value: impl Into<SharedString>) -> Self {
+        self.popup_accessibility = Some((name.into(), value.into()));
+        self
     }
 
     /// The panel headers' variant (the branch picker): 24 high, caption text in 500, a
@@ -69,7 +92,7 @@ impl SelectTrigger {
         self,
         label: &'static str,
         value: SharedString,
-        menu: impl Fn(&App) -> crate::platform::Menu + 'static,
+        menu: impl Fn(&mut App) -> crate::platform::Menu + 'static,
     ) -> Stateful<Div> {
         let ui = self.ui;
         let anchor = crate::platform::Anchor::default();
@@ -78,16 +101,25 @@ impl SelectTrigger {
             crate::platform::show_menu(menu(cx), anchor.below(), window, cx);
         });
         let click = open.clone();
-        self.face()
+        let press = open.clone();
+        self.face(None)
             .relative()
             .role(Role::ComboBox)
             .aria_label(label)
             .aria_value(value)
             .focusable()
             .tab_stop(true)
-            .focus_visible(move |d| d.ringed(ui, ui.focus, ui.focus_ring_width))
+            .focus_visible(move |d| d.focus_outline(ui))
             .child(probe)
-            .on_click(move |_, window, cx| click(window, cx))
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                cx.stop_propagation();
+                press(window, cx);
+            })
+            .on_click(move |event, window, cx| {
+                if matches!(event, ClickEvent::Keyboard(_)) {
+                    click(window, cx);
+                }
+            })
             .on_key_down(move |event, window, cx| {
                 let key = &event.keystroke;
                 if matches!(key.key.as_str(), "up" | "down") && key.modifiers == Modifiers::none() {
@@ -97,8 +129,8 @@ impl SelectTrigger {
             })
     }
 
-    fn face(self) -> Stateful<Div> {
-        let (ui, compact) = (self.ui, self.compact);
+    fn face(self, popup_focus: Option<FocusHandle>) -> Stateful<Div> {
+        let (ui, compact, open) = (self.ui, self.compact, self.open);
         div()
             .id(self.id)
             .flex()
@@ -144,14 +176,46 @@ impl SelectTrigger {
                 let alpha = if ui.increase_contrast { 1.0 } else { FLAT_RING_ALPHA };
                 d.relative().child(flat_ring(ui, ui.input_border_focus, alpha))
             })
+            .when_some(popup_focus, |d, focus| {
+                d.role(Role::ComboBox)
+                    .aria_expanded(open)
+                    .when_some(self.popup_accessibility, |d, (name, value)| {
+                        d.aria_label(name).aria_value(value)
+                    })
+                    .track_focus(&focus)
+                    .focus_visible(move |d| d.focus_outline(ui))
+                    .when(!open, |d| {
+                        d.on_key_down(|event, window, cx| {
+                            let key = &event.keystroke;
+                            if matches!(key.key.as_str(), "up" | "down") && key.modifiers == Modifiers::none()
+                            {
+                                cx.stop_propagation();
+                                window.dispatch_action(Box::new(Confirm { secondary: false }), cx);
+                            }
+                        })
+                    })
+                    .on_a11y_action(AccessibilityAction::Click, move |_, window, cx| {
+                        focus.focus(window, cx);
+                        window.dispatch_action(Box::new(Confirm { secondary: false }), cx);
+                    })
+            })
             .child(div().min_w_0().truncate().child(self.label))
             .child(chevrons(ui))
     }
 }
 
 impl RenderOnce for SelectTrigger {
-    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
-        self.face()
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let focus = self.popup.then(|| {
+            window.with_id(self.id.clone(), |window| {
+                window
+                    .use_keyed_state("select-trigger-focus", cx, |_, cx| cx.focus_handle())
+                    .read(cx)
+                    .clone()
+                    .tab_stop(true)
+            })
+        });
+        self.face(focus)
     }
 }
 
@@ -270,6 +334,14 @@ impl<V> Choice<V> {
         Self { value, label: label.into(), detail: None, mark: None }
     }
 
+    pub(crate) fn label(&self) -> &SharedString {
+        &self.label
+    }
+
+    pub(crate) fn detail_text(&self) -> Option<&SharedString> {
+        self.detail.as_ref()
+    }
+
     pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
         self.detail = Some(detail.into());
         self
@@ -352,6 +424,13 @@ enum Options<V> {
 type OpenChange = Rc<dyn Fn(bool, &mut Window, &mut App)>;
 type Pick<V> = Rc<dyn Fn(&V, &mut Window, &mut App)>;
 
+struct MenuNavigation<V> {
+    query: String,
+    active: Option<V>,
+    scroll: ScrollHandle,
+    virtual_scroll: UniformListScrollHandle,
+}
+
 /// A select over a short list: the trigger, and a floating menu with a search box
 /// that filters the options as you type. The owner keeps the state (whether it is
 /// open, the search input) and re-renders when they change: it passes `open`, learns
@@ -410,6 +489,7 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
     /// The menu without its search box: a handful of options (scrollback sizes, icon themes).
     pub fn without_search(mut self) -> Self {
         self.searchable = false;
+        self.query.clear();
         self
     }
 
@@ -501,18 +581,46 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
                     f(*open, window, cx);
                 }
             })
-            .trigger(trigger);
-        menu_surface(popover, ui, menu_width, bg).content(move |_, _, _| {
+            .trigger(trigger.focusable_popup());
+        menu_surface(popover, ui, menu_width, bg).content(move |_, window, cx| {
             let all: Rc<[Choice<V>]> = match &options {
                 Options::Eager(options) => options.clone(),
                 Options::Lazy(build) => build(),
             };
             let needle = Needle::new(&query);
-            let matches: Vec<usize> = (0..all.len()).filter(|&ix| all[ix].matches(&needle)).collect();
+            let matches: Rc<[usize]> = (0..all.len()).filter(|&ix| all[ix].matches(&needle)).collect();
+            let navigation =
+                window.use_keyed_state(SharedString::from(format!("{id}-navigation")), cx, |_, _| {
+                    MenuNavigation::<V> {
+                        query: query.clone(),
+                        active: None,
+                        scroll: ScrollHandle::new(),
+                        virtual_scroll: UniformListScrollHandle::new(),
+                    }
+                });
+            if navigation.read(cx).query != query {
+                navigation.update(cx, |state, _| {
+                    state.query.clone_from(&query);
+                    state.active = None;
+                    state.scroll.set_offset(point(px(0.0), px(0.0)));
+                    state.virtual_scroll.scroll_to_item(0, ScrollStrategy::Top);
+                });
+            }
+            let state = navigation.read(cx);
+            let active = active_position(state.active.as_ref(), &all, &matches);
+            let (scroll, virtual_scroll) = (state.scroll.clone(), state.virtual_scroll.clone());
             let row = {
                 let (all, current, on_pick) = (all.clone(), current.clone(), on_pick.clone());
                 move |position: usize, ix: usize| {
-                    option_row(position, &all[ix], ui, current.as_ref(), compact, on_pick.clone())
+                    option_row(
+                        position,
+                        &all[ix],
+                        ui,
+                        current.as_ref(),
+                        active == Some(position),
+                        compact,
+                        on_pick.clone(),
+                    )
                 }
             };
             // The explanation only helps before you start narrowing the list. The panel's menu
@@ -526,23 +634,29 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
             };
             // Past a hundred rows (one line each: a list has to be uniform to be drawn from
             // the visible part only) the rows in view are all that is built, not every match.
-            let list = if virtualized(matches.len(), all.iter().any(|c| c.detail.is_some())) {
-                let (count, matches) = (matches.len(), Rc::new(matches));
+            let virtualized = virtualized(matches.len(), all.iter().any(|c| c.detail.is_some()));
+            let hint_rows = usize::from(hint.is_some());
+            let list = if virtualized {
+                let (count, matches) = (matches.len(), matches.clone());
                 div()
                     .flex()
                     .flex_col()
                     .p_1()
-                    .children(hint)
                     .child(
-                        uniform_list("search-select-list", count, move |range, _, _| {
-                            range.map(|position| row(position, matches[position])).collect()
-                        })
-                        .h(px(VIRTUAL_LIST_HEIGHT)),
+                        div().id("search-select-virtual").role(Role::ListBox).children(hint).child(
+                            uniform_list("search-select-list", count, move |range, _, _| {
+                                range.map(|position| row(position, matches[position])).collect()
+                            })
+                            .track_scroll(&virtual_scroll)
+                            .h(px(VIRTUAL_LIST_HEIGHT)),
+                        ),
                     )
                     .into_any_element()
             } else {
                 div()
                     .id("search-select-list")
+                    .role(Role::ListBox)
+                    .track_scroll(&scroll)
                     .flex()
                     .flex_col()
                     .p_1()
@@ -555,9 +669,68 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
                     })
                     .into_any_element()
             };
+            let initial = current.clone().filter(|_| !searchable);
+            let (for_move, move_matches, move_navigation) =
+                (all.clone(), matches.clone(), navigation.clone());
+            let step = Rc::new(move |down: bool, cx: &mut App| {
+                let Some(last) = move_matches.len().checked_sub(1) else { return };
+                move_navigation.update(cx, |state, cx| {
+                    let active = active_position(state.active.as_ref(), &for_move, &move_matches);
+                    let start =
+                        active.or_else(|| active_position(initial.as_ref(), &for_move, &move_matches));
+                    let next = match (start, down) {
+                        (None, true) => 0,
+                        (None, false) => last,
+                        (Some(position), true) => (position + 1).min(last),
+                        (Some(position), false) => position.saturating_sub(1),
+                    };
+                    if active == Some(next) {
+                        return;
+                    }
+                    let choice = &for_move[move_matches[next]];
+                    state.active = Some(choice.value.clone());
+                    if virtualized {
+                        state.virtual_scroll.scroll_to_item(next, ScrollStrategy::Center);
+                    } else {
+                        state.scroll.scroll_to_item(next + hint_rows);
+                    }
+                    // Search holds focus on a sibling of the options, so GPUI's active
+                    // descendant focus cannot announce the keyboard highlight there.
+                    if searchable {
+                        crate::platform::a11y::announce(&choice.label, false);
+                    }
+                    cx.notify();
+                });
+            });
+            let (up, down) = (step.clone(), step);
+            let pick = on_pick.clone();
+            let current = current.clone().filter(|_| query.trim().is_empty());
             div()
+                .id("search-select-content")
                 .flex()
                 .flex_col()
+                // The search field normally supplies these action bindings. In the short
+                // version the list itself keeps keyboard focus.
+                .when(!searchable, |d| d.track_focus(&focus).key_context("Input"))
+                .capture_action(move |_: &MoveUp, _, cx| {
+                    cx.stop_propagation();
+                    up(false, cx);
+                })
+                .capture_action(move |_: &MoveDown, _, cx| {
+                    cx.stop_propagation();
+                    down(true, cx);
+                })
+                .capture_action(move |action: &Enter, window, cx| {
+                    if !action.shift && !action.secondary {
+                        cx.stop_propagation();
+                        let active = active_position(navigation.read(cx).active.as_ref(), &all, &matches);
+                        let chosen =
+                            active.or_else(|| active_position(current.as_ref(), &all, &matches)).unwrap_or(0);
+                        if let (Some(pick), Some(ix)) = (&pick, matches.get(chosen)) {
+                            pick(&all[*ix].value, window, cx);
+                        }
+                    }
+                })
                 .when(searchable, |d| {
                     d.child(search_row(ui, compact, {
                         let input = Input::new(&search).appearance(false);
@@ -568,6 +741,10 @@ impl<V: Clone + PartialEq + 'static> SearchSelect<V> {
                 .children(footer)
         })
     }
+}
+
+fn active_position<V: PartialEq>(active: Option<&V>, all: &[Choice<V>], matches: &[usize]) -> Option<usize> {
+    active.and_then(|active| matches.iter().position(|&ix| all[ix].value == *active))
 }
 
 /// A line of explanation under a panel menu's options, past a hairline.
@@ -595,11 +772,18 @@ fn option_row<V: Clone + PartialEq + 'static>(
     choice: &Choice<V>,
     ui: UiColors,
     current: Option<&V>,
+    active: bool,
     compact: bool,
     on_pick: Option<Pick<V>>,
 ) -> Stateful<Div> {
     let value = choice.value.clone();
-    option(("search-option", position), ui, current == Some(&choice.value), compact)
+    let selected = current == Some(&choice.value);
+    option(("search-option", position), ui, selected, compact)
+        .role(Role::ListBoxOption)
+        .aria_label(choice.label.clone())
+        .aria_selected(selected)
+        .when_some(choice.detail.clone(), |d, detail| d.aria_description(detail))
+        .when(active, |d| d.bg(ui.list_selected).text_color(ui.list_selected_text).aria_active_descendant())
         .children(choice.mark.map(|(icon, color)| Icon::new(icon).xsmall().text_color(color).flex_none()))
         .child(
             div()
@@ -608,12 +792,13 @@ fn option_row<V: Clone + PartialEq + 'static>(
                 .flex()
                 .flex_col()
                 .child(div().truncate().child(choice.label.clone()))
-                .children(
-                    choice
-                        .detail
-                        .clone()
-                        .map(|d| div().truncate().text_caption().text_color(ui.muted).child(d)),
-                ),
+                .children(choice.detail.clone().map(|d| {
+                    div()
+                        .truncate()
+                        .text_caption()
+                        .text_color(if active { ui.list_selected_muted } else { ui.muted })
+                        .child(d)
+                })),
         )
         .on_click(move |_, window, cx| {
             if let Some(pick) = &on_pick {

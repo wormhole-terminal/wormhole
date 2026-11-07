@@ -83,9 +83,21 @@ impl Checkbox {
 }
 
 impl RenderOnce for Checkbox {
-    fn render(self, _: &mut Window, _: &mut App) -> impl IntoElement {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
         let Checkbox { id, ui, checked, form, label, spoken, on_change, ring } = self;
         let (side, mark) = if form { (BOX_FORM, MARK_FORM) } else { (BOX, MARK) };
+        let focus = form.then(|| {
+            window.with_id(id.clone(), |window| {
+                window
+                    .use_keyed_state("checkbox-focus", cx, |_, cx| cx.focus_handle())
+                    .read(cx)
+                    .clone()
+                    .tab_stop(true)
+            })
+        });
+        let ring = ring
+            || focus.as_ref().is_some_and(|focus| focus.is_focused(window))
+                && window.last_input_was_keyboard();
         let indicator = CheckboxIndicator::new()
             .checked(checked)
             .relative()
@@ -109,7 +121,8 @@ impl RenderOnce for Checkbox {
             .checked(checked)
             // The workspace moves the keyboard through its lists itself; a box of its own
             // would be one more stop in every row.
-            .tab_stop(false)
+            .tab_stop(form)
+            .when_some(focus, |d, focus| d.track_focus(&focus))
             .when_some(spoken, |d, text| d.accessibility_label(text))
             .when_some(on_change, |d, on_change| {
                 d.on_change(move |_, _, window, cx| {

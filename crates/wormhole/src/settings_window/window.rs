@@ -21,9 +21,10 @@ use wormhole_core::config::settings_index::{self, Query};
 use wormhole_core::theme::fonts::FontSlot;
 
 use super::font_picker::FontPickerState;
+use super::registry::update_row;
 use crate::app_state::app;
 use crate::platform::vibrancy::Blur;
-use crate::settings::{SettingsStore, update_settings};
+use crate::settings::SettingsStore;
 use crate::settings::{UiColors, settings};
 use crate::style::TitleDrag as _;
 use crate::style::{self, TextRole};
@@ -54,7 +55,7 @@ impl SettingsWindow {
                 let hex = theme_bridge::color(*color).with_alpha(1.0).to_hex();
                 // Dragging a slider fires for shades that round to the same hex.
                 if settings(cx).primary_color != hex {
-                    update_settings(cx, |s| s.choose_primary(hex));
+                    update_row("primary-color", cx, |s| s.choose_primary(hex));
                 }
             }),
             cx.subscribe_in(&branch_picker, window, |_, _, event: &ColorPickerEvent, _, cx| {
@@ -62,7 +63,7 @@ impl SettingsWindow {
                 let hex = theme_bridge::color(*color).with_alpha(1.0).to_hex();
                 let s = settings(cx);
                 if s.branch_color != BranchColor::Custom || s.branch_color_custom != hex {
-                    update_settings(cx, |s| s.choose_branch_color(hex));
+                    update_row("branch-color", cx, |s| s.choose_branch_color(hex));
                 }
             }),
             cx.subscribe_in(&search, window, |this, input, event: &InputEvent, _, cx| {
@@ -80,8 +81,9 @@ impl SettingsWindow {
                     cx.notify();
                 }
             }),
-            cx.subscribe_in(&font_picker.search, window, |_, _, event: &InputEvent, _, cx| {
+            cx.subscribe_in(&font_picker.search, window, |this, _, event: &InputEvent, _, cx| {
                 if let InputEvent::Change = event {
+                    this.font_picker.clear_keyboard_choice();
                     cx.notify();
                 }
             }),
@@ -90,7 +92,7 @@ impl SettingsWindow {
                 let opacity = (slider_value(value) / 100.0).clamp(0.3, 1.0);
                 // Against the opacity asked for: Reduce Transparency's 100 % is not a setting.
                 if (cx.global::<SettingsStore>().asked_opacity() - opacity).abs() > f32::EPSILON {
-                    update_settings(cx, |s| s.opacity = opacity);
+                    update_row("opacity", cx, |s| s.opacity = opacity);
                 }
             }),
             cx.subscribe(&line_height_slider, |_, _, event: &SliderEvent, cx| {
@@ -98,7 +100,7 @@ impl SettingsWindow {
                 // Steps of 0.05, without the float noise the slider adds.
                 let line_height = (slider_value(value) * 20.0).round() / 20.0;
                 if (settings(cx).line_height - line_height).abs() > f32::EPSILON {
-                    update_settings(cx, |s| s.line_height = line_height);
+                    update_row("line-height", cx, |s| s.line_height = line_height);
                 }
             }),
         ];
@@ -170,6 +172,8 @@ impl SettingsWindow {
             rem: window.rem_size(),
             blur,
             focus_handle,
+            nav_focus: Section::ALL.into_iter().map(|section| (section, cx.focus_handle())).collect(),
+            nav_scroll: ScrollHandle::new(),
             _subscriptions: subscriptions,
             _refresh: refresh,
         };
@@ -209,6 +213,21 @@ impl SettingsWindow {
         if front != self.front {
             self.front = front;
             cx.notify();
+        }
+    }
+
+    /// A link or an external command can remove the focused control when it changes pages.
+    /// Continue keyboard navigation from the destination in the sidebar.
+    pub(super) fn navigate_to(&mut self, section: Section, window: &mut Window, cx: &mut Context<Self>) {
+        let changed = self.section != section || self.show_results;
+        self.show_section(section, cx);
+        if changed {
+            let focus = if section == Section::Profile || !section.is_visible(settings(cx)) {
+                &self.focus_handle
+            } else {
+                &self.nav_focus[&section]
+            };
+            focus.focus(window, cx);
         }
     }
 
@@ -485,7 +504,9 @@ impl SettingsWindow {
                         .outline()
                         .small()
                         .label(text(SETTINGS_WINDOW_FEATURE_FLAGS))
-                        .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::FeatureFlags, cx))),
+                        .on_click(cx.listener(|this, _, window, cx| {
+                            this.navigate_to(Section::FeatureFlags, window, cx)
+                        })),
                 )
                 .into_any_element(),
             );

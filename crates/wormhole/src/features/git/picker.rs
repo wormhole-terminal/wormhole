@@ -241,6 +241,8 @@ pub(crate) struct PickerChip<H: PickerHost> {
 impl<H: PickerHost> PickerChip<H> {
     pub(crate) fn render(&self, ui: UiColors, cx: &App) -> AnyElement {
         let (kind, prefix, session) = (self.kind, self.prefix, self.session);
+        let branch: SharedString =
+            self.branch.as_deref().map_or_else(|| "HEAD".to_string(), rev_label).into();
         let label = div()
             .flex()
             .items_center()
@@ -250,9 +252,7 @@ impl<H: PickerHost> PickerChip<H> {
             .when(self.branch.is_some(), |d| {
                 d.child(Icon::new(IconName::GitBranch).xsmall().text_color(ui.branch).flex_none())
             })
-            .child(div().min_w_0().truncate().child(SharedString::from(
-                self.branch.as_deref().map_or_else(|| "HEAD".to_string(), rev_label),
-            )));
+            .child(div().min_w_0().truncate().child(branch.clone()));
         let id = match kind {
             Picker::Compare => "compare-chip",
             Picker::History => "history-chip",
@@ -262,7 +262,9 @@ impl<H: PickerHost> PickerChip<H> {
         let select = SearchSelect::new(
             id,
             ui,
-            SelectTrigger::new(SharedString::from(format!("{id}-trigger")), ui, label).compact(),
+            SelectTrigger::new(SharedString::from(format!("{id}-trigger")), ui, label)
+                .accessibility(text(keys::TITLE_ROW_PART_BRANCH), branch)
+                .compact(),
             &self.search,
             cx,
         )

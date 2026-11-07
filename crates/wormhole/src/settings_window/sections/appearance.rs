@@ -9,6 +9,8 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::color_picker::{ColorPicker, ColorPickerState};
+use gpui_kit::prelude::FluentBuilder;
+
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
 use wormhole_core::config::{BranchColor, ThemeMode};
@@ -24,7 +26,7 @@ use super::{open_button, stage, title_row};
 use crate::select::Choice;
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
-use crate::settings_window::registry::{ProjectSource, Segment, Setting, toggle};
+use crate::settings_window::registry::{ProjectSource, Segment, Setting, project_sets, toggle, update_row};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
 use crate::style::{self};
 use crate::theme_bridge;
@@ -80,7 +82,13 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("status-bar", status_bar),
     toggle!("icon-animations", icon_animations),
     Setting::custom("title-row", title_row::draw_control).below(title_row::draw_parts),
-    Setting::custom("icon-theme", draw_icon_select),
+    Setting::select(
+        "icon-theme",
+        style::SELECT_W,
+        |_| crate::icons::available().into_iter().map(|name| Choice::new(name.clone(), name)).collect(),
+        |s| s.icon_theme.clone(),
+        |s, name| s.icon_theme = name.to_string(),
+    ),
     Setting::custom("icon-themes-folder", |_, _| {
         open_button(
             "icon-themes-folder",
@@ -107,7 +115,7 @@ fn describe_primary(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
 /// elsewhere, and the "+" that picks any color.
 fn draw_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let store = cx.global::<SettingsStore>();
-    if store.settings.uses_theme_primary() {
+    if store.settings.uses_theme_primary() || project_sets("primary-color", cx) {
         return None;
     }
     let base = store.base_tokens();
@@ -115,7 +123,15 @@ fn draw_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> O
     // The theme's own colors, without the one its primary already is.
     let theme_primary = base.get("primary").map(|c| c.with_alpha(1.0));
     let colors = offered(base, &[2, 5, 1, 3, 6, 4], theme_primary, chosen);
-    Some(swatch_row("primary-swatch", colors, chosen, &window.primary_picker, Settings::choose_primary, cx))
+    Some(swatch_row(
+        "primary-color",
+        "primary-swatch",
+        colors,
+        chosen,
+        &window.primary_picker,
+        Settings::choose_primary,
+        cx,
+    ))
 }
 
 /// "Pick a colour below · the theme's is …" while Custom is chosen and nothing is picked yet;
@@ -133,7 +149,7 @@ fn describe_branch(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opti
 /// color. A pick that would not read on the window is made readable, as the theme's is.
 fn draw_branch_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Option<AnyElement> {
     let store = cx.global::<SettingsStore>();
-    if store.settings.branch_color != BranchColor::Custom {
+    if store.settings.branch_color != BranchColor::Custom || project_sets("branch-color", cx) {
         return None;
     }
     let chosen = match store.settings.branch_tint() {
@@ -142,6 +158,7 @@ fn draw_branch_swatches(window: &SettingsWindow, cx: &mut Context<SettingsWindow
     };
     let colors = offered(store.base_tokens(), &[5, 1, 3, 2, 6, 4], None, chosen);
     Some(swatch_row(
+        "branch-color",
         "branch-swatch",
         colors,
         chosen,
@@ -169,6 +186,7 @@ fn offered(base: &ThemeTokens, ansi: &[usize], skip: Option<Color>, chosen: Opti
 /// A row of swatches, the `chosen` one marked, that `choose` a color by its hex, then
 /// `picker`'s "+" for any other.
 fn swatch_row(
+    row: &'static str,
     id: &'static str,
     colors: Vec<Color>,
     chosen: Option<Color>,
@@ -185,7 +203,8 @@ fn swatch_row(
             let hex = color.to_hex();
             let picked = chosen.is_some_and(|c| c.to_hex() == hex);
             style::swatch((id, ix), ui, theme_bridge::hsla(color), picked)
-                .on_click(move |_, _, cx| update_settings(cx, |s| choose(s, hex.clone())))
+                .aria_label(hex.clone())
+                .on_click(move |_, _, cx| update_row(row, cx, |s| choose(s, hex.clone())))
         }))
         .child(ColorPicker::new(picker).icon(IconName::Plus).anchor(Anchor::TopRight))
         .into_any_element()
@@ -223,13 +242,15 @@ fn blur_off_warning(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Opt
     let look = Translucency { opacity: s.opacity, blur: s.blur };
     look.unsafe_without_blur().then(|| {
         style::banner(ui(cx), style::BannerKind::Warning, false, text(SETTINGS_APPEARANCE_BLUR_OFF_WARNING))
-            .child(
-                Button::new("blur-on")
-                    .ghost()
-                    .small()
-                    .label(text(SETTINGS_APPEARANCE_TURN_ON_BLUR))
-                    .on_click(|_, _, cx| update_settings(cx, |s| s.blur = true)),
-            )
+            .when(!project_sets("blur", cx), |banner| {
+                banner.child(
+                    Button::new("blur-on")
+                        .ghost()
+                        .small()
+                        .label(text(SETTINGS_APPEARANCE_TURN_ON_BLUR))
+                        .on_click(|_, _, cx| update_row("blur", cx, |s| s.blur = true)),
+                )
+            })
             .into_any_element()
     })
 }
@@ -272,20 +293,6 @@ fn draw_translucent(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
         .into_any_element()
 }
 
-fn draw_icon_select(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let current = settings(cx).icon_theme.clone();
-    let choices = crate::icons::available().into_iter().map(|name| Choice::new(name.clone(), name)).collect();
-    window.select(
-        "icon-theme",
-        div().child(current.clone()).into_any_element(),
-        style::SELECT_W,
-        choices,
-        current,
-        |s, name| s.icon_theme = name.to_string(),
-        cx,
-    )
-}
-
 /// The project's theme notice, the filter and the cards, and the ways to more themes.
 fn draw_theme(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
@@ -309,9 +316,9 @@ fn draw_theme(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyE
                     .ghost()
                     .small()
                     .label(text(SETTINGS_APPEARANCE_PROJECT_SETTINGS))
-                    .on_click(cx.listener(move |this, _, _, cx| {
+                    .on_click(cx.listener(move |this, _, window, cx| {
                         this.projects.select(root.clone());
-                        this.show_section(Section::Projects, cx);
+                        this.navigate_to(Section::Projects, window, cx);
                     })),
             )
         }))

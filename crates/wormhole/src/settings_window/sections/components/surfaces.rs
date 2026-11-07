@@ -1,10 +1,10 @@
 //! Surfaces and blocks: banners, notes, cards, disclosure rows, the nav, the preview's frame and what the
 //! Theme Studio's gallery already draws of them.
 
+use crate::style::Button;
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::ButtonVariants;
-use crate::style::Button;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use style::{BannerKind, StatusGlyph, StatusTile, TileFace};
@@ -32,7 +32,7 @@ pub(super) fn draw(sheet: &Sheet, cx: &App) -> AnyElement {
         ))
         .child(category(
             ui,
-            "Cards, groups and disclosure",  // text: sample (a category's head)
+            "Cards, groups and disclosure", // text: sample (a category's head)
             "flat_card, choice_card, disclosure", // text: sample (a category's head)
             cards(sheet, cx),
         ))
@@ -130,7 +130,8 @@ fn cards(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
         .child(Button::new("components-copy").outline().small().icon(IconName::Copy).label("Copy as JSON")) // text: sample (a button's label)
         .child(Button::new("components-reset").danger().outline().small().label("Reset all…")); // text: sample (a button's label)
     let choices = div().flex().gap_2().w_full().children(
-        Preset::ALL.iter().zip(["Zen", "Balanced", "Everything"]).enumerate().map(|(ix, (preset, name))| { // text: sample (a developer label)
+        Preset::ALL.iter().zip(["Zen", "Balanced", "Everything"]).enumerate().map(|(ix, (preset, name))| {
+            // text: sample (a developer label)
             let state = sheet.state.clone();
             style::choice_card(("components-card", ix), ui, ix == now.card)
                 .flex_1()
@@ -141,14 +142,7 @@ fn cards(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
                     })
                 })
                 .child(div().p_2().child(style::window_sketch(ui, &Shown::of(*preset), SKETCH_TOOLS)))
-                .child(
-                    div()
-                        .px_2()
-                        .pb_2()
-                        .text_caption()
-                        .text_color(if ix == now.card { ui.primary } else { ui.text })
-                        .child(name),
-                )
+                .child(div().px_2().pb_2().text_caption().child(name))
         }),
     );
     let folded = now.folded;

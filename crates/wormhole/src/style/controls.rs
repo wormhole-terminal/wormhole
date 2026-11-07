@@ -1,6 +1,8 @@
 //! Controls and small chrome: the inset row, tabs and chips, segmented switches, key caps
 //! and color swatches.
 
+use std::rc::Rc;
+
 use gpui_kit::assets::IconName;
 use gpui_kit::base::{Transition, transition};
 use gpui_kit::component::{Icon, Sizable};
@@ -10,7 +12,7 @@ use gpui_kit::*;
 use super::buttons::tooltip_delay;
 use super::icon_motion::TabGlyph;
 use super::labels::{count_badge, selected_count_badge};
-use super::motion::{EASE_IN_OUT, MOTION_BASE};
+use super::motion::{EASE_IN_OUT, MOTION_BASE, SelectionFill};
 use super::scale::{CONTROL_H, CONTROL_H_SM, Edges, KEYCAP_H, KEYCAP_MIN_W, ROW_H, SWATCH, TextRole};
 use crate::settings::UiColors;
 
@@ -269,6 +271,79 @@ pub fn segmented_form(ui: UiColors) -> Div {
         .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.border_strong))
 }
 
+/// A settings segmented control with one Tab stop and arrow-key selection.
+#[derive(IntoElement)]
+pub struct FormSegments {
+    id: ElementId,
+    ui: UiColors,
+    options: Vec<(Option<IconName>, SharedString)>,
+    active: usize,
+    on_change: Rc<dyn Fn(usize, &mut Window, &mut App)>,
+}
+
+#[track_caller]
+pub fn form_segments(
+    id: impl Into<ElementId>,
+    ui: UiColors,
+    options: impl IntoIterator<Item = (Option<IconName>, SharedString)>,
+    active: usize,
+    on_change: impl Fn(usize, &mut Window, &mut App) + 'static,
+) -> FormSegments {
+    FormSegments {
+        id: id.into(),
+        ui,
+        options: options.into_iter().collect(),
+        active,
+        on_change: Rc::new(on_change),
+    }
+}
+
+impl RenderOnce for FormSegments {
+    fn render(self, window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let Self { id, ui, options, active, on_change } = self;
+        let focus: Rc<[FocusHandle]> = window.with_id(id.clone(), |window| {
+            options
+                .iter()
+                .enumerate()
+                .map(|(ix, _)| {
+                    window
+                        .use_keyed_state(("segment-focus", ix), cx, |_, cx| cx.focus_handle())
+                        .read(cx)
+                        .clone()
+                })
+                .collect()
+        });
+        let count = options.len();
+        segmented_form(ui).id(id).role(Role::RadioGroup).children(options.into_iter().enumerate().map(
+            |(ix, (icon, label))| {
+                let click = on_change.clone();
+                let keyboard = on_change.clone();
+                let focus = focus.clone();
+                form_segment(ix, ui, icon, label, ix == active)
+                    .track_focus(&focus[ix].clone().tab_stop(ix == active))
+                    .aria_position_in_set(ix + 1)
+                    .aria_size_of_set(count)
+                    .on_click(move |_, window, cx| click(ix, window, cx))
+                    .on_key_down(move |event, window, cx| {
+                        if event.keystroke.modifiers != Modifiers::none() {
+                            return;
+                        }
+                        let next = match event.keystroke.key.as_str() {
+                            "left" | "up" => (ix + count - 1) % count,
+                            "right" | "down" => (ix + 1) % count,
+                            "home" => 0,
+                            "end" => count - 1,
+                            _ => return,
+                        };
+                        cx.stop_propagation();
+                        keyboard(next, window, cx);
+                        focus[next].focus(window, cx);
+                    })
+            },
+        ))
+    }
+}
+
 /// One option of a [`segmented_form`], with an optional icon before its label ("Dark",
 /// "Light", "Match system"); add `.on_click(…)`. The chosen one is a pill in `control.selected` with
 /// a soft shadow, in the text colour; the others are muted and fill on hover.
@@ -280,8 +355,17 @@ pub fn form_segment(
     label: impl Into<SharedString>,
     active: bool,
 ) -> Stateful<Div> {
+    let label = label.into();
     div()
         .id(id)
+        .role(Role::RadioButton)
+        .aria_label(label.clone())
+        .aria_selected(active)
+        .aria_toggled(if active { Toggled::True } else { Toggled::False })
+        .focusable()
+        .tab_stop(true)
+        .focus_visible(move |d| d.focus_outline(ui))
+        .relative()
         .flex()
         .items_center()
         .gap(px(SEGMENT_ICON_GAP))
@@ -293,11 +377,16 @@ pub fn form_segment(
         .font_weight(FontWeight::MEDIUM)
         .cursor_pointer()
         .text_color(if active { ui.text } else { ui.muted })
-        .when(active, |d| d.bg(ui.control_selected).shadow(segment_lift(ui)))
+        .when(active, |d| d.shadow(segment_lift(ui)))
         .when(active && ui.increase_contrast, |d| d.outlined_always(ui, ui.border_strong))
         .hover(move |d| if active { d } else { d.bg(ui.control_hover).text_color(ui.text) })
+        .child(SelectionFill {
+            selected: active,
+            color: ui.control_selected,
+            radius: (ui.radius - px(SEGMENT_INSET)).max(px(0.0)),
+        })
         .children(icon.map(|icon| Icon::new(icon).with_size(px(super::scale::GLYPH))))
-        .child(label.into())
+        .child(label)
 }
 
 /// The lift of a chosen segment: a hair of shadow under it, enough to read as raised on the track.
@@ -319,6 +408,12 @@ pub fn swatch(id: impl Into<ElementId>, ui: UiColors, color: Hsla, chosen: bool)
     let ring = UiColors { border_width: px(SWATCH_RING), ..ui };
     div()
         .id(id)
+        .role(Role::RadioButton)
+        .aria_selected(chosen)
+        .aria_toggled(if chosen { Toggled::True } else { Toggled::False })
+        .focusable()
+        .tab_stop(true)
+        .focus_visible(move |d| d.focus_outline(ui))
         .flex_none()
         .flex()
         .items_center()

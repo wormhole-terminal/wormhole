@@ -194,7 +194,6 @@ impl FirstRun {
                             .pb_2()
                             .text_caption()
                             .font_weight(if on { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM })
-                            .text_color(if on { ui.primary } else { ui.text })
                             .child(style::keycap(ui, (ix + 1).to_string()))
                             .child(div().flex_1().min_w_0().child(label)),
                     )

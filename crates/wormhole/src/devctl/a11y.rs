@@ -27,15 +27,29 @@ pub(super) fn a11y(ctx: &mut Ctx, arg: &str) -> Result<String> {
             .collect()),
         "" => {
             crate::platform::a11y::wake_tree(ctx.window);
-            ctx.wait = Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| dump(this, cx, true).await));
+            ctx.wait =
+                Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| dump(this, cx, true, None).await));
             Ok(String::new())
         }
         "live" => {
-            ctx.wait = Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| dump(this, cx, false).await));
+            ctx.wait =
+                Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| dump(this, cx, false, None).await));
             Ok(String::new())
         }
         other => Err(anyhow!("expected nothing, `live` or `said`, got {other:?}")),
     }
+}
+
+/// The Settings window's tree, built through the same path as the workspace's.
+pub(super) fn settings_a11y(ctx: &mut Ctx, _: &str) -> Result<String> {
+    let handle =
+        crate::settings_window::devctl::handle(ctx.cx).ok_or_else(|| anyhow!("settings window not open"))?;
+    ctx.cx.defer(move |cx| {
+        handle.update(cx, |_, window, _| crate::platform::a11y::wake_tree(window)).ok();
+    });
+    ctx.wait =
+        Some(ctx.cx.spawn_in(ctx.window, async move |this, cx| dump(this, cx, true, Some(handle)).await));
+    Ok(String::new())
 }
 
 /// `keyboard-navigation on|off|system`: stand in for macOS's Keyboard navigation (⇥ reaches the
@@ -79,16 +93,27 @@ pub(super) fn minimise(ctx: &mut Ctx, _: &str) -> Result<String> {
 
 /// Draw until GPUI has built the tree (it builds it from the frame after it was woken), then
 /// print it. `refresh`: drop GPUI's caches before each frame; without it a frame replays what it can.
-async fn dump(_: WeakEntity<Workspace>, cx: &mut AsyncWindowContext, refresh: bool) -> String {
+async fn dump(
+    _: WeakEntity<Workspace>,
+    cx: &mut AsyncWindowContext,
+    refresh: bool,
+    target: Option<AnyWindowHandle>,
+) -> String {
     let start = cx.background_executor().now();
     loop {
         // Outside the workspace's update: drawing renders it.
         let tree = cx.update(|window, cx| {
-            if refresh {
-                window.refresh();
+            let read = |window: &mut Window, cx: &mut App| {
+                if refresh {
+                    window.refresh();
+                }
+                window.draw(cx).clear(cx);
+                window.is_a11y_active().then(|| window.debug_a11y_tree_json()).flatten()
+            };
+            match target {
+                Some(handle) => handle.update(cx, |_, window, cx| read(window, cx)).ok().flatten(),
+                None => read(window, cx),
             }
-            window.draw(cx).clear(cx);
-            window.is_a11y_active().then(|| window.debug_a11y_tree_json()).flatten()
         });
         match tree {
             Err(_) => return "a11y failed: the window closed\n".into(),

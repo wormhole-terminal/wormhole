@@ -55,6 +55,8 @@ pub enum Check {
 #[derive(Clone)]
 pub struct Item {
     pub title: SharedString,
+    /// A second line below the title, such as the command a shell profile runs.
+    pub detail: Option<SharedString>,
     pub enabled: bool,
     pub check: Check,
     /// The key shown beside the title (the action's own key; the menu doesn't bind it).
@@ -65,7 +67,20 @@ pub struct Item {
 
 impl Item {
     pub fn new(title: impl Into<SharedString>) -> Self {
-        Self { title: title.into(), enabled: true, check: Check::Off, key: None, icon: None, on_select: None }
+        Self {
+            title: title.into(),
+            detail: None,
+            enabled: true,
+            check: Check::Off,
+            key: None,
+            icon: None,
+            on_select: None,
+        }
+    }
+
+    pub fn detail(mut self, detail: impl Into<SharedString>) -> Self {
+        self.detail = Some(detail.into());
+        self
     }
 
     pub fn checked(mut self, checked: bool) -> Self {

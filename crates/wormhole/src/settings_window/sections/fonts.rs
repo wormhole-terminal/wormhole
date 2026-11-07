@@ -40,7 +40,22 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("font-ligatures", font_ligatures),
     Setting::custom("font-code", |w, cx| w.font_control(FontSlot::Code, cx)),
     Setting::custom("font-interface", |w, cx| w.font_control(FontSlot::Interface, cx)),
-    Setting::custom("settings-text-size", draw_text_size),
+    Setting::select(
+        "settings-text-size",
+        style::SELECT_W,
+        |_| {
+            TextSize::ALL
+                .iter()
+                .map(|size| Choice::new(size.name().to_string(), text_size_label(*size)))
+                .collect()
+        },
+        |s| s.settings_text_size.name().to_string(),
+        |s, name| {
+            if let Some(size) = TextSize::from_name(name) {
+                s.settings_text_size = size;
+            }
+        },
+    ),
     Setting::custom("fonts-folder", |_, _| {
         open_button("fonts-folder", IconName::ExternalLink, text(SETTINGS_FONTS_OPEN_FONTS_FOLDER), |cx| {
             open_folder(&crate::active_profile::paths().fonts_dir(), cx)
@@ -57,29 +72,6 @@ fn text_size_label(size: TextSize) -> &'static str {
         TextSize::Large => SETTINGS_FONTS_TEXT_SIZE_LARGE,
         TextSize::Larger => SETTINGS_FONTS_TEXT_SIZE_LARGER,
     })
-}
-
-/// The Settings text size: a select of the four steps, applied to this window and the Theme Studio as
-/// soon as it is picked (`style::text_scale`).
-fn draw_text_size(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let current = settings(cx).settings_text_size;
-    let choices = TextSize::ALL
-        .iter()
-        .map(|size| Choice::new(size.name().to_string(), text_size_label(*size)))
-        .collect();
-    window.select(
-        "settings-text-size",
-        div().child(text_size_label(current)).into_any_element(),
-        style::SELECT_W,
-        choices,
-        current.name().to_string(),
-        |s, name| {
-            if let Some(size) = TextSize::from_name(name) {
-                s.settings_text_size = size;
-            }
-        },
-        cx,
-    )
 }
 
 /// "2 families found: Berkeley Mono, Monaspace Neon".

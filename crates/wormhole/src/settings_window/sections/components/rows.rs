@@ -204,7 +204,9 @@ fn states(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
                             "Theme",                                                                // text: sample (a row's label)
                             "Set by api-server/.wormhole/theme.json while this terminal is active", // text: sample (a row's description)
                             SettingState::Project("api-server".into()), // text: sample (a project's name)
-                            style::toggle("components-project-switch", true, |_, _, _| {}).into_any_element(),
+                            style::toggle("components-project-switch", true, |_, _, _| {})
+                                .disabled(true)
+                                .into_any_element(),
                         )
                     },
                     cx,
@@ -290,19 +292,20 @@ fn controls(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
                     options: &[(Option<IconName>, &'static str)],
                     current: usize,
                     pick: fn(&mut super::Now, usize)| {
-        let mut control = style::segmented_form(ui);
-        for (ix, (icon, label)) in options.iter().enumerate() {
-            let state = sheet.state.clone();
-            control = control.child(
-                style::form_segment((id, ix), ui, *icon, *label, ix == current).on_click(move |_, _, cx| {
-                    state.update(cx, |s, cx| {
-                        pick(&mut s.now, ix);
-                        cx.notify();
-                    })
-                }),
-            );
-        }
-        control.into_any_element()
+        let state = sheet.state.clone();
+        style::form_segments(
+            id,
+            ui,
+            options.iter().map(|(icon, label)| (*icon, (*label).into())),
+            current,
+            move |ix, _, cx| {
+                state.update(cx, |s, cx| {
+                    pick(&mut s.now, ix);
+                    cx.notify();
+                });
+            },
+        )
+        .into_any_element()
     };
     let checks = (0..3).fold(div().flex().flex_col().gap_2(), |column, ix| {
         let state = sheet.state.clone();
@@ -348,7 +351,9 @@ fn controls(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
         SearchSelect::new(
             "components-select",
             ui,
-            SelectTrigger::new("components-select-trigger", ui, now.select_value.clone()).width(px(width)),
+            SelectTrigger::new("components-select-trigger", ui, now.select_value.clone())
+                .accessibility("Theme", now.select_value.clone()) // text: sample (a select label)
+                .width(px(width)),
             &now.menu_search,
             cx,
         )
@@ -424,8 +429,8 @@ fn controls(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
                         segments(
                             "components-seg-b", // text: not shown (a row's id)
                             &[
-                                (Some(IconName::Moon), "Dark"), // text: sample (a developer label)
-                                (Some(IconName::Sun), "Light"), // text: sample (a developer label)
+                                (Some(IconName::Moon), "Dark"),            // text: sample (a developer label)
+                                (Some(IconName::Sun), "Light"),            // text: sample (a developer label)
                                 (Some(IconName::Monitor), "Match system"), // text: sample (a developer label)
                             ], // text: sample (segments)
                             now.segment_icons,

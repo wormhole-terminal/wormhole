@@ -16,7 +16,7 @@ use wormhole_text::text;
 
 use super::MotionScene;
 use crate::select::Choice;
-use crate::settings::{Settings, settings};
+use crate::settings::Settings;
 use crate::settings_window::SettingsWindow;
 use crate::settings_window::registry::Setting;
 use crate::style;
@@ -62,21 +62,37 @@ macro_rules! pick {
 }
 
 pub(super) const SETTINGS: &[Setting] = &[
-    Setting::custom("motion-insert", |w, cx| {
-        select(w, "motion-insert", INSERT, settings(cx).motion.insert, pick!(insert), cx)
-    })
+    Setting::select(
+        "motion-insert",
+        style::SELECT_W,
+        |_| choices(INSERT),
+        |s| s.motion.insert.name().to_string(),
+        pick!(insert),
+    )
     .touched(|w, cx| w.show_motion(MotionScene::Insert, cx)),
-    Setting::custom("motion-fold", |w, cx| {
-        select(w, "motion-fold", FOLD, settings(cx).motion.fold, pick!(fold), cx)
-    })
+    Setting::select(
+        "motion-fold",
+        style::SELECT_W,
+        |_| choices(FOLD),
+        |s| s.motion.fold.name().to_string(),
+        pick!(fold),
+    )
     .touched(|w, cx| w.show_motion(MotionScene::Fold, cx)),
-    Setting::custom("motion-status", |w, cx| {
-        select(w, "motion-status", STATUS, settings(cx).motion.status, pick!(status), cx)
-    })
+    Setting::select(
+        "motion-status",
+        style::SELECT_W,
+        |_| choices(STATUS),
+        |s| s.motion.status.name().to_string(),
+        pick!(status),
+    )
     .touched(|w, cx| w.show_motion(MotionScene::Status, cx)),
-    Setting::custom("motion-column", |w, cx| {
-        select(w, "motion-column", COLUMN, settings(cx).motion.column, pick!(column), cx)
-    })
+    Setting::select(
+        "motion-column",
+        style::SELECT_W,
+        |_| choices(COLUMN),
+        |s| s.motion.column.name().to_string(),
+        pick!(column),
+    )
     .touched(|w, cx| w.show_motion(MotionScene::Column, cx)),
 ];
 
@@ -93,27 +109,8 @@ impl SettingsWindow {
     }
 }
 
-/// The select of one choice: the option in use in its face, every option in its menu.
-fn select<T: MotionChoice>(
-    window: &SettingsWindow,
-    id: &'static str,
-    labels: Labels<T>,
-    current: T,
-    pick: fn(&mut Settings, &str),
-    cx: &mut Context<SettingsWindow>,
-) -> AnyElement {
-    let name_of = |choice: T| labels.iter().find(|(c, _)| *c == choice).map_or("", |(_, key)| text(*key));
-    let choices =
-        labels.iter().map(|(choice, key)| Choice::new(choice.name().to_string(), text(*key))).collect();
-    window.select(
-        id,
-        div().child(name_of(current)).into_any_element(),
-        style::SELECT_W,
-        choices,
-        current.name().to_string(),
-        pick,
-        cx,
-    )
+fn choices<T: MotionChoice>(labels: Labels<T>) -> Vec<Choice<String>> {
+    labels.iter().map(|(choice, key)| Choice::new(choice.name().to_string(), text(*key))).collect()
 }
 
 #[cfg(test)]

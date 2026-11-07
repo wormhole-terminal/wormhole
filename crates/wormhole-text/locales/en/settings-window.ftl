@@ -82,3 +82,8 @@ settings-window-nothing-matches = Nothing matches “{ $query }”
 # A row's quiet line while a project sets it. { $project } and { $dir } name the project and its
 # folder, and { $file } is the project's file that sets it (theme.json or config.json).
 settings-window-set-by-project = Set by { $project }/{ $dir }/{ $file } while one of its terminals is in front; yours is kept
+
+## Stepper buttons spoken by VoiceOver
+
+settings-window-decrease = Decrease
+settings-window-increase = Increase

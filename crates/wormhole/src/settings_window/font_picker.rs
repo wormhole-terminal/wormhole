@@ -15,16 +15,16 @@ use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
 use gpui_kit::component::Sizable;
-use gpui_kit::component::input::{Input, InputState};
+use gpui_kit::component::input::{Enter, Input, InputState, MoveDown, MoveUp};
 use gpui_kit::component::popover::Popover;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::theme::fonts::{FontSlot, FontSource, SYSTEM_FONT, display_name, grouped_font_choices};
 
+use super::registry::{project_sets, update_row};
 use super::{SettingsWindow, ui};
 use crate::fonts::{FontCatalog, LoadedFonts};
 use crate::select::{self, SelectTrigger};
-use crate::settings::update_settings;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::style::{self, Edges, TextRole};
 
@@ -41,8 +41,9 @@ pub(super) struct FontPickerState {
     /// Terminal/code pickers: list proportional fonts too.
     show_all: bool,
     scroll: UniformListScrollHandle,
-    /// The family under the pointer in the open menu, which the specimen shows.
+    /// The family under the pointer or keyboard highlight, shown in the specimen.
     pub(super) hovered: Option<String>,
+    keyboard_choice: Option<String>,
 }
 
 impl FontPickerState {
@@ -53,6 +54,13 @@ impl FontPickerState {
             show_all: false,
             scroll: UniformListScrollHandle::new(),
             hovered: None,
+            keyboard_choice: None,
+        }
+    }
+
+    pub(super) fn clear_keyboard_choice(&mut self) {
+        if self.keyboard_choice.take().is_some() {
+            self.hovered = None;
         }
     }
 }
@@ -66,22 +74,40 @@ enum Entry {
     Family(String),
 }
 
+impl Entry {
+    /// A selectable family's stored value and spoken label. Group headings have neither.
+    fn choice(&self) -> Option<(&str, &str)> {
+        match self {
+            Self::Inherit(label) => Some(("", label)),
+            Self::Family(name) => Some((name, name)),
+            Self::Group(_) => None,
+        }
+    }
+}
+
+fn font_row(slot: FontSlot) -> &'static str {
+    match slot {
+        FontSlot::Terminal => "font-terminal",
+        FontSlot::Interface => "font-interface",
+        FontSlot::Code => "font-code",
+    }
+}
+
 impl SettingsWindow {
     /// Expand `slot`'s picker (collapsing any other), or collapse it.
     pub(super) fn toggle_font_picker(&mut self, slot: FontSlot, window: &mut Window, cx: &mut Context<Self>) {
         let picker = &mut self.font_picker;
         if picker.open == Some(slot) {
             picker.open = None;
-        } else {
+        } else if !project_sets(font_row(slot), cx) {
             FontCatalog::ensure_loaded(cx);
             picker.open = Some(slot);
             picker.show_all = false;
             picker.hovered = None;
+            picker.keyboard_choice = None;
             // The specimen shows the font being picked.
             self.specimen = slot;
             picker.search.update(cx, |input, cx| input.set_value("", window, cx));
-            let focus = picker.search.read(cx).focus_handle(cx);
-            window.focus(&focus, cx);
             if let Some(ix) = self.entries(slot, cx).iter().position(|e| self.is_selected(slot, e, cx)) {
                 self.font_picker.scroll.scroll_to_item(ix, ScrollStrategy::Center);
             }
@@ -128,6 +154,47 @@ impl SettingsWindow {
         }
     }
 
+    fn font_choice_anchor(&self, slot: FontSlot, entries: &[Entry], cx: &App) -> Option<usize> {
+        let search_empty = self.font_picker.search.read(cx).value().trim().is_empty();
+        let value = self
+            .font_picker
+            .keyboard_choice
+            .as_deref()
+            .or_else(|| search_empty.then(|| settings(cx).slot_family(slot)))?;
+        entries.iter().position(|entry| entry.choice().is_some_and(|(choice, _)| choice == value))
+    }
+
+    fn move_font_choice(&mut self, slot: FontSlot, entries: &[Entry], down: bool, cx: &mut Context<Self>) {
+        if self.font_picker.open != Some(slot) {
+            return;
+        }
+        let anchor = self.font_choice_anchor(slot, entries, cx);
+        let rows = entries.iter().enumerate();
+        let next = if down {
+            rows.skip(anchor.map_or(0, |ix| ix + 1))
+                .find_map(|(ix, entry)| entry.choice().map(|choice| (ix, choice)))
+        } else {
+            rows.take(anchor.unwrap_or(entries.len()))
+                .rev()
+                .find_map(|(ix, entry)| entry.choice().map(|choice| (ix, choice)))
+        };
+        if let Some((ix, (value, label))) = next {
+            self.font_picker.keyboard_choice = Some(value.to_owned());
+            self.font_picker.hovered = (!value.is_empty()).then(|| value.to_owned());
+            self.font_picker.scroll.scroll_to_item(ix, ScrollStrategy::Center);
+            crate::platform::a11y::announce(label, false);
+            cx.notify();
+        }
+    }
+
+    fn choose_font(&mut self, slot: FontSlot, value: &str, cx: &mut Context<Self>) {
+        if self.font_picker.open == Some(slot) {
+            self.font_picker.open = None;
+            update_row(font_row(slot), cx, |s| s.set_slot_family(slot, value.to_owned()));
+            cx.notify();
+        }
+    }
+
     /// A font row's control: the font as a select (its menu floats under it) and its size.
     pub(super) fn font_control(&self, slot: FontSlot, cx: &mut Context<Self>) -> AnyElement {
         let ui = ui(cx);
@@ -138,6 +205,15 @@ impl SettingsWindow {
         let open = self.font_picker.open == Some(slot);
         let bundled = cx.try_global::<LoadedFonts>().is_some_and(|loaded| loaded.bundled.contains(&family));
         let key = slot.key();
+        let spoken = text(match slot {
+            FontSlot::Terminal => SETTINGS_APPEARANCE_GROUP_TERMINAL,
+            FontSlot::Interface => SETTINGS_APPEARANCE_GROUP_INTERFACE,
+            FontSlot::Code => SETTINGS_APPEARANCE_GROUP_CODE,
+        });
+        let spoken_value = slot
+            .inherit_label()
+            .filter(|_| !chosen)
+            .map_or_else(|| display_name(&family).to_owned(), str::to_owned);
         // The face: the family in its own face and where it comes from, or what an empty
         // choice follows ("Same as terminal", then the terminal font, faint).
         let face = match slot.inherit_label().filter(|_| !chosen) {
@@ -194,7 +270,9 @@ impl SettingsWindow {
             })
             .trigger(
                 SelectTrigger::new(SharedString::from(format!("font-picker-{key}")), ui, face.w_full())
-                    .width(px(SELECT_W)),
+                    .width(px(SELECT_W))
+                    .accessibility(spoken, spoken_value)
+                    .focusable_popup(),
             );
         let picker = select::menu_surface(popover, ui, px(MENU_W), select::menu_bg(ui, cx))
             .content(move |_, _, _| div().children(menu.as_ref().map(|menu| menu.render(ui))));
@@ -206,8 +284,8 @@ impl SettingsWindow {
                 FontSlot::Code => "font-size-code",
             },
             settings_fonts_size_points(&format!("{size:.0}")),
-            cx.listener(move |_, _, _, cx| update_settings(cx, |s| s.step_slot_size(slot, -1.0))),
-            cx.listener(move |_, _, _, cx| update_settings(cx, |s| s.step_slot_size(slot, 1.0))),
+            cx.listener(move |_, _, _, cx| update_row(font_row(slot), cx, |s| s.step_slot_size(slot, -1.0))),
+            cx.listener(move |_, _, _, cx| update_row(font_row(slot), cx, |s| s.step_slot_size(slot, 1.0))),
         );
         div().flex().items_center().gap_2().child(picker).child(size_control).into_any_element()
     }
@@ -218,6 +296,7 @@ struct FontMenu {
     slot: FontSlot,
     entries: Rc<Vec<Entry>>,
     selected: String,
+    keyboard_choice: Option<String>,
     /// Tag monospace families (when the list isn't already monospace only).
     tag_mono: bool,
     show_all: bool,
@@ -256,6 +335,7 @@ impl FontMenu {
             slot,
             entries,
             selected: settings(cx).slot_family(slot).to_string(),
+            keyboard_choice: page.font_picker.keyboard_choice.clone(),
             tag_mono: !slot.prefers_monospace() || show_all,
             show_all,
             mono,
@@ -271,6 +351,7 @@ impl FontMenu {
         let slot = self.slot;
         let entries = self.entries.clone();
         let (selected, tag_mono) = (self.selected.clone(), self.tag_mono);
+        let keyboard_choice = self.keyboard_choice.clone();
         let (mono, symbolic, this) = (self.mono.clone(), self.symbolic.clone(), self.this.clone());
         let show_all_this = self.this.clone();
 
@@ -280,7 +361,18 @@ impl FontMenu {
             move |range: std::ops::Range<usize>, _, _| {
                 range
                     .map(|ix| {
-                        entry_row(slot, ix, &entries[ix], &selected, tag_mono, &mono, &symbolic, ui, &this)
+                        entry_row(
+                            slot,
+                            ix,
+                            &entries[ix],
+                            &selected,
+                            keyboard_choice.as_deref(),
+                            tag_mono,
+                            &mono,
+                            &symbolic,
+                            ui,
+                            &this,
+                        )
                     })
                     .collect::<Vec<_>>()
             },
@@ -289,9 +381,39 @@ impl FontMenu {
         // Shrinks to a short search result instead of leaving a gap.
         .h(px((self.entries.len().max(1) as f32 * ENTRY_HEIGHT).min(LIST_HEIGHT)));
 
+        let (page, choices) = (self.this.clone(), self.entries.clone());
+        let step = Rc::new(move |down: bool, cx: &mut App| {
+            page.update(cx, |this, cx| this.move_font_choice(slot, &choices, down, cx)).ok();
+        });
+        let (up, down) = (step.clone(), step);
+        let (page, choices) = (self.this.clone(), self.entries.clone());
         div()
+            .id("font-menu")
             .flex()
             .flex_col()
+            .capture_action(move |_: &MoveUp, _, cx| {
+                cx.stop_propagation();
+                up(false, cx);
+            })
+            .capture_action(move |_: &MoveDown, _, cx| {
+                cx.stop_propagation();
+                down(true, cx);
+            })
+            .capture_action(move |action: &Enter, _, cx| {
+                if !action.shift && !action.secondary {
+                    cx.stop_propagation();
+                    page.update(cx, |this, cx| {
+                        let choice = this
+                            .font_choice_anchor(slot, &choices, cx)
+                            .and_then(|ix| choices[ix].choice())
+                            .or_else(|| choices.iter().find_map(Entry::choice));
+                        if let Some((value, _)) = choice {
+                            this.choose_font(slot, value, cx);
+                        }
+                    })
+                    .ok();
+                }
+            })
             .child(select::search_row(
                 ui,
                 false,
@@ -308,6 +430,7 @@ impl FontMenu {
                         move |_, _, cx| {
                             this.update(cx, |this, cx| {
                                 this.font_picker.show_all = all;
+                                this.font_picker.clear_keyboard_choice();
                                 cx.notify();
                             })
                             .ok();
@@ -330,9 +453,14 @@ impl FontMenu {
                         .child(div().text_caption().text_color(ui.faint).child(self.status.clone())),
                 )
             })
-            .child(div().flex().flex_col().p_1().child(list).when(!slot.prefers_monospace(), |d| {
-                d.child(div().px_2().py_1().text_caption().text_color(ui.muted).child(self.status.clone()))
-            }))
+            .child(div().id("font-options").role(Role::ListBox).flex().flex_col().p_1().child(list).when(
+                !slot.prefers_monospace(),
+                |d| {
+                    d.child(
+                        div().px_2().py_1().text_caption().text_color(ui.muted).child(self.status.clone()),
+                    )
+                },
+            ))
             .into_any_element()
     }
 }
@@ -345,6 +473,7 @@ fn entry_row(
     ix: usize,
     entry: &Entry,
     selected: &str,
+    keyboard_choice: Option<&str>,
     tag_mono: bool,
     mono: &Arc<HashSet<String>>,
     symbolic: &Arc<HashSet<String>>,
@@ -370,10 +499,15 @@ fn entry_row(
     let own_face = family.as_ref().filter(|name| !symbolic.contains(*name)).cloned();
     let is_mono = family.as_ref().is_some_and(|name| mono.contains(name));
     let value = family.clone().unwrap_or_default();
+    let highlighted = keyboard_choice == Some(value.as_str());
     let page = page.clone();
     let hover_page = page.clone();
     let hovered = family.clone();
     select::option(("font-entry", ix), ui, active, false)
+        .role(Role::ListBoxOption)
+        .aria_label(label.clone())
+        .aria_selected(active)
+        .when(highlighted, |d| d.bg(ui.list_selected).text_color(ui.list_selected_text))
         .w_full()
         .h(px(ENTRY_HEIGHT))
         .on_hover(move |over, _, cx| {
@@ -388,13 +522,7 @@ fn entry_row(
                 .ok();
         })
         .on_click(move |_, _, cx| {
-            let value = value.clone();
-            page.update(cx, |this, cx| {
-                this.font_picker.open = None;
-                cx.notify();
-            })
-            .ok();
-            update_settings(cx, |s| s.set_slot_family(slot, value));
+            page.update(cx, |this, cx| this.choose_font(slot, &value, cx)).ok();
         })
         .child(
             div()
@@ -403,11 +531,12 @@ fn entry_row(
                 .truncate()
                 .text_heading()
                 .when_some(own_face, |d, face| d.font_family(face))
-                .when(family.is_none(), |d| d.text_color(ui.muted))
+                .when(family.is_none() && !highlighted, |d| d.text_color(ui.muted))
                 .child(label),
         )
         .when(tag_mono && is_mono, |d| {
-            d.child(div().flex_none().text_caption().text_color(ui.faint).child("monospace"))
+            let color = if highlighted { ui.list_selected_muted } else { ui.faint };
+            d.child(div().flex_none().text_caption().text_color(color).child("monospace"))
         })
         .into_any_element()
 }

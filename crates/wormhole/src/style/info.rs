@@ -133,7 +133,7 @@ impl RenderOnce for SettingInfo {
             .aria_expanded(open)
             .focusable()
             .tab_stop(true)
-            .focus_visible(move |d| d.ringed(ui, ui.focus, ui.focus_ring_width))
+            .focus_visible(move |d| d.focus_outline(ui))
             .relative()
             .flex_none()
             .flex()

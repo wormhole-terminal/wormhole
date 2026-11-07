@@ -106,11 +106,30 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
                         run(window, cx);
                     }
                 };
-                let shown = match &item.icon {
-                    None => PopupMenuItem::new(item.title.clone()),
-                    Some(icon) => {
-                        let (title, icon) = (item.title.clone(), icon.clone());
-                        PopupMenuItem::element(move |_, cx| with_icon(&icon, title.clone(), cx))
+                let shown = match (&item.icon, &item.detail) {
+                    (None, None) => PopupMenuItem::new(item.title.clone()),
+                    (icon, detail) => {
+                        let (title, icon, detail) = (item.title.clone(), icon.clone(), detail.clone());
+                        PopupMenuItem::element(move |_, cx| {
+                            let title = match &detail {
+                                None => title.clone().into_any_element(),
+                                Some(detail) => div()
+                                    .flex()
+                                    .flex_col()
+                                    .child(title.clone())
+                                    .child(
+                                        div()
+                                            .text_caption()
+                                            .text_color(crate::settings::ui(cx).muted)
+                                            .child(detail.clone()),
+                                    )
+                                    .into_any_element(),
+                            };
+                            match &icon {
+                                Some(icon) => with_icon(icon, title, cx),
+                                None => title,
+                            }
+                        })
                     }
                 };
                 popup.item(shown.checked(item.check != Check::Off).disabled(!item.enabled).on_click(click))
@@ -135,7 +154,7 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
 }
 
 #[track_caller]
-fn with_icon(icon: &Icon, title: SharedString, cx: &App) -> AnyElement {
+fn with_icon(icon: &Icon, title: AnyElement, cx: &App) -> AnyElement {
     let picture = match icon {
         Icon::Image(file) => img(file.clone()).size_4().into_any_element(),
         // No icon service here: the folder glyph stands for any file.
@@ -152,7 +171,7 @@ fn with_icon(icon: &Icon, title: SharedString, cx: &App) -> AnyElement {
             .child(letters.clone())
             .into_any_element(),
         // SF Symbols are Apple's: this menu has no picture for one, only the title.
-        Icon::Symbol(_) => return title.into_any_element(),
+        Icon::Symbol(_) => return title,
     };
     div().flex().items_center().gap_2().child(picture).child(title).into_any_element()
 }

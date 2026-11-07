@@ -18,17 +18,16 @@ use gpui_kit::*;
 use wormhole_core::config::OptionAsMeta;
 use wormhole_core::config::clipboard::{ClipboardRead, ClipboardWrite};
 use wormhole_core::config::settings_index::SectionId as Section;
+use wormhole_core::platform::open_in::{self, Installed, Resolved};
 use wormhole_core::terminal::shells::{self, ShellChoice, ShellKind};
 use wormhole_core::theme::fonts::FontSlot;
 
 use super::open_in_editor;
 use crate::open_in::OpenIn;
-use crate::platform::apps;
-use crate::platform::default_app;
-use crate::platform::{Item, Menu};
+use crate::platform::{self, Item, Menu, apps, default_app};
 use crate::select::{Choice, SelectTrigger};
 use crate::settings::update_settings;
-use crate::settings::{SettingsStore, UiColors, settings};
+use crate::settings::{Settings, SettingsStore, UiColors, settings};
 use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
@@ -37,7 +36,22 @@ use crate::style::{self, TextRole};
 const SCROLLBACK: [usize; 6] = [1_000, 5_000, 10_000, 50_000, 100_000, 200_000];
 
 pub(super) const SETTINGS: &[Setting] = &[
-    Setting::custom("scrollback", draw_scrollback),
+    Setting::select(
+        "scrollback",
+        SCROLLBACK_W,
+        |s| {
+            scrollback_sizes(s.scrollback_lines)
+                .into_iter()
+                .map(|n| Choice::new(n.to_string(), lines(n)))
+                .collect()
+        },
+        |s| s.scrollback_lines.to_string(),
+        |s, value| {
+            if let Ok(n) = value.parse() {
+                s.scrollback_lines = n;
+            }
+        },
+    ),
     toggle!("restore-text", restore_terminal_text),
     toggle!("minimap", minimap),
     toggle!("split-gaps", split_gaps),
@@ -55,7 +69,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("terminal-font", |_, cx| {
         let ui = ui(cx);
         style::link_button("edit-in-fonts", ui, text(SETTINGS_TERMINAL_EDIT_IN_FONTS), true)
-            .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Fonts, cx)))
+            .on_click(cx.listener(|this, _, window, cx| this.navigate_to(Section::Fonts, window, cx)))
             .into_any_element()
     })
     .describe(describe_font),
@@ -183,43 +197,6 @@ fn scrollback_sizes(current: usize) -> Vec<usize> {
     sizes
 }
 
-pub(in crate::settings_window) fn scrollback_menu(cx: &App) -> Menu {
-    let current = settings(cx).scrollback_lines;
-    scrollback_sizes(current).into_iter().fold(Menu::new(), |menu, size| {
-        menu.item(
-            Item::new(lines(size))
-                .checked(size == current)
-                .on_select(move |_, cx| update_settings(cx, |s| s.scrollback_lines = size)),
-        )
-    })
-}
-
-fn draw_scrollback(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let current = settings(cx).scrollback_lines;
-    if cfg!(target_os = "macos") {
-        let value: SharedString = lines(current).into();
-        return SelectTrigger::new("select-scrollback-trigger", ui(cx), value.clone())
-            .width(px(SCROLLBACK_W))
-            .with_menu(text(SETTINGS_TERMINAL_SCROLLBACK), value, scrollback_menu)
-            .into_any_element();
-    }
-    let choices =
-        scrollback_sizes(current).into_iter().map(|n| Choice::new(n.to_string(), lines(n))).collect();
-    window.select(
-        "scrollback",
-        div().child(lines(current)).into_any_element(),
-        SCROLLBACK_W,
-        choices,
-        current.to_string(),
-        |s, value| {
-            if let Ok(n) = value.parse() {
-                s.scrollback_lines = n;
-            }
-        },
-        cx,
-    )
-}
-
 /// The scrollback select: wide enough for "200,000 lines".
 const SCROLLBACK_W: f32 = 160.0;
 
@@ -228,33 +205,29 @@ const SCROLLBACK_W: f32 = 160.0;
 /// be picked with Choose app…. An app that is gone is shown as written, with what opens instead.
 fn draw_open_in(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     let ui = ui(cx);
-    let apps = OpenIn::apps(cx);
-    let resolved = OpenIn::resolved(cx);
-    let current = resolved.app.bundle.clone();
-    let mut options: Vec<Choice<String>> =
-        apps.iter().map(|app| Choice::new(app.bundle.clone(), app.name.clone())).collect();
-    if let Some(missing) = &resolved.missing {
-        let chosen = settings(cx).open_in.trim().to_string();
-        options.push(
-            Choice::new(chosen, missing.clone())
-                .detail(text(SETTINGS_TERMINAL_NOT_INSTALLED_THE_TITLE_ROW_OPENS)),
-        );
-    }
+    let (_, resolved, options) = open_in_choices(cx);
     let face = div()
         .flex()
         .items_center()
         .gap_2()
         .child(open_in_icon(ui, cx, &resolved.app))
         .child(resolved.app.name.clone());
-    let select = window.select(
-        "open-in",
-        face.into_any_element(),
-        SHELL_W,
-        options,
-        current,
-        |s, bundle| s.open_in = bundle.to_string(),
-        cx,
-    );
+    let select = if open_in_has_native_menu(&resolved) {
+        SelectTrigger::new("select-open-in-trigger", ui, face)
+            .width(px(SHELL_W))
+            .with_menu(text(SETTINGS_TERMINAL_OPEN_IN), resolved.app.name.into(), |cx| open_in_menu(cx))
+            .into_any_element()
+    } else {
+        window.select(
+            "open-in",
+            face.into_any_element(),
+            SHELL_W,
+            options,
+            resolved.app.bundle,
+            |s, bundle| s.open_in = bundle.to_string(),
+            cx,
+        )
+    };
     div()
         .flex()
         .items_center()
@@ -267,8 +240,37 @@ fn draw_open_in(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> An
         .into_any_element()
 }
 
+fn open_in_choices(cx: &App) -> (Vec<Installed>, Resolved, Vec<Choice<String>>) {
+    let apps = OpenIn::apps(cx);
+    let chosen = settings(cx).open_in.trim();
+    let resolved = open_in::resolve(chosen, &apps);
+    let mut options: Vec<_> =
+        apps.iter().map(|app| Choice::new(app.bundle.clone(), app.name.clone())).collect();
+    if let Some(missing) = &resolved.missing {
+        options.push(
+            Choice::new(chosen.to_string(), missing.clone())
+                .detail(text(SETTINGS_TERMINAL_NOT_INSTALLED_THE_TITLE_ROW_OPENS)),
+        );
+    }
+    (apps, resolved, options)
+}
+
+fn open_in_has_native_menu(resolved: &Resolved) -> bool {
+    cfg!(target_os = "macos") && (resolved.missing.is_none() || platform::native_menu_subtitles())
+}
+
+fn open_in_menu(cx: &App) -> Menu {
+    let (apps, resolved, options) = open_in_choices(cx);
+    options.into_iter().enumerate().fold(Menu::new(), |menu, (index, option)| {
+        // The installed apps are the first options, in the same order. A missing app has no icon.
+        let icon = apps.get(index).and_then(|app| OpenIn::menu_icon(cx, app));
+        let item = choice_item(&option, &resolved.app.bundle).icon(icon);
+        menu.item(item.on_select(move |_, cx| update_settings(cx, |s| s.open_in.clone_from(&option.value))))
+    })
+}
+
 /// An app's icon in the select, `style::GLYPH` square: its own, or its monogram.
-fn open_in_icon(ui: UiColors, cx: &App, app: &wormhole_core::platform::open_in::Installed) -> AnyElement {
+fn open_in_icon(ui: UiColors, cx: &App, app: &Installed) -> AnyElement {
     match OpenIn::icon(cx, &app.bundle) {
         Some(image) => img(image).size(px(style::TITLE_GLYPH)).flex_none().into_any_element(),
         None => style::agent_logo(None, app.monogram.clone(), style::TITLE_GLYPH, ui.muted),
@@ -298,16 +300,16 @@ fn choose_app(cx: &mut App) {
 /// what each runs under it. A default that names nothing any more (a profile taken out of
 /// config.json) is shown as written, with what happens instead.
 fn draw_default_shell(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    let settings = settings(cx);
-    let current = wormhole_core::terminal::shells::default_key(settings).to_string();
-    let choices = shells::choices(settings);
-    let face = choices.iter().find(|c| c.key == current).map_or(current.clone(), |c| c.name.clone());
-    let mut options: Vec<Choice<String>> = choices.iter().map(shell_choice).collect();
-    if !choices.iter().any(|c| c.key == current) {
-        options.push(
-            Choice::new(current.clone(), current.clone())
-                .detail(text(SETTINGS_TERMINAL_NOT_FOUND_THE_LOGIN_SHELL_RUNS)),
-        );
+    let (current, options) = default_shell_choices(settings(cx));
+    let face = options
+        .iter()
+        .find(|option| option.value == current)
+        .map_or_else(|| current.clone().into(), |option| option.label().clone());
+    if platform::native_menu_subtitles() {
+        return SelectTrigger::new("select-default-shell-trigger", ui(cx), face.clone())
+            .width(px(SHELL_W))
+            .with_menu(text(SETTINGS_TERMINAL_DEFAULT_SHELL), face, |cx| default_shell_menu(cx))
+            .into_any_element();
     }
     window.select(
         "default-shell",
@@ -318,6 +320,45 @@ fn draw_default_shell(window: &SettingsWindow, cx: &mut Context<SettingsWindow>)
         |s, key| s.default_shell = key.to_string(),
         cx,
     )
+}
+
+fn default_shell_choices(settings: &Settings) -> (String, Vec<Choice<String>>) {
+    let current = shells::default_key(settings).to_string();
+    let mut options: Vec<_> = shells::choices(settings).iter().map(shell_choice).collect();
+    if !options.iter().any(|option| option.value == current) {
+        options.push(
+            Choice::new(current.clone(), current.clone())
+                .detail(text(SETTINGS_TERMINAL_NOT_FOUND_THE_LOGIN_SHELL_RUNS)),
+        );
+    }
+    (current, options)
+}
+
+fn default_shell_menu(cx: &App) -> Menu {
+    let (current, options) = default_shell_choices(settings(cx));
+    options.into_iter().fold(Menu::new(), |menu, option| {
+        let item = choice_item(&option, &current);
+        menu.item(item.on_select(move |_, cx| {
+            update_settings(cx, |s| s.default_shell.clone_from(&option.value));
+        }))
+    })
+}
+
+fn choice_item(option: &Choice<String>, current: &str) -> Item {
+    let item = Item::new(option.label().clone()).checked(option.value == current);
+    match option.detail_text() {
+        Some(detail) => item.detail(detail.clone()),
+        None => item,
+    }
+}
+
+#[cfg(feature = "devctl")]
+pub(in crate::settings_window) fn rich_select_menu(id: &str, cx: &App) -> Option<Menu> {
+    match id {
+        "open-in" if open_in_has_native_menu(&OpenIn::resolved(cx)) => Some(open_in_menu(cx)),
+        "default-shell" if platform::native_menu_subtitles() => Some(default_shell_menu(cx)),
+        _ => None,
+    }
 }
 
 /// A shell in the Default shell select: its name, and what it runs under it.

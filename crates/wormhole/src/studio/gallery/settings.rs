@@ -343,11 +343,13 @@ fn controls(env: &Env) -> Div {
                 .flex_wrap()
                 .items_center()
                 .gap_4()
-                .child(
-                    style::segmented_form(ui)
-                        .child(style::form_segment("g-form-split", ui, None, "Split", true)) // text: sample (the gallery's specimen)
-                        .child(style::form_segment("g-form-unified", ui, None, "Unified", false)), // text: sample (the gallery's specimen)
-                )
+                .child(style::form_segments(
+                    "g-form-layout",
+                    ui,
+                    [(None, "Split".into()), (None, "Unified".into())], // text: sample (the gallery's specimen)
+                    0,
+                    |_, _, _| {},
+                ))
                 .child(
                     style::segmented_form(ui)
                         .child(mode("g-form-dark", IconName::Moon, "Dark", false)) // text: sample (the gallery's specimen)

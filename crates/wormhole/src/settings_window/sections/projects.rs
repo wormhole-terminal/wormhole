@@ -169,7 +169,9 @@ impl SettingsWindow {
         SearchSelect::new(
             "project-select",
             ui,
-            SelectTrigger::new("project-select-trigger", ui, label).width(px(360.0)),
+            SelectTrigger::new("project-select-trigger", ui, label.clone())
+                .accessibility(text(SETTINGS_PROJECTS_PROJECT), label)
+                .width(px(360.0)),
             &self.projects.search,
             cx,
         )

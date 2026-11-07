@@ -42,6 +42,7 @@ mod window;
 mod words_tests;
 mod zen_note;
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use gpui_kit::assets::IconName;
@@ -189,6 +190,8 @@ pub(crate) struct SettingsWindow {
     rem: Pixels,
     blur: Blur,
     focus_handle: FocusHandle,
+    nav_focus: HashMap<Section, FocusHandle>,
+    nav_scroll: ScrollHandle,
     _subscriptions: Vec<Subscription>,
     /// Keeps the project picker's list current.
     _refresh: Task<()>,

@@ -234,6 +234,11 @@ pub trait Edges: Styled + Sized {
         self.border_color(color)
     }
 
+    /// The keyboard focus outline, painted at the edge of a translucent control.
+    fn focus_outline(self, ui: UiColors) -> Self {
+        self.outlined_always(UiColors { border_width: ui.focus_ring_width, ..ui }, ui.focus)
+    }
+
     /// A ring of `width` in `color`: the border every side takes the color, and a shadow without
     /// blur draws the rest just outside the edge. Choosing or focusing an element this way never
     /// moves what is in it, as a thicker border would. A ring stays whatever Borders says.

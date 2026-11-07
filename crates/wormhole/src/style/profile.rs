@@ -108,6 +108,7 @@ pub fn choice_row(
     label: impl Into<SharedString>,
     chosen: bool,
 ) -> Stateful<Div> {
+    let label = label.into();
     let mark = div()
         .flex_none()
         .size(px(CHOICE_MARK))
@@ -123,6 +124,11 @@ pub fn choice_row(
         .id(id)
         .role(Role::RadioButton)
         .aria_selected(chosen)
+        .aria_label(label.clone())
+        .aria_toggled(if chosen { Toggled::True } else { Toggled::False })
+        .focusable()
+        .tab_stop(true)
+        .focus_visible(move |d| d.focus_outline(ui))
         .flex()
         .items_center()
         .gap_2()
@@ -131,7 +137,7 @@ pub fn choice_row(
         .text_body()
         .text_color(ui.text)
         .child(mark)
-        .child(label.into())
+        .child(label)
 }
 
 /// The round mark of a [`choice_row`] and the dot in it when chosen.

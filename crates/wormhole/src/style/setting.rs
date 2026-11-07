@@ -36,9 +36,13 @@ pub fn stepper(
     value: String,
     minus: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     plus: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-) -> Div {
+) -> Stateful<Div> {
     let (round, flat) = (ui.radius, px(0.0));
+    let value = SharedString::from(value);
     div()
+        .id((ElementId::from(id), "stepper"))
+        .role(Role::Group)
+        .aria_value(value.clone())
         .flex()
         .flex_none()
         .items_center()
@@ -59,8 +63,22 @@ pub fn stepper(
                 .flex()
                 .flex_none()
                 .gap(px(STEPPER_SPLIT))
-                .child(stepper_half(ui, (id, 0), IconName::Minus, [round, flat, flat, round], minus))
-                .child(stepper_half(ui, (id, 1), IconName::Plus, [flat, round, round, flat], plus)),
+                .child(stepper_half(
+                    ui,
+                    (id, 0),
+                    IconName::Minus,
+                    text(keys::SETTINGS_WINDOW_DECREASE),
+                    [round, flat, flat, round],
+                    minus,
+                ))
+                .child(stepper_half(
+                    ui,
+                    (id, 1),
+                    IconName::Plus,
+                    text(keys::SETTINGS_WINDOW_INCREASE),
+                    [flat, round, round, flat],
+                    plus,
+                )),
         )
 }
 
@@ -72,6 +90,7 @@ fn stepper_half(
     ui: UiColors,
     id: (&'static str, usize),
     icon: IconName,
+    spoken: &'static str,
     corners: [Pixels; 4],
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> Stateful<Div> {
@@ -90,6 +109,7 @@ fn stepper_half(
                 .ghost()
                 .small()
                 .icon(icon)
+                .accessibility_label(spoken)
                 .w_full()
                 .h_full()
                 .corners(tl, tr, br, bl)
@@ -289,7 +309,7 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
                     )
                 })
                 .children(extra)
-                .child(if elsewhere { out_of_reach((id.clone(), "control"), control) } else { control })
+                .child(if disabled { out_of_reach((id.clone(), "control"), control) } else { control })
                 // The column is there for every row, so a row without an arrow (a project sets its value)
                 // keeps its control where the others have theirs.
                 .when(reset_arrow == ResetArrow::Always, |d| {
@@ -332,8 +352,15 @@ pub fn link_button(
     label: impl Into<SharedString>,
     arrow: bool,
 ) -> Stateful<Div> {
+    let label = label.into();
     div()
         .id(id)
+        .role(Role::Button)
+        .aria_label(label.clone())
+        .focusable()
+        .tab_stop(true)
+        .focus_visible(move |d| d.focus_outline(ui))
+        .rounded(ui.radius)
         .group(LINK_GROUP)
         .relative()
         .flex_none()
@@ -356,7 +383,7 @@ pub fn link_button(
                 .rounded(ui.radius)
                 .group_hover(LINK_GROUP, move |d| d.bg(ui.hover)),
         )
-        .child(label.into())
+        .child(label)
         .when(arrow, |d| d.child(super::buttons::icon(IconName::ArrowRight)))
 }
 

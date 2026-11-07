@@ -8,6 +8,10 @@ use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::tokens::Appearance;
 use wormhole_term::scrollbar::ScrollerStyle;
 
+use gpui_kit::{
+    KeyDownEvent, KeyUpEvent, Keystroke, Modifiers, MouseButton, MouseDownEvent, MouseUpEvent, PlatformInput,
+};
+
 use super::Ctx;
 use crate::platform::scroller::ScrollerPrefs;
 use crate::settings::SettingsStore;
@@ -127,6 +131,45 @@ pub(super) fn resize(ctx: &mut Ctx, arg: &str) -> Result<String> {
 
 pub(super) fn select(ctx: &mut Ctx, arg: &str) -> Result<String> {
     crate::settings_window::devctl::select(arg.trim(), ctx.cx);
+    Ok(String::new())
+}
+
+pub(super) fn key(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let keystroke = Keystroke::parse(arg.trim()).map_err(|err| anyhow!("{err}"))?;
+    crate::settings_window::devctl::input(
+        vec![
+            PlatformInput::KeyDown(KeyDownEvent {
+                keystroke: keystroke.clone(),
+                is_held: false,
+                prefer_character_input: false,
+            }),
+            PlatformInput::KeyUp(KeyUpEvent { keystroke }),
+        ],
+        ctx.cx,
+    );
+    Ok(String::new())
+}
+
+pub(super) fn click(ctx: &mut Ctx, arg: &str) -> Result<String> {
+    let position = super::coordinates(arg)?;
+    crate::settings_window::devctl::input(
+        vec![
+            PlatformInput::MouseDown(MouseDownEvent {
+                button: MouseButton::Left,
+                position,
+                modifiers: Modifiers::none(),
+                click_count: 1,
+                first_mouse: false,
+            }),
+            PlatformInput::MouseUp(MouseUpEvent {
+                button: MouseButton::Left,
+                position,
+                modifiers: Modifiers::none(),
+                click_count: 1,
+            }),
+        ],
+        ctx.cx,
+    );
     Ok(String::new())
 }
 

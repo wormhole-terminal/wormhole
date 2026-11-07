@@ -378,7 +378,6 @@ fn theme_card(ix: usize, tokens: &ThemeTokens, current: bool, ui: UiColors) -> S
                 .px_2()
                 .text_caption()
                 .font_weight(if current { FontWeight::SEMIBOLD } else { FontWeight::MEDIUM })
-                .text_color(if current { ui.primary } else { ui.text })
                 .child(div().flex_1().min_w_0().truncate().child(tokens.name.clone()))
                 .when(light && !current, |d| d.child(style::icon(IconName::Sun).text_color(ui.muted)))
                 .when(current, |d| d.child(style::icon(IconName::Check).text_color(ui.primary))),

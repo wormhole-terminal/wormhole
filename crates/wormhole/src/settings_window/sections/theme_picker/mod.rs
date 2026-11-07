@@ -1,7 +1,7 @@
 //! The theme picker: the themes as cards 88 high, four to a row, each a miniature of the app in
 //! that theme's own colors with its name in a strip under it. The mode decides what shows: under
 //! Dark or Light one shelf of themes of that kind, under Match system two, "In Dark Mode" and "In
-//! Light Mode". The pick of each shelf has the primary's ring, its name in 600 and a check, and a
+//! Light Mode". The pick of each shelf has a tint, its name in 600 and a check, and a
 //! click makes a card the pick of its kind. A theme that ships several versions has a card per
 //! version, on the shelf of its kind. Until "Show all" the shelves show their first cards, the pick
 //! always among them; the filter box narrows every shelf. A hidden theme (`hidden_themes`) is on no
@@ -44,6 +44,7 @@ use crate::style::{self, TextRole};
 
 /// How many cards show before "Show all": two rows, shared by the shelves.
 const FIRST_CARDS: usize = 8;
+const COLUMNS: u16 = 4;
 
 /// The height of a card. A cached view is laid out from a style the window gives it, so this
 /// has to be exact; everything in a card is in points, so it holds at every interface size.
@@ -57,6 +58,7 @@ pub(crate) struct ThemePicker {
     /// How many themes the filter's placeholder counts ("Filter 14 themes").
     counted: usize,
     cards: RefCell<CardSet>,
+    focus: Rc<RefCell<GridFocus>>,
     /// The list of hidden themes is open.
     hidden_open: bool,
     _subscription: Subscription,
@@ -71,7 +73,14 @@ impl ThemePicker {
                 cx.notify();
             }
         });
-        Self { filter, counted, cards: RefCell::default(), hidden_open: false, _subscription: subscription }
+        Self {
+            filter,
+            counted,
+            cards: RefCell::default(),
+            focus: Rc::default(),
+            hidden_open: false,
+            _subscription: subscription,
+        }
     }
 
     /// Keep the filter's placeholder at the live count ("Filter 14 themes") as themes are
@@ -169,7 +178,15 @@ impl CardSet {
                 .enumerate()
                 .map(|(entry, (label, &picked))| {
                     let catalog = entries.clone();
-                    cx.new(|_| ThemeCard { catalog, entry, label, picked, ui })
+                    cx.new(|cx| ThemeCard {
+                        catalog,
+                        entry,
+                        label,
+                        picked,
+                        focus: cx.focus_handle(),
+                        tab_stop: false,
+                        ui,
+                    })
                 })
                 .collect();
             self.search = entries
@@ -199,14 +216,68 @@ impl CardSet {
 
     /// The cards at `shown` (indices into the catalog), each in the fixed box that lets the window
     /// skip it while it hasn't changed.
-    fn views(&self, rem: Pixels, shown: &[usize]) -> Vec<AnyElement> {
+    fn views(
+        &self,
+        rem: Pixels,
+        shown: &[usize],
+        anchor: Option<&FocusHandle>,
+        cx: &mut App,
+    ) -> Vec<AnyElement> {
         let slot = StyleRefinement::default().w_full().h(card_height(rem));
+        let tab = shown
+            .iter()
+            .copied()
+            .find(|&ix| anchor == Some(&self.cards[ix].read(cx).focus))
+            .or_else(|| shown.iter().copied().find(|&ix| self.picked[ix]))
+            .or_else(|| shown.first().copied());
         shown
             .iter()
-            .filter_map(|ix| self.cards.get(*ix))
-            .map(|card| AnyView::from(card.clone()).cached(slot.clone()).into_any_element())
+            .map(|&ix| {
+                let card = &self.cards[ix];
+                let tab_stop = tab == Some(ix);
+                if card.read(cx).tab_stop != tab_stop {
+                    card.update(cx, |card, cx| {
+                        card.tab_stop = tab_stop;
+                        cx.notify();
+                    });
+                }
+                AnyView::from(card.clone()).cached(slot.clone()).into_any_element()
+            })
             .collect()
     }
+}
+
+/// Each shelf keeps its own keyboard entry, independent of which theme is selected.
+#[derive(Default)]
+struct GridFocus {
+    anchors: [Option<FocusHandle>; 2],
+    last: Option<FocusHandle>,
+}
+
+struct ShelfFocus {
+    kind: usize,
+    first_cell: usize,
+    cards: Vec<FocusHandle>,
+}
+
+fn focused_card<'a>(shelves: &'a [ShelfFocus], window: &Window) -> Option<(&'a ShelfFocus, usize)> {
+    shelves
+        .iter()
+        .find_map(|shelf| shelf.cards.iter().position(|focus| focus.is_focused(window)).map(|ix| (shelf, ix)))
+}
+
+fn neighbor(key: &str, ix: usize, len: usize) -> Option<usize> {
+    let columns = usize::from(COLUMNS);
+    Some(match key {
+        "left" => ix.saturating_sub(1),
+        "right" => (ix + 1).min(len - 1),
+        "up" => ix.checked_sub(columns).unwrap_or(ix),
+        "down" if (ix / columns + 1) * columns < len => (ix + columns).min(len - 1),
+        "down" => ix,
+        "home" => 0,
+        "end" => len - 1,
+        _ => return None,
+    })
 }
 
 /// Every theme resolved once; rebuilt only when the themes dir changes
@@ -268,6 +339,7 @@ impl SettingsWindow {
         // The shelves are runs of one grid, each after its name across the whole row: cards nested in
         // a box per shelf lose their cached draw from one frame to the next.
         let mut cells: Vec<AnyElement> = Vec::new();
+        let mut shelf_focus = Vec::new();
         for (place, &kind) in kinds.iter().enumerate() {
             let all: Vec<usize> = (0..entries.len())
                 .filter(|ix| entries[*ix].tokens.appearance == kind)
@@ -297,8 +369,84 @@ impl SettingsWindow {
                         .into_any_element(),
                 );
             }
-            cells.extend(set.views(self.rem, &shown));
+            let kind = match kind {
+                Appearance::Dark => 0,
+                Appearance::Light => 1,
+            };
+            let cards: Vec<_> = shown.iter().map(|&ix| set.cards[ix].read(cx).focus.clone()).collect();
+            let mut focus = self.theme_picker.focus.borrow_mut();
+            let anchor = &mut focus.anchors[kind];
+            if anchor.as_ref().is_some_and(|handle| !cards.contains(handle)) {
+                *anchor = None;
+            }
+            shelf_focus.push(ShelfFocus { kind, first_cell: cells.len(), cards });
+            cells.extend(set.views(self.rem, &shown, anchor.as_ref(), cx));
         }
+
+        let shelves = Rc::new(shelf_focus);
+        let focus = self.theme_picker.focus.clone();
+        let scroll = self.content_scroll.clone();
+        let page = cx.entity_id();
+        let key_shelves = shelves.clone();
+        let key_focus = focus.clone();
+        let grid = div()
+            .grid()
+            .grid_cols(COLUMNS)
+            .gap_3()
+            .on_children_prepainted(move |bounds, window, _| {
+                let mut focus = focus.borrow_mut();
+                let Some((shelf, ix)) = focused_card(&shelves, window) else {
+                    focus.last = None;
+                    return;
+                };
+                let handle = &shelf.cards[ix];
+                if focus.last.as_ref() == Some(handle) {
+                    return;
+                }
+                focus.last = Some(handle.clone());
+                let anchor = &mut focus.anchors[shelf.kind];
+                let moved = anchor.as_ref() != Some(handle);
+                *anchor = Some(handle.clone());
+                let delta = if window.last_input_was_keyboard() {
+                    let card = bounds[shelf.first_cell + ix];
+                    let viewport = scroll.bounds();
+                    let inset = ui.focus_ring_width;
+                    if card.top() - inset < viewport.top() {
+                        viewport.top() - card.top() + inset
+                    } else {
+                        (viewport.bottom() - card.bottom() - inset).min(px(0.0))
+                    }
+                } else {
+                    px(0.0)
+                };
+                if moved || delta != px(0.0) {
+                    let handle = handle.clone();
+                    let scroll = scroll.clone();
+                    window.on_next_frame(move |window, cx| {
+                        if delta != px(0.0) && handle.is_focused(window) {
+                            let offset = scroll.offset();
+                            scroll.set_offset(point(offset.x, (offset.y + delta).min(px(0.0))));
+                        }
+                        cx.notify(page);
+                    });
+                }
+            })
+            .id("theme-picker-grid")
+            .on_key_down(move |event, window, cx| {
+                if event.keystroke.modifiers != Modifiers::none() {
+                    return;
+                }
+                let Some((shelf, ix)) = focused_card(&key_shelves, window) else { return };
+                let Some(next) = neighbor(&event.keystroke.key, ix, shelf.cards.len()) else { return };
+                cx.stop_propagation();
+                if ix != next {
+                    let handle = &shelf.cards[next];
+                    key_focus.borrow_mut().anchors[shelf.kind] = Some(handle.clone());
+                    handle.focus(window, cx);
+                    cx.notify(page);
+                }
+            })
+            .children(cells);
 
         let toolbar = div().w(px(FILTER_W)).child(
             style::text_field(ui, &self.theme_picker.filter)
@@ -364,7 +512,7 @@ impl SettingsWindow {
             .flex_col()
             .gap_3()
             .child(toolbar)
-            .child(div().grid().grid_cols(4).gap_3().children(cells))
+            .child(grid)
             .when(narrowed && total == 0, |d| {
                 d.child(
                     div()
@@ -500,12 +648,12 @@ mod tests {
             let selected = self.selected.clone();
             let picks = super::Picks { dark: &selected, light: &selected };
             self.set.sync(&entries, &picks, theme, ui, cx);
-            div()
-                .w(px(900.0))
-                .grid()
-                .grid_cols(4)
-                .gap_3()
-                .children(self.set.views(window.rem_size(), &(0..self.entries.len()).collect::<Vec<_>>()))
+            div().w(px(900.0)).grid().grid_cols(4).gap_3().children(self.set.views(
+                window.rem_size(),
+                &(0..self.entries.len()).collect::<Vec<_>>(),
+                None,
+                cx,
+            ))
         }
     }
 
@@ -617,7 +765,15 @@ mod tests {
             let entries = Rc::new(catalog::catalog_in(Path::new("/nonexistent/wormhole-themes")));
             let ui = ui(cx);
             let label = entries[0].label.clone().into();
-            cx.new(|_| ThemeCard { catalog: entries, entry: 0, label, picked: true, ui })
+            cx.new(|cx| ThemeCard {
+                catalog: entries,
+                entry: 0,
+                label,
+                picked: true,
+                focus: cx.focus_handle(),
+                tab_stop: true,
+                ui,
+            })
         });
         let handle = cx.update(|cx| {
             gpui_kit::open_window(WindowOptions::default(), cx, |_, cx| cx.new(|_| Natural(card)))

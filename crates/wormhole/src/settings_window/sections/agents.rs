@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use wormhole_text::keys::*;
 use wormhole_text::{text, whole};
 
-use crate::style::Button;
+use crate::style::{Button, Edges};
 use gpui_kit::assets::IconName;
 use gpui_kit::component::Sizable;
 use gpui_kit::component::button::ButtonVariants;
@@ -34,7 +34,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::custom("agents-notifications", |_, cx| {
         let ui = ui(cx);
         style::link_button("open-notifications", ui, text(SETTINGS_AGENTS_OPEN_NOTIFICATIONS), true)
-            .on_click(cx.listener(|this, _, _, cx| this.show_section(Section::Notifications, cx)))
+            .on_click(cx.listener(|this, _, window, cx| this.navigate_to(Section::Notifications, window, cx)))
             .into_any_element()
     }),
     Setting::block("agents-installed", draw_installed),
@@ -448,6 +448,12 @@ fn draw_others(window: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> Any
     let open = window.others_open;
     let head = div()
         .id("agents-others")
+        .role(Role::Button)
+        .aria_label(settings_agents_others_head(whole(others.len())))
+        .aria_expanded(open)
+        .focusable()
+        .tab_stop(true)
+        .focus_visible(move |d| d.rounded(ui.radius).focus_outline(ui))
         .flex()
         .items_center()
         .gap_2()

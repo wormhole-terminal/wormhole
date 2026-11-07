@@ -32,7 +32,7 @@ pub(crate) fn open_settings(section: Option<Section>, cx: &mut App) {
         let shown = handle.update(cx, |_, window, cx| {
             page.update(cx, |page, cx| {
                 if let Some(section) = section {
-                    page.show_section(section, cx);
+                    page.navigate_to(section, window, cx);
                 }
                 cx.notify();
             });

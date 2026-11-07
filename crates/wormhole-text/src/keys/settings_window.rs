@@ -72,6 +72,10 @@ pub const SETTINGS_WINDOW_PREVIEW_GIT_LABEL: Key = Key::new(1271);
 pub const SETTINGS_WINDOW_PREVIEW: Key = Key::new(1272);
 /// "Shown in the preview at the top of the page"
 pub const SETTINGS_WINDOW_PREVIEW_COLUMN_HINT: Key = Key::new(1273);
+/// "Decrease"
+pub const SETTINGS_WINDOW_DECREASE: Key = Key::new(1281);
+/// "Increase"
+pub const SETTINGS_WINDOW_INCREASE: Key = Key::new(1282);
 
 /// ```text
 /// Open { $section }

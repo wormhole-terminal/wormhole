@@ -12,7 +12,7 @@ use std::rc::Rc;
 use super::icon_motion::{IconMotion, MenuMark, StripFill};
 use super::motion::TOOLTIP_DELAY;
 use super::scale::{
-    CONTROL_H_SM, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_CONTROL_H, TITLE_GLYPH, TextRole,
+    CONTROL_H_SM, Edges, GLYPH, HIT_MIN, ICON_SIZE, MARK_DOT, TITLE_CONTROL_H, TITLE_GLYPH, TextRole,
 };
 use crate::settings::UiColors;
 
@@ -513,6 +513,9 @@ pub fn more_toggle(
         .role(Role::Button)
         .aria_label(label.clone())
         .aria_expanded(expanded)
+        .focusable()
+        .tab_stop(true)
+        .focus_visible(move |d| d.focus_outline(ui))
         .flex_none()
         .flex()
         .items_center()
