@@ -16,10 +16,14 @@ mod frame;
 mod isolation;
 mod terminal;
 pub mod theme_dump;
+mod theme_json;
+mod theme_resolve;
+mod themes;
 
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
 pub use terminal::{FrameTiming, KeyPress, Terminal};
+pub use themes::{list_user_themes, resolve_theme};
 
 uniffi::setup_scaffolding!();
 
