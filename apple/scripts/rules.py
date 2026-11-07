@@ -11,7 +11,8 @@ Rules, each with the reason it exists:
                  generated scaffolding) and c_abi.rs (a hand-written seam, if the hot path ever needs it);
   direction      the app's crates never name wormhole-ffi (dependencies point one way);
   no-polling     no Timer.scheduledTimer / Timer.publish / Task.sleep in the Swift sources: an idle
-                 window sleeps until an event (events.md); the measuring tool (ffi-bench) is exempt;
+                 window sleeps until an event (events.md); the measuring tool (ffi-bench) is exempt, and a call with
+                 a `// one-shot: <what it waits for>` comment on its line or the two above is a deadline, not polling;
   no-process     the Swift sources never spawn a process (everything goes through the seam).
 
 Generated and built files (dist/, target/, .build/, the links build-ffi.sh makes) are skipped.
@@ -65,9 +66,11 @@ def main() -> int:
                 if UNSAFE_RUST.search(line) and not line.lstrip().startswith("//"):
                     problems.append(f"unsafe: {rel}:{number}: {line.strip()}")
         if path.suffix == ".swift" and rel.parts[0] != "ffi-bench":
-            for number, line in enumerate(text.splitlines(), 1):
+            swift_lines = text.splitlines()
+            for number, line in enumerate(swift_lines, 1):
                 code = line.split("//", 1)[0]
-                if POLLING.search(code):
+                # A one-shot deadline (a debounce, a delay) is allowed when a `// one-shot:` comment says what it waits for.
+                if POLLING.search(code) and not any("one-shot:" in l for l in swift_lines[max(0, number - 3) : number]):
                     problems.append(f"no-polling: {rel}:{number}: {line.strip()}")
                 if PROCESS.search(code):
                     problems.append(f"no-process: {rel}:{number}: {line.strip()}")
