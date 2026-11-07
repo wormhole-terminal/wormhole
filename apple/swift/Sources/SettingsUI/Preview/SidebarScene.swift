@@ -18,6 +18,12 @@ struct SidebarScene: View {
         Sample(name: "Flaky login test", detail: "Needs input · Allow edit?", state: .needs),
         Sample(name: "Release notes", detail: "Finished · 1m", state: .done),
     ]
+    /// Coding agents' page: the list as agents drive it, in the density in force.
+    private static let agentSamples = [
+        Sample(name: "Claude Code", detail: "Working · 4m", state: .working),
+        Sample(name: "Codex", detail: "Needs input · Allow edit?", state: .needs),
+        Sample(name: "Gemini CLI", detail: "Finished · 1m", state: .done),
+    ]
     private static let densities: [(value: String, label: String, row: CGFloat, tile: CGFloat)] = [
         ("regular", "Regular", Metric.rowTwoLine + 4, Metric.tile), ("compact", "Compact", 32, Metric.tileMini),
         ("dense", "Dense", 26, Metric.tileSmall),
@@ -27,7 +33,7 @@ struct SidebarScene: View {
         let t = PreviewTheme.tokens(model)
         let current = model.value("density").string ?? "regular"
         HStack(alignment: .top, spacing: Space._3) {
-            ForEach(Self.densities, id: \.value) { density in
+            ForEach(Self.densities.filter { !withAgents || $0.value == current }, id: \.value) { density in
                 let isCurrent = density.value == current
                 VStack(alignment: .leading, spacing: Space._1) {
                     Text(density.label).font(.system(size: TextRole.label.size)).foregroundStyle(isCurrent ? t.primary : t.textMuted)
@@ -46,7 +52,7 @@ struct SidebarScene: View {
                 if d.value == "regular" { Text("~/Projects/wormhole").font(.system(size: 11)).foregroundStyle(t.textMuted) }
             }
             .padding(.horizontal, Space._2).padding(.vertical, Space._1)
-            ForEach(Array(Self.samples.enumerated()), id: \.offset) { index, sample in
+            ForEach(Array((withAgents ? Self.agentSamples : Self.samples).enumerated()), id: \.offset) { index, sample in
                 HStack(spacing: Space._2) {
                     AgentTile(tokens: t, size: d.tile, badge: sample.state == .needs ? t.agentAttention : (sample.state == .done ? t.agentDone : nil))
                     VStack(alignment: .leading, spacing: 0) {

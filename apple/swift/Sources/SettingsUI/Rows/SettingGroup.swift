@@ -13,7 +13,6 @@ struct SettingGroup<Rows: View, Accessory: View>: View {
     @ViewBuilder var accessory: Accessory
     @ViewBuilder let rows: Rows
     @Environment(\.tokens) private var tokens
-    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
@@ -43,7 +42,7 @@ struct SettingGroup<Rows: View, Accessory: View>: View {
                 .padding(.horizontal, Space._4).padding(.vertical, Space._1)
                 .background(tokens.settingsGroup, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusLg))
                 .overlay {
-                    if contrast == .increased {
+                    if ThemeStore.shared.increaseContrast {
                         RoundedRectangle(cornerRadius: tokens.metrics.radiusLg).strokeBorder(tokens.cardEdge, lineWidth: tokens.metrics.borderWidth)
                     }
                 }

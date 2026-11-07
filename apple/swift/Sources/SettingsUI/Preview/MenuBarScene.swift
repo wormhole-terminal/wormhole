@@ -7,30 +7,45 @@ import SwiftUI
 
 struct MenuBarScene: View {
     let model: SettingsModel
-    @Environment(\.tokens) private var tokens
+    private static let states: [(value: String, label: String)] = [
+        ("status_count", String(localized: "settings-menu-bar-status-and-count", defaultValue: "Status and count")),
+        ("status", String(localized: "settings-menu-bar-status", defaultValue: "Status")),
+        ("plain", String(localized: "settings-menu-bar-icon-only", defaultValue: "Icon only")),
+    ]
 
     var body: some View {
         let t = PreviewTheme.tokens(model)
         let on = model.value("menu_bar").bool ?? true
-        let icon = model.value("menu_bar_icon").string ?? "status_count"
-        VStack(spacing: Space._3) {
-            HStack(spacing: Space._3) {
-                Spacer()
-                Image(systemName: "wifi").font(.system(size: Metric.glyph))
-                Image(systemName: "battery.75percent").font(.system(size: Metric.glyph))
-                if on { item(t, icon: icon) }
-                Text("Fri 9:41").font(.system(size: 13))
+        let current = model.value("menu_bar_icon").string ?? "status_count"
+        VStack(spacing: Space._2) {
+            ForEach(Self.states, id: \.value) { state in
+                HStack(spacing: Space._3) {
+                    Text(state.label).font(.system(size: TextRole.label.size)).foregroundStyle(state.value == current ? t.primary : t.textMuted)
+                        .frame(width: 120, alignment: .trailing)
+                    bar(t, icon: state.value, on: on).overlay(
+                        RoundedRectangle(cornerRadius: t.metrics.radius).strokeBorder(state.value == current ? t.primary : .clear, lineWidth: 2))
+                }
             }
-            .foregroundStyle(t.textPrimary)
-            .padding(.horizontal, Space._3).frame(height: 24).frame(maxWidth: 420)
-            .background(t.surfacePanel, in: RoundedRectangle(cornerRadius: t.metrics.radius))
             if !on {
                 Text(String(localized: "settings-menu-bar-off", defaultValue: "The menu bar item is off")).font(.system(size: TextRole.caption.size))
                     .foregroundStyle(t.textMuted)
             }
         }
-        .motion(Motion.layout, value: icon)
+        .motion(Motion.selection, value: current)
         .motion(Motion.layout, value: on)
+    }
+
+    private func bar(_ t: ThemeTokens, icon: String, on: Bool) -> some View {
+        HStack(spacing: Space._3) {
+            Spacer()
+            Image(systemName: "wifi").font(.system(size: Metric.glyph))
+            Image(systemName: "battery.75percent").font(.system(size: Metric.glyph))
+            if on { item(t, icon: icon) }
+            Text("Fri 9:41").font(.system(size: 13))
+        }
+        .foregroundStyle(t.textPrimary)
+        .padding(.horizontal, Space._3).frame(height: 24).frame(maxWidth: 320)
+        .background(t.surfacePanel, in: RoundedRectangle(cornerRadius: t.metrics.radius))
     }
 
     private func item(_ t: ThemeTokens, icon: String) -> some View {

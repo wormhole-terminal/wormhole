@@ -22,6 +22,7 @@ enum Snapshot {
         // The scenes read the store for the theme picked, so it follows the theme the page is drawn in.
         ThemeStore.shared.mode = dark ? .dark : .light
         ThemeStore.shared.setTheme(id)
+        ThemeStore.shared.increaseContrast = contrast
         let content = view
             .frame(width: size.width, height: size.height)
             .background(tokens.surfaceWindow)
@@ -37,6 +38,7 @@ enum Snapshot {
         host.layoutSubtreeIfNeeded()
         guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { throw CocoaError(.fileWriteUnknown) }
         host.cacheDisplay(in: host.bounds, to: rep)
+        defer { ThemeStore.shared.increaseContrast = false }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appendingPathComponent("\(name)-\(id)\(contrast ? "-hc" : "").png")
         guard let png = rep.representation(using: .png, properties: [:]) else { throw CocoaError(.fileWriteUnknown) }
