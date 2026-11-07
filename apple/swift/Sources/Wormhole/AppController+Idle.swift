@@ -30,7 +30,7 @@ extension AppController {
                         }
                         print(report)
                         self.devctl?.append(report)
-                        NSApp.terminate(nil)
+                        self.terminateUnattended()
                     }
                 }
             }

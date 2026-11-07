@@ -18,11 +18,12 @@ public final class AppMenuBuilder {
     private nonisolated(unsafe) var observers: [any NSObjectProtocol] = []
 
     public init(
-        builder: MenuBuilder = MenuBuilder(), dispatcher: MenuDispatcher = MenuDispatcher(), style: MenuStyle = .themed()
+        builder: MenuBuilder = MenuBuilder(), dispatcher: MenuDispatcher = MenuDispatcher(), style: MenuStyle = .themed(),
+        standard: [MenuCommand: Selector] = StandardActions.selectors
     ) {
         self.builder = builder
         self.dispatcher = dispatcher
-        factory = NSMenuFactory(dispatcher: dispatcher, style: style, standard: StandardActions.selectors)
+        factory = NSMenuFactory(dispatcher: dispatcher, style: style, standard: standard)
         let center = NotificationCenter.default
         observers = [
             center.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { [weak self] _ in

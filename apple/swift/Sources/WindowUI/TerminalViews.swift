@@ -26,6 +26,9 @@ public final class TerminalViews {
     /// The view if it was made already; never starts a terminal.
     public func existing(_ id: TerminalID) -> MetalTerminalView? { views[id] }
 
+    /// Shut a terminal's view down and forget it: the next `view(for:)` starts it again.
+    func discard(_ id: TerminalID) { views.removeValue(forKey: id)?.shutdown() }
+
     /// Shut down the views of terminals that no longer exist.
     func retain(only ids: Set<TerminalID>) {
         for id in views.keys where !ids.contains(id) {

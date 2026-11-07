@@ -11,6 +11,8 @@ public struct PaletteView: View {
     public let state: WorkspaceState
     public let send: @MainActor (WorkspaceAction) -> Void
     public let dismiss: @MainActor () -> Void
+    /// Carries out a keymap action the workspace has no action for (a split, find, a window).
+    let perform: @MainActor (String) -> Void
     let startsPresented: Bool
 
     @State var scope: PaletteScope
@@ -22,19 +24,20 @@ public struct PaletteView: View {
 
     public init(
         state: WorkspaceState, send: @escaping @MainActor (WorkspaceAction) -> Void,
-        dismiss: @escaping @MainActor () -> Void
+        perform: @escaping @MainActor (String) -> Void = { _ in }, dismiss: @escaping @MainActor () -> Void
     ) {
-        self.init(state: state, send: send, dismiss: dismiss, startsPresented: false)
+        self.init(state: state, send: send, perform: perform, dismiss: dismiss, startsPresented: false)
     }
 
     init(
         state: WorkspaceState, send: @escaping @MainActor (WorkspaceAction) -> Void,
-        dismiss: @escaping @MainActor () -> Void, startsPresented: Bool, query: String = "",
+        perform: @escaping @MainActor (String) -> Void = { _ in }, dismiss: @escaping @MainActor () -> Void, startsPresented: Bool, query: String = "",
         chosen: String? = nil, hovered: String? = nil
     ) {
         self.state = state
         self.send = send
         self.dismiss = dismiss
+        self.perform = perform
         self.startsPresented = startsPresented
         let (scope, rest) = PaletteScope.parse(query)
         _scope = State(initialValue: scope)

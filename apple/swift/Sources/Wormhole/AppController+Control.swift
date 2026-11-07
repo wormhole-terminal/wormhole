@@ -8,32 +8,13 @@ import WorkspaceModel
 extension AppController {
     func run(command line: String) {
         let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
+        let command = parts.first ?? ""
         let argument = parts.count > 1 ? parts[1] : ""
-        switch parts.first ?? "" {
-        case "sidebar": store.send(.toggleSidebar); reply("sidebar")
-        case "panel": store.send(.togglePanel); reply("panel")
-        case "settings": showSettings(); reply("settings")
-        case "palette": showPalette(); reply("palette")
-        case "shortcuts": showShortcuts(); reply("shortcuts")
-        case "new": newTerminal(); reply("new")
-        case "close": closeTerminal(); reply("close")
-        case "select":
-            guard let id = Int(argument) else { return reply("error: select needs a terminal id") }
-            store.send(.select(id))
-            reply("select \(id)")
-        case "tab":
-            guard let tab = PanelTab(rawValue: argument) else { return reply("error: tab is changes, history, notes, usage, project or files") }
-            store.send(.showPanelTab(tab))
-            reply("tab \(argument)")
-        case "look": reply(lookState)
-        case "quit":
-            reply("quit")
-            NSApp.terminate(nil)
-        default:
-            if runLook(command: parts.first ?? "", argument: argument) { return }
-            guard let view = selectedView else { return reply("error: no terminal is shown") }
-            run(command: parts.first ?? "", argument: argument, on: view)
-        }
+        // A window behind others is not drawn; the commands that read it want what the last change made.
+        window?.contentView?.layoutSubtreeIfNeeded()
+        if runLook(command: command, argument: argument) || runWindow(command: command, argument: argument) { return }
+        guard let view = selectedView else { return reply("error: no terminal is shown") }
+        run(command: command, argument: argument, on: view)
     }
 
     private func run(command: String, argument: String, on view: MetalTerminalView) {
@@ -68,7 +49,7 @@ extension AppController {
     private func state(_ view: MetalTerminalView) -> String {
         let renderer = view.renderer
         let grid = renderer.gridSize, cell = renderer.cellPixels, stats = view.statistics, counters = renderer.counters
-        let shown = store.state
+        let shown = hub.state
         return "grid=\(grid.cols)x\(grid.rows) cell=\(cell.width)x\(cell.height)px scale=\(renderer.scale) "
             + "frames_drawn=\(stats.framesDrawn) ticks=\(stats.ticks) wakes=\(stats.wakes) pauses=\(stats.pauses) "
             + "busy_skips=\(stats.busySkips) blink_fires=\(stats.blinkFires) link=\(view.isLinkRunning ? "running" : "paused") "
@@ -76,6 +57,6 @@ extension AppController {
             + "atlas_resets=\(counters.atlasResets) "
             + "terminals=\(shown.terminals.count) selected=\(shown.selected.map(String.init) ?? "none") "
             + "sidebar=\(shown.sidebarVisible) panel=\(shown.panelVisible) tab=\(shown.panelTab.rawValue) "
-            + "window=\(window?.windowNumber ?? 0) " + lookState
+            + "window=\(window?.windowNumber ?? 0) " + lookState + " " + hub.paneState
     }
 }

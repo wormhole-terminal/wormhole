@@ -25,7 +25,7 @@ public struct ChangesView: View {
         ) {
             ChangesListView(store: store).environment(\.selectionSpace, space)
         } bottom: {
-            ChangesDiffPane(store: store, split: false)
+            ChangesDiffPane(store: store, headerInRow: false)
         }
     }
 }
@@ -33,13 +33,14 @@ public struct ChangesView: View {
 /// The diff of the file open in Changes, with the review bar under its rows.
 struct ChangesDiffPane: View {
     let store: ChangesStore
-    let split: Bool
+    /// The window draws the header in the terminal's title row (`PanelCoverTitle`).
+    let headerInRow: Bool
 
     var body: some View {
         if let file = store.current {
             DiffView(
                 file: file, session: store.diff, position: store.position, step: store.step, close: store.close,
-                review: store.canReview ? reviewing(file) : nil
+                review: store.canReview ? reviewing(file) : nil, showsHeader: !headerInRow
             )
             .alert("Copied the comments instead", isPresented: .init(get: { store.copiedInstead }, set: { store.copiedInstead = $0 })) {
                 Button("OK") {}

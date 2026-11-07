@@ -26,7 +26,7 @@ public struct TerminalMenuFacts: Sendable, Equatable {
 }
 
 public enum TerminalMenu {
-    public enum Kind: String, Sendable {
+    public enum Kind: String, Sendable, CaseIterable {
         case openLink, copyLink, copy, paste, selectAll, find, copyCommand, copyOutput, putCommandAtPrompt
         case splitRight, splitDown, clear
         public var key: String { "terminal.\(rawValue)" }

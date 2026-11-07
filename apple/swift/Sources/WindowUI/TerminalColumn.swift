@@ -1,30 +1,63 @@
-// The terminal's column: its colour from the title row down, the title row across the top and the terminal as a
-// rounded surface below it, inset 8 pt from the column's sides and bottom so the grid's text (4 pt of padding)
-// stands on the window's 12 pt edge and lines up with the traffic lights. The inset also keeps a program that
-// paints every cell clear of the window's own corners. The surface is clipped, never sized, while a column
-// slides over it.
+// The terminal's column: its colour from the title row down, the title row across the top and the terminal area
+// as a rounded surface below it, inset 8 pt from the column's sides and bottom so the grid's text (4 pt of
+// padding) stands on the window's 12 pt edge and lines up with the traffic lights. The inset also keeps a program
+// that paints every cell clear of the window's own corners. The surface is clipped, never sized, while a column
+// slides over it. An open diff or file of the right panel takes the title row and the surface in turn
+// (`TerminalStage`, `TitleSlot`); the panes stay alive under it.
 
+import DesignSystem
+import PanelUI
+import PanesUI
 import SwiftUI
-import WorkspaceModel
+import TerminalUI
 
 struct TerminalColumn: View {
-    let terminal: TerminalSummary?
-    let selected: TerminalID?
-    let ids: [TerminalID]
-    let views: TerminalViews
+    let hub: WindowHub
     let pads: TitlePads
-    let showsState: Bool
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
 
     var body: some View {
+        let cover = hub.panel.cover
         VStack(spacing: 0) {
-            CentreTitleRow(terminal: terminal, pads: pads, showsState: showsState)
-            TerminalHost(views: views, selected: selected, ids: ids)
-                .background(colours.terminalSurface)
-                .clipShape(RoundedRectangle(cornerRadius: colours.radiusLarge))
-                .padding([.horizontal, .bottom], Chrome.surfaceInset)
+            TitleSlot {
+                CentreTitle(hub: hub)
+            } coverTitle: {
+                PanelCoverTitle.carries(cover) ? PanelCoverTitle(controller: hub.panel) : nil
+            }
+            .padding(.leading, pads.leading)
+            .padding(.trailing, pads.trailing)
+            .frame(height: Chrome.titleHeight)
+            .background(WindowDragArea())
+
+            if look.tabsOnTop { TabBarView(model: hub.tabBar, actions: hub.tabActions) }
+
+            TerminalStage {
+                TerminalPanes(hub: hub)
+            } cover: {
+                cover == nil ? nil : PanelCoverView(controller: hub.panel).environment(\.fileIcons, PanelBody.icons)
+            }
+            .background(colours.terminalSurface)
+            .overlay { NoticeChipHost(center: hub.notices) }
+            .clipShape(RoundedRectangle(cornerRadius: colours.radiusLarge))
+            .padding([.horizontal, .bottom], Chrome.surfaceInset)
         }
         .background(look.surface(colours.terminal))
+    }
+}
+
+/// The selected terminal's breadcrumb and the buttons at the row's other end.
+private struct CentreTitle: View {
+    let hub: WindowHub
+    @Environment(WindowLook.self) private var look
+
+    var body: some View {
+        if let terminal = hub.state.selectedTerminal {
+            TitleRowView(
+                facts: TitleFactsMaker.facts(for: terminal, row: hub.titleRow, statusBarOn: look.statusBar),
+                actions: hub.titleActions(for: terminal), backend: hub.openIn, icon: SystemOpenIn.icon)
+        } else {
+            Color.clear
+        }
     }
 }

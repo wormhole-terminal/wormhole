@@ -49,6 +49,7 @@ extension PaletteView {
     /// dismissal would close it again.
     func run(_ command: Command, context: OverlayContext) {
         RecentStore.shared.remember(command)
+        if let id = command.appAction { return context.close { perform(id) } }
         guard let action = command.action else { return context.close(nil) }
         if case .showOverlay = action { return context.close { send(action) } }
         send(action)

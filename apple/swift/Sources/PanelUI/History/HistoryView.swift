@@ -28,7 +28,7 @@ public struct HistoryView: View {
         ) {
             HistoryListView(store: store, now: now).environment(\.selectionSpace, space)
         } bottom: {
-            HistoryDiffPane(store: store, split: false)
+            HistoryDiffPane(store: store, headerInRow: false)
         }
     }
 }
@@ -36,11 +36,11 @@ public struct HistoryView: View {
 /// The diff of the file open in the opened commit.
 struct HistoryDiffPane: View {
     let store: HistoryStore
-    let split: Bool
+    let headerInRow: Bool
 
     var body: some View {
         if let file = store.current {
-            DiffView(file: file, session: store.diff, position: store.position, step: store.step, close: store.close)
+            DiffView(file: file, session: store.diff, position: store.position, step: store.step, close: store.close, showsHeader: !headerInRow)
         }
     }
 }

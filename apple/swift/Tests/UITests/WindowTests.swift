@@ -27,7 +27,7 @@ import WorkspaceModel
         if let theme { ThemeStore.shared.setTheme(theme) }
         let look = WindowLook()
         look.statusBar = statusBar
-        let root = WorkspaceRootView(state: state, look: look, send: { _ in }, terminals: TerminalViews { _ in nil })
+        let root = WorkspaceRootView(hub: WindowHub(store: WorkspaceStore(state: state), terminals: TerminalViews { _ in nil }), look: look)
         let hosting = NSHostingView(rootView: root)
         hosting.sizingOptions = []
         let window = NSWindow(

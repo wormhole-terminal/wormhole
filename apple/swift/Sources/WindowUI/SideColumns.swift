@@ -8,30 +8,27 @@ import SidebarUI
 import WorkspaceModel
 
 struct SidebarColumn: View {
-    let state: WorkspaceState
+    let hub: WindowHub
     let facts: WindowFacts
-    let send: @MainActor (WorkspaceAction) -> Void
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
 
     var body: some View {
         VStack(spacing: 0) {
-            SidebarTitleRow(facts: facts, send: send)
-            SidebarView(state: state, send: send)
+            SidebarTitleRow(facts: facts, send: hub.send)
+            SidebarView(state: hub.state, groupEdits: hub.groupEdits, send: hub.send)
         }
         .background { if !look.glassOn { look.surface(colours.sidebar) } }
     }
 }
 
 struct PanelColumn: View {
-    let tab: PanelTab
-    var folder: String?
-    let send: @MainActor (WorkspaceAction) -> Void
+    let hub: WindowHub
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
 
     var body: some View {
-        RightPanel(tab: tab, folder: folder, send: send)
+        RightPanel(hub: hub)
             .background(look.surface(colours.panel))
     }
 }

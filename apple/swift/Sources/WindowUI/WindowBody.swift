@@ -8,9 +8,7 @@ import SwiftUI
 import WorkspaceModel
 
 struct WindowBody: View {
-    let state: WorkspaceState
-    let send: @MainActor (WorkspaceAction) -> Void
-    let terminals: TerminalViews
+    let hub: WindowHub
     @Binding var widths: PaneLayout
     let facts: WindowFacts
     let sidebarSlide: ColumnSlide
@@ -27,6 +25,11 @@ struct WindowBody: View {
         var panelFits: Bool
     }
 
+    var state: WorkspaceState { hub.state }
+    /// Terminals as tabs take the sidebar's place: its column stays shut however the person last left it.
+    var sidebarWanted: Bool { state.sidebarVisible && !look.tabsOnTop }
+    var send: @MainActor (WorkspaceAction) -> Void { hub.send }
+
     var body: some View {
         GeometryReader { proxy in
             let window = proxy.size.width
@@ -40,7 +43,7 @@ struct WindowBody: View {
             }
             .overlay(alignment: .top) {
                 WindowControls(
-                    facts: facts, sidebarOpen: state.sidebarVisible, sidebarShown: sidebarSlide.shown,
+                    facts: facts, sidebarOpen: sidebarWanted, sidebarShown: sidebarSlide.shown,
                     panelOpen: panelFits, panelShown: panelSlide.shown,
                     panelWaiting: state.panelVisible && !panelFits, send: send)
             }
@@ -48,7 +51,7 @@ struct WindowBody: View {
             .overlay(alignment: .topLeading) {
                 if let drag { ResizeReadout(text: drag.resize.readout(closing: drag.edge == .sidebar ? "Hide" : "Close"), pointer: drag.pointer) }
             }
-            .onChange(of: Intent(sidebar: state.sidebarVisible, panelWanted: state.panelVisible, panelFits: panelFits), initial: true) {
+            .onChange(of: Intent(sidebar: sidebarWanted, panelWanted: state.panelVisible, panelFits: panelFits), initial: true) {
                 old, new in
                 let wantedChanged = old.sidebar != new.sidebar || old.panelWanted != new.panelWanted
                 let animated = animates && wantedChanged && drag == nil
@@ -60,7 +63,7 @@ struct WindowBody: View {
 
     private func layout(_ window: CGFloat) -> PaneLayout {
         var layout = widths
-        layout.sidebarOpen = state.sidebarVisible
+        layout.sidebarOpen = sidebarWanted
         layout.panelWanted = state.panelVisible
         return layout
     }
@@ -77,23 +80,20 @@ struct WindowBody: View {
             window: window, sidebar: sidebarColumn, panel: panelColumn, facts: facts,
             ruleWidth: look.columnDividers && !look.glassOn ? colours.dividerWidth : 0)
         return ZStack(alignment: .topLeading) {
-            TerminalColumn(
-                terminal: state.selectedTerminal, selected: state.selected, ids: state.terminals.map(\.id),
-                views: terminals, pads: frames.pads, showsState: !look.statusBar
-            )
+            TerminalColumn(hub: hub, pads: frames.pads)
             .frame(width: frames.contentWidth)
             .offset(x: frames.carry)
             .frame(width: frames.slotVisible, alignment: .leading)
             .clipped()
             .offset(x: frames.slotX)
 
-            SidebarColumn(state: state, facts: facts, send: send)
+            SidebarColumn(hub: hub, facts: facts)
                 .frame(width: sidebarWidth)
                 .frame(width: frames.sidebarVisible, alignment: .leading)
                 .clipped()
                 .reachable(sidebarShown > 0)
 
-            PanelColumn(tab: state.panelTab, folder: state.selectedTerminal?.folder, send: send)
+            PanelColumn(hub: hub)
                 .frame(width: panelWidth)
                 .frame(width: frames.panelVisible, alignment: .trailing)
                 .clipped()
@@ -119,14 +119,14 @@ struct WindowBody: View {
 
     @ViewBuilder private var overlay: some View {
         switch state.overlay {
-        case .palette: PaletteView(state: state, send: send) { send(.showOverlay(nil)) }
+        case .palette: PaletteView(state: state, send: send, perform: { hub.actions.perform($0) }) { send(.showOverlay(nil)) }
         case .shortcuts: ShortcutSheetView { send(.showOverlay(nil)) }
         case nil: EmptyView()
         }
     }
 
     private func statusBar(window: CGFloat) -> some View {
-        let grid = state.selected.flatMap { terminals.existing($0) }?.renderer.gridSize
+        let grid = state.selected.flatMap { hub.terminals.existing($0) }?.renderer.gridSize
         return StatusBar(
             terminals: state.terminals, selected: state.selectedTerminal, size: grid.map { "\($0.cols)×\($0.rows)" }, windowWidth: window
         ) { send(.select($0)) }

@@ -33,6 +33,8 @@ public struct Command: Sendable, Equatable, Identifiable {
     public var shortcut: Shortcut?
     /// What running it sends.
     public var action: WorkspaceAction?
+    /// A keymap action the window carries out (`splitRight`) when the workspace has no action for it.
+    public var appAction: String?
     /// The title in medium weight rather than regular: a terminal's name.
     public var isStrong: Bool
     /// More words a query may find it by, which are not marked.
@@ -41,7 +43,7 @@ public struct Command: Sendable, Equatable, Identifiable {
 
     public init(
         id: String, title: String, detail: String? = nil, scopedDetail: String? = nil, group: PaletteGroup = .actions, lead: Lead,
-        shortcut: Shortcut? = nil, action: WorkspaceAction? = nil, isStrong: Bool = false,
+        shortcut: Shortcut? = nil, action: WorkspaceAction? = nil, appAction: String? = nil, isStrong: Bool = false,
         searchText: [String] = [], section: ActionSection? = nil
     ) {
         self.id = id
@@ -52,6 +54,7 @@ public struct Command: Sendable, Equatable, Identifiable {
         self.lead = lead
         self.shortcut = shortcut
         self.action = action
+        self.appAction = appAction
         self.isStrong = isStrong
         self.searchText = searchText
         self.section = section

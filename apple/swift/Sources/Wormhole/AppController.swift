@@ -1,10 +1,11 @@
-// The app: opens the workspace window over the chosen sources and keeps the control folder and the idle check.
+// The app: the delegate that opens the workspace window and holds the parts around it. The window's state is
+// the hub's (`WindowHub`); the menus, the ambient surfaces, the secondary windows and the control folder are
+// each their own file and reach the window only through it.
 
 import AppKit
-import SettingsModel
+import PlatformModel
+import PlatformUI
 import SettingsUI
-import SwiftUI
-import TerminalCore
 import TerminalMetal
 import WindowUI
 import WorkspaceModel
@@ -12,22 +13,39 @@ import WorkspaceModel
 @MainActor
 final class AppController: NSObject, NSApplicationDelegate {
     let options: Options
-    var devctl: DevCtl?
-    private(set) var store = WorkspaceStore()
+    let policy: PlatformPolicy
+    let dataDirectory: URL
     /// How the window itself looks: its translucency, glass, status bar. The theme is `ThemeStore.shared`.
     let look = WindowLook()
-    private(set) var terminals = TerminalViews { _ in nil }
-    private var windowController: WorkspaceWindowController?
-    private var settingsController: SettingsWindowController?
-    private var configuration: RendererConfiguration?
+    let factory: TerminalFactory
+    let hub: WindowHub
+    var devctl: DevCtl?
+    var windowController: WorkspaceWindowController?
+    var settingsController: SettingsWindowController?
+    var ambient: AmbientController?
+    var menus: MenuController?
+    /// Native context menus (the terminal's), whose choices go to the same router as the menu bar's.
+    private(set) lazy var contextMenus = ContextMenuPresenter(dispatcher: MenuDispatcher { [weak self] in self?.router.dispatch($0) })
+    /// Quitting asks first while something runs, except when a control command or the idle check quits.
+    var confirmsQuit = true
+    var endsAllOnQuit = false
+    private(set) lazy var router = ActionRouter(app: self)
+    private(set) lazy var aux = AuxController(app: self, dataDirectory: dataDirectory)
 
-    init(options: Options) {
+    init(options: Options, dataDirectory: URL) {
         self.options = options
+        self.dataDirectory = dataDirectory
+        policy = PlatformPolicy(background: options.background)
+        let factory = TerminalFactory(options: options)
+        self.factory = factory
+        let store = WorkspaceStore(state: Self.initialState(real: options.program != nil, collapsed: options.grid != nil))
+        hub = WindowHub(store: store, terminals: TerminalViews { factory.make($0) })
+        super.init()
     }
 
     var window: NSWindow? { windowController?.window }
     /// The selected terminal's view, if it exists: what the control commands act on.
-    var selectedView: MetalTerminalView? { store.state.selected.flatMap { terminals.existing($0) } }
+    var selectedView: MetalTerminalView? { hub.state.selected.flatMap { hub.terminals.existing($0) } }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
@@ -39,115 +57,19 @@ final class AppController: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
-    func applicationWillTerminate(_ notification: Notification) { terminals.shutdown() }
-
-    // MARK: opening
-
-    private func open() throws {
-        applyLookOptions()
-        let (configuration, note) = options.rendererConfiguration()
-        if let note { FileHandle.standardError.write(Data((note + "\n").utf8)) }
-        self.configuration = configuration
-        // A fixed grid is a measuring mode: with the columns closed, the terminal is all the window shows.
-        store = WorkspaceStore(state: Self.initialState(real: options.program != nil, collapsed: options.grid != nil))
-        terminals = TerminalViews { [weak self] id in self?.makeView(for: id) }
-        guard let first = store.state.selected.flatMap({ terminals.view(for: $0) }) else {
-            throw Options.UsageError(description: "no terminal source could start")
-        }
-
-        let content = StoreRoot(store: store, terminals: terminals, look: look)
-        let terminalSize = options.grid.map { first.renderer.pointSize(forGrid: $0.cols, $0.rows) } ?? CGSize(width: 960, height: 600)
-        // The title row and the status bar sit above and below the terminal: 38 + 24 pt.
-        let size = CGSize(width: terminalSize.width, height: terminalSize.height + 62)
-        let controller = WorkspaceWindowController(title: "Wormhole (Swift experiment)", contentSize: size, content: content)
-        controller.onClose = { [weak self] in self?.terminals.shutdown() }
-        windowController = controller
-        if options.background {
-            // A test instance: behind the user's windows, never the active app.
-            controller.window?.orderBack(nil)
-        } else {
-            NSApp.mainMenu = AppMenu.make(target: self)
-            controller.showWindow(nil)
-            NSApp.activate()
-        }
-
-        if let directory = options.devctl {
-            let devctl = DevCtl(directory: directory) { [weak self] line in self?.run(command: line) }
-            try devctl.start()
-            self.devctl = devctl
-        }
-        if let seconds = options.idleSeconds { scheduleIdleReport(after: seconds) }
-    }
+    func applicationWillTerminate(_ notification: Notification) { hub.terminals.shutdown() }
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { ambient?.dockMenu() }
 
     /// Some rows to look at when the sources are mock; a real shell starts with the one.
-    /// A real shell starts with one terminal; the mock sources show the sample workspace.
     private static func initialState(real: Bool, collapsed: Bool) -> WorkspaceState {
         var state = MockWorkspace.state
         if real {
-            state.terminals = [TerminalSummary(id: 1, title: "zsh", subtitle: "~/Projects/wormhole", branch: "main")]
+            state.terminals = [TerminalSummary(id: 1, title: "zsh", subtitle: "~/Projects/wormhole", branch: "main", folder: "~/Projects/wormhole")]
             state.groups = []
             state.selected = 1
         }
         // A fixed grid is a measuring mode: the terminal is all the window shows.
         if collapsed { state.sidebarVisible = false; state.panelVisible = false }
         return state
-    }
-
-    private func makeView(for id: TerminalID) -> MetalTerminalView? {
-        guard let configuration else { return nil }
-        do {
-            // Each mock terminal draws from its own seed; the first keeps the one given.
-            var options = options
-            options.seed &+= UInt64(max(0, id - 1))
-            let source = try SourceFactory.make(options, size: GridSize(cols: 100, rows: 30))
-            let view = try MetalTerminalView(source: source, configuration: configuration)
-            view.fixedGrid = options.grid
-            view.onTitle = { [weak self] title in self?.store.setTitle(title, of: id) }
-            view.onExit = { [weak self] code in
-                self?.devctl?.append("exited terminal=\(id) code=\(code.map(String.init) ?? "unknown")")
-            }
-            return view
-        } catch {
-            FileHandle.standardError.write(Data("terminal \(id): cannot start: \(error)\n".utf8))
-            return nil
-        }
-    }
-
-    // MARK: menu actions
-
-    /// Over an in-memory backend until the settings come through the FFI: edits live for this run only.
-    @objc func showSettings() {
-        if settingsController == nil {
-            let model = SettingsModel(backend: MockSettingsBackend(), host: MockSettingsHost())
-            settingsController = SettingsWindowController(model: model)
-        }
-        settingsController?.show()
-    }
-    @objc func toggleSidebar() { store.send(.toggleSidebar) }
-    @objc func togglePanel() { store.send(.togglePanel) }
-    @objc func showPalette() { store.send(.showOverlay(store.state.overlay == .palette ? nil : .palette)) }
-    @objc func showShortcuts() { store.send(.showOverlay(store.state.overlay == .shortcuts ? nil : .shortcuts)) }
-    @objc func newTerminal() { store.send(.newTerminal) }
-
-    @objc func closeTerminal() {
-        guard let id = store.state.selected else { return }
-        store.send(.close(id))
-        if store.state.terminals.isEmpty { window?.close() }
-    }
-
-    @objc func selectNumbered(_ sender: NSMenuItem) {
-        guard store.state.terminals.indices.contains(sender.tag - 1) else { return }
-        store.send(.select(store.state.terminals[sender.tag - 1].id))
-    }
-}
-
-/// Reads the store inside a body, so a change to its state redraws the window.
-private struct StoreRoot: View {
-    let store: WorkspaceStore
-    let terminals: TerminalViews
-    let look: WindowLook
-
-    var body: some View {
-        WorkspaceRootView(state: store.state, look: look, send: { store.send($0) }, terminals: terminals)
     }
 }

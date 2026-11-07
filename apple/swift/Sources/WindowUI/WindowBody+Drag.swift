@@ -25,7 +25,7 @@ extension WindowBody {
     private func move(_ edge: PaneLayout.Edge, pointer: CGFloat?, window: CGFloat) {
         guard let pointer else { return finish() }
         var layout = widths
-        layout.sidebarOpen = state.sidebarVisible
+        layout.sidebarOpen = sidebarWanted
         layout.panelWanted = state.panelVisible
         let extent = edge == .sidebar ? pointer : window - pointer
         let resize = ColumnResize(extent: extent, range: edge.range, max: layout.maxWidth(of: edge, window: window))

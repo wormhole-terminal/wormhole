@@ -16,6 +16,8 @@ struct DiffHeader: View {
     @Binding var wrap: Bool
     let step: (Int) -> Void
     let close: () -> Void
+    /// In the terminal's title row the row gives the height and the insets.
+    var inTitleRow = false
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -49,8 +51,8 @@ struct DiffHeader: View {
                 BandButton(symbol: "xmark", label: "Close diff (esc)", inRow: true, action: close)
             }
         }
-        .padding(.horizontal, PanelMetrics.inset)
-        .frame(height: splitFits ? 44 : 40)
+        .padding(.horizontal, inTitleRow ? 0 : PanelMetrics.inset)
+        .frame(height: inTitleRow ? nil : splitFits ? 44 : 40)
     }
 
     private var badges: [(text: String, color: Color)] {

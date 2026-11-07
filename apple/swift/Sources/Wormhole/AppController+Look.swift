@@ -1,10 +1,13 @@
-// How the window looks, from the command line, the View menu and the control folder: the theme, the
-// appearance, the status bar and the window's own translucency. All of it is one live value in `ThemeStore`
-// and `WindowLook`, so every command does the same as the menu item and nothing is redrawn by hand.
+// How the window looks, from the command line, Settings and the control folder: the theme, the appearance, the
+// status bar and the window's own translucency. All of it is one live value in `ThemeStore` and `WindowLook`, so
+// every command does the same as the Settings control and nothing is redrawn by hand.
 
 import AppKit
 import DesignSystem
 import WindowUI
+#if WITH_UNIFFI
+    import UniFFISource
+#endif
 
 extension AppController {
     var themes: ThemeStore { ThemeStore.shared }
@@ -16,38 +19,13 @@ extension AppController {
         look.statusBar = options.statusBar
     }
 
-    @objc func chooseTheme(_ sender: NSMenuItem) {
-        if let id = sender.representedObject as? String { themes.setTheme(id) }
-    }
-
-    @objc func chooseAppearance(_ sender: NSMenuItem) {
-        if let mode = (sender.representedObject as? String).flatMap(ThemeMode.init(rawValue:)) { themes.mode = mode }
-    }
-
-    @objc func toggleStatusBar() { look.statusBar.toggle() }
-    @objc func toggleTranslucent() { look.opacity = look.opacity < 1 ? 1 : 0.8 }
-    @objc func toggleBlur() { look.blur.toggle() }
-    @objc func toggleLiquidGlass() { look.liquidGlass.toggle() }
-    @objc func toggleDividers() { look.columnDividers.toggle() }
-
-}
-
-extension AppController: NSMenuItemValidation {
-    /// The ticks and radio marks of the menus follow the live values.
-    func validateMenuItem(_ item: NSMenuItem) -> Bool {
-        switch item.action {
-        case #selector(chooseTheme(_:)): item.state = (item.representedObject as? String) == themes.theme.id ? .on : .off
-        case #selector(chooseAppearance(_:)): item.state = (item.representedObject as? String) == themes.mode.rawValue ? .on : .off
-        case #selector(toggleStatusBar): item.state = look.statusBar ? .on : .off
-        case #selector(toggleTranslucent): item.state = look.opacity < 1 ? .on : .off
-        case #selector(toggleBlur): item.state = look.blur ? .on : .off
-        case #selector(toggleLiquidGlass):
-            item.state = look.liquidGlass ? .on : .off
-            return WindowLook.macHasGlass
-        case #selector(toggleDividers): item.state = look.columnDividers ? .on : .off
-        default: break
-        }
-        return true
+    /// The person's own theme files and colour picks: the real loader (core's) reads `<data folder>/themes`, so a
+    /// user theme shows up beside the bundled ones. Without the FFI the bundled themes are all there is.
+    func configureThemes() {
+        #if WITH_UNIFFI
+            themes.resolver = FfiThemeResolver()
+            themes.themesDirectory = dataDirectory.appendingPathComponent("themes")
+        #endif
     }
 }
 
@@ -63,6 +41,8 @@ extension AppController {
             guard let mode = ThemeMode(rawValue: argument) else { reply("error: appearance is light, dark or system"); return true }
             themes.mode = mode
         case "status-bar": on(&look.statusBar)
+        case "tabs": on(&look.tabsOnTop)
+        case "gaps": on(&look.splitGaps)
         case "blur": on(&look.blur)
         case "glass": on(&look.liquidGlass)
         case "dividers": on(&look.columnDividers)
@@ -82,6 +62,6 @@ extension AppController {
     var lookState: String {
         "theme=\(themes.theme.id) appearance=\(themes.appearance.rawValue) mode=\(themes.mode.rawValue) "
             + "opacity=\(look.opacity) blur=\(look.blur) glass=\(look.liquidGlass) status_bar=\(look.statusBar) "
-            + "dividers=\(look.columnDividers) reduce_transparency=\(themes.reduceTransparency) increase_contrast=\(themes.increaseContrast)"
+            + "tabs=\(look.tabsOnTop) gaps=\(look.splitGaps) dividers=\(look.columnDividers) reduce_transparency=\(themes.reduceTransparency) increase_contrast=\(themes.increaseContrast)"
     }
 }

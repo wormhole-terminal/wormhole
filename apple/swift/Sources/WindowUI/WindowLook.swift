@@ -17,6 +17,10 @@ public final class WindowLook {
     public var liquidGlass = false
     /// The optional bar along the bottom, hidden by default.
     public var statusBar = false
+    /// A split's panes are each their own rounded box, apart (`split_gaps`, on by default).
+    public var splitGaps = true
+    /// Terminals as tabs under the title row instead of the sidebar's list (Show terminals in ▸ Tabs).
+    public var tabsOnTop = false
     /// The lines between the columns (the Column dividers setting).
     public var columnDividers = true
     /// Reduce Transparency or Increase Contrast is on, as the theme store follows them live (it observes the

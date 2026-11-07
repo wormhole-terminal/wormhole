@@ -8,11 +8,7 @@ import SwiftUI
 import WorkspaceModel
 
 struct RightPanel: View {
-    let tab: PanelTab
-    /// The terminal's folder, which every tab of the panel follows.
-    var folder: String?
-    let send: @MainActor (WorkspaceAction) -> Void
-    @State private var controller = PanelController(host: SystemPanelHost(), backends: .mock())
+    let hub: WindowHub
     /// The tab before this one, for which side the new body comes from. It is set after the body that needs it
     /// was built, so while that body is built it still holds the tab that was left.
     @State private var before: PanelTab?
@@ -21,9 +17,14 @@ struct RightPanel: View {
     static let contentIn = Animation.timingCurve(0.2, 0, 0, 1, duration: 0.14)
     static let contentSlide: CGFloat = 10
 
+    private var tab: PanelTab { hub.state.panelTab }
+    private var controller: PanelController { hub.panel }
+    /// The terminal's folder, which every tab of the panel follows.
+    private var folder: String? { hub.state.selectedTerminal?.folder }
+
     var body: some View {
         VStack(spacing: 0) {
-            PanelTabBar(tab: tab, select: { send(.showPanelTab($0)) }, badges: badges)
+            PanelTabBar(tab: tab, select: { hub.send(.showPanelTab($0)) }, badges: badges)
             PanelBody(tabName: tab.rawValue, controller: controller)
                 .id(tab)
                 .transition(.asymmetric(insertion: arrival, removal: .identity))

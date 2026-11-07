@@ -1,5 +1,6 @@
 // The right panel's content: the Panel modules' views, reading through the controller. Kept in one file so the window
-// knows the panel only through this seam; the backends are the mock ones until the Rust core arrives through the FFI.
+// knows the panel only through this seam. A diff or file opened in a tab is laid over the terminal instead of in
+// the panel (`TerminalColumn`).
 // `PanelModel` has a tab type of its own (it knows nothing of the window), so it is matched by name here.
 
 import FileIconTheme
@@ -18,8 +19,8 @@ struct PanelBody: View {
             .onChange(of: tabName) { sync() }
     }
 
-    /// The icon theme bundled with the app, loaded once.
-    private static let icons = BundledIconTheme()
+    /// The icon theme bundled with the app, loaded once (the cover over the terminal draws file icons too).
+    static let icons = BundledIconTheme()
 
     private func sync() { controller.tab = PanelModel.PanelTab(rawValue: tabName) ?? .changes }
 }

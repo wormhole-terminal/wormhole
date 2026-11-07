@@ -61,7 +61,7 @@ import WorkspaceModel
     }
 
     @Test func everyCommandRuns() {
-        #expect(CommandCatalog.commands(for: sample()).filter { $0.group != .folders }.allSatisfy { $0.action != nil })
+        #expect(CommandCatalog.commands(for: sample()).filter { $0.group != .folders }.allSatisfy { $0.action != nil || $0.appAction != nil })
     }
 
     @Test func glyphsFollowAppleOrderAndParseBack() {

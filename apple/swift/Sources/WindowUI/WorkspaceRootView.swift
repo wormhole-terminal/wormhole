@@ -10,9 +10,7 @@ import SwiftUI
 import WorkspaceModel
 
 public struct WorkspaceRootView: View {
-    let state: WorkspaceState
-    let send: @MainActor (WorkspaceAction) -> Void
-    let terminals: TerminalViews
+    let hub: WindowHub
     let look: WindowLook
     @State private var widths = PaneLayout()
     @State private var facts = WindowFacts()
@@ -28,21 +26,16 @@ public struct WorkspaceRootView: View {
         var resize: ColumnResize
     }
 
-    public init(
-        state: WorkspaceState, look: WindowLook = WindowLook(),
-        send: @escaping @MainActor (WorkspaceAction) -> Void, terminals: TerminalViews
-    ) {
-        self.state = state
+    public init(hub: WindowHub, look: WindowLook = WindowLook()) {
+        self.hub = hub
         self.look = look
-        self.send = send
-        self.terminals = terminals
-        _sidebarSlide = State(initialValue: ColumnSlide(open: state.sidebarVisible))
-        _panelSlide = State(initialValue: ColumnSlide(open: state.panelVisible))
+        _sidebarSlide = State(initialValue: ColumnSlide(open: hub.state.sidebarVisible))
+        _panelSlide = State(initialValue: ColumnSlide(open: hub.state.panelVisible))
     }
 
     public var body: some View {
         WindowBody(
-            state: state, send: send, terminals: terminals, widths: $widths, facts: facts,
+            hub: hub, widths: $widths, facts: facts,
             sidebarSlide: sidebarSlide, panelSlide: panelSlide, drag: $drag, animates: !reduceMotion
         )
         .background(WindowBackdrop())

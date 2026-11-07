@@ -11,6 +11,10 @@ public final class DiffSession {
 
     public private(set) var file: ChangedFile?
     public private(set) var phase = Phase.idle
+    /// Old against new in two columns (when there is room) and long lines wrapped: shared by the header and the
+    /// rows, which the window draws apart when the diff covers the terminal.
+    public var split = true
+    public var wrap = true
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private let highlighter: any SyntaxHighlighting
 

@@ -41,7 +41,7 @@ public enum CommandCatalog {
                 "keyboard-shortcuts", "Keyboard shortcuts", "keyboard", .showOverlay(.shortcuts),
                 Shortcuts.shortcutSheet, .view),
         ]
-        if let selected { out += neighbours(of: selected, in: state) }
+        if let selected { out += neighbours(of: selected, in: state) + AppCommands.all(hasSelection: true) } else { out += AppCommands.all(hasSelection: false) }
         return out
     }
 

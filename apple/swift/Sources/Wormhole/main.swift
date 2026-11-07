@@ -11,14 +11,14 @@ if arguments.contains("-h") || arguments.contains("--help") {
 
 do {
     let options = try Options.parse(arguments, environment: ProcessInfo.processInfo.environment)
-    try Isolation.require()
+    let dataDirectory = try Isolation.require()
     switch options.mode {
     case .renderPNG(let prefix, let frames, let every):
         try RenderPNG.run(options: options, prefix: prefix, frames: frames, every: every)
     case .app:
         let app = NSApplication.shared
         app.setActivationPolicy(options.background ? .accessory : .regular)
-        let controller = AppController(options: options)
+        let controller = AppController(options: options, dataDirectory: dataDirectory)
         app.delegate = controller
         app.run()
     }

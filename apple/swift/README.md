@@ -49,7 +49,14 @@ window is one one-shot timer per flip.
 
 `WORMHOLE_DEVCTL=<dir>` turns on a folder the app watches with a dispatch source (never a timer): write
 `cmd.tmp`, rename it to `cmd`; results go to `out.txt`. Commands: `frames N`, `shot <png>`, `state`,
-`screen`, `type <text>`, `quit`. `frames N` follows `apple/MEASURING.md`: forced draws on the main thread, 2 ms
+`screen`, `type <text>`, `quit`, and the window's: `new`, `close`, `select <id>`, `split [row|down]`, `zoom`, `join <id>`,
+`leave`, `focus <left|right|up|down>`, `tab <notes|changes|history|usage|project|files>`, `diff [n]` (the n-th changed file over the
+terminals, none closes it), `find [text]`, `notice [n]`, `sidebar`, `panel`, `palette`, `shortcuts`, `settings`,
+`action <keymap id>` (any menu action), `menus` (the menu bar as text), `size WxH`, `window-shot <png> [title]` (the window's
+chrome; Metal grids are not in it, `shot` writes the grid), `about`, `licenses`, `hosts`, `trust`, `access`,
+`updates`, `onboarding`, `quick-panel`, and the look's (`theme`, `appearance`, `status-bar`, `tabs`, `gaps`,
+`blur`, `glass`, `dividers`, `opacity`, `reduce-transparency`, `increase-contrast`). `state` ends with the panes
+(`panes=row(1,col(14,15)) focused=15 zoomed=none cover=none`). `frames N` follows `apple/MEASURING.md`: forced draws on the main thread, 2 ms
 apart, the first 3 dropped, one line appended to `frames.txt`. Its fields (all milliseconds):
 
 - `avg` `max` `first`: **build**, from just before `frame()` to the GPU buffers being complete (fetch, parse
@@ -64,6 +71,7 @@ no PTY, no engine and no FFI: they must never be set beside the GPUI app's.
 
 Environment: `WORMHOLE_SHELL` (a program for the real source), `WORMHOLE_SWIFT_GRID=200x69` (fixed grid, window
 sized to fit), `WORMHOLE_BACKGROUND=1` (accessory app, window behind others, nothing takes focus),
+`--onboarding` forces the welcome (it shows by itself once per data folder, never with `--background`).
 `WORMHOLE_FONT_DIR` (the four JetBrains Mono files; found by walking up from the repository otherwise).
 
 ## What is missing against the GPUI renderer

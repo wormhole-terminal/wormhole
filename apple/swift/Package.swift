@@ -31,7 +31,10 @@ var targets: [Target] = [
     // Title rows, status bar, right panel and the window that holds them with the terminal view.
     .target(
         name: "WindowUI",
-        dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "FileIconTheme", "PaletteUI", "TerminalMetal"]),
+        dependencies: [
+            "WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "FileIconTheme", "PaletteUI",
+            "TerminalMetal", "TerminalCore", "TerminalUI", "PanesModel", "PanesUI", "PlatformModel",
+        ]),
     // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
     .target(name: "PanelModel", dependencies: ["WorkspaceModel"]),
     // The right panel's tab contents: Notes, Changes (with the diff), History, Files, Project and Usage.
@@ -85,11 +88,15 @@ var targets: [Target] = [
     // The Theme Studio window: token list, gallery of every component, token editor.
     .target(name: "StudioUI", dependencies: ["StudioModel", "DesignSystem", "SidebarUI", "PanelUI", "PaletteUI", "WorkspaceModel", "PanelModel", "PaletteModel"]),
     .testTarget(name: "StudioTests", dependencies: ["StudioModel", "StudioUI", "DesignSystem"]),
-    .testTarget(name: "UITests", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI"]),
+    .testTarget(
+        name: "UITests",
+        dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI", "PanesModel", "PanelModel", "PlatformModel"]),
 ]
 
 var appDependencies: [Target.Dependency] = [
-    "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI", "SettingsModel", "SettingsUI",
+    "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI", "SettingsModel", "SettingsUI", "DesignSystem",
+    "PanesModel", "PanesUI", "PanelModel", "PlatformModel", "PlatformUI", "AuxModel", "AuxWindows", "TerminalUI",
+    "PaletteModel",
 ]
 // The view's input: pointer, selection, links, keyboard and input method, on the mock and (when the FFI is
 // linked) on the real engine.
