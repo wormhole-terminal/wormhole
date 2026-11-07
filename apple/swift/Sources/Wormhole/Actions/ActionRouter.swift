@@ -18,6 +18,7 @@ final class ActionRouter {
         table = terminalActions().merging(paneActions(), uniquingKeysWith: { first, _ in first })
             .merging(viewActions(), uniquingKeysWith: { first, _ in first })
             .merging(findActions(), uniquingKeysWith: { first, _ in first })
+            .merging(outputActions(), uniquingKeysWith: { first, _ in first })
             .merging(appActions(), uniquingKeysWith: { first, _ in first })
     }
 

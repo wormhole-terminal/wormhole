@@ -93,4 +93,18 @@ import Testing
         state.persistent = true
         for menu in builder.menus(for: state) { walk(menu.items) }
     }
+
+    @Test func printAndExportEndTheShellMenuWithTheReservedKeys() throws {
+        let shell = try #require(OutputMenuItems(base: builder).menus(for: Self.frontWindow()).first { $0.title == "Shell" })
+        let last = shell.items.suffix(3)
+        guard case .item(let export) = last[last.startIndex + 1], case .item(let print) = last[last.startIndex + 2] else {
+            Issue.record("two items: \(last)")
+            return
+        }
+        #expect(last.first == .separator)
+        #expect((export.command, export.title, export.key?.glyphText) == (.action("exportText"), "Export Text As…", "⌘S"))
+        #expect((print.command, print.title, print.key?.glyphText) == (.action("print"), "Print…", "⌘P"))
+        // Only the Shell menu is touched.
+        #expect(OutputMenuItems(base: builder).menus(for: Self.frontWindow()).filter { $0.title != "Shell" } == builder.menus(for: Self.frontWindow()).filter { $0.title != "Shell" })
+    }
 }
