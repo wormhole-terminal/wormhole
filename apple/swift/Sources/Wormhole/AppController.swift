@@ -1,19 +1,28 @@
-// The window: one terminal view over the chosen source, the control folder, and the idle check.
+// The app: opens the workspace window over the chosen sources and keeps the control folder and the idle check.
 
 import AppKit
+import SwiftUI
 import TerminalCore
 import TerminalMetal
+import WindowUI
+import WorkspaceModel
 
 @MainActor
-final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
-    private let options: Options
-    private var window: NSWindow?
-    private var view: MetalTerminalView?
-    private var devctl: DevCtl?
+final class AppController: NSObject, NSApplicationDelegate {
+    let options: Options
+    var devctl: DevCtl?
+    private(set) var store = LocalStore(terminals: [], collapsed: false)
+    private(set) var terminals = TerminalViews { _ in nil }
+    private var windowController: WorkspaceWindowController?
+    private var configuration: RendererConfiguration?
 
     init(options: Options) {
         self.options = options
     }
+
+    var window: NSWindow? { windowController?.window }
+    /// The selected terminal's view, if it exists: what the control commands act on.
+    var selectedView: MetalTerminalView? { store.state.selected.flatMap { terminals.existing($0) } }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
@@ -25,46 +34,34 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
-
-    func applicationWillTerminate(_ notification: Notification) {
-        view?.shutdown()
-    }
-
-    func windowWillClose(_ notification: Notification) {
-        view?.shutdown()
-    }
+    func applicationWillTerminate(_ notification: Notification) { terminals.shutdown() }
 
     // MARK: opening
 
     private func open() throws {
         let (configuration, note) = options.rendererConfiguration()
         if let note { FileHandle.standardError.write(Data((note + "\n").utf8)) }
-        let source = try SourceFactory.make(options, size: GridSize(cols: 100, rows: 30))
-        let view = try MetalTerminalView(source: source, configuration: configuration)
-        view.fixedGrid = options.grid
-        view.onTitle = { [weak self] title in self?.window?.title = title.isEmpty ? "Wormhole (Swift experiment)" : title }
-        view.onExit = { [weak self] code in
-            self?.devctl?.append("exited code=\(code.map(String.init) ?? "unknown")")
+        self.configuration = configuration
+        // A fixed grid is a measuring mode: with the columns closed, the terminal is all the window shows.
+        store = LocalStore(terminals: Self.initialTerminals(real: options.program != nil), collapsed: options.grid != nil)
+        terminals = TerminalViews { [weak self] id in self?.makeView(for: id) }
+        guard let first = store.state.selected.flatMap({ terminals.view(for: $0) }) else {
+            throw Options.UsageError(description: "no terminal source could start")
         }
-        self.view = view
 
-        let content = options.grid.map { view.renderer.pointSize(forGrid: $0.cols, $0.rows) } ?? CGSize(width: 960, height: 600)
-        let window = NSWindow(
-            contentRect: NSRect(origin: .zero, size: content), styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered, defer: false)
-        window.title = "Wormhole (Swift experiment)"
-        window.contentView = view
-        window.delegate = self
-        window.isReleasedWhenClosed = false
-        window.center()
-        window.makeFirstResponder(view)
-        self.window = window
+        let content = StoreRoot(store: store, terminals: terminals)
+        let terminalSize = options.grid.map { first.renderer.pointSize(forGrid: $0.cols, $0.rows) } ?? CGSize(width: 960, height: 600)
+        // The title row and the status bar sit above and below the terminal: 38 + 24 pt.
+        let size = CGSize(width: terminalSize.width, height: terminalSize.height + 62)
+        let controller = WorkspaceWindowController(title: "Wormhole (Swift experiment)", contentSize: size, content: content)
+        controller.onClose = { [weak self] in self?.terminals.shutdown() }
+        windowController = controller
         if options.background {
             // A test instance: behind the user's windows, never the active app.
-            window.orderBack(nil)
+            controller.window?.orderBack(nil)
         } else {
-            installMenu()
-            window.makeKeyAndOrderFront(nil)
+            NSApp.mainMenu = AppMenu.make(target: self)
+            controller.showWindow(nil)
             NSApp.activate()
         }
 
@@ -76,99 +73,61 @@ final class AppController: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if let seconds = options.idleSeconds { scheduleIdleReport(after: seconds) }
     }
 
-    private func installMenu() {
-        let main = NSMenu()
-        let app = NSMenuItem()
-        main.addItem(app)
-        let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
-        app.submenu = appMenu
-        let edit = NSMenuItem()
-        main.addItem(edit)
-        let editMenu = NSMenu(title: "Edit")
-        editMenu.addItem(withTitle: "Paste", action: #selector(MetalTerminalView.paste(_:)), keyEquivalent: "v")
-        edit.submenu = editMenu
-        NSApp.mainMenu = main
+    /// Some rows to look at when the sources are mock; a real shell starts with the one.
+    private static func initialTerminals(real: Bool) -> [TerminalSummary] {
+        let first = TerminalSummary(id: 1, title: "zsh", subtitle: "~/Projects/wormhole", branch: "main")
+        guard !real else { return [first] }
+        return [
+            first,
+            TerminalSummary(id: 2, title: "agent", subtitle: "~/Projects/wormhole", branch: "exp/swift-ui", activity: .working),
+            TerminalSummary(id: 3, title: "build", subtitle: "~/Projects/web", branch: "main", activity: .needsInput),
+        ]
     }
 
-    // MARK: control commands
-
-    private func run(command line: String) {
-        guard let view else { return }
-        let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
-        let argument = parts.count > 1 ? parts[1] : ""
-        switch parts.first ?? "" {
-        case "frames":
-            FramesRun(view: view, count: Int(argument) ?? 40) { [weak self] line in
-                self?.devctl?.append(line, to: "frames.txt")
-            }.start()
-            // The run keeps itself alive through its scheduled steps.
-        case "shot":
-            guard !argument.isEmpty else { return reply("error: shot needs a path") }
-            do {
-                try view.writeScreenshot(to: URL(fileURLWithPath: argument))
-                reply("shot \(argument)")
-            } catch {
-                reply("error: shot failed: \(error)")
+    private func makeView(for id: TerminalID) -> MetalTerminalView? {
+        guard let configuration else { return nil }
+        do {
+            // Each mock terminal draws from its own seed; the first keeps the one given.
+            var options = options
+            options.seed &+= UInt64(max(0, id - 1))
+            let source = try SourceFactory.make(options, size: GridSize(cols: 100, rows: 30))
+            let view = try MetalTerminalView(source: source, configuration: configuration)
+            view.fixedGrid = options.grid
+            view.onTitle = { [weak self] title in self?.store.setTitle(title, of: id) }
+            view.onExit = { [weak self] code in
+                self?.devctl?.append("exited terminal=\(id) code=\(code.map(String.init) ?? "unknown")")
             }
-        case "state": reply(state(view))
-        case "screen":
-            let grid = view.renderer.gridSize
-            reply((0..<grid.rows).map { view.renderer.text(ofRow: $0) }.joined(separator: "\n"))
-        case "type":
-            view.source.write(Data(argument.replacingOccurrences(of: "\\r", with: "\r").replacingOccurrences(of: "\\n", with: "\r").utf8))
-            reply("typed")
-        case "quit":
-            reply("quit")
-            NSApp.terminate(nil)
-        default:
-            reply("error: no command \(line)")
+            return view
+        } catch {
+            FileHandle.standardError.write(Data("terminal \(id): cannot start: \(error)\n".utf8))
+            return nil
         }
     }
 
-    private func reply(_ text: String) { devctl?.append(text) }
+    // MARK: menu actions
 
-    private func state(_ view: MetalTerminalView) -> String {
-        let renderer = view.renderer
-        let grid = renderer.gridSize, cell = renderer.cellPixels, stats = view.statistics, counters = renderer.counters
-        return "grid=\(grid.cols)x\(grid.rows) cell=\(cell.width)x\(cell.height)px scale=\(renderer.scale) "
-            + "frames_drawn=\(stats.framesDrawn) ticks=\(stats.ticks) wakes=\(stats.wakes) pauses=\(stats.pauses) "
-            + "busy_skips=\(stats.busySkips) blink_fires=\(stats.blinkFires) link=\(view.isLinkRunning ? "running" : "paused") "
-            + "words_shaped=\(counters.wordsShaped) word_hits=\(counters.wordHits) glyphs_rasterised=\(counters.glyphsRasterised) "
-            + "atlas_resets=\(counters.atlasResets)"
+    @objc func toggleSidebar() { store.send(.toggleSidebar) }
+    @objc func togglePanel() { store.send(.togglePanel) }
+    @objc func newTerminal() { store.send(.newTerminal) }
+
+    @objc func closeTerminal() {
+        guard let id = store.state.selected else { return }
+        store.send(.close(id))
+        if store.state.terminals.isEmpty { window?.close() }
     }
 
-    // MARK: the idle check
+    @objc func selectNumbered(_ sender: NSMenuItem) {
+        guard store.state.terminals.indices.contains(sender.tag - 1) else { return }
+        store.send(.select(store.state.terminals[sender.tag - 1].id))
+    }
+}
 
-    /// Hold the window idle, then print what the kernel counted: process CPU time and wake-ups. A one-shot
-    /// timer at each end of the interval is the only thing this adds to the process.
-    private func scheduleIdleReport(after seconds: Double) {
-        guard let view else { return }
-        // Let the first frames and any start-up work finish, then stop the source: the window has nothing to show.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-            MainActor.assumeIsolated {
-                view.source.stop()
-                let cpu0 = WakeupCounter.processCPUNanoseconds()
-                let wake0 = WakeupCounter.current()
-                let stats0 = view.statistics
-                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) {
-                    MainActor.assumeIsolated {
-                        let cpu = WakeupCounter.processCPUNanoseconds() - cpu0
-                        let stats = view.statistics
-                        var report = String(
-                            format: "idle %.1fs: cpu=%.2fms ticks=%d frames=%d wakes=%d blink=%d link=%@",
-                            seconds, Double(cpu) / 1e6, stats.ticks - stats0.ticks, stats.framesDrawn - stats0.framesDrawn,
-                            stats.wakes - stats0.wakes, stats.blinkFires - stats0.blinkFires, view.isLinkRunning ? "running" : "paused")
-                        if let wake0, let wake1 = WakeupCounter.current() {
-                            report += " interrupt_wakeups=\(wake1.interrupts - wake0.interrupts)"
-                                + " platform_idle_wakeups=\(wake1.platformIdle - wake0.platformIdle)"
-                        }
-                        print(report)
-                        self.devctl?.append(report)
-                        NSApp.terminate(nil)
-                    }
-                }
-            }
-        }
+/// Reads the store inside a body, so a change to its state redraws the window.
+private struct StoreRoot: View {
+    let store: LocalStore
+    let terminals: TerminalViews
+
+    var body: some View {
+        WorkspaceRootView(state: store.state, send: { store.send($0) }, terminals: terminals)
     }
 }
