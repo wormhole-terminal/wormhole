@@ -256,7 +256,7 @@ fn open_in_choices(cx: &App) -> (Vec<Installed>, Resolved, Vec<Choice<String>>) 
 }
 
 fn open_in_has_native_menu(resolved: &Resolved) -> bool {
-    cfg!(target_os = "macos") && (resolved.missing.is_none() || platform::native_menu_subtitles())
+    platform::native_menus() && (resolved.missing.is_none() || platform::native_menu_subtitles())
 }
 
 fn open_in_menu(cx: &App) -> Menu {

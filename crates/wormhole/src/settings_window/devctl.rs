@@ -132,7 +132,7 @@ pub(crate) fn cli_tool(action: &str, cx: &mut App) {
 pub(crate) fn select(id: &str, cx: &mut App) {
     let id = super::sections::select_id(id);
     with_page(cx, move |page, window, cx| {
-        if cfg!(target_os = "macos") {
+        if crate::platform::native_menus() {
             let menu = id.and_then(|id| {
                 if let Some(touched) = super::registry::control(id).and_then(|setting| setting.touched) {
                     touched(page, cx);

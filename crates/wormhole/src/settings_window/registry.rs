@@ -31,7 +31,7 @@ use wormhole_text::keys::*;
 use wormhole_text::{Key, text};
 
 use super::{FrontWindow, SettingsWindow, section_icon, sections, ui};
-use crate::platform::{Item, Menu};
+use crate::platform::{self, Item, Menu};
 use crate::select::{Choice, SelectTrigger};
 use crate::settings::update_settings;
 use crate::settings::{Settings, SettingsStore, UiColors, settings};
@@ -660,7 +660,7 @@ impl SettingsWindow {
                     .iter()
                     .find(|option| option.value == current)
                     .map_or_else(|| current.clone().into(), |option| option.label().clone());
-                if cfg!(target_os = "macos") {
+                if platform::native_menus() {
                     let spoken = settings_index::entry(id).map_or("", |(_, _, entry)| entry.label());
                     let owner = cx.weak_entity();
                     return SelectTrigger::new(

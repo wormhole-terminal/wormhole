@@ -95,6 +95,12 @@ pub fn boot_volume_name() -> String {
     "/".to_string()
 }
 
+/// Whether the platform has native menus to open from a control (a select or a menu button). Where
+/// it does not, the caller draws its own.
+pub(crate) fn native_menus() -> bool {
+    cfg!(target_os = "macos")
+}
+
 /// Whether the native menu shows the second line of an item. Use a drawn select when a
 /// second line is needed and the platform does not display it.
 pub(crate) fn native_menu_subtitles() -> bool {
