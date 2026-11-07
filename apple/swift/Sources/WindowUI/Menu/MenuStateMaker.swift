@@ -15,6 +15,7 @@ struct MenuFacts {
     var isZoomed: Bool
     var canSplitRight: Bool
     var canSplitDown: Bool
+    var minimap = false
     /// The actions the dispatcher can run.
     var implemented: Set<ActionID>
 }
@@ -31,7 +32,8 @@ enum MenuStateMaker {
         if !facts.tabsOnTop { menu.off.insert("toggleTerminalTabs") }
         if !facts.isFullScreen { menu.off.insert("fullScreen") }
         if !facts.isZoomed { menu.off.insert("zoomPane") }
-        menu.off.formUnion(["toggleMinimap", "toggleZenMode"])
+        menu.off.insert("toggleZenMode")
+        if !facts.minimap { menu.off.insert("toggleMinimap") }
         menu.checked.insert(tabAction(state.panelTab))
         if selected?.isPinned == true { menu.checked.insert("pinTerminal") }
         menu.split = facts.isSplit

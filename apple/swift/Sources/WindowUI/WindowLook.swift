@@ -18,6 +18,8 @@ public final class WindowLook {
     public var liquidGlass = false
     /// The optional bar along the bottom, hidden by default.
     public var statusBar = false
+    /// The minimap along the terminals' right edge instead of the scroll bar (`minimap`, off by default).
+    public var minimap = false
     /// A split's panes are each their own rounded box, apart (`split_gaps`, on by default).
     public var splitGaps = true
     /// Terminals as tabs under the title row instead of the sidebar's list (Show terminals in ▸ Tabs).

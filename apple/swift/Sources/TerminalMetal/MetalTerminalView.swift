@@ -20,6 +20,15 @@ public final class MetalTerminalView: NSView {
     public var onExit: ((Int32?) -> Void)?
     /// Something was copied (the selection, a link): the host may say so.
     public var onCopied: ((String) -> Void)?
+    /// Rows were rebuilt by a frame (output, a scroll): what is drawn from the terminal's state beside the grid (block
+    /// marks, the minimap, find's ticks) may be read again.
+    public var onContentChanged: (() -> Void)?
+    /// The pointer is over viewport row `row` of the grid (`nil`: it left, or is past the grid): block hover.
+    public var onPointerRow: ((Int?) -> Void)?
+    /// Find's bar is open: the matches among the viewport rows are painted after each frame (`+Find`).
+    public var findActive = false { didSet { if findActive != oldValue { refreshFound() } } }
+    /// Width the grid leaves free on the right for the minimap, which takes the scroll bar's place (`+Minimap`).
+    public var minimapWidth: CGFloat = 0 { didSet { if minimapWidth != oldValue { minimapChanged() } } }
     /// Records every draw's phases when set (the measuring mode).
     public var sampler: FrameSampler?
     public internal(set) var statistics = ViewStatistics()
@@ -70,6 +79,8 @@ public final class MetalTerminalView: NSView {
     /// A selection may exist: ask for its spans after each frame until one comes back empty.
     var selectionMayExist = false
     var hasSelection = false
+    /// Find's matches are painted (`refreshFound`).
+    var foundShown = false
     var focusReported = false
     let scroller = TerminalScroller()
 
@@ -203,7 +214,7 @@ public final class MetalTerminalView: NSView {
         // A zoom on its way keeps the grid the program has: it is told once, when the size has arrived.
         guard zoomEase == nil else { return }
         // The legacy scroll bar's gutter is not grid.
-        let gridWidth = max(1, Int(((bounds.width - scroller.gutterWidth) * scale).rounded(.down)))
+        let gridWidth = max(1, Int(((bounds.width - scroller.gutterWidth - minimapWidth) * scale).rounded(.down)))
         let (cols, rows) = fixedGrid ?? renderer.grid(fittingPixels: gridWidth, Int(pixels.height))
         let cell = renderer.cellPixels
         let size = GridSize(cols: cols, rows: rows, cellWidth: Float(Double(cell.width) / renderer.scale), cellHeight: Float(Double(cell.height) / renderer.scale))
@@ -285,7 +296,9 @@ public final class MetalTerminalView: NSView {
         }
         let t2 = MonotonicClock.now()
         refreshSelection()
+        refreshFound()
         updateScroller()
+        if rebuilt > 0 { onContentChanged?() }
         var timings = DrawTimings(outcome: .drawn)
         if force || renderer.needsDraw {
             if let layer = metalLayer {

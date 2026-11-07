@@ -101,6 +101,8 @@ public protocol FrameSource: AnyObject, Sendable {
 
     /// The pointer, selection and links, when the source has them (the real engine and the mock do).
     var interaction: (any TerminalInteraction)? { get }
+    /// Find, command blocks and the minimap over the whole history, when the source has one (the real engine).
+    var scrollback: (any TerminalScrollback)? { get }
 }
 
 extension FrameSource {
@@ -113,4 +115,5 @@ extension FrameSource {
     public func inlineImage(key: UInt32) -> InlineImage? { nil }
     public func plainText(history: Bool) -> String? { nil }
     public var interaction: (any TerminalInteraction)? { nil }
+    public var scrollback: (any TerminalScrollback)? { nil }
 }

@@ -12,9 +12,11 @@
 
 mod aux_backends;
 mod contents;
+mod blocks;
 mod error;
 mod events;
 mod files_panel;
+mod find;
 pub mod folder_picker;
 mod frame;
 mod git;
@@ -23,6 +25,7 @@ mod inline_images;
 mod interaction;
 mod isolation;
 pub mod keymap;
+mod minimap;
 pub mod notify;
 pub mod palette_search;
 mod settings;
@@ -43,6 +46,7 @@ mod workspace_watch;
 
 pub use aux_backends::*;
 pub use contents::ContentsScope;
+pub use blocks::{BlockRecord, BlockSpanRecord, BlockStatus, PutResult};
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
 pub use files_panel::{
@@ -53,6 +57,7 @@ pub use files_panel::{
     ProjectService, ProjectStateRecord, RenameFailure, SessionNotesStore, TaskDocRecord, TaskSaved,
     TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord, UsageService,
 };
+pub use find::{FindOutcome, FoundSpan};
 pub use git::{
     Git, GitBackendError, GitChange, GitChangeKind, GitCommitDetails, GitDiff, GitEnvVar, GitListener,
     GitLog, GitLogCommit, GitRef, GitRefKind, GitRev, GitRevKind, GitSignature, GitStatus, GitWatch,
@@ -64,6 +69,7 @@ pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,
 };
+pub use minimap::{MinimapGeometryRecord, MinimapRunRecord};
 pub use settings::{
     SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsHandle, SettingsHealth, SettingsHit,
     SettingsHookState, SettingsImportRow, SettingsListener, SettingsOptionRow, SettingsPaths,

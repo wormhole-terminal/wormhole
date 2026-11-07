@@ -11,7 +11,7 @@ extension WindowHub {
         let bars = BarActions()
         bars.onClose = { [unowned self] in actions.closeTerminal(id) }
         bars.onRestart = { [unowned self] in restart(id) }
-        let made = TerminalOverlay(view: view, actions: bars)
+        let made = TerminalOverlay(view: view, actions: bars, notices: notices)
         overlays[id] = made
         return made
     }

@@ -116,11 +116,17 @@ fn pack_cell(cell: &Cell, out: &mut Vec<u8>) {
     out.extend_from_slice(&u32::from(cell.c).to_le_bytes());
     out.extend_from_slice(&pack_color(cell.fg).to_le_bytes());
     out.extend_from_slice(&pack_color(cell.bg).to_le_bytes());
-    out.extend_from_slice(&cell.flags.bits().to_le_bytes());
+    out.extend_from_slice(&pack_flags(cell).to_le_bytes());
+}
+
+/// The cell's flags as the frame carries them (the engine's bits).
+#[inline]
+pub(crate) fn pack_flags(cell: &Cell) -> u32 {
+    cell.flags.bits()
 }
 
 #[inline]
-fn pack_color(color: Color) -> u32 {
+pub(crate) fn pack_color(color: Color) -> u32 {
     match color {
         Color::Named(named) => named_slot(named),
         Color::Indexed(index) => 1 << 24 | u32::from(index),

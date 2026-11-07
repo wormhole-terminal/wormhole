@@ -783,3 +783,47 @@ Swift side: `HookBridge` (`HookBridge.start(workspace:usage:access:)` and `HookB
 
 **Core changes this needed** (additive): `ipc::acquire_in` and `ipc::socket_path_in` are public (a server on a folder
 the process was not started with, and tests); `WorkspaceModel::splits_overview()`.
+
+## Scrollback: find, command blocks, minimap (more `Terminal` methods)
+
+Additive methods on `Terminal` (no version bump); code in `ffi/src/{find,blocks,minimap}.rs`. Swift sees them
+through `FrameSource.scrollback` (`TerminalFinding`, `TerminalBlocks`, `TerminalMinimap` in TerminalCore).
+Lines are grid lines (0 the top of the live screen, history above it negative); rows are viewport rows of the
+last `frame()`; read the frame first.
+
+```swift
+// Find (wormhole_term::find). Matches stay in Rust, in grid coordinates, as of the search.
+func findSearch(text:, matchCase:, wholeWord:, regex:) -> FindOutcome  // BLOCKING: copies the grid's text under the
+                                          // engine's lock, searches the copy; call off the main thread. count, capped
+                                          // (10,000), invalid (bad regex), nearest (the match to start from)
+func findSetCurrent(index: UInt32?)      // the match painted apart
+func findReveal(index: UInt32)           // sets it current and scrolls it into view (the next frame is complete)
+func findSpans() -> [FoundSpan]          // matches on the viewport rows of the last frame {row, first, last, current};
+                                          // shifted by the history growth since the search, dropped when the cells changed
+func findTicks() -> [Double]             // 0 top of the scrollback ... 1 bottom of the screen
+func findHasNewOutput() -> Bool          // the program printed since the search
+func findClear()                         // forgets results and drops a search still running
+```
+A search that finishes after a newer one began reports its outcome but does not replace the results.
+
+```swift
+// Command blocks (OSC 133): wormhole_term blocks/marks/command_to_prompt.
+func blocksAvailable() -> Bool;  func shellAtPrompt() -> Bool
+func blockSpans() -> [BlockSpanRecord]   // viewport rows per block of the last frame {id, firstRow, endRow, starts, status}
+func blockById(id:), blockAtLine(line:), blockNewestRan() -> BlockRecord?   // {id, start, outputStart, end, command, status}
+func promptLine(from:, up:) -> Int32?;  func displayOffset() -> UInt32;  func bottommostLine() -> Int32
+func scrollLineToTop(line:);  func selectLines(first:, last:);  func linesText(first:, last:) -> String
+func blockPutAtPrompt(id:, palette: [UInt32]) -> PutResult   // ^U + the command as a paste, never a Return; refuses
+                                          // concealed / same-colour / invisible text and multi-line without bracketed paste.
+                                          // `palette`: the theme's colours by slot (0xRRGGBB, 263 entries) for the colour check
+// BlockStatus: prompt | running | finished(code: Int32?, tookMs: UInt64?)
+```
+
+```swift
+// Minimap (wormhole_term::minimap): lines are read under the lock only when the output or the view changed.
+func minimapGeometry(fits:) -> MinimapGeometryRecord   // {total, screen, fits, viewTop, columns, stamp}; cheap
+func minimapLines() -> [[MinimapRunRecord]]            // call again only when `stamp` moved; colours/flags as the frame's
+func scrollToDisplayOffset(offset:)                    // the view `offset` lines into the history (0: live)
+```
+Threads: every call is a short lock except `findSearch`. Hostile input: the pattern is compiled with core's size
+limit, matches are capped, a command is typed only when every cell shows what it holds.

@@ -24,6 +24,11 @@ extension ActionRouter {
             "bigger": { hub.zoomText(step: 1) },
             "smaller": { hub.zoomText(step: -1) },
             "actualSize": { hub.zoomText(step: nil) },
+            // Show / Hide Minimap is the setting itself (Settings and the menu are one switch).
+            "toggleMinimap": { [unowned self] in
+                let backend = app.settingsModel.backend
+                backend.set("minimap", to: .bool(!(backend.values["minimap"]?.bool ?? false)))
+            },
         ]
     }
 
@@ -34,6 +39,13 @@ extension ActionRouter {
             "findNext": { hub.find(.next) },
             "findPrevious": { hub.find(.previous) },
             "useSelectionForFind": { hub.find(.useSelection) },
+            // The command blocks' Edit menu (Terminal.app's marks): jumps between prompts and the actions on a block.
+            "previousPrompt": { hub.jumpPrompt(.up) },
+            "nextPrompt": { hub.jumpPrompt(.down) },
+            "selectOutput": { hub.blockAction(.selectOutput) },
+            "copyOutput": { hub.blockAction(.copyOutput) },
+            "copyCommand": { hub.blockAction(.copyCommand) },
+            "rerunCommand": { hub.blockAction(.putAtPrompt) },
         ]
     }
 }

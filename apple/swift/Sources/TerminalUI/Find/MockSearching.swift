@@ -1,6 +1,7 @@
 // A searcher over a list of lines, for previews, the gallery and tests: literal or regex matching, no terminal.
 
 import Foundation
+import TerminalCore
 
 @MainActor
 public final class MockSearching: TerminalSearching {
@@ -30,6 +31,7 @@ public final class MockSearching: TerminalSearching {
     }
 
     public func reveal(match index: Int) { revealed.append(index) }
+    public func setActive(_ active: Bool) {}
     public func selectionText() -> String? { selection }
     public func ticks() -> [Double] { matches.map { Double($0) / Double(max(lines.count, 1)) } }
 

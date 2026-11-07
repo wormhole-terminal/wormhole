@@ -33,8 +33,16 @@ final class TerminalScroller: NSObject {
 
     var style: NSScroller.Style { view.scrollerStyle }
 
+    /// The minimap stands in for the bar: hidden, and no gutter.
+    var isSuppressed = false {
+        didSet {
+            hide?.cancel()
+            view.isHidden = isSuppressed || style == .overlay
+        }
+    }
+
     /// Width the grid gives up: the legacy gutter, nothing for an overlay thumb.
-    var gutterWidth: CGFloat { style == .legacy ? NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy) : 0 }
+    var gutterWidth: CGFloat { style == .legacy && !isSuppressed ? NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy) : 0 }
 
     func layout(in bounds: CGRect) {
         let width = NSScroller.scrollerWidth(for: .regular, scrollerStyle: style)
@@ -74,12 +82,13 @@ final class TerminalScroller: NSObject {
     func applyStyle() {
         view.scrollerStyle = NSScroller.preferredScrollerStyle
         hide?.cancel()
-        view.isHidden = style == .overlay
+        view.isHidden = style == .overlay || isSuppressed
         view.alphaValue = 1
     }
 
     func reveal() {
         hide?.cancel()
+        guard !isSuppressed else { return }
         view.isHidden = false
         view.alphaValue = 1
         guard style == .overlay else { return }

@@ -58,6 +58,8 @@ public final class UniFFIFrameSource: FrameSource {
     /// A new small object per call: the view takes it once, after the source started.
     public var interaction: (any TerminalInteraction)? { current.map(UniFFIInteraction.init) }
 
+    public var scrollback: (any TerminalScrollback)? { current.map(UniFFIScrollback.init) }
+
     public func stop() {
         terminal.withLock { current in
             current?.close()

@@ -30,6 +30,7 @@ public final class FindModel {
     public func open(seed: String? = nil) {
         let reopened = !isOpen
         isOpen = true
+        if reopened { searcher.setActive(true) }
         focusRequest += 1
         if let seed, seed != text {
             text = seed
@@ -44,11 +45,13 @@ public final class FindModel {
         guard let line = searcher.selectionText()?.split(whereSeparator: \.isNewline)
             .first(where: { !$0.allSatisfy(\.isWhitespace) }) else { return }
         let seed = String(line)
+        if !isOpen { searcher.setActive(true) }
         isOpen = true
         if seed != text { text = seed; search(fresh: true) }
     }
 
     public func close() {
+        if isOpen { searcher.setActive(false) }
         isOpen = false
         task?.cancel()
         task = nil

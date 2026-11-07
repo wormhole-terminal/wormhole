@@ -36,13 +36,14 @@ struct TerminalPanes: View {
 struct TerminalSurface: View {
     let hub: WindowHub
     let id: TerminalID
+    @Environment(WindowLook.self) private var look
 
     var body: some View {
         if let overlay = hub.overlay(for: id) {
             GeometryReader { proxy in
                 ZStack(alignment: .topTrailing) {
                     TerminalHost(views: hub.terminals, id: id, overlay: overlay) { hub.actions.terminalMenu(id) }
-                    FindTicks(positions: overlay.find.ticks)
+                    TerminalMarks(overlay: overlay, showsMinimap: look.minimap)
                     if overlay.find.isOpen {
                         FindBar(model: overlay.find, onClose: overlay.find.close).padding(Space._2)
                     }

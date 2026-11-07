@@ -10,15 +10,38 @@ import WorkspaceModel
 @MainActor @Observable
 final class TerminalOverlay {
     let find: FindModel
+    /// The command blocks of the terminal's scrollback (`TerminalOverlay+Blocks`): marks, hover, jumps and actions.
+    let blocks: BlockController
+    let minimap: CoreMinimap
+    /// Bumped after every frame that rebuilt rows: what is drawn from the terminal beside the grid reads it.
+    private(set) var revision = 0
+    @ObservationIgnored private(set) weak var view: MetalTerminalView?
     let size = SizeReadoutModel()
     var bars = PaneOverlayState()
     var exitCode: Int?
     /// The bars' buttons, over the window's own actions.
     @ObservationIgnored let actions: BarActions
 
-    init(view: MetalTerminalView, actions: BarActions) {
-        find = FindModel(searcher: ScreenSearching(view: view))
+    init(view: MetalTerminalView, actions: BarActions, notices: NoticeCenter) {
+        let find = FindModel(searcher: ScreenSearching(view: view))
+        let blocks = BlockController(
+            source: CoreBlocks(
+                terminal: { [weak view] in view?.source.scrollback },
+                palette: { [weak view] in view?.renderer.palette.slots.map(Self.rgb) ?? [] }),
+            say: { notices.post($0) }, announce: Self.announce)
+        (self.find, self.blocks, self.view) = (find, blocks, view)
+        minimap = CoreMinimap(
+            terminal: { [weak view] in view?.source.scrollback }, palette: { [weak view] in view?.renderer.palette ?? .spike })
         self.actions = actions
+        view.onPointerRow = { [weak blocks] in blocks?.hover(row: $0) }
+        view.onContentChanged = { [weak self] in self?.contentChanged() }
+    }
+
+    /// The terminal drew rows: the views beside the grid read again, and a search that the output made stale runs again.
+    private func contentChanged() {
+        revision &+= 1
+        blocks.noteView()
+        find.outputChanged()
     }
 
     func exited(code: Int32?) {

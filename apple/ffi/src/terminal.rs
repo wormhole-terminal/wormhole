@@ -38,6 +38,9 @@ pub struct Terminal {
     pub(crate) interaction: crate::interaction::Interaction,
     /// Which placements the last frame carried (`inline_images`); held with `snapshot`'s lock.
     placements: Mutex<PlacementsSent>,
+    /// The last search's results (`find.rs`) and the minimap's copy (`minimap.rs`).
+    pub(crate) finder: crate::find::Finder,
+    pub(crate) minimap: crate::minimap::Minimap,
     timing: Timing,
     /// The program's name ("zsh"), which names the terminal until something better does.
     name: String,
@@ -295,6 +298,8 @@ impl Terminal {
             events,
             interaction: Default::default(),
             placements: Mutex::default(),
+            finder: Default::default(),
+            minimap: Default::default(),
             timing: Timing::default(),
             name,
         }))

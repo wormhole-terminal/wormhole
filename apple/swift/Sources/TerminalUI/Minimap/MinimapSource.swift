@@ -4,19 +4,6 @@
 import Foundation
 import TerminalCore
 
-/// Columns `start..<end` of a line drawn as one block, in the colours of `cell` (its first cell): the text colour
-/// for text, the background for coloured blanks.
-public struct MinimapRun: Equatable, Sendable {
-    public var start: Int
-    public var end: Int
-    public var isText: Bool
-    public var cell: PackedCell
-
-    public init(start: Int, end: Int, isText: Bool, cell: PackedCell) {
-        (self.start, self.end, self.isText, self.cell) = (start, end, isText, cell)
-    }
-}
-
 public struct MinimapSnapshot: Equatable, Sendable {
     public var geometry: MinimapGeometry
     public var columns: Int

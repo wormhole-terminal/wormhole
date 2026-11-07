@@ -1,6 +1,7 @@
-// Find over what a terminal shows right now, until the Rust search (`wormhole_term::find`) backs the protocol with
-// the scrollback too. The matching is `MockSearching`'s (literal, whole word, regex, case); only the lines are the
-// terminal's: its visible rows, read when a search starts.
+// Find over a terminal: the Rust search (`wormhole_term::find`) through the source's `TerminalScrollback` covers the
+// whole history with case, whole-word and regex as the GPUI app does, off the main thread; matches are painted by the
+// view after each frame while the bar is open. A terminal without a scrollback (the mock sources) is searched on the
+// rows it shows, with `MockSearching`'s matcher.
 
 import TerminalMetal
 import TerminalUI
@@ -8,19 +9,42 @@ import TerminalUI
 @MainActor
 final class ScreenSearching: TerminalSearching {
     private weak var view: MetalTerminalView?
-    private let matcher = MockSearching(lines: [])
+    private let visibleRows = MockSearching(lines: [])
 
     init(view: MetalTerminalView) { self.view = view }
 
+    private var finder: (any TerminalFinding)? { view?.source.scrollback }
+
     func search(_ query: FindQuery) async -> FindOutcome {
-        if let renderer = view?.renderer {
-            matcher.lines = (0..<renderer.gridSize.rows).map { renderer.text(ofRow: $0) }
-        }
-        return await matcher.search(query)
+        guard let finder else { return await searchVisibleRows(query) }
+        let options = query.options
+        // The engine's lock is held only to copy the text; the search itself runs on this copy, off the main thread.
+        let found = await Task.detached(priority: .userInitiated) {
+            finder.find(query.text, matchCase: options.matchCase, wholeWord: options.wholeWord, regex: options.regex)
+        }.value
+        view?.requestRedraw()
+        return found
     }
 
-    func reveal(match index: Int) { matcher.reveal(match: index) }
-    func ticks() -> [Double] { matcher.ticks() }
-    func selectionText() -> String? { nil }
-    var hasNewOutput: Bool { false }
+    func reveal(match index: Int) {
+        guard let finder else { return visibleRows.reveal(match: index) }
+        finder.findReveal(match: index)
+        view?.requestRedraw()
+    }
+
+    func ticks() -> [Double] { finder?.findTicks() ?? visibleRows.ticks() }
+    func selectionText() -> String? { view?.source.interaction?.selectionText() }
+    var hasNewOutput: Bool { finder?.findHasNewOutput ?? false }
+
+    func setActive(_ active: Bool) {
+        view?.findActive = active
+        if !active { finder?.findClear() }
+    }
+
+    private func searchVisibleRows(_ query: FindQuery) async -> FindOutcome {
+        if let renderer = view?.renderer {
+            visibleRows.lines = (0..<renderer.gridSize.rows).map { renderer.text(ofRow: $0) }
+        }
+        return await visibleRows.search(query)
+    }
 }

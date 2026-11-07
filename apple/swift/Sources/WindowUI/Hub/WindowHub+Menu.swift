@@ -11,7 +11,7 @@ extension WindowHub {
         return MenuStateMaker.make(
             MenuFacts(
                 state: state, statusBar: look.statusBar, tabsOnTop: look.tabsOnTop, isFullScreen: isFullScreen,
-                isSplit: panes.isSplit, isZoomed: panes.isZoomed, canSplitRight: canSplit(.row), canSplitDown: canSplit(.column),
+                isSplit: panes.isSplit, isZoomed: panes.isZoomed, canSplitRight: canSplit(.row), canSplitDown: canSplit(.column), minimap: look.minimap,
                 implemented: implemented))
     }
 

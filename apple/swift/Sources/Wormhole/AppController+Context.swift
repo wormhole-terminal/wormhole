@@ -16,6 +16,7 @@ extension AppController {
         facts.splitRight = router.table["splitRight"] != nil
         facts.splitDown = router.table["splitDown"] != nil
         hub.send(.select(id))
+        facts.block = hub.contextBlock(in: id)
         return contextMenus.menu(TerminalMenu.nodes(facts))
     }
 
@@ -30,8 +31,11 @@ extension AppController {
         case .find: router.run("find")
         case .splitRight: router.run("splitRight")
         case .splitDown: router.run("splitDown")
-        case .openLink, .copyLink, .copyCommand, .copyOutput, .putCommandAtPrompt, .clear:
-            // Links and command blocks come with the engine's marks through the FFI.
+        case .copyCommand: hub.blockAction(.copyCommand, on: action.subject.map(UInt64.init(bitPattern:)))
+        case .copyOutput: hub.blockAction(.copyOutput, on: action.subject.map(UInt64.init(bitPattern:)))
+        case .putCommandAtPrompt: hub.blockAction(.putAtPrompt, on: action.subject.map(UInt64.init(bitPattern:)))
+        case .openLink, .copyLink, .clear:
+            // Links come with the engine's marks through the FFI.
             break
         }
     }

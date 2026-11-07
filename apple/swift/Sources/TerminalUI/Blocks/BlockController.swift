@@ -18,6 +18,8 @@ public final class BlockController {
     /// The block ⌘↑ / ⌘↓ last landed on: where the next jump starts and what the Edit menu acts on, until the
     /// view is scrolled or typed in.
     @ObservationIgnored private var cursor: UInt64?
+    /// How far back the view was when the jump landed: a different offset later means the person scrolled or typed.
+    @ObservationIgnored private var cursorOffset = 0
 
     @ObservationIgnored private let source: CommandBlocks
     @ObservationIgnored private let say: (Notice) -> Void
@@ -34,6 +36,7 @@ public final class BlockController {
     }
 
     public var spans: [BlockSpan] { source.spans }
+    public var isAtPrompt: Bool { source.shellAtPrompt }
 
     /// The pointer is over viewport `row` (nil: outside the grid): the finished block under it gets the tint.
     public func hover(row: Int?) {
@@ -48,6 +51,11 @@ public final class BlockController {
     /// The view scrolled or was typed in: the next jump starts from what is in view.
     public func forgetCursor() { cursor = nil }
 
+    /// The terminal drew a frame: a view that is not where the last jump left it has been scrolled or typed in.
+    public func noteView() {
+        if cursor != nil, source.displayOffset != cursorOffset { forgetCursor() }
+    }
+
     /// Block `id`, looked up now: a click may come a while after the readout showed, when its rows moved or went.
     public func block(id: UInt64) -> CommandBlock? { source.block(id: id) }
 
@@ -59,7 +67,7 @@ public final class BlockController {
     /// The block the actions act on: the one the last jump landed on, else the newest whose command ran.
     public var target: CommandBlock? {
         if let cursor, let block = source.block(id: cursor) { return block }
-        return source.spans.last { $0.state.ran }.flatMap { source.block(id: $0.id) }
+        return source.newestRan()
     }
 
     public func perform(_ action: Action, on block: CommandBlock? = nil) {
@@ -97,6 +105,7 @@ public final class BlockController {
             source.scrollLineToTop(line)
             let block = source.block(atLine: line)
             cursor = block?.id
+            cursorOffset = source.displayOffset
             if let block { announce(BlockWording.spoken(block)) }
         } else if direction == .down {
             if !atBottom { source.scrollToBottom() }

@@ -2,11 +2,13 @@
 // with the jumps and actions recorded instead of acted on.
 
 import Foundation
+import TerminalCore
 
 @MainActor
 public final class MockBlocks: CommandBlocks {
     public var blocks: [CommandBlock]
     public var displayOffset = 0
+    public var shellAtPrompt = true
     public let rows: Int
     public private(set) var topLine = 0
     public private(set) var selected: ClosedRange<Int>?
@@ -29,6 +31,8 @@ public final class MockBlocks: CommandBlocks {
 
     public func block(id: UInt64) -> CommandBlock? { blocks.first { $0.id == id } }
     public func block(atLine line: Int) -> CommandBlock? { blocks.first { $0.start <= line && line <= $0.end } }
+
+    public func newestRan() -> CommandBlock? { blocks.last { $0.state.ran } }
 
     public func promptLine(from line: Int, direction: PromptDirection) -> Int? {
         let starts = blocks.map(\.start)

@@ -13,6 +13,9 @@ extension MetalTerminalView {
         return CellGrid(cellWidth: CGFloat(cell.width) / scale, cellHeight: CGFloat(cell.height) / scale, columns: size.cols, rows: size.rows, rowSizes: renderer.scene.sizes)
     }
 
+    /// The viewport row under the pointer as of its last move, for the context menu's block.
+    public var pointerRow: Int? { pointer.lastPoint.flatMap { cellGrid.contains($0) ? cellGrid.hit($0)?.row : nil } }
+
     private func location(_ event: NSEvent) -> CGPoint { convert(event.locationInWindow, from: nil) }
 
     private func modifiers(_ event: NSEvent) -> PointerModifiers {
@@ -98,6 +101,7 @@ extension MetalTerminalView {
         let point = location(event)
         pointer.lastPoint = point
         revealScrollerNear(point)
+        onPointerRow?(cellGrid.contains(point) ? cellGrid.hit(point)?.row : nil)
         guard let hit = cellGrid.hit(point), cellGrid.contains(point) else { return }
         updateLink(under: hit, command: event.modifierFlags.contains(.command))
         _ = send(.none, .motion, hit, event)
@@ -105,6 +109,7 @@ extension MetalTerminalView {
 
     public override func mouseExited(with event: NSEvent) {
         pointer.lastPoint = nil
+        onPointerRow?(nil)
         updateLink(under: nil, command: false)
     }
 
