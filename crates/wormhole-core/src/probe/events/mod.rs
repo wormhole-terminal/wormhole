@@ -197,7 +197,7 @@ const SPECS: [EventSpec; 10] = [
         event: HookEvent::OutputMatch,
         source: bus("output", "output", None),
         // `line` is the finished logical line the pattern ran over; the captures are its groups.
-        fields: &[id("terminal"), id("block"), number("line_no"), text("line")],
+        fields: &[id("terminal"), number("line_no"), text("line")],
         derived: &[],
         matchers: &[MatchField { name: "pattern", kind: MatcherKind::Pattern { on: "line" } }],
     },
