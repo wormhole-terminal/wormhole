@@ -1,0 +1,16 @@
+[package]
+name = "uniffi-bindgen"
+description = "The bindings generator, at the version of the uniffi the library uses."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+# Its own package so the library does not link the generator (about 70 s of compile time and a
+# larger static library): `uniffi/cli` is only turned on here.
+[dependencies]
+uniffi = { version = "0.32", features = ["cli"] }
+
+[lints]
+workspace = true

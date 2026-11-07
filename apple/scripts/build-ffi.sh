@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Build the Rust side of the Swift UI experiment and wrap it for SwiftPM:
 #   1. cargo builds `wormhole-ffi` (release, one arch) into apple/target;
-#   2. uniffi-bindgen (this crate's own binary, at the library's version) reads the library and writes
+#   2. uniffi-bindgen (the package next to it, at the library's version) reads the library and writes
 #      the Swift bindings and the C header and module map;
 #   3. the static library and the header become `WormholeFFI.xcframework`.
 # Both results land in `apple/dist/` (git-ignored): `WormholeFFI.xcframework` and
@@ -17,7 +17,10 @@ cd "$apple"
 export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-26.0}"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
 
+# Two invocations: the library alone has no generator in it (smaller, and cargo's feature
+# unification would otherwise turn `uniffi/cli` on for it); the generator is a package of its own.
 cargo build --release -p wormhole-ffi
+cargo build --release -p uniffi-bindgen
 
 lib="target/release/libwormhole_ffi.a"
 bindings="target/bindings"

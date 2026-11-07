@@ -2,7 +2,7 @@
 # `Cargo.lock`, `cargo deny`, `licenses.json` or `scripts/structure.py` (`tools/bench` is the precedent).
 # The app's crates come in by path; none of them may name anything in here.
 [workspace]
-members = ["ffi"]
+members = ["ffi", "bindgen"]
 resolver = "3"
 
 [workspace.package]
