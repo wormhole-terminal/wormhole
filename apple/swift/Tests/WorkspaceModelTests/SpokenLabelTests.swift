@@ -32,14 +32,14 @@ final class SpokenLabelTests: XCTestCase {
     func testGroupHeadSaysCountStateAndAttentionOnlyWhileFolded() {
         let sections = SidebarListing.sections(for: MockWorkspace.state)
         XCTAssertEqual(
-            SidebarListing.spokenLabel(for: sections[1], position: 2, of: 5),
-            "Wormhole, 3 terminals, expanded, 2 of 5")
+            SidebarListing.spokenLabel(for: sections[1], position: 2, of: 6),
+            "Wormhole, 4 terminals, expanded, 2 of 6")
         XCTAssertEqual(
-            SidebarListing.spokenLabel(for: sections[3], position: 4, of: 5),
-            "Infra, 2 terminals, collapsed, 4 of 5")
+            SidebarListing.spokenLabel(for: sections[4], position: 5, of: 6),
+            "Infra, 2 terminals, collapsed, 5 of 6")
         let alerting = reduce(MockWorkspace.state, .toggleGroup("website"))
         XCTAssertEqual(
-            SidebarListing.spokenLabel(for: SidebarListing.sections(for: alerting)[2], position: 3, of: 5),
-            "Website, 3 terminals, 1 need attention, collapsed, 3 of 5")
+            SidebarListing.spokenLabel(for: SidebarListing.sections(for: alerting)[2], position: 3, of: 6),
+            "Website, 3 terminals, 1 need attention, collapsed, 3 of 6")
     }
 }

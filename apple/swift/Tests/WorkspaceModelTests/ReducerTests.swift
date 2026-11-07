@@ -22,12 +22,12 @@ final class ReducerTests: XCTestCase {
     }
 
     func testClosingTheSelectedSelectsTheRowThatTakesItsPlace() {
-        // Listed: pinned 3, 10, 12; Wormhole 1, 2, 4; Website 5, 6, 7; Infra 8, 9; loose 11, 13.
+        // Listed: pinned loose 10, 12; Wormhole 3, 1, 2, 4; Website 5, 6, 7; loose 11; Infra 8, 9; loose 13.
         var state = mock
         state.selected = 2
         XCTAssertEqual(reduce(state, .close(2)).selected, 4)
         state.selected = 13
-        XCTAssertEqual(reduce(state, .close(13)).selected, 11, "the last one falls back to the row above")
+        XCTAssertEqual(reduce(state, .close(13)).selected, 9, "the last one falls back to the row above")
     }
 
     func testClosingAnotherKeepsTheSelectionAndLeavesGroups() {

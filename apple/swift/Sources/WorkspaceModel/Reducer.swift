@@ -11,12 +11,7 @@ public func reduce(_ state: WorkspaceState, _ action: WorkspaceAction) -> Worksp
         if state.terminals.contains(where: { $0.id == id }) { state.selected = id }
 
     case .newTerminal:
-        // The id is never reused while its neighbours live; the number in the title follows it.
-        let id = (state.terminals.map(\.id).max() ?? 0) + 1
-        state.terminals.append(TerminalSummary(id: id, title: "Terminal \(id)"))
-        state.selected = id
-        // A search that hides the new terminal would leave the selection invisible.
-        state.search = ""
+        state.addTerminal()
 
     case .close(let id):
         guard state.terminals.contains(where: { $0.id == id }) else { break }
@@ -56,6 +51,24 @@ public func reduce(_ state: WorkspaceState, _ action: WorkspaceAction) -> Worksp
 
     case .search(let text):
         state.search = text
+
+    case .rename(let id, let name):
+        state.rename(id, to: name)
+
+    case .newGroup(let name):
+        state.addGroup(named: name)
+
+    case .addToGroup(let id, let group):
+        state.move(id, to: .group(group, before: nil))
+
+    case .moveTerminal(let id, let landing):
+        state.move(id, to: landing)
+
+    case .moveGroup(let id, let before):
+        state.moveGroup(id, before: before)
+
+    case .splitRight(let id):
+        state.splitRight(id)
     }
     return state
 }
