@@ -20,6 +20,11 @@ public final class RustSettingsHost: SettingsHost {
         /// The "Open in" select: the apps installed (a system list).
         public var openApps: @MainActor () -> [SettingOption] = { [] }
         public var open: @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) }
+        /// The programs let in (Agent access): the core's desk lists them, in the order Settings shows.
+        public var approvals: @MainActor () -> [AccessApprovalRecord] = { [] }
+        /// Takes an approval back (`stored`: a database row; else one held in memory): the hook server ends the
+        /// streams it let in, which only the app can reach.
+        public var revokeApproval: @MainActor (_ number: UInt64, _ stored: Bool) -> Void = { _, _ in }
         public init() {}
     }
 
@@ -28,9 +33,9 @@ public final class RustSettingsHost: SettingsHost {
     let backend: RustSettingsBackend
     let platform: Platform
     let importHome: String?
-    private var records: PanelRecords
+    var records: PanelRecords
     /// Why the last hook install or removal failed (core's sentence); nil after one that worked.
-    public private(set) var failure: String?
+    public internal(set) var failure: String?
 
     init(handle: SettingsHandle, backend: RustSettingsBackend, platform: Platform, importHome: String?) {
         (self.handle, self.backend, self.platform, self.importHome) = (handle, backend, platform, importHome)
@@ -40,6 +45,8 @@ public final class RustSettingsHost: SettingsHost {
             profile: profile ?? ProfileRecord(name: "", startFolder: "~", gitName: "", gitEmail: ""))
         refreshAgents()
         refreshImports()
+        refreshProfiles()
+        refreshCommandLine()
     }
 
     public func options(for source: OptionSource) -> [SettingOption] {
@@ -51,6 +58,20 @@ public final class RustSettingsHost: SettingsHost {
     }
 
     public func fontFamilies() -> [String] { platform.fontFamilies() }
+
+    /// Says why the last button did nothing (nil: it did something), until the next one.
+    public func problem(_ sentence: String?) {
+        failure = sentence
+        records.problem = sentence
+    }
+
+    /// The window opened: what the pages read from the disk is read again.
+    public func windowOpened() {
+        refreshAgents()
+        refreshProfiles()
+        refreshCommandLine()
+        refreshApprovals()
+    }
 
     public func panelRecords() -> PanelRecords { records }
 
@@ -67,6 +88,8 @@ public final class RustSettingsHost: SettingsHost {
             backend.reload()
         case .rescanAgents: refreshAgents()
         case .scanImports: refreshImports()
+        case .installCommandLine: installCommandLine()
+        case .uninstallCommandLine: uninstallCommandLine()
         default: platform.perform(action)
         }
     }
@@ -75,7 +98,7 @@ public final class RustSettingsHost: SettingsHost {
         Task.detached {
             let result = Result { try settingsSetAgentHooks(agent: id, install: hooks != .remove) }
             await MainActor.run {
-                self.failure = result.failure.map(SettingsFailure.sentence)
+                self.problem(result.failure.map(SettingsFailure.sentence))
                 self.refreshAgents()
             }
         }
@@ -101,11 +124,5 @@ public final class RustSettingsHost: SettingsHost {
     /// Reads the profile record again, after a switch or an edit of the profile.
     public func refreshProfile() {
         if let profile = RecordMapping.profile((try? settingsProfiles()) ?? []) { records.profile = profile }
-    }
-}
-
-extension Result {
-    fileprivate var failure: Failure? {
-        if case .failure(let error) = self { error } else { nil }
     }
 }

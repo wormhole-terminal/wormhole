@@ -42,7 +42,9 @@ public final class MockSettingsBackend: SettingsBackend {
 public final class MockSettingsHost: SettingsHost {
     public private(set) var performed: [SettingsAction] = []
 
-    public init() {}
+    private let records: PanelRecords
+
+    public init(records: PanelRecords = .sample) { self.records = records }
 
     public func options(for source: OptionSource) -> [SettingOption] {
         switch source {
@@ -60,5 +62,5 @@ public final class MockSettingsHost: SettingsHost {
 
     public func fontFamilies() -> [String] { ["JetBrains Mono", "Menlo", "SF Mono", "Monaco"] }
     public func perform(_ action: SettingsAction) { performed.append(action) }
-    public func panelRecords() -> PanelRecords { .sample }
+    public func panelRecords() -> PanelRecords { records }
 }

@@ -11,12 +11,14 @@
 //! `wait` and `run` a job a thread of its own waits out.
 
 mod input;
+mod joined;
 mod listing;
 mod open;
 mod read;
 mod stream;
 mod structure;
 mod wait;
+mod worktree;
 
 use std::sync::Arc;
 

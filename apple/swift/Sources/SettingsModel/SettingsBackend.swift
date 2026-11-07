@@ -33,9 +33,25 @@ public protocol SettingsHost: AnyObject {
     func panelRecords() -> PanelRecords
     /// Installs, repairs or removes the status hooks of the agent with this id (a row's button).
     func perform(_ hooks: AgentRecord.HookAction, agent id: String)
+    /// Takes an approval back (a row's Revoke): the program is asked again, and what it started is closed.
+    func revoke(_ approval: ApprovalRecord)
+    /// Makes a profile, as a copy of `copyOf`'s settings or with the defaults, and deletes one (never Default). The
+    /// reason it was refused, or nil.
+    func makeProfile(name: String, copyOf: String?) -> String?
+    func removeProfile(_ id: String) -> String?
+    /// The Settings window was opened: what a page reads from the disk is read again.
+    func windowOpened()
 }
 
 extension SettingsHost {
     /// A host that has no agents to set up (the mock) ignores the button.
     public func perform(_ hooks: AgentRecord.HookAction, agent id: String) {}
+    /// A host that holds no approvals (the mock) has none to take back.
+    public func revoke(_ approval: ApprovalRecord) {}
+    public func makeProfile(name: String, copyOf: String?) -> String? { Self.noProfiles }
+    public func windowOpened() {}
+    public func removeProfile(_ id: String) -> String? { Self.noProfiles }
+    private static var noProfiles: String {
+        String(localized: "settings-profile-unavailable", defaultValue: "Profiles are not available in this build.")
+    }
 }

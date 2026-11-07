@@ -120,3 +120,23 @@ fn a_trusted_project_runs_its_actions_as_effects_and_a_switch_turns_them_off() {
         Err(ProjectFailure::NotFound { what: "nonsense".into() })
     );
 }
+
+#[test]
+fn a_projects_settings_go_to_settings_only_while_its_switch_and_trust_allow_them() {
+    let repo = Repo::new(&[("config.json", r#"{"font_size": 20}"#)]);
+    let (_data, service) = service(&Owner::answering([OwnerAnswer::Approved]));
+    let below = repo.root();
+    let found = service.settings_overrides(below.clone()).expect("a project");
+    assert_eq!((found.dir.as_str(), found.root.as_str()), (".wormhole", repo.root().as_str()));
+    assert!(found.note.contains("config.json") && found.note.contains(&found.name), "{}", found.note);
+    assert_eq!(found.json, None, "held back until the person trusts the project");
+    assert_eq!(service.approve(repo.root()), ApproveOutcome::Approved);
+    let json = service.settings_overrides(below.clone()).and_then(|found| found.json).expect("its settings");
+    assert!(json.contains("\"font_size\":20"), "{json}");
+    // Switched off by the person, it sets nothing; no project at all is none.
+    service.set_feature(repo.root(), "settings".into(), false).expect("the switch");
+    assert_eq!(service.settings_overrides(below).expect("still a project").json, None);
+    let plain = tempfile::tempdir().expect("temp dir");
+    std::fs::create_dir(plain.path().join(".git")).expect("git");
+    assert_eq!(service.settings_overrides(plain.path().to_string_lossy().into_owned()), None);
+}

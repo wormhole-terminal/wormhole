@@ -118,13 +118,15 @@ impl Core {
 /// What the server asks Swift to do: queued, with one wake until drained.
 pub(crate) struct Ui {
     pending: Mutex<Vec<HookEvent>>,
+    /// The latest gauge told for each terminal: a status line repeats itself many times a minute.
+    gauges: Mutex<std::collections::HashMap<i64, HookEvent>>,
     woken: AtomicBool,
     listener: Arc<dyn HookListener>,
 }
 
 impl Ui {
     fn new(listener: Arc<dyn HookListener>) -> Self {
-        Self { pending: Mutex::default(), woken: AtomicBool::new(false), listener }
+        Self { pending: Mutex::default(), gauges: Mutex::default(), woken: AtomicBool::new(false), listener }
     }
 
     pub(crate) fn push(&self, event: HookEvent) {
@@ -132,6 +134,25 @@ impl Ui {
         if !self.woken.swap(true, Ordering::AcqRel) {
             self.listener.wake();
         }
+    }
+
+    /// Queue `gauge` (a `HookEvent::Gauge`) unless it says what the last one for its terminal did.
+    pub(crate) fn push_gauge(&self, gauge: HookEvent) {
+        let HookEvent::Gauge { terminal, .. } = &gauge else { return };
+        let terminal = *terminal;
+        let mut told = self.gauges.lock().unwrap_or_else(PoisonError::into_inner);
+        if told.get(&terminal) == Some(&gauge) {
+            return;
+        }
+        told.insert(terminal, gauge.clone());
+        drop(told);
+        {
+            let mut pending = self.pending.lock().unwrap_or_else(PoisonError::into_inner);
+            // Only the newest word of a terminal counts.
+            pending
+                .retain(|event| !matches!(event, HookEvent::Gauge { terminal: old, .. } if *old == terminal));
+        }
+        self.push(gauge);
     }
 
     pub(crate) fn drain(&self) -> Vec<HookEvent> {

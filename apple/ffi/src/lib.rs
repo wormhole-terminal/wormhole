@@ -10,9 +10,11 @@
 // this crate (`apple/scripts/rules.py` checks that).
 #![allow(unsafe_code, reason = "UniFFI's generated scaffolding")]
 
+mod app_actions;
 mod aux_backends;
 mod contents;
 mod blocks;
+mod cli_tool;
 mod error;
 mod events;
 mod files_panel;
@@ -45,9 +47,17 @@ mod workspace_pump;
 mod workspace_types;
 mod workspace_watch;
 
+pub use app_actions::{
+    default_terminal_failed, default_terminal_script_types, dismissed_tips_count, profile_copy_option,
+    profile_delete_question, reset_tips,
+};
 pub use aux_backends::*;
 pub use contents::ContentsScope;
 pub use blocks::{BlockRecord, BlockSpanRecord, BlockStatus, PutResult};
+pub use cli_tool::{
+    CliToolError, CliToolPathRecord, CliToolPathVerdict, CliToolRecord, CliToolState, cli_tool_install,
+    cli_tool_keep_current, cli_tool_path_note, cli_tool_status, cli_tool_uninstall,
+};
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
 pub use files_panel::{
@@ -55,8 +65,9 @@ pub use files_panel::{
     FilesFailure, FilesService, FolderPaintRecord, FolderWatch, NewTerminalRecord, NoteSaved, NotesDocRecord,
     NotesSaved, NotesSyncOutcome, OwnerAnswer, OwnerAuthenticator, PanelListener, PlanLimitRecord,
     ProjectActionRecord, ProjectEffect, ProjectFailure, ProjectFeatureRecord, ProjectPromptRecord,
-    ProjectService, ProjectStateRecord, RenameFailure, SessionNotesStore, TaskDocRecord, TaskSaved,
-    TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord, UsageService,
+    ProjectService, ProjectSettingsRecord, ProjectStateRecord, RenameFailure, SessionNotesStore,
+    TaskDocRecord, TaskSaved, TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord,
+    UsageService,
 };
 pub use find::{FindOutcome, FoundSpan};
 pub use git::{

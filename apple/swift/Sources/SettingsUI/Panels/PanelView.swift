@@ -18,6 +18,7 @@ struct PanelView: View {
         case "agentsInstalled": AgentList(records: records.agents.filter { $0.state != .notInstalled }, host: model.host)
         case "agentsOther": AgentList(records: records.agents.filter { $0.state == .notInstalled }, host: model.host)
         case "importFound": ImportList(records: records.imports)
+        case "agentAccessPrograms": ApprovalList(records: records.approvals, host: model.host)
         default: PanelNote(text: entry.description.isEmpty ? entry.label : entry.description)
         }
     }
@@ -37,5 +38,18 @@ struct PanelNote: View {
     var body: some View {
         Text(text).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, Space._3)
+    }
+}
+
+/// Why the last button did nothing (a hook that could not be installed, `wh` that could not be written), on the page until
+/// the next one.
+struct ProblemNote: View {
+    let text: String
+    @Environment(\.tokens) private var tokens
+    var body: some View {
+        Text(text).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.statusDangerText)
+            .frame(maxWidth: .infinity, alignment: .leading).padding(Space._3)
+            .background(tokens.settingsGroup, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusLg))
+            .accessibilityAddTraits(.isStaticText)
     }
 }

@@ -135,6 +135,16 @@ impl HookServer {
         revoked
     }
 
+    /// Take stored approval `id` (a database row of `AccessDesk::approvals`) back and end the streams it let in.
+    /// Whether there was one.
+    pub fn revoke_stored_approval(&self, id: u64) -> bool {
+        let revoked = self.core.desk.revoke_stored(id);
+        if revoked {
+            self.core.bus.revoke_holder(gate::holder(true, id));
+        }
+        revoked
+    }
+
     /// The settings changed: read them again, and end the streams that only the mode "Allowed while open" let
     /// read every terminal when it is no longer that.
     pub fn settings_changed(&self) {

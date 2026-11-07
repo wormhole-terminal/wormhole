@@ -12,7 +12,7 @@ struct HeaderAction: View {
         switch section {
         case "agents": button(SettingsText.rescanPath, "arrow.clockwise", .rescanAgents)
         case "import": button(SettingsText.scanAgain, "arrow.clockwise", .scanImports)
-        case "profile": button(SettingsText.newProfile, "plus", .newProfile)
+        case "profile": ActionButton(title: SettingsText.newProfile, symbol: "plus") { model.showsNewProfile = true }
         default: EmptyView()
         }
     }

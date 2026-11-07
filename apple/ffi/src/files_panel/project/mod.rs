@@ -5,6 +5,7 @@
 mod effects;
 mod hub;
 mod notes_sync;
+mod overrides;
 mod paint;
 mod records;
 mod service;
@@ -13,6 +14,7 @@ mod trust;
 
 pub use effects::{NewTerminalRecord, ProjectEffect, TerminalPlace};
 pub use notes_sync::{NotesDocRecord, NotesSyncOutcome, TaskDocRecord};
+pub use overrides::ProjectSettingsRecord;
 pub use records::{
     FolderPaintRecord, ProjectActionRecord, ProjectFailure, ProjectFeatureRecord, ProjectPromptRecord,
     ProjectStateRecord, TrustLineRecord, TrustStatusRecord,

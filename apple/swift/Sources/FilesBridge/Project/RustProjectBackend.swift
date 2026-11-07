@@ -22,6 +22,13 @@ public final class RustProjectBackend: ProjectBackend, @unchecked Sendable {
         return await offMain { service.project(folder: folder).map(ProjectState.init) }
     }
 
+    /// What the project of `folder` sets over the person's settings, for Settings to layer: nil where there is no project;
+    /// its `json` is nil unless the project's Settings switch is on and trust allows it.
+    public func settingsOverrides(at folder: String) async -> ProjectSettingsRecord? {
+        let service = service
+        return await offMain { service.settingsOverrides(folder: folder) }
+    }
+
     public func folderPaint(of folder: String) async -> FolderPaint {
         let service = service
         return await offMain { FolderPaint(service.folderPaint(folder: folder)) }

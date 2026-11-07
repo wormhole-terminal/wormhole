@@ -42,6 +42,10 @@ public final class HookServerHandle {
     @discardableResult
     public func revokeApproval(_ id: UInt64) -> Bool { server.revokeApproval(id: id) }
 
+    /// Take stored approval `id` (a database row of `AccessDesk.approvals()`) back and end the streams it let in.
+    @discardableResult
+    public func revokeStoredApproval(_ id: UInt64) -> Bool { server.revokeStoredApproval(id: id) }
+
     /// The settings changed: the server reads the agent-access mode again.
     public func settingsChanged() { server.settingsChanged() }
 

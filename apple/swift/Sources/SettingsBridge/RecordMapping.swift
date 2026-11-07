@@ -35,3 +35,45 @@ enum RecordMapping {
         SettingOption(value: .string(row.value), label: row.label)
     }
 }
+
+// The Command line tool, the approvals, the profiles and the project in front.
+extension RecordMapping {
+    static func commandLine(_ row: CliToolRecord) -> CommandLineToolRecord {
+        let state: CommandLineToolRecord.State =
+            switch row.state {
+            case .notInstalled: .notInstalled
+            case .installed: .installed
+            case .foreign: .foreign
+            }
+        return CommandLineToolRecord(
+            state: state, command: row.command, headline: row.headline, note: row.note, current: row.current,
+            folder: row.folder)
+    }
+
+    static func pathNote(_ row: CliToolPathRecord) -> CommandLinePathNote {
+        let verdict: CommandLinePathNote.Verdict =
+            switch row.verdict {
+            case .on: .on
+            case .off: .off
+            case .unknown: .unknown
+            }
+        return CommandLinePathNote(verdict: verdict, text: row.text, line: row.adviceLine)
+    }
+
+    static func approval(_ row: AccessApprovalRecord) -> ApprovalRecord {
+        ApprovalRecord(
+            number: row.id, isStored: row.stored, label: row.label, detail: row.detail, location: row.location,
+            allowed: row.allowed, agent: row.agent)
+    }
+
+    static func choice(_ row: SettingsProfileRow) -> ProfileChoice {
+        ProfileChoice(
+            id: row.id, name: row.name, isDefault: row.isDefault, isActive: row.isActive,
+            deleteQuestion: profileDeleteQuestion(profile: row.name), copyLabel: profileCopyOption(profile: row.name))
+    }
+
+    /// The rows a project sets, marked: nil when it sets none (nothing to say on any page).
+    static func project(_ row: ProjectSettingsRecord, entries: [String]) -> ProjectSettingsMark? {
+        entries.isEmpty ? nil : ProjectSettingsMark(name: row.name, folder: row.dir, root: row.root, entries: Set(entries), note: row.note)
+    }
+}

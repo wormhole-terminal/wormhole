@@ -9,6 +9,7 @@
     import FilesBridge
     import Foundation
     import HookBridge
+    import PanesModel
     import WorkspaceBridge
     import WormholeBindings
 
@@ -36,6 +37,11 @@
 
         func stop() { handle.stop() }
 
+        /// Settings → Agent access → Revoke: the approval is taken back and the streams it let in end.
+        func revokeApproval(_ number: UInt64, stored: Bool) {
+            if stored { handle.revokeStoredApproval(number) } else { handle.revokeApproval(number) }
+        }
+
         /// Settings changed the agent-access mode: the server reads it again.
         func settingsChanged() { handle.settingsChanged() }
 
@@ -45,6 +51,9 @@
             case .notice(let terminal, let title, let body): app.notices?.post(terminal: terminal, title: title, body: body)
             case .closeAsked(let terminal):
                 app.closeTerminal(Int(terminal)) { [weak self] in self?.handle.closeQuestionOver() }
+            case .worktreeAsked(let folder, let branch): app.hub.askWorktree(branch: branch, in: folder)
+            case .gauge(let terminal, let agent, let model, let context):
+                app.hub.gauges.tell(terminal: Int(terminal), agent: agent, gauge: GaugeFact(model: model, context: context))
             }
         }
     }
@@ -68,6 +77,7 @@
     @MainActor
     final class HookHost {
         func settingsChanged() {}
+        func revokeApproval(_ number: UInt64, stored: Bool) {}
         func stop() {}
     }
 

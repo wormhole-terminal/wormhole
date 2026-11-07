@@ -8,7 +8,7 @@ import AppKit
 import SwiftUI
 
 public struct SettingsView: View {
-    let model: SettingsModel
+    @Bindable var model: SettingsModel
     let onClose: () -> Void
     @FocusState private var focus: SettingsFocus?
     @Environment(\.tokens) private var tokens
@@ -31,6 +31,20 @@ public struct SettingsView: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel(SettingsText.settings)
         .motion(Motion.selection, value: model.selection)
+        .sheet(isPresented: $model.showsNewProfile) { NewProfileSheet(model: model) }
+        .alert(SettingsText.deleteProfileTitle, isPresented: $model.confirmsProfileDelete) {
+            Button(SettingsText.delete, role: .destructive, action: deleteProfile)
+            Button(SettingsText.cancel, role: .cancel) {}
+        } message: {
+            Text(activeProfile?.deleteQuestion ?? "")
+        }
+    }
+
+    /// The profile Wormhole is in, which Delete would remove (never Default).
+    private var activeProfile: ProfileChoice? { model.host.panelRecords().profiles.first(where: \.isActive) }
+
+    private func deleteProfile() {
+        if let profile = activeProfile, !profile.isDefault { _ = model.host.removeProfile(profile.id) }
     }
 
     @ViewBuilder private var page: some View {

@@ -36,6 +36,30 @@ fn an_agents_hooks_are_a_terminals_status_in_the_sidebar() {
 }
 
 #[test]
+fn a_codex_hook_marks_its_terminal_working_with_or_without_the_agent_in_front() {
+    let f = fixture("open");
+    // Codex's own events (`json_hooks::CODEX`): a prompt, a question, the tool that ran after the answer, the end.
+    for (label, id) in [("in front", f.named_agent_terminal("codex")), ("not seen", f.terminal())] {
+        let tab = id.to_string();
+        let mut hook = f.client();
+        hook.send(&json!({"kind": "hook", "tab": tab, "agent": "codex", "event": "UserPromptSubmit"}));
+        eventually(&format!("codex working ({label})"), || {
+            f.row(id).is_some_and(|row| row.state == RowState::Working)
+        });
+        hook.send(&json!({
+            "kind": "hook", "tab": tab, "agent": "codex", "event": "PermissionRequest", "message": "Run ls?"
+        }));
+        eventually(&format!("codex asking ({label})"), || {
+            f.row(id).is_some_and(|row| row.state == RowState::NeedsYou)
+        });
+        hook.send(&json!({"kind": "hook", "tab": tab, "agent": "codex", "event": "PostToolUse"}));
+        eventually(&format!("codex working again ({label})"), || {
+            f.row(id).is_some_and(|row| row.state == RowState::Working)
+        });
+    }
+}
+
+#[test]
 fn a_usage_report_reaches_the_usage_tab() {
     let f = fixture("open");
     let mut client = f.client();

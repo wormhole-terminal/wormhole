@@ -22,6 +22,8 @@ public enum SettingsAction: String, Sendable, Decodable {
     case openConfig, openData, openLogs, openFontsFolder, openIconThemesFolder, openDeveloperTools
     case makeDefaultTerminal, resetAll, resetTips
     /// A page's header buttons, which the schema has no row for.
-    case rescanAgents, scanImports, newProfile, deleteProfile
+    case rescanAgents, scanImports
     case openNotificationSettings, sendTestNotification, checkForUpdates
+    /// The Command line tool row's buttons.
+    case installCommandLine, uninstallCommandLine
 }

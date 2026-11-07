@@ -38,6 +38,7 @@ public final class SettingsWindowController: NSWindowController {
     /// Opens the window (or brings it forward) on `section` when given.
     public func show(section: String? = nil) {
         if let section { model.show(section) }
+        model.host.windowOpened()
         showWindow(nil)
         window?.makeKeyAndOrderFront(nil)
     }

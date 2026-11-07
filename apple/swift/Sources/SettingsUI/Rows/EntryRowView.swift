@@ -16,13 +16,21 @@ struct EntryRowView: View {
         case .block: BlockView(model: model, entry: entry)
         case .row, .tallRow:
             SettingRow(
-                label: entry.label, description: entry.description, visibleHint: entry.visibleHint, state: state,
+                label: entry.label, description: projectNote ?? entry.description, visibleHint: entry.visibleHint || projectNote != nil,
+                state: state,
                 tall: entry.control.layout == .tallRow, onReset: { model.reset(entry) }
             ) {
                 EntryControl(model: model, entry: entry)
             }
             .id(entry.id)
         }
+    }
+
+    /// "Set by <project>/.wormhole/config.json while one of its terminals is in front; yours is kept": the project of the
+    /// terminal in front sets this row.
+    private var projectNote: String? {
+        guard let project = model.host.panelRecords().project, project.entries.contains(entry.id) else { return nil }
+        return project.note
     }
 
     private var state: RowState {

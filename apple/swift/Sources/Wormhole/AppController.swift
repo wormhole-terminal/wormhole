@@ -3,6 +3,7 @@
 // each their own file and reach the window only through it.
 
 import AppKit
+import PanelUI
 import PlatformModel
 import SettingsModel
 import PlatformUI
@@ -34,6 +35,11 @@ final class AppController: NSObject, NSApplicationDelegate {
     let panelEffects: AnyObject?
     let panelNotes: (any NotesPersisting)?
     let panelUsage: AnyObject?
+    /// What the right panel reads through (the core's where real): the project backend is also Settings' source of what a
+    /// project sets.
+    let panelBackends: PanelUI.PanelBackends
+    /// Layers the settings of the terminal in front's project over the person's (real windows only).
+    var projectSettings: AnyObject?
     var hooks: HookHost?
     var ambient: AmbientController?
     var menus: MenuController?
@@ -67,6 +73,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         let panel = PanelBackendsFactory.make(options, store: host.store, policy: policy, effects: effects)
         hub = WindowHub(store: host.store, terminals: TerminalViews { factory.make($0) }, panelBackends: panel.backends)
         (panelEffects, panelNotes, panelUsage) = (effects, panel.notes, panel.usage)
+        panelBackends = panel.backends
         #if WITH_UNIFFI
             // The title row's order of giving way is the core's, wherever the core runs the window.
             if options.program != nil { hub.rowFitting = CoreRowFitting() }

@@ -2,7 +2,7 @@
 
 /// Something the server cannot do by itself: it is on the screen, or it is the window's. Drain them with
 /// `HookServer::drain_events` after `HookListener::wake`.
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+#[derive(Debug, Clone, PartialEq, uniffi::Enum)]
 pub enum HookEvent {
     /// A second launch, or `wh focus --activate`, asks the app to come to the front.
     Activate,
@@ -11,6 +11,13 @@ pub enum HookEvent {
     /// `wh close`: ask the person whether to close `terminal`, as closing it by hand does, and call
     /// `HookServer::close_question_over` when it is answered. Nothing closes unless they say yes.
     CloseAsked { terminal: i64 },
+    /// `wh new-terminal --worktree <branch>`: put the new-worktree question up, with `branch` filled in, for the
+    /// repository `folder` is in. A worktree is never made on a script's say alone: it is made when the person
+    /// confirms, and the terminal opens in it then.
+    WorktreeAsked { folder: String, branch: String },
+    /// The status line of `terminal`'s agent (`agent`, its command: `claude`) says which model it runs and how
+    /// much of its context window is used (0 to 100). Only a coding agent that reports it has one.
+    Gauge { terminal: i64, agent: String, model: Option<String>, context: Option<f32> },
 }
 
 /// Why the server did not start.

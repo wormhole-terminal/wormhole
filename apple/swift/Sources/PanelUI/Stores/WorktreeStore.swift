@@ -9,7 +9,9 @@ import PanelModel
 public final class WorktreeStore {
     public private(set) var folder: String?
     /// The new-worktree sheet is up.
-    public var asking = false
+    public var asking = false { didSet { if !asking { askedFolder = nil } } }
+    /// The repository a command-line request named, for as long as its sheet is up; else the terminal's folder.
+    @ObservationIgnored private var askedFolder: String?
     public var branch = "" { didSet { if branch != oldValue { replan() } } }
     public private(set) var plan: WorktreePlan?
     public private(set) var error: String?
@@ -46,18 +48,30 @@ public final class WorktreeStore {
 
     public var canCreate: Bool { if case .ready = plan, !busy { true } else { false } }
 
-    public func ask() {
-        guard let folder else { return }
-        branch = ""
+    /// The sheet, empty or with `branch` filled in, for the terminal's folder or for `repo` (`wh new-terminal
+    /// --worktree <branch>` names the folder it was run for). The backend may refuse (an untrusted project): that is said, not asked.
+    public func ask(branch preset: String = "", in repo: String? = nil) {
+        guard let target = repo ?? folder else { return }
+        // Before the branch, which plans for the folder it finds.
+        askedFolder = repo
         plan = nil
         error = nil
+        branch = ""
+        branch = preset
         Task {
-            if let problem = await backend.problem(making: folder) { host?.notify(problem) } else { asking = true }
+            if let problem = await backend.problem(making: target) {
+                askedFolder = nil
+                host?.notify(problem)
+            } else {
+                asking = true
+            }
         }
     }
 
+    private var repository: String? { askedFolder ?? folder }
+
     private func replan() {
-        guard let folder else { return }
+        guard let folder = repository else { return }
         planning?.cancel()
         error = nil
         guard !branch.isEmpty else { return plan = nil }
@@ -68,7 +82,7 @@ public final class WorktreeStore {
     }
 
     public func create() {
-        guard let folder, canCreate else { return }
+        guard let folder = repository, canCreate else { return }
         busy = true
         Task {
             let failure = await backend.create(branch: branch, repo: folder)

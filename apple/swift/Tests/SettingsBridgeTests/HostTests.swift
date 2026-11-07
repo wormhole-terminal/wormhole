@@ -69,3 +69,46 @@ final class HostTests: BridgeTestCase {
         XCTAssertThrowsError(try host.deleteProfile("default"))
     }
 }
+
+@MainActor
+final class HostListsTests: BridgeTestCase {
+    func testAProfileIsMadeFromTheHostAndDeletedWithCoresRefusals() throws {
+        let host = try makeKit().host
+        XCTAssertNil(host.makeProfile(name: "Work", copyOf: nil))
+        let work = try XCTUnwrap(host.panelRecords().profiles.first { $0.name == "Work" })
+        XCTAssertTrue(work.deleteQuestion.contains("Work"), work.deleteQuestion)
+        XCTAssertTrue(work.copyLabel.contains("Work"), work.copyLabel)
+        XCTAssertNotNil(host.makeProfile(name: "  ", copyOf: nil), "a blank name is core's refusal, said in its words")
+        XCTAssertNotNil(host.removeProfile("default"), "Default cannot go")
+        XCTAssertNil(host.removeProfile(work.id))
+        XCTAssertFalse(host.panelRecords().profiles.contains { $0.name == "Work" })
+    }
+
+    func testAnApprovalsRevokeGoesToTheApp() throws {
+        var revoked: [(UInt64, Bool)] = []
+        var platform = RustSettingsHost.Platform()
+        platform.approvals = {
+            [AccessApprovalRecord(id: 7, stored: true, label: "Claude Code", how: .always, agent: "claude", detail: "For good", location: "~/bin", allowed: ["Read"])]
+        }
+        platform.revokeApproval = { revoked.append(($0, $1)) }
+        let host = try makeKit(platform: platform).host
+        host.windowOpened()
+        let approval = try XCTUnwrap(host.panelRecords().approvals.first)
+        XCTAssertEqual(approval.detail, "For good")
+        host.revoke(approval)
+        XCTAssertEqual(revoked.map(\.0), [7])
+        XCTAssertEqual(revoked.map(\.1), [true])
+    }
+
+    func testAProjectsSettingsAreLayeredAndMarkedAndForgottenAgain() throws {
+        let kit = try makeKit()
+        let project = ProjectSettingsRecord(
+            name: "app", dir: ".wormhole", root: "/p/app", note: "Set by app/.wormhole/config.json", json: #"{"font_size": 20}"#)
+        kit.host.follow(project: project)
+        XCTAssertEqual(kit.backend.values["font_size"], .number(20), "the project's value shows over the person's")
+        XCTAssertEqual(kit.host.panelRecords().project?.entries.contains("font-terminal"), true)
+        kit.host.follow(project: nil)
+        XCTAssertEqual(kit.backend.values["font_size"], kit.schema.defaults["font_size"])
+        XCTAssertNil(kit.host.panelRecords().project)
+    }
+}

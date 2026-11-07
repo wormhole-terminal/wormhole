@@ -96,7 +96,12 @@ impl Fixture {
     /// says (a copy of a system program would be killed by macOS), found in front once this returns: an agent
     /// that hooks drive is not one a look at the terminal's process has to disagree with.
     pub(super) fn agent_terminal(&self) -> i64 {
-        let script = self.dir.join("claude");
+        self.named_agent_terminal("claude")
+    }
+
+    /// [`Self::agent_terminal`] for the agent whose command is `name` (`codex`, `gemini`, ...).
+    pub(super) fn named_agent_terminal(&self, name: &str) -> i64 {
+        let script = self.dir.join(name);
         let body = "#!/bin/sh\nwhile IFS= read -r line; do :; done\n";
         std::fs::File::create(&script)
             .and_then(|mut file| file.write_all(body.as_bytes()))

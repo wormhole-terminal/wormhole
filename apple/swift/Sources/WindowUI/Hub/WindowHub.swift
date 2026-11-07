@@ -23,6 +23,8 @@ public final class WindowHub {
     public let sidebarSearch = SidebarSearch()
     /// A terminal dragged out of the sidebar over the panes: the list reports it, the pane area takes the drop.
     public let terminalDrag = TerminalDragPointer()
+    /// Each terminal's agent's model and context window, as its status line last said (the title row's gauge chip).
+    public let gauges = GaugeBoard()
     public var actions = HubActions()
     /// The title row's parts as arranged (View ▸ Title Row, the row's own menu).
     public var titleRow = TitleRow.default

@@ -17,6 +17,9 @@ public final class SettingsModel {
     /// The open page: a section id or `changed`.
     public var selection: String
     public var query = ""
+    /// The New profile sheet is up, and the question before deleting the profile Wormhole is in.
+    public var showsNewProfile = false
+    public var confirmsProfileDelete = false
     /// A row to bring into view and mark for a moment, after a search result was chosen.
     public private(set) var revealed: String?
     @ObservationIgnored private var observation: SettingsObservation?

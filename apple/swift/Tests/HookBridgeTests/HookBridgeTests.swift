@@ -38,9 +38,9 @@ final class HookBridgeTests: XCTestCase {
         return (workspace, try HookBridge.start(workspace: workspace, usage: usage, access: desk, dataDir: data))
     }
 
-    /// A terminal running a script named `claude`, which the registry takes for the agent it names.
-    private func agentTerminal(_ workspace: Workspace) throws -> Int64 {
-        let script = root.appendingPathComponent("claude")
+    /// A terminal running a script named like an agent (`claude`, `codex`), which the registry takes for the agent it names.
+    private func agentTerminal(_ workspace: Workspace, named name: String = "claude") throws -> Int64 {
+        let script = root.appendingPathComponent(name)
         try "#!/bin/sh\nwhile IFS= read -r line; do :; done\n".write(to: script, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
         guard case .opened(let id, _) = workspace.apply(action: .newTerminal).first else { throw CocoaError(.fileNoSuchFile) }
@@ -87,6 +87,23 @@ final class HookBridgeTests: XCTestCase {
         XCTAssertEqual(HookBridge.exitCodeIfCommandLine(["Wormhole", "hook", "--agent", "claude", "UserPromptSubmit", "{}"]), 0)
         for _ in 0..<500 where state(workspace, id) != .working { try await Task.sleep(for: .milliseconds(20)) }
         XCTAssertEqual(state(workspace, id), .working)
+    }
+
+    /// Codex's hooks (`json_hooks::CODEX`) run `hook --agent codex <Event>`: the prompt makes the terminal work, a question
+    /// needs you, and the tool that runs once it is answered makes it work again.
+    func testACodexHookFromTheShippedCommandLineMarksItsTerminalWorking() async throws {
+        let (workspace, handle) = try makeServer()
+        defer { handle.stop() }
+        let id = try agentTerminal(workspace, named: "codex")
+        _ = workspace.apply(action: .newTerminal)  // another terminal is in front
+        setenv("WORMHOLE_SOCKET", handle.socketPath, 1)
+        setenv("WORMHOLE_TAB_ID", String(id), 1)
+        defer { unsetenv("WORMHOLE_SOCKET"); unsetenv("WORMHOLE_TAB_ID") }
+        for (event, expected) in [("UserPromptSubmit", RowState.working), ("PermissionRequest", .needsYou), ("PostToolUse", .working)] {
+            XCTAssertEqual(HookBridge.exitCodeIfCommandLine(["Wormhole", "hook", "--agent", "codex", event, "{}"]), 0)
+            for _ in 0..<500 where state(workspace, id) != expected { try await Task.sleep(for: .milliseconds(20)) }
+            XCTAssertEqual(state(workspace, id), expected, event)
+        }
     }
 
     func testASecondLaunchAsksTheFirstToComeForwardAndIsRefused() async throws {

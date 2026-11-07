@@ -10,6 +10,7 @@ import PanesUI
 import SettingsModel
 import SettingsUI
 import SidebarUI
+import TerminalMetal
 import WindowUI
 
 @MainActor
@@ -43,6 +44,11 @@ final class SettingsApplier {
         }
         if changed("font_family", "font_size", "line_height", "font_ligatures"), app.options.fontFamily == nil, app.options.pointSize == nil {
             app.terminalLook.use(FontSettingsMaker.settings(values, bundledDirectory: app.options.fontDirectory ?? Options.findBundledFonts()))
+        }
+        if changed("bell_sound", "bell_visual") {
+            app.terminalLook.use(
+                bell: BellStyle(
+                    sound: values["bell_sound"]?.bool ?? true, visual: values["bell_visual"]?.bool ?? true, dock: false))
         }
         applyLook(values, changed: changed)
         app.ambient?.apply(values, changed: changed)

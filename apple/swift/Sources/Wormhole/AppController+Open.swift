@@ -101,6 +101,11 @@ extension AppController {
         aux.startAccess()
         startHooks()
         #if WITH_UNIFFI
+            let follower = ProjectSettingsFollower(app: self)
+            follower?.start()
+            projectSettings = follower
+        #endif
+        #if WITH_UNIFFI
             (panelEffects as? PanelEffects)?.log = { [weak self] in self?.devctl?.append($0) }
         #endif
     }

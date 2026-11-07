@@ -17,7 +17,7 @@ mod updater;
 #[cfg(test)]
 mod tests;
 
-pub use access::AccessDesk;
+pub use access::{AccessApprovalRecord, AccessDesk, AccessHow};
 pub use access_records::{
     AccessAnswer, AccessCapability, AccessHeldRecord, AccessKindRecord, AccessProgramRecord,
     AccessQuestionRecord, AccessSignerKind,

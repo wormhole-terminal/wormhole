@@ -32,6 +32,40 @@ enum SettingsText {
     static var notSet: String { Words.text("settings-row-not-set", fallback: "Not set") }
     static var noneSet: String { Words.text("settings-row-none", fallback: "None") }
     static var notBuilt: String { Words.text("settings-panel-not-built", fallback: "Not in this build yet") }
+    static var install: String { Words.text("settings-agents-install", fallback: "Install") }
+    static var update: String { Words.text("settings-agents-update", fallback: "Update") }
+    static var uninstall: String { Words.text("settings-agents-uninstall", fallback: "Uninstall") }
+    static var copyLine: String { Words.text("settings-agents-copy-line", fallback: "Copy line") }
+    static var checkingPath: String {
+        Words.text("settings-agents-checking-your-shells-path", fallback: "Checking your shell's PATH…")
+    }
+    static var accessOff: String { Words.text("settings-agents-access-off", fallback: "Off") }
+    static var accessAsk: String { Words.text("settings-agents-access-ask", fallback: "Ask") }
+    static var accessOpen: String { Words.text("settings-agents-access-open", fallback: "Allowed while open") }
+    static var revoke: String { Words.text("settings-agents-access-revoke", fallback: "Revoke") }
+    static var noApprovals: String { Words.text("settings-agents-access-none", fallback: "Nothing has asked yet.") }
+    static var approvalsNote: String {
+        Words.text(
+            "settings-agents-access-caps-note",
+            fallback: "Closing a terminal always asks. A program uses the terminals it opened and the one it runs in; for any other it asks you first.")
+    }
+    static var deleteProfile: String { Words.text("settings-profile-delete-profile", fallback: "Delete profile…") }
+    static var deleteProfileTitle: String { Words.text("settings-profile-delete", fallback: "Delete profile") }
+    static var cancel: String { Words.text("settings-profile-cancel", fallback: "Cancel") }
+    static var delete: String { Words.text("settings-profile-delete-button", fallback: "Delete") }
+    static var newProfileTitle: String { Words.text("settings-profile-new-profile", fallback: "New profile") }
+    static var profileName: String { Words.text("settings-profile-name-field", fallback: "Name") }
+    static var startFrom: String { Words.text("settings-profile-start-from", fallback: "Start from") }
+    static var wormholeDefaults: String {
+        Words.text("settings-profile-wormholes-defaults", fallback: "Wormhole’s defaults")
+    }
+    static var giveAName: String { Words.text("settings-profile-give-the-profile-a-name", fallback: "Give the profile a name") }
+    static var loginsNeverCopied: String {
+        Words.text(
+            "settings-profile-logins-never-copied",
+            fallback: "Agent logins are never copied: the new profile signs in on its own.")
+    }
+    static var create: String { Words.text("settings-profile-create", fallback: "Create") }
     static var preview: String { Words.text("settings-window-preview", fallback: "Preview") }
     static var previewTag: String { Words.text("settings-nav-preview-tag", fallback: "Preview") }
     static var reset: String { Words.text("settings-row-reset", fallback: "Reset to default") }

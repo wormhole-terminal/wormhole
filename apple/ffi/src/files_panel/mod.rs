@@ -28,8 +28,8 @@ pub use notes_store::{NoteSaved, NotesSaved, SessionNotesStore, TaskSaved};
 pub use project::{
     ApproveOutcome, FolderPaintRecord, NewTerminalRecord, NotesDocRecord, NotesSyncOutcome, OwnerAnswer,
     OwnerAuthenticator, ProjectActionRecord, ProjectEffect, ProjectFailure, ProjectFeatureRecord,
-    ProjectPromptRecord, ProjectService, ProjectStateRecord, TaskDocRecord, TerminalPlace, TrustLineRecord,
-    TrustStatusRecord,
+    ProjectPromptRecord, ProjectService, ProjectSettingsRecord, ProjectStateRecord, TaskDocRecord,
+    TerminalPlace, TrustLineRecord, TrustStatusRecord,
 };
 pub use usage::{PlanLimitRecord, UsageReportRecord, UsageService};
 pub use watch::FolderWatch;

@@ -55,7 +55,8 @@ private struct CentreTitle: View {
     var body: some View {
         if let terminal = hub.state.selectedTerminal {
             TitleRowView(
-                facts: TitleFactsMaker.facts(for: terminal, row: hub.titleRow, statusBarOn: look.statusBar),
+                facts: TitleFactsMaker.facts(
+                    for: terminal, row: hub.titleRow, statusBarOn: look.statusBar, gauge: hub.gauges.gauge(for: terminal)),
                 arrangement: hub.state.title.map(TitleArrangement.init), fitting: hub.rowFitting,
                 actions: hub.titleActions(for: terminal), backend: hub.openIn, icon: SystemOpenIn.icon)
         } else {

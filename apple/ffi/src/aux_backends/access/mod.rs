@@ -21,6 +21,10 @@ use wormhole_core::platform::{paths, process};
 use wormhole_core::storage::paths::{DataRoot, ProfileId};
 use wormhole_core::storage::store::{AgentGrantRow, Store};
 
+mod approvals;
+
+pub use approvals::{AccessApprovalRecord, AccessHow};
+
 use super::access_records::{
     AccessAnswer, AccessCapability, AccessHeldRecord, AccessKindRecord, AccessProgramRecord,
     AccessQuestionRecord, AccessSignerKind,

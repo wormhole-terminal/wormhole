@@ -867,3 +867,26 @@ Quit: `finish(endHosts)`, with `endHosts` from the quit question's answer (`Quit
 The Swift backend calls them on the main actor because a terminal's view needs its source at once (the GPUI app waits
 for the host off the UI thread with a blank pane): moving it to a task is a change in `WorkspaceBridge` only.
 The host's events reach Swift through the terminal's own `TerminalListener`, as a local terminal's do.
+## Platform and settings gaps (round N)
+
+Additive to the hook socket and settings sections above; nothing existing changed meaning (`HookEvent` lost `Eq`,
+since `gauge` carries a float).
+
+- **`split` on all four sides.** `left`/`up` (and `right`/`down`) make the terminal standing alone, then
+  `Action::JoinSplit` joins it to the target's pane on a drop zone's side, as the GPUI app's `control_split` does
+  (`control/joined.rs`); no room refuses and leaves no trace for Swift. `--size` is still not applied.
+- **`new-terminal --worktree <branch>`** answers `Asked` after core's `worktree::plan` and queues
+  `HookEvent::WorktreeAsked(folder, branch)`: Swift puts the new-worktree sheet up with the branch filled in. Trust is
+  the sheet's backend to decide (git knows none); a `--command` with it is refused. `new-window` stays `unsupported`
+  until the window host exists.
+- **`HookEvent::Gauge(terminal, agent, model, context)`** from the status line (`Message::Gauge`), once per change
+  per terminal; Swift keeps the latest (`GaugeBoard`) and shows it while that agent is in the terminal.
+- **Command line tool** (`cli_tool.rs`): `cliToolStatus(binaryPath)`, `cliToolInstall`, `cliToolUninstall`,
+  `cliToolPathNote(folder)` (starts the login shell: off the main thread) and `cliToolKeepCurrent(binaryPath)`,
+  which the app calls at launch before its first terminal (`<data dir>/bin/wh`, first on every terminal's PATH).
+  Folders are core's `Targets::from_env`; the Swift app sets `WORMHOLE_CLI_DIR=<data dir>/cli-bin` unless given.
+- **Settings:** `ProjectService.settingsOverrides(folder) -> ProjectSettingsRecord?` (`json` only while the
+  project's Settings switch is on and it is trusted) feeds `SettingsHandle.setProjectOverrides`;
+  `AccessDesk.approvals()` lists stored and held approvals, `revokeStored(id)` / `HookServer.revokeStoredApproval(id)`
+  take one back; `resetTips()`, `dismissedTipsCount()`, `defaultTerminalScriptTypes()`, `defaultTerminalFailed(error)`,
+  `profileDeleteQuestion(profile)`, `profileCopyOption(profile)`.

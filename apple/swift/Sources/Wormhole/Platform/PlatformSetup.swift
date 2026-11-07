@@ -1,5 +1,6 @@
 // What the core supplies to the macOS edge, installed once at launch where the window is real: its keymap (every menu,
-// recorder and tooltip reads it), its fuzzy matcher for the palette and its words (each module's one funnel reads them).
+// recorder and tooltip reads it), its fuzzy matcher for the palette and its words (each module's one funnel reads them),
+// and the `wh` command every terminal finds on its PATH (before the first terminal starts).
 // Everything else keeps the dumped keymap, the Swift matcher and English.
 
 import PlatformModel
@@ -17,6 +18,7 @@ enum PlatformSetup {
             PlatformBridge.installKeymap()
             PlatformBridge.installPaletteMatcher()
             WordsBridge.install()
+            CommandLineSetup.keepCurrent()
         #endif
     }
 

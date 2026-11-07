@@ -10,11 +10,12 @@ use wormhole_core::ipc::Peer;
 use wormhole_core::ipc::access::Access;
 use wormhole_core::ipc::control::structure::{launch_check, size_check};
 use wormhole_core::ipc::control::{
-    Error, ErrorCode, Limited, Opened, Reason, Reply, Side, SplitMade, SplitSpec, writes_off,
+    Error, ErrorCode, Limited, Opened, Reason, Reply, SplitMade, SplitSpec, writes_off,
 };
-use wormhole_core::view::panes::Axis;
 use wormhole_core::workspace::{Action, Event, Refusal};
 
+use super::joined::open_beside;
+use super::worktree;
 use super::{automation_off, not_found};
 use crate::hook_server::core::Core;
 
@@ -54,12 +55,9 @@ pub(super) fn new_terminal(
     if let Err(reply) = core.budget(Limited::NewTerminal, from) {
         return reply;
     }
-    // A worktree is never made on a script's say alone, and the GPUI app's dialog for it is its own.
-    if worktree.is_some() {
-        return Reply::error(
-            ErrorCode::Unsupported,
-            "worktrees are not made from the control line in this app yet",
-        );
+    // A worktree is never made on a script's say alone: the question is put up in the window instead.
+    if let Some(branch) = worktree {
+        return worktree::ask(core, folder, &branch, command);
     }
     let opened = open(core, Action::NewTerminal, folder);
     match opened {
@@ -102,22 +100,11 @@ pub(super) fn split(
         return error.into();
     }
     let Some(anchor) = core.find(spec.target, peer) else { return not_found(spec.target) };
-    // The model splits toward the right or below; the other two sides are not made.
-    let axis = match spec.direction {
-        Side::Right => Axis::Row,
-        Side::Down => Axis::Column,
-        Side::Left | Side::Up => {
-            return Reply::error(
-                ErrorCode::Unsupported,
-                format!("this app splits to the right or down, not {}", spec.direction.word()),
-            );
-        }
-    };
     if let Err(reply) = core.budget(Limited::NewTerminal, from) {
         return reply;
     }
     let before = core.shared.peek_model(|model| model.selected());
-    let Some((terminal, cwd)) = open(core, Action::SplitBeside { anchor, axis }, spec.folder.clone()) else {
+    let Some((terminal, cwd)) = open_beside(core, anchor, spec.direction, spec.folder.clone()) else {
         return Error::new(
             ErrorCode::Refused,
             format!(
