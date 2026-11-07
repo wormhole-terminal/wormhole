@@ -14,6 +14,10 @@ public struct Place: Equatable, Sendable, Identifiable {
     public var detail: String
     public var id: URL { url }
 
+    public init(kind: Kind, name: String, url: URL, detail: String) {
+        (self.kind, self.name, self.url, self.detail) = (kind, name, url, detail)
+    }
+
     /// The folders the first step lists under `home`: the recent roots that still exist (newest first), then Home,
     /// Desktop, Documents, and Developer when there is one. `exists` answers for the disk, so tests decide it.
     public static func list(home: URL, recents: [URL], exists: (URL) -> Bool) -> [Place] {

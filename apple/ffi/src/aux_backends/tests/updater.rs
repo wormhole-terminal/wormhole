@@ -123,6 +123,11 @@ fn restart_needs_a_bundle_and_nothing_here_relaunches() {
     )
     .expect("an engine");
     assert!(engine.restart().is_err());
+    assert_eq!(
+        engine.state().phase,
+        UpdatePhaseRecord::Failed { message: "Wormhole isn't running from an app bundle.".into() },
+        "the button is not silent"
+    );
     assert!(engine.install("0.2.0".into()).is_err());
     assert!(engine.next_check_in_seconds() == 0 && engine.due_at_launch(), "never checked: due now");
 }

@@ -186,9 +186,7 @@ impl UpdateEngine {
             Phase::Available(release) if release.version.to_string() == version => (**release).clone(),
             _ => return Err(AuxError::failed(format!("version {version} is not on offer"))),
         };
-        let Some(bundle) = shared.bundle.clone() else {
-            return Err(AuxError::failed(UpdateError::NotBundled));
-        };
+        let Some(bundle) = shared.bundle.clone() else { return Err(not_bundled(shared)) };
         if let Err(err) = update::preflight(&bundle) {
             set_phase(shared, Phase::Failed(err.to_string()));
             return Ok(());
@@ -316,14 +314,19 @@ impl UpdateEngine {
     /// Starts core's relaunch helper (it opens the bundle again once this process has exited); the caller
     /// terminates the app right after. Fails when the app does not run from a bundle.
     pub fn restart(&self) -> Result<(), AuxError> {
-        let Some(bundle) = self.shared.bundle.clone() else {
-            return Err(AuxError::failed(UpdateError::NotBundled));
-        };
+        let Some(bundle) = self.shared.bundle.clone() else { return Err(not_bundled(&self.shared)) };
         update::relaunch(&bundle).map_err(|err| {
             set_phase(&self.shared, Phase::Failed(format!("Couldn't restart: {err}")));
             AuxError::failed(err)
         })
     }
+}
+
+/// A build that does not run from an app bundle has nothing to replace or reopen: said in the window too, so the
+/// button is not silent (the GPUI app says it for an install).
+fn not_bundled(shared: &Shared) -> AuxError {
+    set_phase(shared, Phase::Failed("Wormhole isn't running from an app bundle.".into()));
+    AuxError::failed(UpdateError::NotBundled)
 }
 
 fn spawn(name: &str, job: impl FnOnce() + Send + 'static) {

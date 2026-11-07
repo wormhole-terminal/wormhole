@@ -140,6 +140,9 @@ if ffiLinked {
         // profiles. Replaces the mock backend and host.
         .target(name: "SettingsBridge", dependencies: ["SettingsModel", "WormholeBindings"]),
         .testTarget(name: "SettingsBridgeTests", dependencies: ["SettingsBridge", "SettingsModel", "WormholeBindings"]),
+        // The auxiliary windows' backends (update, session hosts, project trust, agent access, first run, licenses).
+        .target(name: "AuxBridge", dependencies: ["AuxModel", "PlatformModel", "WormholeBindings"]),
+        .testTarget(name: "AuxBridgeTests", dependencies: ["AuxBridge", "AuxModel", "PlatformModel"]),
     ]
     appDependencies += ["UniFFISource", "WorkspaceBridge"]
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.
