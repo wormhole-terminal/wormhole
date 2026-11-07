@@ -1,4 +1,6 @@
-// One terminal in the list: status dot, name and a second line, then what the row has to say on its right.
+// One terminal in the list (`sidebar/row/`): its tile, then the name over a second line. A terminal in no group is a
+// card of its own (`solo`): the card takes the selection's tint and the hover, the row draws neither. In a group's card
+// the row is a rounded stretch with its own. The pointer shows the × at the line's end; ⌘ held shows the keycap.
 
 import DesignSystem
 import SwiftUI
@@ -7,65 +9,68 @@ import WorkspaceModel
 struct TerminalRowView: View {
     let row: SidebarRow
     let isSelected: Bool
-    /// The namespace the selection highlight slides in, owned by the list.
-    let selection: Namespace.ID
+    let solo: Bool
+    /// Its place among the visible rows, for VoiceOver.
+    let position: Int
+    let count: Int
     let send: @MainActor (WorkspaceAction) -> Void
+    @State private var hovering = false
+    @Environment(\.tokens) private var tokens
+    @Environment(\.sidebarMetrics) private var metrics
+    @Environment(\.showsHints) private var showsHints
+    @Environment(\.keyedStop) private var keyed
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var terminal: TerminalSummary { row.terminal }
+    private var inset: CGFloat { metrics.rowInset + (solo ? metrics.cardPad : 0) }
 
     var body: some View {
-        Row(isSelected: isSelected, selection: selection, action: { send(.select(terminal.id)) }) { hovering in
-            HStack(spacing: Space._2) {
-                StatusDot(terminal.activity.dot)
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(spacing: Space._1) {
-                        Text(terminal.title)
-                            .textRole(.body)
-                            .fontWeight(isSelected ? .semibold : .medium)
-                            .lineLimit(1)
-                        if terminal.isPinned {
-                            Image(systemName: "pin.fill")
-                                .font(TextRole.caption.font).imageScale(.small).foregroundStyle(Palette.textSecondary)
-                                .motionTransition(.scale(scale: 0.4).combined(with: .opacity))
-                        }
-                    }
-                    if let detail {
-                        Text(detail).textRole(.caption).foregroundStyle(Palette.textSecondary).lineLimit(1)
-                    }
-                }
-                Spacer(minLength: 0)
-                trailing(hovering: hovering)
+        let shape = RoundedRectangle(cornerRadius: solo ? metrics.cardRadius : metrics.rowRadius)
+        ZStack(alignment: .topTrailing) {
+            Button { send(.select(terminal.id)) } label: { content }
+                .buttonStyle(.plain)
+            if hovering && !showsHints {
+                CloseButton(isSelected: isSelected) { send(.close(terminal.id)) }
+                    .padding(.top, RowGeometry.closeTop).padding(.trailing, inset - (RowGeometry.closeBox - Metric.glyph) / 2)
+                    .transition(.opacity)
             }
-            .frame(minHeight: Metric.rowTwoLine)
         }
-        .motion(Motion.selection, value: terminal.isPinned)
-        .contextMenu {
-            Button(terminal.isPinned ? "Unpin" : "Pin") { send(.togglePin(terminal.id)) }
-            Button("Close") { send(.close(terminal.id)) }
+        .background(shape.fill(fill))
+        .overlay { if solo { shape.strokeBorder(isSelected ? tokens.sidebarRowSelected : tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) } }
+        .overlay {
+            if keyed == .row(terminal.id) {
+                RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
+            }
         }
+        .contentShape(shape)
+        .onHover { hovering = $0 }
+        .animation(SidebarMotion.state, value: hovering)
+        .animation(SidebarMotion.state, value: isSelected)
+        .contextMenu { SidebarMenu.row(terminal, send: send) }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(SidebarListing.spokenLabel(for: terminal))
+        .accessibilityLabel(SidebarListing.spokenLabel(for: row, selected: isSelected, position: position, of: count))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAction { send(.select(terminal.id)) }
         .accessibilityAction(named: terminal.isPinned ? "Unpin" : "Pin") { send(.togglePin(terminal.id)) }
-        .accessibilityAction(named: "Close") { send(.close(terminal.id)) }
+        .accessibilityAction(named: "Close terminal") { send(.close(terminal.id)) }
     }
 
-    /// The ⌘N hint takes the unread badge's place while the pointer is over the row, as the GPUI app's does.
-    @ViewBuilder private func trailing(hovering: Bool) -> some View {
-        Group {
-            if hovering, let number = row.number {
-                Text("⌘\(number)").textRole(.caption).foregroundStyle(Palette.textSecondary)
-            } else if terminal.unread > 0 {
-                CountBadge(terminal.unread)
-            }
+    /// The card's own fill when alone; the row's when it stands in a group's card (whose fill shows through).
+    private var fill: Color {
+        if isSelected { return tokens.sidebarRowSelected }
+        if hovering { return tokens.stateHover }
+        return solo ? tokens.card : .clear
+    }
+
+    private var content: some View {
+        HStack(spacing: metrics.tileGap) {
+            StatusTile(state: TileState(terminal), size: metrics.tile, phase: StatusTile.phase(of: terminal.id),
+                       surface: isSelected ? tokens.sidebarRowSelected : tokens.sidebarBackground)
+            RowLines(terminal: terminal, number: row.number, isSelected: isSelected, hovering: hovering)
         }
-        .motionTransition(.scale(scale: 0.6).combined(with: .opacity))
-        .motion(Motion.selection, value: hovering)
-        .motion(Motion.selection, value: terminal.unread > 0)
-    }
-
-    private var detail: String? {
-        let parts = [terminal.subtitle, terminal.branch].compactMap { $0 }.filter { !$0.isEmpty }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        .padding(.horizontal, inset)
+        .padding(.vertical, metrics.density.twoLines ? Space._1 : 0)
+        .frame(maxWidth: .infinity, minHeight: metrics.rowHeight, alignment: .leading)
+        .contentShape(Rectangle())
     }
 }

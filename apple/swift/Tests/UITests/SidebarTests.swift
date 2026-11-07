@@ -1,108 +1,86 @@
-import AppKit
 import DesignSystem
 import SwiftUI
 import XCTest
-// The section and row initialisers are the model's internal ones: the listing builds them, tests build them directly.
 @testable import SidebarUI
 @testable import WorkspaceModel
 
 @MainActor
 final class SidebarTests: XCTestCase {
-    /// Where the PNGs go: `out/` is git-ignored; the SIDEBAR_PNG_DIR variable moves them elsewhere.
-    private static var outDir: URL {
-        let dir = ProcessInfo.processInfo.environment["SIDEBAR_PNG_DIR"] ?? FileManager.default.currentDirectoryPath + "/out/sidebar"
-        return URL(fileURLWithPath: dir)
+    func testSecondLineSaysWhatTheTerminalReports() {
+        let needs = RowLine.of(TerminalSummary(id: 1, title: "a", subtitle: "Approve cargo test?", activity: .needsInput), twoLines: true)
+        XCTAssertEqual(needs.text, "Needs input · Approve cargo test?")
+        XCTAssertEqual(needs.tone, .attention)
+        XCTAssertEqual(RowLine.of(TerminalSummary(id: 1, title: "a", subtitle: "1m ago", activity: .finished), twoLines: true).text, "Finished · 1m ago")
+        XCTAssertEqual(RowLine.of(TerminalSummary(id: 1, title: "a"), twoLines: true).text, "Shell", "no row is a single line")
+        XCTAssertEqual(RowLine.of(TerminalSummary(id: 1, title: "a", unread: 2), twoLines: true).trail, "new output")
+        XCTAssertNil(RowLine.of(TerminalSummary(id: 1, title: "a", subtitle: "x"), twoLines: false).text, "compact rows have one line")
     }
 
-    static let sample = WorkspaceState(
-        terminals: [
-            TerminalSummary(id: 1, title: "wormhole", subtitle: "~/Projects/wormhole", branch: "main", activity: .working, isPinned: true),
-            TerminalSummary(id: 2, title: "api server", subtitle: "cargo test", activity: .needsInput, unread: 3),
-            TerminalSummary(id: 3, title: "docs", subtitle: "~/Projects/docs", branch: "writing", activity: .finished),
-            TerminalSummary(id: 4, title: "deploy", subtitle: "exit 1", activity: .failed, unread: 1200),
-            TerminalSummary(id: 5, title: "scratch", activity: .idle),
-        ],
-        selected: 2)
-
-    /// Rendered through a hosting view in an off-screen window, not `ImageRenderer`: that one draws a text
-    /// field as a "prohibited" placeholder and a scroll view as nothing.
-    private func render(_ view: some View, scheme: ColorScheme, name: String) throws -> NSBitmapImageRep {
-        let size = NSSize(width: 260, height: 420)
-        let host = NSHostingView(rootView: view.frame(width: size.width, height: size.height))
-        let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
-        window.appearance = NSAppearance(named: scheme == .dark ? .darkAqua : .aqua)
-        window.contentView = host
-        host.layoutSubtreeIfNeeded()
-        let rep = try XCTUnwrap(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-        host.cacheDisplay(in: host.bounds, to: rep)
-        try FileManager.default.createDirectory(at: Self.outDir, withIntermediateDirectories: true)
-        let png = try XCTUnwrap(rep.representation(using: .png, properties: [:]))
-        try png.write(to: Self.outDir.appendingPathComponent("\(name)-\(scheme == .dark ? "dark" : "light").png"))
-        return rep
+    func testTileStatesFollowCoreUrgencyOrder() {
+        let states = [TileState.shell, .done, .unread, .working, .failed, .needsYou]
+        XCTAssertEqual(states.sorted { $0.urgency < $1.urgency }, [.needsYou, .failed, .working, .unread, .done, .shell])
+        XCTAssertTrue(TileState.needsYou.isAlert && TileState.failed.isAlert && !TileState.working.isAlert)
+        XCTAssertEqual(TileState(TerminalSummary(id: 1, title: "a", unread: 1)), .unread)
     }
 
-    func testRendersLightAndDark() throws {
-        var actions: [WorkspaceAction] = []
-        let view = SidebarView(state: Self.sample, send: { actions.append($0) })
-        for scheme in [ColorScheme.light, .dark] {
-            let rep = try render(view, scheme: scheme, name: "sidebar")
-            XCTAssertEqual(rep.pixelsWide % 260, 0)
+    func testKeysWalkGroupsAndTerminals() {
+        let walk = SidebarWalk(SidebarListing.sections(for: SidebarFixture.state))
+        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .group("g1"), .row(3), .row(4), .row(5), .row(2), .row(6)])
+        let group = 1
+        XCTAssertEqual(walk.move(from: group, .left), .fold(group))
+        XCTAssertEqual(walk.move(from: group, .right), .to(2), "an open group goes to its first terminal")
+        XCTAssertEqual(walk.move(from: 3, .left), .to(group), "a terminal goes to its group")
+        XCTAssertEqual(walk.move(from: 0, .up), .stay)
+        XCTAssertEqual(walk.move(from: nil, .up), .to(6))
+        XCTAssertEqual(walk.move(from: 0, .last), .to(6))
+        XCTAssertEqual(walk.typeAhead(from: 0, "sc"), 6)
+        XCTAssertEqual(walk.typeAhead(from: 6, "sc"), 6, "the only match stays")
+    }
+
+    func testFoldedGroupsAreSkippedByKeys() {
+        var state = SidebarFixture.state
+        state.groups[0].isCollapsed = true
+        let walk = SidebarWalk(SidebarListing.sections(for: state))
+        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .group("g1"), .row(2), .row(6)])
+        XCTAssertEqual(walk.move(from: 1, .right), .open(1))
+    }
+
+    func testHintsShowOnlyAfterTheHoldAndNeverForAShortcut() {
+        let t0 = Date(timeIntervalSinceReferenceDate: 0)
+        var hold = CommandHold()
+        hold.modifiers(commandAlone: true, at: t0)
+        XCTAssertFalse(hold.showing(at: t0.addingTimeInterval(0.2)))
+        XCTAssertEqual(try XCTUnwrap(hold.due(at: t0.addingTimeInterval(0.2))), 0.05, accuracy: 0.001)
+        XCTAssertTrue(hold.showing(at: t0.addingTimeInterval(0.25)))
+        hold.key()
+        XCTAssertFalse(hold.showing(at: t0.addingTimeInterval(0.4)), "any other key hides them")
+        hold.modifiers(commandAlone: false, at: t0.addingTimeInterval(0.5))
+        hold.modifiers(commandAlone: true, at: t0.addingTimeInterval(0.6))
+        XCTAssertTrue(hold.showing(at: t0.addingTimeInterval(0.9)))
+        hold.blur()
+        XCTAssertFalse(hold.showing(at: t0.addingTimeInterval(1)))
+    }
+
+    func testTypedLettersJoinWithinASecond() {
+        var typed = TypedPrefix()
+        let t0 = Date()
+        typed.add("s", at: t0); typed.add("c", at: t0.addingTimeInterval(0.5))
+        XCTAssertEqual(typed.text, "sc")
+        typed.add("x", at: t0.addingTimeInterval(2))
+        XCTAssertEqual(typed.text, "x")
+    }
+
+    func testRendersEveryThemeInLightAndDark() throws {
+        let themes = ["wormhole.dark", "wormhole.light", "tokyo_night", "catppuccin_latte", "nord", "github_light"]
+        for id in themes {
+            let url = try SidebarSnapshot.write(theme: id, name: "sidebar-\(id)")
+            XCTAssertGreaterThan(try Data(contentsOf: url).count, 1000)
         }
-        XCTAssertTrue(actions.isEmpty, "drawing sends nothing")
-    }
-
-    func testRendersGroupsFoldedAndOpen() throws {
-        for scheme in [ColorScheme.light, .dark] { _ = try render(GroupsHarness(), scheme: scheme, name: "groups") }
-    }
-
-    func testListingFeedsOneRowPerTerminal() {
-        let sections = SidebarListing.sections(for: Self.sample)
-        XCTAssertEqual(sections.flatMap(\.rows).count, 5)
-        XCTAssertEqual(Self.sample.selected, 2)
-    }
-
-    func testArrowNavigationStopsAtEndsAndSkipsFoldedSections() {
-        let ids = RowNavigation.visibleIDs([
-            SidebarSection(id: "a", title: "A", isCollapsed: false, rows: [row(1), row(2)], terminalCount: 2, alertCount: 0),
-            SidebarSection(id: "b", title: "B", isCollapsed: true, rows: [row(3)], terminalCount: 1, alertCount: 0),
-            SidebarSection(id: "c", title: nil, isCollapsed: false, rows: [row(4)], terminalCount: 1, alertCount: 0),
-        ])
-        XCTAssertEqual(ids, [1, 2, 4])
-        XCTAssertEqual(RowNavigation.neighbor(of: 2, in: ids, step: 1), 4)
-        XCTAssertEqual(RowNavigation.neighbor(of: 4, in: ids, step: 1), 4)
-        XCTAssertEqual(RowNavigation.neighbor(of: 1, in: ids, step: -1), 1)
-        XCTAssertEqual(RowNavigation.neighbor(of: nil, in: ids, step: 1), 1)
-        XCTAssertEqual(RowNavigation.neighbor(of: nil, in: ids, step: -1), 4)
-        XCTAssertNil(RowNavigation.neighbor(of: 1, in: [], step: 1))
-    }
-
-    func testCountBadgeCaps() {
-        XCTAssertEqual(CountBadge.label(7), "7")
-        XCTAssertEqual(CountBadge.label(999), "999")
-        XCTAssertEqual(CountBadge.label(1000), "999+")
-    }
-
-    private func row(_ id: Int) -> SidebarRow { SidebarRow(terminal: TerminalSummary(id: id, title: "t\(id)"), number: nil) }
-}
-
-/// Titled sections, one folded, which `SidebarListing`'s first cut cannot produce yet. A view of its own because
-/// the selection namespace may only be read inside a body.
-private struct GroupsHarness: View {
-    @Namespace private var selection
-
-    var body: some View {
-        let rows = SidebarTests.sample.terminals.enumerated().map { SidebarRow(terminal: $1, number: $0 + 1) }
-        VStack(spacing: 0) {
-            section("g1", "Backend", collapsed: false, rows[0..<2])
-            section("g2", "Writing", collapsed: true, rows[2..<3])
-            section("g3", nil, collapsed: false, rows[3..<5])
+        try SidebarSnapshot.write(theme: "wormhole.dark", contrast: true, name: "sidebar-wormhole.dark-contrast")
+        try SidebarSnapshot.write(theme: "wormhole.light", contrast: true, name: "sidebar-wormhole.light-contrast")
+        for density in SidebarDensity.allCases {
+            try SidebarSnapshot.write(theme: "wormhole.dark", appearance: SidebarAppearance(density: density), name: "sidebar-dark-\(density.rawValue)")
         }
-        .padding(Space._2).background(Palette.sidebarBackground)
-    }
-
-    private func section(_ id: String, _ title: String?, collapsed: Bool, _ rows: ArraySlice<SidebarRow>) -> some View {
-        SidebarSectionView(
-            section: SidebarSection(id: id, title: title, isCollapsed: collapsed, rows: Array(rows), terminalCount: rows.count, alertCount: 0),
-            selected: 2, selection: selection, send: { _ in })
+        try SidebarSnapshot.write(theme: "wormhole.dark", appearance: SidebarAppearance(forcesHints: true), name: "sidebar-dark-hints")
     }
 }
