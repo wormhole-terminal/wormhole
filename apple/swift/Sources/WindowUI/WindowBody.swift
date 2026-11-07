@@ -33,11 +33,11 @@ struct WindowBody: View {
     var body: some View {
         GeometryReader { proxy in
             let window = proxy.size.width
-            let layout = layout(window)
-            let panelFits = layout.panelVisible(window: window)
+            let fit = ColumnFit(window: window, state: state, sidebarWanted: sidebarWanted, fallback: widths)
+            let panelFits = fit.panelOpen
             VStack(spacing: 0) {
                 SlideGeometry(sidebarShown: sidebarSlide.shown, panelShown: panelSlide.shown) { sidebar, panel in
-                    panes(window: window, layout: layout, sidebarShown: sidebar, panelShown: panel)
+                    panes(window: window, fit: fit, sidebarShown: sidebar, panelShown: panel)
                 }
                 if look.statusBar { statusBar(window: window) }
             }
@@ -45,12 +45,14 @@ struct WindowBody: View {
                 WindowControls(
                     facts: facts, sidebarOpen: sidebarWanted, sidebarShown: sidebarSlide.shown,
                     panelOpen: panelFits, panelShown: panelSlide.shown,
-                    panelWaiting: state.panelVisible && !panelFits, send: send)
+                    panelWaiting: fit.panelWaiting, send: send)
             }
             .overlay { overlay }
             .overlay(alignment: .topLeading) {
-                if let drag { ResizeReadout(text: drag.resize.readout(closing: drag.edge == .sidebar ? "Hide" : "Close"), pointer: drag.pointer) }
+                if let drag { ResizeReadout(text: drag.readout, pointer: drag.pointer) }
             }
+            // The core fits the columns to the window's width, so it is told when that changes.
+            .onChange(of: window, initial: true) { _, width in send(.setWindowWidth(Double(width))) }
             .onChange(of: Intent(sidebar: sidebarWanted, panelWanted: state.panelVisible, panelFits: panelFits), initial: true) {
                 old, new in
                 let wantedChanged = old.sidebar != new.sidebar || old.panelWanted != new.panelWanted
@@ -61,19 +63,11 @@ struct WindowBody: View {
         }
     }
 
-    private func layout(_ window: CGFloat) -> PaneLayout {
-        var layout = widths
-        layout.sidebarOpen = sidebarWanted
-        layout.panelWanted = state.panelVisible
-        return layout
-    }
-
-    private func panes(window: CGFloat, layout: PaneLayout, sidebarShown: CGFloat, panelShown: CGFloat) -> some View {
-        let sidebarWidth = max(min(widths.sidebarWidth, window - PaneLayout.terminalMin), PaneLayout.sidebarRange.lowerBound)
+    private func panes(window: CGFloat, fit: ColumnFit, sidebarShown: CGFloat, panelShown: CGFloat) -> some View {
+        let sidebarWidth = fit.sidebarWidth
         let sidebarColumn = PaneFrames.Column(
             width: sidebarWidth, shown: sidebarShown, inFlow: sidebarSlide.inFlow, sliding: sidebarSlide.sliding)
-        let panelWidth = max(
-            min(widths.panelWidth, window - sidebarColumn.inLayout - PaneLayout.terminalMin), PaneLayout.panelRange.lowerBound)
+        let panelWidth = fit.panelWidth
         let panelColumn = PaneFrames.Column(
             width: panelWidth, shown: panelShown, inFlow: panelSlide.inFlow, sliding: panelSlide.sliding)
         let frames = PaneFrames(
@@ -100,20 +94,20 @@ struct WindowBody: View {
                 .reachable(panelShown > 0)
                 .frame(width: window, alignment: .trailing)
 
-            edges(frames, window: window, layout: layout)
+            edges(frames, window: window, fit: fit)
         }
         .frame(width: window, alignment: .topLeading)
     }
 
     /// The hairlines and the handles over them, along a column that is in.
-    @ViewBuilder private func edges(_ frames: PaneFrames, window: CGFloat, layout: PaneLayout) -> some View {
+    @ViewBuilder private func edges(_ frames: PaneFrames, window: CGFloat, fit: ColumnFit) -> some View {
         if let edge = frames.sidebarEdge {
             if frames.ruleWidth > 0 { colours.divider.frame(width: frames.ruleWidth).offset(x: edge) }
-            handle(.sidebar, at: edge, window: window)
+            handle(.sidebar, at: edge, window: window, fit: fit)
         }
         if let edge = frames.panelEdge {
             if frames.ruleWidth > 0 { colours.divider.frame(width: frames.ruleWidth).offset(x: edge - frames.ruleWidth) }
-            handle(.panel, at: edge, window: window)
+            handle(.panel, at: edge, window: window, fit: fit)
         }
     }
 
@@ -128,7 +122,7 @@ struct WindowBody: View {
     private func statusBar(window: CGFloat) -> some View {
         let grid = state.selected.flatMap { hub.terminals.existing($0) }?.renderer.gridSize
         return StatusBar(
-            terminals: state.terminals, selected: state.selectedTerminal, size: grid.map { "\($0.cols)×\($0.rows)" }, windowWidth: window
+            terminals: state.all, selected: state.selectedTerminal, size: grid.map { "\($0.cols)×\($0.rows)" }, windowWidth: window
         ) { send(.select($0)) }
     }
 }

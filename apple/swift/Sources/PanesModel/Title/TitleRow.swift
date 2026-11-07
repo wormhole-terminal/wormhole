@@ -52,7 +52,8 @@ public struct TitleRow: Sendable, Equatable {
     }
 }
 
-/// For the parts one end of the row draws, in order: whether a chevron goes before each. A crumb gets one
+/// The sample window's chevrons (the core's come with its title snapshot): whether a chevron goes before each part one end of
+/// the row draws. A crumb gets one
 /// when the part drawn before it, past the inline marks that belong to it, is a crumb too:
 /// `folder › branch ● › terminal`, while a chip between two crumbs parts them without one.
 public func chevrons(for drawn: [TitlePart]) -> [Bool] {

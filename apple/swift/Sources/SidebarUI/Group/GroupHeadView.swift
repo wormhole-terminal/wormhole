@@ -33,11 +33,11 @@ struct GroupHeadView: View {
                 }
                 label
                 Spacer(minLength: 0)
-                if head.isFolded { FoldedSummary(count: section.terminalCount, alerts: section.alertCount).transition(.opacity) }
-                if hovering && !isEmpty { HeadAddButton { context.send(.newTerminalInGroup(head.id)) } }
+                if head.isFolded { FoldedSummary(tiles: section.tiles, count: section.terminalCount, alert: section.alert).transition(.opacity) }
+                if hovering && !isEmpty { HeadAddButton { context.newInGroup(head.id) } }
                 if isEmpty {
                     Text("No terminals").font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
-                    HeadAddButton { context.send(.newTerminalInGroup(head.id)) }
+                    HeadAddButton { context.newInGroup(head.id) }
                 } else {
                     HeadChevron(isFolded: head.isFolded)
                 }

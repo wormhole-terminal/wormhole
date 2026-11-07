@@ -7,6 +7,7 @@
 
 import DesignSystem
 import PanelUI
+import PanesModel
 import PanesUI
 import SwiftUI
 import TerminalUI
@@ -55,6 +56,7 @@ private struct CentreTitle: View {
         if let terminal = hub.state.selectedTerminal {
             TitleRowView(
                 facts: TitleFactsMaker.facts(for: terminal, row: hub.titleRow, statusBarOn: look.statusBar),
+                arrangement: hub.state.title.map(TitleArrangement.init), fitting: hub.rowFitting,
                 actions: hub.titleActions(for: terminal), backend: hub.openIn, icon: SystemOpenIn.icon)
         } else {
             Color.clear

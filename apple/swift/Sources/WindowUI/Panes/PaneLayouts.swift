@@ -16,7 +16,7 @@ struct PaneLayouts: Equatable {
     static func members(in state: WorkspaceState) -> [TerminalID] {
         guard let terminal = state.selectedTerminal else { return [] }
         guard let split = terminal.splitID else { return [terminal.id] }
-        return state.terminals.filter { $0.splitID == split }.map(\.id)
+        return state.all.filter { $0.splitID == split }.map(\.id)
     }
 
     /// The panes on screen: the saved layout as far as it still holds, the selected terminal with the keyboard.
@@ -41,6 +41,6 @@ struct PaneLayouts: Equatable {
     /// Keep `panes` under the split `anchor` is in now. Called after the actions were applied, because the core names a
     /// split when the first terminal joins it (a lone terminal gaining a pane).
     mutating func save(_ panes: TabPanes, anchor: TerminalID, in state: WorkspaceState) {
-        if let terminal = state.terminals.first(where: { $0.id == anchor }) { saved[Self.key(terminal)] = panes }
+        if let terminal = state.all.first(where: { $0.id == anchor }) { saved[Self.key(terminal)] = panes }
     }
 }

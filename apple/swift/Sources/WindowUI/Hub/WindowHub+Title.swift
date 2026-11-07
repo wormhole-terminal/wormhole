@@ -25,11 +25,14 @@ extension WindowHub {
             showChanges: { [unowned self] in send(.showPanelTab(.changes)) },
             split: { [unowned self] in split($0) },
             canSplit: { [unowned self] in canSplit($0) },
-            setPart: { [unowned self] in titleRow.setShown($0, $1) },
-            resetRow: { [unowned self] in titleRow = .default },
+            setPart: { [unowned self] in if titleRow.setShown($0, $1) { rowChanged() } },
+            resetRow: { [unowned self] in titleRow = .default; rowChanged() },
             customizeRow: { [unowned self] in actions.openSettings() },
             canInsert: folder != nil)
     }
+
+    /// The row's parts changed: the core lists the row from them (which parts are at each end, where the chevrons go).
+    func rowChanged() { send(.setTitleRow(titleRow.parts.map(\.rawValue))) }
 
     /// The path as one word for a shell: in single quotes, a quote inside as `'\''`.
     static func shellQuoted(_ path: String) -> String {

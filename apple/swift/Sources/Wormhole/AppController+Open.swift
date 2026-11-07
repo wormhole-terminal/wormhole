@@ -6,6 +6,7 @@ import SettingsModel
 import SettingsUI
 import TerminalMetal
 import WindowUI
+import WorkspaceModel
 
 extension AppController {
     func open() throws {
@@ -22,7 +23,10 @@ extension AppController {
         let controller = WorkspaceWindowController(
             title: "Wormhole (Swift experiment)", contentSize: size, content: WorkspaceRootView(hub: hub, look: look))
         controller.onClose = { [weak self] in self?.hub.terminals.shutdown() }
+        controller.onState = { [weak self] active, seen in self?.hub.store.windowState(active: active, seen: seen) }
         windowController = controller
+        // The workspace's first word on the window: it is not in front yet (a test instance never is).
+        controller.reportState()
         if options.background {
             // A test instance: behind the user's windows, never the active app.
             controller.window?.orderBack(nil)
@@ -50,10 +54,24 @@ extension AppController {
             self?.devctl?.append("exited terminal=\(id) code=\(code.map(String.init) ?? "unknown")")
         }
         hub.actions.closeTerminal = { [weak self] in self?.closeTerminal($0) }
+        hub.actions.closeGroup = { [weak self] in self?.closeGroup($0) }
+        hub.store.onNotice = { [weak self] in self?.answer($0) }
         hub.actions.terminalMenu = { [weak self] in self?.terminalMenu(for: $0) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
         hub.actions.openSettings = { [weak self] in self?.showSettings() }
         hub.actions.showTerminalsInSidebar = { [weak self] in self?.look.tabsOnTop = false }
+    }
+
+    /// What the core asked of the shell that no snapshot carries. The Swift app saves no terminal text, so there is nothing
+    /// to erase; a window of its own for a group is not opened yet: it is logged and the group stays where it is.
+    private func answer(_ notice: WorkspaceNotice) {
+        switch notice {
+        case .savedTextForgotten(let id): devctl?.append("saved-text-forgotten terminal=\(id) (nothing is saved)")
+        case .groupToWindow(let group, let terminals):
+            let line = "group-to-window group=\(group) terminals=\(terminals) (opening a window is not implemented: the group stays here)"
+            FileHandle.standardError.write(Data((line + "\n").utf8))
+            devctl?.append(line)
+        }
     }
 
     /// Over an in-memory backend until the settings come through the FFI: edits live for this run only.

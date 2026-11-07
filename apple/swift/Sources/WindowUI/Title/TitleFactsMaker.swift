@@ -15,8 +15,15 @@ enum TitleFactsMaker {
             activity: terminal.activity, agent: terminal.agent, label: terminal.title,
             // The status bar says it when it is on (`TitlePart.terminalStatus`).
             words: statusBarOn ? nil : terminal.activity.words,
-            branch: terminal.branch.map { .some($0) }, branchStatus: terminal.changeCount > 0 ? BranchStatus(dirty: true) : nil,
+            branch: terminal.branch.map { .some($0) }, branchStatus: branchStatus(of: terminal),
             row: row)
+    }
+
+    /// What git says of the branch (the core's feed): an unclean tree and how far it is from its upstream; nothing to say
+    /// draws nothing. Without a branch there is no status.
+    private static func branchStatus(of terminal: TerminalSummary) -> BranchStatus? {
+        guard terminal.branch != nil, terminal.isDirty || terminal.ahead > 0 || terminal.behind > 0 else { return nil }
+        return BranchStatus(dirty: terminal.isDirty, ahead: terminal.ahead, behind: terminal.behind)
     }
 
     private static func abbreviated(_ path: String, home: String) -> String {

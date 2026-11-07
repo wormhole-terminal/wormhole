@@ -4,15 +4,16 @@
 import WorkspaceModel
 import WormholeBindings
 
+/// `panelVisible` is what the person wants: the core's own `panelVisible` is that and room for it, which `layout` says.
 extension ChromeState {
     init(_ core: ChromeSnapshot) {
         self.init(
-            sidebarVisible: core.sidebarVisible, panelVisible: core.panelVisible, panelTab: PanelTab(core.panelTab),
-            search: core.search, overlay: core.overlay.map(WorkspaceModel.Overlay.init))
+            sidebarVisible: core.sidebarVisible, panelVisible: core.panelWanted, panelTab: WorkspaceModel.PanelTab(core.panelTab),
+            search: core.search, overlay: core.overlay.map(WorkspaceModel.Overlay.init), layout: ChromeLayout(core))
     }
 }
 
-extension PanelTab {
+extension WorkspaceModel.PanelTab {
     init(_ core: TabId) {
         switch core {
         case .notes: self = .notes
@@ -45,7 +46,10 @@ extension WorkspaceModel.Refusal {
 }
 
 extension WorkspaceModel.Revisions {
-    init(_ core: WormholeBindings.Revisions) { self.init(sidebar: core.sidebar, chrome: core.chrome) }
+    /// The layout's counter moves with the chrome's for the window, which pulls the panes with it.
+    init(_ core: WormholeBindings.Revisions) {
+        self.init(sidebar: core.sidebar, chrome: core.chrome &+ core.layout, terminals: core.terminals)
+    }
 }
 
 extension WorkspaceModel.DropPlan {

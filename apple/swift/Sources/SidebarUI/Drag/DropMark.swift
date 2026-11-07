@@ -1,6 +1,6 @@
 // How a drop shows (`style::drop_line`, the card's focus outline): a line in the gap between two cards or two rows, a
 // group's card outlined while a drop joins it, or a row outlined while a drop makes a split with it. The line is drawn for
-// the core's plan; a group has no plan from the core yet, so its line goes before or after the card under the pointer.
+// the core's plan, for a terminal (`dropPlan`) and a group (`groupDropPlan`) alike.
 
 import CoreGraphics
 import WorkspaceModel
@@ -34,19 +34,6 @@ extension DropLines {
             case nil: return lastFrame.map { line(at: $0.maxY + gap / 2, over: $0) }
             }
         }
-    }
-
-    /// A group dropped at `y`: before the card under the pointer in its upper half, after it in its lower.
-    func groupMark(over: DropOver, at y: CGFloat, gap: CGFloat) -> DropMark? {
-        guard let (line, _) = line(at: y) else { return nil }
-        let frame: CGRect?
-        switch line.card {
-        case .group(let id): frame = cards[id]
-        case .loose(let id), .split(let id): frame = rows[id]
-        }
-        guard let frame else { return nil }
-        let after = over == .tail || y > frame.midY
-        return self.line(at: after ? frame.maxY + gap / 2 : frame.minY - gap / 2, over: frame)
     }
 
     private func line(at y: CGFloat, over frame: CGRect) -> DropMark { .line(y: y, x: frame.minX...frame.maxX) }

@@ -44,10 +44,17 @@ public struct GroupHead: Sendable, Equatable, Identifiable {
     /// The folder the group stands for, `~`-shortened.
     public var folder: String?
     public var spoken: String
+    /// A colour picked freely as `#rrggbb` (`color` is then nil: it is none of the nine names).
+    public var customColor: String?
+    /// The folder's full path, which `folder` shortens; set by the group's menu, it pins the group.
+    public var folderPath: String?
+    /// The group keeps only terminals that are in its folder.
+    public var onlyInFolder: Bool
 
     public init(
         id: GroupID, name: String, color: GroupColor? = nil, isPinned: Bool = false, isFolded: Bool = false,
-        folder: String? = nil, spoken: String = ""
+        folder: String? = nil, spoken: String = "", customColor: String? = nil, folderPath: String? = nil,
+        onlyInFolder: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -56,6 +63,9 @@ public struct GroupHead: Sendable, Equatable, Identifiable {
         self.isFolded = isFolded
         self.folder = folder
         self.spoken = spoken
+        self.customColor = customColor
+        self.folderPath = folderPath
+        self.onlyInFolder = onlyInFolder
     }
 }
 
@@ -70,17 +80,29 @@ public struct SidebarSection: Sendable, Equatable, Identifiable {
     public var terminalCount: Int
     /// Of those, the ones that need input or failed: a folded head shows them as its alert dot.
     public var alertCount: Int
+    /// While the group is folded: one tile per member that passes the search, the loudest first.
+    public var tiles: [MemberTile]
+    /// The loudest alert among them, for the head's dot (`needsYou` or `failed`).
+    public var alert: Urgency?
+    /// Members working now: what to ask about before closing the group.
+    public var workingCount: Int
 
     public var title: String? { head?.name }
     public var isCollapsed: Bool { head?.isFolded ?? false }
     public var isHeadless: Bool { head == nil }
 
-    public init(id: String, head: GroupHead? = nil, rows: [SidebarRow], terminalCount: Int? = nil, alertCount: Int = 0) {
+    public init(
+        id: String, head: GroupHead? = nil, rows: [SidebarRow], terminalCount: Int? = nil, alertCount: Int = 0,
+        tiles: [MemberTile] = [], alert: Urgency? = nil, workingCount: Int = 0
+    ) {
         self.id = id
         self.head = head
         self.rows = rows
         self.terminalCount = terminalCount ?? rows.count
         self.alertCount = alertCount
+        self.tiles = tiles
+        self.alert = alert
+        self.workingCount = workingCount
     }
 }
 

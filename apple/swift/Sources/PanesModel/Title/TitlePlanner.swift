@@ -1,5 +1,5 @@
 // Everything the title row draws, worked out once per frame (`plan_title`, `extras_wanted`): what each part
-// wants, asked of a text measurer so the rules stay testable without fonts, then core's `fitRow` decides
+// wants, asked of a text measurer so the rules stay testable without fonts, then core's fit decides
 // what the width allows.
 
 import Foundation
@@ -49,14 +49,17 @@ public struct TitlePlan: Sendable, Equatable {
 
 public enum TitlePlanner {
     /// The plan for `facts` in a row `width` points wide inside its padding.
-    public static func plan(_ facts: TitleFacts, width: Double, measure: some TextMeasuring) -> TitlePlan {
-        let ends = TitleLayout.ends(facts)
-        let drawn = { (part: TitlePart) in ends.left.parts.contains(part) || ends.right.parts.contains(part) }
-        let steps = (drawn(.folder) ? facts.shownFolder : nil).map { shown in
-            PathSteps.of(shown, lastMax: TitleMetrics.pathLastMax) { face, text in
+    /// The row at `width`: the parts and the folder's shapes are `arrangement`'s (the core's), the widths are measured here and
+    /// the order in which the row gives way is `fitting`'s (the core's).
+    public static func plan(
+        _ facts: TitleFacts, _ arrangement: TitleArrangement, width: Double, measure: some TextMeasuring, fitting: any RowFitting
+    ) -> TitlePlan {
+        let ends = arrangement.ends
+        let drawn = arrangement.draws
+        let steps = drawn(.folder)
+            ? PathSteps.measured(arrangement.paths, lastMax: TitleMetrics.pathLastMax) { face, text in
                 measure.width(text, face == .parents ? .label : .labelMedium)
-            }
-        } ?? []
+            } : []
         var wants = RowWants()
         wants.path = steps.map { TitleMetrics.crumbGap + $0.width }
         // The status words and, in a submodule, whose it is: they give way together.
@@ -75,11 +78,11 @@ public enum TitlePlanner {
             wants.group = TitleMetrics.rowGap + buttons.reduce(0, +)
             wants.folded = TitleMetrics.rowGap + TitleMetrics.moreWidth
         }
-        let terminal = TitleLayout.has(facts, .terminal)
+        let terminal = drawn(.terminal)
         wants.name = terminal ? min(measure.width(facts.label, .labelMedium), TitleMetrics.nameMax) : 0
         wants.nameMin = terminal ? TitleMetrics.textMin : 0
         wants.fixed = TitleLayout.fixedWidth(ends)
-        return TitlePlan(facts: facts, ends: ends, steps: steps, fit: fitRow(avail: width, wants))
+        return TitlePlan(facts: facts, ends: ends, steps: steps, fit: fitting.fit(avail: width, wants))
     }
 
     /// How wide each extra is with the gap in front of it, and the ports with a chip fewer each time.

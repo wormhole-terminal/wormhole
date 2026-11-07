@@ -98,7 +98,7 @@ var targets: [Target] = [
 var appDependencies: [Target.Dependency] = [
     "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI", "SettingsModel", "SettingsUI", "DesignSystem",
     "PanesModel", "PanesUI", "PanelModel", "PlatformModel", "PlatformUI", "AuxModel", "AuxWindows", "TerminalUI",
-    "PaletteModel",
+    "PaletteModel", "PanelModel", "PanelUI",
 ]
 // The view's input: pointer, selection, links, keyboard and input method, on the mock and (when the FFI is
 // linked) on the real engine.
@@ -130,7 +130,8 @@ if ffiLinked {
         // The window's state kept by the Rust workspace: actions in, snapshots out as WorkspaceModel's values, and the
         // programs started for the terminals it opens.
         .target(
-            name: "WorkspaceBridge", dependencies: ["WorkspaceModel", "WormholeBindings", "UniFFISource", "TerminalCore"]),
+            name: "WorkspaceBridge",
+            dependencies: ["WorkspaceModel", "WormholeBindings", "UniFFISource", "TerminalCore", "PanesModel"]),
         // The theme resolver against the real Rust loader: a user theme file, colour picks, an opacity.
         .testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]),
         // The mapping and the real workspace behind the store: an action through the FFI, a snapshot back.
@@ -146,7 +147,7 @@ if ffiLinked {
         .target(name: "AuxBridge", dependencies: ["AuxModel", "PlatformModel", "WormholeBindings"]),
         .testTarget(name: "AuxBridgeTests", dependencies: ["AuxBridge", "AuxModel", "PlatformModel"]),
     ]
-    appDependencies += ["UniFFISource", "WorkspaceBridge"]
+    appDependencies += ["UniFFISource", "WorkspaceBridge", "GitBridge"]
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.
     targets.append(.target(name: "GitBridge", dependencies: ["PanelModel", "WormholeBindings"]))
     targets.append(.testTarget(name: "GitBridgeTests", dependencies: ["GitBridge", "PanelModel", "WormholeBindings"]))

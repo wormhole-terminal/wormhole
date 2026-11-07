@@ -41,6 +41,13 @@ public struct WorkspaceState: Sendable, Equatable {
     public var panelTab: PanelTab
     public var search: String
     public var overlay: Overlay?
+    /// Every terminal, folded ones too, in list order (core `TerminalsSnapshot`): for the palette, the status bar and menus.
+    public var all: [TerminalSummary]
+    public var counts: TerminalCounts
+    /// The columns, tabs and layouts as the core fitted them; nil while the backend has no window width (the sample).
+    public var layout: ChromeLayout?
+    /// The selected terminal's title row (core `TitleSnapshot`); nil in the sample.
+    public var title: TitleState?
 
     /// The terminals the list shows, in list order. Those folded away with their group are not here.
     public var terminals: [TerminalSummary] { sections.flatMap(\.rows).map(\.terminal) }
@@ -49,8 +56,13 @@ public struct WorkspaceState: Sendable, Equatable {
     public init(
         sections: [SidebarSection] = [], selected: TerminalID? = nil, live: [TerminalID]? = nil,
         sidebarVisible: Bool = true, panelVisible: Bool = true, panelTab: PanelTab = .changes, search: String = "",
-        overlay: Overlay? = nil
+        overlay: Overlay? = nil, all: [TerminalSummary]? = nil, counts: TerminalCounts = TerminalCounts(),
+        layout: ChromeLayout? = nil, title: TitleState? = nil
     ) {
+        self.all = all ?? sections.flatMap(\.rows).map(\.terminal)
+        self.counts = counts
+        self.layout = layout
+        self.title = title
         self.sections = sections
         self.selected = selected
         self.live = live ?? sections.flatMap(\.rows).map(\.id)

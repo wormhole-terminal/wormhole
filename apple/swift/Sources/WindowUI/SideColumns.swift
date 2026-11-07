@@ -16,7 +16,7 @@ struct SidebarColumn: View {
     var body: some View {
         VStack(spacing: 0) {
             SidebarTitleRow(facts: facts, send: hub.send)
-            SidebarView(state: hub.state, send: hub.send)
+            SidebarView(state: hub.state, closeGroup: { hub.actions.closeGroup($0) }, send: hub.send)
                 .environment(\.dropPlanner, hub.store)
         }
         .background { if !look.glassOn { look.surface(colours.sidebar) } }

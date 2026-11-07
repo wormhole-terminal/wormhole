@@ -85,4 +85,9 @@ public struct RowFit: Sendable, Equatable {
     /// Open in… and the splits are one `⋯` menu.
     public var folded: Bool
     public var name: Double
+
+    public init(path: PathShown, words: Bool, chip: Double?, extras: Extras, portsStep: Int, folded: Bool, name: Double) {
+        (self.path, self.words, self.chip, self.extras) = (path, words, chip, extras)
+        (self.portsStep, self.folded, self.name) = (portsStep, folded, name)
+    }
 }

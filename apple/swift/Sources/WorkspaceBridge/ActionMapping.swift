@@ -1,5 +1,5 @@
 // The window's actions as the core's (`WormholeBindings.Action`): one case each, the ids widened to the core's. The
-// drag's targets (`DropOver`) are the core's `Over` by id.
+// drag's targets and landings are in `DropMapping.swift`, the panel and layout names in `NameMapping.swift`.
 
 import WorkspaceModel
 import WormholeBindings
@@ -10,82 +10,68 @@ extension WormholeBindings.Action {
         case .select(let id): self = .select(Int64(id))
         case .selectStep(let delta): self = .selectStep(Int32(delta))
         case .selectNumber(let number): self = .selectNumber(UInt32(number))
-        case .newTerminal: self = .newTerminal
-        // Made in two steps by the store: this is only reached through it.
-        case .newTerminalInGroup: self = .newTerminal
+        case .newTerminal, .newTerminalIn: self = .newTerminal
+        case .newTerminalInGroup(let group): self = .newTerminalInGroup(group)
+        case .newTerminalInNewGroup: self = .newTerminalInNewGroup
         case .close(let id): self = .close(Int64(id))
         case .rename(let id, let name): self = .rename(id: Int64(id), name: name)
         case .togglePin(let id): self = .togglePin(Int64(id))
-        case .newGroup(let members): self = .newGroup(members: members.map(Int64.init))
-        case .renameGroup(let group, let name): self = .renameGroup(group: group, name: name)
-        case .toggleGroup(let group): self = .toggleGroup(group)
-        case .setGroupPinned(let group, let pinned): self = .setGroupPinned(group: group, pinned: pinned)
-        case .ungroup(let group): self = .ungroup(group)
-        case .addToGroup(let id, let group): self = .addToGroup(id: Int64(id), group: group)
-        case .removeFromGroup(let id): self = .removeFromGroup(Int64(id))
-        case .dropTerminal(let id, let over): self = .dropTerminal(dragged: Int64(id), over: Over(over))
-        case .dropGroup(let group, let over): self = .dropGroup(group: group, over: Over(over))
-        case .splitRight(let id): self = .splitBeside(anchor: Int64(id), axis: .row)
-        case .joinSplit(let id, let target): self = .joinSplit(id: Int64(id), target: Int64(target), zone: .right)
-        case .leaveSplit(let id): self = .leaveSplit(Int64(id))
-        case .toggleSidebar: self = .toggleSidebar
-        case .togglePanel: self = .togglePanel
-        case .showPanelTab(let tab): self = .showPanelTab(TabId(tab))
-        case .search(let text): self = .search(text)
-        case .showOverlay(let overlay): self = .showOverlay(overlay.map(WormholeBindings.Overlay.init))
+        case .setAgentHidden(let id, let hidden): self = .setAgentHidden(id: Int64(id), hidden: hidden)
+        case .setForgetText(let id, let forget): self = .setForgetText(id: Int64(id), forget: forget)
+        default: self = Self.group(action) ?? Self.layout(action)
         }
     }
-}
 
-extension TabId {
-    init(_ tab: PanelTab) {
-        switch tab {
-        case .notes: self = .notes
-        case .changes: self = .changes
-        case .history: self = .history
-        case .usage: self = .usage
-        case .project: self = .project
-        case .files: self = .files
+    /// The group's actions and the drags that move things in the list.
+    private static func group(_ action: WorkspaceAction) -> Self? {
+        switch action {
+        case .newGroup(let members): .newGroup(members: members.map(Int64.init))
+        case .renameGroup(let group, let name): .renameGroup(group: group, name: name)
+        case .toggleGroup(let group): .toggleGroup(group)
+        case .setGroupPinned(let group, let pinned): .setGroupPinned(group: group, pinned: pinned)
+        case .ungroup(let group): .ungroup(group)
+        case .addToGroup(let id, let group): .addToGroup(id: Int64(id), group: group)
+        case .removeFromGroup(let id): .removeFromGroup(Int64(id))
+        case .setGroupColor(let group, let colour): .setGroupColor(group: group, color: colour.map(WormholeBindings.GroupColor.init))
+        case .setGroupCustomColor(let group, let red, let green, let blue):
+            .setGroupCustomColor(group: group, r: red, g: green, b: blue)
+        case .setGroupFolder(let group, let folder): .setGroupFolder(group: group, folder: folder)
+        case .setOnlyInFolder(let group, let on): .setOnlyInFolder(group: group, on: on)
+        case .declineGroupFolder(let group): .declineGroupFolder(group)
+        case .closeGroup(let group): .closeGroup(group)
+        case .moveGroupToWindow(let group): .moveGroupToWindow(group)
+        case .dropTerminal(let id, let over): .dropTerminal(dragged: Int64(id), over: Over(over))
+        case .dropGroup(let group, let over): .dropGroup(group: group, over: Over(over))
+        case .moveTerminal(let id, let landing, let leaves, let mates):
+            .moveTerminalAs(id: Int64(id), landing: WormholeBindings.Landing(landing), leaveSplit: leaves, withMates: mates)
+        case .moveGroup(let group, let landing): .moveGroup(group: group, landing: WormholeBindings.Landing(landing))
+        default: nil
         }
     }
-}
 
-extension WormholeBindings.Overlay {
-    init(_ overlay: WorkspaceModel.Overlay) {
-        switch overlay {
-        case .palette: self = .palette
-        case .shortcuts: self = .shortcuts
-        }
-    }
-}
-
-extension Over {
-    init(_ over: DropOver) {
-        switch over {
-        case .row(let id, let part): self = .row(id: Int64(id), part: Part(part))
-        case .head(let group, let part): self = .head(group: group, part: Part(part))
-        case .after(let card): self = .after(WormholeBindings.CardRef(card))
-        case .tail: self = .tail
-        }
-    }
-}
-
-extension Part {
-    init(_ part: DropPart) {
-        switch part {
-        case .top: self = .top
-        case .middle: self = .middle
-        case .bottom: self = .bottom
-        }
-    }
-}
-
-extension WormholeBindings.CardRef {
-    init(_ card: WorkspaceModel.CardRef) {
-        switch card {
-        case .group(let id): self = .group(id)
-        case .loose(let id): self = .loose(Int64(id))
-        case .split(let id): self = .split(Int64(id))
+    /// Splits, panes and the window's own switches.
+    private static func layout(_ action: WorkspaceAction) -> Self {
+        switch action {
+        case .splitRight(let id): .splitBeside(anchor: Int64(id), axis: .row)
+        case .joinSplit(let id, let target): .joinSplit(id: Int64(id), target: Int64(target), zone: .right)
+        case .leaveSplit(let id): .leaveSplit(Int64(id))
+        case .showBeside(let id, let other): .showBeside(id: Int64(id), other: Int64(other))
+        case .applyLayout(let preset): .applyLayout(WormholeBindings.Preset(preset))
+        case .dragDivider(let path, let index, let position): .dragDivider(path: path, index: index, position: Float(position))
+        case .equalizeDivider(let path, let index): .equalizeDivider(path: path, index: index)
+        case .toggleSidebar: .toggleSidebar
+        case .togglePanel: .togglePanel
+        case .showPanelTab(let tab): .showPanelTab(TabId(tab))
+        case .search(let text): .search(text)
+        case .showOverlay(let overlay): .showOverlay(overlay.map(WormholeBindings.Overlay.init))
+        case .setWindowWidth(let width): .setWindowWidth(Float(width))
+        case .setPaneArea(let width, let height): .setPaneArea(width: Float(width), height: Float(height))
+        case .dragEdge(let edge, let extent): .dragEdge(edge: WormholeBindings.Edge(edge), extent: Float(extent))
+        case .resetEdge(let edge): .resetEdge(WormholeBindings.Edge(edge))
+        case .setFeature(let key, let on): .setFeature(feature: FeatureId(key), on: on)
+        case .setTitleRow(let keys): .setTitleRow(keys.compactMap(WormholeBindings.TitlePart.init(key:)))
+        case .setNumbersFollowList(let follow): .setNumbersFollowList(follow)
+        default: .newTerminal
         }
     }
 }

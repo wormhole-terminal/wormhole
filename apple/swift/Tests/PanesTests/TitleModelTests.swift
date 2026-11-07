@@ -5,26 +5,20 @@ import PanesModel
 @Suite struct TitleModelTests {
     /// One point per character, as a monospace font would measure.
     func chars(_: PathFace, _ text: String) -> Double { Double(text.count) }
-    func texts(_ shown: String, _ lastMax: Double = 100) -> [String] {
-        PathSteps.of(shown, lastMax: lastMax, measure: chars).map(\.text.full)
+    /// What the core lists for `~/a/bb/ccc` (`TitleSnapshot.pathSteps`), widest first, the last folder uncut.
+    func steps(_ lastMax: Double = 100, last: String = "ccc") -> [PathStep] {
+        PathSteps.measured(
+            [PathText(parents: "~/a/bb/", last: last), PathText(parents: "~/…/bb/", last: last), PathText(parents: "~/…/", last: last)],
+            lastMax: lastMax, measure: chars)
     }
 
-    @Test func aPathLosesItsMiddleFromTheStartSide() {
-        #expect(texts("~/Projects/misc/wormhole/Icssaddons/Tube") == [
-            "~/Projects/misc/wormhole/Icssaddons/Tube", "~/…/misc/wormhole/Icssaddons/Tube",
-            "~/…/wormhole/Icssaddons/Tube", "~/…/Icssaddons/Tube", "~/…/Tube",
-        ])
-        #expect(texts("~/Tube") == ["~/Tube"] && texts("~") == ["~"] && texts("/") == ["/"])
-        #expect(texts("~/Projects/Tube") == ["~/Projects/Tube", "~/…/Tube"])
-        #expect(texts("/Volumes/Work/clients/acme/api") == [
-            "/Volumes/Work/clients/acme/api", "/Volumes/…/clients/acme/api", "/Volumes/…/acme/api", "/Volumes/…/api",
-        ])
-        let steps = PathSteps.of("~/a/bb/ccc", lastMax: 100, measure: chars)
-        #expect(steps[1].text == PathText(parents: "~/…/bb/", last: "ccc") && steps[1].width == 10)
+    @Test func theCoresPathStepsAreMeasuredAsTheyCome() {
+        #expect(steps().map(\.width) == [10, 10, 7])
+        #expect(steps()[1].text == PathText(parents: "~/…/bb/", last: "ccc"))
     }
 
     @Test func aLongLastFolderIsCutInItsOwnMiddle() {
-        #expect(texts("~/a/abcdefghijklmnop", 8).last == "~/…/abcd…nop")
+        #expect(steps(8, last: "abcdefghijklmnop").last?.text.last == "abcd…nop")
     }
 
     @Test func elidingKeepsTheExtensionAndTheEndOfAFolder() {
@@ -47,57 +41,19 @@ import PanesModel
     @Test func theRowArrangementKeepsOneSpaceAndPutsAShownPartBackWhereItWas() {
         var row = TitleRow.default
         #expect(row.setShown(.ports, false) && !row.shows(.ports) && !row.setShown(.space, false))
-        #expect(row.ends.left == [.folder, .branch, .branchStatus, .terminal, .terminalStatus])
         #expect(row.setShown(.ports, true) && row.parts == TitlePart.allCases)
         #expect(TitleRow([.terminal, .folder, .terminal]).parts == [.terminal, .space, .folder])
         row.move(from: 0, to: 4)
         #expect(row.parts.first == .branch && !row.isDefault)
     }
 
-    @Test func aChevronSeparatesTwoCrumbsAndAChipPartsThemWithoutOne() {
-        #expect(chevrons(for: [.folder, .branch, .branchStatus, .terminal, .terminalStatus]) == [false, true, false, true, false])
-        #expect(chevrons(for: [.folder, .ports, .terminal]) == [false, false, false])
-        #expect(chevrons(for: [.openIn, .splits]) == [false, false])
-    }
-
-    private func wants(path: [Double] = [30, 20, 10], words: Double = 16, name: Double = 40) -> RowWants {
+    @Test func withNoCoreToAskEveryPartKeepsItsNaturalWidth() {
         var w = RowWants()
-        (w.path, w.words, w.name, w.nameMin, w.fixed, w.group, w.folded) = (path, words, name, 12, 20, 30, 10)
+        (w.path, w.words, w.name, w.group) = ([30, 20], 16, 40, 30)
         w.chip = ChipWidth(natural: 40, icon: 20)
-        w.extras = Extras().with(.pullRequest, 20).with(.ports, 30).with(.gauge, 25).with(.branchStatus, 12)
-        w.portsNarrower = [18]
-        return w
-    }
-
-    @Test func aRoomyRowDrawsEverythingAndANarrowOneGivesWayInOrder() {
-        let all = wants()
-        // fixed 20 + path 30 + words 16 + extras 87 + chip 40 + group 30, and the name's 40.
-        #expect(fitRow(avail: 263, all).path == .step(0))
-        let shorter = fitRow(avail: 253, all)
-        #expect(shorter.path == .step(1) && shorter.words && shorter.extras.shows(.pullRequest))
-        #expect(fitRow(avail: 243, all).path == .step(2))
-        let noWords = fitRow(avail: 220, all)
-        #expect(!noWords.words && !noWords.extras.shows(.pullRequest) && noWords.extras.shows(.ports) && noWords.chip == 40)
-        let noExtras = fitRow(avail: 150, all)
-        #expect(Extra.allCases.allSatisfy { !noExtras.extras.shows($0) } && noExtras.chip == 40 && !noExtras.folded)
-        let glyphOnly = fitRow(avail: 120, all)
-        #expect(glyphOnly.chip == 20 && !glyphOnly.folded)
-        let folded = fitRow(avail: 100, all)
-        #expect(folded.folded && folded.chip == 20 && folded.name == 40)
-        let tiny = fitRow(avail: 50, all)
-        #expect(tiny.folded && tiny.path == .icon && tiny.name == 0)
-    }
-
-    @Test func thePortsLoseAChipBeforeTheyGoAndThePathFoldsToItsIconLast() {
-        var w = wants(path: [30])
-        w.words = 0
-        w.extras = Extras().with(.ports, 30)
-        w.chip = nil
-        let fit = fitRow(avail: 140, w)
-        #expect(fit.portsStep == 1 && fit.extras.width(.ports) == 18)
-        w.name = 200
-        #expect(fitRow(avail: 70, w).path == .icon)
-        #expect(fitRow(avail: 100, RowWants()).path == .none)
+        let fit = NaturalFit().fit(avail: 10, w)
+        #expect(fit.path == .step(0) && fit.words && fit.chip == 40 && !fit.folded && fit.name == 40)
+        #expect(NaturalFit().fit(avail: 100, RowWants()).path == .none)
     }
 
     @Test func theExtrasSayWhatTheyMean() {

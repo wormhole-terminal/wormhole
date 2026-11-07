@@ -1,6 +1,6 @@
 // The popover a group's name opens (`sidebar/group_popover.rs`): the name in a field, the colours as a row of swatches in
-// the theme's own hues (the swatch is the colour as the head's dot shows it), and the actions. ↩ keeps the name, a swatch
-// colours the group at once (where the window can: `GroupEdits`), and ⎋ closes it.
+// the theme's own hues (the swatch is the colour as the head's dot shows it), a picker for any other, and the actions.
+// ↩ keeps the name, a swatch or the picker colours the group at once, and ⎋ closes it.
 
 import DesignSystem
 import SwiftUI
@@ -25,21 +25,19 @@ struct GroupPopover: View {
                 .focused($focused)
                 .onSubmit { commit(); close() }
                 .onKeyPress(.escape) { close(); return .handled }
-            if let edits = context.groupEdits {
-                HStack(spacing: Space._2) {
-                    ForEach(GroupColor.allCases, id: \.self) { colour in
-                        Button { edits.setColor(head.id, colour) } label: { swatch(colour) }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(colour.rawValue.capitalized)
-                            .accessibilityAddTraits(head.color == colour ? .isSelected : [])
-                    }
+            HStack(spacing: Space._2) {
+                ForEach(GroupColor.allCases, id: \.self) { colour in
+                    Button { context.send(.setGroupColor(head.id, colour)) } label: { swatch(colour) }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(colour.rawValue.capitalized)
+                        .accessibilityAddTraits(head.color == colour ? .isSelected : [])
                 }
+                ColorPicker("Other colour", selection: custom, supportsOpacity: false).labelsHidden()
             }
             HStack(spacing: Space._2) {
                 Button(head.isPinned ? "Unpin" : "Pin") { context.send(.setGroupPinned(head.id, !head.isPinned)); close() }
                 Button("Ungroup") { context.send(.ungroup(head.id)); close() }
-                Button("Close group", role: .destructive) { rows.forEach { context.send(.close($0.id)) }; close() }
-                    .disabled(rows.isEmpty)
+                Button("Close group", role: .destructive) { context.closeGroup(head.id); close() }
             }
             .controlSize(.small)
         }
@@ -47,6 +45,17 @@ struct GroupPopover: View {
         .frame(width: Self.width)
         .onAppear { name = head.name; focused = true }
         .onDisappear(perform: commit)
+    }
+
+    /// A colour picked freely: the group's own when it has one, else the theme's grey to start from; each pick is the core's
+    /// `setGroupCustomColor`, so the group follows the picker as it moves.
+    private var custom: Binding<Color> {
+        Binding(
+            get: { head.customColor.flatMap(Color.init(hex:)) ?? tokens.textMuted },
+            set: { colour in
+                guard let (red, green, blue) = colour.rgb8 else { return }
+                context.send(.setGroupCustomColor(head.id, red: red, green: green, blue: blue))
+            })
     }
 
     private func swatch(_ colour: GroupColor) -> some View {

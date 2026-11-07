@@ -14,7 +14,8 @@ public struct SidebarView: View {
     public let state: WorkspaceState
     public let send: @MainActor (WorkspaceAction) -> Void
     public let appearance: SidebarAppearance
-    public let groupEdits: GroupEdits?
+    /// How the window answers closing a group (it asks first when something works in it); nil sends the close at once.
+    public let closeGroup: (@MainActor (GroupID) -> Void)?
     @State var hold = CommandHoldMonitor()
     @State var cursor: SidebarStop?
     @State var keysLead = false
@@ -27,21 +28,21 @@ public struct SidebarView: View {
     @FocusState var focused: Bool
     @Environment(\.dropPlanner) var dropPlanner
     public init(
-        state: WorkspaceState, appearance: SidebarAppearance = SidebarAppearance(), groupEdits: GroupEdits? = nil,
-        send: @escaping @MainActor (WorkspaceAction) -> Void
+        state: WorkspaceState, appearance: SidebarAppearance = SidebarAppearance(),
+        closeGroup: (@MainActor (GroupID) -> Void)? = nil, send: @escaping @MainActor (WorkspaceAction) -> Void
     ) {
-        self.init(state: state, appearance: appearance, groupEdits: groupEdits, caught: nil, send: send)
+        self.init(state: state, appearance: appearance, closeGroup: closeGroup, caught: nil, send: send)
     }
 
     /// A list caught mid-edit, for pictures and tests: a name half typed, a drag in flight, a group's popover open.
     /// The window starts every list at rest.
     init(
-        state: WorkspaceState, appearance: SidebarAppearance, groupEdits: GroupEdits?, caught: Caught?,
+        state: WorkspaceState, appearance: SidebarAppearance, closeGroup: (@MainActor (GroupID) -> Void)?, caught: Caught?,
         send: @escaping @MainActor (WorkspaceAction) -> Void
     ) {
         self.state = state
         self.appearance = appearance
-        self.groupEdits = groupEdits
+        self.closeGroup = closeGroup
         self.send = send
         _renaming = State(initialValue: caught?.renaming)
         _drag = State(initialValue: caught?.drag)
@@ -100,7 +101,8 @@ public struct SidebarView: View {
             },
             send: send, renaming: renaming, rename: { renaming = $0 }, shifts: shifts,
             drag: DragHooks(item: drag?.item, moved: { dragMoved($0, $1, sections) }, ended: { dragEnded($0, $1, sections) }),
-            groupEdits: groupEdits, popover: popover, openPopover: { popover = $0 })
+            everyTerminal: state.all, newInGroup: { newInGroup($0) },
+            closeGroup: { closeGroup?($0) ?? send(.closeGroup($0)) }, popover: popover, openPopover: { popover = $0 })
     }
 }
 

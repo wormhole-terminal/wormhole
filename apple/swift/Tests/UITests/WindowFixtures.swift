@@ -19,6 +19,7 @@ extension WorkspaceState {
 @MainActor
 final class SplittingBackend: WorkspaceBackend {
     var onWake: (@MainActor () -> Void)?
+    var onNotice: (@MainActor (WorkspaceNotice) -> Void)?
     private var terminals: [TerminalSummary]
     private var selected: TerminalID?
     private var count = Revisions(sidebar: 1, chrome: 1)

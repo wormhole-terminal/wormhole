@@ -18,35 +18,39 @@ extension WorkspaceModel.SidebarSection {
     init(_ core: WormholeBindings.SidebarSection) {
         self.init(
             id: core.key, head: core.head.map(WorkspaceModel.GroupHead.init), rows: core.rows.map(WorkspaceModel.SidebarRow.init),
-            terminalCount: Int(core.terminalCount), alertCount: Int(core.alertCount))
+            terminalCount: Int(core.terminalCount), alertCount: Int(core.alertCount), tiles: core.tiles.map(WorkspaceModel.MemberTile.init),
+            alert: core.alert.map(WorkspaceModel.Urgency.init), workingCount: Int(core.workingCount))
     }
 }
 
 extension WorkspaceModel.GroupHead {
     init(_ core: WormholeBindings.GroupHead) {
-        // An empty colour is a group that has none.
+        // An empty colour is a group that has none; a `#rrggbb` is one picked freely.
         self.init(
             id: core.id, name: core.name, color: GroupColor(key: core.color), isPinned: core.pinned, isFolded: core.folded,
-            folder: core.folder, spoken: core.spoken)
+            folder: core.folder, spoken: core.spoken, customColor: core.color.hasPrefix("#") ? core.color : nil,
+            folderPath: core.folderPath, onlyInFolder: core.onlyInFolder)
     }
 }
 
 extension WorkspaceModel.SidebarRow {
     init(_ core: WormholeBindings.SidebarRow) {
         self.init(
-            terminal: TerminalSummary(core), number: core.number.map(Int.init), keycap: core.keycap,
+            terminal: WorkspaceModel.TerminalSummary(core), number: core.number.map(Int.init), keycap: core.keycap,
             splitMarks: SplitMarks(core.split), secondLine: WorkspaceModel.SecondLine(core.secondLine),
             position: Int(core.position), of: Int(core.of), spoken: core.spoken)
     }
 }
 
-extension TerminalSummary {
+extension WorkspaceModel.TerminalSummary {
     init(_ core: WormholeBindings.SidebarRow) {
         self.init(
             id: Int(core.id), title: core.name, folder: core.folder, branch: core.branch, activity: Activity(core.state),
             isPinned: core.pinned, unread: core.unread, hasBell: core.bell, agent: core.agent.flatMap { AgentID(command: $0.key) },
             message: core.message, splitID: core.split.id.map(Int.init), noteCount: Int(core.notes),
-            changeCount: Int(core.changes ?? 0))
+            changeCount: Int(core.changes ?? 0), isAgentHidden: core.agentHidden, forgetsText: core.forgetText, repo: core.repo,
+            isDirty: core.dirty, ahead: Int(core.ahead), behind: Int(core.behind), repoFiles: core.repoFiles.map(Int.init),
+            glyph: WorkspaceModel.TileGlyph(core.glyph))
     }
 }
 

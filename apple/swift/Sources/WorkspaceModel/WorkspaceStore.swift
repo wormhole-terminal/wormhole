@@ -7,23 +7,21 @@ import Observation
 @MainActor @Observable
 public final class WorkspaceStore {
     public private(set) var state = WorkspaceState()
-    @ObservationIgnored private let backend: any WorkspaceBackend
+    /// What the core tells the shell to do that no snapshot carries: the window answers each (`WorkspaceNotice`).
+    @ObservationIgnored public var onNotice: @MainActor (WorkspaceNotice) -> Void = { _ in }
+    @ObservationIgnored let backend: any WorkspaceBackend
     @ObservationIgnored private var seen: Revisions?
     @ObservationIgnored private var timer: Task<Void, Never>?
 
     public init(backend: any WorkspaceBackend) {
         self.backend = backend
         backend.onWake = { [weak self] in self?.woke() }
+        backend.onNotice = { [weak self] in self?.onNotice($0) }
         pull()
     }
 
     @discardableResult
     public func send(_ action: WorkspaceAction) -> Refusal? {
-        if case .newTerminalInGroup(let group) = action {
-            // The new terminal is the selected one; the core has no "new terminal in group" of its own.
-            guard send(.newTerminal) == nil, let id = state.selected else { return .unchanged }
-            return send(.addToGroup(id, group))
-        }
         let refusal = backend.apply(action)
         pull()
         return refusal
@@ -31,6 +29,15 @@ public final class WorkspaceStore {
 
     /// What dropping a terminal here would do, for the line shown while it is still held.
     public func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan? { backend.dropPlan(dragged: dragged, over: over) }
+
+    /// Where dropping a group here would put it, for the line shown while it is still held.
+    public func groupDropPlan(group: GroupID, over: DropOver) -> Landing? { backend.groupDropPlan(group: group, over: over) }
+
+    /// What dragging a column's edge to `extent` would leave, for the readout beside the pointer.
+    public func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout? { backend.edgeDrag(edge, extent: extent) }
+
+    /// The folder to offer a group that has none before a terminal opens in it.
+    public func groupFolderOffer(group: GroupID) -> String? { backend.groupFolderOffer(group: group) }
 
     private func woke() {
         backend.drain()
@@ -50,7 +57,16 @@ public final class WorkspaceStore {
         if seen?.chrome != now.chrome {
             let chrome = backend.chrome()
             (next.sidebarVisible, next.panelVisible, next.panelTab) = (chrome.sidebarVisible, chrome.panelVisible, chrome.panelTab)
-            (next.search, next.overlay) = (chrome.search, chrome.overlay)
+            (next.search, next.overlay, next.layout) = (chrome.search, chrome.overlay, chrome.layout)
+        }
+        // A backend that counts no revision of its own for it (the sample) moves it with the list.
+        if seen == nil || seen?.terminals != now.terminals || seen?.sidebar != now.sidebar {
+            let everything = backend.terminals()
+            (next.all, next.counts) = (everything.terminals, everything.counts)
+        }
+        // The title row follows the selected terminal's facts and the row's own parts: any of the three parts moving.
+        if seen == nil || seen?.sidebar != now.sidebar || seen?.chrome != now.chrome || seen?.terminals != now.terminals {
+            next.title = backend.title()
         }
         next.live = backend.live
         seen = now

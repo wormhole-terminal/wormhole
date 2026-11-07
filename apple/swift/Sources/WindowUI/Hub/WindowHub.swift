@@ -5,6 +5,7 @@
 
 import AppKit
 import Observation
+import PanelModel
 import PanelUI
 import PanesModel
 import PanesUI
@@ -20,9 +21,11 @@ public final class WindowHub {
     public var actions = HubActions()
     /// The title row's parts as arranged (View ▸ Title Row, the row's own menu).
     public var titleRow = TitleRow.default
-    /// The right panel's state: the mock backends until the core's git, files and notes come through the FFI. An
-    /// opened diff or file is laid over the terminals (`.terminalArea`, hosted by `TerminalColumn`).
-    public let panel = PanelController(host: SystemPanelHost(), backends: .mock())
+    /// The title row's order of giving way: the core's where the FFI is linked, else every part at its natural width.
+    public var rowFitting: any RowFitting = NaturalFit()
+    /// The right panel's state over the backends the app hands in (the core's git where the FFI is linked, else the
+    /// sample). An opened diff or file is laid over the terminals (`.terminalArea`, hosted by `TerminalColumn`).
+    public let panel: PanelController
     public var openIn: any OpenInBackend = SystemOpenIn()
     /// The program's name for the exited bar ("zsh exited").
     public var shell = "zsh"
@@ -31,9 +34,10 @@ public final class WindowHub {
     var layouts = PaneLayouts()
     @ObservationIgnored var overlays: [TerminalID: TerminalOverlay] = [:]
 
-    public init(store: WorkspaceStore, terminals: TerminalViews) {
+    public init(store: WorkspaceStore, terminals: TerminalViews, panelBackends: PanelBackends = .mock()) {
         self.store = store
         self.terminals = terminals
+        panel = PanelController(host: SystemPanelHost(), backends: panelBackends)
         panel.presentation = .terminalArea
     }
 
@@ -45,6 +49,8 @@ public final class WindowHub {
 public struct HubActions {
     /// Closing a terminal asks first when something runs in it.
     public var closeTerminal: @MainActor (TerminalID) -> Void = { _ in }
+    /// Closing a group asks first when something works in it.
+    public var closeGroup: @MainActor (GroupID) -> Void = { _ in }
     /// The Show terminals in ▸ Sidebar choice (the tab bar's group switcher offers it).
     public var showTerminalsInSidebar: @MainActor () -> Void = {}
     /// The native context menu of a terminal's grid, built when it is asked for.

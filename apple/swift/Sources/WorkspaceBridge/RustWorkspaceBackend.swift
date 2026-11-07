@@ -23,8 +23,9 @@ public struct WorkspaceSetup: Sendable {
 }
 
 @MainActor
-public final class RustWorkspaceBackend: WorkspaceBackend {
+public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     public var onWake: (@MainActor () -> Void)?
+    public var onNotice: (@MainActor (WorkspaceNotice) -> Void)?
     public private(set) var live: [TerminalID] = []
 
     private let workspace: Workspace
@@ -60,13 +61,39 @@ public final class RustWorkspaceBackend: WorkspaceBackend {
 
     public func drain() { _ = handle(workspace.drain()) }
 
+    public func setWindowState(active: Bool, seen: Bool) { _ = handle(workspace.setWindowState(active: active, seen: seen)) }
+
+    public func hook(id: TerminalID, agent: String, event: String, message: String?) {
+        _ = handle(workspace.hook(id: Int64(id), agent: agent, event: event, message: message))
+    }
+
+    public func setNotes(id: TerminalID, tasksDone: [Bool], notes: [String]) {
+        _ = handle(workspace.setNotes(id: Int64(id), tasksDone: tasksDone, notes: notes))
+    }
+
     public func revisions() -> WorkspaceModel.Revisions { WorkspaceModel.Revisions(workspace.revisions()) }
     public func sidebar() -> WorkspaceModel.SidebarSnapshot { WorkspaceModel.SidebarSnapshot(workspace.sidebar()) }
     public func chrome() -> ChromeState { ChromeState(workspace.chrome()) }
+    public func terminals() -> WorkspaceModel.TerminalsSnapshot { WorkspaceModel.TerminalsSnapshot(workspace.terminals()) }
+    public func title() -> TitleState? { TitleState(workspace.title(bootVolume: Self.bootVolume)) }
+
+    /// What the system calls the startup volume ("Macintosh HD"), which the title row's path menu names the root with.
+    private static let bootVolume =
+        (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD"
 
     public func dropPlan(dragged: TerminalID, over: DropOver) -> WorkspaceModel.DropPlan? {
         workspace.dropPlan(dragged: Int64(dragged), over: Over(over)).map(WorkspaceModel.DropPlan.init)
     }
+
+    public func groupDropPlan(group: GroupID, over: DropOver) -> WorkspaceModel.Landing? {
+        workspace.groupDropPlan(group: group, over: Over(over)).map(WorkspaceModel.Landing.init)
+    }
+
+    public func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout? {
+        EdgeDragReadout(workspace.edgeDrag(edge: WormholeBindings.Edge(edge), extent: Float(extent)))
+    }
+
+    public func groupFolderOffer(group: GroupID) -> String? { workspace.groupFolderOffer(group: group) }
 
     /// What the core says happened: start the program of a terminal opened, forget one closed; a refusal is the answer.
     private func handle(_ events: [WorkspaceEvent]) -> WorkspaceModel.Refusal? {
@@ -79,6 +106,8 @@ public final class RustWorkspaceBackend: WorkspaceBackend {
                 relays[Int(id)] = nil
                 failed[Int(id)] = nil
             case .refused(let reason): refusal = WorkspaceModel.Refusal(reason)
+            case .savedTextForgotten(let id): onNotice?(.savedTextForgotten(Int(id)))
+            case .groupToWindow(let group, let terminals): onNotice?(.groupToWindow(group, terminals: terminals.map(Int.init)))
             case .selected, .moved, .listing, .layout, .chrome: break
             }
         }

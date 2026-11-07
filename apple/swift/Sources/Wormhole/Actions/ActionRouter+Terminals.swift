@@ -41,6 +41,11 @@ extension ActionRouter {
             "splitDown": { hub.split(.column) },
             "zoomPane": { hub.toggleZoom() },
             "leaveSplit": { if let id = hub.state.selected { hub.send(.leaveSplit(id)) } },
+            // View > Layout: the core makes the panes (new terminals fill the slots, the rest leave the split and run on).
+            "layoutSingle": { hub.send(.applyLayout(.single)) },
+            "layoutColumns": { hub.send(.applyLayout(.twoColumns)) },
+            "layoutRows": { hub.send(.applyLayout(.twoRows)) },
+            "layoutGrid": { hub.send(.applyLayout(.grid)) },
             "focusPaneLeft": { hub.focusPane(.left) },
             "focusPaneRight": { hub.focusPane(.right) },
             "focusPaneUp": { hub.focusPane(.up) },

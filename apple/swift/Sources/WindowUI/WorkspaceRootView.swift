@@ -19,11 +19,14 @@ public struct WorkspaceRootView: View {
     @State private var drag: DragState?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    /// A column being dragged: which, the pointer, what the readout says and whether letting go closes it.
+    /// A column being dragged: which, the pointer, what the readout says ("430 · max", "Close"), whether the column stays
+    /// open at this pointer and how far the pointer is from the window's edge it hangs on.
     struct DragState: Equatable {
         var edge: PaneLayout.Edge
         var pointer: CGFloat
-        var resize: ColumnResize
+        var readout: String
+        var open: Bool
+        var extent: CGFloat
     }
 
     public init(hub: WindowHub, look: WindowLook = WindowLook()) {

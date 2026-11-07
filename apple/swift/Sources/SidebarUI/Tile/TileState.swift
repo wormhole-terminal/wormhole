@@ -10,7 +10,14 @@ import WorkspaceModel
 enum TileState: Int, Sendable, Equatable {
     case needsYou, failed, working, bell, unread, running, done, shell
 
+    /// The mark the core chose (`TileGlyph`), with the bell over a quiet one; the sample says none and the state follows
+    /// what the terminal is doing.
     init(_ terminal: TerminalSummary) {
+        if let glyph = terminal.glyph {
+            self = TileState(glyph)
+            if terminal.hasBell, self == .shell || self == .running { self = .bell }
+            return
+        }
         let told = terminal.agent != nil
         switch terminal.activity {
         case .needsInput: self = told ? .needsYou : .bell
@@ -22,4 +29,20 @@ enum TileState: Int, Sendable, Equatable {
         // A terminal with nothing louder to say says its bell.
         if terminal.hasBell, self == .shell || self == .running { self = .bell }
     }
+}
+
+extension TileState {
+    init(_ glyph: TileGlyph) {
+        switch glyph {
+        case .working: self = .working
+        case .needsYou: self = .needsYou
+        case .done: self = .done
+        case .failed: self = .failed
+        case .idle, .shell: self = .shell
+        case .terminal(let unread): self = unread ? .unread : .running
+        }
+    }
+
+    /// A folded group's tile: the member's glyph, or, loudest, the urgency the core ranked it by.
+    init(_ tile: MemberTile) { self = TileState(tile.glyph) }
 }

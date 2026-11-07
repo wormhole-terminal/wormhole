@@ -42,6 +42,12 @@ enum MenuStateMaker {
         if !facts.canSplitRight { menu.disabled.insert("splitRight") }
         if !facts.canSplitDown { menu.disabled.insert("splitDown") }
         if !facts.isSplit { menu.disabled.formUnion(["zoomPane", "leaveSplit", "focusPaneLeft", "focusPaneRight", "focusPaneUp", "focusPaneDown"]) }
+        // View > Layout: the layouts the area has room for, the one in use ticked.
+        for preset in state.layout?.menu.presets ?? [] {
+            let id = preset.id.actionID
+            if preset.current { menu.checked.insert(id) }
+            if !preset.enabled { menu.disabled.insert(id) }
+        }
         // Actions whose feature flag is off are not in the menus at all.
         menu.hidden = Set(keymap.entries.filter { $0.flag != nil }.map(\.id))
 
@@ -59,6 +65,18 @@ enum MenuStateMaker {
         case .usage: "showUsage"
         case .project: "showProject"
         case .files: "showFiles"
+        }
+    }
+}
+
+extension LayoutPresetID {
+    /// The keymap's id of View > Layout's item for it.
+    var actionID: ActionID {
+        switch self {
+        case .single: "layoutSingle"
+        case .twoColumns: "layoutColumns"
+        case .twoRows: "layoutRows"
+        case .grid: "layoutGrid"
         }
     }
 }

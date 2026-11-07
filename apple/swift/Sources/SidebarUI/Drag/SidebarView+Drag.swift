@@ -30,7 +30,10 @@ extension SidebarView {
             guard let plan = dropPlanner?.dropPlan(dragged: id, over: over) else { return nil }
             return DropAim(action: .dropTerminal(id, over: over), mark: lines.mark(for: plan, over: over, gap: gap))
         case .group(let id):
-            return DropAim(action: .dropGroup(id, over: over), mark: lines.groupMark(over: over, at: point.y, gap: gap))
+            // The core says where the group would land (nil: nothing would change); the mark is that place.
+            guard let landing = dropPlanner?.groupDropPlan(group: id, over: over) else { return nil }
+            let plan = DropPlan.move(landing, leavesSplit: false, withMates: false)
+            return DropAim(action: .dropGroup(id, over: over), mark: lines.mark(for: plan, over: over, gap: gap))
         }
     }
 

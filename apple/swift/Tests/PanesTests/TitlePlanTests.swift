@@ -25,35 +25,33 @@ struct CharWidth: TextMeasuring {
         #expect(TitleLayout.gap(before: .splits, .terminal) == TitleMetrics.rowGap)
     }
 
-    @Test func theDefaultBreadcrumbKeepsItsFixedWidth() {
+    @Test func theBreadcrumbKeepsItsFixedWidth() {
         // Its padding at each end, the folder's icon, two chevrons with a gap on each side, and the tile with its gap.
         let before = 2 * TitleMetrics.crumbPad + TitleMetrics.glyph + 2 * (2 * TitleMetrics.crumbGap + TitleMetrics.glyph)
             + TitleMetrics.tile + TitleMetrics.crumbGap
-        #expect(TitleLayout.fixedWidth(TitleLayout.ends(facts())) == before)
-        // An end of buttons alone takes nothing of its own.
-        let only = TitleFacts(label: "zsh", row: TitleRow([.terminal, .space, .openIn, .splits]))
-        #expect(only.row.shows(.openIn) && TitleLayout.has(only, .openIn) == false)
+        let ends = (
+            left: TitleEnd([.folder, .branch, .branchStatus, .terminal, .terminalStatus], chevrons: [false, true, false, true, false]),
+            right: TitleEnd([.agentGauge, .ports, .pullRequest, .openIn, .splits], chevrons: [false, false, false, false, false]))
+        #expect(TitleLayout.fixedWidth(ends) == before)
     }
 
-    @Test func aPartWithNothingToShowIsLeftOutAndNoChevronComesAndGoesWithRoom() {
-        let plain = TitleFacts(label: "zsh")
-        let ends = TitleLayout.ends(plain)
-        #expect(ends.left.parts == [.terminal] && ends.right.parts == [.splits])
-        let full = TitleLayout.ends(facts())
-        #expect(full.left.parts == [.folder, .branch, .branchStatus, .terminal, .terminalStatus])
-        #expect(full.left.chevrons == [false, true, false, true, false])
-        #expect(full.right.parts == [.agentGauge, .ports, .pullRequest, .openIn, .splits])
-    }
-
-    @Test func aWideRowDrawsEverythingAndANarrowOneGivesWayInOrder() {
-        let roomy = TitlePlanner.plan(facts(), width: 2000, measure: CharWidth())
-        #expect(roomy.fit.path == .step(0) && roomy.fit.words && !roomy.fit.folded)
-        #expect(Extra.allCases.allSatisfy { roomy.fit.extras.shows($0) })
-        let narrow = TitlePlanner.plan(facts(), width: 330, measure: CharWidth())
-        #expect(!narrow.fit.words && !narrow.fit.extras.shows(.pullRequest))
-        let tiny = TitlePlanner.plan(facts(), width: 140, measure: CharWidth())
-        #expect(tiny.fit.folded && tiny.fit.path == .icon && Extra.allCases.allSatisfy { !tiny.fit.extras.shows($0) })
-        #expect(tiny.fit.chip == TitleMetrics.chipIcon || tiny.fit.chip == nil)
+    @Test func theRowGivesTheCoreItsWantsAndDrawsWhatComesBack() {
+        let arrangement = TitleArrangement(
+            left: TitleEnd([.folder, .terminal], chevrons: [false, true]), right: TitleEnd([.splits], chevrons: [false]),
+            paths: [PathText(parents: "~/Projects/", last: "tube"), PathText(parents: "~/…/", last: "tube")])
+        let roomy = TitlePlanner.plan(facts(), arrangement, width: 2000, measure: CharWidth(), fitting: NaturalFit())
+        #expect(roomy.steps.map(\.width) == [15, 8] && roomy.fit.path == .step(0) && !roomy.fit.folded)
+        #expect(roomy.draws(.folder) && roomy.draws(.splits) && !roomy.draws(.ports))
+        // A fit that folds the row: the buttons are one menu, and only the first of them is the menu.
+        struct Folding: RowFitting {
+            func fit(avail: Double, _ wants: RowWants) -> RowFit {
+                var fit = NaturalFit().fit(avail: avail, wants)
+                fit.folded = true
+                return fit
+            }
+        }
+        let narrow = TitlePlanner.plan(facts(), arrangement, width: 100, measure: CharWidth(), fitting: Folding())
+        #expect(narrow.fit.folded && narrow.isDrawn(.splits))
     }
 
     @Test func thePortsLoseAChipBeforeTheyGo() {

@@ -11,6 +11,8 @@ import WorkspaceModel
 
 struct PanelTabBar: View {
     let tab: PanelTab
+    /// The tabs on offer, in the bar's order: the core's (a feature that is off brings no tab); the sample's is all six.
+    var tabs: [PanelTab] = PanelTab.barOrder
     let select: @MainActor (PanelTab) -> Void
     /// The counts on the tabs that have one (the changed files, the agents that reported).
     var badges: [PanelTab: Int] = [:]
@@ -23,7 +25,7 @@ struct PanelTabBar: View {
 
     var body: some View {
         HStack(spacing: Chrome.tabGap) {
-            ForEach(Array(PanelTab.barOrder.enumerated()), id: \.element) { position, candidate in
+            ForEach(Array(tabs.enumerated()), id: \.element) { position, candidate in
                 PanelTabButton(tab: candidate, isSelected: candidate == tab, badge: badges[candidate], namespace: selection) { select(candidate) }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(candidate.title)
@@ -46,7 +48,7 @@ struct PanelTabBar: View {
 extension PanelTabBar {
     /// "2 of 6", and the count where the tab has one ("Changes: 3 files" is the tab's own label's business).
     fileprivate func spoken(_ tab: PanelTab, position: Int) -> String {
-        let place = "\(position + 1) of \(PanelTab.barOrder.count)"
+        let place = "\(position + 1) of \(tabs.count)"
         return badges[tab].map { "\(place), \($0)" } ?? place
     }
 }

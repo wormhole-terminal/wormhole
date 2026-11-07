@@ -76,13 +76,13 @@ enum SidebarSnapshot {
     static func write(
         _ state: WorkspaceState = SidebarFixture.state, theme: String, contrast: Bool = false, appearance: SidebarAppearance = .init(),
         name: String, size: CGSize = CGSize(width: 350, height: 560), settle: TimeInterval = 0.4,
-        caught: SidebarView.Caught? = nil, groupEdits: GroupEdits? = nil
+        caught: SidebarView.Caught? = nil
     ) throws -> URL {
         let library = ThemeLibrary.bundled
         ThemeStore.shared.increaseContrast = contrast
         let theme = try XCTUnwrap(library.theme(id: theme))
         return try render(
-            SidebarView(state: state, appearance: appearance, groupEdits: groupEdits, caught: caught, send: { _ in }),
+            SidebarView(state: state, appearance: appearance, closeGroup: nil, caught: caught, send: { _ in }),
             theme: theme, contrast: contrast, name: name, size: size, settle: settle)
     }
 

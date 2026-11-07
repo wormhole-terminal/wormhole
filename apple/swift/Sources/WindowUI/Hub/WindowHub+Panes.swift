@@ -37,8 +37,10 @@ extension WindowHub {
         layouts.save(panes, anchor: anchor, in: state)
     }
 
+    /// Whether the area has room for another pane that way: the core's answer where it has the area's size, else the panes'.
     public func canSplit(_ axis: SplitAxis) -> Bool {
-        layouts.panes(in: state)?.canSplit(axis, room: PaneRoom(0, 0)) ?? false
+        if let menu = state.layout?.menu { return axis == .row ? menu.canSplitRow : menu.canSplitColumn }
+        return layouts.panes(in: state)?.canSplit(axis, room: PaneRoom(0, 0)) ?? false
     }
 
     /// ⇧⌘↩ and the pane header's zoom button.

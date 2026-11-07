@@ -51,35 +51,12 @@ public struct TitleEnd: Sendable, Equatable {
     public var parts: [TitlePart]
     public var chevrons: [Bool]
 
-    init(_ parts: [TitlePart]) { (self.parts, chevrons) = (parts, PanesModel.chevrons(for: parts)) }
+    public init(_ parts: [TitlePart], chevrons: [Bool]) { (self.parts, self.chevrons) = (parts, chevrons) }
 }
 
 public enum TitleLayout {
     /// Whether the row draws `part` for these facts: arranged in the row and with something to show (a branch
     /// needs a repository, Open in… a folder).
-    public static func has(_ facts: TitleFacts, _ part: TitlePart) -> Bool {
-        guard facts.row.shows(part) else { return false }
-        switch part {
-        case .folder, .openIn: return facts.folder != nil
-        case .branch: return facts.branch != nil
-        case .branchStatus: return facts.branchStatus != nil
-        case .terminalStatus: return facts.words != nil
-        case .agentGauge: return facts.gauge != nil
-        case .ports: return !facts.ports.isEmpty
-        case .pullRequest: return facts.pullRequest != nil
-        case .terminal, .splits, .space: return true
-        }
-    }
-
-    /// The row's two ends for `facts`. A chevron is decided on these, not on what the row has room for, so
-    /// none comes and goes as the window narrows.
-    public static func ends(_ facts: TitleFacts) -> (left: TitleEnd, right: TitleEnd) {
-        let (left, right) = facts.row.ends
-        return (TitleEnd(left.filter { has(facts, $0) }), TitleEnd(right.filter { has(facts, $0) }))
-    }
-
-    /// The gap before `part`, after `before` (nil: it starts its end, where a button stands flush and anything
-    /// else has the breadcrumb's padding).
     public static func gap(before: TitlePart?, _ part: TitlePart) -> Double {
         switch (before?.kind, part.kind) {
         case (nil, .button): 0

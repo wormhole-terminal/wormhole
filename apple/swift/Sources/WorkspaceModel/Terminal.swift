@@ -23,11 +23,30 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
     /// Notes and tasks still open (the row's count) and files changed (its "±N").
     public var noteCount: Int
     public var changeCount: Int
+    /// "Hide from Agents" and "Forget text" (the row menu's checks): the model keeps them, the shell enforces them.
+    public var isAgentHidden: Bool
+    public var forgetsText: Bool
+    /// What git says of the terminal's folder (core `git_feed`): the repository's root, an unclean tree, how far the
+    /// branch is from its upstream, the files the repository has changed.
+    public var repo: String?
+    public var isDirty: Bool
+    public var ahead: Int
+    public var behind: Int
+    public var repoFiles: Int?
+    /// Where the terminal stands in the list: its group (a folded one's members are listed only by `TerminalsSnapshot`).
+    public var group: GroupID?
+    public var groupName: String?
+    public var isFolded: Bool
+    /// The mark on its tile, when the core said (the sample leaves it out and the tile follows `activity`).
+    public var glyph: TileGlyph?
 
     public init(
         id: TerminalID, title: String, folder: String? = nil, branch: String? = nil, activity: Activity = .idle,
         isPinned: Bool = false, unread: Bool = false, hasBell: Bool = false, agent: AgentID? = nil,
-        message: String? = nil, splitID: Int? = nil, noteCount: Int = 0, changeCount: Int = 0
+        message: String? = nil, splitID: Int? = nil, noteCount: Int = 0, changeCount: Int = 0,
+        isAgentHidden: Bool = false, forgetsText: Bool = false, repo: String? = nil, isDirty: Bool = false,
+        ahead: Int = 0, behind: Int = 0, repoFiles: Int? = nil, group: GroupID? = nil, groupName: String? = nil,
+        isFolded: Bool = false, glyph: TileGlyph? = nil
     ) {
         self.id = id
         self.title = title
@@ -42,5 +61,16 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
         self.splitID = splitID
         self.noteCount = noteCount
         self.changeCount = changeCount
+        self.isAgentHidden = isAgentHidden
+        self.forgetsText = forgetsText
+        self.repo = repo
+        self.isDirty = isDirty
+        self.ahead = ahead
+        self.behind = behind
+        self.repoFiles = repoFiles
+        self.group = group
+        self.groupName = groupName
+        self.isFolded = isFolded
+        self.glyph = glyph
     }
 }

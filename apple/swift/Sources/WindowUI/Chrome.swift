@@ -61,5 +61,6 @@ enum Chrome {
 }
 
 extension WorkspaceState {
-    var selectedTerminal: TerminalSummary? { terminals.first { $0.id == selected } }
+    /// The row's own summary (it has the git and notes counts) when it is listed, else the all-terminals one of a folded group.
+    var selectedTerminal: TerminalSummary? { terminals.first { $0.id == selected } ?? all.first { $0.id == selected } }
 }

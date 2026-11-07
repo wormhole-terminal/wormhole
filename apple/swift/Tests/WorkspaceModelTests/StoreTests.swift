@@ -41,11 +41,11 @@ final class StoreTests: XCTestCase {
         XCTAssertEqual(store.send(.leaveSplit(1)), .unchanged)
     }
 
-    func testANewTerminalInAGroupIsTwoActionsOfTheCore() {
+    func testANewTerminalInAGroupIsOneActionOfTheCore() {
         let backend = RecordingBackend()
         let store = WorkspaceStore(backend: backend)
         store.send(.newTerminalInGroup(7))
-        XCTAssertEqual(backend.applied, [.newTerminal, .addToGroup(1, 7)])
+        XCTAssertEqual(backend.applied, [.newTerminalInGroup(7)])
     }
 
     func testTheOneTimerPullsTheWordsAgainWhenTheyMove() async throws {
@@ -73,6 +73,8 @@ final class StoreTests: XCTestCase {
 @MainActor
 private final class RecordingBackend: WorkspaceBackend {
     var onWake: (@MainActor () -> Void)?
+    var onNotice: (@MainActor (WorkspaceNotice) -> Void)?
+    func terminals() -> TerminalsSnapshot { TerminalsSnapshot() }
     var live: [TerminalID] { [1] }
     var applied: [WorkspaceAction] = []
     var sidebarRevision: UInt64 = 1

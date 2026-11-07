@@ -1,7 +1,7 @@
 // A terminal row's context menu, in the order and words of the GPUI app (`sidebar/row_menu.rs`): Rename…, Add terminal
 // to new group, Add terminal to group ▸, Remove from group, Split right, Close terminal; Pin to top / Unpin;
-// Reveal in Finder, Copy path. Every item is one of the core's actions. "Show beside…", "Remove from split" and the
-// two privacy items wait for the window to offer them.
+// Reveal in Finder, Copy path; Show beside…, Remove from split and the two privacy checks ("Don't keep this terminal's text",
+// "Hide from Agents") sit where the GPUI menu has them. Every item is one of the core's actions.
 
 import AppKit
 import SwiftUI
@@ -29,7 +29,11 @@ struct RowMenu: View {
         Button("Split right") { context.send(.splitRight(id)) }
         Button("Close terminal") { context.send(.close(id)) }
         Divider()
+        besideMenu
+        if terminal.splitID != nil { Button("Remove from split") { context.send(.leaveSplit(id)) } }
         Button(terminal.isPinned ? "Unpin" : "Pin to top") { context.send(.togglePin(id)) }
+        Toggle("Don't keep this terminal's text", isOn: Binding(get: { terminal.forgetsText }, set: { context.send(.setForgetText(id, $0)) }))
+        Toggle("Hide from Agents", isOn: Binding(get: { terminal.isAgentHidden }, set: { context.send(.setAgentHidden(id, $0)) }))
         Divider()
         let path = terminal.folder.map { NSString(string: $0).expandingTildeInPath }
         Button("Reveal in Finder") { if let path { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) } }
@@ -41,5 +45,17 @@ struct RowMenu: View {
             }
         }
         .disabled(path == nil)
+    }
+
+    /// The terminals that could show next to this one (not already in its split): the other joins it, on its right.
+    @ViewBuilder private var besideMenu: some View {
+        let others = context.everyTerminal.filter { $0.id != terminal.id && ($0.splitID == nil || $0.splitID != terminal.splitID) }
+        if others.isEmpty {
+            Menu("Show beside…") {}.disabled(true)
+        } else {
+            Menu("Show beside…") {
+                ForEach(others) { other in Button(other.title) { context.send(.showBeside(terminal.id, other: other.id)) } }
+            }
+        }
     }
 }

@@ -18,8 +18,13 @@ struct SidebarContext {
     /// How many status changes each terminal has had since the list appeared: what plays the wash.
     let shifts: [TerminalID: Int]
     let drag: DragHooks
-    /// What the window can do to a group beyond the core's actions, and the group whose popover is open.
-    let groupEdits: GroupEdits?
+    /// Every terminal, folded ones too, for "Show beside…" and the moves a menu offers.
+    let everyTerminal: [TerminalSummary]
+    /// A new terminal in a group: first the question about its folder, when the core has one to offer.
+    let newInGroup: @MainActor (GroupID) -> Void
+    /// Close a group: the window asks first when something works in it.
+    let closeGroup: @MainActor (GroupID) -> Void
+    /// The group whose popover is open.
     let popover: GroupID?
     let openPopover: @MainActor (GroupID?) -> Void
 

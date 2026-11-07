@@ -49,6 +49,29 @@ extension AppController {
         }
     }
 
+    /// Closes a group's terminals, asking first when any of them works or runs something.
+    func closeGroup(_ id: GroupID) {
+        guard let section = hub.state.sections.first(where: { $0.head?.id == id }), let head = section.head else { return }
+        // A folded group lists no rows: the core counts what works in it, and says all of it is to end.
+        let running = section.rows.filter(\.runsSomething)
+        guard section.workingCount > 0 || !running.isEmpty else { return finishClosingGroup(id) }
+        let question = Question(
+            title: CloseQuestions.groupTitle(head.name),
+            detail: CloseQuestions.group(
+                terminals: section.terminalCount,
+                running: running.map { StillRunning.Fact(status: $0.terminal.runStatus, commandRunning: $0.runningCommand != nil) },
+                programs: running.compactMap(\.runningCommand), stakes: []),
+            confirm: "Close Group")
+        Task {
+            if case .confirm = await QuestionSheet(question).ask(in: window) { finishClosingGroup(id) }
+        }
+    }
+
+    private func finishClosingGroup(_ id: GroupID) {
+        hub.send(.closeGroup(id))
+        if hub.state.live.isEmpty { window?.close() }
+    }
+
     private func finishClosing(_ id: TerminalID) {
         hub.send(.close(id))
         if hub.state.live.isEmpty { window?.close() }

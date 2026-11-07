@@ -7,6 +7,7 @@ import Foundation
 @MainActor
 public final class MockWorkspaceBackend: WorkspaceBackend {
     public var onWake: (@MainActor () -> Void)?
+    public var onNotice: (@MainActor (WorkspaceNotice) -> Void)?
     private var items: [MockItem]
     private var selected: TerminalID?
     private var window: ChromeState
@@ -29,7 +30,7 @@ public final class MockWorkspaceBackend: WorkspaceBackend {
     public func apply(_ action: WorkspaceAction) -> Refusal? {
         switch action {
         case .select(let id): guard live.contains(id) else { return .unknown }; selected = id
-        case .newTerminal:
+        case .newTerminal, .newTerminalIn:
             let id = (live.max() ?? 0) + 1
             items.append(.loose(MockTerminal(TerminalSummary(id: id, title: "Terminal \(id)"))))
             selected = id

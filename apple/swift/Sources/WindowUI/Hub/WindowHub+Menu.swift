@@ -23,7 +23,7 @@ extension WindowHub {
 
     /// ⌥⌘J, ⇧⌥⌘J: the terminal that waits for you, or has finished.
     public func goTo(_ activity: Activity) {
-        let order = state.terminals
+        let order = state.all
         let after = state.selected.flatMap { id in order.firstIndex { $0.id == id } } ?? -1
         let found = (order.dropFirst(after + 1) + order.prefix(max(after, 0))).first { $0.activity == activity }
         if let found { send(.select(found.id)) }

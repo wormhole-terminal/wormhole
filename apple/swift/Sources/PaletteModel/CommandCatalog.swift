@@ -15,7 +15,7 @@ public enum CommandCatalog {
     }
 
     static func actions(for state: WorkspaceState) -> [Command] {
-        let selected = state.terminals.first { $0.id == state.selected }
+        let selected = state.all.first { $0.id == state.selected }
         var out = [command("new-terminal", "New terminal", "plus", .newTerminal, Shortcuts.newTerminal, .terminal)]
         out[0].detail = selected?.folder.map { "in \($0)" }
         if let selected {
@@ -51,17 +51,17 @@ public enum CommandCatalog {
                 "pin-terminal", terminal.isPinned ? "Unpin terminal" : "Pin to top", "pin", .togglePin(terminal.id), nil,
                 .terminal)
         ]
-        guard let at = state.terminals.firstIndex(where: { $0.id == terminal.id }), state.terminals.count > 1 else {
+        guard let at = state.all.firstIndex(where: { $0.id == terminal.id }), state.all.count > 1 else {
             return out
         }
-        let count = state.terminals.count
+        let count = state.all.count
         out.append(
             command(
-                "next-terminal", "Next terminal", "command", .select(state.terminals[(at + 1) % count].id),
+                "next-terminal", "Next terminal", "command", .select(state.all[(at + 1) % count].id),
                 Shortcuts.nextTerminal, .terminal))
         out.append(
             command(
-                "previous-terminal", "Previous terminal", "command", .select(state.terminals[(at + count - 1) % count].id),
+                "previous-terminal", "Previous terminal", "command", .select(state.all[(at + count - 1) % count].id),
                 Shortcuts.previousTerminal, .terminal))
         return out
     }
@@ -74,7 +74,7 @@ public enum CommandCatalog {
     }
 
     private static func terminals(in state: WorkspaceState) -> [Command] {
-        state.terminals.enumerated().map { index, terminal in
+        state.all.enumerated().map { index, terminal in
             let folder = terminal.folder
             return Command(
                 id: "terminal-\(terminal.id)", title: terminal.title,
@@ -99,7 +99,7 @@ public enum CommandCatalog {
     private static func folders(in state: WorkspaceState) -> [Command] {
         var order: [String] = []
         var counts: [String: Int] = [:]
-        for terminal in state.terminals {
+        for terminal in state.all {
             guard let path = terminal.folder, path.hasPrefix("~") || path.hasPrefix("/") else { continue }
             if counts[path] == nil { order.append(path) }
             counts[path, default: 0] += 1
@@ -113,7 +113,7 @@ public enum CommandCatalog {
                 id: "folder-\(path)", title: name,
                 detail: [origin, "\(count) terminal\(count == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " · "),
                 group: .folders, lead: .symbol("folder"),
-                action: state.terminals.first { $0.folder == path }.map { .select($0.id) })
+                action: state.all.first { $0.folder == path }.map { .select($0.id) })
         }
     }
 }

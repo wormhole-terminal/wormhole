@@ -8,10 +8,13 @@ import Foundation
 public struct Revisions: Sendable, Equatable {
     public var sidebar: UInt64
     public var chrome: UInt64
+    /// The all-terminals snapshot (`terminals()`); the sample never moves it.
+    public var terminals: UInt64
 
-    public init(sidebar: UInt64, chrome: UInt64) {
+    public init(sidebar: UInt64, chrome: UInt64, terminals: UInt64 = 0) {
         self.sidebar = sidebar
         self.chrome = chrome
+        self.terminals = terminals
     }
 }
 
@@ -22,11 +25,14 @@ public struct ChromeState: Sendable, Equatable {
     public var panelTab: PanelTab
     public var search: String
     public var overlay: Overlay?
+    /// The columns, tabs and layouts as the core fitted them; nil without a window width.
+    public var layout: ChromeLayout?
 
     public init(
         sidebarVisible: Bool = true, panelVisible: Bool = true, panelTab: PanelTab = .changes, search: String = "",
-        overlay: Overlay? = nil
+        overlay: Overlay? = nil, layout: ChromeLayout? = nil
     ) {
+        self.layout = layout
         self.sidebarVisible = sidebarVisible
         self.panelVisible = panelVisible
         self.panelTab = panelTab
@@ -56,4 +62,19 @@ public protocol WorkspaceBackend: AnyObject {
     func chrome() -> ChromeState
     /// What dropping `dragged` on `over` would do; nil when nothing would change. Pure: nothing moves.
     func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan?
+    /// Where a dragged group would land on `over`; nil when nothing would change. Pure.
+    func groupDropPlan(group: GroupID, over: DropOver) -> Landing?
+    /// Every terminal, folded ones too, with the status counts.
+    func terminals() -> TerminalsSnapshot
+    /// The selected terminal's title row.
+    func title() -> TitleState?
+    /// What a drag of a column's edge would leave, for its readout.
+    func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout?
+    /// The folder to ask about before a terminal opens in a group that has none, when one is worth offering.
+    func groupFolderOffer(group: GroupID) -> String?
+    /// The window came to the front or went behind (`active`) and whether it can be seen at all (`seen`): in front, what is
+    /// on screen is looked at, so a finished result is spent and a bell heard.
+    func setWindowState(active: Bool, seen: Bool)
+    /// Set by the store: told what no snapshot carries (a screen's saved text to forget, a group to move to a window).
+    var onNotice: (@MainActor (WorkspaceNotice) -> Void)? { get set }
 }

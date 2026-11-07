@@ -10,6 +10,10 @@ import TerminalMetal
 import WindowUI
 import WorkspaceModel
 
+#if WITH_UNIFFI
+    import WorkspaceBridge
+#endif
+
 @MainActor
 final class AppController: NSObject, NSApplicationDelegate {
     let options: Options
@@ -41,7 +45,13 @@ final class AppController: NSObject, NSApplicationDelegate {
         let host = WorkspaceHost.make(options)
         let factory = TerminalFactory(options: options, source: host.source)
         self.factory = factory
-        hub = WindowHub(store: host.store, terminals: TerminalViews { factory.make($0) })
+        hub = WindowHub(
+            store: host.store, terminals: TerminalViews { factory.make($0) },
+            panelBackends: PanelBackendsFactory.make(options, store: host.store))
+        #if WITH_UNIFFI
+            // The title row's order of giving way is the core's, wherever the core runs the window.
+            if options.program != nil { hub.rowFitting = CoreRowFitting() }
+        #endif
         super.init()
     }
 

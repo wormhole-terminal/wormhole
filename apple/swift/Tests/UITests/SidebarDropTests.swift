@@ -94,10 +94,13 @@ final class SidebarDropTests: XCTestCase {
         XCTAssertEqual(lines.mark(for: .join(2), over: .row(2, .middle), gap: gap), .row(2))
     }
 
-    func testAGroupsMarkIsBeforeOrAfterTheCardUnderThePointer() throws {
+    func testAGroupsMarkFollowsTheLandingTheCoreSaid() throws {
         let (lines, frames) = lines()
         let loose = try XCTUnwrap(frames[.row(2)])
-        XCTAssertEqual(lines.groupMark(over: .row(2, .top), at: loose.minY + 5, gap: gap), .line(y: loose.minY - gap / 2, x: loose.minX...loose.maxX))
-        XCTAssertEqual(lines.groupMark(over: .row(2, .bottom), at: loose.maxY - 5, gap: gap), .line(y: loose.maxY + gap / 2, x: loose.minX...loose.maxX))
+        // `groupDropPlan` answers a top-level landing: the line stands before the item the group lands before.
+        let before = lines.mark(for: .move(.top(before: .terminal(2)), leavesSplit: false, withMates: false), over: .row(2, .top), gap: gap)
+        XCTAssertEqual(before, .line(y: loose.minY - gap / 2, x: loose.minX...loose.maxX))
+        let end = lines.mark(for: .move(.top(before: nil), leavesSplit: false, withMates: false), over: .tail, gap: gap)
+        XCTAssertNotNil(end, "a landing at the end draws under the last card")
     }
 }
