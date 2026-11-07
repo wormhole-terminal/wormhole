@@ -129,9 +129,9 @@ fn cards(sheet: &Sheet, cx: &App) -> Vec<AnyElement> {
         )
         .child(Button::new("components-copy").outline().small().icon(IconName::Copy).label("Copy as JSON")) // text: sample (a button's label)
         .child(Button::new("components-reset").danger().outline().small().label("Reset all…")); // text: sample (a button's label)
+    let names = ["Zen", "Balanced", "Everything"]; // text: sample (a developer label)
     let choices = div().flex().gap_2().w_full().children(
-        Preset::ALL.iter().zip(["Zen", "Balanced", "Everything"]).enumerate().map(|(ix, (preset, name))| {
-            // text: sample (a developer label)
+        Preset::ALL.iter().zip(names).enumerate().map(|(ix, (preset, name))| {
             let state = sheet.state.clone();
             style::choice_card(("components-card", ix), ui, ix == now.card)
                 .flex_1()
