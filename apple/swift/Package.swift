@@ -53,8 +53,8 @@ var targets: [Target] = [
     .target(name: "SettingsUI", dependencies: ["SettingsModel", "DesignSystem"]),
     .testTarget(name: "SettingsTests", dependencies: ["SettingsModel", "SettingsUI", "DesignSystem"]),
     // Splits and panes (the tree, its geometry, drops, presets), the title row's parts and fit rules and the
-    // tab sets, as plain values. Foundation only.
-    .target(name: "PanesModel"),
+    // tab sets, as plain values. Foundation and the workspace model.
+    .target(name: "PanesModel", dependencies: ["WorkspaceModel"]),
     // The panes' area with headers, dividers and drop hints, the title row's pieces and the tab bar.
     .target(name: "PanesUI", dependencies: ["PanesModel", "WorkspaceModel", "DesignSystem"]),
     .testTarget(name: "PanesTests", dependencies: ["PanesModel", "PanesUI", "WorkspaceModel", "DesignSystem"]),

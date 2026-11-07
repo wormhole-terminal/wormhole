@@ -1,46 +1,90 @@
-// What the title row's extras say, apart from how wide they are (`view/title_extras.rs`): the branch's
-// status, the ports a terminal listens on, and the words of each for a tooltip and for VoiceOver.
+// What the title row says about the terminal it is for (`window/title/mod.rs` `Facts`): plain values the
+// window gathers once per frame from the session, git and the extras' lookups.
 
 import Foundation
+import WorkspaceModel
 
-/// A dot while the tree has uncommitted changes, and how far the branch is from its upstream. Only the
-/// departures are shown: a clean branch level with its upstream has no status.
-public struct BranchStatus: Sendable, Equatable {
-    public var dirty: Bool
-    public var ahead: Int
-    public var behind: Int
-    /// `origin/main`, for the words.
-    public var upstream: String?
+/// The agent's model and how full its context window is (core `usage::Gauge`).
+public struct GaugeFact: Sendable, Equatable {
+    public var model: String?
+    /// The share used, 0 to 100.
+    public var context: Double?
 
-    public init(dirty: Bool = false, ahead: Int = 0, behind: Int = 0, upstream: String? = nil) {
-        (self.dirty, self.ahead, self.behind, self.upstream) = (dirty, ahead, behind, upstream)
-    }
+    public init(model: String? = nil, context: Double? = nil) { (self.model, self.context) = (model, context) }
 
-    /// "Uncommitted changes, 2 commits ahead of origin/main, 1 commit behind origin/main".
+    public var percent: Int? { context.map { Int($0.rounded()) } }
+    /// From this share used on the meter turns to the warning colour: early enough to compact.
+    public var warns: Bool { (context ?? 0) >= 80 }
+
+    /// "Opus 4.5, 41% of the context window used".
     public var words: String {
-        let against = upstream.map { " \($0)" } ?? ""
-        let commits = { (n: Int) in "\(n) \(n == 1 ? "commit" : "commits")" }
-        return [
-            dirty ? "Uncommitted changes" : nil,
-            ahead > 0 ? "\(commits(ahead)) ahead of\(against)" : nil,
-            behind > 0 ? "\(commits(behind)) behind\(against)" : nil,
-        ].compactMap { $0 }.joined(separator: ", ")
+        let used = percent.map { "\($0)% of the context window used" }
+        return [model, used].compactMap { $0 }.joined(separator: ", ")
     }
 }
 
-public enum Ports {
-    /// How many ports are drawn as chips of their own; the rest are in the "+n" menu.
-    public static let shown = 2
+/// The branch's pull request and its checks (core `git::pr`).
+public struct PullRequestFact: Sendable, Equatable {
+    public enum State: Sendable, Equatable { case open, merged, closed }
+    public enum Checks: Sendable, Equatable { case passing, failing, pending }
 
-    public static func chips(_ ports: [UInt16]) -> (shown: [UInt16], more: Int) {
-        (Array(ports.prefix(shown)), max(ports.count - shown, 0))
+    public var number: Int
+    public var url: URL?
+    public var state: State
+    public var draft: Bool
+    public var checks: Checks?
+
+    public init(number: Int, url: URL? = nil, state: State = .open, draft: Bool = false, checks: Checks? = nil) {
+        (self.number, self.url, self.state, self.draft, self.checks) = (number, url, state, draft, checks)
     }
 
-    public static func label(_ port: UInt16) -> String { "localhost:\(port)" }
-    /// Where a click on the chip goes: the program on this Mac, spoken to plainly.
-    public static func url(_ port: UInt16) -> URL? { URL(string: "http://localhost:\(port)") }
-    public static func words(_ port: UInt16) -> String { "Open localhost:\(port) in the browser" }
-    public static func moreWords(_ more: [UInt16]) -> String {
-        "\(more.count) more listening: \(more.map(String.init).joined(separator: ", "))"
+    public var label: String { "#\(number)" }
+    /// Checks are only drawn (and said) of an open one.
+    public var openChecks: Checks? { state == .open ? checks : nil }
+
+    /// "Pull request #142, open, draft, checks failing".
+    public var words: String {
+        var words = "Pull request #\(number), \(state == .open ? "open" : state == .merged ? "merged" : "closed")"
+        if state == .open {
+            let checkWords = checks.map { $0 == .passing ? "checks passing" : $0 == .failing ? "checks failing" : "checks running" }
+            words += ([draft ? "draft" : nil, checkWords].compactMap { $0 }).map { ", " + $0 }.joined()
+        }
+        return words
+    }
+}
+
+public struct TitleFacts: Sendable, Equatable {
+    public var terminalID: Int
+    /// Where the terminal is, and how that reads (`~/Projects/tube`).
+    public var folder: String?
+    public var shownFolder: String?
+    public var activity: Activity
+    public var agent: AgentID?
+    /// The terminal's name: its title, else what runs in it.
+    public var label: String
+    /// How it is doing after the name ("working · 4m"); nothing while it is idle.
+    public var words: String?
+    /// The folder's branch: `.some(nil)` is a detached HEAD, nil is no repository.
+    public var branch: String??
+    /// For a terminal in a submodule, whose it is ("in terminal").
+    public var superproject: String?
+    public var branchStatus: BranchStatus?
+    public var gauge: GaugeFact?
+    public var ports: [UInt16]
+    public var pullRequest: PullRequestFact?
+    public var row: TitleRow
+    /// Hidden from the programs that control Wormhole: the name wears a lock.
+    public var hiddenFromAgents: Bool
+
+    public init(
+        terminalID: Int = 0, folder: String? = nil, shownFolder: String? = nil, activity: Activity = .idle,
+        agent: AgentID? = nil, label: String, words: String? = nil, branch: String?? = nil, superproject: String? = nil,
+        branchStatus: BranchStatus? = nil, gauge: GaugeFact? = nil, ports: [UInt16] = [],
+        pullRequest: PullRequestFact? = nil, row: TitleRow = .default, hiddenFromAgents: Bool = false
+    ) {
+        (self.terminalID, self.folder, self.shownFolder, self.activity, self.agent) = (terminalID, folder, shownFolder, activity, agent)
+        (self.label, self.words, self.branch, self.superproject) = (label, words, branch, superproject)
+        (self.branchStatus, self.gauge, self.ports, self.pullRequest) = (branchStatus, gauge, ports, pullRequest)
+        (self.row, self.hiddenFromAgents) = (row, hiddenFromAgents)
     }
 }

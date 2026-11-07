@@ -38,7 +38,7 @@ extension PaneTree {
 
     /// How much of the two rectangles' sides across `axis`' own direction coincide: the y-sides for a move
     /// along a row, the x-sides for one along a column.
-    private func span(_ a: PaneRect, _ b: PaneRect, _ axis: Axis) -> Double {
+    private func span(_ a: PaneRect, _ b: PaneRect, _ axis: SplitAxis) -> Double {
         let (a0, a1, b0, b1) = axis == .row ? (a.y, a.bottom, b.y, b.bottom) : (a.x, a.right, b.x, b.right)
         return max(min(a1, b1) - max(a0, b0), 0)
     }

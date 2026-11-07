@@ -5,7 +5,7 @@ import Foundation
 enum Layout {
     /// Each child's end is the next one's start, computed once, so neighbours' edges compare equal. `equal`
     /// lays them out as if every share were 1/n.
-    static func childRects(_ rect: PaneRect, _ axis: Axis, _ children: [Child], equal: Bool = false) -> [PaneRect] {
+    static func childRects(_ rect: PaneRect, _ axis: SplitAxis, _ children: [Child], equal: Bool = false) -> [PaneRect] {
         let (start, extent) = rect.along(axis)
         var edges = [start]
         var cumulative = 0.0
@@ -38,12 +38,12 @@ enum Layout {
         return rects.map(\.0)
     }
 
-    static func dividers(_ node: Node, _ rect: PaneRect, _ path: inout [Int], _ out: inout [Divider]) {
+    static func dividers(_ node: Node, _ rect: PaneRect, _ path: inout [Int], _ out: inout [PaneDivider]) {
         guard case .split(let axis, let children) = node else { return }
         let rects = childRects(rect, axis, children)
         for (index, next) in rects.enumerated().dropFirst() {
             let line = axis == .row ? PaneRect(next.x, rect.y, 0, rect.h) : PaneRect(rect.x, next.y, rect.w, 0)
-            out.append(Divider(id: DividerID(path: path, index: index - 1), axis: axis, rect: line))
+            out.append(PaneDivider(id: DividerID(path: path, index: index - 1), axis: axis, rect: line))
         }
         for (ix, (child, inner)) in zip(children, rects).enumerated() {
             path.append(ix)
@@ -63,8 +63,8 @@ extension PaneTree {
     }
 
     /// Every divider, splits before their children.
-    public func dividers(width: Double, height: Double) -> [Divider] {
-        var out: [Divider] = []
+    public func dividers(width: Double, height: Double) -> [PaneDivider] {
+        var out: [PaneDivider] = []
         var path: [Int] = []
         Layout.dividers(root, PaneRect(0, 0, width, height), &path, &out)
         return out

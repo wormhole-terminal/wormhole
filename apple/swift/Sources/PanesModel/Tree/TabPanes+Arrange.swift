@@ -70,3 +70,13 @@ extension TabPanes {
         return plan.out
     }
 }
+
+extension TabPanes {
+    /// Whether ⌘D / ⇧⌘D would leave both halves at least their minimum (the window refuses a split that
+    /// wouldn't, and the buttons grey out).
+    public func canSplit(_ axis: SplitAxis, room: PaneRoom) -> Bool {
+        var copy = self
+        // A probe id no terminal has: only the room matters.
+        return copy.split(axis, new: .min) && fits(copy.tree, [focused, .min], room)
+    }
+}

@@ -7,7 +7,7 @@ import Foundation
 public typealias PaneID = Int
 
 /// How a split lays its children out: `row` side by side (⌘D adds to it), `column` stacked (⇧⌘D).
-public enum Axis: Sendable, Equatable, Hashable {
+public enum SplitAxis: Sendable, Equatable, Hashable {
     case row, column
 }
 
@@ -30,7 +30,7 @@ public struct Child: Sendable, Equatable {
 public enum Node: Sendable, Equatable {
     case leaf(PaneID)
     /// Never fewer than two children inside a `PaneTree`, and never a child split of its own axis.
-    case split(Axis, [Child])
+    case split(SplitAxis, [Child])
 
     var count: Int {
         switch self {

@@ -5,7 +5,7 @@ import Foundation
 
 extension Node {
     /// The split at `path` with its rectangle, `rect` being the root's.
-    fileprivate mutating func editSplit(at path: ArraySlice<Int>, in rect: PaneRect, _ body: (inout [Child], Axis, PaneRect) -> Double?)
+    fileprivate mutating func editSplit(at path: ArraySlice<Int>, in rect: PaneRect, _ body: (inout [Child], SplitAxis, PaneRect) -> Double?)
         -> Double?
     {
         guard case .split(let axis, var children) = self else { return nil }
@@ -22,7 +22,7 @@ extension Node {
 
     /// The least room a subtree needs along `axis` for every pane in it to keep its minimum: panes in a
     /// split of that axis add up, panes across it need the widest one's.
-    func minExtent(_ axis: Axis, _ minW: Double, _ minH: Double) -> Double {
+    func minExtent(_ axis: SplitAxis, _ minW: Double, _ minH: Double) -> Double {
         switch self {
         case .leaf: return axis == .row ? minW : minH
         case .split(let own, let children):

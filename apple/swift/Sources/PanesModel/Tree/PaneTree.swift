@@ -23,7 +23,7 @@ public struct PaneTree: Sendable, Equatable {
     /// Split `target` along `axis`, the new pane to its right (row) or below it (column), each taking half
     /// of the target's room. False when `target` isn't a pane here or `new` already is.
     @discardableResult
-    public mutating func split(_ target: PaneID, axis: Axis, new id: PaneID) -> Bool {
+    public mutating func split(_ target: PaneID, axis: SplitAxis, new id: PaneID) -> Bool {
         !contains(id) && root.splitting(target, axis: axis, before: false, new: id)
     }
 

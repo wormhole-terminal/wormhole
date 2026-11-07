@@ -47,6 +47,7 @@ public struct TabPanes: Sendable, Equatable {
     }
 
     public var panes: [PaneID] { tree.panes }
+    public func contains(_ id: PaneID) -> Bool { tree.contains(id) }
     public var isSplit: Bool { tree.count > 1 }
 
     /// Gives the keyboard to `id`; a zoom on another pane ends.
@@ -60,7 +61,7 @@ public struct TabPanes: Sendable, Equatable {
 
     /// ⌘D / ⇧⌘D: splits the focused pane; the new one takes the keyboard.
     @discardableResult
-    public mutating func split(_ axis: Axis, new id: PaneID) -> Bool {
+    public mutating func split(_ axis: SplitAxis, new id: PaneID) -> Bool {
         guard tree.split(focused, axis: axis, new: id) else { return false }
         (focused, zoomed) = (id, nil)
         return true
@@ -92,7 +93,7 @@ public struct TabPanes: Sendable, Equatable {
         return tree.rects(width: width, height: height)
     }
 
-    public func dividers(width: Double, height: Double) -> [Divider] {
+    public func dividers(width: Double, height: Double) -> [PaneDivider] {
         zoomed == nil ? tree.dividers(width: width, height: height) : []
     }
 

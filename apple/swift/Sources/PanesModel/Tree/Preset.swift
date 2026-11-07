@@ -27,7 +27,7 @@ public enum Preset: Sendable, CaseIterable, Equatable {
 
     /// The tree of `ids` (exactly `slots` of them, in reading order) in this layout, with equal shares.
     func shape(_ ids: [PaneID]) -> Node {
-        func split(_ axis: Axis, _ nodes: [Node]) -> Node {
+        func split(_ axis: SplitAxis, _ nodes: [Node]) -> Node {
             .split(axis, nodes.map { Child(1 / Double(nodes.count), $0) })
         }
         switch self {
@@ -75,7 +75,7 @@ extension PaneTree {
     /// The preset this tree has the shape of, whatever its shares, for the menu's check mark.
     public var preset: Preset? {
         func leaves(_ children: [Child]) -> Bool { children.allSatisfy { if case .leaf = $0.node { true } else { false } } }
-        func pairOfPairs(_ children: [Child], inner: Axis) -> Bool {
+        func pairOfPairs(_ children: [Child], inner: SplitAxis) -> Bool {
             children.count == 2
                 && children.allSatisfy {
                     if case .split(inner, let kids) = $0.node { kids.count == 2 && leaves(kids) } else { false }

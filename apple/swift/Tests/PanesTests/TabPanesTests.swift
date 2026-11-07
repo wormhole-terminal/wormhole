@@ -101,3 +101,20 @@ import PanesModel
         #expect(Preset.allCases.map(\.title) == ["2 Columns", "2 Rows", "2×2 Grid", "Single Pane"])
     }
 }
+
+@Suite struct DragAndSplitTests {
+    @Test func aDraggedTerminalRoundTripsAsText() {
+        let dragged = DraggedTerminal(id: 7, origin: .paneHeader)
+        #expect(DraggedTerminal(encoded: dragged.encoded) == dragged)
+        #expect(DraggedTerminal(encoded: "hello") == nil && DraggedTerminal(encoded: "wormhole.terminal:x:paneHeader") == nil)
+    }
+
+    @Test func aSplitIsRefusedWhereAHalfWouldBeTooSmall() {
+        var tab = TabPanes.single(1)
+        #expect(tab.canSplit(.row, room: PaneRoom(W, H)))
+        #expect(tab.canSplit(.row, room: PaneRoom(300, H)) == false)
+        #expect(tab.canSplit(.column, room: PaneRoom(W, 150)) == false)
+        #expect(tab.split(.row, new: 2) && tab.canSplit(.row, room: PaneRoom(W, H)))
+        #expect(tab.canSplit(.row, room: PaneRoom(400, H)) == false)
+    }
+}

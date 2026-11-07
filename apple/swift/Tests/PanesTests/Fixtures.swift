@@ -6,7 +6,7 @@ let W = 800.0
 let H = 600.0
 
 func leaf(_ id: PaneID) -> Node { .leaf(id) }
-func split(_ axis: Axis, _ children: [(Double, Node)]) -> Node { .split(axis, children.map { Child($0.0, $0.1) }) }
+func split(_ axis: SplitAxis, _ children: [(Double, Node)]) -> Node { .split(axis, children.map { Child($0.0, $0.1) }) }
 
 func tree(_ root: Node) -> PaneTree { PaneTree(repairing: root)! }
 

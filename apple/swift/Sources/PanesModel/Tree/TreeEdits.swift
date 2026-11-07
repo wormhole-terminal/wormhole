@@ -6,7 +6,7 @@ extension Node {
     /// Splits the pane `target` along `axis`, the new pane after it, or before it when `before`. Along the
     /// parent's own axis the new pane is a sibling, not a nested split, and takes half of the target's share
     /// so the other siblings keep theirs.
-    mutating func splitting(_ target: PaneID, axis: Axis, before: Bool, new id: PaneID) -> Bool {
+    mutating func splitting(_ target: PaneID, axis: SplitAxis, before: Bool, new id: PaneID) -> Bool {
         switch self {
         case .leaf(let own) where own == target:
             let (first, second) = before ? (id, target) : (target, id)

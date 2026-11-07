@@ -12,7 +12,7 @@ public struct PaneRect: Sendable, Equatable {
     public var center: (x: Double, y: Double) { (x + w / 2, y + h / 2) }
 
     /// The start and the extent along `axis`: x and w across a row, y and h down a column.
-    func along(_ axis: Axis) -> (start: Double, extent: Double) { axis == .row ? (x, w) : (y, h) }
+    func along(_ axis: SplitAxis) -> (start: Double, extent: Double) { axis == .row ? (x, w) : (y, h) }
 }
 
 /// Which divider: the split it belongs to (child indexes from the root down) and the index of the child
@@ -25,9 +25,9 @@ public struct DividerID: Sendable, Equatable, Hashable {
 }
 
 /// A line with no thickness along two children's shared edge; a row split's is vertical and drags in x.
-public struct Divider: Sendable, Equatable {
+public struct PaneDivider: Sendable, Equatable {
     public var id: DividerID
-    public var axis: Axis
+    public var axis: SplitAxis
     public var rect: PaneRect
 
     /// Where the line is along its split's axis.

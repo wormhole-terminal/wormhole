@@ -9,7 +9,7 @@ public enum Zone: Sendable, CaseIterable, Equatable, Hashable {
     case left, right, top, bottom
 
     /// The axis the dragged pane and the target share afterwards.
-    public var axis: Axis { self == .left || self == .right ? .row : .column }
+    public var axis: SplitAxis { self == .left || self == .right ? .row : .column }
     /// Whether the dragged pane goes before the target along `axis` (left, above).
     public var before: Bool { self == .left || self == .top }
 }
