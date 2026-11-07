@@ -136,7 +136,8 @@ const BUDGET: [(&str, u64); 20] = [
     ("Motion", 6114),
     // With the Worktrees group's switch for cloning build folders (356), and the Inline images group's one
     // select, Image memory per terminal (543: a row with its label, help line and a native menu's state).
-    ("Terminal", 11021),
+    // The Never hide lines switch is one row more in Behaviour: 11,349 measured (about 328 a row).
+    ("Terminal", 11329),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
     // The list in all three densities side by side, each with a group card of three rows and two more cards, in
@@ -192,7 +193,8 @@ const BUDGET: [(&str, u64); 20] = [
     // The search finds the Borders row too, as one more result: 196 more.
     // The window miniature it shows now fills the stage: 9,923 measured.
     // The Image memory row is one more result for the search to draw: 565 more.
-    ("search", 10910),
+    // The same switch is one more entry for a search to list: 11,245 measured.
+    ("search", 11225),
 ];
 
 /// What the Changed page is measured with: five settings that differ from their defaults, on four pages

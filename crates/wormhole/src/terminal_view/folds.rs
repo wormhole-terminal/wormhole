@@ -70,6 +70,9 @@ impl TerminalView {
     /// A bell, or a program's report that it needs input: what is hidden near the end of the output is
     /// shown, so the person can find what is asking.
     pub(super) fn open_recent_folds(&self, cx: &mut Context<Self>) {
+        if !self.folds_on(cx) {
+            return;
+        }
         if let Some(pty) = self.pty.as_ref().filter(|pty| pty.has_folds()) {
             pty.fold_expand_recent();
             cx.notify();
@@ -80,6 +83,10 @@ impl TerminalView {
     /// opens the recent folds and refuses new ones. The system tells no change of echo, so output is when
     /// it is looked at, and only for a terminal that has folds.
     pub(super) fn check_secret_input(&self, cx: &mut Context<Self>) {
+        // Without the feature no fold exists, and an output event takes no lock for them.
+        if !self.folds_on(cx) {
+            return;
+        }
         if let Some(pty) = self.pty.as_ref().filter(|pty| pty.has_folds())
             && pty.refresh_fold_secure()
         {
