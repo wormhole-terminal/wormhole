@@ -113,17 +113,7 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
                         PopupMenuItem::element(move |_, cx| {
                             let title = match &detail {
                                 None => title.clone().into_any_element(),
-                                Some(detail) => div()
-                                    .flex()
-                                    .flex_col()
-                                    .child(title.clone())
-                                    .child(
-                                        div()
-                                            .text_caption()
-                                            .text_color(crate::settings::ui(cx).muted)
-                                            .child(detail.clone()),
-                                    )
-                                    .into_any_element(),
+                                Some(detail) => with_detail(title.clone(), detail.clone(), cx),
                             };
                             match &icon {
                                 Some(icon) => with_icon(icon, title, cx),
@@ -151,6 +141,17 @@ fn fill(mut popup: PopupMenu, menu: &Menu, window: &mut Window, cx: &mut Context
         };
     }
     popup
+}
+
+/// A title with its second line under it, in the muted colour.
+#[track_caller]
+fn with_detail(title: SharedString, detail: SharedString, cx: &App) -> AnyElement {
+    div()
+        .flex()
+        .flex_col()
+        .child(title)
+        .child(div().text_caption().text_color(crate::settings::ui(cx).muted).child(detail))
+        .into_any_element()
 }
 
 #[track_caller]
