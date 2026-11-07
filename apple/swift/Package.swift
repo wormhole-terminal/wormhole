@@ -136,6 +136,10 @@ if ffiLinked {
         // The panel's Files, Project, Usage and Notes backends over the Rust core (trust enforced in Rust).
         .target(name: "FilesBridge", dependencies: ["PanelModel", "PlatformModel", "WorkspaceModel", "WormholeBindings"]),
         .testTarget(name: "FilesBridgeTests", dependencies: ["FilesBridge", "PanelModel", "PlatformModel", "WormholeBindings", "WorkspaceModel"]),
+        // The settings window over the Rust core: values, writes, search, shortcut rules, the agents, imports and
+        // profiles. Replaces the mock backend and host.
+        .target(name: "SettingsBridge", dependencies: ["SettingsModel", "WormholeBindings"]),
+        .testTarget(name: "SettingsBridgeTests", dependencies: ["SettingsBridge", "SettingsModel", "WormholeBindings"]),
     ]
     appDependencies += ["UniFFISource", "WorkspaceBridge"]
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.

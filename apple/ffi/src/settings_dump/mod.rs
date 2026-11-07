@@ -43,7 +43,7 @@ fn entry_keys(section: &Value) -> Vec<String> {
 }
 
 /// A `config.json` key, which may be a path (`motion.insert`).
-fn get<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
+pub(crate) fn get<'a>(root: &'a Value, key: &str) -> Option<&'a Value> {
     key.split('.').try_fold(root, |value, part| value.get(part))
 }
 
@@ -94,7 +94,7 @@ fn entry(e: &Entry, defaults: &Value) -> Value {
 }
 
 /// Swift's spelling of a section: lower camel, as the nav and the tests name them.
-fn section_id(id: SectionId) -> String {
+pub(crate) fn section_id(id: SectionId) -> String {
     let name = format!("{id:?}");
     let mut chars = name.chars();
     chars.next().map(|c| c.to_lowercase().chain(chars).collect()).unwrap_or_default()
@@ -102,7 +102,7 @@ fn section_id(id: SectionId) -> String {
 
 /// The settings hold `f32`s that serde widens (0.8 becomes 0.800000011920929): write the shortest text that
 /// reads back as the same `f32`, as the app shows it.
-fn tidy(value: &Value) -> Value {
+pub(crate) fn tidy(value: &Value) -> Value {
     match value {
         Value::Number(n) if !n.is_i64() && !n.is_u64() => n
             .as_f64()

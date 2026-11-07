@@ -449,6 +449,43 @@ inline-image placements, command-block spans, selection ranges, the program's OS
 Each arrives as an additive change to this file (a new header flag or a second call), with the
 version bumped only if an existing field changes meaning.
 
+## The object: `SettingsHandle` (settings)
+
+One profile's settings as the Settings window holds them, over core's `Config` (`config.json`: merged,
+sanitised, written in place with comments kept, never over a file that does not read). Keys are
+`config.json`'s (a path for one inside an object: `motion.insert`), values are JSON text; no Swift type
+mirrors `Settings`. The schema the rows are drawn from is a free function. Code: `apple/ffi/src/settings/`.
+Errors are `SettingsError` (`notIsolated`, `invalid(reason)`, `profile(reason)`, `agents(reason)`; `reason`
+is core's sentence).
+
+```swift
+static func open(profile: String?, listener: SettingsListener) throws -> SettingsHandle   // nil: Default; isolated only; may create config.json
+func values() -> String            // JSON object: every schema key -> effective value (project overrides on top)
+func defaults() -> String          // the same keys at their defaults
+func set(key: String, value: String) throws          // core refuses unknown keys and values a setting does not read
+func setMany(entries: String) throws                 // JSON object, one save, all or nothing
+func reset(keys: [String]);  func resetAll() -> UInt32
+func changedKeys() -> [String];  func changedRows() -> [SettingsChangedRow]   // person's own; Changed page rows
+func setProjectOverrides(overrides: String?) throws; func overriddenEntries() -> [String]   // "set by project"
+func search(query: String) -> [SettingsHit]          // core's ranking; spans are UTF-8 byte offsets
+func revision() -> UInt64;  func drain() -> UInt64   // compare; drain re-arms wake()
+func health() -> SettingsHealth                      // error sentence, file unreadable
+func shellOptions() / iconThemeOptions() -> [SettingsOptionRow];  func paths() -> SettingsPaths
+func settingsSchemaJson() -> String                  // the schema (format 1), as `Resources/settings.json`
+```
+
+`SettingsListener.wake()` is called from a Rust thread with no lock held, at most once between two
+`drain()` calls, only when the file changed **outside this handle** (a hand edit, a script, another window):
+the OS watch on the profile folder (settle 40 ms, FSEvents) with a 10 s timer as backstop (2 s when the
+watch could not start). Our own writes do not wake; the caller pulls `values()` after `set`/`reset`. The
+state lock is held for a `stat` or one atomic write and never across `wake()`.
+
+Free functions (no handle): `checkShortcut(configKey:spec:) -> ShortcutVerdict` (core's recorder rules and
+conflicts), `settingsAgentRows()` / `settingsSetAgentHooks(agent:install:)` (hooks write **only** under
+`WORMHOLE_AGENT_HOME`, never the real home; reading uses it or the home), `settingsImportRows(home:)` (read-only
+scan; `nil` is the real home), `settingsProfiles()`, `settingsSwitchProfile`, `settingsCreateProfile`,
+`settingsDeleteProfile` (`profiles.json`; isolated only).
+
 ## What the Rust side does not do for you
 
 Cell size and font metrics, glyph shaping, the palette, blink timing, the scroll bar, selection

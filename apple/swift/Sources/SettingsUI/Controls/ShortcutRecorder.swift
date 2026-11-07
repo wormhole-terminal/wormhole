@@ -4,15 +4,20 @@
 
 import AppKit
 import DesignSystem
+import SettingsModel
 import SwiftUI
 
 struct ShortcutRecorder: View {
     let spec: String
     let label: String
+    /// Core's verdict on a recorded shortcut; `nil` when the model has no checker, and the plain rule stands.
+    let check: (String) -> ShortcutCheck?
     let onChange: (String) -> Void
     @Environment(\.tokens) private var tokens
     @State private var recording = false
-    @State private var rejected = false
+    /// Why the last shortcut was refused, in the field's words.
+    @State private var refusal: String?
+    private var rejected: Bool { refusal != nil }
 
     var body: some View {
         Button { recording.toggle() } label: {
@@ -40,22 +45,34 @@ struct ShortcutRecorder: View {
         .buttonStyle(.plain)
         .accessibilityLabel(label)
         .accessibilityValue(spec.isEmpty ? SettingsText.recorderNone : KeySpecText.caps(spec).joined(separator: " "))
-        .accessibilityHint(SettingsText.recorderPrompt)
+        .accessibilityHint(refusal ?? SettingsText.recorderPrompt)
+        .help(refusal ?? "")
     }
 
     private func record(_ key: RecordedKey) {
         switch key {
-        case .cancel: recording = false
+        case .cancel: finish()
         case .clear:
             onChange("")
-            recording = false
-        case .spec(let spec) where KeySpecText.isUsable(spec):
-            rejected = false
-            onChange(spec)
-            recording = false
-        case .spec:
-            rejected = true
+            finish()
+        case .spec(let spec):
+            switch check(spec) ?? (KeySpecText.isUsable(spec) ? .accepted(spec) : .needsModifier) {
+            case .accepted(let stored):
+                onChange(stored)
+                finish()
+            case .cancel: finish()
+            case .clear:
+                onChange("")
+                finish()
+            case .needsModifier: refusal = SettingsText.recorderPrompt
+            case .refused(let reason): refusal = reason
+            }
         }
+    }
+
+    private func finish() {
+        refusal = nil
+        recording = false
     }
 }
 

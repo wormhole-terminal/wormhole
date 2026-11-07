@@ -38,7 +38,9 @@ struct EntryControl: View {
         case .font(let slot): FontControl(model: model, entry: entry, slot: slot)
         case .partsList(let parts): PartsList(model: model, key: key, parts: parts)
         case .recorder:
-            ShortcutRecorder(spec: model.value(key).string ?? "", label: entry.label) { model.set(key, .string($0)) }
+            ShortcutRecorder(spec: model.value(key).string ?? "", label: entry.label, check: { model.shortcuts?.check(key: key, spec: $0) }) {
+                model.set(key, .string($0))
+            }
         case .colorToggle: PrimaryColorControl(model: model, entry: entry)
         case .link(let section, let label): LinkButton(title: label, goes: true) { model.show(section) }
         case .action(let action, let label, let icon):

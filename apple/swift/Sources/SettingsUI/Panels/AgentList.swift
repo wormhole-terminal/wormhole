@@ -20,8 +20,8 @@ struct AgentList: View {
                         Text(agent.detail).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
                     }
                     Spacer()
-                    if agent.state != .ready {
-                        ActionButton(title: agent.state == .needsRepair ? "Repair" : "Set up", symbol: nil) { host.perform(.rescanAgents) }
+                    if let hooks = agent.hooks {
+                        ActionButton(title: title(hooks), symbol: nil) { host.perform(hooks, agent: agent.id) }
                     }
                 }
                 .frame(minHeight: SettingsMetric.rowMinHeight)
@@ -35,7 +35,16 @@ struct AgentList: View {
         switch state {
         case .ready: tokens.statusSuccess
         case .needsRepair: tokens.statusWarning
+        case .statusFromOutput: tokens.textMuted
         case .notInstalled: tokens.textFaint
+        }
+    }
+
+    private func title(_ hooks: AgentRecord.HookAction) -> String {
+        switch hooks {
+        case .install: String(localized: "settings-agents-install-hooks", defaultValue: "Install hooks")
+        case .repair: String(localized: "settings-agents-repair-hooks", defaultValue: "Repair hooks")
+        case .remove: String(localized: "settings-agents-remove-hooks", defaultValue: "Remove hooks")
         }
     }
 }

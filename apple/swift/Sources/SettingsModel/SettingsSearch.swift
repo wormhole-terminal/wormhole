@@ -15,6 +15,14 @@ public struct SearchHit: Sendable, Equatable, Identifiable {
     public let labelRange: Range<Int>?
     public let descriptionRange: Range<Int>?
     public var id: String { entry.id }
+
+    public init(
+        section: String, group: String, entry: SettingsSchema.Entry, score: Int, labelRange: Range<Int>?,
+        descriptionRange: Range<Int>?
+    ) {
+        (self.section, self.group, self.entry, self.score) = (section, group, entry, score)
+        (self.labelRange, self.descriptionRange) = (labelRange, descriptionRange)
+    }
 }
 
 public protocol SettingsSearching: Sendable {

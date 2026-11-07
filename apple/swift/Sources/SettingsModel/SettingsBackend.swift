@@ -31,4 +31,11 @@ public protocol SettingsHost: AnyObject {
     func perform(_ action: SettingsAction)
     /// What the agents, import and profile pages list.
     func panelRecords() -> PanelRecords
+    /// Installs, repairs or removes the status hooks of the agent with this id (a row's button).
+    func perform(_ hooks: AgentRecord.HookAction, agent id: String)
+}
+
+extension SettingsHost {
+    /// A host that has no agents to set up (the mock) ignores the button.
+    public func perform(_ hooks: AgentRecord.HookAction, agent id: String) {}
 }

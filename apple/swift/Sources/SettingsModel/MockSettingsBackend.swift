@@ -18,13 +18,13 @@ public final class MockSettingsBackend: SettingsBackend {
         guard values[key] != value else { return }
         values[key] = value
         writes.append(key)
-        observers.values.forEach { $0() }
+        observers.sorted { $0.key < $1.key }.forEach { $0.value() }
     }
 
     public func reset(_ keys: [String]) {
         for key in keys { values[key] = defaults[key] }
         writes.append(contentsOf: keys)
-        observers.values.forEach { $0() }
+        observers.sorted { $0.key < $1.key }.forEach { $0.value() }
     }
 
     public func observe(_ onChange: @escaping @MainActor () -> Void) -> SettingsObservation {

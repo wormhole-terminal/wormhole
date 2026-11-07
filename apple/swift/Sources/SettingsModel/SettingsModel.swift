@@ -21,12 +21,16 @@ public final class SettingsModel {
     public private(set) var revealed: String?
     @ObservationIgnored private var observation: SettingsObservation?
     @ObservationIgnored private let searcher: any SettingsSearching
+    /// Core's rules for a recorded shortcut; `nil` leaves the recorder to its own plain rule.
+    @ObservationIgnored public let shortcuts: (any ShortcutChecking)?
 
     public init(
         schema: SettingsSchema = .bundled, backend: any SettingsBackend, host: any SettingsHost,
-        searcher: (any SettingsSearching)? = nil, selection: String = "appearance"
+        searcher: (any SettingsSearching)? = nil, shortcuts: (any ShortcutChecking)? = nil,
+        selection: String = "appearance"
     ) {
         (self.schema, self.backend, self.host, self.selection) = (schema, backend, host, selection)
+        self.shortcuts = shortcuts
         self.searcher = searcher ?? SchemaSearch(schema: schema)
         values = backend.values
         observation = backend.observe { [weak self] in self?.values = self?.backend.values ?? [:] }

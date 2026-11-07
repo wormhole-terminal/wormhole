@@ -17,6 +17,7 @@ mod frame;
 mod git;
 mod interaction;
 mod isolation;
+mod settings;
 pub mod settings_dump;
 mod terminal;
 pub mod theme_dump;
@@ -44,6 +45,13 @@ pub use files_panel::{
 pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,
+};
+pub use settings::{
+    SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsHandle, SettingsHealth, SettingsHit,
+    SettingsHookState, SettingsImportRow, SettingsListener, SettingsOptionRow, SettingsPaths,
+    SettingsProfileRow, SettingsTextSpan, ShortcutVerdict, check_shortcut, settings_agent_rows,
+    settings_create_profile, settings_delete_profile, settings_import_rows, settings_profiles,
+    settings_schema_json, settings_set_agent_hooks, settings_switch_profile,
 };
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};
