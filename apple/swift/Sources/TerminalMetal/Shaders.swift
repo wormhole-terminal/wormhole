@@ -10,7 +10,7 @@ enum Shaders {
 
         struct Uniforms {
             float2 viewport;   // pixels
-            float dim;         // the factor SGR 2 multiplies a colour by
+            float dim;         // the opacity SGR 2 draws text at (the GPUI app's `dim`: alpha, so it fades toward either theme's background)
             float blink;       // 1, or the factor blinking text is faded by in the off half
         };
 
@@ -37,6 +37,7 @@ enum Shaders {
         struct SolidOut {
             float4 position [[position]];
             float3 color [[flat]];
+            float alpha [[flat]];       // SGR 2's opacity
             float2 local;               // pixels from the quad's top-left; x is absolute so patterns line up
             float2 size [[flat]];
             uint pattern [[flat]];
@@ -51,7 +52,8 @@ enum Shaders {
             float2 corner;
             SolidOut out;
             out.position = place(q.x, q.y, q.width, q.height, vid, u, corner);
-            out.color = resolve(q.color, palette) * (((q.style >> 8) & 1u) != 0u ? u.dim : 1.0);
+            out.color = resolve(q.color, palette);
+            out.alpha = ((q.style >> 8) & 1u) != 0u ? u.dim : 1.0;
             out.local = float2(q.x + corner.x * q.width, corner.y * q.height);
             out.size = float2(q.width, q.height);
             out.pattern = q.style & 0xFu;
@@ -71,6 +73,7 @@ enum Shaders {
                 float y = in.size.y * 0.5 + sin(in.local.x / period * 6.2831853) * line;
                 coverage = 1.0 - smoothstep(line * 0.5, line * 0.5 + 1.0, abs(in.local.y - y));
             }
+            coverage *= in.alpha;
             return float4(in.color * coverage, coverage);
         }
 
@@ -80,7 +83,7 @@ enum Shaders {
             float4 position [[position]];
             float3 color [[flat]];
             float2 uv;                  // pixels in the atlas texture
-            float fade [[flat]];        // blinking text in the off half
+            float fade [[flat]];        // blinking text in the off half, and dim text's opacity
             uint flags [[flat]];
         };
 
@@ -93,9 +96,9 @@ enum Shaders {
             float2 corner;
             GlyphOut out;
             out.position = place(g.x, g.y, g.width, g.height, vid, u, corner);
-            out.color = resolve(g.color, palette) * ((g.flags & 1u) != 0u ? u.dim : 1.0);
+            out.color = resolve(g.color, palette);
             out.uv = float2(float(g.ax), float(g.ay)) + corner * float2(float(g.aw), float(g.ah));
-            out.fade = (g.flags & 4u) != 0u ? u.blink : 1.0;
+            out.fade = ((g.flags & 4u) != 0u ? u.blink : 1.0) * ((g.flags & 1u) != 0u ? u.dim : 1.0);
             out.flags = g.flags;
             return out;
         }

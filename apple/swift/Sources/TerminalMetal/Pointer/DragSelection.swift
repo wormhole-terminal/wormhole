@@ -31,3 +31,14 @@ extension MetalTerminalView {
     /// a list; the GPUI app scrolls on each pointer event and has no timer).
     static var autoscrollInterval: DispatchTimeInterval { .milliseconds(50) }
 }
+
+extension MetalTerminalView {
+    /// A drag from the left of one cell to the right of another, for the control folder's `select` (no pointer needed).
+    public func select(from start: (row: Int, column: Int), to end: (row: Int, column: Int)) {
+        interaction?.selectionStart(kind: .cell, row: start.row, column: start.column, side: .left)
+        interaction?.selectionUpdate(row: end.row, column: end.column, side: .right)
+        interaction?.selectionFinish()
+        selectionMayExist = true
+        requestRedraw()
+    }
+}

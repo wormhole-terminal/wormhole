@@ -63,3 +63,14 @@ The comparison needs a quiet machine and is run one thing at a time, GPUI and Sw
 the load average is printed with each run, and the processes using more than a few percent of a
 core are listed. Where the machine was not quiet, the result says so. A number goes in a table
 only with the method above.
+
+## Visual comparison (looks)
+
+`apple/scripts/visual-run.sh <scratch dir>` starts a devctl build of the GPUI app and the Swift app as background
+instances with scratch data, runs the same scripted terminal content in both (`visual-scenes.py`: colours, styles,
+underlines, wide and emoji cells, box/block/braille, cursors, selection, images, command blocks) at the same window
+size and scale in dark and light, shoots every Settings page at one window size, and has `visual-compare.py` write a
+sheet per scenario (GPUI | Swift | difference) and a table. Swift draws text with CoreText and GPUI with its own glyph
+raster, so "the same" is defined per block (cell) by mean colour and dominant fill, not per pixel; the definition and
+its tolerances are the header of `visual-compare.py`. GPUI cells are fractional (16.8 px) and Swift's whole pixels
+(17), so the GPUI crop is stretched to Swift's cell width first; that difference is a finding, not noise.

@@ -47,6 +47,11 @@ extension AppController {
             guard let choice = ["once": ClipboardChoice.once, "always": .always, "deny": .deny][argument] else { return reply("error: once, always or deny") }
             hub.answerClipboard(choice)
             reply("clipboard-answer \(argument)")
+        case "select-cells":
+            let n = argument.split(separator: " ").compactMap { Int($0) }
+            guard n.count == 4 else { return reply("error: select-cells ROW COL ROW COL") }
+            view.select(from: (n[0], n[1]), to: (n[2], n[3]))
+            reply("select-cells \(argument)")
         case "state": reply(state(view))
         case "screen":
             let grid = view.renderer.gridSize
