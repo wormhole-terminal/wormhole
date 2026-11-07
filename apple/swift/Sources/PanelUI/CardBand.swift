@@ -31,7 +31,6 @@ struct CardBand<Trailing: View>: View {
         .frame(height: Metric.band)
         .background(hovering ? tokens.stateHover : .clear, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
         .onHover { hovering = $0 }
-        .animation(.snappy(duration: 0.15), value: hovering)
     }
 
     private var toggle: some View {
@@ -45,7 +44,7 @@ struct CardBand<Trailing: View>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(folded == nil)
+        .allowsHitTesting(folded != nil)
         .accessibilityLabel(spoken ?? title)
         .accessibilityValue(folded.map { $0 ? "folded" : "open" } ?? "")
     }

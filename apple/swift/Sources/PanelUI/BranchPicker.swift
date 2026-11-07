@@ -38,7 +38,6 @@ struct BranchPicker: View {
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
         .fixedSize()
         .onHover { hovering = $0 }
-        .animation(.snappy(duration: 0.15), value: hovering)
         .accessibilityLabel("\(prefix) \(branch ?? "HEAD")")
     }
 

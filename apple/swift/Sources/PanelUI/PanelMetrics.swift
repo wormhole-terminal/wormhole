@@ -32,6 +32,8 @@ enum PanelMetrics {
     /// A note's text lines: 14 pt on 20, and how many an open note shows before it fades (`NOTE_OPEN_MAX_LINES`).
     static let noteLine: CGFloat = 20
     static let noteMaxLines = 12
+    /// What 14 pt text needs between lines to sit on the 20 pt line.
+    static let noteLineGap: CGFloat = 3
     /// A two-line commit row's lines (`NAME_LINE`, `META_LINE`) and the pad above and below.
     static let nameLine: CGFloat = 20
     static let metaLine: CGFloat = 16

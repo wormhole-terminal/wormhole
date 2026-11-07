@@ -36,6 +36,13 @@ public struct TaskList: Equatable, Sendable {
         items[index].done.toggle()
     }
 
+    /// Editing a step to nothing removes it, as emptying a field does in the real panel.
+    public mutating func rename(_ id: PanelTask.ID, to text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        if trimmed.isEmpty { items.remove(at: index) } else { items[index].text = trimmed }
+    }
+
     public mutating func delete(_ id: PanelTask.ID) {
         items.removeAll { $0.id == id }
     }

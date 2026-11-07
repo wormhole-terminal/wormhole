@@ -17,7 +17,7 @@ struct BandButton: View {
         let face = inRow ? PanelMetrics.rowButton : PanelMetrics.bandButton
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: inRow ? Metric.glyph : PanelMetrics.bandGlyph, weight: .medium))
+                .font(.system(size: inRow ? Metric.glyph : PanelMetrics.bandGlyph, weight: .regular))
                 .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
                 .frame(width: face, height: face)
                 .background(hovering ? tokens.bandHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
@@ -28,7 +28,6 @@ struct BandButton: View {
         // The hit box is wider than the face; the pull keeps the glyph, not the box, on the row's inset.
         .padding(.horizontal, -(Metric.hitMin - face) / 2)
         .onHover { hovering = $0 }
-        .animation(.snappy(duration: 0.15), value: hovering)
         .help(label)
         .accessibilityLabel(label)
     }

@@ -84,7 +84,7 @@ struct FolderRowView: View {
         PanelRow(action: action) { _ in
             HStack(spacing: PanelMetrics.gap) {
                 Disclosure(collapsed: collapsed)
-                Image(systemName: collapsed ? "folder" : "folder.fill").font(.system(size: Metric.glyph))
+                Image(systemName: "folder").font(.system(size: Metric.glyph))
                     .foregroundStyle(tokens.textMuted).frame(width: Metric.lead, height: Metric.lead)
                 Text(label).font(TextRole.body.font).foregroundStyle(tokens.textMuted).lineLimit(1)
                 Spacer(minLength: 0)

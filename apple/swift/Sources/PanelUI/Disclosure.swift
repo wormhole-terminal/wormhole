@@ -11,10 +11,10 @@ struct Disclosure: View {
 
     var body: some View {
         Image(systemName: "chevron.right")
-            .font(.system(size: 12, weight: .medium))
+            .font(.system(size: 12, weight: .regular))
             .foregroundStyle(tokens.textMuted)
             .rotationEffect(.degrees(collapsed ? 0 : 90))
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: collapsed)
+            .animation(PanelMotion(reduced: reduceMotion).turn, value: collapsed)
             .frame(width: Metric.lead, height: Metric.lead)
             .accessibilityHidden(true)
     }

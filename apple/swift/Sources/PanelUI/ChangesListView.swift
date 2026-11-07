@@ -12,6 +12,7 @@ struct ChangesListView: View {
     let selection: ChangedFile.ID?
     let open: (ChangedFile) -> Void
     @Environment(\.panelMotion) private var motion
+    @Environment(\.tokens) private var tokens
 
     var body: some View {
         PanelScroll {
@@ -66,5 +67,4 @@ struct ChangesListView: View {
         }
     }
 
-    @Environment(\.tokens) private var tokens
 }

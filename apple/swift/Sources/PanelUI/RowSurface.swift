@@ -44,7 +44,7 @@ struct PanelRow<Content: View>: View {
                             }
                         }
                     }
-                    .animation(reduceMotion ? nil : .snappy(duration: 0.15), value: hovering)
+                    .animation(PanelMotion(reduced: reduceMotion).select, value: selected)
                 }
                 .contentShape(shape)
         }
