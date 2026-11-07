@@ -10,7 +10,7 @@ import TerminalCore
 
 extension MetalTerminalView {
     public override func keyDown(with event: NSEvent) {
-        guard let key = KeyMap.input(from: event, leftOptionAsMeta: leftOptionAsMeta), !key.platform else {
+        guard let key = KeyMap.input(from: event, optionAsMeta: optionAsMeta), !key.platform else {
             super.keyDown(with: event)
             return
         }

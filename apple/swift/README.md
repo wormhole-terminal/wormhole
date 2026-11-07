@@ -32,8 +32,8 @@ Screenshots without a window or Screen Recording permission (a texture readback 
 
 | Target | What |
 |---|---|
-| `TerminalCore` | the packed frame (reader, writer), the `FrameSource` protocol, `MockFrameSource` (scenarios `text`, `flood`, `noise`, `matrix`, `unicode`, `cursor`, `mixed`), the xterm key encoder, the palette. Foundation only. |
-| `TerminalMetal` | the view and the renderer: `FontSet` and `GlyphRaster` (CoreText), `WordCache` (shaping once per word), `GlyphAtlas` (R8 coverage and BGRA colour), `BoxDrawing` (exact box, block and braille cells), `RowBuilder` (cells to instances), `TerminalScene` (rows kept between frames), `MetalRenderer` (three layers in one pass, three frames in flight), `MetalTerminalView` (display link, focus, blink), `TerminalInput` (keys, input method, paste, scroll). |
+| `TerminalCore` | the packed frame (reader, writer), the `FrameSource` and `TerminalInteraction` protocols (the pointer, selection, links seam), `MockFrameSource` and `MockInteraction` (scenarios `text`, `flood`, `noise`, `matrix`, `unicode`, `cursor`, `mixed`), the xterm key encoder, the palette. Foundation only. |
+| `TerminalMetal` | the view and the renderer: `FontSet` and `GlyphRaster` (CoreText), `WordCache` (shaping once per word), `GlyphAtlas` (R8 coverage and BGRA colour), `BoxDrawing` (exact box, block and braille cells), `RowBuilder` (cells to instances), `TerminalScene` (rows kept between frames), `MetalRenderer` (three layers in one pass, three frames in flight), `MetalTerminalView` (display link), and the view's input in extensions: `Pointer/` (mouse, wheel, selection, links, Command shortcuts, context menu), `Keyboard/` (key table, input method with marked text, paste and drop), `Scroller/` (a real `NSScroller`), `CursorBlink`, `TerminalBell`, `TerminalFocus`. |
 | `UniFFISource` | `UniFFIFrameSource` over the generated bindings; present only when the FFI is linked. |
 | `Wormhole` | the executable: isolation check, options, window, control folder, `--render-png`. |
 
@@ -71,8 +71,11 @@ sized to fit), `WORMHOLE_BACKGROUND=1` (accessory app, window behind others, not
 - Right-to-left text, cell pinning for combining marks, zero-width characters and grapheme clusters (the frame
   does not carry them yet, contract v1), ligature features (off), font fallback beyond what CoreText picks.
 - Double-width and double-height rows are drawn as normal rows. Rounded box corners are square; dashes are plain.
-- Images (kitty, Sixel, iTerm2), the minimap, command-block marks, find highlights, links, selection and copy,
-  mouse reporting, the blurred scrollback under the title, the native scroller, transparency and vibrancy.
+- Images (kitty, Sixel, iTerm2), the minimap, command-block marks, find highlights, the blurred scrollback
+  under the title, transparency and vibrancy.
+- Input: a program's own selection that Command-V should replace (needs the OSC 52 clipboard event), command
+  blocks and prompt jumps, find; the theme's selection colours reach the renderer only once the host builds
+  `TerminalPalette(... selection:selectionText:)` from the theme.
 - Subpixel glyph variants (cells are whole pixels, so none are needed), the system's font smoothing is only what a
   grey CoreGraphics context gives, colours set at run time (OSC 4, 10, 11, 12), underline colours (SGR 58).
 - A theme (the palette is a fixed dark one), settings, more than one terminal, a window per display scale

@@ -88,23 +88,28 @@ import TerminalCore
             let event = NSEvent.keyEvent(
                 with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil, characters: "\u{F704}",
                 charactersIgnoringModifiers: "\u{F704}", isARepeat: false, keyCode: code)
-            return event.flatMap { KeyMap.input(from: $0, leftOptionAsMeta: false)?.key }
+            return event.flatMap { KeyMap.input(from: $0, optionAsMeta: .off)?.key }
         }
         #expect([name(122), name(111), name(105), name(90)] == ["f1", "f12", "f13", "f20"])
         #expect(name(36) == "enter" && name(76) == "enter" && name(51) == "backspace" && name(117) == "delete")
     }
 
-    @Test func optionIsMetaOnlyOnTheLeftKey() {
-        func input(_ flags: UInt) -> KeyInput? {
+    @Test func optionIsMetaOnTheSideTheSettingNames() {
+        func input(_ flags: UInt, _ mode: OptionAsMeta) -> KeyInput? {
             let event = NSEvent.keyEvent(
                 with: .keyDown, location: .zero, modifierFlags: NSEvent.ModifierFlags(rawValue: flags), timestamp: 0, windowNumber: 0,
                 context: nil, characters: "∫", charactersIgnoringModifiers: "b", isARepeat: false, keyCode: 11)
-            return event.flatMap { KeyMap.input(from: $0, leftOptionAsMeta: true) }
+            return event.flatMap { KeyMap.input(from: $0, optionAsMeta: mode) }
         }
         let option = NSEvent.ModifierFlags.option.rawValue
-        #expect(input(option | 0x20)?.optionAsMeta == true, "left Option")
-        #expect(input(option | 0x40)?.optionAsMeta == false, "right Option types the layout's character")
-        #expect(input(option | 0x40)?.text == "∫")
+        let (left, right) = (option | 0x20, option | 0x40)
+        #expect(input(left, .left)?.optionAsMeta == true && input(right, .left)?.optionAsMeta == false)
+        #expect(input(right, .left)?.text == "∫", "the other Option types the layout's character")
+        #expect(input(right, .right)?.optionAsMeta == true && input(left, .right)?.optionAsMeta == false)
+        #expect(input(left, .both)?.optionAsMeta == true && input(right, .both)?.optionAsMeta == true)
+        #expect(input(left, .off)?.optionAsMeta == false)
+        #expect(input(option, .left)?.optionAsMeta == true, "a synthetic event with no side: any setting but off")
+        #expect(input(option, .off)?.optionAsMeta == false)
     }
 }
 
@@ -128,5 +133,32 @@ import TerminalCore
         #expect(offset(.incrementPage) == 11)
         #expect(offset(.decrementPage, current: 95) == 100 && offset(.incrementPage, current: 5) == 0, "clamped to the history")
         #expect(offset(.knob, value: 0.25) == 75 && offset(.knob, value: 1) == 0)
+    }
+}
+
+@Suite struct RowMarksTests {
+    private let red = PackedColor.named(1)
+
+    @Test func aSelectedCellIsTheSelectionOverTheCellAsItWouldHaveBeenDrawn() {
+        var cells = [PackedCell(scalar: 0x61, fg: PackedColor.named(1), bg: PackedColor.named(2), flags: .inverse), PackedCell(scalar: 0x62)]
+        RowMarks(selected: 0...0).apply(to: &cells, keepsTextInSelection: true)
+        #expect(cells[0].bg == PackedColor.selectionBackground)
+        #expect(cells[0].fg == PackedColor.named(2), "inverse resolved: the text is the cell's background")
+        #expect(!cells[0].cellFlags.contains(.inverse))
+        #expect(cells[1] == PackedCell(scalar: 0x62), "outside the selection: untouched")
+    }
+
+    @Test func aThemeWithSelectionTextColourPaintsTheTextInItButHiddenTextStaysHidden() {
+        var cells = [PackedCell(scalar: 0x61, fg: red), PackedCell(scalar: 0x62, fg: red, flags: .hidden)]
+        RowMarks(selected: 0...1).apply(to: &cells, keepsTextInSelection: false)
+        #expect(cells[0].fg == PackedColor.selectionForeground)
+        #expect(cells[1].fg == PackedColor.background, "hidden text is the background's colour, not the theme's text colour")
+    }
+
+    @Test func aHoveredLinkIsUnderlinedUnlessTheProgramAlreadyUnderlinedIt() {
+        var cells = [PackedCell(scalar: 0x61), PackedCell(scalar: 0x62, flags: .dottedUnderline), PackedCell(scalar: 0x63)]
+        RowMarks(link: 0...1).apply(to: &cells, keepsTextInSelection: true)
+        #expect(cells[0].cellFlags.contains(.underline) && !cells[2].cellFlags.contains(.underline))
+        #expect(cells[1].cellFlags == .dottedUnderline, "the program's own style stays")
     }
 }

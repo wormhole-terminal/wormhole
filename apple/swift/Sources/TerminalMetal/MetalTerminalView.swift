@@ -24,8 +24,8 @@ public final class MetalTerminalView: NSView {
     public var sampler: FrameSampler?
     public internal(set) var statistics = ViewStatistics()
     public var isLinkRunning: Bool { link.map { !$0.isPaused } ?? false }
-    /// Option on the left side sends ESC before the character.
-    public var leftOptionAsMeta = true
+    /// Which Option key sends ESC before the character.
+    public var optionAsMeta = OptionAsMeta.left
     /// A grid of this size whatever the view's size (the measuring mode's 200 x 69).
     public var fixedGrid: (cols: Int, rows: Int)?
     /// How long a blinking cursor is on and off; `nil` keeps it steady (xterm's and macOS's own text cursor rate).
@@ -76,6 +76,7 @@ public final class MetalTerminalView: NSView {
             layer.contentsScale = CGFloat(configuration.scale)
         }
         addSubview(scroller.view)
+        scroller.adapt(toBackground: configuration.palette.background)
         scroller.onScroll = { [weak self] offset in self?.scroll(toOffset: offset) }
         registerForDraggedTypes([.fileURL, .string])
     }
@@ -87,6 +88,13 @@ public final class MetalTerminalView: NSView {
     public override var isFlipped: Bool { true }
     public override var isOpaque: Bool { true }
     private var metalLayer: CAMetalLayer? { layer as? CAMetalLayer }
+
+    /// A new theme's colours: the renderer's palette, and the scroll bar drawn for the new background.
+    public func setPalette(_ palette: TerminalPalette) {
+        renderer.setPalette(palette)
+        scroller.adapt(toBackground: palette.background)
+        requestRedraw()
+    }
 
     // MARK: lifecycle
 

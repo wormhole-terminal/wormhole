@@ -15,16 +15,7 @@ struct CursorDraw {
     var focused: Bool
 }
 
-/// What the view marks on a row beyond what the frame says: the selected columns and the hovered link's.
-struct RowMarks: Equatable {
-    var selected: ClosedRange<Int>?
-    var link: ClosedRange<Int>?
-    static let none = RowMarks()
-}
-
 final class RowBuilder {
-    /// With no selection text colour in the theme, selected text keeps its own colour.
-    var keepsTextInSelection = true
     private let metrics: CellMetrics
     private let atlas: GlyphAtlas
     private let words: WordCache
@@ -38,17 +29,12 @@ final class RowBuilder {
 
     deinit { scratch.deallocate() }
 
-    /// A cell's colours as drawn: inverse swaps them, a selection takes its own background (and its text
-    /// colour, when the theme has one), hidden paints the text in the background, and a filled block cursor
-    /// takes the cursor's colour with the cell's background as the text.
+    /// A cell's colours as drawn: inverse swaps them, hidden paints the text in the background, and a
+    /// filled block cursor takes the cursor's colour with the cell's background as the text.
     @inline(__always)
-    private func colors(_ cell: PackedCell, _ flags: CellFlags, underBlockCursor: Bool, selected: Bool) -> (fg: UInt32, bg: UInt32) {
+    private func colors(_ cell: PackedCell, _ flags: CellFlags, underBlockCursor: Bool) -> (fg: UInt32, bg: UInt32) {
         var fg = cell.fg, bg = cell.bg
         if flags.contains(.inverse) { swap(&fg, &bg) }
-        if selected {
-            bg = PackedColor.selectionBackground
-            if !keepsTextInSelection, !flags.contains(.hidden) { fg = PackedColor.selectionForeground }
-        }
         if underBlockCursor {
             fg = bg
             bg = PackedColor.cursor
@@ -57,7 +43,7 @@ final class RowBuilder {
         return (fg, bg)
     }
 
-    func build(row: Int, cells: UnsafeBufferPointer<PackedCell>, into geometry: RowGeometry, cursor: CursorDraw?, marks: RowMarks = .none) {
+    func build(row: Int, cells: UnsafeBufferPointer<PackedCell>, into geometry: RowGeometry, cursor: CursorDraw?) {
         geometry.removeAll()
         let cellWidth = Float(metrics.width), cellHeight = Float(metrics.height)
         let top = Float(row * metrics.height)
@@ -70,9 +56,6 @@ final class RowBuilder {
             guard filledBlock, let cursor else { return false }
             return column == cursor.column || (cursor.wide && column == cursor.column + 1)
         }
-
-        func selected(_ column: Int) -> Bool { marks.selected?.contains(column) ?? false }
-        func linked(_ column: Int) -> Bool { marks.link?.contains(column) ?? false }
 
         // Open runs, each flushed when something different arrives or the row ends.
         var backgroundColor = PackedColor.background, backgroundStart = -1
@@ -133,7 +116,7 @@ final class RowBuilder {
             let entry = atlas.entry(id)
             guard !entry.isEmpty else { return }
             let flags = CellFlags(rawValue: cell.flags)
-            let (fg, _) = colors(cell, flags, underBlockCursor: covered(column), selected: selected(column))
+            let (fg, _) = colors(cell, flags, underBlockCursor: covered(column))
             geometry.glyphs.append(
                 GlyphInstance(
                     x: Float(column) * cellWidth + Float(entry.left), y: baseline - Float(entry.top),
@@ -158,7 +141,7 @@ final class RowBuilder {
         for column in 0..<columns {
             let cell = cells[column]
             let flags = CellFlags(rawValue: cell.flags)
-            let (fg, bg) = colors(cell, flags, underBlockCursor: covered(column), selected: selected(column))
+            let (fg, bg) = colors(cell, flags, underBlockCursor: covered(column))
 
             // Background: runs of one colour; the default needs no quad (the pass clears to it).
             if bg != PackedColor.background {
@@ -173,9 +156,7 @@ final class RowBuilder {
             }
 
             // Decorations: a run ends when the style or the colour changes.
-            var underline = flags.intersection(.allUnderlines).rawValue
-            // A hovered link is underlined whatever the program drew, in the text's colour.
-            if underline == 0, linked(column) { underline = CellFlags.underline.rawValue }
+            let underline = flags.intersection(.allUnderlines).rawValue
             if underline != 0 {
                 if decorationStart >= 0, decoration == underline, decorationColor == fg {
                 } else {

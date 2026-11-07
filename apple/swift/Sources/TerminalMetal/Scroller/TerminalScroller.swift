@@ -60,6 +60,16 @@ final class TerminalScroller: NSObject {
         if near { reveal() }
     }
 
+    /// The scroller sits on the terminal's background, not on a system surface: draw it for that background's
+    /// brightness (light knob and dark track on a dark terminal), whatever the system appearance is.
+    func adapt(toBackground rgb: SIMD3<UInt8>) {
+        // Rec. 601 weights, the same split the app uses to tell programs whether the theme is light or dark.
+        let luma = (0.299 * Double(rgb.x) + 0.587 * Double(rgb.y) + 0.114 * Double(rgb.z)) / 255
+        let dark = luma < 0.5
+        view.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+        view.knobStyle = dark ? .light : .dark
+    }
+
     /// The system's scroller style changed (System Settings, a mouse plugged in): the owner lays out again.
     func applyStyle() {
         view.scrollerStyle = NSScroller.preferredScrollerStyle

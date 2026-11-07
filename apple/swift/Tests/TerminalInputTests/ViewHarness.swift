@@ -14,8 +14,8 @@ final class ViewHarness {
     let interaction: MockInteraction
     let cell: CGSize
 
-    init(cols: Int = 40, rows: Int = 10, text: String = "") throws {
-        let renderer = RendererConfiguration(font: .system(family: "Menlo"), pointSize: 13, scale: 2)
+    init(cols: Int = 40, rows: Int = 10, text: String = "", palette: TerminalPalette = .spike) throws {
+        let renderer = RendererConfiguration(font: .system(family: "Menlo"), pointSize: 13, scale: 2, palette: palette)
         let probe = try MetalRenderer(configuration: renderer)
         cell = CGSize(width: CGFloat(probe.cellPixels.width) / 2, height: CGFloat(probe.cellPixels.height) / 2)
         let frame = NSRect(x: 0, y: 0, width: cell.width * CGFloat(cols), height: cell.height * CGFloat(rows))

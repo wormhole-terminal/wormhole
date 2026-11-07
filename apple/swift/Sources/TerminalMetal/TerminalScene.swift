@@ -44,6 +44,7 @@ final class TerminalScene {
     private(set) var marked: MarkedText?
     /// The selection and the hovered link, per row; setting one rebuilds only the rows it changed on.
     private var marks: [RowMarks] = []
+    private var keepsTextInSelection = true
 
     init(fonts: FontSet, device: MTLDevice) {
         self.fonts = fonts
@@ -121,8 +122,8 @@ final class TerminalScene {
     /// With no selection text colour in the theme the selection keeps the text's own; a change rebuilds
     /// the selected rows.
     func setKeepsTextInSelection(_ value: Bool) {
-        guard value != builder.keepsTextInSelection else { return }
-        builder.keepsTextInSelection = value
+        guard value != keepsTextInSelection else { return }
+        keepsTextInSelection = value
         for row in marks.indices where marks[row].selected != nil { dirty[row] = true }
     }
 
@@ -178,12 +179,20 @@ final class TerminalScene {
         if let cursor, cursor.row == row, cursorOn || !cursor.blinking {
             draw = CursorDraw(column: cursor.column, shape: cursor.shape, wide: cursor.wide, focused: focused)
         }
-        guard let marked, let cursor, cursor.row == row, !marked.text.isEmpty else {
-            builder.build(row: row, cells: UnsafeBufferPointer(start: start, count: columns), into: geometry[row], cursor: draw, marks: marks[row])
+        let composing = marked != nil && cursor?.row == row && marked?.text.isEmpty == false
+        // The common row goes to the builder as it is; a row with a selection, a hovered link or composed text
+        // is copied and marked first, so the hot loop knows none of it.
+        guard composing || marks[row].isMarked else {
+            builder.build(row: row, cells: UnsafeBufferPointer(start: start, count: columns), into: geometry[row], cursor: draw)
+            return
+        }
+        var cells = Array(UnsafeBufferPointer(start: start, count: columns))
+        marks[row].apply(to: &cells, keepsTextInSelection: keepsTextInSelection)
+        guard composing, let marked, let cursor else {
+            cells.withUnsafeBufferPointer { builder.build(row: row, cells: $0, into: geometry[row], cursor: draw) }
             return
         }
         // Composed text replaces the cells from the cursor on, underlined, and the caret moves to its end.
-        var cells = Array(UnsafeBufferPointer(start: start, count: columns))
         var column = cursor.column
         var caretColumn = column
         for (offset, scalar) in marked.text.unicodeScalars.enumerated() {
@@ -205,7 +214,7 @@ final class TerminalScene {
         }
         draw?.column = min(caretColumn, columns - 1)
         draw?.shape = .beam
-        cells.withUnsafeBufferPointer { builder.build(row: row, cells: $0, into: geometry[row], cursor: draw, marks: marks[row]) }
+        cells.withUnsafeBufferPointer { builder.build(row: row, cells: $0, into: geometry[row], cursor: draw) }
     }
 
     // MARK: handing instances to the GPU

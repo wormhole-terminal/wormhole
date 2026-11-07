@@ -126,34 +126,8 @@ extension MetalTerminalView {
     // MARK: helpers
 
     /// Give an event to the program; `false` when it did not ask for it or Shift took the pointer back.
-    private func send(_ button: PointerButton, _ action: PointerAction, _ hit: CellHit, _ event: NSEvent) -> Bool {
+    func send(_ button: PointerButton, _ action: PointerAction, _ hit: CellHit, _ event: NSEvent) -> Bool {
         interaction?.reportPointer(
             PointerInput(button: button, action: action, row: hit.row, column: hit.column, x: hit.x, y: hit.y, modifiers: modifiers(event))) ?? false
     }
-
-    /// Follow the pointer with the selection. Past the top or bottom the history scrolls and goes on scrolling
-    /// (with a one-shot timer, only while the pointer stays out there) even if the mouse is still.
-    func extendSelection(to point: CGPoint) {
-        guard let interaction else { return }
-        let grid = cellGrid
-        let lines = grid.dragScroll(point)
-        if let lines, lines != 0 { source.scroll(lines: lines) }
-        if let hit = grid.hit(point) { interaction.selectionUpdate(row: hit.row, column: hit.column, side: hit.side) }
-        requestRedraw()
-        pointer.autoscroll?.cancel()
-        pointer.autoscroll = nil
-        guard let lines, lines != 0 else { return }
-        let item = DispatchWorkItem { [weak self] in
-            MainActor.assumeIsolated {
-                guard let self, self.pointer.selecting, let point = self.pointer.lastPoint else { return }
-                self.extendSelection(to: point)
-            }
-        }
-        pointer.autoscroll = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.autoscrollInterval, execute: item)
-    }
-
-    /// How often a drag held outside the grid scrolls again (the system's own periodic rate for dragging in
-    /// a list; the GPUI app scrolls on each pointer event and has no timer).
-    static var autoscrollInterval: DispatchTimeInterval { .milliseconds(50) }
 }
