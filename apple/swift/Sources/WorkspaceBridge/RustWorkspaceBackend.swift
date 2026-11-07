@@ -16,9 +16,15 @@ public struct WorkspaceSetup: Sendable {
     public var home: String?
     /// ⌘1…⌘9 count along the list as shown (`true`), or stay with their terminal.
     public var numbersFollowList: Bool
+    /// Terminals in session hosts that outlive the app; nil keeps them all in the app's process.
+    public var hosting: HostingSetup?
 
-    public init(program: String, arguments: [String] = [], home: String? = NSHomeDirectory(), numbersFollowList: Bool = false) {
+    public init(
+        program: String, arguments: [String] = [], home: String? = NSHomeDirectory(), numbersFollowList: Bool = false,
+        hosting: HostingSetup? = nil
+    ) {
         (self.program, self.arguments, self.home, self.numbersFollowList) = (program, arguments, home, numbersFollowList)
+        self.hosting = hosting
     }
 }
 
@@ -30,15 +36,22 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
 
     /// The core's workspace, for what serves it to others (the hook socket).
     public let core: Workspace
-    private let setup: WorkspaceSetup
-    private var relays: [TerminalID: TerminalRelay] = [:]
-    private var failed: [TerminalID: String] = [:]
+    let setup: WorkspaceSetup
+    var relays: [TerminalID: TerminalRelay] = [:]
+    var failed: [TerminalID: String] = [:]
+    /// The persistent terminals' object, nil while the feature is off or unusable (`RustWorkspaceBackend+Hosting`).
+    let hosted: HostedSessions?
+    /// What the next terminals opened are: saved ones brought back, taken in order.
+    var restoring: [HostedSessions.Entry] = []
+    /// Why terminals stay in the app though persistence is on, once a host did not start.
+    public internal(set) var hostingFallback: String?
 
     /// The size a terminal starts at, until its view fits it: the view's first layout resizes it.
-    private static let startSize = GridSize(cols: 100, rows: 30)
+    static let startSize = GridSize(cols: 100, rows: 30)
 
     public init(setup: WorkspaceSetup) {
         self.setup = setup
+        hosted = setup.hosting.flatMap(HostedSessions.init)
         let wake = WakeRelay()
         core = Workspace(
             config: WorkspaceConfig(
@@ -122,16 +135,11 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
         live.append(id)
         let relay = TerminalRelay()
         do {
-            let size = Self.startSize
-            // Started for its tab: its shell has `WORMHOLE_TAB_ID`, `WORMHOLE_SOCKET` and `WORMHOLE_BIN`, so agents' hooks
-            // and its own `wh` reach this workspace.
-            let terminal = try Terminal.startForTab(
-                tab: Int64(id), program: setup.program, args: setup.arguments, cwd: folder, cols: UInt16(size.cols),
-                rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight, listener: relay)
+            let terminal = try makeTerminal(id, in: folder, relay: relay)
             relays[id] = relay
             core.registerTerminal(id: Int64(id), terminal: terminal)
         } catch {
-            failed[id] = "\(error)"
+            failed[id] = HostingWords.failure(error)
             FileHandle.standardError.write(Data("terminal \(id): cannot start \(setup.program): \(error)\n".utf8))
         }
     }

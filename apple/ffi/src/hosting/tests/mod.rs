@@ -32,9 +32,12 @@ fn a_terminal_outlives_the_app_and_comes_back_with_its_screen() {
     // The next launch: its own object over the same folder.
     let second = first.desk();
     let plan = second.plan_at_launch().expect("plans");
-    assert_eq!(plan.attach.iter().map(|s| s.host_id.as_str()).collect::<Vec<_>>(), [host_id.as_str()]);
-    assert!(plan.replay.is_empty() && plan.orphans.is_empty());
-    let saved = &plan.attach[0];
+    assert_eq!(
+        plan.saved.iter().map(|s| (s.host_id.as_str(), s.running)).collect::<Vec<_>>(),
+        [(host_id.as_str(), true)]
+    );
+    assert!(plan.orphans.is_empty());
+    let saved = &plan.saved[0];
     assert_eq!(saved.cwd.as_deref(), Some(first.cwd()));
     let again =
         second.attach(host_id.clone(), first.request(7), true, support::listener()).expect("attaches");
@@ -46,13 +49,13 @@ fn a_terminal_outlives_the_app_and_comes_back_with_its_screen() {
     // The rows were renumbered: the old id (1) is gone, the new one (7) names the host, nothing is doubled.
     let third = first.desk();
     let plan = third.plan_at_launch().expect("plans");
-    assert_eq!(plan.attach.len(), 1, "one row for one host: {plan:?}");
+    assert_eq!(plan.saved.len(), 1, "one row for one host: {plan:?}");
 
     // End All: the program ends with its host and no row names it.
     drop(third);
     second.finish(true);
     wait_for("the host to end", || first.live_hosts().is_empty());
-    assert!(first.desk().plan_at_launch().expect("plans").attach.is_empty());
+    assert!(first.desk().plan_at_launch().expect("plans").saved.is_empty());
 }
 
 /// Closing an attached terminal on purpose ends its program, so nothing is left to attach to.
@@ -64,7 +67,7 @@ fn closing_a_terminal_ends_its_host_and_forgets_its_row() {
     assert_eq!(fixture.live_hosts().len(), 1);
     terminal.close();
     wait_for("the host to end", || fixture.live_hosts().is_empty());
-    assert!(fixture.desk().plan_at_launch().expect("plans").attach.is_empty());
+    assert!(fixture.desk().plan_at_launch().expect("plans").saved.is_empty());
 }
 
 /// A saved row whose host is gone starts again; a live host no row names is an orphan that can be adopted.
@@ -85,8 +88,12 @@ fn gone_hosts_replay_and_unnamed_hosts_are_orphans() {
     hosts::end_host(&meta, Duration::from_secs(5)).expect("ends");
     wait_for("it to go", || fixture.live_hosts() == vec![kept_id.clone()]);
     let plan = fixture.desk().plan_at_launch().expect("plans");
-    assert_eq!(plan.replay.iter().map(|s| s.host_id.clone()).collect::<Vec<_>>(), [lost_id.clone()]);
-    assert_eq!(plan.attach.iter().map(|s| s.host_id.clone()).collect::<Vec<_>>(), [kept_id.clone()]);
+    let standing: Vec<(String, bool)> = plan.saved.iter().map(|s| (s.host_id.clone(), s.running)).collect();
+    assert_eq!(
+        standing,
+        [(kept_id.clone(), true), (lost_id.clone(), false)],
+        "saved order, each with its standing"
+    );
 
     // Attaching to the one that is gone says so, which is the cue to start a new shell.
     let desk = fixture.desk();

@@ -113,7 +113,8 @@ impl HostedTerminals {
 
     /// At launch, once: forget the files of hosts that are certainly gone, scan the folder, and match the
     /// live hosts against what every profile's saved terminals name. A saved terminal whose host runs is
-    /// to be attached, one whose host is gone starts again, and a live host nobody names is an orphan.
+    /// to be attached, one whose host is gone starts again (`SavedTerminal.running` says which), and a live host
+    /// nobody names is an orphan.
     pub fn plan_at_launch(&self) -> Result<LaunchPlan, HostingError> {
         hosts::forget_gone_hosts(&self.hosts_dir);
         let live = hosts::scan(&self.hosts_dir).map(|scan| scan.live).unwrap_or_else(|err| {
@@ -125,12 +126,11 @@ impl HostedTerminals {
         named.extend(self.named_elsewhere());
         let mut launch = LaunchHosts::plan(named.iter().map(String::as_str), live);
         let running = launch.live_ids();
-        let (attach, replay): (Vec<SavedTerminal>, Vec<SavedTerminal>) =
-            saved.into_iter().partition(|s| running.contains(&s.host_id));
+        let saved =
+            saved.into_iter().map(|s| SavedTerminal { running: running.contains(&s.host_id), ..s }).collect();
         let orphans = launch.take_orphans();
         let plan = LaunchPlan {
-            attach,
-            replay,
+            saved,
             orphans: orphans
                 .iter()
                 .map(|m| OrphanHost { host_id: m.id.clone(), started_at: m.started_at })

@@ -4,6 +4,8 @@
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct SavedTerminal {
     pub host_id: String,
+    /// Its host runs now: attach to it. Otherwise the host is gone and the terminal starts again in `cwd`.
+    pub running: bool,
     pub cwd: Option<String>,
     pub shell: Option<String>,
 }
@@ -20,10 +22,9 @@ pub struct OrphanHost {
 /// What the launch does with the hosts it found (core's `LaunchHosts`), in the sidebar's order.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct LaunchPlan {
-    /// Saved terminals whose host runs: `HostedTerminals.attach`.
-    pub attach: Vec<SavedTerminal>,
-    /// Saved terminals whose host is gone: a new terminal in the same folder (their text is not replayed).
-    pub replay: Vec<SavedTerminal>,
+    /// The saved terminals in the sidebar's order: `HostedTerminals.attach` those that are `running`, start the
+    /// others again in their folder (their text is not replayed).
+    pub saved: Vec<SavedTerminal>,
     /// Live hosts nobody names, oldest first (not yet asked whether they take this app).
     pub orphans: Vec<OrphanHost>,
 }

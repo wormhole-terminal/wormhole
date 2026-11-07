@@ -12,4 +12,6 @@ extension WorkspaceBackend {
     public func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout? { nil }
     public func groupFolderOffer(group: GroupID) -> String? { nil }
     public func setWindowState(active: Bool, seen: Bool) {}
+    public func hosting(of id: TerminalID) -> HostingState? { nil }
+    public func finishQuit(endHosts: Bool) {}
 }

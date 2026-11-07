@@ -12,6 +12,8 @@ struct StatusBar: View {
     /// The shown terminal, whose state and size end the bar; the size is its grid, "100×30", nil when none is drawn.
     let selected: TerminalSummary?
     let size: String?
+    /// Where the shown terminal runs; nil while persistent terminals are off (the bar then says nothing of it).
+    var hosting: HostingState?
     let windowWidth: CGFloat
     let select: @MainActor (TerminalID) -> Void
     @Environment(\.chrome) private var colours
@@ -44,6 +46,9 @@ struct StatusBar: View {
             Spacer(minLength: 0)
             if let words = selected?.activity.stateWords, detail.words {
                 separated { Text(words).foregroundStyle(selected?.activity.stateColour(colours) ?? colours.muted) }
+            }
+            if let hosting, StatusHosting.words(hosting) != nil {
+                separated { StatusHostingItem(state: hosting, word: detail >= .numbers) }
             }
             if let selected, let size, detail.size {
                 separated { Text("\(selected.title) · \(size)") }

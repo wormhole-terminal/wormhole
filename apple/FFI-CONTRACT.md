@@ -839,7 +839,7 @@ profile's database (`Store::save_session_host`). Additive: no existing signature
 |---|---|
 | `HostedTerminals` | `new(dataDir?, hostBinary?, window)`: refuses outside a `Wormhole-swift*` folder. `enabled()` (core's flag rules over the folder's `config.json`), `program()` (`HostingProgram`: `found(path)`, `disposableCopy`, `missing`), `planAtLaunch()`, `adoptableOrphans()`, `start(what, listener)`, `attach(hostId, what, visible, listener)`, `finishRestore()`, `finish(endHosts)`. |
 | `HostedStart` | `tab`, `program`, `args`, `cwd?`, `cols`, `rows`, `cellWidth`, `cellHeight`: the same facts `Terminal.startForTab` takes. |
-| `LaunchPlan` | `attach` (saved terminals whose host runs), `replay` (saved terminals whose host is gone: start a new terminal in the folder; their text is not replayed here), `orphans` (live hosts no saved terminal of any profile names). Each saved terminal is `SavedTerminal { hostId, cwd?, shell? }`. |
+| `LaunchPlan` | `saved` (the last run's terminals in the sidebar's order, each `SavedTerminal { hostId, running, cwd?, shell? }`: `running` attach, otherwise its host is gone and a new terminal starts in the folder; their text is not replayed here), `orphans` (live hosts no saved terminal of any profile names). |
 | `Terminal` (new methods) | `hostId() -> String?`, `hosting() -> TerminalHosting` (`local`, `persistent`, `detached`, `lost`), `detach() -> Bool`, `setVisible(Bool)`. Everything else (frames, keys, resize, scroll, find, interaction) is unchanged: a hosted terminal's engine is a replica fed from the host. |
 | `HostingError` | `notIsolated`, `noProgram` (no host program: stay in the app), `start` (host or program did not start: the caller may start locally and say so once), `gone` (attach: the host is not there: start a new terminal), `unavailable(reason, transient)` (it runs and cannot be shown: keep the terminal's place and say why; `transient` = try again), `store`. |
 
@@ -854,9 +854,9 @@ Closing an attached terminal ends its program and forgets its row; `detach()` (o
 workspace gives new ids every run, so after the restore `finishRestore()` forgets the rows the last run left under old ids.
 A window saver that comes later writes the same `SessionRecord`s with `host_id` from `Terminal.hostId`.
 
-**The flow.** Launch: `enabled()` and `program()`; if both allow, `planAtLaunch()` (once; fast), then per `attach` entry
-`Workspace.apply(newTerminal)` and `attach(...)` on the `Opened` id (`gone` becomes a new terminal, `unavailable` shows
-the reason and keeps the row), per `replay` entry a new hosted terminal in its folder, and, off the main thread,
+**The flow.** Launch: `enabled()` and `program()`; if both allow, `planAtLaunch()` (once; fast), then per `saved` entry
+`Workspace.apply(newTerminal)` and, on the `Opened` id, `attach(...)` for a `running` one (`gone` becomes a new terminal,
+`unavailable` shows the reason and keeps the row) or a new hosted terminal in its folder, and, off the main thread,
 `adoptableOrphans()` (up to half a second per silent host) attached the same way (the GPUI app puts them in a Recovered
 group). Then `finishRestore()`. New terminals: `start(...)`, falling back to `Terminal.startForTab` on `start`/`noProgram`.
 Quit: `finish(endHosts)`, with `endHosts` from the quit question's answer (`QuitFacts.endsHosts`): true closes every terminal

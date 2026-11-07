@@ -36,12 +36,14 @@ impl Registry {
         self.store.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// The window's sessions that name a host, in the sidebar's order.
+    /// The window's sessions that name a host, in the sidebar's order (`running` is for the caller to fill).
     pub(crate) fn saved(&self) -> Result<Vec<SavedTerminal>, HostingError> {
         Ok(self
             .sessions()?
             .into_iter()
-            .filter_map(|s| s.host_id.map(|host_id| SavedTerminal { host_id, cwd: s.cwd, shell: s.shell }))
+            .filter_map(|s| {
+                s.host_id.map(|host_id| SavedTerminal { host_id, running: false, cwd: s.cwd, shell: s.shell })
+            })
             .collect())
     }
 

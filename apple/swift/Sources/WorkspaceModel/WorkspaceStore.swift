@@ -27,6 +27,12 @@ public final class WorkspaceStore {
         return refusal
     }
 
+    /// Where terminal `id`'s program runs; nil while persistent terminals are off.
+    public func hosting(of id: TerminalID) -> HostingState? { backend.hosting(of: id) }
+
+    /// The app is quitting (`WorkspaceBackend.finishQuit`).
+    public func finishQuit(endHosts: Bool) { backend.finishQuit(endHosts: endHosts) }
+
     /// What dropping a terminal here would do, for the line shown while it is still held.
     public func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan? { backend.dropPlan(dragged: dragged, over: over) }
 

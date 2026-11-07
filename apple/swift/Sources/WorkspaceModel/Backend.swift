@@ -75,6 +75,11 @@ public protocol WorkspaceBackend: AnyObject {
     /// The window came to the front or went behind (`active`) and whether it can be seen at all (`seen`): in front, what is
     /// on screen is looked at, so a finished result is spent and a bell heard.
     func setWindowState(active: Bool, seen: Bool)
+    /// Where terminal `id`'s program runs; nil while persistent terminals are off (the status bar then says nothing).
+    func hosting(of id: TerminalID) -> HostingState?
+    /// The app is quitting: `endHosts` ends every terminal's host (Quit and End All Terminals), otherwise each is let go
+    /// of and its program runs on.
+    func finishQuit(endHosts: Bool)
     /// Set by the store: told what no snapshot carries (a screen's saved text to forget, a group to move to a window).
     var onNotice: (@MainActor (WorkspaceNotice) -> Void)? { get set }
 }
