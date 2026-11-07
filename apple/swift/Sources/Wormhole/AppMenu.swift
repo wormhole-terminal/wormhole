@@ -20,6 +20,8 @@ enum AppMenu {
         add(to: main, title: "View", [
             item("Toggle Sidebar", #selector(AppController.toggleSidebar), "b", target: target),
             item("Toggle Panel", #selector(AppController.togglePanel), "b", [.command, .option], target: target),
+            item("Command Palette", #selector(AppController.showPalette), "k", target: target),
+            item("Keyboard Shortcuts", #selector(AppController.showShortcuts), "/", target: target),
         ])
         add(to: main, title: "Terminal", (1...9).map { number in
             let entry = item("Select Terminal \(number)", #selector(AppController.selectNumbered(_:)), "\(number)", target: target)

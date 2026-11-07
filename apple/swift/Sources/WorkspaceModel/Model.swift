@@ -58,6 +58,11 @@ public enum PanelTab: String, Sendable, CaseIterable {
     case notes, changes, history
 }
 
+/// What is laid over the window, at most one at a time.
+public enum Overlay: Sendable, Equatable {
+    case palette, shortcuts
+}
+
 /// The whole window's state.
 public struct WorkspaceState: Sendable, Equatable {
     public var terminals: [TerminalSummary]
@@ -67,10 +72,12 @@ public struct WorkspaceState: Sendable, Equatable {
     public var panelVisible: Bool
     public var panelTab: PanelTab
     public var search: String
+    public var overlay: Overlay?
 
     public init(
         terminals: [TerminalSummary] = [], groups: [TerminalGroup] = [], selected: TerminalID? = nil,
-        sidebarVisible: Bool = true, panelVisible: Bool = true, panelTab: PanelTab = .changes, search: String = ""
+        sidebarVisible: Bool = true, panelVisible: Bool = true, panelTab: PanelTab = .changes, search: String = "",
+        overlay: Overlay? = nil
     ) {
         self.terminals = terminals
         self.groups = groups
@@ -79,6 +86,7 @@ public struct WorkspaceState: Sendable, Equatable {
         self.panelVisible = panelVisible
         self.panelTab = panelTab
         self.search = search
+        self.overlay = overlay
     }
 }
 
@@ -93,4 +101,5 @@ public enum WorkspaceAction: Sendable, Equatable {
     case togglePanel
     case showPanelTab(PanelTab)
     case search(String)
+    case showOverlay(Overlay?)
 }

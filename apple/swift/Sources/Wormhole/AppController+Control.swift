@@ -12,6 +12,8 @@ extension AppController {
         switch parts.first ?? "" {
         case "sidebar": store.send(.toggleSidebar); reply("sidebar")
         case "panel": store.send(.togglePanel); reply("panel")
+        case "palette": showPalette(); reply("palette")
+        case "shortcuts": showShortcuts(); reply("shortcuts")
         case "new": newTerminal(); reply("new")
         case "close": closeTerminal(); reply("close")
         case "select":

@@ -63,9 +63,9 @@ final class SidebarTests: XCTestCase {
 
     func testArrowNavigationStopsAtEndsAndSkipsFoldedSections() {
         let ids = RowNavigation.visibleIDs([
-            SidebarSection(id: "a", title: "A", isCollapsed: false, rows: [row(1), row(2)]),
-            SidebarSection(id: "b", title: "B", isCollapsed: true, rows: [row(3)]),
-            SidebarSection(id: "c", title: nil, isCollapsed: false, rows: [row(4)]),
+            SidebarSection(id: "a", title: "A", isCollapsed: false, rows: [row(1), row(2)], terminalCount: 2, alertCount: 0),
+            SidebarSection(id: "b", title: "B", isCollapsed: true, rows: [row(3)], terminalCount: 1, alertCount: 0),
+            SidebarSection(id: "c", title: nil, isCollapsed: false, rows: [row(4)], terminalCount: 1, alertCount: 0),
         ])
         XCTAssertEqual(ids, [1, 2, 4])
         XCTAssertEqual(RowNavigation.neighbor(of: 2, in: ids, step: 1), 4)
@@ -102,7 +102,7 @@ private struct GroupsHarness: View {
 
     private func section(_ id: String, _ title: String?, collapsed: Bool, _ rows: ArraySlice<SidebarRow>) -> some View {
         SidebarSectionView(
-            section: SidebarSection(id: id, title: title, isCollapsed: collapsed, rows: Array(rows)),
+            section: SidebarSection(id: id, title: title, isCollapsed: collapsed, rows: Array(rows), terminalCount: rows.count, alertCount: 0),
             selected: 2, selection: selection, send: { _ in })
     }
 }

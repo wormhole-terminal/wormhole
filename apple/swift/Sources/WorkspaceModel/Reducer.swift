@@ -30,6 +30,9 @@ public func reduce(_ state: WorkspaceState, _ action: WorkspaceAction) -> Worksp
             state.selected = remaining.isEmpty ? nil : remaining[min(place, remaining.count - 1)]
         }
 
+    case .showOverlay(let overlay):
+        state.overlay = overlay
+
     case .togglePin(let id):
         if let index = state.terminals.firstIndex(where: { $0.id == id }) {
             state.terminals[index].isPinned.toggle()

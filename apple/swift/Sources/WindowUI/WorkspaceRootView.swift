@@ -3,6 +3,7 @@
 // live here and only in memory: hiding a column and showing it again brings back the width it had.
 
 import DesignSystem
+import PaletteUI
 import SidebarUI
 import SwiftUI
 import WorkspaceModel
@@ -53,9 +54,19 @@ public struct WorkspaceRootView: View {
                 }
             }
         }
+        .overlay { overlay }
         .ignoresSafeArea()
         .background(Chrome.surface)
         .background(FullScreenReader(isFullScreen: $isFullScreen))
+    }
+
+    /// The palette and the shortcut sheet play their own exit before asking to be removed.
+    @ViewBuilder private var overlay: some View {
+        switch state.overlay {
+        case .palette: PaletteView(state: state, send: send) { send(.showOverlay(nil)) }
+        case .shortcuts: ShortcutSheetView { send(.showOverlay(nil)) }
+        case nil: EmptyView()
+        }
     }
 
     private var collapseInset: CGFloat { isFullScreen ? Chrome.collapseXFullScreen : Chrome.collapseX }

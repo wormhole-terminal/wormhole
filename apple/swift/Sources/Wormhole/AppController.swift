@@ -111,6 +111,8 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     @objc func toggleSidebar() { store.send(.toggleSidebar) }
     @objc func togglePanel() { store.send(.togglePanel) }
+    @objc func showPalette() { store.send(.showOverlay(store.state.overlay == .palette ? nil : .palette)) }
+    @objc func showShortcuts() { store.send(.showOverlay(store.state.overlay == .shortcuts ? nil : .shortcuts)) }
     @objc func newTerminal() { store.send(.newTerminal) }
 
     @objc func closeTerminal() {

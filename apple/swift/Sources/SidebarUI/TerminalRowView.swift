@@ -44,7 +44,7 @@ struct TerminalRowView: View {
             Button("Close") { send(.close(terminal.id)) }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(spoken)
+        .accessibilityLabel(SidebarListing.spokenLabel(for: terminal))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction(named: terminal.isPinned ? "Unpin" : "Pin") { send(.togglePin(terminal.id)) }
         .accessibilityAction(named: "Close") { send(.close(terminal.id)) }
@@ -67,14 +67,5 @@ struct TerminalRowView: View {
     private var detail: String? {
         let parts = [terminal.subtitle, terminal.branch].compactMap { $0 }.filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
-    }
-
-    // `SidebarListing.spokenLabel` is not in this tree yet, so the label is composed here.
-    private var spoken: String {
-        var parts = [terminal.title, terminal.activity.spoken]
-        if let detail { parts.append(detail) }
-        if terminal.unread > 0 { parts.append("\(terminal.unread) unread") }
-        if terminal.isPinned { parts.append("pinned") }
-        return parts.joined(separator: ", ")
     }
 }
