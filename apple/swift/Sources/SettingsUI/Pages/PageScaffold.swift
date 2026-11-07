@@ -1,5 +1,5 @@
 // What every page shares: the title row (20 / bold, 38 high, with the page's action at its right), the intro
-// under it, and the scrolling column of at most `columnWidth`. Reveals a row by scrolling to its id.
+// under it, and the scrolling column of at most `columnWidth`. Scrolls to a row named by `revealed`.
 
 import DesignSystem
 import SwiftUI
@@ -7,6 +7,9 @@ import SwiftUI
 struct PageScaffold<Action: View, Content: View>: View {
     let title: String
     var intro = ""
+    /// A row to scroll into view (a search result was chosen); `clear` is called when its mark has had its moment.
+    var revealed: String?
+    var clearReveal: () -> Void = {}
     @ViewBuilder var action: Action
     @ViewBuilder let content: Content
     @Environment(\.tokens) private var tokens
@@ -36,12 +39,12 @@ struct PageScaffold<Action: View, Content: View>: View {
             }
             .scrollIndicators(.automatic)
             .background(tokens.surfaceWindow)
-            .environment(\.revealScroll, { id in withAnimation(Motion.layout) { proxy.scrollTo(id, anchor: .center) } })
+            .task(id: revealed) {
+                guard let revealed else { return }
+                withAnimation(Motion.layout) { proxy.scrollTo(revealed, anchor: .center) }
+                try? await Task.sleep(for: .seconds(1.6))
+                clearReveal()
+            }
         }
     }
-}
-
-extension EnvironmentValues {
-    /// Scrolls the open page to a row by its id (set by the page's scroll view).
-    @Entry var revealScroll: (String) -> Void = { _ in }
 }

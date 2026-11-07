@@ -11,7 +11,7 @@ struct SettingsPage: View {
     let section: SettingsSchema.Section
 
     var body: some View {
-        PageScaffold(title: section.title, intro: section.intro, action: { HeaderAction(model: model, section: section.id) }) {
+        PageScaffold(title: section.title, intro: section.intro, revealed: model.revealed, clearReveal: model.clearReveal, action: { HeaderAction(model: model, section: section.id) }) {
             if let scene = PreviewScene(section: section.id) { PreviewStrip(model: model, scene: scene) }
             ForEach(Array(section.groups.enumerated()), id: \.offset) { _, group in
                 let rows = group.entries.filter { $0.isShown(values: model.values) && $0.control.layout != .strip }

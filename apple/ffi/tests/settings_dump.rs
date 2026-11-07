@@ -14,5 +14,8 @@ fn committed_settings_json_is_what_core_holds() {
 #[test]
 fn every_row_has_a_control() {
     let json = wormhole_ffi::settings_dump::json();
-    assert!(!json.contains("\"unsupported\""), "a settings row has no control: add it to settings_dump/controls.rs");
+    assert!(
+        !json.contains("\"unsupported\""),
+        "a settings row has no control: add it to settings_dump/controls.rs"
+    );
 }
