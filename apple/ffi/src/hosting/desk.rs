@@ -123,6 +123,7 @@ impl HostedTerminals {
         });
         let saved = self.registry.saved()?;
         let mut named: HashSet<String> = saved.iter().map(|s| s.host_id.clone()).collect();
+        named.extend(self.registry.hosts_of_other_windows()?);
         named.extend(self.named_elsewhere());
         let mut launch = LaunchHosts::plan(named.iter().map(String::as_str), live);
         let running = launch.live_ids();
@@ -150,6 +151,13 @@ impl HostedTerminals {
             .into_iter()
             .map(|m| OrphanHost { host_id: m.id, started_at: m.started_at })
             .collect()
+    }
+
+    /// A terminal of another window's desk that moved into this window: this desk lets go of it as the app quits.
+    pub fn adopt(&self, terminal: Arc<Terminal>) {
+        let mut made = locked(&self.made);
+        made.retain(|weak| weak.strong_count() > 0);
+        made.push(Arc::downgrade(&terminal));
     }
 
     /// Start `what` in a new session host. `Start` when the host or its program would not start (the caller

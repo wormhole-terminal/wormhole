@@ -21,7 +21,7 @@
 
         /// Nil when this window is not the core's, or when the parts the server shares are not there.
         init?(app: AppController) throws {
-            guard app.options.isReal, let workspace = (app.hub.store.hooks as? RustWorkspaceBackend)?.core,
+            guard app.options.isReal, let workspace = (app.sessions.first?.hub.store.hooks as? RustWorkspaceBackend)?.core,
                 let usage = app.panelUsage as? UsageService, let access = (app.aux.accessBackend as? FFIAccessBackend)?.desk
             else { return nil }
             self.app = app
@@ -53,7 +53,10 @@
                 app.closeTerminal(Int(terminal)) { [weak self] in self?.handle.closeQuestionOver() }
             case .worktreeAsked(let folder, let branch): app.hub.askWorktree(branch: branch, in: folder)
             case .gauge(let terminal, let agent, let model, let context):
-                app.hub.gauges.tell(terminal: Int(terminal), agent: agent, gauge: GaugeFact(model: model, context: context))
+                // In the window that holds the terminal.
+                app.session(holding: Int(terminal))?.hub.gauges.tell(
+                    terminal: Int(terminal), agent: agent, gauge: GaugeFact(model: model, context: context))
+            case .newWindow(let window, _, _, let activate): app.openPlanned(window: Int(window), activate: activate)
             }
         }
     }

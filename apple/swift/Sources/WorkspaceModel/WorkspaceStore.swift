@@ -32,6 +32,27 @@ public final class WorkspaceStore {
 
     /// The app is quitting (`WorkspaceBackend.finishQuit`).
     public func finishQuit(endHosts: Bool) { backend.finishQuit(endHosts: endHosts) }
+    /// Fill this (empty) window from what it was saved with.
+    public func restore() {
+        backend.restore()
+        pull()
+    }
+
+    /// Terminals out of this window for another one, running; nil when none was here.
+    public func takeOut(_ ids: [TerminalID]) -> TerminalDeparture? {
+        let departure = backend.takeOut(ids)
+        pull()
+        return departure
+    }
+
+    /// What another window gave up, taken in.
+    public func receive(_ departure: TerminalDeparture) {
+        backend.receive(departure)
+        pull()
+    }
+
+    /// The backend, for what serves the window beside the store (saving it, the hook socket): never to change it.
+    public var source: any WorkspaceBackend { backend }
 
     /// What dropping a terminal here would do, for the line shown while it is still held.
     public func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan? { backend.dropPlan(dragged: dragged, over: over) }

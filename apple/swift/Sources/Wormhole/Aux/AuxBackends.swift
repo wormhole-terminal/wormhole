@@ -34,9 +34,12 @@ struct AuxBackends {
                 do {
                     let backend = try AuxBridge.makeHostsBackend()
                     // The window knows which terminals hold a host; the folder does not.
-                    let rows = app.hub.state.sections.flatMap(\.rows)
-                    let attached = rows.compactMap { row in
-                        app.hub.store.hosting(of: row.id)?.hostID.map { (hostID: $0, window: 1, title: row.terminal.title) }
+                    let attached = app.sessions.flatMap { session in
+                        session.hub.state.sections.flatMap(\.rows).compactMap { row in
+                            session.hub.store.hosting(of: row.id)?.hostID.map {
+                                (hostID: $0, window: session.id, title: row.terminal.title)
+                            }
+                        }
                     }
                     backend.setAttachments(attached)
                     backend.setPersistentTerminals(app.hub.store.hosting(of: app.hub.state.selected ?? 0) != nil)

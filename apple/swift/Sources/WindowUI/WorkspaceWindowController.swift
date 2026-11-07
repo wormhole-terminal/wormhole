@@ -12,6 +12,12 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     /// Called when the window comes to the front or goes behind (`active`) or can no longer be seen (`seen`: not
     /// miniaturised, not hidden, not covered): the workspace looks at what is on screen only while it is in front.
     public var onState: ((_ active: Bool, _ seen: Bool) -> Void)?
+    /// Called when the window moved, resized, went into the Dock or out, zoomed or changed full screen: its place is new.
+    public var onFrameChange: (() -> Void)?
+    /// Asked when the person closes the window: false keeps it open (the app asks a question first, or quits instead).
+    public var shouldClose: (() -> Bool)?
+    /// The rectangle the window had before it was zoomed or made full screen: what a record of it comes back to.
+    public private(set) var windowedFrame = NSRect.zero
 
     public init<Content: View>(title: String, contentSize: CGSize, content: Content) {
         let window = NSWindow(
@@ -33,20 +39,44 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
         window.contentView = hosting
         window.center()
         super.init(window: window)
+        windowedFrame = window.frame
         window.delegate = self
         centreTrafficLights()
     }
 
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError("not decoded") }
 
+    public func windowShouldClose(_ sender: NSWindow) -> Bool { shouldClose?() ?? true }
     public func windowWillClose(_ notification: Notification) { onClose?() }
     public func windowDidBecomeKey(_ notification: Notification) { reportState() }
     public func windowDidResignKey(_ notification: Notification) { reportState() }
     public func windowDidChangeOcclusionState(_ notification: Notification) { reportState() }
-    public func windowDidMiniaturize(_ notification: Notification) { reportState() }
-    public func windowDidDeminiaturize(_ notification: Notification) { reportState() }
-    public func windowDidResize(_ notification: Notification) { centreTrafficLights() }
-    public func windowDidExitFullScreen(_ notification: Notification) { centreTrafficLights() }
+    public func windowDidMiniaturize(_ notification: Notification) {
+        reportState()
+        onFrameChange?()
+    }
+    public func windowDidDeminiaturize(_ notification: Notification) {
+        reportState()
+        onFrameChange?()
+    }
+    public func windowDidMove(_ notification: Notification) { frameChanged() }
+    public func windowDidResize(_ notification: Notification) {
+        centreTrafficLights()
+        frameChanged()
+    }
+    public func windowDidExitFullScreen(_ notification: Notification) {
+        centreTrafficLights()
+        frameChanged()
+    }
+    public func windowDidEnterFullScreen(_ notification: Notification) { onFrameChange?() }
+
+    /// The last place the window was while it was an ordinary window, then the news.
+    private func frameChanged() {
+        if let window, !window.isZoomed, !window.styleMask.contains(.fullScreen), !window.isMiniaturized {
+            windowedFrame = window.frame
+        }
+        onFrameChange?()
+    }
 
     /// What the workspace is told: in front is the key window, seen is on screen, not miniaturised and not covered.
     public func reportState() {

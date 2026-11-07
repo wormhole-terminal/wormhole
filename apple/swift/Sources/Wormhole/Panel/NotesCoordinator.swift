@@ -57,6 +57,9 @@ final class NotesCoordinator {
         setSync(on: hub.panel.tab == .notes && hub.state.panelVisible)
     }
 
+    /// Terminals moving to another window are not closed: what was written for them goes with them, not away.
+    func departing(_ ids: [TerminalID]) { known.subtract(ids) }
+
     private func forgetClosed() {
         let now = Set(hub.state.all.map(\.id))
         for gone in known.subtracting(now) { persistence.closed(session: gone) }

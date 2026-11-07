@@ -11,11 +11,14 @@ public struct HostingSetup: Sendable {
     public var hostBinary: String?
     /// The id the terminals' saved rows are kept under.
     public var window: Int64
+    /// Whether this window asks for the hosts nobody names, to bring them into a Recovered group: one window of the app
+    /// does, or each would take the same hosts.
+    public var adoptsOrphans: Bool
 
     public init(
         dataDirectory: String? = nil, hostBinary: String? = ProcessInfo.processInfo.environment["WORMHOLE_HOST_BIN"],
-        window: Int64 = 1
+        window: Int64 = 1, adoptsOrphans: Bool = true
     ) {
-        (self.dataDirectory, self.hostBinary, self.window) = (dataDirectory, hostBinary, window)
+        (self.dataDirectory, self.hostBinary, self.window, self.adoptsOrphans) = (dataDirectory, hostBinary, window, adoptsOrphans)
     }
 }

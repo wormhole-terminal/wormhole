@@ -7,7 +7,8 @@ import WorkspaceModel
 
 extension ActionRouter {
     func viewActions() -> [ActionID: Handler] {
-        let hub = app.hub, look = app.look
+        var hub: WindowHub { app.hub }
+        let look = app.look
         return [
             "toggleSidebar": { hub.send(.toggleSidebar) },
             "toggleRightPanel": { hub.send(.togglePanel) },
@@ -33,7 +34,7 @@ extension ActionRouter {
     }
 
     func findActions() -> [ActionID: Handler] {
-        let hub = app.hub
+        var hub: WindowHub { app.hub }
         return [
             "find": { if !hub.sidebarSearch.revealIfFocused() { hub.find(.open) } },
             "findNext": { hub.find(.next) },

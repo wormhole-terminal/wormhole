@@ -42,8 +42,25 @@ impl Registry {
             .sessions()?
             .into_iter()
             .filter_map(|s| {
-                s.host_id.map(|host_id| SavedTerminal { host_id, running: false, cwd: s.cwd, shell: s.shell })
+                s.host_id.map(|host_id| SavedTerminal {
+                    terminal: s.id,
+                    host_id,
+                    running: false,
+                    cwd: s.cwd,
+                    shell: s.shell,
+                })
             })
+            .collect())
+    }
+
+    /// The hosts that the sessions of the profile's other windows name: a host of theirs is not an orphan here.
+    pub(crate) fn hosts_of_other_windows(&self) -> Result<Vec<String>, HostingError> {
+        let windows = self.store().load().map_err(HostingError::store)?;
+        Ok(windows
+            .into_iter()
+            .filter(|w| w.id != self.window)
+            .flat_map(|w| w.sessions)
+            .filter_map(|s| s.host_id)
             .collect())
     }
 

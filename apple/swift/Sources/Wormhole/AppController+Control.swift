@@ -12,7 +12,7 @@ extension AppController {
         let argument = parts.count > 1 ? parts[1] : ""
         // A window behind others is not drawn; the commands that read it want what the last change made.
         window?.contentView?.layoutSubtreeIfNeeded()
-        if runLook(command: command, argument: argument) || runWindow(command: command, argument: argument)
+        if runLook(command: command, argument: argument) || runWindow(command: command, argument: argument) || runWindows(command: command, argument: argument)
             || runWorkspace(command: command, argument: argument) || runSettings(command: command, argument: argument) || runPanel(command: command, argument: argument) || runCore(command: command, argument: argument)
         { return }
         guard let view = selectedView else { return reply("error: no terminal is shown") }

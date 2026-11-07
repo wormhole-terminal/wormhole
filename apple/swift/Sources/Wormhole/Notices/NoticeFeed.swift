@@ -68,8 +68,9 @@
                     sinceMs: monotonic > age ? monotonic - age : 0)
                 (tab.who, tab.message, tab.folder, tab.branch) = (terminal.who, terminal.message, terminal.folder, terminal.branch)
                 tab.source = terminal.source == .agent ? .agent : .plain
-                tab.selected = hub.state.selected.map(Int64.init) == terminal.session
-                tab.key = window?.isKeyWindow ?? false
+                let holder = session(holding: Int(terminal.session))
+                tab.selected = holder?.hub.state.selected.map(Int64.init) == terminal.session
+                tab.key = holder?.window?.isKeyWindow ?? false
                 return tab
             }
         }
@@ -79,12 +80,13 @@
             switch outcome {
             case .nothing: break
             case .activate: NSApp.activate()
-            case .open(let tab): hub.send(.select(Int(tab))); NSApp.activate()
+            case .open(let tab): show(terminal: Int(tab)); NSApp.activate()
             case .showChanges(let tab):
-                hub.send(.select(Int(tab)))
-                hub.send(.showPanelTab(.changes))
+                show(terminal: Int(tab))
+                session(holding: Int(tab))?.hub.send(.showPanelTab(.changes))
                 NSApp.activate()
-            case .reply(let tab, let text): hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
+            case .reply(let tab, let text):
+                session(holding: Int(tab))?.hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
             }
         }
     }

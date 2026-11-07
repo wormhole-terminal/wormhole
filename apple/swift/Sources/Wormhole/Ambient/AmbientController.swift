@@ -47,14 +47,15 @@ final class AmbientController {
         switch command {
         case .showApp: NSApp.activate()
         case .newTerminal: hub.send(.newTerminal)
-        case .openTab(let tab): hub.send(.select(Int(tab)))
-        case .reply(let tab, let text): hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
+        case .newWindow: app.openNewWindow()
+        case .openTab(let tab): app.show(terminal: Int(tab))
+        case .reply(let tab, let text): app.session(holding: Int(tab))?.hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
         case .jumpToWaiting: hub.goTo(.needsInput)
         case .openSettings: app.showSettings()
         case .checkForUpdates: app.aux.showUpdates()
         case .quit: NSApp.terminate(nil)
-        case .newWindow, .openFolder, .runAction, .openProject:
-            // Several windows, the folder picker and projects come with the core.
+        case .openFolder, .runAction, .openProject:
+            // The folder picker and projects come with the core.
             break
         }
     }
@@ -73,9 +74,9 @@ final class AmbientController {
 }
 
 extension AppController {
-    /// Every terminal of the window as the ambient surfaces list them.
+    /// Every terminal of every window as the ambient surfaces list them.
     var ambientTerminals: [AmbientTerminal] {
-        hub.state.sections.flatMap(\.rows).map { row in
+        sessions.flatMap { $0.hub.state.sections.flatMap(\.rows) }.map { row in
             let terminal = row.terminal
             return AmbientTerminal(
                 session: Int64(terminal.id), name: terminal.title, state: terminal.activity.ambient,

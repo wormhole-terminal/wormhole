@@ -32,6 +32,9 @@ final class MenuController {
         refresh()
     }
 
+    /// The window in front changed, or one came or went: the bar follows the one commands now act on.
+    func windowsChanged() { refresh() }
+
     private func refresh() {
         let state = withObservationTracking {
             app.hub.menuState(

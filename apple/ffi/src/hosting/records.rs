@@ -3,6 +3,8 @@
 /// A terminal the last run saved with the session host that ran it.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct SavedTerminal {
+    /// The workspace's id for it: a window restored from its record opens it under this id.
+    pub terminal: i64,
     pub host_id: String,
     /// Its host runs now: attach to it. Otherwise the host is gone and the terminal starts again in `cwd`.
     pub running: bool,

@@ -17,6 +17,9 @@ public enum HookAction: Equatable, Sendable {
     /// The status line of `terminal`'s `agent` (its command, `claude`) says which model it runs and how much of its
     /// context window is used (0 to 100).
     case gauge(terminal: Int64, agent: String, model: String?, context: Double?)
+    /// `wh new-window`: open window `window`, whose first terminal `terminal` is planned already, from the plan the core
+    /// holds for it. Behind the other windows and without the keys unless `activate`.
+    case newWindow(window: Int64, terminal: Int64, folder: String?, activate: Bool)
 }
 
 extension HookAction {
@@ -28,6 +31,8 @@ extension HookAction {
         case .worktreeAsked(let folder, let branch): self = .worktreeAsked(folder: folder, branch: branch)
         case .gauge(let terminal, let agent, let model, let context):
             self = .gauge(terminal: terminal, agent: agent, model: model, context: context.map(Double.init))
+        case .newWindow(let window, let terminal, let folder, let activate):
+            self = .newWindow(window: window, terminal: terminal, folder: folder, activate: activate)
         }
     }
 }

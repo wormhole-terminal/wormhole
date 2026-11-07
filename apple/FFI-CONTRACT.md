@@ -938,6 +938,13 @@ cascadeFrame(from:, display:) -> FrameRecord // a step (26 pt) down and right, o
   Swift makes a workspace with `inWindow(windows, window, …)`, calls `restore()` and starts the program; `command` is typed
   once the shell is ready (within 3 s the terminal must be in some window). Still the first window's only: `list`,
   `events`, `status`, `focus`, `rename`, `close`, `split`, `new-terminal` (the model of the window the server was started over).
+- **With persistent terminals.** `HostedTerminals(window:)` is per window and saves its rows under that window's id;
+  `Windows.save` writes each terminal's `host_id` from `Terminal.hostId` (a terminal not registered yet keeps the host its saved
+  row names). `SavedTerminal.terminal` is the id the row was saved under: a window restored from its record opens that terminal under
+  the same id and attaches to its own host (`HostedStart`/`attach`), else starts it again. The launch plan counts other windows'
+  hosts as named, so no window takes another's for an orphan; one window should ask `adoptableOrphans`. `HostedTerminals.adopt(terminal:)`
+  hands a terminal that moved to the desk of the window that holds it, which lets go of it at the quit. Save the windows before
+  `finish(endHosts:)` (a save names hosts; End All forgets them).
 - **Threads.** `Windows` takes its store's mutex per call (microseconds); `save` reads the workspace's model with `peek_model`
   (no tap wake). Everything is meant for the main thread; none calls Swift.
 - **Core changes this needed** (additive): `workspace::{IdCounter, SavedLayout, Departing}`, `ModelConfig.ids`,

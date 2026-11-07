@@ -146,6 +146,24 @@ impl Windows {
         record
     }
 
+    /// A terminal that has no `Terminal` yet (its host runs and could not be shown) keeps the host and shell its saved
+    /// row names, so the next launch still finds it.
+    fn keep_hosts_unattached(store: &Store, record: &mut WindowRecord, unattached: &[i64]) {
+        if unattached.is_empty() {
+            return;
+        }
+        let Some(saved) = store.load().ok().and_then(|all| all.into_iter().find(|w| w.id == record.id))
+        else {
+            return;
+        };
+        for session in record.sessions.iter_mut().filter(|session| unattached.contains(&session.id)) {
+            if let Some(before) = saved.sessions.iter().find(|before| before.id == session.id) {
+                session.host_id.clone_from(&before.host_id);
+                session.shell.clone_from(&before.shell);
+            }
+        }
+    }
+
     /// Remember the columns of this window as the ones new windows start with, when they changed.
     fn remember(&self, store: &Store, layout: Option<&str>) {
         let Some(layout) = layout.and_then(|json| serde_json::from_str::<SavedLayout>(json).ok()) else {
@@ -203,9 +221,19 @@ impl Windows {
     /// when the write failed.
     pub fn save(&self, window: i64, workspace: Arc<Workspace>, frame: Option<FrameRecord>) -> bool {
         let bounds = frame.map(|frame| WindowFrame::from(frame).to_json());
-        let record = workspace.shared().peek_model(|model| model.window_record(window, bounds));
+        let shared = workspace.shared();
+        let mut record = shared.peek_model(|model| model.window_record(window, bounds));
+        // Which session host runs a terminal is the terminal's to say; a record without it would forget the hosts.
+        let mut unattached = Vec::new();
+        for session in &mut record.sessions {
+            match shared.terminal_of(session.id) {
+                Some(terminal) => session.host_id = terminal.host_id(),
+                None => unattached.push(session.id),
+            }
+        }
         let mut store = locked(&self.store);
         self.remember(&store, record.layout.as_deref());
+        Self::keep_hosts_unattached(&store, &mut record, &unattached);
         let record = Self::with_notes(&store, record);
         match store.save_window(&record) {
             Ok(()) => {

@@ -6,6 +6,7 @@ import PlatformModel
 extension ActionRouter {
     func appActions() -> [ActionID: Handler] {
         [
+            "newWindow": { [unowned self] in app.openNewWindow() },
             "settings": { [unowned self] in app.showSettings() },
             "about": { [unowned self] in app.aux.showAbout() },
             "checkForUpdates": { [unowned self] in app.aux.showUpdates() },

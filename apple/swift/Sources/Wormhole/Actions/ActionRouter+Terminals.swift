@@ -7,7 +7,7 @@ import WorkspaceModel
 
 extension ActionRouter {
     func terminalActions() -> [ActionID: Handler] {
-        let hub = app.hub
+        var hub: WindowHub { app.hub }
         var table: [ActionID: Handler] = [
             "newTerminal": { hub.send(.newTerminal) },
             "newTerminalNoGroup": {
@@ -35,7 +35,7 @@ extension ActionRouter {
     }
 
     func paneActions() -> [ActionID: Handler] {
-        let hub = app.hub
+        var hub: WindowHub { app.hub }
         return [
             "splitRight": { hub.split(.row) },
             "splitDown": { hub.split(.column) },

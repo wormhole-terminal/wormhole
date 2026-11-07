@@ -14,7 +14,7 @@ extension RustWorkspaceBackend {
     /// `WORMHOLE_TAB_ID`, `WORMHOLE_SOCKET` and `WORMHOLE_BIN`, so agents' hooks and its own `wh` reach this workspace.
     func makeTerminal(_ id: TerminalID, in folder: String?, relay: TerminalRelay) throws -> Terminal {
         guard let hosted else { return try startLocal(id, in: folder, relay: relay) }
-        let entry = restoring.isEmpty ? nil : restoring.removeFirst()
+        let entry = saved.removeValue(forKey: id) ?? (adopting.isEmpty ? nil : adopting.removeFirst())
         let what = request(id, in: entry?.folder ?? folder)
         if case .attach(let host, _)? = entry {
             do { return try hosted.desk.attach(hostId: host, what: what, visible: true, listener: relay) } catch HostingError.Gone {
@@ -30,24 +30,41 @@ extension RustWorkspaceBackend {
         }
     }
 
-    /// Brings back the terminals the last run left (attached to their hosts, or started again where their host is gone),
-    /// then asks, off the main thread, for the hosts nobody named. How many came back; 0 means the caller opens its own.
+    /// Brings back what the last run left in this window: from the window's record (the terminals keep their ids, each
+    /// attached to its own host or started again where its host is gone), or, for a workspace that is no window of the
+    /// app's, the saved terminals one by one under new ids. Then, off the main thread, the hosts nobody named. How many
+    /// terminals came back; 0 means the caller opens its own.
     @discardableResult
     public func restoreSaved() -> Int {
-        guard let hosted else { return 0 }
-        let entries = hosted.launchEntries()
-        openRestored(entries)
+        let before = live.count
+        guard let hosted else {
+            _ = handle(core.restore())
+            return live.count - before
+        }
+        let plan = hosted.launchPlan()
+        saved = Dictionary(plan.map { ($0.terminal, $0.entry) }, uniquingKeysWith: { first, _ in first })
+        _ = handle(core.restore())
+        // A workspace with no record of its own (not among the app's windows) opens what the hosts saved, in order.
+        if live.count == before, !plan.isEmpty {
+            openRestored(plan.map { $0.entry })
+            if let first = live.first { _ = apply(.select(first)) }
+        }
+        saved = [:]
         try? hosted.desk.finishRestore()
-        if let first = live.first, !entries.isEmpty { _ = apply(.select(first)) }
         // Opened behind the store's back: it pulls what changed.
         onWake?()
-        let desk = hosted.desk
-        Task.detached { [weak self] in
-            let orphans = desk.adoptableOrphans().map(\.hostId)
-            await MainActor.run { self?.adopt(orphans) }
+        if hosted.adoptsOrphans {
+            let desk = hosted.desk
+            Task.detached { [weak self] in
+                let orphans = desk.adoptableOrphans().map(\.hostId)
+                await MainActor.run { self?.adopt(orphans) }
+            }
         }
-        return entries.count
+        return live.count - before
     }
+
+    /// Fill an empty window from its record (the protocol's `restore`).
+    public func restore() { restoreSaved() }
 
     public func hosting(of id: TerminalID) -> HostingState? {
         guard hosted != nil else { return nil }
@@ -73,9 +90,9 @@ extension RustWorkspaceBackend {
     }
 
     private func openRestored(_ entries: [HostedSessions.Entry]) {
-        restoring = entries
+        adopting = entries
         for _ in entries { _ = apply(.newTerminal) }
-        restoring = []
+        adopting = []
     }
 
     private func request(_ id: TerminalID, in folder: String?) -> HostedStart {

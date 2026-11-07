@@ -10,11 +10,8 @@ import PlatformUI
 import SettingsUI
 import TerminalMetal
 import WindowUI
+import WindowsModel
 import WorkspaceModel
-
-#if WITH_UNIFFI
-    import WorkspaceBridge
-#endif
 
 @MainActor
 final class AppController: NSObject, NSApplicationDelegate {
@@ -23,21 +20,18 @@ final class AppController: NSObject, NSApplicationDelegate {
     let dataDirectory: URL
     /// How the window itself looks: its translucency, glass, status bar. The theme is `ThemeStore.shared`.
     let look = WindowLook()
-    let factory: TerminalFactory
-    let hub: WindowHub
+    /// Which windows there are, what was saved of them and where each one's workspace comes from.
+    let windowsHost: WindowsHost
+    /// Every window, in the order they were made; the one commands act on is `front`.
+    var sessions: [WindowSession] = []
+    /// The window that was in front last: what commands act on while none is the key window (a test instance never has one).
+    var lastFront: WindowSession?
+    /// Set while the app quits, so the windows that go with it are saved, not forgotten.
+    var terminating = false
     var devctl: DevCtl?
-    var windowController: WorkspaceWindowController?
     var settingsController: SettingsWindowController?
     var settingsApplier: SettingsApplier?
-    var notesCoordinator: NotesCoordinator?
     var notices: NoticeFeed?
-    /// What the project's actions ask of the window (real windows only), and where the Notes tab keeps its text.
-    let panelEffects: AnyObject?
-    let panelNotes: (any NotesPersisting)?
-    let panelUsage: AnyObject?
-    /// What the right panel reads through (the core's where real): the project backend is also Settings' source of what a
-    /// project sets.
-    let panelBackends: PanelUI.PanelBackends
     /// Layers the settings of the terminal in front's project over the person's (real windows only).
     var projectSettings: AnyObject?
     var hooks: HookHost?
@@ -52,7 +46,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     var endsHostsOnQuit = false
     let activityClock = ActivityClock()
     /// The fonts and colours every terminal is drawn with: Settings' and the theme's.
-    private(set) lazy var terminalLook = TerminalLook(terminals: hub.terminals)
+    private(set) lazy var terminalLook = TerminalLook(terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] })
     /// The settings the window follows, whether or not the Settings window is open: the core's when real.
     private(set) lazy var settingsModel = AppSettings.makeModel(app: self)
     private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory)
@@ -60,43 +54,30 @@ final class AppController: NSObject, NSApplicationDelegate {
     private(set) lazy var router = ActionRouter(app: self)
     private(set) lazy var aux = AuxController(app: self, dataDirectory: dataDirectory)
 
-    init(options: Options, dataDirectory: URL) {
+    init(options: Options, dataDirectory: URL) throws {
         self.options = options
         self.dataDirectory = dataDirectory
         policy = PlatformPolicy(background: options.background)
         PlatformSetup.install(options)
-        // The core's workspace when a real program is asked for (it also starts the terminals' programs), else the sample.
-        let host = WorkspaceHost.make(options)
-        let factory = TerminalFactory(options: options, source: host.source)
-        self.factory = factory
-        let effects = Self.makeEffects()
-        let panel = PanelBackendsFactory.make(options, store: host.store, policy: policy, effects: effects)
-        hub = WindowHub(store: host.store, terminals: TerminalViews { factory.make($0) }, panelBackends: panel.backends)
-        (panelEffects, panelNotes, panelUsage) = (effects, panel.notes, panel.usage)
-        panelBackends = panel.backends
-        #if WITH_UNIFFI
-            // The title row's order of giving way is the core's, wherever the core runs the window.
-            if options.program != nil { hub.rowFitting = CoreRowFitting() }
-        #endif
+        windowsHost = try WindowsHost.make(options)
         super.init()
-        factory.look = terminalLook
-        #if WITH_UNIFFI
-            (effects as? PanelEffects)?.hub = hub
-        #endif
-    }
-
-    private static func makeEffects() -> AnyObject? {
-        #if WITH_UNIFFI
-            PanelEffects()
-        #else
-            nil
-        #endif
     }
 
     /// The notification rules' view of Settings.
     var settingsNotice: NoticeSettings { NoticeSettingsMaker.settings(settingsModel.backend.values) }
 
-    var window: NSWindow? { windowController?.window }
+    /// The window commands act on: the key one, else the one that was in front last, else the first.
+    var front: WindowSession {
+        sessions.first { $0.window?.isKeyWindow == true } ?? lastFront ?? sessions[0]
+    }
+    var hub: WindowHub { front.hub }
+    /// What the right panel reads through: the project backend is also Settings' source of what a project sets.
+    var panelBackends: PanelUI.PanelBackends { front.panelBackends }
+    var factory: TerminalFactory { front.factory }
+    var windowController: WorkspaceWindowController? { front.controller }
+    var window: NSWindow? { front.window }
+    /// The core's usage service, which the hook socket feeds: the first window's.
+    var panelUsage: AnyObject? { sessions.first?.panelUsage }
     /// The selected terminal's view, if it exists: what the control commands act on.
     var selectedView: MetalTerminalView? { hub.state.selected.flatMap { hub.terminals.existing($0) } }
 
@@ -111,10 +92,13 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationWillTerminate(_ notification: Notification) {
+        // Every window as it is, so the next launch brings them back; a window the person closed was forgotten already.
+        terminating = true
+        saveAllWindows()
         hooks?.stop()
         // Before the views go: a terminal let go of is not ended by its view closing.
-        hub.store.finishQuit(endHosts: endsHostsOnQuit)
-        hub.terminals.shutdown()
+        sessions.forEach { $0.hub.store.finishQuit(endHosts: endsHostsOnQuit) }
+        sessions.forEach { $0.hub.terminals.shutdown() }
     }
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { ambient?.dockMenu() }
 }

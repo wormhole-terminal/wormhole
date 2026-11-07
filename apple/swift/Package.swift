@@ -23,6 +23,9 @@ var targets: [Target] = [
     // The window around the terminal. Layers, lowest first; each depends only on the ones above it here.
     // The window's state as plain values and the actions on it. Foundation only.
     .target(name: "WorkspaceModel"),
+    // The app's windows as plain values: which there are, where each was, the seam the core keeps them behind. Foundation only.
+    .target(name: "WindowsModel", dependencies: ["WorkspaceModel"]),
+    .testTarget(name: "WindowsTests", dependencies: ["WindowsModel", "WorkspaceModel"]),
     // Tokens and shared components (SwiftUI). Knows nothing of terminals. `themes.json` is every bundled
     // theme's resolved tokens, written from `wormhole-core` by `apple/scripts/dump-themes.sh`.
     .target(name: "DesignSystem", resources: [.copy("Resources/themes.json")]),
@@ -33,7 +36,7 @@ var targets: [Target] = [
         name: "WindowUI",
         dependencies: [
             "WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "FileIconTheme", "PaletteUI",
-            "TerminalMetal", "TerminalCore", "TerminalUI", "PanesModel", "PanesUI", "PlatformModel",
+            "TerminalMetal", "TerminalCore", "TerminalUI", "PanesModel", "PanesUI", "PlatformModel", "WindowsModel",
         ]),
     // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
     .target(name: "PanelModel", dependencies: ["WorkspaceModel"]),
@@ -92,11 +95,11 @@ var targets: [Target] = [
     .testTarget(name: "StudioTests", dependencies: ["StudioModel", "StudioUI", "DesignSystem"]),
     .testTarget(
         name: "UITests",
-        dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI", "PanesModel", "PanelModel", "PlatformModel"]),
+        dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI", "PanesModel", "PanelModel", "PlatformModel", "WindowsModel"]),
 ]
 
 var appDependencies: [Target.Dependency] = [
-    "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI", "SettingsModel", "SettingsUI", "DesignSystem",
+    "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowsModel", "WindowUI", "SettingsModel", "SettingsUI", "DesignSystem",
     "PanesModel", "PanesUI", "PanelModel", "PlatformModel", "PlatformUI", "AuxModel", "AuxWindows", "TerminalUI",
     "PaletteModel", "PanelModel", "PanelUI", "StudioModel", "StudioUI", "SidebarUI", "PanesModel",
 ]
@@ -132,6 +135,11 @@ if ffiLinked {
         .target(
             name: "WorkspaceBridge",
             dependencies: ["WorkspaceModel", "WormholeBindings", "UniFFISource", "TerminalCore", "PanesModel"]),
+        // The app's windows over the core's store: what each held at the last run, the ids they share, where each was.
+        .target(name: "WindowsBridge", dependencies: ["WindowsModel", "WorkspaceBridge", "WorkspaceModel", "WormholeBindings"]),
+        .testTarget(
+            name: "WindowsBridgeTests",
+            dependencies: ["WindowsBridge", "WindowsModel", "WorkspaceBridge", "WorkspaceModel", "WormholeBindings", "UniFFISource", "TerminalCore"]),
         // The theme resolver against the real Rust loader: a user theme file, colour picks, an opacity.
         .testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]),
         // The mapping and the real workspace behind the store: an action through the FFI, a snapshot back.
@@ -152,7 +160,7 @@ if ffiLinked {
         .testTarget(name: "HookBridgeTests", dependencies: ["HookBridge", "WormholeBindings"]),
     ]
     appDependencies += [
-        "UniFFISource", "WorkspaceBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge", "HookBridge",
+        "UniFFISource", "WorkspaceBridge", "WindowsBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge", "HookBridge",
     ]
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.
     targets.append(.target(name: "GitBridge", dependencies: ["PanelModel", "WormholeBindings"]))

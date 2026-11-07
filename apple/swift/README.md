@@ -25,6 +25,13 @@ splits, numbers, wording) in `wormhole-core`, starts the program of every termin
 the FFI (or without `--shell`) `MockWorkspaceBackend` stands in over the same `WorkspaceStore`. `WORMHOLE_DEVCTL` gains `rows`,
 `rename`, `pin`, `group`, `drop`, `plan`, `split` and `window-shot` (see `AppController+Workspace.swift`).
 
+Several windows: ⌘N (or `Wormhole new-window` over the hook socket) opens another, each over a workspace of its own in the
+core (`WindowsBridge` keeps the registry: ids no two windows share, what each held, where each was); "Move group to new window"
+takes a group's terminals along running. Windows, frames, columns, groups, splits and the selection are saved as they change
+and come back at launch (`WindowSaver`, `AppController+Windows.swift`). `WORMHOLE_DEVCTL` gains `new-window [folder]`,
+`sessions`, `use-window <id>` (which window the commands act on), `move-to-window <ids>`, `groupwindow <group>`,
+`save-windows` and `saved-windows`.
+
 Screenshots without a window or Screen Recording permission (a texture readback of the same instance data):
 
 ```sh

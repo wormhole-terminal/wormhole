@@ -31,28 +31,34 @@ extension AppController {
 
     /// What a restart would end, for the updater's question.
     var runningTerminals: [RunningTerminal] {
-        hub.state.sections.flatMap(\.rows).filter(\.runsSomething).map {
+        allRows.filter(\.runsSomething).map {
             RunningTerminal(name: $0.terminal.title, agent: $0.terminal.agent?.name, status: $0.terminal.runStatus, program: $0.runningCommand)
         }
     }
 
+    /// Every window's rows: quitting ends the terminals of all of them.
+    private var allRows: [SidebarRow] { sessions.flatMap { $0.hub.state.sections.flatMap(\.rows) } }
+
     private var quitFacts: QuitFacts {
-        let rows = hub.state.sections.flatMap(\.rows)
+        let rows = allRows
         let running = rows.filter(\.runsSomething)
         // Terminals in a session host are left running by a plain quit; only the rest would end.
-        let counts = HostedCounts(running: running.map(\.id), all: rows.map(\.id)) { hub.store.hosting(of: $0) }
+        let counts = HostedCounts(running: running.map(\.id), all: rows.map(\.id)) { id in
+            self.session(holding: id)?.hub.store.hosting(of: id)
+        }
         return QuitFacts(
             running: running.map { StillRunning.Fact(status: $0.terminal.runStatus, commandRunning: $0.runningCommand != nil) },
             programs: running.compactMap { $0.runningCommand }, hostedRunning: counts.hostedRunning,
             localRunning: counts.localRunning, anyHosted: counts.anyHosted)
     }
 
-    /// Closes a terminal, asking first when an agent or a command runs in it.
-    func closeTerminal(_ id: TerminalID, then done: @escaping () -> Void = {}) {
-        guard let row = hub.state.sections.flatMap(\.rows).first(where: { $0.id == id }) else { return done() }
+    /// Closes a terminal (of `session`, else the window that holds it), asking first when an agent or a command runs in it.
+    func closeTerminal(_ id: TerminalID, in session: WindowSession? = nil, then done: @escaping () -> Void = {}) {
+        let session = session ?? self.session(holding: id) ?? front
+        guard let row = session.hub.state.sections.flatMap(\.rows).first(where: { $0.id == id }) else { return done() }
         let terminal = row.terminal
         guard row.runsSomething else {
-            finishClosing(id)
+            finishClosing(id, in: session)
             return done()
         }
         let question = Question(
@@ -62,17 +68,18 @@ extension AppController {
                 commandRunning: row.runningCommand != nil, programs: row.runningCommand.map { [$0] } ?? []),
             confirm: "Close")
         Task {
-            if case .confirm = await QuestionSheet(question).ask(in: window) { finishClosing(id) }
+            if case .confirm = await QuestionSheet(question).ask(in: session.window) { finishClosing(id, in: session) }
             done()
         }
     }
 
     /// Closes a group's terminals, asking first when any of them works or runs something.
-    func closeGroup(_ id: GroupID) {
-        guard let section = hub.state.sections.first(where: { $0.head?.id == id }), let head = section.head else { return }
+    func closeGroup(_ id: GroupID, in session: WindowSession? = nil) {
+        let session = session ?? front
+        guard let section = session.hub.state.sections.first(where: { $0.head?.id == id }), let head = section.head else { return }
         // A folded group lists no rows: the core counts what works in it, and says all of it is to end.
         let running = section.rows.filter(\.runsSomething)
-        guard section.workingCount > 0 || !running.isEmpty else { return finishClosingGroup(id) }
+        guard section.workingCount > 0 || !running.isEmpty else { return finishClosingGroup(id, in: session) }
         let question = Question(
             title: CloseQuestions.groupTitle(head.name),
             detail: CloseQuestions.group(
@@ -81,18 +88,33 @@ extension AppController {
                 programs: running.compactMap(\.runningCommand), stakes: []),
             confirm: "Close Group")
         Task {
-            if case .confirm = await QuestionSheet(question).ask(in: window) { finishClosingGroup(id) }
+            if case .confirm = await QuestionSheet(question).ask(in: session.window) { finishClosingGroup(id, in: session) }
         }
     }
 
-    private func finishClosingGroup(_ id: GroupID) {
-        hub.send(.closeGroup(id))
-        if hub.state.live.isEmpty { window?.close() }
+    /// Closing a window while something runs in it: the question, and the window closes only on a yes.
+    func askToClose(_ session: WindowSession, running: [SidebarRow]) {
+        let question = Question(
+            title: "Close this window?",
+            detail: CloseQuestions.window(
+                terminals: session.hub.state.live.count,
+                running: running.map { StillRunning.Fact(status: $0.terminal.runStatus, commandRunning: $0.runningCommand != nil) },
+                programs: running.compactMap(\.runningCommand), stakes: []),
+            confirm: "Close Window")
+        Task {
+            // `close()` does not ask the window again: the question was this.
+            if case .confirm = await QuestionSheet(question).ask(in: session.window) { session.window?.close() }
+        }
     }
 
-    private func finishClosing(_ id: TerminalID) {
-        hub.send(.close(id))
-        if hub.state.live.isEmpty { window?.close() }
+    private func finishClosingGroup(_ id: GroupID, in session: WindowSession) {
+        session.hub.send(.closeGroup(id))
+        if session.hub.state.live.isEmpty { session.window?.close() }
+    }
+
+    private func finishClosing(_ id: TerminalID, in session: WindowSession) {
+        session.hub.send(.close(id))
+        if session.hub.state.live.isEmpty { session.window?.close() }
     }
 }
 

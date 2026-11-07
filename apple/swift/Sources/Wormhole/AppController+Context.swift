@@ -9,14 +9,15 @@ import WorkspaceModel
 
 extension AppController {
     /// The menu for terminal `id`, built as it is asked for so its facts are current.
-    func terminalMenu(for id: TerminalID) -> NSMenu? {
+    func terminalMenu(for id: TerminalID, in session: WindowSession? = nil) -> NSMenu? {
         var facts = TerminalMenuFacts()
         facts.canPaste = NSPasteboard.general.string(forType: .string) != nil
         facts.canCopy = true
         facts.splitRight = router.table["splitRight"] != nil
         facts.splitDown = router.table["splitDown"] != nil
-        hub.send(.select(id))
-        facts.block = hub.contextBlock(in: id)
+        let holder = session ?? self.session(holding: id) ?? front
+        holder.hub.send(.select(id))
+        facts.block = holder.hub.contextBlock(in: id)
         return contextMenus.menu(TerminalMenu.nodes(facts))
     }
 

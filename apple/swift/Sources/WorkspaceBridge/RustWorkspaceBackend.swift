@@ -39,31 +39,39 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     let setup: WorkspaceSetup
     var relays: [TerminalID: TerminalRelay] = [:]
     var failed: [TerminalID: String] = [:]
+    /// The sources made for terminals, to let go of one that moves to another window (the view's `stop` would end it).
+    var sources: [TerminalID: WeakSource] = [:]
     /// The persistent terminals' object, nil while the feature is off or unusable (`RustWorkspaceBackend+Hosting`).
     let hosted: HostedSessions?
-    /// What the next terminals opened are: saved ones brought back, taken in order.
-    var restoring: [HostedSessions.Entry] = []
+    /// What the terminals of a window restored from its record were, by their ids (they keep them): each attaches to its
+    /// own host, or starts again where its host is gone.
+    var saved: [TerminalID: HostedSessions.Entry] = [:]
+    /// What the next terminals opened are, in order: hosts nobody named, adopted.
+    var adopting: [HostedSessions.Entry] = []
     /// Why terminals stay in the app though persistence is on, once a host did not start.
     public internal(set) var hostingFallback: String?
 
     /// The size a terminal starts at, until its view fits it: the view's first layout resizes it.
     static let startSize = GridSize(cols: 100, rows: 30)
 
-    public init(setup: WorkspaceSetup) {
+    /// A workspace of its own, or window `window` of `windows`: its terminal ids are the app's, never another window's.
+    public init(setup: WorkspaceSetup, windows: Windows? = nil, window: Int = 0) {
         self.setup = setup
         hosted = setup.hosting.flatMap(HostedSessions.init)
         let wake = WakeRelay()
-        core = Workspace(
-            config: WorkspaceConfig(
-                home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: setup.home, paneHeaderHeight: 0),
-            listener: wake)
+        let config = WorkspaceConfig(
+            home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: setup.home, paneHeaderHeight: 0)
+        core = windows.map { Workspace.inWindow(windows: $0, window: Int64(window), config: config, listener: wake) }
+            ?? Workspace(config: config, listener: wake)
         wake.attach { [weak self] in self?.onWake?() }
     }
 
     /// The frame source of terminal `id`, over the program started for it; nil when it did not start.
     public func frameSource(for id: TerminalID) -> (any FrameSource)? {
         guard let relay = relays[id], let terminal = core.terminal(id: Int64(id)) else { return nil }
-        return UniFFIFrameSource(adopting: terminal, relay: relay)
+        let source = UniFFIFrameSource(adopting: terminal, relay: relay)
+        sources[id] = WeakSource(source)
+        return source
     }
 
     /// Why a terminal's program did not start, for the window to say.
@@ -113,7 +121,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     public func groupFolderOffer(group: GroupID) -> String? { core.groupFolderOffer(group: group) }
 
     /// What the core says happened: start the program of a terminal opened, forget one closed; a refusal is the answer.
-    private func handle(_ events: [WorkspaceEvent]) -> WorkspaceModel.Refusal? {
+    func handle(_ events: [WorkspaceEvent]) -> WorkspaceModel.Refusal? {
         var refusal: WorkspaceModel.Refusal?
         for event in events {
             switch event {
@@ -121,7 +129,9 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
             case .closed(let id):
                 live.removeAll { $0 == Int(id) }
                 relays[Int(id)] = nil
+                sources[Int(id)] = nil
                 failed[Int(id)] = nil
+            case .adopted(let id): live.append(Int(id))
             case .refused(let reason): refusal = WorkspaceModel.Refusal(reason)
             case .savedTextForgotten(let id): onNotice?(.savedTextForgotten(Int(id)))
             case .groupToWindow(let group, let terminals): onNotice?(.groupToWindow(group, terminals: terminals.map(Int.init)))

@@ -80,6 +80,14 @@ public protocol WorkspaceBackend: AnyObject {
     /// The app is quitting: `endHosts` ends every terminal's host (Quit and End All Terminals), otherwise each is let go
     /// of and its program runs on.
     func finishQuit(endHosts: Bool)
+    /// Fill an empty window from what it was saved with: its terminals come back (programs started afresh in their
+    /// folders), with their names, pins, groups, splits, columns and selection. Nothing for a window with no record.
+    func restore()
+    /// Take terminals out of this window for another one, their programs running; nil when none of them is here (or the
+    /// backend cannot hand a terminal over). Here they are as good as closed.
+    func takeOut(_ ids: [TerminalID]) -> TerminalDeparture?
+    /// Take in what another window gave up. A departure that this kind of backend did not make is ignored.
+    func receive(_ departure: TerminalDeparture)
     /// Set by the store: told what no snapshot carries (a screen's saved text to forget, a group to move to a window).
     var onNotice: (@MainActor (WorkspaceNotice) -> Void)? { get set }
 }

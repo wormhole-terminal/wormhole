@@ -14,4 +14,8 @@ extension WorkspaceBackend {
     public func setWindowState(active: Bool, seen: Bool) {}
     public func hosting(of id: TerminalID) -> HostingState? { nil }
     public func finishQuit(endHosts: Bool) {}
+    /// The sample saves nothing and runs no programs to hand over.
+    public func restore() {}
+    public func takeOut(_ ids: [TerminalID]) -> TerminalDeparture? { nil }
+    public func receive(_ departure: TerminalDeparture) {}
 }

@@ -2,6 +2,7 @@
 // left to bring back. Everything it decides is Rust's (`ipc::hosts`); this only carries the answers over.
 
 import Foundation
+import WorkspaceModel
 import WormholeBindings
 
 @MainActor
@@ -21,6 +22,8 @@ final class HostedSessions {
     }
 
     let desk: HostedTerminals
+    /// Whether this window brings in the hosts nobody names (`HostingSetup.adoptsOrphans`).
+    let adoptsOrphans: Bool
 
     /// Nil when persistent terminals are off (Settings' flag), there is no host program to start (none beside the app, or
     /// the app runs from a disk image) or the saved terminals cannot be opened: the terminals then stay in the app.
@@ -33,15 +36,21 @@ final class HostedSessions {
                 return nil
             }
             self.desk = desk
+            adoptsOrphans = setup.adoptsOrphans
         } catch {
             FileHandle.standardError.write(Data("persistent terminals: \(error)\n".utf8))
             return nil
         }
     }
 
-    /// The saved terminals of the last run, in the sidebar's order.
-    func launchEntries() -> [Entry] {
+    /// The saved terminals of the last run, in the sidebar's order, with the ids the window saved them under.
+    func launchPlan() -> [(terminal: TerminalID, entry: Entry)] {
         guard let plan = try? desk.planAtLaunch() else { return [] }
-        return plan.saved.map { $0.running ? .attach(hostID: $0.hostId, folder: $0.cwd) : .again(folder: $0.cwd) }
+        return plan.saved.map {
+            (Int($0.terminal), $0.running ? .attach(hostID: $0.hostId, folder: $0.cwd) : .again(folder: $0.cwd))
+        }
     }
+
+    /// The same, as entries alone.
+    func launchEntries() -> [Entry] { launchPlan().map { $0.entry } }
 }

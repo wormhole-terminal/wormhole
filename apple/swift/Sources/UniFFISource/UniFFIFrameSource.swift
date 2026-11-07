@@ -67,6 +67,10 @@ public final class UniFFIFrameSource: FrameSource {
         }
     }
 
+    /// Let go of the terminal without ending it: the terminal is moving to another window, whose own source takes it. This
+    /// source (and the view over it) is finished; stopping it afterwards does nothing.
+    public func detach() { terminal.withLock { $0 = nil } }
+
     private var current: Terminal? { terminal.withLock { $0 } }
 
     public func frame() -> Data { current?.frame() ?? Data() }

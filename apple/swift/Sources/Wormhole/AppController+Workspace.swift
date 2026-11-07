@@ -30,6 +30,7 @@ extension AppController {
             guard numbers.count == 2 else { reply("error: usage ingroup <id> <group>"); break }
             send(.addToGroup(numbers[0], GroupID(numbers[1])))
         case "newin": with("newin <group>") { .newTerminalInGroup(GroupID($0)) }
+        case "groupwindow": with("groupwindow <group>") { .moveGroupToWindow(GroupID($0)) }
         case "step": with("step <delta>") { .selectStep($0) }
         case "number": with("number <n>") { .selectNumber($0) }
         case "search": send(.search(argument))

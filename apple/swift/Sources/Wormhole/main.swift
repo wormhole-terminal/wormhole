@@ -31,7 +31,7 @@ do {
     case .app:
         let app = NSApplication.shared
         app.setActivationPolicy(options.background ? .accessory : .regular)
-        let controller = AppController(options: options, dataDirectory: dataDirectory)
+        let controller = try AppController(options: options, dataDirectory: dataDirectory)
         app.delegate = controller
         app.run()
     }

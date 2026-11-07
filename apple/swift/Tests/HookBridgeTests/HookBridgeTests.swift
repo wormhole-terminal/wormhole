@@ -121,4 +121,9 @@ final class HookBridgeTests: XCTestCase {
         XCTAssertTrue(heard.contains(.activate))
         XCTAssertTrue(FileManager.default.fileExists(atPath: handle.socketPath))
     }
+
+    func testNewWindowIsAnActionWithTheIdsTheCorePlanned() {
+        let event = HookEvent.newWindow(window: 3, terminal: 9, folder: "/tmp", activate: true)
+        XCTAssertEqual(HookAction(event), .newWindow(window: 3, terminal: 9, folder: "/tmp", activate: true))
+    }
 }

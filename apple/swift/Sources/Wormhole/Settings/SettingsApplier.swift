@@ -53,11 +53,20 @@ final class SettingsApplier {
         applyLook(values, changed: changed)
         app.ambient?.apply(values, changed: changed)
         if changed("agent_access", "control_write") { app.hooks?.settingsChanged() }
-        if changed("title_row") { applyTitleRow(values) }
-        if changed("open_in") {
-            let chosen = values["open_in"]?.string ?? ""
-            app.hub.openIn = SystemOpenIn(chosen: { chosen })
-        }
+        if changed("title_row") { applyTitleRow(values, to: app.sessions.map(\.hub)) }
+        if changed("open_in") { applyOpenIn(values, to: app.sessions.map(\.hub)) }
+    }
+
+    /// A window made after the settings were applied takes what they said.
+    func dress(_ session: WindowSession) {
+        let values = model.backend.values
+        applyTitleRow(values, to: [session.hub])
+        if values["open_in"] != nil { applyOpenIn(values, to: [session.hub]) }
+    }
+
+    private func applyOpenIn(_ values: [String: JSONValue], to hubs: [WindowHub]) {
+        let chosen = values["open_in"]?.string ?? ""
+        hubs.forEach { $0.openIn = SystemOpenIn(chosen: { chosen }) }
     }
 
     private func applyLook(_ values: [String: JSONValue], changed: (String...) -> Bool) {
@@ -75,11 +84,12 @@ final class SettingsApplier {
         }
     }
 
-    private func applyTitleRow(_ values: [String: JSONValue]) {
+    private func applyTitleRow(_ values: [String: JSONValue], to hubs: [WindowHub]) {
         guard let keys = values["title_row"]?.array?.compactMap(\.string) else { return }
         let row = TitleRow(keys.compactMap(TitlePart.init(rawValue:)))
-        guard row != app.hub.titleRow else { return }
-        app.hub.titleRow = row
-        app.hub.rowChanged()
+        for hub in hubs where hub.titleRow != row {
+            hub.titleRow = row
+            hub.rowChanged()
+        }
     }
 }
