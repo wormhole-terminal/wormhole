@@ -4,7 +4,6 @@
 // Reduce Motion cuts: the host does not make an ease at all.
 
 import Foundation
-import SwiftUI
 
 public struct TextZoomEase: Equatable, Sendable {
     public struct Sample: Equatable, Sendable {
@@ -15,7 +14,8 @@ public struct TextZoomEase: Equatable, Sendable {
 
     public static let duration: TimeInterval = 0.12
     public static let quantum = 0.25
-    private static let curve = UnitCurve.bezier(startControlPoint: UnitPoint(x: 0.2, y: 0), endControlPoint: UnitPoint(x: 0, y: 1))
+    /// `EASE_OUT` of core's `view::motion::ease`.
+    private static let curve = CubicBezier(0.2, 0, 0, 1)
 
     private let from: Double
     private let to: Double
@@ -35,7 +35,7 @@ public struct TextZoomEase: Equatable, Sendable {
         return TextZoomEase(from: t >= 1 ? to : value(at: t), to: target, began: now)
     }
 
-    private func value(at t: Double) -> Double { from + (to - from) * Self.curve.value(at: max(t, 0)) }
+    private func value(at t: Double) -> Double { from + (to - from) * Self.curve.value(at: t) }
 
-    static func quantise(_ size: Double) -> Double { (size / quantum).rounded() * quantum }
+    public static func quantise(_ size: Double) -> Double { (size / quantum).rounded() * quantum }
 }

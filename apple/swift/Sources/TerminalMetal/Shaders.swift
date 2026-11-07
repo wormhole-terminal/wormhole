@@ -11,7 +11,7 @@ enum Shaders {
         struct Uniforms {
             float2 viewport;   // pixels
             float dim;         // the factor SGR 2 multiplies a colour by
-            float pad;
+            float blink;       // 1, or the factor blinking text is faded by in the off half
         };
 
         struct SolidInstance { float x, y, width, height; uint color; uint style; };
@@ -80,6 +80,7 @@ enum Shaders {
             float4 position [[position]];
             float3 color [[flat]];
             float2 uv;                  // pixels in the atlas texture
+            float fade [[flat]];        // blinking text in the off half
             uint flags [[flat]];
         };
 
@@ -94,6 +95,7 @@ enum Shaders {
             out.position = place(g.x, g.y, g.width, g.height, vid, u, corner);
             out.color = resolve(g.color, palette) * ((g.flags & 1u) != 0u ? u.dim : 1.0);
             out.uv = float2(float(g.ax), float(g.ay)) + corner * float2(float(g.aw), float(g.ah));
+            out.fade = (g.flags & 4u) != 0u ? u.blink : 1.0;
             out.flags = g.flags;
             return out;
         }
@@ -104,9 +106,9 @@ enum Shaders {
             GlyphOut in [[stage_in]], texture2d<float> mask [[texture(0)]], texture2d<float> color [[texture(1)]])
         {
             if ((in.flags & 2u) != 0u) {
-                return color.sample(atlasSampler, in.uv);          // premultiplied, as rasterised
+                return color.sample(atlasSampler, in.uv) * in.fade;   // premultiplied, as rasterised
             }
-            float a = mask.sample(atlasSampler, in.uv).r;
+            float a = mask.sample(atlasSampler, in.uv).r * in.fade;
             return float4(in.color * a, a);
         }
         """

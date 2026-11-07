@@ -23,6 +23,8 @@ struct MockScreen: Sendable {
     private(set) var rows: Int
     private(set) var cells: [PackedCell]
     private var dirty: [Bool]
+    /// How each row is drawn (DECDWL, DECDHL); the scenarios that show sized rows set them, the rest stay single.
+    private var sizes: [LineSize]
     private var everythingDirty = true
     private var history: [[PackedCell]] = []
     private let historyLimit = 2000
@@ -41,6 +43,7 @@ struct MockScreen: Sendable {
         self.rows = rows
         cells = Array(repeating: PackedCell(), count: cols * rows)
         dirty = Array(repeating: true, count: rows)
+        sizes = Array(repeating: .single, count: rows)
     }
 
     // MARK: cells
@@ -57,11 +60,19 @@ struct MockScreen: Sendable {
         self.cols = cols
         self.rows = rows
         dirty = Array(repeating: true, count: rows)
+        sizes = Array(repeating: .single, count: rows)
         everythingDirty = true
         history.removeAll()
         displayOffset = 0
         cursorRow = min(cursorRow, rows - 1)
         cursorColumn = min(cursorColumn, cols - 1)
+    }
+
+    /// Draw a row double-width or as half of a double-height line.
+    mutating func setSize(_ size: LineSize, row: Int) {
+        guard row >= 0, row < rows, sizes[row] != size else { return }
+        sizes[row] = size
+        dirty[row] = true
     }
 
     subscript(row: Int, column: Int) -> PackedCell {
@@ -209,7 +220,7 @@ struct MockScreen: Sendable {
                 displayOffset: displayOffset, historySize: history.count),
             rowCapacity: changed)
         for r in 0..<rows where full || dirty[r] {
-            visibleCells(r).withUnsafeBufferPointer { writer.appendRow(index: r, size: .single, cells: $0) }
+            visibleCells(r).withUnsafeBufferPointer { writer.appendRow(index: r, size: r < sizes.count ? sizes[r] : .single, cells: $0) }
         }
         for r in 0..<rows { dirty[r] = false }
         everythingDirty = false

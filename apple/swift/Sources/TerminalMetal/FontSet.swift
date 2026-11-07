@@ -32,7 +32,7 @@ struct CellMetrics: Equatable {
 }
 
 /// Where the four faces come from.
-public enum FontSpec: Sendable, Equatable {
+public enum FontSpec: Sendable, Hashable {
     /// An installed family; bold and italic are its symbolic-trait variants.
     case system(family: String)
     /// Four font files, registered for this process so CoreText also finds them for fallback.
@@ -56,22 +56,24 @@ final class FontSet {
     private var interned: [CTFont] = []
     private var ids: [String: UInt16] = [:]
 
-    /// `lineHeight` is a multiple of the font size (1.3 in the GPUI app); without it the font's own line.
-    init(spec: FontSpec, pointSize: CGFloat, scale: CGFloat, lineHeight: CGFloat?) {
-        self.pointSize = pointSize
+    /// `settings.lineHeight` is a multiple of the font size (1.3 in the GPUI app); without it the font's own line.
+    init(settings: TerminalFontSettings, scale: CGFloat) {
+        pointSize = CGFloat(settings.pointSize)
         self.scale = scale
         let size = pointSize * scale
-        let faces: [CTFont]
-        switch spec {
+        let lineHeight = settings.lineHeight.map { CGFloat($0) }
+        let plain: [CTFont]
+        switch settings.font {
         case .system(let family):
             let regular = CTFontCreateWithName(family as CFString, size, nil)
             func variant(_ traits: CTFontSymbolicTraits) -> CTFont {
                 CTFontCreateCopyWithSymbolicTraits(regular, size, nil, traits, traits) ?? regular
             }
-            faces = [regular, variant(.traitBold), variant(.traitItalic), variant(.traitBold.union(.traitItalic))]
+            plain = [regular, variant(.traitBold), variant(.traitItalic), variant(.traitBold.union(.traitItalic))]
         case .files(let regular, let bold, let italic, let boldItalic):
-            faces = [regular, bold, italic, boldItalic].map { Self.load($0, size: size) }
+            plain = [regular, bold, italic, boldItalic].map { Self.load($0, size: size) }
         }
+        let faces = plain.map { Self.configured($0, settings: settings, size: size) }
         let regular = faces[0]
         // `FontStyle`'s order: regular, bold, italic, bold italic. They are interned first, so a face's id is
         // its style's raw value.
@@ -102,6 +104,25 @@ final class FontSet {
             width: max(1, Int(advance.width.rounded())), height: max(1, height), baseline: baseline,
             underlineTop: min(height - thickness, baseline + underlineBelow - thickness / 2), lineThickness: thickness,
             strikeTop: baseline - Int((xHeight / 2).rounded()) - thickness / 2)
+    }
+
+    /// The face with the settings' OpenType features and fallback chain. Ligatures off turns `calt` and `liga`
+    /// off, as the GPUI app's `ligature_features` does: programming fonts form `=>` through contextual
+    /// alternates, others through standard ligatures. On, the font keeps its defaults.
+    private static func configured(_ font: CTFont, settings: TerminalFontSettings, size: CGFloat) -> CTFont {
+        var attributes: [CFString: Any] = [:]
+        if !settings.ligatures {
+            attributes[kCTFontFeatureSettingsAttribute] = ["calt", "liga"].map {
+                [kCTFontOpenTypeFeatureTag: $0, kCTFontOpenTypeFeatureValue: 0] as [CFString: Any]
+            }
+        }
+        if !settings.fallbacks.isEmpty {
+            attributes[kCTFontCascadeListAttribute] = settings.fallbacks.map {
+                CTFontDescriptorCreateWithNameAndSize($0 as CFString, size)
+            }
+        }
+        guard !attributes.isEmpty else { return font }
+        return CTFontCreateCopyWithAttributes(font, size, nil, CTFontDescriptorCreateWithAttributes(attributes as CFDictionary))
     }
 
     /// A font from a file, registered for the process so its name resolves (and fallback can find it).

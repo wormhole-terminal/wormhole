@@ -11,23 +11,38 @@ import Synchronization
 import TerminalCore
 
 public struct RendererConfiguration: Sendable {
-    public var font: FontSpec
-    public var pointSize: Double
-    /// A multiple of the font size; `nil` takes the font's own line.
-    public var lineHeight: Double?
+    public var fonts: TerminalFontSettings
     /// Device pixels per point.
     public var scale: Double
     public var palette: TerminalPalette
 
-    public init(
-        font: FontSpec = .system(family: "Menlo"), pointSize: Double = 13, lineHeight: Double? = nil, scale: Double = 2,
-        palette: TerminalPalette = .spike
-    ) {
-        self.font = font
-        self.pointSize = pointSize
-        self.lineHeight = lineHeight
+    public var font: FontSpec {
+        get { fonts.font }
+        set { fonts.font = newValue }
+    }
+    public var pointSize: Double {
+        get { fonts.pointSize }
+        set { fonts.pointSize = newValue }
+    }
+    /// A multiple of the font size; `nil` takes the font's own line.
+    public var lineHeight: Double? {
+        get { fonts.lineHeight }
+        set { fonts.lineHeight = newValue }
+    }
+
+    public init(fonts: TerminalFontSettings, scale: Double = 2, palette: TerminalPalette = .spike) {
+        self.fonts = fonts
         self.scale = scale
         self.palette = palette
+    }
+
+    public init(
+        font: FontSpec = .system(family: "Menlo"), pointSize: Double = 13, lineHeight: Double? = nil, scale: Double = 2,
+        palette: TerminalPalette = .spike, ligatures: Bool = true
+    ) {
+        self.init(
+            fonts: TerminalFontSettings(font: font, pointSize: pointSize, lineHeight: lineHeight, ligatures: ligatures),
+            scale: scale, palette: palette)
     }
 }
 
@@ -64,7 +79,8 @@ public final class MetalRenderer {
     private struct Uniforms {
         var viewport: SIMD2<Float>
         var dim: Float = 0.66
-        var pad: Float = 0
+        /// What blinking text is multiplied by: 1 in the clock's on half, `blinkFaded` in the off half.
+        var blink: Float = 1
     }
 
     private struct Slot {
@@ -74,6 +90,7 @@ public final class MetalRenderer {
 
     public let device: MTLDevice
     let scene: TerminalScene
+    private let contexts: TextContexts
     private let queue: MTLCommandQueue
     private let solidPipeline: MTLRenderPipelineState
     private let glyphPipeline: MTLRenderPipelineState
@@ -90,11 +107,9 @@ public final class MetalRenderer {
         self.queue = queue
         self.configuration = configuration
         palette = configuration.palette
+        contexts = TextContexts(device: device)
         scene = TerminalScene(
-            fonts: FontSet(
-                spec: configuration.font, pointSize: CGFloat(configuration.pointSize), scale: CGFloat(configuration.scale),
-                lineHeight: configuration.lineHeight.map { CGFloat($0) }),
-            device: device)
+            text: contexts.context(for: configuration.fonts, scale: configuration.scale), palette: configuration.palette)
 
         let library: MTLLibrary
         do { library = try device.makeLibrary(source: Shaders.source, options: nil) } catch { throw RendererError.pipeline("\(error)") }
@@ -119,7 +134,6 @@ public final class MetalRenderer {
                 solids: device.makeBuffer(length: 64 * 1024, options: [.storageModeShared, .cpuCacheModeWriteCombined])!,
                 glyphs: device.makeBuffer(length: 64 * 1024, options: [.storageModeShared, .cpuCacheModeWriteCombined])!)
         }
-        scene.setKeepsTextInSelection(configuration.palette.keepsTextInSelection)
     }
 
     // MARK: geometry
@@ -144,14 +158,32 @@ public final class MetalRenderer {
 
     public func setPalette(_ value: TerminalPalette) {
         palette = value
-        scene.setKeepsTextInSelection(value.keepsTextInSelection)
+        scene.setPalette(value)
         scene.rebuildDirty()
         scene.touch()
     }
 
+    /// Draw with other fonts from now on. The grid, the selection and everything else the scene holds stay: its rows
+    /// are built again from the cells it has, with the new cell size, so the screen never goes blank. The caller
+    /// tells the program the new grid (`MetalTerminalView` does). Contexts for recent fonts are kept.
+    public func setFonts(_ fonts: TerminalFontSettings) {
+        guard fonts != configuration.fonts else { return }
+        configuration.fonts = fonts
+        scene.setText(contexts.context(for: fonts, scale: configuration.scale))
+    }
+
+    /// The same fonts at another size in points (kept within 8...36).
+    public func setPointSize(_ points: Double) { setFonts(configuration.fonts.at(pointSize: points)) }
+
     /// The selected columns per row of the frame last applied, and the link under the pointer.
     public func setSelection(_ spans: [RowSpan]) {
         scene.setSelection(spans)
+        scene.rebuildDirty()
+    }
+
+    /// Find's matches among the viewport rows; the current one stands out.
+    public func setFound(_ spans: [FindSpan]) {
+        scene.setFound(spans)
         scene.rebuildDirty()
     }
 
@@ -171,6 +203,19 @@ public final class MetalRenderer {
     private var drawnChange = -1
 
     public func setCursorBlinkOn(_ on: Bool) { scene.setCursorOn(on); scene.rebuildDirty() }
+
+    /// Some visible text blinks. The blink phase is a uniform, so a flip rebuilds and shapes nothing.
+    public var hasBlinkingText: Bool { scene.hasBlinkingText }
+    private var blinkFaded = false
+    /// Sets the blink phase; returns whether it changed (then a draw is due).
+    @discardableResult
+    func setBlinkFadedChanges(_ faded: Bool) -> Bool {
+        guard faded != blinkFaded else { return false }
+        blinkFaded = faded
+        scene.touch()
+        return true
+    }
+    public func setBlinkFaded(_ faded: Bool) { setBlinkFadedChanges(faded) }
     public func setFocused(_ focused: Bool) { scene.setFocused(focused); scene.rebuildDirty() }
     func setMarked(_ marked: MarkedText?) {
         scene.setMarked(marked)
@@ -179,10 +224,11 @@ public final class MetalRenderer {
 
     /// Counters for the measuring mode (words shaped, glyphs rasterised, rows rebuilt since the start).
     public var counters: RendererCounters {
-        RendererCounters(
+        let text = contexts.totals
+        return RendererCounters(
             frames: scene.counters.frames, rowsRebuilt: scene.counters.rowsRebuilt, cellsRead: scene.counters.cellsRead,
-            wordsShaped: scene.words.shaped, wordHits: scene.words.hits, glyphsRasterised: scene.atlas.rasterised,
-            atlasResets: scene.atlas.resets)
+            wordsShaped: text.wordsShaped, wordHits: text.wordHits, glyphsRasterised: text.glyphsRasterised,
+            atlasResets: text.atlasResets)
     }
 
     /// The cursor's cell, if shown, for the input method's candidate window.
@@ -238,6 +284,10 @@ public final class MetalRenderer {
         return timings
     }
 
+    /// How much of its colour blinking text keeps in the off half: faded, not gone, so it stays readable
+    /// (`render/blink.rs` `FADED_ALPHA`).
+    static let blinkFadedFactor: Float = 0.25
+
     private var clearColor: MTLClearColor {
         let background = palette.background
         return MTLClearColor(red: Double(background.x) / 255, green: Double(background.y) / 255, blue: Double(background.z) / 255, alpha: 1)
@@ -266,6 +316,7 @@ public final class MetalRenderer {
     ) {
         let slot = slots[index]
         var uniforms = Uniforms(viewport: SIMD2(Float(size.width), Float(size.height)))
+        if blinkFaded { uniforms.blink = Self.blinkFadedFactor }
         let colors = palette.floats()
         let encoder = buffer.makeRenderCommandEncoder(descriptor: pass)!
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<Uniforms>.size, index: 1)

@@ -77,6 +77,9 @@ public enum PackedColor {
     /// Slots the palette adds for the view's own overlays (a selection's colours).
     public static let selectionBackground: UInt32 = 259
     public static let selectionForeground: UInt32 = 260
+    /// The current find match's fill and text.
+    public static let findCurrent: UInt32 = 261
+    public static let findCurrentText: UInt32 = 262
 
     @inline(__always) public static func named(_ slot: Int) -> UInt32 { UInt32(slot) }
     @inline(__always) public static func indexed(_ index: Int) -> UInt32 { 1 << 24 | UInt32(index) }

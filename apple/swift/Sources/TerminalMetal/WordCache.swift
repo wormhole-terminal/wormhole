@@ -4,7 +4,10 @@
 // is painted glyph by glyph in the colours of the moment, as GPUI's cache does.
 //
 // Glyphs are pinned to their cell's column, never placed at CoreText's advances, so a fallback font with
-// a different advance cannot shift the grid. Ligatures are switched off (one glyph per cell) in this spike.
+// a different advance cannot shift the grid. Ligatures are the font's own contextual forms (`calt`, `liga`),
+// on unless the font set was made without them (`TerminalFontSettings.ligatures`): a ligature is a glyph per
+// cell that overhangs its neighbours, or one glyph in the first cell and nothing in the rest, and both draw
+// right from the pinned columns. A word never holds a blank, so no ligature reaches across one.
 
 import CoreGraphics
 import CoreText
@@ -78,14 +81,14 @@ final class WordCache {
     }
 
     @inline(__always)
-    static func hash(style: FontStyle, scalars: UnsafePointer<UInt32>, count: Int) -> UInt64 {
-        var h: UInt64 = 0xcbf2_9ce4_8422_2325 ^ UInt64(style.rawValue)
+    static func hash(style: FontStyle, stretch: Stretch = .normal, scalars: UnsafePointer<UInt32>, count: Int) -> UInt64 {
+        var h: UInt64 = 0xcbf2_9ce4_8422_2325 ^ UInt64(style.rawValue) ^ stretch.rawValue << 8
         for index in 0..<count { h = (h ^ UInt64(scalars[index])) &* 0x100_0000_01b3 }
         return h
     }
 
     /// The glyphs of the word `scalars[0..<count]` in `style`: a range into `glyphs`.
-    func glyphRange(style: FontStyle, scalars text: UnsafePointer<UInt32>, count: Int, hash: UInt64) -> (start: Int, count: Int) {
+    func glyphRange(style: FontStyle, stretch: Stretch = .normal, scalars text: UnsafePointer<UInt32>, count: Int, hash: UInt64) -> (start: Int, count: Int) {
         if let record = table[hash], Int(record.scalarCount) == count,
             memcmp(scalars.base + Int(record.scalarStart), text, count * MemoryLayout<UInt32>.size) == 0
         {
@@ -95,10 +98,10 @@ final class WordCache {
         if table.count >= Self.wordLimit { clear() }
         shaped += 1
         let buffer = UnsafeBufferPointer(start: text, count: count)
-        var shapedGlyphs = shape(buffer, style: style)
+        var shapedGlyphs = shape(buffer, style: style, stretch: stretch)
         // If the atlas started over while this word was being shaped, its first glyphs point at entries that
         // are gone: once more, now that the atlas is empty.
-        if shapedGlyphs.generation != atlas.generation { shapedGlyphs = shape(buffer, style: style) }
+        if shapedGlyphs.generation != atlas.generation { shapedGlyphs = shape(buffer, style: style, stretch: stretch) }
         // `shape` may have started the atlas (and so this cache) over; the arenas are consistent either way.
         let record = Record(
             scalarStart: Int32(scalars.count), scalarCount: Int32(count), glyphStart: Int32(glyphs.count),
@@ -109,11 +112,11 @@ final class WordCache {
         return (Int(record.glyphStart), Int(record.glyphCount))
     }
 
-    /// The atlas entry of an exact box-drawing, block or braille cell.
-    func boxEntry(_ scalar: UInt32) -> Int32 {
-        let key = 0xFFFF_0000 | (scalar & 0xFFFF)
+    /// The atlas entry of an exact box-drawing, block or braille cell, made for the cell of a row of `stretch`.
+    func boxEntry(_ scalar: UInt32, stretch: Stretch = .normal) -> Int32 {
+        let key = stretch.boxKey(scalar)
         if let id = atlas.lookup(key) { return id }
-        let raster = BoxDrawing.raster(scalar, metrics: fonts.metrics)
+        let raster = BoxDrawing.raster(scalar, metrics: fonts.metrics.stretched(stretch))
         return add(raster, key: key)
     }
 
@@ -126,7 +129,7 @@ final class WordCache {
 
     // MARK: shaping
 
-    private func shape(_ text: UnsafeBufferPointer<UInt32>, style: FontStyle) -> (glyphs: [WordGlyph], generation: Int) {
+    private func shape(_ text: UnsafeBufferPointer<UInt32>, style: FontStyle, stretch: Stretch) -> (glyphs: [WordGlyph], generation: Int) {
         let generation = atlas.generation
         var string = String.UnicodeScalarView()
         /// For each UTF-16 unit of the string, the cell it came from.
@@ -137,10 +140,8 @@ final class WordCache {
             string.append(scalar)
             for _ in 0..<scalar.utf16.count { columns.append(UInt16(column)) }
         }
-        let attributes: [CFString: Any] = [
-            kCTFontAttributeName: fonts.font(for: style),
-            kCTLigatureAttributeName: 0,
-        ]
+        // The font carries the features (`FontSet.configured`): CoreText shapes with them.
+        let attributes: [CFString: Any] = [kCTFontAttributeName: fonts.font(for: style)]
         let attributed = CFAttributedStringCreate(nil, String(string) as CFString, attributes as CFDictionary)!
         let line = CTLineCreateWithAttributedString(attributed)
         var result: [WordGlyph] = []
@@ -156,8 +157,8 @@ final class WordCache {
             let font = (attributes[kCTFontAttributeName] as! CTFont?) ?? fonts.font(for: style)
             let fontID = fonts.id(of: font)
             for index in 0..<count where ids[index] != 0 {
-                let key = UInt32(fontID) << 16 | UInt32(ids[index])
-                let entry = atlas.lookup(key) ?? add(GlyphRaster.rasterize(font: font, glyph: ids[index]), key: key)
+                let key = stretch.key(font: fontID, glyph: ids[index])
+                let entry = atlas.lookup(key) ?? add(GlyphRaster.rasterize(font: font, glyph: ids[index], stretch: stretch), key: key)
                 let column = columns[min(indices[index], columns.count - 1)]
                 result.append(WordGlyph(column: column, atlas: entry))
             }
@@ -166,7 +167,7 @@ final class WordCache {
     }
 
     /// Add a raster, starting the atlas and this cache over if the texture is full.
-    private func add(_ raster: Raster, key: UInt32) -> Int32 {
+    private func add(_ raster: Raster, key: UInt64) -> Int32 {
         if let id = atlas.add(raster, key: key) { return id }
         atlas.reset()
         clear()

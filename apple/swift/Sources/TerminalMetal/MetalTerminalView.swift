@@ -37,13 +37,26 @@ public final class MetalTerminalView: NSView {
     public var bellColor = NSColor.systemOrange
     public var bellCornerRadius: CGFloat = 8
 
+    // Text zoom and fonts (see MetalTerminalView+Zoom).
+    /// The fonts as Settings has them; the zoom is added to their size.
+    var baseFonts: TerminalFontSettings
+    /// Points over the size in Settings (⌘+ ⌘- ⌘0).
+    public internal(set) var zoom = 0.0
+    var zoomEase: TextZoomEase?
+    /// Whether a zoom eases (core's Motion feature); off, or under Reduce Motion, it cuts.
+    public var animatesZoom = true
+    /// A zoom has arrived and the program was told the new grid (columns, rows): the host may show its size chip.
+    public var onZoomSettled: ((_ cols: Int, _ rows: Int) -> Void)?
+
     private var link: CADisplayLink?
     private var started = false
     private var redrawRequested = true
     var blinkItem: DispatchWorkItem?
+    var textBlinkItem: DispatchWorkItem?
     var glowLayer: CALayer?
     var glowItem: DispatchWorkItem?
-    private var gridSize = GridSize(cols: 0, rows: 0)
+    /// The grid the program was last told (`syncSurface`).
+    private(set) var gridSize = GridSize(cols: 0, rows: 0)
     private let wake = WakeRelay()
 
     // Input method state (see Keyboard/).
@@ -63,6 +76,7 @@ public final class MetalTerminalView: NSView {
     public init(source: any FrameSource, configuration: RendererConfiguration, frame: NSRect = NSRect(x: 0, y: 0, width: 960, height: 600)) throws {
         self.source = source
         renderer = try MetalRenderer(configuration: configuration)
+        baseFonts = configuration.fonts
         super.init(frame: frame)
         wantsLayer = true
         layerContentsRedrawPolicy = .never
@@ -177,7 +191,7 @@ public final class MetalTerminalView: NSView {
 
     /// Drawable size and grid size from the view's size. A change of grid goes to the source, which answers
     /// with a full frame of the new size.
-    private func syncSurface() {
+    func syncSurface() {
         let scale = CGFloat(renderer.scale)
         let pixels = CGSize(width: (bounds.width * scale).rounded(.down), height: (bounds.height * scale).rounded(.down))
         guard pixels.width >= 1, pixels.height >= 1 else { return }
@@ -185,6 +199,8 @@ public final class MetalTerminalView: NSView {
             layer.drawableSize = pixels
             requestRedraw()
         }
+        // A zoom on its way keeps the grid the program has: it is told once, when the size has arrived.
+        guard zoomEase == nil else { return }
         // The legacy scroll bar's gutter is not grid.
         let gridWidth = max(1, Int(((bounds.width - scroller.gutterWidth) * scale).rounded(.down)))
         let (cols, rows) = fixedGrid ?? renderer.grid(fittingPixels: gridWidth, Int(pixels.height))
@@ -215,6 +231,7 @@ public final class MetalTerminalView: NSView {
 
     fileprivate func tick() {
         statistics.ticks += 1
+        advanceZoom()
         let needFrame = handleEvents() || redrawRequested
         guard needFrame else { return pauseLink() }
         redrawRequested = false

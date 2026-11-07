@@ -19,6 +19,9 @@ struct CellGrid: Equatable {
     var cellHeight: CGFloat
     var columns: Int
     var rows: Int
+    /// How each row is drawn, when any is not single: a double-width or double-height row's cells are twice as wide
+    /// and it shows half of its columns (`terminal_view/line_size.rs`), so the same x is another column there.
+    var rowSizes: [LineSize] = []
 
     var size: CGSize { CGSize(width: cellWidth * CGFloat(columns), height: cellHeight * CGFloat(rows)) }
 
@@ -30,9 +33,11 @@ struct CellGrid: Equatable {
     func hit(_ point: CGPoint) -> CellHit? {
         guard columns > 0, rows > 0, cellWidth > 0, cellHeight > 0 else { return nil }
         let x = max(0, point.x), y = max(0, point.y)
-        let column = min(Int(x / cellWidth), columns - 1)
         let row = min(Int(y / cellHeight), rows - 1)
-        let inside = (x / cellWidth) - CGFloat(column)
+        let sized = row < rowSizes.count && rowSizes[row] != .single
+        let width = sized ? cellWidth * 2 : cellWidth
+        let column = min(Int(x / width), (sized ? (columns + 1) / 2 : columns) - 1)
+        let inside = (x / width) - CGFloat(column)
         return CellHit(row: row, column: column, side: inside < 0.5 ? .left : .right, x: Int(x), y: Int(y))
     }
 

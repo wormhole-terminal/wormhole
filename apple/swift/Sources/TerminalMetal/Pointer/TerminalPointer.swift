@@ -10,7 +10,7 @@ extension MetalTerminalView {
     /// The grid as the last frame drew it.
     var cellGrid: CellGrid {
         let cell = renderer.cellPixels, scale = CGFloat(renderer.scale), size = renderer.gridSize
-        return CellGrid(cellWidth: CGFloat(cell.width) / scale, cellHeight: CGFloat(cell.height) / scale, columns: size.cols, rows: size.rows)
+        return CellGrid(cellWidth: CGFloat(cell.width) / scale, cellHeight: CGFloat(cell.height) / scale, columns: size.cols, rows: size.rows, rowSizes: renderer.scene.sizes)
     }
 
     private func location(_ event: NSEvent) -> CGPoint { convert(event.locationInWindow, from: nil) }

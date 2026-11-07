@@ -1,4 +1,4 @@
-// The cursor's blink: only when the program asked for it (DECSCUSR), in the key window, and with Reduce Motion
+// The cursor's blink (and, through `updateTextBlink`, the text's): only when the program asked for it (DECSCUSR), in the key window, and with Reduce Motion
 // off. One one-shot timer arms the next flip and nothing else runs, so a steady cursor costs no wakeups.
 // Typing shows the cursor at once and keeps it on for a full phase, as in any text field.
 
@@ -17,6 +17,7 @@ extension MetalTerminalView {
     }
 
     func updateBlink() {
+        updateTextBlink()
         let blinking = renderer.scene.cursor?.blinking == true && window?.isKeyWindow == true && blinkInterval != nil && !reduceMotion
         if blinking {
             guard blinkItem == nil, let interval = blinkInterval else { return }

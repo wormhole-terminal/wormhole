@@ -33,11 +33,12 @@ struct GlyphInstance {
     var atlasWidth: UInt16
     var atlasHeight: UInt16
     var color: UInt32
-    /// Bit 0: dim. Bit 1: a colour glyph, drawn as sampled.
+    /// Bit 0: dim. Bit 1: a colour glyph, drawn as sampled. Bit 2: blinking text.
     var flags: UInt32
 
     static let dimBit: UInt32 = 1
     static let colorBit: UInt32 = 2
+    static let blinkBit: UInt32 = 4
 }
 
 /// One row's instances. A class so the builder appends in place and the store hands out references
@@ -46,8 +47,11 @@ final class RowGeometry {
     var backgrounds = ContiguousArray<SolidInstance>()
     var glyphs = ContiguousArray<GlyphInstance>()
     var decorations = ContiguousArray<SolidInstance>()
+    /// Some glyph of the row blinks: the view runs the blink clock only while any row says so.
+    var blinks = false
 
     func removeAll() {
+        blinks = false
         backgrounds.removeAll(keepingCapacity: true)
         glyphs.removeAll(keepingCapacity: true)
         decorations.removeAll(keepingCapacity: true)

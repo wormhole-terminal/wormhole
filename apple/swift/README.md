@@ -37,7 +37,7 @@ Screenshots without a window or Screen Recording permission (a texture readback 
 | Target | What |
 |---|---|
 | `TerminalCore` | the packed frame (reader, writer), the `FrameSource` and `TerminalInteraction` protocols (the pointer, selection, links seam), `MockFrameSource` and `MockInteraction` (scenarios `text`, `flood`, `noise`, `matrix`, `unicode`, `cursor`, `mixed`), the xterm key encoder, the palette. Foundation only. |
-| `TerminalMetal` | the view and the renderer: `FontSet` and `GlyphRaster` (CoreText), `WordCache` (shaping once per word), `GlyphAtlas` (R8 coverage and BGRA colour), `BoxDrawing` (exact box, block and braille cells), `RowBuilder` (cells to instances), `TerminalScene` (rows kept between frames), `MetalRenderer` (three layers in one pass, three frames in flight), `MetalTerminalView` (display link), and the view's input in extensions: `Pointer/` (mouse, wheel, selection, links, Command shortcuts, context menu), `Keyboard/` (key table, input method with marked text, paste and drop), `Scroller/` (a real `NSScroller`), `CursorBlink`, `TerminalBell`, `TerminalFocus`. |
+| `TerminalMetal` | the view and the renderer: `FontSet` and `GlyphRaster` (CoreText), `WordCache` (shaping once per word), `GlyphAtlas` (R8 coverage and BGRA colour), `BoxDrawing` (exact box, block and braille cells), `RowBuilder` (cells to instances), `TerminalScene` (rows kept between frames), `MetalRenderer` (three layers in one pass, three frames in flight), `MetalTerminalView` (display link), and the view's input in extensions: `Pointer/` (mouse, wheel, selection, links, Command shortcuts, context menu), `Keyboard/` (key table, input method with marked text, paste and drop), `Scroller/` (a real `NSScroller`), `CursorBlink` and `TextBlink`, `TerminalBell`, `TerminalFocus`. A font change swaps the scene's `TextContext` (faces, atlas, word cache, row builder; `TextContexts` keeps the last four): `TerminalFontSettings` from Settings, `MetalTerminalView+Zoom` for ⌘+ ⌘- ⌘0 (`TextZoomEase` in `TerminalCore`); `RowLayout` and `Stretch` draw double-width and double-height rows; `RowMarks` paints the selection, find's matches and the hovered link. |
 | `UniFFISource` | `UniFFIFrameSource` over the generated bindings; present only when the FFI is linked. |
 | `Wormhole` | the executable: isolation check, options, window, control folder, `--render-png`. |
 
@@ -81,9 +81,9 @@ sized to fit), `WORMHOLE_BACKGROUND=1` (accessory app, window behind others, not
 ## What is missing against the GPUI renderer
 
 - Right-to-left text, cell pinning for combining marks, zero-width characters and grapheme clusters (the frame
-  does not carry them yet, contract v1), ligature features (off), font fallback beyond what CoreText picks.
-- Double-width and double-height rows are drawn as normal rows. Rounded box corners are square; dashes are plain.
-- Images (kitty, Sixel, iTerm2), the minimap, command-block marks, find highlights, the blurred scrollback
+  does not carry them yet, contract v1), font fallback beyond the family's `fallbacks` list and what CoreText picks.
+- Rounded box corners are square; dashes are plain. A curly underline cut by a double-height row's edge is cropped, not redrawn.
+- Images (kitty, Sixel, iTerm2), the minimap, command-block marks, the blurred scrollback
   under the title, transparency and vibrancy.
 - Input: a program's own selection that Command-V should replace (needs the OSC 52 clipboard event), command
   blocks and prompt jumps, find; the theme's selection colours reach the renderer only once the host builds

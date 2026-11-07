@@ -22,15 +22,18 @@ struct SceneCounters {
 }
 
 final class TerminalScene {
-    let fonts: FontSet
-    let atlas: GlyphAtlas
-    let words: WordCache
-    private let builder: RowBuilder
+    /// What the rows are built with: swapped as a whole when the font changes (`setText`).
+    private(set) var text: TextContext
+    var fonts: FontSet { text.fonts }
+    var atlas: GlyphAtlas { text.atlas }
+    var words: WordCache { text.words }
 
     private(set) var columns = 0
     private(set) var rows = 0
     private var grid = UnsafeMutablePointer<PackedCell>.allocate(capacity: 0)
     private(set) var geometry: [RowGeometry] = []
+    /// How each row is drawn, from the last frame that named it.
+    private(set) var sizes: [LineSize] = []
     private var dirty: [Bool] = []
     private(set) var counters = SceneCounters()
     /// Bumped whenever the instances changed, so the renderer knows whether a draw would show anything new.
@@ -44,13 +47,12 @@ final class TerminalScene {
     private(set) var marked: MarkedText?
     /// The selection and the hovered link, per row; setting one rebuilds only the rows it changed on.
     private var marks: [RowMarks] = []
-    private var keepsTextInSelection = true
+    /// What marks are painted with: the selection's and find's colours.
+    private var palette: TerminalPalette
 
-    init(fonts: FontSet, device: MTLDevice) {
-        self.fonts = fonts
-        atlas = GlyphAtlas(device: device)
-        words = WordCache(fonts: fonts, atlas: atlas)
-        builder = RowBuilder(fonts: fonts, atlas: atlas, words: words)
+    init(text: TextContext, palette: TerminalPalette) {
+        self.text = text
+        self.palette = palette
     }
 
     deinit { grid.deallocate() }
@@ -66,8 +68,9 @@ final class TerminalScene {
             let header = try FrameReader.header(bytes)
             if header.cols != columns || header.rows != rows { resize(columns: header.cols, rows: header.rows) }
             self.header = header
-            try FrameReader.forEachRow(bytes, header: header) { row, _, cells in
+            try FrameReader.forEachRow(bytes, header: header) { row, size, cells in
                 (grid + row * columns).update(from: cells.baseAddress!, count: columns)
+                sizes[row] = size
                 dirty[row] = true
                 counters.cellsRead += columns
             }
@@ -83,6 +86,7 @@ final class TerminalScene {
         self.columns = columns
         self.rows = rows
         geometry = (0..<rows).map { _ in RowGeometry() }
+        sizes = Array(repeating: .single, count: rows)
         marks = Array(repeating: .none, count: rows)
         dirty = Array(repeating: true, count: rows)
         cursor = nil
@@ -119,12 +123,37 @@ final class TerminalScene {
     /// The columns of the link under the pointer.
     func setLink(_ spans: [RowSpan]) { update(\.link, spans) }
 
-    /// With no selection text colour in the theme the selection keeps the text's own; a change rebuilds
-    /// the selected rows.
-    func setKeepsTextInSelection(_ value: Bool) {
-        guard value != keepsTextInSelection else { return }
-        keepsTextInSelection = value
-        for row in marks.indices where marks[row].selected != nil { dirty[row] = true }
+    /// The colours marks are painted with: a change rebuilds the rows that carry a mark (find's tint is baked into
+    /// the row; the selection's colours are slots, but whether the text keeps its own colour is not).
+    func setPalette(_ value: TerminalPalette) {
+        guard value != palette else { return }
+        palette = value
+        for row in marks.indices where marks[row].isMarked { dirty[row] = true }
+    }
+
+    /// Find's matches on each viewport row.
+    func setFound(_ spans: [FindSpan]) {
+        var next = [Int: [FoundColumns]]()
+        for span in spans where span.row < rows && span.first <= span.last {
+            next[span.row, default: []].append(FoundColumns(first: span.first, last: span.last, isCurrent: span.isCurrent))
+        }
+        for row in 0..<rows {
+            let columns = next[row]?.sorted { $0.first < $1.first } ?? []
+            if marks[row].found != columns {
+                marks[row].found = columns
+                dirty[row] = true
+            }
+        }
+    }
+
+    /// Start building with another font set: every row is built again from the cells already held, so the screen
+    /// never shows a gap between the old text and the new. The atlas of the new context is its own.
+    func setText(_ context: TextContext) {
+        guard context !== text else { return }
+        text = context
+        markAllDirty()
+        rebuildDirty()
+        touch()
     }
 
     private func update(_ field: WritableKeyPath<RowMarks, ClosedRange<Int>?>, _ spans: [RowSpan]) {
@@ -182,14 +211,15 @@ final class TerminalScene {
         let composing = marked != nil && cursor?.row == row && marked?.text.isEmpty == false
         // The common row goes to the builder as it is; a row with a selection, a hovered link or composed text
         // is copied and marked first, so the hot loop knows none of it.
+        let builder = text.builder, size = sizes[row]
         guard composing || marks[row].isMarked else {
-            builder.build(row: row, cells: UnsafeBufferPointer(start: start, count: columns), into: geometry[row], cursor: draw)
+            builder.build(row: row, size: size, cells: UnsafeBufferPointer(start: start, count: columns), into: geometry[row], cursor: draw)
             return
         }
         var cells = Array(UnsafeBufferPointer(start: start, count: columns))
-        marks[row].apply(to: &cells, keepsTextInSelection: keepsTextInSelection)
+        marks[row].apply(to: &cells, palette: palette)
         guard composing, let marked, let cursor else {
-            cells.withUnsafeBufferPointer { builder.build(row: row, cells: $0, into: geometry[row], cursor: draw) }
+            cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, into: geometry[row], cursor: draw) }
             return
         }
         // Composed text replaces the cells from the cursor on, underlined, and the caret moves to its end.
@@ -214,10 +244,13 @@ final class TerminalScene {
         }
         draw?.column = min(caretColumn, columns - 1)
         draw?.shape = .beam
-        cells.withUnsafeBufferPointer { builder.build(row: row, cells: $0, into: geometry[row], cursor: draw) }
+        cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, into: geometry[row], cursor: draw) }
     }
 
     // MARK: handing instances to the GPU
+
+    /// Some row holds blinking text (SGR 5, 6): the view's blink clock runs only then.
+    var hasBlinkingText: Bool { geometry.contains { $0.blinks } }
 
     var instanceCounts: (backgrounds: Int, decorations: Int, glyphs: Int) {
         var counts = (backgrounds: 0, decorations: 0, glyphs: 0)

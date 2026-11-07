@@ -29,7 +29,7 @@ final class GlyphAtlas {
     let maskTexture: MTLTexture
     let colorTexture: MTLTexture
     private(set) var entries: ContiguousArray<AtlasEntry> = []
-    private var index: [UInt32: Int32] = [:]
+    private var index: [UInt64: Int32] = [:]
     private var mask = ShelfPacker(size: GlyphAtlas.maskSize)
     private var color = ShelfPacker(size: GlyphAtlas.colorSize)
     /// How many times the atlas filled up and started again.
@@ -51,13 +51,13 @@ final class GlyphAtlas {
 
     /// The entry for `key`, or `nil` if it was never added.
     @inline(__always)
-    func lookup(_ key: UInt32) -> Int32? { index[key] }
+    func lookup(_ key: UInt64) -> Int32? { index[key] }
 
     @inline(__always)
     func entry(_ id: Int32) -> AtlasEntry { entries[Int(id)] }
 
     /// Store a rasterised glyph. `nil` means the texture is full: call `reset()` and add again.
-    func add(_ raster: Raster, key: UInt32) -> Int32? {
+    func add(_ raster: Raster, key: UInt64) -> Int32? {
         var entry = AtlasEntry(
             x: 0, y: 0, width: UInt16(raster.width), height: UInt16(raster.height), left: Int16(clamping: raster.left),
             top: Int16(clamping: raster.top), isColor: raster.isColor)

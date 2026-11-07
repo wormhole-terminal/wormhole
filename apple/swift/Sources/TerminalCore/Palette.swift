@@ -5,7 +5,7 @@
 import Foundation
 
 public struct TerminalPalette: Sendable, Equatable {
-    public static let slotCount = 261
+    public static let slotCount = 263
 
     /// RGB, 0...255, in slot order.
     public private(set) var slots: [SIMD3<UInt8>]
@@ -17,12 +17,32 @@ public struct TerminalPalette: Sendable, Equatable {
     /// Text on selected cells; when the theme sets none (`keepsTextInSelection`) the cell's own colour stays.
     public var selectionForeground: SIMD3<UInt8> { slots[260] }
     public let keepsTextInSelection: Bool
+    /// The current find match's fill and its text (slots the shader resolves), and the tint every other match
+    /// lays over its cell's background (blended on the CPU: it is translucent).
+    public var findCurrent: SIMD3<UInt8> { slots[261] }
+    public var findCurrentText: SIMD3<UInt8> { slots[262] }
+    public let findMatch: SIMD3<UInt8>
+    public let findMatchAlpha: Float
+
+    /// The colours of find's matches (`Palette::find_match`, `find_current`, `find_current_text`; the app takes them
+    /// from the `find.match*` design tokens).
+    public struct FindColors: Sendable, Equatable {
+        public var match: SIMD3<UInt8>
+        public var matchAlpha: Float
+        public var current: SIMD3<UInt8>
+        public var currentText: SIMD3<UInt8>
+
+        public init(match: SIMD3<UInt8>, matchAlpha: Float, current: SIMD3<UInt8>, currentText: SIMD3<UInt8>) {
+            (self.match, self.matchAlpha, self.current, self.currentText) = (match, matchAlpha, current, currentText)
+        }
+    }
 
     /// `selection` and `selectionText` are the theme's selection colours; without a background one the
-    /// foreground over the background at a third is used, readable under any text.
+    /// foreground over the background at a third is used, readable under any text. Without `find`, a bare theme's
+    /// rule: yellow (ANSI 3) at 32 % for the matches, solid for the current one, in black (ANSI 0).
     public init(
         ansi: [SIMD3<UInt8>], foreground: SIMD3<UInt8>, background: SIMD3<UInt8>, cursor: SIMD3<UInt8>,
-        selection: SIMD3<UInt8>? = nil, selectionText: SIMD3<UInt8>? = nil
+        selection: SIMD3<UInt8>? = nil, selectionText: SIMD3<UInt8>? = nil, find: FindColors? = nil
     ) {
         precondition(ansi.count == 16)
         var table = ansi
@@ -42,6 +62,11 @@ public struct TerminalPalette: Sendable, Equatable {
         table.append(cursor)
         table.append(selection ?? Self.mix(foreground, over: background, amount: 0.33))
         table.append(selectionText ?? foreground)
+        let find = find ?? FindColors(match: ansi[3], matchAlpha: 0.32, current: ansi[3], currentText: ansi[0])
+        table.append(find.current)
+        table.append(find.currentText)
+        findMatch = find.match
+        findMatchAlpha = find.matchAlpha
         keepsTextInSelection = selectionText == nil
         slots = table
     }
@@ -61,6 +86,13 @@ public struct TerminalPalette: Sendable, Equatable {
             SIMD3(0x8f, 0xa1, 0xb3), SIMD3(0xc9, 0x9e, 0xd8), SIMD3(0x96, 0xcb, 0xfe), SIMD3(0xff, 0xff, 0xff),
         ],
         foreground: SIMD3(0xc5, 0xc8, 0xc6), background: SIMD3(0x1d, 0x1f, 0x21), cursor: SIMD3(0xf0, 0xc6, 0x74))
+
+    /// A non-current match's background over a cell's own: the tint blended, as truecolour.
+    public func tinted(_ background: UInt32) -> UInt32 {
+        let under = SIMD3<Float>(resolve(background)), over = SIMD3<Float>(findMatch)
+        let mixed = under + (over - under) * findMatchAlpha
+        return PackedColor.rgb(UInt8(mixed.x.rounded()), UInt8(mixed.y.rounded()), UInt8(mixed.z.rounded()))
+    }
 
     /// The table as the shader reads it: `float4` per slot, premultiplied alpha 1, sRGB values 0...1.
     public func floats() -> [SIMD4<Float>] {

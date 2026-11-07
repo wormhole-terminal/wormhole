@@ -13,6 +13,15 @@ import TerminalCore
         #expect(grid.hit(CGPoint(x: 41, y: 20))?.x == 41 && grid.hit(CGPoint(x: 41, y: 20))?.y == 20, "pixels from the corner")
     }
 
+    @Test func aSizedRowsCellsAreTwiceAsWideAndItShowsHalfItsColumns() {
+        var sized = grid
+        sized.rowSizes = [.single, .doubleWidth, .doubleHeightTop, .doubleHeightBottom]
+        #expect(sized.hit(CGPoint(x: 41, y: 20)).map { ($0.row, $0.column, $0.side) }! == (1, 2, .right), "41 pt is cell 5 on a normal row, 2 here")
+        #expect(sized.hit(CGPoint(x: 41, y: 2)).map { ($0.row, $0.column) }! == (0, 5), "the first row is a normal one")
+        #expect(sized.hit(CGPoint(x: 41, y: 40)).map { ($0.row, $0.column) }! == (2, 2))
+        #expect(sized.hit(CGPoint(x: 9000, y: 20)).map(\.column)! == 39, "clamped to the last column it shows")
+    }
+
     @Test func aPointOutsideIsClampedToTheNearestCell() {
         #expect(grid.hit(CGPoint(x: -5, y: -5)).map { ($0.row, $0.column) }! == (0, 0))
         #expect(grid.hit(CGPoint(x: 9000, y: 9000)).map { ($0.row, $0.column) }! == (23, 79))
@@ -138,10 +147,15 @@ import TerminalCore
 
 @Suite struct RowMarksTests {
     private let red = PackedColor.named(1)
+    /// A palette whose theme sets no selection text colour (`keepsTextInSelection`), and one that does.
+    private let keeping = TerminalPalette.spike
+    private let themed = TerminalPalette(
+        ansi: TerminalPalette.spike.slots[0..<16].map { $0 }, foreground: SIMD3(200, 200, 200), background: SIMD3(0, 0, 0),
+        cursor: SIMD3(255, 255, 255), selection: SIMD3(40, 40, 90), selectionText: SIMD3(255, 255, 255))
 
     @Test func aSelectedCellIsTheSelectionOverTheCellAsItWouldHaveBeenDrawn() {
         var cells = [PackedCell(scalar: 0x61, fg: PackedColor.named(1), bg: PackedColor.named(2), flags: .inverse), PackedCell(scalar: 0x62)]
-        RowMarks(selected: 0...0).apply(to: &cells, keepsTextInSelection: true)
+        RowMarks(selected: 0...0).apply(to: &cells, palette: keeping)
         #expect(cells[0].bg == PackedColor.selectionBackground)
         #expect(cells[0].fg == PackedColor.named(2), "inverse resolved: the text is the cell's background")
         #expect(!cells[0].cellFlags.contains(.inverse))
@@ -150,14 +164,14 @@ import TerminalCore
 
     @Test func aThemeWithSelectionTextColourPaintsTheTextInItButHiddenTextStaysHidden() {
         var cells = [PackedCell(scalar: 0x61, fg: red), PackedCell(scalar: 0x62, fg: red, flags: .hidden)]
-        RowMarks(selected: 0...1).apply(to: &cells, keepsTextInSelection: false)
+        RowMarks(selected: 0...1).apply(to: &cells, palette: themed)
         #expect(cells[0].fg == PackedColor.selectionForeground)
         #expect(cells[1].fg == PackedColor.background, "hidden text is the background's colour, not the theme's text colour")
     }
 
     @Test func aHoveredLinkIsUnderlinedUnlessTheProgramAlreadyUnderlinedIt() {
         var cells = [PackedCell(scalar: 0x61), PackedCell(scalar: 0x62, flags: .dottedUnderline), PackedCell(scalar: 0x63)]
-        RowMarks(link: 0...1).apply(to: &cells, keepsTextInSelection: true)
+        RowMarks(link: 0...1).apply(to: &cells, palette: keeping)
         #expect(cells[0].cellFlags.contains(.underline) && !cells[2].cellFlags.contains(.underline))
         #expect(cells[1].cellFlags == .dottedUnderline, "the program's own style stays")
     }

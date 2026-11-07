@@ -31,6 +31,8 @@ public enum MockScenario: String, Sendable, CaseIterable {
     case unicode
     /// The cursor sweeping the screen writing as it goes (`ttystorm`'s cursor storm).
     case cursor
+    /// Double-width and double-height rows, ligatures, blinking text: what the gallery leaves out, static.
+    case styles
     /// The gallery on top and scrolling text in a region below it: partial damage, the way a TUI does it.
     case mixed
 
@@ -45,6 +47,9 @@ public enum MockScenario: String, Sendable, CaseIterable {
                 screen.cursorRow = min(screen.rows - 1, Self.galleryRows)
                 screen.cursorColumn = 0
             }
+        case .styles:
+            MockStyles.draw(into: &screen)
+            screen.cursorVisible = false
         case .text:
             screen.cursorRow = screen.rows - 1
         case .cursor:
@@ -62,6 +67,7 @@ public enum MockScenario: String, Sendable, CaseIterable {
         case .noise: MockFlood.step(&screen, rng: &rng, tick: tick, halfBlocks: false)
         case .matrix: MockMatrix.step(&screen, rng: &rng, tick: tick)
         case .unicode: MockGallery.spinner(&screen, tick: tick)
+        case .styles: break
         case .cursor: MockCursorStorm.step(&screen, rng: &rng, tick: tick)
         case .mixed:
             MockGallery.spinner(&screen, tick: tick)
