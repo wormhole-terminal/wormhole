@@ -356,6 +356,43 @@ each applied note is (so an editor and its fold survive). Also `notesSessionClos
 Gemini; a transcript is read only from under `home`), `recordReport(json)` (a `Usage` as the app's hook socket carries
 it), `drain()`; `wake()` at most once until the drain. Where the reports arrive from (the status line command, the
 hooks) is the host's socket: it hands the JSON to these.
+## Auxiliary windows: update, session hosts, project trust, agent access, first run, licenses
+
+Additive (no contract version change). Code: `ffi/src/aux_backends/`; Swift side: the `AuxBridge` module
+(`swift/Sources/AuxBridge`, linked builds only) implements `AuxModel`'s protocols over these objects.
+
+**Shape of every object.** A constructor that touches the data folder takes `data_dir: Option<String>`: `None` is
+core's own, which must be `Wormhole-swift*` (`WORMHOLE_DATA_DIR`, as for `Terminal`); a given folder must be named
+`Wormhole-swift*` too (tests and previews pass their own). Failures are `AuxError` (`NotIsolated`, `Failed{reason}`).
+Each object takes an `AuxListener` (`wake()`): called on a Rust thread, no lock held, **at most once until the object's
+state is read again** (`state()` / `report()` / `review()` / `next_question()` re-arm it); it must only note the wake and
+hop to the main queue. Blocking calls (`HostsDesk.report`, `FirstRun.scan_agents`, `import_scan`) run off the main thread.
+
+| Object | What it is | Calls |
+|---|---|---|
+| `UpdateEngine` | core `update`: feed (`<base>/<channel>/latest.json`, GitHub fallback), version compare, download with size + sha256 + minisign check against the key given, bundle swap beside the running one, relaunch helper | `new(UpdateSetup, listener)`, `state() -> UpdateStateRecord`, `check(manual)`, `install(version)`, `skip(version)`, `set_channel(Stable\|Preview)`, `next_check_in_seconds()`, `due_at_launch()`, `restart()` |
+| `HostsDesk` | core `ipc::hosts` survey + report, said in the catalog's words (cards come with their facts as text) | `new(data_dir, listener)`, `set_attachments`, `set_persistent_terminals`, `follow()/unfollow()` (folder watch -> wake), `report()`, `end(id)`, `forget(id)` |
+| `TrustDesk` | core `project` trust: one project's lines, standing against the profile's `trusted-projects.json`, approval | `new(root, profile, data_dir, listener)`, `review()`, `approve_reviewed()`, `revoke()`, `follow()/unfollow()` |
+| `AccessDesk` | core `ipc::access` queue, grants and scopes for one profile | `new(profile, data_dir, listener)`, `next_question()`, `answer(id, AccessAnswer)`, `withdraw(id)`, `held()`, `revoke(id)`, `waiting()`; Rust-side `ask(resolved, need, about, waiter)` for the control socket's gate |
+| `FirstRun` | core `onboarding` + `agents::integrations` + settings | `new(agent_home, data_dir)`, `places(home, recents)`, `scan_agents()`, `install_hooks(id)`, `write_look(LookRecord)`, `should_show(saved_windows)`, `finish()` |
+| free functions | core `import`, `update::licenses` | `import_scan(home)`, `import_apply(source, home, ticked, data_dir)`, `licenses() -> LicensesRecord` |
+
+**Threading.** `UpdateEngine.check` and `install` return at once and run on threads of their own (`wormhole-ffi-update-*`);
+progress wakes at most every 100 ms; a change of channel bumps a generation so a check that began before it does not
+speak, and calls an on-its-way build of the channel left off (`update::on_channel_switch`). `HostsDesk.report` gives each
+host 400 ms to answer, all at once. `AccessDesk.answer` settles under one mutex and tells every request that waited
+(`Decision::Retry` or a refusal that says not to retry).
+
+**Rules that are not obvious.**
+- Nothing here quits the app: `UpdateEngine.restart` starts core's relaunch helper (it waits for this process to exit) and
+  the caller terminates right after. The Swift side never calls it in tests.
+- `TrustDesk.approve_reviewed` trusts exactly the request the last `review()` returned (a file that changed since reads
+  `Changed` again). It asks nothing: Touch ID is the platform's (`Authenticating`), asked first by the Swift side.
+- The `Preview` channel is core's `UpdateChannel::Unstable` (its rename is pending; the feed path is still `unstable/`).
+- Link counters of a host (`LinkStats`) are the GPUI app's own terminals': a card of an attached host says "no connection
+  counters" until the Swift workspace holds hosted terminals.
+- Not here: the control socket's gate that raises questions (only its Rust-side `ask`), the access modes and "Always" list in
+  Settings, the anonymous update count (off), watching the running bundle being replaced from outside.
 
 ## Frame
 

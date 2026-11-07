@@ -10,6 +10,7 @@
 // this crate (`apple/scripts/rules.py` checks that).
 #![allow(unsafe_code, reason = "UniFFI's generated scaffolding")]
 
+mod aux_backends;
 mod error;
 mod events;
 mod files_panel;
@@ -28,6 +29,7 @@ mod workspace;
 mod workspace_feed;
 mod workspace_types;
 
+pub use aux_backends::*;
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
 pub use git::{

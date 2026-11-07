@@ -17,6 +17,7 @@ wormhole-term = { path = "../../crates/wormhole-term" }
 wormhole-text = { path = "../../crates/wormhole-text" }
 anyhow = "1"
 tracing = "0.1"
+semver = "1"
 uniffi = "0.32"
 thiserror = "2"
 tracing = "0.1"
@@ -30,4 +31,10 @@ workspace = true
 
 [dev-dependencies]
 tempfile = "3"
+flate2 = "1.1"
+minisign = "0.9"
+sha2 = "0.11"
+tar = { version = "0.4", default-features = false }
+tempfile = "3"
+tiny_http = "0.12"
 wormhole-term = { path = "../../crates/wormhole-term", features = ["test-support"] }
