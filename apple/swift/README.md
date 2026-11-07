@@ -1,0 +1,83 @@
+# Wormhole Swift renderer (experiment)
+
+A small AppKit app whose terminal view is Metal, written in Swift, fed either by a synthetic source or by
+the real Rust engine over the FFI. It is a spike renderer, not the product: see "What is missing" below.
+This branch is never pushed.
+
+## Run
+
+```sh
+cd apple/swift
+swift build -c release                      # builds without the FFI: the mock source only
+export WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-run   # required; the folder must be named Wormhole-swift*
+.build/release/Wormhole --mock mixed        # a window: the gallery on top, scrolling text below
+.build/release/Wormhole --help
+```
+
+It refuses to start without its own bundle identifier (`app.getwormhole.terminal.swift`, embedded in the
+executable) and a data folder called `Wormhole-swift*`. It never reads the real app's folder.
+
+The real engine: `apple/scripts/build-ffi.sh apple/swift` links `WormholeFFI.xcframework` and the generated
+bindings into this package, and the next `swift build` adds `Sources/UniFFISource`; then
+`WORMHOLE_SHELL=/bin/zsh .build/release/Wormhole` (or `--shell <program>`) runs it on the real terminal.
+
+Screenshots without a window or Screen Recording permission (a texture readback of the same instance data):
+
+```sh
+.build/release/Wormhole --render-png out/gallery --mock unicode --grid 100x30           # out/gallery-0001.png
+.build/release/Wormhole --render-png out/matrix --mock matrix --frames 40 --png-every 40
+```
+
+## Layout
+
+| Target | What |
+|---|---|
+| `TerminalCore` | the packed frame (reader, writer), the `FrameSource` protocol, `MockFrameSource` (scenarios `text`, `flood`, `noise`, `matrix`, `unicode`, `cursor`, `mixed`), the xterm key encoder, the palette. Foundation only. |
+| `TerminalMetal` | the view and the renderer: `FontSet` and `GlyphRaster` (CoreText), `WordCache` (shaping once per word), `GlyphAtlas` (R8 coverage and BGRA colour), `BoxDrawing` (exact box, block and braille cells), `RowBuilder` (cells to instances), `TerminalScene` (rows kept between frames), `MetalRenderer` (three layers in one pass, three frames in flight), `MetalTerminalView` (display link, focus, blink), `TerminalInput` (keys, input method, paste, scroll). |
+| `UniFFISource` | `UniFFIFrameSource` over the generated bindings; present only when the FFI is linked. |
+| `Wormhole` | the executable: isolation check, options, window, control folder, `--render-png`. |
+
+## How a frame goes
+
+`wake()` (any thread, once per drain) sets an atomic and hops to the main queue, which un-pauses the view's
+display link (`NSView.displayLink`). Each tick: `drainEvents()`, then `frame()`, parse, rebuild only the rows
+the frame names (plus the cursor's row), copy every row's instances into one of three GPU buffers, encode,
+commit. A tick that finds nothing pauses the link. No timer runs while idle; a blinking cursor in the key
+window is one one-shot timer per flip.
+
+## Control folder and measuring
+
+`WORMHOLE_DEVCTL=<dir>` turns on a folder the app watches with a dispatch source (never a timer): write
+`cmd.tmp`, rename it to `cmd`; results go to `out.txt`. Commands: `frames N`, `shot <png>`, `state`,
+`screen`, `type <text>`, `quit`. `frames N` follows `apple/MEASURING.md`: forced draws on the main thread, 2 ms
+apart, the first 3 dropped, one line appended to `frames.txt`. Its fields (all milliseconds):
+
+- `avg` `max` `first`: **build**, from just before `frame()` to the GPU buffers being complete (fetch, parse
+  and row rebuild, buffer assembly). The part comparable to GPUI's `window.draw`.
+- `encode_avg`: command buffer creation, encoding, `commit`. `total_*`: build plus encode.
+- `cpu_avg`: the thread's CPU time over the whole draw. `gpu_avg`: `gpuEndTime - gpuStartTime`.
+- `wait_avg`: blocked on a free frame or a drawable (vsync-paced): not CPU work, in neither build nor encode.
+- Then `fetch_avg`, `apply_avg`, `assemble_avg`, rows rebuilt, words shaped, glyphs rasterised, grid.
+
+`scripts/mock-measure.sh` runs the scenarios of the mock this way. Its numbers are the renderer's alone, with
+no PTY, no engine and no FFI: they must never be set beside the GPUI app's.
+
+Environment: `WORMHOLE_SHELL` (a program for the real source), `WORMHOLE_SWIFT_GRID=200x69` (fixed grid, window
+sized to fit), `WORMHOLE_BACKGROUND=1` (accessory app, window behind others, nothing takes focus),
+`WORMHOLE_FONT_DIR` (the four JetBrains Mono files; found by walking up from the repository otherwise).
+
+## What is missing against the GPUI renderer
+
+- Right-to-left text, cell pinning for combining marks, zero-width characters and grapheme clusters (the frame
+  does not carry them yet, contract v1), ligature features (off), font fallback beyond what CoreText picks.
+- Double-width and double-height rows are drawn as normal rows. Rounded box corners are square; dashes are plain.
+- Images (kitty, Sixel, iTerm2), the minimap, command-block marks, find highlights, links, selection and copy,
+  mouse reporting, the blurred scrollback under the title, the native scroller, transparency and vibrancy.
+- Subpixel glyph variants (cells are whole pixels, so none are needed), the system's font smoothing is only what a
+  grey CoreGraphics context gives, colours set at run time (OSC 4, 10, 11, 12), underline colours (SGR 58).
+- A theme (the palette is a fixed dark one), settings, more than one terminal, a window per display scale
+  (the scale is fixed at start), live-resize synchronisation (the drawable is resized on layout).
+- VoiceOver: the terminal has no accessibility node. The input method is minimal: marked text is drawn at
+  the cursor and the candidate window opens at its cell; attributed ranges and reconversion are not done.
+- The row cache does not find scrolled rows again by content (a scroll rebuilds every row, from the word
+  cache); a word cache hit costs a hash and a compare, not shaping.
