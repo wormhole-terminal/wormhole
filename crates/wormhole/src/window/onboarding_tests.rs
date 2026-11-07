@@ -478,9 +478,11 @@ fn the_notes_settings_link_is_an_action_the_app_answers_by_opening_settings(cx: 
 /// altogether, and a card of fixed height (not one that measures its text for its height) took most of
 /// the rest. The budget is that plus about a hundredth, so a cost per card or per frame that grows shows
 /// at once. The flat stepper (two filled halves with the Kit's buttons in them, in place of one outlined
-/// box) made the look step 13,758 and 9.7 MB.
+/// box) made the look step 13,758 and 9.7 MB. The choice cards became keyboard stops with a focus ring and
+/// fade their selection tint in (an element and a keyed transition each: 54 allocations on this page, the
+/// rest being the focus handling), which made it 13,969 and 9.95 MB; the welcome page has no such card.
 const WELCOME_FRAME_ALLOCATIONS: u64 = 3_455;
-const LOOK_FRAME_ALLOCATIONS: u64 = 13_900;
+const LOOK_FRAME_ALLOCATIONS: u64 = 14_110;
 
 #[gpui_kit::test]
 fn a_frame_under_the_intro_window_stays_within_its_allocation_budget(cx: &mut TestAppContext) {
