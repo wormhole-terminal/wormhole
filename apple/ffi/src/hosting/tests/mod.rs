@@ -105,7 +105,7 @@ fn gone_hosts_replay_and_unnamed_hosts_are_orphans() {
     fixture.forget_rows();
     let desk = fixture.desk();
     let plan = desk.plan_at_launch().expect("plans");
-    assert_eq!(plan.orphans.iter().map(|o| o.host_id.clone()).collect::<Vec<_>>(), [kept_id.clone()]);
+    assert_eq!(plan.orphans.iter().map(|o| o.host_id.as_str()).collect::<Vec<_>>(), [kept_id.as_str()]);
     let adoptable = desk.adoptable_orphans();
     assert_eq!(adoptable.len(), 1);
     assert!(desk.adoptable_orphans().is_empty(), "asked once");
