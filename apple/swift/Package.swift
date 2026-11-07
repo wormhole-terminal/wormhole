@@ -30,12 +30,17 @@ var targets: [Target] = [
     // Title rows, status bar, right panel and the window that holds them with the terminal view.
     .target(
         name: "WindowUI",
-        dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "TerminalMetal"]),
+        dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "PaletteUI", "TerminalMetal"]),
     // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
     .target(name: "PanelModel"),
     // The right panel's tab contents: Notes, Changes (with the diff) and History.
     .target(name: "PanelUI", dependencies: ["PanelModel", "DesignSystem"]),
     .testTarget(name: "PanelTests", dependencies: ["PanelModel", "PanelUI", "DesignSystem"]),
+    // The command palette's commands, fuzzy search and the shortcut sheet's rows. Foundation only.
+    .target(name: "PaletteModel", dependencies: ["WorkspaceModel"]),
+    // The palette and shortcut sheet overlays.
+    .target(name: "PaletteUI", dependencies: ["PaletteModel", "WorkspaceModel", "DesignSystem"]),
+    .testTarget(name: "PaletteTests", dependencies: ["PaletteModel", "PaletteUI", "WorkspaceModel", "DesignSystem"]),
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),
     .testTarget(name: "UITests", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI"]),
 ]
