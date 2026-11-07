@@ -249,8 +249,9 @@ result. What does not feed yet: a coding agent's status (its hooks), git (`setGi
 
 `apple/ffi/src/interaction/`. The app's behaviour for what a person does besides typing a key, written once
 over `wormhole-term`'s encoders; the Swift view only turns `NSEvent`s into these calls. **Positions are
-viewport cells** (0-based, row 0 at the top of what the last frame showed, columns from the left); Rust
-turns them into grid lines with the last frame's display offset, so take a frame before relying on them.
+viewport cells** (0-based, row 0 at the top of what the last frame showed, columns from the left). Rust
+turns them into grid lines: a selection with the engine's display offset now (a drag that scrolled the
+history follows it before the next frame is taken), a link with the last frame's (what the person points at).
 
 ```swift
 func reportPointer(event: PointerEvent) -> Bool     // the program took it (mouse modes 9, 1000...1006, 1016, locator)

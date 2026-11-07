@@ -86,9 +86,10 @@ impl Terminal {
 }
 
 impl Terminal {
-    /// The grid line a viewport cell is, with the display offset of the last frame.
+    /// The grid line a viewport cell is, with the engine's display offset now: a drag that scrolled
+    /// the history follows it before the next frame is taken.
     pub(super) fn grid_point(&self, row: u32, col: u32) -> Point {
-        let offset = self.with_snapshot(|snapshot| snapshot.display_offset) as i32;
+        let offset = self.with_pty(|pty| pty.display_offset()).unwrap_or(0) as i32;
         Point::new(Line(row as i32 - offset), Column(col as usize))
     }
 }
