@@ -14,6 +14,10 @@ extension WorkspaceBackend {
     public func setWindowState(active: Bool, seen: Bool) {}
     public func hosting(of id: TerminalID) -> HostingState? { nil }
     public func waited(since: UInt64) -> Waited? { nil }
+    public func hostProblem(of id: TerminalID) -> HostProblem? { nil }
+    public func reconnect(_ id: TerminalID) {}
+    public func endHost(of id: TerminalID, hard: Bool, done: @escaping @MainActor (String?) -> Void) { done(nil) }
+    public func startAgain(_ id: TerminalID) {}
     public func finishQuit(endHosts: Bool) {}
     /// The sample saves nothing and runs no programs to hand over.
     public func restore() {}

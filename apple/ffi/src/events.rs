@@ -142,13 +142,12 @@ pub(crate) fn spawn_receiver(events: PtyEvents, queue: Arc<EventQueue>) -> std::
             if let Some(feed) = queue.feed.get() {
                 feed.on_event(&event);
             }
-            if let Some(event) = translate(event, &queue) {
             if let (PtyEvent::CheckpointWritten(generation), Some(then)) =
                 (&event, queue.checkpoint_written.get())
             {
                 then(*generation);
             }
-            if let Some(event) = translate(event) {
+            if let Some(event) = translate(event, &queue) {
                 queue.push(event);
             }
         }

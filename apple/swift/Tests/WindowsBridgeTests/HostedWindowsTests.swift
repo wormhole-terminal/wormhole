@@ -44,7 +44,15 @@ final class HostedWindowsTests: XCTestCase {
         return (WorkspaceStore(backend: backend), backend)
     }
 
-    func testEachWindowGetsItsOwnHostedTerminalsBackUnderTheirIds() throws {
+    /// The hosts start and attach off the main actor: wait until none of `ids` is still connecting.
+    private func connected(_ store: WorkspaceStore, _ ids: [Int]) async throws {
+        let deadline = Date().addingTimeInterval(15)
+        while ids.contains(where: { store.hosting(of: $0) == .connecting }), Date() < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    func testEachWindowGetsItsOwnHostedTerminalsBackUnderTheirIds() async throws {
         var hostOf: [Int: String] = [:]
         do {
             let windows = try RustWindowsBackend()
@@ -55,6 +63,8 @@ final class HostedWindowsTests: XCTestCase {
             b.send(.newTerminal)
             XCTAssertEqual(a.state.live, [1])
             XCTAssertEqual(b.state.live, [2, 3])
+            try await connected(a, [1])
+            try await connected(b, [2, 3])
             for (store, id) in [(a, 1), (b, 2), (b, 3)] {
                 guard case .persistent(let host)? = store.hosting(of: id) else { return XCTFail("terminal \(id) is not in a host") }
                 hostOf[id] = host
@@ -73,6 +83,8 @@ final class HostedWindowsTests: XCTestCase {
         b.restore()
         XCTAssertEqual(a.state.live, [1])
         XCTAssertEqual(b.state.live, [2, 3])
+        try await connected(a, [1])
+        try await connected(b, [2, 3])
         for (store, id) in [(a, 1), (b, 2), (b, 3)] {
             XCTAssertEqual(store.hosting(of: id), .persistent(hostID: hostOf[id] ?? ""), "terminal \(id) is in its own host again")
         }

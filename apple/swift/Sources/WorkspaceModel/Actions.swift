@@ -23,6 +23,8 @@ public enum WorkspaceAction: Sendable, Equatable {
 
     /// A group holding these terminals and the rest of their splits.
     case newGroup([TerminalID])
+    /// Hosts nobody named, adopted: into the Recovered group.
+    case recoverGroup([TerminalID])
     /// A new terminal in a group of its own.
     case newTerminalInNewGroup
     case renameGroup(GroupID, String)

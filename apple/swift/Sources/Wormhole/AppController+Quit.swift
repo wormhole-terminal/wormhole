@@ -23,9 +23,11 @@ extension AppController {
         NSApp.terminate(nil)
     }
 
-    /// Quits without the question: the control folder's `quit` and the idle check run unattended.
-    func terminateUnattended() {
+    /// Quits without the question: the control folder's `quit` and the idle check run unattended. `endAll`: the hosts end
+    /// with their terminals (End All Terminals), else they run on.
+    func terminateUnattended(endAll: Bool = false) {
         confirmsQuit = false
+        endsHostsOnQuit = endAll
         NSApp.terminate(nil)
     }
 
@@ -57,6 +59,11 @@ extension AppController {
         let session = session ?? self.session(holding: id) ?? front
         guard let row = session.hub.state.sections.flatMap(\.rows).first(where: { $0.id == id }) else { return done() }
         let terminal = row.terminal
+        // A terminal whose host runs and cannot be shown: closing drops the row and with it the host's id, so ask first
+        // whether the host ends with it or is left running (`window/host_close.rs`).
+        if case .unavailable? = session.hub.store.hostProblem(of: id) {
+            return askToEndHost(of: terminal, in: session, then: done)
+        }
         guard row.runsSomething else {
             finishClosing(id, in: session)
             return done()
@@ -69,6 +76,25 @@ extension AppController {
             confirm: "Close")
         Task {
             if case .confirm = await QuestionSheet(question).ask(in: session.window) { finishClosing(id, in: session) }
+            done()
+        }
+    }
+
+    private func askToEndHost(of terminal: TerminalSummary, in session: WindowSession, then done: @escaping () -> Void) {
+        let question = Question(
+            title: CloseQuestions.sessionTitle(terminal.title),
+            detail: String(
+                localized: "hosts-close-detail",
+                defaultValue: "Its session host is still running, but this app can’t show it. Ending the host ends the program in it; leaving it running keeps it in the Session Hosts window."),
+            confirm: String(localized: "hosts-close-end", defaultValue: "End the Host"),
+            alsoButtons: [String(localized: "hosts-close-leave", defaultValue: "Leave It Running")])
+        Task {
+            switch await QuestionSheet(question).ask(in: session.window) {
+            // Closes the terminal when the host ended, and the bar says why when it did not.
+            case .confirm: session.hub.endHost(terminal.id, hard: false)
+            case .also: finishClosing(terminal.id, in: session)
+            case .cancel: break
+            }
             done()
         }
     }
@@ -112,7 +138,7 @@ extension AppController {
         if session.hub.state.live.isEmpty { session.window?.close() }
     }
 
-    private func finishClosing(_ id: TerminalID, in session: WindowSession) {
+    func finishClosing(_ id: TerminalID, in session: WindowSession) {
         session.hub.send(.close(id))
         if session.hub.state.live.isEmpty { session.window?.close() }
     }

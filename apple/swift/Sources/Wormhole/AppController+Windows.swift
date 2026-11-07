@@ -73,6 +73,10 @@ extension AppController {
     /// nothing to erase; a group asked to have a window of its own gets one, its terminals moving in running.
     func answer(_ notice: WorkspaceNotice, from session: WindowSession) {
         switch notice {
+        case .hostFallback: session.hub.notices.post(.warned(.hostFallback))
+        case .moveToApplications: session.hub.notices.post(.warned(.moveToApplications))
+        case .hostChanged(let id): session.hub.hostChanged(id)
+        case .hostEnded(let id): finishClosing(id, in: session)
         case .savedTextForgotten(let id): devctl?.append("saved-text-forgotten terminal=\(id) (nothing is saved)")
         case .groupToWindow(let group, let terminals):
             if !moveToNewWindow(terminals, from: session) {

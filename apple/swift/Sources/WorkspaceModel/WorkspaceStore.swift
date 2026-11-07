@@ -32,6 +32,13 @@ public final class WorkspaceStore {
 
     /// How long ago `since` was (`TerminalSummary.since`), in words.
     public func waited(since: UInt64) -> Waited? { backend.waited(since: since) }
+    /// What is wrong with terminal `id`'s session host, while something is (the bar over its pane).
+    public func hostProblem(of id: TerminalID) -> HostProblem? { backend.hostProblem(of: id) }
+    public func reconnect(_ id: TerminalID) { backend.reconnect(id) }
+    public func endHost(of id: TerminalID, hard: Bool, done: @escaping @MainActor (String?) -> Void) {
+        backend.endHost(of: id, hard: hard, done: done)
+    }
+    public func startAgain(_ id: TerminalID) { backend.startAgain(id) }
 
     /// The app is quitting (`WorkspaceBackend.finishQuit`).
     public func finishQuit(endHosts: Bool) { backend.finishQuit(endHosts: endHosts) }

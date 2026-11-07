@@ -19,6 +19,14 @@ final class TerminalOverlay {
     let size = SizeReadoutModel()
     var bars = PaneOverlayState()
     var exitCode: Int?
+    /// The shell ended because its session host went away with it (the exited bar says so).
+    var hostLost = false
+    /// "Wait" was pressed on the bar for a host that does not answer: it stays away until the host answers again.
+    var waiting = false
+    /// What the bar says of the session host; a program's clipboard question goes over it and gives it back.
+    private var hostBar: PaneBar?
+    /// Why ending the host from its bar failed, until something else happens.
+    var endFailure: String?
     /// The bars' buttons, over the window's own actions.
     @ObservationIgnored let actions: BarActions
 
@@ -45,26 +53,61 @@ final class TerminalOverlay {
         find.outputChanged()
     }
 
-    func exited(code: Int32?) {
+    func exited(code: Int32?, hostLost: Bool) {
         exitCode = code.map(Int.init)
+        self.hostLost = hostLost
         bars.exited = true
+    }
+
+    /// The bar for a session host's trouble, below a program's question (which stays until it is answered).
+    func showHost(_ problem: HostProblem?) {
+        if problem != .notResponding { waiting = false }
+        switch problem {
+        case .unavailable(let why)?: hostBar = .hostUnavailable(HostUnavailableKind(why), endFailure: endFailure)
+        case .notResponding? where !waiting: hostBar = .hostNotResponding(endFailure: endFailure)
+        default: hostBar = nil
+        }
+        askEnded()
+    }
+
+    /// No program's question is up (or none now): the bar is the host's trouble, if there is any.
+    func askEnded() {
+        if case .ask? = bars.bar { return }
+        bars.bar = hostBar
     }
 }
 
-/// `PaneBarActions` over closures: what needs the Rust session host (attaching again, ending it)
-/// has nothing to do yet and does nothing; restarting and closing are the window's.
+extension HostUnavailableKind {
+    init(_ why: HostProblem.Why) {
+        switch why {
+        case .refused: self = .refused
+        case .tooOld: self = .tooOld
+        case .tooNew: self = .tooNew
+        case .busy: self = .busy
+        case .timedOut: self = .timedOut
+        case .unreachable: self = .unreachable
+        case .failed: self = .failed
+        }
+    }
+}
+
+/// `PaneBarActions` over closures: the session host's buttons, restarting and closing are the window's; the clipboard
+/// answer goes to the core (`TerminalOverlay+Clipboard`).
 @MainActor
 final class BarActions: PaneBarActions {
     var onRestart: () -> Void = {}
     var onClose: () -> Void = {}
+    var onReconnect: () -> Void = {}
+    var onEndHost: (Bool) -> Void = { _ in }
+    var onWait: () -> Void = {}
 
     /// The person's choice: the core answers the program (`TerminalOverlay+Clipboard`).
     var onAnswer: (ClipboardChoice) -> Void = { _ in }
     func answerClipboard(_ choice: ClipboardChoice) { onAnswer(choice) }
-    func tryAttachAgain() {}
-    func openNewTerminalHere() {}
-    func endHost(hard: Bool) {}
-    func waitForHost() {}
+    func tryAttachAgain() { onReconnect() }
+    func openNewTerminalHere() { onRestart() }
+    func endHost(hard: Bool) { onEndHost(hard) }
+    func waitForHost() { onWait() }
     func restart() { onRestart() }
     func closeTerminal() { onClose() }
     func dismissHostNotice() {}

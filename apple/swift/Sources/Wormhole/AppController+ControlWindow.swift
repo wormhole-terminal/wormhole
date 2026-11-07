@@ -58,9 +58,24 @@ extension AppController {
         case "diff": runDiff(argument)
         case "notice": hub.notices.post(.copied(.characters(Int(argument) ?? 12)))
         case "about", "licenses", "hosts", "trust", "access", "updates", "onboarding", "quick-panel": runAux(command)
-        case "quit":
-            reply("quit")
-            terminateUnattended()
+        case "host":
+            // What the bar's buttons do, for the selected terminal: retry, new, end, end-hard.
+            guard let id = hub.state.selected else {
+                reply("error: no terminal")
+                return true
+            }
+            switch argument {
+            case "retry": hub.store.reconnect(id)
+            case "new": hub.restart(id)
+            case "end": hub.endHost(id, hard: false)
+            case "end-hard": hub.endHost(id, hard: true)
+            default:
+                reply("error: host retry|new|end|end-hard")
+                return true
+            }
+        case "quit", "quit-end-all":
+            reply(command)
+            terminateUnattended(endAll: command == "quit-end-all")
             return true
         default: return false
         }

@@ -11,35 +11,48 @@ final class HostedSessions {
     enum Entry: Equatable {
         /// Its host runs: attach to it.
         case attach(hostID: String, folder: String?)
-        /// Its host is gone: a new terminal in the folder it was in.
-        case again(folder: String?)
+        /// Its host is gone: a new terminal in the folder it was in, drawn above what it showed (the checkpoint of the host
+        /// it ran in after a restart of the Mac, else its saved text).
+        case again(folder: String?, oldHost: String, text: String?)
 
         var folder: String? {
             switch self {
-            case .attach(_, let folder), .again(let folder): folder
+            case .attach(_, let folder), .again(let folder, _, _): folder
             }
         }
+    }
+
+    /// Whether terminals run in session hosts at all.
+    enum Availability {
+        case on(HostedSessions)
+        /// Wanted, and the app runs from a disk image or a temporary copy, where a host must not start: the terminals stay in
+        /// the app and the person is told to move it.
+        case needsApplications
+        case off
     }
 
     let desk: HostedTerminals
     /// Whether this window brings in the hosts nobody names (`HostingSetup.adoptsOrphans`).
     let adoptsOrphans: Bool
 
-    /// Nil when persistent terminals are off (Settings' flag), there is no host program to start (none beside the app, or
-    /// the app runs from a disk image) or the saved terminals cannot be opened: the terminals then stay in the app.
-    init?(setup: HostingSetup) {
+    private init(desk: HostedTerminals, adoptsOrphans: Bool) { (self.desk, self.adoptsOrphans) = (desk, adoptsOrphans) }
+
+    /// Off when persistent terminals are off (Settings' flag), there is no host program (none beside the app) or the saved
+    /// terminals cannot be opened: the terminals then stay in the app.
+    static func open(_ setup: HostingSetup) -> Availability {
         do {
             let desk = try HostedTerminals(dataDir: setup.dataDirectory, hostBinary: setup.hostBinary, window: setup.window)
-            guard desk.enabled() else { return nil }
-            guard case .found = desk.program() else {
-                FileHandle.standardError.write(Data("persistent terminals: no session host program: \(desk.program())\n".utf8))
-                return nil
+            guard desk.enabled() else { return .off }
+            switch desk.program() {
+            case .found: return .on(HostedSessions(desk: desk, adoptsOrphans: setup.adoptsOrphans))
+            case .disposableCopy: return .needsApplications
+            case .missing:
+                FileHandle.standardError.write(Data("persistent terminals: no session host program beside the app\n".utf8))
+                return .off
             }
-            self.desk = desk
-            adoptsOrphans = setup.adoptsOrphans
         } catch {
             FileHandle.standardError.write(Data("persistent terminals: \(error)\n".utf8))
-            return nil
+            return .off
         }
     }
 
@@ -47,7 +60,10 @@ final class HostedSessions {
     func launchPlan() -> [(terminal: TerminalID, entry: Entry)] {
         guard let plan = try? desk.planAtLaunch() else { return [] }
         return plan.saved.map {
-            (Int($0.terminal), $0.running ? .attach(hostID: $0.hostId, folder: $0.cwd) : .again(folder: $0.cwd))
+            (
+                Int($0.terminal),
+                $0.running ? .attach(hostID: $0.hostId, folder: $0.cwd) : .again(folder: $0.cwd, oldHost: $0.hostId, text: $0.text)
+            )
         }
     }
 

@@ -15,6 +15,12 @@ public final class UniFFIFrameSource: FrameSource {
     private let terminal = Mutex<Terminal?>(nil)
     /// The wake of a terminal that was started before its view: `start` hands the view's wake to it.
     private let relay: TerminalRelay?
+    /// The size the view last asked for, for a terminal that comes after it (`fill`).
+    private let fitted = Mutex<(size: GridSize, wake: (@Sendable () -> Void)?)?>(nil)
+    private let responsiveness = Mutex<(@Sendable () -> Void)?>(nil)
+
+    /// Called, as the view drains events, when the session host stopped answering or answers again.
+    public func onHostResponsiveness(_ then: @escaping @Sendable () -> Void) { responsiveness.withLock { $0 = then } }
 
     public init(program: String, arguments: [String] = []) {
         self.program = program
@@ -31,6 +37,22 @@ public final class UniFFIFrameSource: FrameSource {
         self.terminal.withLock { $0 = terminal }
     }
 
+    /// A source for a terminal whose program is still being started in, or attached to, a session host (off the main
+    /// thread): it draws nothing until `fill` gives it the terminal.
+    public init(waiting relay: TerminalRelay) {
+        program = ""
+        arguments = []
+        self.relay = relay
+    }
+
+    /// The terminal is ready: fit it to the view's size and wake the view to draw it.
+    public func fill(_ terminal: Terminal) {
+        self.terminal.withLock { $0 = terminal }
+        guard let fit = fitted.withLock({ $0 }) else { return }
+        terminal.resize(cols: UInt16(fit.size.cols), rows: UInt16(fit.size.rows), cellWidth: fit.size.cellWidth, cellHeight: fit.size.cellHeight)
+        fit.wake?()
+    }
+
     /// The Rust side's own time in the frames so far (snapshot and pack), for the measuring mode.
     public var rustFrameTiming: (frames: UInt64, snapshotNs: UInt64, packNs: UInt64, lastBytes: UInt64)? {
         terminal.withLock { $0 }.map {
@@ -40,9 +62,10 @@ public final class UniFFIFrameSource: FrameSource {
     }
 
     public func start(size: GridSize, wake: @escaping @Sendable () -> Void) throws {
-        if let relay, let adopted = current {
+        if let relay {
             relay.attach(wake)
-            adopted.resize(cols: UInt16(size.cols), rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight)
+            fitted.withLock { $0 = (size, wake) }
+            current?.resize(cols: UInt16(size.cols), rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight)
             return
         }
         // The layouts must agree before one byte of a frame is read.
@@ -77,20 +100,24 @@ public final class UniFFIFrameSource: FrameSource {
     public func fullFrame() -> Data { current?.fullFrame() ?? Data() }
 
     public func drainEvents() -> [TerminalEvent] {
-        (current?.drainEvents() ?? []).compactMap { event in
+        var events: [TerminalEvent] = []
+        for event in current?.drainEvents() ?? [] {
             switch event {
-            case .output: .output
-            case .title(let title): .title(title)
-            case .resetTitle: .resetTitle
-            case .bell: .bell
-            case .exited(let code): .exited(code: code)
-            case .clipboardWrite(let text): .clipboardWrite(text)
-            case .clipboardRead: .clipboardRead
-            case .clipboardAsk: .clipboardAsk
-            case .clipboardAskClosed: .clipboardAskClosed
-            @unknown default: nil
+            case .output: events.append(.output)
+            case .title(let title): events.append(.title(title))
+            case .resetTitle: events.append(.resetTitle)
+            case .bell: events.append(.bell)
+            case .exited(let code): events.append(.exited(code: code))
+            case .clipboardWrite(let text): events.append(.clipboardWrite(text))
+            case .clipboardRead: events.append(.clipboardRead)
+            case .clipboardAsk: events.append(.clipboardAsk)
+            case .clipboardAskClosed: events.append(.clipboardAskClosed)
+            // The bar over the pane says it; the view has nothing to draw.
+            case .hostResponsiveness: responsiveness.withLock { $0 }?()
+            @unknown default: break
             }
         }
+        return events
     }
 
     public func write(_ bytes: Data) { current?.write(bytes: bytes) }
@@ -127,6 +154,7 @@ public final class UniFFIFrameSource: FrameSource {
     }
 
     public func resize(_ size: GridSize) {
+        fitted.withLock { $0?.size = size }
         current?.resize(cols: UInt16(size.cols), rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight)
     }
 

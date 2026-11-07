@@ -24,14 +24,24 @@ enum StatusHosting {
                     localized: "status-bar-hosting-in-app.tooltip",
                     defaultValue: "This terminal runs inside Wormhole and ends when Wormhole quits or updates.")
             )
-        case .lost: nil
+        case .connecting:
+            (
+                String(localized: "status-bar-hosting-connecting", defaultValue: "Connecting…"),
+                String(
+                    localized: "status-bar-hosting-connecting.tooltip",
+                    defaultValue: "Wormhole is still connecting to this terminal’s session host.")
+            )
+        case .lost, .unavailable: nil
         }
     }
 
     /// Quiet when persistent, in the warning colour when not: the one a person would want to notice.
     static func isWarning(_ state: HostingState) -> Bool { !state.survivesQuit }
 
-    static func symbol(_ state: HostingState) -> String { state.survivesQuit ? "externaldrive" : "exclamationmark.triangle" }
+    static func symbol(_ state: HostingState) -> String {
+        if case .connecting = state { return "arrow.triangle.2.circlepath" }
+        return state.survivesQuit ? "externaldrive" : "exclamationmark.triangle"
+    }
 }
 
 struct StatusHostingItem: View {

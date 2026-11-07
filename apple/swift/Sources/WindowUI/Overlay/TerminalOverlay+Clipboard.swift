@@ -19,10 +19,11 @@ extension TerminalOverlay {
             self?.bars.bar = bar
             if let words = bar.askWords { Self.announce(words) }
         }
-        view.onClipboardAskClosed = { [weak self] in self?.bars.bar = nil }
+        view.onClipboardAskClosed = { [weak self] in self?.bars.bar = nil; self?.askEnded() }
         actions.onAnswer = { [weak self, weak view] choice in
             view?.answerClipboard(choice)
             self?.bars.bar = nil
+            self?.askEnded()
         }
     }
 }

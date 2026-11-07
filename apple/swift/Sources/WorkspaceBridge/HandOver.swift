@@ -24,7 +24,7 @@ extension RustWorkspaceBackend {
         relays.merge(cargo.relays) { _, moved in moved }
         _ = handle(core.receive(departure: cargo.core))
         // A terminal in a session host is let go of, at the quit, by the window that holds it now.
-        for id in departure.ids { core.terminal(id: Int64(id)).map { hosted?.desk.adopt(terminal: $0) } }
+        for id in departure.ids { core.terminal(id: Int64(id)).map { hosted?.desk.adopt(tab: Int64(id), terminal: $0) } }
     }
 }
 

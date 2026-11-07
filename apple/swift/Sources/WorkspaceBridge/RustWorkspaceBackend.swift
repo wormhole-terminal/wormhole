@@ -43,6 +43,9 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     var sources: [TerminalID: WeakSource] = [:]
     /// The persistent terminals' object, nil while the feature is off or unusable (`RustWorkspaceBackend+Hosting`).
     let hosted: HostedSessions?
+    /// Persistent terminals are wanted but the app runs from a disk image or a temporary copy: the person is told.
+    let needsApplications: Bool
+    var book = HostBook()
     /// What the terminals of a window restored from its record were, by their ids (they keep them): each attaches to its
     /// own host, or starts again where its host is gone.
     var saved: [TerminalID: HostedSessions.Entry] = [:]
@@ -57,7 +60,11 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     /// A workspace of its own, or window `window` of `windows`: its terminal ids are the app's, never another window's.
     public init(setup: WorkspaceSetup, windows: Windows? = nil, window: Int = 0) {
         self.setup = setup
-        hosted = setup.hosting.flatMap(HostedSessions.init)
+        switch setup.hosting.map(HostedSessions.open) {
+        case .on(let sessions)?: (hosted, needsApplications) = (sessions, false)
+        case .needsApplications?: (hosted, needsApplications) = (nil, true)
+        case .off?, nil: (hosted, needsApplications) = (nil, false)
+        }
         let wake = WakeRelay()
         let config = WorkspaceConfig(
             home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: setup.home, paneHeaderHeight: 0)
@@ -68,8 +75,11 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
 
     /// The frame source of terminal `id`, over the program started for it; nil when it did not start.
     public func frameSource(for id: TerminalID) -> (any FrameSource)? {
-        guard let relay = relays[id], let terminal = core.terminal(id: Int64(id)) else { return nil }
-        let source = UniFFIFrameSource(adopting: terminal, relay: relay)
+        guard let relay = relays[id] else { return nil }
+        // A terminal still being started in or attached to a host has no program yet: its view waits and draws it when it comes.
+        let source = core.terminal(id: Int64(id)).map { UniFFIFrameSource(adopting: $0, relay: relay) }
+            ?? UniFFIFrameSource(waiting: relay)
+        source.onHostResponsiveness { [weak self] in Task { @MainActor in self?.onNotice?(.hostChanged(id)) } }
         sources[id] = WeakSource(source)
         return source
     }
@@ -78,10 +88,14 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     public func startFailure(of id: TerminalID) -> String? { failed[id] }
 
     public func apply(_ action: WorkspaceAction) -> WorkspaceModel.Refusal? {
-        handle(core.apply(action: WormholeBindings.Action(action)))
+        defer { syncVisibility() }
+        return handle(core.apply(action: WormholeBindings.Action(action)))
     }
 
-    public func drain() { _ = handle(core.drain()) }
+    public func drain() {
+        _ = handle(core.drain())
+        syncVisibility()
+    }
 
     public func setWindowState(active: Bool, seen: Bool) { _ = handle(core.setWindowState(active: active, seen: seen)) }
 
@@ -125,9 +139,12 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
         var refusal: WorkspaceModel.Refusal?
         for event in events {
             switch event {
-            case .opened(let id, let cwd): open(Int(id), in: cwd)
+            case .opened(let id, let cwd):
+                live.append(Int(id))
+                start(Int(id), in: cwd)
             case .closed(let id):
                 live.removeAll { $0 == Int(id) }
+                book.forget(Int(id))
                 relays[Int(id)] = nil
                 sources[Int(id)] = nil
                 failed[Int(id)] = nil
@@ -139,18 +156,5 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
             }
         }
         return refusal
-    }
-
-    private func open(_ id: TerminalID, in folder: String?) {
-        live.append(id)
-        let relay = TerminalRelay()
-        do {
-            let terminal = try makeTerminal(id, in: folder, relay: relay)
-            relays[id] = relay
-            core.registerTerminal(id: Int64(id), terminal: terminal)
-        } catch {
-            failed[id] = HostingWords.failure(error)
-            FileHandle.standardError.write(Data("terminal \(id): cannot start \(setup.program): \(error)\n".utf8))
-        }
     }
 }

@@ -12,20 +12,42 @@ public enum HostingState: Sendable, Equatable {
     case detached(hostID: String)
     /// Its host went away and took the program with it.
     case lost(hostID: String)
+    /// A host is being started or attached to: the pane is blank meanwhile.
+    case connecting
+    /// Its host runs and this app could not attach to it (`HostProblem.unavailable`).
+    case unavailable(hostID: String)
 
     public var hostID: String? {
         switch self {
-        case .local: nil
-        case .persistent(let id), .detached(let id), .lost(let id): id
+        case .persistent(let id), .detached(let id), .lost(let id), .unavailable(let id): id
+        case .local, .connecting: nil
         }
     }
 
     /// Quitting leaves its program running.
     public var survivesQuit: Bool {
         switch self {
-        case .persistent, .detached: true
+        case .persistent, .detached, .connecting, .unavailable: true
         case .local, .lost: false
         }
+    }
+}
+
+/// What is wrong with a terminal's session host, as the bar over its pane says (`terminal_view/host_problem.rs`).
+public enum HostProblem: Sendable, Equatable {
+    /// The host runs and this app could not attach to it.
+    case unavailable(Why)
+    /// It stopped answering.
+    case notResponding
+    /// It went away and took the program.
+    case lost
+
+    /// Why a host that runs cannot be shown (core's `UnavailableKind`).
+    public enum Why: Sendable, Equatable, CaseIterable {
+        case refused, tooOld, tooNew, busy, timedOut, unreachable, failed
+
+        /// May pass by itself, so "Try again" is offered.
+        public var isTransient: Bool { [.busy, .timedOut, .unreachable, .failed].contains(self) }
     }
 }
 

@@ -31,7 +31,8 @@
                 if stored { _ = desk(of: app)?.revokeStored(id: number) } else { _ = desk(of: app)?.revoke(id: number) }
             }
             // The Project folders page shares the Project tab's service, so trust given here is what the tab shows.
-            platform.projects = { [weak app] in (app?.panelBackends.project as? RustProjectBackend)?.service }
+            // Asked while Settings is made, which can be before the first window exists.
+            platform.projects = { [weak app] in (app?.sessions.first?.panelBackends.project as? RustProjectBackend)?.service }
             platform.projectFolders = { [weak app] in app?.hub.state.all.compactMap(\.folder) ?? [] }
             platform.openTerminal = { [weak app] in app?.hub.send(.newTerminalIn($0)) }
             // Owner authentication is Touch ID in a real run and WORMHOLE_AUTH's answer in a test instance.

@@ -58,6 +58,9 @@ final class HostingFFITests: XCTestCase {
         let store = WorkspaceStore(backend: first)
         XCTAssertEqual(first.restoreSaved(), 0, "nothing was saved yet")
         store.send(.newTerminal)
+        // The host starts off the main actor, the pane blank meanwhile.
+        XCTAssertEqual(store.hosting(of: 1), .connecting)
+        try await wait("the host") { store.hosting(of: 1) != .connecting }
         guard case .persistent(let hostID)? = store.hosting(of: 1) else { return XCTFail("not in a host") }
         first.core.terminal(id: 1)?.write(bytes: Data("remember-me\n".utf8))
         try await wait("the echo") { screen(first, 1).contains("remember-me") }
@@ -71,12 +74,14 @@ final class HostingFFITests: XCTestCase {
         XCTAssertEqual(second.restoreSaved(), 1)
         XCTAssertEqual(reopened.state.live.count, 1)
         guard let id = reopened.state.live.first else { return }
+        try await wait("the attach") { reopened.hosting(of: id) != .connecting }
         XCTAssertEqual(reopened.hosting(of: id), .persistent(hostID: hostID), "the same host")
         try await wait("the repaint") { screen(second, id).contains("remember-me") }
 
         // Closing a terminal on purpose ends its program (the window opens a fresh one in its place): the third
         // launch is offered the new host and not the old one.
         reopened.send(.close(id))
+        try await wait("the fresh terminal's host") { reopened.state.live.allSatisfy { reopened.hosting(of: $0) != .connecting } }
         let third = backend()
         let entries = third.hosted?.launchEntries() ?? []
         XCTAssertEqual(entries.count, 1)
@@ -104,10 +109,5 @@ final class HostingFFITests: XCTestCase {
         XCTAssertEqual(HostingState(.persistent(hostId: "a")), .persistent(hostID: "a"))
         XCTAssertEqual(HostingState(.detached(hostId: "a")), .detached(hostID: "a"))
         XCTAssertEqual(HostingState(.lost(hostId: "a")), .lost(hostID: "a"))
-    }
-
-    func testAnUnreachableHostIsSaidInWords() {
-        XCTAssertTrue(HostingWords.failure(HostingError.Unavailable(reason: "refused", transient: false)).contains("refused"))
-        XCTAssertFalse(HostingWords.recoveredGroup.isEmpty)
     }
 }

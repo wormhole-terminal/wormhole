@@ -26,6 +26,7 @@ extension WormholeBindings.Action {
     private static func group(_ action: WorkspaceAction) -> Self? {
         switch action {
         case .newGroup(let members): .newGroup(members: members.map(Int64.init))
+        case .recoverGroup(let members): .recoverGroup(members: members.map(Int64.init))
         case .renameGroup(let group, let name): .renameGroup(group: group, name: name)
         case .toggleGroup(let group): .toggleGroup(group)
         case .setGroupPinned(let group, let pinned): .setGroupPinned(group: group, pinned: pinned)

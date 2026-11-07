@@ -79,6 +79,15 @@ public protocol WorkspaceBackend: AnyObject {
     func hosting(of id: TerminalID) -> HostingState?
     /// How long ago a terminal's `since` was, as the status bar says it; nil in the sample (no clock of the core's).
     func waited(since: UInt64) -> Waited?
+    /// What is wrong with terminal `id`'s host, while something is; nil for a terminal that is fine and for one in the app.
+    func hostProblem(of id: TerminalID) -> HostProblem?
+    /// "Try again": attach to the host a terminal could not be shown from. The pane is blank until it is done.
+    func reconnect(_ id: TerminalID)
+    /// "End host": ask the host to end (`hard` for one that does not answer); `done` says why it did not work, nil when it
+    /// did, in which case the backend tells the window to close the terminal (`WorkspaceNotice.hostEnded`).
+    func endHost(of id: TerminalID, hard: Bool, done: @escaping @MainActor (String?) -> Void)
+    /// "Open a new terminal here" and Restart: a new program in this terminal's place, in a new host when they are on.
+    func startAgain(_ id: TerminalID)
     /// The app is quitting: `endHosts` ends every terminal's host (Quit and End All Terminals), otherwise each is let go
     /// of and its program runs on.
     func finishQuit(endHosts: Bool)

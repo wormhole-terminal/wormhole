@@ -46,7 +46,12 @@ extension AppController {
         sessions.map { session in
             let frame = frame(of: session).map(describe) ?? "none"
             let ids = session.hub.state.live.map(String.init).joined(separator: ",")
-            return "window=\(session.id) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame)"
+            // Where each terminal's program runs, and what its host's bar says (nothing while it is fine).
+            let store = session.hub.store
+            let hosts = session.hub.state.live.map { id in
+                "\(id):\(store.hosting(of: id).map { String(describing: $0) } ?? "off")\(store.hostProblem(of: id).map { " problem=\($0)" } ?? "")"
+            }.joined(separator: ", ")
+            return "window=\(session.id) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame) hosting=[\(hosts)]"
         }.joined(separator: "\n")
     }
 
