@@ -39,6 +39,8 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
     public var isFolded: Bool
     /// The mark on its tile, when the core said (the sample leaves it out and the tile follows `activity`).
     public var glyph: TileGlyph?
+    /// When it got into its state, on the core's clock (`WorkspaceBackend.waited`); nil in the sample.
+    public var since: UInt64?
 
     public init(
         id: TerminalID, title: String, folder: String? = nil, branch: String? = nil, activity: Activity = .idle,

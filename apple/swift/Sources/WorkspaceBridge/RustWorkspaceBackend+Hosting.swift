@@ -71,6 +71,11 @@ extension RustWorkspaceBackend {
         return core.terminal(id: Int64(id)).map { HostingState($0.hosting()) } ?? .local
     }
 
+    public func waited(since: UInt64) -> WorkspaceModel.Waited? {
+        let waited = core.waited(sinceMs: since)
+        return WorkspaceModel.Waited(words: waited.words, next: .milliseconds(waited.nextInMs))
+    }
+
     /// `endHosts`: every terminal ends with its host. Otherwise each is let go of and its program runs on.
     public func finishQuit(endHosts: Bool) { hosted?.desk.finish(endHosts: endHosts) }
 

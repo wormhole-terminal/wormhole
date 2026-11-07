@@ -19,10 +19,11 @@ public struct TitleArrangement: Sendable, Equatable {
 }
 
 extension TitleArrangement {
-    /// The core's row: a slot that has nothing to say is left out, a chevron stands where the core put it.
-    public init(_ state: TitleState) {
+    /// The core's row: a slot that has nothing to say is left out, a chevron stands where the core put it. The model has no
+    /// agent gauge, ports or pull request (`present` is always false for them): the shell's `facts` say when it has one.
+    public init(_ state: TitleState, facts: TitleFacts? = nil) {
         func end(_ slots: [WorkspaceModel.TitleSlot]) -> TitleEnd {
-            let drawn = slots.filter(\.present).compactMap { slot in TitlePart(rawValue: slot.part).map { ($0, slot.chevronBefore) } }
+            let drawn = slots.filter { $0.present || TitlePart(rawValue: $0.part).flatMap { part in facts.map { Self.told($0, part) } } == true }.compactMap { slot in TitlePart(rawValue: slot.part).map { ($0, slot.chevronBefore) } }
             return TitleEnd(drawn.map(\.0), chevrons: drawn.map(\.1))
         }
         self.init(
@@ -38,9 +39,7 @@ extension TitleArrangement {
             case .branch: facts.branch != nil
             case .branchStatus: facts.branchStatus != nil
             case .terminalStatus: facts.words != nil
-            case .agentGauge: facts.gauge != nil
-            case .ports: !facts.ports.isEmpty
-            case .pullRequest: facts.pullRequest != nil
+            case .agentGauge, .ports, .pullRequest: told(facts, part)
             case .terminal, .splits, .space: true
             }
         }
@@ -51,5 +50,15 @@ extension TitleArrangement {
         let (left, right) = facts.row.ends
         let paths = facts.shownFolder.map { [PathText(parents: "", last: $0)] } ?? []
         return TitleArrangement(left: end(left), right: end(right), paths: paths)
+    }
+
+    /// The parts only the shell knows of: what the agent's status line said, the ports its terminal listens on, its pull request.
+    private static func told(_ facts: TitleFacts, _ part: TitlePart) -> Bool {
+        switch part {
+        case .agentGauge: facts.gauge != nil
+        case .ports: !facts.ports.isEmpty
+        case .pullRequest: facts.pullRequest != nil
+        default: false
+        }
     }
 }

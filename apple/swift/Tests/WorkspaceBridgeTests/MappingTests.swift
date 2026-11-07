@@ -180,7 +180,7 @@ final class MappingTests: XCTestCase {
                 revision: 4, selected: 2,
                 terminals: [
                     WormholeBindings.TerminalSummary(
-                        id: 2, name: "api", number: nil, selected: false, pinned: false, state: .failed, glyph: .failed, agent: nil,
+                        id: 2, name: "api", number: nil, selected: false, pinned: false, state: .failed, since: 0, glyph: .failed, agent: nil,
                         message: nil, branch: nil, folder: "~/api", cwd: nil, command: nil, group: 7, groupName: "Web", split: nil,
                         folded: true, agentHidden: false, forgetText: false, unread: false, bell: false)
                 ], counts: WormholeBindings.TerminalCounts(needsYou: 1, working: 2, finished: 3, failed: 4, quiet: 5)))

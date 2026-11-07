@@ -609,6 +609,12 @@ from what the last frame carried (a scroll that brings one into view, a reflow, 
 in `full_frame()`; a frame without the flag says "as before". Pixel offsets and extents are in the same points as
 the cell size, so the view multiplies them by its scale.
 
+**Placeholders (kitty's `U=1`).** The cells that name a picture are not carried as records of their own: a run of
+consecutive tiles on a row becomes one placement record (`rows` 1, `cols` the run, the source rectangle the
+share of the picture the run covers, fill extent), appended after the engine's placements, so the view draws them
+as it draws any placement and the picture is stretched over the placement's cells as the GPUI app does. The cell's
+character (U+10EEEE) is never a glyph and never text.
+
 **Pixels.** `Terminal.inline_image(key) -> InlineImage?` (`width`, `height`, straight RGBA, `width * height * 4`
 bytes) returns the picture a record names, copied once; ask once per key and keep the texture. `nil` while the
 engine is still decoding it (it wakes the view with an `Output` event when done: ask again on the next frame) and
@@ -619,6 +625,17 @@ carries a list touches the pictures it names in the store, so what is on screen 
 **Text.** `Terminal.contents(scope) -> String` with `ContentsScope.screen` (the live screen, one line per row, as
 `screen_text`) or `.everything` (history and screen, soft-wrapped rows joined, a picture's placeholder cells as
 blanks; the screen alone while a full-screen program has the alternate screen). Print and Export Text As use it.
+
+## Cell extras (`frame_extras.rs`)
+
+Additive to frame layout version 1, like the placements. When the header's flag bit 2 (value 4) is set, after the
+rows and the placements: a count `n`, then `n` records of little-endian words: `row`, `column`, underline colour (the
+frame's packed colour; `0xFFFFFFFF` when the text's own), the number of characters `m`, then `m` scalar values. They
+are what a cell carries beyond its character: the zero-width characters that join into one picture (an accent, a
+variation selector, a family emoji's joiners, a flag's second letter, a keycap, a skin tone, an Indic vowel sign) and
+SGR 58's underline colour. The view shapes the character with its marks as one cluster in its own cell. A changed row
+with no record has none, so the reader forgets what it kept for every row a frame names. A placeholder cell's marks
+(they name a tile) are not sent. Hyperlinks stay `link_at`'s.
 
 ## What the Rust side does not do for you
 
@@ -1009,3 +1026,9 @@ the object holds the engine's reply slot until every path out has answered it, w
 - `foreground_program() -> Option<String>`: the program in front as the sidebar names it, cleaned and cut, who the
   question names; `None` when the shell holds the terminal.
 - `select_lines(first, last)` (blocks) now also brings the first line into view, as GPUI's Select Output does.
+## How long a terminal has waited (`workspace_waited.rs`)
+
+`TerminalSummary.since` is when the terminal got into its state, in milliseconds of the workspace's clock
+(`now_ms`). `Workspace.waited(sinceMs) -> Waited(words, nextInMs)` says how long ago that was as the core's status bar
+does ("<1m", "4m", "1h 5m": `view::layout::status_bar::elapsed`) and in how many milliseconds the words next read
+differently: arm one timer for it. Core change (additive): `TerminalSummary.since`.

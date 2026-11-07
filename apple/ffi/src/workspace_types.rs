@@ -499,6 +499,7 @@ pub struct TerminalSummary {
     pub selected: bool,
     pub pinned: bool,
     pub state: RowState,
+    pub since: u64,
     pub glyph: TileGlyph,
     pub agent: Option<AgentInfo>,
     pub message: Option<String>,

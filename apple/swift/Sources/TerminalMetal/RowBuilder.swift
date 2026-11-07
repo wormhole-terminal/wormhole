@@ -46,8 +46,11 @@ final class RowBuilder {
         return (fg, bg)
     }
 
+    /// `extras`: what the row's cells carry beyond a character (marks that join, an underline colour), by column; nil
+    /// for the common row, so the loop pays nothing for it.
     func build(
-        row: Int, size: LineSize = .single, cells: UnsafeBufferPointer<PackedCell>, into geometry: RowGeometry, cursor: CursorDraw?
+        row: Int, size: LineSize = .single, cells: UnsafeBufferPointer<PackedCell>, extras: [Int: CellExtra]? = nil,
+        into geometry: RowGeometry, cursor: CursorDraw?
     ) {
         geometry.removeAll()
         let layout = RowLayout(
@@ -172,12 +175,14 @@ final class RowBuilder {
             // Decorations: a run ends when the style or the colour changes.
             let underline = flags.intersection(.allUnderlines).rawValue
             if underline != 0 {
-                if decorationStart >= 0, decoration == underline, decorationColor == fg {
+                // SGR 58 gives the line a colour of its own; it is not the text's.
+                let lineColor = extras?[column]?.underline ?? fg
+                if decorationStart >= 0, decoration == underline, decorationColor == lineColor {
                 } else {
                     flushDecoration(column)
                     decorationStart = column
                     decoration = underline
-                    decorationColor = fg
+                    decorationColor = lineColor
                 }
             } else {
                 flushDecoration(column)
@@ -207,8 +212,19 @@ final class RowBuilder {
             let scalar = cell.scalar
             if flags.contains(.wideCharSpacer) || flags.contains(.leadingWideCharSpacer) {
                 flushWord(column)
-            } else if scalar <= 0x20 || scalar == 0xA0 {
+            } else if scalar <= 0x20 || scalar == 0xA0 || scalar == PackedCell.imagePlaceholder {
                 flushWord(column)
+            } else if let marks = extras?[column]?.marks, !marks.isEmpty {
+                // A character with marks (an accent, a joiner, a variation selector, a flag's second letter) is one
+                // picture: shaped alone with them, wide or not, and drawn from its own cell.
+                flushWord(column)
+                scratch[0] = scalar
+                let count = min(1 + marks.count, WordCache.maxWordCells)
+                for index in 1..<count { scratch[index] = marks[index - 1] }
+                let style = FontStyle(bold: flags.contains(.bold), italic: flags.contains(.italic))
+                let hash = WordCache.hash(style: style, stretch: stretch, cluster: true, scalars: scratch, count: count)
+                let range = words.glyphRange(style: style, stretch: stretch, cluster: true, scalars: scratch, count: count, hash: hash)
+                for index in range.start..<range.start + range.count { emit(words.glyphs.base[index].atlas, column: column, cell: cell) }
             } else if flags.contains(.wideChar) {
                 // A double-width character stands alone, looked up as a word of one.
                 flushWord(column)

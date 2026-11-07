@@ -20,6 +20,8 @@ pub struct TerminalSummary {
     pub selected: bool,
     pub pinned: bool,
     pub state: RowState,
+    /// When it got into `state`, on the workspace's clock (`Workspace::now_ms`): how long a terminal has waited.
+    pub since: u64,
     pub glyph: TileGlyph,
     pub agent: Option<AgentInfo>,
     pub message: Option<String>,
@@ -107,6 +109,7 @@ impl WorkspaceModel {
             selected: self.selected == Some(session.id),
             pinned: session.pinned,
             state: facts.row_state(),
+            since: facts.since,
             glyph: glyph_of(facts),
             agent: facts.agent.map(super::sidebar::agent_info),
             message: facts.message.clone(),

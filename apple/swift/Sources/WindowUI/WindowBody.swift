@@ -123,7 +123,8 @@ struct WindowBody: View {
         let grid = state.selected.flatMap { hub.terminals.existing($0) }?.renderer.gridSize
         return StatusBar(
             terminals: state.all, selected: state.selectedTerminal, size: grid.map { "\($0.cols)×\($0.rows)" },
-            hosting: state.selected.flatMap { hub.store.hosting(of: $0) }, windowWidth: window
+            hosting: state.selected.flatMap { hub.store.hosting(of: $0) }, windowWidth: window,
+            waited: { hub.store.waited(since: $0) }
         ) { send(.select($0)) }
     }
 }

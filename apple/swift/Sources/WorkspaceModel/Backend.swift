@@ -77,6 +77,8 @@ public protocol WorkspaceBackend: AnyObject {
     func setWindowState(active: Bool, seen: Bool)
     /// Where terminal `id`'s program runs; nil while persistent terminals are off (the status bar then says nothing).
     func hosting(of id: TerminalID) -> HostingState?
+    /// How long ago a terminal's `since` was, as the status bar says it; nil in the sample (no clock of the core's).
+    func waited(since: UInt64) -> Waited?
     /// The app is quitting: `endHosts` ends every terminal's host (Quit and End All Terminals), otherwise each is let go
     /// of and its program runs on.
     func finishQuit(endHosts: Bool)

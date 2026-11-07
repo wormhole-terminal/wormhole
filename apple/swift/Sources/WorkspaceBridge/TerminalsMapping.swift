@@ -21,5 +21,6 @@ extension WorkspaceModel.TerminalSummary {
             isPinned: core.pinned, unread: core.unread, hasBell: core.bell, agent: core.agent.flatMap { AgentID(command: $0.key) },
             message: core.message, splitID: core.split.map(Int.init), isAgentHidden: core.agentHidden, forgetsText: core.forgetText,
             group: core.group, groupName: core.groupName, isFolded: core.folded, glyph: WorkspaceModel.TileGlyph(core.glyph))
+        since = core.since
     }
 }

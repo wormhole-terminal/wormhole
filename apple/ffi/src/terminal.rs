@@ -19,9 +19,9 @@ use wormhole_term::{GridSize, Pty, ScreenSnapshot};
 
 use crate::error::FfiError;
 use crate::events::{EventFeed, EventQueue, TermEvent, TerminalListener, Touch, spawn_receiver};
-use crate::inline_images::PlacementsSent;
+use crate::inline_images::{PlacementsSent, placeholder_placements};
 use crate::hosting::HostSlot;
-use crate::{frame, isolation};
+use crate::{frame, frame_extras, isolation};
 
 /// How much history a terminal keeps (the app's default is the same order).
 const SCROLLBACK_LINES: usize = 10_000;
@@ -395,11 +395,11 @@ impl Terminal {
         pty.snapshot(&mut snapshot);
         let snapshotted = Instant::now();
         let mut bytes = frame::pack(&snapshot, all);
-        self.placements.lock().unwrap_or_else(PoisonError::into_inner).append(
-            &mut bytes,
-            snapshot.placements(),
-            all,
-        );
+        // Placed pictures, then the tiles that placeholder cells draw (kitty's `U=1`).
+        let mut placements = snapshot.placements().to_vec();
+        placements.extend(placeholder_placements(pty, &snapshot));
+        self.placements.lock().unwrap_or_else(PoisonError::into_inner).append(&mut bytes, &placements, all);
+        frame_extras::append(&mut bytes, &snapshot, all);
         let packed = Instant::now();
 
         let t = &self.timing;

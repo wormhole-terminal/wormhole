@@ -39,4 +39,16 @@ public enum PrintableText {
             operation.run()
         }
     }
+
+    /// The same job without the panel, saved as a PDF at `url`: how a script checks what would come out on paper.
+    @discardableResult
+    public static func savePDF(text: String, title: String, font: NSFont, to url: URL) -> Bool {
+        let info = NSPrintInfo()
+        info.jobDisposition = .save
+        info.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = url
+        let operation = operation(text: text, title: title, font: font, info: info)
+        operation.showsPrintPanel = false
+        operation.showsProgressPanel = false
+        return operation.run()
+    }
 }

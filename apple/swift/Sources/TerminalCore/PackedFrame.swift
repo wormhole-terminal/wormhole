@@ -67,6 +67,10 @@ public struct PackedCell: Sendable, Equatable {
     }
 
     @inline(__always) public var cellFlags: CellFlags { CellFlags(rawValue: flags) }
+
+    /// Kitty's image placeholder (`U=1`): the cell names a tile of a picture, which the frame's placements draw, so
+    /// the character itself is never a glyph and never text.
+    public static let imagePlaceholder: UInt32 = 0x10EEEE
 }
 
 /// Helpers for the tag-and-value colour words.
@@ -116,6 +120,8 @@ public struct FrameHeader: Sendable, Equatable {
     public var historySize: Int
     /// How many placement records follow the rows (`PlacementRecords`); `nil`: the list is as the last frame said.
     public var placementCount: Int?
+    /// The frame carries cell extras (`CellExtras`) after the rows and the placements.
+    public var hasExtras = false
 
     public struct Cursor: Sendable, Equatable {
         public var row: Int
@@ -135,7 +141,7 @@ public struct FrameHeader: Sendable, Equatable {
 
     public init(
         cols: Int, rows: Int, changedRows: Int, isFull: Bool, cursor: Cursor?, displayOffset: Int = 0,
-        historySize: Int = 0, placementCount: Int? = nil
+        historySize: Int = 0, placementCount: Int? = nil, hasExtras: Bool = false
     ) {
         self.cols = cols
         self.rows = rows
@@ -145,6 +151,7 @@ public struct FrameHeader: Sendable, Equatable {
         self.displayOffset = displayOffset
         self.historySize = historySize
         self.placementCount = placementCount
+        self.hasExtras = hasExtras
     }
 }
 
@@ -175,7 +182,7 @@ public enum FrameReader {
         return FrameHeader(
             cols: Int(word(2)), rows: Int(word(3)), changedRows: Int(word(4)), isFull: word(5) & 1 != 0,
             cursor: cursor, displayOffset: Int(word(9)), historySize: Int(word(10)),
-            placementCount: word(5) & PlacementRecords.flag != 0 ? Int(word(11)) : nil)
+            placementCount: word(5) & PlacementRecords.flag != 0 ? Int(word(11)) : nil, hasExtras: word(5) & CellExtras.flag != 0)
     }
 
     /// Visit each changed row in order. `body` gets the row index, its line size and its cells, which

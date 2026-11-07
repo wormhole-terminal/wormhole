@@ -15,6 +15,7 @@ extension AppController {
         window?.contentView?.layoutSubtreeIfNeeded()
         if runLook(command: command, argument: argument) || runWindow(command: command, argument: argument) || runWindows(command: command, argument: argument)
             || runWorkspace(command: command, argument: argument) || runSettings(command: command, argument: argument) || runPanel(command: command, argument: argument) || runCore(command: command, argument: argument)
+            || runScripted(command: command, argument: argument)
         { return }
         guard let view = selectedView else { return reply("error: no terminal is shown") }
         run(command: command, argument: argument, on: view)

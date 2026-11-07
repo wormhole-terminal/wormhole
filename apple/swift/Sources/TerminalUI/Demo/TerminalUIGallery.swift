@@ -20,12 +20,6 @@ public struct TerminalUIGallery: View {
                     strip(.hostNotResponding(endFailure: nil), exited: false)
                     strip(.notice(.info, "A program copied 12 lines"), exited: true)
                 }
-                VStack(alignment: .leading, spacing: Space._3) {
-                    AgentStatusCard(summary: AgentStatusSummary(status: .attention, name: "Claude Code", detail: "Approve cargo test?"))
-                    AgentStatusCard(summary: AgentStatusSummary(status: .working, name: "Codex", detail: "Editing sidebar.rs…"))
-                    AgentStatusCard(summary: AgentStatusSummary(status: .failed, name: "Claude Code", detail: "rate limit reached"))
-                    AgentStatusCard(summary: AgentStatusSummary(status: .done, name: "Claude Code", detail: "12m ago"))
-                }
             }
         }
         .padding(Space._4)

@@ -81,14 +81,15 @@ final class WordCache {
     }
 
     @inline(__always)
-    static func hash(style: FontStyle, stretch: Stretch = .normal, scalars: UnsafePointer<UInt32>, count: Int) -> UInt64 {
-        var h: UInt64 = 0xcbf2_9ce4_8422_2325 ^ UInt64(style.rawValue) ^ stretch.rawValue << 8
+    static func hash(style: FontStyle, stretch: Stretch = .normal, cluster: Bool = false, scalars: UnsafePointer<UInt32>, count: Int) -> UInt64 {
+        var h: UInt64 = 0xcbf2_9ce4_8422_2325 ^ UInt64(style.rawValue) ^ stretch.rawValue << 8 ^ (cluster ? 1 << 16 : 0)
         for index in 0..<count { h = (h ^ UInt64(scalars[index])) &* 0x100_0000_01b3 }
         return h
     }
 
-    /// The glyphs of the word `scalars[0..<count]` in `style`: a range into `glyphs`.
-    func glyphRange(style: FontStyle, stretch: Stretch = .normal, scalars text: UnsafePointer<UInt32>, count: Int, hash: UInt64) -> (start: Int, count: Int) {
+    /// The glyphs of the word `scalars[0..<count]` in `style`: a range into `glyphs`. A `cluster` is one cell's character
+    /// followed by its zero-width marks, shaped together.
+    func glyphRange(style: FontStyle, stretch: Stretch = .normal, cluster: Bool = false, scalars text: UnsafePointer<UInt32>, count: Int, hash: UInt64) -> (start: Int, count: Int) {
         if let record = table[hash], Int(record.scalarCount) == count,
             memcmp(scalars.base + Int(record.scalarStart), text, count * MemoryLayout<UInt32>.size) == 0
         {
@@ -98,10 +99,10 @@ final class WordCache {
         if table.count >= Self.wordLimit { clear() }
         shaped += 1
         let buffer = UnsafeBufferPointer(start: text, count: count)
-        var shapedGlyphs = shape(buffer, style: style, stretch: stretch)
+        var shapedGlyphs = shape(buffer, style: style, stretch: stretch, cluster: cluster)
         // If the atlas started over while this word was being shaped, its first glyphs point at entries that
         // are gone: once more, now that the atlas is empty.
-        if shapedGlyphs.generation != atlas.generation { shapedGlyphs = shape(buffer, style: style, stretch: stretch) }
+        if shapedGlyphs.generation != atlas.generation { shapedGlyphs = shape(buffer, style: style, stretch: stretch, cluster: cluster) }
         // `shape` may have started the atlas (and so this cache) over; the arenas are consistent either way.
         let record = Record(
             scalarStart: Int32(scalars.count), scalarCount: Int32(count), glyphStart: Int32(glyphs.count),
@@ -129,7 +130,7 @@ final class WordCache {
 
     // MARK: shaping
 
-    private func shape(_ text: UnsafeBufferPointer<UInt32>, style: FontStyle, stretch: Stretch) -> (glyphs: [WordGlyph], generation: Int) {
+    private func shape(_ text: UnsafeBufferPointer<UInt32>, style: FontStyle, stretch: Stretch, cluster: Bool) -> (glyphs: [WordGlyph], generation: Int) {
         let generation = atlas.generation
         var string = String.UnicodeScalarView()
         /// For each UTF-16 unit of the string, the cell it came from.
@@ -138,7 +139,8 @@ final class WordCache {
         for (column, value) in text.enumerated() {
             let scalar = Unicode.Scalar(value) ?? "\u{FFFD}"
             string.append(scalar)
-            for _ in 0..<scalar.utf16.count { columns.append(UInt16(column)) }
+            // A cluster is one cell's character and its marks: every glyph belongs to that cell.
+            for _ in 0..<scalar.utf16.count { columns.append(cluster ? 0 : UInt16(column)) }
         }
         // The font carries the features (`FontSet.configured`): CoreText shapes with them.
         let attributes: [CFString: Any] = [kCTFontAttributeName: fonts.font(for: style)]

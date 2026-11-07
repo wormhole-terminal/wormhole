@@ -15,6 +15,8 @@ struct StatusBar: View {
     /// Where the shown terminal runs; nil while persistent terminals are off (the bar then says nothing of it).
     var hosting: HostingState?
     let windowWidth: CGFloat
+    /// How long ago a terminal got into its state, in the core's words (nil in the sample).
+    var waited: (UInt64) -> Waited? = { _ in nil }
     let select: @MainActor (TerminalID) -> Void
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
@@ -31,7 +33,12 @@ struct StatusBar: View {
                     HStack(spacing: Space._1) {
                         StatusDot(.attention)
                         Text(waiting.title).lineLimit(1)
-                        if detail.words { Text("needs input").foregroundStyle(colours.attentionText) }
+                        if let since = waiting.since, let waited = waited(since) {
+                            WaitedWords(prefix: detail.words ? "needs input · " : "", first: waited, waited: { self.waited(since) })
+                                .foregroundStyle(colours.attentionText)
+                        } else if detail.words {
+                            Text("needs input").foregroundStyle(colours.attentionText)
+                        }
                     }
                 }
                 .buttonStyle(StatusItemStyle(tint: colours.attentionTint))
@@ -105,5 +112,23 @@ private struct StatusItemStyle: ButtonStyle {
             )
             .onHover { hovering = $0 }
             .contentShape(Rectangle())
+    }
+}
+
+/// "needs input · 2m": the words move with time, so a one-shot timer, armed for the moment they next read differently,
+/// reads them again (never a poll).
+private struct WaitedWords: View {
+    let prefix: String
+    let first: Waited
+    let waited: () -> Waited?
+    @State private var current: Waited?
+
+    var body: some View {
+        let shown = current ?? first
+        Text(prefix + shown.words)
+            .task(id: shown) {
+                try? await Task.sleep(for: shown.next)
+                if !Task.isCancelled { current = waited() }
+            }
     }
 }

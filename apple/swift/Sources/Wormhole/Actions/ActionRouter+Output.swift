@@ -37,21 +37,24 @@ final class ViewContents: TerminalContents {
 }
 
 extension AppController {
-    /// What is selected, else the screen: a person who selected something and printed means that.
-    func printTerminal() {
-        guard let (contents, view) = selectedContents(),
-            let text = contents.text(.selection) ?? contents.text(.screen)
-        else { return }
-        PrintableText.print(
-            text: text, title: contents.title, font: view.renderer.configuration.fonts.printFont(size: Self.printPointSize),
-            over: window)
+    /// What is selected, else the screen: a person who selected something and printed means that. `pdf`: no panel, the
+    /// job saved there (a script's check of the output).
+    @discardableResult
+    func printTerminal(pdf: URL? = nil) -> Bool {
+        guard let (contents, view) = selectedContents(), let text = contents.text(.selection) ?? contents.text(.screen)
+        else { return false }
+        let font = view.renderer.configuration.fonts.printFont(size: Self.printPointSize)
+        if let pdf { return PrintableText.savePDF(text: text, title: contents.title, font: font, to: pdf) }
+        PrintableText.print(text: text, title: contents.title, font: font, over: window)
+        return true
     }
 
     /// What is selected, else everything the terminal keeps.
     func exportTerminalText() {
         guard let (contents, _) = selectedContents(), let text = contents.text(.selection) ?? contents.text(.everything)
         else { return }
-        TextExporter.export(text, title: contents.title, over: window)
+        // What was written is said to a script driving the instance (`reply` is silent without one).
+        TextExporter.export(text, title: contents.title, over: window) { [weak self] in self?.reply("export \($0?.path ?? "cancelled")") }
     }
 
     /// The size text is set at on paper, in points (Terminal.app prints at its window's size; paper wants less).

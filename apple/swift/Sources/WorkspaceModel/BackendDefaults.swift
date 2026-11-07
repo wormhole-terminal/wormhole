@@ -13,6 +13,7 @@ extension WorkspaceBackend {
     public func groupFolderOffer(group: GroupID) -> String? { nil }
     public func setWindowState(active: Bool, seen: Bool) {}
     public func hosting(of id: TerminalID) -> HostingState? { nil }
+    public func waited(since: UInt64) -> Waited? { nil }
     public func finishQuit(endHosts: Bool) {}
     /// The sample saves nothing and runs no programs to hand over.
     public func restore() {}

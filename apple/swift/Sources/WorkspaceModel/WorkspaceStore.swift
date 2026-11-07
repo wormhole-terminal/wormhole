@@ -30,6 +30,9 @@ public final class WorkspaceStore {
     /// Where terminal `id`'s program runs; nil while persistent terminals are off.
     public func hosting(of id: TerminalID) -> HostingState? { backend.hosting(of: id) }
 
+    /// How long ago `since` was (`TerminalSummary.since`), in words.
+    public func waited(since: UInt64) -> Waited? { backend.waited(since: since) }
+
     /// The app is quitting (`WorkspaceBackend.finishQuit`).
     public func finishQuit(endHosts: Bool) { backend.finishQuit(endHosts: endHosts) }
     /// Fill this (empty) window from what it was saved with.

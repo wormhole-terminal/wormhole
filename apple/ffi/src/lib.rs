@@ -23,6 +23,7 @@ mod find;
 mod fonts;
 pub mod folder_picker;
 mod frame;
+mod frame_extras;
 mod git;
 mod hook_server;
 mod hosting;
@@ -48,6 +49,7 @@ mod workspace_feed;
 mod workspace_git;
 mod workspace_pump;
 mod workspace_types;
+mod workspace_waited;
 mod workspace_watch;
 
 pub use app_actions::{
@@ -111,6 +113,7 @@ pub use windows::{
     cascade_frame, fit_frame,
 };
 pub use workspace::{TerminalFactsRecord, Workspace, WorkspaceConfig, WorkspaceEvent, WorkspaceListener};
+pub use workspace_waited::Waited;
 
 uniffi::setup_scaffolding!();
 

@@ -32,6 +32,8 @@ final class TerminalScene {
     private(set) var rows = 0
     private var grid = UnsafeMutablePointer<PackedCell>.allocate(capacity: 0)
     private(set) var geometry: [RowGeometry] = []
+    /// What each row's cells carry beyond a character (nil: nothing), from the last frame that named the row.
+    private var extras: [[Int: CellExtra]?] = []
     /// How each row is drawn, from the last frame that named it.
     private(set) var sizes: [LineSize] = []
     private var dirty: [Bool] = []
@@ -71,9 +73,11 @@ final class TerminalScene {
             try FrameReader.forEachRow(bytes, header: header) { row, size, cells in
                 (grid + row * columns).update(from: cells.baseAddress!, count: columns)
                 sizes[row] = size
+                extras[row] = nil
                 dirty[row] = true
                 counters.cellsRead += columns
             }
+            for (row, found) in try CellExtras.read(bytes, header: header) where row < rows { extras[row] = found }
             setCursor(header.cursor)
         }
         return rebuildDirty()
@@ -87,6 +91,7 @@ final class TerminalScene {
         self.rows = rows
         geometry = (0..<rows).map { _ in RowGeometry() }
         sizes = Array(repeating: .single, count: rows)
+        extras = Array(repeating: nil, count: rows)
         marks = Array(repeating: .none, count: rows)
         dirty = Array(repeating: true, count: rows)
         cursor = nil
@@ -213,13 +218,15 @@ final class TerminalScene {
         // is copied and marked first, so the hot loop knows none of it.
         let builder = text.builder, size = sizes[row]
         guard composing || marks[row].isMarked else {
-            builder.build(row: row, size: size, cells: UnsafeBufferPointer(start: start, count: columns), into: geometry[row], cursor: draw)
+            builder.build(
+                row: row, size: size, cells: UnsafeBufferPointer(start: start, count: columns), extras: extras[row], into: geometry[row],
+                cursor: draw)
             return
         }
         var cells = Array(UnsafeBufferPointer(start: start, count: columns))
         marks[row].apply(to: &cells, palette: palette)
         guard composing, let marked, let cursor else {
-            cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, into: geometry[row], cursor: draw) }
+            cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, extras: extras[row], into: geometry[row], cursor: draw) }
             return
         }
         // Composed text replaces the cells from the cursor on, underlined, and the caret moves to its end.
@@ -244,7 +251,7 @@ final class TerminalScene {
         }
         draw?.column = min(caretColumn, columns - 1)
         draw?.shape = .beam
-        cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, into: geometry[row], cursor: draw) }
+        cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, extras: extras[row], into: geometry[row], cursor: draw) }
     }
 
     // MARK: handing instances to the GPU
@@ -294,7 +301,8 @@ final class TerminalScene {
         for column in 0..<columns {
             let cell = grid[row * columns + column]
             if cell.cellFlags.contains(.wideCharSpacer) { continue }
-            result.append(Unicode.Scalar(cell.scalar) ?? " ")
+            result.append(cell.scalar == PackedCell.imagePlaceholder ? " " : Unicode.Scalar(cell.scalar) ?? " ")
+            for mark in extras[row]?[column]?.marks ?? [] { result.append(Unicode.Scalar(mark) ?? " ") }
         }
         return String(result)
     }

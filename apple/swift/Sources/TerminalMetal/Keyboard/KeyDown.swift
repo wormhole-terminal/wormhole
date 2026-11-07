@@ -50,7 +50,7 @@ extension MetalTerminalView {
 
     /// Paste text from `board`, or the paths of files on it (escaped, each followed by a space, as Terminal.app
     /// inserts them; an agent takes a dropped image by that pasted path).
-    func insert(from board: NSPasteboard) -> Bool {
+    public func insert(from board: NSPasteboard) -> Bool {
         if let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty,
             let text = interaction?.droppedText(paths: urls.map(\.path))
         {
