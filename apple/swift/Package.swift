@@ -42,6 +42,10 @@ var targets: [Target] = [
     // The palette and shortcut sheet overlays.
     .target(name: "PaletteUI", dependencies: ["PaletteModel", "WorkspaceModel", "DesignSystem"]),
     .testTarget(name: "PaletteTests", dependencies: ["PaletteModel", "PaletteUI", "WorkspaceModel", "DesignSystem"]),
+    // The SwiftUI around the terminal: find bar, command blocks, pane bars, notice chip, zoom and resize readout,
+    // minimap, print and export. Over protocols that the Rust FFI backs later; no dependency on a feature module.
+    .target(name: "TerminalUI", dependencies: ["DesignSystem", "TerminalCore"]),
+    .testTarget(name: "TerminalUITests", dependencies: ["TerminalUI", "DesignSystem", "TerminalCore"]),
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),
     .testTarget(name: "UITests", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI"]),
 ]
