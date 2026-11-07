@@ -15,7 +15,9 @@ struct TextMeasurer: TextMeasuring {
             case .caption: (.caption, .regular)
             case .captionMedium: (.caption, .medium)
             }
-        let font = NSFont.systemFont(ofSize: role.size, weight: weight)
+        // Only ever called while a view body lays out, on the main actor; `TextRole`'s size follows the theme's font.
+        let size = MainActor.assumeIsolated { role.size }
+        let font = NSFont.systemFont(ofSize: size, weight: weight)
         return (text as NSString).size(withAttributes: [.font: font]).width.rounded(.up)
     }
 }
