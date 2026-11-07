@@ -16,10 +16,13 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::{Instant, SystemTime};
 
 use wormhole_core::agents::AGENTS;
-use wormhole_core::view::sidebar::{SidebarNumbers, Status};
+use wormhole_core::view::layout::Edge;
+use wormhole_core::view::panes::Preset;
+use wormhole_core::view::sidebar::{Landing, SidebarNumbers, Status};
 use wormhole_core::workspace::{
-    Action, ChromeSnapshot, DropPlan, Event, Failure, ModelConfig, Over, PanesSnapshot, Refusal, Revisions,
-    SidebarSnapshot, StatusEvent, TerminalFacts, WorkspaceModel, open_items,
+    Action, ChromeSnapshot, DiskGround, DropPlan, EdgeDrag, Event, Failure, ModelConfig, Over, PanesSnapshot,
+    Refusal, Revisions, SidebarSnapshot, StatusEvent, TerminalFacts, TerminalsSnapshot, TitleSnapshot,
+    WorkspaceModel, open_items,
 };
 
 use crate::terminal::Terminal;
@@ -54,6 +57,15 @@ pub enum WorkspaceEvent {
     Moved {
         id: i64,
     },
+    /// "Forget text" was set on the terminal: erase what was saved of its screen.
+    SavedTextForgotten {
+        id: i64,
+    },
+    /// The group is to move to a window of its own, with these terminals (and their splits').
+    GroupToWindow {
+        group: u32,
+        terminals: Vec<i64>,
+    },
     /// The sidebar's rows, groups or numbers changed: pull `sidebar`.
     Listing,
     /// The splits or the panes' focus changed: pull `panes`.
@@ -74,6 +86,8 @@ impl From<Event> for WorkspaceEvent {
             Event::Closed { id } => Self::Closed { id },
             Event::Selected { id } => Self::Selected { id },
             Event::Moved { id } => Self::Moved { id },
+            Event::SavedTextForgotten { id } => Self::SavedTextForgotten { id },
+            Event::GroupToWindow { group, terminals } => Self::GroupToWindow { group, terminals },
             Event::Listing => Self::Listing,
             Event::Layout => Self::Layout,
             Event::Chrome => Self::Chrome,
@@ -256,6 +270,9 @@ impl Workspace {
             numbers: if config.numbers_follow_list { SidebarNumbers::List } else { SidebarNumbers::Terminal },
             start_folder: config.start_folder.map(PathBuf::from),
             pane_header_h: config.pane_header_height,
+            // The disk is this crate's to ask: a group that keeps only its folder's terminals reads
+            // where each really is.
+            ground: Some(Arc::new(DiskGround)),
             ..ModelConfig::default()
         });
         let shared = Arc::new(Shared {
@@ -309,6 +326,18 @@ impl Workspace {
         self.shared.with_model(|model| model.chrome_snapshot())
     }
 
+    /// Every terminal, those a folded group hides included, in the list's order: the palette, the
+    /// status bar's counts and menus read it. Pull it when `revisions().terminals` moved.
+    pub fn terminals(&self) -> TerminalsSnapshot {
+        self.shared.with_model(|model| model.terminals_snapshot())
+    }
+
+    /// The selected terminal's title row: parts, chevrons, path steps to measure and the path menu.
+    /// `boot_volume` is what the system calls the startup volume.
+    pub fn title(&self, boot_volume: String) -> TitleSnapshot {
+        self.shared.with_model(|model| model.title_snapshot(&boot_volume))
+    }
+
     pub fn revisions(&self) -> Revisions {
         self.shared.with_model(|model| model.revisions())
     }
@@ -321,6 +350,30 @@ impl Workspace {
     /// still down; `None` when nothing would change. A pure question: nothing moves.
     pub fn drop_plan(&self, dragged: i64, over: Over) -> Option<DropPlan> {
         self.shared.with_model(|model| model.drop_plan(dragged, over))
+    }
+
+    /// Where dropping group `group` on `over` would put it; `None` when nothing would change.
+    pub fn group_drop_plan(&self, group: u32, over: Over) -> Option<Landing> {
+        self.shared.with_model(|model| model.group_drop_plan(group, over))
+    }
+
+    /// Where a drag of a column's edge with the pointer `extent` from the window edge it hangs on
+    /// would leave it, without moving it (the readout beside the pointer).
+    pub fn edge_drag(&self, edge: Edge, extent: f32) -> EdgeDrag {
+        self.shared.with_model(|model| model.edge_drag(edge, extent))
+    }
+
+    /// Whether the area has room for the layout's panes at their least size.
+    pub fn can_layout(&self, preset: Preset) -> bool {
+        self.shared.with_model(|model| model.can_layout(preset))
+    }
+
+    /// The folder to ask the person about before a terminal opens in a group with none, if there is
+    /// one worth offering. Answer with `setGroupFolder` or `declineGroupFolder`.
+    pub fn group_folder_offer(&self, group: u32) -> Option<String> {
+        self.shared.with_model(|model| {
+            model.group_folder_offer(group).map(|folder| folder.to_string_lossy().into_owned())
+        })
     }
 
     /// An agent's hook event for terminal `id` (what `WORMHOLE_TAB_ID` names): `agent` is its command

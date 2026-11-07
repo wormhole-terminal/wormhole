@@ -164,9 +164,15 @@ func sidebar() -> SidebarSnapshot                  // words as they read now (th
 func sidebarAt(nowMs: UInt64) -> SidebarSnapshot   // ... as they read at a given time (tests, previews)
 func panes(width: Float, height: Float) -> PanesSnapshot
 func chrome() -> ChromeSnapshot
-func revisions() -> Revisions                      // sidebar / layout / chrome counters
+func terminals() -> TerminalsSnapshot              // EVERY terminal (folded ones too), counts; revision `terminals`
+func title(bootVolume: String) -> TitleSnapshot    // the selected terminal's title row as data
+func revisions() -> Revisions                      // sidebar / layout / chrome / terminals counters
 func selected() -> Int64?
-func dropPlan(dragged: Int64, over: Over) -> DropPlan?   // pure: the line a drag would drop on
+func dropPlan(dragged: Int64, over: Over) -> DropPlan?   // pure: the line a drag would drop on (folder fences included)
+func groupDropPlan(group: UInt32, over: Over) -> Landing? // pure: where a dragged group would land
+func edgeDrag(edge: Edge, extent: Float) -> EdgeDrag      // pure: where a drag of a column's edge would leave it, with its readout
+func canLayout(preset: Preset) -> Bool                    // pure: the area has room for the layout's panes
+func groupFolderOffer(group: UInt32) -> String?           // pure: the folder to ask about before a terminal opens in a group with none
 func setFacts(id: Int64, facts: TerminalFactsRecord) -> [WorkspaceEvent]   // whole replacement (tests, previews)
 func setGit(id: Int64, branch: String?, changes: UInt32?) -> [WorkspaceEvent]   // previews and tests only: a registered terminal's git is read by the workspace
 func hook(id: Int64, agent: String, event: String, message: String?) -> [WorkspaceEvent]   // an agent's hook, see "What feeds a row"
@@ -194,6 +200,8 @@ wake and hop to the main queue. **One handler** serves both sources of events: `
 | `listing` | the rows, groups or numbers changed: pull `sidebar()` |
 | `layout` | splits or the panes' focus changed: pull `panes(width:height:)` |
 | `chrome` | sidebar/panel visibility, panel tab, search or overlay changed: pull `chrome()` |
+| `savedTextForgotten(id)` | "Forget text" was set on the terminal: erase what was saved of its screen |
+| `groupToWindow(group, terminals)` | the group is to move to a window of its own: open it; `terminals` are the group's and their splits' (nothing moves in this model yet) |
 | `refused(reason)` | the action changed nothing (`unknown`, `tooSmall`, `unchanged`): data, not an error |
 
 Events are coalesced within a call (`listing`/`layout`/`chrome` at most once, `selected` last wins).
@@ -206,11 +214,11 @@ repeat), groups are `UInt32` (a group's id is stable while it exists).
 | Group | Cases |
 |---|---|
 | Selection | `select(id)`, `selectStep(delta)` (next/previous as listed, wraps, skips folded), `selectNumber(n)` (⌘1...⌘9; a number past the last selects the last) |
-| Terminals | `newTerminal` (in the selected one's folder, selected, search ends), `close(id)` (the app's rule: selection by the window's order, a split's heir; closing the last starts a new one), `rename(id, name)` (blank gives the name back to what runs in it), `setPinned`, `togglePin` (a split is pinned as a whole) |
-| Groups | `newGroup(members)` (with the rest of their splits; needs terminals that exist), `renameGroup` (blank keeps the old name), `toggleGroup` (fold), `ungroup`, `setGroupPinned`, `addToGroup(id, group)`, `removeFromGroup(id)` |
-| Moves | `dropTerminal(dragged, over)`, `dropGroup(group, over)` (core's `place` rules; `Over` is by id: `row(id, part)`, `head(group, part)`, `after(card)`, `tail`), `moveTerminal(id, landing)`, `moveGroup(group, landing)` (`Landing.top(before: Item?)` / `.group(group, before: Int64?)`) |
-| Splits | `splitBeside(anchor, axis)` (a new terminal in the anchor's folder, selected; refused `tooSmall` without room), `joinSplit(id, target, zone)`, `leaveSplit(id)`, `focusPane(id)`, `toggleZoom` |
-| Chrome | `toggleSidebar`, `togglePanel`, `showPanelTab(tab)` (shows the panel), `search(text)`, `showOverlay(overlay?)`, `setPaneArea(width, height)` (zero until laid out: nothing is refused for want of room) |
+| Terminals | `newTerminal` (in the selected one's folder, selected, search ends), `close(id)` (the app's rule: selection by the window's order, a split's heir; closing the last starts a new one), `rename(id, name)` (blank gives the name back to what runs in it), `setPinned`, `togglePin` (a split is pinned as a whole), `setAgentHidden(id, hidden)` / `toggleAgentHidden(id)` ("Hide from Agents": the model keeps and shows it, the shell enforces it), `setForgetText(id, forget)` / `toggleForgetText(id)` (turning it on also emits `savedTextForgotten`) |
+| Groups | `newGroup(members)` (with the rest of their splits; needs terminals that exist), `newTerminalInNewGroup`, `newTerminalInGroup(group)` (last in it, in its folder, else where it was last used, else beside the selected one; selected), `renameGroup` (blank keeps the old name), `toggleGroup` (fold), `ungroup`, `setGroupPinned`, `addToGroup(id, group)` (refused `unchanged` by a group that keeps only its folder's terminals), `removeFromGroup(id)`, `setGroupColor(group, color: GroupColor?)` (the nine names), `setGroupCustomColor(group, r, g, b)`, `setGroupFolder(group, folder: String?)` (a folder pins the group; clearing counts as saying no), `setOnlyInFolder(group, on)` (the terminals outside leave now), `declineGroupFolder(group)`, `closeGroup(group)` (closes every terminal, the group goes unless pinned; the shell asks first when `workingCount > 0`), `moveGroupToWindow(group)` (emits `groupToWindow`) |
+| Moves | `dropTerminal(dragged, over)`, `dropGroup(group, over)` (core's `place` rules; `Over` is by id: `row(id, part)`, `head(group, part)`, `after(card)`, `tail`), `moveTerminal(id, landing)`, `moveTerminalAs(id, landing, leaveSplit, withMates)` (a `dropPlan`'s `move` applied as it said), `moveGroup(group, landing)` (`Landing.top(before: Item?)` / `.group(group, before: Int64?)`) |
+| Splits | `splitBeside(anchor, axis)` (a new terminal in the anchor's folder, selected; refused `tooSmall` without room), `joinSplit(id, target, zone)`, `showBeside(id, other)` (other joins id's split on its right), `leaveSplit(id)`, `focusPane(id)`, `toggleZoom`, `applyLayout(preset)` (View → Layout: new terminals fill the slots, the panes over leave the split and keep running), `dragDivider(path, index, position)`, `equalizeDivider(path, index)` |
+| Chrome | `toggleSidebar`, `togglePanel`, `showPanelTab(tab)` (shows the panel, the sidebar steps aside when there is no room; a tab whose feature is off is refused), `search(text)`, `showOverlay(overlay?)`, `setPaneArea(width, height)` (zero until laid out: nothing is refused for want of room), `setWindowWidth(width)`, `dragEdge(edge, extent)`, `resetEdge(edge)`, `setFeature(feature, on)` (a tab comes or goes), `setTitleRow(parts)`, `setNumbersFollowList(bool)` (⌘ numbers follow the list, or stay with their terminal) |
 
 ### Snapshots
 
@@ -219,13 +227,18 @@ All are Swift value types with the fields named here, built on demand and never 
 - `SidebarSnapshot(revision, selected: Int64?, sections: [SidebarSection], terminalCount, refreshInMs: UInt64?)`:
   `refreshInMs` is how long until words that move with time ("Working · 3m", a command's clock) read
   differently: arm **one** timer for it, `nil` asks for none.
-- `SidebarSection(key, head: GroupHead?, rows: [SidebarRow], terminalCount, alertCount)`: `head == nil`
+- `SidebarSection(key, head: GroupHead?, rows: [SidebarRow], terminalCount, alertCount, tiles: [MemberTile], alert: Urgency?, workingCount)`:
+  while the group is **folded** `tiles` is what the head draws in the place of rows (every terminal that passes
+  the search, the loudest first: `MemberTile(id, name, glyph: TileGlyph, state, agent, urgency)`), `alert` is
+  the loudest alert for the head's dot (`needsYou` or `failed`), `workingCount` is what to ask about before
+  closing the group. `head == nil`
   is a run of terminals in no group. `rows` is empty while the group is folded (`terminalCount` still says
   what is folded away; `alertCount` is the needs-input and failed ones, for the head's dot). While a search
   is on, only matching rows and sections that still have one are listed.
-- `GroupHead(id: UInt32, name, color, pinned, folded, folder, position, of, spoken)`.
-- `SidebarRow(id, name, number: UInt32?, keycap: String?, selected, pinned, state: RowState, agent: AgentInfo?, message, branch, folder, unread, bell, failureCode: Int32?, changes: UInt32?, notes, secondLine: SecondLine, split: SplitInfo, position, of, spoken, repo: String?, dirty, ahead: UInt32, behind: UInt32, repoFiles: UInt32?)`
-  (the last five are additive, still contract version 2):
+- `GroupHead(id: UInt32, name, color, pinned, folded, folder, position, of, spoken, folderPath: String?, onlyInFolder)`:
+  `folder` is as the list shows it (`~/app`), `folderPath` the full path.
+- `SidebarRow(id, name, number: UInt32?, keycap: String?, selected, pinned, state: RowState, agent: AgentInfo?, message, branch, folder, unread, bell, failureCode: Int32?, changes: UInt32?, notes, secondLine: SecondLine, split: SplitInfo, position, of, spoken, repo: String?, dirty, ahead: UInt32, behind: UInt32, repoFiles: UInt32?, glyph: TileGlyph, agentHidden, forgetText)`
+  (the last eight are additive, still contract version 2):
   `number` is the ⌘ number the row holds (kept with the terminal under "Stay with the terminal"; they do
   not renumber under a search, as ⌘n still selects the same terminal). `spoken` is the whole VoiceOver label.
   `RowState` is `needsYou, working, finished, failed, idle, exited`.
@@ -233,10 +246,28 @@ All are Swift value types with the fields named here, built on demand and never 
   command (code font); `trail` sits at the line's right.
 - `SplitInfo(id, bracket: Bracket?, chain, onScreen, members)`: `bracket` is `start/mid/end` along the rows of a
   split whose members are next to each other, `chain` a member that is not together in the list.
-- `PanesSnapshot(revision, split: Int64?, panes: [PaneRect(id, x, y, w, h, focused)], focused, zoomed)`:
-  the selected terminal's split in reading order, or the zoomed pane alone, or the lone terminal.
-- `ChromeSnapshot(revision, sidebarVisible, panelVisible, panelTab: TabId, search, overlay)`; `TabId` is
-  `changes, history, notes, usage, project, files`.
+- `PanesSnapshot(revision, split: Int64?, panes: [PaneRect(id, x, y, w, h, focused)], focused, zoomed, dividers: [DividerInfo(path, index, axis, position, x, y, w, h)])`:
+  the selected terminal's split in reading order, or the zoomed pane alone, or the lone terminal. A divider is
+  named to `dragDivider`/`equalizeDivider` by `path` and `index`.
+- `ChromeSnapshot(revision, sidebarVisible, panelVisible, panelTab: TabId, search, overlay, panelWanted, panelToggle: PanelToggle, windowWidth, sidebarWidth, terminalWidth, panelWidth, sidebarChosenWidth, panelChosenWidth, sidebarMaxNow, panelMaxNow, limits: ColumnLimits, tabs: [PanelTab(tab, key, label, enabled, selected)], layout: LayoutInfo(presets: [PresetInfo(preset, title, slots, current, enabled)], canSplitRow, canSplitColumn, paneCount, zoomed), selected, zoomed, numbersFollowList)`;
+  `TabId` is `changes, history, notes, usage, project, files`. The columns are core's `view::layout::Panes`
+  fitted to the window's width (`setWindowWidth`): a hidden or yielding column is 0 wide, the panel gives way
+  first and `panelToggle` says `open`, `closed(hidesSidebar)` or `waiting` (wanted, no room). `EdgeDrag(open, width, stop: Stop?, readout)`
+  from `edgeDrag(edge:extent:)` is the live readout of a drag ("430 · max", "Close") without moving anything.
+- `TerminalsSnapshot(revision, selected, terminals: [TerminalSummary], counts: TerminalCounts(needsYou, working, finished, failed, quiet))`:
+  **every** terminal in the list's order, folded groups' too (`TerminalSummary.folded`, no `number` then),
+  for the palette, the status bar and menus. `revision` is `Revisions.terminals`.
+- `TitleSnapshot(revision, terminal: TitleTerminal?, left: [TitleSlot], right: [TitleSlot], hidden: [TitlePart], pathSteps: [PathStep(parents, last)], pathMenu: [PathFolder(path, name)])`:
+  the parts of the title row before and after its flexible space, each `TitleSlot(part, present, chevronBefore)`
+  (`present` says the model has something for it; gauge, ports and the pull request come with their feeds).
+  `pathSteps` are the ways to draw the folder, widest first: measure each in the row's fonts and give the widths
+  to core's `fit_row` (an FFI function is still to come). Name clashes in Swift: `Axis`, `Edge` and `Part` also exist in SwiftUI; qualify them.
+
+Contract version stays 2: everything above is additive (new cases, new records, fields at the end of
+existing records). Added with phase 2b: `Revisions.terminals`; `SidebarRow.{glyph, agentHidden, forgetText}`;
+`GroupHead.{folderPath, onlyInFolder}`; `SidebarSection.{tiles, alert, workingCount}`; `PanesSnapshot.dividers`;
+the new `ChromeSnapshot` fields; the `Action` and `WorkspaceEvent` cases and the snapshots, queries and
+records named above.
 
 ### What feeds a row
 
@@ -272,160 +303,6 @@ What does not feed yet: the hook **socket** (a hook script's `Wormhole hook` rea
 which the Swift app does not serve yet: the app that serves it calls `hook(...)`), the Settings that decide what a
 row counts (plain terminals' working: finishing commands; shared files: every terminal counts them), the
 Changes panel's full status, and notes (`setNotes`).
-
-### Threads and locks
-
-- Rust runs two threads per terminal that Swift never sees: the **PTY reader** (reads, parses into
-  the screen) and an **event thread** (`wormhole-ffi-events`) that turns the engine's events into the
-  queue behind `drainEvents`.
-- `TerminalListener.wake()` is called **on the event thread**, with no Rust lock held, **at most once
-  between two `drainEvents()` calls** (a flood of a million events is one `wake()`; the first event
-  after a drain wakes again). It must return quickly: set a flag and hop to the main queue
-  (`DispatchQueue.main.async`), then un-pause the display link. Do not call `frame()` inside it,
-  and do not block it on anything the main thread holds.
-- Every other method may be called from **any thread** (they lock internally) and is meant for the
-  **main thread**: `frame()`, `write`, `sendKey`, `resize`, `scroll` and `drainEvents` are each
-  microseconds to a few hundred microseconds (numbers in the spike report). `frame()` and `resize`
-  take the engine's **FairLock**, the lock the reader thread parses under; it is handed over in
-  asking order, so the main thread waits at most for the one parse slice that holds it (2 to 3 µs
-  on average under a flood, measured in `pty/lock.rs`). Never call a `Terminal` method from inside
-  `wake()`: the event thread would wait on the main thread's turn.
-- `frame()` is serialized by an internal mutex: one consumer per terminal. The engine's damage is
-  consumed by the call, so two renderers cannot share one terminal (call `fullFrame()` to give a
-  new one its picture, but the first would then miss the damage).
-- After `close()`, `frame()` and `fullFrame()` return empty `Data`, other calls do nothing.
-
-### Events: `drainEvents()`
-
-```swift
-public enum TermEvent: Equatable, Hashable, Sendable {
-    case output                    // new content: take a frame (at most one per drain: "something is new", not a count)
-    case title(title: String)      // OSC 0/2
-    case resetTitle
-    case bell
-    case exited(code: Int32?)      // the program is gone; the screen stays readable
-}
-```
-
-The engine has more events (clipboard, working directory, command marks, notifications, program
-status, window operations); they are added as the app needs them, each as a new case (a minor
-change: a Swift `switch` needs `@unknown default`, and unknown ones are simply not delivered today).
-
-Protocol for the display link: `wake()` -> un-pause the link; each tick: `drainEvents()` (this
-re-arms `wake()`), then `frame()`; when a tick finds nothing to draw, pause the link. An idle
-terminal calls nothing and its threads sleep.
-
-### Keys: `sendKey`
-
-`KeyPress(key: String, text: String?, shift: Bool, alt: Bool, control: Bool, platform: Bool,
-optionAsMeta: Bool)` is a generated record (a struct with a memberwise `init`). `key` follows the app's key table (GPUI's names): `"enter"`, `"tab"`, `"backspace"`, `"escape"`,
-`"up"`, `"down"`, `"left"`, `"right"`, `"home"`, `"end"`, `"pageup"`, `"pagedown"`, `"insert"`,
-`"delete"`, `"space"`, `"f1"`...`"f24"`, or the single unshifted character (`"a"`, `"["`, `"1"`).
-`text` is what the key types with the layout and modifiers (`event.characters`); pass `nil` when
-Control is held (as the app does). `platform` is Cmd: a Cmd chord returns `false` and sends nothing
-(the application's own shortcuts). `optionAsMeta`: Option+key sends ESC+key. The encoder follows
-the terminal's modes (application cursor keys, kitty keyboard, modifyOtherKeys). Returns whether
-bytes were sent; sending clears the selection and returns the view to the live screen. For text
-that is not a key (IME commit, paste), use `write(bytes:)` (bracketed paste is not wrapped yet).
-
-## The object: `Workspace`
-
-One window's terminals, groups, pins and splits, and what the sidebar lists of them. It wraps core's
-sans-IO `WorkspaceModel` (`crates/wormhole-core/src/workspace/`, the rules are core's `view::sidebar`
-and `view::panes`) behind one mutex. Swift sends **actions**, Rust answers with **events**, and the
-UI **pulls snapshots** when a revision moved: it never re-implements a rule (order, pins, numbers,
-drop plans, selection after a close, second lines, VoiceOver words).
-
-```swift
-init(config: WorkspaceConfig, listener: WorkspaceListener)   // WorkspaceConfig(home:, numbersFollowList:, startFolder:, paneHeaderHeight:)
-
-func apply(action: Action) -> [WorkspaceEvent]     // the events of THIS call come back from it
-func drain() -> [WorkspaceEvent]                   // events caused elsewhere (a terminal's thread); re-arms wake()
-func sidebar() -> SidebarSnapshot                  // words as they read now (the workspace's clock)
-func sidebarAt(nowMs: UInt64) -> SidebarSnapshot   // ... as they read at a given time (tests, previews)
-func panes(width: Float, height: Float) -> PanesSnapshot
-func chrome() -> ChromeSnapshot
-func revisions() -> Revisions                      // sidebar / layout / chrome counters
-func selected() -> Int64?
-func dropPlan(dragged: Int64, over: Over) -> DropPlan?   // pure: the line a drag would drop on
-func setFacts(id: Int64, facts: TerminalFactsRecord) -> [WorkspaceEvent]   // whole replacement (tests, previews)
-func setGit(id: Int64, branch: String?, changes: UInt32?) -> [WorkspaceEvent]   // previews and tests only: a registered terminal's git is read by the workspace
-func hook(id: Int64, agent: String, event: String, message: String?) -> [WorkspaceEvent]   // an agent's hook, see "What feeds a row"
-func setWindowState(active: Bool, seen: Bool) -> [WorkspaceEvent]   // the window in front / visible at all
-func setNotes(id: Int64, tasksDone: [Bool], notes: [String]) -> [WorkspaceEvent]   // what the row's notes mark counts
-func retryGit()                                    // git was missing and may be there now
-func registerTerminal(id: Int64, terminal: Terminal)   // after Opened and Terminal.start: feeds the row; Closed ends it
-func terminal(id: Int64) -> Terminal?
-func nowMs() -> UInt64
-```
-
-`WorkspaceListener` has one method, `wake()`, with the same rules as `TerminalListener`'s: called from
-a Rust thread with no lock held, at most once between two `drain()` calls, and it must only note the
-wake and hop to the main queue. **One handler** serves both sources of events: `apply`'s result and
-`drain()`'s.
-
-### Events: `WorkspaceEvent`
-
-| Case | Meaning, and what Swift does |
-|---|---|
-| `opened(id, cwd)` | a terminal was made: `Terminal.start(...)` a program for it (in `cwd` when there is one), then `registerTerminal(id:terminal:)` |
-| `closed(id)` | the terminal is gone; its registered `Terminal` has already been closed by Rust. Drop its view |
-| `selected(id)` | the selection moved (`nil`: none) |
-| `moved(id)` | a row moved or joined a split: animate it (`Landing`/zone change, by id) |
-| `listing` | the rows, groups or numbers changed: pull `sidebar()` |
-| `layout` | splits or the panes' focus changed: pull `panes(width:height:)` |
-| `chrome` | sidebar/panel visibility, panel tab, search or overlay changed: pull `chrome()` |
-| `refused(reason)` | the action changed nothing (`unknown`, `tooSmall`, `unchanged`): data, not an error |
-
-Events are coalesced within a call (`listing`/`layout`/`chrome` at most once, `selected` last wins).
-
-### Actions: `Action`
-
-Ids are `Int64` (a terminal's id is its session's; split and terminal ids share one counter and never
-repeat), groups are `UInt32` (a group's id is stable while it exists).
-
-| Group | Cases |
-|---|---|
-| Selection | `select(id)`, `selectStep(delta)` (next/previous as listed, wraps, skips folded), `selectNumber(n)` (⌘1...⌘9; a number past the last selects the last) |
-| Terminals | `newTerminal` (in the selected one's folder, selected, search ends), `close(id)` (the app's rule: selection by the window's order, a split's heir; closing the last starts a new one), `rename(id, name)` (blank gives the name back to what runs in it), `setPinned`, `togglePin` (a split is pinned as a whole) |
-| Groups | `newGroup(members)` (with the rest of their splits; needs terminals that exist), `renameGroup` (blank keeps the old name), `toggleGroup` (fold), `ungroup`, `setGroupPinned`, `addToGroup(id, group)`, `removeFromGroup(id)` |
-| Moves | `dropTerminal(dragged, over)`, `dropGroup(group, over)` (core's `place` rules; `Over` is by id: `row(id, part)`, `head(group, part)`, `after(card)`, `tail`), `moveTerminal(id, landing)`, `moveGroup(group, landing)` (`Landing.top(before: Item?)` / `.group(group, before: Int64?)`) |
-| Splits | `splitBeside(anchor, axis)` (a new terminal in the anchor's folder, selected; refused `tooSmall` without room), `joinSplit(id, target, zone)`, `leaveSplit(id)`, `focusPane(id)`, `toggleZoom` |
-| Chrome | `toggleSidebar`, `togglePanel`, `showPanelTab(tab)` (shows the panel), `search(text)`, `showOverlay(overlay?)`, `setPaneArea(width, height)` (zero until laid out: nothing is refused for want of room) |
-
-### Snapshots
-
-All are Swift value types with the fields named here, built on demand and never mirrored.
-
-- `SidebarSnapshot(revision, selected: Int64?, sections: [SidebarSection], terminalCount, refreshInMs: UInt64?)`:
-  `refreshInMs` is how long until words that move with time ("Working · 3m", a command's clock) read
-  differently: arm **one** timer for it, `nil` asks for none.
-- `SidebarSection(key, head: GroupHead?, rows: [SidebarRow], terminalCount, alertCount)`: `head == nil`
-  is a run of terminals in no group. `rows` is empty while the group is folded (`terminalCount` still says
-  what is folded away; `alertCount` is the needs-input and failed ones, for the head's dot). While a search
-  is on, only matching rows and sections that still have one are listed.
-- `GroupHead(id: UInt32, name, color, pinned, folded, folder, position, of, spoken)`.
-- `SidebarRow(id, name, number: UInt32?, keycap: String?, selected, pinned, state: RowState, agent: AgentInfo?, message, branch, folder, unread, bell, failureCode: Int32?, changes: UInt32?, notes, secondLine: SecondLine, split: SplitInfo, position, of, spoken, repo: String?, dirty, ahead: UInt32, behind: UInt32, repoFiles: UInt32?)`
-  (the last five are additive, still contract version 2):
-  `number` is the ⌘ number the row holds (kept with the terminal under "Stay with the terminal"; they do
-  not renumber under a search, as ⌘n still selects the same terminal). `spoken` is the whole VoiceOver label.
-  `RowState` is `needsYou, working, finished, failed, idle, exited`.
-- `SecondLine(text, tone: Tone, mono, trail)`: `Tone` is `plain, attention, done, failed`; `mono` means a
-  command (code font); `trail` sits at the line's right.
-- `SplitInfo(id, bracket: Bracket?, chain, onScreen, members)`: `bracket` is `start/mid/end` along the rows of a
-  split whose members are next to each other, `chain` a member that is not together in the list.
-- `PanesSnapshot(revision, split: Int64?, panes: [PaneRect(id, x, y, w, h, focused)], focused, zoomed)`:
-  the selected terminal's split in reading order, or the zoomed pane alone, or the lone terminal.
-- `ChromeSnapshot(revision, sidebarVisible, panelVisible, panelTab: TabId, search, overlay)`; `TabId` is
-  `changes, history, notes, usage, project, files`.
-
-### What feeds a row
-
-`registerTerminal` makes the terminal's own events facts of its row, on its event thread: the title its
-program set (`title`), the shell's folder (OSC 7), the program in front and when it started (OSC 133 marks),
-a command that failed with its exit code, the bell and output nobody has seen while another terminal
-is selected. Selecting a terminal (and the panes shown with it) hears the bell and spends a finished or failed
-result. What does not feed yet: a coding agent's status (its hooks), git (`setGit`), notes (`setFacts`).
 
 ### Threads and locks
 

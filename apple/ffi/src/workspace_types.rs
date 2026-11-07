@@ -3,12 +3,18 @@
 //! no copy to keep in step: a field added in core fails to compile here until it is added below.
 //! Only what holds a path (`Event`, `TerminalFacts`) has a hand-written twin, in `workspace.rs`.
 
+use wormhole_core::config::FeatureId;
 use wormhole_core::config::tab::TabId;
-use wormhole_core::view::panes::{Axis, Zone};
-use wormhole_core::view::sidebar::{Bracket, Item, Landing, Part, RowState, Status};
+use wormhole_core::view::layout::title_parts::TitlePart;
+use wormhole_core::view::layout::{Edge, PanelToggle, Stop};
+use wormhole_core::view::panes::{Axis, Preset, Zone};
+use wormhole_core::view::sidebar::{Bracket, GroupColor, Item, Landing, Part, RowState, Status, Urgency};
 use wormhole_core::workspace::{
-    Action, AgentInfo, CardRef, ChromeSnapshot, DropPlan, GroupHead, Over, Overlay, PaneRect, PanesSnapshot,
-    Refusal, Revisions, SecondLine, SidebarRow, SidebarSection, SidebarSnapshot, SplitInfo, Tone,
+    Action, AgentInfo, CardRef, ChromeSnapshot, ColumnLimits, DividerInfo, DropPlan, EdgeDrag, GroupHead,
+    LayoutInfo, MemberTile, Over, Overlay, PaneRect, PanelTab, PanesSnapshot, PathFolder, PathStep,
+    PresetInfo, Refusal, Revisions, SecondLine, SidebarRow, SidebarSection, SidebarSnapshot, SplitInfo,
+    TerminalCounts, TerminalSummary, TerminalsSnapshot, TileGlyph, TitleSlot, TitleSnapshot, TitleTerminal,
+    Tone,
 };
 
 #[uniffi::remote(Enum)]
@@ -96,6 +102,95 @@ pub enum Tone {
 }
 
 #[uniffi::remote(Enum)]
+pub enum GroupColor {
+    Grey,
+    Blue,
+    Red,
+    Yellow,
+    Green,
+    Pink,
+    Purple,
+    Cyan,
+    Orange,
+}
+
+#[uniffi::remote(Enum)]
+pub enum Preset {
+    Single,
+    TwoColumns,
+    TwoRows,
+    Grid,
+}
+
+#[uniffi::remote(Enum)]
+pub enum Edge {
+    Sidebar,
+    Panel,
+}
+
+#[uniffi::remote(Enum)]
+pub enum Stop {
+    Min,
+    Max,
+}
+
+#[uniffi::remote(Enum)]
+pub enum PanelToggle {
+    Open,
+    Closed { hides_sidebar: bool },
+    Waiting,
+}
+
+#[uniffi::remote(Enum)]
+pub enum FeatureId {
+    Changes,
+    History,
+    Notes,
+    Usage,
+    Project,
+    Worktrees,
+    Files,
+}
+
+#[uniffi::remote(Enum)]
+pub enum TitlePart {
+    Folder,
+    Branch,
+    BranchStatus,
+    Terminal,
+    TerminalStatus,
+    Space,
+    AgentGauge,
+    Ports,
+    PullRequest,
+    OpenIn,
+    Splits,
+}
+
+#[uniffi::remote(Enum)]
+pub enum Urgency {
+    NeedsYou,
+    Failed,
+    Working,
+    Bell,
+    NewOutput,
+    Running,
+    Done,
+    Idle,
+}
+
+#[uniffi::remote(Enum)]
+pub enum TileGlyph {
+    Working,
+    NeedsYou,
+    Done,
+    Failed,
+    Idle,
+    Terminal { unread: bool },
+    Shell,
+}
+
+#[uniffi::remote(Enum)]
 pub enum Refusal {
     Unknown,
     TooSmall,
@@ -133,20 +228,38 @@ pub enum Action {
     Rename { id: i64, name: String },
     SetPinned { id: i64, pinned: bool },
     TogglePin(i64),
+    SetAgentHidden { id: i64, hidden: bool },
+    ToggleAgentHidden(i64),
+    SetForgetText { id: i64, forget: bool },
+    ToggleForgetText(i64),
     NewGroup { members: Vec<i64> },
     RenameGroup { group: u32, name: String },
     ToggleGroup(u32),
     Ungroup(u32),
     SetGroupPinned { group: u32, pinned: bool },
+    NewTerminalInNewGroup,
+    NewTerminalInGroup(u32),
+    SetGroupColor { group: u32, color: Option<GroupColor> },
+    SetGroupCustomColor { group: u32, r: u8, g: u8, b: u8 },
+    SetGroupFolder { group: u32, folder: Option<String> },
+    SetOnlyInFolder { group: u32, on: bool },
+    DeclineGroupFolder(u32),
+    CloseGroup(u32),
+    MoveGroupToWindow(u32),
     AddToGroup { id: i64, group: u32 },
     RemoveFromGroup(i64),
     DropTerminal { dragged: i64, over: Over },
     DropGroup { group: u32, over: Over },
     MoveTerminal { id: i64, landing: Landing },
+    MoveTerminalAs { id: i64, landing: Landing, leave_split: bool, with_mates: bool },
     MoveGroup { group: u32, landing: Landing },
     SplitBeside { anchor: i64, axis: Axis },
     JoinSplit { id: i64, target: i64, zone: Zone },
     LeaveSplit(i64),
+    ShowBeside { id: i64, other: i64 },
+    ApplyLayout(Preset),
+    DragDivider { path: Vec<u32>, index: u32, position: f32 },
+    EqualizeDivider { path: Vec<u32>, index: u32 },
     FocusPane(i64),
     ToggleZoom,
     ToggleSidebar,
@@ -155,6 +268,12 @@ pub enum Action {
     Search(String),
     ShowOverlay(Option<Overlay>),
     SetPaneArea { width: f32, height: f32 },
+    SetWindowWidth(f32),
+    DragEdge { edge: Edge, extent: f32 },
+    ResetEdge(Edge),
+    SetTitleRow(Vec<TitlePart>),
+    SetNumbersFollowList(bool),
+    SetFeature { feature: FeatureId, on: bool },
 }
 
 #[uniffi::remote(Record)]
@@ -162,6 +281,7 @@ pub struct Revisions {
     pub sidebar: u64,
     pub layout: u64,
     pub chrome: u64,
+    pub terminals: u64,
 }
 
 #[uniffi::remote(Record)]
@@ -216,6 +336,9 @@ pub struct SidebarRow {
     pub ahead: u32,
     pub behind: u32,
     pub repo_files: Option<u32>,
+    pub glyph: TileGlyph,
+    pub agent_hidden: bool,
+    pub forget_text: bool,
 }
 
 #[uniffi::remote(Record)]
@@ -229,6 +352,18 @@ pub struct GroupHead {
     pub position: u32,
     pub of: u32,
     pub spoken: String,
+    pub folder_path: Option<String>,
+    pub only_in_folder: bool,
+}
+
+#[uniffi::remote(Record)]
+pub struct MemberTile {
+    pub id: i64,
+    pub name: String,
+    pub glyph: TileGlyph,
+    pub state: RowState,
+    pub agent: Option<AgentInfo>,
+    pub urgency: Urgency,
 }
 
 #[uniffi::remote(Record)]
@@ -238,6 +373,9 @@ pub struct SidebarSection {
     pub rows: Vec<SidebarRow>,
     pub terminal_count: u32,
     pub alert_count: u32,
+    pub tiles: Vec<MemberTile>,
+    pub alert: Option<Urgency>,
+    pub working_count: u32,
 }
 
 #[uniffi::remote(Record)]
@@ -266,6 +404,65 @@ pub struct PanesSnapshot {
     pub panes: Vec<PaneRect>,
     pub focused: Option<i64>,
     pub zoomed: Option<i64>,
+    pub dividers: Vec<DividerInfo>,
+}
+
+#[uniffi::remote(Record)]
+pub struct DividerInfo {
+    pub path: Vec<u32>,
+    pub index: u32,
+    pub axis: Axis,
+    pub position: f32,
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+}
+
+#[uniffi::remote(Record)]
+pub struct PanelTab {
+    pub tab: TabId,
+    pub key: String,
+    pub label: String,
+    pub enabled: bool,
+    pub selected: bool,
+}
+
+#[uniffi::remote(Record)]
+pub struct PresetInfo {
+    pub preset: Preset,
+    pub title: String,
+    pub slots: u32,
+    pub current: bool,
+    pub enabled: bool,
+}
+
+#[uniffi::remote(Record)]
+pub struct LayoutInfo {
+    pub presets: Vec<PresetInfo>,
+    pub can_split_row: bool,
+    pub can_split_column: bool,
+    pub pane_count: u32,
+    pub zoomed: bool,
+}
+
+#[uniffi::remote(Record)]
+pub struct EdgeDrag {
+    pub open: bool,
+    pub width: f32,
+    pub stop: Option<Stop>,
+    pub readout: String,
+}
+
+#[uniffi::remote(Record)]
+pub struct ColumnLimits {
+    pub sidebar_min: f32,
+    pub sidebar_max: f32,
+    pub panel_min: f32,
+    pub panel_max: f32,
+    pub terminal_min: f32,
+    pub window_min_width: f32,
+    pub window_min_height: f32,
 }
 
 #[uniffi::remote(Record)]
@@ -276,4 +473,105 @@ pub struct ChromeSnapshot {
     pub panel_tab: TabId,
     pub search: String,
     pub overlay: Option<Overlay>,
+    pub panel_wanted: bool,
+    pub panel_toggle: PanelToggle,
+    pub window_width: f32,
+    pub sidebar_width: f32,
+    pub terminal_width: f32,
+    pub panel_width: f32,
+    pub sidebar_chosen_width: f32,
+    pub panel_chosen_width: f32,
+    pub sidebar_max_now: f32,
+    pub panel_max_now: f32,
+    pub limits: ColumnLimits,
+    pub tabs: Vec<PanelTab>,
+    pub layout: LayoutInfo,
+    pub selected: Option<i64>,
+    pub zoomed: Option<i64>,
+    pub numbers_follow_list: bool,
+}
+
+#[uniffi::remote(Record)]
+pub struct TerminalSummary {
+    pub id: i64,
+    pub name: String,
+    pub number: Option<u32>,
+    pub selected: bool,
+    pub pinned: bool,
+    pub state: RowState,
+    pub glyph: TileGlyph,
+    pub agent: Option<AgentInfo>,
+    pub message: Option<String>,
+    pub branch: Option<String>,
+    pub folder: Option<String>,
+    pub cwd: Option<String>,
+    pub command: Option<String>,
+    pub group: Option<u32>,
+    pub group_name: Option<String>,
+    pub split: Option<i64>,
+    pub folded: bool,
+    pub agent_hidden: bool,
+    pub forget_text: bool,
+    pub unread: bool,
+    pub bell: bool,
+}
+
+#[uniffi::remote(Record)]
+pub struct TerminalCounts {
+    pub needs_you: u32,
+    pub working: u32,
+    pub finished: u32,
+    pub failed: u32,
+    pub quiet: u32,
+}
+
+#[uniffi::remote(Record)]
+pub struct TerminalsSnapshot {
+    pub revision: u64,
+    pub selected: Option<i64>,
+    pub terminals: Vec<TerminalSummary>,
+    pub counts: TerminalCounts,
+}
+
+#[uniffi::remote(Record)]
+pub struct TitleSlot {
+    pub part: TitlePart,
+    pub present: bool,
+    pub chevron_before: bool,
+}
+
+#[uniffi::remote(Record)]
+pub struct TitleTerminal {
+    pub id: i64,
+    pub name: String,
+    pub agent: Option<AgentInfo>,
+    pub glyph: TileGlyph,
+    pub state: RowState,
+    pub folder: Option<String>,
+    pub cwd: Option<String>,
+    pub branch: Option<String>,
+    pub message: Option<String>,
+}
+
+#[uniffi::remote(Record)]
+pub struct PathStep {
+    pub parents: String,
+    pub last: String,
+}
+
+#[uniffi::remote(Record)]
+pub struct PathFolder {
+    pub path: String,
+    pub name: String,
+}
+
+#[uniffi::remote(Record)]
+pub struct TitleSnapshot {
+    pub revision: u64,
+    pub terminal: Option<TitleTerminal>,
+    pub left: Vec<TitleSlot>,
+    pub right: Vec<TitleSlot>,
+    pub hidden: Vec<TitlePart>,
+    pub path_steps: Vec<PathStep>,
+    pub path_menu: Vec<PathFolder>,
 }

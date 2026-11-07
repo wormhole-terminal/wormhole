@@ -189,3 +189,110 @@ fn a_registered_terminal_feeds_its_row_and_wakes_once_for_what_it_told() {
     assert!(ws.terminal(1).is_none());
     assert!(first.frame().is_empty(), "the Terminal was closed with its row");
 }
+
+#[test]
+fn a_folded_group_still_shows_its_tiles_and_every_terminal_is_listed() {
+    use wormhole_core::view::sidebar::Urgency;
+    let (ws, _) = workspace();
+    for _ in 0..3 {
+        ws.apply(Action::NewTerminal);
+    }
+    ws.apply(Action::NewGroup { members: vec![2, 3] });
+    let facts = |id: i64, status| {
+        ws.set_facts(id, TerminalFactsRecord { status, agent: Some("claude".into()), ..quiet_facts() });
+    };
+    facts(2, wormhole_core::view::sidebar::Status::Busy);
+    facts(3, wormhole_core::view::sidebar::Status::Attention);
+    ws.apply(Action::ToggleGroup(1));
+    let sidebar = ws.sidebar_at(0);
+    let head = &sidebar.sections[1];
+    assert!(head.rows.is_empty());
+    assert_eq!(head.tiles.iter().map(|t| t.id).collect::<Vec<_>>(), [3, 2], "the loudest first");
+    assert_eq!(head.alert, Some(Urgency::NeedsYou));
+    assert_eq!(head.working_count, 1);
+    let all = ws.terminals();
+    assert_eq!(all.terminals.len(), 3, "the palette still lists what the fold hides");
+    assert!(all.terminals.iter().filter(|t| t.folded).count() == 2);
+    assert_eq!((all.counts.needs_you, all.counts.working), (1, 1));
+    assert_eq!(all.revision, ws.revisions().terminals);
+}
+
+fn quiet_facts() -> TerminalFactsRecord {
+    TerminalFactsRecord {
+        title: None,
+        shell: "zsh".into(),
+        agent: None,
+        reports: false,
+        status: wormhole_core::view::sidebar::Status::Idle,
+        message: None,
+        since_ms: 0,
+        cwd: None,
+        branch: None,
+        command: None,
+        running_since_ms: None,
+        bell: false,
+        failure_code: None,
+        failure_command: None,
+        failure_at_ms: 0,
+        unread: false,
+        changes: None,
+        notes: 0,
+    }
+}
+
+#[test]
+fn a_groups_menu_acts_through_the_actions() {
+    use wormhole_core::view::sidebar::GroupColor;
+    let (ws, _) = workspace();
+    for _ in 0..3 {
+        ws.apply(Action::NewTerminal);
+    }
+    ws.apply(Action::NewGroup { members: vec![2] });
+    ws.apply(Action::SetGroupColor { group: 1, color: Some(GroupColor::Pink) });
+    ws.apply(Action::SetGroupFolder { group: 1, folder: Some("/tmp".into()) });
+    let head = ws.sidebar_at(0).sections[1].head.clone().expect("the group's head");
+    assert_eq!((head.color.as_str(), head.pinned, head.folder_path.as_deref()), ("pink", true, Some("/tmp")));
+    let events = ws.apply(Action::NewTerminalInGroup(1));
+    assert!(events.contains(&WorkspaceEvent::Opened { id: 4, cwd: Some("/tmp".into()) }), "{events:?}");
+    let events = ws.apply(Action::SetForgetText { id: 4, forget: true });
+    assert!(events.contains(&WorkspaceEvent::SavedTextForgotten { id: 4 }));
+    let events = ws.apply(Action::MoveGroupToWindow(1));
+    assert_eq!(events, [WorkspaceEvent::GroupToWindow { group: 1, terminals: vec![2, 4] }]);
+    let events = ws.apply(Action::CloseGroup(1));
+    assert!(
+        events.contains(&WorkspaceEvent::Closed { id: 2 })
+            && events.contains(&WorkspaceEvent::Closed { id: 4 })
+    );
+    assert_eq!(ws.sidebar_at(0).sections.len(), 3, "the group stays, empty: its folder pinned it");
+}
+
+#[test]
+fn the_chrome_says_what_the_title_bar_and_menus_need() {
+    use wormhole_core::view::layout::Edge;
+    use wormhole_core::view::panes::Preset;
+    let (ws, _) = workspace();
+    ws.apply(Action::NewTerminal);
+    ws.apply(Action::SetWindowWidth(1400.0));
+    ws.apply(Action::SetPaneArea { width: 1000.0, height: 600.0 });
+    let chrome = ws.chrome();
+    assert_eq!(chrome.tabs.len(), 6);
+    assert_eq!((chrome.sidebar_width, chrome.panel_width, chrome.terminal_width), (350.0, 360.0, 690.0));
+    assert!(chrome.layout.presets.iter().all(|p| p.enabled) && ws.can_layout(Preset::Grid));
+    assert_eq!(ws.edge_drag(Edge::Sidebar, 500.0).readout, "420 · max");
+    ws.apply(Action::ApplyLayout(Preset::TwoColumns));
+    assert_eq!(ws.panes(1000.0, 600.0).dividers.len(), 1);
+
+    ws.apply(Action::Rename { id: 1, name: "api".into() });
+    ws.set_facts(
+        1,
+        TerminalFactsRecord {
+            cwd: Some("/Users/me/Projects/app".into()),
+            branch: Some("main".into()),
+            ..quiet_facts()
+        },
+    );
+    let title = ws.title("Macintosh HD".into());
+    assert_eq!(title.terminal.as_ref().map(|t| t.name.as_str()), Some("api"));
+    assert_eq!(title.path_menu.last().map(|f| f.name.as_str()), Some("Macintosh HD"));
+    assert!(title.left.iter().any(|slot| slot.chevron_before));
+}
