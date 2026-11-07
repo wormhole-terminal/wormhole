@@ -23,8 +23,9 @@ var targets: [Target] = [
     // The window around the terminal. Layers, lowest first; each depends only on the ones above it here.
     // The window's state as plain values and the actions on it. Foundation only.
     .target(name: "WorkspaceModel"),
-    // Tokens and shared components (SwiftUI). Knows nothing of terminals.
-    .target(name: "DesignSystem"),
+    // Tokens and shared components (SwiftUI). Knows nothing of terminals. `themes.json` is every bundled
+    // theme's resolved tokens, written from `wormhole-core` by `apple/scripts/dump-themes.sh`.
+    .target(name: "DesignSystem", resources: [.copy("Resources/themes.json")]),
     // The sidebar's list, rows and header.
     .target(name: "SidebarUI", dependencies: ["WorkspaceModel", "DesignSystem"]),
     // Title rows, status bar, right panel and the window that holds them with the terminal view.
