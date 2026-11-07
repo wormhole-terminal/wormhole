@@ -250,8 +250,7 @@ impl Prepare {
             (paints, over)
         });
         images_span.end(Part::Images);
-        let folds =
-            folds::markers(&cache.snapshot, &fold_found, geometry, cols, self.ui, &self.entity, window, cx);
+        let folds = folds::markers(&cache.snapshot, &fold_found, geometry, self.ui, &self.entity, window, cx);
         Some(Frame {
             geometry,
             reach,

@@ -39,13 +39,12 @@ pub(super) fn markers(
     snapshot: &ScreenSnapshot,
     found: &[usize],
     geometry: Geometry,
-    cols: usize,
     ui: UiColors,
     entity: &Entity<TerminalView>,
     window: &mut Window,
     cx: &mut App,
 ) -> Vec<AnyElement> {
-    let width = geometry.cell_width * cols as f32;
+    let width = geometry.cell_width * snapshot.columns() as f32;
     let mut markers = Vec::new();
     for (row, fold) in
         snapshot.rows().iter().enumerate().filter_map(|(row, shown)| Some((row, shown.fold()?)))
