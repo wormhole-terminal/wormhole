@@ -19,6 +19,7 @@ public struct SectionLabel: View {
                     .font(.system(size: Metric.chevron, weight: .bold))
                     .rotationEffect(.degrees(isCollapsed ? 0 : 90))
                     .frame(width: Metric.lead)
+                    .motion(Motion.layout, value: isCollapsed)
             }
             Text(title).font(TextRole.caption.font.weight(.semibold))
             Spacer(minLength: 0)

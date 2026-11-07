@@ -1,4 +1,4 @@
-// A borderless symbol button with a hover fill. The label is required: it is the VoiceOver name and the tooltip.
+// A borderless symbol button with hover and press feedback. The label is required: it is the VoiceOver name and the tooltip.
 
 import SwiftUI
 
@@ -18,14 +18,25 @@ public struct IconButton: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: Metric.glyph, weight: .medium))
-                .foregroundStyle(hovering ? Palette.textPrimary : Palette.textSecondary)
                 .frame(width: Metric.control, height: Metric.control)
-                .background(hovering ? Palette.hover : .clear, in: RoundedRectangle(cornerRadius: Radius.row))
-                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(IconButtonStyle(hovering: hovering))
         .onHover { hovering = $0 }
         .help(label)
         .accessibilityLabel(label)
+    }
+}
+
+private struct IconButtonStyle: ButtonStyle {
+    let hovering: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.row)
+        return configuration.label
+            .foregroundStyle(hovering || configuration.isPressed ? Palette.textPrimary : Palette.textSecondary)
+            .background(configuration.isPressed ? Palette.pressed : hovering ? Palette.hover : .clear, in: shape)
+            .contentShape(shape)
+            .pressed(configuration.isPressed)
+            .motion(Motion.press, value: hovering)
     }
 }

@@ -51,6 +51,9 @@ public enum Palette {
     public static let danger = Color.red
     /// A field's face, a badge's face: a faint wash that reads on both appearances.
     public static let fill = Color.primary.opacity(0.08)
+    /// A row or button while it is held down: one step above hover.
+    public static let pressed = Color.primary.opacity(0.12)
+    public static let focusRing = Color.accentColor.opacity(0.6)
 }
 
 /// The four type roles of the GPUI app (12 / 14 / 16 / 20), as fonts that scale with Dynamic Type.
