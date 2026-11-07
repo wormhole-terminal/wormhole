@@ -1,7 +1,7 @@
 //! Links under the pointer: a program's hyperlink (OSC 8) or a URL in the text, and what may be opened.
 
 use wormhole_term::Openable;
-use wormhole_term::types::{Column, Line, Point};
+use wormhole_term::types::Line;
 
 use super::selection::RowSpan;
 use crate::terminal::Terminal;

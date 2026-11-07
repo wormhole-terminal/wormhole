@@ -237,6 +237,12 @@ fn quiet_facts() -> TerminalFactsRecord {
         unread: false,
         changes: None,
         notes: 0,
+        finished_command: None,
+        repo: None,
+        dirty: false,
+        ahead: 0,
+        behind: 0,
+        repo_files: None,
     }
 }
 
