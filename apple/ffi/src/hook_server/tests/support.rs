@@ -109,6 +109,24 @@ impl Fixture {
         id
     }
 
+    /// A terminal whose shell marks its prompts and commands as a shell with integration does (OSC 133), and
+    /// runs each line it is given: what `run` and `wait --block-done` need.
+    pub(super) fn shell_terminal(&self) -> i64 {
+        let script = self.dir.join("marking-shell");
+        let body = "#!/bin/sh\nm() { printf '\\033]133;%s\\007' \"$1\"; }\nm A; m B\nwhile IFS= read -r line; do\n  m C; eval \"$line\"; m \"D;$?\"; m A; m B\ndone\n";
+        std::fs::File::create(&script)
+            .and_then(|mut file| file.write_all(body.as_bytes()))
+            .expect("a script");
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).expect("executable");
+        let id = opened(&self.workspace.apply(Action::NewTerminal));
+        self.start_program(id, &script.to_string_lossy());
+        let terminal = self.workspace.terminal(id).expect("registered");
+        eventually("the shell's first prompt", || {
+            terminal.reader().and_then(|r| r.at_prompt()) == Some(true)
+        });
+        id
+    }
+
     /// Start and register the program of terminal `id` (made by the model already).
     pub(super) fn start(&self, id: i64) {
         self.start_program(id, "/bin/cat");

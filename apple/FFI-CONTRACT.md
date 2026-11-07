@@ -698,3 +698,59 @@ same length: each message's text, English's where a language lacks it, `""` for 
 Rust formats), `textLanguages()`, `textNegotiate(requested:)`, `textSetLanguage(tag:)` (the words Rust itself writes),
 `textHash()` (FNV-1a of the id list, for a generated key list to check itself against). One fetch per language,
 then a lookup in Swift.
+
+## The hook socket and the control line: `HookServer`
+
+What the GPUI app's `app/control/` and hook handling do, over a `Workspace`, behind one object. Without it no
+coding agent reaches the app: the installed hook scripts and the `Wormhole`/`wh` command line talk to a socket, and
+the socket's server is this.
+
+**Start.** `HookServer(workspace:usage:access:listener:dataDir:) throws` takes the data folder's single-instance lock
+and serves its socket as core names and protects it (`ipc::acquire_in`): the path from the data folder
+(`<temp>/wormhole-<uid>-<hash of the folder>.sock`, `socketPath()`; `dataDir` `nil` is the process's own, which the
+terminals' `WORMHOLE_SOCKET` names too), a `0600` file, a peer check on the user's uid, and the kernel lock a second
+instance cannot take. Errors (`HookError`): `NotIsolated` (a folder not named `Wormhole-swift*`), `AlreadyServed`
+(another process holds the lock; it was asked to come forward, so this one is the second launch and should quit),
+`failed`. `stop()` removes the socket, gives up the lock and closes the streams.
+
+**What it does with what arrives.**
+- An agent's hook (`WORMHOLE_BIN hook …`) is a status event for its terminal (`WORMHOLE_TAB_ID` = the `Opened` id);
+  its meaning is core's `StatusMachine`. Plan usage reports (`Message::Usage`) go to `UsageService`. A status
+  line's `Gauge` (model, context window) is dropped: a row has no field for it yet.
+- A control request is answered with core's parsing, limits, budgets and reply formats, after the gate (below). Verbs
+  served: `list`, `status`, `doctor`, `notify`, `send-text`, `send-keys`, `mouse`, `read`, `blocks`, `wait`, `run`,
+  `events` (topics `status title folder bell blocks terminals splits output`; `windows` is never published: one window), `new-terminal`,
+  `split` (right and down), `focus`, `rename`, `close`. Not served, each answered `unsupported` with words that say
+  so: `new-window` (one window), `new-terminal --worktree`, `split` to the left or up, `welcome`. `split --size` is
+  accepted and ignored (the reply carries no `size`).
+- **The gate** is `agent_access/gate.rs` over core's `decide`/`resolve`/`Scopes`, with `AccessDesk` holding the
+  approvals and the questions: Automation flag off, `control_write` decides as in the release; mode `off` refuses what
+  needs approval; `open` lets it in; `ask` identifies the program behind the `wh` from the system (process chain,
+  signature), asks the person through `AccessDesk.nextQuestion` (a request that said it waits holds its
+  connection, one that cannot is refused with `approval_needed` and the question stays) and then asks about each
+  terminal the program did not open. What a request opens is the program's own. Not ported: the question that
+  asks before a mode loosened outside Wormhole takes effect (`change.rs`), and the "who is driving" chip.
+- Every terminal started with `Terminal.startForTab(tab:…)` gets `WORMHOLE_TAB_ID`, `WORMHOLE_SOCKET`,
+  `WORMHOLE_BIN` (core's `terminal::process`). `WORMHOLE_BIN` is the app's own executable, so its `main` must run
+  `cliExitCode(arguments:) -> Int32?` first (`hook`, `statusline`, the control verbs; `nil` for a launch).
+
+**Threads.** The socket thread (core) parses and writes; one dispatch thread (`wormhole-hook-dispatch`) answers in
+order, never waits for a person (a question goes to the desk) and never panics out (a failed handler answers
+`failed`). `read`/`blocks` run on the socket thread, `wait`/`run`/`events` on threads of core's. A thread of the
+server's own (`wormhole-hook-tap`) compares what `list` would say now with what it said last when the model moved and
+somebody listens, and publishes the status, title, folder, terminal and split events; output and bells come from the
+terminals' own events through the workspace's tap. With nobody subscribed that is one atomic load. No lock of the
+model is held while the bus or Swift is called.
+
+**What Swift does.** `HookListener.wake()` (a Rust thread, no lock held, once until drained) then
+`drainEvents() -> [HookEvent]`: `activate` (a second launch, `focus --activate`), `notice(terminal, title, body)` (show
+it by the notification rules, `wh notify`), `closeAsked(terminal)` (ask the person; call `closeQuestionOver()` when
+answered: only one is asked at a time; nothing closes unless they say yes). A `new-terminal` or `split` is not a
+`HookEvent`: it is the workspace's own `Opened` in `Workspace.drain()`, started like any terminal the person opens
+(`Terminal.startForTab`, `register_terminal`); a `--folder` replaces the model's folder in that event. A command the
+request asked for is typed once the shell shows a prompt. Revoke an approval with `HookServer.revokeApproval(id:)`
+(it ends the streams the approval let in), and call `settingsChanged()` after a change of the agent-access mode.
+Swift side: `HookBridge` (`HookBridge.start(workspace:usage:access:)` and `HookBridge.exitCodeIfCommandLine()`).
+
+**Core changes this needed** (additive): `ipc::acquire_in` and `ipc::socket_path_in` are public (a server on a folder
+the process was not started with, and tests); `WorkspaceModel::splits_overview()`.

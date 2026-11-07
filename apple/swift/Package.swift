@@ -146,6 +146,10 @@ if ffiLinked {
         // The auxiliary windows' backends (update, session hosts, project trust, agent access, first run, licenses).
         .target(name: "AuxBridge", dependencies: ["AuxModel", "PlatformModel", "WormholeBindings"]),
         .testTarget(name: "AuxBridgeTests", dependencies: ["AuxBridge", "AuxModel", "PlatformModel"]),
+        // The agents' hooks and the control line (`Wormhole list|send-text|…`) served over the Rust workspace, and
+        // the executable's own command line (`hook`, `statusline`) for `main` to answer first.
+        .target(name: "HookBridge", dependencies: ["WormholeBindings"]),
+        .testTarget(name: "HookBridgeTests", dependencies: ["HookBridge", "WormholeBindings"]),
     ]
     appDependencies += [
         "UniFFISource", "WorkspaceBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge",

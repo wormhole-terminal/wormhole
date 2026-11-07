@@ -90,3 +90,26 @@ fn what_a_terminal_prints_is_told_to_a_stream_that_may_read_it_and_a_wait_can_ma
     };
     assert_eq!(told["terminal"], id);
 }
+
+#[test]
+fn run_types_a_command_at_the_prompt_and_tells_how_it_ended() {
+    let f = fixture("open");
+    let id = f.shell_terminal();
+    let target = json!({"kind": "terminal", "id": id});
+    let mut stream = f.client();
+    assert_eq!(stream.control(json!({"action": "events", "topics": ["blocks"]}))["ok"], true);
+    let mut client = f.client();
+    let ran = client.control(json!({"action": "run", "target": target, "command": "echo ran-here; exit_code=3; (exit 3)", "timeout_ms": 10000}));
+    assert_eq!(ran["ok"], true, "{ran}");
+    assert_eq!(ran["result"]["exit_code"], 3);
+    assert!(ran["result"]["output"].as_str().is_some_and(|out| out.contains("ran-here")), "{ran}");
+    // The same command was told to the stream as it started and as it ended.
+    let mut phases = Vec::new();
+    while phases.len() < 2 {
+        let line = stream.line().expect("an event line");
+        if line["event"] == "block" {
+            phases.push(line["phase"].as_str().expect("a phase").to_string());
+        }
+    }
+    assert_eq!(phases, ["started", "finished"]);
+}

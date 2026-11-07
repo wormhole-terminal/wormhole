@@ -11,9 +11,9 @@ use std::sync::mpsc::{Receiver, SyncSender, TryRecvError, sync_channel};
 use std::sync::{Arc, Mutex, PoisonError, Weak};
 
 use wormhole_core::ipc::bus::Bus;
-use wormhole_core::ipc::control::event::{Body, Event, Topic};
+use wormhole_core::ipc::control::event::{BlockPhase, Body, Event, Topic};
 use wormhole_core::ipc::control::{Listing, WindowInfo};
-use wormhole_term::PtyEvent;
+use wormhole_term::{BlockState, Mark, PtyEvent};
 
 use super::views::{self, Views};
 use crate::workspace::Shared;
@@ -25,6 +25,9 @@ pub(crate) trait Tap: Send + Sync {
     /// A registered terminal's program did something.
     fn terminal_event(&self, id: i64, event: &PtyEvent);
 }
+
+/// A command line is cut to this many characters in an event: it is a line of terminal text.
+const COMMAND_CHARS: usize = 512;
 
 /// The topics a model change can be told on.
 const MODEL_TOPICS: [Topic; 5] =
@@ -153,6 +156,49 @@ fn run(wakes: &Receiver<()>, publisher: &Weak<Publisher>) {
     }
 }
 
+impl Publisher {
+    /// Terminal `id`'s shell marked a command's start or end: tell which command it was. The mark carries the
+    /// number of its prompt, which is the block's id, so a mark heard late is still told about the right
+    /// command; how it went comes from the shell's own log by that number, the line typed from the grid.
+    fn block(&self, id: i64, mark: Mark, prompt: u64) {
+        let (phase, exit_code) = match mark {
+            Mark::OutputStart => (BlockPhase::Started, None),
+            Mark::Finished(code) => (BlockPhase::Finished, code),
+            Mark::PromptStart(_) | Mark::CommandStart => return,
+        };
+        let Some(terminal) = self.shared.upgrade().and_then(|shared| shared.terminal_of(id)) else { return };
+        // Before any prompt (0) the log has nothing to say.
+        let Some((state, line)) = terminal
+            .with_pty(|pty| (pty.command_state(prompt), pty.block(prompt).map(|block| block.command)))
+            .filter(|_| prompt > 0)
+        else {
+            return;
+        };
+        // An Enter on an empty line is marked as ending a block too, with no command in it: that is not a
+        // command finishing, and the command before it already said so.
+        if !state.ran() {
+            return;
+        }
+        let took_ms = match (phase, state) {
+            (BlockPhase::Finished, BlockState::Finished { took, .. }) => {
+                took.map(|took| u64::try_from(took.as_millis()).unwrap_or(u64::MAX))
+            }
+            _ => None,
+        };
+        self.bus.publish(Topic::Blocks, || {
+            let command = wormhole_term::clean(&line.unwrap_or_default(), COMMAND_CHARS);
+            let body = Body::Block {
+                block: i64::try_from(prompt).unwrap_or(i64::MAX),
+                phase,
+                exit_code,
+                took_ms,
+                command: (!command.is_empty()).then_some(command),
+            };
+            self.event(Some(id), body)
+        });
+    }
+}
+
 impl Tap for Publisher {
     fn model_touched(&self) {
         if MODEL_TOPICS.iter().any(|topic| self.bus.wants(*topic)) {
@@ -170,6 +216,7 @@ impl Tap for Publisher {
                 });
             }
             PtyEvent::Bell => self.bus.publish(Topic::Bell, || self.event(Some(id), Body::Bell)),
+            PtyEvent::Mark(mark, prompt) if self.bus.wants(Topic::Blocks) => self.block(id, *mark, *prompt),
             _ => {}
         }
     }
