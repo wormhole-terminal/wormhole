@@ -24,6 +24,16 @@ pub trait TerminalListener: Send + Sync {
 /// into Swift.
 pub(crate) trait EventFeed: Send + Sync {
     fn on_event(&self, event: &PtyEvent);
+    /// What the person did to the terminal, on the caller's thread (Swift's).
+    fn on_touch(&self, touch: Touch);
+}
+
+/// What the person did to a terminal: what makes the program print, which is not its own work.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Touch {
+    Typed,
+    Key { key: String, control: bool },
+    Resized,
 }
 
 /// What a terminal's program did, as the UI needs to hear it. The rest of `PtyEvent`'s variants
@@ -66,6 +76,13 @@ impl EventQueue {
     /// Let `feed` hear the events from now on; the first one wins.
     pub(crate) fn set_feed(&self, feed: Arc<dyn EventFeed>) {
         let _ = self.feed.set(feed);
+    }
+
+    /// Tell the feed what the person did (a no-op until a workspace feeds this terminal).
+    pub(crate) fn touched(&self, touch: Touch) {
+        if let Some(feed) = self.feed.get() {
+            feed.on_touch(touch);
+        }
     }
 
     fn push(&self, event: TermEvent) {

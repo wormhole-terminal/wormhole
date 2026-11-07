@@ -32,7 +32,10 @@ mod themes;
 pub mod words;
 mod workspace;
 mod workspace_feed;
+mod workspace_git;
+mod workspace_pump;
 mod workspace_types;
+mod workspace_watch;
 
 pub use aux_backends::*;
 pub use error::FfiError;
@@ -102,5 +105,7 @@ pub(crate) fn isolate_for_tests() {
     });
 }
 
+#[cfg(test)]
+mod workspace_feed_tests;
 #[cfg(test)]
 mod workspace_tests;

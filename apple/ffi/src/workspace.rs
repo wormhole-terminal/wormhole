@@ -13,17 +13,19 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
-use std::time::Instant;
+use std::time::{Instant, SystemTime};
 
 use wormhole_core::agents::AGENTS;
 use wormhole_core::view::sidebar::{SidebarNumbers, Status};
 use wormhole_core::workspace::{
     Action, ChromeSnapshot, DropPlan, Event, Failure, ModelConfig, Over, PanesSnapshot, Refusal, Revisions,
-    SidebarSnapshot, TerminalFacts, WorkspaceModel,
+    SidebarSnapshot, StatusEvent, TerminalFacts, WorkspaceModel, open_items,
 };
 
 use crate::terminal::Terminal;
-use crate::workspace_feed;
+use crate::workspace_feed::{self, agent_by_key};
+use crate::workspace_git::GitJobs;
+use crate::workspace_pump::{self, Pump};
 
 /// What Swift implements to hear that there is something to drain. Called from a Rust thread, with no
 /// lock held, at most once between two drains; it must return at once: note the wake and hop to the
@@ -116,6 +118,15 @@ pub struct TerminalFactsRecord {
     pub unread: bool,
     pub changes: Option<u32>,
     pub notes: u32,
+    /// The command that just finished, while its result is unseen: it still names the terminal.
+    pub finished_command: Option<String>,
+    /// The repository it is in (its root), and whether the tree is dirty, how far the branch is ahead
+    /// of and behind its upstream, how many files the repository has changed.
+    pub repo: Option<String>,
+    pub dirty: bool,
+    pub ahead: u32,
+    pub behind: u32,
+    pub repo_files: Option<u32>,
 }
 
 impl From<TerminalFactsRecord> for TerminalFacts {
@@ -144,6 +155,12 @@ impl From<TerminalFactsRecord> for TerminalFacts {
             unread: record.unread,
             changes: record.changes.map(|n| n as usize),
             notes: record.notes as usize,
+            finished_command: record.finished_command,
+            repo: record.repo.map(PathBuf::from),
+            dirty: record.dirty,
+            ahead: record.ahead,
+            behind: record.behind,
+            repo_files: record.repo_files.map(|n| n as usize),
         }
     }
 }
@@ -157,7 +174,13 @@ pub(crate) struct Shared {
     listener: Arc<dyn WorkspaceListener>,
     /// The model's clock: the milliseconds since the workspace was made.
     started: Instant,
+    /// The system's clock at the moment `started`: a process's start time is read against it.
+    pub(crate) epoch: SystemTime,
     terminals: Mutex<HashMap<i64, Arc<Terminal>>>,
+    /// The thread that waits for the moments the model needs (`workspace_pump`).
+    pub(crate) pump: Arc<Pump>,
+    /// What git is asked and followed with (`workspace_git`).
+    pub(crate) git: GitJobs,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -165,6 +188,11 @@ fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 impl Shared {
+    /// The registered `Terminal` of terminal `id`.
+    pub(crate) fn terminal_of(&self, id: i64) -> Option<Arc<Terminal>> {
+        locked(&self.terminals).get(&id).cloned()
+    }
+
     pub(crate) fn now(&self) -> u64 {
         u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX)
     }
@@ -202,10 +230,11 @@ impl Shared {
     /// a program's life ends, so Swift cannot forget to.
     pub(crate) fn close_what_closed(&self, events: Vec<Event>) -> Vec<WorkspaceEvent> {
         for event in &events {
-            if let Event::Closed { id } = event
-                && let Some(terminal) = locked(&self.terminals).remove(id)
-            {
-                terminal.close();
+            if let Event::Closed { id } = event {
+                self.pump.forget(*id);
+                if let Some(terminal) = locked(&self.terminals).remove(id) {
+                    terminal.close();
+                }
             }
         }
         events.into_iter().map(WorkspaceEvent::from).collect()
@@ -227,22 +256,30 @@ impl Workspace {
             numbers: if config.numbers_follow_list { SidebarNumbers::List } else { SidebarNumbers::Terminal },
             start_folder: config.start_folder.map(PathBuf::from),
             pane_header_h: config.pane_header_height,
+            ..ModelConfig::default()
         });
-        Arc::new(Self {
-            shared: Arc::new(Shared {
-                model: Mutex::new(model),
-                pending: Mutex::new(Vec::new()),
-                woken: AtomicBool::new(false),
-                listener,
-                started: Instant::now(),
-                terminals: Mutex::new(HashMap::new()),
-            }),
-        })
+        let shared = Arc::new(Shared {
+            model: Mutex::new(model),
+            pending: Mutex::new(Vec::new()),
+            woken: AtomicBool::new(false),
+            listener,
+            started: Instant::now(),
+            epoch: SystemTime::now(),
+            terminals: Mutex::new(HashMap::new()),
+            pump: Arc::default(),
+            git: GitJobs::default(),
+        });
+        workspace_pump::spawn(&shared);
+        Arc::new(Self { shared })
     }
 
     /// Do what the person did. What changed comes back as events (see the module's note).
     pub fn apply(&self, action: Action) -> Vec<WorkspaceEvent> {
         let events = self.shared.with_model(|model| model.apply(action));
+        // Selecting looks at a terminal, which may ask for its programs' reports to be dropped; a new
+        // or closed terminal and a new selection move what the pump waits for.
+        self.shared.serve_asks();
+        self.shared.pump.kick();
         self.shared.close_what_closed(events)
     }
 
@@ -286,13 +323,67 @@ impl Workspace {
         self.shared.with_model(|model| model.drop_plan(dragged, over))
     }
 
-    /// Replace a terminal's facts whole. Unknown ids are ignored.
-    pub fn set_facts(&self, id: i64, facts: TerminalFactsRecord) -> Vec<WorkspaceEvent> {
-        let events = self.shared.with_model(|model| model.set_facts(id, facts.into()));
+    /// An agent's hook event for terminal `id` (what `WORMHOLE_TAB_ID` names): `agent` is its command
+    /// ("claude"), `event` as the hook script spells it (`Stop`, `Notification:permission_prompt`,
+    /// `PostToolUse:wakes=b7`), `message` the words it carries. What the event means for the status is
+    /// core's (`StatusMachine`). Unknown agents and terminals are ignored.
+    pub fn hook(
+        &self,
+        id: i64,
+        agent: String,
+        event: String,
+        message: Option<String>,
+    ) -> Vec<WorkspaceEvent> {
+        let Some(agent) = agent_by_key(&agent) else { return Vec::new() };
+        let at = self.shared.now();
+        let status = StatusEvent::Hook { agent, event, message };
+        let events = self.shared.with_model(|model| model.feed(id, status, at));
+        let events = self.shared.close_what_closed(events);
+        self.shared.serve_asks();
+        self.shared.pump.kick();
+        events
+    }
+
+    /// The window came to the front or went behind (`active`), and whether it can be seen at all
+    /// (`seen`: not minimised, hidden or covered). In front, what is on screen is looked at: results
+    /// are spent and bells heard. Git is read as often as the terminals are seen.
+    pub fn set_window_state(&self, active: bool, seen: bool) -> Vec<WorkspaceEvent> {
+        let at = self.shared.now();
+        let events = self.shared.with_model(|model| {
+            model.set_window_seen(seen);
+            model.set_window_active(active, at)
+        });
+        let events = self.shared.close_what_closed(events);
+        self.shared.pump.kick();
+        events
+    }
+
+    /// A terminal's notes and tasks, as the row counts them: `tasks_done` has one flag per task, `notes`
+    /// the text of each note. The row shows how many are still open (`open_items`: tasks not done and
+    /// notes with something in them).
+    pub fn set_notes(&self, id: i64, tasks_done: Vec<bool>, notes: Vec<String>) -> Vec<WorkspaceEvent> {
+        let open = open_items(tasks_done, notes.iter().map(String::as_str));
+        let events = self.shared.with_model(|model| model.update_facts(id, |facts| facts.notes = open));
         self.shared.close_what_closed(events)
     }
 
-    /// What git says of a terminal's folder: the branch and the files changed.
+    /// Ask git again where it was missing (Retry); a terminal whose repository cannot be read otherwise
+    /// keeps its last answer.
+    pub fn retry_git(&self) {
+        self.shared.with_model(|model| model.git_retry());
+        self.shared.pump.kick();
+    }
+
+    /// Replace a terminal's facts whole. Unknown ids are ignored.
+    pub fn set_facts(&self, id: i64, facts: TerminalFactsRecord) -> Vec<WorkspaceEvent> {
+        let events = self.shared.with_model(|model| model.set_facts(id, facts.into()));
+        // Its folder or what it works at may be new to the git feed.
+        self.shared.pump.kick();
+        self.shared.close_what_closed(events)
+    }
+
+    /// What git says of a terminal's folder, set from outside (previews, tests). A registered terminal's
+    /// repository is read by the workspace itself, which overwrites this at its next answer.
     pub fn set_git(&self, id: i64, branch: Option<String>, changes: Option<u32>) -> Vec<WorkspaceEvent> {
         let events = self.shared.with_model(|model| {
             model.update_facts(id, |facts| {
@@ -318,5 +409,12 @@ impl Workspace {
     /// The workspace's clock: milliseconds since it was made. Facts that carry a time use it.
     pub fn now_ms(&self) -> u64 {
         self.shared.now()
+    }
+}
+
+impl Drop for Workspace {
+    /// The pump thread ends with the workspace.
+    fn drop(&mut self) {
+        self.shared.pump.stop();
     }
 }

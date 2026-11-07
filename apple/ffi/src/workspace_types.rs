@@ -211,6 +211,11 @@ pub struct SidebarRow {
     pub position: u32,
     pub of: u32,
     pub spoken: String,
+    pub repo: Option<String>,
+    pub dirty: bool,
+    pub ahead: u32,
+    pub behind: u32,
+    pub repo_files: Option<u32>,
 }
 
 #[uniffi::remote(Record)]

@@ -128,6 +128,12 @@ fn facts_set_from_outside_show_on_the_row_and_the_snapshot_says_when_its_words_m
         unread: false,
         changes: Some(3),
         notes: 0,
+        finished_command: None,
+        repo: None,
+        dirty: false,
+        ahead: 0,
+        behind: 0,
+        repo_files: None,
     };
     ws.set_facts(1, facts);
     let snapshot = ws.sidebar_at(3 * 60_000 + 1_000);

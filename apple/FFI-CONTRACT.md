@@ -168,7 +168,11 @@ func revisions() -> Revisions                      // sidebar / layout / chrome 
 func selected() -> Int64?
 func dropPlan(dragged: Int64, over: Over) -> DropPlan?   // pure: the line a drag would drop on
 func setFacts(id: Int64, facts: TerminalFactsRecord) -> [WorkspaceEvent]   // whole replacement (tests, previews)
-func setGit(id: Int64, branch: String?, changes: UInt32?) -> [WorkspaceEvent]
+func setGit(id: Int64, branch: String?, changes: UInt32?) -> [WorkspaceEvent]   // previews and tests only: a registered terminal's git is read by the workspace
+func hook(id: Int64, agent: String, event: String, message: String?) -> [WorkspaceEvent]   // an agent's hook, see "What feeds a row"
+func setWindowState(active: Bool, seen: Bool) -> [WorkspaceEvent]   // the window in front / visible at all
+func setNotes(id: Int64, tasksDone: [Bool], notes: [String]) -> [WorkspaceEvent]   // what the row's notes mark counts
+func retryGit()                                    // git was missing and may be there now
 func registerTerminal(id: Int64, terminal: Terminal)   // after Opened and Terminal.start: feeds the row; Closed ends it
 func terminal(id: Int64) -> Terminal?
 func nowMs() -> UInt64
@@ -220,7 +224,189 @@ All are Swift value types with the fields named here, built on demand and never 
   what is folded away; `alertCount` is the needs-input and failed ones, for the head's dot). While a search
   is on, only matching rows and sections that still have one are listed.
 - `GroupHead(id: UInt32, name, color, pinned, folded, folder, position, of, spoken)`.
-- `SidebarRow(id, name, number: UInt32?, keycap: String?, selected, pinned, state: RowState, agent: AgentInfo?, message, branch, folder, unread, bell, failureCode: Int32?, changes: UInt32?, notes, secondLine: SecondLine, split: SplitInfo, position, of, spoken)`:
+- `SidebarRow(id, name, number: UInt32?, keycap: String?, selected, pinned, state: RowState, agent: AgentInfo?, message, branch, folder, unread, bell, failureCode: Int32?, changes: UInt32?, notes, secondLine: SecondLine, split: SplitInfo, position, of, spoken, repo: String?, dirty, ahead: UInt32, behind: UInt32, repoFiles: UInt32?)`
+  (the last five are additive, still contract version 2):
+  `number` is the ⌘ number the row holds (kept with the terminal under "Stay with the terminal"; they do
+  not renumber under a search, as ⌘n still selects the same terminal). `spoken` is the whole VoiceOver label.
+  `RowState` is `needsYou, working, finished, failed, idle, exited`.
+- `SecondLine(text, tone: Tone, mono, trail)`: `Tone` is `plain, attention, done, failed`; `mono` means a
+  command (code font); `trail` sits at the line's right.
+- `SplitInfo(id, bracket: Bracket?, chain, onScreen, members)`: `bracket` is `start/mid/end` along the rows of a
+  split whose members are next to each other, `chain` a member that is not together in the list.
+- `PanesSnapshot(revision, split: Int64?, panes: [PaneRect(id, x, y, w, h, focused)], focused, zoomed)`:
+  the selected terminal's split in reading order, or the zoomed pane alone, or the lone terminal.
+- `ChromeSnapshot(revision, sidebarVisible, panelVisible, panelTab: TabId, search, overlay)`; `TabId` is
+  `changes, history, notes, usage, project, files`.
+
+### What feeds a row
+
+`registerTerminal` makes the terminal's own events facts of its row, on its event thread, through core's
+**status machine** (`workspace::StatusMachine`, the rules of the app's `terminal_view/status.rs`):
+
+- the title its program set (`title`, renamed at most every 250 ms), the shell's folder (OSC 7), the program in
+  front and since when (a look at the process after output, after the shell's OSC 133 marks, every 0.4 s in a
+  terminal's first 3 s and then every 5 s: the system sends no event for it), a command that failed with its exit code (`failureCode`; ⌃C is none) and the
+  command that just finished while its result is unseen (it still names the terminal);
+- the **coding agent** in front (found by its process: `agent`), its **status** from its hooks (`hook(...)`:
+  `UserPromptSubmit` working, `PermissionRequest` needs input with the prompt's words, `Stop` finished, ...;
+  a turn that ends while background work still runs is still working), or, for an agent without hooks, from
+  the output (working while it prints, finished after 1.8 s of quiet, needs input when it rings the bell) and
+  for any program that reports its own status (OSC 7501): `state` is `RowState`, `message` the words;
+- the bell and output nobody has seen while the terminal is not in front; what answers the person's typing,
+  a resize or a focus change is not work;
+- selecting a terminal (and the panes shown with it), and the window coming to the front
+  (`setWindowState(active: true, ...)`), **looks**: a finished or failed result is spent and a bell heard;
+  a question the agent asks stays until it is answered (Return, a choice or Esc typed into the terminal
+  answers it: `Terminal.sendKey` tells the machine).
+
+**Git** is read by the workspace itself for every terminal's folder (`git::status_summary` through core's
+hardened `GitCmd`, two worker threads, a hung repository blocks only its own read): `branch`, `repo` (the
+repository's root: rows with the same one share it), `dirty`, `ahead`/`behind` its upstream, `repoFiles` (files
+changed in the repository) and `changes`, the files **this terminal** changed (`git::attribution`: whose they are
+from when each terminal was working; a file first seen in the first picture of a repository is nobody's). A
+repository is followed through its files (FSEvents, `git::watch` rules, 150 ms debounce) so a read comes when
+something changed; the periods (1.2 s in front without a watch, 30 s with one, longer behind) are the backstop.
+A folder in no repository has `repo == nil` and costs a `stat` walk, not git.
+
+What does not feed yet: the hook **socket** (a hook script's `Wormhole hook` reaches the app's control socket,
+which the Swift app does not serve yet: the app that serves it calls `hook(...)`), the Settings that decide what a
+row counts (plain terminals' working: finishing commands; shared files: every terminal counts them), the
+Changes panel's full status, and notes (`setNotes`).
+
+### Threads and locks
+
+- Rust runs two threads per terminal that Swift never sees: the **PTY reader** (reads, parses into
+  the screen) and an **event thread** (`wormhole-ffi-events`) that turns the engine's events into the
+  queue behind `drainEvents`.
+- `TerminalListener.wake()` is called **on the event thread**, with no Rust lock held, **at most once
+  between two `drainEvents()` calls** (a flood of a million events is one `wake()`; the first event
+  after a drain wakes again). It must return quickly: set a flag and hop to the main queue
+  (`DispatchQueue.main.async`), then un-pause the display link. Do not call `frame()` inside it,
+  and do not block it on anything the main thread holds.
+- Every other method may be called from **any thread** (they lock internally) and is meant for the
+  **main thread**: `frame()`, `write`, `sendKey`, `resize`, `scroll` and `drainEvents` are each
+  microseconds to a few hundred microseconds (numbers in the spike report). `frame()` and `resize`
+  take the engine's **FairLock**, the lock the reader thread parses under; it is handed over in
+  asking order, so the main thread waits at most for the one parse slice that holds it (2 to 3 µs
+  on average under a flood, measured in `pty/lock.rs`). Never call a `Terminal` method from inside
+  `wake()`: the event thread would wait on the main thread's turn.
+- `frame()` is serialized by an internal mutex: one consumer per terminal. The engine's damage is
+  consumed by the call, so two renderers cannot share one terminal (call `fullFrame()` to give a
+  new one its picture, but the first would then miss the damage).
+- After `close()`, `frame()` and `fullFrame()` return empty `Data`, other calls do nothing.
+
+### Events: `drainEvents()`
+
+```swift
+public enum TermEvent: Equatable, Hashable, Sendable {
+    case output                    // new content: take a frame (at most one per drain: "something is new", not a count)
+    case title(title: String)      // OSC 0/2
+    case resetTitle
+    case bell
+    case exited(code: Int32?)      // the program is gone; the screen stays readable
+}
+```
+
+The engine has more events (clipboard, working directory, command marks, notifications, program
+status, window operations); they are added as the app needs them, each as a new case (a minor
+change: a Swift `switch` needs `@unknown default`, and unknown ones are simply not delivered today).
+
+Protocol for the display link: `wake()` -> un-pause the link; each tick: `drainEvents()` (this
+re-arms `wake()`), then `frame()`; when a tick finds nothing to draw, pause the link. An idle
+terminal calls nothing and its threads sleep.
+
+### Keys: `sendKey`
+
+`KeyPress(key: String, text: String?, shift: Bool, alt: Bool, control: Bool, platform: Bool,
+optionAsMeta: Bool)` is a generated record (a struct with a memberwise `init`). `key` follows the app's key table (GPUI's names): `"enter"`, `"tab"`, `"backspace"`, `"escape"`,
+`"up"`, `"down"`, `"left"`, `"right"`, `"home"`, `"end"`, `"pageup"`, `"pagedown"`, `"insert"`,
+`"delete"`, `"space"`, `"f1"`...`"f24"`, or the single unshifted character (`"a"`, `"["`, `"1"`).
+`text` is what the key types with the layout and modifiers (`event.characters`); pass `nil` when
+Control is held (as the app does). `platform` is Cmd: a Cmd chord returns `false` and sends nothing
+(the application's own shortcuts). `optionAsMeta`: Option+key sends ESC+key. The encoder follows
+the terminal's modes (application cursor keys, kitty keyboard, modifyOtherKeys). Returns whether
+bytes were sent; sending clears the selection and returns the view to the live screen. For text
+that is not a key (IME commit, paste), use `write(bytes:)` (bracketed paste is not wrapped yet).
+
+## The object: `Workspace`
+
+One window's terminals, groups, pins and splits, and what the sidebar lists of them. It wraps core's
+sans-IO `WorkspaceModel` (`crates/wormhole-core/src/workspace/`, the rules are core's `view::sidebar`
+and `view::panes`) behind one mutex. Swift sends **actions**, Rust answers with **events**, and the
+UI **pulls snapshots** when a revision moved: it never re-implements a rule (order, pins, numbers,
+drop plans, selection after a close, second lines, VoiceOver words).
+
+```swift
+init(config: WorkspaceConfig, listener: WorkspaceListener)   // WorkspaceConfig(home:, numbersFollowList:, startFolder:, paneHeaderHeight:)
+
+func apply(action: Action) -> [WorkspaceEvent]     // the events of THIS call come back from it
+func drain() -> [WorkspaceEvent]                   // events caused elsewhere (a terminal's thread); re-arms wake()
+func sidebar() -> SidebarSnapshot                  // words as they read now (the workspace's clock)
+func sidebarAt(nowMs: UInt64) -> SidebarSnapshot   // ... as they read at a given time (tests, previews)
+func panes(width: Float, height: Float) -> PanesSnapshot
+func chrome() -> ChromeSnapshot
+func revisions() -> Revisions                      // sidebar / layout / chrome counters
+func selected() -> Int64?
+func dropPlan(dragged: Int64, over: Over) -> DropPlan?   // pure: the line a drag would drop on
+func setFacts(id: Int64, facts: TerminalFactsRecord) -> [WorkspaceEvent]   // whole replacement (tests, previews)
+func setGit(id: Int64, branch: String?, changes: UInt32?) -> [WorkspaceEvent]   // previews and tests only: a registered terminal's git is read by the workspace
+func hook(id: Int64, agent: String, event: String, message: String?) -> [WorkspaceEvent]   // an agent's hook, see "What feeds a row"
+func setWindowState(active: Bool, seen: Bool) -> [WorkspaceEvent]   // the window in front / visible at all
+func setNotes(id: Int64, tasksDone: [Bool], notes: [String]) -> [WorkspaceEvent]   // what the row's notes mark counts
+func retryGit()                                    // git was missing and may be there now
+func registerTerminal(id: Int64, terminal: Terminal)   // after Opened and Terminal.start: feeds the row; Closed ends it
+func terminal(id: Int64) -> Terminal?
+func nowMs() -> UInt64
+```
+
+`WorkspaceListener` has one method, `wake()`, with the same rules as `TerminalListener`'s: called from
+a Rust thread with no lock held, at most once between two `drain()` calls, and it must only note the
+wake and hop to the main queue. **One handler** serves both sources of events: `apply`'s result and
+`drain()`'s.
+
+### Events: `WorkspaceEvent`
+
+| Case | Meaning, and what Swift does |
+|---|---|
+| `opened(id, cwd)` | a terminal was made: `Terminal.start(...)` a program for it (in `cwd` when there is one), then `registerTerminal(id:terminal:)` |
+| `closed(id)` | the terminal is gone; its registered `Terminal` has already been closed by Rust. Drop its view |
+| `selected(id)` | the selection moved (`nil`: none) |
+| `moved(id)` | a row moved or joined a split: animate it (`Landing`/zone change, by id) |
+| `listing` | the rows, groups or numbers changed: pull `sidebar()` |
+| `layout` | splits or the panes' focus changed: pull `panes(width:height:)` |
+| `chrome` | sidebar/panel visibility, panel tab, search or overlay changed: pull `chrome()` |
+| `refused(reason)` | the action changed nothing (`unknown`, `tooSmall`, `unchanged`): data, not an error |
+
+Events are coalesced within a call (`listing`/`layout`/`chrome` at most once, `selected` last wins).
+
+### Actions: `Action`
+
+Ids are `Int64` (a terminal's id is its session's; split and terminal ids share one counter and never
+repeat), groups are `UInt32` (a group's id is stable while it exists).
+
+| Group | Cases |
+|---|---|
+| Selection | `select(id)`, `selectStep(delta)` (next/previous as listed, wraps, skips folded), `selectNumber(n)` (⌘1...⌘9; a number past the last selects the last) |
+| Terminals | `newTerminal` (in the selected one's folder, selected, search ends), `close(id)` (the app's rule: selection by the window's order, a split's heir; closing the last starts a new one), `rename(id, name)` (blank gives the name back to what runs in it), `setPinned`, `togglePin` (a split is pinned as a whole) |
+| Groups | `newGroup(members)` (with the rest of their splits; needs terminals that exist), `renameGroup` (blank keeps the old name), `toggleGroup` (fold), `ungroup`, `setGroupPinned`, `addToGroup(id, group)`, `removeFromGroup(id)` |
+| Moves | `dropTerminal(dragged, over)`, `dropGroup(group, over)` (core's `place` rules; `Over` is by id: `row(id, part)`, `head(group, part)`, `after(card)`, `tail`), `moveTerminal(id, landing)`, `moveGroup(group, landing)` (`Landing.top(before: Item?)` / `.group(group, before: Int64?)`) |
+| Splits | `splitBeside(anchor, axis)` (a new terminal in the anchor's folder, selected; refused `tooSmall` without room), `joinSplit(id, target, zone)`, `leaveSplit(id)`, `focusPane(id)`, `toggleZoom` |
+| Chrome | `toggleSidebar`, `togglePanel`, `showPanelTab(tab)` (shows the panel), `search(text)`, `showOverlay(overlay?)`, `setPaneArea(width, height)` (zero until laid out: nothing is refused for want of room) |
+
+### Snapshots
+
+All are Swift value types with the fields named here, built on demand and never mirrored.
+
+- `SidebarSnapshot(revision, selected: Int64?, sections: [SidebarSection], terminalCount, refreshInMs: UInt64?)`:
+  `refreshInMs` is how long until words that move with time ("Working · 3m", a command's clock) read
+  differently: arm **one** timer for it, `nil` asks for none.
+- `SidebarSection(key, head: GroupHead?, rows: [SidebarRow], terminalCount, alertCount)`: `head == nil`
+  is a run of terminals in no group. `rows` is empty while the group is folded (`terminalCount` still says
+  what is folded away; `alertCount` is the needs-input and failed ones, for the head's dot). While a search
+  is on, only matching rows and sections that still have one are listed.
+- `GroupHead(id: UInt32, name, color, pinned, folded, folder, position, of, spoken)`.
+- `SidebarRow(id, name, number: UInt32?, keycap: String?, selected, pinned, state: RowState, agent: AgentInfo?, message, branch, folder, unread, bell, failureCode: Int32?, changes: UInt32?, notes, secondLine: SecondLine, split: SplitInfo, position, of, spoken, repo: String?, dirty, ahead: UInt32, behind: UInt32, repoFiles: UInt32?)`
+  (the last five are additive, still contract version 2):
   `number` is the ⌘ number the row holds (kept with the terminal under "Stay with the terminal"; they do
   not renumber under a search, as ⌘n still selects the same terminal). `spoken` is the whole VoiceOver label.
   `RowState` is `needsYou, working, finished, failed, idle, exited`.
@@ -247,7 +433,12 @@ result. What does not feed yet: a coding agent's status (its hooks), git (`setGi
   from any thread and are meant for main. The model's lock is **never held** across `wake()`, a call into a
   `Terminal`, or a system call: a terminal's thread probes the process first, then locks, changes, unlocks and
   only then wakes.
-- A registered `Terminal` keeps its own hot path (`frame`, `sendKey`, `resize`): none of it takes the model's lock.
+- A registered `Terminal` keeps its own hot path: `frame` takes none of the model's locks; `write`, `sendKey` and
+  `resize` tell the status machine what the person did (typing makes the program echo, which is not work), under
+  the model's lock for microseconds and with nothing else held.
+- One **pump thread** per workspace sleeps until the next deadline (a busy terminal's quiet, a title's turn, a
+  look at a process, a git read, a debounce) and is woken by what may move one; it holds the workspace weakly and
+  ends with it (`Workspace` deinit). Its events are queued behind `wake()` like any other thread's.
 - `Closed` is the one place a registered terminal's program ends: Rust calls its `close()`.
 ## Interaction: pointer, wheel, selection, links, paste, focus
 

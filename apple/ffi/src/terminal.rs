@@ -11,12 +11,14 @@ use std::time::Instant;
 
 use wormhole_core::agents::{AgentId, Foreground};
 use wormhole_core::terminal::{SpawnOptions, spawn};
+use wormhole_core::workspace::Ask;
 use wormhole_term::input::keys::{self, KeyInput};
+use wormhole_term::program_status::Summary;
 use wormhole_term::types::Scroll;
 use wormhole_term::{GridSize, Pty, ScreenSnapshot};
 
 use crate::error::FfiError;
-use crate::events::{EventFeed, EventQueue, TermEvent, TerminalListener, spawn_receiver};
+use crate::events::{EventFeed, EventQueue, TermEvent, TerminalListener, Touch, spawn_receiver};
 use crate::{frame, isolation};
 
 /// How much history a terminal keeps (the app's default is the same order).
@@ -42,7 +44,11 @@ pub struct Terminal {
 pub(crate) struct Probe {
     pub cwd: Option<PathBuf>,
     pub agent: Option<AgentId>,
+    /// The program in front, when one other than the shell holds the terminal.
     pub command: Option<Foreground>,
+    /// A program other than the shell holds the terminal; `None` where the system can't tell.
+    pub in_front: Option<bool>,
+    pub shell_in_front: bool,
 }
 
 /// Nanoseconds spent in the last and in all `frame` calls, by part.
@@ -156,6 +162,7 @@ impl Terminal {
 
     /// Typed or pasted bytes for the program (the view goes back to the live screen).
     pub fn write(&self, bytes: Vec<u8>) {
+        self.events.touched(Touch::Typed);
         if let Some(pty) = self.pty.read().unwrap_or_else(PoisonError::into_inner).as_ref() {
             pty.write_input(bytes);
         }
@@ -163,6 +170,7 @@ impl Terminal {
 
     /// A key press (see [`KeyPress`]). Whether anything was sent.
     pub fn send_key(&self, press: KeyPress) -> bool {
+        self.events.touched(Touch::Key { key: press.key.clone(), control: press.control });
         let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
         let Some(pty) = guard.as_ref() else { return false };
         let input = KeyInput {
@@ -179,6 +187,7 @@ impl Terminal {
 
     /// The grid's new size; the program is told through the PTY and the engine reflows.
     pub fn resize(&self, cols: u16, rows: u16, cell_width: f32, cell_height: f32) {
+        self.events.touched(Touch::Resized);
         if let Some(pty) = self.pty.write().unwrap_or_else(PoisonError::into_inner).as_mut() {
             pty.resize(GridSize { cols, rows, cell_width, cell_height });
         }
@@ -244,16 +253,44 @@ impl Terminal {
         self.events.set_feed(feed);
     }
 
-    /// The folder, the agent and the program in front, from the process: a few system calls. All
-    /// `None` after `close`.
+    /// The folder, the agent and who holds the terminal, from the process: a few system calls. All
+    /// unknown after `close`.
     pub(crate) fn probe(&self) -> Probe {
         let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
-        match guard.as_ref() {
-            Some(pty) => {
-                Probe { cwd: pty.cwd(), agent: pty.foreground_agent(), command: pty.foreground_command() }
-            }
-            None => Probe { cwd: None, agent: None, command: None },
+        let Some(pty) = guard.as_ref() else {
+            return Probe { cwd: None, agent: None, command: None, in_front: None, shell_in_front: false };
+        };
+        let in_front = pty.program_in_foreground();
+        Probe {
+            cwd: pty.cwd(),
+            agent: pty.foreground_agent(),
+            command: if in_front == Some(true) { pty.foreground_command() } else { None },
+            in_front,
+            shell_in_front: pty.shell_in_foreground(),
         }
+    }
+
+    /// What programs report about themselves (OSC 7501), after the shell did `ask` to the records:
+    /// dropped what the program that left took with it, or what the person saw.
+    pub(crate) fn program_report(&self, ask: Option<Ask>) -> Option<Summary> {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        let mut records = guard.as_ref()?.program_status();
+        match ask {
+            Some(Ask::ProgramLeft) => {
+                records.on_process_exit();
+            }
+            Some(Ask::AcknowledgeReports) => {
+                records.acknowledge();
+            }
+            None => {}
+        }
+        records.summary()
+    }
+
+    /// The command line the shell's block says just ended with `code`.
+    pub(crate) fn ended_command(&self, code: i32) -> Option<String> {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        guard.as_ref()?.ended(code).map(|ended| ended.command)
     }
 
     fn pack_frame(&self, all: bool) -> Vec<u8> {
