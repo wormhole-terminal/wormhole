@@ -14,103 +14,6 @@ public enum Activity: Sendable, Equatable {
     case failed
 }
 
-/// One sidebar row: a terminal, as the list shows it. Only facts: the wording of the second line is
-/// `SidebarWording`'s, from these and the clock.
-public struct TerminalSummary: Sendable, Equatable, Identifiable {
-    public var id: TerminalID
-    public var title: String
-    public var subtitle: String?  // folder or running program
-    public var branch: String?
-    public var activity: Activity
-    public var isPinned: Bool
-    public var unread: Int
-    /// The coding agent in the terminal; nil is a plain shell.
-    public var agent: AgentID?
-    /// What the agent says it is doing or asking ("Approve cargo test?"), when it says.
-    public var message: String?
-    /// When the terminal got into its `activity`.
-    public var activitySince: Date?
-    /// The command in front of a plain terminal and when it started: only one that ends by itself.
-    public var runningCommand: String?
-    public var runningSince: Date?
-    /// The last command failed and the next hasn't started.
-    public var lastFailure: CommandFailure?
-    public var hasBell: Bool
-    /// The terminal's folder as a path (`~` is fine): the quiet second line.
-    public var folder: String?
-    /// The split the terminal is in; only whether two terminals have the same one matters.
-    public var splitID: Int?
-    /// Notes and tasks still open (the row's count) and files changed (its "±N").
-    public var noteCount: Int
-    public var changeCount: Int
-
-    public init(
-        id: TerminalID, title: String, subtitle: String? = nil, branch: String? = nil,
-        activity: Activity = .idle, isPinned: Bool = false, unread: Int = 0, agent: AgentID? = nil,
-        message: String? = nil, activitySince: Date? = nil, runningCommand: String? = nil,
-        runningSince: Date? = nil, lastFailure: CommandFailure? = nil, hasBell: Bool = false,
-        folder: String? = nil, splitID: Int? = nil, noteCount: Int = 0, changeCount: Int = 0
-    ) {
-        self.id = id
-        self.title = title
-        self.subtitle = subtitle
-        self.branch = branch
-        self.activity = activity
-        self.isPinned = isPinned
-        self.unread = unread
-        self.agent = agent
-        self.message = message
-        self.activitySince = activitySince
-        self.runningCommand = runningCommand
-        self.runningSince = runningSince
-        self.lastFailure = lastFailure
-        self.hasBell = hasBell
-        self.folder = folder
-        self.splitID = splitID
-        self.noteCount = noteCount
-        self.changeCount = changeCount
-    }
-}
-
-/// A command that ended with a failing exit code.
-public struct CommandFailure: Sendable, Equatable {
-    public var command: String?
-    public var exitCode: Int
-    public var at: Date
-
-    public init(command: String? = nil, exitCode: Int, at: Date) {
-        self.command = command
-        self.exitCode = exitCode
-        self.at = at
-    }
-}
-
-/// A named run of rows in the sidebar.
-public struct TerminalGroup: Sendable, Equatable, Identifiable {
-    public var id: String
-    public var name: String
-    public var members: [TerminalID]
-    public var isCollapsed: Bool
-    public var color: FolderColor?
-    /// The folder the group stands for, as a path.
-    public var folder: String?
-    /// A pinned group stays as a head with no terminal in it.
-    public var isPinned: Bool
-
-    public init(
-        id: String, name: String, members: [TerminalID], isCollapsed: Bool = false,
-        color: FolderColor? = nil, folder: String? = nil, isPinned: Bool = false
-    ) {
-        self.id = id
-        self.name = name
-        self.members = members
-        self.isCollapsed = isCollapsed
-        self.color = color
-        self.folder = folder
-        self.isPinned = isPinned
-    }
-}
-
 /// The right panel's tabs.
 public enum PanelTab: String, Sendable, CaseIterable {
     case notes, changes, history
@@ -170,4 +73,25 @@ public enum WorkspaceAction: Sendable, Equatable {
     case moveGroup(String, before: TopItem?)
     /// A new terminal in the same split as this one, in its folder; it takes the selection.
     case splitRight(TerminalID)
+
+    case renameGroup(String, String)
+    case setGroupColor(String, FolderColor?)
+    case setGroupFolder(String, String?)
+    /// Pin the group (it stays as a head when its last terminal goes) or let it go again.
+    case pinGroup(String)
+    /// Take the group apart; its terminals stand where it stood.
+    case ungroup(String)
+    /// End every terminal in the group.
+    case closeGroup(String)
+    /// Take a terminal (and its split) out of its group: it stands right after it.
+    case removeFromGroup(TerminalID)
+    case newTerminalInGroup(String)
+    /// A group holding the terminal and its split, named `name` or "Group N".
+    case newGroupWithTerminal(TerminalID, name: String?)
+
+    /// The first terminal shows beside the second ("Show beside…", a drop on the middle of a row).
+    case joinSplit(TerminalID, with: TerminalID)
+    case leaveSplit(TerminalID)
+    case toggleForgetText(TerminalID)
+    case toggleAgentHidden(TerminalID)
 }

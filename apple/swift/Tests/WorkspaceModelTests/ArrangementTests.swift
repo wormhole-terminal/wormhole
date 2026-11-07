@@ -21,8 +21,8 @@ final class ArrangementTests: XCTestCase {
         XCTAssertEqual(once.groups.last?.members, [])
         let twice = reduce(once, .newGroup(""))
         XCTAssertEqual(Set(twice.groups.map(\.id)).count, 5)
-        XCTAssertEqual(twice.groups.last?.name, "Group 5")
-        XCTAssertEqual(SidebarListing.sections(for: twice).last?.title, "Group 5")
+        XCTAssertEqual(twice.groups.last?.name, "Group 1", "the first number no group is called")
+        XCTAssertEqual(SidebarListing.sections(for: twice).last?.title, "Group 1")
     }
 
     func testAddToGroupMovesTheTerminalAndDropsTheGroupItLeftEmpty() {

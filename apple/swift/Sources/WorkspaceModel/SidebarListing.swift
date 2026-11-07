@@ -13,6 +13,9 @@ public struct SidebarRow: Sendable, Equatable, Identifiable {
     public var number: Int?
     /// How the row belongs to its split; empty for a terminal in none.
     public var splitMarks = SplitMarks()
+    /// Whether the row shows its "±N": only the topmost row of a repository does, so the number is shown
+    /// once, not on every row of it.
+    public var showsChanges = false
 }
 
 public struct SidebarSection: Sendable, Equatable, Identifiable {
@@ -60,6 +63,7 @@ public enum SidebarListing {
         let layout = layout(of: state)
         var visible = 0  // rows listed so far: the next one's ⌘ number is one more
         var sections: [SidebarSection] = []
+        var repos = Set<String>()  // repositories a row above already stands for
         for run in layout.runs {
             let terminals = run.rows.map { state.terminals[$0] }
             let passing = zip(run.rows, terminals).filter { matches($1) }
@@ -69,10 +73,12 @@ public enum SidebarListing {
             if !collapsed {
                 for (ix, terminal) in passing {
                     visible += 1
+                    let counted = terminal.repoID.map { !repos.insert($0).inserted } ?? false
                     rows.append(
                         SidebarRow(
                             terminal: terminal, number: visible <= numbered ? visible : nil,
-                            splitMarks: layout.marks[ix] ?? SplitMarks()))
+                            splitMarks: layout.marks[ix] ?? SplitMarks(),
+                            showsChanges: terminal.changeCount > 0 && !counted))
                 }
             }
             sections.append(

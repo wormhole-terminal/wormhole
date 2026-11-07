@@ -102,7 +102,7 @@ public enum SidebarWording {
     }
 
     /// `~/Projects/app` for a path under `home`, the path itself otherwise.
-    static func displayPath(_ path: String, home: String?) -> String {
+    public static func displayPath(_ path: String, home: String?) -> String {
         guard let home, !home.isEmpty else { return path }
         if path == home { return "~" }
         return path.hasPrefix(home + "/") ? "~" + path.dropFirst(home.count) : path
@@ -110,7 +110,7 @@ public enum SidebarWording {
 
     /// A path for a narrow line: cut from the front, so the end, which tells two apart, stays
     /// (`…/clients/acme/app`). Keeps whole components; `max` counts characters.
-    static func pathTail(_ path: String, max: Int) -> String {
+    public static func pathTail(_ path: String, max: Int) -> String {
         guard path.count > max else { return path }
         var tail = ""
         for part in path.split(separator: "/").reversed() {
@@ -140,6 +140,3 @@ public enum SidebarWording {
     }
 }
 
-extension String {
-    fileprivate var nilIfEmpty: String? { isEmpty ? nil : self }
-}

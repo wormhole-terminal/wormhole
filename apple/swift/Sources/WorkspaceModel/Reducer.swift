@@ -14,16 +14,7 @@ public func reduce(_ state: WorkspaceState, _ action: WorkspaceAction) -> Worksp
         state.addTerminal()
 
     case .close(let id):
-        guard state.terminals.contains(where: { $0.id == id }) else { break }
-        let listed = SidebarListing.order(of: state)
-        state.terminals.removeAll { $0.id == id }
-        for index in state.groups.indices { state.groups[index].members.removeAll { $0 == id } }
-        if state.selected == id {
-            // The row that slides into the closed one's place, else the one above it.
-            let remaining = listed.filter { $0 != id }
-            let place = listed.firstIndex(of: id) ?? 0
-            state.selected = remaining.isEmpty ? nil : remaining[min(place, remaining.count - 1)]
-        }
+        state.close([id])
 
     case .showOverlay(let overlay):
         state.overlay = overlay
@@ -69,6 +60,45 @@ public func reduce(_ state: WorkspaceState, _ action: WorkspaceAction) -> Worksp
 
     case .splitRight(let id):
         state.splitRight(id)
+
+    case .renameGroup(let id, let name):
+        state.renameGroup(id, to: name)
+
+    case .setGroupColor(let id, let color):
+        if let index = state.groups.firstIndex(where: { $0.id == id }) { state.groups[index].color = color }
+
+    case .setGroupFolder(let id, let folder):
+        state.setGroupFolder(id, to: folder)
+
+    case .pinGroup(let id):
+        state.togglePinGroup(id)
+
+    case .ungroup(let id):
+        state.ungroup(id)
+
+    case .closeGroup(let id):
+        state.closeGroup(id)
+
+    case .removeFromGroup(let id):
+        state.removeFromGroup(id)
+
+    case .newTerminalInGroup(let id):
+        state.addTerminal(inGroup: id)
+
+    case .newGroupWithTerminal(let id, let name):
+        state.addGroup(holding: id, named: name)
+
+    case .joinSplit(let id, let other):
+        state.join(id, with: other)
+
+    case .leaveSplit(let id):
+        state.leaveSplit(id)
+
+    case .toggleForgetText(let id):
+        state.toggle(id, \.forgetsText)
+
+    case .toggleAgentHidden(let id):
+        state.toggle(id, \.isHiddenFromAgents)
     }
     return state
 }

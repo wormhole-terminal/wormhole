@@ -20,18 +20,20 @@ public enum MockWorkspace {
             TerminalSummary(
                 id: 3, title: "diff perf", branch: "diff-perf", activity: .needsInput, isPinned: true, unread: 1,
                 agent: .claude, message: "Approve cargo test?", activitySince: minutesAgo(1),
-                folder: "\(app)/crates/wormhole-term", changeCount: 12),
+                folder: "\(app)/crates/wormhole-term", changeCount: 12, worktreeOf: app),
             TerminalSummary(id: 4, title: "zsh", branch: "main", folder: app),
             TerminalSummary(
                 id: 5, title: "landing hero", branch: "hero-copy", activity: .working, agent: .codex,
-                message: "Editing hero.tsx…", activitySince: minutesAgo(8), folder: web, splitID: 1, changeCount: 4),
+                message: "Editing hero.tsx…", activitySince: minutesAgo(8), folder: web, splitID: 1, changeCount: 4, repoID: "web"),
             TerminalSummary(
                 id: 6, title: "pnpm build", branch: "hero-copy", activity: .working,
-                runningCommand: "pnpm build", runningSince: minutesAgo(0.3), folder: web, splitID: 1),
+                runningCommand: "pnpm build", runningSince: minutesAgo(0.3), folder: web, splitID: 1,
+                changeCount: 4, repoID: "web"),
             TerminalSummary(
                 id: 7, title: "deploy preview", branch: "hero-copy", activity: .failed, unread: 3,
-                lastFailure: CommandFailure(command: "pnpm deploy", exitCode: 1, at: minutesAgo(2)), folder: web),
-            TerminalSummary(id: 8, title: "ssh build-mac", folder: "~/infra"),
+                lastFailure: CommandFailure(command: "pnpm deploy", exitCode: 1, at: minutesAgo(2)), folder: web,
+                changeCount: 4, repoID: "web"),
+            TerminalSummary(id: 8, title: "ssh build-mac", folder: "~/infra", isHiddenFromAgents: true),
             TerminalSummary(
                 id: 9, title: "terraform plan", branch: "network-split", activity: .finished, unread: 1,
                 folder: "~/infra"),
@@ -43,7 +45,7 @@ public enum MockWorkspace {
                 id: 12, title: "release 1.7", branch: "release/1.7", activity: .needsInput, isPinned: true,
                 unread: 1, agent: .claude, message: "Run the release script?", activitySince: minutesAgo(5),
                 folder: app, noteCount: 1),
-            TerminalSummary(id: 13, title: "scratch", folder: "/tmp"),
+            TerminalSummary(id: 13, title: "scratch", folder: "/tmp", forgetsText: true),
         ]
         let groups = [
             TerminalGroup(id: "wormhole", name: "Wormhole", members: [1, 2, 3, 4], color: .blue, folder: app),
