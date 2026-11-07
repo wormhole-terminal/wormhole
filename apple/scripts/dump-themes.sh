@@ -3,8 +3,8 @@
 #   1. the `dump_themes` example writes every bundled theme (normal and Increase Contrast) as JSON into
 #      the DesignSystem resource `themes.json`;
 #   2. `gen-token-accessors.py` writes the typed `ThemeTokens` accessors from its catalog.
-# `--check` changes nothing and fails when either is out of date (the Swift test `ThemeDumpTests` does
-# the first of these on its own when cargo is on the PATH). Honours CARGO_TARGET_DIR and CARGO_BUILD_JOBS.
+# `--check` changes nothing and fails when either is out of date (the Rust test `cargo test -p wormhole-ffi
+# --test theme_dump` is the first of these as a test). Honours CARGO_TARGET_DIR and CARGO_BUILD_JOBS.
 set -euo pipefail
 
 apple="$(cd "$(dirname "$0")/.." && pwd)"

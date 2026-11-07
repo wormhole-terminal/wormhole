@@ -15,6 +15,7 @@ mod events;
 mod frame;
 mod isolation;
 mod terminal;
+pub mod theme_dump;
 
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
