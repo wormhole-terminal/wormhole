@@ -80,6 +80,11 @@ var targets: [Target] = [
     // AppKit and UserNotifications around it: menus, hotkey, banners, status item, Dock, quick panel, picker panel.
     .target(name: "PlatformUI", dependencies: ["PlatformModel", "DesignSystem"]),
     .testTarget(name: "PlatformTests", dependencies: ["PlatformModel", "PlatformUI", "DesignSystem"]),
+    // The Theme Studio's logic: a theme file as a draft, resolved by Rust, with undo, contrast and versions.
+    .target(name: "StudioModel", dependencies: ["DesignSystem"]),
+    // The Theme Studio window: token list, gallery of every component, token editor.
+    .target(name: "StudioUI", dependencies: ["StudioModel", "DesignSystem", "SidebarUI", "PanelUI", "PaletteUI", "WorkspaceModel", "PanelModel", "PaletteModel"]),
+    .testTarget(name: "StudioTests", dependencies: ["StudioModel", "StudioUI", "DesignSystem"]),
     .testTarget(name: "UITests", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI"]),
 ]
 

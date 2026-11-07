@@ -35,6 +35,9 @@ public final class ThemeStore {
     public internal(set) var tokens: ThemeTokens
     /// Why the theme shown is not the one asked for, if it isn't.
     public internal(set) var problem: String?
+    /// A theme shown in place of the picks while the Theme Studio edits it (or previews a saved version):
+    /// every window follows, and clearing it puts the person's pick back.
+    public var preview: Theme? { didSet { refresh() } }
 
     @ObservationIgnored private let storage: ThemeSettingsStorage?
     @ObservationIgnored private let look: SystemLook?
@@ -66,8 +69,8 @@ public final class ThemeStore {
         set { settings.mode = newValue }
     }
 
-    /// The appearance showing now: the mode's, or macOS's under Match system.
-    public var appearance: ThemeAppearance { settings.mode.appearance(system: systemAppearance) }
+    /// The appearance showing now: the preview's, else the mode's, or macOS's under Match system.
+    public var appearance: ThemeAppearance { preview?.appearance ?? settings.mode.appearance(system: systemAppearance) }
     public var darkThemeID: String { settings.darkTheme }
     public var lightThemeID: String { settings.lightTheme }
 

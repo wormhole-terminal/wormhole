@@ -5,6 +5,11 @@ import Foundation
 
 extension ThemeStore {
     func refresh() {
+        if let preview {
+            // The draft is judged by the resolver already, in the contrast it was asked for, and shows opaque.
+            (theme, tokens, problem) = (preview, preview.tokens(increaseContrast: increaseContrast), nil)
+            return
+        }
         let reference = appearance == .dark ? settings.darkTheme : settings.lightTheme
         let opaque = reduceTransparency || increaseContrast
         let look = opaque ? WindowLook(opacity: 1, blur: false) : settings.look
@@ -37,6 +42,9 @@ extension ThemeStore {
         (theme, tokens) = (base, resolved.windowed(opacity: look.opacity, text: seen))
         self.problem = problem
     }
+
+    /// Reads the themes folder again: a theme was saved or trashed there.
+    public func reloadThemes() { reloadUserThemes() }
 
     func reloadUserThemes() {
         if let resolver, let directory = themesDirectory {
