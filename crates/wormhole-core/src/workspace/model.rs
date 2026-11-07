@@ -22,6 +22,7 @@ use super::event::{Event, Out, Revisions};
 use super::facts::TerminalFacts;
 use super::git_feed::{ChangeRules, GitFeed};
 use super::ground::Ground;
+use super::ids::IdCounter;
 use super::session::Session;
 use super::status::StatusBook;
 
@@ -46,6 +47,8 @@ pub struct ModelConfig {
     pub title_row: TitleRow,
     /// What the model asks of the disk (a group's fence); none: no group fences anything.
     pub ground: Option<Arc<dyn Ground>>,
+    /// Where ids come from when several windows share them (`IdCounter`); none: this model's own, from 1.
+    pub ids: Option<IdCounter>,
 }
 
 impl Default for ModelConfig {
@@ -60,6 +63,7 @@ impl Default for ModelConfig {
             features: FeatureId::ALL.into_iter().fold(FeatureMask::default(), |mask, id| mask.with(id, true)),
             title_row: TitleRow::default(),
             ground: None,
+            ids: None,
         }
     }
 }
@@ -305,9 +309,20 @@ impl WorkspaceModel {
     }
 
     pub(super) fn alloc_id(&mut self) -> i64 {
+        if let Some(ids) = &self.cfg.ids {
+            return ids.next();
+        }
         let id = self.next_id;
         self.next_id += 1;
         id
+    }
+
+    /// An id that came from outside (a restored or received terminal) is taken: new ones start above it.
+    pub(super) fn keep_ids_above(&mut self, taken: i64) {
+        match &self.cfg.ids {
+            Some(ids) => ids.keep_above(taken),
+            None => self.next_id = self.next_id.max(taken + 1),
+        }
     }
 
     pub(super) fn next_number(&mut self) -> usize {

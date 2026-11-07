@@ -20,13 +20,14 @@ use wormhole_core::view::layout::Edge;
 use wormhole_core::view::panes::Preset;
 use wormhole_core::view::sidebar::{Landing, SidebarNumbers, Status};
 use wormhole_core::workspace::{
-    Action, ChromeSnapshot, DiskGround, DropPlan, EdgeDrag, Event, Failure, ModelConfig, Over, PanesSnapshot,
-    Refusal, Revisions, SidebarSnapshot, StatusEvent, TerminalFacts, TerminalsSnapshot, TitleSnapshot,
-    WorkspaceModel, open_items,
+    Action, ChromeSnapshot, DiskGround, DropPlan, EdgeDrag, Event, Failure, IdCounter, ModelConfig, Over,
+    PanesSnapshot, Refusal, Revisions, SidebarSnapshot, StatusEvent, TerminalFacts, TerminalsSnapshot,
+    TitleSnapshot, WorkspaceModel, open_items,
 };
 
 use crate::hook_server::Tap;
 use crate::terminal::Terminal;
+use crate::windows::Windows;
 use crate::workspace_feed::{self, agent_by_key};
 use crate::workspace_git::GitJobs;
 use crate::workspace_pump::{self, Pump};
@@ -49,6 +50,10 @@ pub enum WorkspaceEvent {
     },
     /// A terminal was closed: its registered `Terminal` has been closed; drop its view.
     Closed {
+        id: i64,
+    },
+    /// A terminal came from another window with its program running: make a view for it, start nothing.
+    Adopted {
         id: i64,
     },
     Selected {
@@ -85,6 +90,7 @@ impl From<Event> for WorkspaceEvent {
         match event {
             Event::Opened { id, cwd } => Self::Opened { id, cwd: cwd.map(text) },
             Event::Closed { id } => Self::Closed { id },
+            Event::Adopted { id } => Self::Adopted { id },
             Event::Selected { id } => Self::Selected { id },
             Event::Moved { id } => Self::Moved { id },
             Event::SavedTextForgotten { id } => Self::SavedTextForgotten { id },
@@ -199,6 +205,8 @@ pub(crate) struct Shared {
     /// Who hears what happens to the terminals besides Swift: the control socket's event bus
     /// (`hook_server`). Set once, by the server.
     pub(crate) tap: OnceLock<Arc<dyn Tap>>,
+    /// The windows this one is among, and its id there (`workspace_windows`). Set once, by `Workspace::in_window`.
+    pub(crate) windows: OnceLock<(Arc<Windows>, i64)>,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -209,6 +217,21 @@ impl Shared {
     /// The registered `Terminal` of terminal `id`.
     pub(crate) fn terminal_of(&self, id: i64) -> Option<Arc<Terminal>> {
         locked(&self.terminals).get(&id).cloned()
+    }
+
+    /// The id of the window this workspace is (1 when it is not among several).
+    pub(crate) fn window_id(&self) -> i64 {
+        self.windows.get().map_or(1, |(_, id)| *id)
+    }
+
+    /// Unregister terminal `id` without ending it (it is moving to another window).
+    pub(crate) fn take_terminal(&self, id: i64) -> Option<Arc<Terminal>> {
+        locked(&self.terminals).remove(&id)
+    }
+
+    /// Register a running terminal that came from another window; `workspace_feed::attach` feeds from it.
+    pub(crate) fn put_terminal(&self, id: i64, terminal: Arc<Terminal>) {
+        locked(&self.terminals).insert(id, terminal);
     }
 
     pub(crate) fn now(&self) -> u64 {
@@ -279,30 +302,7 @@ pub struct Workspace {
 impl Workspace {
     #[uniffi::constructor]
     pub fn new(config: WorkspaceConfig, listener: Arc<dyn WorkspaceListener>) -> Arc<Self> {
-        let model = WorkspaceModel::new(ModelConfig {
-            home: config.home.map(PathBuf::from),
-            numbers: if config.numbers_follow_list { SidebarNumbers::List } else { SidebarNumbers::Terminal },
-            start_folder: config.start_folder.map(PathBuf::from),
-            pane_header_h: config.pane_header_height,
-            // The disk is this crate's to ask: a group that keeps only its folder's terminals reads
-            // where each really is.
-            ground: Some(Arc::new(DiskGround)),
-            ..ModelConfig::default()
-        });
-        let shared = Arc::new(Shared {
-            model: Mutex::new(model),
-            pending: Mutex::new(Vec::new()),
-            woken: AtomicBool::new(false),
-            listener,
-            started: Instant::now(),
-            epoch: SystemTime::now(),
-            terminals: Mutex::new(HashMap::new()),
-            pump: Arc::default(),
-            git: GitJobs::default(),
-            tap: OnceLock::new(),
-        });
-        workspace_pump::spawn(&shared);
-        Arc::new(Self { shared })
+        Self::build(config, listener, None)
     }
 
     /// Do what the person did. What changed comes back as events (see the module's note).
@@ -481,6 +481,40 @@ impl Workspace {
 }
 
 impl Workspace {
+    /// A workspace whose ids come from `ids` when it shares them with other windows (`workspace_windows`).
+    pub(crate) fn build(
+        config: WorkspaceConfig,
+        listener: Arc<dyn WorkspaceListener>,
+        ids: Option<IdCounter>,
+    ) -> Arc<Self> {
+        let model = WorkspaceModel::new(ModelConfig {
+            home: config.home.map(PathBuf::from),
+            numbers: if config.numbers_follow_list { SidebarNumbers::List } else { SidebarNumbers::Terminal },
+            start_folder: config.start_folder.map(PathBuf::from),
+            pane_header_h: config.pane_header_height,
+            // The disk is this crate's to ask: a group that keeps only its folder's terminals reads
+            // where each really is.
+            ground: Some(Arc::new(DiskGround)),
+            ids,
+            ..ModelConfig::default()
+        });
+        let shared = Arc::new(Shared {
+            model: Mutex::new(model),
+            pending: Mutex::new(Vec::new()),
+            woken: AtomicBool::new(false),
+            listener,
+            started: Instant::now(),
+            epoch: SystemTime::now(),
+            terminals: Mutex::new(HashMap::new()),
+            pump: Arc::default(),
+            git: GitJobs::default(),
+            tap: OnceLock::new(),
+            windows: OnceLock::new(),
+        });
+        workspace_pump::spawn(&shared);
+        Arc::new(Self { shared })
+    }
+
     /// What the control socket's server works on (`hook_server`).
     pub(crate) fn shared(&self) -> &Arc<Shared> {
         &self.shared

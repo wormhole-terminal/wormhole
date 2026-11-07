@@ -285,7 +285,8 @@ pub(crate) fn own_opened(core: &Core, owner: Identity, reply: &Reply) {
 
 /// Forget what is kept about terminals that are closed, and what a session allowed for programs that ended.
 pub(crate) fn sweep(core: &Core) {
-    let open = core.shared.peek_model(|model| model.ids());
+    let open: Vec<i64> =
+        core.shares().iter().flat_map(|shared| shared.peek_model(|model| model.ids())).collect();
     let now = Instant::now();
     let ended = core.desk.with_state(|grants, scopes| {
         scopes.retain_open(&open);

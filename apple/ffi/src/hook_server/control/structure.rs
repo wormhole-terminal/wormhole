@@ -5,6 +5,7 @@
 //! Nothing here takes the keyboard from the person unless it was asked to (`focus --activate`), and `close`
 //! never closes anything: it asks, and the person answers.
 
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 use wormhole_core::ipc::Peer;
@@ -13,7 +14,7 @@ use wormhole_core::ipc::control::event::{Body, Event, Topic};
 use wormhole_core::ipc::control::structure::{launch_check, name_check};
 use wormhole_core::ipc::control::{
     CloseAsked, CloseSpec, Error, ErrorCode, FocusSpec, Focused, Limited, NewWindowSpec, Reason, RenameSpec,
-    Renamed, Reply, Target, writes_off,
+    Renamed, Reply, Target, WindowOpened, writes_off,
 };
 use wormhole_core::workspace::Action;
 
@@ -36,8 +37,10 @@ fn found(core: &Core, target: Target, peer: &Peer) -> Result<i64, Reply> {
     core.find(target, peer).ok_or_else(|| not_found(target))
 }
 
-/// `new-window`: this app is one window.
-pub(super) fn new_window(core: &Core, spec: &NewWindowSpec, from: Option<i64>, access: Access) -> Reply {
+/// `new-window`: a window like the first one (its panels, no groups) with one new terminal in `folder` (the
+/// selected terminal's folder without), running `command`. The ids are planned now and the window is opened by
+/// Swift (`HookEvent::NewWindow`); behind the other windows unless `activate`.
+pub(super) fn new_window(core: &Arc<Core>, spec: &NewWindowSpec, from: Option<i64>, access: Access) -> Reply {
     if let Err(reply) = gate(core, access) {
         return reply;
     }
@@ -47,7 +50,30 @@ pub(super) fn new_window(core: &Core, spec: &NewWindowSpec, from: Option<i64>, a
     if let Err(reply) = core.budget(Limited::NewWindow, from) {
         return reply;
     }
-    Reply::error(ErrorCode::Unsupported, "this app has one window: use new-terminal")
+    let Some((windows, _)) = core.shared.windows.get() else {
+        return Reply::error(
+            ErrorCode::Unsupported,
+            "this workspace is not one of several windows: use new-terminal",
+        );
+    };
+    let planned = windows.plan_like(Some(&core.shared), spec.folder.clone());
+    let folder = planned.folder.clone();
+    core.ui.push(HookEvent::NewWindow {
+        window: planned.window,
+        terminal: planned.terminal,
+        folder: folder.clone(),
+        activate: spec.activate,
+    });
+    if let Some(command) = spec.command.clone() {
+        super::open::run_first(core, planned.terminal, command);
+    }
+    tracing::info!(
+        window = planned.window,
+        terminal = planned.terminal,
+        ?from,
+        "control: a window was opened"
+    );
+    Reply::ok(WindowOpened { window: planned.window, terminal: planned.terminal, folder })
 }
 
 /// `focus`: select the terminal's row, which shows its split. `activate` also brings the app forward.

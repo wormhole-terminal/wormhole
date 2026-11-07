@@ -29,6 +29,9 @@ const SILENT: Duration = Duration::from_secs(2);
 const GIVE_UP: Duration = Duration::from_secs(5);
 /// A terminal that Swift never started a program for: the wait ends.
 const NO_PTY: Duration = Duration::from_secs(30);
+/// How long a terminal may be in no window's list before it counts as closed: a window that `new-window` planned
+/// has its terminal only once Swift has opened it.
+const WINDOW_GRACE: Duration = Duration::from_secs(3);
 /// The pause between the pasted command and the Return that runs it: the program reads the paste first.
 const SUBMIT_DELAY: Duration = Duration::from_millis(60);
 
@@ -172,7 +175,7 @@ fn open(core: &Core, action: Action, folder: Option<String>) -> Option<(i64, Opt
 /// Type `command` into terminal `tab` and run it once its shell is ready for it: Swift has to start the program
 /// first, and the shell may not have drawn a prompt (see the constants). On a thread of its own, bounded by
 /// the new-terminal budget that let the request in.
-fn run_first(core: &Arc<Core>, tab: i64, command: String) {
+pub(super) fn run_first(core: &Arc<Core>, tab: i64, command: String) {
     let command = command.trim().to_string();
     if command.is_empty() {
         return;
@@ -184,7 +187,8 @@ fn run_first(core: &Arc<Core>, tab: i64, command: String) {
         loop {
             std::thread::sleep(POLL);
             let Some(terminal) = core.terminal(tab) else {
-                if started.elapsed() >= NO_PTY || !core.shared.peek_model(|model| model.ids().contains(&tab))
+                if started.elapsed() >= NO_PTY
+                    || (started.elapsed() >= WINDOW_GRACE && core.owner_of(tab).is_none())
                 {
                     tracing::warn!("a terminal never got a shell: its first command was not typed");
                     return;

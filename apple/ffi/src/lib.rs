@@ -39,6 +39,7 @@ mod theme_json;
 mod theme_resolve;
 mod themes;
 mod title_fit;
+mod windows;
 pub mod words;
 mod workspace;
 mod workspace_feed;
@@ -96,6 +97,10 @@ pub use settings::{
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
+pub use windows::{
+    Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, Windows,
+    cascade_frame, fit_frame,
+};
 pub use workspace::{TerminalFactsRecord, Workspace, WorkspaceConfig, WorkspaceEvent, WorkspaceListener};
 
 uniffi::setup_scaffolding!();

@@ -13,11 +13,14 @@ use super::events::HookEvent;
 /// Act on one message from the socket.
 pub(crate) fn apply(core: &Arc<Core>, message: Message) {
     match message {
-        // The terminal's id is what `WORMHOLE_TAB_ID` held; one this window does not have (another window's,
-        // or one that closed) is ignored by the model. What the event means for the status is core's.
+        // The terminal's id is what `WORMHOLE_TAB_ID` held; one no window has (one that closed) is ignored.
+        // What the event means for the status is core's.
         Message::Hook { tab, agent, event, message } => {
             let Some(id) = tab.trim().parse::<i64>().ok() else { return };
-            core.shared.feed(id, StatusEvent::Hook { agent, event, message });
+            // In whichever window holds the terminal.
+            if let Some(owner) = core.owner_of(id) {
+                owner.feed(id, StatusEvent::Hook { agent, event, message });
+            }
         }
         // Every agent's plan limits, for the Usage tab: the latest report of an agent wins.
         Message::Usage { usage } => core.usage.record(usage),

@@ -15,7 +15,9 @@ use wormhole_core::workspace::{Action, SidebarRow};
 use crate::aux_backends::{AccessDesk, AuxListener};
 use crate::files_panel::PanelListener;
 use crate::hook_server::{HookEvent, HookListener, HookServer};
-use crate::{Terminal, TerminalListener, UsageService, Workspace, WorkspaceConfig, WorkspaceListener};
+use crate::{
+    Terminal, TerminalListener, UsageService, Windows, Workspace, WorkspaceConfig, WorkspaceListener,
+};
 
 #[derive(Default)]
 pub(super) struct Wakes(AtomicUsize);
@@ -41,6 +43,7 @@ pub(super) struct Fixture {
     pub(super) _root: tempfile::TempDir,
     pub(super) dir: PathBuf,
     pub(super) workspace: Arc<Workspace>,
+    pub(super) windows: Option<Arc<Windows>>,
     pub(super) usage: Arc<UsageService>,
     pub(super) desk: Arc<AccessDesk>,
     pub(super) server: Arc<HookServer>,
@@ -50,6 +53,15 @@ pub(super) struct Fixture {
 /// A server on a fresh `Wormhole-swift-hook` folder whose settings let agents in as `mode` says
 /// (`open`, `ask` or `off`), with the Automation feature on.
 pub(super) fn fixture(mode: &str) -> Fixture {
+    fixture_in(mode, false)
+}
+
+/// [`fixture`] whose workspace is window 1 of a registry of windows, as the Swift app's is: `new-window` works.
+pub(super) fn fixture_of_windows(mode: &str) -> Fixture {
+    fixture_in(mode, true)
+}
+
+fn fixture_in(mode: &str, of_windows: bool) -> Fixture {
     crate::isolate_for_tests();
     let root = tempfile::tempdir().expect("a temp dir");
     let dir = root.path().join("Wormhole-swift-hook");
@@ -61,15 +73,19 @@ pub(super) fn fixture(mode: &str) -> Fixture {
         .and_then(|mut file| file.write_all(config.to_string().as_bytes()))
         .expect("config.json");
     let wakes = Arc::new(Wakes::default());
-    let workspace = Workspace::new(
-        WorkspaceConfig {
-            home: None,
-            numbers_follow_list: true,
-            start_folder: None,
-            pane_header_height: 0.0,
-        },
-        wakes.clone(),
-    );
+    let config = WorkspaceConfig {
+        home: None,
+        numbers_follow_list: true,
+        start_folder: None,
+        pane_header_height: 0.0,
+    };
+    let windows = of_windows.then(|| Windows::in_dir(&dir).expect("windows"));
+    let workspace = match &windows {
+        Some(windows) => {
+            Workspace::in_window(windows.clone(), windows.alloc_window_id(), config, wakes.clone())
+        }
+        None => Workspace::new(config, wakes.clone()),
+    };
     let usage = UsageService::in_dir(&dir, wakes.clone());
     let desk = AccessDesk::new(None, Some(dir.display().to_string()), wakes.clone()).expect("a desk");
     let server = HookServer::start(
@@ -80,7 +96,7 @@ pub(super) fn fixture(mode: &str) -> Fixture {
         Some(dir.display().to_string()),
     )
     .expect("a server");
-    Fixture { _root: root, dir, workspace, usage, desk, server, wakes }
+    Fixture { _root: root, dir, workspace, windows, usage, desk, server, wakes }
 }
 
 impl Fixture {

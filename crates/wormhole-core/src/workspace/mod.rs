@@ -26,11 +26,14 @@ mod git_feed;
 mod git_sync;
 mod ground;
 mod groups;
+mod ids;
 mod model;
+mod moves;
 mod open_items;
 mod overview;
 mod panel;
 mod presets;
+mod saved;
 mod session;
 mod snapshot;
 mod splits;
@@ -52,9 +55,12 @@ pub use git_feed::{
     ChangeRules, GitFacts, GitFeed, GitJob, PROBE_CONFIRM, Repo, Sight, Ticket, WATCHED_READ, Wanted,
 };
 pub use ground::{DiskGround, Ground};
+pub use ids::IdCounter;
 pub use model::{ModelConfig, WorkspaceModel};
+pub use moves::Departing;
 pub use open_items::open_items;
 pub use overview::SplitOverview;
+pub use saved::SavedLayout;
 pub use snapshot::{
     AgentInfo, ChromeSnapshot, ColumnLimits, DividerInfo, EdgeDrag, GroupHead, LayoutInfo, MemberTile,
     PaneRect, PanelTab, PanesSnapshot, PathFolder, PathStep, PresetInfo, SidebarRow, SidebarSection,

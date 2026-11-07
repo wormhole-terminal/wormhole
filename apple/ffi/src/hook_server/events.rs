@@ -18,6 +18,11 @@ pub enum HookEvent {
     /// The status line of `terminal`'s agent (`agent`, its command: `claude`) says which model it runs and how
     /// much of its context window is used (0 to 100). Only a coding agent that reports it has one.
     Gauge { terminal: i64, agent: String, model: Option<String>, context: Option<f32> },
+    /// `wh new-window`: open a window for window id `window`, whose first terminal `terminal` is planned already
+    /// (`Windows::plan`): make a `Workspace` in it with `in_window` and `restore()`. `command` is typed into the
+    /// terminal once its shell is ready (the server does it); `activate` says to bring the window forward, else it
+    /// opens behind the others and takes no keys.
+    NewWindow { window: i64, terminal: i64, folder: Option<String>, activate: bool },
 }
 
 /// Why the server did not start.

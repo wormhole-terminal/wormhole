@@ -117,7 +117,7 @@ impl Terminal {
 impl Core {
     /// Terminal `id`'s registered `Terminal`.
     pub(crate) fn terminal(&self, id: i64) -> Option<Arc<Terminal>> {
-        self.shared.terminal_of(id)
+        self.shares().iter().find_map(|shared| shared.terminal_of(id))
     }
 
     /// The terminal `target` names (one id whichever way it is named), unless it is hidden from agents and
@@ -125,7 +125,7 @@ impl Core {
     /// is not found, as if it did not exist. The one lookup every request that names a terminal goes through.
     pub(crate) fn find(&self, target: Target, peer: &Peer) -> Option<i64> {
         let id = target.id();
-        let hidden = self.shared.peek_model(|model| {
+        let hidden = self.owner_of(id)?.peek_model(|model| {
             model.terminals_snapshot().terminals.iter().find(|t| t.id == id).map(|t| t.agent_hidden)
         })?;
         let inside = self.terminal(id).and_then(|t| t.shell_pid()).is_some_and(|shell| peer.runs_in(shell));
@@ -143,13 +143,25 @@ impl Core {
 
     /// Every terminal `peer` may know of: those not hidden from agents, and the one it runs inside of.
     pub(crate) fn visible_ids(&self, peer: &Peer) -> Vec<i64> {
-        let hidden: Vec<i64> = self.shared.peek_model(|model| {
-            model.terminals_snapshot().terminals.iter().filter(|t| t.agent_hidden).map(|t| t.id).collect()
-        });
+        let shares = self.shares();
+        let hidden: Vec<i64> = shares
+            .iter()
+            .flat_map(|shared| {
+                shared.peek_model(|model| {
+                    model
+                        .terminals_snapshot()
+                        .terminals
+                        .iter()
+                        .filter(|t| t.agent_hidden)
+                        .map(|t| t.id)
+                        .collect::<Vec<_>>()
+                })
+            })
+            .collect();
         let inside = self.terminals_under(peer);
-        self.shared
-            .peek_model(|model| model.ids())
-            .into_iter()
+        shares
+            .iter()
+            .flat_map(|shared| shared.peek_model(|model| model.ids()))
             .filter(|id| !hidden.contains(id) || inside.contains(id))
             .collect()
     }
@@ -161,7 +173,8 @@ impl Core {
     }
 
     fn registered(&self) -> Vec<(i64, Arc<Terminal>)> {
-        let ids = self.shared.peek_model(|model| model.ids());
+        let ids: Vec<i64> =
+            self.shares().iter().flat_map(|shared| shared.peek_model(|model| model.ids())).collect();
         ids.into_iter().filter_map(|id| Some((id, self.terminal(id)?))).collect()
     }
 
@@ -169,7 +182,7 @@ impl Core {
     /// question.
     pub(crate) fn tab_facts(&self, tab: i64) -> Option<TabFacts> {
         let (state, asked) = self
-            .shared
+            .owner_of(tab)?
             .peek_model(|model| model.facts(tab).map(|facts| (state_of(facts.row_state()), facts.told())))?;
         Some(TabFacts { state, shell: self.terminal(tab).and_then(|t| t.shell_pid()), asked })
     }

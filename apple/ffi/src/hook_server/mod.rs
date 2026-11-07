@@ -55,9 +55,6 @@ pub trait HookListener: Send + Sync {
     fn wake(&self);
 }
 
-/// The window's id as `list` tells it: this app has one window per workspace.
-const WINDOW: i64 = 1;
-
 /// The socket and the control line of one workspace.
 #[derive(uniffi::Object)]
 pub struct HookServer {
@@ -96,7 +93,7 @@ impl HookServer {
             return Err(HookError::Failed { reason: format!("{} could not be served", socket.display()) });
         }
         let shared = workspace.shared();
-        let publisher = Publisher::start(shared, bus.clone(), WINDOW)
+        let publisher = Publisher::start(shared, bus.clone(), shared.window_id())
             .map_err(|err| HookError::Failed { reason: format!("the event thread: {err}") })?;
         if shared.tap.set(publisher.clone()).is_err() {
             return Err(HookError::Failed { reason: "this workspace already has a server".into() });

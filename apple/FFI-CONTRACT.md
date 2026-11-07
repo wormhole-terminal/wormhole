@@ -890,3 +890,55 @@ since `gauge` carries a float).
   `AccessDesk.approvals()` lists stored and held approvals, `revokeStored(id)` / `HookServer.revokeStoredApproval(id)`
   take one back; `resetTips()`, `dismissedTipsCount()`, `defaultTerminalScriptTypes()`, `defaultTerminalFailed(error)`,
   `profileDeleteQuestion(profile)`, `profileCopyOption(profile)`.
+## Several windows: `Windows`, window records, terminals moving between windows
+
+Additive, contract version stays 2. One `Workspace` per window, as in the GPUI app (`AppState` + one `Workspace` each);
+what they share and what is saved of them is one object, `Windows` (`windows/`, over core's `Store`).
+
+```swift
+// the registry (fails with FfiError.NotIsolated unless WORMHOLE_DATA_DIR is the experiment's)
+Windows()                                    // opens the profile's database; ids start above everything saved
+func saved() -> [SavedWindow]                // to open at launch, the window that was in front last LAST: SavedWindow(id, frame: FrameRecord?, terminals)
+func allocWindowId() -> Int64                // an id for a window that starts empty (first launch) or is given terminals
+func plan(from: Workspace?, folder: String?) -> PlannedWindow   // window + first terminal ids, known before anything is on screen
+func save(window: Int64, workspace: Workspace, frame: FrameRecord?) -> Bool   // cheap when nothing changed; keeps the Notes tab's rows
+func saveFront(window: Int64)                // which window was in front, for the next launch
+func forget(window: Int64)                   // the person closed it: it and what it held are gone (a quit saves, never forgets)
+// a window's workspace
+Workspace.inWindow(windows:, window:, config:, listener:)   // ids from the registry's counter: no two windows share one; the control line finds its terminals
+func restore() -> [WorkspaceEvent]           // fill an EMPTY workspace from its saved or planned record: `opened(id, cwd)` for every terminal (start its program there)
+func takeOut(ids: [Int64]) -> TakenOut       // TakenOut(departure: Departure?, events): terminals leave RUNNING; here they are closed as a close does (selection by the window's rules, a window left with none starts one)
+func receive(departure: Departure) -> [WorkspaceEvent]   // they join the end of the list under their ids; `adopted(id)`; once per departure
+// frames (core `view::layout::frame`: y down, primary display first, plain numbers)
+fitFrame(frame:, displays:) -> FrameRecord   // a window still reachable stays; one whose display went, or that is off every display, is put on its own (else the primary) display
+cascadeFrame(from:, display:) -> FrameRecord // a step (26 pt) down and right, or the display's corner when that would run off
+```
+
+- **What a record holds** (`WorkspaceModel::window_record`, core `workspace/saved.rs`): terminals in the window's order with
+  id, name, pin, "hide from agents", "forget text", folder and split, the splits with their pane layouts, the sidebar's
+  groups/folds/order, the columns and the panel's tab, the selected place; `frame` is the shell's own JSON
+  (`FrameRecord` through core's `WindowFrame`, the GPUI app's own shape). The layout JSON is the GPUI app's (`SavedLayout`).
+  Not kept: what ran in a terminal (a restored terminal is a fresh shell in its folder), notes (the Notes tab's own rows,
+  untouched by `save`), the terminals' saved text.
+- **Ids.** Terminal and split ids share one counter across all windows (`IdCounter`), window ids another; both start above
+  anything in the database (`Store::next_ids`). A terminal keeps its id when it moves, so notes and agent hooks follow it.
+- **Moving.** `takeOut` unregisters the `Terminal`s before the close is told (the model's `Closed` ends a registered program), so the
+  caller must also let go of the old view's source WITHOUT closing it (`UniFFIFrameSource.detach()`), keep each terminal's
+  `TerminalRelay` (the view's wake) and hand both to the other window; `receive` re-registers the terminals and feeds them to
+  the new window's model. Dropping a `Departure` that nobody received ends the programs. Save the receiving window before the
+  giving one (the store moves a session row to the window that saves it first). A moved terminal's status resets until its
+  next hook, and it joins the end of the new list outside any group.
+- **Events.** `WorkspaceEvent.adopted(id)`: a terminal arrived running, make a view, start nothing. `HookEvent.newWindow(window,
+  terminal, folder, activate)`: see below.
+- **The control line over windows.** `Workspace.inWindow` makes every window's terminals reachable by the server that was
+  started over any one of them: hooks (`WORMHOLE_TAB_ID`), `read`, `send-text`, `send-keys`, `mouse`, `run`, `wait`, `notify`
+  and the hidden-from-agents rule use the window that holds the terminal. `new-window [--folder] [--command] [--activate]` is
+  served (it was `unsupported`): the server plans the window (`Windows.plan`, the window's panels without its groups, a
+  folder from the request or the selected terminal's), answers `{window, terminal, folder}`, and queues `HookEvent.newWindow`;
+  Swift makes a workspace with `inWindow(windows, window, …)`, calls `restore()` and starts the program; `command` is typed
+  once the shell is ready (within 3 s the terminal must be in some window). Still the first window's only: `list`,
+  `events`, `status`, `focus`, `rename`, `close`, `split`, `new-terminal` (the model of the window the server was started over).
+- **Threads.** `Windows` takes its store's mutex per call (microseconds); `save` reads the workspace's model with `peek_model`
+  (no tap wake). Everything is meant for the main thread; none calls Swift.
+- **Core changes this needed** (additive): `workspace::{IdCounter, SavedLayout, Departing}`, `ModelConfig.ids`,
+  `WorkspaceModel::{window_record, restore, take_out, receive}`, `Event::Adopted`, `view::layout::frame`.

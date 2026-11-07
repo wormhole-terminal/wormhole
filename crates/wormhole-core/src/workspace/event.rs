@@ -33,6 +33,8 @@ pub enum Event {
     Opened { id: i64, cwd: Option<PathBuf> },
     /// A terminal was closed: end its program.
     Closed { id: i64 },
+    /// A terminal came from another window, its program running: nothing to start, only a view to make.
+    Adopted { id: i64 },
     /// The selection moved (`None`: nothing is selected).
     Selected { id: Option<i64> },
     /// A row was moved by a drop or a split's pane joined it: a shell may animate it.

@@ -31,7 +31,7 @@ pub(crate) struct Core {
     pub desk: Arc<AccessDesk>,
     pub bus: Arc<Bus>,
     pub publisher: Arc<Publisher>,
-    /// The window's id as `list` tells it: the Swift app has one window per workspace.
+    /// The id of the window the server was started over, as `list` tells it.
     pub window: i64,
     pub ui: Ui,
     budgets: Mutex<RateLimits>,
@@ -55,6 +55,7 @@ impl Core {
         listener: Arc<dyn HookListener>,
     ) -> Arc<Self> {
         let shared = workspace.shared().clone();
+        let window = shared.window_id();
         Arc::new(Self {
             _workspace: workspace,
             shared,
@@ -62,7 +63,7 @@ impl Core {
             desk,
             bus,
             publisher,
-            window: 1,
+            window,
             ui: Ui::new(listener),
             budgets: Mutex::default(),
             profile,
@@ -71,6 +72,18 @@ impl Core {
             signatures: Mutex::default(),
             close_question: AtomicBool::new(false),
         })
+    }
+
+    /// Every window's workspace state, the first (the one the server was started over) among them: reading and
+    /// typing, hooks and notices reach the terminals of all of them.
+    pub(crate) fn shares(&self) -> Vec<Arc<Shared>> {
+        let all = self.shared.windows.get().map(|(windows, _)| windows.shares()).unwrap_or_default();
+        if all.is_empty() { vec![self.shared.clone()] } else { all }
+    }
+
+    /// The window state that holds terminal `id`.
+    pub(crate) fn owner_of(&self, id: i64) -> Option<Arc<Shared>> {
+        self.shares().into_iter().find(|shared| shared.peek_model(|model| model.ids().contains(&id)))
     }
 
     /// The profile's settings, as they were a moment ago at most.
