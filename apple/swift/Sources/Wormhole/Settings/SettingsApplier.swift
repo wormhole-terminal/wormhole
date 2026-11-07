@@ -46,6 +46,7 @@ final class SettingsApplier {
         }
         applyLook(values, changed: changed)
         app.ambient?.apply(values, changed: changed)
+        if changed("agent_access", "control_write") { app.hooks?.settingsChanged() }
         if changed("title_row") { applyTitleRow(values) }
         if changed("open_in") {
             let chosen = values["open_in"]?.string ?? ""

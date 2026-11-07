@@ -21,6 +21,8 @@ enum PanelBackendsFactory {
     struct Made {
         var backends = PanelUI.PanelBackends.mock()
         var notes: (any NotesPersisting)?
+        /// The core's usage service, which the hook socket feeds (a `UsageService`).
+        var usage: AnyObject?
     }
 
     /// `effects` performs what the project asks of the window; it is given the hub once that exists.
@@ -47,6 +49,7 @@ enum PanelBackendsFactory {
                     let files = try FilesBridge.makeBackends(authenticator: authenticator, effects: effects)
                     (backends.files, backends.project, backends.usage) = (files.files, files.project, files.usage)
                     made.notes = files.notes
+                    made.usage = files.usage.service
                 } catch {
                     FileHandle.standardError.write(Data("panel: files, project and usage are the sample (\(error))\n".utf8))
                 }

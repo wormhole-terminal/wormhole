@@ -33,6 +33,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// What the project's actions ask of the window (real windows only), and where the Notes tab keeps its text.
     let panelEffects: AnyObject?
     let panelNotes: (any NotesPersisting)?
+    let panelUsage: AnyObject?
+    var hooks: HookHost?
     var ambient: AmbientController?
     var menus: MenuController?
     /// Native context menus (the terminal's), whose choices go to the same router as the menu bar's.
@@ -62,7 +64,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         let effects = Self.makeEffects()
         let panel = PanelBackendsFactory.make(options, store: host.store, policy: policy, effects: effects)
         hub = WindowHub(store: host.store, terminals: TerminalViews { factory.make($0) }, panelBackends: panel.backends)
-        (panelEffects, panelNotes) = (effects, panel.notes)
+        (panelEffects, panelNotes, panelUsage) = (effects, panel.notes, panel.usage)
         #if WITH_UNIFFI
             // The title row's order of giving way is the core's, wherever the core runs the window.
             if options.program != nil { hub.rowFitting = CoreRowFitting() }
@@ -99,6 +101,9 @@ final class AppController: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
-    func applicationWillTerminate(_ notification: Notification) { hub.terminals.shutdown() }
+    func applicationWillTerminate(_ notification: Notification) {
+        hooks?.stop()
+        hub.terminals.shutdown()
+    }
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { ambient?.dockMenu() }
 }

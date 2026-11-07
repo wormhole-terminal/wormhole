@@ -152,7 +152,7 @@ if ffiLinked {
         .testTarget(name: "HookBridgeTests", dependencies: ["HookBridge", "WormholeBindings"]),
     ]
     appDependencies += [
-        "UniFFISource", "WorkspaceBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge",
+        "UniFFISource", "WorkspaceBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge", "HookBridge",
     ]
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.
     targets.append(.target(name: "GitBridge", dependencies: ["PanelModel", "WormholeBindings"]))

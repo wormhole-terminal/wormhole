@@ -99,6 +99,7 @@ extension AppController {
         guard options.isReal else { return }
         notices = NoticeFeed(app: self)
         aux.startAccess()
+        startHooks()
         #if WITH_UNIFFI
             (panelEffects as? PanelEffects)?.log = { [weak self] in self?.devctl?.append($0) }
         #endif

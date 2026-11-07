@@ -28,7 +28,8 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     public var onNotice: (@MainActor (WorkspaceNotice) -> Void)?
     public private(set) var live: [TerminalID] = []
 
-    private let workspace: Workspace
+    /// The core's workspace, for what serves it to others (the hook socket).
+    public let core: Workspace
     private let setup: WorkspaceSetup
     private var relays: [TerminalID: TerminalRelay] = [:]
     private var failed: [TerminalID: String] = [:]
@@ -39,7 +40,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     public init(setup: WorkspaceSetup) {
         self.setup = setup
         let wake = WakeRelay()
-        workspace = Workspace(
+        core = Workspace(
             config: WorkspaceConfig(
                 home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: setup.home, paneHeaderHeight: 0),
             listener: wake)
@@ -48,7 +49,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
 
     /// The frame source of terminal `id`, over the program started for it; nil when it did not start.
     public func frameSource(for id: TerminalID) -> (any FrameSource)? {
-        guard let relay = relays[id], let terminal = workspace.terminal(id: Int64(id)) else { return nil }
+        guard let relay = relays[id], let terminal = core.terminal(id: Int64(id)) else { return nil }
         return UniFFIFrameSource(adopting: terminal, relay: relay)
     }
 
@@ -56,47 +57,47 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     public func startFailure(of id: TerminalID) -> String? { failed[id] }
 
     public func apply(_ action: WorkspaceAction) -> WorkspaceModel.Refusal? {
-        handle(workspace.apply(action: WormholeBindings.Action(action)))
+        handle(core.apply(action: WormholeBindings.Action(action)))
     }
 
-    public func drain() { _ = handle(workspace.drain()) }
+    public func drain() { _ = handle(core.drain()) }
 
-    public func setWindowState(active: Bool, seen: Bool) { _ = handle(workspace.setWindowState(active: active, seen: seen)) }
+    public func setWindowState(active: Bool, seen: Bool) { _ = handle(core.setWindowState(active: active, seen: seen)) }
 
     public func hook(id: TerminalID, agent: String, event: String, message: String?) {
-        _ = handle(workspace.hook(id: Int64(id), agent: agent, event: event, message: message))
+        _ = handle(core.hook(id: Int64(id), agent: agent, event: event, message: message))
         // A hook fed from the main thread wakes no one: the window pulls what changed itself.
         onWake?()
     }
 
     public func setNotes(id: TerminalID, tasksDone: [Bool], notes: [String]) {
-        _ = handle(workspace.setNotes(id: Int64(id), tasksDone: tasksDone, notes: notes))
+        _ = handle(core.setNotes(id: Int64(id), tasksDone: tasksDone, notes: notes))
         onWake?()
     }
 
-    public func revisions() -> WorkspaceModel.Revisions { WorkspaceModel.Revisions(workspace.revisions()) }
-    public func sidebar() -> WorkspaceModel.SidebarSnapshot { WorkspaceModel.SidebarSnapshot(workspace.sidebar()) }
-    public func chrome() -> ChromeState { ChromeState(workspace.chrome()) }
-    public func terminals() -> WorkspaceModel.TerminalsSnapshot { WorkspaceModel.TerminalsSnapshot(workspace.terminals()) }
-    public func title() -> TitleState? { TitleState(workspace.title(bootVolume: Self.bootVolume)) }
+    public func revisions() -> WorkspaceModel.Revisions { WorkspaceModel.Revisions(core.revisions()) }
+    public func sidebar() -> WorkspaceModel.SidebarSnapshot { WorkspaceModel.SidebarSnapshot(core.sidebar()) }
+    public func chrome() -> ChromeState { ChromeState(core.chrome()) }
+    public func terminals() -> WorkspaceModel.TerminalsSnapshot { WorkspaceModel.TerminalsSnapshot(core.terminals()) }
+    public func title() -> TitleState? { TitleState(core.title(bootVolume: Self.bootVolume)) }
 
     /// What the system calls the startup volume ("Macintosh HD"), which the title row's path menu names the root with.
     private static let bootVolume =
         (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD"
 
     public func dropPlan(dragged: TerminalID, over: DropOver) -> WorkspaceModel.DropPlan? {
-        workspace.dropPlan(dragged: Int64(dragged), over: Over(over)).map(WorkspaceModel.DropPlan.init)
+        core.dropPlan(dragged: Int64(dragged), over: Over(over)).map(WorkspaceModel.DropPlan.init)
     }
 
     public func groupDropPlan(group: GroupID, over: DropOver) -> WorkspaceModel.Landing? {
-        workspace.groupDropPlan(group: group, over: Over(over)).map(WorkspaceModel.Landing.init)
+        core.groupDropPlan(group: group, over: Over(over)).map(WorkspaceModel.Landing.init)
     }
 
     public func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout? {
-        EdgeDragReadout(workspace.edgeDrag(edge: WormholeBindings.Edge(edge), extent: Float(extent)))
+        EdgeDragReadout(core.edgeDrag(edge: WormholeBindings.Edge(edge), extent: Float(extent)))
     }
 
-    public func groupFolderOffer(group: GroupID) -> String? { workspace.groupFolderOffer(group: group) }
+    public func groupFolderOffer(group: GroupID) -> String? { core.groupFolderOffer(group: group) }
 
     /// What the core says happened: start the program of a terminal opened, forget one closed; a refusal is the answer.
     private func handle(_ events: [WorkspaceEvent]) -> WorkspaceModel.Refusal? {
@@ -122,11 +123,13 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
         let relay = TerminalRelay()
         do {
             let size = Self.startSize
-            let terminal = try Terminal.startIn(
-                program: setup.program, args: setup.arguments, cwd: folder, cols: UInt16(size.cols), rows: UInt16(size.rows),
-                cellWidth: size.cellWidth, cellHeight: size.cellHeight, listener: relay)
+            // Started for its tab: its shell has `WORMHOLE_TAB_ID`, `WORMHOLE_SOCKET` and `WORMHOLE_BIN`, so agents' hooks
+            // and its own `wh` reach this workspace.
+            let terminal = try Terminal.startForTab(
+                tab: Int64(id), program: setup.program, args: setup.arguments, cwd: folder, cols: UInt16(size.cols),
+                rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight, listener: relay)
             relays[id] = relay
-            workspace.registerTerminal(id: Int64(id), terminal: terminal)
+            core.registerTerminal(id: Int64(id), terminal: terminal)
         } catch {
             failed[id] = "\(error)"
             FileHandle.standardError.write(Data("terminal \(id): cannot start \(setup.program): \(error)\n".utf8))

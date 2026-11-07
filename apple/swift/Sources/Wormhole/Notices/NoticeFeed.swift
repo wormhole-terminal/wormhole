@@ -38,6 +38,11 @@
 
         func sendTest(name: String, settings: NoticeSettings) { coordinator.sendTest(name: name, settings: settings) }
 
+        /// `wh notify`: a notification in the caller's words, about a terminal.
+        func post(terminal: Int64, title: String, body: String) {
+            notifier.post(Notice(id: "notify-\(terminal)", thread: "\(terminal)", title: title, body: body))
+        }
+
         /// The banners a test instance logged instead of posting, for the control folder's `notices`.
         var logged: [Notice] { (notifier as? LogNotifier)?.log ?? [] }
 
@@ -104,6 +109,7 @@
     final class NoticeFeed {
         init(app: AppController) {}
         func sendTest(name: String, settings: NoticeSettings) {}
+        func post(terminal: Int64, title: String, body: String) {}
         var logged: [Notice] { [] }
     }
 #endif

@@ -41,10 +41,13 @@ extension AppController {
     }
 
     /// Closes a terminal, asking first when an agent or a command runs in it.
-    func closeTerminal(_ id: TerminalID) {
-        guard let row = hub.state.sections.flatMap(\.rows).first(where: { $0.id == id }) else { return }
+    func closeTerminal(_ id: TerminalID, then done: @escaping () -> Void = {}) {
+        guard let row = hub.state.sections.flatMap(\.rows).first(where: { $0.id == id }) else { return done() }
         let terminal = row.terminal
-        guard row.runsSomething else { return finishClosing(id) }
+        guard row.runsSomething else {
+            finishClosing(id)
+            return done()
+        }
         let question = Question(
             title: CloseQuestions.sessionTitle(terminal.title),
             detail: CloseQuestions.session(
@@ -53,6 +56,7 @@ extension AppController {
             confirm: "Close")
         Task {
             if case .confirm = await QuestionSheet(question).ask(in: window) { finishClosing(id) }
+            done()
         }
     }
 

@@ -7,7 +7,8 @@ import PanelModel
 import WormholeBindings
 
 public final class RustUsageBackend: UsageBackend, @unchecked Sendable {
-    private let service: UsageService
+    /// The core's service, shared with the hook socket that hands it the agents' reports.
+    public let service: UsageService
     private let relay: UsageRelay
 
     init(service: UsageService, relay: UsageRelay) {

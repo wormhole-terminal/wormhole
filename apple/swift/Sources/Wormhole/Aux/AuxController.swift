@@ -12,6 +12,8 @@ final class AuxController {
     private var updates: (any UpdateBackend)?
     private var onboarding: OnboardingWindow?
     private var access: AccessDriver?
+    /// The core's agent-access desk behind the questions, shared with the hook socket; nil in the sample.
+    private(set) var accessBackend: (any AccessBackend)?
     private unowned let app: AppController
     private var backends: AuxBackends { AuxBackends(app: app) }
 
@@ -36,6 +38,7 @@ final class AuxController {
     /// Agents' questions (the control API's approval) as sheets on the window, one at a time, as they arrive.
     func startAccess() {
         guard access == nil, let backend = backends.access() else { return }
+        accessBackend = backend
         access = AccessDriver(backend: backend) { [weak app] in app?.window }
         access?.start()
     }

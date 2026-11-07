@@ -2,6 +2,18 @@
 
 import AppKit
 import Foundation
+#if WITH_UNIFFI
+    import HookBridge
+#endif
+
+#if WITH_UNIFFI
+    // The agents' hook scripts and a terminal's own `wh` run this executable (`$WORMHOLE_BIN hook …`): a command line is
+    // answered before anything of an app is set up. The app's own options (`--shell`, `--background`) start with a dash;
+    // the core would call them unknown commands.
+    if let first = CommandLine.arguments.dropFirst().first, !first.hasPrefix("-"), let code = HookBridge.exitCodeIfCommandLine() {
+        exit(code)
+    }
+#endif
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 if arguments.contains("-h") || arguments.contains("--help") {
