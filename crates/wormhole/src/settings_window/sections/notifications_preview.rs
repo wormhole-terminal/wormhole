@@ -28,24 +28,13 @@ pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<Se
     div()
         .flex()
         .flex_col()
-        .gap_2()
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .items_center()
-                .p_3()
-                .rounded(ui.radius_lg)
-                .outlined(ui, ui.border)
-                .bg(ui.background)
-                .child(banner(
-                    ui,
-                    icon,
-                    "api needs input", // text: sample (a made-up notification of the preview)
-                    "Allow edit of src/limits.rs?", // text: sample (a made-up notification of the preview)
-                )),
-        )
-        .child(super::preview::caption(ui, text(SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION)))
+        .items_center()
+        .child(banner(
+            ui,
+            icon,
+            "api needs input", // text: sample (a made-up notification of the preview)
+            "Allow edit of src/limits.rs?", // text: sample (a made-up notification of the preview)
+        ))
         .into_any_element()
 }
 
@@ -59,7 +48,7 @@ fn banner(ui: UiColors, icon: &'static str, title: &'static str, body: &'static 
         .gap_3()
         .p_3()
         .rounded(ui.radius_lg)
-        .outlined(ui, ui.border)
+        .when(ui.increase_contrast, |banner| banner.outlined_always(ui, ui.border))
         .bg(ui.panel)
         .shadow(crate::select::menu_shadow(ui))
         .child(img(icon).size(px(BANNER_ICON)).flex_none())

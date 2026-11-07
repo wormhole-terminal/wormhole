@@ -13,25 +13,19 @@ use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::agents::AgentId;
 use wormhole_core::theme::fonts::FontSlot;
-#[allow(
-    clippy::wildcard_imports,
-    reason = "the keys are generated, one constant per message: naming each would list them twice"
-)]
-use wormhole_text::keys::*;
-use wormhole_text::text;
 
-use super::preview::{self, Look, caption};
+use super::preview::{self, Look};
 use super::samples::STAGE_SAMPLES;
 use crate::settings::{SettingsStore, UiColors, settings};
+use crate::settings_window::SettingsWindow;
 use crate::settings_window::preview_column::FRAMED_H;
-use crate::settings_window::{SettingsWindow, ui as window_ui};
 use crate::style::{self, Edges, StatusGlyph, StatusTile, TextRole, TileFace};
 use crate::theme_bridge::hsla;
 
-/// The backdrop fills the scene's frame. The window in it is the Terminals list's own parts at their size:
-/// the traffic lights' row, the list's header and one terminal's card (66 pt at the roomiest density), and
-/// the status bar's row under them, with `WINDOW_INSET` round it. Its width fits the narrowest column
-/// (`WINDOW_MIN`: 640 less the nav and the page's padding is 356, less the backdrop's line).
+/// The window fills the stage's height less `WINDOW_INSET` (the stage's own inset) at its top and bottom. It
+/// is the Terminals list's own parts at their size: the traffic lights' row, the list's header and one
+/// terminal's card (66 pt at the roomiest density), and the status bar's row under them. Its width fits the
+/// narrowest column (`WINDOW_MIN`: 640 less the nav and the page's padding is 356, less the stage's inset).
 const STAGE_H: f32 = FRAMED_H;
 const WINDOW_INSET: f32 = 8.0;
 const WINDOW_W: f32 = 340.0;
@@ -56,9 +50,6 @@ pub(in crate::settings_window) fn draw_stage(
     let status_bar = store.settings_without_zen().status_bar;
     let surfaces = style::window_surfaces(cx, true);
     let look = Look::of(settings(cx));
-    // The backdrop and its outline are this window's, like the other previews' frames; only the
-    // miniature wears the main window's colours.
-    let chrome = window_ui(cx);
     // The miniature's outline takes a line of the border's width, so what sits flush inside it rounds
     // to the window's radius less that width (the clip is square, `Edges::corners`).
     let inner = (ui.radius_lg - ui.border_width).max(px(0.0));
@@ -105,25 +96,8 @@ pub(in crate::settings_window) fn draw_stage(
         .bg(surfaces.background)
         .child(div().flex_1().min_h_0().flex().child(sidebar).child(content))
         .when(status_bar, |d| d.child(status(ui, cx).corners(flat, flat, inner, inner)));
-    div()
-        .flex()
-        .flex_col()
-        .gap_2()
-        .child(
-            div()
-                .flex()
-                .items_center()
-                .justify_center()
-                .h(px(STAGE_H))
-                .w_full()
-                .rounded(chrome.radius_lg)
-                .overflow_hidden()
-                .outlined(chrome, chrome.border)
-                .bg(chrome.panel)
-                .child(window),
-        )
-        .child(caption(ui, text(SETTINGS_APPEARANCE_STAGE_CAPTION)))
-        .into_any_element()
+    // The strip's stage centres it and is as tall as the window and its inset.
+    div().flex().justify_center().child(window).into_any_element()
 }
 
 /// The terminal's title row: its folder, the branch chip, and the agent at work in it.

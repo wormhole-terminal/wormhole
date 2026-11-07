@@ -64,7 +64,7 @@ pub(super) use bar_previews::BarPreview;
 pub(super) use cli_tool::CliToolPanel;
 pub(super) use extensions::Extensions;
 pub(super) use feature_flags::is_unlock_key;
-pub(super) use fonts::draw_specimen;
+pub(super) use fonts::{draw_specimen, specimen_tabs};
 pub(super) use git_preview::{GitPreview, draw_git_preview, git_preview_tabs};
 pub(crate) use import::ImportPage;
 #[cfg(test)]

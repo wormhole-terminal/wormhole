@@ -145,7 +145,10 @@ const BUDGET: [(&str, u64); 20] = [
     // twice, and the shortcut's keys with the quick panel or the window sketch); both measured at the split.
     // Every other page rose by 68 with the nav's one row more, Hotkey, and was measured again.
     ("MenuBar", 3748),
-    ("Hotkey", 3899),
+    // The strip's flat stage became one element round every preview, in place of the frame each drew: Hotkey
+    // measured 3,973 (74 more than before; MenuBar, 4 more, stays inside the slack). Where the 74 come from
+    // was not isolated: the preview is a view of its own, drawn in the stage.
+    ("Hotkey", 3973),
     ("Updates", 4946),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).

@@ -115,8 +115,7 @@ impl Render for HotkeyPreview {
                     ))
                     .child(style::icon(IconName::ArrowRight).text_color(ui.muted))
             });
-        style::preview_frame(ui)
-            .child(div().flex().items_center().justify_center().gap_4().children(keys).child(opens))
+        div().flex().items_center().justify_center().gap_4().children(keys).child(opens)
     }
 }
 

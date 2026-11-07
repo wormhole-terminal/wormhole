@@ -122,7 +122,7 @@ impl Render for MenuBarPreview {
             let icon = status_icon(&[terminal(state)], mode, animate);
             menu_bar(ui, label, shown.then_some((icon, frame)))
         };
-        style::preview_frame(ui)
+        div()
             .flex()
             .flex_col()
             .gap_2()
@@ -142,7 +142,7 @@ fn menu_bar(ui: UiColors, label: &'static str, item: Option<(StatusIcon, Option<
         .px_3()
         .rounded(ui.radius)
         .bg(ui.panel)
-        .outlined(ui, ui.border)
+        .when(ui.increase_contrast, |bar| bar.outlined_always(ui, ui.border))
         .text_caption()
         .child(div().flex_1().min_w_0().truncate().text_color(ui.faint).child(label))
         .children(item.map(|(icon, frame)| status_item(ui, &icon, frame)))

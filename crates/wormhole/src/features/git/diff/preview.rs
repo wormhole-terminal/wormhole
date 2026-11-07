@@ -61,9 +61,16 @@ fn sample_diff() -> FileDiff {
     }
 }
 
-/// The card both previews stand in: the view's surface, in the corners and edge of a card.
+/// The card both previews stand in: the view's surface in a card's corners, with no edge of its own (the
+/// settings stage it stands on is flat; Increase Contrast, where the fill alone is no edge, draws one).
 fn card(ui: UiColors, colors: DiffColors) -> Div {
-    div().flex().flex_col().rounded(ui.radius_lg).overflow_hidden().outlined(ui, ui.border).bg(colors.surface)
+    div()
+        .flex()
+        .flex_col()
+        .rounded(ui.radius_lg)
+        .overflow_hidden()
+        .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.card_edge))
+        .bg(colors.surface)
 }
 
 /// The middle line of a split diff, the full height of the body.

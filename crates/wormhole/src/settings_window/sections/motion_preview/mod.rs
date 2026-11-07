@@ -45,7 +45,7 @@ use super::samples::{CARGO_TEST, FIX_PILE, SCRATCH, SIDEBAR_CARDS, Sample};
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::motion::ANIMATION_FPS;
-use crate::style::{self, Metrics, TileFace};
+use crate::style::{Metrics, TileFace};
 
 /// The widest a preview grows: the sidebar's rows read best at about the width the sidebar has.
 const STAGE_MAX_W: f32 = 480.0;
@@ -364,11 +364,12 @@ impl Render for MotionPreview {
         let t = self.time(self.scene.shown(cx), cx.reduce_motion());
         // The strip says what this is to VoiceOver (a group named for the scene): not twice.
         div().id("motion-preview").w_full().child(
-            style::preview_frame(ui).child(
-                div().h(px(Scene::slot())).flex().flex_col().justify_center().child(
-                    div().flex_none().w_full().max_w(px(STAGE_MAX_W)).child(self.scene.stage(ui, t, cx)),
-                ),
-            ),
+            div()
+                .h(px(Scene::slot()))
+                .flex()
+                .flex_col()
+                .justify_center()
+                .child(div().flex_none().w_full().max_w(px(STAGE_MAX_W)).child(self.scene.stage(ui, t, cx))),
         )
     }
 }

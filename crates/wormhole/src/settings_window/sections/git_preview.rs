@@ -99,7 +99,7 @@ impl GitPreview {
     }
 }
 
-/// The strip: tabs for the scenes over the one in front, in the box every preview stands in.
+/// The strip's scene: the one in front of the page's three, on the stage every preview stands on.
 pub(in crate::settings_window) fn draw_git_preview(
     window: &SettingsWindow,
     cx: &mut Context<SettingsWindow>,
@@ -108,9 +108,14 @@ pub(in crate::settings_window) fn draw_git_preview(
     let s = settings(cx).clone();
     let split_fits = wormhole_core::view::limits::diff_split_fits(window.git_preview.body_width);
     match window.git_preview.scene {
-        GitScene::Panel => div().max_w(px(PANEL_DEFAULT)).child(
-            style::preview_surface(ui).child(changes_sample::list(s.changes_tree, s.group_untracked, ui, cx)),
-        ),
+        // The panel's own list at the panel's width, in the middle of the stage. Its cards keep the edge the
+        // panel gives them (`card.edge`): that is the real component, not this preview's frame.
+        GitScene::Panel => div().w_full().max_w(px(PANEL_DEFAULT)).mx_auto().child(changes_sample::list(
+            s.changes_tree,
+            s.group_untracked,
+            ui,
+            cx,
+        )),
         GitScene::Diff => diff_preview::diff(ui, &s, split_fits, cx),
         GitScene::Sizes => diff_preview::binary(ui, s.diff_split && split_fits, s.size_units, cx),
     }
@@ -125,14 +130,13 @@ pub(in crate::settings_window) fn git_preview_tabs(
 ) -> AnyElement {
     let ui = ui(cx);
     let scene = window.git_preview.scene;
-    style::segmented(ui)
+    style::segmented_form(ui)
         .children(GitScene::ALL.into_iter().map(|tab| {
-            style::segment(("git-preview-tab", tab as usize), ui, text(tab.label()), tab == scene).on_click(
-                cx.listener(move |this, _, _, cx| {
+            style::form_segment(("git-preview-tab", tab as usize), ui, None, text(tab.label()), tab == scene)
+                .on_click(cx.listener(move |this, _, _, cx| {
                     this.git_preview.scene = tab;
                     cx.notify();
-                }),
-            )
+                }))
         }))
         .into_any_element()
 }

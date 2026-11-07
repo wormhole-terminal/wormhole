@@ -1,12 +1,15 @@
 //! The preview strip: at the top of a page that has one, the live preview that belongs to the page, always
-//! [`PREVIEW_H`] tall, whatever the page and the window's size: the head, then the scene in the room that
-//! is left, the scene at its top. Nothing in the strip scrolls: every scene is composed to fit its room whole
-//! (Appearance's window and the Terminals list are small compositions of their own, not cut-off big ones),
-//! and a caption is one line that an ellipsis cuts where the column is narrow.
+//! [`PREVIEW_H`] tall, whatever the page and the window's size: a quiet head (the label, and the page's tabs
+//! at its right), then one flat rounded stage (`style::preview_frame`, a group's fill) with the scene
+//! centred on it, and under it a caption where the picture needs one. Nothing in the strip scrolls: every
+//! scene is composed to fit its room whole (Appearance's window and the Terminals list are small
+//! compositions of their own, not cut-off big ones), and a caption is one line that an ellipsis cuts where
+//! the column is narrow. A scene draws only itself: the stage, the head and the caption are the strip's.
 //!
 //! - Appearance, and a search's results, show the window in miniature (`sections::draw_stage`):
 //!   theme, primary, opacity, status bar and fonts as they are now.
-//! - Fonts shows the specimen (`sections::draw_specimen`), on the tab of the font being picked.
+//! - Fonts shows the specimen (`sections::draw_specimen`), on the tab of the font being picked (the tabs
+//!   are in the head, `specimen_tabs`).
 //! - Terminals & sidebar shows the Terminals list (`sections::draw_sidebar_preview`), beside the
 //!   density under the pointer.
 //! - Coding agents shows the Terminals list with agents at work in it (`draw_agents_preview`).
@@ -21,6 +24,7 @@
 //! The strip holds nothing to operate: no focus stop, so ⇥ and F6 pass over it, and one labelled
 //! group for VoiceOver. A search result for a preview names where it went instead of drawing it.
 
+use gpui_kit::prelude::*;
 use gpui_kit::*;
 use wormhole_core::config::settings_index::{self, SectionId as Section};
 #[allow(
@@ -78,6 +82,24 @@ impl PreviewKind {
             Self::Motion(_) => Some(text(SETTINGS_MOTION_PREVIEW_CAPTION)),
             _ => None,
         }
+    }
+
+    /// The line under the stage, where the picture needs a word of how it differs from the app.
+    fn caption(self) -> Option<&'static str> {
+        match self {
+            Self::Window => Some(text(SETTINGS_APPEARANCE_STAGE_CAPTION)),
+            Self::Fonts => Some(text(SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST)),
+            Self::Sidebar => Some(text(SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE)),
+            Self::Agents => Some(text(SETTINGS_AGENTS_PREVIEW_CAPTION)),
+            Self::Notifications => Some(text(SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION)),
+            _ => None,
+        }
+    }
+
+    /// Whether the scene is made to stand in the stage's whole height (the window in miniature, the
+    /// Changes panel's list), so the stage gives it the least room round it.
+    fn fills_room(self) -> bool {
+        matches!(self, Self::Window | Self::Git)
     }
 
     /// What VoiceOver says for the strip: that it is a picture of the settings, not controls.
@@ -149,8 +171,8 @@ impl SettingsWindow {
         IN_COLUMN.contains(&id)
     }
 
-    /// The strip: its head, then the page's preview, [`PREVIEW_H`] tall in all, with nothing that scrolls.
-    /// `None` for a page without a preview.
+    /// The strip: its head, then the page's preview on one flat stage, [`PREVIEW_H`] tall in all, with
+    /// nothing that scrolls. `None` for a page without a preview.
     pub(super) fn render_preview_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let ui = ui(cx);
         let kind = self.preview_kind(cx)?;
@@ -168,7 +190,23 @@ impl SettingsWindow {
             PreviewKind::Git => sections::draw_git_preview(self, cx),
         };
         // A preview with scenes puts their tabs at the head's right.
-        let tabs = (kind == PreviewKind::Git).then(|| sections::git_preview_tabs(self, cx));
+        let tabs = match kind {
+            PreviewKind::Git => Some(sections::git_preview_tabs(self, cx)),
+            PreviewKind::Fonts => Some(sections::specimen_tabs(self, cx)),
+            _ => None,
+        };
+        // The stage is the same card on every page: a group's fill, `radius_lg`, no outline. A caption goes
+        // under it, so the stage gives up the room the caption takes.
+        let caption = kind.caption();
+        let stage = style::preview_frame(ui)
+            .flex_none()
+            .w_full()
+            .h(px(if caption.is_some() { FRAMED_H } else { SCENE_H }))
+            .flex()
+            .flex_col()
+            .justify_center()
+            .when_else(kind.fills_room(), |stage| stage.p_2(), |stage| stage.px_4().py_3())
+            .child(preview);
         Some(
             div()
                 .id("settings-preview")
@@ -181,23 +219,34 @@ impl SettingsWindow {
                 .flex_col()
                 .gap_2()
                 .child(
+                    // The head, as a group's: a quiet label from the card's inner edge, the page's tabs
+                    // or a note at the other.
                     div()
                         .flex_none()
                         .flex()
                         .items_center()
+                        .px_4()
                         .h(px(style::CONTROL_H))
                         .child(
-                            div().flex_none().child(style::section_label(ui, text(SETTINGS_WINDOW_PREVIEW))),
-                        )
-                        .child(
                             div()
-                                .ml_2()
-                                .min_w_0()
-                                .truncate()
-                                .text_caption()
-                                .text_color(ui.faint)
-                                .child(format!("· {}", kind.title())),
+                                .flex_none()
+                                .text_label()
+                                .text_color(ui.muted)
+                                .child(text(SETTINGS_WINDOW_PREVIEW)),
                         )
+                        // What the picture is of, where the head has room for it: the page's tabs take it, and
+                        // they name the scene themselves.
+                        .when(tabs.is_none(), |head| {
+                            head.child(
+                                div()
+                                    .ml_2()
+                                    .min_w_0()
+                                    .truncate()
+                                    .text_label()
+                                    .text_color(ui.faint)
+                                    .child(kind.title()),
+                            )
+                        })
                         .children(kind.aside().map(|aside| {
                             div()
                                 .flex_1()
@@ -206,17 +255,18 @@ impl SettingsWindow {
                                 .truncate()
                                 .text_right()
                                 .text_caption()
-                                .text_color(ui.muted)
+                                .text_color(ui.faint)
                                 .child(aside)
                         }))
-                        .children(tabs.map(|tabs| div().flex_none().ml_auto().child(tabs))),
+                        .children(tabs.map(|tabs| div().flex_none().ml_auto().pl_4().child(tabs))),
                 )
-                .child(
-                    // The room under the head, the same on every page: the scene sits at its top, next to the
-                    // head that names it. It is clipped, never scrolled: a scene is made to fit (a font size
-                    // far above the default can still outgrow the specimen's frame, which then cuts the text).
-                    div().flex_1().min_h_0().w_full().overflow_hidden().child(preview),
-                )
+                // The room under the head, the same on every page. It is clipped, never scrolled: a scene is
+                // made to fit (a font size far above the default can still outgrow the specimen's block,
+                // which then cuts the text).
+                .child(stage)
+                .children(caption.map(|caption| {
+                    div().flex_none().px_4().text_caption().text_color(ui.muted).truncate().child(caption)
+                }))
                 .into_any_element(),
         )
     }

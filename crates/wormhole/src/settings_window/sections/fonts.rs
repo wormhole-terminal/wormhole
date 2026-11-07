@@ -19,7 +19,7 @@ use crate::select::Choice;
 use crate::settings::{SettingsStore, settings};
 use crate::settings_window::registry::{Setting, toggle};
 use crate::settings_window::{SettingsWindow, open_folder, ui};
-use crate::style::{self, Edges, TextRole};
+use crate::style::{self, TextRole};
 use crate::theme_bridge;
 
 pub(super) const SETTINGS: &[Setting] = &[
@@ -123,14 +123,6 @@ pub(in crate::settings_window) fn draw_specimen(
     let ansi = |i: usize| theme_bridge::hsla(term.ansi[i]);
     let theme_name = store.tokens.name.clone();
     let features = crate::fonts::ligature_features(s.font_ligatures);
-    let tabs = style::segmented(ui).children(FontSlot::ALL.into_iter().rev().enumerate().map(|(ix, tab)| {
-        style::segment(("specimen-tab", ix), ui, tab.title(), tab == slot).on_click(cx.listener(
-            move |this, _, _, cx| {
-                this.specimen = tab;
-                cx.notify();
-            },
-        ))
-    }));
     // A line never wraps, so the specimen is four lines tall at any width; the column cuts one that is
     // longer, as a terminal's edge does.
     let line = |parts: Vec<(Hsla, &'static str)>| {
@@ -146,6 +138,7 @@ pub(in crate::settings_window) fn draw_specimen(
         .flex_col()
         .px_4()
         .py_3()
+        .rounded(ui.radius)
         .overflow_hidden()
         .bg(theme_bridge::hsla(term.background))
         .font_family(SharedString::from(family.clone()))
@@ -178,46 +171,26 @@ pub(in crate::settings_window) fn draw_specimen(
         );
     }
     facts.push(settings_fonts_specimen_colours(&theme_name));
-    let facts = div()
-        .px_4()
-        .py_2()
-        .divider_top(ui)
-        .text_caption()
-        .text_color(ui.muted)
-        .truncate()
-        .child(facts.join("   "));
-    div()
-        .flex()
-        .flex_col()
-        .gap_2()
-        .child(
-            div()
-                .flex()
-                .flex_col()
-                .rounded(ui.radius_lg)
-                .overflow_hidden()
-                .bg(ui.group)
-                .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.card_edge))
-                .child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .justify_between()
-                        .px_2()
-                        .py_2()
-                        .divider_bottom(ui)
-                        .child(tabs)
-                        .child(
-                            div()
-                                .min_w_0()
-                                .truncate()
-                                .text_caption()
-                                .text_color(ui.faint)
-                                .child(text(SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST)),
-                        ),
-                )
-                .child(specimen)
-                .child(facts),
-        )
+    // On the stage under the block, as a caption is: one line that an ellipsis cuts where the column is narrow.
+    let facts = div().px_1().text_caption().text_color(ui.muted).truncate().child(facts.join("   "));
+    div().flex().flex_col().gap_2().child(specimen).child(facts).into_any_element()
+}
+
+/// The specimen's tabs, Terminal | Code | Interface, at the right of the strip's head.
+pub(in crate::settings_window) fn specimen_tabs(
+    window: &SettingsWindow,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
+    let ui = ui(cx);
+    let slot = window.specimen;
+    style::segmented_form(ui)
+        .children(FontSlot::ALL.into_iter().rev().enumerate().map(|(ix, tab)| {
+            style::form_segment(("specimen-tab", ix), ui, None, tab.title(), tab == slot).on_click(
+                cx.listener(move |this, _, _, cx| {
+                    this.specimen = tab;
+                    cx.notify();
+                }),
+            )
+        }))
         .into_any_element()
 }
