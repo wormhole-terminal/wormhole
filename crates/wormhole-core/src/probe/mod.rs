@@ -11,9 +11,11 @@
 //! - `read`: a folder, once, through `storage::files` with every cap and link rule.
 //! - `fingerprint`: the hash an approval is bound to.
 //! - `validate`: findings and the summary of what a Probe would be allowed to do.
-//! - `fixture`: the `tests/*.toml` files of `probe test` and the run of their cases.
+//! - `fixture`: the `tests/*.toml` files of `probe test` and the run of their cases (rules and hooks).
 //! - `scaffold`: the files of a new Probe, for `probe new`.
 //! - `rules`: a Probe's text rules compiled and run over a line, as `probe test` and the terminal do.
+//! - `events`: the vocabulary of hooks as data: each event, its fields and matchers, and where it comes from.
+//! - `hooks`: a Probe's hooks compiled and planned over one event, as `probe test` and the app will.
 //! - `scan`: the Probes in `<data dir>/probes/`.
 //! - `approval`: what the user approved, the state that gives each Probe, and the copy it runs from.
 //!
@@ -23,9 +25,11 @@
 
 pub mod approval;
 pub mod cli;
+pub mod events;
 pub mod fingerprint;
 pub mod fixture;
 pub mod hidden;
+pub mod hooks;
 pub mod manifest;
 pub mod read;
 pub mod rules;

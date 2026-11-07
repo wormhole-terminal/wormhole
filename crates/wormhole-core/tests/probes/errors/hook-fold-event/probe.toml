@@ -1,0 +1,14 @@
+[probe]
+id = "fixture"
+name = "Fixture"
+description = "A fixture for one validate finding."
+author = "tests"
+version = "0.1.0"
+wormhole = ">=1.3"
+api = 1
+[permissions]
+fold = true
+[[contributes.hooks]]
+id = "h"
+on = "bell"
+do = [{ type = "fold", target = "block-output", label = "output" }]

@@ -229,6 +229,9 @@ pub struct Permissions {
     /// E2: `read:<path>` and `write:<path>`.
     #[serde(default)]
     pub fs: Vec<String>,
+    /// A hook's `fold` action: hide parts of the terminals' output on screen.
+    #[serde(default)]
+    pub fold: bool,
     #[serde(flatten)]
     pub(crate) unknown: Unknown,
 }
@@ -252,6 +255,8 @@ pub struct Contributes {
     pub panels: Vec<CodeSlot>,
     #[serde(default)]
     pub hovers: Vec<CodeSlot>,
+    #[serde(default)]
+    pub hooks: Vec<super::Hook>,
     #[serde(flatten)]
     pub(crate) unknown: Unknown,
 }

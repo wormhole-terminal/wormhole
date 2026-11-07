@@ -8,8 +8,8 @@ use super::Outcome;
 use super::output::{self, Out, count};
 use crate::probe::read::ProbeFolder;
 use crate::probe::validate::{
-    Combination, Confirmation, DeclaredPermission, Finding, ProgramClass, ProgramNote, Report, Severity,
-    Summary, validate,
+    Combination, Confirmation, DeclaredPermission, Finding, HookNote, ProgramClass, ProgramNote, Report,
+    Severity, Summary, validate,
 };
 
 /// The version of the `--json` output of `probe validate` and `probe test`. Adding a field is not a
@@ -97,6 +97,7 @@ fn render(dir: &Path, folder: &ProbeFolder, report: &Report) -> String {
         (c.agents.len(), "agent", "agents"),
         (c.themes.len(), "theme", "themes"),
         (c.icon_themes.len(), "icon theme", "icon themes"),
+        (c.hooks.len(), "hook", "hooks"),
     ]
     .into_iter()
     .filter(|(n, ..)| *n > 0)
@@ -122,6 +123,7 @@ fn render(dir: &Path, folder: &ProbeFolder, report: &Report) -> String {
         }
         out.blank();
     }
+    hooks(&report.summary, &mut out);
     summary(&report.summary, &mut out);
     out.blank();
     out.line(&match (errors.len(), warnings.len()) {
@@ -130,6 +132,24 @@ fn render(dir: &Path, folder: &ProbeFolder, report: &Report) -> String {
         (e, w) => format!("{}, {}", count(e, "error", "errors"), count(w, "warning", "warnings")),
     });
     out.finish()
+}
+
+/// Each hook: when it fires and what it does, in words.
+fn hooks(summary: &Summary, out: &mut Out) {
+    if summary.hooks.is_empty() {
+        return;
+    }
+    out.line(&format!("Hooks ({})", summary.hooks.len()));
+    for HookNote { id, on, when, actions } in &summary.hooks {
+        out.line(&format!(
+            "  {id}: on {on}{}",
+            if when.is_empty() { String::new() } else { format!(" when {when}") }
+        ));
+        for action in actions {
+            out.line(&format!("      {action}"));
+        }
+    }
+    out.blank();
 }
 
 /// What the Probe asks for, so that someone can read it before enabling the Probe.
@@ -203,6 +223,16 @@ struct JsonSummary<'a> {
     permissions: Vec<JsonPermission<'a>>,
     combinations: Vec<&'a str>,
     programs: Vec<JsonProgram<'a>>,
+    hooks: Vec<JsonHook<'a>>,
+}
+
+#[derive(Serialize)]
+struct JsonHook<'a> {
+    id: &'a str,
+    on: &'a str,
+    /// The matcher in words, as the text output prints it; empty for every such event.
+    when: &'a str,
+    actions: &'a [String],
 }
 
 #[derive(Serialize)]
@@ -274,6 +304,12 @@ impl<'a> Json<'a> {
                         class: class_key(p.class),
                         description: class_words(p.class),
                     })
+                    .collect(),
+                hooks: report
+                    .summary
+                    .hooks
+                    .iter()
+                    .map(|h| JsonHook { id: &h.id, on: h.on, when: &h.when, actions: &h.actions })
                     .collect(),
             },
         }

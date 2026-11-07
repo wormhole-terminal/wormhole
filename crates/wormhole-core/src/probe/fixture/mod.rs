@@ -16,12 +16,35 @@
 //! args   = ["abc1234"]                   # optional, `command` actions: the values of its `$n`
 //! ```
 //!
+//! Hooks have cases of their own, in the same files: an event, and the actions the hook must plan.
+//!
+//! ```toml
+//! [[hook_case]]
+//! name = "a slow failed build"           # optional
+//! hook = "slow-build-failed"              # the hook's local id; the event is the hook's `on`
+//! event = { terminal = 3, exit = 2, took_ms = 61000, folder_name = "acme" }
+//!
+//! [[hook_case.expect]]                    # every action, in order
+//! type  = "notify"                        # notify | highlight | fold | open-path | run | status | dropped
+//! title = "Build failed"                  # optional, as many of the action's fields as the case cares about
+//! body  = "61 s in acme"
+//!
+//! [hook_case.result]                      # optional: what the first `run` printed; its effects follow it
+//! exit   = 0
+//! stdout = "3 failing"
+//! ```
+//!
+//! A case with no `expect` says the hook does nothing for that event (its `match` does not hold). The
+//! actions planned must be the actions expected, no more and no fewer.
+//!
 //! A case with no `expect` says nothing matches. The matches found must be the matches expected,
 //! no more and no fewer, so a test also catches a rule that has started to match too much. A field
 //! that is left out is not checked. Unknown keys are errors: a typo must not make a test pass.
 //!
-//! Must not use anything above `rules`; it reads no file of its own (the folder was read once).
+//! Must not use anything above `rules` and `hooks`; it reads no file of its own (the folder was read once).
 
+mod hook_case;
+mod hook_run;
 mod run;
 
 use std::fmt;
@@ -31,6 +54,7 @@ use serde::Deserialize;
 use super::manifest::Look;
 use super::read::ProbeFolder;
 
+pub use hook_case::{ExpectAction, HookCase, RunResult};
 pub use run::{CaseReport, TestReport, run};
 
 /// The folder the fixtures are in.
@@ -73,6 +97,8 @@ pub struct Expect {
 struct Raw {
     #[serde(default)]
     case: Vec<Case>,
+    #[serde(default)]
+    hook_case: Vec<HookCase>,
 }
 
 /// A fixture file read.
@@ -81,6 +107,7 @@ pub struct Fixture {
     /// Relative to the Probe's folder (`tests/ticket.toml`).
     pub file: String,
     pub cases: Vec<Case>,
+    pub hook_cases: Vec<HookCase>,
 }
 
 /// A fixture file that is no fixture.
@@ -102,7 +129,7 @@ impl std::error::Error for FixtureError {}
 pub fn parse(file: &str, text: &str) -> Result<Fixture, FixtureError> {
     let raw: Raw = toml::from_str(text)
         .map_err(|err| FixtureError { file: file.to_string(), message: err.message().trim().to_string() })?;
-    Ok(Fixture { file: file.to_string(), cases: raw.case })
+    Ok(Fixture { file: file.to_string(), cases: raw.case, hook_cases: raw.hook_case })
 }
 
 /// Every `tests/*.toml` of `folder`, by name; a file that does not read is an error in its place.

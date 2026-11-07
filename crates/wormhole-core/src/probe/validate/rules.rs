@@ -226,7 +226,12 @@ fn check_action(
 
 /// A rule's captures arrive in `command` as its `$n`. Every capture that does must exist, and be
 /// anchored (see [`Pattern::capture_hazard`]).
-fn check_command_target(command: &Command, pattern: Option<&Pattern>, path: &str, out: &mut Findings) {
+pub(super) fn check_command_target(
+    command: &Command,
+    pattern: Option<&Pattern>,
+    path: &str,
+    out: &mut Findings,
+) {
     let Some(pattern) = pattern else { return };
     let used: Vec<usize> = match &command.run {
         Some(run) => argv::captures_of(run),

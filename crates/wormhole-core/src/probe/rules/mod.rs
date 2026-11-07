@@ -19,7 +19,7 @@ mod matching;
 mod target;
 
 pub use compile::{CompileError, CompiledRule, CompiledRules};
-pub use matching::{MAX_MATCHES_PER_RULE, MAX_SCAN_BYTES, Match, matches, matches_into};
+pub use matching::{MAX_MATCHES_PER_RULE, MAX_SCAN_BYTES, Match, matches, matches_into, scanned};
 pub use target::{Target, target};
 
 #[cfg(test)]

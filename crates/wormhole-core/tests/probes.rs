@@ -7,6 +7,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use wormhole_core::probe::fixture;
+use wormhole_core::probe::hooks::CompiledHooks;
+use wormhole_core::probe::rules::CompiledRules;
 use wormhole_core::probe::scan::{ScanError, scan};
 use wormhole_core::probe::validate::{Confirmation, ProgramClass};
 use wormhole_core::probe::{ProbeFolder, Severity, validate};
@@ -68,6 +71,53 @@ fn the_reference_probe_s_fingerprint_is_stable() {
 }
 
 #[test]
+fn the_hooks_probe_lists_its_hooks_and_asks_for_fold_with_touch_id() {
+    let folder = read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/probes/ok/hooks"));
+    let summary = validate(&folder).summary;
+    let listed: Vec<_> = summary.permissions.iter().map(|p| (p.key, p.confirmation)).collect();
+    assert_eq!(
+        listed,
+        [
+            ("process", Confirmation::TouchId),
+            ("notify", Confirmation::Click),
+            ("terminal", Confirmation::TouchId),
+            ("fold", Confirmation::TouchId),
+        ]
+    );
+    let hooks: Vec<_> = summary.hooks.iter().map(|h| (h.id.as_str(), h.on)).collect();
+    assert_eq!(
+        hooks,
+        [
+            ("slow-build-failed", "command.finished"),
+            ("quiet-green-builds", "command.finished"),
+            ("test-failure", "output.match"),
+            ("source-location", "output.match"),
+            ("agent-needs-you", "agent.status"),
+            ("dirty-release", "git.changed"),
+        ]
+    );
+    assert_eq!(summary.hooks[0].when, "exit != 0, took_ms >= 60000");
+    assert!(
+        summary
+            .combinations
+            .iter()
+            .any(|c| c.description.contains("can send what is on your terminals to anything")),
+        "reading text and running a program is the dangerous pair: {:?}",
+        summary.combinations
+    );
+}
+
+#[test]
+fn the_hooks_probe_passes_its_own_hook_cases() {
+    let folder = read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/probes/ok/hooks"));
+    let rules = CompiledRules::compile(&folder.manifest).expect("rules compile");
+    let hooks = CompiledHooks::compile(&folder.manifest).expect("hooks compile");
+    let report = fixture::run(&folder, &rules, &hooks);
+    assert!(report.is_ok(), "{report:#?}");
+    assert_eq!(report.cases.len(), 12, "a case for each of the file's cases");
+}
+
+#[test]
 fn every_ok_fixture_has_no_findings() {
     for dir in fixtures("ok") {
         let report = validate(&read(&dir));
@@ -124,7 +174,7 @@ fn every_warning_fixture_warns_and_is_still_ok() {
 fn scanning_a_folder_of_probes_lists_each_with_its_probe_or_its_reason() {
     let found = scan(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/probes/ok")).expect("scans");
     let names: Vec<_> = found.iter().map(|s| s.name.as_str()).collect();
-    assert_eq!(names, ["acme-tools", "minimal", "rules-only"]);
+    assert_eq!(names, ["acme-tools", "hooks", "minimal", "rules-only"]);
     assert!(found.iter().all(|s| s.probe.is_ok()));
     // The error fixtures are named by a code, not by the id inside: each is listed with that reason.
     let found = scan(&Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/probes/errors")).expect("scans");

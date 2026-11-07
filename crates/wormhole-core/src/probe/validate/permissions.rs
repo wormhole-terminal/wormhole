@@ -67,6 +67,8 @@ pub struct Summary {
     pub combinations: Vec<Combination>,
     /// One per entry of `permissions.process`.
     pub programs: Vec<ProgramNote>,
+    /// One per `[[contributes.hooks]]`, in plain words.
+    pub hooks: Vec<super::HookNote>,
 }
 
 /// Programs that run whatever they are given, or something it names: shells and interpreters, launchers
@@ -336,6 +338,11 @@ pub(super) fn summarize(folder: &ProbeFolder) -> Summary {
             if entry.starts_with("write:") { Confirmation::TouchId } else { Confirmation::Click };
         add("fs", entry, confirmation);
     }
+    // Click-only approval can be scripted by an agent in a terminal, and a fold can hide that agent's own
+    // output from the user.
+    if p.fold {
+        add("fold", "hide parts of your terminal output", Confirmation::TouchId);
+    }
 
     let mut combinations = Vec::new();
     let reads: Vec<&str> = [
@@ -375,7 +382,13 @@ pub(super) fn summarize(folder: &ProbeFolder) -> Summary {
         .iter()
         .map(|program| ProgramNote { program: program.clone(), class: classify(program) })
         .collect();
-    Summary { has_code: m.probe.main.is_some(), permissions, combinations, programs }
+    Summary {
+        has_code: m.probe.main.is_some(),
+        permissions,
+        combinations,
+        programs,
+        hooks: super::hook_summary::notes(&m.contributes.hooks),
+    }
 }
 
 #[cfg(test)]

@@ -8,6 +8,7 @@ use super::plan::{monogram_of, name_of};
 use super::*;
 use crate::platform::fs as platform_fs;
 use crate::probe::fixture;
+use crate::probe::hooks::CompiledHooks;
 use crate::probe::read::ProbeFolder;
 use crate::probe::rules::CompiledRules;
 use crate::probe::validate::validate;
@@ -24,7 +25,8 @@ fn every_kind_validates_with_nothing_to_say_and_passes_its_own_test() {
         assert_eq!(report.findings, [], "{kind:?}");
 
         let rules = CompiledRules::compile(&folder.manifest).expect("compiles");
-        let tests = fixture::run(&folder, &rules);
+        let hooks = CompiledHooks::compile(&folder.manifest).expect("compiles");
+        let tests = fixture::run(&folder, &rules, &hooks);
         assert!(tests.is_ok(), "{kind:?}: {tests:#?}");
         let has_rules = !folder.manifest.contributes.rules.is_empty();
         assert_eq!(has_rules, matches!(kind, Kind::Rules | Kind::Command), "{kind:?}");

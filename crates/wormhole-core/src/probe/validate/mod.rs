@@ -16,6 +16,8 @@
 mod agents;
 mod argv;
 mod commands;
+mod hook_summary;
+mod hooks;
 mod identity;
 mod paths;
 mod pattern;
@@ -31,9 +33,11 @@ use super::read::ProbeFolder;
 
 // What `rules` compiles with must be what `validate` checked with, so these are shared, not copied.
 pub(crate) use argv::capture_index;
+pub use hook_summary::HookNote;
 pub(crate) use identity::MAX_RULES;
-pub(crate) use pattern::SIZE_LIMIT;
+pub(crate) use pattern::{MAX_ARGUMENT_BYTES, SIZE_LIMIT};
 pub use permissions::{Combination, Confirmation, DeclaredPermission, ProgramClass, ProgramNote, Summary};
+pub(crate) use rules::TONES;
 pub(crate) use template::has_dot_segment;
 
 /// How much a finding matters.
@@ -142,11 +146,14 @@ pub fn validate(folder: &ProbeFolder) -> Report {
     identity::check(folder, &mut out);
     permissions::check(folder, &mut out);
     rules::check(folder, &mut out);
+    hooks::check(folder, &mut out);
     commands::check(folder, &mut out);
     agents::check(folder, &mut out);
     paths::check_contributed_files(folder, &mut out);
     Report { findings: out.0, summary: permissions::summarize(folder) }
 }
 
+#[cfg(test)]
+mod hook_tests;
 #[cfg(test)]
 mod tests;

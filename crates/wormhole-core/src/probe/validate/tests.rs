@@ -8,11 +8,11 @@ use super::*;
 use crate::probe::manifest::Manifest;
 use crate::probe::read::{MANIFEST_FILE, ProbeFile};
 
-const HEAD: &str = "[probe]\nid = \"tiny\"\nname = \"Tiny\"\ndescription = \"d\"\nauthor = \"a\"\n\
+pub(super) const HEAD: &str = "[probe]\nid = \"tiny\"\nname = \"Tiny\"\ndescription = \"d\"\nauthor = \"a\"\n\
                     version = \"0.1.0\"\nwormhole = \">=1.3\"\napi = 1\n";
 
 /// A Probe of `HEAD`, then `rest` (more of `[probe]`, or any other table), and `files`.
-fn probe(rest: &str, files: &[(&str, &str)]) -> ProbeFolder {
+pub(super) fn probe(rest: &str, files: &[(&str, &str)]) -> ProbeFolder {
     let text = format!("{HEAD}{rest}");
     let parsed = Manifest::parse(&text).unwrap_or_else(|err| panic!("{err}\n{text}"));
     let mut all = vec![ProbeFile::new(MANIFEST_FILE, text.as_bytes())];
@@ -20,7 +20,7 @@ fn probe(rest: &str, files: &[(&str, &str)]) -> ProbeFolder {
     ProbeFolder { root: PathBuf::new(), manifest: parsed.manifest, warnings: parsed.warnings, files: all }
 }
 
-fn report(rest: &str) -> Report {
+pub(super) fn report(rest: &str) -> Report {
     validate(&probe(rest, &[]))
 }
 
