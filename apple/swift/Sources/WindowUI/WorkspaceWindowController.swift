@@ -1,5 +1,6 @@
-// The window itself: a unified, transparent title bar over a full-size content view, so the sidebar's
-// material and the terminal reach the top edge and the title rows (SwiftUI) sit beside the traffic lights.
+// The window itself: a transparent, non-opaque window with a unified, transparent title bar over a full-size
+// content view, so the surfaces and the terminal reach the top edge and the title rows (SwiftUI) sit beside
+// the traffic lights, which `TrafficLights` places where the GPUI app does.
 
 import AppKit
 import SwiftUI
@@ -17,6 +18,10 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
         window.title = title  // hidden, but Mission Control and VoiceOver read it
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
+        // Transparent like the GPUI app's: the blur and the fill behind the surfaces are the content's own
+        // (`WindowBackdrop`), so a translucent theme shows the desktop and an opaque one does not.
+        window.isOpaque = false
+        window.backgroundColor = .clear
         window.minSize = NSSize(width: 640, height: 360)
         window.isReleasedWhenClosed = false
         let hosting = NSHostingView(rootView: content)
@@ -35,13 +40,7 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     public func windowDidResize(_ notification: Notification) { centreTrafficLights() }
     public func windowDidExitFullScreen(_ notification: Notification) { centreTrafficLights() }
 
-    /// The title rows are 38 pt, taller than the system's 28 pt bar, so the lights would sit above the
-    /// rows' centre. Growing the bar's container makes AppKit centre them in it again.
     private func centreTrafficLights() {
-        guard let window, !window.styleMask.contains(.fullScreen),
-            let container = window.standardWindowButton(.closeButton)?.superview?.superview
-        else { return }
-        container.frame.size.height = Chrome.titleHeight
-        container.frame.origin.y = window.frame.height - Chrome.titleHeight
+        if let window { TrafficLights.place(in: window) }
     }
 }

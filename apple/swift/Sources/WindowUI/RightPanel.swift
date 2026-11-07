@@ -1,4 +1,6 @@
-// The right panel: a tab strip in the title row's height and the chosen tab's content below it.
+// The right panel: its tab bar in the title row's height and the chosen tab's body below it. The body slides
+// 10 pt in from the side of the tab it came from, fading in over 140 ms easing out, and the old one is gone
+// at once (`view::motion::tabs::content`). Reduce Motion keeps only the fade.
 
 import DesignSystem
 import SwiftUI
@@ -7,60 +9,34 @@ import WorkspaceModel
 struct RightPanel: View {
     let tab: PanelTab
     let send: @MainActor (WorkspaceAction) -> Void
-    @Namespace private var indicator
+    /// The tab before this one, for which side the new body comes from. It is set after the body that needs it
+    /// was built, so while that body is built it still holds the tab that was left.
+    @State private var before: PanelTab?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    static let contentIn = Animation.timingCurve(0.2, 0, 0, 1, duration: 0.14)
+    static let contentSlide: CGFloat = 10
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: Space._1) {
-                ForEach(PanelTab.allCases, id: \.self) { candidate in
-                    TabButton(tab: candidate, isSelected: candidate == tab, indicator: indicator) {
-                        send(.showPanelTab(candidate))
-                    }
-                }
-                Spacer(minLength: 0)
-                ChromeButton(systemImage: "sidebar.right", label: "Hide panel") { send(.togglePanel) }
-            }
-            .padding(.leading, Space._3)
-            .padding(.trailing, Space._2)
-            .frame(height: Chrome.titleHeight)
-            .background(WindowDragArea())
-            Palette.divider.frame(height: 1)
+            PanelTabBar(tab: tab) { send(.showPanelTab($0)) }
             PanelBody(tabName: tab.rawValue)
+                .id(tab)
+                .transition(.asymmetric(insertion: arrival, removal: .identity))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
         }
-        // One animation for the indicator's slide and the body's cross-fade, so they move together.
-        .animation(WindowMotion.tab(reduceMotion: reduceMotion), value: tab)
-        .background(Chrome.surface)
+        .animation(Self.contentIn, value: tab)
+        .onChange(of: tab) { before = tab }
+        .onAppear { before = tab }
     }
-}
 
-private struct TabButton: View {
-    let tab: PanelTab
-    let isSelected: Bool
-    let indicator: Namespace.ID
-    let action: @MainActor () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(tab.title)
-                .font(.callout)
-                .foregroundStyle(isSelected ? Palette.textPrimary : Palette.textSecondary)
-                .padding(.horizontal, Space._3)
-                .padding(.vertical, Space._1)
-                .background {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: Radius.chip)
-                            .fill(Palette.hover)
-                            .matchedGeometryEffect(id: "tab-indicator", in: indicator)
-                    }
-                }
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    private var arrival: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        let order = PanelTab.allCases
+        let from = before.flatMap(order.firstIndex(of:)) ?? 0
+        let to = order.firstIndex(of: tab) ?? 0
+        let start = to < from ? -Self.contentSlide : Self.contentSlide
+        return .offset(x: start).combined(with: .opacity)
     }
-}
-
-extension PanelTab {
-    var title: String { rawValue.capitalized }
 }

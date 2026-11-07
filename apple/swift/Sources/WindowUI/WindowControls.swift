@@ -1,0 +1,46 @@
+// The sidebar's collapse button and the right panel's toggle. They float over the title rows at fixed spots of
+// the window, so they never move as the columns open and close (and never under the pointer): the collapse
+// button 12 pt after the traffic lights, the panel toggle with its glyph on the 12 pt right edge. Each glyph
+// fills its strip while its column is in and follows the column's slide.
+
+import SwiftUI
+import WorkspaceModel
+
+struct WindowControls: View {
+    let facts: WindowFacts
+    let sidebarOpen: Bool
+    let sidebarShown: CGFloat
+    let panelOpen: Bool
+    let panelShown: CGFloat
+    /// Wanted but without room: the toggle wears a dot that says it comes back.
+    let panelWaiting: Bool
+    let send: @MainActor (WorkspaceAction) -> Void
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            TitleButton(label: sidebarOpen ? "Hide sidebar" : "Show sidebar", help: sidebarHelp) { color in
+                PanelGlyph(side: .left, fill: sidebarShown, color: color)
+            } action: {
+                send(.toggleSidebar)
+            }
+            .padding(.leading, facts.collapseX)
+
+            TitleButton(label: panelOpen ? "Hide right panel" : "Show right panel", help: panelHelp, glyph: { color in
+                PanelGlyph(side: .right, fill: panelShown, color: color)
+            }, marked: panelWaiting) {
+                send(.togglePanel)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.trailing, Chrome.panelToggleRight)
+        }
+        .frame(height: Chrome.titleHeight, alignment: .top)
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private var sidebarHelp: String { (sidebarOpen ? "Hide sidebar" : "Show sidebar") + " (⌘B)" }
+
+    private var panelHelp: String {
+        let action = panelOpen ? "Hide right panel" : "Show right panel"
+        return (panelWaiting ? action + " · hides the sidebar to make room" : action) + " (⌥⌘B)"
+    }
+}
