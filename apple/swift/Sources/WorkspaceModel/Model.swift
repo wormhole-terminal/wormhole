@@ -16,7 +16,7 @@ public enum Activity: Sendable, Equatable {
 
 /// The right panel's tabs.
 public enum PanelTab: String, Sendable, CaseIterable {
-    case notes, changes, history
+    case notes, changes, history, usage, project, files
 }
 
 /// What is laid over the window, at most one at a time.

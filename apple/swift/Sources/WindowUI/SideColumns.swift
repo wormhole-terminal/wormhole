@@ -25,12 +25,13 @@ struct SidebarColumn: View {
 
 struct PanelColumn: View {
     let tab: PanelTab
+    var folder: String?
     let send: @MainActor (WorkspaceAction) -> Void
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
 
     var body: some View {
-        RightPanel(tab: tab, send: send)
+        RightPanel(tab: tab, folder: folder, send: send)
             .background(look.surface(colours.panel))
     }
 }

@@ -3,12 +3,16 @@
 // at once (`view::motion::tabs::content`). Reduce Motion keeps only the fade.
 
 import DesignSystem
+import PanelUI
 import SwiftUI
 import WorkspaceModel
 
 struct RightPanel: View {
     let tab: PanelTab
+    /// The terminal's folder, which every tab of the panel follows.
+    var folder: String?
     let send: @MainActor (WorkspaceAction) -> Void
+    @State private var controller = PanelController(host: SystemPanelHost(), backends: .mock())
     /// The tab before this one, for which side the new body comes from. It is set after the body that needs it
     /// was built, so while that body is built it still holds the tab that was left.
     @State private var before: PanelTab?
@@ -19,8 +23,8 @@ struct RightPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PanelTabBar(tab: tab) { send(.showPanelTab($0)) }
-            PanelBody(tabName: tab.rawValue)
+            PanelTabBar(tab: tab, select: { send(.showPanelTab($0)) }, badges: badges)
+            PanelBody(tabName: tab.rawValue, controller: controller)
                 .id(tab)
                 .transition(.asymmetric(insertion: arrival, removal: .identity))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -28,7 +32,25 @@ struct RightPanel: View {
         }
         .animation(Self.contentIn, value: tab)
         .onChange(of: tab) { before = tab }
-        .onAppear { before = tab }
+        .onAppear {
+            before = tab
+            controller.follow(folder: expanded(folder))
+        }
+        .onChange(of: folder) { controller.follow(folder: expanded(folder)) }
+    }
+
+    /// The counts the strip shows, read from the stores so a change redraws the strip.
+    private var badges: [PanelTab: Int] {
+        var out: [PanelTab: Int] = [:]
+        if let count = controller.badge(for: .changes) { out[.changes] = count }
+        if let count = controller.badge(for: .usage) { out[.usage] = count }
+        return out
+    }
+
+    /// The sidebar's folder is written with `~`; the panel reads real paths.
+    private func expanded(_ folder: String?) -> String? {
+        guard let folder else { return nil }
+        return folder == "~" ? NSHomeDirectory() : folder.hasPrefix("~/") ? NSHomeDirectory() + folder.dropFirst(1) : folder
     }
 
     private var arrival: AnyTransition {

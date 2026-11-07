@@ -31,12 +31,17 @@ var targets: [Target] = [
     // Title rows, status bar, right panel and the window that holds them with the terminal view.
     .target(
         name: "WindowUI",
-        dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "PaletteUI", "TerminalMetal"]),
+        dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "FileIconTheme", "PaletteUI", "TerminalMetal"]),
     // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
-    .target(name: "PanelModel"),
-    // The right panel's tab contents: Notes, Changes (with the diff) and History.
-    .target(name: "PanelUI", dependencies: ["PanelModel", "DesignSystem"]),
-    .testTarget(name: "PanelTests", dependencies: ["PanelModel", "PanelUI", "DesignSystem"]),
+    .target(name: "PanelModel", dependencies: ["WorkspaceModel"]),
+    // The right panel's tab contents: Notes, Changes (with the diff), History, Files, Project and Usage.
+    .target(name: "PanelUI", dependencies: ["PanelModel", "DesignSystem", "WorkspaceModel"]),
+    // The app's file icon theme (Catppuccin and Lucide SVGs in Zed's icon theme format) and its lookup, behind the
+    // panel's `FileIconProviding`. `apple/scripts/dump-icon-theme.sh` copies the files from `wormhole-core`.
+    .target(
+        name: "FileIconTheme", dependencies: ["PanelModel"],
+        resources: [.copy("Resources/wormhole-icons.json"), .copy("Resources/icons")]),
+    .testTarget(name: "PanelTests", dependencies: ["PanelModel", "PanelUI", "DesignSystem", "FileIconTheme", "WorkspaceModel"]),
     // The command palette's commands, fuzzy search and the shortcut sheet's rows. Foundation only.
     .target(name: "PaletteModel", dependencies: ["WorkspaceModel"]),
     // The palette and shortcut sheet overlays.

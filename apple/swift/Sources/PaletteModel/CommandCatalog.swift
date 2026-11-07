@@ -34,6 +34,9 @@ public enum CommandCatalog {
                 "toggle-panel", state.panelVisible ? "Hide right panel" : "Show right panel", "sidebar.right",
                 .togglePanel, Shortcuts.togglePanel, .view),
             command("panel-notes", "Show notes", "note.text", .showPanelTab(.notes), Shortcuts.panelTab(.notes), .view),
+            command("panel-usage", "Show usage", "gauge", .showPanelTab(.usage), Shortcuts.panelTab(.usage), .view),
+            command("panel-project", "Show project", "folder.badge.gearshape", .showPanelTab(.project), Shortcuts.panelTab(.project), .view),
+            command("panel-files", "Show files", "folder", .showPanelTab(.files), Shortcuts.panelTab(.files), .view),
             command(
                 "keyboard-shortcuts", "Keyboard shortcuts", "keyboard", .showOverlay(.shortcuts),
                 Shortcuts.shortcutSheet, .view),

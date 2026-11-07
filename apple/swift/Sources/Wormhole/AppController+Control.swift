@@ -22,7 +22,7 @@ extension AppController {
             store.send(.select(id))
             reply("select \(id)")
         case "tab":
-            guard let tab = PanelTab(rawValue: argument) else { return reply("error: tab is notes, changes or history") }
+            guard let tab = PanelTab(rawValue: argument) else { return reply("error: tab is changes, history, notes, usage, project or files") }
             store.send(.showPanelTab(tab))
             reply("tab \(argument)")
         case "look": reply(lookState)

@@ -1,0 +1,146 @@
+// The Files tab's state: the tree of the terminal's folder (or one chosen by hand), the row selected, the file open
+// in the viewer, the pins. The disk is read through the backend, off the main actor, and again when its watch says
+// something changed; a folder that reads the same changes nothing on screen.
+
+import Observation
+import PanelModel
+
+@MainActor @Observable
+public final class FilesStore {
+    public internal(set) var tree = FileTree()
+    public internal(set) var rows: [FileRow] = []
+    /// The terminal's folder, and the one chosen by hand that takes its place until it is followed again.
+    public private(set) var terminalFolder: String?
+    public private(set) var chosen: String?
+    public internal(set) var selected: String?
+    public internal(set) var pins: [String] = []
+    public internal(set) var viewing: String?
+    public internal(set) var content = FileContent.reading
+    /// The row whose name is a field now, and why the last rename was refused.
+    public internal(set) var renaming: String?
+    public internal(set) var renameError: String?
+    /// The open file's text cut into lines, and the colours of each: made once when it is read.
+    public internal(set) var lines: [String] = []
+    public internal(set) var spans: [[SyntaxSpan]] = []
+    @ObservationIgnored let backend: any FilesBackend
+    @ObservationIgnored let highlighter: any SyntaxHighlighting
+    @ObservationIgnored weak var host: (any PanelHost)?
+    @ObservationIgnored private var watch: Task<Void, Never>?
+    @ObservationIgnored var reading: Task<Void, Never>?
+
+    public init(backend: any FilesBackend, highlighter: any SyntaxHighlighting = LexerHighlighter(), host: (any PanelHost)? = nil) {
+        self.backend = backend
+        self.highlighter = highlighter
+        self.host = host
+    }
+
+    public var root: String? { chosen ?? terminalFolder }
+
+    /// The tree follows the terminal's folder; a folder chosen by hand stays until Follow Terminal.
+    public func follow(_ folder: String?) {
+        let changed = terminalFolder != folder
+        terminalFolder = folder
+        if chosen == nil, changed { retarget() }
+    }
+
+    public func choose(_ folder: String) {
+        chosen = folder
+        retarget()
+    }
+
+    public func followTerminal() {
+        chosen = nil
+        retarget()
+    }
+
+    public func chooseFolder() {
+        Task { if let folder = await host?.chooseFolder() { choose(folder) } }
+    }
+
+    private func retarget() {
+        tree.clear()
+        selected = nil
+        closeViewer()
+        rows = tree.rows
+        watch?.cancel()
+        Task { pins = await backend.pins() }
+        guard let root else { return }
+        reload()
+        watch = Task { [backend, weak self] in
+            for await _ in backend.changes(in: root) { self?.reload() }
+        }
+    }
+
+    /// Reads the root and every open folder again, the ones above first.
+    public func reload() {
+        guard let root else { return }
+        let backend = backend
+        let wanted = tree.wanted
+        Task {
+            for folder in wanted {
+                let answer = await backend.list(folder, in: root)
+                guard root == self.root else { return }
+                if tree.set(folder, answer) { rows = tree.rows }
+            }
+            rows = tree.rows
+            if viewing != nil { readViewed() }
+        }
+    }
+
+    /// A click: a folder opens or closes, a file shows in the viewer; every entry is selected.
+    public func click(_ row: FileRow) {
+        guard row.isEntry else { return }
+        selected = row.path
+        switch row.kind {
+        case .file: view(row.path)
+        case .folder: toggle(row.path)
+        default: break
+        }
+    }
+
+    public func toggle(_ path: String) {
+        let needsReading = tree.toggle(path)
+        rows = tree.rows
+        if needsReading { reload() }
+    }
+
+    public func isPinned(_ path: String) -> Bool { root.map { pins.contains(join($0, path)) } ?? false }
+
+    public func setPinned(_ path: String, _ on: Bool) {
+        guard let root else { return }
+        let full = path.isEmpty ? root : join(root, path)
+        Task {
+            await backend.setPinned(full, on)
+            pins = await backend.pins()
+        }
+    }
+
+    public var pathMenu: PathMenuModel? {
+        root.map { PathMenuModel(shown: $0, volume: "Macintosh HD", pins: pins, chosen: chosen != nil, home: host?.homeFolder) }
+    }
+
+    func join(_ root: String, _ path: String) -> String { root == "/" ? "/" + path : root + "/" + path }
+
+    // MARK: Keys over the rows (F-70, as for the Changes list)
+
+    /// ↑ and ↓ move over the entries; with the viewer up, a file the keys land on shows in it.
+    public func step(_ delta: Int) {
+        let entries = rows.filter(\.isEntry)
+        guard let next = ListNavigation.move(in: entries.map(\.path), from: selected, by: delta), let row = entries.first(where: { $0.path == next })
+        else { return }
+        selected = next
+        if viewing != nil, row.kind == .file { view(next) }
+    }
+
+    /// → opens a folder and ← closes it; ← on an entry inside a folder goes to that folder.
+    public func fold(open: Bool) {
+        guard let path = selected, let row = rows.first(where: { $0.path == path }) else { return }
+        if row.isFolder, tree.isOpen(path) != open { return toggle(path) }
+        if !open, !row.isFolder || !tree.isOpen(path), case let parent = FileTree.parent(path), !parent.isEmpty { selected = parent }
+    }
+
+    /// ↩ opens a folder or shows a file in the viewer.
+    public func press() {
+        if let path = selected, let row = rows.first(where: { $0.path == path }) { click(row) }
+    }
+}

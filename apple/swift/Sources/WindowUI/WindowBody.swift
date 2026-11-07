@@ -93,7 +93,7 @@ struct WindowBody: View {
                 .clipped()
                 .reachable(sidebarShown > 0)
 
-            PanelColumn(tab: state.panelTab, send: send)
+            PanelColumn(tab: state.panelTab, folder: state.selectedTerminal?.folder, send: send)
                 .frame(width: panelWidth)
                 .frame(width: frames.panelVisible, alignment: .trailing)
                 .clipped()
