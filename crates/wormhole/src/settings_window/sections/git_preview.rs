@@ -71,16 +71,12 @@ impl Knobs {
 pub(in crate::settings_window) struct GitPreview {
     scene: GitScene,
     seen: Knobs,
-    /// How wide the page's column is, as the window last drew it: the diff scene lays itself out as the
-    /// diff view does at that width (Split only where `diff_split_fits`), so a narrow window shows the
-    /// unified diff, which is shorter, and the scene stays whole in the strip.
-    pub(in crate::settings_window) body_width: f32,
 }
 
 impl GitPreview {
     /// On the first group's scene, as the page opens.
     pub(in crate::settings_window) fn new(s: &Settings) -> Self {
-        Self { scene: GitScene::Panel, seen: Knobs::of(s), body_width: f32::INFINITY }
+        Self { scene: GitScene::Panel, seen: Knobs::of(s) }
     }
 
     /// A setting changed (from the page, a reset arrow or `config.json`): the strip moves to the scene
@@ -106,7 +102,7 @@ pub(in crate::settings_window) fn draw_git_preview(
 ) -> AnyElement {
     let ui = ui(cx);
     let s = settings(cx).clone();
-    let split_fits = wormhole_core::view::limits::diff_split_fits(window.git_preview.body_width);
+    let split_fits = wormhole_core::view::limits::diff_split_fits(window.page_width);
     match window.git_preview.scene {
         // The panel's own list at the panel's width, in the middle of the stage. Its cards keep the edge the
         // panel gives them (`card.edge`): that is the real component, not this preview's frame.

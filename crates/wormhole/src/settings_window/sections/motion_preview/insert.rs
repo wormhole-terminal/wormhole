@@ -7,7 +7,7 @@ use gpui_kit::*;
 use wormhole_core::view::motion::InsertMotion;
 use wormhole_core::view::motion::pose::{Phase, Pose, insert};
 
-use super::{ASKING, IDLE, Scene, Spot, WORKING, metrics, progress, row, since};
+use super::{ASKING, IDLE, Spot, WORKING, metrics, progress, row, since};
 use crate::settings::{UiColors, settings};
 use crate::style::preview_stage;
 
@@ -24,7 +24,7 @@ fn place(variant: InsertMotion, t: f32, row_h: f32) -> (Pose, f32) {
     (pose, row_h * insert::room_at(variant, phase, elapsed))
 }
 
-pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
+pub(super) fn stage(ui: UiColors, t: f32, height: f32, cx: &App) -> Div {
     let row_h = metrics().row_h;
     let (pose, slide) = place(settings(cx).motion.insert, t, row_h);
     // The new row first: the rows under it cover it as they slide, as they do in the list.
@@ -38,7 +38,7 @@ pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
             .moved(0.0, slide)
             .put(|| row(&sample, &format!("motion-insert-{at}"), ui, cx))
     });
-    preview_stage(ui, Scene::Insert.height()).children(new).children(existing)
+    preview_stage(ui, height).children(new).children(existing)
 }
 
 #[cfg(test)]

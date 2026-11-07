@@ -12,11 +12,11 @@ use wormhole_core::view::motion::pose::column::{self, ColumnPose};
 use wormhole_text::keys::SETTINGS_MOTION_COLUMN_TERMINAL;
 use wormhole_text::text;
 
-use super::{ASKING, Scene, Spot, WORKING, metrics, row, since};
+use super::{ASKING, SIDEBAR_SHARE, Spot, WORKING, metrics, row, since};
 use crate::settings::{UiColors, settings};
 use crate::style::{Edges, TextRole, preview_stage};
 
-/// The miniature sidebar's width.
+/// The miniature sidebar's width at most: half the cell, where the cell is narrower than twice it.
 const SIDEBAR_W: f32 = 200.0;
 
 /// When the column hides and when it shows again, as shares of the loop: the slower of the three
@@ -34,12 +34,12 @@ fn at(variant: wormhole_core::view::motion::ColumnMotion, t: f32) -> ColumnPose 
     }
 }
 
-pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
+pub(super) fn stage(ui: UiColors, t: f32, (width, height): (f32, f32), cx: &App) -> Div {
     let row_h = metrics().row_h;
-    let height = Scene::Column.height();
+    let sidebar_w = (width * SIDEBAR_SHARE).min(SIDEBAR_W);
     let ColumnPose { shown, content } = at(settings(cx).motion.column, t);
     // The terminal rides the column's edge, whole: it is moved, not sized.
-    let terminal = Spot::row(0.0, height).moved(SIDEBAR_W * shown, 0.0).put(|| {
+    let terminal = Spot::row(0.0, height).moved(sidebar_w * shown, 0.0).put(|| {
         div()
             .size_full()
             .p_3()
@@ -47,7 +47,7 @@ pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
             .child(div().text_caption().text_color(ui.muted).child(text(SETTINGS_MOTION_COLUMN_TERMINAL)))
             .into_any_element()
     });
-    let sidebar = Spot::wide(SIDEBAR_W, height).moved(-SIDEBAR_W * (1.0 - shown), 0.0).put(|| {
+    let sidebar = Spot::wide(sidebar_w, height).moved(-sidebar_w * (1.0 - shown), 0.0).put(|| {
         div()
             .size_full()
             .bg(ui.panel)

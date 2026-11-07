@@ -64,25 +64,27 @@ pub const SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL: Key = Key::new(1268);
 pub const SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL: Key = Key::new(1269);
 /// "Preview of what the hotkey opens, with your shortcut"
 pub const SETTINGS_WINDOW_PREVIEW_HOTKEY_LABEL: Key = Key::new(1270);
+/// "Preview of every motion option at once: a terminal opening, a group folding, a status changing and the sidebar hiding"
+pub const SETTINGS_WINDOW_PREVIEW_MOTION_LABEL: Key = Key::new(1271);
 /// "Preview of the Changes panel and the diff view with your current settings"
-pub const SETTINGS_WINDOW_PREVIEW_GIT_LABEL: Key = Key::new(1271);
+pub const SETTINGS_WINDOW_PREVIEW_GIT_LABEL: Key = Key::new(1272);
 /// "Preview"
-pub const SETTINGS_WINDOW_PREVIEW: Key = Key::new(1272);
+pub const SETTINGS_WINDOW_PREVIEW: Key = Key::new(1273);
 /// "Shown in the preview at the top of the page"
-pub const SETTINGS_WINDOW_PREVIEW_COLUMN_HINT: Key = Key::new(1273);
+pub const SETTINGS_WINDOW_PREVIEW_COLUMN_HINT: Key = Key::new(1274);
 
 /// ```text
 /// Open { $section }
 /// ```
 pub fn settings_window_open_section(section: &str) -> String {
-    crate::active::message(1274, &[("section", Arg::Str(section))])
+    crate::active::message(1275, &[("section", Arg::Str(section))])
 }
 
 /// ```text
 /// Import failed: { $error }
 /// ```
 pub fn settings_window_import_failed(error: &str) -> String {
-    crate::active::message(1275, &[("error", Arg::Str(error))])
+    crate::active::message(1276, &[("error", Arg::Str(error))])
 }
 
 /// ```text
@@ -100,33 +102,33 @@ pub fn settings_window_import_failed(error: &str) -> String {
 /// }
 /// ```
 pub fn settings_window_results_summary(hits: i64, sections: i64, query: &str) -> String {
-    crate::active::message(1276, &[("hits", Arg::Int(hits)), ("sections", Arg::Int(sections)), ("query", Arg::Str(query))])
+    crate::active::message(1277, &[("hits", Arg::Int(hits)), ("sections", Arg::Int(sections)), ("query", Arg::Str(query))])
 }
 
 /// ```text
 /// Preview feature, behind the “{ $flag }” flag — a release build doesn't have it yet.
 /// ```
 pub fn settings_window_preview_feature_note(flag: &str) -> String {
-    crate::active::message(1277, &[("flag", Arg::Str(flag))])
+    crate::active::message(1278, &[("flag", Arg::Str(flag))])
 }
 
 /// ```text
 /// The list of profiles couldn't be read, so it was set aside and rebuilt: { $message }
 /// ```
 pub fn settings_window_profiles_unreadable(message: &str) -> String {
-    crate::active::message(1278, &[("message", Arg::Str(message))])
+    crate::active::message(1279, &[("message", Arg::Str(message))])
 }
 
 /// ```text
 /// Nothing matches “{ $query }”
 /// ```
 pub fn settings_window_nothing_matches(query: &str) -> String {
-    crate::active::message(1279, &[("query", Arg::Str(query))])
+    crate::active::message(1280, &[("query", Arg::Str(query))])
 }
 
 /// ```text
 /// Set by { $project }/{ $dir }/{ $file } while one of its terminals is in front; yours is kept
 /// ```
 pub fn settings_window_set_by_project(project: &str, dir: &str, file: &str) -> String {
-    crate::active::message(1280, &[("project", Arg::Str(project)), ("dir", Arg::Str(dir)), ("file", Arg::Str(file))])
+    crate::active::message(1281, &[("project", Arg::Str(project)), ("dir", Arg::Str(dir)), ("file", Arg::Str(file))])
 }

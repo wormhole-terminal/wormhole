@@ -146,6 +146,9 @@ pub(crate) struct SettingsWindow {
     sidebar_preview: Option<SidebarLook>,
     /// Changes & diffs → which of the three previews the strip shows.
     git_preview: sections::GitPreview,
+    /// How wide the page's column is, as the window last drew it (`window::page_width`): the previews that
+    /// lay themselves out by width (the diff's Split, the densities side by side) read it.
+    page_width: f32,
     /// Advanced → "Reset to defaults…", or Changed → "Reset All…", was pressed: the page asks before it
     /// resets (a page change or Esc withdraws the question).
     confirm_reset: bool,

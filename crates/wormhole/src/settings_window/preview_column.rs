@@ -16,7 +16,7 @@
 //! - Notifications shows two banners (`draw_notifications_preview`).
 //! - Menu bar shows the menu bar item as the settings make it (`MenuBarPreview`), Hotkey the shortcut and
 //!   what it opens (`HotkeyPreview`); both are views of their own (`BarPreview`).
-//! - Motion shows the scene of the row touched last, looping (`MotionStrip`).
+//! - Motion shows every option's scene at once, four cells looping (`MotionStrip`).
 //! - Changes & diffs shows the Changes panel's list, a diff or a binary file's diff (`draw_git_preview`),
 //!   on the scene of the setting last changed, or the tab picked.
 //! - Every other page has nothing to show there.
@@ -54,8 +54,8 @@ pub(super) enum PreviewKind {
     MenuBar,
     /// The hotkey's keys and what they open.
     Hotkey,
-    /// One of the Motion page's scenes.
-    Motion(sections::MotionScene),
+    /// The Motion page's four scenes side by side.
+    Motion,
     /// The Changes panel and the diff view.
     Git,
 }
@@ -71,15 +71,14 @@ impl PreviewKind {
             Self::MenuBar => text(SETTINGS_WINDOW_MENU_BAR),
             Self::Hotkey => text(SETTINGS_WINDOW_HOTKEY),
             Self::Git => text(SETTINGS_SECTION_GIT),
-            // The setting it shows, so the head says which row the picture is of.
-            Self::Motion(scene) => scene.label(),
+            Self::Motion => text(SETTINGS_SECTION_MOTION),
         }
     }
 
     /// A line at the head's right end: what to know of how the picture moves.
     fn aside(self) -> Option<&'static str> {
         match self {
-            Self::Motion(_) => Some(text(SETTINGS_MOTION_PREVIEW_CAPTION)),
+            Self::Motion => Some(text(SETTINGS_MOTION_PREVIEW_CAPTION)),
             _ => None,
         }
     }
@@ -96,10 +95,11 @@ impl PreviewKind {
         }
     }
 
-    /// Whether the scene is made to stand in the stage's whole height (the window in miniature, the
-    /// Changes panel's list), so the stage gives it the least room round it.
+    /// Whether the scene is made to stand in the stage's whole height and width (the window in miniature,
+    /// the Changes panel's list, the motions side by side), so the stage gives it the least room round it
+    /// ([`STAGE_INSET`]).
     fn fills_room(self) -> bool {
-        matches!(self, Self::Window | Self::Git)
+        matches!(self, Self::Window | Self::Git | Self::Motion)
     }
 
     /// What VoiceOver says for the strip: that it is a picture of the settings, not controls.
@@ -112,7 +112,7 @@ impl PreviewKind {
             Self::Notifications => text(SETTINGS_WINDOW_PREVIEW_NOTIFICATIONS_LABEL),
             Self::MenuBar => text(SETTINGS_WINDOW_PREVIEW_MENU_BAR_LABEL),
             Self::Hotkey => text(SETTINGS_WINDOW_PREVIEW_HOTKEY_LABEL),
-            Self::Motion(scene) => scene.spoken(),
+            Self::Motion => text(SETTINGS_WINDOW_PREVIEW_MOTION_LABEL),
             Self::Git => text(SETTINGS_WINDOW_PREVIEW_GIT_LABEL),
         }
     }
@@ -132,6 +132,10 @@ pub(super) const SCENE_H: f32 = PREVIEW_H - style::CONTROL_H - HEAD_GAP;
 pub(super) const CAPTION_ROW: f32 = 28.0;
 /// A scene's frame when a caption goes under it: the room less the caption.
 pub(super) const FRAMED_H: f32 = SCENE_H - CAPTION_ROW;
+/// What a stage that scenes fill (`p_2`: `fills_room`) leaves round them, at each side.
+pub(super) const STAGE_INSET: f32 = 8.0;
+/// The height inside such a stage, which a scene that fills it has to lay itself out in.
+pub(super) const FILLED_INNER_H: f32 = SCENE_H - 2.0 * STAGE_INSET;
 
 /// The rows the strip shows in place of the page: they are not drawn again in it.
 const IN_COLUMN: [&str; 4] = ["appearance-preview", "font-specimen", "sidebar-preview", "changes-preview"];
@@ -139,7 +143,7 @@ const IN_COLUMN: [&str; 4] = ["appearance-preview", "font-specimen", "sidebar-pr
 impl SettingsWindow {
     /// The preview of the page in front, if it has one. A search's results are not a page: they
     /// show the window.
-    pub(super) fn preview_kind(&self, cx: &App) -> Option<PreviewKind> {
+    pub(super) fn preview_kind(&self) -> Option<PreviewKind> {
         if self.show_results {
             return Some(PreviewKind::Window);
         }
@@ -151,7 +155,7 @@ impl SettingsWindow {
             Section::Notifications => Some(PreviewKind::Notifications),
             Section::MenuBar => Some(PreviewKind::MenuBar),
             Section::Hotkey => Some(PreviewKind::Hotkey),
-            Section::Motion => self.motion_strip.as_ref().map(|strip| PreviewKind::Motion(strip.scene(cx))),
+            Section::Motion => self.motion_strip.as_ref().map(|_| PreviewKind::Motion),
             Section::Git => Some(PreviewKind::Git),
             Section::Profile
             | Section::Changed
@@ -175,7 +179,7 @@ impl SettingsWindow {
     /// nothing that scrolls. `None` for a page without a preview.
     pub(super) fn render_preview_strip(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
         let ui = ui(cx);
-        let kind = self.preview_kind(cx)?;
+        let kind = self.preview_kind()?;
         let preview = match kind {
             PreviewKind::Window => sections::draw_stage(self, cx),
             PreviewKind::Fonts => sections::draw_specimen(self, cx),
@@ -186,7 +190,7 @@ impl SettingsWindow {
                 .bar_preview
                 .as_ref()
                 .map_or_else(|| div().into_any_element(), sections::BarPreview::element),
-            PreviewKind::Motion(_) => self.motion_strip.as_ref().map(|strip| strip.view())?,
+            PreviewKind::Motion => self.motion_strip.as_ref().map(|strip| strip.view())?,
             PreviewKind::Git => sections::draw_git_preview(self, cx),
         };
         // A preview with scenes puts their tabs at the head's right.

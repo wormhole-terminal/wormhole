@@ -7,7 +7,7 @@
 use gpui_kit::*;
 use wormhole_core::view::motion::StatusMotion;
 
-use super::{IDLE, RUNNING, Scene, Spot, progress, since, two_line_metrics};
+use super::{IDLE, RUNNING, Spot, progress, since, two_line_metrics};
 use crate::settings::{UiColors, settings};
 use crate::settings_window::sections::samples::{FLAKY_LOGIN, RATE_LIMITS, RELEASE_NOTES, Sample};
 use crate::style::{ShiftClock, StatusShift, TileFace, preview_stage};
@@ -54,7 +54,7 @@ fn at(motion: StatusMotion, t: f32) -> (usize, Option<StatusShift>) {
     (now, Some(StatusShift { clock, ..shift }).filter(|shift| shift.is_shown(STATES[now].glyph)))
 }
 
-pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
+pub(super) fn stage(ui: UiColors, t: f32, height: f32, cx: &App) -> Div {
     let row_h = two_line_metrics().row_h;
     let (now, shift) = at(settings(cx).motion.status, t);
     let sample = &STATES[now];
@@ -69,7 +69,7 @@ pub(super) fn stage(ui: UiColors, t: f32, cx: &App) -> Div {
     let changing = Spot::row(0.0, row_h).moved(nudge, 0.0).put(|| {
         sample.row_shifting("motion-status", ui, two_line_metrics(), (&TileFace::Terminal, false), was, cx)
     });
-    preview_stage(ui, Scene::Status.height()).children(changing).children(
+    preview_stage(ui, height).children(changing).children(
         Spot::row(row_h, row_h).put(|| {
             RUNNING.row("motion-status-below", ui, two_line_metrics(), &TileFace::Terminal, false, cx)
         }),

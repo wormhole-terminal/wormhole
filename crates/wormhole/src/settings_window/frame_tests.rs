@@ -127,7 +127,8 @@ const BUDGET: [(&str, u64); 20] = [
     // With the flat controls: a stepper is two halves, each a box with the Kit's button in it, and the
     // slider is built from the Kit's parts; a page with either costs a few hundred allocations more.
     ("Fonts", 8436),
-    ("Motion", 4707),
+    // Four scenes at once in one strip, each its stage and caption (5,991 measured).
+    ("Motion", 5991),
     // With the Worktrees group's switch for cloning build folders (356).
     ("Terminal", 10174),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
@@ -289,12 +290,12 @@ fn a_settings_frame_stays_within_its_allocation_budget(cx: &mut TestAppContext) 
     assert!(over.is_empty(), "frames over their budget:\n{}\nall:\n{}", over.join("\n"), table.join("\n"));
 }
 
-/// Allocations a third draw of each Motion preview makes on its own (a window holding nothing else),
-/// when the budget was set: what a tick of one costs, since a preview builds only what shows at its
-/// moment of the loop. The one the page shows is redrawn by its own clock, a few times a second; the scenes
-/// are the strip's, drawn at Dense rows (Status at Regular).
-const PREVIEW_BUDGET: [(Scene, u64); 4] =
-    [(Scene::Insert, 258), (Scene::Fold, 434), (Scene::Status, 312), (Scene::Column, 358)];
+/// Allocations a third draw of the Motion preview makes on its own (a window holding nothing else), when the
+/// budget was set: what a tick costs, since a scene builds only what shows at its moment of the loop. The
+/// preview shows all four scenes at once (they cost 258, 434, 312 and 358 each, alone, as one stage), redrawn
+/// by its own clock a few times a second; the scenes are drawn at Dense rows (Status at Regular): about
+/// 1,500 for four, still hundreds each.
+const PREVIEW_BUDGET: u64 = 1546;
 
 // A tick draws the window like any other draw: GPUI renders the root view on every draw and marks the
 // ancestors of the view that asked for it dirty, so the page is built again with the previews. What the
@@ -311,24 +312,15 @@ fn a_motion_preview_tick_costs_hundreds_of_allocations_and_the_page_no_more_than
         return;
     }
     start(cx, 1);
-    // Each preview alone: its draw is what its clock asks for.
-    let mut table = Vec::new();
-    for (scene, budget) in PREVIEW_BUDGET {
-        let window = cx.add_window(|_, cx| MotionPreview::new(scene, cx));
-        let handle: AnyWindowHandle = window.into();
-        draw(cx, handle);
-        draw(cx, handle);
-        let before = thread_counts();
-        draw(cx, handle);
-        let made = thread_counts().since(before).allocations;
-        table.push((scene, made, budget));
-    }
-    let over: Vec<String> = table
-        .iter()
-        .filter(|(_, made, budget)| *made > budget + SLACK || *made >= 1500)
-        .map(|(scene, made, budget)| format!("{scene:?}: {made} (budget {})", budget + SLACK))
-        .collect();
-    assert!(over.is_empty(), "previews over their budget:\n{}\nall: {table:?}", over.join("\n"));
+    // The preview alone: its draw is what its clock asks for.
+    let window = cx.add_window(|_, cx| MotionPreview::new(Scene::Insert, cx));
+    let handle: AnyWindowHandle = window.into();
+    draw(cx, handle);
+    draw(cx, handle);
+    let before = thread_counts();
+    draw(cx, handle);
+    let made = thread_counts().since(before).allocations;
+    assert!(made <= PREVIEW_BUDGET + SLACK, "the preview drew {made} (budget {})", PREVIEW_BUDGET + SLACK);
     // The page: a tick draws what a draw at rest does, plus what the previews' own redraw is.
     cx.update(|cx| open_settings(Some(Section::Motion), cx));
     cx.run_until_parked();

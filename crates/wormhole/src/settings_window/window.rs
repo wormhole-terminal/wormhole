@@ -149,6 +149,7 @@ impl SettingsWindow {
             themes_all: false,
             sidebar_preview: None,
             git_preview: sections::GitPreview::new(&current),
+            page_width: f32::INFINITY,
             confirm_reset: false,
             changed_copied: None,
             others_open: false,
@@ -382,9 +383,9 @@ impl Render for SettingsWindow {
         let query = Query::new(&self.search.read(cx).value());
         let hits = settings_index::search_visible(&query, settings(cx)).len();
 
-        // The page's width, for the one preview that lays itself out as its view does at a width (Changes &
-        // diffs' diff: Split only where it fits): the window less the nav and the page's 32 pt sides.
-        self.git_preview.body_width = (f32::from(window.viewport_size().width) - NAV_W - 64.0).min(COLUMN_W);
+        // The page's width, for the previews that lay themselves out by it (Changes & diffs' diff: Split only
+        // where it fits; the densities side by side as many as fit).
+        self.page_width = page_width(f32::from(window.viewport_size().width));
         let body = if self.show_results && hits == 0 {
             self.render_no_results(&query, ui, cx)
         } else if self.show_results {
@@ -599,4 +600,10 @@ fn sync_picker(picker: &Entity<ColorPickerState>, token: &str, window: &mut Wind
     if shown != Some(color.to_bytes()) {
         picker.update(cx, |picker, cx| picker.set_value(theme_bridge::hsla(color), window, cx));
     }
+}
+
+/// The page's column in a window `viewport` points wide: the window less the nav and the page's 32 pt sides,
+/// and no wider than the column's own cap.
+pub(super) fn page_width(viewport: f32) -> f32 {
+    (viewport - NAV_W - 64.0).min(COLUMN_W)
 }
