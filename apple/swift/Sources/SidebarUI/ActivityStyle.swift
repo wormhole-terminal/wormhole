@@ -14,15 +14,4 @@ extension Activity {
         case .failed: .failed
         }
     }
-
-    /// The state in words, for VoiceOver (the dot itself is hidden from it).
-    var spoken: String {
-        switch self {
-        case .idle: "idle"
-        case .working: "working"
-        case .needsInput: "needs input"
-        case .finished: "finished"
-        case .failed: "failed"
-        }
-    }
 }
