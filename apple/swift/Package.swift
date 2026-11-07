@@ -28,7 +28,9 @@ var targets: [Target] = [
     // The sidebar's list, rows and header.
     .target(name: "SidebarUI", dependencies: ["WorkspaceModel", "DesignSystem"]),
     // Title rows, status bar, right panel and the window that holds them with the terminal view.
-    .target(name: "WindowUI", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "TerminalMetal"]),
+    .target(
+        name: "WindowUI",
+        dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "TerminalMetal"]),
     // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
     .target(name: "PanelModel"),
     // The right panel's tab contents: Notes, Changes (with the diff) and History.

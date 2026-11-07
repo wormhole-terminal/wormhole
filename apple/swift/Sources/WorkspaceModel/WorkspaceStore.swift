@@ -13,4 +13,10 @@ public final class WorkspaceStore {
     public func send(_ action: WorkspaceAction) {
         state = reduce(state, action)
     }
+
+    /// A terminal's own title (OSC 0/2) replaces its row's; an empty one keeps what the row has.
+    public func setTitle(_ title: String, of id: TerminalID) {
+        guard !title.isEmpty, let index = state.terminals.firstIndex(where: { $0.id == id }) else { return }
+        state.terminals[index].title = title
+    }
 }

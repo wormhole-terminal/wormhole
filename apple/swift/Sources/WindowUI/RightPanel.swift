@@ -1,5 +1,4 @@
-// The right panel: a tab strip in the title row's height and a body per tab. The bodies are placeholders:
-// real Notes, Changes and History are out of scope for this experiment.
+// The right panel: a tab strip in the title row's height and the chosen tab's content below it.
 
 import DesignSystem
 import SwiftUI
@@ -27,9 +26,7 @@ struct RightPanel: View {
             .frame(height: Chrome.titleHeight)
             .background(WindowDragArea())
             Palette.divider.frame(height: 1)
-            PlaceholderBody(tab: tab)
-                .id(tab)
-                .transition(.opacity)
+            PanelBody(tabName: tab.rawValue)
         }
         // One animation for the indicator's slide and the body's cross-fade, so they move together.
         .animation(WindowMotion.tab(reduceMotion: reduceMotion), value: tab)
@@ -64,32 +61,6 @@ private struct TabButton: View {
     }
 }
 
-private struct PlaceholderBody: View {
-    let tab: PanelTab
-
-    var body: some View {
-        VStack(spacing: Space._2) {
-            Image(systemName: tab.symbol).font(.largeTitle)
-            Text(tab.title).font(.headline)
-            Text("Placeholder: this tab is not built in the Swift experiment.")
-                .font(.caption)
-                .multilineTextAlignment(.center)
-        }
-        .foregroundStyle(Palette.textSecondary)
-        .padding(Space._6)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
-    }
-}
-
 extension PanelTab {
     var title: String { rawValue.capitalized }
-
-    var symbol: String {
-        switch self {
-        case .notes: "note.text"
-        case .changes: "plusminus"
-        case .history: "clock.arrow.circlepath"
-        }
-    }
 }

@@ -11,7 +11,7 @@ import WorkspaceModel
 final class AppController: NSObject, NSApplicationDelegate {
     let options: Options
     var devctl: DevCtl?
-    private(set) var store = LocalStore(terminals: [], collapsed: false)
+    private(set) var store = WorkspaceStore()
     private(set) var terminals = TerminalViews { _ in nil }
     private var windowController: WorkspaceWindowController?
     private var configuration: RendererConfiguration?
@@ -43,7 +43,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         if let note { FileHandle.standardError.write(Data((note + "\n").utf8)) }
         self.configuration = configuration
         // A fixed grid is a measuring mode: with the columns closed, the terminal is all the window shows.
-        store = LocalStore(terminals: Self.initialTerminals(real: options.program != nil), collapsed: options.grid != nil)
+        store = WorkspaceStore(state: Self.initialState(real: options.program != nil, collapsed: options.grid != nil))
         terminals = TerminalViews { [weak self] id in self?.makeView(for: id) }
         guard let first = store.state.selected.flatMap({ terminals.view(for: $0) }) else {
             throw Options.UsageError(description: "no terminal source could start")
@@ -74,14 +74,17 @@ final class AppController: NSObject, NSApplicationDelegate {
     }
 
     /// Some rows to look at when the sources are mock; a real shell starts with the one.
-    private static func initialTerminals(real: Bool) -> [TerminalSummary] {
-        let first = TerminalSummary(id: 1, title: "zsh", subtitle: "~/Projects/wormhole", branch: "main")
-        guard !real else { return [first] }
-        return [
-            first,
-            TerminalSummary(id: 2, title: "agent", subtitle: "~/Projects/wormhole", branch: "exp/swift-ui", activity: .working),
-            TerminalSummary(id: 3, title: "build", subtitle: "~/Projects/web", branch: "main", activity: .needsInput),
-        ]
+    /// A real shell starts with one terminal; the mock sources show the sample workspace.
+    private static func initialState(real: Bool, collapsed: Bool) -> WorkspaceState {
+        var state = MockWorkspace.state
+        if real {
+            state.terminals = [TerminalSummary(id: 1, title: "zsh", subtitle: "~/Projects/wormhole", branch: "main")]
+            state.groups = []
+            state.selected = 1
+        }
+        // A fixed grid is a measuring mode: the terminal is all the window shows.
+        if collapsed { state.sidebarVisible = false; state.panelVisible = false }
+        return state
     }
 
     private func makeView(for id: TerminalID) -> MetalTerminalView? {
@@ -124,7 +127,7 @@ final class AppController: NSObject, NSApplicationDelegate {
 
 /// Reads the store inside a body, so a change to its state redraws the window.
 private struct StoreRoot: View {
-    let store: LocalStore
+    let store: WorkspaceStore
     let terminals: TerminalViews
 
     var body: some View {
