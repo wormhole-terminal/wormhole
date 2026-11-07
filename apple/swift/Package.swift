@@ -133,6 +133,9 @@ if ffiLinked {
         .testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]),
         // The mapping and the real workspace behind the store: an action through the FFI, a snapshot back.
         .testTarget(name: "WorkspaceBridgeTests", dependencies: ["WorkspaceBridge", "WorkspaceModel"]),
+        // The panel's Files, Project, Usage and Notes backends over the Rust core (trust enforced in Rust).
+        .target(name: "FilesBridge", dependencies: ["PanelModel", "PlatformModel", "WorkspaceModel", "WormholeBindings"]),
+        .testTarget(name: "FilesBridgeTests", dependencies: ["FilesBridge", "PanelModel", "PlatformModel", "WormholeBindings", "WorkspaceModel"]),
     ]
     appDependencies += ["UniFFISource", "WorkspaceBridge"]
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.

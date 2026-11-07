@@ -19,6 +19,7 @@ anyhow = "1"
 tracing = "0.1"
 uniffi = "0.32"
 thiserror = "2"
+tracing = "0.1"
 # Blocks the event thread on `PtyEvents::recv`, which is async (already in the tree through core).
 smol = "2"
 serde = { version = "1", features = ["derive"] }

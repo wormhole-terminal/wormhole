@@ -298,6 +298,65 @@ func openTarget(uri: String) -> OpenTarget          // .url (http, https, mailto
 Tests: `apple/ffi/tests/interaction.rs` runs each against the real engine and a PTY (kitty keyboard,
 modifyOtherKeys and Option-as-Meta included); `apple/.cargo/config.toml` gives them an isolated data folder.
 
+## Files, Project, Usage and Notes (the right panel's seams)
+
+`apple/ffi/src/files_panel/`. Four objects over `wormhole-core`, each behind a Swift protocol of `PanelModel`
+(`FilesBackend`, `ProjectBackend`, `UsageBackend`) or the Notes tab's persistence; `Sources/FilesBridge` implements
+them (`FilesBridge.makeBackends(authenticator:effects:)`). Every constructor throws `FfiError.notIsolated` unless
+the data folder is `Wormhole-swift*` (the stores, the pins and the reports live in it). **Every call but the
+constructors and `drain`/`stop` blocks on the disk (or, for `approve`, on the owner): run it off the main thread**
+(the bridge does). All paths from Swift are text; a name that is not UTF-8 reads with U+FFFD, so a path made from it
+names nothing and every call answers "gone".
+
+**`FilesService`**: `list(root, folder) throws(FilesFailure)` (`""` is the root; the folder's entries sorted folders
+first in natural order, labels cleaned of control and bidi characters, cut at core's 5,000 with `more`/`atLeast`),
+`read(root, path) -> FileContentRecord` (text capped at 2 MiB with `truncated`, images up to 50 MiB, binary by NUL;
+`unavailable(gone|outside|notAFile|denied|other)`), `rename(root, path, name) throws(RenameFailure) -> newPath`
+(`name|exists|denied|gone|other`; pins of the renamed folder follow), `pins()`, `setPinned(folder, pinned)`,
+`watch(root, listener) -> FolderWatch`. Paths are relative to `root` and plain (no `..`, not absolute); a link is
+never walked through, a file link out of `root` reads `outside`, a rename goes through no link and replaces nothing.
+Pins are `files_pinned` in `config.json`, each edit through a fresh read of the file.
+
+**`FolderWatch`**: FSEvents on a local volume, plus a timer thread as the fallback (2 s without a stream, 30 s with
+one). `PanelListener.wake()` is called at most once between two `drain()`s (same rules as `TerminalListener`); the
+bridge turns it into an `AsyncStream<Void>` coalesced to one element per 250 ms. `isLive()` says whether events are
+followed; `stop()` (or dropping it) ends it.
+
+**`ProjectService(authenticator)`**: `project(folder) -> ProjectStateRecord?` (the `.wormhole/` governing a terminal's
+folder, found as the app does: up to the repository's root; trust, what it would run, the switches with their hints,
+and the actions, prompts and layout only where they are allowed), `folderPaint(folder)`, `setFolderColor(folder,
+colour?)` (a name or `#rrggbb`; the person's own in `config.json`, or the project's `project_color` by a splice that
+keeps comments; a locked or unreadable project is `refused`), `createProject(folder)`, `setFeature(root, key, on)`,
+`approve(root) -> approved|declined|failed`, `revoke(root)`, `runAction(root, id)`, `sendPrompt(root, id)`,
+`promptText(root, id)`, `openLayout(root)`, `watch(folder, listener)` (the project's folder, and the service's own
+changes of trust and switches), and the notes.md sync below. Errors are `ProjectFailure` (`refused(reason)`,
+`notFound(what)`, `failed(message)`).
+**Trust is enforced here.** An action, prompt or layout acts only where the file is there, the person has it on and
+the content is approved (core's `TrustStore`, bound to a fingerprint of everything that can run or type something): a
+snapshot is read at the moment of the call and the verdict and the content come from the same bytes. What the
+service says is *effects* (`command(place, command)`, `paste(place, text, submit)`, `openUrl`, `openTerminals`),
+data for the window to perform; Rust never types into a terminal. `approve` asks the owner through the
+`OwnerAuthenticator` Swift gives (Touch ID, an Apple Watch or the password: it blocks the calling thread until the
+person answers) and trusts exactly what the tab last showed, so a file changed meanwhile reads `changed`. The
+bridge wires `Authenticating`, which answers from `WORMHOLE_AUTH` in a test instance. Reads of project files are
+capped and never follow a link out of the project (a link out is an error line, and the file can neither run nor
+be trusted).
+
+**Notes**: `SessionNotesStore` (`load(session)`, `save(session, NotesSaved)`) keeps a terminal's notes, steps and folds
+in the app's own tables, without the rest of the terminal's record (core's `Store::save_session_notes`; a blank entry
+is never saved; the folds are written only once the window has saved that terminal's row). `ProjectService.syncNotes(
+session, root, local, editing) -> NotesSyncOutcome` is one step of the three-way merge with the project's `notes.md`
+(core's `plan_sync`), only where the person wants it and the project is trusted: untrusted, the file is neither read
+nor written and the Project tab says so. `apply` is the document to show instead and `noteSlots` says which existing note
+each applied note is (so an editor and its fold survive). Also `notesSessionClosed(session)` and
+`notesIdsStartAt(firstFree)` for the merge bases. The bridge's `RustNotesPersistence` does load, save and `sync`.
+
+**`UsageService(listener)`**: `reports()` (latest per agent, kept across restarts in the database's `meta`),
+`recordStatusLine(input, now)` (Claude Code's status line JSON), `recordHook(agent, event, input, home, now)` (Codex,
+Gemini; a transcript is read only from under `home`), `recordReport(json)` (a `Usage` as the app's hook socket carries
+it), `drain()`; `wake()` at most once until the drain. Where the reports arrive from (the status line command, the
+hooks) is the host's socket: it hands the JSON to these.
+
 ## Frame
 
 `frame()` returns `Data` of little-endian `u32` words, no padding. UniFFI copies the Rust `Vec<u8>`

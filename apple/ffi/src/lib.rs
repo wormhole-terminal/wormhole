@@ -12,6 +12,7 @@
 
 mod error;
 mod events;
+mod files_panel;
 mod frame;
 mod git;
 mod interaction;
@@ -32,6 +33,13 @@ pub use git::{
     Git, GitBackendError, GitChange, GitChangeKind, GitCommitDetails, GitDiff, GitEnvVar, GitListener,
     GitLog, GitLogCommit, GitRef, GitRefKind, GitRev, GitRevKind, GitSignature, GitStatus, GitWatch,
     GitWorktree, GitWorktreePlan, WorktreeService,
+pub use files_panel::{
+    ApproveOutcome, DirectoryRecord, EntryRecord, FileContentRecord, FileEntryKind, FileProblem,
+    FilesFailure, FilesService, FolderPaintRecord, FolderWatch, NewTerminalRecord, NoteSaved, NotesDocRecord,
+    NotesSaved, NotesSyncOutcome, OwnerAnswer, OwnerAuthenticator, PanelListener, PlanLimitRecord,
+    ProjectActionRecord, ProjectEffect, ProjectFailure, ProjectFeatureRecord, ProjectPromptRecord,
+    ProjectService, ProjectStateRecord, RenameFailure, SessionNotesStore, TaskDocRecord, TaskSaved,
+    TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord, UsageService,
 };
 pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
