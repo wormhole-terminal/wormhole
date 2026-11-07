@@ -1,0 +1,5 @@
+[bindings.swift]
+module_name = "WormholeBindings"
+ffi_module_name = "WormholeFFI"
+ffi_module_filename = "WormholeFFI"
+generate_immutable_records = true

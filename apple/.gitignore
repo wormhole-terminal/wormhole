@@ -1,0 +1,9 @@
+# The experiment's build products: the Rust target dir, SwiftPM's, and what build-ffi.sh writes
+# (`dist/` and the links it makes into the Swift packages).
+target/
+.build/
+dist/
+/ffi-bench/WormholeFFI.xcframework
+/ffi-bench/Sources/WormholeBindings/
+/swift/WormholeFFI.xcframework
+/swift/Sources/WormholeBindings/

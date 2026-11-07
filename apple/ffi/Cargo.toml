@@ -1,0 +1,26 @@
+[package]
+name = "wormhole-ffi"
+description = "The Swift UI experiment's seam: a terminal of the real engine behind UniFFI."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+# `staticlib` goes into the xcframework; `lib` lets the tests and the bindgen binary link it.
+crate-type = ["staticlib", "lib"]
+
+[dependencies]
+wormhole-core = { path = "../../crates/wormhole-core" }
+wormhole-term = { path = "../../crates/wormhole-term" }
+uniffi = { version = "0.32", features = ["cli"] }
+thiserror = "2"
+# Blocks the event thread on `PtyEvents::recv`, which is async (already in the tree through core).
+smol = "2"
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+wormhole-term = { path = "../../crates/wormhole-term", features = ["test-support"] }
