@@ -100,7 +100,12 @@ final class ThemeLookTests: XCTestCase {
         let second = store(storage: ThemeSettingsStorage(defaults: defaults))
         XCTAssertEqual(second.settings, first.settings)
         XCTAssertEqual(second.darkThemeID, "nord")
-        XCTAssertNotEqual(ThemeSettingsStorage.suite, Bundle.main.bundleIdentifier, "never the real app's preferences")
+        // Foundation refuses a suite named like the running bundle (it logs and persists nothing), and the real
+        // app's preferences are the bundle id `app.getwormhole.terminal`.
+        for bundle in [Bundle.main.bundleIdentifier, "app.getwormhole.terminal.swift", "app.getwormhole.terminal"] {
+            XCTAssertNotEqual(ThemeSettingsStorage.suite, bundle)
+        }
+        XCTAssertNotNil(UserDefaults(suiteName: ThemeSettingsStorage.suite))
     }
 
     func testTheInterfaceFontSizeScalesTheTypeRoles() {

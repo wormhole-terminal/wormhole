@@ -1,6 +1,6 @@
 // What the person chose about looks, as one value: which theme for dark and for light, the mode, the primary
 // and branch colour picks, the window's opacity and blur. Saved as JSON in the Swift app's own defaults
-// suite, which is not the GPUI app's `config.json` and not its preferences.
+// suite (the Swift app's bundle id plus `.theme`), which is not the GPUI app's `config.json` and not its preferences.
 
 import Foundation
 
@@ -35,13 +35,14 @@ public struct ThemeSettings: Sendable, Equatable, Codable {
     }
 }
 
-/// Where `ThemeSettings` live. Never the real app's config: a defaults suite named for the Swift app.
+/// Where `ThemeSettings` live. Never the real app's config: a defaults suite of its own. It must not equal the
+/// running bundle's identifier (Foundation refuses that name), which the Swift app's own is.
 struct ThemeSettingsStorage {
-    static let suite = "app.getwormhole.terminal.swift"
+    static let suite = "app.getwormhole.terminal.swift.theme"
     private static let key = "theme.settings"
     let defaults: UserDefaults
 
-    /// The Swift app's suite; `nil` under XCTest, so a test never writes the machine's preferences.
+    /// The theme suite; `nil` under XCTest, so a test never writes the machine's preferences.
     static var isolated: ThemeSettingsStorage? {
         guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return nil }
         return UserDefaults(suiteName: suite).map(ThemeSettingsStorage.init)

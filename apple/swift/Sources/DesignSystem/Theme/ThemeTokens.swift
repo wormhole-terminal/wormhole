@@ -30,7 +30,7 @@ public struct ThemeTokens: Sendable, Equatable {
 
     init(
         terminal: TerminalPalette, metrics: ThemeMetrics, ui: [String: RGBA], syntax: [String: SyntaxStyle],
-        translucent: TranslucentText?
+        translucent: TranslucentText? = nil
     ) {
         (self.terminal, self.metrics, self.ui, self.syntax) = (terminal, metrics, ui, syntax)
         self.translucent = translucent
