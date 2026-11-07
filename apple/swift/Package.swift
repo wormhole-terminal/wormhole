@@ -58,6 +58,16 @@ var targets: [Target] = [
     // The panes' area with headers, dividers and drop hints, the title row's pieces and the tab bar.
     .target(name: "PanesUI", dependencies: ["PanesModel", "WorkspaceModel", "DesignSystem"]),
     .testTarget(name: "PanesTests", dependencies: ["PanesModel", "PanesUI", "WorkspaceModel", "DesignSystem"]),
+    // The secondary windows' data as plain values and pure logic: the intro's timing and ship, the first-run
+    // steps, licenses, updates, session hosts, agent access, trust and the close questions. Foundation only.
+    .target(name: "AuxModel"),
+    // The secondary windows: onboarding with the Metal wormhole intro, About, Licenses, Updates, Session
+    // Hosts, the agent access sheet, project trust and the close and quit questions. `Resources/shader` is the
+    // GPUI app's own intro shader, linked (not copied), so the two never drift.
+    .target(
+        name: "AuxWindows", dependencies: ["AuxModel", "DesignSystem"],
+        resources: [.copy("Resources/shader")]),
+    .testTarget(name: "AuxTests", dependencies: ["AuxModel", "AuxWindows", "DesignSystem"]),
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),
     // The macOS edge as plain values and pure logic: the keymap (core's table as data), the menu bar and context
     // menus, notifications, the ambient surfaces, the folder picker's model, Touch ID's protocol. Foundation only.
