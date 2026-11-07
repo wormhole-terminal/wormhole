@@ -90,6 +90,8 @@ public final class MetalRenderer {
 
     public let device: MTLDevice
     let scene: TerminalScene
+    /// The pictures kitty, iTerm2 and Sixel placed in the grid (`Images/`).
+    let images: ImageLayer
     private let contexts: TextContexts
     private let queue: MTLCommandQueue
     private let solidPipeline: MTLRenderPipelineState
@@ -110,6 +112,7 @@ public final class MetalRenderer {
         contexts = TextContexts(device: device)
         scene = TerminalScene(
             text: contexts.context(for: configuration.fonts, scale: configuration.scale), palette: configuration.palette)
+        images = try ImageLayer(device: device)
 
         let library: MTLLibrary
         do { library = try device.makeLibrary(source: Shaders.source, options: nil) } catch { throw RendererError.pipeline("\(error)") }
@@ -196,7 +199,11 @@ public final class MetalRenderer {
 
     /// Take a packed frame; the rows it changed are rebuilt. Returns the number rebuilt.
     @discardableResult
-    public func apply(frame: Data) throws -> Int { try scene.apply(frame) }
+    public func apply(frame: Data) throws -> Int {
+        let rebuilt = try scene.apply(frame)
+        if try images.apply(frame) { scene.touch() }
+        return rebuilt
+    }
 
     /// The instances changed since the last draw.
     public var needsDraw: Bool { scene.changeCount != drawnChange }
@@ -315,6 +322,7 @@ public final class MetalRenderer {
         counts: (backgrounds: Int, decorations: Int, glyphs: Int)
     ) {
         let slot = slots[index]
+        images.prepare(in: buffer)
         var uniforms = Uniforms(viewport: SIMD2(Float(size.width), Float(size.height)))
         if blinkFaded { uniforms.blink = Self.blinkFadedFactor }
         let colors = palette.floats()
@@ -322,11 +330,16 @@ public final class MetalRenderer {
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<Uniforms>.size, index: 1)
         colors.withUnsafeBytes { encoder.setVertexBytes($0.baseAddress!, length: $0.count, index: 2) }
 
+        let surface = ImageSurface(
+            cellWidth: cellPixels.width, cellHeight: cellPixels.height, scale: scale, width: gridPixels.width, height: gridPixels.height)
+        let extent = SIMD2(Float(size.width), Float(size.height))
+        images.encode(.belowBackgrounds, into: encoder, size: extent, surface: surface)
         encoder.setRenderPipelineState(solidPipeline)
         encoder.setVertexBuffer(slot.solids, offset: 0, index: 0)
         if counts.backgrounds > 0 {
             encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: counts.backgrounds)
         }
+        images.encode(.belowText, into: encoder, size: extent, surface: surface)
         if counts.glyphs > 0 {
             encoder.setRenderPipelineState(glyphPipeline)
             encoder.setVertexBuffer(slot.glyphs, offset: 0, index: 0)
@@ -339,6 +352,7 @@ public final class MetalRenderer {
             encoder.setVertexBuffer(slot.solids, offset: counts.backgrounds * MemoryLayout<SolidInstance>.stride, index: 0)
             encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: counts.decorations)
         }
+        images.encode(.aboveText, into: encoder, size: extent, surface: surface)
         encoder.endEncoding()
     }
 

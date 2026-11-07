@@ -102,6 +102,15 @@ public final class UniFFIFrameSource: FrameSource {
 
     public func paste(_ text: String) { current?.paste(text: text) }
 
+    public func plainText(history: Bool) -> String? { current?.contents(scope: history ? .everything : .screen) }
+
+    /// Rust's record has the same name as TerminalCore's value, hence the qualified one.
+    public func inlineImage(key: UInt32) -> TerminalCore.InlineImage? {
+        current?.inlineImage(key: key).map {
+            TerminalCore.InlineImage(width: Int($0.width), height: Int($0.height), rgba: $0.rgba)
+        }
+    }
+
     /// The visible screen as plain text.
     public func screenText() -> String { current?.screenText() ?? "" }
 }

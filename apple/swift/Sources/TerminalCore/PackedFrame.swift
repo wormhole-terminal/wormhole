@@ -114,6 +114,8 @@ public struct FrameHeader: Sendable, Equatable {
     public var cursor: Cursor?
     public var displayOffset: Int
     public var historySize: Int
+    /// How many placement records follow the rows (`PlacementRecords`); `nil`: the list is as the last frame said.
+    public var placementCount: Int?
 
     public struct Cursor: Sendable, Equatable {
         public var row: Int
@@ -133,7 +135,7 @@ public struct FrameHeader: Sendable, Equatable {
 
     public init(
         cols: Int, rows: Int, changedRows: Int, isFull: Bool, cursor: Cursor?, displayOffset: Int = 0,
-        historySize: Int = 0
+        historySize: Int = 0, placementCount: Int? = nil
     ) {
         self.cols = cols
         self.rows = rows
@@ -142,6 +144,7 @@ public struct FrameHeader: Sendable, Equatable {
         self.cursor = cursor
         self.displayOffset = displayOffset
         self.historySize = historySize
+        self.placementCount = placementCount
     }
 }
 
@@ -171,7 +174,8 @@ public enum FrameReader {
                 wide: style & 1 << 8 != 0, blinking: style & 1 << 9 != 0)
         return FrameHeader(
             cols: Int(word(2)), rows: Int(word(3)), changedRows: Int(word(4)), isFull: word(5) & 1 != 0,
-            cursor: cursor, displayOffset: Int(word(9)), historySize: Int(word(10)))
+            cursor: cursor, displayOffset: Int(word(9)), historySize: Int(word(10)),
+            placementCount: word(5) & PlacementRecords.flag != 0 ? Int(word(11)) : nil)
     }
 
     /// Visit each changed row in order. `body` gets the row index, its line size and its cells, which

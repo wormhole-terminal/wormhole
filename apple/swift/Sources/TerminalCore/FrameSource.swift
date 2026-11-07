@@ -91,6 +91,14 @@ public protocol FrameSource: AnyObject, Sendable {
     /// Scroll the view by `lines` (positive: back into history).
     func scroll(lines: Int)
 
+    /// The terminal's text for Print and Export Text As: the screen, or with `history` everything the terminal keeps
+    /// (soft-wrapped rows joined); `nil` when the source has none.
+    func plainText(history: Bool) -> String?
+
+    /// The picture a placement's key names (`Images/`): `nil` while it is still being decoded, or when the source has
+    /// let it go. Asked once per picture; the view keeps the texture.
+    func inlineImage(key: UInt32) -> InlineImage?
+
     /// The pointer, selection and links, when the source has them (the real engine and the mock do).
     var interaction: (any TerminalInteraction)? { get }
 }
@@ -102,5 +110,7 @@ extension FrameSource {
         write(Data(text.replacingOccurrences(of: "\r\n", with: "\r").replacingOccurrences(of: "\n", with: "\r").utf8))
     }
     public func scroll(lines: Int) {}
+    public func inlineImage(key: UInt32) -> InlineImage? { nil }
+    public func plainText(history: Bool) -> String? { nil }
     public var interaction: (any TerminalInteraction)? { nil }
 }

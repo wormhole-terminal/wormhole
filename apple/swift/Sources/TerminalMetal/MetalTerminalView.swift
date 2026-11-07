@@ -78,6 +78,7 @@ public final class MetalTerminalView: NSView {
         renderer = try MetalRenderer(configuration: configuration)
         baseFonts = configuration.fonts
         super.init(frame: frame)
+        renderer.images.provider = { [source] key in source.inlineImage(key: key) }
         wantsLayer = true
         layerContentsRedrawPolicy = .never
         if let layer = layer as? CAMetalLayer {

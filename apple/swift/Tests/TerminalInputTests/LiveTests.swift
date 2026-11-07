@@ -14,8 +14,8 @@ final class LiveHarness {
     let window: NSWindow
     let cell: CGSize
 
-    init(_ script: String, cols: Int = 40, rows: Int = 10) throws {
-        setenv("WORMHOLE_DATA_DIR", "/tmp/Wormhole-swift-g-term-input", 1)
+    init(_ script: String, cols: Int = 40, rows: Int = 10, dataDirectory: String = "/tmp/Wormhole-swift-g-term-input") throws {
+        setenv("WORMHOLE_DATA_DIR", dataDirectory, 1)
         let configuration = RendererConfiguration(font: .system(family: "Menlo"), pointSize: 13, scale: 2)
         let probe = try MetalRenderer(configuration: configuration)
         cell = CGSize(width: CGFloat(probe.cellPixels.width) / 2, height: CGFloat(probe.cellPixels.height) / 2)
