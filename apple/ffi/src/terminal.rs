@@ -26,11 +26,13 @@ const SCROLLBACK_LINES: usize = 10_000;
 #[derive(uniffi::Object)]
 pub struct Terminal {
     /// `None` after `close`. Write-locked only by `resize` and `close`.
-    pty: RwLock<Option<Pty>>,
+    pub(crate) pty: RwLock<Option<Pty>>,
     /// The copy `frame` reads the screen into; the engine's damage is consumed by it, so there
     /// is exactly one.
-    snapshot: Mutex<ScreenSnapshot>,
+    pub(crate) snapshot: Mutex<ScreenSnapshot>,
     events: Arc<EventQueue>,
+    /// What the pointer calls remember between calls (`interaction/`).
+    pub(crate) interaction: crate::interaction::Interaction,
     timing: Timing,
     /// The program's name ("zsh"), which names the terminal until something better does.
     name: String,
@@ -112,6 +114,7 @@ impl Terminal {
             pty: RwLock::new(Some(pty)),
             snapshot: Mutex::new(ScreenSnapshot::default()),
             events,
+            interaction: Default::default(),
             timing: Timing::default(),
             name,
         }))

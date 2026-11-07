@@ -22,14 +22,17 @@ export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
 cargo build --release -p wormhole-ffi
 cargo build --release -p uniffi-bindgen
 
-lib="target/release/libwormhole_ffi.a"
+# Cargo's output may live elsewhere (a target dir shared by worktrees); what is generated per worktree
+# (bindings, headers) stays in this one's own `target/`.
+built="${CARGO_TARGET_DIR:-target}"
+lib="$built/release/libwormhole_ffi.a"
 bindings="target/bindings"
 headers="target/xcframework-headers"
 dist="dist"
 rm -rf "$bindings" "$headers" "$dist/WormholeFFI.xcframework"
 mkdir -p "$bindings" "$headers" "$dist"
 
-target/release/uniffi-bindgen generate --library "$lib" --language swift --out-dir "$bindings"
+"$built/release/uniffi-bindgen" generate --library "$lib" --language swift --out-dir "$bindings"
 
 cp "$bindings/WormholeFFI.h" "$headers/"
 # SwiftPM finds a binary target's module through a file named exactly `module.modulemap`.

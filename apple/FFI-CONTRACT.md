@@ -5,6 +5,9 @@ changes, this file changes in the same commit. Contract version: **2** (`contrac
 the `Workspace` object below; a new action or event case is a minor and does not change it). Frame
 layout version: **1** (`frameFormatVersion()` returns it; check both at start-up and refuse a
 different one).
+changes, this file changes in the same commit. Contract version 2 added "Interaction" below (additive; the
+frame layout did not change). Frame layout version: **1** (`frameFormatVersion()`
+returns it; check it at start-up and refuse a different one).
 
 ## What you link, and where it is
 
@@ -242,6 +245,53 @@ result. What does not feed yet: a coding agent's status (its hooks), git (`setGi
   only then wakes.
 - A registered `Terminal` keeps its own hot path (`frame`, `sendKey`, `resize`): none of it takes the model's lock.
 - `Closed` is the one place a registered terminal's program ends: Rust calls its `close()`.
+## Interaction: pointer, wheel, selection, links, paste, focus
+
+`apple/ffi/src/interaction/`. The app's behaviour for what a person does besides typing a key, written once
+over `wormhole-term`'s encoders; the Swift view only turns `NSEvent`s into these calls. **Positions are
+viewport cells** (0-based, row 0 at the top of what the last frame showed, columns from the left); Rust
+turns them into grid lines with the last frame's display offset, so take a frame before relying on them.
+
+```swift
+func reportPointer(event: PointerEvent) -> Bool     // the program took it (mouse modes 9, 1000...1006, 1016, locator)
+func takesPointer() -> Bool                         // a program asked for the mouse: a click is not a selection
+func scrollWheel(step: WheelStep)                   // see below
+func paste(text: String)                            // bracketed when the program asked; view returns to the live screen
+func focusChanged(focused: Bool)                    // DECSET 1004 reports
+func droppedText(paths: [String]) -> String         // shell-escaped paths, each followed by a space
+func clearHistory()
+
+func selectionStart(kind: SelectionKind, row: UInt32, col: UInt32, side: CellSide)  // .cell .word .line .block
+func selectionUpdate(row: UInt32, col: UInt32, side: CellSide)
+func selectionFinish()                              // a click without a drag selects nothing
+func selectAll()
+func selectionText() -> String?
+func selectionSpans() -> [RowSpan]                  // per viewport row of the LAST frame: columns first...last (inclusive)
+
+func linkAt(row: UInt32, col: UInt32) -> LinkHit?   // OSC 8 hyperlink, else a URL in the text; spans per viewport row
+func openTarget(uri: String) -> OpenTarget          // .url (http, https, mailto) / .reveal(path) (file: on this host) / .refused
+```
+
+- `PointerEvent { button: .left/.middle/.right/.none, action: .press/.release/.motion, col, row, x, y, shift,
+  alt, control }`; `x`/`y` are points from the text area's corner, used only when the program asked for
+  SGR pixels (1016). `reportPointer` returns `false` when the program did not ask for the mouse or Shift is
+  held (Shift takes the pointer back for selecting): the view then selects. Motion within one cell is
+  reported once (consumed, nothing sent) unless the program wants pixels.
+- `WheelStep { lines, columns, col, row, x, y, shift, alt, control }`: movement in **cells** (positive: up,
+  left; fractional, Rust keeps the remainder so a trackpad's steps add up). A program that asked for the mouse
+  hears wheel buttons (at most 10 per call); on the alternate screen with alternate-scroll the arrow keys
+  (application cursor keys honoured); otherwise the history scrolls. Shift always scrolls the history.
+- `selectionSpans()` reads the snapshot the last `frame()` took, not the engine: call it after the frame it
+  belongs to. A selection moves with the text when output scrolls, and typing clears it (`sendKey`), so keep
+  calling it after each drawn frame while one exists.
+- The scroll bar needs no call: `history size` and `display offset` are in every frame header; scrolling to an
+  offset is `scroll(lines: offset - current)`.
+- Cursor shape, blink request and wide-ness are in the frame header; the bell is `TermEvent.bell`.
+- Not here yet: a program's selection that ⌘V should replace (needs the OSC 52 clipboard event), command
+  blocks, find.
+
+Tests: `apple/ffi/tests/interaction.rs` runs each against the real engine and a PTY (kitty keyboard,
+modifyOtherKeys and Option-as-Meta included); `apple/.cargo/config.toml` gives them an isolated data folder.
 
 ## Frame
 

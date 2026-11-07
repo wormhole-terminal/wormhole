@@ -13,6 +13,7 @@
 mod error;
 mod events;
 mod frame;
+mod interaction;
 mod isolation;
 pub mod settings_dump;
 mod terminal;
@@ -26,6 +27,10 @@ mod workspace_types;
 
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
+pub use interaction::{
+    CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
+    WheelStep,
+};
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};
 pub use workspace::{TerminalFactsRecord, Workspace, WorkspaceConfig, WorkspaceEvent, WorkspaceListener};
