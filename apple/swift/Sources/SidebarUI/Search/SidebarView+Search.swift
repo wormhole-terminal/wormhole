@@ -1,8 +1,8 @@
 // The search over the list. The core filters (`Action::Search`: every word, any case, over a terminal's name, folder,
 // branch and words; a group with nothing found is not listed, a new terminal ends the search); the view only shows the
-// field, keeps its text in step with the core's and answers the keys. The field is there while a search is on or was
-// asked for with ⌘F; Esc is the ladder's nearest rung (the field, then the window's own): it ends the search and gives
-// the keyboard back to the list.
+// field, keeps its text in step with the core's and answers the keys. The field is there while a search is on, or was
+// asked for with ⌘F or by pulling the list down past its top (`SearchPeek`); Esc is the ladder's nearest rung (the
+// field, then the window's own): it ends the search and gives the keyboard back to the list.
 
 import DesignSystem
 import SwiftUI
@@ -26,6 +26,12 @@ extension SidebarView {
 
     /// Terminals that match but stand folded away in their group: the head's tiles carry them.
     private var foldedMatches: Int { state.sections.filter { $0.head?.isFolded == true }.reduce(0) { $0 + $1.terminalCount } }
+
+    /// The list scrolled to `offset`: a pull shows the field, scrolling away from the top hides it when it is idle.
+    func peekSearch(at offset: CGFloat) {
+        let next = SearchPeek.shown(searchOpen, offset: offset, inUse: searchFocused || searching)
+        if next != searchOpen { withAnimation(reduce ? Motion.fade : SidebarMotion.fold) { searchOpen = next } }
+    }
 
     func revealSearch() {
         withAnimation(reduce ? Motion.fade : SidebarMotion.fold) { searchOpen = true }

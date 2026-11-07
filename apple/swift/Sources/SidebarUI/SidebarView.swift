@@ -102,6 +102,11 @@ public struct SidebarView: View {
                 .overlay(alignment: .topLeading) { dragLayer(sections) }
             }
             .scrollIndicators(.automatic)
+            // Rubber-banding even when the list fits: the pull is what shows the search.
+            .scrollBounceBehavior(.always, axes: .vertical)
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
+                peekSearch(at: offset)
+            }
             .onChange(of: cursor) { _, stop in if let stop { withAnimation(SidebarMotion.state) { proxy.scrollTo(stop) } } }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

@@ -75,4 +75,22 @@ final class SidebarSearchTests: XCTestCase {
         pointer.settle()
         XCTAssertNil(pointer.released)
     }
+
+    func testPullingPastTheTopShowsTheFieldAndScrollingAwayHidesAnIdleOne() {
+        typealias Peek = SearchPeek
+        XCTAssertTrue(Peek.shown(false, offset: -Peek.pull, inUse: false), "a deliberate pull")
+        XCTAssertFalse(Peek.shown(false, offset: -Peek.pull + 1, inUse: false), "the bounce of a flick is not one")
+        XCTAssertTrue(Peek.shown(true, offset: 0, inUse: false), "coming back to rest keeps it")
+        XCTAssertTrue(Peek.shown(true, offset: Peek.away - 1, inUse: false))
+        XCTAssertFalse(Peek.shown(true, offset: Peek.away, inUse: false), "scrolled away from the top")
+        XCTAssertTrue(Peek.shown(true, offset: 400, inUse: true), "never while it has the keyboard or a query")
+        XCTAssertFalse(Peek.shown(false, offset: 400, inUse: false))
+    }
+
+    func testTheListAtRestWithTheFieldPulledInAndWithout() throws {
+        for id in ["wormhole.dark", "wormhole.light"] {
+            try SidebarSnapshot.write(SidebarFixture.state, theme: id, name: "peek-hidden-\(id)")
+            try SidebarSnapshot.write(SidebarFixture.state, theme: id, name: "peek-revealed-\(id)", caught: .init(searchOpen: true))
+        }
+    }
 }
