@@ -13,6 +13,7 @@
 mod error;
 mod events;
 mod frame;
+mod git;
 mod interaction;
 mod isolation;
 pub mod settings_dump;
@@ -27,6 +28,11 @@ mod workspace_types;
 
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
+pub use git::{
+    Git, GitBackendError, GitChange, GitChangeKind, GitCommitDetails, GitDiff, GitEnvVar, GitListener,
+    GitLog, GitLogCommit, GitRef, GitRefKind, GitRev, GitRevKind, GitSignature, GitStatus, GitWatch,
+    GitWorktree, GitWorktreePlan, WorktreeService,
+};
 pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,

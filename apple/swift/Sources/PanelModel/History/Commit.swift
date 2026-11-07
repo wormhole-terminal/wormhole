@@ -38,14 +38,16 @@ public struct Commit: Identifiable, Hashable, Sendable {
     public var parents: [String]
     public var refs: [(kind: RefKind, name: String)]
     public var files: [ChangedFile]
+    /// More than one parent, for a log row that carries only the first (`parents` has them all once opened).
+    public var merge: Bool
 
     public var id: String { sha }
     public var short: String { String(sha.prefix(7)) }
-    public var isMerge: Bool { parents.count > 1 }
+    public var isMerge: Bool { merge || parents.count > 1 }
 
     public init(
         sha: String, subject: String, body: String = "", author: Signature, parents: [String] = [],
-        refs: [(kind: RefKind, name: String)] = [], files: [ChangedFile] = []
+        refs: [(kind: RefKind, name: String)] = [], files: [ChangedFile] = [], merge: Bool = false
     ) {
         self.sha = sha
         self.subject = subject
@@ -54,6 +56,7 @@ public struct Commit: Identifiable, Hashable, Sendable {
         self.parents = parents
         self.refs = refs
         self.files = files
+        self.merge = merge
     }
 
     public static func == (lhs: Commit, rhs: Commit) -> Bool { lhs.sha == rhs.sha && lhs.files == rhs.files }

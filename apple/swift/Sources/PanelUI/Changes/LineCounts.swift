@@ -20,7 +20,7 @@ struct LineCounts: View {
     }
 }
 
-/// What a file row says of its lines, right before the kind letter: counts, "bin" or "LFS".
+/// What a file row says of its lines, right before the kind letter: counts, "bin", "LFS" or a submodule's words.
 struct FileLinesLabel: View {
     let lines: ChangedFile.Lines
     let muted: Color
@@ -30,6 +30,7 @@ struct FileLinesLabel: View {
         case let .counts(added, removed): LineCounts(added: added, removed: removed)
         case .binary: word("bin")
         case .lfs: word("LFS")
+        case let .submodule(words): word(words)
         }
     }
 

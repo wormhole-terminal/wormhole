@@ -8,12 +8,14 @@ public struct ChangedFile: Identifiable, Hashable, Sendable {
     public var added: Int?
     public var removed: Int?
     public var lfs: Bool
+    /// A submodule rather than a file: what the parent sees of it, in core's words ("2 new commits").
+    public var submodule: String?
 
     public var id: String { path }
 
     public init(
         path: String, kind: ChangeKind, added: Int? = 0, removed: Int? = 0, originalPath: String? = nil,
-        lfs: Bool = false
+        lfs: Bool = false, submodule: String? = nil
     ) {
         self.path = path
         self.kind = kind
@@ -21,6 +23,7 @@ public struct ChangedFile: Identifiable, Hashable, Sendable {
         self.removed = removed
         self.originalPath = originalPath
         self.lfs = lfs
+        self.submodule = submodule
     }
 
     public var name: String { path.split(separator: "/").last.map(String.init) ?? path }
@@ -31,10 +34,11 @@ public struct ChangedFile: Identifiable, Hashable, Sendable {
         return String(path[..<slash])
     }
 
-    /// What the row says of the lines: counts, "bin" or "LFS".
-    public enum Lines: Equatable, Sendable { case counts(added: Int, removed: Int), binary, lfs }
+    /// What the row says of the lines: counts, "bin", "LFS" or a submodule's words.
+    public enum Lines: Equatable, Sendable { case counts(added: Int, removed: Int), binary, lfs, submodule(String) }
 
     public var lines: Lines {
+        if let submodule { return .submodule(submodule) }
         if lfs { return .lfs }
         guard let added else { return .binary }
         return .counts(added: added, removed: removed ?? 0)
@@ -57,6 +61,7 @@ public struct ChangedFile: Identifiable, Hashable, Sendable {
         let from = kind == .renamed ? originalPath.map { " from \($0)" } ?? "" : ""
         let counts: String
         switch lines {
+        case let .submodule(words): counts = words
         case .lfs: counts = "LFS"
         case .binary: counts = "binary"
         case let .counts(added, removed): counts = removed > 0 ? "+\(added) \u{2212}\(removed)" : "+\(added)"

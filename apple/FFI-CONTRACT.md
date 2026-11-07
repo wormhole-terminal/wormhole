@@ -395,3 +395,57 @@ version bumped only if an existing field changes meaning.
 Cell size and font metrics, glyph shaping, the palette, blink timing, the scroll bar, selection
 drawing and mouse reporting are Swift's (or later seam calls). The seam gives the engine's grid
 as it is; the engine does wrapping, reflow on `resize`, scrollback and all escape-sequence meaning.
+
+## Git: `Git`, `GitWatch`, `WorktreeService`
+
+`apple/ffi/src/git/`. The right panel's Changes, History and diff, and the worktree per terminal, over core's
+`git/` domain (every command through `GitCmd`; nothing here spawns git). Swift side: `GitBridge`
+(`GitBridge.makeBackends(worktreeAllowed:...)` returns a `RealGitBackend` and a `RealWorktreeBackend`).
+
+**Threading.** Every call is blocking (a few git processes, each with core's timeout and output cap): call from
+a background queue (`GitQueue` does). The objects are `Send + Sync`, hold no repository open and keep two small
+lists (the last status per repository and compared revision, the files of the commits opened) so that a diff can
+be asked for by path alone. **Errors:** `GitBackendError` = `NotIsolated` / `NotARepository` / `Failed(message)`,
+the message in git's own words (`log_failure` adds "the branch was deleted"). Constructors refuse outside an
+isolated data folder.
+
+```swift
+// Git (read-only)
+func isRepository(folder) -> Bool                  // a look for .git, no process
+func status(folder, compare: String?) -> GitStatus // files + branch, dirty, upstream, ahead/behind, compareMissing
+func diff(folder, path, compare: String?, loadAnyway: Bool) -> GitDiff
+func log(folder, rev: GitRev?, paths: [String]) -> GitLog          // nil = HEAD; .stashes = the stashes; 300 max
+func commitDetails(folder, sha) -> GitCommitDetails                // message cleaned by core, files vs first parent
+func commitDiff(folder, sha, path, loadAnyway) -> GitDiff
+func revs(folder, forHistory: Bool) -> [GitRev]    // branches (current first), 200 newest tags, 10 commits, stashes
+func setBinaryUnits(binary: Bool)                  // `size_units`
+
+// GitWatch: one thread per watch; listener.changed() once per debounced burst (150 ms quiet, 1 s cap, 1 s gap)
+GitWatch.start(folder, listener: GitListener) throws -> GitWatch;  isLive();  stop()   // drop also stops
+// a slow poll calls changed() when the OS watch is quiet 30 s (3 s while it could not start; retried every 60 s)
+
+// WorktreeService (the one write; ONLY on these calls, never forced, hooks off)
+WorktreeService(base: String?, cloneBuildFolders: Bool) throws;  setOptions(base, cloneBuildFolders)
+func problem(folder) -> String?      func plan(branch, folder) -> GitWorktreePlan   // .ready / .refused(reason)
+func create(branch, folder) throws -> GitWorktree      // plan, add, clone build folders, ports, remembered
+func madeAt(folder) -> GitWorktree?   func list() -> [GitWorktree]   func isDirty(folder) throws -> Bool
+func remove(folder) throws                              // only one Wormhole made; git refuses with changes
+```
+
+- **Diff = unified text.** Core parses once (caps, binary, LFS, too-large rules) and `patch.rs` writes the
+  hunks back as unified text for Swift's `UnifiedDiffParser`: hunks are core's own lines, the header is rebuilt
+  (modes are written as the usual ones). Whole files are not read for highlighting (Swift's lexer colours the
+  text). `GitDiff` cases: `text`, `binary(patch, sizes)`, `lfs(summary)`, `tooLarge(bytes, title, detail)` (ask
+  again with `loadAnyway`), `submodule(label, note, ahead, behind)`: the last three have no lines, and the words
+  are core's (`diff_text`, `Submodule::label`).
+- **Compare** takes any branch, tag or commit; the base is the merge-base, as `status` reports it, and `diff` uses
+  the same one. A deleted compared branch falls back to HEAD and says `compareMissing`.
+- **Worktrees** are remembered under the store's `worktrees` key (core's `Worktrees`, the default profile's
+  database). Trust of the *project* is not git's: `create` does not check it, the Swift `worktreeAllowed` closure
+  does, before `problem` and again before the write. After `create`, the window opens the terminal
+  (`worktreeCreated` gets the folder and `GitWorktree.env`: `WORMHOLE_PORT`, `WORMHOLE_PORTS`).
+- Core addition: `git::tags` (newest 200, for "Compare with").
+
+Tests: `apple/ffi/tests/git.rs` (real repositories in a temp dir: renames, binaries, LFS pointers, submodule,
+stashes, the over-cap diff, the watch, the worktree round trip) and `Tests/GitBridgeTests` (mapping over canned
+records, and the Swift backends against the real FFI).
