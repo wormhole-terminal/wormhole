@@ -7,7 +7,7 @@
 //! nothing and its thread sleeps in the channel.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, PoisonError};
+use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 
 use wormhole_term::{PtyEvent, PtyEvents};
 
@@ -17,6 +17,13 @@ use wormhole_term::{PtyEvent, PtyEvents};
 #[uniffi::export(with_foreign)]
 pub trait TerminalListener: Send + Sync {
     fn wake(&self);
+}
+
+/// Hears every event of a terminal on its event thread, before Swift's queue does: how a
+/// `Workspace` learns what a row shows (`workspace_feed`). It must return quickly and may not call
+/// into Swift.
+pub(crate) trait EventFeed: Send + Sync {
+    fn on_event(&self, event: &PtyEvent);
 }
 
 /// What a terminal's program did, as the UI needs to hear it. The rest of `PtyEvent`'s variants
@@ -42,11 +49,23 @@ pub(crate) struct EventQueue {
     /// The listener was woken and Swift has not drained since.
     woken: AtomicBool,
     listener: Arc<dyn TerminalListener>,
+    /// Set once, by the workspace the terminal is registered with.
+    feed: OnceLock<Arc<dyn EventFeed>>,
 }
 
 impl EventQueue {
     pub(crate) fn new(listener: Arc<dyn TerminalListener>) -> Arc<Self> {
-        Arc::new(Self { pending: Mutex::new(Vec::new()), woken: AtomicBool::new(false), listener })
+        Arc::new(Self {
+            pending: Mutex::new(Vec::new()),
+            woken: AtomicBool::new(false),
+            listener,
+            feed: OnceLock::new(),
+        })
+    }
+
+    /// Let `feed` hear the events from now on; the first one wins.
+    pub(crate) fn set_feed(&self, feed: Arc<dyn EventFeed>) {
+        let _ = self.feed.set(feed);
     }
 
     fn push(&self, event: TermEvent) {
@@ -75,6 +94,9 @@ impl EventQueue {
 pub(crate) fn spawn_receiver(events: PtyEvents, queue: Arc<EventQueue>) -> std::io::Result<()> {
     std::thread::Builder::new().name("wormhole-ffi-events".into()).spawn(move || {
         while let Some(event) = smol::block_on(events.recv()) {
+            if let Some(feed) = queue.feed.get() {
+                feed.on_event(&event);
+            }
             if let Some(event) = translate(event) {
                 queue.push(event);
             }

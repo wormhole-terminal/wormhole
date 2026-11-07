@@ -1,8 +1,10 @@
-# The Rust/Swift contract (wormhole-ffi), version 1
+# The Rust/Swift contract (wormhole-ffi), version 2
 
 What the Swift side may rely on. It is written from the code (`apple/ffi/src/`); when the code
-changes, this file changes in the same commit. Frame layout version: **1** (`frameFormatVersion()`
-returns it; check it at start-up and refuse a different one).
+changes, this file changes in the same commit. Contract version: **2** (`contractVersion()`; 2 added
+the `Workspace` object below; a new action or event case is a minor and does not change it). Frame
+layout version: **1** (`frameFormatVersion()` returns it; check both at start-up and refuse a
+different one).
 
 ## What you link, and where it is
 
@@ -66,6 +68,7 @@ func frameTiming() -> FrameTiming // Rust-side time of the frames so far (for me
 
 func frameFormatVersion() -> UInt32   // free function
 func ping(value: UInt64) -> UInt64    // free function: a call that does nothing
+func contractVersion() -> UInt32      // free function: this file's version (2)
 ```
 
 `program` is run as is (no login-shell wrapping, no `WORMHOLE_SHELL`): `"/bin/cat"` with `[]`,
@@ -136,6 +139,109 @@ Control is held (as the app does). `platform` is Cmd: a Cmd chord returns `false
 the terminal's modes (application cursor keys, kitty keyboard, modifyOtherKeys). Returns whether
 bytes were sent; sending clears the selection and returns the view to the live screen. For text
 that is not a key (IME commit, paste), use `write(bytes:)` (bracketed paste is not wrapped yet).
+
+## The object: `Workspace`
+
+One window's terminals, groups, pins and splits, and what the sidebar lists of them. It wraps core's
+sans-IO `WorkspaceModel` (`crates/wormhole-core/src/workspace/`, the rules are core's `view::sidebar`
+and `view::panes`) behind one mutex. Swift sends **actions**, Rust answers with **events**, and the
+UI **pulls snapshots** when a revision moved: it never re-implements a rule (order, pins, numbers,
+drop plans, selection after a close, second lines, VoiceOver words).
+
+```swift
+init(config: WorkspaceConfig, listener: WorkspaceListener)   // WorkspaceConfig(home:, numbersFollowList:, startFolder:, paneHeaderHeight:)
+
+func apply(action: Action) -> [WorkspaceEvent]     // the events of THIS call come back from it
+func drain() -> [WorkspaceEvent]                   // events caused elsewhere (a terminal's thread); re-arms wake()
+func sidebar() -> SidebarSnapshot                  // words as they read now (the workspace's clock)
+func sidebarAt(nowMs: UInt64) -> SidebarSnapshot   // ... as they read at a given time (tests, previews)
+func panes(width: Float, height: Float) -> PanesSnapshot
+func chrome() -> ChromeSnapshot
+func revisions() -> Revisions                      // sidebar / layout / chrome counters
+func selected() -> Int64?
+func dropPlan(dragged: Int64, over: Over) -> DropPlan?   // pure: the line a drag would drop on
+func setFacts(id: Int64, facts: TerminalFactsRecord) -> [WorkspaceEvent]   // whole replacement (tests, previews)
+func setGit(id: Int64, branch: String?, changes: UInt32?) -> [WorkspaceEvent]
+func registerTerminal(id: Int64, terminal: Terminal)   // after Opened and Terminal.start: feeds the row; Closed ends it
+func terminal(id: Int64) -> Terminal?
+func nowMs() -> UInt64
+```
+
+`WorkspaceListener` has one method, `wake()`, with the same rules as `TerminalListener`'s: called from
+a Rust thread with no lock held, at most once between two `drain()` calls, and it must only note the
+wake and hop to the main queue. **One handler** serves both sources of events: `apply`'s result and
+`drain()`'s.
+
+### Events: `WorkspaceEvent`
+
+| Case | Meaning, and what Swift does |
+|---|---|
+| `opened(id, cwd)` | a terminal was made: `Terminal.start(...)` a program for it (in `cwd` when there is one), then `registerTerminal(id:terminal:)` |
+| `closed(id)` | the terminal is gone; its registered `Terminal` has already been closed by Rust. Drop its view |
+| `selected(id)` | the selection moved (`nil`: none) |
+| `moved(id)` | a row moved or joined a split: animate it (`Landing`/zone change, by id) |
+| `listing` | the rows, groups or numbers changed: pull `sidebar()` |
+| `layout` | splits or the panes' focus changed: pull `panes(width:height:)` |
+| `chrome` | sidebar/panel visibility, panel tab, search or overlay changed: pull `chrome()` |
+| `refused(reason)` | the action changed nothing (`unknown`, `tooSmall`, `unchanged`): data, not an error |
+
+Events are coalesced within a call (`listing`/`layout`/`chrome` at most once, `selected` last wins).
+
+### Actions: `Action`
+
+Ids are `Int64` (a terminal's id is its session's; split and terminal ids share one counter and never
+repeat), groups are `UInt32` (a group's id is stable while it exists).
+
+| Group | Cases |
+|---|---|
+| Selection | `select(id)`, `selectStep(delta)` (next/previous as listed, wraps, skips folded), `selectNumber(n)` (⌘1...⌘9; a number past the last selects the last) |
+| Terminals | `newTerminal` (in the selected one's folder, selected, search ends), `close(id)` (the app's rule: selection by the window's order, a split's heir; closing the last starts a new one), `rename(id, name)` (blank gives the name back to what runs in it), `setPinned`, `togglePin` (a split is pinned as a whole) |
+| Groups | `newGroup(members)` (with the rest of their splits; needs terminals that exist), `renameGroup` (blank keeps the old name), `toggleGroup` (fold), `ungroup`, `setGroupPinned`, `addToGroup(id, group)`, `removeFromGroup(id)` |
+| Moves | `dropTerminal(dragged, over)`, `dropGroup(group, over)` (core's `place` rules; `Over` is by id: `row(id, part)`, `head(group, part)`, `after(card)`, `tail`), `moveTerminal(id, landing)`, `moveGroup(group, landing)` (`Landing.top(before: Item?)` / `.group(group, before: Int64?)`) |
+| Splits | `splitBeside(anchor, axis)` (a new terminal in the anchor's folder, selected; refused `tooSmall` without room), `joinSplit(id, target, zone)`, `leaveSplit(id)`, `focusPane(id)`, `toggleZoom` |
+| Chrome | `toggleSidebar`, `togglePanel`, `showPanelTab(tab)` (shows the panel), `search(text)`, `showOverlay(overlay?)`, `setPaneArea(width, height)` (zero until laid out: nothing is refused for want of room) |
+
+### Snapshots
+
+All are Swift value types with the fields named here, built on demand and never mirrored.
+
+- `SidebarSnapshot(revision, selected: Int64?, sections: [SidebarSection], terminalCount, refreshInMs: UInt64?)`:
+  `refreshInMs` is how long until words that move with time ("Working · 3m", a command's clock) read
+  differently: arm **one** timer for it, `nil` asks for none.
+- `SidebarSection(key, head: GroupHead?, rows: [SidebarRow], terminalCount, alertCount)`: `head == nil`
+  is a run of terminals in no group. `rows` is empty while the group is folded (`terminalCount` still says
+  what is folded away; `alertCount` is the needs-input and failed ones, for the head's dot). While a search
+  is on, only matching rows and sections that still have one are listed.
+- `GroupHead(id: UInt32, name, color, pinned, folded, folder, position, of, spoken)`.
+- `SidebarRow(id, name, number: UInt32?, keycap: String?, selected, pinned, state: RowState, agent: AgentInfo?, message, branch, folder, unread, bell, failureCode: Int32?, changes: UInt32?, notes, secondLine: SecondLine, split: SplitInfo, position, of, spoken)`:
+  `number` is the ⌘ number the row holds (kept with the terminal under "Stay with the terminal"; they do
+  not renumber under a search, as ⌘n still selects the same terminal). `spoken` is the whole VoiceOver label.
+  `RowState` is `needsYou, working, finished, failed, idle, exited`.
+- `SecondLine(text, tone: Tone, mono, trail)`: `Tone` is `plain, attention, done, failed`; `mono` means a
+  command (code font); `trail` sits at the line's right.
+- `SplitInfo(id, bracket: Bracket?, chain, onScreen, members)`: `bracket` is `start/mid/end` along the rows of a
+  split whose members are next to each other, `chain` a member that is not together in the list.
+- `PanesSnapshot(revision, split: Int64?, panes: [PaneRect(id, x, y, w, h, focused)], focused, zoomed)`:
+  the selected terminal's split in reading order, or the zoomed pane alone, or the lone terminal.
+- `ChromeSnapshot(revision, sidebarVisible, panelVisible, panelTab: TabId, search, overlay)`; `TabId` is
+  `changes, history, notes, usage, project, files`.
+
+### What feeds a row
+
+`registerTerminal` makes the terminal's own events facts of its row, on its event thread: the title its
+program set (`title`), the shell's folder (OSC 7), the program in front and when it started (OSC 133 marks),
+a command that failed with its exit code, the bell and output nobody has seen while another terminal
+is selected. Selecting a terminal (and the panes shown with it) hears the bell and spends a finished or failed
+result. What does not feed yet: a coding agent's status (its hooks), git (`setGit`), notes (`setFacts`).
+
+### Threads and locks
+
+- `apply`, `drain`, the snapshots and `dropPlan` lock the model for microseconds; they may be called
+  from any thread and are meant for main. The model's lock is **never held** across `wake()`, a call into a
+  `Terminal`, or a system call: a terminal's thread probes the process first, then locks, changes, unlocks and
+  only then wakes.
+- A registered `Terminal` keeps its own hot path (`frame`, `sendKey`, `resize`): none of it takes the model's lock.
+- `Closed` is the one place a registered terminal's program ends: Rust calls its `close()`.
 
 ## Frame
 
@@ -223,7 +329,7 @@ Flags (bit values of the engine's `Flags`):
 | 15 | LEADING_WIDE_CHAR_SPACER | a blank at a row's end where a wide character did not fit and moved to the next row |
 | 16 | WRAPLINE | on a row's last cell: the line continues in the next row (a soft wrap) |
 
-**Not in version 1** (the renderer must not expect them yet): zero-width and combining characters
+**Not in frame version 1** (the renderer must not expect them yet): zero-width and combining characters
 (`RowExtras`: the cell carries only its base character), underline colours (SGR 58), hyperlinks,
 inline-image placements, command-block spans, selection ranges, the program's OSC palette changes.
 Each arrives as an additive change to this file (a new header flag or a second call), with the

@@ -4,17 +4,19 @@
 //! calls in from the main thread (`frame`, `write`, `resize`); the one lock they share with the
 //! reader is the engine's fair lock, taken inside `Pty::snapshot` for a copy of the damaged rows.
 
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError, RwLock};
 use std::time::Instant;
 
+use wormhole_core::agents::{AgentId, Foreground};
 use wormhole_core::terminal::{SpawnOptions, spawn};
 use wormhole_term::input::keys::{self, KeyInput};
 use wormhole_term::types::Scroll;
 use wormhole_term::{GridSize, Pty, ScreenSnapshot};
 
 use crate::error::FfiError;
-use crate::events::{EventQueue, TermEvent, TerminalListener, spawn_receiver};
+use crate::events::{EventFeed, EventQueue, TermEvent, TerminalListener, spawn_receiver};
 use crate::{frame, isolation};
 
 /// How much history a terminal keeps (the app's default is the same order).
@@ -30,6 +32,15 @@ pub struct Terminal {
     snapshot: Mutex<ScreenSnapshot>,
     events: Arc<EventQueue>,
     timing: Timing,
+    /// The program's name ("zsh"), which names the terminal until something better does.
+    name: String,
+}
+
+/// What the terminal's process says right now, for the workspace's facts.
+pub(crate) struct Probe {
+    pub cwd: Option<PathBuf>,
+    pub agent: Option<AgentId>,
+    pub command: Option<Foreground>,
 }
 
 /// Nanoseconds spent in the last and in all `frame` calls, by part.
@@ -89,7 +100,7 @@ impl Terminal {
         let options = SpawnOptions {
             tab_id: "swift-experiment".into(),
             scrollback_lines: SCROLLBACK_LINES,
-            shell: Some(wormhole_core::terminal::shells::ShellCommand { program, args, name }),
+            shell: Some(wormhole_core::terminal::shells::ShellCommand { program, args, name: name.clone() }),
             ..SpawnOptions::default()
         };
         let size = GridSize { cols, rows, cell_width, cell_height };
@@ -102,6 +113,7 @@ impl Terminal {
             snapshot: Mutex::new(ScreenSnapshot::default()),
             events,
             timing: Timing::default(),
+            name,
         }))
     }
 
@@ -203,6 +215,26 @@ impl Terminal {
 }
 
 impl Terminal {
+    pub(crate) fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub(crate) fn set_feed(&self, feed: Arc<dyn EventFeed>) {
+        self.events.set_feed(feed);
+    }
+
+    /// The folder, the agent and the program in front, from the process: a few system calls. All
+    /// `None` after `close`.
+    pub(crate) fn probe(&self) -> Probe {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        match guard.as_ref() {
+            Some(pty) => {
+                Probe { cwd: pty.cwd(), agent: pty.foreground_agent(), command: pty.foreground_command() }
+            }
+            None => Probe { cwd: None, agent: None, command: None },
+        }
+    }
+
     fn pack_frame(&self, all: bool) -> Vec<u8> {
         let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
         let Some(pty) = guard.as_ref() else { return Vec::new() };
