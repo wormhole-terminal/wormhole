@@ -5,6 +5,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct PanelControl: View {
     let model: SettingsModel
@@ -19,13 +20,13 @@ struct PanelControl: View {
         case "profile-start": field(profile.startFolder)
         case "profile-git": field(profile.gitName.isEmpty ? SettingsText.notSet : "\(profile.gitName) <\(profile.gitEmail)>")
         case "profile-env", "profile-logins": field(SettingsText.noneSet)
-        case "profile-delete": button(String(localized: "settings-profile-delete-button", defaultValue: "Delete profile…"), "trash", .deleteProfile, danger: true)
-        case "notify-permission": button(String(localized: "settings-notifications-open-system", defaultValue: "Open System Settings"), "gearshape", .openNotificationSettings)
-        case "notify-test": button(String(localized: "settings-notifications-send-test", defaultValue: "Send test"), "bell", .sendTestNotification)
+        case "profile-delete": button(Words.text("settings-profile-delete-button", fallback: "Delete profile…"), "trash", .deleteProfile, danger: true)
+        case "notify-permission": button(Words.text("settings-notifications-open-system", fallback: "Open System Settings"), "gearshape", .openNotificationSettings)
+        case "notify-test": button(Words.text("settings-notifications-send-test", fallback: "Send test"), "bell", .sendTestNotification)
         case "update-status":
             HStack(spacing: Space._3) {
-                Text(String(localized: "settings-updates-up-to-date", defaultValue: "Wormhole is up to date")).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textMuted)
-                button(String(localized: "settings-updates-check-now", defaultValue: "Check now"), "arrow.clockwise", .checkForUpdates)
+                Text(Words.text("settings-updates-up-to-date", fallback: "Wormhole is up to date")).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textMuted)
+                button(Words.text("settings-updates-check-now", fallback: "Check now"), "arrow.clockwise", .checkForUpdates)
             }
         default: Text(SettingsText.notBuilt).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textFaint)
         }

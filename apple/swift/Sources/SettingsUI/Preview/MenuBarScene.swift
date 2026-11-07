@@ -4,13 +4,14 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct MenuBarScene: View {
     let model: SettingsModel
     private static let states: [(value: String, label: String)] = [
-        ("status_count", String(localized: "settings-menu-bar-status-and-count", defaultValue: "Status and count")),
-        ("status", String(localized: "settings-menu-bar-status", defaultValue: "Status")),
-        ("plain", String(localized: "settings-menu-bar-icon-only", defaultValue: "Icon only")),
+        ("status_count", Words.text("settings-menu-bar-status-and-count", fallback: "Status and count")),
+        ("status", Words.text("settings-menu-bar-status", fallback: "Status")),
+        ("plain", Words.text("settings-menu-bar-icon-only", fallback: "Icon only")),
     ]
 
     var body: some View {
@@ -27,7 +28,7 @@ struct MenuBarScene: View {
                 }
             }
             if !on {
-                Text(String(localized: "settings-menu-bar-off", defaultValue: "The menu bar item is off")).font(.system(size: TextRole.caption.size))
+                Text(Words.text("settings-menu-bar-off", fallback: "The menu bar item is off")).font(.system(size: TextRole.caption.size))
                     .foregroundStyle(t.textMuted)
             }
         }

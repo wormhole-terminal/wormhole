@@ -38,7 +38,7 @@ var targets: [Target] = [
     // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
     .target(name: "PanelModel", dependencies: ["WorkspaceModel"]),
     // The right panel's tab contents: Notes, Changes (with the diff), History, Files, Project and Usage.
-    .target(name: "PanelUI", dependencies: ["PanelModel", "DesignSystem", "WorkspaceModel"]),
+    .target(name: "PanelUI", dependencies: ["PanelModel", "DesignSystem", "WorkspaceModel", "WordsModel"]),
     // The app's file icon theme (Catppuccin and Lucide SVGs in Zed's icon theme format) and its lookup, behind the
     // panel's `FileIconProviding`. `apple/scripts/dump-icon-theme.sh` copies the files from `wormhole-core`.
     .target(
@@ -52,23 +52,23 @@ var targets: [Target] = [
     .testTarget(name: "PaletteTests", dependencies: ["PaletteModel", "PaletteUI", "WorkspaceModel", "DesignSystem"]),
     // The SwiftUI around the terminal: find bar, command blocks, pane bars, notice chip, zoom and resize readout,
     // minimap, print and export. Over protocols that the Rust FFI backs later; no dependency on a feature module.
-    .target(name: "TerminalUI", dependencies: ["DesignSystem", "TerminalCore"]),
+    .target(name: "TerminalUI", dependencies: ["DesignSystem", "TerminalCore", "WordsModel"]),
     .testTarget(name: "TerminalUITests", dependencies: ["TerminalUI", "DesignSystem", "TerminalCore"]),
     // The settings window's schema (generated from the Rust settings index by `apple/scripts/dump-settings.sh`),
     // values, search, change tracking and the backend seam. Foundation only.
     .target(name: "SettingsModel", resources: [.copy("Resources/settings.json")]),
     // The settings window: nav, search, preview strip, the rows and their controls, drawn from the schema.
-    .target(name: "SettingsUI", dependencies: ["SettingsModel", "DesignSystem"]),
+    .target(name: "SettingsUI", dependencies: ["SettingsModel", "DesignSystem", "WordsModel"]),
     .testTarget(name: "SettingsTests", dependencies: ["SettingsModel", "SettingsUI", "DesignSystem"]),
     // Splits and panes (the tree, its geometry, drops, presets), the title row's parts and fit rules and the
     // tab sets, as plain values. Foundation and the workspace model.
     .target(name: "PanesModel", dependencies: ["WorkspaceModel"]),
     // The panes' area with headers, dividers and drop hints, the title row's pieces and the tab bar.
-    .target(name: "PanesUI", dependencies: ["PanesModel", "WorkspaceModel", "DesignSystem"]),
+    .target(name: "PanesUI", dependencies: ["PanesModel", "WorkspaceModel", "DesignSystem", "WordsModel"]),
     .testTarget(name: "PanesTests", dependencies: ["PanesModel", "PanesUI", "WorkspaceModel", "DesignSystem"]),
     // The secondary windows' data as plain values and pure logic: the intro's timing and ship, the first-run
     // steps, licenses, updates, session hosts, agent access, trust and the close questions. Foundation only.
-    .target(name: "AuxModel"),
+    .target(name: "AuxModel", dependencies: ["WordsModel"]),
     // The secondary windows: onboarding with the Metal wormhole intro, About, Licenses, Updates, Session
     // Hosts, the agent access sheet, project trust and the close and quit questions. `Resources/shader` is the
     // GPUI app's own intro shader, linked (not copied), so the two never drift.
@@ -86,9 +86,9 @@ var targets: [Target] = [
     .target(name: "PlatformUI", dependencies: ["PlatformModel", "DesignSystem"]),
     .testTarget(name: "PlatformTests", dependencies: ["PlatformModel", "PlatformUI", "DesignSystem"]),
     // The Theme Studio's logic: a theme file as a draft, resolved by Rust, with undo, contrast and versions.
-    .target(name: "StudioModel", dependencies: ["DesignSystem"]),
+    .target(name: "StudioModel", dependencies: ["DesignSystem", "WordsModel"]),
     // The Theme Studio window: token list, gallery of every component, token editor.
-    .target(name: "StudioUI", dependencies: ["StudioModel", "DesignSystem", "SidebarUI", "PanelUI", "PaletteUI", "WorkspaceModel", "PanelModel", "PaletteModel"]),
+    .target(name: "StudioUI", dependencies: ["StudioModel", "DesignSystem", "SidebarUI", "PanelUI", "PaletteUI", "WorkspaceModel", "PanelModel", "PaletteModel", "WordsModel"]),
     .testTarget(name: "StudioTests", dependencies: ["StudioModel", "StudioUI", "DesignSystem"]),
     .testTarget(
         name: "UITests",
@@ -98,7 +98,7 @@ var targets: [Target] = [
 var appDependencies: [Target.Dependency] = [
     "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI", "SettingsModel", "SettingsUI", "DesignSystem",
     "PanesModel", "PanesUI", "PanelModel", "PlatformModel", "PlatformUI", "AuxModel", "AuxWindows", "TerminalUI",
-    "PaletteModel", "PanelModel", "PanelUI",
+    "PaletteModel", "PanelModel", "PanelUI", "StudioModel", "StudioUI", "SidebarUI", "PanesModel",
 ]
 // The view's input: pointer, selection, links, keyboard and input method, on the mock and (when the FFI is
 // linked) on the real engine.
@@ -147,7 +147,9 @@ if ffiLinked {
         .target(name: "AuxBridge", dependencies: ["AuxModel", "PlatformModel", "WormholeBindings"]),
         .testTarget(name: "AuxBridgeTests", dependencies: ["AuxBridge", "AuxModel", "PlatformModel"]),
     ]
-    appDependencies += ["UniFFISource", "WorkspaceBridge", "GitBridge"]
+    appDependencies += [
+        "UniFFISource", "WorkspaceBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge",
+    ]
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.
     targets.append(.target(name: "GitBridge", dependencies: ["PanelModel", "WormholeBindings"]))
     targets.append(.testTarget(name: "GitBridgeTests", dependencies: ["GitBridge", "PanelModel", "WormholeBindings"]))

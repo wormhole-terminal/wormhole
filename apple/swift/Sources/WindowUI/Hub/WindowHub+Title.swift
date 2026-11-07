@@ -32,7 +32,7 @@ extension WindowHub {
     }
 
     /// The row's parts changed: the core lists the row from them (which parts are at each end, where the chevrons go).
-    func rowChanged() { send(.setTitleRow(titleRow.parts.map(\.rawValue))) }
+    public func rowChanged() { send(.setTitleRow(titleRow.parts.map(\.rawValue))) }
 
     /// The path as one word for a shell: in single quotes, a quote inside as `'\''`.
     static func shellQuoted(_ path: String) -> String {

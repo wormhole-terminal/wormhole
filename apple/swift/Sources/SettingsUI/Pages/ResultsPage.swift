@@ -4,6 +4,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct ResultsPage: View {
     let model: SettingsModel
@@ -14,7 +15,7 @@ struct ResultsPage: View {
         PageScaffold(title: SettingsText.results, intro: summary(hits, sections.count), action: { EscHint() }) {
             ForEach(sections) { section in
                 SettingGroup(title: section.title) {
-                    LinkButton(title: String(localized: "settings-window-open-section", defaultValue: "Open \(section.title)"), goes: true) {
+                    LinkButton(title: Words.text("settings-window-open-section", fallback: "Open \(section.title)"), goes: true) {
                         model.show(section.id)
                         model.query = ""
                     }

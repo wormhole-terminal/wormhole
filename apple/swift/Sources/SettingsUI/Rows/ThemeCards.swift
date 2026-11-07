@@ -6,6 +6,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct ThemeCards: View {
     let model: SettingsModel
@@ -18,7 +19,7 @@ struct ThemeCards: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
-            TextField(String(localized: "settings-appearance-filter-themes", defaultValue: "Filter themes"), text: $filter)
+            TextField(Words.text("settings-appearance-filter-themes", fallback: "Filter themes"), text: $filter)
                 .textFieldStyle(.plain).font(.system(size: TextRole.body.size))
                 .padding(.horizontal, Space._3).frame(height: Metric.control)
                 .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))

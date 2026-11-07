@@ -6,6 +6,7 @@
 import AppKit
 import DesignSystem
 import Observation
+import SidebarUI
 import SwiftUI
 
 @MainActor @Observable
@@ -23,6 +24,8 @@ public final class WindowLook {
     public var tabsOnTop = false
     /// The lines between the columns (the Column dividers setting).
     public var columnDividers = true
+    /// How the sidebar's list looks (density, cards, what rows show): Settings → Terminals & sidebar.
+    public var sidebar = SidebarAppearance()
     /// Reduce Transparency or Increase Contrast is on, as the theme store follows them live (it observes the
     /// system's own notifications), so a change redraws the window.
     var systemOpaque: Bool { ThemeStore.shared.reduceTransparency || ThemeStore.shared.increaseContrast }

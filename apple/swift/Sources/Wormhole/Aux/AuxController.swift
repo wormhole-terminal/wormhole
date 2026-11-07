@@ -1,7 +1,6 @@
-// The secondary windows, opened from the menus, the status item and the control folder: About, Licenses,
-// Updates, Session Hosts, the project commands' trust window, the agent access sheet and the welcome. Each is
-// over a sample backend until the core supplies the real one through the FFI; the protocol seams are the
-// AuxModel ones, so only the backend changes then.
+// The secondary windows, opened from the menus, the status item and the control folder: About, Licenses, Updates, Session
+// Hosts, the project commands' trust window, the agent access sheet and the welcome. Their backends are `AuxBackends`'s
+// (the core's where the window is real); the windows are AuxWindows'.
 
 import AppKit
 import AuxModel
@@ -10,9 +9,11 @@ import AuxWindows
 @MainActor
 final class AuxController {
     private let dataDirectory: URL
-    private let updates = SampleUpdateBackend(phase: .upToDate)
+    private var updates: (any UpdateBackend)?
     private var onboarding: OnboardingWindow?
+    private var access: AccessDriver?
     private unowned let app: AppController
+    private var backends: AuxBackends { AuxBackends(app: app) }
 
     init(app: AppController, dataDirectory: URL) {
         self.app = app
@@ -20,15 +21,26 @@ final class AuxController {
     }
 
     func showAbout() { AboutPanel.show() }
-    func showLicenses() { Licenses.show(source: BundledLicenseSource()) }
-    func showHosts() { HostsWindow.show(backend: SampleHostsBackend()) }
-    func showTrust() { TrustWindow.show(backend: SampleTrustBackend()) }
+    func showLicenses() { Licenses.show(source: backends.licenses()) }
+    func showHosts() { HostsWindow.show(backend: backends.hosts()) }
+
+    /// The project of the terminal in front, when the core found one.
+    func showTrust() { TrustWindow.show(backend: backends.trust(root: app.hub.panel.project.state?.root)) }
 
     func showUpdates() {
-        UpdateWindow.show(backend: updates, version: AppInfo.from(bundle: .main).version)
+        let backend = updates ?? backends.updates()
+        updates = backend
+        UpdateWindow.show(backend: backend, version: AppInfo.from(bundle: .main).version)
     }
 
-    /// The control API's approval question on the window, as a sheet; the answer is dropped (nothing asks yet).
+    /// Agents' questions (the control API's approval) as sheets on the window, one at a time, as they arrive.
+    func startAccess() {
+        guard access == nil, let backend = backends.access() else { return }
+        access = AccessDriver(backend: backend) { [weak app] in app?.window }
+        access?.start()
+    }
+
+    /// A sample of the question, for the control folder's `access`: nothing real asks until the control socket serves one.
     func showAccess() {
         let request = AccessRequest(
             label: "claude", capability: .run, kind: .developerID,
@@ -40,12 +52,11 @@ final class AuxController {
     /// The first run shows the welcome by itself, once per data folder; `--onboarding` and Help ▸ Welcome show it
     /// again. A test instance keeps the effect above the window instead of taking the screen.
     func showOnboarding(firstRun: Bool) {
-        let backend = FirstRunBackend(marker: FirstRunBackend.marker(in: dataDirectory))
-        let window = OnboardingWindow(backend: backend, firstRun: firstRun, immersive: !app.policy.background)
+        let window = OnboardingWindow(backend: backends.onboarding(firstRun: firstRun), firstRun: firstRun, immersive: !app.policy.background)
         onboarding = window
         window.show()
     }
 
     /// Whether this data folder has not seen the welcome (and a test instance never shows it by itself).
-    var isFirstRun: Bool { !app.policy.background && !FileManager.default.fileExists(atPath: FirstRunBackend.marker(in: dataDirectory).path) }
+    var isFirstRun: Bool { !app.policy.background && backends.shouldShowWelcome() }
 }

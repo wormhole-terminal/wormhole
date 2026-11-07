@@ -31,6 +31,8 @@ struct Options {
     /// Show the first-run welcome even when this data folder has seen it (`--onboarding`).
     var onboarding = false
     var devctl: URL?
+    /// `--update-feed <url>`: a feed the update window may ask. Without it no feed is ever contacted.
+    var updateFeedURL: String?
     /// Seconds to hold the window idle and report wake-ups, then quit.
     var idleSeconds: Double?
 

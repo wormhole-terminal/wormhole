@@ -12,6 +12,7 @@ if arguments.contains("-h") || arguments.contains("--help") {
 do {
     let options = try Options.parse(arguments, environment: ProcessInfo.processInfo.environment)
     let dataDirectory = try Isolation.require()
+    Isolation.confineHomes(to: dataDirectory)
     switch options.mode {
     case .renderPNG(let prefix, let frames, let every):
         try RenderPNG.run(options: options, prefix: prefix, frames: frames, every: every)

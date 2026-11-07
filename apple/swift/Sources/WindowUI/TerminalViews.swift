@@ -36,6 +36,9 @@ public final class TerminalViews {
         }
     }
 
+    /// Every terminal's view that exists: settings that reach all of them (fonts, colours) walk it.
+    public func forEach(_ body: (MetalTerminalView) -> Void) { views.values.forEach(body) }
+
     public func shutdown() {
         for view in views.values { view.shutdown() }
         views.removeAll()

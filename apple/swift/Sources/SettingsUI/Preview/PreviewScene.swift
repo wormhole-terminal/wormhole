@@ -1,3 +1,4 @@
+import WordsModel
 // Which scene the strip above a page shows (`preview_column.rs` `PreviewKind`) and what it says of itself.
 // The strip holds nothing to operate: no focus stop, and one labelled group for VoiceOver.
 
@@ -20,28 +21,28 @@ enum PreviewScene: Equatable {
 
     var title: String {
         switch self {
-        case .window: String(localized: "settings-window-window", defaultValue: "Window")
-        case .fonts: String(localized: "settings-window-fonts", defaultValue: "Fonts")
-        case .sidebar, .agents: String(localized: "settings-window-terminals-list", defaultValue: "Terminals list")
-        case .notifications: String(localized: "settings-window-notifications", defaultValue: "Notifications")
-        case .menuBar: String(localized: "settings-window-menu-bar", defaultValue: "Menu bar")
-        case .hotkey: String(localized: "settings-window-hotkey", defaultValue: "Hotkey")
-        case .git: String(localized: "settings-section-git", defaultValue: "Changes & diffs")
+        case .window: Words.text("settings-window-window", fallback: "Window")
+        case .fonts: Words.text("settings-window-fonts", fallback: "Fonts")
+        case .sidebar, .agents: Words.text("settings-window-terminals-list", fallback: "Terminals list")
+        case .notifications: Words.text("settings-window-notifications", fallback: "Notifications")
+        case .menuBar: Words.text("settings-window-menu-bar", fallback: "Menu bar")
+        case .hotkey: Words.text("settings-window-hotkey", fallback: "Hotkey")
+        case .git: Words.text("settings-section-git", fallback: "Changes & diffs")
         }
     }
 
     /// The line under the stage where the picture needs a word of how it differs from the app.
     var caption: String? {
         switch self {
-        case .window: String(localized: "settings-appearance-stage-caption", defaultValue: "Live preview of a window. Its blur isn't drawn here")
-        case .fonts: String(localized: "settings-fonts-hover-a-font-in-a-list", defaultValue: "Your fonts in a sample of terminal text")
-        case .agents: String(localized: "settings-agents-preview-caption", defaultValue: "The Terminals list with agents at work")
-        case .notifications: String(localized: "settings-notifications-preview-caption", defaultValue: "How a notification looks")
+        case .window: Words.text("settings-appearance-stage-caption", fallback: "Live preview of a window. Its blur isn't drawn here")
+        case .fonts: Words.text("settings-fonts-hover-a-font-in-a-list", fallback: "Your fonts in a sample of terminal text")
+        case .agents: Words.text("settings-agents-preview-caption", fallback: "The Terminals list with agents at work")
+        case .notifications: Words.text("settings-notifications-preview-caption", fallback: "How a notification looks")
         default: nil
         }
     }
 
     var spoken: String {
-        String(localized: "settings-window-preview-label", defaultValue: "Preview of \(title) with your current settings")
+        Words.text("settings-window-preview-label", fallback: "Preview of \(title) with your current settings")
     }
 }

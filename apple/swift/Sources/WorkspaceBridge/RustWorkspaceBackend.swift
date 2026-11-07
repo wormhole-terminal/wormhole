@@ -65,10 +65,13 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
 
     public func hook(id: TerminalID, agent: String, event: String, message: String?) {
         _ = handle(workspace.hook(id: Int64(id), agent: agent, event: event, message: message))
+        // A hook fed from the main thread wakes no one: the window pulls what changed itself.
+        onWake?()
     }
 
     public func setNotes(id: TerminalID, tasksDone: [Bool], notes: [String]) {
         _ = handle(workspace.setNotes(id: Int64(id), tasksDone: tasksDone, notes: notes))
+        onWake?()
     }
 
     public func revisions() -> WorkspaceModel.Revisions { WorkspaceModel.Revisions(workspace.revisions()) }

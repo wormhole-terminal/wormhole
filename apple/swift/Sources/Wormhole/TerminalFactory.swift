@@ -12,6 +12,8 @@ final class TerminalFactory {
     private let options: Options
     private var configuration: RendererConfiguration?
     var onExit: (TerminalID, Int32?) -> Void = { _, _ in }
+    /// The fonts and colours a new terminal starts with (Settings and the theme); set once the window exists.
+    var look: TerminalLook?
     /// The source of a terminal that the core's workspace runs; nil means the mock sources.
     private let real: ((TerminalID) -> (any FrameSource)?)?
 
@@ -39,6 +41,7 @@ final class TerminalFactory {
             }
             let view = try MetalTerminalView(source: source, configuration: configuration)
             view.fixedGrid = options.grid
+            look?.dress(view)
             view.onExit = { [weak self] in self?.onExit(id, $0) }
             return view
         } catch {

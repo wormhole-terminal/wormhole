@@ -2,10 +2,11 @@
 // named like its key (`studio-show-yours` is `showYours`). English until the FFI hands over the catalogue.
 
 import Foundation
+import WordsModel
 
 enum StudioWords {
     private static func text(_ key: StaticString, _ english: String.LocalizationValue) -> String {
-        String(localized: key, defaultValue: english)
+        Words.text(key, fallback: String(localized: key, defaultValue: english))
     }
 
     static let title = text("studio-title", "Theme Studio")

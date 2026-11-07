@@ -13,13 +13,21 @@ extension AppController {
         applyLookOptions()
         configureThemes()
         connectFactory()
+        // Settings and the theme reach the terminals before the first one is drawn.
+        terminalLook.followTheme()
+        let applier = SettingsApplier(app: self, model: settingsModel)
+        settingsApplier = applier
+        applier.start()
         guard let first = hub.state.selected.flatMap({ hub.terminals.view(for: $0) }) else {
             throw Options.UsageError(description: "no terminal source could start")
         }
         // A fixed grid is a measuring mode: the window fits it. The title row and the status bar sit above and
         // below the terminal: 38 + 24 pt.
-        let terminalSize = options.grid.map { first.renderer.pointSize(forGrid: $0.cols, $0.rows) } ?? CGSize(width: 960, height: 600)
-        let size = CGSize(width: terminalSize.width, height: terminalSize.height + 62)
+        // Otherwise the GPUI app's default window (1320 x 820): both columns open leave the terminal the room its title row needs.
+        let size = options.grid.map { grid in
+            let terminal = first.renderer.pointSize(forGrid: grid.cols, grid.rows)
+            return CGSize(width: terminal.width, height: terminal.height + 62)
+        } ?? CGSize(width: 1320, height: 820)
         let controller = WorkspaceWindowController(
             title: "Wormhole (Swift experiment)", contentSize: size, content: WorkspaceRootView(hub: hub, look: look))
         controller.onClose = { [weak self] in self?.hub.terminals.shutdown() }
@@ -37,6 +45,8 @@ extension AppController {
         menus = MenuController(app: self)
         menus?.start()
         ambient = AmbientController(app: self)
+        applier.applyAmbient()
+        startRealParts()
         if let directory = options.devctl {
             let devctl = DevCtl(directory: directory) { [weak self] line in self?.run(command: line) }
             try devctl.start()
@@ -74,13 +84,24 @@ extension AppController {
         }
     }
 
-    /// Over an in-memory backend until the settings come through the FFI: edits live for this run only.
+    /// The core's settings where the window is real, in memory (this run only) elsewhere.
     func showSettings() {
-        if settingsController == nil {
-            let model = SettingsModel(backend: MockSettingsBackend(), host: MockSettingsHost())
-            settingsController = SettingsWindowController(model: model)
-        }
+        if settingsController == nil { settingsController = SettingsWindowController(model: settingsModel) }
         settingsController?.show()
+    }
+
+    /// What only a real window has: the notes' store, the banners and the agents' questions.
+    private func startRealParts() {
+        if let panelNotes {
+            notesCoordinator = NotesCoordinator(persistence: panelNotes, hub: hub)
+            notesCoordinator?.start()
+        }
+        guard options.isReal else { return }
+        notices = NoticeFeed(app: self)
+        aux.startAccess()
+        #if WITH_UNIFFI
+            (panelEffects as? PanelEffects)?.log = { [weak self] in self?.devctl?.append($0) }
+        #endif
     }
 
     func showLogs() {

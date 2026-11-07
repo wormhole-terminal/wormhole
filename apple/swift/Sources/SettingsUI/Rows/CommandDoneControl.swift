@@ -3,6 +3,7 @@
 
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct CommandDoneControl: View {
     let model: SettingsModel
@@ -28,7 +29,7 @@ struct CommandDoneControl: View {
 
     static func words(_ seconds: Int) -> String {
         seconds >= 60
-            ? String(localized: "settings-notifications-after-minutes", defaultValue: "\(seconds / 60) min")
-            : String(localized: "settings-notifications-after-seconds", defaultValue: "\(seconds) s")
+            ? Words.text("settings-notifications-after-minutes", fallback: "\(seconds / 60) min")
+            : Words.text("settings-notifications-after-seconds", fallback: "\(seconds) s")
     }
 }

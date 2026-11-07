@@ -3,10 +3,11 @@
 // source as its default, so a `.strings` table can replace the defaults without touching a caller.
 
 import Foundation
+import WordsModel
 
 public enum AuxText {
     static func tr(_ key: StaticString, _ value: String.LocalizationValue) -> String {
-        String(localized: key, defaultValue: value, table: "Aux")
+        Words.text(key, fallback: String(localized: key, defaultValue: value, table: "Aux"))
     }
 
     static func plural(_ n: Int, one: String, other: String) -> String { n == 1 ? one : other }

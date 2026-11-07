@@ -2,16 +2,17 @@
 // colours (`describe` in `studio/token_editor.rs`).
 
 import Foundation
+import WordsModel
 
 enum StudioDescriptions {
     static func describe(_ token: String) -> String {
-        if let slot = token.dropPrefix("terminal.ansi.") { return String(localized: "studio-describe-ansi", defaultValue: "Terminal palette color \(slot)") }
-        if let key = token.dropPrefix("syntax.") { return String(localized: "studio-describe-syntax", defaultValue: "Code highlighting: \(key)") }
+        if let slot = token.dropPrefix("terminal.ansi.") { return Words.text("studio-describe-ansi", fallback: "Terminal palette color \(slot)") }
+        if let key = token.dropPrefix("syntax.") { return Words.text("studio-describe-syntax", fallback: "Code highlighting: \(key)") }
         switch token {
-        case "terminal.background": return String(localized: "studio-describe-background", defaultValue: "The terminal's background")
-        case "terminal.foreground": return String(localized: "studio-describe-foreground", defaultValue: "The terminal's text")
-        case "terminal.cursor": return String(localized: "studio-describe-cursor", defaultValue: "The terminal's cursor")
-        default: return String(localized: "studio-describe-selection", defaultValue: "Selected text in the terminal")
+        case "terminal.background": return Words.text("studio-describe-background", fallback: "The terminal's background")
+        case "terminal.foreground": return Words.text("studio-describe-foreground", fallback: "The terminal's text")
+        case "terminal.cursor": return Words.text("studio-describe-cursor", fallback: "The terminal's cursor")
+        default: return Words.text("studio-describe-selection", fallback: "Selected text in the terminal")
         }
     }
 }

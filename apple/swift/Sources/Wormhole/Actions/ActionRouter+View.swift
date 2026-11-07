@@ -21,6 +21,9 @@ extension ActionRouter {
             "showFiles": { hub.send(.showPanelTab(.files)) },
             "commandPalette": { hub.send(.showOverlay(hub.state.overlay == .palette ? nil : .palette)) },
             "keyboardShortcuts": { hub.send(.showOverlay(hub.state.overlay == .shortcuts ? nil : .shortcuts)) },
+            "bigger": { hub.zoomText(step: 1) },
+            "smaller": { hub.zoomText(step: -1) },
+            "actualSize": { hub.zoomText(step: nil) },
         ]
     }
 

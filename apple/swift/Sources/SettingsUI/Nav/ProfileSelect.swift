@@ -3,6 +3,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 struct ProfileSelect: View {
     let name: String
@@ -28,7 +29,7 @@ struct ProfileSelect: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .accessibilityLabel(String(localized: "settings-section-profile", defaultValue: "Profile"))
+        .accessibilityLabel(Words.text("settings-section-profile", fallback: "Profile"))
         .accessibilityValue(name)
     }
 }

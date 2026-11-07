@@ -26,6 +26,7 @@ extension Options {
           --appearance <light|dark|system>   which appearance shows (default system)
           --status-bar         show the optional status bar
           --onboarding         show the first-run welcome (it shows by itself in a data folder that has not seen it)
+          --update-feed <url>  the feed the Updates window may check (none is ever contacted without it)
           --background         accessory app, window behind the others, nothing takes focus (WORMHOLE_BACKGROUND=1)
 
         Needs WORMHOLE_DATA_DIR=<a folder named Wormhole-swift*>; WORMHOLE_DEVCTL=<dir> turns on the control folder.
@@ -77,6 +78,7 @@ extension Options {
             case "--background": options.background = true
             case "--status-bar": options.statusBar = true
             case "--onboarding": options.onboarding = true
+            case "--update-feed": options.updateFeedURL = try value(flag)
             case "--theme":
                 let id = try value(flag)
                 guard ThemeLibrary.bundled.theme(id: id) != nil else {

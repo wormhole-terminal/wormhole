@@ -12,6 +12,7 @@ import WindowUI
 @MainActor
 final class MenuController {
     private let builder: AppMenuBuilder
+    private let provider: any MenuProviding
     private unowned let app: AppController
     private var standard: [MenuCommand: Selector]
     private var shown = MenuState()
@@ -21,7 +22,8 @@ final class MenuController {
         // Copy goes through the app so a copy of the terminal's selection can say what it copied (the chip).
         standard = StandardActions.selectors
         standard[.action("copy")] = nil
-        builder = AppMenuBuilder(standard: standard)
+        provider = PlatformSetup.menus(app.options)
+        builder = AppMenuBuilder(builder: provider, standard: standard)
         builder.dispatcher.handler = { [weak app] command in app?.router.dispatch(command) }
     }
 
@@ -43,5 +45,5 @@ final class MenuController {
     }
 
     /// The bar as text, one item per line with its key and marks (the control folder's `menus`).
-    func dump() -> String { MenuDump.text(MenuBuilder().menus(for: shown)) }
+    func dump() -> String { MenuDump.text(provider.menus(for: shown)) }
 }

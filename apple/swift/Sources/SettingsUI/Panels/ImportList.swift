@@ -3,6 +3,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct ImportList: View {
     let records: [ImportRecord]
@@ -17,7 +18,7 @@ struct ImportList: View {
                         Text(record.summary).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
                     }
                     Spacer()
-                    Text(String(localized: "settings-import-review-soon", defaultValue: "Review…")).font(.system(size: TextRole.label.size))
+                    Text(Words.text("settings-import-review-soon", fallback: "Review…")).font(.system(size: TextRole.label.size))
                         .foregroundStyle(tokens.textFaint)
                 }
                 .frame(minHeight: SettingsMetric.rowMinHeight)

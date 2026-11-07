@@ -11,7 +11,7 @@
     <key>CFBundleVersion</key>
     <string>0</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.0.0-experiment</string>
+    <string>1.6.3</string>
     <key>NSHighResolutionCapable</key>
     <true/>
 </dict>

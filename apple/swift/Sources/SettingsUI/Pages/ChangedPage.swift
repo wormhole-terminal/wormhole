@@ -5,6 +5,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct ChangedPage: View {
     let model: SettingsModel
@@ -38,7 +39,7 @@ struct ChangedPage: View {
         .confirmationDialog(SettingsText.resetAll, isPresented: $confirming) {
             Button(SettingsText.resetAll, role: .destructive) { model.resetAll() }
         } message: {
-            Text(String(localized: "settings-changed-reset-all-confirm", defaultValue: "Every changed setting goes back to its default."))
+            Text(Words.text("settings-changed-reset-all-confirm", fallback: "Every changed setting goes back to its default."))
         }
     }
 }

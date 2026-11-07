@@ -11,8 +11,13 @@ import WorkspaceModel
 
 @MainActor
 final class AmbientController {
-    private let status: StatusItemController
+    let status: StatusItemController
     private let dock: DockController
+    /// What the Dock badge counts (Settings → Notifications → Dock); set by `apply`.
+    var badgeMode = DockBadgeMode.needsYou { didSet { if badgeMode != oldValue { dock.update(terminals: listed, badgeMode: badgeMode) } } }
+    private var listed: [AmbientTerminal] = []
+    /// The global key that raises the quick panel or the app, once Settings names one.
+    var hotkey: GlobalHotkey?
     private let quick: QuickPanelController
     private unowned let app: AppController
 
@@ -33,6 +38,9 @@ final class AmbientController {
     func dockMenu() -> NSMenu { dock.dockMenu() }
 
     func toggleQuickPanel() { quick.toggle { run(.showApp) } }
+
+    /// The key's other action: bring the app forward, or hide it when it already is.
+    func toggleApp() { NSApp.isActive ? NSApp.hide(nil) : NSApp.activate() }
 
     func run(_ command: AmbientCommand) {
         let hub = app.hub
@@ -59,7 +67,8 @@ final class AmbientController {
         var snapshot = StatusSnapshot()
         snapshot.terminals = terminals
         status.update(snapshot)
-        dock.update(terminals: terminals, badgeMode: .needsYou)
+        listed = terminals
+        dock.update(terminals: terminals, badgeMode: badgeMode)
     }
 }
 

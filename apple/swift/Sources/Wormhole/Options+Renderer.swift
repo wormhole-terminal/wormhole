@@ -29,16 +29,19 @@ extension Options {
 
     /// The repository's bundled fonts, found by walking up from the executable and from the working folder.
     static func findBundledFonts() -> URL? {
-        let relative = "crates/wormhole-core/assets/fonts/JetBrainsMono"
+        findInRepository("crates/wormhole-core/assets/fonts/JetBrainsMono", containing: "JetBrainsMono-Regular.ttf")
+    }
+
+    /// `relative` (a folder, or a file when `containing` is nil) inside the repository this was built from.
+    static func findInRepository(_ relative: String, containing file: String? = nil) -> URL? {
         var starts = [URL(fileURLWithPath: FileManager.default.currentDirectoryPath)]
         if let executable = Bundle.main.executableURL { starts.append(executable.deletingLastPathComponent()) }
         for start in starts {
             var directory = start.standardizedFileURL
             for _ in 0..<12 {
                 let candidate = directory.appendingPathComponent(relative)
-                if FileManager.default.fileExists(atPath: candidate.appendingPathComponent("JetBrainsMono-Regular.ttf").path) {
-                    return candidate
-                }
+                let marker = file.map { candidate.appendingPathComponent($0) } ?? candidate
+                if FileManager.default.fileExists(atPath: marker.path) { return candidate }
                 directory.deleteLastPathComponent()
             }
         }

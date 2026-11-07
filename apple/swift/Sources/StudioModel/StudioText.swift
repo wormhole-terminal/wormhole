@@ -3,10 +3,11 @@
 // catalogue's table; `String(localized:)` keeps each one translatable meanwhile.
 
 import Foundation
+import WordsModel
 
 enum StudioText {
     private static func text(_ key: StaticString, _ english: String.LocalizationValue) -> String {
-        String(localized: key, defaultValue: english)
+        Words.text(key, fallback: String(localized: key, defaultValue: english))
     }
 
     static func untitledFrom(_ from: String) -> String { text("studio-untitled-from", "Untitled (from \(from))") }

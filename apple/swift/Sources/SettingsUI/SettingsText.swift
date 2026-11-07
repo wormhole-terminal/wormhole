@@ -4,54 +4,55 @@
 // words (labels, descriptions, options) arrive already in the language in use.
 
 import Foundation
+import WordsModel
 
 enum SettingsText {
-    static var settings: String { String(localized: "settings-window-settings", defaultValue: "Settings") }
+    static var settings: String { Words.text("settings-window-settings", fallback: "Settings") }
     static var searchSettings: String {
-        String(localized: "settings-window-search-settings", defaultValue: "Search settings")
+        Words.text("settings-window-search-settings", fallback: "Search settings")
     }
-    static var clearSearch: String { String(localized: "settings-window-clear-search", defaultValue: "Clear search") }
-    static var results: String { String(localized: "settings-window-results", defaultValue: "Results") }
+    static var clearSearch: String { Words.text("settings-window-clear-search", fallback: "Clear search") }
+    static var results: String { Words.text("settings-window-results", fallback: "Results") }
     static var noResults: String {
         String(
             localized: "settings-window-no-results",
             defaultValue: "No setting has these words in its name, description or config key.")
     }
     static var escClears: String {
-        String(localized: "settings-window-clears-the-search-then-closes", defaultValue: "clears the search, then closes")
+        Words.text("settings-window-clears-the-search-then-closes", fallback: "clears the search, then closes")
     }
     static func resultsSummary(hits: Int, sections: Int, query: String) -> String {
         String(
             localized: "settings-window-results-summary",
             defaultValue: "\(hits) settings in \(sections) sections match “\(query)”. Pick a section to see it in context.")
     }
-    static var rescanPath: String { String(localized: "settings-window-rescan-path", defaultValue: "Rescan PATH") }
-    static var scanAgain: String { String(localized: "settings-import-scan-again", defaultValue: "Scan again") }
-    static var newProfile: String { String(localized: "settings-window-new-profile", defaultValue: "New profile…") }
-    static var notSet: String { String(localized: "settings-row-not-set", defaultValue: "Not set") }
-    static var noneSet: String { String(localized: "settings-row-none", defaultValue: "None") }
-    static var notBuilt: String { String(localized: "settings-panel-not-built", defaultValue: "Not in this build yet") }
-    static var preview: String { String(localized: "settings-window-preview", defaultValue: "Preview") }
-    static var previewTag: String { String(localized: "settings-nav-preview-tag", defaultValue: "Preview") }
-    static var reset: String { String(localized: "settings-row-reset", defaultValue: "Reset to default") }
-    static var changed: String { String(localized: "settings-row-changed", defaultValue: "Changed") }
-    static var changedTitle: String { String(localized: "settings-section-changed", defaultValue: "Changed") }
+    static var rescanPath: String { Words.text("settings-window-rescan-path", fallback: "Rescan PATH") }
+    static var scanAgain: String { Words.text("settings-import-scan-again", fallback: "Scan again") }
+    static var newProfile: String { Words.text("settings-window-new-profile", fallback: "New profile…") }
+    static var notSet: String { Words.text("settings-row-not-set", fallback: "Not set") }
+    static var noneSet: String { Words.text("settings-row-none", fallback: "None") }
+    static var notBuilt: String { Words.text("settings-panel-not-built", fallback: "Not in this build yet") }
+    static var preview: String { Words.text("settings-window-preview", fallback: "Preview") }
+    static var previewTag: String { Words.text("settings-nav-preview-tag", fallback: "Preview") }
+    static var reset: String { Words.text("settings-row-reset", fallback: "Reset to default") }
+    static var changed: String { Words.text("settings-row-changed", fallback: "Changed") }
+    static var changedTitle: String { Words.text("settings-section-changed", fallback: "Changed") }
     static var changedIntro: String {
         String(
             localized: "settings-section-changed-intro",
             defaultValue: "Every setting that differs from its default, each put back by its arrow.")
     }
-    static var noneChanged: String { String(localized: "settings-changed-none", defaultValue: "No settings changed") }
+    static var noneChanged: String { Words.text("settings-changed-none", fallback: "No settings changed") }
     static var noneChangedDetail: String {
-        String(localized: "settings-changed-none-detail", defaultValue: "Everything is at its default")
+        Words.text("settings-changed-none-detail", fallback: "Everything is at its default")
     }
-    static var resetAll: String { String(localized: "settings-changed-reset-all", defaultValue: "Reset All…") }
+    static var resetAll: String { Words.text("settings-changed-reset-all", fallback: "Reset All…") }
     static var recorderPrompt: String {
-        String(localized: "settings-row-recorder-prompt", defaultValue: "Press the shortcut…")
+        Words.text("settings-row-recorder-prompt", fallback: "Press the shortcut…")
     }
-    static var recorderNone: String { String(localized: "settings-row-recorder-none", defaultValue: "Not set") }
-    static var profileDefault: String { String(localized: "settings-nav-profile-default", defaultValue: "Default") }
+    static var recorderNone: String { Words.text("settings-row-recorder-none", fallback: "Not set") }
+    static var profileDefault: String { Words.text("settings-nav-profile-default", fallback: "Default") }
     static func previewLabel(_ scene: String) -> String {
-        String(localized: "settings-window-preview-label", defaultValue: "Preview of \(scene) with your current settings")
+        Words.text("settings-window-preview-label", fallback: "Preview of \(scene) with your current settings")
     }
 }

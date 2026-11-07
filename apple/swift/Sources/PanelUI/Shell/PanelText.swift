@@ -3,7 +3,8 @@
 // real table replaces the body and no view changes.
 
 import Foundation
+import WordsModel
 
 func panelText(_ key: StaticString, _ english: String.LocalizationValue) -> String {
-    String(localized: key, defaultValue: english)
+    Words.text(key, fallback: String(localized: key, defaultValue: english))
 }

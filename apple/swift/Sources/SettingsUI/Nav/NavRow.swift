@@ -4,6 +4,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 enum NavMark: Equatable {
     case none, count(Int), preview, hits(Int), noHits
@@ -60,9 +61,9 @@ struct NavRow: View {
 
     private var spoken: String {
         switch mark {
-        case .count(let n): String(localized: "settings-nav-changed-count", defaultValue: "\(n) changed")
-        case .hits(let n): String(localized: "settings-nav-hits", defaultValue: "\(n) results")
-        case .noHits: String(localized: "settings-nav-no-hits", defaultValue: "no results")
+        case .count(let n): Words.text("settings-nav-changed-count", fallback: "\(n) changed")
+        case .hits(let n): Words.text("settings-nav-hits", fallback: "\(n) results")
+        case .noHits: Words.text("settings-nav-no-hits", fallback: "no results")
         case .preview: SettingsText.previewTag
         case .none: ""
         }

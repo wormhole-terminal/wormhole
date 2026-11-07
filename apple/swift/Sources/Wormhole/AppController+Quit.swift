@@ -26,6 +26,13 @@ extension AppController {
         NSApp.terminate(nil)
     }
 
+    /// What a restart would end, for the updater's question.
+    var runningTerminals: [RunningTerminal] {
+        hub.state.sections.flatMap(\.rows).filter(\.runsSomething).map {
+            RunningTerminal(name: $0.terminal.title, agent: $0.terminal.agent?.name, status: $0.terminal.runStatus, program: $0.runningCommand)
+        }
+    }
+
     private var quitFacts: QuitFacts {
         let running = hub.state.sections.flatMap(\.rows).filter(\.runsSomething)
         return QuitFacts(

@@ -3,9 +3,10 @@
 // Until the FFI hands over the real table, every sentence a person reads is written once, in an `L10n+Area.swift`.
 
 import Foundation
+import WordsModel
 
 enum L10n {
     static func tr(_ key: StaticString, _ english: String.LocalizationValue) -> String {
-        String(localized: key, defaultValue: english)
+        Words.text(key, fallback: String(localized: key, defaultValue: english))
     }
 }

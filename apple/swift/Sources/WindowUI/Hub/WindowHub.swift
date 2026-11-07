@@ -37,8 +37,10 @@ public final class WindowHub {
     public init(store: WorkspaceStore, terminals: TerminalViews, panelBackends: PanelBackends = .mock()) {
         self.store = store
         self.terminals = terminals
-        panel = PanelController(host: SystemPanelHost(), backends: panelBackends)
+        let host = SystemPanelHost()
+        panel = PanelController(host: host, backends: panelBackends)
         panel.presentation = .terminalArea
+        connect(host)
     }
 
     public var state: WorkspaceState { store.state }

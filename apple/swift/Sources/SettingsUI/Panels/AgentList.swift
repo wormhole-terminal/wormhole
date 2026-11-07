@@ -4,6 +4,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct AgentList: View {
     let records: [AgentRecord]
@@ -27,7 +28,7 @@ struct AgentList: View {
                 .frame(minHeight: SettingsMetric.rowMinHeight)
                 .accessibilityElement(children: .combine)
             }
-            if records.isEmpty { PanelNote(text: String(localized: "settings-agents-none", defaultValue: "None found on this Mac")) }
+            if records.isEmpty { PanelNote(text: Words.text("settings-agents-none", fallback: "None found on this Mac")) }
         }
     }
 
@@ -42,9 +43,9 @@ struct AgentList: View {
 
     private func title(_ hooks: AgentRecord.HookAction) -> String {
         switch hooks {
-        case .install: String(localized: "settings-agents-install-hooks", defaultValue: "Install hooks")
-        case .repair: String(localized: "settings-agents-repair-hooks", defaultValue: "Repair hooks")
-        case .remove: String(localized: "settings-agents-remove-hooks", defaultValue: "Remove hooks")
+        case .install: Words.text("settings-agents-install-hooks", fallback: "Install hooks")
+        case .repair: Words.text("settings-agents-repair-hooks", fallback: "Repair hooks")
+        case .remove: Words.text("settings-agents-remove-hooks", fallback: "Remove hooks")
         }
     }
 }

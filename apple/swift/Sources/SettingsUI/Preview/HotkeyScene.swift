@@ -3,6 +3,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct HotkeyScene: View {
     let model: SettingsModel
@@ -21,8 +22,8 @@ struct HotkeyScene: View {
             Image(systemName: "arrow.down").foregroundStyle(t.textFaint)
             Label(
                 opensPanel
-                    ? String(localized: "settings-hotkey-quick-panel", defaultValue: "Quick panel")
-                    : String(localized: "settings-hotkey-show-or-hide-wormhole", defaultValue: "Show or hide Wormhole"),
+                    ? Words.text("settings-hotkey-quick-panel", fallback: "Quick panel")
+                    : Words.text("settings-hotkey-show-or-hide-wormhole", fallback: "Show or hide Wormhole"),
                 systemImage: opensPanel ? "rectangle.and.text.magnifyingglass" : "macwindow")
                 .font(.system(size: TextRole.body.size)).foregroundStyle(t.textPrimary)
         }
