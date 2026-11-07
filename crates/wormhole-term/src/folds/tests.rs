@@ -1,11 +1,13 @@
 use wormhole_vt::{Column, Line, Point, Scroll, SelectionType, Side};
 
-use super::{FoldSpan, MIN_HIDDEN, Refused, Request};
+use std::sync::Arc;
+
+use super::{FoldOwner, FoldSpan, MAX_PER_PROBE, MIN_HIDDEN, Refused, Request};
 use crate::ScreenSnapshot;
 use crate::testing::TestTerm;
 
-const FINISHED: Request = Request { finished: true, failed: false };
-const UNMARKED: Request = Request { finished: false, failed: false };
+const FINISHED: Request = Request { finished: true, failed: false, owner: None };
+const UNMARKED: Request = Request { finished: false, failed: false, owner: None };
 
 /// 10 × 4 with history, after 30 lines "L0" … "L29": the screen shows L26 … L29 (grid lines 0 to 3, the
 /// cursor on 3), L25 is grid line -1.
@@ -45,7 +47,7 @@ fn a_fold_follows_its_rows_and_hides_them_as_one() {
     let mut term = filled();
     fold(&mut term, -12, -4).unwrap();
     term.feed(b"\r\nmore\r\nmore");
-    let span = spans(&mut term)[0];
+    let span = spans(&mut term).remove(0);
     assert_eq!((span.first, span.last, span.hidden()), (Line(-14), Line(-6), 9), "it scrolled with the text");
 
     term.scroll_display(Scroll::Delta(8));
@@ -145,4 +147,95 @@ fn a_full_screen_program_or_mouse_reporting_has_no_folds() {
     term.feed(b"\x1b[?1000l");
     assert_eq!(spans(&mut term).iter().map(|span| span.id).collect::<Vec<_>>(), [id], "the fold waited");
     assert!(term.screen_mut().fold_toggle(id));
+}
+
+#[test]
+fn a_drag_that_ends_on_a_marker_takes_the_rows_it_hides() {
+    let mut term = filled();
+    fold(&mut term, -12, -4).unwrap();
+    let marker = Point::new(Line(-12), Column(2));
+    // Down onto the marker: through the fold's last row.
+    term.start_selection(SelectionType::Simple, Point::new(Line(-16), Column(0)), Side::Left);
+    term.update_selection(marker, Side::Right);
+    let down = term.screen().selection_text().expect("selected");
+    assert!(down.contains("L22") && !down.contains("L23"), "{down}");
+    // Up onto it: from the fold's first row.
+    term.start_selection(SelectionType::Simple, Point::new(Line(-2), Column(0)), Side::Left);
+    term.update_selection(marker, Side::Left);
+    let up = term.screen().selection_text().expect("selected");
+    assert!(up.contains("L14") && !up.contains("L13"), "{up}");
+    // The fold's own rows (Select Output on a folded block) are what they say.
+    term.start_selection(SelectionType::Lines, Point::new(Line(-12), Column(0)), Side::Left);
+    term.update_selection(Point::new(Line(-4), Column(9)), Side::Right);
+    assert_eq!(term.screen().selection_text().map(|text| text.lines().count()), Some(9));
+}
+
+fn owned(probe: &str) -> Request {
+    let owner = FoldOwner { probe: probe.into(), name: probe.into(), label: "build output".into() };
+    Request { owner: Some(Arc::new(owner)), ..FINISHED }
+}
+
+#[test]
+fn a_probes_folds_are_capped_and_go_with_it() {
+    let mut term = TestTerm::new(10, 4, 1000);
+    term.feed("x\r\n".repeat(600).as_bytes());
+    for n in 0..MAX_PER_PROBE as i32 {
+        let at = -3 * n - 10;
+        term.screen_mut().fold_add(Line(at - 2), Line(at), owned("acme")).expect("a fold");
+    }
+    let at = -3 * MAX_PER_PROBE as i32 - 10;
+    assert_eq!(term.screen_mut().fold_add(Line(at - 2), Line(at), owned("acme")), Err(Refused::TooMany));
+    assert!(
+        term.screen_mut().fold_add(Line(at - 2), Line(at), owned("other")).is_ok(),
+        "the cap is each Probe's"
+    );
+    let mine = fold(&mut term, -400, -390).unwrap();
+    let owner = |term: &mut TestTerm| spans(term).into_iter().filter_map(|span| span.owner).count();
+    assert_eq!(owner(&mut term), MAX_PER_PROBE + 1);
+    // Turned off, or its permission revoked: its folds go at once, the person's stay.
+    term.screen_mut().fold_retain_probes(&["other".to_string()]);
+    assert_eq!(owner(&mut term), 1);
+    assert!(spans(&mut term).iter().any(|span| span.id == mine && span.owner.is_none()));
+}
+
+#[test]
+fn a_bell_or_a_secret_opens_what_is_near_and_refuses_new_folds() {
+    let mut term = filled();
+    let near = fold(&mut term, -6, -3).unwrap();
+    fold(&mut term, -20, -8).unwrap();
+    term.screen_mut().fold_expand_recent();
+    let open = |term: &mut TestTerm| spans(term).iter().map(|span| span.expanded).collect::<Vec<_>>();
+    assert_eq!(open(&mut term), [false, true], "the fold in the last two screens opens for good");
+    assert!(term.screen_mut().fold_toggle(near) && open(&mut term) == [false, false]);
+
+    assert!(term.screen_mut().fold_set_secure(true));
+    assert_eq!(open(&mut term), [false, true], "while a password is typed it shows");
+    assert_eq!(fold(&mut term, -30, -25), Err(Refused::Secure));
+    assert!(term.screen_mut().fold_set_secure(false));
+    assert_eq!(open(&mut term), [false, false]);
+}
+
+#[test]
+fn never_hide_lines_shows_everything_and_folds_nothing() {
+    let mut term = filled();
+    let id = fold(&mut term, -12, -4).unwrap();
+    assert!(term.screen_mut().fold_set_off(true));
+    assert!(spans(&mut term).is_empty());
+    assert_eq!(fold(&mut term, -30, -25), Err(Refused::NotNow));
+    term.screen_mut().fold_set_off(false);
+    assert_eq!(spans(&mut term).iter().map(|span| span.id).collect::<Vec<_>>(), [id], "it waited");
+    assert!(term.screen_mut().fold_show_all() && !term.screen_mut().fold_show_all());
+}
+
+#[test]
+fn the_minimap_marks_where_the_view_hides_lines() {
+    let mut term = filled();
+    fold(&mut term, -12, -4).unwrap();
+    let mut extents = Vec::new();
+    term.screen().fold_extents(&mut extents);
+    let history = term.history_size() as i32;
+    assert_eq!(extents, [((history - 12) as usize, (history - 4) as usize)]);
+    term.screen_mut().fold_show_all();
+    term.screen().fold_extents(&mut extents);
+    assert!(extents.is_empty(), "an open fold hides nothing");
 }

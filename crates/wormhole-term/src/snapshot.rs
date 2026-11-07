@@ -12,7 +12,7 @@ use wormhole_vt::image::ImagePlacement;
 use wormhole_vt::{Cell, Colors, CursorShape, Damage, Line, LineSize, Modes, RowExtras, SelectionRange};
 
 use super::blocks::BlockState;
-use super::folds::{FoldSpan, Shown, Walk};
+use super::folds::{FoldSpan, Shown, Walk, crosses_marker};
 use super::marks;
 use super::row_mark::RowMark;
 use super::screen::Screen;
@@ -197,7 +197,7 @@ impl ScreenSnapshot {
         let range = self.selection?;
         let shown = self.rows.get(row)?;
         let line = shown.line;
-        let (first, last) = shown.fold.map_or((line, line), |fold| (fold.first, fold.last));
+        let (first, last) = shown.fold.as_ref().map_or((line, line), |fold| (fold.first, fold.last));
         if last < range.start.line || first > range.end.line || self.cols == 0 {
             return None;
         }
@@ -240,7 +240,7 @@ impl ScreenSnapshot {
         for (snapshot, item) in self.rows.iter_mut().zip(&self.shown) {
             let (line, fold) = match *item {
                 Shown::Line(line) => (line, None),
-                Shown::Marker(ix) => (self.folds[ix].first, Some(self.folds[ix])),
+                Shown::Marker(ix) => (self.folds[ix].first, Some(self.folds[ix].clone())),
             };
             // History rows never change under the damage, so only the live screen's are asked.
             let damaged = fold.is_none()
@@ -251,8 +251,10 @@ impl ScreenSnapshot {
             if !snapshot.changed {
                 continue;
             }
-            (snapshot.line, snapshot.fold) = (line, fold);
-            if fold.is_some() {
+            snapshot.line = line;
+            let marker = fold.is_some();
+            snapshot.fold = fold;
+            if marker {
                 snapshot.cells.clear();
                 snapshot.cells.resize(cols, Cell::default());
                 snapshot.extras.clear();
@@ -284,10 +286,14 @@ impl ScreenSnapshot {
         self.history_size = screen.history_size();
         screen.placements(&mut self.placements);
         if !self.folds.is_empty() {
-            // A picture is placed by grid line: under folds it goes where its line is shown (one in a
-            // fold, or off the view, is not drawn).
-            let rows = &self.rows;
+            // A picture is placed by grid line: under folds it goes where its line is shown. One in a fold,
+            // off the view, or running over a marker is not drawn (clipped whole, not cut).
+            let (rows, folds) = (&self.rows, &self.folds);
             self.placements.retain_mut(|placement| {
+                let bottom = placement.line + (placement.rows.max(1) as i32 - 1);
+                if crosses_marker(folds, placement.line, bottom) {
+                    return false;
+                }
                 let Some(row) = row_of(rows, display_offset, placement.line, true) else { return false };
                 placement.line = Line(row as i32 - display_offset as i32);
                 true

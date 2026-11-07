@@ -150,6 +150,48 @@ pub(crate) fn tty(pid: u32) -> Option<u32> {
     bsd_info(pid).map(|info| info.e_tdev).filter(|&dev| dev != 0 && dev != u32::MAX)
 }
 
+#[allow(unsafe_code)] // libc FFI declaration; the one call carries its SAFETY note.
+unsafe extern "C" {
+    /// `devname(3)` with the caller's buffer (the libc crate has only the one with a static buffer).
+    fn devname_r(
+        dev: libc::dev_t,
+        mode: libc::mode_t,
+        buf: *mut libc::c_char,
+        len: libc::c_int,
+    ) -> *mut libc::c_char;
+}
+
+/// Whether the terminal of `pid` has echo off, which is what a program does to read a secret (`sudo`, `ssh`, a
+/// password prompt). Read from the terminal's device by name, with `O_NOCTTY` so it takes nothing over; a
+/// device that cannot be named or opened (the process is gone, or not the user's) says nothing.
+#[allow(unsafe_code)] // libc FFI; the buffers are sized and the descriptor lives as long as the file.
+pub(crate) fn echo_off(pid: u32) -> Option<bool> {
+    use std::os::fd::AsRawFd as _;
+    use std::os::unix::fs::OpenOptionsExt as _;
+
+    let dev = tty(pid)?;
+    let mut name = [0 as libc::c_char; 64];
+    // SAFETY: the buffer is `name.len()` bytes, which the call is told; it writes a NUL-terminated name and
+    // returns the buffer, or null for a device with no name.
+    let named =
+        unsafe { devname_r(dev as libc::dev_t, libc::S_IFCHR, name.as_mut_ptr(), name.len() as libc::c_int) };
+    if named.is_null() {
+        return None;
+    }
+    // SAFETY: devname_r wrote a NUL-terminated string into `name`.
+    let name = unsafe { std::ffi::CStr::from_ptr(name.as_ptr()) }.to_str().ok()?;
+    let device = std::fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(libc::O_NOCTTY | libc::O_NONBLOCK)
+        .open(format!("/dev/{name}"))
+        .ok()?;
+    // SAFETY: tcgetattr fills the struct, for which all-zero is a valid value.
+    let mut termios: libc::termios = unsafe { std::mem::zeroed() };
+    // SAFETY: the descriptor is open for as long as `device` is.
+    (unsafe { libc::tcgetattr(device.as_raw_fd(), &mut termios) } == 0)
+        .then_some(termios.c_lflag & libc::ECHO == 0)
+}
+
 #[allow(unsafe_code)] // libproc FFI; every buffer size is checked.
 pub(crate) fn group_members(pgid: u32) -> Vec<u32> {
     let mut pids = vec![0 as libc::c_int; 256];

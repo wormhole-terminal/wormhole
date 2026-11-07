@@ -49,7 +49,21 @@ impl TestTerm {
 
     /// Fold grid lines `first..=last` as a finished block's output would be (see `folds`).
     pub fn fold_lines(&mut self, first: i32, last: i32) -> Result<u64, crate::folds::Refused> {
-        let request = crate::folds::Request { finished: true, failed: false };
+        let request = crate::folds::Request { finished: true, failed: false, owner: None };
+        self.screen_mut().fold_add(Line(first), Line(last), request)
+    }
+
+    /// [`fold_lines`](Self::fold_lines) as a Probe's hook would make it.
+    pub fn fold_lines_by(
+        &mut self,
+        first: i32,
+        last: i32,
+        probe: &str,
+    ) -> Result<u64, crate::folds::Refused> {
+        let owner =
+            crate::folds::FoldOwner { probe: probe.into(), name: probe.into(), label: "output".into() };
+        let request =
+            crate::folds::Request { finished: true, failed: false, owner: Some(std::sync::Arc::new(owner)) };
         self.screen_mut().fold_add(Line(first), Line(last), request)
     }
 

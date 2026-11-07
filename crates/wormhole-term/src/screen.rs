@@ -240,11 +240,13 @@ impl Screen {
     }
 
     pub(crate) fn start_selection(&mut self, kind: SelectionType, point: Point, side: Side) {
+        self.fold_note_anchor(point);
         self.term.start_selection(kind, point, side);
     }
 
     /// Move the selection being dragged to `point` (nothing without one).
     pub(crate) fn update_selection(&mut self, point: Point, side: Side) {
+        let (point, side) = self.fold_snap(point, side);
         self.term.update_selection(point, side);
     }
 

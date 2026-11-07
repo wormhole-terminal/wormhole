@@ -53,6 +53,10 @@ pub(crate) fn tty(_pid: u32) -> Option<u32> {
     None
 }
 
+pub(crate) fn echo_off(_pid: u32) -> Option<bool> {
+    None
+}
+
 pub(crate) fn group_members(_pgid: u32) -> Vec<u32> {
     Vec::new()
 }

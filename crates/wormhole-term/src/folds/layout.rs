@@ -117,12 +117,25 @@ impl<'a> Walk<'a> {
     }
 }
 
+/// Whether a picture covering grid lines `top..=bottom` runs over a marker: a collapsed fold it overlaps,
+/// or the marker row an open fold puts into the picture's middle. It is clipped away (not drawn), since
+/// the rows it would cover are no longer the grid's rows in a row.
+pub(crate) fn crosses_marker(spans: &[FoldSpan], top: Line, bottom: Line) -> bool {
+    spans.iter().any(|span| {
+        if span.expanded {
+            span.first > top && span.first <= bottom
+        } else {
+            span.first <= bottom && top <= span.last
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn span(first: i32, last: i32, expanded: bool) -> FoldSpan {
-        FoldSpan { id: 1, first: Line(first), last: Line(last), expanded, failed: false }
+        FoldSpan { id: 1, first: Line(first), last: Line(last), expanded, failed: false, owner: None }
     }
 
     fn shown(spans: &[FoldSpan], bottom: i32, rows: usize) -> Vec<String> {
@@ -166,6 +179,16 @@ mod tests {
             out,
             [Shown::Marker(0), Shown::Line(Line(-1)), Shown::Line(Line(0)), Shown::Line(Line(1))]
         );
+    }
+
+    #[test]
+    fn a_picture_that_runs_over_a_marker_is_clipped() {
+        let (collapsed, open) = ([span(-8, -4, false)], [span(-8, -4, true)]);
+        let across = |spans: &[FoldSpan], top, bottom| crosses_marker(spans, Line(top), Line(bottom));
+        assert!(across(&collapsed, -10, -7) && across(&collapsed, -5, -2) && across(&collapsed, -7, -6));
+        assert!(!across(&collapsed, -12, -9) && !across(&collapsed, -3, 0), "above and below");
+        assert!(across(&open, -10, -8), "the marker would sit in the middle of it");
+        assert!(!across(&open, -8, -5) && !across(&open, -6, -4), "inside the open fold, below its marker");
     }
 
     #[test]
