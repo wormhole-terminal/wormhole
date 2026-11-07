@@ -22,6 +22,7 @@ pub use access_records::{
     AccessAnswer, AccessCapability, AccessHeldRecord, AccessKindRecord, AccessProgramRecord,
     AccessQuestionRecord, AccessSignerKind,
 };
+pub(crate) use common::resolve_data_dir;
 pub use common::{AuxError, AuxListener};
 pub use first_run::{
     AgentScanRecord, FirstRun, FoundAgentRecord, HookState, LookRecord, PlaceKindRecord, PlaceRecord,

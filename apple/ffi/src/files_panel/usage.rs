@@ -86,7 +86,7 @@ impl UsageService {
     }
 
     /// Keeps `report` as its agent's latest, saves it and wakes Swift.
-    fn record(&self, report: Usage) {
+    pub(crate) fn record(&self, report: Usage) {
         let json = {
             let mut all = self.reports.lock().unwrap_or_else(PoisonError::into_inner);
             usage::record(&mut all, report);

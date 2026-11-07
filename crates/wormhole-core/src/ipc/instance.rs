@@ -50,7 +50,9 @@ pub(super) fn asks_to_come_forward(tab_id: Option<&str>) -> bool {
     tab_id.is_none_or(|id| id.trim().is_empty())
 }
 
-pub(super) fn acquire_in(dir: &Path, socket: &Path, come_forward: bool) -> std::io::Result<Instance> {
+/// [`acquire`] for a data dir and socket given: what a shell that is not the process's one app (a test, the
+/// Swift app's server over its own data dir) names itself.
+pub fn acquire_in(dir: &Path, socket: &Path, come_forward: bool) -> std::io::Result<Instance> {
     crate::storage::files::create_dir_all_private(dir)?;
     let file = private_file(File::options().create(true).write(true).truncate(false))
         .open(dir.join(INSTANCE_LOCK_FILE))?;

@@ -120,28 +120,43 @@ impl Terminal {
         cell_height: f32,
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Self>, FfiError> {
-        isolation::require()?;
-        let name = program.rsplit('/').next().unwrap_or(&program).to_string();
-        let options = SpawnOptions {
-            tab_id: "swift-experiment".into(),
-            scrollback_lines: SCROLLBACK_LINES,
-            shell: Some(wormhole_core::terminal::shells::ShellCommand { program, args, name: name.clone() }),
-            cwd: cwd.map(std::path::PathBuf::from).filter(|dir| dir.is_dir()),
-            ..SpawnOptions::default()
-        };
-        let size = GridSize { cols, rows, cell_width, cell_height };
-        let (pty, pty_events) =
-            spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
-        let events = EventQueue::new(listener);
-        spawn_receiver(pty_events, events.clone()).map_err(|e| FfiError::Start { reason: e.to_string() })?;
-        Ok(Arc::new(Self {
-            pty: RwLock::new(Some(pty)),
-            snapshot: Mutex::new(ScreenSnapshot::default()),
-            events,
-            interaction: Default::default(),
-            timing: Timing::default(),
-            name,
-        }))
+        Self::start_tab(
+            EXPERIMENT_TAB.into(),
+            program,
+            args,
+            cwd,
+            (cols, rows),
+            (cell_width, cell_height),
+            listener,
+        )
+    }
+
+    /// [`Self::start_in`] for the terminal the workspace calls `tab` (`Opened { id }`): its shell gets
+    /// `WORMHOLE_TAB_ID`, `WORMHOLE_SOCKET` and `WORMHOLE_BIN` as every Wormhole terminal does, so the
+    /// agent hooks installed in `~/.claude` and the like reach this app's `HookServer`, and the
+    /// terminal's own `wh` knows its place. Sizes are `(cols, rows)` and `(width, height)` of a cell.
+    #[uniffi::constructor]
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_for_tab(
+        tab: i64,
+        program: String,
+        args: Vec<String>,
+        cwd: Option<String>,
+        cols: u16,
+        rows: u16,
+        cell_width: f32,
+        cell_height: f32,
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        Self::start_tab(
+            tab.to_string(),
+            program,
+            args,
+            cwd,
+            (cols, rows),
+            (cell_width, cell_height),
+            listener,
+        )
     }
 
     /// The rows that changed since the last call, packed (`frame.rs` has the layout); every row
@@ -244,7 +259,43 @@ impl Terminal {
     }
 }
 
+/// The tab id of terminals started outside a workspace (a preview, a test).
+const EXPERIMENT_TAB: &str = "swift-experiment";
+
 impl Terminal {
+    fn start_tab(
+        tab_id: String,
+        program: String,
+        args: Vec<String>,
+        cwd: Option<String>,
+        (cols, rows): (u16, u16),
+        (cell_width, cell_height): (f32, f32),
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        isolation::require()?;
+        let name = program.rsplit('/').next().unwrap_or(&program).to_string();
+        let options = SpawnOptions {
+            tab_id,
+            scrollback_lines: SCROLLBACK_LINES,
+            shell: Some(wormhole_core::terminal::shells::ShellCommand { program, args, name: name.clone() }),
+            cwd: cwd.map(std::path::PathBuf::from).filter(|dir| dir.is_dir()),
+            ..SpawnOptions::default()
+        };
+        let size = GridSize { cols, rows, cell_width, cell_height };
+        let (pty, pty_events) =
+            spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
+        let events = EventQueue::new(listener);
+        spawn_receiver(pty_events, events.clone()).map_err(|e| FfiError::Start { reason: e.to_string() })?;
+        Ok(Arc::new(Self {
+            pty: RwLock::new(Some(pty)),
+            snapshot: Mutex::new(ScreenSnapshot::default()),
+            events,
+            interaction: Default::default(),
+            timing: Timing::default(),
+            name,
+        }))
+    }
+
     pub(crate) fn name(&self) -> &str {
         &self.name
     }

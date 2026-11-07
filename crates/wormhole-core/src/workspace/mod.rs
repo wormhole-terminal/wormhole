@@ -28,6 +28,7 @@ mod ground;
 mod groups;
 mod model;
 mod open_items;
+mod overview;
 mod panel;
 mod presets;
 mod session;
@@ -53,6 +54,7 @@ pub use git_feed::{
 pub use ground::{DiskGround, Ground};
 pub use model::{ModelConfig, WorkspaceModel};
 pub use open_items::open_items;
+pub use overview::SplitOverview;
 pub use snapshot::{
     AgentInfo, ChromeSnapshot, ColumnLimits, DividerInfo, EdgeDrag, GroupHead, LayoutInfo, MemberTile,
     PaneRect, PanelTab, PanesSnapshot, PathFolder, PathStep, PresetInfo, SidebarRow, SidebarSection,

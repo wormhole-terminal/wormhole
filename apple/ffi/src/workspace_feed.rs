@@ -46,6 +46,9 @@ impl EventFeed for TerminalFeed {
     fn on_event(&self, event: &PtyEvent) {
         let Some(shared) = self.shared.upgrade() else { return };
         let id = self.id;
+        if let Some(tap) = shared.tap.get() {
+            tap.terminal_event(id, event);
+        }
         match event {
             PtyEvent::Output => {
                 shared.feed_quiet(id, StatusEvent::Output);

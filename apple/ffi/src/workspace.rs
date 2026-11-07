@@ -12,7 +12,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::{Instant, SystemTime};
 
 use wormhole_core::agents::AGENTS;
@@ -25,6 +25,7 @@ use wormhole_core::workspace::{
     WorkspaceModel, open_items,
 };
 
+use crate::hook_server::Tap;
 use crate::terminal::Terminal;
 use crate::workspace_feed::{self, agent_by_key};
 use crate::workspace_git::GitJobs;
@@ -195,6 +196,9 @@ pub(crate) struct Shared {
     pub(crate) pump: Arc<Pump>,
     /// What git is asked and followed with (`workspace_git`).
     pub(crate) git: GitJobs,
+    /// Who hears what happens to the terminals besides Swift: the control socket's event bus
+    /// (`hook_server`). Set once, by the server.
+    pub(crate) tap: OnceLock<Arc<dyn Tap>>,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -214,7 +218,17 @@ impl Shared {
     /// Run `change` on the model and return the events it caused, converted. The lock is released
     /// before the caller does anything with them.
     pub(crate) fn with_model<R>(&self, change: impl FnOnce(&mut WorkspaceModel) -> R) -> R {
-        change(&mut locked(&self.model))
+        let result = change(&mut locked(&self.model));
+        // After the lock is let go: the tap only notes that the model may have moved.
+        if let Some(tap) = self.tap.get() {
+            tap.model_touched();
+        }
+        result
+    }
+
+    /// Read the model without telling the tap: what the tap's own thread reads must not wake it again.
+    pub(crate) fn peek_model<R>(&self, read: impl FnOnce(&WorkspaceModel) -> R) -> R {
+        read(&locked(&self.model))
     }
 
     /// Events caused away from a Swift call: queue them and wake once (until drained).
@@ -285,6 +299,7 @@ impl Workspace {
             terminals: Mutex::new(HashMap::new()),
             pump: Arc::default(),
             git: GitJobs::default(),
+            tap: OnceLock::new(),
         });
         workspace_pump::spawn(&shared);
         Arc::new(Self { shared })
@@ -462,6 +477,13 @@ impl Workspace {
     /// The workspace's clock: milliseconds since it was made. Facts that carry a time use it.
     pub fn now_ms(&self) -> u64 {
         self.shared.now()
+    }
+}
+
+impl Workspace {
+    /// What the control socket's server works on (`hook_server`).
+    pub(crate) fn shared(&self) -> &Arc<Shared> {
+        &self.shared
     }
 }
 

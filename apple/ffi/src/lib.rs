@@ -17,6 +17,7 @@ mod files_panel;
 pub mod folder_picker;
 mod frame;
 mod git;
+mod hook_server;
 mod interaction;
 mod isolation;
 pub mod keymap;
@@ -54,6 +55,7 @@ pub use git::{
     GitLog, GitLogCommit, GitRef, GitRefKind, GitRev, GitRevKind, GitSignature, GitStatus, GitWatch,
     GitWorktree, GitWorktreePlan, WorktreeService,
 };
+pub use hook_server::{HookError, HookEvent, HookListener, HookServer, cli_exit_code};
 pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,

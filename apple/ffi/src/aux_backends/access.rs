@@ -148,10 +148,6 @@ impl AccessDesk {
 impl AccessDesk {
     /// Queues a question for `resolved` (or joins the one its program has open); `waiter` hears the decision.
     /// The control socket's gate calls this; the question's id.
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "the control socket gate calls it once it is in this crate")
-    )]
     pub(crate) fn ask(
         &self,
         resolved: Resolved,
@@ -162,6 +158,20 @@ impl AccessDesk {
         let id = locked(&self.inner).queue.push(resolved, need, SCOPE, about, waiter)?;
         self.waker.notify();
         Ok(id)
+    }
+
+    /// What the control socket's gate reads and updates of the desk: the approvals in force and the
+    /// terminals programs may reach. One lock, so a decision sees both as one moment.
+    pub(crate) fn with_state<R>(&self, read: impl FnOnce(&mut Grants, &mut Scopes) -> R) -> R {
+        let mut inner = locked(&self.inner);
+        let Inner { grants, scopes, .. } = &mut *inner;
+        read(grants, scopes)
+    }
+
+    /// What a stored ("Always") approval of `key` allows, if the profile has one.
+    pub(crate) fn stored_caps(&self, key: &wormhole_core::storage::store::AgentGrantKey) -> Option<CapSet> {
+        let row = Store::open_at(&self.profile_dir).ok()?.agent_grant(key).ok().flatten()?;
+        Some(CapSet::from_bits(row.caps))
     }
 
     /// Remembers that `resolved` was let in, as long as `button` says.
