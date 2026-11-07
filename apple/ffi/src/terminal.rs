@@ -43,6 +43,21 @@ struct Timing {
     last_bytes: AtomicU64,
 }
 
+/// A key press, named as the app's key table names keys ("enter", "left", "f5", "a").
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct KeyPress {
+    pub key: String,
+    /// What the key types with the layout and modifiers; `None` when it types nothing (Control held).
+    pub text: Option<String>,
+    pub shift: bool,
+    pub alt: bool,
+    pub control: bool,
+    /// Cmd: the application's own shortcut, nothing is sent.
+    pub platform: bool,
+    /// Option is Meta: Option+key sends ESC and the key.
+    pub option_as_meta: bool,
+}
+
 /// Where a frame's time went on the Rust side of the seam (the Swift side measures the whole call).
 #[derive(Debug, Clone, Copy, uniffi::Record)]
 pub struct FrameTiming {
@@ -113,22 +128,19 @@ impl Terminal {
         }
     }
 
-    /// A key press, named as the app's key table names keys ("enter", "left", "f5", "a"); `text`
-    /// is what the key types with the layout and modifiers. Whether anything was sent.
-    pub fn send_key(
-        &self,
-        key: String,
-        text: Option<String>,
-        shift: bool,
-        alt: bool,
-        control: bool,
-        platform: bool,
-        option_as_meta: bool,
-    ) -> bool {
+    /// A key press (see [`KeyPress`]). Whether anything was sent.
+    pub fn send_key(&self, press: KeyPress) -> bool {
         let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
         let Some(pty) = guard.as_ref() else { return false };
-        let input =
-            KeyInput { key: &key, key_char: text.as_deref(), shift, alt, control, platform, option_as_meta };
+        let input = KeyInput {
+            key: &press.key,
+            key_char: press.text.as_deref(),
+            shift: press.shift,
+            alt: press.alt,
+            control: press.control,
+            platform: press.platform,
+            option_as_meta: press.option_as_meta,
+        };
         matches!(pty.send_key(|modes| keys::encode(&input, modes)), wormhole_term::KeySent::Sent { .. })
     }
 

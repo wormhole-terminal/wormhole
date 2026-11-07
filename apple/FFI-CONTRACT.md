@@ -55,8 +55,7 @@ func frame() -> Data              // the rows that changed since the last call (
 func fullFrame() -> Data          // every row, whatever changed (a new surface lost its picture)
 func drainEvents() -> [TermEvent] // everything queued since the last drain; re-arms wake()
 func write(bytes: Data)           // typed or pasted bytes; the view returns to the live screen
-func sendKey(key: String, text: String?, shift: Bool, alt: Bool, control: Bool,
-             platform: Bool, optionAsMeta: Bool) -> Bool   // see "Keys"
+func sendKey(press: KeyPress) -> Bool   // see "Keys"
 func resize(cols: UInt16, rows: UInt16, cellWidth: Float, cellHeight: Float)
 func scroll(lines: Int32)         // positive: up into the history
 func scrollToBottom()
@@ -77,6 +76,11 @@ affect the grid.
 
 `FfiError` (Swift `Error`): `.notIsolated(reason:)`, `.start(reason:)`, `.closed`. A Rust panic does
 not cross as undefined behaviour: UniFFI turns it into a Swift error/crash at the boundary.
+
+`TerminalListener` is a generated Swift protocol `AnyObject, Sendable` with one method, `func wake()`:
+implement it in a `final class ... @unchecked Sendable` (or a class holding a `@Sendable` closure). Rust
+keeps the listener alive as long as the terminal lives, so capture the view weakly in what it does
+(`[weak view]`); otherwise terminal, listener and view hold each other.
 
 ### Threads and locks
 
@@ -122,7 +126,8 @@ terminal calls nothing and its threads sleep.
 
 ### Keys: `sendKey`
 
-`key` follows the app's key table (GPUI's names): `"enter"`, `"tab"`, `"backspace"`, `"escape"`,
+`KeyPress(key: String, text: String?, shift: Bool, alt: Bool, control: Bool, platform: Bool,
+optionAsMeta: Bool)` is a generated record (a struct with a memberwise `init`). `key` follows the app's key table (GPUI's names): `"enter"`, `"tab"`, `"backspace"`, `"escape"`,
 `"up"`, `"down"`, `"left"`, `"right"`, `"home"`, `"end"`, `"pageup"`, `"pagedown"`, `"insert"`,
 `"delete"`, `"space"`, `"f1"`...`"f24"`, or the single unshifted character (`"a"`, `"["`, `"1"`).
 `text` is what the key types with the layout and modifiers (`event.characters`); pass `nil` when

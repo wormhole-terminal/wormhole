@@ -18,7 +18,7 @@ mod terminal;
 
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
-pub use terminal::{FrameTiming, Terminal};
+pub use terminal::{FrameTiming, KeyPress, Terminal};
 
 uniffi::setup_scaffolding!();
 
