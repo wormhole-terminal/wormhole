@@ -6,20 +6,36 @@ import DesignSystem
 import Foundation
 
 extension StudioDocument {
-    /// Sets `token` to what was typed. Empty resets it. Returns whether the draft took it.
+    /// Sets `token` to what was typed or picked (`merging`: a drag in the colour picker). Empty resets it.
+    /// Returns whether the draft took it.
     @discardableResult
-    public func set(_ token: String, to text: String) -> Bool {
+    public func set(_ token: String, to text: String, merging: Bool = false) -> Bool {
         let value = text.trimmingCharacters(in: .whitespaces)
         if token.hasPrefix("metrics."), !value.isEmpty, Double(value.replacingOccurrences(of: "px", with: "")) == nil {
             fieldError = FieldError(token: token, text: text, message: StudioText.notPixels(token, value))
             return false
         }
         let label = value.isEmpty ? StudioText.undoReset(token) : StudioText.undoChange(token)
-        return attempt(token, text, label) { $0.set(token, value.isEmpty ? nil : value, version: shown, group: group(of: token)) }
+        return attempt(token, text, label, merging: merging) { $0.set(token, value.isEmpty ? nil : value, version: shown, group: group(of: token)) }
     }
 
     @discardableResult
     public func reset(_ token: String) -> Bool { set(token, to: "") }
+
+    /// Checks what is being typed without taking it (the field says what is wrong as the person types, and the
+    /// draft keeps its last good value until Return).
+    public func validate(_ token: String, typing text: String) {
+        let value = text.trimmingCharacters(in: .whitespaces)
+        guard !value.isEmpty, value != file.own(token, in: shown) else { fieldError = nil; return }
+        var candidate = file
+        candidate.set(token, value, version: shown, group: group(of: token))
+        do {
+            _ = try workspace.resolve(candidate, version: shown, increaseContrast: store.increaseContrast)
+            fieldError = nil
+        } catch {
+            fieldError = FieldError(token: token, text: text, message: (error as? LocalizedError)?.errorDescription ?? "\(error)")
+        }
+    }
 
     public func rename(_ name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
@@ -46,22 +62,25 @@ extension StudioDocument {
 
     public func revertToSaved() { _ = try? take(StudioText.undoRevert) { $0 = saved } }
 
+    public func groupName(of token: String) -> String? { group(of: token) }
+
     func group(of token: String) -> String? { TokenGroup.group(of: token, in: groups) }
 
     /// Applies `change` to a copy of the file and takes it when Rust resolves it; throws Rust's reason otherwise.
-    func take(_ label: String, _ change: (inout ThemeFile) -> Void) throws {
+    func take(_ label: String, merging: Bool = false, _ change: (inout ThemeFile) -> Void) throws {
         var candidate = file
         change(&candidate)
         guard candidate != file else { return }
         let resolved = try workspace.resolve(candidate, version: shown, increaseContrast: store.increaseContrast)
         file = candidate
-        history.record(label, candidate)
+        notice = nil
+        history.record(label, candidate, merging: merging)
         apply(resolved)
     }
 
-    private func attempt(_ token: String, _ text: String, _ label: String, _ change: (inout ThemeFile) -> Void) -> Bool {
+    private func attempt(_ token: String, _ text: String, _ label: String, merging: Bool, _ change: (inout ThemeFile) -> Void) -> Bool {
         do {
-            try take(label, change)
+            try take(label, merging: merging, change)
             fieldError = nil
             return true
         } catch {

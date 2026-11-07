@@ -1,0 +1,48 @@
+// The Studio's window: full-size content under a transparent title bar (the title row is ours, 38 high, with the
+// traffic lights in it), 1344 × 900 and no smaller than 1300 × 640, closing through the session so unsaved edits are
+// asked about first. One at a time: opening it again brings it forward (`toggle_studio`).
+
+import AppKit
+import DesignSystem
+import StudioModel
+import SwiftUI
+
+@MainActor
+public final class StudioWindowController: NSObject, NSWindowDelegate {
+    private var window: NSWindow?
+    private var session: StudioSession?
+
+    /// Opens the Studio on `theme` (what is in use), or brings the open one forward.
+    public func show(theme: String, environment: StudioEnvironment, store: ThemeStore = .shared) throws {
+        if let window {
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+        let session = try StudioSession(theme: theme, environment: environment, store: store)
+        let window = NSWindow(
+            contentRect: CGRect(origin: .zero, size: StudioMetrics.windowSize),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.minSize = StudioMetrics.windowMin
+        window.title = StudioWords.title
+        window.setFrameAutosaveName("StudioWindow")
+        window.contentView = NSHostingView(rootView: StudioView(session: session, store: store))
+        window.delegate = self
+        window.isReleasedWhenClosed = false
+        session.window = window
+        (self.window, self.session) = (window, session)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+    }
+
+    public var isOpen: Bool { window != nil }
+
+    public func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard let session else { return true }
+        Task {
+            if await session.requestClose() { sender.delegate = nil; sender.close(); (window, self.session) = (nil, nil) }
+        }
+        return false
+    }
+}

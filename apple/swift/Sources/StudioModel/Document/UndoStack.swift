@@ -18,11 +18,17 @@ struct UndoStack: Equatable {
     var undoLabel: String? { canUndo ? steps[cursor].label : nil }
     var redoLabel: String? { canRedo ? steps[cursor + 1].label : nil }
 
-    mutating func record(_ label: String, _ file: ThemeFile) {
+    /// Records a change. `merging` folds it into the step before when that was the same change: a colour dragged in
+    /// the picker is one step, not a hundred.
+    mutating func record(_ label: String, _ file: ThemeFile, merging: Bool = false) {
         guard file != steps[cursor].file else { return }
         steps.removeSubrange((cursor + 1)...)
-        steps.append(Step(label: label, file: file))
-        cursor += 1
+        if merging, cursor > 0, steps[cursor].label == label {
+            steps[cursor] = Step(label: label, file: file)
+        } else {
+            steps.append(Step(label: label, file: file))
+            cursor += 1
+        }
     }
 
     mutating func undo() -> ThemeFile? {

@@ -25,6 +25,7 @@ struct MockResolver: ThemeResolving {
         let variant = (file["variants"] as? [[String: Any]])?.first { "\(file["name"] ?? "") \($0["name"] ?? "")" == request.theme }
         var entry = try Self.entry(named: variant?["extends"] as? String ?? file["extends"] as? String ?? "Tokyo Night")
         entry["name"] = request.theme
+        if request.increaseContrast { entry["normal"] = entry["highContrast"] }
         for layer in [file, variant ?? [:]] { try Self.apply(layer, to: &entry) }
         if let appearance = variant?["appearance"] ?? file["appearance"] { entry["appearance"] = appearance }
         entry["highContrast"] = nil

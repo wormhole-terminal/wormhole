@@ -87,3 +87,11 @@ extension StudioDocument {
         }
     }
 }
+
+extension StudioDocument {
+    /// How many tokens differ from the file as saved, for "3 changes. Your changes are lost if you don't save them."
+    public var changeCount: Int { ThemeFile.changedTokens(saved, file, among: groups.flatMap(\.tokens)).count }
+
+    /// The resolved draft, to show in every window (after another theme was opened).
+    public var themePreview: Theme { theme }
+}

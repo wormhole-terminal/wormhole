@@ -62,3 +62,10 @@ extension StudioDocument {
         file.place(of: token, version: shown, group: group(of: token))
     }
 }
+
+extension StudioDocument {
+    /// Every name an expression may refer to: for completion.
+    public var expressionNames: [String] {
+        groups.flatMap(\.tokens).filter { !$0.hasPrefix("metrics.") }
+    }
+}

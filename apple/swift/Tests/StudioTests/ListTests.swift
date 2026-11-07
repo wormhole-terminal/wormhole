@@ -72,3 +72,22 @@ final class ListTests: XCTestCase {
         XCTAssertEqual(ThemeFileNames.copyName("Dusk") { $0 == "Dusk copy" || $0 == "Dusk copy 2" }, "Dusk copy 3")
     }
 }
+
+final class CompletionTests: XCTestCase {
+    private let names = ["primary", "primary.hover", "surface.window", "surface.panel", "text.primary"]
+
+    func testNamesBeginningWithTheWordBeingTyped() {
+        XCTAssertEqual(NameCompletion.suggestions(for: "mix(primary, surface.", among: names), ["surface.panel", "surface.window"])
+        XCTAssertEqual(NameCompletion.suggestions(for: "pri", among: names), ["primary", "primary.hover"])
+        XCTAssertEqual(NameCompletion.suggestions(for: "primary", among: names), [], "a name that is complete offers nothing")
+        XCTAssertEqual(NameCompletion.suggestions(for: "#12", among: names), [])
+        XCTAssertEqual(NameCompletion.completing("mix(primary, surface.", with: "surface.window"), "mix(primary, surface.window")
+    }
+
+    func testTheClosestNameForAMistake() {
+        XCTAssertEqual(NameCompletion.closest(to: "primery", among: names), "primary")
+        XCTAssertEqual(NameCompletion.closest(to: "surface.windw", among: names), "surface.window")
+        XCTAssertNil(NameCompletion.closest(to: "zzzzzz", among: names))
+        XCTAssertEqual(NameCompletion.unknownName(in: "Unknown token “primery” at 1:1."), "primery")
+    }
+}
