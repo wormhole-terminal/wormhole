@@ -827,3 +827,43 @@ func scrollToDisplayOffset(offset:)                    // the view `offset` line
 ```
 Threads: every call is a short lock except `findSearch`. Hostile input: the pattern is compiled with core's size
 limit, matches are capped, a command is typed only when every cell shows what it holds.
+## Persistent terminals: `HostedTerminals` and a `Terminal`'s host
+
+Terminals that outlive the app, as the GPUI app's "Persistent terminals" flag does (`repo-docs/docs/session-host.md`).
+Core is called, never re-done: the host program's place (`ipc::host_binary`), the hosts folder's scan and the launch
+plan (`ipc::hosts`: `forget_gone_hosts`, `scan`, `LaunchHosts`, `adoptable`), what a failed attach means
+(`AttachFailure`), the PTY's hosted constructors (`terminal::{spawn_hosted, attach_hosted}`) and `tabs.host_id` of the
+profile's database (`Store::save_session_host`). Additive: no existing signature changed (`Terminal` gained methods).
+
+| Object / record | What it is |
+|---|---|
+| `HostedTerminals` | `new(dataDir?, hostBinary?, window)`: refuses outside a `Wormhole-swift*` folder. `enabled()` (core's flag rules over the folder's `config.json`), `program()` (`HostingProgram`: `found(path)`, `disposableCopy`, `missing`), `planAtLaunch()`, `adoptableOrphans()`, `start(what, listener)`, `attach(hostId, what, visible, listener)`, `finishRestore()`, `finish(endHosts)`. |
+| `HostedStart` | `tab`, `program`, `args`, `cwd?`, `cols`, `rows`, `cellWidth`, `cellHeight`: the same facts `Terminal.startForTab` takes. |
+| `LaunchPlan` | `attach` (saved terminals whose host runs), `replay` (saved terminals whose host is gone: start a new terminal in the folder; their text is not replayed here), `orphans` (live hosts no saved terminal of any profile names). Each saved terminal is `SavedTerminal { hostId, cwd?, shell? }`. |
+| `Terminal` (new methods) | `hostId() -> String?`, `hosting() -> TerminalHosting` (`local`, `persistent`, `detached`, `lost`), `detach() -> Bool`, `setVisible(Bool)`. Everything else (frames, keys, resize, scroll, find, interaction) is unchanged: a hosted terminal's engine is a replica fed from the host. |
+| `HostingError` | `notIsolated`, `noProgram` (no host program: stay in the app), `start` (host or program did not start: the caller may start locally and say so once), `gone` (attach: the host is not there: start a new terminal), `unavailable(reason, transient)` (it runs and cannot be shown: keep the terminal's place and say why; `transient` = try again), `store`. |
+
+**The host program.** Core looks beside the app's own executable and nowhere else (a disk image or translocated copy is
+`disposableCopy`: no host there). `hostBinary` names another executable (tests, development); it is an argument and not
+`WORMHOLE_HOST_BIN` because the release library ignores that variable. The Swift app passes `WORMHOLE_HOST_BIN` through
+as that argument. A host signed by `cargo build` takes every peer of the same user (core's peer policy).
+
+**Saved rows.** Each started or attached terminal is saved at once under `window` in the default profile's database
+(`tabs.host_id`, the column the Session Hosts window and the launch plan both read, so a named host is never an orphan).
+Closing an attached terminal ends its program and forgets its row; `detach()` (or `finish(false)`) leaves both. The
+workspace gives new ids every run, so after the restore `finishRestore()` forgets the rows the last run left under old ids.
+A window saver that comes later writes the same `SessionRecord`s with `host_id` from `Terminal.hostId`.
+
+**The flow.** Launch: `enabled()` and `program()`; if both allow, `planAtLaunch()` (once; fast), then per `attach` entry
+`Workspace.apply(newTerminal)` and `attach(...)` on the `Opened` id (`gone` becomes a new terminal, `unavailable` shows
+the reason and keeps the row), per `replay` entry a new hosted terminal in its folder, and, off the main thread,
+`adoptableOrphans()` (up to half a second per silent host) attached the same way (the GPUI app puts them in a Recovered
+group). Then `finishRestore()`. New terminals: `start(...)`, falling back to `Terminal.startForTab` on `start`/`noProgram`.
+Quit: `finish(endHosts)`, with `endHosts` from the quit question's answer (`QuitFacts.endsHosts`): true closes every terminal
+(each host ends, no row names one), false lets go of each (the hosts and their programs run on). Call it from
+`applicationShouldTerminate`'s decision and `applicationWillTerminate`.
+
+**Threads.** `start`, `attach`, `adoptableOrphans` block (a host starts in about 15 ms; a stuck one up to a few seconds).
+The Swift backend calls them on the main actor because a terminal's view needs its source at once (the GPUI app waits
+for the host off the UI thread with a blank pane): moving it to a task is a change in `WorkspaceBridge` only.
+The host's events reach Swift through the terminal's own `TerminalListener`, as a local terminal's do.

@@ -22,6 +22,7 @@ mod frame;
 mod git;
 mod hook_server;
 mod inline_images;
+mod hosting;
 mod interaction;
 mod isolation;
 pub mod keymap;
@@ -65,6 +66,10 @@ pub use git::{
 };
 pub use hook_server::{HookError, HookEvent, HookListener, HookServer, cli_exit_code};
 pub use inline_images::InlineImage;
+pub use hosting::{
+    HostedStart, HostedTerminals, HostingError, HostingProgram, LaunchPlan, OrphanHost, SavedTerminal,
+    TerminalHosting,
+};
 pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,

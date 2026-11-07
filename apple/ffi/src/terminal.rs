@@ -20,6 +20,7 @@ use wormhole_term::{GridSize, Pty, ScreenSnapshot};
 use crate::error::FfiError;
 use crate::events::{EventFeed, EventQueue, TermEvent, TerminalListener, Touch, spawn_receiver};
 use crate::inline_images::PlacementsSent;
+use crate::hosting::HostSlot;
 use crate::{frame, isolation};
 
 /// How much history a terminal keeps (the app's default is the same order).
@@ -44,6 +45,8 @@ pub struct Terminal {
     timing: Timing,
     /// The program's name ("zsh"), which names the terminal until something better does.
     name: String,
+    /// The session host the program runs in (`hosting`); `None` in the app's own process.
+    pub(crate) host: Option<HostSlot>,
 }
 
 /// What the terminal's process says right now, for the workspace's facts.
@@ -248,6 +251,12 @@ impl Terminal {
     /// `deinit` only frees.
     pub fn close(&self) {
         let pty = self.pty.write().unwrap_or_else(PoisonError::into_inner).take();
+        // Closing an attached hosted terminal ends its program: its saved row goes first.
+        if pty.is_some()
+            && let Some(slot) = &self.host
+        {
+            slot.closing();
+        }
         drop(pty);
     }
 
@@ -279,19 +288,42 @@ impl Terminal {
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Self>, FfiError> {
         isolation::require()?;
-        let name = program.rsplit('/').next().unwrap_or(&program).to_string();
-        let options = SpawnOptions {
-            tab_id,
-            scrollback_lines: SCROLLBACK_LINES,
-            shell: Some(wormhole_core::terminal::shells::ShellCommand { program, args, name: name.clone() }),
-            cwd: cwd.map(std::path::PathBuf::from).filter(|dir| dir.is_dir()),
-            ..SpawnOptions::default()
-        };
+        let options = Self::spawn_options(tab_id, program, args, cwd);
         let size = GridSize { cols, rows, cell_width, cell_height };
         let (pty, pty_events) =
             spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
+        Self::from_parts(pty, pty_events, &options, listener, None)
+    }
+
+    /// What every terminal of the app starts with: a hosted one's attach must give the same engine
+    /// options (history size) as its start did.
+    pub(crate) fn spawn_options(
+        tab_id: String,
+        program: String,
+        args: Vec<String>,
+        cwd: Option<String>,
+    ) -> SpawnOptions {
+        let name = program.rsplit('/').next().unwrap_or(&program).to_string();
+        SpawnOptions {
+            tab_id,
+            scrollback_lines: SCROLLBACK_LINES,
+            shell: Some(wormhole_core::terminal::shells::ShellCommand { program, args, name }),
+            cwd: cwd.map(std::path::PathBuf::from).filter(|dir| dir.is_dir()),
+            ..SpawnOptions::default()
+        }
+    }
+
+    /// The object over a PTY that is running (local or hosted) and its events.
+    pub(crate) fn from_parts(
+        pty: Pty,
+        pty_events: wormhole_term::PtyEvents,
+        options: &SpawnOptions,
+        listener: Arc<dyn TerminalListener>,
+        host: Option<HostSlot>,
+    ) -> Result<Arc<Self>, FfiError> {
         let events = EventQueue::new(listener);
         spawn_receiver(pty_events, events.clone()).map_err(|e| FfiError::Start { reason: e.to_string() })?;
+        let name = options.shell.as_ref().map(|shell| shell.name.clone()).unwrap_or_default();
         Ok(Arc::new(Self {
             pty: RwLock::new(Some(pty)),
             snapshot: Mutex::new(ScreenSnapshot::default()),
@@ -302,6 +334,7 @@ impl Terminal {
             minimap: Default::default(),
             timing: Timing::default(),
             name,
+            host,
         }))
     }
 
