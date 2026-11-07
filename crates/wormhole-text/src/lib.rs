@@ -27,7 +27,7 @@ mod pseudo;
 
 #[cfg(feature = "test-support")]
 pub use active::with_language;
-pub use active::{is_loaded, language, set_language, text, text_in};
+pub use active::{catalog, is_loaded, language, set_language, text, text_in};
 pub use key::Key;
 pub use language::{Language, negotiate};
 

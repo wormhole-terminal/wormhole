@@ -1,8 +1,10 @@
 // The app's actions and their keys: one table, read by the menu bar, the shortcut recorder and the context
-// menus. It is core's (`keys/keymap/table.rs`), written into `keymap.json` by `apple/scripts/dump-keymap.py`, so
-// nothing here is a second copy; the FFI's `keymap::entries()` replaces the file behind the same type.
+// menus. It is core's (`keys/keymap/table.rs`). Linked to the Rust core, `PlatformBridge.installKeymap()` reads it
+// live (`keymapEntries()`); a build without the FFI reads `keymap.json`, which `apple/scripts/dump-keymap.py` writes
+// from the same source, and a test in `PlatformBridgeTests` keeps the two equal.
 
 import Foundation
+import Synchronization
 
 public struct Keymap: Sendable {
     public let entries: [KeymapEntry]
@@ -19,6 +21,13 @@ public struct Keymap: Sendable {
         var systemKeys: [SystemKey]
     }
 
+    public init(entries: [KeymapEntry], systemKeys: [(spec: KeySpec, what: String)], layout: [MenuLayout] = []) {
+        self.entries = entries
+        self.systemKeys = systemKeys
+        self.layout = layout
+        byID = Dictionary(entries.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
     public init(json: Data) throws {
         let file = try JSONDecoder().decode(File.self, from: json)
         entries = file.entries
@@ -27,7 +36,15 @@ public struct Keymap: Sendable {
         byID = Dictionary(file.entries.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
-    /// The table that ships with the app.
+    private static let installed = Mutex<Keymap?>(nil)
+
+    /// The table the app reads: core's own once `install` ran (the Rust core linked), else `bundled`.
+    public static var shared: Keymap { installed.withLock { $0 } ?? bundled }
+
+    /// Makes `keymap` the one everything reads. Call once, at launch, before a window asks.
+    public static func install(_ keymap: Keymap) { installed.withLock { $0 = keymap } }
+
+    /// The dumped table that ships with the app: what a build without the Rust core reads.
     public static let bundled: Keymap = {
         guard let url = Bundle.module.url(forResource: "keymap", withExtension: "json"),
             let data = try? Data(contentsOf: url), let keymap = try? Keymap(json: data)

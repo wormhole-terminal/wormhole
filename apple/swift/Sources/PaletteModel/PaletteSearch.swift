@@ -1,127 +1,71 @@
-// The palette's fuzzy match, ported from core's `view/search.rs` so both apps find the same things: a word's
-// letters in order, the first at a word start; word starts and runs score higher, and early beats late.
+// The palette's fuzzy match: core's (`view/search.rs`: every word of a query found in a result's title, marked, or
+// in its other texts, ranked best first), behind this seam. Linked to the Rust core, `PlatformBridge` installs
+// core's matcher; a build without the FFI keeps `ContainsMatcher`, which finds the same results by substring and
+// is there for previews and tests, not to rank like the app does.
 
 import Foundation
+import Synchronization
 
 /// How well a text matched, and which characters to mark (offsets into the text's `Character`s).
 public struct Match: Sendable, Equatable {
     public var score: Int
     public var ranges: [Range<Int>]
+    public init(score: Int, ranges: [Range<Int>]) { (self.score, self.ranges) = (score, ranges) }
+}
+
+/// What a result is searched by: its title, which the palette marks, and other texts that find it too (a
+/// terminal's folder) without being marked.
+public struct PaletteCandidate: Sendable, Equatable {
+    public var title: String
+    public var other: [String]
+    public init(title: String, other: [String] = []) { (self.title, self.other) = (title, other) }
+}
+
+/// One candidate a query found: its place in what was asked about, and how.
+public struct PaletteRanked: Sendable, Equatable {
+    public var index: Int
+    public var match: Match
+    public init(index: Int, match: Match) { (self.index, self.match) = (index, match) }
+}
+
+public protocol PaletteMatching: Sendable {
+    /// The candidates `query` finds, best first; equal ones keep their order so results do not shuffle while
+    /// typing. Every word has to be found.
+    func rank(_ query: String, _ candidates: [PaletteCandidate]) -> [PaletteRanked]
 }
 
 public enum PaletteSearch {
-    private static let matchPoints = 16
-    private static let wordStart = 10
-    private static let textStart = 6
-    private static let run = 12
-    private static let gap = 1
-    private static let leadGapMax = 8
-    private static let none = Int.min / 2
+    private static let installed = Mutex<any PaletteMatching>(ContainsMatcher())
 
-    private struct Glyph {
-        var lower: Character
-        var startsWord: Bool
+    /// Makes `matcher` the palette's. Call once, at launch.
+    public static func install(_ matcher: any PaletteMatching) { installed.withLock { $0 = matcher } }
+
+    public static func rank(_ query: String, _ candidates: [PaletteCandidate]) -> [PaletteRanked] {
+        installed.withLock { $0 }.rank(query, candidates)
     }
+}
 
-    private static func glyphs(_ text: String) -> [Glyph] {
-        var out: [Glyph] = []
-        var previous: Character?
-        for c in text {
-            let starts: Bool
-            if let p = previous {
-                starts = (!(p.isLetter || p.isNumber) && (c.isLetter || c.isNumber)) || (p.isLowercase && c.isUppercase)
-            } else {
-                starts = true
-            }
-            out.append(Glyph(lower: lower(c), startsWord: starts))
-            previous = c
-        }
-        return out
-    }
+/// Every word of the query as a substring of the title (marked) or of another text, earlier in the title first.
+public struct ContainsMatcher: PaletteMatching {
+    public init() {}
 
-    private static func lower(_ c: Character) -> Character { c.lowercased().first ?? c }
-
-    /// `word` in `text`: the best placement that starts a word, else the word as typed anywhere. nil: not there.
-    public static func fuzzy(_ word: String, in text: String) -> Match? {
-        let query = word.map(lower)
-        if query.isEmpty { return Match(score: 0, ranges: []) }
-        let text = glyphs(text)
-        guard query.count <= text.count else { return nil }
-        let contiguous: ([Int]) -> Bool = { zip($0, $0.dropFirst()).allSatisfy { $1 == $0 + 1 } }
-        var found = align(query, text, startsWord: false)
-        if let f = found, !(text[f.picks[0]].startsWord || contiguous(f.picks)) { found = nil }
-        guard let (score, picks) = found ?? align(query, text, startsWord: true) ?? asTyped(query, text) else {
-            return nil
-        }
-        var ranges: [Range<Int>] = []
-        for j in picks {
-            if let last = ranges.last, last.upperBound == j {
-                ranges[ranges.count - 1] = last.lowerBound..<(j + 1)
-            } else {
-                ranges.append(j..<(j + 1))
-            }
-        }
-        return Match(score: score, ranges: ranges)
-    }
-
-    private typealias Alignment = (score: Int, picks: [Int])
-
-    private static func firstScore(_ text: [Glyph], _ j: Int) -> Int {
-        let bonus = j == 0 ? textStart + wordStart : (text[j].startsWord ? wordStart : 0)
-        return matchPoints + bonus - min(j * gap, leadGapMax)
-    }
-
-    /// Dynamic programming over (query character, text position): the best score with the query's first
-    /// `i + 1` characters placed and the last at `j`.
-    private static func align(_ query: [Character], _ text: [Glyph], startsWord: Bool) -> Alignment? {
-        let (m, n) = (query.count, text.count)
-        var best = Array(repeating: Array(repeating: none, count: n), count: m)
-        var from = Array(repeating: Array(repeating: -1, count: n), count: m)
-        for j in 0..<n where text[j].lower == query[0] && (!startsWord || text[j].startsWord) {
-            best[0][j] = firstScore(text, j)
-        }
-        for i in 1..<max(m, 1) {
-            var skipped = none
-            var skippedAt = -1
-            for j in i..<max(n, i) {
-                if text[j].lower == query[i] {
-                    let consecutive = best[i - 1][j - 1]
-                    // After a gap the next character has to start a word ("sp" in "sidebar polish").
-                    let skip = text[j].startsWord ? skipped : none
-                    let (prev, at) =
-                        consecutive > none && consecutive + run >= skip ? (consecutive + run, j - 1) : (skip, skippedAt)
-                    if prev > none {
-                        best[i][j] = prev + matchPoints + (text[j].startsWord ? wordStart : 0)
-                        from[i][j] = at
-                    }
-                }
-                let decayed = skipped > none ? skipped - gap : none
-                let here = best[i - 1][j - 1]
-                if here > none && here - gap > decayed {
-                    (skipped, skippedAt) = (here - gap, j - 1)
+    public func rank(_ query: String, _ candidates: [PaletteCandidate]) -> [PaletteRanked] {
+        let words = query.split(whereSeparator: \.isWhitespace).map(String.init)
+        let found = candidates.enumerated().compactMap { index, candidate -> PaletteRanked? in
+            var match = Match(score: 0, ranges: [])
+            for word in words {
+                if let at = candidate.title.range(of: word, options: [.caseInsensitive, .diacriticInsensitive]) {
+                    let start = candidate.title.distance(from: candidate.title.startIndex, to: at.lowerBound)
+                    match.score += 100 - min(start, 99)
+                    match.ranges.append(start..<start + word.count)
+                } else if candidate.other.contains(where: { $0.localizedCaseInsensitiveContains(word) }) {
+                    match.score += 50
                 } else {
-                    skipped = decayed
+                    return nil
                 }
             }
+            return PaletteRanked(index: index, match: match)
         }
-        // Ties go to the earlier end, like the Rust version.
-        guard let end = (0..<n).max(by: { (best[m - 1][$0], n - $0) < (best[m - 1][$1], n - $1) }),
-            best[m - 1][end] > none
-        else { return nil }
-        var picks = Array(repeating: 0, count: m)
-        var j = end
-        for i in stride(from: m - 1, through: 0, by: -1) {
-            picks[i] = j
-            j = from[i][j]
-        }
-        return (best[m - 1][end], picks)
-    }
-
-    private static func asTyped(_ query: [Character], _ text: [Glyph]) -> Alignment? {
-        guard let start = (0...(text.count - query.count)).first(where: { j in
-            query.indices.allSatisfy { text[j + $0].lower == query[$0] }
-        }) else { return nil }
-        let score = firstScore(text, start) + (query.count - 1) * (matchPoints + run)
-        return (score, Array(start..<(start + query.count)))
+        return found.sorted { ($0.match.score, $1.index) > ($1.match.score, $0.index) }
     }
 }

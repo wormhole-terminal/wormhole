@@ -23,7 +23,7 @@ public final class StatusItemController: NSObject, NSMenuDelegate {
     private var animation: Task<Void, Never>?
 
     public init(
-        policy: PlatformPolicy = .current(), style: MenuStyle = .themed(), keymap: Keymap = .bundled,
+        policy: PlatformPolicy = .current(), style: MenuStyle = .themed(), keymap: Keymap = .shared,
         dispatcher: MenuDispatcher = MenuDispatcher(), now: @escaping () -> Date = Date.init
     ) {
         self.style = style

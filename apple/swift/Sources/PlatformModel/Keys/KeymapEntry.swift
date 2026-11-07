@@ -39,6 +39,16 @@ public struct KeymapEntry: Sendable, Codable, Equatable, Identifiable {
     public var feature: String?
     public var flag: String?
 
+    public init(
+        id: ActionID, title: String, titleOff: String? = nil, name: String? = nil, keys: [KeySpec] = [],
+        scope: KeyScope = .app, stage: KeyStage = .now, palette: Bool = true, debugOnly: Bool = false,
+        persistentOnly: Bool = false, feature: String? = nil, flag: String? = nil
+    ) {
+        (self.id, self.title, self.titleOff, self.name, self.keys) = (id, title, titleOff, name, keys)
+        (self.scope, self.stage, self.palette) = (scope, stage, palette)
+        (self.debugOnly, self.persistentOnly, self.feature, self.flag) = (debugOnly, persistentOnly, feature, flag)
+    }
+
     public var displayName: String { name ?? title }
     public var key: KeySpec? { keys.first }
     public var isLive: Bool { stage == .now }

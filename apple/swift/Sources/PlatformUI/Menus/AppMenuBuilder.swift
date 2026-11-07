@@ -1,7 +1,7 @@
-// The full menu bar, driven by the keymap table: `MenuBuilder` makes the values for the window in front, the
-// factory makes the native menus, and this installs them as `NSApp.mainMenu` (with the Window and Help menus
-// registered so the system adds the window list and the Help search). It rebuilds only when what the menus show
-// changed, and never while a menu is open.
+// The full menu bar, driven by the keymap table: a `MenuProviding` (core's menus, or the dumped layout without the
+// Rust core) makes the values for the window in front, the factory makes the native menus, and this installs them
+// as `NSApp.mainMenu` (with the Window and Help menus registered so the system adds the window list and the Help
+// search). It rebuilds only when what the menus show changed, and never while a menu is open.
 
 import AppKit
 import PlatformModel
@@ -9,7 +9,7 @@ import PlatformModel
 @MainActor
 public final class AppMenuBuilder {
     public let dispatcher: MenuDispatcher
-    private let builder: MenuBuilder
+    private let builder: any MenuProviding
     private let factory: NSMenuFactory
     private(set) var shown: MenuState?
     private var pending: MenuState?
@@ -18,7 +18,7 @@ public final class AppMenuBuilder {
     private nonisolated(unsafe) var observers: [any NSObjectProtocol] = []
 
     public init(
-        builder: MenuBuilder = MenuBuilder(), dispatcher: MenuDispatcher = MenuDispatcher(), style: MenuStyle = .themed(),
+        builder: any MenuProviding = MenuBuilder(), dispatcher: MenuDispatcher = MenuDispatcher(), style: MenuStyle = .themed(),
         standard: [MenuCommand: Selector] = StandardActions.selectors
     ) {
         self.builder = builder

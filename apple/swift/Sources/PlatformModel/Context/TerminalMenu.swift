@@ -32,7 +32,7 @@ public enum TerminalMenu {
         public var key: String { "terminal.\(rawValue)" }
     }
 
-    public static func nodes(_ facts: TerminalMenuFacts, keymap: Keymap = .bundled) -> [MenuNode] {
+    public static func nodes(_ facts: TerminalMenuFacts, keymap: Keymap = .shared) -> [MenuNode] {
         var menu = ContextMenuList()
         func item(_ title: String, _ kind: Kind, _ symbol: String, _ id: ActionID? = nil, enabled: Bool = true, argument: String? = nil, subject: Int64? = nil) {
             menu.item(title, kind.key, subject: subject, argument: argument, enabled: enabled, icon: .symbol(symbol), key: id.flatMap(keymap.key))

@@ -111,13 +111,7 @@ public enum PaletteRows {
     /// Best first; equal scores keep their order so results do not shuffle while typing.
     private static func rank(_ query: String, _ commands: [Command]) -> [PaletteResult] {
         guard !query.isEmpty else { return commands.map { PaletteResult(command: $0, ranges: []) } }
-        return commands.enumerated()
-            .compactMap { offset, command -> (Int, Int, PaletteResult)? in
-                guard let match = PaletteSearch.score(query, title: command.title, other: command.searchText)
-                else { return nil }
-                return (match.score, offset, PaletteResult(command: command, ranges: match.ranges))
-            }
-            .sorted { ($1.0, $0.1) < ($0.0, $1.1) }
-            .map(\.2)
+        let ranked = PaletteSearch.rank(query, commands.map { PaletteCandidate(title: $0.title, other: $0.searchText) })
+        return ranked.map { PaletteResult(command: commands[$0.index], ranges: $0.match.ranges) }
     }
 }

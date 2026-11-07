@@ -7,8 +7,10 @@ recorder and the palette never have a second table to drift from:
   keys/keymap/mod.rs    -> the keys macOS keeps for itself (`systemKeys`)
 
 The result is the PlatformModel resource `keymap.json`. `--check` changes nothing and fails when the
-resource is out of date. It goes away when the FFI exposes `keymap::entries()` and `menus::menus()`
-directly (FFI-CONTRACT: keymap). Run as `python3 -I apple/scripts/dump-keymap.py [--check]`.
+resource is out of date. It stays as the fallback now that the FFI exposes `keymap::entries()` and `menus::menus()`
+directly (FFI-CONTRACT: platform seams): a build linked to the Rust core reads the live table, and this file is what a
+build without it reads. `PlatformBridgeTests` keeps the two equal. Run as
+`python3 -I apple/scripts/dump-keymap.py [--check]`.
 """
 import json
 import re

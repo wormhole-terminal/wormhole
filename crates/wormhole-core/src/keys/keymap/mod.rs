@@ -354,6 +354,12 @@ static SYSTEM: LazyLock<Vec<(KeySpec, &'static str)>> = LazyLock::new(|| {
     SYSTEM_KEYS.iter().filter_map(|(text, what)| Some((KeySpec::from_glyphs(text)?, *what))).collect()
 });
 
+/// The keys macOS keeps for itself, each with what for ("⌘Space", "Spotlight"): for a front end that checks
+/// a key itself instead of asking [`uses`].
+pub fn system_keys() -> impl Iterator<Item = (&'static KeySpec, &'static str)> {
+    SYSTEM.iter().map(|(key, what)| (key, *what))
+}
+
 /// Who has a key already, for a conflict message ("⌘T is New Terminal") or a recorder's warning.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum KeyUse {

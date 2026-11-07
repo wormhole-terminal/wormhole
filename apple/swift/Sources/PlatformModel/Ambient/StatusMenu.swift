@@ -38,7 +38,7 @@ public enum StatusMenu {
     /// Terminals listed in the sections before the rest fold into "N more…", so the menu never outgrows the screen.
     public static let maxSessions = 20
 
-    public static func build(_ snapshot: StatusSnapshot, now: Date, keymap: Keymap = .bundled) -> StatusMenuModel {
+    public static func build(_ snapshot: StatusSnapshot, now: Date, keymap: Keymap = .shared) -> StatusMenuModel {
         let terminals = snapshot.terminals
         let sections = AmbientSections(terminals)
         var nodes: [MenuNode] = []

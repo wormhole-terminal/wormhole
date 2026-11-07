@@ -582,3 +582,51 @@ func remove(folder) throws                              // only one Wormhole mad
 Tests: `apple/ffi/tests/git.rs` (real repositories in a temp dir: renames, binaries, LFS pointers, submodule,
 stashes, the over-cap diff, the watch, the worktree round trip) and `Tests/GitBridgeTests` (mapping over canned
 records, and the Swift backends against the real FFI).
+## Platform seams: keymap and menus, notifications, folder picker, palette search, words
+
+`apple/ffi/src/{keymap,notify,folder_picker}/`, `palette_search.rs`, `words.rs`. Each is core's rules called, never
+re-implemented, with plain records on the Swift side (`...Record`). Additive: no contract version change. The Swift
+adapters are `PlatformBridge` and `WordsBridge` (linked builds only); the protocols they fill (`MenuProviding`,
+`NoticeDeciding`, `FolderProviding`/`FolderDecorating`, `PaletteMatching`, `WordSource`) live in `PlatformModel`,
+`PaletteModel` and `WordsModel`, which keep their dumped or mocked stand-ins in a build without the FFI.
+
+**Keymap and menus** (free functions, pure, any thread). Actions are named by text (`newTerminal`, `terminal.3`).
+`keymapEntries() -> [KeymapEntryRecord]` (the table, in order), `keymapSystemKeys()`, `keymapMenus(state:) ->
+[MenuRecord]` and `keymapMenusDump(state:)` (core's text dump), `keymapHiddenActions(featuresOff:flagsOff:)`;
+`keySpecFromGlyphs/Parse/Glyphs/Text/SameKey`, `keyUses`, `recordShortcut(mods:key:)`, `shortcutConflict(key:own:)`
+and the routes `keyActionFor(key:scope:)`, `keyTerminalYields`, `keyTerminalAction`, `keyListAction`,
+`keyStudioAction`. `KeySpecRecord.mods` is a mask: control 1, option 2, shift 4, command 8. A menu item is one flat
+`MenuItemRecord` (`kind`, `command`, `title`, `key`, `checked`, `enabled`, `items` for a submenu). A `MenuStateRecord`
+action name the table does not know is dropped. The window's own facts (which toggles are off, the terminals, the
+profiles) are still the app's to say: core has no model of them.
+
+**Notifications** (`Notifier` object, one per app, internal mutex, no thread of its own). Sans-IO: nothing reads a
+clock or posts a banner. `observe(tabs:settings:appActive:timeSensitive:nowMs:wallMs:) -> [NotifyActionRecord]` takes
+one `TabFactsRecord` per terminal of every window (`sinceMs`, a failure's `atMs` on the monotonic clock;
+`foreground.startedUnixMs` on the wall clock) and returns, in order, `post(NoticeRecord)`, `retract(id)`, `bounce`
+and `say(text, urgent)`. The rules remembered across calls: each tab's last look (a tab seen for the first time counts
+as idle), the burst (3 banners in 10 s become one summary and the singles are retracted; needs input is never
+folded), the bell (once a minute per terminal), a reporting program's asks (once in 5 s). A tab may carry its own
+profile's `NotifySettingsRecord`. `respond(response:) -> ResponseOutcomeRecord` turns a click into `open`,
+`showChanges`, `reply(tab, text)` or `activate` and names the banner to take down; `dismiss(tab:)`, `testNotice(...)`,
+`finishedCommand(tab:)`; free functions `notifyDockBadge`, `notifyDefaultSettings`, `notifyLevel`. Call `observe`
+after an event that changed a terminal (a hook, a mark, a bell, focus), never on a timer.
+
+**Folder picker** (`FolderPicker` object). `providerCount()`/`decoratorCount()`/`decoratorKinds(index:)`;
+`ask(index:query:listener:) -> PickerJob` and `decorate(index:keys:listener:) -> PickerJob` start a job on a Rust
+thread under core's gate (4 readers, 8 threads with the stuck ones, a job over 1.5 s stops counting); the
+`PickerListener` hears `answered` or `decorated` **exactly once per job**, from that thread with no lock held, also
+when the job was cancelled (`PickerJob.cancel()`: the answer is then empty or partial and the caller drops it).
+Marks are byte ranges of the label (`ByteRangeRecord`). `recordVisit(path:nowSecs:)`, `forget(path:)`,
+`recentsJson()` (the host stores it; `FolderPicker(recentsJson:recentTitle:)` reads it back). Every disk look goes
+through core's `looks`, so a hung mount is skipped.
+
+**Palette search** (free functions, pure). `paletteRank(query:candidates:) -> [PaletteRankedRecord]` (best first,
+ties in order; ranges are byte ranges of the title), `paletteFuzzy`, `paletteParse`, `paletteScopes`,
+`paletteStepScope`, `paletteGroupMax`, `paletteGroupOrder`.
+
+**Words** (free functions, pure). `textIds()` (every message id, in `Key` order), `textTable(tag:) -> [String]?` (the
+same length: each message's text, English's where a language lacks it, `""` for a message with variables, which
+Rust formats), `textLanguages()`, `textNegotiate(requested:)`, `textSetLanguage(tag:)` (the words Rust itself writes),
+`textHash()` (FNV-1a of the id list, for a generated key list to check itself against). One fetch per language,
+then a lookup in Swift.

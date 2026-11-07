@@ -77,6 +77,8 @@ var targets: [Target] = [
         resources: [.copy("Resources/shader")]),
     .testTarget(name: "AuxTests", dependencies: ["AuxModel", "AuxWindows", "DesignSystem"]),
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),
+    // The seam for the interface's words (`wormhole-text`'s ids and tables behind it, when linked). Foundation only.
+    .target(name: "WordsModel"),
     // The macOS edge as plain values and pure logic: the keymap (core's table as data), the menu bar and context
     // menus, notifications, the ambient surfaces, the folder picker's model, Touch ID's protocol. Foundation only.
     .target(name: "PlatformModel", resources: [.copy("Resources/keymap.json")]),
@@ -148,6 +150,19 @@ if ffiLinked {
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.
     targets.append(.target(name: "GitBridge", dependencies: ["PanelModel", "WormholeBindings"]))
     targets.append(.testTarget(name: "GitBridgeTests", dependencies: ["GitBridge", "PanelModel", "WormholeBindings"]))
+    // The theme resolver against the real Rust loader: a user theme file, colour picks, an opacity.
+    targets.append(.testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]))
+    // The macOS edge's logic from core: the keymap and menu bar, the notification rules, the folder picker's
+    // providers and the palette's search; and the interface's words.
+    targets += [
+        .target(name: "PlatformBridge", dependencies: ["PlatformModel", "PaletteModel", "WormholeBindings"]),
+        .target(name: "WordsBridge", dependencies: ["WordsModel", "WormholeBindings"]),
+        .testTarget(
+            name: "PlatformBridgeTests",
+            dependencies: ["PlatformBridge", "PlatformModel", "PaletteModel", "WormholeBindings"]),
+        .testTarget(name: "WordsBridgeTests", dependencies: ["WordsBridge", "WordsModel", "WormholeBindings"]),
+    ]
+    appDependencies.append("UniFFISource")
     appSettings.append(.define("WITH_UNIFFI"))
     inputTestDependencies.append("UniFFISource")
     inputTestSettings.append(.define("WITH_UNIFFI"))

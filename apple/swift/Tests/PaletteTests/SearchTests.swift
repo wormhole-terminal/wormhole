@@ -4,33 +4,27 @@ import WorkspaceModel
 @testable import PaletteModel
 
 @Suite struct SearchTests {
-    private func score(_ word: String, _ text: String) -> Int? { PaletteSearch.fuzzy(word, in: text)?.score }
-
-    @Test func prefixBeatsWordStartBeatsScattered() throws {
-        let prefix = try #require(score("sid", "Sidebar polish"))
-        let wordStart = try #require(score("sid", "Hide Sidebar"))
-        let inside = try #require(score("sid", "Inside out"))
-        #expect(prefix > wordStart)
-        #expect(wordStart > inside)
+    /// The build without the Rust core ranks by substring; the real ranking is core's, tested in
+    /// `PlatformBridgeTests` against the FFI.
+    private func rank(_ query: String, _ titles: [String], other: [[String]] = []) -> [Int] {
+        let candidates = titles.enumerated().map { PaletteCandidate(title: $1, other: other.indices.contains($0) ? other[$0] : []) }
+        return ContainsMatcher().rank(query, candidates).map(\.index)
     }
 
-    @Test func lettersInOrderAcrossWordStarts() {
-        #expect(score("sp", "sidebar polish") != nil)
-        #expect(score("shm", "theme shape metrics") != nil)
-        #expect(score("ts", "Terminals") == nil)
+    @Test func earlierInTheTitleComesFirstAndTiesKeepTheirOrder() {
+        #expect(rank("sid", ["Hide Sidebar", "Sidebar polish", "Inside out", "nope"]) == [1, 2, 0])
+        #expect(rank("a", ["xa", "ya", "az"]) == [2, 0, 1])
     }
 
-    @Test func rangesMarkTheMatchedCharacters() throws {
-        let match = try #require(PaletteSearch.fuzzy("hsid", in: "Hide Sidebar"))
-        #expect(match.ranges == [0..<1, 5..<8])
+    @Test func everyWordMustBeFoundAndOtherTextCountsLess() {
+        #expect(rank("go api", ["Go to build"], other: [["~/api · main"]]) == [0])
+        #expect(rank("go zzz", ["Go to build"], other: [["~/api"]]).isEmpty)
+        #expect(rank("api", ["Go to build", "api server"], other: [["api"], []]) == [1, 0])
     }
 
-    @Test func everyWordMustBeFoundAndOtherTextCountsLess() throws {
-        #expect(PaletteSearch.score("go api", title: "Go to build", other: ["~/api · main"]) != nil)
-        #expect(PaletteSearch.score("go zzz", title: "Go to build", other: ["~/api"]) == nil)
-        let inTitle = try #require(PaletteSearch.score("api", title: "api server"))
-        let inOther = try #require(PaletteSearch.score("api", title: "Go to build", other: ["api"]))
-        #expect(inTitle.score > inOther.score)
+    @Test func rangesMarkTheMatchedCharacters() {
+        let found = ContainsMatcher().rank("sid", [PaletteCandidate(title: "Hide Sidebar")])
+        #expect(found.first?.match.ranges == [5..<8])
     }
 
     @Test func prefixesPickTheScope() {

@@ -9,12 +9,12 @@ import SwiftUI
 
 public struct QuickPanelView: View {
     let model: QuickPanelModel
-    var keymap: Keymap = .bundled
+    var keymap: Keymap = .shared
     @Environment(\.tokens) private var tokens
     @Namespace private var selection
     @State private var hovered: String?
 
-    public init(model: QuickPanelModel, keymap: Keymap = .bundled) {
+    public init(model: QuickPanelModel, keymap: Keymap = .shared) {
         self.model = model
         self.keymap = keymap
     }

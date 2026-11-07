@@ -11,7 +11,7 @@ public final class ShortcutRecorderView: NSView {
     public var shortcut: KeySpec? { didSet { needsDisplay = true; updateAccessibility() } }
     /// The action the field sets the key of, whose own key is no conflict (the jump key is Go to Waiting's).
     public var ownAction: ActionID?
-    public var keymap: Keymap = .bundled
+    public var keymap: Keymap = .shared
     public var style: ShortcutRecorderStyle? { didSet { needsDisplay = true } }
     public var onChange: (KeySpec?) -> Void = { _ in }
     /// What stands in the way of the last key pressed, or nil: the owner shows it under the field.

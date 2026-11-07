@@ -1,13 +1,20 @@
 // The menu bar for a window's state (`keymap::menus::menus`): the layout's slots become items, an action that
 // is not live (or is the system's, or whose feature is off) is left out, and so is a separator it would leave
-// dangling. A stand-in for the FFI's `menus(state)`, which will return the same values.
+// dangling. This is the build without the Rust core: linked, `PlatformBridge.makeMenus()` answers the same
+// question from core's own `keymap::menus::menus` and a test keeps the two equal.
 
 import Foundation
 
-public struct MenuBuilder: Sendable {
+/// Where the menu bar's values come from for a window's state.
+public protocol MenuProviding: Sendable {
+    /// The menu bar, left to right.
+    func menus(for state: MenuState) -> [Menu]
+}
+
+public struct MenuBuilder: MenuProviding {
     public let keymap: Keymap
 
-    public init(keymap: Keymap = .bundled) { self.keymap = keymap }
+    public init(keymap: Keymap = .shared) { self.keymap = keymap }
 
     /// The menu bar, left to right.
     public func menus(for state: MenuState) -> [Menu] {

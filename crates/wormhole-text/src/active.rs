@@ -8,6 +8,7 @@ use fluent_bundle::FluentArgs;
 use crate::args::Arg;
 use crate::catalog::Loaded;
 use crate::generated::files::LOCALES;
+use crate::generated::ids::IDS;
 use crate::key::Key;
 use crate::language::Language;
 
@@ -91,6 +92,14 @@ pub fn text(key: Key) -> &'static str {
 /// English words in any language); a frame uses [`text`], which never loads.
 pub fn text_in(language: Language, key: Key) -> &'static str {
     load(language).plain(key.index())
+}
+
+/// Every message id with its text in `language`, in `Key` order (a `Key`'s index is a place in this list), loading
+/// the language first. A message with variables has no text here, only the empty string: it is formatted by its
+/// typed function. For a front end that holds the whole table once per language (one fetch, then an index).
+pub fn catalog(language: Language) -> impl ExactSizeIterator<Item = (&'static str, &'static str)> {
+    let loaded = load(language);
+    IDS.iter().enumerate().map(move |(index, id)| (*id, loaded.plain(index)))
 }
 
 /// Runs `body` with `language` as this thread's language, whatever the global one is. For tests,
