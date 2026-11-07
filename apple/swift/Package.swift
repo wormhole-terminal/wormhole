@@ -19,9 +19,21 @@ var targets: [Target] = [
     // The Metal view: CoreText, the glyph atlas, instanced quads, the display link, keyboard and IME.
     .target(name: "TerminalMetal", dependencies: ["TerminalCore"], swiftSettings: hotLoopSettings),
     .testTarget(name: "TerminalCoreTests", dependencies: ["TerminalCore", "TerminalMetal"]),
+
+    // The window around the terminal. Layers, lowest first; each depends only on the ones above it here.
+    // The window's state as plain values and the actions on it. Foundation only.
+    .target(name: "WorkspaceModel"),
+    // Tokens and shared components (SwiftUI). Knows nothing of terminals.
+    .target(name: "DesignSystem"),
+    // The sidebar's list, rows and header.
+    .target(name: "SidebarUI", dependencies: ["WorkspaceModel", "DesignSystem"]),
+    // Title rows, status bar, right panel and the window that holds them with the terminal view.
+    .target(name: "WindowUI", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "TerminalMetal"]),
+    .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),
+    .testTarget(name: "UITests", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI"]),
 ]
 
-var appDependencies: [Target.Dependency] = ["TerminalCore", "TerminalMetal"]
+var appDependencies: [Target.Dependency] = ["TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowUI"]
 var appSettings: [SwiftSetting] = []
 
 if ffiLinked {
