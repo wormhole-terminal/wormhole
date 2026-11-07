@@ -56,6 +56,10 @@ Generated Swift (`open class Terminal: TerminalProtocol, @unchecked Sendable`):
 static func start(program: String, args: [String], cols: UInt16, rows: UInt16,
                   cellWidth: Float, cellHeight: Float, listener: TerminalListener) throws -> Terminal
 
+static func startIn(program: String, args: [String], cwd: String?, cols: UInt16, rows: UInt16,
+                    cellWidth: Float, cellHeight: Float, listener: TerminalListener) throws -> Terminal
+                                  // `start` in a folder (a missing one starts where the process is): what `opened(id, cwd)` asks for
+
 func frame() -> Data              // the rows that changed since the last call (see "Frame")
 func fullFrame() -> Data          // every row, whatever changed (a new surface lost its picture)
 func drainEvents() -> [TermEvent] // everything queued since the last drain; re-arms wake()

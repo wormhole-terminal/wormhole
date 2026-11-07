@@ -97,12 +97,30 @@ impl Terminal {
         cell_height: f32,
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Self>, FfiError> {
+        Self::start_in(program, args, None, cols, rows, cell_width, cell_height, listener)
+    }
+
+    /// [`Self::start`] in the folder `cwd` (a terminal opened beside another starts where it is); a
+    /// folder that is not there starts the program where the process is.
+    #[uniffi::constructor]
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_in(
+        program: String,
+        args: Vec<String>,
+        cwd: Option<String>,
+        cols: u16,
+        rows: u16,
+        cell_width: f32,
+        cell_height: f32,
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
         isolation::require()?;
         let name = program.rsplit('/').next().unwrap_or(&program).to_string();
         let options = SpawnOptions {
             tab_id: "swift-experiment".into(),
             scrollback_lines: SCROLLBACK_LINES,
             shell: Some(wormhole_core::terminal::shells::ShellCommand { program, args, name: name.clone() }),
+            cwd: cwd.map(std::path::PathBuf::from).filter(|dir| dir.is_dir()),
             ..SpawnOptions::default()
         };
         let size = GridSize { cols, rows, cell_width, cell_height };
