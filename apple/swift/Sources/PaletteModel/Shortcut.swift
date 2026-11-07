@@ -12,8 +12,12 @@ public struct Shortcut: Sendable, Equatable {
         public static let command = Modifiers(rawValue: 8)
     }
 
+    private static let glyphOrder: [(Modifiers, Character)] = [
+        (.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘"),
+    ]
+
     public var modifiers: Modifiers
-    /// What the key cap shows: `T`, `]`, `↓`, `/`.
+    /// What follows the modifiers: `T`, `]`, `↓`, `/`.
     public var key: String
 
     public init(_ modifiers: Modifiers, _ key: String) {
@@ -21,12 +25,21 @@ public struct Shortcut: Sendable, Equatable {
         self.key = key
     }
 
-    /// One cap per modifier and one for the key, so the views can draw each on its own.
-    public var parts: [String] {
-        let glyphs: [(Modifiers, String)] = [(.control, "⌃"), (.option, "⌥"), (.shift, "⇧"), (.command, "⌘")]
-        return glyphs.filter { modifiers.contains($0.0) }.map(\.1) + [key]
+    /// `⇧⌘P`: the text of the one key cap, and what the sheet's filter matches ("⌘W" finds Close terminal).
+    public var glyphs: String {
+        String(Self.glyphOrder.filter { modifiers.contains($0.0) }.map(\.1)) + key
     }
 
-    /// `⇧⌘P`: what the sheet's filter matches, so "⌘W" finds Close terminal.
-    public var glyphs: String { parts.joined() }
+    /// The chord `text` writes, in any order of modifiers; nil without a key or with one modifier twice.
+    public init?(glyphs text: String) {
+        var modifiers: Modifiers = []
+        var rest = Substring(text)
+        while let first = rest.first, let found = Self.glyphOrder.first(where: { $0.1 == first }) {
+            guard !modifiers.contains(found.0) else { return nil }
+            modifiers.insert(found.0)
+            rest = rest.dropFirst()
+        }
+        guard !rest.isEmpty, !modifiers.isEmpty || rest.count > 1 else { return nil }
+        self.init(modifiers, rest.uppercased())
+    }
 }

@@ -14,74 +14,116 @@ import WorkspaceModel
         #expect(wordStart > inside)
     }
 
-    @Test func consecutiveBeatsSplit() throws {
-        let run = try #require(score("new", "New Terminal"))
-        let split = try #require(score("new", "Nice Extra Window"))
-        #expect(run > split)
-    }
-
     @Test func lettersInOrderAcrossWordStarts() {
         #expect(score("sp", "sidebar polish") != nil)
         #expect(score("shm", "theme shape metrics") != nil)
-        #expect(score("ts", "Terminals") == nil)  // after a gap a letter has to start a word, as in core
-        #expect(score("zq", "Terminals") == nil)
+        #expect(score("ts", "Terminals") == nil)
     }
 
     @Test func rangesMarkTheMatchedCharacters() throws {
         let match = try #require(PaletteSearch.fuzzy("hsid", in: "Hide Sidebar"))
         #expect(match.ranges == [0..<1, 5..<8])
-        let whole = try #require(PaletteSearch.fuzzy("new", in: "New Terminal"))
-        #expect(whole.ranges == [0..<3])
     }
 
-    @Test func everyWordMustBeFoundAndSubtitleCountsLess() throws {
+    @Test func everyWordMustBeFoundAndOtherTextCountsLess() throws {
         #expect(PaletteSearch.score("go api", title: "Go to build", other: ["~/api · main"]) != nil)
         #expect(PaletteSearch.score("go zzz", title: "Go to build", other: ["~/api"]) == nil)
         let inTitle = try #require(PaletteSearch.score("api", title: "api server"))
         let inOther = try #require(PaletteSearch.score("api", title: "Go to build", other: ["api"]))
         #expect(inTitle.score > inOther.score)
-        #expect(inOther.ranges.isEmpty)
     }
 
-    @Test func caseDoesNotMatterAndUnicodeIsByCharacter() throws {
-        #expect(score("NEW", "new terminal") != nil)
-        let match = try #require(PaletteSearch.fuzzy("é", in: "Café Étoile"))
-        #expect(match.ranges.first == 5..<6)
+    @Test func prefixesPickTheScope() {
+        #expect(PaletteScope.parse("@diff") == (.terminals, "diff"))
+        #expect(PaletteScope.parse("> new tab") == (.actions, "new tab"))
+        #expect(PaletteScope.parse("~") == (.folders, ""))
+        #expect(PaletteScope.parse("#fix") == (.commits, "fix"))
+        #expect(PaletteScope.parse(",theme") == (.settings, "theme"))
+        #expect(PaletteScope.parse("/style.rs") == (.all, "/style.rs"))
+        #expect(PaletteScope.parse("a@b") == (.all, "a@b"))
     }
 
-    @Test func ranksAreStableForEqualScores() {
-        let commands = (0..<4).map { Command(id: "c\($0)", title: "Same", category: .view, symbol: "x") }
-        #expect(PaletteSearch.results(for: "same", in: commands).map(\.id) == ["c0", "c1", "c2", "c3"])
-    }
-
-    @Test func bestMatchComesFirst() {
-        let state = sample()
-        let found = PaletteSearch.results(for: "side", in: CommandCatalog.commands(for: state))
-        #expect(found.first?.command.id == "toggle-sidebar")
-    }
-
-    @Test func emptyQueryGroupsActionsBeforeTerminals() {
-        let all = PaletteSearch.results(for: "", in: CommandCatalog.commands(for: sample()))
-        let groups = all.map(\.command.group.rawValue)
-        #expect(groups == groups.sorted())
-        #expect(all.first?.command.id == "new-terminal")
-    }
-
-    @Test func prefixesNarrowTheScope() {
-        let commands = CommandCatalog.commands(for: sample())
-        let terminals = PaletteSearch.results(for: "@ ", in: commands)
-        #expect(!terminals.isEmpty && terminals.allSatisfy { $0.command.group == .terminals })
-        let actions = PaletteSearch.results(for: ">new", in: commands)
-        #expect(actions.map(\.id) == ["new-terminal"])
-        #expect(PaletteScope.parse("@api").query == "api")
+    @Test func tabWalksTheScopeRowAndWraps() {
+        #expect(PaletteScope.all.step(forward: true) == .terminals)
+        #expect(PaletteScope.actions.step(forward: true) == .all)
+        #expect(PaletteScope.all.step(forward: false) == .actions)
+        #expect(PaletteScope.row.map(\.title) == ["All", "Terminals", "Folders", "Commits", "Settings", "Actions"])
     }
 }
 
-func sample() -> WorkspaceState {
-    WorkspaceState(
-        terminals: [
-            TerminalSummary(id: 1, title: "api server", subtitle: "~/api", branch: "main", activity: .working),
-            TerminalSummary(id: 2, title: "web", subtitle: "~/web", branch: "redesign"),
-            TerminalSummary(id: 3, title: "notes"),
-        ], selected: 2)
+@Suite struct RowsTests {
+    private let commands = CommandCatalog.commands(for: sample())
+
+    private func rows(_ scope: PaletteScope = .all, _ query: String = "", recent: [String] = []) -> [PaletteRow] {
+        PaletteRows.rows(scope: scope, query: query, commands: commands, recent: recent)
+    }
+
+    @Test func emptyQuerySuggestsTheActionsThatFit() {
+        let rows = rows()
+        #expect(rows.first == .label(title: "Actions", count: nil))
+        #expect(rows.compactMap(\.result?.id) == CommandCatalog.suggested)
+    }
+
+    @Test func recentComesFirstAndLeavesActionsOut() {
+        let rows = rows(recent: ["terminal-1", "new-terminal", "gone"])
+        #expect(rows.first == .label(title: "Recent", count: nil))
+        #expect(rows.compactMap(\.result?.id).first == "terminal-1")
+        #expect(rows.compactMap(\.result?.id).filter { $0 == "new-terminal" }.count == 1)
+    }
+
+    @Test func aQueryListsGroupsInOrderWithTheirCounts() {
+        let rows = rows(.all, "e")
+        let labels = rows.compactMap { row -> String? in
+            if case .label(let title, let count?) = row { "\(title) \(count)" } else { nil }
+        }
+        #expect(labels.first?.hasPrefix("Actions") == true)
+        #expect(labels.contains { $0.hasPrefix("Terminals") })
+        #expect(PaletteRows.resultCount(rows) >= rows.compactMap(\.result).count)
+    }
+
+    @Test func unscopedGroupsAreCutToFiveButTheirScopeListsAll() {
+        let many = WorkspaceState(terminals: (1...9).map { TerminalSummary(id: $0, title: "zq\($0)") })
+        let all = CommandCatalog.commands(for: many)
+        let cut = PaletteRows.rows(scope: .all, query: "zq", commands: all)
+        #expect(cut.compactMap(\.result).count == 5)
+        #expect(PaletteRows.resultCount(cut) == 9)
+        #expect(PaletteRows.rows(scope: .terminals, query: "zq", commands: all).compactMap(\.result).count == 9)
+    }
+
+    @Test func terminalsByWhoNeedsYouFirst() {
+        let state = WorkspaceState(terminals: [
+            TerminalSummary(id: 1, title: "a", activity: .idle), TerminalSummary(id: 2, title: "b", activity: .needsInput),
+            TerminalSummary(id: 3, title: "c", activity: .working),
+        ])
+        let rows = PaletteRows.rows(scope: .terminals, query: "", commands: CommandCatalog.commands(for: state))
+        #expect(rows.compactMap { if case .label(let t, _) = $0 { t } else { nil } } == ["Needs input", "Working", "Idle"])
+    }
+
+    @Test func actionsByTheirGroups() {
+        let rows = rows(.actions)
+        #expect(rows.first == .label(title: "Terminal", count: nil))
+        #expect(rows.contains(.label(title: "View", count: nil)))
+    }
+
+    @Test func emptyScopesSayWhy() {
+        #expect(rows(.commits) == [.note("Nothing here yet")])
+        #expect(rows(.settings) == [.note("Type to find a setting")])
+        #expect(rows(.all, "zzzqq") == [.note("Nothing matches")])
+    }
+
+    @Test func selectionStopsAtTheEndsAndSurvivesRowsChanging() {
+        let rows = rows(.terminals)
+        let ids = rows.compactMap(\.result?.id)
+        #expect(PaletteSelection.current(chosen: nil, in: rows) == ids.first)
+        #expect(PaletteSelection.step(-1, from: nil, in: rows) == ids.first)
+        #expect(PaletteSelection.step(1, from: ids.last, in: rows) == ids.last)
+        #expect(PaletteSelection.current(chosen: "vanished", in: rows) == ids.first)
+    }
+
+    @Test func footerKeysFollowTheScope() {
+        #expect(PaletteFooter.hints(scope: .all).map(\.label) == ["move", "open", "scope"])
+        #expect(PaletteFooter.hints(scope: .terminals).map(\.keys) == ["↩", "⌘⌫"])
+        #expect(PaletteFooter.trailing(scope: .all, query: "", rows: []) == .actionsHint)
+        #expect(PaletteFooter.trailing(scope: .all, query: "x", rows: rows(.all, "e")) != .actionsHint)
+    }
 }

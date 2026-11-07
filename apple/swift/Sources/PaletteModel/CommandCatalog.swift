@@ -1,88 +1,116 @@
-// The commands the Swift app has, for the window as it is now: toggles say what they will do ("Hide
-// Sidebar"), and every terminal is a "Go to" entry. Wording follows core's keymap table (sentence-case titles).
+// What the palette can list for the window as it is now, worded as core's `keymap/palette.rs` words the
+// actions: sentence case, a toggle by what it will do ("Hide sidebar"), listed most-used first. Terminals and the
+// folders they are in are results of their own. Settings and commits have no source in this app yet, so
+// those scopes stay empty, as they do in a Wormhole window outside a repository.
 
 import Foundation
 import WorkspaceModel
 
 public enum CommandCatalog {
+    /// What an empty query suggests under "Actions", in this order (core `palette::SUGGESTED`).
+    public static let suggested = ["new-terminal", "panel-changes", "toggle-panel", "keyboard-shortcuts"]
+
     public static func commands(for state: WorkspaceState) -> [Command] {
-        var out: [Command] = [
-            Command(
-                id: "new-terminal", title: "New Terminal", category: .terminals, symbol: "plus.rectangle",
-                shortcut: Shortcuts.newTerminal, action: .newTerminal)
-        ]
-        if let selected = state.terminals.first(where: { $0.id == state.selected }) {
-            out += selectedTerminalCommands(selected, state: state)
+        actions(for: state) + terminals(in: state) + folders(in: state)
+    }
+
+    static func actions(for state: WorkspaceState) -> [Command] {
+        let selected = state.terminals.first { $0.id == state.selected }
+        var out = [command("new-terminal", "New terminal", "plus", .newTerminal, Shortcuts.newTerminal, .terminal)]
+        out[0].detail = selected?.subtitle.map { "in \($0)" }
+        if let selected {
+            out.append(command("close-terminal", "Close terminal", "xmark", .close(selected.id), Shortcuts.closeTerminal, .terminal))
         }
         out += [
-            Command(
-                id: "toggle-sidebar", title: state.sidebarVisible ? "Hide Sidebar" : "Show Sidebar", category: .view,
-                symbol: "sidebar.left", shortcut: Shortcuts.toggleSidebar, action: .toggleSidebar),
-            Command(
-                id: "toggle-panel", title: state.panelVisible ? "Hide Right Panel" : "Show Right Panel",
-                category: .view, symbol: "sidebar.right", shortcut: Shortcuts.togglePanel, action: .togglePanel),
+            command(
+                "toggle-sidebar", state.sidebarVisible ? "Hide sidebar" : "Show sidebar", "sidebar.left",
+                .toggleSidebar, Shortcuts.toggleSidebar, .view),
+            command(
+                "panel-changes", "Show changes", "plusminus", .showPanelTab(.changes), Shortcuts.panelTab(.changes), .view),
+            command(
+                "panel-history", "Show history", "clock.arrow.circlepath", .showPanelTab(.history),
+                Shortcuts.panelTab(.history), .view),
+            command(
+                "toggle-panel", state.panelVisible ? "Hide right panel" : "Show right panel", "sidebar.right",
+                .togglePanel, Shortcuts.togglePanel, .view),
+            command("panel-notes", "Show notes", "note.text", .showPanelTab(.notes), Shortcuts.panelTab(.notes), .view),
+            command(
+                "keyboard-shortcuts", "Keyboard shortcuts", "keyboard", .showOverlay(.shortcuts),
+                Shortcuts.shortcutSheet, .view),
         ]
-        for tab in [PanelTab.changes, .history, .notes] {
-            out.append(
-                Command(
-                    id: "panel-\(tab.rawValue)", title: "Show \(tab.rawValue.capitalized)", category: .view,
-                    symbol: symbol(for: tab), shortcut: Shortcuts.panelTab(tab), action: .showPanelTab(tab)))
-        }
-        for (index, terminal) in state.terminals.enumerated() {
-            out.append(
-                Command(
-                    id: "go-\(terminal.id)", title: "Go to \(terminal.title)", subtitle: detail(of: terminal),
-                    group: .terminals, category: .terminals, symbol: "terminal",
-                    shortcut: index < 9 ? Shortcuts.terminal(number: index + 1) : nil, action: .select(terminal.id)))
-        }
+        if let selected { out += neighbours(of: selected, in: state) }
         return out
     }
 
-    /// Entries the window handles itself (it opens the overlays), so they are not runnable from the palette.
-    public static let windowEntries: [Command] = [
-        Command(
-            id: "command-palette", title: "Command Palette", category: .findAnything, symbol: "command",
-            shortcut: Shortcuts.commandPalette),
-        Command(
-            id: "shortcut-sheet", title: "Keyboard Shortcuts", category: .findAnything, symbol: "keyboard",
-            shortcut: Shortcuts.shortcutSheet),
-    ]
-
-    private static func selectedTerminalCommands(_ terminal: TerminalSummary, state: WorkspaceState) -> [Command] {
+    private static func neighbours(of terminal: TerminalSummary, in state: WorkspaceState) -> [Command] {
         var out = [
-            Command(
-                id: "close-terminal", title: "Close Terminal", category: .terminals, symbol: "xmark.rectangle",
-                shortcut: Shortcuts.closeTerminal, action: .close(terminal.id)),
-            Command(
-                id: "pin-terminal", title: terminal.isPinned ? "Unpin Terminal" : "Pin to Top",
-                category: .terminals, symbol: terminal.isPinned ? "pin.slash" : "pin",
-                action: .togglePin(terminal.id)),
+            command(
+                "pin-terminal", terminal.isPinned ? "Unpin terminal" : "Pin to top", "pin", .togglePin(terminal.id), nil,
+                .terminal)
         ]
         guard let at = state.terminals.firstIndex(where: { $0.id == terminal.id }), state.terminals.count > 1 else {
             return out
         }
         let count = state.terminals.count
-        out += [
-            Command(
-                id: "next-terminal", title: "Next Terminal", category: .terminals, symbol: "chevron.down",
-                shortcut: Shortcuts.nextTerminal, action: .select(state.terminals[(at + 1) % count].id)),
-            Command(
-                id: "previous-terminal", title: "Previous Terminal", category: .terminals, symbol: "chevron.up",
-                shortcut: Shortcuts.previousTerminal, action: .select(state.terminals[(at + count - 1) % count].id)),
-        ]
+        out.append(
+            command(
+                "next-terminal", "Next terminal", "command", .select(state.terminals[(at + 1) % count].id),
+                Shortcuts.nextTerminal, .terminal))
+        out.append(
+            command(
+                "previous-terminal", "Previous terminal", "command", .select(state.terminals[(at + count - 1) % count].id),
+                Shortcuts.previousTerminal, .terminal))
         return out
     }
 
-    private static func detail(of terminal: TerminalSummary) -> String? {
-        let parts = [terminal.subtitle, terminal.branch].compactMap { $0 }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    private static func command(
+        _ id: String, _ title: String, _ symbol: String, _ action: WorkspaceAction, _ key: Shortcut?,
+        _ section: ActionSection
+    ) -> Command {
+        Command(id: id, title: title, lead: .symbol(symbol), shortcut: key, action: action, section: section)
     }
 
-    private static func symbol(for tab: PanelTab) -> String {
-        switch tab {
-        case .changes: "plusminus"
-        case .history: "clock.arrow.circlepath"
-        case .notes: "note.text"
+    private static func terminals(in state: WorkspaceState) -> [Command] {
+        state.terminals.enumerated().map { index, terminal in
+            let folder = terminal.subtitle
+            return Command(
+                id: "terminal-\(terminal.id)", title: terminal.title,
+                detail: doing(terminal), scopedDetail: (["Window 1"] + [folder].compactMap { $0 }).joined(separator: " · "),
+                group: .terminals, lead: .status(terminal.activity),
+                shortcut: index < 9 ? Shortcuts.terminal(number: index + 1) : nil, action: .select(terminal.id),
+                isStrong: true, searchText: [terminal.subtitle, terminal.branch].compactMap { $0 })
+        }
+    }
+
+    /// What a terminal is doing, in the words of core's `terminal_detail`: a state worth saying, else its folder.
+    private static func doing(_ terminal: TerminalSummary) -> String? {
+        switch terminal.activity {
+        case .needsInput: "Needs input"
+        case .finished: "Finished"
+        case .failed: "Failed"
+        case .working, .idle: terminal.subtitle
+        }
+    }
+
+    /// The folders terminals are in, with how many each holds. A subtitle that is a program, not a path, is not one.
+    private static func folders(in state: WorkspaceState) -> [Command] {
+        var order: [String] = []
+        var counts: [String: Int] = [:]
+        for terminal in state.terminals {
+            guard let path = terminal.subtitle, path.hasPrefix("~") || path.hasPrefix("/") else { continue }
+            if counts[path] == nil { order.append(path) }
+            counts[path, default: 0] += 1
+        }
+        return order.map { path in
+            let name = path.split(separator: "/").last.map(String.init) ?? path
+            let parent = path.split(separator: "/").dropLast().joined(separator: "/")
+            let count = counts[path] ?? 0
+            let origin = parent.isEmpty ? nil : (path.hasPrefix("/") ? "/" : "") + parent
+            return Command(
+                id: "folder-\(path)", title: name,
+                detail: [origin, "\(count) terminal\(count == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " · "),
+                group: .folders, lead: .symbol("folder"),
+                action: state.terminals.first { $0.subtitle == path }.map { .select($0.id) })
         }
     }
 }

@@ -1,29 +1,22 @@
-// One entry of the palette: what it is called, where it is filed, its key and what it does.
+// One result of the palette: what it is called, what leads it, the words beside it, its key and what it does.
 
 import Foundation
 import WorkspaceModel
 
-/// The palette's groups, in the order an unfiltered palette lists them (core `search::Group::ORDER`).
-public enum PaletteGroup: Int, Sendable, CaseIterable {
-    case actions, terminals
-
-    public var title: String {
-        switch self {
-        case .actions: "Actions"
-        case .terminals: "Terminals"
-        }
-    }
+/// What stands in a result's lead column: a terminal's status, or an icon (an SF Symbol name).
+public enum Lead: Sendable, Equatable {
+    case symbol(String)
+    case status(Activity)
 }
 
-/// Where the shortcut sheet files a command (the section names of core's `keys/keymap/sheet.rs`).
-public enum CommandCategory: Int, Sendable, CaseIterable {
-    case terminals, view, findAnything
+/// The groups of the Actions scope with nothing typed (core `palette::Section`).
+public enum ActionSection: Int, Sendable, CaseIterable {
+    case terminal, view
 
     public var title: String {
         switch self {
-        case .terminals: "Windows & terminals"
-        case .view: "View & panels"
-        case .findAnything: "Find anything"
+        case .terminal: "Terminal"
+        case .view: "View"
         }
     }
 }
@@ -31,26 +24,36 @@ public enum CommandCategory: Int, Sendable, CaseIterable {
 public struct Command: Sendable, Equatable, Identifiable {
     public var id: String
     public var title: String
-    public var subtitle: String?
+    /// After the title, in caption text: where, what it is doing.
+    public var detail: String?
+    /// The detail in the Terminals scope, where the window and the folder are the point.
+    public var scopedDetail: String?
     public var group: PaletteGroup
-    public var category: CommandCategory
-    /// An SF Symbol name for the row's icon.
-    public var symbol: String
+    public var lead: Lead
     public var shortcut: Shortcut?
-    /// What running it sends; nil for the entries the window handles itself (open the palette).
+    /// What running it sends.
     public var action: WorkspaceAction?
+    /// The title in medium weight rather than regular: a terminal's name.
+    public var isStrong: Bool
+    /// More words a query may find it by, which are not marked.
+    public var searchText: [String]
+    public var section: ActionSection?
 
     public init(
-        id: String, title: String, subtitle: String? = nil, group: PaletteGroup = .actions,
-        category: CommandCategory, symbol: String, shortcut: Shortcut? = nil, action: WorkspaceAction? = nil
+        id: String, title: String, detail: String? = nil, scopedDetail: String? = nil, group: PaletteGroup = .actions, lead: Lead,
+        shortcut: Shortcut? = nil, action: WorkspaceAction? = nil, isStrong: Bool = false,
+        searchText: [String] = [], section: ActionSection? = nil
     ) {
         self.id = id
         self.title = title
-        self.subtitle = subtitle
+        self.detail = detail
+        self.scopedDetail = scopedDetail
         self.group = group
-        self.category = category
-        self.symbol = symbol
+        self.lead = lead
         self.shortcut = shortcut
         self.action = action
+        self.isStrong = isStrong
+        self.searchText = searchText
+        self.section = section
     }
 }
