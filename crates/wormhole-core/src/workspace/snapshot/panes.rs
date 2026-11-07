@@ -1,9 +1,9 @@
-//! The panes and the chrome as records.
+//! The panes as records.
 
 use crate::view::panes::TabPanes;
 
 use super::super::model::WorkspaceModel;
-use super::{ChromeSnapshot, PaneRect, PanesSnapshot};
+use super::{DividerInfo, PaneRect, PanesSnapshot};
 
 impl WorkspaceModel {
     /// Where the selected terminal's panes are in an area `width` x `height` points: every pane in
@@ -11,7 +11,14 @@ impl WorkspaceModel {
     pub fn panes_snapshot(&self, width: f32, height: f32) -> PanesSnapshot {
         let revision = self.revisions().layout;
         let Some(ix) = self.selected_index() else {
-            return PanesSnapshot { revision, split: None, panes: Vec::new(), focused: None, zoomed: None };
+            return PanesSnapshot {
+                revision,
+                split: None,
+                panes: Vec::new(),
+                focused: None,
+                zoomed: None,
+                dividers: Vec::new(),
+            };
         };
         let id = self.sessions[ix].id;
         let split = self.sessions[ix].split.and_then(|split| self.split_of(split));
@@ -36,24 +43,27 @@ impl WorkspaceModel {
                 focused: pane == focused,
             })
             .collect();
+        let dividers = layout
+            .dividers(width, height)
+            .into_iter()
+            .map(|divider| DividerInfo {
+                path: divider.id.path.iter().map(|&at| at as u32).collect(),
+                index: divider.id.index as u32,
+                axis: divider.axis,
+                position: divider.position(),
+                x: divider.rect.x,
+                y: divider.rect.y,
+                w: divider.rect.w,
+                h: divider.rect.h,
+            })
+            .collect();
         PanesSnapshot {
             revision,
             split: split.map(|split| split.id),
             panes,
             focused: Some(focused),
             zoomed: layout.zoomed(),
-        }
-    }
-
-    pub fn chrome_snapshot(&self) -> ChromeSnapshot {
-        let chrome = &self.chrome;
-        ChromeSnapshot {
-            revision: self.revisions().chrome,
-            sidebar_visible: chrome.sidebar_visible,
-            panel_visible: chrome.panel_visible,
-            panel_tab: chrome.panel_tab,
-            search: chrome.search.clone(),
-            overlay: chrome.overlay,
+            dividers,
         }
     }
 }

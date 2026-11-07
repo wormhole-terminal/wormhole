@@ -37,12 +37,17 @@ pub enum Event {
     Selected { id: Option<i64> },
     /// A row was moved by a drop or a split's pane joined it: a shell may animate it.
     Moved { id: i64 },
-    /// The sidebar's rows, groups or numbers changed: pull `sidebar`.
+    /// The sidebar's rows, groups or numbers changed: pull `sidebar` (and `terminals`).
     Listing,
     /// The splits or the panes' focus changed: pull `panes`.
     Layout,
     /// The sidebar's or panel's visibility, the panel's tab, the search or the overlay changed.
     Chrome,
+    /// A terminal's "Forget text" was set: erase what was saved of its screen.
+    SavedTextForgotten { id: i64 },
+    /// A group is to move to a window of its own: `terminals` are its terminals and the rest of
+    /// every split they are in, in the window's order. Nothing moves in this model.
+    GroupToWindow { group: u32, terminals: Vec<i64> },
     /// The action changed nothing.
     Refused(Refusal),
 }
@@ -54,6 +59,8 @@ pub struct Revisions {
     pub sidebar: u64,
     pub layout: u64,
     pub chrome: u64,
+    /// The list of every terminal (`terminals_snapshot`): moves with the sidebar and the panes.
+    pub terminals: u64,
 }
 
 /// The events of one change, coalesced: a part that changed twice is told once, the selection last

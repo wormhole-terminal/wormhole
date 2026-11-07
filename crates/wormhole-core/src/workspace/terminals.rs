@@ -35,10 +35,16 @@ impl WorkspaceModel {
     pub(super) fn new_terminal_selected(&mut self) {
         let cwd = self.start_folder();
         let id = self.open_terminal(cwd);
+        self.select_new(id);
+    }
+
+    /// Select a terminal just made, and end a search that would hide it.
+    pub(super) fn select_new(&mut self, id: i64) {
         self.select_id(id);
         if !self.chrome.search.is_empty() {
             self.chrome.search.clear();
             self.emit(Event::Chrome);
+            self.emit(Event::Listing);
         }
     }
 
@@ -50,6 +56,8 @@ impl WorkspaceModel {
         }
         let changed = self.selected != Some(id);
         self.selected = Some(id);
+        // Where a new terminal in a group without a folder starts: the one last used in it.
+        self.last_selected.insert(self.sidebar.groups.group_of(id), id);
         let split = self.index_of(id).and_then(|ix| self.sessions[ix].split);
         if let Some(split) = split.and_then(|split| self.split_mut(split))
             && split.layout.focused() != id
@@ -124,6 +132,50 @@ impl WorkspaceModel {
         match self.sessions[ix].split {
             Some(id) => self.members(id).into_iter().any(|member| self.sessions[member].pinned),
             None => self.sessions[ix].pinned,
+        }
+    }
+
+    pub(super) fn toggle_agent_hidden(&mut self, id: i64) {
+        match self.index_of(id) {
+            Some(ix) => {
+                let hidden = !self.sessions[ix].agent_hidden;
+                self.set_agent_hidden(id, hidden)
+            }
+            None => self.refuse(),
+        }
+    }
+
+    /// "Hide from Agents": a program that controls Wormhole cannot list, read or type into the
+    /// terminal. The shell enforces it (`agent_hidden` on the row and the summary says which); the model keeps
+    /// the choice so it is saved and shown with the row.
+    pub(super) fn set_agent_hidden(&mut self, id: i64, hidden: bool) {
+        let Some(ix) = self.index_of(id) else { return self.refuse() };
+        if self.sessions[ix].agent_hidden != hidden {
+            self.sessions[ix].agent_hidden = hidden;
+            self.emit(Event::Listing);
+        }
+    }
+
+    pub(super) fn toggle_forget_text(&mut self, id: i64) {
+        match self.index_of(id) {
+            Some(ix) => {
+                let forget = !self.sessions[ix].forget_text;
+                self.set_forget_text(id, forget)
+            }
+            None => self.refuse(),
+        }
+    }
+
+    /// "Forget text": the screen is not saved with the window. Setting it asks the shell to erase
+    /// what was saved already.
+    pub(super) fn set_forget_text(&mut self, id: i64, forget: bool) {
+        let Some(ix) = self.index_of(id) else { return self.refuse() };
+        if self.sessions[ix].forget_text != forget {
+            self.sessions[ix].forget_text = forget;
+            if forget {
+                self.emit(Event::SavedTextForgotten { id });
+            }
+            self.emit(Event::Listing);
         }
     }
 }

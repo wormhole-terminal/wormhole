@@ -22,16 +22,21 @@ mod drops;
 mod event;
 mod facts;
 mod git_feed;
+mod fence;
 mod git_sync;
+mod ground;
 mod groups;
 mod model;
 mod open_items;
+mod panel;
+mod presets;
 mod session;
 mod snapshot;
 mod splits;
 mod status;
 mod status_feed;
 mod terminals;
+mod tile;
 mod words;
 
 #[cfg(test)]
@@ -45,11 +50,15 @@ pub use facts::{Failure, Millis, TerminalFacts};
 pub use git_feed::{
     ChangeRules, GitFacts, GitFeed, GitJob, PROBE_CONFIRM, Repo, Sight, Ticket, WATCHED_READ, Wanted,
 };
+pub use ground::{DiskGround, Ground};
 pub use model::{ModelConfig, WorkspaceModel};
 pub use open_items::open_items;
 pub use snapshot::{
-    AgentInfo, ChromeSnapshot, GroupHead, PaneRect, PanesSnapshot, SidebarRow, SidebarSection,
-    SidebarSnapshot, SplitInfo,
+    AgentInfo, ChromeSnapshot, ColumnLimits, DividerInfo, EdgeDrag, GroupHead, LayoutInfo, MemberTile,
+    PaneRect, PanelTab, PanesSnapshot, PathFolder, PathStep, PresetInfo, SidebarRow, SidebarSection,
+    SidebarSnapshot, SplitInfo, TerminalCounts, TerminalSummary, TerminalsSnapshot, TitleSlot, TitleSnapshot,
+    TitleTerminal,
 };
 pub use status::{Ask, Context, ForegroundLook, Front, StatusEvent, StatusMachine, status_of};
+pub use tile::{TileGlyph, glyph_of};
 pub use words::{SecondLine, Tone};

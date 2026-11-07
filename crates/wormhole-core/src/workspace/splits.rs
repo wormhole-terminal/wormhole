@@ -15,7 +15,7 @@ use super::model::{Split, WorkspaceModel};
 impl WorkspaceModel {
     /// Whether the focused pane of `anchor`'s split has the room for a split along `axis`: both halves
     /// at least the minimum. Before the area is laid out nothing is known, and the split is allowed.
-    fn can_split(&self, anchor: usize, axis: Axis) -> bool {
+    pub(super) fn can_split(&self, anchor: usize, axis: Axis) -> bool {
         let (w, h) = self.pane_area;
         if w <= 0.0 || h <= 0.0 {
             return true;
@@ -139,7 +139,7 @@ impl WorkspaceModel {
     /// Make `layout` session `anchor`'s split, with `joiner` in it: the split it had, or a new one.
     /// The joiner takes the anchor's pin (the pin is the split's) and stands in the split's card: its
     /// group, right after the other members.
-    fn install_layout(&mut self, anchor: usize, joiner: usize, layout: TabPanes) {
+    pub(super) fn install_layout(&mut self, anchor: usize, joiner: usize, layout: TabPanes) {
         let id = self.split_for(anchor, &layout);
         if let Some(split) = self.split_mut(id) {
             split.layout = layout;

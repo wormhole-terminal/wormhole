@@ -13,13 +13,26 @@ pub(super) struct Session {
     /// A name the person gave it, which wins over what runs in it.
     pub custom_name: Option<String>,
     pub pinned: bool,
+    /// "Hide from Agents": a program that controls Wormhole cannot list, read or type into it.
+    pub agent_hidden: bool,
+    /// "Forget text": its screen is not saved with the window.
+    pub forget_text: bool,
     pub split: Option<SplitId>,
     pub facts: TerminalFacts,
 }
 
 impl Session {
     pub(super) fn new(id: i64, number: usize) -> Self {
-        Self { id, number, custom_name: None, pinned: false, split: None, facts: TerminalFacts::default() }
+        Self {
+            id,
+            number,
+            custom_name: None,
+            pinned: false,
+            agent_hidden: false,
+            forget_text: false,
+            split: None,
+            facts: TerminalFacts::default(),
+        }
     }
 
     /// The name: the person's, else the title its program set, the agent, the program in front or

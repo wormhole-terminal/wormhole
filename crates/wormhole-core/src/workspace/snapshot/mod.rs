@@ -3,14 +3,21 @@
 //! its section (`Revisions`), so a view compares numbers, never values. The words are finished
 //! (second lines, VoiceOver labels) in the one wording core's sidebar already has.
 
+mod chrome;
 mod panes;
 mod sidebar;
+mod terminals;
+mod title;
 
-use crate::config::tab::TabId;
-use crate::view::sidebar::{Bracket, RowState};
+use crate::view::panes::Axis;
+use crate::view::sidebar::{Bracket, RowState, Urgency};
 
-use super::action::Overlay;
+use super::tile::TileGlyph;
 use super::words::SecondLine;
+
+pub use chrome::{ChromeSnapshot, ColumnLimits, EdgeDrag, LayoutInfo, PanelTab, PresetInfo};
+pub use terminals::{TerminalCounts, TerminalSummary, TerminalsSnapshot};
+pub use title::{PathFolder, PathStep, TitleSlot, TitleSnapshot, TitleTerminal};
 
 /// A coding agent as a row names it.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -74,6 +81,11 @@ pub struct SidebarRow {
     pub behind: u32,
     /// Files changed in the repository, whoever changed them (`changes` is this terminal's own).
     pub repo_files: Option<u32>,
+    /// The mark on its tile.
+    pub glyph: TileGlyph,
+    /// "Hide from Agents" and "Forget text" are on (the row menu's checks).
+    pub agent_hidden: bool,
+    pub forget_text: bool,
 }
 
 /// A group's head.
@@ -90,6 +102,21 @@ pub struct GroupHead {
     pub position: u32,
     pub of: u32,
     pub spoken: String,
+    /// The folder as the person set it (a full path), for the folder picker to start from.
+    pub folder_path: Option<String>,
+    /// The group keeps only the terminals in its folder.
+    pub only_in_folder: bool,
+}
+
+/// One terminal of a group as its folded head draws it: a tile.
+#[derive(Clone, Debug, PartialEq)]
+pub struct MemberTile {
+    pub id: i64,
+    pub name: String,
+    pub glyph: TileGlyph,
+    pub state: RowState,
+    pub agent: Option<AgentInfo>,
+    pub urgency: Urgency,
 }
 
 /// A run of rows: a group's, or the terminals in no group between two groups.
@@ -105,6 +132,13 @@ pub struct SidebarSection {
     pub terminal_count: u32,
     /// Of those, the ones that need input or failed: a folded head shows them as its alert dot.
     pub alert_count: u32,
+    /// What a folded head draws in the place of its rows: every terminal of the group that passes
+    /// the search, the loudest first (equally loud ones in the list's order). Empty while open.
+    pub tiles: Vec<MemberTile>,
+    /// The loudest alert among them (`NeedsYou` or `Failed`), for the head's dot; `None` for no alert.
+    pub alert: Option<Urgency>,
+    /// Terminals of the group working now: closing the group asks first when it is not 0.
+    pub working_count: u32,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -139,15 +173,20 @@ pub struct PanesSnapshot {
     pub panes: Vec<PaneRect>,
     pub focused: Option<i64>,
     pub zoomed: Option<i64>,
+    /// The lines between the panes (none while one is zoomed).
+    pub dividers: Vec<DividerInfo>,
 }
 
-/// The window's chrome the list and the panel depend on.
+/// A line between two panes, as `DragDivider` and `EqualizeDivider` name it.
 #[derive(Clone, Debug, PartialEq)]
-pub struct ChromeSnapshot {
-    pub revision: u64,
-    pub sidebar_visible: bool,
-    pub panel_visible: bool,
-    pub panel_tab: TabId,
-    pub search: String,
-    pub overlay: Option<Overlay>,
+pub struct DividerInfo {
+    pub path: Vec<u32>,
+    pub index: u32,
+    pub axis: Axis,
+    /// Its place along its split's axis: x for a vertical line, y for a horizontal one.
+    pub position: f32,
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
 }

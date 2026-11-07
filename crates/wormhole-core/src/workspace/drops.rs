@@ -20,18 +20,32 @@ pub enum DropPlan {
 }
 
 impl WorkspaceModel {
-    /// What dropping terminal `dragged` on `over` would do; `None` when nothing would change.
+    /// What dropping terminal `dragged` on `over` would do; `None` when nothing would change, or when
+    /// it would put the terminal in a group that keeps only the terminals in its folder and this one
+    /// is not in it.
     pub fn drop_plan(&self, dragged: i64, over: Over) -> Option<DropPlan> {
         let listing = self.listing();
         let (ids, pinned, split_of) = (self.ids(), self.pinned_flags(), self.split_flags());
         let input = DropInput { listing: &listing, ids: &ids, split_of: &split_of, pinned: &pinned };
         let drop = terminal_drop(&input, self.index_of(dragged)?, self.target_of(&listing, over)?)?;
+        if !self.fences_allow(drop, dragged) {
+            return None;
+        }
         Some(match drop {
             Drop::Move { landing, leave_split, with_mates } => {
                 DropPlan::Move { landing, leave_split, with_mates }
             }
             Drop::Join { target } => DropPlan::Join { target: ids[target] },
         })
+    }
+
+    /// Where dropping group `group` on `over` would put it; `None` when nothing would change.
+    pub fn group_drop_plan(&self, group: u32, over: Over) -> Option<Landing> {
+        let listing = self.listing();
+        let (ids, pinned, split_of) = (self.ids(), self.pinned_flags(), self.split_flags());
+        let input = DropInput { listing: &listing, ids: &ids, split_of: &split_of, pinned: &pinned };
+        let band = listing.bands.iter().position(|band| band.group == group)?;
+        group_drop(&input, band, self.target_of(&listing, over)?)
     }
 
     /// `over` as the core target it means: terminals and groups by their places in the listing.
@@ -65,6 +79,21 @@ impl WorkspaceModel {
         }
     }
 
+    /// A drop's plan applied: leave the split first when asked, then land with or without its mates.
+    pub(super) fn move_terminal_as(
+        &mut self,
+        id: i64,
+        landing: Landing,
+        leave_split: bool,
+        with_mates: bool,
+    ) {
+        let Some(ix) = self.index_of(id) else { return self.refuse() };
+        if leave_split {
+            self.leave_layout(ix);
+        }
+        self.land(id, landing, with_mates);
+    }
+
     /// A terminal moved to `landing`, alone.
     pub(super) fn move_terminal(&mut self, id: i64, landing: Landing) {
         if self.index_of(id).is_none() {
@@ -86,16 +115,7 @@ impl WorkspaceModel {
 
     /// Group `group` was dropped on `over`: it lands at the top level.
     pub(super) fn drop_group(&mut self, group: u32, over: Over) {
-        let listing = self.listing();
-        let (ids, pinned, split_of) = (self.ids(), self.pinned_flags(), self.split_flags());
-        let input = DropInput { listing: &listing, ids: &ids, split_of: &split_of, pinned: &pinned };
-        let plan = listing
-            .bands
-            .iter()
-            .position(|band| band.group == group)
-            .zip(self.target_of(&listing, over))
-            .and_then(|(band, target)| group_drop(&input, band, target));
-        match plan {
+        match self.group_drop_plan(group, over) {
             Some(landing) => self.move_group(group, landing),
             None => self.emit(Event::Refused(Refusal::Unchanged)),
         }

@@ -4,15 +4,17 @@
 use std::path::Path;
 use std::time::Duration;
 
+use crate::agents::AgentId;
 use crate::view::sidebar::spoken::{self, Place};
 use crate::view::sidebar::wording::display_path;
-use crate::view::sidebar::{Entry, Listing, RowState, SplitMarks, Urgency, hints};
+use crate::view::sidebar::{Entry, Listing, SplitMarks, Urgency, hints};
 
 use super::super::facts::Millis;
 use super::super::model::WorkspaceModel;
 use super::super::session::Session;
+use super::super::tile::glyph_of;
 use super::super::words;
-use super::{AgentInfo, GroupHead, SidebarRow, SidebarSection, SidebarSnapshot, SplitInfo};
+use super::{AgentInfo, GroupHead, MemberTile, SidebarRow, SidebarSection, SidebarSnapshot, SplitInfo};
 
 impl WorkspaceModel {
     /// The list top to bottom as sections of rows, with the words as they read at `now`. While a
@@ -45,7 +47,8 @@ impl WorkspaceModel {
         sections.retain(|section| !section.rows.is_empty() || (section.head.is_some() && !searching));
         for section in sections.iter_mut().filter(|section| section.head.is_none()) {
             section.terminal_count = section.rows.len() as u32;
-            section.alert_count = section.rows.iter().filter(|row| is_alert(row.state)).count() as u32;
+            section.alert_count =
+                section.rows.iter().filter(|row| row.glyph.urgency().is_alert()).count() as u32;
         }
         SidebarSnapshot {
             revision: self.revisions().sidebar,
@@ -89,7 +92,15 @@ impl WorkspaceModel {
         let band = &listing.bands[band];
         let group = self.sidebar.groups.get(band.group);
         let passing: Vec<usize> = band.members.iter().copied().filter(|&ix| matching(ix)).collect();
-        let alerts = passing.iter().filter(|&&ix| is_alert(self.sessions[ix].facts.row_state())).count();
+        let urgency = |ix: usize| glyph_of(&self.sessions[ix].facts).urgency();
+        let alerts = passing.iter().filter(|&&ix| urgency(ix).is_alert()).count();
+        let alert = passing.iter().map(|&ix| urgency(ix)).min().filter(|urgency| urgency.is_alert());
+        let working = passing.iter().filter(|&&ix| urgency(ix) == Urgency::Working).count();
+        // The loudest first; terminals alike keep the list's order (the sort is stable).
+        let mut tiled = passing.clone();
+        tiled.sort_by_key(|&ix| urgency(ix));
+        let tiles =
+            if band.folded { tiled.into_iter().map(|ix| self.tile(ix)).collect() } else { Vec::new() };
         let folder = group
             .and_then(|group| group.folder.as_deref())
             .map(|folder| display_path(Path::new(folder), self.cfg.home.as_deref()));
@@ -117,10 +128,29 @@ impl WorkspaceModel {
                 position: position as u32,
                 of: of as u32,
                 spoken,
+                folder_path: group.and_then(|group| group.folder.clone()),
+                only_in_folder: group.is_some_and(|group| group.only_in_folder),
             }),
             rows: Vec::new(),
             terminal_count: passing.len() as u32,
             alert_count: alerts as u32,
+            tiles,
+            alert,
+            working_count: working as u32,
+        }
+    }
+
+    /// A terminal as a folded head draws it.
+    fn tile(&self, ix: usize) -> MemberTile {
+        let session = &self.sessions[ix];
+        let glyph = glyph_of(&session.facts);
+        MemberTile {
+            id: session.id,
+            name: session.name(),
+            glyph,
+            state: session.facts.row_state(),
+            agent: session.facts.agent.map(agent_info),
+            urgency: glyph.urgency(),
         }
     }
 
@@ -145,14 +175,7 @@ impl WorkspaceModel {
             selected,
             pinned: session.pinned,
             state: facts.row_state(),
-            agent: facts.agent.map(|id| {
-                let agent = crate::agents::agent(id);
-                AgentInfo {
-                    key: agent.command.to_string(),
-                    name: agent.name.to_string(),
-                    short_name: agent.short_name().to_string(),
-                }
-            }),
+            agent: facts.agent.map(agent_info),
             message: facts.message.clone(),
             branch: facts.branch.clone(),
             folder: facts.cwd.as_deref().map(|cwd| display_path(cwd, self.cfg.home.as_deref())),
@@ -172,6 +195,9 @@ impl WorkspaceModel {
             position: position as u32,
             of: of as u32,
             spoken,
+            glyph: glyph_of(facts),
+            agent_hidden: session.agent_hidden,
+            forget_text: session.forget_text,
             name,
             repo: facts.repo.as_deref().map(|repo| repo.to_string_lossy().into_owned()),
             dirty: facts.dirty,
@@ -187,8 +213,13 @@ impl WorkspaceModel {
     }
 }
 
-fn is_alert(state: RowState) -> bool {
-    Urgency::from(state).is_alert()
+pub(super) fn agent_info(id: AgentId) -> AgentInfo {
+    let agent = crate::agents::agent(id);
+    AgentInfo {
+        key: agent.command.to_string(),
+        name: agent.name.to_string(),
+        short_name: agent.short_name().to_string(),
+    }
 }
 
 fn loose_section(row: SidebarRow) -> SidebarSection {
@@ -198,5 +229,8 @@ fn loose_section(row: SidebarRow) -> SidebarSection {
         rows: vec![row],
         terminal_count: 0,
         alert_count: 0,
+        tiles: Vec::new(),
+        alert: None,
+        working_count: 0,
     }
 }

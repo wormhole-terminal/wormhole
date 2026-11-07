@@ -3,11 +3,17 @@
 //! the state, the one entry point (`apply`) and what the others share.
 
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::config::tab::TabId;
-use crate::view::panes::{Room, TabPanes};
+use crate::config::{FeatureId, FeatureMask};
+use crate::view::layout::Panes;
+use crate::view::layout::title_parts::TitleRow;
+use crate::view::panes::{Room, TabPanes, Zone};
+use crate::view::sidebar::group_folder::{Fence, Place};
 use crate::view::sidebar::order::FrozenNumbers;
 use crate::view::sidebar::{ListInput, Listing, NUMBERED, SidebarNumbers, SplitId, Splits, WindowSidebar};
 
@@ -15,11 +21,13 @@ use super::action::{Action, Overlay};
 use super::event::{Event, Out, Revisions};
 use super::facts::TerminalFacts;
 use super::git_feed::{ChangeRules, GitFeed};
+use super::ground::Ground;
 use super::session::Session;
 use super::status::StatusBook;
 
-/// What the shell knows about the machine and the settings, once (settings join the model later).
-#[derive(Clone, Debug, Default)]
+/// What the shell knows about the machine and the settings (settings join the model later); a few
+/// of them change while it runs, each through its own action.
+#[derive(Clone, Debug)]
 pub struct ModelConfig {
     /// The home folder, for the places on a row's second line (`~/Projects/app`).
     pub home: Option<PathBuf>,
@@ -32,6 +40,28 @@ pub struct ModelConfig {
     pub pane_header_h: f32,
     /// What a row's ±N counts (Settings → Terminals & sidebar → Changed files).
     pub changes: ChangeRules,
+    /// Which features are on: the panel offers the tabs they bring.
+    pub features: FeatureMask,
+    /// Which parts the title row shows and in what order (`title_row` in `config.json`).
+    pub title_row: TitleRow,
+    /// What the model asks of the disk (a group's fence); none: no group fences anything.
+    pub ground: Option<Arc<dyn Ground>>,
+}
+
+impl Default for ModelConfig {
+    /// Every feature on, as a first launch of a release has them.
+    fn default() -> Self {
+        Self {
+            home: None,
+            numbers: SidebarNumbers::default(),
+            start_folder: None,
+            pane_header_h: 0.0,
+            changes: ChangeRules::default(),
+            features: FeatureId::ALL.into_iter().fold(FeatureMask::default(), |mask, id| mask.with(id, true)),
+            title_row: TitleRow::default(),
+            ground: None,
+        }
+    }
 }
 
 /// A split: its id (one counter with the terminals') and the layout its members share.
@@ -41,11 +71,15 @@ pub(super) struct Split {
     pub layout: TabPanes,
 }
 
-/// The window's chrome that the list and the panel depend on.
+/// The window's chrome that the list and the panel depend on: the side columns as the person left
+/// them (core's `view::layout::Panes`) and the window's width, which decides whether the panel has
+/// room.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct Chrome {
-    pub sidebar_visible: bool,
-    pub panel_visible: bool,
+    pub panes: Panes,
+    /// The window's width in points; zero until the shell has laid it out, when nothing is refused
+    /// for want of room.
+    pub window_width: f32,
     pub panel_tab: TabId,
     pub search: String,
     pub overlay: Option<Overlay>,
@@ -54,12 +88,22 @@ pub(super) struct Chrome {
 impl Default for Chrome {
     fn default() -> Self {
         Self {
-            sidebar_visible: true,
-            panel_visible: true,
+            panes: Panes::default(),
+            window_width: 0.0,
             panel_tab: TabId::Changes,
             search: String::new(),
             overlay: None,
         }
+    }
+}
+
+/// The width the layout rules are asked about while the window's is not known: room for everything.
+const UNKNOWN_WIDTH: f32 = 1.0e6;
+
+impl Chrome {
+    /// The width to ask `Panes` about.
+    pub(super) fn width(&self) -> f32 {
+        if self.window_width > 0.0 { self.window_width } else { UNKNOWN_WIDTH }
     }
 }
 
@@ -79,6 +123,11 @@ pub struct WorkspaceModel {
     /// dealt again (`FrozenNumbers`).
     pub(super) order_rev: u64,
     frozen: RefCell<FrozenNumbers<i64>>,
+    /// What the disk said of terminals' places and groups' fences (`fence.rs`).
+    /// The terminal last selected in each group (`None`: among those in no group).
+    pub(super) last_selected: HashMap<Option<u32>, i64>,
+    pub(super) places: RefCell<HashMap<PathBuf, Option<Place>>>,
+    pub(super) fences: RefCell<HashMap<String, Option<Fence>>>,
     revisions: Revisions,
     pub(super) out: Out,
     /// One status machine per terminal that has been told anything (`status`).
@@ -102,6 +151,9 @@ impl WorkspaceModel {
             next_number: 1,
             order_rev: 0,
             frozen: RefCell::default(),
+            last_selected: HashMap::new(),
+            places: RefCell::default(),
+            fences: RefCell::default(),
             revisions: Revisions::default(),
             out: Out::default(),
             status: StatusBook::default(),
@@ -120,28 +172,62 @@ impl WorkspaceModel {
             Action::Rename { id, name } => self.rename(id, &name),
             Action::SetPinned { id, pinned } => self.set_pinned(id, pinned),
             Action::TogglePin(id) => self.toggle_pin(id),
+            Action::SetAgentHidden { id, hidden } => self.set_agent_hidden(id, hidden),
+            Action::ToggleAgentHidden(id) => self.toggle_agent_hidden(id),
+            Action::SetForgetText { id, forget } => self.set_forget_text(id, forget),
+            Action::ToggleForgetText(id) => self.toggle_forget_text(id),
             Action::NewGroup { members } => self.new_group(&members),
             Action::RenameGroup { group, name } => self.rename_group(group, &name),
             Action::ToggleGroup(group) => self.toggle_group(group),
             Action::Ungroup(group) => self.ungroup(group),
             Action::SetGroupPinned { group, pinned } => self.set_group_pinned(group, pinned),
+            Action::NewTerminalInNewGroup => self.new_terminal_in_new_group(),
+            Action::NewTerminalInGroup(group) => self.new_terminal_in_group(group),
+            Action::SetGroupColor { group, color } => self.set_group_color(group, color),
+            Action::SetGroupCustomColor { group, r, g, b } => self.set_group_custom_color(group, [r, g, b]),
+            Action::SetGroupFolder { group, folder } => self.set_group_folder(group, folder.as_deref()),
+            Action::SetOnlyInFolder { group, on } => self.set_only_in_folder(group, on),
+            Action::DeclineGroupFolder(group) => self.decline_group_folder(group),
+            Action::CloseGroup(group) => self.close_group(group),
+            Action::MoveGroupToWindow(group) => self.move_group_to_window(group),
             Action::AddToGroup { id, group } => self.add_to_group(id, group),
             Action::RemoveFromGroup(id) => self.remove_from_group(id),
             Action::DropTerminal { dragged, over } => self.drop_terminal(dragged, over),
             Action::DropGroup { group, over } => self.drop_group(group, over),
             Action::MoveTerminal { id, landing } => self.move_terminal(id, landing),
+            Action::MoveTerminalAs { id, landing, leave_split, with_mates } => {
+                self.move_terminal_as(id, landing, leave_split, with_mates)
+            }
             Action::MoveGroup { group, landing } => self.move_group(group, landing),
             Action::SplitBeside { anchor, axis } => self.split_beside(anchor, axis),
             Action::JoinSplit { id, target, zone } => self.join_split(id, target, zone),
             Action::LeaveSplit(id) => self.leave_split(id),
+            Action::ShowBeside { id, other } => self.join_split(other, id, Zone::Right),
+            Action::ApplyLayout(preset) => self.apply_layout(preset),
+            Action::DragDivider { path, index, position } => self.drag_divider(&path, index, position),
+            Action::EqualizeDivider { path, index } => self.equalize_divider(&path, index),
             Action::FocusPane(id) => self.select_id(id),
             Action::ToggleZoom => self.toggle_zoom(),
-            Action::ToggleSidebar => self.chrome_change(|c| c.sidebar_visible = !c.sidebar_visible),
-            Action::TogglePanel => self.chrome_change(|c| c.panel_visible = !c.panel_visible),
-            Action::ShowPanelTab(tab) => self.chrome_change(|c| {
-                c.panel_tab = tab;
-                c.panel_visible = true;
+            Action::ToggleSidebar => self.chrome_change(|c| c.panes.toggle_sidebar()),
+            Action::TogglePanel => {
+                self.chrome_change(|c| {
+                    let width = c.width();
+                    c.panes.toggle_panel(width);
+                });
+            }
+            Action::ShowPanelTab(tab) => self.show_panel_tab(tab),
+            Action::SetWindowWidth(width) => self.chrome_change(|c| c.window_width = width.max(0.0)),
+            Action::DragEdge { edge, extent } => self.chrome_change(|c| {
+                let width = c.width();
+                c.panes.drag(edge, extent, width);
             }),
+            Action::ResetEdge(edge) => self.chrome_change(|c| c.panes.reset(edge)),
+            Action::SetTitleRow(parts) => {
+                self.cfg.title_row = TitleRow::new(parts);
+                self.emit(Event::Chrome);
+            }
+            Action::SetNumbersFollowList(follow) => self.set_numbers_follow_list(follow),
+            Action::SetFeature { feature, on } => self.set_feature(feature, on),
             Action::Search(text) => self.search(text),
             Action::ShowOverlay(overlay) => self.chrome_change(|c| c.overlay = overlay),
             Action::SetPaneArea { width, height } => self.pane_area = (width.max(0.0), height.max(0.0)),
@@ -161,7 +247,11 @@ impl WorkspaceModel {
             let before = session.facts.clone();
             change(&mut session.facts);
             if session.facts != before {
+                let moved = session.facts.cwd != before.cwd;
                 self.emit(Event::Listing);
+                if moved {
+                    self.folder_changed(id);
+                }
             }
         }
         self.out.take()
@@ -194,8 +284,14 @@ impl WorkspaceModel {
     /// Tell the shell, and count the change in the part it belongs to.
     pub(super) fn emit(&mut self, event: Event) {
         match event {
-            Event::Listing => self.revisions.sidebar += 1,
-            Event::Layout => self.revisions.layout += 1,
+            Event::Listing => {
+                self.revisions.sidebar += 1;
+                self.revisions.terminals += 1;
+            }
+            Event::Layout => {
+                self.revisions.layout += 1;
+                self.revisions.terminals += 1;
+            }
             Event::Chrome => self.revisions.chrome += 1,
             _ => {}
         }
@@ -289,7 +385,7 @@ impl WorkspaceModel {
         listing
     }
 
-    fn chrome_change(&mut self, change: impl FnOnce(&mut Chrome)) {
+    pub(super) fn chrome_change(&mut self, change: impl FnOnce(&mut Chrome)) {
         let before = self.chrome.clone();
         change(&mut self.chrome);
         if self.chrome != before {
