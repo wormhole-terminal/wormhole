@@ -83,7 +83,7 @@ pub(crate) struct Screen {
     /// They are removed once the main screen shows again ([`Screen::reap`]).
     orphans: Vec<Pin>,
     /// What the view hides of the history (`folds`): display only.
-    pub(super) folds: super::folds::FoldSet,
+    pub(super) folds: super::fold_set::FoldSet,
 }
 
 /// The next [`Screen::epoch`].

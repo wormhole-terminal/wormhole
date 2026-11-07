@@ -19,10 +19,11 @@
 mod layout;
 
 use wormhole_vt::input::MouseTracking;
-use wormhole_vt::{Column, Line, Modes, Pin, Point, Scroll};
+use wormhole_vt::{Column, Line, Modes, Point, Scroll};
 
 pub(crate) use layout::{Shown, Walk};
 
+use super::fold_set::Fold;
 use super::screen::Screen;
 
 /// A fold hides at least this many rows: a marker for fewer saves nothing.
@@ -75,28 +76,6 @@ pub struct Request {
     /// screen above the cursor.
     pub finished: bool,
     pub failed: bool,
-}
-
-struct Fold {
-    id: u64,
-    first: Pin,
-    last: Pin,
-    expanded: bool,
-    failed: bool,
-}
-
-/// A terminal's folds, in the order they were made.
-#[derive(Default)]
-pub(crate) struct FoldSet {
-    folds: Vec<Fold>,
-    next_id: u64,
-    needs_you: bool,
-}
-
-impl FoldSet {
-    pub(crate) fn is_empty(&self) -> bool {
-        self.folds.is_empty()
-    }
 }
 
 impl Screen {

@@ -61,6 +61,7 @@ mod contents;
 mod engine;
 mod events;
 pub mod find;
+mod fold_set;
 pub mod folds;
 pub mod glyphs;
 mod handle;
