@@ -87,6 +87,11 @@ impl WorkspaceModel {
         }
     }
 
+    /// The ids of [`shown`](Self::shown): which terminals a session host is to feed, and which stay headless.
+    pub fn shown_ids(&self) -> Vec<i64> {
+        self.shown().into_iter().map(|ix| self.sessions[ix].id).collect()
+    }
+
     /// What is in front of the person counts as seen: each machine spends a finished or failed
     /// result and hears the bell. A question an agent asks stays until it is answered. Whether
     /// anything changed.

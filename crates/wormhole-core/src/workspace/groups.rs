@@ -29,6 +29,16 @@ impl WorkspaceModel {
         self.rearranged();
     }
 
+    /// Put `members` (terminals adopted from orphaned session hosts) in the Recovered group.
+    pub(super) fn recover_group(&mut self, members: &[i64]) {
+        let alive = self.ids();
+        let members: Vec<i64> = members.iter().copied().filter(|id| alive.contains(id)).collect();
+        if self.sidebar.groups.recover(&members).is_none() {
+            return self.emit(Event::Refused(Refusal::Unknown));
+        }
+        self.rearranged();
+    }
+
     pub(super) fn rename_group(&mut self, group: u32, name: &str) {
         if self.sidebar.groups.get(group).is_none() {
             return self.refuse();

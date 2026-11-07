@@ -64,6 +64,14 @@ impl Terminal {
         detached
     }
 
+    /// Seconds the host has not answered, once it has not for long enough, while attached (`HostResponsiveness` says when
+    /// it changes): the bar offers Wait or End. `None` for a host that answers, one let go of, and a terminal in the app.
+    pub fn host_not_responding(&self) -> Option<f64> {
+        let stats = self.with_pty(Pty::link_stats).flatten()?;
+        let attached = !stats.detached && !stats.ended && !stats.lost;
+        stats.not_responding_for.filter(|_| attached).map(|silent| silent.as_secs_f64())
+    }
+
     /// On screen (fed a repaint, then the stream) or not (headless: the screen keeps what it last showed).
     /// Nothing for a terminal in the app's own process.
     pub fn set_visible(&self, visible: bool) {

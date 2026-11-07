@@ -39,7 +39,6 @@ mod pane_bar;
 mod progress_timer;
 mod render;
 mod reported;
-mod restored;
 mod scaling;
 mod settle;
 mod status;
@@ -298,7 +297,7 @@ impl TerminalView {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_or(0, |since| since.as_secs());
-            restored::seed_from_text(&text, now)
+            wormhole_core::terminal::restored::seed_from_text(&text, now)
         });
         let local = matches!(start, Start::Local | Start::LocalNeedsApplications)
             .then(|| wormhole_core::terminal::spawn(initial, &options));

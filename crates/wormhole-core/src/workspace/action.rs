@@ -78,6 +78,11 @@ pub enum Action {
     NewGroup {
         members: Vec<i64>,
     },
+    /// Terminals adopted from session hosts nobody named go into the window's Recovered group (made at the end of the
+    /// list when there is none).
+    RecoverGroup {
+        members: Vec<i64>,
+    },
     RenameGroup {
         group: u32,
         name: String,

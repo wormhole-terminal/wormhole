@@ -61,6 +61,9 @@ pub enum TermEvent {
     ClipboardAsk,
     /// The question went away unanswered (it timed out).
     ClipboardAskClosed,
+    /// The session host stopped answering, or answered again: the bar's words about it change
+    /// (`Terminal.host_not_responding`).
+    HostResponsiveness,
 }
 
 /// Events waiting for a drain, and whether the listener was told.
@@ -73,6 +76,8 @@ pub(crate) struct EventQueue {
     feed: OnceLock<Arc<dyn EventFeed>>,
     /// What programs may do with the clipboard (`clipboard.rs`).
     pub(crate) clipboard: crate::clipboard::Clipboard,
+    /// Told when the host says a checkpoint it was asked to flush is on disk (`hosting::checkpoints`); set once.
+    checkpoint_written: OnceLock<Box<dyn Fn(u64) + Send + Sync>>,
 }
 
 impl EventQueue {
@@ -83,7 +88,13 @@ impl EventQueue {
             listener,
             feed: OnceLock::new(),
             clipboard: Default::default(),
+            checkpoint_written: OnceLock::new(),
         })
+    }
+
+    /// Call `then` with the generation when the host says its checkpoint is written; the first one wins.
+    pub(crate) fn on_checkpoint_written(&self, then: Box<dyn Fn(u64) + Send + Sync>) {
+        let _ = self.checkpoint_written.set(then);
     }
 
     /// Let `feed` hear the events from now on; the first one wins.
@@ -132,6 +143,12 @@ pub(crate) fn spawn_receiver(events: PtyEvents, queue: Arc<EventQueue>) -> std::
                 feed.on_event(&event);
             }
             if let Some(event) = translate(event, &queue) {
+            if let (PtyEvent::CheckpointWritten(generation), Some(then)) =
+                (&event, queue.checkpoint_written.get())
+            {
+                then(*generation);
+            }
+            if let Some(event) = translate(event) {
                 queue.push(event);
             }
         }
@@ -148,6 +165,7 @@ fn translate(event: PtyEvent, queue: &Arc<EventQueue>) -> Option<TermEvent> {
         PtyEvent::ResetTitle => TermEvent::ResetTitle,
         PtyEvent::Bell => TermEvent::Bell,
         PtyEvent::Exited(code) => TermEvent::Exited { code },
+        PtyEvent::HostResponsiveness => TermEvent::HostResponsiveness,
         _ => return None,
     })
 }

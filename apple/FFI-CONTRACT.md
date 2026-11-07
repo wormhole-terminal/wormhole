@@ -856,9 +856,9 @@ profile's database (`Store::save_session_host`). Additive: no existing signature
 |---|---|
 | `HostedTerminals` | `new(dataDir?, hostBinary?, window)`: refuses outside a `Wormhole-swift*` folder. `enabled()` (core's flag rules over the folder's `config.json`), `program()` (`HostingProgram`: `found(path)`, `disposableCopy`, `missing`), `planAtLaunch()`, `adoptableOrphans()`, `start(what, listener)`, `attach(hostId, what, visible, listener)`, `finishRestore()`, `finish(endHosts)`. |
 | `HostedStart` | `tab`, `program`, `args`, `cwd?`, `cols`, `rows`, `cellWidth`, `cellHeight`: the same facts `Terminal.startForTab` takes. |
-| `LaunchPlan` | `saved` (the last run's terminals in the sidebar's order, each `SavedTerminal { hostId, running, cwd?, shell? }`: `running` attach, otherwise its host is gone and a new terminal starts in the folder; their text is not replayed here), `orphans` (live hosts no saved terminal of any profile names). |
+| `LaunchPlan` | `saved` (the last run's terminals in the sidebar's order, each `SavedTerminal { hostId, running, cwd?, shell? }`: `running` attach, otherwise its host is gone and a new terminal starts in the folder; their text comes in `text`, for `HostedStart.savedText`), `orphans` (live hosts no saved terminal of any profile names). |
 | `Terminal` (new methods) | `hostId() -> String?`, `hosting() -> TerminalHosting` (`local`, `persistent`, `detached`, `lost`), `detach() -> Bool`, `setVisible(Bool)`. Everything else (frames, keys, resize, scroll, find, interaction) is unchanged: a hosted terminal's engine is a replica fed from the host. |
-| `HostingError` | `notIsolated`, `noProgram` (no host program: stay in the app), `start` (host or program did not start: the caller may start locally and say so once), `gone` (attach: the host is not there: start a new terminal), `unavailable(reason, transient)` (it runs and cannot be shown: keep the terminal's place and say why; `transient` = try again), `store`. |
+| `HostingError` | `notIsolated`, `noProgram` (no host program: stay in the app), `start` (host or program did not start: the caller may start locally and say so once), `gone` (attach: the host is not there: start a new terminal), `unavailable(reason, kind, transient)` (it runs and cannot be shown: keep the terminal's place and say why; `transient` = try again), `store`. |
 
 **The host program.** Core looks beside the app's own executable and nowhere else (a disk image or translocated copy is
 `disposableCopy`: no host there). `hostBinary` names another executable (tests, development); it is an argument and not
@@ -880,10 +880,32 @@ Quit: `finish(endHosts)`, with `endHosts` from the quit question's answer (`Quit
 (each host ends, no row names one), false lets go of each (the hosts and their programs run on). Call it from
 `applicationShouldTerminate`'s decision and `applicationWillTerminate`.
 
-**Threads.** `start`, `attach`, `adoptableOrphans` block (a host starts in about 15 ms; a stuck one up to a few seconds).
-The Swift backend calls them on the main actor because a terminal's view needs its source at once (the GPUI app waits
-for the host off the UI thread with a blank pane): moving it to a task is a change in `WorkspaceBridge` only.
-The host's events reach Swift through the terminal's own `TerminalListener`, as a local terminal's do.
+**Threads.** `start`, `attach`, `adoptableOrphans`, `endHost` and `saveTexts` block (a host starts in about 15 ms; a stuck one
+takes seconds). The Swift backend calls them from a detached task with the pane blank (`HostConnect`), as the GPUI app does:
+the terminal's view gets a `UniFFIFrameSource(waiting:)` that draws nothing until `fill(terminal)`, and a start or attach that
+finishes after its terminal was closed, started again or the app quit is closed or let go of. The host's events reach Swift
+through the terminal's own `TerminalListener`, as a local terminal's do.
+
+### Round P additions (all additive)
+
+- **Restoring what a gone host showed.** `SavedTerminal` gained `forgetText` and `text` (the saved screen, only for a terminal whose
+  host is gone); `HostedStart` gained `oldHost` and `savedText`, which only `start` reads. `start` draws, above the new shell, the
+  checkpoint of `oldHost` when it reads (after a restart of the Mac), else `savedText` (core's `terminal::restored`, shared with the
+  GPUI app), then a divider that says when. `saveTexts()` keeps the screens of the terminals the desk made (the app calls it each
+  minute and on a quit that leaves hosts running); it needs the profile's "restore terminal text" and core's sealed store.
+- **Restart restore** (`FeatureFlag::RestoreAfterRestart`, with persistent terminals and "restore terminal text"): `start` and `attach`
+  ask the host to keep checkpoints, sealed with the key core derives from the host id (`hosting/checkpoints.rs`); a terminal restored
+  from a checkpoint has its new host write its own at once, and the old one is removed when the new one reads back. A closed terminal
+  removes its checkpoint (now and 5 s later); `planAtLaunch` sweeps old ones in the background (a restore under way is spared).
+- **Host problems.** `HostingError.Unavailable` gained `kind: HostUnavailableKind` (core's `UnavailableKind`); `Terminal.hostNotResponding()`
+  (seconds, or nil) with `TermEvent.HostResponsiveness` as the cue to ask again; `HostedTerminals.endHost(hostId, hard)` (nil, or why it
+  failed); `attach` for a host not in the plan answers as core classifies it (gone, or unavailable).
+- **Workspace.** `Action.RecoverGroup { members }` puts adopted terminals in core's Recovered group (`TermGroup.recovered`);
+  `Workspace.shown()` (the terminals on screen: a host feeds those and leaves the others headless) and `cwdOf(id)`.
+  `HostedTerminals.adopt(tab, terminal)` takes the tab id now.
+- **The Keychain.** The crate builds core with its `dev-key` feature: the saved text's key lives in a file beside the text in the
+  isolated data folder, never in the login Keychain (this crate runs only in `Wormhole-swift*` folders).
+
 ## Platform and settings gaps (round N)
 
 Additive to the hook socket and settings sections above; nothing existing changed meaning (`HookEvent` lost `Eq`,

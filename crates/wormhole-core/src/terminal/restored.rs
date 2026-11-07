@@ -1,12 +1,13 @@
 //! The words under the text of a restored terminal, in the person's language and date order, and the seed made
-//! of a terminal's saved text. The engine's seed is VT that ends with its own divider (`wormhole_term::checkpoint`);
-//! what the divider says is the app's, since only the app knows the language.
+//! of a terminal's saved text (the GPUI app and the Swift front end share them). The
+//! engine's seed is VT that ends with its own divider (`wormhole_term::checkpoint`); what the divider says is the
+//! app's, since only the app knows the language.
 
-use wormhole_core::platform::clock::local_date_time;
+use crate::platform::clock::local_date_time;
 use wormhole_term::checkpoint::{divider, text_seed};
 
 /// "restored 2026-11-02 14:03" (in the catalog's order for the language), for a screen kept at `unix_seconds`.
-pub(crate) fn restored_words(unix_seconds: u64) -> String {
+pub fn restored_words(unix_seconds: u64) -> String {
     match local_date_time(unix_seconds) {
         Some(at) => wormhole_text::keys::terminal_restored_at(
             &format!("{:04}", at.year),
@@ -22,7 +23,7 @@ pub(crate) fn restored_words(unix_seconds: u64) -> String {
 
 /// The saved text of a terminal as the seed a new shell is started above: each line dim, then the divider that says
 /// the text was drawn back now.
-pub(crate) fn seed_from_text(text: &str, now_unix_seconds: u64) -> String {
+pub fn seed_from_text(text: &str, now_unix_seconds: u64) -> String {
     text_seed(text, &divider(&restored_words(now_unix_seconds)))
 }
 

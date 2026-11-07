@@ -40,6 +40,10 @@ impl Fixture {
         self.dir.path().join("config.json")
     }
 
+    pub(super) fn sessions_dir(&self) -> PathBuf {
+        wormhole_core::terminal::checkpoint::sessions_dir(self.dir.path())
+    }
+
     pub(super) fn hosts_dir(&self) -> PathBuf {
         hosts::hosts_dir(self.dir.path())
     }
@@ -55,6 +59,8 @@ impl Fixture {
             rows: 24,
             cell_width: 8.0,
             cell_height: 16.0,
+            old_host: None,
+            saved_text: None,
         }
     }
 

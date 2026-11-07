@@ -48,9 +48,22 @@ impl Registry {
                     running: false,
                     cwd: s.cwd,
                     shell: s.shell,
+                    forget_text: s.forget_text,
+                    text: if s.forget_text { None } else { s.scrollback },
                 })
             })
             .collect())
+    }
+
+    /// The key host `host_id` seals its checkpoint with; `None` when the profile has no key.
+    pub(crate) fn checkpoint_key(&self, host_id: &str) -> Option<wormhole_term::checkpoint::Key> {
+        self.store().checkpoint_key(host_id)
+    }
+
+    /// Save the screens of terminals (the store skips those with no row, no key, or text not to be kept).
+    pub(crate) fn save_texts(&self, texts: &[(i64, String)]) -> Result<u32, HostingError> {
+        let written = self.store().save_scrollbacks(texts).map_err(HostingError::store)?;
+        Ok(u32::try_from(written).unwrap_or(u32::MAX))
     }
 
     /// The hosts that the sessions of the profile's other windows name: a host of theirs is not an orphan here.

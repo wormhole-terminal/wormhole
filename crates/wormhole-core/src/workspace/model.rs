@@ -181,6 +181,7 @@ impl WorkspaceModel {
             Action::SetForgetText { id, forget } => self.set_forget_text(id, forget),
             Action::ToggleForgetText(id) => self.toggle_forget_text(id),
             Action::NewGroup { members } => self.new_group(&members),
+            Action::RecoverGroup { members } => self.recover_group(&members),
             Action::RenameGroup { group, name } => self.rename_group(group, &name),
             Action::ToggleGroup(group) => self.toggle_group(group),
             Action::Ungroup(group) => self.ungroup(group),

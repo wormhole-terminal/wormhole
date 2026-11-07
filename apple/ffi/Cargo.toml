@@ -14,6 +14,8 @@ crate-type = ["staticlib", "lib"]
 [dependencies]
 # `dev-key`: Probe approvals and the other sealed stores keep their keys in files of the experiment's own data
 # folder, never in the login Keychain (the experiment never touches it); drop it when the Swift app ships.
+# `dev-key`: the saved text's key lives in a file beside it, never in the login Keychain: this crate only runs in
+# `Wormhole-swift*` data folders (`isolation`), and an experiment must not leave items in anyone's Keychain.
 wormhole-core = { path = "../../crates/wormhole-core", features = ["dev-key"] }
 wormhole-term = { path = "../../crates/wormhole-term" }
 wormhole-text = { path = "../../crates/wormhole-text" }

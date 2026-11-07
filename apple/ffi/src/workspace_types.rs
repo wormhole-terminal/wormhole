@@ -233,6 +233,7 @@ pub enum Action {
     SetForgetText { id: i64, forget: bool },
     ToggleForgetText(i64),
     NewGroup { members: Vec<i64> },
+    RecoverGroup { members: Vec<i64> },
     RenameGroup { group: u32, name: String },
     ToggleGroup(u32),
     Ungroup(u32),

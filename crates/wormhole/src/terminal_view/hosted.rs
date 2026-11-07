@@ -190,7 +190,7 @@ impl TerminalView {
                                 &from.old,
                                 Some(&from.key),
                                 &mut options,
-                                &super::restored::restored_words,
+                                &wormhole_core::terminal::restored::restored_words,
                             );
                             seeded.store(drawn, Ordering::Release);
                         }

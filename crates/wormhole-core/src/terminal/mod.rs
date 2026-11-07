@@ -9,6 +9,7 @@
 //!   `Pty::start` takes;
 //! - `checkpoint`: reading a terminal's checkpoint back after a restart of the Mac, and looking after the folder
 //!   they live in (the host writes them and never deletes one);
+//! - `restored`: the words and the seed under a terminal restored from its text or a checkpoint;
 //! - `shells`: shell profiles, what a new terminal runs;
 //! - `cli_tool`: the `wh` command line tool and the PATH every terminal starts with;
 //! - `default_terminal`: Wormhole as the Mac's default terminal, and what it does with a file
@@ -21,6 +22,7 @@ pub mod checkpoint;
 pub mod cli_tool;
 pub mod default_terminal;
 mod process;
+pub mod restored;
 pub mod shells;
 mod spawn;
 

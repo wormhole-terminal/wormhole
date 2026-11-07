@@ -10,6 +10,11 @@ pub struct SavedTerminal {
     pub running: bool,
     pub cwd: Option<String>,
     pub shell: Option<String>,
+    /// The terminal's row says its text is not to be kept (no checkpoint is asked for either).
+    pub forget_text: bool,
+    /// Its saved screen text, when the profile keeps it and the terminal's row allows: what a host that is gone is
+    /// replaced by (`HostedStart.saved_text`). Never read for a terminal whose host runs.
+    pub text: Option<String>,
 }
 
 /// A live host no saved terminal of any profile names (what a crash of the saved state, or another

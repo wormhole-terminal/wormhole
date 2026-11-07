@@ -16,11 +16,13 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::config::profile::ProfileList;
 use wormhole_core::ipc::host_binary::HostProgram;
 use wormhole_core::ipc::hosts::{self, AttachFailure, HostMeta, LaunchHosts, Probed, Restore};
-use wormhole_core::storage::paths::DataRoot;
+use wormhole_core::storage::paths::{DataRoot, ProfilePaths};
 use wormhole_core::storage::store::Store;
 use wormhole_term::GridSize;
+use wormhole_term::client::AttachError;
 use wormhole_term::client::{HostCommand, socket_of};
 
+use super::checkpoints::{self, Checkpoints};
 use super::registry::Registry;
 use super::{HostSlot, HostingError, HostingProgram, LaunchPlan, OrphanHost, SavedTerminal, program};
 use crate::aux_backends::{AuxError, resolve_data_dir};
@@ -42,6 +44,11 @@ pub struct HostedStart {
     pub rows: u16,
     pub cell_width: f32,
     pub cell_height: f32,
+    /// A terminal whose host is gone (`SavedTerminal.running` false), started again: the host it ran in, whose checkpoint
+    /// (after a restart of the Mac) is drawn above the new shell, and its saved text, drawn when there is none.
+    /// Only `start` reads them.
+    pub old_host: Option<String>,
+    pub saved_text: Option<String>,
 }
 
 impl HostedStart {
@@ -58,15 +65,21 @@ impl HostedStart {
 #[derive(uniffi::Object)]
 pub struct HostedTerminals {
     data_dir: PathBuf,
-    hosts_dir: PathBuf,
+    pub(super) hosts_dir: PathBuf,
+    /// The default profile's folder: the settings and the saved text this object reads are its.
+    pub(super) profile: ProfilePaths,
     program: HostProgram,
-    registry: Arc<Registry>,
+    pub(super) registry: Arc<Registry>,
+    checkpoints: Arc<Checkpoints>,
+    /// The terminals whose rows say their text is not to be kept: no checkpoint is asked for them either.
+    forgetting: Mutex<HashSet<i64>>,
     /// The live hosts found at launch, each taken once (`LaunchHosts::restore`).
     launch: Mutex<LaunchHosts>,
     /// The orphans of the plan, until `adoptable_orphans` asks them.
     orphans: Mutex<Vec<HostMeta>>,
-    /// Every terminal this object made, to let go of them as the app quits.
-    made: Mutex<Vec<Weak<Terminal>>>,
+    /// Every terminal this object made (by the workspace's id for it), to save their text and to let go of them as the
+    /// app quits.
+    pub(super) made: Mutex<Vec<(i64, Weak<Terminal>)>>,
     /// The ids saved this run: what `finish_restore` keeps of the rows the last run left.
     saved_now: Mutex<HashSet<i64>>,
 }
@@ -88,7 +101,10 @@ impl HostedTerminals {
         })?;
         Ok(Arc::new(Self {
             hosts_dir: hosts::hosts_dir(&data_dir),
+            profile: DataRoot::new(&data_dir).default_profile(),
             registry: Arc::new(Registry::open(&data_dir, window)?),
+            checkpoints: Arc::new(Checkpoints::new(&data_dir)),
+            forgetting: Mutex::default(),
             program: program::locate(host_binary.as_deref()),
             data_dir,
             launch: Mutex::default(),
@@ -101,8 +117,7 @@ impl HostedTerminals {
     /// Whether Settings has Persistent terminals on, by core's rules for feature flags (a release build
     /// reads the flag's release default, which is off, unless the flags are unlocked in `config.json`).
     pub fn enabled(&self) -> bool {
-        let profile = DataRoot::new(&self.data_dir).default_profile();
-        Config::load_for(&profile).settings.feature_enabled(FeatureFlag::PersistentTerminals)
+        Config::load_for(&self.profile).settings.feature_enabled(FeatureFlag::PersistentTerminals)
     }
 
     /// Where the host program is, or why there is none: with none (or a disposable copy of the app) every
@@ -127,8 +142,17 @@ impl HostedTerminals {
         named.extend(self.named_elsewhere());
         let mut launch = LaunchHosts::plan(named.iter().map(String::as_str), live);
         let running = launch.live_ids();
-        let saved =
-            saved.into_iter().map(|s| SavedTerminal { running: running.contains(&s.host_id), ..s }).collect();
+        let saved: Vec<SavedTerminal> = saved
+            .into_iter()
+            .map(|s| {
+                let running = running.contains(&s.host_id);
+                // The text only matters to a terminal whose host is gone.
+                SavedTerminal { running, text: s.text.filter(|_| !running), ..s }
+            })
+            .collect();
+        locked(&self.forgetting).extend(saved.iter().filter(|s| s.forget_text).map(|s| s.terminal));
+        self.checkpoints.expect_restores(saved.iter().filter(|s| !s.running).map(|s| s.host_id.clone()));
+        self.sweep_checkpoints(&running);
         let orphans = launch.take_orphans();
         let plan = LaunchPlan {
             saved,
@@ -154,10 +178,10 @@ impl HostedTerminals {
     }
 
     /// A terminal of another window's desk that moved into this window: this desk lets go of it as the app quits.
-    pub fn adopt(&self, terminal: Arc<Terminal>) {
+    pub fn adopt(&self, tab: i64, terminal: Arc<Terminal>) {
         let mut made = locked(&self.made);
-        made.retain(|weak| weak.strong_count() > 0);
-        made.push(Arc::downgrade(&terminal));
+        made.retain(|(_, weak)| weak.strong_count() > 0);
+        made.push((tab, Arc::downgrade(&terminal)));
     }
 
     /// Start `what` in a new session host. `Start` when the host or its program would not start (the caller
@@ -173,16 +197,17 @@ impl HostedTerminals {
         let id = hosts::new_host_id().map_err(|e| HostingError::Start { reason: e.to_string() })?;
         let hosts_dir = hosts::ensure_hosts_dir(&self.data_dir)
             .map_err(|e| HostingError::Start { reason: e.to_string() })?;
-        let options = Terminal::spawn_options(
+        let mut options = Terminal::spawn_options(
             what.tab.to_string(),
             what.program.clone(),
             what.args.clone(),
             what.cwd.clone(),
         );
+        let restored_from = self.seed(&what, &mut options);
         let host = HostCommand { binary, hosts_dir: &hosts_dir, id: &id };
         let (pty, events) = wormhole_core::terminal::spawn_hosted(&host, what.size(), &options)
             .map_err(|e| HostingError::Start { reason: format!("{e:#}") })?;
-        self.taken(&what, id, pty, events, &options, listener)
+        self.taken(&what, id, pty, events, &options, restored_from, listener)
     }
 
     /// Attach `what.tab` to the running host `host_id` (a saved terminal or an adopted orphan), fed a repaint
@@ -198,7 +223,11 @@ impl HostedTerminals {
         let socket = match locked(&self.launch).restore(Some(&host_id)) {
             Restore::Attach(socket) => socket,
             // Not in the plan (a retry, or a host that came after): its own meta says where it listens.
-            Restore::Replay => socket_of(&self.hosts_dir, &host_id).map_err(|_| HostingError::Gone)?,
+            Restore::Replay => socket_of(&self.hosts_dir, &host_id).map_err(|err| {
+                let failure =
+                    hosts::failure_of(&self.hosts_dir, &host_id, &AttachError::Unreachable(err.to_string()));
+                self.failed(&what, &host_id, failure)
+            })?,
         };
         let options = Terminal::spawn_options(
             what.tab.to_string(),
@@ -207,13 +236,8 @@ impl HostedTerminals {
             what.cwd.clone(),
         );
         match wormhole_core::terminal::attach_hosted(&socket, &host_id, &options, visible) {
-            Ok((pty, events)) => self.taken(&what, host_id, pty, events, &options, listener),
-            Err(AttachFailure::Gone) => Err(HostingError::Gone),
-            Err(AttachFailure::Unavailable(why)) => {
-                // The terminal keeps the host's id: the next launch finds this row, not a stranger.
-                self.remember(&what, &host_id);
-                Err(HostingError::Unavailable { reason: why.detail, transient: why.kind.is_transient() })
-            }
+            Ok((pty, events)) => self.taken(&what, host_id, pty, events, &options, None, listener),
+            Err(failure) => Err(self.failed(&what, &host_id, failure)),
         }
     }
 
@@ -228,7 +252,8 @@ impl HostedTerminals {
     /// The app is quitting. `end_hosts` (Quit and End All Terminals, or the box left ticked): every terminal
     /// ends with its host and no row names a host. Otherwise each is let go of and its program runs on.
     pub fn finish(&self, end_hosts: bool) {
-        let alive: Vec<Arc<Terminal>> = locked(&self.made).iter().filter_map(Weak::upgrade).collect();
+        let alive: Vec<Arc<Terminal>> =
+            locked(&self.made).iter().filter_map(|(_, weak)| weak.upgrade()).collect();
         if end_hosts {
             if let Err(err) = self.registry.forget_all() {
                 tracing::warn!("couldn't forget the saved terminals: {err}");
@@ -264,7 +289,71 @@ impl HostedTerminals {
         }
     }
 
-    /// A running PTY in host `id`: make its object, save the row, count it for the quit.
+    /// What an attach that did not work means: gone (start a new terminal) or a host that runs and cannot be shown.
+    fn failed(&self, what: &HostedStart, host_id: &str, failure: AttachFailure) -> HostingError {
+        match failure {
+            AttachFailure::Gone => HostingError::Gone,
+            AttachFailure::Unavailable(why) => {
+                // The terminal keeps the host's id: the next launch finds this row, not a stranger.
+                self.remember(what, host_id);
+                HostingError::Unavailable {
+                    reason: why.detail,
+                    kind: why.kind.into(),
+                    transient: why.kind.is_transient(),
+                }
+            }
+        }
+    }
+
+    /// A terminal started again above what it showed: the checkpoint of the host it ran in when that reads (after a
+    /// restart of the Mac), else its saved text. The host it was restored from, when a checkpoint was drawn.
+    fn seed(
+        &self,
+        what: &HostedStart,
+        options: &mut wormhole_core::terminal::SpawnOptions,
+    ) -> Option<String> {
+        let old = what.old_host.as_deref()?;
+        if let Some(key) = self.checkpoint_key(what.tab, old)
+            && self.checkpoints.seed(old, &key, options)
+        {
+            return Some(old.to_owned());
+        }
+        if let Some(text) = what.saved_text.as_deref() {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |since| since.as_secs());
+            options.restore = Some(wormhole_core::terminal::restored::seed_from_text(text, now))
+                .filter(|seed| !seed.is_empty());
+        }
+        None
+    }
+
+    /// The key host `host` seals its checkpoint with, when this terminal keeps checkpoints at all.
+    fn checkpoint_key(&self, tab: i64, host: &str) -> Option<wormhole_term::checkpoint::Key> {
+        if locked(&self.forgetting).contains(&tab) || !checkpoints::on(&self.profile) {
+            return None;
+        }
+        self.registry.checkpoint_key(host)
+    }
+
+    /// The checkpoints of old hosts at launch (off the main thread): `running` are spared.
+    fn sweep_checkpoints(&self, running: &HashSet<String>) {
+        let any_on = checkpoints::on(&self.profile) || self.other_profiles_keep_checkpoints();
+        let (checkpoints, running) = (Arc::clone(&self.checkpoints), running.clone());
+        let sweep = std::thread::Builder::new()
+            .name("wormhole-ffi-checkpoint-sweep".into())
+            .spawn(move || checkpoints.sweep(running, any_on));
+        drop(sweep);
+    }
+
+    fn other_profiles_keep_checkpoints(&self) -> bool {
+        let root = DataRoot::new(&self.data_dir);
+        let (list, _) = ProfileList::load_or_recover(&root);
+        list.profiles().iter().any(|p| checkpoints::on(&root.profile(&p.id)))
+    }
+
+    /// A running PTY in host `id`: make its object, save the row, ask for checkpoints, count it for the quit.
+    #[allow(clippy::too_many_arguments)]
     fn taken(
         &self,
         what: &HostedStart,
@@ -272,21 +361,29 @@ impl HostedTerminals {
         pty: wormhole_term::Pty,
         events: wormhole_term::PtyEvents,
         options: &wormhole_core::terminal::SpawnOptions,
+        restored_from: Option<String>,
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Terminal>, HostingError> {
         let registry = Arc::clone(&self.registry);
+        let checkpoints = Arc::clone(&self.checkpoints);
         let tab = what.tab;
+        let closing_hosts: Vec<String> =
+            [Some(id.clone()), restored_from.clone()].into_iter().flatten().collect();
         let slot = HostSlot::new(id.clone(), move || {
             if let Err(err) = registry.forget(tab) {
                 tracing::warn!("couldn't forget terminal {tab}: {err}");
             }
+            checkpoints.forget_later(closing_hosts.clone());
         });
         let terminal = Terminal::from_parts(pty, events, options, listener, Some(slot))
             .map_err(|e| HostingError::Start { reason: e.to_string() })?;
         self.remember(what, &id);
+        if let Some(key) = self.checkpoint_key(tab, &id) {
+            self.checkpoints.start(&terminal, &id, key, restored_from);
+        }
         let mut made = locked(&self.made);
-        made.retain(|weak| weak.strong_count() > 0);
-        made.push(Arc::downgrade(&terminal));
+        made.retain(|(_, weak)| weak.strong_count() > 0);
+        made.push((tab, Arc::downgrade(&terminal)));
         Ok(terminal)
     }
 }
@@ -297,6 +394,6 @@ fn takes_the_app(meta: &HostMeta) -> bool {
         && matches!(hosts::probe(meta, ORPHAN_ANSWER), Probed::Answered(_))
 }
 
-fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+pub(super) fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }

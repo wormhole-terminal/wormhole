@@ -8,7 +8,7 @@ use std::time::Duration;
 use wormhole_core::ipc::hosts;
 
 use self::support::{Fixture, wait_for};
-use super::{HostingError, HostingProgram, TerminalHosting};
+use super::{HostedStart, HostingError, HostingProgram, TerminalHosting};
 
 /// The one `cat` of a test: what is typed comes back, on the live screen and after a reattach.
 #[test]
@@ -139,4 +139,55 @@ fn the_flag_is_read_from_the_folders_settings() {
 fn a_folder_that_is_not_the_experiments_is_refused() {
     let err = super::HostedTerminals::new(Some("/tmp/Wormhole".into()), None, 1).err().expect("refused");
     assert!(matches!(err, HostingError::NotIsolated { .. }), "{err:?}");
+}
+
+/// What a terminal whose host is gone is drawn from: the checkpoint the host kept (a restart of the Mac), which the new
+/// host's own first checkpoint then replaces; or, with none, its saved text.
+#[test]
+fn a_terminal_whose_host_is_gone_is_drawn_from_its_checkpoint_then_its_text() {
+    let fixture = Fixture::new();
+    let desk = fixture.desk();
+    let first = desk.start(fixture.request(1), support::listener()).expect("starts");
+    let old = first.host_id().expect("hosted");
+    first.write(b"kept-on-screen\n".to_vec());
+    wait_for("the echo", || first.screen_text().contains("kept-on-screen"));
+    let checkpoint = fixture.sessions_dir().join(&old);
+    wait_for("the host's checkpoint", || checkpoint.exists());
+    assert_eq!(desk.save_texts(), 1, "the screen is kept for a host that will not be there");
+    desk.finish(false);
+    drop((first, desk));
+    // The Mac restarted: the host is gone, its checkpoint and the saved row are not.
+    let meta = hosts::find(&fixture.hosts_dir(), &old).expect("meta");
+    hosts::end_host(&meta, Duration::from_secs(5)).expect("ends");
+    wait_for("it to go", || fixture.live_hosts().is_empty());
+    assert!(checkpoint.exists(), "the host never deletes its checkpoint");
+
+    let again = fixture.desk();
+    let plan = again.plan_at_launch().expect("plans");
+    let saved = &plan.saved[0];
+    assert!(!saved.running);
+    assert!(saved.text.as_deref().is_some_and(|text| text.contains("kept-on-screen")), "{saved:?}");
+    let request = HostedStart {
+        old_host: Some(old.clone()),
+        saved_text: saved.text.clone(),
+        ..fixture.request(saved.terminal)
+    };
+    let restored = again.start(request, support::listener()).expect("starts again");
+    wait_for("the screen above the shell", || {
+        let screen = restored.screen_text();
+        screen.contains("kept-on-screen") && screen.contains("restored")
+    });
+    wait_for("the new host's checkpoint to replace the old", || !checkpoint.exists());
+
+    // Without a checkpoint the saved text is what is drawn.
+    let third = fixture.desk();
+    let request = HostedStart {
+        old_host: Some("nohostatall1".into()),
+        saved_text: Some("from-the-saved-text".into()),
+        ..fixture.request(8)
+    };
+    let text = third.start(request, support::listener()).expect("starts");
+    wait_for("the saved text", || text.screen_text().contains("from-the-saved-text"));
+    again.finish(true);
+    third.finish(true);
 }

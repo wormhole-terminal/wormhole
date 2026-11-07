@@ -86,8 +86,8 @@ pub use git::{
 };
 pub use hook_server::{HookError, HookEvent, HookListener, HookServer, cli_exit_code};
 pub use hosting::{
-    HostedStart, HostedTerminals, HostingError, HostingProgram, LaunchPlan, OrphanHost, SavedTerminal,
-    TerminalHosting,
+    HostUnavailableKind, HostedStart, HostedTerminals, HostingError, HostingProgram, LaunchPlan, OrphanHost,
+    SavedTerminal, TerminalHosting,
 };
 pub use inline_images::InlineImage;
 pub use interaction::{
