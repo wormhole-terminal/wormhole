@@ -1,0 +1,86 @@
+id,area,feature,weight,looks,works,evidence,owner,notes
+T01,terminal,Grid drawing: rows; runs; styles; wide cells; underline styles; strikeout,3700,0.75,1,apple/swift/Sources/TerminalMetal/RowBuilder.swift; apple/swift/Tests/TerminalCoreTests/RendererTests.swift,swift-g-term-ui,Metal over the real engine's frames through UniFFISource; never compared pixel by pixel with GPUI; no double-height rows; the speed gate G1 is undecided
+T02,terminal,Ligatures; font fallback; emoji; font features,500,0.5,0.5,apple/swift/Sources/TerminalMetal/WordCache.swift; apple/swift/Sources/TerminalMetal/FontSet.swift,swift-g-term-ui,CoreText fallback and emoji work; ligatures are forced off (kCTLigatureAttributeName 0) and there is no font_ligatures setting
+T03,terminal,Cursor styles; blink; unfocused hollow,242,0.75,1,apple/swift/Sources/TerminalMetal/RowBuilder.swift; apple/swift/Sources/TerminalMetal/MetalTerminalView.swift,swift-g-term-ui,block/beam/underline/hollow; one-shot blink timer only in the key window; Reduce Motion not checked for the blink
+T04,terminal,Selection: cell; word; line; block; drag; autoscroll; Cmd-A,300,0,0,apple/swift/Sources/TerminalMetal/TerminalInput.swift,swift-g-term-input,mouseDown only makes the view first responder
+T05,terminal,Mouse reporting modes 1000-1006,280,0,0,apple/swift/Sources/TerminalMetal/TerminalInput.swift,swift-g-term-input,no mouse events are sent to the program
+T06,terminal,Wheel and precise scroll into scrollback,80,,1,apple/swift/Sources/TerminalMetal/TerminalInput.swift,swift-g-term-input,line remainder from precise deltas -> FFI scroll(); alt-screen wheel is the engine's; no scrollbar (see T11)
+T07,terminal,Keyboard: key table; Option as Meta; kitty keyboard; modifyOtherKeys,300,,1,apple/swift/Sources/TerminalMetal/TerminalKeys.swift; apple/swift/Sources/TerminalCore/KeyEncoder.swift,swift-g-term-input,real engine encodes through send_key; IME/marked text is also implemented (a new capability: not counted); key release not sent
+T08,terminal,Links: Cmd-hover underline; open; OSC 8,80,0,0,,swift-g-term-input,no hyperlink handling
+T09,terminal,Inline images: kitty; Sixel; iTerm2,238,0,0,,swift-g-term-ui,the packed frame has no image placements in Swift
+T10,terminal,Minimap,142,0,0,,swift-g-term-ui,
+T11,terminal,Scrollbar and overlay scroller,343,0,0,,swift-g-term-ui,no scroller drawn
+T12,terminal,Find bar: search; next/prev; count; case; regex,574,0,0,,swift-g-term-input,
+T13,terminal,Command blocks (OSC 133): gutter; copy output; Cmd-up/down; rerun,395,0,0,,,
+T14,terminal,Bell: sound; visual; Dock bounce,60,0,0,apple/swift/Sources/TerminalMetal/MetalTerminalView.swift,swift-g-platform,onBell callback exists and nothing is connected to it
+T15,terminal,Terminal context menu,247,0,0,,swift-g-term-input,
+T16,terminal,Pane bar; exited/failed states; host problem,798,0,0,,swift-g-panes,onExit is only logged to the control folder
+T17,terminal,Text zoom (Cmd+ Cmd- Cmd0),433,0,0,,swift-g-term-ui,
+T18,terminal,Live-resize steps and grow,407,0,0,,swift-g-panes,the grid follows the view's size (works) but there are no resize increments or readout
+T19,terminal,Agent status per terminal: idle; working; needs you; finished,790,0.5,0.5,apple/swift/Sources/WorkspaceModel/Agents.swift; apple/swift/Sources/WorkspaceModel/MockWorkspace.swift,swift-g-aux,Activity enum and wording on mock data; no detection or hooks; the tiles that show it are graded in S01
+T20,terminal,Persistent terminals: host attach; restore; checkpoint,1275,,0,,,FFI starts one local PTY (Terminal.start); no session host
+T21,terminal,Paste; paste protection; file drop,150,1,0.5,apple/swift/Sources/TerminalMetal/TerminalInput.swift,swift-g-term-input,Cmd-V pastes through FrameSource.paste; no UniFFI override so no bracketed-paste on the real source; no protection dialog; no file drop
+T22,terminal,Print and Export text,100,,0,,,
+S01,sidebar,Sidebar list: rows; tiles; status; hint chips; count badges,1900,0.75,0.5,apple/swift/Sources/SidebarUI/TerminalRowView.swift; png:swift-sidebar/pair-hints.png,swift-g-sidebar2,layout and wording close to GPUI; tile shows a generic terminal glyph instead of the agent logo; mock workspace
+S02,sidebar,Inline rename,200,0,0,apple/swift/Sources/SidebarUI/SidebarMenu.swift,swift-g-sidebar2,Rename is a disabled menu item; the reducer has .rename but no UI
+S03,sidebar,Groups: bands; fold; group colour; pinned folders; No folder,1300,0.5,0.5,apple/swift/Sources/SidebarUI/SidebarSectionView.swift; apple/swift/Sources/SidebarUI/GroupHeadView.swift,swift-g-sidebar2,Agents band with fold drawn; no colour tint picker; no pinned folders; mock data
+S04,sidebar,Densities Regular; Compact; Dense,300,0.75,0.5,apple/swift/Sources/SidebarUI/RowGeometry.swift; png:swift-sidebar/pair-dense.png,swift-g-sidebar2,all three render; not driven by the real setting
+S05,sidebar,Pins; Cmd-1..9 numbering; Cmd-hold hint,300,0.75,0.5,apple/swift/Sources/SidebarUI/CommandHoldMonitor.swift; apple/swift/Sources/SidebarUI/Keycap.swift,swift-g-sidebar2,pin/unpin through the reducer on mock data; keycaps match GPUI
+S06,sidebar,Show filter and search,640,0,0,apple/swift/Sources/WorkspaceModel/Reducer.swift,swift-g-sidebar2,reducer has .search; no search field or Show menu in the view
+S07,sidebar,Drag reorder; drop into group; split drop; tear off,1400,0,0,apple/swift/Sources/WorkspaceModel/Arrangement.swift,swift-g-sidebar2,model moves are tested; no drag source or destination in any view
+S08,sidebar,Sidebar motion: insert; leave; fold; lift; room; join,2050,0.25,0.5,apple/swift/Sources/SidebarUI/SidebarMotion.swift,swift-g-sidebar2,named GPUI timings and springs; Reduce Motion fallback; only fold/hint/badge/selection animate; playback never viewed
+S09,sidebar,Terminals as tabs: tab bar; switcher; profile chip,1129,0,0,,,
+W01,window,Splits and panes: tree; Cmd-D; zoom; focus by direction; layouts,1631,0,0,apple/swift/Sources/WorkspaceModel/SplitRules.swift,swift-g-panes,rules in the model with tests; the window draws one terminal only
+W02,window,Title row: breadcrumb; branch chip; ports; open-in; path card; path menu,2192,0.5,0.5,apple/swift/Sources/WindowUI/Breadcrumb.swift; png:window/expanded.png,swift-g-platform,path + branch chip + state dot on mock data; no ports; open-in; hover card; menu; no pane or layout buttons
+W03,window,Status bar: counts; agent summary; size,960,0.75,0.5,apple/swift/Sources/WindowUI/StatusBar.swift,swift-g-aux,GPUI metrics and wording; mock terminals; hidden by default as in GPUI
+W04,window,Columns: sliding; resize drag; fit rules; readout; remembered widths,1150,0.75,0.5,apple/swift/Sources/WindowUI/PaneLayout.swift; apple/swift/Sources/WindowUI/ColumnSlide.swift; apple/swift/Tests/UITests/WindowGeometryTests.swift,swift-g-panes,rules ported from core with tests; no readout; widths not remembered
+W05,window,Multi-window; window restore; saved layout,1000,0,0,,,one window only
+W06,window,Profiles: switch; new; manage,500,0,0,,,
+W07,window,Zen mode and presets,105,0,0,,,
+W08,window,Close and quit questions; Quit and End All,630,0,0,apple/swift/Sources/Wormhole/AppController.swift,swift-g-platform,closeTerminal closes without asking
+W09,window,Window chrome: traffic lights; collapse buttons; full screen; minimise,500,0.75,1,apple/swift/Sources/WindowUI/TrafficLights.swift; apple/swift/Sources/WindowUI/WindowControls.swift; png:window/collapsed.png,swift-g-platform,real NSWindow; GPUI-placed controls
+W10,window,Glass; vibrancy; blur; translucent window,900,0.5,0.5,apple/swift/Sources/WindowUI/WindowBackdrop.swift; apple/swift/Sources/WindowUI/WindowLook.swift,swift-g-platform,menu toggles exist; offscreen renders have no blur so the look is unverified; no tint slider
+P01,panel,Panel shell: six tabs; Ctrl-Cmd numbers; collapse,1500,0.5,0.5,apple/swift/Sources/WindowUI/PanelTabBar.swift; apple/swift/Sources/WindowUI/RightPanel.swift,swift-g-panel2,3 of 6 tabs (Changes; History; Notes)
+P02,panel,Changes: list or tree; sections; count badge; submodules,1300,0.75,0.5,apple/swift/Sources/PanelUI/ChangesView.swift; png:swift-panel/pair-changes-wormhole.dark.png,swift-g-panel2,no file-type icons; no submodule rows; sample data only
+P03,panel,Diff: split and inline; syntax colours; hunks; review notes; binary,2633,0.75,0.5,apple/swift/Sources/PanelUI/DiffView.swift; apple/swift/Sources/PanelModel/UnifiedDiffParser.swift; png:swift-panel/changes-diff-wormhole.dark.png,swift-g-panel2,parser runs on git diff text; no real git source; own lexer (not tree-sitter); no submodule diff
+P04,panel,History: log; commit details; compare branch; copy; PR info,3518,0.75,0.5,apple/swift/Sources/PanelUI/HistoryView.swift; png:swift-panel/pair-history-open-wormhole.dark.png,swift-g-panel2,detail card close to GPUI; sample commits; no PR info; no graph
+P05,panel,Worktrees: new terminal in worktree; remove,664,0,0,,,
+P06,panel,Notes and tasks: next steps; reorder; stash prompt; notes.md sync,2077,0.75,0.5,apple/swift/Sources/PanelUI/NotesView.swift; apple/swift/Sources/PanelModel/NotesModel.swift,swift-g-panel2,cards and tasks drawn; no persistence or sync
+P07,panel,Files tab: tree; viewer; rename; pins,2868,0,0,,,
+P08,panel,Project tab: .wormhole folders; trust; actions,2866,0,0,,,
+P09,panel,Usage tab: plan limit gauges,326,0,0,,,
+O01,overlays,Command palette: scopes; fuzzy; recents,1715,0.75,0.5,apple/swift/Sources/PaletteUI/PaletteView.swift; apple/swift/Tests/PaletteTests/SearchTests.swift; png:swift-palette/wormhole.dark-palette-query.png,swift-g-aux,matches the GPUI card; actions run on the mock store; Settings and Commits scopes have no source; search re-implemented in Swift
+O02,overlays,Shortcut sheet,402,0.75,0.5,apple/swift/Sources/PaletteUI/ShortcutSheetView.swift; png:swift-palette/wormhole.dark-sheet.png,swift-g-aux,hand-written catalog instead of core's keymap table
+O03,overlays,Folder picker Cmd-J,999,0,0,,,
+O04,overlays,Context menus: row; group; path; panel items,700,0.5,0.5,apple/swift/Sources/SidebarUI/SidebarMenu.swift,swift-g-sidebar2,row menu has the GPUI order and words; most items disabled; no group popover or path/panel menus
+O05,overlays,Notice chip,1193,0,0,,,
+PL01,platform,Menu bar: 113 actions; dynamic items,700,0.25,0.5,apple/swift/Sources/Wormhole/AppMenu.swift,swift-g-platform,87-line menu with about 12 items on the mock store
+PL02,platform,Hotkeys: global hotkey; jump keys; shortcut recorder,300,0,0,,swift-g-platform,
+PL03,platform,Notifications: banners; needs-you; replies,853,0,0,,swift-g-platform,
+PL04,platform,Menu bar status item and menu,900,0,0,,swift-g-platform,
+PL05,platform,Quick panel (reply to waiting agent),771,0,0,,swift-g-platform,
+PL06,platform,Dock: badge; menu; bounce,150,0,0,,swift-g-platform,
+ST01,settings,Settings window shell: sections; search with hit counts; per-row reset,1200,0,0,,swift-g-settings,the SwiftUI Settings that ships in the GPUI app is not part of apple/swift
+ST02,settings,Settings pages Profile; Terminal; Appearance; Fonts; Sessions; Terminal list; Git,2400,0,0,,swift-g-settings,
+ST03,settings,Settings pages Notifications; Agents; Menu bar; Import; Updates; Advanced; Preview,1754,0,0,,swift-g-settings,
+SD01,studio,Theme Studio: token editor; list; draft; save; export; versions; contrast,5000,0,0,,,
+SD02,studio,Theme Studio component gallery,4295,0,0,apple/swift/Tests/UITests/ThemeSwatchSheet.swift,,a test-only swatch sheet per theme is not the gallery
+SD03,studio,Theme library: list; load bundled and user themes; choose; persist,1728,0.5,1,apple/swift/Sources/DesignSystem/Theme/ThemeLibrary.swift; apple/swift/Tests/ThemeFFITests/RealResolverTests.swift,swift-g-settings,real Rust theme resolution through the FFI; menu picker; no registry UI
+A01,aux,Onboarding window; wormhole intro (Metal); welcome page,4114,0,0,,swift-g-aux,
+A02,aux,About and Licenses,444,0,0,,swift-g-aux,
+A03,aux,Update: feed; download; restart prompt; channels,824,0,0,,swift-g-aux,
+A04,aux,Session Hosts window,941,0,0,,swift-g-aux,
+A05,aux,Agent access sheet (control-API approvals),2089,0,0,,swift-g-aux,
+A06,aux,Trust window and project trust notice,267,0,0,,swift-g-aux,
+X01,crosscut,Design language: tokens; rows; pills; buttons; controls,11363,0.75,1,apple/swift/Sources/DesignSystem; png:swift-sidebar/themes.png,,DesignSystem reads the real token snapshot; no Theme Studio gallery to show every component
+X02,crosscut,Theme application: tokens to colours; derive; palette,960,0.75,1,apple/swift/Sources/DesignSystem/Theme/ThemeStore.swift; apple/swift/Tests/UITests/ThemeLookTests.swift; png:theme-swatches/,swift-g-settings,resolved by the Rust core (resolve_theme); live recolouring tested; swatches for 25+ themes
+X03,crosscut,Accessibility: VoiceOver labels; announcements; terminal node,564,0.5,0.5,apple/swift/Sources/WorkspaceModel/SpokenLabels.swift,swift-g-platform,about 100 accessibility modifiers; spoken labels from the model; no terminal node; no announcements; VoiceOver never run
+X04,crosscut,Keyboard navigation: F6 areas; Tab stops; Esc ladder; arrows,1140,0.25,0.5,apple/swift/Sources/SidebarUI/SidebarKeys.swift; apple/swift/Sources/PaletteUI/PaletteView+Keys.swift,,palette and sidebar keys; no F6; no focus ring system
+X05,crosscut,Reduce Motion; Reduce Transparency; Increase Contrast,520,0.75,1,apple/swift/Sources/DesignSystem/Motion.swift; png:swift-sidebar/sidebar-wormhole.dark-contrast.png,,environment values; contrast and transparency variants rendered; no Increase Contrast reaction to a live toggle seen
+X06,crosscut,Light; dark; system appearance,300,1,1,apple/swift/Sources/Wormhole/AppController+Look.swift,,menu switch; rendered in both
+X07,crosscut,Languages: catalogs; pseudo-language,500,0,0,,,no L10n seam yet; English literals in views
+X08,crosscut,CLI and control socket handlers (wh list; send-text; events; mcp),1378,,0,,,only the experiment's own devctl folder exists
+X09,crosscut,Events not polling: idle window sleeps,300,,1,apple/swift/Sources/TerminalMetal/MetalTerminalView.swift,,display link pauses when idle; one-shot blink; measured by the idle report
+X10,crosscut,Performance guards: counting tests; profile scripts,807,,0.5,apple/MEASURING.md; apple/swift/Sources/TerminalMetal/FrameStats.swift,,frame stats and ffi-bench; no counting tests in a gate
+X11,crosscut,Window activation rules; test-instance isolation,117,,1,apple/swift/Sources/Wormhole/Isolation.swift,,refuses to start without Wormhole-swift* data dir; --background
+X12,crosscut,Dev tooling: devctl; inspector; perf spans,5609,,0.5,apple/swift/Sources/Wormhole/DevCtl.swift; apple/swift/Sources/Wormhole/RenderPNG.swift,,6 commands and offscreen PNG renders instead of about 100 devctl commands; no inspect mode
