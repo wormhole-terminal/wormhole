@@ -29,6 +29,11 @@ var targets: [Target] = [
     .target(name: "SidebarUI", dependencies: ["WorkspaceModel", "DesignSystem"]),
     // Title rows, status bar, right panel and the window that holds them with the terminal view.
     .target(name: "WindowUI", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "TerminalMetal"]),
+    // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
+    .target(name: "PanelModel"),
+    // The right panel's tab contents: Notes, Changes (with the diff) and History.
+    .target(name: "PanelUI", dependencies: ["PanelModel", "DesignSystem"]),
+    .testTarget(name: "PanelTests", dependencies: ["PanelModel", "PanelUI", "DesignSystem"]),
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),
     .testTarget(name: "UITests", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI"]),
 ]
