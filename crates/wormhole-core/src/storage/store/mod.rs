@@ -14,6 +14,7 @@ mod records;
 mod saved_text;
 mod schema;
 mod scrollback;
+mod session_notes;
 mod sessions;
 mod steps;
 #[cfg(test)]
@@ -31,6 +32,7 @@ use rusqlite::{Connection, OptionalExtension};
 pub use agent_grants::{AgentGrantKey, AgentGrantRow};
 pub use claims::ClaimRecord;
 pub use records::{NoteRecord, SessionRecord, SplitRecord, TaskRecord, WindowRecord, is_blank};
+pub use session_notes::SessionNotes;
 pub use windows::front_last;
 
 use crate::platform::paths;
