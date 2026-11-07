@@ -1,7 +1,8 @@
-//! Menu bar's preview: two stretches of the menu bar with Wormhole's item as the settings make it, one
-//! while a terminal needs input (the dot and the count that "Icon shows" chooses) and one while a
-//! terminal works (the filled icon, whose prompt types itself out when "Animate" is on). With "Show
-//! Wormhole in the menu bar" off the item is not there.
+//! Menu bar's preview: four stretches of the menu bar with Wormhole's item as the settings make it, one
+//! while a terminal needs input (the dot and the count that "Icon shows" chooses), one while a terminal
+//! works (the filled icon, whose prompt types itself out when "Animate" is on), and one each for a
+//! finished and a failed one (the green and the red dot). With "Show Wormhole in the menu bar" off the
+//! item is not there.
 //!
 //! What the item says is the app's own rule (`menubar::model::status_icon`, from a sample terminal) and
 //! its animation runs on the app's own frames (`notify::MENU_ANIM_FRAMES`); only the drawing is this
@@ -128,6 +129,8 @@ impl Render for MenuBarPreview {
             .gap_2()
             .child(bar(text(SETTINGS_MENU_BAR_PREVIEW_NEEDS_INPUT), State::NeedsYou))
             .child(bar(text(SETTINGS_MENU_BAR_PREVIEW_WORKING), State::Working))
+            .child(bar(text(SETTINGS_MENU_BAR_PREVIEW_FINISHED), State::Done))
+            .child(bar(text(SETTINGS_MENU_BAR_PREVIEW_FAILED), State::Failed))
     }
 }
 

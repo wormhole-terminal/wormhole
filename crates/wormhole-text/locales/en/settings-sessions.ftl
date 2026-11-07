@@ -91,13 +91,4 @@ settings-sessions-changes-shared-none = Nobody counts it
 
 ## settings_window/sections/preview.rs (labels, hints and notes drawn by this page's code)
 
-settings-sessions-preview-caption-side-by-side = Hover a density to see it next to the current one
 settings-sessions-terminals = Terminals
-
-## Sentences with a hole in them
-
-# Over the live preview: the Terminals list as it is now. { $density } is the density's name.
-settings-sessions-preview-now = Now · { $density }
-
-# Over the live preview: the list as the density under the pointer would draw it.
-settings-sessions-preview-hovering = Previewed while hovering { $density }

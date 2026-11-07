@@ -26,3 +26,5 @@ settings-menu-bar-icon-only = Icon only
 
 settings-menu-bar-preview-needs-input = Needs input
 settings-menu-bar-preview-working = Working
+settings-menu-bar-preview-finished = Finished
+settings-menu-bar-preview-failed = Failed

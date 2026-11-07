@@ -1,5 +1,5 @@
 //! Hotkey's preview: the shortcut as key caps, and what pressing it opens. "Quick panel" shows the quick
-//! panel (its search row and one result: two rows are all that fit the strip whole); "Show or hide
+//! panel (its search row and three results, the first one asking for input); "Show or hide
 //! Wormhole" shows a window that comes and goes. The window is the first run's window sketch
 //! (`style::window_sketch`) fading in and out, held shown under Reduce Motion.
 //!
@@ -119,7 +119,8 @@ impl Render for HotkeyPreview {
     }
 }
 
-/// The quick panel as the hotkey opens it: the search field and the terminal that needs input first.
+/// The quick panel as the hotkey opens it: the search field, then the terminals, the one that needs input
+/// first.
 fn quick_panel(cx: &App) -> AnyElement {
     let ui = ui(cx);
     let mut needs = style::PaletteResult::new(
@@ -127,6 +128,15 @@ fn quick_panel(cx: &App) -> AnyElement {
         "api", // text: sample (a made-up terminal of the preview)
     );
     needs.strong = true;
+    let mut running = style::PaletteResult::new(
+        style::status_glyph("hotkey-preview-running", ui, StatusGlyph::Running, cx),
+        "cargo test", // text: sample (a made-up terminal of the preview)
+    );
+    running.detail = Some("cargo test --workspace".into()); // text: sample (a made-up command of the preview)
+    let idle = style::PaletteResult::new(
+        style::status_glyph("hotkey-preview-idle", ui, StatusGlyph::Idle, cx),
+        "scratch", // text: sample (a made-up terminal of the preview)
+    );
     needs.detail = Some("Allow edit?".into()); // text: sample (a made-up terminal of the preview)
     needs.detail_color = Some(ui.attention_text);
     style::palette_surface(ui, false)
@@ -144,5 +154,7 @@ fn quick_panel(cx: &App) -> AnyElement {
             ),
         )
         .child(style::palette_result("hotkey-preview-needs-row", ui, true, needs))
+        .child(style::palette_result("hotkey-preview-running-row", ui, false, running))
+        .child(style::palette_result("hotkey-preview-idle-row", ui, false, idle))
         .into_any_element()
 }

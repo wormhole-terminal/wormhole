@@ -1,6 +1,7 @@
-//! Notifications' preview: a banner as macOS shows it, for a terminal that needs input, drawn in the
-//! theme's colours over the window's own surface. One banner, not two: the preview strip is one
-//! fixed height (`preview_column::PREVIEW_H`), and a second banner would be cut off at its edge.
+//! Notifications' preview: banners as macOS shows them, for a terminal that needs input, one that finished,
+//! a command that failed and another that asks, drawn in the theme's colours over the window's own surface.
+//! Two rows of as many as the page's width holds: the strip is one fixed height
+//! (`preview_column::PREVIEW_H`) and holds two rows of banners whole, never a third cut off at its edge.
 
 use gpui_kit::prelude::*;
 use gpui_kit::*;
@@ -21,28 +22,48 @@ const BANNER_W: f32 = 344.0;
 /// The app's icon in a banner.
 const BANNER_ICON: f32 = 32.0;
 
-/// The banner, and what it shows under it.
-pub(in crate::settings_window) fn draw_notifications_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
+/// The room a stage's banners have at most: banners are as wide as macOS draws them, so as many as fit side
+/// by side go in a row, two rows deep (the stage's height holds two, not three).
+const ROWS: usize = 2;
+/// The gap between banners (`gap_2`).
+const GAP: f32 = 8.0;
+
+/// What the banners say: a title and a body each, for a terminal that needs input, one that finished, a
+/// command that failed and another that asks.
+const BANNERS: [(&str, &str); 4] = [
+    ("api needs input", "Allow edit of src/limits.rs?"), // text: sample (a made-up notification of the preview)
+    ("Rate limits finished", "57 tests passed in 4m"), // text: sample (a made-up notification of the preview)
+    ("cargo test failed", "Exited with code 101"),     // text: sample (a made-up notification of the preview)
+    ("Flaky login test needs input", "Allow Bash: npm test?"), // text: sample (a made-up notification of the preview)
+];
+
+/// The banners, as many as the stage has room for: two rows of as many columns as fit the page's width
+/// (a narrow one shows two, one over the other).
+pub(in crate::settings_window) fn draw_notifications_preview(
+    window: &SettingsWindow,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
     let ui = ui(cx);
     let icon = app_icon_for(cx.global::<SettingsStore>().tokens.appearance);
+    // The stage's own sides (`px_4` twice) come off the page's width.
+    let room = window.page_width - 32.0;
+    let columns = (((room + GAP) / (BANNER_W + GAP)).floor() as usize).clamp(1, BANNERS.len() / ROWS);
     div()
         .flex()
         .flex_col()
         .items_center()
-        .child(banner(
-            ui,
-            icon,
-            "api needs input", // text: sample (a made-up notification of the preview)
-            "Allow edit of src/limits.rs?", // text: sample (a made-up notification of the preview)
-        ))
+        .gap_2()
+        .children(BANNERS.chunks(columns).take(ROWS).map(|row| {
+            div().flex().gap_2().children(row.iter().map(|(title, body)| banner(ui, icon, title, body)))
+        }))
         .into_any_element()
 }
 
 /// One banner: the app's icon, the title over the body, and when it came.
 fn banner(ui: UiColors, icon: &'static str, title: &'static str, body: &'static str) -> Div {
     div()
-        .w_full()
-        .max_w(px(BANNER_W))
+        .w(px(BANNER_W))
+        .flex_none()
         .flex()
         .items_center()
         .gap_3()

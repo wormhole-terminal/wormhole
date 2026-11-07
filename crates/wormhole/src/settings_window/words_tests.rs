@@ -129,8 +129,6 @@ fn sentences() -> Vec<(String, &'static str)> {
             settings_projects_feature_needs_trust("Per-project settings"),
             "Per-project settings. Only after you trust the project",
         ),
-        (settings_sessions_preview_now("Regular"), "Now · Regular"),
-        (settings_sessions_preview_hovering("Compact"), "Previewed while hovering Compact"),
         (settings_terminal_default_failed("denied"), "Couldn't make Wormhole the default: denied"),
         (
             settings_terminal_font_summary_ligatures_on("JetBrains Mono", "14", "1.30"),

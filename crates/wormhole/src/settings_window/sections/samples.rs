@@ -100,19 +100,54 @@ pub(super) const RELEASE_NOTES: Sample = Sample {
     agent: Some(AgentId::OpenCode),
 };
 
-/// Terminals & sidebar's list: one group's card, a head and a row, which is what the strip holds whole at
-/// the roomiest density (it never scrolls or cuts a list off, so the sample is the part that fits).
-pub(super) const SIDEBAR_SAMPLES: &[Card] = &[Card {
-    group: Some("Release 1.2"),          // text: sample (a made-up group of the preview)
-    folder: Some("~/Projects/wormhole"), // text: sample (a made-up folder of the preview)
-    rows: &[SIDEBAR_CARDS],
-}];
+/// Terminals & sidebar's list, in each density side by side: a group's card with an agent working (with
+/// two notes), one asking for input and one finished, then a plain terminal and a running command. The
+/// cell clips what its density has no room for, as the sidebar does.
+pub(super) const DENSITY_SAMPLES: &[Card] = &[
+    Card {
+        group: Some("Release 1.2"),          // text: sample (a made-up group of the preview)
+        folder: Some("~/Projects/wormhole"), // text: sample (a made-up folder of the preview)
+        rows: &[Sample { notes: 2, ..RATE_LIMITS }, FLAKY_LOGIN, RELEASE_NOTES],
+    },
+    Card { group: None, folder: None, rows: &[SCRATCH] },
+    Card { group: None, folder: None, rows: &[CARGO_TEST] },
+];
 
 /// Appearance's window: its sidebar holds one terminal, the selected one.
 pub(super) const STAGE_SAMPLES: &[Card] = &[Card { group: None, folder: None, rows: &[SIDEBAR_CARDS] }];
 
-/// What Coding agents shows, one agent each: one working, one asking and one finished.
-pub(super) const AGENT_SAMPLES: &[Sample] = &[RATE_LIMITS, FLAKY_LOGIN, RELEASE_NOTES];
+pub(super) const MIGRATE_SCHEMA: Sample = Sample {
+    name: "Migrate schema", // text: sample (a made-up terminal of the preview)
+    glyph: StatusGlyph::Working,
+    detail: "Working · 9m", // text: sample (a made-up status of the preview)
+    tone: RowTone::Plain,
+    selected: false,
+    notes: 0,
+    agent: Some(AgentId::Codex),
+};
+pub(super) const LINT_SWEEP: Sample = Sample {
+    name: "Lint sweep", // text: sample (a made-up terminal of the preview)
+    glyph: StatusGlyph::NeedsYou,
+    detail: "Needs input · Run fix?", // text: sample (a made-up status of the preview)
+    tone: RowTone::Attention,
+    selected: false,
+    notes: 0,
+    agent: Some(AgentId::OpenCode),
+};
+pub(super) const DOCS_PASS: Sample = Sample {
+    name: "Docs pass", // text: sample (a made-up terminal of the preview)
+    glyph: StatusGlyph::Done,
+    detail: "Finished · 12m", // text: sample (a made-up status of the preview)
+    tone: RowTone::Done,
+    selected: false,
+    notes: 0,
+    agent: Some(AgentId::Claude),
+};
+
+/// What Coding agents shows, one agent each: working, asking and finished, then again with others. The
+/// strip takes as many as its two rows hold at the page's width (a column of three fits six).
+pub(super) const AGENT_SAMPLES: &[Sample] =
+    &[RATE_LIMITS, FLAKY_LOGIN, RELEASE_NOTES, MIGRATE_SCHEMA, LINT_SWEEP, DOCS_PASS];
 
 impl Sample {
     /// The sidebar's own row for it, with its status tile: `plain` is the face of a terminal without an

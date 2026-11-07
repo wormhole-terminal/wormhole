@@ -133,25 +133,30 @@ const BUDGET: [(&str, u64); 20] = [
     ("Terminal", 10174),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
-    ("Sessions", 9165),
+    // The list in all three densities side by side, each with a group card of three rows and two more cards, in
+    // place of one list with one row (19,454 measured).
+    ("Sessions", 19454),
     ("Git", 5682),
     // A row more (Let the command line read terminals), and the Wormhole skill group: its heading and
     // blurb, the line that no agent was found (the tests see none), and the MCP command with its Copy
     // button; 668 more. The Agent access group (a heading and blurb, the mode's three segments and the line
     // that nothing has asked yet) came with the Automation flag on in place of the two switch rows, and the
     // page measured 9,501: under this, which stays.
-    ("Agents", 8740),
+    // Six cards in two rows in place of three (11,684 measured).
+    ("Agents", 11684),
     // Fell from 49,182 when the comparison left the page: the open card and its rows are what is drawn.
     ("Import", 23034),
-    ("Notifications", 8125),
+    // Four banners in two rows in place of one (8,469 measured).
+    ("Notifications", 8469),
     // The page was split into MenuBar and Hotkey, each with a preview that is a view of its own (a menu bar
     // twice, and the shortcut's keys with the quick panel or the window sketch); both measured at the split.
     // Every other page rose by 68 with the nav's one row more, Hotkey, and was measured again.
-    ("MenuBar", 3748),
+    // Four stretches of the menu bar in place of two (3,973 measured).
+    ("MenuBar", 3973),
     // The strip's flat stage became one element round every preview, in place of the frame each drew: Hotkey
-    // measured 3,973 (74 more than before; MenuBar, 4 more, stays inside the slack). Where the 74 come from
-    // was not isolated: the preview is a view of its own, drawn in the stage.
-    ("Hotkey", 3973),
+    // measured 3,973 (74 more than before; where the 74 came from was not isolated: the preview is a view of
+    // its own, drawn in the stage). With three results in the quick panel in place of one: 4,290.
+    ("Hotkey", 4290),
     ("Updates", 4946),
     // The four keys of the Changed files choices: Advanced reads the settings as JSON twice a frame where
     // the other pages do once, so they cost it twice what they cost the others (36, not 18).

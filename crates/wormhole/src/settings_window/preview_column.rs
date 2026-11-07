@@ -13,7 +13,7 @@
 //! - Terminals & sidebar shows the Terminals list (`sections::draw_sidebar_preview`), beside the
 //!   density under the pointer.
 //! - Coding agents shows the Terminals list with agents at work in it (`draw_agents_preview`).
-//! - Notifications shows two banners (`draw_notifications_preview`).
+//! - Notifications shows banners, two rows of as many as fit across (`draw_notifications_preview`).
 //! - Menu bar shows the menu bar item as the settings make it (`MenuBarPreview`), Hotkey the shortcut and
 //!   what it opens (`HotkeyPreview`); both are views of their own (`BarPreview`).
 //! - Motion shows every option's scene at once, four cells looping (`MotionStrip`).
@@ -88,7 +88,6 @@ impl PreviewKind {
         match self {
             Self::Window => Some(text(SETTINGS_APPEARANCE_STAGE_CAPTION)),
             Self::Fonts => Some(text(SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST)),
-            Self::Sidebar => Some(text(SETTINGS_SESSIONS_PREVIEW_CAPTION_SIDE_BY_SIDE)),
             Self::Agents => Some(text(SETTINGS_AGENTS_PREVIEW_CAPTION)),
             Self::Notifications => Some(text(SETTINGS_NOTIFICATIONS_PREVIEW_CAPTION)),
             _ => None,
@@ -96,10 +95,10 @@ impl PreviewKind {
     }
 
     /// Whether the scene is made to stand in the stage's whole height and width (the window in miniature,
-    /// the Changes panel's list, the motions side by side), so the stage gives it the least room round it
-    /// ([`STAGE_INSET`]).
+    /// the Changes panel's list, the densities and the motions side by side), so the stage gives it the
+    /// least room round it ([`STAGE_INSET`]).
     fn fills_room(self) -> bool {
-        matches!(self, Self::Window | Self::Git | Self::Motion)
+        matches!(self, Self::Window | Self::Git | Self::Sidebar | Self::Motion)
     }
 
     /// What VoiceOver says for the strip: that it is a picture of the settings, not controls.
@@ -184,8 +183,8 @@ impl SettingsWindow {
             PreviewKind::Window => sections::draw_stage(self, cx),
             PreviewKind::Fonts => sections::draw_specimen(self, cx),
             PreviewKind::Sidebar => sections::draw_sidebar_preview(self, cx),
-            PreviewKind::Agents => sections::draw_agents_preview(cx),
-            PreviewKind::Notifications => sections::draw_notifications_preview(cx),
+            PreviewKind::Agents => sections::draw_agents_preview(self, cx),
+            PreviewKind::Notifications => sections::draw_notifications_preview(self, cx),
             PreviewKind::MenuBar | PreviewKind::Hotkey => self
                 .bar_preview
                 .as_ref()

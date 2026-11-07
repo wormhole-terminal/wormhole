@@ -37,3 +37,7 @@ pub const SETTINGS_MENU_BAR_ICON_ONLY: Key = Key::new(828);
 pub const SETTINGS_MENU_BAR_PREVIEW_NEEDS_INPUT: Key = Key::new(829);
 /// "Working"
 pub const SETTINGS_MENU_BAR_PREVIEW_WORKING: Key = Key::new(830);
+/// "Finished"
+pub const SETTINGS_MENU_BAR_PREVIEW_FINISHED: Key = Key::new(831);
+/// "Failed"
+pub const SETTINGS_MENU_BAR_PREVIEW_FAILED: Key = Key::new(832);

@@ -14,15 +14,18 @@ use wormhole_core::view::sidebar::Density;
 use wormhole_text::keys::*;
 use wormhole_text::text;
 
-use super::samples::{AGENT_SAMPLES, Card, SIDEBAR_SAMPLES, SampleHead};
+use super::samples::{AGENT_SAMPLES, Card, DENSITY_SAMPLES, SampleHead};
 use crate::settings::SettingsStore;
 use crate::settings::{Settings, UiColors, settings};
 use crate::settings_window::{SettingsWindow, SidebarLook, ui};
-use crate::style::{self, Metrics, TextRole, TileFace};
+use crate::style::{self, Edges, Metrics, TextRole, TileFace};
 use crate::theme_bridge;
 
-/// A preview list is as wide as the sidebar at its least.
-const SIDEBAR_W: f32 = 320.0;
+/// The narrowest a density's cell in Terminals & sidebar's preview gets: a tile and the start of a row's
+/// two lines, as in Coding agents' cards. Three side by side need this and the gaps in the stage.
+const DENSITY_CELL_MIN_W: f32 = 152.0;
+/// The gap between preview cells (`gap_2`).
+const GAP: f32 = 8.0;
 
 /// The narrowest an agent's card in Coding agents' preview gets: a tile and the start of its two lines.
 /// The cards wrap, so a narrow column shows two and then one, and a wide one all three side by side;
@@ -30,8 +33,17 @@ const SIDEBAR_W: f32 = 320.0;
 /// stage's 16 pt at each side is 324, and a gap of `gap_2` between them).
 const AGENT_CARD_MIN_W: f32 = 152.0;
 
-/// Terminals & sidebar → the Terminals list as the options make it, and beside it the list
-/// with the option under the pointer.
+/// How many densities fit side by side in a stage `width` wide: all three where each has the room a list's
+/// rows need, else as many as do (the current one first), and always one.
+fn densities_that_fit(width: f32) -> usize {
+    let gap = GAP;
+    (((width + gap) / (DENSITY_CELL_MIN_W + gap)).floor() as usize).clamp(1, Density::ALL.len())
+}
+
+/// Terminals & sidebar → the Terminals list in every density at once, side by side, each in the sidebar's
+/// own surface and drawn by its own rows from the options as they are now (cards, fading, folders, notes).
+/// The density in use wears the soft ring and its name in the primary, and the one under the pointer in an
+/// option of the Density row is named in full text.
 pub(in crate::settings_window) fn draw_sidebar_preview(
     window: &SettingsWindow,
     cx: &mut Context<SettingsWindow>,
@@ -39,50 +51,71 @@ pub(in crate::settings_window) fn draw_sidebar_preview(
     let ui = ui(cx);
     let s = settings(cx).clone();
     let now = Look::of(&s);
-    let label = |text: String| {
-        div().text_caption().font_weight(FontWeight::MEDIUM).text_color(ui.muted).truncate().child(text)
-    };
-    let mut panes = div().flex().justify_center().gap_4().w_full().child(
-        div()
+    let hovered = window.sidebar_preview.map(|SidebarLook::Density(density)| density);
+    // The stage's own sides (`px_4` twice) come off the page's width.
+    let room = densities_that_fit(window.page_width - 32.0);
+    // The current density first where not all fit, then the ones nearest to it in the order of `ALL`.
+    let mut shown: Vec<Density> = Density::ALL.to_vec();
+    let at = shown.iter().position(|d| *d == now.density).unwrap_or(0);
+    shown.sort_by_key(|d| {
+        (Density::ALL.iter().position(|x| x == d).unwrap_or(0) as isize - at as isize).abs()
+    });
+    shown.truncate(room);
+    shown.sort_by_key(|d| Density::ALL.iter().position(|x| x == d).unwrap_or(0));
+    let radius = ui.radius_lg;
+    let cells = shown.into_iter().map(|density| {
+        let current = density == now.density;
+        let look = Look { density, ..now };
+        let name = div()
+            .flex_none()
+            .truncate()
+            .text_caption()
+            .font_weight(FontWeight::MEDIUM)
+            .text_color(if current {
+                ui.primary
+            } else if hovered == Some(density) {
+                ui.text
+            } else {
+                ui.muted
+            })
+            .child(density.label());
+        // The ring is the cell's own overlay, outside its edge, so the surface under it clips alone.
+        let surface = div()
+            .relative()
             .flex_1()
-            .min_w_0()
-            .max_w(px(SIDEBAR_W))
-            .flex()
-            .flex_col()
-            .gap_2()
-            .child(label(settings_sessions_preview_now(now.density.label())))
-            .child(cards("now", now, SIDEBAR_SAMPLES, true, false, ui, cx)),
-    );
-    if let Some(SidebarLook::Density(density)) = window.sidebar_preview
-        && density != now.density
-    {
-        let previewed = Look { density, ..now };
-        panes = panes.child(
-            div()
-                .flex_1()
-                .min_w_0()
-                .max_w(px(SIDEBAR_W))
-                .flex()
-                .flex_col()
-                .gap_2()
-                .child(label(settings_sessions_preview_hovering(previewed.density.label())))
-                .child(cards("previewed", previewed, SIDEBAR_SAMPLES, true, false, ui, cx)),
-        );
-    }
-    panes.into_any_element()
+            .min_h_0()
+            .child(
+                div()
+                    .size_full()
+                    .rounded(radius)
+                    .overflow_hidden()
+                    .bg(ui.panel)
+                    .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.border))
+                    .child(cards(density.label(), look, DENSITY_SAMPLES, false, false, ui, cx)),
+            )
+            .when(current, |d| d.child(style::preview_ring(ui, radius)));
+        div().flex_1().min_w_0().flex().flex_col().gap_2().child(name).child(surface)
+    });
+    div().flex_1().min_h_0().flex().gap_2().children(cells).into_any_element()
 }
 
-/// Coding agents → three terminals side by side, each in a card of its own, with an agent working, one
-/// asking and one finished: what the hooks (or the output) tell the sidebar. Side by side where the column
-/// has the width, two and one under them where it has not: stacked in a list they would not fit the
-/// strip's height.
-pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsWindow>) -> AnyElement {
+/// Coding agents → terminals each in a card of its own, with agents working, asking and finished: what the
+/// hooks (or the output) tell the sidebar. Two rows of as many cards as the column has the width for (three
+/// across, two where it is narrow): stacked in a list they would not fit the strip's height.
+pub(in crate::settings_window) fn draw_agents_preview(
+    window: &SettingsWindow,
+    cx: &mut Context<SettingsWindow>,
+) -> AnyElement {
     let ui = ui(cx);
     let look = Look::of(settings(cx));
     let metrics = Metrics::of(look.density, look.cards).fading(look.fade).with_group_folders(look.folders);
     let plain = plain_face();
+    // Two rows of as many cards as fit across the stage (its own sides, `px_4` twice, come off the page's width).
+    let columns =
+        (((window.page_width - 32.0 + GAP) / (AGENT_CARD_MIN_W + GAP)).floor() as usize).clamp(1, 3);
     let cards: Vec<AnyElement> = AGENT_SAMPLES
         .iter()
+        .take(2 * columns)
         .enumerate()
         .map(|(ix, sample)| {
             let row = sample.row(&format!("preview-agents-{ix}"), ui, metrics, &plain, look.notes, cx);
@@ -94,7 +127,14 @@ pub(in crate::settings_window) fn draw_agents_preview(cx: &mut Context<SettingsW
                 .into_any_element()
         })
         .collect();
-    div().flex().flex_wrap().gap_2().children(cards).into_any_element()
+    // Rows of exactly `columns`, so the cards of a row are as wide as the others' and never stretch to fill.
+    let mut cards = cards.into_iter();
+    div()
+        .flex()
+        .flex_col()
+        .gap_2()
+        .children((0..2).map(|_| div().flex().gap_2().children(cards.by_ref().take(columns))))
+        .into_any_element()
 }
 
 /// A terminal without an agent shows the first agent's logo, as any agent would.
