@@ -172,9 +172,6 @@ pub struct SettingParts {
     pub reset_arrow: ResetArrow,
 }
 
-/// How far a [`setting`] row's hover fill reaches past its text on each side.
-const ROW_FILL_PAD: f32 = 8.0;
-
 /// How faint a control is while a project sets its value.
 const SET_ELSEWHERE_OPACITY: f32 = 0.55;
 
@@ -183,8 +180,8 @@ const SET_ELSEWHERE_OPACITY: f32 = 0.55;
 /// warning that must not be missed ([`SettingParts::visible_hint`]), the description under the label
 /// (12, muted); the control at the right edge of the row, at least
 /// [`SETTING_ROW_MIN_H`] tall. It has no line of its own: a [`setting_group`](super::setting_group)
-/// puts its rows on one card and draws the dividers between them. Hovering fills it with `state.hover`, [`ROW_FILL_PAD`]
-/// past its text on each side. See [`SettingState`] for what a changed, project-set or disabled
+/// puts its rows on one card and draws the dividers between them. A row has no hover fill of its own
+/// (the card's rounded edge would show around a square one; the control in it answers the pointer). See [`SettingState`] for what a changed, project-set or disabled
 /// value adds.
 #[track_caller]
 pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: &App) -> Stateful<Div> {
@@ -228,20 +225,6 @@ pub fn setting(id: impl Into<ElementId>, ui: UiColors, parts: SettingParts, cx: 
         .min_h(px(SETTING_ROW_MIN_H))
         .py_1()
         .relative()
-        // The hover fill reaches past the text on both sides, so the words don't touch its edges,
-        // while the text keeps the column of the group heads. Out of the layout, as a layer.
-        .when(!disabled, |d| {
-            d.child(
-                div()
-                    .absolute()
-                    .top_0()
-                    .bottom_0()
-                    .left(px(-ROW_FILL_PAD))
-                    .right(px(-ROW_FILL_PAD))
-                    .rounded(ui.radius)
-                    .group_hover(group.clone(), move |d| d.bg(ui.hover)),
-            )
-        })
         .child(
             div()
                 .flex_1()
