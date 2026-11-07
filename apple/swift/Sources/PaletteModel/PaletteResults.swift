@@ -13,7 +13,7 @@ public struct PaletteResult: Sendable, Equatable, Identifiable {
 public enum PaletteScope: Sendable, Equatable {
     case all, terminals, actions
 
-    public var group: CommandGroup? {
+    public var group: PaletteGroup? {
         switch self {
         case .all: nil
         case .terminals: .terminals

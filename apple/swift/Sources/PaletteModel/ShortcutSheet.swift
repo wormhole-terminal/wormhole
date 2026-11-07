@@ -26,7 +26,8 @@ public enum ShortcutSheet {
             rows: [
                 ShortcutRow(label: "New terminal", keys: [Shortcuts.newTerminal]),
                 ShortcutRow(label: "Close terminal", keys: [Shortcuts.closeTerminal]),
-                ShortcutRow(label: "Previous / next terminal", keys: [Shortcuts.previousTerminal, Shortcuts.nextTerminal]),
+                ShortcutRow(
+                    label: "Previous / next terminal", keys: [Shortcuts.previousTerminal, Shortcuts.nextTerminal]),
                 ShortcutRow(
                     label: "Terminals 1–9", keys: [Shortcuts.terminal(number: 1), Shortcuts.terminal(number: 9)],
                     isRange: true),

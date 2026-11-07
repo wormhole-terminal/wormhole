@@ -4,7 +4,7 @@ import Foundation
 import WorkspaceModel
 
 /// The palette's groups, in the order an unfiltered palette lists them (core `search::Group::ORDER`).
-public enum CommandGroup: Int, Sendable, CaseIterable {
+public enum PaletteGroup: Int, Sendable, CaseIterable {
     case actions, terminals
 
     public var title: String {
@@ -32,7 +32,7 @@ public struct Command: Sendable, Equatable, Identifiable {
     public var id: String
     public var title: String
     public var subtitle: String?
-    public var group: CommandGroup
+    public var group: PaletteGroup
     public var category: CommandCategory
     /// An SF Symbol name for the row's icon.
     public var symbol: String
@@ -41,7 +41,7 @@ public struct Command: Sendable, Equatable, Identifiable {
     public var action: WorkspaceAction?
 
     public init(
-        id: String, title: String, subtitle: String? = nil, group: CommandGroup = .actions,
+        id: String, title: String, subtitle: String? = nil, group: PaletteGroup = .actions,
         category: CommandCategory, symbol: String, shortcut: Shortcut? = nil, action: WorkspaceAction? = nil
     ) {
         self.id = id
