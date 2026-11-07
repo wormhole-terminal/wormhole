@@ -11,13 +11,13 @@ struct HeaderAction: View {
 
     var body: some View {
         switch section {
-        case "agents": button(SettingsText.rescanPath, "arrow.clockwise", .rescanAgents)
-        case "import": ActionButton(title: SettingsText.scanAgain, symbol: "arrow.clockwise") { model.importDraft.reset(); model.host.perform(.scanImports) }
+        case "agents": button(SettingsText.rescanPath, Icon.refresh.rawValue, .rescanAgents)
+        case "import": ActionButton(title: SettingsText.scanAgain, symbol: Icon.refresh.rawValue) { model.importDraft.reset(); model.host.perform(.scanImports) }
         case "extensions":
             if let probes = model.probesModel {
-                IconButton(symbol: "arrow.clockwise", label: LocalizedStringKey(ExtensionsText.refresh)) { Task { await probes.refresh() } }
+                IconButton(symbol: Icon.refresh.rawValue, label: LocalizedStringKey(ExtensionsText.refresh)) { Task { await probes.refresh() } }
             }
-        case "profile": ActionButton(title: SettingsText.newProfile, symbol: "plus") { model.showsNewProfile = true }
+        case "profile": ActionButton(title: SettingsText.newProfile, symbol: Icon.add.rawValue) { model.showsNewProfile = true }
         default: EmptyView()
         }
     }

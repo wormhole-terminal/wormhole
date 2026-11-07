@@ -11,9 +11,9 @@ struct NumberStepper: View {
 
     var body: some View {
         let value = model.value(key).number ?? spec.min
-        FlatStepper(
-            value: spec.format(value), label: label, canDecrease: value > spec.min, canIncrease: value < spec.max,
-            minus: { model.set(key, .number(max(spec.min, value - spec.step))) },
-            plus: { model.set(key, .number(min(spec.max, value + spec.step))) })
+        ValueStepper(
+            value: spec.format(value), label: label,
+            decrease: value > spec.min ? { model.set(key, .number(max(spec.min, value - spec.step))) } : nil,
+            increase: value < spec.max ? { model.set(key, .number(min(spec.max, value + spec.step))) } : nil)
     }
 }

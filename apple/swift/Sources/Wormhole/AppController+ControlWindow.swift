@@ -118,12 +118,27 @@ extension AppController {
             return "error: no window"
         }
         view.cacheDisplay(in: view.bounds, to: bitmap)
-        guard let png = bitmap.representation(using: .png, properties: [:]) else { return "error: no PNG" }
+        // `cacheDisplay` leaves out what the system draws in its own layers (a native sidebar, glass): the window server's
+        // image of this process's own window has them, and needs no Screen Recording permission.
+        let composited = shown.flatMap(Self.compositedImage)
+        guard let png = composited?.representation(using: .png, properties: [:]) ?? bitmap.representation(using: .png, properties: [:]) else {
+            return "error: no PNG"
+        }
         do {
             try png.write(to: URL(fileURLWithPath: path))
             return "window-shot \(path)"
         } catch {
             return "error: window-shot failed: \(error)"
         }
+    }
+
+    /// The window as the window server composites it, by `CGWindowListCreateImage` looked up at run time (the SDK marks it unavailable).
+    private static func compositedImage(of window: NSWindow) -> NSBitmapImageRep? {
+        typealias Create = @convention(c) (CGRect, UInt32, UInt32, UInt32) -> Unmanaged<CGImage>?
+        guard window.windowNumber > 0, let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGWindowListCreateImage") else { return nil }
+        let create = unsafeBitCast(symbol, to: Create.self)
+        // optionIncludingWindow (8), bestResolution | boundsIgnoreFraming (1 | 4)... framing kept: the content is cropped below.
+        guard let image = create(.null, 8, UInt32(window.windowNumber), 1 | 4)?.takeRetainedValue() else { return nil }
+        return NSBitmapImageRep(cgImage: image)
     }
 }

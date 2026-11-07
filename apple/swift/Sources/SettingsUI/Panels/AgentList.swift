@@ -37,7 +37,7 @@ struct AgentList: View {
                     HStack(spacing: Space._1) {
                         Text(agent.detail).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
                         if let path = agent.configPath {
-                            IconButton(symbol: "arrow.up.forward.square", label: LocalizedStringKey(Words.text("settings-agents-reveal-in-finder", fallback: "Reveal in Finder"))) {
+                            IconButton(symbol: Icon.reveal.rawValue, label: LocalizedStringKey(Words.text("settings-agents-reveal-in-finder", fallback: "Reveal in Finder"))) {
                                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
                             }
                             .frame(width: Metric.controlSmall, height: Metric.controlSmall)
@@ -100,7 +100,7 @@ struct OtherAgents: View {
             VStack(alignment: .leading, spacing: 0) {
                 Button { open.toggle() } label: {
                     HStack(alignment: .top, spacing: Space._2) {
-                        Image(systemName: "chevron.right").font(.system(size: Metric.chevron, weight: .bold)).rotationEffect(.degrees(open ? 90 : 0))
+                        Image(Icon.disclosure).font(.system(size: Metric.chevron, weight: .bold)).rotationEffect(.degrees(open ? 90 : 0))
                             .frame(width: Metric.lead, height: Metric.control).foregroundStyle(tokens.textMuted)
                         VStack(alignment: .leading, spacing: 0) {
                             Text(host.othersHead(count: records.count)).font(.system(size: TextRole.body.size, weight: .medium)).foregroundStyle(tokens.textPrimary)

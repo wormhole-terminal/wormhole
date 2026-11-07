@@ -24,7 +24,7 @@ private struct ProjectsBody: View {
         VStack(alignment: .leading, spacing: Space._6) {
             SettingGroup(title: ProjectsText.project) {
                 HStack {
-                    FlatSelect(options: options, selected: .string(projects.selected ?? ""), label: ProjectsText.project, width: Self.selectWidth) {
+                    OptionPicker(options: options, selected: .string(projects.selected ?? ""), label: ProjectsText.project, width: Self.selectWidth) {
                         pick($0.string)
                     }
                     Spacer(minLength: 0)
@@ -60,7 +60,7 @@ private struct Defaults: View {
         SettingGroup(title: ProjectsText.byDefault, blurb: ProjectsText.defaultsNote) {
             ForEach(projects.defaults) { feature in
                 SettingRow(label: feature.label, description: feature.description, visibleHint: true, state: RowState(), onReset: {}) {
-                    FlatSwitch(isOn: feature.on, label: feature.label) { on in Task { await projects.setDefault(feature.key, on: on) } }
+                    SettingToggle(label: feature.label, isOn: feature.on) { on in Task { await projects.setDefault(feature.key, on: on) } }
                 }
             }
         }

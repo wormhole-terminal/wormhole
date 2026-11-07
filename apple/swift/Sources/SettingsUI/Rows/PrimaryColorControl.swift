@@ -20,7 +20,7 @@ struct PrimaryColorControl: View {
                 )
                 .labelsHidden()
             }
-            FlatSwitch(isOn: model.value(entry.keys[0]).bool ?? true, label: entry.label) {
+            SettingToggle(label: entry.label, isOn: model.value(entry.keys[0]).bool ?? true) {
                 model.set(entry.keys[0], .bool($0))
             }
         }

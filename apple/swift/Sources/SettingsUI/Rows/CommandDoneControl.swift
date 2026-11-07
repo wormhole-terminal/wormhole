@@ -16,12 +16,11 @@ struct CommandDoneControl: View {
         // A hand-written value rounds up to the next step, as `after_step` does.
         let index = steps.firstIndex { $0 >= seconds } ?? steps.count - 1
         HStack(spacing: 12) {
-            FlatStepper(
-                value: Self.words(steps[index]), label: entry.label, canDecrease: index > 0,
-                canIncrease: index < steps.count - 1,
-                minus: { model.set(stepKey, .number(Double(steps[index - 1]))) },
-                plus: { model.set(stepKey, .number(Double(steps[index + 1]))) })
-            FlatSwitch(isOn: model.value(entry.keys[0]).bool ?? false, label: entry.label) {
+            ValueStepper(
+                value: Self.words(steps[index]), label: entry.label,
+                decrease: index > 0 ? { model.set(stepKey, .number(Double(steps[index - 1]))) } : nil,
+                increase: index < steps.count - 1 ? { model.set(stepKey, .number(Double(steps[index + 1]))) } : nil)
+            SettingToggle(label: entry.label, isOn: model.value(entry.keys[0]).bool ?? false) {
                 model.set(entry.keys[0], .bool($0))
             }
         }

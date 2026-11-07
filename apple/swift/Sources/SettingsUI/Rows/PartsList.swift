@@ -30,10 +30,10 @@ struct PartsList: View {
 
     private func row(_ part: ControlSpec.TitlePart, shown: Bool, index: Int, count: Int) -> some View {
         HStack(spacing: Space._2) {
-            if shown { Image(systemName: "line.3.horizontal").foregroundStyle(tokens.textFaint).accessibilityHidden(true) }
+            if shown { Image(Icon.grip).foregroundStyle(tokens.textFaint).accessibilityHidden(true) }
             Text(part.label).font(.system(size: TextRole.label.size)).foregroundStyle(shown ? tokens.textPrimary : tokens.textFaint)
             Spacer()
-            if part.hideable { FlatSwitch(isOn: shown, label: part.label) { toggle(part, on: $0) } }
+            if part.hideable { SettingToggle(label: part.label, isOn: shown) { toggle(part, on: $0) } }
         }
         .frame(minHeight: Metric.control)
         .contentShape(Rectangle())

@@ -12,12 +12,12 @@ struct HowStatusWorks: View {
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(alignment: .top, spacing: Space._6) {
                 column(
-                    "checkmark", tokens.statusSuccess, Words.text("settings-agents-with-status-hooks", fallback: "With status hooks"),
+                    Icon.check.rawValue, tokens.statusSuccess, Words.text("settings-agents-with-status-hooks", fallback: "With status hooks"),
                     Words.text(
                         "settings-agents-the-agent-tells-wormhole-the-moment",
                         fallback: "The agent tells Wormhole the moment it starts working, waits for you or finishes."))
                 column(
-                    "terminal", tokens.textMuted, Words.text("settings-agents-without", fallback: "Without"),
+                    Icon.openTerminal.rawValue, tokens.textMuted, Words.text("settings-agents-without", fallback: "Without"),
                     Words.text(
                         "settings-agents-status-is-read-from-the-terminal",
                         fallback: "Status is read from the terminal output: usually right, sometimes a beat late."))

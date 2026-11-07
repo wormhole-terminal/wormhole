@@ -31,7 +31,7 @@ struct ImportCards: View {
     /// What was looked for, so the page does not read as broken.
     private var none: some View {
         VStack(alignment: .leading, spacing: Space._2) {
-            Image(systemName: "magnifyingglass").foregroundStyle(tokens.textMuted)
+            Image(Icon.search).foregroundStyle(tokens.textMuted)
             Text(Words.text("settings-import-none", fallback: "No other terminal's settings found"))
                 .font(.system(size: TextRole.body.size, weight: .semibold))
             Text(Words.text("settings-import-none-detail", fallback: "Wormhole looked for Ghostty, iTerm2, Terminal.app, Alacritty, kitty, WezTerm, Warp, Zed and VS Code in the places they keep their settings, and found none."))
@@ -57,7 +57,8 @@ private struct ImportCard: View {
                     Text(record.summary).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
                         .padding(.horizontal, Space._2).background(tokens.controlBackground, in: Capsule())
                     Spacer(minLength: 0)
-                    Image(systemName: open ? "chevron.up" : "chevron.down").foregroundStyle(tokens.textMuted)
+                    Image(Icon.disclosure).rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(tokens.textMuted)
+                        .motion(Motion.selection, value: open)
                 }
                 .frame(minHeight: Metric.control).contentShape(Rectangle())
             }
@@ -118,11 +119,11 @@ private struct ImportReviewView: View {
     private func row(_ index: Int, _ item: ImportReview.Item) -> some View {
         VStack(alignment: .leading, spacing: Space._1) {
             HStack(spacing: Space._3) {
-                FlatCheckbox(title: item.label, isOn: draft.isTicked(id, index)) { draft.tick(id, index, $0) }
+                SettingToggle(label: item.label, isOn: draft.isTicked(id, index), isCheckbox: true) { draft.tick(id, index, $0) }
                     .frame(width: SettingsMetric.importLabelWidth, alignment: .leading)
                 mono(item.from).foregroundStyle(tokens.textMuted).frame(maxWidth: .infinity, alignment: .leading)
                 if item.command == nil {
-                    Image(systemName: "arrow.right").foregroundStyle(tokens.textFaint).accessibilityHidden(true)
+                    Image(Icon.goTo).foregroundStyle(tokens.textFaint).accessibilityHidden(true)
                     Text(item.value).font(.system(size: TextRole.body.size)).lineLimit(1)
                         .frame(width: SettingsMetric.importValueWidth, alignment: .leading)
                 }
@@ -142,7 +143,7 @@ private struct ImportReviewView: View {
     private var footer: some View {
         let selected = draft.selected(id)
         return HStack(spacing: Space._3) {
-            ActionButton(title: Words.text("settings-import-apply", fallback: "Import selected"), symbol: "arrow.down.to.line") { draft.apply(id) }
+            ActionButton(title: Words.text("settings-import-apply", fallback: "Import selected"), symbol: Icon.install.rawValue) { draft.apply(id) }
                 .disabled(selected == 0)
             Text(host.importSelectedLine(selected: selected, total: review.items.count)).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
             Spacer(minLength: 0)

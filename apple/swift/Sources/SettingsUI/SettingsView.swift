@@ -23,17 +23,30 @@ public struct SettingsView: View {
     }
 
     public var body: some View {
-        HStack(spacing: 0) {
+        NavigationSplitView {
             SettingsNav(model: model, focus: $focus)
-            Rectangle().fill(tokens.divider).frame(width: tokens.metrics.dividerWidth)
+                .navigationSplitViewColumnWidth(min: 200, ideal: SettingsMetric.navWidth, max: 280)
+        } detail: {
             page.focusable().focused($focus, equals: .content).focusEffectDisabled()
+                .background(tokens.surfaceWindow)
         }
-        .background(tokens.surfaceWindow)
+        // The system's search field, in the sidebar's header; Return opens the first result.
+        .searchable(text: $model.query, placement: .sidebar, prompt: SettingsText.searchSettings)
+        .searchFocused($focus, equals: .search)
+        .onSubmit(of: .search) { if let first = model.hits.first { model.jump(to: first) } }
+        // The theme enters the system's controls here: their tint (switch, slider, selection) and, in `themed`, light or dark.
+        .tint(tokens.primary)
         .foregroundStyle(tokens.textPrimary)
         .environment(\.fontLibrary, fonts)
         .onKeyPress(.escape) { escape() }
         .onKeyPress(keys: [Self.f6], phases: .down) { cycle(backwards: $0.modifiers.contains(.shift)) }
         .onKeyPress(keys: ["f"], phases: .down) { unlockFlags($0) }
+        // Locking the feature flags while their page is open takes the page away with its row.
+        .onChange(of: model.navSections.map(\.id)) { _, ids in
+            if !ids.contains(model.selection), model.selection != "profile", model.selection != SettingsModel.changedID, let first = ids.first {
+                model.show(first)
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(SettingsText.settings)
         .motion(Motion.selection, value: model.selection)

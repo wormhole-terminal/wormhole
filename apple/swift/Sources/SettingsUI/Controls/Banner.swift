@@ -14,7 +14,7 @@ struct Banner<Accessory: View>: View {
 
     var body: some View {
         HStack(spacing: Space._3) {
-            Image(systemName: kind == .info ? "info.circle.fill" : "exclamationmark.triangle.fill").font(.system(size: Metric.glyph)).foregroundStyle(accent)
+            Image(kind == .info ? Icon.infoFilled : Icon.warning).font(.system(size: Metric.glyph)).symbolRenderingMode(.hierarchical).foregroundStyle(accent)
             Text(text).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
             accessory

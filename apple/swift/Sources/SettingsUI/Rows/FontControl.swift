@@ -40,10 +40,10 @@ private struct FontRow: View {
         HStack(spacing: Space._3) {
             FontPicker(model: picker, look: look(size: size)) { FontSelectFace(picker: picker, resolved: Self.inherited(slot.slot, model)) }
                 .accessibilityLabel(entry.label)
-            FlatStepper(
-                value: "\(Int(size)) pt", label: entry.label, canDecrease: size > slot.min, canIncrease: size < slot.max,
-                minus: { model.set(entry.keys[1], .number(max(slot.min, size - 1))) },
-                plus: { model.set(entry.keys[1], .number(min(slot.max, size + 1))) })
+            ValueStepper(
+                value: "\(Int(size)) pt", label: entry.label,
+                decrease: size > slot.min ? { model.set(entry.keys[1], .number(max(slot.min, size - 1))) } : nil,
+                increase: size < slot.max ? { model.set(entry.keys[1], .number(min(slot.max, size + 1))) } : nil)
         }
         // The page's scene shows the font being looked at in the open picker, and goes back when it closes.
         .onChange(of: picker.isOpen ? picker.previewFamily : nil) { _, family in

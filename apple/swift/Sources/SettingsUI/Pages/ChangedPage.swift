@@ -17,7 +17,7 @@ struct ChangedPage: View {
         let sections = model.schema.sections.filter { section in changed.contains { $0.section.id == section.id } }
         PageScaffold(title: SettingsText.changedTitle, intro: SettingsText.changedIntro, action: {
             if !changed.isEmpty {
-                ActionButton(title: SettingsText.resetAll, symbol: "arrow.counterclockwise", isDestructive: true) { confirming = true }
+                ActionButton(title: SettingsText.resetAll, symbol: Icon.reset.rawValue, isDestructive: true) { confirming = true }
             }
         }) {
             if changed.isEmpty {

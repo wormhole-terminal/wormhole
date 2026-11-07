@@ -28,7 +28,7 @@ struct ProjectPageView: View {
             SettingGroup(title: ProjectsText.fromThisProject, blurb: ProjectsText.onlyForYou) {
                 ForEach(page.features) { feature in
                     SettingRow(label: feature.label, description: feature.description, visibleHint: true, state: RowState(), onReset: {}) {
-                        FlatSegmented(options: choices(feature), selected: encode(feature.choice), label: feature.label) { value in
+                        OptionPicker(options: choices(feature), selected: encode(feature.choice), label: feature.label, segmented: true) { value in
                             Task { await projects.setChoice(feature.key, to: decode(value)) }
                         }
                     }
@@ -41,7 +41,7 @@ struct ProjectPageView: View {
                 }
             }
             HStack(spacing: Space._2) {
-                ActionButton(title: ProjectsText.openTerminal, symbol: "terminal") { projects.openTerminal() }
+                ActionButton(title: ProjectsText.openTerminal, symbol: Icon.openTerminal.rawValue) { projects.openTerminal() }
                 LinkButton(title: ProjectsText.showInFinder(page.dirName)) {
                     NSWorkspace.shared.open(URL(fileURLWithPath: page.root).appendingPathComponent(page.dirName))
                 }
@@ -62,7 +62,7 @@ struct ProjectPageView: View {
             if page.trust == .trusted {
                 ActionButton(title: ProjectsText.revokeTrust, symbol: nil) { Task { await projects.revoke(page.root) } }
             } else {
-                ActionButton(title: page.approving ? ProjectsText.waiting : ProjectsText.trustTouchID, symbol: "touchid") {
+                ActionButton(title: page.approving ? ProjectsText.waiting : ProjectsText.trustTouchID, symbol: Icon.touchID.rawValue) {
                     Task { await projects.trust() }
                 }
                 .disabled(page.approving)

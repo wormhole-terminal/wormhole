@@ -15,7 +15,7 @@ struct ChangedDot: View {
 struct ResetArrow: View {
     let action: () -> Void
     var body: some View {
-        IconButton(symbol: "arrow.counterclockwise", label: LocalizedStringKey(SettingsText.reset), action: action)
+        IconButton(symbol: Icon.reset.rawValue, label: LocalizedStringKey(SettingsText.reset), action: action)
     }
 }
 
@@ -25,17 +25,14 @@ struct InfoButton: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Button { open.toggle() } label: {
-            Image(systemName: "info.circle").font(.system(size: Metric.glyph))
-                .foregroundStyle(tokens.textFaint).frame(width: Metric.lead, height: Metric.lead)
-        }
-        .buttonStyle(.plain)
-        .popover(isPresented: $open, arrowEdge: .bottom) {
-            Text(text)
-                .font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textPrimary)
-                .frame(width: 280, alignment: .leading).padding(Space._3)
-                .environment(\.tokens, tokens)
-        }
-        .accessibilityHidden(true)
+        Button { open.toggle() } label: { Image(Icon.info).foregroundStyle(tokens.textFaint) }
+            .buttonStyle(.borderless)
+            .popover(isPresented: $open, arrowEdge: .bottom) {
+                Text(text)
+                    .font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textPrimary)
+                    .frame(width: 280, alignment: .leading).padding(Space._3)
+                    .environment(\.tokens, tokens)
+            }
+            .accessibilityHidden(true)
     }
 }

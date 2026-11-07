@@ -20,7 +20,7 @@ struct OpenInControl: View {
         let listed = chosen.isEmpty || apps.contains { $0.value == .string(chosen) }
         let options = listed ? apps : apps + [SettingOption(value: .string(chosen), label: chosen)]
         HStack(spacing: Space._2) {
-            FlatSelect(options: options, selected: chosen.isEmpty ? (apps.first?.value ?? .string("")) : .string(chosen), label: label, width: SettingsMetric.shellWidth) {
+            OptionPicker(options: options, selected: chosen.isEmpty ? (apps.first?.value ?? .string("")) : .string(chosen), label: label, width: SettingsMetric.shellWidth) {
                 model.set(key, $0)
             }
             LinkButton(title: Words.text("settings-terminal-choose-app", fallback: "Choose app…")) { chooseApp() }

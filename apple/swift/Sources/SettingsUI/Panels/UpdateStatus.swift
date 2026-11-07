@@ -78,10 +78,10 @@ private struct UpdateStatus: View {
             }
         case .installed:
             ActionButton(title: AuxText.restartNow, symbol: nil) { model.restart(whenIdle: model.restartQuestion != nil) }
-        case .checking: ProgressView().controlSize(.small)
+        case .checking: ActionButton(title: AuxText.checkNow, symbol: Icon.refresh.rawValue, isSpinning: true) {}.disabled(true)
         case .downloading(let received, let expected): meter(received, expected)
         case .unsupported: EmptyView()
-        default: ActionButton(title: AuxText.checkNow, symbol: "arrow.clockwise") { model.check() }
+        default: ActionButton(title: AuxText.checkNow, symbol: Icon.refresh.rawValue) { model.check() }
         }
     }
 

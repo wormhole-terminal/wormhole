@@ -13,7 +13,7 @@ struct ProbeRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(spacing: Space._3) {
-                Image(systemName: "puzzlepiece.extension").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textPrimary)
+                Image(Icon.extensions).font(.system(size: Metric.glyph)).foregroundStyle(tokens.textPrimary)
                     .frame(width: Metric.control, height: Metric.control)
                     .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
                     .accessibilityHidden(true)
@@ -30,7 +30,7 @@ struct ProbeRowView: View {
                 if row.state == .changed {
                     ActionButton(title: ExtensionsText.approveAgain, symbol: nil) { Task { await probes.openSheet(row.id) } }
                 }
-                FlatSwitch(isOn: row.state == .on, label: row.title) { on in Task { await probes.switched(row, on: on) } }
+                SettingToggle(label: row.title, isOn: row.state == .on) { on in Task { await probes.switched(row, on: on) } }
                     .disabled(!(row.canApprove || row.state == .on))
             }
             if let note = row.note {

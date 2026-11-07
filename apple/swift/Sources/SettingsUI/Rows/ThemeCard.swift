@@ -41,7 +41,7 @@ struct ThemeCard: View {
                     Text(theme.name).font(.system(size: TextRole.label.size, weight: .medium)).lineLimit(1)
                         .foregroundStyle(isSelected ? own.primary : own.textPrimary)
                     Spacer(minLength: 0)
-                    if isSelected { Image(systemName: "checkmark").font(.system(size: Metric.glyph, weight: .semibold)).foregroundStyle(own.primary) }
+                    if isSelected { Image(Icon.check).font(.system(size: Metric.glyph, weight: .semibold)).foregroundStyle(own.primary) }
                 }
                 .padding(.horizontal, Space._3).frame(height: Metric.control + Space._1).background(own.surfacePanel)
             }

@@ -18,7 +18,7 @@ struct FlagList: View {
                 label: flag.title, description: flag.description, visibleHint: false, state: RowState(isChanged: changed),
                 onReset: { model.host.setFlag(flag.key, on: flag.defaultOn) }
             ) {
-                FlatSwitch(isOn: flag.on, label: flag.title) { model.host.setFlag(flag.key, on: $0) }
+                SettingToggle(label: flag.title, isOn: flag.on) { model.host.setFlag(flag.key, on: $0) }
             }
             .id(flag.key)
         }

@@ -48,11 +48,11 @@ private struct ProbesList: View {
 
     private func empty(_ list: ProbeList) -> some View {
         VStack(alignment: .leading, spacing: Space._2) {
-            Image(systemName: "puzzlepiece.extension").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
+            Image(Icon.extensions).font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
             Text(ExtensionsText.noneTitle).font(.system(size: TextRole.body.size, weight: .semibold)).foregroundStyle(tokens.textPrimary)
             Text(ExtensionsText.noneWhere(list.folder) + " " + ExtensionsText.noneNew("wh probe new"))
                 .font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
-            ActionButton(title: ExtensionsText.showFolder, symbol: "folder") { Self.reveal(list.folderPath) }.padding(.top, Space._1)
+            ActionButton(title: ExtensionsText.showFolder, symbol: Icon.folder.rawValue) { Self.reveal(list.folderPath) }.padding(.top, Space._1)
         }
         .padding(.vertical, Space._3)
     }

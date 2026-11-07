@@ -49,7 +49,7 @@ struct ShortcutRecorder: View {
         .overlay(alignment: .trailing) {
             // Delete clears, and so does the ×.
             if !spec.isEmpty, !recording {
-                IconButton(symbol: "xmark", label: LocalizedStringKey(SettingsText.clearSearch)) { onChange("") }
+                IconButton(symbol: Icon.remove.rawValue, label: LocalizedStringKey(SettingsText.clearSearch)) { onChange("") }
                     .frame(width: Metric.controlSmall, height: Metric.controlSmall).padding(.trailing, Space._1)
             }
         }

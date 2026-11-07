@@ -82,10 +82,7 @@ struct McpControl: View {
             Text(command).font(.system(size: TextRole.caption.size, design: .monospaced)).foregroundStyle(tokens.textPrimary)
                 .fixedSize().padding(.horizontal, Space._2).frame(height: Metric.control)
                 .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
-            ActionButton(title: SettingsText.copyCommand, symbol: "doc.on.doc") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(command, forType: .string)
-            }
+            CopyButton(title: SettingsText.copyCommand, text: command)
         }
     }
 }

@@ -90,7 +90,7 @@ private struct PermissionRow: View {
                 Text(permission.words).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
                 if permission.touchID { StatusBadge(text: ExtensionsText.touchID, color: tokens.textMuted) }
-                FlatSwitch(isOn: open.granted.contains(permission.id), label: permission.words) { _ in
+                SettingToggle(label: permission.words, isOn: open.granted.contains(permission.id)) { _ in
                     Task { await probes.toggle(permission) }
                 }
                 .disabled(open.busy)

@@ -1,5 +1,5 @@
 // The control folder's commands for what Settings holds and what hangs off it: `set key=<json>` writes a setting as a
-// control of the window would (so the window follows), `get key` reads one back, `settings-section <id>` opens a page, `settings-size WxH` resizes its window, `profile k=v …` edits the profile as the fields do, `import-open|import-apply <id>`,
+// control of the window would (so the window follows), `get key` reads one back, `settings-section <id>` opens a page, `flags-unlock` does what ⌃⌥⌘F does, `settings-size WxH` resizes its window, `profile k=v …` edits the profile as the fields do, `import-open|import-apply <id>`,
 // `studio` and `folders` open the Theme Studio and the folder picker, `fonts` says what the terminals are drawn with.
 
 import AppKit
@@ -22,6 +22,11 @@ extension AppController {
             showSettings()
             settingsController?.show(section: argument)
             reply("settings-section \(argument)")
+        case "flags-unlock":
+            // ⌃⌥⌘F in the window: unlocks the feature flags (and opens their page) or locks them again.
+            let unlocked = settingsModel.host.toggleFlagsUnlocked()
+            if unlocked { settingsModel.show("featureFlags") }
+            reply("flags-unlock unlocked=\(unlocked) nav=\(settingsModel.navSections.map(\.id).joined(separator: ","))")
         case "settings-size":
             // A taller window shows more of a page in one `window-shot`.
             let size = argument.split(separator: "x").compactMap { Double($0) }

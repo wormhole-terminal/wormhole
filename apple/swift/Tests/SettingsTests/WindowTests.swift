@@ -34,6 +34,24 @@ final class WindowTests: XCTestCase {
 
     func testEveryNavSectionHasAnIconAndNoneRepeats() {
         let ids = SettingsSchema.bundled.sections.map(\.id)
-        XCTAssertEqual(Set(ids.map(NavIcons.symbol)).count, ids.count)
+        XCTAssertEqual(Set(ids.map { Icon(section: $0).rawValue }).count, ids.count)
+    }
+
+    /// A symbol name that is not on this macOS draws nothing; the schema's own icons come from Rust, so they are held to it too.
+    func testEverySymbolResolves() {
+        var names = Icon.allCases.map(\.rawValue)
+        for section in SettingsSchema.bundled.sections {
+            for group in section.groups {
+                for entry in group.entries {
+                    switch entry.control {
+                    case .action(_, _, let icon): names.append(icon)
+                    case .segmented(let options, _, _): names += options.compactMap(\.icon)
+                    default: break
+                    }
+                }
+            }
+        }
+        XCTAssertFalse(names.isEmpty)
+        for name in names { XCTAssertNotNil(NSImage(systemSymbolName: name, accessibilityDescription: nil), name) }
     }
 }

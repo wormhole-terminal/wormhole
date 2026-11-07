@@ -73,10 +73,10 @@ struct ProfileControl: View {
             }
             ForEach(draft.form?.folders ?? [], id: \.self) { folder in
                 HStack(spacing: Space._2) {
-                    Image(systemName: "folder").foregroundStyle(tokens.textMuted)
+                    Image(Icon.folder).foregroundStyle(tokens.textMuted)
                     Text(folder).font(.system(size: TextRole.body.size)).lineLimit(1).truncationMode(.middle)
                     Spacer(minLength: 0)
-                    IconButton(symbol: "xmark", label: LocalizedStringKey(Words.text("settings-profile-stop-opening-folder", fallback: "Stop opening this folder in the profile"))) {
+                    IconButton(symbol: Icon.remove.rawValue, label: LocalizedStringKey(Words.text("settings-profile-stop-opening-folder", fallback: "Stop opening this folder in the profile"))) {
                         draft.edit { $0.folders.removeAll { $0 == folder } }
                     }
                 }
@@ -132,7 +132,7 @@ struct ProfileControl: View {
 
     /// The button that picks a folder for a field, as tall as the field beside it.
     private func chooser(_ picked: @escaping (String) -> Void) -> some View {
-        IconButton(symbol: "folder", label: LocalizedStringKey(Words.text("settings-profile-choose-a-folder", fallback: "Choose a folder"))) {
+        IconButton(symbol: Icon.folder.rawValue, label: LocalizedStringKey(Words.text("settings-profile-choose-a-folder", fallback: "Choose a folder"))) {
             FolderPanel.choose(picked)
         }
         .frame(width: Metric.control, height: Metric.control)

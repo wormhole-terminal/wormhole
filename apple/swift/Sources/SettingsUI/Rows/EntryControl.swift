@@ -15,26 +15,26 @@ struct EntryControl: View {
     var body: some View {
         switch entry.control {
         case .toggle:
-            FlatSwitch(isOn: model.value(key).bool ?? false, label: entry.label) { model.set(key, .bool($0)) }
+            SettingToggle(label: entry.label, isOn: model.value(key).bool ?? false) { model.set(key, .bool($0)) }
         case .segmented(let options, let fallback, _):
-            FlatSegmented(options: options, selected: current(fallback), label: entry.label) { model.set(key, $0) }
+            OptionPicker(options: options, selected: current(fallback), label: entry.label, segmented: true) { model.set(key, $0) }
         case .select(let options, let fallback):
-            FlatSelect(options: options, selected: current(fallback), label: entry.label) { model.set(key, $0) }
+            OptionPicker(options: options, selected: current(fallback), label: entry.label) { model.set(key, $0) }
         case .dynamicSelect(.openIn): OpenInControl(model: model, key: key, label: entry.label)
         case .dynamicSelect(let source):
-            FlatSelect(options: model.host.options(for: source), selected: model.value(key), label: entry.label) {
+            OptionPicker(options: model.host.options(for: source), selected: model.value(key), label: entry.label) {
                 model.set(key, $0)
             }
         case .stepper(let spec):
             NumberStepper(model: model, key: key, label: entry.label, spec: spec)
         case .slider(let spec):
-            FlatSlider(spec: spec, value: model.value(key).number ?? spec.min, label: entry.label) {
+            SettingSlider(spec: spec, value: model.value(key).number ?? spec.min, label: entry.label) {
                 model.set(key, .number($0))
             }
         case .checkboxes(let items):
             HStack(spacing: Space._4) {
                 ForEach(items, id: \.key) { item in
-                    FlatCheckbox(title: item.label, isOn: model.value(item.key).bool ?? false) { model.set(item.key, .bool($0)) }
+                    SettingToggle(label: item.label, isOn: model.value(item.key).bool ?? false, isCheckbox: true) { model.set(item.key, .bool($0)) }
                 }
             }
         case .font(let slot): FontControl(model: model, entry: entry, slot: slot)
@@ -61,7 +61,7 @@ struct EntryControl: View {
         let state = model.host.isDefaultTerminal()
         return ActionButton(
             title: state == true ? Words.text("settings-terminal-wormhole-is-the-default", fallback: "Wormhole is the default") : label,
-            symbol: state == true ? "checkmark" : icon
+            symbol: state == true ? Icon.check.rawValue : icon
         ) { model.host.perform(.makeDefaultTerminal) }
         .disabled(state != false)
     }

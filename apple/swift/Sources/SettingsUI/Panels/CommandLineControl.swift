@@ -43,10 +43,7 @@ struct CommandLineControl: View {
         if let note {
             notice(note.text, color: note.verdict == .on ? tokens.statusSuccessText : tokens.statusWarningText)
             if let line = note.line {
-                ActionButton(title: SettingsText.copyLine, symbol: "doc.on.doc") {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(line, forType: .string)
-                }
+                CopyButton(title: SettingsText.copyLine, text: line)
             }
         } else {
             notice(SettingsText.checkingPath, color: tokens.textMuted)

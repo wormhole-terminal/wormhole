@@ -20,16 +20,17 @@ struct PanelControl: View {
         case "agent-mcp": McpControl(command: model.host.panelRecords().mcpCommand)
         // Who may drive Wormhole from outside: nothing beyond listing, a question the first time, or everything while it runs.
         case "agentAccess":
-            FlatSegmented(
+            OptionPicker(
                 options: [("off", SettingsText.accessOff), ("ask", SettingsText.accessAsk), ("open", SettingsText.accessOpen)]
                     .map { SettingOption(value: .string($0.0), label: $0.1) },
-                selected: model.value("agent_access") == .null ? .string("ask") : model.value("agent_access"), label: entry.label
+                selected: model.value("agent_access") == .null ? .string("ask") : model.value("agent_access"), label: entry.label,
+                segmented: true
             ) { model.set("agent_access", $0) }
         case "profile-delete":
-            ActionButton(title: SettingsText.deleteProfile, symbol: "trash", isDestructive: true) { model.confirmsProfileDelete = true }
+            ActionButton(title: SettingsText.deleteProfile, symbol: Icon.trash.rawValue, isDestructive: true) { model.confirmsProfileDelete = true }
                 .disabled(model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault ?? true)
-        case "notify-permission": button(Words.text("settings-notifications-open-system", fallback: "Open System Settings"), "gearshape", .openNotificationSettings)
-        case "notify-test": button(Words.text("settings-notifications-send-test", fallback: "Send test"), "bell", .sendTestNotification)
+        case "notify-permission": button(Words.text("settings-notifications-open-system", fallback: "Open System Settings"), Icon.settings.rawValue, .openNotificationSettings)
+        case "notify-test": button(Words.text("settings-notifications-send-test", fallback: "Send test"), Icon.notifications.rawValue, .sendTestNotification)
         default: Text(SettingsText.notBuilt).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textFaint)
         }
     }
