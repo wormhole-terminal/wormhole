@@ -32,7 +32,7 @@ pub use hosts::{
 };
 pub use imports::{ImportFoundRecord, ImportRowRecord, import_apply, import_scan};
 pub use licenses::{LicensePackageRecord, LicensesRecord, licenses};
-pub use trust::{TrustDesk, TrustLineRecord, TrustReviewRecord, TrustStatusRecord};
+pub use trust::{TrustDesk, ReviewLineRecord, TrustReviewRecord, ReviewStatusRecord};
 pub use update_records::{
     UpdateChannelNote, UpdateChannelRecord, UpdatePhaseRecord, UpdateReleaseRecord, UpdateSetup, UpdateStateRecord,
 };

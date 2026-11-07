@@ -16,7 +16,7 @@ use wormhole_core::storage::paths::{DataRoot, ProfileId};
 use super::common::{AuxError, AuxListener, Waker, locked, resolve_data_dir};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
-pub enum TrustStatusRecord {
+pub enum ReviewStatusRecord {
     Trusted,
     Changed,
     Untrusted,
@@ -24,7 +24,7 @@ pub enum TrustStatusRecord {
 
 /// One line a project would run, in three pieces (`TrustLine`): what runs it, what it runs, where or how.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct TrustLineRecord {
+pub struct ReviewLineRecord {
     pub what: String,
     pub runs: String,
     pub note: String,
@@ -35,8 +35,8 @@ pub struct TrustReviewRecord {
     pub name: String,
     /// The project folder's name on disk (`.wormhole`, or an older project's `.andromeda`).
     pub directory: String,
-    pub status: TrustStatusRecord,
-    pub lines: Vec<TrustLineRecord>,
+    pub status: ReviewStatusRecord,
+    pub lines: Vec<ReviewLineRecord>,
     /// Why there is nothing to review: no project folder, or a file of it that does not load.
     pub problem: Option<String>,
 }
@@ -85,7 +85,7 @@ impl TrustDesk {
             return TrustReviewRecord {
                 name,
                 directory,
-                status: TrustStatusRecord::Untrusted,
+                status: ReviewStatusRecord::Untrusted,
                 lines: Vec::new(),
                 problem,
             };
@@ -93,9 +93,9 @@ impl TrustDesk {
         let snapshot = folder.snapshot();
         let (store, _) = TrustStore::load_or_recover(&self.profile_dir);
         let status = match store.status_of(&snapshot) {
-            TrustStatus::Trusted => TrustStatusRecord::Trusted,
-            TrustStatus::Changed => TrustStatusRecord::Changed,
-            TrustStatus::Untrusted => TrustStatusRecord::Untrusted,
+            TrustStatus::Trusted => ReviewStatusRecord::Trusted,
+            TrustStatus::Changed => ReviewStatusRecord::Changed,
+            TrustStatus::Untrusted => ReviewStatusRecord::Untrusted,
         };
         let request = snapshot.trust_request();
         let problem = match &request {
@@ -105,7 +105,7 @@ impl TrustDesk {
         let lines = request
             .iter()
             .flat_map(|r| &r.commands)
-            .map(|l| TrustLineRecord { what: l.what.clone(), runs: l.runs.clone(), note: l.note.clone() })
+            .map(|l| ReviewLineRecord { what: l.what.clone(), runs: l.runs.clone(), note: l.note.clone() })
             .collect();
         *locked(&self.shown) = request;
         TrustReviewRecord { name, directory, status, lines, problem }

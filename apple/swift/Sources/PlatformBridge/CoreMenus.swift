@@ -16,7 +16,7 @@ extension MenuState {
         MenuStateRecord(
             off: off.map(\.rawValue), checked: checked.map(\.rawValue), disabled: disabled.map(\.rawValue),
             hidden: hidden.map(\.rawValue), terminals: terminals, currentTerminal: currentTerminal.map(UInt32.init),
-            recent: recent, projectActions: projectActions.map { ProjectActionRecord(id: $0.id, title: $0.title) },
+            recent: recent, projectActions: projectActions.map { MenuProjectActionRecord(id: $0.id, title: $0.title) },
             shells: shells, profiles: profiles, currentProfile: currentProfile.map(UInt32.init),
             windowProfile: windowProfile.map(UInt32.init), split: split, undo: undo, redo: redo, debug: debug,
             persistent: persistent)

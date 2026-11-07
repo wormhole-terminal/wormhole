@@ -56,7 +56,7 @@ public final class FFITrustBackend: TrustBackend {
     public func revoke() throws { try desk.revoke() }
 }
 
-extension TrustStatusRecord {
+extension ReviewStatusRecord {
     var value: TrustStatus {
         switch self {
         case .trusted: .trusted

@@ -61,7 +61,7 @@ pub struct MenuStateRecord {
     pub current_terminal: Option<u32>,
     pub recent: Vec<String>,
     /// The front terminal's project actions as (id, title).
-    pub project_actions: Vec<ProjectActionRecord>,
+    pub project_actions: Vec<MenuProjectActionRecord>,
     pub shells: Vec<String>,
     pub profiles: Vec<String>,
     pub current_profile: Option<u32>,
@@ -74,7 +74,7 @@ pub struct MenuStateRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct ProjectActionRecord {
+pub struct MenuProjectActionRecord {
     pub id: String,
     pub title: String,
 }

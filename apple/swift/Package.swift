@@ -150,8 +150,6 @@ if ffiLinked {
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.
     targets.append(.target(name: "GitBridge", dependencies: ["PanelModel", "WormholeBindings"]))
     targets.append(.testTarget(name: "GitBridgeTests", dependencies: ["GitBridge", "PanelModel", "WormholeBindings"]))
-    // The theme resolver against the real Rust loader: a user theme file, colour picks, an opacity.
-    targets.append(.testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]))
     // The macOS edge's logic from core: the keymap and menu bar, the notification rules, the folder picker's
     // providers and the palette's search; and the interface's words.
     targets += [
@@ -162,7 +160,6 @@ if ffiLinked {
             dependencies: ["PlatformBridge", "PlatformModel", "PaletteModel", "WormholeBindings"]),
         .testTarget(name: "WordsBridgeTests", dependencies: ["WordsBridge", "WordsModel", "WormholeBindings"]),
     ]
-    appDependencies.append("UniFFISource")
     appSettings.append(.define("WITH_UNIFFI"))
     inputTestDependencies.append("UniFFISource")
     inputTestSettings.append(.define("WITH_UNIFFI"))

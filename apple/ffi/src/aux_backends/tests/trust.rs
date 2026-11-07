@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::aux_backends::common::test_support::{Wakes, scratch};
-use crate::aux_backends::{AuxError, TrustDesk, TrustStatusRecord};
+use crate::aux_backends::{AuxError, TrustDesk, ReviewStatusRecord};
 
 fn project(root: &Path, config: &str) {
     let dir = root.join("api").join(".wormhole");
@@ -29,7 +29,7 @@ fn what_a_project_would_run_is_listed_and_approval_is_for_what_was_shown() {
 
     let review = desk.review();
     assert_eq!((review.name.as_str(), review.directory.as_str()), ("api", ".wormhole"));
-    assert_eq!(review.status, TrustStatusRecord::Untrusted);
+    assert_eq!(review.status, ReviewStatusRecord::Untrusted);
     assert!(review.problem.is_none());
     let lines: Vec<String> = review.lines.iter().map(|l| format!("{} {}", l.what, l.runs)).collect();
     assert!(lines.contains(&"shell: /bin/zsh".to_string()), "{lines:?}");
@@ -37,19 +37,19 @@ fn what_a_project_would_run_is_listed_and_approval_is_for_what_was_shown() {
 
     desk.approve_reviewed().expect("approved");
     assert!(wakes.count() >= 1);
-    assert_eq!(desk.review().status, TrustStatusRecord::Trusted);
+    assert_eq!(desk.review().status, ReviewStatusRecord::Trusted);
     assert!(data.join("trusted-projects.json").is_file(), "kept in the profile's folder");
 
     // A `git pull` changes what runs: it reads "changed" until the new content is reviewed and approved.
     project(root.path(), r#"{"shell": "/bin/zsh", "env": {"FOO": "bar", "EVIL": "1"}}"#);
     let review = desk.review();
-    assert_eq!(review.status, TrustStatusRecord::Changed);
+    assert_eq!(review.status, ReviewStatusRecord::Changed);
     assert!(review.lines.iter().any(|l| l.runs == "EVIL=1"));
 
     // The approval binds to the request that was shown, not to what is on disk by the time it lands.
     project(root.path(), r#"{"shell": "/bin/zsh", "env": {"FOO": "bar", "EVIL": "2"}}"#);
     desk.approve_reviewed().expect("approves the one shown");
-    assert_eq!(desk.review().status, TrustStatusRecord::Changed, "the files moved on since");
+    assert_eq!(desk.review().status, ReviewStatusRecord::Changed, "the files moved on since");
 }
 
 #[test]
@@ -78,5 +78,5 @@ fn revoking_takes_the_approval_back() {
     desk.review();
     desk.approve_reviewed().expect("approved");
     desk.revoke().expect("revoked");
-    assert_eq!(desk.review().status, TrustStatusRecord::Untrusted);
+    assert_eq!(desk.review().status, ReviewStatusRecord::Untrusted);
 }
