@@ -300,7 +300,7 @@ mod tests {
         assert_eq!(global_budget_for(STORE_BUDGET_MIN), 4 * STORE_BUDGET_MIN);
         assert_eq!(global_budget_for(STORE_BUDGET_MAX), GLOBAL_BUDGET_MAX);
         assert_eq!(global_budget_for(usize::MAX), GLOBAL_BUDGET_MAX);
-        assert!(GLOBAL_BUDGET_MAX < 4 * STORE_BUDGET_MAX, "the ceiling is what caps the largest");
+        const { assert!(GLOBAL_BUDGET_MAX < 4 * STORE_BUDGET_MAX, "the ceiling is what caps the largest") };
     }
 
     #[test]
