@@ -121,7 +121,9 @@ const BUDGET: [(&str, u64); 20] = [
     ("Changed", 6473),
     // With the Liquid Glass row (16,810 before it came back), and the Borders switch: a row, its (i) and its
     // key line, 425 more.
-    ("Appearance", 14948),
+    // The window miniature fills the stage (the sidebar keeps its width, the terminal takes the rest): 15,438
+    // measured, about 490 more than at its fixed size.
+    ("Appearance", 15438),
     // With the flat controls: a stepper is two halves, each a box with the Kit's button in it, and the
     // slider is built from the Kit's parts; a page with either costs a few hundred allocations more.
     ("Fonts", 8436),
@@ -175,7 +177,8 @@ const BUDGET: [(&str, u64); 20] = [
     // The same row is one more for the search to draw; the four keys of the Changed files choices, which
     // every page reads as JSON each frame, are about 14 more.
     // The search finds the Borders row too, as one more result: 196 more.
-    ("search", 9487),
+    // The window miniature it shows now fills the stage: 9,923 measured.
+    ("search", 9923),
 ];
 
 /// What the Changed page is measured with: five settings that differ from their defaults, on four pages

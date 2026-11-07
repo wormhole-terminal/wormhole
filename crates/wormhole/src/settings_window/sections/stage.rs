@@ -18,17 +18,14 @@ use super::preview::{self, Look};
 use super::samples::STAGE_SAMPLES;
 use crate::settings::{SettingsStore, UiColors, settings};
 use crate::settings_window::SettingsWindow;
-use crate::settings_window::preview_column::FRAMED_H;
 use crate::style::{self, Edges, StatusGlyph, StatusTile, TextRole, TileFace};
 use crate::theme_bridge::hsla;
 
-/// The window fills the stage's height less `WINDOW_INSET` (the stage's own inset) at its top and bottom. It
-/// is the Terminals list's own parts at their size: the traffic lights' row, the list's header and one
-/// terminal's card (66 pt at the roomiest density), and the status bar's row under them. Its width fits the
-/// narrowest column (`WINDOW_MIN`: 640 less the nav and the page's padding is 356, less the stage's inset).
-const STAGE_H: f32 = FRAMED_H;
-const WINDOW_INSET: f32 = 8.0;
-const WINDOW_W: f32 = 340.0;
+/// The window fills the stage, in both directions: the sidebar keeps its width and the terminal takes the
+/// rest, so a wide column shows more terminal, not bigger parts. The parts are the Terminals list's own at
+/// their size: the traffic lights' row, the list's header and one terminal's card (66 pt at the roomiest
+/// density), and the status bar's row under them. They fit the narrowest column (`WINDOW_MIN`: 640 less
+/// the nav and the page's padding is 356, less the stage's inset) at the stage's height.
 /// The sidebar's width in the miniature.
 const SIDEBAR_W: f32 = 140.0;
 /// The traffic lights as macOS draws them (`style::LIGHTS_X`, `style::ASSUMED_LIGHTS_SPAN`).
@@ -85,9 +82,8 @@ pub(in crate::settings_window) fn draw_stage(
         .child(title_row(ui, cx))
         .child(terminal(cx).corners(flat, flat, term_bottom, flat));
     let window = div()
-        .flex_none()
-        .w(px(WINDOW_W))
-        .h(px(STAGE_H - 2.0 * WINDOW_INSET))
+        .flex_1()
+        .min_w_0()
         .flex()
         .flex_col()
         .rounded(ui.radius_lg)
@@ -96,8 +92,9 @@ pub(in crate::settings_window) fn draw_stage(
         .bg(surfaces.background)
         .child(div().flex_1().min_h_0().flex().child(sidebar).child(content))
         .when(status_bar, |d| d.child(status(ui, cx).corners(flat, flat, inner, inner)));
-    // The strip's stage centres it and is as tall as the window and its inset.
-    div().flex().justify_center().child(window).into_any_element()
+    // A row of one that fills the stage's height (a flex child stretches across, and the stage's column gives
+    // this its length).
+    div().flex_1().min_h_0().flex().child(window).into_any_element()
 }
 
 /// The terminal's title row: its folder, the branch chip, and the agent at work in it.
