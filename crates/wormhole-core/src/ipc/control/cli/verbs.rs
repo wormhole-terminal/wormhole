@@ -166,7 +166,7 @@ pub(in crate::ipc) const VERBS: &[Verb] = &[
     )
     .needing(&[Automation])
     .with(&[
-        flag("--topics", Some("<list>"), "comma-separated: windows, terminals, status, title, folder, bell, blocks, splits, output"),
+        flag("--topics", Some("<list>"), "comma-separated: windows, terminals, status, title, folder, bell, blocks, splits, git, output"),
         flag("--terminal", Some("<id>"), "only this terminal's events").repeating(),
         flag("--window", Some("<id>"), "only this window's events").repeating(),
         flag("--output", None, "also what terminals print").needing(Read),

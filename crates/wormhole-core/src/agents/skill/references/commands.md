@@ -27,7 +27,7 @@ to read other terminals (never needed for your own terminal).
 - `wh blocks [<target>] [--last <n>] [--output]` — the shell's commands: id, state, exit code, time;
   `--output` what each printed. Each has `took_ms` (`run` says `duration_ms`). Needs flag, read, and a shell with integration.
 - `wh events [--topics <list>] [--terminal <id>]... [--window <id>]... [--output]` — a stream of what
-  happens (topics: windows, terminals, status, title, folder, bell, blocks, splits, output). It does
+  happens (topics: windows, terminals, status, title, folder, bell, blocks, splits, git, output). It does
   not return: use `wait` in a tool call, `events` where a process can run in the background. Needs flag;
   `--output` also read.
 - `wh wait <target> [--status <state>[,<state>]...] [--match <regex>] [--gone <regex>] [--stable <ms>] [--block-done [--after <block>]] [--timeout <s>]`

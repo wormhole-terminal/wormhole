@@ -47,6 +47,36 @@ on = "bell"
 do = [{ type = "status", item = "build", text = "rang", tone = "warning", tooltip = "the bell" }]
 "#;
 
+const RUNNER: &str = r#"[probe]
+id = "runner"
+name = "Runner"
+description = "d"
+author = "a"
+version = "0.1.0"
+wormhole = ">=1.3"
+api = 1
+
+[permissions]
+process = ["./show.sh"]
+terminal = ["read"]
+
+[[contributes.status]]
+id = "failure"
+
+[[contributes.commands]]
+id = "show"
+title = "Show"
+run = ["./show.sh", "$1"]
+in = "background"
+cwd = "probe"
+
+[[contributes.hooks]]
+id = "failed"
+on = "output.match"
+match = { pattern = '(?-u:\b)FAILED ([a-z_]{1,40})' }
+do = [{ type = "run", command = "show", item = "failure" }]
+"#;
+
 /// Makes the read-only copies deletable again, so the harness can remove the scratch folder.
 struct Tidy(DataRoot);
 
@@ -133,4 +163,40 @@ fn an_approved_probe_comes_into_force_and_a_bell_reaches_its_hook(cx: &mut TestA
     set_flag(cx, false);
     wait_for(cx, "the flag turns it off", |cx| cx.update(|cx| probe_runtime::rules(cx)).is_none());
     wait_for(cx, "the feed ends", |_| bus.subscribers() == 0);
+}
+
+/// A line a terminal prints is matched by a hook of a Probe that may read the terminals, the Probe's program
+/// is started with the capture as its one argument, and what it says becomes the status item. Everything in
+/// between is real: the PTY's output, the bus's worker, the approved copy and the spawn.
+#[gpui_kit::test]
+fn a_printed_line_runs_the_probe_s_program_and_its_answer_is_an_item(cx: &mut TestAppContext) {
+    if isolate("a_printed_line_runs_the_probe_s_program_and_its_answer_is_an_item") {
+        return;
+    }
+    let window = start(cx, 1);
+    let bus = cx.update(|cx| {
+        let bus = wormhole_core::ipc::bus::Bus::new();
+        crate::automation::install(bus.clone(), cx);
+        bus
+    });
+    set_flag(cx, true);
+    let root = DataRoot::current();
+    let _tidy = Tidy(root.clone());
+    let dir = root.probes_dir().join("runner");
+    fs::create_dir_all(&dir).expect("mkdir");
+    fs::write(dir.join("probe.toml"), RUNNER).expect("manifest");
+    let script = dir.join("show.sh");
+    fs::write(&script, "#!/bin/sh\necho \"failed: $1\"\n").expect("script");
+    fs::set_permissions(&script, wormhole_core::platform::fs::permissions(0o755)).expect("chmod");
+    let request = approval::read_one(&root, "runner").expect("a request");
+    let confirmed = request.confirm(&request.initial_grants(), Proof::TouchId).expect("a yes");
+    approval::approve(&root, &request, &confirmed, 1_800_000_000).expect("approves");
+
+    cx.update(crate::app::probes::follow);
+    wait_for(cx, "the feed listens", |_| bus.subscribers() == 1);
+    let t = terminal(cx, &window, 0);
+    cx.update(|cx| t.update(cx, |t, _| t.write_input(b"build FAILED unit_tests\r".to_vec())));
+    wait_for(cx, "the program's answer", |cx| !cx.update(|cx| probe_runtime::status_items(cx)).is_empty());
+    let items = cx.update(|cx| probe_runtime::status_items(cx));
+    assert_eq!((items[0].item.as_str(), items[0].text.as_str()), ("failure", "failed: unit_tests"));
 }

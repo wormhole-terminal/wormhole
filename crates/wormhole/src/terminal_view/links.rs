@@ -18,6 +18,9 @@ use wormhole_term::{Link, Openable, RevealWhen};
 
 use super::{Layout, TerminalView};
 
+/// How many characters of a file's name a chip says.
+const NAME_SHOWN: usize = 60;
+
 /// What the pointer reveals: the span it is over, and the cell and ⌥ it was last looked up for.
 #[derive(Default)]
 pub(super) struct Reveal {
@@ -66,22 +69,34 @@ impl TerminalView {
         }
     }
 
-    /// ⌘-click on a file a rule named (`text` is `path[:line[:col]]`): look for it in the terminal's folder
-    /// off the main thread, then ask the editor to open it. The folder is the shell's own (its prompt told it,
-    /// or its process is in it); a path out of it, or through a link that leaves it, is not opened.
-    fn open_path(&self, text: String, cx: &mut Context<Self>) {
+    /// ⌘-click on a file a rule named, or a click on one a hook offered (`text` is `path[:line[:col]]`): look
+    /// for it in the terminal's folder off the main thread, then ask the editor to open it. The folder is the
+    /// shell's own (its prompt told it, or its process is in it); a path out of it, or through a link that
+    /// leaves it, is not opened, and the chip says it was not found.
+    pub(crate) fn open_path(&self, text: String, cx: &mut Context<Self>) {
         let (Some(target), Some(cwd)) = (PathRef::parse(&text), self.cwd.clone()) else {
-            tracing::info!("a file a Probe named was not opened: no folder to look in, or not a path");
+            self.say_not_found(&text, cx);
             return;
         };
         let line = target.line;
         let found =
             cx.background_executor().spawn(async move { open_path::resolve(&[cwd.as_path()], &target) });
-        cx.spawn(async move |_, cx| match found.await {
+        cx.spawn(async move |this, cx| match found.await {
             Ok(path) => cx.update(|cx| open_in_editor(&path, line, cx)),
-            Err(err) => tracing::info!("a file a Probe named was not opened: {err}"),
+            Err(err) => {
+                tracing::info!("a file a Probe named was not opened: {err}");
+                let _ = this.update(cx, |this, cx| this.say_not_found(&text, cx));
+            }
         })
         .detach();
+    }
+
+    /// The chip that says `text`, the name of a file as a program wrote it, is not in this terminal's
+    /// folder. The name is cleaned and cut: it is a program's text.
+    fn say_not_found(&self, text: &str, cx: &mut Context<Self>) {
+        let shown: String = wormhole_core::probe::hidden::reveal(text).chars().take(NAME_SHOWN).collect();
+        let words = wormhole_text::keys::notice_failed_file_not_found(&shown);
+        self.say_words(wormhole_core::view::notice::Failed::FileNotFound, Some(words), cx);
     }
 
     /// The pointer moved (or ⌥ changed): show the real text of the shortened or redacted span under it, when

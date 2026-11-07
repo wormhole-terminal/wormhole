@@ -16,6 +16,10 @@ pub struct Grants {
     pub notify: bool,
     /// Text the terminals hold may reach a hook.
     pub terminal_read: bool,
+    /// Programs a hook's `run` may start, as `permissions.process` spells them.
+    pub process: Vec<String>,
+    /// Variables a program may be handed, by name.
+    pub env: Vec<String>,
 }
 
 impl Grants {
@@ -25,6 +29,8 @@ impl Grants {
             open: granted("open").map(|p| p.detail.clone()).collect(),
             notify: granted("notify").next().is_some(),
             terminal_read: granted("terminal").any(|p| p.detail.starts_with("read")),
+            process: granted("process").map(|p| p.detail.clone()).collect(),
+            env: granted("env").map(|p| p.detail.clone()).collect(),
         }
     }
 }
@@ -179,7 +185,7 @@ do = [{ type = "notify", title = "Bell" }]
         let [probe] = &loaded.probes[..] else { panic!("one Probe: {:?}", loaded.probes) };
         assert_eq!(
             probe.grants,
-            Grants { open: vec!["acme.atlassian.net".into()], notify: true, terminal_read: false }
+            Grants { open: vec!["acme.atlassian.net".into()], notify: true, ..Grants::default() }
         );
         let rules = rules_of(&loaded.probes);
         let line = "see ACME-42 and src/a.rs:7 or COPYME";

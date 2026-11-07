@@ -103,8 +103,14 @@ fn a_state_asked_for_ends_the_wait_and_another_does_not() {
 #[test]
 fn a_command_finishing_ends_a_wait_for_one_with_its_block_and_code() {
     let rig = start(WaitSpec { block_done: true, ..spec() }, Grant::default(), TestTerm::new(20, 3, 10));
-    let block =
-        |phase, exit_code| Body::Block { block: 58, phase, exit_code, took_ms: Some(40), command: None };
+    let block = |phase, exit_code| Body::Block {
+        block: 58,
+        phase,
+        exit_code,
+        took_ms: Some(40),
+        command: None,
+        output_lines: None,
+    };
     rig.event(Topic::Blocks, block(BlockPhase::Started, None));
     settle();
     assert!(!rig.finished(), "starting is not finishing");
@@ -299,7 +305,7 @@ fn ran(reply: &Reply) -> Ran {
 }
 
 fn block(phase: BlockPhase, id: i64, code: Option<i32>, took: Option<u64>) -> Body {
-    Body::Block { block: id, phase, exit_code: code, took_ms: took, command: None }
+    Body::Block { block: id, phase, exit_code: code, took_ms: took, command: None, output_lines: None }
 }
 
 #[test]
@@ -472,6 +478,7 @@ fn a_command_that_ended_before_the_wait_began_meets_it_at_once_by_after() {
         exit_code: Some(0),
         took_ms: None,
         command: None,
+        output_lines: None,
     };
     bus.publish(Topic::Blocks, || Event { window: Some(1), terminal: Some(TERMINAL), body: block(1) });
     std::thread::sleep(Duration::from_millis(100));

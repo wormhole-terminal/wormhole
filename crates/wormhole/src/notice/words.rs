@@ -8,7 +8,7 @@ pub(crate) fn of(notice: Notice) -> Option<String> {
     let copied = match notice {
         Notice::Copied(copied) => copied,
         Notice::Driven(driven) => return Some(driven_words(driven)),
-        Notice::Failed(failed) => return Some(text(failed_key(failed)).to_string()),
+        Notice::Failed(failed) => return failed_key(failed).map(|key| text(key).to_string()),
         Notice::Warned(Warning::HostFallback) => {
             return Some(text(keys::NOTICE_WARNED_HOST_FALLBACK).to_string());
         }
@@ -18,8 +18,11 @@ pub(crate) fn of(notice: Notice) -> Option<String> {
         Notice::Warned(Warning::MoveToApplications) => {
             return Some(text(keys::NOTICE_WARNED_MOVE_TO_APPLICATIONS).to_string());
         }
-        // The version is the poster's to say (`update::prompt`).
-        Notice::Warned(Warning::UpdateReady(_) | Warning::Test(_)) | Notice::Test(_) => return None,
+        // The version, the Probe and the file are the poster's to say (`update::prompt`, `app::probes`).
+        Notice::Warned(
+            Warning::UpdateReady(_) | Warning::ProbeOffer(_) | Warning::ProbePaused(_) | Warning::Test(_),
+        )
+        | Notice::Test(_) => return None,
     };
     Some(match copied {
         Copied::Lines(lines) => keys::notice_copied_lines(whole(lines)),
@@ -78,20 +81,22 @@ pub(crate) fn host_fallback_detail() -> String {
 }
 
 /// The sentence of something that could not be done.
-fn failed_key(failed: Failed) -> wormhole_text::Key {
+fn failed_key(failed: Failed) -> Option<wormhole_text::Key> {
     match failed {
-        Failed::CopyCommit => keys::NOTICE_FAILED_COPY_COMMIT,
-        Failed::CopyPath => keys::NOTICE_FAILED_COPY_PATH,
-        Failed::RenameName => keys::NOTICE_FAILED_RENAME_NAME,
-        Failed::RenameExists => keys::NOTICE_FAILED_RENAME_EXISTS,
-        Failed::RenameDenied => keys::NOTICE_FAILED_RENAME_DENIED,
-        Failed::RenameGone => keys::NOTICE_FAILED_RENAME_GONE,
-        Failed::RenameFailed => keys::NOTICE_FAILED_RENAME_FAILED,
-        Failed::HistoryKeptByHost => keys::NOTICE_FAILED_HISTORY_KEPT_BY_HOST,
-        Failed::PutAtPrompt(Refused::Concealed) => keys::NOTICE_FAILED_PUT_CONCEALED,
-        Failed::PutAtPrompt(Refused::SameColor) => keys::NOTICE_FAILED_PUT_SAME_COLOR,
-        Failed::PutAtPrompt(Refused::Invisible) => keys::NOTICE_FAILED_PUT_INVISIBLE,
-        Failed::PutAtPrompt(Refused::Lines) => keys::NOTICE_FAILED_PUT_LINES,
+        Failed::CopyCommit => Some(keys::NOTICE_FAILED_COPY_COMMIT),
+        Failed::CopyPath => Some(keys::NOTICE_FAILED_COPY_PATH),
+        // The file is the poster's to name.
+        Failed::FileNotFound => None,
+        Failed::RenameName => Some(keys::NOTICE_FAILED_RENAME_NAME),
+        Failed::RenameExists => Some(keys::NOTICE_FAILED_RENAME_EXISTS),
+        Failed::RenameDenied => Some(keys::NOTICE_FAILED_RENAME_DENIED),
+        Failed::RenameGone => Some(keys::NOTICE_FAILED_RENAME_GONE),
+        Failed::RenameFailed => Some(keys::NOTICE_FAILED_RENAME_FAILED),
+        Failed::HistoryKeptByHost => Some(keys::NOTICE_FAILED_HISTORY_KEPT_BY_HOST),
+        Failed::PutAtPrompt(Refused::Concealed) => Some(keys::NOTICE_FAILED_PUT_CONCEALED),
+        Failed::PutAtPrompt(Refused::SameColor) => Some(keys::NOTICE_FAILED_PUT_SAME_COLOR),
+        Failed::PutAtPrompt(Refused::Invisible) => Some(keys::NOTICE_FAILED_PUT_INVISIBLE),
+        Failed::PutAtPrompt(Refused::Lines) => Some(keys::NOTICE_FAILED_PUT_LINES),
     }
 }
 

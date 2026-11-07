@@ -6,6 +6,6 @@
 use crate::key::Key;
 
 /// "Components"
-pub const SETTINGS_SECTION_COMPONENTS: Key = Key::new(566);
+pub const SETTINGS_SECTION_COMPONENTS: Key = Key::new(569);
 /// "Every control and block the Settings pages are built from, drawn here with sample state that is kept in this page only, so how they look can be tuned in one place."
-pub const SETTINGS_SECTION_COMPONENTS_INTRO: Key = Key::new(567);
+pub const SETTINGS_SECTION_COMPONENTS_INTRO: Key = Key::new(570);

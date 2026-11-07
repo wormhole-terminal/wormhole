@@ -32,7 +32,7 @@ use std::fmt;
 use super::read::ProbeFolder;
 
 // What `rules` compiles with must be what `validate` checked with, so these are shared, not copied.
-pub(crate) use argv::capture_index;
+pub(crate) use argv::{READ_ONLY_GIT, capture_index};
 pub use hook_summary::HookNote;
 pub(crate) use identity::MAX_RULES;
 pub(crate) use pattern::{MAX_ARGUMENT_BYTES, SIZE_LIMIT};

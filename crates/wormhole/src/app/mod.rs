@@ -14,6 +14,7 @@ pub(crate) mod launch;
 pub(crate) mod logging;
 pub(crate) mod menus;
 mod own_files;
+mod probe_effects;
 pub(crate) mod probes;
 mod saved_text;
 #[cfg(test)]

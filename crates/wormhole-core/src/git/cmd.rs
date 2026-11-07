@@ -319,7 +319,7 @@ type Drained = io::Result<(Vec<u8>, u64, bool)>;
 
 /// What to do with a pipe's contents.
 #[derive(Clone, Copy)]
-pub(super) enum Limit {
+pub(crate) enum Limit {
     /// Keep it all.
     None,
     /// Stop reading, and say so, once more than this many bytes have arrived.
@@ -344,7 +344,7 @@ impl Limit {
 /// `Command::output` with a deadline and a cap. Both pipes are drained on their own threads
 /// (a full pipe would stall git while we wait for it), and the waiting happens on a channel, so
 /// a command that finishes quickly costs no polling.
-pub(super) fn run_bounded(command: &mut Command, timeout: Duration, limit: Limit) -> Result<Output> {
+pub(crate) fn run_bounded(command: &mut Command, timeout: Duration, limit: Limit) -> Result<Output> {
     command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
     #[cfg(test)]
     SPAWNS.with(|spawns| spawns.set(spawns.get() + 1));

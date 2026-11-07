@@ -3,9 +3,8 @@
 //!
 //! This is the vocabulary as data, one table, so `validate`, the fixtures' runner and (later) the
 //! delivery read the same one. Each event is mapped onto what exists: the `wh events` topic and body
-//! it comes from ([`Source::Bus`]), or the one that has none yet ([`Source::GitWatch`]). Nothing here
-//! delivers an event or knows the bus: the names are text, and `tests/probes_events.rs` checks them
-//! against `ipc`'s own.
+//! it comes from ([`Source::Bus`]). Nothing here delivers an event or knows the bus: the names are text,
+//! and `tests/probes_events.rs` checks them against `ipc`'s own.
 //!
 //! The policy lives in [`FieldKind`]: events carry ids and numbers freely, a few names the sidebar shows
 //! anyway, and text only as the table names it. A [`FieldKind::Text`] field is hostile input (a command
@@ -79,8 +78,6 @@ pub enum Source {
     /// The `wh events` bus (`ipc::control::event`): a `topic` (`blocks`), the `body` event that carries it
     /// (`block`) and, for `block`, the `phase`.
     Bus { topic: &'static str, body: &'static str, phase: Option<&'static str> },
-    /// Core's git watch (`git/watch`), which has no bus topic yet.
-    GitWatch,
 }
 
 /// One event.
@@ -123,6 +120,9 @@ pub const RUN_TIMEOUT_DEFAULT: u64 = 10;
 pub const RUN_TIMEOUT_MAX: u64 = 60;
 /// What a `run` may print that is read, in bytes.
 pub const RUN_OUTPUT_MAX: usize = 4096;
+/// What it may print before it is killed: more than is read, so a chatty program is not cut mid-line by a
+/// closed pipe.
+pub const RUN_PRINT_MAX: usize = 64 * 1024;
 
 /// What every event has, whatever it is: the terminal's row name, usable in a template.
 pub const CONTEXT: &[Field] = &[Field { name: "folder_name", kind: FieldKind::Name }];
@@ -169,8 +169,7 @@ const SPECS: [EventSpec; 10] = [
             id("block"),
             number("exit"),
             number("took_ms"),
-            // The finished block's rows, counted by the app when it tells the event: the bus does not
-            // carry it today.
+            // The rows of the finished block's output, counted from the shell's marks.
             number("output_lines"),
             text("command"),
         ],
@@ -204,14 +203,13 @@ const SPECS: [EventSpec; 10] = [
     },
     EventSpec {
         event: HookEvent::GitChanged,
-        source: Source::GitWatch,
+        source: bus("git", "git", None),
         fields: &[
             id("terminal"),
             text("branch"),
             number("ahead"),
             number("behind"),
             number("dirty"),
-            number("staged"),
             number("untracked"),
         ],
         derived: &[],
@@ -220,7 +218,6 @@ const SPECS: [EventSpec; 10] = [
             numeric("ahead"),
             numeric("behind"),
             numeric("dirty"),
-            numeric("staged"),
             numeric("untracked"),
         ],
     },

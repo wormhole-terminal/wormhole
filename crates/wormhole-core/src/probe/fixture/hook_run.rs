@@ -25,7 +25,7 @@ impl Found {
             Planned::OpenPath { path, line } => {
                 vec![Some(("path", text(path))), line.map(|n| ("line", n.to_string()))]
             }
-            Planned::Run { command, argv, timeout_s, item } => vec![
+            Planned::Run { command, argv, timeout_s, item, .. } => vec![
                 Some(("command", text(command))),
                 Some(("argv", format!("{argv:?}"))),
                 Some(("timeout", timeout_s.to_string())),

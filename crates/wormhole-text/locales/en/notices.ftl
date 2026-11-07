@@ -109,6 +109,10 @@ notice-failed-rename-gone = Not renamed: it isn't there any more
 
 notice-failed-rename-failed = Couldn't rename it
 
+# A file an extension named in the terminal (a link on ⌘-click, or one it offers) was not found in the
+# terminal's folder, or is outside it or behind a link that leaves it. $path is the name as written.
+notice-failed-file-not-found = Couldn't find { $path } in this folder
+
 # Clear Buffer in a terminal whose session host is from an older Wormhole and cannot forget its history: it is
 # cleared in this window only, and comes back when Wormhole attaches again. A short line: the chip cuts a long one.
 notice-failed-history-kept-by-host = Cleared here only: this session host is too old to forget it
@@ -150,6 +154,13 @@ notice-warned-move-to-applications-detail = { -brand } is running from a disk im
 # The chip when an update is installed and waits for a restart; a click on it restarts. { $version } is the
 # new version's number, e.g. 1.6.0.
 notice-warned-update-ready = { -brand } { $version } is ready — Restart
+
+# An extension's hook offers a file to open; a click on the chip opens it. $name is the extension's, $path
+# the file as it wrote it.
+notice-warned-probe-offer = { $name } (extension): { $path } — Open
+
+# An extension's hook failed three times in a minute and is off until extensions are loaded again.
+notice-warned-probe-paused = { $name } (extension): a hook failed three times in a minute and was paused
 
 ## The buttons of a warning that stays
 

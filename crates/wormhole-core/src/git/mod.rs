@@ -51,8 +51,8 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 
-pub(crate) use cmd::GitCmd;
 pub use cmd::GitError;
+pub(crate) use cmd::{GitCmd, Limit, run_bounded};
 pub use details::{CommitDetails, CommitRef, DiffStat, RefKind, Signature, commit_details};
 #[cfg(test)]
 pub(crate) use diff::parse_diff;

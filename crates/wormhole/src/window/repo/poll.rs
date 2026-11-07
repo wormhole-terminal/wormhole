@@ -120,6 +120,7 @@ impl Workspace {
         cx: &mut Context<Self>,
     ) {
         let Some(ix) = self.sessions.iter().position(|s| s.id == id) else { return };
+        let before = self.git_before(ix, cx);
         let session = &mut self.sessions[ix];
         let now = session.terminal().read(cx).cwd.clone().map(|cwd| (cwd, session.git.compare.clone()));
         match session.git.finish_refresh(ticket, now.as_ref(), status) {
@@ -127,6 +128,7 @@ impl Workspace {
             Refreshed::Applied { changed } => {
                 if changed {
                     cx.notify();
+                    self.publish_git(ix, before, cx);
                 }
                 // Only an answer that is still wanted: a stale one is a picture of a read that was
                 // superseded, and dropped like its status.

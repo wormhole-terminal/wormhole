@@ -3,7 +3,7 @@
 
 use super::*;
 use crate::probe::events::Value;
-use crate::probe::manifest::{FoldTarget, Manifest};
+use crate::probe::manifest::{Cwd, FoldTarget, Manifest};
 
 const HEAD: &str = "[probe]\nid = \"tiny\"\nname = \"T\"\ndescription = \"d\"\nauthor = \"a\"\n\
                     version = \"0.1.0\"\nwormhole = \">=1.3\"\napi = 1\n";
@@ -253,6 +253,7 @@ fn a_capture_is_a_whole_argument_and_git_gets_its_marker_before_it() {
         Planned::Run {
             command: "c".into(),
             argv: ["git", "show", "--stat", "--end-of-options", "abc1234"].map(String::from).to_vec(),
+            cwd: Cwd::Terminal,
             timeout_s: 10,
             item: None
         }

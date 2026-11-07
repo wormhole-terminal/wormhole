@@ -18,7 +18,7 @@ pub fn help_with(automation: bool) -> String {
             "  {wh} events [--topics <list>] [--terminal <id>]... [--window <id>]... [--output]
       Watch what happens, as it happens: terminals' status, titles and folders, commands starting and
       finishing, terminals, windows and splits. One line each (ctrl-c stops); --json gives one JSON
-      object per line. Topics: windows, terminals, status, title, folder, bell, blocks, splits, and
+      object per line. Topics: windows, terminals, status, title, folder, bell, blocks, splits, git, and
       output (what terminals print: --output, which needs reading to be allowed).
   {wh} read [<target>] [--last <n> | --lines <from>:<to> | --block <id>|last] [--join] [--styles] [--numbers]
       What a terminal shows: its screen (also a full-screen program's), the last <n> lines of its

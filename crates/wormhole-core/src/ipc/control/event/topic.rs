@@ -22,12 +22,14 @@ pub enum Topic {
     Blocks,
     /// Splits being made, changed and dissolved.
     Splits,
+    /// What git says of a terminal's folder changing.
+    Git,
     /// What a terminal prints: terminal text, so it needs the grant to read.
     Output,
 }
 
 impl Topic {
-    pub const ALL: [Topic; 9] = [
+    pub const ALL: [Topic; 10] = [
         Topic::Windows,
         Topic::Terminals,
         Topic::Status,
@@ -36,6 +38,7 @@ impl Topic {
         Topic::Bell,
         Topic::Blocks,
         Topic::Splits,
+        Topic::Git,
         Topic::Output,
     ];
 
@@ -55,6 +58,7 @@ impl Topic {
             Topic::Bell => "bell",
             Topic::Blocks => "blocks",
             Topic::Splits => "splits",
+            Topic::Git => "git",
             Topic::Output => "output",
         }
     }

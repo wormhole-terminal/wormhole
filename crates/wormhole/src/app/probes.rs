@@ -9,9 +9,16 @@
 //! Hooks hear the bus, not the screen. One thread (`wormhole-probe-hooks`) waits on a subscription of its
 //! own, for exactly the topics some hook listens to, and hands each event over a bounded channel to a task
 //! on the UI executor, which plans it (pure, microseconds, under each hook's budget) and carries out the
-//! effects: a notification, a status item, a tint on a block. Nothing runs in a frame, no hook can block,
-//! rewrite or answer anything a terminal does, and a hook that fails is a hook that did nothing. With the
-//! flag off, or no Probe with a hook on, there is no subscription and the bus is told nothing extra.
+//! effects (`probe_effects`): a notification, a status item, a tint on a block, a file offered, a program
+//! started. Nothing runs in a frame, no hook can block, rewrite or answer anything a terminal does, and a
+//! hook that fails is a hook that did nothing. With the flag off, or no Probe with a hook on, there is no
+//! subscription and the bus is told nothing extra.
+//!
+//! What a terminal prints reaches `output.match` hooks the way it reaches `wh events --output`: the bus's own
+//! worker reads the screen off the PTY's thread and tells the finished lines, to a subscriber that may read
+//! the terminals. Only a Probe the user let read them (`terminal = ["read"]`) makes the feed one, and the
+//! dispatcher still hands each Probe only what its own grant allows. A terminal the user hid from agents is
+//! as hidden from the feed as from any other.
 //!
 //! Part of the app root: it may use every surface, and nothing below it calls up into it.
 
@@ -21,14 +28,17 @@ use std::time::Instant;
 use gpui_kit::*;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::ipc::bus::{Grant, Next, Subscription};
-use wormhole_core::ipc::control::event::{CloseReason, EventFilter, hook_event, hook_topics};
-use wormhole_core::probe::active::{self, Dispatcher, Effect};
+use wormhole_core::ipc::control::event::{
+    Body, CloseReason, EventFilter, Printed, Topic, hook_event, hook_topics,
+};
+use wormhole_core::probe::active::{self, Dispatcher};
 use wormhole_core::probe::events::{EventData, Value};
 use wormhole_core::probe::manifest::HookEvent;
 use wormhole_core::storage::paths::DataRoot;
 
+use super::probe_effects::{Feed, carry_out};
 use crate::app_state::{AppState, app};
-use crate::probe_runtime::{self, RuleSet, StatusItem};
+use crate::probe_runtime::{self, RuleSet};
 use crate::settings::{SettingsStore, settings};
 use crate::window::ambient;
 
@@ -40,6 +50,9 @@ const PENDING: usize = 256;
 /// The caller of this subscription on the bus: no terminal has this id, so it takes no share of the
 /// streams a shell outside the app (`None`) may open.
 const CALLER: i64 = i64::MIN;
+/// The approval the feed is under on the bus: the Probes' own, which the command line's setting does not
+/// end (`Subscription`'s `holder`). No other approval has this number.
+const HOLDER: u64 = u64::MAX;
 
 /// The running Probes. A global of its own (`AppState`'s fields only shrink).
 #[derive(Default)]
@@ -127,26 +140,50 @@ pub(crate) fn listen(mut dispatcher: Dispatcher, cx: &mut App) -> Option<Running
         return None;
     }
     let bus = crate::automation::bus(cx)?;
+    // Text reaches the feed only when some Probe may be told it, and then each Probe is handed only what its
+    // own grant allows (`Dispatcher::deliver`).
+    let grant = Grant { reads_all: dispatcher.reads_text(), holder: Some(HOLDER), ..Grant::default() };
     let filter = EventFilter { topics, ..EventFilter::default() };
-    let subscription = match bus.subscribe(filter, Grant::default(), Some(CALLER)) {
+    let subscription = match bus.subscribe(filter, grant, Some(CALLER)) {
         Ok((subscription, _)) => Arc::new(subscription),
         Err(refused) => {
             tracing::warn!("the Probes' hooks hear nothing: {refused}");
             return None;
         }
     };
-    let (tx, rx) = smol::channel::bounded::<(HookEvent, EventData)>(PENDING);
-    let waiting = subscription.clone();
+    if topics.contains(Topic::Output) {
+        // Where each terminal's output starts from: its cursor now, so what was printed before the Probes
+        // came on is not matched as if it were new.
+        for window in app(cx).windows.clone() {
+            let readers = window.workspace.read_with(cx, |ws, cx| ws.control_readers(cx)).unwrap_or_default();
+            for facts in readers {
+                bus.watch_output(window.id, facts.terminal, &facts.reader);
+            }
+        }
+    }
+    let (tx, rx) = smol::channel::bounded::<Feed>(PENDING);
+    let (waiting, sender) = (subscription.clone(), tx.clone());
     let spawned = std::thread::Builder::new().name("wormhole-probe-hooks".into()).spawn(move || {
+        let mut printed = Printed::default();
         loop {
             match waiting.next(wormhole_core::ipc::control::event::HEARTBEAT) {
                 Next::Event(published) => {
-                    let Some(item) = hook_event(&published.event) else { continue };
-                    if tx.is_closed() {
+                    let item = match hook_event(&published.event) {
+                        Some((event, data)) => Feed::Event(event, vec![data]),
+                        None if matches!(published.event.body, Body::Output { .. }) => {
+                            let lines = printed.lines(&published.event);
+                            if lines.is_empty() {
+                                continue;
+                            }
+                            Feed::Event(HookEvent::OutputMatch, lines)
+                        }
+                        None => continue,
+                    };
+                    if sender.is_closed() {
                         break;
                     }
                     // Full: a flood of events. The hooks' budgets would refuse most of them anyway.
-                    let _ = tx.try_send(item);
+                    let _ = sender.try_send(item);
                 }
                 Next::Lagged(dropped) => tracing::debug!(dropped, "the Probes' hooks fell behind"),
                 Next::Closed(_) => break,
@@ -159,46 +196,52 @@ pub(crate) fn listen(mut dispatcher: Dispatcher, cx: &mut App) -> Option<Running
         return None;
     }
     let task = cx.spawn(async move |cx| {
-        while let Ok((event, data)) = rx.recv().await {
-            if dispatcher.listens(event) {
-                cx.update(|cx| deliver(&mut dispatcher, event, data, cx));
+        while let Ok(feed) = rx.recv().await {
+            match feed {
+                Feed::Event(event, data) if dispatcher.listens(event) => {
+                    cx.update(|cx| deliver(&mut dispatcher, event, data, &tx, cx));
+                }
+                Feed::Event(..) => {}
+                Feed::Ended(ticket, end) => {
+                    cx.update(|cx| {
+                        let effects = dispatcher.finished(ticket, &end, Instant::now());
+                        carry_out(effects, &tx, cx);
+                        changed(cx);
+                    });
+                }
             }
         }
     });
     Some(Running { subscription, _task: task })
 }
 
-/// One event: the facts about its terminal that matchers read, the plan, the effects.
-fn deliver(dispatcher: &mut Dispatcher, event: HookEvent, data: EventData, cx: &mut App) {
+/// One event, or the lines one print made: the facts about its terminal that matchers read, the plan, the
+/// effects.
+fn deliver(
+    dispatcher: &mut Dispatcher,
+    event: HookEvent,
+    batch: Vec<EventData>,
+    feed: &smol::channel::Sender<Feed>,
+    cx: &mut App,
+) {
     let tabs = ambient::all_tabs(cx);
     let app_active = crate::platform::dock::app_is_active(cx);
-    let tab = data.number("terminal").and_then(|id| tabs.iter().find(|tab| tab.tab == id));
-    let data = match tab {
-        Some(tab) => data
-            .with("front", Value::Number(i64::from(tab.key && app_active)))
-            .with("kind", Value::Text(if tab.who().is_some() { "agent" } else { "shell" }.into()))
-            .with("folder_name", Value::Text(tab.name.clone())),
-        None => data,
-    };
-    let effects = dispatcher.deliver(event, &data, Instant::now());
+    let mut effects = Vec::new();
+    for data in batch {
+        let tab = data.number("terminal").and_then(|id| tabs.iter().find(|tab| tab.tab == id));
+        let data = match tab {
+            Some(tab) => data
+                .with("front", Value::Number(i64::from(tab.key && app_active)))
+                .with("kind", Value::Text(if tab.who().is_some() { "agent" } else { "shell" }.into()))
+                .with("folder_name", Value::Text(tab.name.clone())),
+            None => data,
+        };
+        effects.extend(dispatcher.deliver(event, &data, Instant::now()));
+    }
     if effects.is_empty() {
         return;
     }
-    for effect in effects {
-        match effect {
-            Effect::Notify { probe, probe_name, title, body, .. } => {
-                crate::notifications::probe_notice(&probe, &probe_name, &title, &body, cx);
-            }
-            Effect::Status { probe, probe_name, item, text, tone, tooltip, .. } => {
-                probe_runtime::set_status(StatusItem { probe, probe_name, item, text, tone, tooltip }, cx);
-            }
-            Effect::Highlight { tone, terminal, block, .. } => {
-                if let Ok(block) = u64::try_from(block) {
-                    probe_runtime::mark_block(terminal, block, tone, cx);
-                }
-            }
-        }
-    }
+    carry_out(effects, feed, cx);
     changed(cx);
 }
 

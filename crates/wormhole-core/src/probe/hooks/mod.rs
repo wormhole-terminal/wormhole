@@ -171,7 +171,7 @@ fn compile_hook(manifest: &Manifest, hook: &Hook) -> Result<CompiledHook, String
             let run = match (action.kind, &action.command) {
                 (HookActionKind::Run, Some(id)) => {
                     let command = manifest.contributes.commands.iter().find(|c| &c.id == id);
-                    command.and_then(|c| c.run.clone()).map(|argv| (id.clone(), argv))
+                    command.and_then(|c| c.run.clone().map(|argv| (id.clone(), argv, c.cwd)))
                 }
                 _ => None,
             };

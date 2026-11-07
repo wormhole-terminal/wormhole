@@ -132,6 +132,7 @@ mod panel_tab_tests;
 mod panes;
 mod plays_motion;
 mod probes;
+pub(crate) use self::probes::{open_offered_file, terminal_folder, window_of};
 #[cfg(test)]
 mod probes_tests;
 #[cfg(test)]

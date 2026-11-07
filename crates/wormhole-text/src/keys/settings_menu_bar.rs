@@ -6,38 +6,38 @@
 use crate::key::Key;
 
 /// "Menu bar"
-pub const SETTINGS_SECTION_MENU_BAR: Key = Key::new(815);
+pub const SETTINGS_SECTION_MENU_BAR: Key = Key::new(818);
 /// "Wormhole in the macOS menu bar."
-pub const SETTINGS_SECTION_MENU_BAR_INTRO: Key = Key::new(816);
+pub const SETTINGS_SECTION_MENU_BAR_INTRO: Key = Key::new(819);
 /// "Show Wormhole in the menu bar"
-pub const SETTINGS_MENU_BAR_MENU_BAR: Key = Key::new(817);
+pub const SETTINGS_MENU_BAR_MENU_BAR: Key = Key::new(820);
 /// "Terminals by status and quick actions"
-pub const SETTINGS_MENU_BAR_MENU_BAR_DESCRIPTION: Key = Key::new(818);
+pub const SETTINGS_MENU_BAR_MENU_BAR_DESCRIPTION: Key = Key::new(821);
 /// "status bar tray item menubar"
-pub const SETTINGS_MENU_BAR_MENU_BAR_KEYWORDS: Key = Key::new(819);
+pub const SETTINGS_MENU_BAR_MENU_BAR_KEYWORDS: Key = Key::new(822);
 /// "Icon shows"
-pub const SETTINGS_MENU_BAR_ICON: Key = Key::new(820);
+pub const SETTINGS_MENU_BAR_ICON: Key = Key::new(823);
 /// "The dot and count on the status item"
-pub const SETTINGS_MENU_BAR_ICON_DESCRIPTION: Key = Key::new(821);
+pub const SETTINGS_MENU_BAR_ICON_DESCRIPTION: Key = Key::new(824);
 /// "status item icon count"
-pub const SETTINGS_MENU_BAR_ICON_KEYWORDS: Key = Key::new(822);
+pub const SETTINGS_MENU_BAR_ICON_KEYWORDS: Key = Key::new(825);
 /// "Animate menu bar icon while working"
-pub const SETTINGS_MENU_BAR_ANIMATE: Key = Key::new(823);
+pub const SETTINGS_MENU_BAR_ANIMATE: Key = Key::new(826);
 /// "The prompt in the icon types itself out while something runs. Off: a still, filled icon"
-pub const SETTINGS_MENU_BAR_ANIMATE_DESCRIPTION: Key = Key::new(824);
+pub const SETTINGS_MENU_BAR_ANIMATE_DESCRIPTION: Key = Key::new(827);
 /// "animation"
-pub const SETTINGS_MENU_BAR_ANIMATE_KEYWORDS: Key = Key::new(825);
+pub const SETTINGS_MENU_BAR_ANIMATE_KEYWORDS: Key = Key::new(828);
 /// "Status and count"
-pub const SETTINGS_MENU_BAR_STATUS_AND_COUNT: Key = Key::new(826);
+pub const SETTINGS_MENU_BAR_STATUS_AND_COUNT: Key = Key::new(829);
 /// "Status"
-pub const SETTINGS_MENU_BAR_STATUS: Key = Key::new(827);
+pub const SETTINGS_MENU_BAR_STATUS: Key = Key::new(830);
 /// "Icon only"
-pub const SETTINGS_MENU_BAR_ICON_ONLY: Key = Key::new(828);
+pub const SETTINGS_MENU_BAR_ICON_ONLY: Key = Key::new(831);
 /// "Needs input"
-pub const SETTINGS_MENU_BAR_PREVIEW_NEEDS_INPUT: Key = Key::new(829);
+pub const SETTINGS_MENU_BAR_PREVIEW_NEEDS_INPUT: Key = Key::new(832);
 /// "Working"
-pub const SETTINGS_MENU_BAR_PREVIEW_WORKING: Key = Key::new(830);
+pub const SETTINGS_MENU_BAR_PREVIEW_WORKING: Key = Key::new(833);
 /// "Finished"
-pub const SETTINGS_MENU_BAR_PREVIEW_FINISHED: Key = Key::new(831);
+pub const SETTINGS_MENU_BAR_PREVIEW_FINISHED: Key = Key::new(834);
 /// "Failed"
-pub const SETTINGS_MENU_BAR_PREVIEW_FAILED: Key = Key::new(832);
+pub const SETTINGS_MENU_BAR_PREVIEW_FAILED: Key = Key::new(835);

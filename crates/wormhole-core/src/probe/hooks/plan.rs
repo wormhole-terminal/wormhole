@@ -11,7 +11,7 @@ use crate::probe::events::{
     MAX_TOOLTIP_CHARS, MIN_HIDDEN_ROWS, Piece, RUN_TIMEOUT_DEFAULT, Value,
 };
 use crate::probe::hidden::is_hidden;
-use crate::probe::manifest::{FoldTarget, HookAction, HookActionKind};
+use crate::probe::manifest::{Cwd, FoldTarget, HookAction, HookActionKind};
 use crate::probe::validate::{MAX_ARGUMENT_BYTES, capture_index};
 
 /// One thing a hook would do.
@@ -38,6 +38,8 @@ pub enum Planned {
     Run {
         command: String,
         argv: Vec<String>,
+        /// The folder it starts in.
+        cwd: Cwd,
         timeout_s: u64,
         item: Option<String>,
     },
@@ -92,8 +94,8 @@ pub(super) struct Pieces {
 pub(super) struct Step {
     pub action: HookAction,
     pub pieces: Pieces,
-    /// A `run`'s command and its argument vector as the manifest has it, `$n` and all.
-    pub run: Option<(String, Vec<String>)>,
+    /// A `run`'s command, its argument vector as the manifest has it (`$n` and all) and its folder.
+    pub run: Option<(String, Vec<String>, Cwd)>,
 }
 
 /// What an event gives a template.
@@ -201,7 +203,7 @@ fn open_path(step: &Step, source: &Source<'_>) -> Result<Planned, String> {
 }
 
 fn run(step: &Step, source: &Source<'_>) -> Result<Planned, String> {
-    let (command, template) = step.run.as_ref().ok_or("the command has no argument vector")?;
+    let (command, template, cwd) = step.run.as_ref().ok_or("the command has no argument vector")?;
     let program = template.first().ok_or("the command has no program")?;
     let mut argv = vec![program.clone()];
     let mut marker = program.eq_ignore_ascii_case("git");
@@ -230,6 +232,7 @@ fn run(step: &Step, source: &Source<'_>) -> Result<Planned, String> {
     Ok(Planned::Run {
         command: command.clone(),
         argv,
+        cwd: *cwd,
         timeout_s: step.action.timeout.unwrap_or(RUN_TIMEOUT_DEFAULT),
         item: step.action.item.clone(),
     })

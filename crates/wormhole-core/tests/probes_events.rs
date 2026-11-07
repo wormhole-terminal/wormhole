@@ -26,7 +26,9 @@ fn samples() -> Vec<Body> {
             exit_code: Some(0),
             took_ms: Some(1),
             command: Some("c".into()),
+            output_lines: Some(1),
         },
+        Body::Git { branch: Some("b".into()), ahead: 1, behind: 1, dirty: 1, untracked: 1 },
         Body::TerminalOpened { folder: Some("/f".into()) },
         Body::TerminalClosed,
         Body::Output { screen: "main".into(), lines: vec![], partial: None, skipped: 0, lost: false },
@@ -37,7 +39,7 @@ fn samples() -> Vec<Body> {
 fn every_bus_event_of_the_table_is_a_real_topic_and_body() {
     let samples = samples();
     for spec in events::all() {
-        let Source::Bus { topic, body, phase } = spec.source else { continue };
+        let Source::Bus { topic, body, phase } = spec.source;
         let real =
             Topic::from_name(topic).unwrap_or_else(|| panic!("{}: no topic `{topic}`", spec.event.name()));
         let sample = samples
@@ -63,21 +65,9 @@ fn every_bus_event_of_the_table_is_a_real_topic_and_body() {
 fn the_fields_a_hook_reads_are_the_bus_s_or_worked_out_by_the_app() {
     let samples = samples();
     // What the app works out when it tells the event, so the bus has no field of the name.
-    let worked_out = [
-        "terminal",
-        "block",
-        "output_lines",
-        "line_no",
-        "line",
-        "branch",
-        "ahead",
-        "behind",
-        "dirty",
-        "staged",
-        "untracked",
-    ];
+    let worked_out = ["terminal", "line_no", "line"];
     for spec in events::all() {
-        let Source::Bus { body, .. } = spec.source else { continue };
+        let Source::Bus { body, .. } = spec.source;
         let sample = samples.iter().find(|b| b.name() == body).expect("sample");
         let json = serde_json::to_value(sample).expect("serializes");
         for field in spec.fields {
@@ -106,11 +96,4 @@ fn the_states_are_the_bus_s_states() {
     .map(|s| serde_json::to_value(s).expect("serializes").as_str().expect("a string").to_string())
     .collect();
     assert_eq!(wire, STATES);
-}
-
-#[test]
-fn the_only_event_without_a_topic_is_the_git_watch() {
-    let without: Vec<_> =
-        events::all().iter().filter(|s| s.source == Source::GitWatch).map(|s| s.event.name()).collect();
-    assert_eq!(without, ["git.changed"]);
 }
