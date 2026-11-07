@@ -36,8 +36,8 @@ struct PaneMenuItems: View {
     }
 }
 
-/// View → Layout: the four presets with a check on the one the tab has, each greyed out where the tab
-/// would have to close panes it cannot open (`can_layout`: only when more must be opened than room allows).
+/// View → Layout: the four presets with a check on the one the tab has. (GPUI's `can_layout` greying, for a
+/// preset that must open more panes than the room allows, is the window's: it knows the sessions.)
 struct LayoutPresetItems: View {
     let panes: TabPanes
     let choose: (Preset) -> Void
