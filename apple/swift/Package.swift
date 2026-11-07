@@ -59,10 +59,16 @@ var targets: [Target] = [
     .testTarget(name: "TerminalUITests", dependencies: ["TerminalUI", "DesignSystem", "TerminalCore"]),
     // The settings window's schema (generated from the Rust settings index by `apple/scripts/dump-settings.sh`),
     // values, search, change tracking and the backend seam. Foundation only.
-    .target(name: "SettingsModel", resources: [.copy("Resources/settings.json")]),
+    .target(name: "SettingsModel", dependencies: ["FontPickerModel"], resources: [.copy("Resources/settings.json")]),
     // The settings window: nav, search, preview strip, the rows and their controls, drawn from the schema.
     .target(name: "SettingsUI", dependencies: ["SettingsModel", "DesignSystem", "WordsModel"]),
-    .testTarget(name: "SettingsTests", dependencies: ["SettingsModel", "SettingsUI", "DesignSystem"]),
+    .testTarget(name: "SettingsTests", dependencies: ["SettingsModel", "SettingsUI", "DesignSystem", "FontPickerModel", "FontPickerUI"]),
+    // The font picker's state and rules as plain values: the families and where each comes from, the list for a query
+    // (core's rules, or the same in Swift), the highlight and its keys, recents, the preview's text. Foundation only.
+    .target(name: "FontPickerModel", dependencies: ["WordsModel"]),
+    // The font picker's views (search, list, preview with what the font can draw) and CoreText behind its questions.
+    .target(name: "FontPickerUI", dependencies: ["FontPickerModel", "DesignSystem"]),
+    .testTarget(name: "FontPickerTests", dependencies: ["FontPickerModel", "FontPickerUI", "DesignSystem"]),
     // Splits and panes (the tree, its geometry, drops, presets), the title row's parts and fit rules and the
     // tab sets, as plain values. Foundation and the workspace model.
     .target(name: "PanesModel", dependencies: ["WorkspaceModel"]),
@@ -91,7 +97,7 @@ var targets: [Target] = [
     // The Theme Studio's logic: a theme file as a draft, resolved by Rust, with undo, contrast and versions.
     .target(name: "StudioModel", dependencies: ["DesignSystem", "WordsModel"]),
     // The Theme Studio window: token list, gallery of every component, token editor.
-    .target(name: "StudioUI", dependencies: ["StudioModel", "DesignSystem", "SidebarUI", "PanelUI", "PaletteUI", "WorkspaceModel", "PanelModel", "PaletteModel", "WordsModel"]),
+    .target(name: "StudioUI", dependencies: ["StudioModel", "DesignSystem", "SidebarUI", "PanelUI", "PaletteUI", "WorkspaceModel", "PanelModel", "PaletteModel", "WordsModel", "FontPickerUI"]),
     .testTarget(name: "StudioTests", dependencies: ["StudioModel", "StudioUI", "DesignSystem"]),
     .testTarget(
         name: "UITests",
@@ -149,8 +155,8 @@ if ffiLinked {
         .testTarget(name: "FilesBridgeTests", dependencies: ["FilesBridge", "PanelModel", "PlatformModel", "WormholeBindings", "WorkspaceModel"]),
         // The settings window over the Rust core: values, writes, search, shortcut rules, the agents, imports and
         // profiles. Replaces the mock backend and host.
-        .target(name: "SettingsBridge", dependencies: ["SettingsModel", "WormholeBindings"]),
-        .testTarget(name: "SettingsBridgeTests", dependencies: ["SettingsBridge", "SettingsModel", "WormholeBindings"]),
+        .target(name: "SettingsBridge", dependencies: ["SettingsModel", "FontPickerModel", "WormholeBindings"]),
+        .testTarget(name: "SettingsBridgeTests", dependencies: ["SettingsBridge", "SettingsModel", "FontPickerModel", "WormholeBindings"]),
         // The auxiliary windows' backends (update, session hosts, project trust, agent access, first run, licenses).
         .target(name: "AuxBridge", dependencies: ["AuxModel", "PlatformModel", "WormholeBindings"]),
         .testTarget(name: "AuxBridgeTests", dependencies: ["AuxBridge", "AuxModel", "PlatformModel"]),

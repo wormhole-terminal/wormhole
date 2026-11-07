@@ -2,6 +2,7 @@
 // looking at, and a click inside one must not act on the sample), except the swatches that select their token.
 
 import DesignSystem
+import FontPickerUI
 import SidebarUI
 import SwiftUI
 import WorkspaceModel
@@ -26,6 +27,7 @@ enum SpecimenContent {
         case "shape": ShapeSpecimen()
         case "controls": ControlsSpecimen()
         case "palette": PaletteSpecimen()
+        case "fonts": FontPickerSpecimen().frame(width: FontPickerMetric.width, alignment: .leading).allowsHitTesting(false)
         case "terminal": TerminalSpecimen(context: context)
         case "code": CodeSpecimen(context: context)
         default: TypeSpecimen()

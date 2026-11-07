@@ -20,6 +20,8 @@ public final class SettingsModel {
     /// The New profile sheet is up, and the question before deleting the profile Wormhole is in.
     public var showsNewProfile = false
     public var confirmsProfileDelete = false
+    /// The font an open font picker is looking at; the Fonts page's scene shows it instead of the settings' own.
+    public var fontPreview: FontPreview?
     /// A row to bring into view and mark for a moment, after a search result was chosen.
     public private(set) var revealed: String?
     @ObservationIgnored private var observation: SettingsObservation?

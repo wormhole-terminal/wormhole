@@ -15,7 +15,9 @@
         static func make(app: AppController) -> RustSettingsHost.Platform {
             var platform = RustSettingsHost.Platform()
             platform.perform = { [weak app] action in app?.perform(action) }
-            platform.fontFamilies = { monospacedFamilies() }
+            platform.bundledFonts = { [weak app] in
+                (app?.options.fontDirectory ?? Options.findBundledFonts()).map { bundledFiles(in: $0) } ?? []
+            }
             platform.openApps = {
                 SystemOpenIn().apps().map { SettingOption(value: .string($0.bundle), label: $0.name) }
             }
@@ -30,13 +32,9 @@
 
         private static func desk(of app: AppController?) -> AccessDesk? { (app?.aux.accessBackend as? FFIAccessBackend)?.desk }
 
-        /// The installed families that are fixed-pitch, which is what a terminal's font can be.
-        static func monospacedFamilies() -> [String] {
-            let manager = NSFontManager.shared
-            return manager.availableFontFamilies.filter { family in
-                (manager.availableMembers(ofFontFamily: family)?.first?.first as? String).flatMap { NSFont(name: $0, size: 12) }?
-                    .isFixedPitch ?? false
-            }
+        /// JetBrains Mono's four files in the folder that holds them (`FontSpec.jetBrainsMono`).
+        private static func bundledFiles(in directory: URL) -> [URL] {
+            ["Regular", "Bold", "Italic", "BoldItalic"].map { directory.appendingPathComponent("JetBrainsMono-\($0).ttf") }
         }
     }
 

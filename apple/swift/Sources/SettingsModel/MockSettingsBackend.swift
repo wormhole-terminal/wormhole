@@ -60,7 +60,6 @@ public final class MockSettingsHost: SettingsHost {
         }
     }
 
-    public func fontFamilies() -> [String] { ["JetBrains Mono", "Menlo", "SF Mono", "Monaco"] }
     public func perform(_ action: SettingsAction) { performed.append(action) }
     public func panelRecords() -> PanelRecords { records }
 }

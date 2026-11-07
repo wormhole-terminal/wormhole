@@ -19,6 +19,7 @@ mod error;
 mod events;
 mod files_panel;
 mod find;
+mod fonts;
 pub mod folder_picker;
 mod frame;
 mod git;
@@ -71,6 +72,10 @@ pub use files_panel::{
     UsageService,
 };
 pub use find::{FindOutcome, FoundSpan};
+pub use fonts::{
+    CustomFontFamilyRecord, CustomFontFileRecord, CustomFontsRecord, FontChoiceRecord, FontOrigin, font_bundled_family,
+    font_choices, font_custom_scan,
+};
 pub use git::{
     Git, GitBackendError, GitChange, GitChangeKind, GitCommitDetails, GitDiff, GitEnvVar, GitListener,
     GitLog, GitLogCommit, GitRef, GitRefKind, GitRev, GitRevKind, GitSignature, GitStatus, GitWatch,

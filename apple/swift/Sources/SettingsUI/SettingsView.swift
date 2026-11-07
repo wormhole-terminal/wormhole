@@ -3,6 +3,8 @@
 // ⌘W closes (the window does that).
 
 import DesignSystem
+import FontPickerModel
+import FontPickerUI
 import SettingsModel
 import AppKit
 import SwiftUI
@@ -11,11 +13,13 @@ public struct SettingsView: View {
     @Bindable var model: SettingsModel
     let onClose: () -> Void
     @FocusState private var focus: SettingsFocus?
+    @State private var fonts: FontLibrary
     @Environment(\.tokens) private var tokens
     private static let f6 = KeyEquivalent(Character(UnicodeScalar(UInt32(NSF6FunctionKey)) ?? " "))
 
     public init(model: SettingsModel, onClose: @escaping () -> Void = {}) {
         (self.model, self.onClose) = (model, onClose)
+        _fonts = State(initialValue: FontLibrary(rules: model.host.fontRules, system: CoreTextFonts(), recents: UserDefaultsFontRecents()))
     }
 
     public var body: some View {
@@ -26,6 +30,7 @@ public struct SettingsView: View {
         }
         .background(tokens.surfaceWindow)
         .foregroundStyle(tokens.textPrimary)
+        .environment(\.fontLibrary, fonts)
         .onKeyPress(.escape) { escape() }
         .onKeyPress(keys: [Self.f6], phases: .down) { cycle(backwards: $0.modifiers.contains(.shift)) }
         .accessibilityElement(children: .contain)

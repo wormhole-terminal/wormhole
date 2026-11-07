@@ -14,6 +14,7 @@ enum GalleryCatalog {
         Specimen("shape", "Shape", "radii, the focus ring, everything chip-shaped", area: .chrome, column: .left, tokens: SpecimenTokens.shape),
         Specimen("controls", "Controls and banners", "buttons, fields, switches, sliders, banners", area: .settings, column: .right, tokens: SpecimenTokens.controls),
         Specimen("palette", "Command palette", "the quick panel and the shortcut sheet, on the scrim", area: .ambient, column: .both, tokens: GalleryUses.palette),
+        Specimen("fonts", "Font picker", "search, the families in their own faces, the preview and what the font draws", area: .settings, column: .right, tokens: GalleryUses.fonts + ["terminal.*"]),
         Specimen("terminal", "Terminal", "16 ANSI, text, selection, cursor", area: nil, column: .left, tokens: ["terminal.*"]),
         Specimen("code", "Code", "every syntax colour on the terminal's background", area: nil, column: .right, tokens: ["syntax.*"]),
         Specimen("type", "Type", "the roles of the interface font", area: nil, column: .left, tokens: ["text.primary", "text.muted", "text.faint"]),

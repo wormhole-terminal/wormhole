@@ -120,6 +120,17 @@ enum GalleryUses {
         "text.on_selected",
         "text.primary",
     ]
+    static let fonts: [String] = [
+        "chip.tint",
+        "control.background",
+        "divider",
+        "metrics.divider_width",
+        "metrics.radius",
+        "metrics.radius_chip",
+        "text.faint",
+        "text.muted",
+        "text.primary",
+    ]
     static let chrome: [String] = [
         "agent.attention",
         "agent.done",

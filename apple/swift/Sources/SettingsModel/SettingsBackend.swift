@@ -3,6 +3,8 @@
 // keeps the values in memory. Keys are `config.json`'s, a path for a key inside an object (`motion.insert`).
 // Writes are sanitised on the Rust side, so a caller reads back what stuck.
 
+import FontPickerModel
+
 @MainActor
 public protocol SettingsBackend: AnyObject {
     /// The effective values of every key the schema names (a key the file lacks has its default).
@@ -27,7 +29,8 @@ public final class SettingsObservation: Sendable {
 @MainActor
 public protocol SettingsHost: AnyObject {
     func options(for source: OptionSource) -> [SettingOption]
-    func fontFamilies() -> [String]
+    /// The font pickers' rules and sources: core's, or the same in Swift when there is no core.
+    var fontRules: any FontRules { get }
     func perform(_ action: SettingsAction)
     /// What the agents, import and profile pages list.
     func panelRecords() -> PanelRecords
@@ -44,6 +47,7 @@ public protocol SettingsHost: AnyObject {
 }
 
 extension SettingsHost {
+    public var fontRules: any FontRules { LocalFontRules() }
     /// A host that has no agents to set up (the mock) ignores the button.
     public func perform(_ hooks: AgentRecord.HookAction, agent id: String) {}
     /// A host that holds no approvals (the mock) has none to take back.

@@ -25,6 +25,7 @@ SPECIMENS = {
     "history": ["PanelUI/Commit*", "PanelUI/History*"],
     "diff": ["PanelUI/Diff*"],
     "palette": ["PaletteUI/*"],
+    "fonts": ["FontPickerUI/*"],
     "chrome": ["DesignSystem/IconButton.swift", "DesignSystem/CountBadge.swift", "DesignSystem/StatusDot.swift",
                "DesignSystem/SectionLabel.swift", "DesignSystem/Row.swift"],
 }

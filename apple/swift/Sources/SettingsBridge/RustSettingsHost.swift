@@ -5,6 +5,7 @@
 // them on every draw, and reading them stats every PATH entry and parses other terminals' files.
 
 import AppKit
+import FontPickerModel
 import Observation
 import SettingsModel
 import WormholeBindings
@@ -16,7 +17,8 @@ public final class RustSettingsHost: SettingsHost {
         /// A button core does not answer: the default terminal, notification permission and test, the update check,
         /// the tips, the new-profile form, developer tools.
         public var perform: @MainActor (SettingsAction) -> Void = { _ in }
-        public var fontFamilies: @MainActor () -> [String] = { [] }
+        /// The bundled font's files (JetBrains Mono's four), so its name draws in its own face; none if the app has no folder.
+        public var bundledFonts: @MainActor () -> [URL] = { [] }
         /// The "Open in" select: the apps installed (a system list).
         public var openApps: @MainActor () -> [SettingOption] = { [] }
         public var open: @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) }
@@ -57,7 +59,7 @@ public final class RustSettingsHost: SettingsHost {
         }
     }
 
-    public func fontFamilies() -> [String] { platform.fontFamilies() }
+    public var fontRules: any FontRules { RustFontRules(fontsDir: handle.paths().fontsDir, bundledFiles: platform.bundledFonts()) }
 
     /// Says why the last button did nothing (nil: it did something), until the next one.
     public func problem(_ sentence: String?) {

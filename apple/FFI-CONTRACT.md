@@ -949,3 +949,20 @@ cascadeFrame(from:, display:) -> FrameRecord // a step (26 pt) down and right, o
   (no tap wake). Everything is meant for the main thread; none calls Swift.
 - **Core changes this needed** (additive): `workspace::{IdCounter, SavedLayout, Departing}`, `ModelConfig.ids`,
   `WorkspaceModel::{window_record, restore, take_out, receive}`, `Event::Adopted`, `view::layout::frame`.
+
+## Font picker rules (`fonts.rs`)
+
+Additive, free functions (no object, no listener, no thread of their own; each call is microseconds except the folder scan,
+which reads font files: call it off the main thread). They carry the rules of `theme::fonts`; the installed families and
+their traits stay CoreText's on the Swift side, as `fonts.rs` and `platform/macos/fonts.rs` of the GPUI app have them.
+
+- `fontChoices(installed, bundled, custom, monospace?, query, monospaceOnly) -> [FontChoiceRecord{origin, name}]`:
+  core's `grouped_font_choices` (hidden families out, every word of the query, prefix matches first, each family once,
+  groups bundled, custom, installed). `monospace` is nil while the installed families are being classified: nothing is
+  filtered then; it must include the bundled and custom monospace families.
+- `fontCustomScan(dir) -> CustomFontsRecord{files, families, skipped}`: core's capped `custom::scan` of the fonts folder
+  (`SettingsPaths.fontsDir`). A file that is not a font is only named in `skipped`; a missing folder is empty. The caller
+  registers `files` with CoreText for the process (`CTFontManagerRegisterFontURLs`, scope process), as GPUI does.
+- `fontBundledFamily() -> String`: `JetBrains Mono`. A custom family of that name replaces it (list it once, as custom).
+- Swift: `SettingsBridge.RustFontRules` implements `FontPickerModel.FontRules`; `RustSettingsHost.fontRules` hands it out.
+  `LocalFontRules` is the same rules in Swift for a build without the core, and a test keeps the two equal.
