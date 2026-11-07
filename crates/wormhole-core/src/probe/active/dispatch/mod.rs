@@ -5,8 +5,8 @@
 //! block, rewrite or answer, a plan that fails is a hook that did nothing, and what it may do is bounded
 //! by [`Limits`], counted per hook, so a program that rings the bell in a loop costs the budget, not the app.
 //!
-//! In this build the hooks' `notify`, `status`, `highlight`, `open-path` and `run` act; `fold` is planned by
-//! `probe test` and is not carried out yet. A `run` is the one effect that has a life after it: the dispatcher
+//! In this build the hooks' `notify`, `status`, `highlight`, `open-path`, `run` and `fold` of a block's output
+//! act (`fold` of a run of matching lines is planned by `probe test` and not carried out yet). A `run` is the one effect that has a life after it: the dispatcher
 //! says what to start ([`Effect::Run`], under the `process` grant, one at a time per hook and a few at once)
 //! and is told how it ended ([`Dispatcher::finished`]), which is when its output becomes effects of its own
 //! and when a hook that keeps failing is paused.
@@ -19,7 +19,7 @@ use super::load::ActiveProbe;
 use super::run::RunEnd;
 use crate::probe::events::{self, EventData};
 use crate::probe::hooks::{Plan, Planned};
-use crate::probe::manifest::{Cwd, HookActionKind, HookEvent};
+use crate::probe::manifest::{Cwd, FoldTarget, HookActionKind, HookEvent};
 use crate::probe::tone::Tone;
 
 /// What a hook and a Probe may do in a minute.
@@ -66,6 +66,10 @@ pub enum Effect {
         icon: Option<String>,
         tooltip: Option<String>,
     },
+    /// Hide the output of the block that finished behind a marker, less the first and last lines `keep` says.
+    /// Only for a Probe granted `fold`. The terminal decides what may be folded (finished rows only, never
+    /// the live block or what needs the person) and says no otherwise.
+    Fold { probe: String, probe_name: String, terminal: i64, block: i64, label: String, keep: (u32, u32) },
     /// A tone on the rows of the block that finished.
     Highlight { probe: String, tone: Tone, terminal: i64, block: i64 },
     /// A file the Probe offers to open, as written (`path[:line]` is for the app to find and open when
@@ -382,7 +386,18 @@ fn effect_of(
             path,
             line,
         }),
-        Planned::Fold { .. } | Planned::Run { .. } => None,
+        Planned::Fold { target: FoldTarget::BlockOutput, keep, label, .. } => {
+            probe.grants.fold.then_some(())?;
+            Some(Effect::Fold {
+                probe: probe.id.clone(),
+                probe_name: probe.name.clone(),
+                terminal: data.number("terminal")?,
+                block: data.number("block")?,
+                label,
+                keep,
+            })
+        }
+        Planned::Fold { target: FoldTarget::MatchRun, .. } | Planned::Run { .. } => None,
     }
 }
 

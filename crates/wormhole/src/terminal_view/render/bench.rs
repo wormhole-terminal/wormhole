@@ -186,7 +186,8 @@ fn folded_frames(iterations: usize) -> (usize, usize, usize) {
         frame(&mut plain_cache, &mut plain, &palette, &base_font)
     });
     let mut term = self::term();
-    let collapsed = term.fold_lines(-700, -380).expect("a fold");
+    // The one that is collapsed is a Probe's: its owner rides in the row at no cost per frame.
+    let collapsed = term.fold_lines_by(-700, -380, "acme-tools").expect("a fold");
     let open = term.fold_lines(-370, -270).expect("a fold");
     assert!(term.toggle_fold(open));
     term.scroll_display(wormhole_term::types::Scroll::Delta(400));

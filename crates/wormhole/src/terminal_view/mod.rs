@@ -62,7 +62,16 @@ pub use status::{CommandMark, ProgramNotice, Status, TerminalEvent, TerminalSumm
 // rest on the current block); the terminal answers Edit → Copy, Paste and Select All too.
 actions!(
     terminal,
-    [ClearBuffer, PreviousPrompt, NextPrompt, SelectOutput, CopyOutput, CopyCommand, RerunCommand]
+    [
+        ClearBuffer,
+        PreviousPrompt,
+        NextPrompt,
+        SelectOutput,
+        CopyOutput,
+        CopyCommand,
+        RerunCommand,
+        ShowHiddenLines
+    ]
 );
 
 /// The grid's least inset from the pane's sides, and below the title bar and above the bottom; with
@@ -394,6 +403,7 @@ impl TerminalView {
             this.listen(events, cx);
         }
         this.begin(start, options, initial, cx);
+        this.sync_folds(cx);
         this
     }
 

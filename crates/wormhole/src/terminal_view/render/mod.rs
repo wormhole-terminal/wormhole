@@ -68,7 +68,7 @@ use wormhole_term::types::MouseTracking;
 use super::status::Status;
 use super::{
     ClearBuffer, CopyCommand, CopyOutput, MIN_WIDTH, NextPrompt, PADDING_X, PADDING_Y, PreviousPrompt,
-    RerunCommand, SelectOutput, TerminalView,
+    RerunCommand, SelectOutput, ShowHiddenLines, TerminalView,
 };
 use crate::perf;
 use crate::platform::scroller::ScrollerPrefs;
@@ -145,6 +145,7 @@ impl Render for TerminalView {
         let background_override =
             self.render_state.borrow().snapshot().colors[NamedColor::Background].map(crate::palette::to_hsla);
         let has_blocks = self.pty.as_ref().is_some_and(Pty::has_blocks);
+        let has_folds = self.pty.as_ref().is_some_and(Pty::has_folds);
 
         let prepare = prepare::Prepare {
             font_size: font_size_setting,
@@ -242,6 +243,10 @@ impl Render for TerminalView {
                 .on_action(cx.listener(|this, _: &RerunCommand, _, cx| {
                     this.block_action(blocks::BlockAction::PutAtPrompt, cx)
                 }))
+            })
+            // Edit → Show Hidden Lines, greyed out while this terminal has no fold.
+            .when(has_folds, |this| {
+                this.on_action(cx.listener(|this, _: &ShowHiddenLines, _, cx| this.show_hidden_lines(cx)))
             })
             .on_hover(cx.listener(|this, hovered: &bool, _, cx| {
                 if !hovered {

@@ -197,7 +197,12 @@ fn a_fold_hides_the_lines_of_a_block_less_what_it_keeps() {
     let compiled = fold(", keep_head = 1, keep_tail = 3, min_lines = 10");
     assert_eq!(
         folded(&compiled, 120),
-        Planned::Fold { target: FoldTarget::BlockOutput, hidden_rows: Some(116), label: "out".into() }
+        Planned::Fold {
+            target: FoldTarget::BlockOutput,
+            hidden_rows: Some(116),
+            keep: (1, 3),
+            label: "out".into()
+        }
     );
     // Exactly the fewest rows a fold may hide: three beyond head and tail.
     assert!(matches!(folded(&compiled, 10), Planned::Fold { hidden_rows: Some(6), .. }));
@@ -228,7 +233,12 @@ fn a_fold_of_a_run_of_matches_leaves_the_count_to_the_terminal() {
     let plan = actions(compiled.get("m").expect("hook").plan(&event(&[("line", t("x"))])));
     assert_eq!(
         plan,
-        [Planned::Fold { target: FoldTarget::MatchRun, hidden_rows: None, label: "noise".into() }]
+        [Planned::Fold {
+            target: FoldTarget::MatchRun,
+            hidden_rows: None,
+            keep: (0, 0),
+            label: "noise".into()
+        }]
     );
 }
 

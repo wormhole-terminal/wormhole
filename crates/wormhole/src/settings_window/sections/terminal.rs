@@ -72,6 +72,7 @@ pub(super) const SETTINGS: &[Setting] = &[
         },
     ),
     toggle!("minimap", minimap),
+    toggle!("never-hide-lines", never_hide_lines),
     toggle!("split-gaps", split_gaps),
     Setting::segmented(
         "meta",

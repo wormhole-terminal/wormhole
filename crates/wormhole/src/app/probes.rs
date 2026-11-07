@@ -106,6 +106,7 @@ pub(crate) fn reload(cx: &mut App) {
         let probes = cx.default_global::<Probes>();
         (probes.loading, probes.running) = (None, None);
         probe_runtime::install(None, Vec::new(), cx);
+        retain_folds(Vec::new(), cx);
         changed(cx);
         return;
     }
@@ -121,6 +122,11 @@ fn start(loaded: active::Loaded, cx: &mut App) {
     for (id, why) in &loaded.skipped {
         tracing::warn!(probe = %id, "a Probe that is on could not run: {why}");
     }
+    // A Probe turned off, or one that lost the `fold` grant, loses its folds now, not at the next fold.
+    retain_folds(
+        loaded.probes.iter().filter(|probe| probe.grants.fold).map(|probe| probe.id.clone()).collect(),
+        cx,
+    );
     let names = loaded.probes.iter().map(|probe| (probe.id.clone(), probe.name.clone())).collect();
     let rules = RuleSet::new(active::rules_of(&loaded.probes));
     probe_runtime::install(Some(rules), names, cx);
@@ -243,6 +249,13 @@ fn deliver(
     }
     carry_out(effects, feed, cx);
     changed(cx);
+}
+
+/// Every terminal keeps only the folds of the Probes in `probes` (the ones that are on and may fold).
+fn retain_folds(probes: Vec<String>, cx: &mut App) {
+    for window in app(cx).windows.clone() {
+        AppState::with_workspace(&window, cx, |ws, _, cx| ws.retain_probe_folds(&probes, cx));
+    }
 }
 
 /// Every window draws what changed: its terminals' rows and its status bar.

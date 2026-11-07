@@ -193,6 +193,8 @@ const EDIT: &[Slot] = &[
     A(CopyOutput),
     A(CopyCommand),
     A(RerunCommand),
+    Sep,
+    A(ShowHiddenLines),
 ];
 
 const VIEW: &[Slot] = &[

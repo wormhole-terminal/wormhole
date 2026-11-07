@@ -17,6 +17,7 @@ use wormhole_core::keys::keymap::{self, ActionId, Scope, Stage};
 
 use crate::terminal_view::{
     ClearBuffer, CopyCommand, CopyOutput, NextPrompt, PreviousPrompt, RerunCommand, SelectOutput,
+    ShowHiddenLines,
 };
 
 actions!(
@@ -244,6 +245,7 @@ pub(crate) fn gpui_action(id: ActionId) -> Option<Box<dyn Action>> {
         A::CopyOutput => Box::new(CopyOutput),
         A::CopyCommand => Box::new(CopyCommand),
         A::RerunCommand => Box::new(RerunCommand),
+        A::ShowHiddenLines => Box::new(ShowHiddenLines),
         A::Find => Box::new(Find),
         A::FindNext => Box::new(FindNext),
         A::FindPrevious => Box::new(FindPrevious),

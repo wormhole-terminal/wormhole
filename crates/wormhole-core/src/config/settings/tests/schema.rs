@@ -60,6 +60,7 @@ fn the_final_design_keys_have_their_defaults() {
     assert!(!unset.allow_title_report, "programs can't read the window title back until asked");
     assert!(unset.worktree_base.is_empty(), "worktrees go beside the repository until asked");
     assert!(!unset.worktree_clone_build_folders, "worktrees start without cloned build folders until asked");
+    assert!(!unset.never_hide_lines, "folds may hide lines until the person says never");
 }
 
 #[test]

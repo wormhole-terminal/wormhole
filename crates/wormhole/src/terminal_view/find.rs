@@ -12,6 +12,7 @@ use gpui_kit::*;
 use wormhole_core::view::limits::count_grouped;
 use wormhole_term::ScreenSnapshot;
 use wormhole_term::find::{FindOption, FindQuery, FindResults};
+use wormhole_term::folds::FoldSpan;
 use wormhole_term::types::Line;
 
 use super::TerminalView;
@@ -328,6 +329,25 @@ impl TerminalView {
             }
         }
         rows
+    }
+
+    /// Find's matches inside the lines each marker of `snapshot` stands for, by row: what the marker says
+    /// while a search is open. Empty with find closed, no match or no marker in view.
+    pub(super) fn fold_matches(&self, snapshot: &ScreenSnapshot) -> Vec<usize> {
+        let find = &self.find;
+        let markers = snapshot.rows().iter().any(|row| row.fold().is_some());
+        if !find.open || find.results.matches.is_empty() || !markers {
+            return Vec::new();
+        }
+        // Lines in the results' coordinates: what was at `line` then is at `line + grown` there.
+        let grown = snapshot.history_size.saturating_sub(find.history) as i32;
+        let matches = &find.results.matches;
+        let inside = |fold: &FoldSpan| {
+            let (first, last) = (fold.first + grown, fold.last + grown);
+            matches.partition_point(|m| m.start.line <= last)
+                - matches.partition_point(|m| m.start.line < first)
+        };
+        snapshot.rows().iter().map(|row| row.fold().map_or(0, inside)).collect()
     }
 
     /// Where the matches are along the scrollback, 0 at its top and 1 at the bottom of the

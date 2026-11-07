@@ -17,7 +17,7 @@ impl Found {
         let fields: Vec<Option<(&str, String)>> = match planned {
             Planned::Notify { title, body } => vec![Some(("title", text(title))), Some(("body", text(body)))],
             Planned::Highlight { tone } => vec![Some(("tone", text(tone)))],
-            Planned::Fold { target, hidden_rows, label } => vec![
+            Planned::Fold { target, hidden_rows, label, .. } => vec![
                 Some(("target", text(target.name()))),
                 hidden_rows.map(|n| ("hidden_rows", n.to_string())),
                 Some(("label", text(label))),

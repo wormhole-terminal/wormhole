@@ -88,6 +88,27 @@ fn a_failed_command_notifies_sets_the_item_and_highlights_its_block() {
 }
 
 #[test]
+fn a_fold_needs_its_own_grant() {
+    let hooks = "[permissions]\nfold = true\n[[contributes.hooks]]\nid = \"f\"\non = \"command.finished\"\n\
+         do = [{ type = \"fold\", target = \"block-output\", keep_tail = 2, label = \"build output\" }]\n";
+    let long = finished(0, 5).with("output_lines", Value::Number(120));
+    let mut granted = Dispatcher::new(vec![probe(hooks, Grants { fold: true, ..Grants::default() })]);
+    assert_eq!(
+        granted.deliver(HookEvent::CommandFinished, &long, Instant::now()),
+        [Effect::Fold {
+            probe: "tiny".into(),
+            probe_name: "Tiny".into(),
+            terminal: 3,
+            block: 9,
+            label: "build output".into(),
+            keep: (0, 2)
+        }]
+    );
+    let mut refused = Dispatcher::new(vec![probe(hooks, notify())]);
+    assert!(refused.deliver(HookEvent::CommandFinished, &long, Instant::now()).is_empty());
+}
+
+#[test]
 fn a_notification_needs_the_grant_and_the_rest_still_acts() {
     let mut dispatcher = Dispatcher::new(vec![probe(HOOKS, Grants::default())]);
     let effects = dispatcher.deliver(HookEvent::CommandFinished, &finished(1, 1), Instant::now());

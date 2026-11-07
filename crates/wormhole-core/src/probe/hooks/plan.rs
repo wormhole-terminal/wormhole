@@ -25,10 +25,11 @@ pub enum Planned {
         tone: String,
     },
     /// `hidden_rows` is known for a block's output (its lines less what is kept) and left to the terminal
-    /// for a run of matching lines.
+    /// for a run of matching lines. `keep` is the first and the last lines of the output that stay shown.
     Fold {
         target: FoldTarget,
         hidden_rows: Option<u64>,
+        keep: (u32, u32),
         label: String,
     },
     OpenPath {
@@ -159,8 +160,9 @@ fn fold(step: &Step, data: &EventData) -> Result<Planned, String> {
     let a = &step.action;
     let target = a.target.ok_or("no target")?;
     let label = a.label.clone().unwrap_or_default();
+    let keep = (a.keep_head.unwrap_or(0), a.keep_tail.unwrap_or(0));
     if target == FoldTarget::MatchRun {
-        return Ok(Planned::Fold { target, hidden_rows: None, label });
+        return Ok(Planned::Fold { target, hidden_rows: None, keep, label });
     }
     let lines = data.number("output_lines").ok_or("the event has no `output_lines`")?.max(0) as u64;
     let kept = u64::from(a.keep_head.unwrap_or(0)) + u64::from(a.keep_tail.unwrap_or(0));
@@ -174,7 +176,7 @@ fn fold(step: &Step, data: &EventData) -> Result<Planned, String> {
     if hidden > u64::from(MAX_HIDDEN_ROWS) {
         return Err(format!("{hidden} rows are more than one fold may hide ({MAX_HIDDEN_ROWS})"));
     }
-    Ok(Planned::Fold { target, hidden_rows: Some(hidden), label })
+    Ok(Planned::Fold { target, hidden_rows: Some(hidden), keep, label })
 }
 
 fn open_path(step: &Step, source: &Source<'_>) -> Result<Planned, String> {

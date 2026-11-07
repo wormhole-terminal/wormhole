@@ -16,6 +16,8 @@ pub struct Grants {
     pub notify: bool,
     /// Text the terminals hold may reach a hook.
     pub terminal_read: bool,
+    /// The `fold` action: hide finished output behind a marker. Touch ID to grant.
+    pub fold: bool,
     /// Programs a hook's `run` may start, as `permissions.process` spells them.
     pub process: Vec<String>,
     /// Variables a program may be handed, by name.
@@ -29,6 +31,7 @@ impl Grants {
             open: granted("open").map(|p| p.detail.clone()).collect(),
             notify: granted("notify").next().is_some(),
             terminal_read: granted("terminal").any(|p| p.detail.starts_with("read")),
+            fold: granted("fold").next().is_some(),
             process: granted("process").map(|p| p.detail.clone()).collect(),
             env: granted("env").map(|p| p.detail.clone()).collect(),
         }
@@ -156,9 +159,13 @@ do = [{ type = "notify", title = "Bell" }]
 "#;
 
     fn install(root: &DataRoot) {
+        install_manifest(root, MANIFEST);
+    }
+
+    fn install_manifest(root: &DataRoot, manifest: &str) {
         let dir = root.probes_dir().join("acme-tools");
         fs::create_dir_all(&dir).expect("mkdir");
-        fs::write(dir.join("probe.toml"), MANIFEST).expect("manifest");
+        fs::write(dir.join("probe.toml"), manifest).expect("manifest");
     }
 
     fn approve(root: &DataRoot, granted: impl Fn(&DeclaredPermission) -> bool) {
@@ -206,6 +213,41 @@ do = [{ type = "notify", title = "Bell" }]
         let found = matches(&rules, "ACME-42");
         assert_eq!(found.len(), 1);
         assert_eq!(target(&rules, &found[0], "ACME-42"), None);
+        approval::turn_off(&root, "acme-tools").expect("off");
+    }
+
+    #[test]
+    fn folding_is_its_own_grant_and_a_click_cannot_give_it() {
+        let folding = format!(
+            "{}\n[[contributes.hooks]]\nid = \"tidy\"\non = \"command.finished\"\n\
+             do = [{{ type = \"fold\", target = \"block-output\", label = \"build output\" }}]\n",
+            MANIFEST.replace("notify = true", "notify = true\nfold = true")
+        );
+        let tmp = TempDir::new().expect("tempdir");
+        let root = DataRoot::new(tmp.path().join("data"));
+        fs::create_dir_all(root.base()).expect("data dir");
+        install_manifest(&root, &folding);
+        let request = approval::read_one(&root, "acme-tools").expect("a request");
+        let grants = request.initial_grants();
+        assert!(
+            request.confirm(&grants, Proof::Click).is_err(),
+            "a click can be scripted by an injected agent"
+        );
+        assert!(request.confirm(&grants, Proof::TouchId).is_ok());
+        let mut without = request.initial_grants();
+        for permission in request.summary().permissions.iter().filter(|p| p.key == "fold") {
+            without.set(permission, false);
+        }
+        assert!(
+            request.confirm(&without, Proof::Click).is_ok(),
+            "nothing else this Probe asks needs Touch ID"
+        );
+
+        approve(&root, |_| true);
+        assert!(load(&root).probes[0].grants.fold);
+        approval::turn_off(&root, "acme-tools").expect("off");
+        approve(&root, |p| p.key != "fold");
+        assert!(!load(&root).probes[0].grants.fold, "left off on the sheet: no fold");
         approval::turn_off(&root, "acme-tools").expect("off");
     }
 

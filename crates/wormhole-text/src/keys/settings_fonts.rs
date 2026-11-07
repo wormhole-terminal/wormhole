@@ -7,89 +7,89 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Fonts"
-pub const SETTINGS_SECTION_FONTS: Key = Key::new(648);
+pub const SETTINGS_SECTION_FONTS: Key = Key::new(649);
 /// "Terminal first: it's what you read most. Code follows it and Interface uses the system font until you pick one."
-pub const SETTINGS_SECTION_FONTS_INTRO: Key = Key::new(649);
+pub const SETTINGS_SECTION_FONTS_INTRO: Key = Key::new(650);
 /// "Specimen"
-pub const SETTINGS_FONTS_FONT_SPECIMEN: Key = Key::new(650);
+pub const SETTINGS_FONTS_FONT_SPECIMEN: Key = Key::new(651);
 /// "preview sample"
-pub const SETTINGS_FONTS_FONT_SPECIMEN_KEYWORDS: Key = Key::new(651);
+pub const SETTINGS_FONTS_FONT_SPECIMEN_KEYWORDS: Key = Key::new(652);
 /// "Font"
-pub const SETTINGS_FONTS_FONT_TERMINAL: Key = Key::new(652);
+pub const SETTINGS_FONTS_FONT_TERMINAL: Key = Key::new(653);
 /// "The terminal grid"
-pub const SETTINGS_FONTS_FONT_TERMINAL_DESCRIPTION: Key = Key::new(653);
+pub const SETTINGS_FONTS_FONT_TERMINAL_DESCRIPTION: Key = Key::new(654);
 /// "terminal font typeface size monospace jetbrains bundled"
-pub const SETTINGS_FONTS_FONT_TERMINAL_KEYWORDS: Key = Key::new(654);
+pub const SETTINGS_FONTS_FONT_TERMINAL_KEYWORDS: Key = Key::new(655);
 /// "Line height"
-pub const SETTINGS_FONTS_LINE_HEIGHT: Key = Key::new(655);
+pub const SETTINGS_FONTS_LINE_HEIGHT: Key = Key::new(656);
 /// "Terminal rows, as a multiple of the font size"
-pub const SETTINGS_FONTS_LINE_HEIGHT_DESCRIPTION: Key = Key::new(656);
+pub const SETTINGS_FONTS_LINE_HEIGHT_DESCRIPTION: Key = Key::new(657);
 /// "spacing leading"
-pub const SETTINGS_FONTS_LINE_HEIGHT_KEYWORDS: Key = Key::new(657);
+pub const SETTINGS_FONTS_LINE_HEIGHT_KEYWORDS: Key = Key::new(658);
 /// "Ligatures"
-pub const SETTINGS_FONTS_FONT_LIGATURES: Key = Key::new(658);
+pub const SETTINGS_FONTS_FONT_LIGATURES: Key = Key::new(659);
 /// "Join sequences like => and != into one glyph"
-pub const SETTINGS_FONTS_FONT_LIGATURES_DESCRIPTION: Key = Key::new(659);
+pub const SETTINGS_FONTS_FONT_LIGATURES_DESCRIPTION: Key = Key::new(660);
 /// "ligature"
-pub const SETTINGS_FONTS_FONT_LIGATURES_KEYWORDS: Key = Key::new(660);
+pub const SETTINGS_FONTS_FONT_LIGATURES_KEYWORDS: Key = Key::new(661);
 /// "Font"
-pub const SETTINGS_FONTS_FONT_CODE: Key = Key::new(661);
+pub const SETTINGS_FONTS_FONT_CODE: Key = Key::new(662);
 /// "Diffs, commit hashes, file lists, Theme Studio"
-pub const SETTINGS_FONTS_FONT_CODE_DESCRIPTION: Key = Key::new(662);
+pub const SETTINGS_FONTS_FONT_CODE_DESCRIPTION: Key = Key::new(663);
 /// "code font typeface size monospace diff"
-pub const SETTINGS_FONTS_FONT_CODE_KEYWORDS: Key = Key::new(663);
+pub const SETTINGS_FONTS_FONT_CODE_KEYWORDS: Key = Key::new(664);
 /// "Font"
-pub const SETTINGS_FONTS_FONT_INTERFACE: Key = Key::new(664);
+pub const SETTINGS_FONTS_FONT_INTERFACE: Key = Key::new(665);
 /// "Sidebar, panels, settings and controls. The size scales the whole interface"
-pub const SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION: Key = Key::new(665);
+pub const SETTINGS_FONTS_FONT_INTERFACE_DESCRIPTION: Key = Key::new(666);
 /// "interface font typeface size system ui"
-pub const SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS: Key = Key::new(666);
+pub const SETTINGS_FONTS_FONT_INTERFACE_KEYWORDS: Key = Key::new(667);
 /// "Settings text size"
-pub const SETTINGS_FONTS_SETTINGS_TEXT_SIZE: Key = Key::new(667);
+pub const SETTINGS_FONTS_SETTINGS_TEXT_SIZE: Key = Key::new(668);
 /// "The text of the Settings and Theme Studio windows, on top of the interface font's size. The terminal and the main window keep theirs"
-pub const SETTINGS_FONTS_SETTINGS_TEXT_SIZE_DESCRIPTION: Key = Key::new(668);
+pub const SETTINGS_FONTS_SETTINGS_TEXT_SIZE_DESCRIPTION: Key = Key::new(669);
 /// "text size zoom larger bigger smaller scale settings studio window accessibility"
-pub const SETTINGS_FONTS_SETTINGS_TEXT_SIZE_KEYWORDS: Key = Key::new(669);
+pub const SETTINGS_FONTS_SETTINGS_TEXT_SIZE_KEYWORDS: Key = Key::new(670);
 /// "Fonts folder"
-pub const SETTINGS_FONTS_FOLDER: Key = Key::new(670);
+pub const SETTINGS_FONTS_FOLDER: Key = Key::new(671);
 /// "JetBrains Mono comes with Wormhole. To use other fonts without installing them, put .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within seconds"
-pub const SETTINGS_FONTS_FOLDER_DESCRIPTION: Key = Key::new(671);
+pub const SETTINGS_FONTS_FOLDER_DESCRIPTION: Key = Key::new(672);
 /// "custom bundled ttf otf ttc folder"
-pub const SETTINGS_FONTS_FOLDER_KEYWORDS: Key = Key::new(672);
+pub const SETTINGS_FONTS_FOLDER_KEYWORDS: Key = Key::new(673);
 /// "Custom fonts"
-pub const SETTINGS_FONTS_CUSTOM_FONTS: Key = Key::new(673);
+pub const SETTINGS_FONTS_CUSTOM_FONTS: Key = Key::new(674);
 /// "custom families"
-pub const SETTINGS_FONTS_CUSTOM_FONTS_KEYWORDS: Key = Key::new(674);
+pub const SETTINGS_FONTS_CUSTOM_FONTS_KEYWORDS: Key = Key::new(675);
 /// "Open fonts folder"
-pub const SETTINGS_FONTS_OPEN_FONTS_FOLDER: Key = Key::new(675);
+pub const SETTINGS_FONTS_OPEN_FONTS_FOLDER: Key = Key::new(676);
 /// "None yet: the fonts folder is empty."
-pub const SETTINGS_FONTS_NONE_YET: Key = Key::new(676);
+pub const SETTINGS_FONTS_NONE_YET: Key = Key::new(677);
 /// "ligatures on"
-pub const SETTINGS_FONTS_LIGATURES_ON: Key = Key::new(677);
+pub const SETTINGS_FONTS_LIGATURES_ON: Key = Key::new(678);
 /// "ligatures off"
-pub const SETTINGS_FONTS_LIGATURES_OFF: Key = Key::new(678);
+pub const SETTINGS_FONTS_LIGATURES_OFF: Key = Key::new(679);
 /// "Hover a font in a list to preview it here"
-pub const SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST: Key = Key::new(679);
+pub const SETTINGS_FONTS_HOVER_A_FONT_IN_A_LIST: Key = Key::new(680);
 /// "Small"
-pub const SETTINGS_FONTS_TEXT_SIZE_SMALL: Key = Key::new(680);
+pub const SETTINGS_FONTS_TEXT_SIZE_SMALL: Key = Key::new(681);
 /// "Default"
-pub const SETTINGS_FONTS_TEXT_SIZE_DEFAULT: Key = Key::new(681);
+pub const SETTINGS_FONTS_TEXT_SIZE_DEFAULT: Key = Key::new(682);
 /// "Large"
-pub const SETTINGS_FONTS_TEXT_SIZE_LARGE: Key = Key::new(682);
+pub const SETTINGS_FONTS_TEXT_SIZE_LARGE: Key = Key::new(683);
 /// "Larger"
-pub const SETTINGS_FONTS_TEXT_SIZE_LARGER: Key = Key::new(683);
+pub const SETTINGS_FONTS_TEXT_SIZE_LARGER: Key = Key::new(684);
 /// "Search fonts"
-pub const SETTINGS_FONTS_SEARCH_FONTS: Key = Key::new(684);
+pub const SETTINGS_FONTS_SEARCH_FONTS: Key = Key::new(685);
 /// "Bundled"
-pub const SETTINGS_FONTS_BUNDLED: Key = Key::new(685);
+pub const SETTINGS_FONTS_BUNDLED: Key = Key::new(686);
 /// "Loading installed fonts…"
-pub const SETTINGS_FONTS_LOADING_INSTALLED_FONTS: Key = Key::new(686);
+pub const SETTINGS_FONTS_LOADING_INSTALLED_FONTS: Key = Key::new(687);
 /// "Finding monospace fonts…"
-pub const SETTINGS_FONTS_FINDING_MONOSPACE_FONTS: Key = Key::new(687);
+pub const SETTINGS_FONTS_FINDING_MONOSPACE_FONTS: Key = Key::new(688);
 /// "Monospace"
-pub const SETTINGS_FONTS_MONOSPACE: Key = Key::new(688);
+pub const SETTINGS_FONTS_MONOSPACE: Key = Key::new(689);
 /// "All"
-pub const SETTINGS_FONTS_ALL: Key = Key::new(689);
+pub const SETTINGS_FONTS_ALL: Key = Key::new(690);
 
 /// ```text
 /// { $count ->
@@ -98,7 +98,7 @@ pub const SETTINGS_FONTS_ALL: Key = Key::new(689);
 /// }
 /// ```
 pub fn settings_fonts_count(count: i64) -> String {
-    crate::active::message(690, &[("count", Arg::Int(count))])
+    crate::active::message(691, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -108,33 +108,33 @@ pub fn settings_fonts_count(count: i64) -> String {
 /// }
 /// ```
 pub fn settings_fonts_families_found(count: i64, families: &str) -> String {
-    crate::active::message(691, &[("count", Arg::Int(count)), ("families", Arg::Str(families))])
+    crate::active::message(692, &[("count", Arg::Int(count)), ("families", Arg::Str(families))])
 }
 
 /// ```text
 /// { $size } pt
 /// ```
 pub fn settings_fonts_size_points(size: &str) -> String {
-    crate::active::message(692, &[("size", Arg::Str(size))])
+    crate::active::message(693, &[("size", Arg::Str(size))])
 }
 
 /// ```text
 /// { $family } { $size } pt
 /// ```
 pub fn settings_fonts_specimen_size(family: &str, size: &str) -> String {
-    crate::active::message(693, &[("family", Arg::Str(family)), ("size", Arg::Str(size))])
+    crate::active::message(694, &[("family", Arg::Str(family)), ("size", Arg::Str(size))])
 }
 
 /// ```text
 /// line height { $value }
 /// ```
 pub fn settings_fonts_specimen_line_height(value: &str) -> String {
-    crate::active::message(694, &[("value", Arg::Str(value))])
+    crate::active::message(695, &[("value", Arg::Str(value))])
 }
 
 /// ```text
 /// { $theme } colours
 /// ```
 pub fn settings_fonts_specimen_colours(theme: &str) -> String {
-    crate::active::message(695, &[("theme", Arg::Str(theme))])
+    crate::active::message(696, &[("theme", Arg::Str(theme))])
 }

@@ -77,6 +77,26 @@ terminal-fold-hidden = { $count ->
    *[other] { $count } lines hidden
 }
 
+# A fold a Probe made says so: the line, then the Probe's own fixed label. { $line } is the line above, { $label }
+# a short text from the Probe's manifest.
+terminal-fold-labelled = { $line } · { $label }
+
+# What VoiceOver says for a Probe's fold: { $line } is the line above, { $probe } the Probe's name and { $label }
+# its fixed label.
+terminal-fold-spoken-by = { $line } by { $probe }, { $label }
+
+# The tooltip of a Probe's fold. { $probe } is the Probe's name.
+terminal-fold-tooltip-by = Folded by { $probe }
+
+# While a search is open, a fold says how many matches are inside the lines it hides. { $count } is a whole number.
+terminal-fold-matches = { $count ->
+    [one] 1 match inside
+   *[other] { $count } matches inside
+}
+
+# A fold's line with the matches inside it: { $line } is the text before, { $matches } the matches.
+terminal-fold-with-matches = { $line } · { $matches }
+
 # The same line while the folded output is shown (clicking it folds the output again), and what VoiceOver
 # announces when a fold is opened. { $count } is a whole number of lines.
 terminal-fold-shown = { $count ->

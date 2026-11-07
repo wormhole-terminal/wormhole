@@ -452,6 +452,7 @@ fn describe(permission: &DeclaredPermission) -> String {
         "notify" => text(SETTINGS_EXTENSIONS_PERM_NOTIFY).to_string(),
         "agents" => settings_extensions_perm_agents(detail.strip_prefix("install-hooks:").unwrap_or(&detail)),
         "main" => text(SETTINGS_EXTENSIONS_PERM_CODE).to_string(),
+        "fold" => text(SETTINGS_EXTENSIONS_PERM_FOLD).to_string(),
         key => settings_extensions_perm_other(key, &detail),
     }
 }

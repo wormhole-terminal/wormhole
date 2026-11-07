@@ -132,7 +132,9 @@ mod panel_tab_tests;
 mod panes;
 mod plays_motion;
 mod probes;
-pub(crate) use self::probes::{open_offered_file, terminal_folder, window_of};
+pub(crate) use self::probes::{fold_probe_output, open_offered_file, terminal_folder, window_of};
+#[cfg(test)]
+mod folds_tests;
 #[cfg(test)]
 mod probes_tests;
 #[cfg(test)]
@@ -485,6 +487,8 @@ impl Workspace {
         .detach();
         cx.observe_global::<crate::settings::SettingsStore>(|this, cx| {
             this.sync_sidebar_soon(cx);
+            // "Never hide lines", or the flag that lets lines be hidden.
+            this.sync_folds(cx);
             // The setting went off (the flag, hosts, or the text setting): the hosts stop writing and what they
             // wrote goes.
             if !restart_restore::on(&this.profile, cx) {

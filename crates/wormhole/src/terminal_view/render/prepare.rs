@@ -141,6 +141,7 @@ impl Prepare {
         let mut state = self.state.borrow_mut();
         let RenderState { frame: cache, images: image_cache, words, outlines, .. } = &mut *state;
         let mut found = Vec::new();
+        let mut fold_found = Vec::new();
         let mut ticks = Vec::new();
         let palette = &self.palette;
         let has_terminal = self.entity.update(cx, |this, cx| {
@@ -151,6 +152,7 @@ impl Prepare {
             pty.snapshot(&mut cache.snapshot);
             span.end(Part::Snapshot);
             found = this.found_rows(&cache.snapshot);
+            fold_found = this.fold_matches(&cache.snapshot);
             ticks = this.found_ticks(&cache.snapshot);
             this.probe_marks(&mut cache.decor, &cache.snapshot, cx);
             this.mode = cache.snapshot.mode;
@@ -248,7 +250,8 @@ impl Prepare {
             (paints, over)
         });
         images_span.end(Part::Images);
-        let folds = folds::markers(&cache.snapshot, geometry, cols, self.ui, &self.entity, window, cx);
+        let folds =
+            folds::markers(&cache.snapshot, &fold_found, geometry, cols, self.ui, &self.entity, window, cx);
         Some(Frame {
             geometry,
             reach,

@@ -586,6 +586,7 @@ impl TerminalView {
                     cx.emit(TerminalEvent::Printed);
                 }
                 self.check_cwd_soon(cx);
+                self.check_secret_input(cx);
                 // Ignore what answers us, and whatever a shell with integration prints at its
                 // prompt.
                 let quiet = self.reported()
@@ -624,12 +625,17 @@ impl TerminalView {
             PtyEvent::ProgramStatus => {
                 self.sync_reported(true);
                 self.sync_progress_timer(cx);
+                // A program that says it needs input: what is hidden near its question shows, for good.
+                if self.reported() && self.status == Status::Attention {
+                    self.open_recent_folds(cx);
+                }
             }
             PtyEvent::HostResponsiveness => {
                 self.host_answers_again();
                 cx.notify();
             }
             PtyEvent::Bell => {
+                self.open_recent_folds(cx);
                 let since = self.bell_counted.map(|at| at.elapsed());
                 let bell = on_bell(self.status, self.reported(), self.agent.is_some(), since);
                 self.bell_rang |= bell.mark;

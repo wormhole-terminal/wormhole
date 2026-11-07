@@ -19,6 +19,7 @@ use wormhole_core::probe::manifest::HookEvent;
 use wormhole_core::probe::open_path::PathRef;
 use wormhole_core::storage::paths::DataRoot;
 use wormhole_core::view::notice::{Notice, Warning};
+use wormhole_term::folds::FoldOwner;
 use wormhole_text::keys;
 
 use crate::app_state::AppState;
@@ -58,6 +59,13 @@ pub(super) fn carry_out(effects: Vec<Effect>, feed: &smol::channel::Sender<Feed>
             Effect::Highlight { tone, terminal, block, .. } => {
                 if let Ok(block) = u64::try_from(block) {
                     probe_runtime::mark_block(terminal, block, tone, cx);
+                }
+            }
+            Effect::Fold { probe, probe_name, terminal, block, label, keep } => {
+                // Text a Probe chose, shown on a marker and read by VoiceOver: made visible, cut to fit.
+                let owner = FoldOwner { probe, name: shown(&probe_name), label: shown(&label) };
+                if let Ok(block) = u64::try_from(block) {
+                    crate::window::fold_probe_output(terminal, block, owner, keep, cx);
                 }
             }
             Effect::OpenPath { probe_name, terminal, path, line, .. } => {

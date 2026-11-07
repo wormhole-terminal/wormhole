@@ -135,6 +135,8 @@ pub enum ActionId {
     SelectOutput,
     CopyOutput,
     CopyCommand,
+    /// Edit → Show Hidden Lines: opens every fold in this terminal (only with the Fold output flag on).
+    ShowHiddenLines,
     /// "Put Command at Prompt": it once ran the command ("Rerun Command"), and the id stays so a
     /// key bound to it keeps working.
     RerunCommand,

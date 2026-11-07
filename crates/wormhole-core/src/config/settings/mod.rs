@@ -319,6 +319,9 @@ pub struct Settings {
     /// Whether a new worktree starts with copy-on-write clones of the main checkout's `node_modules`
     /// and `target` folders (macOS, APFS), so installs and builds start warm.
     pub worktree_clone_build_folders: bool,
+    /// Never hide lines: the view shows every line, whatever a fold would hide (the Fold output
+    /// feature), and nothing is folded while it is on. Applies at once, to every terminal.
+    pub never_hide_lines: bool,
 
     /// Features still behind a flag (see [`crate::config::features`]). The key is a [`FeatureFlag`]'s
     /// `key`, the value whether it is on. Only a development build, the Unstable channel or a Stable
@@ -435,6 +438,7 @@ impl Default for Settings {
             clipboard_write: ClipboardWrite::default(),
             worktree_base: String::new(),
             worktree_clone_build_folders: false,
+            never_hide_lines: false,
             feature_flags: BTreeMap::new(),
             features: BTreeMap::new(),
         }

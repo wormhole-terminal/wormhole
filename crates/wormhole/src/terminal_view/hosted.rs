@@ -402,6 +402,7 @@ impl TerminalView {
             pty.resize(size);
         }
         self.pty = Some(pty);
+        self.sync_folds(cx);
         // The window's place goes to the new engine on the next frame.
         self.window_given = None;
         self.listen(events, cx);
