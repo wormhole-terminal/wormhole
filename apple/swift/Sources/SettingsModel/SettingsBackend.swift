@@ -1,0 +1,34 @@
+// The seam to the settings the Rust core holds (`config.json` through `Config::update`): values by key, writes,
+// resets and a change notification. The real one arrives with the FFI (`SettingsHandle`); until then a mock
+// keeps the values in memory. Keys are `config.json`'s, a path for a key inside an object (`motion.insert`).
+// Writes are sanitised on the Rust side, so a caller reads back what stuck.
+
+@MainActor
+public protocol SettingsBackend: AnyObject {
+    /// The effective values of every key the schema names (a key the file lacks has its default).
+    var values: [String: JSONValue] { get }
+    func set(_ key: String, to value: JSONValue)
+    /// Puts keys back at their defaults (the reset arrow of a row, Reset All).
+    func reset(_ keys: [String])
+    /// Calls `onChange` after any write, from anywhere (a hand edit of the file, another window).
+    func observe(_ onChange: @escaping @MainActor () -> Void) -> SettingsObservation
+}
+
+/// Keeps an observation alive; dropping it stops it. `cancel` may run on any thread (a deinit does), so it
+/// hands the work back to the main actor itself.
+public final class SettingsObservation: Sendable {
+    private let cancel: @Sendable () -> Void
+    public init(cancel: @escaping @Sendable () -> Void) { self.cancel = cancel }
+    deinit { cancel() }
+}
+
+/// What the platform provides that is not a stored value: the options of selects that list apps, shells and icon
+/// themes, system fonts, and what a button does.
+@MainActor
+public protocol SettingsHost: AnyObject {
+    func options(for source: OptionSource) -> [SettingOption]
+    func fontFamilies() -> [String]
+    func perform(_ action: SettingsAction)
+    /// What the agents, import and profile pages list.
+    func panelRecords() -> PanelRecords
+}

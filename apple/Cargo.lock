@@ -2435,11 +2435,14 @@ dependencies = [
 name = "wormhole-ffi"
 version = "0.0.0"
 dependencies = [
+ "serde",
+ "serde_json",
  "smol",
  "thiserror",
  "uniffi",
  "wormhole-core",
  "wormhole-term",
+ "wormhole-text",
 ]
 
 [[package]]

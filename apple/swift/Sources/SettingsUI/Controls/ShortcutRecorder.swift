@@ -1,0 +1,73 @@
+// The shortcut recorder row (`recorder.rs`): the keys as caps; a click starts recording (the field says what to
+// press), the next shortcut is the value, Esc cancels and ⌫ clears. The key capture is an `NSView` because
+// SwiftUI hands Esc, Tab and ⌘-keys to the focus system before a view can see them.
+
+import AppKit
+import DesignSystem
+import SwiftUI
+
+struct ShortcutRecorder: View {
+    let spec: String
+    let label: String
+    let onChange: (String) -> Void
+    @Environment(\.tokens) private var tokens
+    @State private var recording = false
+    @State private var rejected = false
+
+    var body: some View {
+        Button { recording.toggle() } label: {
+            HStack(spacing: Space._1) {
+                if recording {
+                    Text(SettingsText.recorderPrompt).foregroundStyle(tokens.textMuted)
+                } else if spec.isEmpty {
+                    Text(SettingsText.recorderNone).foregroundStyle(tokens.textFaint)
+                } else {
+                    ForEach(Array(KeySpecText.caps(spec).enumerated()), id: \.offset) { _, cap in KeyCapView(text: cap) }
+                }
+                Spacer(minLength: 0)
+            }
+            .font(.system(size: TextRole.label.size))
+            .padding(.horizontal, Space._2)
+            .frame(width: SettingsMetric.controlWidth, height: Metric.control)
+            .background(tokens.controlBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
+            .overlay {
+                RoundedRectangle(cornerRadius: tokens.metrics.radius)
+                    .strokeBorder(rejected ? tokens.statusDanger : tokens.inputBorderFocus, lineWidth: recording || rejected ? tokens.metrics.focusRingWidth : 0)
+            }
+            .background { if recording { KeyCapture(onKey: record) } }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityValue(spec.isEmpty ? SettingsText.recorderNone : KeySpecText.caps(spec).joined(separator: " "))
+        .accessibilityHint(SettingsText.recorderPrompt)
+    }
+
+    private func record(_ key: RecordedKey) {
+        switch key {
+        case .cancel: recording = false
+        case .clear:
+            onChange("")
+            recording = false
+        case .spec(let spec) where KeySpecText.isUsable(spec):
+            rejected = false
+            onChange(spec)
+            recording = false
+        case .spec:
+            rejected = true
+        }
+    }
+}
+
+private struct KeyCapView: View {
+    let text: String
+    @Environment(\.tokens) private var tokens
+    var body: some View {
+        Text(text)
+            .font(.system(size: TextRole.caption.size, weight: .medium))
+            .padding(.horizontal, Space._1)
+            .frame(minWidth: Metric.keyCapMinWidth - 8, minHeight: Metric.keyCapHeight)
+            .background(tokens.controlSelected, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
+            .foregroundStyle(tokens.textPrimary)
+    }
+}

@@ -14,6 +14,7 @@ mod error;
 mod events;
 mod frame;
 mod isolation;
+pub mod settings_dump;
 mod terminal;
 pub mod theme_dump;
 mod theme_json;

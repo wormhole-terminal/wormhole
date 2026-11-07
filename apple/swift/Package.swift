@@ -46,6 +46,12 @@ var targets: [Target] = [
     // minimap, print and export. Over protocols that the Rust FFI backs later; no dependency on a feature module.
     .target(name: "TerminalUI", dependencies: ["DesignSystem", "TerminalCore"]),
     .testTarget(name: "TerminalUITests", dependencies: ["TerminalUI", "DesignSystem", "TerminalCore"]),
+    // The settings window's schema (generated from the Rust settings index by `apple/scripts/dump-settings.sh`),
+    // values, search, change tracking and the backend seam. Foundation only.
+    .target(name: "SettingsModel", resources: [.copy("Resources/settings.json")]),
+    // The settings window: nav, search, preview strip, the rows and their controls, drawn from the schema.
+    .target(name: "SettingsUI", dependencies: ["SettingsModel", "DesignSystem"]),
+    .testTarget(name: "SettingsTests", dependencies: ["SettingsModel", "SettingsUI", "DesignSystem"]),
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),
     .testTarget(name: "UITests", dependencies: ["WorkspaceModel", "DesignSystem", "SidebarUI", "WindowUI"]),
 ]

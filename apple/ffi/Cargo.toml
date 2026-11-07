@@ -14,10 +14,13 @@ crate-type = ["staticlib", "lib"]
 [dependencies]
 wormhole-core = { path = "../../crates/wormhole-core" }
 wormhole-term = { path = "../../crates/wormhole-term" }
+wormhole-text = { path = "../../crates/wormhole-text" }
 uniffi = "0.32"
 thiserror = "2"
 # Blocks the event thread on `PtyEvents::recv`, which is async (already in the tree through core).
 smol = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
 
 [lints]
 workspace = true
