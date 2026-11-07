@@ -50,8 +50,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     Setting::block("count-details", draw_count_details),
 ];
 
-/// Privacy → what an update check sends: this Mac's own user agent word for word, the daily and
-/// monthly flag, what is never sent, and in the first day how long until the first count.
+/// Privacy: what update checks send, with example headers for the current sharing setting.
 fn draw_count_details(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
     // The version and the Mac don't change while the app runs; the system's version is read once.
     static MAC: OnceLock<Option<(semver::Version, String, Option<semver::Version>)>> = OnceLock::new();
@@ -62,76 +61,56 @@ fn draw_count_details(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> A
     let ui = ui(cx);
     let (code, _) = crate::fonts::code_font(cx);
     let (counting, channel) = (settings(cx).anonymous_count, settings(cx).update_channel);
-    let agent = mac.as_ref().map(|(version, platform, system)| match counting {
-        true => counted_user_agent(version, channel, platform, system.as_ref()),
-        false => plain_user_agent(version),
+    let starts = counting.then(|| cx.global::<Updates>().count_starts_in()).flatten();
+    let sharing = counting && starts.is_none();
+    let agent = mac.as_ref().map(|(version, platform, system)| {
+        if sharing {
+            counted_user_agent(version, channel, platform, system.as_ref())
+        } else {
+            plain_user_agent(version)
+        }
     });
-    let starts = counting
-        .then(|| cx.global::<Updates>().count_starts_in())
-        .flatten()
-        .map(|left| settings_updates_count_starts_in(whole(left.as_secs().div_ceil(3600))));
-    let code_line = |line: SharedString| div().font_family(code.clone()).text_color(ui.text).child(line);
-    let line = |label: &'static str, values: Vec<AnyElement>, why: Option<SharedString>| {
+    let row = |label: &'static str, details: &'static str, example: Option<SharedString>| {
         div()
             .flex()
-            .gap_4()
+            .flex_col()
+            .gap_1()
             .py_2()
-            .child(div().w(px(DETAIL_LABEL_W)).flex_none().text_body().text_color(ui.muted).child(label))
-            .child(
-                div()
-                    .flex_1()
-                    .min_w_0()
-                    .flex()
-                    .flex_col()
-                    .gap_1()
-                    .text_body()
-                    .children(values)
-                    .children(why.map(|why| div().text_caption().text_color(ui.muted).child(why))),
-            )
+            .child(div().text_label().text_color(ui.text).child(label))
+            .child(div().text_body().text_color(ui.muted).child(details))
+            .children(example.map(|example| {
+                div().text_caption().font_family(code.clone()).text_color(ui.muted).child(example)
+            }))
+            .into_any_element()
     };
-    let every = line(
+    let every = row(
         text(SETTINGS_UPDATES_COUNT_EVERY_CHECK),
-        agent.map(|agent| code_line(agent.into()).into_any_element()).into_iter().collect(),
-        Some(
-            text(if counting {
-                SETTINGS_UPDATES_COUNT_EVERY_CHECK_COUNTED
-            } else {
-                SETTINGS_UPDATES_COUNT_EVERY_CHECK_PLAIN
-            })
-            .into(),
-        ),
+        text(if sharing {
+            SETTINGS_UPDATES_COUNT_EVERY_CHECK_COUNTED
+        } else {
+            SETTINGS_UPDATES_COUNT_EVERY_CHECK_PLAIN
+        }),
+        agent.map(Into::into),
     );
-    let first = counting.then(|| {
-        line(
+    let first = sharing.then(|| {
+        row(
             text(SETTINGS_UPDATES_COUNT_FIRST_CHECK),
-            COUNT_HEADERS.iter().map(|header| code_line((*header).into()).into_any_element()).collect(),
-            Some(text(SETTINGS_UPDATES_COUNT_FIRST_CHECK_WHY).into()),
+            text(SETTINGS_UPDATES_COUNT_FIRST_CHECK_WHY),
+            Some("Wormhole-Count: day, month".into()), // text: protocol, sent as is
         )
     });
-    let never = line(
-        text(SETTINGS_UPDATES_COUNT_NEVER),
-        vec![div().text_color(ui.text).child(text(SETTINGS_UPDATES_COUNT_NEVER_WHAT)).into_any_element()],
-        None,
-    );
+    let private = row(text(SETTINGS_UPDATES_COUNT_NEVER), text(SETTINGS_UPDATES_COUNT_NEVER_WHAT), None);
     div()
         .flex()
         .flex_col()
         .gap_2()
-        .children(starts.map(|starts| style::banner(ui, style::BannerKind::Info, false, starts)))
-        .child(style::setting_group(
-            ui,
-            [every.into_any_element()]
-                .into_iter()
-                .chain(first.map(IntoElement::into_any_element))
-                .chain([never.into_any_element()]),
-        ))
+        .children(starts.map(|left| {
+            let notice = settings_updates_count_starts_in(whole(left.as_secs().div_ceil(3600)));
+            style::banner(ui, style::BannerKind::Info, false, notice)
+        }))
+        .child(style::setting_group(ui, [every].into_iter().chain(first).chain([private])))
         .into_any_element()
 }
-
-/// The width of the labels of what an update check sends.
-const DETAIL_LABEL_W: f32 = 220.0;
-/// The header of the first check of a day and of a month, as `update::Count` sends it.
-const COUNT_HEADERS: [&str; 2] = ["Wormhole-Count: day", "Wormhole-Count: month"]; // text: protocol, sent as is
 
 /// The meter of a download.
 const METER_W: f32 = 120.0;

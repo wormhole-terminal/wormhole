@@ -346,6 +346,7 @@ impl SettingsWindow {
             .flex()
             .flex_col()
             .gap_1()
+            .pl_4()
             .child(
                 div()
                     .flex()

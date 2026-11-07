@@ -34,11 +34,11 @@ pub const SETTINGS_UPDATES_UPDATE_STATUS: Key = Key::new(1193);
 pub const SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS: Key = Key::new(1194);
 /// "Privacy"
 pub const SETTINGS_UPDATES_GROUP_PRIVACY: Key = Key::new(1195);
-/// "Wormhole has no analytics, telemetry or crash reports. Update checks are counted, so we know how many people use Wormhole and which Macs and macOS versions to keep supporting, with nothing that tells one Mac from another."
+/// "Update checks go to Wormhole’s download server, which redirects them to GitHub."
 pub const SETTINGS_UPDATES_GROUP_PRIVACY_BLURB: Key = Key::new(1196);
-/// "Count this Mac anonymously"
+/// "Share update statistics"
 pub const SETTINGS_UPDATES_ANONYMOUS_COUNT: Key = Key::new(1197);
-/// "The first update check of a day and of a month says so. Off, a check sends the version alone"
+/// "Share your chip type and macOS version, and include this installation in daily and monthly counts."
 pub const SETTINGS_UPDATES_ANONYMOUS_COUNT_DESCRIPTION: Key = Key::new(1198);
 /// "analytics telemetry privacy usage statistics count tracking"
 pub const SETTINGS_UPDATES_ANONYMOUS_COUNT_KEYWORDS: Key = Key::new(1199);
@@ -78,19 +78,19 @@ pub const SETTINGS_UPDATES_DONT_RESTART: Key = Key::new(1215);
 pub const SETTINGS_UPDATES_RESTART_NOW: Key = Key::new(1216);
 /// "Check now"
 pub const SETTINGS_UPDATES_CHECK_NOW: Key = Key::new(1217);
-/// "Every check"
+/// "Every update check"
 pub const SETTINGS_UPDATES_COUNT_EVERY_CHECK: Key = Key::new(1219);
-/// "The version, the update channel, Apple silicon or Intel, and the macOS version: the same on thousands of Macs."
+/// "The app version, requested update feed, update channel, chip type, and macOS major version."
 pub const SETTINGS_UPDATES_COUNT_EVERY_CHECK_COUNTED: Key = Key::new(1220);
-/// "The version alone."
+/// "The app version and requested update feed."
 pub const SETTINGS_UPDATES_COUNT_EVERY_CHECK_PLAIN: Key = Key::new(1221);
-/// "First check of a day or month"
+/// "First check each day or month"
 pub const SETTINGS_UPDATES_COUNT_FIRST_CHECK: Key = Key::new(1222);
-/// "Adding these up gives how many copies of Wormhole run each day and each month."
+/// "The server uses a day or month flag to estimate active installations. Both flags can be sent together. Day and month boundaries use UTC."
 pub const SETTINGS_UPDATES_COUNT_FIRST_CHECK_WHY: Key = Key::new(1223);
-/// "Never"
+/// "IP address and private data"
 pub const SETTINGS_UPDATES_COUNT_NEVER: Key = Key::new(1224);
-/// "An ID, your name or account, your files or what your terminals show. The server sees your IP address, as with any request, and doesn't keep it."
+/// "The download server sees your IP address. The update counter does not store it. Update requests exclude device IDs, account details, files, and terminal contents."
 pub const SETTINGS_UPDATES_COUNT_NEVER_WHAT: Key = Key::new(1225);
 /// "Fixes a critical-severity security issue."
 pub const SETTINGS_UPDATES_FIXES_CRITICAL: Key = Key::new(1232);
@@ -103,8 +103,8 @@ pub const SETTINGS_UPDATES_FIXES_LOW: Key = Key::new(1235);
 
 /// ```text
 /// { $count ->
-///     [one] The first count is sent in { $count } hour. Until then an update check sends the version alone, so there's time to turn this off.
-///    *[other] The first count is sent in { $count } hours. Until then an update check sends the version alone, so there's time to turn this off.
+///     [one] Sharing starts in about { $count } hour, with your next update check.
+///    *[other] Sharing starts in about { $count } hours, with your next update check.
 /// }
 /// ```
 pub fn settings_updates_count_starts_in(count: i64) -> String {
