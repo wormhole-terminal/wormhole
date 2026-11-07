@@ -181,7 +181,8 @@ const BUDGET: [(&str, u64); 20] = [
     // 6,912 measured, a row fewer.
     // The Restore after restart flag is one switch row more again: 7,271 measured (about 340 a row).
     // The File icon themes flag is one switch row more again: 7,577 measured (about 305 a row).
-    ("FeatureFlags", 7486),
+    // The Fold output flag is one more: 7,803 measured (about 297 a row).
+    ("FeatureFlags", 7786),
     // Settings → Components, a development tool: every specimen of the controls on one page, many times what any
     // other page draws (nobody opens it but the owner tuning the look). The nav's one row more, Components, raised
     // every other page by 91, and Feature flags by 464 more with the flag's switch row.
