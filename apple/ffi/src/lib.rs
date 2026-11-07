@@ -36,6 +36,7 @@ pub use git::{
     Git, GitBackendError, GitChange, GitChangeKind, GitCommitDetails, GitDiff, GitEnvVar, GitListener,
     GitLog, GitLogCommit, GitRef, GitRefKind, GitRev, GitRevKind, GitSignature, GitStatus, GitWatch,
     GitWorktree, GitWorktreePlan, WorktreeService,
+};
 pub use files_panel::{
     ApproveOutcome, DirectoryRecord, EntryRecord, FileContentRecord, FileEntryKind, FileProblem,
     FilesFailure, FilesService, FolderPaintRecord, FolderWatch, NewTerminalRecord, NoteSaved, NotesDocRecord,

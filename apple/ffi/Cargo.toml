@@ -20,7 +20,6 @@ tracing = "0.1"
 semver = "1"
 uniffi = "0.32"
 thiserror = "2"
-tracing = "0.1"
 # Blocks the event thread on `PtyEvents::recv`, which is async (already in the tree through core).
 smol = "2"
 serde = { version = "1", features = ["derive"] }
@@ -35,6 +34,5 @@ flate2 = "1.1"
 minisign = "0.9"
 sha2 = "0.11"
 tar = { version = "0.4", default-features = false }
-tempfile = "3"
 tiny_http = "0.12"
 wormhole-term = { path = "../../crates/wormhole-term", features = ["test-support"] }
