@@ -671,7 +671,7 @@ impl SettingsWindow {
                     .width(px(*width))
                     .with_menu(spoken, label, move |cx| {
                         if let Some(touched) = setting.touched {
-                            owner.update(cx, |this, cx| touched(this, cx)).ok();
+                            owner.update(cx, touched).ok();
                         }
                         select_menu(id, cx).unwrap_or_default()
                     })

@@ -271,6 +271,9 @@ pub fn segmented_form(ui: UiColors) -> Div {
         .when(ui.increase_contrast, |d| d.outlined_always(ui, ui.border_strong))
 }
 
+/// Called with the index of the segment a segmented control chose.
+type SegmentChanged = Rc<dyn Fn(usize, &mut Window, &mut App)>;
+
 /// A settings segmented control with one Tab stop and arrow-key selection.
 #[derive(IntoElement)]
 pub struct FormSegments {
@@ -278,7 +281,7 @@ pub struct FormSegments {
     ui: UiColors,
     options: Vec<(Option<IconName>, SharedString)>,
     active: usize,
-    on_change: Rc<dyn Fn(usize, &mut Window, &mut App)>,
+    on_change: SegmentChanged,
 }
 
 #[track_caller]
