@@ -79,8 +79,10 @@ public protocol FrameSource: AnyObject, Sendable {
 
     /// Bytes for the program (typed text, a paste already encoded).
     func write(_ bytes: Data)
-    /// A key press the source encodes itself (the real engine knows the keyboard modes the program
-    /// set). Whether it handled the key; `false` makes the view encode and `write`.
+    /// Whether the source encodes key presses itself (the real engine knows the keyboard modes the program
+    /// set). When it does not, the view encodes the key and `write`s the bytes.
+    var encodesKeys: Bool { get }
+    /// A key press for the source to encode; whether it sent anything. Only called when `encodesKeys`.
     func sendKey(_ key: KeyInput) -> Bool
     /// Pasted text; the source adds bracketed-paste markers when the program asked for them.
     func paste(_ text: String)
@@ -91,6 +93,7 @@ public protocol FrameSource: AnyObject, Sendable {
 }
 
 extension FrameSource {
+    public var encodesKeys: Bool { false }
     public func sendKey(_ key: KeyInput) -> Bool { false }
     public func paste(_ text: String) {
         write(Data(text.replacingOccurrences(of: "\r\n", with: "\r").replacingOccurrences(of: "\n", with: "\r").utf8))

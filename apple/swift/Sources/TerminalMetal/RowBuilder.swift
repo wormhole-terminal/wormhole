@@ -239,8 +239,8 @@ final class RowBuilder {
         switch cursor.shape {
         case .beam: quad(x, top, thickness, cellHeight)
         case .underline: quad(x, top + cellHeight - thickness, width, thickness)
-        case .block:
-            // Not focused: an outline, so the text under it stays readable.
+        case .block, .hollow:
+            // Not filled (not focused, or asked for): an outline, so the text under it stays readable.
             quad(x, top, width, thickness)
             quad(x, top + cellHeight - thickness, width, thickness)
             quad(x, top + thickness, thickness, cellHeight - 2 * thickness)

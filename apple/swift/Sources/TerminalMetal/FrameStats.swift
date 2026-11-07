@@ -3,14 +3,17 @@
 //
 //   fetch   `FrameSource.frame()`: for the real source the Rust snapshot under the screen's lock plus the
 //           pack and the lift into `Data`; for the mock a copy of its damaged rows.
-//   build   parsing the header, copying the changed rows into the grid, and rebuilding their instances
+//   apply   parsing the header, copying the changed rows into the grid, and rebuilding their instances
 //           (word cache, atlas misses included): everything between "bytes" and "instances".
-//   encode  filling the GPU buffers from every row's instances, encoding the pass, and `commit`.
-//   draw    fetch + build. This is the closest match to GPUI's `frames N`, which times `window.draw`: the
+//   assemble  filling the GPU buffers from every row's instances (a copy of what `apply` built).
+//   build   fetch + apply + assemble: from just before `frame()` to the instance buffers being complete.
+//           This is what MEASURING.md compares with GPUI's `frames N`, which times `window.draw`: the
 //           snapshot copy and the scene build, and not the platform's Metal encode that follows it.
-//   total   fetch + build + encode.
-//   cpu     the thread's CPU time (`CLOCK_THREAD_CPUTIME_ID`) over the same span as `total`; with no
-//           waiting in the span it should equal `total` within the clock's noise.
+//   encode  creating, encoding and committing the command buffer (CPU only).
+//   total   build + encode: what GPUI's timed region leaves out is in it.
+//   wait    blocking for a free frame in flight or a drawable; not CPU work, so in neither build nor encode.
+//   cpu     the thread's CPU time (`CLOCK_THREAD_CPUTIME_ID`) over the whole draw, waits included in the
+//           span but not in the time (a blocked thread uses none).
 //   gpu     the command buffer's `gpuEndTime - gpuStartTime`; GPUI does not report one.
 //
 // All durations are wall-clock nanoseconds from `CLOCK_UPTIME_RAW` unless named cpu.
@@ -25,15 +28,17 @@ public enum MonotonicClock {
 
 public struct FrameSample: Sendable {
     public var fetchNs: UInt64
-    public var buildNs: UInt64
+    public var applyNs: UInt64
+    public var assembleNs: UInt64
     public var encodeNs: UInt64
+    public var waitNs: UInt64
     public var cpuNs: UInt64
     public var rowsRebuilt: Int
     public var changedRows: Int
     public var outcome: DrawOutcome
 
-    public var drawNs: UInt64 { fetchNs + buildNs }
-    public var totalNs: UInt64 { fetchNs + buildNs + encodeNs }
+    public var buildNs: UInt64 { fetchNs + applyNs + assembleNs }
+    public var totalNs: UInt64 { buildNs + encodeNs }
 }
 
 /// Counters the view keeps for the idle check and the report.

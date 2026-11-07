@@ -21,8 +21,11 @@ public final class MetalTerminalView: NSView {
     /// Records every draw's phases when set (the measuring mode).
     public var sampler: FrameSampler?
     public private(set) var statistics = ViewStatistics()
+    public var isLinkRunning: Bool { link.map { !$0.isPaused } ?? false }
     /// Option on the left side sends ESC before the character.
     public var leftOptionAsMeta = true
+    /// A grid of this size whatever the view's size (the measuring mode's 200 x 69).
+    public var fixedGrid: (cols: Int, rows: Int)?
     /// How long a blinking cursor is on and off; `nil` keeps it steady.
     public var blinkInterval: Duration? = .milliseconds(530)
 
@@ -37,6 +40,7 @@ public final class MetalTerminalView: NSView {
     var markedString = ""
     var markedCaret = 0
     var pendingKey: KeyInput?
+    var scrollRemainder: CGFloat = 0
     var handledByInputMethod = false
 
     public init(source: any FrameSource, configuration: RendererConfiguration, frame: NSRect = NSRect(x: 0, y: 0, width: 960, height: 600)) throws {
@@ -83,6 +87,7 @@ public final class MetalTerminalView: NSView {
             self, selector: #selector(keyStateChanged), name: NSWindow.didBecomeKeyNotification, object: window)
         NotificationCenter.default.addObserver(
             self, selector: #selector(keyStateChanged), name: NSWindow.didResignKeyNotification, object: window)
+        renderer.setFocused(window?.isKeyWindow ?? false)
         syncSurface()
         startSourceIfNeeded()
         requestRedraw()
@@ -144,7 +149,7 @@ public final class MetalTerminalView: NSView {
             layer.drawableSize = pixels
             requestRedraw()
         }
-        let (cols, rows) = renderer.grid(fittingPixels: Int(pixels.width), Int(pixels.height))
+        let (cols, rows) = fixedGrid ?? renderer.grid(fittingPixels: Int(pixels.width), Int(pixels.height))
         let cell = renderer.cellPixels
         let size = GridSize(cols: cols, rows: rows, cellWidth: Float(Double(cell.width) / renderer.scale), cellHeight: Float(Double(cell.height) / renderer.scale))
         guard size != gridSize else { return }
@@ -207,8 +212,9 @@ public final class MetalTerminalView: NSView {
         return output
     }
 
-    /// Fetch, build, draw: one frame, timed by phase. With `force`, draws even when the frame changed
-    /// nothing (the measuring mode's forced draws).
+    /// Fetch, build, draw: one frame, timed by phase (`FrameStats.swift` says what each is). With `force`,
+    /// draws even when the frame changed nothing, and waits for a free frame instead of skipping: the
+    /// measuring mode's forced draws.
     @discardableResult
     public func drawFrame(force: Bool = false) -> FrameSample {
         let cpuStart = MonotonicClock.threadCPU()
@@ -220,16 +226,20 @@ public final class MetalTerminalView: NSView {
             FileHandle.standardError.write(Data("bad frame: \(error)\n".utf8))
         }
         let t2 = MonotonicClock.now()
-        var outcome = DrawOutcome.drawn
-        if force || renderer.needsDraw || renderer.counters.frames <= 1 {
-            outcome = metalLayer.map { renderer.draw(in: $0) } ?? .noDrawable
-            if outcome == .drawn { statistics.framesDrawn += 1 }
+        var timings = DrawTimings(outcome: .drawn)
+        if force || renderer.needsDraw {
+            if let layer = metalLayer {
+                timings = renderer.draw(in: layer, blocking: force)
+            } else {
+                timings.outcome = .noDrawable
+            }
+            if timings.outcome == .drawn { statistics.framesDrawn += 1 }
         }
-        let t3 = MonotonicClock.now()
         updateBlink()
         let sample = FrameSample(
-            fetchNs: t1 - t0, buildNs: t2 - t1, encodeNs: t3 - t2, cpuNs: MonotonicClock.threadCPU() - cpuStart,
-            rowsRebuilt: rebuilt, changedRows: renderer.scene.header?.changedRows ?? 0, outcome: outcome)
+            fetchNs: t1 - t0, applyNs: t2 - t1, assembleNs: timings.assembleNs, encodeNs: timings.encodeNs,
+            waitNs: timings.waitNs, cpuNs: MonotonicClock.threadCPU() - cpuStart, rowsRebuilt: rebuilt,
+            changedRows: renderer.scene.header?.changedRows ?? 0, outcome: timings.outcome)
         sampler?.record(sample)
         return sample
     }

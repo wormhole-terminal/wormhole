@@ -11,15 +11,21 @@ import Synchronization
 import TerminalCore
 
 public struct RendererConfiguration: Sendable {
-    public var fontFamily: String
+    public var font: FontSpec
     public var pointSize: Double
+    /// A multiple of the font size; `nil` takes the font's own line.
+    public var lineHeight: Double?
     /// Device pixels per point.
     public var scale: Double
     public var palette: TerminalPalette
 
-    public init(fontFamily: String = "Menlo", pointSize: Double = 13, scale: Double = 2, palette: TerminalPalette = .spike) {
-        self.fontFamily = fontFamily
+    public init(
+        font: FontSpec = .system(family: "Menlo"), pointSize: Double = 13, lineHeight: Double? = nil, scale: Double = 2,
+        palette: TerminalPalette = .spike
+    ) {
+        self.font = font
         self.pointSize = pointSize
+        self.lineHeight = lineHeight
         self.scale = scale
         self.palette = palette
     }
@@ -28,6 +34,15 @@ public struct RendererConfiguration: Sendable {
 public enum RendererError: Error {
     case noDevice
     case pipeline(String)
+}
+
+/// How long a draw spent where. `assemble` is filling the GPU buffers, `encode` the command buffer's
+/// creation, encoding and commit, `wait` blocking for a free frame or a drawable (not CPU work).
+public struct DrawTimings: Sendable {
+    public var outcome: DrawOutcome
+    public var waitNs: UInt64 = 0
+    public var assembleNs: UInt64 = 0
+    public var encodeNs: UInt64 = 0
 }
 
 public enum DrawOutcome: Sendable, Equatable {
@@ -76,7 +91,9 @@ public final class MetalRenderer {
         self.configuration = configuration
         palette = configuration.palette
         scene = TerminalScene(
-            fonts: FontSet(family: configuration.fontFamily, pointSize: CGFloat(configuration.pointSize), scale: CGFloat(configuration.scale)),
+            fonts: FontSet(
+                spec: configuration.font, pointSize: CGFloat(configuration.pointSize), scale: CGFloat(configuration.scale),
+                lineHeight: configuration.lineHeight.map { CGFloat($0) }),
             device: device)
 
         let library: MTLLibrary
@@ -114,6 +131,11 @@ public final class MetalRenderer {
     public func grid(fittingPixels width: Int, _ height: Int) -> (cols: Int, rows: Int) {
         let cell = cellPixels
         return (max(1, width / cell.width), max(1, height / cell.height))
+    }
+
+    /// The size in points of a view that holds exactly this grid.
+    public func pointSize(forGrid cols: Int, _ rows: Int) -> CGSize {
+        CGSize(width: Double(cols * cellPixels.width) / scale, height: Double(rows * cellPixels.height) / scale)
     }
 
     /// The pixels the grid itself covers.
@@ -156,22 +178,36 @@ public final class MetalRenderer {
 
     // MARK: drawing
 
-    /// Draw the scene into the layer's next drawable. Never waits for the GPU.
-    public func draw(in layer: CAMetalLayer) -> DrawOutcome {
-        guard inflight.wait(timeout: .now()) == .success else { return .busy }
+    /// Draw the scene into the layer's next drawable. With `blocking` off it never waits for the GPU: all
+    /// three frames in flight means `.busy`, and the view tries again on its next tick. The measuring mode
+    /// blocks, since a forced draw must happen, and reports the wait apart from the CPU work.
+    public func draw(in layer: CAMetalLayer, blocking: Bool = false) -> DrawTimings {
+        var timings = DrawTimings(outcome: .drawn)
+        let t0 = MonotonicClock.now()
+        if blocking {
+            inflight.wait()
+        } else if inflight.wait(timeout: .now()) != .success {
+            timings.outcome = .busy
+            return timings
+        }
+        let t1 = MonotonicClock.now()
+        let slot = nextSlot
+        nextSlot = (nextSlot + 1) % slots.count
+        let counts = assemble(slot: slot)
+        let t2 = MonotonicClock.now()
         guard let drawable = layer.nextDrawable() else {
             inflight.signal()
-            return .noDrawable
+            timings.outcome = .noDrawable
+            return timings
         }
+        let t3 = MonotonicClock.now()
         let pass = MTLRenderPassDescriptor()
         pass.colorAttachments[0].texture = drawable.texture
         pass.colorAttachments[0].loadAction = .clear
         pass.colorAttachments[0].storeAction = .store
         pass.colorAttachments[0].clearColor = clearColor
         let buffer = queue.makeCommandBuffer()!
-        let slot = nextSlot
-        nextSlot = (nextSlot + 1) % slots.count
-        encode(into: buffer, pass: pass, size: layer.drawableSize, slot: slot)
+        encode(into: buffer, pass: pass, size: layer.drawableSize, slot: slot, counts: counts)
         buffer.present(drawable)
         let semaphore = inflight
         let times = gpuTimes
@@ -180,8 +216,12 @@ public final class MetalRenderer {
             semaphore.signal()
         }
         buffer.commit()
+        let t4 = MonotonicClock.now()
         drawnChange = scene.changeCount
-        return .drawn
+        timings.waitNs = (t1 - t0) + (t3 - t2)
+        timings.assembleNs = t2 - t1
+        timings.encodeNs = t4 - t3
+        return timings
     }
 
     private var clearColor: MTLClearColor {
@@ -189,7 +229,8 @@ public final class MetalRenderer {
         return MTLClearColor(red: Double(background.x) / 255, green: Double(background.y) / 255, blue: Double(background.z) / 255, alpha: 1)
     }
 
-    private func encode(into buffer: MTLCommandBuffer, pass: MTLRenderPassDescriptor, size: CGSize, slot index: Int) {
+    /// Fill the slot's GPU buffers from every row's instances (growing them if need be).
+    private func assemble(slot index: Int) -> (backgrounds: Int, decorations: Int, glyphs: Int) {
         let counts = scene.instanceCounts
         let solidBytes = (counts.backgrounds + counts.decorations) * MemoryLayout<SolidInstance>.stride
         let glyphBytes = counts.glyphs * MemoryLayout<GlyphInstance>.stride
@@ -202,7 +243,14 @@ public final class MetalRenderer {
         }
         slots[index] = slot
         scene.copyInstances(solids: slot.solids.contents(), glyphs: slot.glyphs.contents(), counts: counts)
+        return counts
+    }
 
+    private func encode(
+        into buffer: MTLCommandBuffer, pass: MTLRenderPassDescriptor, size: CGSize, slot index: Int,
+        counts: (backgrounds: Int, decorations: Int, glyphs: Int)
+    ) {
+        let slot = slots[index]
         var uniforms = Uniforms(viewport: SIMD2(Float(size.width), Float(size.height)))
         let colors = palette.floats()
         let encoder = buffer.makeRenderCommandEncoder(descriptor: pass)!
@@ -249,7 +297,8 @@ public final class MetalRenderer {
         for _ in 0..<3 { inflight.wait() }
         defer { for _ in 0..<3 { inflight.signal() } }
         let buffer = queue.makeCommandBuffer()!
-        encode(into: buffer, pass: pass, size: CGSize(width: width, height: height), slot: nextSlot)
+        let counts = assemble(slot: nextSlot)
+        encode(into: buffer, pass: pass, size: CGSize(width: width, height: height), slot: nextSlot, counts: counts)
         buffer.commit()
         buffer.waitUntilCompleted()
         var pixels = [UInt8](repeating: 0, count: width * height * 4)

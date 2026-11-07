@@ -29,8 +29,11 @@ enum KeyMap {
             return nil
         }
         let meta = leftOptionAsMeta && flags.rawValue & leftOption != 0
+        // Keys that type nothing carry no text (AppKit gives arrows a private-use character), and neither does
+        // Control: the engine encodes those from the key's name, as the contract asks.
+        let text = flags.contains(.control) || (named.values.contains(name) && name != "space") ? nil : event.characters
         return KeyInput(
-            key: name, text: event.characters, shift: flags.contains(.shift), alt: flags.contains(.option),
+            key: name, text: text, shift: flags.contains(.shift), alt: flags.contains(.option),
             control: flags.contains(.control), platform: flags.contains(.command), optionAsMeta: meta)
     }
 

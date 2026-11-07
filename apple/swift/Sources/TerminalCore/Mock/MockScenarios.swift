@@ -20,8 +20,11 @@ struct SplitMix64: RandomNumberGenerator {
 public enum MockScenario: String, Sendable, CaseIterable {
     /// One new line of coloured words a step, scrolling the whole screen: every row changes every step.
     case text
-    /// Every cell new every step in truecolor, like a full-screen animation (`ttystorm wormhole`).
+    /// Every cell new every step: half blocks in two truecolors each, like a full-screen animation
+    /// (`ttystorm`'s wormhole and plasma draw this way).
     case flood
+    /// Every cell new every step with a random character: the worst case for a word cache.
+    case noise
     /// Falling katakana in double-width cells, a few cells changing per row (`ttystorm matrix`).
     case matrix
     /// A gallery of wide characters, emoji, box drawing, blocks, braille and every attribute, static.
@@ -46,7 +49,7 @@ public enum MockScenario: String, Sendable, CaseIterable {
             screen.cursorRow = screen.rows - 1
         case .cursor:
             screen.cursorShape = .beam
-        case .flood, .matrix:
+        case .flood, .noise, .matrix:
             screen.cursorVisible = false
         }
     }
@@ -55,7 +58,8 @@ public enum MockScenario: String, Sendable, CaseIterable {
     func step(_ screen: inout MockScreen, rng: inout SplitMix64, tick: Int) {
         switch self {
         case .text: MockText.line(&screen, rng: &rng, top: 0)
-        case .flood: MockFlood.step(&screen, rng: &rng, tick: tick)
+        case .flood: MockFlood.step(&screen, rng: &rng, tick: tick, halfBlocks: true)
+        case .noise: MockFlood.step(&screen, rng: &rng, tick: tick, halfBlocks: false)
         case .matrix: MockMatrix.step(&screen, rng: &rng, tick: tick)
         case .unicode: MockGallery.spinner(&screen, tick: tick)
         case .cursor: MockCursorStorm.step(&screen, rng: &rng, tick: tick)
@@ -97,7 +101,7 @@ enum MockText {
 enum MockFlood {
     static let glyphs = Array("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ#@%&*+=-:.".unicodeScalars)
 
-    static func step(_ screen: inout MockScreen, rng: inout SplitMix64, tick: Int) {
+    static func step(_ screen: inout MockScreen, rng: inout SplitMix64, tick: Int, halfBlocks: Bool) {
         let t = Double(tick) * 0.07
         for r in 0..<screen.rows {
             for c in 0..<screen.cols {
@@ -106,7 +110,7 @@ enum MockFlood {
                 let hue = (v + 3) / 6
                 let bg = wheel(hue, level: 0.45)
                 let fg = wheel(hue + 0.5, level: 1.0)
-                let glyph = glyphs[Int(rng.next() % UInt64(glyphs.count))]
+                let glyph = halfBlocks ? Unicode.Scalar(0x2580)! : glyphs[Int(rng.next() % UInt64(glyphs.count))]
                 screen[r, c] = PackedCell(scalar: glyph.value, fg: fg, bg: bg)
             }
         }

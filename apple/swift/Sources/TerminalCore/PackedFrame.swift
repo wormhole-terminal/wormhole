@@ -3,7 +3,7 @@
 //
 //   header   48 bytes of little-endian u32: magic, version, cols, rows, changed rows, flags,
 //            cursor row (`noCursor` if hidden), cursor column, cursor style, display offset,
-//            history size, 2 reserved
+//            history size, 1 reserved
 //   per changed row: row index (u32), line size (u32), then `cols` cells of 16 bytes
 //   cell     char (u32), fg, bg, flags (the engine's bits, `CellFlags`)
 //   colour   tag << 24 | value: tag 0 a named slot (0..15 ANSI, 256 foreground, 257 background,
@@ -94,6 +94,8 @@ public enum CursorShape: UInt32, Sendable {
     case block = 0
     case underline = 1
     case beam = 2
+    /// A block drawn as an outline (what a block cursor becomes in a window that is not key).
+    case hollow = 3
 }
 
 public struct FrameHeader: Sendable, Equatable {

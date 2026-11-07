@@ -31,8 +31,24 @@ struct CellMetrics: Equatable {
     var strikeTop: Int
 }
 
+/// Where the four faces come from.
+public enum FontSpec: Sendable, Equatable {
+    /// An installed family; bold and italic are its symbolic-trait variants.
+    case system(family: String)
+    /// Four font files, registered for this process so CoreText also finds them for fallback.
+    case files(regular: URL, bold: URL, italic: URL, boldItalic: URL)
+
+    /// The bundled JetBrains Mono, from the folder that holds its four TTFs.
+    public static func jetBrainsMono(directory: URL) -> FontSpec {
+        .files(
+            regular: directory.appendingPathComponent("JetBrainsMono-Regular.ttf"),
+            bold: directory.appendingPathComponent("JetBrainsMono-Bold.ttf"),
+            italic: directory.appendingPathComponent("JetBrainsMono-Italic.ttf"),
+            boldItalic: directory.appendingPathComponent("JetBrainsMono-BoldItalic.ttf"))
+    }
+}
+
 final class FontSet {
-    let family: String
     let pointSize: CGFloat
     let scale: CGFloat
     let metrics: CellMetrics
@@ -40,20 +56,26 @@ final class FontSet {
     private var interned: [CTFont] = []
     private var ids: [String: UInt16] = [:]
 
-    init(family: String, pointSize: CGFloat, scale: CGFloat) {
-        self.family = family
+    /// `lineHeight` is a multiple of the font size (1.3 in the GPUI app); without it the font's own line.
+    init(spec: FontSpec, pointSize: CGFloat, scale: CGFloat, lineHeight: CGFloat?) {
         self.pointSize = pointSize
         self.scale = scale
         let size = pointSize * scale
-        let regular = CTFontCreateWithName(family as CFString, size, nil)
-        func variant(_ traits: CTFontSymbolicTraits) -> CTFont {
-            CTFontCreateCopyWithSymbolicTraits(regular, size, nil, traits, traits) ?? regular
+        let faces: [CTFont]
+        switch spec {
+        case .system(let family):
+            let regular = CTFontCreateWithName(family as CFString, size, nil)
+            func variant(_ traits: CTFontSymbolicTraits) -> CTFont {
+                CTFontCreateCopyWithSymbolicTraits(regular, size, nil, traits, traits) ?? regular
+            }
+            faces = [regular, variant(.traitBold), variant(.traitItalic), variant(.traitBold.union(.traitItalic))]
+        case .files(let regular, let bold, let italic, let boldItalic):
+            faces = [regular, bold, italic, boldItalic].map { Self.load($0, size: size) }
         }
+        let regular = faces[0]
         // `FontStyle`'s order: regular, bold, italic, bold italic. They are interned first, so a face's id is
         // its style's raw value.
-        for font in [regular, variant(.traitBold), variant(.traitItalic), variant(.traitBold.union(.traitItalic))] {
-            interned.append(font)
-        }
+        interned.append(contentsOf: faces)
         for (index, font) in interned.enumerated() { ids[Self.key(font)] = UInt16(index) }
 
         var glyph = CGGlyph(0)
@@ -62,8 +84,17 @@ final class FontSet {
         var advance = CGSize.zero
         CTFontGetAdvancesForGlyphs(regular, .default, &glyph, &advance, 1)
         let ascent = CTFontGetAscent(regular), descent = CTFontGetDescent(regular), leading = CTFontGetLeading(regular)
-        let height = Int((ascent + descent + leading).rounded(.up))
-        let baseline = Int(ascent.rounded(.up) + (leading / 2).rounded(.down))
+        let natural = ascent + descent + leading
+        let height: Int
+        let baseline: Int
+        if let lineHeight {
+            // A set line height: the text sits in the middle of it, as CSS does.
+            height = Int((size * lineHeight).rounded())
+            baseline = Int(((CGFloat(height) - (ascent + descent)) / 2 + ascent).rounded())
+        } else {
+            height = Int(natural.rounded(.up))
+            baseline = Int(ascent.rounded(.up) + (leading / 2).rounded(.down))
+        }
         let thickness = max(1, Int(CTFontGetUnderlineThickness(regular).rounded()))
         let underlineBelow = max(1, Int(abs(CTFontGetUnderlinePosition(regular)).rounded()))
         let xHeight = CTFontGetXHeight(regular)
@@ -71,6 +102,16 @@ final class FontSet {
             width: max(1, Int(advance.width.rounded())), height: max(1, height), baseline: baseline,
             underlineTop: min(height - thickness, baseline + underlineBelow - thickness / 2), lineThickness: thickness,
             strikeTop: baseline - Int((xHeight / 2).rounded()) - thickness / 2)
+    }
+
+    /// A font from a file, registered for the process so its name resolves (and fallback can find it).
+    private static func load(_ url: URL, size: CGFloat) -> CTFont {
+        CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        if let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor], let first = descriptors.first {
+            return CTFontCreateWithFontDescriptor(first, size, nil)
+        }
+        FileHandle.standardError.write(Data("cannot load the font \(url.path); using Menlo\n".utf8))
+        return CTFontCreateWithName("Menlo" as CFString, size, nil)
     }
 
     func font(for style: FontStyle) -> CTFont { interned[style.rawValue] }
