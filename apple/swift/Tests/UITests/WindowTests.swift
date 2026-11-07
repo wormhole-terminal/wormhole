@@ -1,4 +1,5 @@
 import AppKit
+import DesignSystem
 import SwiftUI
 import Testing
 import WorkspaceModel
@@ -17,8 +18,16 @@ import WorkspaceModel
         TerminalSummary(id: 2, title: "agent", subtitle: "~/Projects/wormhole", branch: "exp/swift-ui", activity: .working),
     ]
 
-    private func snapshot(_ state: WorkspaceState, name: String, size: CGSize = CGSize(width: 1200, height: 720)) throws -> Bool {
-        let root = WorkspaceRootView(state: state, send: { _ in }, terminals: TerminalViews { _ in nil })
+    private func snapshot(
+        _ state: WorkspaceState, name: String, size: CGSize = CGSize(width: 1200, height: 720), statusBar: Bool = false,
+        mode: ThemeMode = .dark, theme: String? = nil
+    ) throws -> Bool {
+        ThemeStore.shared.mode = mode
+        ThemeStore.shared.reduceTransparency = true  // opaque, like the reference's own
+        if let theme { ThemeStore.shared.setTheme(theme) }
+        let look = WindowLook()
+        look.statusBar = statusBar
+        let root = WorkspaceRootView(state: state, look: look, send: { _ in }, terminals: TerminalViews { _ in nil })
         let hosting = NSHostingView(rootView: root)
         hosting.sizingOptions = []
         let window = NSWindow(
@@ -51,11 +60,21 @@ import WorkspaceModel
         #expect(try snapshot(state, name: "panel-\(tab.rawValue)", size: CGSize(width: 900, height: 480)))
     }
 
+    /// The same window as the GPUI reference screenshots (1320 x 820, status bar on), per appearance.
+    @Test(arguments: [ThemeMode.dark, .light]) func referenceSizedWindow(mode: ThemeMode) throws {
+        let state = WorkspaceState(terminals: Self.terminals, selected: 2, panelTab: .notes)
+        #expect(try snapshot(state, name: "ref-\(mode.rawValue)", size: CGSize(width: 1320, height: 820), statusBar: true, mode: mode))
+    }
+
     @Test func narrowWindowKeepsTheTerminalsMinimum() {
-        let open = ColumnWidths(sidebar: 420, panel: 720, window: 640, sidebarVisible: true, panelVisible: true)
-        #expect(640 - open.sidebar - open.panel >= Chrome.terminalMin)
-        let wide = ColumnWidths(sidebar: 260, panel: 320, window: 1600, sidebarVisible: true, panelVisible: true)
-        #expect(wide.sidebar == 260 && wide.panel == 320)
+        var layout = PaneLayout()
+        layout.sidebarWidth = 420
+        layout.panelWidth = 720
+        let narrow = layout.columns(window: 640)
+        #expect(narrow.terminal >= PaneLayout.terminalMin)
+        #expect(layout.panelVisible(window: 640) == false)
+        let wide = PaneLayout().columns(window: 1600)
+        #expect(wide.sidebar == 350 && wide.panel == 360)
     }
 
     @Test func selectedTerminalIsFoundById() {

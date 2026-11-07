@@ -52,6 +52,10 @@ enum Chrome {
     static let markDot: CGFloat = 6
     static let markInset: CGFloat = 5
     static let markRing: CGFloat = 2
+    /// A status bar item: 22 tall with 4 round its text, and the hairline between groups.
+    static let statusItem: CGFloat = 22
+    static let itemPad: CGFloat = 4
+    static let statusSeparator: CGFloat = 12
     /// The terminal's status tile in the title row.
     static let titleTile: CGFloat = 18
 }

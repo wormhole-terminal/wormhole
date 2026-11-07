@@ -1,10 +1,11 @@
-// The window's content: sidebar | centre | right panel. The columns collapse by width, not by removal, so
-// their content keeps its layout while it slides and a running terminal view is never rebuilt. The widths
-// live here and only in memory: hiding a column and showing it again brings back the width it had.
+// The window's content: sidebar | terminal | right panel over the window's blur, the optional status bar under
+// them, the two toggles floating over the title rows and the overlays over everything. The columns collapse by
+// clip, not by removal, so their content keeps its layout while it slides and a running terminal view is never
+// rebuilt (`SlideGeometry`, `PaneFrames`). The widths live here and only in memory: hiding a column and showing
+// it again brings back the width it had.
 
 import DesignSystem
 import PaletteUI
-import SidebarUI
 import SwiftUI
 import WorkspaceModel
 
@@ -12,89 +13,43 @@ public struct WorkspaceRootView: View {
     let state: WorkspaceState
     let send: @MainActor (WorkspaceAction) -> Void
     let terminals: TerminalViews
-    @State private var sidebarWidth = Chrome.sidebarWidth
-    @State private var panelWidth = Chrome.panelWidth
-    @State private var isFullScreen = false
+    let look: WindowLook
+    @State private var widths = PaneLayout()
+    @State private var facts = WindowFacts()
+    @State private var sidebarSlide: ColumnSlide
+    @State private var panelSlide: ColumnSlide
+    @State private var drag: DragState?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// A column being dragged: which, the pointer, what the readout says and whether letting go closes it.
+    struct DragState: Equatable {
+        var edge: PaneLayout.Edge
+        var pointer: CGFloat
+        var resize: ColumnResize
+    }
+
     public init(
-        state: WorkspaceState, send: @escaping @MainActor (WorkspaceAction) -> Void, terminals: TerminalViews
+        state: WorkspaceState, look: WindowLook = WindowLook(),
+        send: @escaping @MainActor (WorkspaceAction) -> Void, terminals: TerminalViews
     ) {
         self.state = state
+        self.look = look
         self.send = send
         self.terminals = terminals
+        _sidebarSlide = State(initialValue: ColumnSlide(open: state.sidebarVisible))
+        _panelSlide = State(initialValue: ColumnSlide(open: state.panelVisible))
     }
 
     public var body: some View {
-        GeometryReader { proxy in
-            let widths = ColumnWidths(
-                sidebar: sidebarWidth, panel: panelWidth, window: proxy.size.width,
-                sidebarVisible: state.sidebarVisible, panelVisible: state.panelVisible)
-            HStack(spacing: 0) {
-                column(width: widths.sidebar, visible: state.sidebarVisible) {
-                    VStack(spacing: 0) {
-                        SidebarTitleRow(leadingInset: collapseInset, send: send)
-                        SidebarView(state: state, send: send)
-                    }
-                    .background(Palette.sidebarBackground)
-                }
-                if state.sidebarVisible {
-                    ColumnDivider(
-                        width: $sidebarWidth, range: Chrome.sidebarRange, grows: 1, label: "Resize sidebar",
-                        initial: Chrome.sidebarWidth)
-                }
-                centre
-                if state.panelVisible {
-                    ColumnDivider(
-                        width: $panelWidth, range: Chrome.panelRange, grows: -1, label: "Resize panel",
-                        initial: Chrome.panelWidth)
-                }
-                column(width: widths.panel, visible: state.panelVisible) {
-                    RightPanel(tab: state.panelTab, send: send)
-                }
-            }
-        }
-        .overlay { overlay }
+        WindowBody(
+            state: state, send: send, terminals: terminals, widths: $widths, facts: facts,
+            sidebarSlide: sidebarSlide, panelSlide: panelSlide, drag: $drag, animates: !reduceMotion
+        )
+        .background(WindowBackdrop())
+        .background(WindowReader(facts: $facts))
+        .coordinateSpace(name: PaneSpace.name)
+        .environment(look)
+        .themed()
         .ignoresSafeArea()
-        .background(Chrome.surface)
-        .background(FullScreenReader(isFullScreen: $isFullScreen))
-    }
-
-    /// The palette and the shortcut sheet play their own exit before asking to be removed.
-    @ViewBuilder private var overlay: some View {
-        switch state.overlay {
-        case .palette: PaletteView(state: state, send: send) { send(.showOverlay(nil)) }
-        case .shortcuts: ShortcutSheetView { send(.showOverlay(nil)) }
-        case nil: EmptyView()
-        }
-    }
-
-    private var collapseInset: CGFloat { isFullScreen ? Chrome.collapseXFullScreen : Chrome.collapseX }
-
-    private var centre: some View {
-        VStack(spacing: 0) {
-            CentreTitleRow(state: state, leadingInset: collapseInset, send: send)
-            TerminalHost(views: terminals, selected: state.selected, ids: state.terminals.map(\.id))
-                .background(Chrome.terminalSurface)
-            StatusBar(terminal: state.selectedTerminal)
-        }
-        .frame(minWidth: Chrome.terminalMin, maxWidth: .infinity)
-        .background(Chrome.surface)
-    }
-
-    /// A column that keeps its layout width and is clipped to nothing when hidden, out of reach of keys and
-    /// VoiceOver. The width follows the spring; the content only fades, which is all Reduce Motion keeps.
-    private func column<Content: View>(
-        width: CGFloat, visible: Bool, @ViewBuilder content: () -> Content
-    ) -> some View {
-        content()
-            .frame(width: width)
-            .opacity(visible ? 1 : 0)
-            .animation(WindowMotion.fade, value: visible)
-            .frame(width: visible ? width : 0, alignment: .leading)
-            .animation(WindowMotion.column(reduceMotion: reduceMotion), value: visible)
-            .clipped()
-            .allowsHitTesting(visible)
-            .accessibilityHidden(!visible)
     }
 }

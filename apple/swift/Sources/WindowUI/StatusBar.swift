@@ -9,17 +9,16 @@ import WorkspaceModel
 
 struct StatusBar: View {
     let terminals: [TerminalSummary]
-    /// The shown terminal's grid, "100×30"; nil when no terminal is drawn.
+    /// The shown terminal, whose state and size end the bar; the size is its grid, "100×30", nil when none is drawn.
+    let selected: TerminalSummary?
     let size: String?
     let windowWidth: CGFloat
     let select: @MainActor (TerminalID) -> Void
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
 
-    /// The room round an item's text, and so the gap between items less twice that.
-    private static let itemPad: CGFloat = 4
-    private static let gap: CGFloat = 14 - 2 * itemPad
-    private static let separatorHeight: CGFloat = 12
+    /// The gap between items: 14 from one's text to the next's, less the room each has round its text.
+    private static let gap: CGFloat = 14 - 2 * Chrome.itemPad
 
     var body: some View {
         let summary = StatusSummary(terminals)
@@ -33,7 +32,7 @@ struct StatusBar: View {
                         if detail.words { Text("needs input").foregroundStyle(colours.attentionText) }
                     }
                 }
-                .buttonStyle(StatusItemStyle())
+                .buttonStyle(StatusItemStyle(tint: colours.attentionTint))
             }
             HStack(spacing: 0) {
                 ForEach(Array(summary.rest.enumerated()), id: \.element.id) { index, count in
@@ -43,25 +42,33 @@ struct StatusBar: View {
                 }
             }
             Spacer(minLength: 0)
-            if let size, detail.size {
-                HStack(spacing: Space._1) {
-                    colours.rule.frame(width: 1, height: Self.separatorHeight)
-                    Text(size).padding(.horizontal, Self.itemPad)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Terminal size \(size)")
+            if let words = selected?.activity.stateWords, detail.words {
+                separated { Text(words).foregroundStyle(selected?.activity.stateColour(colours) ?? colours.muted) }
+            }
+            if let selected, let size, detail.size {
+                separated { Text("\(selected.title) · \(size)") }
+                    .accessibilityLabel("\(selected.title), terminal size \(size)")
             }
         }
         .font(TextRole.caption.font.weight(.medium))
         .monospacedDigit()
         .foregroundStyle(colours.muted)
-        .padding(.horizontal, Chrome.edgeInset - Self.itemPad)
+        .padding(.horizontal, Chrome.edgeInset - Chrome.itemPad)
         .frame(height: Chrome.statusHeight)
-        .background { if !look.glassOn { colours.sidebar.opacity(look.effectiveOpacity) } }
-        .overlay(alignment: .top) { if !look.glassOn { colours.rule.frame(height: colours.dividerWidth) } }
+        .background { if !look.glassOn { look.surface(colours.sidebar) } }
+        .overlay(alignment: .top) { if !look.glassOn { colours.rule.frame(height: colours.borderWidth) } }
         .animation(Motion.fade, value: summary)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Status bar")
+    }
+
+    /// An item read, not clicked, after a hairline.
+    private func separated<Item: View>(@ViewBuilder _ item: () -> Item) -> some View {
+        HStack(spacing: Space._1) {
+            colours.rule.frame(width: colours.borderWidth, height: Chrome.statusSeparator)
+            item().padding(.horizontal, Chrome.itemPad)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private func countLabel(_ count: StatusSummary.Count, words: Bool) -> some View {
@@ -78,15 +85,17 @@ struct StatusBar: View {
 
 /// An item of the bar: its metrics (22 pt tall, 4 round the text), the hover wash and the pressed one.
 private struct StatusItemStyle: ButtonStyle {
+    /// A fill the item wears at rest: the needs-you button's attention tint.
+    var tint: Color = .clear
     @State private var hovering = false
     @Environment(\.chrome) private var colours
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .padding(.horizontal, 4)
-            .frame(height: 22)
+            .padding(.horizontal, Chrome.itemPad)
+            .frame(height: Chrome.statusItem)
             .background(
-                configuration.isPressed || hovering ? colours.hover : .clear,
+                configuration.isPressed || hovering ? colours.bandHover : tint,
                 in: RoundedRectangle(cornerRadius: colours.radius)
             )
             .onHover { hovering = $0 }

@@ -1,60 +1,53 @@
-// The colours and shape the chrome draws from, named as the GPUI app's `UiColors` names them. This is the one
-// seam between the window and the theme: until the tokens reach it they come from the system's adaptive
-// colours, and a themed window replaces `ChromeColours.current` in the environment, nothing else.
+// The colours and shape the chrome draws from, named as the GPUI app's `UiColors` names them and each read
+// from the token `settings/ui_colors.rs` reads for it (the comment says which). Built from the tokens in the
+// environment, so a theme change (or Increase Contrast, which picks another set of tokens) re-colours the
+// window with no view touched. The surfaces are the window's own and get its opacity (`WindowLook.surface`).
 
 import DesignSystem
 import SwiftUI
 
 struct ChromeColours {
-    /// The window's own surface, behind everything (`surface.window`).
-    var window: Color
-    /// The sidebar's surface (`ui.panel`) and the right panel's (`ui.panel_right`).
-    var sidebar: Color
-    var panel: Color
-    /// The terminal's column from the title row down (`ui.background`).
-    var terminal: Color
-    var divider: Color
-    var text: Color
-    var muted: Color
-    var faint: Color
-    var hover: Color
-    var selected: Color
-    var selectedText: Color
-    var branch: Color
-    var branchBackground: Color
-    var attentionText: Color
-    var dangerText: Color
-    var doneText: Color
-    var rule: Color
-    /// The terminal's own surface under its grid, and a tooltip with the readout beside a resize handle.
-    var terminalSurface: Color
-    var tooltip: Color
-    var tooltipText: Color
-    /// The lines' width (`metrics.divider_width`), and the corners.
-    var dividerWidth: CGFloat
-    var radius: CGFloat
-    var radiusChip: CGFloat
-    var radiusLarge: CGFloat
+    private let tokens: ThemeTokens
 
-    static let system = ChromeColours(
-        window: Color(nsColor: .windowBackgroundColor), sidebar: Palette.sidebarBackground,
-        panel: Color(nsColor: .windowBackgroundColor), terminal: Color(nsColor: .windowBackgroundColor),
-        divider: Palette.divider, text: Palette.textPrimary, muted: Palette.textSecondary, faint: Palette.textFaint,
-        hover: Palette.hover, selected: Palette.selected, selectedText: Palette.textPrimary,
-        branch: Palette.textSecondary, branchBackground: Palette.hover, attentionText: Palette.attention,
-        dangerText: Palette.danger, doneText: Palette.done, rule: Palette.divider,
-        terminalSurface: Color(nsColor: .black), tooltip: Color(nsColor: .labelColor),
-        tooltipText: Color(nsColor: .windowBackgroundColor), dividerWidth: 1,
-        radius: Radius.row, radiusChip: Radius.chip, radiusLarge: Radius.card)
-}
+    init(tokens: ThemeTokens) { self.tokens = tokens }
 
-private struct ChromeColoursKey: EnvironmentKey {
-    static let defaultValue = ChromeColours.system
+    /// `surface.window`: the terminal's column from the title row down (`ui.background`).
+    var terminal: Color { tokens.surfaceWindow }
+    /// `sidebar.background` (`ui.panel`) and `surface.panel` (`ui.panel_right`).
+    var sidebar: Color { tokens.sidebarBackground }
+    var panel: Color { tokens.surfacePanel }
+    /// The terminal's own surface under its grid (`terminal.background`).
+    var terminalSurface: Color { tokens.terminal.background.color }
+    var divider: Color { tokens.divider }
+    /// `border`: the status bar's rule and separators.
+    var rule: Color { tokens.border }
+    var text: Color { tokens.textPrimary }
+    var muted: Color { tokens.textMuted }
+    var faint: Color { tokens.textFaint }
+    /// `band.hover`: the hover of an icon button; `state.hover` the generic overlay.
+    var bandHover: Color { tokens.bandHover }
+    var hover: Color { tokens.stateHover }
+    /// `state.selected` and `sidebar.row.selected.text`: the active icon tab and a pressed toggle.
+    var selected: Color { tokens.stateSelected }
+    var selectedText: Color { tokens.sidebarRowSelectedText }
+    var branch: Color { tokens.gitBranch }
+    var branchBackground: Color { tokens.gitBranchBackground }
+    var attentionText: Color { tokens.agentAttentionText }
+    var dangerText: Color { tokens.statusDangerText }
+    /// `agent.attention.tint`: the fill of the status bar's button for the terminal that needs you.
+    var attentionTint: Color { tokens.agentAttentionTint }
+    var tooltip: Color { tokens.tooltipBackground }
+    var tooltipText: Color { tokens.tooltipText }
+    var primary: Color { tokens.primary }
+
+    /// `metrics.divider_width`, 0 for no line; the corners by role.
+    var dividerWidth: CGFloat { tokens.metrics.dividerWidth }
+    var borderWidth: CGFloat { tokens.metrics.borderWidth }
+    var radius: CGFloat { tokens.metrics.radius }
+    var radiusChip: CGFloat { tokens.metrics.radiusChip }
+    var radiusLarge: CGFloat { tokens.metrics.radiusLg }
 }
 
 extension EnvironmentValues {
-    var chrome: ChromeColours {
-        get { self[ChromeColoursKey.self] }
-        set { self[ChromeColoursKey.self] = newValue }
-    }
+    var chrome: ChromeColours { ChromeColours(tokens: tokens) }
 }

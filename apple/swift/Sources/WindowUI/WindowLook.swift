@@ -4,6 +4,7 @@
 // (`settings::derive`, `platform::look`). One observable, owned by the app, read by every part of the window.
 
 import AppKit
+import DesignSystem
 import Observation
 import SwiftUI
 
@@ -18,8 +19,9 @@ public final class WindowLook {
     public var statusBar = false
     /// The lines between the columns (the Column dividers setting).
     public var columnDividers = true
-    /// Reduce Transparency or Increase Contrast is on: read from the system, so a change redraws the window.
-    public private(set) var systemOpaque = Self.readSystemOpaque()
+    /// Reduce Transparency or Increase Contrast is on, as the theme store follows them live (it observes the
+    /// system's own notifications), so a change redraws the window.
+    var systemOpaque: Bool { ThemeStore.shared.reduceTransparency || ThemeStore.shared.increaseContrast }
 
     public init() {}
 
@@ -34,13 +36,6 @@ public final class WindowLook {
     /// `colour` at the window's opacity: every surface paints translucent over the blur.
     func surface(_ colour: Color) -> Color { colour.opacity(effectiveOpacity) }
 
-    static let macHasGlass: Bool = NSClassFromString("NSGlassEffectView") != nil
+    public static let macHasGlass: Bool = NSClassFromString("NSGlassEffectView") != nil
 
-    private static func readSystemOpaque() -> Bool {
-        let workspace = NSWorkspace.shared
-        return workspace.accessibilityDisplayShouldReduceTransparency || workspace.accessibilityDisplayShouldIncreaseContrast
-    }
-
-    /// Called when the system's display options change.
-    public func refreshSystem() { systemOpaque = Self.readSystemOpaque() }
 }

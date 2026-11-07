@@ -12,6 +12,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     let options: Options
     var devctl: DevCtl?
     private(set) var store = WorkspaceStore()
+    /// How the window itself looks: its translucency, glass, status bar. The theme is `ThemeStore.shared`.
+    let look = WindowLook()
     private(set) var terminals = TerminalViews { _ in nil }
     private var windowController: WorkspaceWindowController?
     private var configuration: RendererConfiguration?
@@ -39,6 +41,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     // MARK: opening
 
     private func open() throws {
+        applyLookOptions()
         let (configuration, note) = options.rendererConfiguration()
         if let note { FileHandle.standardError.write(Data((note + "\n").utf8)) }
         self.configuration = configuration
@@ -49,7 +52,7 @@ final class AppController: NSObject, NSApplicationDelegate {
             throw Options.UsageError(description: "no terminal source could start")
         }
 
-        let content = StoreRoot(store: store, terminals: terminals)
+        let content = StoreRoot(store: store, terminals: terminals, look: look)
         let terminalSize = options.grid.map { first.renderer.pointSize(forGrid: $0.cols, $0.rows) } ?? CGSize(width: 960, height: 600)
         // The title row and the status bar sit above and below the terminal: 38 + 24 pt.
         let size = CGSize(width: terminalSize.width, height: terminalSize.height + 62)
@@ -131,8 +134,9 @@ final class AppController: NSObject, NSApplicationDelegate {
 private struct StoreRoot: View {
     let store: WorkspaceStore
     let terminals: TerminalViews
+    let look: WindowLook
 
     var body: some View {
-        WorkspaceRootView(state: store.state, send: { store.send($0) }, terminals: terminals)
+        WorkspaceRootView(state: store.state, look: look, send: { store.send($0) }, terminals: terminals)
     }
 }

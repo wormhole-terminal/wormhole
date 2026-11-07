@@ -17,7 +17,8 @@ struct WindowControls: View {
     let send: @MainActor (WorkspaceAction) -> Void
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
+        // Centred in the 38 pt row, as the GPUI app's buttons are.
+        ZStack(alignment: .leading) {
             TitleButton(label: sidebarOpen ? "Hide sidebar" : "Show sidebar", help: sidebarHelp) { color in
                 PanelGlyph(side: .left, fill: sidebarShown, color: color)
             } action: {
@@ -33,7 +34,7 @@ struct WindowControls: View {
             .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.trailing, Chrome.panelToggleRight)
         }
-        .frame(height: Chrome.titleHeight, alignment: .top)
+        .frame(height: Chrome.titleHeight)
         .frame(maxHeight: .infinity, alignment: .top)
     }
 

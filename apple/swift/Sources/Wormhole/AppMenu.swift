@@ -1,6 +1,7 @@
 // The main menu: what the window's keys are. Targets are explicit so the keys work with any first responder.
 
 import AppKit
+import DesignSystem
 import TerminalMetal
 
 @MainActor
@@ -20,8 +21,21 @@ enum AppMenu {
         add(to: main, title: "View", [
             item("Toggle Sidebar", #selector(AppController.toggleSidebar), "b", target: target),
             item("Toggle Panel", #selector(AppController.togglePanel), "b", [.command, .option], target: target),
-            item("Command Palette", #selector(AppController.showPalette), "k", target: target),
+            item("Command Palette", #selector(AppController.showPalette), "p", [.command, .shift], target: target),
             item("Keyboard Shortcuts", #selector(AppController.showShortcuts), "/", target: target),
+            .separator(),
+            submenu("Theme", themeItems(target: target)),
+            submenu("Appearance", ThemeMode.allCases.map { mode in
+                let entry = item(mode.rawValue.capitalized, #selector(AppController.chooseAppearance(_:)), "", target: target)
+                entry.representedObject = mode.rawValue
+                return entry
+            }),
+            .separator(),
+            item("Status Bar", #selector(AppController.toggleStatusBar), "", target: target),
+            item("Column Dividers", #selector(AppController.toggleDividers), "", target: target),
+            item("Translucent Window", #selector(AppController.toggleTranslucent), "", target: target),
+            item("Window Blur", #selector(AppController.toggleBlur), "", target: target),
+            item("Liquid Glass", #selector(AppController.toggleLiquidGlass), "", target: target),
         ])
         add(to: main, title: "Terminal", (1...9).map { number in
             let entry = item("Select Terminal \(number)", #selector(AppController.selectNumbered(_:)), "\(number)", target: target)
@@ -29,6 +43,29 @@ enum AppMenu {
             return entry
         })
         return main
+    }
+
+    /// Every bundled theme, the dark ones and then the light ones: choosing one shows it.
+    private static func themeItems(target: AppController) -> [NSMenuItem] {
+        let themes = ThemeLibrary.bundled.themes
+        var items: [NSMenuItem] = []
+        for appearance in ThemeAppearance.allCases {
+            if !items.isEmpty { items.append(.separator()) }
+            items += themes.filter { $0.appearance == appearance }.map { theme in
+                let entry = item(theme.name, #selector(AppController.chooseTheme(_:)), "", target: target)
+                entry.representedObject = theme.id
+                return entry
+            }
+        }
+        return items
+    }
+
+    private static func submenu(_ title: String, _ items: [NSMenuItem]) -> NSMenuItem {
+        let holder = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        let menu = NSMenu(title: title)
+        items.forEach(menu.addItem)
+        holder.submenu = menu
+        return holder
     }
 
     private static func add(to menu: NSMenu, title: String, _ items: [NSMenuItem]) {

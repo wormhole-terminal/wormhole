@@ -33,9 +33,12 @@ struct PaneFrames: Equatable {
     /// The sidebar's and panel's clips, from their window edges.
     let sidebarVisible: CGFloat
     let panelVisible: CGFloat
-    /// Where each column's hairline lies (its left edge); nil while there is none to draw.
-    let sidebarRule: CGFloat?
-    let panelRule: CGFloat?
+    /// Where each column's edge lies, when the column is in the layout and at rest: its hairline and resize
+    /// handle go there. The hairline of the panel lies on the terminal's side of the edge, so it starts one
+    /// rule width before it.
+    let sidebarEdge: CGFloat?
+    let panelEdge: CGFloat?
+    let ruleWidth: CGFloat
 
     init(window: CGFloat, sidebar: Column, panel: Column, facts: WindowFacts, ruleWidth: CGFloat) {
         let slot = max(window - sidebar.inLayout - panel.inLayout, PaneLayout.terminalMin)
@@ -49,8 +52,9 @@ struct PaneFrames: Equatable {
         self.pads = pads
         sidebarVisible = sidebar.visible
         panelVisible = panel.visible
-        // Hairlines only lie along a column that is in: a sliding one paints its own surface over the blur.
-        sidebarRule = ruleWidth > 0 && sidebar.inFlow && !sidebar.sliding && sidebar.width > 0 ? sidebar.width : nil
-        panelRule = ruleWidth > 0 && panel.inFlow && !panel.sliding && panel.width > 0 ? window - panel.width - ruleWidth : nil
+        // Only a column that is in and at rest has an edge: a sliding one paints its own surface over the blur.
+        sidebarEdge = sidebar.inFlow && !sidebar.sliding && sidebar.width > 0 ? sidebar.width : nil
+        panelEdge = panel.inFlow && !panel.sliding && panel.width > 0 ? window - panel.width : nil
+        self.ruleWidth = ruleWidth
     }
 }

@@ -2,6 +2,7 @@
 // comparison scripts: WORMHOLE_DEVCTL, WORMHOLE_SHELL, WORMHOLE_SWIFT_GRID, WORMHOLE_BACKGROUND.
 
 import AppKit
+import DesignSystem
 import Foundation
 import TerminalCore
 import TerminalMetal
@@ -26,6 +27,10 @@ struct Options {
     var lineHeight: Double?
     var scale: Double?
     var background = false
+    /// A bundled theme's id (`--theme nord`); nil keeps the default pick.
+    var theme: String?
+    var appearance: ThemeMode?
+    var statusBar = false
     var devctl: URL?
     /// Seconds to hold the window idle and report wake-ups, then quit.
     var idleSeconds: Double?
@@ -50,6 +55,9 @@ struct Options {
           --render-png <prefix> [--frames N] [--png-every K]
                                no window: write <prefix>-<step>.png of the mock, one per K steps of N
           --idle <seconds>     hold the window idle that long, print the wake-ups, quit
+          --theme <id>         a bundled theme: shows it, and makes it the pick for its appearance
+          --appearance <light|dark|system>   which appearance shows (default system)
+          --status-bar         show the optional status bar
           --background         accessory app, window behind the others, nothing takes focus (WORMHOLE_BACKGROUND=1)
 
         Needs WORMHOLE_DATA_DIR=<a folder named Wormhole-swift*>; WORMHOLE_DEVCTL=<dir> turns on the control folder.
@@ -99,6 +107,18 @@ struct Options {
             case "--png-every": every = max(1, Int(try number(flag)))
             case "--idle": options.idleSeconds = try number(flag)
             case "--background": options.background = true
+            case "--status-bar": options.statusBar = true
+            case "--theme":
+                let id = try value(flag)
+                guard ThemeLibrary.bundled.theme(id: id) != nil else {
+                    let known = ThemeLibrary.bundled.themes.map(\.id).joined(separator: ", ")
+                    throw UsageError(description: "no theme \(id) (\(known))")
+                }
+                options.theme = id
+            case "--appearance":
+                let name = try value(flag)
+                guard let mode = ThemeMode(rawValue: name) else { throw UsageError(description: "--appearance is light, dark or system") }
+                options.appearance = mode
             case "-h", "--help": throw UsageError(description: usage)
             default: throw UsageError(description: "unknown option \(flag)\n\n\(usage)")
             }

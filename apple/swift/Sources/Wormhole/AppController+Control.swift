@@ -24,10 +24,12 @@ extension AppController {
             guard let tab = PanelTab(rawValue: argument) else { return reply("error: tab is notes, changes or history") }
             store.send(.showPanelTab(tab))
             reply("tab \(argument)")
+        case "look": reply(lookState)
         case "quit":
             reply("quit")
             NSApp.terminate(nil)
         default:
+            if runLook(command: parts.first ?? "", argument: argument) { return }
             guard let view = selectedView else { return reply("error: no terminal is shown") }
             run(command: parts.first ?? "", argument: argument, on: view)
         }
@@ -60,7 +62,7 @@ extension AppController {
         }
     }
 
-    private func reply(_ text: String) { devctl?.append(text) }
+    func reply(_ text: String) { devctl?.append(text) }
 
     private func state(_ view: MetalTerminalView) -> String {
         let renderer = view.renderer
@@ -73,6 +75,6 @@ extension AppController {
             + "atlas_resets=\(counters.atlasResets) "
             + "terminals=\(shown.terminals.count) selected=\(shown.selected.map(String.init) ?? "none") "
             + "sidebar=\(shown.sidebarVisible) panel=\(shown.panelVisible) tab=\(shown.panelTab.rawValue) "
-            + "window=\(window?.windowNumber ?? 0)"
+            + "window=\(window?.windowNumber ?? 0) " + lookState
     }
 }

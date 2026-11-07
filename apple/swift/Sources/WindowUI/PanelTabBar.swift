@@ -20,11 +20,11 @@ struct PanelTabBar: View {
 
     var body: some View {
         HStack(spacing: Chrome.tabGap) {
-            ForEach(Array(PanelTab.allCases.enumerated()), id: \.element) { position, candidate in
+            ForEach(Array(PanelTab.barOrder.enumerated()), id: \.element) { position, candidate in
                 PanelTabButton(tab: candidate, isSelected: candidate == tab, namespace: selection) { select(candidate) }
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel(candidate.title)
-                    .accessibilityValue("\(position + 1) of \(PanelTab.allCases.count)")
+                    .accessibilityValue("\(position + 1) of \(PanelTab.barOrder.count)")
                     .accessibilityAddTraits(candidate == tab ? [.isButton, .isSelected] : .isButton)
             }
             Spacer(minLength: 0)
@@ -49,16 +49,14 @@ private struct PanelTabButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: tab.symbol)
-                .font(.system(size: Metric.glyph, weight: .medium))
-                .foregroundStyle(isSelected ? colours.selectedText : hovering ? colours.text : colours.muted)
+            glyph
                 .frame(width: Chrome.iconTab, height: Chrome.iconTab)
                 .background {
                     if isSelected {
                         RoundedRectangle(cornerRadius: colours.radius).fill(colours.selected)
                             .matchedGeometryEffect(id: "selection", in: namespace)
                     } else if hovering {
-                        RoundedRectangle(cornerRadius: colours.radius).fill(colours.hover)
+                        RoundedRectangle(cornerRadius: colours.radius).fill(colours.bandHover)
                     }
                 }
                 .contentShape(Rectangle())
@@ -67,9 +65,24 @@ private struct PanelTabButton: View {
         .onHover { hovering = $0 }
         .help(tab.title)
     }
+
+    @ViewBuilder private var glyph: some View {
+        let colour = isSelected ? colours.selectedText : hovering ? colours.text : colours.muted
+        Group {
+            if tab == .history {
+                CommitGlyph(color: colour)
+            } else {
+                Image(systemName: tab.symbol).font(.system(size: Metric.glyph, weight: .medium)).foregroundStyle(colour)
+            }
+        }
+        .frame(width: Chrome.iconTab, height: Chrome.iconTab)
+    }
 }
 
 extension PanelTab {
+    /// The tabs in the GPUI app's order, which the model's own order (the enum's) is not.
+    static let barOrder: [PanelTab] = [.changes, .history, .notes]
+
     var title: String { rawValue.capitalized }
 
     /// Lucide's file-text, git-compare and history, as the GPUI app's tabs draw them, in the system's symbols.
@@ -77,7 +90,7 @@ extension PanelTab {
         switch self {
         case .notes: "doc.text"
         case .changes: "arrow.triangle.pull"
-        case .history: "clock.arrow.circlepath"
+        case .history: "circle"
         }
     }
 }

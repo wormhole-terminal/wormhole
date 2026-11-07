@@ -13,7 +13,7 @@ struct WindowBackdrop: View {
     var body: some View {
         ZStack {
             // Under everything and always there: a translucent window with the blur off shows the desktop.
-            if !look.isTranslucent { colours.window }
+            if !look.isTranslucent { colours.terminal }
             if look.blurShown { BlurMaterial() }
         }
         .ignoresSafeArea()
