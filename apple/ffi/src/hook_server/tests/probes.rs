@@ -205,7 +205,12 @@ fn a_finished_blocks_output_folds_to_a_marker_that_opens_and_that_never_hide_lin
 
     // Opening shows the lines and says how many; closing again is the marker's own click.
     assert_eq!(terminal.fold_show_all(), hidden);
-    assert!(terminal.fold_toggle(fold_id), "the fold is still there, now open");
+    // An open fold keeps its marker, above its own lines.
+    terminal.scroll(200);
+    let (flags, open) = sections(&terminal.frame(), 80);
+    assert_eq!(flags & 16, 16, "an open fold has a marker row: {flags}");
+    assert_eq!(open[5] & 1, 1, "and says it is open: {open:?}");
+    assert!(terminal.fold_toggle(fold_id), "closing it again is the marker's own click");
     assert!(terminal.fold_toggle(fold_id));
 
     // "Never hide lines": the view shows every line.
