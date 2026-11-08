@@ -12,10 +12,9 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use gpui_kit::*;
-use wormhole_core::probe::active::{self, Effect, RunEnd, RunJob, RunTicket};
-use wormhole_core::probe::events::EventData;
-use wormhole_core::probe::hidden::reveal;
-use wormhole_core::probe::manifest::HookEvent;
+use wormhole_core::ipc::probe_feed::{Feed, start_run};
+use wormhole_core::probe::active::{Effect, RunJob};
+use wormhole_core::probe::hidden::shown;
 use wormhole_core::probe::open_path::PathRef;
 use wormhole_core::storage::paths::DataRoot;
 use wormhole_core::view::notice::{Notice, Warning};
@@ -25,25 +24,11 @@ use wormhole_text::keys;
 use crate::app_state::AppState;
 use crate::probe_runtime::{self, StatusItem};
 
-/// What the hook feed's task hears: an event (several lines at once, for printed output) and the end of a
-/// program a hook started.
-pub(super) enum Feed {
-    Event(HookEvent, Vec<EventData>),
-    Ended(RunTicket, RunEnd),
-}
-
-/// Characters of a Probe's name or a file's name a chip says: both are text somebody else chose.
-const SHOWN: usize = 60;
-
 /// Numbers one chip from the next, so a new offer is not "the same one again".
 static SERIAL: AtomicU32 = AtomicU32::new(0);
 
 fn serial() -> u32 {
     SERIAL.fetch_add(1, Ordering::Relaxed).wrapping_add(1)
-}
-
-fn shown(text: &str) -> String {
-    reveal(text).chars().take(SHOWN).collect()
 }
 
 /// Do what `effects` say. `feed` is where a program started here reports its end.
@@ -73,7 +58,12 @@ pub(super) fn carry_out(effects: Vec<Effect>, feed: &smol::channel::Sender<Feed>
             }
             Effect::Run { ticket, probe, argv, cwd, timeout, env, terminal } => {
                 let folder = terminal.and_then(|id| crate::window::terminal_folder(id, cx));
-                start(ticket, RunJob { probe, argv, cwd, folder, timeout, env, terminal }, feed);
+                start_run(
+                    DataRoot::current(),
+                    ticket,
+                    RunJob { probe, argv, cwd, folder, timeout, env, terminal },
+                    feed,
+                );
             }
             Effect::Paused { probe_name, hook } => {
                 tracing::warn!(probe = %probe_name, hook, "a Probe's hook failed too often and was paused");
@@ -102,19 +92,4 @@ fn offer_file(probe_name: &str, terminal: i64, path: String, line: Option<u32>, 
         },
         cx,
     );
-}
-
-/// Run `job` on a thread of its own and tell `feed` how it ended. A thread that cannot be had is an end too,
-/// or the hook would wait for it for ever.
-fn start(ticket: RunTicket, job: RunJob, feed: &smol::channel::Sender<Feed>) {
-    let root = DataRoot::current();
-    let report = feed.clone();
-    let spawned = std::thread::Builder::new().name("wormhole-probe-run".into()).spawn(move || {
-        let end = active::execute(&root, &job);
-        // Blocking is fine here, and a closed feed (the Probes were loaded again) just means nobody waits.
-        let _ = report.send_blocking(Feed::Ended(ticket, end));
-    });
-    if let Err(err) = spawned {
-        let _ = feed.try_send(Feed::Ended(ticket, RunEnd::NotRun(err.to_string())));
-    }
 }

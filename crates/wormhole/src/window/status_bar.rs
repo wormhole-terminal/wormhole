@@ -321,18 +321,11 @@ impl Workspace {
     fn probe_items(&self, cx: &App) -> Vec<ProbeItem> {
         crate::probe_runtime::status_items(cx)
             .into_iter()
-            .map(|item| {
-                let name = wormhole_core::probe::hidden::reveal(&item.probe_name).into_owned();
-                let tooltip = match item.tooltip {
-                    Some(tooltip) => format!("{name}: {tooltip}"),
-                    None => name,
-                };
-                ProbeItem {
-                    key: format!("{}/{}", item.probe, item.item),
-                    text: item.text,
-                    tone: item.tone,
-                    tooltip,
-                }
+            .map(|item| ProbeItem {
+                key: format!("{}/{}", item.probe, item.item),
+                tooltip: item.shown_tooltip(),
+                text: item.text,
+                tone: item.tone,
             })
             .collect()
     }

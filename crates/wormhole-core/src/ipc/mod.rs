@@ -42,6 +42,7 @@ pub mod hosts;
 mod instance;
 mod mcp;
 mod message;
+pub mod probe_feed;
 mod read_job;
 mod server;
 #[cfg(test)]

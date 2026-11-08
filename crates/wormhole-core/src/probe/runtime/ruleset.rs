@@ -1,16 +1,18 @@
-//! The rules of every Probe that is on, as one set the terminal asks about a line of text.
+//! The rules of every Probe that is on, as one set the terminal asks about a line of text: what paints or
+//! masks a span (`decorate`) and what a pointer over a span finds (`LineRules`). Shell-neutral: both shells
+//! draw what it says.
 
 use std::ops::Range;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use wormhole_core::probe::manifest::{Look, Reveal};
-use wormhole_core::probe::rules::{CompiledRules, Match, Target, hover, matches, target};
-use wormhole_core::probe::tone::Tone;
+use crate::probe::manifest::{Look, Reveal};
+use crate::probe::rules::{CompiledRules, Match, Target, hover, matches, target};
+use crate::probe::tone::Tone;
 use wormhole_term::{LineRules, RevealWhen, RuleHit, RuleTarget};
 
 /// What one rule makes of a span of a line on screen.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub(crate) struct Decoration {
+pub struct Decoration {
     /// Bytes of the line.
     pub range: Range<usize>,
     pub tone: Option<Tone>,
@@ -20,24 +22,24 @@ pub(crate) struct Decoration {
 }
 
 /// The compiled rules of the Probes that are on.
-pub(crate) struct RuleSet {
+pub struct RuleSet {
     rules: CompiledRules,
     /// How many times a line was run through the rules: the cost of rules, counted, for the tests.
     scans: AtomicUsize,
 }
 
 impl RuleSet {
-    pub(crate) fn new(rules: CompiledRules) -> Self {
+    pub fn new(rules: CompiledRules) -> Self {
         Self { rules, scans: AtomicUsize::new(0) }
     }
 
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.rules.is_empty()
     }
 
     /// Lines run through the rules since the set was made.
     #[cfg(test)]
-    pub(crate) fn scans(&self) -> usize {
+    pub fn scans(&self) -> usize {
         self.scans.load(Ordering::Relaxed)
     }
 
@@ -48,7 +50,7 @@ impl RuleSet {
 
     /// What the rules paint or mask in `line`, a logical line, in the order the spans lie in it. A rule that
     /// only has a link and a hover says nothing here: it costs nothing until a ⌘-hover (`LineRules`).
-    pub(crate) fn decorate(&self, line: &str) -> Vec<Decoration> {
+    pub fn decorate(&self, line: &str) -> Vec<Decoration> {
         self.found(line)
             .into_iter()
             .filter_map(|found| {
@@ -97,7 +99,7 @@ impl LineRules for RuleSet {
 
 #[cfg(test)]
 mod tests {
-    use wormhole_core::probe::manifest::Manifest;
+    use crate::probe::manifest::Manifest;
 
     use super::*;
 

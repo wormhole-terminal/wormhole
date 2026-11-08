@@ -16,6 +16,7 @@
 //! - `rules`: a Probe's text rules compiled and run over a line, as `probe test` and the terminal do.
 //! - `events`: the vocabulary of hooks as data: each event, its fields and matchers, and where it comes from.
 //! - `hooks`: a Probe's hooks compiled and planned over one event, as `probe test` and the app will.
+//! - `runtime`: the rules, decorations and hook effects a shell holds while Probes are on.
 //! - `tone`: the design tokens a rule or hook may name.
 //! - `active`: the Probes that are on, loaded and compiled for the app to run, and the hooks' delivery.
 //! - `scan`: the Probes in `<data dir>/probes/`.
@@ -37,6 +38,7 @@ pub mod manifest;
 pub mod open_path;
 pub mod read;
 pub mod rules;
+pub mod runtime;
 pub mod scaffold;
 pub mod scan;
 pub mod tone;

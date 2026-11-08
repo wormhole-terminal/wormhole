@@ -8,31 +8,13 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::view::fold::{MarkerWords, marker_words};
 use wormhole_term::ScreenSnapshot;
-use wormhole_term::folds::FoldOwner;
-use wormhole_text::{keys, whole};
 
 use super::frame::Geometry;
 use crate::settings::UiColors;
 use crate::style::{self, TextRole};
 use crate::terminal_view::TerminalView;
-
-/// What a marker says, what VoiceOver says and its tooltip: the line ("124 lines hidden"), then a Probe's own
-/// fixed label (never text of the output) with the Probe's name in what is spoken and in the tooltip, then,
-/// while a search is open, how many matches are inside.
-fn words(line: String, owner: Option<&FoldOwner>, matches: usize) -> (String, String, Option<String>) {
-    let (mut label, mut spoken) = (line.clone(), line);
-    if let Some(owner) = owner {
-        spoken = keys::terminal_fold_spoken_by(&spoken, &owner.name, &owner.label);
-        label = keys::terminal_fold_labelled(&label, &owner.label);
-    }
-    if matches > 0 {
-        let inside = keys::terminal_fold_matches(whole(matches));
-        label = keys::terminal_fold_with_matches(&label, &inside);
-        spoken = keys::terminal_fold_with_matches(&spoken, &inside);
-    }
-    (label, spoken, owner.map(|owner| keys::terminal_fold_tooltip_by(&owner.name)))
-}
 
 /// The markers in view, laid out and ready to paint (none, and nothing allocated, without folds).
 pub(super) fn markers(
@@ -49,14 +31,10 @@ pub(super) fn markers(
     for (row, fold) in
         snapshot.rows().iter().enumerate().filter_map(|(row, shown)| Some((row, shown.fold()?)))
     {
-        let count = whole(fold.hidden());
-        let (line, glyph) = if fold.expanded {
-            (keys::terminal_fold_shown(count), IconName::ChevronDown)
-        } else {
-            (keys::terminal_fold_hidden(count), IconName::ChevronRight)
-        };
-        let (label, spoken, tooltip) =
-            words(line, fold.owner.as_deref(), found.get(row).copied().unwrap_or(0));
+        let glyph = if fold.expanded { IconName::ChevronDown } else { IconName::ChevronRight };
+        let owner = fold.owner.as_deref().map(|owner| (owner.name.as_str(), owner.label.as_str()));
+        let MarkerWords { label, spoken, tooltip } =
+            marker_words(fold.hidden(), fold.expanded, owner, found.get(row).copied().unwrap_or(0));
         let id = fold.id;
         let entity = entity.clone();
         let mut marker = div()
@@ -88,23 +66,4 @@ pub(super) fn markers(
         markers.push(marker);
     }
     markers
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{FoldOwner, words};
-
-    #[test]
-    fn a_probes_marker_carries_its_label_and_only_the_spoken_words_and_tooltip_its_name() {
-        let owner =
-            FoldOwner { probe: "acme".into(), name: "Acme tools".into(), label: "build output".into() };
-        let (label, spoken, tooltip) = words("124 lines hidden".into(), Some(&owner), 0);
-        assert_eq!(label, "124 lines hidden · build output");
-        assert_eq!(spoken, "124 lines hidden by Acme tools, build output");
-        assert_eq!(tooltip.as_deref(), Some("Folded by Acme tools"));
-        let (label, spoken, tooltip) = words("124 lines hidden".into(), None, 2);
-        assert_eq!(label, "124 lines hidden · 2 matches inside");
-        assert_eq!(spoken, label);
-        assert_eq!(tooltip, None, "the person's own fold has no author to name");
-    }
 }
