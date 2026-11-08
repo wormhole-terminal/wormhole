@@ -20,8 +20,10 @@ extension MetalTerminalView {
         guard cell.width > 0, cell.height > 0, grid.cols > 0 else { return nil }
         let size = CGSize(width: CGFloat(cell.width) / scale, height: CGFloat(cell.height) / scale)
         let pad = 2 * MetalRenderer.padding
+        // What is beyond the whole cells that fit, not beyond the grid the program was told: during a drag that one lags.
+        func beyond(_ extent: CGFloat, _ cell: CGFloat) -> CGFloat { extent - cell * (extent / cell).rounded(.down) }
         return (size, CGSize(
-            width: bounds.width - scroller.gutterWidth - minimapWidth - pad - size.width * CGFloat(grid.cols),
-            height: bounds.height - pad - size.height * CGFloat(grid.rows)))
+            width: beyond(bounds.width - scroller.gutterWidth - minimapWidth - pad, size.width),
+            height: beyond(bounds.height - pad, size.height)))
     }
 }

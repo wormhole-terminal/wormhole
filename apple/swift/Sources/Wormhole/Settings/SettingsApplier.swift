@@ -81,6 +81,7 @@ final class SettingsApplier {
         if changed("blur") { look.blur = values["blur"]?.bool ?? look.blur }
         if changed("liquid_glass") { look.liquidGlass = values["liquid_glass"]?.bool ?? look.liquidGlass }
         if changed("status_bar"), !app.options.statusBar { look.statusBar = values["status_bar"]?.bool ?? false }
+        if changed("smooth_resize") { look.smoothResize = values["smooth_resize"]?.bool ?? false }
         if changed("minimap") { look.minimap = values["minimap"]?.bool ?? false }
         if changed("split_gaps") { look.splitGaps = values["split_gaps"]?.bool ?? look.splitGaps }
         if changed("column_dividers") { look.columnDividers = values["column_dividers"]?.bool ?? look.columnDividers }

@@ -59,7 +59,7 @@ struct TerminalHost: NSViewRepresentable {
         override func layout() {
             super.layout()
             guard let view = subviews.first as? MetalTerminalView else { return }
-            let grid = view.renderer.gridSize
+            let grid = view.gridSize
             let live = window?.inLiveResize ?? false
             // After the update that caused this layout: the overlay is observed by the views being laid out.
             DispatchQueue.main.async { [overlay] in overlay.size.noteSize(cols: grid.cols, rows: grid.rows, live: live) }

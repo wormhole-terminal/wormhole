@@ -22,6 +22,8 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     public var gridFacts: (() -> (cell: CGSize, spare: CGSize)?)?
     /// The frame a window drag began at: what tells the edges the person held.
     private var dragStart = NSRect.zero
+    /// The grid's cell and strip when the drag began.
+    private var dragFacts: (cell: CGSize, spare: CGSize)?
     /// The rectangle the window had before it was zoomed or made full screen: what a record of it comes back to.
     public private(set) var windowedFrame = NSRect.zero
 
@@ -65,17 +67,29 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
         reportState()
         onFrameChange?()
     }
-    /// A drag steps by the terminal's cell, so no part of a cell is left at the right or bottom (as Terminal does).
+    /// Whether a drag of the window's edge steps by the terminal's cell (the default) or resizes freely (`smooth_resize`).
+    public var snapsToGrid: () -> Bool = { true }
+
     public func windowWillStartLiveResize(_ notification: Notification) {
-        guard let window else { return }
-        dragStart = window.frame
-        window.resizeIncrements = gridFacts?().map { ResizeSteps.increments(cell: $0.cell) } ?? NSSize(width: 1, height: 1)
+        dragStart = window?.frame ?? .zero
+        dragFacts = snapsToGrid() ? gridFacts?() : nil
     }
 
-    /// AppKit keeps the steps in whole points, so a window may end off the cell grid: it gives up the strip, from the side
+    /// A drag steps by the terminal's cell, so no part of a cell is left at the right or bottom (as Terminal does). Every step
+    /// counts from where the drag began and the strip the grid had then: the layout inside the window follows the frame a
+    /// beat later, so what it holds mid-drag is not the window's size now.
+    public func windowWillResize(_ sender: NSWindow, to proposed: NSSize) -> NSSize {
+        guard snapsToGrid(), let facts = dragFacts ?? gridFacts?() else { return proposed }
+        let least = sender.frameRect(forContentRect: NSRect(origin: .zero, size: sender.minSize)).size
+        let from = dragFacts == nil ? sender.frame.size : dragStart.size
+        return ResizeSteps.snapped(proposed, from: from, spare: facts.spare, cell: facts.cell, least: least)
+    }
+
+    /// A window may still end off the cell grid (the columns gave way as it narrowed): it gives up the strip, from the side
     /// the person was not holding. Full screen, zoomed and tiled windows are the system's size and stay.
     public func windowDidEndLiveResize(_ notification: Notification) {
-        guard let window, !window.isZoomed, !window.styleMask.contains(.fullScreen), let facts = gridFacts?(),
+        dragFacts = nil
+        guard let window, snapsToGrid(), !window.isZoomed, !window.styleMask.contains(.fullScreen), let facts = gridFacts?(),
             let strip = ResizeSteps.settle(spare: facts.spare, cell: facts.cell), let visible = window.screen?.visibleFrame,
             let settled = ResizeSteps.settledFrame(
                 window.frame, strip: strip, visible: visible, heldLeft: abs(window.frame.minX - dragStart.minX) > 0.5,

@@ -2,6 +2,7 @@
 
 import AppKit
 import Foundation
+import QuartzCore
 import TerminalCore
 import TerminalMetal
 import WorkspaceModel
@@ -54,6 +55,7 @@ extension AppController {
             view.select(from: (n[0], n[1]), to: (n[2], n[3]))
             reply("select-cells \(argument)")
         case "state": reply(state(view))
+        case "geometry": reply(geometry(view))
         case "screen":
             let grid = view.renderer.gridSize
             reply((0..<grid.rows).map { view.renderer.text(ofRow: $0) }.joined(separator: "\n"))
@@ -66,6 +68,18 @@ extension AppController {
     }
 
     func reply(_ text: String) { devctl?.append(text) }
+
+    /// What decides the grid, in points: the window, the view, the layer's drawable (px), and where the last grid row ends.
+    func geometry(_ view: MetalTerminalView) -> String {
+        let renderer = view.renderer, cell = renderer.cellPixels, grid = renderer.gridSize
+        let layer = view.layer as? CAMetalLayer
+        let pad = MetalRenderer.padding, scale = CGFloat(renderer.scale)
+        let content = window?.contentView?.bounds.size ?? .zero
+        let lastRowEnd = pad + CGFloat(grid.rows * cell.height) / scale
+        return "window=\(window?.frame.size.debugDescription ?? "-") content=\(content) view=\(view.frame) live=\(window?.inLiveResize ?? false) "
+            + "increments=\(window?.resizeIncrements ?? .zero) drawable=\(layer?.drawableSize ?? .zero) grid=\(grid.cols)x\(grid.rows) "
+            + "cell=\(cell.width)x\(cell.height)px pad=\(pad) lastRowEnd=\(lastRowEnd) viewHeight=\(view.bounds.height) strip=\(view.bounds.height - lastRowEnd - pad)"
+    }
 
     private func state(_ view: MetalTerminalView) -> String {
         let renderer = view.renderer

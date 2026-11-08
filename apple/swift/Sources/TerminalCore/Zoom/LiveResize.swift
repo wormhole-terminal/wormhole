@@ -1,5 +1,5 @@
 // A window dragged to another size (`view::motion::live_resize`): what the program in its terminal is told meanwhile,
-// the window's resize steps and the strip a window off the cell grid leaves when the drag ends. A full-screen program
+// the window's resize snapping and the strip a window off the cell grid leaves when the drag ends. A full-screen program
 // redraws its whole screen for every size it is told, so during a live resize the PTY is resized at most every 100 ms,
 // the last size always getting through, and once more the moment the drag ends. Pure timing and geometry: asking AppKit
 // whether a drag is on (`NSWindow.inLiveResize`) and hearing it end are the window's.
@@ -38,15 +38,18 @@ public struct ResizeGate: Sendable {
 public enum ResizeSteps {
     /// A leftover strip narrower than this is the rounding of a fractional cell to the screen's pixels.
     static let settleMin: CGFloat = 1
-    /// How near a whole point a cell's width must be for the window to step by it: `NSWindow.resizeIncrements` keeps
-    /// whole points, so any other width would be followed wrongly on most steps.
-    static let wholePoint: CGFloat = 0.05
-
-    /// The steps the window resizes in for a terminal whose cell is `cell`; a width that is not whole is left free
-    /// (one point) and `settle` takes the strip off at the end.
-    public static func increments(cell: CGSize) -> CGSize {
-        let width = abs(cell.width - cell.width.rounded()) <= wholePoint ? max(cell.width.rounded(), 1) : 1
-        return CGSize(width: width, height: max(cell.height.rounded(), 1))
+    /// The size a window dragged to `proposed` is held to, so its terminal's area keeps whole cells (a drag steps by a cell, as
+    /// Terminal's does, whatever the chrome around the grid measures): `spare` is the strip the area has beyond its grid now,
+    /// so each side moves by whole cells from where the grid ends. Never under `least`, which it passes by whole cells.
+    public static func snapped(_ proposed: CGSize, from current: CGSize, spare: CGSize, cell: CGSize, least: CGSize) -> CGSize {
+        func axis(_ proposed: CGFloat, _ current: CGFloat, _ spare: CGFloat, _ cell: CGFloat, _ least: CGFloat) -> CGFloat {
+            let cells = ((proposed - current + spare) / cell).rounded()
+            let size = current + cells * cell - spare
+            return size < least ? size + ((least - size) / cell).rounded(.up) * cell : size
+        }
+        return CGSize(
+            width: axis(proposed.width, current.width, spare.width, cell.width, least.width),
+            height: axis(proposed.height, current.height, spare.height, cell.height, least.height))
     }
 
     /// How far the window is to shrink, across and down, so it holds whole cells with no strip left: `spare` is what

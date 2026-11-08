@@ -215,6 +215,8 @@ public final class MetalRenderer {
     /// The instances changed since the last draw.
     public var needsDraw: Bool { scene.changeCount != drawnChange }
     private var drawnChange = -1
+    /// The next `needsDraw` is true: what is on screen was drawn for another surface size.
+    func invalidate() { drawnChange = -1 }
 
     public func setCursorBlinkOn(_ on: Bool) { scene.setCursorOn(on); scene.rebuildDirty() }
 
@@ -255,10 +257,15 @@ public final class MetalRenderer {
     /// Draw the scene into the layer's next drawable. With `blocking` off it never waits for the GPU: all
     /// three frames in flight means `.busy`, and the view tries again on its next tick. The measuring mode
     /// blocks, since a forced draw must happen, and reports the wait apart from the CPU work.
-    public func draw(in layer: CAMetalLayer, blocking: Bool = false) -> DrawTimings {
+    ///
+    /// With `withTransaction` the frame goes on screen with the Core Animation transaction that is being committed (the
+    /// layout that resized the layer), so a window being dragged never shows a frame of the old size scaled; it waits
+    /// for the GPU, as `blocking` does.
+    public func draw(in layer: CAMetalLayer, blocking: Bool = false, withTransaction: Bool = false) -> DrawTimings {
         var timings = DrawTimings(outcome: .drawn)
+        layer.presentsWithTransaction = withTransaction
         let t0 = MonotonicClock.now()
-        if blocking {
+        if blocking || withTransaction {
             inflight.wait()
         } else if inflight.wait(timeout: .now()) != .success {
             timings.outcome = .busy
@@ -282,7 +289,7 @@ public final class MetalRenderer {
         pass.colorAttachments[0].clearColor = clearColor
         let buffer = queue.makeCommandBuffer()!
         encode(into: buffer, pass: pass, size: layer.drawableSize, inset: paddingPixels, slot: slot, counts: counts)
-        buffer.present(drawable)
+        if !withTransaction { buffer.present(drawable) }
         let semaphore = inflight
         let times = gpuTimes
         buffer.addCompletedHandler { finished in
@@ -290,6 +297,10 @@ public final class MetalRenderer {
             semaphore.signal()
         }
         buffer.commit()
+        if withTransaction {
+            buffer.waitUntilScheduled()
+            drawable.present()
+        }
         let t4 = MonotonicClock.now()
         drawnChange = scene.changeCount
         timings.waitNs = (t1 - t0) + (t3 - t2)

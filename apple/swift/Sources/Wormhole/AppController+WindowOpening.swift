@@ -86,6 +86,7 @@ extension AppController {
             return self?.shouldClose(session) ?? true
         }
         controller.gridFacts = { [weak session] in session?.hub.gridFacts }
+        controller.snapsToGrid = { [weak self] in !(self?.look.smoothResize ?? false) }
         controller.onState = { [weak self, weak session] active, seen in
             guard let session else { return }
             session.hub.store.windowState(active: active, seen: seen)

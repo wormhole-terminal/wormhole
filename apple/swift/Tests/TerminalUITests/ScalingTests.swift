@@ -62,9 +62,18 @@ import Testing
         #expect(gate.step(now: after(10), live: true, differs: true).apply)
     }
 
-    @Test func theWindowStepsByAWholeCellWidthAndLeavesAFractionalOneFree() {
-        #expect(ResizeSteps.increments(cell: CGSize(width: 8, height: 17.6)) == CGSize(width: 8, height: 18))
-        #expect(ResizeSteps.increments(cell: CGSize(width: 8.4, height: 17)) == CGSize(width: 1, height: 17))
+    @Test func aDragStepsByWholeCellsFromWhereTheGridEndsWhateverTheChromeMeasures() {
+        let cell = CGSize(width: 8.5, height: 18), spare = CGSize(width: 3, height: 5)
+        let current = CGSize(width: 1000, height: 640), least = CGSize(width: 640, height: 360)
+        // Dragged 30 pt wider and 50 pt taller: the nearest whole cells (33 pt of the strip and the drag is 3.9 cells, 55 pt is 3.05).
+        let snapped = ResizeSteps.snapped(CGSize(width: 1030, height: 690), from: current, spare: spare, cell: cell, least: least)
+        #expect(snapped == CGSize(width: 1000 + 4 * 8.5 - 3, height: 640 + 3 * 18 - 5))
+        // The size that results holds whole cells: nothing beyond the grid.
+        #expect((spare.width + snapped.width - current.width).truncatingRemainder(dividingBy: cell.width) == 0)
+        #expect(ResizeSteps.snapped(current, from: current, spare: .zero, cell: cell, least: least) == current)
+        // Never under the least size, passing it by a whole cell.
+        let small = ResizeSteps.snapped(CGSize(width: 100, height: 100), from: current, spare: .zero, cell: cell, least: least)
+        #expect(small.width >= 640 && small.height >= 360 && small.width < 640 + cell.width && small.height < 360 + cell.height)
     }
 
     @Test func settlingTakesOffTheStripAndNeverAWholeCell() {

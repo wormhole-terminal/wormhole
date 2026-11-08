@@ -31,6 +31,7 @@ extension AppController {
             let sides = argument.split(separator: "x").compactMap { Double($0) }
             guard sides.count == 2 else { reply("error: size is WIDTHxHEIGHT"); return true }
             window?.setContentSize(CGSize(width: sides[0], height: sides[1]))
+        case "live-resize-sim": liveResizeSim(argument)
         case "split": hub.split(["down", "column"].contains(argument) ? .column : .row)
         case "edge":
             // `edge sidebar|panel <extent>`: a column's edge dragged to a width, as the handle does.
@@ -89,6 +90,39 @@ extension AppController {
         }
         reply(argument.isEmpty ? command : "\(command) \(argument)")
         return true
+    }
+
+    /// `live-resize-sim <width> <height> <shot prefix>`: the window dragged from its size to this frame size in eight steps,
+    /// each held to the grid as a real drag is (`windowWillResize`), with the drag's start and end notified. A shot of the
+    /// window window-server composited is written mid-drag (`<prefix>-mid.png`) and when it ends (`<prefix>-end.png`).
+    /// AppKit's own live resize cannot be started from outside, so `inLiveResize` stays false here.
+    private func liveResizeSim(_ argument: String) {
+        let words = argument.split(separator: " ").map(String.init)
+        guard words.count == 3, let width = Double(words[0]), let height = Double(words[1]), let window, let controller = front.controller else {
+            return reply("error: live-resize-sim WIDTH HEIGHT PREFIX")
+        }
+        let from = window.frame.size, to = CGSize(width: width, height: height)
+        controller.windowWillStartLiveResize(Notification(name: NSWindow.willStartLiveResizeNotification))
+        Task { @MainActor in
+            for step in 1...8 {
+                let t = Double(step) / 8
+                let proposed = CGSize(width: from.width + (to.width - from.width) * t, height: from.height + (to.height - from.height) * t)
+                var frame = window.frame
+                let size = controller.windowWillResize(window, to: proposed)
+                frame.origin.y += frame.height - size.height
+                frame.size = size
+                window.setFrame(frame, display: true)
+                window.contentView?.layoutSubtreeIfNeeded()
+                reply("step \(step) \(selectedView.map(geometry) ?? "")")
+                if step == 4 { reply(windowShot(to: words[2] + "-mid.png")) }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            try? await Task.sleep(for: .milliseconds(300))
+            controller.windowDidEndLiveResize(Notification(name: NSWindow.didEndLiveResizeNotification))
+            try? await Task.sleep(for: .milliseconds(300))
+            reply(selectedView.map(geometry) ?? "")
+            reply(windowShot(to: words[2] + "-end.png"))
+        }
     }
 
     private func runFind(_ text: String) {

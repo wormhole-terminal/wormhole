@@ -14,17 +14,20 @@ final class LiveHarness {
     let window: NSWindow
     let cell: CGSize
 
-    init(_ script: String, cols: Int = 40, rows: Int = 10, dataDirectory: String = "/tmp/Wormhole-swift-g-term-input") throws {
+    init(_ script: String, cols: Int = 40, rows: Int = 10, fitting: Bool = false, dataDirectory: String = "/tmp/Wormhole-swift-g-term-input") throws {
         setenv("WORMHOLE_DATA_DIR", dataDirectory, 1)
         let configuration = RendererConfiguration(font: .system(family: "Menlo"), pointSize: 13, scale: 2)
         let probe = try MetalRenderer(configuration: configuration)
         cell = CGSize(width: CGFloat(probe.cellPixels.width) / 2, height: CGFloat(probe.cellPixels.height) / 2)
-        let frame = NSRect(x: 0, y: 0, width: cell.width * CGFloat(cols), height: cell.height * CGFloat(rows))
+        // `fitting`: a pane that is exactly this grid and its padding (and the scroll bar's gutter), and the view works out the grid itself.
+        let pad = fitting ? 2 * MetalRenderer.padding : 0
+        let frame = NSRect(x: 0, y: 0, width: cell.width * CGFloat(cols) + pad, height: cell.height * CGFloat(rows) + pad)
         let source = UniFFIFrameSource(program: "/bin/sh", arguments: ["-c", "\(script); exec cat"])
         view = try MetalTerminalView(source: source, configuration: configuration, frame: frame)
-        view.fixedGrid = (cols, rows)
+        if !fitting { view.fixedGrid = (cols, rows) }
         window = NSWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.contentView = view
+        if fitting { view.setFrameSize(NSSize(width: frame.width + view.scroller.gutterWidth, height: frame.height)) }
         view.layoutSubtreeIfNeeded()
     }
 
@@ -121,6 +124,25 @@ final class LiveHarness {
         live.view.drawFrame(force: true)
         #expect(live.view.renderer.scene.header?.displayOffset == 5)
         #expect(scroller.view.doubleValue < 1 && !scroller.view.isHidden, "an overlay thumb shows while scrolling")
+    }
+
+    /// The owner's 100x30 pane whose last row was cut in half: the pane's padding is taken off every side before cells are counted,
+    /// so the rows and their padding fit the pane exactly, and the program is told the grid that is drawn.
+    @Test func aPaneHoldsTheWholeGridItsPaddingLeavesAndTheProgramIsToldTheSame() async throws {
+        let live = try LiveHarness("stty size", cols: 100, rows: 30, fitting: true)
+        #expect(await live.wait(for: "30 100"), "the real program reads the size the view told it")
+        #expect(live.view.gridSize.cols == 100 && live.view.gridSize.rows == 30)
+        let height = live.view.bounds.height, pad = 2 * MetalRenderer.padding
+        #expect(CGFloat(30) * live.cell.height + pad <= height, "the 30 rows and the padding fit the pane: nothing is cut")
+        // A pane a point short of the 30th row holds 29, whole, and the engine's screen follows.
+        live.view.setFrameSize(NSSize(width: live.view.frame.width, height: height - 1))
+        live.view.layoutSubtreeIfNeeded()
+        #expect(live.view.gridSize.rows == 29)
+        for _ in 0..<250 where live.view.renderer.gridSize.rows != 29 {
+            live.view.drawFrame(force: true)
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(live.view.renderer.gridSize.rows == 29)
     }
 
     @Test func pasteIsBracketedOnlyWhenAsked() async throws {

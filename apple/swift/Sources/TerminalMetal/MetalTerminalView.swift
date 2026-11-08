@@ -76,7 +76,7 @@ public final class MetalTerminalView: NSView {
     var resizeGate = ResizeGate()
     var resizeItem: DispatchWorkItem?
     /// The grid the program was last told (`syncSurface`).
-    private(set) var gridSize = GridSize(cols: 0, rows: 0)
+    public private(set) var gridSize = GridSize(cols: 0, rows: 0)
     private let wake = WakeRelay()
 
     // Input method state (see Keyboard/).
@@ -109,6 +109,8 @@ public final class MetalTerminalView: NSView {
             layer.framebufferOnly = true
             layer.isOpaque = true
             layer.maximumDrawableCount = 3
+            // A frame of another size is never scaled to the layer's: it stays where it is (the clear colour is the terminal's).
+            layer.contentsGravity = .topLeft
             layer.colorspace = CGColorSpace(name: CGColorSpace.sRGB)
             layer.contentsScale = CGFloat(configuration.scale)
         }
@@ -222,7 +224,10 @@ public final class MetalTerminalView: NSView {
         guard pixels.width >= 1, pixels.height >= 1 else { return }
         if let layer = metalLayer, layer.drawableSize != pixels {
             layer.drawableSize = pixels
+            renderer.invalidate()
             requestRedraw()
+            // What was drawn is for the old size: draw again now, with this layout's transaction, not on the next tick.
+            if started, window != nil { drawFrame(transaction: true) }
         }
         // A zoom on its way keeps the grid the program has: it is told once, when the size has arrived.
         guard zoomEase == nil else { return }
@@ -319,9 +324,9 @@ public final class MetalTerminalView: NSView {
 
     /// Fetch, build, draw: one frame, timed by phase (`FrameStats.swift` says what each is). With `force`,
     /// draws even when the frame changed nothing, and waits for a free frame instead of skipping: the
-    /// measuring mode's forced draws.
+    /// measuring mode's forced draws. With `transaction` it is shown with the layout being committed (`MetalRenderer.draw`).
     @discardableResult
-    public func drawFrame(force: Bool = false) -> FrameSample {
+    public func drawFrame(force: Bool = false, transaction: Bool = false) -> FrameSample {
         let cpuStart = MonotonicClock.threadCPU()
         let t0 = MonotonicClock.now()
         let data = source.frame()
@@ -338,7 +343,7 @@ public final class MetalTerminalView: NSView {
         var timings = DrawTimings(outcome: .drawn)
         if force || renderer.needsDraw {
             if let layer = metalLayer {
-                timings = renderer.draw(in: layer, blocking: force)
+                timings = renderer.draw(in: layer, blocking: force, withTransaction: transaction)
             } else {
                 timings.outcome = .noDrawable
             }

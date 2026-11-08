@@ -25,6 +25,8 @@ public final class WindowLook {
         get { zen?.statusBar ?? ownStatusBar }
         set { ownStatusBar = newValue }
     }
+    /// A window is dragged freely, its grid reflowing, instead of in whole cells of the grid (`smooth_resize`, off by default).
+    public var smoothResize = false
     /// The minimap along the terminals' right edge instead of the scroll bar (`minimap`, off by default).
     public var minimap: Bool {
         get { zen?.minimap ?? ownMinimap }
