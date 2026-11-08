@@ -5,6 +5,7 @@
 
 use std::path::Path;
 
+use crate::git::pr::PullRequest;
 use crate::view::layout::path_menu;
 use crate::view::layout::title_parts::{TitlePart, chevrons};
 use crate::view::layout::title_row::path_steps;
@@ -19,8 +20,8 @@ use super::AgentInfo;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TitleSlot {
     pub part: TitlePart,
-    /// The model has something for it (a branch needs a repository, Open in… a folder). Gauge,
-    /// ports and the pull request come with the git and probe feeds: never present before them.
+    /// The model has something for it (a branch needs a repository, Open in… a folder, ports a
+    /// listener, the pull request one that `gh` found). The gauge is the shell's own: never present.
     pub present: bool,
     /// A chevron goes before it, as it joins the crumb before it.
     pub chevron_before: bool,
@@ -70,6 +71,11 @@ pub struct TitleSnapshot {
     pub path_steps: Vec<PathStep>,
     /// The folder's menu (`boot_volume` names the top of the tree).
     pub path_menu: Vec<PathFolder>,
+    /// The ports the selected terminal's programs listen on, lowest first.
+    pub ports: Vec<u16>,
+    /// The pull request of its branch, and how VoiceOver says it (`PullRequest::words`).
+    pub pull_request: Option<PullRequest>,
+    pub pull_request_words: Option<String>,
 }
 
 impl WorkspaceModel {
@@ -89,16 +95,23 @@ impl WorkspaceModel {
                 hidden,
                 path_steps: Vec::new(),
                 path_menu: Vec::new(),
+                ports: Vec::new(),
+                pull_request: None,
+                pull_request_words: None,
             };
         };
         let facts = &session.facts;
         let folder = facts.cwd.as_deref().map(|cwd| display_path(cwd, self.cfg.home.as_deref()));
+        let ports = self.ports.get(&session.id).cloned().unwrap_or_default();
+        let pull_request = self.pull_request_of(session.id).cloned();
         let present = |part: TitlePart| match part {
             TitlePart::Folder | TitlePart::OpenIn => facts.cwd.is_some(),
             TitlePart::Branch | TitlePart::BranchStatus => facts.branch.is_some(),
             TitlePart::Terminal | TitlePart::Splits => true,
             TitlePart::TerminalStatus => facts.told() || facts.command.is_some(),
-            TitlePart::AgentGauge | TitlePart::Ports | TitlePart::PullRequest | TitlePart::Space => false,
+            TitlePart::Ports => !ports.is_empty(),
+            TitlePart::PullRequest => pull_request.is_some(),
+            TitlePart::AgentGauge | TitlePart::Space => false,
         };
         TitleSnapshot {
             revision,
@@ -127,6 +140,9 @@ impl WorkspaceModel {
                 })
                 .unwrap_or_default(),
             path_menu: facts.cwd.as_deref().map(|cwd| path_menu_of(cwd, boot_volume)).unwrap_or_default(),
+            pull_request_words: pull_request.as_ref().map(PullRequest::words),
+            pull_request,
+            ports: ports.clone(),
         }
     }
 

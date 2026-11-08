@@ -18,6 +18,7 @@ use super::joined::open_beside;
 use super::worktree;
 use super::{automation_off, not_found};
 use crate::hook_server::core::Core;
+use crate::workspace::Shared;
 
 /// How often a new terminal is looked at while its command waits.
 const POLL: Duration = Duration::from_millis(50);
@@ -52,9 +53,14 @@ pub(super) fn new_terminal(
     if let Err(error) = launch_check(folder.as_deref(), command.as_deref()) {
         return error.into();
     }
-    if let Some(id) = window.filter(|id| *id != core.window) {
-        return Reply::error(ErrorCode::NotFound, format!("no window {id}"));
-    }
+    // The window asked for; else the caller's own terminal's; else the first.
+    let target = match window {
+        Some(id) => core.share_of_window(id),
+        None => from.and_then(|tab| core.owner_of(tab)).or_else(|| Some(core.shared.clone())),
+    };
+    let Some(target) = target else {
+        return Reply::error(ErrorCode::NotFound, format!("no window {}", window.unwrap_or_default()));
+    };
     if let Err(reply) = core.budget(Limited::NewTerminal, from) {
         return reply;
     }
@@ -62,7 +68,7 @@ pub(super) fn new_terminal(
     if let Some(branch) = worktree {
         return worktree::ask(core, folder, &branch, command);
     }
-    let opened = open(core, Action::NewTerminal, folder);
+    let opened = open(&target, Action::NewTerminal, folder);
     match opened {
         Some((terminal, cwd)) => {
             if let Some(command) = command {
@@ -70,7 +76,7 @@ pub(super) fn new_terminal(
             }
             tracing::info!(terminal, ?from, "control: a terminal was opened");
             Reply::ok(Opened {
-                window: core.window,
+                window: target.window_id(),
                 terminal,
                 tab: terminal,
                 pane: terminal,
@@ -106,13 +112,14 @@ pub(super) fn split(
     if let Err(reply) = core.budget(Limited::NewTerminal, from) {
         return reply;
     }
-    let before = core.shared.peek_model(|model| model.selected());
-    let Some((terminal, cwd)) = open_beside(core, anchor, spec.direction, spec.folder.clone()) else {
+    let Some(owner) = core.owner_of(anchor) else { return not_found(spec.target) };
+    let before = owner.peek_model(|model| model.selected());
+    let Some((terminal, cwd)) = open_beside(&owner, anchor, spec.direction, spec.folder.clone()) else {
         return Error::new(
             ErrorCode::Refused,
             format!(
                 "window {} has no room to split terminal {anchor} {}",
-                core.window,
+                owner.window_id(),
                 spec.direction.word()
             ),
         )
@@ -123,14 +130,13 @@ pub(super) fn split(
     if !spec.select
         && let Some(before) = before
     {
-        let events = core.shared.with_model(|model| model.apply(Action::Select(before)));
-        core.shared.post(events);
+        let events = owner.with_model(|model| model.apply(Action::Select(before)));
+        owner.post(events);
     }
     if let Some(command) = spec.command.clone() {
         run_first(core, terminal, command);
     }
     let split = core
-        .publisher
         .listing()
         .windows
         .iter()
@@ -139,36 +145,35 @@ pub(super) fn split(
         .and_then(|t| t.split)
         .unwrap_or_default();
     tracing::info!(terminal, split, ?from, "control: a terminal was split off");
-    Reply::ok(SplitMade { window: core.window, split, terminal, folder: cwd, size: None })
+    Reply::ok(SplitMade { window: owner.window_id(), split, terminal, folder: cwd, size: None })
 }
 
 /// Do `action`, which makes a terminal: the id and folder it opened (`folder` in the place of the model's
 /// choice when given), with the events handed to Swift, which starts its program. `None` when it made none
 /// (the room was refused).
-fn open(core: &Core, action: Action, folder: Option<String>) -> Option<(i64, Option<String>)> {
-    let mut events = core.shared.with_model(|model| model.apply(action));
+fn open(shared: &Shared, action: Action, folder: Option<String>) -> Option<(i64, Option<String>)> {
+    let mut events = shared.with_model(|model| model.apply(action));
     let refused = events.iter().any(|event| matches!(event, Event::Refused(Refusal::TooSmall)));
     let opened = events.iter_mut().find_map(|event| match event {
         Event::Opened { id, cwd } => Some((*id, cwd)),
         _ => None,
     });
     let Some((id, cwd)) = opened.filter(|_| !refused) else {
-        core.shared.post(events);
+        shared.post(events);
         return None;
     };
     if let Some(folder) = folder {
         *cwd = Some(folder.clone().into());
-        let set =
-            core.shared.with_model(|model| model.update_facts(id, |facts| facts.cwd = Some(folder.into())));
+        let set = shared.with_model(|model| model.update_facts(id, |facts| facts.cwd = Some(folder.into())));
         let shown = cwd.as_ref().map(|path| path.to_string_lossy().into_owned());
         events.extend(set);
-        core.shared.post(events);
-        core.shared.pump.kick();
+        shared.post(events);
+        shared.pump.kick();
         return Some((id, shown));
     }
     let shown = cwd.as_ref().map(|path| path.to_string_lossy().into_owned());
-    core.shared.post(events);
-    core.shared.pump.kick();
+    shared.post(events);
+    shared.pump.kick();
     Some((id, shown))
 }
 

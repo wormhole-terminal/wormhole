@@ -138,6 +138,9 @@ pub struct WorkspaceModel {
     pub(super) status: StatusBook,
     /// What git says of each terminal's folder (`git_feed`).
     pub(super) git: GitFeed,
+    /// The ports each terminal's programs listen on, and what `gh` said of branches (`extras`).
+    pub(super) ports: HashMap<i64, Vec<u16>>,
+    pub(super) pull_requests: HashMap<crate::git::pr::Branch, crate::git::pr::PullRequest>,
 }
 
 impl WorkspaceModel {
@@ -162,6 +165,8 @@ impl WorkspaceModel {
             out: Out::default(),
             status: StatusBook::default(),
             git,
+            ports: HashMap::new(),
+            pull_requests: HashMap::new(),
         }
     }
 
@@ -211,7 +216,9 @@ impl WorkspaceModel {
             Action::ApplyLayout(preset) => self.apply_layout(preset),
             Action::DragDivider { path, index, position } => self.drag_divider(&path, index, position),
             Action::EqualizeDivider { path, index } => self.equalize_divider(&path, index),
+            Action::MovePane { id, target, zone } => self.move_pane(id, target, zone),
             Action::FocusPane(id) => self.select_id(id),
+            Action::FocusDirection(direction) => self.focus_direction(direction),
             Action::ToggleZoom => self.toggle_zoom(),
             Action::ToggleSidebar => self.chrome_change(|c| c.panes.toggle_sidebar()),
             Action::TogglePanel => {

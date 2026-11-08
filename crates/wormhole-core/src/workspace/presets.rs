@@ -3,7 +3,7 @@
 //! (`view::panes`: `Preset`, `TabPanes::plan`/`arrange`/`drag`); this makes the terminals the
 //! slots need and lets the ones over leave the split (they keep running).
 
-use crate::view::panes::{DividerId, PANE_MIN_W, Preset, TabPanes};
+use crate::view::panes::{Direction, DividerId, PANE_MIN_W, Preset, TabPanes, Zone};
 
 use super::event::{Event, Refusal};
 use super::model::WorkspaceModel;
@@ -112,5 +112,59 @@ impl WorkspaceModel {
     fn selected_split_mut(&mut self) -> Option<&mut super::model::Split> {
         let id = self.selected_index().and_then(|ix| self.sessions[ix].split)?;
         self.split_mut(id)
+    }
+
+    /// A pane's header dragged onto another pane's edge: it moves there inside its split and takes the keyboard.
+    pub(super) fn move_pane(&mut self, id: i64, target: i64, zone: Zone) {
+        let room = self.room();
+        let Some(split) = self.index_of(id).and_then(|ix| self.sessions[ix].split) else {
+            return self.refuse();
+        };
+        let Some(split) = self.split_mut(split) else { return self.refuse() };
+        match split.layout.move_to(id, target, zone, room) {
+            Ok(()) => {
+                self.emit(Event::Layout);
+                self.emit(Event::Moved { id });
+                self.select_id(id);
+            }
+            Err(error) => self.emit(Event::Refused(error.into())),
+        }
+    }
+
+    /// ⌥⌘← → ↑ ↓: the neighbouring pane of the shown split takes the keyboard. Before the area is laid
+    /// out the panes' shares alone decide, in a unit square.
+    pub(super) fn focus_direction(&mut self, direction: Direction) {
+        let (w, h) =
+            if self.pane_area.0 > 0.0 && self.pane_area.1 > 0.0 { self.pane_area } else { (1.0, 1.0) };
+        let next = self
+            .selected_index()
+            .and_then(|ix| self.sessions[ix].split)
+            .and_then(|id| self.split_of(id))
+            .and_then(|split| split.layout.neighbour(direction, w, h));
+        match next {
+            Some(id) => self.select_id(id),
+            None => self.emit(Event::Refused(Refusal::Unchanged)),
+        }
+    }
+
+    /// Why a pane's header (or a row of the list) dropped on `target`'s `zone` would be refused, or
+    /// nothing when it would work: a member of the split moves, any other terminal joins. Pure.
+    pub fn pane_drop_refusal(&self, dragged: i64, target: i64, zone: Zone) -> Option<Refusal> {
+        let layout = match self
+            .index_of(target)
+            .and_then(|ix| self.sessions[ix].split)
+            .and_then(|id| self.split_of(id))
+        {
+            Some(split) => split.layout.clone(),
+            None if self.index_of(target).is_some() => TabPanes::single(target),
+            None => return Some(Refusal::Unknown),
+        };
+        let room = self.room();
+        let verdict = if layout.contains(dragged) {
+            layout.can_move_to(dragged, target, zone, room)
+        } else {
+            layout.can_join(target, zone, dragged, room)
+        };
+        verdict.err().map(Refusal::from)
     }
 }

@@ -65,6 +65,11 @@ impl Publisher {
         listing
     }
 
+    /// Whether the window this publishes for still exists.
+    pub(crate) fn is_alive(&self) -> bool {
+        self.shared.strong_count() > 0
+    }
+
     /// Look again soon: something the caller just did may have changed what is waited for.
     pub(crate) fn kick(&self) {
         let _ = self.kick.try_send(());

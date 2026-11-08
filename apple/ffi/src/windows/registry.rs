@@ -51,6 +51,8 @@ pub struct Windows {
     live: Mutex<Vec<(i64, Weak<Shared>)>>,
     /// The columns last written as the ones new windows start with.
     remembered: Mutex<Option<RememberedPanes>>,
+    /// Told of every window made from now on (the control socket's event publishers).
+    on_register: Mutex<Option<Box<dyn Fn(&Arc<Shared>) + Send + Sync>>>,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -69,6 +71,7 @@ impl Windows {
             planned: Mutex::default(),
             live: Mutex::default(),
             remembered: Mutex::default(),
+            on_register: Mutex::default(),
         }))
     }
 
@@ -77,9 +80,19 @@ impl Windows {
     }
 
     pub(crate) fn register(&self, window: i64, shared: &Arc<Shared>) {
-        let mut live = locked(&self.live);
-        live.retain(|(_, known)| known.strong_count() > 0);
-        live.push((window, Arc::downgrade(shared)));
+        {
+            let mut live = locked(&self.live);
+            live.retain(|(_, known)| known.strong_count() > 0);
+            live.push((window, Arc::downgrade(shared)));
+        }
+        if let Some(told) = locked(&self.on_register).as_ref() {
+            told(shared);
+        }
+    }
+
+    /// `told` hears of every window made from now on.
+    pub(crate) fn on_register(&self, told: impl Fn(&Arc<Shared>) + Send + Sync + 'static) {
+        *locked(&self.on_register) = Some(Box::new(told));
     }
 
     /// Every window's shared state that is still alive, in the order they were made: the control line reaches

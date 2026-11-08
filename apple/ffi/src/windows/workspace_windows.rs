@@ -50,9 +50,10 @@ impl Workspace {
         listener: Arc<dyn WorkspaceListener>,
     ) -> Arc<Self> {
         let workspace = Self::build(config, listener, Some(windows.ids()));
+        // Set once, here: the workspace was made a moment ago. Before it is registered: whoever hears of the new window
+        // (the control socket's publishers) reads its id.
+        let _ = workspace.shared().windows.set((windows.clone(), window));
         windows.register(window, workspace.shared());
-        // Set once, here: the workspace was made a moment ago.
-        let _ = workspace.shared().windows.set((windows, window));
         workspace
     }
 

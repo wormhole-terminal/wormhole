@@ -46,6 +46,7 @@ mod title_fit;
 mod windows;
 pub mod words;
 mod workspace;
+mod workspace_extras;
 mod workspace_feed;
 mod workspace_git;
 mod workspace_pump;

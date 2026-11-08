@@ -89,7 +89,7 @@ fn handle(core: &Arc<Core>, request: Request, access: Access, peer: &Peer) -> Re
     let from = request.from_tab();
     tracing::debug!(?from, action = request.action.name(), "control request");
     match request.action {
-        Action::List => Reply::ok(core.publisher.listing()),
+        Action::List => Reply::ok(core.listing()),
         Action::Doctor => listing::doctor(core, from, peer),
         Action::Status { target } => listing::status(core, target, from, peer),
         Action::Notify { target, title, body } => listing::notify(core, target, &title, &body, from, peer),

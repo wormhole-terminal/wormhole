@@ -89,7 +89,7 @@ fn try_wait(
         .wait(Watch::of_wait(tab, &plan), grant, from)
         .map_err(|refused| Error::new(ErrorCode::RateLimited, refused.to_string()))?;
     // The state may have changed between the look above and the subscription: the next diff tells it.
-    core.publisher.kick();
+    core.kick();
     tracing::info!(?from, terminal = tab, "control: a wait began");
     Ok(Answer::Wait(WaitJob::wait(subscription, reader.downgrade(), tab, plan)))
 }

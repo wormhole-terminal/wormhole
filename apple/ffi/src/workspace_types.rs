@@ -5,9 +5,10 @@
 
 use wormhole_core::config::FeatureId;
 use wormhole_core::config::tab::TabId;
+use wormhole_core::git::pr::{Checks, PrState, PullRequest, Review};
 use wormhole_core::view::layout::title_parts::TitlePart;
 use wormhole_core::view::layout::{Edge, PanelToggle, Stop};
-use wormhole_core::view::panes::{Axis, Preset, Zone};
+use wormhole_core::view::panes::{Axis, Direction, Preset, Zone};
 use wormhole_core::view::sidebar::{Bracket, GroupColor, Item, Landing, Part, RowState, Status, Urgency};
 use wormhole_core::workspace::{
     Action, AgentInfo, CardRef, ChromeSnapshot, ColumnLimits, DividerInfo, DropPlan, EdgeDrag, GroupHead,
@@ -21,6 +22,14 @@ use wormhole_core::workspace::{
 pub enum Axis {
     Row,
     Column,
+}
+
+#[uniffi::remote(Enum)]
+pub enum Direction {
+    Left,
+    Right,
+    Up,
+    Down,
 }
 
 #[uniffi::remote(Enum)]
@@ -261,7 +270,9 @@ pub enum Action {
     ApplyLayout(Preset),
     DragDivider { path: Vec<u32>, index: u32, position: f32 },
     EqualizeDivider { path: Vec<u32>, index: u32 },
+    MovePane { id: i64, target: i64, zone: Zone },
     FocusPane(i64),
+    FocusDirection(Direction),
     ToggleZoom,
     ToggleSidebar,
     TogglePanel,
@@ -406,6 +417,7 @@ pub struct PanesSnapshot {
     pub focused: Option<i64>,
     pub zoomed: Option<i64>,
     pub dividers: Vec<DividerInfo>,
+    pub unzoomed: Vec<PaneRect>,
 }
 
 #[uniffi::remote(Record)]
@@ -576,4 +588,38 @@ pub struct TitleSnapshot {
     pub hidden: Vec<TitlePart>,
     pub path_steps: Vec<PathStep>,
     pub path_menu: Vec<PathFolder>,
+    pub ports: Vec<u16>,
+    pub pull_request: Option<PullRequest>,
+    pub pull_request_words: Option<String>,
+}
+
+#[uniffi::remote(Enum)]
+pub enum PrState {
+    Open,
+    Merged,
+    Closed,
+}
+
+#[uniffi::remote(Enum)]
+pub enum Checks {
+    Pending,
+    Failing,
+    Passing,
+}
+
+#[uniffi::remote(Enum)]
+pub enum Review {
+    Approved,
+    ChangesRequested,
+    Required,
+}
+
+#[uniffi::remote(Record)]
+pub struct PullRequest {
+    pub number: u64,
+    pub url: String,
+    pub state: PrState,
+    pub draft: bool,
+    pub checks: Option<Checks>,
+    pub review: Option<Review>,
 }

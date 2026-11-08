@@ -20,17 +20,18 @@ use crate::hook_server::gate::identify;
 
 /// `status`: the target's terminal, the caller's own without one, the app's summary outside any tab.
 pub(super) fn status(core: &Core, target: Option<Target>, from: Option<i64>, peer: &Peer) -> Reply {
-    let listing = core.publisher.listing();
+    let listing = core.listing();
     let Some(target) = target.or(from.map(Target::Tab)) else {
         let states = listing.windows.iter().flat_map(|w| w.terminals.iter().map(|t| t.status));
         return Reply::ok(Summary::of(listing.windows.len(), states));
     };
     let Some(id) = core.find(target, peer) else { return not_found(target) };
-    let terminal = listing.windows.iter().flat_map(|window| &window.terminals).find(|t| t.id == id);
-    match terminal {
-        Some(terminal) => {
-            Reply::ok(StatusInfo { window: core.window, terminal: terminal.clone(), tab: target.id() })
-        }
+    let found = listing
+        .windows
+        .iter()
+        .find_map(|window| window.terminals.iter().find(|t| t.id == id).map(|t| (window.id, t.clone())));
+    match found {
+        Some((window, terminal)) => Reply::ok(StatusInfo { window, terminal, tab: target.id() }),
         None => not_found(target),
     }
 }

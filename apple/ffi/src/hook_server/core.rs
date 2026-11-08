@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::config::{AgentAccess, Config, Settings};
 use wormhole_core::ipc::bus::Bus;
-use wormhole_core::ipc::control::{Limited, RateLimits, Reply};
+use wormhole_core::ipc::control::{Limited, Listing, RateLimits, Reply, WindowInfo};
 use wormhole_core::storage::paths::ProfilePaths;
 
 use super::HookListener;
@@ -30,7 +30,8 @@ pub(crate) struct Core {
     pub usage: Arc<UsageService>,
     pub desk: Arc<AccessDesk>,
     pub bus: Arc<Bus>,
-    pub publisher: Arc<Publisher>,
+    /// One publisher per window (the first is the one the server started over); `attach` adds the rest.
+    publishers: Mutex<Vec<Arc<Publisher>>>,
     /// The id of the window the server was started over, as `list` tells it.
     pub window: i64,
     pub ui: Ui,
@@ -62,7 +63,7 @@ impl Core {
             usage,
             desk,
             bus,
-            publisher,
+            publishers: Mutex::new(vec![publisher]),
             window,
             ui: Ui::new(listener),
             budgets: Mutex::default(),
@@ -79,6 +80,55 @@ impl Core {
     pub(crate) fn shares(&self) -> Vec<Arc<Shared>> {
         let all = self.shared.windows.get().map(|(windows, _)| windows.shares()).unwrap_or_default();
         if all.is_empty() { vec![self.shared.clone()] } else { all }
+    }
+
+    /// Hear of window `shared`'s terminals too (its publisher, as the first window's): called for every window
+    /// that exists when the server starts and for each one made after.
+    pub(crate) fn attach(&self, shared: &Arc<Shared>) {
+        if shared.tap.get().is_some() {
+            return;
+        }
+        match Publisher::start(shared, self.bus.clone(), shared.window_id()) {
+            Ok(publisher) if shared.tap.set(publisher.clone()).is_ok() => {
+                self.publishers.lock().unwrap_or_else(PoisonError::into_inner).push(publisher);
+            }
+            Ok(_) => {}
+            Err(err) => tracing::warn!("a window's events are not told: {err}"),
+        }
+    }
+
+    fn publishers(&self) -> Vec<Arc<Publisher>> {
+        let mut held = self.publishers.lock().unwrap_or_else(PoisonError::into_inner);
+        held.retain(|publisher| publisher.is_alive());
+        held.clone()
+    }
+
+    /// `list` as it reads now: every window, the server's own the front one.
+    pub(crate) fn listing(&self) -> Listing {
+        self.gather(Publisher::listing)
+    }
+
+    /// [`Self::listing`] and the baseline each window's next events are told against.
+    pub(crate) fn listing_and_rebase(&self) -> Listing {
+        self.gather(Publisher::listing_and_rebase)
+    }
+
+    fn gather(&self, read: fn(&Publisher) -> Listing) -> Listing {
+        let windows =
+            self.publishers().iter().flat_map(|publisher| read(publisher).windows).collect::<Vec<_>>();
+        Listing {
+            windows: windows.into_iter().map(|w| WindowInfo { front: w.id == self.window, ..w }).collect(),
+        }
+    }
+
+    /// Look at every window again soon (`Publisher::kick`).
+    pub(crate) fn kick(&self) {
+        self.publishers().iter().for_each(|publisher| publisher.kick());
+    }
+
+    /// The state of window `id`, while it exists.
+    pub(crate) fn share_of_window(&self, id: i64) -> Option<Arc<Shared>> {
+        self.shares().into_iter().find(|shared| shared.window_id() == id)
     }
 
     /// The window state that holds terminal `id`.

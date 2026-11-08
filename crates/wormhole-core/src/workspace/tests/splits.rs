@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 
-use crate::view::panes::{Axis, Zone};
+use crate::view::panes::{Axis, Direction, Zone};
 use crate::workspace::{Action, Event, Refusal, TerminalFacts};
 
 use super::{listed, model, refused};
@@ -95,4 +95,34 @@ fn a_terminal_alone_shows_alone_and_cannot_zoom() {
     assert!(refused(&m.apply(Action::ToggleZoom)));
     // facts are untouched by any of it
     assert_eq!(m.facts(1), Some(&TerminalFacts::default()));
+}
+
+#[test]
+fn a_pane_moves_inside_its_split_and_the_focus_follows_the_arrows() {
+    let mut m = model(3);
+    m.apply(Action::SetPaneArea { width: 2000.0, height: 900.0 });
+    m.apply(Action::JoinSplit { id: 2, target: 1, zone: Zone::Right });
+    m.apply(Action::JoinSplit { id: 3, target: 2, zone: Zone::Bottom });
+    // 1 on the left, 2 above 3 on the right; 3 has the keyboard.
+    assert_eq!(m.pane_drop_refusal(3, 1, Zone::Left), None, "a member moves");
+    m.apply(Action::FocusDirection(Direction::Up));
+    assert_eq!(m.selected(), Some(2));
+    m.apply(Action::FocusDirection(Direction::Left));
+    assert_eq!(m.selected(), Some(1));
+    assert!(refused(&m.apply(Action::FocusDirection(Direction::Left))), "the area's edge");
+    let events = m.apply(Action::MovePane { id: 3, target: 1, zone: Zone::Left });
+    assert!(events.contains(&Event::Layout));
+    let panes = m.panes_snapshot(2000.0, 900.0);
+    assert_eq!(panes.panes[0].id, 3, "3 is now first in reading order, to the left of 1");
+    assert_eq!(m.selected(), Some(3));
+    assert!(refused(&m.apply(Action::MovePane { id: 3, target: 99, zone: Zone::Left })));
+}
+
+#[test]
+fn a_terminal_that_is_not_in_the_split_is_checked_as_a_join() {
+    let mut m = model(3);
+    m.apply(Action::SetPaneArea { width: 300.0, height: 900.0 });
+    m.apply(Action::JoinSplit { id: 2, target: 1, zone: Zone::Right });
+    assert_eq!(m.pane_drop_refusal(3, 1, Zone::Right), Some(Refusal::TooSmall), "no room for a third column");
+    assert_eq!(m.pane_drop_refusal(3, 99, Zone::Right), Some(Refusal::Unknown));
 }

@@ -984,8 +984,7 @@ cascadeFrame(from:, display:) -> FrameRecord // a step (26 pt) down and right, o
   served (it was `unsupported`): the server plans the window (`Windows.plan`, the window's panels without its groups, a
   folder from the request or the selected terminal's), answers `{window, terminal, folder}`, and queues `HookEvent.newWindow`;
   Swift makes a workspace with `inWindow(windows, window, …)`, calls `restore()` and starts the program; `command` is typed
-  once the shell is ready (within 3 s the terminal must be in some window). Still the first window's only: `list`,
-  `events`, `status`, `focus`, `rename`, `close`, `split`, `new-terminal` (the model of the window the server was started over).
+  once the shell is ready (within 3 s the terminal must be in some window). Every verb reaches every window (see "Round R: window"): `list`, `status`, `events`, `focus`, `rename`, `close`, `split`, `new-terminal`.
 - **With persistent terminals.** `HostedTerminals(window:)` is per window and saves its rows under that window's id;
   `Windows.save` writes each terminal's `host_id` from `Terminal.hostId` (a terminal not registered yet keeps the host its saved
   row names). `SavedTerminal.terminal` is the id the row was saved under: a window restored from its record opens that terminal under
@@ -1106,3 +1105,25 @@ func focusPressFoldsBand(space: bool) -> bool                                   
 enum WindowPreset { Zen, Balanced, Everything }   record PresetShown { titleRow: [String], statusBar, minimap, columnDividers, panelOpen }
 func windowPreset(preset: WindowPreset) -> PresetShown                                            // Zen's layer is windowPreset(.zen)
 ```
+## Round R: window (panes, title extras, the control line over windows)
+
+Additive.
+
+- **Panes are the core's.** `Workspace.panes(width, height) -> PanesSnapshot` now also has `unzoomed: [PaneRect]` (every pane at
+  its place in the unzoomed layout, reading order: what a zoom hides and the header order). The Swift window keeps no pane tree: it
+  sends `setPaneArea` (with the pane header's height in `WorkspaceConfig.paneHeaderHeight`, 34 as GPUI's) and draws the snapshot.
+  New actions: `movePane(id, target, zone)` (a pane's header dropped on another pane's edge, inside its split; refused `unchanged`,
+  `tooSmall`, `unknown`) and `focusDirection(direction)` (⌥⌘ arrows; refused `unchanged` at the area's edge). New query
+  `Workspace.paneDropRefusal(dragged, target, zone) -> Refusal?` (pure: a member moves, any other terminal joins) for the drop hint.
+  `Direction` is a core enum on the seam. Core: `Action::{MovePane, FocusDirection}`, `WorkspaceModel::pane_drop_refusal`.
+- **Title extras.** `TitleSnapshot` has `ports: [UInt16]`, `pullRequest: PullRequest?` (`number, url, state, draft, checks, review`) and
+  `pullRequestWords` (core's `PullRequest::words`). The `ports` and `pull_request` slots are `present` once found. Looked up by the
+  workspace's pump (`workspace_extras.rs`), nothing in Swift: the ports from the shell's process tree for the selected terminal every
+  5 s while the row has the part (no OS event exists for a listener); the pull request from `gh` per terminal branch (`git::pr`'s
+  cache and deadlines), only while the `project_folders` flag is on and the repository's `.wormhole/` is approved in the data
+  folder's default profile (`ProjectHub::trusted`'s rule). A change moves the chrome revision.
+- **The control line over windows.** One publisher per window feeds the same bus (attached for every window that exists at
+  `HookServer.start` and, through `Windows.on_register`, every one made later), so `events` hear every window. `list` and `status`
+  cover all windows (`front` is the window the server started over); `focus`, `rename`, `split` and `close` act in the window that
+  holds the terminal and answer with its id; `new-terminal --window <id>` (else the caller's own window, else the first) opens in
+  that window. `HookEvent.front(terminal)` follows `focus --activate`: bring that terminal's window forward.

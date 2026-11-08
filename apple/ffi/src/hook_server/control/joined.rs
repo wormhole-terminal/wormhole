@@ -9,7 +9,7 @@ use wormhole_core::ipc::control::Side;
 use wormhole_core::view::panes::Zone;
 use wormhole_core::workspace::{Action, Event};
 
-use crate::hook_server::core::Core;
+use crate::workspace::Shared;
 
 /// The side of the target's pane a new terminal goes, as a drop zone.
 fn zone_of(side: Side) -> Zone {
@@ -21,17 +21,17 @@ fn zone_of(side: Side) -> Zone {
     }
 }
 
-/// A new terminal on `side` of `anchor`, in `folder` or where `anchor` is: its id and folder, with the events
+/// A new terminal in window `shared` on `side` of `anchor`, in `folder` or where `anchor` is: its id and folder, with the events
 /// handed to Swift, which starts its program. `None` when there was no room: nothing was made, and Swift hears
 /// of nothing but the selection coming back to where it was.
 pub(super) fn open_beside(
-    core: &Core,
+    shared: &Shared,
     anchor: i64,
     side: Side,
     folder: Option<String>,
 ) -> Option<(i64, Option<String>)> {
     let zone = zone_of(side);
-    let (events, made) = core.shared.with_model(|model| {
+    let (events, made) = shared.with_model(|model| {
         let before = model.selected();
         let start = model.facts(anchor).and_then(|facts| facts.cwd.clone());
         let mut events = model.apply(Action::NewTerminal);
@@ -67,7 +67,7 @@ pub(super) fn open_beside(
         events.retain(|event| !matches!(event, Event::Opened { id: gone, .. } | Event::Closed { id: gone } if *gone == id));
         (events, None)
     });
-    core.shared.post(events);
-    core.shared.pump.kick();
+    shared.post(events);
+    shared.pump.kick();
     made
 }

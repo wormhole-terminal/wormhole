@@ -14,7 +14,7 @@ use std::time::Duration;
 use wormhole_core::workspace::StatusEvent;
 
 use crate::workspace::Shared;
-use crate::workspace_git;
+use crate::{workspace_extras, workspace_git};
 
 /// How often a terminal's process is looked at when nothing said it changed. The system sends no event
 /// for who holds a terminal, so this is the fallback; the app's tick looks every 2 s, here output and
@@ -164,6 +164,7 @@ fn round(shared: &Arc<Shared>) -> Option<Duration> {
     }
     next.extend(shared.pump.next_probe());
     next.extend(workspace_git::step(shared));
+    next.extend(workspace_extras::step(shared));
     let now = shared.now();
     next.into_iter().min().map(|at| Duration::from_millis(at.saturating_sub(now).max(LEAST_SLEEP)))
 }

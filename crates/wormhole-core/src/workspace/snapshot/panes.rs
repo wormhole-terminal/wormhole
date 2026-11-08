@@ -18,6 +18,7 @@ impl WorkspaceModel {
                 focused: None,
                 zoomed: None,
                 dividers: Vec::new(),
+                unzoomed: Vec::new(),
             };
         };
         let id = self.sessions[ix].id;
@@ -31,18 +32,16 @@ impl WorkspaceModel {
             }
         };
         let focused = layout.focused();
-        let panes = layout
-            .shown(width, height)
-            .into_iter()
-            .map(|(pane, rect)| PaneRect {
-                id: pane,
-                x: rect.x,
-                y: rect.y,
-                w: rect.w,
-                h: rect.h,
-                focused: pane == focused,
-            })
-            .collect();
+        let place = |(pane, rect): (i64, crate::view::panes::Rect)| PaneRect {
+            id: pane,
+            x: rect.x,
+            y: rect.y,
+            w: rect.w,
+            h: rect.h,
+            focused: pane == focused,
+        };
+        let panes = layout.shown(width, height).into_iter().map(place).collect();
+        let unzoomed = layout.tree().rects(width, height).into_iter().map(place).collect();
         let dividers = layout
             .dividers(width, height)
             .into_iter()
@@ -64,6 +63,7 @@ impl WorkspaceModel {
             focused: Some(focused),
             zoomed: layout.zoomed(),
             dividers,
+            unzoomed,
         }
     }
 }

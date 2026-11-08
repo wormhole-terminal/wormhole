@@ -100,6 +100,18 @@ impl HookServer {
         }
         let profile = DataRoot::new(dir).default_profile();
         let core = Core::new(workspace, usage, access, bus, publisher, profile, listener);
+        // Every other window's terminals are heard too, the ones that exist and the ones made later.
+        for window in core.shares() {
+            core.attach(&window);
+        }
+        if let Some((windows, _)) = core.shared.windows.get() {
+            let weak = Arc::downgrade(&core);
+            windows.on_register(move |window| {
+                if let Some(core) = weak.upgrade() {
+                    core.attach(window);
+                }
+            });
+        }
         let server =
             Arc::new(Self { core, socket, requests: requests.clone(), lock: Mutex::new(Some(lock)) });
         dispatch::spawn(server.core.clone(), requests)

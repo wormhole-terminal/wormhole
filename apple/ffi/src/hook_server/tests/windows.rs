@@ -99,3 +99,44 @@ fn new_window_runs_its_command_once_the_terminal_has_a_shell() {
     let screen = second.terminal(terminal).expect("registered");
     eventually("the command typed", || screen.screen_text().contains("echo hi"));
 }
+
+#[test]
+fn list_focus_and_rename_reach_the_window_that_holds_the_terminal() {
+    let f = fixture_of_windows("open");
+    let windows = f.windows.clone().expect("windows");
+    f.terminal();
+    let mut client = f.client();
+    let planned = client.control(json!({"action": "new_window"}));
+    let (window, terminal) = (
+        ok(&planned)["window"].as_i64().expect("window"),
+        ok(&planned)["terminal"].as_i64().expect("terminal"),
+    );
+    let wakes = f.wakes.clone();
+    let config = WorkspaceConfig {
+        home: None,
+        numbers_follow_list: true,
+        start_folder: None,
+        pane_header_height: 0.0,
+    };
+    let second = Workspace::in_window(windows, window, config, wakes);
+    second.restore();
+
+    // Both windows are listed, each under its own id.
+    let listed = client.control(json!({"action": "list"}));
+    let ids: Vec<i64> = ok(&listed)["windows"]
+        .as_array()
+        .expect("windows")
+        .iter()
+        .map(|w| w["id"].as_i64().expect("id"))
+        .collect();
+    assert!(ids.len() == 2 && ids.contains(&window), "{listed}");
+
+    // Acting on the second window's terminal answers with that window, and the change is in its model.
+    let target = json!({"kind": "terminal", "id": terminal});
+    let focused = client.control(json!({"action": "focus", "target": target}));
+    assert_eq!(ok(&focused)["window"], window, "{focused}");
+    let renamed = client.control(json!({"action": "rename", "target": target, "name": "over there"}));
+    assert_eq!(ok(&renamed)["name"], "over there", "{renamed}");
+    let rows = second.sidebar().sections.into_iter().flat_map(|s| s.rows).collect::<Vec<_>>();
+    assert!(rows.iter().any(|row| row.id == terminal && row.name == "over there"));
+}

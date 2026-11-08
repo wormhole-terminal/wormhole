@@ -20,6 +20,7 @@ mod action;
 mod close;
 mod drops;
 mod event;
+mod extras;
 mod facts;
 mod fence;
 mod git_feed;

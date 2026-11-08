@@ -88,13 +88,15 @@ pub(super) fn focus(core: &Core, spec: &FocusSpec, from: Option<i64>, access: Ac
     if let Err(reply) = core.budget(Limited::Focus, from) {
         return reply;
     }
-    let events = core.shared.with_model(|model| model.apply(Action::Select(tab)));
-    core.shared.post(events);
+    let Some(owner) = core.owner_of(tab) else { return not_found(spec.target) };
+    let events = owner.with_model(|model| model.apply(Action::Select(tab)));
+    owner.post(events);
     if spec.activate {
         core.ui.push(HookEvent::Activate);
+        core.ui.push(HookEvent::Front { terminal: tab });
     }
     tracing::info!(terminal = tab, ?from, activate = spec.activate, "control: a terminal was focused");
-    Reply::ok(Focused { window: core.window, terminal: tab })
+    Reply::ok(Focused { window: owner.window_id(), terminal: tab })
 }
 
 /// `rename`: name the terminal (the sidebar's rename), or with no name call it after what runs in it again.
@@ -120,12 +122,11 @@ pub(super) fn rename(
         return reply;
     }
     // A blank name goes back to what runs in the terminal.
-    let events = core
-        .shared
+    let Some(owner) = core.owner_of(tab) else { return not_found(spec.target) };
+    let events = owner
         .with_model(|model| model.apply(Action::Rename { id: tab, name: name.clone().unwrap_or_default() }));
-    core.shared.post(events);
+    owner.post(events);
     let shown = core
-        .publisher
         .listing()
         .windows
         .iter()
@@ -133,7 +134,7 @@ pub(super) fn rename(
         .find(|terminal| terminal.id == tab)
         .map(|terminal| terminal.name.clone());
     let Some(shown) = shown else { return not_found(spec.target) };
-    let (window, terminal) = (core.window, Some(tab));
+    let (window, terminal) = (owner.window_id(), Some(tab));
     core.bus.publish(Topic::Terminals, || Event {
         window: Some(window),
         terminal,
@@ -154,18 +155,16 @@ pub(super) fn close(core: &Core, spec: &CloseSpec, from: Option<i64>, access: Ac
     };
     // A question already up is a refusal that costs nothing: said before the budget is spent.
     if core.close_question.load(Ordering::Acquire) {
-        return Error::new(
-            ErrorCode::Refused,
-            format!("a question is already up in window {}: it has to be answered first", core.window),
-        )
-        .because(Reason::QuestionOpen)
-        .into();
+        return Error::new(ErrorCode::Refused, "a question is already up: it has to be answered first")
+            .because(Reason::QuestionOpen)
+            .into();
     }
     if let Err(reply) = core.budget(Limited::Close, from) {
         return reply;
     }
+    let window = core.owner_of(tab).map_or(core.window, |owner| owner.window_id());
     core.close_question.store(true, Ordering::Release);
     core.ui.push(HookEvent::CloseAsked { terminal: tab });
     tracing::info!(terminal = tab, ?from, "control: the close question was asked");
-    Reply::ok(CloseAsked { asked: true, window: core.window, terminal: tab })
+    Reply::ok(CloseAsked { asked: true, window, terminal: tab })
 }

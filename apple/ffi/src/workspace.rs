@@ -17,7 +17,7 @@ use std::time::{Instant, SystemTime};
 
 use wormhole_core::agents::AGENTS;
 use wormhole_core::view::layout::Edge;
-use wormhole_core::view::panes::Preset;
+use wormhole_core::view::panes::{Preset, Zone};
 use wormhole_core::view::sidebar::{Landing, SidebarNumbers, Status};
 use wormhole_core::workspace::{
     Action, ChromeSnapshot, DiskGround, DropPlan, EdgeDrag, Event, Failure, IdCounter, ModelConfig, Over,
@@ -28,6 +28,7 @@ use wormhole_core::workspace::{
 use crate::hook_server::Tap;
 use crate::terminal::Terminal;
 use crate::windows::Windows;
+use crate::workspace_extras::Extras;
 use crate::workspace_feed::{self, agent_by_key};
 use crate::workspace_git::GitJobs;
 use crate::workspace_pump::{self, Pump};
@@ -202,6 +203,8 @@ pub(crate) struct Shared {
     pub(crate) pump: Arc<Pump>,
     /// What git is asked and followed with (`workspace_git`).
     pub(crate) git: GitJobs,
+    /// The title row's ports and pull request (`workspace_extras`).
+    pub(crate) extras: Extras,
     /// Who hears what happens to the terminals besides Swift: the control socket's event bus
     /// (`hook_server`). Set once, by the server.
     pub(crate) tap: OnceLock<Arc<dyn Tap>>,
@@ -383,6 +386,12 @@ impl Workspace {
         self.shared.with_model(|model| model.can_layout(preset))
     }
 
+    /// Why dropping terminal `dragged` on `target`'s `zone` would be refused, nothing when it works (a member of
+    /// the split moves, any other terminal joins); the pane area's drop hint reads it.
+    pub fn pane_drop_refusal(&self, dragged: i64, target: i64, zone: Zone) -> Option<Refusal> {
+        self.shared.with_model(|model| model.pane_drop_refusal(dragged, target, zone))
+    }
+
     /// The folder to ask the person about before a terminal opens in a group with none, if there is
     /// one worth offering. Answer with `setGroupFolder` or `declineGroupFolder`.
     pub fn group_folder_offer(&self, group: u32) -> Option<String> {
@@ -508,6 +517,7 @@ impl Workspace {
             terminals: Mutex::new(HashMap::new()),
             pump: Arc::default(),
             git: GitJobs::default(),
+            extras: Extras::default(),
             tap: OnceLock::new(),
             windows: OnceLock::new(),
         });

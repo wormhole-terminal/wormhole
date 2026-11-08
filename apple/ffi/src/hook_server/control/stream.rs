@@ -63,12 +63,12 @@ fn subscribe(
         .bus
         .subscribe(filter.clone(), grant, from)
         .map_err(|refused| Error::new(ErrorCode::RateLimited, refused.to_string()))?;
-    let listing = core.publisher.listing_and_rebase();
+    let listing = core.listing_and_rebase();
     if filter.topics.contains(Topic::Output) {
         // Where each terminal's output starts from: its cursor now, so what is printed right after the reply is told.
-        for terminal in listing.windows.iter().flat_map(|window| &window.terminals) {
+        for (window, terminal) in listing.windows.iter().flat_map(|w| w.terminals.iter().map(|t| (w.id, t))) {
             if let Some(reader) = core.terminal(terminal.id).and_then(|terminal| terminal.reader()) {
-                core.bus.watch_output(core.window, terminal.id, &reader);
+                core.bus.watch_output(window, terminal.id, &reader);
             }
         }
     }

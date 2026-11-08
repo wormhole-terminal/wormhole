@@ -4,7 +4,7 @@ use crate::config::FeatureId;
 use crate::config::tab::TabId;
 use crate::view::layout::Edge;
 use crate::view::layout::title_parts::TitlePart;
-use crate::view::panes::{Axis, Preset, Zone};
+use crate::view::panes::{Axis, Direction, Preset, Zone};
 use crate::view::sidebar::{GroupColor, Landing, Part};
 
 /// What is laid over the window, at most one at a time.
@@ -194,8 +194,16 @@ pub enum Action {
         path: Vec<u32>,
         index: u32,
     },
+    /// A pane's header dropped on another pane's edge: it moves to `zone`'s side of `target`, in its split.
+    MovePane {
+        id: i64,
+        target: i64,
+        zone: Zone,
+    },
     /// Select a pane of the shown split.
     FocusPane(i64),
+    /// ⌥⌘← → ↑ ↓: the neighbouring pane of the shown split.
+    FocusDirection(Direction),
     ToggleZoom,
     // The window's chrome.
     ToggleSidebar,

@@ -6,6 +6,8 @@
 pub enum HookEvent {
     /// A second launch, or `wh focus --activate`, asks the app to come to the front.
     Activate,
+    /// `wh focus --activate`: bring the window that holds `terminal` to the front (`Activate` brings the app).
+    Front { terminal: i64 },
     /// `wh notify`: show a notification about `terminal`, in the caller's words (already cleaned).
     Notice { terminal: i64, title: String, body: String },
     /// `wh close`: ask the person whether to close `terminal`, as closing it by hand does, and call

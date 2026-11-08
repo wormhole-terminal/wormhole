@@ -170,11 +170,15 @@ pub struct PanesSnapshot {
     pub revision: u64,
     /// The split's id; `None` for a terminal on its own.
     pub split: Option<i64>,
+    /// What is shown: every pane, or the zoomed one alone over the whole area.
     pub panes: Vec<PaneRect>,
     pub focused: Option<i64>,
     pub zoomed: Option<i64>,
     /// The lines between the panes (none while one is zoomed).
     pub dividers: Vec<DividerInfo>,
+    /// Every pane at its place in the unzoomed layout, in reading order: what a zoom hides, which a shell
+    /// keeps alive under the zoomed one, and the order the headers count in.
+    pub unzoomed: Vec<PaneRect>,
 }
 
 /// A line between two panes, as `DragDivider` and `EqualizeDivider` name it.

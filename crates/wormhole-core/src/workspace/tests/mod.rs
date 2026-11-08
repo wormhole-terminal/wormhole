@@ -4,6 +4,7 @@
 mod chrome;
 mod close;
 mod drops;
+mod extras;
 mod feed;
 mod fences;
 mod folded;
