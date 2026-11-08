@@ -40,6 +40,7 @@ sleep 5
 # Same window, no translucency, no right panel (Swift opens it), terminal grid only.
 g "onboarding close" "resize 1320 820" "reduce-transparency on" > /dev/null
 s "size 1320x820" "reduce-transparency on" "panel" > /dev/null
+# shellcheck disable=SC2054 # the commas are in the values visual-compare.py parses (`722,84`)
 GRID=(--origin 722,84 --size 1904,1548 --cell 17,36 --gpui-cell-w 16.8)
 
 scene() { # <name> <prefix>: the scene in both, then a shot of each
@@ -65,7 +66,7 @@ for mode in dark light; do
   g "settings-section appearance" > /dev/null; g "settings-resize 920 1084" > /dev/null
   s "settings-section appearance" > /dev/null; sleep 1
   for page in Profile Appearance Fonts Terminal Sessions Git Agents Import Notifications MenuBar Hotkey Updates Advanced; do
-    id="$(printf '%s' "${page:0:1}" | tr 'A-Z' 'a-z')${page:1}"
+    id="$(printf '%s' "${page:0:1}" | tr '[:upper:]' '[:lower:]')${page:1}"
     g "settings-section $page" > /dev/null; s "settings-section $id" > /dev/null; sleep 1
     g "settings-shot s$mode-$page" > /dev/null; s "window-shot $ctl_s/s$mode-$page.png Settings" > /dev/null
     python3 "$here/visual-compare.py" compare "settings-$mode-$page" "$ctl_g/s$mode-$page.png" "$ctl_s/s$mode-$page.png" --out "$out" > /dev/null

@@ -12,8 +12,9 @@ target="$apple/swift/Sources/FileIconTheme/Resources"
 json() { python3 -I -c 'import sys; print("".join(l for l in open(sys.argv[1]) if not l.lstrip().startswith("//")), end="")' "$source/wormhole-icons.json"; }
 
 if [[ "${1:-}" == "--check" ]]; then
-  diff -q <(json) "$target/wormhole-icons.json" >/dev/null && diff -rq "$source/icons" "$target/icons" >/dev/null \
-    || { echo "the icon theme copy is stale: run apple/scripts/dump-icon-theme.sh" >&2; exit 1; }
+  if ! { diff -q <(json) "$target/wormhole-icons.json" >/dev/null && diff -rq "$source/icons" "$target/icons" >/dev/null; }; then
+    echo "the icon theme copy is stale: run apple/scripts/dump-icon-theme.sh" >&2; exit 1
+  fi
   echo "the icon theme copy is current"
 else
   mkdir -p "$target/icons"
