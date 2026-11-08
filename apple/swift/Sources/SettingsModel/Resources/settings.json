@@ -924,6 +924,19 @@
               }
             },
             {
+              "id": "never-hide-lines",
+              "label": "Never hide lines",
+              "description": "Show every line of output, whatever an extension or a fold would hide behind a marker. Off lets folds hide finished output; copying and finding always see every line",
+              "keywords": "fold folds hide hidden output lines marker collapse extension probe show all",
+              "keys": [
+                "never_hide_lines"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
               "id": "split-gaps",
               "label": "Gaps between split terminals",
               "description": "Each terminal of a split is its own rounded surface, a small gap apart. Off joins them with a hairline",
@@ -1119,6 +1132,48 @@
               "visibleHint": false,
               "control": {
                 "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Inline images",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "image-memory",
+              "label": "Image memory per terminal",
+              "description": "Most memory the pictures a program draws in one terminal may take, decoded. The oldest go first when it is full. Applies to new terminals; all terminals together get four times this, at most 2 GiB",
+              "keywords": "images graphics kitty sixel iterm2 pictures memory ram budget",
+              "keys": [
+                "image_memory_mib"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "select",
+                "options": [
+                  {
+                    "value": 64,
+                    "label": "64 MiB"
+                  },
+                  {
+                    "value": 128,
+                    "label": "128 MiB"
+                  },
+                  {
+                    "value": 256,
+                    "label": "256 MiB"
+                  },
+                  {
+                    "value": 512,
+                    "label": "512 MiB"
+                  },
+                  {
+                    "value": 1024,
+                    "label": "1024 MiB"
+                  }
+                ]
               }
             }
           ]
@@ -2686,6 +2741,7 @@
     "scrollback_lines": 10000,
     "restore_terminal_text": true,
     "minimap": false,
+    "never_hide_lines": false,
     "split_gaps": true,
     "option_as_meta": "off",
     "open_in": "",
@@ -2695,6 +2751,7 @@
     "worktree_clone_build_folders": false,
     "bell_sound": true,
     "bell_visual": true,
+    "image_memory_mib": 128,
     "clipboard_read": "ask",
     "clipboard_write": "allow",
     "allow_screen_checksum": false,

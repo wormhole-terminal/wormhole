@@ -4,6 +4,7 @@
 
 use serde::Serialize;
 use serde_json::{Value, json};
+use wormhole_core::config::IMAGE_MEMORY_STEPS_MIB;
 use wormhole_core::config::clipboard::{ClipboardRead, ClipboardWrite};
 use wormhole_core::config::{
     BranchColor, ChangesScope, DockBadge, HotkeyAction, InFront, MenuBarIcon, NotifySound, OptionAsMeta,
@@ -66,6 +67,12 @@ pub(super) fn of(key: &str) -> Option<Vec<Value>> {
         "scrollback_lines" => [1_000_u32, 5_000, 10_000, 50_000, 100_000, 200_000]
             .iter()
             .map(|n| json!({ "value": n, "label": settings_terminal_scrollback_lines(&grouped(*n)) }))
+            .collect(),
+        "image_memory_mib" => IMAGE_MEMORY_STEPS_MIB
+            .iter()
+            .map(
+                |mib| json!({ "value": mib, "label": settings_terminal_image_memory_size(&mib.to_string()) }),
+            )
             .collect(),
         "terminals_in" => options(&[
             (TerminalsIn::Sidebar, SETTINGS_SESSIONS_SIDEBAR),

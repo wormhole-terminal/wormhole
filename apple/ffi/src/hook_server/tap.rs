@@ -168,9 +168,8 @@ impl Publisher {
         };
         let Some(terminal) = self.shared.upgrade().and_then(|shared| shared.terminal_of(id)) else { return };
         // Before any prompt (0) the log has nothing to say.
-        let Some((state, line)) = terminal
-            .with_pty(|pty| (pty.command_state(prompt), pty.block(prompt).map(|block| block.command)))
-            .filter(|_| prompt > 0)
+        let Some((state, found)) =
+            terminal.with_pty(|pty| (pty.command_state(prompt), pty.block(prompt))).filter(|_| prompt > 0)
         else {
             return;
         };
@@ -186,13 +185,18 @@ impl Publisher {
             _ => None,
         };
         self.bus.publish(Topic::Blocks, || {
-            let command = wormhole_term::clean(&line.unwrap_or_default(), COMMAND_CHARS);
+            let command =
+                wormhole_term::clean(found.as_ref().map_or("", |block| &block.command), COMMAND_CHARS);
+            // The rows of its output are known once it ended, from the marks on the grid.
+            let output_lines =
+                found.as_ref().filter(|_| phase == BlockPhase::Finished).map(|block| block.output_rows());
             let body = Body::Block {
                 block: i64::try_from(prompt).unwrap_or(i64::MAX),
                 phase,
                 exit_code,
                 took_ms,
                 command: (!command.is_empty()).then_some(command),
+                output_lines,
             };
             self.event(Some(id), body)
         });

@@ -121,6 +121,10 @@ extension ThemeTokens {
     public var tooltipBackground: Color { color(named: "tooltip.background") }
     /// `tooltip.text`: Tooltip text
     public var tooltipText: Color { color(named: "tooltip.text") }
+    /// `tooltip.success`: Success as text on a tooltip or readout (4.5:1 on the tooltip fill)
+    public var tooltipSuccess: Color { color(named: "tooltip.success") }
+    /// `tooltip.danger`: Danger as text on a tooltip or readout (4.5:1 on the tooltip fill)
+    public var tooltipDanger: Color { color(named: "tooltip.danger") }
     /// `shadow`: Drop shadow color
     public var shadow: Color { color(named: "shadow") }
     /// `selection.ui`: Text selection in UI text fields
