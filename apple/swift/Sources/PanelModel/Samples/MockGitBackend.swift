@@ -15,24 +15,29 @@ public struct MockGitBackend: GitBackend {
 
     public func changes(in folder: String, comparedWith rev: Rev?) async throws -> [ChangedFile] { files }
 
-    public func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> String {
-        PanelSamples.diffs[path] ?? ""
+    public func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> DiffFile {
+        PanelSamples.diffs[path] ?? DiffFile(newPath: path)
     }
 
     public func log(in folder: String, of rev: Rev?, paths: [String]) async throws -> HistoryModel {
         var shown = history
-        if !paths.isEmpty { shown.commits = shown.commits.filter { $0.files.contains { paths.contains($0.path) } } }
+        if !paths.isEmpty { shown.commits = PanelSamples.commits(touching: paths) }
         shown.branch = rev?.title ?? history.branch
         return shown
     }
 
-    public func details(of sha: String, in folder: String) async throws -> Commit {
-        guard let commit = history.commits.first(where: { $0.sha == sha }) else { throw GitFailure("No such commit") }
-        return commit
+    public func details(of sha: String, in folder: String) async throws -> CommitDetails {
+        guard let details = PanelSamples.details(of: sha) else { throw GitFailure("No such commit") }
+        return details
     }
 
-    public func diff(of path: String, inCommit sha: String, folder: String) async throws -> String {
-        PanelSamples.diffs[path] ?? ""
+    /// Every sample message is short enough to show whole.
+    public func compactMessage(of sha: String, in folder: String, lineChars: Int) -> CommitDetails.Compact? {
+        PanelSamples.details(of: sha).map { .init(text: $0.whole, more: false) }
+    }
+
+    public func diff(of path: String, inCommit sha: String, folder: String) async throws -> DiffFile {
+        PanelSamples.diffs[path] ?? DiffFile(newPath: path)
     }
 
     public func revs(in folder: String, forHistory: Bool) async throws -> [Rev] {

@@ -4,17 +4,18 @@
 //! burst of file events (`FFI-CONTRACT.md`, "Git").
 
 mod error;
-mod patch;
 mod records;
 mod service;
+mod shown;
 mod watch;
 mod worktrees;
 
 pub use error::GitBackendError;
 pub use records::{
-    GitChange, GitChangeKind, GitCommitDetails, GitDiff, GitLog, GitLogCommit, GitRef, GitRefKind, GitRev,
-    GitRevKind, GitSignature, GitStatus,
+    GitChange, GitChangeKind, GitDiff, GitDiffFile, GitDiffLine, GitHunk, GitLineKind, GitLog, GitLogCommit,
+    GitRef, GitRefKind, GitRev, GitRevKind, GitStatus,
 };
 pub use service::Git;
+pub use shown::{GitCommitDetails, GitCompact, GitFact, GitParent, GitSpan, GitTone};
 pub use watch::{GitListener, GitWatch};
 pub use worktrees::{GitEnvVar, GitWorktree, GitWorktreePlan, WorktreeService};

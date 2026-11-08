@@ -9,8 +9,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use wormhole_ffi::{
-    Git, GitBackendError, GitChangeKind, GitDiff, GitListener, GitRev, GitRevKind, GitWatch, GitWorktreePlan,
-    WorktreeService,
+    Git, GitBackendError, GitChangeKind, GitDiff, GitDiffFile, GitLineKind, GitListener, GitRev, GitRevKind,
+    GitWatch, GitWorktreePlan, WorktreeService,
 };
 
 fn git(dir: &Path, args: &[&str]) -> String {
@@ -48,9 +48,34 @@ fn repo_with(files: &[(&str, &str)]) -> (tempfile::TempDir, String) {
     (dir, folder)
 }
 
+/// A parsed diff as the lines a person reads: what happened to the file, then each hunk with its marks.
+fn render(file: &GitDiffFile) -> String {
+    let mut out = match (&file.old_path, &file.new_path) {
+        (None, _) => "new file\n".to_string(),
+        (_, None) => "deleted file\n".to_string(),
+        (Some(old), Some(new)) if old != new => format!("rename from {old}\nrename to {new}\n"),
+        _ => String::new(),
+    };
+    for hunk in &file.hunks {
+        out += &format!("{}\n", hunk.header);
+        for line in &hunk.lines {
+            let mark = match line.kind {
+                GitLineKind::Context => ' ',
+                GitLineKind::Added => '+',
+                GitLineKind::Removed => '-',
+            };
+            out += &format!("{mark}{}\n", line.text);
+            if line.no_newline {
+                out += "\\ No newline at end of file\n";
+            }
+        }
+    }
+    out
+}
+
 fn text(diff: GitDiff) -> String {
     match diff {
-        GitDiff::Text { patch } => patch,
+        GitDiff::Text { file } => render(&file),
         other => panic!("expected text, got {other:?}"),
     }
 }
@@ -113,7 +138,7 @@ fn diffs_are_unified_text_with_renames_binaries_and_untracked_files() {
     git_obj.status(folder.clone(), None).expect("status");
 
     let modified = text(git_obj.diff(folder.clone(), "a.txt".into(), None, false).expect("diff"));
-    assert!(modified.starts_with("diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ "), "{modified}");
+    assert!(modified.starts_with("@@ "), "{modified}");
     assert!(modified.contains("\n-2\n-3\n+TWO\n+3\n"), "{modified}");
     assert!(modified.ends_with("+3\n\\ No newline at end of file\n"), "{modified}");
 
@@ -121,15 +146,11 @@ fn diffs_are_unified_text_with_renames_binaries_and_untracked_files() {
     assert!(renamed.contains("rename from old.txt\nrename to new.txt\n"), "{renamed}");
 
     let untracked = text(git_obj.diff(folder.clone(), "fresh.txt".into(), None, false).expect("diff"));
-    assert!(
-        untracked.contains("new file mode")
-            && untracked.contains("--- /dev/null\n")
-            && untracked.contains("\n+hello\n")
-    );
+    assert!(untracked.starts_with("new file\n") && untracked.contains("\n+hello\n"), "{untracked}");
 
     match git_obj.diff(folder, "img.bin".into(), None, false).expect("diff") {
-        GitDiff::Binary { patch, sizes } => {
-            assert!(patch.contains("Binary files a/img.bin and b/img.bin differ"), "{patch}");
+        GitDiff::Binary { file, sizes } => {
+            assert!(file.hunks.is_empty() && file.new_path.as_deref() == Some("img.bin"));
             assert_eq!(sizes.as_deref(), Some("2 bytes → 6 bytes"));
         }
         other => panic!("{other:?}"),
@@ -273,10 +294,22 @@ fn history_log_details_and_commit_diffs() {
     let sha = log.commits[1].sha.clone();
     let details = git_obj.commit_details(folder.clone(), sha.clone()).expect("details");
     assert_eq!(details.subject, "second subject");
-    assert!(details.body.starts_with("A body line."), "{}", details.body);
-    assert!(details.body.ends_with("Co-authored-by: Ada <ada@example.com>"), "{}", details.body);
-    assert_eq!(details.parents, [log.commits[2].sha.clone()]);
-    assert_eq!(details.author.name, "Test");
+    assert!(details.whole.starts_with("A body line."), "{}", details.whole);
+    assert_eq!(details.trailers, "Co-authored-by: Ada <ada@example.com>");
+    assert!(details.message.ends_with("Co-authored-by: Ada <ada@example.com>"), "{}", details.message);
+    assert_eq!(
+        details.parents.iter().map(|p| p.sha.clone()).collect::<Vec<_>>(),
+        [log.commits[2].sha.clone()]
+    );
+    assert_eq!(details.author_line, "Test <test@example.com>");
+    let labels: Vec<_> = details.people.iter().map(|fact| fact.label.as_str()).collect();
+    assert_eq!(labels, ["Author", "Co-author"], "the committer is the author, so one line");
+    let changes: String = details.changes.spans.iter().map(|span| span.text.as_str()).collect();
+    assert_eq!(changes, "2 files +3 \u{2212}1");
+    // The estimate of the compact view: a short body shows whole, a narrow line cuts what is left.
+    let compact = git_obj.compact_message(folder.clone(), sha.clone(), 80).expect("opened");
+    assert!(compact.text.starts_with("A body line.") && compact.more, "the trailers are left out");
+    assert!(git_obj.compact_message(folder.clone(), "0".repeat(40), 80).is_none());
     let paths: Vec<_> = details.files.iter().map(|f| (f.path.as_str(), f.kind)).collect();
     assert_eq!(paths, [("added.txt", GitChangeKind::Added), ("dir/b.txt", GitChangeKind::Modified)]);
 
@@ -285,7 +318,7 @@ fn history_log_details_and_commit_diffs() {
     // A commit not opened first (the cache is empty for it) reads its files itself.
     let rename = log.commits[0].sha.clone();
     let patch = text(git_obj.commit_diff(folder.clone(), rename, "renamed.txt".into(), false).expect("diff"));
-    assert!(patch.contains("rename from a.txt\nrename to renamed.txt"), "{patch}");
+    assert_eq!(patch, "rename from a.txt\nrename to renamed.txt\n");
 
     let bad = git_obj.log(
         folder,

@@ -52,12 +52,6 @@ extension GitRev {
     }
 }
 
-extension Signature {
-    init(_ signature: GitSignature) {
-        self.init(name: signature.name, email: signature.email, time: Int(signature.time), zone: Int(signature.zone))
-    }
-}
-
 /// Core names remote-tracking branches apart; the panel draws them as branches.
 private func panelRefs(_ refs: [GitRef]) -> [(kind: RefKind, name: String)] {
     refs.map { found in
@@ -70,17 +64,35 @@ private func panelRefs(_ refs: [GitRef]) -> [(kind: RefKind, name: String)] {
 }
 
 extension Commit {
-    /// A row of the log: the subject and the first parent; the rest comes with `details`.
+    /// A row of the log: the subject and the first parent; the rest comes with the commit's details.
     init(_ row: GitLogCommit) {
         self.init(
-            sha: row.sha, subject: row.subject, author: Signature(name: row.author, time: Int(row.time)),
+            sha: row.sha, subject: row.subject, author: row.author, time: Int(row.time),
             parents: row.parent.map { [$0] } ?? [], refs: panelRefs(row.refs), merge: row.merge)
     }
+}
 
+extension CommitDetails {
     init(_ details: GitCommitDetails) {
+        let fact = { (fact: GitFact) in Fact(fact.label, fact.spans.map { Span($0.text, Tone($0.tone)) }) }
         self.init(
-            sha: details.sha, subject: details.subject, body: details.body, author: Signature(details.author),
-            parents: details.parents, refs: panelRefs(details.refs), files: details.files.map(ChangedFile.init))
+            sha: details.sha, subject: details.subject, spoken: details.spoken, message: details.message,
+            authorLine: details.authorLine, people: details.people.map(fact), parentsLabel: details.parentsLabel,
+            parents: details.parents.map { Parent(sha: $0.sha, short: $0.short, spoken: $0.spoken) },
+            parentsMore: details.parentsMore, refs: panelRefs(details.refs), refsMore: details.refsMore, whole: details.whole,
+            trailers: details.trailers, continues: details.continues, tooLong: details.tooLong, changes: fact(details.changes),
+            files: details.files.map(ChangedFile.init))
+    }
+}
+
+extension CommitDetails.Tone {
+    init(_ tone: GitTone) {
+        switch tone {
+        case .plain: self = .plain
+        case .muted: self = .muted
+        case .added: self = .added
+        case .removed: self = .removed
+        }
     }
 }
 

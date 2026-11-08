@@ -35,30 +35,34 @@ import WormholeBindings
             subject: "Merge x",
             refs: [GitRef(kind: .head, name: "HEAD"), GitRef(kind: .remote, name: "origin/main"), GitRef(kind: .tag, name: "v1")])
         let commit = Commit(row)
-        #expect(commit.parents == ["9f8e7d6c"] && commit.isMerge)
+        #expect(commit.parents == ["9f8e7d6c"] && commit.merge)
         #expect(commit.refs.map(\.kind) == [.head, .branch, .tag])
-        #expect(commit.author.name == "Ada" && commit.author.time == 1_700_000_000)
+        #expect(commit.author == "Ada" && commit.time == 1_700_000_000)
     }
 
-    @Test func openedCommitsCarryMessageSignatureAndFiles() {
-        let signature = GitSignature(name: "Ada", email: "ada@example.com", time: 1_700_000_000, zone: 7200)
+    @Test func openedCommitsCarryTheCoresFinishedBlock() {
+        let fact = GitFact(label: "Changes", spans: [GitSpan(text: "1 file ", tone: .plain), GitSpan(text: "+1", tone: .added)])
         let details = GitCommitDetails(
-            sha: "abc", parents: ["p1", "p2"], author: signature, committer: signature, refs: [], subject: "Subject",
-            body: "Body.", cut: false,
+            sha: "abc", subject: "Subject", spoken: "Details of abc", message: "Subject\n\nBody.", authorLine: "Ada <ada@example.com>",
+            people: [fact], parentsLabel: "Parents", parents: [GitParent(sha: "p1", short: "p1", spoken: "Open parent p1")],
+            parentsMore: "+1", refs: [GitRef(kind: .remote, name: "origin/main")], refsMore: nil, whole: "Body.", trailers: "",
+            continues: nil, tooLong: nil, changes: fact,
             files: [GitChange(path: "a", originalPath: nil, kind: .added, added: 1, removed: 0, lfs: true, submodule: nil)])
-        let commit = Commit(details)
-        #expect(commit.isMerge && commit.body == "Body." && commit.author.zone == 7200)
-        #expect(commit.files.first?.lines == .lfs)
+        let opened = CommitDetails(details)
+        #expect(opened.message == "Subject\n\nBody." && opened.authorLine == "Ada <ada@example.com>" && opened.parentsMore == "+1")
+        #expect(opened.people[0].spans.map(\.tone) == [.plain, .added] && opened.refs.map(\.kind) == [.branch])
+        #expect(opened.files.first?.lines == .lfs)
     }
 
-    @Test func aTextDiffIsTheUnifiedPatchAndTheOtherKindsSayWhyInCoresWords() throws {
-        let patch = "diff --git a/a b/a\n--- a/a\n+++ b/a\n@@ -1 +1 @@\n-x\n+y\n"
-        #expect(try GitDiff.text(patch: patch).text() == patch)
-        #expect(UnifiedDiffParser.parse(patch).first?.hunks.first?.added == 1)
-        #expect(try GitDiff.binary(patch: "diff --git a/b b/b\nBinary files a/b and b/b differ\n", sizes: nil).text().contains("Binary files"))
+    @Test func aTextDiffIsCoresParsedHunksAndTheOtherKindsSayWhyInCoresWords() throws {
+        let line = GitDiffLine(kind: .added, old: nil, new: 1, text: "y", noNewline: true)
+        let file = GitDiffFile(oldPath: "a", newPath: "a", hunks: [GitHunk(header: "@@ -1 +1 @@", lines: [line])])
+        let parsed = try GitDiff.text(file: file).file()
+        #expect(parsed.hunks[0].header == "@@ -1 +1 @@" && parsed.hunks[0].lines == [DiffLine(kind: .added, newNumber: 1, text: "y", noNewline: true)])
+        #expect(try GitDiff.binary(file: GitDiffFile(oldPath: nil, newPath: "b", hunks: []), sizes: nil).file().isBinary)
 
         func failure(_ diff: GitDiff) -> String {
-            do { _ = try diff.text(); return "" } catch { return (error as? GitFailure)?.message ?? "" }
+            do { _ = try diff.file(); return "" } catch { return (error as? GitFailure)?.message ?? "" }
         }
         #expect(failure(.lfs(summary: "1 KB → 2 KB · oid aaaaaa…")) == "Stored with Git LFS: 1 KB → 2 KB · oid aaaaaa…")
         #expect(failure(.tooLarge(bytes: 9_000_000, title: "This diff is 9 MB", detail: "Loading it can take a few seconds.")) == "This diff is 9 MB. Loading it can take a few seconds.")

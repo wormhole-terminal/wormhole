@@ -11,14 +11,17 @@ public protocol GitBackend: Sendable {
     func isRepository(_ folder: String) async -> Bool
     /// The status of the working tree, or the diff stat against `rev` when comparing.
     func changes(in folder: String, comparedWith rev: Rev?) async throws -> [ChangedFile]
-    /// One file's unified diff text: the working tree against HEAD, or against `rev`.
-    func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> String
+    /// One file's diff as the core parsed it: the working tree against HEAD, or against `rev`.
+    func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> DiffFile
     /// The log of `rev` (HEAD when nil, or the stashes), limited to commits that touched `paths` when given.
     func log(in folder: String, of rev: Rev?, paths: [String]) async throws -> HistoryModel
-    /// An opened commit's message in full, its refs and its files with their counts.
-    func details(of sha: String, in folder: String) async throws -> Commit
+    /// An opened commit as its block draws it: the message, who and when, the refs and its files with their counts.
+    func details(of sha: String, in folder: String) async throws -> CommitDetails
+    /// The opened commit's message for lines of about `lineChars` characters, and whether it leaves anything out
+    /// (core's estimate of how the view wraps; nil for a commit that was not opened).
+    func compactMessage(of sha: String, in folder: String, lineChars: Int) -> CommitDetails.Compact?
     /// One file's diff in a commit.
-    func diff(of path: String, inCommit sha: String, folder: String) async throws -> String
+    func diff(of path: String, inCommit sha: String, folder: String) async throws -> DiffFile
     /// What the branch picker lists: branches and tags, and in History the stashes too.
     func revs(in folder: String, forHistory: Bool) async throws -> [Rev]
     /// Fires when something that matters to `git status` changed (the debounced watch of `git/watch`).

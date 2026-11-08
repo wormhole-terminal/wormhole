@@ -76,7 +76,7 @@ final class PanelLogicTests: XCTestCase {
     }
 
     func testSplitPairsRunsAndFillsTheRest() throws {
-        let file = try XCTUnwrap(UnifiedDiffParser.parse(SampleDiffs.sidebar).first)
+        let file = SampleDiffs.sidebar
         let rows = DiffRows.split(file)
         let pairs = rows.compactMap { if case let .split(old, new) = $0 { (old?.kind, new?.kind) } else { nil } }
         XCTAssertTrue(pairs.contains { $0.0 == .removed && $0.1 == .added })
@@ -84,10 +84,17 @@ final class PanelLogicTests: XCTestCase {
         XCTAssertEqual(DiffRows.numberDigits(file), 3)
     }
 
+    func testARemovalAfterAdditionsStartsANewBlock() {
+        let hunk = DiffHunk("@@ -1,3 +1,3 @@", "-a", "+A", "-b", "+B")
+        let rows = DiffRows.split(DiffFile(newPath: "f", hunks: [hunk]))
+        let pairs = rows.compactMap { if case let .split(old, new) = $0 { (old?.text, new?.text) } else { nil } }
+        XCTAssertEqual(pairs.map { "\($0.0 ?? "-")\($0.1 ?? "-")" }, ["aA", "bB"], "as core's split_rows pairs them, not aB and b-")
+    }
+
     func testNoNewlineIsAFlagNotARow() throws {
-        let file = try XCTUnwrap(UnifiedDiffParser.parse(SampleDiffs.settings).first)
+        let file = SampleDiffs.settings
         let rows = DiffRows.unified(file)
-        XCTAssertEqual(rows.count, 1 + file.hunks[0].lines.count - 1)
+        XCTAssertEqual(rows.count, 1 + file.hunks[0].lines.count)
         guard case let .unified(last) = rows.last else { return XCTFail() }
         XCTAssertTrue(last.noNewline)
     }
@@ -100,8 +107,13 @@ final class PanelLogicTests: XCTestCase {
         XCTAssertNil(SyntaxLanguage.of(path: "notes.unknownext"), "no grammar, no colours")
     }
 
-    func testCommitStampAndMerge() {
-        XCTAssertEqual(Signature(name: "a", time: 1_790_000_000, zone: 7200).stamp, "2026-09-21 16:13 +02:00")
-        XCTAssertEqual(Commit(sha: "abcdef0123", subject: "s", author: Signature(name: "a", time: 0), parents: ["1", "2"]).isMerge, true)
+    func testACommitCopiesFromItsRowAndNeedsDetailsForTheRest() throws {
+        let commit = try XCTUnwrap(PanelSamples.history.commits.first)
+        let details = try XCTUnwrap(PanelSamples.details(of: commit.sha))
+        XCTAssertEqual(CommitCopy.hash.text(of: commit, details: nil), commit.sha)
+        XCTAssertEqual(CommitCopy.subject.text(of: commit, details: nil), commit.subject)
+        XCTAssertNil(CommitCopy.message.text(of: commit, details: nil))
+        XCTAssertEqual(CommitCopy.author.text(of: commit, details: details), "Benny <benny@example.com>")
+        XCTAssertEqual(CommitCopy.allCases.filter(\.needsDetails), [.message, .author])
     }
 }

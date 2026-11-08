@@ -1,5 +1,5 @@
 // The diff of the one file that is open, whichever list it was opened from (Changes against the working tree or a
-// branch, History in a commit): it fetches the text off the main actor, parses it, colours it, and keeps the last
+// branch, History in a commit): it fetches the parsed diff off the main actor, colours it, and keeps the last
 // request only, so walking the files with the arrow keys never shows an older file's diff late.
 
 import Observation
@@ -22,18 +22,18 @@ public final class DiffSession {
 
     public var parsed: DiffFile? { if case let .shown(diff) = phase { diff } else { nil } }
 
-    public func open(_ file: ChangedFile, fetch: @escaping @Sendable () async throws -> String) {
+    public func open(_ file: ChangedFile, fetch: @escaping @Sendable () async throws -> DiffFile) {
         self.file = file
         phase = .loading
         task?.cancel()
         let highlighter = highlighter
         task = Task { [weak self] in
             do {
-                let text = try await fetch()
-                let diff = await Task.detached(priority: .userInitiated) { () -> DiffFile? in
-                    guard var parsed = UnifiedDiffParser.parse(text).first else { return nil }
-                    DiffHighlighting.apply(to: &parsed, with: highlighter)
-                    return parsed
+                let fetched = try await fetch()
+                let diff = await Task.detached(priority: .userInitiated) { () -> DiffFile in
+                    var colored = fetched
+                    DiffHighlighting.apply(to: &colored, with: highlighter)
+                    return colored
                 }.value
                 guard !Task.isCancelled else { return }
                 self?.phase = .shown(diff)

@@ -15,10 +15,4 @@ public enum Age {
         default: return "\(seconds / year)y"
         }
     }
-
-    /// "just now" or "3d ago", for the opened commit's dates (`history-ago`, with a no-break space).
-    public static func words(seconds: Int) -> String {
-        let short = text(seconds: seconds)
-        return short == "now" ? "just now" : "\(short)\u{00A0}ago"
-    }
 }

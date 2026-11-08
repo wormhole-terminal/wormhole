@@ -49,7 +49,6 @@ struct HistoryListView: View {
     let store: HistoryStore
     let now: Int
     @Environment(\.panelMotion) private var motion
-    @Environment(\.panelCopy) private var copy
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -81,22 +80,27 @@ struct HistoryListView: View {
                 CommitRowView(commit: commit, now: now, expanded: commit.id == store.expanded) {
                     withAnimation(motion.fold) { store.toggle(commit.id) }
                 }
-                .commitMenu(commit, openParent: openParent)
-                if commit.id == store.expanded { details }
+                .commitMenu(commit, store: store, openParent: openParent)
+                if commit.id == store.expanded { details(of: commit) }
             }
         }
     }
 
-    @ViewBuilder private var details: some View {
-        if let commit = store.details {
-            Group {
-                CommitDetailsView(commit: commit, now: now, copy: { copy($0) }, open: openParent)
-                ForEach(commit.files) { file in
+    @ViewBuilder private func details(of commit: Commit) -> some View {
+        Group {
+            CommitDetailsView(
+                commit: commit, details: store.details, error: store.detailsError, store: store,
+                listed: Set(store.model.commits.map(\.sha)), open: openParent)
+            if let files = store.details?.files {
+                if files.isEmpty { EmptyNote(text: panelText("history-no-files", "No file changes.")) }
+                ForEach(files) { file in
                     FileRowView(file: file, depth: 1, selected: file.id == store.selection) { store.open(file.id) }
                 }
+            } else if store.detailsError == nil {
+                EmptyNote(text: panelText("history-loading-files", "Loading files\u{2026}"))
             }
-            .transition(motion.hunk)
         }
+        .transition(motion.hunk)
     }
 
     private func openParent(_ sha: String) {

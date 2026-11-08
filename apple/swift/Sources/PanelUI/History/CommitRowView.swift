@@ -29,10 +29,10 @@ struct CommitRowView: View {
                 HStack(spacing: PanelMetrics.gap) {
                     Text(commit.short).font(.system(size: TextRole.caption.size, design: .monospaced))
                         .foregroundStyle(expanded ? tokens.sidebarRowSelectedText : tokens.primary)
-                    if commit.isMerge { Text("merge") }
-                    Text(commit.author.name).lineLimit(1)
+                    if commit.merge { Text("merge") }
+                    Text(commit.author).lineLimit(1)
                     Spacer(minLength: 0)
-                    Text(Age.text(seconds: now - commit.author.time)).monospacedDigit()
+                    Text(Age.text(seconds: now - commit.time)).monospacedDigit()
                 }
                 .font(TextRole.caption.font).foregroundStyle(muted)
                 .frame(height: PanelMetrics.metaLine)
@@ -42,7 +42,7 @@ struct CommitRowView: View {
             .frame(height: Metric.rowTwoLine)
         }
         .help(commit.subject)
-        .accessibilityLabel("\(commit.subject), \(commit.short), \(commit.author.name)")
+        .accessibilityLabel("\(commit.subject), \(commit.short), \(commit.author)")
         .accessibilityValue(expanded ? "open" : "folded")
     }
 

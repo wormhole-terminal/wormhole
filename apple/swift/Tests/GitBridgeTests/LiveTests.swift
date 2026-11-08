@@ -26,10 +26,10 @@ import Testing
         let modified = try #require(state.files.first { $0.path == "a.txt" })
         #expect(modified.lines == .counts(added: 2, removed: 1))
 
-        let text = try await git.diff(of: "a.txt", in: folder, comparedWith: nil)
-        let parsed = try #require(UnifiedDiffParser.parse(text).first)
-        #expect(parsed.path == "a.txt" && parsed.hunks.count == 1 && parsed.hunks[0].added == 2 && parsed.hunks[0].removed == 1)
-        let renamed = try #require(UnifiedDiffParser.parse(try await git.diff(of: "new.txt", in: folder, comparedWith: nil)).first)
+        let parsed = try await git.diff(of: "a.txt", in: folder, comparedWith: nil)
+        let counts = parsed.hunks[0].lines.reduce(into: (added: 0, removed: 0)) { $0.added += $1.kind == .added ? 1 : 0; $0.removed += $1.kind == .removed ? 1 : 0 }
+        #expect(parsed.path == "a.txt" && parsed.hunks.count == 1 && counts == (2, 1))
+        let renamed = try await git.diff(of: "new.txt", in: folder, comparedWith: nil)
         #expect(renamed.isRenamed && renamed.oldPath == "old.txt")
 
         let revs = try await git.revs(in: folder, forHistory: true)
@@ -54,9 +54,11 @@ import Testing
         #expect(only.commits.map(\.subject) == ["initial"])
 
         let opened = try await git.details(of: log.commits[0].sha, in: root.path)
-        #expect(opened.body == "Because it is needed." && opened.files.map(\.path) == ["b.txt"])
+        #expect(opened.whole == "Because it is needed." && opened.files.map(\.path) == ["b.txt"] && opened.authorLine.hasPrefix("Test <"))
+        let compact = try #require(git.compactMessage(of: opened.sha, in: root.path, lineChars: 80))
+        #expect(compact == CommitDetails.Compact(text: "Because it is needed.", more: false))
         let diff = try await git.diff(of: "b.txt", inCommit: opened.sha, folder: root.path)
-        #expect(UnifiedDiffParser.parse(diff).first?.isNew == true)
+        #expect(diff.isNew)
 
         await #expect(throws: GitFailure.self) { try await git.log(in: root.path, of: Rev(name: "no-such-branch"), paths: []) }
     }

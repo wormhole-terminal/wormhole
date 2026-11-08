@@ -1,96 +1,146 @@
 // The opened commit's block under its row (`features/git/history/details_view.rs`): the subject in full with the
 // button that copies the message, the message (compact, with "Show more" when something is left out), the refs
 // that point at it, then under a rule who wrote it and when, its hash with the copy buttons, its parents as links
-// and how much it changed. One level in (x 32), caption text.
+// and how much it changed. One level in (x 32), caption text. What it says comes finished from the core
+// (`CommitDetails`); this lays it out.
 
+import AppKit
 import DesignSystem
 import PanelModel
 import SwiftUI
 
 struct CommitDetailsView: View {
     let commit: Commit
-    let now: Int
-    let copy: (String) -> Void
+    let details: CommitDetails?
+    let error: String?
+    let store: HistoryStore
+    /// The parents the log lists: only those can be opened from here.
+    let listed: Set<String>
     let open: (String) -> Void
     @State private var whole = false
+    @State private var width: CGFloat = 0
+    @Environment(\.panelCopy) private var copy
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         VStack(alignment: .leading, spacing: PanelMetrics.gap) {
             HStack(alignment: .top, spacing: PanelMetrics.gap) {
-                Text(commit.subject).font(TextRole.body.font.weight(.semibold)).foregroundStyle(tokens.textPrimary)
+                Text(details?.subject ?? commit.subject).font(TextRole.body.font.weight(.semibold)).foregroundStyle(tokens.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                BandButton(symbol: "doc.on.doc", label: "Copy message", inRow: true) { copy(commit.subject + "\n\n" + commit.body) }
+                copyButton(panelText("history-copy-message", "Copy message"), .message)
             }
             message
-            if !commit.refs.isEmpty { CommitRefs(refs: commit.refs) }
+            if let details, !details.refs.isEmpty { refs(details) }
             facts
         }
-        .font(TextRole.label.font.weight(.regular))
+        .font(TextRole.caption.font)
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
         .padding(.leading, PanelMetrics.inset + Metric.indent).padding(.trailing, PanelMetrics.inset)
         .padding(.vertical, Space._2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Details of \(commit.short), by \(commit.author.name)")
+        .accessibilityLabel(details?.spoken ?? "\(commit.short), \(commit.subject), \(commit.author)")
+        .contextMenu { CommitCopies(commit: commit, store: store) }
     }
 
     @ViewBuilder private var message: some View {
-        let lines = commit.body.split(separator: "\n", omittingEmptySubsequences: false)
-        if !lines.isEmpty {
-            let more = lines.count > 3
-            Text(more && !whole ? lines.prefix(3).joined(separator: "\n") : commit.body)
-                .foregroundStyle(tokens.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
+        if let details {
+            let compact = store.compact(lineChars: max(CaptionMeasure.characters(in: width), 16))
+            let more = compact?.more ?? false
+            if whole {
+                if !details.whole.isEmpty { line(details.whole, tokens.textPrimary) }
+                if !details.trailers.isEmpty { line(details.trailers, tokens.textMuted) }
+                if let note = details.continues { line(note, tokens.textMuted) }
+                if let note = details.tooLong { line(note, tokens.textMuted) }
+            } else if let text = compact?.text, !text.isEmpty {
+                line(text, tokens.textPrimary)
+            }
             if more { ShowMore(whole: whole) { whole.toggle() } }
+        } else if let error {
+            line(error, tokens.statusDangerText)
+        } else {
+            line(panelText("history-reading-details", "Reading details\u{2026}"), tokens.textMuted)
+        }
+    }
+
+    private func line(_ text: String, _ color: Color) -> some View {
+        Text(text).foregroundStyle(color).frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func refs(_ details: CommitDetails) -> some View {
+        HStack(spacing: Space._1) {
+            CommitRefs(refs: details.refs)
+            if let more = details.refsMore { Text(more).foregroundStyle(tokens.textMuted) }
         }
     }
 
     private var facts: some View {
         VStack(alignment: .leading, spacing: Space._1) {
-            CommitFact(label: "Author") {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(parts([(commit.author.name, tokens.textPrimary), (" \(commit.author.email)", tokens.textMuted)]))
-                    Text("\(commit.author.stamp) · \(Age.words(seconds: now - commit.author.time))").foregroundStyle(tokens.textMuted)
-                }
+            if let details {
+                ForEach(Array(details.people.enumerated()), id: \.offset) { _, fact in CommitFact(label: fact.label) { Text(styled(fact)) } }
+            } else {
+                CommitFact(label: panelText("history-author", "Author")) { Text(commit.author) }
             }
-            CommitFact(label: "Commit") {
-                Text(commit.short).font(.system(size: TextRole.label.size, design: .monospaced))
+            CommitFact(label: panelText("history-commit", "Commit")) {
+                Text(commit.short).font(.system(size: TextRole.caption.size, design: .monospaced))
             } trailing: {
                 HStack(spacing: 0) {
-                    BandButton(symbol: "doc.on.doc", label: "Copy hash", inRow: true) { copy(commit.sha) }
-                    BandMenu(symbol: "ellipsis", label: panelText("history-more-copy", "More ways to copy")) { CommitCopies(commit: commit) }
+                    copyButton(panelText("history-copy-hash", "Copy hash"), .hash)
+                    BandMenu(symbol: "ellipsis", label: panelText("history-more-copy", "More ways to copy")) { CommitCopies(commit: commit, store: store) }
                 }
             }
-            if !commit.parents.isEmpty {
-                CommitFact(label: commit.parents.count == 1 ? "Parent" : "Parents") {
-                    HStack(spacing: PanelMetrics.gap) {
-                        ForEach(commit.parents, id: \.self) { parent in
-                            Button(String(parent.prefix(7))) { open(parent) }.buttonStyle(.plain)
-                                .font(.system(size: TextRole.label.size, design: .monospaced)).foregroundStyle(tokens.textLink)
-                                .accessibilityLabel("Open parent \(parent.prefix(7))")
-                        }
-                    }
-                }
-            }
-            if !commit.files.isEmpty { changes }
+            if let details, !details.parents.isEmpty { parents(details) }
+            if let details { CommitFact(label: details.changes.label) { Text(styled(details.changes)) } }
         }
         .padding(.top, Space._2)
         .overlay(alignment: .top) { Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth) }
     }
 
-    /// One line of text whose stretches have colours of their own.
-    private func parts(_ pieces: [(String, Color)]) -> AttributedString {
-        pieces.reduce(into: AttributedString()) { text, piece in
-            var run = AttributedString(piece.0)
-            run.foregroundColor = piece.1
-            text += run
+    private func parents(_ details: CommitDetails) -> some View {
+        CommitFact(label: details.parentsLabel) {
+            HStack(spacing: PanelMetrics.gap) {
+                ForEach(details.parents, id: \.sha) { parent in
+                    let mono = Font.system(size: TextRole.caption.size, design: .monospaced)
+                    if listed.contains(parent.sha) {
+                        Button(parent.short) { open(parent.sha) }.buttonStyle(.plain).font(mono).foregroundStyle(tokens.textLink)
+                            .accessibilityLabel(parent.spoken)
+                    } else {
+                        Text(parent.short).font(mono)
+                    }
+                }
+                if let more = details.parentsMore { Text(more).foregroundStyle(tokens.textMuted) }
+            }
         }
     }
 
-    private var changes: some View {
-        let summary = commit.changeSummary
-        return CommitFact(label: "Changes") {
-            Text(parts([(summary.files + " ", tokens.textPrimary), (summary.added + " ", tokens.diffAdded), (summary.removed, tokens.diffRemoved)]))
+    private func copyButton(_ label: String, _ what: CommitCopy) -> some View {
+        BandButton(symbol: "doc.on.doc", label: label, inRow: true) {
+            Task { if let text = await store.text(of: what, for: commit) { copy(text) } }
         }
+    }
+
+    /// One line of text whose stretches have the colours the core gave them.
+    private func styled(_ fact: CommitDetails.Fact) -> AttributedString {
+        fact.spans.reduce(into: AttributedString()) { text, span in
+            var run = AttributedString(span.text)
+            run.foregroundColor = switch span.tone {
+            case .plain: tokens.textPrimary
+            case .muted: tokens.textMuted
+            case .added: tokens.diffAdded
+            case .removed: tokens.diffRemoved
+            }
+            text += run
+        }
+    }
+}
+
+/// About how many characters of caption text fit in `width`: the width of a line of ordinary words, divided out, a
+/// little under it so that what is cut or offered as "more" errs on the side of offering (GPUI `measure::caption_chars`).
+@MainActor private enum CaptionMeasure {
+    static func characters(in width: CGFloat) -> Int {
+        let sample = "The quick brown fox jumps over"
+        let wide = sample.size(withAttributes: [.font: NSFont.systemFont(ofSize: TextRole.caption.size)]).width
+        return Int(width / max(wide / CGFloat(sample.count), 1) * 0.95)
     }
 }
 
@@ -103,7 +153,7 @@ private struct ShowMore: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: Space._1) {
-                Text(whole ? "Show less" : "Show more")
+                Text(whole ? panelText("history-show-less", "Show less") : panelText("history-show-more", "Show more"))
                 Image(systemName: whole ? "chevron.up" : "chevron.down").font(.system(size: 10, weight: .medium))
             }
             .foregroundStyle(hovering ? tokens.textLink : tokens.textMuted)

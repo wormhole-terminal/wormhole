@@ -14,8 +14,10 @@ public final class HistoryStore {
     public private(set) var rev: Rev?
     public private(set) var paths: [String] = []
     public private(set) var expanded: Commit.ID?
-    /// The opened commit with its message and files read in full (the log's rows carry the subject only).
-    public private(set) var details: Commit?
+    /// The opened commit's block as the core made it, once read (the log's rows carry the subject only).
+    public private(set) var details: CommitDetails?
+    /// Why the details could not be read.
+    public private(set) var detailsError: String?
     public private(set) var selection: ChangedFile.ID?
     public private(set) var revs: [Rev] = []
     public let diff: DiffSession
@@ -30,7 +32,7 @@ public final class HistoryStore {
     public func follow(_ folder: String?) {
         guard folder != self.folder else { return }
         self.folder = folder
-        (rev, paths, expanded, details, model) = (nil, [], nil, nil, HistoryModel())
+        (rev, paths, expanded, details, detailsError, model) = (nil, [], nil, nil, nil, HistoryModel())
         close()
         watch?.cancel()
         guard let folder else { return }
@@ -61,15 +63,33 @@ public final class HistoryStore {
     public func toggle(_ sha: Commit.ID) {
         close()
         details = nil
-        guard expanded != sha else { return expanded = nil }
-        expanded = sha
-        details = model.commits.first { $0.id == sha }
+        guard expanded != sha else { return (expanded, detailsError) = (nil, nil) }
+        (expanded, detailsError) = (sha, nil)
         guard let folder else { return }
         let git = git
         Task {
-            guard let full = try? await git.details(of: sha, in: folder), expanded == sha else { return }
-            details = full
+            do {
+                let full = try await git.details(of: sha, in: folder)
+                if expanded == sha { details = full }
+            } catch {
+                if expanded == sha { detailsError = (error as? GitFailure)?.message ?? "The details can't be read." }
+            }
         }
+    }
+
+    /// What `what` of `commit` puts on the clipboard: read from the log row, or from the details, which a commit that
+    /// was never opened has read first. Nil when git cannot say.
+    public func text(of what: CommitCopy, for commit: Commit) async -> String? {
+        let known = details?.sha == commit.sha ? details : nil
+        if let text = what.text(of: commit, details: known) { return text }
+        guard let folder, let read = try? await git.details(of: commit.sha, in: folder) else { return nil }
+        return what.text(of: commit, details: read)
+    }
+
+    /// The open commit's message for lines of about `lineChars` characters, and whether it leaves anything out.
+    public func compact(lineChars: Int) -> CommitDetails.Compact? {
+        guard let folder, let sha = expanded else { return nil }
+        return git.compactMessage(of: sha, in: folder, lineChars: lineChars)
     }
 
     /// Opens the commit `sha` names (a parent's link), if the log has it; one that is open stays open.
@@ -80,8 +100,7 @@ public final class HistoryStore {
 
     public func pick(_ rev: Rev?) {
         self.rev = rev
-        expanded = nil
-        details = nil
+        (expanded, details, detailsError) = (nil, nil, nil)
         close()
         refresh()
     }

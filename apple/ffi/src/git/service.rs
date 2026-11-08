@@ -14,10 +14,8 @@ use wormhole_core::git::{
 };
 
 use super::error::GitBackendError;
-use super::patch;
-use super::records::{
-    GitChange, GitCommitDetails, GitDiff, GitLog, GitLogCommit, GitRev, GitRevKind, GitStatus,
-};
+use super::records::{GitChange, GitDiff, GitDiffFile, GitLog, GitLogCommit, GitRev, GitRevKind, GitStatus};
+use super::shown::{GitCommitDetails, GitCompact, Message};
 
 /// Recent commits the revision picker offers to compare with.
 const RECENT_COMMITS: usize = 10;
@@ -40,6 +38,7 @@ struct Opened {
     sha: String,
     parent: Option<String>,
     files: Vec<FileChange>,
+    message: Message,
 }
 
 /// Repositories, read-only, through core's `GitCmd`. One per app; it holds no repository open.
@@ -159,7 +158,15 @@ impl Git {
         let root = root_of(&folder)?;
         let details = git::commit_details(&root, &sha).map_err(|err| GitBackendError::of(&err))?;
         let opened = self.open(&root, &sha, &details)?;
-        Ok(GitCommitDetails::of(&details, &opened.files))
+        Ok(GitCommitDetails::of(&details, &opened.files, now()))
+    }
+
+    /// The opened commit's message for lines of about `line_chars` characters (core's estimate of how the
+    /// view wraps), and whether it leaves anything out. Nothing for a commit that was not opened.
+    pub fn compact_message(&self, folder: String, sha: String, line_chars: u32) -> Option<GitCompact> {
+        let root = root_of(&folder).ok()?;
+        let opened = self.kept().commits.get(&(root, sha)).cloned()?;
+        Some(opened.message.compact(line_chars as usize))
     }
 
     /// One file's diff in a commit (against its first parent).
@@ -224,7 +231,7 @@ impl Git {
         let parent = details.parents.first().cloned();
         let files = git::commit_files(root, &commit_of(&details.sha, parent.as_ref()))
             .map_err(|err| GitBackendError::of(&err))?;
-        let opened = Opened { sha: details.sha.clone(), parent, files };
+        let opened = Opened { sha: details.sha.clone(), parent, files, message: Message::of(details) };
         let mut kept = self.kept();
         if kept.commits.len() >= 64 {
             kept.commits.clear();
@@ -273,11 +280,11 @@ impl Git {
             GitDiff::Lfs { summary: git::lfs_summary(change, units) }
         } else if diff.binary {
             GitDiff::Binary {
-                patch: patch::unified(file, &diff),
+                file: GitDiffFile::of(file, &diff),
                 sizes: git::sizes_label(diff.sizes.0, diff.sizes.1, units),
             }
         } else {
-            GitDiff::Text { patch: patch::unified(file, &diff) }
+            GitDiff::Text { file: GitDiffFile::of(file, &diff) }
         })
     }
 }
@@ -311,6 +318,11 @@ fn commit_of(sha: &str, parent: Option<&String>) -> Commit {
         subject: String::new(),
         refs: Vec::new(),
     }
+}
+
+/// Unix seconds, for the ages a block writes.
+fn now() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)
 }
 
 fn root_of(folder: &str) -> Result<PathBuf, GitBackendError> {

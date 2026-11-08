@@ -26,9 +26,9 @@ public struct RealGitBackend: GitBackend {
         try await state(in: folder, comparedWith: rev).files
     }
 
-    public func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> String {
+    public func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> DiffFile {
         try await GitQueue.run { [git] in
-            try git.diff(folder: folder, path: path, compare: rev?.name, loadAnyway: false).text()
+            try git.diff(folder: folder, path: path, compare: rev?.name, loadAnyway: false).file()
         }
     }
 
@@ -37,13 +37,18 @@ public struct RealGitBackend: GitBackend {
         return HistoryModel(commits: log.commits.map(Commit.init), branch: rev?.title ?? log.branch)
     }
 
-    public func details(of sha: String, in folder: String) async throws -> Commit {
-        Commit(try await GitQueue.run { [git] in try git.commitDetails(folder: folder, sha: sha) })
+    public func details(of sha: String, in folder: String) async throws -> CommitDetails {
+        CommitDetails(try await GitQueue.run { [git] in try git.commitDetails(folder: folder, sha: sha) })
     }
 
-    public func diff(of path: String, inCommit sha: String, folder: String) async throws -> String {
+    /// Asked while the block draws, so it does no git: core keeps the message of every commit it opened.
+    public func compactMessage(of sha: String, in folder: String, lineChars: Int) -> CommitDetails.Compact? {
+        git.compactMessage(folder: folder, sha: sha, lineChars: UInt32(clamping: lineChars)).map { .init(text: $0.text, more: $0.more) }
+    }
+
+    public func diff(of path: String, inCommit sha: String, folder: String) async throws -> DiffFile {
         try await GitQueue.run { [git] in
-            try git.commitDiff(folder: folder, sha: sha, path: path, loadAnyway: false).text()
+            try git.commitDiff(folder: folder, sha: sha, path: path, loadAnyway: false).file()
         }
     }
 

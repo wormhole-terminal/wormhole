@@ -27,4 +27,10 @@ impl Terminal {
         })
         .unwrap_or_default()
     }
+
+    /// What is typed in an AI CLI's input box on the screen (core's `prompt_in` heuristic: the last `>` or `❯`
+    /// line and its box), for "Stash prompt". Nothing at a plain shell prompt, or after `close`.
+    pub fn grab_prompt(&self) -> Option<String> {
+        self.with_pty(|pty| pty.grab_prompt()).flatten()
+    }
 }

@@ -662,7 +662,8 @@ func isRepository(folder) -> Bool                  // a look for .git, no proces
 func status(folder, compare: String?) -> GitStatus // files + branch, dirty, upstream, ahead/behind, compareMissing
 func diff(folder, path, compare: String?, loadAnyway: Bool) -> GitDiff
 func log(folder, rev: GitRev?, paths: [String]) -> GitLog          // nil = HEAD; .stashes = the stashes; 300 max
-func commitDetails(folder, sha) -> GitCommitDetails                // message cleaned by core, files vs first parent
+func commitDetails(folder, sha) -> GitCommitDetails                // the block as core finished it, files vs first parent
+func compactMessage(folder, sha, lineChars) -> GitCompact?         // the compact message for a width; nil if not opened
 func commitDiff(folder, sha, path, loadAnyway) -> GitDiff
 func revs(folder, forHistory: Bool) -> [GitRev]    // branches (current first), 200 newest tags, 10 commits, stashes
 func setBinaryUnits(binary: Bool)                  // `size_units`
@@ -679,12 +680,20 @@ func madeAt(folder) -> GitWorktree?   func list() -> [GitWorktree]   func isDirt
 func remove(folder) throws                              // only one Wormhole made; git refuses with changes
 ```
 
-- **Diff = unified text.** Core parses once (caps, binary, LFS, too-large rules) and `patch.rs` writes the
-  hunks back as unified text for Swift's `UnifiedDiffParser`: hunks are core's own lines, the header is rebuilt
-  (modes are written as the usual ones). Whole files are not read for highlighting (Swift's lexer colours the
-  text). `GitDiff` cases: `text`, `binary(patch, sizes)`, `lfs(summary)`, `tooLarge(bytes, title, detail)` (ask
-  again with `loadAnyway`), `submodule(label, note, ahead, behind)`: the last three have no lines, and the words
-  are core's (`diff_text`, `Submodule::label`).
+- **Diff = core's parsed hunks.** Core parses once (caps, binary, LFS, too-large rules); `GitDiffFile` carries
+  `oldPath` (nil: a new file), `newPath` (nil: deleted) and `hunks` of `GitHunk{header, lines: [GitDiffLine{kind,
+  old, new, text, noNewline}]}`, so Swift parses no diff text. Whole files are not read for highlighting (Swift's
+  lexer colours the lines). `GitDiff` cases: `text(file)`, `binary(file, sizes)`, `lfs(summary)`, `tooLarge(bytes,
+  title, detail)` (ask again with `loadAnyway`), `submodule(label, note, ahead, behind)`: the last three have no
+  lines, and the words are core's (`diff_text`, `Submodule::label`).
+- **An opened commit is finished by core.** `commitDetails` returns `GitCommitDetails`: the subject, VoiceOver's
+  words, the raw `message` and `authorLine` (what the copies put on the clipboard), `people` (author, committer when
+  it differs, co-authors) as `GitFact{label, spans: [GitSpan{text, tone}]}`, parents and refs capped with their
+  "+N" lines, the body's prose and trailers, the "goes on" / "too long" lines, the `changes` fact and the files. It
+  mirrors the GPUI app's `Shown`. `compactMessage(folder, sha, lineChars) -> GitCompact{text, more}?` is core's
+  estimate of the three-line view for a line width (nil for a commit not opened), cheap enough to ask while drawing.
+- `Terminal.grabPrompt() -> String?`: what is typed in an AI CLI's input box on the screen (`prompt_in`), for
+  "Stash prompt"; nil at a plain shell prompt.
 - **Compare** takes any branch, tag or commit; the base is the merge-base, as `status` reports it, and `diff` uses
   the same one. A deleted compared branch falls back to HEAD and says `compareMissing`.
 - **Worktrees** are remembered under the store's `worktrees` key (core's `Worktrees`, the default profile's

@@ -22,8 +22,8 @@ public final class NotesStore {
 
     public func send(_ note: Note) { host?.send(note.text) }
 
-    /// The text at the terminal's prompt becomes a new note and the prompt is empty again. Nothing at the prompt,
-    /// nothing happens.
+    /// What is typed in the terminal's input box (an agent's, as core reads it) becomes a new note, open for writing.
+    /// Nothing there, nothing happens.
     @discardableResult
     public func stashPrompt() -> Bool {
         guard let text = host?.takePrompt(), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }

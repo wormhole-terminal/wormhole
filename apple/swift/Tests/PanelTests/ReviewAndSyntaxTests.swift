@@ -61,7 +61,7 @@ final class ReviewAndSyntaxTests: XCTestCase {
     }
 
     func testDiffHighlightingReadsOldAndNewSidesSeparately() throws {
-        var file = try XCTUnwrap(UnifiedDiffParser.parse(SampleDiffs.sidebar).first)
+        var file = SampleDiffs.sidebar
         DiffHighlighting.apply(to: &file, with: LexerHighlighter())
         let lines = file.hunks[0].lines
         XCTAssertTrue(lines.filter { $0.kind == .added }.contains { $0.spans.contains { $0.key == "keyword" } })

@@ -103,6 +103,9 @@ public protocol FrameSource: AnyObject, Sendable {
     /// (soft-wrapped rows joined); `nil` when the source has none.
     func plainText(history: Bool) -> String?
 
+    /// What is typed in an AI CLI's input box on the screen, for "Stash prompt"; `nil` when there is none.
+    func grabPrompt() -> String?
+
     /// The picture a placement's key names (`Images/`): `nil` while it is still being decoded, or when the source has
     /// let it go. Asked once per picture; the view keeps the texture.
     func inlineImage(key: UInt32) -> InlineImage?
@@ -133,6 +136,7 @@ extension FrameSource {
     public func scroll(lines: Int) {}
     public func inlineImage(key: UInt32) -> InlineImage? { nil }
     public func plainText(history: Bool) -> String? { nil }
+    public func grabPrompt() -> String? { nil }
     public var interaction: (any TerminalInteraction)? { nil }
     public var scrollback: (any TerminalScrollback)? { nil }
     public func setClipboardRules(read: ClipboardReadRule, writeAllowed: Bool) {}

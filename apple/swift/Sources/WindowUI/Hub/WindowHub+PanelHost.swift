@@ -8,6 +8,7 @@ import TerminalCore
 extension WindowHub {
     func connect(_ host: SystemPanelHost) {
         host.terminal.send = { [unowned self] text in selectedSource?.write(Data(text.utf8)) }
+        host.terminal.takePrompt = { [unowned self] in selectedSource?.grabPrompt() }
         host.terminal.paste = { [unowned self] text in
             guard let source = selectedSource else { return false }
             source.paste(text)

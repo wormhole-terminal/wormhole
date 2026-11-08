@@ -13,15 +13,15 @@
 mod app_actions;
 mod aux_backends;
 mod blocks;
-mod clipboard;
 mod cli_tool;
+mod clipboard;
 mod contents;
 mod error;
 mod events;
 mod files_panel;
 mod find;
-mod fonts;
 pub mod folder_picker;
+mod fonts;
 mod frame;
 mod frame_extras;
 mod git;
@@ -76,13 +76,14 @@ pub use files_panel::{
 };
 pub use find::{FindOutcome, FoundSpan};
 pub use fonts::{
-    CustomFontFamilyRecord, CustomFontFileRecord, CustomFontsRecord, FontChoiceRecord, FontOrigin, font_bundled_family,
-    font_choices, font_custom_scan,
+    CustomFontFamilyRecord, CustomFontFileRecord, CustomFontsRecord, FontChoiceRecord, FontOrigin,
+    font_bundled_family, font_choices, font_custom_scan,
 };
 pub use git::{
-    Git, GitBackendError, GitChange, GitChangeKind, GitCommitDetails, GitDiff, GitEnvVar, GitListener,
-    GitLog, GitLogCommit, GitRef, GitRefKind, GitRev, GitRevKind, GitSignature, GitStatus, GitWatch,
-    GitWorktree, GitWorktreePlan, WorktreeService,
+    Git, GitBackendError, GitChange, GitChangeKind, GitCommitDetails, GitCompact, GitDiff, GitDiffFile,
+    GitDiffLine, GitEnvVar, GitFact, GitHunk, GitLineKind, GitListener, GitLog, GitLogCommit, GitParent,
+    GitRef, GitRefKind, GitRev, GitRevKind, GitSpan, GitStatus, GitTone, GitWatch, GitWorktree,
+    GitWorktreePlan, WorktreeService,
 };
 pub use hook_server::{HookError, HookEvent, HookListener, HookServer, cli_exit_code};
 pub use hosting::{
@@ -96,6 +97,12 @@ pub use interaction::{
 };
 pub use minimap::{MinimapGeometryRecord, MinimapRunRecord};
 pub use settings::{
+    FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
+    SettingsLoginField, SettingsProfileForm, SettingsShellLine, settings_import_review,
+    settings_import_selected_line, settings_others_head, settings_preview_note, settings_profile_form,
+    settings_profile_save, settings_reset_question, settings_update_user_agent,
+};
+pub use settings::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,
     ProbeSheetRecord, ProbesDesk, SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsFlagRow,
     SettingsHandle, SettingsHealth, SettingsHit, SettingsHookState, SettingsImportRow, SettingsListener,
@@ -104,12 +111,6 @@ pub use settings::{
     settings_delete_profile, settings_import_rows, settings_mcp_command, settings_profiles,
     settings_schema_json, settings_set_agent_hooks, settings_set_skill, settings_skill_rows,
     settings_switch_profile,
-};
-pub use settings::{
-    FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
-    SettingsLoginField, SettingsProfileForm, SettingsShellLine, settings_import_review, settings_import_selected_line,
-    settings_others_head, settings_preview_note, settings_profile_form, settings_profile_save,
-    settings_reset_question, settings_update_user_agent,
 };
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};

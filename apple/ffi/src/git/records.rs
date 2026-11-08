@@ -2,7 +2,7 @@
 //! core owns (a submodule's label, a too-large diff's title) arrives as text, so Swift keeps no copy of it.
 
 use wormhole_core::git::{
-    ChangeKind, Commit, CommitDetails, CommitRef, FileChange, RefKind, Signature, Submodule,
+    ChangeKind, Commit, CommitRef, DiffLine, FileChange, FileDiff, Hunk, LineKind, RefKind, Submodule,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -154,60 +154,66 @@ pub struct GitLog {
     pub limited: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
-pub struct GitSignature {
-    pub name: String,
-    pub email: String,
-    pub time: i64,
-    /// Seconds east of UTC where it was written.
-    pub zone: i32,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum GitLineKind {
+    Context,
+    Added,
+    Removed,
 }
 
-impl From<&Signature> for GitSignature {
-    fn from(signature: &Signature) -> Self {
-        Self {
-            name: signature.name.clone(),
-            email: signature.email.clone(),
-            time: signature.time,
-            zone: signature.offset,
-        }
+/// One line of a hunk, numbered on the side(s) it is on.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct GitDiffLine {
+    pub kind: GitLineKind,
+    pub old: Option<u32>,
+    pub new: Option<u32>,
+    pub text: String,
+    /// Git's "\ No newline at end of file" followed this line.
+    pub no_newline: bool,
+}
+
+impl From<&DiffLine> for GitDiffLine {
+    fn from(line: &DiffLine) -> Self {
+        let kind = match line.kind {
+            LineKind::Context => GitLineKind::Context,
+            LineKind::Added => GitLineKind::Added,
+            LineKind::Removed => GitLineKind::Removed,
+        };
+        Self { kind, old: line.old, new: line.new, text: line.text.clone(), no_newline: line.no_newline }
     }
 }
 
-/// An opened commit: its message cleaned for the screen, who and when, and its files with their counts.
-#[derive(Debug, Clone, PartialEq, uniffi::Record)]
-pub struct GitCommitDetails {
-    pub sha: String,
-    pub parents: Vec<String>,
-    pub author: GitSignature,
-    pub committer: GitSignature,
-    pub refs: Vec<GitRef>,
-    pub subject: String,
-    /// The body's text and, after a blank line, its trailers; empty for a one-line message.
-    pub body: String,
-    /// The message was longer than core reads (or than the screen draws).
-    pub cut: bool,
-    pub files: Vec<GitChange>,
+/// A hunk: git's `@@ -41,8 +41,10 @@ section` line as it is drawn, and its lines.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct GitHunk {
+    pub header: String,
+    pub lines: Vec<GitDiffLine>,
 }
 
-impl GitCommitDetails {
-    pub(crate) fn of(details: &CommitDetails, files: &[FileChange]) -> Self {
-        let body = details.body_view();
-        let text = match (body.text.is_empty(), body.trailers.is_empty()) {
-            (_, true) => body.text.clone(),
-            (true, false) => body.trailers.clone(),
-            (false, false) => format!("{}\n\n{}", body.text, body.trailers),
-        };
+impl From<&Hunk> for GitHunk {
+    fn from(hunk: &Hunk) -> Self {
+        Self { header: hunk.header.clone(), lines: hunk.lines.iter().map(GitDiffLine::from).collect() }
+    }
+}
+
+/// A file's parsed diff. `old_path` is `None` for a new file and `new_path` for a deleted one; they differ for a
+/// rename. A binary file has no hunks.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct GitDiffFile {
+    pub old_path: Option<String>,
+    pub new_path: Option<String>,
+    pub hunks: Vec<GitHunk>,
+}
+
+impl GitDiffFile {
+    /// `diff` for `file`: the paths as the header of `git diff` names them (a rename keeps both), hunks as core
+    /// parsed them.
+    pub(crate) fn of(file: &FileChange, diff: &FileDiff) -> Self {
+        let old = diff.renamed_from.as_deref().or(file.original_path.as_deref()).unwrap_or(&file.path);
         Self {
-            sha: details.sha.clone(),
-            parents: details.parents.clone(),
-            author: (&details.author).into(),
-            committer: (&details.committer).into(),
-            refs: details.refs.iter().map(GitRef::from).collect(),
-            subject: details.shown_subject(),
-            body: text,
-            cut: details.message_cut || body.cut,
-            files: files.iter().map(GitChange::of).collect(),
+            old_path: (!diff.new_file).then(|| old.to_string()),
+            new_path: (!diff.deleted_file).then(|| file.path.clone()),
+            hunks: diff.hunks.iter().map(GitHunk::from).collect(),
         }
     }
 }
@@ -215,10 +221,10 @@ impl GitCommitDetails {
 /// What a file's diff is, for a person: lines, or why there are none.
 #[derive(Debug, Clone, PartialEq, uniffi::Enum)]
 pub enum GitDiff {
-    /// Unified diff text, git's own hunks (`patch`).
-    Text { patch: String },
-    /// A binary file: `patch` says so in git's words, `sizes` is "48.2 KB → 52.9 KB" when known.
-    Binary { patch: String, sizes: Option<String> },
+    /// Core's parsed hunks (`git::diff`): the panel draws them as they are.
+    Text { file: GitDiffFile },
+    /// A binary file: `sizes` is "48.2 KB → 52.9 KB" when known.
+    Binary { file: GitDiffFile, sizes: Option<String> },
     /// Stored with Git LFS: what the pointers stand for ("12.3 MB → 12.8 MB · oid 4d7a21…").
     Lfs { summary: Option<String> },
     /// More than core loads unasked: its two lines of wording and the size. Ask again with `load_anyway`.
