@@ -54,7 +54,7 @@ final class UniFFIInteraction: TerminalCore.TerminalInteraction {
 
     func link(row: Int, column: Int) -> LinkInfo? {
         terminal.linkAt(row: UInt32(row), col: UInt32(column)).map {
-            LinkInfo(uri: $0.uri, isExplicit: $0.explicit, spans: $0.spans.map(Self.span))
+            LinkInfo(uri: $0.uri, isExplicit: $0.explicit, spans: $0.spans.map(Self.span), isFile: $0.file, readout: $0.readout)
         }
     }
 

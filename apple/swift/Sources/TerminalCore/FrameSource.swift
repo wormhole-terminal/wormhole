@@ -115,6 +115,9 @@ public protocol FrameSource: AnyObject, Sendable {
     /// Find, command blocks and the minimap over the whole history, when the source has one (the real engine).
     var scrollback: (any TerminalScrollback)? { get }
 
+    /// Folds and Probe marks, when the source has them (the real engine).
+    var probes: (any TerminalProbes)? { get }
+
     /// What programs may do with the clipboard (OSC 52): Settings' `clipboard_read` and `clipboard_write`.
     func setClipboardRules(read: ClipboardReadRule, writeAllowed: Bool)
     /// The terminal is shown where the person can see it: the only state in which a read is asked about.
@@ -139,6 +142,7 @@ extension FrameSource {
     public func grabPrompt() -> String? { nil }
     public var interaction: (any TerminalInteraction)? { nil }
     public var scrollback: (any TerminalScrollback)? { nil }
+    public var probes: (any TerminalProbes)? { nil }
     public func setClipboardRules(read: ClipboardReadRule, writeAllowed: Bool) {}
     public func setOnScreen(_ onScreen: Bool) {}
     public func giveClipboard(_ text: String) {}

@@ -28,6 +28,7 @@ extension MetalTerminalView {
         let link = (command ? hit : nil).flatMap { interaction?.link(row: $0.row, column: $0.column) }
         guard link != pointer.link else { return }
         pointer.link = link
+        onLinkReadout?(link?.readout)
         renderer.setLinkHighlight(link?.spans ?? [])
         window?.invalidateCursorRects(for: self)
         requestRedraw()
@@ -36,6 +37,11 @@ extension MetalTerminalView {
     /// Command-click: open the link at `hit`. `false` when there is none, so the click does what it would.
     func openLink(at hit: CellHit) -> Bool {
         guard let interaction, let link = interaction.link(row: hit.row, column: hit.column) else { return false }
+        // A file a Probe's rule named is looked for in the terminal's folder by the host, never opened as an address.
+        if link.isFile {
+            onFileLink?(link.uri)
+            return true
+        }
         let target = interaction.openTarget(for: link.uri)
         if target == .refused {
             // The scheme only: the rest of a link can be private.
@@ -56,7 +62,7 @@ extension MetalTerminalView {
         linkOpener = { asked = $0 }
         defer { linkOpener = opener }
         if click { _ = openLink(at: hit) }
-        return "link \(link.uri) explicit=\(link.isExplicit) spans=\(link.spans.count) opens=\(asked.map { "\($0)" } ?? "not clicked")"
+        return "link \(link.uri) explicit=\(link.isExplicit) file=\(link.isFile) readout=\(link.readout ?? "-") spans=\(link.spans.count) opens=\(asked.map { "\($0)" } ?? "not clicked")"
     }
 
     /// The pointer over the grid: a hand over a link, an arrow where a program has the mouse, else the text cursor.

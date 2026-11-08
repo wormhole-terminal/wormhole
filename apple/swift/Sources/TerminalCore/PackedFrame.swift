@@ -84,6 +84,9 @@ public enum PackedColor {
     /// The current find match's fill and text.
     public static let findCurrent: UInt32 = 261
     public static let findCurrentText: UInt32 = 262
+    /// The first of the five slots of a Probe's tones (`ProbeTone`).
+    public static let toneBase = 263
+    @inline(__always) public static func tone(_ tone: ProbeTone) -> UInt32 { UInt32(toneBase + tone.rawValue) }
 
     @inline(__always) public static func named(_ slot: Int) -> UInt32 { UInt32(slot) }
     @inline(__always) public static func indexed(_ index: Int) -> UInt32 { 1 << 24 | UInt32(index) }
@@ -122,6 +125,9 @@ public struct FrameHeader: Sendable, Equatable {
     public var placementCount: Int?
     /// The frame carries cell extras (`CellExtras`) after the rows and the placements.
     public var hasExtras = false
+    /// It carries Probe decorations and fold markers after the extras (`FrameSections`).
+    public var hasDecor = false
+    public var hasFolds = false
 
     public struct Cursor: Sendable, Equatable {
         public var row: Int
@@ -141,7 +147,7 @@ public struct FrameHeader: Sendable, Equatable {
 
     public init(
         cols: Int, rows: Int, changedRows: Int, isFull: Bool, cursor: Cursor?, displayOffset: Int = 0,
-        historySize: Int = 0, placementCount: Int? = nil, hasExtras: Bool = false
+        historySize: Int = 0, placementCount: Int? = nil, hasExtras: Bool = false, hasDecor: Bool = false, hasFolds: Bool = false
     ) {
         self.cols = cols
         self.rows = rows
@@ -152,6 +158,8 @@ public struct FrameHeader: Sendable, Equatable {
         self.historySize = historySize
         self.placementCount = placementCount
         self.hasExtras = hasExtras
+        self.hasDecor = hasDecor
+        self.hasFolds = hasFolds
     }
 }
 
@@ -182,7 +190,8 @@ public enum FrameReader {
         return FrameHeader(
             cols: Int(word(2)), rows: Int(word(3)), changedRows: Int(word(4)), isFull: word(5) & 1 != 0,
             cursor: cursor, displayOffset: Int(word(9)), historySize: Int(word(10)),
-            placementCount: word(5) & PlacementRecords.flag != 0 ? Int(word(11)) : nil, hasExtras: word(5) & CellExtras.flag != 0)
+            placementCount: word(5) & PlacementRecords.flag != 0 ? Int(word(11)) : nil, hasExtras: word(5) & CellExtras.flag != 0, hasDecor: word(5) & FrameSections.decorFlag != 0,
+            hasFolds: word(5) & FrameSections.foldFlag != 0)
     }
 
     /// Visit each changed row in order. `body` gets the row index, its line size and its cells, which

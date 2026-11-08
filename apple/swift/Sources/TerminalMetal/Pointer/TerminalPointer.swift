@@ -104,6 +104,7 @@ extension MetalTerminalView {
         onPointerRow?(cellGrid.contains(point) ? cellGrid.hit(point)?.row : nil)
         guard let hit = cellGrid.hit(point), cellGrid.contains(point) else { return }
         updateLink(under: hit, command: event.modifierFlags.contains(.command))
+        updateReveal(under: hit, alt: event.modifierFlags.contains(.option))
         _ = send(.none, .motion, hit, event)
     }
 
@@ -111,11 +112,13 @@ extension MetalTerminalView {
         pointer.lastPoint = nil
         onPointerRow?(nil)
         updateLink(under: nil, command: false)
+        updateReveal(under: nil, alt: false)
     }
 
     public override func flagsChanged(with event: NSEvent) {
         if let point = pointer.lastPoint, let hit = cellGrid.hit(point), cellGrid.contains(point) {
             updateLink(under: hit, command: event.modifierFlags.contains(.command))
+            updateReveal(under: hit, alt: event.modifierFlags.contains(.option))
         }
         super.flagsChanged(with: event)
     }

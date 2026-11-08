@@ -30,18 +30,24 @@ public enum Notice: Hashable, Sendable {
         case copyPath
         case historyKeptByHost
         case putAtPrompt(PutRefusal)
+        /// A file a Probe named is not in the terminal's folder; the words come from Rust with the name cleaned and cut.
+        case fileNotFound(words: String)
     }
 
     /// Stays on the chip until it is clicked.
     public enum Warning: Hashable, Sendable {
         case hostFallback, moveToApplications, dataFolder
         case updateReady(version: String)
+        /// A Probe's hook offers a file in `terminal`'s folder: a click opens it, never anything by itself.
+        case probeOffer(terminal: Int, text: String, words: String)
+        /// A hook failed too often in a minute and was paused until the Probes are loaded again.
+        case probePaused(words: String)
     }
 
     /// The picture beside the words (`Glyph`).
     var symbol: String {
         switch self {
-        case .failed(.putAtPrompt), .warned: "exclamationmark.triangle"
+        case .failed(.putAtPrompt), .failed(.fileNotFound), .warned: "exclamationmark.triangle"
         case .copied, .failed: "doc.on.doc"
         case .driven(.reading): "eye"
         case .driven(.typing): "keyboard"
@@ -59,7 +65,12 @@ public enum Notice: Hashable, Sendable {
     }
 
     /// The capsule itself is the button ("Restart").
-    var hasAction: Bool { if case .warned(.updateReady) = self { true } else { false } }
+    var hasAction: Bool {
+        switch self {
+        case .warned(.updateReady), .warned(.probeOffer): true
+        default: false
+        }
+    }
 
     /// A copy of `text`: lines when it has several, else characters (`Copied::text`).
     public static func copied(text: String, byProgram: Bool = false) -> Notice {

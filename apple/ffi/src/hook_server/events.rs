@@ -25,6 +25,17 @@ pub enum HookEvent {
     /// terminal once its shell is ready (the server does it); `activate` says to bring the window forward, else it
     /// opens behind the others and takes no keys.
     NewWindow { window: i64, terminal: i64, folder: Option<String>, activate: bool },
+    /// A Probe's hook asks for a notification (the Probe's name is the subtitle, `"<name> (extension)"`): show it
+    /// by the notification rules. `probe` groups them, one thread per Probe.
+    ProbeNotice { probe: String, subtitle: String, title: String, body: String },
+    /// A Probe's hook offers a file in `terminal`'s folder, in the words of the chip. Nothing opens until the
+    /// person says so: then `Terminal::resolve_path(text)` finds it.
+    ProbeOffer { terminal: i64, words: String, text: String },
+    /// A hook failed too often and was paused until the Probes are loaded again; `words` say so.
+    ProbePaused { words: String },
+    /// The rules, a status item, a tinted block or a fold changed: take a frame of every terminal and read
+    /// `HookServer::probe_status_items` again.
+    ProbesChanged,
 }
 
 /// Why the server did not start.

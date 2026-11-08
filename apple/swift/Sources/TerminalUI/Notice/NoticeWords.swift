@@ -25,6 +25,7 @@ extension Notice {
             switch failed {
             case .copyPath: L10n.noticeFailedCopyPath
             case .historyKeptByHost: L10n.noticeHistoryKept
+            case let .fileNotFound(words): words
             case let .putAtPrompt(refusal):
                 switch refusal {
                 case .concealed: L10n.noticePutConcealed
@@ -39,6 +40,7 @@ extension Notice {
             case .dataFolder: L10n.noticeDataFolder
             case .moveToApplications: L10n.noticeMoveToApplications
             case let .updateReady(version): L10n.noticeUpdateReady(version)
+            case let .probeOffer(_, _, words), let .probePaused(words): words
             }
         }
     }

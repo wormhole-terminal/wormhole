@@ -18,7 +18,7 @@ use std::time::{Instant, SystemTime};
 use wormhole_core::agents::AGENTS;
 use wormhole_core::view::layout::Edge;
 use wormhole_core::view::panes::{Preset, Zone};
-use wormhole_core::view::sidebar::{Landing, SidebarNumbers, Status};
+use wormhole_core::view::sidebar::{Landing, RowState, SidebarNumbers, Status};
 use wormhole_core::workspace::{
     Action, ChromeSnapshot, DiskGround, DropPlan, EdgeDrag, Event, Failure, IdCounter, ModelConfig, Over,
     PanesSnapshot, Refusal, Revisions, SidebarSnapshot, StatusEvent, TerminalFacts, TerminalsSnapshot,
@@ -263,6 +263,7 @@ impl Shared {
             return;
         }
         let events = self.close_what_closed(events);
+        self.sync_fold_guards();
         {
             let mut pending = locked(&self.pending);
             for event in events {
@@ -277,6 +278,18 @@ impl Shared {
         }
         if !self.woken.swap(true, Ordering::AcqRel) {
             self.listener.wake();
+        }
+    }
+
+    /// What needs the person is never under a fold: each terminal's folds are told whether its row says so now.
+    fn sync_fold_guards(&self) {
+        let terminals: Vec<(i64, Arc<Terminal>)> =
+            locked(&self.terminals).iter().map(|(id, terminal)| (*id, terminal.clone())).collect();
+        for (id, terminal) in terminals {
+            let needs = self.peek_model(|model| {
+                model.facts(id).is_some_and(|facts| facts.row_state() == RowState::NeedsYou)
+            });
+            terminal.fold_needs_you(needs);
         }
     }
 

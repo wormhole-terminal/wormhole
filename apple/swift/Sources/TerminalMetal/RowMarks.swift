@@ -15,9 +15,11 @@ struct RowMarks: Equatable {
     var link: ClosedRange<Int>?
     /// In column order, as the search found them.
     var found: [FoundColumns] = []
+    /// What a Probe's rules and hooks add: tones, shortened or redacted text, a block's tint.
+    var decor: RowDecor?
     static let none = RowMarks()
 
-    var isMarked: Bool { selected != nil || link != nil || !found.isEmpty }
+    var isMarked: Bool { selected != nil || link != nil || !found.isEmpty || decor != nil }
 
     /// A cell's colours as drawn with inverse resolved and hidden text kept hidden: the base a mark paints over.
     private static func normalised(_ cell: inout PackedCell) {
@@ -30,11 +32,35 @@ struct RowMarks: Equatable {
         cell.flags = flags.subtracting([.inverse, .hidden]).rawValue
     }
 
+    /// A Probe's marks, under the selection and find's matches, which stand over both: a hook's tint under the whole block, a
+    /// rule's tone on its text, and what a shortened or redacted span shows in place of the characters it hides (the real
+    /// ones are never drawn).
+    private static func paint(_ decor: RowDecor, over cells: inout [PackedCell], palette: TerminalPalette, selected: ClosedRange<Int>?) {
+        if let block = decor.block {
+            for column in cells.indices where selected?.contains(column) != true {
+                normalised(&cells[column])
+                cells[column].bg = palette.tinted(cells[column].bg, tone: block)
+            }
+        }
+        for span in decor.spans where span.first < cells.count {
+            for column in span.first...min(span.last, cells.count - 1) where selected?.contains(column) != true {
+                if let tone = span.tone { cells[column].fg = PackedColor.tone(tone) }
+                if let mask = span.mask, column - span.first < mask.count {
+                    let shown = mask[column - span.first]
+                    // A wide character's second cell stays a spacer, so the row's cells keep their meaning.
+                    if !cells[column].cellFlags.contains(.wideCharSpacer) { cells[column].scalar = shown }
+                    cells[column].flags &= ~CellFlags.wideChar.rawValue
+                }
+            }
+        }
+    }
+
     /// A selected cell is drawn as the selection's colours over the cell as it would have been drawn; without a
     /// theme text colour the text keeps its own. Find's current match stands out over everything, in bold; the
     /// others tint the background, except inside the selection (`render/rows.rs`). A hovered link is underlined,
     /// whatever the program drew, in the text's colour.
     func apply(to cells: inout [PackedCell], palette: TerminalPalette) {
+        if let decor { Self.paint(decor, over: &cells, palette: palette, selected: selected) }
         if let selected {
             for column in selected where column < cells.count {
                 let wasHidden = cells[column].cellFlags.contains(.hidden)

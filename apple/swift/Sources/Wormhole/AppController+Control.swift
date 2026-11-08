@@ -59,6 +59,11 @@ extension AppController {
         case "screen":
             let grid = view.renderer.gridSize
             reply((0..<grid.rows).map { view.renderer.text(ofRow: $0) }.joined(separator: "\n"))
+        case "scroll":
+            // The view scrolled through the history by `argument` lines (positive: up), as the wheel would.
+            view.source.scroll(lines: Int(argument) ?? 0)
+            view.requestRedraw()
+            reply("scrolled \(argument)")
         case "type":
             view.source.write(Data(argument.replacingOccurrences(of: "\\r", with: "\r").replacingOccurrences(of: "\\n", with: "\r").utf8))
             reply("typed")

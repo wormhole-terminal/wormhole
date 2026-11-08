@@ -3,6 +3,7 @@
 // with its view, so a terminal moved to another pane or hidden behind a diff keeps its search and its bar.
 
 import Observation
+import TerminalCore
 import TerminalMetal
 import TerminalUI
 import WorkspaceModel
@@ -15,6 +16,11 @@ final class TerminalOverlay {
     let minimap: CoreMinimap
     /// Bumped after every frame that rebuilt rows: what is drawn from the terminal beside the grid reads it.
     private(set) var revision = 0
+    /// The fold markers among the rows (`MetalTerminalView.foldMarkers`), and whether any fold exists: Edit ▸ Show Hidden Lines.
+    var markers: [FoldMarkerRow] = []
+    var hasFolds = false
+    /// While ⌘ is held over a link a Probe's rule made: what it says (`LinkReadout`).
+    var linkReadout: String?
     @ObservationIgnored private(set) weak var view: MetalTerminalView?
     let size = SizeReadoutModel()
     var bars = PaneOverlayState()
@@ -44,11 +50,13 @@ final class TerminalOverlay {
         view.onPointerRow = { [weak blocks] in blocks?.hover(row: $0) }
         wireClipboard(view: view, notices: notices)
         view.onContentChanged = { [weak self] in self?.contentChanged() }
+        view.onLinkReadout = { [weak self] in self?.linkReadout = $0 }
     }
 
     /// The terminal drew rows: the views beside the grid read again, and a search that the output made stale runs again.
     private func contentChanged() {
         revision &+= 1
+        syncFolds()
         blocks.noteView()
         find.outputChanged()
     }

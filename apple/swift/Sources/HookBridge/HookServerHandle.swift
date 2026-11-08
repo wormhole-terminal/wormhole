@@ -49,6 +49,9 @@ public final class HookServerHandle {
     /// The settings changed: the server reads the agent-access mode again.
     public func settingsChanged() { server.settingsChanged() }
 
+    /// The status items the Probes' hooks set (`HookAction.probesChanged` says to read them again).
+    public func probeStatusItems() -> [ProbeStatusRecord] { server.probeStatusItems() }
+
     /// Stop serving: the socket goes, the lock is given up, the streams end.
     public func stop() {
         server.stop()

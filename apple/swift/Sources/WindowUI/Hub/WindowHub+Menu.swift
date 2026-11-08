@@ -6,13 +6,13 @@ import WorkspaceModel
 extension WindowHub {
     /// What the menus show now. Reading it registers what it reads with the caller's observation, so the menu
     /// bar redraws when any of it changes.
-    public func menuState(look: WindowLook, isFullScreen: Bool, implemented: Set<ActionID>) -> MenuState {
+    public func menuState(look: WindowLook, isFullScreen: Bool, implemented: Set<ActionID>, flagsOn: Set<String> = []) -> MenuState {
         let panes = paneFacts
         return MenuStateMaker.make(
             MenuFacts(
                 state: state, statusBar: look.ownStatusBar, tabsOnTop: look.tabsOnTop, isFullScreen: isFullScreen,
                 isSplit: panes.isSplit, isZoomed: panes.isZoomed, canSplitRight: canSplit(.row), canSplitDown: canSplit(.column), minimap: look.ownMinimap, zen: look.zen != nil,
-                implemented: implemented))
+                implemented: implemented, flagsOn: flagsOn, hasFolds: selectedOverlay?.hasFolds ?? false))
     }
 
     /// ⌘1–9: the terminal with this number in the list (the core numbers them).

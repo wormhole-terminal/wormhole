@@ -24,7 +24,7 @@ mod values;
 mod watch;
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 pub use agents::{SettingsAgentRow, SettingsHookState, settings_agent_rows, settings_set_agent_hooks};
 pub use error::SettingsError;

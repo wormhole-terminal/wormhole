@@ -172,7 +172,7 @@ impl Core {
         self.registered().into_iter().filter_map(|(_, terminal)| terminal.shell_pid()).collect()
     }
 
-    fn registered(&self) -> Vec<(i64, Arc<Terminal>)> {
+    pub(crate) fn registered(&self) -> Vec<(i64, Arc<Terminal>)> {
         let ids: Vec<i64> =
             self.shares().iter().flat_map(|shared| shared.peek_model(|model| model.ids())).collect();
         ids.into_iter().filter_map(|id| Some((id, self.terminal(id)?))).collect()

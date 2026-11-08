@@ -5,7 +5,7 @@
 //! reader is the engine's fair lock, taken inside `Pty::snapshot` for a copy of the damaged rows.
 
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError, RwLock};
 use std::time::Instant;
 
@@ -19,8 +19,8 @@ use wormhole_term::{GridSize, Pty, ScreenSnapshot};
 
 use crate::error::FfiError;
 use crate::events::{EventFeed, EventQueue, TermEvent, TerminalListener, Touch, spawn_receiver};
-use crate::inline_images::{PlacementsSent, placeholder_placements};
 use crate::hosting::HostSlot;
+use crate::inline_images::{PlacementsSent, placeholder_placements};
 use crate::{frame, frame_extras, isolation};
 
 /// How much history a terminal keeps (the app's default is the same order).
@@ -43,6 +43,12 @@ pub struct Terminal {
     pub(crate) finder: crate::find::Finder,
     pub(crate) minimap: crate::minimap::Minimap,
     timing: Timing,
+    /// What Probes mark on the rows and which folds show (`probes`): worked out under the snapshot's lock.
+    pub(crate) marks: Mutex<crate::probes::Marks>,
+    /// The terminal's id in the workspace (what a hook's event names it by); `-1` outside one.
+    pub(crate) tab: i64,
+    /// The terminal needs the person, as last told to its folds (`probes::terminal`).
+    pub(crate) needs_you: AtomicBool,
     /// The program's name ("zsh"), which names the terminal until something better does.
     name: String,
     /// The session host the program runs in (`hosting`); `None` in the app's own process.
@@ -333,6 +339,9 @@ impl Terminal {
             finder: Default::default(),
             minimap: Default::default(),
             timing: Timing::default(),
+            marks: Mutex::default(),
+            tab: options.tab_id.parse().unwrap_or(-1),
+            needs_you: AtomicBool::new(false),
             name,
             host,
         }))
@@ -380,6 +389,18 @@ impl Terminal {
         records.summary()
     }
 
+    /// How long until the OSC 9;4 progress bar its program last reported is stale, when it has one.
+    pub(crate) fn progress_remaining(&self) -> Option<std::time::Duration> {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        guard.as_ref()?.program_status().progress_remaining(Instant::now())
+    }
+
+    /// Drop the progress bar its program has not renewed for `PROGRESS_TIMEOUT`. Whether it did.
+    pub(crate) fn expire_progress(&self) -> bool {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        guard.as_ref().is_some_and(|pty| pty.program_status().expire_progress(Instant::now()))
+    }
+
     /// The command line the shell's block says just ended with `code`.
     pub(crate) fn ended_command(&self, code: i32) -> Option<String> {
         let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
@@ -392,14 +413,19 @@ impl Terminal {
         let mut snapshot = self.snapshot.lock().unwrap_or_else(PoisonError::into_inner);
 
         let started = Instant::now();
+        let mut marks = self.marks.lock().unwrap_or_else(PoisonError::into_inner);
+        marks.sync_folds(pty);
         pty.snapshot(&mut snapshot);
         let snapshotted = Instant::now();
+        // A row's marks that changed without the row (rules loaded, a hook's tint) go out as a full frame.
+        let all = marks.refresh(self.tab, &snapshot) || all;
         let mut bytes = frame::pack(&snapshot, all);
         // Placed pictures, then the tiles that placeholder cells draw (kitty's `U=1`).
         let mut placements = snapshot.placements().to_vec();
         placements.extend(placeholder_placements(pty, &snapshot));
         self.placements.lock().unwrap_or_else(PoisonError::into_inner).append(&mut bytes, &placements, all);
         frame_extras::append(&mut bytes, &snapshot, all);
+        marks.append(&mut bytes, &snapshot, all);
         let packed = Instant::now();
 
         let t = &self.timing;

@@ -19,6 +19,10 @@ struct MenuFacts {
     var zen = false
     /// The actions the dispatcher can run.
     var implemented: Set<ActionID>
+    /// The feature flags that are on: an action whose flag is off is not in the menus.
+    var flagsOn: Set<String> = []
+    /// The selected terminal has a fold: Show Hidden Lines has something to show.
+    var hasFolds = false
 }
 
 enum MenuStateMaker {
@@ -58,7 +62,8 @@ enum MenuStateMaker {
             if !preset.enabled { menu.disabled.insert(id) }
         }
         // Actions whose feature flag is off are not in the menus at all.
-        menu.hidden = Set(keymap.entries.filter { $0.flag != nil }.map(\.id))
+        menu.hidden = Set(keymap.entries.filter { $0.flag.map { !facts.flagsOn.contains($0) } ?? false }.map(\.id))
+        if !facts.hasFolds { menu.disabled.insert("showHiddenLines") }
 
         let numbered = SidebarNumbering.numbered(state)
         menu.terminals = numbered.map(\.title)

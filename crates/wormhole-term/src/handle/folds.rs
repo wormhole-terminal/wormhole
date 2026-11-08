@@ -62,8 +62,13 @@ impl Pty {
     }
 
     /// Whether a program is reading a secret just now: echo is off on the terminal (a password prompt).
-    /// `false` where the system cannot say.
+    /// `false` where the system cannot say. A shell editing its own line has echo off as well (zsh's ZLE,
+    /// readline), and that is no secret: only a program in front of the shell reads one, so while the shell
+    /// holds the terminal nothing is secret, or no fold would ever be made at a prompt.
     pub fn secure_input(&self) -> bool {
+        if self.program_in_foreground() == Some(false) {
+            return false;
+        }
         self.pid().and_then(sys::process::echo_off).unwrap_or(false)
     }
 

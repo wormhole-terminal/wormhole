@@ -47,6 +47,10 @@ struct TerminalSurface: View {
                 ZStack(alignment: .topTrailing) {
                     TerminalHost(views: hub.terminals, id: id, overlay: overlay) { hub.actions.terminalMenu(id) }
                     TerminalMarks(overlay: overlay, showsMinimap: look.minimap)
+                    FoldMarkers(
+                        markers: overlay.markers, geometry: overlay.blockGeometry ?? BlockGeometry(rows: 0, cellHeight: 0, gutter: 0),
+                        trailingInset: minimap, toggle: overlay.toggle)
+                    LinkReadout(text: overlay.linkReadout)
                     if overlay.find.isOpen {
                         FindBar(model: overlay.find, onClose: overlay.find.close).padding(Space._2)
                     }

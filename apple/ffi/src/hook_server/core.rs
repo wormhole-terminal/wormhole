@@ -9,7 +9,7 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::config::{AgentAccess, Config, Settings};
 use wormhole_core::ipc::bus::Bus;
 use wormhole_core::ipc::control::{Limited, Listing, RateLimits, Reply, WindowInfo};
-use wormhole_core::storage::paths::ProfilePaths;
+use wormhole_core::storage::paths::{DataRoot, ProfilePaths};
 
 use super::HookListener;
 use super::events::HookEvent;
@@ -37,12 +37,16 @@ pub(crate) struct Core {
     pub ui: Ui,
     budgets: Mutex<RateLimits>,
     profile: ProfilePaths,
+    /// The data folder the server serves: where the Probes are.
+    pub(crate) root: DataRoot,
     settings: Mutex<Option<(Instant, Arc<Settings>)>>,
     /// Who was found behind a process lately, and what was read of programs (`gate`).
     pub(super) identities: Mutex<super::gate::Identities>,
     pub(super) signatures: Mutex<Signatures>,
     /// A close question is up (`close`): one at a time, until Swift says it is over.
     pub(super) close_question: AtomicBool,
+    /// The Probes that are on and the feed their hooks hear (`probes`).
+    pub(crate) probes: crate::probes::Probes,
 }
 
 impl Core {
@@ -52,7 +56,7 @@ impl Core {
         desk: Arc<AccessDesk>,
         bus: Arc<Bus>,
         publisher: Arc<Publisher>,
-        profile: ProfilePaths,
+        (root, profile): (DataRoot, ProfilePaths),
         listener: Arc<dyn HookListener>,
     ) -> Arc<Self> {
         let shared = workspace.shared().clone();
@@ -68,10 +72,12 @@ impl Core {
             ui: Ui::new(listener),
             budgets: Mutex::default(),
             profile,
+            root,
             settings: Mutex::new(None),
             identities: Mutex::default(),
             signatures: Mutex::default(),
             close_question: AtomicBool::new(false),
+            probes: crate::probes::Probes::default(),
         })
     }
 

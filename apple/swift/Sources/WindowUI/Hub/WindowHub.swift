@@ -51,6 +51,7 @@ public final class WindowHub {
         panel = PanelController(host: host, backends: panelBackends)
         panel.presentation = .terminalArea
         connect(host)
+        notices.onAct = { [unowned self] in noticeActed($0) }
     }
 
     public var state: WorkspaceState { store.state }

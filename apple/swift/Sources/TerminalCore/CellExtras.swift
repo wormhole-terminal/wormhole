@@ -19,19 +19,17 @@ public enum CellExtras {
 
     /// The records a frame carries, by row and column; empty without the section.
     public static func read(_ bytes: UnsafeRawBufferPointer, header: FrameHeader) throws(FrameError) -> [Int: [Int: CellExtra]] {
+        var words = FrameWords(bytes, header: header)
+        return try read(&words, header: header)
+    }
+
+    static func read(_ words: inout FrameWords, header: FrameHeader) throws(FrameError) -> [Int: [Int: CellExtra]] {
         guard header.hasExtras else { return [:] }
-        let rows = header.changedRows * (FrameLayout.rowHeaderBytes + header.cols * FrameLayout.cellBytes)
-        var offset = FrameLayout.headerBytes + rows + (header.placementCount ?? 0) * PlacementRecords.recordBytes
-        func next() throws(FrameError) -> Int {
-            guard offset + 4 <= bytes.count else { throw .truncated }
-            defer { offset += 4 }
-            return Int(UInt32(littleEndian: bytes.loadUnaligned(fromByteOffset: offset, as: UInt32.self)))
-        }
         var found: [Int: [Int: CellExtra]] = [:]
-        for _ in 0..<(try next()) {
-            let (row, column, underline, count) = (try next(), try next(), try next(), try next())
+        for _ in 0..<(try words.next()) {
+            let (row, column, underline, count) = (try words.next(), try words.next(), try words.next(), try words.next())
             var marks: [UInt32] = []
-            for _ in 0..<count { marks.append(UInt32(try next())) }
+            for _ in 0..<count { marks.append(UInt32(try words.next())) }
             found[row, default: [:]][column] = CellExtra(underline: underline == Int(noColour) ? nil : UInt32(underline), marks: marks)
         }
         return found

@@ -23,6 +23,13 @@ extension AppController {
             let cell = argument.split(separator: " ").compactMap { Int($0) }
             guard let view = selectedView, cell.count == 2 else { reply("error: usage \(command) <row> <column>"); return true }
             reply(view.scriptedLink(row: cell[0], column: cell[1], click: command == "link-click"))
+        case "probes", "fold-toggle":
+            // What Probes put on the screen, read from the last frame: the status items, the marker rows, and (`fold-toggle`) a click
+            // on the first marker, as the person's would be.
+            guard let view = selectedView else { reply("error: no terminal is shown"); return true }
+            if command == "fold-toggle", let first = view.foldMarkers.first { _ = view.toggleFold(first.marker.id) }
+            let markers = view.foldMarkers.map { "\($0.row): \($0.marker.label) [\($0.marker.isOpen ? "open" : "closed")] <\($0.marker.spoken)>" }
+            reply("status \(look.probeItems.map { "\($0.text) (\($0.tooltip))" }) markers \(markers)")
         case "print-pdf":
             // The print job without its panel (the panel itself is opened by `action print` and read with `sheet info`).
             reply("print-pdf \(printTerminal(pdf: URL(fileURLWithPath: argument)) ? argument : "nothing to print")")

@@ -43,6 +43,12 @@
             notifier.post(Notice(id: "notify-\(terminal)", thread: "\(terminal)", title: title, body: body))
         }
 
+        /// A Probe's hook asks for a notification: one thread per Probe, its name (with "extension") as the subtitle.
+        func post(probe: String, subtitle: String, title: String, body: String) {
+            let id = "wormhole/probe/\(probe)"
+            notifier.post(Notice(id: id, thread: id, title: title, subtitle: subtitle, body: body))
+        }
+
         /// The banners a test instance logged instead of posting, for the control folder's `notices`.
         var logged: [Notice] { (notifier as? LogNotifier)?.log ?? [] }
 

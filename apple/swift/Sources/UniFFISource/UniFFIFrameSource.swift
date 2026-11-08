@@ -83,6 +83,8 @@ public final class UniFFIFrameSource: FrameSource {
 
     public var scrollback: (any TerminalScrollback)? { current.map(UniFFIScrollback.init) }
 
+    public var probes: (any TerminalProbes)? { current.map(UniFFIProbes.init) }
+
     public func stop() {
         terminal.withLock { current in
             current?.close()

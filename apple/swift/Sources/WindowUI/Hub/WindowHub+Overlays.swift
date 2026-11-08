@@ -18,6 +18,7 @@ extension WindowHub {
             hostChanged(id)
         }
         let made = TerminalOverlay(view: view, actions: bars, notices: notices)
+        view.onFileLink = { [unowned self] text in openFile(text, in: id) }
         overlays[id] = made
         made.showHost(store.hostProblem(of: id))
         return made

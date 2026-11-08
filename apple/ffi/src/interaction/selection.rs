@@ -88,8 +88,13 @@ impl Terminal {
 impl Terminal {
     /// The grid line a viewport cell is, with the engine's display offset now: a drag that scrolled
     /// the history follows it before the next frame is taken.
-    pub(super) fn grid_point(&self, row: u32, col: u32) -> Point {
+    pub(crate) fn grid_point(&self, row: u32, col: u32) -> Point {
         let offset = self.with_pty(|pty| pty.display_offset()).unwrap_or(0) as i32;
-        Point::new(Line(row as i32 - offset), Column(col as usize))
+        // Under folds a row's line is not its place in the view: the last frame says which line it showed.
+        let shown = self.with_pty(|pty| pty.has_folds()).unwrap_or(false);
+        let line = shown
+            .then(|| self.with_snapshot(|s| s.rows().get(row as usize).map(|shown| shown.line())))
+            .flatten();
+        Point::new(line.unwrap_or(Line(row as i32 - offset)), Column(col as usize))
     }
 }

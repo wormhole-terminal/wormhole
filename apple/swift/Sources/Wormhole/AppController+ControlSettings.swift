@@ -63,6 +63,21 @@ extension AppController {
         case "import-apply":
             settingsModel.importDraft.apply(argument)
             reply("import-apply \(settingsModel.importDraft.outcome?.text ?? "nothing")")
+        case "probe-approve":
+            // The Extensions page's approval with every permission left ticked, through the sheet's own model: the owner's question
+            // is answered by WORMHOLE_AUTH in this instance, never by Touch ID.
+            guard let probes = settingsModel.probesModel else {
+                reply("error: no Probes backend")
+                return true
+            }
+            Task { @MainActor in
+                await probes.openSheet(argument)
+                for permission in probes.open?.sheet.permissions ?? [] where probes.open?.granted.contains(permission.id) != true {
+                    await probes.toggle(permission)
+                }
+                await probes.approve()
+                reply("probe-approve \(argument) \(probes.list?.rows.first { $0.id == argument }?.state.rawValue ?? "?") \(probes.open?.error ?? "")")
+            }
         case "studio": studio.show(); reply("studio")
         case "folders": folderPicking.open(); reply("folders")
         case "fonts":

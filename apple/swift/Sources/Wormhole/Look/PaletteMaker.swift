@@ -1,5 +1,5 @@
 // The terminal's colours from the live theme: the grid's 16 colours, foreground, background, cursor and selection are the
-// theme's terminal palette, and find's matches come from the `find.match*` tokens (`Palette::find_match` in the GPUI
+// theme's terminal palette, and find's matches come from the `find.match*` tokens and a Probe's tones from `text.link`, `status.*.text` and `text.muted` (`Palette::find_match` in the GPUI
 // app). One function, so the theme in force is the one every terminal draws with.
 
 import DesignSystem
@@ -18,9 +18,11 @@ enum PaletteMaker {
         {
             find = .init(match: rgb(match), matchAlpha: Float(match.alpha), current: rgb(current), currentText: rgb(text))
         }
+        let tones = ProbeTone.allCases.compactMap { tokens.rgba(named: $0.token).map(rgb) }
         return TerminalCore.TerminalPalette(
             ansi: theme.ansi.map(rgb), foreground: rgb(theme.foreground), background: rgb(theme.background),
             cursor: rgb(theme.cursor), selection: rgb(theme.selectionBackground),
-            selectionText: theme.selectionForeground.map(rgb), find: find)
+            selectionText: theme.selectionForeground.map(rgb), find: find,
+            tones: tones.count == ProbeTone.allCases.count ? tones : nil)
     }
 }

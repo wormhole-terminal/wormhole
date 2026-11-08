@@ -1127,3 +1127,74 @@ Additive.
   cover all windows (`front` is the window the server started over); `focus`, `rename`, `split` and `close` act in the window that
   holds the terminal and answer with its id; `new-terminal --window <id>` (else the caller's own window, else the first) opens in
   that window. `HookEvent.front(terminal)` follows `focus --activate`: bring that terminal's window forward.
+
+## Probes: decorations, fold markers, hook effects (round R)
+
+The Probes that are on run in Rust, hosted by the hook server's core (`probes/`), and Swift draws what they say. Everything
+that decides is core's or the terminal layer's, shared with the GPUI app: the rules and their spans
+(`probe::runtime::{RuleSet, Decor}`), the hooks and their budgets (`probe::active::Dispatcher`), the bus feed
+(`ipc::probe_feed`), the folds and their rules (`wormhole_term::folds`), the marker's words (`view::fold::marker_words`).
+The `probes` flag, the `output_folds` flag and `never_hide_lines` are read with the settings: call
+`HookServer.settingsChanged()` when any of them changes. The Settings window's approvals (`ProbesDesk.approve`, `turnOff`)
+reload the Probes on their own; `HookServer.reloadProbes()` does it for a script or a test.
+
+### Two more sections of the frame (additive to layout version 1)
+
+After the cell extras, each when its header flag is set: bit 3 (value 8) decorations, bit 4 (value 16) fold markers. Like the
+extras they are as complete as the rows the frame carries: a row the frame names and no record names has no mark. A change
+of a row's marks that the engine did not damage (rules loaded, a hook tinted a block, the pointer revealed a span) makes the
+frame a full one.
+
+```
+decorations: count, then per row with a mark
+    row, the block's tone, number of spans m, then per span
+        first column, last column, tone, k (0: the text stays; else the span's width), then k scalar values
+fold markers: count, then per marker row
+    row, fold id (low word, high word), lines hidden, flags (bit 0 open, bit 1 its block failed),
+    then label, spoken, tooltip, each as a byte length (0xFFFFFFFF: none) and its UTF-8 bytes padded to a whole word
+tone: 0 none, else 1 + the place in link, danger, warning, success, muted (`Tone::ALL`); the theme token is `Tone::token`
+```
+
+A span's tone paints the text, a block's tone tints the cell backgrounds (faint, `TONE_TINT` 0.16); a mask is what each cell shows
+instead of its text (a shortened or redacted span: the real characters, and their zero-width marks, are never drawn). The
+marker row's cells are blank: the host draws the marker over it (`label`, a chevron, danger when `failed`) as a real button
+named by `spoken`, whose click or Return calls `Terminal.foldToggle`. The palette gets five tone slots (263 to 267).
+
+### `Terminal`: folds, reveal, files (`probes/terminal.rs`)
+
+```swift
+func hasFolds() -> Bool
+func foldToggle(id: UInt64) -> Bool        // the marker was clicked; whether the fold exists
+func foldShowAll() -> UInt32               // Edit > Show Hidden Lines: the lines it showed (0: none was closed)
+func foldShownWords(lines: UInt32) -> String   // "124 lines shown", for VoiceOver
+func setReveal(row: UInt32?, col: UInt32?, alt: Bool) -> Bool   // pointer over a cell (nil: left); true: take a frame
+func resolvePath(text: String) -> ResolvedFile   // `path[:line[:column]]` in the terminal's folder; off the main thread
+```
+
+`LinkHit` gains `file` (a rule named a file: `uri` is the path as written, not an address; `resolvePath` finds it) and
+`readout` (what the chip says while Command is held: the rule's hover words, where it really goes, the Probe's name).
+`link_at` asks the rules and, under folds, maps rows to grid lines through the last frame (`grid_point`).
+
+What may be folded is never Swift's: the engine refuses the live screen, the live block, the alternate screen, a program
+that has the mouse, a secret being typed and, while the terminal needs the person (an agent's question, a program's report),
+the last two screens (they show open). The workspace tells each terminal's folds when its row needs you (`post`), a bell opens
+the recent ones, and output while folds exist looks at echo.
+
+### Hook effects: more `HookEvent` cases, one read
+
+```swift
+case probeNotice(probe: String, subtitle: String, title: String, body: String)   // subtitle: "<name> (extension)"
+case probeOffer(terminal: Int64, words: String, text: String)   // a chip; a click calls resolvePath(text)
+case probePaused(words: String)
+case probesChanged        // rules, status item, tint or fold changed: take a frame of every terminal
+func probeStatusItems() -> [ProbeStatusRecord]   // probe, item, text, token (design token or nil), tooltip
+```
+
+Nothing opens or runs by itself: an offer is a chip, a click opens the file, `run` is the dispatcher's under the `process` grant.
+`front` in a hook's `match` is "the selected terminal of its window" here (the model knows no front window).
+
+### The stale progress bar
+
+A program's OSC 9;4 bar that stops being renewed goes after `PROGRESS_TIMEOUT` (15 s): the workspace arms one deadline in its
+pump when a report appears (`Pump::progress_by`), the pump drops the bar when it falls due (or waits out what a renewal left) and
+the row's state is told as every report is. No polling.

@@ -5,7 +5,7 @@
 import Foundation
 
 public struct TerminalPalette: Sendable, Equatable {
-    public static let slotCount = 263
+    public static let slotCount = 268
 
     /// RGB, 0...255, in slot order.
     public private(set) var slots: [SIMD3<UInt8>]
@@ -23,6 +23,11 @@ public struct TerminalPalette: Sendable, Equatable {
     public var findCurrentText: SIMD3<UInt8> { slots[262] }
     public let findMatch: SIMD3<UInt8>
     public let findMatchAlpha: Float
+    /// A Probe's tones (`ProbeTone`), slots 263...267: the text a rule paints; a hook's tint of a block is blended on the CPU.
+    public func tone(_ tone: ProbeTone) -> SIMD3<UInt8> { slots[PackedColor.toneBase + tone.rawValue] }
+    /// How much of its tone a block a hook marked takes of the cell's own background (`TONE_TINT` in the GPUI palette): faint,
+    /// so the text keeps its colours.
+    static let toneTint: Float = 0.16
 
     /// The colours of find's matches (`Palette::find_match`, `find_current`, `find_current_text`; the app takes them
     /// from the `find.match*` design tokens).
@@ -42,7 +47,8 @@ public struct TerminalPalette: Sendable, Equatable {
     /// rule: yellow (ANSI 3) at 32 % for the matches, solid for the current one, in black (ANSI 0).
     public init(
         ansi: [SIMD3<UInt8>], foreground: SIMD3<UInt8>, background: SIMD3<UInt8>, cursor: SIMD3<UInt8>,
-        selection: SIMD3<UInt8>? = nil, selectionText: SIMD3<UInt8>? = nil, find: FindColors? = nil
+        selection: SIMD3<UInt8>? = nil, selectionText: SIMD3<UInt8>? = nil, find: FindColors? = nil,
+        tones: [SIMD3<UInt8>]? = nil
     ) {
         precondition(ansi.count == 16)
         var table = ansi
@@ -65,6 +71,8 @@ public struct TerminalPalette: Sendable, Equatable {
         let find = find ?? FindColors(match: ansi[3], matchAlpha: 0.32, current: ansi[3], currentText: ansi[0])
         table.append(find.current)
         table.append(find.currentText)
+        // Without the theme's tokens: the closest of its own colours (link blue, red, yellow, green, grey), as a bare theme does.
+        table.append(contentsOf: tones ?? [4, 1, 3, 2, 8].map { ansi[$0] })
         findMatch = find.match
         findMatchAlpha = find.matchAlpha
         keepsTextInSelection = selectionText == nil
@@ -91,6 +99,13 @@ public struct TerminalPalette: Sendable, Equatable {
     public func tinted(_ background: UInt32) -> UInt32 {
         let under = SIMD3<Float>(resolve(background)), over = SIMD3<Float>(findMatch)
         let mixed = under + (over - under) * findMatchAlpha
+        return PackedColor.rgb(UInt8(mixed.x.rounded()), UInt8(mixed.y.rounded()), UInt8(mixed.z.rounded()))
+    }
+
+    /// A cell's background under a hook's tint for its block: the tone over the background, as truecolour.
+    public func tinted(_ background: UInt32, tone: ProbeTone) -> UInt32 {
+        let under = SIMD3<Float>(resolve(background)), over = SIMD3<Float>(self.tone(tone))
+        let mixed = under + (over - under) * Self.toneTint
         return PackedColor.rgb(UInt8(mixed.x.rounded()), UInt8(mixed.y.rounded()), UInt8(mixed.z.rounded()))
     }
 

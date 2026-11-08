@@ -58,7 +58,11 @@ final class SettingsApplier {
         }
         applyLook(values, changed: changed)
         app.ambient?.apply(values, changed: changed)
-        if changed("agent_access", "control_write") { app.hooks?.settingsChanged() }
+        // The server also reads the Probes' flag, the folds' flag and "Never hide lines" again with them.
+        if changed("agent_access", "control_write", "feature_flags", "never_hide_lines") {
+            app.hooks?.settingsChanged()
+            app.menus?.windowsChanged()
+        }
         if changed("title_row") { applyTitleRow(values, to: app.sessions.map(\.hub)) }
         if changed("open_in") { applyOpenIn(values, to: app.sessions.map(\.hub)) }
     }

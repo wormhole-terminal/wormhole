@@ -247,6 +247,8 @@ impl ProbesDesk {
         match approval::approve(&self.root, &request, &confirmed, now()) {
             Ok(()) => {
                 self.requests().remove(&id);
+                // The server runs what is approved: it reads the Probes again.
+                crate::probes::approvals_changed();
                 ProbeApprovalOutcome::Approved
             }
             Err(err) => failed(&approve_error_text(&err)),
@@ -257,6 +259,8 @@ impl ProbesDesk {
     pub fn turn_off(&self, id: String) -> Result<(), SettingsError> {
         approval::turn_off(&self.root, &id).map_err(|err| SettingsError::Invalid {
             reason: settings_extensions_not_turned_off(&reveal(&id), &err.to_string()),
-        })
+        })?;
+        crate::probes::approvals_changed();
+        Ok(())
     }
 }

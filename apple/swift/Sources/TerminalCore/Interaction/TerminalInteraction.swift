@@ -81,10 +81,16 @@ public struct LinkInfo: Sendable, Equatable {
     /// A program's own hyperlink (OSC 8) rather than a URL found in the text.
     public var isExplicit: Bool
     public var spans: [RowSpan]
-    public init(uri: String, isExplicit: Bool, spans: [RowSpan]) {
+    /// A Probe's rule named a file (`uri` is `path[:line[:column]]`): not an address, found in the terminal's folder.
+    public var isFile: Bool
+    /// What a rule's link says while Command is held over it: its hover words, where it really goes and which Probe said so.
+    public var readout: String?
+    public init(uri: String, isExplicit: Bool, spans: [RowSpan], isFile: Bool = false, readout: String? = nil) {
         self.uri = uri
         self.isExplicit = isExplicit
         self.spans = spans
+        self.isFile = isFile
+        self.readout = readout
     }
 }
 

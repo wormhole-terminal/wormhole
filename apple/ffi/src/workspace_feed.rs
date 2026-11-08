@@ -51,6 +51,9 @@ impl EventFeed for TerminalFeed {
         }
         match event {
             PtyEvent::Output => {
+                if let Some(terminal) = self.terminal.upgrade() {
+                    terminal.fold_check_secret();
+                }
                 shared.feed_quiet(id, StatusEvent::Output);
                 shared.pump.probe_by(id, shared.now() + AFTER_OUTPUT);
             }
@@ -58,7 +61,12 @@ impl EventFeed for TerminalFeed {
             PtyEvent::ResetTitle => shared.feed(id, StatusEvent::ResetTitle),
             // The shell said where it is: no need to wait for the next look.
             PtyEvent::Cwd => shared.pump.probe_by(id, 0),
-            PtyEvent::Bell => shared.feed(id, StatusEvent::Bell),
+            PtyEvent::Bell => {
+                if let Some(terminal) = self.terminal.upgrade() {
+                    terminal.fold_bell();
+                }
+                shared.feed(id, StatusEvent::Bell);
+            }
             PtyEvent::Notify(_) => shared.feed(id, StatusEvent::Notice),
             PtyEvent::Mark(mark, _) => {
                 let ended = match *mark {
@@ -69,8 +77,10 @@ impl EventFeed for TerminalFeed {
                 shared.pump.probe_by(id, shared.now() + AFTER_MARK);
             }
             PtyEvent::ProgramStatus => {
-                let summary = self.terminal.upgrade().and_then(|t| t.program_report(None));
+                let terminal = self.terminal.upgrade();
+                let summary = terminal.as_ref().and_then(|t| t.program_report(None));
                 shared.feed(id, StatusEvent::Reported { summary, by_report: true });
+                shared.arm_progress(id);
             }
             PtyEvent::Exited(_) => shared.feed(id, StatusEvent::Exited),
             _ => {}
@@ -122,6 +132,28 @@ impl Shared {
                 .with_model(|model| model.feed(id, StatusEvent::Reported { summary, by_report: false }, at));
             self.post(events);
         }
+    }
+
+    /// A program's report came: arm the one-shot timer for its progress bar, if it has one and none is armed.
+    pub(crate) fn arm_progress(&self, id: i64) {
+        let left = self.terminal_of(id).and_then(|terminal| terminal.progress_remaining());
+        if let Some(left) = left {
+            self.pump.progress_by(id, self.now() + u64::try_from(left.as_millis()).unwrap_or(u64::MAX));
+        }
+    }
+
+    /// The progress deadline of terminal `id` came: drop the bar if its program did not renew it (the records have
+    /// no clock of their own) and tell the model, or wait out what a renewal left.
+    pub(crate) fn progress_due(&self, id: i64) {
+        let Some(terminal) = self.terminal_of(id) else { return };
+        if terminal.expire_progress() {
+            let summary = terminal.program_report(None);
+            let at = self.now();
+            let events = self
+                .with_model(|model| model.feed(id, StatusEvent::Reported { summary, by_report: false }, at));
+            self.post(events);
+        }
+        self.arm_progress(id);
     }
 
     /// Look at terminal `id`'s process: where it is, who holds it, which agent runs. Whether to look

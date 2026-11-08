@@ -39,7 +39,7 @@ use wormhole_core::ipc::{self, Instance, InstanceLock};
 use wormhole_core::platform::paths;
 use wormhole_core::storage::paths::DataRoot;
 
-use self::core::Core;
+pub(crate) use self::core::Core;
 pub use self::events::{HookError, HookEvent};
 use self::tap::Publisher;
 pub(crate) use self::tap::Tap;
@@ -58,7 +58,7 @@ pub trait HookListener: Send + Sync {
 /// The socket and the control line of one workspace.
 #[derive(uniffi::Object)]
 pub struct HookServer {
-    core: Arc<Core>,
+    pub(crate) core: Arc<Core>,
     socket: PathBuf,
     requests: smol::channel::Receiver<ipc::Incoming>,
     /// The instance lock, held while this server runs (the kernel lock goes with the process, crashes too).
@@ -98,8 +98,9 @@ impl HookServer {
         if shared.tap.set(publisher.clone()).is_err() {
             return Err(HookError::Failed { reason: "this workspace already has a server".into() });
         }
-        let profile = DataRoot::new(dir).default_profile();
-        let core = Core::new(workspace, usage, access, bus, publisher, profile, listener);
+        let root = DataRoot::new(dir);
+        let profile = root.default_profile();
+        let core = Core::new(workspace, usage, access, bus, publisher, (root, profile), listener);
         // Every other window's terminals are heard too, the ones that exist and the ones made later.
         for window in core.shares() {
             core.attach(&window);
@@ -116,6 +117,7 @@ impl HookServer {
             Arc::new(Self { core, socket, requests: requests.clone(), lock: Mutex::new(Some(lock)) });
         dispatch::spawn(server.core.clone(), requests)
             .map_err(|err| HookError::Failed { reason: format!("the socket's thread: {err}") })?;
+        crate::probes::reload(&server.core);
         Ok(server)
     }
 
@@ -158,6 +160,8 @@ impl HookServer {
     /// read every terminal when it is no longer that.
     pub fn settings_changed(&self) {
         self.core.settings_changed();
+        // The `probes` flag, the output-folds flag and "Never hide lines" are read again with them.
+        crate::probes::reload(&self.core);
     }
 
     /// Stop serving: the socket is removed, the lock given up, the streams closed. Explicit: a Swift `deinit`

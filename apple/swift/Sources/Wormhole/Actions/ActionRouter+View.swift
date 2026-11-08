@@ -54,6 +54,8 @@ extension ActionRouter {
             "copyOutput": { hub.blockAction(.copyOutput) },
             "copyCommand": { hub.blockAction(.copyCommand) },
             "rerunCommand": { hub.blockAction(.putAtPrompt) },
+            // Fold output (a Probe's or the person's): Edit ▸ Show Hidden Lines opens every fold of this terminal.
+            "showHiddenLines": { hub.showHiddenLines() },
         ]
     }
 }

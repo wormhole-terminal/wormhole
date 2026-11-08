@@ -5,6 +5,7 @@
 mod access;
 mod control;
 mod hooks;
+mod probes;
 mod streams;
 mod support;
 mod windows;

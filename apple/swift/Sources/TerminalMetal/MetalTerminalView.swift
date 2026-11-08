@@ -47,6 +47,10 @@ public final class MetalTerminalView: NSView {
     public var fixedGrid: (cols: Int, rows: Int)?
     /// How long a blinking cursor is on and off; `nil` keeps it steady (xterm's and macOS's own text cursor rate).
     public var blinkInterval: Duration? = .milliseconds(530)
+    /// Command is held over a link a Probe's rule made: what to say of it, where it really goes and which Probe said so (`nil`: none).
+    public var onLinkReadout: ((String?) -> Void)?
+    /// Command-click on a file a Probe's rule named (`path[:line[:column]]`): the host finds it in the terminal's folder.
+    public var onFileLink: ((String) -> Void)?
     /// How a link is opened (the system's; tests replace it).
     public var linkOpener: (OpenTarget) -> Void = { LinkOpener.system($0) }
     /// Which parts of the bell happen, and the colour and corner of its glow (the host's tokens).
@@ -92,6 +96,8 @@ public final class MetalTerminalView: NSView {
     var hasSelection = false
     /// Find's matches are painted (`refreshFound`).
     var foundShown = false
+    /// A span shows its text under the pointer (`updateReveal`): the pointer's leaving must say so.
+    var revealing = false
     var focusReported = false
     let scroller = TerminalScroller()
 

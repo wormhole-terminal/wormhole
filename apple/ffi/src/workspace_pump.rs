@@ -48,6 +48,8 @@ struct State {
     probes: HashMap<i64, u64>,
     /// When each terminal was handed over.
     born: HashMap<i64, u64>,
+    /// When the OSC 9;4 progress bar a terminal's program last reported goes stale, on the workspace's clock.
+    progress: HashMap<i64, u64>,
 }
 
 impl Pump {
@@ -82,6 +84,28 @@ impl Pump {
         let mut state = self.state();
         state.probes.remove(&id);
         state.born.remove(&id);
+        state.progress.remove(&id);
+    }
+
+    /// Terminal `id`'s progress bar goes stale at `at` unless renewed: a deadline armed once when a report appears. A
+    /// renewal raises no event, so it only moves the deadline in the records, which the round that finds this one
+    /// due reads (`Shared::progress_due`) and waits out what is left.
+    pub(crate) fn progress_by(&self, id: i64, at: u64) {
+        self.state().progress.entry(id).or_insert(at);
+        self.kick();
+    }
+
+    fn take_due_progress(&self, now: u64) -> Vec<i64> {
+        let mut state = self.state();
+        let due: Vec<i64> = state.progress.iter().filter(|&(_, &at)| at <= now).map(|(&id, _)| id).collect();
+        for id in &due {
+            state.progress.remove(id);
+        }
+        due
+    }
+
+    fn next_progress(&self) -> Option<u64> {
+        self.state().progress.values().copied().min()
     }
 
     /// Terminal `id` was handed over at `at`.
@@ -162,9 +186,30 @@ fn round(shared: &Arc<Shared>) -> Option<Duration> {
             shared.pump.probe_later(id, shared.pump.next_look(id, now));
         }
     }
+    for id in shared.pump.take_due_progress(shared.now()) {
+        shared.progress_due(id);
+    }
     next.extend(shared.pump.next_probe());
+    next.extend(shared.pump.next_progress());
     next.extend(workspace_git::step(shared));
     next.extend(workspace_extras::step(shared));
     let now = shared.now();
     next.into_iter().min().map(|at| Duration::from_millis(at.saturating_sub(now).max(LEAST_SLEEP)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Pump;
+
+    #[test]
+    fn a_progress_deadline_is_armed_once_and_comes_due_once() {
+        let pump = Pump::default();
+        // A renewal arms nothing new: the deadline in place reads the records when it falls due.
+        pump.progress_by(1, 100);
+        pump.progress_by(1, 900);
+        assert_eq!(pump.next_progress(), Some(100));
+        assert!(pump.take_due_progress(99).is_empty());
+        assert_eq!(pump.take_due_progress(100), vec![1]);
+        assert_eq!(pump.next_progress(), None, "nothing waits once it was taken");
+    }
 }

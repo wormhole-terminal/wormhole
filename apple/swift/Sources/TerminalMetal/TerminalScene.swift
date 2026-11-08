@@ -34,6 +34,10 @@ final class TerminalScene {
     private(set) var geometry: [RowGeometry] = []
     /// What each row's cells carry beyond a character (nil: nothing), from the last frame that named the row.
     private var extras: [[Int: CellExtra]?] = []
+    /// The marker of each row that is a fold's (nil: an ordinary row), from the last frame that named the row.
+    private(set) var markers: [FoldMarker?] = []
+    /// Some row carries a rule's span: the pointer's moves are worth asking Rust about.
+    var hasRuleSpans: Bool { marks.contains { $0.decor?.spans.isEmpty == false } }
     /// How each row is drawn, from the last frame that named it.
     private(set) var sizes: [LineSize] = []
     private var dirty: [Bool] = []
@@ -70,14 +74,22 @@ final class TerminalScene {
             let header = try FrameReader.header(bytes)
             if header.cols != columns || header.rows != rows { resize(columns: header.cols, rows: header.rows) }
             self.header = header
+            var named: [Int] = []
             try FrameReader.forEachRow(bytes, header: header) { row, size, cells in
                 (grid + row * columns).update(from: cells.baseAddress!, count: columns)
                 sizes[row] = size
                 extras[row] = nil
                 dirty[row] = true
+                named.append(row)
                 counters.cellsRead += columns
             }
-            for (row, found) in try CellExtras.read(bytes, header: header) where row < rows { extras[row] = found }
+            // What follows the rows is as complete as the rows: a row the frame names and no record names has none.
+            let sections = try FrameSections.read(bytes, header: header)
+            for row in named {
+                extras[row] = sections.extras[row]
+                markers[row] = sections.markers[row]
+                marks[row].decor = sections.decor[row]
+            }
             setCursor(header.cursor)
         }
         return rebuildDirty()
@@ -92,6 +104,7 @@ final class TerminalScene {
         geometry = (0..<rows).map { _ in RowGeometry() }
         sizes = Array(repeating: .single, count: rows)
         extras = Array(repeating: nil, count: rows)
+        markers = Array(repeating: nil, count: rows)
         marks = Array(repeating: .none, count: rows)
         dirty = Array(repeating: true, count: rows)
         cursor = nil
@@ -225,8 +238,10 @@ final class TerminalScene {
         }
         var cells = Array(UnsafeBufferPointer(start: start, count: columns))
         marks[row].apply(to: &cells, palette: palette)
+        // The characters a mask stands in for are never shaped, with or without the marks that join to them.
+        let rowExtras = marks[row].decor.map { $0.withoutMasked(extras[row]) } ?? extras[row]
         guard composing, let marked, let cursor else {
-            cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, extras: extras[row], into: geometry[row], cursor: draw) }
+            cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, extras: rowExtras, into: geometry[row], cursor: draw) }
             return
         }
         // Composed text replaces the cells from the cursor on, underlined, and the caret moves to its end.
@@ -251,7 +266,7 @@ final class TerminalScene {
         }
         draw?.column = min(caretColumn, columns - 1)
         draw?.shape = .beam
-        cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, extras: extras[row], into: geometry[row], cursor: draw) }
+        cells.withUnsafeBufferPointer { builder.build(row: row, size: size, cells: $0, extras: rowExtras, into: geometry[row], cursor: draw) }
     }
 
     // MARK: handing instances to the GPU

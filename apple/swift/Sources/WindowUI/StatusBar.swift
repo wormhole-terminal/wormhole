@@ -54,6 +54,7 @@ struct StatusBar: View {
                 }
             }
             Spacer(minLength: 0)
+            if detail.size, !look.probeItems.isEmpty { StatusProbeItems(items: look.probeItems) }
             if let words = selected?.activity.stateWords, detail.words {
                 separated { Text(words).foregroundStyle(selected?.activity.stateColour(colours) ?? colours.muted) }
             }

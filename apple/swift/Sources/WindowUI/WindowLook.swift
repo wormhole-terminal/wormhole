@@ -35,6 +35,8 @@ public final class WindowLook {
     /// What the person set, whatever Zen mode shows meanwhile: what the menus' titles say.
     var ownStatusBar = false
     var ownMinimap = false
+    /// What the Probes' hooks set for the status bar (`ProbeStatusItem`).
+    public var probeItems: [ProbeStatusItem] = []
     /// A split's panes are each their own rounded box, apart (`split_gaps`, on by default).
     public var splitGaps = true
     /// Terminals as tabs under the title row instead of the sidebar's list (Show terminals in ▸ Tabs).

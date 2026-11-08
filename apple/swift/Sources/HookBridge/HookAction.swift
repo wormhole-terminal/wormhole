@@ -22,6 +22,14 @@ public enum HookAction: Equatable, Sendable {
     /// `wh new-window`: open window `window`, whose first terminal `terminal` is planned already, from the plan the core
     /// holds for it. Behind the other windows and without the keys unless `activate`.
     case newWindow(window: Int64, terminal: Int64, folder: String?, activate: Bool)
+    /// A Probe's hook asks for a notification: its name is the subtitle ("<name> (extension)").
+    case probeNotice(probe: String, subtitle: String, title: String, body: String)
+    /// A Probe's hook offers a file in `terminal`'s folder, in the chip's words; a click opens it (`resolvePath`).
+    case probeOffer(terminal: Int64, words: String, text: String)
+    /// A hook failed too often and was paused.
+    case probePaused(words: String)
+    /// The rules, a status item, a tinted block or a fold changed: every terminal takes a frame, the status bar reads again.
+    case probesChanged
 }
 
 extension HookAction {
@@ -36,6 +44,11 @@ extension HookAction {
             self = .gauge(terminal: terminal, agent: agent, model: model, context: context.map(Double.init))
         case .newWindow(let window, let terminal, let folder, let activate):
             self = .newWindow(window: window, terminal: terminal, folder: folder, activate: activate)
+        case .probeNotice(let probe, let subtitle, let title, let body):
+            self = .probeNotice(probe: probe, subtitle: subtitle, title: title, body: body)
+        case .probeOffer(let terminal, let words, let text): self = .probeOffer(terminal: terminal, words: words, text: text)
+        case .probePaused(let words): self = .probePaused(words: words)
+        case .probesChanged: self = .probesChanged
         }
     }
 }

@@ -10,6 +10,7 @@
     import Foundation
     import HookBridge
     import PanesModel
+    import WindowUI
     import WorkspaceBridge
     import WormholeBindings
 
@@ -45,6 +46,15 @@
         /// Settings changed the agent-access mode: the server reads it again.
         func settingsChanged() { handle.settingsChanged() }
 
+        /// What the Probes set changed: the status bar says it, and every terminal takes a frame (rules, tints and folds are
+        /// in the frames).
+        private func probesChanged() {
+            app.look.probeItems = handle.probeStatusItems().map {
+                ProbeStatusItem(key: "\($0.probe)/\($0.item)", text: $0.text, token: $0.token, tooltip: $0.tooltip)
+            }
+            app.sessions.forEach { $0.hub.terminals.forEach { $0.requestRedraw() } }
+        }
+
         private func perform(_ action: HookAction) {
             switch action {
             case .activate: if app.policy.touchesSystem { NSApp.activate() }
@@ -58,6 +68,12 @@
                 app.session(holding: Int(terminal))?.hub.gauges.tell(
                     terminal: Int(terminal), agent: agent, gauge: GaugeFact(model: model, context: context))
             case .newWindow(let window, _, _, let activate): app.openPlanned(window: Int(window), activate: activate)
+            case .probeNotice(let probe, let subtitle, let title, let body):
+                app.notices?.post(probe: probe, subtitle: subtitle, title: title, body: body)
+            case .probeOffer(let terminal, let words, let text):
+                app.session(holding: Int(terminal))?.hub.offerFile(terminal: Int(terminal), text: text, words: words)
+            case .probePaused(let words): app.hub.probePaused(words: words)
+            case .probesChanged: probesChanged()
             }
         }
     }

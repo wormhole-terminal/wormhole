@@ -35,6 +35,7 @@ pub mod keymap;
 mod minimap;
 pub mod notify;
 pub mod palette_search;
+mod probes;
 mod settings;
 pub mod settings_dump;
 mod terminal;
@@ -102,6 +103,13 @@ pub use interaction::{
     WheelStep,
 };
 pub use minimap::{MinimapGeometryRecord, MinimapRunRecord};
+pub use probes::{ProbeStatusRecord, ResolvedFile};
+pub use settings::{
+    FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
+    SettingsLoginField, SettingsProfileForm, SettingsShellLine, settings_import_review,
+    settings_import_selected_line, settings_others_head, settings_preview_note, settings_profile_form,
+    settings_profile_save, settings_reset_question, settings_update_user_agent,
+};
 pub use settings::{
     FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
     SettingsLoginField, SettingsProfileForm, SettingsShellLine, settings_import_review,
