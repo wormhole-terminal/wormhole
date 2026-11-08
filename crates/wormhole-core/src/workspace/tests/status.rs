@@ -3,7 +3,7 @@
 //! shell's marks, output going quiet, programs that report, the agent in front), without a window.
 
 use wormhole_term::program_status::{Kind, State, Summary};
-use wormhole_term::{Mark, PromptKind};
+use wormhole_term::{Mark, ProgressState, PromptKind};
 
 use crate::agents::AgentId;
 use crate::view::sidebar::{RowState, Status};
@@ -45,7 +45,7 @@ fn shell_back(agent: Option<AgentId>) -> ForegroundLook {
 }
 
 fn report(state: State, kind: Option<Kind>, msg: Option<&str>) -> Summary {
-    Summary { state, kind, progress: None, app: None, title: None, msg: msg.map(str::to_string) }
+    Summary { state, kind, progress: None, app: None, title: None, msg: msg.map(str::to_string), bar: None }
 }
 
 #[test]
@@ -277,6 +277,24 @@ fn a_program_that_reports_its_status_has_the_last_word() {
     feed(&mut m, 2, StatusEvent::Reported { summary: None, by_report: false }, 5_000);
     assert_eq!(state(&m, 2).0, Status::Idle);
     assert!(m.facts(2).is_some_and(|f| !f.reports && f.message.is_none()));
+}
+
+#[test]
+fn a_progress_bar_never_takes_the_status_an_agents_hook_set() {
+    let mut m = model(2);
+    hook(&mut m, 2, "PermissionRequest:Bash", Some("Approve ls?"), 1_000);
+    assert_eq!(state(&m, 2).0, Status::Attention);
+    let bar = Summary {
+        progress: Some(10),
+        bar: Some(ProgressState::Normal),
+        ..report(State::Working, None, None)
+    };
+    feed(&mut m, 2, StatusEvent::Reported { summary: Some(bar), by_report: true }, 2_000);
+    assert_eq!(
+        state(&m, 2).0,
+        Status::Attention,
+        "the bar says how far work is, not what the agent waits for"
+    );
 }
 
 #[test]

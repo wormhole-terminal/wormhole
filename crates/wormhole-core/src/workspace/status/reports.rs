@@ -5,7 +5,9 @@
 //! is the program's: it is exact, where the output heuristics only guess, so those stand aside. An
 //! agent's hooks report the same way and whichever spoke last wins.
 
+use wormhole_term::ProgressState;
 use wormhole_term::program_status::{Kind, State, Summary};
+use wormhole_text::{keys, text};
 
 use crate::view::sidebar::Status;
 
@@ -23,11 +25,16 @@ impl StatusMachine {
         at: Millis,
     ) {
         let derived = summary.as_ref().map(|summary| (status_of(summary), summary.agent()));
+        // A progress bar (OSC 9;4) says how far along work is, not what the agent in front is
+        // doing: a hook's word on it (a question waiting, say) is not taken over by a later bar.
+        let bar_under_hooks =
+            self.hook_driven && summary.as_ref().is_some_and(|summary| summary.bar.is_some());
         self.program = summary;
         if facts.status == Status::Exited {
             return;
         }
         match derived {
+            Some(_) if bar_under_hooks => {}
             Some(((status, message), agent)) => {
                 self.program_driven |= by_report;
                 if self.program_driven {
@@ -55,7 +62,8 @@ impl StatusMachine {
 /// The status and the words a program's record amounts to. A blocked program needs input, with its
 /// own words or a short default for what it waits for; working is busy, done is done, and an error
 /// is failed, with what went wrong as its words. How far along a working or blocked program says it
-/// is follows its words ("Installing · 40%"); a result has no progress to show.
+/// is follows its words ("Installing · 40%"); a result has no progress to show. An OSC 9;4 bar is
+/// work whatever its state: paused and error say so in their words and are never a result.
 pub fn status_of(summary: &Summary) -> (Status, Option<String>) {
     let message = summary.message();
     match summary.state {
@@ -63,8 +71,19 @@ pub fn status_of(summary: &Summary) -> (Status, Option<String>) {
             let words = message.unwrap_or_else(|| waiting_for(summary.kind).to_string());
             (Status::Attention, Some(with_progress(words, summary.progress)))
         }
+        // A bar in its error state (OSC 9;4 state 2) is a state the program still holds, not an
+        // outcome: busy, never failed, so nothing is announced and nothing waits to be looked at.
+        State::Error if summary.bar.is_some() => {
+            let words = text(keys::TERMINAL_PROGRESS_ERROR).to_string();
+            (Status::Busy, Some(with_progress(words, summary.progress)))
+        }
         State::Error => (Status::Failed, message),
         State::Done => (Status::Done, message),
+        // A program that holds its progress (OSC 9;4 state 4) says so, since it isn't moving.
+        State::Working if summary.bar == Some(ProgressState::Paused) => {
+            let words = text(keys::TERMINAL_PROGRESS_PAUSED).to_string();
+            (Status::Busy, Some(with_progress(words, summary.progress)))
+        }
         // Without words of its own, only the percentage is worth saying: the row's "Working · 3m"
         // can't carry it.
         State::Working => match (message, summary.progress) {
@@ -96,6 +115,7 @@ fn waiting_for(kind: Option<Kind>) -> &'static str {
 
 #[cfg(test)]
 mod tests {
+    use wormhole_term::ProgressState;
     use wormhole_term::program_status::{Kind, State, Summary};
 
     use crate::view::sidebar::Status;
@@ -103,7 +123,15 @@ mod tests {
     use super::{status_of, waiting_for};
 
     fn summary(state: State, kind: Option<Kind>, msg: Option<&str>) -> Summary {
-        Summary { state, kind, progress: None, app: None, title: None, msg: msg.map(str::to_string) }
+        Summary {
+            state,
+            kind,
+            progress: None,
+            app: None,
+            title: None,
+            msg: msg.map(str::to_string),
+            bar: None,
+        }
     }
 
     fn with_progress(state: State, progress: u8, msg: Option<&str>) -> Summary {
@@ -162,6 +190,19 @@ mod tests {
         // A result has finished: no progress to show, even if the report carried one.
         assert_eq!(of(with_progress(State::Done, 100, Some("Done"))), (Status::Done, Some("Done".into())));
         assert_eq!(of(with_progress(State::Idle, 5, None)), (Status::Idle, None));
+    }
+
+    #[test]
+    fn a_paused_or_errored_bar_is_work_that_says_so_never_a_result() {
+        let bar = |state, progress, bar| Summary { progress, bar: Some(bar), ..summary(state, None, None) };
+        assert_eq!(
+            status_of(&bar(State::Working, Some(40), ProgressState::Paused)),
+            (Status::Busy, Some("Paused · 40%".into()))
+        );
+        assert_eq!(
+            status_of(&bar(State::Error, None, ProgressState::Error)),
+            (Status::Busy, Some("Error".into()))
+        );
     }
 
     #[test]
