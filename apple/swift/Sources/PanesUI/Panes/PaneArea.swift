@@ -1,8 +1,8 @@
-// A split drawn: each pane with its header, the dividers over their shared edges, the drop overlay, the
-// whole surface. The tree and its geometry are the model's (`TabPanes`, the port of core's `view/panes`); the
-// terminals are the window's, handed in through `content`. A zoomed pane fills the area and the others fade
-// but stay alive underneath, so their terminals keep their place and the zoom reverses in place. Frames
-// animate when the tree changes (a split opens, a drag lands), a fade under Reduce Motion.
+// A split drawn: each pane with its header, the dividers over their shared edges, the drop overlay, the whole surface. The
+// layout is the core's (`PanesState`: where each pane is, which has the keyboard, which is zoomed); the terminals are the
+// window's, handed in through `content`. A zoomed pane fills the area and the others fade but stay alive underneath, so their
+// terminals keep their place and the zoom reverses in place. Frames animate when the layout changes (a split opens, a drag
+// lands), a fade under Reduce Motion.
 
 import DesignSystem
 import PanesModel
@@ -12,7 +12,7 @@ import WorkspaceModel
 enum PaneSpace { static let name = "pane-area" }
 
 public struct PaneArea<Content: View>: View {
-    @Binding var panes: TabPanes
+    let panes: PanesState
     let gaps: Bool
     let info: (PaneID) -> PaneInfo
     let actions: PaneActions
@@ -24,10 +24,10 @@ public struct PaneArea<Content: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(
-        panes: Binding<TabPanes>, gaps: Bool, session: PaneDragSession, sidebarDrag: TerminalDragPointer? = nil,
+        panes: PanesState, gaps: Bool, session: PaneDragSession, sidebarDrag: TerminalDragPointer? = nil,
         actions: PaneActions = PaneActions(), info: @escaping (PaneID) -> PaneInfo, @ViewBuilder content: @escaping (PaneID) -> Content
     ) {
-        (_panes, self.gaps, self.session, self.sidebarDrag, self.actions, self.info, self.content) =
+        (self.panes, self.gaps, self.session, self.sidebarDrag, self.actions, self.info, self.content) =
             (panes, gaps, session, sidebarDrag, actions, info, content)
     }
 
@@ -36,19 +36,20 @@ public struct PaneArea<Content: View>: View {
             let size = proxy.size
             let origin = proxy.frame(in: .global).origin
             ZStack(alignment: .topLeading) {
-                ForEach(panes.tree.rects(width: size.width, height: size.height), id: \.id) { pane in
+                ForEach(panes.unzoomed, id: \.id) { pane in
                     frame(pane.id, rect: pane.rect, size: size)
                 }
-                PaneDividers(panes: $panes, size: size, gaps: gaps, session: session)
-                PaneDropZones(panes: panes, state: drop, size: size, names: { info($0).title })
+                PaneDividers(dividers: panes.dividers, gaps: gaps, session: session, actions: actions)
+                PaneDropZones(panes: panes, state: drop, size: size, names: { info($0).title }, refusal: actions.refusal)
                 if let over = sidebarDrag?.over { ghost(over, origin: origin) }
             }
             .frame(width: size.width, height: size.height, alignment: .topLeading)
             .coordinateSpace(.named(PaneSpace.name))
-            .onDrop(of: [.plainText], delegate: PaneDropDelegate(state: $drop, panes: $panes, size: size, onDropped: actions.dropped))
+            .onDrop(of: [.plainText], delegate: PaneDropDelegate(state: $drop, panes: panes, actions: actions))
             .animation(reduceMotion ? Motion.fade : Motion.layout, value: panes)
-            .onChange(of: sidebarDrag?.over, initial: true) { _, over in follow(over, size: size, origin: origin) }
-            .onChange(of: sidebarDrag?.released) { _, released in if let released { land(released, size: size, origin: origin) } }
+            .onChange(of: size, initial: true) { _, size in actions.areaChanged(size) }
+            .onChange(of: sidebarDrag?.over, initial: true) { _, over in follow(over, origin: origin) }
+            .onChange(of: sidebarDrag?.released) { _, released in if let released { land(released, origin: origin) } }
         }
     }
 
@@ -57,8 +58,7 @@ public struct PaneArea<Content: View>: View {
         let zoomed = panes.zoomed
         let shown = zoomed == nil || zoomed == id
         let place = zoomed == id ? PaneRect(0, 0, size.width, size.height) : inset(rect)
-        let order = panes.panes
-        let room = PaneRoom(size.width, size.height)
+        let order = panes.order
         let focused = panes.focused == id
         let dragged = DraggedTerminal(id: id, origin: .paneHeader)
         return PaneFrame(
@@ -69,9 +69,9 @@ public struct PaneArea<Content: View>: View {
                 PaneHeader(
                     info: info(id), focused: focused, gaps: gaps, zoomed: zoomed == id, dragged: dragged,
                     position: (order.firstIndex(of: id) ?? 0) + 1, of: order.count,
-                    focus: { _ = panes.focus(id) }, zoom: { toggleZoom(id) }, close: { actions.close(id) }
+                    focus: { actions.focus(id) }, zoom: { toggleZoom(id) }, close: { actions.close(id) }
                 ) {
-                    PaneMenuItems(id: id, panes: panes, room: room, actions: actions, focus: { _ = panes.focus(id) }, zoom: { toggleZoom(id) })
+                    PaneMenuItems(id: id, panes: panes, actions: actions)
                 }
             }
         } content: {
@@ -86,8 +86,8 @@ public struct PaneArea<Content: View>: View {
     }
 
     private func toggleZoom(_ id: PaneID) {
-        _ = panes.focus(id)
-        _ = panes.toggleZoom()
+        if panes.focused != id { actions.focus(id) }
+        actions.toggleZoom()
     }
 
     /// With gaps a pane is its own box: its cell less the gap on each side that has a neighbour (the gap

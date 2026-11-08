@@ -5,6 +5,7 @@
 import Foundation
 import PanesModel
 import WordsModel
+import WorkspaceModel
 
 enum PanesText {
     static var splitRight: String { Words.text("pane-menu-split-right", fallback: "Split right") }

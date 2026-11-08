@@ -12,6 +12,8 @@ public final class WorkspaceStore {
     @ObservationIgnored let backend: any WorkspaceBackend
     @ObservationIgnored private var seen: Revisions?
     @ObservationIgnored private var timer: Task<Void, Never>?
+    /// The pane area's size, which the core lays the panes out in and refuses a split by.
+    @ObservationIgnored private var paneArea = (width: 0.0, height: 0.0)
 
     public init(backend: any WorkspaceBackend) {
         self.backend = backend
@@ -25,6 +27,19 @@ public final class WorkspaceStore {
         let refusal = backend.apply(action)
         pull()
         return refusal
+    }
+
+    /// The pane area was laid out at this size (or resized): the core lays the panes out in it.
+    public func setPaneArea(width: Double, height: Double) {
+        guard (width, height) != paneArea else { return }
+        paneArea = (width, height)
+        _ = backend.apply(.setPaneArea(width: width, height: height))
+        pull(panesMoved: true)
+    }
+
+    /// Why dropping a terminal on a pane's edge would be refused; nil when it would work.
+    public func paneDropRefusal(dragged: TerminalID, target: TerminalID, zone: Zone) -> Refusal? {
+        backend.paneDropRefusal(dragged: dragged, target: target, zone: zone)
     }
 
     /// Where terminal `id`'s program runs; nil while persistent terminals are off.
@@ -82,7 +97,7 @@ public final class WorkspaceStore {
     }
 
     /// Take the parts whose revision moved (all of them the first time, the sidebar again when its timer fired).
-    private func pull(refreshWords: Bool = false) {
+    private func pull(refreshWords: Bool = false, panesMoved: Bool = false) {
         let now = backend.revisions()
         var next = state
         if refreshWords || seen?.sidebar != now.sidebar {
@@ -95,6 +110,10 @@ public final class WorkspaceStore {
             let chrome = backend.chrome()
             (next.sidebarVisible, next.panelVisible, next.panelTab) = (chrome.sidebarVisible, chrome.panelVisible, chrome.panelTab)
             (next.search, next.overlay, next.layout) = (chrome.search, chrome.overlay, chrome.layout)
+        }
+        // The selection decides which split is shown, so the list's moves count too.
+        if panesMoved || seen?.chrome != now.chrome || seen?.sidebar != now.sidebar {
+            next.panes = backend.panes(width: paneArea.width, height: paneArea.height)
         }
         // A backend that counts no revision of its own for it (the sample) moves it with the list.
         if seen == nil || seen?.terminals != now.terminals || seen?.sidebar != now.sidebar {

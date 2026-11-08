@@ -2,6 +2,7 @@
 // travels as plain text (`wormhole.terminal:<id>:<origin>`), which every drag session can carry.
 
 import Foundation
+import WorkspaceModel
 
 public struct DraggedTerminal: Sendable, Equatable {
     /// Where the drag started: a sidebar row joins a pane to the split, a pane header moves it within it.

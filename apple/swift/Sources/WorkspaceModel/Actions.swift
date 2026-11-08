@@ -56,8 +56,16 @@ public enum WorkspaceAction: Sendable, Equatable {
 
     /// A new terminal beside this one, in its folder and split; it takes the selection.
     case splitRight(TerminalID)
-    /// The first terminal shows beside the second ("Show beside…").
-    case joinSplit(TerminalID, with: TerminalID)
+    /// The same, below it.
+    case splitDown(TerminalID)
+    /// ⇧⌘↩: the focused pane fills the area, or the panes come back.
+    case toggleZoom
+    /// The first terminal joins the second's split on `zone`'s side of its pane (a drop on the pane area, "Show beside…" on the right).
+    case joinSplit(TerminalID, with: TerminalID, zone: Zone = .right)
+    /// A pane's header dropped on another pane's edge: it moves there inside its split.
+    case movePane(TerminalID, beside: TerminalID, zone: Zone)
+    /// ⌥⌘← → ↑ ↓: the neighbouring pane of the shown split takes the keyboard.
+    case focusDirection(Direction)
     case leaveSplit(TerminalID)
     /// The second terminal joins the first's split, on its right ("Show beside").
     case showBeside(TerminalID, other: TerminalID)

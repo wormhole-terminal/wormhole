@@ -4,6 +4,7 @@
 // translucent over it, so the blur is what shows through.
 
 import AppKit
+import DesignSystem
 import SwiftUI
 
 struct WindowBackdrop: View {
@@ -21,6 +22,12 @@ struct WindowBackdrop: View {
     }
 }
 
+/// The material follows the theme, not the system: a light theme in Dark Mode sits on the light material, so the appearance is
+/// set on the effect views alone, never on the window, which keeps following the system (`platform/macos/appearance.rs`).
+@MainActor private func followTheme(_ view: NSView) {
+    view.appearance = NSAppearance(named: ThemeStore.shared.appearance == .dark ? .darkAqua : .aqua)
+}
+
 private struct BlurMaterial: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
@@ -29,8 +36,21 @@ private struct BlurMaterial: NSViewRepresentable {
         // Active even in a window that is not key, as the GPUI app's is: the chrome must not change colour
         // when focus moves to another app.
         view.state = .active
+        followTheme(view)
         return view
     }
 
-    func updateNSView(_ view: NSVisualEffectView, context: Context) {}
+    func updateNSView(_ view: NSVisualEffectView, context: Context) { followTheme(view) }
+}
+
+/// Liquid Glass behind a column (macOS 26): the system's own material, over the blur. It is drawn only while the look says glass is on
+/// (a setting, and neither Reduce Transparency nor Increase Contrast), so an opaque window never gets it.
+struct GlassBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSGlassEffectView {
+        let view = NSGlassEffectView()
+        followTheme(view)
+        return view
+    }
+
+    func updateNSView(_ view: NSGlassEffectView, context: Context) { followTheme(view) }
 }

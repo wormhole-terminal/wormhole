@@ -60,6 +60,11 @@ public protocol WorkspaceBackend: AnyObject {
     func revisions() -> Revisions
     func sidebar() -> SidebarSnapshot
     func chrome() -> ChromeState
+    /// The selected terminal's panes in an area of this size.
+    func panes(width: Double, height: Double) -> PanesState
+    /// Why dropping `dragged` on `target`'s `zone` would be refused (a pane of the split moves, any other terminal joins); nil
+    /// when it would work. Pure.
+    func paneDropRefusal(dragged: TerminalID, target: TerminalID, zone: Zone) -> Refusal?
     /// What dropping `dragged` on `over` would do; nil when nothing would change. Pure: nothing moves.
     func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan?
     /// Where a dragged group would land on `over`; nil when nothing would change. Pure.

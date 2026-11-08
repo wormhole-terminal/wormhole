@@ -1,18 +1,9 @@
-// Where a drag lands on the panes of a split: which pane and which of its four edges (`panes/drop.rs`). A
-// terminal dragged from the sidebar onto an edge joins the split on that side; a pane's header dragged
-// onto another pane's edge moves it there.
+// Where a drag lands on the panes of a split: which pane and which of its four edges (`panes/drop.rs`), as geometry for
+// the overlay and the pointer's aim. What a drop does is the core's. A terminal dragged from the sidebar onto an edge joins
+// the split on that side; a pane's header dragged onto another pane's edge moves it there.
 
 import Foundation
-
-/// The side of a pane a drop lands on, which is the side the dragged pane ends up on.
-public enum Zone: Sendable, CaseIterable, Equatable, Hashable {
-    case left, right, top, bottom
-
-    /// The axis the dragged pane and the target share afterwards.
-    public var axis: SplitAxis { self == .left || self == .right ? .row : .column }
-    /// Whether the dragged pane goes before the target along `axis` (left, above).
-    public var before: Bool { self == .left || self == .top }
-}
+import WorkspaceModel
 
 public enum DropBand {
     /// A quarter of a pane's side, so the middle half is left for a drop that is not an edge.

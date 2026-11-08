@@ -34,7 +34,7 @@ struct TerminalColumn: View {
             .frame(height: Chrome.titleHeight)
             .background(WindowDragArea())
 
-            if look.tabsOnTop { TabBarView(model: hub.tabBar, actions: hub.tabActions) }
+            if look.tabsOnTop { TabBarView(model: hub.tabBar, profiles: hub.actions.profiles(), profileActions: hub.actions.profile, actions: hub.tabActions) }
 
             TerminalStage {
                 TerminalPanes(hub: hub)
@@ -58,7 +58,8 @@ private struct CentreTitle: View {
     var body: some View {
         if let terminal = hub.state.selectedTerminal {
             let facts = TitleFactsMaker.facts(
-                for: terminal, row: hub.titleRow, statusBarOn: look.statusBar, gauge: hub.gauges.gauge(for: terminal))
+                for: terminal, row: hub.titleRow, statusBarOn: look.statusBar, gauge: hub.gauges.gauge(for: terminal),
+                extras: hub.state.title)
             TitleRowView(
                 facts: facts, arrangement: hub.state.title.map { TitleArrangement($0, facts: facts) }, fitting: hub.rowFitting,
                 actions: hub.titleActions(for: terminal), backend: hub.openIn, icon: SystemOpenIn.icon)

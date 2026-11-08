@@ -105,6 +105,40 @@ final class WorkspaceFFITests: XCTestCase {
         XCTAssertEqual(rows.map(\.splitMarks.bracket), [.start, .end])
     }
 
+    /// The pane area reads the core's tree: a split's rects, a zoom, the arrows, a drop inside it and a divider.
+    func testThePanesAreTheCoresLayoutInTheAreaTheWindowGave() {
+        let (store, _) = make()
+        store.send(.newTerminal)
+        store.setPaneArea(width: 1000, height: 600)
+        store.send(.splitRight(1))
+        let beside = store.state.selected!
+        store.send(.splitDown(beside))
+        let below = store.state.selected!
+        // 1 on the left; `beside` above `below` on the right; `below` has the keyboard.
+        var panes = store.state.panes
+        XCTAssertEqual(panes.order, [1, beside, below])
+        XCTAssertEqual(panes.shown.first { $0.id == 1 }?.rect, PaneRect(0, 0, 500, 600))
+        XCTAssertEqual(panes.focused, below)
+        XCTAssertEqual(panes.dividers.count, 2)
+
+        store.send(.focusDirection(.up))
+        XCTAssertEqual(store.state.panes.focused, beside)
+        store.send(.toggleZoom)
+        panes = store.state.panes
+        XCTAssertEqual(panes.shown, [PanePlace(beside, PaneRect(0, 0, 1000, 600))], "the zoomed pane alone")
+        XCTAssertEqual(panes.order, [1, beside, below], "what the zoom hides is still in the order")
+        store.send(.toggleZoom)
+
+        XCTAssertNil(store.paneDropRefusal(dragged: below, target: 1, zone: .left), "a member may move")
+        store.send(.movePane(below, beside: 1, zone: .left))
+        XCTAssertEqual(store.state.panes.order.first, below, "it is now left of 1")
+        XCTAssertEqual(store.state.selected, below)
+
+        let divider = store.state.panes.dividers[0]
+        store.send(.dragDivider(path: divider.path, index: divider.index, position: 300))
+        XCTAssertEqual(store.state.panes.dividers[0].position, 300)
+    }
+
     func testTheProgramsOwnTitleReachesTheRow() async throws {
         // The program sets an OSC 2 title, then idles as `cat`.
         let (store, _) = make(WorkspaceSetup(program: "/bin/sh", arguments: ["-c", #"printf '\033]2;from the program\007'; exec cat"#]))

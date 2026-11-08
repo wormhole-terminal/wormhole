@@ -48,6 +48,8 @@ public struct WorkspaceState: Sendable, Equatable {
     public var layout: ChromeLayout?
     /// The selected terminal's title row (core `TitleSnapshot`); nil in the sample.
     public var title: TitleState?
+    /// The selected terminal's panes in the pane area (core `PanesSnapshot`); empty until the area has a size.
+    public var panes = PanesState()
 
     /// The terminals the list shows, in list order. Those folded away with their group are not here.
     public var terminals: [TerminalSummary] { sections.flatMap(\.rows).map(\.terminal) }

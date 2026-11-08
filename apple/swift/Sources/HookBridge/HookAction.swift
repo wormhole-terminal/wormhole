@@ -6,6 +6,8 @@ import WormholeBindings
 public enum HookAction: Equatable, Sendable {
     /// A second launch, or `wh focus --activate`: come to the front.
     case activate
+    /// `wh focus --activate`: bring the window that holds `terminal` to the front (it is selected there already).
+    case front(terminal: Int64)
     /// `wh notify`: show a notification about `terminal`, by the notification rules, in the caller's words.
     case notice(terminal: Int64, title: String, body: String)
     /// `wh close`: ask the person whether to close `terminal` (as closing it by hand does), then call
@@ -26,6 +28,7 @@ extension HookAction {
     init(_ event: HookEvent) {
         switch event {
         case .activate: self = .activate
+        case .front(let terminal): self = .front(terminal: terminal)
         case .notice(let terminal, let title, let body): self = .notice(terminal: terminal, title: title, body: body)
         case .closeAsked(let terminal): self = .closeAsked(terminal: terminal)
         case .worktreeAsked(let folder, let branch): self = .worktreeAsked(folder: folder, branch: branch)

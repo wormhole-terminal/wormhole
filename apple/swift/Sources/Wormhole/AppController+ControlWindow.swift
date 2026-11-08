@@ -32,6 +32,14 @@ extension AppController {
             guard sides.count == 2 else { reply("error: size is WIDTHxHEIGHT"); return true }
             window?.setContentSize(CGSize(width: sides[0], height: sides[1]))
         case "split": hub.split(["down", "column"].contains(argument) ? .column : .row)
+        case "edge":
+            // `edge sidebar|panel <extent>`: a column's edge dragged to a width, as the handle does.
+            let words = argument.split(separator: " ").map(String.init)
+            guard words.count == 2, let extent = Double(words[1]), let edge = ["sidebar": ColumnEdge.sidebar, "panel": .panel][words[0]] else {
+                reply("error: edge sidebar|panel <width>")
+                return true
+            }
+            hub.send(.dragEdge(edge, extent: extent))
         case "zoom": hub.toggleZoom()
         case "join":
             guard let id = Int(argument), let anchor = hub.state.selected else { reply("error: join needs a terminal id"); return true }

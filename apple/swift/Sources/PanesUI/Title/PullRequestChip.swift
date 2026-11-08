@@ -5,6 +5,7 @@
 import DesignSystem
 import PanesModel
 import SwiftUI
+import WorkspaceModel
 
 struct PullRequestChip: View {
     let pr: PullRequestFact

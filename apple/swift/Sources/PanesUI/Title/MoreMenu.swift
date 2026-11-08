@@ -4,6 +4,7 @@
 import DesignSystem
 import PanesModel
 import SwiftUI
+import WorkspaceModel
 
 struct MoreMenu: View {
     let plan: TitlePlan

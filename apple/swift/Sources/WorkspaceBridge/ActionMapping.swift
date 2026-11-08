@@ -54,7 +54,12 @@ extension WormholeBindings.Action {
     private static func layout(_ action: WorkspaceAction) -> Self {
         switch action {
         case .splitRight(let id): .splitBeside(anchor: Int64(id), axis: .row)
-        case .joinSplit(let id, let target): .joinSplit(id: Int64(id), target: Int64(target), zone: .right)
+        case .splitDown(let id): .splitBeside(anchor: Int64(id), axis: .column)
+        case .toggleZoom: .toggleZoom
+        case .joinSplit(let id, let target, let zone): .joinSplit(id: Int64(id), target: Int64(target), zone: WormholeBindings.Zone(zone))
+        case .movePane(let id, let target, let zone):
+            .movePane(id: Int64(id), target: Int64(target), zone: WormholeBindings.Zone(zone))
+        case .focusDirection(let direction): .focusDirection(WormholeBindings.Direction(direction))
         case .leaveSplit(let id): .leaveSplit(Int64(id))
         case .showBeside(let id, let other): .showBeside(id: Int64(id), other: Int64(other))
         case .applyLayout(let preset): .applyLayout(WormholeBindings.Preset(preset))

@@ -11,27 +11,29 @@ public struct ProfileChoice: Identifiable, Equatable, Sendable {
     public var id: String
     public var name: String
     public var letter: Character
-    public var colour: Color
+    /// Nil draws the primary.
+    public var colour: Color?
     /// The profile Wormhole is in, and the one this window shows.
     public var current: Bool
     public var here: Bool
 
-    public init(id: String, name: String, letter: Character, colour: Color, current: Bool, here: Bool) {
+    public init(id: String, name: String, letter: Character, colour: Color? = nil, current: Bool, here: Bool) {
         (self.id, self.name, self.letter, self.colour, self.current, self.here) = (id, name, letter, colour, current, here)
     }
 }
 
 public struct ProfileActions {
     public var switchTo: (String) -> Void
-    public var openWindow: (String) -> Void
-    public var moveWindow: (String) -> Void
+    /// Nil leaves the entry out: a window in a profile of its own is not made yet.
+    public var openWindow: ((String) -> Void)?
+    public var moveWindow: ((String) -> Void)?
     public var newProfile: () -> Void
     public var manage: () -> Void
     public var settings: () -> Void
 
     public init(
-        switchTo: @escaping (String) -> Void = { _ in }, openWindow: @escaping (String) -> Void = { _ in },
-        moveWindow: @escaping (String) -> Void = { _ in }, newProfile: @escaping () -> Void = {},
+        switchTo: @escaping (String) -> Void = { _ in }, openWindow: ((String) -> Void)? = nil,
+        moveWindow: ((String) -> Void)? = nil, newProfile: @escaping () -> Void = {},
         manage: @escaping () -> Void = {}, settings: @escaping () -> Void = {}
     ) {
         (self.switchTo, self.openWindow, self.moveWindow, self.newProfile, self.manage, self.settings) =
@@ -85,6 +87,6 @@ struct ProfileAvatar: View {
             .font((size >= Self.bodyFrom ? TextRole.body : TextRole.caption).font.weight(.bold))
             .foregroundStyle(tokens.surfaceWindow)
             .frame(width: size, height: size)
-            .background(choice.colour, in: Circle())
+            .background(choice.colour ?? tokens.primary, in: Circle())
     }
 }

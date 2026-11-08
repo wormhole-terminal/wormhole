@@ -66,6 +66,8 @@ extension AppController {
         hub.actions.terminalMenu = { [weak self, weak session] in self?.terminalMenu(for: $0, in: session) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
         hub.actions.openSettings = { [weak self] in self?.showSettings() }
+        hub.actions.profiles = { [weak self] in self?.profileChoices() ?? [] }
+        hub.actions.profile = profileActions()
         hub.actions.showTerminalsInSidebar = { [weak self] in self?.look.tabsOnTop = false }
     }
 

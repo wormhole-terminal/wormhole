@@ -21,6 +21,10 @@ public final class MockWorkspaceBackend: WorkspaceBackend {
     public func drain() {}
     public func revisions() -> Revisions { count }
     public func chrome() -> ChromeState { window }
+    /// The sample has no splits: the selected terminal fills the area.
+    public func panes(width: Double, height: Double) -> PanesState {
+        PanesState(shown: selected.map { [PanePlace($0, PaneRect(0, 0, width, height))] } ?? [], focused: selected)
+    }
     public func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan? { nil }
 
     public func sidebar() -> SidebarSnapshot {

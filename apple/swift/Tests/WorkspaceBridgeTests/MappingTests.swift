@@ -133,6 +133,9 @@ final class MappingTests: XCTestCase {
         XCTAssertEqual(WormholeBindings.Action(.rename(3, "x")), .rename(id: 3, name: "x"))
         XCTAssertEqual(WormholeBindings.Action(.newGroup([1, 2])), .newGroup(members: [1, 2]))
         XCTAssertEqual(WormholeBindings.Action(.splitRight(4)), .splitBeside(anchor: 4, axis: .row))
+        XCTAssertEqual(WormholeBindings.Action(.splitDown(4)), .splitBeside(anchor: 4, axis: .column))
+        XCTAssertEqual(WormholeBindings.Action(.movePane(3, beside: 1, zone: .top)), .movePane(id: 3, target: 1, zone: .top))
+        XCTAssertEqual(WormholeBindings.Action(.focusDirection(.left)), .focusDirection(.left))
         XCTAssertEqual(WormholeBindings.Action(.showPanelTab(.notes)), .showPanelTab(.notes))
         XCTAssertEqual(
             WormholeBindings.Action(.dropTerminal(1, over: .after(.split(7)))), .dropTerminal(dragged: 1, over: .after(.split(7))))
@@ -168,7 +171,14 @@ final class MappingTests: XCTestCase {
                     branch: "main", message: nil),
                 left: [WormholeBindings.TitleSlot(part: .folder, present: true, chevronBefore: false), WormholeBindings.TitleSlot(part: .branchStatus, present: false, chevronBefore: false)],
                 right: [WormholeBindings.TitleSlot(part: .openIn, present: true, chevronBefore: false)], hidden: [.ports],
-                pathSteps: [PathStep(parents: "~/", last: "app")], pathMenu: [PathFolder(path: "/Users/ref", name: "ref")]))
+                pathSteps: [PathStep(parents: "~/", last: "app")], pathMenu: [PathFolder(path: "/Users/ref", name: "ref")], ports: [3000],
+                pullRequest: WormholeBindings.PullRequest(
+                    number: 42, url: "https://github.com/o/r/pull/42", state: .open, draft: true, checks: .failing, review: nil),
+                pullRequestWords: "Pull request #42, open, draft, checks failing"))
+        XCTAssertEqual(title.ports, [3000])
+        XCTAssertEqual(title.pullRequest?.number, 42)
+        XCTAssertEqual(title.pullRequest?.checks, .failing)
+        XCTAssertEqual(title.pullRequest?.words, "Pull request #42, open, draft, checks failing")
         XCTAssertEqual(title.left.map(\.part), ["folder", "branch_status"])
         XCTAssertEqual(title.left.map(\.present), [true, false])
         XCTAssertEqual(title.right.map(\.part), ["open_in"])

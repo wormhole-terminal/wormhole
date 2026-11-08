@@ -16,12 +16,14 @@ struct ProfileMenuItems: View {
                 }
             }
         }
-        Divider()
-        Menu(PanesText.openWindowIn) {
-            ForEach(choices) { choice in Button(choice.name) { actions.openWindow(choice.id) } }
-        }
-        Menu(PanesText.moveWindowTo) {
-            ForEach(choices.filter { !$0.here }) { choice in Button(choice.name) { actions.moveWindow(choice.id) } }
+        if let openWindow = actions.openWindow, let moveWindow = actions.moveWindow {
+            Divider()
+            Menu(PanesText.openWindowIn) {
+                ForEach(choices) { choice in Button(choice.name) { openWindow(choice.id) } }
+            }
+            Menu(PanesText.moveWindowTo) {
+                ForEach(choices.filter { !$0.here }) { choice in Button(choice.name) { moveWindow(choice.id) } }
+            }
         }
         Divider()
         Button(PanesText.newProfile, action: actions.newProfile)

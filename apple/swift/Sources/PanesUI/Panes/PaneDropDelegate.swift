@@ -1,18 +1,16 @@
-// The drop onto the panes: a terminal dragged from the sidebar joins the split on the side of the pane it
-// lands on, a pane's header dragged onto another pane's edge moves it there. The terminal travels as text
-// (`DraggedTerminal`), read when the drag enters so the hover can say what a drop would do.
+// The drop onto the panes: a terminal dragged from the sidebar joins the split on the side of the pane it lands on, a pane's
+// header dragged onto another pane's edge moves it there (the core tells which, by whether the terminal is in the split). The
+// terminal travels as text (`DraggedTerminal`), read when the drag enters so the hover can say what a drop would do.
 
 import PanesModel
 import SwiftUI
 import UniformTypeIdentifiers
+import WorkspaceModel
 
 struct PaneDropDelegate: DropDelegate {
     @Binding var state: PaneDropState
-    @Binding var panes: TabPanes
-    let size: CGSize
-    let onDropped: (DraggedTerminal) -> Void
-
-    private var room: PaneRoom { PaneRoom(size.width, size.height) }
+    let panes: PanesState
+    let actions: PaneActions
 
     func validateDrop(info: DropInfo) -> Bool { info.hasItemsConforming(to: [.plainText]) }
 
@@ -25,20 +23,17 @@ struct PaneDropDelegate: DropDelegate {
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        state.aim(at: info.location, in: panes, size: size)
-        guard let dragged = state.dragged, let target = state.target, let zone = state.zone else {
-            return DropProposal(operation: .cancel)
-        }
-        let refused = panes.dropRefusal(dragged, on: target, zone, room: room) != nil
-        return DropProposal(operation: refused ? .forbidden : .move)
+        state.aim(at: info.location, in: panes)
+        guard let hit = state.landing else { return DropProposal(operation: .cancel) }
+        return DropProposal(operation: actions.refusal(hit.dragged, hit.target, hit.zone) == nil ? .move : .forbidden)
     }
 
     func dropExited(info: DropInfo) { state = PaneDropState() }
 
     func performDrop(info: DropInfo) -> Bool {
         defer { state = PaneDropState() }
-        guard let dragged = state.perform(on: &panes, size: size) else { return false }
-        onDropped(dragged)
+        guard let hit = state.landing, actions.refusal(hit.dragged, hit.target, hit.zone) == nil else { return false }
+        actions.drop(hit.dragged, hit.target, hit.zone)
         return true
     }
 }

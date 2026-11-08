@@ -1,7 +1,7 @@
 // The two side columns' own surfaces: the sidebar's (its title row over the list) and the right panel's (its
 // tab bar over the tab). Each paints its translucent surface at the window's opacity over the blur, as at rest
 // and while it slides, so the one choice cannot drift between them. On Liquid Glass the sidebar paints none:
-// its cards float on the glass.
+// the system's glass lies behind it, its cards float on it.
 
 import SwiftUI
 import SidebarUI
@@ -23,7 +23,7 @@ struct SidebarColumn: View {
             .environment(\.dropPlanner, hub.store)
             .environment(\.terminalDrag, hub.terminalDrag)
         }
-        .background { if !look.glassOn { look.surface(colours.sidebar) } }
+        .background { if look.glassOn { GlassBackground() } else { look.surface(colours.sidebar) } }
     }
 }
 

@@ -1,6 +1,5 @@
-// The title row's facts for the selected terminal, gathered from the summary the window already has. What needs
-// git, ports or a pull request comes with the Rust core (`window/title/breadcrumb.rs`); the
-// row hides a part with nothing to say.
+// The title row's facts for the selected terminal, gathered from the summary the window already has. The ports and the
+// pull request are what the core looked up (`TitleState`); the row hides a part with nothing to say.
 
 import Foundation
 import PanesModel
@@ -8,7 +7,8 @@ import WorkspaceModel
 
 enum TitleFactsMaker {
     static func facts(
-        for terminal: TerminalSummary, row: TitleRow, statusBarOn: Bool, gauge: GaugeFact? = nil, home: String = NSHomeDirectory()
+        for terminal: TerminalSummary, row: TitleRow, statusBarOn: Bool, gauge: GaugeFact? = nil, extras: TitleState? = nil,
+        home: String = NSHomeDirectory()
     ) -> TitleFacts {
         let shown = terminal.folder
         let path = shown.map { ($0 as NSString).expandingTildeInPath }
@@ -18,7 +18,7 @@ enum TitleFactsMaker {
             // The status bar says it when it is on (`TitlePart.terminalStatus`).
             words: statusBarOn ? nil : terminal.activity.words,
             branch: terminal.branch.map { .some($0) }, branchStatus: branchStatus(of: terminal), gauge: gauge,
-            row: row)
+            ports: extras?.ports ?? [], pullRequest: extras?.pullRequest, row: row)
     }
 
     /// What git says of the branch (the core's feed): an unclean tree and how far it is from its upstream; nothing to say

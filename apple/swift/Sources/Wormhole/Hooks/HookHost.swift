@@ -48,6 +48,7 @@
         private func perform(_ action: HookAction) {
             switch action {
             case .activate: if app.policy.touchesSystem { NSApp.activate() }
+            case .front(let terminal): app.show(terminal: Int(terminal))
             case .notice(let terminal, let title, let body): app.notices?.post(terminal: terminal, title: title, body: body)
             case .closeAsked(let terminal):
                 app.closeTerminal(Int(terminal)) { [weak self] in self?.handle.closeQuestionOver() }

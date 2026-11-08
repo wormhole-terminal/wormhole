@@ -23,36 +23,6 @@ public struct GaugeFact: Sendable, Equatable {
     }
 }
 
-/// The branch's pull request and its checks (core `git::pr`).
-public struct PullRequestFact: Sendable, Equatable {
-    public enum State: Sendable, Equatable { case open, merged, closed }
-    public enum Checks: Sendable, Equatable { case passing, failing, pending }
-
-    public var number: Int
-    public var url: URL?
-    public var state: State
-    public var draft: Bool
-    public var checks: Checks?
-
-    public init(number: Int, url: URL? = nil, state: State = .open, draft: Bool = false, checks: Checks? = nil) {
-        (self.number, self.url, self.state, self.draft, self.checks) = (number, url, state, draft, checks)
-    }
-
-    public var label: String { "#\(number)" }
-    /// Checks are only drawn (and said) of an open one.
-    public var openChecks: Checks? { state == .open ? checks : nil }
-
-    /// "Pull request #142, open, draft, checks failing".
-    public var words: String {
-        var words = "Pull request #\(number), \(state == .open ? "open" : state == .merged ? "merged" : "closed")"
-        if state == .open {
-            let checkWords = checks.map { $0 == .passing ? "checks passing" : $0 == .failing ? "checks failing" : "checks running" }
-            words += ([draft ? "draft" : nil, checkWords].compactMap { $0 }).map { ", " + $0 }.joined()
-        }
-        return words
-    }
-}
-
 public struct TitleFacts: Sendable, Equatable {
     public var terminalID: Int
     /// Where the terminal is, and how that reads (`~/Projects/tube`).

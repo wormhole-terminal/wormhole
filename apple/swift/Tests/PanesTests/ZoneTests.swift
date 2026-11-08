@@ -1,13 +1,14 @@
 import Testing
 
 import PanesModel
+import WorkspaceModel
 
 @Suite struct ZoneTests {
     let pane = PaneRect(100, 50, 400, 300)
 
     @Test func theEdgeBandIsAQuarterOfTheSideUpToACap() {
         #expect(DropBand.depth(400) == 96 && DropBand.depth(300) == 75)
-        #expect(DropBand.depth(PaneMin.width) == 40 && DropBand.depth(PaneMin.height) == 24)
+        #expect(DropBand.depth(160) == 40 && DropBand.depth(96) == 24)
         #expect(DropBand.depth(4000) == DropBand.maxDepth && DropBand.depth(0) == 0)
     }
 
@@ -46,10 +47,5 @@ import PanesModel
         let target = { DropBand.target(rects.map { (id: $0.0, rect: $0.1) }, at: $0) }
         #expect(target((399, 300))?.pane == 1 && target((400, 300))?.pane == 3)
         #expect(target((900, 300)) == nil)
-    }
-
-    @Test func zonesNameTheAxisAndTheSideTheDroppedPaneLandsOn() {
-        #expect(Zone.allCases.map(\.axis) == [.row, .row, .column, .column])
-        #expect(Zone.allCases.map(\.before) == [true, false, true, false])
     }
 }

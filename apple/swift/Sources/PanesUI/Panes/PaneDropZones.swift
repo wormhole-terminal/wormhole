@@ -6,30 +6,31 @@
 import DesignSystem
 import PanesModel
 import SwiftUI
+import WorkspaceModel
 
 struct PaneDropZones: View {
-    let panes: TabPanes
+    let panes: PanesState
     let state: PaneDropState
     let size: CGSize
     let names: (PaneID) -> String
+    let refusal: (DraggedTerminal, PaneID, Zone) -> Refusal?
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        let room = PaneRoom(size.width, size.height)
-        if let dragged = state.dragged, let target = state.target, let zone = state.zone,
-            let pane = panes.shown(width: size.width, height: size.height).first(where: { $0.id == target })?.rect
+        if let (dragged, target, zone) = state.landing,
+            let pane = panes.shown.first(where: { $0.id == target })?.rect
         {
-            let moving = panes.contains(dragged.id)
+            let moving = panes.order.contains(dragged.id)
             ZStack(alignment: .topLeading) {
                 // The sides that would work too, faint; the one under the pointer over them.
                 ForEach(Zone.allCases.filter { $0 != zone }, id: \.self) { other in
                     if let band = DropBand.hint(pane, other, active: zone),
-                        panes.dropRefusal(dragged, on: target, other, room: room) == nil
+                        refusal(dragged, target, other) == nil
                     {
                         hint(other).placed(band)
                     }
                 }
-                if panes.dropRefusal(dragged, on: target, zone, room: room) == nil {
+                if refusal(dragged, target, zone) == nil {
                     active(zone, text: PanesText.dropHint(zone, moving: moving, target: names(target))).placed(DropBand.preview(pane, zone))
                 }
             }

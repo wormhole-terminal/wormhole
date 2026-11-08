@@ -1,6 +1,7 @@
 import Testing
 
 @testable import PanesModel
+import WorkspaceModel
 
 /// One point per character, as a monospace font would measure.
 struct CharWidth: TextMeasuring {
@@ -63,8 +64,6 @@ struct CharWidth: TextMeasuring {
     }
 
     @Test func aPullRequestAndAGaugeSpeak() {
-        #expect(PullRequestFact(number: 142, draft: true, checks: .failing).words == "Pull request #142, open, draft, checks failing")
-        #expect(PullRequestFact(number: 7, state: .merged, checks: .failing).words == "Pull request #7, merged")
         #expect(PullRequestFact(number: 7, state: .merged, checks: .failing).openChecks == nil)
         #expect(GaugeFact(model: "Opus 4.5", context: 41).words == "Opus 4.5, 41% of the context window used")
         #expect(GaugeFact(context: 80).warns && GaugeFact(context: 79).warns == false)

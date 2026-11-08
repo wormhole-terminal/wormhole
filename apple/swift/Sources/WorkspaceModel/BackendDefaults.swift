@@ -8,6 +8,8 @@ extension WorkspaceBackend {
     public func terminals() -> TerminalsSnapshot {
         TerminalsSnapshot(terminals: sidebar().sections.flatMap(\.rows).map(\.terminal))
     }
+    public func panes(width: Double, height: Double) -> PanesState { PanesState() }
+    public func paneDropRefusal(dragged: TerminalID, target: TerminalID, zone: Zone) -> Refusal? { .unchanged }
     public func title() -> TitleState? { nil }
     public func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout? { nil }
     public func groupFolderOffer(group: GroupID) -> String? { nil }

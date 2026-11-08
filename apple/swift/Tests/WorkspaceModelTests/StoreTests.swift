@@ -8,7 +8,10 @@ import XCTest
 final class StoreTests: XCTestCase {
     func testTheFirstPullIsTheWholeSampleWindow() {
         let store = WorkspaceStore(backend: MockWorkspaceBackend())
-        XCTAssertEqual(store.state, MockWorkspace.state)
+        var sample = MockWorkspace.state
+        sample.panes = store.state.panes
+        XCTAssertEqual(store.state, sample)
+        XCTAssertEqual(store.state.panes.focused, 1, "the selected terminal fills the pane area")
         XCTAssertEqual(store.state.selected, 1)
         XCTAssertEqual(store.state.live.count, 13, "terminals folded away with their group still exist")
         XCTAssertEqual(store.state.terminals.count, 11, "but their rows are not listed")

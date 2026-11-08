@@ -7,6 +7,7 @@
 import DesignSystem
 import PanesModel
 import SwiftUI
+import WorkspaceModel
 
 enum DividerLook { case rest, hot, dragging }
 

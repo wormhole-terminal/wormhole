@@ -18,6 +18,9 @@ public struct WorkspaceSetup: Sendable {
     public var numbersFollowList: Bool
     /// Terminals in session hosts that outlive the app; nil keeps them all in the app's process.
     public var hosting: HostingSetup?
+    /// What a pane's header adds to the least height of a pane: the taller of the gapped header (tile 18 + 2 x 8) and the
+    /// row's 28, as the GPUI app's `style::pane_header_h(true).max(PANE_HEADER_H)` says.
+    public var paneHeaderHeight: Double = 34
 
     public init(
         program: String, arguments: [String] = [], home: String? = NSHomeDirectory(), numbersFollowList: Bool = false,
@@ -67,7 +70,8 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
         }
         let wake = WakeRelay()
         let config = WorkspaceConfig(
-            home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: setup.home, paneHeaderHeight: 0)
+            home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: setup.home,
+            paneHeaderHeight: Float(setup.paneHeaderHeight))
         core = windows.map { Workspace.inWindow(windows: $0, window: Int64(window), config: config, listener: wake) }
             ?? Workspace(config: config, listener: wake)
         wake.attach { [weak self] in self?.onWake?() }
@@ -113,6 +117,11 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     public func revisions() -> WorkspaceModel.Revisions { WorkspaceModel.Revisions(core.revisions()) }
     public func sidebar() -> WorkspaceModel.SidebarSnapshot { WorkspaceModel.SidebarSnapshot(core.sidebar()) }
     public func chrome() -> ChromeState { ChromeState(core.chrome()) }
+    public func panes(width: Double, height: Double) -> PanesState { PanesState(core.panes(width: Float(width), height: Float(height))) }
+
+    public func paneDropRefusal(dragged: TerminalID, target: TerminalID, zone: WorkspaceModel.Zone) -> WorkspaceModel.Refusal? {
+        core.paneDropRefusal(dragged: Int64(dragged), target: Int64(target), zone: WormholeBindings.Zone(zone)).map(WorkspaceModel.Refusal.init)
+    }
     public func terminals() -> WorkspaceModel.TerminalsSnapshot { WorkspaceModel.TerminalsSnapshot(core.terminals()) }
     public func title() -> TitleState? { TitleState(core.title(bootVolume: Self.bootVolume)) }
 

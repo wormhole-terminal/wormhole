@@ -1,5 +1,5 @@
-// What one window holds beyond the workspace's state, and the one place its parts reach each other: the pane
-// layouts, the notice chip, the title row's arrangement, the panel and each terminal's overlay. The views
+// What one window holds beyond the workspace's state, and the one place its parts reach each other: the
+// notice chip, the title row's arrangement, the panel and each terminal's overlay. The views
 // read it (it is observable) and call its methods; the app gives it the store, the terminals and, through
 // `HubActions`, what only the app can do (ask a question before closing, start a terminal again).
 
@@ -42,7 +42,6 @@ public final class WindowHub {
     public var shell = "zsh"
     /// Bumped to make a terminal's host start over with a fresh view (a shell that ended starts again).
     var restarts: [TerminalID: Int] = [:]
-    var layouts = PaneLayouts()
     @ObservationIgnored var overlays: [TerminalID: TerminalOverlay] = [:]
 
     public init(store: WorkspaceStore, terminals: TerminalViews, panelBackends: PanelBackends = .mock()) {
@@ -72,6 +71,9 @@ public struct HubActions {
     public var perform: @MainActor (String) -> Void = { _ in }
     /// Settings, where the title row's parts are also arranged.
     public var openSettings: @MainActor () -> Void = {}
+    /// The profiles the tab bar's chip offers (none while there is one) and what its menu does.
+    public var profiles: @MainActor () -> [ProfileChoice] = { [] }
+    public var profile = ProfileActions()
     /// The branch picker (needs the repository; the core's `git` answers it).
     public var pickBranch: @MainActor (TerminalID) -> Void = { _ in }
 

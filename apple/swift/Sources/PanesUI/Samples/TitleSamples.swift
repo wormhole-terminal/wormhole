@@ -17,7 +17,7 @@ public enum TitleSamples {
         activity: .needsInput, agent: .claude, label: "sidebar polish", words: "needs input · 4m",
         branch: .some("feature/pane-headers"), branchStatus: BranchStatus(dirty: true, ahead: 2, behind: 1, upstream: "origin/main"),
         gauge: GaugeFact(model: "Opus 4.5", context: 82), ports: [3000, 5173, 8080],
-        pullRequest: PullRequestFact(number: 142, state: .open, checks: .failing))
+        pullRequest: PullRequestFact(number: 142, state: .open, checks: .failing, words: "Pull request #142, open, checks failing"))
 
     public static let plain = TitleFacts(
         terminalID: 1, folder: "/Users/ben", shownFolder: "~", label: "zsh", row: TitleRow.default)

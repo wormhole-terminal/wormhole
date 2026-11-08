@@ -2,6 +2,7 @@
 
 import Foundation
 import PanesModel
+import WorkspaceModel
 
 public struct TitleActions {
     /// The folder's path itself in Finder (a folder is opened, a file shown).

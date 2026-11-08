@@ -1,25 +1,22 @@
-// A pane's menu (its ⋯ button and a right-click on its header) and View → Layout's presets, as native menu
-// items: what a pane cannot do is greyed out, and each entry shows its key (`window/panes/mod.rs`).
+// A pane's menu (its ⋯ button and a right-click on its header) as native menu items: what a pane cannot do is greyed out, and
+// each entry shows its key (`window/panes/mod.rs`).
 
-import PanesModel
 import SwiftUI
+import WorkspaceModel
 
 struct PaneMenuItems: View {
     let id: PaneID
-    let panes: TabPanes
-    let room: PaneRoom
+    let panes: PanesState
     let actions: PaneActions
-    let focus: () -> Void
-    let zoom: () -> Void
 
     var body: some View {
         Button(PanesText.splitRight) { act { actions.split(.row) } }
             .keyboardShortcut("d", modifiers: .command)
-            .disabled(!panes.canSplit(.row, room: room))
+            .disabled(!actions.canSplit(.row))
         Button(PanesText.splitDown) { act { actions.split(.column) } }
             .keyboardShortcut("d", modifiers: [.command, .shift])
-            .disabled(!panes.canSplit(.column, room: room))
-        Button(panes.zoomed == id ? PanesText.unzoom : PanesText.zoom) { act(zoom) }
+            .disabled(!actions.canSplit(.column))
+        Button(panes.zoomed == id ? PanesText.unzoom : PanesText.zoom) { act(actions.toggleZoom) }
             .keyboardShortcut(.return, modifiers: [.command, .shift])
             .disabled(!panes.isSplit)
         Button(PanesText.leaveSplit) { act { actions.leaveSplit(id) } }
@@ -31,20 +28,7 @@ struct PaneMenuItems: View {
 
     /// The pane the menu belongs to takes the keyboard first, as it does when it is clicked.
     private func act(_ run: () -> Void) {
-        focus()
+        actions.focus(id)
         run()
-    }
-}
-
-/// View → Layout: the four presets with a check on the one the tab has. (GPUI's `can_layout` greying, for a
-/// preset that must open more panes than the room allows, is the window's: it knows the sessions.)
-struct LayoutPresetItems: View {
-    let panes: TabPanes
-    let choose: (Preset) -> Void
-
-    var body: some View {
-        ForEach(Preset.allCases, id: \.self) { preset in
-            Toggle(preset.title, isOn: Binding(get: { panes.tree.preset == preset }, set: { _ in choose(preset) }))
-        }
     }
 }
