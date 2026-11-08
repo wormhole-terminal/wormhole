@@ -1,0 +1,60 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> new
+new
+> new
+new
+> rows
+selected=6 live=[1, 2, 3, 5, 6] groups=0
+  row 1 "user@host:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, 1 of 5, Command 1"
+  row 2 "user@host:/tmp/rv/repo" idle number=2 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:start spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 2 of 5, Command 2"
+  row 3 "user@host:/tmp/rv/repo" idle number=3 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:end spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 3 of 5, Command 3"
+  row 5 "user@host:~" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, 4 of 5, Command 4"
+  row 6 "user@host:~" idle number=5 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, selected, 5 of 5, Command 5"
+> plan 4 row:5:middle
+plan nothing 
+> plan 4 tail
+plan nothing 
+> drop 4 row:5:middle
+dropTerminal(4, over: WorkspaceModel.DropOver.row(5, WorkspaceModel.DropPart.middle)) refused unknown
+> rows
+selected=6 live=[1, 2, 3, 5, 6] groups=0
+  row 1 "user@host:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, 1 of 5, Command 1"
+  row 2 "user@host:/tmp/rv/repo" idle number=2 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:start spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 2 of 5, Command 2"
+  row 3 "user@host:/tmp/rv/repo" idle number=3 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:end spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 3 of 5, Command 3"
+  row 5 "user@host:~" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, 4 of 5, Command 4"
+  row 6 "user@host:~" idle number=5 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, selected, 5 of 5, Command 5"
+> plan 1 head:1:middle
+plan nothing 
+> drop 1 tail
+dropTerminal(1, over: WorkspaceModel.DropOver.tail) ok
+> rows
+selected=6 live=[1, 2, 3, 5, 6] groups=0
+  row 2 "user@host:/tmp/rv/repo" idle number=1 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:start spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 1 of 5, Command 1"
+  row 3 "user@host:/tmp/rv/repo" idle number=2 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:end spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 2 of 5, Command 2"
+  row 5 "user@host:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, 3 of 5, Command 3"
+  row 6 "user@host:~" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, selected, 4 of 5, Command 4"
+  row 1 "user@host:~" idle number=5 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, 5 of 5, Command 5"
+> group 5 6
+newGroup([5, 6]) ok
+> rows
+selected=6 live=[1, 2, 3, 5, 6] groups=1
+  row 2 "user@host:/tmp/rv/repo" idle number=1 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:start spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 1 of 4, Command 1"
+  row 3 "user@host:/tmp/rv/repo" idle number=2 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:end spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 2 of 4, Command 2"
+group 1 "Group 1" folded=false pinned=false count=2 alerts=0 spoken="Group 1, coloured blue, 2 terminals, expanded, 3 of 4"
+  row 5 "user@host:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, 1 of 2, Command 3"
+  row 6 "user@host:~" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, selected, 2 of 2, Command 4"
+  row 1 "user@host:~" idle number=5 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, 4 of 4, Command 5"
+> plan 1 row:5:middle
+plan join(5) 
+> drop 1 row:5:middle
+dropTerminal(1, over: WorkspaceModel.DropOver.row(5, WorkspaceModel.DropPart.middle)) ok
+> plan 2 after-loose:1
+plan move(WorkspaceModel.Landing.top(before: nil), leavesSplit: true, withMates: false) 
+> rows
+selected=1 live=[1, 2, 3, 5, 6] groups=1
+  row 2 "user@host:/tmp/rv/repo" idle number=1 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:start spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 1 of 3, Command 1"
+  row 3 "user@host:/tmp/rv/repo" idle number=2 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:end spoken="user@host:/tmp/rv/repo, shell, nothing running, in a split with 1 other, 2 of 3, Command 2"
+group 1 "Group 1" folded=false pinned=false count=3 alerts=0 spoken="Group 1, coloured blue, 3 terminals, expanded, 3 of 3"
+  row 5 "user@host:~" idle number=3 pinned=false folder=~ line="~" trail=- split=2:start spoken="user@host:~, shell, nothing running, in a split with 1 other, on screen, 1 of 3, Command 3"
+  row 1 "user@host:~" idle number=4 pinned=false folder=~ line="~" trail=- split=2:end spoken="user@host:~, shell, nothing running, in a split with 1 other, selected, 2 of 3, Command 4"
+  row 6 "user@host:~" idle number=5 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, 3 of 3, Command 5"

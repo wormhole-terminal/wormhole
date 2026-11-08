@@ -38,6 +38,9 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
 
     public var isOpen: Bool { window != nil }
 
+    /// The draft in the open window, for a driver that has no pointer (the control folder's `studio-*`).
+    public var document: StudioDocument? { session?.document }
+
     public func windowShouldClose(_ sender: NSWindow) -> Bool {
         guard let session else { return true }
         Task {

@@ -1,0 +1,31 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> notice-test
+notice-test 
+> notices
+notices=["Wormhole needs input: This is how a terminal that needs input is announced."]
+> hook 3 claude Stop
+hook 3 claude Stop
+> hook 3 claude Notification Wants to run rm
+hook 3 claude Notification Wants to run rm
+> notices
+notices=["Wormhole needs input: This is how a terminal that needs input is announced."]
+> counts
+TerminalCounts(needsYou: 0, working: 0, finished: 0, failed: 0, quiet: 6) all=["2:idle", "3:idle", "6:idle", "1:idle", "5:idle", "8:idle"]
+> select 2
+select 2
+> window-state off off
+window-state active=false seen=false
+> hook 3 claude UserPromptSubmit
+hook 3 claude UserPromptSubmit
+> hook 3 claude Notification Needs permission to run npm test
+hook 3 claude Notification Needs permission to run npm test
+> counts
+TerminalCounts(needsYou: 1, working: 0, finished: 0, failed: 0, quiet: 5) all=["2:idle", "3:needsInput", "6:idle", "1:idle", "5:idle", "8:idle"]
+> notices
+notices=["Wormhole needs input: This is how a terminal that needs input is announced."]
+> hook 3 claude Stop
+hook 3 claude Stop
+> counts
+TerminalCounts(needsYou: 0, working: 0, finished: 1, failed: 0, quiet: 5) all=["2:idle", "3:finished", "6:idle", "1:idle", "5:idle", "8:idle"]
+> notices
+notices=["Wormhole needs input: This is how a terminal that needs input is announced.", "user@host:/tmp/rv/repo finished: Finished"]

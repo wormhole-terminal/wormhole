@@ -1,0 +1,81 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> actions-missing
+keymap now=128 implemented=94 missing=34
+newTerminalInWorktree hideFromAgents newProfile manageProfiles switchProfile openWindowInProfile moveWindowToProfile toggleZenMode focusTerminalOrPanel focusNextArea focusPreviousArea clearBuffer lineStart lineEnd deleteLine showHiddenLines insertFolderPath newNote stashPrompt moveItemUp moveItemDown rowMenu playIntroEmerge playIntroVortex playIntroCollapse playIntroFtl playIntroAurora playIntroTe
+> menus
+Wormhole
+  About Wormhole
+  Check for Updates…
+  ---
+  Settings…  ⌘,
+  Theme Studio  ⌥⌘,
+  ---
+  Services ▸
+  ---
+  Hide Wormhole  ⌘H
+  Hide Others  ⌥⌘H
+  Show All
+  ---
+  Quit Wormhole  ⌘Q
+Shell
+  New Window  ⌘N
+  New Terminal  ⌘T
+  New Terminal in No Group  ⇧⌘T
+  New Terminal With ▸
+    No Shells  (disabled)
+  New Terminal in New Worktree…  (disabled)
+  ---
+  Split Right  ⌘D
+  Split Down  ⇧⌘D
+  Move Pane Out of Split
+  ---
+  Open Folder…  ⌘O
+  Open Recent ▸
+    No Recent Folders  (disabled)
+  ---
+  Profile ▸
+    New Profile…  (disabled)
+    Manage Profiles…  (disabled)
+  ---
+  Close Pane  ⌘W
+  Close Window  ⇧⌘W
+  ---
+  Export Text As…  ⌘S
+  Print…  ⌘P
+Edit
+  Undo  ⌘Z
+  Redo  ⇧⌘Z
+  ---
+  Cut  ⌘X
+  Copy  ⌘C
+  Paste  ⌘V
+  Select All  ⌘A
+  ---
+  Clear Buffer  ⌘K  (disabled)
+  ---
+  Find…  ⌘F
+  Find Next  ⌘G
+  Find Previous  ⇧⌘G
+  Use Selection for Find  ⌘E
+  ---
+  Previous Prompt  ⌘↑
+  Next Prompt  ⌘↓
+  Select Output
+  Copy Output
+  Copy Command
+  Put Command at Prompt
+  ---
+  Show Hidden Lines  ⌥⌘L
+View
+  Hide Sidebar  ⌃⌘S
+  Hide Right Panel  ⌥⌘I
+  Show Status Bar  ⌘/
+  Show Minimap
+  Enter Zen Mode  ⌃⌘Z  (disabled)
+  ---
+  Zoom Pane  ⇧⌘↩
+  Layout ▸
+    2 Columns
+    2 Rows
+    2×2 Grid
+    ✓ Single Pane

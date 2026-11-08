@@ -18,6 +18,8 @@ final class StudioLauncher {
 
     init(dataDirectory: URL) { themes = dataDirectory.appendingPathComponent("themes") }
 
+    var document: StudioDocument? { controller.document }
+
     func show(store: ThemeStore = .shared) {
         #if WITH_UNIFFI
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)

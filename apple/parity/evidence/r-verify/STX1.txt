@@ -1,0 +1,23 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> flags-unlock
+flags-unlock unlocked=true nav=appearance,fonts,terminal,sessions,git,agents,import,notifications,menuBar,hotkey,updates,advanced,featureFlags
+> get feature_flags
+feature_flags = object(["unlocked": SettingsModel.JSONValue.bool(true)])
+> set feature_flags={"probes":true,"folder_picker":true,"project_folder":true}
+set feature_flags -> object(["folder_picker": SettingsModel.JSONValue.bool(true), "project_folder": SettingsModel.JSONValue.bool(true), "probes": SettingsModel.JSONValue.bool(true)])
+> settings-size 920x1000
+settings-size 920x1000
+> settings-section extensions
+settings-section extensions
+> window-shot <scratch>/rv/shots/stx1-a.png Settings
+window-shot <scratch>/rv/shots/stx1-a.png
+> probe list
+probe list: rows=["acme-tools:off", "broken:invalid"] sheet=none notice=-
+> probe sheet acme-tools
+probe sheet acme-tools: rows=["acme-tools:off", "broken:invalid"] sheet=ProbeSheet(id: "acme-tools", title: "Turn on Acme tools", identity: "acme-tools · version 0.3.0 · by a", description: "Does things", since: [], asksHeading: "It asks for", permissions: [SettingsModel.ProbePermission(id: 0, words: "Show notifications", touchID: false, granted: true, programNote: nil, programWarns: false, comman
+> probe approve acme-tools
+probe approve acme-tools: rows=["acme-tools:on", "broken:invalid"] sheet=none notice=-
+> probe off acme-tools
+probe off acme-tools: rows=["acme-tools:off", "broken:invalid"] sheet=none notice=-
+> probe sheet broken
+probe sheet broken: rows=["acme-tools:off", "broken:invalid"] sheet=none notice=broken cannot be turned on: probe.toml:1:5: key with no value, expected `=`

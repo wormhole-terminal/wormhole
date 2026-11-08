@@ -1,0 +1,17 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> group 1
+newGroup([1]) ok
+> new
+new
+> rows
+selected=8 live=[1, 2, 3, 5, 6, 8] groups=2
+  row 2 "user@host:/tmp/rv/repo" idle number=1 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:start spoken="user@host:/tmp/rv/repo, shell, nothing running, unread output, in a split with 1 other, 1 of 5, Command 1"
+  row 3 "user@host:/tmp/rv/repo" idle number=2 pinned=false folder=/tmp/rv/repo line="/tmp/rv/repo" trail=- split=2:end spoken="user@host:/tmp/rv/repo, shell, nothing running, unread output, in a split with 1 other, 2 of 5, Command 2"
+group 1 "Group 1" folded=false pinned=false count=1 alerts=0 spoken="Group 1, coloured blue, 1 terminal, expanded, 3 of 5"
+  row 6 "user@host:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, unread output, 1 of 1, Command 3"
+group 2 "Group 2" folded=false pinned=false count=2 alerts=0 spoken="Group 2, coloured green, 2 terminals, expanded, 4 of 5"
+  row 1 "user@host:~" idle number=4 pinned=false folder=~ line="~" trail=- split=2:start spoken="user@host:~, shell, nothing running, in a split with 1 other, 1 of 2, Command 4"
+  row 5 "user@host:~" idle number=5 pinned=false folder=~ line="~" trail=- split=2:end spoken="user@host:~, shell, nothing running, in a split with 1 other, 2 of 2, Command 5"
+  row 8 "user@host:~" idle number=6 pinned=false folder=~ line="~" trail=- split=0 spoken="user@host:~, shell, nothing running, selected, 5 of 5, Command 6"
+> fold 2
+toggleGroup(2) ok

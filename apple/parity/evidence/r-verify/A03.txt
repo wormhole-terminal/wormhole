@@ -1,0 +1,20 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> updates
+updates
+> windows
+Wormhole (Swift experiment) visible=true sheet=false
+Updates visible=true sheet=false
+> window-shot <scratch>/rv/shots/a03-a.png Updates
+window-shot <scratch>/rv/shots/a03-a.png
+> update
+update  phase=idle channel=stable
+> updates
+updates
+> update check
+update check phase=available(AuxModel.Release(version: "99.0.0", notes: "## Verification\n- a test release from the local feed\n- it is not signed by the release key", published: Optional(2026-11-08 12:00:00 +0000), isSecurity: false)) channel=stable
+> window-shot <scratch>/rv/shots/a03-b.png Updates
+window-shot <scratch>/rv/shots/a03-b.png
+> update install
+update install phase=failed("Wormhole isn\'t running from an app bundle.") channel=stable
+> window-shot <scratch>/rv/shots/a03-c.png Updates
+window-shot <scratch>/rv/shots/a03-c.png

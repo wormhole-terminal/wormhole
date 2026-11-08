@@ -1,0 +1,81 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> select 3
+select 3
+> type clear; echo hello select me\r
+typed
+> context-menu
+Copy [c off]
+Paste [v]
+Select All [a]
+---
+Find… [f]
+---
+Split Right [d]
+Split Down [d]
+---
+Clear Buffer [k]
+> select-cells 1 0 1 10
+select-cells 1 0 1 10
+> context-menu
+Copy [c]
+Paste [v]
+Select All [a]
+---
+Find… [f]
+---
+Split Right [d]
+Split Down [d]
+---
+Clear Buffer [k]
+> action copy
+action copy
+> notices
+notices=[]
+> state
+grid=32x40 cell=17x36px scale=2.0 frames_drawn=11 ticks=26 wakes=9 pauses=11 busy_skips=0 blink_fires=0 link=paused words_shaped=24 word_hits=31 glyphs_rasterised=52 atlas_resets=0 terminals=3 selected=3 sidebar=true panel=true tab=changes window=83593 theme=wormhole.dark appearance=dark mode=dark opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transpar
+> screen
+hello select me                 
+➜  repo git:(main) ✗            
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+                                
+> type clear; echo https://example.com/a-link done\r
+typed
+> screen
+https://example.com/a-link done 
+➜  repo git:(main) ✗            
