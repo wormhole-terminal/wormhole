@@ -21,7 +21,6 @@ mod events;
 mod files_panel;
 mod find;
 mod focus;
-mod fonts;
 pub mod folder_picker;
 mod fonts;
 mod frame;

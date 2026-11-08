@@ -67,7 +67,8 @@ final class ThemeTokenTests: XCTestCase {
 
     func testEveryThemeHasEveryCatalogToken() {
         let ui = library.catalog.filter { !$0.name.hasPrefix("metrics.") }
-        XCTAssertEqual(ui.count, 110)
+        // 112 since core's catalog gained tooltip.success and tooltip.danger (status text on the tooltip fill).
+        XCTAssertEqual(ui.count, 112)
         XCTAssertGreaterThan(library.themes.count, 50)
         for theme in library.themes {
             for contrast in [false, true] {
