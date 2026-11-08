@@ -80,6 +80,7 @@ pub(super) const SETTINGS: &[Setting] = &[
     toggle!("borders", borders),
     toggle!("column-dividers", column_dividers),
     toggle!("status-bar", status_bar),
+    toggle!("smooth-resize", smooth_resize),
     toggle!("icon-animations", icon_animations),
     Setting::custom("title-row", title_row::draw_control).below(title_row::draw_parts),
     Setting::select(

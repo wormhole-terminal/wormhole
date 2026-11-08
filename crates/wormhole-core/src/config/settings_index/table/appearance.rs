@@ -63,6 +63,9 @@ pub(super) const APPEARANCE: &[Group] = &[
             entry("status-bar", SETTINGS_APPEARANCE_STATUS_BAR, &["status_bar"])
                 .with_description(SETTINGS_APPEARANCE_STATUS_BAR_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_STATUS_BAR_KEYWORDS),
+            entry("smooth-resize", SETTINGS_APPEARANCE_SMOOTH_RESIZE, &["smooth_resize"])
+                .with_description(SETTINGS_APPEARANCE_SMOOTH_RESIZE_DESCRIPTION)
+                .with_keywords(SETTINGS_APPEARANCE_SMOOTH_RESIZE_KEYWORDS),
             entry("icon-animations", SETTINGS_APPEARANCE_ICON_ANIMATIONS, &["icon_animations"])
                 .with_description(SETTINGS_APPEARANCE_ICON_ANIMATIONS_DESCRIPTION)
                 .with_keywords(SETTINGS_APPEARANCE_ICON_ANIMATIONS_KEYWORDS),

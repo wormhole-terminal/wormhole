@@ -68,6 +68,10 @@ settings-appearance-status-bar = Show status bar
     .description = Branch, agents and terminal size along the bottom of every window
     .keywords = bottom bar footer
 
+settings-appearance-smooth-resize = Resize windows smoothly
+    .description = Off, dragging a window's edge steps by whole characters of the terminal grid. On, it resizes freely: the grid reflows to whole cells and the strip left over takes the terminal's background
+    .keywords = window resize drag snap grid characters cells step smooth free
+
 settings-appearance-icon-animations = Animate icons
     .description = Buttons show what a click did with their icon, such as the + turning, Copy turning into a check, or the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too
     .keywords = motion animation toolbar buttons icons sidebar panel toggle

@@ -299,6 +299,10 @@ entry Appearance status-bar
   label "Show status bar"
   description "Branch, agents and terminal size along the bottom of every window"
   keywords "bottom bar footer"
+entry Appearance smooth-resize
+  label "Resize windows smoothly"
+  description "Off, dragging a window's edge steps by whole characters of the terminal grid. On, it resizes freely: the grid reflows to whole cells and the strip left over takes the terminal's background"
+  keywords "window resize drag snap grid characters cells step smooth free"
 entry Appearance icon-animations
   label "Animate icons"
   description "Buttons show what a click did with their icon, such as the + turning, Copy turning into a check, or the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too"

@@ -71,6 +71,8 @@ pub const APP_SETTINGS: &[&str] = &[
     // How large those two windows' text is: the person's own habit, never a project's.
     "settings_text_size",
     "status_bar",
+    // How the person's window is dragged: a habit of theirs, whatever project is in front.
+    "smooth_resize",
     "minimap",
     "split_gaps",
     "column_dividers",
