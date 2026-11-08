@@ -20,6 +20,8 @@ mod error;
 mod events;
 mod files_panel;
 mod find;
+mod focus;
+mod fonts;
 pub mod folder_picker;
 mod fonts;
 mod frame;
@@ -75,6 +77,10 @@ pub use files_panel::{
     TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord, UsageService,
 };
 pub use find::{FindOutcome, FoundSpan};
+pub use focus::{
+    AreaStops, EscapeRung, EscapeState, FocusArea, FocusStop, ListItem, ListKey, ListMove, PresetShown, WindowPreset,
+    focus_escape, focus_list_walk, focus_press_folds_band, focus_step, focus_tab_step, focus_type_ahead, window_preset,
+};
 pub use fonts::{
     CustomFontFamilyRecord, CustomFontFileRecord, CustomFontsRecord, FontChoiceRecord, FontOrigin,
     font_bundled_family, font_choices, font_custom_scan,

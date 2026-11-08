@@ -14,7 +14,7 @@ struct SidebarTitleRow: View {
     var body: some View {
         HStack(spacing: 0) {
             Spacer(minLength: 0)
-            TitleButton(label: "New terminal", help: "New terminal (⌘T)") { color in
+            TitleButton(label: "New terminal", help: "New terminal (⌘T)", stop: 1) { color in
                 Image(systemName: "plus").font(.system(size: Chrome.glyph, weight: .regular)).foregroundStyle(color)
             } action: {
                 send(.newTerminal)

@@ -16,6 +16,7 @@ public final class PanelController {
     public let usage: UsageStore
     public let worktrees: WorktreeStore
     public let host: any PanelHost
+    public let keyboard = PanelKeyboard()
     public private(set) var folder: String?
     /// A fixed clock (Unix seconds) for screenshots and tests; nil follows the real one.
     public var now: Int?
@@ -74,6 +75,18 @@ public final class PanelController {
         case .history: return history.current == nil ? nil : .historyDiff
         case .files: return files.viewing == nil ? nil : .file
         default: return nil
+        }
+    }
+}
+
+extension PanelController {
+    /// Esc over a diff or file: the thing laid over the terminal closes.
+    public func closeCover() {
+        switch cover {
+        case .changesDiff: changes.close()
+        case .historyDiff: history.close()
+        case .file: files.closeViewer()
+        case nil: break
         }
     }
 }

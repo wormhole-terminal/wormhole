@@ -39,6 +39,9 @@ struct ChromeColours {
     var tooltip: Color { tokens.tooltipBackground }
     var tooltipText: Color { tokens.tooltipText }
     var primary: Color { tokens.primary }
+    /// `border.focus` and `metrics.focus_ring_width`: the keyboard's ring.
+    var focusRing: Color { tokens.borderFocus }
+    var focusRingWidth: CGFloat { tokens.metrics.focusRingWidth }
 
     /// `metrics.divider_width`, 0 for no line; the corners by role.
     var dividerWidth: CGFloat { tokens.metrics.dividerWidth }

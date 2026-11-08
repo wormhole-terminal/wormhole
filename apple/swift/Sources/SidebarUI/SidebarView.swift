@@ -82,6 +82,7 @@ public struct SidebarView: View {
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { viewport = $0 }
         .onChange(of: search.requests) { revealSearch() }
+        .onChange(of: search.keyboardRequests) { focused = true; keysLead = true }
         .onChange(of: state.search) { _, text in if searchText != text { searchText = text } }
         .onChange(of: searchText) { _, text in if text != state.search { send(.search(text)) } }
         .onChange(of: focused || searchFocused, initial: true) { _, has in search.hasKeyboard = has }

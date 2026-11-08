@@ -36,7 +36,7 @@ var targets: [Target] = [
         name: "WindowUI",
         dependencies: [
             "WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "FileIconTheme", "PaletteUI",
-            "TerminalMetal", "TerminalCore", "TerminalUI", "PanesModel", "PanesUI", "PlatformModel", "WindowsModel",
+            "TerminalMetal", "TerminalCore", "TerminalUI", "PanesModel", "PanesUI", "PlatformModel", "WindowsModel", "WordsModel",
         ]),
     // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
     .target(name: "PanelModel", dependencies: ["WorkspaceModel"]),

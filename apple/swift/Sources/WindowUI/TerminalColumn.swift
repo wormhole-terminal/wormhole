@@ -17,6 +17,7 @@ struct TerminalColumn: View {
     let pads: TitlePads
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
+    @Environment(WindowFocus.self) private var focus
 
     var body: some View {
         let cover = hub.panel.cover
@@ -26,6 +27,8 @@ struct TerminalColumn: View {
             } coverTitle: {
                 PanelCoverTitle.carries(cover) ? PanelCoverTitle(controller: hub.panel) : nil
             }
+            // The strip wears the ring while the keys are on it (← → step between terminals).
+            .overlay { Color.clear.padding(.vertical, Space._1).focusRing(focus.ring(.tabs), radius: colours.radius) }
             .padding(.leading, pads.leading)
             .padding(.trailing, pads.trailing)
             .frame(height: Chrome.titleHeight)

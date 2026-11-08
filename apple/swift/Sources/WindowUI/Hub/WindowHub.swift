@@ -21,6 +21,8 @@ public final class WindowHub {
     public let drag = PaneDragSession()
     /// ⌘F while the sidebar has the keyboard is its search's, else the terminal's find.
     public let sidebarSearch = SidebarSearch()
+    /// Where the keyboard is among the window's areas, and where F6, ⇥ and Esc take it.
+    @ObservationIgnored public private(set) lazy var focus = WindowFocus(hub: self)
     /// A terminal dragged out of the sidebar over the panes: the list reports it, the pane area takes the drop.
     public let terminalDrag = TerminalDragPointer()
     /// Each terminal's agent's model and context window, as its status line last said (the title row's gauge chip).
@@ -28,6 +30,8 @@ public final class WindowHub {
     public var actions = HubActions()
     /// The title row's parts as arranged (View ▸ Title Row, the row's own menu).
     public var titleRow = TitleRow.default
+    /// Zen mode is on: the row is the preset's, and arranging it would change the person's own (`settings::zen`).
+    public var zenActive = false
     /// The title row's order of giving way: the core's where the FFI is linked, else every part at its natural width.
     public var rowFitting: any RowFitting = NaturalFit()
     /// The right panel's state over the backends the app hands in (the core's git where the FFI is linked, else the

@@ -6,24 +6,13 @@ import XCTest
 
 @MainActor
 final class SidebarTests: XCTestCase {
-    func testKeysWalkGroupsAndTerminals() {
-        let walk = SidebarWalk(SidebarFixture.state.sections)
-        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .row(2), .group(1), .row(3), .row(4), .row(5), .row(6)])
-        let group = 2
-        XCTAssertEqual(walk.move(from: group, .left), .fold(group))
-        XCTAssertEqual(walk.move(from: group, .right), .to(3), "an open group goes to its first terminal")
-        XCTAssertEqual(walk.move(from: 4, .left), .to(group), "a terminal goes to its group")
-        XCTAssertEqual(walk.move(from: 0, .up), .stay)
-        XCTAssertEqual(walk.move(from: nil, .up), .to(6))
-        XCTAssertEqual(walk.move(from: 0, .last), .to(6))
-        XCTAssertEqual(walk.typeAhead(from: 0, "sc"), 6)
-        XCTAssertEqual(walk.typeAhead(from: 6, "sc"), 6, "the only match stays")
-    }
-
-    func testFoldedGroupsAreSkippedByKeys() {
-        let walk = SidebarWalk(SidebarFixture.folded.sections)
-        XCTAssertEqual(walk.items.map(\.stop), [.row(1), .row(2), .group(1), .row(6)])
-        XCTAssertEqual(walk.move(from: 2, .right), .open(2))
+    /// What is on screen is listed (groups and terminals as stops, a folded group's rows left out); where a key
+    /// goes is the core's, tested through the FFI (`FocusFFITests`).
+    func testKeysListGroupsAndTerminalsOnScreen() {
+        XCTAssertEqual(
+            SidebarWalk(SidebarFixture.state.sections).items.map(\.stop),
+            [.row(1), .row(2), .group(1), .row(3), .row(4), .row(5), .row(6)])
+        XCTAssertEqual(SidebarWalk(SidebarFixture.folded.sections).items.map(\.stop), [.row(1), .row(2), .group(1), .row(6)])
     }
 
     func testHintsShowOnlyAfterTheHoldAndNeverForAShortcut() {

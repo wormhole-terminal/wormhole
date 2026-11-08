@@ -8,6 +8,7 @@ import DesignSystem
 import Observation
 import SidebarUI
 import SwiftUI
+import WorkspaceModel
 
 @MainActor @Observable
 public final class WindowLook {
@@ -16,16 +17,32 @@ public final class WindowLook {
     public var blur = true
     /// Liquid Glass under the sidebar and the panel (macOS 26 and later), off by default as in the GPUI app.
     public var liquidGlass = false
+    /// Zen mode: every window drawn with the Zen preset, for a while and saved nowhere (`settings::zen`). It is a layer over
+    /// the person's own values below, which it never changes, so ending it brings back exactly what was there.
+    public var zen: WindowShown?
     /// The optional bar along the bottom, hidden by default.
-    public var statusBar = false
+    public var statusBar: Bool {
+        get { zen?.statusBar ?? ownStatusBar }
+        set { ownStatusBar = newValue }
+    }
     /// The minimap along the terminals' right edge instead of the scroll bar (`minimap`, off by default).
-    public var minimap = false
+    public var minimap: Bool {
+        get { zen?.minimap ?? ownMinimap }
+        set { ownMinimap = newValue }
+    }
+    /// What the person set, whatever Zen mode shows meanwhile: what the menus' titles say.
+    var ownStatusBar = false
+    var ownMinimap = false
     /// A split's panes are each their own rounded box, apart (`split_gaps`, on by default).
     public var splitGaps = true
     /// Terminals as tabs under the title row instead of the sidebar's list (Show terminals in ▸ Tabs).
     public var tabsOnTop = false
     /// The lines between the columns (the Column dividers setting).
-    public var columnDividers = true
+    public var columnDividers: Bool {
+        get { zen?.columnDividers ?? ownColumnDividers }
+        set { ownColumnDividers = newValue }
+    }
+    private var ownColumnDividers = true
     /// How the sidebar's list looks (density, cards, what rows show): Settings → Terminals & sidebar.
     public var sidebar = SidebarAppearance()
     /// Reduce Transparency or Increase Contrast is on, as the theme store follows them live (it observes the

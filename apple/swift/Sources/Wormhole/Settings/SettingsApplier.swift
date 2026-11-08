@@ -90,10 +90,16 @@ final class SettingsApplier {
         }
     }
 
+    /// Zen mode started or ended: each window's row is the preset's, or the person's own again.
+    func applyZen() { applyTitleRow(model.backend.values, to: app.sessions.map(\.hub)) }
+
     private func applyTitleRow(_ values: [String: JSONValue], to hubs: [WindowHub]) {
-        guard let keys = values["title_row"]?.array?.compactMap(\.string) else { return }
+        let zen = app.look.zen
+        guard let keys = zen?.titleRow ?? values["title_row"]?.array?.compactMap(\.string) else { return }
         let row = TitleRow(keys.compactMap(TitlePart.init(rawValue:)))
-        for hub in hubs where hub.titleRow != row {
+        for hub in hubs {
+            hub.zenActive = zen != nil
+            guard hub.titleRow != row else { continue }
             hub.titleRow = row
             hub.rowChanged()
         }

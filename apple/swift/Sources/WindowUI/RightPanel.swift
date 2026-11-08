@@ -24,7 +24,7 @@ struct RightPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PanelTabBar(tab: tab, tabs: tabs, select: { hub.send(.showPanelTab($0)) }, badges: badges)
+            PanelTabBar(tab: tab, tabs: hub.panelTabs, select: { hub.send(.showPanelTab($0)) }, badges: badges)
             PanelBody(tabName: tab.rawValue, controller: controller)
                 .id(tab)
                 .transition(.asymmetric(insertion: arrival, removal: .identity))
@@ -38,11 +38,6 @@ struct RightPanel: View {
             controller.follow(folder: expanded(folder))
         }
         .onChange(of: folder) { controller.follow(folder: expanded(folder)) }
-    }
-
-    /// The tabs the core offers (a feature that is off brings none), or all of them without one.
-    private var tabs: [PanelTab] {
-        hub.state.layout.map { $0.tabs.filter(\.enabled).map(\.tab) } ?? PanelTab.barOrder
     }
 
     /// The counts the strip shows, read from the stores so a change redraws the strip.

@@ -17,6 +17,7 @@ struct SelectableListSplit<Top: View, Bottom: View>: View {
     @ViewBuilder let top: Top
     @ViewBuilder let bottom: Bottom
     @FocusState private var focused: Bool
+    @Environment(PanelKeyboard.self) private var keyboard: PanelKeyboard?
     @Environment(\.panelMotion) private var motion
     @Environment(\.tokens) private var tokens
 
@@ -35,6 +36,11 @@ struct SelectableListSplit<Top: View, Bottom: View>: View {
         .focused($focused)
         .focusEffectDisabled()
         .simultaneousGesture(TapGesture().onEnded { focused = true })
+        // The window's F6 and ⇥ ask the list for the keyboard; it tells the window when it has it.
+        .onChange(of: keyboard?.requests) { focused = true }
+        .onChange(of: focused) { _, now in keyboard?.focusChanged(now) }
+        .onAppear { keyboard?.appeared() }
+        .onDisappear { keyboard?.disappeared(focused: focused) }
         .onKeyPress(.downArrow) { step(1); return .handled }
         .onKeyPress(.upArrow) { step(-1); return .handled }
         .onKeyPress(.rightArrow) { fold.map { $0(true) } == nil ? .ignored : .handled }

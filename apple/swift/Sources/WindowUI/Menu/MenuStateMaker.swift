@@ -16,6 +16,7 @@ struct MenuFacts {
     var canSplitRight: Bool
     var canSplitDown: Bool
     var minimap = false
+    var zen = false
     /// The actions the dispatcher can run.
     var implemented: Set<ActionID>
 }
@@ -32,13 +33,19 @@ enum MenuStateMaker {
         if !facts.tabsOnTop { menu.off.insert("toggleTerminalTabs") }
         if !facts.isFullScreen { menu.off.insert("fullScreen") }
         if !facts.isZoomed { menu.off.insert("zoomPane") }
-        menu.off.insert("toggleZenMode")
+        // Zen mode hides the status bar, the minimap and the panel whatever they are set to: their toggles have nothing to
+        // do until it ends (and the menu says which way Zen mode itself goes).
+        if facts.zen {
+            menu.disabled.formUnion(["toggleStatusBar", "toggleMinimap", "toggleRightPanel"])
+        } else {
+            menu.off.insert("toggleZenMode")
+        }
         if !facts.minimap { menu.off.insert("toggleMinimap") }
         menu.checked.insert(tabAction(state.panelTab))
         if selected?.isPinned == true { menu.checked.insert("pinTerminal") }
         menu.split = facts.isSplit
 
-        menu.disabled = Set(keymap.entries.filter { $0.isLive && !facts.implemented.contains($0.id) }.map(\.id))
+        menu.disabled.formUnion(keymap.entries.filter { $0.isLive && !facts.implemented.contains($0.id) }.map(\.id))
         if selected == nil { menu.disabled.formUnion(["closeTerminal", "pinTerminal", "splitRight", "splitDown"]) }
         if selected?.folder == nil { menu.disabled.formUnion(["revealInFinder", "copyPath"]) }
         if !facts.canSplitRight { menu.disabled.insert("splitRight") }

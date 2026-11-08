@@ -11,9 +11,14 @@ extension ActionRouter {
         let look = app.look
         return [
             "toggleSidebar": { hub.send(.toggleSidebar) },
-            "toggleRightPanel": { hub.send(.togglePanel) },
-            "toggleStatusBar": { look.statusBar.toggle() },
+            // Under Zen mode these have nothing to show and would only change what comes back, unseen: the menu greys them.
+            "toggleRightPanel": { if look.zen == nil { hub.send(.togglePanel) } },
+            "toggleStatusBar": { if look.zen == nil { look.statusBar.toggle() } },
+            "toggleZenMode": { [unowned self] in app.toggleZen() },
             "toggleTerminalTabs": { look.tabsOnTop.toggle() },
+            "focusNextArea": { hub.focus.step(1) },
+            "focusPreviousArea": { hub.focus.step(-1) },
+            "focusTerminalOrPanel": { hub.focus.toggleTerminalAndPanel() },
             "showChanges": { hub.send(.showPanelTab(.changes)) },
             "showHistory": { hub.send(.showPanelTab(.history)) },
             "showNotes": { hub.send(.showPanelTab(.notes)) },
@@ -28,6 +33,7 @@ extension ActionRouter {
             "actualSize": { hub.zoomText(step: nil) },
             // Show / Hide Minimap is the setting itself (Settings and the menu are one switch).
             "toggleMinimap": { [unowned self] in
+                guard look.zen == nil else { return }
                 let backend = app.settingsModel.backend
                 backend.set("minimap", to: .bool(!(backend.values["minimap"]?.bool ?? false)))
             },

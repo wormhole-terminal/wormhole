@@ -54,4 +54,7 @@ struct StatusSummary: Equatable {
     }
 
     var isEmpty: Bool { attention == nil && rest.isEmpty }
+
+    /// What a click on each item goes to, in the bar's order (the keys walk them).
+    var items: [TerminalID] { (attention.map { [$0.id] } ?? []) + rest.map(\.first) }
 }

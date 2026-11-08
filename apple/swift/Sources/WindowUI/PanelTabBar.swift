@@ -61,6 +61,7 @@ private struct PanelTabButton: View {
     let action: @MainActor () -> Void
     @State private var hovering = false
     @Environment(\.chrome) private var colours
+    @Environment(WindowFocus.self) private var focus
 
     var body: some View {
         Button(action: action) {
@@ -78,6 +79,7 @@ private struct PanelTabButton: View {
                         RoundedRectangle(cornerRadius: colours.radius).fill(colours.bandHover)
                     }
                 }
+                .focusRing(isSelected && focus.ring(.panelTabs), radius: colours.radius)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

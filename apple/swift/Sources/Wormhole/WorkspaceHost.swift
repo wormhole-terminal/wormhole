@@ -25,6 +25,7 @@ struct WindowsHost {
         #if WITH_UNIFFI
             if let program = options.program {
                 let windows = try RustWindowsBackend()
+                CoreWindowRules.install()
                 var first = true
                 return WindowsHost(backend: windows) { id in
                     // Persistent terminals follow Settings' flag (off in a release build unless unlocked). The terminals

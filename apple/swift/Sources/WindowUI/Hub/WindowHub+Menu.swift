@@ -10,8 +10,8 @@ extension WindowHub {
         let panes = paneFacts
         return MenuStateMaker.make(
             MenuFacts(
-                state: state, statusBar: look.statusBar, tabsOnTop: look.tabsOnTop, isFullScreen: isFullScreen,
-                isSplit: panes.isSplit, isZoomed: panes.isZoomed, canSplitRight: canSplit(.row), canSplitDown: canSplit(.column), minimap: look.minimap,
+                state: state, statusBar: look.ownStatusBar, tabsOnTop: look.tabsOnTop, isFullScreen: isFullScreen,
+                isSplit: panes.isSplit, isZoomed: panes.isZoomed, canSplitRight: canSplit(.row), canSplitDown: canSplit(.column), minimap: look.ownMinimap, zen: look.zen != nil,
                 implemented: implemented))
     }
 

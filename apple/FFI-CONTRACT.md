@@ -1086,3 +1086,23 @@ SettingsHandle.importApply(home:, source:, ticked: [UInt32], shown: UInt32, font
 func settingsUpdateUserAgent(version:, counting:, unstable:) -> String?    // core's counted_user_agent / plain_user_agent
 func settingsOthersHead(count:), settingsImportSelectedLine(selected:, total:), settingsResetQuestion(count:), settingsPreviewNote(section:) -> String?
 ```
+
+## Keyboard focus and Zen mode (`focus.rs`, round R)
+
+Additive; pure functions over `wormhole_core::view::focus` and `config::presets`, no state, no threads. The shell holds the real focus and the
+window's facts, asks, and acts on the answer (`WorkspaceModel.Focus.rules`, installed by `WorkspaceBridge.CoreWindowRules`).
+
+```
+enum FocusArea { TitleRow, Sidebar, Tabs, Terminal, PanelTabs, PanelContent, StatusBar }        // core's Area, F6's order
+record FocusStop { area, index }      record AreaStops { area, count }                            // a ⇥ stop; how many an area has now
+func focusStep(from: FocusArea?, delta: i32, shown: [FocusArea]) -> FocusArea                    // F6 / ⇧F6 skip what is not on screen
+func focusTabStep(from: FocusStop?, delta: i32, stops: [AreaStops]) -> FocusStop                  // ⇥ / ⇧⇥, stop by stop
+record EscapeState { terminal, popup, detail }   enum EscapeRung { ToShell, ClosePopup, CloseDetail, ToTerminal }
+func focusEscape(state: EscapeState) -> EscapeRung                                                // the Esc ladder
+record ListItem { level: u8, fold: bool? }   enum ListKey { Up, Down, Left, Right, First, Last }   enum ListMove { To{index}, Open{index}, Fold{index}, Stay }
+func focusListWalk(items: [ListItem], at: u32?, key: ListKey) -> ListMove                        // arrows in a list
+func focusTypeAhead(names: [String], at: u32?, typed: String) -> u32?                             // letters jump by name
+func focusPressFoldsBand(space: bool) -> bool                                                     // Space folds a band, ↩ does not
+enum WindowPreset { Zen, Balanced, Everything }   record PresetShown { titleRow: [String], statusBar, minimap, columnDividers, panelOpen }
+func windowPreset(preset: WindowPreset) -> PresetShown                                            // Zen's layer is windowPreset(.zen)
+```

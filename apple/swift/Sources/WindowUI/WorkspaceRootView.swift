@@ -43,8 +43,14 @@ public struct WorkspaceRootView: View {
         )
         .background(WindowBackdrop())
         .background(WindowReader(facts: $facts))
+        .background(FocusHolder(focus: hub.focus))
+        // A new window starts with the keys in its terminal, as the GPUI app's does (SwiftUI would give them to the first list).
+        .task { hub.focus.focusTerminal() }
+        // ⇥ and Esc from the lists and fields of SwiftUI; the holder and the terminal take their own (`WindowFocus`).
+        .onKeyPress(keys: [.tab, .escape], phases: .down) { hub.focus.listKey($0) }
         .coordinateSpace(name: PaneSpace.name)
         .environment(look)
+        .environment(hub.focus)
         .themed()
         .ignoresSafeArea()
     }

@@ -2,6 +2,7 @@
 // Return opens a terminal and Space folds a group (`SidebarWalk` decides each move). Esc ends a drag in flight.
 
 import SwiftUI
+import WorkspaceModel
 
 extension SidebarView {
     func handle(_ press: KeyPress, _ walk: SidebarWalk) -> KeyPress.Result {
@@ -35,7 +36,7 @@ extension SidebarView {
         if press.key == .return || press.key == .space, let at {
             switch walk.items[at].stop {
             case .row(let id): send(.select(id))
-            case .group(let id): if press.key == .space { send(.toggleGroup(id)) }
+            case .group(let id): if Focus.rules.pressFoldsBand(space: press.key == .space) { send(.toggleGroup(id)) }
             }
             return .handled
         }

@@ -4,6 +4,7 @@
 // fills its strip while its column is in and follows the column's slide.
 
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 struct WindowControls: View {
@@ -14,12 +15,14 @@ struct WindowControls: View {
     let panelShown: CGFloat
     /// Wanted but without room: the toggle wears a dot that says it comes back.
     let panelWaiting: Bool
+    /// Under Zen mode the panel's button is the way out: it says so, and a click leaves Zen mode instead of opening a panel.
+    let leaveZen: (() -> Void)?
     let send: @MainActor (WorkspaceAction) -> Void
 
     var body: some View {
         // Centred in the 38 pt row, as the GPUI app's buttons are.
         ZStack(alignment: .leading) {
-            TitleButton(label: sidebarOpen ? "Hide sidebar" : "Show sidebar", help: sidebarHelp) { color in
+            TitleButton(label: sidebarOpen ? "Hide sidebar" : "Show sidebar", help: sidebarHelp, stop: 0) { color in
                 PanelGlyph(side: .left, fill: sidebarShown, color: color)
             } action: {
                 send(.toggleSidebar)
@@ -29,7 +32,7 @@ struct WindowControls: View {
             TitleButton(label: panelOpen ? "Hide right panel" : "Show right panel", help: panelHelp, glyph: { color in
                 PanelGlyph(side: .right, fill: panelShown, color: color)
             }, marked: panelWaiting) {
-                send(.togglePanel)
+                if let leaveZen { leaveZen() } else { send(.togglePanel) }
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.trailing, Chrome.panelToggleRight)
@@ -41,6 +44,7 @@ struct WindowControls: View {
     private var sidebarHelp: String { (sidebarOpen ? "Hide sidebar" : "Show sidebar") + " (⌘B)" }
 
     private var panelHelp: String {
+        if leaveZen != nil { return Words.text("zen-panel-hidden", fallback: "Zen mode hides the right panel · Click to leave Zen mode") }
         let action = panelOpen ? "Hide right panel" : "Show right panel"
         return (panelWaiting ? action + " · hides the sidebar to make room" : action) + " (⌥⌘B)"
     }

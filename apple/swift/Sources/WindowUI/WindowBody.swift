@@ -34,26 +34,36 @@ struct WindowBody: View {
         GeometryReader { proxy in
             let window = proxy.size.width
             let fit = ColumnFit(window: window, state: state, sidebarWanted: sidebarWanted, fallback: widths)
-            let panelFits = fit.panelOpen
+            // Zen mode draws no panel and keeps what the window was asked for (`window::layout`): it is back as it was.
+            let panelFits = fit.panelOpen && look.zen == nil
+            let panelWanted = state.panelVisible && look.zen == nil
             VStack(spacing: 0) {
                 SlideGeometry(sidebarShown: sidebarSlide.shown, panelShown: panelSlide.shown) { sidebar, panel in
                     panes(window: window, fit: fit, sidebarShown: sidebar, panelShown: panel)
                 }
-                if look.statusBar { statusBar(window: window) }
+                if look.statusBar { statusBar(window: window).transition(.opacity) }
             }
             .overlay(alignment: .top) {
                 WindowControls(
                     facts: facts, sidebarOpen: sidebarWanted, sidebarShown: sidebarSlide.shown,
                     panelOpen: panelFits, panelShown: panelSlide.shown,
-                    panelWaiting: fit.panelWaiting, send: send)
+                    panelWaiting: fit.panelWaiting && look.zen == nil, leaveZen: look.zen == nil ? nil : { hub.actions.perform("toggleZenMode") },
+                    send: send)
             }
+            // The status bar fades in and out (Reduce Motion cuts); the terminal resizes once, when it is gone.
+            .animation(animates ? Motion.fade : nil, value: look.statusBar)
             .overlay { overlay }
             .overlay(alignment: .topLeading) {
                 if let drag { ResizeReadout(text: drag.readout, pointer: drag.pointer) }
             }
             // The core fits the columns to the window's width, so it is told when that changes.
             .onChange(of: window, initial: true) { _, width in send(.setWindowWidth(Double(width))) }
-            .onChange(of: Intent(sidebar: sidebarWanted, panelWanted: state.panelVisible, panelFits: panelFits), initial: true) {
+            // F6 and ⇥ skip what is not on screen.
+            .onChange(
+                of: WindowFocus.Layout(sidebar: sidebarWanted, panel: panelWanted && panelFits, statusBar: look.statusBar, tabsOnTop: look.tabsOnTop),
+                initial: true
+            ) { _, layout in hub.focus.layout = layout }
+            .onChange(of: Intent(sidebar: sidebarWanted, panelWanted: panelWanted, panelFits: panelFits), initial: true) {
                 old, new in
                 let wantedChanged = old.sidebar != new.sidebar || old.panelWanted != new.panelWanted
                 let animated = animates && wantedChanged && drag == nil

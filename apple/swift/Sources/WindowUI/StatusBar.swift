@@ -20,6 +20,7 @@ struct StatusBar: View {
     let select: @MainActor (TerminalID) -> Void
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
+    @Environment(WindowFocus.self) private var focus
 
     /// The gap between items: 14 from one's text to the next's, less the room each has round its text.
     private static let gap: CGFloat = 14 - 2 * Chrome.itemPad
@@ -42,12 +43,14 @@ struct StatusBar: View {
                     }
                 }
                 .buttonStyle(StatusItemStyle(tint: colours.attentionTint))
+                .focusRing(focus.ring(.statusBar, 0), radius: colours.radius)
             }
             HStack(spacing: 0) {
                 ForEach(Array(summary.rest.enumerated()), id: \.element.id) { index, count in
                     if index > 0 && detail.words { Text("·").foregroundStyle(colours.faint) }
                     Button { select(count.first) } label: { countLabel(count, words: detail.words) }
                         .buttonStyle(StatusItemStyle())
+                        .focusRing(focus.ring(.statusBar, index + (summary.attention == nil ? 0 : 1)), radius: colours.radius)
                 }
             }
             Spacer(minLength: 0)

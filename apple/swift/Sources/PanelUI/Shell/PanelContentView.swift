@@ -23,6 +23,7 @@ public struct PanelContentView: View {
             }
         }
         .animation(motion.tab, value: controller.tab)
+        .environment(controller.keyboard)
         .environment(\.panelHost, controller.host)
         .environment(\.panelRoot, controller.folder)
         .environment(\.showFileHistory, controller.showFileHistory)

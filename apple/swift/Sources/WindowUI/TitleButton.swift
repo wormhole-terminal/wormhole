@@ -9,18 +9,22 @@ import SwiftUI
 struct TitleButton<Glyph: View>: View {
     let label: String
     let help: String
+    /// Which stop of the title row's ⇥ order this button is, where the keyboard can be on it.
+    var stop: Int?
     /// Draws the glyph in the colour the button is giving it now.
     @ViewBuilder let glyph: (Color) -> Glyph
     var marked = false
     let action: @MainActor () -> Void
     @State private var hovering = false
     @Environment(\.chrome) private var colours
+    @Environment(WindowFocus.self) private var focus
 
     var body: some View {
         Button(action: action) {
             glyph(hovering ? colours.text : colours.muted)
                 .frame(width: Chrome.face, height: Chrome.face)
                 .background(hovering ? colours.bandHover : .clear, in: RoundedRectangle(cornerRadius: colours.radius))
+                .focusRing(stop.map { focus.ring(.titleRow, $0) } ?? false, radius: colours.radius)
                 .overlay(alignment: .topTrailing) { if marked { MarkDot() } }
                 .frame(width: Chrome.hit, height: Chrome.hit)
                 .contentShape(Rectangle())
