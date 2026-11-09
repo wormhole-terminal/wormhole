@@ -49,4 +49,6 @@ public protocol WindowsBackend: AnyObject {
     func fit(_ frame: WindowFrame, on displays: [DisplayArea]) -> WindowFrame
     /// Where a window opened from `frame` goes on `display`: a step down and to the right, or the corner.
     func cascade(_ frame: WindowFrame, on display: DisplayArea) -> WindowFrame
+    /// The smallest window content: the sidebar beside a usable terminal.
+    var minSize: CGSize { get }
 }

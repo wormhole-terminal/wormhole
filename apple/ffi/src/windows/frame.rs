@@ -83,6 +83,20 @@ pub fn fit_frame(frame: FrameRecord, displays: Vec<DisplayRecord>) -> FrameRecor
     WindowFrame::from(frame).fitted(&displays).into()
 }
 
+/// A window's smallest content size.
+#[derive(Debug, Clone, Copy, PartialEq, uniffi::Record)]
+pub struct WindowMinSize {
+    pub width: f32,
+    pub height: f32,
+}
+
+/// The smallest window, the GPUI app's too: the sidebar beside a usable terminal, 400 pt tall.
+#[uniffi::export]
+pub fn window_min_size() -> WindowMinSize {
+    use wormhole_core::view::layout::{WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH};
+    WindowMinSize { width: WINDOW_MIN_WIDTH, height: WINDOW_MIN_HEIGHT }
+}
+
 /// Where a window opened from `from` goes on `display`: a step down and to the right, or the corner.
 #[uniffi::export]
 pub fn cascade_frame(from: FrameRecord, display: DisplayRecord) -> FrameRecord {

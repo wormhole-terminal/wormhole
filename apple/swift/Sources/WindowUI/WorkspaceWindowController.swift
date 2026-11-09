@@ -27,7 +27,7 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     /// The rectangle the window had before it was zoomed or made full screen: what a record of it comes back to.
     public private(set) var windowedFrame = NSRect.zero
 
-    public init<Content: View>(title: String, contentSize: CGSize, content: Content) {
+    public init<Content: View>(title: String, contentSize: CGSize, minSize: CGSize, content: Content) {
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: contentSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -39,7 +39,7 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
         // (`WindowBackdrop`), so a translucent theme shows the desktop and an opaque one does not.
         window.isOpaque = false
         window.backgroundColor = .clear
-        window.minSize = NSSize(width: 640, height: 360)
+        window.contentMinSize = minSize
         window.isReleasedWhenClosed = false
         let hosting = NSHostingView(rootView: content)
         // The window's size is the user's; the SwiftUI layout must not resize it as columns collapse.
@@ -80,7 +80,7 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     /// beat later, so what it holds mid-drag is not the window's size now.
     public func windowWillResize(_ sender: NSWindow, to proposed: NSSize) -> NSSize {
         guard snapsToGrid(), let facts = dragFacts ?? gridFacts?() else { return proposed }
-        let least = sender.frameRect(forContentRect: NSRect(origin: .zero, size: sender.minSize)).size
+        let least = sender.frameRect(forContentRect: NSRect(origin: .zero, size: sender.contentMinSize)).size
         let from = dragFacts == nil ? sender.frame.size : dragStart.size
         return ResizeSteps.snapped(proposed, from: from, spare: facts.spare, cell: facts.cell, least: least)
     }

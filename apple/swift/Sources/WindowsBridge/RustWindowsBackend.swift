@@ -50,4 +50,9 @@ public final class RustWindowsBackend: WindowsBackend {
     public func cascade(_ frame: WindowFrame, on display: DisplayArea) -> WindowFrame {
         WindowFrame(cascadeFrame(from: frame.record, display: display.record))
     }
+
+    public var minSize: CGSize {
+        let least = windowMinSize()
+        return CGSize(width: Double(least.width), height: Double(least.height))
+    }
 }

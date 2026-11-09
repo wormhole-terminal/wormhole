@@ -5,7 +5,7 @@ mod frame;
 mod registry;
 mod workspace_windows;
 
-pub use frame::{DisplayRecord, FrameKind, FrameRecord, cascade_frame, fit_frame};
+pub use frame::{DisplayRecord, FrameKind, FrameRecord, WindowMinSize, cascade_frame, fit_frame, window_min_size};
 pub use registry::{PlannedWindow, SavedWindow, Windows};
 pub use workspace_windows::{Departure, TakenOut};
 

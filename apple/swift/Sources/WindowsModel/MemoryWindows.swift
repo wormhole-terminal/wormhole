@@ -41,6 +41,9 @@ public final class MemoryWindows: WindowsBackend {
 
     public func fit(_ frame: WindowFrame, on displays: [DisplayArea]) -> WindowFrame { frame }
 
+    /// The core's `WINDOW_MIN_*`, for the sample that runs without it.
+    public var minSize: CGSize { CGSize(width: 560, height: 400) }
+
     /// The core's step, so the sample's second window does not open exactly over the first.
     public func cascade(_ frame: WindowFrame, on display: DisplayArea) -> WindowFrame {
         WindowFrame(x: frame.x + 26, y: frame.y + 26, width: frame.width, height: frame.height, display: display.id)

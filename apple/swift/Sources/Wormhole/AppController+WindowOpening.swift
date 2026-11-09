@@ -53,7 +53,8 @@ extension AppController {
             }
         } ?? CGSize(width: 1320, height: 820)
         let title = "Wormhole (Swift experiment)" + (sessions.first === session ? "" : " \(session.id)")
-        let controller = WorkspaceWindowController(title: title, contentSize: size, content: WorkspaceRootView(hub: hub, look: look))
+        let controller = WorkspaceWindowController(
+            title: title, contentSize: size, minSize: windowsHost.backend.minSize, content: WorkspaceRootView(hub: hub, look: look))
         wire(controller, of: session)
         session.controller = controller
         if let frame, let window = controller.window { WindowFrames.place(frame, on: window) }

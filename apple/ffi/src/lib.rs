@@ -124,8 +124,8 @@ pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
 pub use windows::{
-    Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, Windows,
-    cascade_frame, fit_frame,
+    Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, WindowMinSize, Windows,
+    cascade_frame, fit_frame, window_min_size,
 };
 pub use workspace::{TerminalFactsRecord, Workspace, WorkspaceConfig, WorkspaceEvent, WorkspaceListener};
 pub use workspace_waited::Waited;
