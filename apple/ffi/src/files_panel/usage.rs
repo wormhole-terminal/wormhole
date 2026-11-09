@@ -13,7 +13,7 @@ use wormhole_core::storage::store::Store;
 
 use crate::error::FfiError;
 use crate::files_panel::listener::{PanelListener, Waker};
-use crate::isolation;
+use crate::profile;
 
 /// One meter: a plan's limit window, as the agent reports it.
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
@@ -106,8 +106,7 @@ impl UsageService {
     /// Fails unless this is an isolated instance of the experiment (the reports are kept in its database).
     #[uniffi::constructor]
     pub fn new(listener: Arc<dyn PanelListener>) -> Result<Arc<Self>, FfiError> {
-        isolation::require()?;
-        Ok(Self::in_dir(&wormhole_core::storage::paths::data_dir(), listener))
+        Ok(Self::in_dir(&profile::active_dir()?, listener))
     }
 
     /// The latest report of each agent that has reported, in the order they first did.

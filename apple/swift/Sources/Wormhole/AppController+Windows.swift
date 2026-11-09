@@ -30,7 +30,7 @@ extension AppController {
         let effects = Self.makeEffects()
         let panel = PanelBackendsFactory.make(options, store: host.store, policy: policy, effects: effects)
         let hub = WindowHub(store: host.store, terminals: TerminalViews { factory.make($0) }, panelBackends: panel.backends)
-        let session = WindowSession(id: id, hub: hub, factory: factory, effects: effects, usage: panel.usage, backends: panel.backends)
+        let session = WindowSession(id: id, windows: windowsHost, hub: hub, factory: factory, effects: effects, usage: panel.usage, backends: panel.backends)
         #if WITH_UNIFFI
             // The title row's order of giving way is the core's, wherever the core runs the window.
             if options.program != nil { hub.rowFitting = CoreRowFitting() }
@@ -66,7 +66,7 @@ extension AppController {
         hub.actions.terminalMenu = { [weak self, weak session] in self?.terminalMenu(for: $0, in: session) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
         hub.actions.openSettings = { [weak self] in self?.showSettings() }
-        hub.actions.profiles = { [weak self] in self?.profileChoices() ?? [] }
+        hub.actions.profiles = profileList(for: session)
         hub.actions.profile = profileActions()
         hub.actions.showTerminalsInSidebar = { [weak self] in self?.look.tabsOnTop = false }
     }

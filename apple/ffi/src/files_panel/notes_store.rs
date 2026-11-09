@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use wormhole_core::storage::store::{NoteRecord, SessionNotes, Store, TaskRecord};
 
 use crate::error::FfiError;
-use crate::isolation;
+use crate::profile;
 
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct NoteSaved {
@@ -79,8 +79,7 @@ impl SessionNotesStore {
     /// Fails unless this is an isolated instance of the experiment, or the database can't be opened.
     #[uniffi::constructor]
     pub fn new() -> Result<Arc<Self>, FfiError> {
-        isolation::require()?;
-        Self::in_dir(&wormhole_core::storage::paths::data_dir())
+        Self::in_dir(&profile::active_dir()?)
     }
 
     /// What was saved for terminal `session` (nothing: empty).

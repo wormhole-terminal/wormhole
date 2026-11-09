@@ -108,7 +108,7 @@ extension AppController {
 
     func cameToFront(_ session: WindowSession) {
         lastFront = session
-        windowsHost.backend.saveFront(session.id)
+        session.windows.backend.saveFront(session.id)
         menus?.windowsChanged()
     }
 }

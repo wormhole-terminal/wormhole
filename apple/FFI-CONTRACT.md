@@ -565,7 +565,7 @@ Errors are `SettingsError` (`notIsolated`, `invalid(reason)`, `profile(reason)`,
 is core's sentence).
 
 ```swift
-static func open(profile: String?, listener: SettingsListener) throws -> SettingsHandle   // nil: Default; isolated only; may create config.json
+static func open(profile: String?, listener: SettingsListener) throws -> SettingsHandle   // nil: the profile Wormhole is in (profiles.json); isolated only; may create config.json
 func values() -> String            // JSON object: every schema key -> effective value (project overrides on top)
 func defaults() -> String          // the same keys at their defaults
 func set(key: String, value: String) throws          // core refuses unknown keys and values a setting does not read
@@ -1198,3 +1198,26 @@ Nothing opens or runs by itself: an offer is a chip, a click opens the file, `ru
 A program's OSC 9;4 bar that stops being renewed goes after `PROGRESS_TIMEOUT` (15 s): the workspace arms one deadline in its
 pump when a report appears (`Pump::progress_by`), the pump drops the bar when it falls due (or waits out what a renewal left) and
 the row's state is told as every report is. No polling.
+
+## Profiles: which one Wormhole is in (`profile.rs`, round R)
+
+Additive, contract version stays 2. `profiles.json` (core's `ProfileList`, written by `settingsSwitchProfile`) says which profile
+Wormhole is in; every object that keeps a profile's data reads it when it is made, so a switch moves them all and Swift
+only hides and shows windows. A profile's folder is core's `DataRoot::profile` (Default's is the data folder itself).
+
+```swift
+activeProfile() throws -> ActiveProfile     // { id, dir }: the profile Wormhole is in and its folder (config.json, themes/, fonts/, wormhole.db)
+Windows()                                    // now the ACTIVE profile's database; counters start past every profile's saved ids
+func beside(profile: String) throws -> Windows   // another profile's windows open at once: own database and saved windows, SHARED id counters and live windows
+```
+
+- Made for the active profile (was: Default): `Windows()`, `SessionNotesStore()`, `UsageService`, `ProjectService`,
+  `HostedTerminals(dataDir: nil)` (its registry and settings; the hosts folder stays the data folder's), `SettingsHandle.open(profile: nil)`.
+  An explicit `dataDir` (tests) is still one profile of its own.
+- **A switch** (the Swift app, `AppController.switchProfile`): save the windows leaving, `settingsSwitchProfile`, make the target's
+  `Windows` with `beside` (once; kept), show its windows (restored from its database the first time, one new window when it has none)
+  and hide the leaving ones (their terminals run on), make the settings model and theme folder again for the new profile.
+- **Ids.** Terminal and window ids come from one counter for every profile open (`beside` shares it, `Windows()` starts past
+  all profiles' databases), so an id is never taken twice and hooks and the control line find a terminal in any profile.
+- Not done: a window in a profile other than the shown one (menu "Open Window in" switches, then opens one), "Move Window to", the
+  Access, Trust, Imports and Session Hosts desks still work on the data folder's default profile.

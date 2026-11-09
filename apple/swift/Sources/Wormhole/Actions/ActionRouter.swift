@@ -35,8 +35,13 @@ final class ActionRouter {
         case .action(let id): run(id)
         case .ambient(let command): app.ambient?.run(command)
         case .context(let action): app.runContext(action)
-        case .openRecent, .runProjectAction, .newTerminalWith, .switchProfile, .openInProfile, .moveToProfile:
-            // Recent folders, project actions, shells and profiles come with the core; their menus are empty.
+        case .switchProfile(let index): app.switchProfile(index: index)
+        // Not a window beside the shown profile's (as the GPUI app has it): Wormhole goes into the profile and opens one there.
+        case .openInProfile(let index):
+            app.switchProfile(index: index)
+            app.openNewWindow()
+        case .openRecent, .runProjectAction, .newTerminalWith, .moveToProfile:
+            // Recent folders, project actions, shells and moving a window to another profile come with the core.
             break
         }
     }

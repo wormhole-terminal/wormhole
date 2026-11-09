@@ -36,6 +36,7 @@ mod minimap;
 pub mod notify;
 pub mod palette_search;
 mod probes;
+mod profile;
 mod settings;
 pub mod settings_dump;
 mod terminal;
@@ -79,8 +80,9 @@ pub use files_panel::{
 };
 pub use find::{FindOutcome, FoundSpan};
 pub use focus::{
-    AreaStops, EscapeRung, EscapeState, FocusArea, FocusStop, ListItem, ListKey, ListMove, PresetShown, WindowPreset,
-    focus_escape, focus_list_walk, focus_press_folds_band, focus_step, focus_tab_step, focus_type_ahead, window_preset,
+    AreaStops, EscapeRung, EscapeState, FocusArea, FocusStop, ListItem, ListKey, ListMove, PresetShown,
+    WindowPreset, focus_escape, focus_list_walk, focus_press_folds_band, focus_step, focus_tab_step,
+    focus_type_ahead, window_preset,
 };
 pub use fonts::{
     CustomFontFamilyRecord, CustomFontFileRecord, CustomFontsRecord, FontChoiceRecord, FontOrigin,
@@ -104,6 +106,7 @@ pub use interaction::{
 };
 pub use minimap::{MinimapGeometryRecord, MinimapRunRecord};
 pub use probes::{ProbeStatusRecord, ResolvedFile};
+pub use profile::{ActiveProfile, active_profile};
 pub use settings::{
     FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
     SettingsLoginField, SettingsProfileForm, SettingsShellLine, settings_import_review,
@@ -124,8 +127,8 @@ pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
 pub use windows::{
-    Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, WindowMinSize, Windows,
-    cascade_frame, fit_frame, window_min_size,
+    Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, WindowMinSize,
+    Windows, cascade_frame, fit_frame, window_min_size,
 };
 pub use workspace::{TerminalFactsRecord, Workspace, WorkspaceConfig, WorkspaceEvent, WorkspaceListener};
 pub use workspace_waited::Waited;

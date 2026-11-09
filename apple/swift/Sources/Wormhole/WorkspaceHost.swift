@@ -10,35 +10,48 @@ import WorkspaceModel
 #if WITH_UNIFFI
     import WindowsBridge
     import WorkspaceBridge
+    import WormholeBindings
 #endif
 
-/// The app's windows: what is saved of them and where each window's workspace comes from.
+/// One profile's windows: what is saved of them and where each window's workspace comes from.
 @MainActor
 struct WindowsHost {
+    let profile: String
     let backend: any WindowsBackend
     /// A window's workspace and the source of each of its terminals (nil when its program did not start); no function at
     /// all means the sample workspace and the mock sources.
     let workspace: ((WindowID) -> (backend: any WorkspaceBackend, source: (TerminalID) -> (any FrameSource)?))?
+    /// Another profile's windows, open beside these (nil for the sample, which has one profile).
+    let beside: ((String) throws -> WindowsHost)?
 
-    /// Throws when the core's store cannot be opened (the data folder is not the experiment's, or is damaged).
+    /// The profile Wormhole is in. Throws when the core's store cannot be opened (the data folder is not the
+    /// experiment's, or is damaged).
     static func make(_ options: Options) throws -> WindowsHost {
         #if WITH_UNIFFI
             if let program = options.program {
-                let windows = try RustWindowsBackend()
                 CoreWindowRules.install()
-                var first = true
-                return WindowsHost(backend: windows) { id in
+                return real(try RustWindowsBackend(), profile: try activeProfile().id, program: program, adoptsOrphans: true)
+            }
+        #endif
+        return WindowsHost(profile: "default", backend: MemoryWindows(), workspace: nil, beside: nil)
+    }
+
+    #if WITH_UNIFFI
+        private static func real(_ windows: RustWindowsBackend, profile: String, program: String, adoptsOrphans: Bool) -> WindowsHost {
+            var first = adoptsOrphans
+            return WindowsHost(
+                profile: profile, backend: windows,
+                workspace: { id in
                     // Persistent terminals follow Settings' flag (off in a release build unless unlocked). The terminals
                     // are saved under their window's id, and one window brings in the hosts nobody names.
                     let hosting = HostingSetup(window: Int64(id), adoptsOrphans: first)
                     first = false
                     let backend = windows.workspace(window: id, setup: WorkspaceSetup(program: program, hosting: hosting))
                     return (backend, { backend.frameSource(for: $0) })
-                }
-            }
-        #endif
-        return WindowsHost(backend: MemoryWindows(), workspace: nil)
-    }
+                },
+                beside: { other in real(try windows.beside(profile: other), profile: other, program: program, adoptsOrphans: false) })
+        }
+    #endif
 }
 
 @MainActor

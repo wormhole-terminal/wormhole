@@ -19,10 +19,10 @@ pub(crate) struct Registry {
 }
 
 impl Registry {
-    /// The default profile's database in `data_dir`, with a row for `window` so that what is saved
+    /// The profile database in `dir`, with a row for `window` so that what is saved
     /// under it loads again.
-    pub(crate) fn open(data_dir: &Path, window: i64) -> Result<Self, HostingError> {
-        let store = Store::open_at(data_dir).map_err(HostingError::store)?;
+    pub(crate) fn open(dir: &Path, window: i64) -> Result<Self, HostingError> {
+        let store = Store::open_at(dir).map_err(HostingError::store)?;
         let known = store.load().map_err(HostingError::store)?.iter().any(|w| w.id == window);
         if !known {
             store

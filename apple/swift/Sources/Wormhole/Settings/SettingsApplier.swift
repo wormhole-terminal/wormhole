@@ -63,8 +63,8 @@ final class SettingsApplier {
             app.hooks?.settingsChanged()
             app.menus?.windowsChanged()
         }
-        if changed("title_row") { applyTitleRow(values, to: app.sessions.map(\.hub)) }
-        if changed("open_in") { applyOpenIn(values, to: app.sessions.map(\.hub)) }
+        if changed("title_row") { applyTitleRow(values, to: app.shown.map(\.hub)) }
+        if changed("open_in") { applyOpenIn(values, to: app.shown.map(\.hub)) }
     }
 
     /// A window made after the settings were applied takes what they said.
@@ -96,7 +96,7 @@ final class SettingsApplier {
     }
 
     /// Zen mode started or ended: each window's row is the preset's, or the person's own again.
-    func applyZen() { applyTitleRow(model.backend.values, to: app.sessions.map(\.hub)) }
+    func applyZen() { applyTitleRow(model.backend.values, to: app.shown.map(\.hub)) }
 
     private func applyTitleRow(_ values: [String: JSONValue], to hubs: [WindowHub]) {
         let zen = app.look.zen

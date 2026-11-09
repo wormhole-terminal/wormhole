@@ -16,6 +16,13 @@ extension AppController {
         case "sessions":
             reply(sessionLines())
             return true
+        case "profile-new":
+            reply("profile-new \(argument) \(settingsModel.host.makeProfile(name: argument, copyOf: nil) ?? "ok")")
+            return true
+        case "profile-switch":
+            switchProfile(to: argument)
+            reply("profile-switch \(argument) now=\(windowsHost.profile) shown=\(shown.map(\.id)) parked=\(sessions.filter { $0.windows.profile != windowsHost.profile }.map(\.id))")
+            return true
         case "use-window":
             guard let id = numbers.first, let session = sessions.first(where: { $0.id == id }) else {
                 reply("error: use-window needs the id of a window (see sessions)")
@@ -51,7 +58,7 @@ extension AppController {
             let hosts = session.hub.state.live.map { id in
                 "\(id):\(store.hosting(of: id).map { String(describing: $0) } ?? "off")\(store.hostProblem(of: id).map { " problem=\($0)" } ?? "")"
             }.joined(separator: ", ")
-            return "window=\(session.id) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame) hosting=[\(hosts)]"
+            return "window=\(session.id) profile=\(session.windows.profile) visible=\(session.window?.isVisible ?? false) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame) hosting=[\(hosts)]"
         }.joined(separator: "\n")
     }
 

@@ -20,9 +20,11 @@ final class AppController: NSObject, NSApplicationDelegate {
     let dataDirectory: URL
     /// How the window itself looks: its translucency, glass, status bar. The theme is `ThemeStore.shared`.
     let look = WindowLook()
-    /// Which windows there are, what was saved of them and where each one's workspace comes from.
-    let windowsHost: WindowsHost
-    /// Every window, in the order they were made; the one commands act on is `front`.
+    /// The windows of the profile Wormhole is in: what was saved of them and where each one's workspace comes from.
+    var windowsHost: WindowsHost
+    /// Every profile opened since launch, by id: the ones parked keep their windows (their terminals running, out of sight).
+    var profileHosts: [String: WindowsHost] = [:]
+    /// Every window of every profile, in the order they were made; the ones commands act on are `shown`.
     var sessions: [WindowSession] = []
     /// The window that was in front last: what commands act on while none is the key window (a test instance never has one).
     var lastFront: WindowSession?
@@ -48,7 +50,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// The fonts and colours every terminal is drawn with: Settings' and the theme's.
     private(set) lazy var terminalLook = TerminalLook(terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] })
     /// The settings the window follows, whether or not the Settings window is open: the core's when real.
-    private(set) lazy var settingsModel = AppSettings.makeModel(app: self)
+    lazy var settingsModel = AppSettings.makeModel(app: self)
     private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory)
     private(set) lazy var folderPicking = FolderPicking(app: self)
     private(set) lazy var router = ActionRouter(app: self)
@@ -60,15 +62,19 @@ final class AppController: NSObject, NSApplicationDelegate {
         policy = PlatformPolicy(background: options.background)
         PlatformSetup.install(options)
         windowsHost = try WindowsHost.make(options)
+        profileHosts[windowsHost.profile] = windowsHost
         super.init()
     }
 
     /// The notification rules' view of Settings.
     var settingsNotice: NoticeSettings { NoticeSettingsMaker.settings(settingsModel.backend.values) }
 
+    /// The windows of the profile Wormhole is in: the others are parked.
+    var shown: [WindowSession] { sessions.filter { $0.windows.profile == windowsHost.profile } }
     /// The window commands act on: the key one, else the one that was in front last, else the first.
     var front: WindowSession {
-        sessions.first { $0.window?.isKeyWindow == true } ?? lastFront ?? sessions[0]
+        let shown = shown
+        return shown.first { $0.window?.isKeyWindow == true } ?? shown.first { $0 === lastFront } ?? shown[0]
     }
     var hub: WindowHub { front.hub }
     /// What the right panel reads through: the project backend is also Settings' source of what a project sets.

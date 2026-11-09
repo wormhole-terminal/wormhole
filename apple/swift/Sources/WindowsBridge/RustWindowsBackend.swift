@@ -12,10 +12,16 @@ import WormholeBindings
 public final class RustWindowsBackend: WindowsBackend {
     private let windows: Windows
 
-    /// Throws `FfiError.NotIsolated` outside an experiment data folder, or when the database cannot be opened.
+    /// The profile Wormhole is in. Throws `FfiError.NotIsolated` outside an experiment data folder, or when the
+    /// database cannot be opened.
     public init() throws {
         windows = try Windows()
     }
+
+    private init(_ windows: Windows) { self.windows = windows }
+
+    /// Another profile's windows, open at once with these: its own database and saved windows, the same ids.
+    public func beside(profile: String) throws -> RustWindowsBackend { RustWindowsBackend(try windows.beside(profile: profile)) }
 
     /// Window `window`'s workspace, among this backend's: filled by `restore()` from what was saved or planned for it.
     public func workspace(window: WindowID, setup: WorkspaceSetup) -> RustWorkspaceBackend {

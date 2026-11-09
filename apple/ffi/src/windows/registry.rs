@@ -3,6 +3,10 @@
 //! core's `Store`. A window is a `Workspace` (`workspace_windows`); this object is what they have in common:
 //! one counter of terminal and split ids, one of window ids, the database.
 //!
+//! One `Windows` is one profile's: its database, its saved windows. The profiles open at once (the shown one and the
+//! parked ones) are made `beside` each other and share what is the app's, not a profile's: the id counters (a
+//! terminal's id is never taken twice) and the list of live windows (the control line reaches every terminal).
+//!
 //! Swift decides nothing here: it asks for the windows to open at launch, opens an `NSWindow` for each and
 //! calls `save` when something about one changed (a revision moved, the frame moved).
 
@@ -11,6 +15,8 @@ use std::path::Path;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 
+use wormhole_core::config::profile::ProfileList;
+use wormhole_core::storage::paths::{DataRoot, ProfileId};
 use wormhole_core::storage::store::{Store, WindowRecord, front_last};
 use wormhole_core::view::layout::frame::WindowFrame;
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
@@ -18,8 +24,8 @@ use wormhole_core::workspace::{IdCounter, SavedLayout};
 
 use super::frame::FrameRecord;
 use crate::error::FfiError;
-use crate::isolation;
 use crate::workspace::{Shared, Workspace};
+use crate::{isolation, profile};
 
 /// A window saved at the last quit (or the last change), in the order to open them: the one that was in front
 /// last.
@@ -45,33 +51,62 @@ pub struct PlannedWindow {
 pub struct Windows {
     store: Mutex<Store>,
     ids: IdCounter,
-    next_window: AtomicI64,
+    next_window: Arc<AtomicI64>,
     /// Windows planned and not saved yet: what they start with (`Workspace::restore` reads it).
     planned: Mutex<HashMap<i64, WindowRecord>>,
-    live: Mutex<Vec<(i64, Weak<Shared>)>>,
+    live: Arc<Mutex<Live>>,
     /// The columns last written as the ones new windows start with.
     remembered: Mutex<Option<RememberedPanes>>,
     /// Told of every window made from now on (the control socket's event publishers).
-    on_register: Mutex<Option<Box<dyn Fn(&Arc<Shared>) + Send + Sync>>>,
+    on_register: Arc<Mutex<Option<OnRegister>>>,
 }
+
+type Live = Vec<(i64, Weak<Shared>)>;
+type OnRegister = Box<dyn Fn(&Arc<Shared>) + Send + Sync>;
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
 impl Windows {
+    fn open_store(dir: &Path) -> Result<Store, FfiError> {
+        Store::open_at(dir).map_err(|err| FfiError::Start { reason: format!("{err:#}") })
+    }
+
+    fn over(store: Store, ids: IdCounter, next_window: Arc<AtomicI64>) -> Self {
+        Self {
+            store: Mutex::new(store),
+            ids,
+            next_window,
+            planned: Mutex::default(),
+            live: Arc::default(),
+            remembered: Mutex::default(),
+            on_register: Arc::default(),
+        }
+    }
+
     pub(crate) fn in_dir(dir: &Path) -> Result<Arc<Self>, FfiError> {
-        let store = Store::open_at(dir).map_err(|err| FfiError::Start { reason: format!("{err:#}") })?;
+        let store = Self::open_store(dir)?;
         let (terminal, window) =
             store.next_ids().map_err(|err| FfiError::Start { reason: format!("{err:#}") })?;
+        Ok(Arc::new(Self::over(store, IdCounter::starting_at(terminal), Arc::new(AtomicI64::new(window)))))
+    }
+
+    pub(super) fn beside_in(&self, root: &DataRoot, profile: &str) -> Result<Arc<Self>, FfiError> {
+        let failed = |reason: String| FfiError::Start { reason };
+        let id = ProfileId::parse(profile).map_err(|err| failed(err.to_string()))?;
+        let (list, _) = ProfileList::load_or_recover(root);
+        if list.get(&id).is_none() {
+            return Err(failed(format!("no profile {id}")));
+        }
+        let store = Self::open_store(root.profile(&id).dir())?;
+        let (terminal, window) = store.next_ids().map_err(|err| failed(format!("{err:#}")))?;
+        self.ids.keep_above(terminal.saturating_sub(1));
+        self.next_window.fetch_max(window, Ordering::Relaxed);
         Ok(Arc::new(Self {
-            store: Mutex::new(store),
-            ids: IdCounter::starting_at(terminal),
-            next_window: AtomicI64::new(window),
-            planned: Mutex::default(),
-            live: Mutex::default(),
-            remembered: Mutex::default(),
-            on_register: Mutex::default(),
+            live: self.live.clone(),
+            on_register: self.on_register.clone(),
+            ..Self::over(store, self.ids.clone(), self.next_window.clone())
         }))
     }
 
@@ -199,7 +234,20 @@ impl Windows {
     #[uniffi::constructor]
     pub fn new() -> Result<Arc<Self>, FfiError> {
         isolation::require()?;
-        Self::in_dir(&wormhole_core::storage::paths::data_dir())
+        let root = DataRoot::current();
+        let windows = Self::in_dir(profile::active_in(&root).dir())?;
+        // Past what every profile saved, so the ones opened `beside` this never meet an id again.
+        let (terminal, window) = profile::first_free_ids(&root);
+        windows.ids.keep_above(terminal.saturating_sub(1));
+        windows.next_window.fetch_max(window, Ordering::Relaxed);
+        Ok(windows)
+    }
+
+    /// Another profile's windows, open at the same time as these (the profile Wormhole is switching to): its own
+    /// database and saved windows, the same counters and live windows. `profile` is in `profiles.json`.
+    pub fn beside(&self, profile: String) -> Result<Arc<Self>, FfiError> {
+        isolation::require()?;
+        self.beside_in(&DataRoot::current(), &profile)
     }
 
     /// The windows saved, to open in this order: the one that was in front last, so it is in front again.

@@ -23,6 +23,9 @@ struct MenuFacts {
     var flagsOn: Set<String> = []
     /// The selected terminal has a fold: Show Hidden Lines has something to show.
     var hasFolds = false
+    /// The profiles' names, in the order of the list, and the one Wormhole is in.
+    var profiles: [String] = []
+    var currentProfile: Int?
 }
 
 enum MenuStateMaker {
@@ -68,6 +71,7 @@ enum MenuStateMaker {
         let numbered = SidebarNumbering.numbered(state)
         menu.terminals = numbered.map(\.title)
         menu.currentTerminal = numbered.firstIndex { $0.id == state.selected }
+        (menu.profiles, menu.currentProfile) = (facts.profiles, facts.currentProfile)
         return menu
     }
 

@@ -26,7 +26,7 @@ extension AppController {
     /// The person closes a window. The last one quits the app instead (saved, and asked like any quit); another asks first
     /// while something runs in it, and is forgotten once it closes.
     func shouldClose(_ session: WindowSession) -> Bool {
-        guard sessions.count > 1 else {
+        guard shown.count > 1 else {
             NSApp.terminate(nil)
             return false
         }
@@ -39,12 +39,12 @@ extension AppController {
     /// A window is gone: its terminals end and the core forgets it. Not while the app quits, and not the last one
     /// (closing it ends the app, saved): then it stays as it is.
     func windowClosed(_ session: WindowSession) {
-        guard !terminating, sessions.count > 1 else { return }
+        guard !terminating, shown.count > 1 else { return }
         session.saver?.cancel()
         session.hub.terminals.shutdown()
-        windowsHost.backend.forget(session.id)
+        session.windows.backend.forget(session.id)
         sessions.removeAll { $0 === session }
-        if lastFront === session { lastFront = sessions.last }
+        if lastFront === session { lastFront = shown.last }
         menus?.windowsChanged()
     }
 

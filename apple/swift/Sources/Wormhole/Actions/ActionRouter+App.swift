@@ -7,6 +7,8 @@ extension ActionRouter {
     func appActions() -> [ActionID: Handler] {
         [
             "newWindow": { [unowned self] in app.openNewWindow() },
+            "newProfile": { [unowned self] in app.showProfiles(new: true) },
+            "manageProfiles": { [unowned self] in app.showProfiles() },
             "settings": { [unowned self] in app.showSettings() },
             "about": { [unowned self] in app.aux.showAbout() },
             "checkForUpdates": { [unowned self] in app.aux.showUpdates() },

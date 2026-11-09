@@ -8,11 +8,13 @@ extension WindowHub {
     /// bar redraws when any of it changes.
     public func menuState(look: WindowLook, isFullScreen: Bool, implemented: Set<ActionID>, flagsOn: Set<String> = []) -> MenuState {
         let panes = paneFacts
+        let profiles = actions.profiles()
         return MenuStateMaker.make(
             MenuFacts(
                 state: state, statusBar: look.ownStatusBar, tabsOnTop: look.tabsOnTop, isFullScreen: isFullScreen,
                 isSplit: panes.isSplit, isZoomed: panes.isZoomed, canSplitRight: canSplit(.row), canSplitDown: canSplit(.column), minimap: look.ownMinimap, zen: look.zen != nil,
-                implemented: implemented, flagsOn: flagsOn, hasFolds: selectedOverlay?.hasFolds ?? false))
+                implemented: implemented, flagsOn: flagsOn, hasFolds: selectedOverlay?.hasFolds ?? false,
+                profiles: profiles.map(\.name), currentProfile: profiles.firstIndex { $0.current }))
     }
 
     /// ⌘1–9: the terminal with this number in the list (the core numbers them).

@@ -216,3 +216,56 @@ fn taking_out_what_is_not_here_takes_nothing() {
     let none = a.take_out(vec![99]);
     assert!(none.departure.is_none() && none.events.is_empty());
 }
+
+/// A switch is Rust's own: `profiles.json` says which profile is active, and the windows and the settings read
+/// are that profile's; the other one's stay as they were, with their ids never repeated.
+#[test]
+fn a_switch_makes_the_other_profiles_windows_and_settings_the_ones_read_and_back_again() {
+    use wormhole_core::config::Config;
+    use wormhole_core::config::profile::{NewProfile, ProfileList, StartFrom};
+    use wormhole_core::storage::paths::DataRoot;
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = DataRoot::new(dir.path());
+    let mut list = ProfileList::default();
+    let work = list
+        .create(
+            &root,
+            NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults },
+        )
+        .expect("makes Work");
+    list.save(&root).expect("saves the list");
+    crate::settings::tests::write_file(&root.default_profile().config_file(), r#"{"font_size": 20}"#);
+
+    // Wormhole is in Default: its window is the one saved there.
+    let in_default = open(dir.path());
+    let a = window(&in_default, 1);
+    a.apply(Action::NewTerminal);
+    assert!(in_default.save(1, a.clone(), None));
+    assert_eq!(crate::profile::active_in(&root).id().as_str(), "default");
+    assert_eq!(Config::load_for(&crate::profile::active_in(&root)).settings.font_size, 20.0);
+
+    // Switch to Work: the profile read is Work's, with its own (default) settings and no windows saved yet.
+    list.set_active(&work).expect("known");
+    list.save(&root).expect("saves");
+    let active = crate::profile::active_in(&root);
+    assert_eq!(active.id(), &work);
+    assert_ne!(Config::load_for(&active).settings.font_size, 20.0);
+    let in_work = in_default.beside_in(&root, work.as_str()).expect("opens Work beside Default");
+    assert!(in_work.saved().is_empty());
+    let b = window(&in_work, in_work.alloc_window_id());
+    let work_terminal = opened(&b.apply(Action::NewTerminal))[0];
+    assert!(in_work.save(2, b.clone(), None));
+    assert_eq!(in_work.saved().iter().map(|w| w.id).collect::<Vec<_>>(), [2]);
+    assert_eq!(in_default.saved().iter().map(|w| w.id).collect::<Vec<_>>(), [1], "Default's is untouched");
+    assert_eq!(in_default.shares().len(), 2, "the control line reaches the windows of both");
+    assert!(work_terminal > 1, "an id is never taken twice: {work_terminal}");
+
+    // And back: Default's settings and window are what is read again.
+    list.set_active(&wormhole_core::storage::paths::ProfileId::default_profile()).expect("known");
+    list.save(&root).expect("saves");
+    let active = crate::profile::active_in(&root);
+    assert_eq!(Config::load_for(&active).settings.font_size, 20.0);
+    assert_eq!(open(active.dir()).saved().iter().map(|w| w.id).collect::<Vec<_>>(), [1]);
+    assert!(in_default.beside_in(&root, "nobody").is_err(), "a profile that is not in the list");
+}

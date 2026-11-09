@@ -19,7 +19,7 @@ use super::trust::OwnerAuthenticator;
 use crate::error::FfiError;
 use crate::files_panel::listener::PanelListener;
 use crate::files_panel::watch::FolderWatch;
-use crate::isolation;
+use crate::profile;
 
 #[derive(uniffi::Object)]
 pub struct ProjectService {
@@ -57,8 +57,7 @@ impl ProjectService {
     /// Fails unless this is an isolated instance of the experiment (the stores live in its data folder).
     #[uniffi::constructor]
     pub fn new(authenticator: Arc<dyn OwnerAuthenticator>) -> Result<Arc<Self>, FfiError> {
-        isolation::require()?;
-        Ok(Self::in_dir(&wormhole_core::storage::paths::data_dir(), authenticator))
+        Ok(Self::in_dir(&profile::active_dir()?, authenticator))
     }
 
     /// The project governing `folder` (a terminal's folder: the first `.wormhole/` above it, stopping

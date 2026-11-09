@@ -106,7 +106,7 @@ impl SettingsHandle {
 
 #[uniffi::export]
 impl SettingsHandle {
-    /// Opens a profile's settings: the default profile's when `profile` is `None`. Refuses unless the
+    /// Opens a profile's settings: the one Wormhole is in when `profile` is `None`. Refuses unless the
     /// process is an isolated instance of the experiment. Reads (and may create) a file: call it off
     /// the main thread in a real app.
     #[uniffi::constructor]
@@ -120,7 +120,7 @@ impl SettingsHandle {
             Some(text) => {
                 ProfileId::parse(&text).map_err(|err| SettingsError::Profile { reason: err.to_string() })?
             }
-            None => ProfileId::default_profile(),
+            None => crate::profile::active_in(&root).id().clone(),
         };
         Ok(Self::open_at(&root, &id, listener))
     }

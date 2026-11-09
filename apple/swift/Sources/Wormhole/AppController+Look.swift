@@ -7,6 +7,7 @@ import DesignSystem
 import WindowUI
 #if WITH_UNIFFI
     import UniFFISource
+    import WormholeBindings
 #endif
 
 extension AppController {
@@ -24,7 +25,7 @@ extension AppController {
     func configureThemes() {
         #if WITH_UNIFFI
             themes.resolver = FfiThemeResolver()
-            themes.themesDirectory = dataDirectory.appendingPathComponent("themes")
+            themes.themesDirectory = URL(fileURLWithPath: (try? activeProfile().dir) ?? dataDirectory.path).appendingPathComponent("themes")
         #endif
     }
 }

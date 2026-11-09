@@ -27,6 +27,7 @@ use super::registry::Registry;
 use super::{HostSlot, HostingError, HostingProgram, LaunchPlan, OrphanHost, SavedTerminal, program};
 use crate::aux_backends::{AuxError, resolve_data_dir};
 use crate::events::TerminalListener;
+use crate::profile;
 use crate::terminal::Terminal;
 
 /// How long one orphan gets to answer before it is left alone (`window/hosting.rs`).
@@ -66,7 +67,7 @@ impl HostedStart {
 pub struct HostedTerminals {
     data_dir: PathBuf,
     pub(super) hosts_dir: PathBuf,
-    /// The default profile's folder: the settings and the saved text this object reads are its.
+    /// The folder of the profile these terminals belong to: the settings and the saved text this object reads are its.
     pub(super) profile: ProfilePaths,
     program: HostProgram,
     pub(super) registry: Arc<Registry>,
@@ -95,14 +96,18 @@ impl HostedTerminals {
         host_binary: Option<String>,
         window: i64,
     ) -> Result<Arc<Self>, HostingError> {
+        // A folder given is a profile of its own (tests); core's own is the profile Wormhole is in.
+        let given = data_dir.is_some();
         let data_dir = resolve_data_dir(data_dir).map_err(|err| match err {
             AuxError::NotIsolated { reason } => HostingError::NotIsolated { reason },
             AuxError::Failed { reason } => HostingError::Store { reason },
         })?;
+        let root = DataRoot::new(&data_dir);
+        let profile = if given { root.default_profile() } else { profile::active_in(&root) };
         Ok(Arc::new(Self {
             hosts_dir: hosts::hosts_dir(&data_dir),
-            profile: DataRoot::new(&data_dir).default_profile(),
-            registry: Arc::new(Registry::open(&data_dir, window)?),
+            registry: Arc::new(Registry::open(profile.dir(), window)?),
+            profile,
             checkpoints: Arc::new(Checkpoints::new(&data_dir)),
             forgetting: Mutex::default(),
             program: program::locate(host_binary.as_deref()),
