@@ -25,6 +25,14 @@ import WorkspaceModel
         #expect(windows.records[3] == nil && windows.forgotten == [3])
     }
 
+    @Test func aWindowMovedToAnotherProfileIsSavedThereAndGoneFromHere() {
+        let here = MemoryWindows(), there = MemoryWindows()
+        let frame = WindowFrame(x: 10, y: 20, width: 900, height: 600, display: 1)
+        #expect(here.save(window: 3, workspace: workspace, frame: frame))
+        #expect(here.rehome(window: 3, workspace: workspace, frame: frame, to: there))
+        #expect(here.records[3] == nil && there.records[3] == .some(frame))
+    }
+
     @Test func theSampleStepsANewWindowAwayFromTheOneItCameFrom() {
         let windows = MemoryWindows()
         let display = DisplayArea(id: 1, x: 0, y: 25, width: 1440, height: 875)

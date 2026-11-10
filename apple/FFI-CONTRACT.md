@@ -1219,7 +1219,7 @@ func beside(profile: String) throws -> Windows   // another profile's windows op
   and hide the leaving ones (their terminals run on), make the settings model and theme folder again for the new profile.
 - **Ids.** Terminal and window ids come from one counter for every profile open (`beside` shares it, `Windows()` starts past
   all profiles' databases), so an id is never taken twice and hooks and the control line find a terminal in any profile.
-- Not done: a window in a profile other than the shown one (menu "Open Window in" switches, then opens one), "Move Window to", the
+- Not done: the
   Access, Trust, Imports and Session Hosts desks still work on the data folder's default profile.
 
 ## The palette's actions, the shortcut sheet and pasting over a program's selection (round S, lane O; additive)
@@ -1243,3 +1243,22 @@ terminal keeps itself (a left press and release reported to a program that track
   first and pastes what the clipboard held before the program's copy; otherwise it is `paste`.
 - `programCopied(text, clipboardBefore)`: a program's OSC 52 copy reached the clipboard, which held `clipboardBefore`;
   within a second of the program's own selection it is remembered as that selection's copy.
+
+### A window in another profile, and tearing a terminal off (round S, lane W)
+
+```swift
+func rehome(window: Int64, workspace: Workspace, frame: FrameRecord?, to: Windows) -> Bool
+    // "Move Window to": the record (terminals, notes, frame) is written into `to`'s database and removed from this one;
+    // unlike `forget` the window stays among the live ones (its terminals run on). A profile moved to itself is true and nothing.
+tearOffLanding(stack: [TearWindow], x:, y:, source: Int64, covered: Bool) -> TearLanding   // .stay | .newWindow | .into(window)
+tearOffWindow(x:, y:, width:, height:, visible: TearRect) -> TearRect   // where the torn-off window opens (a display's own space)
+```
+
+- **Open Window in <profile>**: the shell asks `beside(profile)` for that profile's `Windows` once (kept) and plans, makes and
+  saves the window there with the ordinary calls; Wormhole stays in the shown profile (the odd window, as the GPUI app's
+  `open_window_in_profile`). Its settings are the shown profile's (the workspace reads the active profile).
+- **Tear off** (`view::tear_off`): AppKit sends a drag's events to the window it began in, so the shell reads the app's windows
+  front to back (`TearWindow`: its id when it shows this profile's terminals, else nil), the screens, and whether another
+  application's window is on top (`covered`), and does what the core answers. All points are AppKit's global space (y up)
+  except `tearOffWindow`'s, which are in one display's (from its top left, y down); the pointer lies at the new window's
+  anchor (120, 90), kept inside the display's usable part.

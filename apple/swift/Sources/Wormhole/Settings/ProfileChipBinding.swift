@@ -28,9 +28,11 @@ extension AppController {
         }
     }
 
-    func profileActions() -> ProfileActions {
+    func profileActions(for session: WindowSession) -> ProfileActions {
         ProfileActions(
             switchTo: { [weak self] in self?.switchProfile(to: $0) },
+            openWindow: { [weak self] in self?.openWindow(inProfile: $0) },
+            moveWindow: { [weak self, weak session] id in session.map { self?.move($0, toProfile: id) } },
             newProfile: { [weak self] in self?.showProfiles(new: true) },
             manage: { [weak self] in self?.showProfiles() },
             settings: { [weak self] in self?.showSettings() })
@@ -58,13 +60,15 @@ extension AppController {
             let settingsOpen = settingsController?.window?.isVisible == true
             do {
                 let target = try profileHosts[id] ?? beside(id)
-                // What a relaunch restores: the profile being left, as it is now.
-                shown.forEach { $0.saver?.saveNow() }
-                let leaving = shown
+                // What a relaunch restores: the profile being left, as it is now. Windows opened in another profile stay in sight.
+                let leaving = windows(of: windowsHost.profile)
+                leaving.forEach { $0.saver?.saveNow() }
                 try (settingsModel.host as? RustSettingsHost)?.switchProfile(to: id)
                 profileHosts[id] = target
                 windowsHost = target
-                let back = shown
+                leaving.forEach { $0.parked = true }
+                let back = windows(of: id)
+                back.forEach { $0.parked = false }
                 if back.isEmpty { try openSavedWindows() } else { back.forEach(show) }
                 // After the windows exist: applying the settings reaches the shown ones (and the menus read the window in front).
                 followProfileSettings()
@@ -81,6 +85,64 @@ extension AppController {
                 FileHandle.standardError.write(Data("profile: cannot switch to \(id) (\(error))\n".utf8))
             }
         #endif
+    }
+
+    /// Every window of profile `id`, in sight or parked.
+    private func windows(of id: String) -> [WindowSession] { sessions.filter { $0.windows.profile == id } }
+
+    /// "Open Window in <profile>": a window in `id` beside the ones of the profile Wormhole is in, which stays where it is
+    /// (the odd window, as the GPUI app has it); in the profile Wormhole is in, a new window.
+    func openWindow(inProfile id: String) {
+        #if WITH_UNIFFI
+            guard id != windowsHost.profile else { return openNewWindow() }
+            guard let target = hostBeside(id) else { return }
+            // Its own start folder (the profile's), not the one of the window in front.
+            let planned = target.backend.plan(from: nil, folder: nil)
+            openPlanned(window: planned.window, activate: true, in: target)
+        #endif
+    }
+
+    /// "Move Window to <profile>": `session`'s window and its running terminals go to `id`, which keeps its record from now on.
+    func move(_ session: WindowSession, toProfile id: String) {
+        #if WITH_UNIFFI
+            let old = session.windows
+            guard id != old.profile, let target = hostBeside(id) else { return }
+            let frame = frame(of: session)
+            guard old.backend.rehome(window: session.id, workspace: session.hub.store.source, frame: frame, to: target.backend) else {
+                devctl?.append("move-window \(session.id) to \(id) failed: its record could not be written there")
+                return
+            }
+            session.windows = target
+            session.saver?.windows = target.backend
+            // Not left without a window: the profile Wormhole is in keeps one to type in.
+            if windows(of: windowsHost.profile).isEmpty {
+                let planned = windowsHost.backend.plan(from: nil, folder: nil)
+                openPlanned(window: planned.window, activate: false)
+            }
+            session.hub.actions.profiles = profileList(for: session)
+            menus?.windowsChanged()
+        #endif
+    }
+
+    /// The menu's "Open Window in" and "Move Window to" choices, by the row's place in the list they were made from.
+    func openWindow(inProfileIndex index: Int) { profileID(at: index).map(openWindow(inProfile:)) }
+    func moveFrontWindow(toProfileIndex index: Int) { profileID(at: index).map { move(front, toProfile: $0) } }
+
+    private func profileID(at index: Int) -> String? {
+        #if WITH_UNIFFI
+            guard let rows = try? (settingsModel.host as? RustSettingsHost)?.profiles(), rows.indices.contains(index) else { return nil }
+            return rows[index].id
+        #else
+            return nil
+        #endif
+    }
+
+    /// The windows of profile `id`, open beside the shown profile's (made the first time and kept).
+    private func hostBeside(_ id: String) -> WindowsHost? {
+        if let known = profileHosts[id] { return known }
+        guard let beside = windowsHost.beside, let made = try? beside(id) else { return nil }
+        profileHosts[id] = made
+        return made
     }
 
     /// A parked window comes back: its chip names the profile Wormhole is in now (the call redraws it).

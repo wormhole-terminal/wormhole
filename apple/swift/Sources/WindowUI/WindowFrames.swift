@@ -43,6 +43,12 @@ public enum WindowFrames {
             display: display(of: window)?.id, minimised: window.isMiniaturized)
     }
 
+    /// A windowed frame at `rect` of AppKit's space, on display `display`.
+    public static func windowed(_ rect: NSRect, on display: UInt64?) -> WindowFrame {
+        let global = flipped(rect)
+        return WindowFrame(kind: .windowed, x: global.minX, y: global.minY, width: global.width, height: global.height, display: display, minimised: false)
+    }
+
     /// Put `window` where `frame` says (already fitted to the displays), without animation.
     public static func place(_ frame: WindowFrame, on window: NSWindow) {
         window.setFrame(flipped(NSRect(x: frame.x, y: frame.y, width: frame.width, height: frame.height)), display: false)

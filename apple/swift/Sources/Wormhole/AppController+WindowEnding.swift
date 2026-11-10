@@ -6,17 +6,17 @@ import WindowsModel
 import WorkspaceModel
 
 extension AppController {
-    /// A window of its own for terminals of `session`, which keep running in it. False when the workspace cannot hand
+    /// A window of its own for terminals of `session`, which keep running in it, at `place` or a step from `session`'s. False when the workspace cannot hand
     /// terminals over (the sample) or none of them is here.
     @discardableResult
-    func moveToNewWindow(_ ids: [TerminalID], from session: WindowSession) -> Bool {
+    func moveToNewWindow(_ ids: [TerminalID], from session: WindowSession, at place: WindowFrame? = nil) -> Bool {
         // The notes of a terminal that moves are not the notes of one that closed.
         session.notes?.departing(ids)
         guard let departure = session.hub.store.takeOut(ids) else { return false }
         let source = frame(of: session)
-        let moved = makeSession(window: windowsHost.backend.allocWindowId(), empty: true)
+        let moved = makeSession(window: session.windows.backend.allocWindowId(), empty: true, in: session.windows)
         moved.hub.store.receive(departure)
-        present(moved, frame: source.map(cascaded), activate: true)
+        present(moved, frame: place ?? source.map(cascaded), activate: true)
         // The new window's record names the terminals before the old one is written without them.
         moved.saver?.saveNow()
         session.saver?.saveNow()
@@ -51,6 +51,6 @@ extension AppController {
     /// Every window as it is, written now (a quit).
     func saveAllWindows() {
         sessions.forEach { $0.saver?.saveNow() }
-        windowsHost.backend.saveFront(front.id)
+        front.windows.backend.saveFront(front.id)
     }
 }

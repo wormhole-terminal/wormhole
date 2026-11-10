@@ -212,6 +212,44 @@ impl Windows {
         }
     }
 
+    /// The record of `workspace` as window `window`, with the hosts and notes the database holds for it.
+    fn record_of_window(
+        &self,
+        store: &Store,
+        window: i64,
+        workspace: &Workspace,
+        frame: Option<FrameRecord>,
+    ) -> WindowRecord {
+        let bounds = frame.map(|frame| WindowFrame::from(frame).to_json());
+        let shared = workspace.shared();
+        let mut record = shared.peek_model(|model| model.window_record(window, bounds));
+        // Which session host runs a terminal is the terminal's to say; a record without it would forget the hosts.
+        let mut unattached = Vec::new();
+        for session in &mut record.sessions {
+            match shared.terminal_of(session.id) {
+                Some(terminal) => session.host_id = terminal.host_id(),
+                None => unattached.push(session.id),
+            }
+        }
+        Self::keep_hosts_unattached(store, &mut record, &unattached);
+        Self::with_notes(store, record)
+    }
+
+    /// Write `record` into the database held by `store`, remembering its columns for new windows.
+    fn write(&self, mut store: MutexGuard<'_, Store>, window: i64, record: WindowRecord) -> bool {
+        self.remember(&store, record.layout.as_deref());
+        match store.save_window(&record) {
+            Ok(()) => {
+                locked(&self.planned).remove(&window);
+                true
+            }
+            Err(err) => {
+                tracing::warn!("saving window {window}: {err:#}");
+                false
+            }
+        }
+    }
+
     /// Remember the columns of this window as the ones new windows start with, when they changed.
     fn remember(&self, store: &Store, layout: Option<&str>) {
         let Some(layout) = layout.and_then(|json| serde_json::from_str::<SavedLayout>(json).ok()) else {
@@ -281,31 +319,37 @@ impl Windows {
     /// with where the window is. Cheap when nothing changed: the rows already equal are not rewritten. False
     /// when the write failed.
     pub fn save(&self, window: i64, workspace: Arc<Workspace>, frame: Option<FrameRecord>) -> bool {
-        let bounds = frame.map(|frame| WindowFrame::from(frame).to_json());
-        let shared = workspace.shared();
-        let mut record = shared.peek_model(|model| model.window_record(window, bounds));
-        // Which session host runs a terminal is the terminal's to say; a record without it would forget the hosts.
-        let mut unattached = Vec::new();
-        for session in &mut record.sessions {
-            match shared.terminal_of(session.id) {
-                Some(terminal) => session.host_id = terminal.host_id(),
-                None => unattached.push(session.id),
-            }
+        let store = locked(&self.store);
+        let record = self.record_of_window(&store, window, &workspace, frame);
+        self.write(store, window, record)
+    }
+
+    /// Window `window` goes to the profile `to` keeps ("Move this window to..."): its record is written into that
+    /// profile's database and removed from this one. Unlike `forget` it leaves the window among the live ones, since
+    /// the terminals go on running where they are. False when the write failed (nothing is removed then).
+    pub fn rehome(
+        &self,
+        window: i64,
+        workspace: Arc<Workspace>,
+        frame: Option<FrameRecord>,
+        to: Arc<Windows>,
+    ) -> bool {
+        if std::ptr::eq(self, &*to) {
+            return true;
         }
-        let mut store = locked(&self.store);
-        self.remember(&store, record.layout.as_deref());
-        Self::keep_hosts_unattached(&store, &mut record, &unattached);
-        let record = Self::with_notes(&store, record);
-        match store.save_window(&record) {
-            Ok(()) => {
-                locked(&self.planned).remove(&window);
-                true
-            }
-            Err(err) => {
-                tracing::warn!("saving window {window}: {err:#}");
-                false
-            }
+        // The notes and tasks are read where the window is now, before they are written into the other database.
+        let record = {
+            let store = locked(&self.store);
+            self.record_of_window(&store, window, &workspace, frame)
+        };
+        if !to.write(locked(&to.store), window, record) {
+            return false;
         }
+        locked(&self.planned).remove(&window);
+        if let Err(err) = locked(&self.store).delete_window(window) {
+            tracing::warn!("removing window {window} from its old profile: {err:#}");
+        }
+        true
     }
 
     /// Which window is in front, so the next launch brings the same one forward.

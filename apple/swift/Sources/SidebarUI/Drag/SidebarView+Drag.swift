@@ -65,6 +65,11 @@ extension SidebarView {
         // Esc ended it already.
         guard drag != nil else { return }
         defer { outside = false }
+        // Let go outside the window, the window decides (a window of its own, another window's list, or nothing).
+        if case .terminal(let id) = item, terminalDrag?.tearOff?(id, windowPoint) == true {
+            drag = nil
+            return
+        }
         if outside, case .terminal(let id) = item {
             terminalDrag?.release(id, at: windowPoint)
             drag = nil

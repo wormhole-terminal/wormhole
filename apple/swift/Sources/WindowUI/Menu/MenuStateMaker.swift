@@ -26,6 +26,8 @@ struct MenuFacts {
     /// The profiles' names, in the order of the list, and the one Wormhole is in.
     var profiles: [String] = []
     var currentProfile: Int?
+    /// The one this window is in (the odd window of another profile is not the one Wormhole is in).
+    var windowProfile: Int?
 }
 
 enum MenuStateMaker {
@@ -79,7 +81,7 @@ enum MenuStateMaker {
         let numbered = SidebarNumbering.numbered(state)
         menu.terminals = numbered.map(\.title)
         menu.currentTerminal = numbered.firstIndex { $0.id == state.selected }
-        (menu.profiles, menu.currentProfile) = (facts.profiles, facts.currentProfile)
+        (menu.profiles, menu.currentProfile, menu.windowProfile) = (facts.profiles, facts.currentProfile, facts.windowProfile)
         return menu
     }
 

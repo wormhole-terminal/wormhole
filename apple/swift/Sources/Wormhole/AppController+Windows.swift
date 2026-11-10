@@ -24,7 +24,8 @@ extension AppController {
 
     /// A window over its own workspace: filled from what was saved or planned for it (`empty`: terminals are about to
     /// move into it). The window itself is `present`ed apart.
-    func makeSession(window id: WindowID, empty: Bool = false) -> WindowSession {
+    func makeSession(window id: WindowID, empty: Bool = false, in windows: WindowsHost? = nil) -> WindowSession {
+        let windowsHost = windows ?? self.windowsHost
         let host = WorkspaceHost.make(options, windows: windowsHost, window: id, empty: empty)
         let factory = TerminalFactory(options: options, source: host.source)
         let effects = Self.makeEffects()
@@ -68,7 +69,11 @@ extension AppController {
         hub.actions.palette = paletteSources(for: session)
         hub.actions.openSettings = { [weak self] in self?.showSettings() }
         hub.actions.profiles = profileList(for: session)
-        hub.actions.profile = profileActions()
+        hub.actions.profile = profileActions(for: session)
+        hub.terminalDrag.tearOff = { [weak self, weak session] in
+            guard let self, let session else { return false }
+            return tearOffReleased($0, at: $1, from: session)
+        }
         hub.actions.showTerminalsInSidebar = { [weak self] in self?.look.tabsOnTop = false }
     }
 

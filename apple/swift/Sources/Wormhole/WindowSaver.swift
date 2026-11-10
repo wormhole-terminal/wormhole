@@ -14,7 +14,8 @@ final class WindowSaver {
     static let settle: Duration = .milliseconds(600)
 
     private unowned let session: WindowSession
-    private let windows: any WindowsBackend
+    /// The profile's windows it is written in; a window moved to another profile changes it.
+    var windows: any WindowsBackend
     private var pending: Task<Void, Never>?
 
     init(session: WindowSession, windows: any WindowsBackend) {

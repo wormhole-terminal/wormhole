@@ -22,6 +22,10 @@ public final class TerminalDragPointer {
     /// The button went up outside the list: the one who takes the drop acts and calls `settle()`.
     public private(set) var released: Over?
 
+    /// Asked first when a terminal is let go, with the pointer in the window's coordinates (it may lie outside the window):
+    /// true when the window took it, by opening a window of its own for it or giving it to another one.
+    public var tearOff: (@MainActor (TerminalID, CGPoint) -> Bool)?
+
     public init() {}
 
     public func move(_ terminal: TerminalID, to point: CGPoint) { over = Over(terminal: terminal, point: point) }

@@ -269,3 +269,37 @@ fn a_switch_makes_the_other_profiles_windows_and_settings_the_ones_read_and_back
     assert_eq!(open(active.dir()).saved().iter().map(|w| w.id).collect::<Vec<_>>(), [1]);
     assert!(in_default.beside_in(&root, "nobody").is_err(), "a profile that is not in the list");
 }
+
+/// "Move this window to...": the record leaves one profile's database for the other's, its notes with it, and the
+/// window stays among the live ones (its terminals run on where they are).
+#[test]
+fn a_window_moved_to_another_profile_is_saved_there_and_gone_from_here() {
+    use wormhole_core::config::profile::{NewProfile, ProfileList, StartFrom};
+    use wormhole_core::storage::paths::DataRoot;
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = DataRoot::new(dir.path());
+    let mut list = ProfileList::default();
+    let work = list
+        .create(
+            &root,
+            NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults },
+        )
+        .expect("makes Work");
+    list.save(&root).expect("saves the list");
+    let in_default = open(dir.path());
+    let in_work = in_default.beside_in(&root, work.as_str()).expect("opens Work beside Default");
+    let ws = window(&in_default, 1);
+    ws.apply(Action::NewTerminal);
+    assert!(in_default.save(1, ws.clone(), Some(frame(40.0))));
+
+    assert!(in_default.rehome(1, ws.clone(), Some(frame(50.0)), in_work.clone()));
+    assert!(in_default.saved().is_empty(), "gone from the profile it left");
+    let saved = in_work.saved();
+    assert_eq!((saved.len(), saved[0].id, saved[0].terminals), (1, 1, 1));
+    assert_eq!(saved[0].frame.map(|f| f.x), Some(50.0));
+    assert_eq!(in_default.shares().len(), 1, "still live: its terminal runs on");
+    // To the profile it is in already is nothing to do.
+    assert!(in_work.rehome(1, ws, None, in_work.clone()));
+    assert_eq!(in_work.saved().len(), 1);
+}

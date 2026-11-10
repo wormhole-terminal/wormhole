@@ -44,11 +44,19 @@ public protocol WindowsBackend: AnyObject {
     func saveFront(_ window: WindowID)
     /// The person closed the window: it and what it held are forgotten.
     func forget(_ window: WindowID)
+    /// Window `window` goes to the profile `to` belongs to: its record is written there and removed here, and its
+    /// terminals are untouched. False when the write failed (the window stays where it was).
+    func rehome(window: WindowID, workspace: any WorkspaceBackend, frame: WindowFrame?, to: any WindowsBackend) -> Bool
     /// Where to open a window saved as `frame` with these displays attached: still reachable stays, else it is brought
     /// onto a display.
     func fit(_ frame: WindowFrame, on displays: [DisplayArea]) -> WindowFrame
     /// Where a window opened from `frame` goes on `display`: a step down and to the right, or the corner.
     func cascade(_ frame: WindowFrame, on display: DisplayArea) -> WindowFrame
+    /// What letting go of a terminal at the global point `point` does, dragged out of window `source`. `covered`: another
+    /// application's window is the front-most there.
+    func tearOffLanding(over stack: [TearOffWindow], at point: CGPoint, from source: WindowID, covered: Bool) -> TearOffLanding
+    /// The window a terminal let go of at `point` (a display's own space) opens as, inside that display's `visible` part.
+    func tearOffWindow(at point: CGPoint, size: CGSize, visible: CGRect) -> CGRect
     /// The smallest window content: the sidebar beside a usable terminal.
     var minSize: CGSize { get }
 }

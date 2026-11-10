@@ -14,7 +14,7 @@ extension WindowHub {
                 state: state, statusBar: look.ownStatusBar, tabsOnTop: look.tabsOnTop, isFullScreen: isFullScreen,
                 isSplit: panes.isSplit, isZoomed: panes.isZoomed, canSplitRight: canSplit(.row), canSplitDown: canSplit(.column), minimap: look.ownMinimap, zen: look.zen != nil,
                 implemented: implemented, flagsOn: flagsOn, hasFolds: selectedOverlay?.hasFolds ?? false,
-                profiles: profiles.map(\.name), currentProfile: profiles.firstIndex { $0.current }))
+                profiles: profiles.map(\.name), currentProfile: profiles.firstIndex { $0.current }, windowProfile: profiles.firstIndex { $0.here }))
     }
 
     /// ⌘1–9: the terminal with this number in the list (the core numbers them).

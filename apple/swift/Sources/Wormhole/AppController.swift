@@ -69,8 +69,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// The notification rules' view of Settings.
     var settingsNotice: NoticeSettings { NoticeSettingsMaker.settings(settingsModel.backend.values) }
 
-    /// The windows of the profile Wormhole is in: the others are parked.
-    var shown: [WindowSession] { sessions.filter { $0.windows.profile == windowsHost.profile } }
+    /// The windows in sight: the profile Wormhole is in, and the odd ones opened in another (the rest are parked).
+    var shown: [WindowSession] { sessions.filter { !$0.parked } }
     /// The window commands act on: the key one, else the one that was in front last, else the first.
     var front: WindowSession {
         let shown = shown

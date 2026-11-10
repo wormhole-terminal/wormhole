@@ -12,7 +12,7 @@ import WorkspaceModel
 final class WindowSession {
     let id: WindowID
     /// The windows of the profile this one belongs to: it is saved and forgotten there.
-    let windows: WindowsHost
+    var windows: WindowsHost
     let hub: WindowHub
     let factory: TerminalFactory
     /// What the project's actions ask of this window, and the core's usage service (real windows only).
@@ -23,6 +23,8 @@ final class WindowSession {
     var notes: NotesCoordinator?
     var controller: WorkspaceWindowController?
     var saver: WindowSaver?
+    /// Out of sight with its terminals running: its profile is not the one Wormhole is in (`switchProfile`).
+    var parked = false
 
     init(id: WindowID, windows: WindowsHost, hub: WindowHub, factory: TerminalFactory, effects: AnyObject?, usage: AnyObject?, backends: PanelUI.PanelBackends) {
         (self.id, self.windows, self.hub, self.factory, panelEffects, panelUsage, panelBackends) = (id, windows, hub, factory, effects, usage, backends)

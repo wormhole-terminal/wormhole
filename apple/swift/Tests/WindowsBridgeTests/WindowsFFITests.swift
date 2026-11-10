@@ -102,4 +102,24 @@ final class WindowsFFITests: XCTestCase {
         XCTAssertEqual(windows.fit(kept, on: [main]), kept)
         XCTAssertEqual(windows.cascade(kept, on: main).x, 126)
     }
+
+    func testTheCoreSaysWhereAReleasedTerminalGoes() throws {
+        let windows = try RustWindowsBackend()
+        let stack = [
+            TearOffWindow(window: 2, bounds: CGRect(x: 500, y: 400, width: 600, height: 500)),
+            TearOffWindow(window: 1, bounds: CGRect(x: 0, y: 300, width: 800, height: 600)),
+            TearOffWindow(window: nil, bounds: CGRect(x: 1200, y: 0, width: 300, height: 300)),
+        ]
+        func landing(_ x: Double, _ y: Double, covered: Bool = false) -> TearOffLanding {
+            windows.tearOffLanding(over: stack, at: CGPoint(x: x, y: y), from: 1, covered: covered)
+        }
+        XCTAssertEqual(landing(600, 700), .into(2), "the front-most window takes it")
+        XCTAssertEqual(landing(100, 700), .stay, "its own window")
+        XCTAssertEqual(landing(1300, 100), .stay, "a window that takes nothing hides what lies behind it")
+        XCTAssertEqual(landing(1300, 700), .newWindow, "the desktop")
+        XCTAssertEqual(landing(600, 700, covered: true), .newWindow, "another application on top")
+        let visible = CGRect(x: 0, y: 38, width: 1440, height: 1000)
+        let placed = windows.tearOffWindow(at: CGPoint(x: 500, y: 400), size: CGSize(width: 900, height: 600), visible: visible)
+        XCTAssertEqual(placed, CGRect(x: 380, y: 310, width: 900, height: 600), "the pointer lies at the new terminal's row")
+    }
 }
