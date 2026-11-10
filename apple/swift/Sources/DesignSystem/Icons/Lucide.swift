@@ -1,20 +1,24 @@
-// The Lucide icons the sidebar's marks use (`gpui-kit-assets`: pin, link-2, sticky-note), drawn as strokes in their 24
+// The Lucide icons the sidebar's marks, the panel's tabs and the title row use (`gpui-kit-assets`), drawn as strokes in their 24
 // point box at any size. Their paths are generated (`LucideData.swift`).
 
 import SwiftUI
 
-enum Lucide: Sendable, Hashable {
+public enum Lucide: Sendable, Hashable {
     case pin, link, note
+    // The glyphs of the right panel's tabs and the branch chip.
+    case gitCompare, gitBranch, gauge, folder, folderTree
 }
 
 /// An icon stroked in the foreground colour, its line width scaled with the box as the SVG's is.
-struct LucideView: View {
+public struct LucideView: View {
     let icon: Lucide
     let size: CGFloat
+
+    public init(icon: Lucide, size: CGFloat) { (self.icon, self.size) = (icon, size) }
     private static let box: CGFloat = 24
     private static let line: CGFloat = 2
 
-    var body: some View {
+    public var body: some View {
         Canvas { canvas, area in
             let scale = area.width / Self.box
             var path = Path()

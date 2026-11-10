@@ -18,7 +18,7 @@ struct BranchCrumb: View {
             HStack(spacing: 0) {
                 Button(action: actions.pickBranch) {
                     HStack(spacing: Space._1) {
-                        Image(systemName: "arrow.triangle.branch").font(.system(size: Metric.chevron + 2))
+                        LucideView(icon: .gitBranch, size: Metric.chevron + 3)
                             .frame(width: TitleMetrics.extraIcon)
                         if showsText { Text(branch ?? PanesText.detached).lineLimit(1).truncationMode(.tail) }
                     }

@@ -2,13 +2,16 @@
 // running shell. Views are made lazily on first show, by a closure the app gives (it owns the sources), and
 // shut down when their terminal is gone.
 
+import Observation
 import TerminalMetal
 import WorkspaceModel
 
-@MainActor
+@MainActor @Observable
 public final class TerminalViews {
-    private var views: [TerminalID: MetalTerminalView] = [:]
-    private let make: @MainActor (TerminalID) -> MetalTerminalView?
+    @ObservationIgnored private var views: [TerminalID: MetalTerminalView] = [:]
+    @ObservationIgnored private let make: @MainActor (TerminalID) -> MetalTerminalView?
+    /// Moves when any view's grid changes, so what shows a size (the status bar) is drawn again.
+    public private(set) var gridRevision = 0
 
     /// `make` returns nil when a source cannot start; it reports why itself.
     public init(make: @escaping @MainActor (TerminalID) -> MetalTerminalView?) {
@@ -19,6 +22,7 @@ public final class TerminalViews {
     public func view(for id: TerminalID) -> MetalTerminalView? {
         if let view = views[id] { return view }
         guard let view = make(id) else { return nil }
+        view.onGridChange = { [weak self] in self?.gridRevision += 1 }
         views[id] = view
         return view
     }

@@ -4,8 +4,9 @@
 
 import SwiftUI
 
-enum SVGPath {
-    static func path(_ d: String) -> Path {
+/// What the logos and the Lucide icons draw their SVG data with.
+public enum SVGPath {
+    public static func path(_ d: String) -> Path {
         var scanner = Scanner(bytes: Array(d.utf8))
         var path = Path()
         var (current, start) = (CGPoint.zero, CGPoint.zero)

@@ -16,7 +16,9 @@ extension AppController {
         for window in windows {
             let session = makeSession(window: window.id)
             let frame = window.frame.map { windowsHost.backend.fit($0, on: WindowFrames.displays()) }
-            guard present(session, frame: frame, activate: true) else {
+            // One that was in the Dock opens behind, unfocused, and goes back there: it is never the one that comes forward,
+            // which is the last of the others (`window/window_bounds.rs` `front_after_restore`).
+            guard present(session, frame: frame, activate: frame?.minimised != true) else {
                 throw Options.UsageError(description: "no terminal source could start")
             }
         }
@@ -30,9 +32,9 @@ extension AppController {
 
     /// The window the core planned (`plan`, or `wh new-window`): its workspace is filled from the plan. It opens a step
     /// from the one in front; behind the others and without the keys unless `activate`.
-    func openPlanned(window id: WindowID, activate: Bool) {
+    func openPlanned(window id: WindowID, activate: Bool, in windows: WindowsHost? = nil) {
         let source = frame(of: front)
-        let session = makeSession(window: id)
+        let session = makeSession(window: id, in: windows)
         present(session, frame: source.map(cascaded), activate: activate)
     }
 

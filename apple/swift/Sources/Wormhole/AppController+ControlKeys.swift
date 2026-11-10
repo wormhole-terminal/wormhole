@@ -12,6 +12,16 @@ extension AppController {
         switch command {
         case "key": reply(sendKey(argument))
         case "keys": reply("focus=\(hub.focus.detail)")
+        case "hold-cmd", "release-cmd":
+            // ⌘ pressed alone and kept down (the ⌘1-9 hints show after 250 ms), or let go: the modifier event the window's monitors see.
+            let flags: NSEvent.ModifierFlags = command == "hold-cmd" ? .command : []
+            if let window, let event = NSEvent.keyEvent(
+                with: .flagsChanged, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: 55)
+            {
+                NSApp.sendEvent(event)
+            }
+            reply(command)
         default: return false
         }
         return true

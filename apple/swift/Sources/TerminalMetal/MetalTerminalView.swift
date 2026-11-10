@@ -80,7 +80,9 @@ public final class MetalTerminalView: NSView {
     var resizeGate = ResizeGate()
     var resizeItem: DispatchWorkItem?
     /// The grid the program was last told (`syncSurface`).
-    public private(set) var gridSize = GridSize(cols: 0, rows: 0)
+    public private(set) var gridSize = GridSize(cols: 0, rows: 0) { didSet { if gridSize != oldValue { onGridChange?() } } }
+    /// Told when the grid the program has changed (the status bar's size reads it).
+    public var onGridChange: (() -> Void)?
     private let wake = WakeRelay()
 
     // Input method state (see Keyboard/).

@@ -1,6 +1,7 @@
 // An agent's logo, filled in the foreground colour in its 24 point box (the registry's `agent-icons/*.svg`). Agents
 // without one (Aider, Crush, Factory Droid, Auggie, Foundation Models) show their monogram instead.
 
+import DesignSystem
 import SwiftUI
 import WorkspaceModel
 

@@ -1,4 +1,5 @@
 import SwiftUI
+@testable import DesignSystem
 import XCTest
 @testable import SidebarUI
 @testable import WorkspaceModel
