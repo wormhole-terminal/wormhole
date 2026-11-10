@@ -26,11 +26,11 @@ struct ThemeNameMenu: View {
                 Button(StudioWords.trash, role: .destructive) { Task { await session.trash() } }
             }
         } label: {
-            HStack(spacing: Space._1) {
-                Text(document.name).font(TextRole.body.font.weight(.semibold)).lineLimit(1).truncationMode(.tail)
-                Image(systemName: "chevron.down").font(.system(size: Metric.chevron, weight: .bold))
-            }
-            .frame(maxWidth: StudioMetrics.nameMaxWidth)
+            // One Text, so the system's menu label keeps the chevron after the name.
+            (Text(document.name).font(TextRole.heading.font.weight(.medium))
+                + Text(" ") + Text(Image(systemName: "chevron.down")).font(.system(size: Metric.chevron, weight: .bold)))
+                .lineLimit(1).truncationMode(.tail)
+                .frame(maxWidth: StudioMetrics.nameMaxWidth)
         }
         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
         .help(StudioWords.tooltipMenu)

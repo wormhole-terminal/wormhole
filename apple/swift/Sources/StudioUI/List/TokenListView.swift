@@ -30,8 +30,11 @@ struct TokenListView: View {
                     .padding(.bottom, Space._4)
                 }
                 .onChange(of: document.selected) { _, token in
-                    if let token { withAnimation(Motion.layout) { proxy.scrollTo(token, anchor: .center) } }
+                    guard let token else { return }
+                    reveal(token)
+                    withAnimation(Motion.layout) { proxy.scrollTo(token, anchor: .center) }
                 }
+                .onAppear { if let token = document.selected { reveal(token) } }
             }
         }
         .frame(width: StudioMetrics.listWidth)
@@ -59,6 +62,11 @@ struct TokenListView: View {
                 .id(token)
             }
         }
+    }
+
+    /// Opens the band the token is in, so a token chosen in the gallery or at the start is seen.
+    private func reveal(_ token: String) {
+        if let group = document.groups.first(where: { $0.tokens.contains(token) }) { open.insert(group.name) }
     }
 
     private var notInArea: String? {

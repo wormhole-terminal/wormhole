@@ -1,5 +1,4 @@
-// The head of the token list: the filter field and All / Yours / Low contrast (`studio/token_list.rs`). The
-// segments are the system's segmented control, which carries the keyboard and VoiceOver behaviour for free.
+// The head of the token list: the filter field and All / Yours / Low contrast (`studio/token_list.rs`).
 
 import DesignSystem
 import StudioModel
@@ -25,12 +24,12 @@ struct TokenListHeader: View {
             .frame(height: Metric.control)
             .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
             .overlay(RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.inputBorder, lineWidth: tokens.metrics.borderWidth))
-            Picker("", selection: $filter.show) {
-                Text(StudioWords.showAll).tag(TokenFilter.Show.all)
-                Text(StudioWords.showYours(yours)).tag(TokenFilter.Show.yours)
-                Text(StudioWords.showLow(low)).tag(TokenFilter.Show.lowContrast)
+            HStack {
+                Segmented(
+                    [(StudioWords.showAll, .all), (StudioWords.showYours(yours), .yours), (StudioWords.showLow(low), .lowContrast)],
+                    selection: $filter.show)
+                Spacer(minLength: 0)
             }
-            .pickerStyle(.segmented).labelsHidden().controlSize(.small)
         }
         .padding(.horizontal, Space._4).padding(.vertical, Space._3)
         .accessibilityElement(children: .contain)

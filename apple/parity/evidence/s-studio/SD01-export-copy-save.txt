@@ -1,0 +1,39 @@
+> studio-do rename S Lane Theme
+studio-do rename S Lane Theme: name=S Lane Theme dirty=true changes=0 counts=(yours: 0, low: 0) issues=0 undo=Rename redo=-
+> studio-do set primary #ff5500
+studio-do set primary #ff5500 ok=true: name=S Lane Theme dirty=true changes=1 counts=(yours: 1, low: 0) issues=0 undo=Change “primary” redo=-
+> studio-out export
+studio-out export: notice=exported(file:///tmp/Wormhole-swift-s-studio-a/Wormhole-swift-data/studio-out/s-lane-theme.json) files=["s-lane-theme.json"] in /tmp/Wormhole-swift-s-studio-a/Wormhole-swift-data/studio-out
+> studio-out copy-json
+studio-out copy-json: notice=copiedJSON files=["pasteboard.txt", "s-lane-theme.json"] in /tmp/Wormhole-swift-s-studio-a/Wormhole-swift-data/studio-out
+> studio-out duplicate
+studio-out duplicate: notice=copySaved(name: "S Lane Theme copy", file:///tmp/Wormhole-swift-s-studio-a/Wormhole-swift-data/themes/S%20Lane%20Theme%20copy.json) files=["pasteboard.txt", "s-lane-theme.json"] in /tmp/Wormhole-swift-s-studio-a/Wormhole-swift-data/studio-out
+> studio-out save-theme
+studio-out save-theme: notice=copySaved(name: "S Lane Theme copy", file:///tmp/Wormhole-swift-s-studio-a/Wormhole-swift-data/themes/S%20Lane%20Theme%20copy.json) files=["pasteboard.txt", "s-lane-theme.json"] in /tmp/Wormhole-swift-s-studio-a/Wormhole-swift-data/studio-out
+> studio-do state
+studio-do state: name=S Lane Theme dirty=true changes=1 counts=(yours: 1, low: 0) issues=0 undo=Change “primary” redo=-
+
+--- files
+/tmp/Wormhole-swift-s-studio-a/Wormhole-swift-data/studio-out:
+total 16
+drwxr-xr-x@  4 benjamin  wheel  128 11 Nov 00:44 .
+drwx------@ 17 benjamin  wheel  544 11 Nov 00:44 ..
+-rw-r--r--@  1 benjamin  wheel   99 11 Nov 00:44 pasteboard.txt
+-rw-r--r--@  1 benjamin  wheel   99 11 Nov 00:44 s-lane-theme.json
+
+/tmp/Wormhole-swift-s-studio-a/Wormhole-swift-data/themes:
+total 8
+drwxr-xr-x@  3 benjamin  wheel   96 11 Nov 00:44 .
+drwx------@ 17 benjamin  wheel  544 11 Nov 00:44 ..
+-rw-r--r--@  1 benjamin  wheel  104 11 Nov 00:44 S Lane Theme copy.json
+--- pasteboard.txt (first lines)
+{
+  "name": "S Lane Theme",
+  "extends": "Wormhole Dark",
+  "ui": {
+    "primary": "#ff5500"
+  }
+}
+
+--- exported file equals copy:
+identical

@@ -1,18 +1,23 @@
-// A banner over a pane (`style::banner`): the kind's glyph, one line in label size, and the buttons at the
-// trailing end. Tinted fill in the control corners; Increase Contrast draws the kind's outline.
+// A banner (`style::banner`): the kind's glyph, one line in label size, and the buttons at the trailing end; over a
+// pane or in a page. Tinted fill in the control corners; Increase Contrast draws the kind's outline.
 
-import DesignSystem
 import SwiftUI
 
+/// What a banner says it is: its glyph and its `banner.*` colours.
 public enum BannerKind: Sendable, Equatable { case info, warning, danger, success }
 
-struct PaneBanner<Actions: View>: View {
+/// A tinted notice with one line of words and, at the end, the buttons that go with it.
+public struct Banner<Actions: View>: View {
     let kind: BannerKind
     let text: String
-    @ViewBuilder var actions: Actions
+    let actions: Actions
     @Environment(\.tokens) private var tokens
 
-    var body: some View {
+    public init(kind: BannerKind, text: String, @ViewBuilder actions: () -> Actions) {
+        (self.kind, self.text, self.actions) = (kind, text, actions())
+    }
+
+    public var body: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radius)
         HStack(spacing: Space._3) {
             Image(systemName: symbol).font(.system(size: Metric.titleGlyph)).foregroundStyle(glyphColor)
@@ -64,4 +69,8 @@ struct PaneBanner<Actions: View>: View {
         case .success: tokens.bannerSuccessBorder
         }
     }
+}
+
+extension Banner where Actions == EmptyView {
+    public init(kind: BannerKind, text: String) { self.init(kind: kind, text: text) { EmptyView() } }
 }

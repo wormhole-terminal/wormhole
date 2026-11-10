@@ -5,16 +5,23 @@
 import SwiftUI
 
 public enum Motion {
+    /// Every animation's length in seconds, by name: the animations below are built from these, and the Theme
+    /// Studio's gallery lists them.
+    public static let timings: [(name: String, seconds: Double)] = [
+        ("press", 0.15), ("selection", 0.25), ("layout", 0.30), ("fade", 0.15), ("breath", 0.9),
+    ]
+    private static func seconds(_ name: String) -> Double { timings.first { $0.name == name }?.seconds ?? 0.25 }
+
     /// Hover and press feedback: quick enough to feel attached to the pointer.
-    public static let press = Animation.snappy(duration: 0.15)
+    public static let press = Animation.snappy(duration: seconds("press"))
     /// A selection moving, a count changing, a glyph swapping.
-    public static let selection = Animation.snappy(duration: 0.25)
+    public static let selection = Animation.snappy(duration: seconds("selection"))
     /// Layout that changes size or order: a group folding, a row arriving or leaving.
-    public static let layout = Animation.smooth(duration: 0.30)
+    public static let layout = Animation.smooth(duration: seconds("layout"))
     /// What replaces movement when Reduce Motion is on.
-    public static let fade = Animation.easeOut(duration: 0.15)
+    public static let fade = Animation.easeOut(duration: seconds("fade"))
     /// One breath of a status glyph; it repeats for as long as the state lasts.
-    public static let breath = Animation.easeInOut(duration: 0.9)
+    public static let breath = Animation.easeInOut(duration: seconds("breath"))
     /// How far a pressed control sinks.
     public static let pressScale: CGFloat = 0.98
 }

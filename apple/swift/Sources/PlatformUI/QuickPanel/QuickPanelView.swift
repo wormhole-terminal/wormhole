@@ -41,7 +41,7 @@ public struct QuickPanelView: View {
                 text: Binding(get: { model.query }, set: { model.query = $0 }), placeholder: "Search terminals and actions",
                 size: TextRole.heading.size, textColor: tokens.textPrimary, placeholderColor: tokens.inputPlaceholder,
                 caretColor: tokens.textPrimary, onKey: onKey)
-            if let hotkey = model.hotkey { KeyCapView(text: hotkey) }
+            if let hotkey = model.hotkey { KeyCap(text: hotkey) }
         }
         .padding(.horizontal, Space._4)
         .frame(height: Metric.paletteSearchHeight)

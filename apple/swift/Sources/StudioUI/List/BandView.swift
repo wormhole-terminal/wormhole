@@ -27,13 +27,13 @@ struct BandView: View {
                     .opacity(folds ? 1 : 0.4)
                     .motion(Motion.layout, value: isOpen)
                 Text(group.name).font(TextRole.label.font)
-                CountBadge(size)
                 Spacer(minLength: 0)
                 if lowCount > 0 {
                     Label("\(lowCount)", systemImage: "exclamationmark.triangle.fill")
                         .labelStyle(WarningLabel(tokens: tokens))
                 }
                 if changed { ChangedDot() }
+                CountBadge(size)
             }
             .padding(.horizontal, Metric.edgeInset)
             .frame(height: Metric.band)

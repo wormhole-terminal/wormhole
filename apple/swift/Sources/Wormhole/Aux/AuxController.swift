@@ -10,8 +10,8 @@ import AuxWindows
 final class AuxController {
     private let dataDirectory: URL
     private var updates: (any UpdateBackend)?
-    private var onboarding: OnboardingWindow?
-    /// The intro that plays again over the window in front (`playIntro`).
+    var onboarding: OnboardingWindow?
+    /// The run Play Intro and Play Welcome start (one plays at a time).
     let introPlayer = IntroPlayer()
     private var access: AccessDriver?
     /// The core's agent-access desk behind the questions, shared with the hook socket; nil in the sample.

@@ -28,7 +28,8 @@ struct TitleBar: View {
             UndoButtons(document: document)
             Button(StudioWords.revert) { document.revertToSaved() }.buttonStyle(.plain).font(TextRole.body.font)
                 .foregroundStyle(document.isDirty ? tokens.textMuted : tokens.textFaint).disabled(!document.isDirty)
-            Button(StudioWords.export) { session.exportJSON() }.buttonStyle(.plain).font(TextRole.body.font).foregroundStyle(tokens.textMuted)
+            Button { Task { await session.exportJSON() } } label: { Label(StudioWords.export, systemImage: "square.and.arrow.up") }
+                .buttonStyle(.bordered).controlSize(.small)
             SaveButton(session: session)
         }
         .padding(.leading, StudioMetrics.lightsEnd).padding(.trailing, Space._3)

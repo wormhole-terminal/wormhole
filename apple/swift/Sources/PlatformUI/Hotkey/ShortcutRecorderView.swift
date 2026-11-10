@@ -4,6 +4,7 @@
 // `ShortcutRecording` (core's `shortcut_record`); this only turns key events into it and draws the pill.
 
 import AppKit
+import DesignSystem
 import PlatformModel
 
 @MainActor

@@ -2,7 +2,9 @@
 // looking at, and a click inside one must not act on the sample), except the swatches that select their token.
 
 import DesignSystem
+import AuxWindows
 import FontPickerUI
+import PanesUI
 import SidebarUI
 import SwiftUI
 import WorkspaceModel
@@ -23,6 +25,16 @@ enum SpecimenContent {
         case "diff":
             ChangesSpecimen(opensFirst: true)
                 .frame(height: 520).clipped().allowsHitTesting(false)
+        case "tiles": TilesSpecimen()
+        case "find": FindSpecimen()
+        case "panes": PaneSpecimen()
+        case "chips": ChipsSpecimen()
+        case "labels": LabelsSpecimen()
+        case "buttons": ButtonsSpecimen()
+        case "inputs": InputsSpecimen()
+        case "menus": MenusSpecimen()
+        case "windows": AuxWindowsSpecimen()
+        case "metrics": MetricsSpecimen()
         case "chrome": ChromeSpecimen()
         case "shape": ShapeSpecimen()
         case "controls": ControlsSpecimen()

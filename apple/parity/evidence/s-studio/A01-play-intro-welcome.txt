@@ -1,0 +1,31 @@
+> intro emerge
+intro emerge
+> intro vortex
+intro vortex
+> intro collapse
+intro collapse
+> intro ftl
+intro ftl
+> intro aurora
+intro aurora
+> intro tentacles
+intro tentacles
+> intro voyage
+intro voyage
+> welcome cursor
+welcome cursor
+> welcome portal
+welcome portal
+> welcome logo
+welcome logo
+> intro nope
+error: intro takes emerge|vortex|collapse|ftl|aurora|tentacles|voyage|glow
+> windows
+Wormhole (Swift experiment) visible=true sheet=false
+Licenses visible=true sheet=false
+(untitled) visible=false sheet=false
+Session Hosts visible=true sheet=false
+Welcome to Wormhole visible=true sheet=false
+Theme Studio visible=true sheet=false
+(untitled) visible=false sheet=false
+(untitled) visible=true sheet=false

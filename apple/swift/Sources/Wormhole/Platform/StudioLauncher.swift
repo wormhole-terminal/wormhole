@@ -19,11 +19,20 @@ final class StudioLauncher {
     init(dataDirectory: URL) { themes = dataDirectory.appendingPathComponent("themes") }
 
     var document: StudioDocument? { controller.document }
+    var isOpen: Bool { controller.isOpen }
+
+    /// The menu's Save theme and Duplicate, Export JSON and Copy JSON.
+    func saveTheme() async { await controller.saveTheme() }
+    func duplicateTheme() { controller.duplicateTheme() }
+    func setOutputs(_ outputs: StudioOutputs) { controller.outputs = outputs }
+    func exportJSON() async { await controller.exportJSON() }
+    func copyJSON() { controller.copyJSON() }
 
     func show(store: ThemeStore = .shared) {
         #if WITH_UNIFFI
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)
-            let environment = StudioEnvironment(resolver: FfiThemeResolver(), folder: DiskThemeFolder(directory: themes))
+            let environment = StudioEnvironment(
+                resolver: FfiThemeResolver(), folder: DiskThemeFolder(directory: themes), knowledge: GalleryKnowledge())
             do {
                 try controller.show(theme: store.theme.name, environment: environment, store: store)
             } catch {

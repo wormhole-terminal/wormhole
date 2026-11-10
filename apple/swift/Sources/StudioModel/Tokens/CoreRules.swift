@@ -157,6 +157,8 @@ enum CoreRules {
         "tile.sheen": ("#fff / 14%", "#fff / 14%"),
         "titlebar.background": ("surface.panel", "surface.panel"),
         "tooltip.background": ("mix(surface.window, text.primary, 14%)", "text.primary"),
+        "tooltip.danger": ("readable(status.danger, tooltip.background, 4.5)", "readable(status.danger, tooltip.background, 4.5)"),
+        "tooltip.success": ("readable(status.success, tooltip.background, 4.5)", "readable(status.success, tooltip.background, 4.5)"),
         "tooltip.text": ("readable(text.primary, tooltip.background, 4.5)", "readable(surface.window, tooltip.background, 4.5)"),
         "trust.command": ("readable(status.info, over(banner.warning.background, surface.panel), surface.window, 4.5)", "readable(status.info, over(banner.warning.background, surface.panel), surface.window, 4.5)"),
     ]

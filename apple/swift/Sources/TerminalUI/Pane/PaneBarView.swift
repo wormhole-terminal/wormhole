@@ -21,7 +21,7 @@ public struct PaneBarView: View {
     public var body: some View {
         switch bar {
         case let .ask(program):
-            PaneBanner(kind: .warning, text: L10n.clipboardAsk(program)) {
+            Banner(kind: .warning, text: L10n.clipboardAsk(program)) {
                 HStack(spacing: Space._1) {
                     BarButton(title: L10n.clipboardOnce, help: L10n.clipboardOnceHelp) { actions.answerClipboard(.once) }
                     BarButton(title: gridWidth >= Self.roomyWidth ? L10n.clipboardAlwaysLong : L10n.clipboardAlways,
@@ -30,9 +30,9 @@ public struct PaneBarView: View {
                 }
             }
         case let .notice(kind, text):
-            PaneBanner(kind: kind, text: text) { EmptyView() }
+            Banner(kind: kind, text: text) { EmptyView() }
         case let .hostUnavailable(kind, failure):
-            PaneBanner(kind: .warning, text: failure.map(L10n.hostsEndFailed) ?? L10n.hostsUnavailable(kind)) {
+            Banner(kind: .warning, text: failure.map(L10n.hostsEndFailed) ?? L10n.hostsUnavailable(kind)) {
                 HStack(spacing: Space._1) {
                     if kind.isTransient { BarButton(title: L10n.hostsRetry, action: actions.tryAttachAgain) }
                     BarButton(title: L10n.hostsNew, action: actions.openNewTerminalHere)
@@ -40,7 +40,7 @@ public struct PaneBarView: View {
                 }
             }
         case let .hostNotResponding(failure):
-            PaneBanner(kind: .warning, text: failure.map(L10n.hostsEndFailed) ?? L10n.hostsNotResponding) {
+            Banner(kind: .warning, text: failure.map(L10n.hostsEndFailed) ?? L10n.hostsNotResponding) {
                 HStack(spacing: Space._1) {
                     BarButton(title: L10n.hostsWait, action: actions.waitForHost)
                     BarButton(title: L10n.hostsEnd) { actions.endHost(hard: true) }

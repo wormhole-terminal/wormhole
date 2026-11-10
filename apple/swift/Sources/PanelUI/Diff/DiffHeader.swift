@@ -40,10 +40,10 @@ struct DiffHeader: View {
                     .opacity(wrap ? 1 : 0.6)
             }
             if splitFits {
-                DiffSegmented(split: $split)
+                Segmented([("Split", true), ("Unified", false)], selection: $split)
                 Button(action: close) {
                     HStack(spacing: Space._1) {
-                        KeyCap(text: "esc")
+                        KeyCap(text: "esc", height: Metric.titleControl)
                         Text("close").font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                     }.padding(.horizontal, Space._2).frame(height: Metric.hitMin).contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel("Close diff")

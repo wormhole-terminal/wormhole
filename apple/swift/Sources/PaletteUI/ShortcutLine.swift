@@ -19,7 +19,7 @@ struct ShortcutLine: View {
         }
         .frame(height: Metric.row)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(row.label), \(row.keys.map { KeyCap.spoken($0.glyphs) }.joined(separator: ", "))"))
+        .accessibilityLabel(Text("\(row.label), \(row.keys.map { KeyCapSpeech.words($0.glyphs) }.joined(separator: ", "))"))
     }
 
     @ViewBuilder private var caps: some View {

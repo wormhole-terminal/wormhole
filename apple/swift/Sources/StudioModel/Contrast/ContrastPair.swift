@@ -43,6 +43,9 @@ public struct ContrastPair: Sendable, Equatable {
         .init("checkbox.border", "surface.panel", 3.0),
         .init("tab.inactive.text", "titlebar.background", 3.0),
         .init("tooltip.text", "tooltip.background", 4.5),
+        // Status colours as text on the tooltip's fill, which is the opposite of the window's lightness.
+        .init("tooltip.success", "tooltip.background", 4.5),
+        .init("tooltip.danger", "tooltip.background", 4.5),
         .init("diff.added", "diff.added.background", 4.5),
         .init("diff.removed", "diff.removed.background", 4.5),
         .init("diff.hunk.text", "diff.hunk.background", 4.5),

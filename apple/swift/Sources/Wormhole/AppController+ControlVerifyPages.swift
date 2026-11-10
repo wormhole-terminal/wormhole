@@ -14,6 +14,9 @@ extension AppController {
         case "probe": return runProbe(argument)
         case "project": return runProject(argument)
         case "studio-do": runStudio(argument)
+        case "studio-out": runStudioOutputs(argument)
+        case "onboarding-step": aux.showOnboarding(step: argument); reply("onboarding-step \(argument)")
+        case "intro", "welcome": runIntro(command: command, argument: argument)
         default: return false
         }
         return true
@@ -71,7 +74,7 @@ extension AppController {
         return true
     }
 
-    /// `studio-do state|set <token> <value>|reset <token>|rename <name>|undo|redo|save|revert|versions` on the open Studio's draft.
+    /// `studio-do state|area <name>|select <token>|set <token> <value>|reset <token>|rename <name>|undo|redo|save|revert|versions` on the open Studio's draft.
     private func runStudio(_ argument: String) {
         guard let document = studio.document else { return reply("error: the Studio is not open (`studio`)") }
         let words = argument.split(separator: " ", maxSplits: 2).map(String.init)
@@ -80,6 +83,8 @@ extension AppController {
         case "set": said = " ok=\(words.count == 3 && document.set(words[1], to: words[2]))"
         case "reset": said = " ok=\(words.count > 1 && document.reset(words[1]))"
         case "rename": document.rename(words.dropFirst().joined(separator: " "))
+        case "area": document.filter.area = words.count > 1 ? StudioArea(rawValue: words[1]) ?? .all : .all
+        case "select": document.selected = words.count > 1 ? words[1] : nil
         case "undo": document.undo()
         case "redo": document.redo()
         case "revert": document.revertToSaved()

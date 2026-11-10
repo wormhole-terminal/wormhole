@@ -97,7 +97,7 @@ var targets: [Target] = [
     // The Theme Studio's logic: a theme file as a draft, resolved by Rust, with undo, contrast and versions.
     .target(name: "StudioModel", dependencies: ["DesignSystem", "WordsModel"]),
     // The Theme Studio window: token list, gallery of every component, token editor.
-    .target(name: "StudioUI", dependencies: ["StudioModel", "DesignSystem", "SidebarUI", "PanelUI", "PaletteUI", "WorkspaceModel", "PanelModel", "PaletteModel", "WordsModel", "FontPickerUI"]),
+    .target(name: "StudioUI", dependencies: ["StudioModel", "DesignSystem", "SidebarUI", "PanelUI", "PaletteUI", "WorkspaceModel", "PanelModel", "PaletteModel", "WordsModel", "FontPickerUI", "PanesUI", "TerminalUI", "AuxWindows"]),
     .testTarget(name: "StudioTests", dependencies: ["StudioModel", "StudioUI", "DesignSystem"]),
     .testTarget(
         name: "UITests",

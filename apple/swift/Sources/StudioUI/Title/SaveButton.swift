@@ -1,7 +1,6 @@
 // "Save theme" as a split button: the click saves (⌘S), and the arrow opens the other ways to write the theme
 // out: a copy (⇧⌘S), Export JSON, Copy JSON (`SaveAction` of the GPUI app's title row).
 
-import AppKit
 import DesignSystem
 import StudioModel
 import SwiftUI
@@ -15,22 +14,16 @@ struct SaveButton: View {
             Button { Task { await session.save() } } label: {
                 Text(StudioWords.save).font(TextRole.body.font)
             }
-            .keyboardShortcut("s", modifiers: .command)
+            .keyboardShortcut("s", modifiers: .command).disabled(!session.document.isDirty && session.document.subject.url != nil)
             Menu {
                 Button(StudioWords.saveCopy) { session.saveCopy() }.keyboardShortcut("s", modifiers: [.command, .shift])
                 Divider()
-                Button(StudioWords.exportJSON) { session.exportJSON() }
-                Button(StudioWords.copyJSON) { copy() }
+                Button(StudioWords.exportJSON) { Task { await session.exportJSON() } }
+                Button(StudioWords.copyJSON) { session.copyJSON() }
             } label: { EmptyView() }
             .menuIndicator(.visible).menuStyle(.borderlessButton).fixedSize()
             .accessibilityLabel("More ways to save")
         }
-        .buttonStyle(.borderedProminent).controlSize(.small).tint(tokens.primary)
-    }
-
-    private func copy() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(session.document.exportJSON, forType: .string)
-        session.document.copiedJSON()
+        .buttonStyle(.bordered).controlSize(.small).tint(session.document.isDirty ? tokens.primary : nil)
     }
 }

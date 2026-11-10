@@ -36,7 +36,7 @@ public struct ExitedBar: View {
             Button(action: actions.closeTerminal) {
                 HStack(spacing: Space._1) {
                     Text(L10n.closeTerminal).font(.system(size: TextRole.caption.size))
-                    KeyCapLabel(text: closeKeys)
+                    KeyCap(text: closeKeys)
                 }
                 .foregroundStyle(closeHover ? tokens.textPrimary : tokens.textMuted)
                 .padding(.horizontal, Space._2)

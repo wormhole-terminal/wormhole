@@ -32,9 +32,7 @@ extension ActionRouter {
             table[ActionID(rawValue: "playIntro" + style.rawValue.capitalized)] = { [unowned self] in app.aux.playIntro(style) }
         }
         for handover in Handover.allCases {
-            table[ActionID(rawValue: "playWelcome" + handover.rawValue.capitalized)] = { [unowned self] in
-                app.aux.playIntro(.voyage, handover: handover)
-            }
+            table[ActionID(rawValue: "playWelcome" + handover.rawValue.capitalized)] = { [unowned self] in app.aux.playWelcome(handover) }
         }
         return table
     }

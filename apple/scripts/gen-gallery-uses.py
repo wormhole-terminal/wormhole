@@ -26,6 +26,13 @@ SPECIMENS = {
     "diff": ["PanelUI/Diff*"],
     "palette": ["PaletteUI/*"],
     "fonts": ["FontPickerUI/*"],
+    "find": ["TerminalUI/Find/*"],
+    "panes": ["PanesUI/Panes/*"],
+    "tiles": ["PanesUI/Panes/TerminalTile*", "PanesUI/Tabs/*"],
+    "chips": ["PanesUI/Title/*"],
+    "labels": ["StudioUI/Gallery/LabelsSpecimen.swift", "DesignSystem/SectionLabel.swift"],
+    "buttons": ["AuxWindows/Shared/AuxButtons.swift"],
+    "windows": ["AuxWindows/Shared/AuxCard.swift", "AuxWindows/Shared/StatusBadge.swift", "AuxWindows/Hosts/HostCardView.swift"],
     "chrome": ["DesignSystem/IconButton.swift", "DesignSystem/CountBadge.swift", "DesignSystem/StatusDot.swift",
                "DesignSystem/SectionLabel.swift", "DesignSystem/Row.swift"],
 }
@@ -59,7 +66,7 @@ def main() -> int:
              "// The tokens each gallery component's views draw with, which the Studio outlines and lists as \"Used by\".",
              "", "enum GalleryUses {"]
     for name, patterns in SPECIMENS.items():
-        files = sorted(p for p in SWIFT.glob("*/*.swift") if any(fnmatch(str(p.relative_to(SWIFT)), g) for g in patterns))
+        files = sorted(p for p in SWIFT.glob("*/**/*.swift") if any(fnmatch(str(p.relative_to(SWIFT)), g) for g in patterns))
         tokens = sorted(set().union(*(tokens_of(f.read_text(), table) for f in files)))
         lines.append(f"    static let {name}: [String] = [")
         lines += [f'        "{t}",' for t in tokens]

@@ -21,7 +21,8 @@ public struct SectionLabel: View {
                     .frame(width: Metric.lead)
                     .motion(Motion.layout, value: isCollapsed)
             }
-            Text(title).font(TextRole.caption.font.weight(.semibold))
+            // A caption over a group of rows is capitals (`section_label`); a foldable band keeps its case.
+            Text(title).textCase(isCollapsed == nil ? .uppercase : nil).font(TextRole.caption.font.weight(.semibold))
             Spacer(minLength: 0)
         }
         .foregroundStyle(Palette.textSecondary)

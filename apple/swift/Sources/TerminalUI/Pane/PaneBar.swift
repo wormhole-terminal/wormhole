@@ -2,6 +2,7 @@
 // question first, then a problem with the session host, then the last notice. The state is the terminal's (Rust's);
 // this is its value, and `PaneBarActions` is what its buttons do.
 
+import DesignSystem
 import Foundation
 
 /// Why a terminal's session host cannot be shown (`UnavailableKind`).

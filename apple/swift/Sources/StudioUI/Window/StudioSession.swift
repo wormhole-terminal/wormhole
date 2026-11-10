@@ -14,6 +14,8 @@ public final class StudioSession {
     /// Save was asked of a copy with no name of its own yet: the name is being asked for first.
     private var savingAfterRename = false
     @ObservationIgnored public weak var window: NSWindow?
+    /// The panel and pasteboard Export JSON and Copy JSON use.
+    @ObservationIgnored public var outputs = StudioOutputs.system
     @ObservationIgnored let environment: StudioEnvironment
     @ObservationIgnored let store: ThemeStore
 

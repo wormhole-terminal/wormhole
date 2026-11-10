@@ -11,6 +11,8 @@ import SwiftUI
 public final class StudioWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var session: StudioSession?
+    /// The panel and pasteboard of Export JSON and Copy JSON; a check replaces them with a scratch folder's.
+    public var outputs = StudioOutputs.system { didSet { session?.outputs = outputs } }
 
     /// Opens the Studio on `theme` (what is in use), or brings the open one forward.
     public func show(theme: String, environment: StudioEnvironment, store: ThemeStore = .shared) throws {
@@ -31,6 +33,7 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
         window.delegate = self
         window.isReleasedWhenClosed = false
         session.window = window
+        session.outputs = outputs
         (self.window, self.session) = (window, session)
         window.center()
         window.makeKeyAndOrderFront(nil)
@@ -40,6 +43,12 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
 
     /// The draft in the open window, for a driver that has no pointer (the control folder's `studio-*`).
     public var document: StudioDocument? { session?.document }
+
+    /// Save theme (⌘S) and Duplicate, for the menu bar and the palette: no-ops while the Studio is closed.
+    public func saveTheme() async { await session?.save() }
+    public func duplicateTheme() { session?.saveCopy() }
+    public func exportJSON() async { await session?.exportJSON() }
+    public func copyJSON() { session?.copyJSON() }
 
     public func windowShouldClose(_ sender: NSWindow) -> Bool {
         guard let session else { return true }

@@ -32,8 +32,8 @@ struct WelcomePage: View {
                     Button(AuxText.skipIntro) { session.send(.skip) }.buttonStyle(.plain).foregroundStyle(tokens.textMuted)
                 }
                 HStack(spacing: Space._4) {
-                    KeyHint(keys: "\u{23CE}", label: AuxText.hintContinue)
-                    KeyHint(keys: "esc", label: AuxText.hintSkip)
+                    KeyHintView(keys: "\u{23CE}", label: AuxText.hintContinue)
+                    KeyHintView(keys: "esc", label: AuxText.hintSkip)
                 }
             }
             .padding(.top, Space._6 + Space._2).entering(entrance.actions)

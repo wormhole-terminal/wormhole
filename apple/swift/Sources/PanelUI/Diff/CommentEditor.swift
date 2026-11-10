@@ -42,7 +42,7 @@ struct CommentEditor: View {
                     }
                 }
             HStack(spacing: PanelMetrics.gap) {
-                KeyCap(text: "\u{2318}\u{21a9}")
+                KeyCap(text: "\u{2318}\u{21a9}", height: Metric.titleControl)
                 Text(panelText("review-saves", "saves")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                 Spacer(minLength: 0)
                 if existing != nil { NoticeButton(title: panelText("review-remove", "Remove"), action: remove) }

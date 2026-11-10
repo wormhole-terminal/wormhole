@@ -71,7 +71,7 @@ struct ResultRow: View {
         .frame(width: Metric.lead, height: Metric.lead)
     }
 
-    private var spokenKey: String? { command.shortcut.map { KeyCap.spoken($0.glyphs) } }
+    private var spokenKey: String? { command.shortcut.map { KeyCapSpeech.words($0.glyphs) } }
 }
 
 extension StatusKind {

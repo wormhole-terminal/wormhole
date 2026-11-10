@@ -97,7 +97,7 @@ struct QuickPanelRowView: View {
         if let terminal, let time = AmbientWording.elapsed(terminal.state, since: max(0, now.timeIntervalSince(terminal.since))) {
             Text(time).font(.system(size: TextRole.caption.size)).monospacedDigit().foregroundStyle(tokens.textFaint)
         } else if case .action(let item) = row, let keys = item.keys(keymap) {
-            KeyCapView(text: keys)
+            KeyCap(text: keys)
         }
     }
 

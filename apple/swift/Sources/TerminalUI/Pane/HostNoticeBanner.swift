@@ -12,7 +12,7 @@ public struct HostNoticeBanner: View {
     public init(text: String, actions: PaneBarActions) { (self.text, self.actions) = (text, actions) }
 
     public var body: some View {
-        PaneBanner(kind: .warning, text: text) {
+        Banner(kind: .warning, text: text) {
             Button(L10n.dismiss, action: actions.dismissHostNotice)
                 .buttonStyle(.plain)
                 .font(.system(size: TextRole.label.size))

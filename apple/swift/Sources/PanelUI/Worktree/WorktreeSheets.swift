@@ -47,7 +47,7 @@ struct NewWorktreeSheet: View {
                 }
             }
             HStack(spacing: PanelMetrics.gap) {
-                KeyCap(text: "esc")
+                KeyCap(text: "esc", height: Metric.titleControl)
                 Text(panelText("worktree-cancels", "cancels")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                 Spacer(minLength: 0)
                 NoticeButton(title: panelText("worktree-cancel", "Cancel")) { store.asking = false }.keyboardShortcut(.cancelAction)
