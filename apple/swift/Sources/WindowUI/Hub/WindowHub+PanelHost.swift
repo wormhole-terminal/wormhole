@@ -10,7 +10,8 @@ extension WindowHub {
         host.terminal.send = { [unowned self] text in selectedSource?.write(Data(text.utf8)) }
         host.terminal.takePrompt = { [unowned self] in selectedSource?.grabPrompt() }
         host.terminal.paste = { [unowned self] text in
-            guard let source = selectedSource else { return false }
+            // A program without bracketed paste would run each line: the panel copies the text instead.
+            guard let source = selectedSource, source.takesPasteAsText else { return false }
             source.paste(text)
             return true
         }

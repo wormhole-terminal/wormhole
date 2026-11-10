@@ -30,13 +30,15 @@ public struct DiffFile: Hashable, Sendable {
     public var newPath: String?
     public var isBinary = false
     public var hunks: [DiffHunk] = []
+    /// Core's words where a diff has no lines: an LFS pointer, a file too large to load unasked, a submodule's commits.
+    public var note: String?
 
     public var isNew: Bool { oldPath == nil }
     public var isDeleted: Bool { newPath == nil }
     public var isRenamed: Bool { oldPath != nil && newPath != nil && oldPath != newPath }
     public var path: String { newPath ?? oldPath ?? "" }
 
-    public init(oldPath: String? = nil, newPath: String? = nil, isBinary: Bool = false, hunks: [DiffHunk] = []) {
-        (self.oldPath, self.newPath, self.isBinary, self.hunks) = (oldPath, newPath, isBinary, hunks)
+    public init(oldPath: String? = nil, newPath: String? = nil, isBinary: Bool = false, hunks: [DiffHunk] = [], note: String? = nil) {
+        (self.oldPath, self.newPath, self.isBinary, self.hunks, self.note) = (oldPath, newPath, isBinary, hunks, note)
     }
 }

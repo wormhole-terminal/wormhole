@@ -13,10 +13,11 @@ public struct Note: Identifiable, Hashable, Sendable {
         self.collapsed = collapsed
     }
 
-    /// The first line is the title; an empty note is still being written.
-    public var title: String {
-        text.split(separator: "\n", omittingEmptySubsequences: true).first.map(String.init) ?? "New note"
-    }
+    /// The first line without a list's or a heading's marks is the title; an empty note is still being written.
+    public var title: String { NoteRules.title(text) ?? "New note" }
+
+    /// Nothing but whitespace: such a note is thrown away when its writing ends.
+    public var isBlank: Bool { text.allSatisfy(\.isWhitespace) }
 
     /// The lines after the title, which show under it while the note is open.
     public var body: String {

@@ -1,6 +1,8 @@
 // A next step (`features/notes/task_rows.rs`, `style::item_row`): the box in the lead column and its words in the
-// body style, muted and struck through once done. Clicking the words edits them in place; ↵ keeps the change,
-// esc drops it, and emptying the field removes the step. The actions show under the pointer.
+// body style, muted and struck through once done. Clicking the words edits them in place; ↵ keeps the change and opens
+// the next step below (on an empty field it just ends the writing), esc keeps it and gives the keys back to the terminal,
+// ⌘↵ sends the words to the prompt (⇧ also submits), ⌫ on an empty field deletes the step and opens the one above, and
+// emptying the field removes it. The actions show under the pointer.
 
 import DesignSystem
 import PanelModel
@@ -8,6 +10,7 @@ import SwiftUI
 
 struct TaskRowView: View {
     let task: PanelTask
+    let store: NotesStore
     let toggle: () -> Void
     let rename: (String) -> Void
     let send: () -> Void
@@ -34,24 +37,42 @@ struct TaskRowView: View {
         .background(hovering || editing ? tokens.stateHover : .clear, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
         .onHover { hovering = $0 }
         .animation(motion.tick, value: task.done)
+        .onChange(of: store.freshStep) { _, id in
+            if id == task.id { edit(); store.consumeFreshStep() }
+        }
     }
 
     @ViewBuilder private var label: some View {
         if editing {
             TextField("", text: $draft)
                 .textFieldStyle(.plain).font(TextRole.body.font).focused($focused)
-                .onSubmit { finish(keep: true) }
-                .onExitCommand { finish(keep: false) }
+                .onSubmit {
+                    let empty = draft.trimmingCharacters(in: .whitespaces).isEmpty
+                    finish(keep: true)
+                    if empty { store.leave() } else { (store.draftAfter, store.drafting) = (task.id, true) }
+                }
+                .onExitCommand { finish(keep: true); store.leave() }
+                .onKeyPress(.return, phases: .down) { press in
+                    guard press.modifiers.contains(.command) else { return .ignored }
+                    store.send(text: draft, submit: press.modifiers.contains(.shift))
+                    return .handled
+                }
+                .onKeyPress(.delete, phases: .down) { _ in
+                    guard draft.isEmpty else { return .ignored }
+                    editing = false
+                    store.removeEmpty(task)
+                    return .handled
+                }
                 .reorderKeys(moveBy)
                 .onChange(of: focused) { _, now in if !now && editing { finish(keep: true) } }
         } else {
             Text(task.text).font(TextRole.body.font)
-                .foregroundStyle(task.done ? tokens.textFaint : tokens.textPrimary)
-                .strikethrough(task.done, color: tokens.textFaint)
+                .foregroundStyle(task.done ? tokens.textMuted : tokens.textPrimary)
+                .strikethrough(task.done, color: tokens.textMuted)
                 .lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
-                .onTapGesture { draft = task.text; editing = true; focused = true }
+                .onTapGesture(perform: edit)
         }
     }
 
@@ -59,4 +80,6 @@ struct TaskRowView: View {
         editing = false
         if keep, draft != task.text { rename(draft) }
     }
+
+    private func edit() { draft = task.text; editing = true; focused = true }
 }

@@ -4,6 +4,7 @@
 // colour it sets by hand is a swatch of its own, matching none of the names.
 
 import DesignSystem
+import PanelModel
 import SwiftUI
 import WorkspaceModel
 
@@ -11,12 +12,20 @@ struct FolderColorCard: View {
     let store: ProjectStore
     @State private var picked = Color.accentColor
     @State private var choosing = false
+    @State private var folded = false
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         let paint = store.paint
         PanelCard {
-            CardBand(title: panelText("project-folder-color", "Folder colour"))
+            CardBand(title: panelText("project-folder-color", "Folder colour"), folded: folded, onToggle: { folded.toggle() })
+            if !folded { choices(paint) }
+        }
+        .animation(.snappy(duration: 0.16), value: folded)
+    }
+
+    @ViewBuilder private func choices(_ paint: FolderPaint) -> some View {
+        Group {
             HStack(spacing: 0) {
                 ColorChoice(name: "None", color: nil, chosen: paint.chosen == nil && paint.custom == nil, enabled: paint.enabled) { store.setColor(nil) }
                 if let hex = paint.custom {

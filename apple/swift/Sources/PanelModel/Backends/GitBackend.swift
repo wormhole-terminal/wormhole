@@ -11,6 +11,8 @@ public protocol GitBackend: Sendable {
     func isRepository(_ folder: String) async -> Bool
     /// The status of the working tree, or the diff stat against `rev` when comparing.
     func changes(in folder: String, comparedWith rev: Rev?) async throws -> [ChangedFile]
+    /// The same, with the name of the compared branch when it no longer exists (the list is then against HEAD).
+    func changesResult(in folder: String, comparedWith rev: Rev?) async throws -> ChangesResult
     /// One file's diff as the core parsed it: the working tree against HEAD, or against `rev`.
     func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> DiffFile
     /// The log of `rev` (HEAD when nil, or the stashes), limited to commits that touched `paths` when given.
@@ -26,4 +28,18 @@ public protocol GitBackend: Sendable {
     func revs(in folder: String, forHistory: Bool) async throws -> [Rev]
     /// Fires when something that matters to `git status` changed (the debounced watch of `git/watch`).
     func changes(in folder: String) -> AsyncStream<Void>
+}
+
+/// What a status read gave: the files, and the compared branch's name when it was deleted.
+public struct ChangesResult: Sendable {
+    public var files: [ChangedFile]
+    public var compareMissing: String?
+
+    public init(files: [ChangedFile], compareMissing: String? = nil) { (self.files, self.compareMissing) = (files, compareMissing) }
+}
+
+extension GitBackend {
+    public func changesResult(in folder: String, comparedWith rev: Rev?) async throws -> ChangesResult {
+        ChangesResult(files: try await changes(in: folder, comparedWith: rev))
+    }
 }

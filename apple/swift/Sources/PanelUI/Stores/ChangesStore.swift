@@ -13,6 +13,10 @@ public final class ChangesStore {
     public private(set) var phase = Phase.loading
     public private(set) var folder: String?
     public var compare: Rev?
+    /// The branch the list compared with is gone and the list is against HEAD (an amber line over it).
+    public private(set) var compareMissing: String?
+    /// The last read failed but the list under it is the last good one: git may only have been busy for a moment.
+    public private(set) var refreshError: String?
     /// The list's arrangement: tree and untracked grouping are the panel's preferences, the folds are this list's own.
     public var layout: ChangeRows {
         get {
@@ -53,6 +57,7 @@ public final class ChangesStore {
         self.folder = folder
         files = []
         compare = nil
+        (compareMissing, refreshError) = (nil, nil)
         close()
         watch?.cancel()
         guard let folder else { return }
@@ -69,13 +74,18 @@ public final class ChangesStore {
         Task {
             guard await git.isRepository(folder) else { return setPhase(.notRepository, folder) }
             do {
-                let list = try await git.changes(in: folder, comparedWith: rev)
+                let result = try await git.changesResult(in: folder, comparedWith: rev)
+                let list = result.files
                 guard folder == self.folder, rev == compare else { return }
                 files = list
+                (compareMissing, refreshError) = (result.compareMissing, nil)
                 phase = .loaded
                 if let open = selection, !list.contains(where: { $0.id == open }) { close() }
             } catch {
-                setPhase(.failed((error as? GitFailure)?.message ?? "git can't be read."), folder)
+                let message = (error as? GitFailure)?.message ?? "git can't be read."
+                guard folder == self.folder else { return }
+                // A list already shown stays under a red line; with none, the problem takes its place.
+                if phase == .loaded { refreshError = message } else { phase = .failed(message) }
             }
         }
     }

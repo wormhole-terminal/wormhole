@@ -160,7 +160,7 @@ final class StoreTests: XCTestCase {
 
     func testUsageBadgeAndCoverFollowPresentation() async throws {
         let c = try await controller()
-        XCTAssertEqual(c.badge(for: .usage), 3)
+        XCTAssertNil(c.badge(for: .usage), "only Changes has a count on its tab")
         XCTAssertNil(c.badge(for: .history))
         c.tab = .changes
         c.changes.open(c.changes.files[0].id)

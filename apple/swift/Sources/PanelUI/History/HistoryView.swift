@@ -59,13 +59,13 @@ struct HistoryListView: View {
                     spoken: "History, \(store.model.commits.count) commits"
                 ) {
                     RevPicker(
-                        selected: store.rev, revs: store.revs, headTitle: store.model.branch ?? "HEAD", load: store.loadRevs, pick: store.pick)
+                        selected: store.rev, revs: store.revs, headTitle: "HEAD", load: store.loadRevs, pick: store.pick)
                 }
                 if !store.paths.isEmpty { filterChip }
                 switch store.phase {
-                case .loading: EmptyNote(text: "Reading the log\u{2026}")
-                case .notRepository: EmptyNote(text: "This folder isn't in a git repository.")
-                case let .failed(why): EmptyNote(text: why)
+                case .loading: EmptyNote(text: panelText("history-reading", "Reading history\u{2026}"))
+                case .notRepository: EmptyNote(text: panelText("git-not-repository", "This terminal's folder isn't inside a git repository."))
+                case let .failed(why): GitProblemView(problem: GitProblem(message: why, tab: .history), retry: store.refresh)
                 case .loaded: commits
                 }
             }

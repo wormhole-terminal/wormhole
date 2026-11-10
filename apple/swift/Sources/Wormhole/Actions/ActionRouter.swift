@@ -39,8 +39,12 @@ final class ActionRouter {
         case .switchProfile(let index): app.switchProfile(index: index)
         case .openInProfile(let index): app.openWindow(inProfileIndex: index)
         case .moveToProfile(let index): app.moveFrontWindow(toProfileIndex: index)
-        case .openRecent, .runProjectAction, .newTerminalWith:
-            // Recent folders, project actions and shells come with the core.
+        // A project's action by id, as the Project tab's row runs it (the menu lists the trusted project's).
+        case .runProjectAction(let id):
+            let project = app.hub.panel.project
+            if let action = project.state?.actions.first(where: { $0.id == id }) { project.run(action) }
+        case .openRecent, .newTerminalWith:
+            // Recent folders and shells come with the core.
             break
         }
     }

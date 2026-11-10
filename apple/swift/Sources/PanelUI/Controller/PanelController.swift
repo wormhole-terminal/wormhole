@@ -54,15 +54,9 @@ public final class PanelController {
         tab = .history
     }
 
-    /// The count on a tab of the strip: the changed files, the agents that reported.
+    /// The count on a tab of the strip: the changed files (Changes is the only tab with one, as in the GPUI app).
     public func badge(for tab: PanelTab) -> Int? {
-        let count =
-            switch tab {
-            case .changes: changes.files.count
-            case .usage: usage.reports.count
-            default: 0
-            }
-        return count > 0 ? count : nil
+        tab == .changes && !changes.files.isEmpty ? changes.files.count : nil
     }
 
     /// Where an opened diff or file is drawn (see `DiffPresentation`).

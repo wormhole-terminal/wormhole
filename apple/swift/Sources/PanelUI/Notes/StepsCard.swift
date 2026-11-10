@@ -8,7 +8,6 @@ import SwiftUI
 struct StepsCard: View {
     @Bindable var store: NotesStore
     @State private var dragging: UUID?
-    @State private var writing = false
     @Environment(\.panelMotion) private var motion
     @Environment(\.tokens) private var tokens
 
@@ -21,17 +20,17 @@ struct StepsCard: View {
         let open = model.tasks.remaining
         PanelCard {
             CardBand(
-                title: "Next steps", folded: model.tasks.items.isEmpty && !writing ? nil : model.stepsCollapsed,
+                title: "Next steps", folded: model.tasks.items.isEmpty && !store.drafting ? nil : model.stepsCollapsed,
                 count: open > 0 ? CountText.grouped(open) : nil, spoken: "Next steps, \(open) open",
                 onToggle: { model.stepsCollapsed.toggle() },
-                add: ("Add next step", { model.stepsCollapsed = false; writing = true }))
+                add: ("Add next step", { model.stepsCollapsed = false; (store.draftAfter, store.drafting) = (nil, true) }))
             if !model.stepsCollapsed {
                 ForEach(model.tasks.rows(showDone: model.showDone)) { row in
                     switch row {
                     case let .step(task):
                         let ids = model.tasks.items.map(\.id)
                         TaskRowView(
-                            task: task, toggle: { model.tasks.toggle(task.id) },
+                            task: task, store: store, toggle: { model.tasks.toggle(task.id) },
                             rename: { model.tasks.rename(task.id, to: $0) }, send: { store.send(task) },
                             delete: { model.tasks.delete(task.id) },
                             moveBy: { delta in
@@ -39,17 +38,33 @@ struct StepsCard: View {
                             })
                             .reorderable(id: task.id, in: ids, dragging: $dragging, move: store.moveTask)
                             .transition(motion.row)
+                        if store.drafting, store.draftAfter == task.id { draft }
                     case let .doneFold(count):
                         DoneFold(count: count, open: model.showDone) { model.showDone.toggle() }.transition(motion.row)
                     }
                 }
-                if writing {
-                    TaskDraftRow(add: { _ = model.tasks.add($0) }, discard: { writing = false }).transition(motion.row)
-                }
+                if store.drafting, store.draftAfter == nil { draft }
             }
         }
         .animation(motion.list, value: model.tasks.rows(showDone: model.showDone))
         .animation(motion.fold, value: model.stepsCollapsed)
+    }
+}
+
+extension StepsCard {
+    /// The step being written, where ↵ left it: under the step it was opened after, or at the end. Each new one is
+    /// a new row (its id is its place), which takes the keyboard on its own.
+    fileprivate var draft: some View {
+        let after = store.draftAfter
+        return TaskDraftRow(
+            add: { text in
+                if let made = store.model.tasks.add(text, after: after) { store.draftAfter = made.id }
+            },
+            discard: { store.drafting = false },
+            leave: store.leave
+        )
+        .id(store.draftAfter)
+        .transition(motion.row)
     }
 }
 

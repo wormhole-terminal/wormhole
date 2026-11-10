@@ -1,5 +1,6 @@
-// A boxed notice (`style::callout`) in a banner's colours: a title, then what it says. The project trust notice is the
-// warning one; the fill and the edge are the theme's `banner.*` tokens.
+// A full-width notice in a panel that asks for something (`style::callout`; the project's trust notice), flat like a banner:
+// the kind's tint in the control corners with no outline (Increase Contrast draws the kind's), the icon in the lead column and
+// the title at its side, then the body lined up under the title.
 
 import DesignSystem
 import SwiftUI
@@ -11,20 +12,42 @@ struct Callout<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
     @Environment(\.tokens) private var tokens
+    @Environment(\.colorSchemeContrast) private var contrast
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radius, style: .continuous)
-        VStack(alignment: .leading, spacing: PanelMetrics.gap) {
-            Text(title).font(TextRole.label.font).foregroundStyle(tokens.textPrimary)
-            content
+        VStack(alignment: .leading, spacing: Space._2) {
+            HStack(spacing: Space._2) {
+                Image(systemName: symbol).font(.system(size: Metric.glyph)).foregroundStyle(iconColour)
+                    .frame(width: Metric.lead, height: Metric.lead)
+                Text(title).font(TextRole.body.font.weight(.semibold)).foregroundStyle(tokens.textPrimary)
+            }
+            // The body starts under the title: past the lead column and its gap (`CALLOUT_INDENT`).
+            VStack(alignment: .leading, spacing: Space._2) { content }.padding(.leading, Metric.lead + Space._2)
         }
-        .padding(PanelMetrics.gap)
+        .padding(.horizontal, Space._4).padding(.vertical, Space._3)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(fill, in: shape)
-        .overlay { shape.strokeBorder(edge, lineWidth: tokens.metrics.borderWidth) }
+        .overlay { if contrast == .increased { shape.strokeBorder(edge, lineWidth: tokens.metrics.borderWidth) } }
         .padding(.horizontal, PanelMetrics.inset - PanelMetrics.cardPad).padding(.vertical, Space._1)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)
+    }
+
+    private var symbol: String {
+        switch kind {
+        case .info: "info.circle"
+        case .warning: "shield"
+        case .danger: "exclamationmark.triangle"
+        }
+    }
+
+    private var iconColour: Color {
+        switch kind {
+        case .info: tokens.statusInfo
+        case .warning: tokens.statusWarning
+        case .danger: tokens.statusDanger
+        }
     }
 
     private var fill: Color {

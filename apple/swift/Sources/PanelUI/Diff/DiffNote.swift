@@ -18,6 +18,7 @@ struct DiffNote: View {
 
     /// The note for a file with no rows: why, from what the diff and the change say.
     static func text(for file: ChangedFile, diff: DiffFile?) -> String? {
+        if let note = diff?.note { return note }
         if diff?.isBinary == true { return "Binary file" }
         if file.lfs { return "Stored in Git LFS" }
         guard diff?.hunks.isEmpty ?? true else { return nil }

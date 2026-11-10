@@ -35,6 +35,7 @@ mod isolation;
 pub mod keymap;
 mod live_resize;
 mod minimap;
+mod notes_text;
 pub mod notify;
 mod open_file;
 pub mod palette_search;

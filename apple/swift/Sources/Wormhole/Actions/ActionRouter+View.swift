@@ -25,6 +25,7 @@ extension ActionRouter {
             "showUsage": { hub.send(.showPanelTab(.usage)) },
             "showProject": { hub.send(.showPanelTab(.project)) },
             "showFiles": { hub.send(.showPanelTab(.files)) },
+            "newNote": { hub.send(.showPanelTab(.notes)); hub.panel.notes.newNote() },
             "stashPrompt": { if hub.panel.notes.stashPrompt() { hub.send(.showPanelTab(.notes)) } },
             "commandPalette": { hub.send(.showOverlay(hub.state.overlay == .palette ? nil : .palette)) },
             "keyboardShortcuts": { hub.send(.showOverlay(hub.state.overlay == .shortcuts ? nil : .shortcuts)) },

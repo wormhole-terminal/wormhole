@@ -23,11 +23,11 @@ public struct TaskList: Equatable, Sendable {
 
     /// Blank input adds nothing: pressing return on an empty field is not a request for an empty task.
     @discardableResult
-    public mutating func add(_ text: String) -> PanelTask? {
+    public mutating func add(_ text: String, after id: PanelTask.ID? = nil) -> PanelTask? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         let task = PanelTask(text: trimmed)
-        items.append(task)
+        if let id, let at = items.firstIndex(where: { $0.id == id }) { items.insert(task, at: at + 1) } else { items.append(task) }
         return task
     }
 

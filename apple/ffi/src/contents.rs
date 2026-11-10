@@ -1,6 +1,7 @@
 //! The terminal's text for Print and Export Text As: `wormhole-term`'s `contents`, as one call.
 
 use crate::terminal::Terminal;
+use wormhole_term::types::Modes;
 
 /// How much of the terminal's text a call returns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -32,5 +33,11 @@ impl Terminal {
     /// line and its box), for "Stash prompt". Nothing at a plain shell prompt, or after `close`.
     pub fn grab_prompt(&self) -> Option<String> {
         self.with_pty(|pty| pty.grab_prompt()).flatten()
+    }
+
+    /// Whether the program in front takes a paste as text (it turned bracketed paste on): without it every
+    /// line of a paste runs as if Return followed it, so a review is copied instead of pasted.
+    pub fn takes_paste_as_text(&self) -> bool {
+        self.with_pty(|pty| pty.mode().contains(Modes::BRACKETED_PASTE)).unwrap_or(false)
     }
 }

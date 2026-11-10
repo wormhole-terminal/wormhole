@@ -167,6 +167,7 @@ public final class UniFFIFrameSource: FrameSource {
     public func plainText(history: Bool) -> String? { current?.contents(scope: history ? .everything : .screen) }
 
     public func grabPrompt() -> String? { current?.grabPrompt() }
+    public var takesPasteAsText: Bool { current?.takesPasteAsText() ?? false }
 
     /// Rust's record has the same name as TerminalCore's value, hence the qualified one.
     public func inlineImage(key: UInt32) -> TerminalCore.InlineImage? {

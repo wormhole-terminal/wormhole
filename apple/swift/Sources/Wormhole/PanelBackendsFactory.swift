@@ -49,6 +49,7 @@ enum PanelBackendsFactory {
                     let files = try FilesBridge.makeBackends(authenticator: authenticator, effects: effects)
                     (backends.files, backends.project, backends.usage) = (files.files, files.project, files.usage)
                     made.notes = files.notes
+                    FilesBridge.installNoteRules()
                     made.usage = files.usage.service
                 } catch {
                     FileHandle.standardError.write(Data("panel: files, project and usage are the sample (\(error))\n".utf8))
@@ -58,10 +59,11 @@ enum PanelBackendsFactory {
         return made
     }
 
-    /// Why a worktree may not be made of `folder`, or nil. Git knows nothing of trust, so the project's own state decides:
-    /// only a trusted project is written to, and a folder whose project is unknown is not trusted.
+    /// Why a worktree may not be made of `folder`, or nil. Git knows nothing of trust, so the project's own state decides, as
+    /// the GPUI app's does: a folder with no `.wormhole/` is plain git and may; one whose project is not trusted may not, because
+    /// its settings and setup command would run in the new terminal.
     nonisolated static func refusal(making folder: String, project: any ProjectBackend) async -> String? {
-        guard let state = await project.project(at: folder), state.status == .trusted else {
+        if let state = await project.project(at: folder), state.status != .trusted {
             return "Worktrees are made only in a trusted project: approve this folder's project in the Project tab first."
         }
         return nil

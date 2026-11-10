@@ -6,6 +6,7 @@
 // and the Notes tab's `backends.notes` (load, save, sync). The data folder is core's (`WORMHOLE_DATA_DIR`, which must
 // be `Wormhole-swift*`: the library refuses to start otherwise, so this throws).
 
+import PanelModel
 import PlatformModel
 import WormholeBindings
 
@@ -17,6 +18,12 @@ public struct PanelBackends: Sendable {
 }
 
 public enum FilesBridge {
+    /// Core's notes text rules for the Notes tab (the paragraph ⌘↵ sends, a note's title), installed once at launch.
+    public static func installNoteRules() {
+        NoteRules.paragraphAt = { text, cursor in noteParagraphAt(text: text, cursor: UInt64(max(cursor, 0))) }
+        NoteRules.title = { noteTitle(text: $0) }
+    }
+
     /// - Parameters:
     ///   - authenticator: asked before a project is trusted (Touch ID or the password).
     ///   - effects: performs what a project's action, prompt or layout asks of the window, and says what was refused.

@@ -14,9 +14,9 @@ struct ChangesListView: View {
     var body: some View {
         PanelScroll {
             switch store.phase {
-            case .loading: PanelCard { head(group: .all, count: 0, folded: false, first: true); EmptyNote(text: "Reading changes\u{2026}") }
-            case .notRepository: PanelCard { EmptyNote(text: "This folder isn't in a git repository.") }
-            case let .failed(why): PanelCard { EmptyNote(text: why) }
+            case .loading: PanelCard { head(group: .all, count: 0, folded: false, first: true); EmptyNote(text: panelText("changes-reading", "Reading git status\u{2026}")) }
+            case .notRepository: PanelCard { EmptyNote(text: panelText("git-not-repository", "This terminal's folder isn't inside a git repository.")) }
+            case let .failed(why): PanelCard { GitProblemView(problem: GitProblem(message: why, tab: .changes), retry: store.refresh) }
             case .loaded: loaded
             }
         }
@@ -24,6 +24,8 @@ struct ChangesListView: View {
     }
 
     @ViewBuilder private var loaded: some View {
+        if let message = store.refreshError { StatusLine(text: panelText("changes-refresh-failed", "Couldn't refresh: \(message.split(separator: "\n").first.map(String.init) ?? message)"), danger: true) }
+        if let branch = store.compareMissing { StatusLine(text: panelText("changes-compare-missing", "\(branch) no longer exists \u{00B7} showing vs HEAD"), danger: false) }
         if store.files.isEmpty {
             PanelCard {
                 head(group: .all, count: 0, folded: false, first: true)

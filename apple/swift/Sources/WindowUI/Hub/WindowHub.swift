@@ -59,7 +59,19 @@ public final class WindowHub {
     }
 
     public var state: WorkspaceState { store.state }
-    public func send(_ action: WorkspaceAction) { store.send(action) }
+    /// The tab Usage was opened from: Usage returns to it when its agent leaves (`returns_to_previous`).
+    @ObservationIgnored var tabBeforeUsage: WorkspaceModel.PanelTab?
+
+    public func send(_ action: WorkspaceAction) {
+        guard case .showPanelTab(let tab) = action else {
+            _ = store.send(action)
+            return
+        }
+        // A tab that is not on offer (Usage without an agent) is gone, as in the GPUI app's `show_tab`.
+        let shown = panelTabs.contains(tab) ? tab : .changes
+        if shown == .usage, state.panelTab != .usage { tabBeforeUsage = state.panelTab }
+        _ = store.send(.showPanelTab(shown))
+    }
 }
 
 /// What the window asks of the app that the views cannot do themselves.

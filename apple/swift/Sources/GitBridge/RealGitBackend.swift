@@ -26,6 +26,11 @@ public struct RealGitBackend: GitBackend {
         try await state(in: folder, comparedWith: rev).files
     }
 
+    public func changesResult(in folder: String, comparedWith rev: Rev?) async throws -> ChangesResult {
+        let state = try await state(in: folder, comparedWith: rev)
+        return ChangesResult(files: state.files, compareMissing: state.compareMissing)
+    }
+
     public func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> DiffFile {
         try await GitQueue.run { [git] in
             try git.diff(folder: folder, path: path, compare: rev?.name, loadAnyway: false).file()

@@ -5,6 +5,7 @@
 // `project-send <id>` are the Project tab's buttons.
 
 import PanelModel
+import PanelUI
 import PlatformModel
 
 extension AppController {
@@ -69,6 +70,37 @@ extension AppController {
             reply("root=\(state.root) status=\(state.status) asks=\(state.asksForTrust) commands=\(state.commands.count) features=\(state.features.map { "\($0.feature.rawValue)=\($0.on)" }) "
                 + "actions=\(state.actions.map(\.id)) prompts=\(state.prompts.map(\.id)) layout=\(state.layout) errors=\(state.errors)")
             return true
+        case "panel-option":
+            // The settings the panel reads, set as the settings follower would: tree|group|split|wrap on|off, tabwidth N.
+            let preferences = hub.panel.preferences
+            let words = argument.split(separator: " ").map(String.init)
+            let on = words.last == "on"
+            switch words.first {
+            case "tree": preferences.changesTree = on
+            case "group": preferences.groupUntracked = on
+            case "split": preferences.diffSplit = on
+            case "wrap": preferences.diffWrap = on
+            case "tabwidth": preferences.tabWidth = words.last.flatMap(Int.init) ?? 4
+            default: return fail("panel-option tree|group|split|wrap on|off, or tabwidth N")
+            }
+            reply("tree=\(preferences.changesTree) group=\(preferences.groupUntracked) split=\(preferences.diffSplit) wrap=\(preferences.diffWrap) tabwidth=\(preferences.tabWidth)")
+            return true
+        case "files-open", "files-expand", "files-rename-start":
+            // The Files tab by relative path: the viewer, a folder opened (it and the ones above), a row's name as its rename field.
+            hub.send(.showPanelTab(.files))
+            let files = hub.panel.files
+            switch command {
+            case "files-open": files.view(argument)
+            case "files-expand":
+                var path = ""
+                for part in argument.split(separator: "/") {
+                    path += (path.isEmpty ? "" : "/") + part
+                    if let row = files.rows.first(where: { $0.path == path }), case .folder(open: false) = row.kind { files.toggle(path) }
+                }
+            default:
+                guard let row = files.rows.first(where: { $0.path == argument }) else { return fail("files-rename-start: no row \(argument)") }
+                files.startRename(row)
+            }
         case "notices":
             reply("notices=\((notices?.logged ?? []).map { "\($0.title): \($0.body)" })")
             return true

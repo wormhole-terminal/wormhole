@@ -105,6 +105,8 @@ public protocol FrameSource: AnyObject, Sendable {
 
     /// What is typed in an AI CLI's input box on the screen, for "Stash prompt"; `nil` when there is none.
     func grabPrompt() -> String?
+    /// Whether the program in front took bracketed paste on: a paste is text for it, not a line to run.
+    var takesPasteAsText: Bool { get }
 
     /// The picture a placement's key names (`Images/`): `nil` while it is still being decoded, or when the source has
     /// let it go. Asked once per picture; the view keeps the texture.
@@ -140,6 +142,7 @@ extension FrameSource {
     public func inlineImage(key: UInt32) -> InlineImage? { nil }
     public func plainText(history: Bool) -> String? { nil }
     public func grabPrompt() -> String? { nil }
+    public var takesPasteAsText: Bool { true }
     public var interaction: (any TerminalInteraction)? { nil }
     public var scrollback: (any TerminalScrollback)? { nil }
     public var probes: (any TerminalProbes)? { nil }

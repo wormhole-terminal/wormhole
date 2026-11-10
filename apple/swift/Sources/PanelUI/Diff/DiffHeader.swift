@@ -27,7 +27,10 @@ struct DiffHeader: View {
             if let position, splitFits {
                 Text("File \(position.index + 1) of \(position.count)").font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize()
             }
-            Text(file.name).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1).truncationMode(.middle)
+            // The path crumb: the file's icon, its folders quiet and its name loud. It gives way first, down to
+            // nothing, so the badges and controls at the end stay whole (the GPUI title row elides it the same way).
+            FileIcon(kind: .file(file.name), tint: tokens.textMuted)
+            crumb.lineLimit(1).truncationMode(.head).layoutPriority(-1).clipped()
             Spacer(minLength: 0)
             ForEach(badges, id: \.text) { badge in StatusBadge(text: badge.text, color: badge.color) }
             if case let .counts(added, removed) = file.lines {
@@ -53,6 +56,12 @@ struct DiffHeader: View {
         }
         .padding(.horizontal, inTitleRow ? 0 : PanelMetrics.inset)
         .frame(height: inTitleRow ? nil : splitFits ? 44 : 40)
+    }
+
+    private var crumb: Text {
+        let folders = file.path.split(separator: "/", omittingEmptySubsequences: false).dropLast().joined(separator: "/")
+        let quiet = Text(folders.isEmpty ? "" : folders + "/").foregroundStyle(tokens.textMuted)
+        return Text("\(quiet)\(Text(file.name).foregroundStyle(tokens.textPrimary))").font(TextRole.body.font)
     }
 
     private var badges: [(text: String, color: Color)] {

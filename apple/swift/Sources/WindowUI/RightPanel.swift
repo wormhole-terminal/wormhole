@@ -25,6 +25,10 @@ struct RightPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             PanelTabBar(tab: tab, tabs: hub.panelTabs, select: { hub.send(.showPanelTab($0)) }, badges: badges)
+                // The Notes tab's one action sits in the strip beside the panel toggle (`stash_button`).
+                .overlay(alignment: .trailing) {
+                    if tab == .notes { StashPromptButton(controller: controller).padding(.trailing, Chrome.panelToggleSlot) }
+                }
             PanelBody(tabName: tab.rawValue, controller: controller)
                 .id(tab)
                 .transition(.asymmetric(insertion: arrival, removal: .identity))
@@ -33,6 +37,7 @@ struct RightPanel: View {
         }
         .animation(Self.contentIn, value: tab)
         .onChange(of: tab) { before = tab }
+        .onChange(of: hub.panelTabs) { hub.leaveMissingTab() }
         .onAppear {
             before = tab
             controller.follow(folder: expanded(folder))
@@ -44,7 +49,6 @@ struct RightPanel: View {
     private var badges: [PanelTab: Int] {
         var out: [PanelTab: Int] = [:]
         if let count = controller.badge(for: .changes) { out[.changes] = count }
-        if let count = controller.badge(for: .usage) { out[.usage] = count }
         return out
     }
 
