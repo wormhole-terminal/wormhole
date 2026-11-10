@@ -20,6 +20,9 @@ extension PaletteView {
         case .tab(let forward): setScope(scope.step(forward: forward))
         case .enter:
             if let selected { run(selected, context: context) }
+        case .commandCopy:
+            guard let selected, case .setting(let id)? = selected.target else { return false }
+            sources.copySettingKey(id)
         case .commandDelete:
             guard let selected, selected.group == .terminals, case .select(let id)? = selected.action else {
                 return false
@@ -49,9 +52,9 @@ extension PaletteView {
     /// dismissal would close it again.
     func run(_ command: Command, context: OverlayContext) {
         RecentStore.shared.remember(command)
-        if let id = command.appAction { return context.close { perform(id) } }
+        if let id = command.appAction { return context.close { sources.perform(id) } }
+        if let target = command.target { return context.close { sources.reveal(target) } }
         guard let action = command.action else { return context.close(nil) }
-        if case .showOverlay = action { return context.close { send(action) } }
         send(action)
         context.close(nil)
     }

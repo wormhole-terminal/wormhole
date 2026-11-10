@@ -159,3 +159,33 @@ fn the_dump_of_the_bar_matches_the_state_it_was_given() {
     let dump = menus::dump(&menus::menus(&MenuState::default()));
     assert!(dump.starts_with("Wormhole\n  About Wormhole"));
 }
+
+#[test]
+fn the_palette_lists_what_the_window_can_do_and_the_sheet_reads_the_table() {
+    use super::lists::{keymap_palette_actions, keymap_sheet, keymap_sheet_columns};
+    let all = keymap_palette_actions(MenuStateRecord::default());
+    assert!(all.actions.len() > 60, "{}", all.actions.len());
+    let new = all.actions.iter().find(|a| a.id == "newTerminal").expect("New terminal");
+    assert_eq!((new.label.as_str(), new.section.as_str()), ("New terminal", "Terminal"));
+    assert_eq!(all.suggested.first().map(String::as_str), Some("newTerminal"));
+    let greyed = keymap_palette_actions(MenuStateRecord {
+        disabled: vec!["showChanges".into()],
+        hidden: vec!["showNotes".into()],
+        ..Default::default()
+    });
+    assert!(!greyed.actions.iter().any(|a| a.id == "showChanges" || a.id == "showNotes"));
+
+    let sheet = keymap_sheet(vec![], String::new());
+    assert_eq!(sheet.sections.len(), 6);
+    assert_eq!(sheet.shown, sheet.total);
+    let found = keymap_sheet(vec![], "⌘W".into());
+    assert!(found.sections.iter().flat_map(|s| &s.rows).any(|r| r.label.starts_with("Close terminal")));
+    let marked = keymap_sheet(vec![], "split".into());
+    assert!(marked.sections.iter().flat_map(|s| &s.rows).any(|r| r.label_hit.is_some()));
+    let hidden = keymap_sheet(vec!["newNote".into()], "new note".into());
+    assert_eq!(hidden.shown, 0);
+    assert_eq!(
+        keymap_sheet_columns(vec![3, 3, 3], 3),
+        [(0, 1), (1, 2), (2, 3)].map(|(start, end)| crate::folder_picker::ByteRangeRecord { start, end })
+    );
+}

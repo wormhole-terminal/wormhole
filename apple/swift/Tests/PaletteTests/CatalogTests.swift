@@ -36,32 +36,42 @@ import WorkspaceModel
         #expect(folders[0].action == .select(1))
     }
 
-    @Test func togglesNameTheirEffectInSentenceCase() {
-        var state = sample()
-        #expect(command("toggle-sidebar", state)?.title == "Hide sidebar")
-        state.sidebarVisible = false
-        #expect(command("toggle-sidebar", state)?.title == "Show sidebar")
-        state.panelVisible = false
-        #expect(command("toggle-panel", state)?.title == "Show right panel")
+    @Test func actionsAreTheCoresListWithItsWordsKeysAndGroups() {
+        SampleLists.install()
+        let list = ListedKeymap.actions(ActionFacts())
+        let actions = CommandCatalog.commands(for: sample(), actions: list).filter { $0.group == .actions }
+        #expect(actions.map(\.title).prefix(3) == ["New terminal", "Close terminal", "Open folder…"])
+        let new = actions[0]
+        #expect((new.id, new.appAction, new.shortcut?.glyphs, new.section) == ("action-newTerminal", "newTerminal", "⌘T", .terminal))
+        #expect(new.detail == "in ~/web")
+        #expect(actions.map(\.section).contains(.app))
+        #expect(actions.allSatisfy { $0.appAction != nil })
     }
 
-    @Test func selectedTerminalCommandsNeedASelection() {
-        #expect(command("close-terminal")?.action == .close(2))
-        #expect(command("pin-terminal")?.action == .togglePin(2))
-        #expect(command("next-terminal")?.action == .select(3))
-        #expect(command("previous-terminal")?.action == .select(1))
-        var none = sample()
-        none.selected = nil
-        #expect(command("close-terminal", none) == nil)
+    @Test func settingsAndCommitsAreResultsOfTheirOwn() {
+        let setting = PaletteSetting(
+            id: "opacity", key: "opacity", label: "Opacity", section: "Appearance", icon: "paintpalette", value: "80 %",
+            match: Match(score: 9, ranges: [0..<3]))
+        let commit = PaletteCommit(sha: "abc1234ffff", short: "abc1234", subject: "fix the tab bar", author: "Ben")
+        let found = CommandCatalog.commands(for: sample(), settings: [setting], commits: [commit])
+        let one = found.first { $0.group == .settings }
+        #expect((one?.detail, one?.trailing, one?.target) == ("Settings › Appearance", "80 %", .setting("opacity")))
+        let two = found.first { $0.group == .commits }
+        #expect((two?.title, two?.trailing, two?.trailingIsCode, two?.target) == ("fix the tab bar", "abc1234", true, .commit("abc1234ffff")))
+        // Found by the settings index, a setting keeps its match and the index's order.
+        let rows = PaletteRows.rows(scope: .settings, query: "op", commands: found)
+        #expect(rows.compactMap(\.result).first?.ranges == [0..<3])
+        #expect(PaletteRows.rows(scope: .commits, query: "tab", commands: found).compactMap(\.result?.id) == ["commit-abc1234ffff"])
     }
 
-    @Test func theCommandPaletteIsNotAnActionOfItself() {
-        #expect(command("command-palette") == nil)
-        #expect(command("keyboard-shortcuts")?.action == .showOverlay(.shortcuts))
-    }
-
-    @Test func everyCommandRuns() {
-        #expect(CommandCatalog.commands(for: sample()).filter { $0.group != .folders }.allSatisfy { $0.action != nil || $0.appAction != nil })
+    @Test func profilesOfferASwitchAWindowAndAMoveOnlyWithAnotherToGoTo() {
+        #expect(CommandCatalog.commands(for: sample(), profiles: [PaletteProfile(name: "Default", isShown: true, isHere: true)]).isEmpty == false)
+        let one = [PaletteProfile(name: "Default", isShown: true, isHere: true)]
+        #expect(CommandCatalog.commands(for: sample(), profiles: one).filter { $0.section == .profiles }.isEmpty)
+        let two = one + [PaletteProfile(name: "Work", isShown: false, isHere: false)]
+        let rows = CommandCatalog.commands(for: sample(), profiles: two).filter { $0.section == .profiles }
+        #expect(rows.map(\.title) == ["Switch to Work", "Open window in Default", "Open window in Work", "Move this window to Work"])
+        #expect(rows.first?.target == .profile(.switchTo, 1))
     }
 
     @Test func glyphsFollowAppleOrderAndParseBack() {
@@ -70,36 +80,6 @@ import WorkspaceModel
         #expect(Shortcut(glyphs: "⌘⌘T") == nil)
         #expect(Shortcut(glyphs: "⌘") == nil)
         #expect(Shortcut(glyphs: "F6")?.glyphs == "F6")
-    }
-}
-
-@Suite struct SheetTests {
-    @Test func filtersByLabelAndByKeyAsTheRustSheetDoes() {
-        #expect(ShortcutSheet.filter("").sections.count == 3)
-        let byKey = ShortcutSheet.filter("⌘W").sections.flatMap { $0.rows.map(\.row.label) }
-        #expect(byKey == ["Close terminal"])
-        let byLabel = ShortcutSheet.filter("sidebar")
-        #expect(byLabel.sections.map(\.title) == ["View & panels"])
-        #expect(byLabel.sections[0].rows[0].hit.label == 12..<19)
-        #expect(ShortcutSheet.filter("zzzz").shown == 0)
-    }
-
-    @Test func aKeyInsideARunFindsTheRun() {
-        #expect(ShortcutSheet.filter("⌘5").sections.flatMap { $0.rows.map(\.row.label) } == ["Terminals 1–9"])
-        #expect(ShortcutSheet.sections[0].rows[3].keysText == "⌘1 … ⌘9")
-    }
-
-    @Test func countsRowsShownAndAll() {
-        let all = ShortcutSheet.filter("")
-        #expect(all.shown == all.total)
-        #expect(ShortcutSheet.filter("new").shown < all.total)
-    }
-
-    @Test func columnsMinimiseTheTallest() {
-        #expect(SheetColumns.split([5, 5, 5], into: 3) == [0..<1, 1..<2, 2..<3])
-        #expect(SheetColumns.split([9, 2, 2, 9], into: 2) == [0..<2, 2..<4])
-        #expect(SheetColumns.split([3], into: 3) == [0..<1])
-        #expect(SheetColumns.split([], into: 3).isEmpty)
     }
 }
 

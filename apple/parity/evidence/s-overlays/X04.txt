@@ -1,0 +1,17 @@
+# live run, --background Swift instance (FFI build), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-overlays-a, throwaway repo /tmp/s-ov/repo with 3 commits; each '>' line is one control-folder command
+> keys
+focus=none
+> key f6
+key f6 -> focusNextArea focus=panel-tabs notes ring
+> keys
+focus=panel-tabs notes ring
+> key shift-f6
+key shift-f6 -> focusPreviousArea focus=terminal
+> keys
+focus=terminal
+> key ctrl-cmd-z
+key ctrl-cmd-z -> toggleZenMode focus=terminal
+> window-state
+error: usage window-state <active on|off> <seen on|off>
+> key ctrl-cmd-z
+key ctrl-cmd-z -> toggleZenMode focus=terminal

@@ -108,6 +108,9 @@ public final class SettingsModel {
 
     public var hits: [SearchHit] { isSearching ? searcher.search(query, values: values) : [] }
 
+    /// What the settings index finds for `text` without touching the window's own search (the command palette's).
+    public func find(_ text: String) -> [SearchHit] { searcher.search(text, values: values) }
+
     /// How many results each section holds, for the nav's counts while a search runs.
     public var hitCounts: [String: Int] { Dictionary(hits.map { ($0.section, 1) }, uniquingKeysWith: +) }
 
@@ -123,6 +126,14 @@ public final class SettingsModel {
         query = ""
         selection = hit.section
         revealed = hit.entry.id
+    }
+
+    /// Opens the page of the row `id` and marks it (the command palette's setting result, which names no search).
+    public func reveal(_ id: String) {
+        guard let found = schema.entry(id) else { return }
+        query = ""
+        selection = found.section.id
+        revealed = id
     }
 
     public func clearReveal() { revealed = nil }

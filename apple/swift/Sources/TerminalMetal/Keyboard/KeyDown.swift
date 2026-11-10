@@ -46,17 +46,19 @@ extension MetalTerminalView {
 
     // MARK: paste and drop
 
-    @objc public func paste(_ sender: Any?) { _ = insert(from: .general) }
+    @objc public func paste(_ sender: Any?) { _ = insert(from: .general, replacingProgramSelection: true) }
 
     /// Paste text from `board`, or the paths of files on it (escaped, each followed by a space, as Terminal.app
     /// inserts them; an agent takes a dropped image by that pasted path).
-    public func insert(from board: NSPasteboard) -> Bool {
+    /// `replacingProgramSelection` (⌘V, not a drop): over a selection a full-screen program drew itself the paste replaces it.
+    public func insert(from board: NSPasteboard, replacingProgramSelection: Bool = false) -> Bool {
         if let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty,
             let text = interaction?.droppedText(paths: urls.map(\.path))
         {
             source.paste(text)
         } else if let text = board.string(forType: .string), !text.isEmpty {
-            source.paste(text)
+            // Only the real engine (`encodesKeys`) knows a program's own selection.
+            if replacingProgramSelection, source.encodesKeys, let interaction { interaction.pasteClipboard(text) } else { source.paste(text) }
         } else {
             return false
         }

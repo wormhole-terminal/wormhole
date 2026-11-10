@@ -1221,3 +1221,25 @@ func beside(profile: String) throws -> Windows   // another profile's windows op
   all profiles' databases), so an id is never taken twice and hooks and the control line find a terminal in any profile.
 - Not done: a window in a profile other than the shown one (menu "Open Window in" switches, then opens one), "Move Window to", the
   Access, Trust, Imports and Session Hosts desks still work on the data folder's default profile.
+
+## The palette's actions, the shortcut sheet and pasting over a program's selection (round S, lane O; additive)
+
+`keymap/lists.rs` (free functions; pure, no lock):
+
+- `keymapPaletteActions(state: MenuStateRecord) -> PaletteActionsRecord`: core's `keymap::palette::actions` for the
+  window `state` describes (the menus' facts: `off`, `disabled`, `hidden`, `split`, `debug`, `persistent`; the other
+  fields are ignored): `actions` (`id`, `label`, `key`, `section` `Terminal`/`View`/`App`) in the order the palette lists
+  them, and `suggested` (ids) for an empty query.
+- `keymapSheet(hidden: [String], query: String) -> SheetRecord`: `sheet::sections_without(hidden)` through `sheet::filter`:
+  `sections` (`title`, `rows`: `label`, `keys`, `range` (a run: first and last key), `labelHit` in bytes), `shown`, `total`
+  and `exampleKey` (the key the footer's example filter finds, "⌘W"). `keymapSheetColumns(heights, columns)` is
+  `sheet::columns` as half-open ranges of sections.
+
+`Terminal` (`interaction/app_selection.rs`), over `wormhole_term::input::app_selection::AppSelection`, which the
+terminal keeps itself (a left press and release reported to a program that tracks the mouse start it; a key sent or
+`write` forgets it):
+
+- `pasteClipboard(clipboard: String?)`: ⌘V. Over a selection the program drew on the cursor's rows it sends a Backspace
+  first and pastes what the clipboard held before the program's copy; otherwise it is `paste`.
+- `programCopied(text, clipboardBefore)`: a program's OSC 52 copy reached the clipboard, which held `clipboardBefore`;
+  within a second of the program's own selection it is remembered as that selection's copy.

@@ -9,19 +9,39 @@ public enum Lead: Sendable, Equatable {
     case status(Activity)
 }
 
-/// The groups of the Actions scope with nothing typed (core `palette::Section`).
+/// The groups of the Actions scope with nothing typed (core `keymap::palette::Section`).
 public enum ActionSection: Int, Sendable, CaseIterable {
-    case terminal, view
+    case terminal, view, app
+    /// The profile rows after App's (core's palette has them only with another profile to go to).
+    case profiles
 
     public var title: String {
         switch self {
         case .terminal: "Terminal"
         case .view: "View"
+        case .app: "App"
+        case .profiles: "Profiles"
         }
+    }
+
+    /// The section the core names by its title.
+    public init?(title: String) {
+        guard let found = Self.allCases.first(where: { $0.title == title }) else { return nil }
+        self = found
     }
 }
 
 public struct Command: Sendable, Equatable, Identifiable {
+    /// What running a result other than an action or a terminal does: open a setting's row, show a commit.
+    public enum Target: Sendable, Equatable {
+        case setting(String)
+        case commit(String)
+        /// A profile by its place in the list.
+        case profile(ProfileCommand, Int)
+    }
+
+    public enum ProfileCommand: Sendable, Equatable { case switchTo, openWindowIn, moveWindowTo }
+
     public var id: String
     public var title: String
     /// After the title, in caption text: where, what it is doing.
@@ -31,20 +51,28 @@ public struct Command: Sendable, Equatable, Identifiable {
     public var group: PaletteGroup
     public var lead: Lead
     public var shortcut: Shortcut?
+    /// At the right, in caption text: a setting's value, a commit's short hash (`trailingIsCode`).
+    public var trailing: String?
+    public var trailingIsCode = false
     /// What running it sends.
     public var action: WorkspaceAction?
-    /// A keymap action the window carries out (`splitRight`) when the workspace has no action for it.
+    /// A keymap action the window carries out (`splitRight`): the router runs it, as the menu and the key do.
     public var appAction: String?
+    public var target: Target?
     /// The title in medium weight rather than regular: a terminal's name.
     public var isStrong: Bool
     /// More words a query may find it by, which are not marked.
     public var searchText: [String]
     public var section: ActionSection?
+    /// How the core already matched it (a setting is found by the settings index, which also reads its keywords): used
+    /// instead of ranking the title again.
+    public var match: Match?
 
     public init(
         id: String, title: String, detail: String? = nil, scopedDetail: String? = nil, group: PaletteGroup = .actions, lead: Lead,
-        shortcut: Shortcut? = nil, action: WorkspaceAction? = nil, appAction: String? = nil, isStrong: Bool = false,
-        searchText: [String] = [], section: ActionSection? = nil
+        shortcut: Shortcut? = nil, trailing: String? = nil, action: WorkspaceAction? = nil, appAction: String? = nil,
+        target: Target? = nil, isStrong: Bool = false, searchText: [String] = [], section: ActionSection? = nil,
+        match: Match? = nil
     ) {
         self.id = id
         self.title = title
@@ -53,10 +81,13 @@ public struct Command: Sendable, Equatable, Identifiable {
         self.group = group
         self.lead = lead
         self.shortcut = shortcut
+        self.trailing = trailing
         self.action = action
         self.appAction = appAction
+        self.target = target
         self.isStrong = isStrong
         self.searchText = searchText
         self.section = section
+        self.match = match
     }
 }

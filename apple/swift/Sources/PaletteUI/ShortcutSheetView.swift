@@ -7,24 +7,30 @@ import SwiftUI
 
 public struct ShortcutSheetView: View {
     public let dismiss: @MainActor () -> Void
+    /// The actions whose feature is off: the core leaves their rows out.
+    let hidden: [String]
+    /// The global show/hide key as the footer writes it ("⌃⌥Space"), when one is set.
+    let hotkey: String?
     let startsPresented: Bool
 
     @State private var filter: String
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.tokens) private var tokens
 
-    public init(dismiss: @escaping @MainActor () -> Void) {
-        self.init(dismiss: dismiss, startsPresented: false)
+    public init(hidden: [String] = [], hotkey: String? = nil, dismiss: @escaping @MainActor () -> Void) {
+        self.init(hidden: hidden, hotkey: hotkey, dismiss: dismiss, startsPresented: false)
     }
 
-    init(dismiss: @escaping @MainActor () -> Void, startsPresented: Bool, filter: String = "") {
+    init(hidden: [String], hotkey: String?, dismiss: @escaping @MainActor () -> Void, startsPresented: Bool, filter: String = "") {
+        self.hidden = hidden
+        self.hotkey = hotkey
         self.dismiss = dismiss
         self.startsPresented = startsPresented
         _filter = State(initialValue: filter)
     }
 
     public var body: some View {
-        let found = ShortcutSheet.filter(filter)
+        let found = ListedKeymap.sheet(hidden: hidden, query: filter)
         OverlayChrome(style: .sheet, top: OverlayMetrics.sheetTop, startsPresented: startsPresented, dismiss: dismiss) { context in
             let layout = SheetLayout(
                 window: context.size, sectionRows: found.sections.map(\.rows.count),
@@ -36,7 +42,7 @@ public struct ShortcutSheetView: View {
                     return true
                 }
                 SheetBody(found: found, layout: layout)
-                SheetFooter(found: found, filtering: !filter.trimmingCharacters(in: .whitespaces).isEmpty)
+                SheetFooter(found: found, filtering: !filter.trimmingCharacters(in: .whitespaces).isEmpty, hotkey: hotkey)
             }
             .frame(width: layout.width)
             .frame(maxHeight: layout.maxHeight, alignment: .top)

@@ -4,6 +4,7 @@
 //! Actions are named by text (`newTerminal`, `terminal.3`), as the Swift side's `ActionID` writes them.
 
 pub mod keys;
+pub mod lists;
 pub mod menus;
 pub mod records;
 

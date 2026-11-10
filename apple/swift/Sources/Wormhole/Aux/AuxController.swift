@@ -11,10 +11,12 @@ final class AuxController {
     private let dataDirectory: URL
     private var updates: (any UpdateBackend)?
     private var onboarding: OnboardingWindow?
+    /// The intro that plays again over the window in front (`playIntro`).
+    let introPlayer = IntroPlayer()
     private var access: AccessDriver?
     /// The core's agent-access desk behind the questions, shared with the hook socket; nil in the sample.
     private(set) var accessBackend: (any AccessBackend)?
-    private unowned let app: AppController
+    unowned let app: AppController
     private var backends: AuxBackends { AuxBackends(app: app) }
 
     init(app: AppController, dataDirectory: URL) {

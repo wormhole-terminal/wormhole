@@ -20,7 +20,8 @@ extension AppController {
         switch command {
         case "palette-rows", "palette-run": runPalette(command, argument)
         case "shortcut-rows":
-            reply(ShortcutSheet.sections.map { s in "\(s.title)\n" + s.rows.map { "  \($0.label)  \($0.keysText)" }.joined(separator: "\n") }.joined(separator: "\n"))
+            let sheet = ListedKeymap.sheet(hidden: hub.actions.palette.hiddenActions(), query: argument)
+            reply("\(sheet.shown) of \(sheet.total)\n" + sheet.sections.map { s in "\(s.title)\n" + s.rows.map { "  \($0.label)  \($0.keys.map(\.glyphs).joined(separator: $0.isRun ? " … " : " "))" }.joined(separator: "\n") }.joined(separator: "\n"))
         case "actions-missing":
             let wanted = Keymap.shared.entries.filter { $0.stage == .now && !$0.debugOnly }
             let missing = wanted.filter { !router.implemented.contains($0.id) }
@@ -47,10 +48,13 @@ extension AppController {
     /// `palette-rows <query>` lists what the palette shows; `palette-run <query>` runs its first result.
     private func runPalette(_ command: String, _ argument: String) {
         let (scope, query) = PaletteScope.parse(argument)
-        let rows = PaletteRows.rows(scope: scope, query: query, commands: CommandCatalog.commands(for: hub.state))
+        let sources = hub.actions.palette
+        let actions = sources.actions()
+        let commands = CommandCatalog.commands(for: hub.state, sources: sources, actions: actions, scope: scope, query: query, recent: [])
+        let rows = PaletteRows.rows(scope: scope, query: query, commands: commands, suggested: actions.suggested)
         guard command == "palette-run" else { return reply(rows.map(Self.line).joined(separator: "\n")) }
         guard let found = rows.compactMap(\.result).first?.command else { return reply("palette-run nothing found") }
-        if let id = found.appAction { router.run(ActionID(rawValue: id)) } else if let action = found.action { hub.send(action) }
+        if let id = found.appAction { router.run(ActionID(rawValue: id)) } else if let target = found.target { sources.reveal(target) } else if let action = found.action { hub.send(action) }
         reply("palette-run \(found.title)")
     }
 

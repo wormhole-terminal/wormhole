@@ -8,8 +8,8 @@ import SwiftUI
 /// The keys the palette takes before the field does. `handled` stops the field acting on it.
 enum FieldKey: Equatable {
     case up, down, tab(forward: Bool), enter, escape
-    /// ⌫ in an empty field, and ⌘⌫.
-    case backspaceWhenEmpty, commandDelete
+    /// ⌫ in an empty field, ⌘⌫ and ⌘C with nothing selected in the field (the result's own copy).
+    case backspaceWhenEmpty, commandDelete, commandCopy
 }
 
 struct PaletteField: NSViewRepresentable {
@@ -30,6 +30,7 @@ struct PaletteField: NSViewRepresentable {
         field.usesSingleLineMode = true
         field.cell?.isScrollable = true
         field.delegate = context.coordinator
+        field.onCommandCopy = { [weak coordinator = context.coordinator] in coordinator?.parent.onKey(.commandCopy) ?? false }
         return field
     }
 
@@ -81,6 +82,14 @@ struct PaletteField: NSViewRepresentable {
 /// Takes the keyboard when it joins a window, as the GPUI palette's field does when it opens.
 final class FocusingField: NSTextField {
     var caretColor: NSColor = .labelColor
+    /// ⌘C with nothing selected in the field: the owner may take it (a setting's key); true when it did.
+    var onCommandCopy: () -> Bool = { false }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let copy = event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command && event.charactersIgnoringModifiers == "c"
+        if copy, currentEditor()?.selectedRange.length == 0, onCommandCopy() { return true }
+        return super.performKeyEquivalent(with: event)
+    }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()

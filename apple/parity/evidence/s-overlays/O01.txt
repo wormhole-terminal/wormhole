@@ -1,0 +1,235 @@
+# live run, --background Swift instance (FFI build), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-overlays-a, throwaway repo /tmp/s-ov/repo with 3 commits; each '>' line is one control-folder command
+> onboarding close
+onboarding close
+> new
+new
+> palette-rows
+# Actions
+  New terminal  - in ~  [⌘T]  <action-newTerminal>
+  Open folder…  - start a terminal in another folder  [⌘O]  <action-openFolder>
+  Show changes  [⌃⌘1]  <action-showChanges>
+  Hide right panel  [⌥⌘I]  <action-toggleRightPanel>
+  Stash prompt  [⌥⌘S]  <action-stashPrompt>
+  Keyboard shortcuts  [⌥⌘/]  <action-keyboardShortcuts>
+> palette-rows >
+# Terminal
+  New terminal  - in ~  [⌘T]  <action-newTerminal>
+  Close terminal  [⌘W]  <action-closeTerminal>
+  Open folder…  - start a terminal in another folder  [⌘O]  <action-openFolder>
+  New window  [⌘N]  <action-newWindow>
+  Stash prompt  [⌥⌘S]  <action-stashPrompt>
+  New terminal in no group  [⇧⌘T]  <action-newTerminalNoGroup>
+  Pin to top  <action-pinTerminal>
+  Reveal in Finder  <action-revealInFinder>
+  Copy path  <action-copyPath>
+  Close window  [⇧⌘W]  <action-closeWindow>
+  Next terminal  [⌃⌘↓]  <action-nextTerminal>
+  Previous terminal  [⌃⌘↑]  <action-previousTerminal>
+  Previous group  [⌃⌥[]  <action-previousGroup>
+  Next group  [⌃⌥]]  <action-nextGroup>
+  Split right  [⌘D]  <action-splitRight>
+  Split down  [⇧⌘D]  <action-splitDown>
+  Go to waiting terminal  [⌥⌘J]  <action-goToWaiting>
+  Go to finished terminal  [⌥⇧⌘J]  <action-goToFinished>
+  Clear buffer  [⌘K]  <action-clearBuffer>
+  Find…  [⌘F]  <action-find>
+  Select output  <action-selectOutput>
+  Copy output  <action-copyOutput>
+  Copy command  <action-copyCommand>
+  Put command at prompt  <action-rerunCommand>
+  New note  [⌥⌘N]  <action-newNote>
+# View
+  Hide sidebar  [⌃⌘S]  <action-toggleSidebar>
+  Show changes  [⌃⌘1]  <action-showChanges>
+  Show history  [⌃⌘2]  <action-showHistory>
+  Hide right panel  [⌥⌘I]  <action-toggleRightPanel>
+  Show notes  [⌃⌘3]  <action-showNotes>
+  Keyboard shortcuts  [⌥⌘/]  <action-keyboardShortcuts>
+  Layout: 2 columns  <action-layoutColumns>
+  Layout: 2 rows  <action-layoutRows>
+  Layout: 2×2 grid  <action-layoutGrid>
+  Layout: single pane  <action-layoutSingle>
+  Minimize  [⌘M]  <action-minimize>
+  Zoom  <action-zoom>
+  Bring all to front  <action-bringAllToFront>
+  Show status bar  [⌘/]  <action-toggleStatusBar>
+  Show minimap  <action-toggleMinimap>
+  Enter zen mode  [⌃⌘Z]  <action-toggleZenMode>
+  Show usage  [⌃⌘4]  <action-showUsage>
+  Show project  [⌃⌘5]  <action-showProject>
+  Show files  [⌃⌘6]  <action-showFiles>
+  Show terminals as tabs  <action-toggleTerminalTabs>
+  Focus terminal / panel  [⇧⌘E]  <action-focusTerminalOrPanel>
+  Focus next area  [F6]  <action-focusNextArea>
+  Focus previous area  [⇧F6]  <action-focusPreviousArea>
+  Bigger  [⌘+]  <action-bigger>
+  Smaller  [⌘-]  <action-smaller>
+  Actual size  [⌘0]  <action-actualSize>
+  Enter full screen  [⌃⌘F]  <action-fullScreen>
+# App
+  Settings…  [⌘,]  <action-settings>
+  Open Theme Studio  [⌥⌘,]  <action-themeStudio>
+  New profile…  <action-newProfile>
+  Manage profiles…  <action-manageProfiles>
+  About Wormhole  <action-about>
+  Check for updates…  <action-checkForUpdates>
+  Hide Wormhole  [⌘H]  <action-hide>
+  Hide others  [⌥⌘H]  <action-hideOthers>
+  Show all  <action-showAll>
+  Quit Wormhole  [⌘Q]  <action-quit>
+  Show logs in Finder  <action-showLogs>
+  Licenses  <action-licenses>
+  Welcome to Wormhole  <action-showIntro>
+  Play intro: emerge  [⌃⌥⌘1]  <action-playIntroEmerge>
+  Play intro: edge vortex  [⌃⌥⌘2]  <action-playIntroVortex>
+  Play intro: collapse  [⌃⌥⌘3]  <action-playIntroCollapse>
+  Play intro: ftl jump  [⌃⌥⌘4]  <action-playIntroFtl>
+  Play intro: aurora  [⌃⌥⌘5]  <action-playIntroAurora>
+  Play intro: tentacles  [⌃⌥⌘6]  <action-playIntroTentacles>
+  Play intro: voyage  [⌃⌥⌘7]  <action-playIntroVoyage>
+  Play welcome: cursor  [⌃⌥⌘8]  <action-playWelcomeCursor>
+  Play welcome: portal  [⌃⌥⌘9]  <action-playWelcomePortal>
+  Play welcome: logo  [⌃⌥⌘0]  <action-playWelcomeLogo>
+> palette-rows >
+# Terminal
+  New terminal  - in ~  [⌘T]  <action-newTerminal>
+  Close terminal  [⌘W]  <action-closeTerminal>
+  Open folder…  - start a terminal in another folder  [⌘O]  <action-openFolder>
+  New window  [⌘N]  <action-newWindow>
+  Stash prompt  [⌥⌘S]  <action-stashPrompt>
+  New terminal in no group  [⇧⌘T]  <action-newTerminalNoGroup>
+  Pin to top  <action-pinTerminal>
+  Reveal in Finder  <action-revealInFinder>
+  Copy path  <action-copyPath>
+  Close window  [⇧⌘W]  <action-closeWindow>
+  Next terminal  [⌃⌘↓]  <action-nextTerminal>
+  Previous terminal  [⌃⌘↑]  <action-previousTerminal>
+  Previous group  [⌃⌥[]  <action-previousGroup>
+  Next group  [⌃⌥]]  <action-nextGroup>
+  Split right  [⌘D]  <action-splitRight>
+  Split down  [⇧⌘D]  <action-splitDown>
+  Go to waiting terminal  [⌥⌘J]  <action-goToWaiting>
+  Go to finished terminal  [⌥⇧⌘J]  <action-goToFinished>
+  Clear buffer  [⌘K]  <action-clearBuffer>
+  Find…  [⌘F]  <action-find>
+  Select output  <action-selectOutput>
+  Copy output  <action-copyOutput>
+  Copy command  <action-copyCommand>
+  Put command at prompt  <action-rerunCommand>
+  New note  [⌥⌘N]  <action-newNote>
+# View
+  Hide sidebar  [⌃⌘S]  <action-toggleSidebar>
+  Show changes  [⌃⌘1]  <action-showChanges>
+  Show history  [⌃⌘2]  <action-showHistory>
+  Hide right panel  [⌥⌘I]  <action-toggleRightPanel>
+  Show notes  [⌃⌘3]  <action-showNotes>
+  Keyboard shortcuts  [⌥⌘/]  <action-keyboardShortcuts>
+  Layout: 2 columns  <action-layoutColumns>
+  Layout: 2 rows  <action-layoutRows>
+  Layout: 2×2 grid  <action-layoutGrid>
+  Layout: single pane  <action-layoutSingle>
+  Minimize  [⌘M]  <action-minimize>
+  Zoom  <action-zoom>
+  Bring all to front  <action-bringAllToFront>
+  Show status bar  [⌘/]  <action-toggleStatusBar>
+  Show minimap  <action-toggleMinimap>
+  Enter zen mode  [⌃⌘Z]  <action-toggleZenMode>
+  Show usage  [⌃⌘4]  <action-showUsage>
+  Show project  [⌃⌘5]  <action-showProject>
+  Show files  [⌃⌘6]  <action-showFiles>
+  Show terminals as tabs  <action-toggleTerminalTabs>
+  Focus terminal / panel  [⇧⌘E]  <action-focusTerminalOrPanel>
+  Focus next area  [F6]  <action-focusNextArea>
+  Focus previous area  [⇧F6]  <action-focusPreviousArea>
+  Bigger  [⌘+]  <action-bigger>
+  Smaller  [⌘-]  <action-smaller>
+  Actual size  [⌘0]  <action-actualSize>
+  Enter full screen  [⌃⌘F]  <action-fullScreen>
+# App
+  Settings…  [⌘,]  <action-settings>
+  Open Theme Studio  [⌥⌘,]  <action-themeStudio>
+  New profile…  <action-newProfile>
+  Manage profiles…  <action-manageProfiles>
+  About Wormhole  <action-about>
+  Check for updates…  <action-checkForUpdates>
+  Hide Wormhole  [⌘H]  <action-hide>
+  Hide others  [⌥⌘H]  <action-hideOthers>
+  Show all  <action-showAll>
+  Quit Wormhole  [⌘Q]  <action-quit>
+  Show logs in Finder  <action-showLogs>
+  Licenses  <action-licenses>
+  Welcome to Wormhole  <action-showIntro>
+  Play intro: emerge  [⌃⌥⌘1]  <action-playIntroEmerge>
+  Play intro: edge vortex  [⌃⌥⌘2]  <action-playIntroVortex>
+  Play intro: collapse  [⌃⌥⌘3]  <action-playIntroCollapse>
+  Play intro: ftl jump  [⌃⌥⌘4]  <action-playIntroFtl>
+  Play intro: aurora  [⌃⌥⌘5]  <action-playIntroAurora>
+  Play intro: tentacles  [⌃⌥⌘6]  <action-playIntroTentacles>
+  Play intro: voyage  [⌃⌥⌘7]  <action-playIntroVoyage>
+  Play welcome: cursor  [⌃⌥⌘8]  <action-playWelcomeCursor>
+  Play welcome: portal  [⌃⌥⌘9]  <action-playWelcomePortal>
+  Play welcome: logo  [⌃⌥⌘0]  <action-playWelcomeLogo>
+> palette-rows ,opacity
+# Settings (3)
+  Background opacity  - Settings › Appearance  <setting-opacity>
+  Blur what's behind the window  - Settings › Appearance  <setting-blur>
+  Also translucent  - Settings › Appearance  <setting-translucent>
+> palette-rows ,font size
+# Settings (5)
+  Font  - Settings › Fonts  <setting-font-terminal>
+  Font  - Settings › Fonts  <setting-font-code>
+  Font  - Settings › Fonts  <setting-font-interface>
+  Settings text size  - Settings › Fonts  <setting-settings-text-size>
+  Line height  - Settings › Fonts  <setting-line-height>
+> palette-rows #
+  (Nothing here yet)
+> palette-rows #tab
+  (Nothing matches)
+> palette-rows sidebar
+# Settings (20)
+  ⌘1–⌘9 numbers  - Settings › Terminals & sidebar  <setting-sidebar-numbers>
+  Show ⌘1–⌘9 while ⌘ is held  - Settings › Terminals & sidebar  <setting-cmd-hints>
+  Changed files  - Settings › Terminals & sidebar  <setting-sidebar-changes>
+  Count  - Settings › Terminals & sidebar  <setting-sidebar-changes-scope>
+  Plain terminals  - Settings › Terminals & sidebar  <setting-sidebar-changes-plain>
+# Actions (1)
+  Hide sidebar  [⌃⌘S]  <action-toggleSidebar>
+> palette-rows zzz
+  (Nothing matches)
+> palette-rows >zoom
+# Actions (1)
+  Zoom  <action-zoom>
+> type cd /tmp/s-ov/repo
+typed
+> key return
+key return focus=none
+> state
+grid=68x42 cell=17x36px scale=2.0 frames_drawn=5 ticks=9 wakes=3 pauses=4 busy_skips=0 blink_fires=0 link=paused words_shaped=4 word_hits=2 glyphs_rasterised=14 atlas_resets=0 terminals=2 selected=2 sidebar=true panel=true tab=changes window=88397 theme=wormhole.dark appearance=dark mode=dark opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transparency=false increase_contrast=false panes=2 focused=2 zoomed=none cover=none focus=none
+> palette-rows #
+  (Nothing here yet)
+> palette-rows #palette
+  (Nothing matches)
+> palette-rows tab
+# Settings (3)
+  Tab width  - Settings › Changes & diffs  <setting-tab-width>
+  Show terminals in  - Settings › Terminals & sidebar  <setting-terminals-in>
+  Density  - Settings › Terminals & sidebar  <setting-density>
+# Actions (1)
+  Show terminals as tabs  <action-toggleTerminalTabs>
+> history-state
+phase=notRepository commits=0 branch=- open=- people=[] parents=[] changes=- files=[] diff=idle
+> palette-run #fix
+palette-run fix the tab bar
+> history-state
+phase=loaded commits=3 branch=main open=0314a68 people=["Author=t a@b.c\n2026-11-11 00:32 +01:00 · 2m ago"] parents=["fa16dd5"] changes=1 file +1 −0 files=["a.txt"] diff=idle
+> palette-run >new note
+palette-run New note
+> palette-run ,opacity
+palette-run Background opacity
+> settings-section
+settings-section 
+> actions-missing
+keymap now=128 implemented=127 missing=1
+rowMenu
+> palette-rows >hide from
+  (Nothing matches)

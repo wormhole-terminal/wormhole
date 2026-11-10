@@ -7,12 +7,11 @@ import SwiftUI
 
 struct ShortcutLine: View {
     let row: ShortcutRow
-    let hit: ShortcutHit
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         HStack(spacing: Space._2) {
-            Text(MarkedText.title(row.label, ranges: hit.label.map { [$0] } ?? [], mark: tokens.primary, size: TextRole.label.size))
+            Text(MarkedText.title(row.label, ranges: row.hit.map { [$0] } ?? [], mark: tokens.primary, size: TextRole.label.size))
                 .font(.system(size: TextRole.label.size))
                 .lineLimit(1)
             Spacer(minLength: 0)
@@ -24,15 +23,14 @@ struct ShortcutLine: View {
     }
 
     @ViewBuilder private var caps: some View {
-        switch row.style {
-        case .each:
-            ForEach(Array(row.keys.enumerated()), id: \.offset) { KeyCap(text: $1.glyphs) }
-        case .range:
+        if row.isRun {
             if let first = row.keys.first { KeyCap(text: first.glyphs) }
             if row.keys.count > 1, let last = row.keys.last {
                 Text("…").font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textFaint)
                 KeyCap(text: last.glyphs)
             }
+        } else {
+            ForEach(Array(row.keys.enumerated()), id: \.offset) { KeyCap(text: $1.glyphs) }
         }
     }
 }

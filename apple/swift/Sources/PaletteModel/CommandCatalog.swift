@@ -1,76 +1,112 @@
-// What the palette can list for the window as it is now, worded as core's `keymap/palette.rs` words the
-// actions: sentence case, a toggle by what it will do ("Hide sidebar"), listed most-used first. Terminals and the
-// folders they are in are results of their own. Settings and commits have no source in this app yet, so
-// those scopes stay empty, as they do in a Wormhole window outside a repository.
+// What the palette can list for the window as it is now. Actions are the core's keymap as `KeymapLists` gives it for
+// this window (its words, order, groups and keys), settings and commits come from the sources the window hands in, and
+// terminals and the folders they are in are results of their own.
 
 import Foundation
 import WorkspaceModel
 
+/// A setting the settings index found (or a recent one): where it is, what it is now.
+public struct PaletteSetting: Sendable, Equatable {
+    public var id: String
+    /// The config key the row sets: what ⌘C copies.
+    public var key: String
+    public var label: String
+    public var section: String
+    /// An SF Symbol's name: the section's icon.
+    public var icon: String
+    /// Its value in the words of its row ("On", "80 %"); nil says nothing.
+    public var value: String?
+    /// The index's own match (it also reads keywords and descriptions); nil for a recent one, which nothing found.
+    public var match: Match?
+
+    public init(id: String, key: String, label: String, section: String, icon: String, value: String?, match: Match? = nil) {
+        (self.id, self.key, self.label, self.section, self.icon, self.value, self.match) = (id, key, label, section, icon, value, match)
+    }
+}
+
+/// A commit of the selected terminal's branch.
+public struct PaletteCommit: Sendable, Equatable {
+    public var sha: String
+    public var short: String
+    public var subject: String
+    public var author: String
+
+    public init(sha: String, short: String, subject: String, author: String) {
+        (self.sha, self.short, self.subject, self.author) = (sha, short, subject, author)
+    }
+}
+
+/// A profile Wormhole can switch to, open a window in or move the window to: where it is in the list and what it is.
+public struct PaletteProfile: Sendable, Equatable {
+    public var name: String
+    /// The one Wormhole is in.
+    public var isShown: Bool
+    /// The one this window belongs to.
+    public var isHere: Bool
+
+    public init(name: String, isShown: Bool, isHere: Bool) { (self.name, self.isShown, self.isHere) = (name, isShown, isHere) }
+}
+
 public enum CommandCatalog {
-    /// What an empty query suggests under "Actions", in this order (core `palette::SUGGESTED`).
-    public static let suggested = ["new-terminal", "panel-changes", "toggle-panel", "keyboard-shortcuts"]
-
-    public static func commands(for state: WorkspaceState) -> [Command] {
-        actions(for: state) + terminals(in: state) + folders(in: state)
+    public static func commands(
+        for state: WorkspaceState, actions: ActionList = ActionList(), settings: [PaletteSetting] = [],
+        commits: [PaletteCommit] = [], profiles: [PaletteProfile] = []
+    ) -> [Command] {
+        self.actions(actions, for: state) + profileCommands(profiles) + settings.map(command) + commits.map(command)
+            + terminals(in: state) + folders(in: state)
     }
 
-    static func actions(for state: WorkspaceState) -> [Command] {
+    /// With another profile to go to: a row to switch to each profile that is not shown, to open a window in each, and to
+    /// move this window to each it is not in (core's palette, in that order).
+    private static func profileCommands(_ profiles: [PaletteProfile]) -> [Command] {
+        guard profiles.count > 1 else { return [] }
+        let kinds: [(Command.ProfileCommand, String, String, (PaletteProfile) -> Bool, String?)] = [
+            (.switchTo, "Switch to", "person.crop.circle", { !$0.isShown }, "every window switches"),
+            (.openWindowIn, "Open window in", "macwindow", { _ in true }, nil),
+            (.moveWindowTo, "Move this window to", "arrow.left.arrow.right", { !$0.isHere }, nil),
+        ]
+        return kinds.flatMap { kind, words, symbol, offered, detail in
+            profiles.enumerated().filter { offered($0.element) }.map { index, profile in
+                Command(
+                    id: "profile-\(words)-\(index)", title: "\(words) \(profile.name)", detail: detail, lead: .symbol(symbol),
+                    target: .profile(kind, index), section: .profiles)
+            }
+        }
+    }
+
+    static func actions(_ list: ActionList, for state: WorkspaceState) -> [Command] {
         let selected = state.all.first { $0.id == state.selected }
-        var out = [command("new-terminal", "New terminal", "plus", .newTerminal, Shortcuts.newTerminal, .terminal)]
-        out[0].detail = selected?.folder.map { "in \($0)" }
-        if let selected {
-            out.append(command("close-terminal", "Close terminal", "xmark", .close(selected.id), Shortcuts.closeTerminal, .terminal))
+        return list.rows.map { row in
+            Command(
+                id: "action-\(row.id)", title: row.label, detail: detail(of: row.id, selected: selected),
+                lead: .symbol(ActionIcon.symbol(row.id)), shortcut: row.key, appAction: row.id, section: row.section)
         }
-        out += [
-            command(
-                "toggle-sidebar", state.sidebarVisible ? "Hide sidebar" : "Show sidebar", "sidebar.left",
-                .toggleSidebar, Shortcuts.toggleSidebar, .view),
-            command(
-                "panel-changes", "Show changes", "plusminus", .showPanelTab(.changes), Shortcuts.panelTab(.changes), .view),
-            command(
-                "panel-history", "Show history", "clock.arrow.circlepath", .showPanelTab(.history),
-                Shortcuts.panelTab(.history), .view),
-            command(
-                "toggle-panel", state.panelVisible ? "Hide right panel" : "Show right panel", "sidebar.right",
-                .togglePanel, Shortcuts.togglePanel, .view),
-            command("panel-notes", "Show notes", "note.text", .showPanelTab(.notes), Shortcuts.panelTab(.notes), .view),
-            command("panel-usage", "Show usage", "gauge", .showPanelTab(.usage), Shortcuts.panelTab(.usage), .view),
-            command("panel-project", "Show project", "folder.badge.gearshape", .showPanelTab(.project), Shortcuts.panelTab(.project), .view),
-            command("panel-files", "Show files", "folder", .showPanelTab(.files), Shortcuts.panelTab(.files), .view),
-            command(
-                "keyboard-shortcuts", "Keyboard shortcuts", "keyboard", .showOverlay(.shortcuts),
-                Shortcuts.shortcutSheet, .view),
-        ]
-        if let selected { out += neighbours(of: selected, in: state) + AppCommands.all(hasSelection: true) } else { out += AppCommands.all(hasSelection: false) }
-        return out
     }
 
-    private static func neighbours(of terminal: TerminalSummary, in state: WorkspaceState) -> [Command] {
-        var out = [
-            command(
-                "pin-terminal", terminal.isPinned ? "Unpin terminal" : "Pin to top", "pin", .togglePin(terminal.id), nil,
-                .terminal)
-        ]
-        guard let at = state.all.firstIndex(where: { $0.id == terminal.id }), state.all.count > 1 else {
-            return out
+    /// The line after an action's name, where the window knows more (core's palette view): where a new terminal opens,
+    /// how many files changed.
+    private static func detail(of action: String, selected: TerminalSummary?) -> String? {
+        switch action {
+        case "newTerminal": selected?.folder.map { "in \($0)" }
+        case "openFolder": "start a terminal in another folder"
+        case "showChanges":
+            selected.flatMap { $0.repo == nil ? nil : "\($0.changeCount) file\($0.changeCount == 1 ? "" : "s") changed" }
+        default: nil
         }
-        let count = state.all.count
-        out.append(
-            command(
-                "next-terminal", "Next terminal", "command", .select(state.all[(at + 1) % count].id),
-                Shortcuts.nextTerminal, .terminal))
-        out.append(
-            command(
-                "previous-terminal", "Previous terminal", "command", .select(state.all[(at + count - 1) % count].id),
-                Shortcuts.previousTerminal, .terminal))
-        return out
     }
 
-    private static func command(
-        _ id: String, _ title: String, _ symbol: String, _ action: WorkspaceAction, _ key: Shortcut?,
-        _ section: ActionSection
-    ) -> Command {
-        Command(id: id, title: title, lead: .symbol(symbol), shortcut: key, action: action, section: section)
+    private static func command(_ setting: PaletteSetting) -> Command {
+        Command(
+            id: "setting-\(setting.id)", title: setting.label, detail: "Settings › \(setting.section)", group: .settings,
+            lead: .symbol(setting.icon), trailing: setting.value, target: .setting(setting.id), match: setting.match)
+    }
+
+    private static func command(_ commit: PaletteCommit) -> Command {
+        var command = Command(
+            id: "commit-\(commit.sha)", title: commit.subject, group: .commits, lead: .symbol("smallcircle.filled.circle"),
+            trailing: commit.short, target: .commit(commit.sha), searchText: [commit.short, commit.author])
+        command.trailingIsCode = true
+        return command
     }
 
     private static func terminals(in state: WorkspaceState) -> [Command] {
@@ -80,7 +116,7 @@ public enum CommandCatalog {
                 id: "terminal-\(terminal.id)", title: terminal.title,
                 detail: doing(terminal), scopedDetail: (["Window 1"] + [folder].compactMap { $0 }).joined(separator: " · "),
                 group: .terminals, lead: .status(terminal.activity),
-                shortcut: index < 9 ? Shortcuts.terminal(number: index + 1) : nil, action: .select(terminal.id),
+                shortcut: index < 9 ? Shortcut(.command, String(index + 1)) : nil, action: .select(terminal.id),
                 isStrong: true, searchText: [terminal.folder, terminal.branch].compactMap { $0 })
         }
     }

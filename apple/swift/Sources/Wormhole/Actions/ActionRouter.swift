@@ -20,10 +20,11 @@ final class ActionRouter {
             .merging(findActions(), uniquingKeysWith: { first, _ in first })
             .merging(outputActions(), uniquingKeysWith: { first, _ in first })
             .merging(appActions(), uniquingKeysWith: { first, _ in first })
+            .merging(editActions(), uniquingKeysWith: { first, _ in first })
     }
 
     /// What the menus may enable: the table, and what AppKit answers itself (hide, minimise, the editing keys).
-    var implemented: Set<ActionID> { Set(table.keys).union(StandardActions.ids) }
+    var implemented: Set<ActionID> { Set(table.keys).union(StandardActions.ids).union(Self.viewed) }
 
     func run(_ id: ActionID) {
         if let handler = table[id] { handler() }

@@ -5,6 +5,7 @@
 
 import AppKit
 import Observation
+import PaletteModel
 import PanelModel
 import PanelUI
 import PanesModel
@@ -70,6 +71,8 @@ public struct HubActions {
     public var terminalMenu: @MainActor (TerminalID) -> NSMenu? = { _ in nil }
     /// A keymap action by id (the palette's): the app's router runs it.
     public var perform: @MainActor (String) -> Void = { _ in }
+    /// What the palette and the shortcut sheet list and do (the core's actions, settings and commits).
+    public var palette = PaletteSources()
     /// Settings, where the title row's parts are also arranged.
     public var openSettings: @MainActor () -> Void = {}
     /// The profiles the tab bar's chip offers (none while there is one) and what its menu does.

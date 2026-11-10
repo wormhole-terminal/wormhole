@@ -1,5 +1,5 @@
 // The footer's words: the keys that work on what is selected, and a count or a hint at the right (core's
-// `command_palette/view.rs` `render_footer`). ⌘↩ (open in a new window) is left out: this app has one window.
+// `command_palette/view.rs` `render_footer`). ⌘↩ (open in a new window) is left out until the palette opens one.
 
 import Foundation
 
@@ -9,11 +9,13 @@ public struct KeyHint: Sendable, Equatable {
 }
 
 public enum PaletteFooter {
-    public static func hints(scope: PaletteScope) -> [KeyHint] {
+    /// `selected` is what the selection is on: a setting has its own hints (↩ opens it in Settings, ⌘C copies its key).
+    public static func hints(scope: PaletteScope, selected: Command? = nil) -> [KeyHint] {
         let pairs: [(String, String)] =
-            switch scope {
-            case .terminals: [("↩", "switch"), ("⌘⌫", "close terminal")]
-            case .actions: [("↩", "run"), ("⌫", "back to all")]
+            switch (scope, selected?.group) {
+            case (.terminals, _): [("↩", "switch"), ("⌘⌫", "close terminal")]
+            case (.actions, _): [("↩", "run"), ("⌫", "back to all")]
+            case (_, .settings?): [("↑↓", "move"), ("↩", "open in Settings"), ("⌘C", "copy setting key")]
             default: [("↑↓", "move"), ("↩", "open"), ("tab", "scope")]
             }
         return pairs.map { KeyHint(keys: $0.0, label: $0.1) }

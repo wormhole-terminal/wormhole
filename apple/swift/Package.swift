@@ -35,7 +35,7 @@ var targets: [Target] = [
     .target(
         name: "WindowUI",
         dependencies: [
-            "WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "FileIconTheme", "PaletteUI",
+            "WorkspaceModel", "DesignSystem", "SidebarUI", "PanelModel", "PanelUI", "FileIconTheme", "PaletteModel", "PaletteUI",
             "TerminalMetal", "TerminalCore", "TerminalUI", "PanesModel", "PanesUI", "PlatformModel", "WindowsModel", "WordsModel",
         ]),
     // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
@@ -178,7 +178,7 @@ if ffiLinked {
         .target(name: "WordsBridge", dependencies: ["WordsModel", "WormholeBindings"]),
         .testTarget(
             name: "PlatformBridgeTests",
-            dependencies: ["PlatformBridge", "PlatformModel", "PaletteModel", "WormholeBindings"]),
+            dependencies: ["PlatformBridge", "PlatformModel", "PaletteModel", "PaletteUI", "DesignSystem", "WorkspaceModel", "WormholeBindings"]),
         .testTarget(name: "WordsBridgeTests", dependencies: ["WordsBridge", "WordsModel", "WormholeBindings"]),
     ]
     appSettings.append(.define("WITH_UNIFFI"))

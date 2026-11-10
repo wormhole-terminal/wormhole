@@ -50,11 +50,19 @@ enum MenuStateMaker {
         if !facts.minimap { menu.off.insert("toggleMinimap") }
         menu.checked.insert(tabAction(state.panelTab))
         if selected?.isPinned == true { menu.checked.insert("pinTerminal") }
+        // Hide from Agents is offered with the Automation flag on, or while the terminal is hidden (to show it again).
+        if selected?.isAgentHidden == true {
+            menu.checked.insert("hideFromAgents")
+        } else if !facts.flagsOn.contains("automation") {
+            menu.hidden.insert("hideFromAgents")
+        }
         menu.split = facts.isSplit
 
         menu.disabled.formUnion(keymap.entries.filter { $0.isLive && !facts.implemented.contains($0.id) }.map(\.id))
         if selected == nil { menu.disabled.formUnion(["closeTerminal", "pinTerminal", "splitRight", "splitDown"]) }
         if selected?.folder == nil { menu.disabled.formUnion(["revealInFinder", "copyPath"]) }
+        // A worktree needs a repository.
+        if selected?.repo == nil { menu.disabled.insert("newTerminalInWorktree") }
         if !facts.canSplitRight { menu.disabled.insert("splitRight") }
         if !facts.canSplitDown { menu.disabled.insert("splitDown") }
         if !facts.isSplit { menu.disabled.formUnion(["zoomPane", "leaveSplit", "focusPaneLeft", "focusPaneRight", "focusPaneUp", "focusPaneDown"]) }
@@ -65,7 +73,7 @@ enum MenuStateMaker {
             if !preset.enabled { menu.disabled.insert(id) }
         }
         // Actions whose feature flag is off are not in the menus at all.
-        menu.hidden = Set(keymap.entries.filter { $0.flag.map { !facts.flagsOn.contains($0) } ?? false }.map(\.id))
+        menu.hidden.formUnion(keymap.entries.filter { $0.flag.map { !facts.flagsOn.contains($0) } ?? false }.map(\.id))
         if !facts.hasFolds { menu.disabled.insert("showHiddenLines") }
 
         let numbered = SidebarNumbering.numbered(state)

@@ -1,5 +1,6 @@
 import AppKit
 import DesignSystem
+import PaletteModel
 import SwiftUI
 import Testing
 import WorkspaceModel
@@ -65,28 +66,30 @@ import WorkspaceModel
     }
 
     private func palette(_ query: String, chosen: String? = nil, hovered: String? = nil) -> PaletteView {
-        PaletteView(state: state, send: { _ in }, dismiss: {}, startsPresented: true, query: query, chosen: chosen, hovered: hovered)
+        PaletteView(state: state, send: { _ in }, sources: PaletteSources(actions: { SampleLists().actions(ActionFacts()) }), dismiss: {}, startsPresented: true, query: query, chosen: chosen, hovered: hovered)
     }
 
     @Test func paletteImages() throws {
+        SampleLists.install()
         for theme in Self.themes {
             for (name, query) in [("palette", ""), ("palette-query", "new"), ("palette-terminals", "@"), ("palette-none", "zzq")] {
                 try write(palette(query), named: name, theme: theme)
             }
         }
-        try write(palette("", hovered: "panel-changes"), named: "palette-hover", theme: "wormhole.dark")
+        try write(palette("", hovered: "action-showChanges"), named: "palette-hover", theme: "wormhole.dark")
         for theme in ["wormhole.dark", "wormhole.light"] {
             try write(palette("new"), named: "palette-query", theme: theme, contrast: true)
         }
     }
 
     @Test func sheetImages() throws {
+        SampleLists.install()
         for theme in Self.themes {
-            try write(ShortcutSheetView(dismiss: {}, startsPresented: true), named: "sheet", theme: theme)
+            try write(ShortcutSheetView(hidden: [], hotkey: nil, dismiss: {}, startsPresented: true), named: "sheet", theme: theme)
         }
         for theme in ["wormhole.dark", "wormhole.light"] {
-            try write(ShortcutSheetView(dismiss: {}, startsPresented: true), named: "sheet", theme: theme, contrast: true)
-            try write(ShortcutSheetView(dismiss: {}, startsPresented: true, filter: "⌘"), named: "sheet-filtered", theme: theme)
+            try write(ShortcutSheetView(hidden: [], hotkey: nil, dismiss: {}, startsPresented: true), named: "sheet", theme: theme, contrast: true)
+            try write(ShortcutSheetView(hidden: [], hotkey: nil, dismiss: {}, startsPresented: true, filter: "⌘"), named: "sheet-filtered", theme: theme)
         }
     }
 }

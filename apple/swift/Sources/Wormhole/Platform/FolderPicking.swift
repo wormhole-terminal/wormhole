@@ -1,4 +1,5 @@
-// ⌘J: the folder picker over the terminal in front (`openFolder`), a new terminal in the folder chosen. The providers are
+// ⌘J (`insertFolderPath`): the folder picker over the terminal in front; the folder chosen is pasted at its cursor, as the
+// GPUI app does (it never cd's). ⌘O (`openFolder`) is the system's panel and a new terminal there. The providers are
 // core's (typed paths, the fuzzy walk, recent folders by frecency, git branch badges) where the window is real and the
 // sample's elsewhere. Recent folders are kept in the data folder and a visit is recorded when a terminal changes folder
 // (an event of the workspace's state, never a poll).
@@ -35,6 +36,27 @@ final class FolderPicking {
         #endif
     }
 
+    /// The key's and the menu's way in: only over the terminal that has the keyboard (a paste must not land in one the
+    /// person is not in) and only with the Folder picker feature flag on.
+    func insertPath() {
+        guard app.settingsModel.host.flags().contains(where: { $0.key == "folder_picker" && $0.on }),
+            let view = app.selectedView, view.window?.isKeyWindow == true, view.window?.firstResponder === view
+        else { return }
+        open()
+    }
+
+    /// ⌘O: a terminal in a folder chosen in the system's panel.
+    func openFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Open"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        app.hub.send(.newTerminalIn(url.path))
+    }
+
+    /// The picker itself, over the terminal in front; a pick is pasted there.
     func open() {
         guard let window = app.window, let content = window.contentView else { return }
         let cwd = app.hub.state.terminals.first { $0.id == app.hub.state.selected }?.folder.map { ($0 as NSString).expandingTildeInPath } ?? NSHomeDirectory()
@@ -46,7 +68,7 @@ final class FolderPicking {
         let (providers, decorators) = sources()
         controller.open(
             over: window, pane: pane, cursor: cursor, context: PickerContext(cwd: cwd), providers: providers, decorators: decorators,
-            onPick: { [weak app] path in app?.hub.send(.newTerminalIn(path)) }, onForget: { [weak self] path in self?.forget(path) })
+            onPick: { [weak app] path in app?.selectedView?.source.paste(path) }, onForget: { [weak self] path in self?.forget(path) })
     }
 
     private func sources() -> ([any FolderProviding], [any FolderDecorating]) {

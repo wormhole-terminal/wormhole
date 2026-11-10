@@ -6,12 +6,14 @@
 //! Positions are viewport cells (0-based, row 0 at the top of what the frame shows); this side turns
 //! them into grid lines with the display offset of the last frame, which is what the person saw.
 
+mod app_selection;
 mod links;
 mod pointer;
 mod selection;
 
 use std::sync::{Mutex, PoisonError};
 
+use wormhole_term::input::app_selection::AppSelection;
 use wormhole_term::{Pty, ScreenSnapshot};
 
 use crate::terminal::Terminal;
@@ -24,11 +26,17 @@ pub use selection::{CellSide, RowSpan, SelectionKind};
 #[derive(Default)]
 pub(crate) struct Interaction {
     pointer: Mutex<pointer::Memory>,
+    /// A selection a full-screen program drew itself, for ⌘V over it.
+    app_selection: Mutex<AppSelection>,
 }
 
 impl Interaction {
     pub(crate) fn pointer(&self) -> std::sync::MutexGuard<'_, pointer::Memory> {
         self.pointer.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    pub(crate) fn app_selection(&self) -> std::sync::MutexGuard<'_, AppSelection> {
+        self.app_selection.lock().unwrap_or_else(PoisonError::into_inner)
     }
 }
 

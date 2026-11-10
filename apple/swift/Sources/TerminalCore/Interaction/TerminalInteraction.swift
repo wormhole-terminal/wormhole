@@ -112,6 +112,12 @@ public protocol TerminalInteraction: AnyObject, Sendable {
     /// The shell-escaped text for dropped files.
     func droppedText(paths: [String]) -> String
     func clearHistory()
+    /// ⌘V: the clipboard pasted; over a selection a full-screen program drew itself it replaces it (a Backspace first, and
+    /// what the clipboard held before the program's copy). `nil`: nothing on the clipboard.
+    func pasteClipboard(_ text: String?)
+    /// A program's copy (OSC 52) went to the clipboard, which held `before`: right after the program's own mouse
+    /// selection that copy is the selection ⌘V replaces.
+    func programCopied(_ text: String, replacing before: String?)
 
     func selectionStart(kind: SelectionKind, row: Int, column: Int, side: CellSide)
     func selectionUpdate(row: Int, column: Int, side: CellSide)
@@ -123,4 +129,10 @@ public protocol TerminalInteraction: AnyObject, Sendable {
 
     func link(row: Int, column: Int) -> LinkInfo?
     func openTarget(for uri: String) -> OpenTarget
+}
+
+extension TerminalInteraction {
+    /// Only the real engine knows a program's own selection.
+    public func pasteClipboard(_ text: String?) {}
+    public func programCopied(_ text: String, replacing before: String?) {}
 }

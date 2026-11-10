@@ -23,6 +23,8 @@ extension MetalTerminalView {
     func handleClipboard(_ event: TerminalEvent) {
         switch event {
         case .clipboardWrite(let text):
+            // What the clipboard held goes to the engine first: ⌘V over the selection this copy came from pastes it.
+            interaction?.programCopied(text, replacing: Self.pasteboardText.isEmpty ? nil : Self.pasteboardText)
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(text, forType: .string)
             onProgramCopy?(text)

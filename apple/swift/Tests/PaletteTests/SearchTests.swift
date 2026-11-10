@@ -46,23 +46,30 @@ import WorkspaceModel
 }
 
 @Suite struct RowsTests {
-    private let commands = CommandCatalog.commands(for: sample())
+    private let list: ActionList
+    private let commands: [Command]
+
+    init() {
+        SampleLists.install()
+        list = ListedKeymap.actions(ActionFacts())
+        commands = CommandCatalog.commands(for: sample(), actions: list)
+    }
 
     private func rows(_ scope: PaletteScope = .all, _ query: String = "", recent: [String] = []) -> [PaletteRow] {
-        PaletteRows.rows(scope: scope, query: query, commands: commands, recent: recent)
+        PaletteRows.rows(scope: scope, query: query, commands: commands, recent: recent, suggested: list.suggested)
     }
 
     @Test func emptyQuerySuggestsTheActionsThatFit() {
         let rows = rows()
         #expect(rows.first == .label(title: "Actions", count: nil))
-        #expect(rows.compactMap(\.result?.id) == CommandCatalog.suggested)
+        #expect(rows.compactMap(\.result?.id) == list.suggested.map { "action-\($0)" })
     }
 
     @Test func recentComesFirstAndLeavesActionsOut() {
-        let rows = rows(recent: ["terminal-1", "new-terminal", "gone"])
+        let rows = rows(recent: ["terminal-1", "action-newTerminal", "gone"])
         #expect(rows.first == .label(title: "Recent", count: nil))
         #expect(rows.compactMap(\.result?.id).first == "terminal-1")
-        #expect(rows.compactMap(\.result?.id).filter { $0 == "new-terminal" }.count == 1)
+        #expect(rows.compactMap(\.result?.id).filter { $0 == "action-newTerminal" }.count == 1)
     }
 
     @Test func aQueryListsGroupsInOrderWithTheirCounts() {
@@ -97,6 +104,7 @@ import WorkspaceModel
         let rows = rows(.actions)
         #expect(rows.first == .label(title: "Terminal", count: nil))
         #expect(rows.contains(.label(title: "View", count: nil)))
+        #expect(rows.contains(.label(title: "App", count: nil)))
     }
 
     @Test func emptyScopesSayWhy() {

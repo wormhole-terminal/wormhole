@@ -11,8 +11,8 @@ public struct PaletteView: View {
     public let state: WorkspaceState
     public let send: @MainActor (WorkspaceAction) -> Void
     public let dismiss: @MainActor () -> Void
-    /// Carries out a keymap action the workspace has no action for (a split, find, a window).
-    let perform: @MainActor (String) -> Void
+    /// What the window lists and does for it: the keymap's actions, settings, commits (`PaletteSources`).
+    let sources: PaletteSources
     let startsPresented: Bool
 
     @State var scope: PaletteScope
@@ -20,24 +20,27 @@ public struct PaletteView: View {
     /// The selected result, by id (rows come and go while typing); nil is the first one.
     @State var chosen: String?
     @State var hovered: String?
+    /// The actions as the window offered them when the palette opened (the core's list for this window).
+    @State var actions: ActionList
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(
         state: WorkspaceState, send: @escaping @MainActor (WorkspaceAction) -> Void,
-        perform: @escaping @MainActor (String) -> Void = { _ in }, dismiss: @escaping @MainActor () -> Void
+        sources: PaletteSources = PaletteSources(), dismiss: @escaping @MainActor () -> Void
     ) {
-        self.init(state: state, send: send, perform: perform, dismiss: dismiss, startsPresented: false)
+        self.init(state: state, send: send, sources: sources, dismiss: dismiss, startsPresented: false)
     }
 
     init(
         state: WorkspaceState, send: @escaping @MainActor (WorkspaceAction) -> Void,
-        perform: @escaping @MainActor (String) -> Void = { _ in }, dismiss: @escaping @MainActor () -> Void, startsPresented: Bool, query: String = "",
+        sources: PaletteSources = PaletteSources(), dismiss: @escaping @MainActor () -> Void, startsPresented: Bool, query: String = "",
         chosen: String? = nil, hovered: String? = nil
     ) {
         self.state = state
         self.send = send
         self.dismiss = dismiss
-        self.perform = perform
+        self.sources = sources
+        _actions = State(initialValue: sources.actions())
         self.startsPresented = startsPresented
         let (scope, rest) = PaletteScope.parse(query)
         _scope = State(initialValue: scope)
@@ -49,8 +52,10 @@ public struct PaletteView: View {
     var motion: OverlayMotion { OverlayMotion(reduceMotion: reduceMotion) }
 
     var rows: [PaletteRow] {
-        PaletteRows.rows(
-            scope: scope, query: text, commands: CommandCatalog.commands(for: state), recent: RecentStore.shared.ids)
+        let recent = RecentStore.shared.ids
+        let commands = CommandCatalog.commands(
+            for: state, sources: sources, actions: actions, scope: scope, query: text, recent: recent)
+        return PaletteRows.rows(scope: scope, query: text, commands: commands, recent: recent, suggested: actions.suggested)
     }
 
     public var body: some View {
@@ -78,7 +83,7 @@ public struct PaletteView: View {
             .frame(height: listHeight(rows, in: context.size) - OverlayMetrics.listBottom)
             .padding(.bottom, OverlayMetrics.listBottom)
             PaletteFooterView(
-                hints: PaletteFooter.hints(scope: scope),
+                hints: PaletteFooter.hints(scope: scope, selected: rows.compactMap(\.result).first { $0.id == selection }?.command),
                 trailing: PaletteFooter.trailing(scope: scope, query: text, rows: rows))
         }
         .frame(width: width)

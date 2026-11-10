@@ -37,7 +37,7 @@ struct SheetBody: View {
             ForEach(Array(found.sections[run].enumerated()), id: \.offset) { _, section in
                 VStack(spacing: 0) {
                     GroupLabel(title: section.title, count: nil, inset: 0)
-                    ForEach(section.rows, id: \.row.id) { ShortcutLine(row: $0.row, hit: $0.hit) }
+                    ForEach(section.rows) { ShortcutLine(row: $0) }
                 }
             }
         }

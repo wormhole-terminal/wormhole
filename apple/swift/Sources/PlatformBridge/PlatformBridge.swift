@@ -33,6 +33,9 @@ public enum PlatformBridge {
         CoreFolders(recentsJSON: recentsJSON, recentTitle: recentTitle)
     }
 
-    /// Makes core's fuzzy matcher the palette's.
-    public static func installPaletteMatcher() { PaletteSearch.install(CorePaletteMatcher()) }
+    /// Makes core's fuzzy matcher and keymap lists (the palette's actions, the shortcut sheet) the palette's.
+    public static func installPaletteMatcher() {
+        PaletteSearch.install(CorePaletteMatcher())
+        ListedKeymap.install(CoreKeymapLists())
+    }
 }

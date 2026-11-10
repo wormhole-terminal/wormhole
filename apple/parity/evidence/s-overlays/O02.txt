@@ -1,0 +1,58 @@
+# live run, --background Swift instance (FFI build), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-overlays-a, throwaway repo /tmp/s-ov/repo with 3 commits; each '>' line is one control-folder command
+> shortcut-rows
+43 of 43
+Windows & terminals
+  New window  ⌘N
+  New terminal  ⌘T
+  Open folder…  ⌘O
+  Close terminal (pane in a split)  ⌘W
+  Close window  ⇧⌘W
+  Split right / down  ⌘D ⇧⌘D
+  Zoom pane  ⇧⌘↩
+  Pane left / right / above / below  ⌥⌘← ⌥⌘→ ⌥⌘↑ ⌥⌘↓
+  Previous / next terminal  ⌃⌘↑ ⌃⌘↓
+  Terminals 1–9 (hold ⌘ to see them)  ⌘1 … ⌘9
+  Previous / next group  ⌃⌥[ ⌃⌥]
+  Groups 1–9  ⌃⌥1 … ⌃⌥9
+  Go to the terminal that needs input  ⌥⌘J
+  Go to the terminal that finished  ⌥⇧⌘J
+View & panels
+  Hide / show sidebar  ⌃⌘S
+  Hide / show right panel  ⌥⌘I
+  Hide / show status bar  ⌘/
+  Hide / show minimap  
+  Zen mode  ⌃⌘Z
+  Changes · History · Notes · Usage · Project · Files  ⌃⌘1 … ⌃⌘6
+  Focus terminal / panel  ⇧⌘E
+  Next / previous area  F6 ⇧F6
+  Bigger / smaller / actual size  ⌘+ ⌘- ⌘0
+  Full screen  ⌃⌘F
+Terminal
+  Copy / paste  ⌘C ⌘V
+  Select all  ⌘A
+  Clear buffer  ⌘K
+  Find in scrollback  ⌘F
+  Find next / previous  ⌘G ⇧⌘G
+  Use selection for find  ⌘E
+  Previous / next prompt  ⌘↑ ⌘↓
+  Show hidden lines  ⌥⌘L
+Find anything
+  Command palette  ⇧⌘P
+  Keyboard shortcuts (this sheet)  ⌥⌘/
+  Wormhole help  ⌘?
+Notes
+  New note  ⌥⌘N
+  Stash typed prompt  ⌥⌘S
+App
+  Settings  ⌘,
+  Theme Studio  ⌥⌘,
+  Save theme (in the Studio)  ⌘S
+  Duplicate (in the Studio)  ⇧⌘S
+  Hide Wormhole  ⌘H
+  Quit  ⌘Q
+> shortcut-rows ⌘W
+1 of 43
+Windows & terminals
+  Close terminal (pane in a split)  ⌘W
+> shortcut-rows zzzz
+0 of 43

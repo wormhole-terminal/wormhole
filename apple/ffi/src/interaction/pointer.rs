@@ -120,6 +120,16 @@ impl Terminal {
             if let Some(bytes) = mouse::encode(&input, mode) {
                 pty.write(bytes);
             }
+            if event.button == PointerButton::Left {
+                let mut selected = self.interaction.app_selection();
+                match action {
+                    mouse::MouseAction::Press => selected.pressed(event.row as usize),
+                    mouse::MouseAction::Release => {
+                        selected.released(event.row as usize, std::time::Instant::now())
+                    }
+                    mouse::MouseAction::Motion => {}
+                }
+            }
             true
         })
         .unwrap_or(false)

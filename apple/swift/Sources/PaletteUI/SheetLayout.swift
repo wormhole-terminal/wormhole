@@ -32,7 +32,7 @@ struct SheetLayout: Equatable {
         width = columns == full ? widest : min(max(across, OverlayMetrics.sheetMinWidth), widest)
         // A section is its label and its rows, all one line high (a label is a row's height too).
         let heights = sectionRows.map { $0 + 1 }
-        runs = SheetColumns.split(heights, into: columns)
+        runs = ListedKeymap.columns(heights, columns)
         var tallest: CGFloat = 0
         for run in runs {
             let lines = heights[run].reduce(0, +)

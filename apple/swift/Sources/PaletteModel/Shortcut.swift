@@ -40,6 +40,7 @@ public struct Shortcut: Sendable, Equatable {
             rest = rest.dropFirst()
         }
         guard !rest.isEmpty, !modifiers.isEmpty || rest.count > 1 else { return nil }
-        self.init(modifiers, rest.uppercased())
+        // A letter is written capital ("⌘t" is ⌘T); a named key ("Space", "F6") as it is.
+        self.init(modifiers, rest.count == 1 ? rest.uppercased() : String(rest))
     }
 }

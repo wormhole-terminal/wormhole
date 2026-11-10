@@ -31,6 +31,8 @@ final class UniFFIInteraction: TerminalCore.TerminalInteraction {
     func focusChanged(_ focused: Bool) { terminal.focusChanged(focused: focused) }
     func droppedText(paths: [String]) -> String { terminal.droppedText(paths: paths) }
     func clearHistory() { terminal.clearHistory() }
+    func pasteClipboard(_ text: String?) { terminal.pasteClipboard(clipboard: text) }
+    func programCopied(_ text: String, replacing before: String?) { terminal.programCopied(text: text, clipboardBefore: before) }
 
     func selectionStart(kind: TerminalCore.SelectionKind, row: Int, column: Int, side: TerminalCore.CellSide) {
         let kind: WormholeBindings.SelectionKind =

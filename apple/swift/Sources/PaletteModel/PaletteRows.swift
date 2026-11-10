@@ -31,17 +31,18 @@ public struct PaletteResult: Sendable, Equatable, Identifiable {
 }
 
 public enum PaletteRows {
-    /// `query` is the words after any prefix. `recent` is the ids chosen before, newest first.
+    /// `query` is the words after any prefix. `recent` is the ids chosen before, newest first; `suggested` the action ids
+    /// listed with nothing typed (the core's, for this window).
     public static func rows(
-        scope: PaletteScope, query: String, commands: [Command], recent: [String] = []
+        scope: PaletteScope, query: String, commands: [Command], recent: [String] = [], suggested: [String] = []
     ) -> [PaletteRow] {
         let query = query.trimmingCharacters(in: .whitespaces)
         let rows =
             switch (scope, query.isEmpty) {
-            case (.all, true): suggestions(commands, recent: recent)
+            case (.all, true): suggestions(commands, recent: recent, suggested: suggested)
             case (.terminals, true): terminalsByState(commands)
             case (.actions, true): actionsBySection(commands)
-            case (.settings, true): [PaletteRow.note("Type to find a setting")]
+            case (.settings, true): recentSettings(commands, recent: recent)
             default: found(scope: scope, query: query, commands: commands)
             }
         return rows.isEmpty ? [.note(query.isEmpty ? "Nothing here yet" : "Nothing matches")] : rows
@@ -59,13 +60,20 @@ public enum PaletteRows {
     }
 
     /// Nothing typed: what was chosen before, then the actions that fit most windows, each with its key.
-    private static func suggestions(_ commands: [Command], recent: [String]) -> [PaletteRow] {
+    private static func suggestions(_ commands: [Command], recent: [String], suggested: [String]) -> [PaletteRow] {
         let lookup = Dictionary(commands.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let recents = recent.compactMap { lookup[$0] }.filter { $0.group != .actions }.prefix(6)
         var rows: [PaletteRow] = recents.isEmpty ? [] : [.label(title: "Recent", count: nil)] + results(Array(recents))
-        let suggested = CommandCatalog.suggested.compactMap { lookup[$0] }
-        if !suggested.isEmpty { rows += [.label(title: "Actions", count: nil)] + results(suggested) }
+        let actions = suggested.compactMap { lookup["action-\($0)"] }
+        if !actions.isEmpty { rows += [.label(title: "Actions", count: nil)] + results(actions) }
         return rows
+    }
+
+    /// The Settings scope with nothing typed: the settings chosen lately; typing finds any setting.
+    private static func recentSettings(_ commands: [Command], recent: [String]) -> [PaletteRow] {
+        let lookup = Dictionary(commands.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let settings = recent.compactMap { lookup[$0] }.filter { $0.group == .settings }
+        return settings.isEmpty ? [.note("Type to find a setting")] : [.label(title: "Recent", count: nil)] + results(settings)
     }
 
     /// The Terminals scope with nothing typed: under who needs input first.
@@ -101,16 +109,22 @@ public enum PaletteRows {
     /// each cut to its first few unless the scope is its own.
     private static func found(scope: PaletteScope, query: String, commands: [Command]) -> [PaletteRow] {
         PaletteGroup.allCases.filter { scope.group == nil || scope.group == $0 }.flatMap { group -> [PaletteRow] in
-            let ranked = rank(query, commands.filter { $0.group == group })
+            let ranked = rank(query, commands.filter { $0.group == group }, mixed: scope == .all)
             guard !ranked.isEmpty else { return [] }
             let shown = scope == .all ? Array(ranked.prefix(PaletteGroup.unscopedMax)) : ranked
             return [.label(title: group.title, count: ranked.count)] + shown.map(PaletteRow.result)
         }
     }
 
-    /// Best first; equal scores keep their order so results do not shuffle while typing.
-    private static func rank(_ query: String, _ commands: [Command]) -> [PaletteResult] {
+    /// Best first; equal scores keep their order so results do not shuffle while typing. A result the core already
+    /// matched (a setting) keeps its match and order, by score where it is mixed with other groups.
+    private static func rank(_ query: String, _ commands: [Command], mixed: Bool) -> [PaletteResult] {
         guard !query.isEmpty else { return commands.map { PaletteResult(command: $0, ranges: []) } }
+        if commands.allSatisfy({ $0.match != nil }), !commands.isEmpty {
+            let found = commands.enumerated().map { ($0.offset, $0.element, $0.element.match ?? Match(score: 0, ranges: [])) }
+            let ordered = mixed ? found.sorted { ($0.2.score, $1.0) > ($1.2.score, $0.0) } : found
+            return ordered.map { PaletteResult(command: $0.1, ranges: $0.2.ranges) }
+        }
         let ranked = PaletteSearch.rank(query, commands.map { PaletteCandidate(title: $0.title, other: $0.searchText) })
         return ranked.map { PaletteResult(command: commands[$0.index], ranges: $0.match.ranges) }
     }

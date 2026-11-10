@@ -1,0 +1,27 @@
+# live run, --background Swift instance (FFI build), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-overlays-a, throwaway repo /tmp/s-ov/repo with 3 commits; each '>' line is one control-folder command
+> palette-rows >play
+# Actions (10)
+  Play intro: emerge  [⌃⌥⌘1]  <action-playIntroEmerge>
+  Play intro: edge vortex  [⌃⌥⌘2]  <action-playIntroVortex>
+  Play intro: collapse  [⌃⌥⌘3]  <action-playIntroCollapse>
+  Play intro: ftl jump  [⌃⌥⌘4]  <action-playIntroFtl>
+  Play intro: aurora  [⌃⌥⌘5]  <action-playIntroAurora>
+  Play intro: tentacles  [⌃⌥⌘6]  <action-playIntroTentacles>
+  Play intro: voyage  [⌃⌥⌘7]  <action-playIntroVoyage>
+  Play welcome: cursor  [⌃⌥⌘8]  <action-playWelcomeCursor>
+  Play welcome: portal  [⌃⌥⌘9]  <action-playWelcomePortal>
+  Play welcome: logo  [⌃⌥⌘0]  <action-playWelcomeLogo>
+> palette-run >clear buffer
+palette-run Clear buffer
+> palette-run >play intro: collapse
+palette-run Play intro: collapse
+> palette-run >play welcome: cursor
+palette-run Play welcome: cursor
+> palette-run >new terminal in new
+palette-run New terminal in no group
+> palette-rows >worktree
+# Actions (1)
+  New terminal in new worktree…  <action-newTerminalInWorktree>
+> actions-missing
+keymap now=128 implemented=127 missing=1
+rowMenu

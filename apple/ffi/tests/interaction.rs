@@ -204,3 +204,46 @@ fn keys_follow_the_keyboard_modes_the_program_set() {
     assert!(meta.send_key(press("b", Some("\u{222B}"), false, true, true)));
     wait_for(&meta, "^[b");
 }
+
+/// A program that tracks the mouse and has put its cursor on row 0, with the tty raw so `cat -v` shows what arrives.
+fn mouse_program() -> Arc<Terminal> {
+    let terminal = start("stty raw -echo; printf '\\033[?1000h\\033[?1006hprompt> '; exec cat -v");
+    wait_for(&terminal, "prompt>");
+    terminal
+}
+
+fn drag_on(terminal: &Terminal, row: u32) {
+    assert!(terminal.report_pointer(event(PointerAction::Press, PointerButton::Left, 2, row)));
+    assert!(terminal.report_pointer(event(PointerAction::Release, PointerButton::Left, 6, row)));
+}
+
+#[test]
+fn pasting_over_a_selection_the_program_drew_replaces_it() {
+    let terminal = mouse_program();
+    drag_on(&terminal, 0);
+    // The program copied the selection with OSC 52; the clipboard held "before" until then, holds "picked" now.
+    terminal.program_copied("picked".into(), Some("before".into()));
+    terminal.paste_clipboard(Some("picked".into()));
+    // A Backspace first (DEL, `^?`), then what the clipboard held before the program's copy.
+    wait_for(&terminal, "^?before");
+}
+
+#[test]
+fn a_paste_elsewhere_or_after_typing_is_a_plain_paste() {
+    let terminal = mouse_program();
+    // Selected on a row the cursor is not on: the program would not delete it, so nothing is sent ahead of the paste.
+    drag_on(&terminal, 5);
+    terminal.program_copied("picked".into(), Some("before".into()));
+    terminal.paste_clipboard(Some("picked".into()));
+    let screen = wait_for(&terminal, "picked");
+    assert!(!screen.contains("^?"), "{screen}");
+
+    // A key the person types ends the program's selection.
+    let terminal = mouse_program();
+    drag_on(&terminal, 0);
+    terminal.program_copied("picked".into(), None);
+    terminal.write(b"x".to_vec());
+    terminal.paste_clipboard(Some("later".into()));
+    let screen = wait_for(&terminal, "xlater");
+    assert!(!screen.contains("^?"), "{screen}");
+}

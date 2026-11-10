@@ -193,6 +193,7 @@ impl Terminal {
     /// Typed or pasted bytes for the program (the view goes back to the live screen).
     pub fn write(&self, bytes: Vec<u8>) {
         self.events.touched(Touch::Typed);
+        self.interaction.app_selection().forget();
         if let Some(pty) = self.pty.read().unwrap_or_else(PoisonError::into_inner).as_ref() {
             pty.write_input(bytes);
         }
@@ -212,7 +213,12 @@ impl Terminal {
             platform: press.platform,
             option_as_meta: press.option_as_meta,
         };
-        matches!(pty.send_key(|modes| keys::encode(&input, modes)), wormhole_term::KeySent::Sent { .. })
+        let sent =
+            matches!(pty.send_key(|modes| keys::encode(&input, modes)), wormhole_term::KeySent::Sent { .. });
+        if sent {
+            self.interaction.app_selection().forget();
+        }
+        sent
     }
 
     /// The grid's new size; the program is told through the PTY and the engine reflows.
