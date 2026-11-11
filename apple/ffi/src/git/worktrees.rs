@@ -206,8 +206,19 @@ pub(crate) fn env_for(cwd: &Path) -> Vec<(String, String)> {
 }
 
 /// `worktree_base` as a folder (`~` is the caller's to expand); empty puts worktrees beside the repository.
-fn base_of(base: Option<String>) -> Option<PathBuf> {
-    base.map(|b| b.trim().to_string()).filter(|b| !b.is_empty()).map(PathBuf::from)
+/// `worktree_base` as a folder, `~` expanded; `None` (unset, blank) puts worktrees beside the repository.
+pub(crate) fn base_of(base: Option<String>) -> Option<PathBuf> {
+    let base = base?;
+    let base = base.trim();
+    if base.is_empty() {
+        return None;
+    }
+    let home = wormhole_core::platform::paths::home();
+    Some(match (base.strip_prefix("~/"), home) {
+        (Some(rest), Some(home)) => home.join(rest),
+        (None, Some(home)) if base == "~" => home,
+        _ => PathBuf::from(base),
+    })
 }
 
 /// The repository a worktree of `folder` is of: its main working tree, so a terminal in a worktree makes

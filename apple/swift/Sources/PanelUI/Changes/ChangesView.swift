@@ -26,6 +26,8 @@ public struct ChangesView: View {
         } bottom: {
             ChangesDiffPane(store: store, headerInRow: false)
         }
+        // Showing the tab reads the status again (`changes/def.rs` `shown`).
+        .onAppear { store.refresh() }
     }
 }
 

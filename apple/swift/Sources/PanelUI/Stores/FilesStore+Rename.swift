@@ -33,6 +33,8 @@ extension FilesStore {
                 rows = tree.rows
                 host?.notify(panelText("files-spoken-renamed", ["name": .text(new)], "Renamed to \(new)"))
                 reload()
+                // A renamed folder's pins moved in the settings file.
+                pins = await backend.pins()
             case let .failure(failure):
                 renameError = Self.words(failure)
                 host?.notify(Self.words(failure))

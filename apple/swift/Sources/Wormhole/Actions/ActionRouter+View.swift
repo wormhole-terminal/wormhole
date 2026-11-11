@@ -12,7 +12,12 @@ extension ActionRouter {
         return [
             "toggleSidebar": { hub.send(.toggleSidebar) },
             // Under Zen mode these have nothing to show and would only change what comes back, unseen: the menu greys them.
-            "toggleRightPanel": { if look.zen == nil { hub.send(.togglePanel) } },
+            "toggleRightPanel": {
+                guard look.zen == nil else { return }
+                hub.send(.togglePanel)
+                // A panel that closed had the keys in a note or a list: the terminal takes them (`toggle_notes`).
+                if !hub.state.panelVisible { hub.focus.focusTerminal() }
+            },
             "toggleStatusBar": { if look.zen == nil { look.statusBar.toggle() } },
             "toggleZenMode": { [unowned self] in app.toggleZen() },
             "toggleTerminalTabs": { [unowned self] in app.settingsModel.backend.set("terminals_in", to: .string(look.tabsOnTop ? "sidebar" : "tabs")) },
@@ -25,8 +30,9 @@ extension ActionRouter {
             "showUsage": { hub.send(.showPanelTab(.usage)) },
             "showProject": { hub.send(.showPanelTab(.project)) },
             "showFiles": { hub.send(.showPanelTab(.files)) },
-            "newNote": { hub.send(.showPanelTab(.notes)); hub.panel.notes.newNote() },
-            "stashPrompt": { if hub.panel.notes.stashPrompt() { hub.send(.showPanelTab(.notes)) } },
+            // With the Notes feature off neither does anything (`note_ops.rs`).
+            "newNote": { if hub.panelTabs.contains(.notes) { hub.send(.showPanelTab(.notes)); hub.panel.notes.newNote() } },
+            "stashPrompt": { if hub.panelTabs.contains(.notes), hub.panel.notes.stashPrompt() { hub.send(.showPanelTab(.notes)) } },
             "commandPalette": { hub.send(.showOverlay(hub.state.overlay == .palette ? nil : .palette)) },
             "keyboardShortcuts": { hub.send(.showOverlay(hub.state.overlay == .shortcuts ? nil : .shortcuts)) },
             "bigger": { hub.zoomText(step: 1) },

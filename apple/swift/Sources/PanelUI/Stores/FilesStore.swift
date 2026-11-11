@@ -2,6 +2,7 @@
 // in the viewer, the pins. The disk is read through the backend, off the main actor, and again when its watch says
 // something changed; a folder that reads the same changes nothing on screen.
 
+import Foundation
 import Observation
 import PanelModel
 
@@ -148,7 +149,7 @@ public final class FilesStore {
     }
 
     public var pathMenu: PathMenuModel? {
-        root.map { PathMenuModel(shown: $0, volume: "Macintosh HD", pins: pins, chosen: chosen != nil, home: host?.homeFolder) } // text: macOS's default name of the startup volume
+        root.map { PathMenuModel(shown: $0, volume: FileManager.default.displayName(atPath: "/"), pins: pins, chosen: chosen != nil, home: host?.homeFolder) }
     }
 
     func join(_ root: String, _ path: String) -> String { root == "/" ? "/" + path : root + "/" + path }

@@ -85,7 +85,7 @@ final class NotesCoordinator {
     }
 
     func sync() async {
-        let editing = NSApp.keyWindow?.firstResponder is NSTextView
+        let editing = NSApp?.keyWindow?.firstResponder is NSTextView
         for terminal in hub.state.all {
             let id = terminal.id
             var found = id == shown ? hub.panel.project.state?.root : nil

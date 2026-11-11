@@ -63,7 +63,8 @@ enum PanelBackendsFactory {
                 worktreeCreated: { made, _ in
                     let setup = await project.worktreeSetup(of: made.repo)
                     await MainActor.run { _ = store.send(.newTerminalIn(made.folder)) }
-                    if let setup { await effects?.perform([.type(setup, in: .current)]) }
+                    // Pasted (bracketed) and submitted into the terminal just made for it, as one line whatever it holds.
+                    if let setup { await effects?.perform([.paste(setup, submit: true, in: .current)]) }
                 })
             if let real {
                 backends.git = real.git

@@ -9,24 +9,13 @@ use std::sync::Arc;
 use wormhole_core::git::worktree;
 use wormhole_core::git::{find_root, worktree_of};
 use wormhole_core::ipc::control::{Asked, Error, ErrorCode, Reply};
-use wormhole_core::platform::paths;
 
 use crate::hook_server::core::Core;
 use crate::hook_server::events::HookEvent;
 
-/// `worktree_base` as a folder, `~` expanded; `None` puts worktrees beside the repository.
+/// Where the sheet would put the worktree: the same rule as the service the sheet plans with.
 fn base(core: &Core) -> Option<PathBuf> {
-    let settings = core.settings();
-    let base = settings.worktree_base.trim();
-    if base.is_empty() {
-        return None;
-    }
-    let home = paths::home();
-    Some(match (base.strip_prefix("~/"), &home) {
-        (Some(rest), Some(home)) => home.join(rest),
-        _ if base == "~" => home.clone().unwrap_or_else(|| PathBuf::from(base)),
-        _ => PathBuf::from(base),
-    })
+    crate::git::worktree_base(Some(core.settings().worktree_base.clone()))
 }
 
 pub(super) fn ask(core: &Arc<Core>, folder: Option<String>, branch: &str, command: Option<String>) -> Reply {

@@ -25,15 +25,22 @@ public final class NotesStore {
     }
 
     /// A next step goes to the terminal's prompt as it reads.
-    public func send(_ task: PanelTask) { host?.send(task.text) }
+    public func send(_ task: PanelTask) { send(text: task.text, submit: false) }
 
-    public func send(_ note: Note) { host?.send(note.text) }
+    public func send(_ note: Note) { send(text: note.text, submit: false) }
 
     /// ⌘↵ in a note or step: `text` goes to the prompt, and with ⇧ the program is told to run it.
     public func send(text: String, submit: Bool) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         host?.send(text.trimmingCharacters(in: .whitespacesAndNewlines))
-        if submit { host?.submit() }
+        // The terminal has the keys from here: the person reads what was pasted and goes on there.
+        host?.focusTerminal()
+        guard submit else { return }
+        Task { [host] in
+            // one-shot: the program takes the paste first; Return a moment later is what the person would press.
+            try? await Task.sleep(for: .milliseconds(120))
+            host?.submit()
+        }
     }
 
     /// Esc, or ↵ on an empty field: the person is done writing and the keys go back to the terminal.
@@ -69,8 +76,11 @@ public final class NotesStore {
     @discardableResult
     public func stashPrompt() -> Bool {
         guard let text = host?.takePrompt(), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
-        add(note: text)
+        // The note is not opened for writing: the keys stay in the terminal, to answer the agent's question.
+        model.notes.append(Note(text: text))
+        model.notesCollapsed = false
         host?.notify(panelText("notes-prompt-stashed", "Prompt stashed in a new note"))
+        host?.focusTerminal()
         return true
     }
 

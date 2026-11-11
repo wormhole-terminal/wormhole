@@ -68,6 +68,12 @@ impl Git {
         find_root(Path::new(&folder)).is_some()
     }
 
+    /// The repository root of `folder` (the band's folder: what the Files tree and the project's colour are of),
+    /// `None` outside a repository. A look for `.git`, no process.
+    pub fn repository_root(&self, folder: String) -> Option<String> {
+        find_root(Path::new(&folder)).map(|root| root.to_string_lossy().into_owned())
+    }
+
     /// The status of the working tree, or what changed since the merge-base with `compare` (any branch, tag
     /// or commit) plus the untracked files. Line counts, LFS marks and submodule words included.
     pub fn status(&self, folder: String, compare: Option<String>) -> Result<GitStatus, GitBackendError> {
