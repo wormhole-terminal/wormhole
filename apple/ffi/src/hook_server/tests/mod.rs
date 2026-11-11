@@ -10,4 +10,5 @@ mod probes;
 mod profiles;
 mod streams;
 mod support;
+mod welcome;
 mod windows;

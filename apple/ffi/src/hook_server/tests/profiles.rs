@@ -12,7 +12,8 @@ use crate::{AccessAnswer, AccessDesk, Terminal, Workspace, WorkspaceConfig};
 fn write_mode(root: &DataRoot, profile: &str, mode: &str) {
     let id = wormhole_core::storage::paths::ProfileId::parse(profile).expect("an id");
     let file = root.profile(&id).config_file();
-    let config = json!({ "agent_access": mode, "control_write": true, "feature_flags": { "automation": true } });
+    let config =
+        json!({ "agent_access": mode, "control_write": true, "feature_flags": { "automation": true } });
     crate::settings::tests::write_file(&file, &config.to_string());
 }
 
@@ -20,15 +21,23 @@ fn write_mode(root: &DataRoot, profile: &str, mode: &str) {
 fn work_window(f: &Fixture, mode: &str) -> (std::sync::Arc<AccessDesk>, i64) {
     let root = DataRoot::new(&f.dir);
     let mut list = ProfileList::default();
-    list.create(&root, NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults })
-        .expect("makes Work");
+    list.create(
+        &root,
+        NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults },
+    )
+    .expect("makes Work");
     list.save(&root).expect("saves the list");
     write_mode(&root, "work", mode);
     let windows = f.windows.clone().expect("windows").beside_in(&root, "work").expect("Work beside Default");
     let desk = AccessDesk::new(Some("work".into()), Some(f.dir.display().to_string()), f.wakes.clone())
         .expect("a desk");
     f.server.add_desk(desk.clone());
-    let config = WorkspaceConfig { home: None, numbers_follow_list: true, start_folder: None, pane_header_height: 0.0 };
+    let config = WorkspaceConfig {
+        home: None,
+        numbers_follow_list: true,
+        start_folder: None,
+        pane_header_height: 0.0,
+    };
     let workspace = Workspace::in_window(windows.clone(), windows.alloc_window_id(), config, f.wakes.clone());
     let id = opened(&workspace.apply(Action::NewTerminal));
     let terminal =

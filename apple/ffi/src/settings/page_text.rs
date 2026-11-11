@@ -9,8 +9,8 @@ use std::path::Path;
 use std::time::SystemTime;
 use wormhole_core::config::settings_index::SectionId;
 use wormhole_core::platform::paths;
-use wormhole_core::terminal::shells::{self, ShellKind};
 use wormhole_core::storage::paths::DataRoot;
+use wormhole_core::terminal::shells::{self, ShellKind};
 use wormhole_core::update::{
     UpdateChannel, UpdateSchedule, counted_user_agent, current_platform, macos_version, plain_user_agent,
 };

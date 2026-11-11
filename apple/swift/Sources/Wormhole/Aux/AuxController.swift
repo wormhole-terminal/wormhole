@@ -22,7 +22,7 @@ final class AuxController {
     /// The shown profile's agent-access desk, shared with the hook socket; nil in the sample.
     var accessBackend: (any AccessBackend)? { accessBackends[app.windowsHost.profile] }
     unowned let app: AppController
-    private var backends: AuxBackends { AuxBackends(app: app) }
+    var backends: AuxBackends { AuxBackends(app: app) }
 
     init(app: AppController, dataDirectory: URL) {
         self.app = app

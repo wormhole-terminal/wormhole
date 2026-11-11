@@ -16,9 +16,11 @@
 
     @MainActor
     final class HookHost {
-        private let handle: HookServerHandle
+        let handle: HookServerHandle
         private var listening: Task<Void, Never>?
-        private unowned let app: AppController
+        /// The task that tells the welcome what macOS says of banners (`HookHost+Welcome`).
+        var permissionWatch: Task<Void, Never>?
+        unowned let app: AppController
 
         /// Nil when this window is not the core's, or when the parts the server shares are not there.
         init?(app: AppController) throws {
@@ -79,6 +81,9 @@
             case .driven(let terminal, let typing, let agent):
                 app.session(holding: Int(terminal))?.hub.driven(terminal: Int(terminal), typing: typing, agent: agent)
             case .probesChanged: probesChanged()
+            case .welcomeDemo(let terminal, let show): welcomeDemo(terminal: Int(terminal), show: show)
+            case .welcomeEnded(let terminal): welcomeEnded(terminal: Int(terminal))
+            case .welcomeAskPermission: askNotificationPermission()
             }
         }
     }

@@ -1340,3 +1340,19 @@ UpdateEngine.setAutoUpdate(on:) / setAnonymousCount(on:)
   `NewTerminal` opens the row, the bridge starts the program it was asked for).
 - `keymap_sheet_matches(query, label, key) -> SheetMatchRecord?`: core's `sheet::matches` for a row the keymap does not hold (a trusted
   project's action and its key as glyphs): `None` when the query does not find it or `key` is no key; `label_hit` the bytes to mark.
+
+## The terminal welcome (lane settings-b, wave 2)
+
+The first run as a program in a terminal (`Wormhole welcome`, core's `onboarding::welcome`), behind the `terminal_welcome` flag.
+- `cli_exit_code(["Wormhole","welcome","--",…])` runs core's program (`onboarding::welcome::run`); the app's executable is what a welcome
+  terminal starts. `Terminal.start_for_welcome(tab, program, args, cwd, cols, rows, cell_w, cell_h, token, listener)` starts it in the app's
+  own process (never a session host) with `WORMHOLE_WELCOME_TOKEN` in that terminal's environment alone.
+- `HookServer.begin_welcome(tab, WelcomePlan { handover, first_run, animates, reduce_motion, import_home }, fonts) -> String?` opens the door
+  (core's `Registry`) and starts the agent scan; the token goes to `start_for_welcome`. `welcome_playing(tab, playing)` starts/ends the
+  animation clock behind the state's `wait_ms`; `set_notification_permission(word)` tells what macOS says of banners; `welcome_gone(tab) -> bool`
+  shuts a closed terminal's door (a first run closed unfinished is remembered as skipped); `welcome_available() -> bool` is the flag.
+- `Action::Welcome` is answered by the server (`state`, `set_look`, `set_notify`, `install_hooks`, `demo`, `import`, `finish`; budgets and the token
+  rule are core's; `set_shown` is refused and `state.shown` is absent, so the program shows that page read-only). Settings go through core's
+  `Config::update` of the window's profile; the open window sees them by its file watch.
+- `HookEvent::WelcomeDemo { terminal, show }`, `WelcomeEnded { terminal }`, `WelcomeAskPermission`.
+- The example band's rows are core's: `welcome_demo_title()`, `welcome_demo_label()`, `welcome_demo_rows(elapsed_ms, still)`, `welcome_demo_next_ms(...)`.

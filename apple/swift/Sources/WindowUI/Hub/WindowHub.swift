@@ -29,6 +29,8 @@ public final class WindowHub {
     /// Each terminal's agent's model and context window, as its status line last said (the title row's gauge chip).
     public let gauges = GaugeBoard()
     public var actions = HubActions()
+    /// The terminal welcome's example band in the sidebar, while the program's sidebar step is up (never a terminal).
+    public var exampleBand: ExampleBand?
     /// A click on the chip that says an update is ready: the app restarts into it (asking first when that ends something).
     public var onRestartToUpdate: (() -> Void)?
     /// The title row's parts as arranged (View ▸ Title Row, the row's own menu).

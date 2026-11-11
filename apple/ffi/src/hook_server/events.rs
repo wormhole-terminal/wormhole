@@ -39,6 +39,14 @@ pub enum HookEvent {
     /// The rules, a status item, a tinted block or a fold changed: take a frame of every terminal and read
     /// `HookServer::probe_status_items` again.
     ProbesChanged,
+    /// The welcome program's sidebar step: put the example band in the sidebar of the window that holds `terminal`
+    /// (`show`), or take it away. The band is never a terminal: not listed, not saved, not numbered, not selectable.
+    WelcomeDemo { terminal: i64, show: bool },
+    /// The welcome in `terminal` is over: the example band goes and a start animation still playing is cut short.
+    WelcomeEnded { terminal: i64 },
+    /// A press turned a banner on, or said Allow, while macOS has not been asked: ask it, then tell
+    /// `HookServer::set_notification_permission`.
+    WelcomeAskPermission,
 }
 
 /// Why the server did not start.

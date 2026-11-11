@@ -1,0 +1,111 @@
+# Terminal welcome walked by keys in a fresh data dir (first run, flag terminal_welcome on, fake HOME with a Ghostty config)
+- before any key: onboarded flag
+   onboarded: 
+-- page 1: welcome
+   |   >_ Wormhole
+   |      A terminal for working with AI coding agents.
+   |   ←  your terminals and what their agents are doing
+   |   ←  which is working, which needs input, which is done
+   |   ←  ⌘T opens another; click one to switch
+   |   ❯ Get started
+   |   ⏎ get started  esc skip
+-- page 2: look (Enter)
+   |   How should it look?
+   |   Themes apply as you move. The rest of it is in Settings.
+- key down: Tokyo Night
+   config.json: {'theme': 'Tokyo Night', 'primary_color': '', 'font_size': 14.0, 'font_ligatures': True, 'opacity': 0.800000011920929, 'notify_needs_you': True, 'notify_agent_done': True, 'notify_sound': 'needs_you', 'notifications': True}
+- p: next colour
+   config.json: {'theme': 'Tokyo Night', 'primary_color': '#9ece6a', 'font_size': 14.0, 'font_ligatures': True, 'opacity': 0.800000011920929, 'notify_needs_you': True, 'notify_agent_done': True, 'notify_sound': 'needs_you', 'notifications': True}
+- l: ligatures off
+   config.json: {'theme': 'Tokyo Night', 'primary_color': '#9ece6a', 'font_size': 14.0, 'font_ligatures': False, 'opacity': 0.800000011920929, 'notify_needs_you': True, 'notify_agent_done': True, 'notify_sound': 'needs_you', 'notifications': True}
+- +: font +1
+   config.json: {'theme': 'Tokyo Night', 'primary_color': '#9ece6a', 'font_size': 15.0, 'font_ligatures': False, 'opacity': 0.800000011920929, 'notify_needs_you': True, 'notify_agent_done': True, 'notify_sound': 'needs_you', 'notifications': True}
+- i: Use my Ghostty settings (fake home: font-size 17, background-opacity 0.92)
+   config.json: {'theme': 'Tokyo Night', 'primary_color': '#9ece6a', 'font_size': 17.0, 'font_ligatures': False, 'opacity': 0.9200000166893005, 'notify_needs_you': True, 'notify_agent_done': True, 'notify_sound': 'needs_you', 'notifications': True}
+-- look page after import
+   |   How should it look?
+   |   Themes apply as you move. The rest of it is in
+   |   Settings.
+   |   Theme
+   |     Wormhole Dark
+   |   ❯ Tokyo Night
+   |     Catppuccin Mocha
+   |     Nord
+   |     Rose Pine
+   |     Wormhole Light  light
+   |   Colour     ○ Theme  ● Green  ○ Magenta  ○ Red
+   |   Font       JetBrains Mono 17
+   |   Ligatures  off  => != >=
+   |   ✓ 2 settings brought over
+   |   ↑↓ choose  p colour  l ligatures  + - size  ⏎ continue
+-- page 3: how much to show (read-only here: the window reports nothing of what it shows)
+   |   How much to show
+   |   Each answer changes the window around this terminal as
+   |   you give it.
+-- page after Continue on the how-much page
+   |   Tell me when an agent needs me
+   |   A banner and a sound can tell you when a terminal
+   |   needs input or an agent finishes, so you can look
+   |   away. The same switches are in Settings (⌘,).
+   |     Needs input  ● On  ○ Off
+- Sound row, Enter (cycles)
+   config.json: {'notify_needs_you': True, 'notify_agent_done': True, 'notify_sound': 'all', 'notifications': True}
+- Needs input row, Enter (toggles)
+   config.json: {'notify_needs_you': False, 'notify_agent_done': True, 'notify_sound': 'all', 'notifications': True}
+- Finished row, Enter (toggles)
+   config.json: {'notify_needs_you': False, 'notify_agent_done': False, 'notify_sound': 'all', 'notifications': True}
+-- page 5: sidebar (the example band is up in the window's sidebar)
+   |   Watch the sidebar
+   |   The Example folder in the sidebar is only there while
+   |   this page is up: three terminals showing what a row
+   |   tells you.
+   |   ←  working      the agent is busy; nothing for you to d
+   |   ←  needs input  it asked a question or for permission
+   |   ←  done         it finished; time to look at what it di
+   |   Coding agents
+   |   Hooks tell Wormhole what an agent is doing. Nothing is
+   |   installed until you press Install on its row.
+   |     Claude Code                              [ Install ]
+   |     Codex CLI                                [ Install ]
+   |     OpenCode                                 [ Install ]
+   |     Pi                                       [ Install ]
+window-shot /Users/benjamin/Projects/terminal/wormhole/.claude/worktrees/swift-s2-settings-b/apple/parity/evidence/s2-settings-b/W5-sidebar-band.png
+selected=2 live=[2] groups=0
+  row 2 "Welcome" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="Welcome, shell, nothing running, selected, 1 of 1, Command 1"
+-- Install pressed on Claude Code (hooks go only under the instance's WORMHOLE_AGENT_HOME)
+   |   ❯ Claude Code                              Installed ✓
+   |     Codex CLI                                [ Install ]
+   file: agent-home/.claude/settings.json
+-- page 6: what else is here
+   |   What else is here
+   |   Everything has a key, and every action is in the
+   |   command palette (⇧⌘P).
+   |   ⌃⌘1  Changes    what an agent changed. Click a line of
+   |                   a diff to comment on it, then paste
+   |                   the comments into the terminal for its
+   |                   agent.
+   |   ⌃⌘3  Notes      notes and next steps for each
+   |                   terminal, kept with it.
+   |   ⇧⌘P  Worktrees  New Terminal in New Worktree… gives a
+   |                   branch a folder and a terminal of its
+   |                   own.
+   |   wh   Scripts    wh help, in any of these terminals,
+   |                   lists what scripts and agents can ask
+   |                   of Wormhole. Settings → Coding agents
+   |                   puts wh in other terminals too.
+- before finishing: onboarded=''; the token (grabbed from the program's environment with ps) answers a state request:
+   {"version":1,"ok":true,"result":{"wait_ms":0,"reduce_motion":false,"handover":"cursor","first_run":true,"look":{"themes"
+- Enter on the last page: the welcome ends and becomes the shell
+   |   >_ Wormhole
+   |   ⌘T new terminal   ⇧⌘P command palette
+   | benjamin@MacBook-Pro-von-Benjamin benjamin %
+   onboarded: '1'
+- after finish, the same token again:
+   {"kind":"state"} ->
+      {"version":1,"ok":false,"error":{"code":"refused","message":"the welcome has finished"}}
+   {"kind":"set_look","ligatures":true} ->
+      {"version":1,"ok":false,"error":{"code":"refused","message":"the welcome has finished"}}
+   {"kind":"demo","show":true} ->
+      {"version":1,"ok":false,"error":{"code":"refused","message":"the welcome has finished"}}
+   {"kind":"import","source":"ghostty"} ->
+      {"version":1,"ok":false,"error":{"code":"refused","message":"the welcome has finished"}}

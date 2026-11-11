@@ -29,6 +29,7 @@ mod reach;
 mod tap;
 mod terminals;
 mod views;
+mod welcome;
 
 #[cfg(test)]
 mod tests;
@@ -45,6 +46,10 @@ pub(crate) use self::core::Core;
 pub use self::events::{HookError, HookEvent};
 use self::tap::Publisher;
 pub(crate) use self::tap::Tap;
+pub use self::welcome::{
+    WelcomeDemoRow, WelcomeDemoState, WelcomePlan, welcome_demo_label, welcome_demo_next_ms,
+    welcome_demo_rows, welcome_demo_title,
+};
 use crate::aux_backends::{AccessDesk, AuxError};
 use crate::files_panel::UsageService;
 use crate::workspace::Workspace;
@@ -210,11 +215,8 @@ pub fn cli_exit_code(arguments: Vec<String>) -> Option<i32> {
             Some(0)
         }
         ipc::Command::Control(rest) => Some(ipc::run_control_cli(rest)),
-        // The first-run welcome is the GPUI app's own terminal program.
-        ipc::Command::Welcome(_) => {
-            let _ = writeln!(std::io::stderr(), "Wormhole: this app has no welcome terminal");
-            Some(2)
-        }
+        // The first run as a program in a terminal: this executable is what the welcome terminal starts.
+        ipc::Command::Welcome(rest) => Some(wormhole_core::onboarding::welcome::run(rest)),
         // Most likely a command a newer build installed into an agent's settings: a launch would bring
         // the running app to the front every time it runs.
         ipc::Command::Unknown(command) => {

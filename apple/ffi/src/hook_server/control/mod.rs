@@ -129,8 +129,8 @@ fn handle(core: &Arc<Core>, request: Request, access: Access, peer: &Peer) -> Re
         Action::Events(_) | Action::Read(_) | Action::Blocks(_) | Action::Wait(_) | Action::Run(_) => {
             Reply::error(ErrorCode::Failed, "this request is carried out by the socket: not answered here")
         }
-        // The first-run welcome is the GPUI app's own program; this app's first run is its own window.
-        Action::Welcome { .. } => Reply::error(ErrorCode::Unsupported, "this app has no welcome terminal"),
+        // Not behind `control_write`: the token the app put in the welcome terminal is the key.
+        Action::Welcome { token, op } => core.welcome(&token, op, from),
     }
 }
 

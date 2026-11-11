@@ -18,6 +18,8 @@ public struct SidebarView: View {
     public let closeGroup: (@MainActor (GroupID) -> Void)?
     /// What ⌘F asks of the list; the window keeps it, so it can tell whether the sidebar has the keyboard.
     public let search: SidebarSearch
+    /// The terminal welcome's example band, after the list's own cards while the program's sidebar step is up.
+    public let band: ExampleBand?
     @State var searchText: String
     @State var searchOpen = false
     @FocusState var searchFocused: Bool
@@ -44,19 +46,21 @@ public struct SidebarView: View {
     public init(
         state: WorkspaceState, appearance: SidebarAppearance = SidebarAppearance(),
         closeGroup: (@MainActor (GroupID) -> Void)? = nil, search: SidebarSearch = SidebarSearch(),
-        send: @escaping @MainActor (WorkspaceAction) -> Void
+        band: ExampleBand? = nil, send: @escaping @MainActor (WorkspaceAction) -> Void
     ) {
-        self.init(state: state, appearance: appearance, closeGroup: closeGroup, search: search, caught: nil, send: send)
+        self.init(state: state, appearance: appearance, closeGroup: closeGroup, search: search, band: band, caught: nil, send: send)
     }
 
     /// A list caught mid-edit, for pictures and tests: a name half typed, a drag in flight, a group's popover open.
     /// The window starts every list at rest.
     init(
         state: WorkspaceState, appearance: SidebarAppearance, closeGroup: (@MainActor (GroupID) -> Void)?,
-        search: SidebarSearch = SidebarSearch(), caught: Caught?, send: @escaping @MainActor (WorkspaceAction) -> Void
+        search: SidebarSearch = SidebarSearch(), band: ExampleBand? = nil, caught: Caught?,
+        send: @escaping @MainActor (WorkspaceAction) -> Void
     ) {
         self.state = state
         self.search = search
+        self.band = band
         _searchText = State(initialValue: state.search)
         _searchOpen = State(initialValue: caught?.searchOpen ?? false)
         self.appearance = appearance
@@ -98,6 +102,7 @@ public struct SidebarView: View {
                     ForEach(sections) { section in
                         SidebarSectionView(section: section, context: context)
                     }
+                    if let band { ExampleBandView(band: band, context: context) }
                 }
                 .padding(.top, Space._1)
                 .animation(SidebarMotion.list, value: sections.flatMap { $0.rows.map(\.id) })

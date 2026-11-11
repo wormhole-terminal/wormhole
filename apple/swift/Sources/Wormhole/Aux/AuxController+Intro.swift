@@ -18,11 +18,11 @@ extension AuxController {
         introPlayer.play(style, over: window, options: options, colors: IntroColors(tokens: ThemeStore.shared.tokens))
     }
 
-    /// Play Welcome (Help ▸ Welcome, the palette, `welcome`): the start animation with its ship docking as `handover` has it, and
-    /// a new terminal that runs the welcome program (`AppController.openWelcomeTerminal`, the one entry to it).
-    func playWelcome(_ handover: Handover) {
+    /// Play Welcome (Help ▸ Welcome, the palette, `welcome`, a first run): the start animation with its ship docking as `handover` has it,
+    /// and a new terminal that runs the welcome program (`AppController.openWelcomeTerminal`, the one entry to it).
+    func playWelcome(_ handover: Handover, firstRun: Bool = false) {
         playIntro(handover.style, handover: handover)
-        app.openWelcomeTerminal(handover)
+        app.openWelcomeTerminal(handover, firstRun: firstRun)
     }
 }
 
@@ -58,11 +58,10 @@ extension AppController {
 extension AppController {
     /// The one entry point to the welcome's terminal side: a new terminal in the window in front that runs this app's own
     /// `welcome` program in front of the shell the terminal would have run (core's `welcome_command`: `welcome -- <program> <args>`), as
-    /// GPUI's `open_welcome_session` does. The program itself (`Wormhole welcome`, core's `onboarding::welcome::run`) is
-    /// the settings and onboarding lane's.
-    func openWelcomeTerminal(_ handover: Handover) {
-        // The hand-over (which of Cursor, Portal, Logo the ship docks as) reaches the program through the app side of its token and
-        // plan (`Action::Welcome`), which is the settings lane's; the terminal only needs the program.
+    /// GPUI's `open_welcome_session` does. With the `terminal_welcome` flag on the terminal gets a one-time token and the core answers the
+    /// program's requests (`AuxController.startWelcomeTerminal`); without it the program is the read-only tour.
+    func openWelcomeTerminal(_ handover: Handover, firstRun: Bool = false) {
+        if aux.startWelcomeTerminal(handover, firstRun: firstRun) { return }
         guard let exe = Bundle.main.executablePath else { return }
         let shell = options.program ?? "/bin/zsh"
         hub.send(.newTerminalRunning(program: exe, arguments: ["welcome", "--", shell]))

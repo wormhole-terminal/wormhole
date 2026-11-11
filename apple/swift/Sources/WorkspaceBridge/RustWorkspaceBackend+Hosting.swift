@@ -15,6 +15,14 @@ extension RustWorkspaceBackend {
     /// `WORMHOLE_BIN`, so agents' hooks and its own `wh` reach this workspace.
     func start(_ id: TerminalID, in folder: String?) {
         let relay = TerminalRelay()
+        if let make = welcomeToken, let token = make(id) {
+            welcomeToken = nil
+            do { register(id, try HostConnect.welcome(request(id, in: folder), token: token, relay), relay: relay) } catch {
+                failed[id] = "\(error)"
+                FileHandle.standardError.write(Data("terminal \(id): cannot start the welcome: \(error)\n".utf8))
+            }
+            return
+        }
         guard let hosted else {
             if needsApplications { told("move-to-applications", .moveToApplications) }
             do { register(id, try HostConnect.local(request(id, in: folder), relay), relay: relay) } catch {

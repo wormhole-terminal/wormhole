@@ -18,7 +18,7 @@ struct SidebarColumn: View {
             SidebarTitleRow(facts: facts, send: hub.send)
             SidebarView(
                 state: hub.state, appearance: look.sidebar, closeGroup: { hub.actions.closeGroup($0) },
-                search: hub.sidebarSearch, send: hub.send
+                search: hub.sidebarSearch, band: hub.exampleBand, send: hub.send
             )
             .environment(\.dropPlanner, hub.store)
             .environment(\.terminalDrag, hub.terminalDrag)

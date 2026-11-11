@@ -38,8 +38,8 @@ pub use imports::{
 };
 pub use licenses::{LicensePackageRecord, LicensesRecord, licenses};
 pub use tailor::{
-    OnboardingTailor, SketchCorner, SketchFill, SketchPiece, TailorActRecord, TailorAnswerRecord, TailorLineRecord,
-    TailorRecord, TailorStage, window_sketch,
+    OnboardingTailor, SketchCorner, SketchFill, SketchPiece, TailorActRecord, TailorAnswerRecord,
+    TailorLineRecord, TailorRecord, TailorStage, window_sketch,
 };
 pub use trust::{ReviewLineRecord, ReviewStatusRecord, TrustDesk, TrustReviewRecord};
 pub use update_records::{

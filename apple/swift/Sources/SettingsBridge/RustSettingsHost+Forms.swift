@@ -7,8 +7,10 @@ import SettingsModel
 import WormholeBindings
 
 /// A PostScript font name (iTerm2, Terminal.app write those) as its family, which only the system can say.
-private final class CoreTextFamilies: FontFamilyResolver {
-    func family(postscriptName: String) -> String? {
+public final class CoreTextFamilies: FontFamilyResolver {
+    public init() {}
+
+    public func family(postscriptName: String) -> String? {
         let font = CTFontCreateWithName(postscriptName as CFString, 12, nil)
         // A name that is not installed comes back as the system font: only the same PostScript name is the face.
         guard CTFontCopyPostScriptName(font) as String == postscriptName else { return nil }

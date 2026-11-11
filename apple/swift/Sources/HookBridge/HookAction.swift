@@ -33,6 +33,13 @@ public enum HookAction: Equatable, Sendable {
     case driven(terminal: Int64, typing: Bool, agent: String?)
     /// The rules, a status item, a tinted block or a fold changed: every terminal takes a frame, the status bar reads again.
     case probesChanged
+    /// The welcome program's sidebar step: the example band goes up in the sidebar of the window that holds `terminal` (`show`)
+    /// or comes down. It is never a terminal.
+    case welcomeDemo(terminal: Int64, show: Bool)
+    /// The welcome in `terminal` is over: the band goes and a start animation still playing is cut short.
+    case welcomeEnded(terminal: Int64)
+    /// A press turned a banner on, or said Allow, and macOS has not been asked: ask, then `setNotificationPermission`.
+    case welcomeAskPermission
 }
 
 extension HookAction {
@@ -53,6 +60,9 @@ extension HookAction {
         case .probePaused(let words): self = .probePaused(words: words)
         case .driven(let terminal, let typing, let agent): self = .driven(terminal: terminal, typing: typing, agent: agent)
         case .probesChanged: self = .probesChanged
+        case .welcomeDemo(let terminal, let show): self = .welcomeDemo(terminal: terminal, show: show)
+        case .welcomeEnded(let terminal): self = .welcomeEnded(terminal: terminal)
+        case .welcomeAskPermission: self = .welcomeAskPermission
         }
     }
 }

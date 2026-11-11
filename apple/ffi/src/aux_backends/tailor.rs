@@ -131,7 +131,14 @@ fn pieces(shown: &Shown, tools: usize, w: f32, h: f32) -> Vec<SketchPiece> {
         out.push(piece(text_x, y, text_w * share, BAR, if line == 0 { Primary } else { Faint }, Round));
     }
     if shown.minimap {
-        out.push(piece(main_right - MINIMAP_W - GAP, TITLE_H + GAP, MINIMAP_W, body_h - TITLE_H - 2.0 * GAP, Minimap, Soft));
+        out.push(piece(
+            main_right - MINIMAP_W - GAP,
+            TITLE_H + GAP,
+            MINIMAP_W,
+            body_h - TITLE_H - 2.0 * GAP,
+            Minimap,
+            Soft,
+        ));
     }
     if shown.status_bar {
         let bar_y = body_h + (STATUS_H - BAR) / 2.0;
@@ -232,7 +239,9 @@ pub struct TailorRecord {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum TailorActRecord {
     /// Answer number `n` (from 0) of the question asked.
-    Answer { n: u32 },
+    Answer {
+        n: u32,
+    },
     Back,
     StartOver,
     /// "Looks good" on the summary.
@@ -302,7 +311,8 @@ impl OnboardingTailor {
         } else {
             TailorStage::Summary
         };
-        let (mut question, mut counter, mut answers, mut detail) = (String::new(), String::new(), Vec::new(), String::new());
+        let (mut question, mut counter, mut answers, mut detail) =
+            (String::new(), String::new(), Vec::new(), String::new());
         let mut announcement = text(TAILOR_SUMMARY).to_string();
         if let Some(step) = walk.step() {
             let asked = step.question;
@@ -338,7 +348,8 @@ impl OnboardingTailor {
                 .into_iter()
                 .map(|(question, answer)| TailorLineRecord {
                     question: text(question.title()).to_string(),
-                    answer: answer.map_or_else(|| text(TAILOR_OWN).to_string(), |a| text(a.label).to_string()),
+                    answer: answer
+                        .map_or_else(|| text(TAILOR_OWN).to_string(), |a| text(a.label).to_string()),
                 })
                 .collect(),
             summary_title: text(TAILOR_SUMMARY).to_string(),
@@ -363,7 +374,8 @@ impl OnboardingTailor {
 #[uniffi::export]
 pub fn window_sketch(preset: u32, width: f32) -> Vec<SketchPiece> {
     use wormhole_core::config::presets::Preset;
-    let shown = Preset::ALL.get(preset as usize).map_or_else(|| Shown::of(Preset::Balanced), |p| Shown::of(*p));
+    let shown =
+        Preset::ALL.get(preset as usize).map_or_else(|| Shown::of(Preset::Balanced), |p| Shown::of(*p));
     pieces(&shown, TABS_MAX - TABS_ALWAYS, width, SKETCH_H)
 }
 
@@ -403,11 +415,17 @@ mod tests {
         for preset in Preset::ALL {
             let blocks = pieces(&Shown::of(preset), 2, 118.0, SKETCH_H);
             for b in &blocks {
-                assert!(b.x >= 0.0 && b.y >= 0.0 && b.x + b.w <= 118.001 && b.y + b.h <= SKETCH_H + 0.001, "{preset:?} {b:?}");
+                assert!(
+                    b.x >= 0.0 && b.y >= 0.0 && b.x + b.w <= 118.001 && b.y + b.h <= SKETCH_H + 0.001,
+                    "{preset:?} {b:?}"
+                );
             }
         }
-        let has = |preset, fill| pieces(&Shown::of(preset), 2, 118.0, SKETCH_H).iter().any(|b| b.fill == fill);
+        let has =
+            |preset, fill| pieces(&Shown::of(preset), 2, 118.0, SKETCH_H).iter().any(|b| b.fill == fill);
         assert!(!has(Preset::Zen, SketchFill::Minimap) && !has(Preset::Zen, SketchFill::PanelRight));
-        assert!(has(Preset::Everything, SketchFill::Minimap) && has(Preset::Everything, SketchFill::PanelRight));
+        assert!(
+            has(Preset::Everything, SketchFill::Minimap) && has(Preset::Everything, SketchFill::PanelRight)
+        );
     }
 }

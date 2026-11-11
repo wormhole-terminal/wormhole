@@ -14,7 +14,7 @@
     @MainActor
     final class NoticeFeed {
         private let coordinator: NoticeCoordinator
-        private let notifier: any Notifying
+        let notifier: any Notifying
         private unowned let app: AppController
 
         init(app: AppController) {

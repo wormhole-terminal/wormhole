@@ -178,6 +178,34 @@ impl Terminal {
         )
     }
 
+    /// [`Self::start_for_tab`] for the first run's welcome: the program runs as `Wormhole welcome -- <program>`
+    /// (this executable, which becomes `program` when the welcome ends), with `token`
+    /// (`HookServer::begin_welcome`) in this terminal's environment alone. It runs in the app's own process,
+    /// never in a session host.
+    #[uniffi::constructor]
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_for_welcome(
+        tab: i64,
+        program: String,
+        args: Vec<String>,
+        cwd: Option<String>,
+        cols: u16,
+        rows: u16,
+        cell_width: f32,
+        cell_height: f32,
+        token: String,
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        isolation::require()?;
+        let mut options = Self::spawn_options(tab.to_string(), program, args, cwd);
+        options.welcome = true;
+        options.env.insert(wormhole_core::onboarding::welcome::TOKEN_VAR.to_string(), token);
+        let size = GridSize { cols, rows, cell_width, cell_height };
+        let (pty, pty_events) =
+            spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
+        Self::from_parts(pty, pty_events, &options, listener, None)
+    }
+
     /// The rows that changed since the last call, packed (`frame.rs` has the layout); every row
     /// the first time and after a resize. Empty after `close`.
     pub fn frame(&self) -> Vec<u8> {

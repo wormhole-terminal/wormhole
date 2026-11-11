@@ -47,6 +47,16 @@ enum HostConnect {
     }
 }
 
+extension HostConnect {
+    /// The first run's welcome: this executable as `Wormhole welcome -- <program>` with `token` in its environment alone,
+    /// in the app's own process (never in a session host).
+    static func welcome(_ what: HostedStart, token: String, _ relay: TerminalRelay) throws -> Terminal {
+        try Terminal.startForWelcome(
+            tab: what.tab, program: what.program, args: what.args, cwd: what.cwd, cols: what.cols, rows: what.rows,
+            cellWidth: what.cellWidth, cellHeight: what.cellHeight, token: token, listener: relay)
+    }
+}
+
 extension HostProblem.Why {
     init(_ core: HostUnavailableKind) {
         switch core {

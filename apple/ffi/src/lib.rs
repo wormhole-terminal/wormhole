@@ -102,7 +102,10 @@ pub use git::{
     GitWorktreePlan, WorktreeService,
 };
 pub use git::{GitDiffNotes, GitProblemWords, GitSideNote, git_problem};
-pub use hook_server::{HookError, HookEvent, HookListener, HookServer, cli_exit_code};
+pub use hook_server::{
+    HookError, HookEvent, HookListener, HookServer, WelcomeDemoRow, WelcomeDemoState, WelcomePlan,
+    cli_exit_code, welcome_demo_label, welcome_demo_next_ms, welcome_demo_rows, welcome_demo_title,
+};
 pub use hosting::{
     HostUnavailableKind, HostedStart, HostedTerminals, HostingError, HostingProgram, LaunchPlan, OrphanHost,
     SavedTerminal, TerminalHosting,
@@ -126,8 +129,7 @@ pub use settings::{
     FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
     SettingsLoginField, SettingsProfileForm, SettingsShellLine, settings_import_review,
     settings_import_selected_line, settings_others_head, settings_preview_note, settings_profile_form,
-    settings_profile_save, settings_reset_question, settings_update_count_wait,
-    settings_update_user_agent,
+    settings_profile_save, settings_reset_question, settings_update_count_wait, settings_update_user_agent,
 };
 pub use settings::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,

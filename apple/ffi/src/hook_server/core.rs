@@ -86,6 +86,8 @@ pub(crate) struct Core {
     pub(super) close_question: AtomicBool,
     /// The Probes that are on and the feed their hooks hear (`probes`).
     pub(crate) probes: crate::probes::Probes,
+    /// The terminal welcomes that run (`welcome`).
+    pub(super) welcome: Mutex<super::welcome::Welcomes>,
 }
 
 impl Core {
@@ -116,6 +118,7 @@ impl Core {
             signatures: Mutex::default(),
             close_question: AtomicBool::new(false),
             probes: crate::probes::Probes::default(),
+            welcome: Mutex::default(),
         })
     }
 

@@ -32,7 +32,7 @@ extension AppController {
             try devctl.start()
             self.devctl = devctl
         }
-        if options.onboarding || aux.isFirstRun { aux.showOnboarding(firstRun: aux.isFirstRun) }
+        if options.onboarding || aux.isFirstRun { aux.showFirstRun() }
         if let seconds = options.idleSeconds { scheduleIdleReport(after: seconds) }
     }
 

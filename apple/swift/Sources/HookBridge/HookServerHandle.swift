@@ -57,6 +57,33 @@ public final class HookServerHandle {
     /// The status items the Probes' hooks set (`HookAction.probesChanged` says to read them again).
     public func probeStatusItems() -> [ProbeStatusRecord] { server.probeStatusItems() }
 
+    /// Whether the terminal welcome is on (the feature flag `terminal_welcome`).
+    public var welcomeAvailable: Bool { server.welcomeAvailable() }
+
+    /// A welcome starts in terminal `tab` (`handover`: `cursor`, `portal` or `logo`): the token for that terminal's
+    /// environment alone, nil when none could be made (the terminal is then a plain one). `animates`: the start animation
+    /// is about to play around the window. `importHome`: where an import reads the other terminal's files (nil: the Mac's home).
+    public func beginWelcome(
+        tab: Int64, handover: String, firstRun: Bool, animates: Bool, reduceMotion: Bool, importHome: String?,
+        fonts: FontFamilyResolver
+    ) -> String? {
+        server.beginWelcome(
+            tab: tab,
+            plan: WelcomePlan(
+                handover: handover, firstRun: firstRun, animates: animates, reduceMotion: reduceMotion, importHome: importHome),
+            fonts: fonts)
+    }
+
+    /// The start animation really started, or is over: the program's wait counts from here.
+    public func welcomePlaying(tab: Int64, _ playing: Bool) { server.welcomePlaying(tab: tab, playing: playing) }
+
+    /// What macOS says of banners (`checking`, `not_asked`, `allowed`, `denied`, `outside`).
+    public func setNotificationPermission(_ word: String) { server.setNotificationPermission(state: word) }
+
+    /// The welcome's terminal is gone: its token opens nothing. Whether a first run was still running in it.
+    @discardableResult
+    public func welcomeGone(tab: Int64) -> Bool { server.welcomeGone(tab: tab) }
+
     /// Stop serving: the socket goes, the lock is given up, the streams end.
     public func stop() {
         server.stop()

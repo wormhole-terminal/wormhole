@@ -49,6 +49,11 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     /// Persistent terminals are wanted but the app runs from a disk image or a temporary copy: the person is told.
     let needsApplications: Bool
     var book = HostBook()
+    /// The next terminal started is a welcome when this gives it a token (`begin_welcome` of the hook server, by its id); it
+    /// is cleared as that terminal starts. The welcome runs in the app's own process, never in a host.
+    public var welcomeToken: ((TerminalID) -> String?)?
+    /// A terminal was closed (its welcome's token is gone with it).
+    public var onClosed: ((TerminalID) -> Void)?
     /// What the terminals of a window restored from its record were, by their ids (they keep them): each attaches to its
     /// own host, or starts again where its host is gone.
     var saved: [TerminalID: HostedSessions.Entry] = [:]
@@ -168,6 +173,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
             case .closed(let id):
                 live.removeAll { $0 == Int(id) }
                 book.forget(Int(id))
+                onClosed?(Int(id))
                 relays[Int(id)] = nil
                 programs[Int(id)] = nil
                 sources[Int(id)] = nil
