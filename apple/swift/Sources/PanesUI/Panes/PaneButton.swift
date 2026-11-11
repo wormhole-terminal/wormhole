@@ -7,6 +7,8 @@ import SwiftUI
 struct PaneButton: View {
     let symbol: String
     let label: String
+    /// The key that does the same, said in the tooltip ("Zoom pane (⇧⌘↩)").
+    var key: String?
     let action: () -> Void
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
@@ -22,7 +24,7 @@ struct PaneButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help(label)
+        .help(key.map { "\(label) (\($0))" } ?? label)
         .accessibilityLabel(label)
     }
 }

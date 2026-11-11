@@ -82,6 +82,16 @@ extension AppController {
         hub.notices.onOpenLogs = { [dataDirectory] in ExternalOpen.open(dataDirectory.appendingPathComponent("logs")) }
         hub.actions.openSettings = { [weak self] in self?.showSettings() }
         hub.actions.profiles = profileList(for: session)
+        // The status bar counts every window in sight (this one's terminals first), and a click goes to the terminal's own window.
+        hub.actions.everyTerminal = { [weak self, weak session] in
+            guard let self, let session else { return [] }
+            return session.hub.state.all + shown.filter { $0 !== session }.flatMap { $0.hub.state.all }
+        }
+        hub.actions.showTerminal = { [weak self] in self?.show(terminal: $0) }
+        hub.actions.windowProfile = { [weak self, weak session] in
+            guard let self, let session else { return nil }
+            return profileList(for: session)().first { $0.here && !$0.current }
+        }
         hub.actions.profile = profileActions(for: session)
         hub.terminalDrag.tearOff = { [weak self, weak session] in
             guard let self, let session else { return false }

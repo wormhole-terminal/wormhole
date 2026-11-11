@@ -223,37 +223,37 @@ pub const WINDOW_STATE_FAILED: Key = Key::new(2168);
 /// "exited"
 pub const WINDOW_STATE_EXITED: Key = Key::new(2169);
 /// "Not set"
-pub const SETTINGS_ROW_NOT_SET: Key = Key::new(2175);
+pub const SETTINGS_ROW_NOT_SET: Key = Key::new(2180);
 /// "None"
-pub const SETTINGS_ROW_NONE: Key = Key::new(2176);
+pub const SETTINGS_ROW_NONE: Key = Key::new(2181);
 /// "Changed"
-pub const SETTINGS_ROW_CHANGED: Key = Key::new(2177);
+pub const SETTINGS_ROW_CHANGED: Key = Key::new(2182);
 /// "Press the shortcut…"
-pub const SETTINGS_ROW_RECORDER_PROMPT: Key = Key::new(2178);
+pub const SETTINGS_ROW_RECORDER_PROMPT: Key = Key::new(2183);
 /// "Not set"
-pub const SETTINGS_ROW_RECORDER_NONE: Key = Key::new(2179);
+pub const SETTINGS_ROW_RECORDER_NONE: Key = Key::new(2184);
 /// "Not in this build yet"
-pub const SETTINGS_PANEL_NOT_BUILT: Key = Key::new(2180);
+pub const SETTINGS_PANEL_NOT_BUILT: Key = Key::new(2185);
 /// "Default"
-pub const SETTINGS_NAV_PROFILE_DEFAULT: Key = Key::new(2181);
+pub const SETTINGS_NAV_PROFILE_DEFAULT: Key = Key::new(2186);
 /// "Every setting that differs from its default, each put back by its arrow."
-pub const SETTINGS_CHANGED_INTRO_ARROW: Key = Key::new(2183);
+pub const SETTINGS_CHANGED_INTRO_ARROW: Key = Key::new(2188);
 /// "The menu bar item is off"
-pub const SETTINGS_MENU_BAR_OFF: Key = Key::new(2184);
+pub const SETTINGS_MENU_BAR_OFF: Key = Key::new(2189);
 /// "Move up"
-pub const TITLE_ROW_MOVE_UP: Key = Key::new(2185);
+pub const TITLE_ROW_MOVE_UP: Key = Key::new(2190);
 /// "Move down"
-pub const TITLE_ROW_MOVE_DOWN: Key = Key::new(2186);
+pub const TITLE_ROW_MOVE_DOWN: Key = Key::new(2191);
 /// "Profiles are not available in this build."
-pub const SETTINGS_PROFILE_UNAVAILABLE: Key = Key::new(2187);
+pub const SETTINGS_PROFILE_UNAVAILABLE: Key = Key::new(2192);
 /// "Themes can't be imported in this build."
-pub const SETTINGS_IMPORT_THEME_UNAVAILABLE: Key = Key::new(2188);
+pub const SETTINGS_IMPORT_THEME_UNAVAILABLE: Key = Key::new(2193);
 /// "Regular"
-pub const SETTINGS_WINDOW_PREVIEW_DENSITY_REGULAR: Key = Key::new(2189);
+pub const SETTINGS_WINDOW_PREVIEW_DENSITY_REGULAR: Key = Key::new(2194);
 /// "Compact"
-pub const SETTINGS_WINDOW_PREVIEW_DENSITY_COMPACT: Key = Key::new(2190);
+pub const SETTINGS_WINDOW_PREVIEW_DENSITY_COMPACT: Key = Key::new(2195);
 /// "Dense"
-pub const SETTINGS_WINDOW_PREVIEW_DENSITY_DENSE: Key = Key::new(2191);
+pub const SETTINGS_WINDOW_PREVIEW_DENSITY_DENSE: Key = Key::new(2196);
 
 /// ```text
 /// { $name } · worktree of { $repo }
@@ -481,8 +481,43 @@ pub fn window_status_size_spoken(title: &str, size: &str) -> String {
 }
 
 /// ```text
+/// This window is in { $profile }, not the profile Wormhole is in
+/// ```
+pub fn window_status_profile_edge(profile: &str) -> String {
+    crate::active::message(2175, &[("profile", Arg::Str(profile))])
+}
+
+/// ```text
+/// { $first }, then { $rest }
+/// ```
+pub fn window_attention_then(first: &str, rest: &str) -> String {
+    crate::active::message(2176, &[("first", Arg::Str(first)), ("rest", Arg::Str(rest))])
+}
+
+/// ```text
+/// { $names } and { $count } more
+/// ```
+pub fn window_attention_more(names: &str, count: &str) -> String {
+    crate::active::message(2177, &[("names", Arg::Str(names)), ("count", Arg::Str(count))])
+}
+
+/// ```text
+/// { $names } · go there
+/// ```
+pub fn window_attention_go_there(names: &str) -> String {
+    crate::active::message(2178, &[("names", Arg::Str(names))])
+}
+
+/// ```text
+/// { $names } · go to the first
+/// ```
+pub fn window_attention_go_first(names: &str) -> String {
+    crate::active::message(2179, &[("names", Arg::Str(names))])
+}
+
+/// ```text
 /// Preview of { $scene } with your current settings
 /// ```
 pub fn settings_window_preview_label(scene: &str) -> String {
-    crate::active::message(2182, &[("scene", Arg::Str(scene))])
+    crate::active::message(2187, &[("scene", Arg::Str(scene))])
 }

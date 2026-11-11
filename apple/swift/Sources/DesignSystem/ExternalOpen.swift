@@ -19,7 +19,7 @@ public enum ExternalOpen {
     /// Opens `target` in the app with bundle identifier `bundle` found at `app` (Open in…); a test instance records it.
     @MainActor
     public static func open(_ target: URL, in bundle: String, at app: URL) {
-        if !record("open \(target.path) in \(bundle)") {
+        if !record("open \(target.path) in \(bundle)") {  // text: a test instance's record
             NSWorkspace.shared.open([target], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
         }
     }

@@ -27,7 +27,7 @@ extension AppController {
                 reply("error: open-in [click|<n>|<name>]")
             }
         case "path-card":
-            guard let actions = hub.selectedTitleActions, let folder = hub.state.selectedTerminal?.folder else { reply("error: the selected terminal has no folder"); return true }
+            guard let actions = hub.selectedTitleActions, let folder = hub.state.all.first(where: { $0.id == hub.state.selected })?.folder else { reply("error: the selected terminal has no folder"); return true }
             if argument.isEmpty {
                 reply("path-card \(folder)\n" + Self.numbered(PathCardItem.allCases.map { $0.title + ($0.isOn(actions) ? "" : " [off]") }))
             } else if let item = pick(argument, from: PathCardItem.allCases, title: \.title) {

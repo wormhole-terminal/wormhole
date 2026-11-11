@@ -4,6 +4,7 @@
 
 import DesignSystem
 import PaletteUI
+import PanesUI
 import SwiftUI
 import WorkspaceModel
 
@@ -63,8 +64,14 @@ struct WindowBody: View {
             .animation(animates ? Motion.fade : nil, value: look.statusBar)
             .onAppear { hub.cancelColumnDrag = { cancelDrag() } }
             .overlay { overlay }
+            // A window of another profile than the one Wormhole is in wears its profile's colour across the top (`profile_edge`).
+            .overlay(alignment: .top) {
+                if let odd = hub.actions.windowProfile?() {
+                    Rectangle().fill(odd.colour ?? colours.primary).frame(height: Self.profileEdge).allowsHitTesting(false).accessibilityHidden(true)
+                }
+            }
             .overlay(alignment: .topLeading) {
-                if let drag { ResizeReadout(text: drag.readout, pointer: drag.pointer) }
+                if let drag { ResizeReadout(text: drag.readout, pointer: drag.pointer, pointerY: drag.pointerY) }
             }
             // The core fits the columns to the window's width, so it is told when that changes.
             .onChange(of: window, initial: true) { _, width in send(.setWindowWidth(Double(width))) }
@@ -140,15 +147,20 @@ struct WindowBody: View {
         }
     }
 
+    /// How tall the odd window's profile edge is (`PROFILE_EDGE_H`).
+    private static let profileEdge: CGFloat = 3
+
     private func statusBar(window: CGFloat) -> some View {
         // The grid the program was told, redrawn when it changes (a column opening or closing resizes it after this is drawn).
         _ = hub.terminals.gridRevision
         let grid = state.selected.flatMap { hub.terminals.existing($0) }?.gridSize
         return StatusBar(
-            terminals: state.all, selected: state.selectedTerminal, size: grid.map { "\($0.cols)×\($0.rows)" },
+            terminals: hub.actions.everyTerminal?() ?? state.all, selected: state.selectedTerminal,
+            program: state.selected.flatMap { hub.store.programName(of: $0) }, profile: hub.actions.windowProfile?(),
+            size: grid.map { "\($0.cols)×\($0.rows)" },
             hosting: state.selected.flatMap { hub.store.hosting(of: $0) }, windowWidth: window,
             waited: { hub.store.waited(since: $0) }
-        ) { send(.select($0)) }
+        ) { hub.actions.showTerminal?($0) ?? send(.select($0)) }
     }
 }
 

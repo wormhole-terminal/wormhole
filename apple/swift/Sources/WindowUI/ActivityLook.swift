@@ -24,7 +24,7 @@ extension Activity {
         case .idle: nil
         case .exited: Words.text("window-state-exited", fallback: "exited")
         case .working: Words.text("window-state-working", fallback: "working")
-        case .needsInput: Words.text("window-state-needs-you", fallback: "needs you")
+        case .needsInput: Words.text("window-state-needs-input", fallback: "needs input")
         case .finished: Words.text("window-state-done", fallback: "done")
         case .failed: Words.text("window-state-failed", fallback: "failed")
         }

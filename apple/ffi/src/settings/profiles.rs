@@ -21,6 +21,8 @@ pub struct SettingsProfileRow {
     pub start_dir: String,
     pub git_name: String,
     pub git_email: String,
+    /// The profile's colour by name (`GroupColor::key`): the chip's dot, the odd window's edge and its status bar's tag.
+    pub color: String,
 }
 
 fn failed(err: impl std::fmt::Display) -> SettingsError {
@@ -40,6 +42,7 @@ fn row(profile: &Profile, active: &ProfileId) -> SettingsProfileRow {
         start_dir: profile.start_dir.clone(),
         git_name: profile.git.name.clone(),
         git_email: profile.git.email.clone(),
+        color: profile.color.key().to_string(),
     }
 }
 

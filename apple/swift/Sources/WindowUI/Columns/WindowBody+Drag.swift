@@ -37,11 +37,12 @@ extension WindowBody {
         if edge == .sidebar { widths.sidebarWidth = width } else { widths.panelWidth = width }
     }
 
-    private func move(_ edge: PaneLayout.Edge, pointer: CGFloat?, window: CGFloat, from width: CGFloat) {
-        guard let pointer else {
+    private func move(_ edge: PaneLayout.Edge, pointer at: CGPoint?, window: CGFloat, from width: CGFloat) {
+        guard let at else {
             (dragBefore, dragCancelled) = (nil, false)
             return finish()
         }
+        let pointer = at.x
         // After Esc the button may still be down: the drag is over until it is let go.
         guard !dragCancelled else { return }
         if dragBefore == nil { dragBefore = DragBefore(edge: edge, width: width, widths: widths) }
@@ -51,7 +52,7 @@ extension WindowBody {
             // Past the point of no return the column stays as it was until the pointer is let go.
             if answer.open { send(.dragEdge(edge.column, extent: Double(extent))) }
             drag = WorkspaceRootView.DragState(
-                edge: edge, pointer: pointer, readout: answer.open ? answer.readout : closing, open: answer.open, extent: extent)
+                edge: edge, pointer: pointer, pointerY: at.y, readout: answer.open ? answer.readout : closing, open: answer.open, extent: extent)
             return
         }
         var layout = widths
@@ -60,7 +61,7 @@ extension WindowBody {
         let resize = ColumnResize(extent: extent, range: edge.range, max: layout.maxWidth(of: edge, window: window))
         local(edge, width: resize.width)
         drag = WorkspaceRootView.DragState(
-            edge: edge, pointer: pointer, readout: resize.readout(closing: closing), open: resize.open, extent: extent)
+            edge: edge, pointer: pointer, pointerY: at.y, readout: resize.readout(closing: closing), open: resize.open, extent: extent)
     }
 
     /// Esc while a column is dragged: it goes back to where the drag began (`cancel_resize`). Whether a drag was going on.

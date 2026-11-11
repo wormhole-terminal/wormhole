@@ -69,6 +69,12 @@ public final class WindowLook {
     /// Glass needs the system's say-so too (`Settings::glass_on`).
     var glassOn: Bool { liquidGlass && !systemOpaque && Self.macHasGlass }
 
+    /// What the surfaces are painted over, as the window has it now (the control folder's `backdrop`): the opacity in effect, whether
+    /// the blur lies behind, whether the cards stand on glass, and the system's say that overrules all three.
+    public var backdropSummary: String {
+        "surfaces opacity=\(effectiveOpacity) blur_behind=\(blurShown) cards_glass=\(glassOn) system_opaque=\(systemOpaque)"  // text: the control folder's output
+    }
+
     /// `colour` at the window's opacity: every surface paints translucent over the blur.
     func surface(_ colour: Color) -> Color { colour.opacity(effectiveOpacity) }
 

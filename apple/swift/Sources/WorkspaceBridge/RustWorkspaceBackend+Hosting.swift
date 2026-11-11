@@ -176,6 +176,11 @@ extension RustWorkspaceBackend {
         _ = hosted?.desk.stopCheckpointsIfOff()
     }
 
+    public func programName(of id: TerminalID) -> String? {
+        let name = core.programName(id: Int64(id))
+        return name.isEmpty ? nil : name
+    }
+
     public func waited(since: UInt64) -> WorkspaceModel.Waited? {
         let waited = core.waited(sinceMs: since)
         return WorkspaceModel.Waited(words: waited.words, next: .milliseconds(waited.nextInMs))

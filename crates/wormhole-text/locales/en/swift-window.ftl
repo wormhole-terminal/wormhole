@@ -276,6 +276,18 @@ window-status-failed = { $count } failed
 # What VoiceOver says for the selected terminal's size. { $size } is "80x24".
 window-status-size-spoken = { $title }, terminal size { $size }
 
+# The tooltip of the profile tag in a window that is not in the profile Wormhole is in. { $profile } is the profile's name.
+window-status-profile-edge = This window is in { $profile }, not the profile Wormhole is in
+
+# The tooltip of the button that goes to a terminal waiting for an answer. { $first } is a terminal's name, { $rest } one or two more.
+window-attention-then = { $first }, then { $rest }
+# { $names } is the names so far, { $count } a whole number of further terminals.
+window-attention-more = { $names } and { $count } more
+# { $names } is the one terminal that waits.
+window-attention-go-there = { $names } · go there
+# { $names } is the terminals that wait, the longest first.
+window-attention-go-first = { $names } · go to the first
+
 ## The Settings window: what it writes itself
 
 settings-row-not-set = Not set

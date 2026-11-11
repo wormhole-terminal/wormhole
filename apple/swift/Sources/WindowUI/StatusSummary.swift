@@ -46,11 +46,36 @@ struct StatusSummary: Equatable {
     /// The terminal the button is for, and the counts after it.
     var attention: TerminalSummary?
     var rest: [Count]
+    /// Who needs input, longest waiting first.
+    var waitingNames: [String] = []
+
+    /// "a, then b, c and 2 more · go to the first" (core `needs_you_tooltip`), with the jump key after it.
+    var attentionTooltip: String? {
+        guard let first = waitingNames.first else { return nil }
+        let others = waitingNames.dropFirst().prefix(2)
+        var names = first
+        if !others.isEmpty {
+            let rest = others.joined(separator: ", ")
+            names = Words.text("window-attention-then", ["first": .text(first), "rest": .text(rest)], fallback: "\(first), then \(rest)")
+        }
+        if waitingNames.count > 3 {
+            let more = waitingNames.count - 3
+            names = Words.text("window-attention-more", ["names": .text(names), "count": .whole(more)], fallback: "\(names) and \(more) more")
+        }
+        let go =
+            waitingNames.count == 1
+            ? Words.text("window-attention-go-there", ["names": .text(names)], fallback: "\(names) · go there")
+            : Words.text("window-attention-go-first", ["names": .text(names)], fallback: "\(names) · go to the first")
+        return go + " (⌃⌘↓)"
+    }
 
     init(_ terminals: [TerminalSummary]) {
         let waiting = terminals.filter { $0.activity == .needsInput }
-        attention = waiting.first
-        rest = [(Activity.needsInput, Array(waiting.dropFirst())),
+        // The one that has waited longest (core `Summary::of`: stable, so equal starts keep the list's order).
+        let longest = waiting.enumerated().sorted { ($0.element.since ?? .max, $0.offset) < ($1.element.since ?? .max, $1.offset) }.map(\.element)
+        attention = longest.first
+        waitingNames = longest.map(\.title)
+        rest = [(Activity.needsInput, Array(longest.dropFirst())),
             (.working, terminals.filter { $0.activity == .working }),
             (.finished, terminals.filter { $0.activity == .finished }),
             (.failed, terminals.filter { $0.activity == .failed })]

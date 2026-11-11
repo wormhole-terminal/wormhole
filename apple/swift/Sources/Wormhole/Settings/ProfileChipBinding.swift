@@ -5,12 +5,15 @@
 // with their terminals running, as the GPUI app does (`AppState::switch_profile`).
 
 import AppKit
+import DesignSystem
 import PanesUI
+import SidebarUI
 import WindowUI
 import WorkspaceModel
 #if WITH_UNIFFI
     import FilesBridge
     import SettingsBridge
+    import WorkspaceBridge
     import WormholeBindings
 #endif
 
@@ -21,7 +24,10 @@ extension AppController {
             #if WITH_UNIFFI
                 guard let self, let session, let rows = try? (self.settingsModel.host as? RustSettingsHost)?.profiles() else { return [] }
                 return rows.map {
-                    ProfileChoice(id: $0.id, name: $0.name, letter: $0.name.first ?? "?", current: $0.isActive, here: $0.id == session.windows.profile)
+                    ProfileChoice(
+                        id: $0.id, name: $0.name, letter: $0.name.first ?? "?",
+                        colour: GroupColor(key: $0.color).map { $0.mark(ThemeStore.shared.tokens).color }, current: $0.isActive,
+                        here: $0.id == session.windows.profile)
                 }
             #else
                 return []

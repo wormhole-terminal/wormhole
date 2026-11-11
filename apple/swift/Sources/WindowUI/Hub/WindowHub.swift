@@ -122,6 +122,12 @@ public struct HubActions {
     /// The profiles the tab bar's chip offers (none while there is one) and what its menu does.
     public var profiles: @MainActor () -> [ProfileChoice] = { [] }
     public var profile = ProfileActions()
+    /// Every terminal of every window in sight, for the status bar's counts (nil: this window's own), and what a click on one does:
+    /// select it and bring its window forward.
+    public var everyTerminal: (@MainActor () -> [TerminalSummary])?
+    public var showTerminal: (@MainActor (TerminalID) -> Void)?
+    /// The profile this window is in when it is not the one Wormhole is in (nil otherwise): the status bar names it.
+    public var windowProfile: (@MainActor () -> ProfileChoice?)?
     /// The branch picker (needs the repository; the core's `git` answers it).
     public var pickBranch: @MainActor (TerminalID) -> Void = { _ in }
 

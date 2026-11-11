@@ -24,4 +24,20 @@ impl Workspace {
         let next = until_next(waited, Duration::from_secs(60));
         Waited { words: elapsed(waited), next_in_ms: next.as_millis() as u64 }
     }
+
+    /// What runs in terminal `id`, whatever title it set: the agent, the running command or the shell (`names::program_name`,
+    /// the status bar's size item: "zsh · 90×40"). Empty for a terminal the workspace does not have.
+    pub fn program_name(&self, id: i64) -> String {
+        use wormhole_core::view::sidebar::names::{NameFacts, program_name};
+        self.shared().peek_model(|model| {
+            let Some(facts) = model.facts(id) else { return String::new() };
+            let agent = facts.agent.map(|agent| wormhole_core::agents::agent(agent).command);
+            program_name(&NameFacts {
+                title: facts.title.as_deref(),
+                agent,
+                command: facts.command.as_deref().or(facts.finished_command.as_deref()),
+                shell: &facts.shell,
+            })
+        })
+    }
 }

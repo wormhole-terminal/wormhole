@@ -88,6 +88,8 @@ public protocol WorkspaceBackend: AnyObject {
     func hosting(of id: TerminalID) -> HostingState?
     /// How long ago a terminal's `since` was, as the status bar says it; nil in the sample (no clock of the core's).
     func waited(since: UInt64) -> Waited?
+    /// What runs in terminal `id`, whatever title it set: the agent, the running command or the shell (nil in the sample).
+    func programName(of id: TerminalID) -> String?
     /// What is wrong with terminal `id`'s host, while something is; nil for a terminal that is fine and for one in the app.
     func hostProblem(of id: TerminalID) -> HostProblem?
     /// "Try again": attach to the host a terminal could not be shown from. The pane is blank until it is done.

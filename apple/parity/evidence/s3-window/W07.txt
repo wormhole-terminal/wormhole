@@ -1,0 +1,34 @@
+# W07 Zen mode and presets (round S3, window)
+  Show Minimap
+  Enter Zen Mode  ⌃⌘Z
+  ---
+sidebar=true panel=true tab=changes
+-- menu: View > Zen Mode (action toggleZenMode) on
+error: no menu
+sidebar=true panel=true tab=changes
+gauge: none
+
+## menu item (the menu runs its action: control action toggleZenMode, as MenuDispatcher does)
+action toggleZenMode
+  Exit Zen Mode  ⌃⌘Z
+left: [WorkspaceModel.TitleSlot(part: "terminal", present: true, chevronBefore: false)], right: [WorkspaceModel.TitleSlot(part: "splits", present: true, chevronBefore: false)], hidden
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s3w/f/z1.png
+## palette
+palette-run Exit zen mode
+  Enter Zen Mode  ⌃⌘Z
+## key
+key ctrl-cmd-z -> toggleZenMode focus=terminal
+  Exit Zen Mode  ⌃⌘Z
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s3w/f/z2.png
+key ctrl-cmd-z -> toggleZenMode focus=terminal
+  Enter Zen Mode  ⌃⌘Z
+## state in Zen vs out (sidebar, panel, status_bar, dividers)
+sidebar=true panel=true tab=changes
+status_bar=false tabs=false gaps=true dividers=true
+sidebar=true panel=true tab=changes
+status_bar=false tabs=false gaps=true dividers=false
+key ctrl-cmd-z -> toggleZenMode focus=terminal
+idle
+## presets: Balanced / Everything come from the first run's How much to show step (TailorStep): the step is on the onboarding walk
+onboarding
+onboarding-step 4

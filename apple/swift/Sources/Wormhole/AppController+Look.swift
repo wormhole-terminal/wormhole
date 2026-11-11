@@ -64,7 +64,9 @@ extension AppController {
             front.hub.focus.setFront(argument == "system" ? nil : argument != "off")
         case "backdrop":
             // What is behind the window's surfaces: the effect views of its content, as AppKit holds them.
-            reply(front.window.map(Self.backdropReport) ?? "no window")
+            // `backdrop [title]`: the window with that title (Settings, Theme Studio, Session Hosts), else the front workspace's.
+            let shown = argument.isEmpty ? front.window : NSApp.windows.first { $0.title == argument }
+            reply(shown.map { Self.backdropReport(of: $0) + (argument.isEmpty ? "\n" + look.backdropSummary : "") } ?? "no window")
             return true
         default: return false
         }

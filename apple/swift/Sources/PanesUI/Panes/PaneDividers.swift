@@ -36,6 +36,7 @@ struct PaneDividers: View {
     private func drag(_ divider: PaneDividerState) -> some Gesture {
         DragGesture(minimumDistance: 1, coordinateSpace: .named(PaneSpace.name))
             .onChanged { value in
+                guard !session.cancelled else { return }
                 let along = divider.axis == .row ? value.location.x : value.location.y
                 if !session.isActive {
                     let startAlong = divider.axis == .row ? value.startLocation.x : value.startLocation.y

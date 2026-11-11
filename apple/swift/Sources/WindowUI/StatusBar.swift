@@ -4,6 +4,7 @@
 // window the words go and the counts keep a glyph, in a narrower one the size goes too (`StatusSummary.Detail`).
 
 import DesignSystem
+import PanesUI
 import SwiftUI
 import WordsModel
 import WorkspaceModel
@@ -12,6 +13,10 @@ struct StatusBar: View {
     let terminals: [TerminalSummary]
     /// The shown terminal, whose state and size end the bar; the size is its grid, "100×30", nil when none is drawn.
     let selected: TerminalSummary?
+    /// What runs in front of the shown terminal (the title row's last chip says it too): the size item's first word.
+    var program: String?
+    /// The window's profile when it is not the one Wormhole is in.
+    var profile: ProfileChoice?
     let size: String?
     /// Where the shown terminal runs; nil while persistent terminals are off (the bar then says nothing of it).
     var hosting: HostingState?
@@ -30,6 +35,17 @@ struct StatusBar: View {
         let summary = StatusSummary(terminals)
         let detail = StatusSummary.Detail(windowWidth: windowWidth)
         HStack(spacing: Self.gap) {
+            if let profile, detail.words {
+                HStack(spacing: Space._1) {
+                    Circle().fill(profile.colour ?? colours.primary).frame(width: Metric.statusDot, height: Metric.statusDot)
+                    Text(profile.name).lineLimit(1)
+                }
+                .padding(.horizontal, Chrome.itemPad)
+                .help(
+                    Words.text(
+                        "window-status-profile-edge", ["profile": .text(profile.name)],
+                        fallback: "This window is in \(profile.name), not the profile Wormhole is in"))
+            }
             if let waiting = summary.attention {
                 Button { select(waiting.id) } label: {
                     HStack(spacing: Space._1) {
@@ -44,6 +60,7 @@ struct StatusBar: View {
                     }
                 }
                 .buttonStyle(StatusItemStyle(tint: colours.attentionTint))
+                .help(summary.attentionTooltip ?? "")
                 .focusRing(focus.ring(.statusBar, 0), radius: colours.radius)
             }
             HStack(spacing: 0) {
@@ -56,18 +73,18 @@ struct StatusBar: View {
             }
             Spacer(minLength: 0)
             if detail.size, !look.probeItems.isEmpty { StatusProbeItems(items: look.probeItems) }
-            if let words = selected?.activity.stateWords, detail.words {
-                separated { Text(words).foregroundStyle(selected?.activity.stateColour(colours) ?? colours.muted) }
+            if let selected, let words = selected.activity.stateWords {
+                separated { stateText(selected, words).foregroundStyle(selected.activity.stateColour(colours)) }
             }
             if let hosting, StatusHosting.words(hosting) != nil {
                 separated { StatusHostingItem(state: hosting, word: detail >= .numbers) }
             }
             if let selected, let size, detail.size {
-                separated { Text("\(selected.title) · \(size)") }
+                separated { Text("\(program ?? selected.title) · \(size)") }
                     .accessibilityLabel(
                         Words.text(
-                            "window-status-size-spoken", ["title": .text(selected.title), "size": .text(size)],
-                            fallback: "\(selected.title), terminal size \(size)"))
+                            "window-status-size-spoken", ["title": .text(program ?? selected.title), "size": .text(size)],
+                            fallback: "\(program ?? selected.title), terminal size \(size)"))
             }
         }
         .font(TextRole.caption.font.weight(.medium))
@@ -80,6 +97,15 @@ struct StatusBar: View {
         .animation(Motion.fade, value: summary)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Words.text("window-status-bar", fallback: "Status bar"))
+    }
+
+    /// "working · 4m", "done · 3m", "failed · 2m", "needs input", "exited": how long in whole minutes, as the title row says it.
+    @ViewBuilder private func stateText(_ terminal: TerminalSummary, _ words: String) -> some View {
+        if [.working, .finished, .failed].contains(terminal.activity), let since = terminal.since, let first = waited(since) {
+            WaitedWords(prefix: words + " · ", first: first, waited: { self.waited(since) })
+        } else {
+            Text(words)
+        }
     }
 
     /// An item read, not clicked, after a hairline.

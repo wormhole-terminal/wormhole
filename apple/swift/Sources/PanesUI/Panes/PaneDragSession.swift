@@ -19,14 +19,17 @@ public final class PaneDragSession {
         (self.divider, self.grab, self.restore) = (divider, grab, restore)
     }
 
-    func end() { (divider, restore) = (nil, nil) }
+    /// Esc put the divider back while the button is still down: the rest of that gesture moves nothing.
+    @ObservationIgnored private(set) var cancelled = false
+
+    func end() { (divider, restore, cancelled) = (nil, nil, false) }
 
     /// Esc: whether a drag was going on, and if so the divider goes back to where it began.
     @discardableResult
     public func cancel() -> Bool {
         guard let restore else { return false }
         restore()
-        end()
+        (divider, self.restore, cancelled) = (nil, nil, true)
         return true
     }
 }

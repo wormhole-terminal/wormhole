@@ -28,7 +28,7 @@ final class RecordMappingTests: XCTestCase {
         let row = { (id: String, active: Bool, start: String) in
             SettingsProfileRow(
                 id: id, name: id.capitalized, isDefault: id == "default", isActive: active, startDir: start, gitName: "Ada",
-                gitEmail: "ada@example.com")
+                gitEmail: "ada@example.com", color: "blue")
         }
         let profile = RecordMapping.profile([row("default", false, ""), row("work", true, "~/work")])
         XCTAssertEqual(profile?.name, "Work")

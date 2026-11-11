@@ -38,7 +38,7 @@ impl HostedTerminals {
     /// host stops writing its checkpoint and what it wrote goes (`window/mod.rs` in the GPUI app). Nothing while they stay
     /// on. How many hosts were told.
     pub fn stop_checkpoints_if_off(&self) -> u32 {
-        if super::checkpoints::on(&self.profile) {
+        if super::checkpoints::on(&self.profile()) {
             return 0;
         }
         let hosts: Vec<String> = locked(&self.made)

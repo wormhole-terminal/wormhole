@@ -300,7 +300,7 @@ impl HostedTerminals {
     /// What `what` starts with in this desk's profile, without the saved text: `seed` decides what it starts above.
     fn options(&self, what: &HostedStart) -> wormhole_core::terminal::SpawnOptions {
         let what = HostedStart { saved_text: None, ..what.clone() };
-        crate::launch::options(&DataRoot::new(&self.data_dir), &self.profile, &what)
+        crate::launch::options(&DataRoot::new(&self.data_dir), &self.profile(), &what)
     }
 
     fn remember(&self, what: &HostedStart, host_id: &str) {

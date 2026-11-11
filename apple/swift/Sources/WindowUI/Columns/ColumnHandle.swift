@@ -10,21 +10,44 @@ import WordsModel
 struct ColumnHandle: View {
     let label: String
     let width: CGFloat
-    /// Called with the pointer's x in the window's space while dragging, and once more with nil at the end.
-    let drag: @MainActor (CGFloat?) -> Void
+    /// Called with the pointer in the window's space while dragging, and once more with nil at the end.
+    let drag: @MainActor (CGPoint?) -> Void
     let reset: @MainActor () -> Void
     let step: @MainActor (CGFloat) -> Void
     private static let keyStep: CGFloat = 16
 
+    @State private var hot = false
+    @State private var dragging = false
+    @State private var hoverTask: Task<Void, Never>?
+    @Environment(\.tokens) private var tokens
+    /// How long the pointer rests on the handle before its line lights (`resize.rs`, so crossing it flashes nothing).
+    private static let hoverDelay: Duration = .milliseconds(120)
+
     var body: some View {
-        Color.clear
+        Rectangle().fill(.clear)
+            // The line takes `resize.handle.hover` after a short rest and `resize.handle.active` while it is dragged.
+            .overlay { if hot || dragging { Rectangle().fill(dragging ? tokens.resizeHandleActive : tokens.resizeHandleHover).frame(width: tokens.metrics.borderWidth) } }
             .frame(width: Chrome.resizeHandle)
             .contentShape(Rectangle())
             .pointerStyle(.columnResize)
+            .onHover { inside in
+                hoverTask?.cancel()
+                guard inside else { return hot = false }
+                hoverTask = Task {
+                    try? await Task.sleep(for: Self.hoverDelay)
+                    if !Task.isCancelled { hot = true }
+                }
+            }
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .named(PaneSpace.name))
-                    .onChanged { drag($0.location.x) }
-                    .onEnded { _ in drag(nil) }
+                    .onChanged {
+                        dragging = true
+                        drag($0.location)
+                    }
+                    .onEnded { _ in
+                        dragging = false
+                        drag(nil)
+                    }
             )
             .onTapGesture(count: 2, perform: reset)
             .accessibilityElement()
@@ -50,6 +73,7 @@ enum PaneSpace {
 struct ResizeReadout: View {
     let text: String
     let pointer: CGFloat
+    let pointerY: CGFloat
     @Environment(\.chrome) private var colours
 
     var body: some View {
@@ -60,7 +84,7 @@ struct ResizeReadout: View {
             .padding(.horizontal, Space._2)
             .frame(height: Chrome.hit - Space._1)
             .background(colours.tooltip, in: RoundedRectangle(cornerRadius: colours.radius))
-            .offset(x: pointer + Space._3, y: Chrome.titleHeight + Space._2)
+            .offset(x: pointer + Space._2, y: pointerY - Space._2)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }

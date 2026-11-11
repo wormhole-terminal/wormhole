@@ -170,7 +170,7 @@ public final class WindowFocus {
     /// terminal. `true` when it took the key; the terminal's Esc is its program's, and a text field's is its own.
     @discardableResult
     func escape() -> Bool {
-        if hub.cancelColumnDrag?() == true { return true }
+        if hub.cancelColumnDrag?() == true || hub.drag.cancel() { return true }
         if hub.state.overlay != nil || holder?.window?.firstResponder is NSText { return false }
         let area = current()
         let find = hub.selectedOverlay?.find

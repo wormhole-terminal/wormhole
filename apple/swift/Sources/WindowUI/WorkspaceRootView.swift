@@ -25,6 +25,8 @@ public struct WorkspaceRootView: View {
     struct DragState: Equatable {
         var edge: PaneLayout.Edge
         var pointer: CGFloat
+        /// Where the pointer is down the window: the readout stands beside it.
+        var pointerY: CGFloat = 0
         var readout: String
         var open: Bool
         var extent: CGFloat

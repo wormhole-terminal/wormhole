@@ -60,7 +60,7 @@ struct PaneHeader<Menu: View>: View {
 
     private var zoomButton: some View {
         PaneButton(symbol: zoomed ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
-                   label: zoomed ? PanesText.unzoom : PanesText.zoom, action: zoom)
+                   label: zoomed ? PanesText.unzoom : PanesText.zoom, key: "⇧⌘↩", action: zoom)
     }
 
     private var moreButton: some View {
@@ -73,7 +73,7 @@ struct PaneHeader<Menu: View>: View {
         .help(PanesText.paneMenu).accessibilityLabel(PanesText.paneMenu)
     }
 
-    private var closeButton: some View { PaneButton(symbol: "xmark", label: PanesText.closePane, action: close) }
+    private var closeButton: some View { PaneButton(symbol: "xmark", label: PanesText.closePane, key: "⌘W", action: close) }
 
     /// Without gaps a hairline under every header and the primary line under the focused one; with gaps the
     /// pane's own outline says which has the keyboard (`PaneFrame`).
