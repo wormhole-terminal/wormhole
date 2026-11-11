@@ -84,7 +84,7 @@ final class NotesCoordinator {
         } : nil
     }
 
-    private func sync() async {
+    func sync() async {
         let editing = NSApp.keyWindow?.firstResponder is NSTextView
         for terminal in hub.state.all {
             let id = terminal.id
@@ -95,8 +95,12 @@ final class NotesCoordinator {
                 guard let merged = await persistence.sync(session: id, root: root, model: hub.panel.notes.model, editing: editing),
                     id == shown, merged != hub.panel.notes.model
                 else { continue }
-                saved = merged
+                // Saved like an edit, at once: a merge left for the next edit is lost on quit, and the next launch
+                // then reads the stale database against the merged base as lines the person deleted.
                 hub.panel.notes.model = merged
+                saved = merged
+                persistence.save(session: id, model: merged)
+                tell(id, merged)
             } else {
                 let model = persistence.load(session: id)
                 guard let merged = await persistence.sync(session: id, root: root, model: model, editing: false), merged != model else { continue }
