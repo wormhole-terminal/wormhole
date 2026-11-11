@@ -8,6 +8,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 public struct SidebarView: View {
@@ -136,7 +137,7 @@ public struct SidebarView: View {
         .onAppear { hold.start() }
         .onDisappear { hold.stop() }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Terminals")
+        .accessibilityLabel(Words.text("sidebar-list", fallback: "Terminals"))
         .accessibilityAction(named: SidebarText.searchPlaceholder) { search.reveal() }
     }
 

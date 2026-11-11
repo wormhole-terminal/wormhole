@@ -6,6 +6,7 @@
 import AppKit
 import SwiftUI
 import TerminalMetal
+import WordsModel
 import WorkspaceModel
 
 struct TerminalHost: NSViewRepresentable {
@@ -19,7 +20,7 @@ struct TerminalHost: NSViewRepresentable {
     func makeNSView(context: Context) -> Container {
         let host = Container(overlay: overlay, menu: menu)
         host.setAccessibilityRole(.group)
-        host.setAccessibilityLabel("Terminal")
+        host.setAccessibilityLabel(Words.text("window-terminal", fallback: "Terminal"))
         return host
     }
 

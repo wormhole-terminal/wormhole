@@ -4,6 +4,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 struct GroupPopover: View {
@@ -20,7 +21,7 @@ struct GroupPopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
-            TextField("Group name", text: $name)
+            TextField(Words.text("sidebar-popover-group-name", fallback: "Group name"), text: $name)
                 .textFieldStyle(.roundedBorder)
                 .focused($focused)
                 .onSubmit { commit(); close() }
@@ -32,12 +33,12 @@ struct GroupPopover: View {
                         .accessibilityLabel(colour.rawValue.capitalized)
                         .accessibilityAddTraits(head.color == colour ? .isSelected : [])
                 }
-                ColorPicker("Other colour", selection: custom, supportsOpacity: false).labelsHidden()
+                ColorPicker(Words.text("sidebar-popover-colour-other", fallback: "Other colour"), selection: custom, supportsOpacity: false).labelsHidden()
             }
             HStack(spacing: Space._2) {
-                Button(head.isPinned ? "Unpin" : "Pin") { context.send(.setGroupPinned(head.id, !head.isPinned)); close() }
-                Button("Ungroup") { context.send(.ungroup(head.id)); close() }
-                Button("Close group", role: .destructive) { context.closeGroup(head.id); close() }
+                Button(head.isPinned ? Words.text("sidebar-unpin", fallback: "Unpin") : Words.text("sidebar-pin", fallback: "Pin")) { context.send(.setGroupPinned(head.id, !head.isPinned)); close() }
+                Button(Words.text("sidebar-menu-group-ungroup", fallback: "Ungroup")) { context.send(.ungroup(head.id)); close() }
+                Button(Words.text("sidebar-menu-group-close", fallback: "Close group"), role: .destructive) { context.closeGroup(head.id); close() }
             }
             .controlSize(.small)
         }

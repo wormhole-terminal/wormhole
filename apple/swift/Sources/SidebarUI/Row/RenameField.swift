@@ -4,6 +4,7 @@
 import AppKit
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 /// What a name field reports: the typed name, or nil to leave the old one.
 struct RowRename {
@@ -33,7 +34,7 @@ struct RenameField: View {
                 // The whole name is selected, so typing replaces it.
                 DispatchQueue.main.async { NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil) }
             }
-            .accessibilityLabel("Terminal name")
+            .accessibilityLabel(Words.text("sidebar-rename-field", fallback: "Terminal name"))
     }
 
     /// The field ends once, whichever of ↩, ⎋ and losing the keyboard comes first.

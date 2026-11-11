@@ -34,5 +34,5 @@ struct FontSelectFace: View {
     }
 
     /// The system font's own name, as GPUI says it (`SF Pro`).
-    private static func shown(_ family: String) -> String { family == FontFace.system ? "SF Pro" : family }
+    private static func shown(_ family: String) -> String { family == FontFace.system ? "SF Pro" : family } // text: a font's name
 }

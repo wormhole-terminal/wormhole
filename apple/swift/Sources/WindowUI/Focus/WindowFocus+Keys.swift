@@ -5,6 +5,7 @@
 import AppKit
 import SwiftUI
 import TerminalMetal
+import WordsModel
 import WorkspaceModel
 
 /// The key codes the window answers (Carbon's `kVK_*`, which AppKit hands out as `NSEvent.keyCode`).
@@ -85,12 +86,33 @@ extension WindowFocus {
         let words: String =
             switch virtual {
             case .titleRow:
-                "Title row, \(cursor(.titleRow) == 0 ? (hub.state.sidebarVisible ? "Hide sidebar" : "Show sidebar") : "New terminal"), button \(cursor(.titleRow) + 1) of \(titleButtons)"
-            case .tabs: "Terminal, \(hub.state.selectedTerminal?.title ?? "none")"
-            case .panelTabs: "Right panel tabs, \(hub.state.panelTab.rawValue.capitalized)"
-            case .statusBar: "Status bar, item \(cursor(.statusBar) + 1) of \(hub.statusItems.count)"
-            default: "Right panel"
+                titleRowWords
+            case .tabs:
+                Words.text(
+                    "window-focus-terminal",
+                    ["title": .text(hub.state.selectedTerminal?.title ?? Words.text("window-focus-terminal-none", fallback: "none"))],
+                    fallback: "Terminal, \(hub.state.selectedTerminal?.title ?? "none")")
+            case .panelTabs:
+                Words.text(
+                    "window-focus-panel-tabs", ["tab": .text(hub.state.panelTab.rawValue.capitalized)],
+                    fallback: "Right panel tabs, \(hub.state.panelTab.rawValue.capitalized)")
+            case .statusBar:
+                Words.text(
+                    "window-focus-status-bar", ["position": .whole(cursor(.statusBar) + 1), "total": .whole(hub.statusItems.count)],
+                    fallback: "Status bar, item \(cursor(.statusBar) + 1) of \(hub.statusItems.count)")
+            default: Words.text("window-panel", fallback: "Right panel")
             }
         holder?.speak(words)
+    }
+
+    private var titleRowWords: String {
+        let item =
+            cursor(.titleRow) == 0
+            ? (hub.state.sidebarVisible ? Words.text("window-focus-hide-sidebar", fallback: "Hide sidebar") : Words.text("window-focus-show-sidebar", fallback: "Show sidebar"))
+            : Words.text("window-new-terminal", fallback: "New terminal")
+        return Words.text(
+            "window-focus-title-row",
+            ["item": .text(item), "position": .whole(cursor(.titleRow) + 1), "total": .whole(titleButtons)],
+            fallback: "Title row, \(item), button \(cursor(.titleRow) + 1) of \(titleButtons)")
     }
 }

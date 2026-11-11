@@ -5,6 +5,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct NotificationsScene: View {
     let model: SettingsModel
@@ -13,9 +14,9 @@ struct NotificationsScene: View {
         let t = PreviewTheme.tokens(model)
         let sound = model.value("notify_sound").string ?? "needs_you"
         VStack(spacing: Space._3) {
-            banner(t, title: "Flaky login test", body: "Needs input · Allow edit?", badge: t.agentAttention, sounds: sound != "none")
+            banner(t, title: "Flaky login test", body: "\(Words.text("settings-menu-bar-preview-needs-input", fallback: "Needs input")) · Allow edit?", badge: t.agentAttention, sounds: sound != "none")
             if model.value("notify_agent_done").bool ?? true {
-                banner(t, title: "Rate limits", body: "Finished · 4m", badge: t.agentDone, sounds: sound == "all")
+                banner(t, title: "Rate limits", body: "\(Words.text("settings-menu-bar-preview-finished", fallback: "Finished")) · 4m", badge: t.agentDone, sounds: sound == "all")
             }
         }
         .frame(maxWidth: 360)
@@ -26,7 +27,7 @@ struct NotificationsScene: View {
         HStack(spacing: Space._3) {
             AgentTile(tokens: t, size: Metric.tile, badge: badge)
             VStack(alignment: .leading, spacing: 0) {
-                Text("Wormhole").font(.system(size: 11)).foregroundStyle(t.textMuted)
+                Text("Wormhole").font(.system(size: 11)).foregroundStyle(t.textMuted) // text: the product name
                 Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(t.textPrimary)
                 Text(body).font(.system(size: 12)).foregroundStyle(t.textMuted)
             }

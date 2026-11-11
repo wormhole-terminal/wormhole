@@ -3,6 +3,7 @@
 // window's width. The model does not time how long a terminal has waited, so the button has no "2m" yet.
 
 import CoreGraphics
+import WordsModel
 import WorkspaceModel
 
 struct StatusSummary: Equatable {
@@ -15,10 +16,13 @@ struct StatusSummary: Equatable {
         /// "2 working", "1 done", "2 need input": all of it in words.
         var words: String {
             switch activity {
-            case .working: "\(number) working"
-            case .needsInput: number == 1 ? "1 needs input" : "\(number) need input"
-            case .finished: "\(number) done"
-            case .failed: "\(number) failed"
+            case .working: Words.text("window-status-working", ["count": .whole(number)], fallback: "\(number) working")
+            case .needsInput:
+                Words.text(
+                    "window-status-need-input", ["count": .whole(number)],
+                    fallback: number == 1 ? "1 needs input" : "\(number) need input")
+            case .finished: Words.text("window-status-done", ["count": .whole(number)], fallback: "\(number) done")
+            case .failed: Words.text("window-status-failed", ["count": .whole(number)], fallback: "\(number) failed")
             case .idle, .exited: "\(number)"
             }
         }

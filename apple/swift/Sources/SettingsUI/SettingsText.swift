@@ -12,21 +12,22 @@ enum SettingsText {
         Words.text("settings-window-search-settings", fallback: "Search settings")
     }
     /// The running app's version, as the Updates page's Version row and its update header say it.
-    static var appVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0" }
+    static var appVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0" } // text: Info.plist key
     static var clearSearch: String { Words.text("settings-window-clear-search", fallback: "Clear search") }
     static var results: String { Words.text("settings-window-results", fallback: "Results") }
     static var noResults: String {
-        String(
-            localized: "settings-window-no-results",
-            defaultValue: "No setting has these words in its name, description or config key.")
+        Words.text(
+            "settings-window-no-results",
+            fallback: "No setting has these words in its name, description or config key.")
     }
     static var escClears: String {
         Words.text("settings-window-clears-the-search-then-closes", fallback: "clears the search, then closes")
     }
     static func resultsSummary(hits: Int, sections: Int, query: String) -> String {
-        String(
-            localized: "settings-window-results-summary",
-            defaultValue: "\(hits) settings in \(sections) sections match “\(query)”. Pick a section to see it in context.")
+        Words.text(
+            "settings-window-results-summary",
+            ["hits": .whole(hits), "sections": .whole(sections), "query": .text(query)],
+            fallback: "\(hits) settings in \(sections) sections match “\(query)”. Pick a section to see it in context.")
     }
     static var rescanPath: String { Words.text("settings-window-rescan-path", fallback: "Rescan PATH") }
     static var scanAgain: String { Words.text("settings-import-scan-again", fallback: "Scan again") }
@@ -70,14 +71,14 @@ enum SettingsText {
     }
     static var create: String { Words.text("settings-profile-create", fallback: "Create") }
     static var preview: String { Words.text("settings-window-preview", fallback: "Preview") }
-    static var previewTag: String { Words.text("settings-nav-preview-tag", fallback: "Preview") }
+    static var previewTag: String { Words.text("settings-nav-preview", fallback: "Preview") }
     static var reset: String { Words.text("settings-row-reset", fallback: "Reset to default") }
     static var changed: String { Words.text("settings-row-changed", fallback: "Changed") }
     static var changedTitle: String { Words.text("settings-section-changed", fallback: "Changed") }
     static var changedIntro: String {
-        String(
-            localized: "settings-section-changed-intro",
-            defaultValue: "Every setting that differs from its default, each put back by its arrow.")
+        Words.text(
+            "settings-changed-intro-arrow",
+            fallback: "Every setting that differs from its default, each put back by its arrow.")
     }
     static var noneChanged: String { Words.text("settings-changed-none", fallback: "No settings changed") }
     static var noneChangedDetail: String {
@@ -90,6 +91,7 @@ enum SettingsText {
     static var recorderNone: String { Words.text("settings-row-recorder-none", fallback: "Not set") }
     static var profileDefault: String { Words.text("settings-nav-profile-default", fallback: "Default") }
     static func previewLabel(_ scene: String) -> String {
-        Words.text("settings-window-preview-label", fallback: "Preview of \(scene) with your current settings")
+        Words.text(
+            "settings-window-preview-label", ["scene": .text(scene)], fallback: "Preview of \(scene) with your current settings")
     }
 }

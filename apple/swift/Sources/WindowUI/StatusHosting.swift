@@ -4,6 +4,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 enum StatusHosting {
@@ -12,24 +13,18 @@ enum StatusHosting {
         switch state {
         case .persistent, .detached:
             (
-                String(localized: "status-bar-hosting-persistent", defaultValue: "Persistent"),
-                String(
-                    localized: "status-bar-hosting-persistent.tooltip",
-                    defaultValue: "This terminal keeps running when Wormhole quits or updates.")
+                Words.text("status-bar-hosting-persistent", fallback: "Persistent"),
+                Words.text("status-bar-hosting-persistent.tooltip", fallback: "This terminal keeps running when Wormhole quits or updates.")
             )
         case .local:
             (
-                String(localized: "status-bar-hosting-in-app", defaultValue: "In app"),
-                String(
-                    localized: "status-bar-hosting-in-app.tooltip",
-                    defaultValue: "This terminal runs inside Wormhole and ends when Wormhole quits or updates.")
+                Words.text("status-bar-hosting-in-app", fallback: "In app"),
+                Words.text("status-bar-hosting-in-app.tooltip", fallback: "This terminal runs inside Wormhole and ends when Wormhole quits or updates.")
             )
         case .connecting:
             (
-                String(localized: "status-bar-hosting-connecting", defaultValue: "Connecting…"),
-                String(
-                    localized: "status-bar-hosting-connecting.tooltip",
-                    defaultValue: "Wormhole is still connecting to this terminal’s session host.")
+                Words.text("status-bar-hosting-connecting", fallback: "Connecting…"),
+                Words.text("status-bar-hosting-connecting.tooltip", fallback: "Wormhole is still connecting to this terminal’s session host.")
             )
         case .lost, .unavailable: nil
         }

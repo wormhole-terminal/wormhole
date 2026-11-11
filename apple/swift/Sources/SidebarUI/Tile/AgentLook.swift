@@ -32,23 +32,23 @@ extension AgentID {
     /// Two capitals: the initials of the name's words, or the first two letters, unless the registry fixes them.
     var monogram: String {
         switch self {
-        case .claude: "CC"
-        case .codex: "CX"
-        case .gemini: "GM"
-        case .copilot: "GC"
-        case .cursor: "CA"
-        case .openCode: "OC"
-        case .aider: "AI"
-        case .amp: "AM"
-        case .goose: "GO"
-        case .qwen: "QC"
-        case .crush: "CR"
-        case .droid: "FD"
-        case .auggie: "AU"
-        case .kiro: "KI"
-        case .cline: "CL"
-        case .pi: "PI"
-        case .fm: "FM"
+        case .claude: "CC" // text: logo initials
+        case .codex: "CX" // text: logo initials
+        case .gemini: "GM" // text: logo initials
+        case .copilot: "GC" // text: logo initials
+        case .cursor: "CA" // text: logo initials
+        case .openCode: "OC" // text: logo initials
+        case .aider: "AI" // text: logo initials
+        case .amp: "AM" // text: logo initials
+        case .goose: "GO" // text: logo initials
+        case .qwen: "QC" // text: logo initials
+        case .crush: "CR" // text: logo initials
+        case .droid: "FD" // text: logo initials
+        case .auggie: "AU" // text: logo initials
+        case .kiro: "KI" // text: logo initials
+        case .cline: "CL" // text: logo initials
+        case .pi: "PI" // text: logo initials
+        case .fm: "FM" // text: logo initials
         }
     }
 }

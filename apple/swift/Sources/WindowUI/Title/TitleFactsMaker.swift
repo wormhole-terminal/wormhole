@@ -3,6 +3,7 @@
 
 import Foundation
 import PanesModel
+import WordsModel
 import WorkspaceModel
 
 enum TitleFactsMaker {
@@ -37,11 +38,11 @@ private extension Activity {
     var words: String? {
         switch self {
         case .idle: nil
-        case .working: "working"
-        case .needsInput: "needs input"
-        case .finished: "finished"
-        case .failed: "failed"
-        case .exited: "exited"
+        case .working: Words.text("window-state-working", fallback: "working")
+        case .needsInput: Words.text("window-state-needs-input", fallback: "needs input")
+        case .finished: Words.text("window-state-finished", fallback: "finished")
+        case .failed: Words.text("window-state-failed", fallback: "failed")
+        case .exited: Words.text("window-state-exited", fallback: "exited")
         }
     }
 }

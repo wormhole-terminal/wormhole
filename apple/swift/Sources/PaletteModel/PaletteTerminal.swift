@@ -4,6 +4,7 @@
 // the palette is open.
 
 import Foundation
+import WordsModel
 import WorkspaceModel
 
 public struct PaletteTerminal: Sendable {
@@ -44,19 +45,19 @@ public struct PaletteTerminal: Sendable {
 
     /// "Window 1 · terminal · 4:12" in the Terminals scope, else what it is doing: "Needs input · Approve cargo test?".
     public func detail(scoped: Bool, now: Date) -> String? {
-        let words = scoped ? ["Window \(window)", folder, elapsed(now)].compactMap { $0 }.joined(separator: " · ") : doingWords
+        let words = scoped ? [Words.text("palette-terminal-window", ["window": .whole(window)], fallback: "Window \(window)"), folder, elapsed(now)].compactMap { $0 }.joined(separator: " · ") : doingWords
         return words.isEmpty ? nil : words
     }
 
     private var doingWords: String {
         let doing: String? =
             switch activity {
-            case .needsInput: "Needs input"
-            case .finished: "Finished"
-            case .failed: "Failed"
+            case .needsInput: Words.text("palette-state-needs-input", fallback: "Needs input")
+            case .finished: Words.text("palette-state-finished", fallback: "Finished")
+            case .failed: Words.text("palette-state-failed", fallback: "Failed")
             case .working, .idle, .exited: folder
             }
-        let exitWords = exit.map { "exit \($0)" }
+        let exitWords = exit.map { Words.text("palette-terminal-exit", ["code": .whole($0)], fallback: "exit \($0)") }
         let words: String? =
             switch activity {
             case .needsInput, .working: message ?? command
@@ -71,7 +72,7 @@ public struct PaletteTerminal: Sendable {
     /// The line under a terminal that waits for an answer, in the Terminals scope.
     public var question: String? {
         guard activity == .needsInput, let message else { return nil }
-        return who.map { "\($0) is asking: \(message)" } ?? message
+        return who.map { Words.text("palette-terminal-asking", ["who": .text($0), "message": .text(message)], fallback: "\($0) is asking: \(message)") } ?? message
     }
 }
 

@@ -5,6 +5,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 struct TerminalRowView: View {
@@ -63,9 +64,9 @@ struct TerminalRowView: View {
         .accessibilityLabel(row.spoken)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { context.send(.select(terminal.id)) }
-        .accessibilityAction(named: terminal.isPinned ? "Unpin" : "Pin") { context.send(.togglePin(terminal.id)) }
-        .accessibilityAction(named: "Rename") { context.rename(terminal.id) }
-        .accessibilityAction(named: "Close terminal") { context.send(.close(terminal.id)) }
+        .accessibilityAction(named: terminal.isPinned ? Words.text("sidebar-unpin", fallback: "Unpin") : Words.text("sidebar-pin", fallback: "Pin")) { context.send(.togglePin(terminal.id)) }
+        .accessibilityAction(named: Words.text("sidebar-rename-action", fallback: "Rename")) { context.rename(terminal.id) }
+        .accessibilityAction(named: Words.text("sidebar-close-terminal", fallback: "Close terminal")) { context.send(.close(terminal.id)) }
     }
 
     /// The card's own fill when alone; the row's when it stands in a group's card (whose fill shows through).

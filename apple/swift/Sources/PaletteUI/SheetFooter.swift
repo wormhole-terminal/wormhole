@@ -5,6 +5,7 @@
 import DesignSystem
 import PaletteModel
 import SwiftUI
+import WordsModel
 
 struct SheetFooter: View {
     let found: FilteredShortcuts
@@ -16,18 +17,22 @@ struct SheetFooter: View {
     var body: some View {
         HStack(spacing: Space._2) {
             if filtering {
-                Text("\(found.shown) of \(found.total) · matches labels and keys (“\(found.exampleKey)” finds Close terminal)")
+                Text(
+                    Words.text(
+                        "palette-sheet-filtering",
+                        ["shown": .whole(found.shown), "total": .whole(found.total), "key": .text(found.exampleKey)],
+                        fallback: "\(found.shown) of \(found.total) · matches labels and keys (“\(found.exampleKey)” finds Close terminal)"))
             } else {
                 Image(systemName: "globe").accessibilityHidden(true)
                 if let hotkey {
-                    Text("Show or hide Wormhole from any app")
+                    Text(Words.text("palette-sheet-hotkey", fallback: "Show or hide Wormhole from any app"))
                     KeyCap(text: hotkey)
-                    Text("set in Settings › Hotkey").foregroundStyle(tokens.textFaint)
+                    Text(Words.text("palette-sheet-hotkey-where", fallback: "set in Settings › Hotkey")).foregroundStyle(tokens.textFaint)
                 } else {
-                    Text("A key that shows or hides Wormhole from any app is set in Settings › Hotkey")
+                    Text(Words.text("palette-sheet-hotkey-unset", fallback: "A key that shows or hides Wormhole from any app is set in Settings › Hotkey"))
                 }
                 Spacer(minLength: 0)
-                Text("Also in Help › Keyboard Shortcuts and the palette")
+                Text(Words.text("palette-sheet-also", fallback: "Also in Help › Keyboard Shortcuts and the palette"))
             }
         }
         .font(.system(size: TextRole.caption.size))

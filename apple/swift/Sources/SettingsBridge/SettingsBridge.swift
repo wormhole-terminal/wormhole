@@ -22,7 +22,7 @@ public enum SettingsBridge {
     @MainActor
     public static func make(
         profile: String? = nil, platform: RustSettingsHost.Platform = .init(),
-        importHome: String? = ProcessInfo.processInfo.environment["WORMHOLE_IMPORT_HOME"]
+        importHome: String? = ProcessInfo.processInfo.environment["WORMHOLE_IMPORT_HOME"] // text: environment variable
     ) throws -> Kit {
         let relay = WakeRelay()
         let handle = try SettingsHandle.open(profile: profile, listener: relay)

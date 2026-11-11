@@ -3,6 +3,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 struct SheetHeader: View {
     @Binding var filter: String
@@ -15,7 +16,7 @@ struct SheetHeader: View {
                 .font(.system(size: Metric.glyph))
                 .foregroundStyle(tokens.textMuted)
                 .accessibilityHidden(true)
-            Text("Keyboard shortcuts")
+            Text(Words.text("palette-sheet-title", fallback: "Keyboard shortcuts"))
                 .font(.system(size: TextRole.heading.size, weight: .bold))
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
@@ -36,7 +37,7 @@ struct SheetHeader: View {
                 .foregroundStyle(tokens.textMuted)
                 .accessibilityHidden(true)
             PaletteField(
-                text: $filter, placeholder: "Filter shortcuts", size: TextRole.label.size, textColor: tokens.textPrimary,
+                text: $filter, placeholder: Words.text("palette-sheet-filter", fallback: "Filter shortcuts"), size: TextRole.label.size, textColor: tokens.textPrimary,
                 placeholderColor: tokens.inputPlaceholder, caretColor: tokens.textPrimary, onKey: onKey)
                 .padding(.leading, Space._2)
         }

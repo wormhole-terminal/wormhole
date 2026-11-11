@@ -3,6 +3,7 @@
 // column close; dragging back out opens it again in the same gesture. The readout says why it stopped.
 
 import CoreGraphics
+import WordsModel
 
 struct ColumnResize: Equatable {
     /// Dragging this far past the minimum closes the column.
@@ -28,8 +29,8 @@ struct ColumnResize: Equatable {
         let number = Int(width.rounded())
         switch stop {
         case nil: return "\(number)"
-        case .min: return "\(number) · min"
-        case .max: return "\(number) · max"
+        case .min: return Words.text("window-resize-min", ["width": .whole(number)], fallback: "\(number) · min")
+        case .max: return Words.text("window-resize-max", ["width": .whole(number)], fallback: "\(number) · max")
         }
     }
 }

@@ -43,6 +43,7 @@ enum PreviewScene: Equatable {
     }
 
     var spoken: String {
-        Words.text("settings-window-preview-label", fallback: "Preview of \(title) with your current settings")
+        Words.text(
+            "settings-window-preview-label", ["scene": .text(title)], fallback: "Preview of \(title) with your current settings")
     }
 }

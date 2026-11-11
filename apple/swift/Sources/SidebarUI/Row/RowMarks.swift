@@ -4,6 +4,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 struct PinMark: View {
@@ -33,7 +34,7 @@ struct RowDetails: View {
         HStack(spacing: Space._2) {
             if marks.chain {
                 LucideView(icon: .link, size: Metric.glyph).foregroundStyle(tokens.textMuted)
-                    .help("In a split with terminals in other folders")
+                    .help(Words.text("sidebar-mark-split-folders", fallback: "In a split with terminals in other folders"))
             }
             if look.showsNotes, terminal.noteCount > 0 {
                 HStack(spacing: Space._1) {

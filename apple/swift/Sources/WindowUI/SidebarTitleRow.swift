@@ -5,6 +5,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 struct SidebarTitleRow: View {
@@ -14,7 +15,8 @@ struct SidebarTitleRow: View {
     var body: some View {
         HStack(spacing: 0) {
             Spacer(minLength: 0)
-            TitleButton(label: "New terminal", help: "New terminal (⌘T)", stop: 1) { color in
+            TitleButton(
+                label: Words.text("window-new-terminal", fallback: "New terminal"), help: Words.text("window-new-terminal-help", fallback: "New terminal (⌘T)"), stop: 1) { color in
                 Image(systemName: "plus").font(.system(size: Chrome.glyph, weight: .regular)).foregroundStyle(color)
             } action: {
                 send(.newTerminal)

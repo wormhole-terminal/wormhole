@@ -72,6 +72,6 @@ public final class WindowLook {
     /// `colour` at the window's opacity: every surface paints translucent over the blur.
     func surface(_ colour: Color) -> Color { colour.opacity(effectiveOpacity) }
 
-    public static let macHasGlass: Bool = NSClassFromString("NSGlassEffectView") != nil
+    public static let macHasGlass: Bool = NSClassFromString("NSGlassEffectView") != nil // text: AppKit class name
 
 }

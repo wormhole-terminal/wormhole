@@ -4,6 +4,7 @@
 import DesignSystem
 import PaletteModel
 import SwiftUI
+import WordsModel
 
 struct ShortcutLine: View {
     let row: ShortcutRow
@@ -19,7 +20,12 @@ struct ShortcutLine: View {
         }
         .frame(height: Metric.row)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text("\(row.label), \(row.keys.map { KeyCapSpeech.words($0.glyphs) }.joined(separator: ", "))"))
+        .accessibilityLabel(Text(spoken))
+    }
+
+    private var spoken: String {
+        let keys = row.keys.map { KeyCapSpeech.words($0.glyphs) }.joined(separator: ", ")
+        return Words.text("palette-sheet-spoken", ["label": .text(row.label), "keys": .text(keys)], fallback: "\(row.label), \(keys)")
     }
 
     @ViewBuilder private var caps: some View {

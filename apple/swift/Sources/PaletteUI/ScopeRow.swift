@@ -4,6 +4,7 @@
 import DesignSystem
 import PaletteModel
 import SwiftUI
+import WordsModel
 
 struct ScopeRow: View {
     let scope: PaletteScope
@@ -25,7 +26,7 @@ struct ScopeRow: View {
         .frame(height: Metric.paletteRowHeight)
         .overlay(alignment: .bottom) { Rule(color: tokens.border, width: tokens.metrics.borderWidth) }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Scope"))
+        .accessibilityLabel(Text(Words.text("palette-scope-label", fallback: "Scope")))
     }
 
     private func segment(_ item: PaletteScope) -> some View {

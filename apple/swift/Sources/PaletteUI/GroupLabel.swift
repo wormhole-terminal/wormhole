@@ -3,6 +3,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 struct GroupLabel: View {
     let title: String
@@ -18,7 +19,7 @@ struct GroupLabel: View {
             Text(title)
                 .font(.system(size: TextRole.caption.size, weight: .semibold))
                 .foregroundStyle(tokens.textMuted)
-            if trusted { StatusBadge(text: "Trusted", color: tokens.statusSuccessText) }
+            if trusted { StatusBadge(text: Words.text("settings-projects-trusted", fallback: "Trusted"), color: tokens.statusSuccessText) }
             if let count {
                 Text(String(count))
                     .font(.system(size: TextRole.caption.size, weight: .medium))

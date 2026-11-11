@@ -2,6 +2,7 @@
 // `command_palette/view.rs` `render_footer`).
 
 import Foundation
+import WordsModel
 
 public struct KeyHint: Sendable, Equatable {
     public var keys: String
@@ -13,10 +14,18 @@ public enum PaletteFooter {
     public static func hints(scope: PaletteScope, selected: Command? = nil) -> [KeyHint] {
         let pairs: [(String, String)] =
             switch (scope, selected?.group) {
-            case (.terminals, _): [("↩", "switch"), ("⌘⌫", "close terminal")]
-            case (.actions, _): [("↩", "run"), ("⌫", "back to all")]
-            case (_, .settings?): [("↑↓", "move"), ("↩", "open in Settings"), ("⌘C", "copy setting key")]
-            default: [("↑↓", "move"), ("↩", "open"), ("⌘↩", "open in new window"), ("tab", "scope")]
+            case (.terminals, _): [("↩", Words.text("palette-hint-switch", fallback: "switch")), ("⌘⌫", Words.text("palette-hint-close-terminal", fallback: "close terminal"))]
+            case (.actions, _): [("↩", Words.text("palette-hint-run", fallback: "run")), ("⌫", Words.text("palette-hint-back", fallback: "back to all"))]
+            case (_, .settings?):
+                [
+                    ("↑↓", Words.text("palette-hint-move", fallback: "move")), ("↩", Words.text("palette-hint-open-in-settings", fallback: "open in Settings")),
+                    ("⌘C", Words.text("palette-hint-copy-setting-key", fallback: "copy setting key")),
+                ]
+            default:
+                [
+                    ("↑↓", Words.text("palette-hint-move", fallback: "move")), ("↩", Words.text("palette-hint-open", fallback: "open")),
+                    ("⌘↩", Words.text("palette-hint-open-in-window", fallback: "open in new window")), ("tab", Words.text("palette-hint-scope", fallback: "scope")),
+                ]
             }
         return pairs.map { KeyHint(keys: $0.0, label: $0.1) }
     }

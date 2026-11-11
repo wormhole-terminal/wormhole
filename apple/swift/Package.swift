@@ -49,9 +49,9 @@ var targets: [Target] = [
         resources: [.copy("Resources/wormhole-icons.json"), .copy("Resources/icons")]),
     .testTarget(name: "PanelTests", dependencies: ["PanelModel", "PanelUI", "DesignSystem", "FileIconTheme", "WorkspaceModel"]),
     // The command palette's commands, fuzzy search and the shortcut sheet's rows. Foundation only.
-    .target(name: "PaletteModel", dependencies: ["WorkspaceModel"]),
+    .target(name: "PaletteModel", dependencies: ["WorkspaceModel", "WordsModel"]),
     // The palette and shortcut sheet overlays.
-    .target(name: "PaletteUI", dependencies: ["PaletteModel", "WorkspaceModel", "DesignSystem"]),
+    .target(name: "PaletteUI", dependencies: ["PaletteModel", "WorkspaceModel", "DesignSystem", "WordsModel"]),
     .testTarget(name: "PaletteTests", dependencies: ["PaletteModel", "PaletteUI", "WorkspaceModel", "DesignSystem"]),
     // The SwiftUI around the terminal: find bar, command blocks, pane bars, notice chip, zoom and resize readout,
     // minimap, print and export. Over protocols that the Rust FFI backs later; no dependency on a feature module.
@@ -59,7 +59,7 @@ var targets: [Target] = [
     .testTarget(name: "TerminalUITests", dependencies: ["TerminalUI", "DesignSystem", "TerminalCore"]),
     // The settings window's schema (generated from the Rust settings index by `apple/scripts/dump-settings.sh`),
     // values, search, change tracking and the backend seam. Foundation only.
-    .target(name: "SettingsModel", dependencies: ["FontPickerModel"], resources: [.copy("Resources/settings.json")]),
+    .target(name: "SettingsModel", dependencies: ["FontPickerModel", "WordsModel"], resources: [.copy("Resources/settings.json")]),
     // The settings window: nav, search, preview strip, the rows and their controls, drawn from the schema.
     .target(name: "SettingsUI", dependencies: ["SettingsModel", "DesignSystem", "WordsModel", "WorkspaceModel", "SidebarUI", "AuxModel", "AuxWindows", "FontPickerModel", "FontPickerUI"]),
     .testTarget(name: "SettingsTests", dependencies: ["SettingsModel", "SettingsUI", "DesignSystem", "FontPickerModel", "FontPickerUI"]),

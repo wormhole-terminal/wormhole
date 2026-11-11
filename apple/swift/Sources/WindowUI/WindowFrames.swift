@@ -27,7 +27,7 @@ public enum WindowFrames {
 
     private static func area(of screen: NSScreen) -> DisplayArea {
         let visible = flipped(screen.visibleFrame)
-        let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber // text: AppKit key
         return DisplayArea(
             id: number.map { UInt64($0.uint32Value) } ?? 0, x: visible.minX, y: visible.minY, width: visible.width,
             height: visible.height)

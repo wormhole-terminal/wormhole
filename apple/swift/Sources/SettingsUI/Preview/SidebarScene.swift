@@ -5,6 +5,7 @@
 import DesignSystem
 import SettingsModel
 import SwiftUI
+import WordsModel
 
 struct SidebarScene: View {
     let model: SettingsModel
@@ -13,21 +14,24 @@ struct SidebarScene: View {
 
     private struct Sample { let name: String, detail: String, state: AgentState }
     enum AgentState { case working, needs, done }
-    private static let samples = [
-        Sample(name: "Rate limits", detail: "Working · 4m", state: .working),
-        Sample(name: "Flaky login test", detail: "Needs input · Allow edit?", state: .needs),
-        Sample(name: "Release notes", detail: "Finished · 1m", state: .done),
-    ]
+    private static var samples: [Sample] { [
+        Sample(name: "Rate limits", detail: "\(Words.text("settings-menu-bar-preview-working", fallback: "Working")) · 4m", state: .working),
+        Sample(name: "Flaky login test", detail: "\(Words.text("settings-menu-bar-preview-needs-input", fallback: "Needs input")) · Allow edit?", state: .needs),
+        Sample(name: "Release notes", detail: "\(Words.text("settings-menu-bar-preview-finished", fallback: "Finished")) · 1m", state: .done),
+    ] }
     /// Coding agents' page: the list as agents drive it, in the density in force.
-    private static let agentSamples = [
-        Sample(name: "Claude Code", detail: "Working · 4m", state: .working),
-        Sample(name: "Codex", detail: "Needs input · Allow edit?", state: .needs),
-        Sample(name: "Gemini CLI", detail: "Finished · 1m", state: .done),
-    ]
-    private static let densities: [(value: String, label: String, row: CGFloat, tile: CGFloat)] = [
-        ("regular", "Regular", Metric.rowTwoLine + 4, Metric.tile), ("compact", "Compact", 32, Metric.tileMini),
-        ("dense", "Dense", 26, Metric.tileSmall),
-    ]
+    private static var agentSamples: [Sample] { [
+        Sample(name: "Claude Code", detail: "\(Words.text("settings-menu-bar-preview-working", fallback: "Working")) · 4m", state: .working),
+        Sample(name: "Codex", detail: "\(Words.text("settings-menu-bar-preview-needs-input", fallback: "Needs input")) · Allow edit?", state: .needs),
+        Sample(name: "Gemini CLI", detail: "\(Words.text("settings-menu-bar-preview-finished", fallback: "Finished")) · 1m", state: .done),
+    ] }
+    private static var densities: [(value: String, label: String, row: CGFloat, tile: CGFloat)] {
+        [
+            ("regular", Words.text("settings-window-preview-density-regular", fallback: "Regular"), Metric.rowTwoLine + 4, Metric.tile),
+            ("compact", Words.text("settings-window-preview-density-compact", fallback: "Compact"), 32, Metric.tileMini),
+            ("dense", Words.text("settings-window-preview-density-dense", fallback: "Dense"), 26, Metric.tileSmall),
+        ]
+    }
 
     var body: some View {
         let t = PreviewTheme.tokens(model)
@@ -48,7 +52,7 @@ struct SidebarScene: View {
     private func cell(_ t: ThemeTokens, _ d: (value: String, label: String, row: CGFloat, tile: CGFloat), _ isCurrent: Bool) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             VStack(alignment: .leading, spacing: 0) {
-                Text("Release 1.2").font(.system(size: 12, weight: .semibold)).foregroundStyle(t.textPrimary)
+                Text("Release 1.2").font(.system(size: 12, weight: .semibold)).foregroundStyle(t.textPrimary) // text: sample group
                 if d.value == "regular" { Text("~/Projects/wormhole").font(.system(size: 11)).foregroundStyle(t.textMuted) }
             }
             .padding(.horizontal, Space._2).padding(.vertical, Space._1)

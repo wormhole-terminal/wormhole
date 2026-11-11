@@ -1,6 +1,7 @@
 // One result of the palette: what it is called, what leads it, the words beside it, its key and what it does.
 
 import Foundation
+import WordsModel
 import WorkspaceModel
 
 /// What stands in a result's lead column: a terminal's status, or an icon (an SF Symbol name).
@@ -17,17 +18,22 @@ public enum ActionSection: Int, Sendable, CaseIterable {
 
     public var title: String {
         switch self {
-        case .terminal: "Terminal"
-        case .view: "View"
-        case .app: "App"
-        case .profiles: "Profiles"
+        case .terminal: Words.text("palette-section-terminal", fallback: "Terminal")
+        case .view: Words.text("palette-section-view", fallback: "View")
+        case .app: Words.text("palette-section-app", fallback: "App")
+        case .profiles: Words.text("palette-section-profiles", fallback: "Profiles")
         }
     }
 
-    /// The section the core names by its title.
+    /// The section the core names by its title (its English, whatever language the interface is in).
     public init?(title: String) {
-        guard let found = Self.allCases.first(where: { $0.title == title }) else { return nil }
-        self = found
+        switch title {
+        case "Terminal": self = .terminal // text: the core's section name, matched not shown
+        case "View": self = .view
+        case "App": self = .app
+        case "Profiles": self = .profiles
+        default: return nil
+        }
     }
 }
 

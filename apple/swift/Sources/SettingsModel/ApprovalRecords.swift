@@ -15,7 +15,7 @@ public struct ApprovalRecord: Sendable, Equatable, Identifiable {
     /// The registry agent it is (`claude`), for its tile; nil for any other program.
     public let agent: String?
 
-    public var id: String { "\(isStored ? "stored" : "held")-\(number)" }
+    public var id: String { "\(isStored ? "stored" : "held")-\(number)" } // text: an id
 
     public init(number: UInt64, isStored: Bool, label: String, detail: String, location: String = "", allowed: [String] = [], agent: String? = nil) {
         (self.number, self.isStored, self.label, self.detail, self.location, self.allowed, self.agent) =

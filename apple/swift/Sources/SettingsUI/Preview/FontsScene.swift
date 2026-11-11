@@ -18,10 +18,10 @@ struct FontsScene: View {
         let font = FontFace.font(
             family, size: size, ligatures: model.value("font_ligatures").bool ?? true, monospacedFallback: true)
         VStack(alignment: .leading, spacing: max(0, size * (height - 1.2))) {
-            Text("$ cargo test --release").foregroundStyle(t.terminal.foreground.color)
-            Text("test result: ok. 412 passed").foregroundStyle(t.terminal.ansi[2].color)
-            Text("fn map(x: &str) -> Option<u8> {").foregroundStyle(t.terminal.ansi[4].color)
-            Text("    x.parse().ok() // != == => -> >=").foregroundStyle(t.terminal.foreground.color)
+            Text("$ cargo test --release").foregroundStyle(t.terminal.foreground.color) // text: sample terminal output
+            Text("test result: ok. 412 passed").foregroundStyle(t.terminal.ansi[2].color) // text: sample terminal output
+            Text("fn map(x: &str) -> Option<u8> {").foregroundStyle(t.terminal.ansi[4].color) // text: sample code
+            Text("    x.parse().ok() // != == => -> >=").foregroundStyle(t.terminal.foreground.color) // text: sample code
             Text("}").foregroundStyle(t.terminal.ansi[4].color)
         }
         .font(font)

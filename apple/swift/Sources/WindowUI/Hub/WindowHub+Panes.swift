@@ -61,8 +61,8 @@ extension WindowHub {
     /// One line of how the panes stand, for the control folder's `state`.
     public var paneState: String {
         let panes = state.panes
-        return "panes=\(panes.order.map(String.init).joined(separator: ",")) focused=\(panes.focused.map(String.init) ?? "none") "
-            + "zoomed=\(panes.zoomed.map(String.init) ?? "none") cover=\(panel.cover.map { "\($0)" } ?? "none")"
+        return "panes=\(panes.order.map(String.init).joined(separator: ",")) focused=\(panes.focused.map(String.init) ?? "none") " // text: control state line
+            + "zoomed=\(panes.zoomed.map(String.init) ?? "none") cover=\(panel.cover.map { "\($0)" } ?? "none")" // text: control state line
     }
 }
 

@@ -4,6 +4,7 @@
 import DesignSystem
 import PaletteModel
 import SwiftUI
+import WordsModel
 
 struct PaletteFooterView: View {
     let hints: [KeyHint]
@@ -25,12 +26,13 @@ struct PaletteFooterView: View {
 
     @ViewBuilder private var trailingText: some View {
         switch trailing {
-        case .count(let n): Text(n == 1 ? "1 result" : "\(n) results")
+        case .count(let n):
+            Text(Words.text("palette-results", ["count": .whole(n)], fallback: n == 1 ? "1 result" : "\(n) results"))
         case .actionsHint:
             HStack(spacing: Space._1) {
-                Text("Type")
+                Text(Words.text("palette-actions-hint-type", fallback: "Type"))
                 Text(">").font(.system(size: TextRole.caption.size, design: .monospaced)).foregroundStyle(tokens.textPrimary)
-                Text("for actions")
+                Text(Words.text("palette-actions-hint-for-actions", fallback: "for actions"))
             }
         case .none: EmptyView()
         }

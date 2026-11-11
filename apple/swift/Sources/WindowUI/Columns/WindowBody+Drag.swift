@@ -4,6 +4,7 @@
 // to ask, resolves the same drag with the local copy of the rule (`ColumnResize`).
 
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 extension WindowBody {
@@ -11,7 +12,7 @@ extension WindowBody {
         let isSidebar = edge == .sidebar
         let width = isSidebar ? fit.sidebarWidth : fit.panelWidth
         return ColumnHandle(
-            label: isSidebar ? "Resize sidebar" : "Resize panel", width: width,
+            label: isSidebar ? Words.text("window-resize-sidebar", fallback: "Resize sidebar") : Words.text("window-resize-panel", fallback: "Resize panel"), width: width,
             drag: { move(edge, pointer: $0, window: window, from: width) },
             reset: { reset(edge) },
             step: { delta in set(edge, width: width + (isSidebar ? delta : -delta), window: window) }
@@ -45,7 +46,7 @@ extension WindowBody {
         guard !dragCancelled else { return }
         if dragBefore == nil { dragBefore = DragBefore(edge: edge, width: width, widths: widths) }
         let extent = edge == .sidebar ? pointer : window - pointer
-        let closing = edge == .sidebar ? "Hide" : "Close"
+        let closing = edge == .sidebar ? Words.text("window-resize-hide", fallback: "Hide") : Words.text("window-resize-close", fallback: "Close")
         if let answer = hub.store.edgeDrag(edge.column, extent: Double(extent)) {
             // Past the point of no return the column stays as it was until the pointer is let go.
             if answer.open { send(.dragEdge(edge.column, extent: Double(extent))) }

@@ -4,6 +4,7 @@
 // Writes are sanitised on the Rust side, so a caller reads back what stuck.
 
 import FontPickerModel
+import WordsModel
 
 @MainActor
 public protocol SettingsBackend: AnyObject {
@@ -115,13 +116,26 @@ extension SettingsHost {
     public func shellChoices() -> [ShellChoice] { [] }
     public func worktreeCaption(base: String) -> String? { nil }
     public func isDefaultTerminal() -> Bool? { nil }
-    public func othersHead(count: Int) -> String { "\(count) more agent\(count == 1 ? "" : "s") Wormhole recognises" }
-    public func importSelectedLine(selected: Int, total: Int) -> String { "\(selected) of \(total) selected" }
+    public func othersHead(count: Int) -> String {
+        Words.text(
+            "settings-agents-others-head", ["count": .whole(count)],
+            fallback: "\(count) more agent\(count == 1 ? "" : "s") Wormhole recognises")
+    }
+    public func importSelectedLine(selected: Int, total: Int) -> String {
+        Words.text(
+            "settings-import-selected", ["selected": .whole(selected), "total": .whole(total)], fallback: "\(selected) of \(total) selected")
+    }
     public func previewNote(section: String) -> String? { nil }
-    public func resetQuestion(count: Int) -> String { "Reset \(count) changed setting\(count == 1 ? "" : "s") to their default? Your terminals, notes and themes are kept." }
+    public func resetQuestion(count: Int) -> String {
+        Words.text(
+            "settings-advanced-reset-question", ["count": .whole(count)],
+            fallback: "Reset \(count) changed setting\(count == 1 ? "" : "s") to their default? Your terminals, notes and themes are kept.")
+    }
     public func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String? { nil }
     public func updateCountWait() -> String? { nil }
-    public func importTheme(path: String) -> String? { "Themes can't be imported in this build." }
+    public func importTheme(path: String) -> String? {
+        Words.text("settings-import-theme-unavailable", fallback: "Themes can't be imported in this build.")
+    }
     public func themeTrashPlan(_ value: String) -> ThemeTrashQuestion? { nil }
     public func trashTheme(_ value: String) -> Bool { false }
     public func saveProfile(_ form: ProfileForm) -> String? { Self.noProfiles }
@@ -129,7 +143,7 @@ extension SettingsHost {
     public func applyImport(_ id: String, ticked: [Int], shown: Int) -> (text: String, failed: Bool) { (Self.noProfiles, true) }
     public func removeProfile(_ id: String) -> String? { Self.noProfiles }
     private static var noProfiles: String {
-        String(localized: "settings-profile-unavailable", defaultValue: "Profiles are not available in this build.")
+        Words.text("settings-profile-unavailable", fallback: "Profiles are not available in this build.")
     }
 }
 

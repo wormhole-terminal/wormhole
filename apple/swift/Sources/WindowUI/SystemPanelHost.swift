@@ -103,7 +103,7 @@ final class SystemPanelHost: PanelHost {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "Choose"
+        panel.prompt = Words.text("files-choose-prompt", fallback: "Choose")
         return await withCheckedContinuation { continuation in
             panel.begin { continuation.resume(returning: $0 == .OK ? panel.url?.path : nil) }
         }

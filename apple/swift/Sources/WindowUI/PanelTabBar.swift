@@ -7,6 +7,7 @@
 import DesignSystem
 import PanelUI
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 struct PanelTabBar: View {
@@ -41,14 +42,14 @@ struct PanelTabBar: View {
         .frame(height: Chrome.titleHeight)
         .background(WindowDragArea())
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Right panel")
+        .accessibilityLabel(Words.text("window-panel", fallback: "Right panel"))
     }
 }
 
 extension PanelTabBar {
     /// "2 of 6", and the count where the tab has one ("Changes: 3 files" is the tab's own label's business).
     fileprivate func spoken(_ tab: PanelTab, position: Int) -> String {
-        let place = "\(position + 1) of \(tabs.count)"
+        let place = Words.text("window-tab-position", ["position": .whole(position + 1), "total": .whole(tabs.count)], fallback: "\(position + 1) of \(tabs.count)")
         return badges[tab].map { "\(place), \($0)" } ?? place
     }
 }

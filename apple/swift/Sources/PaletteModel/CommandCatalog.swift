@@ -3,6 +3,7 @@
 // terminals and the folders they are in are results of their own.
 
 import Foundation
+import WordsModel
 import WorkspaceModel
 
 /// A setting the settings index found (or a recent one): where it is, what it is now.
@@ -71,7 +72,7 @@ public enum CommandCatalog {
     /// A terminal with another shell: named like New terminal, found by what it runs too.
     private static func command(_ shell: PaletteShell) -> Command {
         var command = Command(
-            id: "shell-\(shell.key)", title: "New terminal: \(shell.name)", detail: shell.commandLine, lead: .symbol("plus"),
+            id: "shell-\(shell.key)", title: Words.text("palette-new-terminal-with", ["shell": .text(shell.name)], fallback: "New terminal: \(shell.name)"), detail: shell.commandLine, lead: .symbol("plus"),
             target: .newTerminalWith(shell.key), searchText: [shell.commandLine], section: .terminal)
         command.detailIsCode = true
         return command
@@ -81,15 +82,24 @@ public enum CommandCatalog {
     /// move this window to each it is not in (core's palette, in that order).
     private static func profileCommands(_ profiles: [PaletteProfile]) -> [Command] {
         guard profiles.count > 1 else { return [] }
-        let kinds: [(Command.ProfileCommand, String, String, (PaletteProfile) -> Bool, String?)] = [
-            (.switchTo, "Switch to", "person.crop.circle", { !$0.isShown }, "every window switches"),
-            (.openWindowIn, "Open window in", "macwindow", { _ in true }, nil),
-            (.moveWindowTo, "Move this window to", "arrow.left.arrow.right", { !$0.isHere }, nil),
+        let kinds: [(Command.ProfileCommand, (String) -> String, String, (PaletteProfile) -> Bool, String?)] = [
+            (
+                .switchTo, { Words.text("palette-profile-switch", ["profile": .text($0)], fallback: "Switch to \($0)") },
+                "person.crop.circle", { !$0.isShown }, Words.text("palette-profile-switch-detail", fallback: "every window switches")
+            ),
+            (
+                .openWindowIn, { Words.text("palette-profile-open-window", ["profile": .text($0)], fallback: "Open window in \($0)") },
+                "macwindow", { _ in true }, nil
+            ),
+            (
+                .moveWindowTo, { Words.text("palette-profile-move-window", ["profile": .text($0)], fallback: "Move this window to \($0)") },
+                "arrow.left.arrow.right", { !$0.isHere }, nil
+            ),
         ]
-        return kinds.flatMap { kind, words, symbol, offered, detail in
+        return kinds.flatMap { kind, title, symbol, offered, detail in
             profiles.enumerated().filter { offered($0.element) }.map { index, profile in
                 Command(
-                    id: "profile-\(words)-\(index)", title: "\(words) \(profile.name)", detail: detail, lead: .symbol(symbol),
+                    id: "profile-\(kind)-\(index)", title: title(profile.name), detail: detail, lead: .symbol(symbol),
                     target: .profile(kind, index), section: .profiles)
             }
         }
@@ -108,17 +118,23 @@ public enum CommandCatalog {
     /// how many files changed.
     private static func detail(of action: String, selected: TerminalSummary?) -> String? {
         switch action {
-        case "newTerminal": selected?.folder.map { "in \($0)" }
-        case "openFolder": "start a terminal in another folder"
+        case "newTerminal": selected?.folder.map { Words.text("palette-detail-new-terminal-in", ["folder": .text($0)], fallback: "in \($0)") }
+        case "openFolder": Words.text("palette-detail-open-folder", fallback: "start a terminal in another folder")
         case "showChanges":
-            selected.flatMap { $0.repo == nil ? nil : "\($0.changeCount) file\($0.changeCount == 1 ? "" : "s") changed" }
+            selected.flatMap {
+                $0.repo == nil
+                    ? nil
+                    : Words.text(
+                        "palette-detail-files-changed", ["count": .whole($0.changeCount)],
+                        fallback: "\($0.changeCount) file\($0.changeCount == 1 ? "" : "s") changed")
+            }
         default: nil
         }
     }
 
     private static func command(_ setting: PaletteSetting) -> Command {
         Command(
-            id: "setting-\(setting.id)", title: setting.label, detail: "Settings › \(setting.section)", group: .settings,
+            id: "setting-\(setting.id)", title: setting.label, detail: Words.text("palette-detail-setting", ["section": .text(setting.section)], fallback: "Settings › \(setting.section)"), group: .settings,
             lead: .symbol(setting.icon), trailing: setting.value, target: .setting(setting.id), match: setting.match)
     }
 
@@ -160,7 +176,7 @@ public enum CommandCatalog {
             let origin = parent.isEmpty ? nil : (path.hasPrefix("/") ? "/" : "") + parent
             return Command(
                 id: "folder-\(path)", title: name,
-                detail: [origin, count == 0 ? nil : "\(count) terminal\(count == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " · "),
+                detail: [origin, count == 0 ? nil : Words.text("palette-detail-terminals", ["count": .whole(count)], fallback: "\(count) terminal\(count == 1 ? "" : "s")")].compactMap { $0 }.joined(separator: " · "),
                 group: .folders, lead: .symbol("folder"), target: .folder(path))
         }
     }

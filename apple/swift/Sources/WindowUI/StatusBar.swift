@@ -5,6 +5,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 struct StatusBar: View {
@@ -35,10 +36,10 @@ struct StatusBar: View {
                         StatusDot(.attention)
                         Text(waiting.title).lineLimit(1)
                         if let since = waiting.since, let waited = waited(since) {
-                            WaitedWords(prefix: detail.words ? "needs input · " : "", first: waited, waited: { self.waited(since) })
+                            WaitedWords(prefix: detail.words ? Words.text("window-state-needs-input", fallback: "needs input") + " · " : "", first: waited, waited: { self.waited(since) })
                                 .foregroundStyle(colours.attentionText)
                         } else if detail.words {
-                            Text("needs input").foregroundStyle(colours.attentionText)
+                            Text(Words.text("window-state-needs-input", fallback: "needs input")).foregroundStyle(colours.attentionText)
                         }
                     }
                 }
@@ -63,7 +64,10 @@ struct StatusBar: View {
             }
             if let selected, let size, detail.size {
                 separated { Text("\(selected.title) · \(size)") }
-                    .accessibilityLabel("\(selected.title), terminal size \(size)")
+                    .accessibilityLabel(
+                        Words.text(
+                            "window-status-size-spoken", ["title": .text(selected.title), "size": .text(size)],
+                            fallback: "\(selected.title), terminal size \(size)"))
             }
         }
         .font(TextRole.caption.font.weight(.medium))
@@ -75,7 +79,7 @@ struct StatusBar: View {
         .overlay(alignment: .top) { if !look.glassOn { colours.rule.frame(height: colours.borderWidth) } }
         .animation(Motion.fade, value: summary)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Status bar")
+        .accessibilityLabel(Words.text("window-status-bar", fallback: "Status bar"))
     }
 
     /// An item read, not clicked, after a hairline.

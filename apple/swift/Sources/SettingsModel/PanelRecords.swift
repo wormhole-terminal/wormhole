@@ -75,41 +75,41 @@ public struct PanelRecords: Sendable, Equatable {
     /// Sample records for previews and tests, until the FFI delivers real ones.
     public static let sample = PanelRecords(
         agents: [
-            AgentRecord(id: "claude", name: "Claude Code", detail: "~/.claude · status hooks installed", state: .ready, hooks: .remove),
-            AgentRecord(id: "codex", name: "Codex", detail: "~/.codex · hooks need repair", state: .needsRepair, hooks: .repair),
-            AgentRecord(id: "gemini", name: "Gemini CLI", detail: "Found on PATH · not set up", state: .statusFromOutput, hooks: .install),
-            AgentRecord(id: "aider", name: "Aider", detail: "Not on PATH", state: .notInstalled),
+            AgentRecord(id: "claude", name: "Claude Code", detail: "~/.claude · status hooks installed", state: .ready, hooks: .remove), // text: sample record
+            AgentRecord(id: "codex", name: "Codex", detail: "~/.codex · hooks need repair", state: .needsRepair, hooks: .repair), // text: sample record
+            AgentRecord(id: "gemini", name: "Gemini CLI", detail: "Found on PATH · not set up", state: .statusFromOutput, hooks: .install), // text: sample record
+            AgentRecord(id: "aider", name: "Aider", detail: "Not on PATH", state: .notInstalled), // text: sample record
         ],
         imports: [
-            ImportRecord(id: "ghostty", app: "Ghostty", summary: "Font, theme, 14 shortcuts"),
-            ImportRecord(id: "iterm", app: "iTerm2", summary: "Font, colours, scrollback"),
+            ImportRecord(id: "ghostty", app: "Ghostty", summary: "Font, theme, 14 shortcuts"), // text: sample record
+            ImportRecord(id: "iterm", app: "iTerm2", summary: "Font, colours, scrollback"), // text: sample record
         ],
-        profile: ProfileRecord(name: "Default", startFolder: "~", gitName: "", gitEmail: ""))
+        profile: ProfileRecord(name: "Default", startFolder: "~", gitName: "", gitEmail: "")) // text: sample record
 
     /// The same with the rows the live pages draw from the disk: the `wh` script, two approvals, the profiles and a project
     /// in front that sets the terminal font.
     public static let live: PanelRecords = {
         var records = PanelRecords.sample
         records.commandLine = CommandLineToolRecord(
-            state: .installed, headline: "wh in any terminal. Installed at ~/.local/bin/wh",
-            note: "The installed wh runs another copy of Wormhole. Update points it at this one.", current: false,
+            state: .installed, headline: "wh in any terminal. Installed at ~/.local/bin/wh", // text: sample record
+            note: "The installed wh runs another copy of Wormhole. Update points it at this one.", current: false, // text: sample record
             folder: "/Users/x/.local/bin")
         records.commandLinePath = CommandLinePathNote(
-            verdict: .off, text: "~/.local/bin is not on the PATH of a new terminal. Add this line to ~/.zshrc:", line: "export PATH=\"$HOME/.local/bin:$PATH\"")
+            verdict: .off, text: "~/.local/bin is not on the PATH of a new terminal. Add this line to ~/.zshrc:", line: "export PATH=\"$HOME/.local/bin:$PATH\"") // text: sample record
         records.approvals = [
             ApprovalRecord(
-                number: 4, isStored: true, label: "Claude Code", detail: "Always · Signed by Anthropic · last used 3 min ago",
-                location: "~/.local/bin/claude", allowed: ["Read", "Type", "Run"], agent: "claude"),
-            ApprovalRecord(number: 9, isStored: false, label: "Scripts", detail: "While it runs", allowed: ["Read"]),
+                number: 4, isStored: true, label: "Claude Code", detail: "Always · Signed by Anthropic · last used 3 min ago", // text: sample record
+                location: "~/.local/bin/claude", allowed: ["Read", "Type", "Run"], agent: "claude"), // text: sample record
+            ApprovalRecord(number: 9, isStored: false, label: "Scripts", detail: "While it runs", allowed: ["Read"]), // text: sample record
         ]
         records.profiles = [
-            ProfileChoice(id: "default", name: "Default", isDefault: true),
-            ProfileChoice(id: "work", name: "Work", isActive: true, deleteQuestion: "Delete Work? Its terminals, notes, tasks and settings are removed.", copyLabel: "A copy of Work"),
+            ProfileChoice(id: "default", name: "Default", isDefault: true), // text: sample record
+            ProfileChoice(id: "work", name: "Work", isActive: true, deleteQuestion: "Delete Work? Its terminals, notes, tasks and settings are removed.", copyLabel: "A copy of Work"), // text: sample record
         ]
         records.project = ProjectSettingsMark(
             name: "api", folder: ".wormhole", root: "/p/api", entries: ["font-terminal"],
-            note: "Set by api/.wormhole/config.json while one of its terminals is in front; yours is kept")
-        records.problem = "Couldn't install wh: another wh is at /usr/local/bin/wh; Wormhole leaves it alone"
+            note: "Set by api/.wormhole/config.json while one of its terminals is in front; yours is kept") // text: sample record
+        records.problem = "Couldn't install wh: another wh is at /usr/local/bin/wh; Wormhole leaves it alone" // text: sample record
         return records
     }()
 }

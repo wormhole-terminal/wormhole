@@ -42,7 +42,7 @@ struct MenuBarScene: View {
             Image(systemName: "wifi").font(.system(size: Metric.glyph))
             Image(systemName: "battery.75percent").font(.system(size: Metric.glyph))
             if on { item(t, icon: icon) }
-            Text("Fri 9:41").font(.system(size: 13))
+            Text("Fri 9:41").font(.system(size: 13)) // text: a sample clock
         }
         .foregroundStyle(t.textPrimary)
         .padding(.horizontal, Space._3).frame(height: 24).frame(maxWidth: 320)

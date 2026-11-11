@@ -4,6 +4,7 @@
 import DesignSystem
 import PaletteModel
 import SwiftUI
+import WordsModel
 
 struct SheetBody: View {
     let found: FilteredShortcuts
@@ -13,7 +14,7 @@ struct SheetBody: View {
 
     var body: some View {
         if found.shown == 0 {
-            Text("No shortcut matches")
+            Text(Words.text("palette-sheet-none", fallback: "No shortcut matches"))
                 .font(.system(size: TextRole.body.size))
                 .foregroundStyle(tokens.textMuted)
                 .padding(.horizontal, OverlayMetrics.sheetMargin)

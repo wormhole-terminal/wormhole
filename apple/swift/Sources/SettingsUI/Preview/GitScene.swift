@@ -45,15 +45,15 @@ struct GitScene: View {
 
     private func diff(_ t: ThemeTokens, rows: [Kind]) -> some View {
         VStack(spacing: 0) {
-            row(t, "@@ fn rows()", t.diffHunkBackground, t.diffHunkText)
+            row(t, "@@ fn rows()", t.diffHunkBackground, t.diffHunkText) // text: sample diff
             ForEach(rows, id: \.self) { kind in
                 switch kind {
-                case .removed: row(t, "- let n = 4;", t.diffRemovedBackground, t.textPrimary)
-                case .added: row(t, "+ let n = 8;", t.diffAddedBackground, t.textPrimary)
-                case .addedMore: row(t, "+ rows.shrink();", t.diffAddedBackground, t.textPrimary)
+                case .removed: row(t, "- let n = 4;", t.diffRemovedBackground, t.textPrimary) // text: sample diff
+                case .added: row(t, "+ let n = 8;", t.diffAddedBackground, t.textPrimary) // text: sample diff
+                case .addedMore: row(t, "+ rows.shrink();", t.diffAddedBackground, t.textPrimary) // text: sample diff
                 }
             }
-            row(t, "  rows.len()", .clear, t.textMuted)
+            row(t, "  rows.len()", .clear, t.textMuted) // text: sample diff
             Spacer(minLength: 0)
         }
         .background(t.terminal.background.color)

@@ -4,6 +4,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 extension Activity {
@@ -21,11 +22,11 @@ extension Activity {
     var stateWords: String? {
         switch self {
         case .idle: nil
-        case .exited: "exited"
-        case .working: "working"
-        case .needsInput: "needs you"
-        case .finished: "done"
-        case .failed: "failed"
+        case .exited: Words.text("window-state-exited", fallback: "exited")
+        case .working: Words.text("window-state-working", fallback: "working")
+        case .needsInput: Words.text("window-state-needs-you", fallback: "needs you")
+        case .finished: Words.text("window-state-done", fallback: "done")
+        case .failed: Words.text("window-state-failed", fallback: "failed")
         }
     }
 

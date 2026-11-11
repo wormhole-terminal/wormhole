@@ -6,6 +6,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 struct GroupHeadView: View {
@@ -36,7 +37,7 @@ struct GroupHeadView: View {
                 if head.isFolded { FoldedSummary(tiles: section.tiles, count: section.terminalCount, alert: section.alert).transition(.opacity) }
                 if hovering && !isEmpty { HeadAddButton { context.newInGroup(head.id) } }
                 if isEmpty {
-                    Text("No terminals").font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
+                    Text(Words.text("sidebar-group-empty", fallback: "No terminals")).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
                     HeadAddButton { context.newInGroup(head.id) }
                 } else {
                     HeadChevron(isFolded: head.isFolded)
@@ -61,7 +62,7 @@ struct GroupHeadView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(head.spoken)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint("Folds or opens the group")
+        .accessibilityHint(Words.text("sidebar-group-head-hint", fallback: "Folds or opens the group"))
     }
 
     @ViewBuilder private var label: some View {

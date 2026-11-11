@@ -4,6 +4,7 @@
 import DesignSystem
 import PaletteModel
 import SwiftUI
+import WordsModel
 
 public struct ShortcutSheetView: View {
     public let dismiss: @MainActor () -> Void
@@ -57,6 +58,6 @@ public struct ShortcutSheetView: View {
             .overlayCard()
             .animation(OverlayMotion(reduceMotion: reduceMotion).resize, value: layout)
         }
-        .accessibilityLabel(Text("Keyboard shortcuts"))
+        .accessibilityLabel(Text(Words.text("palette-sheet-title", fallback: "Keyboard shortcuts")))
     }
 }

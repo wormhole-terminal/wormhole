@@ -5,6 +5,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 struct ColumnHandle: View {
     let label: String
@@ -28,7 +29,7 @@ struct ColumnHandle: View {
             .onTapGesture(count: 2, perform: reset)
             .accessibilityElement()
             .accessibilityLabel(label)
-            .accessibilityValue("\(Int(width)) points")
+            .accessibilityValue(Words.text("window-column-width", ["points": .whole(Int(width))], fallback: "\(Int(width)) points"))
             .accessibilityAdjustableAction { direction in
                 switch direction {
                 case .increment: step(Self.keyStep)

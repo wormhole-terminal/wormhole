@@ -10,7 +10,8 @@ enum ProjectsText {
         Words.text("settings-projects-all-projects-defaults", fallback: "All projects (defaults)")
     }
     static func missing(_ folder: String) -> String {
-        Words.text("settings-projects-missing-folder", fallback: "\(folder) has no .wormhole folder anymore.")
+        Words.text(
+            "settings-projects-missing-folder", ["folder": .text(folder)], fallback: "\(folder) has no .wormhole folder anymore.")
     }
     static var byDefault: String { Words.text("settings-projects-use-from-projects-by-default", fallback: "Use from projects by default") }
     static var defaultsNote: String {
@@ -46,6 +47,6 @@ enum ProjectsText {
     static var problems: String { Words.text("settings-projects-problems", fallback: "Problems") }
     static var openTerminal: String { Words.text("settings-projects-open-in-a-new-terminal", fallback: "Open in a new terminal") }
     static func showInFinder(_ folder: String) -> String {
-        Words.text("settings-projects-show-in-finder", fallback: "Show \(folder) in Finder")
+        Words.text("settings-projects-show-in-finder", ["folder": .text(folder)], fallback: "Show \(folder) in Finder")
     }
 }

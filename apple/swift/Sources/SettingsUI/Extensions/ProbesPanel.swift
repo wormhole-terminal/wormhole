@@ -50,7 +50,7 @@ private struct ProbesList: View {
         VStack(alignment: .leading, spacing: Space._2) {
             Image(Icon.extensions).font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
             Text(ExtensionsText.noneTitle).textRole(.body, weight: .semibold).foregroundStyle(tokens.textPrimary)
-            Text(ExtensionsText.noneWhere(list.folder) + " " + ExtensionsText.noneNew("wh probe new"))
+            Text(ExtensionsText.noneWhere(list.folder) + " " + ExtensionsText.noneNew("wh probe new")) // text: shell command
                 .textRole(.caption).foregroundStyle(tokens.textMuted)
             ActionButton(title: ExtensionsText.showFolder, symbol: Icon.folder.rawValue) { Self.reveal(list.folderPath) }.padding(.top, Space._1)
         }

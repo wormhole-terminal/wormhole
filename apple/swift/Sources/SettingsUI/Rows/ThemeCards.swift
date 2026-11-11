@@ -56,8 +56,10 @@ struct ThemeCards: View {
     /// The disclosure under the cards: a row per hidden theme with Show.
     private var hiddenList: some View {
         VStack(alignment: .leading, spacing: Space._2) {
-            LinkButton(title: Words.text("settings-appearance-hidden-themes", fallback: "Hidden themes (\(hidden.count))")
-                .replacingOccurrences(of: "{ $count }", with: "\(hidden.count)")) { hiddenOpen.toggle() }
+            LinkButton(
+                title: Words.text(
+                    "settings-appearance-hidden-themes", ["count": .whole(hidden.count)], fallback: "Hidden themes (\(hidden.count))")
+            ) { hiddenOpen.toggle() }
             if hiddenOpen {
                 ForEach(hidden, id: \.self) { name in
                     HStack {
@@ -86,10 +88,17 @@ struct ThemeCards: View {
         let shown = showAll || !filter.isEmpty ? all : Array(all.prefix(Self.collapsed))
         return VStack(alignment: .leading, spacing: Space._2) {
             HStack {
-                Text(appearance == .dark ? "In Dark Mode" : "In Light Mode").textRole(.label).foregroundStyle(tokens.textMuted)
+                Text(
+                    appearance == .dark
+                        ? Words.text("settings-appearance-in-dark-mode", fallback: "In Dark Mode") : Words.text("settings-appearance-in-light-mode", fallback: "In Light Mode")
+                ).textRole(.label).foregroundStyle(tokens.textMuted)
                 Spacer()
                 if all.count > Self.collapsed, filter.isEmpty {
-                    LinkButton(title: showAll ? "Show fewer" : "Show all \(all.count)") { showAll.toggle() }
+                    LinkButton(
+                        title: showAll
+                            ? Words.text("settings-appearance-show-fewer", fallback: "Show fewer")
+                            : Words.text("settings-appearance-show-all-themes", ["total": .whole(all.count)], fallback: "Show all \(all.count)")
+                    ) { showAll.toggle() }
                 }
             }
             LazyVGrid(columns: columns, spacing: Space._3) {

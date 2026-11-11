@@ -3,6 +3,7 @@
 // ever lands on a result.
 
 import Foundation
+import WordsModel
 import WorkspaceModel
 
 public enum PaletteRow: Sendable, Equatable, Identifiable {
@@ -49,7 +50,7 @@ public enum PaletteRows {
             case (.settings, true): recentSettings(commands, recent: recent)
             default: found(scope: scope, query: query, commands: commands)
             }
-        return rows.isEmpty ? [.note(query.isEmpty ? "Nothing here yet" : "Nothing matches")] : rows
+        return rows.isEmpty ? [.note(query.isEmpty ? Words.text("palette-empty-nothing-yet", fallback: "Nothing here yet") : Words.text("palette-empty-nothing-matches", fallback: "Nothing matches"))] : rows
     }
 
     /// How many results a query found (the footer's count): every group's whole count.
@@ -67,9 +68,9 @@ public enum PaletteRows {
     private static func suggestions(_ commands: [Command], recent: [String], suggested: [String]) -> [PaletteRow] {
         let lookup = Dictionary(commands.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let recents = recent.compactMap { lookup[$0] }.filter { $0.group != .actions }.prefix(6)
-        var rows: [PaletteRow] = recents.isEmpty ? [] : [.label(title: "Recent", count: nil)] + results(Array(recents))
+        var rows: [PaletteRow] = recents.isEmpty ? [] : [.label(title: Words.text("folder-picker-recent", fallback: "Recent"), count: nil)] + results(Array(recents))
         let actions = suggested.compactMap { lookup["action-\($0)"] }
-        if !actions.isEmpty { rows += [.label(title: "Actions", count: nil)] + results(actions) }
+        if !actions.isEmpty { rows += [.label(title: Words.text("palette-group-actions", fallback: "Actions"), count: nil)] + results(actions) }
         return rows
     }
 
@@ -77,7 +78,9 @@ public enum PaletteRows {
     private static func recentSettings(_ commands: [Command], recent: [String]) -> [PaletteRow] {
         let lookup = Dictionary(commands.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let settings = recent.compactMap { lookup[$0] }.filter { $0.group == .settings }
-        return settings.isEmpty ? [.note("Type to find a setting")] : [.label(title: "Recent", count: nil)] + results(settings)
+        return settings.isEmpty
+            ? [.note(Words.text("palette-empty-type-setting", fallback: "Type to find a setting"))]
+            : [.label(title: Words.text("folder-picker-recent", fallback: "Recent"), count: nil)] + results(settings)
     }
 
     /// The Terminals scope with nothing typed: under who needs input first.
@@ -92,10 +95,12 @@ public enum PaletteRows {
         return rows
     }
 
-    private static let urgency: [(String, [Activity])] = [
-        ("Needs input", [.needsInput]), ("Working", [.working]), ("Finished", [.finished, .failed]),
-        ("Idle", [.idle]),
-    ]
+    private static var urgency: [(String, [Activity])] {
+        [
+            (Words.text("palette-state-needs-input", fallback: "Needs input"), [.needsInput]), (Words.text("palette-state-working", fallback: "Working"), [.working]),
+            (Words.text("palette-state-finished", fallback: "Finished"), [.finished, .failed]), (Words.text("palette-state-idle", fallback: "Idle"), [.idle]),
+        ]
+    }
 
     private static func activity(of command: Command) -> Activity {
         if case .status(let activity) = command.lead { activity } else { .idle }
@@ -109,7 +114,7 @@ public enum PaletteRows {
             return members.isEmpty ? [] : [.label(title: section.title, count: nil)] + results(members)
         }
         let projectActions = commands.filter { if case .projectAction? = $0.target { true } else { false } }
-        let ours: [PaletteRow] = projectActions.isEmpty ? [] : [.projectLabel(project.map { "Project · \($0)" } ?? "Project")] + results(projectActions)
+        let ours: [PaletteRow] = projectActions.isEmpty ? [] : [.projectLabel(project.map { Words.text("palette-project-named", ["project": .text($0)], fallback: "Project · \($0)") } ?? Words.text("palette-project", fallback: "Project"))] + results(projectActions)
         return section(.terminal) + section(.view) + ours + section(.app) + section(.profiles)
     }
 

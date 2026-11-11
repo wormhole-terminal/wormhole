@@ -15,7 +15,7 @@ struct ResultsPage: View {
         PageScaffold(title: SettingsText.results, intro: summary(hits, sections.count), action: { EscHint() }) {
             ForEach(sections) { section in
                 SettingGroup(title: section.title) {
-                    LinkButton(title: Words.text("settings-window-open-section", fallback: "Open \(section.title)"), goes: true) {
+                    LinkButton(title: Words.text("settings-window-open-section", ["section": .text(section.title)], fallback: "Open \(section.title)"), goes: true) {
                         model.show(section.id)
                         model.query = ""
                     }

@@ -65,7 +65,7 @@ public struct SettingsSchema: Sendable {
         let dump = try JSONDecoder().decode(Dump.self, from: json)
         guard dump.format == Self.formatVersion else {
             throw DecodingError.dataCorrupted(
-                .init(codingPath: [], debugDescription: "settings.json format \(dump.format), expected \(Self.formatVersion)"))
+                .init(codingPath: [], debugDescription: "settings.json format \(dump.format), expected \(Self.formatVersion)")) // text: a decoding error, for developers
         }
         (sections, defaults) = (dump.sections, dump.defaults)
     }

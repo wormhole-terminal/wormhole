@@ -5,6 +5,7 @@
 import AppKit
 import DesignSystem
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 struct GroupMenu: View {
@@ -14,7 +15,7 @@ struct GroupMenu: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Button("Rename…") { context.openPopover(head.id) }
+        Button(Words.text("sidebar-menu-rename", fallback: "Rename…")) { context.openPopover(head.id) }
         Divider()
         // The colours as one row of dots, as GPUI's menu draws them (`group_popover.rs`): each picks and closes the menu.
         ControlGroup {
@@ -27,24 +28,24 @@ struct GroupMenu: View {
         }
         .controlGroupStyle(.palette)
         // A colour picked freely is the popover's picker.
-        Toggle("Other colour…", isOn: Binding(get: { head.customColor != nil }, set: { _ in context.openPopover(head.id) }))
-        Toggle("No colour", isOn: Binding(get: { head.color == nil && head.customColor == nil }, set: { _ in context.send(.setGroupColor(head.id, nil)) }))
+        Toggle(Words.text("sidebar-menu-group-colour-other", fallback: "Other colour…"), isOn: Binding(get: { head.customColor != nil }, set: { _ in context.openPopover(head.id) }))
+        Toggle(Words.text("sidebar-menu-group-colour-none", fallback: "No colour"), isOn: Binding(get: { head.color == nil && head.customColor == nil }, set: { _ in context.send(.setGroupColor(head.id, nil)) }))
         Divider()
         folder
         Divider()
-        Button("New terminal in group") { context.newInGroup(head.id) }
-        Button("Ungroup") { context.send(.ungroup(head.id)) }
-        Button("Close group") { context.closeGroup(head.id) }
-        Button(head.isPinned ? "Unpin group" : "Pin group") { context.send(.setGroupPinned(head.id, !head.isPinned)) }
-        Button("Move group to new window") { context.send(.moveGroupToWindow(head.id)) }
+        Button(Words.text("sidebar-menu-group-new-terminal", fallback: "New terminal in group")) { context.newInGroup(head.id) }
+        Button(Words.text("sidebar-menu-group-ungroup", fallback: "Ungroup")) { context.send(.ungroup(head.id)) }
+        Button(Words.text("sidebar-menu-group-close", fallback: "Close group")) { context.closeGroup(head.id) }
+        Button(head.isPinned ? Words.text("sidebar-menu-group-unpin", fallback: "Unpin group") : Words.text("sidebar-menu-group-pin", fallback: "Pin group")) { context.send(.setGroupPinned(head.id, !head.isPinned)) }
+        Button(Words.text("sidebar-menu-group-move-to-window", fallback: "Move group to new window")) { context.send(.moveGroupToWindow(head.id)) }
     }
 
     @ViewBuilder private var folder: some View {
         if let path = head.folder { Text(path) }
-        Button("Set folder…") { Self.choose(for: head.id, send: context.send) }
+        Button(Words.text("sidebar-menu-group-set-folder", fallback: "Set folder…")) { Self.choose(for: head.id, send: context.send) }
         if head.folderPath != nil {
-            Button("Clear folder") { context.send(.setGroupFolder(head.id, nil)) }
-            Toggle("Only terminals in this folder", isOn: Binding(get: { head.onlyInFolder }, set: { context.send(.setOnlyInFolder(head.id, $0)) }))
+            Button(Words.text("sidebar-menu-group-clear-folder", fallback: "Clear folder")) { context.send(.setGroupFolder(head.id, nil)) }
+            Toggle(Words.text("sidebar-group-only-in-folder", fallback: "Only terminals in this folder"), isOn: Binding(get: { head.onlyInFolder }, set: { context.send(.setOnlyInFolder(head.id, $0)) }))
         }
     }
 
@@ -53,7 +54,7 @@ struct GroupMenu: View {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
-        panel.prompt = "Choose"
+        panel.prompt = Words.text("files-choose-prompt", fallback: "Choose")
         if panel.runModal() == .OK, let url = panel.url { send(.setGroupFolder(group, url.path)) }
     }
 }

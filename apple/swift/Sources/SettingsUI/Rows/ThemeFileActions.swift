@@ -31,7 +31,7 @@ struct ImportThemeButton: View {
 
 enum ThemeFiles {
     @MainActor static func chosenFile() -> String? {
-        if let seam = ProcessInfo.processInfo.environment["WORMHOLE_THEME_IMPORT_FILE"], !seam.isEmpty { return seam }
+        if let seam = ProcessInfo.processInfo.environment["WORMHOLE_THEME_IMPORT_FILE"], !seam.isEmpty { return seam } // text: environment variable
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = false

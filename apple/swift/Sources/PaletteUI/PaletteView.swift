@@ -5,6 +5,7 @@
 import DesignSystem
 import PaletteModel
 import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 public struct PaletteView: View {
@@ -77,7 +78,7 @@ public struct PaletteView: View {
         ) { context in
             card(rows: rows, selection: selection, context: context)
         }
-        .accessibilityLabel(Text("Command palette"))
+        .accessibilityLabel(Text(Words.text("palette-title", fallback: "Command palette")))
     }
 
     private func card(rows: [PaletteRow], selection: String?, context: OverlayContext) -> some View {

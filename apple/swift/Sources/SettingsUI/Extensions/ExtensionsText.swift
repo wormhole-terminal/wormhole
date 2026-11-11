@@ -8,11 +8,13 @@ enum ExtensionsText {
     static var looking: String { Words.text("settings-extensions-looking", fallback: "Looking for Probes…") }
     static var noneTitle: String { Words.text("settings-extensions-none-title", fallback: "No Probes yet") }
     static func noneWhere(_ folder: String) -> String {
-        Words.text("settings-extensions-none-where", fallback: "Probes live in \(folder), one folder each with a probe.toml in it.")
+        Words.text(
+            "settings-extensions-none-where", ["folder": .text(folder)],
+            fallback: "Probes live in \(folder), one folder each with a probe.toml in it.")
     }
     static func noneNew(_ command: String) -> String {
         Words.text(
-            "settings-extensions-none-new",
+            "settings-extensions-none-new", ["command": .text(command)],
             fallback: "Make one with \(command), or copy a folder in. It stays off until you approve it here.")
     }
     static var showFolder: String { Words.text("settings-extensions-show-folder", fallback: "Show in Finder") }

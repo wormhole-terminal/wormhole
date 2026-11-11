@@ -3,6 +3,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 struct CloseButton: View {
     let isSelected: Bool
@@ -23,7 +24,7 @@ struct CloseButton: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .animation(SidebarMotion.state, value: hovering)
-        .help("Close terminal")
-        .accessibilityLabel("Close terminal")
+        .help(Words.text("sidebar-close-terminal", fallback: "Close terminal"))
+        .accessibilityLabel(Words.text("sidebar-close-terminal", fallback: "Close terminal"))
     }
 }

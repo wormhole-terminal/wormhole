@@ -2,6 +2,7 @@
 // (core `search::Scope`). Files has no scope there either (backlog).
 
 import Foundation
+import WordsModel
 
 public enum PaletteScope: Sendable, Equatable, CaseIterable {
     case all, terminals, folders, commits, settings, actions
@@ -23,24 +24,24 @@ public enum PaletteScope: Sendable, Equatable, CaseIterable {
     /// Its name on the scope row and on the search field's chip.
     public var title: String {
         switch self {
-        case .all: "All"
-        case .terminals: "Terminals"
-        case .folders: "Folders"
-        case .commits: "Commits"
-        case .settings: "Settings"
-        case .actions: "Actions"
+        case .all: Words.text("palette-scope-all", fallback: "All")
+        case .terminals: Words.text("palette-group-terminals", fallback: "Terminals")
+        case .folders: Words.text("palette-group-folders", fallback: "Folders")
+        case .commits: Words.text("palette-group-commits", fallback: "Commits")
+        case .settings: Words.text("palette-group-settings", fallback: "Settings")
+        case .actions: Words.text("palette-group-actions", fallback: "Actions")
         }
     }
 
     /// What the empty search field says.
     public var placeholder: String {
         switch self {
-        case .all: "Jump to a terminal, folder, commit or setting…"
-        case .terminals: "Terminals in every window…"
-        case .folders: "Folders with a terminal, and recent ones…"
-        case .commits: "Commits on this branch…"
-        case .settings: "Find a setting…"
-        case .actions: "Run an action…"
+        case .all: Words.text("palette-placeholder-all", fallback: "Jump to a terminal, folder, commit or setting…")
+        case .terminals: Words.text("palette-placeholder-terminals", fallback: "Terminals in every window…")
+        case .folders: Words.text("palette-placeholder-folders", fallback: "Folders with a terminal, and recent ones…")
+        case .commits: Words.text("palette-placeholder-commits", fallback: "Commits on this branch…")
+        case .settings: Words.text("palette-placeholder-settings", fallback: "Find a setting…")
+        case .actions: Words.text("palette-placeholder-actions", fallback: "Run an action…")
         }
     }
 
