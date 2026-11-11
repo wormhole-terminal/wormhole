@@ -10,6 +10,7 @@ mod hosts;
 mod hosts_words;
 mod imports;
 mod licenses;
+mod tailor;
 mod trust;
 mod update_records;
 mod updater;
@@ -31,8 +32,15 @@ pub use hosts::{
     HostAttachmentRecord, HostCardRecord, HostFactRecord, HostFieldRecord, HostProgramKind,
     HostStandingRecord, HostToneRecord, HostsDesk, HostsReportRecord,
 };
-pub use imports::{ImportFoundRecord, ImportRowRecord, import_apply, import_scan};
+pub use imports::{
+    ImportFoundRecord, ImportRowRecord, import_apply, import_brought_words, import_scan, import_theme_file,
+    import_use_mine_words,
+};
 pub use licenses::{LicensePackageRecord, LicensesRecord, licenses};
+pub use tailor::{
+    OnboardingTailor, SketchCorner, SketchFill, SketchPiece, TailorActRecord, TailorAnswerRecord, TailorLineRecord,
+    TailorRecord, TailorStage, window_sketch,
+};
 pub use trust::{ReviewLineRecord, ReviewStatusRecord, TrustDesk, TrustReviewRecord};
 pub use update_records::{
     UpdateChannelNote, UpdateChannelRecord, UpdatePhaseRecord, UpdateReleaseRecord, UpdateSetup,

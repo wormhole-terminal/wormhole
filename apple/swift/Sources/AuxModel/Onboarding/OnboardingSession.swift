@@ -21,9 +21,12 @@ public final class OnboardingSession {
     public let firstRun: Bool
     @ObservationIgnored public var onEnd: ((_ folder: URL?, _ firstRun: Bool) -> Void)?
     @ObservationIgnored public let backend: any OnboardingBackend
+    /// The Look step's import offer and "How much to show" walk.
+    public let look: LookExtras
 
     public init(backend: any OnboardingBackend, firstRun: Bool) {
         self.backend = backend
+        look = LookExtras(backend: backend)
         self.firstRun = firstRun
         flow = firstRun ? OnboardingFlow(agentsFound: true) : .replay()
         places = backend.places()

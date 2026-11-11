@@ -33,6 +33,7 @@ SPECIMENS = {
     "labels": ["StudioUI/Gallery/LabelsSpecimen.swift", "DesignSystem/SectionLabel.swift"],
     "buttons": ["AuxWindows/Shared/AuxButtons.swift"],
     "windows": ["AuxWindows/Shared/AuxCard.swift", "AuxWindows/Shared/StatusBadge.swift", "AuxWindows/Hosts/HostCardView.swift"],
+    "sketch": ["AuxWindows/Onboarding/WindowSketch.swift", "AuxWindows/Onboarding/TailorStep.swift"],
     "chrome": ["DesignSystem/IconButton.swift", "DesignSystem/CountBadge.swift", "DesignSystem/StatusDot.swift",
                "DesignSystem/SectionLabel.swift", "DesignSystem/Row.swift"],
 }

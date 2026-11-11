@@ -96,3 +96,29 @@ pub fn import_apply(
     Config::load_for(&profile).update(|settings| import::apply(settings, &found.proposal, &chosen, &saved));
     Ok(u32::try_from(chosen.len()).unwrap_or(u32::MAX))
 }
+
+/// Copies the theme file at `path` into the Default profile's themes folder and selects it (core's
+/// `Config::import_theme`: a file that is no theme is refused with its reason).
+#[uniffi::export]
+pub fn import_theme_file(path: String, data_dir: Option<String>) -> Result<(), AuxError> {
+    let profile = DataRoot::new(resolve_data_dir(data_dir)?).default_profile();
+    Config::load_for(&profile).import_theme(std::path::Path::new(&path)).map_err(AuxError::failed)
+}
+
+/// "Use my Ghostty settings", the Look step's offer.
+#[uniffi::export]
+pub fn import_use_mine_words(terminal: String) -> String {
+    wormhole_text::keys::settings_import_use_mine(&terminal)
+}
+
+/// What bringing the settings over did, said under the offer: all of them, or some with `left` over.
+#[uniffi::export]
+pub fn import_brought_words(brought: u32, left: u32) -> String {
+    use wormhole_text::keys::{settings_import_onboarding_all, settings_import_onboarding_summary};
+    let brought_count = wormhole_text::whole(brought);
+    if left == 0 {
+        settings_import_onboarding_all(brought_count)
+    } else {
+        settings_import_onboarding_summary(brought_count, &left.to_string())
+    }
+}

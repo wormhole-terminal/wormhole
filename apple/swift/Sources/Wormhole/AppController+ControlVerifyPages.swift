@@ -6,6 +6,9 @@ import AuxModel
 import Foundation
 import SettingsModel
 import StudioModel
+#if WITH_UNIFFI
+    import AuxBridge
+#endif
 
 extension AppController {
     func runVerifyPages(command: String, argument: String) -> Bool {
@@ -23,7 +26,7 @@ extension AppController {
     }
 
     /// `update check`, `update install`, `update restart` (what a click on the chip does: asks first when something would end),
-    /// `update restart-now`, `update restart-idle` (waits until every terminal has been idle); `update` alone says the phase.
+    /// `update auto-check` (the schedule's check), `update restart-now`, `update restart-idle` (waits until every terminal has been idle); `update` alone says the phase.
     private func runUpdate(_ argument: String) {
         let backend = aux.updateBackend()
         Task { @MainActor in
@@ -33,6 +36,11 @@ extension AppController {
             case "restart": self.updateFollower?.requestRestart()
             case "restart-now": backend.restart(whenIdle: false)
             case "restart-idle": backend.restart(whenIdle: true)
+            // The schedule's own check, run now (the six-hourly one cannot be waited for).
+            case "auto-check":
+                #if WITH_UNIFFI
+                    (backend as? FFIUpdateBackend)?.checkAutomatically()
+                #endif
             default: break
             }
             self.reply("update \(argument) phase=\(backend.phase) channel=\(backend.channel)")

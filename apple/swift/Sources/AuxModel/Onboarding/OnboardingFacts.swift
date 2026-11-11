@@ -50,4 +50,27 @@ public protocol OnboardingBackend: AnyObject {
     func chooseFolder() async -> URL?
     /// Finishing: the first run is remembered and the first terminal moves to `folder`; a replay changes nothing.
     func finish(folder: URL?, firstRun: Bool)
+    /// "How much to show": the walk over what the window displays, from the settings and the window's panel as they are.
+    func tailor() -> (any TailorWalking)?
+    /// Whether the right panel of the window behind is to be open (an answer of the walk), and whether it is now.
+    func panelOpen(_ open: Bool)
+    /// The newest terminal on this Mac with settings to bring over, found off the main thread.
+    func importOffer() async -> ImportChoice?
+    /// Brings over what that terminal's settings tick by default; the sentence that says what came over.
+    func useImport(_ choice: ImportChoice) async throws -> String
+    /// Shows the open panel for a theme file and imports it as the theme; whether one was.
+    func importThemeFile() async -> Bool
+}
+
+extension OnboardingBackend {
+    /// A backend without the core has no walk.
+    public func tailor() -> (any TailorWalking)? { nil }
+    /// Nothing behind to follow the walk.
+    public func panelOpen(_ open: Bool) {}
+    /// No other terminal is looked for.
+    public func importOffer() async -> ImportChoice? { nil }
+    /// Nothing to bring over.
+    public func useImport(_ choice: ImportChoice) async throws -> String { "" }
+    /// No file is imported.
+    public func importThemeFile() async -> Bool { false }
 }

@@ -24,6 +24,8 @@ struct ThemeCard: View {
                     Text(theme.name).font(TextRole.caption.font.weight(current ? .semibold : .medium)).lineLimit(1)
                     Spacer(minLength: 0)
                     if current { Image(systemName: "checkmark").font(.system(size: Metric.glyph)) }
+                    // A light theme that is not the pick says so with a sun (`look_step::theme_card`).
+                    else if theme.appearance == .light { Image(systemName: "sun.max").font(.system(size: Metric.glyph)).foregroundStyle(window.textMuted) }
                 }
                 .foregroundStyle(current ? tokens.primary : tokens.textPrimary)
                 .padding(.horizontal, Space._2).frame(height: OnboardingMetrics.cardStrip)

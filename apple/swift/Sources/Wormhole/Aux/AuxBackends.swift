@@ -135,7 +135,12 @@ struct AuxBackends {
                 do {
                     return try FFIOnboardingBackend(
                         preferences: preferences, settingsKeys: "\u{2318},", agentHome: home, dataDir: app.dataDirectory,
-                        authenticator: authenticator
+                        authenticator: authenticator,
+                        // "How much to show" opens or closes the right panel of the window behind (the window's own, so not a setting).
+                        panel: (
+                            { [weak app] in app?.hub.state.panelVisible ?? false },
+                            { [weak app] open in if let app, app.hub.state.panelVisible != open { app.hub.send(.togglePanel) } }
+                        )
                     ) { [weak app] folder, _ in
                         if let folder { app?.hub.send(.newTerminalIn(folder.path)) }
                     }

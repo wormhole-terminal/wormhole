@@ -82,7 +82,7 @@ var targets: [Target] = [
     // Hosts, the agent access sheet, project trust and the close and quit questions. `Resources/shader` is the
     // GPUI app's own intro shader, linked (not copied), so the two never drift.
     .target(
-        name: "AuxWindows", dependencies: ["AuxModel", "DesignSystem"],
+        name: "AuxWindows", dependencies: ["AuxModel", "DesignSystem", "FontPickerModel", "FontPickerUI"],
         resources: [.copy("Resources/shader")]),
     .testTarget(name: "AuxTests", dependencies: ["AuxModel", "AuxWindows", "DesignSystem"]),
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),

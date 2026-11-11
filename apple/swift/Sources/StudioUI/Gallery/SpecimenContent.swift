@@ -34,6 +34,7 @@ enum SpecimenContent {
         case "inputs": InputsSpecimen()
         case "menus": MenusSpecimen()
         case "windows": AuxWindowsSpecimen()
+        case "sketch": SketchSpecimen()
         case "metrics": MetricsSpecimen()
         case "chrome": ChromeSpecimen()
         case "shape": ShapeSpecimen()

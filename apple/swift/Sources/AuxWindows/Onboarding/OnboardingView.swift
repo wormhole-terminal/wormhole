@@ -56,7 +56,7 @@ struct OnboardingView: View {
     @ViewBuilder private var stepBody: some View {
         switch session.step {
         case .folder: FolderStep(session: session)
-        case .look: LookStep(preferences: session.preferences)
+        case .look: LookStep(look: session.look, preferences: session.preferences)
         case .agents: AgentsStep(session: session)
         case .primer: PrimerStep(session: session)
         case .welcome: EmptyView()
@@ -94,6 +94,11 @@ struct OnboardingView: View {
         case .leftArrow: session.send(.back)
         case .return: session.send(session.flow.isLast ? .start : .continue)
         default:
+            // A digit answers the walk's question on the Look step (`tailor_key`).
+            if session.step == .look, let n = Int(press.characters), n >= 1, session.look.walk?.stage == .asking {
+                session.look.act(.answer(n - 1))
+                return .handled
+            }
             guard press.characters.lowercased() == "r" else { return .ignored }
             replay()
         }

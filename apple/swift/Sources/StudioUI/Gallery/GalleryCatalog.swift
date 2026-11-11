@@ -22,6 +22,7 @@ enum GalleryCatalog {
         Specimen("inputs", "Inputs", "fields, checkboxes, switches, radios", area: .settings, column: .right, tokens: SpecimenTokens.inputs),
         Specimen("menus", "Menus", "the select and the pop-up button", area: .settings, column: .right, tokens: SpecimenTokens.menus),
         Specimen("windows", "Windows", "the secondary windows' cards, badges and buttons", area: .ambient, column: .both, tokens: GalleryUses.windows),
+        Specimen("sketch", "Window sketch", "the first run's 'How much to show' presets, Zen to Everything", area: .ambient, column: .both, tokens: GalleryUses.sketch),
         Specimen("palette", "Command palette", "the quick panel and the shortcut sheet, on the scrim", area: .ambient, column: .both, tokens: GalleryUses.palette),
         Specimen("fonts", "Font picker", "search, the families in their own faces, the preview and what the font draws", area: .settings, column: .right, tokens: GalleryUses.fonts + ["terminal.*"]),
         Specimen("terminal", "Terminal", "16 ANSI, text, selection, cursor", area: nil, column: .left, tokens: ["terminal.*"]),

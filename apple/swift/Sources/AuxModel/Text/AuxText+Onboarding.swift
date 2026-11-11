@@ -41,6 +41,8 @@ extension AuxText {
     }
     public static var primaryColour: String { tr("onboarding-primary", "Primary colour") }
     public static var terminalFont: String { tr("onboarding-font", "Terminal font") }
+    /// The link under the theme cards (GPUI writes it as a literal in `look_step.rs`: it has no catalog message).
+    public static var importFromOthers: String { tr("onboarding-import-from", "Import from Ghostty, iTerm2 or Alacritty\u{2026}") }
     public static var ligatures: String { tr("onboarding-ligatures", "Ligatures") }
     public static var themeLabel: String { tr("onboarding-theme", "Theme") }
     public static var fontSize: String { tr("onboarding-font-size", "Font size") }

@@ -237,6 +237,19 @@ enum GalleryUses {
         "text.muted",
         "text.primary",
     ]
+    static let sketch: [String] = [
+        "border",
+        "primary",
+        "sidebar.background",
+        "sidebar.row.selected",
+        "state.selected",
+        "surface.panel",
+        "surface.window",
+        "text.faint",
+        "text.link",
+        "text.muted",
+        "text.primary",
+    ]
     static let chrome: [String] = [
         "agent.attention",
         "agent.done",

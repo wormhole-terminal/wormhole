@@ -19,6 +19,8 @@ public final class FFIOnboardingBackend: OnboardingBackend {
     private let trustDesk: TrustDesk?
     private let authenticator: any Authenticating
     private let recents: () -> [URL]
+    private let dataDir: URL?
+    private let windowPanel: (get: () -> Bool, set: (Bool) -> Void)
     private let onFinish: (_ folder: URL?, _ firstRun: Bool) -> Void
     private let hub = WakeHub()
 
@@ -27,6 +29,7 @@ public final class FFIOnboardingBackend: OnboardingBackend {
     public init(
         preferences: OnboardingPreferences, settingsKeys: String, project: URL? = nil, recents: @escaping () -> [URL] = { [] },
         agentHome: URL? = nil, dataDir: URL? = nil, authenticator: any Authenticating,
+        panel: (get: () -> Bool, set: (Bool) -> Void) = ({ false }, { _ in }),
         onFinish: @escaping (_ folder: URL?, _ firstRun: Bool) -> Void
     ) throws {
         run = try FirstRun(agentHome: agentHome?.path, dataDir: dataDir?.path)
@@ -34,6 +37,8 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         self.settingsKeys = settingsKeys
         self.authenticator = authenticator
         self.recents = recents
+        self.dataDir = dataDir
+        windowPanel = panel
         self.onFinish = onFinish
         let wakes = hub
         trustDesk = try project.map { try TrustDesk(root: $0.path, profile: nil, dataDir: dataDir?.path, listener: wakes) }
@@ -83,6 +88,42 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         // A replay of the intro changes nothing.
         if firstRun { try? run.finish() }
         onFinish(folder, firstRun)
+    }
+
+    /// The walk over core's, from the settings and the window's panel as they are.
+    public func tailor() -> (any TailorWalking)? {
+        try? FFITailor(panelOpen: windowPanel.get(), dataDir: dataDir)
+    }
+
+    /// An answer of the walk opens or closes the window's right panel.
+    public func panelOpen(_ open: Bool) { windowPanel.set(open) }
+
+    /// The newest terminal with something ticked by default (one with nothing to bring over leaves the theme file import).
+    public func importOffer() async -> ImportChoice? {
+        guard let offers = try? await ImportBridge.scan(), let found = offers.first(where: { $0.rows.contains(where: \.tickedByDefault) }) else {
+            return nil
+        }
+        return ImportChoice(source: found.source, offer: importUseMineWords(terminal: found.name))
+    }
+
+    /// Brings over what the offered terminal's settings tick by default; says what came over.
+    public func useImport(_ choice: ImportChoice) async throws -> String {
+        let offers = try await ImportBridge.scan()
+        let found = offers.first { $0.source == choice.source }
+        let taken = try await ImportBridge.apply(source: choice.source, dataDir: dataDir)
+        let left = max(0, (found?.rows.count ?? taken) - taken) + (found?.skipped ?? 0)
+        return importBroughtWords(brought: UInt32(taken), left: UInt32(left))
+    }
+
+    /// Asks for a theme file and imports it as the theme.
+    public func importThemeFile() async -> Bool {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Import theme"
+        guard await panel.begin() == .OK, let url = panel.url else { return false }
+        return (try? WormholeBindings.importThemeFile(path: url.path, dataDir: dataDir?.path)) != nil
     }
 
     /// Whether the intro should open: a first launch nothing was saved from that never finished or skipped it.

@@ -16,6 +16,8 @@ public final class OnboardingPreferences {
     public var notifications: Bool { didSet { onChange?() } }
     /// Notify when a long command in a background terminal finishes.
     public var notifyCommandDone: Bool { didSet { onChange?() } }
+    /// The family that ships with the app (a "Bundled" chip says so on the font's face); `nil` when none is known.
+    @ObservationIgnored public var bundledFamily: String? = "JetBrains Mono"
     @ObservationIgnored public var onChange: (() -> Void)?
 
     public init(

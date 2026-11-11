@@ -8,6 +8,8 @@ import StudioModel
 import StudioUI
 
 #if WITH_UNIFFI
+    import AuxBridge
+    import AuxModel
     import UniFFISource
 #endif
 
@@ -31,6 +33,7 @@ final class StudioLauncher {
     func show(store: ThemeStore = .shared) {
         #if WITH_UNIFFI
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)
+            SketchSource.preset = { WindowSketches.blocks(preset: $0, width: $1) }
             let environment = StudioEnvironment(
                 resolver: FfiThemeResolver(), folder: DiskThemeFolder(directory: themes), knowledge: GalleryKnowledge())
             do {
