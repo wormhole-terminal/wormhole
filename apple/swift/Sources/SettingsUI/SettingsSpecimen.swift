@@ -1,6 +1,7 @@
 // The settings window's parts on sample data, for the Theme Studio's gallery (`gallery/settings.rs`): the nav as it is idle
 // and while a search runs, a group's rows in each state, the shortcut recorder and the title row's arranged list. They are
 // the window's own views over an in-memory backend, so a theme edit shows on the real ones.
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import SettingsModel

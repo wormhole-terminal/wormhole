@@ -84,7 +84,7 @@ public final class StudioDocument {
 
     /// Asks whether the base under the shown version still matches its source, when the base (or the version) changed.
     func refreshUpdate() {
-        let key = file.baseSource(in: shown).map { "\($0.from)|\($0.copied ?? "")|\(shown ?? "")" }
+        let key = file.baseSource(in: shown).map { "\($0.from)|\($0.copied ?? "")|\(shown ?? "")" }  // text: a key to compare, never shown
         guard key != updateKey else { return }
         updateKey = key
         update = key == nil ? UpdateCheck() : ((try? environment.files?.updateCheck(file.json(), shown: shown)) ?? UpdateCheck())

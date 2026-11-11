@@ -9,9 +9,14 @@ import SwiftUI
 public struct TokenMarks: Equatable, Sendable {
     /// The component ids the selected token is drawn on.
     public var drawn: Set<String>
+    /// What VoiceOver says of a marked element ("uses the selected token"); empty: the outline is only seen.
+    public var spoken: String
 
     /// Marks the components `drawn` names (none by default).
-    public init(drawn: Set<String> = []) { self.drawn = drawn }
+    public init(drawn: Set<String> = [], spoken: String = "") {
+        self.drawn = drawn
+        self.spoken = spoken
+    }
 }
 
 extension EnvironmentValues {
@@ -41,7 +46,8 @@ private struct TokenMark: ViewModifier {
                     .strokeBorder(tokens.primary, style: StrokeStyle(lineWidth: Self.line, dash: [Self.line * 2, Self.line * 2]))
                     .padding(-Self.offset)
                     .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+                    .accessibilityHidden(marks.spoken.isEmpty)
+                    .accessibilityLabel(marks.spoken)
             }
         }
     }

@@ -139,8 +139,7 @@ enum StudioWords {
     static var newerChip: String { text("studio-newer-chip", "Made with a newer Wormhole") }
     static var newerDuplicate: String { text("studio-newer-duplicate", "Duplicate") }
     static func newerExplain(_ count: Int) -> String {
-        let skipped = text("studio-newer-explain", ["count": .whole(count)], count == 1 ? "1 value this version doesn’t know was skipped." : "\(count) values this version doesn’t know were skipped.")
-        return skipped + " " + text("studio-newer-explain-rest", "It shows what it can; the rest is worked out. Saving would drop them, so Theme Studio won’t save over it.")
+        text("studio-newer-explain", ["count": .whole(count)], count == 1 ? "1 value this version doesn’t know was skipped. It shows what it can; the rest is worked out. Saving would drop them, so Theme Studio won’t save over it." : "\(count) values this version doesn’t know were skipped. It shows what it can; the rest is worked out. Saving would drop them, so Theme Studio won’t save over it.")
     }
     static var previewChip: String { text("studio-preview-chip", "Preview") }
     static var previewUse: String { text("studio-preview-use", "Use") }
@@ -165,6 +164,6 @@ enum StudioWords {
     static func switchMessage(_ current: String, _ next: String) -> String {
         text("studio-switch-message", ["current": .text(current), "next": .text(next)], "Do you want to save the changes to “\(current)” before opening “\(next)”?")
     }
-    static func copyFailed(_ reason: String) -> String { text("studio-copy-failed", ["reason": .text(reason)], "Could not save a copy: \(reason)") }
+    static func copyFailed(_ reason: String) -> String { text("studio-copy-failed", ["error": .text(reason)], "Could not save a copy: \(reason)") }
     static var openFailed: String { text("studio-open-failed", "That theme could not be opened.") }
 }

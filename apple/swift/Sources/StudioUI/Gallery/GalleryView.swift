@@ -26,7 +26,7 @@ struct GalleryView: View {
                     column(shown.filter { $0.column == .both }, context)
                 }
                 .padding(Space._4)
-                .environment(\.tokenMarks, TokenMarks(drawn: drawn))
+                .environment(\.tokenMarks, TokenMarks(drawn: drawn, spoken: StudioWords.gallerySelected))
                 .animation(Motion.layout, value: shown.map(\.id))
             }
         }

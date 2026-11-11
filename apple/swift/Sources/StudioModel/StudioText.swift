@@ -45,7 +45,7 @@ enum StudioText {
     static var noProjectFolder: String { text("studio-no-project-folder", "The terminal in front isn't in a project with a .wormhole folder.") }
     static var otherProject: String { text("studio-other-project", "The terminal in front is in another project.") }
     static func projectSaved(_ path: String) -> String { text("studio-project-saved", ["path": .text(path)], "Saved to \(path): terminals in this project use it.") }
-    static func projectFailed(_ reason: String) -> String { text("studio-project-failed", ["reason": .text(reason)], "Could not save to the project: \(reason)") }
+    static func projectFailed(_ reason: String) -> String { text("studio-project-failed", ["error": .text(reason)], "Could not save to the project: \(reason)") }
     static func onlyShown(_ appearance: String) -> String { text("studio-only-shown", ["appearance": .text(appearance)], "Only the \(appearance) appearance of this theme was written.") }
     static func pairUsed(_ name: String) -> String { text("studio-pair-used", ["name": .text(name)], "“\(name)” follows the system’s light and dark.") }
     static var nameFirst: String { text("studio-name-first", "Give the theme a name first.") }
