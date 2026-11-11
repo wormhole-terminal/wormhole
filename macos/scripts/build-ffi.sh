@@ -35,7 +35,9 @@ dist="dist"
 rm -rf "$bindings" "$headers" "$dist/WormholeFFI.xcframework"
 mkdir -p "$bindings" "$headers" "$dist"
 
-"$built/release/uniffi-bindgen" generate --library "$lib" --language swift --out-dir "$bindings"
+# From the bridge's folder: the generator asks cargo there for the crate's `uniffi.toml`, which names the module
+# and the header; anywhere else it finds none and writes them under its default names.
+(cd "$bridge" && "$built/release/uniffi-bindgen" generate --library "$lib" --language swift --out-dir "$bindings")
 
 cp "$bindings/WormholeFFI.h" "$headers/"
 # SwiftPM finds a binary target's module through a file named exactly `module.modulemap`.
