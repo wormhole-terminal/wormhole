@@ -358,6 +358,12 @@ pub const TITLE_ROW_SPLIT_RIGHT: Key = Key::new(1861);
 pub const TITLE_ROW_SPLIT_DOWN: Key = Key::new(1862);
 /// "Uncommitted changes"
 pub const TITLE_ROW_UNCOMMITTED: Key = Key::new(1863);
+/// "Out of date"
+pub const DIFF_BADGE_OUT_OF_DATE: Key = Key::new(1869);
+/// "No longer changed"
+pub const DIFF_BADGE_GONE: Key = Key::new(1870);
+/// "Trust (approve with password)"
+pub const PROJECT_TRUST_PASSWORD: Key = Key::new(1871);
 
 /// ```text
 /// Couldn't refresh: { $message }

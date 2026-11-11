@@ -7,212 +7,222 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "no terminals open"
-pub const PLATFORM_STATUS_NO_TERMINALS: Key = Key::new(1870);
+pub const PLATFORM_STATUS_NO_TERMINALS: Key = Key::new(1873);
 /// "Bell"
-pub const PLATFORM_DETAIL_BELL: Key = Key::new(1873);
+pub const PLATFORM_DETAIL_BELL: Key = Key::new(1877);
 /// "Exited"
-pub const PLATFORM_DETAIL_EXITED: Key = Key::new(1874);
+pub const PLATFORM_DETAIL_EXITED: Key = Key::new(1878);
 /// "New Terminal"
-pub const PLATFORM_MENU_NEW_TERMINAL: Key = Key::new(1875);
+pub const PLATFORM_MENU_NEW_TERMINAL: Key = Key::new(1879);
 /// "New Window"
-pub const PLATFORM_MENU_NEW_WINDOW: Key = Key::new(1876);
+pub const PLATFORM_MENU_NEW_WINDOW: Key = Key::new(1880);
 /// "Open Folder…"
-pub const PLATFORM_MENU_OPEN_FOLDER: Key = Key::new(1877);
+pub const PLATFORM_MENU_OPEN_FOLDER: Key = Key::new(1881);
 /// "Other Terminals"
-pub const PLATFORM_STATUS_OTHER: Key = Key::new(1878);
+pub const PLATFORM_STATUS_OTHER: Key = Key::new(1882);
 /// "No terminals open"
-pub const PLATFORM_STATUS_NONE_OPEN: Key = Key::new(1880);
+pub const PLATFORM_STATUS_NONE_OPEN: Key = Key::new(1884);
 /// "Projects"
-pub const PLATFORM_STATUS_PROJECTS: Key = Key::new(1881);
+pub const PLATFORM_STATUS_PROJECTS: Key = Key::new(1885);
 /// "Show Wormhole"
-pub const PLATFORM_STATUS_SHOW: Key = Key::new(1882);
+pub const PLATFORM_STATUS_SHOW: Key = Key::new(1886);
 /// "Jump to Next Waiting"
-pub const PLATFORM_STATUS_JUMP: Key = Key::new(1883);
+pub const PLATFORM_STATUS_JUMP: Key = Key::new(1887);
 /// "Check for Updates…"
-pub const PLATFORM_STATUS_UPDATES: Key = Key::new(1884);
+pub const PLATFORM_STATUS_UPDATES: Key = Key::new(1888);
 /// "Quit Wormhole"
-pub const PLATFORM_STATUS_QUIT: Key = Key::new(1885);
+pub const PLATFORM_STATUS_QUIT: Key = Key::new(1889);
 /// "Untitled"
-pub const PLATFORM_STATUS_UNTITLED: Key = Key::new(1886);
+pub const PLATFORM_STATUS_UNTITLED: Key = Key::new(1890);
 /// "Nothing needs input"
-pub const PLATFORM_QUICK_NOTHING_WAITING: Key = Key::new(1891);
+pub const PLATFORM_QUICK_NOTHING_WAITING: Key = Key::new(1895);
 /// "Recent"
-pub const PLATFORM_QUICK_RECENT: Key = Key::new(1892);
+pub const PLATFORM_QUICK_RECENT: Key = Key::new(1896);
 /// "Do"
-pub const PLATFORM_QUICK_DO: Key = Key::new(1893);
+pub const PLATFORM_QUICK_DO: Key = Key::new(1897);
 /// "Terminals"
-pub const PLATFORM_QUICK_TERMINALS: Key = Key::new(1894);
+pub const PLATFORM_QUICK_TERMINALS: Key = Key::new(1898);
 /// "Nothing matches"
-pub const PLATFORM_QUICK_NOTHING_MATCHES: Key = Key::new(1895);
+pub const PLATFORM_QUICK_NOTHING_MATCHES: Key = Key::new(1899);
 /// "Waiting for your answer"
-pub const PLATFORM_QUICK_WAITING: Key = Key::new(1896);
+pub const PLATFORM_QUICK_WAITING: Key = Key::new(1900);
 /// "select"
-pub const PLATFORM_QUICK_HINT_SELECT: Key = Key::new(1897);
+pub const PLATFORM_QUICK_HINT_SELECT: Key = Key::new(1901);
 /// "answer here"
-pub const PLATFORM_QUICK_HINT_ANSWER: Key = Key::new(1898);
+pub const PLATFORM_QUICK_HINT_ANSWER: Key = Key::new(1902);
 /// "close"
-pub const PLATFORM_QUICK_HINT_CLOSE: Key = Key::new(1899);
+pub const PLATFORM_QUICK_HINT_CLOSE: Key = Key::new(1903);
 /// "send reply"
-pub const PLATFORM_QUICK_HINT_SEND: Key = Key::new(1900);
+pub const PLATFORM_QUICK_HINT_SEND: Key = Key::new(1904);
 /// "open terminal"
-pub const PLATFORM_QUICK_HINT_OPEN_TERMINAL: Key = Key::new(1901);
+pub const PLATFORM_QUICK_HINT_OPEN_TERMINAL: Key = Key::new(1905);
 /// "back"
-pub const PLATFORM_QUICK_HINT_BACK: Key = Key::new(1902);
+pub const PLATFORM_QUICK_HINT_BACK: Key = Key::new(1906);
 /// "Open"
-pub const PLATFORM_NOTICE_OPEN: Key = Key::new(1903);
+pub const PLATFORM_NOTICE_OPEN: Key = Key::new(1907);
 /// "Reply…"
-pub const PLATFORM_NOTICE_REPLY: Key = Key::new(1904);
+pub const PLATFORM_NOTICE_REPLY: Key = Key::new(1908);
 /// "Show Changes"
-pub const PLATFORM_NOTICE_SHOW_CHANGES: Key = Key::new(1905);
+pub const PLATFORM_NOTICE_SHOW_CHANGES: Key = Key::new(1909);
 /// "Send"
-pub const PLATFORM_SEND: Key = Key::new(1906);
+pub const PLATFORM_SEND: Key = Key::new(1910);
 /// "Reply"
-pub const PLATFORM_REPLY: Key = Key::new(1907);
+pub const PLATFORM_REPLY: Key = Key::new(1911);
 /// "Where you are"
-pub const PLATFORM_PICKER_CRUMBS: Key = Key::new(1908);
+pub const PLATFORM_PICKER_CRUMBS: Key = Key::new(1912);
 /// "has folders"
-pub const PLATFORM_PICKER_HAS_FOLDERS: Key = Key::new(1909);
+pub const PLATFORM_PICKER_HAS_FOLDERS: Key = Key::new(1913);
 /// "Open Recent"
-pub const PLATFORM_MENU_OPEN_RECENT: Key = Key::new(1910);
+pub const PLATFORM_MENU_OPEN_RECENT: Key = Key::new(1914);
 /// "No Recent Folders"
-pub const PLATFORM_MENU_NO_RECENT: Key = Key::new(1911);
+pub const PLATFORM_MENU_NO_RECENT: Key = Key::new(1915);
 /// "Project Actions"
-pub const PLATFORM_MENU_PROJECT_ACTIONS: Key = Key::new(1912);
+pub const PLATFORM_MENU_PROJECT_ACTIONS: Key = Key::new(1916);
 /// "No Project Actions"
-pub const PLATFORM_MENU_NO_PROJECT_ACTIONS: Key = Key::new(1913);
+pub const PLATFORM_MENU_NO_PROJECT_ACTIONS: Key = Key::new(1917);
 /// "New Terminal With"
-pub const PLATFORM_MENU_NEW_TERMINAL_WITH: Key = Key::new(1914);
+pub const PLATFORM_MENU_NEW_TERMINAL_WITH: Key = Key::new(1918);
 /// "No Shells"
-pub const PLATFORM_MENU_NO_SHELLS: Key = Key::new(1915);
+pub const PLATFORM_MENU_NO_SHELLS: Key = Key::new(1919);
 /// "Open Window in"
-pub const PLATFORM_MENU_OPEN_WINDOW_IN: Key = Key::new(1916);
+pub const PLATFORM_MENU_OPEN_WINDOW_IN: Key = Key::new(1920);
 /// "Move Window to"
-pub const PLATFORM_MENU_MOVE_WINDOW_TO: Key = Key::new(1917);
+pub const PLATFORM_MENU_MOVE_WINDOW_TO: Key = Key::new(1921);
 /// "Profile"
-pub const PLATFORM_MENU_PROFILE: Key = Key::new(1918);
+pub const PLATFORM_MENU_PROFILE: Key = Key::new(1922);
 /// "Close Pane"
-pub const PLATFORM_MENU_CLOSE_PANE: Key = Key::new(1919);
+pub const PLATFORM_MENU_CLOSE_PANE: Key = Key::new(1923);
 /// "Services"
-pub const PLATFORM_MENU_SERVICES: Key = Key::new(1920);
+pub const PLATFORM_MENU_SERVICES: Key = Key::new(1924);
 /// "Open"
-pub const PLATFORM_MENU_OPEN: Key = Key::new(1921);
+pub const PLATFORM_MENU_OPEN: Key = Key::new(1925);
 /// "Colour"
-pub const PLATFORM_SWATCH_LABEL: Key = Key::new(1922);
+pub const PLATFORM_SWATCH_LABEL: Key = Key::new(1926);
 /// "a control character"
-pub const PLATFORM_KEY_SHELL_CONTROL: Key = Key::new(1926);
+pub const PLATFORM_KEY_SHELL_CONTROL: Key = Key::new(1930);
 /// "Meta, word jumps and accents"
-pub const PLATFORM_KEY_SHELL_META: Key = Key::new(1927);
+pub const PLATFORM_KEY_SHELL_META: Key = Key::new(1931);
 /// "typing"
-pub const PLATFORM_KEY_SHELL_TYPING: Key = Key::new(1928);
+pub const PLATFORM_KEY_SHELL_TYPING: Key = Key::new(1932);
 /// "Add ⌘, ⌃ or ⌥ to the key"
-pub const PLATFORM_RECORDER_ADD_MODIFIER: Key = Key::new(1931);
+pub const PLATFORM_RECORDER_ADD_MODIFIER: Key = Key::new(1935);
 /// "Type shortcut"
-pub const PLATFORM_RECORDER_TYPE: Key = Key::new(1932);
+pub const PLATFORM_RECORDER_TYPE: Key = Key::new(1936);
 /// "Recording"
-pub const PLATFORM_RECORDER_RECORDING: Key = Key::new(1933);
+pub const PLATFORM_RECORDER_RECORDING: Key = Key::new(1937);
 /// "Press to record a new shortcut. Escape cancels, Delete clears."
-pub const PLATFORM_RECORDER_HELP: Key = Key::new(1934);
+pub const PLATFORM_RECORDER_HELP: Key = Key::new(1938);
 /// "On"
-pub const PLATFORM_VALUE_ON: Key = Key::new(1936);
+pub const PLATFORM_VALUE_ON: Key = Key::new(1940);
 /// "Off"
-pub const PLATFORM_VALUE_OFF: Key = Key::new(1937);
+pub const PLATFORM_VALUE_OFF: Key = Key::new(1941);
 /// "not running from Wormhole.app"
-pub const PLATFORM_DEFAULT_TERMINAL_NOT_BUNDLED: Key = Key::new(1938);
+pub const PLATFORM_DEFAULT_TERMINAL_NOT_BUNDLED: Key = Key::new(1942);
 
 /// ```text
 /// { -brand } — { $summary }
 /// ```
 pub fn platform_status_tooltip(summary: &str) -> String {
-    crate::active::message(1869, &[("summary", Arg::Str(summary))])
+    crate::active::message(1872, &[("summary", Arg::Str(summary))])
+}
+
+/// ```text
+/// { $count ->
+///     [one] { $count } terminal, all quiet
+///    *[other] { $count } terminals, all quiet
+/// }
+/// ```
+pub fn platform_status_all_quiet(count: i64) -> String {
+    crate::active::message(1874, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $count } finished
 /// ```
 pub fn platform_status_finished(count: &str) -> String {
-    crate::active::message(1871, &[("count", Arg::Str(count))])
+    crate::active::message(1875, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// after { $duration }
 /// ```
 pub fn platform_detail_after(duration: &str) -> String {
-    crate::active::message(1872, &[("duration", Arg::Str(duration))])
+    crate::active::message(1876, &[("duration", Arg::Str(duration))])
 }
 
 /// ```text
 /// { $count } more…
 /// ```
 pub fn platform_status_more(count: &str) -> String {
-    crate::active::message(1879, &[("count", Arg::Str(count))])
+    crate::active::message(1883, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Actions · { $name }
 /// ```
 pub fn platform_status_actions(name: &str) -> String {
-    crate::active::message(1887, &[("name", Arg::Str(name))])
+    crate::active::message(1891, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Actions · { $name } — { $root }
 /// ```
 pub fn platform_status_actions_at(name: &str, root: &str) -> String {
-    crate::active::message(1888, &[("name", Arg::Str(name)), ("root", Arg::Str(root))])
+    crate::active::message(1892, &[("name", Arg::Str(name)), ("root", Arg::Str(root))])
 }
 
 /// ```text
 /// Run { $title }
 /// ```
 pub fn platform_quick_run(title: &str) -> String {
-    crate::active::message(1889, &[("title", Arg::Str(title))])
+    crate::active::message(1893, &[("title", Arg::Str(title))])
 }
 
 /// ```text
 /// action · { $project }
 /// ```
 pub fn platform_quick_action_detail(project: &str) -> String {
-    crate::active::message(1890, &[("project", Arg::Str(project))])
+    crate::active::message(1894, &[("project", Arg::Str(project))])
 }
 
 /// ```text
 /// { $key } is { $name }
 /// ```
 pub fn platform_key_is(key: &str, name: &str) -> String {
-    crate::active::message(1923, &[("key", Arg::Str(key)), ("name", Arg::Str(name))])
+    crate::active::message(1927, &[("key", Arg::Str(key)), ("name", Arg::Str(name))])
 }
 
 /// ```text
 /// macOS uses it for { $what }
 /// ```
 pub fn platform_key_system(what: &str) -> String {
-    crate::active::message(1924, &[("what", Arg::Str(what))])
+    crate::active::message(1928, &[("what", Arg::Str(what))])
 }
 
 /// ```text
 /// the shell needs it ({ $what })
 /// ```
 pub fn platform_key_shell(what: &str) -> String {
-    crate::active::message(1925, &[("what", Arg::Str(what))])
+    crate::active::message(1929, &[("what", Arg::Str(what))])
 }
 
 /// ```text
 /// macOS uses { $key } for { $what }
 /// ```
 pub fn platform_recorder_system(key: &str, what: &str) -> String {
-    crate::active::message(1929, &[("key", Arg::Str(key)), ("what", Arg::Str(what))])
+    crate::active::message(1933, &[("key", Arg::Str(key)), ("what", Arg::Str(what))])
 }
 
 /// ```text
 /// The shell uses { $key }
 /// ```
 pub fn platform_recorder_shell(key: &str) -> String {
-    crate::active::message(1930, &[("key", Arg::Str(key))])
+    crate::active::message(1934, &[("key", Arg::Str(key))])
 }
 
 /// ```text
 /// another app owns this combination (error { $status })
 /// ```
 pub fn platform_hotkey_taken(status: &str) -> String {
-    crate::active::message(1935, &[("status", Arg::Str(status))])
+    crate::active::message(1939, &[("status", Arg::Str(status))])
 }

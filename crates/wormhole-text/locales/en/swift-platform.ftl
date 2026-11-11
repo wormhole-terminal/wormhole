@@ -11,7 +11,10 @@ platform-status-tooltip = { -brand } — { $summary }
 platform-status-no-terminals = no terminals open
 
 # { $count } is how many terminals are open, none of them needing anything.
-platform-status-all-quiet = { $count -> [one] { $count } terminal *[other] { $count } terminals }, all quiet
+platform-status-all-quiet = { $count ->
+    [one] { $count } terminal, all quiet
+   *[other] { $count } terminals, all quiet
+}
 
 # A count among the tooltip's parts: "2 need input · 1 failed · 2 working · 2 finished".
 platform-status-finished = { $count } finished
@@ -143,6 +146,7 @@ platform-key-shell-typing = typing
 
 # What the shortcut field says when the key is taken; { $key } is the key, { $what } what macOS does with it.
 platform-recorder-system = macOS uses { $key } for { $what }
+# { $key } is the key the shell uses itself.
 platform-recorder-shell = The shell uses { $key }
 
 platform-recorder-add-modifier = Add ⌘, ⌃ or ⌥ to the key

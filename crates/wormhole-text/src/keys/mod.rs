@@ -136,7 +136,7 @@ pub use zen::*;
 use crate::key::Key;
 
 /// Every key, in the order of the files, for tests that walk them all.
-pub const ALL: [Key; 1836] = [
+pub const ALL: [Key; 1839] = [
     AGENT_SHEET_TITLE_SCRIPTS, AGENT_SHEET_WANTS_READ, AGENT_SHEET_WANTS_TYPE,
     AGENT_SHEET_WANTS_RUN, AGENT_SHEET_WANTS_OPEN, AGENT_SHEET_WANTS_CLOSE,
     AGENT_SHEET_DETAIL, AGENT_SHEET_DETAIL_SCRIPTS, AGENT_SHEET_WARNING_UNSIGNED,
@@ -633,7 +633,8 @@ pub const ALL: [Key; 1836] = [
     PROFILE_MENU_MANAGE, PROFILE_MENU_SETTINGS, TITLE_ROW_PATH_INSERT,
     TITLE_ROW_DETACHED, TITLE_ROW_HIDDEN_FROM_AGENTS, TITLE_ROW_OPEN_IN_HEADER,
     TITLE_ROW_OPEN_IN_ANOTHER, TITLE_ROW_SPLIT_RIGHT, TITLE_ROW_SPLIT_DOWN,
-    TITLE_ROW_UNCOMMITTED, PLATFORM_STATUS_NO_TERMINALS, PLATFORM_DETAIL_BELL,
+    TITLE_ROW_UNCOMMITTED, DIFF_BADGE_OUT_OF_DATE, DIFF_BADGE_GONE,
+    PROJECT_TRUST_PASSWORD, PLATFORM_STATUS_NO_TERMINALS, PLATFORM_DETAIL_BELL,
     PLATFORM_DETAIL_EXITED, PLATFORM_MENU_NEW_TERMINAL, PLATFORM_MENU_NEW_WINDOW,
     PLATFORM_MENU_OPEN_FOLDER, PLATFORM_STATUS_OTHER, PLATFORM_STATUS_NONE_OPEN,
     PLATFORM_STATUS_PROJECTS, PLATFORM_STATUS_SHOW, PLATFORM_STATUS_JUMP,
@@ -1187,6 +1188,8 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("title-row-ports-more", title_row_ports_more("Sample", "Sample")),
         ("title-row-context-used", title_row_context_used("Sample")),
         ("platform-status-tooltip", platform_status_tooltip("Sample")),
+        ("platform-status-all-quiet", platform_status_all_quiet(1)),
+        ("platform-status-all-quiet", platform_status_all_quiet(5)),
         ("platform-status-finished", platform_status_finished("Sample")),
         ("platform-detail-after", platform_detail_after("Sample")),
         ("platform-status-more", platform_status_more("Sample")),
