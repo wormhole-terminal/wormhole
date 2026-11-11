@@ -12,6 +12,11 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   default). With Live resize on (a feature flag), dragging a window's edge steps by whole characters of the
   terminal grid; the switch lets the window resize freely instead, the grid reflowing to whole cells and the
   strip left over taking the terminal's background.
+- Folding output (a development build, behind the `output_folds` flag): the menu of a finished command
+  folds its output into one marker row that says how many lines it hides, opened by a click or VoiceOver's
+  Show. Edit → Show Hidden Lines (⌥⌘L) opens every fold of a terminal, and Settings → Terminal → Never hide
+  lines shows every line always. Copying and finding see every line; the live screen, the alternate screen
+  and a terminal that needs you never fold.
 - Settings → Terminal → Inline images has an Image memory per terminal row (`image_memory_mib` in
   `config.json`: 64, 128, 256, 512 or 1024 MiB, 128 by default) for how much memory the pictures a program
   draws in one terminal (kitty, iTerm2, Sixel) may take, decoded. When it is full the pictures drawn longest

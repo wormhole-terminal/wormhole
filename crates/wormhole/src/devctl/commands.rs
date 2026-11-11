@@ -35,6 +35,7 @@ pub(super) fn command(name: &str) -> Option<Command> {
         "drop" => |ctx, arg| input::file_drag(ctx, arg, input::FileDrag::Drop),
         "drag-end" => |ctx, arg| input::file_drag(ctx, arg, input::FileDrag::End),
         "hover" => input::hover,
+        "hover-cmd" => input::hover_cmd,
         "scroll" => input::scroll,
         "mouse-down" => |ctx, arg| input::mouse(ctx, arg, input::Mouse::Down),
         "mouse-drag" => |ctx, arg| input::mouse(ctx, arg, input::Mouse::Drag),

@@ -16,6 +16,7 @@ use gpui_kit::assets::IconName;
 use gpui_kit::component::tooltip::Tooltip;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
+use wormhole_core::probe::tone::Tone;
 use wormhole_core::view::focus::Area;
 use wormhole_core::view::layout::status_bar::{self as rules, Activity, Detail, Entry, Summary};
 use wormhole_core::view::spoken;
@@ -77,6 +78,18 @@ pub(super) struct StatusBar {
     /// The profile of a window that is not in the profile Wormhole is in, while the window is
     /// wide enough: the bar's lowest-priority item, at its left.
     profile: Option<ProfileTag>,
+    /// The items Probes' hooks set, while the window is wide enough for the size too: the first to go.
+    probes: Vec<ProbeItem>,
+}
+
+/// One status item a Probe's hook set. The Probe's name is in its tooltip and its spoken words, so an item
+/// cannot pass for one of Wormhole's.
+#[derive(Clone, Debug, PartialEq)]
+struct ProbeItem {
+    key: String,
+    text: String,
+    tone: Option<Tone>,
+    tooltip: String,
 }
 
 /// The counts of a bar's items, by what they count.
@@ -289,7 +302,32 @@ impl Workspace {
             name: profile.name.clone().into(),
             color,
         });
-        Some(StatusBar { spoken, attention, rest, words: detail.words(), state, size, hosting, profile })
+        let probes = if detail.size() { self.probe_items(cx) } else { Vec::new() };
+        Some(StatusBar {
+            spoken,
+            attention,
+            rest,
+            words: detail.words(),
+            state,
+            size,
+            hosting,
+            profile,
+            probes,
+        })
+    }
+
+    /// The items Probes' hooks set, as the bar shows them: the text as set (at most 80 characters, cleaned by
+    /// the hook's plan), and the Probe's name before whatever tooltip it gave.
+    fn probe_items(&self, cx: &App) -> Vec<ProbeItem> {
+        crate::probe_runtime::status_items(cx)
+            .into_iter()
+            .map(|item| ProbeItem {
+                key: format!("{}/{}", item.probe, item.item),
+                tooltip: item.shown_tooltip(),
+                text: item.text,
+                tone: item.tone,
+            })
+            .collect()
     }
 
     /// Whether the bar says where the terminal runs: only while persistent terminals are on.
@@ -524,6 +562,26 @@ impl Workspace {
                 )
                 .child(style::status_separator(ui))
         });
+        // A Probe's items: its text in the tone it chose (a design token), its name in the tooltip.
+        let tokens = crate::settings::store_in(&self.profile, cx).tokens.clone();
+        let probes: Vec<AnyElement> = bar
+            .probes
+            .iter()
+            .map(|item| {
+                let tooltip = SharedString::from(item.tooltip.clone());
+                let spoken = format!("{}: {}", item.tooltip, item.text);
+                style::status_text(ui)
+                    .id(SharedString::from(format!("status-probe-{}", item.key)))
+                    .role(Role::Label)
+                    .aria_label(spoken)
+                    .when_some(item.tone, |d, tone| {
+                        d.text_color(crate::theme_bridge::token(&tokens, tone.token()))
+                    })
+                    .child(item.text.clone())
+                    .tooltip(move |window, cx| Tooltip::new(tooltip.clone()).build(window, cx))
+                    .into_any_element()
+            })
+            .collect();
         let bar_element = style::status_bar(ui, self.glass_on(cx))
             .id("status-bar")
             // A toolbar, there only while the bar is shown.
@@ -533,6 +591,7 @@ impl Workspace {
             .children(attention)
             .child(div().flex().items_center().children(rest))
             .child(div().flex_1())
+            .children((!probes.is_empty()).then(|| div().flex().items_center().gap_2().children(probes)))
             .children(
                 bar.hosting
                     .and_then(|(hosting, word)| status_hosting::item(ui, hosting, word))

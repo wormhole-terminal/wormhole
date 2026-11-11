@@ -29,6 +29,7 @@ mod watch;
 
 mod announce;
 mod permission;
+mod probe;
 mod respond;
 mod route;
 mod test_banner;
@@ -64,6 +65,7 @@ pub(crate) use permission::{
 };
 #[cfg(any(test, feature = "devctl"))]
 pub(crate) use permission::{permission_asks, pretend_permission};
+pub(crate) use probe::probe_notice;
 #[cfg(test)]
 pub(crate) use respond::tag;
 pub(crate) use respond::{dismiss, reply, respond};

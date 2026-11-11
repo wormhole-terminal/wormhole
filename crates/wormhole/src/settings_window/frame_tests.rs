@@ -128,7 +128,9 @@ const BUDGET: [(&str, u64); 20] = [
     // key line, 425 more.
     // The window miniature fills the stage (the sidebar keeps its width, the terminal takes the rest): 15,438
     // measured, about 490 more than at its fixed size.
-    ("Appearance", 15909),
+    // The Resize windows smoothly switch is one row more: 16,260 measured (about 330 a row). Its key, which
+    // every page reads as JSON each frame, is 1 to 6 more on Terminal, Feature flags and the search.
+    ("Appearance", 16240),
     // With the flat controls: a stepper is two halves, each a box with the Kit's button in it, and the
     // slider is built from the Kit's parts; a page with either costs a few hundred allocations more.
     ("Fonts", 8342),
@@ -136,7 +138,8 @@ const BUDGET: [(&str, u64); 20] = [
     ("Motion", 6114),
     // With the Worktrees group's switch for cloning build folders (356), and the Inline images group's one
     // select, Image memory per terminal (543: a row with its label, help line and a native menu's state).
-    ("Terminal", 11021),
+    // The Never hide lines switch is one row more in Behaviour: 11,349 measured (about 328 a row).
+    ("Terminal", 11335),
     // Three choices and a switch more (what the Changed files count is of, plain terminals, files changed
     // at once, remember after restart): about 1,400, each a segmented control or a switch with its line.
     // The list in all three densities side by side, each with a group card of three rows and two more cards, in
@@ -181,7 +184,8 @@ const BUDGET: [(&str, u64); 20] = [
     // 6,912 measured, a row fewer.
     // The Restore after restart flag is one switch row more again: 7,271 measured (about 340 a row).
     // The File icon themes flag is one switch row more again: 7,577 measured (about 305 a row).
-    ("FeatureFlags", 7486),
+    // The Fold output flag is one more: 7,803 measured (about 297 a row).
+    ("FeatureFlags", 7787),
     // Settings → Components, a development tool: every specimen of the controls on one page, many times what any
     // other page draws (nobody opens it but the owner tuning the look). The nav's one row more, Components, raised
     // every other page by 91, and Feature flags by 464 more with the flag's switch row.
@@ -191,7 +195,8 @@ const BUDGET: [(&str, u64); 20] = [
     // The search finds the Borders row too, as one more result: 196 more.
     // The window miniature it shows now fills the stage: 9,923 measured.
     // The Image memory row is one more result for the search to draw: 565 more.
-    ("search", 10910),
+    // The same switch is one more entry for a search to list: 11,245 measured.
+    ("search", 11226),
 ];
 
 /// What the Changed page is measured with: five settings that differ from their defaults, on four pages

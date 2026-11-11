@@ -10,10 +10,11 @@
 //! subscriptions.
 
 use gpui_kit::*;
+use wormhole_core::git::{ChangeKind, RepoStatus};
 use wormhole_core::ipc::control::TerminalState;
 use wormhole_core::ipc::control::event::{BlockPhase, Body, Event, Topic};
 use wormhole_core::view::sidebar::SplitId;
-use wormhole_term::BlockState;
+use wormhole_term::{Block, BlockState};
 
 use crate::automation::{publish, wants};
 use crate::terminal_view::{CommandMark, TerminalSummary};
@@ -77,6 +78,40 @@ impl Workspace {
                 let folder = new.cwd.as_ref().map(|path| path.to_string_lossy().into_owned());
                 self.event(Some(id), Body::Folder { folder })
             });
+        }
+    }
+
+    /// What git says of a terminal's folder, as the bus tells it. Counts only: the files and their lines stay
+    /// the panel's.
+    pub(super) fn git_body(status: &RepoStatus) -> Body {
+        let untracked = status.files.iter().filter(|file| file.kind == ChangeKind::Untracked).count();
+        let count = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
+        let upstream = status.upstream.as_ref();
+        Body::Git {
+            branch: status.branch.clone(),
+            ahead: upstream.map_or(0, |up| up.ahead),
+            behind: upstream.map_or(0, |up| up.behind),
+            dirty: count(status.files.len() - untracked),
+            untracked: count(untracked),
+        }
+    }
+
+    /// What git said of session `ix`'s folder before a read that is on its way, when anyone listens: the
+    /// answer to compare with ([`publish_git`](Self::publish_git)).
+    pub(super) fn git_before(&self, ix: usize, cx: &App) -> Option<Body> {
+        wants(cx, Topic::Git).then(|| self.sessions[ix].git.status.as_ref().map(Self::git_body)).flatten()
+    }
+
+    /// Session `ix`'s repository was read and the answer is not what it was (`before`): tell the new one.
+    pub(super) fn publish_git(&self, ix: usize, before: Option<Body>, cx: &App) {
+        if !wants(cx, Topic::Git) {
+            return;
+        }
+        let session = &self.sessions[ix];
+        let Some(status) = session.git.status.as_ref() else { return };
+        let body = Self::git_body(status);
+        if before.as_ref() != Some(&body) {
+            publish(cx, Topic::Git, || self.event(Some(session.id), body));
         }
     }
 
@@ -144,14 +179,19 @@ impl Workspace {
             _ => None,
         };
         publish(cx, Topic::Blocks, || {
-            let line = terminal.block_numbered(prompt).map(|block| block.command).unwrap_or_default();
-            let command = wormhole_term::clean(&line, COMMAND_CHARS);
+            let block = terminal.block_numbered(prompt);
+            let command =
+                wormhole_term::clean(block.as_ref().map_or("", |block| &block.command), COMMAND_CHARS);
+            // The rows of its output are known once it ended, from the marks on the grid.
+            let output_lines =
+                block.as_ref().filter(|_| phase == BlockPhase::Finished).map(Block::output_rows);
             let body = Body::Block {
                 block: i64::try_from(prompt).unwrap_or(i64::MAX),
                 phase,
                 exit_code,
                 took_ms,
                 command: (!command.is_empty()).then_some(command),
+                output_lines,
             };
             self.event(Some(id), body)
         });

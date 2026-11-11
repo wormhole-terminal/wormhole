@@ -190,7 +190,7 @@ impl TerminalView {
                                 &from.old,
                                 Some(&from.key),
                                 &mut options,
-                                &super::restored::restored_words,
+                                &wormhole_core::terminal::restored::restored_words,
                             );
                             seeded.store(drawn, Ordering::Release);
                         }
@@ -402,6 +402,7 @@ impl TerminalView {
             pty.resize(size);
         }
         self.pty = Some(pty);
+        self.sync_folds(cx);
         // The window's place goes to the new engine on the next frame.
         self.window_given = None;
         self.listen(events, cx);

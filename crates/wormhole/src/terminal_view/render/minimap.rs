@@ -51,6 +51,21 @@ impl TerminalView {
                     }
                 }
                 let geometry = minimap.geometry;
+                // The minimap draws the real lines; a collapsed fold is marked by a tick at its left edge,
+                // as long as the lines the view folds into one marker.
+                let (top, shown) = (geometry.first(), minimap.lines.len());
+                for &(first, last) in &minimap.folds {
+                    let (first, last) = (first.max(top), last.min((top + shown).saturating_sub(1)));
+                    if first > last {
+                        continue;
+                    }
+                    let y = bounds.origin.y + px(LINE_PITCH * (first - top) as f32);
+                    let tick = Bounds::new(
+                        point(bounds.origin.x, y),
+                        size(px(LINE_PITCH), px(LINE_PITCH * (last - first + 1) as f32)),
+                    );
+                    window.paint_quad(fill(tick, thumb));
+                }
                 if geometry.total > geometry.screen {
                     let (top, height) = geometry.slider();
                     let slider = Bounds::new(

@@ -42,6 +42,8 @@ pub(super) enum BlockAction {
     CopyCommand,
     /// Type the command at the prompt, for the person to run with Return.
     PutAtPrompt,
+    /// Fold the output into one marker row (the Fold output feature).
+    FoldOutput,
 }
 
 /// The gutter mark's color for a block in this state: the status colors for a command that
@@ -106,7 +108,7 @@ impl TerminalView {
         let from = match self.blocks.cursor.and_then(|id| pty.block(id)) {
             Some(block) => Some(block.start),
             None if at_bottom => pty.prompt_line(Line(pty.bottommost_line().0 + 1), Direction::Up),
-            None => Some(Line(-(pty.display_offset() as i32))),
+            None => self.render_state.borrow().snapshot().rows().first().map(|row| row.line()),
         };
         let Some(from) = from else { return };
         match pty.prompt_line(from, direction) {
@@ -211,6 +213,7 @@ impl TerminalView {
                     self.say(Copied::Command, cx);
                 }
             }
+            BlockAction::FoldOutput => self.fold_output(block.id, cx),
             BlockAction::PutAtPrompt => {
                 if block.command.is_empty() {
                     return;
@@ -329,14 +332,17 @@ impl TerminalView {
         out
     }
 
-    /// `block <n> <select|copy-output|copy-command|to-prompt>`.
+    /// `block <n> <select|copy-output|copy-command|to-prompt|fold>`.
     pub fn devctl_block(&mut self, n: usize, action: &str, cx: &mut Context<Self>) -> anyhow::Result<()> {
         let action = match action {
             "select" => BlockAction::SelectOutput,
             "copy-output" => BlockAction::CopyOutput,
             "copy-command" => BlockAction::CopyCommand,
             "to-prompt" => BlockAction::PutAtPrompt,
-            other => anyhow::bail!("expected select, copy-output, copy-command or to-prompt, got {other:?}"),
+            "fold" => BlockAction::FoldOutput,
+            other => {
+                anyhow::bail!("expected select, copy-output, copy-command, to-prompt or fold, got {other:?}")
+            }
         };
         let block = self
             .pty

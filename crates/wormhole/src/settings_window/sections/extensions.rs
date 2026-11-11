@@ -155,6 +155,8 @@ impl SettingsWindow {
                     )
                 });
                 this.extensions.work = None;
+                // The terminals' rules and hooks follow what is approved.
+                crate::probe_runtime::approvals_changed(cx);
                 this.scan_probes(cx);
                 cx.notify();
             })

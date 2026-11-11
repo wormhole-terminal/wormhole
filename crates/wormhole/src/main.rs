@@ -36,6 +36,7 @@ mod palette;
 mod perf;
 mod picker;
 mod platform;
+mod probe_runtime;
 mod select;
 mod settings;
 mod settings_window;

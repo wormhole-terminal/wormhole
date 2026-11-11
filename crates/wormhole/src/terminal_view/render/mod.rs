@@ -15,13 +15,16 @@
 //!   layers in order); `frame`, `cache`, `rows`, `words` and `shaping` are what they build on
 //! - the grid's parts: `glyphs` (box drawing), `underline`, `cursor`, `images`, `blink`,
 //!   `sized` (double-width and double-height rows)
-//! - beside the grid: `overlays` (block marks, find ticks, the bell, the drag), `scrollbar`,
+//! - what Probes add: `decor` (tones, masks and a marked block's tint on the rows)
+//! - beside the grid: `overlays` (block marks, find ticks, the bell, the drag), `folds` (a fold's marker row), `scrollbar`,
 //!   `minimap`, `exited` (the bar of a finished shell)
 
 mod blink;
 mod cache;
 mod cursor;
+mod decor;
 mod exited;
+mod folds;
 mod frame;
 mod glyphs;
 mod images;
@@ -65,7 +68,7 @@ use wormhole_term::types::MouseTracking;
 use super::status::Status;
 use super::{
     ClearBuffer, CopyCommand, CopyOutput, MIN_WIDTH, NextPrompt, PADDING_X, PADDING_Y, PreviousPrompt,
-    RerunCommand, SelectOutput, TerminalView,
+    RerunCommand, SelectOutput, ShowHiddenLines, TerminalView,
 };
 use crate::perf;
 use crate::platform::scroller::ScrollerPrefs;
@@ -102,11 +105,6 @@ impl RenderState {
         &self.frame.snapshot
     }
 
-    /// How far the last frame was scrolled into the history.
-    pub(super) fn display_offset(&self) -> usize {
-        self.frame.snapshot.display_offset
-    }
-
     /// How long the history was in the last frame.
     pub(super) fn history_size(&self) -> usize {
         self.frame.snapshot.history_size
@@ -141,12 +139,13 @@ impl Render for TerminalView {
         let minimap = store.settings.minimap;
         let paint_state = self.render_state.clone();
         let weak = entity.downgrade();
-        let link_rows = self.hovered_link_rows(self.render_state.borrow().display_offset());
+        let link_rows = self.hovered_link_rows();
         let link_color = palette.foreground;
         let hovered_block = self.hovered_block();
         let background_override =
             self.render_state.borrow().snapshot().colors[NamedColor::Background].map(crate::palette::to_hsla);
         let has_blocks = self.pty.as_ref().is_some_and(Pty::has_blocks);
+        let has_folds = self.pty.as_ref().is_some_and(Pty::has_folds);
 
         let prepare = prepare::Prepare {
             font_size: font_size_setting,
@@ -158,6 +157,7 @@ impl Render for TerminalView {
             draws_cursor,
             reduce_motion,
             live_resize: self.live_on(cx),
+            ui,
             dock,
             layout: layout_cell,
             state: prepaint_state,
@@ -182,7 +182,7 @@ impl Render for TerminalView {
                 frame
             },
             move |bounds, frame, window, cx| {
-                let Some(frame) = frame else { return };
+                let Some(mut frame) = frame else { return };
                 #[cfg(feature = "devctl")]
                 PAINTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 let span = perf::span();
@@ -192,6 +192,9 @@ impl Render for TerminalView {
                         paint.run(bounds, &frame, window, cx)
                     }),
                     None => paint.run(bounds, &frame, window, cx),
+                }
+                for marker in &mut frame.folds {
+                    marker.paint(window, cx);
                 }
                 span.end(perf::Part::Paint);
             },
@@ -241,9 +244,14 @@ impl Render for TerminalView {
                     this.block_action(blocks::BlockAction::PutAtPrompt, cx)
                 }))
             })
+            // Edit → Show Hidden Lines, greyed out while this terminal has no fold.
+            .when(has_folds, |this| {
+                this.on_action(cx.listener(|this, _: &ShowHiddenLines, _, cx| this.show_hidden_lines(cx)))
+            })
             .on_hover(cx.listener(|this, hovered: &bool, _, cx| {
                 if !hovered {
                     this.leave_blocks(cx);
+                    this.end_reveal(cx);
                 }
             }))
             .size_full()
@@ -265,6 +273,7 @@ impl Render for TerminalView {
             })
             .on_modifiers_changed(cx.listener(|this, event: &ModifiersChangedEvent, window, cx| {
                 this.hover_link(window.mouse_position(), event.modifiers.platform, cx);
+                this.update_reveal(window.mouse_position(), event.modifiers, cx);
             }))
             .on_mouse_down(MouseButton::Left, cx.listener(Self::on_mouse_down))
             .on_mouse_down(MouseButton::Right, cx.listener(Self::on_mouse_down))
@@ -288,6 +297,7 @@ impl Render for TerminalView {
             .when(!minimap, |this| this.child(self.render_scrollbar(cx)))
             .children(self.render_block_readout(cx))
             .children(self.render_size_readout(window, cx))
+            .children(self.render_link_readout(cx))
             .children(bell_glow.map(|color| bell_edge(ui, color)))
             .when(exited, |this| this.child(self.render_exited(cx)))
             .children(self.render_pane_bar(exited, cx))

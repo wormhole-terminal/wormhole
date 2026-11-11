@@ -154,6 +154,57 @@ fn frame_build_200x60() {
         idle < UNCHANGED_FRAME_ALLOCATIONS && scroll < SCROLLING_FRAME_ALLOCATIONS,
         "steady frames allocate {idle} / {scroll} times"
     );
+    folded_frames(2000);
+}
+
+/// What folds cost a frame, on the same screen: a fold of 320 lines in the history (collapsed) and one of
+/// 100 (open) after it, 240 more of three rows in the history out of view, and the view scrolled so both are in it.
+/// Returns the allocations of the steady frames with folds in view (nothing changed, and the view scrolled
+/// by one row) and of the same scrolled frame without folds.
+fn folded_frames(iterations: usize) -> (usize, usize, usize) {
+    let palette = Palette::from_theme(&wormhole_core::theme::builtin()[0]);
+    let mut base_font = font("JetBrains Mono");
+    base_font.features = crate::fonts::ligature_features(false);
+    let mut term = term();
+    for n in 0..240 {
+        let at = -750 + 3 * n;
+        term.fold_lines(at, at + 2).expect("a fold");
+    }
+    // 240 folds out of view, none of them in the view at the bottom.
+    let mut cache = FrameCache::default();
+    frame(&mut cache, &mut term, &palette, &base_font);
+    let (_, bottom) = measure("unchanged frame, 240 folds out of view", iterations, |_| {
+        frame(&mut cache, &mut term, &palette, &base_font)
+    });
+    let mut plain = self::term();
+    plain.scroll_display(wormhole_term::types::Scroll::Delta(400));
+    let mut plain_cache = FrameCache::default();
+    frame(&mut plain_cache, &mut plain, &palette, &base_font);
+    let (_, plain_scroll) = measure("scrolled by a row, no folds", iterations, |i| {
+        let step = if i % 2 == 0 { 1 } else { -1 };
+        plain.scroll_display(wormhole_term::types::Scroll::Delta(step));
+        frame(&mut plain_cache, &mut plain, &palette, &base_font)
+    });
+    let mut term = self::term();
+    // The one that is collapsed is a Probe's: its owner rides in the row at no cost per frame.
+    let collapsed = term.fold_lines_by(-700, -380, "acme-tools").expect("a fold");
+    let open = term.fold_lines(-370, -270).expect("a fold");
+    assert!(term.toggle_fold(open));
+    term.scroll_display(wormhole_term::types::Scroll::Delta(400));
+    let mut cache = FrameCache::default();
+    frame(&mut cache, &mut term, &palette, &base_font);
+    assert!(cache.snapshot.rows().iter().any(|row| row.fold().is_some_and(|f| f.id == collapsed)));
+    assert!(cache.snapshot.rows().iter().any(|row| row.fold().is_some_and(|f| f.id == open)));
+    let (_, idle) = measure("unchanged frame, folds in view", iterations, |_| {
+        frame(&mut cache, &mut term, &palette, &base_font)
+    });
+    let (_, scroll) = measure("scrolled by a row, folds in view", iterations, |i| {
+        let step = if i % 2 == 0 { 1 } else { -1 };
+        term.scroll_display(wormhole_term::types::Scroll::Delta(step));
+        frame(&mut cache, &mut term, &palette, &base_font)
+    });
+    assert!(bottom < UNCHANGED_FRAME_ALLOCATIONS, "folds out of view cost {bottom} allocations");
+    (idle, scroll, plain_scroll)
 }
 
 /// The benchmark's allocation limits as a check that always runs: counts don't depend on the
@@ -177,6 +228,17 @@ fn frames_stay_within_their_allocations() {
     assert!(
         idle < UNCHANGED_FRAME_ALLOCATIONS && scroll < SCROLLING_FRAME_ALLOCATIONS,
         "steady frames allocate {idle} / {scroll} times"
+    );
+}
+
+/// Folds in view cost a frame no more allocations than the same frame without: the rows are walked
+/// over reused buffers, and a screen with no folds does no work for them.
+#[test]
+fn folds_in_view_do_not_make_steady_frames_allocate() {
+    let (idle, scroll, plain) = folded_frames(20);
+    assert!(
+        idle < UNCHANGED_FRAME_ALLOCATIONS && scroll <= plain + 16,
+        "steady frames with folds allocate {idle} / {scroll} times, {plain} for the scroll without folds"
     );
 }
 

@@ -20,7 +20,7 @@
 #   text  the source checks themselves (crates/wormhole-rules), skills, agents, rules, scripts,
 #         tools/visual, the top-level .md files (CHANGELOG.md too): the source checks (they scan the
 #         wording), which link std alone, so nothing of the app or core compiles.
-#   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench (its
+#   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench, apple (its
 #         own workspace) and tools/feed-counter (bun test there): nothing to run.
 # Whatever the scope, first the history (cheap, before any cargo): the commits since the base follow
 # the rules (scripts/commits.py), a feat/fix/perf, breaking or Security commit comes with a
@@ -74,6 +74,8 @@ scope_of() {
     .git-blame-ignore-revs) echo none ;;
     # Its own workspace, built and checked on its own (tools/bench/README.md).
     tools/bench/*) echo none ;;
+    # The Swift UI experiment: its own workspace and packages, built and checked on their own.
+    apple/*) echo none ;;
     # The download server's counter, a Cloudflare Worker with its own tests (bun test there).
     tools/feed-counter/*) echo none ;;
     *) echo all ;;   # unknown: safer to run everything than to miss a test that reads it

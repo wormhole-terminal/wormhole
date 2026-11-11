@@ -28,6 +28,7 @@ mod failed;
 mod find;
 mod find_bar;
 mod first_command;
+mod folds;
 mod grid_layout;
 mod host_problem;
 mod hosted;
@@ -38,7 +39,6 @@ mod pane_bar;
 mod progress_timer;
 mod render;
 mod reported;
-mod restored;
 mod scaling;
 mod settle;
 mod status;
@@ -61,7 +61,16 @@ pub use status::{CommandMark, ProgramNotice, Status, TerminalEvent, TerminalSumm
 // rest on the current block); the terminal answers Edit → Copy, Paste and Select All too.
 actions!(
     terminal,
-    [ClearBuffer, PreviousPrompt, NextPrompt, SelectOutput, CopyOutput, CopyCommand, RerunCommand]
+    [
+        ClearBuffer,
+        PreviousPrompt,
+        NextPrompt,
+        SelectOutput,
+        CopyOutput,
+        CopyCommand,
+        RerunCommand,
+        ShowHiddenLines
+    ]
 );
 
 /// The grid's least inset from the pane's sides, and below the title bar and above the bottom; with
@@ -216,6 +225,10 @@ pub struct TerminalView {
     cursor_blink: Option<Task<()>>,
     /// The link under the pointer while ⌘ is held (see `links`).
     hovered_link: Option<wormhole_term::Link>,
+    /// This terminal's id as its session has it (what events and hooks call it); 0 for a view with none.
+    tab: i64,
+    /// A shortened or redacted span the pointer is over, shown as it is written (see `links`).
+    reveal: links::Reveal,
     /// Points over the font size in Settings (⌘+ / ⌘- in this window; ⌘0 is 0). Where a zoom is going; the
     /// size drawn eases to it (`scaling`).
     font_zoom: f32,
@@ -277,13 +290,14 @@ impl TerminalView {
         options.colors = Some(palette.engine_colors());
         options.color_scheme = Some(palette.color_scheme());
         let cwd = options.cwd.clone();
+        let tab = options.tab_id.parse().unwrap_or(0);
         let restored = options.restore.clone().unwrap_or_default();
         // The saved text is the seed a new shell starts above: dim, with the divider that says when.
         options.restore = options.restore.take().map(|text| {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_or(0, |since| since.as_secs());
-            restored::seed_from_text(&text, now)
+            wormhole_core::terminal::restored::seed_from_text(&text, now)
         });
         let local = matches!(start, Start::Local | Start::LocalNeedsApplications)
             .then(|| wormhole_core::terminal::spawn(initial, &options));
@@ -371,6 +385,8 @@ impl TerminalView {
             blink_held: false,
             cursor_blink: None,
             hovered_link: None,
+            tab,
+            reveal: links::Reveal::default(),
             font_zoom: 0.0,
             scaling: Default::default(),
             minimap_grab: None,
@@ -386,6 +402,7 @@ impl TerminalView {
             this.listen(events, cx);
         }
         this.begin(start, options, initial, cx);
+        this.sync_folds(cx);
         this
     }
 
@@ -486,12 +503,6 @@ impl TerminalView {
     /// [`Self::shell`], borrowed: names are worked out on every frame.
     pub fn shell_name(&self) -> &str {
         &self.shell
-    }
-
-    /// The grid's columns and rows as of the last frame.
-    pub fn grid_size(&self) -> (usize, usize) {
-        let layout = self.layout.get();
-        (layout.cols, layout.rows)
     }
 
     /// A handle on the grid's size that outlives a read of the terminal: what the window shows of

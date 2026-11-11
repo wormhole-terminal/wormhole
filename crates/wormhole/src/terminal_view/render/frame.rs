@@ -7,6 +7,7 @@ use wormhole_term::ScreenSnapshot;
 use wormhole_term::types::LineSize;
 
 use super::cache::{RowCache, SyncStats};
+use super::decor::Decor;
 use super::glyphs::GlyphPainter;
 use super::rows::{ImageRun, RowBuilder, Segment, Underline};
 use super::sized;
@@ -79,6 +80,8 @@ pub(super) struct FrameStats {
 /// `L` is a word as painted.
 pub(super) struct FrameCache<K, L> {
     pub snapshot: ScreenSnapshot,
+    /// What Probes add to the rows: worked out before each sync, by `prepare`.
+    pub decor: Decor,
     rows: RowCache<K, PaintedRow<L>>,
     /// Builds each row's words, keeping the buffers of the last row for the next.
     builder: RowBuilder,
@@ -91,6 +94,7 @@ impl<K, L> Default for FrameCache<K, L> {
     fn default() -> Self {
         Self {
             snapshot: ScreenSnapshot::default(),
+            decor: Decor::default(),
             rows: RowCache::default(),
             builder: RowBuilder::default(),
             lines: Vec::new(),
@@ -114,8 +118,8 @@ impl<K: Clone + PartialEq, L> FrameCache<K, L> {
         let mut stats = FrameStats::default();
         let colors = self.snapshot.colors;
         let redo = |painted: &PaintedRow<L>| painted.provisional;
-        let Self { rows, snapshot, builder, lines, .. } = self;
-        stats.rows = rows.sync(key.clone(), snapshot, found, redo, |cells, extras, marks, spare| {
+        let Self { rows, snapshot, builder, lines, decor, .. } = self;
+        stats.rows = rows.sync(key.clone(), snapshot, found, decor, redo, |cells, extras, marks, spare| {
             let built = builder.build(cells, extras, palette, &colors, marks);
             let mut painted = spare.unwrap_or_default();
             // The words' lines of the row being replaced are the next row's to fill again.

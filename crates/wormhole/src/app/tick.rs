@@ -94,6 +94,7 @@ pub(super) fn tick(cx: &mut App) {
     let reading = agent_access::reads_open(cx);
     crate::automation::sync_grants(cx, reading);
     notifications::tick(ticks, cx);
+    crate::app::probes::tick(ticks, cx);
     status_item::sync(cx);
     menus::sync(cx);
     update::schedule_check(ticks, cx);

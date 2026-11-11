@@ -8,14 +8,14 @@ use std::collections::hash_map::Entry;
 use std::rc::Rc;
 
 use gpui_kit::{App, Bounds, Entity, Font, Pixels, Point, Size, Window, point, px, size};
+use wormhole_core::view::layout::cell::Cell as GridCell;
 use wormhole_term::GridSize;
 use wormhole_term::images::Tiles;
 
 use super::cursor::{CursorPaint, cursor_frame};
 use super::frame::Geometry;
-use super::rows::Style;
-use super::shaping::{ShapeKey, colors_key, shape_word, text_run};
-use super::{RenderState, blink, images, words};
+use super::shaping::{ShapeKey, colors_key, shape_word};
+use super::{RenderState, blink, folds, images, words};
 use crate::palette::Palette;
 use crate::perf::{self, Count, Part};
 use crate::terminal_view::{Layout, PADDING_X, PADDING_Y, TerminalView};
@@ -45,6 +45,8 @@ pub(super) struct Frame {
     /// Where the grid must stay inside when it is not the size the pane makes (a text zoom or a live
     /// resize holds the PTY's size, so the grid may be larger than the pane): the pane with its padding.
     pub clip: Option<Bounds<Pixels>>,
+    /// The markers of the folds in view (`folds`), painted over the grid.
+    pub folds: Vec<gpui_kit::AnyElement>,
 }
 
 /// What a frame's preparation reads from the view: copied out of `render`, which has the view and
@@ -61,6 +63,7 @@ pub(super) struct Prepare {
     /// The window is resized like Terminal does (Live resize feature): the grid tolerates a pixel's rounding
     /// of the window's size.
     pub live_resize: bool,
+    pub ui: crate::settings::UiColors,
     pub dock: Option<wormhole_core::onboarding::welcome::DockCell>,
     pub layout: Rc<Cell<Layout>>,
     pub state: Rc<RefCell<RenderState>>,
@@ -72,9 +75,13 @@ impl Prepare {
         let font_size = px(self.font_size);
         let text_system = window.text_system().clone();
         let font_id = text_system.resolve_font(&self.base_font);
-        let cell_width =
-            text_system.advance(font_id, font_size, 'm').map(|size| size.width).unwrap_or(px(8.4));
-        let line_height = px((self.font_size * self.line_height).round());
+        // The cell is core's rule over the font's measurements (the Swift renderer sizes its grid by the same one).
+        let advance = text_system.advance(font_id, font_size, 'm').map_or(8.4, |size| f32::from(size.width));
+        let ascent = f32::from(text_system.ascent(font_id, font_size));
+        // GPUI's font metrics give the descent below the baseline as a negative number.
+        let descent = -f32::from(text_system.descent(font_id, font_size));
+        let cell = GridCell::new(self.font_size, self.line_height, advance, ascent, descent);
+        let (cell_width, line_height) = (px(cell.width), px(cell.height));
         let area = bounds;
         // What of the pane shows: the grid may be wider than its pane (a terminal has a least width), and a
         // notice about it is centred on the part that is there.
@@ -82,7 +89,7 @@ impl Prepare {
         // A window whose size AppKit rounded to the screen's pixels (its steps are a fractional cell) may be a
         // pixel short of a whole column.
         let slack = if self.live_resize { 1.0 / window.scale_factor() } else { 0.0 };
-        let wanted = Placement::new(area, cell_width, line_height, slack);
+        let wanted = Placement::new(area, &cell, slack);
         // What the PTY is told, and the grid drawn: the size the pane makes, unless it is held back.
         let (told_cols, told_rows) = self.entity.update(cx, |this, cx| {
             let size = GridSize {
@@ -138,6 +145,7 @@ impl Prepare {
         let mut state = self.state.borrow_mut();
         let RenderState { frame: cache, images: image_cache, words, outlines, .. } = &mut *state;
         let mut found = Vec::new();
+        let mut fold_found = Vec::new();
         let mut ticks = Vec::new();
         let palette = &self.palette;
         let has_terminal = self.entity.update(cx, |this, cx| {
@@ -148,7 +156,9 @@ impl Prepare {
             pty.snapshot(&mut cache.snapshot);
             span.end(Part::Snapshot);
             found = this.found_rows(&cache.snapshot);
+            fold_found = this.fold_matches(&cache.snapshot);
             ticks = this.found_ticks(&cache.snapshot);
+            this.probe_marks(&mut cache.decor, &cache.snapshot, cx);
             this.mode = cache.snapshot.mode;
             let blinking = cache.snapshot.cursor.is_some_and(|cursor| cursor.blinking);
             this.blink_wanted(blinking && self.focused && !self.reduce_motion, cx);
@@ -172,6 +182,7 @@ impl Prepare {
             font_size,
             cell_width,
             colors: colors_key(&cache.snapshot.colors),
+            rules: crate::probe_runtime::generation(cx),
         };
         words.sync((font_id, font_size, cell_width));
         words.start_frame(Some(std::time::Instant::now() + words::SHAPE_BUDGET));
@@ -201,19 +212,8 @@ impl Prepare {
             .draws_cursor
             .then(|| cursor_frame(&cache.snapshot, palette, self.focused, geometry, &text_system, base_font))
             .flatten();
-        let underline_y = gpui_kit::underline_y_offset(
-            line_height,
-            text_system.ascent(font_id, font_size),
-            text_system.descent(font_id, font_size),
-        );
-        // Where a line of the base font puts its baseline and strikethrough (as
-        // `ShapedLine::paint` does), so every row's glyphs sit on the same one.
-        let (baseline_y, strike_y) = {
-            let run = text_run(1, &Style::of(&Default::default(), palette.foreground), base_font);
-            let line = text_system.shape_line("m".into(), font_size, &[run], None);
-            let baseline = (line_height - line.ascent - line.descent) / 2.0 + line.ascent;
-            (baseline, (line.ascent * 0.5 + baseline) * 0.5)
-        };
+        // Where the base font puts its baseline, underline and strikethrough, so every row's glyphs sit on the same one.
+        let (underline_y, baseline_y, strike_y) = (px(cell.underline), px(cell.baseline), px(cell.strike));
         // The pictures: under the placeholder cells and placed in the grid. The terminal's
         // lock for what the engine knows of the placeholders, then the store's for the
         // pixels; never both at once.
@@ -243,6 +243,7 @@ impl Prepare {
             (paints, over)
         });
         images_span.end(Part::Images);
+        let folds = folds::markers(&cache.snapshot, &fold_found, geometry, self.ui, &self.entity, window, cx);
         Some(Frame {
             geometry,
             reach,
@@ -257,6 +258,7 @@ impl Prepare {
             images,
             overlay,
             clip,
+            folds,
         })
     }
 }
@@ -279,10 +281,9 @@ pub(super) struct Placement {
 impl Placement {
     /// `slack` is how far short of a whole column or row the area may be and still have it, in points:
     /// zero, or a screen pixel for a window whose size is rounded to pixels.
-    pub fn new(area: Bounds<Pixels>, cell_width: Pixels, line_height: Pixels, slack: f32) -> Self {
-        let cols = ((f32::from(area.size.width) + slack) / f32::from(cell_width)).floor().max(2.0) as usize;
-        let rows = ((f32::from(area.size.height) + slack) / f32::from(line_height)).floor().max(1.0) as usize;
-        Self::held(area, cell_width, line_height, cols, rows)
+    pub fn new(area: Bounds<Pixels>, cell: &GridCell, slack: f32) -> Self {
+        let (cols, rows) = cell.fit(f32::from(area.size.width), f32::from(area.size.height), slack);
+        Self::held(area, px(cell.width), px(cell.height), cols, rows)
     }
 
     /// The grid of `cols` by `rows` cells at the area's top left, whatever room the area has: smaller than
@@ -334,7 +335,11 @@ fn report_dock(
 mod tests {
     use gpui_kit::{Bounds, point, px, size};
 
-    use super::{PADDING_X, PADDING_Y, Placement};
+    use super::{GridCell, PADDING_X, PADDING_Y, Placement};
+
+    fn cell(width: f32, height: f32) -> GridCell {
+        GridCell { width, height, baseline: 0.0, underline: 0.0, strike: 0.0 }
+    }
 
     fn area(width: f32, height: f32) -> Bounds<gpui_kit::Pixels> {
         Bounds::new(point(px(40.0), px(30.0)), size(px(width), px(height)))
@@ -342,9 +347,9 @@ mod tests {
 
     #[test]
     fn the_grid_keeps_its_origin_when_the_width_changes_the_columns() {
-        let (cell, line) = (px(8.4), px(18.0));
-        let wide = Placement::new(area(700.0, 400.0), cell, line, 0.0);
-        let narrow = Placement::new(area(700.0 - 3.0 * 8.4 - 4.0, 400.0), cell, line, 0.0);
+        let grid = cell(8.4, 18.0);
+        let wide = Placement::new(area(700.0, 400.0), &grid, 0.0);
+        let narrow = Placement::new(area(700.0 - 3.0 * 8.4 - 4.0, 400.0), &grid, 0.0);
         assert_ne!(wide.cols, narrow.cols, "the width really changed the columns");
         assert_eq!(wide.bounds.origin, narrow.bounds.origin);
         assert_eq!(wide.bounds.origin, point(px(40.0), px(30.0)), "the area's own corner");
@@ -352,17 +357,17 @@ mod tests {
 
     #[test]
     fn the_grid_keeps_its_origin_when_the_height_changes_the_rows() {
-        let (cell, line) = (px(8.4), px(18.0));
-        let tall = Placement::new(area(700.0, 400.0), cell, line, 0.0);
-        let short = Placement::new(area(700.0, 400.0 - 18.0 - 5.0), cell, line, 0.0);
+        let grid = cell(8.4, 18.0);
+        let tall = Placement::new(area(700.0, 400.0), &grid, 0.0);
+        let short = Placement::new(area(700.0, 400.0 - 18.0 - 5.0), &grid, 0.0);
         assert_ne!(tall.rows, short.rows);
         assert_eq!(tall.bounds.origin, short.bounds.origin);
     }
 
     #[test]
     fn the_leftover_goes_to_the_right_and_bottom_edges() {
-        let (cell, line) = (px(10.0), px(20.0));
-        let placed = Placement::new(area(105.0, 207.0), cell, line, 0.0);
+        let grid = cell(10.0, 20.0);
+        let placed = Placement::new(area(105.0, 207.0), &grid, 0.0);
         assert_eq!((placed.cols, placed.rows), (10, 10));
         assert_eq!(placed.bounds.size, size(px(100.0), px(200.0)));
         assert_eq!(placed.reach.left, px(PADDING_X));
@@ -373,15 +378,11 @@ mod tests {
 
     #[test]
     fn a_pixel_of_slack_keeps_a_column_a_rounded_window_is_short_of() {
-        let (cell, line) = (px(8.4), px(18.0));
+        let grid = cell(8.4, 18.0);
         // 20 columns of 8.4 are 168.0; a window rounded down to the half point is 167.5.
-        assert_eq!(Placement::new(area(167.5, 180.0), cell, line, 0.0).cols, 19);
-        assert_eq!(Placement::new(area(167.5, 180.0), cell, line, 0.5).cols, 20);
-        assert_eq!(
-            Placement::new(area(160.0, 180.0), cell, line, 0.5).cols,
-            19,
-            "a real shortfall still counts"
-        );
+        assert_eq!(Placement::new(area(167.5, 180.0), &grid, 0.0).cols, 19);
+        assert_eq!(Placement::new(area(167.5, 180.0), &grid, 0.5).cols, 20);
+        assert_eq!(Placement::new(area(160.0, 180.0), &grid, 0.5).cols, 19, "a real shortfall still counts");
     }
 
     #[test]

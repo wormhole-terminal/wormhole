@@ -11,7 +11,9 @@ use gpui_kit::Hsla;
 use wormhole_term::images::{Placeholder, placeholder_at};
 use wormhole_term::types::{Cell, Colors, Flags, LineSize, RowExtras};
 
+use super::decor::RuleSpan;
 use crate::palette::Palette;
+use wormhole_core::probe::tone::Tone;
 
 /// The text attributes runs are split on. Underlines aren't among them: the
 /// terminal paints those itself (see [`Underline`]), and strikethroughs in rows too. `blink` only
@@ -172,9 +174,18 @@ pub(super) struct Marks {
     pub selected: Option<(usize, usize)>,
     /// Matches' columns `[first, last]`, in order; `true` on the current match.
     pub found: Vec<(usize, usize, bool)>,
+    /// What Probes' rules do to spans of the row (empty with no Probe on).
+    pub rules: Vec<RuleSpan>,
+    /// The tint a hook gave the block the row is in.
+    pub block_tone: Option<Tone>,
 }
 
 impl Marks {
+    /// The rule span that holds `col`.
+    fn rule_at(&self, col: usize) -> Option<&RuleSpan> {
+        self.rules.iter().find(|span| (span.first..=span.last).contains(&col))
+    }
+
     /// Whether `col` is in a match, and in the current one.
     fn found_at(&self, col: usize) -> Option<bool> {
         self.found.iter().find(|(first, last, _)| (*first..=*last).contains(&col)).map(|m| m.2)
@@ -259,6 +270,17 @@ fn fill(
         let extra = extras.cell(col);
         let in_selection = marks.selected.is_some_and(|(first, last)| (first..=last).contains(&col));
         let (mut fg, mut bg) = palette.cell_colors(cell, in_selection, overrides);
+        // A Probe's marks: a hook's tint under the whole block, a rule's tone on the text. The selection and
+        // find's matches stand over both.
+        let rule = marks.rule_at(col);
+        if !in_selection {
+            if let Some(tone) = marks.block_tone {
+                bg = palette.tone_tint(tone, bg);
+            }
+            if let Some(tone) = rule.and_then(|span| span.tone) {
+                fg = palette.tone(tone);
+            }
+        }
         // The current match stands out over everything; the others tint, except in the selection.
         let found = marks.found_at(col);
         match found {
@@ -290,13 +312,17 @@ fn fill(
             }
             continue;
         }
-        let shown = if !wide && is_shape(cell.c) {
-            row.shapes.push((col, cell.c, fg));
+        // A shortened or redacted span draws its replacement where the text was: the real characters of the
+        // span (and their combining marks) are never shaped or painted.
+        let masked = rule.and_then(|span| span.mask.as_ref()?.get(col - span.first).copied());
+        let c = masked.unwrap_or(cell.c);
+        let shown = if !wide && is_shape(c) {
+            row.shapes.push((col, c, fg));
             ' '
-        } else if cell.c == '\0' || cell.c == '\t' {
+        } else if c == '\0' || c == '\t' {
             ' '
         } else {
-            cell.c
+            c
         };
         // A hidden cell (SGR 8) hides its underline and overline too. Both take the underline's
         // color when the program set one (SGR 58), else the text's.
@@ -329,7 +355,7 @@ fn fill(
                 _ => row.strikes.push((col, end, fg)),
             }
         }
-        let zerowidth = extra.zerowidth;
+        let zerowidth = if masked.is_some() { &[] } else { extra.zerowidth };
         // A blank draws nothing: it ends the word before it, and the next
         // character starts one at its own column.
         if shown == ' ' && zerowidth.is_empty() {
