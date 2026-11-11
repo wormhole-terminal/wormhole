@@ -22,6 +22,7 @@ extension WindowHub {
         hooks.browse = { [unowned self] in terminals.keepKeys() }
         hooks.copyPath = { [unowned self] in copyFolder($0) }
         hooks.revealFolder = { [unowned self] in revealFolder($0) }
+        hooks.groupMenu = actions.groupMenu
         return hooks
     }
 

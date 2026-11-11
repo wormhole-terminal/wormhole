@@ -118,7 +118,7 @@ public struct HubActions {
     public var newTerminalWith: @MainActor (String) -> Void = { _ in }
     /// The Show terminals in ▸ Sidebar choice (the tab bar's group switcher offers it).
     public var showTerminalsInSidebar: @MainActor () -> Void = {}
-    /// A group's native menu, for a right-click on its card in the tab bar's switcher.
+    /// A group's native menu, for a right-click on its head or on its card in the tab bar's switcher.
     public var groupMenu: @MainActor (GroupID) -> NSMenu? = { _ in nil }
     /// Settings, open on the setting with this id (`RevealSetting`).
     public var revealSetting: @MainActor (String) -> Void = { _ in }

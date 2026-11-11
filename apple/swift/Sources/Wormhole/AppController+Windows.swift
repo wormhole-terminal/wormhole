@@ -43,6 +43,7 @@ extension AppController {
         factory.look = terminalLook
         settingsApplier?.dress(session)
         connect(session)
+        followCloseDot(of: session)
         if let persistence = panel.notes {
             session.notes = NotesCoordinator(persistence: persistence, hub: hub)
             session.notes?.start()
@@ -62,7 +63,6 @@ extension AppController {
         }
         hub.actions.closeTerminal = { [weak self, weak session] in self?.closeTerminal($0, in: session) }
         hub.actions.closeGroup = { [weak self, weak session] in self?.closeGroup($0, in: session) }
-        followCloseDot(of: session)
         hub.store.onNotice = { [weak self, weak session] in
             guard let session else { return }
             self?.answer($0, from: session)
@@ -73,16 +73,7 @@ extension AppController {
         hub.sidebarLink.groupMenu = { [weak self, weak session] id, frame in
             if let session { self?.openGroupMenu(id, at: frame, in: session) }
         }
-        hub.actions.groupMenu = { [weak self, weak session] id in session.flatMap { self?.groupMenu(id, in: $0) } }
-        hub.actions.revealSetting = { [weak self] in
-            self?.showSettings()
-            self?.settingsModel.reveal($0)
-        }
-        hub.actions.editsSettings = { [weak self, weak session] in session?.windows.profile == self?.windowsHost.profile }
-        hub.actions.showKeyMenu = { [weak self, weak session] menu, frame in
-            guard let self, policy.touchesSystem, let content = session?.window?.contentView else { self?.injector.keep(menu); return }
-            menu.popUp(positioning: nil, at: NSPoint(x: frame.minX, y: content.bounds.height - frame.maxY), in: content)
-        }
+        connectMenus(of: session)
         hub.actions.terminalMenu = { [weak self, weak session] in self?.terminalMenu(for: $0, in: session) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
         hub.actions.palette = paletteSources(for: session)

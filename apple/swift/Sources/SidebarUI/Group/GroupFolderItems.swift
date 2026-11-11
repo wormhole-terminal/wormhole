@@ -1,6 +1,6 @@
 // The group's folder as the popover lists it above the actions (`group_popover.rs` `folder_items`): the folder as a greyed
 // line (it is not a choice) when there is one, Set folder…, and with a folder Clear folder and the fence's switch. The group
-// menu has the same items as menu entries (`GroupMenu`); the folder is chosen in the system's open panel.
+// menu has the same items as menu entries (`PlatformModel.GroupMenu`); the folder is chosen in the system's open panel.
 
 import DesignSystem
 import SwiftUI
@@ -18,7 +18,7 @@ struct GroupFolderItems: View {
             Text(path).font(TextRole.body.font).foregroundStyle(tokens.textDisabled).lineLimit(1).truncationMode(.head)
                 .padding(.horizontal, Space._2)
         }
-        PopoverItem(title: Words.text("sidebar-menu-group-set-folder", fallback: "Set folder…")) { GroupMenu.choose(for: head.id, send: context.send); close() }
+        PopoverItem(title: Words.text("sidebar-menu-group-set-folder", fallback: "Set folder…")) { GroupFolderPanel.choose(for: head.id, send: context.send); close() }
         if head.folderPath != nil {
             PopoverItem(title: Words.text("sidebar-menu-group-clear-folder", fallback: "Clear folder")) { context.send(.setGroupFolder(head.id, nil)); close() }
             PopoverItem(title: Words.text("sidebar-group-only-in-folder", fallback: "Only terminals in this folder"), checked: head.onlyInFolder) {

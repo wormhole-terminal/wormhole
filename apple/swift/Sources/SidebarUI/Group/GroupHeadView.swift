@@ -66,7 +66,7 @@ struct GroupHeadView: View {
         .opacity(context.drag.lifts(.group(head.id)) ? DragLift.opacity : 1)
         .dragSource(.group(head.id), hooks: context.drag)
         .dropFrame(.head(head.id))
-        .contextMenu { GroupMenu(section: section, head: head, context: context) }
+        .nativeContextMenu { context.hooks.groupMenu(head.id) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(head.spoken)
         .accessibilityAddTraits(.isButton)

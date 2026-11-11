@@ -27,6 +27,23 @@ extension AppController {
         return contextMenus.menu(TerminalMenu.nodes(facts))
     }
 
+    /// What the window's views ask of the app for their menus: a group's native menu, a menu the keys opened, and the
+    /// title row's way to its setting.
+    func connectMenus(of session: WindowSession) {
+        let hub = session.hub
+        hub.actions.groupMenu = { [weak self, weak session] id in session.flatMap { self?.groupMenu(id, in: $0) } }
+        hub.actions.revealSetting = { [weak self] in
+            self?.showSettings()
+            self?.settingsModel.reveal($0)
+        }
+        hub.actions.editsSettings = { [weak self, weak session] in session?.windows.profile == self?.windowsHost.profile }
+        // A test instance keeps the menu for `menu` and `menu-pick` (it would hold the app in AppKit's tracking loop).
+        hub.actions.showKeyMenu = { [weak self, weak session] menu, frame in
+            guard let self, policy.touchesSystem, let content = session?.window?.contentView else { self?.injector.keep(menu); return }
+            menu.popUp(positioning: nil, at: NSPoint(x: frame.minX, y: content.bounds.height - frame.maxY), in: content)
+        }
+    }
+
     /// A context menu's choice. Terminal menu kinds map onto actions; the others (rows, groups, paths) are the
     /// sidebar's and title row's own SwiftUI menus here, so nothing else arrives.
     func runContext(_ action: ContextAction) {
