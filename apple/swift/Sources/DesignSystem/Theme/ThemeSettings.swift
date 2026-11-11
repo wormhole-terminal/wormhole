@@ -34,25 +34,3 @@ public struct ThemeSettings: Sendable, Equatable, Codable {
         look = library.defaultLook
     }
 }
-
-/// Where `ThemeSettings` live. Never the real app's config: a defaults suite of its own. It must not equal the
-/// running bundle's identifier (Foundation refuses that name), which the Swift app's own is.
-struct ThemeSettingsStorage {
-    static let suite = "app.getwormhole.terminal.swift.theme"
-    private static let key = "theme.settings"
-    let defaults: UserDefaults
-
-    /// The theme suite; `nil` under XCTest, so a test never writes the machine's preferences.
-    static var isolated: ThemeSettingsStorage? {
-        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return nil }
-        return UserDefaults(suiteName: suite).map(ThemeSettingsStorage.init)
-    }
-
-    func load() -> ThemeSettings? {
-        defaults.data(forKey: Self.key).flatMap { try? JSONDecoder().decode(ThemeSettings.self, from: $0) }
-    }
-
-    func save(_ settings: ThemeSettings) {
-        defaults.set(try? JSONEncoder().encode(settings), forKey: Self.key)
-    }
-}

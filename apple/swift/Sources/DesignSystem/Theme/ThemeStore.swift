@@ -9,12 +9,13 @@ import Observation
 
 @MainActor @Observable
 public final class ThemeStore {
-    public static let shared = ThemeStore(storage: .isolated)
+    /// Nothing of it is saved here: the choices are the settings' (`ThemeSync`), each instance's own, so one
+    /// instance never re-themes another.
+    public static let shared = ThemeStore()
 
     public let library: ThemeLibrary
     public var settings: ThemeSettings {
         didSet {
-            if settings != oldValue { storage?.save(settings) }
             refresh()
         }
     }
@@ -46,14 +47,12 @@ public final class ThemeStore {
     /// every window follows, and clearing it puts the person's pick back.
     public var preview: Theme? { didSet { refresh() } }
 
-    @ObservationIgnored private let storage: ThemeSettingsStorage?
     @ObservationIgnored private let look: SystemLook?
 
     /// `follows: false` leaves the three system facts to the caller (tests, `--appearance`).
-    init(library: ThemeLibrary = .bundled, follows: Bool = true, storage: ThemeSettingsStorage? = nil) {
+    init(library: ThemeLibrary = .bundled, follows: Bool = true) {
         self.library = library
-        self.storage = storage
-        settings = storage?.load() ?? ThemeSettings(library: library)
+        settings = ThemeSettings(library: library)
         let start = library.theme(id: library.defaultDark) ?? library.themes[0]
         (theme, tokens) = (start, start.tokens())
         look = follows ? SystemLook() : nil

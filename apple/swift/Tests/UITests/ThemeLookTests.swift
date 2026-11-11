@@ -5,8 +5,8 @@ import XCTest
 /// Reduce Transparency, the colour picks and user themes through a resolver, persistence and the interface font.
 @MainActor
 final class ThemeLookTests: XCTestCase {
-    private func store(storage: ThemeSettingsStorage? = nil) -> ThemeStore {
-        let store = ThemeStore(library: .bundled, follows: false, storage: storage)
+    private func store() -> ThemeStore {
+        let store = ThemeStore(library: .bundled, follows: false)
         store.systemAppearance = .dark
         return store
     }
@@ -86,26 +86,6 @@ final class ThemeLookTests: XCTestCase {
         store.settings.darkTheme = "gone"
         XCTAssertEqual(store.problem?.contains("unknown theme"), true)
         XCTAssertEqual(store.theme.id, "wormhole.dark")
-    }
-
-    func testTheChoiceModeAndPicksArePersistedInTheIsolatedSuite() throws {
-        let name = "wh-theme-test-\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
-        let first = store(storage: ThemeSettingsStorage(defaults: defaults))
-        first.setTheme("nord")
-        first.settings.primary = "#123456"
-        first.settings.branch = .primary
-        first.settings.look = WindowLook(opacity: 0.6, blur: false)
-        let second = store(storage: ThemeSettingsStorage(defaults: defaults))
-        XCTAssertEqual(second.settings, first.settings)
-        XCTAssertEqual(second.darkThemeID, "nord")
-        // Foundation refuses a suite named like the running bundle (it logs and persists nothing), and the real
-        // app's preferences are the bundle id `app.getwormhole.terminal`.
-        for bundle in [Bundle.main.bundleIdentifier, "app.getwormhole.terminal.swift", "app.getwormhole.terminal"] {
-            XCTAssertNotEqual(ThemeSettingsStorage.suite, bundle)
-        }
-        XCTAssertNotNil(UserDefaults(suiteName: ThemeSettingsStorage.suite))
     }
 
     func testTheInterfaceFontSizeScalesTheTypeRoles() {
