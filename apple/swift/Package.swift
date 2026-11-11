@@ -147,7 +147,7 @@ if ffiLinked {
             name: "WindowsBridgeTests",
             dependencies: ["WindowsBridge", "WindowsModel", "WorkspaceBridge", "WorkspaceModel", "WormholeBindings", "UniFFISource", "TerminalCore"]),
         // The theme resolver against the real Rust loader: a user theme file, colour picks, an opacity.
-        .testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource", "StudioModel", "StudioBridge", "SettingsUI", "SettingsModel"]),
+        .testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource", "StudioModel", "StudioBridge", "SettingsUI", "SettingsModel", "StudioUI"]),
         // The mapping and the real workspace behind the store: an action through the FFI, a snapshot back.
         .testTarget(name: "WorkspaceBridgeTests", dependencies: ["WorkspaceBridge", "WorkspaceModel"]),
         // The panel's Files, Project, Usage and Notes backends over the Rust core (trust enforced in Rust).

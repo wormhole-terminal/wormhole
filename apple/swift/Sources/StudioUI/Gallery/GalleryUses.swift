@@ -110,7 +110,7 @@ enum GalleryUses {
         TokenUse(id: "settings.nav", label: "settings nav", area: .settings, tokens: [
         ]),
         TokenUse(id: "setting.row", label: "setting row", area: .settings, tokens: [
-            "find.match", "text.faint", "text.muted", "text.primary",
+            "find.match", "status.success.text", "text.faint", "text.muted", "text.primary",
         ]),
         TokenUse(id: "switch", label: "switch", area: .settings, tokens: [
             "checkbox.background", "checkbox.checked", "primary", "switch.knob", "switch.track",

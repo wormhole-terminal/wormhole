@@ -2,7 +2,9 @@
 import Foundation
 import SettingsModel
 @testable import SettingsUI
+import StudioBridge
 @testable import StudioModel
+import StudioUI
 import UniFFISource
 import WormholeBindings
 import XCTest
@@ -158,7 +160,13 @@ final class ThemeFilesFFITests: XCTestCase {
     }
 
     func testANewerFileIsNeverWrittenBack() throws {
-        let newer = "{ \"version\": 9, \"name\": \"Future\", \"id\": \"future\", \"base\": { \"from\": \"nord\" }, \"surprise\": { \"x\": 1 } }\n"
+        // A whole version 1 file from the core (a version 1 theme carries every terminal colour), as a later release would
+        // have written it: a higher version and a block this one does not know.
+        let copy = try XCTUnwrap(FfiStudioFiles(directory: folder).copyTheme(from: "Nord", name: "Future"))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(copy.utf8)) as? [String: Any])
+        object["version"] = 9
+        object["surprise"] = ["x": 1]
+        let newer = try XCTUnwrap(String(data: JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys]), encoding: .utf8))
         try newer.write(to: folder.appendingPathComponent("Future.json"), atomically: true, encoding: .utf8)
         let store = store()
         store.reloadThemes()

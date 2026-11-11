@@ -141,7 +141,7 @@ final class DocumentTests: XCTestCase {
     }
 
     func testAPairOpensOnItsFirstVersionAndSwitches() throws {
-        let pair = "{ \"name\": \"Pair\", \"extends\": \"Nord\", \"variants\": [{ \"name\": \"Dark\", \"appearance\": \"dark\" }, { \"name\": \"Light\", \"appearance\": \"light\", \"extends\": \"GitHub Light\" }] }"
+        let pair = "{ \"version\": 1, \"name\": \"Pair\", \"extends\": \"Nord\", \"variants\": [{ \"name\": \"Dark\", \"appearance\": \"dark\" }, { \"name\": \"Light\", \"appearance\": \"light\", \"extends\": \"GitHub Light\" }] }"
         let fixtures = try StudioFixtures(themes: ["Pair.json": pair])
         defer { fixtures.remove() }
         let doc = try fixtures.opening("Pair Light")
