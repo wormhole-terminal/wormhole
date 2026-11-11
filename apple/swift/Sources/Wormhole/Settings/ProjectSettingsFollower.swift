@@ -4,6 +4,7 @@
 // and it is trusted) and Settings shows those values over the person's, with the rows it sets marked.
 
 #if WITH_UNIFFI
+    import DesignSystem
     import FilesBridge
     import Foundation
     import Observation
@@ -52,12 +53,19 @@
         }
 
         private func reload() {
-            guard let folder else { return host.follow(project: nil) }
+            guard let folder else {
+                ThemeStore.shared.projectTheme = nil
+                return host.follow(project: nil)
+            }
             let path = expanded(folder)
             Task {
                 let found = await project.settingsOverrides(at: path)
+                let theme = await project.themeOverlay(at: path)
                 // The terminal may have changed while the core read.
-                if self.folder == folder { host.follow(project: found) }
+                guard self.folder == folder else { return }
+                host.follow(project: found)
+                // The project's theme colours the windows while one of its terminals is in front.
+                ThemeStore.shared.projectTheme = theme
             }
         }
 

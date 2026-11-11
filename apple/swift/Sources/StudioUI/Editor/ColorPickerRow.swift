@@ -51,7 +51,8 @@ struct OriginTag: View {
 
     var body: some View {
         let (label, color) = isError ? (StudioWords.tagLastGood, tokens.statusWarningText)
-            : origin == .yours ? (StudioWords.originYours, tokens.primary) : (hasRule ? "derived" : "theme", tokens.textMuted)
+            : origin == .yours ? (StudioWords.originYours, tokens.primary)
+            : origin == .base ? (StudioWords.originBase, tokens.textMuted) : (hasRule ? "derived" : "theme", tokens.textMuted)
         Text(label).font(TextRole.caption.font).foregroundStyle(color)
             .padding(.horizontal, Space._2).frame(height: Metric.badgeHeight)
             .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))

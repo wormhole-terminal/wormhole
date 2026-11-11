@@ -29,7 +29,7 @@ final class RealResolverTests: XCTestCase {
         let store = store()
         let mine = try XCTUnwrap(store.userThemes.first { $0.name == "Mine" })
         XCTAssertEqual(mine.appearance, .dark)
-        store.setTheme(mine.id)
+        store.show(mine.id)
         XCTAssertEqual(store.theme.name, "Mine")
         XCTAssertEqual(store.tokens.rgba(named: "primary")?.hex, "#ff6600")
         XCTAssertEqual(store.tokens.terminal.background.hex, "#2e3440", "it extends Nord")

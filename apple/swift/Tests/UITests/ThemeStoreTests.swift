@@ -3,6 +3,16 @@ import SwiftUI
 import XCTest
 
 @MainActor
+private final class RecordingPicks: ThemePicking {
+    var calls: [String] = []
+    func pick(_ value: String, dark: Bool) { calls.append("\(value) \(dark ? "dark" : "light")") }
+    func pickAfterSave(_ value: String, dark: Bool, path: String) -> Bool { false }
+    func renamePicks(_ renames: [(old: String, new: String)]) {}
+    func followSystem(light: String, dark: String) {}
+    func selects(_ setting: String, path: String) -> Bool { false }
+}
+
+@MainActor
 final class ThemeStoreTests: XCTestCase {
     private func store() -> ThemeStore {
         let store = ThemeStore(follows: false)
@@ -19,16 +29,31 @@ final class ThemeStoreTests: XCTestCase {
         XCTAssertEqual(store.theme.id, "wormhole.dark", "a fixed mode ignores macOS")
     }
 
-    func testSetThemeIsThePickForItsAppearanceAndShowsIt() {
+    func testSetThemeIsThePickForItsAppearanceAndNeverMovesTheMode() {
         let store = store()
-        store.setTheme("nord")
-        XCTAssertEqual(store.theme.id, "nord")
+        let picks = RecordingPicks()
+        store.picks = picks
         store.setTheme("github_light")
+        XCTAssertEqual(picks.calls, ["github_light light"], "core's rule decides which pick, the store only asks")
+        XCTAssertEqual(store.mode, .system)
+        store.picks = nil
+        store.setTheme("nord")
+        XCTAssertEqual(store.darkThemeID, "nord", "without the settings behind it the pick is held here")
+        XCTAssertEqual(store.mode, .system, "a pick of the other appearance does not move the mode")
+        store.setTheme("no_such_theme")
+        XCTAssertEqual(store.darkThemeID, "nord")
+    }
+
+    func testShowMovesTheModeSoTheThemeIsSeen() {
+        let store = store()
+        store.show("nord")
+        XCTAssertEqual(store.theme.id, "nord")
+        store.show("github_light")
         XCTAssertEqual(store.theme.id, "github_light", "the light theme moves the mode so it is seen")
         XCTAssertEqual(store.mode, .light)
         store.mode = .dark
         XCTAssertEqual(store.theme.id, "nord", "the dark pick is kept")
-        store.setTheme("no_such_theme")
+        store.show("no_such_theme")
         XCTAssertEqual(store.theme.id, "nord")
     }
 
@@ -45,9 +70,9 @@ final class ThemeStoreTests: XCTestCase {
     func testSwitchingThemeRecoloursALiveViewTree() throws {
         let store = ThemeStore.shared
         let saved = (store.mode, store.darkThemeID, store.lightThemeID, store.systemAppearance)
-        defer { (store.mode, store.systemAppearance) = (saved.0, saved.3); store.setTheme(saved.1); store.setTheme(saved.2); store.mode = saved.0 }
+        defer { (store.mode, store.systemAppearance) = (saved.0, saved.3); store.show(saved.1); store.show(saved.2); store.mode = saved.0 }
         store.mode = .dark
-        store.setTheme("wormhole.dark")
+        store.show("wormhole.dark")
         let render = ThemeRender(SampleView().themed(store), size: CGSize(width: 40, height: 20), dark: true)
         func shown() throws -> (palette: NSColor, environment: NSColor) {
             (try render.pixel(x: 5, y: 10), try render.pixel(x: 30, y: 10))
@@ -63,7 +88,7 @@ final class ThemeStoreTests: XCTestCase {
         assertEqual(dark.palette, try plain("sidebar.background"))
         assertEqual(dark.environment, try plain("primary"))
 
-        store.setTheme("nord")
+        store.show("nord")
         let nord = try shown()
         assertEqual(nord.palette, try plain("sidebar.background"))
         assertEqual(nord.environment, try plain("primary"))

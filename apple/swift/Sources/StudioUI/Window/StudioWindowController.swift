@@ -11,6 +11,7 @@ import SwiftUI
 public final class StudioWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var session: StudioSession?
+    private lazy var undoManager = StudioUndoManager { [unowned self] in self.session!.document }
     /// The panel and pasteboard of Export JSON and Copy JSON; a check replaces them with a scratch folder's.
     public var outputs = StudioOutputs.system { didSet { session?.outputs = outputs } }
 
@@ -41,14 +42,23 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
 
     public var isOpen: Bool { window != nil }
 
+    /// Closes the window as the red light does: unsaved edits are asked about first (⌥⌘, with the Studio open).
+    public func close() { window?.performClose(nil) }
+
+    /// The open window's session, for a driver that has no pointer (the control folder's `studio-do`).
+    public var activeSession: StudioSession? { session }
+
     /// The draft in the open window, for a driver that has no pointer (the control folder's `studio-*`).
     public var document: StudioDocument? { session?.document }
 
     /// Save theme (⌘S) and Duplicate, for the menu bar and the palette: no-ops while the Studio is closed.
     public func saveTheme() async { await session?.save() }
-    public func duplicateTheme() { session?.saveCopy() }
+    public func duplicateTheme() { session?.duplicate() }
     public func exportJSON() async { await session?.exportJSON() }
     public func copyJSON() { session?.copyJSON() }
+
+    /// The Edit menu's Undo and Redo are the draft's steps while this window is in front.
+    public func windowWillReturnUndoManager(_ window: NSWindow) -> UndoManager? { session == nil ? nil : undoManager }
 
     public func windowShouldClose(_ sender: NSWindow) -> Bool {
         guard let session else { return true }

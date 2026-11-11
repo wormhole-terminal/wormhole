@@ -2,6 +2,7 @@
 // real, the sample's in memory everywhere else. Made once at launch, because the window follows it (`SettingsApplier`)
 // whether or not the Settings window is open.
 
+import DesignSystem
 import Foundation
 import SettingsModel
 
@@ -13,6 +14,10 @@ import SettingsModel
 enum AppSettings {
     static func makeModel(app: AppController) -> SettingsModel {
         let model = makeBare(app: app)
+        #if WITH_UNIFFI
+            // Choosing, saving and renaming a theme write the picks by core's rule, through the host.
+            if let host = model.host as? RustSettingsHost { ThemeStore.shared.picks = ThemePicks(host: host) }
+        #endif
         model.onRecording = { [weak app] in app?.hotkey?.pause($0) }
         model.openStudio = { [weak app] in app?.studio.show() }
         model.hotkeyError = { [weak app] in app?.hotkey?.error }

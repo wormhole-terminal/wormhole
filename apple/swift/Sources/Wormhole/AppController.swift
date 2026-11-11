@@ -73,7 +73,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     private(set) lazy var terminalLook = TerminalLook(terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] })
     /// The settings the window follows, whether or not the Settings window is open: the core's when real.
     lazy var settingsModel = AppSettings.makeModel(app: self)
-    private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory)
+    private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory, project: { [unowned self] in StudioProjects.source(app: self) })
     private(set) lazy var folderPicking = FolderPicking(app: self)
     private(set) lazy var router = ActionRouter(app: self)
     private(set) lazy var recents = RecentProjects(dataDirectory: dataDirectory)

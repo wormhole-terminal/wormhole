@@ -90,6 +90,7 @@ extension AppController {
     private func runStudio(_ argument: String) {
         guard let document = studio.document else { return reply("error: the Studio is not open (`studio`)") }
         let words = argument.split(separator: " ", maxSplits: 2).map(String.init)
+        if runStudioSession(words) { return }
         var said = ""
         switch words.first {
         case "set": said = " ok=\(words.count == 3 && document.set(words[1], to: words[2]))"

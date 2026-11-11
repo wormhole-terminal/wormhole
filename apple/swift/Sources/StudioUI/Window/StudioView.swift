@@ -20,6 +20,7 @@ public struct StudioView: View {
 
     public var body: some View {
         StudioContent(session: session, showsVersions: $showsVersions)
+            .environment(\.textScale, store.textScale)
             .themed(store)
     }
 }
@@ -44,5 +45,11 @@ private struct StudioContent: View {
         .background(tokens.surfaceWindow)
         .animation(Motion.layout, value: document.notice)
         .sheet(isPresented: $showsVersions) { VersionsSheet(document: document) { showsVersions = false }.themed() }
+        .sheet(isPresented: $session.showsUpdate) {
+            UpdateSheet(check: document.update, apply: { session.applyUpdate() }, cancel: { session.showsUpdate = false }).themed()
+        }
+        // Esc ends a rename first, and then closes the window (asking about unsaved edits as the red light does).
+        .onExitCommand { if session.renaming { session.renaming = false } else { session.window?.performClose(nil) } }
+        .onChange(of: ThemeStore.shared.shownPick) { document.refreshInUse() }
     }
 }

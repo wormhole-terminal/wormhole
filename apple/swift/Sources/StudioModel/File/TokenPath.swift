@@ -25,14 +25,15 @@ enum TokenPath: Equatable {
         }
     }
 
-    /// The object in a layer that holds the value, and its key there.
-    var location: (section: String, key: String) {
+    /// The object in a layer that holds the value, and its key there. A file of the new format (version 1) spells a
+    /// few keys differently (`StudioKeys`) and keeps the palette's colours as `ansi.N` keys of `terminal`.
+    func location(v1: Bool) -> (section: String, key: String) {
         switch self {
         case .ui(let name): ("ui", name)
-        case .terminal(let key): ("terminal", key)
-        case .ansi(let slot): ("terminal.ansi", String(slot))
+        case .terminal(let key): ("terminal", v1 ? StudioKeys.new("terminal", key) : key)
+        case .ansi(let slot): v1 ? ("terminal", "ansi.\(slot)") : ("terminal.ansi", String(slot))
         case .syntax(let key): ("syntax", key)
-        case .metric(let key): ("metrics", key)
+        case .metric(let key): ("metrics", v1 ? StudioKeys.new("metrics", key) : key)
         }
     }
 

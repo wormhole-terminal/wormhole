@@ -24,7 +24,7 @@ import WorkspaceModel
     ) throws -> Bool {
         ThemeStore.shared.mode = mode
         ThemeStore.shared.reduceTransparency = true  // opaque, like the reference's own
-        if let theme { ThemeStore.shared.setTheme(theme) }
+        if let theme { ThemeStore.shared.show(theme) }
         let look = WindowLook()
         look.statusBar = statusBar
         let root = WorkspaceRootView(hub: WindowHub(store: WorkspaceStore(backend: MockWorkspaceBackend(items: state.terminals.map { .loose(MockTerminal($0)) }, selected: state.selected, chrome: ChromeState(sidebarVisible: state.sidebarVisible, panelVisible: state.panelVisible, panelTab: state.panelTab))), terminals: TerminalViews { _ in nil }), look: look)

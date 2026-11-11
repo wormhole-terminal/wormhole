@@ -42,7 +42,7 @@ TABLE: dict[str, tuple[str, int]] = {
     "TerminalMetal": ("ui", 1), "FileIconTheme": ("ui", 1),
     "StudioUI": ("ui", 2), "WindowUI": ("ui", 3),
     "WorkspaceBridge": ("bridge", 1), "FilesBridge": ("bridge", 1), "GitBridge": ("bridge", 1),
-    "SettingsBridge": ("bridge", 1), "AuxBridge": ("bridge", 1), "HookBridge": ("bridge", 1),
+    "SettingsBridge": ("bridge", 1), "StudioBridge": ("bridge", 1), "AuxBridge": ("bridge", 1), "HookBridge": ("bridge", 1),
     "PlatformBridge": ("bridge", 1), "WordsBridge": ("bridge", 1), "WindowsBridge": ("bridge", 2),
     "Wormhole": ("app", 9),
 }

@@ -5,7 +5,7 @@
 import Foundation
 
 public struct TokenFilter: Sendable, Equatable {
-    public enum Show: Sendable, Equatable, CaseIterable { case all, yours, lowContrast }
+    public enum Show: Sendable, Equatable, CaseIterable { case all, yours, base, lowContrast }
 
     public var show = Show.all
     public var area = StudioArea.all
@@ -26,13 +26,22 @@ public struct TokenFilter: Sendable, Equatable {
         }
     }
 
+    private func keeps(_ name: String, _ facts: Facts) -> Bool {
+        switch show {
+        case .all: true
+        case .yours: facts.origin(name) == .yours
+        case .base: facts.origin(name) == .base
+        case .lowContrast: facts.low(name)
+        }
+    }
+
     public func visible(_ groups: [TokenGroup], facts: Facts) -> [TokenGroup] {
         let needle = query.trimmingCharacters(in: .whitespaces).lowercased()
         return groups.compactMap { group in
             let groupHit = !needle.isEmpty && group.name.lowercased().contains(needle)
             let tokens = group.tokens.filter { name in
                 (area == .all || facts.inArea(name, area))
-                    && (show == .all || (show == .yours ? facts.origin(name) == .yours : facts.low(name)))
+                    && keeps(name, facts)
                     && (needle.isEmpty || groupHit || name.lowercased().contains(needle))
             }
             return tokens.isEmpty ? nil : TokenGroup(name: group.name, tokens: tokens)

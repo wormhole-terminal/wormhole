@@ -15,7 +15,7 @@ extension AppController {
 
     /// What `--theme`, `--appearance` and `--status-bar` asked for, before the window opens.
     func applyLookOptions() {
-        if let id = options.theme { themes.setTheme(id) }
+        if let id = options.theme { themes.show(id) }
         if let mode = options.appearance { themes.mode = mode }
         look.statusBar = options.statusBar
     }
@@ -37,7 +37,7 @@ extension AppController {
         switch command {
         case "theme":
             guard themes.library.theme(id: argument) != nil else { reply("error: no theme \(argument)"); return true }
-            themes.setTheme(argument)
+            themes.show(argument)
         case "appearance":
             guard let mode = ThemeMode(rawValue: argument) else { reply("error: appearance is light, dark or system"); return true }
             themes.mode = mode

@@ -7,8 +7,16 @@ import SwiftUI
 struct TokenListHeader: View {
     @Binding var filter: TokenFilter
     let yours: Int
+    /// How many tokens are still as copied; `nil` for a theme with no base (the segment is not offered).
+    let base: Int?
     let low: Int
     @Environment(\.tokens) private var tokens
+
+    private var segments: [(title: String, value: TokenFilter.Show)] {
+        [(StudioWords.showAll, .all), (StudioWords.showYours(yours), .yours)]
+            + (base.map { [(title: StudioWords.showBase($0), value: TokenFilter.Show.base)] } ?? [])
+            + [(title: StudioWords.showLow(low), value: .lowContrast)]
+    }
 
     var body: some View {
         VStack(spacing: Space._2) {
@@ -25,9 +33,7 @@ struct TokenListHeader: View {
             .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
             .overlay(RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.inputBorder, lineWidth: tokens.metrics.borderWidth))
             HStack {
-                Segmented(
-                    [(StudioWords.showAll, .all), (StudioWords.showYours(yours), .yours), (StudioWords.showLow(low), .lowContrast)],
-                    selection: $filter.show)
+                Segmented(segments, selection: $filter.show)
                 Spacer(minLength: 0)
             }
         }

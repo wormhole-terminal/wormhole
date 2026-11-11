@@ -5,9 +5,11 @@ import Foundation
 
 struct ThemeLayer {
     var fields: [String: JSONValue]
+    /// The layer is of a file of the new format: its keys are spelled as `StudioKeys` says.
+    var v1 = false
 
     func value(of path: TokenPath) -> String? {
-        let (section, key) = path.location
+        let (section, key) = path.location(v1: v1)
         let object = section == "terminal.ansi" ? fields["terminal"]?.object?["ansi"]?.object : fields[section]?.object
         switch object?[key] {
         case .string(let text)?: return text
@@ -19,7 +21,7 @@ struct ThemeLayer {
 
     /// Sets the value, or removes it with `nil`; an emptied section goes with it.
     mutating func set(_ path: TokenPath, _ value: String?) {
-        let (section, key) = path.location
+        let (section, key) = path.location(v1: v1)
         if section == "terminal.ansi" {
             update("terminal") { terminal in
                 var ansi = terminal["ansi"]?.object ?? [:]

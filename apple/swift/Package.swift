@@ -107,7 +107,7 @@ var targets: [Target] = [
 var appDependencies: [Target.Dependency] = [
     "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowsModel", "WindowUI", "SettingsModel", "SettingsUI", "DesignSystem",
     "PanesModel", "PanesUI", "PanelModel", "PlatformModel", "PlatformUI", "AuxModel", "AuxWindows", "TerminalUI",
-    "PaletteModel", "PanelModel", "PanelUI", "StudioModel", "StudioUI", "SidebarUI", "PanesModel", "WordsModel",
+    "PaletteModel", "PanelModel", "PanelUI", "StudioModel", "StudioUI", "SidebarUI", "PanesModel", "WordsModel", "FileIconTheme",
 ]
 // The view's input: pointer, selection, links, keyboard and input method, on the mock and (when the FFI is
 // linked) on the real engine.
@@ -147,7 +147,7 @@ if ffiLinked {
             name: "WindowsBridgeTests",
             dependencies: ["WindowsBridge", "WindowsModel", "WorkspaceBridge", "WorkspaceModel", "WormholeBindings", "UniFFISource", "TerminalCore"]),
         // The theme resolver against the real Rust loader: a user theme file, colour picks, an opacity.
-        .testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource"]),
+        .testTarget(name: "ThemeFFITests", dependencies: ["DesignSystem", "UniFFISource", "StudioModel", "StudioBridge", "SettingsUI", "SettingsModel"]),
         // The mapping and the real workspace behind the store: an action through the FFI, a snapshot back.
         .testTarget(name: "WorkspaceBridgeTests", dependencies: ["WorkspaceBridge", "WorkspaceModel"]),
         // The panel's Files, Project, Usage and Notes backends over the Rust core (trust enforced in Rust).
@@ -156,6 +156,8 @@ if ffiLinked {
         // The settings window over the Rust core: values, writes, search, shortcut rules, the agents, imports and
         // profiles. Replaces the mock backend and host.
         .target(name: "SettingsBridge", dependencies: ["SettingsModel", "FontPickerModel", "DesignSystem", "WormholeBindings"]),
+        // The Theme Studio's theme file rules from the core: formats, copies, pairs, updates (`StudioFiles`).
+        .target(name: "StudioBridge", dependencies: ["StudioModel", "WormholeBindings"]),
         .testTarget(name: "SettingsBridgeTests", dependencies: ["SettingsBridge", "SettingsModel", "FontPickerModel", "WormholeBindings"]),
         // The auxiliary windows' backends (update, session hosts, project trust, agent access, first run, licenses).
         .target(name: "AuxBridge", dependencies: ["AuxModel", "PlatformModel", "WormholeBindings"]),
@@ -166,7 +168,7 @@ if ffiLinked {
         .testTarget(name: "HookBridgeTests", dependencies: ["HookBridge", "WormholeBindings"]),
     ]
     appDependencies += [
-        "UniFFISource", "WorkspaceBridge", "WindowsBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge", "HookBridge",
+        "UniFFISource", "WorkspaceBridge", "WindowsBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge", "HookBridge", "StudioBridge",
     ]
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.
     targets.append(.target(name: "GitBridge", dependencies: ["PanelModel", "WordsModel", "WormholeBindings"]))

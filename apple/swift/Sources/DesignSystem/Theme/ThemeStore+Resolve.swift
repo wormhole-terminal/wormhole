@@ -19,12 +19,12 @@ extension ThemeStore {
         var shown: (theme: Theme, tokens: ThemeTokens)?
         var problem: String?
 
-        if bundled == nil || customised || !(opaque || atDefaultLook) {
+        if bundled == nil || customised || projectTheme != nil || !(opaque || atDefaultLook) {
             if let resolver {
                 do {
                     let request = ThemeRequest(
                         theme: reference, themesDirectory: themesDirectory, primary: settings.primary,
-                        branch: settings.branch.spelling, increaseContrast: increaseContrast, look: look)
+                        branch: settings.branch.spelling, increaseContrast: increaseContrast, look: look, projectJSON: projectTheme)
                     let resolved = try ResolvedTheme(json: resolver.resolve(request)).theme
                     shown = (resolved, resolved.tokens())
                 } catch {
@@ -57,8 +57,18 @@ extension ThemeStore {
     /// Reads the themes folder again: a theme was saved or trashed there.
     public func reloadThemes() { reloadUserThemes() }
 
+    /// Reads the themes folder again when a file a pick may come from changed (the theme in use edited by hand or by a
+    /// script, another theme it extends, a theme saved elsewhere): one stamp of the folder and the picks, then the same
+    /// re-resolve as a save. Called whenever the settings follower reports a change, and costs a `stat` when none.
+    public func refreshIfThemeFilesChanged() {
+        guard let resolver, let directory = themesDirectory else { return }
+        let stamp = resolver.filesStamp(in: directory, picks: [settings.darkTheme, settings.lightTheme])
+        if stamp != filesStamp { reloadUserThemes() }
+    }
+
     func reloadUserThemes() {
         if let resolver, let directory = themesDirectory {
+            filesStamp = resolver.filesStamp(in: directory, picks: [settings.darkTheme, settings.lightTheme])
             userThemes = (try? JSONDecoder().decode([ThemeSummary].self, from: resolver.userThemes(in: directory))) ?? []
         } else {
             userThemes = []

@@ -32,6 +32,8 @@ public final class ThemeStore {
     public var showsBorders = true { didSet { if showsBorders != oldValue { refresh() } } }
     /// The interface font picked in Settings → Fonts: every type role reads it through the tokens' metrics.
     public var interfaceFont = InterfaceFont() { didSet { if interfaceFont != oldValue { refresh() } } }
+    /// What `settings_text_size` multiplies the secondary windows' text by (the Studio's too): 1 is the default.
+    public var textScale: CGFloat = 1
     /// "Also translucent" for the Settings, Studio and Session Hosts windows, and the main window's opacity and blur they borrow.
     public var secondary = SecondaryLook()
     /// The folder of the person's theme files (read only). Needs a `resolver`.
@@ -49,6 +51,12 @@ public final class ThemeStore {
     /// every window follows, and clearing it puts the person's pick back.
     public var preview: Theme? { didSet { refresh() } }
 
+    /// Where the person's picks are written (the settings, core's rule); `nil` holds them here only.
+    @ObservationIgnored public var picks: (any ThemePicking)?
+    /// The text of a trusted project's `theme.json` that is in effect for the terminal in front: it is the theme shown
+    /// in place of the picks (the person's colour choices still go over it), as the GPUI app's `project_theme`.
+    public var projectTheme: String? { didSet { if projectTheme != oldValue { refresh() } } }
+    @ObservationIgnored var filesStamp: String?
     @ObservationIgnored private let look: SystemLook?
 
     /// `follows: false` leaves the three system facts to the caller (tests, `--appearance`).
@@ -80,20 +88,40 @@ public final class ThemeStore {
 
     /// The appearance showing now: the preview's, else the mode's, or macOS's under Match system.
     public var appearance: ThemeAppearance { preview?.appearance ?? settings.mode.appearance(system: systemAppearance) }
+    /// The pick the app shows apart from any preview: the dark pick or the light one, as the mode and macOS say.
+    public var shownPick: String { shownAppearance == .dark ? settings.darkTheme : settings.lightTheme }
+    /// The appearance the app shows apart from any preview: the mode's, or macOS's under Match system.
+    public var shownAppearance: ThemeAppearance { settings.mode.appearance(system: systemAppearance) }
     public var darkThemeID: String { settings.darkTheme }
     public var lightThemeID: String { settings.lightTheme }
 
-    /// Makes `id` (a bundled slug, or a user theme's id) the pick for its own appearance, and shows it: a
-    /// mode that would hide it moves to that appearance (the GPUI app only sets the pick; a menu here must
-    /// visibly do something).
+    /// Makes `id` (a bundled slug, or a user theme's id) the pick of its own appearance, as the GPUI app does: the
+    /// mode says which pick a choice sets (`config::picks`, core's rule, written through `picks`), and the mode itself
+    /// never moves. Without `picks` (no core) the pick is held here only.
     public func setTheme(_ id: String) {
-        guard let picked = library.theme(id: id)?.appearance ?? userThemes.first(where: { $0.id == id })?.appearance
-        else { return }
+        guard let picked = appearanceOf(id) else { return }
+        if let picks {
+            picks.pick(id, dark: picked == .dark)
+            return
+        }
+        var next = settings
+        if picked == .dark { next.darkTheme = id } else { next.lightTheme = id }
+        settings = next
+    }
+
+    /// Shows `id` now: its pick, and a mode that would hide it moves to its appearance. For a menu that must visibly do
+    /// something and for the dev commands and tests; nothing is written (the person's picks are `setTheme`'s).
+    public func show(_ id: String) {
+        guard let picked = appearanceOf(id) else { return }
         var next = settings
         if picked == .dark { next.darkTheme = id } else { next.lightTheme = id }
         if next.mode.appearance(system: systemAppearance) != picked {
             next.mode = ThemeMode(rawValue: picked.rawValue) ?? next.mode
         }
         settings = next
+    }
+
+    func appearanceOf(_ id: String) -> ThemeAppearance? {
+        library.theme(id: id)?.appearance ?? userThemes.first(where: { $0.id == id })?.appearance
     }
 }

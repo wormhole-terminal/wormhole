@@ -19,8 +19,9 @@ struct PanelBody: View {
             .onChange(of: tabName) { sync() }
     }
 
-    /// The icon theme bundled with the app, loaded once (the cover over the terminal draws file icons too).
-    static let icons = BundledIconTheme()
+    /// The icon theme in force, one value the windows share (the cover over the terminal draws file icons too): the app
+    /// sets it from the `icon_theme` setting.
+    static let icons = FileIconSource.shared
 
     private func sync() { controller.tab = PanelModel.PanelTab(rawValue: tabName) ?? .changes }
 }

@@ -12,6 +12,16 @@ public struct ThemeRequest: Sendable, Equatable {
     public var branch: String
     public var increaseContrast: Bool
     public var look: WindowLook
+    /// A project's `theme.json` text: the theme in effect in place of `theme`.
+    public var projectJSON: String?
+
+    public init(
+        theme: String, themesDirectory: URL? = nil, primary: String = "", branch: String = "", increaseContrast: Bool = false,
+        look: WindowLook, projectJSON: String? = nil
+    ) {
+        (self.theme, self.themesDirectory, self.primary, self.branch) = (theme, themesDirectory, primary, branch)
+        (self.increaseContrast, self.look, self.projectJSON) = (increaseContrast, look, projectJSON)
+    }
 }
 
 public protocol ThemeResolving: Sendable {
@@ -19,6 +29,12 @@ public protocol ThemeResolving: Sendable {
     func resolve(_ request: ThemeRequest) throws -> Data
     /// JSON array of the user's theme files in a folder: `[{id, name, appearance, error}]`.
     func userThemes(in directory: URL) -> Data
+    /// A string that changes when a theme file a pick may come from changes (the folder, a pick that is a path).
+    func filesStamp(in directory: URL, picks: [String]) -> String
+}
+
+extension ThemeResolving {
+    public func filesStamp(in directory: URL, picks: [String]) -> String { "" }
 }
 
 /// A user theme file listed in the themes folder. `appearance` is `nil` when the file doesn't resolve.

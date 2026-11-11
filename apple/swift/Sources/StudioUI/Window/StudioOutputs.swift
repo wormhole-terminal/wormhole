@@ -7,21 +7,23 @@ import UniformTypeIdentifiers
 
 /// The Studio's two ways out for a theme as text, replaceable by a check.
 public struct StudioOutputs {
-    /// Where the exported file goes, or `nil` when the person cancelled; `name` is the suggested file name.
-    public var exportDestination: @MainActor (_ name: String, _ window: NSWindow?) async -> URL?
+    /// Where the exported file goes, or `nil` when the person cancelled; `name` is the suggested file name and `folder` where the
+    /// dialog starts (where the last export went).
+    public var exportDestination: @MainActor (_ name: String, _ folder: URL?, _ window: NSWindow?) async -> URL?
     public var copy: @MainActor (_ json: String) -> Void
 
     public init(
-        exportDestination: @escaping @MainActor (String, NSWindow?) async -> URL?, copy: @escaping @MainActor (String) -> Void
+        exportDestination: @escaping @MainActor (String, URL?, NSWindow?) async -> URL?, copy: @escaping @MainActor (String) -> Void
     ) {
         (self.exportDestination, self.copy) = (exportDestination, copy)
     }
 
     /// The system's: a save panel (a sheet on the window) and the general pasteboard.
     @MainActor public static let system = StudioOutputs(
-        exportDestination: { name, window in
+        exportDestination: { name, folder, window in
             let panel = NSSavePanel()
             panel.nameFieldStringValue = name
+            panel.directoryURL = folder
             panel.allowedContentTypes = [.json]
             panel.isExtensionHidden = false
             guard let window else { return panel.runModal() == .OK ? panel.url : nil }

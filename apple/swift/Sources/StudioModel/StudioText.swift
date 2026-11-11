@@ -5,6 +5,12 @@
 import Foundation
 import WordsModel
 
+public enum StudioNames {
+    /// What a new theme is called until it is named, and what a copy of another is.
+    public static var untitled: String { StudioText.untitled }
+    public static func untitled(from base: String) -> String { StudioText.untitledFrom(base) }
+}
+
 enum StudioText {
     private static func text(_ key: StaticString, _ english: String.LocalizationValue) -> String {
         Words.text(key, fallback: String(localized: key, defaultValue: english))
@@ -18,6 +24,30 @@ enum StudioText {
     static func copyName(_ name: String, n: Int? = nil) -> String {
         n.map { text("studio-copy-name-n", ["name": .text(name), "n": .whole($0)], "\(name) copy \($0)") } ?? text("studio-copy-name", ["name": .text(name)], "\(name) copy")
     }
+    /// A pair's version as people read it: its two appearances by their words, any other version as it is named.
+    static func appearanceWord(_ name: String) -> String {
+        switch name {
+        case "light": text("studio-appearance-light", "Light")
+        case "dark": text("studio-appearance-dark", "Dark")
+        default: name
+        }
+    }
+    static var untitled: String { text("studio-untitled", "Untitled") }
+    static var newerFile: String { text("studio-newer-file", "This theme was made by a newer Wormhole. Saving here would lose what this version doesn’t understand, so it was not changed. Duplicate keeps a copy.") }
+    static var convertFailed: String { text("studio-convert-failed", "Could not convert this theme safely, so it was not changed.") }
+    static var savedConverted: String { text("studio-saved-converted", "Saved in the new theme format: older releases of Wormhole can’t open this file. The previous file is kept in the theme’s saved versions.") }
+    static var savedComments: String { text("studio-saved-comments", "Comments in the file were not kept.") }
+    static var addFailed: String { text("studio-add-failed", "Could not add an appearance to this theme.") }
+    static var openFailed: String { text("studio-open-failed", "That theme could not be opened.") }
+    static var undoAddAppearance: String { text("studio-undo-add-appearance", "Add Appearance") }
+    static var undoUpdateFrom: String { text("studio-undo-update-from", "Update from Base") }
+    static var noTerminal: String { text("studio-no-terminal", "Open a terminal in a project first.") }
+    static var noProjectFolder: String { text("studio-no-project-folder", "The terminal in front isn't in a project with a .wormhole folder.") }
+    static var otherProject: String { text("studio-other-project", "The terminal in front is in another project.") }
+    static func projectSaved(_ path: String) -> String { text("studio-project-saved", ["path": .text(path)], "Saved to \(path): terminals in this project use it.") }
+    static func projectFailed(_ reason: String) -> String { text("studio-project-failed", ["reason": .text(reason)], "Could not save to the project: \(reason)") }
+    static func onlyShown(_ appearance: String) -> String { text("studio-only-shown", ["appearance": .text(appearance)], "Only the \(appearance) appearance of this theme was written.") }
+    static func pairUsed(_ name: String) -> String { text("studio-pair-used", ["name": .text(name)], "“\(name)” follows the system’s light and dark.") }
     static var nameFirst: String { text("studio-name-first", "Give the theme a name first.") }
     static func saved(_ path: String) -> String { text("studio-saved", ["path": .text(path)], "Saved to \(path).") }
     static func savedAndSet(_ path: String) -> String { text("studio-saved-set", ["path": .text(path)], "Saved to \(path) and set as your theme.") }

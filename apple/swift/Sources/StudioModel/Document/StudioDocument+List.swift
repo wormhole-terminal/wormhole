@@ -6,7 +6,13 @@ import DesignSystem
 import Foundation
 
 extension StudioDocument {
-    public func origin(of token: String) -> TokenOrigin { file.own(token, in: shown) != nil ? .yours : .workedOut }
+    public func origin(of token: String) -> TokenOrigin {
+        if file.own(token, in: shown) != nil { return .yours }
+        return file.baseValue(token, in: shown) != nil ? .base : .workedOut
+    }
+
+    /// What the base has for the token, if it is a copy: Reset goes back to it.
+    public func baseValue(of token: String) -> String? { file.baseValue(token, in: shown) }
 
     /// Edited since the last save.
     public func isChanged(_ token: String) -> Bool { file.own(token, in: shown) != saved.own(token, in: shown) }
@@ -22,11 +28,14 @@ extension StudioDocument {
         return filter.visible(groups, facts: facts)
     }
 
-    /// The counts the Yours and Low contrast segments carry.
-    public var counts: (yours: Int, low: Int) {
+    /// The counts the Yours, Base and Low contrast segments carry.
+    public var counts: (yours: Int, base: Int, low: Int) {
         let all = groups.flatMap(\.tokens)
-        return (all.filter { origin(of: $0) == .yours }.count, all.filter(lowContrastTokens.contains).count)
+        return (all.filter { origin(of: $0) == .yours }.count, all.filter { origin(of: $0) == .base }.count, all.filter(lowContrastTokens.contains).count)
     }
+
+    /// Whether a copy's base is under the shown version (the Base segment is offered then).
+    public var hasBase: Bool { file.baseSource(in: shown) != nil }
 
     public func row(for token: String) -> TokenRowValue {
         if let pixels = tokens.metric(named: token) {

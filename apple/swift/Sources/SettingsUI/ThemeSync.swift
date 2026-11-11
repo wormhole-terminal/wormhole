@@ -11,14 +11,11 @@ import SettingsModel
 @MainActor
 public enum ThemeSync {
     public static func apply(_ values: [String: JSONValue], to store: ThemeStore = .shared) {
-        for key in ["theme", "theme_light"] {
-            if let name = values[key]?.string, let theme = store.library.themes.first(where: { $0.name == name }) {
-                store.setTheme(theme.id)
-            }
-        }
+        applyPicks(values, to: store)
         if let raw = values["theme_mode"]?.string, let mode = ThemeMode(rawValue: raw) { store.mode = mode }
         applyAccents(values, to: store)
         store.showsBorders = values["borders"]?.bool ?? true
+        store.textScale = SettingsMetric.textScale(values["settings_text_size"]?.string)
         var secondary = SecondaryLook()
         secondary.settings = values["settings_translucent"]?.bool ?? true
         secondary.studio = values["studio_translucent"]?.bool ?? true
@@ -28,6 +25,19 @@ public enum ThemeSync {
         if secondary != store.secondary { store.secondary = secondary }
         store.interfaceFont = InterfaceFont(
             family: values["ui_font_family"]?.string ?? "", size: values["ui_font_size"]?.number ?? InterfaceFont.defaultSize)
+    }
+
+    /// The picks as `config.json` holds them: a bundled theme by its name or slug, anything else (a theme of the person's
+    /// own, by name, slug or path) as written, for core's resolver to find (`theme_resolve::find`). A pick that does not
+    /// resolve is reported (`ThemeStore.problem`) and the default shows until it is fixed, as in the GPUI app.
+    static func applyPicks(_ values: [String: JSONValue], to store: ThemeStore) {
+        var next = store.settings
+        for (key, dark) in [("theme", true), ("theme_light", false)] {
+            guard let raw = values[key]?.string?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { continue }
+            let pick = store.library.themes.first { $0.id == raw || $0.name == raw }?.id ?? raw
+            if dark { next.darkTheme = pick } else { next.lightTheme = pick }
+        }
+        if next != store.settings { store.settings = next }
     }
 
     /// `primary_color` while `theme_primary` is off (a config from before the switch: while a colour is set), and

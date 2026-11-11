@@ -89,11 +89,22 @@ final class DocumentTests: XCTestCase {
         XCTAssertEqual(doc.undoLabel, "Restore Version")
     }
 
-    func testANameAnotherThemeHasIsNeverOverwritten() throws {
-        try fixtures.folder.write("{ \"name\": \"Taken\" }", to: fixtures.folder.directory.appendingPathComponent("a.json"))
+    func testANameAnotherThemeHasAsksBeforeItIsReplaced() throws {
+        let taken = fixtures.folder.directory.appendingPathComponent("a.json")
+        try fixtures.folder.write("{ \"name\": \"Taken\" }", to: taken)
         let doc = try fixtures.opening("Nord")
         doc.rename("taken")
-        XCTAssertThrowsError(try doc.save()) { XCTAssertEqual($0 as? SaveError, .nameTaken("taken")) }
+        XCTAssertThrowsError(try doc.save()) { XCTAssertEqual($0 as? SaveError, .exists("taken")) }
+        XCTAssertEqual(try doc.save(replacing: true), taken, "Replace writes over that theme's own file")
+        XCTAssertEqual(doc.versionRows().count, 2, "and keeps what it replaced as a saved version")
+    }
+
+    func testANameThatIsOneVersionOfAPairIsRefused() throws {
+        let pair = "{ \"name\": \"Duo\", \"extends\": \"Nord\", \"variants\": [{ \"name\": \"Light\", \"appearance\": \"light\" }, { \"name\": \"Dark\" }] }"
+        try fixtures.folder.write(pair, to: fixtures.folder.directory.appendingPathComponent("duo.json"))
+        let doc = try fixtures.opening("Nord")
+        doc.rename("duo dark")
+        XCTAssertThrowsError(try doc.save()) { XCTAssertEqual($0 as? SaveError, .nameTaken("duo dark")) }
     }
 
     func testAFileChangedByAnotherApplicationIsAskedAbout() throws {
@@ -106,14 +117,15 @@ final class DocumentTests: XCTestCase {
         XCTAssertNoThrow(try doc.save(overwriting: true))
     }
 
-    func testACopyTakesAFreeName() throws {
+    func testADuplicateTakesAFreeNameAndIsWhatIsEditedNext() throws {
         let doc = try fixtures.opening("Nord")
         doc.rename("Dusk")
-        let first = try doc.saveCopy()
-        let second = try doc.saveCopy()
-        XCTAssertEqual(first.lastPathComponent, "Dusk copy.json")
-        XCTAssertEqual(second.lastPathComponent, "Dusk copy 2.json")
-        XCTAssertEqual(doc.subject, .untitled(from: "Nord"), "the draft itself stays as it was")
+        let first = try doc.duplicate()
+        let second = try doc.duplicate()
+        XCTAssertEqual(first.subject.url?.lastPathComponent, "Dusk copy.json")
+        XCTAssertEqual(first.name, "Dusk copy", "the window goes on editing the copy")
+        XCTAssertEqual(second.subject.url?.lastPathComponent, "Dusk copy 2.json")
+        XCTAssertEqual(doc.subject, .untitled(from: "Nord"), "the original stays as it was")
     }
 
     func testOwnFileOpensInPlaceAndTrashesAway() throws {

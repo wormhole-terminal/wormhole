@@ -19,7 +19,6 @@ enum StudioWords {
     static var export: String { text("studio-export", "Export…") }
     static var exportJSON: String { text("studio-export-json", "Export JSON…") }
     static var copyJSON: String { text("studio-copy-json", "Copy JSON") }
-    static var saveCopy: String { text("studio-menu-duplicate-short", "Save as a copy") }
     static var revert: String { text("studio-menu-revert", "Revert to Saved") }
     static var versions: String { text("studio-menu-versions", "Browse All Versions…") }
     static var trash: String { text("studio-menu-trash", "Move to Trash…") }
@@ -122,4 +121,50 @@ enum StudioWords {
     static var gallerySelected: String { text("studio-gallery-uses-selected", "uses the selected token") }
     static var showPalette: String { text("studio-gallery-show-palette", "Show the palette") }
     static var showSheet: String { text("studio-gallery-show-sheet", "Show the shortcut sheet") }
+
+    // The theme menu, the title row's marks and the update sheet.
+    static var menuThisProject: String { text("studio-menu-this-project", "This Project") }
+    static var menuProjectTheme: String { text("studio-menu-project-theme", "The project’s theme") }
+    static var menuNew: String { text("studio-menu-new", "New Theme…") }
+    static var menuNewFrom: String { text("studio-menu-new-from", "New Theme From") }
+    static var menuAddDark: String { text("studio-menu-add-dark", "Add Dark Appearance") }
+    static var menuAddLight: String { text("studio-menu-add-light", "Add Light Appearance") }
+    static var menuRevertTo: String { text("studio-menu-revert-to", "Revert To") }
+    static func menuDuplicate(_ name: String) -> String { text("studio-menu-duplicate", ["name": .text(name)], "Duplicate “\(name)”") }
+    static func updateFrom(_ from: String) -> String { text("studio-update-from", ["from": .text(from)], "Update from \(from)…") }
+    static func updateCurrent(_ from: String) -> String { text("studio-menu-update-current", ["from": .text(from)], "Up to date with \(from)") }
+    static func updateMissing(_ from: String) -> String { text("studio-menu-update-missing", ["from": .text(from)], "\(from) is unavailable") }
+    static var useInProject: String { text("studio-use-in-project", "Use in this project…") }
+    static var useWithMatchSystem: String { text("studio-use-with-match-system", "Use with Match system") }
+    static var newerChip: String { text("studio-newer-chip", "Made with a newer Wormhole") }
+    static var newerDuplicate: String { text("studio-newer-duplicate", "Duplicate") }
+    static func newerExplain(_ count: Int) -> String {
+        let skipped = text("studio-newer-explain", ["count": .whole(count)], count == 1 ? "1 value this version doesn’t know was skipped." : "\(count) values this version doesn’t know were skipped.")
+        return skipped + " " + text("studio-newer-explain-rest", "It shows what it can; the rest is worked out. Saving would drop them, so Theme Studio won’t save over it.")
+    }
+    static var previewChip: String { text("studio-preview-chip", "Preview") }
+    static var previewUse: String { text("studio-preview-use", "Use") }
+    static var previewTooltip: String { text("studio-preview-tooltip", "Every window shows this theme while Theme Studio is open. Closing Theme Studio puts your theme back.") }
+    static func titleBasedOn(_ from: String, _ day: String, _ appearance: String) -> String {
+        text("studio-title-based-on", ["from": .text(from), "day": .text(day), "appearance": .text(appearance)], "based on \(from) · copied \(day) · \(appearance)")
+    }
+    static func titleGenerated(_ from: String, _ appearance: String) -> String { text("studio-title-generated", ["from": .text(from), "appearance": .text(appearance)], "generated from \(from) · \(appearance)") }
+    static func showBase(_ count: Int) -> String { text("studio-show-base", ["count": .whole(count)], "Base · \(count)") }
+    static var originBase: String { text("studio-origin-base", "base") }
+    static func tipBase(_ from: String) -> String { text("studio-origin-tip-base", ["from": .text(from)], "Copied from \(from) and not changed. Editing it makes it yours.") }
+    static var resetToBase: String { text("studio-reset-base", "Reset to base") }
+    static func updateTitle(_ from: String) -> String { text("studio-update-title", ["from": .text(from)], "Update from \(from)?") }
+    static func updateCount(_ count: Int, _ date: String) -> String {
+        text("studio-update-count", ["count": .whole(count), "date": .text(date)], count == 1 ? "1 value changed since you copied it on \(date). Your own changes stay." : "\(count) values changed since you copied it on \(date). Your own changes stay.")
+    }
+    static var updateKept: String { text("studio-update-kept", "yours · kept") }
+    static var updateApply: String { text("studio-update-apply", "Update") }
+    static func existsMessage(_ name: String) -> String { text("studio-exists-message", ["name": .text(name)], "“\(name)” already exists. Do you want to replace it?") }
+    static var existsDetail: String { text("studio-exists-detail", "A theme with the same name is in your themes folder. Replacing it overwrites that theme with this draft.") }
+    static var replace: String { text("studio-replace", "Replace") }
+    static func switchMessage(_ current: String, _ next: String) -> String {
+        text("studio-switch-message", ["current": .text(current), "next": .text(next)], "Do you want to save the changes to “\(current)” before opening “\(next)”?")
+    }
+    static func copyFailed(_ reason: String) -> String { text("studio-copy-failed", ["reason": .text(reason)], "Could not save a copy: \(reason)") }
+    static var openFailed: String { text("studio-open-failed", "That theme could not be opened.") }
 }

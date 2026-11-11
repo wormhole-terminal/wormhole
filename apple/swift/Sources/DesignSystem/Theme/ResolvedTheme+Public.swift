@@ -26,12 +26,3 @@ extension ThemeTokens {
     /// The syntax keys the theme styles, sorted (`keyword`, `string.escape`).
     public var syntaxKeys: [String] { syntax.keys.sorted() }
 }
-
-extension ThemeRequest {
-    /// A request for one theme by name in a folder of theme files, with no colour picks.
-    public init(theme: String, themesDirectory: URL?, increaseContrast: Bool, look: WindowLook) {
-        self.init(
-            theme: theme, themesDirectory: themesDirectory, primary: "", branch: "", increaseContrast: increaseContrast,
-            look: look)
-    }
-}

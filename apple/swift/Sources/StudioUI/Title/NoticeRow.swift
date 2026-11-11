@@ -28,6 +28,16 @@ struct NoticeRow: View {
             if let file {
                 Button(StudioWords.reveal) { NSWorkspace.shared.activateFileViewerSelecting([file]) }
                     .buttonStyle(.plain).font(TextRole.caption.font).foregroundStyle(tokens.textLink)
+                // A saved pair that does not yet follow the system's light and dark offers to.
+                if session.document.canFollowSystem {
+                    Button(StudioWords.useWithMatchSystem) { session.document.followSystem() }
+                        .buttonStyle(.plain).font(TextRole.caption.font).foregroundStyle(tokens.textLink)
+                }
+            }
+            // A file from a newer Wormhole is never written back; a copy of it is.
+            if failed, session.document.isNewer {
+                Button(StudioWords.newerDuplicate) { session.duplicate() }
+                    .buttonStyle(.plain).font(TextRole.caption.font).foregroundStyle(tokens.textLink)
             }
         }
         .padding(.horizontal, Space._4).padding(.vertical, Space._2)

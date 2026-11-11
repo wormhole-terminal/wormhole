@@ -4,10 +4,14 @@
 // by hand is not undone by an unrelated setting.
 
 import DesignSystem
+import FileIconTheme
 import Foundation
 import PanesModel
 import PanesUI
 import SettingsModel
+#if WITH_UNIFFI
+    import SettingsBridge
+#endif
 import SettingsUI
 import SidebarUI
 import TerminalCore
@@ -46,9 +50,13 @@ final class SettingsApplier {
     private func apply(_ values: [String: JSONValue]) {
         func changed(_ keys: String...) -> Bool { keys.contains { values[$0] != applied[$0] } }
         defer { applied = values }
-        if changed("theme", "theme_light", "theme_mode", "theme_primary", "primary_color", "branch_color", "branch_color_custom", "borders", "ui_font_family", "ui_font_size", "settings_translucent", "studio_translucent", "hosts_translucent", "opacity", "blur"), app.options.theme == nil, app.options.appearance == nil {
+        if changed("theme", "theme_light", "theme_mode", "theme_primary", "primary_color", "branch_color", "branch_color_custom", "borders", "settings_text_size", "ui_font_family", "ui_font_size", "settings_translucent", "studio_translucent", "hosts_translucent", "opacity", "blur"), app.options.theme == nil, app.options.appearance == nil {
             ThemeSync.apply(values)
         }
+        // The theme file in use, or one it extends, was edited by hand or by a script: the follower noticed, and
+        // the keys did not move, so ask the store whether the files did.
+        ThemeStore.shared.refreshIfThemeFilesChanged()
+        if changed("icon_theme", "feature_flags") { applyIcons() }
         if changed("font_family", "font_size", "line_height", "font_ligatures"), app.options.fontFamily == nil, app.options.pointSize == nil {
             app.terminalLook.use(FontSettingsMaker.settings(values, bundledDirectory: app.options.fontDirectory ?? Options.findBundledFonts()))
         }
@@ -92,6 +100,16 @@ final class SettingsApplier {
         if changed("title_row") { applyTitleRow(values, to: app.shown.map(\.hub)) }
         if changed("open_in") { applyOpenIn(values, to: app.shown.map(\.hub)) }
         if changed("sidebar_numbers", "sidebar_changes_plain", "sidebar_changes_shared") { applySidebarRules(values, to: app.shown.map(\.hub)) }
+    }
+
+    /// The file icon theme in force: the setting, or the bundled one while the Icon themes flag is off (core's rule); "None"
+    /// draws the system's symbols. Without the core the bundled theme stays.
+    private func applyIcons() {
+        #if WITH_UNIFFI
+            guard let host = model.host as? RustSettingsHost else { return }
+            let theme = CoreIconTheme(directory: host.handle.paths().iconThemesDir, name: host.iconThemeInForce())
+            FileIconSource.shared.theme = theme.hasIcons ? theme : nil
+        #endif
     }
 
     /// A window made after the settings were applied takes what they said.

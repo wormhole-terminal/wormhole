@@ -13,6 +13,8 @@ struct TokenRowView: View {
     let isLow: Bool
     let isChanged: Bool
     let origin: TokenOrigin
+    /// The theme it was copied from, for what a base value's tip says.
+    var baseFrom = ""
     let selection: Namespace.ID
     let select: () -> Void
     @Environment(\.tokens) private var tokens
@@ -25,9 +27,9 @@ struct TokenRowView: View {
                 if isLow { Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(tokens.statusWarning).font(TextRole.caption.font) }
                 if isChanged { ChangedDot() }
                 Spacer(minLength: Space._2)
-                Text(origin == .yours ? StudioWords.originYours : StudioWords.originWorkedOut)
+                Text(originWord)
                     .font(TextRole.caption.font).foregroundStyle(muted)
-                    .help(origin == .yours ? StudioWords.tipYours : StudioWords.tipWorkedOut)
+                    .help(originTip)
                 Text(value.text).font(TextRole.caption.font.monospaced()).foregroundStyle(muted).lineLimit(1)
                     .truncationMode(.tail).frame(maxWidth: StudioMetrics.valueMaxWidth, alignment: .trailing)
             }
@@ -36,9 +38,25 @@ struct TokenRowView: View {
         }
         .padding(.horizontal, Space._2)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(name), \(value.text), \(origin == .yours ? StudioWords.originYours : StudioWords.originWorkedOut)")
+        .accessibilityLabel("\(name), \(value.text), \(originWord)")
         .accessibilityHint(isLow ? StudioWords.rowLow : "")
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    private var originWord: String {
+        switch origin {
+        case .yours: StudioWords.originYours
+        case .base: StudioWords.originBase
+        case .workedOut: StudioWords.originWorkedOut
+        }
+    }
+
+    private var originTip: String {
+        switch origin {
+        case .yours: StudioWords.tipYours
+        case .base: StudioWords.tipBase(baseFrom)
+        case .workedOut: StudioWords.tipWorkedOut
+        }
     }
 
     private var muted: Color { isSelected ? tokens.sidebarRowSelectedMuted : tokens.textFaint }

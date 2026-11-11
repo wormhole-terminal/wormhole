@@ -15,7 +15,7 @@ extension ActionRouter {
             "licenses": { [unowned self] in app.aux.showLicenses() },
             "sessionHosts": { [unowned self] in app.aux.showHosts() },
             "showIntro": { [unowned self] in app.aux.showWelcome() },
-            "themeStudio": { [unowned self] in app.studio.show() },
+            "themeStudio": { [unowned self] in app.studio.toggle() },
             "openFolder": { [unowned self] in app.openFolder() },
             "showLogs": { [unowned self] in app.showLogs() },
             "quitAndEndAll": { [unowned self] in app.quit(endAll: true) },

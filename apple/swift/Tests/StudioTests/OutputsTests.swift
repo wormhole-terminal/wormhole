@@ -18,21 +18,21 @@ final class OutputsTests: XCTestCase {
         let out = fixtures.folder.directory.appendingPathComponent("out")
         try FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
         var asked: String?
-        studio.outputs.exportDestination = { name, _ in asked = name; return out.appendingPathComponent(name) }
+        studio.outputs.exportDestination = { name, _, _ in asked = name; return out.appendingPathComponent(name) }
 
         await studio.exportJSON()
 
         let name = try XCTUnwrap(asked)
         XCTAssertEqual(name, studio.document.exportFileName)
         XCTAssertEqual(try String(contentsOf: out.appendingPathComponent(name), encoding: .utf8), studio.document.exportJSON)
-        XCTAssertEqual(studio.document.notice, .exported(out.appendingPathComponent(name)))
+        XCTAssertEqual(studio.document.notice, .exported(out.appendingPathComponent(name), note: nil))
     }
 
     func testACancelledPanelWritesNothing() async throws {
         let fixtures = try StudioFixtures()
         defer { fixtures.remove() }
         let studio = try session(fixtures)
-        studio.outputs.exportDestination = { _, _ in nil }
+        studio.outputs.exportDestination = { _, _, _ in nil }
 
         await studio.exportJSON()
 
@@ -50,7 +50,7 @@ final class OutputsTests: XCTestCase {
         studio.copyJSON()
 
         XCTAssertEqual(copied, studio.document.exportJSON)
-        XCTAssertEqual(studio.document.notice, .copiedJSON)
+        XCTAssertEqual(studio.document.notice, .copiedJSON(note: nil))
         XCTAssertEqual(NSPasteboard.general.changeCount, before)
     }
 

@@ -84,3 +84,24 @@ Send commands with `printf 'cmd\n' > /tmp/manual-ctl/cmd.tmp && mv /tmp/manual-c
     with ⌃↩ ▸ Copy path. **Expect** the chip to say "Copied commit hash", "Copied object id", "Copied setting key", "Copied path".
 23. With Wormhole in front, finish three agents within ten seconds (see `evidence/s3-platform/PL03.txt`): **Expect** one "3 terminals finished" banner.
     A needs-input banner is never grouped.
+
+## Themes lane (round S wave 3; SD01, SD03, X14)
+
+Everything the control folder can reach was driven (`evidence/s3-themes/`); these need the real menu bar, a pointer on a SwiftUI menu, or a
+system panel. Start a normal (not `--background`) instance as in the setup above, with a throwaway `themes/` folder.
+
+24. Press ⌥⌘, (View ▸ Theme Studio) with the Studio closed, then again with it open. **Expect** the window to open and then to close (with the
+    "Do you want to save the changes" sheet when there are edits), not to come forward.
+25. Click the theme's name in the Studio's title row. **Expect** the menu: Your Themes (the one being edited checked), This Project (only when
+    the terminal in front is in a project with a `theme.json`), New Theme…, New Theme From ▸ (yours, then Wormhole ▸ and the families, a family
+    with a light and a dark one as a submenu), Duplicate “name” (⇧⌘S), Rename…, Move to Trash… (own file only), Add Light or Dark Appearance
+    (a single theme only), Update from X… (greyed "Up to date with X" or "X is unavailable" when there is nothing to do), Revert to Saved, Revert To ▸ Browse All Versions….
+26. Change a token's value, open the Edit menu. **Expect** "Undo Change “primary”"; ⌘Z undoes it and the item then reads "Redo Change “primary”"
+    (inside a text field ⌘Z is the field's own).
+27. Export JSON… and save into a new folder, then Export JSON… again. **Expect** the second panel to start in that folder, also after
+    quitting and starting the app again.
+28. Open a theme that is not in use (New Theme From ▸ Nord, with Wormhole Dark picked). **Expect** a "Preview" chip with Use beside the title:
+    Use saves (it asks for a name first) and makes the theme the pick of its appearance in Settings → Appearance.
+29. Put a Zed icon theme folder in the profile's `icon-themes/`, turn on the Icon themes feature flag and pick it under Settings → Appearance →
+    File icon theme. **Expect** the Files tab and the Changes rows to draw its icons, "None" to draw the system's symbols, and the bundled
+    Wormhole Icons again with the flag off.

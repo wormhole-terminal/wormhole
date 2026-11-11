@@ -17,7 +17,7 @@ struct TokenListView: View {
         let counts = document.counts
         let low = document.lowContrastTokens
         VStack(spacing: 0) {
-            TokenListHeader(filter: $document.filter, yours: counts.yours, low: counts.low)
+            TokenListHeader(filter: $document.filter, yours: counts.yours, base: document.hasBase ? counts.base : nil, low: counts.low)
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 0, pinnedViews: []) {
@@ -57,7 +57,7 @@ struct TokenListView: View {
             ForEach(group.tokens, id: \.self) { token in
                 TokenRowView(
                     name: token, value: document.row(for: token), isSelected: document.selected == token, isLow: low.contains(token),
-                    isChanged: document.isChanged(token), origin: document.origin(of: token), selection: selection
+                    isChanged: document.isChanged(token), origin: document.origin(of: token), baseFrom: document.update.from, selection: selection
                 ) { document.selected = token }
                 .id(token)
             }

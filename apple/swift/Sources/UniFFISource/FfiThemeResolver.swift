@@ -9,6 +9,12 @@ public struct FfiThemeResolver: ThemeResolving {
     public init() {}
 
     public func resolve(_ request: ThemeRequest) throws -> Data {
+        if let project = request.projectJSON {
+            let json = try resolveThemeJson(
+                json: project, themesDir: request.themesDirectory?.path, primary: request.primary, branch: request.branch,
+                increaseContrast: request.increaseContrast, opacity: Float(request.look.opacity), blur: request.look.blur)
+            return Data(json.utf8)
+        }
         let json = try resolveTheme(
             theme: request.theme, themesDir: request.themesDirectory?.path, primary: request.primary,
             branch: request.branch, increaseContrast: request.increaseContrast,
@@ -17,4 +23,6 @@ public struct FfiThemeResolver: ThemeResolving {
     }
 
     public func userThemes(in directory: URL) -> Data { Data(listUserThemes(themesDir: directory.path).utf8) }
+
+    public func filesStamp(in directory: URL, picks: [String]) -> String { themeFilesStamp(themesDir: directory.path, picks: picks) }
 }

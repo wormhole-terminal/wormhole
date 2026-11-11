@@ -10,11 +10,15 @@ struct ExpressionField: View {
     @Bindable var document: StudioDocument
     let token: String
     @State private var text = ""
+    /// The row of the completion list the arrows are on, and whether Esc closed the list.
+    @State private var highlighted = 0
+    @State private var dismissed = false
     @FocusState private var focused: Bool
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        let suggestions = NameCompletion.suggestions(for: text, among: document.expressionNames)
+        let suggestions = dismissed ? [] : NameCompletion.suggestions(for: text, among: document.expressionNames)
+        let row = min(highlighted, max(suggestions.count - 1, 0))
         VStack(alignment: .leading, spacing: Space._1) {
             TextField(StudioWords.expressionPlaceholder, text: $text)
                 .textFieldStyle(.plain).codeFont().focused($focused)
@@ -22,14 +26,22 @@ struct ExpressionField: View {
                 .background(tokens.inputBackground, in: shape)
                 .overlay(shape.strokeBorder(border, lineWidth: tokens.metrics.borderWidth))
                 .onSubmit { document.set(token, to: text) }
-                .onChange(of: text) { _, new in if focused { document.validate(token, typing: new) } }
-                .onKeyPress(.tab) {
-                    guard let first = suggestions.first else { return .ignored }
-                    text = NameCompletion.completing(text, with: first)
+                .onChange(of: text) { _, new in
+                    (highlighted, dismissed) = (0, false)
+                    if focused { document.validate(token, typing: new) }
+                }
+                // ↑ ↓ move in the list, Tab and Return take the row, Esc closes the list before it closes the window.
+                .onKeyPress(.tab) { take(suggestions, row) }
+                .onKeyPress(.return) { take(suggestions, row) }
+                .onKeyPress(.downArrow) { move(1, in: suggestions) }
+                .onKeyPress(.upArrow) { move(-1, in: suggestions) }
+                .onKeyPress(.escape) {
+                    guard !suggestions.isEmpty else { return .ignored }
+                    dismissed = true
                     return .handled
                 }
                 .accessibilityLabel(StudioWords.sectionValue)
-            if !suggestions.isEmpty { completions(suggestions) }
+            if !suggestions.isEmpty { completions(suggestions, highlighted: row) }
             else if let error = document.fieldError, error.token == token { problem(error) }
         }
         .onAppear(perform: load)
@@ -48,9 +60,21 @@ struct ExpressionField: View {
         document.validate(token, typing: "")
     }
 
-    private func completions(_ names: [String]) -> some View {
+    private func take(_ names: [String], _ row: Int) -> KeyPress.Result {
+        guard names.indices.contains(row) else { return .ignored }
+        text = NameCompletion.completing(text, with: names[row])
+        return .handled
+    }
+
+    private func move(_ step: Int, in names: [String]) -> KeyPress.Result {
+        guard !names.isEmpty else { return .ignored }
+        highlighted = min(max(highlighted + step, 0), names.count - 1)
+        return .handled
+    }
+
+    private func completions(_ names: [String], highlighted row: Int) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(names, id: \.self) { name in
+            ForEach(Array(names.enumerated()), id: \.element) { index, name in
                 Button { text = NameCompletion.completing(text, with: name) } label: {
                     HStack(spacing: Space._2) {
                         TokenSwatch(chip: .color(document.resolvedColor(name)), size: Metric.tileSmall)
@@ -58,6 +82,7 @@ struct ExpressionField: View {
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, Space._2).frame(height: Metric.controlSmall).contentShape(Rectangle())
+                    .background(index == row ? tokens.listSelected : .clear)
                 }
                 .buttonStyle(.plain)
             }

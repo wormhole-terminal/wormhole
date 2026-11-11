@@ -19,7 +19,7 @@ enum Snapshot {
     ) throws -> URL {
         _ = NSApplication.shared
         let store = ThemeStore.shared
-        store.setTheme(id)
+        store.show(id)
         store.mode = ThemeLibrary.bundled.theme(id: id)?.appearance == .dark ? .dark : .light
         store.increaseContrast = contrast
         store.reduceTransparency = reduceTransparency

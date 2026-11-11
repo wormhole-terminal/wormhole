@@ -7,6 +7,9 @@ import Foundation
 public enum ThemeSubject: Sendable, Equatable {
     case own(URL)
     case untitled(from: String)
+    /// `.wormhole/theme.json` of the trusted project whose terminal is in front, edited as the project has it (the
+    /// project's root): saving it writes it back there.
+    case project(root: String)
 
     public var url: URL? { if case .own(let url) = self { url } else { nil } }
 }

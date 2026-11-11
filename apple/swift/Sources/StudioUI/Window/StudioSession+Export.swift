@@ -5,8 +5,13 @@ import StudioModel
 
 extension StudioSession {
     public func exportJSON() async {
-        guard let url = await outputs.exportDestination(document.exportFileName, window) else { return }
-        do { try document.exported(to: url) } catch { document.report(error) }
+        guard let url = await outputs.exportDestination(document.exportFileName, environment.exportFolder?.recall(), window) else { return }
+        do {
+            try document.exported(to: url)
+            environment.exportFolder?.remember(url.deletingLastPathComponent())
+        } catch {
+            document.report(error)
+        }
     }
 
     public func copyJSON() {

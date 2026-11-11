@@ -42,6 +42,13 @@ public final class RustProjectBackend: ProjectBackend, @unchecked Sendable {
         return await offMain { service.settingsOverrides(folder: folder) }
     }
 
+    /// The text of the theme of the project of `folder`, while its theme is in effect (the file is there and the person has
+    /// it on); nil otherwise. The theme store shows it in place of the person's pick, as the GPUI app's `project_theme`.
+    public func themeOverlay(at folder: String) async -> String? {
+        let service = service
+        return await offMain { service.themeOverlay(folder: folder) }
+    }
+
     public func folderPaint(of folder: String) async -> FolderPaint {
         let service = service
         return await offMain { FolderPaint(service.folderPaint(folder: folder)) }

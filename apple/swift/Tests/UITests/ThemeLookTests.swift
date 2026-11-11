@@ -14,7 +14,7 @@ final class ThemeLookTests: XCTestCase {
     func testTranslucentWindowsDrawTextJudgedOnWhatShowsThrough() throws {
         // The numbers of core's own design test (`tokyo_night_at_80_percent_matches_the_design`, 1 step per channel).
         let store = store()
-        store.setTheme("tokyo_night")
+        store.show("tokyo_night")
         for (token, hex) in [("sidebar.row.selected.muted", "#a3abcc"), ("text.faint", "#7c819b"), ("git.branch", "#c0a9f7")] {
             let got = try XCTUnwrap(store.tokens.rgba(named: token))
             let want = try XCTUnwrap(ThemeStoreFixtures.rgba(hex: hex))
@@ -25,7 +25,7 @@ final class ThemeLookTests: XCTestCase {
 
     func testReduceTransparencyMakesTheWindowOpaqueWithTheOpaqueRulesText() throws {
         let store = store()
-        store.setTheme("tokyo_night")
+        store.show("tokyo_night")
         let translucent = store.tokens
         store.reduceTransparency = true
         XCTAssertEqual(try XCTUnwrap(store.tokens.rgba(named: "surface.window")).alpha, 1)
@@ -63,7 +63,7 @@ final class ThemeLookTests: XCTestCase {
         store.resolver = resolver
         store.themesDirectory = URL(fileURLWithPath: "/themes")
         XCTAssertEqual(store.userThemes.map(\.id), ["mine"])
-        store.setTheme("mine")
+        store.show("mine")
         let last = try XCTUnwrap(resolver.requests.last)
         XCTAssertEqual([last.theme, last.themesDirectory?.path], ["mine", "/themes"])
         XCTAssertEqual(store.tokens.terminal.background.hex, "#2e3440")

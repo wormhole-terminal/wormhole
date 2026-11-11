@@ -1,5 +1,5 @@
 // "Save theme" as a split button: the click saves (⌘S), and the arrow opens the other ways to write the theme
-// out: a copy (⇧⌘S), Export JSON, Copy JSON (`SaveAction` of the GPUI app's title row).
+// out: Export JSON, Copy JSON and Use in this project (`title.rs`'s save menu; Duplicate is in the theme menu).
 
 import DesignSystem
 import StudioModel
@@ -16,10 +16,10 @@ struct SaveButton: View {
             }
             .keyboardShortcut("s", modifiers: .command).disabled(!session.document.isDirty && session.document.subject.url != nil)
             Menu {
-                Button(StudioWords.saveCopy) { session.saveCopy() }.keyboardShortcut("s", modifiers: [.command, .shift])
-                Divider()
                 Button(StudioWords.exportJSON) { Task { await session.exportJSON() } }
                 Button(StudioWords.copyJSON) { session.copyJSON() }
+                Divider()
+                Button(StudioWords.useInProject) { session.useInProject() }
             } label: { EmptyView() }
             .menuIndicator(.visible).menuStyle(.borderlessButton).fixedSize()
             .accessibilityLabel(StudioWords.saveMore)

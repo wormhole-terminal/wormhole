@@ -17,7 +17,7 @@ final class GalleryRenderTests: XCTestCase {
 
     private func render(theme id: String, contrast: Bool, reduceTransparency: Bool = false, name: String) async throws {
         let store = ThemeStore(follows: false)
-        store.setTheme(id)
+        store.show(id)
         store.increaseContrast = contrast
         store.reduceTransparency = reduceTransparency
         // The chip reads the live store (the system's setting, followed by the window), so the shared one is set too.

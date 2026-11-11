@@ -15,10 +15,11 @@ struct ValueSection: View {
             HStack {
                 SectionLabel(StudioWords.sectionValue)
                 if document.file.own(token, in: document.shown) != nil {
+                    let reset = document.baseValue(of: token) == nil ? StudioWords.reset : StudioWords.resetToBase
                     Button { document.reset(token) } label: {
-                        Label(StudioWords.reset, systemImage: "arrow.counterclockwise").font(TextRole.caption.font)
+                        Label(reset, systemImage: "arrow.counterclockwise").font(TextRole.caption.font)
                     }
-                    .buttonStyle(.plain).foregroundStyle(tokens.textMuted).help(StudioWords.reset)
+                    .buttonStyle(.plain).foregroundStyle(tokens.textMuted).help(reset)
                 }
             }
             if token.hasPrefix("metrics.") {

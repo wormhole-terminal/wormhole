@@ -9,9 +9,9 @@ enum StudioQuestions {
     enum Answer { case save, discard, cancel }
 
     /// "Do you want to save the changes to “name”?": Save, Don't Save, Cancel.
-    static func unsaved(name: String, changes: Int, on window: NSWindow?) async -> Answer {
+    static func unsaved(name: String, changes: Int, opening next: String? = nil, on window: NSWindow?) async -> Answer {
         let alert = NSAlert()
-        alert.messageText = StudioWords.closeMessage(name)
+        alert.messageText = next.map { StudioWords.switchMessage(name, $0) } ?? StudioWords.closeMessage(name)
         alert.informativeText = StudioWords.closeDetail(changes)
         alert.addButton(withTitle: StudioWords.saveShort)
         alert.addButton(withTitle: StudioWords.dontSave)
@@ -29,6 +29,17 @@ enum StudioQuestions {
         alert.messageText = StudioWords.changedMessage(name)
         alert.informativeText = StudioWords.changedDetail
         alert.addButton(withTitle: StudioWords.overwrite)
+        alert.addButton(withTitle: StudioWords.cancel)
+        return await run(alert, on: window) == .alertFirstButtonReturn
+    }
+
+    /// A theme of that name is in the themes folder: Replace overwrites it with this draft (the old file is kept as a saved version).
+    static func exists(name: String, on window: NSWindow?) async -> Bool {
+        let alert = NSAlert()
+        alert.messageText = StudioWords.existsMessage(name)
+        alert.informativeText = StudioWords.existsDetail
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: StudioWords.replace)
         alert.addButton(withTitle: StudioWords.cancel)
         return await run(alert, on: window) == .alertFirstButtonReturn
     }

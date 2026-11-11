@@ -13,7 +13,7 @@ extension AppController {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         studio.setOutputs(
             StudioOutputs(
-                exportDestination: { name, _ in folder.appendingPathComponent(name) },
+                exportDestination: { name, _, _ in folder.appendingPathComponent(name) },
                 copy: { try? $0.write(to: folder.appendingPathComponent("pasteboard.txt"), atomically: true, encoding: .utf8) }))
         Task { @MainActor in
             switch argument {
