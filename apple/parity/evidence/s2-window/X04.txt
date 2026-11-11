@@ -1,0 +1,117 @@
+# X04 keyboard navigation, key events through the window of a --background instance (WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s2-window-a)
+## F6 order from the terminal (core's Area::ALL: title row, sidebar, tabs, terminal, panel tabs, panel content, status bar)
+> key f6
+> key f6
+> key f6
+> key f6
+> key f6
+> key f6
+> key f6
+key f6 -> focusNextArea focus=panel-tabs changes ring
+key f6 -> focusNextArea focus=panel-content
+key f6 -> focusNextArea focus=title-row toggle-sidebar ring
+key f6 -> focusNextArea focus=sidebar
+key f6 -> focusNextArea focus=tabs ring
+key f6 -> focusNextArea focus=terminal
+key f6 -> focusNextArea focus=panel-tabs changes ring
+## Tab walks the title row's buttons
+> key f6
+> key f6
+> key f6
+> key f6
+> key f6
+> key f6
+> keys
+> key tab
+> key tab
+> key shift-tab
+key f6 -> focusNextArea focus=panel-content
+key f6 -> focusNextArea focus=title-row toggle-sidebar ring
+key f6 -> focusNextArea focus=sidebar
+key f6 -> focusNextArea focus=tabs ring
+key f6 -> focusNextArea focus=terminal
+key f6 -> focusNextArea focus=panel-tabs changes ring
+focus=panel-tabs changes ring
+key tab focus=panel-content
+key tab focus=sidebar
+key shift-tab focus=panel-content
+## Esc ladder: from the panel content, Esc goes to the terminal
+> key escape
+> keys
+key escape focus=terminal
+focus=terminal
+## the sidebar: F6 to it, arrows walk its rows (the cursor), option-arrow goes to the ends, Return opens the row, Esc returns to the terminal
+> key shift-f6
+> key shift-f6
+> key shift-f6
+> key shift-f6
+> keys
+> key down
+> key down
+> keys
+> key up
+> key alt-down
+> key return
+> keys
+> key escape
+> keys
+key shift-f6 -> focusPreviousArea focus=tabs ring
+key shift-f6 -> focusPreviousArea focus=sidebar
+key shift-f6 -> focusPreviousArea focus=title-row new-terminal ring
+key shift-f6 -> focusPreviousArea focus=panel-content
+focus=panel-content
+key down focus=panel-content
+key down focus=panel-content
+focus=panel-content
+key up focus=panel-content
+key alt-down focus=panel-content
+key return focus=panel-content
+focus=panel-content
+key escape focus=terminal
+focus=terminal
+## the focus ring hides in a window that is not in front
+> key f6
+> key f6
+> key f6
+> key f6
+> keys
+> window-shot <scratch>/s2w/x04-ring.png
+> window-state off on
+> window-shot <scratch>/s2w/x04-ring-hidden.png
+> window-state on on
+key f6 -> focusNextArea focus=panel-tabs changes ring
+key f6 -> focusNextArea focus=panel-content
+key f6 -> focusNextArea focus=title-row toggle-sidebar ring
+key f6 -> focusNextArea focus=sidebar
+focus=sidebar
+window-shot <scratch>/s2w/x04-ring.png
+window-state active=false seen=true
+window-shot <scratch>/s2w/x04-ring-hidden.png
+window-state active=true seen=true
+## sidebar has the keys: down, down, up, option-down (last), return opens the row under the cursor, Esc to the terminal (rows lists the selection)
+> keys
+> key down
+> key down
+> window-shot <scratch>/s2w/x04-sidebar-cursor.png
+> key up
+> key alt-down
+> window-shot <scratch>/s2w/x04-sidebar-last.png
+> key return
+> rows
+> key escape
+> keys
+focus=sidebar
+key down focus=sidebar
+key down focus=sidebar
+window-shot <scratch>/s2w/x04-sidebar-cursor.png
+key up focus=sidebar
+key alt-down focus=sidebar
+window-shot <scratch>/s2w/x04-sidebar-last.png
+key return focus=sidebar
+selected=4 live=[1, 2, 3, 4] groups=1
+  row 1 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 1 of 4, Command 1"
+group 1 "Group 1" folded=true pinned=false count=1 alerts=0 spoken="Group 1, coloured blue, 1 terminal, collapsed, 2 of 4"
+  row 3 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=2:start spoken="wanderer@mac:~, shell, nothing running, in a split with 1 other, on screen, 3 of 4, Comm
+  row 4 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=2:end spoken="wanderer@mac:~, shell, nothing running, in a split with 1 other, selected, 4 of 4, Command
+key escape focus=terminal
+focus=terminal

@@ -1,0 +1,39 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> new
+new
+> palette-rows
+# Actions
+  New terminal  - in /tmp/rv/repo  [⌘T]  <new-terminal>
+  Show changes  [⌃⌘1]  <panel-changes>
+  Hide right panel  [⌥⌘I]  <toggle-panel>
+  Keyboard shortcuts  [⌥⌘/]  <keyboard-shortcuts>
+> palette-rows spl
+# Actions (2)
+  Split right  [⌘D]  <split-right>
+  Split down  [⇧⌘D]  <split-down>
+> palette-rows @
+# Idle (8)
+  user@host:/tmp/rv/repo  - /tmp/rv/repo  [⌘1]  <terminal-2>
+  user@host:/tmp/rv/repo  - /tmp/rv/repo  [⌘2]  <terminal-3>
+  user@host:~  - ~  [⌘3]  <terminal-6>
+  user@host:~  - ~  [⌘4]  <terminal-1>
+  user@host:~  - ~  [⌘5]  <terminal-5>
+  user@host:~  - ~  [⌘6]  <terminal-8>
+  user@host:/tmp/rv/repo  - /tmp/rv/repo  [⌘7]  <terminal-9>
+  user@host:/tmp/rv/repo  - /tmp/rv/repo  [⌘8]  <terminal-10>
+> palette-rows ~
+# Folders (2)
+  repo  - /tmp/rv · 4 terminals  <folder-/tmp/rv/repo>
+  ~  - 4 terminals  <folder-~>
+> palette-rows #
+  (Nothing here yet)
+> palette-rows ,font
+  (Nothing matches)
+> palette-rows >panel
+# Actions (1)
+  Hide right panel  [⌥⌘I]  <toggle-panel>
+> palette-rows nothingmatches
+  (Nothing matches)
+> actions-missing
+keymap now=128 implemented=94 missing=34
+newTerminalInWorktree hideFromAgents newProfile manageProfiles switchProfile openWindowInProfile moveWindowToProfile toggleZenMode focusTerminalOrPanel focusNextArea focusPreviousArea clearBuffer lineStart lineEnd deleteLine showHiddenLines insertFolderPath newNote stashPrompt moveItemUp moveItemDown rowMenu playIntroEmerge playIntroVortex playIntroCollapse playIntroFtl playIntroAurora playIntroTe

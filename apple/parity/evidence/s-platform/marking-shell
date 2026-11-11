@@ -1,0 +1,7 @@
+#!/bin/sh
+# A shell that marks its prompts and commands as a shell with integration does (OSC 133), and runs each line it is given.
+m() { printf '\033]133;%s\007' "$1"; }
+m A; m B
+while IFS= read -r line; do
+  m C; eval "$line"; m "D;$?"; m A; m B
+done

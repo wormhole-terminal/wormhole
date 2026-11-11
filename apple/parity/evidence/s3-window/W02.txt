@@ -1,0 +1,22 @@
+# W02 title row, round S3 (window). Instance /tmp/Wormhole-swift-s3w-a, terminal in /tmp/s3w-repo (a git repo, branch main) running python3 -m http.server 8765.
+open-in click Zed
+open-in Zed
+open-in Xcode
+open-in PhpStorm
+open-in RustRover
+open-in Finder
+path-card Open in Finder
+path-card Copy path
+path-card Insert into terminal
+ports localhost:8765
+open /private/tmp/s3w-repo in dev.zed.Zed
+open /private/tmp/s3w-repo in dev.zed.Zed
+open /private/tmp/s3w-repo in com.apple.dt.Xcode
+open /private/tmp/s3w-repo in com.jetbrains.PhpStorm
+open /private/tmp/s3w-repo in com.jetbrains.rustrover
+open /private/tmp/s3w-repo
+open /private/tmp/s3w-repo
+open http://localhost:8765
+pasteboard "/private/tmp/s3w-repo"
+selected=1 live=[1] groups=0
+  row 1 "My server" working number=1 pinned=false folder=/private/tmp/s3w-repo line="Python -m http.server 8765 --bind 127.0.0.1" trail=0:36 split=0 spoken="My server, running Python, 36 seconds, selected, 1 of 1, Command 1"

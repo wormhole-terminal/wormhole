@@ -1,0 +1,29 @@
+# A03 re-run on the merged code (e37f35179 + the M3/M4 fixes): auto_update at its default (on)
+> launch: the check found 99.0.0 and installed it by itself (nothing sent)
+feed log:
+  127.0.0.1 - - [11/Nov/2026 02:30:31] "GET /stable/latest.json HTTP/1.1" 200 -
+  127.0.0.1 - - [11/Nov/2026 02:30:31] "GET /releases/Wormhole-99.0.0-macos.app.tar.gz HTTP/1.1" 200 -
+chip shown=Wormhole 99.0.0 is ready — Restart sticky=true info=false detail=- bar=- hostNotice=-
+update  phase=installed(version: "99.0.0") channel=stable
+> a command runs in the terminal
+typed
+> the chip's click: a command runs, so it asks first
+update restart phase=installed(version: "99.0.0") channel=stable
+title=Restart to Update?
+detail=sleep 120
+
+Your terminals come back after the restart, but what runs in them ends.
+buttons=0:Restart | 1:Restart When Idle | 2:Later (confirm=0 cancel=2)
+waiting=1
+question answered Restart When Idle
+> the schedule's own check runs now, while Restart When Idle is pending and the update is installed
+chip shown=Wormhole 99.0.0 is ready — Restart sticky=true info=false detail=- bar=- hostNotice=-
+update auto-check phase=installed(version: "99.0.0") channel=stable
+update  phase=installed(version: "99.0.0") channel=stable
+feed log after it (no new GET: the check returned at once):
+  127.0.0.1 - - [11/Nov/2026 02:30:31] "GET /stable/latest.json HTTP/1.1" 200 -
+  127.0.0.1 - - [11/Nov/2026 02:30:31] "GET /releases/Wormhole-99.0.0-macos.app.tar.gz HTTP/1.1" 200 -
+> still waiting for idle (no relaunch marker):
+ls: <scratch>/s2-settings/fx3/relaunched.marker: No such file or directory
+> app alive:
+41918 ??         0:00.66 .build/release/Wormhole --background --update-feed http://127.0.0.1:20721 --update-key <scratch>/s2-settings/fx3/key.pub --update-bundle /tmp/Wormhole-swift-s2-settings-d/Fixture/Wormhole.app

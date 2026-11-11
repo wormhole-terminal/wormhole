@@ -1,0 +1,20 @@
+R-Z: last-row clip, stretched frames on resize, grid-snapped and smooth window resizing.
+Live --background runs, scratch data dir, WORMHOLE_SHELL=/bin/zsh, `seq 1 300` typed so the prompt is the last grid row.
+Shots are window-shot (window-server composite), 2 px per pt; shots live in the scratchpad folder rz/shots/.
+
+Cause (both bugs): a change of the layer's drawable size (status bar toggled, column slid, window resized) set
+CAMetalLayer.drawableSize and requested a redraw, but MetalRenderer.needsDraw only looks at the scene's change count,
+so nothing was drawn: the layer showed the previous frame scaled to the new size until the next output.
+Before: status bar toggled on with 32 rows on screen -> geometry grid=34x31, status bar still 34x32, the shot shows
+rows at a 34 px pitch (cell is 36 px): the old 1188 px drawable scaled into 1132 px (rz/shots/sb.png).
+After : same steps -> row pitch 36 px exactly, status bar 34x31, full prompt row inside the surface (rz/shots/sb2.png);
+        default window with --status-bar at launch: pitch 36, `geometry` strip=0.0 (rz/shots/def.png).
+Fix   : renderer.invalidate() on a drawable change, drawn at once in the layout pass with presentsWithTransaction,
+        CAMetalLayer.contentsGravity = .topLeft so a frame of another size is never scaled.
+
+`geometry` (devctl) prints window, view, drawable, grid, last row end and the strip beyond it; `live-resize-sim W H PREFIX`
+drives windowWillStartLiveResize, eight snapped windowWillResize/setFrame steps (a shot mid-drag, rz/shots/sim-mid.png: unstretched,
+prompt row whole) and windowDidEndLiveResize. Grid mode ends on whole cells (874x640 -> 1104 wide, 127x34, strip 0.0).
+Smooth mode (`set smooth_resize=true`) ends on the exact asked frame (1103x701): grid 126x34, a 7 pt strip in the terminal's colour
+(rz/shots/smooth-end.png). AppKit's own live resize cannot be started from outside the process, so inLiveResize stays false in
+the sim: the 100 ms gate, the size chip during a real drag and the actual mouse drag are NOT verified here.

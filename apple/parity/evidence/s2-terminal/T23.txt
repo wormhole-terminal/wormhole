@@ -1,0 +1,5 @@
+# T23 rules on screen, Swift (Probe demo, scene rules): `FAILED test_a by bob@mail.org` / `see Cargo.toml:3 here` / `key sk-abcdefghijklmnopqrstuvwxyz0123 end`
+Rules: failed -> tone danger; email -> look shorten keep start:1,domain reveal hover; api-key -> look redact reveal hover.
+window-shot dark (T23-rules.png): "FAILED test_a" red (danger), "b…@mail.org", key a solid light block over the 31 key cells (the cells keep their width).
+Pointer: `hover 900 400`, `hover 520 51`, `hover 528 51` -> "bob@mail.org" shown; `hover 440 87`, `hover 451 87` -> the key text shown, mail shortened again. Reveal works through `hover`.
+Light shot taken while the pointer still rested on the key cell: key visible (revealed). GPUI: not run (no devctl approve for a Probe; its debug build also rejects the shorten look? unchecked).

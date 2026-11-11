@@ -1,0 +1,12 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> select 8
+select 8
+> type exit 3\r
+typed
+exited terminal=8 code=3
+> window-shot <scratch>/rv/shots/t16-exited.png
+window-shot <scratch>/rv/shots/t16-exited.png
+> host retry
+host retry
+> host new
+host new

@@ -1,0 +1,43 @@
+> update
+update  phase=idle channel=stable
+> update check
+update check phase=available(AuxModel.Release(version: "99.0.0", notes: "## Fixture\n- a signed release from a throwaway key", published: Optional(2026-11-11 12:00:00 +0000), isSecurity: false)) channel=stable
+> updates
+updates
+> update
+update  phase=available(AuxModel.Release(version: "99.0.0", notes: "## Fixture\n- a signed release from a throwaway key", published: Optional(2026-11-11 12:00:00 +0000), isSecurity: false)) channel=stable
+--- bundle before: echo old / </string>
+0.0.1</string>
+</string>
+> update install
+update install phase=downloading(received: 0, expected: 754) channel=stable
+> update
+update  phase=installed(version: "99.0.0") channel=stable
+> notice chip
+chip shown=Wormhole 99.0.0 is ready — Restart sticky=true info=false detail=- bar=- hostNotice=-
+> window-shot /tmp/sp-a03/chip-update-ready.png
+window-shot /tmp/sp-a03/chip-update-ready.png
+--- bundle after: date > "/tmp/sp-a03/fx/relaunched.marker" / 99.0.0
+Wormhole.app
+--- a click on the chip while a command runs: the question first (Cancel leaves everything), then Restart When Idle
+> type sleep 9\r
+typed
+> update restart
+update restart phase=installed(version: "99.0.0") channel=stable
+> question
+title=Restart to Update?
+detail=sleep 9
+
+Your terminals come back after the restart, but what runs in them ends.
+buttons=0:Restart | 1:Restart When Idle | 2:Later (confirm=0 cancel=2)
+waiting=1
+> question cancel
+question answered Later
+> update restart
+update restart phase=installed(version: "99.0.0") channel=stable
+> question also
+question answered Restart When Idle
+--- the app waits for the terminals to be idle for 30 s, then restarts into the new bundle (the marker is what the new bundle's executable writes)
+feed feed.log feed.pid key.pub key.sec new port relaunched.marker sig.minisig 
+relaunched: Wed 11 Nov 2026 01:07:52 CET
+the app quit for the restart

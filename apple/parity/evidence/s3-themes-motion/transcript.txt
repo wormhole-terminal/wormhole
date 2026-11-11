@@ -1,0 +1,164 @@
+onboarding close
+accent primary=#0096ff branch=#bea0f9 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:number=1,pinned=false,changes=0,repo_files=-
+window-shot /tmp/s3tm-shots/rest.png
+click 329 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/plus1.png
+window-shot /tmp/s3tm-shots/plus2.png
+window-shot /tmp/s3tm-shots/plus3.png
+idle
+window-shot /tmp/s3tm-shots/plus_after.png
+idle
+window-shot /tmp/s3tm-shots/sp0.png
+click 911 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/sp1.png
+window-shot /tmp/s3tm-shots/sp2.png
+wait-idle failed: the window still changes after 1500 ms
+window-shot /tmp/s3tm-shots/sp3.png
+click 939 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/sd1.png
+idle
+window-shot /tmp/s3tm-shots/sd2.png
+idle
+click 1011 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/t_hist.png
+idle
+click 1043 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/t_notes.png
+idle
+click 1075 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/t_proj.png
+idle
+click 979 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/t_chg.png
+wait-idle failed: the window still changes after 800 ms
+window-shot /tmp/s3tm-shots/t_rest.png
+click 1011 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+idle
+click 979 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/c1.png
+window-shot /tmp/s3tm-shots/c2.png
+window-shot /tmp/s3tm-shots/c3.png
+idle
+click 1075 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/p1.png
+window-shot /tmp/s3tm-shots/p2.png
+grid=32x18 cell=16.799999237060547x36px scale=2.0 frames_drawn=2 ticks=4 wakes=1 pauses=2 busy_skips=0 blink_fires=0 link=paused words_shaped=2 word_hits=0 glyphs_rasterised=2 atlas_resets=0 terminals=4 selected=5 sidebar=true panel=true tab=project window=97922 theme=wormhole.dark appearance=dark mode=system opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transparency=false increase_contrast=false panes=2,3,5 focused=5 zoomed=none cover=none focus=none question=none
+click 1043 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+idle
+click 1075 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/f1.png
+window-shot /tmp/s3tm-shots/f2.png
+window-shot /tmp/s3tm-shots/f3.png
+window-shot /tmp/s3tm-shots/f4.png
+click 150 66: down on PlatformGroupContainer, the gesture played to its release
+menu:
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - wanderer@mac:~
+    - wanderer@mac:~
+    - wanderer@mac:~
+7. Pin to top
+8. Don't keep this terminal's text
+---
+9. Reveal in Finder
+10. Copy path
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - wanderer@mac:~
+    - wanderer@mac:~
+    - wanderer@mac:~
+7. Pin to top
+8. Don't keep this terminal's text
+---
+9. Reveal in Finder
+10. Copy path
+picked Add terminal to new group
+wait-idle failed: the window still changes after 800 ms
+selected=1 live=[1, 2, 3, 5] groups=1
+group 1 "Group 1" folded=false pinned=false count=1 alerts=0 spoken="Group 1, coloured blue, 1 terminal, expanded, 1 of 4"
+  row 1 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 1 of 1, Command 1"
+  row 2 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=3:start spoken="wanderer@mac:~, shell, nothing running, in a split with 2 others, 2 of 4, Command 2"
+  row 3 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=3:mid spoken="wanderer@mac:~, shell, nothing running, in a split with 2 others, 3 of 4, Command 3"
+  row 5 "wanderer@mac:~" idle number=4 pinned=false folder=~ line="~" trail=- split=3:end spoken="wanderer@mac:~, shell, nothing running, in a split with 2 others, 4 of 4, Command 4"
+window-shot /tmp/s3tm-shots/g0.png
+idle
+window-shot /tmp/s3tm-shots/ic_off.png
+increase-contrast on
+idle
+window-shot /tmp/s3tm-shots/ic_on.png
+accent primary=#0096ff branch=#af91e9 border=#e3ebf252 card_edge=#e3ebf247
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:number=1,pinned=false,changes=0,repo_files=- 2:number=2,pinned=false,changes=0,repo_files=- 3:number=3,pinned=false,changes=0,repo_files=- 5:number=4,pinned=false,changes=0,repo_files=-
+settings-size 900x1400
+settings-section appearance
+idle
+window-shot /tmp/s3tm-shots/set_ic_on.png
+increase-contrast off
+idle
+window-shot /tmp/s3tm-shots/set_ic_off.png
+increase-contrast on
+settings-section git
+idle
+window-shot /tmp/s3tm-shots/git_ic_on.png
+increase-contrast off
+idle
+window-shot /tmp/s3tm-shots/git_ic_off.png
+set icon_animations -> bool(false)
+idle
+accent primary=#0096ff branch=#bea0f9 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=false
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:number=1,pinned=false,changes=0,repo_files=- 2:number=2,pinned=false,changes=0,repo_files=- 3:number=3,pinned=false,changes=0,repo_files=- 5:number=4,pinned=false,changes=0,repo_files=-
+click 329 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/off1.png
+wait-idle failed: the window still changes after 1500 ms
+set icon_animations -> bool(true)
+idle
+reduce-motion on
+click 329 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/rm1.png
+idle
+reduce-motion off
+click 329 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+window-shot /tmp/s3tm-shots/on1.png
+click 800 400: down on MetalTerminalView, the gesture played to its release
+text cd /tmp/s3tm-repo
+key return focus=terminal
+idle
+click 979 18: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+idle
+window-shot /tmp/s3tm-shots/repo.png
+typed
+idle
+window-shot /tmp/s3tm-shots/repo2.png
+click 1265 62: down on PlatformGroupContainer, the gesture played to its release
+window-shot /tmp/s3tm-shots/r1.png
+window-shot /tmp/s3tm-shots/r2.png
+idle
+window-shot /tmp/s3tm-shots/r3.png

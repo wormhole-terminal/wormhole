@@ -1,0 +1,81 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> language en-XA
+language en-XA
+> settings-size 920x1000
+settings-size 920x1000
+> settings-section terminal
+settings-section terminal
+> window-shot <scratch>/rv/shots/x07-settings.png Settings
+window-shot <scratch>/rv/shots/x07-settings.png
+> palette
+palette
+> window-shot <scratch>/rv/shots/x07-palette.png
+window-shot <scratch>/rv/shots/x07-palette.png
+> palette
+palette
+> select 2
+select 2
+> tab history
+tab history
+> window-shot <scratch>/rv/shots/x07-main.png
+window-shot <scratch>/rv/shots/x07-main.png
+> menus
+Wormhole
+  About Wormhole
+  Check for Updates…
+  ---
+  Settings…  ⌘,
+  Theme Studio  ⌥⌘,
+  ---
+  Services ▸
+  ---
+  Hide Wormhole  ⌘H
+  Hide Others  ⌥⌘H
+  Show All
+  ---
+  Quit Wormhole  ⌘Q
+Shell
+  New Window  ⌘N
+  New Terminal  ⌘T
+  New Terminal in No Group  ⇧⌘T
+  New Terminal With ▸
+    No Shells  (disabled)
+  New Terminal in New Worktree…  (disabled)
+  ---
+  Split Right  ⌘D
+  Split Down  ⇧⌘D
+  Move Pane Out of Split
+  ---
+  Open Folder…  ⌘O
+  Open Recent ▸
+    No Recent Folders  (disabled)
+  ---
+  Profile ▸
+    New Profile…  (disabled)
+    Manage Profiles…  (disabled)
+  ---
+  Close Pane  ⌘W
+  Close Window  ⇧⌘W
+  ---
+  Export Text As…  ⌘S
+  Print…  ⌘P
+Edit
+  Undo  ⌘Z
+  Redo  ⇧⌘Z
+  ---
+  Cut  ⌘X
+  Copy  ⌘C
+  Paste  ⌘V
+  Select All  ⌘A
+  ---
+  Clear Buffer  ⌘K  (disabled)
+  ---
+  Find…  ⌘F
+  Find Next  ⌘G
+  Find Previous  ⇧⌘G
+  Use Selection for Find  ⌘E
+  ---
+  Previous Prompt  ⌘↑
+  Next Prompt  ⌘↓
+  Select Output
+  Copy Output

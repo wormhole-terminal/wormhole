@@ -1,0 +1,11 @@
+Live run of window restore: --background instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-window-d, WORMHOLE_SHELL=/bin/zsh, control folder.
+> new-window, new-window; place 1 50 60 900 600; place 2 300 200 1000 700; minimise 3 (the Dock); use-window 2; save-windows
+  saved-windows (the order the core opens them in: the one in front last):
+    saved window=1 frame=windowed 50,60 900x600 / window=3 frame=windowed 256,151 1320x820 minimised / window=2 frame=windowed 300,200 1000x700
+> quit, relaunch: sessions
+    window=1 50,60 900x600 / window=3 minimised, visible=false, front=false / window=2 300,200 1000x700 front=true
+Behaviour as the GPUI app's window_lifecycle.rs: each window comes back where it was (fit to the displays by the core's rules), one that was in the Dock opens behind,
+unfocused, and goes back there (it is never the one that comes forward: `front_after_restore`; before this the shell activated every window as it opened), the one
+that was in front is in front. A window opened in another profile (Open Window in) is saved in that profile's database (W06.txt). Columns, groups, splits and the selection
+are saved per window by the core (record_of / window_record) and were restored live earlier (R-V). A window moved out of the sidebar by tear-off (S07.txt) is saved at the place it opened.
+Not run: a saved full-screen or zoomed window coming back as such (WindowFrames.settle, as before), a display that is gone (core fit_frame has a test), the Dock itself.

@@ -1,0 +1,17 @@
+# live run, --background Swift instance with persistent terminals (feature flag persistent_terminals, WORMHOLE_HOST_BIN=a wormhole-host built from this tree),
+# data /tmp/Wormhole-swift-s-platform-t16. The host's process is what is hurt; the app only reads its state.
+$ Wormhole sessions list
+h58yxw4qikw4    27120    27126  2026-11-11 00:11:24Z  1.6.3     live
+$ kill -STOP 27120   (12 s later)  > window-shot hostbar-notresponding.png      the bar says "Session host not responding" with Wait and End host
+$ kill -CONT 27120   (3 s later)   the bar is gone (bar=false in `state`)
+$ kill -9 27120      (3 s later)   > window-shot hostbar-lost.png              the bar says "This terminal ended unexpectedly" with Restart and Close terminal
+$ Wormhole sessions list
+h58yxw4qikw4    27120    27126  2026-11-11 00:11:24Z  1.6.3     stale (process gone)
+> host new
+$ Wormhole sessions list
+5br4jt50uest    28645    28646  2026-11-11 00:12:26Z  1.6.3     live          (a new host for the same place)
+h58yxw4qikw4    27120    27126  2026-11-11 00:11:24Z  1.6.3     stale (process gone)
+$ Wormhole sessions end --all   -> 5br4jt50uest ended
+png: s-platform/shots/hostbar-notresponding.png, hostbar-lost.png (scratchpad folder)
+# "unavailable": the app quit with its host left running (`quit`), the host was stopped (kill -STOP 40127), the same data folder was started again:
+> window-shot hostbar-unavailable.png     "Session host unavailable: it did not answer" with Try again, Open a new terminal here, End host

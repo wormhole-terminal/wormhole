@@ -1,0 +1,17 @@
+Tear-off (a terminal let go outside its window), live in a --background instance (WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-window-c, WORMHOLE_SHELL=/bin/zsh).
+The decision is the core's (`view::tear_off`: `landing`, `place`, through the FFI's tear_off_landing / tear_off_window); the shell reads AppKit's windows and screens.
+Entry points: the sidebar's drag gesture calls `TerminalDragPointer.tearOff(terminal, windowPoint)` when the button goes up; `tear-off ID X Y` calls that very closure
+(the window's own space, y down); `tear-off-at ID X Y` calls AppController.land at the primary display's space with nothing covering the point (a --background
+window lies behind other apps' windows, so the measured `covered` is true over most of the screen and the answer is always NewWindow).
+> new, new            (window 1: terminals 1,2,3)
+> tear-off-at 2 60 400   -> window 2 = [2] at 0,297 (the pointer at the anchor 120,90 of the new window, kept inside the display's visible part); window 1 = [1,3]
+> tear-off-at 3 100 1000 -> over window 2 (the front-most there): terminal 3 goes into window 2 = [2,3]; window 1 = [1]
+> tear-off-at 1 100 1000 -> window 1's last terminal goes into window 2 = [2,3,1]; window 1 starts a new terminal 4 (as when its last one is closed)
+> tear-off 3 1400 100    -> took=true: outside window 2, measured covered=true here, so a window of its own: window 3 = [3] at 408,297
+> tear-off 3 600 300     -> took=false: inside its window, the panes and the list decide
+> tear-off 4 -80 600     -> took=true, the last terminal of window 1: it stays (never torn off into a window that would only move the window)
+Rust tests: windows::tear_off::tests (landing: front-most window, own window, desktop, another app on top, a window that takes nothing; place: pointer at the anchor,
+kept inside the display, never bigger). Swift: WindowsBridgeTests.
+NOT run, a person must try: the real drag (grab a row, leave the window, release over the desktop / over another Wormhole window / over Settings), the flag off
+(Settings > Feature flags > Tear off a terminal) and a full-screen window (nothing happens). Not built: the chip that follows the pointer outside the window and
+the new window growing from it (GPUI window/grow.rs): the ghost is drawn inside the window only.

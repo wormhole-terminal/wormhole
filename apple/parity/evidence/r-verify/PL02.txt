@@ -1,0 +1,15 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> settings-size 920x1000
+settings-size 920x1000
+> settings-section hotkey
+settings-section hotkey
+> window-shot <scratch>/rv/shots/pl02-hotkey.png Settings
+window-shot <scratch>/rv/shots/pl02-hotkey.png
+> set hotkey="cmd-shift-space"
+set hotkey -> string("cmd-shift-space")
+> get hotkey
+hotkey = string("cmd-shift-space")
+> get hotkey_action
+hotkey_action = string("quick_panel")
+> set hotkey=""
+set hotkey -> string("")

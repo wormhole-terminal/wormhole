@@ -1,0 +1,43 @@
+# Settings driven by control (instance with a fake HOME holding a Ghostty config)
+> settings-size 920x1300 settings-search shell
+settings-size 920x1300
+settings-search shell hits=8 sections=5
+> settings-search font settings-search 
+settings-search font hits=11 sections=3
+settings-search  hits=0 sections=0
+> settings-section appearance set font_size=16 get font_size look-keys
+settings-section appearance
+set font_size -> number(16.0)
+font_size = number(16.0)
+accent primary=#0096ff branch=#bea0f9 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:number=1,pinned=false,changes=0,repo_files=-
+> set borders=false get borders
+set borders -> bool(false)
+borders = bool(false)
+> settings-section import import-open ghostty
+settings-section import
+import-open open=ghostty reviews=[]
+> import-apply ghostty get font_size
+import-apply 2 settings brought over, 0 didn't
+font_size = number(17.0)
+> settings-section profile profile name=Work color=green start=/tmp
+settings-section profile
+profile Work|D|green|/tmp|[]| problem=none
+> profile-new Work2 question
+profile-new Work2 ok
+no question is up
+> settings-section hotkey shortcut-rows
+settings-section hotkey
+42 of 42
+Windows & terminals
+View & panels
+Terminal
+Find anything
+Notes
+App

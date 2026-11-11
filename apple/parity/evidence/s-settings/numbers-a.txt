@@ -1,0 +1,7 @@
+# sidebar_numbers live flip, readback of the core's chrome snapshot (after the core now emits Chrome)
+> set sidebar_numbers="terminal"
+> look-keys
+sidebar scope=terminal status_dot=false cmd_hints=false numbers_follow_list=false
+> set sidebar_numbers="list"
+> look-keys
+sidebar scope=terminal status_dot=false cmd_hints=false numbers_follow_list=true

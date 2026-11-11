@@ -1,0 +1,13 @@
+X04 leftovers, round S2 (window-b). Instance /tmp/Wormhole-swift-s2wb-a, control folder, keys injected through the window.
+New controls (as GPUI's devctl): `keyboard-navigation on|off|system` (WindowFocus.keyboardNavigationOverride), `window-front on|off|system`
+(WindowFocus.setFront; hides every ring of WindowFocus and the sidebar's cursor ring in a window that is not in front).
+1. Tab stops of the title row (`state` prints the focus):
+   navigation ON, from the title row: tab -> toggle-sidebar, new-terminal, sidebar, tabs, terminal; shift-tab from tabs -> sidebar,
+   title-row new-terminal, title-row toggle-sidebar, panel-content.
+   navigation OFF: tab from the title row -> sidebar, tabs, terminal (the title row's buttons are no stop); shift-tab from tabs -> sidebar,
+   panel-content, panel-tabs, terminal. F6 visits the title row either way.  Shot: x04-title-stop-newterminal.png (ring on the new-terminal button).
+2. Type-ahead in the sidebar (renamed alpha, beta, gamma): F6 to the sidebar, `text g` Return -> terminal 6 (gamma) selected; `text b` Return -> 2.
+3. The ring in a window that is not in front: panel-tabs focus prints `ring`; after `window-front off` it does not and the shot differs only
+   in the panel tab strip; the sidebar's cursor ring (x04-sidebar-ring-front-on-off.png: left front on, right off) is gone too.
+   (A shot taken in the same batch as the change shows the old frame: give SwiftUI a turn first.)
+Still open: arrow walking inside Notes/Project/Usage (panel lane), VoiceOver following (a person).

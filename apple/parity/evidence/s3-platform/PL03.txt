@@ -1,0 +1,105 @@
+$ Wormhole new-terminal --folder /tmp -> exit 0
+opened terminal 2 (tab 2, pane 2) in window 1 at /tmp
+$ Wormhole new-terminal --folder /tmp -> exit 0
+opened terminal 3 (tab 3, pane 3) in window 1 at /tmp
+$ Wormhole new-terminal --folder /tmp -> exit 0
+opened terminal 4 (tab 4, pane 4) in window 1 at /tmp
+$ Wormhole new-terminal --folder /tmp -> exit 0
+opened terminal 5 (tab 5, pane 5) in window 1 at /tmp
+$ Wormhole new-terminal --folder /tmp -> exit 0
+opened terminal 6 (tab 6, pane 6) in window 1 at /tmp
+> select 6
+select 6
+## needs input: banner, Needs-you category, Active level (no Time Sensitive entitlement in a test instance), sound, thread per terminal
+> hook 1 claude UserPromptSubmit
+hook 1 claude UserPromptSubmit
+> hook 1 claude Notification Needs permission to run npm test
+hook 1 claude Notification Needs permission to run npm test
+> notice-log
+wormhole/tab/1 thread=wormhole/terminal/1 level=active sound=true category=wormhole.needs-you title=claude needs input body=Needs permission to run npm test
+## a newer message about the same wait is the same banner (core posts on the change of state, not of words)
+> hook 1 claude Notification Approve cargo build?
+hook 1 claude Notification Approve cargo build?
+> notice-log
+wormhole/tab/1 thread=wormhole/terminal/1 level=active sound=true category=wormhole.needs-you title=claude needs input body=Needs permission to run npm test
+## a response to someone else's banner changes nothing; show-changes brings that terminal and the Changes tab; open brings it
+> notice-respond wormhole/tab/99 reply nothing-here
+notice-respond wormhole/tab/99 reply nothing-here
+> notice-log
+wormhole/tab/1 thread=wormhole/terminal/1 level=active sound=true category=wormhole.needs-you title=claude needs input body=Needs permission to run npm test
+> notice-respond wormhole/tab/1 show-changes
+notice-respond wormhole/tab/1 show-changes
+> state
+grid=69x42 cell=16.799999237060547x36px scale=2.0 frames_drawn=55 ticks=38 wakes=0 pauses=8 busy_skips=0 blink_fires=0 link=paused words_shaped=0 word_hits=0 glyphs_rasterised=0 atlas_resets=0 terminals=6 selected=1 sidebar=true panel=true tab=changes window=97584 theme=wormhole.dark appearance=dark mode=dark opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transparency=false increase_contrast=false panes=1 focused=1 zoomed=none cover=none focus=none question=none
+## reply typed from the banner goes into that terminal and takes the banner down
+> select 6
+select 6
+> notice-respond wormhole/tab/1 reply typed-from-the-banner
+notice-respond wormhole/tab/1 reply typed-from-the-banner
+> notice-log
+
+$ Wormhole read --terminal 1 --last 2 -> exit 0
+typed-from-the-banner
+## agent finished: its own banner (Finished category, no sound)
+> hook 1 claude UserPromptSubmit
+hook 1 claude UserPromptSubmit
+> hook 1 claude Stop
+hook 1 claude Stop
+> notice-log
+wormhole/tab/1 thread=wormhole/terminal/1 level=active sound=false category=wormhole.finished title=claude finished body=2s
+## looking at the terminal takes its banner down
+> select 1
+select 1
+> notice-log
+
+> select 6
+select 6
+## Needs input off: no banner; Agent done off: no finished banner
+> set notify_needs_you=false
+set notify_needs_you -> bool(false)
+> set notify_agent_done=false
+set notify_agent_done -> bool(false)
+> hook 2 claude UserPromptSubmit
+hook 2 claude UserPromptSubmit
+> hook 2 claude Notification Needs you again
+hook 2 claude Notification Needs you again
+> notice-log
+
+> hook 2 claude Stop
+hook 2 claude Stop
+> notice-log
+
+> set notify_needs_you=true
+set notify_needs_you -> bool(true)
+> set notify_agent_done=true
+set notify_agent_done -> bool(true)
+## sound setting none: the banner has no sound
+> set notify_sound="none"
+set notify_sound -> string("none")
+> hook 3 claude UserPromptSubmit
+hook 3 claude UserPromptSubmit
+> hook 3 claude Notification Quiet
+hook 3 claude Notification Quiet
+> notice-log
+wormhole/tab/3 thread=wormhole/terminal/3 level=active sound=false category=wormhole.needs-you title=claude needs input body=Quiet
+> set notify_sound="needs_you"
+set notify_sound -> string("needs_you")
+## a burst: three agents finishing within ten seconds become one summary naming them and each loses its own banner (a wait is never grouped)
+> notice-log
+wormhole/tab/3 thread=wormhole/terminal/3 level=active sound=false category=wormhole.needs-you title=claude needs input body=Quiet
+wormhole/summary thread=wormhole/summary level=active sound=false category=plain title=1 terminals finished body=claude
+## group_bursts off: each finished agent keeps its own banner
+> set notify_group_bursts=false
+set notify_group_bursts -> bool(false)
+> select 6
+select 6
+> notice-log
+wormhole/summary thread=wormhole/summary level=active sound=false category=plain title=1 terminals finished body=claude
+wormhole/tab/3 thread=wormhole/terminal/3 level=active sound=false category=wormhole.finished title=claude finished body=Finished
+## Send test (Settings): the banner needs input would be
+> notice-test
+notice-test 
+> notice-log
+wormhole/summary thread=wormhole/summary level=active sound=false category=plain title=1 terminals finished body=claude
+wormhole/tab/3 thread=wormhole/terminal/3 level=active sound=false category=wormhole.finished title=claude finished body=Finished
+wormhole/test thread=wormhole/test level=active sound=true category=plain title=Wormhole needs input body=This is how a terminal that needs input is announced.

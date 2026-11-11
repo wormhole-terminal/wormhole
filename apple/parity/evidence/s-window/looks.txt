@@ -1,0 +1,21 @@
+Looks: GPUI (devctl, target/debug/Wormhole through scripts/devctl-instance.sh, scratch HOME) left, Swift (--background instance, window-shot) right, same scenario in both
+(6 terminals named api, web, docs, infra, shell, scratch in the same folder, docs+infra in the group Backend, web pinned, opacity 1 / blur off so neither shows what
+lies behind the window, window content 1320 x 820). pairs/*.png. Measured with a pixel diff over the sidebar column (2x): regular dark 3.9 % of pixels differ by
+more than 8/255, compact 1.1 %, dense 1.0 %, regular light 4.2 %, folded 3.9 %; what differs is text antialiasing and a 1 pt step in the name line.
+
+Matches (looked at, zoomed): row geometry in the three densities, tiles, pin, group card and wash, folded group tiles and count, selected row, the Cmd-hold hints
+(the modifier event was injected: control `hold-cmd`), the split's rows and pane headers, the tab bar with the group switcher and profile chip, the collapsed columns,
+the title row's chips, the panel's tab strip (Lucide glyphs now, as GPUI's; Usage only with an agent), light and dark.
+
+Differences left (named):
+- Text: Swift's name and second line are about 3 % wider than GPUI's at the same size (SwiftUI's tracking at small sizes against GPUI's none).
+- Group wash: Swift (43,59,83) against GPUI (38,58,82) in dark; selected row (14,34,55) against (6,34,57): a few levels, from the colour space the two draw in.
+- The title row's last chip in GPUI is the terminal's own name (the program: `pane.label()`), in Swift the row's name, so after a Rename they differ (not otherwise).
+- The terminal grid is 2 columns narrower in Swift at the same window width (152 against 154): the padding.
+- The status bar's "Persistent" mark and "1 done" differ with the state of the two instances (hosting off in Swift; a finished command in GPUI).
+- The traffic lights are in the Swift captures (the window server's image) and not in GPUI's own render.
+- Not compared: the sidebar filter (GPUI has no devctl command for it; Cmd-F opens the terminal's find in both), Open in / path card / path menu variants, glass and blur
+  (a GPUI shot has none, and a window-shot of a --background instance shows what lies behind it), the profile chip's menu (a native menu is not in a window capture).
+- After about 00:44 on 2026-11-11 every Swift instance on this Mac drew its primary colour orange instead of the theme's blue (also the base worktree's build in a fresh
+  data folder, so not from this branch; the system accent is blue and Reduce Transparency/Increase Contrast are off): tabs-dark, titlerow-dark and filter captures
+  show it. The other pairs were taken before and are blue. Cause not found.

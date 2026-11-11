@@ -1,0 +1,53 @@
+# X04 keyboard navigation (round S3, window). Instance /tmp/Wormhole-swift-s3w-a, window 1 (front), three untracked files in the terminal's repo.
+use-window 1
+select 5
+tab changes
+key escape focus=terminal
+focus=terminal responder=MetalTerminalView
+## F6 forward, one full cycle (state prints focus)
+key f6 -> focusNextArea focus=panel-tabs changes ring
+key f6 -> focusNextArea focus=panel-content
+key f6 -> focusNextArea focus=title-row toggle-sidebar ring
+key f6 -> focusNextArea focus=sidebar
+key f6 -> focusNextArea focus=tabs ring
+key f6 -> focusNextArea focus=terminal
+key f6 -> focusNextArea focus=panel-tabs changes ring
+key f6 -> focusNextArea focus=panel-content
+## shift-F6 back, one full cycle
+key shift-f6 -> focusPreviousArea focus=panel-tabs changes ring
+key shift-f6 -> focusPreviousArea focus=terminal
+key shift-f6 -> focusPreviousArea focus=tabs ring
+key shift-f6 -> focusPreviousArea focus=sidebar
+key shift-f6 -> focusPreviousArea focus=title-row new-terminal ring
+key shift-f6 -> focusPreviousArea focus=panel-content
+key shift-f6 -> focusPreviousArea focus=panel-tabs changes ring
+key shift-f6 -> focusPreviousArea focus=terminal
+## Esc ladder from each area (F6 n times from the terminal, then Esc, then keys)
+-- after 1 x F6:
+focus=panel-tabs changes ring responder=FocusHolderView
+key escape focus=panel-tabs changes ring
+focus=panel-tabs changes ring responder=FocusHolderView
+-- after 2 x F6:
+focus=title-row toggle-sidebar ring responder=FocusHolderView
+key escape focus=title-row toggle-sidebar ring
+focus=title-row toggle-sidebar ring responder=FocusHolderView
+-- after 3 x F6:
+focus=terminal responder=MetalTerminalView
+key escape focus=terminal
+focus=terminal responder=MetalTerminalView
+-- after 4 x F6:
+focus=sidebar responder=KeyViewProxy
+key escape focus=sidebar
+focus=sidebar responder=KeyViewProxy
+-- after 5 x F6:
+focus=title-row toggle-sidebar ring responder=FocusHolderView
+key escape focus=title-row toggle-sidebar ring
+focus=title-row toggle-sidebar ring responder=FocusHolderView
+## panel content: arrows walk the list (F6 x2 from terminal), Tab stops
+focus=tabs ring responder=FocusHolderView
+key down focus=tabs ring
+key down focus=tabs ring
+key down focus=tabs ring
+key up focus=tabs ring
+key tab focus=tabs ring
+key shift-tab focus=tabs ring

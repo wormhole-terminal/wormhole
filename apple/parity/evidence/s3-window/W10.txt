@@ -1,0 +1,69 @@
+# W10 glass, blur, translucency (round S3, window). Instance c, window 1 in front. Each line: the setting, then what AppKit holds (effect views) and what the window's surfaces are painted over.
+> use-window 1
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+surfaces opacity=0.8 blur_behind=true cards_glass=false system_opaque=false
+> blur off
+surfaces opacity=0.8 blur_behind=false cards_glass=false system_opaque=false
+> blur on
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+surfaces opacity=0.8 blur_behind=true cards_glass=false system_opaque=false
+> opacity 1
+surfaces opacity=1.0 blur_behind=false cards_glass=false system_opaque=false
+> opacity 0.6
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+surfaces opacity=0.6 blur_behind=true cards_glass=false system_opaque=false
+> reduce-transparency on
+surfaces opacity=1.0 blur_behind=false cards_glass=false system_opaque=true
+> reduce-transparency off
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+surfaces opacity=0.6 blur_behind=true cards_glass=false system_opaque=false
+> increase-contrast on
+surfaces opacity=1.0 blur_behind=false cards_glass=false system_opaque=true
+> increase-contrast off
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+surfaces opacity=0.6 blur_behind=true cards_glass=false system_opaque=false
+> glass on
+glass on
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+surfaces opacity=0.6 blur_behind=true cards_glass=true system_opaque=false
+> reduce-transparency on
+surfaces opacity=1.0 blur_behind=false cards_glass=false system_opaque=true
+> reduce-transparency off
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+surfaces opacity=0.6 blur_behind=true cards_glass=true system_opaque=false
+> increase-contrast on
+surfaces opacity=1.0 blur_behind=false cards_glass=false system_opaque=true
+> increase-contrast off
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+surfaces opacity=0.6 blur_behind=true cards_glass=true system_opaque=false
+> glass off
+glass off
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+surfaces opacity=0.6 blur_behind=true cards_glass=false system_opaque=false
+## the three secondary windows (settings_translucent, studio_translucent, hosts_translucent): the Settings window's backdrop
+settings
+Settings visible=true sheet=false
+> settings_translucent true (default)
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameDarkAqua
+effect material=13 blending=0 state=1 hidden=false appearance=inherited frame=920x1000
+glass style=0 hidden=false appearance=inherited frame=220x1000
+effect material=4 blending=0 state=0 hidden=false appearance=NSAppearanceNameVibrantDark frame=200x32
+> settings_translucent false
+set settings_translucent -> bool(false)
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameDarkAqua
+effect material=13 blending=0 state=1 hidden=false appearance=inherited frame=920x1000
+glass style=0 hidden=false appearance=inherited frame=220x1000
+effect material=4 blending=0 state=0 hidden=false appearance=NSAppearanceNameVibrantDark frame=200x32
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+> the flags reach the secondary-window state (look-keys secondary_windows) and the main window's opacity does not move them (GPUI: the three windows read their own switch, and the main opacity/blur)
+secondary_windows settings=false studio=true hosts=false opacity=0.8 blur=true
+secondary_windows settings=true studio=true hosts=true opacity=0.5 blur=true
+## per-profile opacity: the default profile 0.5, profile Work 0.9, switching follows each
+surfaces opacity=0.5 blur_behind=true cards_glass=false system_opaque=false
+profile-switch work now=work shown=[3] parked=[1, 2]
+set opacity -> number(0.9)
+surfaces opacity=0.9 blur_behind=true cards_glass=false system_opaque=false
+surfaces opacity=0.5 blur_behind=true cards_glass=false system_opaque=false
+surfaces opacity=0.9 blur_behind=true cards_glass=false system_opaque=false
+profile-switch default now=default shown=[1, 2] parked=[3]

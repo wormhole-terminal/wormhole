@@ -1,0 +1,70 @@
+# live run, --background, data /tmp/Wormhole-swift-s-platform-o05, marking shell, agent_access open, automation on, notices on
+$ Wormhole send-text --terminal 1 --submit echo typed-by-a-command-line -> exit 0
+tab 1
+> notice chip
+chip shown=Claude Code is typing sticky=false info=false detail=- bar=- hostNotice=-
+$ Wormhole read --terminal 1 --last 2 -> exit 0
+typed-by-a-command-line
+> notice chip
+chip shown=Claude Code is reading sticky=false info=false detail=- bar=- hostNotice=-
+> window-shot /tmp/sp-o05/chip-driven.png
+window-shot /tmp/sp-o05/chip-driven.png
+> notice update-ready 9.9.9
+notice update-ready 9.9.9
+> notice chip
+chip shown=Wormhole 9.9.9 is ready — Restart sticky=true info=false detail=- bar=- hostNotice=-
+> notice data-folder permission denied
+notice data-folder permission denied
+> notice chip
+chip shown=Wormhole can't open a profile's data folder, so it saves nothing there sticky=true info=false detail=Wormhole can't open the data folder of the profile default, /tmp/Wormhole-swift-s-platform-o05, so that profile runs without saving anything: no windows, notes or settings are kept. permission denied bar=- hostNotice=-
+> notice host-fallback no such file: wormhole-host (os error 2)
+notice host-fallback no such file: wormhole-host (os error 2)
+> notice chip
+chip shown=This terminal ends when Wormhole quits sticky=true info=false detail=no such file: wormhole-host (os error 2) bar=- hostNotice=-
+> notice move
+notice move
+> notice chip
+chip shown=Move Wormhole to Applications to keep terminals running when it quits sticky=true info=false detail=- bar=- hostNotice=-
+> notice history-kept
+notice history-kept
+> notice chip
+chip shown=Cleared here only: this session host is too old to forget it sticky=false info=false detail=- bar=- hostNotice=-
+> notice copy-path
+notice copy-path
+> notice chip
+chip shown=Not copied: the path has characters that would act when pasted sticky=false info=false detail=- bar=- hostNotice=-
+> notice typing Codex CLI
+notice typing Codex CLI
+> notice chip
+chip shown=Codex CLI is typing sticky=false info=false detail=- bar=- hostNotice=-
+> notice reading
+notice reading
+> notice chip
+chip shown=A script is reading sticky=false info=false detail=- bar=- hostNotice=-
+> notice host-fallback boom
+notice host-fallback boom
+> window-shot /tmp/sp-o05/chip-host-fallback.png
+window-shot /tmp/sp-o05/chip-host-fallback.png
+$ Wormhole new-terminal --folder /tmp -> exit 0
+opened terminal 2 (tab 2, pane 2) in window 1 at /tmp
+> hook 1 claude UserPromptSubmit
+hook 1 claude UserPromptSubmit
+> hook 1 claude Notification Needs permission to run npm test
+hook 1 claude Notification Needs permission to run npm test
+> notice-log
+wormhole/tab/1 thread=wormhole/terminal/1 level=active sound=true category=wormhole.needs-you title=claude needs input body=Needs permission to run npm test
+> notice-respond wormhole/tab/1 reply echo replied-via-the-banner
+notice-respond wormhole/tab/1 reply echo replied-via-the-banner
+$ Wormhole read --terminal 1 --last 3 -> exit 0
+echo replied-via-the-banner
+replied-via-the-banner
+> notice-log
+
+> hook 1 claude Stop
+hook 1 claude Stop
+> notice-log
+wormhole/tab/1 thread=wormhole/terminal/1 level=active sound=false category=wormhole.finished title=claude finished body=Finished
+> notice-respond wormhole/tab/1 open
+notice-respond wormhole/tab/1 open
+> notice-respond wormhole/tab/1 default
+notice-respond wormhole/tab/1 default

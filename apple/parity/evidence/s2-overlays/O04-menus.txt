@@ -1,0 +1,51 @@
+# every context menu read with right-click in the Swift instance e (fixture-e.sh); GPUI's read with devctl right-click + menu in /tmp/so-g (same state). Swift: n. title [key] [x] [off], --- separators; GPUI: n - title, > submenu.
+> pasteboard-set x
+pasteboard-set
+> right-click 700 400
+menu:
+1. Copy [c] [off]
+2. Paste [v]
+3. Select All [a]
+---
+4. Find… [f]
+---
+5. Split Right [d]
+6. Split Down [d]
+---
+7. Clear Buffer [k]
+> menu-close
+menu-close
+> right-click 700 400
+menu:
+1. Copy [c] [off]
+2. Paste [v]
+3. Select All [a]
+---
+4. Find… [f]
+---
+5. Split Right [d]
+6. Split Down [d]
+---
+7. Clear Buffer [k]
+
+## sidebar row (right-click and the keyboard's ⌃↩ menu, same 11 items) -- identical to GPUI's
+Rename… | Add terminal to new group | Add terminal to group ▸ [off with no group] | (Remove from group when in one) | Split right | Close terminal | --- | Show beside… ▸ (the other terminals) | (Remove from split when in one) | Pin to top / Unpin | Don't keep this terminal's text [x] | Hide from Agents [x] (only with the Automation flag, or while hidden: fixed this round, it was always offered) | --- | Reveal in Finder | Copy path
+Every item picked once through the keyboard's menu: O04-rowmenu.txt.
+
+## terminal (right-click on the grid) -- identical to GPUI's
+Copy [off with no selection] | Paste [off with an empty clipboard] | Select All | --- | Find… | --- | Split Right | Split Down | --- | Clear Buffer
+
+## folder path on the title row -- identical to GPUI's (after this round: a SwiftUI Section drew a separator above its heading and two under the items; the heading is now a line of text and the separators are the dividers)
+/private/tmp/so-b/proj [heading, off] | --- | Open in Finder | Copy path | Insert into terminal | --- | proj | so-b | tmp | private | Macintosh HD
+
+## title row elsewhere -- identical to GPUI's (same Section fix)
+Show in title row [heading] | Folder [x] | Branch [x] | Branch status [x] | Terminal name [x] | Terminal status [x] | Agent model and context [x] | Open ports [x] | Pull request [x] | Open in… [x] | Split buttons [x] | --- | Reset title row [off] | Customize title row…
+
+## group head -- one difference
+GPUI: Rename… | --- | a row of nine colour dots (Grey…Orange, the group's ringed) | Other colour… | No colour | --- | Set folder… | --- | New terminal in group | Ungroup | Close group | Pin group | Move group to new window
+Swift: the same items with the dots as a "Colour ▸" submenu (Grey … Orange, ---, Other colour…, No colour): a SwiftUI .contextMenu cannot hold a row of dots. PlatformUI has the native swatch row (`SwatchMenuView`, used by the AppKit menus); the sidebar's group head is not on it yet. Not fixed.
+
+## panel items -- one difference
+Files row. GPUI: Open in ▸ (Zed [x], Xcode, PhpStorm, RustRover, Finder) | Reveal in Finder | Copy Path | --- | Rename…
+Swift: Reveal in Finder | Copy Path | --- | Rename…  (no Open in ▸: `SystemPanelHost.editorName` is nil: the panel lane's P03/P07, not done here.)
+Changes and History rows are the panel lane's lists (P02/P03); not read here.

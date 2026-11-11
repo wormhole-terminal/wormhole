@@ -1,0 +1,12 @@
+W05 multi-window, restore, saved layout (round S2, window-b). Instance /tmp/Wormhole-swift-s2wb-a; new controls `window-zoom <id>` and `full-screen <id>`.
+- A zoomed window: `window-zoom 1` -> sessions says frame=maximized 8,39 1714x1072; save-windows; saved-windows the same; quit and relaunch ->
+  window 1 comes back maximized (frame=maximized 8,39 1714x1072), with its 5 terminals and groups.
+- The front window comes back in front: `use-window 1`, save, quit, relaunch -> sessions front=true for window 1 (it opens last: core front_last).
+- Cascade: windows made by new-window step 26 down and right (204,99 -> 230,125 -> 256,151) as the core's cascade rule.
+- A display that is gone, and a saved full-screen or zoomed window on it: the core's fit rule with fake displays, windows::frame tests
+  (the_records_go_through_core_s_rules; a_saved_full_screen_or_zoomed_window_keeps_its_kind_when_its_display_is_gone) and
+  WindowsFFITests (a display 2 frame comes back on display 1 at x 40, the kind and the Dock state kept).
+- A saved FULL-SCREEN window: NOT driven. `full-screen <id>` in a --background instance does nothing (AppKit enters full screen only for the
+  active app, and a background instance never is); the restore calls toggleFullScreen as the green light does (WindowFrames.place). A person must
+  try: put a window in full screen, quit with Cmd-Q, relaunch: it comes back full screen.
+- Not driven: a second display, the Dock itself.

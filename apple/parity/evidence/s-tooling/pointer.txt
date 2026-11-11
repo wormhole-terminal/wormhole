@@ -1,0 +1,164 @@
+# live run, --background Swift instance (exp/swift-s-tooling), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-tooling-c; each '>' line is one control-folder batch; '# window server' lines are read from outside (CGWindowList: our window's z-index among on-screen windows and the frontmost owner)
+# S07/S08 sidebar drag, a row click, a column drag, a context menu, a rename typed into a SwiftUI field, the wheel
+> new
+new
+> new
+new
+# window server: z=17 of 18 front=Terminal
+> rows
+selected=3 live=[1, 2, 3] groups=0
+  row 1 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 1 of 3, Command 1"
+  row 2 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 2 of 3, Command 2"
+  row 3 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 3 of 3, Command 3"
+> click 150 66
+click 150 66: down on PlatformGroupContainer, the gesture played to its release
+> rows
+selected=1 live=[1, 2, 3] groups=0
+  row 1 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 1 of 3, Command 1"
+  row 2 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 2 of 3, Command 2"
+  row 3 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 3 of 3, Command 3"
+> drag 150 182 150 40 12
+drag 150 182 150 40 12: down on PlatformGroupContainer, the gesture played to its release
+> rows
+selected=1 live=[1, 2, 3] groups=0
+  row 3 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 1 of 3, Command 1"
+  row 1 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 2 of 3, Command 2"
+  row 2 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 3 of 3, Command 3"
+# a held drag: the lifted row and its room, shot mid-drag (held-mid.png beside this file)
+> mouse-down 150 182
+down on PlatformGroupContainer
+> mouse-move 150 170
+dragged PlatformGroupContainer
+> mouse-move 150 150
+dragged PlatformGroupContainer
+> mouse-move 150 125
+dragged PlatformGroupContainer
+> mouse-move 150 110
+dragged PlatformGroupContainer
+> window-shot apple/parity/evidence/s-tooling/held-mid.png
+window-shot apple/parity/evidence/s-tooling/held-mid.png
+> mouse-up 150 110
+up on PlatformGroupContainer
+> rows
+selected=1 live=[1, 2, 3] groups=0
+  row 3 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 1 of 3, Command 1"
+  row 2 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 2 of 3, Command 2"
+  row 1 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 3 of 3, Command 3"
+# the sidebar's edge dragged (ColumnHandle's DragGesture)
+> drag 351 400 300 400 10
+drag 351 400 300 400 10: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+# the row's SwiftUI context menu, read unshown, an item pressed
+> right-click 150 66
+menu:
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - wanderer@mac:~
+    - wanderer@mac:~
+7. Pin to top
+8. Don't keep this terminal's text
+9. Hide from Agents
+---
+10. Reveal in Finder
+11. Copy path
+> menu-pick Pin to top
+picked Pin to top
+> rows
+selected=1 live=[1, 2, 3] groups=0
+  row 3 "wanderer@mac:~" idle number=1 pinned=true folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 1 of 3, Command 1"
+  row 2 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 2 of 3, Command 2"
+  row 1 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 3 of 3, Command 3"
+> right-click 150 66
+menu:
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - wanderer@mac:~
+    - wanderer@mac:~
+7. Unpin
+8. Don't keep this terminal's text
+9. Hide from Agents
+---
+10. Reveal in Finder
+11. Copy path
+> menu-pick Rename…
+picked Rename…
+> click 150 60
+click 150 60: down on _SystemTextFieldFieldEditor, the gesture played to its release
+> key cmd-a
+key cmd-a -> selectAll focus=sidebar
+> text Build
+text Build
+> key return
+key return focus=none
+> rows
+selected=1 live=[1, 2, 3] groups=0
+  row 3 "wanderer@mac:~" idle number=1 pinned=true folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 1 of 3, Command 1"
+  row 2 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 2 of 3, Command 2"
+  row 1 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 3 of 3, Command 3"
+# the wheel over the terminal's scrollback
+> click 700 400
+click 700 400: down on MetalTerminalView, the gesture played to its release
+> type seq 1 300
+typed
+> scroll 700 400 -400
+scroll 700 400 -400: scrolled MetalTerminalView in 20 steps
+> screen
+238                                                                       
+239                                                                       
+240                                                                       
+241                                                                       
+242                                                                       
+243                                                                       
+244                                                                       
+245                                                                       
+246                                                                       
+247                                                                       
+248                                                                       
+249                                                                       
+250                                                                       
+251                                                                       
+252                                                                       
+253                                                                       
+254                                                                       
+255                                                                       
+256                                                                       
+257                                                                       
+258                                                                       
+259                                                                       
+260                                                                       
+261                                                                       
+262                                                                       
+263                                                                       
+264                                                                       
+265                                                                       
+266                                                                       
+267                                                                       
+268                                                                       
+269                                                                       
+270                                                                       
+271                                                                       
+272                                                                       
+273                                                                       
+274                                                                       
+275                                                                       
+276                                                                       
+277                                                                       
+278                                                                       
+279                                                                       
+# window server: z=16 of 18 front=Terminal
+# the sidebar's edge at 300 double-clicked: back to its default width (ColumnHandle's onTapGesture(count: 2))
+> columns
+ChromeLayout(columns: WorkspaceModel.Columns(window: 1162.0, sidebar: 300.0, terminal: 502.0, panel: 360.0, sidebarChosen: 300.0, panelChosen: 360.0, sidebarMaxNow: 420.0, panelMaxNow: 542.0, limits: WorkspaceModel.ColumnLimits(sidebarMin: 240.0, sidebarMax: 420.0, panelMin: 240.0, panelMax: 720.0, terminalMin: 320.0, windowMinWidth: 560.0, windowMinHeight: 400.0)), panelToggle: WorkspaceModel.PanelToggle.open, tabs: [WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.changes, label: "Changes", enabled: true, selected: true), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.history, label: "History", enabled: true, selected: false), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.notes, label: "Notes", enabled: true, selected: false), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.usage, label: "Usage", enabled: true, selected: false), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.project, label: "Project", enabled: true, selected: false), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.files, label: "Files", enabled: true, selected: false)], menu: WorkspaceModel.LayoutMenu(presets: [WorkspaceModel.LayoutPreset(id: WorkspaceModel.LayoutPresetID.twoColumns, title: "2 Columns", slots: 2, current: false, enabled: true), WorkspaceModel.LayoutPreset(id: WorkspaceModel.LayoutPresetID.twoRows, title: "2 Rows", slots: 2, current: false, enabled: true), WorkspaceModel.LayoutPreset(id: WorkspaceModel.LayoutPresetID.grid, title: "2×2 Grid", slots: 4, current: false, enabled: true), WorkspaceModel.LayoutPreset(id: WorkspaceModel.LayoutPresetID.single, title: "Single Pane", slots: 1, current: true, enabled: true)], canSplitRow: true, canSplitColumn: true, paneCount: 1, zoomed: false), zoomed: nil, numbersFollowList: false)
+> double-click 301 400
+double-click 301 400: down on NSHostingView<WorkspaceRootView>, the gesture played to its release, down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+> columns
+ChromeLayout(columns: WorkspaceModel.Columns(window: 1162.0, sidebar: 350.0, terminal: 452.0, panel: 360.0, sidebarChosen: 350.0, panelChosen: 360.0, sidebarMaxNow: 420.0, panelMaxNow: 492.0, limits: WorkspaceModel.ColumnLimits(sidebarMin: 240.0, sidebarMax: 420.0, panelMin: 240.0, panelMax: 720.0, terminalMin: 320.0, windowMinWidth: 560.0, windowMinHeight: 400.0)), panelToggle: WorkspaceModel.PanelToggle.open, tabs: [WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.changes, label: "Changes", enabled: true, selected: true), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.history, label: "History", enabled: true, selected: false), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.notes, label: "Notes", enabled: true, selected: false), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.usage, label: "Usage", enabled: true, selected: false), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.project, label: "Project", enabled: true, selected: false), WorkspaceModel.PanelTabItem(tab: WorkspaceModel.PanelTab.files, label: "Files", enabled: true, selected: false)], menu: WorkspaceModel.LayoutMenu(presets: [WorkspaceModel.LayoutPreset(id: WorkspaceModel.LayoutPresetID.twoColumns, title: "2 Columns", slots: 2, current: false, enabled: true), WorkspaceModel.LayoutPreset(id: WorkspaceModel.LayoutPresetID.twoRows, title: "2 Rows", slots: 2, current: false, enabled: true), WorkspaceModel.LayoutPreset(id: WorkspaceModel.LayoutPresetID.grid, title: "2×2 Grid", slots: 4, current: false, enabled: true), WorkspaceModel.LayoutPreset(id: WorkspaceModel.LayoutPresetID.single, title: "Single Pane", slots: 1, current: true, enabled: true)], canSplitRow: true, canSplitColumn: true, paneCount: 1, zoomed: false), zoomed: nil, numbersFollowList: false)

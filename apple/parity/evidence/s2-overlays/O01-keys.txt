@@ -1,0 +1,50 @@
+# O01 driven with keys in instance e (fixture-e.sh: 1 needs input, 2 works, 3 idle in the trusted project); every line a control command
+## ⇧⌘P opens; typing @ narrows to Terminals and leaves the field; ↓ moves; Return switches
+> key cmd-shift-p
+key cmd-shift-p -> commandPalette focus=none
+selected=3 live=[1, 2, 3] groups=0
+## Esc ladder: text cleared, then scope back to all, then closed (cover= is the overlay)
+> key cmd-shift-p
+key cmd-shift-p -> commandPalette focus=none
+> text >new
+## ⌫ in an empty narrowed field goes back to all; Tab and ⇧Tab walk the scope row
+window-shot apple/parity/evidence/s2-overlays/shots/swift-scope-walk.pn
+## ⌘↩ opens the chosen terminal's folder in a new window
+2
+## ⌘⌫ closes the chosen terminal
+selected=3 live=[1, 2, 3] groups=0
+## (fresh instance) Esc ladder: text typed, Esc clears it (rows come back as all), Esc again closes
+key cmd-shift-p -> commandPalette focus=none
+> text >new
+text >new
+## ⌘⌫ closes the chosen terminal (terminal 3 chosen with two ↓)
+selected=2 live=[1, 2] groups=0
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Pin to top
+8. Don't keep this terminal's text
+9. Hide from Agents
+---
+10. Reveal in Finder
+11. Copy path
+> menu-pick Close terminal
+picked Close terminal
+> wait-idle 800
+wait-idle failed: the window still changes after 800 ms
+> palette-rows ~
+# Folders (2)
+  ~  - 2 terminals  <folder-~>
+  proj  - /private/tmp/so-b  <folder-/private/tmp/so-b/proj>
+> palette-rows ~
+# Folders (2)
+  ~  - 2 terminals  <folder-~>
+  proj  - /private/tmp/so-b  <folder-/private/tmp/so-b/proj>

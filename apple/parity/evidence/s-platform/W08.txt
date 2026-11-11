@@ -1,0 +1,31 @@
+# live, --background Swift instance (questions held, answered through the control folder)
+> type sleep 30\r          (zsh)
+> quit-ask
+quit-ask title=Quit Wormhole?
+detail=Your terminals come back next time, but what runs in them ends. An agent is still working. Still running: sleep 30.     <- BEFORE the fix: a plain terminal was called an agent
+(after the fix: "... ends. Still running: sleep 30."; GPUI's agent_status is Idle without an agent)
+$ Wormhole close --terminal 2        (an idle terminal: the command line is always asked about, it never closes on a script's say)
+asked in window 1 whether to close terminal 2; it closes only if the user says yes
+> question
+title=Close "marking-shell"?
+detail=Its shell ends. The command line asked to close it.
+buttons=0:Close | 1:Cancel (confirm=0 cancel=1)
+> question cancel   -> question answered Cancel   (terminal 2 still there)
+$ Wormhole close --terminal 2 ; > question confirm -> question answered Close   (terminal 2 gone)
+Before: Cancel on a question with no extra button trapped (the range 1...0): the app died. AuxTests.QuestionAnswerTests holds it.
+> quit-ask
+quit-ask title=Quit Wormhole?
+detail=Your terminals come back next time and what runs in them keeps going. Untick the box to end them.
+confirm=Quit checkbox=Keep terminals running in the background checked=true
+> quit-ask-end-all
+quit-ask title=Quit and End All Terminals?
+detail=Your terminals come back next time, but what runs in them ends.
+confirm=Quit and End All checkbox=none
+$ Wormhole sessions list -> exit 0
+ID                PID    CHILD  STARTED               VERSION   STATE
+94hpa4lwmxh4    40127    40128  2026-11-11 00:18:04Z  1.6.3     live
+$ Wormhole sessions end --all -> exit 0
+94hpa4lwmxh4 ended
+# (above, last block) a hosted terminal whose host cannot be shown counts as running, and the box keeps the hosts:
+quit-ask:        "Your terminals come back next time and what runs in them keeps going. Untick the box to end them."  [Keep terminals running in the background, ticked]
+quit-ask-end-all: title "Quit and End All Terminals?", no box, confirm "Quit and End All"   (GPUI window::quit_question tests: same words)

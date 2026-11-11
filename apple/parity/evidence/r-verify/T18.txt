@@ -1,0 +1,81 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> select 1
+select 1
+> type clear; stty size\r
+typed
+> screen
+42 68                                                               
+➜  ~                                                                
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+> size 1100x700
+size 1100x700
+> window-shot <scratch>/rv/shots/t18-chip.png
+window-shot <scratch>/rv/shots/t18-chip.png
+> type clear; stty size\r
+typed
+> state
+grid=43x35 cell=17x36px scale=2.0 frames_drawn=8 ticks=24 wakes=8 pauses=10 busy_skips=0 blink_fires=0 link=paused words_shaped=6 word_hits=8 glyphs_rasterised=8 atlas_resets=0 terminals=3 selected=1 sidebar=true panel=true tab=changes window=83593 theme=wormhole.dark appearance=dark mode=dark opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transparency
+> screen
+35 43                                      
+➜  ~                                       
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           
+                                           

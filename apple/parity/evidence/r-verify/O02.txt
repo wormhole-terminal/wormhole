@@ -1,0 +1,14 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> shortcut-rows
+Windows & terminals
+  New terminal  ⌘T
+  Close terminal  ⌘W
+  Previous / next terminal  ⌃⌘↑ ⌃⌘↓
+  Terminals 1–9  ⌘1 … ⌘9
+View & panels
+  Hide / show sidebar  ⌃⌘S
+  Hide / show right panel  ⌥⌘I
+  Changes · History · Notes  ⌃⌘1 ⌃⌘2 ⌃⌘3
+Find anything
+  Command palette  ⇧⌘P
+  Keyboard shortcuts (this sheet)  ⌥⌘/

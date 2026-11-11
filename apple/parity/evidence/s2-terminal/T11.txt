@@ -1,0 +1,12 @@
+# T11 scroll bar. 500-line scrollback scene, scrolled up. System: defaults read -g AppleShowScrollBars = WhenScrolling -> overlay style for both apps.
+Swift: NSScroller (`bounds 1307 300 2`): ScrollBar "Scrollback" @1294,37 19x776 pt (whole control); knob (ValueIndicator) 6x64 pt at x=1303 (1303..1309), knob top y=41 (history top) .. bottom 809 (live end) => travel 768 pt
+  (probed with bounds 1306 y: top state knob @1303,41 6x64; bottom state knob @1303,745 6x64). Page slots 6 pt wide, 703 pt tall.
+  Capture: `shot` (terminal render) never has it; `window-shot` has only, while the pointer is on the bar, a 6-pt-wide full-height track pill x 2606..2617 px, y 82..1617 px,
+  colour dark (22,30,40) on (10,19,29), light (235,237,239) on (247,249,251); the knob is NOT in any window-shot (so knob colours cannot be measured). screencapture -l <id> fails here ("could not create image from window").
+  Swift has no `scroller overlay|legacy` command: the style follows the system only, so the legacy gutter (NSScroller.scrollerWidth(.regular,.legacy)) was not shot.
+GPUI (`scroller overlay|legacy`, `scroll 700 300 dy`, `shot`):
+  overlay dark: thumb x 2608..2619 px = 1304..1310 pt (6 wide), 128 px = 64 pt long, colour (63,73,83); at scroll top y 87..208 px (thumb top 43.5 pt), at bottom 1491..1612 px (bottom 806 pt) => travel ~763 pt
+  overlay light: thumb (179,184,189) on (247,249,251), same geometry
+  legacy dark: track x 2596..2623 px = 1298..1312 pt (14 wide), y 84..1615 px = 42..808 pt, colour (19,30,41); thumb x 2600..2619 px (10 wide), (71,81,91), 64 pt long, rounded
+  legacy light: track (236,238,241), thumb (171,176,182)
+Differences: knob x 1303..1309 (Swift) vs 1304..1310 (GPUI): 1 pt left; knob travel 41..809 (768) vs 43.5..806.5 (763): GPUI inset ~2.5 pt top and bottom; widths and knob length equal (6 x 64 pt).

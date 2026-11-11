@@ -1,0 +1,152 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-settings-a, throwaway repo scratchpad/s-settings/repo-a; '>' lines are control-folder commands, 'look-keys' prints what the windows hold (AppController+Look settingsEffects)
+> look-keys
+accent primary=#0096ff branch=#bea0f9 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set primary_color="#ff8800"
+set primary_color -> string("#ff8800")
+> set theme_primary=false
+set theme_primary -> bool(false)
+> look-keys
+accent primary=#ff8800 branch=#bea0f9 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set branch_color="custom"
+set branch_color -> string("custom")
+> set branch_color_custom="#00ff00"
+set branch_color_custom -> string("#00ff00")
+> look-keys
+accent primary=#ff8800 branch=#00ff00 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set branch_color="primary"
+set branch_color -> string("primary")
+> look-keys
+accent primary=#ff8800 branch=#ff9335 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set borders=false
+set borders -> bool(false)
+> look-keys
+accent primary=#ff8800 branch=#ff9335 border=#00000000 card_edge=#00000000
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set borders=true
+set borders -> bool(true)
+> look-keys
+accent primary=#ff8800 branch=#ff9335 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=system size=13.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set ui_font_size=16
+set ui_font_size -> number(16.0)
+> set ui_font_family="Menlo"
+set ui_font_family -> string("Menlo")
+> look-keys
+accent primary=#ff8800 branch=#ff9335 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=Menlo size=16.0
+code_font family=JetBrains Mono size=13.0 tab_width=4 binary_sizes=false
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set code_font_family="Menlo"
+set code_font_family -> string("Menlo")
+> set code_font_size=15
+set code_font_size -> number(15.0)
+> set tab_width=2
+set tab_width -> number(2.0)
+> set size_units="binary"
+set size_units -> string("binary")
+> look-keys
+accent primary=#ff8800 branch=#ff9335 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=Menlo size=16.0
+code_font family=Menlo size=15.0 tab_width=2 binary_sizes=true
+panel changes_tree=true group_untracked=true diff_split=true diff_wrap=false
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set changes_tree=false
+set changes_tree -> bool(false)
+> set group_untracked=false
+set group_untracked -> bool(false)
+> set diff_split=false
+set diff_split -> bool(false)
+> set diff_wrap=true
+set diff_wrap -> bool(true)
+> look-keys
+accent primary=#ff8800 branch=#ff9335 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=Menlo size=16.0
+code_font family=Menlo size=15.0 tab_width=2 binary_sizes=true
+panel changes_tree=false group_untracked=false diff_split=false diff_wrap=true
+icon_animations=true
+sidebar scope=terminal status_dot=true cmd_hints=true numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set icon_animations=false
+set icon_animations -> bool(false)
+> set sidebar_status_dot=false
+set sidebar_status_dot -> bool(false)
+> set sidebar_cmd_hints=false
+set sidebar_cmd_hints -> bool(false)
+> set sidebar_numbers="list"
+set sidebar_numbers -> string("list")
+> set sidebar_changes_scope="repository"
+set sidebar_changes_scope -> string("repository")
+> set menu_bar_animate=true
+set menu_bar_animate -> bool(true)
+> look-keys
+accent primary=#ff8800 branch=#ff9335 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=Menlo size=16.0
+code_font family=Menlo size=15.0 tab_width=2 binary_sizes=true
+panel changes_tree=false group_untracked=false diff_split=false diff_wrap=true
+icon_animations=false
+sidebar scope=repository status_dot=false cmd_hints=false numbers_follow_list=false
+secondary_windows settings=true studio=true hosts=true opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2
+> set settings_translucent=false
+set settings_translucent -> bool(false)
+> set studio_translucent=false
+set studio_translucent -> bool(false)
+> set hosts_translucent=false
+set hosts_translucent -> bool(false)
+> look-keys
+accent primary=#ff8800 branch=#ff9335 border=#e3ebf21f card_edge=#e3ebf21a
+interface_font family=Menlo size=16.0
+code_font family=Menlo size=15.0 tab_width=2 binary_sizes=true
+panel changes_tree=false group_untracked=false diff_split=false diff_wrap=true
+icon_animations=false
+sidebar scope=repository status_dot=false cmd_hints=false numbers_follow_list=false
+secondary_windows settings=false studio=false hosts=false opacity=0.8 blur=true
+row_counts 1:changes=0,repo_files=2

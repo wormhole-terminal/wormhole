@@ -1,0 +1,70 @@
+# S09 terminals as tabs: tab bar, group switcher, profile chip (--background instance)
+> key escape
+> profile-new Work
+> tabs on
+> wait-idle 1500
+> window-shot <scratch>/s2w/s09-tabs.png
+key escape focus=sidebar
+profile-new Work ok
+tabs on
+idle
+window-shot <scratch>/s2w/s09-tabs.png
+> leave 3
+> leave 4
+> wait-idle 1500
+> window-shot <scratch>/s2w/s09-tabs.png
+leave 3
+leave 4
+idle
+window-shot <scratch>/s2w/s09-tabs.png
+## profile chip (Work exists): click it, the menu is read and kept unshown
+> click 62 69
+> wait-idle 800
+> menu
+> menu-pick Work
+> wait-idle 1500
+> sessions
+> windows
+> profile-menu open 0
+click 62 69: down on MetalTerminalView, the gesture played to its release
+idle
+no menu
+error: no menu
+idle
+window=1 profile=default visible=true front=true terminals=[1,2,3,4,7] selected=7 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off, 7:off]
+Wormhole (Swift experiment) visible=true sheet=false
+(untitled) visible=false sheet=false
+profile-menu open 0
+> click 45 52
+> wait-idle 800
+> menu
+> menu-close
+click 45 52: down on MetalTerminalView, the gesture played to its release
+idle
+no menu
+no menu
+> use-window 1
+> pointer-window Wormhole (Swift experiment)
+> click 45 52
+> wait-idle 800
+> menu
+> menu-close
+use-window 1
+pointer-window Wormhole (Swift experiment)
+click 45 52: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+idle
+no menu
+no menu
+## group switcher: click on 'Ungrouped' opens its popover (a window of its own: shot by its title)
+> click 175 52
+> wait-idle 1200
+> windows
+> window-shot <scratch>/s2w/s09-switcher.png
+click 175 52: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+idle
+Wormhole (Swift experiment) visible=true sheet=false
+(untitled) visible=false sheet=false
+Wormhole (Swift experiment) 2 visible=true sheet=false
+(untitled) visible=true sheet=false
+(untitled) visible=true sheet=false
+window-shot <scratch>/s2w/s09-switcher.png

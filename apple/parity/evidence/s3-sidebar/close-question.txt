@@ -1,0 +1,88 @@
+# Gap 4, driven in a --background instance (a row's x shows only under the pointer, which a background instance never has: its code calls context.closeTerminal, as the menu does)
+# terminal 2 runs `sleep 300`: row menu Close terminal asks; Cancel keeps it; the palette (@sleep, Cmd-Backspace) asks; Close closes
+> right-click 175 125
+menu:
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - wanderer@mac:~
+7. Pin to top
+8. Don't keep this terminal's text
+---
+9. Reveal in Finder
+10. Copy path
+> menu-pick Close terminal
+picked Close terminal
+> wait-idle 800
+idle
+> state
+grid=69x42 cell=16.799999237060547x36px scale=2.0 frames_drawn=4 ticks=8 wakes=2 pauses=4 busy_skips=0 blink_fires=0 link=paused words_shaped=4 word_hits=2 glyphs_rasterised=8 atlas_resets=0 terminals=2 selected=2 sidebar=true panel=true tab=changes window=97638 theme=wormhole.dark appearance=dark mode=dark opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transparency=false increase_contrast=false panes=2 focused=2 zoomed=none cover=none focus=none question=Close “sleep 300”? (1)
+> rows
+selected=2 live=[1, 2] groups=0
+  row 1 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 1 of 2, Command 1"
+  row 2 "sleep 300" working number=2 pinned=false folder=~ line="sleep 300" trail=0:18 split=0 spoken="sleep 300, running sleep, 18 seconds, selected, 2 of 2, Command 2"
+> question
+title=Close “sleep 300”?
+detail=Its agent is still working. Still running: sleep 300. Closing ends them.
+buttons=0:Close | 1:Cancel (confirm=0 cancel=1)
+waiting=1
+> question cancel
+question answered Cancel
+> wait-idle 500
+idle
+> rows
+selected=2 live=[1, 2] groups=0
+  row 1 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 1 of 2, Command 1"
+  row 2 "sleep 300" working number=2 pinned=false folder=~ line="sleep 300" trail=0:27 split=0 spoken="sleep 300, running sleep, 27 seconds, selected, 2 of 2, Command 2"
+> key cmd-shift-p
+key cmd-shift-p -> commandPalette focus=none
+> wait-idle 600
+wait-idle failed: the window still changes after 600 ms
+> key down
+key down focus=none
+> key cmd-backspace
+key cmd-backspace -> deleteToBeginningOfLine focus=none
+> wait-idle 800
+wait-idle failed: the window still changes after 800 ms
+> question
+no question is up
+> key escape
+key escape focus=none
+> palette sleep
+palette sleep
+> wait-idle 800
+wait-idle failed: the window still changes after 800 ms
+> window-shot /tmp/s3sb-a/p.png
+window-shot /tmp/s3sb-a/p.png
+> key cmd-backspace
+key cmd-backspace -> deleteToBeginningOfLine focus=none
+> wait-idle 800
+wait-idle failed: the window still changes after 800 ms
+> question
+no question is up
+> rows
+selected=2 live=[1, 2] groups=0
+  row 1 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, 1 of 2, Command 1"
+  row 2 "sleep 300" working number=2 pinned=false folder=~ line="sleep 300" trail=0:50 split=0 spoken="sleep 300, running sleep, 50 seconds, selected, 2 of 2, Command 2"
+> text @sleep
+text @sleep
+> keys
+focus=none responder=NSTextView
+> key cmd-backspace
+key cmd-backspace -> deleteToBeginningOfLine focus=none
+> question
+title=Close “sleep 300”?
+detail=Its agent is still working. Still running: sleep 300. Closing ends them.
+buttons=0:Close | 1:Cancel (confirm=0 cancel=1)
+waiting=1
+> question confirm
+question answered Close
+> wait-idle 800
+idle
+> rows
+selected=1 live=[1] groups=0
+  row 1 "wanderer@mac:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 1 of 1, Command 1"

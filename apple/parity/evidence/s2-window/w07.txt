@@ -1,0 +1,21 @@
+# W07 Zen mode (ctrl-cmd-z through the keymap), --background instance
+> new
+> wait-idle 800
+> state
+> window-shot <scratch>/s2w/w07-before.png
+> key ctrl-cmd-z
+> wait-idle 1500
+> state
+> window-shot <scratch>/s2w/w07-zen.png
+> key ctrl-cmd-z
+> wait-idle 1500
+> state
+new
+wait-idle failed: the window still changes after 800 ms
+grid=68x42 cell=17x36px scale=2.0 frames_drawn=3 ticks=5 wakes=1 pauses=2 busy_skips=0 blink_fires=0 link=paused words_shaped=2 word_hits=0 glyphs_rasterised=2 atlas_resets=0 terminals=2 selected=2 sidebar=true panel=true tab=chan
+window-shot <scratch>/s2w/w07-before.png
+key ctrl-cmd-z -> toggleZenMode focus=none
+idle
+grid=111x42 cell=17x36px scale=2.0 frames_drawn=32 ticks=20 wakes=5 pauses=6 busy_skips=0 blink_fires=0 link=paused words_shaped=2 word_hits=32 glyphs_rasterised=2 atlas_resets=0 terminals=2 selected=2 sidebar=true panel=true tab=
+window-shot <scratch>/s2w/w07-zen.png
+key ctrl-cmd-z -> toggleZenMode focus=none

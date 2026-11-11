@@ -1,0 +1,6 @@
+## B1 ui_font_family=Inter in config, fonts folder empty: the interface draws in the system face
+<scratch>/s3tf-ctlb.sh: line 4: /tmp/Wormhole-swift-s3-themes-fonts-b-ctl/out.txt: No such file or directory
+ui_font_family = string("Inter")
+## B2 Inter-Regular.ttf copied into the folder while running (no other change)
+## B3 removed again
+## B4 added again

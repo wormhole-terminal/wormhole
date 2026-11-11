@@ -1,0 +1,51 @@
+# W10 / W09: what is behind the window and which settings turn it on, read from AppKit's views (control backdrop); the blur itself needs a person
+> backdrop
+> blur off
+> backdrop
+> blur on
+> opacity 1
+> backdrop
+> opacity 0.8
+> reduce-transparency on
+> backdrop
+> reduce-transparency off
+> increase-contrast on
+> backdrop
+> increase-contrast off
+> glass on
+> wait-idle 800
+> backdrop
+> reduce-transparency on
+> backdrop
+> glass off
+> reduce-transparency off
+> appearance light
+> backdrop
+> appearance dark
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameDarkAqua
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+blur off
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameDarkAqua
+blur on
+opacity 1
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameDarkAqua
+opacity 0.8
+reduce-transparency on
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameDarkAqua
+reduce-transparency off
+increase-contrast on
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameDarkAqua
+increase-contrast off
+glass on
+idle
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameDarkAqua
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameDarkAqua frame=1320x820
+glass style=0 hidden=false appearance=NSAppearanceNameDarkAqua frame=350x820
+reduce-transparency on
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameDarkAqua
+glass off
+reduce-transparency off
+appearance light
+window opaque=false background_clear=true has_shadow=true appearance=NSAppearanceNameAqua
+effect material=13 blending=0 state=1 hidden=false appearance=NSAppearanceNameAqua frame=1320x820
+appearance dark

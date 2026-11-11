@@ -1,0 +1,18 @@
+W06 round S2 (window-b), Move Window to <profile>. Instance /tmp/Wormhole-swift-s2wb-a, control folder.
+GPUI's rule (app_state/profiles.rs first_free_ids, window_lifecycle.rs Workspace::rehome): ONE counter of terminal, split and window ids for every
+profile, started past what every profile saved; a moved window keeps its ids and is saved into the target's database as it is. The Swift
+`Windows::new` and `beside` do the same, so data written by this build cannot collide; what can is a profile database written before that
+(each profile numbered from 1). GPUI would replace the other window's rows then; the previous lane refused. Now:
+  - the target's DORMANT window with the same window, terminal or split ids is given new ids from the shared counter (a running terminal cannot
+    change its id), rewriting the split layouts' panes, the sidebar groups and order, notes, tasks, pins, hidden-from-agents, no-text flags, host
+    ids, claims and sealed text; refused only when that window is open (windows::rehome.rs, reissue.rs);
+  - the moving window brings its notes, tasks, flags, the files each terminal changed and (when the target keeps text) the terminals' text;
+  - the workspace is among the TARGET's windows afterwards (Shared::set_windows), which is what the hook server judges a request by (agent access);
+    project trust and the usage meters follow too (ProjectService/UsageService.follow_profile, called by ProfileChipBinding.move).
+Rust tests (real FFI over temp databases and /bin/cat terminals): a_window_moved_over_a_saved_window_of_the_same_id_renumbers_the_saved_one (also
+the move back), a_colliding_terminal_alone_renumbers_the_saved_window_that_has_it, a_window_is_not_moved_over_an_open_window_of_the_same_id,
+a_window_follows_only_a_profile_the_list_has.
+Live: legacy window id 3 with terminal 50 and a note written into Work's database with sqlite3, then a new window 3 (terminal 4) moved to Work:
+  after: windows 3 (the mover, terminal 4) and 4 (the legacy one, terminal 5, its note "kept note" intact); move back to Default lists windows 1, 2.
+Not done: the hosted-terminal desk of a moved window still writes a new terminal's host row into the profile it was made for (an orphan row there,
+the next window save writes it right into the target); host checkpoints stay sealed with the profile key they were made with (GPUI the same).

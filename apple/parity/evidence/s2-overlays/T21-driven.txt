@@ -1,0 +1,201 @@
+# T21 driven: mouse.py tracks the mouse like a coding agent (OSC 52 copy on release, shows the bytes it is sent); drag over its text, then cmd-V (the menu key -> paste:) with the Pasteboard seam file as the clipboard. A plain paste at another time follows.
+> onboarding close
+onboarding close
+onboarding close
+> wait-idle 1500
+idle
+> pasteboard-set BEFORE-THE-DRAG
+pasteboard-set
+pasteboard-set
+> drag 400 60 520 60 6
+drag 400 60 520 60 6: down on MetalTerminalView, the gesture played to its release
+drag 400 60 520 60 6: down on MetalTerminalView, the gesture played to its release
+> wait-idle 800
+idle
+idle
+> pasteboard
+pasteboard "program-copy"
+pasteboard "program-copy"
+> key cmd-v
+key cmd-v -> paste focus=terminal
+> wait-idle 800
+idle
+idle
+> screen
+selectable text of the program                                      
+^[[<0;5;2M^[[<0;19;2m^?BEFORE-THE-DRAG^[[<0;5;2M^[[<0;19;2m^?BEFORE-
+THE-DRAG                                                            
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+selectable text of the program                                      
+^[[<0;5;2M^[[<0;19;2m                                               
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+> key return
+key return focus=terminal
+key return focus=terminal
+> pasteboard-set PLAIN-AFTER-TYPING
+pasteboard-set
+pasteboard-set
+> key cmd-v
+key cmd-v -> paste focus=terminal
+> screen
+selectable text of the program                                      
+^[[<0;5;2M^[[<0;19;2m^?BEFORE-THE-DRAG^[[<0;5;2M^[[<0;19;2m^?BEFORE-
+THE-DRAGPLAIN-AFTER-TYPING                                          
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+selectable text of the program                                      
+^[[<0;5;2M^[[<0;19;2m^?PLAIN-AFTER-TYPING                           
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    

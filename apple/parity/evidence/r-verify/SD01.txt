@@ -1,0 +1,40 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> studio
+studio
+> studio-do state
+studio-do state: name=Wormhole Dark Custom dirty=false changes=0 counts=(yours: 0, low: 0) issues=0 undo=- redo=-
+> studio-do rename Verify Theme
+studio-do rename Verify Theme: name=Verify Theme dirty=true changes=0 counts=(yours: 0, low: 0) issues=0 undo=Rename redo=-
+> studio-do set accent #ff8800
+studio-do set accent #ff8800 ok=true: name=Verify Theme dirty=true changes=0 counts=(yours: 0, low: 0) issues=0 undo=Change “accent” redo=-
+> studio-do set text.primary #ffffff
+studio-do set text.primary #ffffff ok=true: name=Verify Theme dirty=true changes=1 counts=(yours: 1, low: 0) issues=0 undo=Change “text.primary” redo=-
+> studio-do undo
+studio-do undo: name=Verify Theme dirty=true changes=0 counts=(yours: 0, low: 0) issues=0 undo=Change “accent” redo=Change “text.primary”
+> studio-do redo
+studio-do redo: name=Verify Theme dirty=true changes=1 counts=(yours: 1, low: 0) issues=0 undo=Change “text.primary” redo=-
+> studio-do versions
+studio-do versions versions=0: name=Verify Theme dirty=true changes=1 counts=(yours: 1, low: 0) issues=0 undo=Change “text.primary” redo=-
+> studio-do save
+studio-do save saved=/tmp/Wormhole-swift-rverify/themes/Verify Theme.json: name=Verify Theme dirty=false changes=0 counts=(yours: 1, low: 0) issues=0 undo=Change “text.primary” redo=-
+> windows
+Wormhole (Swift experiment) visible=true sheet=false
+Theme Studio visible=true sheet=false
+> window-shot <scratch>/rv/shots/sd01-studio.png Studio
+window-shot <scratch>/rv/shots/sd01-studio.png
+> window-shot <scratch>/rv/shots/sd01-studio.png Theme Studio
+window-shot <scratch>/rv/shots/sd01-studio.png
+> state
+grid=43x35 cell=17x36px scale=2.0 frames_drawn=1 ticks=2 wakes=1 pauses=1 busy_skips=0 blink_fires=0 link=paused words_shaped=3 word_hits=0 glyphs_rasterised=3 atlas_resets=0 terminals=6 selected=8 sidebar=true panel=true tab=history window=83771 theme=verify_theme appearance=dark mode=dark opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transparency=fa
+> studio-do set text.primary #eeeeee
+studio-do set text.primary #eeeeee ok=true: name=Verify Theme dirty=true changes=1 counts=(yours: 1, low: 0) issues=0 undo=Change “text.primary” redo=-
+> studio-do save
+studio-do save saved=/tmp/Wormhole-swift-rverify/themes/Verify Theme.json: name=Verify Theme dirty=false changes=0 counts=(yours: 1, low: 0) issues=0 undo=Change “text.primary” redo=-
+> studio-do versions
+studio-do versions versions=2: name=Verify Theme dirty=false changes=0 counts=(yours: 1, low: 0) issues=0 undo=Change “text.primary” redo=-
+> studio-do revert
+studio-do revert: name=Verify Theme dirty=false changes=0 counts=(yours: 1, low: 0) issues=0 undo=Change “text.primary” redo=-
+> studio-do reset accent
+studio-do reset accent ok=true: name=Verify Theme dirty=true changes=0 counts=(yours: 1, low: 0) issues=0 undo=Reset “accent” redo=-
+> studio-do state
+studio-do state: name=Verify Theme dirty=true changes=0 counts=(yours: 1, low: 0) issues=0 undo=Reset “accent” redo=-

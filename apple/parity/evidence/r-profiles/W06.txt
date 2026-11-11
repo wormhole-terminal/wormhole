@@ -1,0 +1,14 @@
+Live run of profile switching: a --background instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-profiles-a, WORMHOLE_SHELL=/bin/zsh,
+driven through the control folder (profile-new, profile-switch, sessions, get, screen, window-shot, saved-windows, menus).
+
+1. Default: set font_size=18, a second terminal, typed text. `profile-new Work` made the profile.
+2. `profile-switch work` -> Work's window opens (window 2, terminal 3: ids never repeat across profiles), Default's window is hidden.
+3. Quit and relaunch: the instance starts in Work (profiles.json) with Work's own settings (font_size 14, Default's is 18).
+4. `profile-switch default` (first time since launch) -> Default's saved window 1 is restored from its database with terminals [1,2]:
+   sessions: window=2 profile=work visible=false ...  /  window=1 profile=default visible=true terminals=[1,2]; get font_size = 18.
+5. `profile-switch work` -> window 2 is shown again with its terminal still running and its screen as left (echo work-marker);
+   `profile-switch default` -> window 1 again. saved-windows (Default's registry) lists window 1 only.
+6. `menus`: Shell > Profile lists Default and Work with the one Wormhole is in checked; New Profile... and Manage Profiles... enabled.
+Screens: png:r-profiles/chips.png (top: Default after the switch, two terminals; bottom: Work after returning, `work-marker` still on screen).
+Not run: the Settings window open during a switch, a click on the chip's menu (a --background instance has no pointer), the native menu bar
+(not installed in --background; the dump was read).

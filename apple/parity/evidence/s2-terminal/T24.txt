@@ -1,0 +1,9 @@
+# T24 rule links, Swift. Rule: pattern '[A-Za-z]+\.toml:[0-9]+' hover "Open {0}" action open-path (probes-src/demo/probe.toml). Scene rules: "see Cargo.toml:3 here" on row 1.
+> link 1 8   -> link Cargo.toml:3 explicit=false file=true readout=Open Cargo.toml:3 → Cargo.toml:3 · Demo tools spans=1 opens=not clicked
+> link 0 22  -> no link at 0,22
+> hover-cmd 430 69 ; hover-cmd 434 69 ; window-shot (T24-link-chip-dark.png): "Cargo.toml:3" underlined, chip bottom left of the pane: "Open Cargo.toml:3 → Cargo.toml:3 · Demo tools"
+  (LinkReadout.swift: allowsHitTesting(false): the chip takes no clicks, the click goes on the underlined text).
+Click with a fake editor: NOT done, on purpose. WindowHub+Probes.swift openFile -> openIn.choice() (the person's pick, else the FIRST INSTALLED editor) -> NSWorkspace.urlForApplication(withBundleIdentifier:)
+  -> open_file_run(bundle, path, line, appFolder). This Mac has Zed.app, Xcode and JetBrains Toolbox installed, so a click would start the real Zed (`Contents/MacOS/cli path:3`) or open Xcode on the screen.
+  The one route that logs argv (Zed/Sublime Bundled: runs <appFolder>/Contents/MacOS/cli) needs Launch Services to know a fake bundle id (dev.zed.Zed), i.e. registering a fake app system-wide
+  (lsregister): not done. The core's own tests (apple/ffi/src/open_file.rs) already run a fake bundle with an explicit app folder.

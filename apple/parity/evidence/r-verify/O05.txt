@@ -1,0 +1,7 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> select 1
+select 1
+> type clear; printf '\033]52;c;aGVsbG8gZnJvbSBwcm9ncmFt\a'\r
+typed
+> window-shot <scratch>/rv/shots/o05-osc52b.png
+window-shot <scratch>/rv/shots/o05-osc52b.png

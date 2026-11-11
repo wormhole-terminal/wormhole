@@ -1,0 +1,60 @@
+Wormhole > Settings…  ⌘,  -> key cmd-, -> settings focus=none
+Wormhole > Theme Studio  ⌥⌘,  -> key alt-cmd-, -> themeStudio focus=none
+Wormhole > Hide Wormhole  ⌘H  key cmd-h  [not pressed]
+Wormhole > Hide Others  ⌥⌘H  key alt-cmd-h  [not pressed]
+Wormhole > Quit Wormhole  ⌘Q  key cmd-q  [not pressed]
+Shell > New Window  ⌘N  -> key cmd-n -> newWindow focus=sidebar
+Shell > New Terminal  ⌘T  -> key cmd-t -> newTerminal focus=terminal
+Shell > New Terminal in No Group  ⇧⌘T  -> key shift-cmd-t -> newTerminalNoGroup focus=none
+Shell > Split Right  ⌘D  -> key cmd-d -> splitRight focus=none
+Shell > Split Down  ⇧⌘D  -> key shift-cmd-d -> splitDown focus=none
+Shell > Open Folder…  ⌘O  -> key cmd-o -> openFolder focus=none
+Shell > Close Terminal  ⌘W  key cmd-w  [not pressed]
+Shell > Close Window  ⇧⌘W  key shift-cmd-w  [not pressed]
+Shell > Export Text As…  ⌘S  key cmd-s  [not pressed]
+Shell > Print…  ⌘P  key cmd-p  [not pressed]
+Edit > Undo  ⌘Z  -> key cmd-z -> undo focus=none
+Edit > Redo  ⇧⌘Z  -> key shift-cmd-z -> redo focus=none
+Edit > Cut  ⌘X  -> key cmd-x -> cut focus=none
+Edit > Copy  ⌘C  -> key cmd-c -> copy focus=none
+Edit > Paste  ⌘V  -> key cmd-v -> paste focus=none
+Edit > Select All  ⌘A  -> key cmd-a -> selectAll focus=none
+Edit > Clear Buffer  ⌘K  -> key cmd-k -> clearBuffer focus=none
+Edit > Find…  ⌘F  -> key cmd-f -> find focus=none +find
+Edit > Find Next  ⌘G  -> key cmd-g -> findNext focus=none +find
+Edit > Find Previous  ⇧⌘G  -> key shift-cmd-g -> findPrevious focus=none +find
+Edit > Use Selection for Find  ⌘E  -> key cmd-e -> useSelectionForFind focus=none
+Edit > Previous Prompt  ⌘↑  -> key cmd-up -> previousPrompt focus=none
+Edit > Next Prompt  ⌘↓  -> key cmd-down -> nextPrompt focus=none
+View > Hide Sidebar  ⌃⌘S  -> key ctrl-cmd-s -> toggleSidebar focus=none
+View > Hide Right Panel  ⌥⌘I  -> key alt-cmd-i -> toggleRightPanel focus=none
+View > Show Status Bar  ⌘/  -> key cmd-/ -> toggleStatusBar focus=none
+View > Enter Zen Mode  ⌃⌘Z  -> key ctrl-cmd-z -> toggleZenMode focus=none
+View > ✓ Changes  ⌃⌘1  -> key ctrl-cmd-1 -> showChanges focus=none
+View > History  ⌃⌘2  -> key ctrl-cmd-2 -> showHistory focus=none
+View > Notes  ⌃⌘3  -> key ctrl-cmd-3 -> showNotes focus=none
+View > Usage  ⌃⌘4  -> key ctrl-cmd-4 -> showUsage focus=none
+View > Project  ⌃⌘5  -> key ctrl-cmd-5 -> showProject focus=none
+View > Files  ⌃⌘6  -> key ctrl-cmd-6 -> showFiles focus=none
+View > Bigger  ⌘+  -> error: unknown key +
+View > Smaller  ⌘-  -> key cmd-- -> smaller focus=none
+View > Actual Size  ⌘0  -> key cmd-0 -> actualSize focus=none
+View > Command Palette…  ⇧⌘P  -> key shift-cmd-p -> commandPalette focus=none
+View > Enter Full Screen  ⌃⌘F  key ctrl-cmd-f  [not pressed]
+Terminal > Focus Terminal / Panel  ⇧⌘E  -> key shift-cmd-e -> focusTerminalOrPanel focus=terminal
+Terminal > Focus Next Area  F6  -> key f6 -> focusNextArea focus=title-row toggle-sidebar ring
+Terminal > Focus Previous Area  ⇧F6  -> key shift-f6 -> focusPreviousArea focus=terminal
+Terminal > New Note  ⌥⌘N  -> key alt-cmd-n -> newNote focus=none
+Terminal > Stash Prompt  ⌥⌘S  -> key alt-cmd-s -> stashPrompt focus=terminal
+Terminal > Insert Folder Path…  ⌘J  -> key cmd-j -> insertFolderPath focus=terminal
+Window > Minimize  ⌘M  key cmd-m  [not pressed]
+Window > Next Terminal  ⌃⌘↓  -> key ctrl-cmd-down -> nextTerminal focus=terminal
+Window > Previous Terminal  ⌃⌘↑  -> key ctrl-cmd-up -> previousTerminal focus=none
+Window > Next Group  ⌃⌥]  -> key ctrl-alt-] focus=none
+Window > Previous Group  ⌃⌥[  -> key ctrl-alt-[ focus=none
+Window > Go to Waiting Terminal  ⌥⌘J  -> key alt-cmd-j -> goToWaiting focus=none
+Window > Go to Finished Terminal  ⌥⇧⌘J  -> key alt-shift-cmd-j -> goToFinished focus=none
+Window > ✓ claude  ⌘1  -> key cmd-1 -> terminal.1 focus=none
+Window > claude  ⌘2  -> key cmd-2 -> terminal.2 focus=none
+Window > claude  ⌘3  -> key cmd-3 -> terminal.3 focus=none
+Help > Keyboard Shortcuts  ⌥⌘/  -> key alt-cmd-/ -> keyboardShortcuts focus=none

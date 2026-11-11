@@ -1,0 +1,404 @@
+
+=== appearance
+rows: [('theme-mode', 'segmented'), ('primary-color', 'colorToggle'), ('branch-color', 'segmented'), ('opacity', 'slider'), ('blur', 'toggle'), ('liquid-glass', 'toggle'), ('translucent', 'checkboxes'), ('borders', 'toggle'), ('column-dividers', 'toggle'), ('status-bar', 'toggle'), ('smooth-resize', 'toggle'), ('icon-animations', 'toggle'), ('title-row', 'partsList'), ('icon-theme', 'dynamicSelect'), ('icon-themes-folder', 'action')]
+ok   theme-mode segment ?: string("light")  file light
+ok   theme-mode every segment gave its own value  {'string("light")'}
+ok   theme-mode: reset arrow present
+ok   theme-mode: reset arrow puts it back to the default  {'theme_mode': 'string("system")'}, file ['system']
+ok   theme-mode: arrow gone at the default
+ok   primary-color toggle: bool(true) -> bool(false)  file False
+ok   primary-color: reset arrow present
+ok   primary-color: reset arrow puts it back to the default  {'theme_primary': 'bool(true)', 'primary_color': 'string("")'}, file [True, '']
+ok   primary-color: arrow gone at the default
+ok   primary-color (second): reset arrow present
+ok   primary-color (second): reset arrow puts it back to the default  {'theme_primary': 'bool(true)', 'primary_color': 'string("")'}, file [True, '']
+ok   primary-color (second): arrow gone at the default
+ok   branch-color segment ?: string("primary")  file primary
+ok   branch-color every segment gave its own value  {'string("primary")'}
+ok   branch-color: reset arrow present
+ok   branch-color: reset arrow puts it back to the default  {'branch_color': 'string("theme")', 'branch_color_custom': 'string("")'}, file ['theme', '']
+ok   branch-color: arrow gone at the default
+ok   opacity slider at 0.15: number(0.42000002)  file 0.42000001668930054
+ok   opacity slider at 0.5: number(0.78000003)  file 0.7800000309944153
+ok   opacity: reset arrow present
+ok   opacity: reset arrow puts it back to the default  {'opacity': 'number(0.8)'}, file [0.800000011920929]
+ok   opacity: arrow gone at the default
+ok   blur toggle: bool(true) -> bool(false)  file False
+ok   blur: reset arrow present
+ok   blur: reset arrow puts it back to the default  {'blur': 'bool(true)'}, file [True]
+ok   blur: arrow gone at the default
+ok   blur (second): reset arrow present
+ok   blur (second): reset arrow puts it back to the default  {'blur': 'bool(true)'}, file [True]
+ok   blur (second): arrow gone at the default
+ok   translucent checkbox settings_translucent: bool(true) -> bool(false)  file False
+FAIL translucent checkbox studio_translucent: bool(true) -> bool(true)  file True
+ok   translucent checkbox hosts_translucent: bool(true) -> bool(false)  file False
+ok   translucent: reset arrow present
+ok   translucent: reset arrow puts it back to the default  {'settings_translucent': 'bool(true)', 'studio_translucent': 'bool(true)', 'hosts_translucent': 'bool(true)'}, file [True, True, True]
+ok   translucent: arrow gone at the default
+ok   borders toggle: bool(true) -> bool(false)  file False
+ok   borders: reset arrow present
+ok   borders: reset arrow puts it back to the default  {'borders': 'bool(true)'}, file [True]
+ok   borders: arrow gone at the default
+ok   borders (second): reset arrow present
+ok   borders (second): reset arrow puts it back to the default  {'borders': 'bool(true)'}, file [True]
+ok   borders (second): arrow gone at the default
+ok   column-dividers toggle: bool(true) -> bool(false)  file False
+ok   column-dividers: reset arrow present
+ok   column-dividers: reset arrow puts it back to the default  {'column_dividers': 'bool(true)'}, file [True]
+ok   column-dividers: arrow gone at the default
+ok   column-dividers (second): reset arrow present
+ok   column-dividers (second): reset arrow puts it back to the default  {'column_dividers': 'bool(true)'}, file [True]
+ok   column-dividers (second): arrow gone at the default
+ok   status-bar toggle: bool(false) -> bool(true)  file True
+ok   status-bar: reset arrow present
+ok   status-bar: reset arrow puts it back to the default  {'status_bar': 'bool(false)'}, file [False]
+ok   status-bar: arrow gone at the default
+ok   status-bar (second): reset arrow present
+ok   status-bar (second): reset arrow puts it back to the default  {'status_bar': 'bool(false)'}, file [False]
+ok   status-bar (second): arrow gone at the default
+ok   smooth-resize toggle: bool(false) -> bool(true)  file True
+ok   smooth-resize: reset arrow present
+ok   smooth-resize: reset arrow puts it back to the default  {'smooth_resize': 'bool(false)'}, file [False]
+ok   smooth-resize: arrow gone at the default
+ok   smooth-resize (second): reset arrow present
+ok   smooth-resize (second): reset arrow puts it back to the default  {'smooth_resize': 'bool(false)'}, file [False]
+ok   smooth-resize (second): arrow gone at the default
+ok   icon-animations toggle: bool(true) -> bool(false)  file False
+ok   icon-animations: reset arrow present
+ok   icon-animations: reset arrow puts it back to the default  {'icon_animations': 'bool(true)'}, file [True]
+ok   icon-animations: arrow gone at the default
+ok   icon-animations (second): reset arrow present
+ok   icon-animations (second): reset arrow puts it back to the default  {'icon_animations': 'bool(true)'}, file [True]
+ok   icon-animations (second): arrow gone at the default
+----- title-row (partsList) is driven in its own run
+----- icon-theme (dynamicSelect) is driven in its own run
+----- icon-themes-folder (action) is driven in its own run
+
+=== fonts
+rows: [('font-terminal', 'font'), ('line-height', 'slider'), ('font-ligatures', 'toggle'), ('font-code', 'font'), ('font-interface', 'font'), ('settings-text-size', 'segmented'), ('fonts-folder', 'action'), ('custom-fonts', 'info')]
+----- font-terminal (font) is driven in its own run
+ok   line-height slider at 0.15: number(1.15)  file 1.149999976158142
+ok   line-height slider at 0.5: number(1.7)  file 1.7000000476837158
+ok   line-height: reset arrow present
+ok   line-height: reset arrow puts it back to the default  {'line_height': 'number(1.3)'}, file [1.2999999523162842]
+ok   line-height: arrow gone at the default
+ok   font-ligatures toggle: bool(true) -> bool(false)  file False
+ok   font-ligatures: reset arrow present
+ok   font-ligatures: reset arrow puts it back to the default  {'font_ligatures': 'bool(true)'}, file [True]
+ok   font-ligatures: arrow gone at the default
+ok   font-ligatures (second): reset arrow present
+ok   font-ligatures (second): reset arrow puts it back to the default  {'font_ligatures': 'bool(true)'}, file [True]
+ok   font-ligatures (second): arrow gone at the default
+----- font-code (font) is driven in its own run
+----- font-interface (font) is driven in its own run
+ok   settings-text-size segment ?: string("large")  file large
+ok   settings-text-size every segment gave its own value  {'string("large")'}
+ok   settings-text-size: reset arrow present
+ok   settings-text-size: reset arrow puts it back to the default  {'settings_text_size': 'string("default")'}, file ['default']
+ok   settings-text-size: arrow gone at the default
+----- fonts-folder (action) is driven in its own run
+----- custom-fonts (info) is driven in its own run
+
+=== motion
+rows: [('motion-insert', 'segmented'), ('motion-fold', 'segmented'), ('motion-status', 'select'), ('motion-column', 'segmented')]
+FAIL motion-insert segment ?: null  file (absent)
+ok   motion-insert every segment gave its own value  {'null'}
+FAIL motion-insert: reset arrow present
+FAIL motion-fold segment ?: string("drawer")  file (absent)
+ok   motion-fold every segment gave its own value  {'string("drawer")'}
+ok   motion-fold: reset arrow present
+FAIL motion-fold: reset arrow puts it back to the default  {'motion.fold': 'null'}, file [None]
+ok   motion-fold: arrow gone at the default
+FAIL motion-status pick Classic  settings-pick motion-status Classic -> motion.status = null
+FAIL motion-status pick Crossfade  settings-pick motion-status Crossfade -> motion.status = string("crossfade")
+FAIL motion-status pick Badge pops  settings-pick motion-status Badge pops -> motion.status = string("badge-pop")
+FAIL motion-status pick Card wash  settings-pick motion-status Card wash -> motion.status = string("wash")
+FAIL motion-status pick Amber flare  settings-pick motion-status Amber flare -> motion.status = string("flare")
+FAIL motion-status pick Nudge  settings-pick motion-status Nudge -> motion.status = string("nudge")
+FAIL motion-status pick Line rolls  settings-pick motion-status Line rolls -> motion.status = string("line-roll")
+ok   motion-status: reset arrow present
+FAIL motion-status: reset arrow puts it back to the default  {'motion.status': 'null'}, file [None]
+ok   motion-status: arrow gone at the default
+FAIL motion-column segment ?: string("soft-spring")  file (absent)
+ok   motion-column every segment gave its own value  {'string("soft-spring")'}
+ok   motion-column: reset arrow present
+FAIL motion-column: reset arrow puts it back to the default  {'motion.column': 'null'}, file [None]
+ok   motion-column: arrow gone at the default
+
+=== sessions
+rows: [('terminals-in', 'segmented'), ('density', 'segmented'), ('cards', 'toggle'), ('fade-group-colors', 'toggle'), ('show-group-folders', 'toggle'), ('sidebar-numbers', 'segmented'), ('cmd-hints', 'toggle'), ('sidebar-changes', 'toggle'), ('sidebar-changes-scope', 'segmented'), ('sidebar-changes-plain', 'segmented'), ('sidebar-changes-shared', 'segmented'), ('sidebar-changes-remember', 'toggle'), ('sidebar-dot', 'toggle'), ('sidebar-notes', 'toggle')]
+ok   terminals-in segment ?: string("sidebar")  file sidebar
+ok   terminals-in every segment gave its own value  {'string("sidebar")'}
+  (terminals-in is at its default: no arrow to press)
+ok   density segment ?: string("compact")  file compact
+ok   density every segment gave its own value  {'string("compact")'}
+ok   density: reset arrow present
+ok   density: reset arrow puts it back to the default  {'density': 'string("regular")'}, file ['regular']
+ok   density: arrow gone at the default
+ok   cards toggle: bool(true) -> bool(false)  file False
+ok   cards: reset arrow present
+ok   cards: reset arrow puts it back to the default  {'show_groups_as_cards': 'bool(true)'}, file [True]
+ok   cards: arrow gone at the default
+ok   cards (second): reset arrow present
+ok   cards (second): reset arrow puts it back to the default  {'show_groups_as_cards': 'bool(true)'}, file [True]
+ok   cards (second): arrow gone at the default
+ok   fade-group-colors toggle: bool(false) -> bool(true)  file True
+ok   fade-group-colors: reset arrow present
+ok   fade-group-colors: reset arrow puts it back to the default  {'fade_group_colors': 'bool(false)'}, file [False]
+ok   fade-group-colors: arrow gone at the default
+ok   fade-group-colors (second): reset arrow present
+ok   fade-group-colors (second): reset arrow puts it back to the default  {'fade_group_colors': 'bool(false)'}, file [False]
+ok   fade-group-colors (second): arrow gone at the default
+ok   show-group-folders toggle: bool(true) -> bool(false)  file False
+ok   show-group-folders: reset arrow present
+ok   show-group-folders: reset arrow puts it back to the default  {'show_group_folders': 'bool(true)'}, file [True]
+ok   show-group-folders: arrow gone at the default
+ok   show-group-folders (second): reset arrow present
+ok   show-group-folders (second): reset arrow puts it back to the default  {'show_group_folders': 'bool(true)'}, file [True]
+ok   show-group-folders (second): arrow gone at the default
+ok   sidebar-numbers segment ?: string("terminal")  file terminal
+ok   sidebar-numbers every segment gave its own value  {'string("terminal")'}
+  (sidebar-numbers is at its default: no arrow to press)
+ok   cmd-hints toggle: bool(true) -> bool(false)  file False
+ok   cmd-hints: reset arrow present
+ok   cmd-hints: reset arrow puts it back to the default  {'sidebar_cmd_hints': 'bool(true)'}, file [True]
+ok   cmd-hints: arrow gone at the default
+ok   cmd-hints (second): reset arrow present
+ok   cmd-hints (second): reset arrow puts it back to the default  {'sidebar_cmd_hints': 'bool(true)'}, file [True]
+ok   cmd-hints (second): arrow gone at the default
+ok   sidebar-changes toggle: bool(true) -> bool(false)  file False
+ok   sidebar-changes: reset arrow present
+ok   sidebar-changes: reset arrow puts it back to the default  {'sidebar_changes': 'bool(true)'}, file [True]
+ok   sidebar-changes: arrow gone at the default
+ok   sidebar-changes (second): reset arrow present
+ok   sidebar-changes (second): reset arrow puts it back to the default  {'sidebar_changes': 'bool(true)'}, file [True]
+ok   sidebar-changes (second): arrow gone at the default
+ok   sidebar-changes-scope segment ?: string("terminal")  file terminal
+ok   sidebar-changes-scope every segment gave its own value  {'string("terminal")'}
+  (sidebar-changes-scope is at its default: no arrow to press)
+ok   sidebar-changes-plain segment ?: string("any")  file any
+ok   sidebar-changes-plain every segment gave its own value  {'string("any")'}
+ok   sidebar-changes-plain: reset arrow present
+ok   sidebar-changes-plain: reset arrow puts it back to the default  {'sidebar_changes_plain': 'string("finishing")'}, file ['finishing']
+ok   sidebar-changes-plain: arrow gone at the default
+ok   sidebar-changes-shared segment ?: string("none")  file none
+ok   sidebar-changes-shared every segment gave its own value  {'string("none")'}
+ok   sidebar-changes-shared: reset arrow present
+ok   sidebar-changes-shared: reset arrow puts it back to the default  {'sidebar_changes_shared': 'string("each")'}, file ['each']
+ok   sidebar-changes-shared: arrow gone at the default
+ok   sidebar-changes-remember toggle: bool(true) -> bool(false)  file False
+ok   sidebar-changes-remember: reset arrow present
+ok   sidebar-changes-remember: reset arrow puts it back to the default  {'sidebar_changes_remember': 'bool(true)'}, file [True]
+ok   sidebar-changes-remember: arrow gone at the default
+ok   sidebar-changes-remember (second): reset arrow present
+ok   sidebar-changes-remember (second): reset arrow puts it back to the default  {'sidebar_changes_remember': 'bool(true)'}, file [True]
+ok   sidebar-changes-remember (second): arrow gone at the default
+ok   sidebar-dot toggle: bool(true) -> bool(false)  file False
+ok   sidebar-dot: reset arrow present
+ok   sidebar-dot: reset arrow puts it back to the default  {'sidebar_status_dot': 'bool(true)'}, file [True]
+ok   sidebar-dot: arrow gone at the default
+ok   sidebar-dot (second): reset arrow present
+ok   sidebar-dot (second): reset arrow puts it back to the default  {'sidebar_status_dot': 'bool(true)'}, file [True]
+ok   sidebar-dot (second): arrow gone at the default
+ok   sidebar-notes toggle: bool(false) -> bool(true)  file True
+ok   sidebar-notes: reset arrow present
+ok   sidebar-notes: reset arrow puts it back to the default  {'sidebar_notes': 'bool(false)'}, file [False]
+ok   sidebar-notes: arrow gone at the default
+ok   sidebar-notes (second): reset arrow present
+ok   sidebar-notes (second): reset arrow puts it back to the default  {'sidebar_notes': 'bool(false)'}, file [False]
+ok   sidebar-notes (second): arrow gone at the default
+
+=== git
+rows: [('changes-view', 'segmented'), ('group-untracked', 'toggle'), ('diff-layout', 'segmented'), ('diff-wrap', 'toggle'), ('tab-width', 'stepper'), ('size-units', 'segmented')]
+ok   changes-view segment ?: bool(true)  file True
+ok   changes-view every segment gave its own value  {'bool(true)'}
+  (changes-view is at its default: no arrow to press)
+ok   group-untracked toggle: bool(true) -> bool(false)  file False
+ok   group-untracked: reset arrow present
+ok   group-untracked: reset arrow puts it back to the default  {'group_untracked': 'bool(true)'}, file [True]
+ok   group-untracked: arrow gone at the default
+ok   group-untracked (second): reset arrow present
+ok   group-untracked (second): reset arrow puts it back to the default  {'group_untracked': 'bool(true)'}, file [True]
+ok   group-untracked (second): arrow gone at the default
+ok   diff-layout segment ?: bool(true)  file True
+ok   diff-layout every segment gave its own value  {'bool(true)'}
+  (diff-layout is at its default: no arrow to press)
+ok   diff-wrap toggle: bool(false) -> bool(true)  file True
+ok   diff-wrap: reset arrow present
+ok   diff-wrap: reset arrow puts it back to the default  {'diff_wrap': 'bool(false)'}, file [False]
+ok   diff-wrap: arrow gone at the default
+ok   diff-wrap (second): reset arrow present
+ok   diff-wrap (second): reset arrow puts it back to the default  {'diff_wrap': 'bool(false)'}, file [False]
+ok   diff-wrap (second): arrow gone at the default
+----- tab-width (stepper) is driven in its own run
+ok   size-units segment ?: string("binary")  file binary
+ok   size-units every segment gave its own value  {'string("binary")'}
+ok   size-units: reset arrow present
+ok   size-units: reset arrow puts it back to the default  {'size_units': 'string("decimal")'}, file ['decimal']
+ok   size-units: arrow gone at the default
+
+=== agents
+rows: [('agents-notifications', 'link'), ('cli-tool', 'panel'), ('control-write', 'toggle'), ('agent-access', 'panel'), ('agent-mcp', 'panel')]
+----- agents-notifications (link) is driven in its own run
+----- cli-tool (panel) is driven in its own run
+ok   control-write toggle: bool(false) -> bool(true)  file True
+ok   control-write: reset arrow present
+ok   control-write: reset arrow puts it back to the default  {'control_write': 'bool(false)'}, file [False]
+ok   control-write: arrow gone at the default
+ok   control-write (second): reset arrow present
+ok   control-write (second): reset arrow puts it back to the default  {'control_write': 'bool(false)'}, file [False]
+ok   control-write (second): arrow gone at the default
+----- agent-access (panel) is driven in its own run
+----- agent-mcp (panel) is driven in its own run
+
+=== notifications
+rows: [('notify-permission', 'panel'), ('notify-test', 'panel'), ('notify-needs-you', 'toggle'), ('notify-agent-done', 'toggle'), ('notify-command-done', 'toggleStepper'), ('notify-command-failed', 'toggle'), ('notify-bell', 'toggle'), ('notify-only-unseen', 'toggle'), ('notify-in-front', 'segmented'), ('notify-sound', 'segmented'), ('notify-group-bursts', 'toggle'), ('dock-badge', 'segmented'), ('dock-bounce', 'toggle')]
+----- notify-permission (panel) is driven in its own run
+----- notify-test (panel) is driven in its own run
+ok   notify-needs-you toggle: bool(true) -> bool(false)  file False
+ok   notify-needs-you: reset arrow present
+ok   notify-needs-you: reset arrow puts it back to the default  {'notify_needs_you': 'bool(true)'}, file [True]
+ok   notify-needs-you: arrow gone at the default
+ok   notify-needs-you (second): reset arrow present
+ok   notify-needs-you (second): reset arrow puts it back to the default  {'notify_needs_you': 'bool(true)'}, file [True]
+ok   notify-needs-you (second): arrow gone at the default
+ok   notify-agent-done toggle: bool(true) -> bool(false)  file False
+ok   notify-agent-done: reset arrow present
+ok   notify-agent-done: reset arrow puts it back to the default  {'notify_agent_done': 'bool(true)'}, file [True]
+ok   notify-agent-done: arrow gone at the default
+ok   notify-agent-done (second): reset arrow present
+ok   notify-agent-done (second): reset arrow puts it back to the default  {'notify_agent_done': 'bool(true)'}, file [True]
+ok   notify-agent-done (second): arrow gone at the default
+----- notify-command-done (toggleStepper) is driven in its own run
+ok   notify-command-failed toggle: bool(true) -> bool(false)  file False
+ok   notify-command-failed: reset arrow present
+ok   notify-command-failed: reset arrow puts it back to the default  {'notify_command_failed': 'bool(true)'}, file [True]
+ok   notify-command-failed: arrow gone at the default
+ok   notify-command-failed (second): reset arrow present
+ok   notify-command-failed (second): reset arrow puts it back to the default  {'notify_command_failed': 'bool(true)'}, file [True]
+ok   notify-command-failed (second): arrow gone at the default
+ok   notify-bell toggle: bool(false) -> bool(true)  file True
+ok   notify-bell: reset arrow present
+ok   notify-bell: reset arrow puts it back to the default  {'notify_bell': 'bool(false)'}, file [False]
+ok   notify-bell: arrow gone at the default
+ok   notify-bell (second): reset arrow present
+ok   notify-bell (second): reset arrow puts it back to the default  {'notify_bell': 'bool(false)'}, file [False]
+ok   notify-bell (second): arrow gone at the default
+ok   notify-only-unseen toggle: bool(true) -> bool(false)  file False
+ok   notify-only-unseen: reset arrow present
+ok   notify-only-unseen: reset arrow puts it back to the default  {'notify_only_unseen': 'bool(true)'}, file [True]
+ok   notify-only-unseen: arrow gone at the default
+ok   notify-only-unseen (second): reset arrow present
+ok   notify-only-unseen (second): reset arrow puts it back to the default  {'notify_only_unseen': 'bool(true)'}, file [True]
+ok   notify-only-unseen (second): arrow gone at the default
+ok   notify-in-front segment ?: string("none")  file none
+ok   notify-in-front every segment gave its own value  {'string("none")'}
+  (notify-in-front is at its default: no arrow to press)
+ok   notify-sound segment ?: string("all")  file all
+ok   notify-sound every segment gave its own value  {'string("all")'}
+ok   notify-sound: reset arrow present
+ok   notify-sound: reset arrow puts it back to the default  {'notify_sound': 'string("needs_you")'}, file ['needs_you']
+ok   notify-sound: arrow gone at the default
+ok   notify-group-bursts toggle: bool(true) -> bool(false)  file False
+ok   notify-group-bursts: reset arrow present
+ok   notify-group-bursts: reset arrow puts it back to the default  {'notify_group_bursts': 'bool(true)'}, file [True]
+ok   notify-group-bursts: arrow gone at the default
+ok   notify-group-bursts (second): reset arrow present
+ok   notify-group-bursts (second): reset arrow puts it back to the default  {'notify_group_bursts': 'bool(true)'}, file [True]
+ok   notify-group-bursts (second): arrow gone at the default
+ok   dock-badge segment ?: string("needs_you")  file needs_you
+ok   dock-badge every segment gave its own value  {'string("needs_you")'}
+  (dock-badge is at its default: no arrow to press)
+ok   dock-bounce toggle: bool(true) -> bool(false)  file False
+ok   dock-bounce: reset arrow present
+ok   dock-bounce: reset arrow puts it back to the default  {'dock_bounce': 'bool(true)'}, file [True]
+ok   dock-bounce: arrow gone at the default
+ok   dock-bounce (second): reset arrow present
+ok   dock-bounce (second): reset arrow puts it back to the default  {'dock_bounce': 'bool(true)'}, file [True]
+ok   dock-bounce (second): arrow gone at the default
+
+=== menuBar
+rows: [('menu-bar', 'toggle'), ('menu-bar-icon', 'segmented'), ('menu-bar-animate', 'toggle')]
+ok   menu-bar toggle: bool(true) -> bool(false)  file False
+ok   menu-bar: reset arrow present
+ok   menu-bar: reset arrow puts it back to the default  {'menu_bar': 'bool(true)'}, file [True]
+ok   menu-bar: arrow gone at the default
+ok   menu-bar (second): reset arrow present
+ok   menu-bar (second): reset arrow puts it back to the default  {'menu_bar': 'bool(true)'}, file [True]
+ok   menu-bar (second): arrow gone at the default
+ok   menu-bar-icon segment ?: string("status")  file status
+ok   menu-bar-icon every segment gave its own value  {'string("status")'}
+ok   menu-bar-icon: reset arrow present
+ok   menu-bar-icon: reset arrow puts it back to the default  {'menu_bar_icon': 'string("status_count")'}, file ['status_count']
+ok   menu-bar-icon: arrow gone at the default
+ok   menu-bar-animate toggle: bool(false) -> bool(true)  file True
+ok   menu-bar-animate: reset arrow present
+ok   menu-bar-animate: reset arrow puts it back to the default  {'menu_bar_animate': 'bool(false)'}, file [False]
+ok   menu-bar-animate: arrow gone at the default
+ok   menu-bar-animate (second): reset arrow present
+ok   menu-bar-animate (second): reset arrow puts it back to the default  {'menu_bar_animate': 'bool(false)'}, file [False]
+ok   menu-bar-animate (second): arrow gone at the default
+
+=== hotkey
+rows: [('hotkey', 'recorder'), ('hotkey-action', 'segmented'), ('jump-waiting-key', 'recorder')]
+----- hotkey (recorder) is driven in its own run
+ok   hotkey-action segment ?: string("toggle_app")  file toggle_app
+ok   hotkey-action every segment gave its own value  {'string("toggle_app")'}
+ok   hotkey-action: reset arrow present
+ok   hotkey-action: reset arrow puts it back to the default  {'hotkey_action': 'string("quick_panel")'}, file ['quick_panel']
+ok   hotkey-action: arrow gone at the default
+----- jump-waiting-key (recorder) is driven in its own run
+
+=== updates
+rows: [('version', 'info'), ('auto-update', 'toggle'), ('update-channel', 'segmented'), ('anonymous-count', 'toggle')]
+----- version (info) is driven in its own run
+ok   auto-update toggle: bool(true) -> bool(false)  file False
+ok   auto-update: reset arrow present
+ok   auto-update: reset arrow puts it back to the default  {'auto_update': 'bool(true)'}, file [True]
+ok   auto-update: arrow gone at the default
+ok   auto-update (second): reset arrow present
+ok   auto-update (second): reset arrow puts it back to the default  {'auto_update': 'bool(true)'}, file [True]
+ok   auto-update (second): arrow gone at the default
+ok   update-channel segment ?: string("unstable")  file unstable
+ok   update-channel every segment gave its own value  {'string("unstable")'}
+ok   update-channel: reset arrow present
+ok   update-channel: reset arrow puts it back to the default  {'update_channel': 'string("stable")'}, file ['stable']
+ok   update-channel: arrow gone at the default
+ok   anonymous-count toggle: bool(true) -> bool(false)  file False
+ok   anonymous-count: reset arrow present
+ok   anonymous-count: reset arrow puts it back to the default  {'anonymous_count': 'bool(true)'}, file [True]
+ok   anonymous-count: arrow gone at the default
+ok   anonymous-count (second): reset arrow present
+ok   anonymous-count (second): reset arrow puts it back to the default  {'anonymous_count': 'bool(true)'}, file [True]
+ok   anonymous-count (second): arrow gone at the default
+
+=== advanced
+rows: [('open-config', 'action'), ('open-data', 'action'), ('open-logs', 'action'), ('show-config-keys', 'toggle'), ('reset-settings', 'action'), ('reset-tips', 'action'), ('skip-scans', 'action')]
+----- open-config (action) is driven in its own run
+----- open-data (action) is driven in its own run
+----- open-logs (action) is driven in its own run
+ok   show-config-keys toggle: bool(false) -> bool(true)  file True
+ok   show-config-keys: reset arrow present
+ok   show-config-keys: reset arrow puts it back to the default  {'show_config_keys': 'bool(false)'}, file [False]
+ok   show-config-keys: arrow gone at the default
+ok   show-config-keys (second): reset arrow present
+ok   show-config-keys (second): reset arrow puts it back to the default  {'show_config_keys': 'bool(false)'}, file [False]
+ok   show-config-keys (second): arrow gone at the default
+----- reset-settings (action) is driven in its own run
+----- reset-tips (action) is driven in its own run
+----- skip-scans (action) is driven in its own run
+
+=== profile
+rows: [('profile-name', 'panel'), ('profile-start', 'panel'), ('profile-env', 'panel'), ('profile-git', 'panel'), ('profile-logins', 'panel'), ('profile-delete', 'panel')]
+----- profile-name (panel) is driven in its own run
+----- profile-start (panel) is driven in its own run
+----- profile-env (panel) is driven in its own run
+----- profile-git (panel) is driven in its own run
+----- profile-logins (panel) is driven in its own run
+----- profile-delete (panel) is driven in its own run
+
+=== import
+rows: []
+
+310 ok, 15 FAIL

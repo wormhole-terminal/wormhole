@@ -1,0 +1,15 @@
+   Compiling wormhole-wire v1.6.3 (crates/wormhole-wire)
+   Compiling wormhole-text v1.6.3 (crates/wormhole-text)
+   Compiling wormhole-term v1.6.3 (crates/wormhole-term)
+   Compiling wormhole-core v1.6.3 (crates/wormhole-core)
+   Compiling wormhole-ffi v0.0.0 (apple/ffi)
+    Finished `test` profile [optimized + debuginfo] target(s) in 1m 54s
+     Running tests/interaction.rs (target/debug/deps/interaction-5df20784e6fbfa82)
+
+running 2 tests
+test pasting_over_a_selection_the_program_drew_replaces_it ... ok
+test a_paste_elsewhere_or_after_typing_is_a_plain_paste ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.05s
+
+rc=0

@@ -1,0 +1,48 @@
+# live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-rverify, throwaway repo /tmp/rv/repo; each '>' line is one control-folder command
+> hook 2 claude UserPromptSubmit
+hook 2 claude UserPromptSubmit
+> hook 2 claude Notification Needs a decision
+hook 2 claude Notification Needs a decision
+> ambient
+icon StatusIcon(state: PlatformModel.ItemState.needsYou, mark: PlatformModel.StatusMark.needsYou, count: Optional("1"), tooltip: "Wormhole — 1 needs input", animate: false)
+  # Needs input
+  user@host:/tmp/rv/repo  ⇥ now
+      Claude Code · Needs a decision
+  ---
+  Other Terminals  ⇥ 7 ▸
+    user@host:/tmp/rv/repo
+        /tmp/rv/repo
+    user@host:~
+        ~
+    user@host:~
+        ~
+    user@host:~
+        ~
+    user@host:~
+        ~
+    user@host:/tmp/rv/repo
+        /tmp/rv/repo
+    user@host:/tmp/rv/repo
+        /tmp/rv/repo
+  ---
+  New Terminal  ⌘T
+  Open Folder…  ⌘O
+  ---
+  Show Wormhole
+  Jump to Next Waiting
+  Settings…  ⌘,
+  Check for Updates…
+  ---
+  Quit Wormhole  ⌘Q
+dock
+  # Needs input
+  user@host:/tmp/rv/repo   now
+  ---
+  New Terminal
+  New Window
+badge needs_you=1 needs_you_done=1
+quick
+  label("Needs input", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "user@host:/tmp/rv/repo", state: PlatformModel.AmbientState.needsYou, since: 2026-11-08 04:51:17 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Needs a decision"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("/tmp/rv/repo"), branch: Optional("main")))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: nil))

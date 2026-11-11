@@ -1,0 +1,14 @@
+S08 sidebar motion, round S3 (window). Instance /tmp/Wormhole-swift-s3w-a, 4 terminals, one group of 3; frames by `after <ms> window-shot` (a shot lags a few
+tens of ms behind its time, so frames show the poses in order, not exact times). Motion feature flag on (`set feature_flags={"unlocked":true,"motion":true}`).
+- Fold per-row poses (core fold_row_pose via FoldPoseTables): WHY the fold played nothing before: the core's sections list no rows while a group is folded
+  (SidebarSection.rows is empty), so SwiftUI had nothing to remove and animate. GroupRows now keeps the rows the card showed open and plays them out from
+  that copy, each row by the core's pose for its place; opening plays the core's rows in. One linear run, the core's pose asked every frame; Classic and
+  Reduce Motion are a cut; the folded summary waits for the rows to be gone (core foldPlan time, as summary_opacity does).
+  S08-fold-tuck-strip.png: Tuck folding (before, 30, 90, 170, 330, 700 ms): rows fade and rise from the bottom up, then the card closes, then the tiles and count.
+  S08-fold-drawer-strip.png / S08-open-drawer-strip.png: Drawer folding and opening (height and fade together).
+- Status motions Flare and Nudge (core status_motion_pose through the FFI, StatusPlay.swift): `set motion.status="nudge"`, then hooks make terminal 3 need input:
+  the row's left edge by shot x offsets 47, 44, 47, 45, 44 px (4 pt aside and back twice, the core's NUDGE_STEPS): S08-nudge-strip.png. `flare`: a ring leaves the
+  amber edge, widens and fades: S08-flare-strip.png. Reduce Motion (`reduce-motion on`): no ring, no move (frames equal in the tile's area).
+- Compact chip crossfade (S08-lift-chip-strip.png): a row dragged by hand (mouse-down/move): the row itself lifted as a card with a shadow follows the pointer;
+  over the middle of another row it crossfades (120 ms ease out) to the compact chip, which snaps on the quick spring below that row's name, the row outlined;
+  back to the row's picture when the pointer leaves.

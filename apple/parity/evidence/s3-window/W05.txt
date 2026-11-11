@@ -1,0 +1,44 @@
+# W05 multi-window, restore, saved layout, round S3 (window). Instance /tmp/Wormhole-swift-s3w-a then relaunched on the same data dir.
+## state before: pin 2, select 3, split right of the selected terminal, a second window, window 1 in (simulated) full screen, window 2 placed where no display is
+togglePin(2) ok
+select 3
+split
+new-window /tmp/s3w-repo
+window=1 profile=default visible=true front=false terminals=[1,2,3,4,5] selected=5 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off, 5:off]
+window=2 profile=default visible=true front=true terminals=[7] selected=7 frame=windowed 230,125 1320x820 hosting=[7:off]
+selected=7 live=[7] groups=0
+  row 7 "zsh" idle number=1 pinned=false folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=0 spoken="zsh, shell, nothing running, selected, 1 of 1, Command 1"
+error: no command layout 
+place 2 9000 4000 900 600
+full-screen 1
+use-window 1
+selected=5 live=[1, 2, 3, 4, 5] groups=1
+  row 1 "My server" working number=1 pinned=false folder=/private/tmp/s3w-repo line="Python -m http.server 8765 --bind 127.0.0.1" trail=3:56 split=0 spoken="My server, running Python, 3 minutes 56, 1 of 2, Command 1"
+group 1 "Group 1" folded=false pinned=false count=4 alerts=0 spoken="Group 1, coloured blue, 4 terminals, expanded, 2 of 2"
+  row 2 "zsh" idle number=2 pinned=true folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=0 spoken="zsh, shell, nothing running, 1 of 4, Command 2"
+  row 4 "zsh" idle number=3 pinned=false folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=0 spoken="zsh, shell, nothing running, 2 of 4, Command 3"
+  row 3 "zsh" idle number=4 pinned=false folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=2:start spoken="zsh, shell, nothing running, in a split with 1 other, on screen, 3 of 4, Command 4"
+  row 5 "zsh" idle number=5 pinned=false folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=2:end spoken="zsh, shell, nothing running, in a split with 1 other, selected, 4 of 4, Command 5"
+error: no command panes 
+save-windows
+window=1 profile=default visible=true front=true terminals=[1,2,3,4,5] selected=5 frame=fullscreen 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off, 5:off]
+window=2 profile=default visible=true front=false terminals=[7] selected=7 frame=windowed 1688,1085 900x600 hosting=[7:off]
+saved window=2 terminals=1 frame=windowed 1688,1085 900x600
+saved window=1 terminals=5 frame=fullscreen 204,99 1320x820
+## after quit and relaunch on the same data dir
+<scratch>/s3w/ctl.sh:4: no such file or directory: /tmp/hd-s3w-a/out.txt
+window=2 profile=default visible=true front=false terminals=[7] selected=7 frame=windowed 40,73 900x600 hosting=[7:off]
+window=1 profile=default visible=true front=true terminals=[1,2,3,4,5] selected=5 frame=fullscreen 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off, 5:off]
+saved window=2 terminals=1 frame=windowed 40,73 900x600
+saved window=1 terminals=5 frame=fullscreen 204,99 1320x820
+selected=5 live=[1, 2, 3, 4, 5] groups=1
+  row 1 "My server" idle number=1 pinned=false folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=0 spoken="My server, shell, nothing running, unread output, 1 of 2, Command 1"
+group 1 "Group 1" folded=false pinned=false count=4 alerts=0 spoken="Group 1, coloured blue, 4 terminals, expanded, 2 of 2"
+  row 2 "zsh" idle number=2 pinned=true folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=0 spoken="zsh, shell, nothing running, unread output, 1 of 4, Command 2"
+  row 4 "zsh" idle number=3 pinned=false folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=0 spoken="zsh, shell, nothing running, unread output, 2 of 4, Command 3"
+  row 3 "zsh" idle number=4 pinned=false folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=2:start spoken="zsh, shell, nothing running, in a split with 1 other, on screen, 3 of 4, Command 4"
+  row 5 "zsh" idle number=5 pinned=false folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=2:end spoken="zsh, shell, nothing running, in a split with 1 other, selected, 4 of 4, Command 5"
+use-window 2
+selected=7 live=[7] groups=0
+  row 7 "zsh" idle number=1 pinned=false folder=/private/tmp/s3w-repo line="/private/tmp/s3w-repo" trail=- split=0 spoken="zsh, shell, nothing running, selected, 1 of 1, Command 1"
+use-window 1

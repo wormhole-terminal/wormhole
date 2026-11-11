@@ -1,0 +1,72 @@
+# live run, --background Swift instance (exp/swift-s-tooling), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-tooling-c; each '>' line is one control-folder batch
+# F6 / Tab / arrows / Esc walking the areas (F-70), keys sent as the keyboard's while the window stays behind
+> click 700 400
+click 700 400: down on MetalTerminalView, the gesture played to its release
+> keys
+focus=terminal
+> key f6
+key f6 -> focusNextArea focus=panel-tabs changes ring
+> key down
+key down focus=panel-content
+> key f6
+key f6 -> focusNextArea focus=title-row toggle-sidebar ring
+> key tab
+key tab focus=sidebar
+> key esc
+key esc focus=terminal
+> key shift-f6
+key shift-f6 -> focusPreviousArea focus=tabs ring
+> key esc
+key esc focus=terminal
+# window server: z=16 of 17 front=Terminal
+# what VoiceOver gets: the window's tree (AppKit's part; SwiftUI builds its nodes only for an assistive app, see DRIVING.md), the element at a point, and what was said
+> a11y
+Window/StandardWindow "Wormhole (Swift experiment)" [off] @0,0 1320x820
+  Group/HostingView [off] @0,0 1320x820
+  Button/CloseButton @11,8 16x16
+  Button/ZoomButton @57,8 16x16
+    Group [off] @58,9 14x14
+  Button/MinimizeButton @34,8 16x16
+> bounds 700 400 2
+views: MetalTerminalView < Container < AppKitPlatformViewHost<PlatformViewRepresentableAdaptor<TerminalHost>> < _NSGraphicsView < NSHostingView<WorkspaceRootView> < NSThemeFrame
+TextArea "Terminal" = see https://example.com/x here⏎➜  ~⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎… [focused] [off] @308,38 644x774
+Group/HostingView [off] @0,0 1320x820
+> notice 5
+notice 5
+> wait-idle 3000
+idle
+> a11y said
+said Copied 5 characters
+# perf-profile under a flood and on a still screen
+> type for i in {1..400000}; do echo line $i of a flood; done
+typed
+> perf-profile 2 flood
+perf-profile draws=131 seconds=2.0 grid=74x42
+  fetch     avg=0.043ms p50=0.035ms p99=0.094ms max=0.116ms
+  apply     avg=0.085ms p50=0.005ms p99=0.331ms max=0.368ms
+  assemble  avg=0.003ms p50=0.004ms p99=0.005ms max=0.007ms
+  build     avg=0.131ms p50=0.044ms p99=0.394ms max=0.428ms
+  encode    avg=0.068ms p50=0.067ms p99=0.083ms max=0.090ms
+  total     avg=0.199ms p50=0.116ms p99=0.460ms max=0.505ms
+  wait      avg=8.612ms p50=7.749ms p99=15.696ms max=15.862ms
+  cpu       avg=0.262ms p50=0.168ms p99=0.537ms max=0.582ms
+  gpu       avg=0.123ms p50=0.065ms p99=0.649ms max=0.829ms
+  per draw: rows_rebuilt=15.4 changed_rows=15.4 allocations=402.4 (max 1053)
+  run: words_shaped=3816 glyphs_rasterised=0 atlas_resets=0
+> key ctrl-c
+key ctrl-c focus=terminal
+> wait-idle 4000
+idle
+> perf-profile 1 still
+perf-profile draws=106 seconds=1.0 grid=74x42
+  fetch     avg=0.035ms p50=0.034ms p99=0.057ms max=0.071ms
+  apply     avg=0.004ms p50=0.004ms p99=0.006ms max=0.006ms
+  assemble  avg=0.004ms p50=0.004ms p99=0.008ms max=0.010ms
+  build     avg=0.044ms p50=0.042ms p99=0.072ms max=0.080ms
+  encode    avg=0.065ms p50=0.063ms p99=0.091ms max=0.099ms
+  total     avg=0.108ms p50=0.107ms p99=0.152ms max=0.158ms
+  wait      avg=6.476ms p50=5.266ms p99=13.697ms max=14.189ms
+  cpu       avg=0.153ms p50=0.152ms p99=0.195ms max=0.203ms
+  gpu       avg=0.113ms p50=0.065ms p99=0.592ms max=0.766ms
+  per draw: rows_rebuilt=0.0 changed_rows=0.0 allocations=40.0 (max 40)
+  run: words_shaped=0 glyphs_rasterised=0 atlas_resets=0

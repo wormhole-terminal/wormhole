@@ -1,0 +1,161 @@
+> onboarding close
+onboarding close
+$ Wormhole new-terminal --folder /tmp -> exit 0
+opened terminal 2 (tab 2, pane 2) in window 1 at /tmp
+$ Wormhole new-terminal --folder /tmp -> exit 0
+opened terminal 3 (tab 3, pane 3) in window 1 at /tmp
+$ Wormhole new-terminal --folder /tmp -> exit 0
+opened terminal 4 (tab 4, pane 4) in window 1 at /tmp
+> hook 1 claude UserPromptSubmit
+hook 1 claude UserPromptSubmit
+> hook 1 claude Notification Approve cargo test?
+hook 1 claude Notification Approve cargo test?
+> hook 2 claude UserPromptSubmit
+hook 2 claude UserPromptSubmit
+> hook 3 claude UserPromptSubmit
+hook 3 claude UserPromptSubmit
+> hook 3 claude Stop
+hook 3 claude Stop
+> ambient
+icon StatusIcon(state: PlatformModel.ItemState.needsYou, mark: PlatformModel.StatusMark.needsYou, count: Optional("1"), tooltip: "Wormhole — 1 needs input · 1 working · 1 finished", animate: false)
+  # Needs input
+  claude  ⇥ now
+      Claude Code · Approve cargo test?
+  # Working
+  claude  ⇥ 0:07
+      Claude Code
+  # Finished
+  claude  ⇥ just now
+      Claude Code
+  ---
+  Other Terminals  ⇥ 1 ▸
+    claude
+        Claude Code
+  ---
+  New Terminal  ⌘T
+  Open Folder…  ⌘O
+  ---
+  Show Wormhole
+  Jump to Next Waiting
+  Settings…  ⌘,
+  Check for Updates…
+  ---
+  Quit Wormhole  ⌘Q
+dock
+  # Needs input
+  claude   now
+  # Working
+  claude   now
+  ---
+  New Terminal
+  New Window
+badge needs_you=1 needs_you_done=2
+quick
+  label("Needs input", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 04:28:48 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Approve cargo test?"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("wanderer"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 04:28:50 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Recent", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 3, tab: 3, name: "claude", state: PlatformModel.AmbientState.done, since: 2026-11-11 04:28:55 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+> quick-open
+quick-open 
+query="" not answering height=380
+hints=↑↓ select | ⏎ open | ⌘⏎ answer here | esc close
+  label("Needs input", count: Optional(1))
+> terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 04:28:48 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Approve cargo test?"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("wanderer"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 04:28:50 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Recent", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 3, tab: 3, name: "claude", state: PlatformModel.AmbientState.done, since: 2026-11-11 04:28:55 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+> quick-key down
+quick-key down
+query="" not answering height=380
+hints=↑↓ select | ⏎ open | ⌘⏎ answer here | esc close
+  label("Needs input", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 04:28:48 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Approve cargo test?"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("wanderer"), branch: nil))
+  label("Working", count: Optional(1))
+> terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 04:28:50 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Recent", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 3, tab: 3, name: "claude", state: PlatformModel.AmbientState.done, since: 2026-11-11 04:28:55 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+> quick-key up
+quick-key up
+query="" not answering height=380
+hints=↑↓ select | ⏎ open | ⌘⏎ answer here | esc close
+  label("Needs input", count: Optional(1))
+> terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 04:28:48 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Approve cargo test?"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("wanderer"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 04:28:50 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Recent", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 3, tab: 3, name: "claude", state: PlatformModel.AmbientState.done, since: 2026-11-11 04:28:55 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+> quick-key cmd-enter
+quick-key cmd-enter
+query="" answering tab 1: Approve cargo test? reply="" height=492
+hints=⏎ send reply | ⌘⏎ open terminal | esc back
+  label("Needs input", count: Optional(1))
+> terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 04:28:48 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Approve cargo test?"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("wanderer"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 04:28:50 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Recent", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 3, tab: 3, name: "claude", state: PlatformModel.AmbientState.done, since: 2026-11-11 04:28:55 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+> quick-text ok go
+quick-text ok go
+query="" answering tab 1: Approve cargo test? reply="ok go" height=492
+hints=⏎ send reply | ⌘⏎ open terminal | esc back
+  label("Needs input", count: Optional(1))
+> terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 04:28:48 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Approve cargo test?"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("wanderer"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 04:28:50 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Recent", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 3, tab: 3, name: "claude", state: PlatformModel.AmbientState.done, since: 2026-11-11 04:28:55 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+> quick-key enter
+quick-key enter
+query="" not answering height=380
+hints=↑↓ select | ⏎ open | ⌘⏎ answer here | esc close
+  label("Needs input", count: Optional(1))
+> terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 04:28:48 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Approve cargo test?"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("wanderer"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 04:28:50 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Recent", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 3, tab: 3, name: "claude", state: PlatformModel.AmbientState.done, since: 2026-11-11 04:28:55 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+> quick-state
+quick-state 
+query="" not answering height=380
+hints=↑↓ select | ⏎ open | ⌘⏎ answer here | esc close
+  label("Needs input", count: Optional(1))
+> terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 04:28:48 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Approve cargo test?"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("wanderer"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 04:28:50 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Recent", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 3, tab: 3, name: "claude", state: PlatformModel.AmbientState.done, since: 2026-11-11 04:28:55 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("tmp"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+> quick-open build
+quick-open build
+query="build" not answering height=124
+hints=↑↓ select | ⏎ open | ⌘⏎ answer here | esc close
+  note("Nothing matches")
+> quick-key escape
+quick-key escape
+closed
