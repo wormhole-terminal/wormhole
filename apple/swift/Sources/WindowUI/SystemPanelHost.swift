@@ -3,6 +3,7 @@
 // window as closures, since the terminal's view is the window's, not the panel's.
 
 import AppKit
+import DesignSystem
 import PanelModel
 
 @MainActor
@@ -47,7 +48,7 @@ final class SystemPanelHost: PanelHost {
     }
 
     func notify(_ text: String) {
-        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested, userInfo: [.announcement: text])
+        Announcements.post(text)
     }
 
     func openTerminal(in folder: String, running command: String?) { terminal.open(folder, command) }

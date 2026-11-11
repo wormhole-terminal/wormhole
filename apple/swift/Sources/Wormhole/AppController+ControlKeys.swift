@@ -27,46 +27,57 @@ extension AppController {
         return true
     }
 
+    /// Carbon's key codes of the ANSI letters, digits and punctuation, by position.
+    private static let ansiKeys = Array("asdfhgzxcv\u{0}bqweryt123465=97-80]ou[ip\u{0}lj'k;\\,/nm.")
+
     /// `[shift-|cmd-|ctrl-|alt-]…key`, the key a name (`f6`, `tab`, `esc`, `left`, `return`, `space`) or one character.
     private func sendKey(_ spec: String) -> String {
         var parts = spec.lowercased().split(separator: "-", omittingEmptySubsequences: false).map(String.init)
         if parts.last == "" { parts.removeLast(); parts[parts.count - 1] += "-" }
         guard let name = parts.last, let window else { return "error: key needs a spec like shift-f6" }
-        var flags: NSEvent.ModifierFlags = []
-        for modifier in parts.dropLast() {
-            switch modifier {
-            case "shift": flags.insert(.shift)
-            case "cmd": flags.insert(.command)
-            case "ctrl": flags.insert(.control)
-            case "alt": flags.insert(.option)
-            default: return "error: unknown modifier \(modifier)"
-            }
-        }
+        var flags = Self.modifierFlags(parts.dropLast().joined(separator: "-"))
+        if let unknown = parts.dropLast().first(where: { Self.modifierFlags($0).isEmpty }) { return "error: unknown modifier \(unknown)" }
         let named: [String: (UInt16, String)] = [
             "f6": (97, "\u{F709}"), "tab": (48, "\t"), "esc": (53, "\u{1B}"), "escape": (53, "\u{1B}"),
             "left": (123, "\u{F702}"), "right": (124, "\u{F703}"), "down": (125, "\u{F701}"), "up": (126, "\u{F700}"),
             "return": (36, "\r"), "enter": (36, "\r"), "space": (49, " "),
         ]
-        // Carbon's key codes of the ANSI letters, digits and punctuation, by position.
-        let ansi = Array("asdfhgzxcv\u{0}bqweryt123465=97-80]ou[ip\u{0}lj'k;\\,/nm.")
-        guard let (code, text) = named[name] ?? name.first.flatMap({ ansi.firstIndex(of: $0) }).map({ (UInt16($0), name) }),
+        guard let (code, text) = named[name] ?? name.first.flatMap({ Self.ansiKeys.firstIndex(of: $0) }).map({ (UInt16($0), name) }),
             name.count == 1 || named[name] != nil
         else { return "error: unknown key \(name)" }
         // The keyboard marks F-keys and arrows with the function flag.
         if text.unicodeScalars.first.map({ (0xF700...0xF70F).contains($0.value) }) == true { flags.insert(.function) }
-        for (down, characters) in [(true, text), (false, text)] {
-            let event = NSEvent.keyEvent(
-                with: down ? .keyDown : .keyUp, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
-                windowNumber: window.windowNumber, context: nil, characters: characters, charactersIgnoringModifiers: characters,
-                isARepeat: false, keyCode: code)
-            guard let event else { continue }
-            if down, let id = menuAction(for: name, flags) {
-                router.run(id)
-                return "key \(spec) -> \(id.rawValue) focus=\(settled())"
-            }
-            NSApp.sendEvent(event)
+        if let id = menuAction(for: name, flags) {
+            router.run(id)
+            return "key \(spec) -> \(id.rawValue) focus=\(settled())"
         }
+        press(code: code, characters: text, flags: flags, in: window)
         return "key \(spec) focus=\(settled())"
+    }
+
+    /// One character typed into whatever has the keys, as `text` sends them: its key on the ANSI layout when it has one.
+    func typeCharacter(_ character: Character) {
+        guard let window else { return }
+        let code = character.lowercased().first.flatMap { Self.ansiKeys.firstIndex(of: $0) }.map(UInt16.init) ?? (character == " " ? 49 : 0)
+        press(code: code, characters: String(character), flags: character.isUppercase ? .shift : [], in: window)
+    }
+
+    /// A key down and up, through the application's own dispatch (its monitors, then the window's first responder).
+    private func press(code: UInt16, characters: String, flags: NSEvent.ModifierFlags, in window: NSWindow) {
+        for type in [NSEvent.EventType.keyDown, .keyUp] {
+            NSEvent.keyEvent(
+                with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, characters: characters, charactersIgnoringModifiers: characters,
+                isARepeat: false, keyCode: code
+            ).map { event in
+                // A field being edited reads keys through the input method, which only a really active app has; the key
+                // bindings it would apply are applied directly (typing, Return, Esc, arrows), the rest go the usual way.
+                if let editor = window.firstResponder as? NSTextView, type == .keyDown, flags.isDisjoint(with: [.command, .control]) {
+                    return editor.interpretKeyEvents([event])
+                }
+                InFront.during(window) { NSApp.sendEvent(event) }
+            }
+        }
     }
 
     /// Where the keys are once SwiftUI has acted on a request for focus, which it does on the next turn of the run loop.

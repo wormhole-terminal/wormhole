@@ -1,5 +1,7 @@
 // The control folder (WORMHOLE_DEVCTL=<dir>), off unless the variable is set. The caller writes `cmd.tmp` and
-// renames it to `cmd`; the app reads and removes `cmd`, runs its lines and appends the results to `out.txt`.
+// renames it to `cmd`; the app reads and removes `cmd`, runs its lines in order and appends the results to `out.txt`.
+// A line may take time (a drag in steps, `wait-idle`, `perf-profile`): the lines after it, and any batch written
+// meanwhile, wait for it, as GPUI's devctl batches do.
 // Event-driven: a dispatch source on the folder wakes the app when something is written, and nothing runs
 // between commands (no timer, so an idle instance stays idle). Owner-only, like the GPUI app's devctl.
 
@@ -8,10 +10,12 @@ import Foundation
 @MainActor
 final class DevCtl {
     private let directory: URL
-    private let handler: @MainActor (String) -> Void
+    private let handler: @MainActor (String) async -> Void
     private var source: DispatchSourceFileSystemObject?
+    private var queued: [String] = []
+    private var running = false
 
-    init(directory: URL, handler: @escaping @MainActor (String) -> Void) {
+    init(directory: URL, handler: @escaping @MainActor (String) async -> Void) {
         self.directory = directory
         self.handler = handler
     }
@@ -34,9 +38,13 @@ final class DevCtl {
         let command = directory.appendingPathComponent("cmd")
         guard let data = try? Data(contentsOf: command) else { return }
         try? FileManager.default.removeItem(at: command)
-        for line in String(decoding: data, as: UTF8.self).split(whereSeparator: \.isNewline) {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if !trimmed.isEmpty { handler(trimmed) }
+        queued += String(decoding: data, as: UTF8.self).split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        guard !running else { return }
+        running = true
+        Task { @MainActor in
+            while !queued.isEmpty { await handler(queued.removeFirst()) }
+            running = false
         }
     }
 

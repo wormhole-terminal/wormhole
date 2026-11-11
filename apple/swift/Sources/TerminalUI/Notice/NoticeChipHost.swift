@@ -38,9 +38,5 @@ public struct NoticeChipHost: View {
         return .spring(Spring(mass: 1, stiffness: NoticeTiming.dropStiffness, damping: NoticeTiming.dropDamping))
     }
 
-    private func announce(_ words: String) {
-        var text = AttributedString(words)
-        text.accessibilitySpeechAnnouncementPriority = .default
-        AccessibilityNotification.Announcement(text).post()
-    }
+    private func announce(_ words: String) { Announcements.post(words) }
 }

@@ -1,0 +1,122 @@
+# live run, --background Swift instance (exp/swift-s-tooling), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-tooling-d, persistent terminals on (config feature_flags unlocked), WORMHOLE_HOST_BIN=a wormhole-host built from this tree; each '>' line is one control-folder batch
+# T16 and X12: the selected terminal's host ended from outside (host-kill, as `Wormhole sessions end <id>` does), the pane's bar seen (T16-exited.png), its Restart button clicked with the pointer, a new host up
+> state
+grid=68x42 cell=17x36px scale=2.0 frames_drawn=3 ticks=8 wakes=2 pauses=4 busy_skips=0 blink_fires=0 link=paused words_shaped=2 word_hits=0 glyphs_rasterised=2 atlas_resets=0 terminals=3 selected=3 sidebar=true panel=true tab=changes window=90535 theme=wormhole.dark appearance=dark mode=system opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transparency=false increase_contrast=false panes=3 focused=3 zoomed=none cover=none focus=none
+> hosts-list
+65q8913o5lpf (Attached): Window 1, “benjamin@MacBook-Pro-von-Benjamin:~”
+Host process: 38581
+Shell process: 38582
+Running now: zsh
+Memory: 8.5 MiB
+Host version: 1.6.3
+Protocol: 1, compatible
+Started: 2026-11-11 00:17:24 UTC (up 14 s)
+Answers: Yes, program running, 68×42, 0 lines of history
+Connection: Connecting…
+Folder: /Users/benjamin
+Socket: /tmp/Wormhole-swift-s-tooling-d/hosts/65q8913o5lpf.sock
+Meta file: /tmp/Wormhole-swift-s-tooling-d/hosts/65q8913o5lpf.meta
+
+z7mqk8glcvit (Attached): Window 1, “benjamin@MacBook-Pro-von-Benjamin:~”
+Host process: 38580
+Shell process: 38583
+Running now: zsh
+Memory: 7.8 MiB
+Host version: 1.6.3
+Protocol: 1, compatible
+Started: 2026-11-11 00:17:24 UTC (up 14 s)
+Answers: Yes, program running, 100×30, 0 lines of history
+Connection: Connecting…
+Folder: /Users/benjamin
+Socket: /tmp/Wormhole-swift-s-tooling-d/hosts/z7mqk8glcvit.sock
+Meta file: /tmp/Wormhole-swift-s-tooling-d/hosts/z7mqk8glcvit.meta
+
+lj2u40zqop3h (Attached): Window 1, “benjamin@MacBook-Pro-von-Benjamin:~”
+Host process: 38828
+Shell process: 38830
+Running now: zsh
+Memory: 7.8 MiB
+Host version: 1.6.3
+Protocol: 1, compatible
+Started: 2026-11-11 00:17:28 UTC (up 10 s)
+Answers: Yes, program running, 68×42, 0 lines of history
+Connection: Connecting…
+Folder: /Users/benjamin
+Socket: /tmp/Wormhole-swift-s-tooling-d/hosts/lj2u40zqop3h.sock
+Meta file: /tmp/Wormhole-swift-s-tooling-d/hosts/lj2u40zqop3h.meta
+> host-kill lj2u40zqop3h 
+host-kill lj2u40zqop3h
+65q8913o5lpf (Attached): Window 1, “benjamin@MacBook-Pro-von-Benjamin:~”
+Host process: 38581
+Shell process: 38582
+Running now: zsh
+Memory: 8.5 MiB
+Host version: 1.6.3
+Protocol: 1, compatible
+Started: 2026-11-11 00:17:24 UTC (up 14 s)
+Answers: Yes, program running, 68×42, 0 lines of history
+Connection: Connecting…
+Folder: /Users/benjamin
+Socket: /tmp/Wormhole-swift-s-tooling-d/hosts/65q8913o5lpf.sock
+Meta file: /tmp/Wormhole-swift-s-tooling-d/hosts/65q8913o5lpf.meta
+
+z7mqk8glcvit (Attached): Window 1, “benjamin@MacBook-Pro-von-Benjamin:~”
+Host process: 38580
+Shell process: 38583
+Running now: zsh
+Memory: 7.8 MiB
+Host version: 1.6.3
+Protocol: 1, compatible
+Started: 2026-11-11 00:17:24 UTC (up 14 s)
+Answers: Yes, program running, 100×30, 0 lines of history
+Connection: Connecting…
+Folder: /Users/benjamin
+Socket: /tmp/Wormhole-swift-s-tooling-d/hosts/z7mqk8glcvit.sock
+Meta file: /tmp/Wormhole-swift-s-tooling-d/hosts/z7mqk8glcvit.meta
+exited terminal=3 code=unknown
+> window-shot /Users/benjamin/Projects/terminal/wormhole/.claude/worktrees/swift-s-tooling/apple/parity/evidence/s-tooling/T16-exited.png
+window-shot /Users/benjamin/Projects/terminal/wormhole/.claude/worktrees/swift-s-tooling/apple/parity/evidence/s-tooling/T16-exited.png
+> click 764 792
+click 764 792: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+> hosts-list
+65q8913o5lpf (Attached): Window 1, “benjamin@MacBook-Pro-von-Benjamin:~”
+Host process: 38581
+Shell process: 38582
+Running now: zsh
+Memory: 8.5 MiB
+Host version: 1.6.3
+Protocol: 1, compatible
+Started: 2026-11-11 00:17:24 UTC (up 20 s)
+Answers: Yes, program running, 68×42, 0 lines of history
+Connection: Connecting…
+Folder: /Users/benjamin
+Socket: /tmp/Wormhole-swift-s-tooling-d/hosts/65q8913o5lpf.sock
+Meta file: /tmp/Wormhole-swift-s-tooling-d/hosts/65q8913o5lpf.meta
+
+z7mqk8glcvit (Attached): Window 1, “benjamin@MacBook-Pro-von-Benjamin:~”
+Host process: 38580
+Shell process: 38583
+Running now: zsh
+Memory: 7.8 MiB
+Host version: 1.6.3
+Protocol: 1, compatible
+Started: 2026-11-11 00:17:24 UTC (up 20 s)
+Answers: Yes, program running, 100×30, 0 lines of history
+Connection: Connecting…
+Folder: /Users/benjamin
+Socket: /tmp/Wormhole-swift-s-tooling-d/hosts/z7mqk8glcvit.sock
+Meta file: /tmp/Wormhole-swift-s-tooling-d/hosts/z7mqk8glcvit.meta
+
+61dplkzo2cjx (Attached): Window 1, “benjamin@MacBook-Pro-von-Benjamin:~”
+Host process: 39478
+Shell process: 39480
+Running now: zsh
+Memory: 7.9 MiB
+Host version: 1.6.3
+Protocol: 1, compatible
+Started: 2026-11-11 00:17:42 UTC (up 2 s)
+Answers: Yes, program running, 68×42, 0 lines of history
+Connection: Connecting…
+Folder: /Users/benjamin
+Socket: /tmp/Wormhole-swift-s-tooling-d/hosts/61dplkzo2cjx.sock
+Meta file: /tmp/Wormhole-swift-s-tooling-d/hosts/61dplkzo2cjx.meta

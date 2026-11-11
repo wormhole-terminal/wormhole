@@ -3,6 +3,7 @@
 // and the `wh` command every terminal finds on its PATH (before the first terminal starts).
 // Everything else keeps the dumped keymap, the Swift matcher and English.
 
+import DesignSystem
 import PlatformModel
 
 #if WITH_UNIFFI
@@ -13,6 +14,8 @@ import PlatformModel
 enum PlatformSetup {
     @MainActor
     static func install(_ options: Options) {
+        // A test instance never speaks; what it would say is kept for `a11y said`.
+        Announcements.speaks = !options.background
         #if WITH_UNIFFI
             guard options.isReal else { return }
             PlatformBridge.installKeymap()

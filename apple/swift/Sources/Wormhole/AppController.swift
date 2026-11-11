@@ -31,6 +31,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// Set while the app quits, so the windows that go with it are saved, not forgotten.
     var terminating = false
     var devctl: DevCtl?
+    /// The control folder's pointer: what it pressed, the tracking areas it is in, the menu it found.
+    let injector = Injector()
     var settingsController: SettingsWindowController?
     var settingsApplier: SettingsApplier?
     var notices: NoticeFeed?

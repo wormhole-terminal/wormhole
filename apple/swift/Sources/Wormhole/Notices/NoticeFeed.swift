@@ -5,6 +5,7 @@
 
 #if WITH_UNIFFI
     import AppKit
+    import DesignSystem
     import Observation
     import PlatformBridge
     import PlatformModel
@@ -21,17 +22,9 @@
             notifier = SystemNotifier.make(policy: app.policy)
             coordinator = NoticeCoordinator(rules: PlatformBridge.makeNoticeRules(), notifier: notifier)
             coordinator.onOutcome = { [weak app] in app?.carryOut($0) }
-            if app.policy.touchesSystem {
-                coordinator.onBounce = { NSApp.requestUserAttention(.informationalRequest) }
-                coordinator.onSay = { text, urgent in
-                    NSAccessibility.post(
-                        element: NSApp as Any, notification: .announcementRequested,
-                        userInfo: [
-                            .announcement: text,
-                            .priority: (urgent ? NSAccessibilityPriorityLevel.high : .medium).rawValue,
-                        ])
-                }
-            }
+            if app.policy.touchesSystem { coordinator.onBounce = { NSApp.requestUserAttention(.informationalRequest) } }
+            // A test instance keeps the words for `a11y said` (`Announcements.speaks`).
+            coordinator.onSay = { text, urgent in Announcements.post(text, urgent: urgent) }
             coordinator.listen()
             follow()
         }

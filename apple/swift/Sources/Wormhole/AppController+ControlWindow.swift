@@ -82,7 +82,7 @@ extension AppController {
                 reply("error: host retry|new|end|end-hard")
                 return true
             }
-        case "quit", "quit-end-all":
+        case "quit", "quit-keep", "quit-end-all":
             reply(command)
             terminateUnattended(endAll: command == "quit-end-all")
             return true

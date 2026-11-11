@@ -3,6 +3,7 @@
 // The title row is the one part of it the windows hold themselves, so it is swapped here.
 
 import AppKit
+import DesignSystem
 import WindowUI
 import WordsModel
 import WorkspaceModel
@@ -16,7 +17,7 @@ extension AppController {
         look.zen = on ? Zen.preset : nil
         settingsApplier?.applyZen()
         let words = on ? Words.text("zen-on", fallback: "Zen mode on") : Words.text("zen-off", fallback: "Zen mode off")
-        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested, userInfo: [.announcement: words])
+        Announcements.post(words)
     }
 
     func toggleZen() { setZen(!zenOn) }

@@ -2,6 +2,7 @@
 // for the marks, and VoiceOver's word for a jump.
 
 import AppKit
+import DesignSystem
 import TerminalMetal
 import TerminalUI
 
@@ -23,6 +24,6 @@ extension TerminalOverlay {
     static func rgb(_ colour: SIMD3<UInt8>) -> UInt32 { UInt32(colour.x) << 16 | UInt32(colour.y) << 8 | UInt32(colour.z) }
 
     static func announce(_ text: String) {
-        NSAccessibility.post(element: NSApp as Any, notification: .announcementRequested, userInfo: [.announcement: text])
+        Announcements.post(text)
     }
 }
