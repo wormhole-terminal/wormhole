@@ -18,10 +18,23 @@ public struct PanelBackends: Sendable {
 }
 
 public enum FilesBridge {
-    /// Core's notes text rules for the Notes tab (the paragraph ⌘↵ sends, a note's title), installed once at launch.
-    public static func installNoteRules() {
+    /// Core's rules for the panel, installed once at launch (`PlatformSetup`): the notes' text (the paragraph ⌘↵ sends, a note's
+    /// title), how a line of code is drawn, sizes in words, and opening a repository's file in an editor.
+    @MainActor public static func installRules() {
         NoteRules.paragraphAt = { text, cursor in noteParagraphAt(text: text, cursor: UInt64(max(cursor, 0))) }
         NoteRules.title = { noteTitle(text: $0) }
+        VisibleRules.line = { text, tab in
+            let line = visibleLine(text: text, tabWidth: UInt32(max(tab, 1)))
+            return VisibleLine(text: line.text, offsets: line.offsets.map(Int.init), marks: line.marks.map { Int($0.start)..<Int($0.end) })
+        }
+        GitProblem.rule = { message, history in
+            let words = gitProblem(message: message, history: history)
+            return GitProblem(headline: words.headline, hint: words.hint, detail: words.detail, copy: words.copy)
+        }
+        ByteSize.core = { byteSize(bytes: $0, binary: $1) }
+        RepoFiles.resolver = { repoFileResolve(root: $0, relative: $1) }
+        RepoFiles.opener = { openFileRun(bundle: $0, path: $1, line: $2.map { UInt32(max($0, 0)) }, appFolder: $3) }
+        RepoFiles.tooltip = { openFileTooltip(bundle: $0, app: $1, line: $2.map { UInt32(max($0, 0)) }) }
     }
 
     /// - Parameters:

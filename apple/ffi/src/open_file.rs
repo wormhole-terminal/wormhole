@@ -7,6 +7,7 @@ use std::ffi::OsString;
 use std::path::Path;
 
 use wormhole_core::platform::open_file::{self, Launch};
+use wormhole_core::storage::files;
 use wormhole_term::sys::process;
 
 /// The program and arguments for `launch` aimed at the app `bundle`, which lives in `app` when it is installed.
@@ -43,6 +44,19 @@ fn command(bundle: &str, launch: Launch, app: Option<&Path>) -> (OsString, Vec<O
 #[uniffi::export]
 pub fn open_file_run(bundle: String, path: String, line: Option<u32>, app_folder: Option<String>) -> bool {
     run(&bundle, Path::new(&path), line, app_folder.as_deref().map(Path::new))
+}
+
+/// The tooltip and menu words of the open action: "Open in Zed at line 12", "Reveal in Finder".
+#[uniffi::export]
+pub fn open_file_tooltip(bundle: String, app: String, line: Option<u32>) -> String {
+    open_file::tooltip(&bundle, &app, line)
+}
+
+/// Where `relative` is inside the repository at `root`, every link resolved: nil for a file that is gone, a path that
+/// leads out of the repository (a planted link) or one that is not a file. Nothing is opened or revealed that this refuses.
+#[uniffi::export]
+pub fn repo_file_resolve(root: String, relative: String) -> Option<String> {
+    files::resolve_within(Path::new(&root), &relative).ok().map(|path| path.to_string_lossy().into_owned())
 }
 
 fn run(bundle: &str, path: &Path, line: Option<u32>, app: Option<&Path>) -> bool {

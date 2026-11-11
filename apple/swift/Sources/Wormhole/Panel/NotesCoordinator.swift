@@ -1,6 +1,7 @@
 // The Notes tab's text per terminal: loaded when a terminal is shown, saved after each edit, forgotten with the terminal,
-// and the row's note count told to the workspace. While the tab is up (and only then) it is merged with the trusted
-// project's `notes.md` every couple of seconds: the file watch lives in Rust, and this is its slow poll.
+// and the row's note count told to the workspace. Every terminal of the window, whatever tab is up, is merged with its trusted
+// project's `notes.md` every couple of seconds (`project/notes_sync.rs` runs on the tick for all of them): the file watch lives
+// in Rust, and this is its slow poll. A terminal that is not shown is merged from what was saved for it.
 
 import AppKit
 import Observation
@@ -16,6 +17,8 @@ final class NotesCoordinator {
     private var known: Set<TerminalID> = []
     private var saved = NotesModel()
     private var syncTimer: Timer?
+    /// A folder's project root as last asked, so a window of many terminals asks each folder only now and then.
+    private var roots: [String: (root: String?, at: Date)] = [:]
     private static let syncEvery: TimeInterval = 2
 
     init(persistence: any NotesPersisting, hub: WindowHub) {
@@ -54,7 +57,7 @@ final class NotesCoordinator {
             persistence.save(session: shown, model: saved)
             tell(shown, saved)
         }
-        setSync(on: hub.panel.tab == .notes && hub.state.panelVisible)
+        setSync(on: !hub.state.all.isEmpty)
     }
 
     /// Terminals moving to another window are not closed: what was written for them goes with them, not away.
@@ -80,12 +83,32 @@ final class NotesCoordinator {
     }
 
     private func sync() async {
-        guard let id = shown, let root = hub.panel.project.state?.root else { return }
         let editing = NSApp.keyWindow?.firstResponder is NSTextView
-        guard let merged = await persistence.sync(session: id, root: root, model: hub.panel.notes.model, editing: editing),
-            id == shown, merged != hub.panel.notes.model
-        else { return }
-        saved = merged
-        hub.panel.notes.model = merged
+        for terminal in hub.state.all {
+            let id = terminal.id
+            var found = id == shown ? hub.panel.project.state?.root : nil
+            if found == nil { found = await root(of: terminal) }
+            guard let root = found else { continue }
+            if id == shown {
+                guard let merged = await persistence.sync(session: id, root: root, model: hub.panel.notes.model, editing: editing),
+                    id == shown, merged != hub.panel.notes.model
+                else { continue }
+                saved = merged
+                hub.panel.notes.model = merged
+            } else {
+                let model = persistence.load(session: id)
+                guard let merged = await persistence.sync(session: id, root: root, model: model, editing: false), merged != model else { continue }
+                persistence.save(session: id, model: merged)
+                tell(id, merged)
+            }
+        }
+    }
+
+    private func root(of terminal: TerminalSummary) async -> String? {
+        guard let folder = AppController.expanded(terminal.folder) else { return nil }
+        if let known = roots[folder], Date().timeIntervalSince(known.at) < 10 { return known.root }
+        let root = await hub.panel.project.root(of: folder)
+        roots[folder] = (root, Date())
+        return root
     }
 }

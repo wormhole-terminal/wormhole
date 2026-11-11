@@ -1,6 +1,5 @@
-// The two questions a worktree asks (`features/git/worktree/ask.rs`, `close.rs`): the sheet that asks for the branch before
-// making one in a folder of its own, and the confirmation before removing the one Wormhole made for the terminal. Both
-// are the system's own sheets; nothing is written until the person confirms.
+// What a worktree asks and says in the panel (`features/git/worktree/ask.rs`): the sheet that asks for the branch before making
+// one in a folder of its own, and the alerts that say why none was made. Nothing is written until the person confirms.
 
 import DesignSystem
 import PanelModel
@@ -18,12 +17,7 @@ private struct WorktreeSheets: ViewModifier {
     func body(content: Content) -> some View {
         content
             .sheet(isPresented: $store.asking) { NewWorktreeSheet(store: store) }
-            .alert(panelText("worktree-remove-title", "Remove the worktree?"), isPresented: $store.confirmingRemoval) {
-                Button(panelText("worktree-remove", "Remove Worktree"), role: .destructive, action: store.confirmRemoval)
-                Button(panelText("worktree-cancel", "Cancel"), role: .cancel) {}
-            } message: {
-                Text(store.removalNote ?? "")
-            }
+            .alert(item: $store.alert) { alert in Alert(title: Text(alert.title), message: Text(alert.message)) }
     }
 }
 
@@ -36,13 +30,13 @@ struct NewWorktreeSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
             Text(panelText("worktree-title", "New terminal in a new worktree")).font(TextRole.heading.font).foregroundStyle(tokens.textPrimary)
-            Text(panelText("worktree-about", "A worktree of the repository on a branch of its own, in a folder of its own, so work there touches nothing in the repository's folder."))
+            Text(panelText("worktree-about", "A worktree of \(store.repositoryName) on a branch of its own, in a folder of its own, so work there touches nothing in the repository's folder."))
                 .font(TextRole.body.font).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: Space._1) {
                 Text(panelText("worktree-branch", "Branch (new, or one the repository has)")).font(TextRole.caption.font.weight(.medium)).foregroundStyle(tokens.textMuted)
                 TextField("fix/login", text: $store.branch).textFieldStyle(.roundedBorder).focused($focused).onSubmit(store.create)
-                if let note = store.error ?? store.footnote {
-                    Text(note).font(TextRole.caption.font).foregroundStyle(store.error != nil || isRefusal ? tokens.statusDangerText : tokens.textMuted)
+                if let note = store.footnote {
+                    Text(note).font(TextRole.caption.font).foregroundStyle(isRefusal ? tokens.statusWarningText : tokens.textMuted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }

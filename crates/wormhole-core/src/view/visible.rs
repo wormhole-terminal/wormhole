@@ -13,17 +13,17 @@ use std::ops::Range;
 
 /// A line's text as drawn, and the way to carry byte offsets of the original (what the syntax highlighter
 /// reports) over to it.
-pub(crate) struct Expanded<'a> {
-    pub(crate) text: Cow<'a, str>,
+pub struct Expanded<'a> {
+    pub text: Cow<'a, str>,
     /// The offset in `text` of every byte offset of the original (and of its end). `None` when nothing
     /// moved, which is every line without a tab or a placeholder.
-    pub(crate) offsets: Option<Vec<usize>>,
+    pub offsets: Option<Vec<usize>>,
     /// Where the placeholders are in `text`: drawn dimmed, so they read as marks and not as code.
-    pub(crate) marks: Vec<Range<usize>>,
+    pub marks: Vec<Range<usize>>,
 }
 
 impl Expanded<'_> {
-    pub(crate) fn offset(&self, original: usize) -> usize {
+    pub fn offset(&self, original: usize) -> usize {
         match &self.offsets {
             Some(offsets) => offsets.get(original).copied().unwrap_or(self.text.len()),
             None => original.min(self.text.len()),
@@ -54,7 +54,7 @@ fn placeholder(ch: char) -> Option<String> {
 
 /// `text` as drawn. Almost no line needs anything, and those that don't are neither copied nor given an
 /// offset table (8 bytes per byte of text).
-pub(crate) fn visible(text: &str, tab_width: usize) -> Expanded<'_> {
+pub fn visible(text: &str, tab_width: usize) -> Expanded<'_> {
     if !text.chars().any(|ch| ch == '\t' || placeholder(ch).is_some()) {
         return Expanded { text: Cow::Borrowed(text), offsets: None, marks: Vec::new() };
     }

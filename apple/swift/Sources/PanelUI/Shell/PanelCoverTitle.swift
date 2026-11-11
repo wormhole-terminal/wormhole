@@ -44,6 +44,7 @@ public struct PanelCoverTitle: View {
                     .frame(maxHeight: .infinity)
             }
             .environment(\.panelHost, controller.host)
+            .environment(\.panelRoot, controller.folder)
         }
     }
 }

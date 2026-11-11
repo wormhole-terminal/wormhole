@@ -23,8 +23,7 @@ public struct HistoryView: View {
 
     public var body: some View {
         SelectableListSplit(
-            selection: store.selection, hasDetail: presentation == .panel && store.current != nil, label: "Commits",
-            step: store.step
+            hasDetail: presentation == .panel && store.current != nil, label: "Commits", walker: store
         ) {
             HistoryListView(store: store, now: now).environment(\.selectionSpace, space)
         } bottom: {
@@ -74,13 +73,14 @@ struct HistoryListView: View {
 
     @ViewBuilder private var commits: some View {
         if store.model.commits.isEmpty {
-            EmptyNote(text: "No commits yet.")
+            EmptyView()
         } else {
             ForEach(store.model.commits) { commit in
                 CommitRowView(commit: commit, now: now, expanded: commit.id == store.expanded) {
                     withAnimation(motion.fold) { store.toggle(commit.id) }
                 }
-                .commitMenu(commit, store: store, openParent: openParent)
+                .commitMenu(commit, store: store)
+                .walkRow("commit-" + commit.id)
                 if commit.id == store.expanded { details(of: commit) }
             }
         }
@@ -91,10 +91,17 @@ struct HistoryListView: View {
             CommitDetailsView(
                 commit: commit, details: store.details, error: store.detailsError, store: store,
                 listed: Set(store.model.commits.map(\.sha)), open: openParent)
+                .walkRow("details-" + commit.id)
             if let files = store.details?.files {
                 if files.isEmpty { EmptyNote(text: panelText("history-no-files", "No file changes.")) }
                 ForEach(files) { file in
-                    FileRowView(file: file, depth: 1, selected: file.id == store.selection) { store.open(file.id) }
+                    if file.submodule != nil {
+                        SubmoduleRowView(file: file, depth: 1, selected: file.id == store.selection) { store.open(file.id) }
+                            .walkRow("file-" + file.id)
+                    } else {
+                        FileRowView(file: file, depth: 1, selected: file.id == store.selection) { store.open(file.id) }
+                            .walkRow("file-" + file.id)
+                    }
                 }
             } else if store.detailsError == nil {
                 EmptyNote(text: panelText("history-loading-files", "Loading files\u{2026}"))
@@ -107,14 +114,23 @@ struct HistoryListView: View {
         store.show(sha)
     }
 
-    /// "File History": the chip that limits the log, with the way back to every commit.
+    /// "File History": the pill that limits the log (the file's name or "N paths") with an x, and the way back to every commit
+    /// on a click (`history/view.rs`, tooltip "Show all commits").
     private var filterChip: some View {
-        HStack(spacing: PanelMetrics.gap) {
-            Image(systemName: "line.3.horizontal.decrease").font(.system(size: 12)).foregroundStyle(tokens.textMuted)
-            Text(store.paths.count == 1 ? (store.paths[0].split(separator: "/").last.map(String.init) ?? store.paths[0]) : "\(store.paths.count) paths")
-                .font(TextRole.caption.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+        let name = store.paths.count == 1 ? (store.paths[0].split(separator: "/").last.map(String.init) ?? store.paths[0]) : "\(store.paths.count) paths"
+        return HStack(spacing: PanelMetrics.gap) {
+            Button { store.filter(by: []) } label: {
+                HStack(spacing: Space._1) {
+                    Text(name).font(TextRole.caption.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                    PanelIcon("xmark", size: 12).foregroundStyle(tokens.textMuted)
+                }
+                .padding(.horizontal, Space._2).frame(height: Metric.controlSmall)
+                .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).strokeBorder(tokens.border, lineWidth: tokens.metrics.borderWidth) }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain).help(panelText("history-filter-clear", "Show all commits"))
+            .accessibilityLabel(panelText("history-filter-clear", "Show all commits"))
             Spacer(minLength: 0)
-            BandButton(symbol: "xmark", label: panelText("history-filter-clear", "Show all commits"), inRow: true) { store.filter(by: []) }
         }
         .padding(.horizontal, PanelMetrics.inset).frame(minHeight: Metric.row)
     }

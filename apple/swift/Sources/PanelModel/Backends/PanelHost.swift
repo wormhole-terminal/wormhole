@@ -10,8 +10,13 @@ public protocol PanelHost: AnyObject {
     func reveal(_ path: String)
     /// Opens a file in the editor the person chose (`Open in`), at a line when given.
     func open(_ path: String, line: Int?)
-    /// The name on the "Open in" button's tooltip ("Zed"), nil when none is known.
+    /// The name on the "Open in" button's tooltip ("Zed"), nil when none is known or the chosen app is Finder (whose "open"
+    /// is the reveal, so no second item).
     var editorName: String? { get }
+    /// The words of the open action for the chosen app, at a line where it can: "Open in Zed at line 12" (core's).
+    func openTooltip(line: Int?) -> String?
+    /// Whether something is at this absolute path now (a file the working tree no longer has cannot be opened).
+    func exists(_ path: String) -> Bool
     /// The person's home folder, which shortens paths to `~`.
     var homeFolder: String? { get }
     /// Pastes `text` into the terminal's prompt without pressing return. False where the program in the terminal
@@ -35,6 +40,8 @@ public protocol PanelHost: AnyObject {
 }
 
 extension PanelHost {
+    public func openTooltip(line: Int?) -> String? { editorName.map { "Open in \($0)" } }
+    public func exists(_ path: String) -> Bool { true }
     /// Where there is no chip to refuse on: the copy, and VoiceOver's word for it.
     public func copyPath(_ path: String) {
         copy(path)

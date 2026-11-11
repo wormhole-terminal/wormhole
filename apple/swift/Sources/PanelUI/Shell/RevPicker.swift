@@ -105,7 +105,7 @@ private struct RevList: View {
     private func item(title: String, detail: String, symbol: String, checked: Bool, action: @escaping () -> Void) -> some View {
         PanelRow(action: action) { _ in
             HStack(spacing: PanelMetrics.gap) {
-                Image(systemName: symbol).font(.system(size: 12)).foregroundStyle(tokens.textMuted).frame(width: Metric.lead)
+                PanelIcon(symbol, size: 12).foregroundStyle(tokens.textMuted).frame(width: Metric.lead)
                 Text(title).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 if !detail.isEmpty { Text(detail).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1) }
                 Spacer(minLength: 0)

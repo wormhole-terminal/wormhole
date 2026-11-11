@@ -53,6 +53,16 @@ public struct DiffView: View {
     }
 
     @ViewBuilder private func content(split: Bool, width: CGFloat) -> some View {
+        if let large = session.parsed?.tooLarge {
+            TooLargeCard(
+                large: large, path: file.path, revealLabel: review != nil ? "Reveal in Finder" : "Reveal Current File in Finder",
+                load: session.loadAnyway)
+        } else {
+            lines(split: split, width: width)
+        }
+    }
+
+    @ViewBuilder private func lines(split: Bool, width: CGFloat) -> some View {
         let diff = session.parsed
         let style = DiffStyle(code: codeFont, digits: diff.map(DiffRows.numberDigits) ?? 3, wrap: session.wrap, advance: codeFont.advance)
         let rows = diff.map { split ? DiffRows.split($0) : DiffRows.unified($0) } ?? []
@@ -67,36 +77,45 @@ public struct DiffView: View {
                 }
                 // Unwrapped lines scroll sideways, so the rows are as wide as the longest line needs (their bars are
                 // `maxWidth: .infinity`); never narrower than the card, so the bars of short rows reach its edge.
-                .frame(width: session.wrap ? width : max(width, Self.widest(rows, split: split, style: style, tabWidth: tabWidth)), alignment: .topLeading)
+                .frame(width: session.wrap ? width : max(width, Self.widest(diff, split: split, style: style)), alignment: .topLeading)
             }
             .defaultScrollAnchor(.topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .overlay { if split { Rectangle().fill(tokens.border).frame(width: tokens.metrics.borderWidth).frame(maxHeight: .infinity) } }
-            if let note { DiffNote(text: note) }
+            if rows.isEmpty, let diff, case .shown = session.phase, Self.hasNotes(diff) {
+                columnNotes(diff.notes, split: split)
+            } else if let note {
+                DiffNote(text: note)
+            }
         }
         .id(file.id)
         .transition(.opacity)
     }
 
-    /// The diff has lines to lay out (not a binary file, an LFS pointer or a submodule): the layout switch is for them.
-    static func hasLines(_ session: DiffSession) -> Bool { session.parsed.map { !$0.isBinary && $0.note == nil } ?? true }
+    /// The diff has lines to lay out (not a binary file, an LFS pointer, a submodule or a patch too large): the layout switch is for them.
+    static func hasLines(_ session: DiffSession) -> Bool {
+        session.parsed.map { !$0.isBinary && $0.note == nil && !$0.isLFS && $0.tooLarge == nil } ?? true
+    }
 
-    /// What the longest line needs in an unwrapped diff: gutter, marker, its characters at the code font's advance
-    /// (tabs expanded, the cap of `DiffCode.maxRowCharacters` applied) and the trailing pad; two columns in split.
-    private static func widest(_ rows: [DiffRow], split: Bool, style: DiffStyle, tabWidth: Int) -> CGFloat {
-        var characters = 0
-        func note(_ cell: DiffCell?) {
-            guard let text = cell?.text else { return }
-            characters = max(characters, min(DiffCode.expandTabs(text, tabWidth: tabWidth).columns.last ?? text.count, DiffCode.maxRowCharacters + 1))
-        }
-        for row in rows {
-            switch row {
-            case .hunk: break
-            case let .unified(cell): note(cell)
-            case let .split(old, new): note(old); note(new)
+    private static func hasNotes(_ diff: DiffFile) -> Bool { diff.notes.unified != nil || diff.notes.split.contains { $0 != nil } }
+
+    /// The note over each column that has nothing to show (two when split, one when unified), centred in it.
+    @ViewBuilder private func columnNotes(_ notes: DiffNotes, split: Bool) -> some View {
+        if split, notes.split.count == 2 {
+            HStack(spacing: 0) {
+                ForEach(0..<2, id: \.self) { side in
+                    ZStack { if let note = notes.split[side] { SideNoteView(note: note) } }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
+        } else if let note = notes.unified {
+            SideNoteView(note: note)
         }
-        let column = style.gutter * (split ? 1 : 2) + DiffStyle.marker + CGFloat(characters) * style.advance + Space._3
+    }
+
+    /// What the longest line needs in an unwrapped diff: gutter, marker, its characters at the code font's advance and the
+    /// trailing pad; two columns in split. The longest line was measured when the diff was read.
+    private static func widest(_ diff: DiffFile?, split: Bool, style: DiffStyle) -> CGFloat {
+        let column = style.gutter * (split ? 1 : 2) + DiffStyle.marker + CGFloat(diff?.widest ?? 0) * style.advance + Space._3
         return split ? column * 2 : column
     }
 
@@ -104,7 +123,7 @@ public struct DiffView: View {
         switch session.phase {
         case .loading, .idle: panelText("diff-reading", "Reading the diff\u{2026}")
         case let .failed(why): why
-        case .shown: DiffNote.text(for: file, diff: diff)
+        case .shown: diff.flatMap { Self.hasNotes($0) ? nil : DiffNote.text(for: file, diff: $0) }
         }
     }
 }

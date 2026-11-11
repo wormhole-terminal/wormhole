@@ -30,9 +30,6 @@ enum PanelSettings {
         hub.panel.preferences.persist = { [weak model] key, value in
             if let model, model.value(key).bool != value { model.set(key, .bool(value)) }
         }
-        #if WITH_UNIFFI
-            ByteSize.core = { byteSize(bytes: $0, binary: $1) }
-        #endif
     }
 
     static func codeFont(_ values: [String: JSONValue]) -> CodeFont {

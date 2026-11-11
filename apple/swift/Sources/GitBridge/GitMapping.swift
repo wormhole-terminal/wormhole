@@ -9,7 +9,7 @@ extension ChangedFile {
         self.init(
             path: change.path, kind: ChangeKind(change.kind), added: change.added.map(Int.init),
             removed: change.removed.map(Int.init), originalPath: change.originalPath, lfs: change.lfs,
-            submodule: change.submodule)
+            submodule: change.submodule, submoduleEnterable: change.submoduleEnterable)
     }
 }
 

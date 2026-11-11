@@ -21,7 +21,8 @@ public final class ChangesStore {
     public var layout: ChangeRows {
         get {
             var rows = arrangement
-            (rows.tree, rows.groupUntracked) = (preferences.changesTree, preferences.groupUntracked)
+            // A comparison is one list: untracked files are not in it (`untracked_apart`).
+            (rows.tree, rows.groupUntracked) = (preferences.changesTree, preferences.groupUntracked && compare == nil)
             return rows
         }
         set {
@@ -32,6 +33,10 @@ public final class ChangesStore {
     private var arrangement = ChangeRows()
     public let preferences: PanelPreferences
     public private(set) var selection: ChangedFile.ID?
+    /// The row the keys are on (`PanelWalking`), and the files marked for the menu (⌘-click, ⇧-click, ⇧ with the arrows).
+    public var cursor: String?
+    public internal(set) var marked: Set<String> = []
+    @ObservationIgnored var anchor: String?
     public var review = Review()
     public let diff: DiffSession
     public private(set) var revs: [Rev] = []
@@ -78,6 +83,7 @@ public final class ChangesStore {
                 let list = result.files
                 guard folder == self.folder, rev == compare else { return }
                 files = list
+                marked.formIntersection(list.map(\.path))
                 (compareMissing, refreshError) = (result.compareMissing, nil)
                 phase = .loaded
                 if let open = selection, !list.contains(where: { $0.id == open }) { close() }
@@ -97,10 +103,11 @@ public final class ChangesStore {
     public var position: (index: Int, count: Int)? { current.flatMap { file in order.firstIndex(of: file).map { ($0, order.count) } } }
 
     public func open(_ id: ChangedFile.ID?) {
+        if id != nil { marked = [] }
         selection = id
         guard let folder, let file = current else { return diff.close() }
         let (git, rev) = (git, compare)
-        diff.open(file) { try await git.diff(of: file.path, in: folder, comparedWith: rev) }
+        diff.open(file) { try await git.diff(of: file.path, in: folder, comparedWith: rev, loadAnyway: $0) }
     }
 
     public func close() { open(nil) }

@@ -28,3 +28,4 @@ pub mod sidebar;
 pub mod spoken;
 pub mod tear_off;
 pub mod title_extras;
+pub mod visible;

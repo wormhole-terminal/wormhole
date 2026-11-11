@@ -1,5 +1,5 @@
 // The notes' text rules, which core owns (`view::notes::paragraphs`): the paragraph ⌘↵ sends and a note's title. The app
-// installs core's at launch (`FilesBridge.installNoteRules()`); until then, in previews and tests, a plain stand-in
+// installs core's at launch (`FilesBridge.installRules()`); until then, in previews and tests, a plain stand-in
 // answers: the whole text, and the first line.
 
 public enum NoteRules {

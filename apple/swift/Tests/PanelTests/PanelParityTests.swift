@@ -1,3 +1,4 @@
+import DesignSystem
 import PanelModel
 import XCTest
 
@@ -7,27 +8,28 @@ import XCTest
 /// see, git's problems in words, and the writing flows of the Notes tab.
 @MainActor
 final class PanelParityTests: XCTestCase {
-    func testInvisibleCharactersAreSpelledOutAndLongLinesCut() {
-        let shown = DiffCode.expandTabs("if x\u{202E} \u{2066}{\u{1B}[31m\t.", tabWidth: 4)
-        XCTAssertEqual(shown.text, "if x<U+202E> <U+2066>{\u{241B}[31m .")
-        XCTAssertEqual(shown.marks.count, 3)
-        XCTAssertEqual(DiffCode.expandTabs("\u{85}\u{2028}\u{7F}").text, "<U+0085><U+2028>\u{2421}")
-        let long = String(repeating: "a", count: DiffCode.maxRowCharacters + 50)
-        let cut = DiffCode.expandTabs(long)
-        XCTAssertEqual(cut.text.count, DiffCode.maxRowCharacters + 1)
+    /// A repository's line is hostile input: whatever the rule answers, and wherever a highlighter says a span runs, the drawn
+    /// text is coloured inside itself (the offsets are scalars, clamped), so opening a diff can never trap.
+    func testADrawnLineNeverPutsAnOffsetPastItsEnd() {
+        let saved = VisibleRules.line
+        defer { VisibleRules.line = saved }
+        // A control picture followed by a combining mark (one Character in the drawn text, two in the original), with offsets
+        // and marks a stale or hostile answer could hold.
+        VisibleRules.line = { _, _ in VisibleLine(text: "# \u{2401}\u{301}", offsets: [0, 1, 2, 3, 99], marks: [2..<99]) }
+        let drawn = DrawnLine("# \u{1}\u{301}", spans: [SyntaxSpan(range: 0..<4, key: "comment"), SyntaxSpan(range: 3..<400, key: "x")], tabWidth: 4, limit: 5_000)
+        XCTAssertEqual(drawn.scalars, 4)
+        XCTAssertTrue(drawn.spans.allSatisfy { $0.range.upperBound <= drawn.scalars })
+        XCTAssertTrue(drawn.marks.allSatisfy { $0.upperBound <= drawn.scalars })
+        let code = DiffCode(tokens: ThemeStore.shared.tokens)
+        _ = code.text("# \u{1}\u{301}", spans: [SyntaxSpan(range: 0..<4, key: "comment")])
+        // The tab and the override with a mark after them, and a line cut at the limit.
+        VisibleRules.line = { text, _ in VisibleLine(text: text) }
+        _ = code.text("#\t\u{301}", spans: [SyntaxSpan(range: 0..<3, key: "comment")])
+        _ = code.text("a\u{202E}\u{301}b", spans: [SyntaxSpan(range: 0..<4, key: "comment")])
+        let cut = DrawnLine(String(repeating: "a", count: DiffCode.maxRowCharacters + 50), spans: [], tabWidth: 4, limit: DiffCode.maxRowCharacters)
+        XCTAssertEqual(cut.scalars, DiffCode.maxRowCharacters + 1)
         XCTAssertTrue(cut.text.hasSuffix("\u{2026}"))
-    }
-
-    func testGitProblemsSayWhatToDo() {
-        let missing = GitProblem(message: "git is not installed", tab: .history)
-        XCTAssertEqual(missing.headline, "History needs git, and it isn't installed.")
-        XCTAssertEqual(missing.detail, "xcode-select --install")
-        XCTAssertNil(missing.copy)
-        let owner = GitProblem(message: "fatal: detected dubious ownership in repository at '/srv/repo'\nmore", tab: .changes)
-        XCTAssertEqual(owner.detail, "git config --global --add safe.directory '/srv/repo'")
-        let quoted = GitProblem(message: "fatal: detected dubious ownership in repository at '/srv/it's'", tab: .changes)
-        XCTAssertEqual(quoted.headline, "Couldn't read this repository.", "a quote in the folder's name leaves the generic wording")
-        XCTAssertEqual(quoted.copy, "fatal: detected dubious ownership in repository at '/srv/it's'")
+        XCTAssertEqual(cut.marks.last, DiffCode.maxRowCharacters..<DiffCode.maxRowCharacters + 1)
     }
 
     func testAStepOpensTheNextOneBelowItAndAnEmptyNoteIsThrownAway() {

@@ -11,6 +11,10 @@ extension DiffFile {
             DiffHunk(header: hunk.header, lines: hunk.lines.map(DiffLine.init))
         }
         self.init(oldPath: file.oldPath, newPath: file.newPath, isBinary: isBinary, hunks: hunks)
+        modeChange = file.modeChange
+        noHighlight = file.highlightSkipped
+        let note = { (note: GitSideNote?) in note.map { SideNote(text: $0.text, detail: $0.detail, oid: $0.oid) } }
+        notes = DiffNotes(split: file.notes.split.map(note), unified: note(file.notes.unified))
     }
 }
 
@@ -31,8 +35,14 @@ extension GitDiff {
         switch self {
         case let .text(file): return DiffFile(file)
         case let .binary(file, _): return DiffFile(file, isBinary: true)
-        case let .lfs(summary): return DiffFile(note: ["Stored with Git LFS", summary].compactMap { $0 }.joined(separator: ": "))
-        case let .tooLarge(_, title, detail): return DiffFile(note: "\(title). \(detail)")
+        case let .lfs(file, _):
+            var lfs = DiffFile(file)
+            lfs.isLFS = true
+            return lfs
+        case let .tooLarge(_, title, detail):
+            var large = DiffFile()
+            large.tooLarge = TooLarge(title: title, detail: detail)
+            return large
         case let .submodule(label, note, ahead, behind):
             let commits = (ahead.map { "+ \($0.short) \($0.subject)" } + behind.map { "\u{2212} \($0.short) \($0.subject)" })
             return DiffFile(note: ([label, note].compactMap { $0 } + commits).joined(separator: "\n"))

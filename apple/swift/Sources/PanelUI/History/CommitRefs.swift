@@ -13,8 +13,8 @@ struct CommitRefs: View {
         HStack(spacing: Space._1) {
             ForEach(Array(refs.enumerated()), id: \.offset) { _, ref in
                 switch ref.kind {
-                case .head: badge("HEAD", tokens.primary, tokens.primary.opacity(0.15))
-                case .tag: badge(ref.name, tokens.gitTag, tokens.gitTag.opacity(0.15))
+                case .head: StatusBadge(text: "HEAD", color: tokens.primary)
+                case .tag: StatusBadge(text: ref.name, color: tokens.gitTag)
                 case .branch:
                     HStack(spacing: Space._1) {
                         PanelIcon("arrow.triangle.branch", size: 12)
@@ -27,11 +27,5 @@ struct CommitRefs: View {
             }
             Spacer(minLength: 0)
         }
-    }
-
-    private func badge(_ text: String, _ color: Color, _ fill: Color) -> some View {
-        Text(text).font(TextRole.caption.font).foregroundStyle(color)
-            .padding(.horizontal, Space._2).frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)
-            .background(fill, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
     }
 }

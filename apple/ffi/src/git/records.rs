@@ -1,9 +1,13 @@
 //! The values that cross the seam for git: core's types cut down to what the panels show. Wording that
 //! core owns (a submodule's label, a too-large diff's title) arrives as text, so Swift keeps no copy of it.
 
+use wormhole_core::config::SizeUnits;
 use wormhole_core::git::{
-    ChangeKind, Commit, CommitRef, DiffLine, FileChange, FileDiff, Hunk, LineKind, RefKind, Submodule,
+    ChangeKind, Commit, CommitRef, DIFF_HIGHLIGHT_MAX_LINES, DiffLine, FileChange, FileDiff, Hunk, LineKind, RefKind,
+    Submodule,
 };
+
+use super::notes::GitDiffNotes;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum GitChangeKind {
@@ -42,6 +46,8 @@ pub struct GitChange {
     pub lfs: bool,
     /// A submodule, not a file: core's words for what the parent sees of it ("2 new commits").
     pub submodule: Option<String>,
+    /// A submodule that is checked out and still there: the row offers "Open a terminal in" it.
+    pub submodule_enterable: bool,
 }
 
 impl GitChange {
@@ -54,6 +60,7 @@ impl GitChange {
             removed: file.removed,
             lfs: file.lfs,
             submodule: file.submodule.as_ref().map(|sub: &Submodule| sub.label(file.kind)),
+            submodule_enterable: file.submodule.as_ref().is_some_and(Submodule::checked_out) && file.kind != ChangeKind::Deleted,
         }
     }
 }
@@ -203,17 +210,26 @@ pub struct GitDiffFile {
     pub old_path: Option<String>,
     pub new_path: Option<String>,
     pub hunks: Vec<GitHunk>,
+    /// "Mode 100644 → 100755" when the file's mode changed.
+    pub mode_change: Option<String>,
+    /// More lines than core colours (`DIFF_HIGHLIGHT_MAX_LINES`): the badge "No highlighting", and Swift colours none.
+    pub highlight_skipped: bool,
+    /// What the card says over a diff with no hunks (empty when it has some).
+    pub notes: GitDiffNotes,
 }
 
 impl GitDiffFile {
     /// `diff` for `file`: the paths as the header of `git diff` names them (a rename keeps both), hunks as core
     /// parsed them.
-    pub(crate) fn of(file: &FileChange, diff: &FileDiff) -> Self {
+    pub(crate) fn of(file: &FileChange, diff: &FileDiff, units: SizeUnits) -> Self {
         let old = diff.renamed_from.as_deref().or(file.original_path.as_deref()).unwrap_or(&file.path);
         Self {
             old_path: (!diff.new_file).then(|| old.to_string()),
             new_path: (!diff.deleted_file).then(|| file.path.clone()),
             hunks: diff.hunks.iter().map(GitHunk::from).collect(),
+            mode_change: diff.mode_change.as_ref().map(|(old, new)| format!("Mode {old} \u{2192} {new}")),
+            highlight_skipped: diff.hunks.iter().map(|hunk| hunk.lines.len()).sum::<usize>() > DIFF_HIGHLIGHT_MAX_LINES,
+            notes: if diff.hunks.is_empty() { super::notes::notes(diff, file.kind, units) } else { GitDiffNotes::default() },
         }
     }
 }
@@ -226,7 +242,7 @@ pub enum GitDiff {
     /// A binary file: `sizes` is "48.2 KB → 52.9 KB" when known.
     Binary { file: GitDiffFile, sizes: Option<String> },
     /// Stored with Git LFS: what the pointers stand for ("12.3 MB → 12.8 MB · oid 4d7a21…").
-    Lfs { summary: Option<String> },
+    Lfs { file: GitDiffFile, summary: Option<String> },
     /// More than core loads unasked: its two lines of wording and the size. Ask again with `load_anyway`.
     TooLarge { bytes: Option<u64>, title: String, detail: String },
     /// A submodule: what moved, and the commits between (its own repository's, newest first).

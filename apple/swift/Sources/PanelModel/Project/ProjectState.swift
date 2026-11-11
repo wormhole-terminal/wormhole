@@ -115,6 +115,6 @@ public struct ProjectState: Equatable, Sendable {
     }
 
     /// How many lines the notice shows in full; a longer list shows `shownLines` and "View all N…".
-    public static let linesMax = 8
+    public static let linesMax = 6
     public static let linesShown = 5
 }

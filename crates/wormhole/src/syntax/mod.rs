@@ -5,4 +5,5 @@
 //! It uses nothing of the app beyond GPUI Kit's highlighter, so it sits with `fonts`, below `style`.
 
 pub(crate) mod highlight;
-pub(crate) mod visible;
+// The rule is core's, shared with the Swift app (Trojan Source protection lives in one place).
+pub(crate) use wormhole_core::view::visible;

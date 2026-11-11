@@ -4,6 +4,7 @@
 
 import DesignSystem
 import PanelModel
+import AppKit
 import SwiftUI
 
 struct ChangesListView: View {
@@ -29,13 +30,13 @@ struct ChangesListView: View {
         if store.files.isEmpty {
             PanelCard {
                 head(group: .all, count: 0, folded: false, first: true)
-                EmptyNote(text: store.compare == nil ? "No changes. Working tree is clean." : "No differences from \(store.compare?.title ?? "").")
+                EmptyNote(text: panelText("changes-clean", "No changes. Working tree is clean."))
             }
         } else {
             ForEach(ChangeSection.cut(store.layout.build(store.files))) { section in
                 PanelCard {
-                    if case let .band(group, count, folded, first) = section.band { head(group: group, count: count, folded: folded, first: first) }
-                    ForEach(section.rows) { row in rowView(row).transition(motion.row) }
+                    if case let .band(group, count, folded, first) = section.band { head(group: group, count: count, folded: folded, first: first).walkRow(section.band.id) }
+                    ForEach(section.rows) { row in rowView(row).walkRow(row.id).transition(motion.row) }
                 }
                 .transition(.opacity)
             }
@@ -59,12 +60,20 @@ struct ChangesListView: View {
     @ViewBuilder private func rowView(_ row: ChangeRow) -> some View {
         switch row {
         case let .file(file, depth, inTree):
-            FileRowView(file: file, depth: depth, inTree: inTree, selected: file.id == store.selection) { store.open(file.id) }
-        case let .directory(group, path, label, depth, collapsed):
-            FolderRowView(label: label, depth: depth, collapsed: collapsed) {
-                let key = "\(group.rawValue)\u{1f}\(path)"
-                if collapsed { store.layout.collapsed.remove(key) } else { store.layout.collapsed.insert(key) }
+            let selected = file.id == store.selection || store.marked.contains(file.path)
+            let click = {
+                let flags = NSApp.currentEvent?.modifierFlags ?? []
+                store.click(file, command: flags.contains(.command), shift: flags.contains(.shift))
             }
+            if file.submodule != nil {
+                SubmoduleRowView(file: file, depth: depth, inTree: inTree, selected: selected, action: click)
+            } else {
+                FileRowView(
+                    file: file, depth: depth, inTree: inTree, selected: selected, menu: store.menuPaths(for: file),
+                    onDisk: file.kind != .deleted, action: click)
+            }
+        case let .directory(_, path, label, depth, collapsed):
+            FolderRowView(label: label, path: path, depth: depth, collapsed: collapsed) { store.toggle(row) }
         case let .foldNote(text):
             Text(text).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                 .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._2)

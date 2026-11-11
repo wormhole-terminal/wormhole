@@ -8,10 +8,12 @@ import PanelModel
 @MainActor @Observable
 public final class NotesStore {
     public var model: NotesModel
+    /// The row the keys are on (`PanelWalking`).
+    public var cursor: String?
     /// The note that opens for writing at once (a new one, the stash's, the one above a deleted empty one).
-    public private(set) var freshNote: Note.ID?
+    public internal(set) var freshNote: Note.ID?
     /// The same for a next step: the row that was asked to open its editor.
-    public private(set) var freshStep: PanelTask.ID?
+    public internal(set) var freshStep: PanelTask.ID?
     /// A new, empty step is being written, and where: after this step, or at the end when nil (↵ in a step opens the next one below).
     public var draftAfter: PanelTask.ID?
     public var drafting = false

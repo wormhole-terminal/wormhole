@@ -23,6 +23,8 @@ struct PanelIcon: View {
         "doc.badge.plus": .filePlus, "info.circle": .info, "shield": .shield, "checkmark.shield": .shieldCheck,
         "exclamationmark.triangle": .triangleAlert, "arrow.up.right": .arrowUpRight, "arrow.right": .arrowRight,
         "play.fill": .play, "ellipsis": .ellipsis, "text.bubble": .messageSquarePlus, "nosign": .ban,
-        "arrow.triangle.branch": .gitBranch,
+        "arrow.triangle.branch": .gitBranch, "folder.badge.gearshape": .folderGit2, "folder.badge.plus": .folderInput,
+        "terminal": .squareTerminal, "tag": .tag, "chevron.up": .chevronUp, "gearshape": .settings, "paintpalette": .palette,
+        "tray.full": .archive, "smallcircle.filled.circle": .commit,
     ]
 }

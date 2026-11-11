@@ -1,12 +1,12 @@
-// What the right-click menu of a commit offers (`features/git/history/menu.rs`): the copies of its hash, message and
-// author, and a way to its parent.
+// What the right-click menu of a commit row offers (`features/git/history/menu.rs`): the five copies, and nothing else (the
+// parents are the details block's).
 
 import PanelModel
 import SwiftUI
 
 extension View {
-    func commitMenu(_ commit: Commit, store: HistoryStore, openParent: @escaping (String) -> Void) -> some View {
-        modifier(CommitMenu(commit: commit, store: store, openParent: openParent))
+    func commitMenu(_ commit: Commit, store: HistoryStore) -> some View {
+        modifier(CommitMenu(commit: commit, store: store))
     }
 }
 
@@ -32,15 +32,8 @@ struct CommitCopies: View {
 private struct CommitMenu: ViewModifier {
     let commit: Commit
     let store: HistoryStore
-    let openParent: (String) -> Void
 
     func body(content: Content) -> some View {
-        content.contextMenu {
-            CommitCopies(commit: commit, store: store)
-            if let parent = commit.parents.first {
-                Divider()
-                Button(panelText("history-menu-open-parent", "Open Parent \(parent.prefix(7))")) { openParent(parent) }
-            }
-        }
+        content.contextMenu { CommitCopies(commit: commit, store: store) }
     }
 }

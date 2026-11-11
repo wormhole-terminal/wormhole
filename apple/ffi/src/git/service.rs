@@ -277,14 +277,14 @@ impl Git {
                 detail: git::too_large_detail(lines),
             }
         } else if let Some(change) = &diff.lfs {
-            GitDiff::Lfs { summary: git::lfs_summary(change, units) }
+            GitDiff::Lfs { file: GitDiffFile::of(file, &diff, units), summary: git::lfs_summary(change, units) }
         } else if diff.binary {
             GitDiff::Binary {
-                file: GitDiffFile::of(file, &diff),
+                file: GitDiffFile::of(file, &diff, units),
                 sizes: git::sizes_label(diff.sizes.0, diff.sizes.1, units),
             }
         } else {
-            GitDiff::Text { file: GitDiffFile::of(file, &diff) }
+            GitDiff::Text { file: GitDiffFile::of(file, &diff, units) }
         })
     }
 }

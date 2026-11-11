@@ -120,27 +120,4 @@ public final class FilesStore {
     }
 
     func join(_ root: String, _ path: String) -> String { root == "/" ? "/" + path : root + "/" + path }
-
-    // MARK: Keys over the rows (F-70, as for the Changes list)
-
-    /// ↑ and ↓ move over the entries; with the viewer up, a file the keys land on shows in it.
-    public func step(_ delta: Int) {
-        let entries = rows.filter(\.isEntry)
-        guard let next = ListNavigation.move(in: entries.map(\.path), from: selected, by: delta), let row = entries.first(where: { $0.path == next })
-        else { return }
-        selected = next
-        if viewing != nil, row.kind == .file { view(next) }
-    }
-
-    /// → opens a folder and ← closes it; ← on an entry inside a folder goes to that folder.
-    public func fold(open: Bool) {
-        guard let path = selected, let row = rows.first(where: { $0.path == path }) else { return }
-        if row.isFolder, tree.isOpen(path) != open { return toggle(path) }
-        if !open, !row.isFolder || !tree.isOpen(path), case let parent = FileTree.parent(path), !parent.isEmpty { selected = parent }
-    }
-
-    /// ↩ opens a folder or shows a file in the viewer.
-    public func press() {
-        if let path = selected, let row = rows.first(where: { $0.path == path }) { click(row) }
-    }
 }

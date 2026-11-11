@@ -10,12 +10,14 @@ public struct ChangedFile: Identifiable, Hashable, Sendable {
     public var lfs: Bool
     /// A submodule rather than a file: what the parent sees of it, in core's words ("2 new commits").
     public var submodule: String?
+    /// The submodule is checked out and still there: its row offers a terminal in it.
+    public var submoduleEnterable: Bool
 
     public var id: String { path }
 
     public init(
         path: String, kind: ChangeKind, added: Int? = 0, removed: Int? = 0, originalPath: String? = nil,
-        lfs: Bool = false, submodule: String? = nil
+        lfs: Bool = false, submodule: String? = nil, submoduleEnterable: Bool = false
     ) {
         self.path = path
         self.kind = kind
@@ -24,6 +26,7 @@ public struct ChangedFile: Identifiable, Hashable, Sendable {
         self.originalPath = originalPath
         self.lfs = lfs
         self.submodule = submodule
+        self.submoduleEnterable = submoduleEnterable
     }
 
     public var name: String { path.split(separator: "/").last.map(String.init) ?? path }

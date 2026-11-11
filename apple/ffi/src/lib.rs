@@ -38,6 +38,7 @@ mod minimap;
 mod notes_text;
 pub mod notify;
 mod open_file;
+mod visible;
 pub mod palette_search;
 mod probes;
 mod profile;
@@ -99,6 +100,7 @@ pub use git::{
     GitRef, GitRefKind, GitRev, GitRevKind, GitSpan, GitStatus, GitTone, GitWatch, GitWorktree,
     GitWorktreePlan, WorktreeService,
 };
+pub use git::{GitDiffNotes, GitProblemWords, GitSideNote, git_problem};
 pub use hook_server::{HookError, HookEvent, HookListener, HookServer, cli_exit_code};
 pub use hosting::{
     HostUnavailableKind, HostedStart, HostedTerminals, HostingError, HostingProgram, LaunchPlan, OrphanHost,
@@ -114,7 +116,8 @@ pub use live_resize::{
     resize_snapped,
 };
 pub use minimap::{MinimapGeometryRecord, MinimapRunRecord};
-pub use open_file::open_file_run;
+pub use visible::{VisibleLine, VisibleMark, visible_line};
+pub use open_file::{open_file_run, open_file_tooltip, repo_file_resolve};
 pub use probes::{ProbeStatusRecord, ResolvedFile};
 pub use profile::{ActiveProfile, active_profile};
 pub use settings::{

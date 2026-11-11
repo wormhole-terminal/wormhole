@@ -113,4 +113,7 @@ public final class ProjectStore {
             reload()
         }
     }
+
+    /// The project root of any terminal's folder (the notes' sync goes through every terminal, not only the shown one).
+    public func root(of folder: String) async -> String? { await backend.project(at: folder)?.root }
 }

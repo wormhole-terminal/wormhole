@@ -20,8 +20,7 @@ public struct ChangesView: View {
 
     public var body: some View {
         SelectableListSplit(
-            selection: store.selection, hasDetail: presentation == .panel && store.current != nil, label: "Changed files",
-            step: store.step
+            hasDetail: presentation == .panel && store.current != nil, label: "Changed files", walker: store
         ) {
             ChangesListView(store: store).environment(\.selectionSpace, space)
         } bottom: {

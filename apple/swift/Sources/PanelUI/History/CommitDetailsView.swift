@@ -154,7 +154,7 @@ private struct ShowMore: View {
         Button(action: action) {
             HStack(spacing: Space._1) {
                 Text(whole ? panelText("history-show-less", "Show less") : panelText("history-show-more", "Show more"))
-                Image(systemName: whole ? "chevron.up" : "chevron.down").font(.system(size: 10, weight: .medium))
+                PanelIcon(whole ? "chevron.up" : "chevron.down", size: 12)
             }
             .foregroundStyle(hovering ? tokens.textLink : tokens.textMuted)
             .padding(.horizontal, Space._1).frame(height: Metric.controlSmall)

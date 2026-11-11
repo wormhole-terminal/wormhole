@@ -19,6 +19,8 @@ struct DiffHeader: View {
     /// In the terminal's title row the row gives the height and the insets.
     var inTitleRow = false
     @Environment(\.tokens) private var tokens
+    @Environment(\.panelHost) private var host
+    @Environment(\.panelRoot) private var root
 
     var body: some View {
         HStack(spacing: PanelMetrics.gap) {
@@ -42,6 +44,10 @@ struct DiffHeader: View {
                 BandButton(symbol: "text.append", label: "Wrap long lines", inRow: true) { wrap.toggle() }
                     .opacity(wrap ? 1 : 0.6)
             }
+            // The file in the chosen editor, when it is on disk (a deleted file has nothing to open).
+            if let on = onDisk, let open = host?.openTooltip(line: nil), host?.editorName != nil {
+                BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) { host?.open(on, line: nil) }
+            }
             if splitFits {
                 Segmented([("Split", true), ("Unified", false)], selection: $split)
                 Button(action: close) {
@@ -58,6 +64,8 @@ struct DiffHeader: View {
         .frame(height: inTitleRow ? nil : splitFits ? 44 : 40)
     }
 
+    private var onDisk: String? { root.flatMap { RepoFiles.resolve(root: $0, relative: file.path) } }
+
     private var crumb: Text {
         let folders = file.path.split(separator: "/", omittingEmptySubsequences: false).dropLast().joined(separator: "/")
         let quiet = Text(folders.isEmpty ? "" : folders + "/").foregroundStyle(tokens.textMuted)
@@ -72,12 +80,14 @@ struct DiffHeader: View {
             out.append((file.renamedFrom.map { "Renamed from \($0)" } ?? "Renamed", tokens.primary))
         }
         if diff?.isBinary == true { out.append(("Binary", tokens.textMuted)) }
-        if file.lfs { out.append(("LFS", tokens.textMuted)) }
+        if file.lfs || diff?.isLFS == true { out.append(("LFS", tokens.textMuted)) }
+        if let mode = diff?.modeChange { out.append((mode, tokens.textMuted)) }
+        if diff?.noHighlight == true { out.append((panelText("diff-badge-no-highlighting", "No highlighting"), tokens.textMuted)) }
         return out
     }
 }
 
-/// A short status word in a colour (`style::status_badge`): the word on a 15 % tint of it, in the chip corners.
+/// A short status word in a colour (`style::status_badge`): outlined in it, the word in it, no fill, in the chip corners.
 struct StatusBadge: View {
     let text: String
     let color: Color
@@ -86,6 +96,6 @@ struct StatusBadge: View {
     var body: some View {
         Text(text).font(TextRole.caption.font).foregroundStyle(color).lineLimit(1).fixedSize()
             .padding(.horizontal, Space._2).frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)
-            .background(color.opacity(0.15), in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
+            .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).strokeBorder(color, lineWidth: tokens.metrics.borderWidth) }
     }
 }

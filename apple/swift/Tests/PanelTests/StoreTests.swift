@@ -58,7 +58,7 @@ final class StoreTests: XCTestCase {
         XCTAssertNotNil(c.history.diff.parsed)
         c.history.toggle(sha)
         XCTAssertNil(c.history.selection, "closing the commit closes its diff")
-        c.showFileHistory(PanelSamples.files[0].path)
+        c.showFileHistory([PanelSamples.files[0].path])
         try await settle()
         XCTAssertEqual(c.tab, .history)
         XCTAssertEqual(c.history.model.commits.count, 1)
@@ -87,14 +87,39 @@ final class StoreTests: XCTestCase {
         f.setPinned("docs", true)
         try await settle()
         XCTAssertTrue(f.isPinned("docs"))
-        f.step(1)
-        f.fold(open: false)
+        // The keys' press: a folder toggles, a file shows in the viewer (the walk itself is the core's, tested over the FFI).
+        f.press(WalkRow(id: "docs", level: 0, isOpen: true), space: false, following: false)
+        XCTAssertFalse(f.rows.contains { $0.path == "docs/ARCHITECTURE.md" })
         f.chooseFolder()
         host.folder = "/elsewhere"
         f.choose("/elsewhere")
         XCTAssertEqual(f.root, "/elsewhere")
         f.followTerminal()
         XCTAssertEqual(f.root, "/p")
+    }
+
+    func testMarksAndTheKeysOnTheChangesList() async throws {
+        let c = try await controller()
+        let list = c.changes
+        let files = list.order
+        XCTAssertGreaterThan(files.count, 2)
+        list.click(files[0], command: true, shift: false)
+        list.click(files[2], command: true, shift: false)
+        XCTAssertEqual(list.marked, [files[0].path, files[2].path])
+        XCTAssertNil(list.selection, "a mark opens no diff")
+        XCTAssertEqual(list.menuPaths(for: files[2]), [files[0].path, files[2].path], "a marked row's menu acts on every marked file")
+        XCTAssertEqual(list.menuPaths(for: files[1]), [files[1].path], "an unmarked row's menu is its own")
+        list.click(files[1], command: false, shift: true)
+        XCTAssertEqual(list.marked.count, 3, "shift marks the range from the last clicked file")
+        list.click(files[1], command: false, shift: false)
+        XCTAssertTrue(list.marked.isEmpty, "a plain click opens the diff and drops the marks")
+        XCTAssertEqual(list.selection, files[1].id)
+        // A band folds only on Space; a file's press opens its diff, and the diff then follows the cursor.
+        let rows = list.walkRows
+        XCTAssertTrue(rows.contains { $0.isBand })
+        XCTAssertTrue(list.following)
+        list.press(rows.first { $0.name == files[0].name && !$0.isBand }!, space: false, following: true)
+        XCTAssertEqual(list.selection, files[0].id)
     }
 
     func testNotesSendStashAndMove() async throws {
@@ -133,29 +158,26 @@ final class StoreTests: XCTestCase {
         let made = MadeWorktree(repo: "/p", branch: "fix/x", folder: "/p-worktrees/fix-x")
         let c = try await controller(made: made)
         let w = c.worktrees
-        XCTAssertEqual(w.made, made)
+        let found = await w.made(at: "/p-worktrees/fix-x")
+        XCTAssertEqual(found, made)
         w.ask()
         try await settle()
         XCTAssertTrue(w.asking)
+        XCTAssertEqual(w.footnote, "Folder: <branch>")
         w.branch = "bad name"
         try await settle()
-        XCTAssertFalse(w.canCreate)
+        XCTAssertTrue(w.canCreate, "Create answers a refused branch with its reason instead of going grey")
+        w.create()
+        try await settle()
+        XCTAssertTrue(w.asking, "a refused branch asks nothing of git")
         w.branch = "feature/new"
         try await settle()
-        XCTAssertTrue(w.canCreate)
         XCTAssertTrue(w.footnote?.hasPrefix("Folder: ") == true)
         w.create()
         try await settle()
         XCTAssertFalse(w.asking)
-        w.dirty = true
-        w.askRemoval()
-        XCTAssertFalse(w.confirmingRemoval, "a worktree with changes stays")
-        w.dirty = false
-        w.askRemoval()
-        XCTAssertTrue(w.confirmingRemoval)
-        w.confirmRemoval()
-        try await settle()
-        XCTAssertNil(w.made)
+        await w.remove(made)
+        XCTAssertNil(w.alert)
     }
 
     func testUsageBadgeAndCoverFollowPresentation() async throws {

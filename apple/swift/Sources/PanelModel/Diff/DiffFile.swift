@@ -25,6 +25,32 @@ public struct DiffHunk: Hashable, Sendable {
     public init(header: String, lines: [DiffLine]) { (self.header, self.lines) = (header, lines) }
 }
 
+/// What a column with nothing to show says (`features/git/diff/notes.rs`): why, a size or what a pointer stands for, and
+/// the LFS object whole for copying.
+public struct SideNote: Hashable, Sendable {
+    public var text: String
+    public var detail: String?
+    public var oid: String?
+
+    public init(text: String, detail: String? = nil, oid: String? = nil) { (self.text, self.detail, self.oid) = (text, detail, oid) }
+}
+
+/// The notes of a diff with no lines: one per column when split (old, new), one when unified.
+public struct DiffNotes: Hashable, Sendable {
+    public var split: [SideNote?] = []
+    public var unified: SideNote?
+
+    public init(split: [SideNote?] = [], unified: SideNote? = nil) { (self.split, self.unified) = (split, unified) }
+}
+
+/// A patch bigger than core loads unasked: its two lines of words, until the person says "Load diff".
+public struct TooLarge: Hashable, Sendable {
+    public var title: String
+    public var detail: String
+
+    public init(title: String, detail: String) { (self.title, self.detail) = (title, detail) }
+}
+
 public struct DiffFile: Hashable, Sendable {
     public var oldPath: String?
     public var newPath: String?
@@ -32,6 +58,16 @@ public struct DiffFile: Hashable, Sendable {
     public var hunks: [DiffHunk] = []
     /// Core's words where a diff has no lines: an LFS pointer, a file too large to load unasked, a submodule's commits.
     public var note: String?
+    public var notes = DiffNotes()
+    public var tooLarge: TooLarge?
+    /// "Mode 100644 → 100755" when only the mode changed or besides the lines.
+    public var modeChange: String?
+    /// More lines than core colours: shown plain, with the badge "No highlighting".
+    public var noHighlight = false
+    public var isLFS = false
+    /// The longest line as drawn, in characters (tabs and marks spelled out, capped): measured once when the diff is read, so
+    /// an unwrapped layout never measures lines again.
+    public var widest = 0
 
     public var isNew: Bool { oldPath == nil }
     public var isDeleted: Bool { newPath == nil }

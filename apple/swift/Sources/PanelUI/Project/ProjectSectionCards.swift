@@ -16,7 +16,7 @@ struct ProjectFeaturesCard: View {
             CardBand(title: panelText("project-use", "Use from this project"))
             ForEach(state.features) { row in
                 TwoLineRow(title: row.feature.label, detail: row.hint, detailWarns: row.warns) {
-                    Image(systemName: row.feature.symbol).font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
+                    PanelIcon(row.feature.symbol, size: Metric.glyph).foregroundStyle(tokens.textMuted)
                 } trailing: {
                     Toggle(row.feature.label, isOn: Binding(get: { row.on }, set: { store.setFeature(row.feature, on: $0) }))
                         .labelsHidden().toggleStyle(.switch).controlSize(.small).tint(tokens.primary)

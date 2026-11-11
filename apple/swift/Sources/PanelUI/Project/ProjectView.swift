@@ -30,7 +30,7 @@ public struct ProjectView: View {
             }
         }
         .sheet(isPresented: $store.showingAllLines) {
-            if let state = store.state { TrustLinesSheet(state: state) { store.showingAllLines = false } }
+            TrustLinesSheet(store: store) { store.showingAllLines = false }
         }
     }
 

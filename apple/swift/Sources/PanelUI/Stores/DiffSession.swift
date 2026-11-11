@@ -23,6 +23,7 @@ public final class DiffSession {
     }
     public let preferences: PanelPreferences
     @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var reload: (@Sendable (Bool) async throws -> DiffFile)?
     @ObservationIgnored private let highlighter: any SyntaxHighlighting
 
     public init(highlighter: any SyntaxHighlighting, preferences: PanelPreferences = PanelPreferences()) {
@@ -32,17 +33,28 @@ public final class DiffSession {
 
     public var parsed: DiffFile? { if case let .shown(diff) = phase { diff } else { nil } }
 
-    public func open(_ file: ChangedFile, fetch: @escaping @Sendable () async throws -> DiffFile) {
+    /// `fetch(loadAnyway)` reads the diff; a patch core would not load unasked is read again with true ("Load diff").
+    public func open(_ file: ChangedFile, fetch: @escaping @Sendable (_ loadAnyway: Bool) async throws -> DiffFile) {
         self.file = file
+        reload = fetch
+        read(loadAnyway: false)
+    }
+
+    public func loadAnyway() { read(loadAnyway: true) }
+
+    private func read(loadAnyway: Bool) {
+        guard let fetch = reload else { return }
         phase = .loading
         task?.cancel()
         let highlighter = highlighter
+        let tabWidth = preferences.tabWidth
         task = Task { [weak self] in
             do {
-                let fetched = try await fetch()
+                let fetched = try await fetch(loadAnyway)
                 let diff = await Task.detached(priority: .userInitiated) { () -> DiffFile in
                     var colored = fetched
                     DiffHighlighting.apply(to: &colored, with: highlighter)
+                    colored.widest = DiffRows.widest(colored, tabWidth: tabWidth)
                     return colored
                 }.value
                 guard !Task.isCancelled else { return }
@@ -56,6 +68,7 @@ public final class DiffSession {
 
     public func close() {
         task?.cancel()
+        reload = nil
         file = nil
         phase = .idle
     }

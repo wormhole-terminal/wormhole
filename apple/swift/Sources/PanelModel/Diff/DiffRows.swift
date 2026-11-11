@@ -61,4 +61,16 @@ public enum DiffRows {
     private static func cell(_ line: DiffLine) -> DiffCell {
         DiffCell(kind: line.kind, old: line.oldNumber, new: line.newNumber, text: line.text, noNewline: line.noNewline, spans: line.spans)
     }
+
+    /// The longest line of the diff as drawn, capped at `limit + 1` (its elision mark). A line of plain printable ASCII is its
+    /// own length; only the others go through core's rule.
+    public static func widest(_ file: DiffFile, tabWidth: Int, limit: Int = 5_000) -> Int {
+        var widest = 0
+        for line in file.hunks.lazy.flatMap(\.lines) {
+            let plain = line.text.utf8.allSatisfy { $0 >= 0x20 && $0 < 0x7F }
+            let width = plain ? line.text.utf8.count : VisibleRules.line(line.text, tabWidth).text.unicodeScalars.count
+            widest = max(widest, min(width, limit + 1))
+        }
+        return widest
+    }
 }

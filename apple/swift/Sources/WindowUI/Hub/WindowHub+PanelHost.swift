@@ -7,6 +7,7 @@ import TerminalCore
 
 extension WindowHub {
     func connect(_ host: SystemPanelHost) {
+        host.chosenApp = { [unowned self] in openIn.choice().app }
         // Pasted as the GPUI app does (`SendText`): brackets where the program asked, so an agent takes a note as text.
         host.terminal.send = { [unowned self] text in selectedSource?.paste(text) }
         host.terminal.submit = { [unowned self] in selectedSource?.write(Data("\r".utf8)) }

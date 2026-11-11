@@ -13,17 +13,22 @@ struct FileRowView: View {
     var depth = 0
     var inTree = false
     var selected = false
+    /// What the menu acts on (the marked files); the file alone by default. `onDisk` nil asks the disk.
+    var menu: [String]?
+    var onDisk: Bool?
     let action: () -> Void
     @State private var width: CGFloat = 0
     @Environment(\.tokens) private var tokens
+    @Environment(\.panelHost) private var host
+    @Environment(\.panelRoot) private var root
 
     var body: some View {
-        PanelRow(selected: selected, action: action) { _ in
+        PanelRow(selected: selected, action: action) { hovering in
             HStack(spacing: PanelMetrics.gap) {
                 FileIcon(kind: .file(file.path), tint: muted)
                 if let from = file.renamedFrom { renamed(from) }
                 if file.moved {
-                    Image(systemName: "folder.badge.gearshape").font(.system(size: 12)).foregroundStyle(muted)
+                    PanelIcon("folder.badge.plus", size: 12).foregroundStyle(muted)
                 }
                 Text(file.name)
                     .font(TextRole.body.font.weight(selected ? .semibold : .regular))
@@ -36,6 +41,12 @@ struct FileRowView: View {
                         .lineLimit(1).truncationMode(.head)
                 }
                 Spacer(minLength: 0)
+                // The icon that opens the file in the chosen editor, over the row while the pointer is (a deleted file has none).
+                if hovering, onDisk ?? (file.kind != .deleted), let open = host?.openTooltip(line: nil), host?.editorName != nil {
+                    BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) {
+                        host?.open(root.flatMap { RepoFiles.resolve(root: $0, relative: file.path) } ?? file.path, line: nil)
+                    }
+                }
                 FileLinesLabel(lines: file.lines, muted: muted)
                 Text(file.kind.letter)
                     .font(TextRole.caption.font.weight(.bold))
@@ -48,7 +59,7 @@ struct FileRowView: View {
             .onGeometryChange(for: CGFloat.self, of: { $0.size.width - PanelMetrics.inset * 2 }) { width = $0 }
         }
         .help("\(file.path)\n\(file.about)")
-        .changedFileMenu(file)
+        .pathMenu(menu ?? [file.path], onDisk: onDisk)
         .accessibilityLabel("\(file.name), \(file.kind.title)")
     }
 
@@ -75,6 +86,8 @@ struct FileRowView: View {
 /// (a chain of single folders is one row, "crates/wormhole/src"). Folds on a click.
 struct FolderRowView: View {
     let label: String
+    /// Relative to the repository: what its menu acts on.
+    let path: String
     let depth: Int
     let collapsed: Bool
     let action: () -> Void
@@ -92,6 +105,7 @@ struct FolderRowView: View {
             .padding(.trailing, PanelMetrics.inset)
             .frame(minHeight: Metric.row)
         }
+        .pathMenu([path])
         .accessibilityLabel(label)
         .accessibilityValue(collapsed ? "folded" : "open")
     }

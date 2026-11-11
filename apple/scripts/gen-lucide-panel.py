@@ -20,6 +20,8 @@ ICONS = {
     "filePlus": "file-plus", "info": "info", "shield": "shield", "shieldCheck": "shield-check",
     "triangleAlert": "triangle-alert", "arrowUpRight": "arrow-up-right", "arrowRight": "arrow-right",
     "play": "play", "ellipsis": "ellipsis", "messageSquarePlus": "message-square-plus", "ban": "ban",
+    "folderGit2": "folder-git-2", "folderInput": "folder-input", "squareTerminal": "square-terminal", "tag": "tag",
+    "chevronUp": "chevron-up", "settings": "settings", "palette": "palette", "archive": "archive", "commit": "git-commit-horizontal",
 }
 
 

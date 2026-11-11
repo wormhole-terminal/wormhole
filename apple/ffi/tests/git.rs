@@ -194,7 +194,7 @@ fn lfs_pointers_are_summarised_not_listed() {
     let status = git_obj.status(folder.clone(), None).expect("status");
     assert!(status.files.iter().any(|f| f.path == "model.dat" && f.lfs));
     match git_obj.diff(folder, "model.dat".into(), None, false).expect("diff") {
-        GitDiff::Lfs { summary } => assert_eq!(summary.as_deref(), Some("1 KB → 52.9 KB · oid bbbbbb…")),
+        GitDiff::Lfs { summary, .. } => assert_eq!(summary.as_deref(), Some("1 KB → 52.9 KB · oid bbbbbb…")),
         other => panic!("{other:?}"),
     }
 }

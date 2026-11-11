@@ -19,8 +19,7 @@ public struct FilesView: View {
 
     public var body: some View {
         SelectableListSplit(
-            selection: store.selected, hasDetail: presentation == .panel && store.viewing != nil, label: "Files", step: store.step,
-            fold: store.fold(open:), press: store.press
+            hasDetail: presentation == .panel && store.viewing != nil, label: "Files", walker: store
         ) {
             tree.environment(\.selectionSpace, space)
         } bottom: {

@@ -49,7 +49,6 @@ enum PanelBackendsFactory {
                     let files = try FilesBridge.makeBackends(authenticator: authenticator, effects: effects)
                     (backends.files, backends.project, backends.usage) = (files.files, files.project, files.usage)
                     made.notes = files.notes
-                    FilesBridge.installNoteRules()
                     made.usage = files.usage.service
                 } catch {
                     FileHandle.standardError.write(Data("panel: files, project and usage are the sample (\(error))\n".utf8))

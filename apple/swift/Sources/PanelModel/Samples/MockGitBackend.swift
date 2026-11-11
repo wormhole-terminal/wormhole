@@ -15,7 +15,7 @@ public struct MockGitBackend: GitBackend {
 
     public func changes(in folder: String, comparedWith rev: Rev?) async throws -> [ChangedFile] { files }
 
-    public func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> DiffFile {
+    public func diff(of path: String, in folder: String, comparedWith rev: Rev?, loadAnyway: Bool) async throws -> DiffFile {
         PanelSamples.diffs[path] ?? DiffFile(newPath: path)
     }
 
@@ -36,7 +36,7 @@ public struct MockGitBackend: GitBackend {
         PanelSamples.details(of: sha).map { .init(text: $0.whole, more: false) }
     }
 
-    public func diff(of path: String, inCommit sha: String, folder: String) async throws -> DiffFile {
+    public func diff(of path: String, inCommit sha: String, folder: String, loadAnyway: Bool) async throws -> DiffFile {
         PanelSamples.diffs[path] ?? DiffFile(newPath: path)
     }
 

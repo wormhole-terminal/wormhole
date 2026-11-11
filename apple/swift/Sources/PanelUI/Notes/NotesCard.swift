@@ -22,6 +22,7 @@ struct NotesCard: View {
                 count: model.filledNotes > 0 ? CountText.grouped(model.filledNotes) : nil,
                 spoken: "Notes, \(model.filledNotes) written", onToggle: { model.notesCollapsed.toggle() },
                 add: (panelText("notes-new", "New note"), { store.newNote() }))
+                .walkRow("band-notes")
             if !model.notesCollapsed {
                 ForEach($store.model.notes) { $note in
                     let ids = model.notes.map(\.id)
@@ -31,6 +32,7 @@ struct NotesCard: View {
                             if let from = ids.firstIndex(of: note.id), let to = Reorder.step(from, delta, count: ids.count) { store.moveNote(from: from, to: to) }
                         })
                         .reorderable(id: note.id, in: ids, dragging: $dragging, move: store.moveNote)
+                        .walkRow("note-" + note.id.uuidString)
                         .transition(motion.row)
                 }
             }

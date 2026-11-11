@@ -4,7 +4,7 @@
 
 public enum DiffHighlighting {
     public static func apply(to file: inout DiffFile, with highlighter: some SyntaxHighlighting) {
-        guard !file.isBinary else { return }
+        guard !file.isBinary, !file.noHighlight else { return }
         let path = file.path
         for h in file.hunks.indices {
             let lines = file.hunks[h].lines

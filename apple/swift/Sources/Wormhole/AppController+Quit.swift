@@ -89,18 +89,28 @@ extension AppController {
         if case .unavailable? = session.hub.store.hostProblem(of: id) {
             return askToEndHost(of: terminal, in: session, then: done)
         }
-        guard row.runsSomething || fromCommandLine else {
-            finishClosing(id, in: session)
-            return done()
-        }
-        let detail = CloseQuestions.session(
-            agent: terminal.agent?.name, stakes: [], status: terminal.runStatus,
-            commandRunning: row.runningCommand != nil, programs: row.runningCommand.map { [$0] } ?? [])
-        let question = Question(
-            title: CloseQuestions.sessionTitle(terminal.title),
-            detail: fromCommandLine ? detail + " " + AuxText.controlCloseAsked : detail, confirm: "Close")
         Task {
-            if case .confirm = await QuestionSheet(question).ask(in: session.window) { finishClosing(id, in: session) }
+            let extra = await worktreeClose(of: [terminal], in: session, group: false)
+            guard row.runsSomething || fromCommandLine || extra != nil else {
+                finishClosing(id, in: session)
+                return done()
+            }
+            var detail = row.runsSomething || fromCommandLine
+                ? CloseQuestions.session(
+                    agent: terminal.agent?.name, stakes: [], status: terminal.runStatus,
+                    commandRunning: row.runningCommand != nil, programs: row.runningCommand.map { [$0] } ?? [])
+                : ""
+            if fromCommandLine { detail += " " + AuxText.controlCloseAsked }
+            if let extra { detail = detail.isEmpty ? extra.note : detail + " " + extra.note }
+            let question = Question(
+                title: CloseQuestions.sessionTitle(terminal.title), detail: detail, confirm: "Close", alsoButtons: extra?.also.map { [$0] } ?? [])
+            switch await QuestionSheet(question).ask(in: session.window) {
+            case .confirm: finishClosing(id, in: session)
+            case .also:
+                finishClosing(id, in: session)
+                for made in extra?.remove ?? [] { Task { await session.hub.panel.worktrees.remove(made) } }
+            case .cancel: break
+            }
             done()
         }
     }
@@ -130,16 +140,25 @@ extension AppController {
         guard let section = session.hub.state.sections.first(where: { $0.head?.id == id }), let head = section.head else { return }
         // A folded group lists no rows: the core counts what works in it, and says all of it is to end.
         let running = section.rows.filter(\.runsSomething)
-        guard section.workingCount > 0 || !running.isEmpty else { return finishClosingGroup(id, in: session) }
-        let question = Question(
-            title: CloseQuestions.groupTitle(head.name),
-            detail: CloseQuestions.group(
-                terminals: section.terminalCount,
-                running: running.map { StillRunning.Fact(status: $0.terminal.agentStatus, commandRunning: $0.runningCommand != nil) },
-                programs: running.compactMap(\.runningCommand), stakes: []),
-            confirm: "Close Group")
         Task {
-            if case .confirm = await QuestionSheet(question).ask(in: session.window) { finishClosingGroup(id, in: session) }
+            let extra = await worktreeClose(of: section.rows.map(\.terminal), in: session, group: true)
+            guard section.workingCount > 0 || !running.isEmpty || extra != nil else { return finishClosingGroup(id, in: session) }
+            var detail = section.workingCount > 0 || !running.isEmpty
+                ? CloseQuestions.group(
+                    terminals: section.terminalCount,
+                    running: running.map { StillRunning.Fact(status: $0.terminal.agentStatus, commandRunning: $0.runningCommand != nil) },
+                    programs: running.compactMap(\.runningCommand), stakes: [])
+                : ""
+            if let extra { detail = detail.isEmpty ? extra.note : detail + " " + extra.note }
+            let question = Question(
+                title: CloseQuestions.groupTitle(head.name), detail: detail, confirm: "Close Group", alsoButtons: extra?.also.map { [$0] } ?? [])
+            switch await QuestionSheet(question).ask(in: session.window) {
+            case .confirm: finishClosingGroup(id, in: session)
+            case .also:
+                finishClosingGroup(id, in: session)
+                for made in extra?.remove ?? [] { Task { await session.hub.panel.worktrees.remove(made) } }
+            case .cancel: break
+            }
         }
     }
 

@@ -1,22 +1,22 @@
 // A keyboard-driven list above a detail pane. The list is as tall as its rows up to a share of the panel, so a
 // short list does not leave a hole and a long one does not push the detail out; with nothing open it takes it all.
-// Arrow keys call `step`; the selected row scrolls into view; a click anywhere in the list takes the keyboard.
+// The keys walk the tab through its `PanelWalking` (the core's list rules); the row the keys are on wears the ring and
+// scrolls into view; a click anywhere in the list takes the keyboard.
 
+import AppKit
 import DesignSystem
+import PanelModel
 import SwiftUI
 
 struct SelectableListSplit<Top: View, Bottom: View>: View {
-    let selection: AnyHashable?
     let hasDetail: Bool
     let label: String
     var maxTopShare: CGFloat = 0.45
-    let step: (Int) -> Void
-    /// → and ← on a list that folds, and ↩.
-    var fold: ((Bool) -> Void)?
-    var press: (() -> Void)?
+    let walker: any PanelWalking
     @ViewBuilder let top: Top
     @ViewBuilder let bottom: Bottom
     @FocusState private var focused: Bool
+    @State private var typed = TypedAhead()
     @Environment(PanelKeyboard.self) private var keyboard: PanelKeyboard?
     @Environment(\.panelMotion) private var motion
     @Environment(\.tokens) private var tokens
@@ -32,6 +32,7 @@ struct SelectableListSplit<Top: View, Bottom: View>: View {
             }
             .animation(motion.fold, value: hasDetail)
         }
+        .environment(\.walkCursor, focused ? walker.cursor : nil)
         .focusable()
         .focused($focused)
         .focusEffectDisabled()
@@ -41,11 +42,28 @@ struct SelectableListSplit<Top: View, Bottom: View>: View {
         .onChange(of: focused) { _, now in keyboard?.focusChanged(now) }
         .onAppear { keyboard?.appeared() }
         .onDisappear { keyboard?.disappeared(focused: focused) }
-        .onKeyPress(.downArrow) { step(1); return .handled }
-        .onKeyPress(.upArrow) { step(-1); return .handled }
-        .onKeyPress(.rightArrow) { fold.map { $0(true) } == nil ? .ignored : .handled }
-        .onKeyPress(.leftArrow) { fold.map { $0(false) } == nil ? .ignored : .handled }
-        .onKeyPress(.return) { press.map { $0() } == nil ? .ignored : .handled }
+        .onKeyPress(phases: [.down, .repeat], action: handle)
+        .onCopyCommand { walker.copyCursor().map { [NSItemProvider(object: $0 as NSString)] } ?? [] }
         .accessibilityLabel(label)
+    }
+
+    private func handle(_ press: KeyPress) -> KeyPress.Result {
+        guard press.modifiers.isDisjoint(with: [.command, .control]) else { return .ignored }
+        let option = press.modifiers.contains(.option)
+        let shift = press.modifiers.contains(.shift)
+        switch press.key {
+        case .upArrow: walker.walk(option ? .first : .up, marking: shift)
+        case .downArrow: walker.walk(option ? .last : .down, marking: shift)
+        case .leftArrow: walker.walk(.left)
+        case .rightArrow: walker.walk(.right)
+        case .home: walker.walk(.first)
+        case .end: walker.walk(.last)
+        case .return: walker.pressCursor(space: false)
+        case .space: walker.pressCursor(space: true)
+        default:
+            guard !option, let letter = press.characters.first, letter.isLetter || letter.isNumber else { return .ignored }
+            walker.typeAhead(typed.push(String(letter)))
+        }
+        return .handled
     }
 }

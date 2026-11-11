@@ -5,6 +5,7 @@
 import AppKit
 import DesignSystem
 import PanelModel
+import PanesModel
 import TerminalUI
 import WordsModel
 
@@ -24,7 +25,9 @@ final class SystemPanelHost: PanelHost {
         var say: (Notice) -> Void = { _ in }
     }
 
-    let editorName: String? = nil
+    /// The app the Open in button opens files in (the window's choice); Finder is a reveal, so it names no editor.
+    var chosenApp: () -> OpenInApp? = { nil }
+    var editorName: String? { chosenApp().flatMap { $0 == .finder ? nil : $0.name } }
     let homeFolder: String? = NSHomeDirectory()
 
     func copy(_ text: String) {
@@ -43,7 +46,16 @@ final class SystemPanelHost: PanelHost {
 
     func reveal(_ path: String) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) }
 
-    func open(_ path: String, line: Int?) { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
+    /// The core runs the app's own way of taking a line; a build without it opens the file in the default app.
+    func open(_ path: String, line: Int?) {
+        guard let app = chosenApp() else { return }
+        let folder = NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundle)?.path
+        if !RepoFiles.opener(app.bundle, path, line, folder) { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
+    }
+
+    func openTooltip(line: Int?) -> String? { chosenApp().map { RepoFiles.tooltip($0.bundle, $0.name, line) } }
+
+    func exists(_ path: String) -> Bool { FileManager.default.fileExists(atPath: path) }
 
     func paste(_ text: String) -> Bool { terminal.paste(text) }
     func send(_ text: String) { terminal.send(text) }

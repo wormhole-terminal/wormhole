@@ -11,6 +11,7 @@ public enum Lucide: Sendable, Hashable {
     case chevronLeft, chevronRight, chevronDown, chevronsUpDown, x, plus, copy, check, refreshCw, slidersHorizontal, textWrap
     case externalLink, inbox, file, fileText, filePlus, info, shield, shieldCheck, triangleAlert, arrowUpRight, arrowRight
     case play, ellipsis, messageSquarePlus, ban
+    case folderGit2, folderInput, squareTerminal, tag, chevronUp, settings, palette, archive, commit
 }
 
 /// An icon stroked in the foreground colour, its line width scaled with the box as the SVG's is.

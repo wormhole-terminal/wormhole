@@ -48,9 +48,9 @@ public final class PanelController {
         worktrees.follow(folder)
     }
 
-    /// File History: the log limited to the commits that touched `path`.
-    public func showFileHistory(_ path: String) {
-        history.filter(by: [path])
+    /// File History: the log limited to the commits that touched these paths.
+    public func showFileHistory(_ paths: [String]) {
+        history.filter(by: paths)
         tab = .history
     }
 

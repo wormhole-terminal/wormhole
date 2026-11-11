@@ -24,6 +24,7 @@ struct StepsCard: View {
                 count: open > 0 ? CountText.grouped(open) : nil, spoken: "Next steps, \(open) open",
                 onToggle: { model.stepsCollapsed.toggle() },
                 add: ("Add next step", { model.stepsCollapsed = false; (store.draftAfter, store.drafting) = (nil, true) }))
+                .walkRow("band-steps")
             if !model.stepsCollapsed {
                 ForEach(model.tasks.rows(showDone: model.showDone)) { row in
                     switch row {
@@ -37,10 +38,11 @@ struct StepsCard: View {
                                 if let from = ids.firstIndex(of: task.id), let to = Reorder.step(from, delta, count: ids.count) { store.moveTask(from: from, to: to) }
                             })
                             .reorderable(id: task.id, in: ids, dragging: $dragging, move: store.moveTask)
+                            .walkRow("step-" + task.id.uuidString)
                             .transition(motion.row)
                         if store.drafting, store.draftAfter == task.id { draft }
                     case let .doneFold(count):
-                        DoneFold(count: count, open: model.showDone) { model.showDone.toggle() }.transition(motion.row)
+                        DoneFold(count: count, open: model.showDone) { model.showDone.toggle() }.walkRow("done-fold").transition(motion.row)
                     }
                 }
                 if store.drafting, store.draftAfter == nil { draft }

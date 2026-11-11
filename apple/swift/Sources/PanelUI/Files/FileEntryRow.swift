@@ -13,7 +13,7 @@ struct FileEntryRow: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        if row.isEntry { entry } else { note }
+        if row.isEntry { entry.walkRow(row.path) } else { note }
     }
 
     private var selected: Bool { store.selected == row.path }

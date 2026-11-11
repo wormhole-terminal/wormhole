@@ -4,6 +4,8 @@
 //! burst of file events (`FFI-CONTRACT.md`, "Git").
 
 mod error;
+mod notes;
+mod problem;
 mod records;
 mod service;
 mod shown;
@@ -15,6 +17,8 @@ pub use records::{
     GitChange, GitChangeKind, GitDiff, GitDiffFile, GitDiffLine, GitHunk, GitLineKind, GitLog, GitLogCommit,
     GitRef, GitRefKind, GitRev, GitRevKind, GitStatus,
 };
+pub use notes::{GitDiffNotes, GitSideNote};
+pub use problem::{GitProblemWords, git_problem};
 pub use service::Git;
 pub use shown::{GitCommitDetails, GitCompact, GitFact, GitParent, GitSpan, GitTone};
 pub use watch::{GitListener, GitWatch};

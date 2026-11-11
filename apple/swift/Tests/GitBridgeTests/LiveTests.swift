@@ -26,10 +26,10 @@ import Testing
         let modified = try #require(state.files.first { $0.path == "a.txt" })
         #expect(modified.lines == .counts(added: 2, removed: 1))
 
-        let parsed = try await git.diff(of: "a.txt", in: folder, comparedWith: nil)
+        let parsed = try await git.diff(of: "a.txt", in: folder, comparedWith: nil, loadAnyway: false)
         let counts = parsed.hunks[0].lines.reduce(into: (added: 0, removed: 0)) { $0.added += $1.kind == .added ? 1 : 0; $0.removed += $1.kind == .removed ? 1 : 0 }
         #expect(parsed.path == "a.txt" && parsed.hunks.count == 1 && counts == (2, 1))
-        let renamed = try await git.diff(of: "new.txt", in: folder, comparedWith: nil)
+        let renamed = try await git.diff(of: "new.txt", in: folder, comparedWith: nil, loadAnyway: false)
         #expect(renamed.isRenamed && renamed.oldPath == "old.txt")
 
         let revs = try await git.revs(in: folder, forHistory: true)
@@ -57,7 +57,7 @@ import Testing
         #expect(opened.whole == "Because it is needed." && opened.files.map(\.path) == ["b.txt"] && opened.authorLine.hasPrefix("Test <"))
         let compact = try #require(git.compactMessage(of: opened.sha, in: root.path, lineChars: 80))
         #expect(compact == CommitDetails.Compact(text: "Because it is needed.", more: false))
-        let diff = try await git.diff(of: "b.txt", inCommit: opened.sha, folder: root.path)
+        let diff = try await git.diff(of: "b.txt", inCommit: opened.sha, folder: root.path, loadAnyway: false)
         #expect(diff.isNew)
 
         await #expect(throws: GitFailure.self) { try await git.log(in: root.path, of: Rev(name: "no-such-branch"), paths: []) }

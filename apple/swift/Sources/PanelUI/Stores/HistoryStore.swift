@@ -19,6 +19,8 @@ public final class HistoryStore {
     /// Why the details could not be read.
     public private(set) var detailsError: String?
     public private(set) var selection: ChangedFile.ID?
+    /// The row the keys are on (`PanelWalking`).
+    public var cursor: String?
     public private(set) var revs: [Rev] = []
     public let diff: DiffSession
     @ObservationIgnored private let git: any GitBackend
@@ -119,7 +121,7 @@ public final class HistoryStore {
         selection = id
         guard let folder, let sha = expanded, let file = current else { return diff.close() }
         let git = git
-        diff.open(file) { try await git.diff(of: file.path, inCommit: sha, folder: folder) }
+        diff.open(file) { try await git.diff(of: file.path, inCommit: sha, folder: folder, loadAnyway: $0) }
     }
 
     public func close() { open(nil) }

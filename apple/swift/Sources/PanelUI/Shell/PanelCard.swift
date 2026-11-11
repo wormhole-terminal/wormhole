@@ -22,14 +22,18 @@ struct PanelCard<Content: View>: View {
 /// The scrolling column of cards, with the room above the first and the tail under the last.
 struct PanelScroll<Content: View>: View {
     @ViewBuilder let content: Content
+    @Environment(\.walkCursor) private var cursor
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) { content }
-                .padding(.top, PanelMetrics.listTop)
-                .padding(.bottom, PanelMetrics.tail - PanelMetrics.cardGap)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 0) { content }
+                    .padding(.top, PanelMetrics.listTop)
+                    .padding(.bottom, PanelMetrics.tail - PanelMetrics.cardGap)
+            }
+            .scrollIndicators(.automatic)
+            .onChange(of: cursor) { _, now in if let now { proxy.scrollTo(now) } }
         }
-        .scrollIndicators(.automatic)
     }
 }
 

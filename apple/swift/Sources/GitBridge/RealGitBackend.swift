@@ -31,9 +31,9 @@ public struct RealGitBackend: GitBackend {
         return ChangesResult(files: state.files, compareMissing: state.compareMissing)
     }
 
-    public func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> DiffFile {
+    public func diff(of path: String, in folder: String, comparedWith rev: Rev?, loadAnyway: Bool) async throws -> DiffFile {
         try await GitQueue.run { [git] in
-            try git.diff(folder: folder, path: path, compare: rev?.name, loadAnyway: false).file()
+            try git.diff(folder: folder, path: path, compare: rev?.name, loadAnyway: loadAnyway).file()
         }
     }
 
@@ -51,9 +51,9 @@ public struct RealGitBackend: GitBackend {
         git.compactMessage(folder: folder, sha: sha, lineChars: UInt32(clamping: lineChars)).map { .init(text: $0.text, more: $0.more) }
     }
 
-    public func diff(of path: String, inCommit sha: String, folder: String) async throws -> DiffFile {
+    public func diff(of path: String, inCommit sha: String, folder: String, loadAnyway: Bool) async throws -> DiffFile {
         try await GitQueue.run { [git] in
-            try git.commitDiff(folder: folder, sha: sha, path: path, loadAnyway: false).file()
+            try git.commitDiff(folder: folder, sha: sha, path: path, loadAnyway: loadAnyway).file()
         }
     }
 

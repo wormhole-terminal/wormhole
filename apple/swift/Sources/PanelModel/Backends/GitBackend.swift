@@ -13,8 +13,9 @@ public protocol GitBackend: Sendable {
     func changes(in folder: String, comparedWith rev: Rev?) async throws -> [ChangedFile]
     /// The same, with the name of the compared branch when it no longer exists (the list is then against HEAD).
     func changesResult(in folder: String, comparedWith rev: Rev?) async throws -> ChangesResult
-    /// One file's diff as the core parsed it: the working tree against HEAD, or against `rev`.
-    func diff(of path: String, in folder: String, comparedWith rev: Rev?) async throws -> DiffFile
+    /// One file's diff as the core parsed it: the working tree against HEAD, or against `rev`. `loadAnyway` asks again for a
+    /// patch that was too large to load unasked.
+    func diff(of path: String, in folder: String, comparedWith rev: Rev?, loadAnyway: Bool) async throws -> DiffFile
     /// The log of `rev` (HEAD when nil, or the stashes), limited to commits that touched `paths` when given.
     func log(in folder: String, of rev: Rev?, paths: [String]) async throws -> HistoryModel
     /// An opened commit as its block draws it: the message, who and when, the refs and its files with their counts.
@@ -23,7 +24,7 @@ public protocol GitBackend: Sendable {
     /// (core's estimate of how the view wraps; nil for a commit that was not opened).
     func compactMessage(of sha: String, in folder: String, lineChars: Int) -> CommitDetails.Compact?
     /// One file's diff in a commit.
-    func diff(of path: String, inCommit sha: String, folder: String) async throws -> DiffFile
+    func diff(of path: String, inCommit sha: String, folder: String, loadAnyway: Bool) async throws -> DiffFile
     /// What the branch picker lists: branches and tags, and in History the stashes too.
     func revs(in folder: String, forHistory: Bool) async throws -> [Rev]
     /// Fires when something that matters to `git status` changed (the debounced watch of `git/watch`).
