@@ -206,13 +206,15 @@ fn quiet_is_no_output_for_the_time_asked_and_printing_keeps_pushing_it_back() {
 #[test]
 fn quiet_without_the_wake_up_still_ends_by_the_revision() {
     // A print the wake-up never told of (it is only a hint) moves the quiet's start when it is found.
-    let rig = start(WaitSpec { stable_ms: Some(200), ..spec() }, Grant::default(), TestTerm::new(30, 4, 10));
+    // The quiet is long against the sleep before the print: on a loaded runner a 100 ms sleep took over 200,
+    // and a wait of 200 had then ended before the print it was to find.
+    let rig = start(WaitSpec { stable_ms: Some(600), ..spec() }, Grant::default(), TestTerm::new(30, 4, 10));
     std::thread::sleep(Duration::from_millis(100));
     rig.reader.print(b"x");
     let after_print = Instant::now();
     let found = waited(&rig.reply());
     assert_eq!(found.met, Met::Stable);
-    assert!(after_print.elapsed() >= Duration::from_millis(150), "{:?}", after_print.elapsed());
+    assert!(after_print.elapsed() >= Duration::from_millis(550), "{:?}", after_print.elapsed());
 }
 
 #[test]
