@@ -80,7 +80,7 @@ var targets: [Target] = [
     .target(name: "AuxModel", dependencies: ["WordsModel"]),
     // The secondary windows: onboarding with the Metal wormhole intro, About, Licenses, Updates, Session
     // Hosts, the agent access sheet, project trust and the close and quit questions. `Resources/shader` is the
-    // GPUI app's own intro shader, linked (not copied), so the two never drift.
+    // GPUI app's own intro shader, copied in by `apple/scripts/build-ffi.sh` (git-ignored), so the two never drift.
     .target(
         name: "AuxWindows", dependencies: ["AuxModel", "DesignSystem", "FontPickerModel", "FontPickerUI"],
         resources: [.copy("Resources/shader")]),

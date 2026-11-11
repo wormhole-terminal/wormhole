@@ -40,7 +40,7 @@ import Testing
     @Test func theRustSideTestsBytesParse() throws {
         // The layout test in `wormhole-ffi`'s frame.rs: header words by name, then a row.
         var data = Data()
-        for word: UInt32 in [FrameLayout.magic, 1, 10, 4, 1, 0, UInt32.max, 0, 0, 0, 0, 0] {
+        for word: UInt32 in [FrameLayout.magic, FrameLayout.version, 10, 4, 1, 0, UInt32.max, 0, 0, 0, 0, 0] {
             withUnsafeBytes(of: word.littleEndian) { data.append(contentsOf: $0) }
         }
         for word: UInt32 in [1, 0] { withUnsafeBytes(of: word.littleEndian) { data.append(contentsOf: $0) } }

@@ -48,5 +48,13 @@ for package in ffi-bench "$@"; do
   mkdir -p "$package/Sources/WormholeBindings"
   ln -sfn "$apple/$dist/WormholeFFI.xcframework" "$package/WormholeFFI.xcframework"
   ln -sf "$apple/$dist/WormholeBindings.swift" "$package/Sources/WormholeBindings/WormholeBindings.swift"
+  # The intro's shader is the GPUI app's own, one source for both. It is copied in, not linked: SwiftPM does not
+  # follow a link to a folder outside the package when it gathers resources (Swift 6.3 left the bundle without it).
+  if [ -d "$package/Sources/AuxWindows" ]; then
+    shader="$package/Sources/AuxWindows/Resources/shader"
+    rm -rf "$shader"
+    mkdir -p "$shader"
+    cp "$apple/../crates/wormhole/src/platform/macos/intro/shader/"*.metal "$shader/"
+  fi
   echo "linked into $package"
 done

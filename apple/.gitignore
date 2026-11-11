@@ -7,3 +7,4 @@ dist/
 /ffi-bench/Sources/WormholeBindings/
 /swift/WormholeFFI.xcframework
 /swift/Sources/WormholeBindings/
+/swift/Sources/AuxWindows/Resources/shader/
