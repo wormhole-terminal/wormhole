@@ -1943,6 +1943,28 @@
   {
    "debugOnly": false,
    "feature": null,
+   "flag": "output_folds",
+   "id": "showHiddenLines",
+   "keys": [
+    {
+     "key": "l",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Show Hidden Lines",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
    "flag": "folder_picker",
    "id": "insertFolderPath",
    "keys": [
@@ -2836,6 +2858,13 @@
     },
     {
      "id": "rerunCommand",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "showHiddenLines",
      "kind": "action"
     }
    ],
