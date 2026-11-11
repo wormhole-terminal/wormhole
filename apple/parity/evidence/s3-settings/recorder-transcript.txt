@@ -1,0 +1,70 @@
+=== global hotkey row
+    hotkey spec= action=quickPanel paused=false error=- shown=- | hotkey = string("")
+> click the field: it records
+    click 732 439: down on PlatformGroupContainer, the gesture played to its release
+    focus=terminal responder=CaptureView
+    hotkey spec= action=quickPanel paused=true error=- shown=- | hotkey = string("")
+> press shift-cmd-space (the field takes it)
+    key shift-cmd-space focus=terminal
+    focus=terminal responder=NSWindow
+    hotkey spec=shift-cmd-space action=quickPanel paused=false error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> click again, press cmd-t (the app's New Terminal): refused with who has it
+    click 732 439: down on PlatformGroupContainer, the gesture played to its release
+    key cmd-t focus=terminal
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> press shift-cmd-4 (macOS: screenshots): refused
+    key shift-cmd-4 focus=terminal
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> press a bare j: wants a modifier
+    key j focus=terminal
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> Esc: recording ends, nothing changed
+    key esc focus=terminal
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> click, press alt-space (shell Meta): refused
+    click 732 439: down on PlatformGroupContainer, the gesture played to its release
+    key alt-space focus=terminal
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> press ctrl-alt-cmd-h: accepted
+    key ctrl-alt-cmd-h focus=terminal
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> click, Backspace: clears
+    click 732 439: down on PlatformGroupContainer, the gesture played to its release
+    key backspace focus=terminal
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> record again then the x button clears
+    click 732 439: down on PlatformGroupContainer, the gesture played to its release
+    key shift-cmd-space focus=terminal
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> x (the clear button at the field's right end)
+    click 858 439: down on PlatformGroupContainer, the gesture played to its release
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space | hotkey = string("shift-cmd-space")
+> hotkey-press with the hotkey set while recording: held off
+    set hotkey -> string("shift-cmd-space")
+    click 732 439: down on PlatformGroupContainer, the gesture played to its release
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space
+> Esc ends it: the hotkey is back
+    key esc focus=terminal
+    hotkey spec=shift-cmd-space action=quickPanel paused=true error=- shown=shift-cmd-space
+> the reset arrow (reset hotkey) puts it back to none
+    reset hotkey -> hotkey = string("")
+    hotkey spec= action=quickPanel paused=true error=- shown=-
+    hotkey spec= action=quickPanel paused=true error=- shown=- | hotkey = string("")
+=== jump key row
+    hotkey spec= action=quickPanel paused=true error=- shown=- | jump_waiting_key = string("alt-cmd-j")
+> click, press alt-cmd-k
+    click 732 521: down on PlatformGroupContainer, the gesture played to its release
+    key alt-cmd-k focus=terminal
+    hotkey spec= action=quickPanel paused=true error=- shown=- | jump_waiting_key = string("alt-cmd-j")
+> click, press shift-j (shift alone types a capital: refused)
+    click 732 521: down on PlatformGroupContainer, the gesture played to its release
+    key shift-j focus=terminal
+    hotkey spec= action=quickPanel paused=true error=- shown=- | jump_waiting_key = string("alt-cmd-j")
+> press cmd-t (the app's New Terminal): refused
+    key cmd-t focus=terminal
+    hotkey spec= action=quickPanel paused=true error=- shown=- | jump_waiting_key = string("alt-cmd-j")
+> press alt-cmd-j (its own key: not a conflict)
+    key alt-cmd-j focus=terminal
+    hotkey spec= action=quickPanel paused=true error=- shown=- | jump_waiting_key = string("alt-cmd-j")
+> the jump key works inside the app: hotkey-press jump
+    reset jump_waiting_key -> jump_waiting_key = string("alt-cmd-j")

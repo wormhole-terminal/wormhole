@@ -5,6 +5,7 @@
 // them on every draw, and reading them stats every PATH entry and parses other terminals' files.
 
 import AppKit
+import DesignSystem
 import FontPickerModel
 import Observation
 import SettingsModel
@@ -23,7 +24,7 @@ public final class RustSettingsHost: SettingsHost {
         public var isDefaultTerminal: @MainActor () -> Bool? = { nil }
         /// The "Open in" select: the apps installed (a system list).
         public var openApps: @MainActor () -> [SettingOption] = { [] }
-        public var open: @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) }
+        public var open: @MainActor (URL) -> Void = { ExternalOpen.open($0) }
         /// The programs let in (Agent access): the core's desk lists them, in the order Settings shows.
         public var approvals: @MainActor () -> [AccessApprovalRecord] = { [] }
         /// Takes an approval back (`stored`: a database row; else one held in memory): the hook server ends the
@@ -37,6 +38,11 @@ public final class RustSettingsHost: SettingsHost {
         public var ownerAvailable: @MainActor @Sendable () -> Bool = { true }
         /// The folders of the open terminals, whose projects the Project folders page offers.
         public var projectFolders: @MainActor () -> [String] = { [] }
+        /// A profile was made: Wormhole goes into it, as the GPUI app's Create does (`switch_to`).
+        public var profileCreated: @MainActor (String) -> Void = { _ in }
+        /// A profile is about to be deleted: Wormhole leaves it when it is in it and its windows end with their terminals, so
+        /// its folder and databases are under nothing open when core removes them.
+        public var willDeleteProfile: @MainActor (String) -> Void = { _ in }
         /// A new terminal in a project's folder.
         public var openTerminal: @MainActor (String) -> Void = { _ in }
         public init() {}
@@ -56,6 +62,8 @@ public final class RustSettingsHost: SettingsHost {
     }
     /// Why the last hook install or removal failed (core's sentence); nil after one that worked.
     public internal(set) var failure: String?
+    /// The tips closed with "Don't show again", read when the window opens and after Reset tips.
+    public private(set) var dismissedTips = 0
 
     init(handle: SettingsHandle, backend: RustSettingsBackend, platform: Platform, importHome: String?) {
         (self.handle, self.backend, self.platform, self.importHome) = (handle, backend, platform, importHome)
@@ -92,6 +100,8 @@ public final class RustSettingsHost: SettingsHost {
     public var fontRules: any FontRules { RustFontRules(fontsDir: handle.paths().fontsDir, bundledFiles: platform.bundledFonts()) }
     public func isDefaultTerminal() -> Bool? { platform.isDefaultTerminal() }
 
+    public func refreshTips() { dismissedTips = Int((try? dismissedTipsCount()) ?? 0) }
+
     /// Says why the last button did nothing (nil: it did something), until the next one.
     public func problem(_ sentence: String?) {
         failure = sentence
@@ -100,6 +110,7 @@ public final class RustSettingsHost: SettingsHost {
 
     /// The window opened: what the pages read from the disk is read again.
     public func windowOpened() {
+        refreshTips()
         refreshAgents()
         refreshSkills()
         refreshProfiles()

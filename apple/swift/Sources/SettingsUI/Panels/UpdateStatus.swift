@@ -81,7 +81,7 @@ private struct UpdateStatus: View {
         case .checking: ActionButton(title: AuxText.checkNow, symbol: Icon.refresh.rawValue, isSpinning: true) {}.disabled(true)
         case .downloading(let received, let expected): meter(received, expected)
         case .unsupported: EmptyView()
-        default: ActionButton(title: AuxText.checkNow, symbol: Icon.refresh.rawValue) { model.check() }
+        default: ActionButton(title: AuxText.checkNow, symbol: Icon.refresh.rawValue, frameId: "update.check") { model.check() }
         }
     }
 

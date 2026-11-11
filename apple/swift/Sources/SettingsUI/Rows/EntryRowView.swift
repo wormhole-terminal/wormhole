@@ -30,7 +30,7 @@ struct EntryRowView: View {
             label: entry.label, description: projectNote ?? caption ?? entry.description,
             visibleHint: entry.visibleHint || projectNote != nil || caption != nil,
             state: state,
-            tall: entry.control.layout == .tallRow, onReset: { model.reset(entry) }
+            tall: entry.control.layout == .tallRow, frameId: entry.id, keys: entry.keys, json: { model.host.copyJSON(keys: entry.keys) }, onReset: { model.reset(entry) }
         ) {
             EntryControl(model: model, entry: entry)
         }

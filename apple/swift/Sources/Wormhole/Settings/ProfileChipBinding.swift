@@ -91,6 +91,26 @@ extension AppController {
         #endif
     }
 
+    /// Settings → Delete profile, before core removes the folder: Wormhole leaves the profile when it is in it, and its windows end
+    /// with their terminals (the GPUI app's `delete_profile`). Not through `shouldClose`: that would quit the app for the last window.
+    func end(profile id: String) {
+        #if WITH_UNIFFI
+            guard id != "default" else { return }
+            if windowsHost.profile == id { switchProfile(to: "default") }
+            for session in windows(of: id) {
+                session.saver?.cancel()
+                session.hub.terminals.shutdown()
+                session.windows.backend.forget(session.id)
+                sessions.removeAll { $0 === session }
+                session.window?.delegate = nil
+                session.window?.close()
+            }
+            profileHosts[id] = nil
+            if lastFront == nil || !sessions.contains(where: { $0 === lastFront }) { lastFront = shown.last }
+            menus?.windowsChanged()
+        #endif
+    }
+
     /// Every window of profile `id`, in sight or parked.
     private func windows(of id: String) -> [WindowSession] { sessions.filter { $0.windows.profile == id } }
 

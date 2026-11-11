@@ -69,8 +69,14 @@ extension AppController {
     }
 
     /// The window the pointer acts on: the workspace's in front, or the one `pointer-window <title>` named (Settings, the Studio).
-    private var pointerWindow: NSWindow? {
-        injector.windowTitle.flatMap { title in NSApp.windows.first { $0.title == title } } ?? window
+    private var pointerWindow: NSWindow? { drivenWindow ?? window }
+
+    /// The window `pointer-window <title>` named: by its title, or `popover` for the one a popover (the font picker, a row's
+    /// description) shows its content in, which has no title.
+    var drivenWindow: NSWindow? {
+        injector.windowTitle.flatMap { title in
+            NSApp.windows.first { title == "popover" ? String(describing: type(of: $0)).contains("Popover") : $0.title == title }
+        }
     }
 
     /// A menu as GPUI's devctl prints one: `n. title [key] [x] [off]`, `---` for a separator, a submenu's items indented.

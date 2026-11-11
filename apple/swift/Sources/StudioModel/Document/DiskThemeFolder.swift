@@ -2,6 +2,7 @@
 // 256 KiB and refuse links, a project's or a download's file being hostile input; writes are atomic; every save
 // keeps the file it replaces under `.versions/<id>/<time>.json`, thinned as core does (`VersionPolicy`).
 
+import DesignSystem
 import Foundation
 
 public struct DiskThemeFolder: ThemeFolder {
@@ -35,6 +36,6 @@ public struct DiskThemeFolder: ThemeFolder {
     }
 
     public func trash(_ file: URL) throws {
-        try FileManager.default.trashItem(at: file, resultingItemURL: nil)
+        try Trash.move(file)
     }
 }

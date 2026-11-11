@@ -45,7 +45,7 @@ fn row(profile: &Profile, active: &ProfileId) -> SettingsProfileRow {
 
 pub(crate) fn list_in(root: &DataRoot) -> Vec<SettingsProfileRow> {
     // A profiles.json that does not read leaves Default alone, as the app starts.
-    let (list, _) = ProfileList::load_or_recover(root);
+    let list = crate::profile::list_in(root);
     list.profiles().iter().map(|profile| row(profile, list.active_id())).collect()
 }
 

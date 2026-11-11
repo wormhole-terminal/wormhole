@@ -172,6 +172,17 @@ impl SettingsHandle {
         self.shared.lock().changed_keys()
     }
 
+    /// The current values of `keys` as one line of JSON, `{"blur": true}`, for a row's "Copy as JSON": a snippet to paste
+    /// into config.json, in core's shape (a key inside an object as that object; a key holding nothing left out).
+    pub fn copy_json(&self, keys: Vec<String>) -> String {
+        self.shared.lock().copy_json(&keys)
+    }
+
+    /// The same for every key the Changed page lists: the page's "Copy as JSON".
+    pub fn copy_changed_json(&self) -> String {
+        self.shared.lock().changed_json()
+    }
+
     /// The rows the Changed page lists, in page order.
     pub fn changed_rows(&self) -> Vec<SettingsChangedRow> {
         let rows = self.shared.lock().changed_rows();

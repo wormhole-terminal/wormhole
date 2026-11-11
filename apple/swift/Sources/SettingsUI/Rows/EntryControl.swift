@@ -40,13 +40,15 @@ struct EntryControl: View {
         case .font(let slot): FontControl(model: model, entry: entry, slot: slot)
         case .partsList(let parts): PartsList(model: model, key: key, parts: parts)
         case .recorder:
-            ShortcutRecorder(spec: model.value(key).string ?? "", label: entry.label, check: { model.shortcuts?.check(key: key, spec: $0) }, onRecording: { model.onRecording?($0) }) {
+            ShortcutRecorder(spec: model.value(key).string ?? "", label: entry.label, problem: shortcutProblem(), check: { model.shortcuts?.check(key: key, spec: $0) }, onRecording: { model.onRecording?($0) }) {
                 model.set(key, .string($0))
             }
         case .colorToggle: PrimaryColorControl(model: model, entry: entry)
         case .link(let section, let label): LinkButton(title: label, goes: true) { model.show(section) }
         case .action(.makeDefaultTerminal, let label, let icon): defaultTerminal(label, icon)
         case .action(.resetAll, let label, let icon): ResetAllButton(model: model, label: label, icon: icon)
+        case .action(.resetTips, let label, let icon):
+            ActionButton(title: label, symbol: icon, frameId: "reset-tips") { model.host.perform(.resetTips) }.disabled(model.host.dismissedTips == 0)
         case .action(let action, let label, let icon):
             ActionButton(title: label, symbol: icon) { model.host.perform(action) }
         case .info(let name): InfoValue(name: name)
@@ -64,6 +66,15 @@ struct EntryControl: View {
             symbol: state == true ? Icon.check.rawValue : icon
         ) { model.host.perform(.makeDefaultTerminal) }
         .disabled(state != false)
+    }
+
+    /// Why the global hotkey set now does not work (`hotkey_problem`): macOS, the app or the shell has the keys (set by hand in
+    /// config.json: the recorder refuses them), or the system did not register it. The jump key has none.
+    private func shortcutProblem() -> String? {
+        let spec = model.value(key).string ?? ""
+        guard key == "hotkey", !spec.isEmpty else { return nil }
+        if case .refused(let reason)? = model.shortcuts?.check(key: key, spec: spec) { return reason }
+        return model.hotkeyError?()
     }
 
     /// The stored value, or what the row shows while the file says nothing.

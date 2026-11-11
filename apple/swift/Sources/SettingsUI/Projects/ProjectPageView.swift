@@ -27,7 +27,7 @@ struct ProjectPageView: View {
             }
             SettingGroup(title: ProjectsText.fromThisProject, blurb: ProjectsText.onlyForYou) {
                 ForEach(page.features) { feature in
-                    SettingRow(label: feature.label, description: feature.description, visibleHint: true, state: RowState(), onReset: {}) {
+                    SettingRow(label: feature.label, description: feature.description, visibleHint: true, state: RowState(), frameId: "project.feature.\(feature.key)", onReset: {}) {
                         OptionPicker(options: choices(feature), selected: encode(feature.choice), label: feature.label, segmented: true) { value in
                             Task { await projects.setChoice(feature.key, to: decode(value)) }
                         }
@@ -41,9 +41,9 @@ struct ProjectPageView: View {
                 }
             }
             HStack(spacing: Space._2) {
-                ActionButton(title: ProjectsText.openTerminal, symbol: Icon.openTerminal.rawValue) { projects.openTerminal() }
+                ActionButton(title: ProjectsText.openTerminal, symbol: Icon.openTerminal.rawValue, frameId: "project.open-terminal") { projects.openTerminal() }
                 LinkButton(title: ProjectsText.showInFinder(page.dirName)) {
-                    NSWorkspace.shared.open(URL(fileURLWithPath: page.root).appendingPathComponent(page.dirName))
+                    ExternalOpen.open(URL(fileURLWithPath: page.root).appendingPathComponent(page.dirName))
                 }
             }
         }
@@ -60,9 +60,9 @@ struct ProjectPageView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if page.trust == .trusted {
-                ActionButton(title: ProjectsText.revokeTrust, symbol: nil) { Task { await projects.revoke(page.root) } }
+                ActionButton(title: ProjectsText.revokeTrust, symbol: nil, frameId: "project.revoke-trust") { Task { await projects.revoke(page.root) } }
             } else {
-                ActionButton(title: page.approving ? ProjectsText.waiting : ProjectsText.trustTouchID, symbol: Icon.touchID.rawValue) {
+                ActionButton(title: page.approving ? ProjectsText.waiting : ProjectsText.trustTouchID, symbol: Icon.touchID.rawValue, frameId: "project.trust") {
                     Task { await projects.trust() }
                 }
                 .disabled(page.approving)

@@ -53,19 +53,6 @@ public struct SettingsView: View {
         .accessibilityLabel(SettingsText.settings)
         .motion(Motion.selection, value: model.selection)
         .sheet(isPresented: $model.showsNewProfile) { NewProfileSheet(model: model) }
-        .alert(SettingsText.deleteProfileTitle, isPresented: $model.confirmsProfileDelete) {
-            Button(SettingsText.delete, role: .destructive, action: deleteProfile)
-            Button(SettingsText.cancel, role: .cancel) {}
-        } message: {
-            Text(activeProfile?.deleteQuestion ?? "")
-        }
-    }
-
-    /// The profile Wormhole is in, which Delete would remove (never Default).
-    private var activeProfile: ProfileChoice? { model.host.panelRecords().profiles.first(where: \.isActive) }
-
-    private func deleteProfile() {
-        if let profile = activeProfile, !profile.isDefault { _ = model.host.removeProfile(profile.id) }
     }
 
     @ViewBuilder private var page: some View {

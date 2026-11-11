@@ -7,6 +7,7 @@ struct InputField: View {
     let placeholder: String
     @Binding var text: String
     var width: CGFloat = SettingsMetric.fieldWidth
+    var frameId: String?
     let onCommit: () -> Void
     @FocusState private var focused: Bool
 
@@ -17,5 +18,6 @@ struct InputField: View {
             .onSubmit(onCommit)
             .onChange(of: focused) { _, now in if !now { onCommit() } }
             .frame(width: width)
+            .recordFrame(frameId)
     }
 }

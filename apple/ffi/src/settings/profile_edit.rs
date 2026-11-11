@@ -108,7 +108,7 @@ fn form_of(profile: &Profile) -> SettingsProfileForm {
 }
 
 pub(crate) fn form_in(root: &DataRoot, id: Option<&str>) -> Result<SettingsProfileForm, SettingsError> {
-    let (list, _) = ProfileList::load_or_recover(root);
+    let list = crate::profile::list_in(root);
     let profile = match id {
         Some(text) => {
             let id = ProfileId::parse(text).map_err(|e| SettingsError::Profile { reason: e.to_string() })?;

@@ -17,10 +17,16 @@ public protocol SettingsBackend: AnyObject {
     func observe(_ onChange: @escaping @MainActor () -> Void) -> SettingsObservation
     /// What is wrong with the file (it does not read, the last save failed), for the Advanced page; nil when nothing.
     func banner() -> String?
+    /// The file did not read in full: changes are kept in memory and not saved until it is fixed.
+    var unreadable: Bool { get }
+    /// The rows the Changed page lists, as core decides them (`section id`, `row id`) in page order; nil: the model works it out.
+    func changedRows() -> [(section: String, entry: String)]?
 }
 
 extension SettingsBackend {
     public func banner() -> String? { nil }
+    public var unreadable: Bool { false }
+    public func changedRows() -> [(section: String, entry: String)]? { nil }
 }
 
 /// Keeps an observation alive; dropping it stops it. `cancel` may run on any thread (a deinit does), so it
@@ -79,6 +85,15 @@ public protocol SettingsHost: AnyObject {
     func importSelectedLine(selected: Int, total: Int) -> String
     /// The question before settings go back to their defaults, with how many.
     func resetQuestion(count: Int) -> String
+    /// How many tips were closed with "Don't show again" (Advanced's Reset tips is off at none).
+    var dismissedTips: Int { get }
+    /// "Copy as JSON": the values of `keys` (a row's) or of every key the Changed page lists (`changedJSON`) as one line to paste
+    /// into config.json, and the page's "7 settings changed".
+    func copyJSON(keys: [String]) -> String
+    func changedJSON() -> String
+    func changedSummary(count: Int) -> String
+    /// Why the list of profiles was set aside and rebuilt at launch, in a sentence; nil when it read.
+    func profilesProblem() -> String?
     /// What a preview section says at its top, naming the feature flag it is behind; nil for one that always ships.
     func previewNote(section: String) -> String?
     /// The shell profiles listed under the Shells row, and where worktrees go once a folder is named.
@@ -126,6 +141,15 @@ extension SettingsHost {
             "settings-import-selected", ["selected": .whole(selected), "total": .whole(total)], fallback: "\(selected) of \(total) selected")
     }
     public func previewNote(section: String) -> String? { nil }
+    public var dismissedTips: Int { 1 }
+    public func copyJSON(keys: [String]) -> String { "{}" }
+    public func changedJSON() -> String { "{}" }
+    public func changedSummary(count: Int) -> String {
+        Words.text(
+            "settings-changed-summary", ["count": .whole(count)],
+            fallback: "\(count) setting\(count == 1 ? "" : "s") changed")
+    }
+    public func profilesProblem() -> String? { nil }
     public func resetQuestion(count: Int) -> String {
         Words.text(
             "settings-advanced-reset-question", ["count": .whole(count)],

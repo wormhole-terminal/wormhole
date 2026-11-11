@@ -31,7 +31,7 @@ struct ApprovalList: View {
                             }
                         }
                         Spacer(minLength: Space._3)
-                        ActionButton(title: SettingsText.revoke, symbol: nil) { host.revoke(approval) }
+                        ActionButton(title: SettingsText.revoke, symbol: nil, frameId: "approval.\(approval.id)") { host.revoke(approval) }
                     }
                     .padding(.vertical, Space._2).frame(minHeight: SettingsMetric.rowMinHeight)
                     .accessibilityElement(children: .combine)

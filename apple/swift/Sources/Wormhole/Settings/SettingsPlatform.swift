@@ -6,6 +6,7 @@
     import AppKit
     import AuxBridge
     import AuxModel
+    import DesignSystem
     import FilesBridge
     import PanesUI
     import PlatformModel
@@ -39,6 +40,8 @@
             platform.projects = { [weak app] in (app?.sessions.first?.panelBackends.project as? RustProjectBackend)?.service }
             platform.projectFolders = { [weak app] in app?.hub.state.all.compactMap(\.folder) ?? [] }
             platform.openTerminal = { [weak app] in app?.hub.send(.newTerminalIn($0)) }
+            platform.profileCreated = { [weak app] in app?.switchProfile(to: $0) }
+            platform.willDeleteProfile = { [weak app] in app?.end(profile: $0) }
             // Owner authentication is Touch ID in a real run and WORMHOLE_AUTH's answer in a test instance.
             platform.ownerAvailable = { [weak app] in
                 guard let policy = app?.policy else { return true }
@@ -73,12 +76,13 @@
                 Task { host?.problem(await DefaultTerminal.make(policy: policy)) }
             case .resetTips:
                 do { _ = try resetTips() } catch { host?.problem(String(describing: error)) }
+                host?.refreshTips()
             default: break
             }
         }
 
         private func open(_ link: String) {
-            if let url = URL(string: link) { NSWorkspace.shared.open(url) }
+            if let url = URL(string: link) { ExternalOpen.open(url) }
         }
     }
 #endif

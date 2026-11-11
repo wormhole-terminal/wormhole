@@ -1,6 +1,7 @@
 // The theme files of the profile, from the Appearance cards: Import theme and Move to Trash. Core decides what is a theme, which
 // picks a trashed one changes and what the question says (`settings/theme_files.rs`); the Trash is the system's.
 
+import DesignSystem
 import Foundation
 import SettingsModel
 import WormholeBindings
@@ -26,7 +27,7 @@ extension RustSettingsHost {
         let before = handle.resetThemePicks(value: value)
         backend.reload()
         do {
-            try FileManager.default.trashItem(at: URL(fileURLWithPath: plan.path), resultingItemURL: nil)
+            try Trash.move(URL(fileURLWithPath: plan.path))
             backend.reload()
             return true
         } catch {

@@ -9,9 +9,26 @@ use wormhole_core::storage::store::Store;
 use crate::error::FfiError;
 use crate::isolation;
 
+/// Why `profiles.json` did not read the first time it was asked, as the GPUI app keeps it from launch for the Profile
+/// page's banner: the list was set aside and rebuilt then, so a later read finds nothing wrong.
+static RECOVERED: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+pub(crate) fn recovered() -> Option<String> {
+    RECOVERED.lock().ok()?.clone()
+}
+
+/// The profile list under `root`, recovered when it does not read (the first reason is kept for the page).
+pub(crate) fn list_in(root: &DataRoot) -> ProfileList {
+    let (list, error) = ProfileList::load_or_recover(root);
+    if let (Some(error), Ok(mut slot)) = (error, RECOVERED.lock()) {
+        slot.get_or_insert_with(|| error.to_string());
+    }
+    list
+}
+
 /// The active profile's files under `root`: Default's (the data folder itself) when the list does not read.
 pub(crate) fn active_in(root: &DataRoot) -> ProfilePaths {
-    let (list, _) = ProfileList::load_or_recover(root);
+    let list = list_in(root);
     root.profile(list.active_id())
 }
 
@@ -30,7 +47,7 @@ pub(crate) fn dir_of(id: &str) -> Option<std::path::PathBuf> {
 
 fn dir_in(root: &DataRoot, id: &str) -> Option<std::path::PathBuf> {
     let id = ProfileId::parse(id).ok()?;
-    let (list, _) = ProfileList::load_or_recover(root);
+    let list = list_in(root);
     list.get(&id)?;
     Some(root.profile(&id).dir().to_path_buf())
 }
@@ -38,7 +55,7 @@ fn dir_in(root: &DataRoot, id: &str) -> Option<std::path::PathBuf> {
 /// The first terminal and window ids free in every profile's database, so an id is never taken twice by two
 /// profiles that are both open (a terminal's id is what hooks report).
 pub(crate) fn first_free_ids(root: &DataRoot) -> (i64, i64) {
-    let (list, _) = ProfileList::load_or_recover(root);
+    let list = list_in(root);
     let mut ids = (1, 1);
     for profile in list.profiles() {
         let paths = root.profile(&profile.id);

@@ -14,6 +14,8 @@ enum AppSettings {
     static func makeModel(app: AppController) -> SettingsModel {
         let model = makeBare(app: app)
         model.onRecording = { [weak app] in app?.hotkey?.pause($0) }
+        model.openStudio = { [weak app] in app?.studio.show() }
+        model.hotkeyError = { [weak app] in app?.hotkey?.error }
         return model
     }
 

@@ -21,7 +21,7 @@ struct CommandLineControl: View {
                     case .notInstalled: install(SettingsText.install)
                     case .installed:
                         if !tool.current { install(SettingsText.update) }
-                        ActionButton(title: SettingsText.uninstall, symbol: nil) { model.host.perform(.uninstallCommandLine) }
+                        ActionButton(title: SettingsText.uninstall, symbol: nil, frameId: "cli.uninstall") { model.host.perform(.uninstallCommandLine) }
                     case .foreign: install(SettingsText.install).disabled(true)
                     }
                 }
@@ -36,7 +36,7 @@ struct CommandLineControl: View {
     }
 
     private func install(_ title: String) -> some View {
-        ActionButton(title: title, symbol: nil) { model.host.perform(.installCommandLine) }
+        ActionButton(title: title, symbol: nil, frameId: "cli.install") { model.host.perform(.installCommandLine) }
     }
 
     @ViewBuilder private func path(_ note: CommandLinePathNote?) -> some View {

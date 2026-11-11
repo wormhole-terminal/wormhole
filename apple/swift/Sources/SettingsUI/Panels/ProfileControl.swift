@@ -35,16 +35,16 @@ struct ProfileControl: View {
         Binding(get: { draft.form?[keyPath: path] ?? "" }, set: { draft.form?[keyPath: path] = $0 })
     }
 
-    private func field(_ placeholder: String, _ path: WritableKeyPath<ProfileForm, String>, width: CGFloat = SettingsMetric.fieldWidth) -> some View {
-        InputField(placeholder: placeholder, text: text(path), width: width, onCommit: draft.commit)
+    private func field(_ placeholder: String, _ path: WritableKeyPath<ProfileForm, String>, width: CGFloat = SettingsMetric.fieldWidth, id: String? = nil) -> some View {
+        InputField(placeholder: placeholder, text: text(path), width: width, frameId: id, onCommit: draft.commit)
     }
 
     private var identity: some View {
         VStack(alignment: .trailing, spacing: Space._2) {
             HStack(spacing: Space._2) {
                 ProfileChip(letter: draft.form?.letter ?? "", color: draft.form?.color ?? "blue")
-                field(Words.text("settings-profile-name-field", fallback: "Name"), \.name, width: SettingsMetric.fieldPairWidth)
-                field("W", \.avatar, width: SettingsMetric.fieldLetterWidth)
+                field(Words.text("settings-profile-name-field", fallback: "Name"), \.name, width: SettingsMetric.fieldPairWidth, id: "profile.name")
+                field("W", \.avatar, width: SettingsMetric.fieldLetterWidth, id: "profile.avatar")
             }
             HStack(spacing: Space._1) {
                 ForEach(GroupColor.allCases, id: \.self) { color in
@@ -58,6 +58,7 @@ struct ProfileControl: View {
                             .frame(width: Metric.hitMin, height: Metric.hitMin).contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .recordFrame("profile.color.\(color.rawValue)")
                     .accessibilityLabel(color.rawValue.capitalized)
                     .accessibilityAddTraits(draft.form?.color == color.rawValue ? .isSelected : [])
                 }
@@ -68,7 +69,7 @@ struct ProfileControl: View {
     private var start: some View {
         VStack(alignment: .trailing, spacing: Space._2) {
             HStack(spacing: Space._2) {
-                field(Words.text("settings-profile-the-home-folder", fallback: "~ (the home folder)"), \.startDir)
+                field(Words.text("settings-profile-the-home-folder", fallback: "~ (the home folder)"), \.startDir, id: "profile.start")
                 chooser { path in draft.form?.startDir = path; draft.commit() }
             }
             ForEach(draft.form?.folders ?? [], id: \.self) { folder in
@@ -101,14 +102,15 @@ struct ProfileControl: View {
                         .padding(.horizontal, Space._2 + Space._1).padding(.top, Space._1 + 1).allowsHitTesting(false)
                 }
             }
+            .recordFrame("profile.env")
             .accessibilityLabel(Words.text("settings-profile-env", fallback: "Environment"))
             .modifier(CommitOnBlur(commit: draft.commit))
     }
 
     private var git: some View {
         HStack(spacing: Space._2) {
-            field(Words.text("settings-profile-name-field", fallback: "Name"), \.gitName, width: SettingsMetric.fieldPairWidth)
-            field(Words.text("settings-profile-email", fallback: "Email"), \.gitEmail, width: SettingsMetric.fieldPairWidth)
+            field(Words.text("settings-profile-name-field", fallback: "Name"), \.gitName, width: SettingsMetric.fieldPairWidth, id: "profile.git-name")
+            field(Words.text("settings-profile-email", fallback: "Email"), \.gitEmail, width: SettingsMetric.fieldPairWidth, id: "profile.git-email")
         }
     }
 
@@ -153,7 +155,7 @@ enum FolderPanel {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = Words.text("settings-profile-choose", fallback: "Choose")
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard let url = PanelPick.run(panel) else { return }
         picked((url.path as NSString).abbreviatingWithTildeInPath)
     }
 }

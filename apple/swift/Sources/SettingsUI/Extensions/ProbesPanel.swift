@@ -1,6 +1,6 @@
 // The Extensions page (`sections/extensions.rs`): the Probes in the Probes folder, one row each with its state and a
 // switch. Switching one on opens the approval sheet; off needs no question. The folder is read when the page opens and
-// from the refresh button, never on a timer.
+// from the refresh button and when the window comes forward, never on a timer.
 
 import AppKit
 import DesignSystem
@@ -39,6 +39,10 @@ private struct ProbesList: View {
             }
         }
         .task { await probes.refresh() }
+        // The folder is read again when the window comes forward with the page showing (a Probe was added or changed outside).
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { note in
+            if (note.object as? NSWindow)?.title == SettingsText.settings { Task { await probes.refresh() } }
+        }
         .sheet(
             isPresented: Binding(get: { probes.open != nil }, set: { if !$0 { probes.close() } })
         ) {
@@ -61,6 +65,6 @@ private struct ProbesList: View {
     private static func reveal(_ path: String) {
         let url = URL(fileURLWithPath: path)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        NSWorkspace.shared.open(url)
+        ExternalOpen.open(url)
     }
 }

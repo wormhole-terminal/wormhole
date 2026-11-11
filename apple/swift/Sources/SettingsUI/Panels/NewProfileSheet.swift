@@ -19,7 +19,7 @@ struct NewProfileSheet: View {
             Text(SettingsText.newProfileTitle).textRole(.heading).foregroundStyle(tokens.textPrimary)
             VStack(alignment: .leading, spacing: Space._1) {
                 label(SettingsText.profileName)
-                TextField(SettingsText.giveAName, text: $name).textFieldStyle(.roundedBorder).focused($focused).onSubmit(create)
+                TextField(SettingsText.giveAName, text: $name).textFieldStyle(.roundedBorder).focused($focused).onSubmit(create).recordFrame("sheet.name")
             }
             VStack(alignment: .leading, spacing: Space._1) {
                 label(SettingsText.startFrom)
@@ -37,8 +37,8 @@ struct NewProfileSheet: View {
             }
             HStack(spacing: Space._2) {
                 Spacer(minLength: 0)
-                ActionButton(title: SettingsText.cancel, symbol: nil) { model.showsNewProfile = false }.keyboardShortcut(.cancelAction)
-                ActionButton(title: SettingsText.create, symbol: nil, action: create).keyboardShortcut(.defaultAction)
+                ActionButton(title: SettingsText.cancel, symbol: nil, frameId: "sheet.cancel") { model.showsNewProfile = false }.keyboardShortcut(.cancelAction)
+                ActionButton(title: SettingsText.create, symbol: nil, frameId: "sheet.create", action: create).keyboardShortcut(.defaultAction)
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }

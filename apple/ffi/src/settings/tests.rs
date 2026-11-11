@@ -114,6 +114,22 @@ fn a_write_sticks_clamped_reaches_the_file_and_resets() {
 }
 
 #[test]
+fn copy_as_json_is_core_s_snippet_for_a_row_and_for_the_changed_page() {
+    let fx = Fixture::new();
+    fx.set("opacity", json!(0.5)).expect("sets");
+    fx.set("motion.insert", json!("reveal")).expect("sets");
+    // a row's keys, in core's shape: a key inside an object as that object, a key holding nothing left out
+    assert_eq!(fx.handle.copy_json(vec!["opacity".into()]), "{\"opacity\": 0.5}");
+    assert_eq!(fx.handle.copy_json(vec!["motion.insert".into()]), "{\"motion\": {\"insert\": \"reveal\"}}");
+    assert_eq!(fx.handle.copy_json(vec!["no_such_key".into()]), "{}");
+    // the Changed page copies the keys of the rows it lists, and only those
+    let page = fx.handle.copy_changed_json();
+    assert!(page.contains("\"opacity\": 0.5") && page.contains("\"insert\": \"reveal\""), "{page}");
+    fx.handle.reset_all();
+    assert_eq!(fx.handle.copy_changed_json(), "{}");
+}
+
+#[test]
 fn what_core_refuses_changes_nothing_and_says_why() {
     let fx = Fixture::new();
     let (revision, file) = (fx.handle.revision(), std::fs::read(fx.config_file()).expect("read"));

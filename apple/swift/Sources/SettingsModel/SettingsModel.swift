@@ -22,7 +22,6 @@ public final class SettingsModel {
     public var query = ""
     /// The New profile sheet is up, and the question before deleting the profile Wormhole is in.
     public var showsNewProfile = false
-    public var confirmsProfileDelete = false
     /// The font an open font picker is looking at; the Fonts page's scene shows it instead of the settings' own.
     public var fontPreview: FontPreview?
     /// A row to bring into view and mark for a moment, after a search result was chosen.
@@ -36,6 +35,10 @@ public final class SettingsModel {
     @ObservationIgnored public let shortcuts: (any ShortcutChecking)?
     /// A recorder row started or stopped recording: the global hotkey is held off while it has the keys.
     @ObservationIgnored public var onRecording: ((Bool) -> Void)?
+    /// Why the global hotkey set now did not register with the system (`hotkey::error`); nil when it did or none is set.
+    /// Opens the Theme Studio (the button beside Import theme).
+    @ObservationIgnored public var openStudio: (() -> Void)?
+    @ObservationIgnored public var hotkeyError: (() -> String?)?
 
     public init(
         schema: SettingsSchema = .bundled, backend: any SettingsBackend, host: any SettingsHost,
@@ -80,7 +83,17 @@ public final class SettingsModel {
 
     /// The rows that differ from their default and show now, in page order: what the Changed page lists.
     public var changedEntries: [Located] {
-        schema.sections.flatMap { section in
+        // Core decides which rows differ and show (`Values::changed_rows`); the model's own rule is for a build without it.
+        if let rows = backend.changedRows() {
+            _ = values
+            return rows.compactMap { row in
+                guard let section = schema.sections.first(where: { $0.id == row.section }) else { return nil }
+                return section.groups.lazy.compactMap { group in
+                    group.entries.first { $0.id == row.entry }.map { Located(section: section, group: group, entry: $0) }
+                }.first
+            }
+        }
+        return schema.sections.flatMap { section in
             section.groups.flatMap { group in
                 group.entries.filter { isChanged($0) && $0.isShown(values: values) && !isBlock($0) }
                     .map { Located(section: section, group: group, entry: $0) }

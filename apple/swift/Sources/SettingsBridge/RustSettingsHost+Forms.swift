@@ -60,6 +60,14 @@ extension RustSettingsHost {
 
     public func resetQuestion(count: Int) -> String { settingsResetQuestion(count: UInt32(count)) }
 
+    public func copyJSON(keys: [String]) -> String { handle.copyJson(keys: keys) }
+
+    public func changedJSON() -> String { handle.copyChangedJson() }
+
+    public func changedSummary(count: Int) -> String { settingsChangedSummaryLine(count: UInt32(count)) }
+
+    public func profilesProblem() -> String? { settingsProfilesProblem() }
+
     public func importSelectedLine(selected: Int, total: Int) -> String {
         settingsImportSelectedLine(selected: UInt32(selected), total: UInt32(total))
     }

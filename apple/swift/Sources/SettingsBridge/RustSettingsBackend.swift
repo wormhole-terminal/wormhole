@@ -63,4 +63,6 @@ public final class RustSettingsBackend: SettingsBackend {
 
     /// What the page's banner says about the file (does not read, last save failed), nil when there is nothing.
     public func banner() -> String? { handle.health().error }
+    public var unreadable: Bool { handle.health().unreadable }
+    public func changedRows() -> [(section: String, entry: String)]? { handle.changedRows().map { ($0.section, $0.entry) } }
 }

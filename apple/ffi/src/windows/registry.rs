@@ -15,7 +15,6 @@ use std::path::Path;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 
-use wormhole_core::config::profile::ProfileList;
 use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 use wormhole_core::storage::store::{Store, WindowRecord, front_last};
 use wormhole_core::view::layout::frame::WindowFrame;
@@ -120,7 +119,7 @@ impl Windows {
     pub(crate) fn beside_in(&self, root: &DataRoot, profile: &str) -> Result<Arc<Self>, FfiError> {
         let failed = |reason: String| FfiError::Start { reason };
         let id = ProfileId::parse(profile).map_err(|err| failed(err.to_string()))?;
-        let (list, _) = ProfileList::load_or_recover(root);
+        let list = crate::profile::list_in(root);
         if list.get(&id).is_none() {
             return Err(failed(format!("no profile {id}")));
         }

@@ -84,6 +84,19 @@ enum SettingsText {
     static var noneChangedDetail: String {
         Words.text("settings-changed-none-detail", fallback: "Everything is at its default")
     }
+    static var copyJSON: String { Words.text("settings-row-copy-json", fallback: "Copy as JSON") }
+    static var copyKey: String { Words.text("settings-row-copy-key", fallback: "Copy Key") }
+    static var copied: String { Words.text("settings-row-copied", fallback: "Copied") }
+    static var resetToDefault: String { Words.text("settings-row-reset-menu", fallback: "Reset to Default") }
+    static var open: String { Words.text("settings-window-open", fallback: "Open") }
+    static var configUnreadable: String {
+        Words.text(
+            "settings-window-config-json-cant-be-read-so",
+            fallback: "config.json can't be read, so changes made here aren't saved until it is fixed (see Advanced).")
+    }
+    static var changedSummaryDetail: String {
+        Words.text("settings-changed-summary-detail", fallback: "Everything else is at its default")
+    }
     static var resetAll: String { Words.text("settings-changed-reset-all", fallback: "Reset All…") }
     static var recorderPrompt: String {
         Words.text("settings-row-recorder-prompt", fallback: "Press the shortcut…")

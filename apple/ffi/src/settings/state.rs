@@ -154,6 +154,19 @@ impl State {
             .collect()
     }
 
+    /// `keys` and their current values as one line of JSON to paste into config.json ("Copy as JSON").
+    pub(crate) fn copy_json(&self, keys: &[String]) -> String {
+        let keys: Vec<&str> = keys.iter().map(String::as_str).collect();
+        Values::of(&self.config.settings).json(&keys)
+    }
+
+    /// The same for every key the Changed page lists.
+    pub(crate) fn changed_json(&self) -> String {
+        let values = Values::of(&self.config.settings);
+        let rows = values.changed_rows(&self.effective);
+        values.json(&values.changed_keys_of(&rows))
+    }
+
     /// The ids of the rows a project's settings set (the "set by project" mark).
     pub(crate) fn overridden_entries(&self) -> Vec<&'static str> {
         entries()

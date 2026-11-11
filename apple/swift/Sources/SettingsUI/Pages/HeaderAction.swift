@@ -12,17 +12,17 @@ struct HeaderAction: View {
     var body: some View {
         switch section {
         case "agents": button(SettingsText.rescanPath, Icon.refresh.rawValue, .rescanAgents)
-        case "import": ActionButton(title: SettingsText.scanAgain, symbol: Icon.refresh.rawValue) { model.importDraft.reset(); model.host.perform(.scanImports) }
+        case "import": ActionButton(title: SettingsText.scanAgain, symbol: Icon.refresh.rawValue, frameId: "header.scan-again") { model.importDraft.reset(); model.host.perform(.scanImports) }
         case "extensions":
             if let probes = model.probesModel {
                 IconButton(symbol: Icon.refresh.rawValue, label: LocalizedStringKey(ExtensionsText.refresh)) { Task { await probes.refresh() } }
             }
-        case "profile": ActionButton(title: SettingsText.newProfile, symbol: Icon.add.rawValue) { model.showsNewProfile = true }
+        case "profile": ActionButton(title: SettingsText.newProfile, symbol: Icon.add.rawValue, frameId: "header.new-profile") { model.showsNewProfile = true }
         default: EmptyView()
         }
     }
 
     private func button(_ title: String, _ symbol: String, _ action: SettingsAction) -> some View {
-        ActionButton(title: title, symbol: symbol) { model.host.perform(action) }
+        ActionButton(title: title, symbol: symbol, frameId: "header.\(section)") { model.host.perform(action) }
     }
 }

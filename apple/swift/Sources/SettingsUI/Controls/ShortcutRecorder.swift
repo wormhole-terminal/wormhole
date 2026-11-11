@@ -10,6 +10,9 @@ import SwiftUI
 struct ShortcutRecorder: View {
     let spec: String
     let label: String
+    /// Why the shortcut set now does not work, shown in the field while it is not recording (a conflict set by hand in the file, or
+    /// a key the system did not register).
+    var problem: String?
     /// Core's verdict on a recorded shortcut; `nil` when the model has no checker, and the plain rule stands.
     let check: (String) -> ShortcutCheck?
     let onRecording: (Bool) -> Void
@@ -18,12 +21,13 @@ struct ShortcutRecorder: View {
     @State private var recording = false
     /// Why the last shortcut was refused, in the field's words.
     @State private var refusal: String?
-    private var rejected: Bool { refusal != nil }
+    private var shownProblem: String? { refusal ?? (recording ? nil : problem) }
+    private var rejected: Bool { shownProblem != nil }
 
     var body: some View {
         Button { recording.toggle() } label: {
             HStack(spacing: Space._1) {
-                if let refusal {
+                if let refusal = shownProblem {
                     // Keys that macOS, the app or the shell already answer to are said, not taken (`Recording::Taken`).
                     Text(refusal).lineLimit(1).foregroundStyle(tokens.statusWarningText)
                 } else if recording {
@@ -58,8 +62,8 @@ struct ShortcutRecorder: View {
         .onDisappear { if recording { onRecording(false) } }
         .accessibilityLabel(label)
         .accessibilityValue(spec.isEmpty ? SettingsText.recorderNone : KeySpecText.caps(spec).joined(separator: " "))
-        .accessibilityHint(refusal ?? SettingsText.recorderPrompt)
-        .help(refusal ?? "")
+        .accessibilityHint(shownProblem ?? SettingsText.recorderPrompt)
+        .help(shownProblem ?? "")
     }
 
     private func record(_ key: RecordedKey) {

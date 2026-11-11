@@ -16,7 +16,13 @@ struct SettingsPage: View {
             if let note = model.host.previewNote(section: section.id) {
                 Banner(kind: .info, text: note) { ActionButton(title: Words.text("settings-window-feature-flags", fallback: "Feature flags"), symbol: nil) { model.show("featureFlags") } }
             }
-            if section.id == "advanced", let broken = model.backend.banner() { Banner(kind: .warning, text: broken) }
+            // The file that does not read says why on Advanced, with a way to open it; on every other page that changes are not saved.
+            if section.id == "advanced", let broken = model.backend.banner() {
+                Banner(kind: .warning, text: broken) { ActionButton(title: SettingsText.open, symbol: nil, frameId: "banner.open") { model.host.perform(.openConfig) } }
+            } else if model.backend.unreadable {
+                Banner(kind: .warning, text: SettingsText.configUnreadable)
+            }
+            if section.id == "profile", let problem = model.host.profilesProblem() { Banner(kind: .warning, text: problem) }
             if let problem = model.host.panelRecords().problem { Banner(kind: .danger, text: problem) }
             if let scene = PreviewScene(section: section.id) { PreviewStrip(model: model, scene: scene) }
             ForEach(Array(section.groups.enumerated()), id: \.offset) { _, group in

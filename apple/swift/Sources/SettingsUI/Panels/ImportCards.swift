@@ -63,6 +63,7 @@ private struct ImportCard: View {
                 .frame(minHeight: Metric.control).contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .recordFrame("import.\(record.id)")
             .accessibilityLabel("\(record.app), \(record.summary)")
             .accessibilityAddTraits(.isButton)
             .accessibilityValue(open ? "expanded" : "collapsed")
@@ -120,6 +121,7 @@ private struct ImportReviewView: View {
         VStack(alignment: .leading, spacing: Space._1) {
             HStack(spacing: Space._3) {
                 SettingToggle(label: item.label, isOn: draft.isTicked(id, index), isCheckbox: true) { draft.tick(id, index, $0) }
+                    .recordFrame("import.\(id).tick\(index)")
                     .frame(width: SettingsMetric.importLabelWidth, alignment: .leading)
                 mono(item.from).foregroundStyle(tokens.textMuted).frame(maxWidth: .infinity, alignment: .leading)
                 if item.command == nil {
@@ -143,7 +145,7 @@ private struct ImportReviewView: View {
     private var footer: some View {
         let selected = draft.selected(id)
         return HStack(spacing: Space._3) {
-            ActionButton(title: Words.text("settings-import-apply", fallback: "Import selected"), symbol: Icon.install.rawValue) { draft.apply(id) }
+            ActionButton(title: Words.text("settings-import-apply", fallback: "Import selected"), symbol: Icon.install.rawValue, frameId: "import.apply") { draft.apply(id) }
                 .disabled(selected == 0)
             Text(host.importSelectedLine(selected: selected, total: review.items.count)).textRole(.caption).foregroundStyle(tokens.textMuted)
             Spacer(minLength: 0)

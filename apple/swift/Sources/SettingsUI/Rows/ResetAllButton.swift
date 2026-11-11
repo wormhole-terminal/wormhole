@@ -10,19 +10,19 @@ struct ResetAllButton: View {
     let model: SettingsModel
     let label: String
     let icon: String
-    @State private var asking = false
-
     var body: some View {
         let count = model.changedKeyCount
-        ActionButton(title: label, symbol: icon, isDestructive: true) { asking = true }
+        ActionButton(title: label, symbol: icon, isDestructive: true, frameId: "reset-all") { ask(count) }
             .disabled(count == 0)
             .help(count == 0
                 ? Words.text("settings-advanced-every-setting-is-at-its-default", fallback: "Every setting is at its default")
                 : Words.text("settings-advanced-asks-first", fallback: "Asks first"))
-            .confirmationDialog(label, isPresented: $asking) {
-                Button(Words.text("settings-advanced-reset", fallback: "Reset"), role: .destructive) { model.resetAll() }
-            } message: {
-                Text(model.host.resetQuestion(count: count))
-            }
+    }
+
+    private func ask(_ count: Int) {
+        Task {
+            let reset = Words.text("settings-advanced-reset", fallback: "Reset")
+            if await SettingsQuestion.confirm(title: label, detail: model.host.resetQuestion(count: count), confirm: reset) { model.resetAll() }
+        }
     }
 }

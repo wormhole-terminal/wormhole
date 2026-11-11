@@ -12,7 +12,7 @@ extension AppController {
     func runKeys(command: String, argument: String) -> Bool {
         switch command {
         case "key": reply(sendKey(argument))
-        case "keys": reply("focus=\(hub.focus.detail) responder=\(window?.firstResponder.map { String(describing: type(of: $0)) } ?? "none")")
+        case "keys": reply("focus=\(hub.focus.detail) responder=\(keyTarget?.firstResponder.map { String(describing: type(of: $0)) } ?? "none")")
         case "hold-cmd", "release-cmd":
             // ⌘ pressed alone and kept down (the ⌘1-9 hints show after 250 ms), or let go: the modifier event the window's monitors see.
             let flags: NSEvent.ModifierFlags = command == "hold-cmd" ? .command : []
@@ -28,6 +28,9 @@ extension AppController {
         return true
     }
 
+    /// The window the keys go to: the one `pointer-window <title>` named (Settings, the Studio), else the workspace's in front.
+    private var keyTarget: NSWindow? { drivenWindow ?? window }
+
     /// Carbon's key codes of the ANSI letters, digits and punctuation, by position.
     private static let ansiKeys = Array("asdfhgzxcv\u{0}bqweryt123465=97-80]ou[ip\u{0}lj'k;\\,/nm.")
 
@@ -35,7 +38,7 @@ extension AppController {
     private func sendKey(_ spec: String) -> String {
         var parts = spec.lowercased().split(separator: "-", omittingEmptySubsequences: false).map(String.init)
         if parts.last == "" { parts.removeLast(); parts[parts.count - 1] += "-" }
-        guard let name = parts.last, let window else { return "error: key needs a spec like shift-f6" }
+        guard let name = parts.last, let window = keyTarget else { return "error: key needs a spec like shift-f6" }
         var flags = Self.modifierFlags(parts.dropLast().joined(separator: "-"))
         if let unknown = parts.dropLast().first(where: { Self.modifierFlags($0).isEmpty }) { return "error: unknown modifier \(unknown)" }
         let named: [String: (UInt16, String)] = [
@@ -61,7 +64,9 @@ extension AppController {
             editor.doCommand(by: #selector(NSResponder.deleteToBeginningOfLine(_:)))
             return "key \(spec) -> deleteToBeginningOfLine focus=\(settled())"
         }
-        if !fieldCopy, let id = menuAction(for: name, flags) {
+        // In another window (`pointer-window Settings`) the key goes to that window's views first, as a person's would, a recorder's
+        // among them; only what they leave goes on to the menu.
+        if !fieldCopy, window === self.window, let id = menuAction(for: name, flags) {
             // An action nothing in the table runs is AppKit's own (Edit ▸ Paste, Undo…): the menu would send it up the responder chain.
             if router.table[id] == nil, let selector = StandardActions.selectors[.action(id)] {
                 // In a text field the system's own copy, cut and paste would use the person's clipboard.
@@ -80,7 +85,7 @@ extension AppController {
 
     /// One character typed into whatever has the keys, as `text` sends them: its key on the ANSI layout when it has one.
     func typeCharacter(_ character: Character) {
-        guard let window else { return }
+        guard let window = keyTarget else { return }
         let code = character.lowercased().first.flatMap { Self.ansiKeys.firstIndex(of: $0) }.map(UInt16.init) ?? (character == " " ? 49 : 0)
         press(code: code, characters: String(character), flags: character.isUppercase ? .shift : [], in: window)
     }

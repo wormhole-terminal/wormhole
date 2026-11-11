@@ -13,8 +13,11 @@ extension RustSettingsHost {
 
     public func makeProfile(name: String, copyOf: String?) -> String? {
         do {
-            _ = try settingsCreateProfile(name: name, copyOf: copyOf)
+            let id = try settingsCreateProfile(name: name, copyOf: copyOf)
             refreshProfiles()
+            // Deferred: the sheet that asked is still on its way out, and the switch rebuilds this window.
+            let enter = platform.profileCreated
+            Task { @MainActor in enter(id) }
             return nil
         } catch {
             return SettingsFailure.sentence(error)
@@ -23,6 +26,7 @@ extension RustSettingsHost {
 
     public func removeProfile(_ id: String) -> String? {
         do {
+            platform.willDeleteProfile(id)
             try settingsDeleteProfile(id: id)
             refreshProfiles()
             return nil

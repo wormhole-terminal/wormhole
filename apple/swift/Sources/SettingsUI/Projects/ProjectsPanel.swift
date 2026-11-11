@@ -27,12 +27,12 @@ private struct ProjectsBody: View {
         VStack(alignment: .leading, spacing: Space._6) {
             SettingGroup(title: ProjectsText.project) {
                 HStack {
-                    TextField(ProjectsText.search, text: $search).textFieldStyle(.roundedBorder).frame(width: Self.searchWidth)
+                    TextField(ProjectsText.search, text: $search).textFieldStyle(.roundedBorder).frame(width: Self.searchWidth).recordFrame("project.search")
                     OptionPicker(options: options, selected: .string(projects.selected ?? ""), label: ProjectsText.project, width: Self.selectWidth) {
                         pick($0.string)
                     }
                     Spacer(minLength: 0)
-                    if projects.selected != nil { LinkButton(title: ProjectsText.allProjects) { pick(nil) } }
+                    if projects.selected != nil { LinkButton(title: ProjectsText.allProjects) { pick(nil) }.recordFrame("project.all") }
                 }
                 .padding(.vertical, Space._2)
             }
@@ -64,7 +64,7 @@ private struct Defaults: View {
     var body: some View {
         SettingGroup(title: ProjectsText.byDefault, blurb: ProjectsText.defaultsNote) {
             ForEach(projects.defaults) { feature in
-                SettingRow(label: feature.label, description: feature.description, visibleHint: true, state: RowState(), onReset: {}) {
+                SettingRow(label: feature.label, description: feature.description, visibleHint: true, state: RowState(), frameId: "project.default.\(feature.key)", onReset: {}) {
                     SettingToggle(label: feature.label, isOn: feature.on) { on in Task { await projects.setDefault(feature.key, on: on) } }
                 }
             }
@@ -78,8 +78,8 @@ private struct Defaults: View {
                 HStack(spacing: Space._2) {
                     Text(project.detail).textRole(.body).foregroundStyle(tokens.textPrimary)
                         .lineLimit(1).truncationMode(.middle).frame(maxWidth: .infinity, alignment: .leading)
-                    LinkButton(title: ProjectsText.settings) { Task { await projects.select(project.root) } }
-                    LinkButton(title: ProjectsText.revoke) { Task { await projects.revoke(project.root) } }
+                    LinkButton(title: ProjectsText.settings) { Task { await projects.select(project.root) } }.recordFrame("project.settings.\(project.name)")
+                    LinkButton(title: ProjectsText.revoke) { Task { await projects.revoke(project.root) } }.recordFrame("project.revoke.\(project.name)")
                 }
                 .frame(minHeight: SettingsMetric.rowMinHeight + Space._2)
             }

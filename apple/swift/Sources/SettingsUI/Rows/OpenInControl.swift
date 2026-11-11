@@ -35,7 +35,7 @@ struct OpenInControl: View {
         panel.allowsMultipleSelection = false
         panel.directoryURL = URL(fileURLWithPath: "/Applications")
         panel.prompt = Words.text("settings-profile-choose", fallback: "Choose")
-        guard panel.runModal() == .OK, let url = panel.url, let bundle = Bundle(url: url)?.bundleIdentifier else { return }
+        guard let url = PanelPick.run(panel), let bundle = Bundle(url: url)?.bundleIdentifier else { return }
         model.set(key, .string(bundle))
     }
 }

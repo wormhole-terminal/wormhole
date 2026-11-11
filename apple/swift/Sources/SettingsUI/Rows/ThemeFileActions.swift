@@ -17,7 +17,10 @@ struct ImportThemeButton: View {
 
     var body: some View {
         HStack(spacing: Space._3) {
-            ActionButton(title: Words.text("settings-appearance-import-theme", fallback: "Import theme…"), symbol: "arrow.down") { importFile() }
+            ActionButton(title: Words.text("settings-appearance-import-theme", fallback: "Import theme…"), symbol: "arrow.down", frameId: "import-theme") { importFile() }
+            if let open = model.openStudio {
+                ActionButton(title: Words.text("settings-appearance-theme-studio", fallback: "Theme Studio"), symbol: "paintpalette", frameId: "open-studio", action: open)
+            }
             if let failure { Text(failure).textRole(.caption).foregroundStyle(tokens.statusDangerText) }
         }
     }
@@ -37,18 +40,15 @@ enum ThemeFiles {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.prompt = Words.text("settings-window-import-theme", fallback: "Import theme")
-        return panel.runModal() == .OK ? panel.url?.path : nil
+        return PanelPick.run(panel)?.path
     }
 
     /// Move to Trash…: the question (a sheet on the Settings window, held for a driver in a test instance), then the move.
     @MainActor static func trash(_ value: String, model: SettingsModel) {
         guard let plan = model.host.themeTrashPlan(value) else { return }
         Task {
-            let question = Question(
-                title: plan.message, detail: plan.detail,
-                confirm: Words.text("settings-appearance-move-to-trash", fallback: "Move to Trash"))
-            let window = NSApp.windows.first { $0.title == SettingsText.settings }
-            guard case .confirm = await QuestionSheet(question).ask(in: window) else { return }
+            let confirm = Words.text("settings-appearance-move-to-trash", fallback: "Move to Trash")
+            guard await SettingsQuestion.confirm(title: plan.message, detail: plan.detail, confirm: confirm) else { return }
             _ = model.host.trashTheme(value)
             ThemeStore.shared.reloadThemes()
         }

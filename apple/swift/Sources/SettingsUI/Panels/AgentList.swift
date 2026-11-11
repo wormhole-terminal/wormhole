@@ -38,14 +38,14 @@ struct AgentList: View {
                         Text(agent.detail).textRole(.caption).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
                         if let path = agent.configPath {
                             IconButton(symbol: Icon.reveal.rawValue, label: LocalizedStringKey(Words.text("settings-agents-reveal-in-finder", fallback: "Reveal in Finder"))) {
-                                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+                                ExternalOpen.reveal([URL(fileURLWithPath: path)])
                             }
                             .frame(width: Metric.controlSmall, height: Metric.controlSmall)
                         }
                     }
                 }
                 Spacer(minLength: 0)
-                if let hooks = agent.hooks { ActionButton(title: title(hooks), symbol: nil) { host.perform(hooks, agent: agent.id) } }
+                if let hooks = agent.hooks { ActionButton(title: title(hooks), symbol: nil, frameId: "agent.\(agent.id).hooks") { host.perform(hooks, agent: agent.id) } }
             }
             if let note = agent.note {
                 Text(note).textRole(.caption).foregroundStyle(tokens.textMuted).padding(.leading, Metric.tile + Space._3)

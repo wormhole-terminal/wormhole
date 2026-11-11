@@ -16,9 +16,9 @@ use wormhole_core::update::{
 };
 use wormhole_core::view::sidebar::display_path;
 use wormhole_text::keys::{
-    settings_advanced_reset_question, settings_agents_others_head, settings_import_selected,
+    settings_advanced_reset_question, settings_agents_others_head, settings_changed_summary, settings_import_selected,
     settings_terminal_worktree_base_under, settings_updates_count_starts_in,
-    settings_window_preview_feature_note,
+    settings_window_preview_feature_note, settings_window_profiles_unreadable,
 };
 use wormhole_text::whole;
 
@@ -32,6 +32,19 @@ pub fn settings_others_head(count: u32) -> String {
 #[uniffi::export]
 pub fn settings_reset_question(count: u32) -> String {
     settings_advanced_reset_question(whole(count))
+}
+
+/// "7 settings changed", the Changed page's summary.
+#[uniffi::export]
+pub fn settings_changed_summary_line(count: u32) -> String {
+    settings_changed_summary(whole(count))
+}
+
+/// "The list of profiles couldn't be read, so it was set aside and rebuilt: <why>": the Profile page's banner while
+/// `profiles.json` was recovered at launch; `None` when it read.
+#[uniffi::export]
+pub fn settings_profiles_problem() -> Option<String> {
+    crate::profile::recovered().map(|message| settings_window_profiles_unreadable(&message))
 }
 
 /// What a preview section says at its top: it is behind a feature flag, which it names. `section` is the schema's id;

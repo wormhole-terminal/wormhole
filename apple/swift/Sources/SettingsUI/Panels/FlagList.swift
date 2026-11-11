@@ -16,7 +16,7 @@ struct FlagList: View {
             let changed = flag.on != flag.defaultOn
             SettingRow(
                 label: flag.title, description: flag.description, visibleHint: false, state: RowState(isChanged: changed),
-                onReset: { model.host.setFlag(flag.key, on: flag.defaultOn) }
+                frameId: "flag.\(flag.key)", onReset: { model.host.setFlag(flag.key, on: flag.defaultOn) }
             ) {
                 SettingToggle(label: flag.title, isOn: flag.on) { model.host.setFlag(flag.key, on: $0) }
             }

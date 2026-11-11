@@ -155,7 +155,7 @@ if ffiLinked {
         .testTarget(name: "FilesBridgeTests", dependencies: ["FilesBridge", "PanelModel", "PlatformModel", "WormholeBindings", "WorkspaceModel"]),
         // The settings window over the Rust core: values, writes, search, shortcut rules, the agents, imports and
         // profiles. Replaces the mock backend and host.
-        .target(name: "SettingsBridge", dependencies: ["SettingsModel", "FontPickerModel", "WormholeBindings"]),
+        .target(name: "SettingsBridge", dependencies: ["SettingsModel", "FontPickerModel", "DesignSystem", "WormholeBindings"]),
         .testTarget(name: "SettingsBridgeTests", dependencies: ["SettingsBridge", "SettingsModel", "FontPickerModel", "WormholeBindings"]),
         // The auxiliary windows' backends (update, session hosts, project trust, agent access, first run, licenses).
         .target(name: "AuxBridge", dependencies: ["AuxModel", "PlatformModel", "WormholeBindings"]),

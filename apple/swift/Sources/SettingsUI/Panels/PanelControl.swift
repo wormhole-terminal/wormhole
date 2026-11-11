@@ -27,11 +27,20 @@ struct PanelControl: View {
                 segmented: true
             ) { model.set("agent_access", $0) }
         case "profile-delete":
-            ActionButton(title: SettingsText.deleteProfile, symbol: Icon.trash.rawValue, isDestructive: true) { model.confirmsProfileDelete = true }
+            ActionButton(title: SettingsText.deleteProfile, symbol: Icon.trash.rawValue, isDestructive: true, frameId: "profile.delete") { deleteProfile() }
                 .disabled(model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault ?? true)
         case "notify-permission": button(Words.text("settings-notifications-open-system", fallback: "Open System Settings"), Icon.settings.rawValue, .openNotificationSettings)
         case "notify-test": button(Words.text("settings-notifications-send-test", fallback: "Send test"), Icon.notifications.rawValue, .sendTestNotification)
         default: Text(SettingsText.notBuilt).textRole(.label).foregroundStyle(tokens.textFaint)
+        }
+    }
+
+    /// The profile Wormhole is in is deleted after the question (never Default: the button is off there).
+    private func deleteProfile() {
+        guard let profile = model.host.panelRecords().profiles.first(where: \.isActive), !profile.isDefault else { return }
+        Task {
+            guard await SettingsQuestion.confirm(title: SettingsText.deleteProfileTitle, detail: profile.deleteQuestion, confirm: SettingsText.delete) else { return }
+            _ = model.host.removeProfile(profile.id)
         }
     }
 
