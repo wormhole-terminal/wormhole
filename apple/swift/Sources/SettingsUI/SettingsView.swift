@@ -19,7 +19,7 @@ public struct SettingsView: View {
 
     public init(model: SettingsModel, onClose: @escaping () -> Void = {}) {
         (self.model, self.onClose) = (model, onClose)
-        _fonts = State(initialValue: FontLibrary(rules: model.host.fontRules, system: CoreTextFonts(), recents: UserDefaultsFontRecents()))
+        _fonts = State(initialValue: FontLibrary(rules: model.host.fontRules, system: CoreTextFonts(), recents: FileFontRecents()))
     }
 
     public var body: some View {
