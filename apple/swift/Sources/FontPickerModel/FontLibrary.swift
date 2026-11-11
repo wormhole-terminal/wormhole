@@ -1,6 +1,6 @@
 // The fonts a Mac has, loaded once for a window's pickers and kept: the installed families first, then which of
-// them are monospace (the slower question), plus the bundled family and the user's font files, which are
-// registered for this process so each name draws in its own face. The system is asked off the main actor.
+// them are monospace (the slower question), plus the bundled family and the user's font files (registered for this
+// process by the app, so each name draws in its own face). The system is asked off the main actor.
 
 import Foundation
 import Observation
@@ -60,7 +60,8 @@ public final class FontLibrary {
     private func apply(custom: CustomFonts) async {
         let system = system
         let replaced = custom.families.contains { $0.name == rules.bundledFamily }
-        let files = (replaced ? [] : rules.bundledFiles) + custom.files
+        // The custom files are the app's to register and keep in step with the folder (`SettingsBridge`'s `FontFolder`).
+        let files = replaced ? [] : rules.bundledFiles
         await Task.detached { system.register(files) }.value
         catalog.custom = custom.families
         catalog.bundled = replaced ? [] : [rules.bundledFamily]

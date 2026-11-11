@@ -3,10 +3,12 @@
 // `studio` and `folders` open the Theme Studio and the folder picker, `fonts` says what the terminals are drawn with.
 
 import AppKit
+import CoreText
 import DesignSystem
 import Foundation
 import SettingsModel
 import SettingsUI
+import TerminalMetal
 
 extension AppController {
     /// False when `command` is not one of these.
@@ -144,7 +146,12 @@ extension AppController {
         case "folders": folderPicking.open(); reply("folders")
         case "fonts":
             let fonts = terminalLook.fonts
-            reply("fonts=\(fonts.map { "\($0.font) size=\($0.pointSize) line=\($0.lineHeight ?? 0) ligatures=\($0.ligatures)" } ?? "none") view=\(selectedView.map { "\($0.pointSize)pt" } ?? "-")")
+            // The family CoreText gives the regular face now: another than the one set means a fallback (a custom font not registered).
+            var resolved = ""
+            if case .system(let family)? = fonts?.font {
+                resolved = " resolved=" + (CTFontCopyFamilyName(CTFontCreateWithName(family as CFString, 12, nil)) as String)
+            }
+            reply("fonts=\(fonts.map { "\($0.font) size=\($0.pointSize) line=\($0.lineHeight ?? 0) ligatures=\($0.ligatures)" } ?? "none") view=\(selectedView.map { "\($0.pointSize)pt" } ?? "-")\(resolved)")
         default: return false
         }
         return true

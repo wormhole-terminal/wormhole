@@ -21,12 +21,16 @@ public protocol SettingsBackend: AnyObject {
     var unreadable: Bool { get }
     /// The rows the Changed page lists, as core decides them (`section id`, `row id`) in page order; nil: the model works it out.
     func changedRows() -> [(section: String, entry: String)]?
+    /// The fonts folder's files as registered with the system: its families, and a count that moves when the files change
+    /// (the observers hear of that too, as the values are the same then). Nothing follows it in memory.
+    var fontFolder: FontFolderState { get }
 }
 
 extension SettingsBackend {
     public func banner() -> String? { nil }
     public var unreadable: Bool { false }
     public func changedRows() -> [(section: String, entry: String)]? { nil }
+    public var fontFolder: FontFolderState { FontFolderState() }
 }
 
 /// Keeps an observation alive; dropping it stops it. `cancel` may run on any thread (a deinit does), so it

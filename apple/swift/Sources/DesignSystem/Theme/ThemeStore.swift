@@ -34,6 +34,9 @@ public final class ThemeStore {
     public var interfaceFont = InterfaceFont() { didSet { if interfaceFont != oldValue { refresh() } } }
     /// What `settings_text_size` multiplies the secondary windows' text by (the Studio's too): 1 is the default.
     public var textScale: CGFloat = 1
+    /// Moves when font files were registered or dropped (the fonts folder): the type roles read it, so what is set in a
+    /// family that was missing draws again in its own face.
+    public var fontFiles = 0
     /// "Also translucent" for the Settings, Studio and Session Hosts windows, and the main window's opacity and blur they borrow.
     public var secondary = SecondaryLook()
     /// The folder of the person's theme files (read only). Needs a `resolver`.

@@ -90,19 +90,21 @@ pub fn font_custom_scan(dir: String) -> CustomFontsRecord {
 }
 
 fn records(scan: Scan) -> CustomFontsRecord {
-    let family =
-        |f: &custom::FontFamily| CustomFontFamilyRecord { name: f.name.clone(), monospace: f.monospace };
     CustomFontsRecord {
-        families: custom::families(&scan.files).iter().map(family).collect(),
-        files: scan
-            .files
-            .iter()
-            .map(|file| CustomFontFileRecord {
-                path: file.path.to_string_lossy().into_owned(),
-                families: file.families.iter().map(family).collect(),
-            })
-            .collect(),
+        families: custom::families(&scan.files).iter().map(family_record).collect(),
+        files: scan.files.iter().map(file_record).collect(),
         skipped: scan.skipped.iter().map(|(path, _)| path.to_string_lossy().into_owned()).collect(),
+    }
+}
+
+fn family_record(f: &custom::FontFamily) -> CustomFontFamilyRecord {
+    CustomFontFamilyRecord { name: f.name.clone(), monospace: f.monospace }
+}
+
+pub(crate) fn file_record(file: &custom::FontFile) -> CustomFontFileRecord {
+    CustomFontFileRecord {
+        path: file.path.to_string_lossy().into_owned(),
+        families: file.families.iter().map(family_record).collect(),
     }
 }
 

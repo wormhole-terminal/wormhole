@@ -1,5 +1,5 @@
-//! Following a profile's `config.json` (and the theme files that resolve with it) so a hand edit, a
-//! script or another window reaches the open Settings window without anyone polling it.
+//! Following a profile's `config.json` (and the theme files that resolve with it, and the fonts folder) so
+//! a hand edit, a script or another window reaches the open Settings window without anyone polling it.
 //!
 //! The shape is the app's `own_files`: the OS delivers events on a thread of its own whose callback
 //! only sorts the paths and sends a mark; one thread of ours waits for the writer to finish
@@ -71,22 +71,30 @@ impl Follower {
     }
 }
 
-/// The two places of a profile that settings read back, as the system names paths (real paths).
+/// The places of a profile that settings read back, as the system names paths (real paths).
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Roots {
     config: PathBuf,
     themes: PathBuf,
+    fonts: PathBuf,
 }
 
 impl Roots {
     fn of(profile: &ProfilePaths, base: &Path) -> Self {
         let under = |path: PathBuf| path.file_name().map_or(path.clone(), |name| base.join(name));
-        Self { config: under(profile.config_file()), themes: under(profile.themes_dir()) }
+        Self {
+            config: under(profile.config_file()),
+            themes: under(profile.themes_dir()),
+            fonts: under(profile.fonts_dir()),
+        }
     }
 
-    /// Whether a batch calls for a look: it names the file or a theme, or events were lost.
+    /// Whether a batch calls for a look: it names the file, a theme or a font, or events were lost.
     fn matters(&self, batch: &Batch) -> bool {
-        batch.rescan || batch.paths.iter().any(|path| *path == self.config || path.starts_with(&self.themes))
+        batch.rescan
+            || batch.paths.iter().any(|path| {
+                *path == self.config || path.starts_with(&self.themes) || path.starts_with(&self.fonts)
+            })
     }
 }
 
@@ -115,13 +123,14 @@ mod tests {
     }
 
     #[test]
-    fn only_the_file_the_themes_and_lost_events_call_for_a_look() {
+    fn only_the_file_the_themes_the_fonts_and_lost_events_call_for_a_look() {
         let root = DataRoot::new("/data");
         let profile = root.default_profile();
         let roots = Roots::of(&profile, profile.dir());
         let config = profile.config_file();
         assert!(roots.matters(&Batch { paths: vec![config.clone()], rescan: false }));
         assert!(roots.matters(&Batch { paths: vec![profile.themes_dir().join("mine.json")], rescan: false }));
+        assert!(roots.matters(&Batch { paths: vec![profile.fonts_dir().join("Mine.ttf")], rescan: false }));
         assert!(roots.matters(&batch(&[], true)), "events were lost");
         assert!(!roots.matters(&Batch { paths: vec![profile.dir().join("wormhole.db")], rescan: false }));
     }

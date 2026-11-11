@@ -7,6 +7,7 @@
 mod agents;
 mod error;
 mod flags;
+mod fonts_follow;
 mod handle;
 mod host;
 mod import_review;

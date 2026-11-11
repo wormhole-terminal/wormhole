@@ -2,6 +2,7 @@
 // the interface font (the theme's `ui_font_size`, 13 pt by default, in its `ui_font_family` or the system
 // font), so at the default they are 12 / 13 / 14 / 16 / 20. Line height is GPUI's own ratio unless a row fixes it (`NAME_LINE`, `META_LINE`).
 
+import CoreText
 import SwiftUI
 
 public enum TextRole: CaseIterable, Sendable {
@@ -49,8 +50,11 @@ public enum TextRole: CaseIterable, Sendable {
     /// window's own text step (`textScale`); `weight` and `design` replace the role's.
     @MainActor public func font(scale: CGFloat = 1, weight: Font.Weight? = nil, design: Font.Design? = nil) -> Font {
         let size = size * scale
-        if let family = ThemeStore.shared.tokens.metrics.uiFontFamily, family != Self.systemFont {
-            return .custom(family, size: size).weight(weight ?? self.weight)
+        _ = ThemeStore.shared.fontFiles
+        if let family = ThemeStore.shared.tokens.metrics.uiFontFamily, family != Self.systemFont,
+            let face = CTFont.face(of: family, size: size)
+        {
+            return Font(face).weight(weight ?? self.weight)
         }
         return .system(size: size, weight: weight ?? self.weight, design: design ?? .default)
     }
@@ -81,5 +85,15 @@ extension View {
     /// The role's font, at the window's text step.
     public func textRole(_ role: TextRole, weight: Font.Weight? = nil, design: Font.Design? = nil) -> some View {
         modifier(RoleFont(role: role, weight: weight, design: design))
+    }
+}
+
+extension CTFont {
+    /// The family's face at `size`, or nil when CoreText has no such family and would give another. Asked of CoreText each
+    /// time, not by SwiftUI's or AppKit's font names, which keep what they found: a family whose file came or went (the
+    /// fonts folder) would stay as it first drew.
+    static func face(of family: String, size: CGFloat) -> CTFont? {
+        let font = CTFontCreateWithName(family as CFString, size, nil)
+        return CTFontCopyFamilyName(font) as String == family ? font : nil
     }
 }

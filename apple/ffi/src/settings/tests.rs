@@ -177,6 +177,28 @@ fn the_file_is_followed_and_our_own_writes_do_not_wake() {
 }
 
 #[test]
+fn the_fonts_folder_is_followed_and_each_change_is_reported_once() {
+    let fx = Fixture::new();
+    let dir = fx.root.default_profile().fonts_dir();
+    assert!(fx.handle.font_folder_changes().added.is_empty(), "the first ask lists what is there: nothing");
+    std::fs::create_dir_all(&dir).expect("fonts folder");
+    let font = dir.join("Mine.ttf");
+    write_atomic(&font, wormhole_core::theme::fonts::bundled::FACES[0], LinkPolicy::Follow).expect("writes");
+    assert!(fx.wakes.wait_past(0), "a font added woke the window");
+    fx.handle.drain();
+    let found = fx.handle.font_folder_changes();
+    assert_eq!(found.added.len(), 1);
+    assert!(found.removed.is_empty());
+    assert!(fx.handle.font_folder_changes().added.is_empty(), "told once");
+
+    let woken = fx.wakes.count();
+    std::fs::remove_file(&font).expect("remove");
+    assert!(fx.wakes.wait_past(woken), "a font removed woke it again");
+    fx.handle.drain();
+    assert_eq!(fx.handle.font_folder_changes().removed, vec![font.to_string_lossy().into_owned()]);
+}
+
+#[test]
 fn a_file_that_does_not_read_is_never_written_over() {
     let fx = Fixture::new();
     let broken = "{ \"opacity\": \"dim\" }\n";

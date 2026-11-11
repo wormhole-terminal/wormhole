@@ -16,11 +16,15 @@ public struct TerminalFontSettings: Sendable, Hashable {
     public var ligatures: Bool
     /// Families tried, in this order, for a character the font has no glyph for.
     public var fallbacks: [String]
+    /// Moves when font files were registered or dropped (the fonts folder): a family that was missing and drew in a fallback
+    /// face is looked up again, which equal settings would not do, and the contexts made before it are not found.
+    public var folderRevision: Int
 
     public init(
         font: FontSpec = .system(family: "Menlo"), pointSize: Double = 13, lineHeight: Double? = nil, ligatures: Bool = true,  // text: a font family's name
-        fallbacks: [String] = []
+        fallbacks: [String] = [], folderRevision: Int = 0
     ) {
+        self.folderRevision = folderRevision
         self.font = font
         self.pointSize = pointSize
         self.lineHeight = lineHeight

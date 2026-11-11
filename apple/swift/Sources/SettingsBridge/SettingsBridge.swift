@@ -27,7 +27,7 @@ public enum SettingsBridge {
         let relay = WakeRelay()
         let handle = try SettingsHandle.open(profile: profile, listener: relay)
         let schema = try SettingsSchema(json: Data(settingsSchemaJson().utf8))
-        let backend = RustSettingsBackend(handle: handle, relay: relay)
+        let backend = RustSettingsBackend(handle: handle, relay: relay, bundledFonts: platform.bundledFonts())
         return Kit(
             schema: schema, backend: backend,
             host: RustSettingsHost(handle: handle, backend: backend, platform: platform, importHome: importHome),

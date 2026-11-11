@@ -14,6 +14,7 @@ use serde_json::Value;
 use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 
 use super::error::SettingsError;
+use super::fonts_follow::FontsFolder;
 use super::state::State;
 use super::values::to_text;
 use super::watch::Follower;
@@ -31,6 +32,7 @@ pub(crate) struct Shared {
     pub(crate) state: Mutex<State>,
     woken: AtomicBool,
     listener: Arc<dyn SettingsListener>,
+    pub(crate) fonts: FontsFolder,
 }
 
 impl Shared {
@@ -83,11 +85,13 @@ impl SettingsHandle {
             state: Mutex::new(State::load(&paths)),
             woken: AtomicBool::new(false),
             listener,
+            fonts: FontsFolder::new(paths.fonts_dir()),
         });
         let watched = Arc::downgrade(&shared);
         let follower = Follower::start(&paths, move || {
             let Some(shared) = watched.upgrade() else { return false };
-            let moved = shared.lock().poll();
+            // The fonts folder is asked after the file, so a wake for either is one.
+            let moved = shared.lock().poll() | shared.fonts.moved();
             if moved {
                 shared.wake();
             }

@@ -1015,6 +1015,12 @@ their traits stay CoreText's on the Swift side, as `fonts.rs` and `platform/maco
 - `fontCustomScan(dir) -> CustomFontsRecord{files, families, skipped}`: core's capped `custom::scan` of the fonts folder
   (`SettingsPaths.fontsDir`). A file that is not a font is only named in `skipped`; a missing folder is empty. The caller
   registers `files` with CoreText for the process (`CTFontManagerRegisterFontURLs`, scope process), as GPUI does.
+- `SettingsHandle.fontFolderChanges() -> FontFolderChanges{removed: [path], added: [CustomFontFileRecord]}` (`fonts.rs:48-136` of the GPUI
+  app): the font files to unregister and register since the last call, by core's fingerprint of the profile's fonts folder (`custom::changes`),
+  `added` only the files that parse. The first call lists every file, so the app calls it once at launch and registers them before any text is
+  shaped. The settings follower watches the folder with `config.json` (one FSEvents watch, the slow poll as fallback) and wakes the listener
+  when it differs; `drain()` then `fontFolderChanges()`. Swift: `SettingsBridge.FontFolder` calls CoreText, `SettingsBackend.fontFolder`
+  (`revision`, `families`) tells the window to make its fonts again.
 - `fontBundledFamily() -> String`: `JetBrains Mono`. A custom family of that name replaces it (list it once, as custom).
 - Swift: `SettingsBridge.RustFontRules` implements `FontPickerModel.FontRules`; `RustSettingsHost.fontRules` hands it out.
   `LocalFontRules` is the same rules in Swift for a build without the core, and a test keeps the two equal.

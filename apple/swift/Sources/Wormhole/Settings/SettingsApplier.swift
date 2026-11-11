@@ -5,6 +5,7 @@
 
 import DesignSystem
 import FileIconTheme
+import FontPickerModel
 import Foundation
 import PanesModel
 import PanesUI
@@ -25,6 +26,7 @@ final class SettingsApplier {
     private let model: SettingsModel
     private var observation: SettingsObservation?
     private var applied: [String: JSONValue] = [:]
+    private var appliedFolder = FontFolderState()
 
     init(app: AppController, model: SettingsModel) {
         self.app = app
@@ -49,7 +51,10 @@ final class SettingsApplier {
 
     private func apply(_ values: [String: JSONValue]) {
         func changed(_ keys: String...) -> Bool { keys.contains { values[$0] != applied[$0] } }
-        defer { applied = values }
+        let folder = model.backend.fontFolder
+        let fontsMoved = folder != appliedFolder
+        defer { (applied, appliedFolder) = (values, folder) }
+        if fontsMoved { ThemeStore.shared.fontFiles += 1 }
         if changed("theme", "theme_light", "theme_mode", "theme_primary", "primary_color", "branch_color", "branch_color_custom", "borders", "settings_text_size", "ui_font_family", "ui_font_size", "settings_translucent", "studio_translucent", "hosts_translucent", "opacity", "blur"), app.options.theme == nil, app.options.appearance == nil {
             ThemeSync.apply(values)
         }
@@ -57,8 +62,9 @@ final class SettingsApplier {
         // the keys did not move, so ask the store whether the files did.
         ThemeStore.shared.refreshIfThemeFilesChanged()
         if changed("icon_theme", "feature_flags") { applyIcons() }
-        if changed("font_family", "font_size", "line_height", "font_ligatures"), app.options.fontFamily == nil, app.options.pointSize == nil {
-            app.terminalLook.use(FontSettingsMaker.settings(values, bundledDirectory: app.options.fontDirectory ?? Options.findBundledFonts()))
+        if changed("font_family", "font_size", "line_height", "font_ligatures") || fontsMoved, app.options.fontFamily == nil, app.options.pointSize == nil {
+            app.terminalLook.use(
+                FontSettingsMaker.settings(values, bundledDirectory: app.options.fontDirectory ?? Options.findBundledFonts(), folder: folder))
         }
         if changed("restore_terminal_text", "feature_flags") { app.sessions.forEach { $0.hub.store.source.settingsChanged() } }
         if changed("bell_sound", "bell_visual") {
@@ -85,7 +91,9 @@ final class SettingsApplier {
             app.hooks?.settingsChanged(profile: app.windowsHost.profile)
             app.menus?.windowsChanged()
         }
-        if changed("code_font_family", "code_font_size", "font_family") { app.look.codeFont = PanelSettings.codeFont(values) }
+        if changed("code_font_family", "code_font_size", "font_family") || fontsMoved {
+            app.look.codeFont = PanelSettings.codeFont(values, folderRevision: folder.revision)
+        }
         if changed(
             "changes_tree", "group_untracked", "diff_split", "diff_wrap", "tab_width", "size_units", "worktree_base",
             "worktree_clone_build_folders")

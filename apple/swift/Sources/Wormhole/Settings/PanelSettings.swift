@@ -35,9 +35,9 @@ enum PanelSettings {
         }
     }
 
-    static func codeFont(_ values: [String: JSONValue]) -> CodeFont {
+    static func codeFont(_ values: [String: JSONValue], folderRevision: Int = 0) -> CodeFont {
         let own = values["code_font_family"]?.string?.trimmingCharacters(in: .whitespaces) ?? ""
         let family = own.isEmpty ? values["font_family"]?.string : own
-        return CodeFont(family: family, size: values["code_font_size"]?.number ?? 13)
+        return CodeFont(family: family, size: values["code_font_size"]?.number ?? 13, folderRevision: folderRevision)
     }
 }
