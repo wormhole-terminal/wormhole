@@ -31,7 +31,7 @@ libc = "0.2"
 # with no value built, to refuse one nested deeper than any real file (`import/plist_value.rs`). The
 # tilde keeps it on the minor release whose API that is.
 plist = { version = "~1.10.1", default-features = false, features = ["enable_unstable_features_that_may_break_with_minor_version_bumps"] }
-rusqlite = { version = "0.40.2", features = ["bundled"] }
+rusqlite = { version = "0.41.1", features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sha2 = "0.11"

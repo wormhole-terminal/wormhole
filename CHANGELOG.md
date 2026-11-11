@@ -82,6 +82,10 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- The SQLite that Wormhole bundles for its database is now 3.54 (`libsqlite3-sys` 0.39), which closes
+  CVE-2026-119375: older versions could hand back stale memory when a database was opened beside a crafted
+  write-ahead log. Wormhole only opens its own database in its data folder, so this needed a file placed
+  there by someone else.
 - A hovered command block's exit code ("exit 101", in red or green) was hard to read on the dark readout
   of a light theme and on the light readout of a dark one. Themes get two tokens for it, `tooltip.success`
   and `tooltip.danger`, which are the status colors made readable (4.5:1) on `tooltip.background`; no
