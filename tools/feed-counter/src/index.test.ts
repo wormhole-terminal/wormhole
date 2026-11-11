@@ -4,57 +4,34 @@ import worker, { type DataPoint, dataPoint } from "./index.ts";
 const headers = (h: Record<string, string>) => new Headers(h);
 
 describe("update checks", () => {
-  test("a 1.4 check says how it runs and what it is the first of", () => {
+  test("a check is its feed and the app's version", () => {
+    const p = dataPoint("/stable/latest.json", "GET", headers({ "user-agent": "Wormhole-Updater/1.7.0" }));
+    expect(p).toEqual({ indexes: ["feed"], blobs: ["feed", "/stable/latest.json", "1.7.0", "app"], doubles: [1] });
+  });
+
+  test("a preview build is counted on its own feed", () => {
+    const p = dataPoint("/preview/latest.json", "GET", headers({ "user-agent": "Wormhole-Updater/1.7.1-preview.6" }));
+    expect(p?.blobs).toEqual(["feed", "/preview/latest.json", "1.7.1-preview.6", "app"]);
+  });
+
+  test("what 1.4 to 1.6 said besides the version is not kept", () => {
     const p = dataPoint(
       "/stable/latest.json",
       "GET",
       headers({ "user-agent": "Wormhole-Updater/1.4.0 (stable; aarch64; macOS 26)", "wormhole-count": "day, month" }),
     );
-    expect(p).toEqual({
-      indexes: ["feed"],
-      blobs: ["feed", "/stable/latest.json", "1.4.0", "stable", "aarch64", "26", "app"],
-      doubles: [1, 1, 1],
-    });
+    expect(p).toEqual({ indexes: ["feed"], blobs: ["feed", "/stable/latest.json", "1.4.0", "app"], doubles: [1] });
+    expect(JSON.stringify(p)).not.toMatch(/aarch64|macOS|stable;|day|month/);
   });
 
-  test("a check that is the first of nothing counts as a check only", () => {
-    const p = dataPoint(
-      "/unstable/latest.json",
-      "GET",
-      headers({ "user-agent": "Wormhole-Updater/1.4.1-dev.3 (unstable; x86_64; macOS unknown)" }),
-    );
-    expect(p?.blobs.slice(2, 6)).toEqual(["1.4.1-dev.3", "unstable", "x86_64", "unknown"]);
-    expect(p?.doubles).toEqual([1, 0, 0]);
-  });
-
-  test("a preview build names its channel", () => {
-    const p = dataPoint(
-      "/preview/latest.json",
-      "GET",
-      headers({ "user-agent": "Wormhole-Updater/1.5.1-preview.6 (preview; aarch64; macOS 27)" }),
-    );
-    expect(p?.blobs.slice(2, 6)).toEqual(["1.5.1-preview.6", "preview", "aarch64", "27"]);
-  });
-
-  test("an older app has its version only, and flags from it are not believed", () => {
-    const p = dataPoint(
-      "/stable/latest.json",
-      "GET",
-      headers({ "user-agent": "Wormhole-Updater/1.3.0", "wormhole-count": "day" }),
-    );
-    expect(p?.blobs.slice(2, 7)).toEqual(["1.3.0", "", "", "", "app"]);
-    expect(p?.doubles).toEqual([1, 0, 0]);
-  });
-
-  test("anything else asking for the feed is counted apart", () => {
-    const p = dataPoint("/stable/latest.json", "GET", headers({ "user-agent": "curl/8.7.1", "wormhole-count": "day" }));
-    expect(p?.blobs).toEqual(["feed", "/stable/latest.json", "", "", "", "", "other"]);
-    expect(p?.doubles).toEqual([1, 0, 0]);
+  test("anything else asking for the feed is counted apart, without its user agent", () => {
+    const p = dataPoint("/stable/latest.json", "GET", headers({ "user-agent": "curl/8.7.1" }));
+    expect(p?.blobs).toEqual(["feed", "/stable/latest.json", "", "other"]);
   });
 });
 
 describe("the download link", () => {
-  const client = (agent: string) => dataPoint("/stable/Wormhole-latest.dmg", "GET", headers({ "user-agent": agent }))?.blobs[6];
+  const client = (agent: string) => dataPoint("/stable/Wormhole-latest.dmg", "GET", headers({ "user-agent": agent }))?.blobs[3];
 
   test("tells browsers from bots", () => {
     expect(client("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15")).toBe("browser");
@@ -62,7 +39,7 @@ describe("the download link", () => {
     expect(client("Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)")).toBe("bot");
     expect(client("curl/8.7.1")).toBe("bot");
     expect(client("Transmit/5")).toBe("other");
-    expect(dataPoint("/stable/Wormhole-latest.dmg", "GET", headers({}))?.blobs[6]).toBe("none");
+    expect(dataPoint("/stable/Wormhole-latest.dmg", "GET", headers({}))?.blobs[3]).toBe("none");
   });
 
   test("a HEAD request is redirected but not counted", () => {
@@ -76,7 +53,7 @@ describe("the worker", () => {
     const env = { COUNTS: { writeDataPoint: (p: DataPoint) => points.push(p) } };
     const res = await worker.fetch(
       new Request("https://downloads.getwormhole.app/stable/latest.json", {
-        headers: { "user-agent": "Wormhole-Updater/1.4.0 (stable; aarch64; macOS 26)", "cf-connecting-ip": "203.0.113.7" },
+        headers: { "user-agent": "Wormhole-Updater/1.7.0", "cf-connecting-ip": "203.0.113.7", cookie: "id=42" },
       }),
       env,
     );
@@ -85,7 +62,7 @@ describe("the worker", () => {
       "https://github.com/wormhole-terminal/wormhole/releases/latest/download/latest.json",
     );
     expect(points).toHaveLength(1);
-    expect(JSON.stringify(points)).not.toContain("203.0.113.7");
+    expect(points).toEqual([{ indexes: ["feed"], blobs: ["feed", "/stable/latest.json", "1.7.0", "app"], doubles: [1] }]);
   });
 
   test("every address goes where its rule sent it", async () => {

@@ -3,15 +3,16 @@
  * same 302 the redirect rules gave, and adds one data point to Workers Analytics Engine:
  *
  * - an update check (`/stable/latest.json`, `/preview/latest.json`, and `/unstable/latest.json`, which
- *   the Unstable channel reads up to 1.5): the app's version, and from
- *   1.4 its channel, chip and macOS major version (its user agent), and whether it is the copy's
- *   first check of a UTC day or month (`Wormhole-Count: day, month`). The flags summed are the
- *   copies running that day or month, with no ID: nothing tells two checks of one Mac apart.
+ *   the Unstable channel reads up to 1.5): which feed, and the app's version, which its user agent
+ *   names (`Wormhole-Updater/1.7.0`). The sum is how many checks each version made, not how many
+ *   copies run: a copy checks at launch and every six hours, and nothing tells two copies apart.
  * - the website's download links (`/stable/Wormhole-latest.dmg`, universal, and `-aarch64`, `-x86_64`):
  *   which one, and whether a browser asked or a crawler, link preview or script did, by its user agent.
  *
- * Nothing else is kept: no IP address, no full user agent, no other header. Workers Logs stay off
- * (wrangler.jsonc), so no request is logged either.
+ * Nothing else is kept: no IP address, no full user agent, no other header. Versions 1.4 to 1.6 said
+ * more (the channel, the chip, the macOS version, and a `Wormhole-Count` header on the first check of
+ * a day and month); what they still send is not read. Workers Logs stay off (wrangler.jsonc), so no
+ * request is logged either.
  */
 
 /** The binding wrangler.jsonc names; Analytics Engine's `writeDataPoint`, typed by hand. */
@@ -39,8 +40,8 @@ export const TARGETS: Record<string, { kind: "feed" | "dmg"; to: string }> = {
   "/stable/Wormhole-latest-x86_64.dmg": { kind: "dmg", to: `${RELEASES}/latest/download/Wormhole-macos-x86_64.dmg` },
 };
 
-/** `Wormhole-Updater/1.4.0 (stable; aarch64; macOS 26)`; before 1.4 the version alone. */
-const UPDATER = /^Wormhole-Updater\/([0-9A-Za-z.+-]{1,40})(?: \((stable|preview|unstable); (aarch64|x86_64|unknown); macOS (\d{1,3}|unknown)\))?$/;
+/** `Wormhole-Updater/1.7.0`. What 1.4 to 1.6 put after the version, in brackets, is let through and not kept. */
+const UPDATER = /^Wormhole-Updater\/([0-9A-Za-z.+-]{1,40})(?: \([^)]{0,80}\))?$/;
 
 /** User agents that are not a person clicking a link. */
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|embed|scan|monitor|check|curl|wget|python|go-http|java\/|okhttp|libwww|httpclient|headless/i;
@@ -52,26 +53,10 @@ export function dataPoint(path: string, method: string, headers: Headers): DataP
   const agent = headers.get("user-agent") ?? "";
   if (target.kind === "dmg") {
     const client = !agent ? "none" : BOT.test(agent) ? "bot" : agent.startsWith("Mozilla/") ? "browser" : "other";
-    return { indexes: ["dmg"], blobs: ["dmg", path, "", "", "", "", client], doubles: [1, 0, 0] };
+    return { indexes: ["dmg"], blobs: ["dmg", path, "", client], doubles: [1] };
   }
-  const m = UPDATER.exec(agent);
-  if (!m) {
-    return { indexes: ["feed"], blobs: ["feed", path, "", "", "", "", "other"], doubles: [1, 0, 0] };
-  }
-  const [, version, channel = "", arch = "", macos = ""] = m;
-  const flags = new Set(
-    (headers.get("wormhole-count") ?? "")
-      .split(",")
-      .map((f) => f.trim())
-      .filter(Boolean),
-  );
-  // Only an app that says how it runs sends flags; anything else claiming them isn't the app.
-  const counted = channel !== "";
-  return {
-    indexes: ["feed"],
-    blobs: ["feed", path, version, channel, arch, macos, "app"],
-    doubles: [1, counted && flags.has("day") ? 1 : 0, counted && flags.has("month") ? 1 : 0],
-  };
+  const version = UPDATER.exec(agent)?.[1];
+  return { indexes: ["feed"], blobs: ["feed", path, version ?? "", version ? "app" : "other"], doubles: [1] };
 }
 
 export default {

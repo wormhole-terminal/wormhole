@@ -6,7 +6,8 @@
  *                              Analytics: Read), the counter's numbers (src/index.ts)
  *
  * GitHub counts every fetch of a file, by people and bots alike: the DMG is an upper bound. The update
- * archive is fetched by the in-app updater only, so its count is about how many copies updated.
+ * archive is fetched by the in-app updater only, so its count is about how many copies updated, the
+ * nearest there is to a count of copies. The counter has update checks per version, not copies.
  * Analytics Engine keeps three months.
  */
 
@@ -68,32 +69,20 @@ async function counter(): Promise<void> {
   const since = `timestamp > NOW() - INTERVAL '${days}' DAY`;
   const day = "formatDateTime(toStartOfInterval(timestamp, INTERVAL '1' DAY), '%Y-%m-%d')";
   table(
-    `Running copies per day (1.4 and later), update checks, website downloads — last ${days} days`,
+    `Update checks and website downloads per day — last ${days} days`,
     await sql(`SELECT ${day} AS day,
-        SUM(IF(blob1 = 'feed', _sample_interval * double2, 0)) AS running,
-        SUM(IF(blob1 = 'feed', _sample_interval * double1, 0)) AS checks,
-        SUM(IF(blob1 = 'dmg' AND blob7 = 'browser', _sample_interval * double1, 0)) AS dmg_browsers,
-        SUM(IF(blob1 = 'dmg' AND blob7 != 'browser', _sample_interval * double1, 0)) AS dmg_other
+        SUM(IF(blob1 = 'feed' AND blob4 = 'app', _sample_interval * double1, 0)) AS checks,
+        SUM(IF(blob1 = 'dmg' AND blob4 = 'browser', _sample_interval * double1, 0)) AS dmg_browsers,
+        SUM(IF(blob1 = 'dmg' AND blob4 != 'browser', _sample_interval * double1, 0)) AS dmg_other
       FROM ${DATASET} WHERE ${since} GROUP BY day ORDER BY day`),
   );
+  // A copy checks at launch and every six hours while it runs: checks say which versions are in use and
+  // how that moves, not how many copies there are.
   table(
-    "Running copies per month",
-    await sql(`SELECT formatDateTime(toStartOfInterval(timestamp, INTERVAL '1' MONTH), '%Y-%m') AS month,
-        SUM(_sample_interval * double3) AS running
-      FROM ${DATASET} WHERE blob1 = 'feed' GROUP BY month ORDER BY month`),
-  );
-  table(
-    "Today's running copies by version, channel, chip and macOS",
-    await sql(`SELECT blob3 AS version, blob4 AS channel, blob5 AS chip, blob6 AS macos,
-        SUM(_sample_interval * double2) AS running
-      FROM ${DATASET} WHERE blob1 = 'feed' AND timestamp > NOW() - INTERVAL '1' DAY AND double2 > 0
-      GROUP BY version, channel, chip, macos ORDER BY running DESC`),
-  );
-  table(
-    "Checks from versions before 1.4 (no daily flag: roughly 2–4 checks a day each)",
-    await sql(`SELECT blob3 AS version, SUM(_sample_interval * double1) AS checks
-      FROM ${DATASET} WHERE blob1 = 'feed' AND blob7 = 'app' AND blob4 = '' AND ${since}
-      GROUP BY version ORDER BY checks DESC`),
+    `Update checks by feed and version — last ${days} days`,
+    await sql(`SELECT blob2 AS feed, blob3 AS version, SUM(_sample_interval * double1) AS checks
+      FROM ${DATASET} WHERE blob1 = 'feed' AND blob4 = 'app' AND ${since}
+      GROUP BY feed, version ORDER BY checks DESC`),
   );
 }
 
