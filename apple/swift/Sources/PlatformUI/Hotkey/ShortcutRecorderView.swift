@@ -6,6 +6,7 @@
 import AppKit
 import DesignSystem
 import PlatformModel
+import WordsModel
 
 @MainActor
 public final class ShortcutRecorderView: NSView {
@@ -26,7 +27,7 @@ public final class ShortcutRecorderView: NSView {
     public override init(frame: NSRect) {
         super.init(frame: frame)
         setAccessibilityRole(.button)
-        setAccessibilityLabel("Shortcut")
+        setAccessibilityLabel(Words.text("settings-hotkey-hotkey", fallback: "Shortcut"))
         updateAccessibility()
     }
 
@@ -68,7 +69,7 @@ public final class ShortcutRecorderView: NSView {
             shortcut = nil
             onChange(nil)
             window?.makeFirstResponder(nil)
-        case .needsModifier: onMessage("Add ⌘, ⌃ or ⌥ to the key")
+        case .needsModifier: onMessage(Words.text("platform-recorder-add-modifier", fallback: "Add ⌘, ⌃ or ⌥ to the key"))
         case .shortcut(let spec):
             if let conflict = ShortcutRecording.conflict(spec, own: ownAction, in: keymap) { return onMessage(conflict) }
             shortcut = spec
@@ -88,13 +89,15 @@ public final class ShortcutRecorderView: NSView {
 
     /// What the pill says: the held modifiers while recording, the shortcut otherwise.
     var label: String {
-        if isRecording { return held.isEmpty ? "Type shortcut" : KeySpec(held, "").glyphText }
-        return shortcut?.glyphText ?? "None"
+        if isRecording { return held.isEmpty ? Words.text("platform-recorder-type", fallback: "Type shortcut") : KeySpec(held, "").glyphText }
+        return shortcut?.glyphText ?? Words.text("settings-row-none", fallback: "None")
     }
 
     private func updateAccessibility() {
-        setAccessibilityValue(isRecording ? "Recording" : shortcut.map { KeyCapSpeech.words($0.glyphText) } ?? "None")
-        setAccessibilityHelp("Press to record a new shortcut. Escape cancels, Delete clears.")
+        setAccessibilityValue(
+            isRecording
+                ? Words.text("platform-recorder-recording", fallback: "Recording") : shortcut.map { KeyCapSpeech.words($0.glyphText) } ?? Words.text("settings-row-none", fallback: "None"))
+        setAccessibilityHelp(Words.text("platform-recorder-help", fallback: "Press to record a new shortcut. Escape cancels, Delete clears."))
     }
 
     public override func draw(_ dirtyRect: NSRect) {

@@ -92,7 +92,7 @@ var targets: [Target] = [
     // menus, notifications, the ambient surfaces, the folder picker's model, Touch ID's protocol. Foundation only.
     .target(name: "PlatformModel", dependencies: ["WordsModel"], resources: [.copy("Resources/keymap.json")]),
     // AppKit and UserNotifications around it: menus, hotkey, banners, status item, Dock, quick panel, picker panel.
-    .target(name: "PlatformUI", dependencies: ["PlatformModel", "DesignSystem"]),
+    .target(name: "PlatformUI", dependencies: ["PlatformModel", "DesignSystem", "WordsModel"]),
     .testTarget(name: "PlatformTests", dependencies: ["PlatformModel", "PlatformUI", "DesignSystem"]),
     // The Theme Studio's logic: a theme file as a draft, resolved by Rust, with undo, contrast and versions.
     .target(name: "StudioModel", dependencies: ["DesignSystem", "WordsModel"]),
@@ -174,7 +174,7 @@ if ffiLinked {
     // The macOS edge's logic from core: the keymap and menu bar, the notification rules, the folder picker's
     // providers and the palette's search; and the interface's words.
     targets += [
-        .target(name: "PlatformBridge", dependencies: ["PlatformModel", "PaletteModel", "WormholeBindings"]),
+        .target(name: "PlatformBridge", dependencies: ["PlatformModel", "PaletteModel", "WordsModel", "WormholeBindings"]),
         .target(name: "WordsBridge", dependencies: ["WordsModel", "WormholeBindings"]),
         .testTarget(
             name: "PlatformBridgeTests",

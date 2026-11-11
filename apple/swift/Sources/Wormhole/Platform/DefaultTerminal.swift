@@ -7,6 +7,7 @@
     import AppKit
     import PlatformModel
     import UniformTypeIdentifiers
+    import WordsModel
     import WormholeBindings
 
     @MainActor
@@ -23,8 +24,8 @@
         /// Asks the system, once per kind. The sentence for what went wrong (core's catalog), or nil when it is done.
         static func make(policy: PlatformPolicy) async -> String? {
             let bundle = Bundle.main.bundleURL
-            guard bundle.pathExtension == "app" else { return defaultTerminalFailed(error: "not running from Wormhole.app") }
-            guard policy.touchesSystem else { return defaultTerminalFailed(error: "this instance never changes the system") }
+            guard bundle.pathExtension == "app" else { return defaultTerminalFailed(error: Words.text("platform-default-terminal-not-bundled", fallback: "not running from Wormhole.app")) }
+            guard policy.touchesSystem else { return defaultTerminalFailed(error: "this instance never changes the system")  // text: shown only to a test instance }
             for identifier in defaultTerminalScriptTypes() {
                 guard let kind = UTType(identifier) else { continue }
                 do { try await NSWorkspace.shared.setDefaultApplication(at: bundle, toOpen: kind) } catch {

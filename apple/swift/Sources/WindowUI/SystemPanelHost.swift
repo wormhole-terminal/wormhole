@@ -58,14 +58,14 @@ final class SystemPanelHost: PanelHost {
     }
 
     func reveal(_ path: String) {
-        guard launches() else { return notify("Would reveal \(path)") }
+        guard launches() else { return notify("Would reveal \(path)") }  // text: a test instance's log of what it did not do
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
 
     /// The core runs the app's own way of taking a line; a build without it opens the file in the default app.
     func open(_ path: String, line: Int?) {
         guard let app = chosenApp() else { return }
-        guard launches() else { return notify("Would open \(path) in \(app.name)") }
+        guard launches() else { return notify("Would open \(path) in \(app.name)") }  // text: a test instance's log of what it did not do
         let folder = NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundle)?.path
         if !RepoFiles.opener(app.bundle, path, line, folder) { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
     }
@@ -76,7 +76,7 @@ final class SystemPanelHost: PanelHost {
     }
 
     func open(_ path: String, inBundle bundle: String) {
-        guard launches() else { return notify("Would open \(path) in \(bundle)") }
+        guard launches() else { return notify("Would open \(path) in \(bundle)") }  // text: a test instance's log of what it did not do
         let folder = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle)?.path
         if !RepoFiles.opener(bundle, path, nil, folder) { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
     }
@@ -87,7 +87,7 @@ final class SystemPanelHost: PanelHost {
 
     func stamp(of path: String) -> String? {
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: path) else { return nil }
-        return "\(attributes[.size] as? Int ?? 0) \((attributes[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0)"
+        return "\(attributes[.size] as? Int ?? 0) \((attributes[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0)"  // text: a change stamp, never shown
     }
 
     func exists(_ path: String) -> Bool { FileManager.default.fileExists(atPath: path) }

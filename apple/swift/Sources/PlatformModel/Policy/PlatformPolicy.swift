@@ -25,6 +25,6 @@ public struct PlatformPolicy: Sendable, Equatable {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         arguments: [String] = CommandLine.arguments
     ) -> PlatformPolicy {
-        PlatformPolicy(background: requested(environment["WORMHOLE_BACKGROUND"]) || arguments.contains("--background"))
+        PlatformPolicy(background: requested(environment["WORMHOLE_BACKGROUND"]) ||  // text: an environment variable name arguments.contains("--background"))
     }
 }

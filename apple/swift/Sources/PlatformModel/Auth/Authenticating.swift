@@ -15,9 +15,9 @@ public enum AuthError: Error, Equatable, Sendable, CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .unavailable(let message): "authentication unavailable: \(message)"
-        case .cancelled: "authentication cancelled"
-        case .failed(let message): "authentication failed: \(message)"
+        case .unavailable(let message): "authentication unavailable: \(message)"  // text: a diagnostic of a refused prompt, not shown as a sentence
+        case .cancelled: "authentication cancelled"  // text: a diagnostic of a refused prompt, not shown as a sentence
+        case .failed(let message): "authentication failed: \(message)"  // text: a diagnostic of a refused prompt, not shown as a sentence
         }
     }
 }
@@ -44,8 +44,8 @@ public struct ScriptedAuthenticator: Authenticating {
     /// Touch ID is there (a wording only: the answer is still WORMHOLE_AUTH's).
     public init(environment: [String: String] = ProcessInfo.processInfo.environment) {
         self.init(
-            answer: environment["WORMHOLE_AUTH"].flatMap(Answer.init(rawValue:)) ?? .cancel,
-            biometrics: environment["WORMHOLE_AUTH_BIOMETRICS"] == "on")
+            answer: environment["WORMHOLE_AUTH"].flatMap(Answer.init(rawValue:)) ?? .cancel,  // text: an environment variable name
+            biometrics: environment["WORMHOLE_AUTH_BIOMETRICS"] == "on")  // text: an environment variable name
     }
 
     public func canAuthenticate() -> Bool { true }
@@ -54,7 +54,7 @@ public struct ScriptedAuthenticator: Authenticating {
     public func authenticate(reason: String) async throws {
         switch answer {
         case .allow: return
-        case .deny: throw AuthError.failed("denied by WORMHOLE_AUTH")
+        case .deny: throw AuthError.failed("denied by WORMHOLE_AUTH")  // text: a test instance answering the prompt
         case .cancel: throw AuthError.cancelled
         }
     }
@@ -71,7 +71,7 @@ public enum AuthErrorMapping {
         // With the owner policy the password fallback is the system's, so these only surface when it could not finish.
         case -1, -3, -8: return .failed(message)
         case -5, -6, -7, -10, -11, -12, -13, -14, -1004: return .unavailable(message)
-        default: return .failed("LAError \(code): \(message)")
+        default: return .failed("LAError \(code): \(message)")  // text: a diagnostic with the system error code
         }
     }
 }

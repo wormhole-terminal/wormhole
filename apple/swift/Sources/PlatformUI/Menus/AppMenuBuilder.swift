@@ -42,7 +42,7 @@ public final class AppMenuBuilder {
 
     /// The bar for `state` as a native menu, not installed: for tests and offscreen dumps.
     public func mainMenu(for state: MenuState) -> NSMenu {
-        let main = NSMenu(title: "Main")
+        let main = NSMenu(title: "Main")  // text: the menu bar's own name, never shown
         main.autoenablesItems = false
         for menu in builder.menus(for: state) {
             let holder = NSMenuItem(title: menu.title, action: nil, keyEquivalent: "")
@@ -60,7 +60,7 @@ public final class AppMenuBuilder {
         shown = state
         let main = mainMenu(for: state)
         NSApp.mainMenu = main
-        NSApp.windowsMenu = main.items.first { $0.title == "Window" }?.submenu
-        NSApp.helpMenu = main.items.first { $0.title == "Help" }?.submenu
+        NSApp.windowsMenu = main.items.first { $0.title == "Window" }?.submenu  // text: the title core gives that menu, found by it
+        NSApp.helpMenu = main.items.first { $0.title == "Help" }?.submenu  // text: the title core gives that menu, found by it
     }
 }

@@ -7,296 +7,296 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Search terminals"
-pub const SIDEBAR_SEARCH_PLACEHOLDER: Key = Key::new(1960);
+pub const SIDEBAR_SEARCH_PLACEHOLDER: Key = Key::new(2030);
 /// "Clear search"
-pub const SIDEBAR_SEARCH_CLEAR: Key = Key::new(1961);
+pub const SIDEBAR_SEARCH_CLEAR: Key = Key::new(2031);
 /// "No terminal matches"
-pub const SIDEBAR_SEARCH_NOTHING: Key = Key::new(1962);
+pub const SIDEBAR_SEARCH_NOTHING: Key = Key::new(2032);
 /// "Return opens the first one, Escape ends the search"
-pub const SIDEBAR_SEARCH_HINT: Key = Key::new(1963);
+pub const SIDEBAR_SEARCH_HINT: Key = Key::new(2033);
 /// "Terminals"
-pub const SIDEBAR_LIST: Key = Key::new(1966);
+pub const SIDEBAR_LIST: Key = Key::new(2036);
 /// "No terminals"
-pub const SIDEBAR_GROUP_EMPTY: Key = Key::new(1967);
+pub const SIDEBAR_GROUP_EMPTY: Key = Key::new(2037);
 /// "Folds or opens the group"
-pub const SIDEBAR_GROUP_HEAD_HINT: Key = Key::new(1968);
+pub const SIDEBAR_GROUP_HEAD_HINT: Key = Key::new(2038);
 /// "In a split with terminals in other folders"
-pub const SIDEBAR_MARK_SPLIT_FOLDERS: Key = Key::new(1969);
+pub const SIDEBAR_MARK_SPLIT_FOLDERS: Key = Key::new(2039);
 /// "Close terminal"
-pub const SIDEBAR_CLOSE_TERMINAL: Key = Key::new(1970);
+pub const SIDEBAR_CLOSE_TERMINAL: Key = Key::new(2040);
 /// "Terminal name"
-pub const SIDEBAR_RENAME_FIELD: Key = Key::new(1971);
+pub const SIDEBAR_RENAME_FIELD: Key = Key::new(2041);
 /// "Rename"
-pub const SIDEBAR_RENAME_ACTION: Key = Key::new(1972);
+pub const SIDEBAR_RENAME_ACTION: Key = Key::new(2042);
 /// "Pin"
-pub const SIDEBAR_PIN: Key = Key::new(1973);
+pub const SIDEBAR_PIN: Key = Key::new(2043);
 /// "Unpin"
-pub const SIDEBAR_UNPIN: Key = Key::new(1974);
+pub const SIDEBAR_UNPIN: Key = Key::new(2044);
 /// "Group name"
-pub const SIDEBAR_POPOVER_GROUP_NAME: Key = Key::new(1975);
+pub const SIDEBAR_POPOVER_GROUP_NAME: Key = Key::new(2045);
 /// "Other colour"
-pub const SIDEBAR_POPOVER_COLOUR_OTHER: Key = Key::new(1976);
+pub const SIDEBAR_POPOVER_COLOUR_OTHER: Key = Key::new(2046);
 /// "Rename…"
-pub const SIDEBAR_MENU_RENAME: Key = Key::new(1977);
+pub const SIDEBAR_MENU_RENAME: Key = Key::new(2047);
 /// "Add terminal to new group"
-pub const SIDEBAR_MENU_ADD_TO_NEW_GROUP: Key = Key::new(1978);
+pub const SIDEBAR_MENU_ADD_TO_NEW_GROUP: Key = Key::new(2048);
 /// "Add terminal to group"
-pub const SIDEBAR_MENU_ADD_TO_GROUP: Key = Key::new(1979);
+pub const SIDEBAR_MENU_ADD_TO_GROUP: Key = Key::new(2049);
 /// "Remove from group"
-pub const SIDEBAR_MENU_REMOVE_FROM_GROUP: Key = Key::new(1980);
+pub const SIDEBAR_MENU_REMOVE_FROM_GROUP: Key = Key::new(2050);
 /// "Split right"
-pub const SIDEBAR_MENU_SPLIT_RIGHT: Key = Key::new(1981);
+pub const SIDEBAR_MENU_SPLIT_RIGHT: Key = Key::new(2051);
 /// "Remove from split"
-pub const SIDEBAR_MENU_REMOVE_FROM_SPLIT: Key = Key::new(1982);
+pub const SIDEBAR_MENU_REMOVE_FROM_SPLIT: Key = Key::new(2052);
 /// "Pin to top"
-pub const SIDEBAR_MENU_PIN_TOP: Key = Key::new(1983);
+pub const SIDEBAR_MENU_PIN_TOP: Key = Key::new(2053);
 /// "Don't keep this terminal's text"
-pub const SIDEBAR_MENU_FORGET_TEXT: Key = Key::new(1984);
+pub const SIDEBAR_MENU_FORGET_TEXT: Key = Key::new(2054);
 /// "Hide from Agents"
-pub const SIDEBAR_MENU_HIDE_FROM_AGENTS: Key = Key::new(1985);
+pub const SIDEBAR_MENU_HIDE_FROM_AGENTS: Key = Key::new(2055);
 /// "Show beside…"
-pub const SIDEBAR_MENU_SHOW_BESIDE: Key = Key::new(1986);
+pub const SIDEBAR_MENU_SHOW_BESIDE: Key = Key::new(2056);
 /// "Other colour…"
-pub const SIDEBAR_MENU_GROUP_COLOUR_OTHER: Key = Key::new(1987);
+pub const SIDEBAR_MENU_GROUP_COLOUR_OTHER: Key = Key::new(2057);
 /// "No colour"
-pub const SIDEBAR_MENU_GROUP_COLOUR_NONE: Key = Key::new(1988);
+pub const SIDEBAR_MENU_GROUP_COLOUR_NONE: Key = Key::new(2058);
 /// "New terminal in group"
-pub const SIDEBAR_MENU_GROUP_NEW_TERMINAL: Key = Key::new(1989);
+pub const SIDEBAR_MENU_GROUP_NEW_TERMINAL: Key = Key::new(2059);
 /// "Ungroup"
-pub const SIDEBAR_MENU_GROUP_UNGROUP: Key = Key::new(1990);
+pub const SIDEBAR_MENU_GROUP_UNGROUP: Key = Key::new(2060);
 /// "Close group"
-pub const SIDEBAR_MENU_GROUP_CLOSE: Key = Key::new(1991);
+pub const SIDEBAR_MENU_GROUP_CLOSE: Key = Key::new(2061);
 /// "Pin group"
-pub const SIDEBAR_MENU_GROUP_PIN: Key = Key::new(1992);
+pub const SIDEBAR_MENU_GROUP_PIN: Key = Key::new(2062);
 /// "Unpin group"
-pub const SIDEBAR_MENU_GROUP_UNPIN: Key = Key::new(1993);
+pub const SIDEBAR_MENU_GROUP_UNPIN: Key = Key::new(2063);
 /// "Move group to new window"
-pub const SIDEBAR_MENU_GROUP_MOVE_TO_WINDOW: Key = Key::new(1994);
+pub const SIDEBAR_MENU_GROUP_MOVE_TO_WINDOW: Key = Key::new(2064);
 /// "Set folder…"
-pub const SIDEBAR_MENU_GROUP_SET_FOLDER: Key = Key::new(1995);
+pub const SIDEBAR_MENU_GROUP_SET_FOLDER: Key = Key::new(2065);
 /// "Clear folder"
-pub const SIDEBAR_MENU_GROUP_CLEAR_FOLDER: Key = Key::new(1996);
+pub const SIDEBAR_MENU_GROUP_CLEAR_FOLDER: Key = Key::new(2066);
 /// "Command palette"
-pub const PALETTE_TITLE: Key = Key::new(1997);
+pub const PALETTE_TITLE: Key = Key::new(2067);
 /// "Scope"
-pub const PALETTE_SCOPE_LABEL: Key = Key::new(1998);
+pub const PALETTE_SCOPE_LABEL: Key = Key::new(2068);
 /// "Settings"
-pub const PALETTE_GROUP_SETTINGS: Key = Key::new(1999);
+pub const PALETTE_GROUP_SETTINGS: Key = Key::new(2069);
 /// "Actions"
-pub const PALETTE_GROUP_ACTIONS: Key = Key::new(2000);
+pub const PALETTE_GROUP_ACTIONS: Key = Key::new(2070);
 /// "Terminals"
-pub const PALETTE_GROUP_TERMINALS: Key = Key::new(2001);
+pub const PALETTE_GROUP_TERMINALS: Key = Key::new(2071);
 /// "Folders"
-pub const PALETTE_GROUP_FOLDERS: Key = Key::new(2002);
+pub const PALETTE_GROUP_FOLDERS: Key = Key::new(2072);
 /// "Commits"
-pub const PALETTE_GROUP_COMMITS: Key = Key::new(2003);
+pub const PALETTE_GROUP_COMMITS: Key = Key::new(2073);
 /// "All"
-pub const PALETTE_SCOPE_ALL: Key = Key::new(2004);
+pub const PALETTE_SCOPE_ALL: Key = Key::new(2074);
 /// "Jump to a terminal, folder, commit or setting…"
-pub const PALETTE_PLACEHOLDER_ALL: Key = Key::new(2005);
+pub const PALETTE_PLACEHOLDER_ALL: Key = Key::new(2075);
 /// "Terminals in every window…"
-pub const PALETTE_PLACEHOLDER_TERMINALS: Key = Key::new(2006);
+pub const PALETTE_PLACEHOLDER_TERMINALS: Key = Key::new(2076);
 /// "Folders with a terminal, and recent ones…"
-pub const PALETTE_PLACEHOLDER_FOLDERS: Key = Key::new(2007);
+pub const PALETTE_PLACEHOLDER_FOLDERS: Key = Key::new(2077);
 /// "Commits on this branch…"
-pub const PALETTE_PLACEHOLDER_COMMITS: Key = Key::new(2008);
+pub const PALETTE_PLACEHOLDER_COMMITS: Key = Key::new(2078);
 /// "Find a setting…"
-pub const PALETTE_PLACEHOLDER_SETTINGS: Key = Key::new(2009);
+pub const PALETTE_PLACEHOLDER_SETTINGS: Key = Key::new(2079);
 /// "Run an action…"
-pub const PALETTE_PLACEHOLDER_ACTIONS: Key = Key::new(2010);
+pub const PALETTE_PLACEHOLDER_ACTIONS: Key = Key::new(2080);
 /// "Terminal"
-pub const PALETTE_SECTION_TERMINAL: Key = Key::new(2011);
+pub const PALETTE_SECTION_TERMINAL: Key = Key::new(2081);
 /// "View"
-pub const PALETTE_SECTION_VIEW: Key = Key::new(2012);
+pub const PALETTE_SECTION_VIEW: Key = Key::new(2082);
 /// "App"
-pub const PALETTE_SECTION_APP: Key = Key::new(2013);
+pub const PALETTE_SECTION_APP: Key = Key::new(2083);
 /// "Profiles"
-pub const PALETTE_SECTION_PROFILES: Key = Key::new(2014);
+pub const PALETTE_SECTION_PROFILES: Key = Key::new(2084);
 /// "Nothing here yet"
-pub const PALETTE_EMPTY_NOTHING_YET: Key = Key::new(2015);
+pub const PALETTE_EMPTY_NOTHING_YET: Key = Key::new(2085);
 /// "Nothing matches"
-pub const PALETTE_EMPTY_NOTHING_MATCHES: Key = Key::new(2016);
+pub const PALETTE_EMPTY_NOTHING_MATCHES: Key = Key::new(2086);
 /// "Type to find a setting"
-pub const PALETTE_EMPTY_TYPE_SETTING: Key = Key::new(2017);
+pub const PALETTE_EMPTY_TYPE_SETTING: Key = Key::new(2087);
 /// "Needs input"
-pub const PALETTE_STATE_NEEDS_INPUT: Key = Key::new(2018);
+pub const PALETTE_STATE_NEEDS_INPUT: Key = Key::new(2088);
 /// "Working"
-pub const PALETTE_STATE_WORKING: Key = Key::new(2019);
+pub const PALETTE_STATE_WORKING: Key = Key::new(2089);
 /// "Finished"
-pub const PALETTE_STATE_FINISHED: Key = Key::new(2020);
+pub const PALETTE_STATE_FINISHED: Key = Key::new(2090);
 /// "Idle"
-pub const PALETTE_STATE_IDLE: Key = Key::new(2021);
+pub const PALETTE_STATE_IDLE: Key = Key::new(2091);
 /// "Failed"
-pub const PALETTE_STATE_FAILED: Key = Key::new(2022);
+pub const PALETTE_STATE_FAILED: Key = Key::new(2092);
 /// "Project"
-pub const PALETTE_PROJECT: Key = Key::new(2024);
+pub const PALETTE_PROJECT: Key = Key::new(2094);
 /// "every window switches"
-pub const PALETTE_PROFILE_SWITCH_DETAIL: Key = Key::new(2027);
+pub const PALETTE_PROFILE_SWITCH_DETAIL: Key = Key::new(2097);
 /// "start a terminal in another folder"
-pub const PALETTE_DETAIL_OPEN_FOLDER: Key = Key::new(2031);
+pub const PALETTE_DETAIL_OPEN_FOLDER: Key = Key::new(2101);
 /// "switch"
-pub const PALETTE_HINT_SWITCH: Key = Key::new(2038);
+pub const PALETTE_HINT_SWITCH: Key = Key::new(2108);
 /// "close terminal"
-pub const PALETTE_HINT_CLOSE_TERMINAL: Key = Key::new(2039);
+pub const PALETTE_HINT_CLOSE_TERMINAL: Key = Key::new(2109);
 /// "run"
-pub const PALETTE_HINT_RUN: Key = Key::new(2040);
+pub const PALETTE_HINT_RUN: Key = Key::new(2110);
 /// "back to all"
-pub const PALETTE_HINT_BACK: Key = Key::new(2041);
+pub const PALETTE_HINT_BACK: Key = Key::new(2111);
 /// "move"
-pub const PALETTE_HINT_MOVE: Key = Key::new(2042);
+pub const PALETTE_HINT_MOVE: Key = Key::new(2112);
 /// "open in Settings"
-pub const PALETTE_HINT_OPEN_IN_SETTINGS: Key = Key::new(2043);
+pub const PALETTE_HINT_OPEN_IN_SETTINGS: Key = Key::new(2113);
 /// "copy setting key"
-pub const PALETTE_HINT_COPY_SETTING_KEY: Key = Key::new(2044);
+pub const PALETTE_HINT_COPY_SETTING_KEY: Key = Key::new(2114);
 /// "open"
-pub const PALETTE_HINT_OPEN: Key = Key::new(2045);
+pub const PALETTE_HINT_OPEN: Key = Key::new(2115);
 /// "open in new window"
-pub const PALETTE_HINT_OPEN_IN_WINDOW: Key = Key::new(2046);
+pub const PALETTE_HINT_OPEN_IN_WINDOW: Key = Key::new(2116);
 /// "scope"
-pub const PALETTE_HINT_SCOPE: Key = Key::new(2047);
+pub const PALETTE_HINT_SCOPE: Key = Key::new(2117);
 /// "Type"
-pub const PALETTE_ACTIONS_HINT_TYPE: Key = Key::new(2049);
+pub const PALETTE_ACTIONS_HINT_TYPE: Key = Key::new(2119);
 /// "for actions"
-pub const PALETTE_ACTIONS_HINT_FOR_ACTIONS: Key = Key::new(2050);
+pub const PALETTE_ACTIONS_HINT_FOR_ACTIONS: Key = Key::new(2120);
 /// "Keyboard shortcuts"
-pub const PALETTE_SHEET_TITLE: Key = Key::new(2051);
+pub const PALETTE_SHEET_TITLE: Key = Key::new(2121);
 /// "Filter shortcuts"
-pub const PALETTE_SHEET_FILTER: Key = Key::new(2052);
+pub const PALETTE_SHEET_FILTER: Key = Key::new(2122);
 /// "No shortcut matches"
-pub const PALETTE_SHEET_NONE: Key = Key::new(2053);
+pub const PALETTE_SHEET_NONE: Key = Key::new(2123);
 /// "Show or hide Wormhole from any app"
-pub const PALETTE_SHEET_HOTKEY: Key = Key::new(2056);
+pub const PALETTE_SHEET_HOTKEY: Key = Key::new(2126);
 /// "set in Settings › Hotkey"
-pub const PALETTE_SHEET_HOTKEY_WHERE: Key = Key::new(2057);
+pub const PALETTE_SHEET_HOTKEY_WHERE: Key = Key::new(2127);
 /// "A key that shows or hides Wormhole from any app is set in Settings › Hotkey"
-pub const PALETTE_SHEET_HOTKEY_UNSET: Key = Key::new(2058);
+pub const PALETTE_SHEET_HOTKEY_UNSET: Key = Key::new(2128);
 /// "Also in Help › Keyboard Shortcuts and the palette"
-pub const PALETTE_SHEET_ALSO: Key = Key::new(2059);
+pub const PALETTE_SHEET_ALSO: Key = Key::new(2129);
 /// "New terminal"
-pub const WINDOW_NEW_TERMINAL: Key = Key::new(2061);
+pub const WINDOW_NEW_TERMINAL: Key = Key::new(2131);
 /// "New terminal (⌘T)"
-pub const WINDOW_NEW_TERMINAL_HELP: Key = Key::new(2062);
+pub const WINDOW_NEW_TERMINAL_HELP: Key = Key::new(2132);
 /// "Terminal"
-pub const WINDOW_TERMINAL: Key = Key::new(2063);
+pub const WINDOW_TERMINAL: Key = Key::new(2133);
 /// "Right panel"
-pub const WINDOW_PANEL: Key = Key::new(2064);
+pub const WINDOW_PANEL: Key = Key::new(2134);
 /// "Status bar"
-pub const WINDOW_STATUS_BAR: Key = Key::new(2065);
+pub const WINDOW_STATUS_BAR: Key = Key::new(2135);
 /// "Resize sidebar"
-pub const WINDOW_RESIZE_SIDEBAR: Key = Key::new(2069);
+pub const WINDOW_RESIZE_SIDEBAR: Key = Key::new(2139);
 /// "Resize panel"
-pub const WINDOW_RESIZE_PANEL: Key = Key::new(2070);
+pub const WINDOW_RESIZE_PANEL: Key = Key::new(2140);
 /// "Hide"
-pub const WINDOW_RESIZE_HIDE: Key = Key::new(2071);
+pub const WINDOW_RESIZE_HIDE: Key = Key::new(2141);
 /// "Close"
-pub const WINDOW_RESIZE_CLOSE: Key = Key::new(2072);
+pub const WINDOW_RESIZE_CLOSE: Key = Key::new(2142);
 /// "Hide sidebar"
-pub const WINDOW_FOCUS_HIDE_SIDEBAR: Key = Key::new(2075);
+pub const WINDOW_FOCUS_HIDE_SIDEBAR: Key = Key::new(2145);
 /// "Show sidebar"
-pub const WINDOW_FOCUS_SHOW_SIDEBAR: Key = Key::new(2076);
+pub const WINDOW_FOCUS_SHOW_SIDEBAR: Key = Key::new(2146);
 /// "none"
-pub const WINDOW_FOCUS_TERMINAL_NONE: Key = Key::new(2078);
+pub const WINDOW_FOCUS_TERMINAL_NONE: Key = Key::new(2148);
 /// "working"
-pub const WINDOW_STATE_WORKING: Key = Key::new(2081);
+pub const WINDOW_STATE_WORKING: Key = Key::new(2151);
 /// "needs input"
-pub const WINDOW_STATE_NEEDS_INPUT: Key = Key::new(2082);
+pub const WINDOW_STATE_NEEDS_INPUT: Key = Key::new(2152);
 /// "needs you"
-pub const WINDOW_STATE_NEEDS_YOU: Key = Key::new(2083);
+pub const WINDOW_STATE_NEEDS_YOU: Key = Key::new(2153);
 /// "finished"
-pub const WINDOW_STATE_FINISHED: Key = Key::new(2084);
+pub const WINDOW_STATE_FINISHED: Key = Key::new(2154);
 /// "done"
-pub const WINDOW_STATE_DONE: Key = Key::new(2085);
+pub const WINDOW_STATE_DONE: Key = Key::new(2155);
 /// "failed"
-pub const WINDOW_STATE_FAILED: Key = Key::new(2086);
+pub const WINDOW_STATE_FAILED: Key = Key::new(2156);
 /// "exited"
-pub const WINDOW_STATE_EXITED: Key = Key::new(2087);
+pub const WINDOW_STATE_EXITED: Key = Key::new(2157);
 /// "Not set"
-pub const SETTINGS_ROW_NOT_SET: Key = Key::new(2093);
+pub const SETTINGS_ROW_NOT_SET: Key = Key::new(2163);
 /// "None"
-pub const SETTINGS_ROW_NONE: Key = Key::new(2094);
+pub const SETTINGS_ROW_NONE: Key = Key::new(2164);
 /// "Changed"
-pub const SETTINGS_ROW_CHANGED: Key = Key::new(2095);
+pub const SETTINGS_ROW_CHANGED: Key = Key::new(2165);
 /// "Press the shortcut…"
-pub const SETTINGS_ROW_RECORDER_PROMPT: Key = Key::new(2096);
+pub const SETTINGS_ROW_RECORDER_PROMPT: Key = Key::new(2166);
 /// "Not set"
-pub const SETTINGS_ROW_RECORDER_NONE: Key = Key::new(2097);
+pub const SETTINGS_ROW_RECORDER_NONE: Key = Key::new(2167);
 /// "Not in this build yet"
-pub const SETTINGS_PANEL_NOT_BUILT: Key = Key::new(2098);
+pub const SETTINGS_PANEL_NOT_BUILT: Key = Key::new(2168);
 /// "Default"
-pub const SETTINGS_NAV_PROFILE_DEFAULT: Key = Key::new(2099);
+pub const SETTINGS_NAV_PROFILE_DEFAULT: Key = Key::new(2169);
 /// "Every setting that differs from its default, each put back by its arrow."
-pub const SETTINGS_CHANGED_INTRO_ARROW: Key = Key::new(2101);
+pub const SETTINGS_CHANGED_INTRO_ARROW: Key = Key::new(2171);
 /// "The menu bar item is off"
-pub const SETTINGS_MENU_BAR_OFF: Key = Key::new(2102);
+pub const SETTINGS_MENU_BAR_OFF: Key = Key::new(2172);
 /// "Move up"
-pub const TITLE_ROW_MOVE_UP: Key = Key::new(2103);
+pub const TITLE_ROW_MOVE_UP: Key = Key::new(2173);
 /// "Move down"
-pub const TITLE_ROW_MOVE_DOWN: Key = Key::new(2104);
+pub const TITLE_ROW_MOVE_DOWN: Key = Key::new(2174);
 /// "Profiles are not available in this build."
-pub const SETTINGS_PROFILE_UNAVAILABLE: Key = Key::new(2105);
+pub const SETTINGS_PROFILE_UNAVAILABLE: Key = Key::new(2175);
 /// "Themes can't be imported in this build."
-pub const SETTINGS_IMPORT_THEME_UNAVAILABLE: Key = Key::new(2106);
+pub const SETTINGS_IMPORT_THEME_UNAVAILABLE: Key = Key::new(2176);
 /// "Regular"
-pub const SETTINGS_WINDOW_PREVIEW_DENSITY_REGULAR: Key = Key::new(2107);
+pub const SETTINGS_WINDOW_PREVIEW_DENSITY_REGULAR: Key = Key::new(2177);
 /// "Compact"
-pub const SETTINGS_WINDOW_PREVIEW_DENSITY_COMPACT: Key = Key::new(2108);
+pub const SETTINGS_WINDOW_PREVIEW_DENSITY_COMPACT: Key = Key::new(2178);
 /// "Dense"
-pub const SETTINGS_WINDOW_PREVIEW_DENSITY_DENSE: Key = Key::new(2109);
+pub const SETTINGS_WINDOW_PREVIEW_DENSITY_DENSE: Key = Key::new(2179);
 
 /// ```text
 /// { $found } of { $total }
 /// ```
 pub fn sidebar_search_count(found: &str, total: &str) -> String {
-    crate::active::message(1964, &[("found", Arg::Str(found)), ("total", Arg::Str(total))])
+    crate::active::message(2034, &[("found", Arg::Str(found)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// { $found } of { $total } terminals
 /// ```
 pub fn sidebar_search_count_spoken(found: &str, total: &str) -> String {
-    crate::active::message(1965, &[("found", Arg::Str(found)), ("total", Arg::Str(total))])
+    crate::active::message(2035, &[("found", Arg::Str(found)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// Project · { $project }
 /// ```
 pub fn palette_project_named(project: &str) -> String {
-    crate::active::message(2023, &[("project", Arg::Str(project))])
+    crate::active::message(2093, &[("project", Arg::Str(project))])
 }
 
 /// ```text
 /// New terminal: { $shell }
 /// ```
 pub fn palette_new_terminal_with(shell: &str) -> String {
-    crate::active::message(2025, &[("shell", Arg::Str(shell))])
+    crate::active::message(2095, &[("shell", Arg::Str(shell))])
 }
 
 /// ```text
 /// Switch to { $profile }
 /// ```
 pub fn palette_profile_switch(profile: &str) -> String {
-    crate::active::message(2026, &[("profile", Arg::Str(profile))])
+    crate::active::message(2096, &[("profile", Arg::Str(profile))])
 }
 
 /// ```text
 /// Open window in { $profile }
 /// ```
 pub fn palette_profile_open_window(profile: &str) -> String {
-    crate::active::message(2028, &[("profile", Arg::Str(profile))])
+    crate::active::message(2098, &[("profile", Arg::Str(profile))])
 }
 
 /// ```text
 /// Move this window to { $profile }
 /// ```
 pub fn palette_profile_move_window(profile: &str) -> String {
-    crate::active::message(2029, &[("profile", Arg::Str(profile))])
+    crate::active::message(2099, &[("profile", Arg::Str(profile))])
 }
 
 /// ```text
 /// in { $folder }
 /// ```
 pub fn palette_detail_new_terminal_in(folder: &str) -> String {
-    crate::active::message(2030, &[("folder", Arg::Str(folder))])
+    crate::active::message(2100, &[("folder", Arg::Str(folder))])
 }
 
 /// ```text
@@ -306,14 +306,14 @@ pub fn palette_detail_new_terminal_in(folder: &str) -> String {
 /// }
 /// ```
 pub fn palette_detail_files_changed(count: i64) -> String {
-    crate::active::message(2032, &[("count", Arg::Int(count))])
+    crate::active::message(2102, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Settings › { $section }
 /// ```
 pub fn palette_detail_setting(section: &str) -> String {
-    crate::active::message(2033, &[("section", Arg::Str(section))])
+    crate::active::message(2103, &[("section", Arg::Str(section))])
 }
 
 /// ```text
@@ -323,28 +323,28 @@ pub fn palette_detail_setting(section: &str) -> String {
 /// }
 /// ```
 pub fn palette_detail_terminals(count: i64) -> String {
-    crate::active::message(2034, &[("count", Arg::Int(count))])
+    crate::active::message(2104, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Window { $window }
 /// ```
 pub fn palette_terminal_window(window: &str) -> String {
-    crate::active::message(2035, &[("window", Arg::Str(window))])
+    crate::active::message(2105, &[("window", Arg::Str(window))])
 }
 
 /// ```text
 /// exit { $code }
 /// ```
 pub fn palette_terminal_exit(code: &str) -> String {
-    crate::active::message(2036, &[("code", Arg::Str(code))])
+    crate::active::message(2106, &[("code", Arg::Str(code))])
 }
 
 /// ```text
 /// { $who } is asking: { $message }
 /// ```
 pub fn palette_terminal_asking(who: &str, message: &str) -> String {
-    crate::active::message(2037, &[("who", Arg::Str(who)), ("message", Arg::Str(message))])
+    crate::active::message(2107, &[("who", Arg::Str(who)), ("message", Arg::Str(message))])
 }
 
 /// ```text
@@ -354,28 +354,28 @@ pub fn palette_terminal_asking(who: &str, message: &str) -> String {
 /// }
 /// ```
 pub fn palette_results(count: i64) -> String {
-    crate::active::message(2048, &[("count", Arg::Int(count))])
+    crate::active::message(2118, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// This project · { $project }
 /// ```
 pub fn palette_sheet_project(project: &str) -> String {
-    crate::active::message(2054, &[("project", Arg::Str(project))])
+    crate::active::message(2124, &[("project", Arg::Str(project))])
 }
 
 /// ```text
 /// { $shown } of { $total } · matches labels and keys (“{ $key }” finds Close terminal)
 /// ```
 pub fn palette_sheet_filtering(shown: &str, total: &str, key: &str) -> String {
-    crate::active::message(2055, &[("shown", Arg::Str(shown)), ("total", Arg::Str(total)), ("key", Arg::Str(key))])
+    crate::active::message(2125, &[("shown", Arg::Str(shown)), ("total", Arg::Str(total)), ("key", Arg::Str(key))])
 }
 
 /// ```text
 /// { $label }, { $keys }
 /// ```
 pub fn palette_sheet_spoken(label: &str, keys: &str) -> String {
-    crate::active::message(2060, &[("label", Arg::Str(label)), ("keys", Arg::Str(keys))])
+    crate::active::message(2130, &[("label", Arg::Str(label)), ("keys", Arg::Str(keys))])
 }
 
 /// ```text
@@ -385,63 +385,63 @@ pub fn palette_sheet_spoken(label: &str, keys: &str) -> String {
 /// }
 /// ```
 pub fn window_column_width(points: i64) -> String {
-    crate::active::message(2066, &[("points", Arg::Int(points))])
+    crate::active::message(2136, &[("points", Arg::Int(points))])
 }
 
 /// ```text
 /// { $width } · min
 /// ```
 pub fn window_resize_min(width: &str) -> String {
-    crate::active::message(2067, &[("width", Arg::Str(width))])
+    crate::active::message(2137, &[("width", Arg::Str(width))])
 }
 
 /// ```text
 /// { $width } · max
 /// ```
 pub fn window_resize_max(width: &str) -> String {
-    crate::active::message(2068, &[("width", Arg::Str(width))])
+    crate::active::message(2138, &[("width", Arg::Str(width))])
 }
 
 /// ```text
 /// { $position } of { $total }
 /// ```
 pub fn window_tab_position(position: &str, total: &str) -> String {
-    crate::active::message(2073, &[("position", Arg::Str(position)), ("total", Arg::Str(total))])
+    crate::active::message(2143, &[("position", Arg::Str(position)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// Title row, { $item }, button { $position } of { $total }
 /// ```
 pub fn window_focus_title_row(item: &str, position: &str, total: &str) -> String {
-    crate::active::message(2074, &[("item", Arg::Str(item)), ("position", Arg::Str(position)), ("total", Arg::Str(total))])
+    crate::active::message(2144, &[("item", Arg::Str(item)), ("position", Arg::Str(position)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// Terminal, { $title }
 /// ```
 pub fn window_focus_terminal(title: &str) -> String {
-    crate::active::message(2077, &[("title", Arg::Str(title))])
+    crate::active::message(2147, &[("title", Arg::Str(title))])
 }
 
 /// ```text
 /// Right panel tabs, { $tab }
 /// ```
 pub fn window_focus_panel_tabs(tab: &str) -> String {
-    crate::active::message(2079, &[("tab", Arg::Str(tab))])
+    crate::active::message(2149, &[("tab", Arg::Str(tab))])
 }
 
 /// ```text
 /// Status bar, item { $position } of { $total }
 /// ```
 pub fn window_focus_status_bar(position: &str, total: &str) -> String {
-    crate::active::message(2080, &[("position", Arg::Str(position)), ("total", Arg::Str(total))])
+    crate::active::message(2150, &[("position", Arg::Str(position)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// { $count } working
 /// ```
 pub fn window_status_working(count: &str) -> String {
-    crate::active::message(2088, &[("count", Arg::Str(count))])
+    crate::active::message(2158, &[("count", Arg::Str(count))])
 }
 
 /// ```text
@@ -451,33 +451,33 @@ pub fn window_status_working(count: &str) -> String {
 /// }
 /// ```
 pub fn window_status_need_input(count: i64) -> String {
-    crate::active::message(2089, &[("count", Arg::Int(count))])
+    crate::active::message(2159, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $count } done
 /// ```
 pub fn window_status_done(count: &str) -> String {
-    crate::active::message(2090, &[("count", Arg::Str(count))])
+    crate::active::message(2160, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $count } failed
 /// ```
 pub fn window_status_failed(count: &str) -> String {
-    crate::active::message(2091, &[("count", Arg::Str(count))])
+    crate::active::message(2161, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $title }, terminal size { $size }
 /// ```
 pub fn window_status_size_spoken(title: &str, size: &str) -> String {
-    crate::active::message(2092, &[("title", Arg::Str(title)), ("size", Arg::Str(size))])
+    crate::active::message(2162, &[("title", Arg::Str(title)), ("size", Arg::Str(size))])
 }
 
 /// ```text
 /// Preview of { $scene } with your current settings
 /// ```
 pub fn settings_window_preview_label(scene: &str) -> String {
-    crate::active::message(2100, &[("scene", Arg::Str(scene))])
+    crate::active::message(2170, &[("scene", Arg::Str(scene))])
 }

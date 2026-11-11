@@ -2,6 +2,7 @@
 // data-folder warning's sentence with the profile and folder in it (words with arguments are the core's, not the Words seam's).
 
 import Foundation
+import WordsModel
 
 #if WITH_UNIFFI
     import SettingsBridge
@@ -19,7 +20,9 @@ import Foundation
         static func clean(_ error: String) -> String { error.split(whereSeparator: \.isWhitespace).joined(separator: " ") }
 
         static func dataFolder(profile: String, folder: String, error: String) -> String {
-            "Wormhole can't open the data folder of the profile \(profile), \(folder): \(clean(error))"
+            Words.text(
+                "notice-warned-data-folder-detail", ["profile": .text(profile), "folder": .text(folder), "error": .text(clean(error))],
+                fallback: "Wormhole can't open the data folder of the profile \(profile), \(folder): \(clean(error))")
         }
     }
 #endif

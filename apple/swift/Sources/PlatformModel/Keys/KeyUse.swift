@@ -2,6 +2,7 @@
 // recorder's warning.
 
 import Foundation
+import WordsModel
 
 public enum KeyUse: Equatable, Sendable, CustomStringConvertible {
     case action(id: ActionID, name: String, key: KeySpec)
@@ -12,9 +13,10 @@ public enum KeyUse: Equatable, Sendable, CustomStringConvertible {
 
     public var description: String {
         switch self {
-        case .action(_, let name, let key): "\(key.glyphText) is \(name)"
-        case .system(let what): "macOS uses it for \(what)"
-        case .shell(let what): "the shell needs it (\(what))"
+        case .action(_, let name, let key):
+            Words.text("platform-key-is", ["key": .text(key.glyphText), "name": .text(name)], fallback: "\(key.glyphText) is \(name)")
+        case .system(let what): Words.text("platform-key-system", ["what": .text(what)], fallback: "macOS uses it for \(what)")
+        case .shell(let what): Words.text("platform-key-shell", ["what": .text(what)], fallback: "the shell needs it (\(what))")
         }
     }
 }
@@ -27,7 +29,10 @@ extension Keymap {
         }
         if let system = systemKeys.first(where: { $0.spec.sameKey(spec) }) { return .system(system.what) }
         if spec.mods.contains(.command) || spec.isFunctionKey { return nil }
-        if spec.mods.contains(.control) { return .shell("a control character") }
-        return .shell(spec.mods.contains(.option) ? "Meta, word jumps and accents" : "typing")
+        if spec.mods.contains(.control) { return .shell(Words.text("platform-key-shell-control", fallback: "a control character")) }
+        return .shell(
+            spec.mods.contains(.option)
+                ? Words.text("platform-key-shell-meta", fallback: "Meta, word jumps and accents")
+                : Words.text("platform-key-shell-typing", fallback: "typing"))
     }
 }

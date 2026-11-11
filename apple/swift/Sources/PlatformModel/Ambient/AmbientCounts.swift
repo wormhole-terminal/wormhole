@@ -2,6 +2,7 @@
 // urgent wins, needs input before failed before finished before working before idle.
 
 import Foundation
+import WordsModel
 
 public enum ItemState: Sendable, Equatable {
     case idle, working, finished, failed, needsYou
@@ -43,15 +44,23 @@ public struct AmbientCounts: Sendable, Equatable {
     /// "Wormhole — 2 need input · 1 failed · 2 working · 2 finished".
     public var tooltip: String {
         let parts = [
-            needsYou > 0 ? (needsYou == 1 ? "1 needs input" : "\(needsYou) need input") : nil,
-            failed > 0 ? "\(failed) failed" : nil,
-            working > 0 ? "\(working) working" : nil,
-            finished > 0 ? "\(finished) finished" : nil,
+            needsYou > 0
+                ? Words.text(
+                    "window-status-need-input", ["count": .whole(needsYou)],
+                    fallback: needsYou == 1 ? "1 needs input" : "\(needsYou) need input")
+                : nil,
+            failed > 0 ? Words.text("window-status-failed", ["count": .whole(failed)], fallback: "\(failed) failed") : nil,
+            working > 0 ? Words.text("window-status-working", ["count": .whole(working)], fallback: "\(working) working") : nil,
+            finished > 0 ? Words.text("platform-status-finished", ["count": .whole(finished)], fallback: "\(finished) finished") : nil,
         ].compactMap { $0 }
         let summary =
             total == 0
-            ? "no terminals open"
-            : parts.isEmpty ? "\(AmbientWording.count(total, "terminal", "terminals")), all quiet" : parts.joined(separator: " · ")
-        return "Wormhole — \(summary)"
+            ? Words.text("platform-status-no-terminals", fallback: "no terminals open")
+            : parts.isEmpty
+                ? Words.text(
+                    "platform-status-all-quiet", ["count": .whole(total)],
+                    fallback: "\(AmbientWording.count(total, "terminal", "terminals")), all quiet")
+                : parts.joined(separator: " · ")
+        return Words.text("platform-status-tooltip", ["summary": .text(summary)], fallback: "Wormhole — \(summary)")
     }
 }

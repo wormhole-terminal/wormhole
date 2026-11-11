@@ -2,6 +2,7 @@
 // Open Folder, the projects, then Show Wormhole, Jump to Next Waiting, Settings, updates and Quit.
 
 import Foundation
+import WordsModel
 
 /// What the menu is built from: every terminal of every window and the project facts.
 public struct StatusSnapshot: Sendable, Equatable {
@@ -43,8 +44,12 @@ public enum StatusMenu {
         let sections = AmbientSections(terminals)
         var nodes: [MenuNode] = []
         var listed = 0, hidden = 0
-        for (title, list) in [("Needs input", sections.needsYou), ("Working", sections.working), ("Finished", sections.finished)]
-        where !list.isEmpty {
+        let titles = [
+            (Words.text("palette-state-needs-input", fallback: "Needs input"), sections.needsYou),
+            (Words.text("palette-state-working", fallback: "Working"), sections.working),
+            (Words.text("palette-state-finished", fallback: "Finished"), sections.finished),
+        ]
+        for (title, list) in titles where !list.isEmpty {
             nodes.append(.header(title))
             for index in list {
                 if listed < maxSessions {
@@ -55,30 +60,42 @@ public enum StatusMenu {
                 }
             }
         }
-        if hidden > 0 { nodes.append(.item(MenuItem(.ambient(.showApp), "\(hidden) more…"))) }
-        if terminals.isEmpty { nodes.append(.item(MenuItem(.ambient(.showApp), "No terminals open", enabled: false))) }
+        if hidden > 0 { nodes.append(.item(MenuItem(.ambient(.showApp), more(hidden)))) }
+        if terminals.isEmpty {
+            nodes.append(.item(MenuItem(.ambient(.showApp), Words.text("platform-status-none-open", fallback: "No terminals open"), enabled: false)))
+        }
         if !sections.other.isEmpty {
             if !nodes.isEmpty { nodes.append(.separator) }
             var others = sections.other.prefix(maxSessions).map { row(terminals[$0], now) }
             if sections.other.count > maxSessions {
-                others.append(.item(MenuItem(.ambient(.showApp), "\(sections.other.count - maxSessions) more…")))
+                others.append(.item(MenuItem(.ambient(.showApp), more(sections.other.count - maxSessions))))
             }
-            nodes.append(.submenu(title: "Other Terminals", items: others, trailing: String(sections.other.count)))
+            nodes.append(.submenu(title: Words.text("platform-status-other", fallback: "Other Terminals"), items: others, trailing: String(sections.other.count)))
         }
-        nodes += [.separator, key(.ambient(.newTerminal), "New Terminal", .newTerminal, keymap), key(.ambient(.openFolder), "Open Folder…", .openFolder, keymap)]
+        nodes += [
+            .separator, key(.ambient(.newTerminal), Words.text("platform-menu-new-terminal", fallback: "New Terminal"), .newTerminal, keymap),
+            key(.ambient(.openFolder), Words.text("platform-menu-open-folder", fallback: "Open Folder…"), .openFolder, keymap),
+        ]
         if !snapshot.recent.isEmpty || !snapshot.actions.isEmpty {
-            nodes.append(.submenu(title: "Projects", items: projects(snapshot, keymap)))
+            nodes.append(.submenu(title: Words.text("platform-status-projects", fallback: "Projects"), items: projects(snapshot, keymap)))
         }
         nodes += [
             .separator,
-            .item(MenuItem(.ambient(.showApp), "Show Wormhole", key: snapshot.hotkey)),
-            .item(MenuItem(.ambient(.jumpToWaiting), "Jump to Next Waiting", key: snapshot.jumpKey, enabled: !sections.needsYou.isEmpty)),
-            key(.ambient(.openSettings), "Settings…", .settings, keymap),
-            .item(MenuItem(.ambient(.checkForUpdates), "Check for Updates…")),
+            .item(MenuItem(.ambient(.showApp), Words.text("platform-status-show", fallback: "Show Wormhole"), key: snapshot.hotkey)),
+            .item(
+                MenuItem(
+                    .ambient(.jumpToWaiting), Words.text("platform-status-jump", fallback: "Jump to Next Waiting"), key: snapshot.jumpKey,
+                    enabled: !sections.needsYou.isEmpty)),
+            key(.ambient(.openSettings), Words.text("profile-menu-settings", fallback: "Settings…"), .settings, keymap),
+            .item(MenuItem(.ambient(.checkForUpdates), Words.text("platform-status-updates", fallback: "Check for Updates…"))),
             .separator,
-            key(.ambient(.quit), "Quit Wormhole", .quit, keymap),
+            key(.ambient(.quit), Words.text("platform-status-quit", fallback: "Quit Wormhole"), .quit, keymap),
         ]
         return StatusMenuModel(icon: StatusIcon(terminals, mode: snapshot.icon, animate: snapshot.animate), menu: nodes)
+    }
+
+    private static func more(_ count: Int) -> String {
+        Words.text("platform-status-more", ["count": .whole(count)], fallback: "\(count) more…")
     }
 
     private static func key(_ command: MenuCommand, _ title: String, _ id: ActionID, _ keymap: Keymap) -> MenuNode {
@@ -87,7 +104,7 @@ public enum StatusMenu {
 
     static func row(_ terminal: AmbientTerminal, _ now: Date) -> MenuNode {
         .item(MenuItem(
-            .ambient(.openTab(terminal.tab)), terminal.name.trimmingCharacters(in: .whitespaces).isEmpty ? "Untitled" : terminal.name,
+            .ambient(.openTab(terminal.tab)), terminal.name.trimmingCharacters(in: .whitespaces).isEmpty ? Words.text("platform-status-untitled", fallback: "Untitled") : terminal.name,
             icon: .status(StatusGlyph(terminal)), trailing: AmbientWording.elapsed(terminal.state, since: max(0, now.timeIntervalSince(terminal.since))),
             subtitle: terminal.detail(withAgent: true)))
     }

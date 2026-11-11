@@ -4,7 +4,9 @@
 
 import DesignSystem
 import PlatformModel
+import WordsModel
 import SwiftUI
+import WordsModel
 
 struct FolderPickerRowView: View {
     let row: PickerRow
@@ -46,8 +48,15 @@ struct FolderPickerRowView: View {
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text([row.label, row.badge.map { "branch \($0)" }, row.detail, row.chevron ? "has folders" : nil].compactMap { $0 }.joined(separator: ", ")))
+        .accessibilityLabel(Text(spoken))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+    }
+
+    /// What VoiceOver reads for the row: the name, the branch, the detail and whether it opens.
+    private var spoken: String {
+        let branch = row.badge.map { Words.text("title-row-branch-spoken", ["name": .text($0)], fallback: "branch \($0)") }
+        let opens = row.chevron ? Words.text("platform-picker-has-folders", fallback: "has folders") : nil
+        return [row.label, branch, row.detail, opens].compactMap { $0 }.joined(separator: ", ")
     }
 
     /// The label with the typed text marked in the primary colour and semibold, by character offsets.

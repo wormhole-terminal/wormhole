@@ -4,6 +4,7 @@
 
 import AppKit
 import PlatformModel
+import WordsModel
 
 @MainActor
 public struct NSMenuFactory {
@@ -36,8 +37,8 @@ public struct NSMenuFactory {
         case .separator: menu.addItem(.separator())
         case .header(let title): menu.addItem(NSMenuItem.sectionHeader(title: title))
         case .services:
-            let holder = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
-            let services = NSMenu(title: "Services")
+            let holder = NSMenuItem(title: Words.text("platform-menu-services", fallback: "Services"), action: nil, keyEquivalent: "")
+            let services = NSMenu(title: Words.text("platform-menu-services", fallback: "Services"))
             holder.submenu = services
             NSApp?.servicesMenu = services
             menu.addItem(holder)

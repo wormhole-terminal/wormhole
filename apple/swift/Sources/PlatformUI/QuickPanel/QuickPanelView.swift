@@ -6,6 +6,7 @@
 import DesignSystem
 import PlatformModel
 import SwiftUI
+import WordsModel
 
 public struct QuickPanelView: View {
     let model: QuickPanelModel
@@ -28,7 +29,7 @@ public struct QuickPanelView: View {
         .frame(width: Metric.paletteWidth, height: model.height)
         .panelCard()
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Quick panel"))
+        .accessibilityLabel(Text(Words.text("settings-hotkey-quick-panel", fallback: "Quick panel")))
     }
 
     private var search: some View {
@@ -38,7 +39,7 @@ public struct QuickPanelView: View {
                 .foregroundStyle(tokens.textMuted)
                 .accessibilityHidden(true)
             PanelField(
-                text: Binding(get: { model.query }, set: { model.query = $0 }), placeholder: "Search terminals and actions",
+                text: Binding(get: { model.query }, set: { model.query = $0 }), placeholder: Words.text("settings-hotkey-preview-search", fallback: "Search terminals and actions"),
                 size: TextRole.heading.size, textColor: tokens.textPrimary, placeholderColor: tokens.inputPlaceholder,
                 caretColor: tokens.textPrimary, onKey: onKey)
             if let hotkey = model.hotkey { KeyCap(text: hotkey) }
@@ -89,7 +90,7 @@ public struct QuickPanelView: View {
                 .foregroundStyle(tokens.listSelectedMuted)
                 .lineLimit(3)
             PanelField(
-                text: Binding(get: { model.reply }, set: { model.reply = $0 }), placeholder: "Reply", size: TextRole.body.size,
+                text: Binding(get: { model.reply }, set: { model.reply = $0 }), placeholder: Words.text("platform-reply", fallback: "Reply"), size: TextRole.body.size,
                 textColor: tokens.textPrimary, placeholderColor: tokens.inputPlaceholder, caretColor: tokens.textPrimary, onKey: onKey)
                 .padding(.horizontal, Space._2)
                 .frame(height: Metric.control)

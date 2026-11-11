@@ -3,6 +3,7 @@
 // (`notify::text`, `Bursts`); this is what reaches the notification centre.
 
 import Foundation
+import WordsModel
 
 /// What happened in a terminal that may be worth telling (`notify::Kind`).
 public enum NoticeKind: Sendable, Equatable {
@@ -41,9 +42,15 @@ public struct NoticeButton: Sendable, Equatable {
     public var label: String
     public var kind: Kind
 
-    public static let open = NoticeButton(id: "open", label: "Open", kind: .foreground)
-    public static let reply = NoticeButton(id: "reply", label: "Reply…", kind: .reply)
-    public static let showChanges = NoticeButton(id: "show-changes", label: "Show Changes", kind: .foreground)
+    public static var open: NoticeButton {
+        NoticeButton(id: "open", label: Words.text("platform-notice-open", fallback: "Open"), kind: .foreground)
+    }
+    public static var reply: NoticeButton {
+        NoticeButton(id: "reply", label: Words.text("platform-notice-reply", fallback: "Reply…"), kind: .reply)
+    }
+    public static var showChanges: NoticeButton {
+        NoticeButton(id: "show-changes", label: Words.text("platform-notice-show-changes", fallback: "Show Changes"), kind: .foreground)
+    }
 
     public static func buttons(for category: NoticeCategory) -> [NoticeButton] {
         switch category {

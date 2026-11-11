@@ -2,16 +2,32 @@
 // the profiles and the terminals 1–9.
 
 import Foundation
+import WordsModel
 
 extension MenuBuilder {
     func dynamic(_ part: MenuLayout.Dynamic, _ state: MenuState) -> [MenuNode] {
         switch part {
         case .recentFolders:
-            [list("Open Recent", state.recent.enumerated().map { .item(MenuItem(.openRecent($0), $1)) }, "No Recent Folders")]
+            [
+                list(
+                    Words.text("platform-menu-open-recent", fallback: "Open Recent"),
+                    state.recent.enumerated().map { .item(MenuItem(.openRecent($0), $1)) },
+                    Words.text("platform-menu-no-recent", fallback: "No Recent Folders"))
+            ]
         case .projectActions:
-            [list("Project Actions", state.projectActions.map { .item(MenuItem(.runProjectAction($0.id), $0.title)) }, "No Project Actions")]
+            [
+                list(
+                    Words.text("platform-menu-project-actions", fallback: "Project Actions"),
+                    state.projectActions.map { .item(MenuItem(.runProjectAction($0.id), $0.title)) },
+                    Words.text("platform-menu-no-project-actions", fallback: "No Project Actions"))
+            ]
         case .newTerminalWith:
-            [list("New Terminal With", state.shells.enumerated().map { .item(MenuItem(.newTerminalWith($0), $1)) }, "No Shells")]
+            [
+                list(
+                    Words.text("platform-menu-new-terminal-with", fallback: "New Terminal With"),
+                    state.shells.enumerated().map { .item(MenuItem(.newTerminalWith($0), $1)) },
+                    Words.text("platform-menu-no-shells", fallback: "No Shells"))
+            ]
         case .profiles: [profiles(state)]
         case .terminals:
             state.terminals.prefix(9).enumerated().map { index, name in
@@ -38,14 +54,14 @@ extension MenuBuilder {
         if state.profiles.count > 1 {
             items += [
                 .separator,
-                .submenu(title: "Open Window in", items: pick(MenuCommand.openInProfile, skipping: nil)),
+                .submenu(title: Words.text("platform-menu-open-window-in", fallback: "Open Window in"), items: pick(MenuCommand.openInProfile, skipping: nil)),
                 .submenu(
-                    title: "Move Window to", items: pick(MenuCommand.moveToProfile, skipping: state.windowProfile),
+                    title: Words.text("platform-menu-move-window-to", fallback: "Move Window to"), items: pick(MenuCommand.moveToProfile, skipping: state.windowProfile),
                     enabled: state.windowProfile != nil),
             ]
         }
         items.append(.separator)
         items += [ActionID.newProfile, .manageProfiles].compactMap { actionItem($0, state).map(MenuNode.item) }
-        return .submenu(title: "Profile", items: tidy(items))
+        return .submenu(title: Words.text("platform-menu-profile", fallback: "Profile"), items: tidy(items))
     }
 }

@@ -13,7 +13,7 @@ public struct OutputMenuItems: MenuProviding {
 
     public func menus(for state: MenuState) -> [Menu] {
         base.menus(for: state).map { menu in
-            guard menu.title == "Shell" else { return menu }
+            guard menu.title == "Shell" else { return menu }  // text: the title core gives that menu, found by it
             let ids: [ActionID] = ["exportText", "print"]
             let items = ids.compactMap { id in
                 keymap.entry(id).map { MenuNode.item(MenuItem(.action(id), $0.title(on: true), key: $0.key)) }

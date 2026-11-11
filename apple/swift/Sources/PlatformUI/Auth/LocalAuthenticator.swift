@@ -17,7 +17,7 @@ public struct LocalAuthenticator: Authenticating {
         let context = LAContext()
         var error: NSError?
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
-            throw error.map(Self.map) ?? .unavailable("no owner authentication")
+            throw error.map(Self.map) ?? .unavailable("no owner authentication")  // text: a diagnostic of a refused prompt, not shown as a sentence
         }
         do {
             _ = try await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason)

@@ -5,6 +5,7 @@
 import Foundation
 import Observation
 import PlatformModel
+import WordsModel
 
 @MainActor @Observable
 public final class QuickPanelModel {
@@ -68,7 +69,7 @@ public final class QuickPanelModel {
             send(.openTab(answering.tab))
         } else if let terminal = selectedRow?.waiting {
             reply = ""
-            answering = Answering(tab: terminal.tab, question: terminal.message ?? "Waiting for your answer")
+            answering = Answering(tab: terminal.tab, question: terminal.message ?? Words.text("platform-quick-waiting", fallback: "Waiting for your answer"))
         }
     }
 
@@ -114,7 +115,15 @@ public final class QuickPanelModel {
 
     public var footerHints: [(keys: String, label: String)] {
         answering == nil
-            ? [("↑↓", "select"), ("⏎", "open"), ("⌘⏎", "answer here"), ("esc", "close")]
-            : [("⏎", "send reply"), ("⌘⏎", "open terminal"), ("esc", "back")]
+            ? [
+                ("↑↓", Words.text("platform-quick-hint-select", fallback: "select")), ("⏎", Words.text("palette-hint-open", fallback: "open")),
+                ("⌘⏎", Words.text("platform-quick-hint-answer", fallback: "answer here")),
+                ("esc", Words.text("platform-quick-hint-close", fallback: "close")),  // text: "esc" is a key cap's name
+            ]
+            : [
+                ("⏎", Words.text("platform-quick-hint-send", fallback: "send reply")),
+                ("⌘⏎", Words.text("platform-quick-hint-open-terminal", fallback: "open terminal")),
+                ("esc", Words.text("platform-quick-hint-back", fallback: "back")),  // text: "esc" is a key cap's name
+            ]
     }
 }

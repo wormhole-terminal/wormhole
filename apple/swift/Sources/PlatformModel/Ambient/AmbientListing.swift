@@ -3,6 +3,7 @@
 // `notify` calls, which return the same values.
 
 import Foundation
+import WordsModel
 
 public struct AmbientSections: Sendable, Equatable {
     /// Indices into the terminals: needing you the longest waiting first, working the longest running first,
@@ -40,19 +41,23 @@ extension AmbientTerminal {
     /// panel's one-line row gives just the words.
     public func detail(withAgent: Bool) -> String? {
         let agent = withAgent ? who : nil
-        let changedText = changed.flatMap { $0 > 0 ? AmbientWording.count($0, "file changed", "files changed") : nil }
-        let tookText = took.map { "after \(AmbientWording.duration($0))" }
+        let changedText = changed.flatMap { $0 > 0 ? Words.text("palette-detail-files-changed", ["count": .whole($0)], fallback: AmbientWording.count($0, "file changed", "files changed")) : nil }
+        let tookText = took.map {
+            Words.text("platform-detail-after", ["duration": .text(AmbientWording.duration($0))], fallback: "after \(AmbientWording.duration($0))")
+        }
+        let finishedText = Words.text("palette-state-finished", fallback: "Finished")
+        let failedText = Words.text("palette-state-failed", fallback: "Failed")
         let parts: [String?]
         switch (state, source.told) {
         case (.needsYou, true), (.working, true): parts = [agent, message]
-        case (.needsYou, false): parts = ["Bell", command]
+        case (.needsYou, false): parts = [Words.text("platform-detail-bell", fallback: "Bell"), command]
         case (.working, false): parts = [command]
-        case (.done, true): parts = [agent ?? (withAgent ? nil : "Finished"), message, changedText]
-        case (.done, false): parts = command == nil ? ["Finished"] : [command, tookText]
-        case (.failed, true): parts = [agent, "Failed", message]
-        case (.failed, false): parts = [command ?? "Failed", exit.map { "exit \($0)" }, tookText]
+        case (.done, true): parts = [agent ?? (withAgent ? nil : finishedText), message, changedText]
+        case (.done, false): parts = command == nil ? [finishedText] : [command, tookText]
+        case (.failed, true): parts = [agent, failedText, message]
+        case (.failed, false): parts = [command ?? failedText, exit.map { Words.text("palette-terminal-exit", ["code": .whole($0)], fallback: "exit \($0)") }, tookText]
         case (.idle, _): parts = [who ?? folder]
-        case (.exited, _): parts = ["Exited"]
+        case (.exited, _): parts = [Words.text("platform-detail-exited", fallback: "Exited")]
         }
         let words = parts.compactMap { $0?.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
         return words.isEmpty ? nil : words.joined(separator: " · ")

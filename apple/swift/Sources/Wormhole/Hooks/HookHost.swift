@@ -96,10 +96,10 @@
                 hooks = try HookHost(app: self)
                 hooks?.start()
             } catch HookError.AlreadyServed {
-                FileHandle.standardError.write(Data("another Wormhole serves this data folder: it was asked to come forward\n".utf8))
+                FileHandle.standardError.write(Data("another Wormhole serves this data folder: it was asked to come forward\n".utf8))  // text: a log line
                 terminateUnattended()
             } catch {
-                FileHandle.standardError.write(Data("hooks: the socket is not served (\(error)); agents' hooks will not arrive\n".utf8))
+                FileHandle.standardError.write(Data("hooks: the socket is not served (\(error)); agents' hooks will not arrive\n".utf8))  // text: a log line
             }
         }
     }

@@ -3,6 +3,7 @@
 
 import AppKit
 import PlatformModel
+import WordsModel
 
 @MainActor
 final class SwatchMenuView: NSView {
@@ -20,7 +21,7 @@ final class SwatchMenuView: NSView {
         let width = Self.inset * 2 + CGFloat(row.swatches.count) * Self.dot + CGFloat(max(row.swatches.count - 1, 0)) * Self.gap
         super.init(frame: NSRect(x: 0, y: 0, width: width, height: Self.height))
         setAccessibilityRole(.radioGroup)
-        setAccessibilityLabel("Colour")
+        setAccessibilityLabel(Words.text("platform-swatch-label", fallback: "Colour"))
         addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect], owner: self))
     }
 

@@ -6,6 +6,7 @@
 
 import PaletteModel
 import PlatformModel
+import WordsModel
 import WormholeBindings
 
 public enum PlatformBridge {
@@ -29,7 +30,7 @@ public enum PlatformBridge {
     public static func defaultNoticeSettings() -> NoticeSettings { NoticeSettings(notifyDefaultSettings()) }
 
     /// The folder picker's providers and decorators from core's `folder_picker`.
-    public static func makeFolders(recentsJSON: String? = nil, recentTitle: String = "Recent") -> CoreFolders {
+    public static func makeFolders(recentsJSON: String? = nil, recentTitle: String = Words.text("folder-picker-recent", fallback: "Recent")) -> CoreFolders {
         CoreFolders(recentsJSON: recentsJSON, recentTitle: recentTitle)
     }
 

@@ -4,6 +4,7 @@
 // `kind` is one of `RowMenu.Kind` and whose `subject` is the terminal.
 
 import Foundation
+import WordsModel
 
 public struct RowMenuFacts: Sendable, Equatable {
     public struct Group: Sendable, Equatable {
@@ -54,27 +55,27 @@ public enum RowMenu {
         func item(_ title: String, _ kind: Kind, checked: Bool = false, enabled: Bool = true) {
             menu.item(title, kind.key, subject: id, checked: checked, enabled: enabled)
         }
-        item("Rename…", .rename)
-        item("Add terminal to new group", .newGroup)
+        item(Words.text("sidebar-menu-rename", fallback: "Rename…"), .rename)
+        item(Words.text("sidebar-menu-add-to-new-group", fallback: "Add terminal to new group"), .newGroup)
         var into = ContextMenuList()
         for group in facts.groups {
             into.item(group.name, Kind.intoGroup.key, subject: id, argument: String(group.id), checked: group.current, enabled: group.allowed)
         }
-        menu.submenu("Add terminal to group", into)
-        if facts.groups.contains(where: \.current) { item("Remove from group", .removeFromGroup) }
-        item("Split right", .splitRight)
-        item("Close terminal", .close)
+        menu.submenu(Words.text("sidebar-menu-add-to-group", fallback: "Add terminal to group"), into)
+        if facts.groups.contains(where: \.current) { item(Words.text("sidebar-menu-remove-from-group", fallback: "Remove from group"), .removeFromGroup) }
+        item(Words.text("sidebar-menu-split-right", fallback: "Split right"), .splitRight)
+        item(Words.text("sidebar-close-terminal", fallback: "Close terminal"), .close)
         menu.separator()
         var next = ContextMenuList()
         for other in facts.beside { next.item(other.name, Kind.showBeside.key, subject: id, argument: String(other.id)) }
-        menu.submenu("Show beside…", next)
-        if facts.inSplit { item("Remove from split", .removeFromSplit) }
-        item(facts.pinned ? "Unpin" : "Pin to top", .togglePin)
-        item("Don't keep this terminal's text", .toggleForgetText, checked: facts.forgetText, enabled: facts.restoring)
-        if let hidden = facts.agentHide { item("Hide from Agents", .toggleAgentHidden, checked: hidden) }
+        menu.submenu(Words.text("sidebar-menu-show-beside", fallback: "Show beside…"), next)
+        if facts.inSplit { item(Words.text("sidebar-menu-remove-from-split", fallback: "Remove from split"), .removeFromSplit) }
+        item(facts.pinned ? Words.text("sidebar-unpin", fallback: "Unpin") : Words.text("sidebar-menu-pin-top", fallback: "Pin to top"), .togglePin)
+        item(Words.text("sidebar-menu-forget-text", fallback: "Don't keep this terminal's text"), .toggleForgetText, checked: facts.forgetText, enabled: facts.restoring)
+        if let hidden = facts.agentHide { item(Words.text("sidebar-menu-hide-from-agents", fallback: "Hide from Agents"), .toggleAgentHidden, checked: hidden) }
         menu.separator()
-        item("Reveal in Finder", .revealInFinder, enabled: facts.cwd != nil)
-        item("Copy path", .copyPath, enabled: facts.cwd != nil)
+        item(Words.text("history-menu-reveal", fallback: "Reveal in Finder"), .revealInFinder, enabled: facts.cwd != nil)
+        item(Words.text("title-row-path-copy", fallback: "Copy path"), .copyPath, enabled: facts.cwd != nil)
         return menu.finished
     }
 }

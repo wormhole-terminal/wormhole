@@ -3,6 +3,7 @@
 
 import PlatformModel
 import UserNotifications
+import WordsModel
 
 enum NoticeContent {
     static func content(_ notice: Notice) -> UNMutableNotificationContent {
@@ -29,8 +30,8 @@ enum NoticeContent {
                 // Typing a reply needs no window: the text goes to the terminal as it is.
                 case .reply:
                     UNTextInputNotificationAction(
-                        identifier: button.id, title: button.label, options: [], textInputButtonTitle: "Send",
-                        textInputPlaceholder: "Reply")
+                        identifier: button.id, title: button.label, options: [], textInputButtonTitle: Words.text("platform-send", fallback: "Send"),
+                        textInputPlaceholder: Words.text("platform-reply", fallback: "Reply"))
                 case .foreground:
                     UNNotificationAction(identifier: button.id, title: button.label, options: [.foreground])
                 }

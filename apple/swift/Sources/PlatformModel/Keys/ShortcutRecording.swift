@@ -2,6 +2,7 @@
 // field, and whether the keys are taken (`keys/shortcut_record.rs`).
 
 import Foundation
+import WordsModel
 
 public enum Recorded: Equatable, Sendable {
     /// Esc alone: stop recording, keep the shortcut there was.
@@ -39,8 +40,9 @@ public enum ShortcutRecording {
     private static func describe(_ used: KeyUse, _ spec: KeySpec) -> String {
         switch used {
         case .action: used.description
-        case .system(let what): "macOS uses \(spec.glyphText) for \(what)"
-        case .shell: "The shell uses \(spec.glyphText)"
+        case .system(let what):
+            Words.text("platform-recorder-system", ["key": .text(spec.glyphText), "what": .text(what)], fallback: "macOS uses \(spec.glyphText) for \(what)")
+        case .shell: Words.text("platform-recorder-shell", ["key": .text(spec.glyphText)], fallback: "The shell uses \(spec.glyphText)")
         }
     }
 }

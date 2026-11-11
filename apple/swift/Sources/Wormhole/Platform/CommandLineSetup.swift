@@ -12,7 +12,7 @@
             do {
                 _ = try cliToolKeepCurrent(binaryPath: binary)
             } catch {
-                FileHandle.standardError.write(Data("wh: terminals start without the command (\(error))\n".utf8))
+                FileHandle.standardError.write(Data("wh: terminals start without the command (\(error))\n".utf8))  // text: a log line
             }
         }
     }

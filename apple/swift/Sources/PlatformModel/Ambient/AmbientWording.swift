@@ -2,6 +2,7 @@
 // terminal has waited, run or been done, and how long a command took.
 
 import Foundation
+import WordsModel
 
 public enum AmbientWording {
     public static func count(_ n: Int, _ one: String, _ many: String) -> String { "\(n) \(n == 1 ? one : many)" }
@@ -18,7 +19,10 @@ public enum AmbientWording {
     }
 
     /// How long ago, short: "just now", "12m ago".
-    public static func ago(_ elapsed: TimeInterval) -> String { took(elapsed).map { "\($0) ago" } ?? "just now" }
+    public static func ago(_ elapsed: TimeInterval) -> String {
+        took(elapsed).map { Words.text("hosts-heard-ago", ["ago": .text($0)], fallback: "\($0) ago") }
+            ?? Words.text("history-just-now", fallback: "just now")
+    }
 
     /// A running command's time on the clock: "0:05", "1:12", "1:02:03".
     public static func clock(_ elapsed: TimeInterval) -> String {

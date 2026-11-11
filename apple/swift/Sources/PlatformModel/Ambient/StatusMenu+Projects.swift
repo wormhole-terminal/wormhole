@@ -1,18 +1,19 @@
 // The status item's Projects submenu: recent folders, each open project's actions, then Open Folder….
 
 import Foundation
+import WordsModel
 
 extension StatusMenu {
     static func projects(_ snapshot: StatusSnapshot, _ keymap: Keymap) -> [MenuNode] {
         var nodes: [MenuNode] = []
         if !snapshot.recent.isEmpty {
-            nodes.append(.header("Recent"))
+            nodes.append(.header(Words.text("folder-picker-recent", fallback: "Recent")))
             nodes += snapshot.recent.map {
                 .item(MenuItem(.ambient(.openProject(path: $0.path)), $0.name, subtitle: ($0.path as NSString).abbreviatingWithTildeInPath))
             }
         }
         nodes += actions(snapshot.actions)
-        nodes += [.separator, .item(MenuItem(.ambient(.openFolder), "Open Folder…", key: keymap.key(.openFolder)))]
+        nodes += [.separator, .item(MenuItem(.ambient(.openFolder), Words.text("platform-menu-open-folder", fallback: "Open Folder…"), key: keymap.key(.openFolder)))]
         return nodes
     }
 
@@ -25,7 +26,11 @@ extension StatusMenu {
             let list = actions.filter { $0.root == root }
             let name = list[0].project
             let repeats = Set(actions.filter { $0.project == name }.map(\.root)).count > 1
-            return [.header(repeats ? "Actions · \(name) — \(root)" : "Actions · \(name)")]
+            let title =
+                repeats
+                ? Words.text("platform-status-actions-at", ["name": .text(name), "root": .text(root)], fallback: "Actions · \(name) — \(root)")
+                : Words.text("platform-status-actions", ["name": .text(name)], fallback: "Actions · \(name)")
+            return [.header(title)]
                 + list.map { .item(MenuItem(.ambient(.runAction(root: root, id: $0.id)), $0.title)) }
         }
     }

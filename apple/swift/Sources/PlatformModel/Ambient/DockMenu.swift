@@ -2,12 +2,17 @@
 // New Terminal and New Window; macOS adds its own items below. And the badge on the icon's tile.
 
 import Foundation
+import WordsModel
 
 public enum DockMenu {
     public static func build(_ terminals: [AmbientTerminal], now: Date) -> [MenuNode] {
         let sections = AmbientSections(terminals)
         var nodes: [MenuNode] = []
-        for (title, list) in [("Needs input", sections.needsYou), ("Working", sections.working)] where !list.isEmpty {
+        let titles = [
+            (Words.text("palette-state-needs-input", fallback: "Needs input"), sections.needsYou),
+            (Words.text("palette-state-working", fallback: "Working"), sections.working),
+        ]
+        for (title, list) in titles where !list.isEmpty {
             nodes.append(.header(title))
             for index in list.prefix(StatusMenu.maxSessions / 2) {
                 let terminal = terminals[index]
@@ -16,7 +21,10 @@ public enum DockMenu {
             }
         }
         if !nodes.isEmpty { nodes.append(.separator) }
-        return nodes + [.item(MenuItem(.ambient(.newTerminal), "New Terminal")), .item(MenuItem(.ambient(.newWindow), "New Window"))]
+        return nodes + [
+            .item(MenuItem(.ambient(.newTerminal), Words.text("platform-menu-new-terminal", fallback: "New Terminal"))),
+            .item(MenuItem(.ambient(.newWindow), Words.text("platform-menu-new-window", fallback: "New Window"))),
+        ]
     }
 }
 

@@ -26,7 +26,7 @@ enum PlatformSetup {
             PlatformBridge.installKeymap()
             PlatformBridge.installPaletteMatcher()
             // WORMHOLE_LANGUAGE=en-XA starts the instance in the pseudo-language, so every string built once shows it too.
-            WordsBridge.install(tag: ProcessInfo.processInfo.environment["WORMHOLE_LANGUAGE"])
+            WordsBridge.install(tag: ProcessInfo.processInfo.environment["WORMHOLE_LANGUAGE"])  // text: an environment variable name
             FilesBridge.installRules()
             installResizeRules()
             installCellRules()

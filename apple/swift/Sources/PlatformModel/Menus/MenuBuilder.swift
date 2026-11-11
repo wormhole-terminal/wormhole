@@ -4,6 +4,7 @@
 // question from core's own `keymap::menus::menus` and a test keeps the two equal.
 
 import Foundation
+import WordsModel
 
 /// Where the menu bar's values come from for a window's state.
 public protocol MenuProviding: Sendable {
@@ -41,7 +42,7 @@ public struct MenuBuilder: MenuProviding {
             !(entry.persistentOnly && !state.persistent), !state.hidden.contains(id)
         else { return nil }
         // In a split ⌘W closes the focused pane, so its item says so.
-        var title = id == .closeTerminal && state.split ? "Close Pane" : entry.title(on: !state.off.contains(id))
+        var title = id == .closeTerminal && state.split ? Words.text("platform-menu-close-pane", fallback: "Close Pane") : entry.title(on: !state.off.contains(id))
         if id == .undo, let what = state.undo { title += " \(what)" }
         if id == .redo, let what = state.redo { title += " \(what)" }
         return MenuItem(

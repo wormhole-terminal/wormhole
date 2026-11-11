@@ -6,6 +6,7 @@
 import Carbon.HIToolbox
 import Foundation
 import PlatformModel
+import WordsModel
 
 @MainActor
 public final class GlobalHotkey {
@@ -15,8 +16,9 @@ public final class GlobalHotkey {
 
         public var description: String {
             switch self {
-            case .unknownKey(let key): "no key code for \(key)"
-            case .registration(let status): "another app owns this combination (error \(status))"
+            case .unknownKey(let key): "no key code for \(key)"  // text: a diagnostic, logged
+            case .registration(let status):
+                Words.text("platform-hotkey-taken", ["status": .whole(Int(status))], fallback: "another app owns this combination (error \(status))")
             }
         }
     }

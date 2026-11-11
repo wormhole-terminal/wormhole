@@ -16,9 +16,9 @@ public enum PathMenu {
         var menu = ContextMenuList()
         menu.add(.header(shown))
         menu.separator()
-        menu.item("Open in Finder", Kind.openInFinder.key, argument: folder)
-        menu.item("Copy path", Kind.copyPath.key, argument: folder)
-        menu.item("Insert into terminal", Kind.insertIntoTerminal.key, argument: folder, enabled: !exited)
+        menu.item(Words.text("title-row-path-open-in-finder", fallback: "Open in Finder"), Kind.openInFinder.key, argument: folder)
+        menu.item(Words.text("title-row-path-copy", fallback: "Copy path"), Kind.copyPath.key, argument: folder)
+        menu.item(Words.text("title-row-path-insert", fallback: "Insert into terminal"), Kind.insertIntoTerminal.key, argument: folder, enabled: !exited)
         menu.separator()
         for step in PathChain.of(folder, volume: volume) {
             menu.item(step.name, Kind.openFolder.key, argument: step.path, icon: .file(path: step.path))
@@ -40,7 +40,7 @@ public enum PathChain {
     public static func of(_ folder: String, volume: String) -> [Step] {
         let parts = folder.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
         let absolute = folder.hasPrefix("/")
-        let onVolume = absolute && parts.count >= 2 && parts[0] == "Volumes"
+        let onVolume = absolute && parts.count >= 2 && parts[0] == "Volumes"  // text: the folder macOS mounts volumes in
         let stop = onVolume ? "/Volumes/\(parts[1])" : nil
         var steps: [Step] = []
         for count in stride(from: parts.count, through: 0, by: -1) {

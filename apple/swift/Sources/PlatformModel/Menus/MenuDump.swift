@@ -1,3 +1,4 @@
+// text-file: the dump is a test and devctl format that core writes in the same form, not interface text.
 // The menus as text, one item per line with its key and marks: for tests and devctl's `menus`, in the form
 // core's `keymap::menus::dump` writes, so the two can be compared line by line.
 

@@ -39,10 +39,10 @@ final class StudioLauncher {
             do {
                 try controller.show(theme: store.theme.name, environment: environment, store: store)
             } catch {
-                FileHandle.standardError.write(Data("theme studio: \(error)\n".utf8))
+                FileHandle.standardError.write(Data("theme studio: \(error)\n".utf8))  // text: a log line
             }
         #else
-            FileHandle.standardError.write(Data("theme studio: needs the Rust library (apple/scripts/build-ffi.sh)\n".utf8))
+            FileHandle.standardError.write(Data("theme studio: needs the Rust library (apple/scripts/build-ffi.sh)\n".utf8))  // text: a log line
         #endif
     }
 }

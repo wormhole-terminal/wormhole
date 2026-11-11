@@ -49,6 +49,7 @@ pub(crate) const LOCALES: [Locale; 1] = [
             ("studio.ftl", include_str!("../../locales/en/studio.ftl")),
             ("swift-aux.ftl", include_str!("../../locales/en/swift-aux.ftl")),
             ("swift-panel.ftl", include_str!("../../locales/en/swift-panel.ftl")),
+            ("swift-platform.ftl", include_str!("../../locales/en/swift-platform.ftl")),
             ("swift-studio.ftl", include_str!("../../locales/en/swift-studio.ftl")),
             ("swift-window.ftl", include_str!("../../locales/en/swift-window.ftl")),
             ("tailor.ftl", include_str!("../../locales/en/tailor.ftl")),

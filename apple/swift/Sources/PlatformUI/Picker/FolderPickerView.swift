@@ -6,6 +6,7 @@
 import DesignSystem
 import PlatformModel
 import SwiftUI
+import WordsModel
 
 public struct FolderPickerView: View {
     let driver: FolderPickerDriver
@@ -65,7 +66,7 @@ public struct FolderPickerView: View {
         .padding(.horizontal, Space._3)
         .frame(height: FolderPickerMetrics.crumbs)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Where you are"))
+        .accessibilityLabel(Text(Words.text("platform-picker-crumbs", fallback: "Where you are")))
     }
 
     private var field: some View {

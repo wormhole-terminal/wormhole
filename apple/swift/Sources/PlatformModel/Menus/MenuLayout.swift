@@ -26,7 +26,7 @@ public struct MenuLayout: Sendable, Decodable {
             case "services": self = .services
             case "submenu": self = .submenu(title: try c.decode(String.self, forKey: .title), slots: try c.decode([Slot].self, forKey: .slots))
             case "dynamic": self = .dynamic(try c.decode(Dynamic.self, forKey: .name))
-            case let other: throw DecodingError.dataCorruptedError(forKey: .kind, in: c, debugDescription: "slot \(other)")
+            case let other: throw DecodingError.dataCorruptedError(forKey: .kind, in: c, debugDescription: "slot \(other)")  // text: a decoding error, not interface text
             }
         }
     }

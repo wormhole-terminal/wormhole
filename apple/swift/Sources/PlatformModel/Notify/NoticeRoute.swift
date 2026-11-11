@@ -12,7 +12,7 @@ public enum NoticeRoute: Sendable, Equatable {
 
     /// The route for a run: a test instance logs (unless WORMHOLE_NOTIFY names another route), a bundled app
     /// posts through the centre.
-    public static func choose(policy: PlatformPolicy, notify: String? = ProcessInfo.processInfo.environment["WORMHOLE_NOTIFY"], bundled: Bool) -> NoticeRoute {
+    public static func choose(policy: PlatformPolicy, notify: String? = ProcessInfo.processInfo.environment["WORMHOLE_NOTIFY"], bundled: Bool) -> NoticeRoute {  // text: an environment variable name
         let logs = notify.map { $0 == "log" } ?? policy.background
         if logs { return .log }
         return bundled ? .center : .off
