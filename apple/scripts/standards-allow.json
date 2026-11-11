@@ -1,0 +1,23 @@
+{
+ "any-view Sources/PlatformUI/QuickPanel/QuickPanelController.swift": 2,
+ "file-soft Sources/TerminalMetal/MetalRenderer.swift": 1,
+ "func-size Sources/SidebarUI/Icons/SVGPath.swift": 1,
+ "func-size Sources/TerminalCore/Mock/MockGallery.swift": 1,
+ "func-size Sources/Wormhole/Options+Parse.swift": 1,
+ "unchecked Sources/AuxBridge/WakeHub.swift": 1,
+ "unchecked Sources/DesignSystem/Theme/SystemLook.swift": 1,
+ "unchecked Sources/FileIconTheme/BundledIconTheme.swift": 1,
+ "unchecked Sources/FilesBridge/Files/RustFilesBackend.swift": 1,
+ "unchecked Sources/FilesBridge/Notes/RustNotesPersistence.swift": 1,
+ "unchecked Sources/FilesBridge/Project/OwnerAuthentication.swift": 2,
+ "unchecked Sources/FilesBridge/Project/RustProjectBackend.swift": 1,
+ "unchecked Sources/FilesBridge/Support/WakeStream.swift": 1,
+ "unchecked Sources/FilesBridge/Usage/RustUsageBackend.swift": 2,
+ "unchecked Sources/GitBridge/RepoChanges.swift": 2,
+ "unchecked Sources/HookBridge/HookWake.swift": 1,
+ "unchecked Sources/PlatformUI/Hotkey/GlobalHotkey.swift": 2,
+ "unchecked Sources/PlatformUI/Menus/AppMenuBuilder.swift": 1,
+ "unchecked Sources/PlatformUI/Notifications/NoticeDelegate.swift": 1,
+ "unchecked Sources/SettingsBridge/WakeRelay.swift": 1,
+ "unchecked Sources/TerminalMetal/GlyphRaster.swift": 1
+}
