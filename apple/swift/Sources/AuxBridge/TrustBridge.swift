@@ -14,6 +14,7 @@ public final class FFITrustBackend: TrustBackend {
     private let hub = WakeHub()
     private let authenticator: any Authenticating
     private var approving = false
+    private var shown: TrustReview?
 
     /// `root`: the project's folder; `profile`: whose approval it is (the default one when `nil`).
     public init(root: URL, profile: String? = nil, dataDir: URL? = nil, authenticator: any Authenticating) throws {
@@ -25,10 +26,12 @@ public final class FFITrustBackend: TrustBackend {
 
     public func review() -> TrustReview {
         let record = desk.review()
-        return TrustReview(
+        let review = TrustReview(
             name: record.name, directory: record.directory, status: record.status.value,
             lines: record.lines.map { TrustLine(what: $0.what, runs: $0.runs, note: $0.note) }, problem: record.problem,
             approving: approving)
+        shown = review
+        return review
     }
 
     public func changes() -> AsyncStream<Void> {
@@ -41,9 +44,9 @@ public final class FFITrustBackend: TrustBackend {
         guard !approving else { return }
         approving = true
         defer { approving = false }
-        // The window shows what is about to be approved; the approval is for exactly that.
-        let shown = review()
-        guard shown.canApprove else { return }
+        // The approval is for exactly what the window last drew: never a fresh read, and core holds that request
+        // through the dialog, whatever the watch reads meanwhile.
+        guard let shown, shown.canApprove, desk.holdReviewed() else { return }
         let reason = AuxText.trustTouchIDReason(folder: shown.name)
         do {
             try await authenticator.authenticate(reason: reason)

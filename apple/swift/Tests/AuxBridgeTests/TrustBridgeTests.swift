@@ -33,6 +33,7 @@ final class TrustBridgeTests: XCTestCase {
 
     func testApprovingAsksTheOwnerFirstAndTrustsWhatWasShown() async throws {
         let backend = try backend(.allow)
+        _ = backend.review()
         await backend.approve()
         XCTAssertEqual(backend.review().status, .trusted)
         XCTAssertFalse(backend.review().canApprove)
@@ -44,9 +45,36 @@ final class TrustBridgeTests: XCTestCase {
     func testACancelledOrRefusedAuthenticationTrustsNothing() async throws {
         for answer in [ScriptedAuthenticator.Answer.cancel, .deny] {
             let backend = try backend(answer)
+            _ = backend.review()
             await backend.approve()
             XCTAssertEqual(backend.review().status, .untrusted, "\(answer)")
         }
+    }
+
+    /// The owner's answer approves what the window drew, never what a `git pull` wrote while the dialog was up,
+    /// even when the window's watch reviewed the new content meanwhile.
+    func testAFileChangedDuringTheDialogIsNotTrusted() async throws {
+        let (scratch, project) = (scratch!, project!)
+        let evil = #"{"shell": "/bin/zsh", "env": {"FOO": "bar", "EVIL": "1"}}"#
+        var during: (@MainActor () -> Void)?
+        let backend = try FFITrustBackend(
+            root: project, dataDir: scratch.data,
+            authenticator: MeddlingAuthenticator {
+                try? scratch.write(evil, to: "api/.wormhole/config.json")
+                await during?()
+            })
+        during = { _ = backend.review() }
+        _ = backend.review()
+        await backend.approve()
+        let after = backend.review()
+        XCTAssertEqual(after.status, .changed)
+        XCTAssertTrue(after.lines.contains(TrustLine(what: "env:", runs: "EVIL=1")))
+    }
+
+    func testNothingIsApprovedThatWasNeverReviewed() async throws {
+        let backend = try backend(.allow)
+        await backend.approve()
+        XCTAssertEqual(backend.review().status, .untrusted)
     }
 
     func testTheViewModelFollowsTheBackendThroughApproval() async throws {
@@ -63,4 +91,12 @@ final class TrustBridgeTests: XCTestCase {
         XCTAssertNotNil(review.problem)
         XCTAssertFalse(review.canApprove)
     }
+}
+
+/// Says yes, after running what a test wants to happen while the dialog is up.
+private struct MeddlingAuthenticator: Authenticating {
+    let meanwhile: @Sendable @MainActor () async -> Void
+    func canAuthenticate() -> Bool { true }
+    func biometricsAvailable() -> Bool { false }
+    func authenticate(reason: String) async throws { await meanwhile() }
 }

@@ -58,7 +58,8 @@ public final class FFIOnboardingBackend: OnboardingBackend {
     }
 
     public func trust(_ folder: URL) {
-        guard let trustDesk, trustDesk.review().problem == nil else { return }
+        // Held before the dialog: the answer approves what was read now, not what is on disk afterwards.
+        guard let trustDesk, trustDesk.review().problem == nil, trustDesk.holdReviewed() else { return }
         Task {
             do {
                 try await authenticator.authenticate(reason: AuxText.trustTouchIDReason(folder: folder.lastPathComponent))

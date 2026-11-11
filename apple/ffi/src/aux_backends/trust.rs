@@ -2,8 +2,9 @@
 //! would run, in core's words (`project::trust`), its standing against the profile's approvals
 //! (`TrustStore`), and the approval itself.
 //!
-//! Approving binds to what was *shown*: `review` keeps the request it described, and `approve_reviewed` trusts
-//! exactly that, so a file that changed since reads "changed" again and must be reviewed anew. Nothing here asks
+//! Approving binds to what was *shown*: `review` keeps the request it described, `hold_reviewed` fixes it before
+//! the owner is asked and `approve_reviewed` trusts exactly that, so a file that changed since (also while the
+//! dialog was up) reads "changed" again and must be reviewed anew. Nothing here asks
 //! for Touch ID: that is the platform's (Swift's `Authenticating`), asked before `approve_reviewed` is called.
 
 use std::path::PathBuf;
@@ -46,6 +47,9 @@ pub struct TrustDesk {
     root: PathBuf,
     profile_dir: PathBuf,
     shown: Mutex<Option<TrustRequest>>,
+    /// What the owner is being asked about: taken from `shown` before the dialog, so a `review` that runs while
+    /// it is up (the watch, a `git pull`) never changes what the answer approves.
+    held: Mutex<Option<TrustRequest>>,
     waker: Arc<Waker>,
     watch: Mutex<Option<Watch>>,
 }
@@ -69,6 +73,7 @@ impl TrustDesk {
             root: PathBuf::from(root),
             profile_dir: paths.dir().to_path_buf(),
             shown: Mutex::new(None),
+            held: Mutex::new(None),
             waker: Arc::new(Waker::new(listener)),
             watch: Mutex::new(None),
         }))
@@ -111,10 +116,20 @@ impl TrustDesk {
         TrustReviewRecord { name, directory, status, lines, problem }
     }
 
-    /// Trusts exactly what the last `review` showed. Call only after the owner authenticated.
+    /// Call before asking the owner: fixes what the answer approves to what `review` last showed. `false` when
+    /// nothing reviewed can be approved.
+    pub fn hold_reviewed(&self) -> bool {
+        let shown = locked(&self.shown).clone();
+        let holds = shown.is_some();
+        *locked(&self.held) = shown;
+        holds
+    }
+
+    /// Trusts exactly what `hold_reviewed` took, once. Call only after the owner authenticated: files changed
+    /// since the review read "changed" afterwards and must be reviewed anew.
     pub fn approve_reviewed(&self) -> Result<(), AuxError> {
-        let request = locked(&self.shown)
-            .clone()
+        let request = locked(&self.held)
+            .take()
             .ok_or_else(|| AuxError::failed("there is nothing reviewed to approve"))?;
         let (mut store, _) = TrustStore::load_or_recover(&self.profile_dir);
         store.trust_request(&request);
