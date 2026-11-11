@@ -53,10 +53,30 @@ extension AppController {
         case "reduce-transparency", "increase-contrast":
             // The system's own switches are followed live; this stands in for them where a check cannot flip the setting.
             if command == "reduce-transparency" { on(&themes.reduceTransparency) } else { on(&themes.increaseContrast) }
+        case "backdrop":
+            // What is behind the window's surfaces: the effect views of its content, as AppKit holds them.
+            reply(front.window.map(Self.backdropReport) ?? "no window")
+            return true
         default: return false
         }
         reply("\(command) \(argument)")
         return true
+    }
+
+    /// The window's effect views (`NSVisualEffectView`, `NSGlassEffectView`) with the material, blending, state and
+    /// appearance the system draws them with, and whether the window itself is see-through.
+    static func backdropReport(of window: NSWindow) -> String {
+        var lines = ["window opaque=\(window.isOpaque) background_clear=\(window.backgroundColor == .clear) has_shadow=\(window.hasShadow) appearance=\(window.effectiveAppearance.name.rawValue)"]
+        func walk(_ view: NSView, _ depth: Int) {
+            if let effect = view as? NSVisualEffectView {
+                lines.append("effect material=\(effect.material.rawValue) blending=\(effect.blendingMode.rawValue) state=\(effect.state.rawValue) hidden=\(effect.isHiddenOrHasHiddenAncestor) appearance=\(effect.appearance?.name.rawValue ?? "inherited") frame=\(Int(effect.frame.width))x\(Int(effect.frame.height))")
+            } else if let glass = view as? NSGlassEffectView {
+                lines.append("glass style=\(glass.style.rawValue) hidden=\(glass.isHiddenOrHasHiddenAncestor) appearance=\(glass.appearance?.name.rawValue ?? "inherited") frame=\(Int(glass.frame.width))x\(Int(glass.frame.height))")
+            }
+            view.subviews.forEach { walk($0, depth + 1) }
+        }
+        window.contentView.map { walk($0, 0) }
+        return lines.joined(separator: "\n")
     }
 
     /// One line of what the look is now, for `state`.

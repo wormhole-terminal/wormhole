@@ -1256,6 +1256,13 @@ tearOffGrowMs() -> UInt32                                                      /
 tearOffGrow(chip: TearRect, width:, height:, radius:, elapsedMs: UInt32) -> TearGrow   // what shows of it then: rect, corners, content and face opacity, done
 ```
 
+```swift
+SessionNotesStore.forProfile(profile: String) throws -> SessionNotesStore   // a window's notes live in ITS profile's database
+Windows.setKeepsChanges(keeps: Bool)   // `sidebar_changes_remember`: the files each terminal changed are saved with its window and restored
+```
+
+- A window moved to another profile (`rehome`) is refused (false) when that profile already has a saved window with its id: the
+  databases number windows and terminals apart, and a write would replace that window and delete its terminals.
 - **Open Window in <profile>**: the shell asks `beside(profile)` for that profile's `Windows` once (kept) and plans, makes and
   saves the window there with the ordinary calls; Wormhole stays in the shown profile (the odd window, as the GPUI app's
   `open_window_in_profile`). Its settings are the shown profile's (the workspace reads the active profile).

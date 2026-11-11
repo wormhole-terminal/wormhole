@@ -218,7 +218,8 @@ fn the_title_rows_last_chip_names_what_runs_not_what_the_person_called_it() {
     let mut m = model(1);
     m.update_facts(1, |f| f.shell = "zsh".into());
     m.apply(Action::Rename { id: 1, name: "api".into() });
-    let name = |m: &crate::workspace::WorkspaceModel| m.title_snapshot("Macintosh HD").terminal.map(|t| t.name);
+    let name =
+        |m: &crate::workspace::WorkspaceModel| m.title_snapshot("Macintosh HD").terminal.map(|t| t.name);
     assert_eq!(name(&m).as_deref(), Some("zsh"), "the program's name, as the GPUI row's chip is");
     assert_eq!(m.sidebar_snapshot(0).sections[0].rows[0].name, "api", "the list keeps the person's");
 }

@@ -1,0 +1,73 @@
+# S06 sidebar search, driven by keys and typing (the field is hidden until asked for: Cmd-F with the sidebar holding the keys; with the terminal holding them Cmd-F is the terminal's find, as in GPUI)
+> key cmd-f
+> keys
+> text web
+> wait-idle 1500
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/s06-typed.png
+> rows
+> key down
+> keys
+> key return
+> keys
+key cmd-f -> find focus=sidebar
+focus=sidebar
+text web
+idle
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/s06-typed.png
+selected=4 live=[1, 2, 3, 4] groups=1
+  row 1 "api" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="api, shell, nothing running, 1 of 4, Command 1"
+group 1 "Group 1" folded=true pinned=false count=1 alerts=0 spoken="Group 1, coloured blue, 1 terminal, collapsed, 2 of 4"
+  row 3 "web" idle number=2 pinned=false folder=~ line="~" trail=- split=2:start spoken="web, shell, nothing running, in a split with 1 other, on screen, 3 of 4, Command 2"
+  row 4 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=3 pinned=false folder=~ line="~" trail=- split=2:end spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, in a split with 1 other, selected, 4 of 4, Command
+key down focus=sidebar
+focus=sidebar
+key return focus=sidebar
+focus=sidebar
+> click 150 56
+> wait-idle 1000
+> keys
+> text we
+> wait-idle 1000
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/s06-typed.png
+> rows
+> key return
+> keys
+> wait-idle 800
+> rows
+click 150 56: down on AppKitTextField, the gesture played to its release
+idle
+focus=sidebar
+text we
+idle
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/s06-typed.png
+selected=1 live=[1, 2, 3, 4] groups=0
+key return focus=sidebar
+focus=sidebar
+> click 322 56
+> wait-idle 800
+> text w
+> wait-idle 800
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/s06-w.png
+> rows
+> key return
+> wait-idle 800
+> rows
+> key escape
+> wait-idle 800
+> keys
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/s06-ended.png
+click 322 56: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+idle
+text w
+wait-idle failed: the window still changes after 800 ms
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/s06-w.png
+selected=3 live=[1, 2, 3, 4] groups=0
+  row 3 "web" idle number=2 pinned=false folder=~ line="~" trail=- split=2:start spoken="web, shell, nothing running, in a split with 1 other, selected, 3 of 4, Command 2"
+key return focus=sidebar
+idle
+selected=3 live=[1, 2, 3, 4] groups=0
+  row 3 "web" idle number=2 pinned=false folder=~ line="~" trail=- split=2:start spoken="web, shell, nothing running, in a split with 1 other, selected, 3 of 4, Command 2"
+key escape focus=sidebar
+idle
+focus=sidebar
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/s06-ended.png
