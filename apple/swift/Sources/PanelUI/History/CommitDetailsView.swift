@@ -8,7 +8,6 @@ import AppKit
 import DesignSystem
 import PanelModel
 import SwiftUI
-import WordsModel
 
 struct CommitDetailsView: View {
     let commit: Commit
@@ -59,12 +58,14 @@ struct CommitDetailsView: View {
             menu.addItem(.separator())
         }
         for (what, title) in CommitCopies.titles {
-            menu.addItem(ActionMenuItem(title) { Task { if let text = await store.text(of: what, for: commit) { copy(text) } } })
+            menu.addItem(ActionMenuItem(title) {
+                Task { if let text = await store.text(of: what, for: commit) { copy(text, store.copied(what, for: commit)) } else { host?.failed(.copyCommit) } }
+            })
         }
         let parents = details?.parents.filter { listed.contains($0.sha) } ?? []
         if !parents.isEmpty { menu.addItem(.separator()) }
         for parent in parents {
-            menu.addItem(ActionMenuItem(Words.text("history-menu-open-parent", fallback: "Open Parent \(parent.short)")) { open(parent.sha) })
+            menu.addItem(ActionMenuItem(panelText("history-menu-open-parent", ["short": .text(parent.short)], "Open Parent \(parent.short)")) { open(parent.sha) })
         }
         return menu
     }

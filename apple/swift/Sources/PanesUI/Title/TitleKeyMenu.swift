@@ -26,7 +26,7 @@ public enum TitleKeyMenu {
         menu.addItem(ActionMenuItem(PanesText.copyPath, run: actions.copyPath))
         menu.addItem(ActionMenuItem(PanesText.insertIntoTerminal, enabled: actions.canInsert, run: actions.insertPath))
         menu.addItem(.separator())
-        let volume = (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD"
+        let volume = (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD" // text: macOS's default name of the startup volume
         for step in PathChain.of(folder, bootVolume: volume) {
             let item = ActionMenuItem(step.name) { NSWorkspace.shared.open(URL(fileURLWithPath: step.path)) }
             let icon = NSWorkspace.shared.icon(forFile: step.path)

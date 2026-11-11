@@ -313,7 +313,7 @@ Not run in an instance. Compiles; the one focused test is core's `workspace::tes
 | W08 | run `false` (or a failing `cargo build`) in a plain terminal; ⌘W, then ⌘Q | closes and quits with no question; no "Still running: … · exit 101" anywhere | same |
 | W08 | two terminals in a group, `sleep 300` in one, fold the group; then ⇧⌘W in a second window, ⌘Q, and Close group from the head's menu | each asks, names "sleep 300" and counts both terminals; with the sidebar's search typed so no row is listed, the same | `AppController+Quit.swift quitFacts`, `closeGroup`, `askToClose`; `AppController+WindowEnding.swift shouldClose` |
 | W08 | select a terminal, fold its group (or filter it away by the search), ⌘W; also the pane's × and `wh close <id>` | the terminal closes (asking if something runs); before, nothing happened | `closeTerminal` (reads `state.all`) |
-| W08 | window with an agent working and a plain `npm run dev`: Close Window, Close group, ⌘Q | "An agent is still working. Still running: claude, npm run dev." (the agent's program is named too) | `TerminalSummary.runningFact`, `command` |
+| W08 | window with an agent working and a plain `npm run dev`: Close Window, Close group, ⌘Q | "An agent is still working. Still running: claude, npm run dev." (the agent's program is named too) | `TerminalSummary.runningFact`, `runningCommand` |
 | W08 | ⌘W on a running terminal twice quickly; ⇧⌘W twice | one sheet; the second request is dropped, not queued behind the first | `WindowSession.asking` |
 | W08 | run `sleep 300`; look at the red button; let it end | the dot (document-edited mark) is in the close button while closing the window would ask, and goes when nothing runs | `AppController+WindowEnding.swift followCloseDot` |
 | W08 | a window (not the last) or a group whose only stake is a terminal with a host that cannot be shown: close it | it asks (the host counts as running) | `asking(in:)` |
@@ -344,6 +344,8 @@ Not run in an instance. Compiles; the one focused test is core's `workspace::tes
 | O04 | Settings: right-click a row with a config key | Copy Key (the keys, a line each), Copy as JSON (`{"key":value}` on one line), Reset to Default (greyed at the default) | `SettingsUI/Rows/EntryRowView.swift rowMenu` |
 
 Unfinished or not built in this lane:
+- O04: the group head's menu is now the native one (`GroupMenuNative.swift`); it replaces the SwiftUI menu with the palette row the platform lane wrote (`SidebarUI/Menu/GroupMenu.swift`, deleted), so that lane's O04 line about the dots is answered by the row above. Its words are `PlatformModel/Context/GroupMenu.swift`'s.
+- O04: the + buttons' menu heading reads "New Terminal With" (the menu bar's catalog message); GPUI's is "New terminal with", which has no catalog message.
 - O04/W08: the sidebar row's ×, VoiceOver's "Close terminal", the mouse row menu's Close terminal and the palette's ⌘⌫ still need to call `hub.actions.closeTerminal` (the sidebar lane's three callers).
 - O04: Settings rows have no ⌃↩ menu key and no "Copied" flash beside the key after Copy Key / Copy as JSON (GPUI `style/row_keys.rs`); Copy as JSON sorts the keys.
 - O04: the native-menu catcher (`nativeContextMenu`) takes right-click and ⌃-click only when AppKit's current event is one; check that a plain click, a drag and hover on a group head, the + buttons and the commit details still work, and that ⌃-click opens the menu.

@@ -201,7 +201,7 @@ final class MappingTests: XCTestCase {
         // What the close and quit questions read of a terminal the sidebar lists no row for (its group is folded).
         let folded = all.terminals.first
         XCTAssertEqual(folded?.asksToClose, true)
-        XCTAssertEqual(folded?.command, "claude")
+        XCTAssertEqual(folded?.runningCommand, "claude")
         XCTAssertEqual(folded?.run, .attention)
         XCTAssertEqual(folded?.noteCount, 2)
         XCTAssertEqual(all.counts, TerminalCounts(needsYou: 1, working: 2, finished: 3, failed: 4, quiet: 5))
