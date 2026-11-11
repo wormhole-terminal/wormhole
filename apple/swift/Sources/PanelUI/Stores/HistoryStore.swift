@@ -88,6 +88,11 @@ public final class HistoryStore {
         return what.text(of: commit, details: read)
     }
 
+    /// What the chip says of copying `what` of `commit`: its message is cut when the details were read cut.
+    public func copied(_ what: CommitCopy, for commit: Commit) -> PanelCopied {
+        what.copied(cut: details?.sha == commit.sha && details?.tooLong != nil)
+    }
+
     /// The open commit's message for lines of about `lineChars` characters, and whether it leaves anything out.
     public func compact(lineChars: Int) -> CommitDetails.Compact? {
         guard let folder, let sha = expanded else { return nil }

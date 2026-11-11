@@ -36,17 +36,30 @@ extension FilesStore {
             case let .failure(failure):
                 renameError = Self.words(failure)
                 host?.notify(Self.words(failure))
+                host?.failed(failure.panelFailed)
             }
         }
     }
 
     static func words(_ failure: RenameFailure) -> String {
         switch failure {
-        case .name: "That can't be a name."
-        case .exists: "There is a file with that name already."
-        case .denied: "Wormhole isn't allowed to rename this."
-        case .gone: "This is gone, so it can't be renamed."
-        case .other: "The rename didn't work."
+        case .name: panelText("notice-failed-rename-name", "Not renamed: that isn’t a usable name")
+        case .exists: panelText("notice-failed-rename-exists", "Not renamed: something with that name exists already")
+        case .denied: panelText("notice-failed-rename-denied", "Not renamed: Wormhole isn’t allowed to change it")
+        case .gone: panelText("notice-failed-rename-gone", "Not renamed: it isn’t there any more")
+        case .other: panelText("notice-failed-rename-failed", "Couldn’t rename it")
+        }
+    }
+}
+
+extension RenameFailure {
+    var panelFailed: PanelFailed {
+        switch self {
+        case .name: .renameName
+        case .exists: .renameExists
+        case .denied: .renameDenied
+        case .gone: .renameGone
+        case .other: .renameFailed
         }
     }
 }

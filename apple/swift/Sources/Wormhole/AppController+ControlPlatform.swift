@@ -55,6 +55,9 @@ extension AppController {
         case "hotkey-pause":
             hotkey?.pause(argument == "on")
             reply("hotkey-pause \(argument)")
+        case "quick-open", "quick-key", "quick-text", "quick-state":
+            // The quick panel's model driven without its window (a test instance shows none): what it lists, its keys, Reply.
+            reply(driveQuickPanel(command, argument))
         case "ambient-run":
             // A row of the menu bar extra, the Dock's menu or the quick panel, run as choosing it would (a test instance makes none).
             let words = argument.split(separator: " ", maxSplits: 1).map(String.init)
@@ -77,5 +80,34 @@ extension AppController {
         default: return false
         }
         return true
+    }
+}
+
+extension AppController {
+    /// `quick-open [query]`, `quick-key up|down|enter|escape|cmd-enter`, `quick-text <text>` (the query, or the reply while answering)
+    /// and `quick-state`, over a model of the panel that sends what it is asked for as the status item's rows do.
+    fileprivate func driveQuickPanel(_ command: String, _ argument: String) -> String {
+        if command == "quick-open" {
+            let model = QuickPanelModel()
+            model.send = { [weak self] in self?.run(ambient: $0) }
+            model.close = { [weak self] in self?.quickDriver = nil }
+            (model.terminals, model.items) = (ambientTerminals, ambientItems)
+            model.query = argument
+            quickDriver = model
+        }
+        guard let model = quickDriver else { return "error: no quick panel open (quick-open)" }
+        switch command {
+        case "quick-key":
+            let keys: [String: QuickPanelModel.Key] = ["up": .up, "down": .down, "enter": .enter, "escape": .escape, "cmd-enter": .commandReturn]
+            guard let key = keys[argument] else { return "error: quick-key up|down|enter|escape|cmd-enter" }
+            model.press(key)
+            if let again = quickDriver { (again.terminals, again.items) = (ambientTerminals, ambientItems) }
+        case "quick-text": if model.answering == nil { model.query = argument } else { model.reply = argument }
+        default: break
+        }
+        guard let model = quickDriver else { return "\(command) \(argument)\nclosed" }
+        let rows = model.rows.enumerated().map { index, row in "\(index == model.selectedIndex ? ">" : " ") \(row)" }.joined(separator: "\n")
+        let answering = model.answering.map { "answering tab \($0.tab): \($0.question) reply=\(model.reply.debugDescription)" } ?? "not answering"
+        return "\(command) \(argument)\nquery=\(model.query.debugDescription) \(answering) height=\(Int(model.height))\nhints=\(model.footerHints.map { "\($0.keys) \($0.label)" }.joined(separator: " | "))\n\(rows)"
     }
 }

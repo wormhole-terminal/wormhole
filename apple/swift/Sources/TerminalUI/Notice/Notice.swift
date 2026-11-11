@@ -11,10 +11,12 @@ public enum Notice: Hashable, Sendable {
 
     public enum Copied: Hashable, Sendable {
         case lines(Int), characters(Int)
-        /// A program's write to the clipboard, with its name when it is known (`notice::program_copy`).
-        case programLines(Int, program: String? = nil), programCharacters(Int, program: String? = nil)
+        case programLines(Int), programCharacters(Int)
+        /// A copy by a program that is named (the terminal's foreground program): "ssh copied 120 characters".
+        case namedLines(Int, program: String), namedCharacters(Int, program: String)
         case output(lines: Int)
-        case command, path, error
+        case command, path, error, settingKey, objectId
+        case commitHash, commitShortHash, commitMessage, commitMessageCut, commitSubject, commitAuthor
     }
 
     /// A program that controls the terminal is doing something to it.
@@ -29,6 +31,10 @@ public enum Notice: Hashable, Sendable {
 
     public enum Failed: Hashable, Sendable {
         case copyPath
+        /// A copy of a commit's message or author, which needed details git could not read.
+        case copyCommit
+        /// A rename in the Files tab that was refused, and why.
+        case renameName, renameExists, renameDenied, renameGone, renameFailed
         case historyKeptByHost
         case putAtPrompt(PutRefusal)
         /// A file a Probe named is not in the terminal's folder; the words come from Rust with the name cleaned and cut.
@@ -81,8 +87,12 @@ public enum Notice: Hashable, Sendable {
         let lines = text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).count
         let trailing = text.hasSuffix("\n") ? 1 : 0
         let count = max(lines - trailing, 0)
-        if count <= 1 { return .copied(byProgram ? .programCharacters(text.count, program: program) : .characters(text.count)) }
-        return .copied(byProgram ? .programLines(count, program: program) : .lines(count))
+        if count <= 1 {
+            if byProgram, let program { return .copied(.namedCharacters(text.count, program: program)) }
+            return .copied(byProgram ? .programCharacters(text.count) : .characters(text.count))
+        }
+        if byProgram, let program { return .copied(.namedLines(count, program: program)) }
+        return .copied(byProgram ? .programLines(count) : .lines(count))
     }
 
     public static func copiedOutput(_ text: String) -> Notice {

@@ -22,7 +22,7 @@ struct SideNoteView: View {
                     // Beside the text, so the note stays where it is; it takes no room until the pointer is over the line.
                     if let oid = note.oid {
                         BandButton(symbol: "doc.on.doc", label: panelText("diff-copy-oid", "Copy object id"), inRow: true) {
-                            host?.copy(oid)
+                            host?.copy(oid, as: .objectId)
                             host?.notify(panelText("notice-copied-object-id", "Copied object id"))
                         }
                         .opacity(hovering ? 1 : 0)

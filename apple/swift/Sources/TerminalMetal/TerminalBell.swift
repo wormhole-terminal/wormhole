@@ -3,6 +3,7 @@
 // `ring`). Which of the three happen are the settings' (`bell_sound`, `bell_visual`); the host sets `bell`.
 
 import AppKit
+import DesignSystem
 
 public struct BellStyle: Sendable, Equatable {
     public var sound: Bool
@@ -22,7 +23,7 @@ extension MetalTerminalView {
     static var bellEdgeWidth: CGFloat { 2 }
 
     func ringBell() {
-        if bell.sound, !isGlowing { NSSound.beep() }
+        if bell.sound, !isGlowing, TestInstance.mayMakeSound { NSSound.beep() }
         if bell.dock, !NSApp.isActive { NSApp.requestUserAttention(.informationalRequest) }
         guard bell.visual else { return }
         let glow = glowLayer ?? makeGlowLayer()

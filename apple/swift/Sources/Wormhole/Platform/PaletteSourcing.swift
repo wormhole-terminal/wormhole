@@ -63,6 +63,7 @@ extension AppController {
             copySettingKey: { [weak self] id in
                 guard let key = self?.settingsModel.schema.entry(id)?.entry.keys.first else { return }
                 Pasteboard.setText(key)
+                self?.hub.notices.post(.copied(.settingKey))
             },
             terminals: { [weak self, weak session] in self?.paletteTerminals(own: session) ?? [] },
             project: { [weak session] in session.flatMap { PaletteProject($0.hub.panel.project.state) } },
@@ -72,7 +73,8 @@ extension AppController {
             },
             recentFolders: { [weak self] in self?.recents.roots ?? [] },
             openInNewWindow: { [weak self, weak session] in self?.openInNewWindow($0, from: session) },
-            closeTerminal: { [weak self] id in self?.session(holding: id)?.hub.send(.close(id)) })
+            // The one close entry point: it asks while something runs, and closes the window when it was the last terminal.
+            closeTerminal: { [weak self] id in self?.closeTerminal(id, in: self?.session(holding: id)) })
     }
 
     /// The menus' facts about the window, as the palette's action list wants them: what is flipped, greyed or hidden.

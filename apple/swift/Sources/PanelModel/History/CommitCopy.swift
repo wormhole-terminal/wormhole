@@ -17,5 +17,16 @@ public enum CommitCopy: CaseIterable, Sendable {
         }
     }
 
+    /// What the chip says of it; a message that was read cut is its start.
+    public func copied(cut: Bool = false) -> PanelCopied {
+        switch self {
+        case .hash: .commitHash
+        case .shortHash: .commitShortHash
+        case .message: cut ? .commitMessageCut : .commitMessage
+        case .subject: .commitSubject
+        case .author: .commitAuthor
+        }
+    }
+
     public var needsDetails: Bool { self == .message || self == .author }
 }

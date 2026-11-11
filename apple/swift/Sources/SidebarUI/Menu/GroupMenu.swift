@@ -3,6 +3,7 @@
 // one of the core's actions; the folder is chosen in the system's open panel.
 
 import AppKit
+import DesignSystem
 import SwiftUI
 import WorkspaceModel
 
@@ -10,19 +11,24 @@ struct GroupMenu: View {
     let section: SidebarSection
     let head: GroupHead
     let context: SidebarContext
+    @Environment(\.tokens) private var tokens
 
     var body: some View {
         Button("Rename…") { context.openPopover(head.id) }
         Divider()
-        Menu("Colour") {
+        // The colours as one row of dots, as GPUI's menu draws them (`group_popover.rs`): each picks and closes the menu.
+        ControlGroup {
             ForEach(GroupColor.allCases, id: \.self) { colour in
-                Toggle(colour.rawValue.capitalized, isOn: Binding(get: { head.color == colour }, set: { _ in context.send(.setGroupColor(head.id, colour)) }))
+                Button { context.send(.setGroupColor(head.id, colour)) } label: {
+                    Label(colour.rawValue.capitalized, systemImage: head.color == colour ? "checkmark.circle.fill" : "circle.fill")
+                }
+                .tint(colour.mark(tokens).color)
             }
-            Divider()
-            // A colour picked freely is the popover's picker.
-            Toggle("Other colour…", isOn: Binding(get: { head.customColor != nil }, set: { _ in context.openPopover(head.id) }))
-            Toggle("No colour", isOn: Binding(get: { head.color == nil && head.customColor == nil }, set: { _ in context.send(.setGroupColor(head.id, nil)) }))
         }
+        .controlGroupStyle(.palette)
+        // A colour picked freely is the popover's picker.
+        Toggle("Other colour…", isOn: Binding(get: { head.customColor != nil }, set: { _ in context.openPopover(head.id) }))
+        Toggle("No colour", isOn: Binding(get: { head.color == nil && head.customColor == nil }, set: { _ in context.send(.setGroupColor(head.id, nil)) }))
         Divider()
         folder
         Divider()

@@ -1,0 +1,172 @@
+Wormhole
+  About Wormhole
+  Check for Updates…
+  ---
+  Settings…  ⌘,
+  Theme Studio  ⌥⌘,
+  ---
+  Services ▸
+  ---
+  Hide Wormhole  ⌘H
+  Hide Others  ⌥⌘H
+  Show All
+  ---
+  Quit Wormhole  ⌘Q
+  Quit and End All Terminals
+Shell
+  New Window  ⌘N
+  New Terminal  ⌘T
+  New Terminal in No Group  ⇧⌘T
+  New Terminal With ▸
+    zsh
+    bash
+    csh
+    dash
+    ksh
+    sh
+    tcsh
+  New Terminal in New Worktree…
+  ---
+  Split Right  ⌘D
+  Split Down  ⇧⌘D
+  Move Pane Out of Split  (disabled)
+  ---
+  Open Folder…  ⌘O
+  Open Recent ▸
+    No Recent Folders  (disabled)
+  ---
+  Profile ▸
+    ✓ Default
+    ---
+    New Profile…
+    Manage Profiles…
+  ---
+  Close Terminal  ⌘W
+  Close Window  ⇧⌘W
+Edit
+  Undo  ⌘Z
+  Redo  ⇧⌘Z
+  ---
+  Cut  ⌘X
+  Copy  ⌘C
+  Paste  ⌘V
+  Select All  ⌘A
+  ---
+  Clear Buffer  ⌘K
+  ---
+  Find…  ⌘F
+  Find Next  ⌘G
+  Find Previous  ⇧⌘G
+  Use Selection for Find  ⌘E
+  ---
+  Previous Prompt  ⌘↑
+  Next Prompt  ⌘↓
+  Select Output
+  Copy Output
+  Copy Command
+  Put Command at Prompt
+  ---
+  Writing Tools ▸
+    Show Writing Tools
+    ---
+    Proofread
+    Rewrite
+    ---
+    Make Friendly
+    Make Professional
+    Make Concise
+    ---
+    Summarize
+    Create Key Points
+    Make List
+    Make Table
+    ---
+    Compose…
+  ---
+  AutoFill ▸
+    Contact…
+    Passwords…
+    Credit Card…
+  Start Dictation…
+  Start Dictation…  D
+  Start Dictation…  D
+  Emoji & Symbols  ⌘Space
+  Emoji & Symbols  ⌃⌘Space
+  Emoji & Symbols  E
+  Emoji & Symbols  ⌃⌘Space
+  Emoji & Symbols  E
+View
+  Hide Sidebar  ⌃⌘S
+  Show Right Panel  ⌥⌘I
+  Show Status Bar  ⌘/
+  Show Minimap
+  Enter Zen Mode  ⌃⌘Z
+  ---
+  Zoom Pane  ⇧⌘ENTER  (disabled)
+  Layout ▸
+    2 Columns
+    2 Rows
+    2×2 Grid
+    ✓ Single Pane
+  ---
+  ✓ Changes  ⌃⌘1
+  History  ⌃⌘2
+  Notes  ⌃⌘3
+  Project  ⌃⌘5
+  Files  ⌃⌘6
+  ---
+  Show Terminals as Tabs
+  ---
+  Bigger  ⌘+
+  Smaller  ⌘-
+  Actual Size  ⌘0
+  ---
+  Command Palette…  ⇧⌘P
+  ---
+  Enter Full Screen  ⌃⌘F
+Terminal
+  Pin to Top
+  Hide from Agents
+  ---
+  Focus Terminal / Panel  ⇧⌘E
+  Focus Next Area  F6
+  Focus Previous Area  ⇧F6
+  New Note  ⌥⌘N
+  Stash Prompt  ⌥⌘S
+  Project Actions ▸
+    No Project Actions  (disabled)
+  ---
+  Reveal in Finder
+  Copy Path
+  ---
+  Insert Folder Path…  ⌘J
+Window
+  Minimize  ⌘M
+  Zoom
+  ---
+  Next Terminal  ⌃⌘↓
+  Previous Terminal  ⌃⌘↑
+  Next Group  ⌃⌥]
+  Previous Group  ⌃⌥[
+  Go to Waiting Terminal  ⌥⌘J
+  Go to Finished Terminal  ⌥⇧⌘J
+  Select Pane ▸
+    Left  ⌥⌘←  (disabled)
+    Right  ⌥⌘→  (disabled)
+    Above  ⌥⌘↑  (disabled)
+    Below  ⌥⌘↓  (disabled)
+  ---
+  ✓ cat  ⌘1
+  ---
+  Bring All to Front
+  ---
+  cat
+Help
+  Keyboard Shortcuts  ⌥⌘/
+  Welcome to Wormhole
+  ---
+  Licenses
+  Show Logs in Finder
+  Session Hosts
+Developer
+  Inspector  ⌥⇧⌘I

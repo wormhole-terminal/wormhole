@@ -51,7 +51,10 @@ extension AppController {
         case .revealInFinder:
             if let path = terminal?.folder { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: (path as NSString).expandingTildeInPath)]) }
         case .copyPath:
-            if let path = terminal?.folder { Pasteboard.setText((path as NSString).expandingTildeInPath) }
+            if let path = terminal?.folder {
+                Pasteboard.setText((path as NSString).expandingTildeInPath)
+                hub.notices.post(.copied(.path))
+            }
         }
     }
 }

@@ -3,9 +3,10 @@
 
 import AppKit
 import DesignSystem
+import PanelModel
 import SwiftUI
 
-typealias PanelCopy = @MainActor (String) -> Void
+typealias PanelCopy = @MainActor (String, PanelCopied?) -> Void
 
 @MainActor
 enum PanelPasteboard {
@@ -15,5 +16,5 @@ enum PanelPasteboard {
 }
 
 extension EnvironmentValues {
-    @Entry var panelCopy: PanelCopy = { PanelPasteboard.copy($0) }
+    @Entry var panelCopy: PanelCopy = { text, _ in PanelPasteboard.copy(text) }
 }

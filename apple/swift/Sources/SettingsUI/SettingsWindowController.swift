@@ -45,7 +45,6 @@ public final class SettingsWindowController: NSWindowController {
         if let section { model.show(section) }
         model.host.windowOpened()
         model.profile.reload()
-        showWindow(nil)
-        window?.makeKeyAndOrderFront(nil)
+        TestInstance.bring(window)
     }
 }

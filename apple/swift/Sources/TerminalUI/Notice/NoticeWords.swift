@@ -7,12 +7,22 @@ extension Notice {
             switch copied {
             case let .lines(n): L10n.noticeCopiedLines(n)
             case let .characters(n): L10n.noticeCopiedCharacters(n)
-            case let .programLines(n, program): L10n.noticeProgramLines(n, program)
-            case let .programCharacters(n, program): L10n.noticeProgramCharacters(n, program)
+            case let .programLines(n): L10n.noticeProgramLines(n)
+            case let .programCharacters(n): L10n.noticeProgramCharacters(n)
+            case let .namedLines(n, program): L10n.noticeNamedLines(n, program)
+            case let .namedCharacters(n, program): L10n.noticeNamedCharacters(n, program)
             case let .output(lines): L10n.noticeCopiedOutput(lines)
             case .command: L10n.noticeCopiedCommand
             case .path: L10n.noticeCopiedPath
             case .error: L10n.noticeCopiedError
+            case .settingKey: L10n.noticeCopiedSettingKey
+            case .objectId: L10n.noticeCopiedObjectId
+            case .commitHash: L10n.noticeCopiedCommitHash
+            case .commitShortHash: L10n.noticeCopiedCommitShortHash
+            case .commitMessage: L10n.noticeCopiedCommitMessage
+            case .commitMessageCut: L10n.noticeCopiedCommitMessageCut
+            case .commitSubject: L10n.noticeCopiedCommitSubject
+            case .commitAuthor: L10n.noticeCopiedCommitAuthor
             }
         case let .driven(driven):
             switch driven {
@@ -24,6 +34,12 @@ extension Notice {
         case let .failed(failed):
             switch failed {
             case .copyPath: L10n.noticeFailedCopyPath
+            case .copyCommit: L10n.noticeFailedCopyCommit
+            case .renameName: L10n.noticeFailedRenameName
+            case .renameExists: L10n.noticeFailedRenameExists
+            case .renameDenied: L10n.noticeFailedRenameDenied
+            case .renameGone: L10n.noticeFailedRenameGone
+            case .renameFailed: L10n.noticeFailedRenameFailed
             case .historyKeptByHost: L10n.noticeHistoryKept
             case let .fileNotFound(words): words
             case let .putAtPrompt(refusal):

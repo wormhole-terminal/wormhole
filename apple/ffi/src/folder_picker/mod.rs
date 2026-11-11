@@ -42,6 +42,24 @@ impl PickerJob {
     }
 }
 
+/// The store's `meta` key the recent folders are kept under, as in the GPUI app (`app_state/recent_folders.rs`), so the
+/// list of one is the other's.
+const RECENTS_KEY: &str = "recent_folders";
+
+/// The recent folders the data folder's database holds, as `recents_json()` writes them (nil for none or no database).
+#[uniffi::export]
+pub fn folder_recents_load() -> Option<String> {
+    crate::isolation::require().ok()?;
+    wormhole_core::storage::store::Store::open().ok()?.meta(RECENTS_KEY).ok().flatten()
+}
+
+/// Keeps `json` (what `recents_json()` wrote) as the data folder's recent folders. False when it could not be kept.
+#[uniffi::export]
+pub fn folder_recents_save(json: String) -> bool {
+    crate::isolation::require().is_ok()
+        && wormhole_core::storage::store::Store::open().is_ok_and(|store| store.set_meta(RECENTS_KEY, &json).is_ok())
+}
+
 /// The providers and decorators of one picker, and the recent folders they share.
 #[derive(uniffi::Object)]
 pub struct FolderPicker {
@@ -127,6 +145,11 @@ impl FolderPicker {
     /// Forget a recent folder (⌘⌫ on its row). Whether it was there.
     pub fn forget(&self, path: String) -> bool {
         self.lock().forget(&path)
+    }
+
+    /// Forget every recent folder (the flag is off: turning the feature off forgets what it learned).
+    pub fn clear(&self) {
+        *self.lock() = RecentFolders::default();
     }
 
     /// The recent folders as the host keeps them (read back by `new`).

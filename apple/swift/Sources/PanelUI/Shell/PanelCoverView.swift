@@ -27,6 +27,6 @@ public struct PanelCoverView: View {
         .environment(\.panelHost, controller.host)
         .environment(\.panelRoot, controller.folder)
         .environment(\.showFileHistory, controller.showFileHistory)
-        .environment(\.panelCopy, { [host = controller.host] in host.copy($0) })
+        .environment(\.panelCopy, { [host = controller.host] in host.copy($0, as: $1) })
     }
 }

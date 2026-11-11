@@ -1,4 +1,5 @@
 import Foundation
+import WordsModel
 
 extension L10n {
     static func noticeCopiedLines(_ n: Int) -> String {
@@ -53,4 +54,24 @@ extension L10n {
     static var noticeInfoCopied: String { tr("notice-info-copied", "Copied") }
     static var noticeClose: String { tr("notice-close", "Close") }
     static var noticeInfo: String { tr("notice-info", "More about this warning") }
+    static var noticeCopiedSettingKey: String { tr("notice-copied-setting-key", "Copied setting key") }
+    static func noticeNamedLines(_ n: Int, _ program: String) -> String {
+        Words.text("notice-copied-named-lines", ["count": .whole(n), "program": .text(program)], fallback: "\(program) copied \(n) line\(n == 1 ? "" : "s")")
+    }
+    static func noticeNamedCharacters(_ n: Int, _ program: String) -> String {
+        Words.text("notice-copied-named-characters", ["count": .whole(n), "program": .text(program)], fallback: "\(program) copied \(n) character\(n == 1 ? "" : "s")")
+    }
+    static var noticeCopiedObjectId: String { tr("notice-copied-object-id", "Copied object id") }
+    static var noticeCopiedCommitHash: String { tr("notice-copied-commit-hash", "Copied commit hash") }
+    static var noticeCopiedCommitShortHash: String { tr("notice-copied-commit-short-hash", "Copied short hash") }
+    static var noticeCopiedCommitMessage: String { tr("notice-copied-commit-message", "Copied commit message") }
+    static var noticeCopiedCommitMessageCut: String { tr("notice-copied-commit-message-cut", "Copied the start of the message, which is cut") }
+    static var noticeCopiedCommitSubject: String { tr("notice-copied-commit-subject", "Copied subject") }
+    static var noticeCopiedCommitAuthor: String { tr("notice-copied-commit-author", "Copied author") }
+    static var noticeFailedCopyCommit: String { tr("notice-failed-copy-commit", "Couldn’t copy: git could not read the commit") }
+    static var noticeFailedRenameName: String { tr("notice-failed-rename-name", "Not renamed: that isn’t a usable name") }
+    static var noticeFailedRenameExists: String { tr("notice-failed-rename-exists", "Not renamed: something with that name exists already") }
+    static var noticeFailedRenameDenied: String { tr("notice-failed-rename-denied", "Not renamed: Wormhole isn’t allowed to change it") }
+    static var noticeFailedRenameGone: String { tr("notice-failed-rename-gone", "Not renamed: it isn’t there any more") }
+    static var noticeFailedRenameFailed: String { tr("notice-failed-rename-failed", "Couldn’t rename it") }
 }

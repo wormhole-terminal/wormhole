@@ -4,6 +4,10 @@
 @MainActor
 public protocol PanelHost: AnyObject {
     func copy(_ text: String)
+    /// A copy that says what it was on the notice chip ("Copied commit hash"); where there is no chip it is a plain copy.
+    func copy(_ text: String, as what: PanelCopied?)
+    /// Something the person asked for could not be done: the chip says why.
+    func failed(_ what: PanelFailed)
     /// The path of a file or folder on the clipboard, plain and absolute. A path with a control character is not copied
     /// (it would act when pasted) and the notice chip says so (`files/open.rs` `copy_path`).
     func copyPath(_ path: String)
@@ -57,7 +61,22 @@ public struct OpenApp: Identifiable, Equatable, Sendable {
     public init(bundle: String, name: String, isChosen: Bool) { (self.bundle, self.name, self.isChosen) = (bundle, name, isChosen) }
 }
 
+/// What the panel could not do, for the chip (`view::notice::Failed`).
+public enum PanelFailed: Sendable {
+    case copyCommit
+    case renameName, renameExists, renameDenied, renameGone, renameFailed
+}
+
+/// What a copy from the panel was, for the chip's words (`view::notice::Copied`).
+public enum PanelCopied: Sendable {
+    case error, objectId
+    case commitHash, commitShortHash, commitMessage, commitMessageCut, commitSubject, commitAuthor
+}
+
 extension PanelHost {
+    public func copy(_ text: String, as what: PanelCopied?) { copy(text) }
+    /// Where there is no chip, nothing says it (VoiceOver is told through `notify` where the caller has words).
+    public func failed(_ what: PanelFailed) {}
     public func stamp(of path: String) -> String? { nil }
     public var openApps: [OpenApp] { [] }
     public func open(_ path: String, inBundle bundle: String) {}

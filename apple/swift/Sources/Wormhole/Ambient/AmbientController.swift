@@ -91,8 +91,15 @@ extension AppController {
         return [.newTerminal(cwd: folder), .openFolder] + ambientActions.map(QuickPanelDo.action)
     }
 
-    /// Every terminal of every window as the ambient surfaces list them.
-    var ambientTerminals: [AmbientTerminal] { sessions.flatMap { $0.hub.state.sections.flatMap(\.rows) }.map(ambient) }
+    /// Every terminal of every window as the ambient surfaces list them, those in folded groups too (GPUI's `tab_facts` walks
+    /// every session).
+    var ambientTerminals: [AmbientTerminal] {
+        sessions.flatMap { session in
+            let running = Dictionary(
+                session.hub.state.sections.flatMap(\.rows).map { ($0.id, $0.runningCommand) }, uniquingKeysWith: { first, _ in first })
+            return session.hub.state.all.map { ambient($0, running: running[$0.id] ?? nil) }
+        }
+    }
 
     /// What the surfaces call a terminal's folder (core's `notify::Terminal.folder`): its name, "~" being the home folder's.
     static func folderName(_ path: String) -> String {
@@ -100,12 +107,13 @@ extension AppController {
         return full == "/" ? "/" : (full as NSString).lastPathComponent
     }
 
-    func ambient(_ row: SidebarRow) -> AmbientTerminal {
-        let terminal = row.terminal
-        return AmbientTerminal(
+    func ambient(_ row: SidebarRow) -> AmbientTerminal { ambient(row.terminal, running: row.runningCommand) }
+
+    func ambient(_ terminal: TerminalSummary, running: String?) -> AmbientTerminal {
+        AmbientTerminal(
             session: Int64(terminal.id), name: terminal.title, state: terminal.activity.ambient,
             since: activityClock.since(terminal.id, terminal.activity), source: terminal.agent == nil ? .plain : .agent,
-            who: terminal.agent?.name, message: terminal.message, command: row.runningCommand,
+            who: terminal.agent?.name, message: terminal.message, command: running,
             folder: terminal.folder.map(Self.folderName), branch: terminal.branch)
     }
 }

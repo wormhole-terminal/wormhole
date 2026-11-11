@@ -9,7 +9,7 @@ extension WindowHub {
     func sayInBar(_ notice: Notice, detail: String?) {
         guard let overlay = selectedOverlay else { return }
         switch notice {
-        case .copied(.programLines), .copied(.programCharacters): overlay.sayInBar(.info, notice.words)
+        case .copied(.programLines), .copied(.programCharacters), .copied(.namedLines), .copied(.namedCharacters): overlay.sayInBar(.info, notice.words)
         case .failed(.putAtPrompt):
             overlay.sayInBar(.warning, notice.words)
             TerminalOverlay.announce(notice.words)

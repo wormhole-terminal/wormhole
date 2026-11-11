@@ -9,14 +9,17 @@ import WindowUI
 import WorkspaceModel
 
 extension AppController {
-    /// Every window's terminals with the window's number; only the palette's own window has ⌘ keys (core `gather`).
+    /// Every visible window's terminals, those in folded groups too, with the window's number (parked windows are left out and
+    /// not counted); only the palette's own window has ⌘ keys (core `gather`).
     func paletteTerminals(own: WindowSession?) -> [PaletteTerminal] {
-        sessions.enumerated().flatMap { index, session in
-            session.hub.state.sections.flatMap(\.rows).map { row in
-                let ambient = ambient(row)
+        sessions.filter { !$0.parked }.enumerated().flatMap { index, session in
+            let rows = Dictionary(session.hub.state.sections.flatMap(\.rows).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            return session.hub.state.all.map { terminal in
+                let row = rows[terminal.id]
+                let ambient = ambient(terminal, running: row?.runningCommand)
                 return PaletteTerminal(
-                    id: row.id, name: ambient.name, window: index + 1, activity: row.terminal.activity,
-                    number: session === own ? row.number : nil, path: row.terminal.folder, folder: ambient.folder, branch: ambient.branch,
+                    id: terminal.id, name: ambient.name, window: index + 1, activity: terminal.activity,
+                    number: session === own ? row?.number : nil, path: terminal.folder, folder: ambient.folder, branch: ambient.branch,
                     who: ambient.who, message: ambient.message, command: ambient.command, exit: ambient.exit,
                     elapsed: { [state = ambient.state, since = ambient.since] now in
                         AmbientWording.elapsed(state, since: max(0, now.timeIntervalSince(since)))

@@ -40,6 +40,14 @@ final class SystemPanelHost: PanelHost {
         Pasteboard.setText(text)
     }
 
+    func failed(_ what: PanelFailed) { terminal.say(.failed(what.notice)) }
+
+    func copy(_ text: String, as what: PanelCopied?) {
+        copy(text)
+        guard let what else { return }
+        terminal.say(.copied(what.notice))
+    }
+
     func copyPath(_ path: String) {
         guard !path.unicodeScalars.contains(where: { $0.properties.generalCategory == .control }) else {
             notify(Notice.failed(.copyPath).words)
@@ -106,4 +114,33 @@ final class SystemPanelHost: PanelHost {
     }
 
     func openTerminal(in folder: String, running command: String?) { terminal.open(folder, command) }
+}
+
+extension PanelCopied {
+    /// What the chip says for a copy from the panel.
+    var notice: Notice.Copied {
+        switch self {
+        case .error: .error
+        case .objectId: .objectId
+        case .commitHash: .commitHash
+        case .commitShortHash: .commitShortHash
+        case .commitMessage: .commitMessage
+        case .commitMessageCut: .commitMessageCut
+        case .commitSubject: .commitSubject
+        case .commitAuthor: .commitAuthor
+        }
+    }
+}
+
+extension PanelFailed {
+    var notice: Notice.Failed {
+        switch self {
+        case .copyCommit: .copyCommit
+        case .renameName: .renameName
+        case .renameExists: .renameExists
+        case .renameDenied: .renameDenied
+        case .renameGone: .renameGone
+        case .renameFailed: .renameFailed
+        }
+    }
 }

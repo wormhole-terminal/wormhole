@@ -19,6 +19,7 @@ enum PlatformSetup {
     static func install(_ options: Options, launchLog: URL? = nil) {
         // A test instance never speaks; what it would say is kept for `a11y said`.
         Announcements.speaks = !options.background
+        TestInstance.isBackground = options.background
         #if WITH_UNIFFI
             guard options.isReal else { return }
             recordLaunches(to: launchLog?.path)

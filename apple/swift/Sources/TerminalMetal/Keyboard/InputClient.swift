@@ -67,12 +67,23 @@ extension MetalTerminalView: @preconcurrency NSTextInputClient {
 
     /// Where the candidate window opens: under the composed text's start, or the cursor's cell, in screen coordinates.
     public func firstRect(forCharacterRange range: NSRange, actualRange: NSRangePointer?) -> NSRect {
-        let grid = cellGrid
-        let position = renderer.cursorCell ?? (0, 0)
-        let column = position.column + composition.columns(before: range.location)
-        let local = NSRect(x: grid.origin + CGFloat(column) * grid.cellWidth, y: grid.origin + CGFloat(position.row) * grid.cellHeight, width: grid.cellWidth, height: grid.cellHeight)
+        let local = cursorCellRect(columnsBefore: composition.columns(before: range.location))
         guard let window else { return local }
         return window.convertToScreen(convert(local, to: nil))
+    }
+
+    /// The cursor's cell in the window's own (base) coordinates, as drawn in the last frame; nil before the first one. The
+    /// folder picker opens at it.
+    public var cursorFrameInWindow: CGRect? {
+        guard renderer.cursorCell != nil else { return nil }
+        return convert(cursorCellRect(columnsBefore: 0), to: nil)
+    }
+
+    private func cursorCellRect(columnsBefore: Int) -> NSRect {
+        let grid = cellGrid
+        let position = renderer.cursorCell ?? (0, 0)
+        let column = position.column + columnsBefore
+        return NSRect(x: grid.origin + CGFloat(column) * grid.cellWidth, y: grid.origin + CGFloat(position.row) * grid.cellHeight, width: grid.cellWidth, height: grid.cellHeight)
     }
 
     public func characterIndex(for point: NSPoint) -> Int { 0 }

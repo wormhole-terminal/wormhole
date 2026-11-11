@@ -74,6 +74,20 @@ public final class QuickPanelModel {
 
     public func stopAnswering() { answering = nil }
 
+    public enum Key: Sendable { case up, down, enter, escape, commandReturn }
+
+    /// The panel's keys (the view and the control folder's `quick-key` both come here): ↑↓ move, ⏎ runs the row or sends the
+    /// reply, ⌘⏎ answers in place (or opens the terminal while answering), Esc steps back out of Reply, then closes.
+    public func press(_ key: Key) {
+        switch key {
+        case .escape: if answering == nil { close() } else { stopAnswering() }
+        case .up: step(-1)
+        case .down: step(1)
+        case .enter: if answering == nil { run() } else { sendReply() }
+        case .commandReturn: commandReturn()
+        }
+    }
+
     /// ⏎ in Reply: type the answer into the terminal and press Return, then go on to the next waiting terminal.
     public func sendReply() {
         guard let answering, !reply.trimmingCharacters(in: .whitespaces).isEmpty else { return }

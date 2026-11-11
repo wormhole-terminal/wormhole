@@ -34,6 +34,9 @@ public final class CoreFolders: Sendable {
     @discardableResult
     public func forget(_ path: String) -> Bool { picker.forget(path: path) }
 
+    /// Forget every recent folder.
+    public func clear() { picker.clear() }
+
     /// The recent folders as the host keeps them; `PlatformBridge.makeFolders(recentsJSON:)` reads them back.
     public func recentsJSON() -> String { picker.recentsJson() }
 }

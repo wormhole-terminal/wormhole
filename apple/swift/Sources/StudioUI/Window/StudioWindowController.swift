@@ -17,7 +17,7 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
     /// Opens the Studio on `theme` (what is in use), or brings the open one forward.
     public func show(theme: String, environment: StudioEnvironment, store: ThemeStore = .shared) throws {
         if let window {
-            window.makeKeyAndOrderFront(nil)
+            TestInstance.bring(window)
             return
         }
         let session = try StudioSession(theme: theme, environment: environment, store: store)
@@ -36,7 +36,7 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
         session.outputs = outputs
         (self.window, self.session) = (window, session)
         window.center()
-        window.makeKeyAndOrderFront(nil)
+        TestInstance.bring(window)
     }
 
     public var isOpen: Bool { window != nil }

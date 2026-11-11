@@ -15,6 +15,7 @@ struct CommitCopies: View {
     let commit: Commit
     let store: HistoryStore
     @Environment(\.panelCopy) private var copy
+    @Environment(\.panelHost) private var host
 
     var body: some View {
         item(.hash, panelText("history-menu-copy-hash", "Copy Hash"))
@@ -25,7 +26,7 @@ struct CommitCopies: View {
     }
 
     private func item(_ what: CommitCopy, _ title: String) -> some View {
-        Button(title) { Task { if let text = await store.text(of: what, for: commit) { copy(text) } } }
+        Button(title) { Task { if let text = await store.text(of: what, for: commit) { copy(text, store.copied(what, for: commit)) } else { host?.failed(.copyCommit) } } }
     }
 }
 

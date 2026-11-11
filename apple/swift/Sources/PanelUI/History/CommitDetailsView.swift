@@ -20,6 +20,7 @@ struct CommitDetailsView: View {
     @State private var whole = false
     @State private var width: CGFloat = 0
     @Environment(\.panelCopy) private var copy
+    @Environment(\.panelHost) private var host
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -115,7 +116,7 @@ struct CommitDetailsView: View {
 
     private func copyButton(_ label: String, _ what: CommitCopy) -> some View {
         BandButton(symbol: "doc.on.doc", label: label, inRow: true) {
-            Task { if let text = await store.text(of: what, for: commit) { copy(text) } }
+            Task { if let text = await store.text(of: what, for: commit) { copy(text, store.copied(what, for: commit)) } else { host?.failed(.copyCommit) } }
         }
     }
 

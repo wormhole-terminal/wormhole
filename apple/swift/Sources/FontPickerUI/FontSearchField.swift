@@ -32,15 +32,21 @@ struct FontSearchField: View {
 
     private func press(_ key: KeyPress) -> KeyPress.Result {
         switch key.key {
-        case .upArrow: model.move(-1)
-        case .downArrow: model.move(1)
-        case .pageUp: model.move(-Self.page)
-        case .pageDown: model.move(Self.page)
+        case .upArrow: move(-1)
+        case .downArrow: move(1)
+        case .pageUp: move(-Self.page)
+        case .pageDown: move(Self.page)
         case .return: model.commitHighlighted()
         case .escape: return model.escape() ? .ignored : .handled
         default: return .ignored
         }
         return .handled
+    }
+
+    /// The highlight moves and VoiceOver says the family it landed on (GPUI's `font_picker.rs` announces the label).
+    private func move(_ steps: Int) {
+        model.move(steps)
+        if let family = model.entries.first(where: { $0.id == model.highlighted })?.family { Announcements.post(family) }
     }
 
     /// A page is the rows the list shows at once.

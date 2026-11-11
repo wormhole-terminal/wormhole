@@ -43,6 +43,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     var settingsController: SettingsWindowController?
     var settingsApplier: SettingsApplier?
     var notices: NoticeFeed?
+    /// The quick panel driven without its window by the control folder (`quick-open`).
+    var quickDriver: QuickPanelModel?
     /// Layers the settings of the terminal in front's project over the person's (real windows only).
     var projectSettings: AnyObject?
     var hooks: HookHost?

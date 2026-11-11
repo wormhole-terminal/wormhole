@@ -27,7 +27,7 @@ struct GitProblemView: View {
                 .padding(.horizontal, Space._3)
             HStack(spacing: Space._2) {
                 outlined(panelText("git-retry", "Retry"), action: retry)
-                if let message = problem.copy { outlined(panelText("git-copy-error", "Copy error")) { copy(message) } }
+                if let message = problem.copy { outlined(panelText("git-copy-error", "Copy error")) { copy(message, .error) } }
             }
             .padding(.horizontal, Space._3).padding(.bottom, Space._2)
         }

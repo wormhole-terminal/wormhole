@@ -118,11 +118,10 @@ public struct QuickPanelView: View {
 
     private func onKey(_ key: PanelKey) -> Bool {
         switch key {
-        case .escape:
-            if model.answering == nil { model.close() } else { model.stopAnswering() }
-        case .up where model.answering == nil: model.step(-1)
-        case .down where model.answering == nil: model.step(1)
-        case .enter: model.answering == nil ? model.run() : model.sendReply()
+        case .escape: model.press(.escape)
+        case .up where model.answering == nil: model.press(.up)
+        case .down where model.answering == nil: model.press(.down)
+        case .enter: model.press(.enter)
         default: return false
         }
         return true
