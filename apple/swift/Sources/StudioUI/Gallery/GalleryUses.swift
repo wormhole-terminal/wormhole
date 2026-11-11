@@ -10,9 +10,10 @@ enum GalleryUses {
         TokenUse(id: "sidebar.row", label: "sidebar row", area: .sidebar, tokens: [
             "agent.attention", "agent.attention.text", "agent.done", "agent.done.text", "agent.working",
             "border.focus", "card", "card.edge", "metrics.border_width", "metrics.focus_ring_width",
-            "metrics.radius_sm", "sidebar.background", "sidebar.row.selected", "sidebar.row.selected.muted",
-            "sidebar.row.selected.text", "state.hover", "state.selected.inset", "status.danger",
-            "status.danger.text", "text.faint", "text.muted", "text.primary",
+            "metrics.radius_sm", "shadow", "sidebar.background", "sidebar.row.selected",
+            "sidebar.row.selected.muted", "sidebar.row.selected.text", "state.highlight", "state.hover",
+            "state.selected.inset", "status.danger", "status.danger.text", "text.faint", "text.muted",
+            "text.primary",
         ]),
         TokenUse(id: "sidebar.card", label: "sidebar card", area: .sidebar, tokens: [
             "card", "card.edge", "metrics.border_width",
