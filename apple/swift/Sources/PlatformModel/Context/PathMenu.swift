@@ -3,6 +3,7 @@
 // folders, innermost first, down to the volume, each with Finder's icon. Choosing a folder opens it in Finder.
 
 import Foundation
+import WordsModel
 
 public enum PathMenu {
     public enum Kind: String, Sendable {

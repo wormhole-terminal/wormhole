@@ -107,7 +107,7 @@ var targets: [Target] = [
 var appDependencies: [Target.Dependency] = [
     "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowsModel", "WindowUI", "SettingsModel", "SettingsUI", "DesignSystem",
     "PanesModel", "PanesUI", "PanelModel", "PlatformModel", "PlatformUI", "AuxModel", "AuxWindows", "TerminalUI",
-    "PaletteModel", "PanelModel", "PanelUI", "StudioModel", "StudioUI", "SidebarUI", "PanesModel",
+    "PaletteModel", "PanelModel", "PanelUI", "StudioModel", "StudioUI", "SidebarUI", "PanesModel", "WordsModel",
 ]
 // The view's input: pointer, selection, links, keyboard and input method, on the mock and (when the FFI is
 // linked) on the real engine.
