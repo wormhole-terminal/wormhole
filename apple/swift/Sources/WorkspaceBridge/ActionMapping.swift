@@ -11,6 +11,7 @@ extension WormholeBindings.Action {
         case .selectStep(let delta): self = .selectStep(Int32(delta))
         case .selectNumber(let number): self = .selectNumber(UInt32(number))
         case .newTerminal, .newTerminalIn, .newTerminalRunning: self = .newTerminal
+        case .newTerminalWithShell(let key): self = .newTerminalWithShell(key)
         case .newTerminalInGroup(let group): self = .newTerminalInGroup(group)
         case .newTerminalInNewGroup: self = .newTerminalInNewGroup
         case .close(let id): self = .close(Int64(id))

@@ -35,6 +35,23 @@ impl WorkspaceModel {
         self.out.take()
     }
 
+    /// Terminal `id`'s program came back with it: its session host was attached again at launch. A result its
+    /// record said nobody had seen ("Done") comes back with it (a terminal started again runs a new program,
+    /// whose past is only text, and gets nothing). Asked once per restored terminal.
+    pub fn attached_again(&mut self, id: i64, at: Millis) -> Vec<Event> {
+        let Some(ix) = self.index_of(id) else { return Vec::new() };
+        if !std::mem::take(&mut self.sessions[ix].done_unseen) {
+            return Vec::new();
+        }
+        self.feed(id, StatusEvent::DoneUnseen, at)
+    }
+
+    /// The name of the program that reports terminal `id`'s status (`StatusMachine::program_name`).
+    pub fn program_name(&self, id: i64) -> Option<String> {
+        let facts = self.facts(id)?;
+        self.status.machines.get(&id)?.program_name(facts)
+    }
+
     /// When the soonest terminal wants a `StatusEvent::Tick`, and for which: the shell arms one timer
     /// for it and feeds the tick when it fires.
     pub fn next_due(&self) -> Option<(i64, Millis)> {

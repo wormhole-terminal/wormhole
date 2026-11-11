@@ -22,12 +22,12 @@ final class HostedSessions {
         }
     }
 
-    /// Whether terminals run in session hosts at all.
+    /// Whether terminals can run in session hosts: Settings' flag decides each time one starts (`enabled`).
     enum Availability {
         case on(HostedSessions)
-        /// Wanted, and the app runs from a disk image or a temporary copy, where a host must not start: the terminals stay in
-        /// the app and the person is told to move it.
-        case needsApplications
+        /// The app runs from a disk image or a temporary copy, where a host must not start: with the flag on the terminals
+        /// stay in the app and the person is told to move it.
+        case needsApplications(HostedTerminals)
         case off
     }
 
@@ -37,15 +37,14 @@ final class HostedSessions {
 
     private init(desk: HostedTerminals, adoptsOrphans: Bool) { (self.desk, self.adoptsOrphans) = (desk, adoptsOrphans) }
 
-    /// Off when persistent terminals are off (Settings' flag), there is no host program (none beside the app) or the saved
-    /// terminals cannot be opened: the terminals then stay in the app.
+    /// Off when there is no host program (none beside the app) or the saved terminals cannot be opened: the terminals then
+    /// stay in the app.
     static func open(_ setup: HostingSetup) -> Availability {
         do {
             let desk = try HostedTerminals(dataDir: setup.dataDirectory, hostBinary: setup.hostBinary, window: setup.window)
-            guard desk.enabled() else { return .off }
             switch desk.program() {
             case .found: return .on(HostedSessions(desk: desk, adoptsOrphans: setup.adoptsOrphans))
-            case .disposableCopy: return .needsApplications
+            case .disposableCopy: return .needsApplications(desk)
             case .missing:
                 FileHandle.standardError.write(Data("persistent terminals: no session host program beside the app\n".utf8))  // text: a diagnostic written to stderr
                 return .off
@@ -66,6 +65,9 @@ final class HostedSessions {
             )
         }
     }
+
+    /// Whether Settings has Persistent terminals on now: asked as each terminal starts, as the GPUI app's `may_host` is.
+    var enabled: Bool { desk.enabled() }
 
     /// The same, as entries alone.
     func launchEntries() -> [Entry] { launchPlan().map { $0.entry } }

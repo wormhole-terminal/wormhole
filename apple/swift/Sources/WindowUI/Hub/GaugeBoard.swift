@@ -23,6 +23,14 @@ public final class GaugeBoard {
         told[terminal] = Entry(agent: AgentID(command: agent), gauge: gauge)
     }
 
+    /// Forget the gauges of terminals whose shell has them back (no agent, nothing else in front), as the GPUI app's
+    /// `forget_gone_gauges`; while a program is merely not recognised yet (an agent just started) its gauge is kept.
+    public func forgetGone(_ terminals: [TerminalSummary]) {
+        for terminal in terminals where told[terminal.id] != nil && terminal.agent == nil && terminal.runningCommand == nil {
+            told[terminal.id] = nil
+        }
+    }
+
     /// The gauge of the agent that is in `terminal` now, if it ever reported one.
     public func gauge(for terminal: TerminalSummary) -> GaugeFact? {
         guard let entry = told[terminal.id], let agent = terminal.agent, entry.agent == agent else { return nil }

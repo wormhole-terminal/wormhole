@@ -16,7 +16,10 @@ struct Options {
     var scenario = MockScenario.mixed
     var seed: UInt64 = 1
     var hertz = 60.0
+    /// A program every terminal runs as it is (`--shell`, WORMHOLE_SHELL); nil: what the core decides.
     var program: String?
+    /// The sample workspace and the mock sources instead of the real terminals (`--sample`, `--mock`).
+    var sample = false
     var grid: (cols: Int, rows: Int)?
     var fontFamily: String?
     var fontDirectory: URL?

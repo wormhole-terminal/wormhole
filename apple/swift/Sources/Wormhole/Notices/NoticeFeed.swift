@@ -10,6 +10,8 @@
     import PlatformBridge
     import PlatformModel
     import PlatformUI
+    import WorkspaceBridge
+    import WormholeBindings
 
     @MainActor
     final class NoticeFeed {
@@ -30,11 +32,6 @@
         }
 
         func sendTest(name: String, settings: NoticeSettings) { coordinator.sendTest(name: name, settings: settings) }
-
-        /// `wh notify`: a notification in the caller's words, about a terminal.
-        func post(terminal: Int64, title: String, body: String) {
-            notifier.post(Notice(id: "notify-\(terminal)", thread: "\(terminal)", title: title, body: body))
-        }
 
         /// A Probe's hook asks for a notification: one thread per Probe, its name (with "extension") as the subtitle.
         func post(probe: String, subtitle: String, title: String, body: String) {
@@ -61,9 +58,13 @@
     }
 
     extension AppController {
-        /// Every terminal as the rules read it.
+        /// Every terminal as the rules read it: its row, and what the core keeps for the notifications (who tells its
+        /// status, its latest notification in its own words, the last command's failure, the program in front).
         var noticeTabs: [NoticeTab] {
             let monotonic = UInt64(ProcessInfo.processInfo.systemUptime * 1000)
+            // Read so that a new notification, which may change nothing on a row, looks again.
+            _ = sessions.map { $0.hub.state.all.map(\.noticeSerial) }
+            let core = coreNoticeFacts(nowMs: monotonic)
             return ambientTerminals.map { terminal in
                 let age = UInt64(max(0, Date().timeIntervalSince(terminal.since)) * 1000)
                 var tab = NoticeTab(
@@ -71,10 +72,28 @@
                     sinceMs: monotonic > age ? monotonic - age : 0)
                 (tab.who, tab.message, tab.folder, tab.branch) = (terminal.who, terminal.message, terminal.folder, terminal.branch)
                 tab.source = terminal.source == .agent ? .agent : .plain
+                if let facts = core[terminal.session] { tab.take(facts) }
                 let holder = session(holding: Int(terminal.session))
                 tab.selected = holder?.hub.state.selected.map(Int64.init) == terminal.session
                 tab.key = holder?.window?.isKeyWindow ?? false
                 return tab
+            }
+        }
+
+        /// What the core keeps of every window's terminals for the notifications, by id (times on the monotonic clock `nowMs`).
+        func coreNoticeFacts(nowMs: UInt64) -> [Int64: NoticeFactsRecord] {
+            let facts = sessions.flatMap { ($0.hub.store.hooks as? RustWorkspaceBackend)?.core.noticeFacts(nowMs: nowMs) ?? [] }
+            return Dictionary(facts.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        }
+
+        /// A program that reports its own status (OSC 7501) is worded under its name, as an agent is, on every ambient surface.
+        func namedByReports(_ terminals: [AmbientTerminal]) -> [AmbientTerminal] {
+            let told = coreNoticeFacts(nowMs: 0)
+            return terminals.map { terminal in
+                guard let facts = told[terminal.session], facts.source == .program else { return terminal }
+                var named = terminal
+                (named.source, named.who) = (.program, facts.who ?? terminal.who)
+                return named
             }
         }
 
@@ -91,6 +110,24 @@
             case .reply(let tab, let text):
                 session(holding: Int(tab))?.hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
             }
+        }
+    }
+
+    private extension NoticeTab {
+        /// What the core keeps of the terminal for the notifications, over what its row says.
+        mutating func take(_ facts: NoticeFactsRecord) {
+            source = switch facts.source {
+            case .plain: .plain
+            case .agent: .agent
+            case .program: .program
+            }
+            who = facts.who ?? who
+            reported = facts.reported
+            notice = facts.notice.map { ProgramNotice(serial: $0.serial, title: $0.title, body: $0.body) }
+            failure = facts.failure.map {
+                Failure(serial: $0.serial, code: $0.code, atMs: $0.atMs, command: $0.command, tookMs: $0.tookMs, lastLine: $0.lastLine)
+            }
+            foreground = facts.foreground.map { Foreground(command: $0.command, startedUnixMs: $0.startedUnixMs) }
         }
     }
 
@@ -114,7 +151,6 @@
     final class NoticeFeed {
         init(app: AppController) {}
         func sendTest(name: String, settings: NoticeSettings) {}
-        func post(terminal: Int64, title: String, body: String) {}
         func respond(_ response: NoticeResponse) {}
         var logged: [Notice] { [] }
     }

@@ -1,7 +1,7 @@
 //! The shell's marks (OSC 133): a command starts running, finishes, and the shell is back at its
 //! prompt. And the failure a finished command leaves on the row.
 
-use wormhole_term::Mark;
+use wormhole_term::{Ended, Mark};
 
 use crate::notify;
 use crate::view::sidebar::Status;
@@ -17,7 +17,7 @@ impl StatusMachine {
         &mut self,
         facts: &mut TerminalFacts,
         mark: Mark,
-        ended: Option<String>,
+        ended: Option<Ended>,
         at: Millis,
     ) {
         if self.hook_driven || facts.status == Status::Exited {
@@ -58,13 +58,23 @@ impl StatusMachine {
         &mut self,
         facts: &mut TerminalFacts,
         code: Option<i32>,
-        command: Option<String>,
+        ended: Option<Ended>,
         at: Millis,
     ) {
-        facts.failure = notify::failed_exit(code).map(|code| Failure {
-            code,
-            command: command.filter(|command| !command.is_empty()),
-            at,
+        facts.failure = notify::failed_exit(code).map(|code| {
+            self.failures += 1;
+            let (command, took, last_line) = match ended {
+                Some(Ended { command, took, last_line }) => (Some(command), took, last_line),
+                None => (None, None, None),
+            };
+            Failure {
+                serial: self.failures,
+                code,
+                command: command.filter(|command| !command.is_empty()),
+                at,
+                took: took.map(|took| u64::try_from(took.as_millis()).unwrap_or(u64::MAX)),
+                last_line,
+            }
         });
     }
 }

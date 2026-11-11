@@ -11,6 +11,7 @@ mod folded;
 mod group_actions;
 mod groups;
 mod listing;
+mod notices;
 mod splits;
 mod status;
 mod windows;

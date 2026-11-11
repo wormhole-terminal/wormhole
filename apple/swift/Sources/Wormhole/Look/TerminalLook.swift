@@ -81,6 +81,12 @@ final class TerminalLook {
         guard next != palette else { return }
         palette = next
         terminals().forEach { $0.forEach { $0.setPalette(next) } }
+        #if WITH_UNIFFI
+            // The engine answers programs' colour queries (OSC 4, 10, 11, 12) and `CSI ? 996 n` with what is drawn, and
+            // tells the programs that asked (mode 2031) when the theme turns light or dark: every live terminal and the
+            // ones started later.
+            EngineColors.share(next)
+        #endif
     }
 
     /// Whether the menus own this key: an entry of the app's scope has it (`keymap::action_for(key, Scope::App)`).

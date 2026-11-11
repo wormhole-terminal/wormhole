@@ -268,9 +268,9 @@ fn focus_rename_close_notify_and_new_window() {
     let told = client
         .control(json!({"action": "notify", "target": first_target, "title": "Build", "body": "done\nnow"}));
     assert_eq!(ok(&told)["tab"], first);
-    assert!(f.events().iter().any(
-        |e| matches!(e, HookEvent::Notice { terminal, title, .. } if *terminal == first && title == "Build")
-    ));
+    // Kept as the terminal's latest notification, for the notification rules to tell; no banner straight from here.
+    let notice = f.workspace.terminals().terminals.iter().find(|t| t.id == first).map(|t| t.notice);
+    assert_eq!(notice, Some(1));
     assert_eq!(code(&client.control(json!({"action": "new_window"}))), "unsupported");
     // The person closing it by hand is the model's own business and the registry follows.
     f.workspace.apply(Action::Close(second));

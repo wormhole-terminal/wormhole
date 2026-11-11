@@ -41,6 +41,11 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
     public var glyph: TileGlyph?
     /// When it got into its state, on the core's clock (`WorkspaceBackend.waited`); nil in the sample.
     public var since: UInt64?
+    /// The serial of its latest notification in its own words (0: none): a new one is news for the notifications even
+    /// when nothing else of it moved.
+    public var noticeSerial: UInt64 = 0
+    /// The program in front of the shell, as the core spells it, while one is (nil in the sample).
+    public var runningCommand: String?
 
     public init(
         id: TerminalID, title: String, folder: String? = nil, branch: String? = nil, activity: Activity = .idle,

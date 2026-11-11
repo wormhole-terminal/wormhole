@@ -13,7 +13,7 @@ use crate::config::tab::TabId;
 use crate::storage::store::{SessionRecord, SplitRecord, WindowRecord};
 use crate::view::layout::Panes;
 use crate::view::panes::TabPanes;
-use crate::view::sidebar::WindowSidebar;
+use crate::view::sidebar::{Status, WindowSidebar};
 
 use super::event::Event;
 use super::model::{Split, WorkspaceModel};
@@ -78,7 +78,9 @@ impl WorkspaceModel {
             pinned: session.pinned,
             forget_text: session.forget_text,
             agent_hidden: session.agent_hidden,
+            done_unseen: session.facts.status == Status::Done,
             cwd: session.facts.cwd.as_ref().map(|cwd| cwd.to_string_lossy().into_owned()),
+            shell: session.shell.clone(),
             split_id: session.split,
             ..Default::default()
         }
@@ -138,6 +140,8 @@ impl WorkspaceModel {
             session.forget_text = record.forget_text;
             session.agent_hidden = record.agent_hidden;
             session.split = record.split_id;
+            session.shell.clone_from(&record.shell);
+            session.done_unseen = start && record.done_unseen;
             let cwd = record.cwd.as_deref().map(PathBuf::from);
             session.facts.cwd = cwd.clone();
             self.sessions.push(session);

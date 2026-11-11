@@ -1,7 +1,6 @@
-// Where one window's state and its terminals come from. With the FFI linked and a program asked for (`--shell`,
-// WORMHOLE_SHELL), the core's workspace keeps the list and every terminal is a real program that it started, among the
-// app's windows (`WindowsHost`); otherwise the sample workspace and the mock sources stand in, over the same store and
-// views.
+// Where one window's state and its terminals come from. With the FFI linked, the core's workspace keeps the list and
+// every terminal is a real program that it started, among the app's windows (`WindowsHost`); with `--sample` (or no
+// library) the sample workspace and the mock sources stand in, over the same store and views.
 
 import TerminalCore
 import WindowsModel
@@ -28,16 +27,16 @@ struct WindowsHost {
     /// experiment's, or is damaged).
     static func make(_ options: Options) throws -> WindowsHost {
         #if WITH_UNIFFI
-            if let program = options.program {
+            if options.isReal {
                 CoreWindowRules.install()
-                return real(try RustWindowsBackend(), profile: try activeProfile().id, program: program, adoptsOrphans: true)
+                return real(try RustWindowsBackend(), profile: try activeProfile().id, program: options.program, adoptsOrphans: true)
             }
         #endif
         return WindowsHost(profile: "default", backend: MemoryWindows(), workspace: nil, beside: nil)
     }
 
     #if WITH_UNIFFI
-        private static func real(_ windows: RustWindowsBackend, profile: String, program: String, adoptsOrphans: Bool) -> WindowsHost {
+        private static func real(_ windows: RustWindowsBackend, profile: String, program: String?, adoptsOrphans: Bool) -> WindowsHost {
             var first = adoptsOrphans
             return WindowsHost(
                 profile: profile, backend: windows,
@@ -46,7 +45,8 @@ struct WindowsHost {
                     // are saved under their window's id, and one window brings in the hosts nobody names.
                     let hosting = HostingSetup(window: Int64(id), adoptsOrphans: first)
                     first = false
-                    let backend = windows.workspace(window: id, setup: WorkspaceSetup(program: program, hosting: hosting))
+                    let setup = WorkspaceSetup(program: program, profile: profile, hosting: hosting)
+                    let backend = windows.workspace(window: id, setup: setup)
                     return (backend, { backend.frameSource(for: $0) })
                 },
                 beside: { other in real(try windows.beside(profile: other), profile: other, program: program, adoptsOrphans: false) })

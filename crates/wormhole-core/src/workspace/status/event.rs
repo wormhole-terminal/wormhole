@@ -1,7 +1,7 @@
 //! What the status machine is told, and what it asks back.
 
-use wormhole_term::Mark;
 use wormhole_term::program_status::Summary;
+use wormhole_term::{Ended, Mark};
 
 use crate::agents::AgentId;
 
@@ -41,12 +41,22 @@ pub enum StatusEvent {
     ResetTitle,
     Bell,
     /// The program sent a notification of its own (OSC 9/99/777): the bell with words.
-    Notice,
-    /// The shell marked a command's life (OSC 133). `ended` is the command line a finished command
-    /// ran, as far as the shell's blocks can say.
+    Notice {
+        title: String,
+        body: String,
+    },
+    /// A notification about the terminal sent through the control line (`wh notify`): told in its
+    /// words like a program's own, without touching the status (the caller said something, the
+    /// terminal did not ring to ask for you).
+    ControlNotice {
+        title: String,
+        body: String,
+    },
+    /// The shell marked a command's life (OSC 133). `ended` is what a finished command was (its
+    /// line, how long it ran, its last line), as far as the shell's blocks can say.
     Mark {
         mark: Mark,
-        ended: Option<String>,
+        ended: Option<Ended>,
     },
     /// What programs report about themselves (OSC 7501), read again. `by_report`: the records changed
     /// because a program said something (rather than a prompt, the program's exit or the person
@@ -78,6 +88,9 @@ pub enum StatusEvent {
     FocusReported,
     /// The person looked: a result is spent, a bell heard.
     Seen,
+    /// The terminal's program finished something nobody had looked at before the app last quit, and
+    /// it is the same program now (its session host was attached again): its "Done" comes back.
+    DoneUnseen,
     /// Time passed to a deadline the machine asked for (`next_due`).
     Tick,
 }

@@ -67,6 +67,15 @@ public final class WindowHub {
         connect(host)
         notices.onAct = { [unowned self] in noticeActed($0) }
         notices.onBar = { [unowned self] in sayInBar($0, detail: $1) }
+        followGauges()
+    }
+
+    /// A gauge goes once the shell has its terminal back, so the agent's next run starts without the last one's numbers.
+    private func followGauges() {
+        let all = withObservationTracking { store.state.all } onChange: { [weak self] in
+            Task { @MainActor in self?.followGauges() }
+        }
+        gauges.forgetGone(all)
     }
 
     public var state: WorkspaceState { store.state }

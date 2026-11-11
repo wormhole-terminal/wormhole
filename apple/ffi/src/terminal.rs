@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex, PoisonError, RwLock};
 use std::time::Instant;
 
 use wormhole_core::agents::{AgentId, Foreground};
+use wormhole_core::storage::paths::DataRoot;
 use wormhole_core::terminal::{SpawnOptions, spawn};
 use wormhole_core::workspace::Ask;
 use wormhole_term::input::keys::{self, KeyInput};
@@ -19,12 +20,9 @@ use wormhole_term::{GridSize, Pty, ScreenSnapshot};
 
 use crate::error::FfiError;
 use crate::events::{EventFeed, EventQueue, TermEvent, TerminalListener, Touch, spawn_receiver};
-use crate::hosting::HostSlot;
+use crate::hosting::{HostSlot, HostedStart};
 use crate::inline_images::{PlacementsSent, placeholder_placements};
 use crate::{frame, frame_extras, isolation};
-
-/// How much history a terminal keeps (the app's default is the same order).
-const SCROLLBACK_LINES: usize = 10_000;
 
 /// A terminal: a program in a PTY, its screen and its events.
 #[derive(uniffi::Object)]
@@ -41,6 +39,8 @@ pub struct Terminal {
     placements: Mutex<PlacementsSent>,
     /// The frame being packed, and the last one sent that changed no row (`pack_frame`); held with `snapshot`'s lock.
     quiet: Mutex<(Vec<u8>, Vec<u8>)>,
+    /// The colours programs set that the last frames carried (`frame_colors`); held with `snapshot`'s lock.
+    colors_sent: Mutex<crate::frame_colors::ColorsSent>,
     /// What `prepare_frame` packed, until `take_frame`.
     pending: Mutex<Vec<u8>>,
     /// The last search's results (`find.rs`) and the minimap's copy (`minimap.rs`).
@@ -178,29 +178,39 @@ impl Terminal {
         )
     }
 
-    /// [`Self::start_for_tab`] for the first run's welcome: the program runs as `Wormhole welcome -- <program>`
-    /// (this executable, which becomes `program` when the welcome ends), with `token`
-    /// (`HookServer::begin_welcome`) in this terminal's environment alone. It runs in the app's own process,
+    /// Terminal `what` of a window, in the app's own process: the program, environment and engine options its window
+    /// decides as the GPUI app's does (`launch`: the shell it was opened with, a trusted project's, `default_shell`,
+    /// else the login shell as a login shell; the profile's environment; Settings' engine options; the theme's
+    /// colours), drawn above `what.saved_text` when it was restored. Its shell gets `WORMHOLE_TAB_ID`,
+    /// `WORMHOLE_SOCKET` and `WORMHOLE_BIN`. Blocks briefly (it spawns).
+    #[uniffi::constructor]
+    pub fn start_planned(
+        what: HostedStart,
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        isolation::require()?;
+        let size = what.size();
+        let options = Self::options_for(what);
+        let (pty, pty_events) =
+            spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
+        Self::from_parts(pty, pty_events, &options, listener, None)
+    }
+
+    /// [`Self::start_planned`] for the first run's welcome: what the terminal would run starts through
+    /// `Wormhole welcome -- <program>` (this executable, which becomes that program when the welcome ends), with
+    /// `token` (`HookServer::begin_welcome`) in this terminal's environment alone. It runs in the app's own process,
     /// never in a session host.
     #[uniffi::constructor]
-    #[allow(clippy::too_many_arguments)]
     pub fn start_for_welcome(
-        tab: i64,
-        program: String,
-        args: Vec<String>,
-        cwd: Option<String>,
-        cols: u16,
-        rows: u16,
-        cell_width: f32,
-        cell_height: f32,
+        what: HostedStart,
         token: String,
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Self>, FfiError> {
         isolation::require()?;
-        let mut options = Self::spawn_options(tab.to_string(), program, args, cwd);
+        let size = what.size();
+        let mut options = Self::options_for(what);
         options.welcome = true;
         options.env.insert(wormhole_core::onboarding::welcome::TOKEN_VAR.to_string(), token);
-        let size = GridSize { cols, rows, cell_width, cell_height };
         let (pty, pty_events) =
             spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
         Self::from_parts(pty, pty_events, &options, listener, None)
@@ -346,31 +356,37 @@ impl Terminal {
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Self>, FfiError> {
         isolation::require()?;
-        let options = Self::spawn_options(tab_id, program, args, cwd);
+        let options = Self::options_for(Self::stand_in(tab_id.parse().unwrap_or(-1), program, args, cwd));
+        let options = SpawnOptions { tab_id, ..options };
         let size = GridSize { cols, rows, cell_width, cell_height };
         let (pty, pty_events) =
             spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
         Self::from_parts(pty, pty_events, &options, listener, None)
     }
 
-    /// What every terminal of the app starts with: a hosted one's attach must give the same engine
-    /// options (history size) as its start did.
-    pub(crate) fn spawn_options(
-        tab_id: String,
-        program: String,
-        args: Vec<String>,
-        cwd: Option<String>,
-    ) -> SpawnOptions {
-        let name = program.rsplit('/').next().unwrap_or(&program).to_string();
-        let cwd = cwd.map(std::path::PathBuf::from).filter(|dir| dir.is_dir());
-        SpawnOptions {
-            tab_id,
-            scrollback_lines: SCROLLBACK_LINES,
-            shell: Some(wormhole_core::terminal::shells::ShellCommand { program, args, name }),
-            env: cwd.as_deref().map(crate::git::worktree_env).unwrap_or_default().into_iter().collect(),
+    /// A start of `program` standing in for the login shell, in the profile Wormhole is in.
+    fn stand_in(tab: i64, program: String, args: Vec<String>, cwd: Option<String>) -> HostedStart {
+        HostedStart {
+            tab,
+            shell: None,
+            program: Some(program),
+            args,
             cwd,
-            ..SpawnOptions::default()
+            cols: 0,
+            rows: 0,
+            cell_width: 0.0,
+            cell_height: 0.0,
+            old_host: None,
+            saved_text: None,
+            profile: None,
         }
+    }
+
+    /// The options `what` starts with in the app's own process (`launch`), in the profile it names.
+    fn options_for(what: HostedStart) -> SpawnOptions {
+        let root = DataRoot::current();
+        let profile = crate::launch::profile_in(&root, what.profile.as_deref());
+        crate::launch::options(&root, &profile, &what)
     }
 
     /// The object over a PTY that is running (local or hosted) and its events.
@@ -383,14 +399,16 @@ impl Terminal {
     ) -> Result<Arc<Self>, FfiError> {
         let events = EventQueue::new(listener);
         spawn_receiver(pty_events, events.clone()).map_err(|e| FfiError::Start { reason: e.to_string() })?;
-        let name = options.shell.as_ref().map(|shell| shell.name.clone()).unwrap_or_default();
-        Ok(Arc::new(Self {
+        // What the status bar and the exited bar call it: the program asked for, or `WORMHOLE_SHELL`'s (core's rule).
+        let name = wormhole_core::terminal::shell_name(options);
+        let terminal = Arc::new(Self {
             pty: RwLock::new(Some(pty)),
             snapshot: Mutex::new(ScreenSnapshot::default()),
             events,
             interaction: Default::default(),
             placements: Mutex::default(),
             quiet: Mutex::default(),
+            colors_sent: Mutex::default(),
             pending: Mutex::default(),
             finder: Default::default(),
             minimap: Default::default(),
@@ -400,7 +418,9 @@ impl Terminal {
             needs_you: AtomicBool::new(false),
             name,
             host,
-        }))
+        });
+        crate::engine_look::follow(&terminal);
+        Ok(terminal)
     }
 
     pub(crate) fn name(&self) -> &str {
@@ -457,10 +477,10 @@ impl Terminal {
         guard.as_ref().is_some_and(|pty| pty.program_status().expire_progress(Instant::now()))
     }
 
-    /// The command line the shell's block says just ended with `code`.
-    pub(crate) fn ended_command(&self, code: i32) -> Option<String> {
+    /// What the shell's block says just ended with `code`: its line, how long it ran, its last line.
+    pub(crate) fn ended(&self, code: i32) -> Option<wormhole_term::Ended> {
         let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
-        guard.as_ref()?.ended(code).map(|ended| ended.command)
+        guard.as_ref()?.ended(code)
     }
 
     fn pack_frame(&self, all: bool) -> Vec<u8> {
@@ -484,6 +504,7 @@ impl Terminal {
         self.placements.lock().unwrap_or_else(PoisonError::into_inner).append(bytes, &placements, all);
         frame_extras::append(bytes, &snapshot, all);
         marks.append(bytes, &snapshot, all);
+        self.colors_sent.lock().unwrap_or_else(PoisonError::into_inner).append(bytes, &snapshot.colors, all);
         let packed = Instant::now();
         // A frame that changes no row and says what the last such one said changes nothing on screen: none at all, so a
         // still screen's frames allocate nothing (the renderer skips an empty frame). Anything else goes out as packed.

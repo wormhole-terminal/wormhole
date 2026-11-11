@@ -51,6 +51,9 @@ pub enum Action {
     // Terminals.
     /// A new terminal in the selected one's folder, selected.
     NewTerminal,
+    /// [`Action::NewTerminal`] running the shell this key names (`terminal::shells`: `""` the login shell,
+    /// a profile's name, a program's path), which the terminal keeps ("New Terminal with ▸").
+    NewTerminalWithShell(String),
     Close(i64),
     /// A blank name goes back to what runs in the terminal.
     Rename {

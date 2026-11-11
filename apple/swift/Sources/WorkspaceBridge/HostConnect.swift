@@ -15,6 +15,8 @@ struct Connected: Sendable {
     var fallback: String?
     /// Nothing started.
     var failure: String?
+    /// The terminal is the host's program of before, attached again (not a new one started in its place).
+    var attached = false
 }
 
 enum HostConnect {
@@ -25,7 +27,7 @@ enum HostConnect {
     ) -> Connected {
         if let host {
             do {
-                return Connected(terminal: try desk.attach(hostId: host, what: what, visible: visible, listener: relay))
+                return Connected(terminal: try desk.attach(hostId: host, what: what, visible: visible, listener: relay), attached: true)
             } catch HostingError.Unavailable(_, let kind, _) {
                 return Connected(unavailable: (HostProblem.Why(kind), host))
             } catch HostingError.Gone {
@@ -41,9 +43,7 @@ enum HostConnect {
 
     /// The same program in the app's own process.
     static func local(_ what: HostedStart, _ relay: TerminalRelay) throws -> Terminal {
-        try Terminal.startForTab(
-            tab: what.tab, program: what.program, args: what.args, cwd: what.cwd, cols: what.cols, rows: what.rows,
-            cellWidth: what.cellWidth, cellHeight: what.cellHeight, listener: relay)
+        try Terminal.startPlanned(what: what, listener: relay)
     }
 }
 
@@ -51,9 +51,7 @@ extension HostConnect {
     /// The first run's welcome: this executable as `Wormhole welcome -- <program>` with `token` in its environment alone,
     /// in the app's own process (never in a session host).
     static func welcome(_ what: HostedStart, token: String, _ relay: TerminalRelay) throws -> Terminal {
-        try Terminal.startForWelcome(
-            tab: what.tab, program: what.program, args: what.args, cwd: what.cwd, cols: what.cols, rows: what.rows,
-            cellWidth: what.cellWidth, cellHeight: what.cellHeight, token: token, listener: relay)
+        try Terminal.startForWelcome(what: what, token: token, listener: relay)
     }
 }
 

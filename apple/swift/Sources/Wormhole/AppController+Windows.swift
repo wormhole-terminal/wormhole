@@ -34,7 +34,7 @@ extension AppController {
         let session = WindowSession(id: id, windows: windowsHost, hub: hub, factory: factory, effects: effects, usage: panel.usage, backends: panel.backends)
         #if WITH_UNIFFI
             // The title row's order of giving way is the core's, wherever the core runs the window.
-            if options.program != nil { hub.rowFitting = CoreRowFitting() }
+            if options.isReal { hub.rowFitting = CoreRowFitting() }
             (effects as? PanelEffects)?.hub = hub
             if options.isReal { (effects as? PanelEffects)?.log = { [weak self] in self?.devctl?.append($0) } }
         #endif
@@ -97,7 +97,7 @@ extension AppController {
         case .moveToApplications: session.hub.notices.post(.warned(.moveToApplications))
         case .hostChanged(let id): session.hub.hostChanged(id)
         case .hostEnded(let id): finishClosing(id, in: session)
-        case .savedTextForgotten(let id): devctl?.append("saved-text-forgotten terminal=\(id) (nothing is saved)")
+        case .savedTextForgotten(let id): devctl?.append("saved-text-forgotten terminal=\(id) (its saved text was erased)")
         case .groupToWindow(let group, let terminals):
             if !moveToNewWindow(terminals, from: session) {
                 devctl?.append("group-to-window group=\(group) terminals=\(terminals) (this workspace cannot hand terminals over: the group stays)")

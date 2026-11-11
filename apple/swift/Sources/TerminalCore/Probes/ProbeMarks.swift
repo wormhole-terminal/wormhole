@@ -89,6 +89,8 @@ public struct FrameSections: Sendable, Equatable {
     public var extras: [Int: [Int: CellExtra]] = [:]
     public var decor: [Int: RowDecor] = [:]
     public var markers: [Int: FoldMarker] = [:]
+    /// The colours programs set, when the frame carries them (nil: as the last frame said).
+    public var colors: [ProgramColor]?
 
     static let decorFlag: UInt32 = 8
     static let foldFlag: UInt32 = 16
@@ -123,6 +125,7 @@ public struct FrameSections: Sendable, Equatable {
                     label: label ?? "", spoken: spoken ?? "", tooltip: tooltip)
             }
         }
+        if header.hasColors { sections.colors = try ProgramColors.read(&words) }
         return sections
     }
 }

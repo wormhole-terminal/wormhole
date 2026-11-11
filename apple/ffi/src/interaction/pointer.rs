@@ -3,6 +3,7 @@
 use wormhole_term::input::{self, mouse};
 use wormhole_term::types::{Modes, Scroll};
 
+use crate::events::Touch;
 use crate::terminal::Terminal;
 
 /// Wheel steps reported to a program per event, at most (a fast flick must not flood it).
@@ -208,11 +209,13 @@ impl Terminal {
     /// The window or the view gained or lost the keyboard: a program that asked for focus events
     /// (DECSET 1004) is told.
     pub fn focus_changed(&self, focused: bool) {
-        self.with_pty(|pty| {
-            if let Some(bytes) = input::keys::focus_report(focused, pty.mode()) {
-                pty.write(bytes);
-            }
+        let told = self.with_pty(|pty| {
+            input::keys::focus_report(focused, pty.mode()).map(|bytes| pty.write(bytes)).is_some()
         });
+        // What the program redraws in answer is not its work (`StatusEvent::FocusReported`); told with no lock held.
+        if told == Some(true) {
+            self.events.touched(Touch::FocusReported);
+        }
     }
 
     /// The shell-escaped text to insert for dropped files (each path followed by a space).
@@ -223,6 +226,7 @@ impl Terminal {
     /// Erase the history; the screen stays. Whether it comes back at the next attach: the terminal's session host
     /// is too old to forget it, and the person is told so.
     pub fn clear_history(&self) -> bool {
+        self.events.touched(Touch::Cleared);
         self.with_pty(|pty| {
             pty.clear_history();
             pty.host_forgets_history() == Some(false)

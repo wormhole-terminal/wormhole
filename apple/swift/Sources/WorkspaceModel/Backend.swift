@@ -96,6 +96,9 @@ public protocol WorkspaceBackend: AnyObject {
     /// The app is quitting: `endHosts` ends every terminal's host (Quit and End All Terminals), otherwise each is let go
     /// of and its program runs on.
     func finishQuit(endHosts: Bool)
+    /// The settings changed: what the core keeps of the terminals follows them (saved text erased when its setting went
+    /// off, checkpoints stopped).
+    func settingsChanged()
     /// Fill an empty window from what it was saved with: its terminals come back (programs started afresh in their
     /// folders), with their names, pins, groups, splits, columns and selection. Nothing for a window with no record.
     func restore()

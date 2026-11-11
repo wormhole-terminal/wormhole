@@ -101,6 +101,8 @@ public final class MetalRenderer {
     private let inflight = DispatchSemaphore(value: 3)
     public let gpuTimes = GPUTimes()
     public private(set) var palette: TerminalPalette { didSet { paletteFloats = palette.floats() } }
+    /// The theme's colours, before what programs set (`palette` is what is drawn).
+    private var themePalette: TerminalPalette
     /// What a draw hands the shaders, and its pass and completion: made once, so a draw allocates nothing of its own (what
     /// remains is Metal's: the command buffer, the encoder, the drawable).
     private var paletteFloats: [SIMD4<Float>] = []
@@ -117,6 +119,7 @@ public final class MetalRenderer {
         self.queue = queue
         self.configuration = configuration
         palette = configuration.palette
+        themePalette = configuration.palette
         paletteFloats = palette.floats()
         contexts = TextContexts(device: device)
         scene = TerminalScene(
@@ -181,9 +184,19 @@ public final class MetalRenderer {
         (Int((Double(scene.columns) * cellPixels.width).rounded()), scene.rows * cellPixels.height)
     }
 
+    /// The theme's colours; what programs set (OSC 4, 10, 11, 12) is drawn over them.
     public func setPalette(_ value: TerminalPalette) {
-        palette = value
-        scene.setPalette(value)
+        themePalette = value
+        drawPalette()
+    }
+
+    /// The theme's palette with the colours programs set over it: the cells, the background behind the grid and the
+    /// cursor all take them.
+    private func drawPalette() {
+        let drawn = programColors.isEmpty ? themePalette : themePalette.overriding(programColors)
+        guard drawn != palette else { return }
+        palette = drawn
+        scene.setPalette(drawn)
         scene.rebuildDirty()
         scene.touch()
     }
@@ -224,8 +237,15 @@ public final class MetalRenderer {
     public func apply(frame: Data) throws -> Int {
         let rebuilt = try scene.apply(frame)
         if try images.apply(frame) { scene.touch() }
+        if scene.programColors != programColors {
+            programColors = scene.programColors
+            drawPalette()
+        }
         return rebuilt
     }
+
+    /// What the scene last said programs set, as drawn.
+    private var programColors: [ProgramColor] = []
 
     /// The instances changed since the last draw.
     public var needsDraw: Bool { scene.changeCount != drawnChange }

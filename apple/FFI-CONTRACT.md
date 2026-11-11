@@ -3,10 +3,10 @@
 What the Swift side may rely on. It is written from the code (`apple/ffi/src/`); when the code
 changes, this file changes in the same commit. Contract version: **2** (`contractVersion()`; 2 added
 the `Workspace` object below; a new action or event case is a minor and does not change it). Frame
-layout version: **1** (`frameFormatVersion()` returns it; check both at start-up and refuse a
-different one).
+layout version: **2** (`frameFormatVersion()` returns it; check both at start-up and refuse a
+different one; 2 added the colours programs set, "Round S3, engine" below).
 changes, this file changes in the same commit. Contract version 2 added "Interaction" below (additive; the
-frame layout did not change). Frame layout version: **1** (`frameFormatVersion()`
+frame layout did not change). Frame layout version: **2** since round S3 (`frameFormatVersion()`
 returns it; check it at start-up and refuse a different one).
 
 ## What you link, and where it is
@@ -471,7 +471,7 @@ into a Swift `Data` (one allocation and one memcpy per frame; the buffer is 16-b
 ```
 offset  size  field
 0       4     magic: 0x31464857 ("WHF1" as bytes)
-4       4     format version (1)
+4       4     format version (2)
 8       4     cols
 12      4     rows
 16      4     changed: number of row records that follow
@@ -1377,3 +1377,47 @@ All additive; the core decides, Swift asks.
   ("notes and tasks are discarded."); Swift puts "Its" or "Their" before it.
 - `GitDiffLine.open_line` is core's `lines_in_new_file` per hunk: the line of the new file a diff line's open icon opens the editor at
   (a removed line: the nearest).
+
+## Round S3, engine: what a terminal runs, the engine's options and colours, window operations, saved text, notices
+
+- **What a terminal runs** is decided in Rust (`launch.rs`), as the GPUI app's window does: `HostedStart` gains `shell: String?` (the
+  key "New Terminal with ▸" chose, from `Workspace::launch_facts`), `profile: String?` (`None`: the one Wormhole is in) and `program`
+  becomes optional: a program named there runs as it is (`--shell`, the welcome's tour, tests) unless `shell` names one; without it the
+  shell is core `shells::for_terminal` (the terminal's own, a trusted project's (`ProjectHub::enabled`: project folders on, its Settings
+  on, its files approved as they are now), `default_shell`, else the login shell with `-l`). The options carry the trusted project's
+  `env`, then the profile's (`apply_profile`: environment, git identity, agent logins, `WORMHOLE_PROFILE`, start folder), Settings'
+  `scrollback_lines`, `image_memory_mib` and the three `allow_*` switches (read at each start, so a change reaches the next terminal, as in
+  the GPUI app), the theme's colours (below) and, for a restored terminal, its saved text drawn above the new shell. Core's
+  `WORMHOLE_SHELL` replaces the program last, for test instances. `Terminal::start_planned(what, listener)` starts one in the app's
+  process; `start_for_welcome(what, token, listener)` takes a `HostedStart` too; `HostedTerminals::start/attach` build the same
+  options in the desk's profile. `Terminal.start*` with a program stay for tests and previews.
+- `Action::NewTerminalWithShell(key)`: a new terminal that keeps its shell key; saved in the window's record (`SessionRecord.shell`) and
+  restored with it. `Workspace::launch_facts(id) -> LaunchFacts { shell, saved_text, profile }`: ask as the terminal starts; the saved
+  text is given once.
+- **The theme's colours to the engine**: `set_terminal_colors(slots)` (free function), 259 `0xRRGGBB` (256 indexed, foreground,
+  background, cursor) as drawn; the scheme is light by the background's luma (the GPUI palette's rule). Every live terminal is told at
+  once (`set_default_colors`, `set_color_scheme`: OSC 4/10/11/12 queries, `CSI ? 996 n` and mode 2031 reports), later ones at spawn.
+  Swift calls it whenever its palette changes. Telling the same colours again does nothing.
+- **Frame layout 2**: after the fold markers, with header flag bit 5 (32), the colours programs set: a count, then `(slot, 0xRRGGBB)`
+  word pairs, the whole table as it is now (count 0: all the theme's again). Sent when it changed and with every full frame while any is
+  set; a frame without it leaves the table as it was. The renderer draws its palette with these over it: cells, the background behind the
+  grid (OSC 11) and the cursor (OSC 12). Cells keep unresolved colours.
+- **Window operations** (`window_ops.rs`): `TermEvent::WindowOp { op: WindowOpRecord }` (deiconify, iconify, move, raise, lower,
+  resize in cells, maximise, full screen; only with `allow_window_ops`, the engine having taken the cells already). The sums are Rust's:
+  `window_op_frame(op, place, pane) -> WindowFrameGoal?` (a move kept in the usable area, a resize to cells moved onto the screen, a
+  one-way maximise) and `window_geometry(place, pane, iconified)`; rectangles in points from the top left of the window's screen. Swift
+  carries the operation out, then after 400 ms calls `Terminal::sync_size()`; `Terminal::set_window(geometry)` whenever the window moves,
+  resizes, minimises or the grid changes (not while a program's resize is pending): the reports (XTWINOPS 11, 13, 14, 15, 19) answer it.
+- **Saved text** (`workspace_texts.rs`): `Workspace::save_texts()` saves the window's terminals in the app's process (hosted ones are their
+  desk's), each minute and at quit, unless the profile keeps none or a row says not to; `Workspace::restore` keeps the record's texts for
+  `launch_facts`. Erased at once: `Terminal.clear_history` (⌘K) and `WorkspaceEvent::SavedTextForgotten` (the FFI erases before Swift
+  hears it); `Windows::erase_saved_text_if_off()` / `Workspace::erase_saved_text_if_off()` at window open and on a settings change;
+  `HostedTerminals::stop_checkpoints_if_off()` stops the hosts' checkpoints and removes them when their settings went off.
+- **Status and notices**: `Terminal.focus_changed` that sent a focus report feeds `StatusEvent::FocusReported` (a redraw answering it is
+  not work). OSC 9/99/777 keep their words (`TerminalFacts.notice`, a serial); `wh notify` keeps its words without touching the status
+  (`HookEvent::Notice` is gone: the notification rules tell it). A failure carries a serial, how long it ran and its last line.
+  `TerminalSummary.notice` is the serial (a new notification moves the terminals' revision); `Workspace::notice_facts(now_ms) ->
+  [NoticeFactsRecord]` gives the source (plain, agent, program), who (the agent's or the reporting program's name), `reported`, the notice,
+  the failure (`at_ms` on the caller's monotonic clock) and the foreground command with its Unix start, for `TabFactsRecord`.
+  `Workspace::attached_again(id)` after a host attached at launch brings back a "Done" its record said nobody had seen.
+

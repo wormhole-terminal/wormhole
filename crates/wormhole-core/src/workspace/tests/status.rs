@@ -28,7 +28,9 @@ fn state(m: &WorkspaceModel, id: i64) -> (Status, RowState) {
 }
 
 fn mark(m: &mut WorkspaceModel, id: i64, mark: Mark, ended: Option<&str>, at: u64) {
-    feed(m, id, StatusEvent::Mark { mark, ended: ended.map(Into::into) }, at);
+    let ended =
+        ended.map(|command| wormhole_term::Ended { command: command.into(), took: None, last_line: None });
+    feed(m, id, StatusEvent::Mark { mark, ended }, at);
 }
 
 fn front(command: &str, since: u64) -> ForegroundLook {

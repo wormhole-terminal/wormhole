@@ -67,12 +67,21 @@ fn a_command_runs_with_its_clock_and_a_failed_one_says_how_it_ended() {
     );
     let m = one(|f| {
         f.status = Status::Failed;
-        f.failure = Some(Failure { code: 101, command: Some("cargo build".into()), at: 0 });
+        f.failure = Some(Failure {
+            serial: 1,
+            code: 101,
+            command: Some("cargo build".into()),
+            at: 0,
+            took: None,
+            last_line: None,
+        });
     });
     let failed = line(&m, 2 * MINUTE);
     assert_eq!(failed.text.as_deref(), Some("cargo build · exit 101"));
     assert_eq!((failed.tone, failed.trail.as_deref()), (Tone::Failed, Some("2m ago")));
-    let m = one(|f| f.failure = Some(Failure { code: 2, command: None, at: 0 }));
+    let m = one(|f| {
+        f.failure = Some(Failure { serial: 1, code: 2, command: None, at: 0, took: None, last_line: None })
+    });
     assert_eq!(line(&m, 0).text.as_deref(), Some("exit 2"));
     let m = one(|f| f.unread = true);
     assert_eq!(line(&m, 0).trail.as_deref(), None, "new output is for a command that has ended");

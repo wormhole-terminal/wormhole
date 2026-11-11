@@ -41,6 +41,9 @@ pub struct TerminalSummary {
     pub forget_text: bool,
     pub unread: bool,
     pub bell: bool,
+    /// The serial of its latest notification in its own words (`TerminalFacts::notice`), 0 for none: a new one
+    /// is news for the notifications even when nothing else on its row moved.
+    pub notice: u64,
 }
 
 /// How many terminals are in each state: the status bar's and the menu bar's counts.
@@ -125,6 +128,7 @@ impl WorkspaceModel {
             forget_text: session.forget_text,
             unread: facts.unread,
             bell: facts.bell,
+            notice: facts.notice.as_ref().map_or(0, |notice| notice.serial),
         }
     }
 }

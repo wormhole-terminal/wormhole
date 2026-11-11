@@ -21,8 +21,9 @@
 use wormhole_term::ScreenSnapshot;
 use wormhole_term::types::{Cell, Color, CursorShape, LineSize, NamedColor};
 
-/// The layout's version; bumped by any change to what is above.
-pub(crate) const VERSION: u32 = 1;
+/// The layout's version; bumped by any change to what is above, and by a section a reader must not skip unknowing
+/// (2: the colours programs set, `frame_colors`).
+pub(crate) const VERSION: u32 = 2;
 const MAGIC: u32 = u32::from_le_bytes(*b"WHF1");
 pub(crate) const HEADER_BYTES: usize = 48;
 pub(crate) const CELL_BYTES: usize = 16;

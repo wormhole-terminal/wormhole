@@ -30,8 +30,8 @@ extension AppController {
 
     /// A new terminal that runs the shell with this key (New terminal: fish), in the window the palette or menu is over.
     func newTerminal(shellKey key: String, in session: WindowSession? = nil) {
-        guard let shell = settingsModel.host.shellChoices().first(where: { $0.key == key }) else { return }
-        (session?.hub ?? hub).send(.newTerminalRunning(program: shell.program, arguments: shell.arguments))
+        guard settingsModel.host.shellChoices().contains(where: { $0.key == key }) else { return }
+        (session?.hub ?? hub).send(.newTerminalWithShell(key))
     }
 
     /// ⌘↩: a new window, laid out like this one, with a terminal where the result is: a terminal's folder, a folder, a commit's

@@ -15,7 +15,6 @@ use wormhole_core::workspace::StatusEvent;
 
 use super::not_found;
 use crate::hook_server::core::Core;
-use crate::hook_server::events::HookEvent;
 use crate::hook_server::gate::identify;
 
 /// `status`: the target's terminal, the caller's own without one, the app's summary outside any tab.
@@ -37,8 +36,8 @@ pub(super) fn status(core: &Core, target: Option<Target>, from: Option<i64>, pee
 }
 
 /// `notify`: a notification about the target's terminal (the caller's own without one), in the caller's
-/// words. Swift shows it by the notification rules like a program's own (`HookEvent::Notice`), and the
-/// terminal's row hears of it as of a program's notification.
+/// words: the terminal keeps it as its latest notification (`StatusEvent::ControlNotice`) and the notification
+/// rules tell it like a program's own, from the terminal's facts, with the status left alone.
 pub(super) fn notify(
     core: &Core,
     target: Option<Target>,
@@ -60,8 +59,8 @@ pub(super) fn notify(
     if let Err(reply) = core.budget(Limited::Notify, from) {
         return reply;
     }
-    core.shared.feed(tab, StatusEvent::Notice);
-    core.ui.push(HookEvent::Notice { terminal: tab, title: words.title, body: words.body });
+    // Told by the notification rules in the caller's words, as GPUI's `notice_from_control`: the status stays.
+    core.shared.feed(tab, StatusEvent::ControlNotice { title: words.title, body: words.body });
     Reply::ok(Reached { tab })
 }
 

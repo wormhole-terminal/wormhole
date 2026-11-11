@@ -32,6 +32,29 @@ impl HostedTerminals {
     }
 }
 
+#[uniffi::export]
+impl HostedTerminals {
+    /// The settings changed: when Restore after restart, Persistent terminals or "Restore terminal text" went off, every
+    /// host stops writing its checkpoint and what it wrote goes (`window/mod.rs` in the GPUI app). Nothing while they stay
+    /// on. How many hosts were told.
+    pub fn stop_checkpoints_if_off(&self) -> u32 {
+        if super::checkpoints::on(&self.profile) {
+            return 0;
+        }
+        let hosts: Vec<String> = locked(&self.made)
+            .iter()
+            .filter_map(|(_, weak)| weak.upgrade())
+            .filter(|terminal| terminal.with_pty(wormhole_term::Pty::stop_checkpoints).unwrap_or(false))
+            .filter_map(|terminal| terminal.host_id())
+            .collect();
+        let told = u32::try_from(hosts.len()).unwrap_or(u32::MAX);
+        if !hosts.is_empty() {
+            self.checkpoints.forget_later(hosts);
+        }
+        told
+    }
+}
+
 impl HostedTerminals {
     /// Whether the default profile keeps terminal text: its setting. (What turning it off erases is core's.)
     pub(super) fn keeps_text(&self) -> bool {

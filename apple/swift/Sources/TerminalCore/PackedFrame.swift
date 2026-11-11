@@ -16,8 +16,9 @@ import Foundation
 public enum FrameLayout {
     /// `u32::from_le_bytes(*b"WHF1")`.
     public static let magic: UInt32 = 0x3146_4857
-    /// The layout version this reader understands; the library's `frame_format_version()` must equal it.
-    public static let version: UInt32 = 1
+    /// The layout version this reader understands; the library's `frame_format_version()` must equal it (2: the colours
+    /// programs set, `ProgramColors`).
+    public static let version: UInt32 = 2
     public static let headerBytes = 48
     public static let rowHeaderBytes = 8
     public static let cellBytes = 16
@@ -130,6 +131,8 @@ public struct FrameHeader: Sendable, Equatable {
     /// It carries Probe decorations and fold markers after the extras (`FrameSections`).
     public var hasDecor = false
     public var hasFolds = false
+    /// It carries the colours programs set after the fold markers (`ProgramColors`).
+    public var hasColors = false
 
     public struct Cursor: Sendable, Equatable {
         public var row: Int
@@ -149,7 +152,8 @@ public struct FrameHeader: Sendable, Equatable {
 
     public init(
         cols: Int, rows: Int, changedRows: Int, isFull: Bool, cursor: Cursor?, displayOffset: Int = 0,
-        historySize: Int = 0, placementCount: Int? = nil, hasExtras: Bool = false, hasDecor: Bool = false, hasFolds: Bool = false
+        historySize: Int = 0, placementCount: Int? = nil, hasExtras: Bool = false, hasDecor: Bool = false, hasFolds: Bool = false,
+        hasColors: Bool = false
     ) {
         self.cols = cols
         self.rows = rows
@@ -162,6 +166,7 @@ public struct FrameHeader: Sendable, Equatable {
         self.hasExtras = hasExtras
         self.hasDecor = hasDecor
         self.hasFolds = hasFolds
+        self.hasColors = hasColors
     }
 }
 
@@ -193,7 +198,7 @@ public enum FrameReader {
             cols: Int(word(2)), rows: Int(word(3)), changedRows: Int(word(4)), isFull: word(5) & 1 != 0,
             cursor: cursor, displayOffset: Int(word(9)), historySize: Int(word(10)),
             placementCount: word(5) & PlacementRecords.flag != 0 ? Int(word(11)) : nil, hasExtras: word(5) & CellExtras.flag != 0, hasDecor: word(5) & FrameSections.decorFlag != 0,
-            hasFolds: word(5) & FrameSections.foldFlag != 0)
+            hasFolds: word(5) & FrameSections.foldFlag != 0, hasColors: word(5) & ProgramColors.flag != 0)
     }
 
     /// Visit each changed row in order. `body` gets the row index, its line size and its cells, which

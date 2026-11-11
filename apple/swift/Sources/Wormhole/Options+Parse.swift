@@ -12,7 +12,8 @@ extension Options {
           --mock <text|flood|noise|matrix|unicode|cursor|mixed>   synthetic output (default mixed)
           --mock-hz <n>        steps a second; 0 as fast as possible (default 60)
           --seed <n>           the mock's seed (default 1)
-          --shell <program>    the real engine running this program (WORMHOLE_SHELL); needs the FFI linked in
+          --shell <program>    every terminal runs this program instead of the login shell (WORMHOLE_SHELL)
+          --sample             the sample workspace and mock terminals instead of real ones
           --grid <COLSxROWS>   a fixed grid, the window sized to fit (WORMHOLE_SWIFT_GRID)
           --font <family>      an installed font instead of the bundled JetBrains Mono
           --font-dir <dir>     the folder with the four JetBrainsMono-*.ttf (WORMHOLE_FONT_DIR)
@@ -63,10 +64,11 @@ extension Options {
                     throw UsageError(description: "no scenario \(name) (\(MockScenario.allCases.map(\.rawValue).joined(separator: ", ")))")
                 }
                 options.scenario = scenario
-                options.program = nil
+                options.sample = true
             case "--mock-hz": options.hertz = try number(flag)
             case "--seed": options.seed = UInt64(try number(flag))
             case "--shell": options.program = try value(flag)
+            case "--sample": options.sample = true
             case "--grid": options.grid = try parseGrid(try value(flag))
             case "--font": options.fontFamily = try value(flag)
             case "--font-dir": options.fontDirectory = URL(fileURLWithPath: try value(flag))

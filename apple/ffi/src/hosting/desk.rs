@@ -38,7 +38,12 @@ const ORPHAN_ANSWER: Duration = Duration::from_millis(500);
 pub struct HostedStart {
     /// The workspace's id for the terminal (`Opened { id }`): its shell's `WORMHOLE_TAB_ID`.
     pub tab: i64,
-    pub program: String,
+    /// The shell it was opened with (`Workspace::launch_facts`: a `terminal::shells` key); `None` lets the project,
+    /// `default_shell` and the login shell decide (`launch`).
+    pub shell: Option<String>,
+    /// A program to run instead of what the terminal would (`--shell`, the welcome's tour, tests), with its arguments,
+    /// unless `shell` names one; `None`: the shell `launch` decides.
+    pub program: Option<String>,
     pub args: Vec<String>,
     pub cwd: Option<String>,
     pub cols: u16,
@@ -47,13 +52,16 @@ pub struct HostedStart {
     pub cell_height: f32,
     /// A terminal whose host is gone (`SavedTerminal.running` false), started again: the host it ran in, whose checkpoint
     /// (after a restart of the Mac) is drawn above the new shell, and its saved text, drawn when there is none.
-    /// Only `start` reads them.
+    /// Only a start reads them; a terminal in the app's own process starts above `saved_text` too.
     pub old_host: Option<String>,
     pub saved_text: Option<String>,
+    /// The profile whose settings and environment it starts with (`None`: the one Wormhole is in). A desk starts its
+    /// terminals in its own profile.
+    pub profile: Option<String>,
 }
 
 impl HostedStart {
-    fn size(&self) -> GridSize {
+    pub(crate) fn size(&self) -> GridSize {
         GridSize {
             cols: self.cols,
             rows: self.rows,
@@ -71,7 +79,7 @@ pub struct HostedTerminals {
     pub(super) profile: ProfilePaths,
     program: HostProgram,
     pub(super) registry: Arc<Registry>,
-    checkpoints: Arc<Checkpoints>,
+    pub(super) checkpoints: Arc<Checkpoints>,
     /// The terminals whose rows say their text is not to be kept: no checkpoint is asked for them either.
     forgetting: Mutex<HashSet<i64>>,
     /// The live hosts found at launch, each taken once (`LaunchHosts::restore`).
@@ -202,12 +210,7 @@ impl HostedTerminals {
         let id = hosts::new_host_id().map_err(|e| HostingError::Start { reason: e.to_string() })?;
         let hosts_dir = hosts::ensure_hosts_dir(&self.data_dir)
             .map_err(|e| HostingError::Start { reason: e.to_string() })?;
-        let mut options = Terminal::spawn_options(
-            what.tab.to_string(),
-            what.program.clone(),
-            what.args.clone(),
-            what.cwd.clone(),
-        );
+        let mut options = self.options(&what);
         let restored_from = self.seed(&what, &mut options);
         let host = HostCommand { binary, hosts_dir: &hosts_dir, id: &id };
         let (pty, events) = wormhole_core::terminal::spawn_hosted(&host, what.size(), &options)
@@ -234,12 +237,7 @@ impl HostedTerminals {
                 self.failed(&what, &host_id, failure)
             })?,
         };
-        let options = Terminal::spawn_options(
-            what.tab.to_string(),
-            what.program.clone(),
-            what.args.clone(),
-            what.cwd.clone(),
-        );
+        let options = self.options(&what);
         match wormhole_core::terminal::attach_hosted(&socket, &host_id, &options, visible) {
             Ok((pty, events)) => self.taken(&what, host_id, pty, events, &options, None, listener),
             Err(failure) => Err(self.failed(&what, &host_id, failure)),
@@ -284,9 +282,14 @@ impl HostedTerminals {
             .collect()
     }
 
+    /// What `what` starts with in this desk's profile, without the saved text: `seed` decides what it starts above.
+    fn options(&self, what: &HostedStart) -> wormhole_core::terminal::SpawnOptions {
+        let what = HostedStart { saved_text: None, ..what.clone() };
+        crate::launch::options(&DataRoot::new(&self.data_dir), &self.profile, &what)
+    }
+
     fn remember(&self, what: &HostedStart, host_id: &str) {
-        let shell = Some(what.program.clone());
-        match self.registry.remember(what.tab, host_id, what.cwd.clone(), shell) {
+        match self.registry.remember(what.tab, host_id, what.cwd.clone(), what.shell.clone()) {
             Ok(()) => {
                 locked(&self.saved_now).insert(what.tab);
             }

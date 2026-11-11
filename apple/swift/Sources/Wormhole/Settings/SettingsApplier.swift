@@ -52,6 +52,7 @@ final class SettingsApplier {
         if changed("font_family", "font_size", "line_height", "font_ligatures"), app.options.fontFamily == nil, app.options.pointSize == nil {
             app.terminalLook.use(FontSettingsMaker.settings(values, bundledDirectory: app.options.fontDirectory ?? Options.findBundledFonts()))
         }
+        if changed("restore_terminal_text", "feature_flags") { app.sessions.forEach { $0.hub.store.source.settingsChanged() } }
         if changed("bell_sound", "bell_visual") {
             app.terminalLook.use(
                 bell: BellStyle(

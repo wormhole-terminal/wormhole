@@ -35,6 +35,16 @@ pub enum NoticeSourceRecord {
     Program,
 }
 
+impl From<Source> for NoticeSourceRecord {
+    fn from(source: Source) -> Self {
+        match source {
+            Source::Plain => Self::Plain,
+            Source::Agent => Self::Agent,
+            Source::Program => Self::Program,
+        }
+    }
+}
+
 impl From<NoticeSourceRecord> for Source {
     fn from(source: NoticeSourceRecord) -> Self {
         match source {

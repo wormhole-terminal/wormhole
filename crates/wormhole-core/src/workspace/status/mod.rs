@@ -30,8 +30,14 @@ pub(in crate::workspace) use book::StatusBook;
 pub use event::{Ask, Context, ForegroundLook, Front, StatusEvent};
 pub use reports::status_of;
 
-use super::facts::{Millis, TerminalFacts};
+use super::facts::{Millis, ProgramNotice, TerminalFacts};
 use rules::{Answered, TitleGate, on_bell};
+
+/// Keep `title` and `body` as the terminal's latest notification, numbered after the last one.
+fn note_notice(facts: &mut TerminalFacts, title: String, body: String) {
+    let serial = facts.notice.as_ref().map_or(0, |notice| notice.serial) + 1;
+    facts.notice = Some(ProgramNotice { serial, title, body });
+}
 
 /// One terminal's status rules and what they remember between events. The status itself, its
 /// message, agent and the other things a row shows live in the terminal's `TerminalFacts`; this holds
@@ -58,6 +64,8 @@ pub struct StatusMachine {
     foreground: Option<Front>,
     /// What was in front before the shell got the terminal back.
     ended_command: Option<String>,
+    /// How many commands have failed here: each failure's serial.
+    failures: u64,
     title: TitleGate,
 }
 
@@ -78,6 +86,7 @@ impl StatusMachine {
             program_in_front: false,
             foreground: None,
             ended_command: None,
+            failures: 0,
             title: TitleGate::default(),
         }
     }
@@ -97,7 +106,8 @@ impl StatusMachine {
             StatusEvent::Title(raw) => self.offer_title(facts, names::title_name(&raw), at),
             StatusEvent::ResetTitle => self.offer_title(facts, None, at),
             StatusEvent::Bell => self.on_bell(facts, at),
-            StatusEvent::Notice => self.on_notice(facts, at),
+            StatusEvent::Notice { title, body } => self.on_notice(facts, title, body, at),
+            StatusEvent::ControlNotice { title, body } => note_notice(facts, title, body),
             StatusEvent::Mark { mark, ended } => self.on_mark(facts, mark, ended, at),
             StatusEvent::Reported { summary, by_report } => {
                 self.apply_reported(facts, summary, by_report, at)
@@ -115,6 +125,11 @@ impl StatusMachine {
             StatusEvent::Resized => self.answered.resize = Some(at),
             StatusEvent::FocusReported => self.answered.focus = Some(at),
             StatusEvent::Seen => ask = self.acknowledge(facts, at),
+            StatusEvent::DoneUnseen => {
+                if facts.status == Status::Idle {
+                    self.set_status(facts, Status::Done, at);
+                }
+            }
             StatusEvent::Tick => {
                 self.settle(facts, at, cx);
                 if let Some(title) = self.title.take_due(at) {
@@ -134,6 +149,19 @@ impl StatusMachine {
     /// long enough, or a title is due. `None` when nothing waits, so an idle window arms no timer.
     pub fn next_due(&self, facts: &TerminalFacts) -> Option<Millis> {
         [self.settle_at(facts), self.title.due_at()].into_iter().flatten().min()
+    }
+
+    /// The name of the program that reports its status (`facts.source()` is `Program`): what it calls itself,
+    /// else the command it runs. `None` for any other terminal, and where neither is known.
+    pub fn program_name(&self, facts: &TerminalFacts) -> Option<String> {
+        if facts.source() != crate::notify::Source::Program {
+            return None;
+        }
+        if let Some(app) = self.program.as_ref().and_then(|program| program.app.clone()) {
+            return Some(app);
+        }
+        let command = facts.command.as_deref().or(facts.finished_command.as_deref())?;
+        Some(crate::view::sidebar::names::command_name(command)).filter(|name| !name.is_empty())
     }
 
     /// Whether the status is told, not guessed: an agent's hooks or a program's own reports say what
@@ -206,12 +234,14 @@ impl StatusMachine {
     }
 
     /// A program's own notification is the bell with words: the bell's rules say whether it counts
-    /// as needing you (an agent's hooks already say when).
-    fn on_notice(&mut self, facts: &mut TerminalFacts, at: Millis) {
+    /// as needing you (an agent's hooks already say when), and the notifications tell it in the
+    /// program's words.
+    fn on_notice(&mut self, facts: &mut TerminalFacts, title: String, body: String, at: Millis) {
         if self.reported() || facts.status == Status::Exited {
             return;
         }
         self.on_bell(facts, at);
+        note_notice(facts, title, body);
     }
 
     fn on_exit(&mut self, facts: &mut TerminalFacts, at: Millis) {

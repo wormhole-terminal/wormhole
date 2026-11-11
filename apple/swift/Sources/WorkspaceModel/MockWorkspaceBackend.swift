@@ -45,7 +45,7 @@ public final class MockWorkspaceBackend: WorkspaceBackend {
     public func apply(_ action: WorkspaceAction) -> Refusal? {
         switch action {
         case .select(let id): guard live.contains(id) else { return .unknown }; selected = id
-        case .newTerminal, .newTerminalIn, .newTerminalRunning:
+        case .newTerminal, .newTerminalIn, .newTerminalRunning, .newTerminalWithShell:
             let id = (live.max() ?? 0) + 1
             items.append(.loose(MockTerminal(TerminalSummary(id: id, title: "Terminal \(id)"))))
             selected = id

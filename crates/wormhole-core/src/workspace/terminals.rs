@@ -38,6 +38,23 @@ impl WorkspaceModel {
         self.select_new(id);
     }
 
+    /// [`new_terminal_selected`](Self::new_terminal_selected) running the shell `key` names, which the terminal
+    /// keeps: the shell asks for it ([`shell_key`](Self::shell_key)) when it starts the program.
+    pub(super) fn new_terminal_with_shell(&mut self, key: String) {
+        let cwd = self.start_folder();
+        let id = self.open_terminal(cwd);
+        if let Some(ix) = self.index_of(id) {
+            self.sessions[ix].shell = Some(key);
+        }
+        self.select_new(id);
+    }
+
+    /// The shell terminal `id` was opened with (`terminal::shells`' key); `None` for the default, which the
+    /// shell decides with the person's settings and the project.
+    pub fn shell_key(&self, id: i64) -> Option<&str> {
+        self.index_of(id).and_then(|ix| self.sessions[ix].shell.as_deref())
+    }
+
     /// Select a terminal just made, and end a search that would hide it.
     pub(super) fn select_new(&mut self, id: i64) {
         self.select_id(id);

@@ -24,7 +24,11 @@ public final class TerminalViews {
     public func view(for id: TerminalID) -> MetalTerminalView? {
         if let view = views[id] { return view }
         guard let view = make(id) else { return nil }
-        view.onGridChange = { [weak self] in self?.gridRevision += 1 }
+        let own = view.onGridChange
+        view.onGridChange = { [weak self] in
+            own?()
+            self?.gridRevision += 1
+        }
         view.setZoom(zoom, animated: false)
         views[id] = view
         return view

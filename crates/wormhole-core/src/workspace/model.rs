@@ -177,6 +177,7 @@ impl WorkspaceModel {
             Action::SelectStep(delta) => self.select_step(delta as isize),
             Action::SelectNumber(n) => self.select_number(n as usize),
             Action::NewTerminal => self.new_terminal_selected(),
+            Action::NewTerminalWithShell(key) => self.new_terminal_with_shell(key),
             Action::Close(id) => self.close_terminal(id),
             Action::Rename { id, name } => self.rename(id, &name),
             Action::SetPinned { id, pinned } => self.set_pinned(id, pinned),

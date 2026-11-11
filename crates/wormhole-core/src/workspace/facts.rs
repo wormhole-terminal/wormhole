@@ -14,10 +14,26 @@ pub type Millis = u64;
 /// A plain terminal's last command that failed, as its row says it ("cargo build · exit 101").
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Failure {
+    /// Counts the terminal's failures: a new one is news even with the code of the last.
+    pub serial: u64,
     pub code: i32,
     pub command: Option<String>,
     /// When the shell said so.
     pub at: Millis,
+    /// How long the command ran and the last line it printed, as far as the shell's blocks can say
+    /// (`Pty::ended`): what a "failed" notification tells.
+    pub took: Option<Millis>,
+    pub last_line: Option<String>,
+}
+
+/// A program's own notification (OSC 9, 99, 777) or one sent with `wh notify`, numbered so a new one
+/// is news even when it says what the last one said.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProgramNotice {
+    pub serial: u64,
+    /// Empty when only a body was given (OSC 9).
+    pub title: String,
+    pub body: String,
 }
 
 /// Everything a sidebar row says of a terminal, as plain values.
@@ -45,6 +61,8 @@ pub struct TerminalFacts {
     pub running_since: Option<Millis>,
     pub bell: bool,
     pub failure: Option<Failure>,
+    /// The last notification a program sent in its own words, or `wh notify` about this terminal.
+    pub notice: Option<ProgramNotice>,
     /// The command is done and left output nobody has seen.
     pub unread: bool,
     /// Files this terminal changed in its repository (`git::attribution`), when known.
@@ -82,6 +100,7 @@ impl Default for TerminalFacts {
             running_since: None,
             bell: false,
             failure: None,
+            notice: None,
             unread: false,
             changes: None,
             notes: 0,
@@ -99,6 +118,17 @@ impl TerminalFacts {
     /// Something tells the status: an agent, or a program's own report.
     pub fn told(&self) -> bool {
         self.agent.is_some() || self.reports
+    }
+
+    /// Who tells the status, as the notifications word it: an agent, a program that reports its own (OSC
+    /// 7501), or neither.
+    pub fn source(&self) -> crate::notify::Source {
+        use crate::notify::Source;
+        match () {
+            _ if self.agent.is_some() => Source::Agent,
+            _ if self.reports => Source::Program,
+            _ => Source::Plain,
+        }
     }
 
     /// What the row shows (`RowState::of`: the one place status becomes a row's state).

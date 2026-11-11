@@ -8,8 +8,6 @@ pub enum HookEvent {
     Activate,
     /// `wh focus --activate`: bring the window that holds `terminal` to the front (`Activate` brings the app).
     Front { terminal: i64 },
-    /// `wh notify`: show a notification about `terminal`, in the caller's words (already cleaned).
-    Notice { terminal: i64, title: String, body: String },
     /// `wh close`: ask the person whether to close `terminal`, as closing it by hand does, and call
     /// `HookServer::close_question_over` when it is answered. Nothing closes unless they say yes.
     CloseAsked { terminal: i64 },

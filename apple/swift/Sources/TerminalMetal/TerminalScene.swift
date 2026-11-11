@@ -69,6 +69,9 @@ final class TerminalScene {
 
     deinit { grid.deallocate() }
 
+    /// The colours programs set, as the last frame that carried them said; the renderer draws its palette over them.
+    private(set) var programColors: [ProgramColor] = []
+
     // MARK: frames
 
     /// Take a packed frame and rebuild what it changed. Returns how many rows were rebuilt.
@@ -91,6 +94,7 @@ final class TerminalScene {
             }
             // What follows the rows is as complete as the rows: a row the frame names and no record names has none.
             let sections = try FrameSections.read(bytes, header: header)
+            if let colors = sections.colors { programColors = colors }
             for row in named {
                 extras[row] = sections.extras[row]
                 markers[row] = sections.markers[row]

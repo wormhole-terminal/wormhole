@@ -14,6 +14,7 @@ extension RustWorkspaceBackend {
     /// is off or no host would start. Started for its tab: its shell has `WORMHOLE_TAB_ID`, `WORMHOLE_SOCKET` and
     /// `WORMHOLE_BIN`, so agents' hooks and its own `wh` reach this workspace.
     func start(_ id: TerminalID, in folder: String?) {
+        startSaving()
         let relay = TerminalRelay()
         if let make = welcomeToken, let token = make(id) {
             welcomeToken = nil
@@ -23,11 +24,11 @@ extension RustWorkspaceBackend {
             }
             return
         }
-        guard let hosted else {
-            if needsApplications { told("move-to-applications", .moveToApplications) }
+        guard let hosted = hosting else {
+            if disposable?.enabled() == true { told("move-to-applications", .moveToApplications) }
             do { register(id, try HostConnect.local(request(id, in: folder), relay), relay: relay) } catch {
                 failed[id] = "\(error)"
-                FileHandle.standardError.write(Data("terminal \(id): cannot start \(setup.program): \(error)\n".utf8))  // text: a diagnostic written to stderr
+                FileHandle.standardError.write(Data("terminal \(id): cannot start: \(error)\n".utf8))  // text: a diagnostic written to stderr
             }
             return
         }
@@ -42,6 +43,9 @@ extension RustWorkspaceBackend {
         }
     }
 
+    /// The persistent terminals' object while Settings has them on.
+    var hosting: HostedSessions? { hosted.flatMap { $0.enabled ? $0 : nil } }
+
     /// Begin starting or attaching terminal `id` off the main actor; `connected` takes the result.
     func connect(_ id: TerminalID, _ what: HostedStart, attach host: String?, relay: TerminalRelay, desk: HostedTerminals) {
         relays[id] = relay
@@ -50,7 +54,6 @@ extension RustWorkspaceBackend {
         book.connecting[id] = token
         let visible = Set(core.shown().map(Int.init)).contains(id)
         book.visible[id] = visible
-        startSaving(desk)
         Task { [weak self] in
             let done = await Task.detached(priority: .userInitiated) {
                 HostConnect.run(desk: desk, what: what, attach: host, visible: visible, relay: relay)
@@ -73,6 +76,8 @@ extension RustWorkspaceBackend {
         if let fallback = done.fallback { told("host-fallback", .hostFallback(fallback)) }
         if let terminal = done.terminal {
             register(id, terminal, relay: relays[id])
+            // Its program is the one its record named: a result nobody had seen comes back with it.
+            if done.attached { core.attachedAgain(id: Int64(id)) }
             // Attached while the window has moved on (or the other way round): the stream follows what is shown now.
             terminal.setVisible(visible: Set(core.shown().map(Int.init)).contains(id))
         } else if let unavailable = done.unavailable {
@@ -82,7 +87,7 @@ extension RustWorkspaceBackend {
         } else if let failure = done.failure {
             failed[id] = failure
             relays[id] = nil
-            FileHandle.standardError.write(Data("terminal \(id): cannot start \(setup.program): \(failure)\n".utf8))  // text: a diagnostic written to stderr
+            FileHandle.standardError.write(Data("terminal \(id): cannot start: \(failure)\n".utf8))  // text: a diagnostic written to stderr
         }
         if book.restoring, book.connecting.isEmpty { finishRestore() }
         onNotice?(.hostChanged(id))
@@ -117,7 +122,7 @@ extension RustWorkspaceBackend {
     @discardableResult
     public func restoreSaved() -> Int {
         let before = live.count
-        guard let hosted else {
+        guard let hosted = hosting else {
             _ = handle(core.restore())
             return live.count - before
         }
@@ -152,9 +157,18 @@ extension RustWorkspaceBackend {
     public func finishQuit(endHosts: Bool) {
         book.quitting = true
         book.saver?.cancel()
+        // The terminals in the app's own process end with it: what they show is kept for the next launch.
+        _ = core.saveTexts()
         guard let desk = hosted?.desk else { return }
         if !endHosts { _ = desk.saveTexts() }
         desk.finish(endHosts: endHosts)
+    }
+
+    /// "Restore terminal text after restart" went off: the profile's saved texts go; it, Persistent terminals or Restore
+    /// after restart went off: the hosts stop writing checkpoints and what they wrote goes. Nothing while they are on.
+    public func settingsChanged() {
+        _ = core.eraseSavedTextIfOff()
+        _ = hosted?.desk.stopCheckpointsIfOff()
     }
 
     public func waited(since: UInt64) -> WorkspaceModel.Waited? {
@@ -162,13 +176,19 @@ extension RustWorkspaceBackend {
         return WorkspaceModel.Waited(words: waited.words, next: .milliseconds(waited.nextInMs))
     }
 
-    /// The screens are kept each minute, so a terminal whose host is gone is drawn from what it showed.
-    private func startSaving(_ desk: HostedTerminals) {
+    /// The screens are kept each minute (`window/save.rs` `SCROLLBACK_SAVE_INTERVAL`), so a terminal comes back above what
+    /// it showed: the ones in the app's process from the workspace, a hosted one whose host is gone from its desk.
+    private func startSaving() {
         guard book.saver == nil else { return }
+        let (core, desk) = (core, hosted?.desk)
         book.saver = Task {
             while !Task.isCancelled {
+                // one-shot: the next minute's save (each waits for the one before it to end).
                 try? await Task.sleep(for: .seconds(60))
-                await Task.detached(priority: .utility) { _ = desk.saveTexts() }.value
+                await Task.detached(priority: .utility) {
+                    _ = core.saveTexts()
+                    _ = desk?.saveTexts()
+                }.value
             }
         }
     }
@@ -191,11 +211,15 @@ extension RustWorkspaceBackend {
         adopting = []
     }
 
+    /// What terminal `id` starts with: the core's facts (the shell it was opened with, the profile, the text it showed when
+    /// the app last quit), the program an action named or the setup's, the folder and the size until its view fits it.
     func request(_ id: TerminalID, in folder: String?, old: String? = nil, text: String? = nil) -> HostedStart {
         let size = Self.startSize
-        let program = programs[id] ?? (setup.program, setup.arguments)
+        let facts = core.launchFacts(id: Int64(id))
+        let program = programs[id] ?? setup.program.map { ($0, setup.arguments) }
         return HostedStart(
-            tab: Int64(id), program: program.0, args: program.1, cwd: folder, cols: UInt16(size.cols),
-            rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight, oldHost: old, savedText: text)
+            tab: Int64(id), shell: facts.shell, program: program?.0, args: program?.1 ?? [], cwd: folder,
+            cols: UInt16(size.cols), rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight,
+            oldHost: old, savedText: text ?? facts.savedText, profile: setup.profile ?? facts.profile)
     }
 }

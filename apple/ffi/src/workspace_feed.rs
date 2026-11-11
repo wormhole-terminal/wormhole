@@ -67,10 +67,13 @@ impl EventFeed for TerminalFeed {
                 }
                 shared.feed(id, StatusEvent::Bell);
             }
-            PtyEvent::Notify(_) => shared.feed(id, StatusEvent::Notice),
+            PtyEvent::Notify(notification) => shared.feed(
+                id,
+                StatusEvent::Notice { title: notification.title.clone(), body: notification.body.clone() },
+            ),
             PtyEvent::Mark(mark, _) => {
                 let ended = match *mark {
-                    Mark::Finished(Some(code)) => self.terminal.upgrade().and_then(|t| t.ended_command(code)),
+                    Mark::Finished(Some(code)) => self.terminal.upgrade().and_then(|t| t.ended(code)),
                     _ => None,
                 };
                 shared.feed(id, StatusEvent::Mark { mark: *mark, ended });
@@ -89,10 +92,15 @@ impl EventFeed for TerminalFeed {
 
     fn on_touch(&self, touch: Touch) {
         let Some(shared) = self.shared.upgrade() else { return };
+        if touch == Touch::Cleared {
+            return shared.erase_saved_text(self.id);
+        }
         let event = match touch {
             Touch::Typed => StatusEvent::Typed,
             Touch::Key { key, control } => StatusEvent::Key { key, control },
             Touch::Resized => StatusEvent::Resized,
+            Touch::FocusReported => StatusEvent::FocusReported,
+            Touch::Cleared => return,
         };
         shared.feed_quiet(self.id, event);
     }

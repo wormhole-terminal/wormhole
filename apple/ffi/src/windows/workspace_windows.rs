@@ -63,6 +63,9 @@ impl Workspace {
     pub fn restore(&self) -> Vec<WorkspaceEvent> {
         let Some((windows, window)) = self.shared().windows() else { return Vec::new() };
         let Some(record) = windows.record_of(window) else { return Vec::new() };
+        let keeps_text =
+            wormhole_core::config::Config::load_for(windows.profile()).settings.restore_terminal_text;
+        self.shared().restored_texts.keep(&record, keeps_text);
         let mut events = self.shared().with_model(|model| model.restore(&record));
         // The files each terminal had changed come back with it, so its row counts them again.
         let ids: Vec<i64> = record.sessions.iter().map(|session| session.id).collect();

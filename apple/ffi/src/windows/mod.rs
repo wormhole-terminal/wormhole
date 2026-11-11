@@ -22,3 +22,5 @@ pub use workspace_windows::{Departure, TakenOut};
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod texts_tests;

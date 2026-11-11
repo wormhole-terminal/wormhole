@@ -64,7 +64,6 @@
             switch action {
             case .activate: if app.policy.touchesSystem { NSApp.activate() }
             case .front(let terminal): app.show(terminal: Int(terminal))
-            case .notice(let terminal, let title, let body): app.notices?.post(terminal: terminal, title: title, body: body)
             case .closeAsked(let terminal):
                 app.closeTerminal(Int(terminal), fromCommandLine: true) { [weak self] in self?.handle.closeQuestionOver() }
             case .worktreeAsked(let folder, let branch): app.hub.askWorktree(branch: branch, in: folder)

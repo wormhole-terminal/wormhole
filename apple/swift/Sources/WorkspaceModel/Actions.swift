@@ -12,8 +12,11 @@ public enum WorkspaceAction: Sendable, Equatable {
     case newTerminal
     /// A new terminal that starts in this folder (a worktree just made); selected like any other.
     case newTerminalIn(String)
-    /// A new terminal that runs this program, not the window's (New terminal: fish); selected like any other.
+    /// A new terminal that runs this program as it is (the welcome's tour); selected like any other.
     case newTerminalRunning(program: String, arguments: [String])
+    /// A new terminal that runs the shell this key names (core `terminal::shells`: "" the login shell, a profile's name,
+    /// a program's path), which it keeps across a restart of its shell and a relaunch (New Terminal with ▸ fish).
+    case newTerminalWithShell(String)
     case close(TerminalID)
     case rename(TerminalID, String)
     case togglePin(TerminalID)

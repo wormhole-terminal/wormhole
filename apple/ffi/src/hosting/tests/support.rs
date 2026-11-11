@@ -52,7 +52,8 @@ impl Fixture {
     pub(super) fn request(&self, tab: i64) -> HostedStart {
         HostedStart {
             tab,
-            program: "/bin/cat".into(),
+            shell: None,
+            program: Some("/bin/cat".into()),
             args: Vec::new(),
             cwd: Some(self.cwd().into()),
             cols: 80,
@@ -61,6 +62,7 @@ impl Fixture {
             cell_height: 16.0,
             old_host: None,
             saved_text: None,
+            profile: None,
         }
     }
 

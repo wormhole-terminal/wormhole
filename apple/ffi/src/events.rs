@@ -32,8 +32,16 @@ pub(crate) trait EventFeed: Send + Sync {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Touch {
     Typed,
-    Key { key: String, control: bool },
+    Key {
+        key: String,
+        control: bool,
+    },
     Resized,
+    /// The program was told the window or the pane gained or lost the keyboard (DECSET 1004): what it
+    /// redraws in answer is not its own work.
+    FocusReported,
+    /// The person cleared the terminal (⌘K): what was saved of its text goes too.
+    Cleared,
 }
 
 /// What a terminal's program did, as the UI needs to hear it. The rest of `PtyEvent`'s variants
@@ -64,6 +72,11 @@ pub enum TermEvent {
     /// The session host stopped answering, or answered again: the bar's words about it change
     /// (`Terminal.host_not_responding`).
     HostResponsiveness,
+    /// A program asked the window to move, resize, minimise or the like, and `allow_window_ops` lets it
+    /// (`window_ops`): carry it out, then `sync_size`.
+    WindowOp {
+        op: crate::window_ops::WindowOpRecord,
+    },
 }
 
 /// Events waiting for a drain, and whether the listener was told.
@@ -165,6 +178,7 @@ fn translate(event: PtyEvent, queue: &Arc<EventQueue>) -> Option<TermEvent> {
         PtyEvent::Bell => TermEvent::Bell,
         PtyEvent::Exited(code) => TermEvent::Exited { code },
         PtyEvent::HostResponsiveness => TermEvent::HostResponsiveness,
+        PtyEvent::WindowOp(op) => TermEvent::WindowOp { op: crate::window_ops::WindowOpRecord::of(op)? },
         _ => return None,
     })
 }

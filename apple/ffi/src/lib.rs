@@ -18,6 +18,7 @@ mod cell;
 mod cli_tool;
 mod clipboard;
 mod contents;
+mod engine_look;
 mod error;
 mod events;
 mod files_panel;
@@ -26,6 +27,7 @@ mod focus;
 pub mod folder_picker;
 mod fonts;
 mod frame;
+mod frame_colors;
 mod frame_extras;
 mod git;
 mod hook_server;
@@ -34,6 +36,7 @@ mod inline_images;
 mod interaction;
 mod isolation;
 pub mod keymap;
+mod launch;
 mod live_resize;
 mod minimap;
 mod notes_text;
@@ -52,13 +55,16 @@ mod theme_resolve;
 mod themes;
 mod title_fit;
 mod visible;
+mod window_ops;
 mod windows;
 pub mod words;
 mod workspace;
 mod workspace_extras;
 mod workspace_feed;
 mod workspace_git;
+mod workspace_notices;
 mod workspace_pump;
+mod workspace_texts;
 mod workspace_types;
 mod workspace_waited;
 mod workspace_watch;
@@ -70,21 +76,27 @@ pub use app_actions::{
 pub use aux_backends::*;
 pub use blocks::{BlockRecord, BlockSpanRecord, BlockStatus, PutResult};
 pub use byte_size::byte_size;
+pub use cell::{
+    CellRecord, CellShapeRecord, CellShapesRecord, GridFitRecord, cell_shapes, terminal_cell,
+    terminal_grid_fit,
+};
 pub use cli_tool::{
     CliToolError, CliToolPathRecord, CliToolPathVerdict, CliToolRecord, CliToolState, cli_tool_install,
     cli_tool_keep_current, cli_tool_path_note, cli_tool_status, cli_tool_uninstall,
 };
 pub use contents::ContentsScope;
+pub use engine_look::set_terminal_colors;
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
 pub use files_panel::{
-    ApproveOutcome, DirectoryRecord, EntryRecord, FileContentRecord, FileEntryKind, FileProblem,
-    AgentLogoRecord, FilesFailure, FilesService, FolderPaintRecord, FolderWatch, NewTerminalRecord, NoteSaved, NotesDocRecord,
-    NotesSaved, NotesSyncOutcome, OwnerAnswer, OwnerAuthenticator, PanelListener, PlanLimitRecord,
-    ProjectActionRecord, ProjectChoiceRecord, ProjectDefaultRecord, ProjectEffect, ProjectFailure,
-    ProjectFeatureRecord, ProjectFeatureRowRecord, ProjectPageRecord, ProjectPromptRecord, ProjectService,
-    ProjectSettingsRecord, ProjectStateRecord, RenameFailure, SessionNotesStore, TaskDocRecord, TaskSaved,
-    TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord, UsageService,
+    AgentLogoRecord, ApproveOutcome, DirectoryRecord, EntryRecord, FileContentRecord, FileEntryKind,
+    FileProblem, FilesFailure, FilesService, FolderPaintRecord, FolderWatch, NewTerminalRecord, NoteSaved,
+    NotesDocRecord, NotesSaved, NotesSyncOutcome, OwnerAnswer, OwnerAuthenticator, PanelListener,
+    PlanLimitRecord, ProjectActionRecord, ProjectChoiceRecord, ProjectDefaultRecord, ProjectEffect,
+    ProjectFailure, ProjectFeatureRecord, ProjectFeatureRowRecord, ProjectPageRecord, ProjectPromptRecord,
+    ProjectService, ProjectSettingsRecord, ProjectStateRecord, RenameFailure, SessionNotesStore,
+    TaskDocRecord, TaskSaved, TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord,
+    UsageService,
 };
 pub use find::{FindOutcome, FoldWords, FoundSpan};
 pub use focus::{
@@ -116,7 +128,6 @@ pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,
 };
-pub use cell::{CellRecord, CellShapeRecord, CellShapesRecord, GridFitRecord, cell_shapes, terminal_cell, terminal_grid_fit};
 pub use live_resize::{
     LiveResizeGate, ResizeStepRecord, SizeRecord, WindowFrameRecord, resize_settle, resize_settled_frame,
     resize_snapped,
@@ -138,22 +149,28 @@ pub use settings::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,
     ProbeSheetRecord, ProbesDesk, SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsFlagRow,
     SettingsHandle, SettingsHealth, SettingsHit, SettingsHookState, SettingsImportRow, SettingsListener,
-    SettingsOptionRow, SettingsPaths, SettingsProfileRow, SettingsSkillRow, SettingsSkillState, ShellChoiceRecord,
-    SettingsTextSpan, ShortcutVerdict, ThemeTrashPlan, check_shortcut, settings_agent_rows, settings_create_profile,
-    settings_delete_profile, settings_import_rows, settings_mcp_command, settings_profiles,
-    settings_schema_json, settings_set_agent_hooks, settings_set_skill, settings_skill_rows,
-    settings_switch_profile,
+    SettingsOptionRow, SettingsPaths, SettingsProfileRow, SettingsSkillRow, SettingsSkillState,
+    SettingsTextSpan, ShellChoiceRecord, ShortcutVerdict, ThemeTrashPlan, check_shortcut,
+    settings_agent_rows, settings_create_profile, settings_delete_profile, settings_import_rows,
+    settings_mcp_command, settings_profiles, settings_schema_json, settings_set_agent_hooks,
+    settings_set_skill, settings_skill_rows, settings_switch_profile,
 };
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
 pub use visible::{VisibleLine, VisibleMark, visible_line};
+pub use window_ops::{
+    ExtentRecord, FullscreenRecord, MaximizeRecord, PaneSizeRecord, ScreenRect, WindowFrameGoal,
+    WindowGeometryRecord, WindowOpRecord, WindowPlace, window_geometry, window_op_frame,
+};
 pub use windows::{
     Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, TearGrow,
     TearLanding, TearPlaced, TearRect, TearWindow, WindowMinSize, Windows, cascade_frame, fit_frame,
     tear_off_grow, tear_off_grow_ms, tear_off_landing, tear_off_place, window_min_size,
 };
 pub use workspace::{TerminalFactsRecord, Workspace, WorkspaceConfig, WorkspaceEvent, WorkspaceListener};
+pub use workspace_notices::NoticeFactsRecord;
+pub use workspace_texts::LaunchFacts;
 pub use workspace_waited::Waited;
 
 uniffi::setup_scaffolding!();
@@ -193,6 +210,8 @@ pub(crate) fn isolate_for_tests() {
     });
 }
 
+#[cfg(test)]
+mod launch_tests;
 #[cfg(test)]
 mod workspace_feed_tests;
 #[cfg(test)]

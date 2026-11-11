@@ -91,7 +91,7 @@ impl Windows {
         }
     }
 
-    pub(super) fn store_locked(&self) -> MutexGuard<'_, Store> {
+    pub(crate) fn store_locked(&self) -> MutexGuard<'_, Store> {
         locked(&self.store)
     }
 

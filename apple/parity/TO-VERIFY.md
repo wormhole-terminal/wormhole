@@ -71,3 +71,44 @@ Everything below was built after that and has not been run.
 | A03 | Not built here: Settings "Restart Now" asking when something runs, the channel note, the security line, bundle-replaced detection, the ready chip following the front window | the launch and settings lanes own the updater | Wormhole/Aux/UpdateFollower.swift, SettingsUI/Panels/UpdateStatus.swift |
 | X07 | The words seam now also covers the platform modules (context menus, status item, Dock, quick panel, notification buttons, shortcut recorder, folder picker): `python3 -I apple/scripts/words.py` is clean; compile checked once, tests not run (MenuBarExpected and the Platform tests compare English strings: run PlatformTests first) | | swift-platform.ftl, PlatformModel/*, PlatformUI/* |
 | O03 TEST | Recent folders are written to the data folder database (`meta` row `recent_folders`) and cleared when the flag is off | no list lost on a profile switch | apple/ffi/src/folder_picker/mod.rs |
+
+## Lane engine (round S wave 3: T19, T20, T27 to T31)
+
+Instances for these: no `WORMHOLE_SHELL` and no `--shell` (the core decides the program), `HOME` pointed at a scratch folder with
+a `.zprofile` (`export PROFILE_READ=yes`) and a `.bash_profile`, `SHELL=/bin/zsh`. `--sample` (or `--mock`) now asks for the sample
+workspace; a build with the FFI otherwise always runs real terminals. Partly driven before the mode changed (login shell,
+`default_shell`, New terminal: zsh kept across a relaunch, saved text above a restored terminal, OSC 10/11/12/4 and `CSI ? 996 n`
+answers, mode 2031 on a theme switch, CSI 13/14/18/19 t reports): run them again on the merged build.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| TEST T27 | start the app as above; in the terminal `echo $PROFILE_READ $0 $WORMHOLE_PROFILE; [[ -o login ]] && echo LOGIN` | `yes /bin/zsh default` and `LOGIN` (not the sample workspace) | ffi `launch.rs`; Wormhole `Options+Real.swift`, `WorkspaceHost.swift` |
+| T27 | `set default_shell="/bin/bash"`, ⌘T, `shopt -q login_shell && echo L; echo $0` | `L` and `/bin/bash` | ffi `launch.rs` (`shells::for_terminal`) |
+| T27 | palette `New terminal: zsh` (key ""), quit, relaunch | that terminal runs zsh again while the others run `default_shell`; `tabs.shell` is `''` for it | core `workspace/terminals.rs` `new_terminal_with_shell`, `saved.rs`; Swift `PaletteSourcing+Listed.swift` |
+| TEST T27 | a trusted project with `.wormhole/config.json` `{"env":{"X":"1"},"shell":"/bin/bash"}`: open a terminal in it; untrust it and open another | trusted: `$X` is 1 and bash runs; untrusted: neither | ffi `launch.rs` `project_adds` |
+| TEST T27 | a profile with environment, git identity and a start folder (Settings → Profiles); new terminal | `env` shows them, `WORMHOLE_PROFILE` is its id, it starts in the folder | ffi `launch.rs` (`apply_profile`) |
+| T27 | `--shell /bin/cat`: ⌘T, then palette New terminal: zsh | ⌘T runs cat; the shell chosen in the palette still runs zsh | ffi `launch.rs` (program unless `shell`) |
+| T28 | `set scrollback_lines=1000`, ⌘T, print 5000 lines, scroll to the top | the oldest line kept is about line 4000; terminals opened before keep their old size | ffi `launch.rs` |
+| T28 | `printf '\e]11;?\a'` (and 10, 12, `4;1`), `printf '\e[?996n'` in dark and light themes; with `printf '\e[?2031h'` switch the theme | answers are the drawn theme's colours; `997;1` dark, `997;2` light; the 2031 program hears `997;2` unasked | ffi `engine_look.rs`; Swift `Look/EngineColors.swift`, `TerminalLook.followTheme` |
+| TEST T28 | `printf '\e]11;#203040\a\e]12;#ff8000\a\e]4;1;#00ff00\a\e[31mX'`, then `printf '\e]111\a\e]112\a\e]104\a'` | the background behind the grid and the padding turn #203040, the cursor orange, red text green; the resets bring the theme's back | ffi `frame_colors.rs`; Swift `ProgramColors.swift`, `MetalRenderer.drawPalette` |
+| T28 | `perf-profile` on a flood, before and after | no new allocations per frame (FrameWorkGuardTests) | `MetalRenderer.apply(frame:)`, `FrameSections.read` |
+| T29 | `set allow_window_ops=true`, ⌘T, `printf '\e[8;30;100t'`, `printf '\e[3;100;80t'`, `printf '\e[2t'`, `printf '\e[1t'`, `printf '\e[9;1t'`, `printf '\e[9;0t'`, `printf '\e[10;2t'` | the window resizes so this pane is 100x30, moves to 100,80 (kept on screen), minimises and comes back, zooms and back, full screen toggles; the grid ends at the window's size | ffi `window_ops.rs`; Swift `Platform/WindowOps.swift` |
+| TEST T29 | the same with `allow_window_ops` off | nothing moves or resizes (a test holds the engine's side) | ffi `launch_tests.rs` |
+| T29 | `printf '\e[13t'`, `'\e[14t'`, `'\e[19t'`, after moving and resizing the window | position, size in points, and the most cells reported, changed with the window; `\e[11t` says 2 while minimised | `WindowOps.share` |
+| T29 | `printf '\e[5t'` in a `--background` instance | the window stays behind (a raise brings a normal instance forward) | `WindowOps.carry` |
+| TEST T30 | type a marker, quit, relaunch (Persistent terminals off) | the terminal shows the marker dimmed above a `restored …` divider (zsh's start may push it into the history: scroll up) | ffi `workspace_texts.rs`; Swift `RustWorkspaceBackend+Hosting.swift` (`startSaving`, `finishQuit`) |
+| T30 | wait over a minute after typing, kill -9 the app, relaunch | the text of that minute comes back | `startSaving` |
+| TEST T30 | ⌘K, then kill -9 the app before the next minute, relaunch; separately the row's "Don't keep this terminal's text", quit, relaunch | nothing of the cleared or private terminal comes back | ffi `interaction/pointer.rs` `clear_history`, `workspace.rs` `close_what_closed` |
+| TEST T30 | set `restore_terminal_text` off | `scrollback.db` has no rows; nothing is saved while off; turning it off in `config.json` while the app is closed erases at the next launch | `SettingsApplier`, `RustWorkspaceBackend.init`, ffi `erase_saved_text_if_off` |
+| T20 | Persistent terminals on with hosts that keep checkpoints, then turn Restore after restart (or the text setting) off | the hosts stop writing and their files under `sessions/` go | ffi `hosting/texts.rs` `stop_checkpoints_if_off` |
+| T20 | turn Persistent terminals on while the app runs, ⌘T; off, ⌘T | the first new terminal is hosted (`hosts-list`), the second runs in the app | `RustWorkspaceBackend+Hosting.swift` `hosting` |
+| T19 | a program that finished unseen in a hosted terminal, quit keeping hosts, relaunch | its row says Done again; a terminal restarted from its text does not | core `status_feed.rs` `attached_again`; Swift `connected` |
+| T19 | a TUI with DECSET 1004 that redraws on focus in/out; switch windows | its row stays Idle and no "finished" banner comes (a test holds the FFI side) | ffi `interaction/pointer.rs` `focus_changed` |
+| T19 | run claude until its gauge shows, quit it, run it again | the old model and context % are gone until its first status line | `WindowHub.followGauges`, `GaugeBoard.forgetGone` |
+| T31 | `printf '\e]9;hi\a'`, `printf '\e]777;notify;T;B\a'` in a terminal not looked at; `notices` | banners in the program's words (`B` under title `T`); a second identical one is posted again | core `status/mod.rs` `on_notice`; Swift `NoticeFeed.noticeTabs` |
+| T31 | `set notify_command_after=2`; `sleep 3`; then with shell integration a command that fails after 3 s | "finished" and "failed" banners with the command's name (needs OSC 133 marks for the failure) | ffi `workspace_notices.rs`, `notify/watch.rs` |
+| T31 | a script reporting OSC 7501 status (`brew`-like); make it ask and finish | banners, the status item and the quick panel name the program, not a plain terminal | `NoticeFeed.namedByReports`, `noticeTabs` |
+| T31 | `wh notify --title A --body B` from a terminal, while looking at it and with notifications off | no banner while looked at or off; otherwise one in the caller's words; the row's status does not change | ffi `hook_server/control/listing.rs` |
+
+Known unfinished: the minimap still draws theme colours where a program set its own (T10's file); the exited bar's shell name is
+still `--shell`'s or "zsh" (`TerminalFactory.shellName`), not the core's name for the program the terminal ran.

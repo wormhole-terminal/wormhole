@@ -94,11 +94,16 @@ extension AppController {
     /// Every terminal of every window as the ambient surfaces list them, those in folded groups too (GPUI's `tab_facts` walks
     /// every session).
     var ambientTerminals: [AmbientTerminal] {
-        sessions.flatMap { session in
+        let terminals: [AmbientTerminal] = sessions.flatMap { session in
             let running = Dictionary(
                 session.hub.state.sections.flatMap(\.rows).map { ($0.id, $0.runningCommand) }, uniquingKeysWith: { first, _ in first })
             return session.hub.state.all.map { ambient($0, running: running[$0.id] ?? nil) }
         }
+        #if WITH_UNIFFI
+            return namedByReports(terminals)
+        #else
+            return terminals
+        #endif
     }
 
     /// What the surfaces call a terminal's folder (core's `notify::Terminal.folder`): its name, "~" being the home folder's.

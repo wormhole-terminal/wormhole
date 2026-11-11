@@ -233,6 +233,7 @@ pub enum Action {
     SelectStep(i32),
     SelectNumber(u32),
     NewTerminal,
+    NewTerminalWithShell(String),
     Close(i64),
     Rename { id: i64, name: String },
     SetPinned { id: i64, pinned: bool },
@@ -548,6 +549,7 @@ pub struct TerminalSummary {
     pub forget_text: bool,
     pub unread: bool,
     pub bell: bool,
+    pub notice: u64,
 }
 
 #[uniffi::remote(Record)]

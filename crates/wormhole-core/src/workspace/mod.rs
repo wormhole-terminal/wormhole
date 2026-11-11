@@ -51,7 +51,7 @@ pub use action::{Action, CardRef, Over, Overlay};
 pub use close::session_after_close;
 pub use drops::DropPlan;
 pub use event::{Event, Refusal, Revisions};
-pub use facts::{Failure, Millis, TerminalFacts};
+pub use facts::{Failure, Millis, ProgramNotice, TerminalFacts};
 pub use git_feed::{
     ChangeRules, GitFacts, GitFeed, GitJob, PROBE_CONFIRM, Repo, Sight, Ticket, WATCHED_READ, Wanted,
 };

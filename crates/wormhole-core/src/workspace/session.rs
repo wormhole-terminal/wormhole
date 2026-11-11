@@ -18,6 +18,12 @@ pub(super) struct Session {
     /// "Forget text": its screen is not saved with the window.
     pub forget_text: bool,
     pub split: Option<SplitId>,
+    /// The shell it was opened with (`terminal::shells`' key), `None` for the default: a restart of its
+    /// shell and the next launch run the same thing.
+    pub shell: Option<String>,
+    /// Its record said "Done, unseen" when the window was restored: the result comes back if its program
+    /// is the same one (its session host attached again), and is dropped once that is decided.
+    pub done_unseen: bool,
     pub facts: TerminalFacts,
 }
 
@@ -31,6 +37,8 @@ impl Session {
             agent_hidden: false,
             forget_text: false,
             split: None,
+            shell: None,
+            done_unseen: false,
             facts: TerminalFacts::default(),
         }
     }

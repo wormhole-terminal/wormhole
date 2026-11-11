@@ -42,6 +42,10 @@ final class TerminalFactory {
             let view = try MetalTerminalView(source: source, configuration: configuration)
             view.fixedGrid = options.grid
             look?.dress(view)
+            #if WITH_UNIFFI
+                // A test instance stays behind the person's windows: a program's raise does not bring it forward.
+                WindowOps.attach(view, raises: !options.background)
+            #endif
             view.onExit = { [weak self] in self?.onExit(id, $0) }
             return view
         } catch {

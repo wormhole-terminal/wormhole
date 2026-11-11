@@ -154,9 +154,12 @@ pub struct TerminalFactsRecord {
 impl From<TerminalFactsRecord> for TerminalFacts {
     fn from(record: TerminalFactsRecord) -> Self {
         let failure = record.failure_code.map(|code| Failure {
+            serial: 1,
             code,
             command: record.failure_command,
             at: record.failure_at_ms,
+            took: None,
+            last_line: None,
         });
         Self {
             title: record.title,
@@ -174,6 +177,7 @@ impl From<TerminalFactsRecord> for TerminalFacts {
             running_since: record.running_since_ms,
             bell: record.bell,
             failure,
+            notice: None,
             unread: record.unread,
             changes: record.changes.map(|n| n as usize),
             notes: record.notes as usize,
@@ -211,6 +215,8 @@ pub(crate) struct Shared {
     /// The windows this one is among, and its id there (`workspace_windows`). Set by `Workspace::in_window`; a window moved to
     /// another profile is among that profile's from then on (`Windows::rehome`).
     windows: Mutex<Option<(Arc<Windows>, i64)>>,
+    /// The texts of the terminals the window was restored with, until each starts (`workspace_texts`).
+    pub(crate) restored_texts: crate::workspace_texts::RestoredTexts,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -221,6 +227,11 @@ impl Shared {
     /// The registered `Terminal` of terminal `id`.
     pub(crate) fn terminal_of(&self, id: i64) -> Option<Arc<Terminal>> {
         locked(&self.terminals).get(&id).cloned()
+    }
+
+    /// Every registered terminal with its id.
+    pub(crate) fn registered(&self) -> Vec<(i64, Arc<Terminal>)> {
+        locked(&self.terminals).iter().map(|(id, terminal)| (*id, terminal.clone())).collect()
     }
 
     /// The windows this one is among and its id there, `None` when it is not among several.
@@ -307,11 +318,16 @@ impl Shared {
     /// a program's life ends, so Swift cannot forget to.
     pub(crate) fn close_what_closed(&self, events: Vec<Event>) -> Vec<WorkspaceEvent> {
         for event in &events {
-            if let Event::Closed { id } = event {
-                self.pump.forget(*id);
-                if let Some(terminal) = locked(&self.terminals).remove(id) {
-                    terminal.close();
+            match event {
+                Event::Closed { id } => {
+                    self.pump.forget(*id);
+                    if let Some(terminal) = locked(&self.terminals).remove(id) {
+                        terminal.close();
+                    }
                 }
+                // "Don't keep this terminal's text": what was saved goes now, not at the next minute's save.
+                Event::SavedTextForgotten { id } => self.erase_saved_text(*id),
+                _ => {}
             }
         }
         events.into_iter().map(WorkspaceEvent::from).collect()
@@ -543,6 +559,7 @@ impl Workspace {
             extras: Extras::default(),
             tap: OnceLock::new(),
             windows: Mutex::new(None),
+            restored_texts: Default::default(),
         });
         workspace_pump::spawn(&shared);
         Arc::new(Self { shared })

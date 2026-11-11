@@ -127,3 +127,12 @@ public struct TerminalPalette: Sendable, Equatable {
         }
     }
 }
+
+extension TerminalPalette {
+    /// The palette with what programs set over the theme's entries (a slot past the cursor's is not a program's).
+    public func overriding(_ colors: [ProgramColor]) -> TerminalPalette {
+        var copy = self
+        for color in colors where color.slot <= Int(PackedColor.cursor) { copy.slots[color.slot] = color.rgb }
+        return copy
+    }
+}

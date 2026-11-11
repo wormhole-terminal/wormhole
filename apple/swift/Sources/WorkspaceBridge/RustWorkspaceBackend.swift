@@ -11,8 +11,12 @@ import WormholeBindings
 
 /// What a window starts its terminals with, and what the core is told of the machine.
 public struct WorkspaceSetup: Sendable {
-    public var program: String
+    /// A program every terminal runs as it is (`--shell`, tests); nil lets the core decide as the GPUI app does (the shell
+    /// the terminal was opened with, a trusted project's, `default_shell`, else the login shell as a login shell).
+    public var program: String?
     public var arguments: [String]
+    /// The profile the window's terminals start in (its settings and environment); nil: the one Wormhole is in.
+    public var profile: String?
     public var home: String?
     /// ⌘1…⌘9 count along the list as shown (`true`), or stay with their terminal.
     public var numbersFollowList: Bool
@@ -23,11 +27,11 @@ public struct WorkspaceSetup: Sendable {
     public var paneHeaderHeight: Double = 34
 
     public init(
-        program: String, arguments: [String] = [], home: String? = NSHomeDirectory(), numbersFollowList: Bool = false,
-        hosting: HostingSetup? = nil
+        program: String? = nil, arguments: [String] = [], profile: String? = nil, home: String? = NSHomeDirectory(),
+        numbersFollowList: Bool = false, hosting: HostingSetup? = nil
     ) {
         (self.program, self.arguments, self.home, self.numbersFollowList) = (program, arguments, home, numbersFollowList)
-        self.hosting = hosting
+        (self.profile, self.hosting) = (profile, hosting)
     }
 }
 
@@ -44,10 +48,11 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     var failed: [TerminalID: String] = [:]
     /// The sources made for terminals, to let go of one that moves to another window (the view's `stop` would end it).
     var sources: [TerminalID: WeakSource] = [:]
-    /// The persistent terminals' object, nil while the feature is off or unusable (`RustWorkspaceBackend+Hosting`).
+    /// The persistent terminals' object, nil where there is no host program (`RustWorkspaceBackend+Hosting`); whether a
+    /// terminal starts in a host is Settings' flag as it starts (`hosting`).
     let hosted: HostedSessions?
-    /// Persistent terminals are wanted but the app runs from a disk image or a temporary copy: the person is told.
-    let needsApplications: Bool
+    /// The app runs from a disk image or a temporary copy: with persistent terminals wanted, the person is told.
+    let disposable: HostedTerminals?
     var book = HostBook()
     /// The next terminal started is a welcome when this gives it a token (`begin_welcome` of the hook server, by its id); it
     /// is cleared as that terminal starts. The welcome runs in the app's own process, never in a host.
@@ -69,9 +74,9 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     public init(setup: WorkspaceSetup, windows: Windows? = nil, window: Int = 0) {
         self.setup = setup
         switch setup.hosting.map(HostedSessions.open) {
-        case .on(let sessions)?: (hosted, needsApplications) = (sessions, false)
-        case .needsApplications?: (hosted, needsApplications) = (nil, true)
-        case .off?, nil: (hosted, needsApplications) = (nil, false)
+        case .on(let sessions)?: (hosted, disposable) = (sessions, nil)
+        case .needsApplications(let desk)?: (hosted, disposable) = (nil, desk)
+        case .off?, nil: (hosted, disposable) = (nil, nil)
         }
         let wake = WakeRelay()
         let config = WorkspaceConfig(
@@ -80,6 +85,8 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
         core = windows.map { Workspace.inWindow(windows: $0, window: Int64(window), config: config, listener: wake) }
             ?? Workspace(config: config, listener: wake)
         wake.attach { [weak self] in self?.onWake?() }
+        // It may have been turned off in `config.json` while the app was closed.
+        _ = core.eraseSavedTextIfOff()
     }
 
     /// The frame source of terminal `id`, over the program started for it; nil when it did not start.

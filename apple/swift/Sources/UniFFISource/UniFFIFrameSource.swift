@@ -18,9 +18,20 @@ public final class UniFFIFrameSource: FrameSource {
     /// The size the view last asked for, for a terminal that comes after it (`fill`).
     private let fitted = Mutex<(size: GridSize, wake: (@Sendable () -> Void)?)?>(nil)
     private let responsiveness = Mutex<(@Sendable () -> Void)?>(nil)
+    private let windowOp = Mutex<(@Sendable (WindowOpRecord) -> Void)?>(nil)
 
     /// Called, as the view drains events, when the session host stopped answering or answers again.
     public func onHostResponsiveness(_ then: @escaping @Sendable () -> Void) { responsiveness.withLock { $0 = then } }
+
+    /// Called, as the view drains events, when a program asks the window to move, resize, minimise or the like and
+    /// `allow_window_ops` lets it (the engine already took the size it asked for).
+    public func onWindowOp(_ then: @escaping @Sendable (WindowOpRecord) -> Void) { windowOp.withLock { $0 = then } }
+
+    /// Where the window is, for the reports a program asks for (XTWINOPS 11, 13, 14, 15, 19).
+    public func setWindow(_ geometry: WindowGeometryRecord) { current?.setWindow(geometry: geometry) }
+
+    /// Back to the size the terminal has, once the window has followed (or could not follow) a program's resize.
+    public func syncSize() { current?.syncSize() }
 
     public init(program: String, arguments: [String] = []) {
         self.program = program
@@ -120,6 +131,7 @@ public final class UniFFIFrameSource: FrameSource {
             case .clipboardAskClosed: events.append(.clipboardAskClosed)
             // The bar over the pane says it; the view has nothing to draw.
             case .hostResponsiveness: responsiveness.withLock { $0 }?()
+            case .windowOp(let op): windowOp.withLock { $0 }?(op)
             @unknown default: break
             }
         }
