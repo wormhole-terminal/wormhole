@@ -28,8 +28,14 @@ env:
 
 jobs:
   build-test:
-    name: Build and test
-    runs-on: macos-latest
+    name: Build and test (${{ matrix.os }})
+    # The app is developed with Xcode 27. macos-latest (Xcode 26.6, Swift 6.3.3) is kept beside it because the
+    # package says it builds with Swift 6.2: its compiler crashed on TerminalUI, which the last step narrows down.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, macos-27]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -65,6 +71,14 @@ jobs:
         run: |
           set -o pipefail
           swift test 2>&1 | tee "$RUNNER_TEMP/swift-test.log"
+      # A compiler crash names no source line: build the module file by file and say which file it was in.
+      - name: Where the compiler crashed, if it did
+        if: failure()
+        working-directory: apple/swift
+        run: |
+          swift build -c release --target TerminalUI -Xswiftc -no-whole-module-optimization > "$RUNNER_TEMP/narrow.log" 2>&1 || true
+          grep -E "Program arguments" "$RUNNER_TEMP/narrow.log" | grep -oE "primary-file [^ ]+" | sort | uniq -c || true
+          grep -E "While |error:" "$RUNNER_TEMP/narrow.log" | sort -u | head -20 || true
       - name: Failures, if any
         if: failure()
         run: grep -E "error:|recorded an issue|failed" "$RUNNER_TEMP/swift-test.log" | sort -u | head -80 || true
