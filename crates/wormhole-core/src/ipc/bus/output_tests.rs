@@ -31,6 +31,14 @@ fn heard(subscription: &Subscription, wait: Duration) -> Option<(Option<i64>, Bo
     }
 }
 
+/// The next `output` event within `wait`, with the time the bus published it (milliseconds since the epoch).
+fn published(subscription: &Subscription, wait: Duration) -> Option<(u64, Body)> {
+    match subscription.next(wait) {
+        Next::Event(published) => Some((published.at_ms, published.event.body.clone())),
+        _ => None,
+    }
+}
+
 fn lines(body: &Body) -> Vec<&str> {
     match body {
         Body::Output { lines, .. } => lines.iter().map(String::as_str).collect(),
@@ -61,6 +69,9 @@ fn a_busy_terminal_is_told_at_most_every_hundred_milliseconds() {
     let subscription = watch(&bus, vec![], reads_all());
     let screen = reader();
     bus.watch_output(1, 2, &screen);
+    // The times are the bus's own (when it published), not when this thread got round to reading: on a busy
+    // machine two events read late and close together were still published a tenth of a second apart.
+    let began_ms = wormhole_term::hosted::now_ms();
     let start = Instant::now();
     let mut told = Vec::new();
     let mut n = 0;
@@ -70,17 +81,18 @@ fn a_busy_terminal_is_told_at_most_every_hundred_milliseconds() {
         bus.pulse(1, 2, || Some(screen.downgrade()));
         n += 1;
         std::thread::sleep(Duration::from_millis(5));
-        while let Some((_, body)) = heard(&subscription, Duration::ZERO) {
-            told.push((start.elapsed(), body));
+        while let Some(event) = published(&subscription, Duration::ZERO) {
+            told.push(event);
         }
     }
-    while let Some((_, body)) = heard(&subscription, Duration::from_millis(250)) {
-        told.push((start.elapsed(), body));
+    while let Some(event) = published(&subscription, Duration::from_millis(250)) {
+        told.push(event);
     }
     assert!((2..=7).contains(&told.len()), "{} events for {n} lines", told.len());
-    assert!(told[0].0 < Duration::from_millis(60), "the first is not held back: {:?}", told[0].0);
-    let gaps: Vec<Duration> = told.windows(2).map(|pair| pair[1].0 - pair[0].0).collect();
-    assert!(gaps.iter().all(|gap| *gap >= Duration::from_millis(80)), "{gaps:?}");
+    let first = told[0].0.saturating_sub(began_ms);
+    assert!(first < 60, "the first is not held back: {first} ms");
+    let gaps: Vec<u64> = told.windows(2).map(|pair| pair[1].0 - pair[0].0).collect();
+    assert!(gaps.iter().all(|gap| *gap >= 80), "{gaps:?} ms");
     // Nothing lost, nothing twice.
     let all: Vec<&str> = told.iter().flat_map(|(_, body)| lines(body)).collect();
     assert_eq!(all.len(), n);
