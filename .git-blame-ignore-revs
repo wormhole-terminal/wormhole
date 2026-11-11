@@ -38,3 +38,5 @@ bef7e035969b3440e7ed568252d6e20265f44c19
 ce289a1171ccd3b38be77f1c8b0e95abb6c46a1f
 # refactor(tests): the app's source checks move to a crate of their own, wormhole-rules
 b9a2363d7e07645ae1d13080cb9e93db29ff468f
+# refactor(macos): the Swift app moves to macos/, its bridge crate to crates/wormhole-ffi
+ccac3f2eb702b9dd7b1fc9525c0c09a281d08d44
