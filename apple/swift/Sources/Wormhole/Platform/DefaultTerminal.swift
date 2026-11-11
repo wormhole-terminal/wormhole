@@ -25,7 +25,7 @@
         static func make(policy: PlatformPolicy) async -> String? {
             let bundle = Bundle.main.bundleURL
             guard bundle.pathExtension == "app" else { return defaultTerminalFailed(error: Words.text("platform-default-terminal-not-bundled", fallback: "not running from Wormhole.app")) }
-            guard policy.touchesSystem else { return defaultTerminalFailed(error: "this instance never changes the system")  // text: shown only to a test instance }
+            guard policy.touchesSystem else { return defaultTerminalFailed(error: "this instance never changes the system") } // text: shown only to a test instance
             for identifier in defaultTerminalScriptTypes() {
                 guard let kind = UTType(identifier) else { continue }
                 do { try await NSWorkspace.shared.setDefaultApplication(at: bundle, toOpen: kind) } catch {
