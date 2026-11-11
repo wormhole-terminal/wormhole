@@ -38,6 +38,9 @@ extension AppController {
         case "pasteboard":
             // What the instance "copied": its clipboard is a file in its data folder, never the person's (`DesignSystem.Pasteboard`).
             reply(Pasteboard.isDiverted ? (Pasteboard.text().map { "pasteboard \($0.debugDescription)" } ?? "pasteboard empty") : "error: this instance uses the system clipboard")
+        case "launches":
+            // What the instance would have opened (an address, Finder, an editor at a line): a file in its data folder, never launched.
+            reply(Launcher.log().map { "launches\n" + $0 } ?? "error: this instance launches for real")
         case "pasteboard-set":
             guard Pasteboard.isDiverted else { reply("error: this instance uses the system clipboard"); return true }
             Pasteboard.setText(argument.replacingOccurrences(of: "\\n", with: "\n").replacingOccurrences(of: "\\e", with: "\u{1b}"))

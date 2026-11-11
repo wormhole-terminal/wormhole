@@ -20,6 +20,7 @@ enum PlatformSetup {
         Announcements.speaks = !options.background
         #if WITH_UNIFFI
             guard options.isReal else { return }
+            recordLaunches(to: Launcher.diverted?.path)
             PlatformBridge.installKeymap()
             PlatformBridge.installPaletteMatcher()
             WordsBridge.install()

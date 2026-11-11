@@ -27,3 +27,6 @@ final class UniFFIProbes: TerminalCore.TerminalProbes {
         openFileRun(bundle: bundle, path: path, line: line.map(UInt32.init), appFolder: appFolder)
     }
 }
+
+/// A test instance's launches of the core (a file in an editor at a line) are written to `file` instead of started.
+public func recordLaunches(to file: String?) { openFileRecordTo(file: file) }

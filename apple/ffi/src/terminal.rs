@@ -362,11 +362,13 @@ impl Terminal {
         cwd: Option<String>,
     ) -> SpawnOptions {
         let name = program.rsplit('/').next().unwrap_or(&program).to_string();
+        let cwd = cwd.map(std::path::PathBuf::from).filter(|dir| dir.is_dir());
         SpawnOptions {
             tab_id,
             scrollback_lines: SCROLLBACK_LINES,
             shell: Some(wormhole_core::terminal::shells::ShellCommand { program, args, name }),
-            cwd: cwd.map(std::path::PathBuf::from).filter(|dir| dir.is_dir()),
+            env: cwd.as_deref().map(crate::git::worktree_env).unwrap_or_default().into_iter().collect(),
+            cwd,
             ..SpawnOptions::default()
         }
     }

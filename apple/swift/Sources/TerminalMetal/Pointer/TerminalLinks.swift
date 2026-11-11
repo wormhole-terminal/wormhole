@@ -3,6 +3,7 @@
 // What may be opened is the seam's `openTarget`; the system opens it.
 
 import AppKit
+import DesignSystem
 import OSLog
 import TerminalCore
 
@@ -11,9 +12,9 @@ public enum LinkOpener {
     @MainActor public static func system(_ target: OpenTarget) {
         switch target {
         case .url(let string):
-            if let url = URL(string: string) { NSWorkspace.shared.open(url) }
+            if let url = URL(string: string) { Launcher.open(url) }
         case .reveal(let path):
-            NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+            Launcher.reveal([URL(fileURLWithPath: path)])
         case .refused:
             break
         }

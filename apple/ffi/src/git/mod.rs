@@ -23,3 +23,4 @@ pub use service::Git;
 pub use shown::{GitCommitDetails, GitCompact, GitFact, GitParent, GitSpan, GitTone};
 pub use watch::{GitListener, GitWatch};
 pub use worktrees::{GitEnvVar, GitWorktree, GitWorktreePlan, WorktreeService};
+pub(crate) use worktrees::env_for as worktree_env;

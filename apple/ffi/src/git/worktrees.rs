@@ -191,6 +191,20 @@ impl WorktreeService {
     }
 }
 
+/// What a terminal started in `cwd` gets from the worktree Wormhole made there: its own ports (GPUI's spawn hook,
+/// `features/git/worktree/def.rs`). Read from the store as it is at the start, so every terminal of the app, local or
+/// hosted, asks the same place; nothing for a folder that is no worktree of Wormhole's.
+pub(crate) fn env_for(cwd: &Path) -> Vec<(String, String)> {
+    if crate::isolation::require().is_err() {
+        return Vec::new();
+    }
+    let stored = Store::open().ok().and_then(|store| store.meta(worktree::STORE_KEY).ok().flatten());
+    let all = stored.map(|json| Worktrees::from_json(&json)).unwrap_or_default();
+    all.find(cwd)
+        .map(|made| made.env().into_iter().map(|(name, value)| (name.to_owned(), value)).collect())
+        .unwrap_or_default()
+}
+
 /// `worktree_base` as a folder (`~` is the caller's to expand); empty puts worktrees beside the repository.
 fn base_of(base: Option<String>) -> Option<PathBuf> {
     base.map(|b| b.trim().to_string()).filter(|b| !b.is_empty()).map(PathBuf::from)

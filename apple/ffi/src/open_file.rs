@@ -4,7 +4,9 @@
 //! knows) and never spawns anything itself.
 
 use std::ffi::OsString;
-use std::path::Path;
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, PoisonError};
 
 use wormhole_core::platform::open_file::{self, Launch};
 use wormhole_core::storage::files;
@@ -46,6 +48,16 @@ pub fn open_file_run(bundle: String, path: String, line: Option<u32>, app_folder
     run(&bundle, Path::new(&path), line, app_folder.as_deref().map(Path::new))
 }
 
+/// Where a test instance's launches are written instead of started (`DesignSystem.Launcher` writes its own there too).
+static RECORD: Mutex<Option<PathBuf>> = Mutex::new(None);
+
+/// From now on a launch is a line appended to `file` (`run <program> <arguments>`) and nothing is started; `None` starts
+/// processes again. A `--background` instance never opens the person's editor or browser.
+#[uniffi::export]
+pub fn open_file_record_to(file: Option<String>) {
+    *RECORD.lock().unwrap_or_else(PoisonError::into_inner) = file.map(PathBuf::from);
+}
+
 /// The tooltip and menu words of the open action: "Open in Zed at line 12", "Reveal in Finder".
 #[uniffi::export]
 pub fn open_file_tooltip(bundle: String, app: String, line: Option<u32>) -> String {
@@ -62,6 +74,12 @@ pub fn repo_file_resolve(root: String, relative: String) -> Option<String> {
 fn run(bundle: &str, path: &Path, line: Option<u32>, app: Option<&Path>) -> bool {
     let Some(launch) = open_file::launch(bundle, path, line) else { return false };
     let (program, args) = command(bundle, launch, app);
+    if let Some(file) = RECORD.lock().unwrap_or_else(PoisonError::into_inner).as_ref() {
+        let line =
+            std::iter::once(&program).chain(&args).map(|word| word.to_string_lossy()).collect::<Vec<_>>();
+        let appended = std::fs::OpenOptions::new().create(true).append(true).open(file);
+        return appended.and_then(|mut out| writeln!(out, "run {}", line.join(" "))).is_ok();
+    }
     let Ok(mut child) = process::command(program)
         .args(args)
         .stdin(std::process::Stdio::null())
@@ -137,6 +155,17 @@ mod tests {
         assert!(
             !run("dev.zed.Zed", Path::new("rel.rs"), None, Some(&app)),
             "a relative path is never opened"
+        );
+
+        // A recorded launch is written and never started (the global is the reason this is one test, not two).
+        let log = dir.path().join("launches.txt");
+        open_file_record_to(Some(log.to_string_lossy().into_owned()));
+        let started = run("com.microsoft.VSCode", Path::new("/repo/a.rs"), Some(7), None);
+        open_file_record_to(None);
+        assert!(started);
+        assert_eq!(
+            fs::read_to_string(&log).expect("log"),
+            "run /usr/bin/open -b com.microsoft.VSCode vscode://file/repo/a.rs:7\n"
         );
     }
 }

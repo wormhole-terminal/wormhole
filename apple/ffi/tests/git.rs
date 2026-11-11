@@ -10,8 +10,41 @@ use std::time::{Duration, Instant};
 
 use wormhole_ffi::{
     Git, GitBackendError, GitChangeKind, GitDiff, GitDiffFile, GitLineKind, GitListener, GitRev, GitRevKind,
-    GitWatch, GitWorktreePlan, WorktreeService,
+    GitWatch, GitWorktreePlan, Terminal, TerminalListener, WorktreeService,
 };
+
+struct Quiet;
+
+impl TerminalListener for Quiet {
+    fn wake(&self) {}
+}
+
+/// What a shell started in `folder` sees of the worktree ports: `PORT=<WORMHOLE_PORT> PORTS=<WORMHOLE_PORTS>`.
+fn ports_seen_in(folder: &str) -> String {
+    let script = "printf 'PORT=%s PORTS=%s\\n' \"$WORMHOLE_PORT\" \"$WORMHOLE_PORTS\"; exec cat".to_string();
+    let terminal = Terminal::start_in(
+        "/bin/sh".into(),
+        vec!["-c".into(), script],
+        Some(folder.to_owned()),
+        60,
+        5,
+        8.0,
+        16.0,
+        Arc::new(Quiet),
+    )
+    .expect("starts");
+    let until = Instant::now() + Duration::from_secs(5);
+    let text = loop {
+        terminal.frame();
+        let text = terminal.screen_text();
+        if text.contains("PORTS=") || Instant::now() > until {
+            break text;
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    };
+    terminal.close();
+    text.lines().find(|line| line.starts_with("PORT=")).unwrap_or_default().to_owned()
+}
 
 fn git(dir: &Path, args: &[&str]) -> String {
     let output = wormhole_term::sys::process::command("git")
@@ -450,6 +483,13 @@ fn a_worktree_is_made_remembered_and_removed_but_never_forced() {
     assert_eq!(PathBuf::from(&made.folder), expected);
     assert!(expected.join("a.txt").exists(), "checked out");
     assert!(made.env.iter().any(|v| v.name == "WORMHOLE_PORT"), "its own ports");
+    // A terminal started there has them in its shell's environment, one in the repository itself does not.
+    let value = |name: &str| made.env.iter().find(|v| v.name == name).map(|v| v.value.clone()).expect(name);
+    assert_eq!(
+        ports_seen_in(&made.folder),
+        format!("PORT={} PORTS={}", value("WORMHOLE_PORT"), value("WORMHOLE_PORTS"))
+    );
+    assert_eq!(ports_seen_in(&folder), "PORT= PORTS=", "the main working tree has none");
     assert!(git(Path::new(&folder), &["branch", "--list", "fix/login"]).contains("fix/login"));
     assert!(worktrees_of(&service).contains(&"fix/login".to_string()));
 
