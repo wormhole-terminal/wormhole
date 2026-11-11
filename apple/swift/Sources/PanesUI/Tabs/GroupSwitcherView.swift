@@ -26,6 +26,7 @@ struct GroupSwitcherView: View {
                 ForEach(model.cards) { card in
                     // A pinned group with nothing in it is somewhere to start a terminal: its card has a +.
                     SetCardView(card: card, open: { go(.set(card.id)) }, add: card.pinned && card.count == 0 ? addAction(card) : nil)
+                        .nativeContextMenu { model.sets.indices.contains(card.id) ? model.sets[card.id].groupID.flatMap(actions.groupMenu) : nil }
                 }
                 Divider()
                 footer

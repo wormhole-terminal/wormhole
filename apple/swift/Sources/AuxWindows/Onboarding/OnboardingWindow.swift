@@ -26,6 +26,9 @@ public final class OnboardingWindow {
         }
     }
 
+    /// The page is up: the front window opens no shortcut sheet under it.
+    public var isOpen: Bool { controller?.window?.isVisible == true }
+
     public func show(store: ThemeStore = .shared) {
         let (session, player) = (self.session, self.player)
         let controller = AuxWindowController.show(

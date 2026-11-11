@@ -169,3 +169,10 @@ mod tests {
         );
     }
 }
+
+/// Whether Wormhole knows the app as an editor (or Finder): the Files tab offers a file only these
+/// (`features/files/open.rs` `may_open_in`).
+#[uniffi::export]
+pub fn open_in_known(bundle: String) -> bool {
+    wormhole_core::platform::open_in::known(&bundle).is_some()
+}

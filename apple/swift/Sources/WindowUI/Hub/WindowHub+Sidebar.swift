@@ -77,7 +77,7 @@ extension WindowHub {
 
     /// What the bar's controls do (the one-line forwards of `TabBarActions`), with the menus of a tab and of the +.
     func tabActions(appearance: SidebarAppearance) -> TabBarActions {
-        TabBarActions(
+        var bar = TabBarActions(
             select: { [unowned self] in send(.select($0)) },
             close: { [unowned self] in actions.closeTerminal($0) },
             newTerminal: { [unowned self] group in send(group.map { .newTerminalInGroup($0) } ?? .newTerminal) },
@@ -90,6 +90,8 @@ extension WindowHub {
             },
             newMenu: { [unowned self] in newTerminalMenu },
             groupKeys: { Self.groupKeyHints })
+        bar.groupMenu = actions.groupMenu
+        return bar
     }
 
     /// Open a tab set: the terminal last selected in it, else its first; an empty group gets a new terminal

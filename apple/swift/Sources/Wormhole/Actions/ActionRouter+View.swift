@@ -34,7 +34,10 @@ extension ActionRouter {
             "newNote": { if hub.panelTabs.contains(.notes) { hub.send(.showPanelTab(.notes)); hub.panel.notes.newNote() } },
             "stashPrompt": { if hub.panelTabs.contains(.notes), hub.panel.notes.stashPrompt() { hub.send(.showPanelTab(.notes)) } },
             "commandPalette": { hub.send(.showOverlay(hub.state.overlay == .palette ? nil : .palette)) },
-            "keyboardShortcuts": { hub.send(.showOverlay(hub.state.overlay == .shortcuts ? nil : .shortcuts)) },
+            // Not under the first-run page (`shortcut_sheet.rs` `toggle`).
+            "keyboardShortcuts": { [unowned self] in
+                if app.aux.onboarding?.isOpen != true { hub.send(.showOverlay(hub.state.overlay == .shortcuts ? nil : .shortcuts)) }
+            },
             "bigger": { hub.zoomText(step: 1) },
             "smaller": { hub.zoomText(step: -1) },
             "actualSize": { hub.zoomText(step: nil) },

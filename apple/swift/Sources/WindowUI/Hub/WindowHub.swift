@@ -85,6 +85,13 @@ public final class WindowHub {
     @ObservationIgnored var tabBeforeUsage: WorkspaceModel.PanelTab?
 
     public func send(_ action: WorkspaceAction) {
+        // Before the overlay's field takes the keyboard, and after it is gone: the keyboard goes back where it was.
+        if case .showOverlay(let next) = action {
+            focus.overlayChanging(to: next != nil)
+            defer { if next == nil { focus.overlayClosed() } }
+            _ = store.send(action)
+            return
+        }
         guard case .showPanelTab(let tab) = action else {
             _ = store.send(action)
             return
@@ -111,6 +118,8 @@ public struct HubActions {
     public var newTerminalWith: @MainActor (String) -> Void = { _ in }
     /// The Show terminals in ▸ Sidebar choice (the tab bar's group switcher offers it).
     public var showTerminalsInSidebar: @MainActor () -> Void = {}
+    /// A group's native menu, for a right-click on its card in the tab bar's switcher.
+    public var groupMenu: @MainActor (GroupID) -> NSMenu? = { _ in nil }
     /// The native context menu of a terminal's grid, built when it is asked for.
     public var terminalMenu: @MainActor (TerminalID) -> NSMenu? = { _ in nil }
     /// A keymap action by id (the palette's): the app's router runs it.

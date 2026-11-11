@@ -94,11 +94,7 @@ extension AppController {
     /// Every terminal of every window as the ambient surfaces list them, those in folded groups too (GPUI's `tab_facts` walks
     /// every session).
     var ambientTerminals: [AmbientTerminal] {
-        let terminals: [AmbientTerminal] = sessions.flatMap { session in
-            let running = Dictionary(
-                session.hub.state.sections.flatMap(\.rows).map { ($0.id, $0.runningCommand) }, uniquingKeysWith: { first, _ in first })
-            return session.hub.state.all.map { ambient($0, running: running[$0.id] ?? nil) }
-        }
+        let terminals: [AmbientTerminal] = sessions.flatMap { session in session.hub.state.all.map { ambient($0, running: $0.runningCommand) } }
         #if WITH_UNIFFI
             return namedByReports(terminals)
         #else
@@ -111,8 +107,6 @@ extension AppController {
         let full = (path as NSString).expandingTildeInPath
         return full == "/" ? "/" : (full as NSString).lastPathComponent
     }
-
-    func ambient(_ row: SidebarRow) -> AmbientTerminal { ambient(row.terminal, running: row.runningCommand) }
 
     func ambient(_ terminal: TerminalSummary, running: String?) -> AmbientTerminal {
         AmbientTerminal(

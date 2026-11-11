@@ -37,6 +37,8 @@ public final class WindowFocus {
     @ObservationIgnored weak var holder: FocusHolderView?
     @ObservationIgnored private var observers: [any NSObjectProtocol] = []
     @ObservationIgnored private var monitor: Any?
+    /// What had the keyboard before the first overlay (the palette, the shortcut sheet) opened.
+    @ObservationIgnored private weak var beforeOverlay: NSResponder?
 
     init(hub: WindowHub) { self.hub = hub }
 
@@ -153,6 +155,23 @@ public final class WindowFocus {
         request()
     }
 
+    // MARK: overlays
+
+    /// An overlay opens or closes (`window/overlay.rs` `end_overlay`): the first one to open remembers who had the keyboard.
+    func overlayChanging(to open: Bool) {
+        if open, hub.state.overlay == nil { beforeOverlay = holder?.window?.firstResponder }
+    }
+
+    /// The last overlay closed (`close_overlay`): the keyboard returns to what had it, or to the terminal on screen when
+    /// that is gone (a terminal closed meanwhile) or was nothing that takes keys.
+    func overlayClosed() {
+        guard hub.state.overlay == nil, let window = holder?.window else { return }
+        let back = beforeOverlay as? NSView
+        beforeOverlay = nil
+        if let back, back.window === window, back !== window.contentView, window.makeFirstResponder(back) { return }
+        focusTerminal()
+    }
+
     /// The keyboard back to the terminal on screen: where it goes when a list, a strip or an editor lets go of it.
     public func focusTerminal() {
         guard let id = hub.state.selected, let view = hub.terminals.existing(id) else { return }
@@ -217,6 +236,11 @@ public final class WindowFocus {
         guard event.window === window else { return false }
         keyboardDriven = event.type == .keyDown
         let bare = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(.function).isEmpty
+        // Esc closes the shortcut sheet whatever has the keyboard (`shortcut_sheet.rs`); its filter's own Esc clears first.
+        if event.type == .keyDown, event.keyCode == Key.escape, bare, hub.state.overlay == .shortcuts, !(window.firstResponder is NSText) {
+            hub.send(.showOverlay(nil))
+            return true
+        }
         return event.type == .keyDown && event.keyCode == Key.escape && bare && window.firstResponder is MetalTerminalView
             && escape()
     }

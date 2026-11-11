@@ -13,9 +13,11 @@ extension AppController {
     func terminalMenu(for id: TerminalID, in session: WindowSession? = nil) -> NSMenu? {
         var facts = TerminalMenuFacts()
         facts.canPaste = Pasteboard.text()?.isEmpty == false
-        facts.splitRight = router.table["splitRight"] != nil
-        facts.splitDown = router.table["splitDown"] != nil
+        // Greyed when the action is not available: no room for another pane, a diff over the terminal.
         let holder = session ?? self.session(holding: id) ?? front
+        let off = menuState(for: holder.hub).disabled
+        facts.splitRight = !off.contains("splitRight")
+        facts.splitDown = !off.contains("splitDown")
         holder.hub.send(.select(id))
         let view = holder.hub.terminals.existing(id)
         facts.canCopy = view?.canCopy ?? false

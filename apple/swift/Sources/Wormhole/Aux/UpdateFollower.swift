@@ -98,17 +98,14 @@ extension AppController {
     /// Every terminal lets "Restart When Idle" go ahead (`update::restart::is_idle`).
     var allTerminalsIdle: Bool {
         for session in sessions {
-            for section in session.hub.state.sections {
-                for row in section.rows where !row.isIdleForRestart { return false }
-            }
+            for terminal in session.hub.state.all where !terminal.isIdleForRestart { return false }
         }
         return true
     }
 }
 
-private extension SidebarRow {
+private extension TerminalSummary {
     var isIdleForRestart: Bool {
-        RestartIdle.isIdle(
-            terminal.runStatus, ended: terminal.activity == .exited, commandRunning: runningCommand != nil, agentInFront: terminal.agent != nil)
+        RestartIdle.isIdle(runStatus, ended: activity == .exited, commandRunning: runningCommand != nil, agentInFront: agent != nil)
     }
 }

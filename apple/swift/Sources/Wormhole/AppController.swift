@@ -77,6 +77,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     private(set) lazy var folderPicking = FolderPicking(app: self)
     private(set) lazy var router = ActionRouter(app: self)
     private(set) lazy var recents = RecentProjects(dataDirectory: dataDirectory)
+    /// SIGTERM as an event on the main queue (`quitOnSigterm`).
+    var sigterm: DispatchSourceSignal?
     private(set) lazy var aux = AuxController(app: self, dataDirectory: dataDirectory)
 
     init(options: Options, dataDirectory: URL) throws {
@@ -126,6 +128,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     var selectedView: MetalTerminalView? { hub.state.selected.flatMap { hub.terminals.existing($0) } }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        quitOnSigterm()
         do {
             try open()
         } catch {

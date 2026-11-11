@@ -48,7 +48,7 @@ mod words;
 mod tests;
 
 pub use action::{Action, CardRef, Over, Overlay};
-pub use close::session_after_close;
+pub use close::{asks_before_closing, session_after_close};
 pub use drops::DropPlan;
 pub use event::{Event, Refusal, Revisions};
 pub use facts::{Failure, Millis, ProgramNotice, TerminalFacts};

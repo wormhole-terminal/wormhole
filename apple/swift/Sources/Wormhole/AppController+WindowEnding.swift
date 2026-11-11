@@ -30,10 +30,27 @@ extension AppController {
             NSApp.terminate(nil)
             return false
         }
-        let running = session.hub.state.all.filter(\.runsSomething)
-        guard !running.isEmpty else { return true }
-        askToClose(session, running: running)
+        guard !asking(in: session).isEmpty else { return true }
+        askToClose(session)
         return false
+    }
+
+    /// The red button's dot (the document-edited mark), on while closing the window would ask (`sync_close_dot`).
+    func followCloseDot(of session: WindowSession) {
+        let dot = withObservationTracking { !asking(in: session).isEmpty } onChange: { [weak self, weak session] in
+            Task { @MainActor in if let session { self?.followCloseDot(of: session) } }
+        }
+        if session.window?.isDocumentEdited != dot { session.window?.isDocumentEdited = dot }
+    }
+
+    /// `kill` (SIGTERM) quits as ⌘Q does, saved and with the hosted terminals let go of, without the question
+    /// (`app/sigterm.rs`).
+    func quitOnSigterm() {
+        signal(SIGTERM, SIG_IGN)
+        let source = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        source.setEventHandler { [weak self] in MainActor.assumeIsolated { self?.terminateUnattended() } }
+        source.resume()
+        sigterm = source
     }
 
     /// A window is gone: its terminals end and the core forgets it. Not while the app quits, and not the last one

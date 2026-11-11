@@ -27,6 +27,8 @@ final class WindowSession {
     var saver: WindowSaver?
     /// Out of sight with its terminals running: its profile is not the one Wormhole is in (`switchProfile`).
     var parked = false
+    /// A close question of this window is up or being put together: a second one is dropped until it is answered.
+    var asking = false
 
     init(id: WindowID, windows: WindowsHost, hub: WindowHub, factory: TerminalFactory, effects: AnyObject?, usage: AnyObject?, backends: PanelUI.PanelBackends) {
         (self.id, self.windows, self.hub, self.factory, panelEffects, panelUsage, panelBackends) = (id, windows, hub, factory, effects, usage, backends)

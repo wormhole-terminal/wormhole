@@ -16,7 +16,7 @@ extension AppController {
             let rows = Dictionary(session.hub.state.sections.flatMap(\.rows).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
             return session.hub.state.all.map { terminal in
                 let row = rows[terminal.id]
-                let ambient = ambient(terminal, running: row?.runningCommand)
+                let ambient = ambient(terminal, running: terminal.runningCommand)
                 return PaletteTerminal(
                     id: terminal.id, name: ambient.name, window: index + 1, activity: terminal.activity,
                     number: session === own ? row?.number : nil, path: terminal.folder, folder: ambient.folder, branch: ambient.branch,

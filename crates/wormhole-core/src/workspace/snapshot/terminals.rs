@@ -3,7 +3,7 @@
 //! lists only the rows the list shows, so a terminal folded away would be lost to all of these.
 
 use crate::view::sidebar::wording::display_path;
-use crate::view::sidebar::{Entry, RowState};
+use crate::view::sidebar::{Entry, RowState, Status};
 
 use super::super::model::WorkspaceModel;
 use super::super::session::Session;
@@ -29,7 +29,14 @@ pub struct TerminalSummary {
     /// The folder as the list shows it (`~/Projects/app`), and as a full path.
     pub folder: Option<String>,
     pub cwd: Option<String>,
+    /// The program in its foreground, as a row spells it: what a question before closing names.
     pub command: Option<String>,
+    /// Closing it asks first (`workspace::asks_before_closing`).
+    pub asks_to_close: bool,
+    /// Its status as told or detected, for the question's words ("is still working").
+    pub status: Status,
+    /// Notes and tasks still open: what closing discards.
+    pub notes: u32,
     /// The group it is in, with its name.
     pub group: Option<u32>,
     pub group_name: Option<String>,
@@ -120,6 +127,9 @@ impl WorkspaceModel {
             folder: facts.cwd.as_deref().map(|cwd| display_path(cwd, self.cfg.home.as_deref())),
             cwd: facts.cwd.as_ref().map(|cwd| cwd.to_string_lossy().into_owned()),
             command: facts.command.clone(),
+            asks_to_close: super::super::close::asks_before_closing(facts),
+            status: facts.status,
+            notes: facts.notes as u32,
             group: group.map(|group| group.id),
             group_name: group.map(|group| group.name.clone()),
             split: session.split.filter(|&id| self.members(id).len() > 1),

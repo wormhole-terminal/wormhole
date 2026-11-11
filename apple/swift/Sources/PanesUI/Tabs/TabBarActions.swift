@@ -18,6 +18,8 @@ public struct TabBarActions {
     public var newMenu: () -> AnyView
     /// The switcher's footer: "⌃⌥[ / ] previous, next group" and "⌃⌥1–9", from the keymap (empty: no keys to say).
     public var groupKeys: () -> (hint: String, keys: String)
+    /// A group's native menu, under a right-click of its card in the switcher (`switcher.rs`); the window builds it.
+    public var groupMenu: @MainActor (GroupID) -> NSMenu? = { _ in nil }
 
     public init(
         select: @escaping (TerminalID) -> Void = { _ in }, close: @escaping (TerminalID) -> Void = { _ in },

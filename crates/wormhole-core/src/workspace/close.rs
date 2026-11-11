@@ -1,8 +1,10 @@
 //! Closing a terminal: who is selected after it, and what happens to its split.
 
 use crate::view::panes::TabPanes;
+use crate::view::sidebar::Status;
 
 use super::event::Event;
+use super::facts::TerminalFacts;
 use super::model::WorkspaceModel;
 
 /// The selected terminal's place after the terminal at place `closed` is removed from `len`.
@@ -22,6 +24,15 @@ pub fn session_after_close(active: usize, closed: usize, len: usize) -> Option<(
         std::cmp::Ordering::Equal => (active.min(len - 2), true),
         std::cmp::Ordering::Greater => (active, false),
     })
+}
+
+/// Whether closing a terminal asks first: it would cut something off, a program other than the shell
+/// in the foreground (an agent sitting at its prompt is one), or an agent at work or waiting for an
+/// answer. A command that failed or finished is not running, and notes alone never ask. The same rule
+/// decides for each terminal of a group, a window and the app (the GPUI app's
+/// `window/session.rs` `close_needs_confirmation`).
+pub fn asks_before_closing(facts: &TerminalFacts) -> bool {
+    facts.command.is_some() || matches!(facts.status, Status::Busy | Status::Attention)
 }
 
 impl WorkspaceModel {

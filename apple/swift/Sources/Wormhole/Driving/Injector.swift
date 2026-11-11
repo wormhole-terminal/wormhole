@@ -10,6 +10,7 @@
 // key as going nowhere; while an injected event is routed the window acts as the key window of an active app (`InFront`).
 
 import AppKit
+import DesignSystem
 
 @MainActor
 final class Injector {
@@ -141,7 +142,11 @@ final class Injector {
     /// click is the view's own (a program that takes the mouse).
     func contextMenu(_ point: NSPoint, in window: NSWindow) -> NSMenu? {
         let event = mouse(.rightMouseDown, point, window)
-        for view in sequence(first: view(at: point, in: window), next: { $0?.superview }).compactMap({ $0 }) {
+        // A native menu's catcher answers a hit test only for a secondary click; no event is current here.
+        NativeContextMenu.probing = true
+        let hit = view(at: point, in: window)
+        NativeContextMenu.probing = false
+        for view in sequence(first: hit, next: { $0?.superview }).compactMap({ $0 }) {
             guard let menu = view.menu(for: event) else { continue }
             menu.delegate?.menuNeedsUpdate?(menu)
             menu.update()

@@ -31,6 +31,8 @@ use crate::profile;
 use crate::terminal::Terminal;
 
 /// How long one orphan gets to answer before it is left alone (`window/hosting.rs`).
+/// How long each host gets to end when all of them are ended on the way out (`window/windows.rs`).
+const END_WAIT: Duration = Duration::from_secs(5);
 const ORPHAN_ANSWER: Duration = Duration::from_millis(500);
 
 /// A terminal's place and its program, as a start or an attach is asked for it.
@@ -273,6 +275,9 @@ impl HostedTerminals {
                 tracing::warn!("couldn't forget the saved terminals: {err}");
             }
             alive.iter().for_each(|terminal| terminal.close());
+            // Every live host of the data folder, not only the ones this run made: another profile's that
+            // was never opened, an orphan not adopted, one left running behind a closed terminal.
+            hosts::end_all_live(&self.hosts_dir, END_WAIT);
         } else {
             alive.iter().for_each(|terminal| {
                 terminal.detach();

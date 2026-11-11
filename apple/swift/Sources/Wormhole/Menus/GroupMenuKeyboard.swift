@@ -11,17 +11,21 @@ import WorkspaceModel
 
 extension AppController {
     func openGroupMenu(_ id: GroupID, at frame: CGRect, in session: WindowSession) {
-        let hub = session.hub
-        guard let head = hub.state.groups.first(where: { $0.id == id }) else { return }
+        guard let menu = groupMenu(id, in: session) else { return }
+        guard policy.touchesSystem, let content = session.window?.contentView else { return injector.keep(menu) }
+        menu.popUp(positioning: nil, at: NSPoint(x: frame.minX + 24, y: content.bounds.height - frame.maxY + 4), in: content)
+    }
+
+    /// The group's menu as it is now; a right-click on its card in the tab bar's switcher asks for it too.
+    func groupMenu(_ id: GroupID, in session: WindowSession) -> NSMenu? {
+        guard let head = session.hub.state.groups.first(where: { $0.id == id }) else { return nil }
         var facts = GroupMenuFacts(group: Int64(id))
         facts.pinned = head.isPinned
         facts.custom = head.customColor != nil
         facts.coloured = head.color != nil
         facts.folder = head.folder
         facts.onlyInFolder = head.onlyInFolder
-        let menu = contextMenus.menu(GroupMenu.nodes(facts))
-        guard policy.touchesSystem, let content = session.window?.contentView else { return injector.keep(menu) }
-        menu.popUp(positioning: nil, at: NSPoint(x: frame.minX + 24, y: content.bounds.height - frame.maxY + 4), in: content)
+        return contextMenus.menu(GroupMenu.nodes(facts))
     }
 
     /// A choice from a group's menu: the action of the item of the same name in the SwiftUI menu.

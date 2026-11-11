@@ -80,3 +80,34 @@ fn closing_a_terminal_that_is_not_here_is_refused() {
     assert!(refused(&m.apply(Action::Close(99))));
     assert_eq!(m.ids(), [1]);
 }
+
+/// Data loss if wrong: a terminal nobody is asked about ends with its program.
+#[test]
+fn a_program_in_a_folded_group_is_asked_about_and_a_failed_command_is_not() {
+    use crate::view::sidebar::Status;
+    use crate::workspace::Failure;
+    let mut m = model(4);
+    m.apply(Action::NewGroup { members: vec![2, 3] });
+    // An agent sitting idle at its prompt: its program holds the terminal.
+    m.update_facts(2, |f| {
+        f.agent = Some(crate::agents::AgentId::Claude);
+        f.status = Status::Idle;
+        f.command = Some("claude".into());
+    });
+    // A plain terminal whose last command failed: nothing runs.
+    m.update_facts(4, |f| {
+        f.status = Status::Failed;
+        f.failure = Some(Failure { code: 101, command: Some("cargo build".into()), at: 0 });
+    });
+    m.apply(Action::ToggleGroup(1));
+    m.apply(Action::Search("no such row".into()));
+    assert!(m.sidebar_snapshot(0).sections.iter().all(|s| s.rows.is_empty()), "the list shows none of them");
+    let asking: Vec<(i64, Option<String>)> = m
+        .terminals_snapshot()
+        .terminals
+        .into_iter()
+        .filter(|t| t.asks_to_close)
+        .map(|t| (t.id, t.command))
+        .collect();
+    assert_eq!(asking, [(2, Some("claude".to_string()))]);
+}

@@ -3,6 +3,9 @@
 
 import Foundation
 
+/// What a question about ending a terminal says of its agent: at work, waiting for an answer, or neither.
+public enum RunState: Sendable, Equatable { case idle, busy, attention }
+
 public struct TerminalSummary: Sendable, Equatable, Identifiable {
     public var id: TerminalID
     public var title: String
@@ -51,6 +54,10 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
     public var noticeSerial: UInt64 = 0
     /// The program in front of the shell, as the core spells it, while one is (nil in the sample).
     public var runningCommand: String?
+    /// Closing it asks first: the core's rule (`workspace::asks_before_closing`), never derived here.
+    public var asksToClose = false
+    /// Its status as told or detected, for a question's words; a finished, failed or ended one is `.idle` there.
+    public var run: RunState = .idle
 
     public init(
         id: TerminalID, title: String, folder: String? = nil, branch: String? = nil, activity: Activity = .idle,

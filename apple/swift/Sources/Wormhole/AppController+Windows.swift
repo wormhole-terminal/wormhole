@@ -62,6 +62,7 @@ extension AppController {
         }
         hub.actions.closeTerminal = { [weak self, weak session] in self?.closeTerminal($0, in: session) }
         hub.actions.closeGroup = { [weak self, weak session] in self?.closeGroup($0, in: session) }
+        followCloseDot(of: session)
         hub.store.onNotice = { [weak self, weak session] in
             guard let session else { return }
             self?.answer($0, from: session)
@@ -72,6 +73,7 @@ extension AppController {
         hub.sidebarLink.groupMenu = { [weak self, weak session] id, frame in
             if let session { self?.openGroupMenu(id, at: frame, in: session) }
         }
+        hub.actions.groupMenu = { [weak self, weak session] id in session.flatMap { self?.groupMenu(id, in: $0) } }
         hub.actions.terminalMenu = { [weak self, weak session] in self?.terminalMenu(for: $0, in: session) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
         hub.actions.palette = paletteSources(for: session)
