@@ -14,6 +14,7 @@ extension WindowHub {
             source.paste(text)
             return true
         }
+        host.terminal.say = { [unowned self] in notices.post($0) }
         host.terminal.focus = { [unowned self] in
             guard let id = state.selected, let view = terminals.existing(id) else { return }
             view.window?.makeFirstResponder(view)

@@ -12,6 +12,7 @@ struct ShortcutRecorder: View {
     let label: String
     /// Core's verdict on a recorded shortcut; `nil` when the model has no checker, and the plain rule stands.
     let check: (String) -> ShortcutCheck?
+    let onRecording: (Bool) -> Void
     let onChange: (String) -> Void
     @Environment(\.tokens) private var tokens
     @State private var recording = false
@@ -53,6 +54,8 @@ struct ShortcutRecorder: View {
                     .frame(width: Metric.controlSmall, height: Metric.controlSmall).padding(.trailing, Space._1)
             }
         }
+        .onChange(of: recording) { onRecording(recording) }
+        .onDisappear { if recording { onRecording(false) } }
         .accessibilityLabel(label)
         .accessibilityValue(spec.isEmpty ? SettingsText.recorderNone : KeySpecText.caps(spec).joined(separator: " "))
         .accessibilityHint(refusal ?? SettingsText.recorderPrompt)

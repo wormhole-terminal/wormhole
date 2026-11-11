@@ -30,7 +30,7 @@ final class UniFFIInteraction: TerminalCore.TerminalInteraction {
 
     func focusChanged(_ focused: Bool) { terminal.focusChanged(focused: focused) }
     func droppedText(paths: [String]) -> String { terminal.droppedText(paths: paths) }
-    func clearHistory() { terminal.clearHistory() }
+    func clearHistory() -> Bool { terminal.clearHistory() }
     func pasteClipboard(_ text: String?) { terminal.pasteClipboard(clipboard: text) }
     func programCopied(_ text: String, replacing before: String?) { terminal.programCopied(text: text, clipboardBefore: before) }
 

@@ -20,6 +20,7 @@
 mod control;
 mod core;
 mod dispatch;
+mod drive;
 mod events;
 mod gate;
 mod messages;

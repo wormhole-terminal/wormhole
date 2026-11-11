@@ -19,10 +19,8 @@ final class AmbientController {
     /// What the menu bar item shows and whether its working glyph types out (`menu_bar_icon`, `menu_bar_animate`).
     var iconMode = MenuBarIconMode.statusCount { didSet { if iconMode != oldValue { pushStatus() } } }
     var animatesIcon = false { didSet { if animatesIcon != oldValue { pushStatus() } } }
-    /// The global key that raises the quick panel or the app, once Settings names one.
-    var hotkey: GlobalHotkey?
     private let quick: QuickPanelController
-    private unowned let app: AppController
+    unowned let app: AppController
 
     init?(app: AppController) {
         guard app.policy.touchesSystem else { return nil }
@@ -42,26 +40,18 @@ final class AmbientController {
 
     func toggleQuickPanel() { quick.toggle { run(.showApp) } }
 
+    /// The global key was pressed (`HotkeyController`): what Settings says it does.
+    func hotkeyPressed(_ action: HotkeyController.Action) {
+        switch action {
+        case .quickPanel: toggleQuickPanel()
+        case .toggleApp: toggleApp()
+        }
+    }
+
     /// The key's other action: bring the app forward, or hide it when it already is.
     func toggleApp() { NSApp.isActive ? NSApp.hide(nil) : NSApp.activate() }
 
-    func run(_ command: AmbientCommand) {
-        let hub = app.hub
-        switch command {
-        case .showApp: NSApp.activate()
-        case .newTerminal: hub.send(.newTerminal)
-        case .newWindow: app.openNewWindow()
-        case .openTab(let tab): app.show(terminal: Int(tab))
-        case .reply(let tab, let text): app.session(holding: Int(tab))?.hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
-        case .jumpToWaiting: hub.goTo(.needsInput)
-        case .openSettings: app.showSettings()
-        case .checkForUpdates: app.aux.showUpdates()
-        case .quit: NSApp.terminate(nil)
-        case .openFolder, .runAction, .openProject:
-            // The folder picker and projects come with the core.
-            break
-        }
-    }
+    func run(_ command: AmbientCommand) { app.run(ambient: command) }
 
     /// Puts the surfaces up for the terminals as they are, again whenever they change.
     private func follow() {

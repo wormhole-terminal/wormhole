@@ -111,7 +111,8 @@ public protocol TerminalInteraction: AnyObject, Sendable {
     func focusChanged(_ focused: Bool)
     /// The shell-escaped text for dropped files.
     func droppedText(paths: [String]) -> String
-    func clearHistory()
+    /// Erases the history; `true` when it will come back (a session host too old to forget it keeps it).
+    func clearHistory() -> Bool
     /// ⌘V: the clipboard pasted; over a selection a full-screen program drew itself it replaces it (a Backspace first, and
     /// what the clipboard held before the program's copy). `nil`: nothing on the clipboard.
     func pasteClipboard(_ text: String?)

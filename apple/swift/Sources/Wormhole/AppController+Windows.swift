@@ -67,6 +67,9 @@ extension AppController {
         hub.actions.terminalMenu = { [weak self, weak session] in self?.terminalMenu(for: $0, in: session) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
         hub.actions.palette = paletteSources(for: session)
+        hub.notices.chipOn = { [weak self] in self?.noticesOn ?? true }
+        hub.onRestartToUpdate = { [weak self] in self?.updateFollower?.requestRestart() }
+        hub.notices.onOpenLogs = { [dataDirectory] in NSWorkspace.shared.open(dataDirectory.appendingPathComponent("logs")) }
         hub.actions.openSettings = { [weak self] in self?.showSettings() }
         hub.actions.profiles = profileList(for: session)
         hub.actions.profile = profileActions(for: session)
@@ -81,7 +84,7 @@ extension AppController {
     /// nothing to erase; a group asked to have a window of its own gets one, its terminals moving in running.
     func answer(_ notice: WorkspaceNotice, from session: WindowSession) {
         switch notice {
-        case .hostFallback: session.hub.notices.post(.warned(.hostFallback))
+        case .hostFallback(let reason): session.hub.notices.post(.warned(.hostFallback), detail: NoticeReason.clean(reason))
         case .moveToApplications: session.hub.notices.post(.warned(.moveToApplications))
         case .hostChanged(let id): session.hub.hostChanged(id)
         case .hostEnded(let id): finishClosing(id, in: session)

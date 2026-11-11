@@ -13,8 +13,16 @@ public final class NoticeCenter {
     public private(set) var leaving = false
     /// A swap while showing: a view crossfades on this.
     public private(set) var serial = 0
-    /// The explanation of a warning (ⓘ) was asked for; the host presents it.
-    public var onInfo: ((Notice) -> Void)?
+    /// What the error behind the warning on show said, one short line (core's `reason`): the explanation under ⓘ quotes it.
+    public private(set) var detail: String?
+    /// The explanation under the ⓘ is open.
+    public var infoOpen = false
+    /// Whether the Notices feature is on in this window's profile. Off, nothing drops onto the terminal: what is worth saying
+    /// goes to `onBar` (the pane's bar, `terminal_view/pane_bar.rs`).
+    public var chipOn: () -> Bool = { true }
+    public var onBar: ((Notice, String?) -> Void)?
+    /// Open Logs Folder, in the explanation.
+    public var onOpenLogs: (() -> Void)?
     /// A click on a warning that offers something ("Restart").
     public var onAct: ((Notice) -> Void)?
     /// The window's Reduce Motion, set by the host view: it picks the way out, which the rules need the length of.
@@ -26,9 +34,12 @@ public final class NoticeCenter {
 
     public init(now: @escaping @MainActor () -> Date = Date.init) { self.now = now }
 
-    public func post(_ notice: Notice) {
+    /// `detail` is what went wrong, for a warning that explains itself.
+    public func post(_ notice: Notice, detail: String? = nil) {
+        guard chipOn() else { return onBar?(notice, detail) ?? () }
         let effect = rules.post(notice, now: now())
         guard effect != .ignore else { return }
+        if notice.isSticky { self.detail = detail }
         shown = notice
         leaving = false
         serial += 1
@@ -36,12 +47,12 @@ public final class NoticeCenter {
     }
 
     /// The ⓘ or the capsule of a warning.
-    public func clickInfo() { if let shown, shown.hasInfo { onInfo?(shown) } }
+    public func clickInfo() { if shown?.hasExplanation == true { infoOpen.toggle() } }
 
     public func clickBody() {
         guard let shown else { return }
         if rules.bodyClickActs(at: now()) { onAct?(shown) }
-        else if shown.hasInfo { onInfo?(shown) }
+        else if shown.hasInfo { clickInfo() }
         else { dismiss() }
     }
 
@@ -53,8 +64,8 @@ public final class NoticeCenter {
 
     private func apply(_ effect: NoticeRules.Effect) {
         switch effect {
-        case .hide: leaving = true
-        case .remove: shown = nil; leaving = false
+        case .hide: leaving = true; infoOpen = false
+        case .remove: shown = nil; leaving = false; infoOpen = false
         // A copy's life is over and the warning it covered comes back.
         case .restore: shown = rules.sticky; serial += 1
         case .show, .swap, .ignore: break

@@ -61,7 +61,7 @@
             case .front(let terminal): app.show(terminal: Int(terminal))
             case .notice(let terminal, let title, let body): app.notices?.post(terminal: terminal, title: title, body: body)
             case .closeAsked(let terminal):
-                app.closeTerminal(Int(terminal)) { [weak self] in self?.handle.closeQuestionOver() }
+                app.closeTerminal(Int(terminal), fromCommandLine: true) { [weak self] in self?.handle.closeQuestionOver() }
             case .worktreeAsked(let folder, let branch): app.hub.askWorktree(branch: branch, in: folder)
             case .gauge(let terminal, let agent, let model, let context):
                 // In the window that holds the terminal.
@@ -73,6 +73,8 @@
             case .probeOffer(let terminal, let words, let text):
                 app.session(holding: Int(terminal))?.hub.offerFile(terminal: Int(terminal), text: text, words: words)
             case .probePaused(let words): app.hub.probePaused(words: words)
+            case .driven(let terminal, let typing, let agent):
+                app.session(holding: Int(terminal))?.hub.driven(terminal: Int(terminal), typing: typing, agent: agent)
             case .probesChanged: probesChanged()
             }
         }

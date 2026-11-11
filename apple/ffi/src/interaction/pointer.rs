@@ -220,9 +220,14 @@ impl Terminal {
         input::file_drop::dropped_text(&paths)
     }
 
-    /// Erase the history; the screen stays.
-    pub fn clear_history(&self) {
-        self.with_pty(|pty| pty.clear_history());
+    /// Erase the history; the screen stays. Whether it comes back at the next attach: the terminal's session host
+    /// is too old to forget it, and the person is told so.
+    pub fn clear_history(&self) -> bool {
+        self.with_pty(|pty| {
+            pty.clear_history();
+            pty.host_forgets_history() == Some(false)
+        })
+        .unwrap_or(false)
     }
 }
 

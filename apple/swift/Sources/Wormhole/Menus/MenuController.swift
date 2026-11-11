@@ -22,7 +22,7 @@ final class MenuController {
         // Copy goes through the app so a copy of the terminal's selection can say what it copied (the chip).
         standard = StandardActions.selectors
         standard[.action("copy")] = nil
-        provider = OutputMenuItems(base: PlatformSetup.menus(app.options))
+        provider = RekeyedMenus(base: OutputMenuItems(base: PlatformSetup.menus(app.options)))
         builder = AppMenuBuilder(builder: provider, standard: standard)
         builder.dispatcher.handler = { [weak app] command in app?.router.dispatch(command) }
     }

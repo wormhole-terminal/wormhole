@@ -44,7 +44,7 @@ struct FileViewerHeader: View {
                 BandButton(symbol: "arrow.up.forward.square", label: panelText("files-viewer-open-in-editor", "Open in \(editor)"), inRow: true) { host?.open(absolute, line: nil) }
             }
             BandButton(symbol: "folder", label: panelText("files-row-reveal", "Reveal in Finder"), inRow: true) { host?.reveal(absolute) }
-            BandButton(symbol: "doc.on.doc", label: panelText("files-row-copy-path", "Copy Path"), inRow: true) { host?.copy(absolute) }
+            BandButton(symbol: "doc.on.doc", label: panelText("files-row-copy-path", "Copy Path"), inRow: true) { host?.copyPath(absolute) }
             BandButton(symbol: "xmark", label: panelText("files-viewer-close", "Close file (esc)"), inRow: true, action: store.closeViewer)
         }
         .padding(.horizontal, PanelMetrics.inset).frame(height: 40)

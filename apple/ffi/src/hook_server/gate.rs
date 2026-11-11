@@ -16,8 +16,10 @@ use wormhole_core::ipc::control::event::Topic;
 use wormhole_core::ipc::control::{Action, Error, ErrorCode, Reason, Reply, Request, Target};
 use wormhole_core::ipc::{AskJob, Peer};
 use wormhole_core::platform::process;
+use wormhole_core::view::notice::Driver;
 
 use super::core::Core;
+use super::drive::{drive_of, driver_of};
 use super::processes::System;
 
 /// How long who is behind a process is remembered: `wh mcp` is one process that asks again and again.
@@ -31,6 +33,8 @@ pub(crate) struct Identities(Vec<(u32, SystemTime, Instant, Resolved)>);
 /// A request that is let through, and what the handlers need to know of it.
 pub(crate) struct Admit {
     pub access: Access,
+    /// Who is asking, when the request drives a terminal and the chip is on to say so (`drive`).
+    pub driver: Option<Driver>,
     /// The program, when the request opens terminals: what it opens is its own.
     pub opener: Option<Identity>,
     /// For a stream of what terminals print: the ones it may hear the text of (its scope). `None` when the
@@ -62,6 +66,7 @@ pub(crate) fn gate(core: &Core, request: &Request, peer: &Peer) -> Gate {
     if !settings.feature_enabled(FeatureFlag::Automation) {
         return Gate::Open(Admit {
             access: Access { read: false, write: settings.control_write, holder: None },
+            driver: None,
             opener: None,
             readable: None,
         });
@@ -71,12 +76,13 @@ pub(crate) fn gate(core: &Core, request: &Request, peer: &Peer) -> Gate {
     let own = need == Need::Capability(Capability::Read) && reads_only_own(core, request, peer);
     match decide(mode, need, own, None, false) {
         Verdict::Allow(access) => {
+            let driver = driver_when_shown(core, request, peer, access);
             // Allowed while open asks nothing, but what a request opens is still its program's own, for
             // the day the mode is Ask again.
             let opener = (mode == AgentAccess::Open && opens(&request.action))
                 .then(|| identify(core, peer).ok().map(|resolved| resolved.identity))
                 .flatten();
-            return Gate::Open(Admit { access, opener, readable: None });
+            return Gate::Open(Admit { access, driver, opener, readable: None });
         }
         Verdict::Refuse(error) => return Gate::Reply(error.into()),
         Verdict::Ask => {}
@@ -132,7 +138,21 @@ fn within_scope(core: &Core, request: &Request, peer: &Peer, resolved: Resolved,
         core.desk.with_state(|_, scopes| scopes.readable(&resolved.identity, resolved.process, &own, visible))
     });
     let opener = opens(&request.action).then(|| resolved.identity.clone());
-    Gate::Open(Admit { access, opener, readable })
+    let driver = Some(driver_of(&resolved));
+    Gate::Open(Admit { access, driver, opener, readable })
+}
+
+/// Who is acting, for the chip, when the request is let in without a look at who it is (everybody is let in, or
+/// it needed no approval): only when the chip would be shown at all, since finding out costs a walk of the
+/// process chain.
+fn driver_when_shown(core: &Core, request: &Request, peer: &Peer, access: Access) -> Option<Driver> {
+    if access == Access::default() || drive_of(&request.action, request.from_tab()).is_none() {
+        return None;
+    }
+    if !core.settings().feature_enabled(FeatureFlag::Notices) {
+        return None;
+    }
+    identify(core, peer).ok().map(|resolved| driver_of(&resolved))
 }
 
 fn declined_recently(terminal: i64) -> Error {

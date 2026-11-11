@@ -86,12 +86,32 @@ import Testing
         #expect(center.leaving, "the × closes a warning for good")
     }
 
-    @Test func theInfoOfAWarningIsAskedFor() {
+    @Test func onlyAHostThatCouldNotStartExplainsItselfAndTheErrorIsKept() {
         let center = NoticeCenter(now: { Date() })
-        var asked: Notice?
-        center.onInfo = { asked = $0 }
-        center.post(.warned(.moveToApplications))
+        center.post(.warned(.hostFallback), detail: "no such file: /x/wormhole-host")
+        #expect(center.detail == "no such file: /x/wormhole-host")
         center.clickBody()
-        #expect(asked == .warned(.moveToApplications))
+        #expect(center.infoOpen, "a click on the capsule opens the explanation")
+        center.clickInfo()
+        #expect(!center.infoOpen, "and the ⓘ closes it again")
+        center.dismiss()
+        #expect(!center.infoOpen)
+
+        let other = NoticeCenter(now: { Date() })
+        other.post(.warned(.moveToApplications))
+        other.clickInfo()
+        #expect(!other.infoOpen, "the other warnings have nothing more to say")
+    }
+
+    @Test func whereTheChipIsOffNothingDropsAndTheBarIsToldInstead() {
+        let center = NoticeCenter(now: { Date() })
+        var told: [(Notice, String?)] = []
+        center.chipOn = { false }
+        center.onBar = { told.append(($0, $1)) }
+        center.post(.copied(.programCharacters(5)))
+        center.post(.warned(.dataFolder), detail: "why")
+        #expect(center.shown == nil)
+        #expect(told.map(\.0) == [.copied(.programCharacters(5)), .warned(.dataFolder)])
+        #expect(told.last?.1 == "why")
     }
 }

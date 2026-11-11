@@ -1301,3 +1301,13 @@ UpdateEngine.setAutoUpdate(on:) / setAnonymousCount(on:)
   `app_folder` (Launch Services) and never spawns anything. `TerminalProbes.openFile` is the seam.
 - **Find and folds**: `Terminal.find_reveal` opens a fold that hides the match (as the GPUI find does, and it stays open); `Terminal.find_fold_words() -> [FoldWords { row, label, spoken }]`
   gives the markers of the last frame as they read while a search is open (how many matches are inside each; empty with no match or no marker).
+
+## Platform and notices (lane S)
+
+- `HookEvent::Driven { terminal, typing, agent }`: a control request that drives a terminal (send-text, send-keys, mouse, run: typing; read,
+  blocks, wait with a pattern: reading) was let in and answered ok, and the Notices flag is on: say it on the chip of the window that shows
+  `terminal`. `agent` is the coding agent's name as the sentence has it ("Claude Code"), none for a script. Never for a refused request.
+- `notice_reason(error) -> String`: what an error said as one short line (core's `view::notice::reason`), for the explanation behind a warning.
+- `notice_data_folder_detail(profile, folder, error) -> String`: the data-folder warning's explanation in full.
+- `Interaction::clear_history() -> bool` (was `()`): the history will come back at the next attach, because the terminal's session host is too
+  old to forget it; the app says so on the chip.

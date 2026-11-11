@@ -33,6 +33,9 @@ pub enum HookEvent {
     ProbeOffer { terminal: i64, words: String, text: String },
     /// A hook failed too often and was paused until the Probes are loaded again; `words` say so.
     ProbePaused { words: String },
+    /// A program is driving `terminal` (`typing`, else only reading): say it on the chip of the window that shows
+    /// it. `agent` is the coding agent's name as the sentence has it ("Claude Code"); none is a script.
+    Driven { terminal: i64, typing: bool, agent: Option<String> },
     /// The rules, a status item, a tinted block or a fold changed: take a frame of every terminal and read
     /// `HookServer::probe_status_items` again.
     ProbesChanged,

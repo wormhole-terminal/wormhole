@@ -30,6 +30,7 @@ use wormhole_core::ipc::control::{
 use wormhole_core::ipc::{Answer, Peer};
 
 use super::core::Core;
+use super::drive::{announcement, drive_of};
 use super::gate::{Gate, gate, own_opened, sweep};
 
 /// Answer `request` for the socket thread: one reply line, a reply and the stream that follows it, a job for
@@ -41,7 +42,17 @@ pub(crate) fn answer(core: &Arc<Core>, request: Request, peer: &Peer) -> Answer 
     sweep(core);
     match gate(core, &request, peer) {
         Gate::Open(admit) => {
+            let drives = admit.driver.and_then(|driver| {
+                drive_of(&request.action, request.from_tab()).map(|(target, typing)| (target, typing, driver))
+            });
             let answer = dispatch(core, request, admit.access, admit.readable, peer);
+            // Said once the handler has said yes: a refusal drives nothing.
+            if let Some((target, typing, driver)) = drives
+                && !matches!(&answer, Answer::Reply(reply) if !reply.ok)
+                && let Some(terminal) = core.find(target, peer)
+            {
+                core.ui.push(announcement(terminal, typing, driver));
+            }
             // What a request opened is the program's own from now on (its scope).
             if let (Some(opener), Answer::Reply(reply)) = (admit.opener, &answer) {
                 own_opened(core, opener, reply);

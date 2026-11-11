@@ -12,22 +12,5 @@ extension AmbientController {
         if changed("menu_bar_icon") { iconMode = values["menu_bar_icon"]?.string.flatMap(MenuBarIconMode.init(rawValue:)) ?? .statusCount }
         if changed("menu_bar_animate") { animatesIcon = values["menu_bar_animate"]?.bool ?? false }
         if changed("dock_badge") { badgeMode = values["dock_badge"]?.string.flatMap(DockBadgeMode.init(rawValue:)) ?? .needsYou }
-        if changed("hotkey", "hotkey_action") { setHotkey(values["hotkey"]?.string ?? "", action: values["hotkey_action"]?.string ?? "") }
-    }
-
-    private func setHotkey(_ text: String, action: String) {
-        hotkey?.unregister()
-        hotkey = nil
-        guard !text.isEmpty, let spec = try? KeySpec(parsing: text) else { return }
-        let key = GlobalHotkey { [weak self] in
-            guard let self else { return }
-            if action == "toggle_app" { toggleApp() } else { toggleQuickPanel() }
-        }
-        do {
-            try key.register(spec)
-            hotkey = key
-        } catch {
-            FileHandle.standardError.write(Data("hotkey \(text): \(error)\n".utf8))
-        }
     }
 }

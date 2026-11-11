@@ -23,9 +23,14 @@ extension WindowHub {
 
     /// A click on a chip that offers something: the file a Probe offered.
     func noticeActed(_ notice: Notice) {
-        guard case let .warned(.probeOffer(terminal, text, _)) = notice else { return }
-        openFile(text, in: terminal)
-        notices.dismiss()
+        switch notice {
+        case let .warned(.probeOffer(terminal, text, _)):
+            openFile(text, in: terminal)
+            notices.dismiss()
+        // The chip stays: a restart that is put off, or fails, leaves the offer where it was.
+        case .warned(.updateReady): onRestartToUpdate?()
+        default: break
+        }
     }
 
     /// Look for `text` in `terminal`'s folder off the main thread (Rust reads the disk, link-safe), then open it in the editor or say

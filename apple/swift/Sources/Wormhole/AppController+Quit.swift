@@ -7,6 +7,10 @@ import AuxModel
 import AuxWindows
 import WorkspaceModel
 
+#if WITH_UNIFFI
+    import SettingsBridge
+#endif
+
 extension AppController {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         let endAll = endsAllOnQuit
@@ -41,21 +45,42 @@ extension AppController {
     /// Every window's rows: quitting ends the terminals of all of them.
     private var allRows: [SidebarRow] { sessions.flatMap { $0.hub.state.sections.flatMap(\.rows) } }
 
-    private var quitFacts: QuitFacts {
-        let rows = allRows
-        let running = rows.filter(\.runsSomething)
-        // Terminals in a session host are left running by a plain quit; only the rest would end.
-        let counts = HostedCounts(running: running.map(\.id), all: rows.map(\.id)) { id in
+    /// What the quit question is decided from, every window's terminals. A terminal whose session host cannot be shown counts
+    /// as running (`needs_close_confirmation`); the terminals of a profile that is not shown run on out of sight, and the question
+    /// names that profile with how many (`window::windows::quit_asking`).
+    var quitFacts: QuitFacts {
+        let rows = sessions.flatMap { session in session.hub.state.sections.flatMap(\.rows).map { (session: session, row: $0) } }
+        let running = rows.filter { $0.row.runsSomething || hostUnavailable($0.row.id, in: $0.session) }
+        let counts = HostedCounts(running: running.map(\.row.id), all: rows.map(\.row.id)) { id in
             self.session(holding: id)?.hub.store.hosting(of: id)
         }
+        var elsewhere: [(name: String, count: Int)] = []
+        for (session, _) in running where session.windows.profile != windowsHost.profile {
+            let name = profileName(session.windows.profile)
+            if let at = elsewhere.firstIndex(where: { $0.name == name }) { elsewhere[at].count += 1 } else { elsewhere.append((name, 1)) }
+        }
         return QuitFacts(
-            running: running.map { StillRunning.Fact(status: $0.terminal.runStatus, commandRunning: $0.runningCommand != nil) },
-            programs: running.compactMap { $0.runningCommand }, hostedRunning: counts.hostedRunning,
+            running: running.map { StillRunning.Fact(status: $0.row.terminal.agentStatus, commandRunning: $0.row.runningCommand != nil) },
+            programs: running.compactMap { $0.row.runningCommand }, otherProfiles: elsewhere, hostedRunning: counts.hostedRunning,
             localRunning: counts.localRunning, anyHosted: counts.anyHosted)
     }
 
-    /// Closes a terminal (of `session`, else the window that holds it), asking first when an agent or a command runs in it.
-    func closeTerminal(_ id: TerminalID, in session: WindowSession? = nil, then done: @escaping () -> Void = {}) {
+    private func hostUnavailable(_ id: TerminalID, in session: WindowSession) -> Bool {
+        if case .unavailable? = session.hub.store.hostProblem(of: id) { true } else { false }
+    }
+
+    /// A profile's name as the person gave it, else its id.
+    private func profileName(_ id: String) -> String {
+        #if WITH_UNIFFI
+            ((try? (settingsModel.host as? RustSettingsHost)?.profiles()) ?? []).first { $0.id == id }?.name ?? id
+        #else
+            id
+        #endif
+    }
+
+    /// Closes a terminal (of `session`, else the window that holds it), asking first when an agent or a command runs in it. One
+    /// the command line asked to close (`wh close`) is always asked about: it never closes on a script's say (`CloseOrigin::Control`).
+    func closeTerminal(_ id: TerminalID, in session: WindowSession? = nil, fromCommandLine: Bool = false, then done: @escaping () -> Void = {}) {
         let session = session ?? self.session(holding: id) ?? front
         guard let row = session.hub.state.sections.flatMap(\.rows).first(where: { $0.id == id }) else { return done() }
         let terminal = row.terminal
@@ -64,16 +89,16 @@ extension AppController {
         if case .unavailable? = session.hub.store.hostProblem(of: id) {
             return askToEndHost(of: terminal, in: session, then: done)
         }
-        guard row.runsSomething else {
+        guard row.runsSomething || fromCommandLine else {
             finishClosing(id, in: session)
             return done()
         }
+        let detail = CloseQuestions.session(
+            agent: terminal.agent?.name, stakes: [], status: terminal.runStatus,
+            commandRunning: row.runningCommand != nil, programs: row.runningCommand.map { [$0] } ?? [])
         let question = Question(
             title: CloseQuestions.sessionTitle(terminal.title),
-            detail: CloseQuestions.session(
-                agent: terminal.agent?.name, stakes: [], status: terminal.runStatus,
-                commandRunning: row.runningCommand != nil, programs: row.runningCommand.map { [$0] } ?? []),
-            confirm: "Close")
+            detail: fromCommandLine ? detail + " " + AuxText.controlCloseAsked : detail, confirm: "Close")
         Task {
             if case .confirm = await QuestionSheet(question).ask(in: session.window) { finishClosing(id, in: session) }
             done()
@@ -110,7 +135,7 @@ extension AppController {
             title: CloseQuestions.groupTitle(head.name),
             detail: CloseQuestions.group(
                 terminals: section.terminalCount,
-                running: running.map { StillRunning.Fact(status: $0.terminal.runStatus, commandRunning: $0.runningCommand != nil) },
+                running: running.map { StillRunning.Fact(status: $0.terminal.agentStatus, commandRunning: $0.runningCommand != nil) },
                 programs: running.compactMap(\.runningCommand), stakes: []),
             confirm: "Close Group")
         Task {
@@ -124,7 +149,7 @@ extension AppController {
             title: "Close this window?",
             detail: CloseQuestions.window(
                 terminals: session.hub.state.live.count,
-                running: running.map { StillRunning.Fact(status: $0.terminal.runStatus, commandRunning: $0.runningCommand != nil) },
+                running: running.map { StillRunning.Fact(status: $0.terminal.agentStatus, commandRunning: $0.runningCommand != nil) },
                 programs: running.compactMap(\.runningCommand), stakes: []),
             confirm: "Close Window")
         Task {
@@ -153,6 +178,11 @@ extension SidebarRow {
 }
 
 extension TerminalSummary {
+    /// What the quit question may call an agent's: the real status where an agent is in the terminal, else idle. Any command makes a
+    /// terminal busy (its output is the signal), and `top` is not an agent: the question names what runs through the programs
+    /// (`Session::agent_status`).
+    var agentStatus: RunningTerminal.Status { agent == nil ? .idle : runStatus }
+
     var runStatus: RunningTerminal.Status {
         switch activity {
         case .needsInput: .attention

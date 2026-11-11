@@ -4,6 +4,9 @@
 @MainActor
 public protocol PanelHost: AnyObject {
     func copy(_ text: String)
+    /// The path of a file or folder on the clipboard, plain and absolute. A path with a control character is not copied
+    /// (it would act when pasted) and the notice chip says so (`files/open.rs` `copy_path`).
+    func copyPath(_ path: String)
     func reveal(_ path: String)
     /// Opens a file in the editor the person chose (`Open in`), at a line when given.
     func open(_ path: String, line: Int?)
@@ -26,4 +29,12 @@ public protocol PanelHost: AnyObject {
     func notify(_ text: String)
     /// "New terminal in worktree": the terminal the worktree was made for.
     func openTerminal(in folder: String, running command: String?)
+}
+
+extension PanelHost {
+    /// Where there is no chip to refuse on: the copy, and VoiceOver's word for it.
+    public func copyPath(_ path: String) {
+        copy(path)
+        notify("Path copied")
+    }
 }

@@ -28,6 +28,9 @@ public enum HookAction: Equatable, Sendable {
     case probeOffer(terminal: Int64, words: String, text: String)
     /// A hook failed too often and was paused.
     case probePaused(words: String)
+    /// A program is typing at `terminal` (else only reading it): the chip of the window that shows it says who. `agent` is the
+    /// coding agent's name as the sentence has it; none is a script.
+    case driven(terminal: Int64, typing: Bool, agent: String?)
     /// The rules, a status item, a tinted block or a fold changed: every terminal takes a frame, the status bar reads again.
     case probesChanged
 }
@@ -48,6 +51,7 @@ extension HookAction {
             self = .probeNotice(probe: probe, subtitle: subtitle, title: title, body: body)
         case .probeOffer(let terminal, let words, let text): self = .probeOffer(terminal: terminal, words: words, text: text)
         case .probePaused(let words): self = .probePaused(words: words)
+        case .driven(let terminal, let typing, let agent): self = .driven(terminal: terminal, typing: typing, agent: agent)
         case .probesChanged: self = .probesChanged
         }
     }

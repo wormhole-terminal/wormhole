@@ -33,7 +33,7 @@ extension MetalTerminalView {
 
     /// Erase the history and have the shell redraw its prompt (⌘K).
     @objc public func clearBuffer(_ sender: Any?) {
-        interaction?.clearHistory()
+        if interaction?.clearHistory() == true { onHistoryKept?() }
         source.write(Data([0x0C]))
         requestRedraw()
     }

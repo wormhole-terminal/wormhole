@@ -33,6 +33,18 @@ extension L10n {
     static var noticeDataFolder: String { tr("notice-warned-data-folder", "Wormhole can't open a profile's data folder, so it saves nothing there") }
     static var noticeMoveToApplications: String { tr("notice-warned-move-to-applications", "Move Wormhole to Applications to keep terminals running when it quits") }
     static func noticeUpdateReady(_ version: String) -> String { tr("notice-warned-update-ready", "Wormhole \(version) is ready — Restart") }
+    static var noticeInfoHostHeading: String { tr("notice-info-host-heading", "This terminal can't outlive Wormhole") }
+    static var noticeInfoHostWhat: String {
+        tr("notice-info-host-what", "Wormhole normally keeps each terminal running in a small helper, so your work carries on after you quit Wormhole and is waiting when you open it again. The helper for this terminal couldn't start, so the terminal runs inside Wormhole instead and closes when Wormhole quits.")
+    }
+    static var noticeInfoHostOthers: String { tr("notice-info-host-others", "Other terminals that already run in a helper are not affected.") }
+    static var noticeInfoHostTry: String {
+        tr("notice-info-host-try", "Finish what is running here before you quit. Each new terminal tries to start its helper again, and Wormhole says this once each time it starts.")
+    }
+    static var noticeInfoHostReason: String { tr("notice-info-host-reason", "What went wrong, if you want to report it:") }
+    static var noticeInfoLogs: String { tr("notice-info-logs", "Open Logs Folder") }
+    static var noticeInfoCopy: String { tr("notice-info-copy", "Copy reason") }
+    static var noticeInfoCopied: String { tr("notice-info-copied", "Copied") }
     static var noticeClose: String { tr("notice-close", "Close") }
     static var noticeInfo: String { tr("notice-info", "More about this warning") }
 }

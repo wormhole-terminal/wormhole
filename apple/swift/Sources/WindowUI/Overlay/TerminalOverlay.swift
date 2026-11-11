@@ -78,6 +78,17 @@ final class TerminalOverlay {
         askEnded()
     }
 
+    /// What the chip would have said, in the bar for a few seconds (`say_in_bar`), unless a question or a host's trouble holds it.
+    func sayInBar(_ kind: BannerKind, _ text: String) {
+        guard bars.bar == nil else { return }
+        let bar = PaneBar.notice(kind, text)
+        bars.bar = bar
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            if self?.bars.bar == bar { self?.bars.bar = nil }
+        }
+    }
+
     /// No program's question is up (or none now): the bar is the host's trouble, if there is any.
     func askEnded() {
         if case .ask? = bars.bar { return }
@@ -108,6 +119,7 @@ final class BarActions: PaneBarActions {
     var onReconnect: () -> Void = {}
     var onEndHost: (Bool) -> Void = { _ in }
     var onWait: () -> Void = {}
+    var onDismissHostNotice: () -> Void = {}
 
     /// The person's choice: the core answers the program (`TerminalOverlay+Clipboard`).
     var onAnswer: (ClipboardChoice) -> Void = { _ in }
@@ -118,5 +130,5 @@ final class BarActions: PaneBarActions {
     func waitForHost() { onWait() }
     func restart() { onRestart() }
     func closeTerminal() { onClose() }
-    func dismissHostNotice() {}
+    func dismissHostNotice() { onDismissHostNotice() }
 }

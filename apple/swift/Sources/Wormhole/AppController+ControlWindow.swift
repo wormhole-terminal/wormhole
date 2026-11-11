@@ -65,7 +65,7 @@ extension AppController {
             return true
         case "find": runFind(argument)
         case "diff": runDiff(argument)
-        case "notice": hub.notices.post(.copied(.characters(Int(argument) ?? 12)))
+        case "notice": reply(postNotice(argument)); return true
         case "about", "licenses", "hosts", "trust", "access", "updates", "onboarding", "quick-panel": runAux(command)
         case "host":
             // What the bar's buttons do, for the selected terminal: retry, new, end, end-hard.
@@ -82,6 +82,11 @@ extension AppController {
                 reply("error: host retry|new|end|end-hard")
                 return true
             }
+        case "quit-ask", "quit-ask-end-all":
+            // What ⌘Q (or Quit and End All Terminals) would put to the person now: the sheet's words, or that it quits at once.
+            guard let question = quitFacts.question(endAll: command == "quit-ask-end-all") else { reply("quit-ask no question: nothing runs, the app quits at once"); return true }
+            reply("quit-ask title=\(question.title)\ndetail=\(question.detail)\nconfirm=\(question.confirm) checkbox=\(question.checkbox.map { "\($0.label) checked=\($0.checked)" } ?? "none")")
+            return true
         case "quit", "quit-keep", "quit-end-all":
             reply(command)
             terminateUnattended(endAll: command == "quit-end-all")

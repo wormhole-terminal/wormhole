@@ -1,6 +1,7 @@
 import AppKit
 import PlatformModel
 import Testing
+import UserNotifications
 
 @testable import PlatformUI
 
@@ -70,5 +71,24 @@ import Testing
             bitmaps.append(try #require(rep.representation(using: .png, properties: [:])))
         }
         #expect(Set(bitmaps).count == states.count, "every state looks different")
+    }
+
+    /// What the notification centre is handed, built without the centre (which aborts a process that is no app bundle).
+    @Test func aBannerIsBuiltForTheCentreWithItsThreadLevelSoundAndButtons() {
+        let notice = Notice(
+            id: "wormhole/tab/4", thread: "wormhole/terminal/4", title: "api needs input", body: "Approve cargo test?",
+            level: .timeSensitive, sound: true, category: .needsYou)
+        let content = NoticeContent.content(notice)
+        #expect(content.title == "api needs input" && content.body == "Approve cargo test?")
+        #expect(content.threadIdentifier == "wormhole/terminal/4" && content.interruptionLevel == .timeSensitive)
+        #expect(content.categoryIdentifier == "wormhole.needs-you" && content.sound != nil)
+        #expect(NoticeContent.content(Notice(id: "a", thread: "t", title: "x", body: "y")).categoryIdentifier.isEmpty, "plain has no buttons")
+
+        let categories = Dictionary(uniqueKeysWithValues: NoticeContent.categories().map { ($0.identifier, $0.actions) })
+        let asking = categories["wormhole.needs-you"] ?? []
+        #expect(asking.map(\.title) == ["Open", "Reply…"])
+        #expect(asking.last is UNTextInputNotificationAction, "Reply types into the terminal from the banner, no window needed")
+        #expect(asking.first?.options.contains(.foreground) == true && asking.last?.options.contains(.foreground) == false)
+        #expect((categories["wormhole.finished"] ?? []).map(\.title) == ["Open", "Show Changes"])
     }
 }

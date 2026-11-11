@@ -36,7 +36,12 @@ final class SettingsApplier {
     }
 
     /// The surfaces outside the window are made after the first apply: tell them what Settings holds.
-    func applyAmbient() { app.ambient?.apply(model.backend.values) { _ in true } }
+    func applyAmbient() {
+        app.ambient?.apply(model.backend.values) { _ in true }
+        let values = model.backend.values
+        app.hotkey?.apply(spec: values["hotkey"]?.string ?? "", action: values["hotkey_action"]?.string ?? "")
+        app.bindJumpKey(values["jump_waiting_key"]?.string ?? "")
+    }
 
     private func apply(_ values: [String: JSONValue]) {
         func changed(_ keys: String...) -> Bool { keys.contains { values[$0] != applied[$0] } }
@@ -59,6 +64,8 @@ final class SettingsApplier {
         }
         applyLook(values, changed: changed)
         app.ambient?.apply(values, changed: changed)
+        if changed("hotkey", "hotkey_action") { app.hotkey?.apply(spec: values["hotkey"]?.string ?? "", action: values["hotkey_action"]?.string ?? "") }
+        if changed("jump_waiting_key") { app.bindJumpKey(values["jump_waiting_key"]?.string ?? "") }
         // The server also reads the Probes' flag, the folds' flag and "Never hide lines" again with them.
         if changed("agent_access", "control_write", "feature_flags", "never_hide_lines") {
             app.hooks?.settingsChanged()

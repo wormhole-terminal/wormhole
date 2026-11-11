@@ -45,7 +45,7 @@ public final class MockInteraction: TerminalInteraction {
     public func scrollWheel(_ input: WheelInput) { state.withLock { $0.wheels.append(input) } }
     public func focusChanged(_ focused: Bool) { state.withLock { $0.focus.append(focused) } }
     public func droppedText(paths: [String]) -> String { paths.map { $0.replacingOccurrences(of: " ", with: "\\ ") + " " }.joined() }
-    public func clearHistory() {}
+    public func clearHistory() -> Bool { false }
 
     // MARK: selection
 

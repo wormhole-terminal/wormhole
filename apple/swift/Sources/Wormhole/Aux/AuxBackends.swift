@@ -92,19 +92,36 @@ struct AuxBackends {
         #if WITH_UNIFFI
             if real, let feed = app.options.updateFeedURL, let key = publicKey() {
                 let info = AppInfo.from(bundle: .main)
-                let setup = FFIUpdateBackend.Setup(
+                var setup = FFIUpdateBackend.Setup(
                     baseURL: feed, publicKey: key, currentVersion: info.version, bundleID: Isolation.bundleIdentifier)
+                if app.options.updateKeyFile != nil || app.options.updateBundle != nil {
+                    // A fixture: its own key and a bundle in the data folder, which no one has code-signed.
+                    setup.appBundle = scratchBundle()
+                    setup.verifyCodesign = false
+                }
                 let hooks = FFIUpdateBackend.Hooks(
-                    runningTerminals: { [weak app] in app?.runningTerminals ?? [] }, terminate: { [weak app] in app?.terminateUnattended() })
+                    runningTerminals: { [weak app] in app?.runningTerminals ?? [] }, terminate: { [weak app] in app?.terminateUnattended() },
+                    whenIdle: { [weak app] restart in app?.updateFollower?.restartWhenIdle(restart) ?? restart() })
                 do { return try AuxBridge.makeUpdateBackend(setup: setup, hooks: hooks) } catch { fallback("updates", error) }
             }
         #endif
         return SampleUpdateBackend(phase: .unsupported("This build has no update feed. Start it with --update-feed <url> to check one."))
     }
 
-    /// `packaging/updater.pub`: the minisign key releases are signed with.
+    /// The scratch bundle an install replaces: only one inside the data folder, never an installed app.
+    private func scratchBundle() -> URL? {
+        guard let bundle = app.options.updateBundle?.standardizedFileURL else { return nil }
+        guard bundle.path.hasPrefix(app.dataDirectory.standardizedFileURL.path + "/") else {
+            fallback("updates", Isolation.Refusal(description: "--update-bundle must be inside the data folder"))
+            return nil
+        }
+        return bundle
+    }
+
+    /// `packaging/updater.pub`: the minisign key releases are signed with; a fixture names its own.
     private func publicKey() -> String? {
-        Options.findInRepository("packaging/updater.pub").flatMap { try? String(contentsOf: $0, encoding: .utf8) }
+        if let file = app.options.updateKeyFile { return try? String(contentsOf: file, encoding: .utf8) }
+        return Options.findInRepository("packaging/updater.pub").flatMap { try? String(contentsOf: $0, encoding: .utf8) }
     }
 
     func onboarding(firstRun: Bool) -> any OnboardingBackend {

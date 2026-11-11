@@ -52,6 +52,8 @@ extension AuxText {
     public static func isStillWorking(_ who: String) -> String { tr("close-is-working", "\(who) is still working.") }
     public static func isWaiting(_ who: String) -> String { tr("close-is-waiting", "\(who) is waiting for an answer.") }
     public static var shellEnds: String { tr("close-shell-ends", "Its shell ends.") }
+    /// What the close question adds when a script asked for it (`wh close`), so the person knows why the sheet appeared.
+    public static var controlCloseAsked: String { tr("control-close-asked", "The command line asked to close it.") }
     public static var closingEndsProcess: String { tr("close-ends-process", "Closing ends the process.") }
     public static var closingEndsThem: String { tr("close-ends-them", "Closing ends them.") }
     public static var terminalInWindowEnds: String { tr("close-window-one", "The terminal in this window will end.") }

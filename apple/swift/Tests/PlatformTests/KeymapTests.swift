@@ -1,4 +1,5 @@
 import PlatformModel
+import PlatformUI
 import Testing
 
 @Suite struct KeymapTests {
@@ -108,5 +109,36 @@ import Testing
         #expect(!PlatformPolicy.requested(nil))
         #expect(PlatformPolicy.current(environment: [:], arguments: ["Wormhole", "--background"]).background)
         #expect(PlatformPolicy.current(environment: [:], arguments: ["Wormhole"]).touchesSystem)
+    }
+}
+
+@Suite struct JumpKeyTests {
+    @Test func theJumpKeyIsThePersonsAndTheMenuShowsIt() throws {
+        let base = Keymap.bundled
+        let mine = try #require(try? KeySpec(parsing: "ctrl-alt-w"))
+        let changed = base.replacingKeys(of: .goToWaiting, with: [mine])
+        #expect(changed.key(.goToWaiting) == mine)
+        #expect(base.key(.goToWaiting) != mine, "the table it came from is not touched")
+        #expect(changed.entries.count == base.entries.count)
+        #expect(base.replacingKeys(of: .goToWaiting, with: []).key(.goToWaiting) == nil, "an empty setting leaves it without a key")
+    }
+
+    @Test @MainActor func hotkeyDecisionsHoldWithoutTheSystem() throws {
+        var pressed: [HotkeyController.Action] = []
+        // A test instance registers nothing with the system, but decides as the real one does.
+        let key = HotkeyController(policy: PlatformPolicy(background: true)) { pressed.append($0) }
+        key.apply(spec: "shift-cmd-space", action: "toggle_app")
+        #expect(key.shown == "shift-cmd-space" && key.error == nil)
+        key.press()
+        #expect(pressed == [.toggleApp])
+        key.pause(true)
+        #expect(key.paused && key.shown == "shift-cmd-space", "held off by a recording, still shown as it would be")
+        key.pause(false)
+        key.apply(spec: "", action: "quick_panel")
+        #expect(key.shown == nil, "no hotkey set: nothing shown")
+        key.press()
+        #expect(pressed == [.toggleApp, .quickPanel])
+        key.apply(spec: "not a key", action: "quick_panel")
+        #expect(key.error != nil && key.shown == nil)
     }
 }

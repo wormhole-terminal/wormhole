@@ -34,6 +34,8 @@ public final class SettingsModel {
     @ObservationIgnored private let searcher: any SettingsSearching
     /// Core's rules for a recorded shortcut; `nil` leaves the recorder to its own plain rule.
     @ObservationIgnored public let shortcuts: (any ShortcutChecking)?
+    /// A recorder row started or stopped recording: the global hotkey is held off while it has the keys.
+    @ObservationIgnored public var onRecording: ((Bool) -> Void)?
 
     public init(
         schema: SettingsSchema = .bundled, backend: any SettingsBackend, host: any SettingsHost,

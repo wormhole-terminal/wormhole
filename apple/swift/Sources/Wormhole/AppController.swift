@@ -3,6 +3,7 @@
 // each their own file and reach the window only through it.
 
 import AppKit
+import AuxWindows
 import PanelUI
 import PlatformModel
 import SettingsModel
@@ -39,7 +40,11 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// Layers the settings of the terminal in front's project over the person's (real windows only).
     var projectSettings: AnyObject?
     var hooks: HookHost?
+    /// The updater's follower: the schedule, the chip that says an update is ready, Restart When Idle (a run with a feed only).
+    var updateFollower: UpdateFollower?
     var ambient: AmbientController?
+    /// The global hotkey: made for a test instance too, which registers nothing with the system.
+    var hotkey: HotkeyController?
     var menus: MenuController?
     /// Native context menus (the terminal's), whose choices go to the same router as the menu bar's.
     private(set) lazy var contextMenus = ContextMenuPresenter(dispatcher: MenuDispatcher { [weak self] in self?.router.dispatch($0) })
@@ -62,6 +67,8 @@ final class AppController: NSObject, NSApplicationDelegate {
         self.options = options
         self.dataDirectory = dataDirectory
         policy = PlatformPolicy(background: options.background)
+        // A test instance never puts a question on the screen (it would bring a window forward): a driver answers it.
+        if options.background { PendingQuestions.current = PendingQuestions() }
         PlatformSetup.install(options)
         windowsHost = try WindowsHost.make(options)
         profileHosts[windowsHost.profile] = windowsHost

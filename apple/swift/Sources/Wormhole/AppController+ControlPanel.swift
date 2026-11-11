@@ -5,6 +5,7 @@
 // `project-send <id>` are the Project tab's buttons.
 
 import PanelModel
+import PlatformModel
 
 extension AppController {
     private func fail(_ message: String) -> Bool {
@@ -71,6 +72,14 @@ extension AppController {
         case "notices":
             reply("notices=\((notices?.logged ?? []).map { "\($0.title): \($0.body)" })")
             return true
+        case "notice-log":
+            // Each banner as the centre would be handed it: id, thread, level, sound, category.
+            reply((notices?.logged ?? []).map { "\($0.id) thread=\($0.thread) level=\($0.level) sound=\($0.sound) category=\($0.category.rawValue) title=\($0.title) body=\($0.body)" }.joined(separator: "\n"))
+            return true
+        case "notice-respond":
+            let words = argument.split(separator: " ", maxSplits: 2).map(String.init)
+            guard words.count >= 2 else { return fail("notice-respond <banner id> <default|open|reply|show-changes> [reply text]") }
+            notices?.respond(NoticeResponse(id: words[0], action: words[1] == "default" ? nil : words[1], reply: words.count > 2 ? words[2] : nil))
         case "notice-tabs":
             #if WITH_UNIFFI
                 reply("notice-tabs=\(noticeTabs.map { "\($0.tab):\($0.state) \($0.source) selected=\($0.selected) key=\($0.key) since=\($0.sinceMs)" })")

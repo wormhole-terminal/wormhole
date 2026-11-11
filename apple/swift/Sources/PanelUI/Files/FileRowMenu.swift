@@ -15,8 +15,7 @@ struct FileRowMenu: View {
         }
         Button(panelText("files-row-reveal", "Reveal in Finder")) { host?.reveal(absolute) }
         Button(panelText("files-row-copy-path", "Copy Path")) {
-            host?.copy(absolute)
-            host?.notify(panelText("files-spoken-path-copied", "Path copied"))
+            host?.copyPath(absolute)
         }
         if row.isFolder {
             Divider()

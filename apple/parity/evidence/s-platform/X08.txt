@@ -1,0 +1,240 @@
+# live run, --background Swift instance (WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-platform-x08), the real command line (the app's own executable), agent_access=open, automation on
+$ Wormhole list -> exit 0
+window 1  front
+  terminal 1  "marking-shell"  idle  ~  selected
+    tab 1  "marking-shell"  idle  marking-shell  selected  pane 1
+$ Wormhole status -> exit 0
+1 window, 1 terminal: 0 needs you, 0 working, 0 finished, 0 failed, 1 idle, 0 exited
+$ Wormhole doctor -> exit 0
+Wormhole 0.0.0 answers (protocol 1; this command line speaks 1).
+Automation flag: on
+Agent access: open. You are Claude Code: everyone is allowed while Wormhole is open
+This terminal: not one of Wormhole's
+Skill for Claude Code: not installed (~/.claude/skills/wormhole)
+Skill for Codex CLI: not installed (~/.agents/skills/wormhole)
+Skill for OpenCode: not installed (~/.config/opencode/skills/wormhole)
+MCP: claude mcp add wormhole -- wh mcp
+
+To fix:
+1. This command does not run in one of Wormhole's terminals, so there is no "own terminal": status and notify need --terminal, and nothing is refused as your own. [not_in_a_terminal]
+   Fix: Name terminals with --terminal <id> from `wh list --json`.
+2. Claude Code is installed but has no Wormhole skill. [skill_not_installed]
+   Fix: Ask the user whether to install it: `wh skill install --agent claude` (or Install in Settings → Coding agents).
+3. Codex CLI is installed but has no Wormhole skill. [skill_not_installed]
+   Fix: Ask the user whether to install it: `wh skill install --agent codex` (or Install in Settings → Coding agents).
+4. OpenCode is installed but has no Wormhole skill. [skill_not_installed]
+   Fix: Ask the user whether to install it: `wh skill install --agent opencode` (or Install in Settings → Coding agents).
+$ Wormhole status --terminal 1 -> exit 0
+window 1
+  terminal 1  "marking-shell"  idle  ~  selected
+    tab 1  "marking-shell"  idle  marking-shell  selected  pane 1
+$ Wormhole notify --terminal 1 --title Deploy finished in 3s -> exit 0
+tab 1
+> notice-log
+notify-1 thread=1 level=active sound=false category=plain title=Deploy body=finished in 3s
+$ Wormhole send-text --terminal 1 --submit echo hello-from-send-text -> exit 0
+tab 1
+> screen
+echo hello-from-send-text                                           
+hello-from-send-text                                                
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+$ Wormhole send-text --terminal 1 --submit - -> exit 0
+tab 1
+$ Wormhole new-terminal --folder /tmp --command echo opened-by-command -> exit 0
+opened terminal 2 (tab 2, pane 2) in window 1 at /tmp
+$ Wormhole list -> exit 0
+window 1  front
+  terminal 1  "marking-shell"  needs you  ~
+    tab 1  "marking-shell"  needs you  marking-shell  selected  pane 1
+  terminal 2  "marking-shell"  idle  /private/tmp  selected
+    tab 2  "marking-shell"  idle  marking-shell  selected  pane 2
+$ Wormhole read --terminal 1 --last 6 -> exit 0
+echo hello-from-send-text
+hello-from-send-text
+echo from-stdin
+from-stdin
+$ Wormhole send-keys --terminal 1 --type echo keys-typed enter -> exit 0
+2 keys to tab 1
+$ Wormhole read --terminal 1 --last 3 -> exit 0
+echo keys-typed
+keys-typed
+$ Wormhole mouse --terminal 1 move 2 3 -> exit 1
+Wormhole: the program in tab 1 did not ask for the mouse (or not for this): nothing was sent (refused, no_mouse)
+$ Wormhole new-window --folder /tmp -> exit 0
+opened window 2 with terminal 3 at /tmp
+$ Wormhole list -> exit 0
+window 1  front
+  terminal 1  "marking-shell"  needs you  ~
+    tab 1  "marking-shell"  needs you  marking-shell  selected  pane 1
+  terminal 2  "marking-shell"  idle  /private/tmp  selected
+    tab 2  "marking-shell"  idle  marking-shell  selected  pane 2
+window 2
+  terminal 3  "marking-shell"  idle  /private/tmp  selected
+    tab 3  "marking-shell"  idle  marking-shell  selected  pane 3
+$ Wormhole split --terminal 3 --left --select -> exit 0
+opened terminal 4 in split 5 in window 2 at /private/tmp
+$ Wormhole split --terminal 3 --up -> exit 0
+opened terminal 6 in split 5 in window 2 at /private/tmp
+$ Wormhole split --terminal 1 --right --select -> exit 0
+opened terminal 7 in split 8 in window 1 at ~
+$ Wormhole split --terminal 1 --down -> exit 0
+opened terminal 9 in split 8 in window 1 at ~
+$ Wormhole list -> exit 0
+window 1  front
+  terminal 1  "marking-shell"  idle  ~  split 8
+    tab 1  "marking-shell"  idle  marking-shell  selected  pane 1
+  terminal 7  "marking-shell"  idle  ~  split 8  selected
+    tab 7  "marking-shell"  idle  marking-shell  selected  pane 7
+  terminal 9  "marking-shell"  idle  ~  split 8
+    tab 9  "marking-shell"  idle  marking-shell  selected  pane 9
+  terminal 2  "marking-shell"  idle  /private/tmp
+    tab 2  "marking-shell"  idle  marking-shell  selected  pane 2
+  split 8  terminals 1 7 9  focused 7
+window 2
+  terminal 3  "marking-shell"  idle  /private/tmp  split 5
+    tab 3  "marking-shell"  idle  marking-shell  selected  pane 3
+  terminal 4  "marking-shell"  idle  /private/tmp  split 5  selected
+    tab 4  "marking-shell"  idle  marking-shell  selected  pane 4
+  terminal 6  "marking-shell"  idle  /private/tmp  split 5
+    tab 6  "marking-shell"  idle  marking-shell  selected  pane 6
+  split 5  terminals 4 6 3  focused 4
+$ Wormhole focus --terminal 1 -> exit 0
+focused terminal 1 in window 1
+$ Wormhole rename --terminal 1 renamed by wh -> exit 0
+terminal 1 is named "renamed by wh"
+$ Wormhole list -> exit 0
+window 1  front
+  terminal 1  "renamed by wh"  idle  ~  split 8  selected
+    tab 1  "renamed by wh"  idle  marking-shell  selected  pane 1
+  terminal 7  "marking-shell"  idle  ~  split 8
+    tab 7  "marking-shell"  idle  marking-shell  selected  pane 7
+  terminal 9  "marking-shell"  idle  ~  split 8
+    tab 9  "marking-shell"  idle  marking-shell  selected  pane 9
+  terminal 2  "marking-shell"  idle  /private/tmp
+    tab 2  "marking-shell"  idle  marking-shell  selected  pane 2
+  split 8  terminals 1 7 9  focused 1
+window 2
+  terminal 3  "marking-shell"  idle  /private/tmp  split 5
+    tab 3  "marking-shell"  idle  marking-shell  selected  pane 3
+  terminal 4  "marking-shell"  idle  /private/tmp  split 5  selected
+    tab 4  "marking-shell"  idle  marking-shell  selected  pane 4
+  terminal 6  "marking-shell"  idle  /private/tmp  split 5
+    tab 6  "marking-shell"  idle  marking-shell  selected  pane 6
+  split 5  terminals 4 6 3  focused 4
+$ Wormhole wait --terminal 1 --match keys-typed --timeout 5 -> exit 0
+terminal 1 shows "keys-typed" (after 0.0s)
+$ Wormhole run --terminal 1 --exit-code echo run-ok -> exit 0
+exit 0 in 0.0s (block 4); output not shown: the output has left the history
+$ Wormhole run --terminal 1 --exit-code false -> exit 1
+exit 1 in 0.0s (block 5); output not shown: the output has left the history
+$ Wormhole blocks --terminal 1 --last 3 --output -> exit 0
+no commands yet
+$ Wormhole wait --terminal 1 --match never-appears-xyz --timeout 1 -> exit 124
+Wormhole: timed out after 1 s: still waiting for the text to appear (failed, timeout)
+$ Wormhole sessions list -> exit 0
+no sessions
+$ Wormhole help --json -> exit 0
+{"version":1,"ok":true,"result":{"command":"wh","protocol":1,"json":{"flag":"--json","environment":"WORMHOLE_JSON"},"global_flags":[{"name":"--json","meaning":"print the reply as one JSON object (WORMHOLE_JSON=1 makes that the default)"},{"name":"--text","meaning":"print text even when WORMHOLE_JSON is set"},{"name":"--help","meaning":"print the usage"}],"target_flags":[{"name":"--terminal","meaning":"the terminal, by the id `list` prints","value":"<id>"},{"name":"--tab","meaning":"the same terminal (a terminal has one tab); either id works","value":"<id>"},{"name":"--pane","meaning":"the same terminal (a terminal has one pane); either id works","value":"<id>"}],"verbs":[{"name":"list","usage":"wh list","does":"every window, terminal, tab and pane with their ids","target":"none","needs":[],"flags":[],"works_without_the_app":false},{"name":"status","usage":"wh status [<target>]","does":"one terminal's status (this terminal's without a target), or a summary of the app","target":"optional","needs":[],"flags":[],"works_without_the_app":false},{"name":"notify","usage":"wh notify [<target>] [--title <text>] <body>...","does":"a notification about a terminal, in your words","target":"optional","needs":[],"flags":[{"name":"--title","meaning":"the notification's title","value":"<text>"}],"works_without_the_app":false},{"name":"send-text","usage":"wh send-text <target> [--submit] <text>... | -","does":"type text into a terminal as a paste; - reads stdin","target":"required","needs":["control_write"],"flags":[{"name":"--submit","meaning":"press Return after the text"}],"works_without_the_app":false},{"name":"new-terminal","usage":"wh new-terminal [--folder <path>] [--command <command>] [--window <id>] [--worktree <branch>]","does":"a new terminal in the front window (or --window)","target":"none","needs":["control_write"],"flags":[{"name":"--folder","meaning":"the folder it starts in (~ and relative paths are resolved here)","value":"<path>"},{"name":"--command","meaning":"a command its shell runs at start","value":"<command>"},{"name":"--window","meaning":"the window to open it in","value":"<id>"},{"name":"--worktree","meaning":"ask the user to confirm a new git worktree on this branch","value":"<branch>"}],"works_without_the_app":false},{"name":"events","usage":"wh events [--topics <list>] [--terminal <id>]... [--window <id>]... [--output]","does":"watch what happens, as it happens (one line each; --json gives one JSON object per line)","target":"none","needs":["automation_flag"],"flags":[{"name":"--topics","meaning":"comma-separated: windows, terminals, status, title, folder, bell, blocks, splits, git, output","value":"<list>"},{"name":"--terminal","meaning":"only this terminal's events","value":"<id>","repeats":true},{"name":"--window","meaning":"only this window's events","value":"<id>","repeats":true},{"name":"--output","meaning":"also what terminals print","needs":"control_read"}],"works_without_the_app":false},{"name":"read","usage":"wh read [<target>] [--last <n> | --lines <from>:<to> | --block <id>|last] [--join] [--styles] [--numbers]","does":"what a terminal shows: its screen, history or one command block, as text","target":"optional","needs":["automation_flag","control_read"],"flags":[{"name":"--last","meaning":"the last n rows of history and screen","value":"<n>"},{"name":"--lines","meaning":"grid lines: 0 is the screen's top row, history is negative","value":"<from>:<to>"},{"name":"--block","meaning":"one command block: prompt, command and output","value":"<id>|last"},{"name":"--join","meaning":"put wrapped rows back together"},{"name":"--styles","meaning":"with --json, each line's colours and attributes"},{"name":"--numbers","meaning":"a gutter of line numbers in the text output"}],"works_without_the_app":false},{"name":"blocks","usage":"wh blocks [<target>] [--last <n>] [--output]","does":"a terminal's commands: id, state, exit code, time","target":"optional","needs":["automation_flag","control_read"],"flags":[{"name":"--last","meaning":"the newest n commands (at most 100, 10 by default)","value":"<n>"},{"name":"--output","meaning":"what each command printed"}],"works_without_the_app":false},{"name":"send-keys","usage":"wh send-keys <target> <key>... [--type <string>]... [--paste <string>]...","does":"press keys in a terminal, encoded for the program's keyboard modes","target":"required","needs":["automation_flag","control_write"],"flags":[{"name":"--type","meaning":"type a string key by key","value":"<string>","repeats":true},{"name":"--paste","meaning":"paste a string (in the program's paste brackets)","value":"<string>","repeats":true}],"works_without_the_app":false},{"name":"mouse","usage":"wh mouse <target> click|press|release|move <row> <col> | scroll <row> <col> up|down|left|right","does":"click, drag or scroll in a program that asked for the mouse (rows and columns count from 0)","target":"required","needs":["automation_flag","control_write"],"flags":[{"name":"--button","meaning":"the button (left for a click, press and release)","value":"left|middle|right"},{"name":"--double","meaning":"a double click"},{"name":"--by","meaning":"wheel lines for scroll","value":"<n>"},{"name":"--shift","meaning":"with shift held"},{"name":"--alt","meaning":"with alt held"},{"name":"--ctrl","meaning":"with ctrl held"}],"works_without_the_app":false},{"name":"new-window","usage":"wh new-window [--folder <path>] [--command <command>] [--activate]","does":"a window with one new terminal, opened behind the user's other windows","target":"none","needs":["automation_flag","control_write"],"flags":[{"name":"--folder","meaning":"the folder it starts in (~ and relative paths are resolved here)","value":"<path>"},{"name":"--command","meaning":"a command its shell runs at start","value":"<command>"},{"name":"--activate","meaning":"open it in front and give it the keys"}],"works_without_the_app":false},{"name":"split","usage":"wh split <target> [--right|--down|--left|--up] [--size <percent>] [--folder <path>] [--command <command>] [--select]","does":"a new terminal beside the target, in its split","target":"required","needs":["automation_flag","control_write"],"flags":[{"name":"--right","meaning":"to the right of the target (the default)"},{"name":"--down","meaning":"below the target"},{"name":"--left","meaning":"to the left of the target"},{"name":"--up","meaning":"above the target"},{"name":"--size","meaning":"its share of the split, 1 to 99","value":"<percent>"},{"name":"--folder","meaning":"the folder it starts in (~ and relative paths are resolved here)","value":"<path>"},{"name":"--command","meaning":"a command its shell runs at start","value":"<command>"},{"name":"--select","meaning":"select the new terminal and give it the keys"}],"works_without_the_app":false},{"name":"focus","usage":"wh focus <target> [--activate]","does":"select a terminal and show its split; the keys stay where they were","target":"required","needs":["automation_flag","control_write"],"flags":[{"name":"--activate","meaning":"give the terminal the keys and bring its window forward"}],"works_without_the_app":false},{"name":"rename","usage":"wh rename <target> <name>... | --clear","does":"name a terminal, as the sidebar's rename does","target":"required","needs":["automation_flag","control_write"],"flags":[{"name":"--clear","meaning":"call it after what runs in it again"}],"works_without_the_app":false},{"name":"close","usage":"wh close <target>","does":"ask the user, in the terminal's window, whether to close it; it never closes by itself","target":"required","needs":["automation_flag","control_write"],"flags":[],"works_without_the_app":false},{"name":"wait","usage":"wh wait <target> [--status <state>[,<state>]...] [--match <regex>] [--gone <regex>] [--stable <ms>] [--block-done [--after <block>]] [--timeout <s>]","does":"wait until one of the conditions holds and say which; exits 124 when the time is up","target":"required","needs":["automation_flag"],"flags":[{"name":"--status","meaning":"idle, working, needs_you, finished, failed or exited","value":"<state>[,<state>]"},{"name":"--match","meaning":"a pattern found on the screen","value":"<regex>","needs":"control_read"},{"name":"--gone","meaning":"a pattern no longer found on the screen","value":"<regex>","needs":"control_read"},{"name":"--stable","meaning":"no output for this long","value":"<ms>"},{"name":"--block-done","meaning":"a command finishes (needs shell integration)"},{"name":"--after","meaning":"with --block-done: only a command after this block counts","value":"<block>"},{"name":"--timeout","meaning":"seconds to wait: 30 by default, at most 600","value":"<s>"}],"works_without_the_app":false},{"name":"run","usage":"wh run <target> [--timeout <s>] [--exit-code] ['<command>' | -- <word>...]","does":"type a command at the shell's prompt, wait for it and give its output and exit code","target":"required","needs":["automation_flag","control_write"],"flags":[{"name":"--timeout","meaning":"seconds to wait: 10 minutes by default, at most 3600","value":"<s>"},{"name":"--exit-code","meaning":"exit with the command's own exit code"},{"name":"--","meaning":"everything after it is the command's words"}],"works_without_the_app":false},{"name":"doctor","usage":"wh doctor","does":"what an agent needs to know in one call: the app, the switches, this terminal, the skill, what to fix","target":"none","needs":[],"flags":[],"works_without_the_app":false},{"name":"skill","usage":"wh skill install|uninstall|show [--agent <id>] [--path] [<file>]","does":"install the Wormhole skill into coding agents' skill folders, remove it, or show it","target":"none","needs":[],"flags":[{"name":"--agent","meaning":"one agent (claude, codex, gemini, opencode, qwen, copilot, droid); every installed one without","value":"<id>"},{"name":"--path","meaning":"show: print where the skill goes instead of the skill"}],"works_without_the_app":true,"subcommands":["install","uninstall","show"]},{"name":"sessions","usage":"wh sessions list|end <id>|end --all|forget <id>","does":"the terminals that keep running behind the app","target":"none","needs":[],"flags":[{"name":"--all","meaning":"end: every background terminal of this data folder, not one"}],"works_without_the_app":true,"subcommands":["list","end","forget"]},{"name":"mcp","usage":"wh mcp","does":"serve all of this to a coding agent over MCP on stdin and stdout","target":"none","needs":[],"flags":[],"works_without_the_app":true},{"name":"welcome","usage":"wh welcome [-- <program> [<args>...]]","does":"the first-run welcome, in this terminal","target":"none","needs":[],"flags":[],"works_without_the_app":true},{"name":"help","usage":"wh help [--json]","does":"the usage; --json the verbs, flags, exit codes and error codes as data","target":"none","needs":[],"flags":[],"works_without_the_app":true}],"exit_codes":[{"code":0,"meaning":"it worked"},{"code":1,"meaning":"the app would not or could not (see error.code: not_found, not_allowed, refused, rate_limited, too_large, unsupported, failed)"},{"code":2,"meaning":"a mistake in the arguments (bad_request), or a protocol version the app does not speak"},{"code":3,"meaning":"Wormhole is not running, or did not answer (an older build, or one still starting)"},{"code":124,"meaning":"a wait or run ran out of time (error.reason is timeout)"}],"error_codes":[{"code":"version","exit":2,"advice":"The command line and the running Wormhole speak different protocol versions. Tell the user to update Wormhole (or restart it); do not retry."},{"code":"bad_request","exit":2,"advice":"The arguments are wrong (a missing target, a bad range, a pattern that does not compile). The message says what; fix the call."},{"code":"not_found","exit":1,"advice":"No such terminal, window or folder, or the terminal's shell has ended (reason exited). Read the ids again with `wh list --json`."},{"code":"not_allowed","exit":1,"advice":"The user has not allowed this: agent access is off, a switch is off, or they answered Don't Allow (the reason says which). The message names it. Ask the user; never try to get around it."},{"code":"refused","exit":1,"advice":"Allowed in general, not into this terminal now: your own terminal, one waiting for the user's answer, a shell that is not at its prompt, no room for a split. The reason says which; do not retry unchanged."},{"code":"rate_limited","exit":1,"advice":"Too many requests of this kind lately. `error.retry_after_s` says how many seconds to wait (the message says the same); wait that long, then ask less often."},{"code":"too_large","exit":1,"advice":"Over a size cap (text, keys, lines). Send less."},{"code":"unsupported","exit":1,"advice":"This Wormhole cannot do that now: the Automation flag is off (reason flag_off) or the shell has no integration (reason no_integration)."},{"code":"failed","exit":1,"advice":"The app tried and could not, or a wait ran out (reason timeout, exit code 124). Read the message; a timeout can be waited for again."}],"reasons":[{"reason":"timeout","advice":"A wait or a run took longer than it was given (exit 124). The command, if any, keeps running: follow it with `wait --block-done --after <block>` or `read --block`."},{"reason":"no_integration","advice":"The shell reports no command blocks (OSC 133), so `run` and `wait --block-done` cannot tell commands apart. Use `send-keys` or `send-text` and `wait --match` or `--stable` instead."},{"reason":"not_at_prompt","advice":"The shell is busy or a program has the terminal. Wait for it (`wait --block-done`, `--status idle`) or interrupt it with `send-keys ctrl-c` if that is what the user wants."},{"reason":"no_mouse","advice":"The program in the terminal did not ask for the mouse; use keys."},{"reason":"no_room","advice":"The window has no room for another pane; open a new window instead."},{"reason":"question_open","advice":"A close question is already up in that window; do not ask again."},{"reason":"exited","advice":"The terminal's shell has ended; nothing more will happen in it."},{"reason":"flag_off","advice":"The Automation flag is off in this Wormhole. Ask the user to turn it on (Settings → Feature flags); `wh doctor` says how."},{"reason":"run_pending","advice":"A run is under way in that terminal; wait for it to end before running another."},{"reason":"hidden_profile","advice":"The terminal is in a window of a profile that is not shown; leave it alone."},{"reason":"approval_needed","advice":"The user has not let this program control Wormhole, and Wormhole has asked them (or will, in its window). Do not retry in a loop: tell the user to answer the question in Wormhole, then try once more."},{"reason":"declined","advice":"The user chose Don't Allow. Do not retry and do not look for another way in; tell the user what you wanted to do and ask them to allow it in Settings → Coding agents → Agent access."},{"reason":"declined_recently","advice":"The user said no a moment ago, so Wormhole does not ask again for two minutes. Do not retry; ask the user."},{"reason":"ask_timed_out","advice":"Nobody answered the question in Wormhole within a minute. Tell the user it is waiting, and try once more only after they say they have looked."},{"reason":"agent_access_off","advice":"Agent access is switched off in Settings → Coding agents → Agent access. Ask the user to turn it on; never try to get around it."},{"reason":"identity_changed","advice":"The program asking changed while Wormhole looked at it (a process ended or was replaced). Try the request once more."},{"reason":"too_many_questions","advice":"Wormhole already has several questions waiting for the user. Wait for them to be answered, then try again."},{"reason":"not_answered","advice":"The question went away without an answer (its window closed, or no sheet could be shown). It counts as no for now and is not remembered: tell the user, and try once more after they say Wormhole's window is up."}]}}
+{"version":1,"ok":true,"result":{"subscribed":true,"seq":5,"boot":"eaae050cd10159cd","topics":["terminals","status","output"],"listing":{"windows":[{"id":1,"front":true,"terminals":[{"id":1,"name":"renamed by wh","status":"failed","folder":"/Users/benjamin","p
+{"version":1,"seq":6,"at_ms":1794354800656,"window":1,"terminal":1,"event":"output","screen":"main","lines":[],"partial":"echo streamed","skipped":0}
+{"version":1,"seq":7,"at_ms":1794354800721,"window":1,"terminal":1,"event":"status","status":"idle","was":"failed"}
+{"version":1,"seq":8,"at_ms":1794354800756,"window":1,"terminal":1,"event":"output","screen":"main","lines":["echo streamed","streamed"],"partial":"","skipped":0}
+initialize -> wormhole 2025-03-26
+tools/list -> list_terminals, terminal_status, read_terminal, list_blocks, notify, doctor, send_text, send_keys, mouse, new_terminal, new_window, split, focus, rename, close, wait, run, wait_events
+tools/call id 3 -> {"content": [{"type": "text", "text": "window 1  front\n  terminal 1  \"renamed by wh\"  idle  ~  split 8  selected\n    tab 1  \"renamed by wh\"  idle  marking-shell  selected  pane 1\n  terminal 7  \"marking-shell\"  idle  ~  split 8\n    tab 7  \"marking-sh
+tools/call id 4 -> {"content": [{"type": "text", "text": "echo streamed\nstreamed"}], "isError": false}
+$ Wormhole close --terminal 1 -> exit 0
+asked in window 1 whether to close terminal 1; it closes only if the user says yes
+> windows
+Wormhole (Swift experiment) visible=true sheet=false
+Wormhole (Swift experiment) 2 visible=true sheet=false
+(untitled) visible=false sheet=false
+> question
+title=Close “renamed by wh”?
+detail=Its shell ends. The command line asked to close it.
+buttons=0:Close | 1:Cancel (confirm=0 cancel=1)
+waiting=1
+> question cancel
+question answered Cancel
+$ Wormhole list -> exit 0
+window 1  front
+  terminal 1  "renamed by wh"  idle  ~  split 8  selected
+    tab 1  "renamed by wh"  idle  marking-shell  selected  pane 1
+  terminal 7  "marking-shell"  idle  ~  split 8
+    tab 7  "marking-shell"  idle  marking-shell  selected  pane 7
+  terminal 9  "marking-shell"  idle  ~  split 8
+    tab 9  "marking-shell"  idle  marking-shell  selected  pane 9
+  terminal 2  "marking-shell"  idle  /private/tmp
+    tab 2  "marking-shell"  idle  marking-shell  selected  pane 2
+  split 8  terminals 1 7 9  focused 1
+window 2
+  terminal 3  "marking-shell"  idle  /private/tmp  split 5
+    tab 3  "marking-shell"  idle  marking-shell  selected  pane 3
+  terminal 4  "marking-shell"  idle  /private/tmp  split 5  selected
+    tab 4  "marking-shell"  idle  marking-shell  selected  pane 4
+  terminal 6  "marking-shell"  idle  /private/tmp  split 5
+    tab 6  "marking-shell"  idle  marking-shell  selected  pane 6
+  split 5  terminals 4 6 3  focused 4
+$ Wormhole close --terminal 2 -> exit 0
+asked in window 1 whether to close terminal 2; it closes only if the user says yes
+> question confirm
+question answered Close
+$ Wormhole list -> exit 0
+window 1  front
+  terminal 1  "renamed by wh"  idle  ~  split 8  selected
+    tab 1  "renamed by wh"  idle  marking-shell  selected  pane 1
+  terminal 7  "marking-shell"  idle  ~  split 8
+    tab 7  "marking-shell"  idle  marking-shell  selected  pane 7
+  terminal 9  "marking-shell"  idle  ~  split 8
+    tab 9  "marking-shell"  idle  marking-shell  selected  pane 9
+  split 8  terminals 1 7 9  focused 1
+window 2
+  terminal 3  "marking-shell"  idle  /private/tmp  split 5
+    tab 3  "marking-shell"  idle  marking-shell  selected  pane 3
+  terminal 4  "marking-shell"  idle  /private/tmp  split 5  selected
+    tab 4  "marking-shell"  idle  marking-shell  selected  pane 4
+  terminal 6  "marking-shell"  idle  /private/tmp  split 5
+    tab 6  "marking-shell"  idle  marking-shell  selected  pane 6
+  split 5  terminals 4 6 3  focused 4
+terminal 2 left after Close: 0
+> quit-ask
+quit-ask no question: nothing runs, the app quits at once

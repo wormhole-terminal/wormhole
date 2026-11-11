@@ -33,6 +33,10 @@ struct Options {
     var devctl: URL?
     /// `--update-feed <url>`: a feed the update window may ask. Without it no feed is ever contacted.
     var updateFeedURL: String?
+    /// `--update-key <file>` / `--update-bundle <app>`: a fixture's own minisign key and the scratch bundle an install replaces
+    /// (inside the data folder, or it is refused): the updater end to end without the app's key or an installed app.
+    var updateKeyFile: URL?
+    var updateBundle: URL?
     /// Seconds to hold the window idle and report wake-ups, then quit.
     var idleSeconds: Double?
 

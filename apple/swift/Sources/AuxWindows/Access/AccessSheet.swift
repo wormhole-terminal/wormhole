@@ -30,6 +30,12 @@ public final class AccessSheet {
     /// Shows the sheet on `window` (a modal alert without one); `nil` when it was withdrawn.
     public func ask(in window: NSWindow?) async -> AccessButton? {
         self.window = window
+        if let pending = PendingQuestions.current {
+            // The first button backs out; the next is the first way in.
+            let place = await pending.hold(
+                title: display.title, detail: display.detail, buttons: display.buttons.map(\.label), confirm: 1, cancel: 0)
+            return display.buttons.indices.contains(place) ? display.buttons[place] : nil
+        }
         // Esc is Don't Allow: the system maps Esc only to a button titled Cancel, and Return is Don't Allow too.
         let escape = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [alert] event in
             guard event.keyCode == Self.escapeKeyCode, event.window === alert.window else { return event }

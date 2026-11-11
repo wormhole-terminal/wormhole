@@ -29,6 +29,8 @@ public final class WindowHub {
     /// Each terminal's agent's model and context window, as its status line last said (the title row's gauge chip).
     public let gauges = GaugeBoard()
     public var actions = HubActions()
+    /// A click on the chip that says an update is ready: the app restarts into it (asking first when that ends something).
+    public var onRestartToUpdate: (() -> Void)?
     /// The title row's parts as arranged (View ▸ Title Row, the row's own menu).
     public var titleRow = TitleRow.default
     /// Zen mode is on: the row is the preset's, and arranging it would change the person's own (`settings::zen`).
@@ -53,6 +55,7 @@ public final class WindowHub {
         panel.presentation = .terminalArea
         connect(host)
         notices.onAct = { [unowned self] in noticeActed($0) }
+        notices.onBar = { [unowned self] in sayInBar($0, detail: $1) }
     }
 
     public var state: WorkspaceState { store.state }

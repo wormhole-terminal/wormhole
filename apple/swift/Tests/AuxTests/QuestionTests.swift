@@ -110,3 +110,29 @@ final class QuestionTests: XCTestCase {
         XCTAssertEqual(quit.buttonTitles, ["Quit", "Cancel"])
     }
 }
+
+@MainActor
+final class QuestionAnswerTests: XCTestCase {
+    func testCancelOfAQuestionWithNoExtraButtonIsACancelNotACrash() {
+        let sheet = QuestionSheet(Question(title: "Quit?", detail: "", confirm: "Quit"))
+        XCTAssertEqual(sheet.answer(at: 0), .confirm(boxChecked: false))
+        XCTAssertEqual(sheet.answer(at: 1), .cancel, "Cancel is place 1 here: the range of extra buttons is empty")
+        let two = QuestionSheet(Question(title: "Restart?", detail: "", confirm: "Restart", alsoButtons: ["When Idle"]))
+        XCTAssertEqual(two.answer(at: 1), .also(0))
+        XCTAssertEqual(two.answer(at: 2), .cancel)
+    }
+
+    func testATestInstanceHoldsTheQuestionUntilItsDriverAnswersIt() async {
+        let pending = PendingQuestions()
+        PendingQuestions.current = pending
+        defer { PendingQuestions.current = nil }
+        let answer = Task { await QuestionSheet(Question(title: "Close?", detail: "d", confirm: "Close")).ask(in: nil) }
+        while pending.isEmpty { await Task.yield() }
+        XCTAssertTrue(pending.summary.contains("title=Close?") && pending.summary.contains("0:Close | 1:Cancel"))
+        XCTAssertTrue(pending.answer("bogus").hasPrefix("error"))
+        XCTAssertEqual(pending.answer("cancel"), "question answered Cancel")
+        let result = await answer.value
+        XCTAssertEqual(result, .cancel)
+        XCTAssertEqual(pending.answer("confirm"), "error: no question is up")
+    }
+}

@@ -91,8 +91,16 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     /// Why a terminal's program did not start, for the window to say.
     public func startFailure(of id: TerminalID) -> String? { failed[id] }
 
+    /// The folder the next terminal opened starts in, when the action named one (`newTerminalIn`): the core opens a terminal where
+    /// the selected one is, and the folder is the program's to start in.
+    private var folderOfNext: String?
+
     public func apply(_ action: WorkspaceAction) -> WorkspaceModel.Refusal? {
-        defer { syncVisibility() }
+        defer {
+            folderOfNext = nil
+            syncVisibility()
+        }
+        if case .newTerminalIn(let folder) = action { folderOfNext = folder }
         return handle(core.apply(action: WormholeBindings.Action(action)))
     }
 
@@ -150,7 +158,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
             switch event {
             case .opened(let id, let cwd):
                 live.append(Int(id))
-                start(Int(id), in: cwd)
+                start(Int(id), in: folderOfNext ?? cwd)
             case .closed(let id):
                 live.removeAll { $0 == Int(id) }
                 book.forget(Int(id))

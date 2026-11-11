@@ -5,6 +5,8 @@
 import AppKit
 import DesignSystem
 import PanelModel
+import TerminalUI
+import WordsModel
 
 @MainActor
 final class SystemPanelHost: PanelHost {
@@ -17,6 +19,8 @@ final class SystemPanelHost: PanelHost {
         var takePrompt: () -> String? = { nil }
         var focus: () -> Void = {}
         var open: (String, String?) -> Void = { _, _ in }
+        /// The chip of the window says `notice`.
+        var say: (Notice) -> Void = { _ in }
     }
 
     let editorName: String? = nil
@@ -25,6 +29,15 @@ final class SystemPanelHost: PanelHost {
     func copy(_ text: String) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    func copyPath(_ path: String) {
+        guard !path.unicodeScalars.contains(where: { $0.properties.generalCategory == .control }) else {
+            notify(Notice.failed(.copyPath).words)
+            return terminal.say(.failed(.copyPath))
+        }
+        copy(path)
+        notify(Words.text("files-spoken-path-copied", fallback: "Path copied"))
     }
 
     func reveal(_ path: String) { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) }

@@ -83,6 +83,8 @@ extension AppController {
             } catch {
                 devctl?.append("switch-profile \(id) failed: \(error)")
                 FileHandle.standardError.write(Data("profile: cannot switch to \(id) (\(error))\n".utf8))
+                // A profile whose data folder cannot be opened saves nothing: the chip says so and why.
+                hub.notices.post(.warned(.dataFolder), detail: NoticeReason.dataFolder(profile: id, folder: dataDirectory.path, error: "\(error)"))
             }
         #endif
     }

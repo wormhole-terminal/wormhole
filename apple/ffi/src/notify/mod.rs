@@ -198,6 +198,20 @@ pub fn notify_level(kind: NoticeKindRecord, time_sensitive: bool) -> NoticeLevel
     notify::interruption_level(kind.into(), time_sensitive).into()
 }
 
+/// What an error said as one short line, for the explanation behind a warning's ⓘ
+/// (`view::notice::reason`: control characters and invisible ones gone, a long one cut in the middle).
+#[uniffi::export]
+pub fn notice_reason(error: String) -> String {
+    wormhole_core::view::notice::reason(&error)
+}
+
+/// The data-folder warning's explanation in full (`notice-warned-data-folder-detail`): which profile and folder, and
+/// what the error said (already cleaned by [`notice_reason`]).
+#[uniffi::export]
+pub fn notice_data_folder_detail(profile: String, folder: String, error: String) -> String {
+    wormhole_text::keys::notice_warned_data_folder_detail(&profile, &folder, &error)
+}
+
 impl Notifier {
     fn lock(&self) -> std::sync::MutexGuard<'_, Inner> {
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)

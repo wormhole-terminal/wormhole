@@ -4,6 +4,7 @@
 
 mod access;
 mod control;
+mod drive;
 mod hooks;
 mod probes;
 mod streams;

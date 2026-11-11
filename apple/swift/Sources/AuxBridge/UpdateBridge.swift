@@ -108,6 +108,12 @@ public final class FFIUpdateBackend: UpdateBackend {
         for await next in phases() where next != .checking { return }
     }
 
+    /// A check nobody asked for (the schedule's): it stays quiet about what the person need not hear (a skipped version, a failure).
+    public func checkAutomatically() {
+        engine.check(manual: false)
+        apply(engine.state())
+    }
+
     public func install(_ release: Release) async {
         do { try engine.install(version: release.version) } catch { phase = .failed("\(error)"); publish() }
         apply(engine.state())

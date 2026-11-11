@@ -22,13 +22,17 @@ extension AppController {
         return true
     }
 
-    /// `update check`, `update install`; `update` alone says the phase.
+    /// `update check`, `update install`, `update restart` (what a click on the chip does: asks first when something would end),
+    /// `update restart-now`, `update restart-idle` (waits until every terminal has been idle); `update` alone says the phase.
     private func runUpdate(_ argument: String) {
         let backend = aux.updateBackend()
         Task { @MainActor in
             switch argument {
             case "check": await backend.check()
             case "install": if case .available(let release) = backend.phase { await backend.install(release) }
+            case "restart": self.updateFollower?.requestRestart()
+            case "restart-now": backend.restart(whenIdle: false)
+            case "restart-idle": backend.restart(whenIdle: true)
             default: break
             }
             self.reply("update \(argument) phase=\(backend.phase) channel=\(backend.channel)")

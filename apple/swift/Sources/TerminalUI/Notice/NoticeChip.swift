@@ -24,7 +24,12 @@ struct NoticeChip: View {
                 .foregroundStyle(tokens.textPrimary)
                 .lineLimit(1)
                 .contentTransition(.opacity)
-            if notice.hasInfo { button("info.circle", L10n.noticeInfo, center.clickInfo) }
+            if notice.hasInfo {
+                button("info.circle", L10n.noticeInfo, center.clickInfo)
+                    .popover(isPresented: Binding(get: { center.infoOpen }, set: { center.infoOpen = $0 }), arrowEdge: .bottom) {
+                        NoticeInfoView(reason: center.detail.flatMap { $0.isEmpty ? nil : $0 }, openLogs: { center.onOpenLogs?() })
+                    }
+            }
             if notice.isSticky { button("xmark", L10n.noticeClose, center.dismiss) }
         }
         .padding(.leading, M.pad)

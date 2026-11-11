@@ -14,6 +14,7 @@ extension TerminalOverlay {
             let typing = view?.window?.firstResponder === view && view?.window?.isKeyWindow == true
             notices.post(.copied(text: text, byProgram: !typing))
         }
+        view.onHistoryKept = { notices.post(.failed(.historyKeptByHost)) }
         view.onClipboardAsk = { [weak self] program in
             let bar = PaneBar.asking(program)
             self?.bars.bar = bar

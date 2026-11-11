@@ -1,0 +1,155 @@
+> type printf '\033]52;c;aGVsbG8=\007'\r
+typed
+> notice chip
+chip shown=none sticky=false info=false detail=- bar=A program copied 5 characters hostNotice=-
+> notice data-folder permission denied
+notice data-folder permission denied
+> notice chip
+chip shown=none sticky=false info=false detail=- bar=A program copied 5 characters hostNotice=Wormhole can't open the data folder of the profile default, /tmp/Wormhole-swift-s-platform-co, so that profile runs without saving anything: no windows, notes or settings are kept. permission denied
+> window-shot /tmp/sp-co/chipoff.png
+window-shot /tmp/sp-co/chipoff.png
+> hotkey
+hotkey spec=shift-cmd-space action=toggleApp paused=false error=- shown=shift-cmd-space
+> hotkey-press
+hotkey-press toggleApp
+> hotkey-pause on
+hotkey-pause on
+> hotkey
+hotkey spec=shift-cmd-space action=toggleApp paused=true error=- shown=shift-cmd-space
+> hotkey-pause off
+hotkey-pause off
+> menus
+Wormhole
+  About Wormhole
+  Check for Updates…
+  ---
+  Settings…  ⌘,
+  Theme Studio  ⌥⌘,
+  ---
+  Services ▸
+  ---
+  Hide Wormhole  ⌘H
+  Hide Others  ⌥⌘H
+  Show All
+  ---
+  Quit Wormhole  ⌘Q
+Shell
+  New Window  ⌘N
+  New Terminal  ⌘T
+  New Terminal in No Group  ⇧⌘T
+  New Terminal With ▸
+    No Shells  (disabled)
+  New Terminal in New Worktree…  (disabled)
+  ---
+  Split Right  ⌘D
+  Split Down  ⇧⌘D
+  Move Pane Out of Split  (disabled)
+  ---
+  Open Folder…  ⌘O
+  Open Recent ▸
+    No Recent Folders  (disabled)
+  ---
+  Profile ▸
+    ✓ Default
+    ---
+    New Profile…
+    Manage Profiles…
+  ---
+  Close Terminal  ⌘W
+  Close Window  ⇧⌘W
+  ---
+  Export Text As…  ⌘S
+  Print…  ⌘P
+Edit
+  Undo  ⌘Z
+  Redo  ⇧⌘Z
+  ---
+  Cut  ⌘X
+  Copy  ⌘C
+  Paste  ⌘V
+  Select All  ⌘A
+  ---
+  Clear Buffer  ⌘K  (disabled)
+  ---
+  Find…  ⌘F
+  Find Next  ⌘G
+  Find Previous  ⇧⌘G
+  Use Selection for Find  ⌘E
+  ---
+  Previous Prompt  ⌘↑
+  Next Prompt  ⌘↓
+  Select Output
+  Copy Output
+  Copy Command
+  Put Command at Prompt
+  ---
+  Show Hidden Lines  ⌥⌘L  (disabled)
+View
+  Hide Sidebar  ⌃⌘S
+  Hide Right Panel  ⌥⌘I
+  Show Status Bar  ⌘/
+  Show Minimap
+  Enter Zen Mode  ⌃⌘Z
+  ---
+  Zoom Pane  ⇧⌘↩  (disabled)
+  Layout ▸
+    2 Columns
+    2 Rows
+    2×2 Grid
+    ✓ Single Pane
+  ---
+  ✓ Changes  ⌃⌘1
+  History  ⌃⌘2
+  Notes  ⌃⌘3
+  Usage  ⌃⌘4
+  Project  ⌃⌘5
+  Files  ⌃⌘6
+  ---
+  Show Terminals as Tabs
+  ---
+  Bigger  ⌘+
+  Smaller  ⌘-
+  Actual Size  ⌘0
+  ---
+  Command Palette…  ⇧⌘P
+  ---
+  Enter Full Screen  ⌃⌘F
+Terminal
+  Pin to Top
+  Hide from Agents  (disabled)
+  ---
+  Focus Terminal / Panel  ⇧⌘E
+  Focus Next Area  F6
+  Focus Previous Area  ⇧F6
+  New Note  ⌥⌘N  (disabled)
+  Stash Prompt  ⌥⌘S
+  Project Actions ▸
+    No Project Actions  (disabled)
+  ---
+  Reveal in Finder
+  Copy Path
+Window
+  Minimize  ⌘M
+  Zoom
+  ---
+  Next Terminal  ⌃⌘↓
+  Previous Terminal  ⌃⌘↑
+  Next Group  ⌃⌥]
+  Previous Group  ⌃⌥[
+  Go to Waiting Terminal  ⌃⌥W
+  Go to Finished Terminal  ⌥⇧⌘J
+  Select Pane ▸
+    Left  ⌥⌘←  (disabled)
+    Right  ⌥⌘→  (disabled)
+    Above  ⌥⌘↑  (disabled)
+    Below  ⌥⌘↓  (disabled)
+  ---
+  ✓ benjamin@MacBook-Pro-von-Benjamin:~  ⌘1
+  ---
+  Bring All to Front
+Help
+  Keyboard Shortcuts  ⌥⌘/
+  Welcome to Wormhole
+  ---
+  Licenses
+  Show Logs in Finder

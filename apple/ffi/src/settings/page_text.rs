@@ -3,20 +3,20 @@
 //! `plain_user_agent` while it is off, so the example is the header this Mac would send), and the counts of the
 //! Agents and Import pages, in the catalogs' plurals.
 
+use super::handle::SettingsHandle;
 use semver::Version;
 use std::path::Path;
 use wormhole_core::config::settings_index::SectionId;
 use wormhole_core::platform::paths;
 use wormhole_core::terminal::shells::{self, ShellKind};
-use wormhole_core::view::sidebar::display_path;
 use wormhole_core::update::{
     UpdateChannel, counted_user_agent, current_platform, macos_version, plain_user_agent,
 };
+use wormhole_core::view::sidebar::display_path;
 use wormhole_text::keys::{
     settings_advanced_reset_question, settings_agents_others_head, settings_import_selected,
     settings_terminal_worktree_base_under, settings_window_preview_feature_note,
 };
-use super::handle::SettingsHandle;
 use wormhole_text::whole;
 
 /// "17 more agents Wormhole recognises".

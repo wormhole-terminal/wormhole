@@ -318,3 +318,13 @@ fn the_badge_counts_by_its_mode() {
     assert_eq!(notify_dock_badge(DockBadgeModeRecord::NeedsYou, 1200, 0).as_deref(), Some("999+"));
     assert_eq!(notify_level(NoticeKindRecord::Bell, true), NoticeLevelRecord::Passive);
 }
+
+#[test]
+fn a_reason_is_one_short_line_and_the_data_folder_says_which_profile() {
+    assert_eq!(
+        super::notice_reason("could not start:\n\tno such file".into()),
+        "could not start: no such file"
+    );
+    let words = super::notice_data_folder_detail("Work".into(), "/x/y".into(), "denied".into());
+    assert!(words.contains("Work") && words.contains("/x/y") && words.ends_with("denied"), "{words}");
+}

@@ -27,6 +27,8 @@ extension Options {
           --status-bar         show the optional status bar
           --onboarding         show the first-run welcome (it shows by itself in a data folder that has not seen it)
           --update-feed <url>  the feed the Updates window may check (none is ever contacted without it)
+          --update-key <file>  with --update-feed: the minisign public key that signs the feed's archives (a fixture's)
+          --update-bundle <app>  with --update-feed: the scratch .app an install replaces (it must be inside the data folder)
           --background         accessory app, window behind the others, nothing takes focus (WORMHOLE_BACKGROUND=1)
 
         Needs WORMHOLE_DATA_DIR=<a folder named Wormhole-swift*>; WORMHOLE_DEVCTL=<dir> turns on the control folder.
@@ -79,6 +81,8 @@ extension Options {
             case "--status-bar": options.statusBar = true
             case "--onboarding": options.onboarding = true
             case "--update-feed": options.updateFeedURL = try value(flag)
+            case "--update-key": options.updateKeyFile = URL(fileURLWithPath: try value(flag))
+            case "--update-bundle": options.updateBundle = URL(fileURLWithPath: try value(flag))
             case "--theme":
                 let id = try value(flag)
                 guard ThemeLibrary.bundled.theme(id: id) != nil else {

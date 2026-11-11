@@ -42,6 +42,10 @@
             notifier.post(Notice(id: id, thread: id, title: title, subtitle: subtitle, body: body))
         }
 
+        /// What a click on a banner, or one of its buttons, would hand over (a test instance's banners are in the log, so this is
+        /// how a driver presses one: the same path as the centre's delegate, the response going to the core's rules).
+        func respond(_ response: NoticeResponse) { (notifier as? LogNotifier)?.respond(response) }
+
         /// The banners a test instance logged instead of posting, for the control folder's `notices`.
         var logged: [Notice] { (notifier as? LogNotifier)?.log ?? [] }
 
@@ -111,6 +115,7 @@
         init(app: AppController) {}
         func sendTest(name: String, settings: NoticeSettings) {}
         func post(terminal: Int64, title: String, body: String) {}
+        func respond(_ response: NoticeResponse) {}
         var logged: [Notice] { [] }
     }
 #endif

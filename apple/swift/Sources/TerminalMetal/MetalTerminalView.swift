@@ -20,6 +20,8 @@ public final class MetalTerminalView: NSView {
     public var onExit: ((Int32?) -> Void)?
     /// Something was copied (the selection, a link): the host may say so.
     public var onCopied: ((String) -> Void)?
+    /// Clear Buffer left the history in a session host that cannot forget it: it is back at the next attach.
+    public var onHistoryKept: (() -> Void)?
     /// Rows were rebuilt by a frame (output, a scroll): what is drawn from the terminal's state beside the grid (block
     /// marks, the minimap, find's ticks) may be read again.
     public var onContentChanged: (() -> Void)?

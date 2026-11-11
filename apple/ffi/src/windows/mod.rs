@@ -7,7 +7,9 @@ mod registry;
 mod tear_off;
 mod workspace_windows;
 
-pub use frame::{DisplayRecord, FrameKind, FrameRecord, WindowMinSize, cascade_frame, fit_frame, window_min_size};
+pub use frame::{
+    DisplayRecord, FrameKind, FrameRecord, WindowMinSize, cascade_frame, fit_frame, window_min_size,
+};
 pub use registry::{PlannedWindow, SavedWindow, Windows};
 pub use tear_off::{TearLanding, TearRect, TearWindow, tear_off_landing, tear_off_window};
 pub use workspace_windows::{Departure, TakenOut};

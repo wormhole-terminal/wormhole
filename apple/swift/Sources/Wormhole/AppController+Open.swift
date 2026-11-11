@@ -1,6 +1,7 @@
 // Opening the window and starting everything that goes with it.
 
 import AppKit
+import PlatformUI
 import AuxModel
 import PlatformModel
 import SettingsModel
@@ -22,6 +23,7 @@ extension AppController {
         menus = MenuController(app: self)
         menus?.start()
         ambient = AmbientController(app: self)
+        hotkey = HotkeyController(policy: policy) { [weak self] in self?.ambient?.hotkeyPressed($0) }
         applier.applyAmbient()
         startRealParts()
         if let directory = options.devctl {
@@ -45,6 +47,7 @@ extension AppController {
         notices = NoticeFeed(app: self)
         aux.startAccess()
         startHooks()
+        startUpdates()
         #if WITH_UNIFFI
             let follower = ProjectSettingsFollower(app: self)
             follower?.start()

@@ -1,0 +1,6 @@
+# live, --background Swift instance, no status item, Dock or panel made: the rows they carry, run as choosing them would (`ambient-run`)
+> ambient-run open-project /tmp/sp-am/proj   -> terminal 2 in /private/tmp/sp-am/proj        (before: the folder was dropped, the terminal opened in ~; WorkspaceAction.newTerminalIn now reaches the program's start)
+> ambient-run open-project /tmp/sp-am/proj   -> the same terminal is shown, none opened
+> ambient-run new-terminal ; new-window ; open-tab 1 ; jump-to-waiting      -> as the rows do
+> ambient-run reply 1 echo replied-from-the-quick-panel   -> typed into terminal 1 and run: "replied-from-the-quick-panel" on its screen
+Not run: the NSStatusItem's image and menu, the quick panel window and its keys, the Dock tile.

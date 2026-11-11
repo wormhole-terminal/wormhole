@@ -17,6 +17,7 @@ extension WindowHub {
             overlays[id]?.waiting = true
             hostChanged(id)
         }
+        bars.onDismissHostNotice = { [unowned self] in overlays[id]?.bars.hostNotice = nil }
         let made = TerminalOverlay(view: view, actions: bars, notices: notices)
         view.onFileLink = { [unowned self] text in openFile(text, in: id) }
         overlays[id] = made

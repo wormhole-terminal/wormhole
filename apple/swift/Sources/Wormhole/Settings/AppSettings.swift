@@ -12,6 +12,12 @@ import SettingsModel
 @MainActor
 enum AppSettings {
     static func makeModel(app: AppController) -> SettingsModel {
+        let model = makeBare(app: app)
+        model.onRecording = { [weak app] in app?.hotkey?.pause($0) }
+        return model
+    }
+
+    private static func makeBare(app: AppController) -> SettingsModel {
         #if WITH_UNIFFI
             if app.options.isReal {
                 do {

@@ -64,6 +64,9 @@ public enum Notice: Hashable, Sendable {
         }
     }
 
+    /// The ⓘ opens something: only a host that could not start has an explanation (`notice/info.rs`).
+    var hasExplanation: Bool { if case .warned(.hostFallback) = self { true } else { false } }
+
     /// The capsule itself is the button ("Restart").
     var hasAction: Bool {
         switch self {
