@@ -28,14 +28,10 @@ env:
 
 jobs:
   build-test:
-    name: Build and test (${{ matrix.os }})
-    # The app is developed with Xcode 27. macos-latest (Xcode 26.6, Swift 6.3.3) is kept beside it because the
-    # package says it builds with Swift 6.2: its compiler crashed on TerminalUI, which the last step narrows down.
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, macos-27]
-    runs-on: ${{ matrix.os }}
+    name: Build and test
+    # The app is developed with Xcode 27; the runner has Xcode 26 (Swift 6.3), which the package says it builds
+    # with. There is no macOS 27 runner yet (a job asking for one stays queued).
+    runs-on: macos-latest
     timeout-minutes: 75
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

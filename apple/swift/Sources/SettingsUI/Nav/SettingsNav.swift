@@ -13,7 +13,7 @@ struct SettingsNav: View {
     var focus: FocusState<SettingsFocus?>.Binding
 
     var body: some View {
-        List(selection: Binding(get: { model.isSearching ? nil : model.selection }, set: open)) {
+        List(selection: Binding(get: { model.isSearching ? nil : model.selection }, set: { open($0) })) {
             Label {
                 Text(model.profile.form?.name ?? SettingsText.profileDefault)
             } icon: {

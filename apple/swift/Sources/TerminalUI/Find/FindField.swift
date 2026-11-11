@@ -15,7 +15,8 @@ struct FindField: View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radius)
         HStack(spacing: Space._2) {
             LucideView(icon: .search, size: Metric.glyph).foregroundStyle(tokens.textMuted).accessibilityHidden(true)
-            TextField(L10n.findPlaceholder, text: Binding(get: { model.text }, set: model.setText), selection: $selection)
+            // The setter is a closure, not the method itself: Swift 6.3's compiler crashes on the thunk for a method there.
+            TextField(L10n.findPlaceholder, text: Binding(get: { model.text }, set: { model.setText($0) }), selection: $selection)
                 .textFieldStyle(.plain)
                 .font(.system(size: TextRole.body.size))
                 .focused($focused)
