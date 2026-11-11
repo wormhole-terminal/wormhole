@@ -20,8 +20,8 @@
 #   text  the source checks themselves (crates/wormhole-rules), skills, agents, rules, scripts,
 #         tools/visual, the top-level .md files (CHANGELOG.md too): the source checks (they scan the
 #         wording), which link std alone, so nothing of the app or core compiles.
-#   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench, apple (its
-#         own workspace) and tools/feed-counter (bun test there): nothing to run.
+#   none  .github, .claude/hooks and settings, .gitignore, the rest of packaging, tools/bench, macos and
+#         crates/wormhole-ffi (the Swift app and its bridge, a workspace of their own) and tools/feed-counter (bun test there): nothing to run.
 # Whatever the scope, first the history (cheap, before any cargo): the commits since the base follow
 # the rules (scripts/commits.py), a feat/fix/perf, breaking or Security commit comes with a
 # CHANGELOG.md entry, and CHANGELOG.md itself is well formed when it changed (scripts/changelog.py).
@@ -53,6 +53,9 @@ done
 # The scope one path needs, and whether it touches dependencies.
 scope_of() {
   case "$1" in
+    # The Swift app's bridge: a workspace of its own (the root Cargo.toml's `exclude`), built and checked with macos/. Before the
+    # manifests below: its Cargo.toml and Cargo.lock are not the app's.
+    crates/wormhole-ffi/*) echo none ;;
     Cargo.toml|Cargo.lock|deny.toml|crates/*/Cargo.toml) echo "all deps" ;;
     rust-toolchain*|rustfmt.toml|clippy.toml|.cargo/*|.config/nextest.toml) echo all ;;
     crates/wormhole-core/*|crates/wormhole-term/*|crates/wormhole-host/*|crates/wormhole-wire/*|crates/wormhole-text/*) echo all ;;
@@ -74,7 +77,7 @@ scope_of() {
     .git-blame-ignore-revs) echo none ;;
     # Its own workspace, built and checked on its own (tools/bench/README.md).
     tools/bench/*) echo none ;;
-    # The Swift UI experiment: its own workspace and packages, built and checked on their own.
+    # The Swift app: its own packages, built and checked on their own (.github/workflows/swift.yml).
     macos/*) echo none ;;
     # The download server's counter, a Cloudflare Worker with its own tests (bun test there).
     tools/feed-counter/*) echo none ;;
@@ -111,6 +114,8 @@ if [ "$selftest" = 1 ]; then
     case "$rel" in "$crate"/*) continue ;; esac
     checked=$((checked + 1))
     need="$(scope_of "$file" | cut -d' ' -f1)" got="$(scope_of "$rel" | cut -d' ' -f1)"
+    # A crate this gate runs no tests of (a workspace of its own) has nothing here to miss.
+    [ "$need" = none ] && continue
     if [ "$got" != all ] && [ "$got" != "$need" ]; then
       echo "scope table: $file includes $rel, which is '$got' (needs '$need'$([ "$need" = all ] || echo " or 'all'"))" >&2
       bad=1

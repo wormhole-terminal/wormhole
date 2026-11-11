@@ -3,7 +3,7 @@
 
 #[test]
 fn committed_settings_json_is_what_core_holds() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../swift/Sources/SettingsModel/Resources/settings.json");
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../macos/swift/Sources/SettingsModel/Resources/settings.json");
     let committed = std::fs::read_to_string(path).expect("settings.json is committed");
     assert!(
         committed == wormhole_ffi::settings_dump::json(),

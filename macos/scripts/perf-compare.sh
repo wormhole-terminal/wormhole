@@ -15,8 +15,7 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-APPLE="$(dirname "$HERE")"
-ROOT="$(dirname "$APPLE")"
+ROOT="$(cd "$HERE/../.." && pwd)"
 # shellcheck source=../../scripts/lib.sh
 . "$ROOT/scripts/lib.sh"
 
@@ -24,7 +23,7 @@ FRAME_RUNS=3 FRAMES=60 SAMPLE_SECONDS=5 SETTLE_SECONDS=4 IDLE_SECONDS=10
 ALL_WORKLOADS="warptunnel matrix flood-ascii flood-truecolor throughput idle"
 BENCH_TESTS=logflood,colorflood,cursorstorm
 
-app="" only="" keep=0 grid="200x69" ttystorm="$APPLE/target/ttystorm/release/ttystorm"
+app="" only="" keep=0 grid="200x69" ttystorm="$ROOT/crates/wormhole-ffi/target/ttystorm/release/ttystorm"
 while [ $# -gt 0 ]; do
   case "$1" in
     --app) app="${2:?--app needs a path}"; shift ;;

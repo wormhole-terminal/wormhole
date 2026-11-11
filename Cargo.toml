@@ -1,5 +1,8 @@
 [workspace]
 members = ["crates/*"]
+# The Swift app's UniFFI bridge: a workspace of its own until it joins this one (its own `Cargo.lock`, so UniFFI is
+# in neither the shipping app's lock file nor its licences; built by macos/scripts/build-ffi.sh).
+exclude = ["crates/wormhole-ffi"]
 default-members = ["crates/wormhole"]
 resolver = "3"
 

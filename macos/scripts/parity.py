@@ -17,8 +17,8 @@ import sys
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-CSV_PATH = os.path.join(ROOT, "apple", "parity", "features.csv")
-SOURCES = os.path.join(ROOT, "apple", "swift", "Sources")
+CSV_PATH = os.path.join(ROOT, "macos", "parity", "features.csv")
+SOURCES = os.path.join(ROOT, "macos", "swift", "Sources")
 
 AREAS = ["terminal", "sidebar", "window", "panel", "overlays", "platform", "aux", "settings", "studio", "crosscut"]
 LOOKS = (0.0, 0.25, 0.5, 0.75, 1.0)
@@ -112,11 +112,11 @@ def parse(text):
 
 
 def missing_evidence(features, root=ROOT):
-    """Evidence paths under macos/ that do not exist (png: entries name scratchpad renders and are not checked)."""
+    """Evidence paths under macos/ and crates/ that do not exist (png: entries name screenshots and are not checked)."""
     missing = []
     for feature in features:
         for item in [part.strip() for part in feature.evidence.split(";") if part.strip()]:
-            if item.startswith("macos/") and not os.path.exists(os.path.join(root, item)):
+            if item.startswith(("macos/", "crates/")) and not os.path.exists(os.path.join(root, item)):
                 missing.append("%s: evidence %s does not exist" % (feature.id, item))
     return missing
 

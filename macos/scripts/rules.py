@@ -7,7 +7,7 @@
 Rules, each with the reason it exists:
   file-size      no source file over 1,000 lines (the project's limit; over 600 is only counted);
   bucket-names   no file or folder named utils, helpers, common, misc (the project bans them);
-  unsafe         `unsafe` and `allow(unsafe_code)` in Rust only in the ffi crate's lib.rs (UniFFI's
+  unsafe         `unsafe` and `allow(unsafe_code)` in Rust only in the bridge crate's lib.rs (UniFFI's
                  generated scaffolding) and c_abi.rs (a hand-written seam, if the hot path ever needs it);
   direction      the app's crates never name wormhole-ffi (dependencies point one way);
   no-polling     no Timer.scheduledTimer / Timer.publish / Task.sleep in the Swift sources: an idle
@@ -25,8 +25,10 @@ import re
 import sys
 from pathlib import Path
 
-APPLE = Path(__file__).resolve().parent.parent
-REPO = APPLE.parent
+MACOS = Path(__file__).resolve().parent.parent
+REPO = MACOS.parent
+# The bridge crate lives with the app's crates; its rules are these, not scripts/structure.py's.
+BRIDGE = REPO / "crates" / "wormhole-ffi"
 
 SKIP_DIRS = {"target", ".build", "dist", ".git"}
 # What build-ffi.sh links or generates inside a package.
@@ -34,15 +36,15 @@ GENERATED = [re.compile(r"(^|/)Sources/WormholeBindings(/|$)"), re.compile(r"\.x
 SOURCE_SUFFIXES = {".rs", ".swift", ".py", ".sh", ".metal"}
 BUCKET_NAMES = {"utils", "util", "helpers", "helper", "common", "misc"}
 LIMIT = 1000
-UNSAFE_ALLOWED = {Path("ffi/src/lib.rs"), Path("ffi/src/c_abi.rs")}
+UNSAFE_ALLOWED = {Path("crates/wormhole-ffi/src/lib.rs"), Path("crates/wormhole-ffi/src/c_abi.rs")}
 POLLING = re.compile(r"\bTimer\.(scheduledTimer|publish)\b|\bTask\.sleep\b")
 PROCESS = re.compile(r"\bProcess\(\)|\bNSTask\b|\bposix_spawn\b")
 UNSAFE_RUST = re.compile(r"\bunsafe\b")
 
 
 def sources():
-    for path in sorted(APPLE.rglob("*")):
-        rel = path.relative_to(APPLE)
+    for path in sorted(MACOS.rglob("*")) + sorted(BRIDGE.rglob("*")):
+        rel = path.relative_to(REPO)
         if any(part in SKIP_DIRS for part in rel.parts):
             continue
         if any(pattern.search(rel.as_posix()) for pattern in GENERATED):
@@ -65,7 +67,7 @@ def main() -> int:
             for number, line in enumerate(text.splitlines(), 1):
                 if UNSAFE_RUST.search(line) and not line.lstrip().startswith("//"):
                     problems.append(f"unsafe: {rel}:{number}: {line.strip()}")
-        if path.suffix == ".swift" and rel.parts[0] != "ffi-bench":
+        if path.suffix == ".swift" and rel.parts[1] != "ffi-bench":
             swift_lines = text.splitlines()
             for number, line in enumerate(swift_lines, 1):
                 code = line.split("//", 1)[0]
@@ -76,10 +78,11 @@ def main() -> int:
                     problems.append(f"no-process: {rel}:{number}: {line.strip()}")
 
     for manifest in sorted((REPO / "crates").glob("*/Cargo.toml")) + [REPO / "Cargo.toml"]:
-        if re.search(r"wormhole[-_]ffi", manifest.read_text(encoding="utf-8")):
+        # A dependency on it; the root manifest's `exclude` names its folder, which is the opposite.
+        if manifest.parent != BRIDGE and re.search(r"^\s*wormhole[-_]ffi\b", manifest.read_text(encoding="utf-8"), re.M):
             problems.append(f"direction: {manifest.relative_to(REPO)} names wormhole-ffi")
     for source in sorted((REPO / "crates").glob("*/src/**/*.rs")):
-        if "wormhole_ffi" in source.read_text(encoding="utf-8"):
+        if BRIDGE not in source.parents and "wormhole_ffi" in source.read_text(encoding="utf-8"):
             problems.append(f"direction: {source.relative_to(REPO)} names wormhole_ffi")
 
     for problem in problems:

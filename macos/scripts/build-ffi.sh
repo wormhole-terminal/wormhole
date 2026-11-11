@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build the Rust side of the Swift UI experiment and wrap it for SwiftPM:
-#   1. cargo builds `wormhole-ffi` (release, one arch) into crates/wormhole-ffi/target;
+#   1. cargo builds `wormhole-ffi` (crates/wormhole-ffi; release, one arch) into its own target dir;
 #   2. uniffi-bindgen (the package next to it, at the library's version) reads the library and writes
 #      the Swift bindings and the C header and module map;
 #   3. the static library and the header become `WormholeFFI.xcframework`.
@@ -10,8 +10,10 @@
 # Run from anywhere; `CARGO_BUILD_JOBS` defaults to 4.
 set -euo pipefail
 
-apple="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$apple"
+macos="$(cd "$(dirname "$0")/.." && pwd)"
+# The bridge crate and its bindings generator: a cargo workspace of its own, beside the app's crates.
+bridge="$(cd "$macos/../crates/wormhole-ffi" && pwd)"
+cd "$macos"
 
 # The same deployment target for cargo's objects and for Swift.
 export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-26.0}"
@@ -19,15 +21,16 @@ export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
 
 # Two invocations: the library alone has no generator in it (smaller, and cargo's feature
 # unification would otherwise turn `uniffi/cli` on for it); the generator is a package of its own.
-cargo build --release -p wormhole-ffi
-cargo build --release -p uniffi-bindgen
+(cd "$bridge" && cargo build --release -p wormhole-ffi && cargo build --release -p uniffi-bindgen)
 
 # Cargo's output may live elsewhere (a target dir shared by worktrees); what is generated per worktree
-# (bindings, headers) stays in this one's own `target/`.
+# (bindings, headers) stays in the bridge's own `target/`. A relative CARGO_TARGET_DIR is cargo's, read from
+# the bridge's folder.
 built="${CARGO_TARGET_DIR:-target}"
+case "$built" in /*) ;; *) built="$bridge/$built" ;; esac
 lib="$built/release/libwormhole_ffi.a"
-bindings="target/bindings"
-headers="target/xcframework-headers"
+bindings="$bridge/target/bindings"
+headers="$bridge/target/xcframework-headers"
 dist="dist"
 rm -rf "$bindings" "$headers" "$dist/WormholeFFI.xcframework"
 mkdir -p "$bindings" "$headers" "$dist"
@@ -39,22 +42,22 @@ cp "$bindings/WormholeFFI.h" "$headers/"
 cp "$bindings/WormholeFFI.modulemap" "$headers/module.modulemap"
 cp "$bindings/WormholeBindings.swift" "$dist/WormholeBindings.swift"
 xcodebuild -create-xcframework -library "$lib" -headers "$headers" -output "$dist/WormholeFFI.xcframework"
-echo "built $lib ($(du -h "$lib" | cut -f1)) -> $apple/$dist/"
+echo "built $lib ($(du -h "$lib" | cut -f1)) -> $macos/$dist/"
 
 # The packages that consume it get symlinks (SwiftPM wants a binary target and sources inside the
 # package's own folder): `<package>/WormholeFFI.xcframework` and `<package>/Sources/WormholeBindings/`.
 for package in ffi-bench "$@"; do
   package="$(cd "$package" && pwd)"
   mkdir -p "$package/Sources/WormholeBindings"
-  ln -sfn "$apple/$dist/WormholeFFI.xcframework" "$package/WormholeFFI.xcframework"
-  ln -sf "$apple/$dist/WormholeBindings.swift" "$package/Sources/WormholeBindings/WormholeBindings.swift"
+  ln -sfn "$macos/$dist/WormholeFFI.xcframework" "$package/WormholeFFI.xcframework"
+  ln -sf "$macos/$dist/WormholeBindings.swift" "$package/Sources/WormholeBindings/WormholeBindings.swift"
   # The intro's shader is the GPUI app's own, one source for both. It is copied in, not linked: SwiftPM does not
   # follow a link to a folder outside the package when it gathers resources (Swift 6.3 left the bundle without it).
   if [ -d "$package/Sources/AuxWindows" ]; then
     shader="$package/Sources/AuxWindows/Resources/shader"
     rm -rf "$shader"
     mkdir -p "$shader"
-    cp "$apple/../crates/wormhole/src/platform/macos/intro/shader/"*.metal "$shader/"
+    cp "$macos/../crates/wormhole/src/platform/macos/intro/shader/"*.metal "$shader/"
   fi
   echo "linked into $package"
 done

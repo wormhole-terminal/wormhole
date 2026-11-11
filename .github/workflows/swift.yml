@@ -1,11 +1,12 @@
 name: Swift app
 
-# The Swift experiment (macos/): its Rust library, a release build of the app and every Swift test, on a
-# GitHub runner instead of a developer's Mac. Pushes to exp/swift only, or by hand (Actions → Swift app →
-# Run workflow, or `gh workflow run "Swift app" --ref <branch>`). It uses no secret and publishes nothing.
+# The Swift app (macos/, with its bridge crate crates/wormhole-ffi): the Rust library, a release build of the app
+# and every Swift test, on a GitHub runner instead of a developer's Mac. Pushes to main that reach it, or by hand
+# (Actions → Swift app → Run workflow, or `gh workflow run "Swift app" --ref <branch>`). It uses no secret and
+# publishes nothing, and no other workflow waits for it: the app that ships is the CI workflow's.
 on:
   push:
-    branches: [exp/swift]
+    branches: [main]
     paths:
       - "macos/**"
       - "crates/**"
@@ -42,7 +43,7 @@ jobs:
         run: rustup toolchain install
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          workspaces: "apple -> target"
+          workspaces: "crates/wormhole-ffi -> target"
       # The app is developed with the newest Xcode; the runner's default may be a release behind (Swift 6.3.3 crashed
       # compiling TerminalUI). Take the newest Xcode the image has.
       - name: Newest Xcode

@@ -1128,11 +1128,20 @@ RULE_FUNCS = {
 }
 
 
+def own_workspace(root: str, crate: str) -> bool:
+    """A crate folder that is a cargo workspace of its own (the root's `exclude`): not this workspace's to check."""
+    try:
+        with open(os.path.join(root, "crates", crate, "Cargo.toml"), encoding="utf-8") as f:
+            return any(line.strip() == "[workspace]" for line in f)
+    except OSError:
+        return False
+
+
 class Analysis:
     def __init__(self, root: str, cfg: dict) -> None:
         self.root, self.cfg = root, cfg
         names = sorted(d for d in os.listdir(os.path.join(root, "crates"))
-                       if os.path.isdir(os.path.join(root, "crates", d, "src")))
+                       if os.path.isdir(os.path.join(root, "crates", d, "src")) and not own_workspace(root, d))
         self.crates = [Crate(n, root) for n in names]
         self.found: Dict[str, Findings] = {r: {} for r in RULES}
         for crate in self.crates:

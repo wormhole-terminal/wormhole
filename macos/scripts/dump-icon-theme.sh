@@ -5,9 +5,9 @@
 # fails when the copy is out of date.
 set -euo pipefail
 
-apple="$(cd "$(dirname "$0")/.." && pwd)"
-source="$apple/../crates/wormhole-core/assets/icon-themes/wormhole"
-target="$apple/swift/Sources/FileIconTheme/Resources"
+macos="$(cd "$(dirname "$0")/.." && pwd)"
+source="$macos/../crates/wormhole-core/assets/icon-themes/wormhole"
+target="$macos/swift/Sources/FileIconTheme/Resources"
 
 json() { python3 -I -c 'import sys; print("".join(l for l in open(sys.argv[1]) if not l.lstrip().startswith("//")), end="")' "$source/wormhole-icons.json"; }
 

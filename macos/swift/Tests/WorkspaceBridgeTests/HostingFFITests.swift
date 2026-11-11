@@ -14,7 +14,7 @@ final class HostingFFITests: XCTestCase {
     private var host = ""
 
     override func setUpWithError() throws {
-        host = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../../target/debug/wormhole-host")
+        host = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../../../crates/wormhole-ffi/target/debug/wormhole-host")
             .standardizedFileURL.path
         try XCTSkipUnless(FileManager.default.isExecutableFile(atPath: host), "no host binary at \(host)")
         // /tmp: a socket's path must fit in 104 bytes.

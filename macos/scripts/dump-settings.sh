@@ -6,10 +6,11 @@
 # Honours CARGO_TARGET_DIR and CARGO_BUILD_JOBS.
 set -euo pipefail
 
-apple="$(cd "$(dirname "$0")/.." && pwd)"
-resource="$apple/swift/Sources/SettingsModel/Resources/settings.json"
+macos="$(cd "$(dirname "$0")/.." && pwd)"
+resource="$macos/swift/Sources/SettingsModel/Resources/settings.json"
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-4}"
-cd "$apple"
+# The dump is an example of the bridge crate, which is a cargo workspace of its own.
+cd "$macos/../crates/wormhole-ffi"
 
 if [[ "${1:-}" == "--check" ]]; then
   fresh="$(mktemp -d)/settings.json"

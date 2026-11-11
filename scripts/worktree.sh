@@ -45,6 +45,8 @@ if [ "${1:-}" = "--selftest" ]; then
   out="$(config "$root" 1)"
   status=0
   for toml in "$root"/crates/*/Cargo.toml; do
+    # A workspace of its own (the root's `exclude`) builds with its own profile.
+    grep -qx '\[workspace\]' "$toml" && continue
     name="$(sed -n 's/^name *= *"\(.*\)"/\1/p' "$toml" | head -n1)"
     grep -qx "\[profile.dev.package.$name\]" <<<"$out" || { echo "worktree.sh: $name is not covered" >&2; status=1; }
   done

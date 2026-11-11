@@ -11,9 +11,10 @@ returns it; check it at start-up and refuse a different one).
 
 ## What you link, and where it is
 
-`macos/scripts/build-ffi.sh` builds the Rust crate `wormhole-ffi` (a nested Cargo workspace under
-`macos/`, its own `Cargo.lock` and target dir `crates/wormhole-ffi/target/`, git-ignored) and writes, to
-`macos/dist/` (git-ignored; in the worktree that built it):
+`macos/scripts/build-ffi.sh` builds the Rust crate `wormhole-ffi` (`crates/wormhole-ffi`, a Cargo workspace of
+its own with its bindings generator: its own `Cargo.lock` and target dir `crates/wormhole-ffi/target/`,
+git-ignored; run cargo for it from that folder) and writes, to `macos/dist/` (git-ignored; in the worktree
+that built it):
 
 | File | What |
 |---|---|
