@@ -74,8 +74,8 @@ public final class ProjectStore {
 
     /// The approve button's words: Touch ID where it is set up, else the password.
     public var approveTitle: String {
-        approving ? panelText("project-waiting", "Waiting for approval\u{2026}")
-            : backend.biometricsAvailable ? panelText("project-trust", "Trust with Touch ID")
+        approving ? panelText("settings-projects-waiting-for-approval", "Waiting for approval\u{2026}")
+            : backend.biometricsAvailable ? panelText("settings-projects-trust-with-touch-id", "Trust with Touch ID")
             : panelText("project-trust-password", "Trust (approve with password)")
     }
 

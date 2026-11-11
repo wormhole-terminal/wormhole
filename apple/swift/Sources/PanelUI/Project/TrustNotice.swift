@@ -30,7 +30,7 @@ struct TrustNotice: View {
     @ViewBuilder private func buttons(shown: Int) -> some View {
         NoticeButton(title: store.approveTitle, primary: true, busy: store.approving, action: store.approve)
         if shown < state.commands.count {
-            NoticeButton(title: panelText("project-view-all", "View all \(state.commands.count)\u{2026}"), action: store.viewAll)
+            NoticeButton(title: panelText("project-view-all", ["count": .whole(state.commands.count)], "View all \(state.commands.count)\u{2026}"), action: store.viewAll)
         }
     }
 

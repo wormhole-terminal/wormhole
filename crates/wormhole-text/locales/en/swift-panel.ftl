@@ -463,3 +463,6 @@ title-row-ports-more = { $count } more listening: { $ports }
 # The agent meter's words. { $percent } is a whole number.
 title-row-context-used = { $percent }% of the context window used
 
+diff-badge-out-of-date = Out of date
+diff-badge-gone = No longer changed
+project-trust-password = Trust (approve with password)
