@@ -11,6 +11,7 @@ mod records;
 mod service;
 mod settings_page;
 mod state;
+mod theme;
 mod trust;
 
 pub use effects::{NewTerminalRecord, ProjectEffect, TerminalPlace};

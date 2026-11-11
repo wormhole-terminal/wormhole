@@ -20,6 +20,7 @@ mod shortcuts;
 mod skills;
 mod state;
 mod theme_files;
+mod theme_picks;
 
 mod values;
 mod watch;

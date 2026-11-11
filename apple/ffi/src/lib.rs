@@ -32,6 +32,7 @@ mod frame_extras;
 mod git;
 mod hook_server;
 mod hosting;
+mod icon_theme;
 mod inline_images;
 mod interaction;
 mod isolation;
@@ -52,6 +53,7 @@ mod terminal;
 pub mod theme_dump;
 mod theme_json;
 mod theme_resolve;
+mod studio_files;
 mod themes;
 mod title_fit;
 mod visible;
@@ -123,6 +125,7 @@ pub use hosting::{
     HostUnavailableKind, HostedStart, HostedTerminals, HostingError, HostingProgram, LaunchPlan, OrphanHost,
     SavedTerminal, TerminalHosting,
 };
+pub use icon_theme::IconThemeHandle;
 pub use inline_images::InlineImage;
 pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
@@ -157,7 +160,14 @@ pub use settings::{
     settings_set_skill, settings_skill_rows, settings_switch_profile,
 };
 pub use terminal::{FrameTiming, KeyPress, Terminal};
-pub use themes::{list_user_themes, resolve_theme};
+pub use studio_files::{
+    StudioKeyRename, StudioRead, StudioThemeChoice, StudioThemeFamily, StudioThemeList, StudioUpdate,
+    StudioUpdateChange, studio_add_appearance, studio_canonical, studio_convert, studio_copy_theme,
+    studio_export, studio_export_dir, studio_key_table, studio_new_id, studio_new_theme, studio_read,
+    studio_remember_export_dir, studio_theme_list, studio_token_in_both, studio_update_apply,
+    studio_update_check,
+};
+pub use themes::{list_user_themes, resolve_theme, resolve_theme_json, theme_files_stamp};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
 pub use visible::{VisibleLine, VisibleMark, visible_line};
 pub use window_ops::{

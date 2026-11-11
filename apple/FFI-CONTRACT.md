@@ -1426,3 +1426,24 @@ All additive; the core decides, Swift asks.
   the failure (`at_ms` on the caller's monotonic clock) and the foreground command with its Unix start, for `TabFactsRecord`.
   `Workspace::attached_again(id)` after a host attached at launch brings back a "Done" its record said nobody had seen.
 
+## Round S wave 3, themes: picks, theme files, a project's theme, icon themes (`settings/theme_picks.rs`, `studio_files.rs`, `themes.rs`, `icon_theme.rs`)
+
+All additive; the core decides, Swift asks.
+
+- Picks (`config::picks`, moved to core and shared with the GPUI app): `SettingsHandle.pick_theme(value, dark)` sets the pick the mode says a
+  choice sets (never the mode); `pick_theme_after_save(value, dark, path)` is the Studio's save (nothing when the theme is a pick already);
+  `rename_theme_picks([old, new, ...])`, `follow_system_with(light, dark)` (the one that sets the mode, to Match system), `theme_selects(setting, path)`
+  and `icon_theme_in_force()` (the setting, or the bundled one while the Icon themes flag is off). Each returns whether a pick changed.
+- `theme_files_stamp(themes_dir, picks) -> String` changes when a file a pick may come from changes (core's `ThemeStamp`); the store asks it
+  when the settings follower reports a revision.
+- `resolve_theme_json(json, themes_dir, primary, branch, increase_contrast, opacity, blur)` resolves a project's `theme.json` text as the
+  theme in effect (the person's colour choices go over it), in `resolve_theme`'s shape. `ProjectService.theme_overlay(folder)` is that text
+  while the project's theme is on (core asks no trust for a theme), `theme_target(folder)` and `write_theme(folder, json)` are "Use in this
+  project": refused unless the project is trusted and its theme is not switched off (the reason is the sentence).
+- Theme files (`studio_files.rs`, text in and text out, nothing written): `studio_read(text) -> StudioRead {version, newer, skipped, notices}`,
+  `studio_canonical`, `studio_new_theme(dark, name)`, `studio_copy_theme(dir, from, name)` (a base copied from a built-in, a theme's slug or
+  file), `studio_new_id`, `studio_convert` (version 0 to 1, refused unless it looks the same), `studio_add_appearance`, `studio_update_check` /
+  `studio_update_apply` (a copy's base against its source), `studio_export` (the format every release reads), `studio_theme_list(dir)`
+  (the menu: yours once, built-ins by family), `studio_key_table()` and `studio_token_in_both(name)` (core's `token_scope`).
+- `IconThemeHandle.open(user_dir, name)` is `icon_theme::theme_named` for dark and light ("None": no icons): `file(path, dark)` and
+  `folder(name, open, dark)` answer where the SVG is (a user file's path, or the bundled key `wormhole-icons/...`), `renders_in_colour()`.

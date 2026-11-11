@@ -14,6 +14,9 @@ use crate::theme_json::{appearance, string, terminal, variant};
 /// What to resolve. `theme` is what `settings.theme` holds: a name, a slug, or a path.
 pub(crate) struct Request<'a> {
     pub(crate) theme: &'a str,
+    /// A project's `theme.json` text: it is the theme in effect in place of `theme` (the GPUI app's
+    /// `project_theme`), and the person's colour choices still go over it.
+    pub(crate) project: Option<&'a str>,
     /// The folder user themes live in (read only); `None` has none.
     pub(crate) themes_dir: Option<&'a Path>,
     /// `#rrggbb` replaces the theme's primary; empty keeps the theme's own.
@@ -27,7 +30,13 @@ pub(crate) struct Request<'a> {
 
 pub(crate) fn resolve(req: &Request<'_>) -> Result<String, String> {
     let themes = UserThemes::read(req.themes_dir.unwrap_or(Path::new("")));
-    let (id, base) = find(&themes, req.theme)?;
+    let (id, base) = match req.project {
+        Some(json) => (
+            "project".to_string(),
+            wormhole_core::config::tokens_from_json_in(req.themes_dir.unwrap_or(Path::new("")), json)?,
+        ),
+        None => find(&themes, req.theme)?,
+    };
     let choices = ColorChoices {
         primary: if req.primary.trim().is_empty() {
             None
@@ -101,6 +110,7 @@ mod tests {
     fn request<'a>(theme: &'a str, dir: Option<&'a Path>) -> Request<'a> {
         Request {
             theme,
+            project: None,
             themes_dir: dir,
             primary: "",
             branch: "",
@@ -136,6 +146,19 @@ mod tests {
         assert!(json.contains("\"primary\": [1, 0.4, 0, 1]"), "the file's primary is applied: {json}");
         assert!(list(&dir).contains("\"name\": \"Mine\""));
         std::fs::remove_dir_all(&dir).expect("cleanup");
+    }
+
+    #[test]
+    fn a_project_theme_replaces_the_pick_and_keeps_the_choices() {
+        let mut req = request("nord", None);
+        req.project = Some(r##"{"name": "App", "extends": "Nord", "ui": {"primary": "#00ff00"}}"##);
+        let json = resolve(&req).expect("resolves");
+        assert!(json.contains("\"name\": \"App\""), "{json}");
+        assert!(json.contains("\"primary\": [0, 1, 0, 1]"));
+        req.primary = "#ff6600";
+        assert!(resolve(&req).expect("resolves").contains("\"primary\": [1, 0.4, 0, 1]"));
+        req.project = Some("{ not json");
+        assert!(resolve(&req).is_err());
     }
 
     #[test]
