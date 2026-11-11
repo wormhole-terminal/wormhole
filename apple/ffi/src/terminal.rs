@@ -1,0 +1,536 @@
+//! The `Terminal` object: a program in a PTY on the real engine, as Swift holds it.
+//!
+//! Threads: the PTY's reader thread and the event thread are Rust's and run on their own. Swift
+//! calls in from the main thread (`frame`, `write`, `resize`); the one lock they share with the
+//! reader is the engine's fair lock, taken inside `Pty::snapshot` for a copy of the damaged rows.
+
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, PoisonError, RwLock};
+use std::time::Instant;
+
+use wormhole_core::agents::{AgentId, Foreground};
+use wormhole_core::storage::paths::DataRoot;
+use wormhole_core::terminal::{SpawnOptions, spawn};
+use wormhole_core::workspace::Ask;
+use wormhole_term::input::keys::{self, KeyInput};
+use wormhole_term::program_status::Summary;
+use wormhole_term::types::Scroll;
+use wormhole_term::{GridSize, Pty, ScreenSnapshot};
+
+use crate::error::FfiError;
+use crate::events::{EventFeed, EventQueue, TermEvent, TerminalListener, Touch, spawn_receiver};
+use crate::hosting::{HostSlot, HostedStart};
+use crate::inline_images::{PlacementsSent, placeholder_placements};
+use crate::{frame, frame_extras, isolation};
+
+/// A terminal: a program in a PTY, its screen and its events.
+#[derive(uniffi::Object)]
+pub struct Terminal {
+    /// `None` after `close`. Write-locked only by `resize` and `close`.
+    pub(crate) pty: RwLock<Option<Pty>>,
+    /// The copy `frame` reads the screen into; the engine's damage is consumed by it, so there
+    /// is exactly one.
+    pub(crate) snapshot: Mutex<ScreenSnapshot>,
+    pub(crate) events: Arc<EventQueue>,
+    /// What the pointer calls remember between calls (`interaction/`).
+    pub(crate) interaction: crate::interaction::Interaction,
+    /// Which placements the last frame carried (`inline_images`); held with `snapshot`'s lock.
+    placements: Mutex<PlacementsSent>,
+    /// The frame being packed, and the last one sent that changed no row (`pack_frame`); held with `snapshot`'s lock.
+    quiet: Mutex<(Vec<u8>, Vec<u8>)>,
+    /// The colours programs set that the last frames carried (`frame_colors`); held with `snapshot`'s lock.
+    colors_sent: Mutex<crate::frame_colors::ColorsSent>,
+    /// What `prepare_frame` packed, until `take_frame`.
+    pending: Mutex<Vec<u8>>,
+    /// The last search's results (`find.rs`) and the minimap's copy (`minimap.rs`).
+    pub(crate) finder: crate::find::Finder,
+    pub(crate) minimap: crate::minimap::Minimap,
+    timing: Timing,
+    /// What Probes mark on the rows and which folds show (`probes`): worked out under the snapshot's lock.
+    pub(crate) marks: Mutex<crate::probes::Marks>,
+    /// The terminal's id in the workspace (what a hook's event names it by); `-1` outside one.
+    pub(crate) tab: i64,
+    /// The terminal needs the person, as last told to its folds (`probes::terminal`).
+    pub(crate) needs_you: AtomicBool,
+    /// The program's name ("zsh"), which names the terminal until something better does.
+    name: String,
+    /// The session host the program runs in (`hosting`); `None` in the app's own process.
+    pub(crate) host: Option<HostSlot>,
+}
+
+/// What the terminal's process says right now, for the workspace's facts.
+pub(crate) struct Probe {
+    pub cwd: Option<PathBuf>,
+    pub agent: Option<AgentId>,
+    /// The program in front, when one other than the shell holds the terminal.
+    pub command: Option<Foreground>,
+    /// A program other than the shell holds the terminal; `None` where the system can't tell.
+    pub in_front: Option<bool>,
+    pub shell_in_front: bool,
+}
+
+/// Nanoseconds spent in the last and in all `frame` calls, by part.
+#[derive(Default)]
+struct Timing {
+    frames: AtomicU64,
+    last_snapshot_ns: AtomicU64,
+    last_pack_ns: AtomicU64,
+    total_snapshot_ns: AtomicU64,
+    total_pack_ns: AtomicU64,
+    last_bytes: AtomicU64,
+}
+
+/// A key press, named as the app's key table names keys ("enter", "left", "f5", "a").
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct KeyPress {
+    pub key: String,
+    /// What the key types with the layout and modifiers; `None` when it types nothing (Control held).
+    pub text: Option<String>,
+    pub shift: bool,
+    pub alt: bool,
+    pub control: bool,
+    /// Cmd: the application's own shortcut, nothing is sent.
+    pub platform: bool,
+    /// Option is Meta: Option+key sends ESC and the key.
+    pub option_as_meta: bool,
+}
+
+/// Where a frame's time went on the Rust side of the seam (the Swift side measures the whole call).
+#[derive(Debug, Clone, Copy, uniffi::Record)]
+pub struct FrameTiming {
+    pub frames: u64,
+    pub last_snapshot_ns: u64,
+    pub last_pack_ns: u64,
+    pub total_snapshot_ns: u64,
+    pub total_pack_ns: u64,
+    pub last_bytes: u64,
+}
+
+#[uniffi::export]
+impl Terminal {
+    /// Start `program` with `args` in a PTY of `cols` x `rows` cells (`cell_width` x `cell_height`
+    /// points, which the program may ask for). Refuses unless the process is an isolated instance
+    /// of the experiment. Blocks briefly (it spawns): call it off the main thread in a real app.
+    #[uniffi::constructor]
+    pub fn start(
+        program: String,
+        args: Vec<String>,
+        cols: u16,
+        rows: u16,
+        cell_width: f32,
+        cell_height: f32,
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        Self::start_in(program, args, None, cols, rows, cell_width, cell_height, listener)
+    }
+
+    /// [`Self::start`] in the folder `cwd` (a terminal opened beside another starts where it is); a
+    /// folder that is not there starts the program where the process is.
+    #[uniffi::constructor]
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_in(
+        program: String,
+        args: Vec<String>,
+        cwd: Option<String>,
+        cols: u16,
+        rows: u16,
+        cell_width: f32,
+        cell_height: f32,
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        Self::start_tab(
+            EXPERIMENT_TAB.into(),
+            program,
+            args,
+            cwd,
+            (cols, rows),
+            (cell_width, cell_height),
+            listener,
+        )
+    }
+
+    /// [`Self::start_in`] for the terminal the workspace calls `tab` (`Opened { id }`): its shell gets
+    /// `WORMHOLE_TAB_ID`, `WORMHOLE_SOCKET` and `WORMHOLE_BIN` as every Wormhole terminal does, so the
+    /// agent hooks installed in `~/.claude` and the like reach this app's `HookServer`, and the
+    /// terminal's own `wh` knows its place. Sizes are `(cols, rows)` and `(width, height)` of a cell.
+    #[uniffi::constructor]
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_for_tab(
+        tab: i64,
+        program: String,
+        args: Vec<String>,
+        cwd: Option<String>,
+        cols: u16,
+        rows: u16,
+        cell_width: f32,
+        cell_height: f32,
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        Self::start_tab(
+            tab.to_string(),
+            program,
+            args,
+            cwd,
+            (cols, rows),
+            (cell_width, cell_height),
+            listener,
+        )
+    }
+
+    /// Terminal `what` of a window, in the app's own process: the program, environment and engine options its window
+    /// decides as the GPUI app's does (`launch`: the shell it was opened with, a trusted project's, `default_shell`,
+    /// else the login shell as a login shell; the profile's environment; Settings' engine options; the theme's
+    /// colours), drawn above `what.saved_text` when it was restored. Its shell gets `WORMHOLE_TAB_ID`,
+    /// `WORMHOLE_SOCKET` and `WORMHOLE_BIN`. Blocks briefly (it spawns).
+    #[uniffi::constructor]
+    pub fn start_planned(
+        what: HostedStart,
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        isolation::require()?;
+        let size = what.size();
+        let options = Self::options_for(what);
+        let (pty, pty_events) =
+            spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
+        Self::from_parts(pty, pty_events, &options, listener, None)
+    }
+
+    /// [`Self::start_planned`] for the first run's welcome: what the terminal would run starts through
+    /// `Wormhole welcome -- <program>` (this executable, which becomes that program when the welcome ends), with
+    /// `token` (`HookServer::begin_welcome`) in this terminal's environment alone. It runs in the app's own process,
+    /// never in a session host.
+    #[uniffi::constructor]
+    pub fn start_for_welcome(
+        what: HostedStart,
+        token: String,
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        isolation::require()?;
+        let size = what.size();
+        let mut options = Self::options_for(what);
+        options.welcome = true;
+        options.env.insert(wormhole_core::onboarding::welcome::TOKEN_VAR.to_string(), token);
+        let (pty, pty_events) =
+            spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
+        Self::from_parts(pty, pty_events, &options, listener, None)
+    }
+
+    /// The rows that changed since the last call, packed (`frame.rs` has the layout); every row
+    /// the first time and after a resize. Empty after `close`.
+    pub fn frame(&self) -> Vec<u8> {
+        self.pack_frame(false)
+    }
+
+    /// Packs the next frame (as [`Terminal::frame`]) and says how long it is, for [`Terminal::take_frame`]: 0 when the screen
+    /// changed nothing, so a still screen's frames cross the FFI as a number and allocate nothing.
+    pub fn prepare_frame(&self) -> u64 {
+        let bytes = self.pack_frame(false);
+        let len = bytes.len() as u64;
+        *self.pending.lock().unwrap_or_else(PoisonError::into_inner) = bytes;
+        len
+    }
+
+    /// The frame [`Terminal::prepare_frame`] packed (empty if it was taken or there was none).
+    pub fn take_frame(&self) -> Vec<u8> {
+        std::mem::take(&mut *self.pending.lock().unwrap_or_else(PoisonError::into_inner))
+    }
+
+    /// Every row, whatever changed: for a renderer that lost its picture (a new surface).
+    pub fn full_frame(&self) -> Vec<u8> {
+        self.pack_frame(true)
+    }
+
+    /// Everything queued since the last drain; re-arms the wake.
+    pub fn drain_events(&self) -> Vec<TermEvent> {
+        self.events.drain()
+    }
+
+    /// Typed or pasted bytes for the program (the view goes back to the live screen).
+    pub fn write(&self, bytes: Vec<u8>) {
+        self.events.touched(Touch::Typed);
+        self.interaction.app_selection().forget();
+        if let Some(pty) = self.pty.read().unwrap_or_else(PoisonError::into_inner).as_ref() {
+            pty.write_input(bytes);
+        }
+    }
+
+    /// A key press (see [`KeyPress`]). Whether anything was sent.
+    pub fn send_key(&self, press: KeyPress) -> bool {
+        self.events.touched(Touch::Key { key: press.key.clone(), control: press.control });
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        let Some(pty) = guard.as_ref() else { return false };
+        let input = KeyInput {
+            key: &press.key,
+            key_char: press.text.as_deref(),
+            shift: press.shift,
+            alt: press.alt,
+            control: press.control,
+            platform: press.platform,
+            option_as_meta: press.option_as_meta,
+        };
+        let sent =
+            matches!(pty.send_key(|modes| keys::encode(&input, modes)), wormhole_term::KeySent::Sent { .. });
+        if sent {
+            self.interaction.app_selection().forget();
+        }
+        sent
+    }
+
+    /// The grid's new size; the program is told through the PTY and the engine reflows.
+    pub fn resize(&self, cols: u16, rows: u16, cell_width: f32, cell_height: f32) {
+        self.events.touched(Touch::Resized);
+        if let Some(pty) = self.pty.write().unwrap_or_else(PoisonError::into_inner).as_mut() {
+            pty.resize(GridSize { cols, rows, cell_width, cell_height });
+        }
+    }
+
+    /// Scroll the view through the history, `lines` up (positive) or down (negative); the next
+    /// `frame` is complete. Typing returns the view to the live screen.
+    pub fn scroll(&self, lines: i32) {
+        if let Some(pty) = self.pty.read().unwrap_or_else(PoisonError::into_inner).as_ref() {
+            pty.scroll(Scroll::Delta(lines));
+        }
+    }
+
+    /// Back to the live screen.
+    pub fn scroll_to_bottom(&self) {
+        if let Some(pty) = self.pty.read().unwrap_or_else(PoisonError::into_inner).as_ref() {
+            pty.scroll(Scroll::Bottom);
+        }
+    }
+
+    /// The visible screen as plain text.
+    pub fn screen_text(&self) -> String {
+        self.pty
+            .read()
+            .unwrap_or_else(PoisonError::into_inner)
+            .as_ref()
+            .map(Pty::screen_text)
+            .unwrap_or_default()
+    }
+
+    /// Whether the program still runs.
+    pub fn is_alive(&self) -> bool {
+        self.pty.read().unwrap_or_else(PoisonError::into_inner).as_ref().is_some_and(Pty::is_alive)
+    }
+
+    /// End the program (hangup, with the engine's grace period) and drop the PTY. Explicit: a Swift
+    /// `deinit` only frees.
+    pub fn close(&self) {
+        let pty = self.pty.write().unwrap_or_else(PoisonError::into_inner).take();
+        // Closing an attached hosted terminal ends its program: its saved row goes first.
+        if pty.is_some()
+            && let Some(slot) = &self.host
+        {
+            slot.closing();
+        }
+        drop(pty);
+    }
+
+    /// The Rust side's share of the frames so far.
+    pub fn frame_timing(&self) -> FrameTiming {
+        let t = &self.timing;
+        FrameTiming {
+            frames: t.frames.load(Ordering::Relaxed),
+            last_snapshot_ns: t.last_snapshot_ns.load(Ordering::Relaxed),
+            last_pack_ns: t.last_pack_ns.load(Ordering::Relaxed),
+            total_snapshot_ns: t.total_snapshot_ns.load(Ordering::Relaxed),
+            total_pack_ns: t.total_pack_ns.load(Ordering::Relaxed),
+            last_bytes: t.last_bytes.load(Ordering::Relaxed),
+        }
+    }
+}
+
+/// The tab id of terminals started outside a workspace (a preview, a test).
+const EXPERIMENT_TAB: &str = "swift-experiment";
+
+impl Terminal {
+    fn start_tab(
+        tab_id: String,
+        program: String,
+        args: Vec<String>,
+        cwd: Option<String>,
+        (cols, rows): (u16, u16),
+        (cell_width, cell_height): (f32, f32),
+        listener: Arc<dyn TerminalListener>,
+    ) -> Result<Arc<Self>, FfiError> {
+        isolation::require()?;
+        let options = Self::options_for(Self::stand_in(tab_id.parse().unwrap_or(-1), program, args, cwd));
+        let options = SpawnOptions { tab_id, ..options };
+        let size = GridSize { cols, rows, cell_width, cell_height };
+        let (pty, pty_events) =
+            spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
+        Self::from_parts(pty, pty_events, &options, listener, None)
+    }
+
+    /// A start of `program` standing in for the login shell, in the profile Wormhole is in.
+    fn stand_in(tab: i64, program: String, args: Vec<String>, cwd: Option<String>) -> HostedStart {
+        HostedStart {
+            tab,
+            shell: None,
+            program: Some(program),
+            args,
+            cwd,
+            cols: 0,
+            rows: 0,
+            cell_width: 0.0,
+            cell_height: 0.0,
+            old_host: None,
+            saved_text: None,
+            profile: None,
+        }
+    }
+
+    /// The options `what` starts with in the app's own process (`launch`), in the profile it names.
+    fn options_for(what: HostedStart) -> SpawnOptions {
+        let root = DataRoot::current();
+        let profile = crate::launch::profile_in(&root, what.profile.as_deref());
+        crate::launch::options(&root, &profile, &what)
+    }
+
+    /// The object over a PTY that is running (local or hosted) and its events.
+    pub(crate) fn from_parts(
+        pty: Pty,
+        pty_events: wormhole_term::PtyEvents,
+        options: &SpawnOptions,
+        listener: Arc<dyn TerminalListener>,
+        host: Option<HostSlot>,
+    ) -> Result<Arc<Self>, FfiError> {
+        let events = EventQueue::new(listener);
+        spawn_receiver(pty_events, events.clone()).map_err(|e| FfiError::Start { reason: e.to_string() })?;
+        // What the status bar and the exited bar call it: the program asked for, or `WORMHOLE_SHELL`'s (core's rule).
+        let name = wormhole_core::terminal::shell_name(options);
+        let terminal = Arc::new(Self {
+            pty: RwLock::new(Some(pty)),
+            snapshot: Mutex::new(ScreenSnapshot::default()),
+            events,
+            interaction: Default::default(),
+            placements: Mutex::default(),
+            quiet: Mutex::default(),
+            colors_sent: Mutex::default(),
+            pending: Mutex::default(),
+            finder: Default::default(),
+            minimap: Default::default(),
+            timing: Timing::default(),
+            marks: Mutex::default(),
+            tab: options.tab_id.parse().unwrap_or(-1),
+            needs_you: AtomicBool::new(false),
+            name,
+            host,
+        });
+        crate::engine_look::follow(&terminal);
+        Ok(terminal)
+    }
+
+    pub(crate) fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub(crate) fn set_feed(&self, feed: Arc<dyn EventFeed>) {
+        self.events.set_feed(feed);
+    }
+
+    /// The folder, the agent and who holds the terminal, from the process: a few system calls. All
+    /// unknown after `close`.
+    pub(crate) fn probe(&self) -> Probe {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        let Some(pty) = guard.as_ref() else {
+            return Probe { cwd: None, agent: None, command: None, in_front: None, shell_in_front: false };
+        };
+        let in_front = pty.program_in_foreground();
+        Probe {
+            cwd: pty.cwd(),
+            agent: pty.foreground_agent(),
+            command: if in_front == Some(true) { pty.foreground_command() } else { None },
+            in_front,
+            shell_in_front: pty.shell_in_foreground(),
+        }
+    }
+
+    /// What programs report about themselves (OSC 7501), after the shell did `ask` to the records:
+    /// dropped what the program that left took with it, or what the person saw.
+    pub(crate) fn program_report(&self, ask: Option<Ask>) -> Option<Summary> {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        let mut records = guard.as_ref()?.program_status();
+        match ask {
+            Some(Ask::ProgramLeft) => {
+                records.on_process_exit();
+            }
+            Some(Ask::AcknowledgeReports) => {
+                records.acknowledge();
+            }
+            None => {}
+        }
+        records.summary()
+    }
+
+    /// How long until the OSC 9;4 progress bar its program last reported is stale, when it has one.
+    pub(crate) fn progress_remaining(&self) -> Option<std::time::Duration> {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        guard.as_ref()?.program_status().progress_remaining(Instant::now())
+    }
+
+    /// Drop the progress bar its program has not renewed for `PROGRESS_TIMEOUT`. Whether it did.
+    pub(crate) fn expire_progress(&self) -> bool {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        guard.as_ref().is_some_and(|pty| pty.program_status().expire_progress(Instant::now()))
+    }
+
+    /// What the shell's block says just ended with `code`: its line, how long it ran, its last line.
+    pub(crate) fn ended(&self, code: i32) -> Option<wormhole_term::Ended> {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        guard.as_ref()?.ended(code)
+    }
+
+    fn pack_frame(&self, all: bool) -> Vec<u8> {
+        let guard = self.pty.read().unwrap_or_else(PoisonError::into_inner);
+        let Some(pty) = guard.as_ref() else { return Vec::new() };
+        let mut snapshot = self.snapshot.lock().unwrap_or_else(PoisonError::into_inner);
+
+        let started = Instant::now();
+        let mut marks = self.marks.lock().unwrap_or_else(PoisonError::into_inner);
+        marks.sync_folds(pty);
+        pty.snapshot(&mut snapshot);
+        let snapshotted = Instant::now();
+        // A row's marks that changed without the row (rules loaded, a hook's tint) go out as a full frame.
+        let all = marks.refresh(self.tab, &snapshot) || all;
+        let mut quiet = self.quiet.lock().unwrap_or_else(PoisonError::into_inner);
+        let (bytes, last_quiet) = &mut *quiet;
+        let changed = frame::pack_into(&snapshot, all, bytes);
+        // Placed pictures, then the tiles that placeholder cells draw (kitty's `U=1`).
+        let mut placements = snapshot.placements().to_vec();
+        placements.extend(placeholder_placements(pty, &snapshot));
+        self.placements.lock().unwrap_or_else(PoisonError::into_inner).append(bytes, &placements, all);
+        frame_extras::append(bytes, &snapshot, all);
+        marks.append(bytes, &snapshot, all);
+        self.colors_sent.lock().unwrap_or_else(PoisonError::into_inner).append(bytes, &snapshot.colors, all);
+        let packed = Instant::now();
+        // A frame that changes no row and says what the last such one said changes nothing on screen: none at all, so a
+        // still screen's frames allocate nothing (the renderer skips an empty frame). Anything else goes out as packed.
+        let bytes = if changed == 0 && !all && bytes == last_quiet {
+            Vec::new()
+        } else {
+            if changed == 0 {
+                last_quiet.clone_from(bytes);
+            } else {
+                last_quiet.clear();
+            }
+            bytes.clone()
+        };
+
+        let t = &self.timing;
+        let (snapshot_ns, pack_ns) = (nanos(snapshotted - started), nanos(packed - snapshotted));
+        t.frames.fetch_add(1, Ordering::Relaxed);
+        t.last_snapshot_ns.store(snapshot_ns, Ordering::Relaxed);
+        t.last_pack_ns.store(pack_ns, Ordering::Relaxed);
+        t.total_snapshot_ns.fetch_add(snapshot_ns, Ordering::Relaxed);
+        t.total_pack_ns.fetch_add(pack_ns, Ordering::Relaxed);
+        t.last_bytes.store(bytes.len() as u64, Ordering::Relaxed);
+        bytes
+    }
+}
+
+fn nanos(duration: std::time::Duration) -> u64 {
+    u64::try_from(duration.as_nanos()).unwrap_or(u64::MAX)
+}

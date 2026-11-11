@@ -1,0 +1,9 @@
+{
+  "session_id": "fixture",
+  "model": { "id": "claude-opus-4-5", "display_name": "Claude Opus 4.5" },
+  "context_window": { "used_percentage": 41.4 },
+  "rate_limits": {
+    "five_hour": { "used_percentage": 25.0, "resets_at": 1800002040 },
+    "seven_day": { "used_percentage": 86.0, "resets_at": 1800176400 }
+  }
+}

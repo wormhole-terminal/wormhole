@@ -1,0 +1,50 @@
+//! The plain values of the launch plan and a terminal's hosting.
+
+/// A terminal the last run saved with the session host that ran it.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct SavedTerminal {
+    /// The workspace's id for it: a window restored from its record opens it under this id.
+    pub terminal: i64,
+    pub host_id: String,
+    /// Its host runs now: attach to it. Otherwise the host is gone and the terminal starts again in `cwd`.
+    pub running: bool,
+    pub cwd: Option<String>,
+    pub shell: Option<String>,
+    /// The terminal's row says its text is not to be kept (no checkpoint is asked for either).
+    pub forget_text: bool,
+    /// Its saved screen text, when the profile keeps it and the terminal's row allows: what a host that is gone is
+    /// replaced by (`HostedStart.saved_text`). Never read for a terminal whose host runs.
+    pub text: Option<String>,
+}
+
+/// A live host no saved terminal of any profile names (what a crash of the saved state, or another
+/// tool, left running). It is offered, never ended: what runs in it is the person's.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct OrphanHost {
+    pub host_id: String,
+    /// Unix seconds, as the host's meta says.
+    pub started_at: u64,
+}
+
+/// What the launch does with the hosts it found (core's `LaunchHosts`), in the sidebar's order.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct LaunchPlan {
+    /// The saved terminals in the sidebar's order: `HostedTerminals.attach` those that are `running`, start the
+    /// others again in their folder (their text is not replayed).
+    pub saved: Vec<SavedTerminal>,
+    /// Live hosts nobody names, oldest first (not yet asked whether they take this app).
+    pub orphans: Vec<OrphanHost>,
+}
+
+/// Where a terminal's program runs, as the status bar says it (the app's `Hosting`).
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum TerminalHosting {
+    /// In the app's own process: it ends when the app quits.
+    Local,
+    /// In a session host, which outlives the app.
+    Persistent { host_id: String },
+    /// Let go of: the program runs on in its host for the next attach.
+    Detached { host_id: String },
+    /// Its host went away (crashed, killed, ended from the Session Hosts window) and took the program.
+    Lost { host_id: String },
+}

@@ -1,0 +1,4 @@
+# `Terminal::start` refuses to run unless the data folder is the experiment's own (isolation.rs); the
+# integration tests start real terminals, so cargo gives them one. A variable already set wins.
+[env]
+WORMHOLE_DATA_DIR = "/tmp/Wormhole-swift-cargo-test"

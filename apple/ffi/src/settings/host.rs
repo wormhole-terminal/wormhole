@@ -1,0 +1,102 @@
+//! What the select rows list and where the buttons that open things point, from core: the shells
+//! (`terminal::shells::choices`), the icon themes on disk (`icon_theme::discover`) and the folders of
+//! the profile and the data folder. Swift opens a folder (Finder is the platform's) and lists the
+//! apps (`open_in` needs the system's list of installed ones).
+
+use wormhole_core::terminal::shells;
+use wormhole_core::theme::icon_theme;
+
+use super::handle::SettingsHandle;
+
+/// The value `icon_theme` holds to show no file icons (stored, not interface text).
+const NO_ICONS: &str = "None";
+
+/// One choice of a select row: the value the file stores and the words shown for it.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct SettingsOptionRow {
+    pub value: String,
+    pub label: String,
+}
+
+/// A shell a new terminal can run (`terminal::shells::choices`) with what starting it takes: the palette's and the menu's
+/// "New terminal: fish".
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct ShellChoiceRecord {
+    pub key: String,
+    pub name: String,
+    pub command_line: String,
+    pub program: String,
+    pub args: Vec<String>,
+    /// What a plain New terminal opens (`default_shell`).
+    pub is_default: bool,
+}
+
+/// Folders and files a button opens, as absolute paths.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct SettingsPaths {
+    pub config_file: String,
+    pub data_dir: String,
+    pub logs_dir: String,
+    pub fonts_dir: String,
+    pub icon_themes_dir: String,
+}
+
+fn text(path: impl AsRef<std::path::Path>) -> String {
+    path.as_ref().to_string_lossy().into_owned()
+}
+
+#[uniffi::export]
+impl SettingsHandle {
+    /// The Default shell select: the login shell, the profiles of `config.json` and the shells on this
+    /// Mac, in that order. The login shell's value is the empty string.
+    pub fn shell_options(&self) -> Vec<SettingsOptionRow> {
+        let choices = shells::choices(self.shared.lock().effective());
+        choices
+            .into_iter()
+            // The face is the shell's name ("zsh"), as the GPUI select's: what it runs is under the Shells row.
+            .map(|choice| SettingsOptionRow { label: choice.name, value: choice.key })
+            .collect()
+    }
+
+    /// The shells a terminal can start with, login shell first, each with its program and arguments.
+    pub fn shell_choices(&self) -> Vec<ShellChoiceRecord> {
+        let guard = self.shared.lock();
+        let settings = guard.effective();
+        let default = shells::default_key(settings).to_string();
+        shells::choices(settings)
+            .into_iter()
+            .filter_map(|choice| {
+                let command = shells::resolve(&choice.key, settings)?;
+                Some(ShellChoiceRecord {
+                    is_default: choice.key == default,
+                    key: choice.key,
+                    name: choice.name,
+                    command_line: choice.command_line,
+                    program: command.program,
+                    args: command.args,
+                })
+            })
+            .collect()
+    }
+
+    /// The File icon theme select: the bundled theme, the ones in the profile's `icon-themes` folder,
+    /// and none.
+    pub fn icon_theme_options(&self) -> Vec<SettingsOptionRow> {
+        let mut names = vec![icon_theme::builtin_family().name.clone()];
+        names.extend(icon_theme::discover(&self.paths.icon_themes_dir()).into_iter().map(|(name, _)| name));
+        names.dedup();
+        names.push(NO_ICONS.into());
+        names.into_iter().map(|name| SettingsOptionRow { value: name.clone(), label: name }).collect()
+    }
+
+    /// Where the Open buttons go.
+    pub fn paths(&self) -> SettingsPaths {
+        SettingsPaths {
+            config_file: text(self.paths.config_file()),
+            data_dir: text(self.root.base()),
+            logs_dir: text(self.root.logs_dir()),
+            fonts_dir: text(self.paths.fonts_dir()),
+            icon_themes_dir: text(self.paths.icon_themes_dir()),
+        }
+    }
+}
