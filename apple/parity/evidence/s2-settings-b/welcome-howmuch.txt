@@ -1,0 +1,18 @@
+# welcome page 3, How much to show, after the merge with exp/swift
+sidebar=true panel=true 
+   |   How much to show
+   |   Each answer changes the window around this terminal as you give
+   |   it.
+   |   Where do you want to start?                                1 of 7
+   |   ╭──────────────────╮  ╭──────────────────╮  ╭──────────────────╮
+   |   │     ━━━        □ │  │   │ ━━·━·  ▫▫▫□□ │  │   │ ━ ▫□□ │ ▪▪▪  │
+   |   │ ▪━  $ ━━━━━━━    │  │ ▪━│ $ ━━━━━━━    │  │ ▪━│ $ ━  ░│ ━━━  │
+   |   │ ▪━  ━━━━━━       │  │ ▪━│ ━━━━━━       │  │ ▪━│ ━━   ░│ ━━   │
+panel=false
+   |   >_ Wormhole
+   |   ⌘T new terminal   ⇧⌘P command palette   ⌥⌘/ keyboard shortcuts
+   | benjamin@MacBook-Pro-von-Benjamin benjamin %
+   | benjamin@MacBook-Pro-von-Benjamin benjamin %
+   | benjamin@MacBook-Pro-von-Benjamin benjamin %
+   | benjamin@MacBook-Pro-von-Benjamin benjamin %
+{'theme': 'Wormhole Dark', 'primary_color': '', 'theme_primary': True, 'branch_color': 'theme', 'branch_color_custom': '', 'font_family': 'JetBrains Mono', 'font_size': 14.0, 'font_ligatures': True, 'line_height': 1.2999999523162842, 'opacity': 0.800000011920929, 'blur': True, 'liquid_glass': False, 'density': 'regular', 'show_groups_as_cards': True, 'fade_group_colors': False, 'show_group_folders

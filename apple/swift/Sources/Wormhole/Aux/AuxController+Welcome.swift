@@ -46,13 +46,14 @@ extension AuxController {
             let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
             let importHome = ProcessInfo.processInfo.environment["WORMHOLE_IMPORT_HOME"]
             let before = app.hub.state.all.map(\.id)
+            let panelOpen = app.hub.state.panelVisible
             var started: Int?
             backend.onClosed = { [weak hooks] in hooks?.terminalClosed($0) }
             backend.welcomeToken = { id in
                 started = id
                 return hooks.handle.beginWelcome(
                     tab: Int64(id), handover: handover.rawValue, firstRun: firstRun, animates: animates,
-                    reduceMotion: reduceMotion, panelOpen: app.hub.state.panelVisible, importHome: importHome,
+                    reduceMotion: reduceMotion, panelOpen: panelOpen, importHome: importHome,
                     fonts: CoreTextFamilies())
             }
             app.hub.send(.newTerminal)
