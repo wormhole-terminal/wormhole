@@ -58,7 +58,7 @@ struct SkillList: View {
     }
 
     private func button(_ title: String, _ skill: SkillRecord, install: Bool) -> some View {
-        ActionButton(title: title, symbol: nil, frameId: "skill.\(skill.id).\(install ? "install" : "remove")") { host.perform(skill: skill.id, install: install) }
+        ActionButton(title: title, symbol: nil, frameId: "skill.\(skill.id).\(install ? "install" : "remove")") { host.perform(skill: skill.id, install: install) }  // text: a frame id for the driver
     }
 
     private func remove(_ skill: SkillRecord) -> some View { button(SettingsText.uninstall, skill, install: false) }
