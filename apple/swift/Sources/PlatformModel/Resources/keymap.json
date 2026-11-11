@@ -1,0 +1,3250 @@
+{
+ "entries": [
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "newWindow",
+   "keys": [
+    {
+     "key": "n",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "New Window",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "newTerminal",
+   "keys": [
+    {
+     "key": "t",
+     "mods": [
+      "cmd"
+     ]
+    },
+    {
+     "key": "n",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "New Terminal",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "newTerminalNoGroup",
+   "keys": [
+    {
+     "key": "t",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "New Terminal in No Group",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "newTerminalInWorktree",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "New Terminal in New Worktree…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "openFolder",
+   "keys": [
+    {
+     "key": "o",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Open Folder…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "pinTerminal",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Pin to Top",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "hideFromAgents",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Hide from Agents",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "revealInFinder",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Reveal in Finder",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "copyPath",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Copy Path",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "closeTerminal",
+   "keys": [
+    {
+     "key": "w",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Close Terminal",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "closeWindow",
+   "keys": [
+    {
+     "key": "w",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Close Window",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "nextTerminal",
+   "keys": [
+    {
+     "key": "down",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    },
+    {
+     "key": "]",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Next Terminal",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "previousTerminal",
+   "keys": [
+    {
+     "key": "up",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    },
+    {
+     "key": "[",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Previous Terminal",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "terminal.1",
+   "keys": [
+    {
+     "key": "1",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Terminal 1",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "terminal.2",
+   "keys": [
+    {
+     "key": "2",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Terminal 2",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "terminal.3",
+   "keys": [
+    {
+     "key": "3",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Terminal 3",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "terminal.4",
+   "keys": [
+    {
+     "key": "4",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Terminal 4",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "terminal.5",
+   "keys": [
+    {
+     "key": "5",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Terminal 5",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "terminal.6",
+   "keys": [
+    {
+     "key": "6",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Terminal 6",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "terminal.7",
+   "keys": [
+    {
+     "key": "7",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Terminal 7",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "terminal.8",
+   "keys": [
+    {
+     "key": "8",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Terminal 8",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "terminal.9",
+   "keys": [
+    {
+     "key": "9",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Terminal 9",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "previousGroup",
+   "keys": [
+    {
+     "key": "[",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Previous Group",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "nextGroup",
+   "keys": [
+    {
+     "key": "]",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Next Group",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "group.1",
+   "keys": [
+    {
+     "key": "1",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Group 1",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "group.2",
+   "keys": [
+    {
+     "key": "2",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Group 2",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "group.3",
+   "keys": [
+    {
+     "key": "3",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Group 3",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "group.4",
+   "keys": [
+    {
+     "key": "4",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Group 4",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "group.5",
+   "keys": [
+    {
+     "key": "5",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Group 5",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "group.6",
+   "keys": [
+    {
+     "key": "6",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Group 6",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "group.7",
+   "keys": [
+    {
+     "key": "7",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Group 7",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "group.8",
+   "keys": [
+    {
+     "key": "8",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Group 8",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "group.9",
+   "keys": [
+    {
+     "key": "9",
+     "mods": [
+      "ctrl",
+      "alt"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Group 9",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "newProfile",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "New Profile…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "manageProfiles",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Manage Profiles…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "switchProfile",
+   "keys": [],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Switch Profile",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "openWindowInProfile",
+   "keys": [],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Open Window in Profile",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "moveWindowToProfile",
+   "keys": [],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Move Window to Profile",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "splitRight",
+   "keys": [
+    {
+     "key": "d",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Split Right",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "splitDown",
+   "keys": [
+    {
+     "key": "d",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Split Down",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "zoomPane",
+   "keys": [
+    {
+     "key": "enter",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Zoom Pane",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Unzoom Pane",
+   "titleOff": "Zoom Pane"
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "leaveSplit",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Move Pane Out of Split",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "focusPaneLeft",
+   "keys": [
+    {
+     "key": "left",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Select Pane on the Left",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Left",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "focusPaneRight",
+   "keys": [
+    {
+     "key": "right",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Select Pane on the Right",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Right",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "focusPaneUp",
+   "keys": [
+    {
+     "key": "up",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Select Pane Above",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Above",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "focusPaneDown",
+   "keys": [
+    {
+     "key": "down",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Select Pane Below",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Below",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "layoutColumns",
+   "keys": [],
+   "name": "Layout: 2 Columns",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "2 Columns",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "layoutRows",
+   "keys": [],
+   "name": "Layout: 2 Rows",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "2 Rows",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "layoutGrid",
+   "keys": [],
+   "name": "Layout: 2×2 Grid",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "2×2 Grid",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "layoutSingle",
+   "keys": [],
+   "name": "Layout: Single Pane",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Single Pane",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "goToWaiting",
+   "keys": [
+    {
+     "key": "j",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Go to Waiting Terminal",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "goToFinished",
+   "keys": [
+    {
+     "key": "j",
+     "mods": [
+      "alt",
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Go to Finished Terminal",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "minimize",
+   "keys": [
+    {
+     "key": "m",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Minimize",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "zoom",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Zoom",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "bringAllToFront",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Bring All to Front",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "toggleSidebar",
+   "keys": [
+    {
+     "key": "s",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Show / Hide Sidebar",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Hide Sidebar",
+   "titleOff": "Show Sidebar"
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "toggleRightPanel",
+   "keys": [
+    {
+     "key": "i",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Show / Hide Right Panel",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Hide Right Panel",
+   "titleOff": "Show Right Panel"
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "toggleStatusBar",
+   "keys": [
+    {
+     "key": "/",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Show / Hide Status Bar",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Hide Status Bar",
+   "titleOff": "Show Status Bar"
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "toggleMinimap",
+   "keys": [],
+   "name": "Show / Hide Minimap",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Hide Minimap",
+   "titleOff": "Show Minimap"
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "toggleZenMode",
+   "keys": [
+    {
+     "key": "z",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Zen Mode",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Exit Zen Mode",
+   "titleOff": "Enter Zen Mode"
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "showChanges",
+   "keys": [
+    {
+     "key": "1",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Show Changes",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Changes",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": "history",
+   "flag": null,
+   "id": "showHistory",
+   "keys": [
+    {
+     "key": "2",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Show History",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "History",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": "notes",
+   "flag": null,
+   "id": "showNotes",
+   "keys": [
+    {
+     "key": "3",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Show Notes",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Notes",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "showUsage",
+   "keys": [
+    {
+     "key": "4",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Show Usage",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Usage",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": "project",
+   "flag": null,
+   "id": "showProject",
+   "keys": [
+    {
+     "key": "5",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Show Project",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Project",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": "files",
+   "flag": null,
+   "id": "showFiles",
+   "keys": [
+    {
+     "key": "6",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Show Files",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Files",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "toggleTerminalTabs",
+   "keys": [],
+   "name": "Show Terminals as Tabs / in Sidebar",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Show Terminals in Sidebar",
+   "titleOff": "Show Terminals as Tabs"
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "focusTerminalOrPanel",
+   "keys": [
+    {
+     "key": "e",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Focus Terminal / Panel",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "focusNextArea",
+   "keys": [
+    {
+     "key": "f6",
+     "mods": []
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Focus Next Area",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "focusPreviousArea",
+   "keys": [
+    {
+     "key": "f6",
+     "mods": [
+      "shift"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Focus Previous Area",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "bigger",
+   "keys": [
+    {
+     "key": "+",
+     "mods": [
+      "cmd"
+     ]
+    },
+    {
+     "key": "=",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Bigger",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "smaller",
+   "keys": [
+    {
+     "key": "-",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Smaller",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "actualSize",
+   "keys": [
+    {
+     "key": "0",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Actual Size",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "fullScreen",
+   "keys": [
+    {
+     "key": "f",
+     "mods": [
+      "ctrl",
+      "cmd"
+     ]
+    }
+   ],
+   "name": "Full Screen",
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Exit Full Screen",
+   "titleOff": "Enter Full Screen"
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "commandPalette",
+   "keys": [
+    {
+     "key": "p",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Command Palette…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "keyboardShortcuts",
+   "keys": [
+    {
+     "key": "/",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Keyboard Shortcuts",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "help",
+   "keys": [
+    {
+     "key": "?",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "system",
+   "title": "Wormhole Help",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "undo",
+   "keys": [
+    {
+     "key": "z",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "edit",
+   "stage": "now",
+   "title": "Undo",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "redo",
+   "keys": [
+    {
+     "key": "z",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "edit",
+   "stage": "now",
+   "title": "Redo",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "cut",
+   "keys": [
+    {
+     "key": "x",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "edit",
+   "stage": "now",
+   "title": "Cut",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "copy",
+   "keys": [
+    {
+     "key": "c",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "edit",
+   "stage": "now",
+   "title": "Copy",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "paste",
+   "keys": [
+    {
+     "key": "v",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "edit",
+   "stage": "now",
+   "title": "Paste",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "selectAll",
+   "keys": [
+    {
+     "key": "a",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "edit",
+   "stage": "now",
+   "title": "Select All",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "clearBuffer",
+   "keys": [
+    {
+     "key": "k",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Clear Buffer",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "find",
+   "keys": [
+    {
+     "key": "f",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Find…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "findNext",
+   "keys": [
+    {
+     "key": "g",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Find Next",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "findPrevious",
+   "keys": [
+    {
+     "key": "g",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Find Previous",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "useSelectionForFind",
+   "keys": [
+    {
+     "key": "e",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Use Selection for Find",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "lineStart",
+   "keys": [
+    {
+     "key": "left",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Line Start",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "lineEnd",
+   "keys": [
+    {
+     "key": "right",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Line End",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "deleteLine",
+   "keys": [
+    {
+     "key": "backspace",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Delete Line",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "previousPrompt",
+   "keys": [
+    {
+     "key": "up",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Previous Prompt",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "nextPrompt",
+   "keys": [
+    {
+     "key": "down",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Next Prompt",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "selectOutput",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Select Output",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "copyOutput",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Copy Output",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "copyCommand",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Copy Command",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "rerunCommand",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Put Command at Prompt",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": "output_folds",
+   "id": "showHiddenLines",
+   "keys": [
+    {
+     "key": "l",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Show Hidden Lines",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": "folder_picker",
+   "id": "insertFolderPath",
+   "keys": [
+    {
+     "key": "j",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "now",
+   "title": "Insert Folder Path…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": "notes",
+   "flag": null,
+   "id": "newNote",
+   "keys": [
+    {
+     "key": "n",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "New Note",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": "notes",
+   "flag": null,
+   "id": "stashPrompt",
+   "keys": [
+    {
+     "key": "s",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Stash Prompt",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "moveItemUp",
+   "keys": [
+    {
+     "key": "up",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "list",
+   "stage": "now",
+   "title": "Move Up",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "moveItemDown",
+   "keys": [
+    {
+     "key": "down",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "list",
+   "stage": "now",
+   "title": "Move Down",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "rowMenu",
+   "keys": [
+    {
+     "key": "enter",
+     "mods": [
+      "ctrl"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "list",
+   "stage": "now",
+   "title": "Show Context Menu",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "about",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "About Wormhole",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "checkForUpdates",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Check for Updates…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "settings",
+   "keys": [
+    {
+     "key": ",",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Settings…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "themeStudio",
+   "keys": [
+    {
+     "key": ",",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Theme Studio",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "hide",
+   "keys": [
+    {
+     "key": "h",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Hide Wormhole",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "hideOthers",
+   "keys": [
+    {
+     "key": "h",
+     "mods": [
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Hide Others",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "showAll",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Show All",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "quit",
+   "keys": [
+    {
+     "key": "q",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Quit Wormhole",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "quitAndEndAll",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": true,
+   "scope": "app",
+   "stage": "now",
+   "title": "Quit and End All Terminals",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "showLogs",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Show Logs in Finder",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "sessionHosts",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": true,
+   "scope": "app",
+   "stage": "now",
+   "title": "Session Hosts",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "licenses",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Licenses",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "showIntro",
+   "keys": [],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Welcome to Wormhole",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playIntroEmerge",
+   "keys": [
+    {
+     "key": "1",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Intro: Emerge",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playIntroVortex",
+   "keys": [
+    {
+     "key": "2",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Intro: Edge Vortex",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playIntroCollapse",
+   "keys": [
+    {
+     "key": "3",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Intro: Collapse",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playIntroFtl",
+   "keys": [
+    {
+     "key": "4",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Intro: FTL Jump",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playIntroAurora",
+   "keys": [
+    {
+     "key": "5",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Intro: Aurora",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playIntroTentacles",
+   "keys": [
+    {
+     "key": "6",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Intro: Tentacles",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playIntroVoyage",
+   "keys": [
+    {
+     "key": "7",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Intro: Voyage",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playWelcomeCursor",
+   "keys": [
+    {
+     "key": "8",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Welcome: Cursor",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playWelcomePortal",
+   "keys": [
+    {
+     "key": "9",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Welcome: Portal",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "playWelcomeLogo",
+   "keys": [
+    {
+     "key": "0",
+     "mods": [
+      "ctrl",
+      "alt",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": true,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Play Welcome: Logo",
+   "titleOff": null
+  },
+  {
+   "debugOnly": true,
+   "feature": null,
+   "flag": null,
+   "id": "inspector",
+   "keys": [
+    {
+     "key": "i",
+     "mods": [
+      "alt",
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "app",
+   "stage": "now",
+   "title": "Inspector",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "print",
+   "keys": [
+    {
+     "key": "p",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": "kept for Print, as in Terminal.app",
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "reserved",
+   "title": "Print…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "exportText",
+   "keys": [
+    {
+     "key": "s",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": "kept for Export Text As, as in Terminal.app",
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "terminal",
+   "stage": "reserved",
+   "title": "Export Text As…",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "saveTheme",
+   "keys": [
+    {
+     "key": "s",
+     "mods": [
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "studio",
+   "stage": "now",
+   "title": "Save Theme",
+   "titleOff": null
+  },
+  {
+   "debugOnly": false,
+   "feature": null,
+   "flag": null,
+   "id": "duplicateTheme",
+   "keys": [
+    {
+     "key": "s",
+     "mods": [
+      "shift",
+      "cmd"
+     ]
+    }
+   ],
+   "name": null,
+   "palette": false,
+   "persistentOnly": false,
+   "scope": "studio",
+   "stage": "now",
+   "title": "Duplicate",
+   "titleOff": null
+  }
+ ],
+ "layout": [
+  {
+   "slots": [
+    {
+     "id": "about",
+     "kind": "action"
+    },
+    {
+     "id": "checkForUpdates",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "settings",
+     "kind": "action"
+    },
+    {
+     "id": "themeStudio",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "kind": "services"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "hide",
+     "kind": "action"
+    },
+    {
+     "id": "hideOthers",
+     "kind": "action"
+    },
+    {
+     "id": "showAll",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "quit",
+     "kind": "action"
+    },
+    {
+     "id": "quitAndEndAll",
+     "kind": "action"
+    }
+   ],
+   "title": "Wormhole",
+   "when": null
+  },
+  {
+   "slots": [
+    {
+     "id": "newWindow",
+     "kind": "action"
+    },
+    {
+     "id": "newTerminal",
+     "kind": "action"
+    },
+    {
+     "id": "newTerminalNoGroup",
+     "kind": "action"
+    },
+    {
+     "kind": "dynamic",
+     "name": "newTerminalWith"
+    },
+    {
+     "id": "newTerminalInWorktree",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "splitRight",
+     "kind": "action"
+    },
+    {
+     "id": "splitDown",
+     "kind": "action"
+    },
+    {
+     "id": "leaveSplit",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "openFolder",
+     "kind": "action"
+    },
+    {
+     "kind": "dynamic",
+     "name": "recentFolders"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "kind": "dynamic",
+     "name": "profiles"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "closeTerminal",
+     "kind": "action"
+    },
+    {
+     "id": "closeWindow",
+     "kind": "action"
+    }
+   ],
+   "title": "Shell",
+   "when": null
+  },
+  {
+   "slots": [
+    {
+     "id": "undo",
+     "kind": "action"
+    },
+    {
+     "id": "redo",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "cut",
+     "kind": "action"
+    },
+    {
+     "id": "copy",
+     "kind": "action"
+    },
+    {
+     "id": "paste",
+     "kind": "action"
+    },
+    {
+     "id": "selectAll",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "clearBuffer",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "find",
+     "kind": "action"
+    },
+    {
+     "id": "findNext",
+     "kind": "action"
+    },
+    {
+     "id": "findPrevious",
+     "kind": "action"
+    },
+    {
+     "id": "useSelectionForFind",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "previousPrompt",
+     "kind": "action"
+    },
+    {
+     "id": "nextPrompt",
+     "kind": "action"
+    },
+    {
+     "id": "selectOutput",
+     "kind": "action"
+    },
+    {
+     "id": "copyOutput",
+     "kind": "action"
+    },
+    {
+     "id": "copyCommand",
+     "kind": "action"
+    },
+    {
+     "id": "rerunCommand",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "showHiddenLines",
+     "kind": "action"
+    }
+   ],
+   "title": "Edit",
+   "when": null
+  },
+  {
+   "slots": [
+    {
+     "id": "toggleSidebar",
+     "kind": "action"
+    },
+    {
+     "id": "toggleRightPanel",
+     "kind": "action"
+    },
+    {
+     "id": "toggleStatusBar",
+     "kind": "action"
+    },
+    {
+     "id": "toggleMinimap",
+     "kind": "action"
+    },
+    {
+     "id": "toggleZenMode",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "zoomPane",
+     "kind": "action"
+    },
+    {
+     "kind": "submenu",
+     "slots": [
+      {
+       "id": "layoutColumns",
+       "kind": "action"
+      },
+      {
+       "id": "layoutRows",
+       "kind": "action"
+      },
+      {
+       "id": "layoutGrid",
+       "kind": "action"
+      },
+      {
+       "id": "layoutSingle",
+       "kind": "action"
+      }
+     ],
+     "title": "Layout"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "showChanges",
+     "kind": "action"
+    },
+    {
+     "id": "showHistory",
+     "kind": "action"
+    },
+    {
+     "id": "showNotes",
+     "kind": "action"
+    },
+    {
+     "id": "showUsage",
+     "kind": "action"
+    },
+    {
+     "id": "showProject",
+     "kind": "action"
+    },
+    {
+     "id": "showFiles",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "toggleTerminalTabs",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "bigger",
+     "kind": "action"
+    },
+    {
+     "id": "smaller",
+     "kind": "action"
+    },
+    {
+     "id": "actualSize",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "commandPalette",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "fullScreen",
+     "kind": "action"
+    }
+   ],
+   "title": "View",
+   "when": null
+  },
+  {
+   "slots": [
+    {
+     "id": "pinTerminal",
+     "kind": "action"
+    },
+    {
+     "id": "hideFromAgents",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "focusTerminalOrPanel",
+     "kind": "action"
+    },
+    {
+     "id": "focusNextArea",
+     "kind": "action"
+    },
+    {
+     "id": "focusPreviousArea",
+     "kind": "action"
+    },
+    {
+     "id": "newNote",
+     "kind": "action"
+    },
+    {
+     "id": "stashPrompt",
+     "kind": "action"
+    },
+    {
+     "kind": "dynamic",
+     "name": "projectActions"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "revealInFinder",
+     "kind": "action"
+    },
+    {
+     "id": "copyPath",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "insertFolderPath",
+     "kind": "action"
+    }
+   ],
+   "title": "Terminal",
+   "when": null
+  },
+  {
+   "slots": [
+    {
+     "id": "minimize",
+     "kind": "action"
+    },
+    {
+     "id": "zoom",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "nextTerminal",
+     "kind": "action"
+    },
+    {
+     "id": "previousTerminal",
+     "kind": "action"
+    },
+    {
+     "id": "nextGroup",
+     "kind": "action"
+    },
+    {
+     "id": "previousGroup",
+     "kind": "action"
+    },
+    {
+     "id": "goToWaiting",
+     "kind": "action"
+    },
+    {
+     "id": "goToFinished",
+     "kind": "action"
+    },
+    {
+     "kind": "submenu",
+     "slots": [
+      {
+       "id": "focusPaneLeft",
+       "kind": "action"
+      },
+      {
+       "id": "focusPaneRight",
+       "kind": "action"
+      },
+      {
+       "id": "focusPaneUp",
+       "kind": "action"
+      },
+      {
+       "id": "focusPaneDown",
+       "kind": "action"
+      }
+     ],
+     "title": "Select Pane"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "kind": "dynamic",
+     "name": "terminals"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "bringAllToFront",
+     "kind": "action"
+    }
+   ],
+   "title": "Window",
+   "when": null
+  },
+  {
+   "slots": [
+    {
+     "id": "help",
+     "kind": "action"
+    },
+    {
+     "id": "keyboardShortcuts",
+     "kind": "action"
+    },
+    {
+     "id": "showIntro",
+     "kind": "action"
+    },
+    {
+     "kind": "separator"
+    },
+    {
+     "id": "licenses",
+     "kind": "action"
+    },
+    {
+     "id": "showLogs",
+     "kind": "action"
+    },
+    {
+     "id": "sessionHosts",
+     "kind": "action"
+    }
+   ],
+   "title": "Help",
+   "when": null
+  },
+  {
+   "slots": [
+    {
+     "id": "inspector",
+     "kind": "action"
+    }
+   ],
+   "title": "Developer",
+   "when": "debug"
+  }
+ ],
+ "systemKeys": [
+  {
+   "glyphs": "⌘Space",
+   "what": "Spotlight"
+  },
+  {
+   "glyphs": "⌥⌘Space",
+   "what": "Finder search"
+  },
+  {
+   "glyphs": "⌘⇥",
+   "what": "switching apps"
+  },
+  {
+   "glyphs": "⇧⌘⇥",
+   "what": "switching apps"
+  },
+  {
+   "glyphs": "⌘`",
+   "what": "cycling windows"
+  },
+  {
+   "glyphs": "⌃↑",
+   "what": "Mission Control"
+  },
+  {
+   "glyphs": "⌃↓",
+   "what": "App Exposé"
+  },
+  {
+   "glyphs": "⌃←",
+   "what": "moving between Spaces"
+  },
+  {
+   "glyphs": "⌃→",
+   "what": "moving between Spaces"
+  },
+  {
+   "glyphs": "⇧⌘3",
+   "what": "screenshots"
+  },
+  {
+   "glyphs": "⇧⌘4",
+   "what": "screenshots"
+  },
+  {
+   "glyphs": "⇧⌘5",
+   "what": "screenshots"
+  },
+  {
+   "glyphs": "⌃⌘Q",
+   "what": "Lock Screen"
+  },
+  {
+   "glyphs": "⌃⌘Space",
+   "what": "the Character Viewer"
+  },
+  {
+   "glyphs": "⌃⌘D",
+   "what": "Look Up"
+  },
+  {
+   "glyphs": "⌃Space",
+   "what": "switching input sources"
+  },
+  {
+   "glyphs": "⌃⌥Space",
+   "what": "switching input sources"
+  },
+  {
+   "glyphs": "⇧⌘Q",
+   "what": "Log Out"
+  },
+  {
+   "glyphs": "⌥⌘⎋",
+   "what": "Force Quit"
+  }
+ ]
+}

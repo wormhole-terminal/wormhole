@@ -1,0 +1,2820 @@
+{
+  "format": 1,
+  "sections": [
+    {
+      "id": "profile",
+      "title": "Profile",
+      "intro": "Every page here is this profile's. A new profile starts as a copy of one you have, without its terminals or agent logins.",
+      "nav": "profile",
+      "navTitle": "",
+      "preview": false,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "profile-name",
+              "label": "Name and colour",
+              "description": "",
+              "keywords": "profile rename avatar letter swatch colour color edge",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "profile-name"
+              }
+            },
+            {
+              "id": "profile-start",
+              "label": "Start new terminals in",
+              "description": "",
+              "keywords": "folder directory cwd home path open also claim",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "profile-start"
+              }
+            },
+            {
+              "id": "profile-env",
+              "label": "Environment",
+              "description": "Variables this profile's terminals start with",
+              "keywords": "env variable aws path registry export",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "profile-env"
+              }
+            },
+            {
+              "id": "profile-git",
+              "label": "Git identity",
+              "description": "Set in its terminals only; Wormhole never writes to a repository.",
+              "keywords": "author committer name email commit user",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "profile-git"
+              }
+            },
+            {
+              "id": "profile-logins",
+              "label": "Agent logins",
+              "description": "A separate login for each agent.",
+              "keywords": "claude codex account config dir home sign in",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "profile-logins"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Danger zone",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "profile-delete",
+              "label": "Delete profile",
+              "description": "Its terminals, notes, tasks and settings are removed and its windows close.",
+              "keywords": "remove danger",
+              "keys": [],
+              "visibleHint": true,
+              "control": {
+                "kind": "panel",
+                "panel": "profile-delete"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "changed",
+      "title": "Changed",
+      "intro": "Every setting that differs from its default, with its own control. Reset one, or all at once.",
+      "nav": "changed",
+      "navTitle": "",
+      "preview": false,
+      "groups": []
+    },
+    {
+      "id": "appearance",
+      "title": "Appearance",
+      "intro": "What every window looks like. Changes apply as you make them.",
+      "nav": "look",
+      "navTitle": "Look",
+      "preview": false,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "appearance-preview",
+              "label": "Live preview",
+              "description": "",
+              "keywords": "preview window",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "preview",
+                "scene": "window"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Theme",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "theme-mode",
+              "label": "Mode",
+              "description": "Match system follows macOS: your dark pick in Dark Mode, your light pick in Light Mode",
+              "keywords": "dark light system appearance match night day",
+              "keys": [
+                "theme_mode"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "dark",
+                    "label": "Dark",
+                    "icon": "moon"
+                  },
+                  {
+                    "value": "light",
+                    "label": "Light",
+                    "icon": "sun.max"
+                  },
+                  {
+                    "value": "system",
+                    "label": "Match system",
+                    "icon": "display"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "theme",
+              "label": "Theme",
+              "description": "",
+              "keywords": "colour color scheme palette dark light studio import ghostty iterm2 alacritty",
+              "keys": [
+                "theme",
+                "theme_light",
+                "hidden_themes"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "themeCards"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Accent",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "primary-color",
+              "label": "Use the theme's primary colour",
+              "description": "Off: a colour of your choice for buttons, focus rings, selection and links, in every theme",
+              "keywords": "accent highlight color colour swatch custom own",
+              "keys": [
+                "theme_primary",
+                "primary_color"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "colorToggle"
+              }
+            },
+            {
+              "id": "branch-color",
+              "label": "Branch colour",
+              "description": "The git branch on folders, in the title row and in the status bar. Any colour is kept readable",
+              "keywords": "git branch chip accent color colour magenta purple primary swatch custom own",
+              "keys": [
+                "branch_color",
+                "branch_color_custom"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "theme",
+                    "label": "Theme"
+                  },
+                  {
+                    "value": "primary",
+                    "label": "Primary"
+                  },
+                  {
+                    "value": "custom",
+                    "label": "Custom"
+                  }
+                ],
+                "customKey": "branch_color_custom",
+                "customWhen": "custom"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Window",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "opacity",
+              "label": "Background opacity",
+              "description": "30–100 %. Below 100 % the desktop shows through",
+              "keywords": "transparency translucent see through",
+              "keys": [
+                "opacity"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "slider",
+                "min": 0.30000001192092896,
+                "max": 1.0,
+                "step": 0.01,
+                "format": "percent",
+                "ticks": [
+                  0.3,
+                  0.65,
+                  1.0
+                ]
+              }
+            },
+            {
+              "id": "blur",
+              "label": "Blur what's behind the window",
+              "description": "Only visible below 100 % opacity",
+              "keywords": "vibrancy frosted",
+              "keys": [
+                "blur"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "liquid-glass",
+              "label": "Liquid Glass",
+              "description": "Glass under the sidebar's and the panel's cards. Off: every surface painted.",
+              "keywords": "glass translucent material apple tahoe cards beta",
+              "keys": [
+                "liquid_glass"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "translucent",
+              "label": "Also translucent",
+              "description": "Use the opacity and blur above for these windows too",
+              "keywords": "settings theme studio session hosts window",
+              "keys": [
+                "settings_translucent",
+                "studio_translucent",
+                "hosts_translucent"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "checkboxes",
+                "items": [
+                  {
+                    "key": "settings_translucent",
+                    "label": "Settings"
+                  },
+                  {
+                    "key": "studio_translucent",
+                    "label": "Theme Studio"
+                  },
+                  {
+                    "key": "hosts_translucent",
+                    "label": "Session Hosts"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "borders",
+              "label": "Borders",
+              "description": "Lines around cards, columns and the sidebar. Off: surfaces are told apart by their shade alone",
+              "keywords": "lines outline outlines border hairline rule ring frame cards rows controls menus",
+              "keys": [
+                "borders"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "column-dividers",
+              "label": "Column dividers",
+              "description": "The lines between the sidebar, the terminal and the right panel. Off hides them in every theme; the edges still resize. Increase Contrast keeps them",
+              "keywords": "border hairline rule separator edge columns divider",
+              "keys": [
+                "column_dividers"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "status-bar",
+              "label": "Show status bar",
+              "description": "Branch, agents and terminal size along the bottom of every window",
+              "keywords": "bottom bar footer",
+              "keys": [
+                "status_bar"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "smooth-resize",
+              "label": "Resize windows smoothly",
+              "description": "Off, dragging a window's edge steps by whole characters of the terminal grid. On, it resizes freely: the grid reflows to whole cells and the strip left over takes the terminal's background",
+              "keywords": "window resize drag snap grid characters cells step smooth free",
+              "keys": [
+                "smooth_resize"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "icon-animations",
+              "label": "Animate icons",
+              "description": "Buttons show what a click did with their icon, such as the + turning, Copy turning into a check, or the sidebar button's strip draining as the sidebar slides away. Reduce Motion turns this off too",
+              "keywords": "motion animation toolbar buttons icons sidebar panel toggle",
+              "keys": [
+                "icon_animations"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Title row",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "title-row",
+              "label": "Parts and order",
+              "description": "What the title row shows, and where. Drag a part to move it: the ones above the flexible space sit at the row's left, the others at its right. Right-click the title row to show or hide them there. The pull request is asked of the GitHub CLI (gh), only in a trusted project; hidden, it isn't asked for, and the folder's band in the sidebar has no mark for it either",
+              "keywords": "toolbar customize arrange order reorder rearrange move hide show folder path branch git dirty uncommitted ahead behind status working claude model context window ports localhost server pull request pr github gh checks open in editor split buttons",
+              "keys": [
+                "title_row"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "partsList",
+                "parts": [
+                  {
+                    "value": "folder",
+                    "label": "Folder",
+                    "hideable": true
+                  },
+                  {
+                    "value": "branch",
+                    "label": "Branch",
+                    "hideable": true
+                  },
+                  {
+                    "value": "branch_status",
+                    "label": "Branch status",
+                    "hideable": true
+                  },
+                  {
+                    "value": "terminal",
+                    "label": "Terminal name",
+                    "hideable": true
+                  },
+                  {
+                    "value": "terminal_status",
+                    "label": "Terminal status",
+                    "hideable": true
+                  },
+                  {
+                    "value": "space",
+                    "label": "Flexible space",
+                    "hideable": false
+                  },
+                  {
+                    "value": "agent_gauge",
+                    "label": "Agent model and context",
+                    "hideable": true
+                  },
+                  {
+                    "value": "ports",
+                    "label": "Open ports",
+                    "hideable": true
+                  },
+                  {
+                    "value": "pull_request",
+                    "label": "Pull request",
+                    "hideable": true
+                  },
+                  {
+                    "value": "open_in",
+                    "label": "Open in…",
+                    "hideable": true
+                  },
+                  {
+                    "value": "splits",
+                    "label": "Split buttons",
+                    "hideable": true
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "title": "File icons",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "icon-theme",
+              "label": "File icons",
+              "description": "In the Changes and History panels. Zed icon themes work too",
+              "keywords": "icon theme",
+              "keys": [
+                "icon_theme"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "dynamicSelect",
+                "source": "iconThemes"
+              }
+            },
+            {
+              "id": "icon-themes-folder",
+              "label": "Icon themes folder",
+              "description": "Put a Zed icon theme folder here; it's listed above within seconds",
+              "keywords": "zed folder",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "openIconThemesFolder",
+                "label": "Open folder",
+                "icon": "arrow.up.right.square"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "fonts",
+      "title": "Fonts",
+      "intro": "Terminal first: it's what you read most. Code follows it and Interface uses the system font until you pick one.",
+      "nav": "look",
+      "navTitle": "Look",
+      "preview": false,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "font-specimen",
+              "label": "Specimen",
+              "description": "",
+              "keywords": "preview sample",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "preview",
+                "scene": "fonts"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Terminal",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "font-terminal",
+              "label": "Font",
+              "description": "The terminal grid",
+              "keywords": "terminal font typeface size monospace jetbrains bundled",
+              "keys": [
+                "font_family",
+                "font_size"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "font",
+                "slot": "terminal",
+                "min": 8.0,
+                "max": 36.0,
+                "inherit": null
+              }
+            },
+            {
+              "id": "line-height",
+              "label": "Line height",
+              "description": "Terminal rows, as a multiple of the font size",
+              "keywords": "spacing leading",
+              "keys": [
+                "line_height"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "slider",
+                "min": 1.0,
+                "max": 2.0,
+                "step": 0.05,
+                "format": "decimal2",
+                "ticks": [
+                  1.0,
+                  1.5,
+                  2.0
+                ]
+              }
+            },
+            {
+              "id": "font-ligatures",
+              "label": "Ligatures",
+              "description": "Join sequences like => and != into one glyph",
+              "keywords": "ligature",
+              "keys": [
+                "font_ligatures"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Code",
+          "blurb": "",
+          "aside": "Follows the terminal until you pick one",
+          "entries": [
+            {
+              "id": "font-code",
+              "label": "Font",
+              "description": "Diffs, commit hashes, file lists, Theme Studio",
+              "keywords": "code font typeface size monospace diff",
+              "keys": [
+                "code_font_family",
+                "code_font_size"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "font",
+                "slot": "code",
+                "min": 8.0,
+                "max": 36.0,
+                "inherit": "Same as terminal"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Interface",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "font-interface",
+              "label": "Font",
+              "description": "Sidebar, panels, settings and controls. The size scales the whole interface",
+              "keywords": "interface font typeface size system ui",
+              "keys": [
+                "ui_font_family",
+                "ui_font_size"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "font",
+                "slot": "interface",
+                "min": 10.0,
+                "max": 20.0,
+                "inherit": "System font"
+              }
+            },
+            {
+              "id": "settings-text-size",
+              "label": "Settings text size",
+              "description": "The text of the Settings and Theme Studio windows, on top of the interface font's size. The terminal and the main window keep theirs",
+              "keywords": "text size zoom larger bigger smaller scale settings studio window accessibility",
+              "keys": [
+                "settings_text_size"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "small",
+                    "label": "Small"
+                  },
+                  {
+                    "value": "default",
+                    "label": "Default"
+                  },
+                  {
+                    "value": "large",
+                    "label": "Large"
+                  },
+                  {
+                    "value": "larger",
+                    "label": "Larger"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "title": "Your fonts",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "fonts-folder",
+              "label": "Fonts folder",
+              "description": "JetBrains Mono comes with Wormhole. To use other fonts without installing them, put .ttf, .otf or .ttc files (or folders of them) here: they're listed under Custom within seconds",
+              "keywords": "custom bundled ttf otf ttc folder",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "openFontsFolder",
+                "label": "Open fonts folder",
+                "icon": "arrow.up.right.square"
+              }
+            },
+            {
+              "id": "custom-fonts",
+              "label": "Custom fonts",
+              "description": "",
+              "keywords": "custom families",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "info",
+                "info": "customFonts"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "motion",
+      "title": "Motion",
+      "intro": "How things move. Pick one for each, and watch the one you touched last loop in the preview at the top.",
+      "nav": "look",
+      "navTitle": "Look",
+      "preview": true,
+      "groups": [
+        {
+          "title": "Terminals list",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "motion-insert",
+              "label": "A terminal opens or closes",
+              "description": "How its row comes into the list and leaves it",
+              "keywords": "animation animate new row appear disappear add remove list insert spring slide fade",
+              "keys": [
+                "motion.insert"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "classic",
+                    "label": "Classic"
+                  },
+                  {
+                    "value": "reveal",
+                    "label": "Reveal"
+                  },
+                  {
+                    "value": "from-side",
+                    "label": "From the side"
+                  },
+                  {
+                    "value": "soft-spring",
+                    "label": "Soft spring"
+                  }
+                ],
+                "default": "from-side"
+              }
+            },
+            {
+              "id": "motion-fold",
+              "label": "A group folds",
+              "description": "How a group's rows go away when you fold it, and come back when you open it",
+              "keywords": "animation animate collapse expand band group fold drawer tuck",
+              "keys": [
+                "motion.fold"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "classic",
+                    "label": "Classic"
+                  },
+                  {
+                    "value": "drawer",
+                    "label": "Drawer"
+                  },
+                  {
+                    "value": "tuck",
+                    "label": "Rows tuck in"
+                  }
+                ],
+                "default": "tuck"
+              }
+            },
+            {
+              "id": "motion-status",
+              "label": "A status changes",
+              "description": "What a terminal's tile does when its agent starts working, needs you or finishes",
+              "keywords": "animation animate tile badge agent working needs input done failed crossfade wash flare nudge roll",
+              "keys": [
+                "motion.status"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "select",
+                "options": [
+                  {
+                    "value": "classic",
+                    "label": "Classic"
+                  },
+                  {
+                    "value": "crossfade",
+                    "label": "Crossfade"
+                  },
+                  {
+                    "value": "badge-pop",
+                    "label": "Badge pops"
+                  },
+                  {
+                    "value": "wash",
+                    "label": "Card wash"
+                  },
+                  {
+                    "value": "flare",
+                    "label": "Amber flare"
+                  },
+                  {
+                    "value": "nudge",
+                    "label": "Nudge"
+                  },
+                  {
+                    "value": "line-roll",
+                    "label": "Line rolls"
+                  }
+                ],
+                "default": "classic"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Window",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "motion-column",
+              "label": "The sidebar and panel hide or show",
+              "description": "How a column slides in and out",
+              "keywords": "animation animate sidebar panel column slide spring hide show collapse",
+              "keys": [
+                "motion.column"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "classic",
+                    "label": "Classic"
+                  },
+                  {
+                    "value": "soft-spring",
+                    "label": "Soft spring"
+                  },
+                  {
+                    "value": "content-after",
+                    "label": "Content after"
+                  }
+                ],
+                "default": "classic"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "terminal",
+      "title": "Terminal",
+      "intro": "How the terminal behaves. Its font is in Fonts.",
+      "nav": "work",
+      "navTitle": "Work",
+      "preview": false,
+      "groups": [
+        {
+          "title": "Behaviour",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "scrollback",
+              "label": "Scrollback",
+              "description": "Lines kept per terminal (applies to new terminals)",
+              "keywords": "history buffer lines",
+              "keys": [
+                "scrollback_lines"
+              ],
+              "visibleHint": true,
+              "control": {
+                "kind": "select",
+                "options": [
+                  {
+                    "value": 1000,
+                    "label": "1,000 lines"
+                  },
+                  {
+                    "value": 5000,
+                    "label": "5,000 lines"
+                  },
+                  {
+                    "value": 10000,
+                    "label": "10,000 lines"
+                  },
+                  {
+                    "value": 50000,
+                    "label": "50,000 lines"
+                  },
+                  {
+                    "value": 100000,
+                    "label": "100,000 lines"
+                  },
+                  {
+                    "value": 200000,
+                    "label": "200,000 lines"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "restore-text",
+              "label": "Restore terminal text after restart",
+              "description": "Encrypted and kept only on this Mac. Off erases what's saved",
+              "keywords": "scrollback history saved restore privacy secrets encrypted keychain",
+              "keys": [
+                "restore_terminal_text"
+              ],
+              "visibleHint": true,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "minimap",
+              "label": "Show minimap",
+              "description": "The scrollback drawn small along the terminal's right edge. Click or drag it to scroll",
+              "keywords": "overview scrollbar map outline",
+              "keys": [
+                "minimap"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "never-hide-lines",
+              "label": "Never hide lines",
+              "description": "Show every line of output, whatever an extension or a fold would hide behind a marker. Off lets folds hide finished output; copying and finding always see every line",
+              "keywords": "fold folds hide hidden output lines marker collapse extension probe show all",
+              "keys": [
+                "never_hide_lines"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "split-gaps",
+              "label": "Gaps between split terminals",
+              "description": "Each terminal of a split is its own rounded surface, a small gap apart. Off joins them with a hairline",
+              "keywords": "panes divider spacing rounded margin",
+              "keys": [
+                "split_gaps"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "meta",
+              "label": "Use Option as Meta",
+              "description": "For emacs and readline shortcuts. A side set to Meta can't type @ { [ on some keyboard layouts",
+              "keywords": "alt option escape keyboard left right",
+              "keys": [
+                "option_as_meta"
+              ],
+              "visibleHint": true,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "off",
+                    "label": "Off"
+                  },
+                  {
+                    "value": "left",
+                    "label": "Left"
+                  },
+                  {
+                    "value": "right",
+                    "label": "Right"
+                  },
+                  {
+                    "value": "both",
+                    "label": "Both"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "terminal-font",
+              "label": "Font",
+              "description": "",
+              "keywords": "typeface size line height",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "link",
+                "section": "fonts",
+                "label": "Edit in Fonts"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Opening",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "open-in",
+              "label": "Open folders in",
+              "description": "The Open in… button in a terminal's title row opens its folder here; its menu lists the others",
+              "keywords": "editor ide zed code vscode cursor sublime xcode jetbrains phpstorm finder app",
+              "keys": [
+                "open_in"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "dynamicSelect",
+                "source": "openIn"
+              }
+            },
+            {
+              "id": "default-terminal",
+              "label": "Default terminal",
+              "description": "Double-clicked .command files and programs run in a new Wormhole terminal instead of Terminal",
+              "keywords": "default terminal app command script executable finder open with launch services",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "makeDefaultTerminal",
+                "label": "Make default",
+                "icon": "terminal"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Shell",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "default-shell",
+              "label": "Default shell",
+              "description": "What a new terminal runs: your login shell, a shell on this Mac, or a profile below. Right-click a + for the others",
+              "keywords": "shell zsh bash fish nu nushell login program default",
+              "keys": [
+                "default_shell"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "dynamicSelect",
+                "source": "shells"
+              }
+            },
+            {
+              "id": "shells",
+              "label": "Shells",
+              "description": "Profiles for New Terminal With: a program with its arguments, listed in config.json",
+              "keywords": "shell profiles custom command arguments args claude program",
+              "keys": [
+                "shells"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "openConfig",
+                "label": "Edit in config.json",
+                "icon": "doc.text"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Worktrees",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "worktree-base",
+              "label": "Worktrees folder",
+              "description": "Where Shell → New Terminal in New Worktree puts a worktree: beside the repository in <name>-worktrees, or under the folder worktree_base names in config.json",
+              "keywords": "worktree worktrees git branch folder base parallel agents",
+              "keys": [
+                "worktree_base"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "openConfig",
+                "label": "Edit in config.json",
+                "icon": "doc.text"
+              }
+            },
+            {
+              "id": "worktree-clone-build-folders",
+              "label": "Start new worktrees with build folders",
+              "description": "When Wormhole makes a worktree, it clones the main checkout's ignored node_modules and target folders into it, so installs and builds start warm. Clones share disk space with the originals until a file changes. Only when both are on the same APFS volume; the clones are left out of Time Machine.",
+              "keywords": "worktree worktrees clone copy node_modules target cargo pnpm npm build cache install apfs warm",
+              "keys": [
+                "worktree_clone_build_folders"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Bell",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "bell-sound",
+              "label": "Play a sound",
+              "description": "The system beep when a program in a terminal rings the bell",
+              "keywords": "bell beep audible alert",
+              "keys": [
+                "bell_sound"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "bell-visual",
+              "label": "Flash the window edge",
+              "description": "A short glow along the terminal's edge when it rings the bell",
+              "keywords": "bell visual flash glow",
+              "keys": [
+                "bell_visual"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Inline images",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "image-memory",
+              "label": "Image memory per terminal",
+              "description": "Most memory the pictures a program draws in one terminal may take, decoded. The oldest go first when it is full. Applies to new terminals; all terminals together get four times this, at most 2 GiB",
+              "keywords": "images graphics kitty sixel iterm2 pictures memory ram budget",
+              "keys": [
+                "image_memory_mib"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "select",
+                "options": [
+                  {
+                    "value": 64,
+                    "label": "64 MiB"
+                  },
+                  {
+                    "value": 128,
+                    "label": "128 MiB"
+                  },
+                  {
+                    "value": 256,
+                    "label": "256 MiB"
+                  },
+                  {
+                    "value": 512,
+                    "label": "512 MiB"
+                  },
+                  {
+                    "value": 1024,
+                    "label": "1024 MiB"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "title": "Privacy",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "clipboard-read",
+              "label": "Programs reading the clipboard",
+              "description": "What a program gets when it asks for the clipboard's text (OSC 52), over ssh too. Ask puts a question over that terminal; the clipboard often holds a password",
+              "keywords": "osc 52 clipboard read paste copy password ask allow deny security ssh",
+              "keys": [
+                "clipboard_read"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "ask",
+                    "label": "Ask"
+                  },
+                  {
+                    "value": "allow",
+                    "label": "Allow"
+                  },
+                  {
+                    "value": "deny",
+                    "label": "Deny"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "clipboard-write",
+              "label": "Programs setting the clipboard",
+              "description": "Lets a program put text on the clipboard (OSC 52), which replaces what you copied. The terminal says when one does",
+              "keywords": "osc 52 clipboard write copy set security ssh notice",
+              "keys": [
+                "clipboard_write"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "allow",
+                    "label": "Allow"
+                  },
+                  {
+                    "value": "deny",
+                    "label": "Deny"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "screen-checksum",
+              "label": "Let programs read the screen back",
+              "description": "Answers a program's request for the checksum of part of the screen (DECRQCRA), which also lets a program, over ssh too, read the screen cell by cell. Applies to new terminals",
+              "keywords": "decrqcra checksum screen read capture esctest security ssh",
+              "keys": [
+                "allow_screen_checksum"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "window-ops",
+              "label": "Let programs control the window",
+              "description": "Lets a program move, resize, minimise, raise or full-screen the window (xterm's window operations). Applies to new terminals",
+              "keywords": "xtwinops window operations resize move iconify fullscreen maximize security ssh",
+              "keys": [
+                "allow_window_ops"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "title-report",
+              "label": "Let programs read the window title back",
+              "description": "Answers a program's request for the window title and icon name (XTWINOPS 20 and 21). A title is text a program chose, and the answer is typed into the shell, so over ssh this lets a program type a command line. Applies to new terminals",
+              "keywords": "xtwinops title icon name report read back window security ssh esctest",
+              "keys": [
+                "allow_title_report"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sessions",
+      "title": "Terminals & sidebar",
+      "intro": "The Terminals list on the left: how it's grouped and what each row shows.",
+      "nav": "work",
+      "navTitle": "Work",
+      "preview": false,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "sidebar-preview",
+              "label": "Live preview",
+              "description": "",
+              "keywords": "preview sidebar",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "preview",
+                "scene": "sidebar"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Terminals in",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "terminals-in",
+              "label": "Show terminals in",
+              "description": "Sidebar: the list on the left; Tabs: a tab bar instead, with the groups as sets of tabs",
+              "keywords": "tabs tab bar sidebar list layout",
+              "keys": [
+                "terminals_in"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "sidebar",
+                    "label": "Sidebar"
+                  },
+                  {
+                    "value": "tabs",
+                    "label": "Tabs"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "title": "Terminals list",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "density",
+              "label": "Density",
+              "description": "How much room each terminal takes, in the sidebar and the tab bar: Regular rows are 48 pt with a second line, Compact 32, Dense 26",
+              "keywords": "density compact dense regular comfortable rows size",
+              "keys": [
+                "density"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "regular",
+                    "label": "Regular"
+                  },
+                  {
+                    "value": "compact",
+                    "label": "Compact"
+                  },
+                  {
+                    "value": "dense",
+                    "label": "Dense"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "cards",
+              "label": "Show groups as cards",
+              "description": "Off: groups are a head and their rows, with no card around them",
+              "keywords": "cards groups card background border",
+              "keys": [
+                "show_groups_as_cards"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "fade-group-colors",
+              "label": "Fade group colours",
+              "description": "On: a group's colour fades out across its card; off, it fills the card evenly",
+              "keywords": "fade gradient group colour color card wash",
+              "keys": [
+                "fade_group_colors"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "show-group-folders",
+              "label": "Show group folders",
+              "description": "The folder a group's new terminals start in, under its name",
+              "keywords": "group folder path directory name head show hide",
+              "keys": [
+                "show_group_folders"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "sidebar-numbers",
+              "label": "⌘1–⌘9 numbers",
+              "description": "Stay with the terminal: dealt down the list, then kept (a new terminal gets the next one); Follow the list: the first nine rows you can see",
+              "keywords": "command shortcuts numbers stay follow list stable classic",
+              "keys": [
+                "sidebar_numbers"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "terminal",
+                    "label": "Stay with the terminal"
+                  },
+                  {
+                    "value": "list",
+                    "label": "Follow the list"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "cmd-hints",
+              "label": "Show ⌘1–⌘9 while ⌘ is held",
+              "description": "Keycaps on the first nine terminals after 250 ms; the shortcuts work either way",
+              "keywords": "command keycaps shortcuts numbers hints",
+              "keys": [
+                "sidebar_cmd_hints"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Row details",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "sidebar-changes",
+              "label": "Changed files",
+              "description": "±N uncommitted files in the terminal's row",
+              "keywords": "git changes count",
+              "keys": [
+                "sidebar_changes"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "sidebar-changes-scope",
+              "label": "Count",
+              "description": "The files this terminal changed, or everything changed in its repository, shown once, on the topmost row of that repository",
+              "keywords": "git changes count repository terminal own",
+              "keys": [
+                "sidebar_changes_scope"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "terminal",
+                    "label": "This terminal"
+                  },
+                  {
+                    "value": "repository",
+                    "label": "Repository"
+                  }
+                ]
+              },
+              "visibleWhen": [
+                {
+                  "key": "sidebar_changes",
+                  "equals": true
+                }
+              ]
+            },
+            {
+              "id": "sidebar-changes-plain",
+              "label": "Plain terminals",
+              "description": "Which programs make a terminal without an agent count the files changed while they run. Commands that finish: a build, a test run, a formatter. Any program: an editor or a dev server too, which then take edits made outside the app",
+              "keywords": "shell command editor dev server vim ssh",
+              "keys": [
+                "sidebar_changes_plain"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "finishing",
+                    "label": "Commands that finish"
+                  },
+                  {
+                    "value": "any",
+                    "label": "Any program"
+                  },
+                  {
+                    "value": "none",
+                    "label": "None"
+                  }
+                ]
+              },
+              "visibleWhen": [
+                {
+                  "key": "sidebar_changes",
+                  "equals": true
+                },
+                {
+                  "key": "sidebar_changes_scope",
+                  "equals": "terminal"
+                }
+              ]
+            },
+            {
+              "id": "sidebar-changes-shared",
+              "label": "Files changed at once",
+              "description": "When several terminals worked at the same time, whose file it is can't be told: each counts it, or nobody does",
+              "keywords": "both shared overlap ambiguous agents",
+              "keys": [
+                "sidebar_changes_shared"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "each",
+                    "label": "Each counts it"
+                  },
+                  {
+                    "value": "none",
+                    "label": "Nobody counts it"
+                  }
+                ]
+              },
+              "visibleWhen": [
+                {
+                  "key": "sidebar_changes",
+                  "equals": true
+                },
+                {
+                  "key": "sidebar_changes_scope",
+                  "equals": "terminal"
+                }
+              ]
+            },
+            {
+              "id": "sidebar-changes-remember",
+              "label": "Remember after restart",
+              "description": "Keep which files each terminal changed when the app quits, for the terminals that come back",
+              "keywords": "persist restart restore",
+              "keys": [
+                "sidebar_changes_remember"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              },
+              "visibleWhen": [
+                {
+                  "key": "sidebar_changes",
+                  "equals": true
+                }
+              ]
+            },
+            {
+              "id": "sidebar-dot",
+              "label": "Status dot",
+              "description": "Working, needs input, finished or idle, as the state round every terminal's status tile",
+              "keywords": "status glyph agent",
+              "keys": [
+                "sidebar_status_dot"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "sidebar-notes",
+              "label": "Notes and tasks",
+              "description": "Note icon with the number of notes and open tasks",
+              "keywords": "notes tasks next steps count",
+              "keys": [
+                "sidebar_notes"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              },
+              "feature": "notes"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "git",
+      "title": "Changes & diffs",
+      "intro": "The Changes panel and the diff view.",
+      "nav": "work",
+      "navTitle": "Work",
+      "preview": false,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "changes-preview",
+              "label": "Live preview",
+              "description": "",
+              "keywords": "preview changes diff panel list tree",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "preview",
+                "scene": "git"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Changes panel",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "changes-view",
+              "label": "File view",
+              "description": "A flat list, or folders as a tree",
+              "keywords": "folders files list tree",
+              "keys": [
+                "changes_tree"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": false,
+                    "label": "List"
+                  },
+                  {
+                    "value": true,
+                    "label": "Tree"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "group-untracked",
+              "label": "Group untracked files separately",
+              "description": "New files get their own section under the changes",
+              "keywords": "untracked new files",
+              "keys": [
+                "group_untracked"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Diff view",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "diff-layout",
+              "label": "Default layout",
+              "description": "Split keeps old and new side by side, even for a new or deleted file. The diff's own toolbar switches one diff",
+              "keywords": "split unified side by side",
+              "keys": [
+                "diff_split"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": true,
+                    "label": "Split",
+                    "icon": "rectangle.split.2x1"
+                  },
+                  {
+                    "value": false,
+                    "label": "Unified",
+                    "icon": "rectangle.split.1x2"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "diff-wrap",
+              "label": "Wrap long lines",
+              "description": "Otherwise the diff scrolls sideways",
+              "keywords": "wrap",
+              "keys": [
+                "diff_wrap"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "tab-width",
+              "label": "Tab width",
+              "description": "Spaces per tab in diffs",
+              "keywords": "indent tabs",
+              "keys": [
+                "tab_width"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "stepper",
+                "min": 1,
+                "max": 16,
+                "step": 1,
+                "template": "1234567 spaces"
+              }
+            },
+            {
+              "id": "size-units",
+              "label": "File sizes",
+              "description": "Decimal like Finder (12.4 MB), or binary like git (11.8 MiB)",
+              "keywords": "size units bytes kilobytes megabytes kb mb kib mib finder binary decimal",
+              "keys": [
+                "size_units"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "decimal",
+                    "label": "MB"
+                  },
+                  {
+                    "value": "binary",
+                    "label": "MiB"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "agents",
+      "title": "Coding agents",
+      "intro": "Wormhole recognises the agent running in each terminal. With status hooks it knows exactly when it's working, waiting for you, or done.",
+      "nav": "agents",
+      "navTitle": "Agents",
+      "preview": false,
+      "groups": [
+        {
+          "title": "Notifications",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "agents-notifications",
+              "label": "Notify me when an agent needs input or finishes",
+              "description": "These, and notifications about long commands and the bell, have their own section",
+              "keywords": "notifications alerts banner",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "link",
+                "section": "notifications",
+                "label": "Open Notifications"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Installed",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "agents-installed",
+              "label": "Installed agents",
+              "description": "",
+              "keywords": "claude code codex gemini copilot cursor opencode aider amp goose qwen pi fm foundation models hooks status install remove repair",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "agentsInstalled"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Other agents",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "agents-other",
+              "label": "Other agents",
+              "description": "Agents Wormhole recognises that aren't on this Mac's PATH",
+              "keywords": "not installed path",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "agentsOther"
+              }
+            }
+          ]
+        },
+        {
+          "title": "How status works",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "agents-how",
+              "label": "How status works",
+              "description": "With status hooks the agent tells Wormhole the moment it starts working, waits for you or finishes; without them the status is read from the terminal output",
+              "keywords": "hooks output heuristic backup",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "agentsHow"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Command line",
+          "blurb": "Scripts and agents can drive Wormhole from the command line: list terminals, read a status and send notifications.",
+          "aside": "",
+          "entries": [
+            {
+              "id": "cli-tool",
+              "label": "Command line tool",
+              "description": "The Wormhole command in any terminal",
+              "keywords": "wh wht cli command install uninstall path shell alias symlink bin usr local terminal",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "cliTool"
+              }
+            },
+            {
+              "id": "control-write",
+              "label": "Let the command line type and open terminals",
+              "description": "send-text types into a terminal and new-terminal opens one, as a paste; never into the terminal that asks, nor one waiting for your answer",
+              "keywords": "cli command line control api socket send-text new-terminal scripts agents automation remote type",
+              "keys": [
+                "control_write"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Agent access",
+          "blurb": "Programs that drive Wormhole through its command line, MCP or socket: which ones are let in, and what they were allowed. Wormhole controls what goes through Wormhole. It can't stop a program from using your files directly.",
+          "aside": "",
+          "entries": [
+            {
+              "id": "agent-access",
+              "label": "External agents and scripts",
+              "description": "Off lets nothing in beyond listing terminals and their status. Ask shows a question the first time a program wants more. Allowed while open lets every program in without asking while Wormhole runs",
+              "keywords": "agent access permissions approve allow deny ask off open scripts mcp command line automation security trust",
+              "keys": [
+                "agent_access"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "agentAccess"
+              }
+            },
+            {
+              "id": "agent-access-programs",
+              "label": "Approved programs",
+              "description": "",
+              "keywords": "approved programs allowed revoke remove forget signed always session quit claude codex scripts",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "agentAccessPrograms"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Wormhole skill",
+          "blurb": "A skill teaches a coding agent to drive Wormhole through the command line: run tests in a split, wait for a dev server, read a screen. Nothing is installed until you press Install.",
+          "aside": "",
+          "entries": [
+            {
+              "id": "agent-skills",
+              "label": "Skill for coding agents",
+              "description": "Puts the Wormhole skill in an agent's own skills folder. Update replaces it, Uninstall removes it, and a skill of the same name that Wormhole didn't write is never touched",
+              "keywords": "skill skills agent agents claude codex gemini copilot opencode qwen droid install update uninstall wh automation instructions",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "agent-skills"
+              }
+            },
+            {
+              "id": "agent-mcp",
+              "label": "Add Wormhole to an agent over MCP",
+              "description": "Run this command in a terminal to give Claude Code the tools of wh mcp. Wormhole doesn't change other apps' settings",
+              "keywords": "mcp model context protocol claude code tools server wh agent",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "agent-mcp"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "import",
+      "title": "Import",
+      "intro": "Bring your font, colours, shell and more over from the terminal you used before. Nothing changes until you choose what to import, and the other terminal's own files are never touched.",
+      "nav": "app",
+      "navTitle": "App",
+      "preview": false,
+      "groups": [
+        {
+          "title": "Found on this Mac",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "import-found",
+              "label": "Terminals found",
+              "description": "",
+              "keywords": "import migrate switch move settings config configuration ghostty iterm iterm2 terminal.app alacritty kitty wezterm warp zed vscode vs code font theme colours colors shell",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "importFound"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "notifications",
+      "title": "Notifications",
+      "intro": "What Wormhole tells you about terminals you aren't looking at.",
+      "nav": "app",
+      "navTitle": "App",
+      "preview": false,
+      "groups": [
+        {
+          "title": "macOS",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "notify-permission",
+              "label": "Notifications in System Settings",
+              "description": "",
+              "keywords": "permission allow system settings",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "notify-permission"
+              }
+            },
+            {
+              "id": "notify-test",
+              "label": "Send a test notification",
+              "description": "",
+              "keywords": "test banner try check send permission",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "notify-test"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Notify me when",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "notify-needs-you",
+              "label": "A terminal needs input",
+              "description": "An agent asks a question or for permission",
+              "keywords": "time sensitive focus question permission notifications",
+              "keys": [
+                "notify_needs_you"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "notify-agent-done",
+              "label": "An agent finishes",
+              "description": "Its Stop hook, or its output settles. A program that reports it is done or failed counts too",
+              "keywords": "notifications done program report failed error",
+              "keys": [
+                "notify_agent_done"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "notify-command-done",
+              "label": "A command finishes",
+              "description": "Any foreground command, agent or not, that ran longer than",
+              "keywords": "long build threshold seconds notifications",
+              "keys": [
+                "notify_command_done",
+                "notify_command_after"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggleStepper",
+                "stepKey": "notify_command_after",
+                "min": 5,
+                "max": 300,
+                "steps": [
+                  5,
+                  10,
+                  30,
+                  60,
+                  120,
+                  300
+                ]
+              }
+            },
+            {
+              "id": "notify-command-failed",
+              "label": "A command fails",
+              "description": "Non-zero exit code. Needs shell integration (on for zsh, bash and fish)",
+              "keywords": "failed failure error exit code build notifications",
+              "keys": [
+                "notify_command_failed"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "notify-bell",
+              "label": "The terminal rings the bell",
+              "description": "Terminals without an agent; at most once a minute each",
+              "keywords": "bell notifications",
+              "keys": [
+                "notify_bell"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Delivery",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "notify-only-unseen",
+              "label": "Only for terminals I’m not looking at",
+              "description": "Off: the terminal in front notifies too",
+              "keywords": "unseen front",
+              "keys": [
+                "notify_only_unseen"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "notify-in-front",
+              "label": "While Wormhole is in front",
+              "description": "A system banner, or nothing",
+              "keywords": "banner nothing front",
+              "keys": [
+                "notify_in_front"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "banner",
+                    "label": "Banner"
+                  },
+                  {
+                    "value": "none",
+                    "label": "Nothing"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "notify-sound",
+              "label": "Sound",
+              "description": "",
+              "keywords": "sound alert",
+              "keys": [
+                "notify_sound"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "needs_you",
+                    "label": "Needs input only"
+                  },
+                  {
+                    "value": "all",
+                    "label": "All"
+                  },
+                  {
+                    "value": "none",
+                    "label": "None"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "notify-group-bursts",
+              "label": "Group bursts",
+              "description": "Three or more within 10 s become one summary",
+              "keywords": "summary bursts",
+              "keys": [
+                "notify_group_bursts"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Dock",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "dock-badge",
+              "label": "Badge",
+              "description": "The count on the Dock icon",
+              "keywords": "dock badge count",
+              "keys": [
+                "dock_badge"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "off",
+                    "label": "Off"
+                  },
+                  {
+                    "value": "needs_you",
+                    "label": "Needs input"
+                  },
+                  {
+                    "value": "needs_you_done",
+                    "label": "Needs input + finished"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "dock-bounce",
+              "label": "Bounce once when a terminal needs input",
+              "description": "Only while Wormhole isn’t the active app; never for a bell",
+              "keywords": "dock bounce",
+              "keys": [
+                "dock_bounce"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "menuBar",
+      "title": "Menu bar",
+      "intro": "Wormhole in the macOS menu bar.",
+      "nav": "app",
+      "navTitle": "App",
+      "preview": false,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "menu-bar",
+              "label": "Show Wormhole in the menu bar",
+              "description": "Terminals by status and quick actions",
+              "keywords": "status bar tray item menubar",
+              "keys": [
+                "menu_bar"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "menu-bar-icon",
+              "label": "Icon shows",
+              "description": "The dot and count on the status item",
+              "keywords": "status item icon count",
+              "keys": [
+                "menu_bar_icon"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "status_count",
+                    "label": "Status and count"
+                  },
+                  {
+                    "value": "status",
+                    "label": "Status"
+                  },
+                  {
+                    "value": "plain",
+                    "label": "Icon only"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "menu-bar-animate",
+              "label": "Animate menu bar icon while working",
+              "description": "The prompt in the icon types itself out while something runs. Off: a still, filled icon",
+              "keywords": "animation",
+              "keys": [
+                "menu_bar_animate"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hotkey",
+      "title": "Hotkey",
+      "intro": "A shortcut that works from any app.",
+      "nav": "app",
+      "navTitle": "App",
+      "preview": false,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "hotkey",
+              "label": "Shortcut",
+              "description": "Works from any app. Click, then press the keys",
+              "keywords": "global shortcut quake record hotkey",
+              "keys": [
+                "hotkey"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "recorder"
+              }
+            },
+            {
+              "id": "hotkey-action",
+              "label": "Hotkey opens",
+              "description": "Pressing it again with the panel open shows Wormhole",
+              "keywords": "quick panel toggle",
+              "keys": [
+                "hotkey_action"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "quick_panel",
+                    "label": "Quick panel"
+                  },
+                  {
+                    "value": "toggle_app",
+                    "label": "Show or hide Wormhole"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "jump-waiting-key",
+              "label": "Jump to next waiting terminal",
+              "description": "Inside Wormhole, in any window",
+              "keywords": "needs input needs you waiting shortcut",
+              "keys": [
+                "jump_waiting_key"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "recorder"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "updates",
+      "title": "Updates",
+      "intro": "Signed releases, checked in the background.",
+      "nav": "app",
+      "navTitle": "App",
+      "preview": false,
+      "groups": [
+        {
+          "title": "Updates",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "version",
+              "label": "Version",
+              "description": "",
+              "keywords": "release build",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "info",
+                "info": "version"
+              }
+            },
+            {
+              "id": "auto-update",
+              "label": "Update automatically",
+              "description": "Checks in the background and installs on the next restart",
+              "keywords": "download auto",
+              "keys": [
+                "auto_update"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "update-channel",
+              "label": "Channel",
+              "description": "Unstable also gets a build of every change once it passes the tests, and shows the feature flags",
+              "keywords": "beta nightly unstable stable prerelease dev builds main feature flags",
+              "keys": [
+                "update_channel"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "segmented",
+                "options": [
+                  {
+                    "value": "stable",
+                    "label": "Stable"
+                  },
+                  {
+                    "value": "unstable",
+                    "label": "Unstable"
+                  }
+                ]
+              }
+            },
+            {
+              "id": "update-status",
+              "label": "Check for updates",
+              "description": "",
+              "keywords": "install restart release notes check skip",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "update-status"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Privacy",
+          "blurb": "Update checks go to Wormhole’s download server, which redirects them to GitHub.",
+          "aside": "",
+          "entries": [
+            {
+              "id": "anonymous-count",
+              "label": "Share update statistics",
+              "description": "Share your chip type and macOS version, and include this installation in daily and monthly counts.",
+              "keywords": "analytics telemetry privacy usage statistics count tracking",
+              "keys": [
+                "anonymous_count"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "count-details",
+              "label": "What an update check sends",
+              "description": "",
+              "keywords": "privacy data sent user agent ip address",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "count-details"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "advanced",
+      "title": "Advanced",
+      "intro": "Files, folders and a way back to the defaults.",
+      "nav": "app",
+      "navTitle": "App",
+      "preview": false,
+      "groups": [
+        {
+          "title": "Files",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "open-config",
+              "label": "Settings file",
+              "description": "config.json: edits apply live",
+              "keywords": "json config",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "openConfig",
+                "label": "Open",
+                "icon": "chevron.left.forwardslash.chevron.right"
+              }
+            },
+            {
+              "id": "open-data",
+              "label": "Data folder",
+              "description": "Terminals, notes, themes, logs",
+              "keywords": "finder database",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "openData",
+                "label": "Show in Finder",
+                "icon": "folder"
+              }
+            },
+            {
+              "id": "open-logs",
+              "label": "Logs",
+              "description": "Set WORMHOLE_LOG=debug for more detail",
+              "keywords": "debug log",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "openLogs",
+                "label": "Show in Finder",
+                "icon": "folder"
+              }
+            },
+            {
+              "id": "show-config-keys",
+              "label": "Show config keys",
+              "description": "Settings shows each setting's name in config.json under its label. Off: hidden. Right-click a row to copy its key either way",
+              "keywords": "config json key keys name names raw developer option",
+              "keys": [
+                "show_config_keys"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "toggle"
+              }
+            },
+            {
+              "id": "reset-settings",
+              "label": "Reset all settings",
+              "description": "Your terminals, notes and themes are kept",
+              "keywords": "defaults reset restore",
+              "keys": [],
+              "visibleHint": true,
+              "control": {
+                "kind": "action",
+                "action": "resetAll",
+                "label": "Reset to defaults…",
+                "icon": "arrow.counterclockwise"
+              }
+            }
+          ]
+        },
+        {
+          "title": "Tips",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "reset-tips",
+              "label": "Closed tips",
+              "description": "Bring back the tips closed with “Don't show again”, such as the sidebar's coding agents note",
+              "keywords": "hints tips reset show again dismissed",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "resetTips",
+                "label": "Reset tips",
+                "icon": "lightbulb"
+              }
+            }
+          ]
+        },
+        {
+          "title": "New programs",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "skip-scans",
+              "label": "Skip malware scans of new programs",
+              "description": "macOS scans each new program for malware the first time it runs, which slows builds, tests and coding agents. Adding Wormhole to Developer Tools lets programs started in Wormhole skip that scan. Only do this if you trust what you run. Terminals opened after you restart Wormhole get it. If Developer Tools isn't listed, run spctl developer-mode enable-terminal in a terminal first.",
+              "keywords": "developer tools xprotect gatekeeper malware scan speed slow first run build privacy security spctl",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "action",
+                "action": "openDeveloperTools",
+                "label": "Open Developer Tools Settings",
+                "icon": "gearshape"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "projects",
+      "title": "Project folders",
+      "intro": "Change the defaults for every project, or pick one to set it up just for you.",
+      "nav": "preview",
+      "navTitle": "Preview",
+      "preview": true,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "projects",
+              "label": "Project folders",
+              "description": "The .wormhole folder of a project: trust, and which of its files you use",
+              "keywords": ".wormhole project folder trust touch id actions prompts layout notes theme settings",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "projects"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "extensions",
+      "title": "Extensions",
+      "intro": "Probes are folders that add to Wormhole. A new or changed one stays off until you approve exactly what it asks for.",
+      "nav": "preview",
+      "navTitle": "Preview",
+      "preview": true,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "probes",
+              "label": "Probes",
+              "description": "Folders with a probe.toml in Wormhole's data folder, and what each is allowed to do",
+              "keywords": "probe probes extension extensions plugin permissions approve touch id probe.toml",
+              "keys": [],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "probes"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "featureFlags",
+      "title": "Feature flags",
+      "intro": "Features still being built. They show here in a development build and on the Unstable update channel; otherwise a release has them off until they're finished.",
+      "nav": "preview",
+      "navTitle": "Preview",
+      "preview": true,
+      "groups": [
+        {
+          "title": "",
+          "blurb": "",
+          "aside": "",
+          "entries": [
+            {
+              "id": "feature-flags",
+              "label": "Feature flags",
+              "description": "Turn features that are still being built on or off in this build",
+              "keywords": "feature flag preview experimental development dev in progress beta unstable project folders",
+              "keys": [
+                "feature_flags"
+              ],
+              "visibleHint": false,
+              "control": {
+                "kind": "panel",
+                "panel": "feature-flags"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "defaults": {
+    "theme_mode": "system",
+    "theme": "Wormhole Dark",
+    "theme_light": "Wormhole Light",
+    "hidden_themes": [],
+    "theme_primary": true,
+    "primary_color": "",
+    "branch_color": "theme",
+    "branch_color_custom": "",
+    "opacity": 0.8,
+    "blur": true,
+    "liquid_glass": false,
+    "settings_translucent": true,
+    "studio_translucent": true,
+    "hosts_translucent": true,
+    "borders": true,
+    "column_dividers": true,
+    "status_bar": false,
+    "smooth_resize": false,
+    "icon_animations": true,
+    "title_row": [
+      "folder",
+      "branch",
+      "branch_status",
+      "terminal",
+      "terminal_status",
+      "space",
+      "agent_gauge",
+      "ports",
+      "pull_request",
+      "open_in",
+      "splits"
+    ],
+    "icon_theme": "Wormhole Icons",
+    "font_family": "JetBrains Mono",
+    "font_size": 14.0,
+    "line_height": 1.3,
+    "font_ligatures": true,
+    "code_font_family": "",
+    "code_font_size": 13.0,
+    "ui_font_family": "",
+    "ui_font_size": 13.0,
+    "settings_text_size": "default",
+    "scrollback_lines": 10000,
+    "restore_terminal_text": true,
+    "minimap": false,
+    "never_hide_lines": false,
+    "split_gaps": true,
+    "option_as_meta": "off",
+    "open_in": "",
+    "default_shell": "",
+    "shells": [],
+    "worktree_base": "",
+    "worktree_clone_build_folders": false,
+    "bell_sound": true,
+    "bell_visual": true,
+    "image_memory_mib": 128,
+    "clipboard_read": "ask",
+    "clipboard_write": "allow",
+    "allow_screen_checksum": false,
+    "allow_window_ops": false,
+    "allow_title_report": false,
+    "terminals_in": "sidebar",
+    "density": "regular",
+    "show_groups_as_cards": true,
+    "fade_group_colors": false,
+    "show_group_folders": true,
+    "sidebar_numbers": "terminal",
+    "sidebar_cmd_hints": true,
+    "sidebar_changes": true,
+    "sidebar_changes_scope": "terminal",
+    "sidebar_changes_plain": "finishing",
+    "sidebar_changes_shared": "each",
+    "sidebar_changes_remember": true,
+    "sidebar_status_dot": true,
+    "sidebar_notes": false,
+    "changes_tree": true,
+    "group_untracked": true,
+    "diff_split": true,
+    "diff_wrap": false,
+    "tab_width": 4,
+    "size_units": "decimal",
+    "control_write": false,
+    "agent_access": "ask",
+    "notify_needs_you": true,
+    "notify_agent_done": true,
+    "notify_command_done": true,
+    "notify_command_after": 10,
+    "notify_command_failed": true,
+    "notify_bell": false,
+    "notify_only_unseen": true,
+    "notify_in_front": "none",
+    "notify_sound": "needs_you",
+    "notify_group_bursts": true,
+    "dock_badge": "needs_you",
+    "dock_bounce": true,
+    "menu_bar": true,
+    "menu_bar_icon": "status_count",
+    "menu_bar_animate": false,
+    "hotkey": "",
+    "hotkey_action": "quick_panel",
+    "jump_waiting_key": "alt-cmd-j",
+    "auto_update": true,
+    "update_channel": "stable",
+    "anonymous_count": true,
+    "show_config_keys": false,
+    "feature_flags": {}
+  }
+}
