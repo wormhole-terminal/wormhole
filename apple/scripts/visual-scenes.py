@@ -123,7 +123,15 @@ def pad_scene():
     return "".join(out)
 
 
+def ruler_scene():
+    """The grid's size: numbered rows scrolled past the bottom (the last shown says how many rows) and a 300-character line
+    that wraps at the last column (where it breaks says how many columns)."""
+    rows = "".join(f"row {i:03}\r\n" for i in range(1, 81))
+    return ESC + "c" + csi("?25l") + rows + ("0123456789" * 30)
+
+
 SCENES = {
+    "ruler": ruler_scene,
     "text": text_scene,
     "cursor-block": lambda: cursor_scene(2),
     "cursor-underline": lambda: cursor_scene(4),
@@ -133,6 +141,33 @@ SCENES = {
     "scrollback": scrollback_scene,
     "pad": pad_scene,
 }
+
+# The cells each scene's features occupy (row0, col0, row1, col1, 0-based, inclusive): visual-compare.py requires every
+# block of each to pass on its own, so a missing cursor, picture or ligature fails the scene whatever the rest does.
+ROW = 79
+REGIONS = {
+    "text": {
+        "bold-dim": (0, 0, 0, ROW), "fg-swatches": (2, 0, 3, ROW), "bg-swatches": (4, 0, 5, ROW), "256": (6, 0, 6, ROW),
+        "grey": (7, 0, 7, ROW), "truecolor": (8, 0, 8, ROW), "styles": (10, 0, 10, ROW), "bold-italic": (11, 0, 11, ROW),
+        "underline-styles": (12, 0, 12, ROW), "underline-colours": (13, 0, 13, ROW), "wide": (15, 0, 15, ROW),
+        "emoji": (16, 0, 16, ROW), "marks-indic": (17, 0, 17, ROW), "box": (19, 0, 19, ROW), "blocks": (20, 0, 20, ROW),
+        "braille": (21, 0, 21, ROW), "ligatures": (22, 0, 22, ROW), "ascii": (23, 0, 23, ROW), "links": (24, 0, 24, ROW),
+        "mixed": (25, 0, 25, ROW),
+    },
+    # The cursor sits at row 2, column 4 (1-based): cell (1, 3).
+    **{f"cursor-{s}": {"cursor": (1, 3, 1, 3), "rows": (0, 0, 2, 30)} for s in ("block", "underline", "bar")},
+    "images": {"kitty": (1, 0, 4, 11), "iterm2": (7, 0, 10, 11), "sixel": (13, 0, 13, 5), "labels": (0, 0, 18, 40)},
+    "blocks": {"blocks": (0, 0, 11, 40)},
+    "pad": {"corners": (0, 0, 11, 39)},
+    # Every cell: the same wrap column and the same last row in both apps means the same grid.
+    "ruler": {"grid": (0, 0, 200, 400)},
+    # visual-run.sh selects from row 3, column 5 to row 5, column 20 (1-based).
+    "selection": {"selected": (2, 4, 4, 19), "around": (1, 0, 5, 40)},
+    # The scrollback's labels (`line NNN`) hold find's matches; its # runs are the densest ink.
+    "find": {"labels": (0, 0, 42, 8), "ink": (0, 9, 42, 70)},
+    "minimap": {"labels": (0, 0, 42, 8), "ink": (0, 9, 42, 70)},
+}
+REGIONS["contrast"] = REGIONS["text"]
 
 FEED = """#!/bin/sh
 # Shows the scene whose name is written to {fifo}; the terminal's program for the {app} app.
@@ -159,6 +194,8 @@ def main():
         script = root / f"feed-{app}.sh"
         script.write_text(FEED.format(fifo=fifo, app=app, scenes=scenes))
         script.chmod(0o755)
+    import json
+    (root / "regions.json").write_text(json.dumps(REGIONS))
     print(f"{len(SCENES)} scenes in {scenes}")
 
 

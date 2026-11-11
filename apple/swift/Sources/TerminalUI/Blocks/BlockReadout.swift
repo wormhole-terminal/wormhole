@@ -19,10 +19,10 @@ public struct BlockReadout: View {
             ReadoutPill {
                 HStack(spacing: Space._1) {
                     if let code {
-                        Text(L10n.blockExit(code)).foregroundStyle(code == 0 ? tokens.statusSuccess : tokens.statusDanger)
+                        Text(L10n.blockExit(code)).foregroundStyle(code == 0 ? tokens.tooltipSuccess : tokens.tooltipDanger)
                     }
                     if let took { Text(code == nil ? BlockWording.took(took) : "· " + BlockWording.took(took)) }
-                    IconButton(symbol: "doc.on.doc", label: LocalizedStringKey(L10n.blockCopyOutput)) {
+                    IconButton(lucide: .copy, label: LocalizedStringKey(L10n.blockCopyOutput)) {
                         controller.perform(.copyOutput, on: controller.block(id: id))
                     }
                     .foregroundStyle(tokens.tooltipText)

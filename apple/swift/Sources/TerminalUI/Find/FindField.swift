@@ -14,12 +14,12 @@ struct FindField: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radius)
         HStack(spacing: Space._2) {
-            Image(systemName: "magnifyingglass").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
-                .accessibilityHidden(true)
+            LucideView(icon: .search, size: Metric.glyph).foregroundStyle(tokens.textMuted).accessibilityHidden(true)
             TextField(L10n.findPlaceholder, text: Binding(get: { model.text }, set: model.setText), selection: $selection)
                 .textFieldStyle(.plain)
                 .font(.system(size: TextRole.body.size))
                 .focused($focused)
+                .padding(.leading, FindMetrics.queryInset)
                 .onKeyPress(.return, phases: .down) { press in
                     model.step(press.modifiers.contains(.shift) ? -1 : 1)
                     return .handled
@@ -35,7 +35,7 @@ struct FindField: View {
         .padding(.leading, Space._2)
         .frame(height: Metric.control)
         .background(tokens.inputBackground, in: shape)
-        .overlay { shape.strokeBorder(focused ? tokens.borderFocus : tokens.border, lineWidth: focused ? tokens.metrics.focusRingWidth : tokens.metrics.borderWidth) }
+        .overlay { shape.strokeBorder(focused ? tokens.borderFocus : tokens.border, lineWidth: tokens.metrics.borderWidth) }
         .onChange(of: model.focusRequest) { focus() }
         .onAppear { focus() }
     }

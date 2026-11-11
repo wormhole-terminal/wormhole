@@ -36,9 +36,17 @@ public struct FrameSample: Sendable {
     public var rowsRebuilt: Int
     public var changedRows: Int
     public var outcome: DrawOutcome
+    /// The main thread's allocations in each part while `AllocationCounter` counts (zeros otherwise): the fetch, the
+    /// apply, the view's own bookkeeping after it (selection, find, scroller, blink) and the draw (assemble and encode).
+    public var allocations = PartAllocations()
 
     public var buildNs: UInt64 { fetchNs + applyNs + assembleNs }
     public var totalNs: UInt64 { buildNs + encodeNs }
+}
+
+public struct PartAllocations: Sendable {
+    public var fetch = 0, apply = 0, view = 0, draw = 0
+    public var total: Int { fetch + apply + view + draw }
 }
 
 /// Counters the view keeps for the idle check and the report.

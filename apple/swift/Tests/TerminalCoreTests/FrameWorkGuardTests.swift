@@ -38,6 +38,13 @@ import TerminalCore
         #expect(allocations <= Budget.emptyFrame, "an empty frame allocated \(allocations) times")
     }
 
+    /// What a still screen's frame is now (`prepare_frame` says 0): nothing to parse, nothing allocated.
+    @Test func anEmptyFrameAllocatesNothing() throws {
+        let renderer = try warmed()
+        let (rebuilt, allocations) = try AllocationCounter.counting { try renderer.apply(frame: Data()) }
+        #expect(rebuilt == 0 && allocations == 0, "an empty frame allocated \(allocations) times")
+    }
+
     @Test func aChangedRowCostsItsRowAndItsCachedWordsOnly() throws {
         let renderer = try warmed()
         let before = renderer.counters
@@ -53,11 +60,12 @@ import TerminalCore
         #expect(allocations >= 100)
     }
 
-    /// Measured on this tree (2026-11-11) in the debug build `swift test` makes (133 for an empty frame, 238 a row; the release
-    /// app's `perf-profile` shows about 40 for a whole still draw), with about 15 % room. Lower them when a frame gets cheaper;
-    /// raise them only with the reason in the commit.
+    /// Measured on this tree (2026-11-11, round S wave 2) in the debug build `swift test` makes: 133 for a frame of a header only
+    /// and 238 a row (unoptimised code; the release app's `perf-profile` shows 0 for the fetch, apply and view of a still screen,
+    /// whose frame is now empty, and 6 for the apply of 42 flooded rows). Lower them when a frame gets cheaper; raise them only with
+    /// the reason in the commit.
     private enum Budget {
-        static let emptyFrame = 150
-        static let perRow = 270
+        static let emptyFrame = 140
+        static let perRow = 250
     }
 }

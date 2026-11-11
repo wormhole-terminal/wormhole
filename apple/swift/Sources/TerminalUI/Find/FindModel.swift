@@ -15,6 +15,8 @@ public final class FindModel {
     /// Bumped to give the field the keyboard with its text selected (⌘F while open, ⌘G with nothing typed).
     public private(set) var focusRequest = 0
 
+    /// A search's results arrived or the bar closed: what reads them off the frame (a fold's count of matches) reads again.
+    @ObservationIgnored public var onOutcome: (() -> Void)?
     @ObservationIgnored private let searcher: TerminalSearching
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var task: Task<Void, Never>?
@@ -58,6 +60,7 @@ public final class FindModel {
         isSearching = false
         outcome = FindOutcome()
         current = nil
+        onOutcome?()
     }
 
     public func setText(_ new: String) {
@@ -89,6 +92,7 @@ public final class FindModel {
     public func outputChanged() {
         guard isOpen, !text.isEmpty, !outcome.invalid, task == nil, searcher.hasNewOutput else { return }
         task = Task { [weak self] in
+            // one-shot: the program printed; search again once `researchEvery` has passed (GPUI's `RESEARCH_EVERY`).
             try? await Task.sleep(for: Self.researchEvery)
             guard !Task.isCancelled else { return }
             self?.task = nil
@@ -111,6 +115,7 @@ public final class FindModel {
 
     private func apply(_ found: FindOutcome, fresh: Bool) {
         outcome = found
+        defer { onOutcome?() }
         isSearching = false
         task = nil
         if fresh {

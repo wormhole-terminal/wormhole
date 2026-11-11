@@ -56,6 +56,6 @@ final class ViewHarness {
         let image = view.renderer.renderToImage()
         let size = view.renderer.cellPixels
         // A corner of the cell: the glyph, if any, is in the middle.
-        return image.pixel(column * size.width + 1, row * size.height + 1)
+        return image.pixel(view.renderer.left(column) + 1, row * size.height + 1)
     }
 }

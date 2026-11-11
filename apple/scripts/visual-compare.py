@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
 """Pixel comparison of one scenario in the GPUI app and the Swift app, rerunnable.
 
-    visual-compare.py compare NAME GPUI.png SWIFT.png --out DIR [--origin X,Y] [--size W,H]
-                              [--swift-origin X,Y] [--cell W,H] [--gpui-cell-w PX] [--search N] [--matte R,G,B]
+    visual-compare.py compare NAME GPUI.png SWIFT.png --out DIR [--origin X,Y] [--size W,H] [--swift-origin X,Y]
+                              [--cell W,H] [--search N] [--matte R,G,B] [--regions FILE --scene NAME [--first-row N]]
+    visual-compare.py delta NAME GPUI_OFF GPUI_ON SWIFT_OFF SWIFT_ON --out DIR   where a setting changes each window, and the overlap
     visual-compare.py table DIR          the results of every scenario compared into DIR, as markdown
 
 GPUI.png is cropped (--origin, --size, device pixels; the terminal's top left in the GPUI window) and compared with
 SWIFT.png at --swift-origin (default its top left: a grid-only shot). --search N tries every shift of up to N pixels and keeps the best: the shift is itself a
 measurement (padding and baseline differences). Alpha is composited over --matte (default mid grey, so a translucent
-window shows as a difference). GPUI's cells are fractional (16.8 px wide at 14 pt, 2x) and Swift's whole pixels (17), so
-columns drift apart by 0.2 px each; --gpui-cell-w 16.8 stretches the GPUI crop to Swift's cell width before comparing,
-and the drift itself is reported as the cell width difference, not as thousands of failing blocks. Writes DIR/NAME.png (GPUI | Swift | difference, failing blocks outlined),
-DIR/NAME.json and merges the numbers into DIR/results.json.
+window shows as a difference). Both apps size the grid by the core's cell (`view::layout::cell`), whose width is fractional
+(16.8 px at 14 pt, 2x): --cell takes it as it is, and block c spans the device pixels from round(c x w) to round((c + 1) x w),
+where both apps put a cell's edge. Nothing is stretched and no pixel is left out. Writes DIR/NAME.png (GPUI | Swift |
+difference, failing blocks outlined), DIR/NAME.json and merges the numbers into DIR/results.json.
 
-What counts as the same. Swift draws text with CoreText and GPUI with its own glyph raster, so no pixel-exact match is
-possible or wanted. The image is cut into blocks (the terminal's cells; 16 px for chrome). A block passes when its mean
+What counts as the same. The image is cut into blocks (the terminal's cells; 16 px for chrome). A block passes when its mean
 colour is within TOLERANCE levels per channel in both apps: the same fill, and the same amount of ink where text is.
 `pass` is the share of passing blocks; `fill` the share of blocks whose dominant colour agrees within 3 levels (solid
 areas: backgrounds, swatches, selection); `mad` the mean absolute difference per channel over all pixels, and `mad_blur`
 the same after a Gaussian blur of 1.5 px, which removes anti-aliasing and keeps shape, colour and placement.
-Blocks are judged on their interior, `--inset` pixels (default 1) in from each side: the two apps put a cell's edge on
-different device pixels (GPUI's 16.8 px cells alternate 16 and 17 px), which a stretch cannot undo; the GPUI crop is stretched
-with nearest-neighbour so no edge is blurred into its neighbour.
-Same = shift 0,0, pass >= 98 %, fill >= 99 %.
+A scene-wide share cannot carry a feature (2 % of a grid is a hundred blocks, more than a cursor or an image covers), so a
+scene names the cells each of its features occupies (--regions, written by visual-scenes.py: row0, col0, row1, col1 in the
+scene's cells; --first-row when the crop starts lower) and every block of every region must pass; the failing blocks of
+each region are listed in NAME.json and in the table.
+Same = shift 0,0, pass >= 98 %, fill >= 99 %, every region 100 %.
 """
 import argparse
 import json
@@ -42,19 +43,28 @@ def load(path, matte):
     return Image.alpha_composite(backdrop, image).convert("RGB")
 
 
-def blocks(array, cell):
-    """(rows, cols, cell_h, cell_w, 3) view over the whole blocks of an image."""
-    h, w = array.shape[0] // cell[1] * cell[1], array.shape[1] // cell[0] * cell[0]
-    return array[:h, :w].reshape(h // cell[1], cell[1], w // cell[0], cell[0], 3).swapaxes(1, 2)
+def edges(extent, cell):
+    """The pixel edges of whole cells of `cell` pixels (fractional) across `extent` pixels."""
+    count = int(extent / cell + 1e-6)
+    return [round(i * cell) for i in range(count + 1)]
 
 
-def dominant(grid):
-    rows, cols = grid.shape[:2]
-    packed = (grid[..., 0].astype(np.uint32) << 16 | grid[..., 1].astype(np.uint32) << 8 | grid[..., 2]).reshape(rows, cols, -1)
-    out = np.zeros((rows, cols, 3), np.int16)
-    for r in range(rows):
-        for c in range(cols):
-            values, counts = np.unique(packed[r, c], return_counts=True)
+def block_means(array, xs, ys):
+    """(rows, cols, 3) mean colour of each block, from an integral image."""
+    integral = np.zeros((array.shape[0] + 1, array.shape[1] + 1, 3), np.float64)
+    integral[1:, 1:] = array.astype(np.float64).cumsum(0).cumsum(1)
+    x, y = np.array(xs), np.array(ys)
+    total = integral[y[1:, None], x[None, 1:]] - integral[y[:-1, None], x[None, 1:]] - integral[y[1:, None], x[None, :-1]] + integral[y[:-1, None], x[None, :-1]]
+    area = ((y[1:] - y[:-1])[:, None] * (x[1:] - x[:-1])[None, :])[..., None]
+    return total / area
+
+
+def dominant(array, xs, ys):
+    out = np.zeros((len(ys) - 1, len(xs) - 1, 3), np.int16)
+    packed = array[..., 0].astype(np.uint32) << 16 | array[..., 1].astype(np.uint32) << 8 | array[..., 2]
+    for r in range(len(ys) - 1):
+        for c in range(len(xs) - 1):
+            values, counts = np.unique(packed[ys[r]:ys[r + 1], xs[c]:xs[c + 1]], return_counts=True)
             v = int(values[counts.argmax()])
             out[r, c] = (v >> 16, v >> 8 & 255, v & 255)
     return out
@@ -82,7 +92,7 @@ def pair(a, b):
 
 def compare(args):
     matte = tuple(int(v) for v in args.matte.split(","))
-    cell = tuple(int(v) for v in args.cell.split(","))
+    cell = tuple(float(v) for v in args.cell.split(","))
     origin = tuple(int(v) for v in args.origin.split(","))
     gpui_full, swift_full = np.asarray(load(args.gpui, matte)), np.asarray(load(args.swift, matte))
     size = tuple(int(v) for v in args.size.split(",")) if args.size else (swift_full.shape[1], swift_full.shape[0])
@@ -90,37 +100,41 @@ def compare(args):
     swift_full = swift_full[so[1] :, so[0] :]
     dx, dy = best_shift(gpui_full, swift_full[: size[1], : size[0]], origin, size, args.search) if args.search else (0, 0)
     x, y = origin[0] + dx, origin[1] + dy
-    crop_w = round(size[0] * args.gpui_cell_w / cell[0]) if args.gpui_cell_w else size[0]
-    gpui = gpui_full[y : y + size[1], x : x + crop_w]
-    if crop_w != size[0]:
-        gpui = np.asarray(Image.fromarray(gpui).resize(size, Image.NEAREST))
-    gpui, swift = pair(gpui, swift_full[: size[1], : size[0]])
+    gpui, swift = pair(gpui_full[y : y + size[1], x : x + size[0]], swift_full[: size[1], : size[0]])
 
     diff = np.abs(gpui.astype(np.int16) - swift.astype(np.int16))
     blur = lambda a: np.asarray(Image.fromarray(a).filter(ImageFilter.GaussianBlur(1.5))).astype(np.int16)
     mad_blur = float(np.abs(blur(gpui) - blur(swift)).mean())
-    ga, sa = blocks(gpui, cell), blocks(swift, cell)
-    # GPUI puts each cell's edge on a device pixel of its own (16.8 px cells alternate 16 and 17), so after the stretch an edge
-    # lands up to a pixel from Swift's: a block is judged on its interior, INSET pixels in from every side.
-    inset = args.inset
-    ga, sa = ga[:, :, inset : cell[1] - inset, inset : cell[0] - inset], sa[:, :, inset : cell[1] - inset, inset : cell[0] - inset]
-    gm, sm = ga.reshape(*ga.shape[:2], -1, 3).mean(axis=2), sa.reshape(*sa.shape[:2], -1, 3).mean(axis=2)
-    passing = np.abs(gm - sm).max(axis=2) <= TOLERANCE
-    fill = np.abs(dominant(ga) - dominant(sa)).max(axis=2) <= 3
+    xs, ys = edges(gpui.shape[1], cell[0]), edges(gpui.shape[0], cell[1])
+    passing = np.abs(block_means(gpui, xs, ys) - block_means(swift, xs, ys)).max(axis=2) <= TOLERANCE
+    fill = np.abs(dominant(gpui, xs, ys) - dominant(swift, xs, ys)).max(axis=2) <= 3
+    regions = {}
+    if args.regions:
+        named = json.loads(pathlib.Path(args.regions).read_text()).get(args.scene or args.name, {})
+        for region, (r0, c0, r1, c1) in named.items():
+            r0, r1 = max(0, r0 - args.first_row), min(passing.shape[0] - 1, r1 - args.first_row)
+            c1 = min(passing.shape[1] - 1, c1)
+            if r1 < r0 or c1 < c0:
+                regions[region] = {"pass": None, "failing": "outside the crop"}
+                continue
+            part = passing[r0 : r1 + 1, c0 : c1 + 1]
+            fails = [[int(r + r0 + args.first_row), int(c + c0)] for r, c in zip(*np.nonzero(~part))]
+            regions[region] = {"pass": round(float(part.mean() * 100), 2), "failing": fails}
     result = {
         "name": args.name, "shift": [dx, dy], "size": [gpui.shape[1], gpui.shape[0]], "cell": list(cell),
         "pass": round(float(passing.mean() * 100), 2), "fill": round(float(fill.mean() * 100), 2),
         "mad": round(float(diff.mean()), 3), "mad_blur": round(mad_blur, 3), "blocks": int(passing.size),
-        "failing": [[int(r), int(c)] for r, c in zip(*np.nonzero(~passing))][:200],
+        "regions": regions, "failing": [[int(r), int(c)] for r, c in zip(*np.nonzero(~passing))][:200],
     }
-    result["same"] = (dx, dy) == (0, 0) and result["pass"] >= PASS_MIN and result["fill"] >= FILL_MIN
+    result["same"] = ((dx, dy) == (0, 0) and result["pass"] >= PASS_MIN and result["fill"] >= FILL_MIN
+                      and all(r["pass"] == 100.0 for r in regions.values()))
 
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     heat = Image.fromarray(np.clip(diff * 4, 0, 255).astype(np.uint8))
     draw = ImageDraw.Draw(heat)
     for r, c in zip(*np.nonzero(~passing)):
-        draw.rectangle([c * cell[0], r * cell[1], (c + 1) * cell[0] - 1, (r + 1) * cell[1] - 1], outline=(255, 64, 64))
+        draw.rectangle([xs[c], ys[r], xs[c + 1] - 1, ys[r + 1] - 1], outline=(255, 64, 64))
     sheet = Image.new("RGB", (gpui.shape[1] * 3 + 16, gpui.shape[0]), (60, 60, 60))
     for i, image in enumerate((Image.fromarray(gpui), Image.fromarray(swift), heat)):
         sheet.paste(image, (i * (gpui.shape[1] + 8), 0))
@@ -132,11 +146,39 @@ def compare(args):
     print(json.dumps({k: v for k, v in result.items() if k != "failing"}))
 
 
+def delta(args):
+    """Where a setting changes each app's window (off and on shots of each), and whether the same places change in both."""
+    matte = (128, 128, 128)
+    def changed(off, on):
+        a, b = np.asarray(load(off, matte)).astype(np.int16), np.asarray(load(on, matte)).astype(np.int16)
+        h, w = min(a.shape[0], b.shape[0]), min(a.shape[1], b.shape[1])
+        return np.abs(a[:h, :w] - b[:h, :w]).max(axis=2) > 3
+    g, s = changed(args.gpui_off, args.gpui_on), changed(args.swift_off, args.swift_on)
+    h, w = min(g.shape[0], s.shape[0]), min(g.shape[1], s.shape[1])
+    g, s = g[:h, :w], s[:h, :w]
+    def box(mask):
+        ys, xs = np.nonzero(mask)
+        return [int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())] if len(xs) else None
+    both, either = int((g & s).sum()), int((g | s).sum())
+    result = {"name": args.name, "gpui_changed": int(g.sum()), "swift_changed": int(s.sum()), "gpui_box": box(g), "swift_box": box(s),
+              "overlap": round(both / either, 3) if either else None}
+    out = pathlib.Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    picture = np.zeros((h, w, 3), np.uint8)
+    picture[g] = (255, 64, 64)
+    picture[s] += np.array((0, 200, 255), np.uint8)
+    Image.fromarray(picture).save(out / f"{args.name}.png")
+    (out / f"{args.name}.json").write_text(json.dumps(result))
+    print(json.dumps(result))
+
+
 def table(args):
     results = json.loads((pathlib.Path(args.dir) / "results.json").read_text())
-    print("| scenario | shift px | pass % | fill % | mad | mad blur | same |\n|---|---|---|---|---|---|---|")
+    print("| scenario | shift px | pass % | fill % | mad | mad blur | regions (failing blocks: row,col) | same |\n|---|---|---|---|---|---|---|---|")
     for name, r in sorted(results.items()):
-        print(f"| {name} | {r['shift'][0]},{r['shift'][1]} | {r['pass']} | {r['fill']} | {r['mad']} | {r['mad_blur']} | {'yes' if r['same'] else 'no'} |")
+        regions = "; ".join(
+            f"{k} {v['pass']}" + (f" {v['failing']}" if v["failing"] else "") for k, v in sorted(r.get("regions", {}).items()))
+        print(f"| {name} | {r['shift'][0]},{r['shift'][1]} | {r['pass']} | {r['fill']} | {r['mad']} | {r['mad_blur']} | {regions or '-'} | {'yes' if r['same'] else 'no'} |")
 
 
 def main():
@@ -146,8 +188,13 @@ def main():
     c.add_argument("name"); c.add_argument("gpui"); c.add_argument("swift")
     c.add_argument("--out", required=True); c.add_argument("--origin", default="0,0"); c.add_argument("--size")
     c.add_argument("--cell", default="16,16"); c.add_argument("--search", type=int, default=0)
-    c.add_argument("--inset", type=int, default=1); c.add_argument("--matte", default="128,128,128"); c.add_argument("--swift-origin", default="0,0"); c.add_argument("--gpui-cell-w", type=float)
+    c.add_argument("--matte", default="128,128,128"); c.add_argument("--swift-origin", default="0,0")
+    c.add_argument("--regions"); c.add_argument("--scene"); c.add_argument("--first-row", type=int, default=0)
     c.set_defaults(run=compare)
+    d = sub.add_parser("delta")
+    d.add_argument("name"); d.add_argument("gpui_off"); d.add_argument("gpui_on"); d.add_argument("swift_off"); d.add_argument("swift_on")
+    d.add_argument("--out", required=True)
+    d.set_defaults(run=delta)
     t = sub.add_parser("table")
     t.add_argument("dir")
     t.set_defaults(run=table)

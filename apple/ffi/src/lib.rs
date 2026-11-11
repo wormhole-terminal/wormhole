@@ -14,6 +14,7 @@ mod app_actions;
 mod aux_backends;
 mod blocks;
 mod byte_size;
+mod cell;
 mod cli_tool;
 mod clipboard;
 mod contents;
@@ -111,6 +112,7 @@ pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,
 };
+pub use cell::{CellRecord, CellShapeRecord, CellShapesRecord, GridFitRecord, cell_shapes, terminal_cell, terminal_grid_fit};
 pub use live_resize::{
     LiveResizeGate, ResizeStepRecord, SizeRecord, WindowFrameRecord, resize_settle, resize_settled_frame,
     resize_snapped,

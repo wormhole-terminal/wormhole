@@ -48,3 +48,11 @@ final class ScreenSearching: TerminalSearching {
         return await visibleRows.search(query)
     }
 }
+
+extension TerminalOverlay {
+    /// Esc or the close button: the bar goes and the keys go back to the terminal, as GPUI's find bar gives them back.
+    func closeFind() {
+        find.close()
+        if let view { view.window?.makeFirstResponder(view) }
+    }
+}

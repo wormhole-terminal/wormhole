@@ -98,7 +98,11 @@ public final class UniFFIFrameSource: FrameSource {
 
     private var current: Terminal? { terminal.withLock { $0 } }
 
-    public func frame() -> Data { current?.frame() ?? Data() }
+    /// A still screen's frame is a length of 0 and nothing else: no bytes cross, nothing is allocated.
+    public func frame() -> Data {
+        guard let current, current.prepareFrame() > 0 else { return Data() }
+        return current.takeFrame()
+    }
     public func fullFrame() -> Data { current?.fullFrame() ?? Data() }
 
     public func drainEvents() -> [TerminalEvent] {

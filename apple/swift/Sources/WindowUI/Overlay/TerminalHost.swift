@@ -12,6 +12,8 @@ struct TerminalHost: NSViewRepresentable {
     let views: TerminalViews
     let id: TerminalID
     let overlay: TerminalOverlay
+    /// The window's opacity (`WindowLook.effectiveOpacity`), passed in so a change of it updates the view.
+    let opacity: CGFloat
     let menu: @MainActor () -> NSMenu?
 
     func makeNSView(context: Context) -> Container {
@@ -24,6 +26,8 @@ struct TerminalHost: NSViewRepresentable {
     func updateNSView(_ host: Container, context: Context) {
         guard let wanted = views.view(for: id) else { return host.show(nil) }
         host.show(wanted)
+        // The pane is painted at the window's opacity, as every surface is (`WindowLook.surface`).
+        wanted.backgroundOpacity = Double(opacity)
     }
 
     static func dismantleNSView(_ host: Container, coordinator: ()) { host.show(nil) }

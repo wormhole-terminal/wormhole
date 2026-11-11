@@ -100,7 +100,15 @@ public final class MetalRenderer {
     private var nextSlot = 0
     private let inflight = DispatchSemaphore(value: 3)
     public let gpuTimes = GPUTimes()
-    public private(set) var palette: TerminalPalette
+    public private(set) var palette: TerminalPalette { didSet { paletteFloats = palette.floats() } }
+    /// What a draw hands the shaders, and its pass and completion: made once, so a draw allocates nothing of its own (what
+    /// remains is Metal's: the command buffer, the encoder, the drawable).
+    private var paletteFloats: [SIMD4<Float>] = []
+    private let pass = MTLRenderPassDescriptor()
+    private lazy var completed: @Sendable (any MTLCommandBuffer) -> Void = { [inflight, gpuTimes] finished in
+        gpuTimes.record(finished.gpuEndTime - finished.gpuStartTime)
+        inflight.signal()
+    }
     public private(set) var configuration: RendererConfiguration
 
     public init(configuration: RendererConfiguration, device: MTLDevice? = MTLCreateSystemDefaultDevice()) throws {
@@ -109,6 +117,7 @@ public final class MetalRenderer {
         self.queue = queue
         self.configuration = configuration
         palette = configuration.palette
+        paletteFloats = palette.floats()
         contexts = TextContexts(device: device)
         scene = TerminalScene(
             text: contexts.context(for: configuration.fonts, scale: configuration.scale), palette: configuration.palette)
@@ -141,8 +150,12 @@ public final class MetalRenderer {
 
     // MARK: geometry
 
-    /// One cell in device pixels.
-    public var cellPixels: (width: Int, height: Int) { (scene.fonts.metrics.width, scene.fonts.metrics.height) }
+    /// One cell in device pixels; the width is fractional (16.8 for JetBrains Mono 14 pt at 2x), as GPUI's.
+    public var cellPixels: (width: Double, height: Int) { (scene.fonts.metrics.width, scene.fonts.metrics.height) }
+    /// Where column `c`'s left edge falls on whole pixels (the cell is fractional; edges are the nearest pixel, as GPUI's).
+    public func left(_ column: Int) -> Int { scene.fonts.metrics.edge(column) }
+    /// One cell in points, as the core sized it.
+    public var cell: TerminalCell { scene.fonts.cell }
     public var scale: Double { configuration.scale }
 
     /// The pane's padding around the grid in points (`PADDING_X` and `PADDING_Y`, `terminal_view/mod.rs`): the grid is
@@ -152,19 +165,21 @@ public final class MetalRenderer {
     /// The padding in pixels, which `encode` leaves clear.
     var paddingPixels: Int { Int((Self.padding * CGFloat(scale)).rounded()) }
 
-    /// The cells that fit a surface of this many pixels.
-    public func grid(fittingPixels width: Int, _ height: Int) -> (cols: Int, rows: Int) {
-        let cell = cellPixels
-        return (max(1, width / cell.width), max(1, height / cell.height))
+    /// The cells an area of this many points holds (the core's rule, as the GPUI app's pane), `slack` short of a cell
+    /// still counting.
+    public func grid(fittingPoints width: Double, _ height: Double, slack: Double = 0) -> (cols: Int, rows: Int) {
+        CellRule.current.fit(cell, width: width, height: height, slack: slack)
     }
 
     /// The size in points of a view that holds exactly this grid.
     public func pointSize(forGrid cols: Int, _ rows: Int) -> CGSize {
-        CGSize(width: Double(cols * cellPixels.width) / scale, height: Double(rows * cellPixels.height) / scale)
+        CGSize(width: Double(cols) * cell.width, height: Double(rows) * cell.height)
     }
 
-    /// The pixels the grid itself covers.
-    public var gridPixels: (width: Int, height: Int) { (scene.columns * cellPixels.width, scene.rows * cellPixels.height) }
+    /// The pixels the grid itself covers: to the last column's right edge on whole pixels.
+    public var gridPixels: (width: Int, height: Int) {
+        (Int((Double(scene.columns) * cellPixels.width).rounded()), scene.rows * cellPixels.height)
+    }
 
     public func setPalette(_ value: TerminalPalette) {
         palette = value
@@ -282,20 +297,15 @@ public final class MetalRenderer {
             return timings
         }
         let t3 = MonotonicClock.now()
-        let pass = MTLRenderPassDescriptor()
         pass.colorAttachments[0].texture = drawable.texture
         pass.colorAttachments[0].loadAction = .clear
         pass.colorAttachments[0].storeAction = .store
         pass.colorAttachments[0].clearColor = clearColor
         let buffer = queue.makeCommandBuffer()!
         encode(into: buffer, pass: pass, size: layer.drawableSize, inset: paddingPixels, slot: slot, counts: counts)
+        pass.colorAttachments[0].texture = nil
         if !withTransaction { buffer.present(drawable) }
-        let semaphore = inflight
-        let times = gpuTimes
-        buffer.addCompletedHandler { finished in
-            times.record(finished.gpuEndTime - finished.gpuStartTime)
-            semaphore.signal()
-        }
+        buffer.addCompletedHandler(completed)
         buffer.commit()
         if withTransaction {
             buffer.waitUntilScheduled()
@@ -313,9 +323,15 @@ public final class MetalRenderer {
     /// (`render/blink.rs` `FADED_ALPHA`).
     static let blinkFadedFactor: Float = 0.25
 
+    /// The default background's opacity: the window's (`opacity`) while it is translucent, as GPUI paints the pane, so the
+    /// blur shows through where no cell has a colour of its own.
+    public var backgroundAlpha: Double = 1
+
+    /// Premultiplied, as Core Animation composites a layer that is not opaque.
     private var clearColor: MTLClearColor {
-        let background = palette.background
-        return MTLClearColor(red: Double(background.x) / 255, green: Double(background.y) / 255, blue: Double(background.z) / 255, alpha: 1)
+        let background = palette.background, a = backgroundAlpha
+        return MTLClearColor(
+            red: Double(background.x) / 255 * a, green: Double(background.y) / 255 * a, blue: Double(background.z) / 255 * a, alpha: a)
     }
 
     /// Fill the slot's GPU buffers from every row's instances (growing them if need be).
@@ -345,7 +361,7 @@ public final class MetalRenderer {
         let size = CGSize(width: full.width - CGFloat(2 * inset), height: full.height - CGFloat(2 * inset))
         var uniforms = Uniforms(viewport: SIMD2(Float(size.width), Float(size.height)))
         if blinkFaded { uniforms.blink = Self.blinkFadedFactor }
-        let colors = palette.floats()
+        let colors = paletteFloats
         let encoder = buffer.makeRenderCommandEncoder(descriptor: pass)!
         encoder.setViewport(MTLViewport(originX: Double(inset), originY: Double(inset), width: size.width, height: size.height, znear: 0, zfar: 1))
         encoder.setVertexBytes(&uniforms, length: MemoryLayout<Uniforms>.size, index: 1)

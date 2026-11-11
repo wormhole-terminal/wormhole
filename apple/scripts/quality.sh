@@ -2,7 +2,8 @@
 # One command for the Swift port's static checks, no builds: rules, layers, gallery, parity data, size, budgets.
 #   apple/scripts/quality.sh            # table; exit 1 when rules, layers or parity --check fail
 #   apple/scripts/quality.sh --strict   # also fail on budgets above standards-allow.json
-#   apple/scripts/quality.sh --guards   # also run the frame's work guards (perf-guards.sh: builds and runs TerminalCoreTests)
+#   apple/scripts/quality.sh --guards   # also run the frame's work guards (perf-guards.sh: a heavy debug build, then
+#                                       # TerminalCoreTests; BUILD_SLOT=<slot command> runs it under a build slot)
 set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 py() { python3 -I "$here/$1" "${@:2}"; }

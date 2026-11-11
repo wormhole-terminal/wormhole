@@ -1,6 +1,6 @@
 // The glyph atlas: shelf-packed textures the shader samples. Coverage glyphs go to an R8 texture and are
-// tinted by the cell's colour; colour glyphs (emoji) to a BGRA one and drawn as they are. A glyph is
-// rasterised once, at a whole-pixel position, so there are no subpixel variants to keep.
+// tinted by the cell's colour; colour glyphs (emoji) to a BGRA one and drawn as they are. A glyph is rasterised
+// once per quarter-pixel variant and stem dilation it is drawn at (`WordCache.entry`), as GPUI's atlas keeps them.
 //
 // When a texture is full the whole atlas is cleared (`generation` changes and the owner drops everything
 // that held an entry); a terminal's working set is a few hundred glyphs, so this is rare, and it counts.

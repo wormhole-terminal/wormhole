@@ -21,11 +21,17 @@ enum Stretch: UInt64 {
     var x: Int { self == .normal ? 1 : 2 }
     var y: Int { self == .tall ? 2 : 1 }
 
-    /// The atlas key of a glyph of a font (`FontSet.id`) in this stretch.
-    func key(font: UInt16, glyph: UInt16) -> UInt64 { rawValue << 32 | UInt64(font) << 16 | UInt64(glyph) }
+    /// The atlas key of a glyph of a font (`FontSet.id`) in this stretch, at a quarter-pixel `variant` (0...3) and a
+    /// stem `dilation` (0...4, `GlyphRaster`).
+    func key(font: UInt16, glyph: UInt16, variant: Int, dilation: Int) -> UInt64 {
+        UInt64(dilation) << 40 | UInt64(variant) << 36 | rawValue << 32 | UInt64(font) << 16 | UInt64(glyph)
+    }
 
-    /// The atlas key of a box-drawing or block cell: past every font id.
-    func boxKey(_ scalar: UInt32) -> UInt64 { rawValue << 32 | 0xFFFF_0000 | UInt64(scalar & 0xFFFF) }
+    /// The atlas key of a box-drawing or block cell `width` pixels wide starting `phase` 1024ths of a pixel past its left
+    /// pixel (cells are 16 or 17 pixels at 16.8): past every font id.
+    func boxKey(_ scalar: UInt32, width: Int, phase: Int) -> UInt64 {
+        UInt64(phase) << 48 | UInt64(width) << 36 | rawValue << 32 | 0xFFFF_0000 | UInt64(scalar & 0xFFFF)
+    }
 }
 
 extension CellMetrics {
@@ -34,7 +40,7 @@ extension CellMetrics {
         guard stretch != .normal else { return self }
         let (sx, sy) = (stretch.x, stretch.y)
         return CellMetrics(
-            width: width * sx, height: height * sy, baseline: baseline * sy, underlineTop: underlineTop * sy,
+            width: width * Double(sx), height: height * sy, baseline: baseline * sy, underlineTop: underlineTop * sy,
             lineThickness: lineThickness * sy, strikeTop: strikeTop * sy)
     }
 }

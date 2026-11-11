@@ -133,13 +133,13 @@ import TerminalCore
         let image = renderer.renderToImage()
         let cell = renderer.cellPixels
         // The red texel is the top-left quarter of the 4 x 2 cells.
-        #expect(near(image.pixel(2 * cell.width + cell.width, 1 * cell.height + cell.height / 2), red))
+        #expect(near(image.pixel(renderer.left(2) + renderer.left(1), 1 * cell.height + cell.height / 2), red))
         // The green one the top-right, the blue the bottom-left.
-        #expect(near(image.pixel(5 * cell.width, cell.height + cell.height / 2), (0, 255, 0)))
-        #expect(near(image.pixel(3 * cell.width, 2 * cell.height + cell.height / 2), (0, 0, 255)))
+        #expect(near(image.pixel(renderer.left(5), cell.height + cell.height / 2), (0, 255, 0)))
+        #expect(near(image.pixel(renderer.left(3), 2 * cell.height + cell.height / 2), (0, 0, 255)))
         let background = TerminalPalette.spike.background
-        #expect(image.pixel(cell.width, cell.height + cell.height / 2) == (background.x, background.y, background.z), "left of it")
-        #expect(image.pixel(7 * cell.width, cell.height + cell.height / 2) == (background.x, background.y, background.z), "right of it")
+        #expect(image.pixel(renderer.left(1), cell.height + cell.height / 2) == (background.x, background.y, background.z), "left of it")
+        #expect(image.pixel(renderer.left(7), cell.height + cell.height / 2) == (background.x, background.y, background.z), "right of it")
     }
 
     @Test func aTransparentTexelShowsTheBackgroundAndTheBandsStackByZ() throws {
@@ -149,7 +149,7 @@ import TerminalCore
         let cell = renderer.cellPixels
         func pixel(z: Int32) throws -> (r: UInt8, g: UInt8, b: UInt8) {
             try renderer.apply(frame: rowsFrame(background: blue, placements: [ImagePlacement(key: 1, z: z, line: 1, column: 2, cols: 2, rows: 1)]))
-            return renderer.renderToImage().pixel(2 * cell.width + cell.width / 2, cell.height + cell.height / 4)
+            return renderer.renderToImage().pixel(renderer.left(2) + renderer.left(1) / 2, cell.height + cell.height / 4)
         }
         #expect(near(try pixel(z: 0), red), "over the cells' colour")
         #expect(near(try pixel(z: -1), red), "between the backgrounds and the text")
@@ -157,7 +157,7 @@ import TerminalCore
         // The bottom-right texel is fully transparent: the cell's own background shows through it.
         renderer.images.provider = { _ in InlineImage(width: 1, height: 1, rgba: Data([255, 255, 255, 0])) }
         try renderer.apply(frame: rowsFrame(background: blue, placements: [ImagePlacement(key: 2, line: 1, column: 2, cols: 1, rows: 1)]))
-        #expect(renderer.renderToImage().pixel(2 * cell.width + cell.width / 2, cell.height + cell.height / 2) == (0, 0, 255))
+        #expect(renderer.renderToImage().pixel(renderer.left(2) + renderer.left(1) / 2, cell.height + cell.height / 2) == (0, 0, 255))
     }
 
     @Test func aPictureStillDecodingIsAskedForAgainOnTheNextFrameAndNotBefore() throws {

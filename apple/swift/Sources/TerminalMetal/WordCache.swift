@@ -1,7 +1,9 @@
 // The word cache: text shaped once, painted from then on. A "word" is a run of single-width cells in one
-// font face; CoreText shapes it on a miss and the result (which glyph sits in which column, and where its
-// bitmap is in the atlas) is kept under a hash of the text and the face. Colours are not in the key: a word
-// is painted glyph by glyph in the colours of the moment, as GPUI's cache does.
+// font face; CoreText shapes it on a miss and the result (which glyph sits in which column) is kept under a hash
+// of the text and the face. Colours are not in the key: a word is painted glyph by glyph in the colours of the
+// moment, as GPUI's cache does. A glyph's bitmap depends on where between pixels its cell starts and on its colour's
+// stem dilation (`GlyphRaster`), so a shaped glyph names a slot: the glyph of a face, with an atlas entry per
+// quarter-pixel variant and dilation, each rasterised the first time a row needs it.
 //
 // Glyphs are pinned to their cell's column, never placed at CoreText's advances, so a fallback font with
 // a different advance cannot shift the grid. Ligatures are the font's own contextual forms (`calt`, `liga`),
@@ -17,7 +19,8 @@ import Foundation
 struct WordGlyph {
     /// The column, counted from the word's first cell.
     var column: UInt16
-    var atlas: Int32
+    /// The glyph's slot in the cache (`WordCache.entry`).
+    var slot: Int32
 }
 
 /// Plain-old-data storage that grows and never shrinks until cleared: the word cache's arenas, read in the
@@ -64,9 +67,26 @@ final class WordCache {
         var glyphCount: Int32
     }
 
+    /// A glyph of a face in a stretch, with an atlas entry per variant and dilation.
+    private struct Slot {
+        var font: UInt16
+        var glyph: CGGlyph
+        var stretch: Stretch
+        var isColor: Bool
+    }
+
+    /// Atlas entries kept per slot: `GlyphRaster.variants` x five dilations.
+    static let entriesPerSlot = GlyphRaster.variants * 5
+
     private let fonts: FontSet
     private let atlas: GlyphAtlas
     private var table: [UInt64: Record] = [:]
+    private var slots = ContiguousArray<Slot>()
+    private var slotIndex: [UInt64: Int32] = [:]
+    /// `entriesPerSlot` atlas ids per slot, -1 until rasterised; all -1 again when the atlas starts over.
+    private var entries = ContiguousArray<Int32>()
+    /// Box-drawing keys the core leaves to the font.
+    private var fontDrawn = Set<UInt64>()
     private let scalars = Arena<UInt32>(capacity: 8192)
     let glyphs = Arena<WordGlyph>(capacity: 8192)
 
@@ -99,25 +119,50 @@ final class WordCache {
         if table.count >= Self.wordLimit { clear() }
         shaped += 1
         let buffer = UnsafeBufferPointer(start: text, count: count)
-        var shapedGlyphs = shape(buffer, style: style, stretch: stretch, cluster: cluster)
-        // If the atlas started over while this word was being shaped, its first glyphs point at entries that
-        // are gone: once more, now that the atlas is empty.
-        if shapedGlyphs.generation != atlas.generation { shapedGlyphs = shape(buffer, style: style, stretch: stretch, cluster: cluster) }
-        // `shape` may have started the atlas (and so this cache) over; the arenas are consistent either way.
+        let shapedGlyphs = shape(buffer, style: style, stretch: stretch, cluster: cluster)
         let record = Record(
             scalarStart: Int32(scalars.count), scalarCount: Int32(count), glyphStart: Int32(glyphs.count),
-            glyphCount: Int32(shapedGlyphs.glyphs.count))
+            glyphCount: Int32(shapedGlyphs.count))
         for index in 0..<count { scalars.append(text[index]) }
-        for glyph in shapedGlyphs.glyphs { glyphs.append(glyph) }
+        for glyph in shapedGlyphs { glyphs.append(glyph) }
         table[hash] = record
         return (Int(record.glyphStart), Int(record.glyphCount))
     }
 
-    /// The atlas entry of an exact box-drawing or block cell, made for the cell of a row of `stretch`.
-    func boxEntry(_ scalar: UInt32, stretch: Stretch = .normal) -> Int32 {
-        let key = stretch.boxKey(scalar)
+    /// Whether a slot's glyph is a colour one (drawn at a whole pixel, as GPUI's emoji are).
+    @inline(__always)
+    func isColor(_ slot: Int32) -> Bool { slots[Int(slot)].isColor }
+
+    /// The atlas entry of a slot's glyph at a quarter-pixel `variant` and a `dilation`, rasterised on first use.
+    @inline(__always)
+    func entry(_ slot: Int32, variant: Int, dilation: Int) -> Int32 {
+        let index = Int(slot) * Self.entriesPerSlot + variant * 5 + dilation
+        let id = entries[index]
+        if id >= 0 { return id }
+        let info = slots[Int(slot)]
+        let font = fonts.font(id: info.font)
+        let raster = GlyphRaster.rasterize(
+            font: font, glyph: info.glyph, scale: fonts.scale, stretch: info.stretch, variant: variant, dilation: dilation)
+        let key = info.stretch.key(font: info.font, glyph: info.glyph, variant: variant, dilation: dilation)
+        let added = add(raster, key: key)
+        entries[index] = added
+        return added
+    }
+
+    /// The atlas entry of a box-drawing or block cell `width` whole pixels wide whose fractional cell starts `phase` past
+    /// its left pixel, in a row of `stretch`; nil when the font draws the character.
+    func boxEntry(_ scalar: UInt32, stretch: Stretch = .normal, width: Int, phase: Double) -> Int32? {
+        let key = stretch.boxKey(scalar, width: width, phase: Int((phase * 1024).rounded()))
         if let id = atlas.lookup(key) { return id }
-        let raster = BoxDrawing.raster(scalar, metrics: fonts.metrics.stretched(stretch))
+        if fontDrawn.contains(key) { return nil }
+        let metrics = fonts.metrics.stretched(stretch)
+        guard let raster = BoxDrawing.raster(
+            scalar, width: width, metrics: metrics, cellWidth: metrics.width, phase: phase, fontSize: Double(fonts.pointSize),
+            scale: Double(fonts.scale))
+        else {
+            fontDrawn.insert(key)
+            return nil
+        }
         return add(raster, key: key)
     }
 
@@ -130,8 +175,7 @@ final class WordCache {
 
     // MARK: shaping
 
-    private func shape(_ text: UnsafeBufferPointer<UInt32>, style: FontStyle, stretch: Stretch, cluster: Bool) -> (glyphs: [WordGlyph], generation: Int) {
-        let generation = atlas.generation
+    private func shape(_ text: UnsafeBufferPointer<UInt32>, style: FontStyle, stretch: Stretch, cluster: Bool) -> [WordGlyph] {
         var string = String.UnicodeScalarView()
         /// For each UTF-16 unit of the string, the cell it came from.
         var columns: [UInt16] = []
@@ -158,21 +202,31 @@ final class WordCache {
             let attributes = CTRunGetAttributes(run) as NSDictionary
             let font = (attributes[kCTFontAttributeName] as! CTFont?) ?? fonts.font(for: style)
             let fontID = fonts.id(of: font)
+            let color = FontSet.hasColorGlyphs(font)
             for index in 0..<count where ids[index] != 0 {
-                let key = stretch.key(font: fontID, glyph: ids[index])
-                let entry = atlas.lookup(key) ?? add(GlyphRaster.rasterize(font: font, glyph: ids[index], stretch: stretch), key: key)
                 let column = columns[min(indices[index], columns.count - 1)]
-                result.append(WordGlyph(column: column, atlas: entry))
+                result.append(WordGlyph(column: column, slot: slot(font: fontID, glyph: ids[index], stretch: stretch, isColor: color)))
             }
         }
-        return (result, generation)
+        return result
     }
 
-    /// Add a raster, starting the atlas and this cache over if the texture is full.
+    private func slot(font: UInt16, glyph: CGGlyph, stretch: Stretch, isColor: Bool) -> Int32 {
+        let key = stretch.key(font: font, glyph: glyph, variant: 0, dilation: 0)
+        if let slot = slotIndex[key] { return slot }
+        let slot = Int32(slots.count)
+        slots.append(Slot(font: font, glyph: glyph, stretch: stretch, isColor: isColor))
+        entries.append(contentsOf: repeatElement(-1, count: Self.entriesPerSlot))
+        slotIndex[key] = slot
+        return slot
+    }
+
+    /// Add a raster, starting the atlas over if the texture is full (every slot's entries are then made again as rows
+    /// ask for them; the scene rebuilds its rows when the atlas's generation changes).
     private func add(_ raster: Raster, key: UInt64) -> Int32 {
         if let id = atlas.add(raster, key: key) { return id }
         atlas.reset()
-        clear()
+        for index in entries.indices { entries[index] = -1 }
         // A glyph bigger than an empty texture cannot be stored; draw nothing for it rather than loop.
         return atlas.add(raster, key: key) ?? atlas.add(.empty, key: key) ?? 0
     }

@@ -39,12 +39,22 @@ pub(crate) const IMAGES_WORD: usize = 11;
 const FLAG_FULL: u32 = 1;
 
 /// Pack the rows `snapshot` says changed (all of them when `all` is set).
+#[cfg(test)]
 pub(crate) fn pack(snapshot: &ScreenSnapshot, all: bool) -> Vec<u8> {
+    let mut out = Vec::new();
+    pack_into(snapshot, all, &mut out);
+    out
+}
+
+/// [`pack`] into `out`, which is cleared first and keeps its capacity (a still screen's frames allocate nothing). Returns how
+/// many rows went in.
+pub(crate) fn pack_into(snapshot: &ScreenSnapshot, all: bool, out: &mut Vec<u8>) -> usize {
     let cols = snapshot.columns();
     let rows = snapshot.rows();
     let sent = |changed: bool| all || changed;
     let changed = rows.iter().filter(|row| sent(row.changed())).count();
-    let mut out = Vec::with_capacity(HEADER_BYTES + changed * (ROW_HEADER_BYTES + cols * CELL_BYTES));
+    out.clear();
+    out.reserve(HEADER_BYTES + changed * (ROW_HEADER_BYTES + cols * CELL_BYTES));
 
     let (cursor_row, cursor_col, style) = match snapshot.cursor {
         Some(cursor) => (cursor.row as u32, cursor.col as u32, cursor_style(cursor)),
@@ -79,13 +89,13 @@ pub(crate) fn pack(snapshot: &ScreenSnapshot, all: bool) -> Vec<u8> {
         // copies every row), but the layout promises `cols` cells: pad rather than trust it.
         let cells = row.cells();
         for cell in cells.iter().take(cols) {
-            pack_cell(cell, &mut out);
+            pack_cell(cell, out);
         }
         for _ in cells.len()..cols {
-            pack_cell(&Cell::default(), &mut out);
+            pack_cell(&Cell::default(), out);
         }
     }
-    out
+    changed
 }
 
 /// Block 0, underline 1, beam 2, hollow block 3 in the low byte; bit 8 a wide character under it;

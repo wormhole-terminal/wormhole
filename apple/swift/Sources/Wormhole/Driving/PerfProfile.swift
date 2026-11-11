@@ -44,6 +44,10 @@ enum PerfProfile {
         table += String(
             format: "\n  per draw: rows_rebuilt=%.1f changed_rows=%.1f allocations=%.1f (max %d)", perDraw.rows, perDraw.changed,
             perDraw.allocations, allocated.max() ?? 0)
+        let parts = steady.map(\.allocations)
+        table += String(
+            format: "\n  allocations per draw by part: fetch=%.1f apply=%.1f view=%.1f draw=%.1f", mean(parts.map(\.fetch)),
+            mean(parts.map(\.apply)), mean(parts.map(\.view)), mean(parts.map(\.draw)))
         table += "\n  run: words_shaped=\(delta.wordsShaped) glyphs_rasterised=\(delta.glyphsRasterised) atlas_resets=\(delta.atlasResets)"
         let json: [String: Any] = [
             "draws": samples.count, "seconds": seconds, "grid": "\(grid.cols)x\(grid.rows)",

@@ -58,7 +58,7 @@ import TerminalCore
         for placement in placements.filter({ $0.cols == 8 && $0.rows == 2 }) {
             for (row, line) in Self.colours.enumerated() {
                 for (column, expected) in line.enumerated() {
-                    let x = placement.column * cell.width + (2 * column + 1) * cell.width
+                    let x = live.view.renderer.left(placement.column + 2 * column + 1)
                     let y = (placement.line * cell.height) + row * cell.height + cell.height / 2
                     let got = image.pixel(x, y)
                     #expect(near(got, expected), "texel \(column),\(row) of the picture at line \(placement.line): \(got)")
@@ -68,7 +68,7 @@ import TerminalCore
         #expect(placements.filter({ $0.cols == 8 && $0.rows == 2 }).count == 2)
         // The Sixel: red where a band was drawn, the background beside it.
         let sixel = try #require(placements.first { $0.rows < 2 || $0.cols != 8 })
-        let red = image.pixel(sixel.column * cell.width + 2, sixel.line * cell.height + 2)
+        let red = image.pixel(live.view.renderer.left(sixel.column) + 2, sixel.line * cell.height + 2)
         #expect(near(red, (255, 0, 0)))
     }
 
@@ -92,7 +92,7 @@ import TerminalCore
         let image = live.view.renderer.renderToImage()
         let cell = live.view.renderer.cellPixels
         // The history's top row is the picture's own: red where the first texel is.
-        let red = image.pixel(cell.width, cell.height / 2)
+        let red = image.pixel(live.view.renderer.left(1), cell.height / 2)
         #expect(placed.line + live.view.renderer.images.displayOffset == 0)
         #expect(near(red, (255, 0, 0)))
     }

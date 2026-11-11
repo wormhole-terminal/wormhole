@@ -4,6 +4,8 @@ import SwiftUI
 
 public struct IconButton: View {
     public let symbol: String
+    /// The Lucide glyph GPUI's button draws, where one is generated; otherwise `symbol`'s SF Symbol.
+    public var lucide: Lucide?
     public let label: LocalizedStringKey
     public let action: () -> Void
     @State private var hovering = false
@@ -14,11 +16,17 @@ public struct IconButton: View {
         self.action = action
     }
 
+    public init(lucide: Lucide, label: LocalizedStringKey, action: @escaping () -> Void) {
+        self.init(symbol: "", label: label, action: action)
+        self.lucide = lucide
+    }
+
     public var body: some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: Metric.glyph, weight: .medium))
-                .frame(width: Metric.control, height: Metric.control)
+            Group {
+                if let lucide { LucideView(icon: lucide, size: Metric.glyph) } else { Image(systemName: symbol).font(.system(size: Metric.glyph, weight: .medium)) }
+            }
+            .frame(width: Metric.control, height: Metric.control)
         }
         .buttonStyle(IconButtonStyle(hovering: hovering))
         .onHover { hovering = $0 }

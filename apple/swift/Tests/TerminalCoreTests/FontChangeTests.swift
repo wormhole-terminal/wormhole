@@ -22,7 +22,7 @@ import TerminalCore
         #expect(renderer.gridSize == (20, 4), "the grid the program has is untouched")
         #expect(renderer.text(ofRow: 0).hasPrefix("hello"), "the cells are the same")
         let image = renderer.renderToImage()
-        #expect(RowDrawing.lit(image, x: 0..<after.width * 5, y: 0..<after.height, background: RowDrawing.background), "and they are drawn")
+        #expect(RowDrawing.lit(image, x: 0..<renderer.left(5), y: 0..<after.height, background: RowDrawing.background), "and they are drawn")
         #expect(renderer.needsDraw, "a change of font is something to draw")
     }
 
@@ -53,10 +53,10 @@ import TerminalCore
         #expect(renderer.cellPixels.height > tight.height)
     }
 
-    @Test func theCursorAndUnderlineComeFromTheFont() throws {
+    @Test func theUnderlineAndStrikeFollowTheFontAndLinesStayAPoint() throws {
         let small = FontSet(settings: TerminalFontSettings(pointSize: 10), scale: 2).metrics
         let large = FontSet(settings: TerminalFontSettings(pointSize: 36), scale: 2).metrics
-        #expect(large.lineThickness > small.lineThickness, "a heavier font draws heavier lines")
+        #expect(large.lineThickness == small.lineThickness && small.lineThickness == 2, "GPUI's lines are 1 pt at any size")
         #expect(large.underlineTop > small.underlineTop)
         #expect(large.strikeTop > small.strikeTop)
     }
@@ -72,7 +72,7 @@ import TerminalCore
         #expect(on.bgra != off.bgra, "JetBrains Mono joins -> and != through contextual alternates")
         // Nothing but the pairs differs: the first cell ('a') is the same either way.
         let cell = try RowDrawing.renderer(TerminalFontSettings(font: font, pointSize: 14, lineHeight: 1.3)).cellPixels
-        for y in 0..<cell.height { for x in 0..<cell.width { #expect(on.pixel(x, y) == off.pixel(x, y)) } }
+        for y in 0..<cell.height { for x in 0..<Int(cell.width) { #expect(on.pixel(x, y) == off.pixel(x, y)) } }
     }
 
     @Test func aFallbackFamilyIsAskedForWhatTheFontLacks() throws {

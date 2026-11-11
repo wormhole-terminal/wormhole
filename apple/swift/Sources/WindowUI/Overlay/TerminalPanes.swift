@@ -45,14 +45,16 @@ struct TerminalSurface: View {
             let minimap = look.minimap && overlay.hasScrollback ? MinimapGeometry.width : 0
             GeometryReader { proxy in
                 ZStack(alignment: .topTrailing) {
-                    TerminalHost(views: hub.terminals, id: id, overlay: overlay) { hub.actions.terminalMenu(id) }
+                    TerminalHost(views: hub.terminals, id: id, overlay: overlay, opacity: look.effectiveOpacity) { hub.actions.terminalMenu(id) }
                     TerminalMarks(overlay: overlay, showsMinimap: look.minimap)
                     FoldMarkers(
                         markers: overlay.markers, geometry: overlay.blockGeometry ?? BlockGeometry(rows: 0, cellHeight: 0, gutter: 0),
                         trailingInset: minimap, toggle: overlay.toggle)
                     LinkReadout(text: overlay.linkReadout)
                     if overlay.find.isOpen {
-                        FindBar(model: overlay.find, onClose: overlay.find.close).padding(Space._2)
+                        // `render_find_bar`: 8 pt down, the pane's padding (and the minimap's strip) in from the right.
+                        FindBar(model: overlay.find, onClose: overlay.closeFind)
+                            .padding(.top, Space._2).padding(.trailing, MetalRenderer.padding + minimap)
                     }
                     SizeReadoutChip(model: overlay.size)
                     PaneOverlays(

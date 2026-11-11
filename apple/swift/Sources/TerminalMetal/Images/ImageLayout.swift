@@ -18,7 +18,7 @@ struct ImageQuad: Equatable {
 
 /// What the layout needs to know about the surface, all in device pixels except `scale`.
 struct ImageSurface {
-    var cellWidth: Int
+    var cellWidth: Double
     var cellHeight: Int
     /// Device pixels per point: the engine measures offsets and pixel extents in the points it was told a cell has.
     var scale: Double
@@ -34,7 +34,7 @@ enum ImageLayout {
         _ placement: ImagePlacement, imageWidth: Int, imageHeight: Int, displayOffset: Int, surface: ImageSurface
     ) -> ImageQuad? {
         guard imageWidth > 0, imageHeight > 0 else { return nil }
-        let cw = Double(surface.cellWidth), ch = Double(surface.cellHeight)
+        let cw = surface.cellWidth, ch = Double(surface.cellHeight)
         let row = Double(placement.line + displayOffset)
         let corner = (x: cw * Double(placement.column), y: ch * row)
         let cells = (width: cw * Double(placement.cols), height: ch * Double(placement.rows))

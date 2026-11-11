@@ -41,7 +41,8 @@ struct TerminalColumn: View {
             } cover: {
                 cover == nil ? nil : PanelCoverView(controller: hub.panel).environment(\.fileIcons, PanelBody.icons)
             }
-            .background(colours.terminalSurface)
+            // At the window's opacity, as the terminal's own background is (GPUI paints the pane translucent over the blur).
+            .background(look.surface(colours.terminalSurface))
             .overlay { NoticeChipHost(center: hub.notices) }
             .clipShape(RoundedRectangle(cornerRadius: colours.radiusLarge))
             .padding([.horizontal, .bottom], Chrome.surfaceInset)

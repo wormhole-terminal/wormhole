@@ -70,17 +70,21 @@ only with the method above.
 instances with scratch data, runs the same scripted terminal content in both (`visual-scenes.py`: colours, styles,
 underlines, wide and emoji cells, box/block/braille, cursors, selection, images, command blocks) at the same window
 size and scale in dark and light, shoots every Settings page at one window size, and has `visual-compare.py` write a
-sheet per scenario (GPUI | Swift | difference) and a table. Swift draws text with CoreText and GPUI with its own glyph
-raster, so "the same" is defined per block (cell) by mean colour and dominant fill, not per pixel; the definition and
-its tolerances are the header of `visual-compare.py`. GPUI cells are fractional (16.8 px) and Swift's whole pixels
-(17), so the GPUI crop is stretched (nearest-neighbour) to Swift's cell width first; that difference is a finding, not noise.
+sheet per scenario (GPUI | Swift | difference) and a table. A cell (block) is the same when its mean colour is within 12 levels in both;
+the definition is the header of `visual-compare.py`.
 
-Two things about the crops. The Swift shot is the pane as drawn, with its 4 pt padding (8 px at scale 2) around the grid, which the GPUI
-crop leaves out: `--swift-origin 8,8`. (Without it every row drifts and the text scene fell to 83 %: that was this harness, not the
-renderer.) And a block is judged on its interior, 1 px in from each side (`--inset`): GPUI puts each cell's edge on a device pixel of its own
-(16.8 px cells alternate 16 and 17), so after the stretch a colour edge lands up to a pixel from Swift's, which a 256-colour row
-turns into 72 failing blocks that are not a difference. The scenes: text (colours, styles, underline styles, wide and emoji cells, box,
-blocks, braille, ligatures, links), pad, the three cursors, images (kitty, iTerm2, Sixel), blocks (OSC 133 gutter), selection, find (the
-matches in the grid, and the bar in a shot of the whole window), Increase Contrast, and the minimap (the grid, and its strip in a shot of the
-whole window). `SKIP_SETTINGS=1` runs the terminal scenes only. Not compared (a person must look): the native scroll bar (an NSScroller,
+Both apps size the grid by the core's cell (`view::layout::cell`: the font's `m` advance, unrounded; GPUI's `prepare.rs` and Swift's
+`FontSet` through the FFI), so JetBrains Mono 14 pt at 2x is 16.8 x 36 px in each, the same window holds the same columns and rows, and
+block c of a crop spans the pixels from round(16.8 c) to round(16.8 (c + 1)), where both apps put a cell's edge. Nothing is stretched and
+no pixel is left out. Glyphs are rasterised as GPUI's text system does (`GlyphRaster`: an alpha-only bitmap, the face at its point size under the scale, quarter-pixel x variants, and CoreGraphics' stem dilation only for text whose colour's luminance asks for it, in quarters), so light text on a dark terminal and dark text on a light one carry the same ink in both. The Swift shot is the pane as drawn, with its 4 pt padding (8 px), so its grid starts at `--swift-origin 8,8`;
+where GPUI's grid starts in its window is found once per run by the `ruler` scene (numbered rows past the bottom and a 300-character
+line that wraps at the last column, searched within 4 px), which also proves the two grids are the same size. A scene-wide share cannot
+carry a feature (2 % of a grid is a hundred blocks), so each scene names the cells its features occupy (`REGIONS` in `visual-scenes.py`:
+the cursor's cell, each picture, the ligature, emoji and Indic rows, each underline style, the selected cells, find's labels) and every
+block of every region must pass; their failing blocks are listed in the table. Settings that change the window rather than the grid
+(Increase Contrast, Reduce Transparency) are compared by where they change each window (`visual-compare.py delta`: the pixels that
+differ between off and on in each app, and how much of that overlaps). The scenes: ruler, text (colours, styles, underline styles,
+wide and emoji cells, box, blocks, braille, ligatures, links), pad, the three cursors, images (kitty, iTerm2, Sixel), blocks (OSC 133
+gutter), selection, find (the matches in the grid, and the bar in a shot of the whole window), Increase Contrast, text zoom (two steps
+in), and the minimap (the grid, and its strip in a shot of the whole window). `SKIP_SETTINGS=1` runs the terminal scenes only. Not compared (a person must look): the native scroll bar (an NSScroller,
 not in the Metal shot), the unfocused hollow cursor, a Cmd-hover underline, the context menu (native NSMenu).

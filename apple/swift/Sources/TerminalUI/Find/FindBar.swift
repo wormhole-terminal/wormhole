@@ -17,9 +17,9 @@ public struct FindBar: View {
     public var body: some View {
         HStack(spacing: Space._1) {
             FindField(model: model, onClose: onClose)
-            IconButton(symbol: "chevron.up", label: LocalizedStringKey(L10n.findPrevious)) { model.step(-1) }
-            IconButton(symbol: "chevron.down", label: LocalizedStringKey(L10n.findNext)) { model.step(1) }
-            IconButton(symbol: "xmark", label: LocalizedStringKey(L10n.findClose), action: onClose)
+            step(.chevronUp, L10n.findPrevious) { model.step(-1) }
+            step(.chevronDown, L10n.findNext) { model.step(1) }
+            step(.x, L10n.findClose, action: onClose)
         }
         .padding(.leading, Space._2).padding(.trailing, Space._1)
         .frame(width: FindMetrics.barWidth, height: FindMetrics.barHeight)
@@ -28,5 +28,14 @@ public struct FindBar: View {
         .accessibilityLabel(L10n.findPlaceholder)
         // Esc anywhere in the bar (a button focused) closes it, as in GPUI's focus ladder.
         .onExitCommand(perform: onClose)
+    }
+
+    /// Previous, next and close: GPUI's title-row icon buttons (`in_title_row`), a Lucide glyph in a 24 pt face.
+    private func step(_ icon: Lucide, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { LucideView(icon: icon, size: FindMetrics.stepGlyph).frame(width: FindMetrics.hit, height: FindMetrics.hit) }
+            .buttonStyle(.plain)
+            .foregroundStyle(tokens.textMuted)
+            .help(label)
+            .accessibilityLabel(label)
     }
 }

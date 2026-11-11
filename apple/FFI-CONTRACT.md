@@ -1311,6 +1311,17 @@ UpdateEngine.setAutoUpdate(on:) / setAnonymousCount(on:)
 - **Find and folds**: `Terminal.find_reveal` opens a fold that hides the match (as the GPUI find does, and it stays open); `Terminal.find_fold_words() -> [FoldWords { row, label, spoken }]`
   gives the markers of the last frame as they read while a search is open (how many matches are inside each; empty with no match or no marker).
 
+## Round S wave 2, terminal: the cell (`cell.rs`)
+
+- `terminal_cell(font_size, line_height, advance, ascent, descent) -> CellRecord { width, height, baseline, underline, strike }` (points; core
+  `view::layout::cell::Cell`, which the GPUI app's `prepare.rs` uses too) and `terminal_grid_fit(cell, width, height, slack) -> GridFitRecord { cols, rows }`.
+  Swift measures the font with CoreText and asks; `TerminalCore.CellRule` calls them once `UniFFISource.installCellRules()` has run.
+- `cell_shapes(scalar, cell_width, height, phase, font_size, scale) -> CellShapesRecord? { shapes: [CellShapeRecord { rect, points, width }], alpha }`:
+  what GPUI's painter draws for a box-drawing or block-element character (core `wormhole_term::glyphs`), in device pixels from the cell's left
+  whole pixel; `phase` is how far the fractional cell starts past it. `None` for a character drawn from the font. Swift's own box drawing is deleted.
+- `Terminal.prepare_frame() -> u64` and `Terminal.take_frame() -> bytes`: `frame()` in two calls, so a frame that changes nothing (no row,
+  and the same header and sections as the last such one) crosses as the number 0 and allocates nothing on either side; `frame()` stays.
+
 ## Platform and notices (lane S)
 
 - `HookEvent::Driven { terminal, typing, agent }`: a control request that drives a terminal (send-text, send-keys, mouse, run: typing; read,

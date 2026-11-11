@@ -25,6 +25,8 @@ enum PlatformSetup {
             WordsBridge.install()
             FilesBridge.installRules()
             installResizeRules()
+            installCellRules()
+            installCellShapes()
             CommandLineSetup.keepCurrent()
         #endif
     }

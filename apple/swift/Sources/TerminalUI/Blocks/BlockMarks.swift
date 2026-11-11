@@ -46,7 +46,8 @@ public struct BlockMarks: View {
                 let top = geometry.top + geometry.cellHeight * CGFloat(span.rows.lowerBound)
                 let height = geometry.cellHeight * CGFloat(span.rows.count)
                 if hovered == span.id {
-                    context.fill(Path(CGRect(x: 0, y: top, width: size.width, height: height)), with: .color(tokens.stateHover))
+                    // From the pane's left edge to the grid's right one (`paint_blocks`: the right padding stays clear).
+                    context.fill(Path(CGRect(x: 0, y: top, width: size.width - geometry.gutter, height: height)), with: .color(tokens.stateHover))
                 }
                 guard let color = markColor(span.state) else { continue }
                 let insetTop = span.starts ? Self.markInset : 0

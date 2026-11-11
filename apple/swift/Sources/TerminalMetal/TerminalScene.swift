@@ -59,7 +59,11 @@ final class TerminalScene {
     init(text: TextContext, palette: TerminalPalette) {
         self.text = text
         self.palette = palette
+        text.builder.levels = Self.levels(palette)
     }
+
+    /// The stem dilation of text in each palette slot: a palette whose levels differ rebuilds every row's glyphs.
+    private static func levels(_ palette: TerminalPalette) -> [UInt8] { palette.slots.map { UInt8(GlyphRaster.level(of: $0)) } }
 
     deinit { grid.deallocate() }
 
@@ -146,6 +150,11 @@ final class TerminalScene {
     func setPalette(_ value: TerminalPalette) {
         guard value != palette else { return }
         palette = value
+        let levels = Self.levels(value)
+        if levels != text.builder.levels {
+            text.builder.levels = levels
+            markAllDirty()
+        }
         for row in marks.indices where marks[row].isMarked { dirty[row] = true }
     }
 
@@ -169,6 +178,7 @@ final class TerminalScene {
     func setText(_ context: TextContext) {
         guard context !== text else { return }
         text = context
+        context.builder.levels = Self.levels(palette)
         markAllDirty()
         rebuildDirty()
         touch()

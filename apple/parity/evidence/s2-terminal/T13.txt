@@ -1,0 +1,21 @@
+# T13 command blocks, hover. Both apps 1320x820, reduce-transparency on, feed script with one OSC 133 block (rows 2-4), `block` says: Swift target lines=2...4 output=3...4 command=echo hi; GPUI 1: lines 2..=4 output 3..=4 | exit 0 · 0.0s | echo hi
+# Swift `hover x y` needs a pointer already inside the window: a single hover straight after a start showed no tint (twice); a batch of 4 hovers ending on the block did.
+> hover 900 400 / hover 700 300 / hover 420 100 / hover 410 105 / wait-idle 800 / window-shot <png>      (Swift)   GPUI: the same hovers, one per batch with `frames 2`, then `frames 3`, `shot`
+measure_hover.py numbers (px at scale 2; window 2640x1640):            Swift dark                   GPUI dark
+  pane background                                                       (10,19,29)                   (8,19,30)
+  block tint colour (rows 3 x 36 px = y 156..263)                       (21,30,40)  [bg+11,11,11]    (19,30,41) [bg+11,11,11]
+  tint x extent                                                         716..2623                    716..2615    (Swift runs 8 px = 4 pt further right, to the window edge)
+  readout pill bbox (bottom right, pane padding)                        2377,1552..2599,1607 (223x56) 2376,1552..2599,1607 (224x56)
+  pill fill                                                             (41,49,59)                   (39,49,60)
+  "exit 0" text (most saturated px)                                     (119,211,164)                (79,214,160)  <- Swift's green is paler
+                                                                        Swift light                  GPUI light
+  pane bg / tint                                                        (247,249,251)/(236,238,240)  (247,249,251)/(236,238,241)
+  pill fill / exit text                                                 (22,32,44) / (54,110,73)     (19,32,45) / (27,112,70)
+Words identical: "exit 0 · 0.0s". Copy control: SF Symbol doc.on.doc (two sheets) in Swift, GPUI draws a single-outline copy glyph (shots T13-hover-*.png, readout rows).
+Readout is at the pane's bottom right in both (BlockReadout.swift doc comment; same px box), not beside the block.
+Copy output control NOT clicked (writes the real clipboard): pending the pasteboard seam. Rows of the gutter bar: both 2 pt bars at the pane's left padding (x 716 px region), same height as block rows.
+## Round S wave 2, after the fixes (lane build, same feed and hovers, Swift only; GPUI's numbers above)
+tint x extent 716..2615 (GPUI 716..2615: the tint stops at the grid's right edge, `paint_blocks`); pill 2377,1552..2599,1607 (223x56, GPUI 224x56);
+exit text now in the tooltip tokens (`tooltip.success` / `tooltip.danger`, GPUI's `ui.tooltip_success`): the most saturated pixel is (119,211,164) dark,
+(90,147,108) light against GPUI's (79,214,160) / (27,112,70); one anti-aliased pixel of SwiftUI text, not the token (the text weight is SwiftUI's, not the grid's).
+Copy control: Lucide `copy` (GPUI's IconName::Copy), T13-readout-after.png. Not clicked (pasteboard seam).

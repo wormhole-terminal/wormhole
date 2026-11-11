@@ -7,8 +7,9 @@ import TerminalCore
 
 struct RowLayout {
     let stretch: Stretch
-    /// A cell as drawn: twice a normal one's width on a sized row.
+    /// A cell as drawn: twice a normal one's width on a sized row; `advance` is the same, unrounded, for glyph placement.
     let cellWidth: Float
+    let advance: Double
     /// The row's own height, which is what it is cut to.
     let rowTop: Float
     let rowHeight: Float
@@ -25,6 +26,7 @@ struct RowLayout {
 
     init(row: Int, size: LineSize, columns: Int, metrics: CellMetrics, stretched: CellMetrics) {
         stretch = Stretch(size)
+        advance = stretched.width
         cellWidth = Float(stretched.width)
         rowHeight = Float(metrics.height)
         rowTop = Float(row * metrics.height)
@@ -34,10 +36,13 @@ struct RowLayout {
         strikeTop = lineTop + Float(stretched.strikeTop)
         thickness = Float(stretched.lineThickness)
         shown = stretch == .normal ? columns : (columns + 1) / 2
-        gridRight = Float(columns * metrics.width)
+        gridRight = Float(Double(columns) * metrics.width)
     }
 
     var isTall: Bool { stretch == .tall }
+
+    /// Column `c`'s left edge on whole pixels, as GPUI's block shapes and box cells fall.
+    func edge(_ column: Int) -> Int { Int((Double(column) * advance).rounded()) }
 
     /// A solid quad cut to the row; `nil` if nothing of it is inside. Only a tall line reaches past its rows.
     func clipped(_ quad: SolidInstance) -> SolidInstance? {

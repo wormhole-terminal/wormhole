@@ -1,0 +1,15 @@
+# T25 output folds, Swift only. Instance /tmp/Wormhole-swift-s2-terminal-p, WORMHOLE_AUTH=allow. flags-unlock; set feature_flags={"probes":true,"output_folds":true,"unlocked":true}; restart;
+# probe folder (made with `Wormhole probe new demo --kind rules` from the GPUI debug binary, then edited: probes-src/demo/probe.toml, hook command.finished exit 0 -> fold block-output "build output",
+# permissions fold=true) copied into <data dir>/probes/demo; `probe approve demo` -> rows=["demo:on"].
+# The fold hides only HISTORY rows: an 80-line block makes it; a short block that fits the screen shows no marker. `scroll 30` brings it into view.
+> probes   -> status [] markers ["2: 39 lines hidden · build output [closed] <39 lines hidden by Demo tools, build output>"]
+> window-shot (T25-fold-markers.png): row 2: chevron.right, "39 lines hidden · build output", full-width tint (21,30,40) dark / (236,238,241) light.
+> hover 450 87 ; click 450 87 -> opens; view moves, marker above the view; `scroll 12` -> markers ["1: 39 lines shown · build output [open] ..."], chevron.down, "39 lines shown · build output".
+> click again closes ("39 lines hidden" again, markers ["2: ..."]).
+> key return / key space: NOT testable. After the click, `bounds` over the marker says MetalTerminalView, `key return` reports focus=terminal and goes to the terminal (the view snaps to the bottom, markers []).
+  `key tab` x3 stays focus=terminal (sent to the shell), `key f6` walks sidebar/terminal only. FoldMarkers.swift MarkerRow has .onKeyPress(.return) but no .focusable(): nothing can give the Button
+  keyboard focus except Full Keyboard Access (no control command sets it). Likely gap: the marker is not a keyboard stop.
+> find needle (8 matches, 3 inside the fold)  : `probes` says "... · 3 matches inside"; the window-shot (twice, 1.5 s apart, dark and light) still shows "39 lines hidden · build output" (T25-fold-find-count.png top).
+  After one more line of output (a frame with rows) the marker shows "39 lines hidden · build output · 3 matches inside" (bottom, light). So the on-screen marker is only re-read after a frame:
+  TerminalOverlay+Folds.swift:10 syncFolds() runs after rows are applied; find opening/typing does not trigger it. (Find field also showed "5 of 8"; no find highlight on 'needle' of line 40 was painted in the window-shot.)
+GPUI: not possible with this build: `Wormhole probe validate` on the same manifest: unknown key `permissions.fold`, unknown key `contributes.hooks` (GPUI debug build of 7 Nov has no hooks or folds); no devctl probe approve either.

@@ -168,3 +168,27 @@ fn the_minimap_reads_lines_when_the_output_changed_and_scrolls_the_view() {
     t.frame();
     assert_eq!(t.display_offset(), 0);
 }
+
+/// A still screen's frames are nothing at all: `prepare_frame` says 0 once a frame that changed no row has gone out, and the
+/// next change goes out again (the renderer's still draws allocate nothing for it).
+#[test]
+fn a_still_screen_prepares_empty_frames() {
+    let terminal = start("printf 'still'", 4);
+    wait_for(&terminal, "still");
+    let mut quiet = 0;
+    for _ in 0..20 {
+        if terminal.prepare_frame() == 0 {
+            quiet += 1;
+        }
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    assert!(quiet >= 18, "a still screen kept sending frames: {quiet} of 20 empty");
+    assert!(terminal.take_frame().is_empty());
+    terminal.write(b"x".to_vec());
+    let until = Instant::now() + Duration::from_secs(5);
+    while terminal.prepare_frame() == 0 {
+        assert!(Instant::now() < until, "the typed character never made a frame");
+        std::thread::sleep(Duration::from_millis(5));
+    }
+    assert!(!terminal.take_frame().is_empty());
+}

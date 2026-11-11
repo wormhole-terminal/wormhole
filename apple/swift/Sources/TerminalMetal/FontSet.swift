@@ -1,11 +1,12 @@
-// The fonts a terminal draws with and the cell they imply. Everything here is in device pixels: the
-// fonts are created at `points * scale`, so a glyph rasterises at the size it is drawn and the cell is a
-// whole number of pixels (a fractional cell would put every glyph at a different subpixel offset, which is
-// what the atlas avoids by not keeping subpixel variants).
+// The fonts a terminal draws with and the cell they imply. The fonts are created at `points * scale`, so a glyph's
+// outline is measured at the size it is drawn; the cell is the core's (`CellRule`, the GPUI app's rule) and keeps its
+// fractional width (16.8 px for JetBrains Mono 14 pt at 2x), so the grid holds the columns GPUI's does and every glyph
+// sits at its cell's own position (the atlas keeps quarter-pixel variants for that, as GPUI's does).
 
 import CoreGraphics
 import CoreText
 import Foundation
+import TerminalCore
 
 /// The four faces a cell can ask for: SGR 1 and SGR 3 pick one.
 enum FontStyle: Int, CaseIterable {
@@ -20,7 +21,8 @@ enum FontStyle: Int, CaseIterable {
 }
 
 struct CellMetrics: Equatable {
-    var width: Int
+    /// Device pixels, unrounded: cell `c` spans `c * width` to `(c + 1) * width`.
+    var width: Double
     var height: Int
     /// From the top of the cell to the baseline.
     var baseline: Int
@@ -29,7 +31,13 @@ struct CellMetrics: Equatable {
     var lineThickness: Int
     /// The top of a strikethrough, from the top of the cell.
     var strikeTop: Int
+
+    /// Where column `c`'s left edge lands on whole pixels: the nearest one, as GPUI's quads and block shapes fall.
+    func edge(_ column: Int) -> Int { Int((Double(column) * width).rounded()) }
 }
+
+/// GPUI's rounding of a point to a device pixel (`round_to_device_pixel`): halves go toward zero.
+func roundHalfTowardZero(_ value: Double) -> Int { Int((abs(value) - 0.5).rounded(.up)) * (value < 0 ? -1 : 1) }
 
 /// Where the four faces come from.
 public enum FontSpec: Sendable, Hashable {
@@ -52,6 +60,8 @@ final class FontSet {
     let pointSize: CGFloat
     let scale: CGFloat
     let metrics: CellMetrics
+    /// The cell in points, as the core gave it.
+    let cell: TerminalCell
 
     private var interned: [CTFont] = []
     private var ids: [String: UInt16] = [:]
@@ -80,30 +90,25 @@ final class FontSet {
         interned.append(contentsOf: faces)
         for (index, font) in interned.enumerated() { ids[Self.key(font)] = UInt16(index) }
 
+        // GPUI's measurements: the advance of `m` and the font's ascent and descent, in points.
         var glyph = CGGlyph(0)
-        var m: UniChar = 0x4D
+        var m: UniChar = 0x6D
         CTFontGetGlyphsForCharacters(regular, &m, &glyph, 1)
         var advance = CGSize.zero
         CTFontGetAdvancesForGlyphs(regular, .default, &glyph, &advance, 1)
-        let ascent = CTFontGetAscent(regular), descent = CTFontGetDescent(regular), leading = CTFontGetLeading(regular)
-        let natural = ascent + descent + leading
-        let height: Int
-        let baseline: Int
-        if let lineHeight {
-            // A set line height: the text sits in the middle of it, as CSS does.
-            height = Int((size * lineHeight).rounded())
-            baseline = Int(((CGFloat(height) - (ascent + descent)) / 2 + ascent).rounded())
-        } else {
-            height = Int(natural.rounded(.up))
-            baseline = Int(ascent.rounded(.up) + (leading / 2).rounded(.down))
-        }
-        let thickness = max(1, Int(CTFontGetUnderlineThickness(regular).rounded()))
-        let underlineBelow = max(1, Int(abs(CTFontGetUnderlinePosition(regular)).rounded()))
-        let xHeight = CTFontGetXHeight(regular)
+        let ascent = CTFontGetAscent(regular) / scale, descent = CTFontGetDescent(regular) / scale
+        let factor = lineHeight ?? (ascent + descent + CTFontGetLeading(regular) / scale) / pointSize
+        let cell = CellRule.current.cell(
+            fontSize: Double(pointSize), lineHeight: Double(factor), advance: Double(advance.width / scale), ascent: Double(ascent),
+            descent: Double(descent))
+        self.cell = cell
+        let s = Double(scale)
+        let height = max(1, Int((cell.height * s).rounded()))
+        let thickness = max(1, Int((TerminalCell.line * s).rounded()))
         metrics = CellMetrics(
-            width: max(1, Int(advance.width.rounded())), height: max(1, height), baseline: baseline,
-            underlineTop: min(height - thickness, baseline + underlineBelow - thickness / 2), lineThickness: thickness,
-            strikeTop: baseline - Int((xHeight / 2).rounded()) - thickness / 2)
+            width: max(1, cell.width * s), height: height, baseline: roundHalfTowardZero(cell.baseline * s),
+            underlineTop: min(height - thickness, roundHalfTowardZero(cell.underline * s)), lineThickness: thickness,
+            strikeTop: roundHalfTowardZero(cell.strike * s))
     }
 
     /// The face with the settings' OpenType features and fallback chain. Ligatures off turns `calt` and `liga`

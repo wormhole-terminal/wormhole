@@ -39,6 +39,10 @@ pub struct Terminal {
     pub(crate) interaction: crate::interaction::Interaction,
     /// Which placements the last frame carried (`inline_images`); held with `snapshot`'s lock.
     placements: Mutex<PlacementsSent>,
+    /// The frame being packed, and the last one sent that changed no row (`pack_frame`); held with `snapshot`'s lock.
+    quiet: Mutex<(Vec<u8>, Vec<u8>)>,
+    /// What `prepare_frame` packed, until `take_frame`.
+    pending: Mutex<Vec<u8>>,
     /// The last search's results (`find.rs`) and the minimap's copy (`minimap.rs`).
     pub(crate) finder: crate::find::Finder,
     pub(crate) minimap: crate::minimap::Minimap,
@@ -178,6 +182,20 @@ impl Terminal {
     /// the first time and after a resize. Empty after `close`.
     pub fn frame(&self) -> Vec<u8> {
         self.pack_frame(false)
+    }
+
+    /// Packs the next frame (as [`Terminal::frame`]) and says how long it is, for [`Terminal::take_frame`]: 0 when the screen
+    /// changed nothing, so a still screen's frames cross the FFI as a number and allocate nothing.
+    pub fn prepare_frame(&self) -> u64 {
+        let bytes = self.pack_frame(false);
+        let len = bytes.len() as u64;
+        *self.pending.lock().unwrap_or_else(PoisonError::into_inner) = bytes;
+        len
+    }
+
+    /// The frame [`Terminal::prepare_frame`] packed (empty if it was taken or there was none).
+    pub fn take_frame(&self) -> Vec<u8> {
+        std::mem::take(&mut *self.pending.lock().unwrap_or_else(PoisonError::into_inner))
     }
 
     /// Every row, whatever changed: for a renderer that lost its picture (a new surface).
@@ -342,6 +360,8 @@ impl Terminal {
             events,
             interaction: Default::default(),
             placements: Mutex::default(),
+            quiet: Mutex::default(),
+            pending: Mutex::default(),
             finder: Default::default(),
             minimap: Default::default(),
             timing: Timing::default(),
@@ -425,14 +445,28 @@ impl Terminal {
         let snapshotted = Instant::now();
         // A row's marks that changed without the row (rules loaded, a hook's tint) go out as a full frame.
         let all = marks.refresh(self.tab, &snapshot) || all;
-        let mut bytes = frame::pack(&snapshot, all);
+        let mut quiet = self.quiet.lock().unwrap_or_else(PoisonError::into_inner);
+        let (bytes, last_quiet) = &mut *quiet;
+        let changed = frame::pack_into(&snapshot, all, bytes);
         // Placed pictures, then the tiles that placeholder cells draw (kitty's `U=1`).
         let mut placements = snapshot.placements().to_vec();
         placements.extend(placeholder_placements(pty, &snapshot));
-        self.placements.lock().unwrap_or_else(PoisonError::into_inner).append(&mut bytes, &placements, all);
-        frame_extras::append(&mut bytes, &snapshot, all);
-        marks.append(&mut bytes, &snapshot, all);
+        self.placements.lock().unwrap_or_else(PoisonError::into_inner).append(bytes, &placements, all);
+        frame_extras::append(bytes, &snapshot, all);
+        marks.append(bytes, &snapshot, all);
         let packed = Instant::now();
+        // A frame that changes no row and says what the last such one said changes nothing on screen: none at all, so a
+        // still screen's frames allocate nothing (the renderer skips an empty frame). Anything else goes out as packed.
+        let bytes = if changed == 0 && !all && bytes == last_quiet {
+            Vec::new()
+        } else {
+            if changed == 0 {
+                last_quiet.clone_from(bytes);
+            } else {
+                last_quiet.clear();
+            }
+            bytes.clone()
+        };
 
         let t = &self.timing;
         let (snapshot_ns, pack_ns) = (nanos(snapshotted - started), nanos(packed - snapshotted));

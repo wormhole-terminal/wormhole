@@ -12,7 +12,7 @@ import TerminalCore
     private func pixel(_ renderer: MetalRenderer, column: Int, row: Int = 0) -> (r: UInt8, g: UInt8, b: UInt8) {
         let cell = renderer.cellPixels
         // The cell's top-left corner is background or the match's fill, never a glyph's stroke.
-        return renderer.renderToImage().pixel(column * cell.width + 1, row * cell.height + 1)
+        return renderer.renderToImage().pixel(renderer.left(column) + 1, row * cell.height + 1)
     }
 
     private func word(_ renderer: MetalRenderer) throws {
@@ -65,7 +65,7 @@ import TerminalCore
         try renderer.apply(frame: RowDrawing.frame(rows))
         #expect(renderer.hasBlinkingText)
         let cell = renderer.cellPixels
-        func level() -> UInt8 { renderer.renderToImage().pixel(cell.width / 2, cell.height / 2).r }
+        func level() -> UInt8 { renderer.renderToImage().pixel(renderer.left(1) / 2, cell.height / 2).r }
         let on = level()
         let built = renderer.counters
         renderer.setBlinkFaded(true)

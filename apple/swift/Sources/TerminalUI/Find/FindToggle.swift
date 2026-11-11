@@ -22,17 +22,19 @@ struct FindToggle: View {
         .background(on ? tokens.stateSelected : hovering ? tokens.stateHover : .clear,
                     in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
         .onHover { hovering = $0 }
+        .frame(width: FindMetrics.hit, height: FindMetrics.hit)
         .motion(Motion.press, value: on)
         .help(L10n.findOption(option))
         .accessibilityLabel(L10n.findOption(option))
     }
 
-    /// The marks of the lucide icons the GPUI bar uses: "Aa", a word with its underline, ".*".
-    @ViewBuilder private var glyph: some View {
-        switch option {
-        case .matchCase: Text("Aa").font(.system(size: TextRole.caption.size, weight: .medium))
-        case .wholeWord: Text("ab").underline().font(.system(size: TextRole.caption.size, weight: .medium))
-        case .regex: Text(".*").font(.system(size: TextRole.caption.size, weight: .medium, design: .monospaced))
+    /// The Lucide icons the GPUI bar uses (`option_icon`).
+    private var glyph: some View {
+        let icon: Lucide = switch option {
+        case .matchCase: .caseSensitive
+        case .wholeWord: .wholeWord
+        case .regex: .regex
         }
+        return LucideView(icon: icon, size: FindMetrics.toggleGlyph)
     }
 }

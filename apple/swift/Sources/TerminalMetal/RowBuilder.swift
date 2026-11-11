@@ -22,6 +22,8 @@ final class RowBuilder {
     private let atlas: GlyphAtlas
     private let words: WordCache
     private let scratch = UnsafeMutablePointer<UInt32>.allocate(capacity: WordCache.maxWordCells)
+    /// The stem dilation of text in each palette slot (`GlyphRaster.level`), set by the scene with its palette.
+    var levels: [UInt8] = []
 
     init(fonts: FontSet, atlas: GlyphAtlas, words: WordCache) {
         metrics = fonts.metrics
@@ -44,6 +46,14 @@ final class RowBuilder {
         }
         if flags.contains(.hidden) { fg = bg }
         return (fg, bg)
+    }
+
+    /// The stem dilation GPUI gives text of this colour.
+    @inline(__always)
+    private func dilation(_ fg: UInt32) -> Int {
+        if fg >> 24 == 2 { return GlyphRaster.level(of: SIMD3(UInt8(fg >> 16 & 0xFF), UInt8(fg >> 8 & 0xFF), UInt8(fg & 0xFF))) }
+        let index = Int(fg & 0xFFFF)
+        return index < levels.count ? Int(levels[index]) : 0
     }
 
     /// `extras`: what the row's cells carry beyond a character (marks that join, an underline colour), by column; nil
@@ -125,14 +135,29 @@ final class RowBuilder {
                     height: thickness, color: overColor, style: 0))
             overStart = -1
         }
-        func emit(_ id: Int32, column: Int, cell: PackedCell) {
-            let entry = atlas.entry(id)
-            guard !entry.isEmpty else { return }
+        // A glyph goes where GPUI paints it: its cell's left edge quantised to a quarter pixel, the bitmap made for that
+        // quarter (`GlyphRaster`) at the whole pixel below it; a colour glyph at the nearest whole pixel.
+        func emit(_ slot: Int32, column: Int, cell: PackedCell) {
             let flags = CellFlags(rawValue: cell.flags)
             let (fg, _) = colors(cell, flags, underBlockCursor: covered(column))
+            let x = Double(column) * layout.advance
+            let id: Int32, left: Int
+            if words.isColor(slot) {
+                left = roundHalfTowardZero(x)
+                id = words.entry(slot, variant: 0, dilation: 0)
+            } else {
+                let quarters = roundHalfTowardZero(x * Double(GlyphRaster.variants))
+                left = quarters / GlyphRaster.variants
+                id = words.entry(slot, variant: quarters % GlyphRaster.variants, dilation: dilation(fg))
+            }
+            place(id, x: left, cell: cell, flags: flags, fg: fg)
+        }
+        func place(_ id: Int32, x: Int, cell: PackedCell, flags: CellFlags, fg: UInt32) {
+            let entry = atlas.entry(id)
+            guard !entry.isEmpty else { return }
             let blink = flags.contains(.blink)
             let glyph = GlyphInstance(
-                x: Float(column) * cellWidth + Float(entry.left), y: layout.baseline - Float(entry.top),
+                x: Float(x + Int(entry.left)), y: layout.baseline - Float(entry.top),
                 width: Float(entry.width), height: Float(entry.height), atlasX: entry.x, atlasY: entry.y,
                 atlasWidth: entry.width, atlasHeight: entry.height, color: fg,
                 flags: (flags.contains(.dim) ? GlyphInstance.dimBit : 0) | (entry.isColor ? GlyphInstance.colorBit : 0)
@@ -149,7 +174,7 @@ final class RowBuilder {
             for index in range.start..<range.start + range.count {
                 let glyph = table[index]
                 let column = wordStart + Int(glyph.column)
-                emit(glyph.atlas, column: column, cell: cells[column])
+                emit(glyph.slot, column: column, cell: cells[column])
             }
             wordLength = 0
             wordStart = -1
@@ -224,7 +249,7 @@ final class RowBuilder {
                 let style = FontStyle(bold: flags.contains(.bold), italic: flags.contains(.italic))
                 let hash = WordCache.hash(style: style, stretch: stretch, cluster: true, scalars: scratch, count: count)
                 let range = words.glyphRange(style: style, stretch: stretch, cluster: true, scalars: scratch, count: count, hash: hash)
-                for index in range.start..<range.start + range.count { emit(words.glyphs.base[index].atlas, column: column, cell: cell) }
+                for index in range.start..<range.start + range.count { emit(words.glyphs.base[index].slot, column: column, cell: cell) }
             } else if flags.contains(.wideChar) {
                 // A double-width character stands alone, looked up as a word of one.
                 flushWord(column)
@@ -232,10 +257,11 @@ final class RowBuilder {
                 let style = FontStyle(bold: flags.contains(.bold), italic: flags.contains(.italic))
                 let hash = WordCache.hash(style: style, stretch: stretch, scalars: scratch, count: 1)
                 let range = words.glyphRange(style: style, stretch: stretch, scalars: scratch, count: 1, hash: hash)
-                for index in range.start..<range.start + range.count { emit(words.glyphs.base[index].atlas, column: column, cell: cell) }
-            } else if BoxDrawing.handles(scalar) {
+                for index in range.start..<range.start + range.count { emit(words.glyphs.base[index].slot, column: column, cell: cell) }
+            } else if BoxDrawing.handles(scalar), let (id, left) = boxCell(scalar, column: column, layout: layout) {
+                // A shape made for this cell's own whole pixels (16 or 17 wide at 16.8), so neighbours meet.
                 flushWord(column)
-                emit(words.boxEntry(scalar, stretch: stretch), column: column, cell: cell)
+                place(id, x: left, cell: cell, flags: flags, fg: fg)
             } else {
                 let style = FontStyle(bold: flags.contains(.bold), italic: flags.contains(.italic))
                 if wordLength > 0, style != wordStyle || wordLength == WordCache.maxWordCells { flushWord(column) }
@@ -256,21 +282,29 @@ final class RowBuilder {
         if let cursor, !filledBlock, cursor.column < columns { addCursorShape(cursor, layout: layout, geometry: geometry) }
     }
 
-    /// The cursor shapes that are not a filled block, as decoration quads over the glyphs.
+    /// A box-drawing or block cell's atlas entry and left pixel; nil when the font draws the character.
+    private func boxCell(_ scalar: UInt32, column: Int, layout: RowLayout) -> (Int32, Int)? {
+        let x = Double(column) * layout.advance, left = layout.edge(column)
+        let phase = x - x.rounded(.down)
+        guard let id = words.boxEntry(scalar, stretch: layout.stretch, width: layout.edge(column + 1) - left, phase: phase) else { return nil }
+        return (id, left)
+    }
+
+    /// The cursor shapes that are not a filled block, as decoration quads over the glyphs: GPUI's `cursor_rect`, a beam
+    /// or an underline 2 pt thick while focused, otherwise the cell's outline (1 pt).
     private func addCursorShape(_ cursor: CursorDraw, layout: RowLayout, geometry: RowGeometry) {
         let cellWidth = layout.cellWidth, cellHeight = layout.rowHeight, top = layout.rowTop
         let x = Float(cursor.column) * cellWidth
         let width = cellWidth * (cursor.wide ? 2 : 1)
-        let thickness = Float(max(1, metrics.lineThickness))
+        let thickness = Float(max(1, metrics.lineThickness)), bar = 2 * thickness
         let color = PackedColor.cursor
         func quad(_ x: Float, _ y: Float, _ w: Float, _ h: Float) {
             geometry.decorations.append(SolidInstance(x: x, y: y, width: w, height: h, color: color, style: 0))
         }
-        switch cursor.shape {
-        case .beam: quad(x, top, thickness, cellHeight)
-        case .underline: quad(x, top + cellHeight - thickness, width, thickness)
-        case .block, .hollow:
-            // Not filled (not focused, or asked for): an outline, so the text under it stays readable.
+        switch (cursor.shape, cursor.focused) {
+        case (.beam, true): quad(x, top, bar, cellHeight)
+        case (.underline, true): quad(x, top + cellHeight - bar, width, bar)
+        default:
             quad(x, top, width, thickness)
             quad(x, top + cellHeight - thickness, width, thickness)
             quad(x, top + thickness, thickness, cellHeight - 2 * thickness)

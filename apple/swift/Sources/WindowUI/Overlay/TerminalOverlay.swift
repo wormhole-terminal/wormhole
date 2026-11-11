@@ -51,6 +51,8 @@ final class TerminalOverlay {
         view.onPointerRow = { [weak blocks] in blocks?.hover(row: $0) }
         wireClipboard(view: view, notices: notices)
         view.onContentChanged = { [weak self] in self?.contentChanged() }
+        // A fold's marker counts the matches inside it: read again when a search's results arrive, output or not.
+        find.onOutcome = { [weak self] in self?.syncFolds() }
         view.onLinkReadout = { [weak self] in self?.linkReadout = $0 }
     }
 
@@ -85,6 +87,7 @@ final class TerminalOverlay {
         let bar = PaneBar.notice(kind, text)
         bars.bar = bar
         Task { [weak self] in
+            // one-shot: the bar's few seconds (`say_in_bar`), then it goes unless something else took it.
             try? await Task.sleep(for: .seconds(4))
             if self?.bars.bar == bar { self?.bars.bar = nil }
         }

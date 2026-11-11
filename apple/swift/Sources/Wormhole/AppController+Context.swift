@@ -30,7 +30,8 @@ extension AppController {
         switch kind {
         case .copy: router.run("copy")
         case .paste: NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
-        case .selectAll: NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil)
+        // The terminal the menu is over, not the responder chain (which has no key window in a background instance).
+        case .selectAll: selectedView?.selectAll(nil)
         case .find: router.run("find")
         case .splitRight: router.run("splitRight")
         case .splitDown: router.run("splitDown")

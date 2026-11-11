@@ -20,10 +20,10 @@ import TerminalCore
         let image = renderer.renderToImage()
         let cell = renderer.cellPixels
         let mid = cell.height + cell.height / 2
-        #expect(image.pixel(6 * cell.width + 2, mid) == green, "column 3 now starts at 6 cells")
-        #expect(image.pixel(8 * cell.width - 2, mid) == green, "and is two cells wide")
-        #expect(image.pixel(3 * cell.width + 2, mid) != green, "not where an ordinary cell 3 would be")
-        #expect(!RowDrawing.lit(image, x: 12 * cell.width..<20 * cell.width, y: cell.height..<2 * cell.height, background: RowDrawing.background))
+        #expect(image.pixel(renderer.left(6) + 2, mid) == green, "column 3 now starts at 6 cells")
+        #expect(image.pixel(renderer.left(8) - 2, mid) == green, "and is two cells wide")
+        #expect(image.pixel(renderer.left(3) + 2, mid) != green, "not where an ordinary cell 3 would be")
+        #expect(!RowDrawing.lit(image, x: renderer.left(12)..<renderer.left(20), y: cell.height..<2 * cell.height, background: RowDrawing.background))
     }
 
     @Test func aDoubleHeightLineIsDrawnByBothRowsEachShowingItsHalf() throws {
@@ -35,9 +35,9 @@ import TerminalCore
         try renderer.apply(frame: RowDrawing.frame(cells, sizes: [.doubleHeightTop, .doubleHeightBottom]))
         let image = renderer.renderToImage()
         let cell = renderer.cellPixels
-        #expect(image.pixel(cell.width, cell.height / 2) == green, "the upper half of a tall cell is the whole top row")
-        #expect(image.pixel(cell.width, cell.height - 1) == green)
-        #expect(!RowDrawing.lit(image, x: 0..<2 * cell.width, y: cell.height..<2 * cell.height, background: RowDrawing.background),
+        #expect(image.pixel(renderer.left(1), cell.height / 2) == green, "the upper half of a tall cell is the whole top row")
+        #expect(image.pixel(renderer.left(1), cell.height - 1) == green)
+        #expect(!RowDrawing.lit(image, x: 0..<renderer.left(2), y: cell.height..<2 * cell.height, background: RowDrawing.background),
             "and nothing of the row below")
     }
 
@@ -50,8 +50,8 @@ import TerminalCore
         try renderer.apply(frame: RowDrawing.frame(cells, sizes: [.doubleHeightTop, .doubleHeightBottom]))
         let image = renderer.renderToImage()
         let cell = renderer.cellPixels
-        #expect(!RowDrawing.lit(image, x: 0..<2 * cell.width, y: 0..<cell.height, background: RowDrawing.background))
-        #expect(image.pixel(cell.width, cell.height + cell.height / 2) == green)
+        #expect(!RowDrawing.lit(image, x: 0..<renderer.left(2), y: 0..<cell.height, background: RowDrawing.background))
+        #expect(image.pixel(renderer.left(1), cell.height + cell.height / 2) == green)
     }
 
     @Test func glyphsOfASizedRowAreRasterisedAtTheirSizeNotScaled() throws {

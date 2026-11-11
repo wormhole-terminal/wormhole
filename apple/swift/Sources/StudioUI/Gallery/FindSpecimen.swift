@@ -17,6 +17,13 @@ struct FindSpecimen: View {
             terminal
             FindBar(model: found, onClose: {})
             FindBar(model: invalid, onClose: {})
+            // The bar's Lucide glyphs on their own (`LucideView`, the icons GPUI's `find_bar` takes from gpui-kit-assets).
+            HStack(spacing: Space._3) {
+                ForEach([Lucide.search, .caseSensitive, .wholeWord, .regex, .chevronUp, .chevronDown, .x], id: \.self) {
+                    LucideView(icon: $0, size: Metric.glyph)
+                }
+            }
+            .foregroundStyle(tokens.textMuted)
         }
         .allowsHitTesting(false)
         .task {

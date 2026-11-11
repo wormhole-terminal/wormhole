@@ -135,7 +135,18 @@ public final class MetalTerminalView: NSView {
     public override func makeBackingLayer() -> CALayer { CAMetalLayer() }
     public override var acceptsFirstResponder: Bool { true }
     public override var isFlipped: Bool { true }
-    public override var isOpaque: Bool { true }
+    public override var isOpaque: Bool { backgroundOpacity >= 1 }
+
+    /// How opaque the terminal's own background is (the window's opacity, 1 under Reduce Transparency).
+    public var backgroundOpacity: Double = 1 {
+        didSet {
+            guard backgroundOpacity != oldValue else { return }
+            renderer.backgroundAlpha = backgroundOpacity
+            metalLayer?.isOpaque = backgroundOpacity >= 1
+            renderer.invalidate()
+            requestRedraw()
+        }
+    }
     private var metalLayer: CAMetalLayer? { layer as? CAMetalLayer }
 
     /// A new theme's colours: the renderer's palette, and the scroll bar drawn for the new background.
@@ -243,11 +254,13 @@ public final class MetalTerminalView: NSView {
         guard zoomEase == nil else { return }
         // The legacy scroll bar's gutter is not grid.
         // The padding is on every side, and the right one also keeps the scroller's or minimap's strip clear.
-        let padding = CGFloat(renderer.paddingPixels)
-        let gridWidth = max(1, Int(((bounds.width - scroller.gutterWidth - minimapWidth) * scale - 2 * padding).rounded(.down)))
-        let (cols, rows) = fixedGrid ?? renderer.grid(fittingPixels: gridWidth, Int(pixels.height - 2 * padding))
-        let cell = renderer.cellPixels
-        let size = GridSize(cols: cols, rows: rows, cellWidth: Float(Double(cell.width) / renderer.scale), cellHeight: Float(Double(cell.height) / renderer.scale))
+        // The cells the area holds, by the core's rule (the GPUI pane's): a screen pixel short of a whole cell still holds it,
+        // as a window whose size AppKit rounds to pixels may be (GPUI's slack while a drag steps by cells, Swift's default).
+        let padding = MetalRenderer.padding
+        let area = (width: bounds.width - scroller.gutterWidth - minimapWidth - 2 * padding, height: bounds.height - 2 * padding)
+        let (cols, rows) = fixedGrid ?? renderer.grid(fittingPoints: Double(area.width), Double(area.height), slack: 1 / Double(scale))
+        let cell = renderer.cell
+        let size = GridSize(cols: cols, rows: rows, cellWidth: Float(cell.width), cellHeight: Float(cell.height))
         guard size != gridSize else { return }
         // A window being dragged tells the program a size at most every 100 ms (the last one always, and once more when the
         // drag ends: `viewDidEndLiveResize`), as a full-screen program redraws everything for each size.
@@ -338,18 +351,22 @@ public final class MetalTerminalView: NSView {
     @discardableResult
     public func drawFrame(force: Bool = false, transaction: Bool = false) -> FrameSample {
         let cpuStart = MonotonicClock.threadCPU()
+        let a0 = AllocationCounter.allocations
         let t0 = MonotonicClock.now()
         let data = source.frame()
         let t1 = MonotonicClock.now()
+        let a1 = AllocationCounter.allocations
         var rebuilt = 0
         do { rebuilt = try renderer.apply(frame: data) } catch {
             FileHandle.standardError.write(Data("bad frame: \(error)\n".utf8))
         }
         let t2 = MonotonicClock.now()
+        let a2 = AllocationCounter.allocations
         refreshSelection()
         refreshFound()
         updateScroller()
         if rebuilt > 0 { onContentChanged?() }
+        let a3 = AllocationCounter.allocations
         var timings = DrawTimings(outcome: .drawn)
         if force || renderer.needsDraw {
             if let layer = metalLayer {
@@ -360,10 +377,12 @@ public final class MetalTerminalView: NSView {
             if timings.outcome == .drawn { statistics.framesDrawn += 1 }
         }
         updateBlink()
-        let sample = FrameSample(
+        let a4 = AllocationCounter.allocations
+        var sample = FrameSample(
             fetchNs: t1 - t0, applyNs: t2 - t1, assembleNs: timings.assembleNs, encodeNs: timings.encodeNs,
             waitNs: timings.waitNs, cpuNs: MonotonicClock.threadCPU() - cpuStart, rowsRebuilt: rebuilt,
             changedRows: renderer.scene.header?.changedRows ?? 0, outcome: timings.outcome)
+        sample.allocations = PartAllocations(fetch: a1 - a0, apply: a2 - a1, view: a3 - a2, draw: a4 - a3)
         sampler?.record(sample)
         return sample
     }

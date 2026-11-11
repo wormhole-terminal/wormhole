@@ -22,8 +22,24 @@ enum RowDrawing {
         return nil
     }
 
+    /// Without the FFI these tests draw blocks from a stand-in for the core's shapes: the full block and its halves.
+    static let shapes: Void = CellShapes.install(TestShapes())
+
+    private struct TestShapes: CellShapeSource {
+        func shapes(_ scalar: UInt32, cellWidth: Float, height: Float, phase: Float, fontSize: Float, scale: Float) -> (shapes: [CellShape], alpha: Float)? {
+            let right = (phase + cellWidth).rounded() - phase.rounded(), half = (height / 2).rounded()
+            switch scalar {
+            case 0x2588: return ([CellShape(rect: [0, 0, right, height])], 1)
+            case 0x2580: return ([CellShape(rect: [0, 0, right, half])], 1)
+            case 0x2584: return ([CellShape(rect: [0, half, right, height])], 1)
+            default: return nil
+            }
+        }
+    }
+
     static func renderer(_ fonts: TerminalFontSettings = TerminalFontSettings(pointSize: 13)) throws -> MetalRenderer {
-        try MetalRenderer(configuration: RendererConfiguration(fonts: fonts, scale: 2))
+        _ = shapes
+        return try MetalRenderer(configuration: RendererConfiguration(fonts: fonts, scale: 2))
     }
 
     static func blank(cols: Int = size.cols, rows: Int = size.rows) -> [[PackedCell]] {
