@@ -40,7 +40,10 @@ fn what_a_project_would_run_is_listed_and_approval_is_for_what_was_shown() {
     assert!(lines.contains(&"shell: /bin/zsh".to_string()), "{lines:?}");
     assert!(lines.contains(&"env: FOO=bar".to_string()), "{lines:?}");
 
+    assert!(desk.approve_reviewed().is_err(), "the review is held before the owner is asked");
+    assert!(desk.hold_reviewed());
     desk.approve_reviewed().expect("approved");
+    assert!(desk.approve_reviewed().is_err(), "a hold is used once");
     assert!(wakes.count() >= 1);
     assert_eq!(desk.review().status, ReviewStatusRecord::Trusted);
     assert!(data.join("trusted-projects.json").is_file(), "kept in the profile's folder");
@@ -52,6 +55,7 @@ fn what_a_project_would_run_is_listed_and_approval_is_for_what_was_shown() {
     assert!(review.lines.iter().any(|l| l.runs == "EVIL=1"));
 
     // The approval binds to the request that was shown, not to what is on disk by the time it lands.
+    assert!(desk.hold_reviewed());
     project(root.path(), r#"{"shell": "/bin/zsh", "env": {"FOO": "bar", "EVIL": "2"}}"#);
     desk.approve_reviewed().expect("approves the one shown");
     assert_eq!(desk.review().status, ReviewStatusRecord::Changed, "the files moved on since");
@@ -62,7 +66,8 @@ fn nothing_is_approved_without_a_review_and_a_broken_project_has_no_lines() {
     let (root, data) = scratch();
     let wakes = Wakes::new();
     let missing = desk(root.path(), &data, &wakes);
-    assert!(missing.approve_reviewed().is_err(), "nothing was shown");
+    assert!(!missing.hold_reviewed(), "nothing was shown");
+    assert!(missing.approve_reviewed().is_err());
     let review = missing.review();
     assert!(review.problem.is_some(), "no .wormhole folder");
     assert!(missing.approve_reviewed().is_err());
@@ -81,6 +86,7 @@ fn revoking_takes_the_approval_back() {
     project(root.path(), r#"{"shell": "/bin/zsh"}"#);
     let desk = desk(root.path(), &data, &Wakes::new());
     desk.review();
+    assert!(desk.hold_reviewed());
     desk.approve_reviewed().expect("approved");
     desk.revoke().expect("revoked");
     assert_eq!(desk.review().status, ReviewStatusRecord::Untrusted);

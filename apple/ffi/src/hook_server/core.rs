@@ -35,6 +35,10 @@ pub(crate) struct Seat {
 
 impl Seat {
     fn new(desk: Arc<AccessDesk>) -> Self {
+        // The mode at launch is what a later edit of `config.json` is measured against: looked at now, not at the
+        // first request, and also while the Automation flag is off, so a widening made together with turning the
+        // flag on is still asked about.
+        desk.mode_in_force(Config::load_for(desk.profile()).settings.agent_access);
         Self { profile: desk.profile().clone(), desk, settings: Mutex::new(None) }
     }
 

@@ -361,3 +361,11 @@ Unfinished or not built in this lane:
 | A04 | Help > Session Hosts | cards start folded (badge, note, id, program, problem lines), click or Return opens; link/heard/quiet facts for attached hosts; badge = Persistent terminals setting; attachments re-read each look | AuxWindows/Hosts/HostCardView.swift, ffi/src/aux_backends/hosts.rs |
 | A01 | `control welcome cursor` / `logo`, `control welcome-dock` | ship lands on the real `>` / logo chevron cell | Wormhole/Aux/AuxController+Intro.swift, ffi welcome_dock |
 | A02, A06 | Licenses window; project commands window | texts in the code font; a second project replaces the first in the open trust window | AuxWindows/About/PackageDetail.swift, Trust/TrustWindow.swift |
+
+## Orchestrator (merge fixes)
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| A07 | TEST: start with `agent_access` "ask" and the Automation flag off; while running, edit config.json to turn the flag on and set `agent_access` "open" in one write; make a request | the earlier mode stays in force and the keep-it question is put | `apple/ffi/src/hook_server/core.rs` `Seat::new` |
+| T20 | Persistent terminals off: `control hosts` for a terminal in the app | no hosting state (`off`), and the Session Hosts badge is off | `WorkspaceBridge/RustWorkspaceBackend+HostProblems.swift` `hosting(of:)` |
+| A01 | build with Xcode 26 on a clean checkout, play any intro | the intro draws (its shader files are in the bundle) | `apple/scripts/build-ffi.sh` (copies `Resources/shader`) |
