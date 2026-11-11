@@ -23,7 +23,22 @@ public struct RowMotionPlan: Sendable, Equatable {
     public static func == (a: Self, b: Self) -> Bool { a.seconds == b.seconds && a.roomSpring?.stiffness == b.roomSpring?.stiffness && a.roomSpring?.damping == b.roomSpring?.damping }
 }
 
+/// How a tile and its row stand at a moment of a status change (`pose::status`): the parts that matter to Flare and Nudge.
+public struct StatusPose: Sendable, Equatable {
+    /// How far outside the tile's edge the flare's ring reaches (points) and how strong it is.
+    public var flareReach, flareStrength: Double
+    /// How far the row is moved sideways (points).
+    public var dx: Double
+    public static let rest = StatusPose(flareReach: 0, flareStrength: 0, dx: 0)
+    public init(flareReach: Double, flareStrength: Double, dx: Double) { (self.flareReach, self.flareStrength, self.dx) = (flareReach, flareStrength, dx) }
+}
+
 public struct RowMotionTables: Sendable {
+    /// How long the change from the tile state at `from` to the one at `to` (their places in the core's urgency order) plays under
+    /// the `motion.status` choice, and where it stands `t` of the way through.
+    public var statusSeconds: @Sendable (_ variant: String, _ from: Int, _ to: Int) -> Double = { _, _, _ in 0 }
+    public var statusPose: @Sendable (_ variant: String, _ from: Int, _ to: Int, _ t: Double) -> StatusPose = { _, _, _, _ in .rest }
+
     public var insertPlan: @Sendable (_ variant: String, _ entering: Bool) -> RowMotionPlan
     public var insertPose: @Sendable (_ variant: String, _ entering: Bool, _ t: Double) -> RowPose
     public var foldPlan: @Sendable (_ variant: String, _ entering: Bool, _ rows: Int) -> RowMotionPlan

@@ -70,6 +70,26 @@ fn closing_a_terminal_ends_its_host_and_forgets_its_row() {
     assert!(fixture.desk().plan_at_launch().expect("plans").saved.is_empty());
 }
 
+/// "Move this window to <profile>": a terminal started after the move is saved in the profile the window is in, and
+/// closing a terminal that ran before the move forgets its row there.
+#[test]
+fn a_window_that_moved_keeps_its_terminals_rows_in_its_new_profile() {
+    let fixture = Fixture::new();
+    let desk = fixture.desk();
+    let before = desk.start(fixture.request(1), support::listener()).expect("starts");
+    assert_eq!(fixture.hosted_rows_in("default"), vec![1]);
+
+    desk.follow_profile("work".into()).expect("follows");
+    let after = desk.start(fixture.request(2), support::listener()).expect("starts");
+    assert_eq!(fixture.hosted_rows_in("work"), vec![2], "the new terminal's row is in the profile the window moved to");
+    assert_eq!(fixture.hosted_rows_in("default"), vec![1], "nothing new in the profile it left");
+
+    after.close();
+    before.close();
+    wait_for("the hosts to end", || fixture.live_hosts().is_empty());
+    assert!(fixture.hosted_rows_in("work").is_empty());
+}
+
 /// A saved row whose host is gone starts again; a live host no row names is an orphan that can be adopted.
 #[test]
 fn gone_hosts_replay_and_unnamed_hosts_are_orphans() {

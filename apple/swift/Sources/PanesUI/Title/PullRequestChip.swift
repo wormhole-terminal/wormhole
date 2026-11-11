@@ -9,11 +9,10 @@ import WorkspaceModel
 
 struct PullRequestChip: View {
     let pr: PullRequestFact
-    @Environment(\.openURL) private var openURL
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Button { pr.url.map { openURL($0) } } label: {
+        Button { TitleClicks.openPullRequest(pr) } label: {
             HStack(spacing: TitleMetrics.extraGap) {
                 ExtraChip(text: pr.label, symbol: ("arrow.triangle.pull", stateColour))
                 if let checks = pr.openChecks {

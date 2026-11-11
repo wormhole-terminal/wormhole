@@ -138,6 +138,7 @@ extension AppController {
             }
             session.windows = target
             session.notes?.follow(profile: id)
+            (session.hub.store.source as? RustWorkspaceBackend)?.followProfile(id)
             // What the window reads of its profile follows: the trust its project actions run under and the usage meters
             // (agent access is judged by the window's own profile in the core, which `rehome` told). The panel's
             // backends were made for the profile it left.

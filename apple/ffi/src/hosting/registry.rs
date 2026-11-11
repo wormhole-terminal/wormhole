@@ -22,6 +22,10 @@ impl Registry {
     /// The profile database in `dir`, with a row for `window` so that what is saved
     /// under it loads again.
     pub(crate) fn open(dir: &Path, window: i64) -> Result<Self, HostingError> {
+        Ok(Self { store: Mutex::new(Self::store_in(dir, window)?), window })
+    }
+
+    fn store_in(dir: &Path, window: i64) -> Result<Store, HostingError> {
         let store = Store::open_at(dir).map_err(HostingError::store)?;
         let known = store.load().map_err(HostingError::store)?.iter().any(|w| w.id == window);
         if !known {
@@ -29,7 +33,14 @@ impl Registry {
                 .save_window_meta(&WindowRecord { id: window, ..WindowRecord::default() })
                 .map_err(HostingError::store)?;
         }
-        Ok(Self { store: Mutex::new(store), window })
+        Ok(store)
+    }
+
+    /// The window moved to the profile in `dir`: its rows are written and read there from now on (the terminals it
+    /// runs already hold this registry, so it is the store that changes).
+    pub(crate) fn follow(&self, dir: &Path) -> Result<(), HostingError> {
+        *self.store() = Self::store_in(dir, self.window)?;
+        Ok(())
     }
 
     fn store(&self) -> MutexGuard<'_, Store> {

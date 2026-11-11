@@ -33,10 +33,26 @@ public enum WindowFrames {
             height: visible.height)
     }
 
+    /// A test instance cannot enter the system's full screen (AppKit allows it only for the active app), so it keeps the state
+    /// itself: the windows it holds as full screen. A saved window comes back through the same call a person's green light
+    /// makes, and the frame record reads it, so the save and the restore run for real up to the system's own transition.
+    public static var simulatesFullScreen = false
+    private static var simulated: Set<ObjectIdentifier> = []
+
+    public static func isFullScreen(_ window: NSWindow) -> Bool {
+        simulatesFullScreen ? simulated.contains(ObjectIdentifier(window)) : window.styleMask.contains(.fullScreen)
+    }
+
+    /// What the green light's full-screen item does.
+    public static func toggleFullScreen(_ window: NSWindow) {
+        guard simulatesFullScreen else { return window.toggleFullScreen(nil) }
+        if !simulated.insert(ObjectIdentifier(window)).inserted { simulated.remove(ObjectIdentifier(window)) }
+    }
+
     /// Where `window` is, with what to come back to when it is full screen or zoomed: `windowed`, the rectangle it had
     /// before (the system does not say it, the controller keeps the last one).
     public static func frame(of window: NSWindow, windowed: NSRect) -> WindowFrame {
-        let kind: FrameKind = window.styleMask.contains(.fullScreen) ? .fullscreen : window.isZoomed ? .maximized : .windowed
+        let kind: FrameKind = isFullScreen(window) ? .fullscreen : window.isZoomed ? .maximized : .windowed
         let rect = flipped(kind == .windowed ? window.frame : windowed)
         return WindowFrame(
             kind: kind, x: rect.minX, y: rect.minY, width: rect.width, height: rect.height,
@@ -59,7 +75,7 @@ public enum WindowFrames {
         switch frame.kind {
         case .windowed: break
         case .maximized: window.zoom(nil)
-        case .fullscreen: window.toggleFullScreen(nil)
+        case .fullscreen: if !isFullScreen(window) { toggleFullScreen(window) }
         }
     }
 }

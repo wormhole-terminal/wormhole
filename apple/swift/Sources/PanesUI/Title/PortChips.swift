@@ -9,7 +9,6 @@ import SwiftUI
 struct PortChips: View {
     let ports: [UInt16]
     let step: Int
-    @Environment(\.openURL) private var openURL
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -18,7 +17,7 @@ struct PortChips: View {
         let rest = Array(ports.dropFirst(shown.count))
         HStack(spacing: TitleMetrics.chipGap) {
             ForEach(shown, id: \.self) { port in
-                Button { Ports.url(port).map { openURL($0) } } label: {
+                Button { TitleClicks.openPort(port) } label: {
                     ExtraChip(text: Ports.label(port), symbol: ("globe", tokens.textPrimary))
                 }
                 .buttonStyle(.plain)
@@ -32,7 +31,7 @@ struct PortChips: View {
     private func more(_ rest: [UInt16]) -> some View {
         Menu {
             ForEach(rest, id: \.self) { port in
-                Button(Ports.label(port)) { Ports.url(port).map { openURL($0) } }
+                Button(Ports.label(port)) { TitleClicks.openPort(port) }
             }
         } label: {
             ExtraChip(text: "+\(rest.count)", filled: false)

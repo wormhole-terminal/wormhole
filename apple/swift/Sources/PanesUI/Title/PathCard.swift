@@ -20,9 +20,12 @@ struct PathCard: View {
             Text(path).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).textSelection(.enabled)
                 .lineLimit(3).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: Space._1) {
-                cardButton("arrow.up.forward.app", PanesText.openInFinder) { hover.close(); actions.revealFolder() }
-                cardButton(copied ? "checkmark" : "doc.on.doc", copied ? PanesText.copied : PanesText.copyPath) { copy() }
-                cardButton("text.insert", PanesText.insertIntoTerminal, enabled: actions.canInsert) { hover.close(); actions.insertPath() }
+                ForEach(PathCardItem.allCases, id: \.self) { item in
+                    let label = item == .copyPath && copied ? PanesText.copied : item.title
+                    cardButton(item == .copyPath && copied ? "checkmark" : item.symbol, label, enabled: item.isOn(actions)) {
+                        if item == .copyPath { copy() } else { hover.close(); item.perform(actions) }
+                    }
+                }
             }
         }
         .padding(Space._3)
@@ -38,7 +41,7 @@ struct PathCard: View {
     }
 
     private func copy() {
-        actions.copyPath()
+        PathCardItem.copyPath.perform(actions)
         copied = true
         Task {
             try? await Task.sleep(for: Self.copiedFor)

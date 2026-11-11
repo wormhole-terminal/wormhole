@@ -13,16 +13,16 @@ struct OpenInButtons: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        let choice = backend.choice()
+        let open = OpenInMenu(folder: folder, backend: backend), choice = open.choice
         HStack(spacing: 0) {
-            TitleIconButton(label: tooltip(choice), action: { backend.open(folder, in: choice.app) }) {
+            TitleIconButton(label: tooltip(choice), action: open.click) {
                 AppIcon(app: choice.app, image: icon(choice.app), size: Metric.titleGlyph)
             }
             Menu {
                 Section(PanesText.openFolderIn) {
-                    ForEach(backend.apps(), id: \.bundle) { app in
-                        Toggle(isOn: Binding(get: { app.bundle == choice.app.bundle }, set: { _ in backend.open(folder, in: app) })) {
-                            Label { Text(app.name) } icon: { AppIcon(app: app, image: icon(app), size: Metric.titleGlyph) }
+                    ForEach(open.items, id: \.app.bundle) { item in
+                        Toggle(isOn: Binding(get: { item.checked }, set: { _ in open.pick(item.app) })) {
+                            Label { Text(item.app.name) } icon: { AppIcon(app: item.app, image: icon(item.app), size: Metric.titleGlyph) }
                         }
                     }
                 }

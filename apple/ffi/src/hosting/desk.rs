@@ -8,7 +8,7 @@
 
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError, RwLock, Weak};
 use std::time::Duration;
 
 use wormhole_core::config::Config;
@@ -16,7 +16,7 @@ use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::config::profile::ProfileList;
 use wormhole_core::ipc::host_binary::HostProgram;
 use wormhole_core::ipc::hosts::{self, AttachFailure, HostMeta, LaunchHosts, Probed, Restore};
-use wormhole_core::storage::paths::{DataRoot, ProfilePaths};
+use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 use wormhole_core::storage::store::Store;
 use wormhole_term::GridSize;
 use wormhole_term::client::AttachError;
@@ -76,7 +76,7 @@ pub struct HostedTerminals {
     data_dir: PathBuf,
     pub(super) hosts_dir: PathBuf,
     /// The folder of the profile these terminals belong to: the settings and the saved text this object reads are its.
-    pub(super) profile: ProfilePaths,
+    profile: RwLock<ProfilePaths>,
     program: HostProgram,
     pub(super) registry: Arc<Registry>,
     pub(super) checkpoints: Arc<Checkpoints>,
@@ -115,7 +115,7 @@ impl HostedTerminals {
         Ok(Arc::new(Self {
             hosts_dir: hosts::hosts_dir(&data_dir),
             registry: Arc::new(Registry::open(profile.dir(), window)?),
-            profile,
+            profile: RwLock::new(profile),
             checkpoints: Arc::new(Checkpoints::new(&data_dir)),
             forgetting: Mutex::default(),
             program: program::locate(host_binary.as_deref()),
@@ -127,10 +127,21 @@ impl HostedTerminals {
         }))
     }
 
+    /// The window moved to profile `profile` ("Move this window to…"): the rows of its terminals, their text and the
+    /// settings this object reads are that profile's from now on, so a terminal started after the move is saved
+    /// where the window is.
+    pub fn follow_profile(&self, profile: String) -> Result<(), HostingError> {
+        let id = ProfileId::parse(&profile).map_err(|err| HostingError::Store { reason: err.to_string() })?;
+        let paths = DataRoot::new(&self.data_dir).profile(&id);
+        self.registry.follow(paths.dir())?;
+        *self.profile.write().unwrap_or_else(PoisonError::into_inner) = paths;
+        Ok(())
+    }
+
     /// Whether Settings has Persistent terminals on, by core's rules for feature flags (a release build
     /// reads the flag's release default, which is off, unless the flags are unlocked in `config.json`).
     pub fn enabled(&self) -> bool {
-        Config::load_for(&self.profile).settings.feature_enabled(FeatureFlag::PersistentTerminals)
+        Config::load_for(&self.profile()).settings.feature_enabled(FeatureFlag::PersistentTerminals)
     }
 
     /// Where the host program is, or why there is none: with none (or a disposable copy of the app) every
@@ -271,6 +282,10 @@ impl HostedTerminals {
 }
 
 impl HostedTerminals {
+    pub(super) fn profile(&self) -> ProfilePaths {
+        self.profile.read().unwrap_or_else(PoisonError::into_inner).clone()
+    }
+
     /// The host ids that saved terminals of the other profiles name: a host of theirs is not an orphan.
     fn named_elsewhere(&self) -> Vec<String> {
         let root = DataRoot::new(&self.data_dir);
@@ -338,7 +353,7 @@ impl HostedTerminals {
 
     /// The key host `host` seals its checkpoint with, when this terminal keeps checkpoints at all.
     fn checkpoint_key(&self, tab: i64, host: &str) -> Option<wormhole_term::checkpoint::Key> {
-        if locked(&self.forgetting).contains(&tab) || !checkpoints::on(&self.profile) {
+        if locked(&self.forgetting).contains(&tab) || !checkpoints::on(&self.profile()) {
             return None;
         }
         self.registry.checkpoint_key(host)
@@ -346,7 +361,7 @@ impl HostedTerminals {
 
     /// The checkpoints of old hosts at launch (off the main thread): `running` are spared.
     fn sweep_checkpoints(&self, running: &HashSet<String>) {
-        let any_on = checkpoints::on(&self.profile) || self.other_profiles_keep_checkpoints();
+        let any_on = checkpoints::on(&self.profile()) || self.other_profiles_keep_checkpoints();
         let (checkpoints, running) = (Arc::clone(&self.checkpoints), running.clone());
         let sweep = std::thread::Builder::new()
             .name("wormhole-ffi-checkpoint-sweep".into())

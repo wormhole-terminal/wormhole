@@ -11,6 +11,9 @@ extension SidebarView {
     }
 
     func noteStatusChanges(from old: [TerminalID: TileState], to new: [TerminalID: TileState]) {
-        for (id, status) in new where old[id].map({ $0 != status }) == true { shifts[id, default: 0] += 1 }
+        for (id, status) in new {
+            guard let was = old[id], was != status else { continue }
+            shifts[id] = StatusShift(count: (shifts[id]?.count ?? 0) + 1, from: was, to: status)
+        }
     }
 }

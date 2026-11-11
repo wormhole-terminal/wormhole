@@ -14,11 +14,15 @@ public struct HostingSetup: Sendable {
     /// Whether this window asks for the hosts nobody names, to bring them into a Recovered group: one window of the app
     /// does, or each would take the same hosts.
     public var adoptsOrphans: Bool
+    /// The profile the window belongs to when it is not the one Wormhole is in (a window opened beside the shown profile's):
+    /// its terminals' rows are kept there. Nil is the profile Wormhole is in.
+    public var profile: String?
 
     public init(
         dataDirectory: String? = nil, hostBinary: String? = ProcessInfo.processInfo.environment["WORMHOLE_HOST_BIN"],  // text: an environment variable
-        window: Int64 = 1, adoptsOrphans: Bool = true
+        window: Int64 = 1, adoptsOrphans: Bool = true, profile: String? = nil
     ) {
-        (self.dataDirectory, self.hostBinary, self.window, self.adoptsOrphans) = (dataDirectory, hostBinary, window, adoptsOrphans)
+        (self.dataDirectory, self.hostBinary, self.window, self.adoptsOrphans, self.profile) =
+            (dataDirectory, hostBinary, window, adoptsOrphans, profile)
     }
 }

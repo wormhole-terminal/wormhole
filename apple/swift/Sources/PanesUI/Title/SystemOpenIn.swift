@@ -5,6 +5,7 @@
 // chosen app is the app-wide `open_in` setting, the window's to say.
 
 import AppKit
+import DesignSystem
 import PanesModel
 
 @MainActor
@@ -26,10 +27,10 @@ public struct SystemOpenIn: OpenInBackend {
     public func open(_ folder: String, in app: OpenInApp) {
         let target = URL(fileURLWithPath: folder)
         guard app != .finder, let url = Self.url(for: app.bundle) else {
-            NSWorkspace.shared.open(target)
+            ExternalOpen.open(target)
             return
         }
-        NSWorkspace.shared.open([target], withApplicationAt: url, configuration: NSWorkspace.OpenConfiguration())
+        ExternalOpen.open(target, in: app.bundle, at: url)
     }
 
     /// The app's own icon at the glyph size, nil for one that isn't installed.

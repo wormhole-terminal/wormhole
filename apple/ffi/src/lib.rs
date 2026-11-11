@@ -137,7 +137,8 @@ pub use open_file::{open_file_record_to, open_file_run, open_file_tooltip, repo_
 pub use probes::{ProbeStatusRecord, ResolvedFile};
 pub use profile::{ActiveProfile, active_profile};
 pub use row_motion::{
-    RowMotionRecord, RowPoseRecord, fold_row_motion, fold_row_pose, insert_row_motion, insert_row_pose,
+    RowMotionRecord, RowPoseRecord, StatusPoseRecord, fold_row_motion, fold_row_pose, insert_row_motion, insert_row_pose,
+    status_motion_duration, status_motion_pose,
 };
 pub use settings::{
     FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,

@@ -19,12 +19,19 @@ struct GroupHeadView: View {
     @Environment(\.sidebarMetrics) private var metrics
     @Environment(\.sidebarLook) private var look
     @Environment(\.keyedStop) private var keyed
+    @Environment(\.reduceMotion) private var reduceMotion
 
     private var isEmpty: Bool { section.terminalCount == 0 && head.isPinned }
     /// The core has `~`-shortened it; a long one is cut from the front, as a row's place is.
     private var folder: String? { look.showsGroupFolders ? head.folder : nil }
     private var twoLines: Bool { folder != nil && metrics.density != .dense }
     private var height: CGFloat { twoLines ? metrics.headTwoLineHeight : isEmpty ? metrics.emptyHeight : metrics.headHeight }
+
+    /// The folded summary waits for the rows to be gone, as the core's `summary_opacity` does (Classic shows it at once).
+    private var summaryAnimation: Animation {
+        let wait = head.isFolded && !reduceMotion ? RowMotion.tables?.foldPlan(look.foldMotion, false, section.terminalCount).seconds : nil
+        return wait.map { $0 > 0 ? SidebarMotion.summary.delay($0) : SidebarMotion.summary } ?? SidebarMotion.summary
+    }
 
     var body: some View {
         HStack(spacing: Space._2) {
@@ -54,7 +61,7 @@ struct GroupHeadView: View {
                 RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
             }
         }
-        .animation(SidebarMotion.summary, value: head.isFolded)
+        .animation(summaryAnimation, value: head.isFolded)
         .opacity(context.drag.lifts(.group(head.id)) ? DragLift.opacity : 1)
         .dragSource(.group(head.id), hooks: context.drag)
         .dropFrame(.head(head.id))

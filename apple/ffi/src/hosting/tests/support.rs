@@ -74,6 +74,15 @@ impl Fixture {
         ids
     }
 
+    /// The terminal ids window 1 names a host for in the profile `profile` of this folder (its own database).
+    pub(super) fn hosted_rows_in(&self, profile: &str) -> Vec<i64> {
+        use wormhole_core::storage::paths::{DataRoot, ProfileId};
+        let paths = DataRoot::new(self.dir.path()).profile(&ProfileId::parse(profile).expect("id"));
+        let store = wormhole_core::storage::store::Store::open_at(paths.dir()).expect("store");
+        let windows = store.load().expect("loads");
+        windows.iter().filter(|w| w.id == 1).flat_map(|w| &w.sessions).filter(|s| s.host_id.is_some()).map(|s| s.id).collect()
+    }
+
     /// The database forgets every saved terminal (a lost database, another profile's).
     pub(super) fn forget_rows(&self) {
         let mut store = wormhole_core::storage::store::Store::open_at(self.dir.path()).expect("store");

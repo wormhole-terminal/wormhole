@@ -7,7 +7,7 @@ import SwiftUI
 import WorkspaceModel
 
 /// The row's height scaled by the pose's `clip`, so the rows around follow frame by frame.
-private struct ClipHeight: Layout {
+struct ClipHeight: Layout {
     var clip: Double
     var animatableData: Double {
         get { clip }
@@ -24,7 +24,7 @@ private struct ClipHeight: Layout {
     }
 }
 
-private struct RowPoseEffect: ViewModifier, @preconcurrency Animatable {
+struct RowPoseEffect: ViewModifier, @preconcurrency Animatable {
     var progress: Double
     let pose: @Sendable (_ comingAt: Double?, _ goingAt: Double?) -> RowPose
 

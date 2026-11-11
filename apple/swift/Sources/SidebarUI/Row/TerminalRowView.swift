@@ -13,6 +13,8 @@ struct TerminalRowView: View {
     let isSelected: Bool
     let solo: Bool
     let context: SidebarContext
+    /// Drawn as the picture of the row being dragged: its card alone, with the shadow of something floating.
+    var lifted = false
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
     @Environment(\.sidebarMetrics) private var metrics
@@ -27,6 +29,20 @@ struct TerminalRowView: View {
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: solo ? metrics.cardRadius : metrics.rowRadius) }
 
     var body: some View {
+        if lifted { liftedFace } else { interactive }
+    }
+
+    /// The row lifted out of the list as a card of its own (`style::card_lifted`): no gestures, frames or menus of its own, so
+    /// the list's drop lines never see it.
+    private var liftedFace: some View {
+        content.padding(tokens.metrics.borderWidth)
+            .background(shape.fill(isSelected ? tokens.sidebarRowSelected : tokens.card))
+            .overlay { shape.strokeBorder(isSelected ? tokens.sidebarRowSelected : tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) }
+            .shadow(color: tokens.shadow, radius: Space._3, y: Space._1)
+            .allowsHitTesting(false)
+    }
+
+    private var interactive: some View {
         ZStack(alignment: .topTrailing) {
             Button { context.open(terminal.id) } label: { content }
                 .buttonStyle(.plain)
@@ -44,7 +60,7 @@ struct TerminalRowView: View {
             if let part = row.splitMarks.bracket { SplitLine(part: part, x: inset + metrics.tile / 2) }
         }
         .overlay { if solo { shape.strokeBorder(isSelected ? tokens.sidebarRowSelected : tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) } }
-        .overlay { StatusWash(state: tileState, count: reduceMotion ? 0 : context.shifts[terminal.id] ?? 0, enabled: look.statusMotion == .wash, shape: shape) }
+        .overlay { StatusWash(state: tileState, count: reduceMotion ? 0 : context.shifts[terminal.id]?.count ?? 0, enabled: look.statusMotion == .wash, shape: shape) }
         .overlay {
             if keyed == .row(terminal.id) {
                 RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
@@ -53,6 +69,7 @@ struct TerminalRowView: View {
         .overlay { if let flash = context.flash, flash.id == terminal.id { RowFlash(shape: shape).id(flash.generation) } }
         .contentShape(shape)
         .ringWhileMenuOpen(hovering: hovering)
+        .statusNudge(context.shifts[terminal.id])
         .onHover { hovering = $0 }
         .onAppear { hovering = look.hovered == terminal.id }
         .animation(SidebarMotion.state, value: hovering)
@@ -82,6 +99,7 @@ struct TerminalRowView: View {
         HStack(spacing: metrics.tileGap) {
             StatusTile(state: tileState, agent: terminal.agent, size: metrics.tile, phase: StatusTile.phase(of: terminal.id),
                        surface: isSelected ? tokens.sidebarRowSelected : tokens.sidebarBackground)
+                .statusFlare(context.shifts[terminal.id], tile: metrics.tile)
             RowLines(row: row, isSelected: isSelected, hovering: hovering, rename: rename)
         }
         .padding(.horizontal, inset)

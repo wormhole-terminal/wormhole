@@ -43,7 +43,7 @@ struct WindowsHost {
                 workspace: { id in
                     // Persistent terminals follow Settings' flag (off in a release build unless unlocked). The terminals
                     // are saved under their window's id, and one window brings in the hosts nobody names.
-                    let hosting = HostingSetup(window: Int64(id), adoptsOrphans: first)
+                    let hosting = HostingSetup(window: Int64(id), adoptsOrphans: first, profile: adoptsOrphans ? nil : profile)
                     first = false
                     let setup = WorkspaceSetup(program: program, profile: profile, hosting: hosting)
                     let backend = windows.workspace(window: id, setup: setup)

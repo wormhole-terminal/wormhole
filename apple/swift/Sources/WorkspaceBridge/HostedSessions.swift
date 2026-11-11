@@ -42,6 +42,7 @@ final class HostedSessions {
     static func open(_ setup: HostingSetup) -> Availability {
         do {
             let desk = try HostedTerminals(dataDir: setup.dataDirectory, hostBinary: setup.hostBinary, window: setup.window)
+            if let profile = setup.profile { try desk.followProfile(profile: profile) }
             switch desk.program() {
             case .found: return .on(HostedSessions(desk: desk, adoptsOrphans: setup.adoptsOrphans))
             case .disposableCopy: return .needsApplications(desk)

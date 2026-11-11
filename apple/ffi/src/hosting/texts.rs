@@ -58,6 +58,6 @@ impl HostedTerminals {
 impl HostedTerminals {
     /// Whether the default profile keeps terminal text: its setting. (What turning it off erases is core's.)
     pub(super) fn keeps_text(&self) -> bool {
-        wormhole_core::config::Config::load_for(&self.profile).settings.restore_terminal_text
+        wormhole_core::config::Config::load_for(&self.profile()).settings.restore_terminal_text
     }
 }

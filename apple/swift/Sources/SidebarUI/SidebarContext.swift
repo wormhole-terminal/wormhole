@@ -17,8 +17,8 @@ struct SidebarContext {
     /// the old name).
     let renaming: SidebarRename?
     let rename: @MainActor (SidebarRename?) -> Void
-    /// How many status changes each terminal has had since the list appeared: what plays the wash.
-    let shifts: [TerminalID: Int]
+    /// Each terminal's status changes since the list appeared (how many, and the latest between which states): what plays the wash, the flare and the nudge.
+    let shifts: [TerminalID: StatusShift]
     let drag: DragHooks
     /// Every terminal, folded ones too, for "Show beside…" and the moves a menu offers.
     let everyTerminal: [TerminalSummary]

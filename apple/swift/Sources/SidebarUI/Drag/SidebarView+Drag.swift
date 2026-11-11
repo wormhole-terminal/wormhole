@@ -10,6 +10,8 @@ struct LiveDrag: Equatable {
     var item: DragItem
     var point: CGPoint
     var aim: DropAim?
+    /// Where in the row's card the pointer took hold of it, which the lifted picture keeps.
+    var grab: CGPoint = .zero
 }
 
 extension EnvironmentValues {
@@ -53,7 +55,9 @@ extension SidebarView {
         guard !escape.ended else { return }
         escape.arm { cancelDrag() }
         outside = leftList(item, point)
-        drag = LiveDrag(item: item, point: point, aim: outside ? nil : aim(item, at: point, sections))
+        var grab = drag?.item == item ? drag?.grab ?? .zero : .zero
+        if drag?.item != item, case .terminal(let id) = item, let frame = frames[.row(id)] { grab = CGPoint(x: point.x - frame.minX, y: point.y - frame.minY) }
+        drag = LiveDrag(item: item, point: point, aim: outside ? nil : aim(item, at: point, sections), grab: grab)
         if case .terminal(let id) = item { if outside { terminalDrag?.move(id, to: windowPoint) } else { terminalDrag?.leave() } }
     }
 
@@ -105,12 +109,21 @@ extension SidebarView {
             ZStack(alignment: .topLeading) {
                 if let mark = (drag?.aim ?? paneAim)?.mark { DropMarkView(mark: mark, lines: lines) }
                 if let drag {
-                    DragGhost(terminal: ghostTerminal(drag.item), title: ghostTitle(drag.item))
-                        .fixedSize().position(x: drag.point.x, y: drag.point.y)
+                    if case .terminal(let id) = drag.item, let row = sections.lazy.flatMap(\.rows).first(where: { $0.id == id }), let frame = frames[.row(id)] {
+                        LiftedPicture(row: row, context: context(sections), drag: drag, width: frame.width, target: onto(drag.aim?.mark, lines))
+                    } else {
+                        DragGhost(terminal: ghostTerminal(drag.item), title: ghostTitle(drag.item))
+                            .fixedSize().position(x: drag.point.x, y: drag.point.y)
+                    }
                 }
             }
             .transition(.opacity)
         }
+    }
+
+    /// The row a drop would make a split with, as the lifted picture's chip snaps onto it.
+    private func onto(_ mark: DropMark?, _ lines: DropLines) -> CGRect? {
+        if case .row(let id)? = mark { lines.rows[id] } else { nil }
     }
 
     private func ghostTerminal(_ item: DragItem) -> TerminalSummary? {

@@ -4,8 +4,9 @@
 //! the Settings page previews, from one source.
 
 use wormhole_core::view::motion::pose::fold::{self, Slot};
-use wormhole_core::view::motion::pose::{Phase, Pose, Room, insert};
-use wormhole_core::view::motion::{FoldMotion, InsertMotion, MotionChoice};
+use wormhole_core::view::motion::pose::{Phase, Pose, Room, insert, status};
+use wormhole_core::view::motion::{FoldMotion, InsertMotion, MotionChoice, StatusMotion};
+use wormhole_core::view::sidebar::Urgency;
 
 /// How a row stands: how much shows through, how far it is moved, and the share of its height that is open.
 #[derive(Debug, Clone, Copy, PartialEq, uniffi::Record)]
@@ -81,6 +82,56 @@ pub fn fold_row_pose(variant: String, entering: bool, t: f32, index: u32, rows: 
     fold::pose(fold_variant(&variant), phase(entering), t, slot).into()
 }
 
+/// How a tile and its row stand part-way through a status change (`pose::status`): how much of the old status's light, edge
+/// and badge still shows (`leaving`), the new light or edge (`ring`), the new badge, the ring a flare sends out of the
+/// tile's edge, the card's wash, the row's sideways nudge in points, and how far the second line has rolled.
+#[derive(Debug, Clone, Copy, PartialEq, uniffi::Record)]
+pub struct StatusPoseRecord {
+    pub leaving: f32,
+    pub ring: f32,
+    pub badge_opacity: f32,
+    pub badge_scale: f32,
+    pub flare_reach: f32,
+    pub flare_strength: f32,
+    pub wash: f32,
+    pub dx: f32,
+    pub roll: f32,
+}
+
+/// A status by its place in `Urgency::ORDER` (loudest first: needs you, failed, working, bell, new output, running, done,
+/// idle), which is the order the sidebar's tile states are in.
+fn urgency(index: u8) -> Urgency {
+    Urgency::ORDER.get(usize::from(index)).copied().unwrap_or(Urgency::Idle)
+}
+
+fn status_variant(name: &str) -> StatusMotion {
+    StatusMotion::from_name(name).unwrap_or_default()
+}
+
+/// How long the change from status `from` to `to` plays under the `motion.status` choice `variant`, in milliseconds (0: a
+/// cut, which is what a variant with nothing to say for that change is).
+#[uniffi::export]
+pub fn status_motion_duration(variant: String, from: u8, to: u8) -> f32 {
+    status::duration(status_variant(&variant), urgency(from), urgency(to)).as_secs_f32() * 1000.0
+}
+
+/// The tile and row `t` (0 to 1) of the way through that change.
+#[uniffi::export]
+pub fn status_motion_pose(variant: String, from: u8, to: u8, t: f32) -> StatusPoseRecord {
+    let pose = status::pose(status_variant(&variant), urgency(from), urgency(to), t);
+    StatusPoseRecord {
+        leaving: pose.leaving,
+        ring: pose.ring,
+        badge_opacity: pose.badge.opacity,
+        badge_scale: pose.badge.scale,
+        flare_reach: pose.flare.reach,
+        flare_strength: pose.flare.strength,
+        wash: pose.wash,
+        dx: pose.dx,
+        roll: pose.roll,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -112,5 +163,18 @@ mod tests {
             fold_row_pose("tuck".into(), false, 0.2, 2, rows),
         );
         assert!(bottom.opacity < top.opacity && bottom.dy < 0.0);
+    }
+
+    #[test]
+    fn a_flare_and_a_nudge_are_for_a_terminal_that_asks() {
+        // needs you is 0, idle 7.
+        assert_eq!(status_motion_duration("flare".into(), 7, 0), 700.0);
+        assert_eq!(status_motion_duration("nudge".into(), 7, 0), 420.0);
+        assert_eq!(status_motion_duration("flare".into(), 0, 7), 0.0, "going quiet is a cut");
+        assert_eq!(status_motion_duration("nudge".into(), 7, 7), 0.0, "no change is a cut");
+        assert!(status_motion_pose("flare".into(), 7, 0, 0.3).flare_strength > 0.0);
+        assert_eq!(status_motion_pose("flare".into(), 7, 0, 1.0).flare_strength, 0.0);
+        let aside = (1..20).map(|i| status_motion_pose("nudge".into(), 7, 0, i as f32 / 20.0).dx).fold(0.0, f32::max);
+        assert!(aside > 3.0 && aside <= 4.0, "{aside}");
     }
 }

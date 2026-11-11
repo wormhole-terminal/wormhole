@@ -16,6 +16,14 @@ public enum ExternalOpen {
         if !record("open \(url.isFileURL ? url.path : url.absoluteString)") { NSWorkspace.shared.open(url) }
     }
 
+    /// Opens `target` in the app with bundle identifier `bundle` found at `app` (Open in…); a test instance records it.
+    @MainActor
+    public static func open(_ target: URL, in bundle: String, at app: URL) {
+        if !record("open \(target.path) in \(bundle)") {
+            NSWorkspace.shared.open([target], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+        }
+    }
+
     /// Shows `urls` in a Finder window with them selected.
     public static func reveal(_ urls: [URL]) {
         if !record("reveal " + urls.map(\.path).joined(separator: " ")) { NSWorkspace.shared.activateFileViewerSelecting(urls) }

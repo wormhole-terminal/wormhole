@@ -13,12 +13,12 @@ struct MoreMenu: View {
 
     var body: some View {
         let facts = plan.facts
-        let choice = backend.choice()
         Menu {
             if plan.draws(.openIn), let folder = facts.folder {
+                let open = OpenInMenu(folder: folder, backend: backend)
                 Section(PanesText.openFolderIn) {
-                    ForEach(backend.apps(), id: \.bundle) { app in
-                        Toggle(app.name, isOn: Binding(get: { app.bundle == choice.app.bundle }, set: { _ in backend.open(folder, in: app) }))
+                    ForEach(open.items, id: \.app.bundle) { item in
+                        Toggle(item.app.name, isOn: Binding(get: { item.checked }, set: { _ in open.pick(item.app) }))
                     }
                 }
             }

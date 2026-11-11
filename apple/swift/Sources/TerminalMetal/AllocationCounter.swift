@@ -18,6 +18,13 @@ public enum AllocationCounter {
     /// Allocations on the main thread since `start()`.
     public static var allocations: Int { count.load(ordering: .relaxed) }
 
+    /// What the hook held before `start()` (stack logging of a profiled run), put back by `stop()`.
+    private static let previous = Mutex<Logger?>(nil)
+
+    private static func isOurs(_ other: Logger?) -> Bool {
+        other.map { unsafeBitCast($0, to: UnsafeRawPointer.self) == unsafeBitCast(logger, to: UnsafeRawPointer.self) } ?? false
+    }
+
     /// Starts counting from zero; false when malloc has no logger hook to set.
     @discardableResult
     public static func start() -> Bool {
@@ -25,11 +32,16 @@ public enum AllocationCounter {
         // Touched here, so the callback never runs a lazy initialiser (which could allocate) from inside malloc.
         count.store(0, ordering: .relaxed)
         _ = allocate
+        if !isOurs(slot.pointee) { previous.withLock { $0 = slot.pointee } }
         slot.pointee = logger
         return true
     }
 
-    public static func stop() { slot?.pointee = nil }
+    /// Stops counting and gives the hook back to what held it before (Instruments, `MallocStackLogging`).
+    public static func stop() {
+        guard let slot, isOurs(slot.pointee) else { return }
+        slot.pointee = previous.withLock { $0 }
+    }
 
     /// Counts the allocations `body` makes on the main thread.
     public static func counting<T>(_ body: () throws -> T) rethrows -> (T, allocations: Int) {

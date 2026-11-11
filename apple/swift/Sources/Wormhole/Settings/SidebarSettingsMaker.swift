@@ -30,6 +30,8 @@ enum SidebarSettingsMaker {
         case "crossfade": .crossfade
         case "badge-pop": .badgePop
         case "wash": .wash
+        case "flare": .flare
+        case "nudge": .nudge
         case "line-roll": .lineRoll
         default: nil
         }

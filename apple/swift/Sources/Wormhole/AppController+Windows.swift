@@ -3,6 +3,7 @@
 // saved of each and where each workspace comes from is the core's (`WindowsHost`).
 
 import AppKit
+import DesignSystem
 import PanesUI
 import PlatformModel
 import WindowUI
@@ -78,7 +79,7 @@ extension AppController {
         hub.onRestartToUpdate = { [weak self] in self?.updateFollower?.requestRestart() }
         hub.launchesApps = policy.touchesSystem
         hub.onShowProjectCommands = { [weak self] in self?.aux.showTrust() }
-        hub.notices.onOpenLogs = { [dataDirectory] in NSWorkspace.shared.open(dataDirectory.appendingPathComponent("logs")) }
+        hub.notices.onOpenLogs = { [dataDirectory] in ExternalOpen.open(dataDirectory.appendingPathComponent("logs")) }
         hub.actions.openSettings = { [weak self] in self?.showSettings() }
         hub.actions.profiles = profileList(for: session)
         hub.actions.profile = profileActions(for: session)

@@ -24,6 +24,10 @@ enum DragLift {
     static let opacity = 0.4
     /// The least way the pointer moves before a press is a drag and not a click.
     static let slop: CGFloat = 6
+    /// How far from the pointer the compact chip stands while it is not on a row: to its right, about a line up
+    /// (`GHOST_POINTER_GAP`, `GHOST_POINTER_RISE`).
+    static let chipGap: CGFloat = 12
+    static let chipRise: CGFloat = 14
     /// The coordinate space of the list's content, which frames and pointer positions are measured in.
     static let space = "sidebar-list"
 }

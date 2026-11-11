@@ -91,6 +91,8 @@ final class AppController: NSObject, NSApplicationDelegate {
             Pasteboard.divert(to: dataDirectory.appendingPathComponent("pasteboard.txt"))
             PanelPick.divert()
             Trash.divert(to: dataDirectory.appendingPathComponent("trash"))
+            // A test instance cannot enter the system's full screen: a window keeps that state itself, so saving and restoring it still run.
+            WindowFrames.simulatesFullScreen = true
         }
         // Nor does it launch the person's browser, Finder or editor: what it would launch is a file there too (`opened.txt`),
         // the core's launches (a file in an editor at a line) included.

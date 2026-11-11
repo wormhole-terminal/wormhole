@@ -42,7 +42,13 @@ extension AppController {
                 reply("error: \(command) needs the id of a window")
                 return true
             }
-            if command == "full-screen" { window.toggleFullScreen(nil) } else { window.zoom(nil) }
+            if command == "full-screen" {
+                WindowFrames.toggleFullScreen(window)
+                // The system tells the controller when the transition ends; a simulated one has none.
+                if WindowFrames.simulatesFullScreen { (window.windowController as? WorkspaceWindowController)?.onFrameChange?() }
+            } else {
+                window.zoom(nil)
+            }
         case "minimise", "place":
             // `minimise ID` puts the window in the Dock; `place ID X Y W H` puts it there (the core's space: y down).
             guard let id = numbers.first, let window = sessions.first(where: { $0.id == id })?.window else {

@@ -46,6 +46,11 @@ extension RustWorkspaceBackend {
     /// The persistent terminals' object while Settings has them on.
     var hosting: HostedSessions? { hosted.flatMap { $0.enabled ? $0 : nil } }
 
+    /// The window moved to profile `id`: the rows of the terminals it starts from now on, and of those it runs, are kept there.
+    public func followProfile(_ id: String) {
+        do { try hosted?.desk.followProfile(profile: id) } catch { FileHandle.standardError.write(Data("persistent terminals: \(error)\n".utf8)) }  // text: a diagnostic written to stderr
+    }
+
     /// Begin starting or attaching terminal `id` off the main actor; `connected` takes the result.
     func connect(_ id: TerminalID, _ what: HostedStart, attach host: String?, relay: TerminalRelay, desk: HostedTerminals) {
         relays[id] = relay

@@ -31,10 +31,7 @@ struct SidebarSectionView: View {
             VStack(spacing: 0) {
                 GroupHeadView(section: section, head: head, mark: head.color.map { $0.mark(tokens).color }, context: context)
                     .id(SidebarStop.group(head.id))
-                if !head.isFolded {
-                    VStack(spacing: 0) { ForEach(section.rows) { row in rowView(row, solo: false).id(SidebarStop.row(row.id)) } }
-                        .transition(.opacity)
-                }
+                GroupRows(section: section, head: head) { row in rowView(row, solo: false).id(SidebarStop.row(row.id)) }
             }
         }
         .dropFrame(.card(head.id))
@@ -42,7 +39,8 @@ struct SidebarSectionView: View {
             GroupPopover(head: head, rows: section.rows, context: context) { dismissPopover() }
         }
         .padding(.horizontal, metrics.cardMargin).padding(.bottom, metrics.cardGap)
-        .animation(SidebarMotion.fold, value: head.isFolded)
+        // Under Classic the card closes on the timed curve; Drawer and Tuck close it by the rows' own height (`GroupRows`).
+        .animation(look.foldMotion == "classic" ? SidebarMotion.fold : nil, value: head.isFolded)
     }
 
     /// One card per terminal in no group, but the members of a split that sit together in one.

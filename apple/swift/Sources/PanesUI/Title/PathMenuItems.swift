@@ -3,6 +3,7 @@
 // first, down to the volume, each with the icon Finder gives it. Choosing a folder opens it in Finder.
 
 import AppKit
+import DesignSystem
 import PanesModel
 import SwiftUI
 
@@ -21,7 +22,7 @@ struct PathMenuItems: View {
             Divider()
             ForEach(PathChain.of(folder, bootVolume: bootVolumeName), id: \.path) { item in
                 Button {
-                    NSWorkspace.shared.open(URL(fileURLWithPath: item.path))
+                    ExternalOpen.open(URL(fileURLWithPath: item.path))
                 } label: {
                     Label { Text(item.name) } icon: { Image(nsImage: icon(of: item.path)) }
                 }

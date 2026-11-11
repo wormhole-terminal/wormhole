@@ -19,6 +19,7 @@ extension AppController {
             || runWorkspace(command: command, argument: argument) || runSettings(command: command, argument: argument) || runPanel(command: command, argument: argument) || runCore(command: command, argument: argument)
             || runScripted(command: command, argument: argument) || runVerify(command: command, argument: argument)
             || runKeys(command: command, argument: argument) || runPlatform(command: command, argument: argument)
+            || runTitle(command: command, argument: argument)
         { return }
         guard let view = selectedView else { return reply("error: no terminal is shown") }
         run(command: command, argument: argument, on: view)

@@ -37,7 +37,7 @@ public struct SidebarView: View {
     /// Where a pane header dragged over the list would land (the list draws its mark), and which terminal it carries.
     @State var paneAim: DropAim?
     @State var paneDragReader = PaneHeaderDragReader()
-    @State var shifts: [TerminalID: Int] = [:]
+    @State var shifts: [TerminalID: StatusShift] = [:]
     /// The list's frame in the window, and where a drag's pointer stands in it: what tells a drag over the list from one
     /// that has left it for the panes.
     @State var viewport: CGRect = .zero
@@ -131,7 +131,7 @@ public struct SidebarView: View {
         .accessibilityLabel(Words.text("sidebar-list", fallback: "Terminals"))
     }
 
-    private func context(_ sections: [SidebarSection]) -> SidebarContext {
+    func context(_ sections: [SidebarSection]) -> SidebarContext {
         SidebarContext(
             selected: state.selected,
             groups: sections.compactMap { section in

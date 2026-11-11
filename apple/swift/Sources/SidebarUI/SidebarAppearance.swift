@@ -17,6 +17,10 @@ public enum StatusMotion: String, Sendable, CaseIterable {
     case badgePop
     /// The card is washed in the new status's colour, which fades away.
     case wash
+    /// A terminal that starts asking: a ring leaves the tile's edge and fades.
+    case flare
+    /// A terminal that starts asking: its row moves aside and back.
+    case nudge
     /// The second line rolls up to its new words, like a counter.
     case lineRoll
 }

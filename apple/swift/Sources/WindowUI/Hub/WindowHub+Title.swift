@@ -12,7 +12,7 @@ extension WindowHub {
     func titleActions(for terminal: TerminalSummary) -> TitleActions {
         let folder = terminal.folder.map { ($0 as NSString).expandingTildeInPath }
         return TitleActions(
-            revealFolder: { if let folder { NSWorkspace.shared.open(URL(fileURLWithPath: folder)) } },
+            revealFolder: { if let folder { ExternalOpen.open(URL(fileURLWithPath: folder)) } },
             copyPath: { [unowned self] in
                 guard let folder else { return }
                 Pasteboard.setText(folder)
@@ -43,4 +43,12 @@ extension WindowHub {
 extension WindowHub {
     /// The title row's verbs for the selected terminal: what Reveal in Finder and Copy Path in the menus do.
     public var selectedTitleActions: TitleActions? { state.selectedTerminal.map(titleActions(for:)) }
+}
+
+extension WindowHub {
+    /// The selected terminal's folder as the row's buttons use it (`~` expanded), nil without one.
+    public var selectedFolder: String? { state.selectedTerminal?.folder.map { ($0 as NSString).expandingTildeInPath } }
+
+    /// Open in… for the selected terminal: what the button and its menu list and do.
+    public var selectedOpenIn: OpenInMenu? { selectedFolder.map { OpenInMenu(folder: $0, backend: openIn) } }
 }
