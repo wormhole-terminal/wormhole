@@ -41,6 +41,14 @@ jobs:
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: "apple -> target"
+      # The app is developed with the newest Xcode; the runner's default may be a release behind (Swift 6.3.3 crashed
+      # compiling TerminalUI). Take the newest Xcode the image has.
+      - name: Newest Xcode
+        run: |
+          ls -d /Applications/Xcode*.app
+          newest="$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)"
+          sudo xcode-select -s "$newest"
+          echo "selected $newest"
       - name: Versions
         run: |
           sw_vers
