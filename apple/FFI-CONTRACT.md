@@ -173,6 +173,11 @@ func groupDropPlan(group: UInt32, over: Over) -> Landing? // pure: where a dragg
 func edgeDrag(edge: Edge, extent: Float) -> EdgeDrag      // pure: where a drag of a column's edge would leave it, with its readout
 func canLayout(preset: Preset) -> Bool                    // pure: the area has room for the layout's panes
 func groupFolderOffer(group: UInt32) -> String?           // pure: the folder to ask about before a terminal opens in a group with none
+func groupAdmits(group: UInt32, id: Int64) -> Bool        // pure: the group's fence lets the terminal (and its split) in; menus grey a group that refuses
+func lastSelectedIn(group: UInt32?) -> Int64?               // pure: the terminal last selected in a group (nil: in none); a tab set opens on it
+// SidebarRow.worktree: the main working tree the terminal's folder is a linked worktree of (the row's worktree mark)
+// free functions: noAgentsTipDismissed() -> Bool, dismissNoAgentsTip() (the sidebar's note; Reset tips clears it);
+// HookEvent.welcomeEnded(terminal:, note:) — note: a first run ended on the primer, so the note comes up
 func setFacts(id: Int64, facts: TerminalFactsRecord) -> [WorkspaceEvent]   // whole replacement (tests, previews)
 func setGit(id: Int64, branch: String?, changes: UInt32?) -> [WorkspaceEvent]   // previews and tests only: a registered terminal's git is read by the workspace
 func hook(id: Int64, agent: String, event: String, message: String?) -> [WorkspaceEvent]   // an agent's hook, see "What feeds a row"
