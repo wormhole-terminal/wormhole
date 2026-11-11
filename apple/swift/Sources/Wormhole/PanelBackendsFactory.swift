@@ -3,6 +3,7 @@
 // (`--mock`, an unlinked build) they are the sample. Trust is enforced in Rust; owner authentication is Touch ID in a real
 // run and WORMHOLE_AUTH's answer (cancel by default) in a test instance, so a check never raises the prompt.
 
+import AuxModel
 import Foundation
 import PanelModel
 import PanelUI
@@ -43,7 +44,7 @@ enum PanelBackendsFactory {
                     made.notes = files.notes
                     made.usage = files.usage.service
                 } catch {
-                    FileHandle.standardError.write(Data("panel: files, project and usage are the sample (\(error))\n".utf8))
+                    FileHandle.standardError.write(Data("panel: files, project and usage are the sample (\(error))\n".utf8)) // text: a line on stderr for whoever launched the app
                 }
             }
             // Whether a worktree may be made, and what it runs first, is the core's (the project's trust); git only makes it.

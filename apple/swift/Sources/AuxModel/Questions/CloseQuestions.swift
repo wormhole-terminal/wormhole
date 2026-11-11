@@ -5,14 +5,14 @@
 import Foundation
 
 public enum CloseQuestions {
-    public static func sessionTitle(_ name: String) -> String { "Close \u{201C}\(name)\u{201D}?" }
+    public static func sessionTitle(_ name: String) -> String { AuxText.closeSessionTitle(name) }
 
-    public static func groupTitle(_ name: String) -> String { "Close the group \u{201C}\(name)\u{201D}?" }
+    public static func groupTitle(_ name: String) -> String { AuxText.closeGroupTitle(name) }
 
     public static func session(
         agent: String?, stakes: [String], status: RunningTerminal.Status, commandRunning: Bool, programs: [String]
     ) -> String {
-        let who = agent ?? "Its agent"
+        let who = agent ?? AuxText.itsAgent
         var sentences: [String] = []
         switch status {
         case .busy: sentences.append(AuxText.isStillWorking(who))
@@ -31,18 +31,18 @@ public enum CloseQuestions {
         case (false, 0...1): sentences.append(AuxText.closingEndsProcess)
         case (false, _): sentences.append(AuxText.closingEndsThem)
         }
-        sentences += stakes.map { "Its \($0)" }
+        sentences += stakes.map(AuxText.itsStake)
         return sentences.joined(separator: " ")
     }
 
     public static func window(terminals: Int, running: [StillRunning.Fact], programs: [String], stakes: [String]) -> String {
         let head = terminals == 1 ? AuxText.terminalInWindowEnds : AuxText.terminalsInWindowEnd(terminals)
-        return head + StillRunning.detail(running, programs: programs) + stakes.map { " Their \($0)" }.joined()
+        return head + StillRunning.detail(running, programs: programs) + stakes.map { " " + AuxText.theirStake($0) }.joined()
     }
 
     public static func group(terminals: Int, running: [StillRunning.Fact], programs: [String], stakes: [String]) -> String {
         let head = terminals == 1 ? AuxText.terminalInGroupEnds : AuxText.terminalsInGroupEnd(terminals)
-        return head + StillRunning.detail(running, programs: programs) + stakes.map { " Their \($0)" }.joined()
+        return head + StillRunning.detail(running, programs: programs) + stakes.map { " " + AuxText.theirStake($0) }.joined()
     }
 
     /// Closing a terminal whose session host runs but cannot be shown: end the host with the terminal, or leave it

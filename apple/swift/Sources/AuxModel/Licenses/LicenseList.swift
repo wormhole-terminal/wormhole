@@ -45,7 +45,7 @@ public struct LicenseList: Decodable, Sendable {
     public static func parse(_ data: Data) throws -> LicenseList {
         let list = try JSONDecoder().decode(LicenseList.self, from: data)
         for package in list.packages where package.texts.contains(where: { $0 >= list.texts.count }) {
-            throw CocoaError(.coderReadCorrupt, userInfo: [NSLocalizedDescriptionKey: "\(package.id) points at a missing license text"])
+            throw CocoaError(.coderReadCorrupt, userInfo: [NSLocalizedDescriptionKey: "\(package.id) points at a missing license text"]) // text: a parse error for the log; the window says licenses-unreadable
         }
         return list
     }
@@ -59,7 +59,7 @@ public struct LicenseList: Decodable, Sendable {
         let words = query.split(whereSeparator: \.isWhitespace).map { $0.lowercased() }
         return packages.indices.filter { index in
             let package = packages[index]
-            let haystack = "\(package.name) \(package.version) \(package.license ?? "")".lowercased()
+            let haystack = "\(package.name) \(package.version) \(package.license ?? "")".lowercased() // text: what a search matches against
             return words.allSatisfy { haystack.contains($0) }
         }
     }

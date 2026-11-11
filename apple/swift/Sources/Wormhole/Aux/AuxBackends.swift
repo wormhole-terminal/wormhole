@@ -35,7 +35,7 @@ struct AuxBackends {
     }
 
     private func fallback(_ what: String, _ error: any Error) {
-        FileHandle.standardError.write(Data("\(what): the core's is not available (\(error)); using the sample\n".utf8))
+        FileHandle.standardError.write(Data("\(what): the core's is not available (\(error)); using the sample\n".utf8)) // text: a line on stderr for whoever launched the app
     }
 
     func hosts() -> any HostsBackend {
@@ -54,7 +54,7 @@ struct AuxBackends {
                     backend.setAttachments(attached)
                     backend.setPersistentTerminals(app.hub.store.hosting(of: app.hub.state.selected ?? 0) != nil)
                     return backend
-                } catch { fallback("session hosts", error) }
+                } catch { fallback("session hosts", error) } // text: names the part in a stderr line
             }
         #endif
         return SampleHostsBackend()
@@ -66,7 +66,7 @@ struct AuxBackends {
             if real, let root {
                 do {
                     return try AuxBridge.makeTrustBackend(root: URL(fileURLWithPath: root), profile: activeProfileID, authenticator: authenticator)
-                } catch { fallback("project trust", error) }
+                } catch { fallback("project trust", error) } // text: names the part in a stderr line
             }
         #endif
         return SampleTrustBackend()
@@ -75,7 +75,7 @@ struct AuxBackends {
     func access(profile: String) -> (any AccessBackend)? {
         #if WITH_UNIFFI
             if real {
-                do { return try AuxBridge.makeAccessBackend(profile: profile) } catch { fallback("agent access", error) }
+                do { return try AuxBridge.makeAccessBackend(profile: profile) } catch { fallback("agent access", error) } // text: names the part in a stderr line
             }
         #endif
         return nil
@@ -105,14 +105,14 @@ struct AuxBackends {
                 do { return try AuxBridge.makeUpdateBackend(setup: setup, hooks: hooks) } catch { fallback("updates", error) }
             }
         #endif
-        return SampleUpdateBackend(phase: .unsupported("This build has no update feed. Start it with --update-feed <url> to check one."))
+        return SampleUpdateBackend(phase: .unsupported(AuxText.noUpdateFeed))
     }
 
     /// The scratch bundle an install replaces: only one inside the data folder, never an installed app.
     private func scratchBundle() -> URL? {
         guard let bundle = app.options.updateBundle?.standardizedFileURL else { return nil }
         guard bundle.path.hasPrefix(app.dataDirectory.standardizedFileURL.path + "/") else {
-            fallback("updates", Isolation.Refusal(description: "--update-bundle must be inside the data folder"))
+            fallback("updates", Isolation.Refusal(description: "--update-bundle must be inside the data folder")) // text: a launch flag's error on stderr
             return nil
         }
         return bundle
@@ -129,9 +129,9 @@ struct AuxBackends {
             if real {
                 let values = app.settingsModel.backend.values
                 let preferences = OnboardingPreferences(
-                    fontFamily: values["font_family"]?.string ?? "JetBrains Mono", fontSize: values["font_size"]?.number ?? 14,
+                    fontFamily: values["font_family"]?.string ?? "JetBrains Mono", fontSize: values["font_size"]?.number ?? 14, // text: a font family name
                     ligatures: values["font_ligatures"]?.bool ?? true)
-                let home = ProcessInfo.processInfo.environment["WORMHOLE_AGENT_HOME"].map { URL(fileURLWithPath: $0) }
+                let home = ProcessInfo.processInfo.environment["WORMHOLE_AGENT_HOME"].map { URL(fileURLWithPath: $0) } // text: an environment variable
                 do {
                     return try FFIOnboardingBackend(
                         preferences: preferences, settingsKeys: "\u{2318},", agentHome: home, dataDir: app.dataDirectory,

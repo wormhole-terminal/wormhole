@@ -12,13 +12,13 @@ public struct AuxButtonsSpecimen: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(spacing: Space._2) {
-                Button("Primary") {}.primaryAction()
-                Button("Secondary") {}.secondaryAction()
-                Button("Disabled") {}.secondaryAction().disabled(true)
+                Button("Primary") {}.primaryAction() // text: sample label in the Studio gallery
+                Button("Secondary") {}.secondaryAction() // text: sample label in the Studio gallery
+                Button("Disabled") {}.secondaryAction().disabled(true) // text: sample label in the Studio gallery
             }
             HStack(spacing: Space._2) {
-                Button("Small primary") {}.primaryAction().controlSize(.small)
-                Button("Small secondary") {}.secondaryAction().controlSize(.small)
+                Button("Small primary") {}.primaryAction().controlSize(.small) // text: sample label in the Studio gallery
+                Button("Small secondary") {}.secondaryAction().controlSize(.small) // text: sample label in the Studio gallery
             }
         }
     }
@@ -33,9 +33,9 @@ public struct AuxWindowsSpecimen: View {
     public var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
             HStack(spacing: Space._2) {
-                StatusBadge(text: "Attached", color: tokens.statusSuccess)
-                StatusBadge(text: "Detached", color: tokens.statusWarning)
-                StatusBadge(text: "Stale", color: tokens.textMuted)
+                StatusBadge(text: AuxText.hostsAttached, color: tokens.statusSuccess)
+                StatusBadge(text: AuxText.hostsDetached, color: tokens.statusWarning)
+                StatusBadge(text: AuxText.hostsStale, color: tokens.textMuted)
             }
             ForEach(HostsSamples.report.cards.prefix(2)) { card in
                 HostCardView(card: card, copied: false, copy: {}, end: {}, forget: {})

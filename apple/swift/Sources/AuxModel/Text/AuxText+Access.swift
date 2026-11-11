@@ -3,7 +3,7 @@
 import Foundation
 
 extension AuxText {
-    public static func accessTitle(_ name: String) -> String { tr("agent-sheet-title", "Allow \u{201C}\(name)\u{201D} to control Wormhole?") }
+    public static func accessTitle(_ name: String) -> String { tr("agent-sheet-title", ["name": .text(name)], fallback: "Allow \u{201C}\(name)\u{201D} to control Wormhole?") }
     public static var accessTitleScripts: String { tr("agent-sheet-title-scripts", "Allow scripts to control Wormhole?") }
     public static var wantsRead: String { tr("agent-sheet-wants-read", "It wants to read what terminals show.") }
     public static var wantsType: String { tr("agent-sheet-wants-type", "It wants to type into terminals.") }
@@ -17,7 +17,7 @@ extension AuxText {
         tr("agent-sheet-detail-scripts", "Any program that is not a coding agent Wormhole knows counts as Scripts: a script, a tool, or a command you typed at your own prompt. Allowing it lets all of them in until Wormhole quits.")
     }
     public static func warningUnusual(_ name: String) -> String {
-        tr("agent-sheet-warning-unusual", "This program is called \(name) but is not signed by its usual developer.")
+        tr("agent-sheet-warning-unusual", ["name": .text(name)], fallback: "This program is called \(name) but is not signed by its usual developer.")
     }
     public static var warningUnsigned: String { tr("agent-sheet-warning-unsigned", "It is not signed, so only this exact file is remembered.") }
     public static var warningAdHoc: String {
@@ -37,22 +37,36 @@ extension AuxText {
     public static var labelFolder: String { tr("agent-terminal-label-folder", "Folder") }
 
     public static func signedDeveloper(subject: String, team: String) -> String {
-        tr("agent-sheet-signed-developer", "\(subject) (Developer ID, team \(team))")
+        tr("agent-sheet-signed-developer", ["subject": .text(subject), "team": .text(team)], fallback: "\(subject) (Developer ID, team \(team))")
     }
-    public static func signedTeam(_ team: String) -> String { tr("agent-sheet-signed-team", "Developer ID, team \(team)") }
+    public static func signedTeam(_ team: String) -> String { tr("agent-sheet-signed-team", ["team": .text(team)], fallback: "Developer ID, team \(team)") }
     public static var signedApple: String { tr("agent-sheet-signed-apple", "Apple") }
     public static var signedAdHoc: String { tr("agent-sheet-signed-ad-hoc", "Ad hoc signature") }
     public static var signedOther: String { tr("agent-sheet-signed-other", "Signed, not by a Developer ID") }
     public static var signedNone: String { tr("agent-sheet-signed-none", "Not signed") }
     public static var signedUnreadable: String { tr("agent-sheet-signed-unreadable", "Could not be read") }
-    public static func inTerminal(_ title: String) -> String { tr("agent-sheet-in-terminal", "terminal \u{201C}\(title)\u{201D}") }
-    public static func runsOn(_ name: String, signer: String) -> String { tr("agent-sheet-runs-on", "\(name), signed by \(signer)") }
+    public static func inTerminal(_ title: String) -> String { tr("agent-sheet-in-terminal", ["title": .text(title)], fallback: "terminal \u{201C}\(title)\u{201D}") }
+    public static func runsOn(_ name: String, signer: String) -> String { tr("agent-sheet-runs-on", ["name": .text(name), "signer": .text(signer)], fallback: "\(name), signed by \(signer)") }
 
-    public static func terminalTitle(_ verb: String, name: String, terminal: String) -> String {
-        "Allow \u{201C}\(name)\u{201D} to \(verb) \u{201C}\(terminal)\u{201D}?"
+    public static func terminalTitle(_ capability: AccessRequest.Capability, name: String, terminal: String) -> String {
+        switch capability {
+        case .type:
+            tr("agent-terminal-title-type", ["name": .text(name), "terminal": .text(terminal)], fallback: "Allow \u{201C}\(name)\u{201D} to type into \u{201C}\(terminal)\u{201D}?")
+        case .run:
+            tr("agent-terminal-title-run", ["name": .text(name), "terminal": .text(terminal)], fallback: "Allow \u{201C}\(name)\u{201D} to run commands in \u{201C}\(terminal)\u{201D}?")
+        case .open:
+            tr("agent-terminal-title-open", ["name": .text(name), "terminal": .text(terminal)], fallback: "Allow \u{201C}\(name)\u{201D} to rename or bring forward \u{201C}\(terminal)\u{201D}?")
+        default:
+            tr("agent-terminal-title-read", ["name": .text(name), "terminal": .text(terminal)], fallback: "Allow \u{201C}\(name)\u{201D} to read \u{201C}\(terminal)\u{201D}?")
+        }
     }
-    public static func terminalTitleScripts(_ verb: String, terminal: String) -> String {
-        "Allow scripts to \(verb) \u{201C}\(terminal)\u{201D}?"
+    public static func terminalTitleScripts(_ capability: AccessRequest.Capability, terminal: String) -> String {
+        switch capability {
+        case .type: tr("agent-terminal-title-scripts-type", ["terminal": .text(terminal)], fallback: "Allow scripts to type into \u{201C}\(terminal)\u{201D}?")
+        case .run: tr("agent-terminal-title-scripts-run", ["terminal": .text(terminal)], fallback: "Allow scripts to run commands in \u{201C}\(terminal)\u{201D}?")
+        case .open: tr("agent-terminal-title-scripts-open", ["terminal": .text(terminal)], fallback: "Allow scripts to rename or bring forward \u{201C}\(terminal)\u{201D}?")
+        default: tr("agent-terminal-title-scripts-read", ["terminal": .text(terminal)], fallback: "Allow scripts to read \u{201C}\(terminal)\u{201D}?")
+        }
     }
     public static var terminalDetail: String {
         tr("agent-terminal-detail", "It did not open this terminal and does not run in it. \u{201C}Allow for This Session\u{201D} lets it use this terminal, and no other, while the program runs; \u{201C}Until Wormhole Quits\u{201D}, until Wormhole quits.")
@@ -69,9 +83,9 @@ extension AuxText {
     public static var buttonKeep: String { tr("agent-sheet-button-keep", "Keep") }
 
     public static func changeTitle(_ mode: String) -> String {
-        tr("agent-change-title", "Agent access was changed outside Wormhole to \u{201C}\(mode)\u{201D}. Keep it?")
+        tr("agent-change-title", ["mode": .text(mode)], fallback: "Agent access was changed outside Wormhole to \u{201C}\(mode)\u{201D}. Keep it?")
     }
     public static func changeDetail(previous: String) -> String {
-        tr("agent-change-detail", "Something other than Wormhole\u{2019}s Settings edited the file, and the new mode lets more programs in. Until you answer, \u{201C}\(previous)\u{201D} stays in force; Don\u{2019}t Keep puts it back in the file.")
+        tr("agent-change-detail", ["previous": .text(previous)], fallback: "Something other than Wormhole\u{2019}s Settings edited the file, and the new mode lets more programs in. Until you answer, \u{201C}\(previous)\u{201D} stays in force; Don\u{2019}t Keep puts it back in the file.")
     }
 }

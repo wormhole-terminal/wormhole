@@ -10,10 +10,12 @@ struct PrimerStep: View {
     @Environment(\.tokens) private var tokens
 
     /// What to try first and its keys (the menus' glyphs, from core's key table).
-    static let things: [(String, [String])] = [
-        ("Jump to anything", ["\u{21E7}\u{2318}P"]), ("See every shortcut", ["\u{2325}\u{2318}/"]),
-        ("Show what changed in git", ["\u{2318}9"]), ("Hide the side panels", ["\u{2318}B", "\u{2325}\u{2318}B"]),
-    ]
+    static var things: [(String, [String])] {
+        [
+            (AuxText.tryJump, ["\u{21E7}\u{2318}P"]), (AuxText.tryShortcuts, ["\u{2325}\u{2318}/"]),
+            (AuxText.tryChanges, ["\u{2318}9"]), (AuxText.tryPanels, ["\u{2318}B", "\u{2325}\u{2318}B"]),
+        ]
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {

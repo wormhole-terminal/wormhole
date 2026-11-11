@@ -15,7 +15,7 @@ struct LookStep: View {
     @Environment(\.tokens) private var tokens
 
     /// The themes the step offers, if the build has them (more are in Settings): `onboarding::LOOK_THEMES`.
-    static let offered = ["Wormhole Dark", "Tokyo Night", "Catppuccin Mocha", "Nord", "Rose Pine", "Wormhole Light"]
+    static let offered = ["Wormhole Dark", "Tokyo Night", "Catppuccin Mocha", "Nord", "Rose Pine", "Wormhole Light"] // text: theme names, matched against the library
     /// The terminal colours offered as primaries beside the theme's own: ANSI green, magenta, red, yellow, cyan.
     static let primaryAnsi = [2, 5, 1, 3, 6]
 
@@ -120,10 +120,10 @@ struct LookStep: View {
         let terminal = store.tokens.terminal
         let font = face(size: TextRole.caption.size)
         return VStack(alignment: .leading, spacing: 0) {
-            Text("~/Projects/app on main").foregroundStyle(tokens.textMuted)
-            Text("$ git status --short").foregroundStyle(terminal.foreground.color)
-            Text(" M src/main.rs").foregroundStyle(terminal.ansi[3].color)
-            Text("?? docs/notes.md").foregroundStyle(terminal.ansi[1].color)
+            Text("~/Projects/app on main") // text: sample content of a terminal preview.foregroundStyle(tokens.textMuted)
+            Text("$ git status --short") // text: sample content of a terminal preview.foregroundStyle(terminal.foreground.color)
+            Text(" M src/main.rs") // text: sample content of a terminal preview.foregroundStyle(terminal.ansi[3].color)
+            Text("?? docs/notes.md") // text: sample content of a terminal preview.foregroundStyle(terminal.ansi[1].color)
         }
         .font(font)
         .padding(.horizontal, Space._3).padding(.vertical, Space._2)

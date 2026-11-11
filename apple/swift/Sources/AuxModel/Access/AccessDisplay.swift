@@ -61,18 +61,12 @@ public struct AccessDisplay: Equatable, Sendable {
 
     private static func terminalDisplay(_ request: AccessRequest, _ terminal: AccessRequest.Terminal) -> AccessDisplay {
         let scripts = request.kind == .scripts
-        let verb = switch request.capability {
-        case .type: "type into"
-        case .run: "run commands in"
-        case .open: "rename or bring forward"
-        default: "read"
-        }
         var rows = [(AuxText.labelTerminal, terminal.name)]
         if let folder = terminal.folder { rows.append((AuxText.labelFolder, folder)) }
         return AccessDisplay(
             title: scripts
-                ? AuxText.terminalTitleScripts(verb, terminal: terminal.name)
-                : AuxText.terminalTitle(verb, name: request.label, terminal: terminal.name),
+                ? AuxText.terminalTitleScripts(request.capability, terminal: terminal.name)
+                : AuxText.terminalTitle(request.capability, name: request.label, terminal: terminal.name),
             detail: scripts ? AuxText.terminalDetailScripts : AuxText.terminalDetail, accessory: columns(rows),
             buttons: buttons(request))
     }

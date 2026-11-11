@@ -25,9 +25,9 @@ public struct Place: Equatable, Sendable, Identifiable {
             Place(kind: .recent, name: $0.lastPathComponent, url: $0, detail: tilde($0.deletingLastPathComponent(), home: home))
         }
         let standard: [(Kind, String, URL)] = [
-            (.home, "Home", home), (.desktop, "Desktop", home.appending(path: "Desktop")),
-            (.documents, "Documents", home.appending(path: "Documents")),
-            (.developer, "Developer", home.appending(path: "Developer")),
+            (.home, AuxText.placeHome, home), (.desktop, AuxText.placeDesktop, home.appending(path: "Desktop")), // text: a folder on disk
+            (.documents, AuxText.placeDocuments, home.appending(path: "Documents")), // text: a folder on disk
+            (.developer, AuxText.placeDeveloper, home.appending(path: "Developer")), // text: a folder on disk
         ]
         for (kind, name, url) in standard where kind != .developer || exists(url) {
             places.append(Place(kind: kind, name: name, url: url, detail: tilde(url, home: home)))

@@ -5,6 +5,7 @@
 #if WITH_UNIFFI
     import AppKit
     import AuxBridge
+    import AuxModel
     import FilesBridge
     import PanesUI
     import PlatformModel
@@ -54,7 +55,7 @@
 
         /// JetBrains Mono's four files in the folder that holds them (`FontSpec.jetBrainsMono`).
         private static func bundledFiles(in directory: URL) -> [URL] {
-            ["Regular", "Bold", "Italic", "BoldItalic"].map { directory.appendingPathComponent("JetBrainsMono-\($0).ttf") }
+            ["Regular", "Bold", "Italic", "BoldItalic"].map { directory.appendingPathComponent("JetBrainsMono-\($0).ttf") } // text: font file names
         }
     }
 
@@ -64,7 +65,7 @@
             let host = settingsModel.host as? RustSettingsHost
             switch action {
             case .checkForUpdates: aux.showUpdates()
-            case .sendTestNotification: notices?.sendTest(name: "Wormhole", settings: settingsNotice)
+            case .sendTestNotification: notices?.sendTest(name: AuxText.brand, settings: settingsNotice)
             case .openNotificationSettings: open("x-apple.systempreferences:com.apple.Notifications-Settings.extension")
             // The system's list of apps that start programs without the first-run malware check (Privacy & Security).
             case .openDeveloperTools: open("x-apple.systempreferences:com.apple.preference.security?Privacy_DevTools")

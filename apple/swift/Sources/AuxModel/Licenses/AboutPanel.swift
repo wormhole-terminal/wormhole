@@ -8,11 +8,11 @@ extension AppInfo {
     /// (empty) and the version carries the "(debug build)" note, so the panel reads "Version 1.6.3".
     public var aboutPanelOptions: [String: Any] {
         var options: [String: Any] = [
-            "ApplicationName": name,
-            "ApplicationVersion": version + (debugBuild ? " (debug build)" : ""),
-            "Version": "",
+            "ApplicationName": name, // text: option keys of the standard About panel
+            "ApplicationVersion": version + (debugBuild ? " " + AuxText.debugBuild : ""), // text: option key
+            "Version": "", // text: option key
         ]
-        if !copyright.isEmpty { options["Copyright"] = copyright }
+        if !copyright.isEmpty { options["Copyright"] = copyright } // text: option key
         return options
     }
 }

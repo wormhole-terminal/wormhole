@@ -17,9 +17,9 @@ struct WelcomeSpecimen: View {
     }
 
     private let samples = [
-        Sample(id: "working", kind: .working, name: "auth refactor", detail: "Editing middleware.rs…"),
-        Sample(id: "attention", kind: .attention, name: "release notes", detail: "Needs input \u{B7} Approve git push?"),
-        Sample(id: "done", kind: .done, name: "api tests", detail: "Finished \u{B7} 12m ago"),
+        Sample(id: "working", kind: .working, name: "auth refactor", detail: "Editing middleware.rs…"), // text: sample content of a picture of the list
+        Sample(id: "attention", kind: .attention, name: "release notes", detail: "Needs input \u{B7} Approve git push?"), // text: sample content of a picture of the list
+        Sample(id: "done", kind: .done, name: "api tests", detail: "Finished \u{B7} 12m ago"), // text: sample content of a picture of the list
     ]
 
     var body: some View {

@@ -1,3 +1,4 @@
+// text-file: a test driver's replies on the control folder (a test instance only), not interface text
 // A test instance (`--background`) never puts a question on the screen: presenting a sheet brings its window forward, over what
 // the person is doing. The question is held here instead, and a driver answers it through the control folder (`question`). The
 // real app has none of this (`current` stays nil): its questions are sheets, and nothing that arrives over the control socket

@@ -7,7 +7,7 @@ import SettingsModel
 import TerminalMetal
 
 enum FontSettingsMaker {
-    static let bundledFamily = "JetBrains Mono"
+    static let bundledFamily = "JetBrains Mono" // text: a font family name
 
     static func settings(_ values: [String: JSONValue], bundledDirectory: URL?) -> TerminalFontSettings {
         let family = values["font_family"]?.string.flatMap { $0.isEmpty ? nil : $0 } ?? bundledFamily

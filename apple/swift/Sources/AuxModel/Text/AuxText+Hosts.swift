@@ -5,12 +5,12 @@ import Foundation
 extension AuxText {
     public static var hostsTitle: String { tr("hosts-window-title", "Session Hosts") }
     public static var hostsLoading: String { tr("hosts-loading", "Looking for session hosts…") }
-    public static func hostsEmpty(_ folder: String) -> String { tr("hosts-empty", "No session hosts in \(folder).") }
+    public static func hostsEmpty(_ folder: String) -> String { tr("hosts-empty", ["folder": .text(folder)], fallback: "No session hosts in \(folder).") }
     public static var hostsOffNote: String {
         tr("hosts-off-note", "Persistent terminals are off, so new terminals start inside the app. Hosts left over from earlier are listed below.")
     }
     public static func hostsHeaderApp(version: String, protocol p: String) -> String {
-        tr("hosts-header-app", "Wormhole \(version), protocol \(p)")
+        tr("hosts-header-app", ["version": .text(version), "protocol": .text(p)], fallback: "Wormhole \(version), protocol \(p)")
     }
     public static var hostsFolder: String { tr("hosts-header-folder", "Hosts folder") }
     public static var hostsFlag: String { tr("hosts-header-flag", "Persistent terminals") }
@@ -29,7 +29,7 @@ extension AuxText {
     public static var hostsDetachedNote: String { tr("hosts-standing-detached-note", "Running, no terminal of this app holds it") }
     public static var hostsOrphanNote: String { tr("hosts-standing-orphan-note", "Running, and no saved terminal names it") }
     public static func hostsAttachedTo(window: Int, title: String) -> String {
-        tr("hosts-standing-attached-to", "Window \(window), \u{201C}\(title)\u{201D}")
+        tr("hosts-standing-attached-to", ["window": .whole(window), "title": .text(title)], fallback: "Window \(window), \u{201C}\(title)\u{201D}")
     }
     public static var hostsEnd: String { tr("hosts-action-end", "End") }
     public static var hostsForget: String { tr("hosts-action-forget", "Forget") }
@@ -38,16 +38,14 @@ extension AuxText {
     public static var hostsCopied: String { tr("hosts-action-copied", "Copied") }
     public static var hostsUnknown: String { tr("hosts-unknown", "Unknown") }
 
-    public static func hostEndTitle(_ id: String) -> String { tr("hosts-end-title", "End session host \(id)?") }
+    public static func hostEndTitle(_ id: String) -> String { tr("hosts-end-title", ["id": .text(id)], fallback: "End session host \(id)?") }
     public static func hostEndDetailAttached(_ title: String) -> String {
-        tr("hosts-end-detail-attached", "The program in the terminal \u{201C}\(title)\u{201D} gets a hangup and the terminal ends.")
+        tr("hosts-end-detail-attached", ["title": .text(title)], fallback: "The program in the terminal \u{201C}\(title)\u{201D} gets a hangup and the terminal ends.")
     }
     public static var hostEndDetail: String { tr("hosts-end-detail", "The program in it gets a hangup and ends.") }
     public static var hostEndConfirm: String { tr("hosts-end-confirm", "End Host") }
     public static var hostCloseDetail: String {
-        tr(
-            "hosts-close-detail",
-            "Its session host is still running, but this app can\u{2019}t show it. Ending the host ends the program in it; leaving it running keeps it in the Session Hosts window.")
+        tr("hosts-close-detail", "Its session host is still running, but this app can\u{2019}t show it. Ending the host ends the program in it; leaving it running keeps it in the Session Hosts window.")
     }
     public static var hostCloseEnd: String { tr("hosts-close-end", "End the Host") }
     public static var hostCloseLeave: String { tr("hosts-close-leave", "Leave It Running") }

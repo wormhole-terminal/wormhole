@@ -56,7 +56,7 @@ extension AppController {
         // What was written is said to a script driving the instance (`reply` is silent without one).
         let scratch = policy.touchesSystem ? nil : dataDirectory.appendingPathComponent("exports")
         if let scratch { try? FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true) }
-        TextExporter.export(text, title: contents.title, over: window, directory: scratch) { [weak self] in self?.reply("export \($0?.path ?? "cancelled")") }
+        TextExporter.export(text, title: contents.title, over: window, directory: scratch) { [weak self] in self?.reply("export \($0?.path ?? "cancelled")") } // text: a reply line for a test driver
     }
 
     /// The size text is set at on paper, in points (Terminal.app prints at its window's size; paper wants less).

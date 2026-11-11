@@ -18,7 +18,7 @@ public enum StillRunning {
         for program in programs where !names.contains(program) { names.append(program) }
         guard !names.isEmpty else { return nil }
         var list = names.prefix(programsListed).map(shortened).joined(separator: ", ")
-        if names.count > programsListed { list += " and \(names.count - programsListed) more" }
+        if names.count > programsListed { list += " " + AuxText.andMore(names.count - programsListed) }
         return list
     }
 

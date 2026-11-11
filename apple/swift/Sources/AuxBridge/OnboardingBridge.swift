@@ -61,7 +61,7 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         guard let trustDesk, trustDesk.review().problem == nil else { return }
         Task {
             do {
-                try await authenticator.authenticate(reason: "trust the project folder \u{201C}\(folder.lastPathComponent)\u{201D} and let it run commands")
+                try await authenticator.authenticate(reason: AuxText.trustTouchIDReason(folder: folder.lastPathComponent))
                 try trustDesk.approveReviewed()
             } catch {
                 // Cancelled or refused: nothing is trusted.
@@ -80,7 +80,7 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Start here"
+        panel.prompt = AuxText.startHere
         return await panel.begin() == .OK ? panel.url : nil
     }
 
@@ -121,7 +121,7 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Import theme"
+        panel.prompt = AuxText.importTheme
         guard await panel.begin() == .OK, let url = panel.url else { return false }
         return (try? WormholeBindings.importThemeFile(path: url.path, dataDir: dataDir?.path)) != nil
     }

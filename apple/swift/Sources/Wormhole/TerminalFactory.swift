@@ -23,7 +23,7 @@ final class TerminalFactory {
     }
 
     /// The program's name for the exited bar ("zsh exited"): the shell asked for, else what a terminal starts with.
-    var shellName: String { options.program.map { URL(fileURLWithPath: $0).lastPathComponent } ?? "zsh" }
+    var shellName: String { options.program.map { URL(fileURLWithPath: $0).lastPathComponent } ?? "zsh" } // text: a shell program name
 
     func make(_ id: TerminalID) -> MetalTerminalView? {
         guard let configuration = rendererConfiguration() else { return nil }
@@ -45,7 +45,7 @@ final class TerminalFactory {
             view.onExit = { [weak self] in self?.onExit(id, $0) }
             return view
         } catch {
-            FileHandle.standardError.write(Data("terminal \(id): cannot start: \(error)\n".utf8))
+            FileHandle.standardError.write(Data("terminal \(id): cannot start: \(error)\n".utf8)) // text: a line on stderr for whoever launched the app
             return nil
         }
     }

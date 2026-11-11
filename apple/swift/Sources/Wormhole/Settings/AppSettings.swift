@@ -23,7 +23,7 @@ enum AppSettings {
                 do {
                     return try SettingsBridge.makeModel(platform: SettingsPlatform.make(app: app))
                 } catch {
-                    FileHandle.standardError.write(Data("settings: the core's are not available (\(error)); using the sample\n".utf8))
+                    FileHandle.standardError.write(Data("settings: the core's are not available (\(error)); using the sample\n".utf8)) // text: a line on stderr for whoever launched the app
                 }
             }
         #endif

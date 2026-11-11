@@ -1,3 +1,4 @@
+// text-file: the names of Metal shader constants, not interface text
 // The moments the shader needs, as the `constant float` lines it is built on (`shader_constants`): the model owns
 // them, so the shader files have no copy that could drift.
 

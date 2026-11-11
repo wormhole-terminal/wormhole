@@ -45,7 +45,7 @@ final class TearOffChip {
 
     private func makePanel(_ host: NSHostingView<TearOffChipView>) -> NSPanel {
         let panel = NSPanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        panel.title = "Tear-off chip"
+        panel.title = "Tear-off chip" // text: the title of a borderless panel, never drawn
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hasShadow = false

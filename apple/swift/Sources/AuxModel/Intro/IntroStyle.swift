@@ -19,14 +19,14 @@ public enum IntroStyle: String, CaseIterable, Sendable {
 
     public var label: String {
         switch self {
-        case .emerge: "Emerge"
-        case .vortex: "Edge Vortex"
-        case .collapse: "Collapse"
-        case .ftl: "FTL Jump"
-        case .aurora: "Aurora"
-        case .tentacles: "Tentacles"
-        case .voyage: "Voyage"
-        case .glow: "Glow"
+        case .emerge: AuxText.introEmerge
+        case .vortex: AuxText.introVortex
+        case .collapse: AuxText.introCollapse
+        case .ftl: AuxText.introFTL
+        case .aurora: AuxText.introAurora
+        case .tentacles: AuxText.introTentacles
+        case .voyage: AuxText.introVoyage
+        case .glow: AuxText.introGlow
         }
     }
 

@@ -17,8 +17,14 @@ extension AuxText {
         tr("trust-summary-untrusted", "It wants to run these commands. Nothing runs until you approve.")
     }
     public static var trustNothing: String { tr("trust-nothing", "Nothing here would run.") }
-    public static var trustWaiting: String { tr("trust-waiting", "Waiting for approval…") }
+    public static var trustWaiting: String { tr("settings-projects-waiting-for-approval", "Waiting for approval…") }
     public static var trustWithTouchID: String { tr("trust-with-touch-id", "Trust with Touch ID") }
+    public static func trustTouchIDReason(folder: String) -> String {
+        tr("trust-touch-id-reason", ["folder": .text(folder)], fallback: "trust the project folder \u{201C}\(folder)\u{201D} and let it run commands")
+    }
+    public static var trustWorktreeRefused: String {
+        tr("trust-worktree-refused", "Worktrees are made only in a trusted project: approve this folder's project in the Project tab first.")
+    }
     public static var trustWithPassword: String { tr("trust-with-password", "Trust (approve with password)") }
-    public static func trustLines(_ n: Int) -> String { plural(n, one: "1 line", other: "\(n) lines") }
+    public static func trustLines(_ n: Int) -> String { tr("trust-lines", ["count": .whole(n)], fallback: n == 1 ? "1 line" : "\(n) lines") }
 }

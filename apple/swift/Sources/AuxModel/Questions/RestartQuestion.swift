@@ -8,14 +8,14 @@ public enum RestartQuestion {
 
     static func what(_ running: RunningTerminal) -> String {
         switch (running.agent, running.status) {
-        case (let agent?, .busy): return "\(agent) is working"
-        case (let agent?, .attention): return "\(agent) is waiting for an answer"
+        case (let agent?, .busy): return AuxText.restartAgentWorking(agent)
+        case (let agent?, .attention): return AuxText.restartAgentWaiting(agent)
         default:
             if let program = running.program { return StillRunning.shortened(program) }
             switch running.status {
-            case .busy: return "still working"
-            case .attention: return "waiting for you"
-            case .idle: return "a command is running"
+            case .busy: return AuxText.restartStillWorking
+            case .attention: return AuxText.restartWaitingForYou
+            case .idle: return AuxText.restartCommandRunning
             }
         }
     }
@@ -31,7 +31,7 @@ public enum RestartQuestion {
     public static func detail(_ running: [RunningTerminal]) -> String {
         let shown = running.count > listed + 1 ? listed : running.count
         var lines = running.prefix(shown).map(line)
-        if shown < running.count { lines.append("and \(running.count - shown) more") }
+        if shown < running.count { lines.append(AuxText.andMore(running.count - shown)) }
         return lines.isEmpty ? AuxText.restartNote : lines.joined(separator: "\n") + "\n\n" + AuxText.restartNote
     }
 

@@ -44,7 +44,7 @@ public final class FFITrustBackend: TrustBackend {
         // The window shows what is about to be approved; the approval is for exactly that.
         let shown = review()
         guard shown.canApprove else { return }
-        let reason = "trust the project folder \u{201C}\(shown.name)\u{201D} and let it run commands"
+        let reason = AuxText.trustTouchIDReason(folder: shown.name)
         do {
             try await authenticator.authenticate(reason: reason)
             try desk.approveReviewed()

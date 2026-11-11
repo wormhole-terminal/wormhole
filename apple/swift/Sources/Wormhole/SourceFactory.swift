@@ -14,7 +14,7 @@ enum SourceFactory {
                 return UniFFISource.UniFFIFrameSource(program: program)
             #else
                 throw Options.UsageError(
-                    description: "--shell needs the Rust library: run apple/scripts/build-ffi.sh apple/swift and build again")
+                    description: "--shell needs the Rust library: run apple/scripts/build-ffi.sh apple/swift and build again") // text: a launch flag's error on stderr
             #endif
         }
         return MockFrameSource(

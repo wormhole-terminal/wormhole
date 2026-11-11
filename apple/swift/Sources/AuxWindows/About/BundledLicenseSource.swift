@@ -8,7 +8,7 @@ public struct BundledLicenseSource: LicenseSource {
     public init() {}
 
     public func load() throws -> LicenseList {
-        let override = ProcessInfo.processInfo.environment["WORMHOLE_LICENSES_JSON"].map(URL.init(fileURLWithPath:))
+        let override = ProcessInfo.processInfo.environment["WORMHOLE_LICENSES_JSON"].map(URL.init(fileURLWithPath:)) // text: an environment variable
         guard let url = override ?? Bundle.main.url(forResource: "licenses", withExtension: "json") else {
             throw CocoaError(.fileNoSuchFile)
         }
