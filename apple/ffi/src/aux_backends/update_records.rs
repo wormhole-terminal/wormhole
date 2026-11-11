@@ -37,6 +37,36 @@ pub struct UpdateReleaseRecord {
     /// RFC 3339 as published.
     pub published: Option<String>,
     pub is_security: bool,
+    /// What the (unsigned, so only advisory) feed says the update fixes.
+    pub security: Option<UpdateSecurityRecord>,
+}
+
+/// A security update's severity as the interface says it (critical and high read as danger, the rest as a warning), the
+/// sentence, and the advisories to link.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct UpdateSecurityRecord {
+    pub danger: bool,
+    /// "Fixes a high-severity security issue."
+    pub line: String,
+    pub advisories: Vec<UpdateAdvisoryRecord>,
+}
+
+/// One GitHub advisory: its id in capitals and where GitHub shows it.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct UpdateAdvisoryRecord {
+    pub id: String,
+    pub url: String,
+}
+
+/// The release build's updater facts, baked in when the app was built (`WORMHOLE_UPDATE_URL`, `WORMHOLE_TEAM_ID`,
+/// `packaging/updater.pub`); a dev build has none.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct UpdateReleaseSetup {
+    pub base_url: String,
+    pub public_key: String,
+    pub team_id: Option<String>,
+    /// Where the release workflow publishes, for when the download server does not answer.
+    pub fallback_url: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
@@ -78,4 +108,6 @@ pub struct UpdateStateRecord {
 pub struct UpdateChannelNote {
     pub version: String,
     pub stays_installed: bool,
+    /// The sentence the settings page says (the Unstable build removed, or staying).
+    pub words: String,
 }

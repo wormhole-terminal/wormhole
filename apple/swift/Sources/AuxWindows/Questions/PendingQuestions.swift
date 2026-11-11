@@ -34,6 +34,12 @@ public final class PendingQuestions {
         }
     }
 
+    /// The question titled `title` was taken away without an answer (its time ran out): it ends with a place no button has.
+    func withdraw(title: String) {
+        guard let at = held.firstIndex(where: { $0.title == title }) else { return }
+        held.remove(at: at).resume.resume(returning: -1)
+    }
+
     /// The oldest question, as a driver reads it.
     public var summary: String {
         guard let first = held.first else { return "no question is up" }

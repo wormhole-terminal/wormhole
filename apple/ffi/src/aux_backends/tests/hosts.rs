@@ -7,8 +7,10 @@ use wormhole_term::hosted::meta::Meta;
 
 use crate::aux_backends::common::test_support::{Wakes, scratch};
 use crate::aux_backends::{
-    AuxError, HostAttachmentRecord, HostFieldRecord, HostStandingRecord, HostToneRecord, HostsDesk,
+    AuxError, HostAttachmentRecord, HostFieldRecord, HostLinkMode, HostLinkRecord, HostStandingRecord,
+    HostToneRecord, HostsDesk,
 };
+use crate::hosting::HostUnavailableKind;
 
 const ID_LIVE: &str = "livehost0001";
 const ID_GONE: &str = "gonehost0002";
@@ -115,17 +117,64 @@ fn live_and_stale_hosts_are_classified_and_attachments_name_their_terminal() {
     let stale = report.cards.iter().find(|c| c.id == ID_GONE).expect("the stale host");
     assert_eq!(stale.standing, HostStandingRecord::Stale);
 
-    desk.set_attachments(vec![HostAttachmentRecord {
+    let attachment = |link, unavailable| HostAttachmentRecord {
         host_id: ID_LIVE.into(),
         window: 2,
         title: "api".into(),
-    }]);
+        link,
+        unavailable,
+        unavailable_detail: None,
+    };
+    desk.set_attachments(vec![attachment(None, None)]);
     let report = desk.report();
     let live = report.cards.iter().find(|c| c.id == ID_LIVE).expect("the live host");
     assert_eq!(live.standing, HostStandingRecord::Attached);
     assert_eq!(live.attached_title.as_deref(), Some("api"));
     assert!(live.note.contains("api"), "{}", live.note);
-    assert!(live.facts.iter().any(|f| f.field == HostFieldRecord::Link));
+    let fact = |card: &crate::aux_backends::HostCardRecord, field| {
+        card.facts.iter().find(|f| f.field == field).cloned()
+    };
+    assert_eq!(fact(live, HostFieldRecord::Link).map(|f| f.value).as_deref(), Some("Connecting…"));
+    assert!(fact(live, HostFieldRecord::Heard).is_none() && fact(live, HostFieldRecord::Quiet).is_none());
+
+    // The connection's own facts: counters and the last word from the host while it is attached.
+    let link = |mode, lost| HostLinkRecord {
+        mode,
+        bytes_in: 4096,
+        bytes_out: 128,
+        frames_in: 7,
+        frames_out: 3,
+        detached: false,
+        lost,
+        ended: false,
+        quiet_secs: 12.0,
+        not_responding_secs: None,
+    };
+    desk.set_attachments(vec![attachment(Some(link(HostLinkMode::Sync, false)), None)]);
+    let report = desk.report();
+    let live = report.cards.iter().find(|c| c.id == ID_LIVE).expect("the live host");
+    let traffic = fact(live, HostFieldRecord::Link).expect("link");
+    assert!(traffic.value.contains("7") && traffic.value.contains("3"), "{}", traffic.value);
+    assert_eq!(traffic.tone, HostToneRecord::Normal);
+    assert!(fact(live, HostFieldRecord::Heard).is_some(), "a link on screen is pinged");
+    desk.set_attachments(vec![attachment(Some(link(HostLinkMode::Headless, false)), None)]);
+    let report = desk.report();
+    let live = report.cards.iter().find(|c| c.id == ID_LIVE).expect("the live host");
+    assert!(
+        fact(live, HostFieldRecord::Quiet).is_some(),
+        "a link that is not on screen is not pinged: only quiet"
+    );
+    // A lost link, or a host that runs and cannot be shown, is a problem.
+    desk.set_attachments(vec![attachment(None, Some(HostUnavailableKind::TooNew))]);
+    let report = desk.report();
+    let live = report.cards.iter().find(|c| c.id == ID_LIVE).expect("the live host");
+    let why = fact(live, HostFieldRecord::Link).expect("link");
+    assert_eq!(why.tone, HostToneRecord::Danger);
+    assert_ne!(why.value, "Connecting…");
+    desk.set_attachments(vec![attachment(Some(link(HostLinkMode::Sync, true)), None)]);
+    let report = desk.report();
+    let live = report.cards.iter().find(|c| c.id == ID_LIVE).expect("the live host");
+    assert_eq!(fact(live, HostFieldRecord::Link).map(|f| f.tone), Some(HostToneRecord::Danger));
 }
 
 #[test]

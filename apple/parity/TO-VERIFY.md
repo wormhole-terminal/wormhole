@@ -340,3 +340,24 @@ Unfinished or not built in this lane:
 - O04: the native-menu catcher (`nativeContextMenu`) takes right-click and ⌃-click only when AppKit's current event is one; check that a plain click, a drag and hover on a group head, the + buttons and the commit details still work, and that ⌃-click opens the menu.
 - W08: `hosts::end_all_live` runs on the main thread as the app quits (GPUI: off it); with an unresponsive host End All can take up to 5 s per host.
 - W08: a quit asked while a close question is up is not dropped (GPUI's `quit_prompt`); the Dock's Quit still asks (deliberate, as before).
+
+## Lane launch (S3): PL07, PL09, A07, X15, A01 to A06
+
+| row | what to do | what must happen | file |
+|---|---|---|---|
+| PL07 | `control open-url file:///<folder>` and `file:///<x.command>` in an instance | a terminal in the folder; the script's quoted path typed and run in its folder; https URL and a missing file refused. TEST (script run) | ffi/src/hook_server/control/open.rs, Wormhole/SystemOpen.swift |
+| PL07 | bundled build: set as default terminal, double-click `.command`; Open With a folder; folder on the Dock | new terminal as above; macOS shows the privacy sentences of Info.plist for a mic/Desktop access | Wormhole/Info.plist |
+| PL09 | `kill -TERM <pid>` of an instance | quits as Cmd-Q without the question; windows saved, hosts let go | Wormhole/AppController+WindowEnding.swift `quitOnSigterm` |
+| PL09 | second launch of the same data folder (`control second-launch hide` hides windows first) | a window opens when none is visible | SystemOpen.swift `activateFromSecondLaunch` |
+| A07 | edit config.json `agent_access` Off->Open (or Off->Ask, Ask->Open) by hand with the Automation flag on | request still judged by the old mode; sheet "changed outside Wormhole, keep it?"; Don't Keep writes the old mode back; no answer in 60 s = not kept; edits in Settings, narrowing: apply at once. TEST | ffi/src/aux_backends/access/modes.rs, hook_server/core.rs `Seat::settings`, Wormhole/Aux/AccessDriver.swift |
+| A07 | a control request question left unanswered | after 60 s the client gets ask_timed_out and the sheet goes | ffi/src/aux_backends/access/mod.rs `next_question` |
+| A07 | two profiles open | a profile's question goes on that profile's window, none open = not answered | Wormhole/Aux/AuxController.swift `window(ofProfile:)` |
+| X15 | none yet (never runs on a `Wormhole-swift*` folder) | old hooks replaced, default-terminal role of the old bundle id taken, data folder moved. TEST (never touches a real folder) | ffi/src/legacy.rs, Wormhole/Platform/LegacyLaunch.swift |
+| A03 | release build (`WORMHOLE_UPDATE_URL` set at FFI build): Settings > Updates | feed, key, team, fallback baked; channel from Settings; test instances ignore the baked feed. TEST (feed/signature) | ffi/src/aux_backends/updater.rs `update_release_setup`, Wormhole/Aux/AuxBackends.swift `updateSetup` |
+| A03 | Restart Now with a command running; Restart When Idle then Don't restart | question first; "waits" status and Don't restart button | SettingsUI/Panels/UpdateStatus.swift, Wormhole/Aux/UpdateFollower.swift |
+| A03 | security release feed; channel switch with an Unstable build installed | severity line and GHSA links (opened through ExternalOpen); channel note | updater.rs `release_record`, DesignSystem/ExternalOpen.swift |
+| A03 | replace the running bundle from outside | Installed phase and the chip within a minute | updater.rs `watch_bundle` |
+| A03 | two windows, ready chip | chip follows the front window; x closes it for that version everywhere | UpdateFollower.swift `keepOffered`, TerminalUI/Notice/NoticeCenter.swift `onDismissed` |
+| A04 | Help > Session Hosts | cards start folded (badge, note, id, program, problem lines), click or Return opens; link/heard/quiet facts for attached hosts; badge = Persistent terminals setting; attachments re-read each look | AuxWindows/Hosts/HostCardView.swift, ffi/src/aux_backends/hosts.rs |
+| A01 | `control welcome cursor` / `logo`, `control welcome-dock` | ship lands on the real `>` / logo chevron cell | Wormhole/Aux/AuxController+Intro.swift, ffi welcome_dock |
+| A02, A06 | Licenses window; project commands window | texts in the code font; a second project replaces the first in the open trust window | AuxWindows/About/PackageDetail.swift, Trust/TrustWindow.swift |

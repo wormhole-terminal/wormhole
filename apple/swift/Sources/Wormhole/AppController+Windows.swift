@@ -79,6 +79,7 @@ extension AppController {
         hub.actions.palette = paletteSources(for: session)
         hub.notices.chipOn = { [weak self, weak session] in session.flatMap { self?.noticesOn($0) } ?? true }
         hub.onRestartToUpdate = { [weak self] in self?.updateFollower?.requestRestart() }
+        hub.notices.onDismissed = { [weak self] in if case .warned(.updateReady(let version)) = $0 { self?.updateFollower?.closed(version) } }
         hub.launchesApps = policy.touchesSystem
         hub.onShowProjectCommands = { [weak self] in self?.aux.showTrust() }
         hub.notices.onOpenLogs = { [dataDirectory] in ExternalOpen.open(dataDirectory.appendingPathComponent("logs")) }

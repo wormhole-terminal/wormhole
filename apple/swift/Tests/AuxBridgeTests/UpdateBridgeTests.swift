@@ -72,7 +72,7 @@ final class UpdateBridgeTests: XCTestCase {
     }
 
     func testTheEnginesPhasesBecomeTheWindowsValues() {
-        let release = UpdateReleaseRecord(version: "1.7.0", notes: "## Fixed", published: "2026-10-01T12:00:00Z", isSecurity: true)
+        let release = UpdateReleaseRecord(version: "1.7.0", notes: "## Fixed", published: "2026-10-01T12:00:00Z", isSecurity: true, security: nil)
         XCTAssertEqual(
             UpdatePhaseRecord.available(release: release).value,
             .available(Release(version: "1.7.0", notes: "## Fixed", published: try? Date("2026-10-01T12:00:00Z", strategy: .iso8601), isSecurity: true)))

@@ -5,7 +5,8 @@
 use wormhole_core::ipc::hosts::report::{
     Answer, Elapsed, HostFit, HostRow, SizeUnit, Standing, elapsed, size, utc_parts,
 };
-use wormhole_core::ipc::hosts::{ProbeFailure, StaleReason};
+use wormhole_core::ipc::hosts::{ProbeFailure, StaleReason, UnavailableKind};
+use wormhole_term::client::{LinkMode, LinkStats};
 use wormhole_text::keys::{
     HOSTS_ANSWER_EXITED, HOSTS_ANSWER_INCOMPATIBLE, HOSTS_ANSWER_NOT_ASKED, HOSTS_FAILURE_HUNG_UP,
     HOSTS_FAILURE_NOT_OURS, HOSTS_FAILURE_OTHER_HOST, HOSTS_FAILURE_TIMED_OUT, HOSTS_FAILURE_UNEXPECTED,
@@ -15,6 +16,12 @@ use wormhole_text::keys::{
     hosts_duration_seconds, hosts_failure_connect, hosts_failure_io, hosts_fit_compatible, hosts_fit_too_new,
     hosts_fit_too_old, hosts_range_not_running, hosts_range_one, hosts_range_span, hosts_size_bytes,
     hosts_size_kib, hosts_size_mib, hosts_standing_attached_to, hosts_started, hosts_time_utc,
+};
+use wormhole_text::keys::{
+    HOSTS_LINK_DETACHED, HOSTS_LINK_HEADLESS, HOSTS_LINK_LOST, HOSTS_LINK_RAW, HOSTS_LINK_SYNC,
+    HOSTS_UNAVAILABLE_BUSY, HOSTS_UNAVAILABLE_FAILED, HOSTS_UNAVAILABLE_REFUSED, HOSTS_UNAVAILABLE_TIMED_OUT,
+    HOSTS_UNAVAILABLE_TOO_NEW, HOSTS_UNAVAILABLE_TOO_OLD, HOSTS_UNAVAILABLE_UNREACHABLE, hosts_heard_ago,
+    hosts_link_not_responding, hosts_link_traffic, hosts_quiet_for,
 };
 use wormhole_text::text;
 
@@ -115,7 +122,52 @@ pub(super) fn answer(answer: &Answer) -> String {
     }
 }
 
-/// "No connection": the attachment this app holds has no counters to say more.
-pub(super) fn no_link() -> String {
-    text(HOSTS_LINK_NONE).to_string()
+/// How the connection stands, in the catalog's words (`hosts_window/words.rs` `link`); "No connection" before one is up.
+pub(super) fn link(link: Option<&LinkStats>) -> String {
+    let Some(l) = link else { return text(HOSTS_LINK_NONE).to_string() };
+    if let Some(silent) = l.not_responding_for {
+        return hosts_link_not_responding(&elapsed_text(silent.as_secs()));
+    }
+    if l.lost {
+        return text(HOSTS_LINK_LOST).to_string();
+    }
+    if l.detached || l.ended {
+        return text(HOSTS_LINK_DETACHED).to_string();
+    }
+    let mode = match l.mode {
+        LinkMode::Sync => text(HOSTS_LINK_SYNC),
+        LinkMode::Raw => text(HOSTS_LINK_RAW),
+        LinkMode::Headless => text(HOSTS_LINK_HEADLESS),
+    };
+    hosts_link_traffic(
+        mode,
+        &size_text(l.bytes_in),
+        &size_text(l.bytes_out),
+        &l.frames_in.to_string(),
+        &l.frames_out.to_string(),
+    )
+}
+
+/// How long ago, from a duration.
+pub(super) fn ago_text(since: std::time::Duration) -> String {
+    hosts_heard_ago(&elapsed_text(since.as_secs()))
+}
+
+/// How long a link that is not pinged has been quiet.
+pub(super) fn quiet_text(since: std::time::Duration) -> String {
+    hosts_quiet_for(&elapsed_text(since.as_secs()))
+}
+
+/// Why a host that runs cannot be shown (`terminal_view/host_problem.rs` `unavailable_text`).
+pub(super) fn unavailable_text(kind: UnavailableKind) -> String {
+    text(match kind {
+        UnavailableKind::Refused => HOSTS_UNAVAILABLE_REFUSED,
+        UnavailableKind::TooOld => HOSTS_UNAVAILABLE_TOO_OLD,
+        UnavailableKind::TooNew => HOSTS_UNAVAILABLE_TOO_NEW,
+        UnavailableKind::Busy => HOSTS_UNAVAILABLE_BUSY,
+        UnavailableKind::TimedOut => HOSTS_UNAVAILABLE_TIMED_OUT,
+        UnavailableKind::Unreachable => HOSTS_UNAVAILABLE_UNREACHABLE,
+        UnavailableKind::Failed => HOSTS_UNAVAILABLE_FAILED,
+    })
+    .to_string()
 }

@@ -135,3 +135,24 @@ are numbered on their own.
 11. Turn Increase Contrast on (System Settings → Accessibility → Display), give a group a colour (its menu) and select a terminal in it.
     **Expect** a 2 pt line in the group's colour along the bottom of the title row's rounded bar, and the Settings theme cards, the
     segmented controls and the diff preview card to wear a visible outline.
+
+## Launch, opening files, updates (round S3, lane launch: PL07, PL09, A03, A04, X15)
+
+L1. In a bundled build (not a `--background` instance) make Wormhole the default terminal (Settings → Terminal), then double-click a `.command`
+    file in Finder. **Expect** Wormhole to open a new terminal in that file's folder that runs it. `open -a Wormhole <folder>`, Open With on a
+    folder and a folder dropped on the Dock icon each **expect** a new terminal in that folder. (The handler itself is proved in a test instance
+    by `control open-url`; only Launch Services' choice of this app needs the real bundle.)
+L2. From a terminal in the bundled app run a command that asks for the microphone, then one that lists `~/Desktop`. **Expect** macOS's own
+    question naming Wormhole with the sentences of `Info.plist` (`A program running in Wormhole wants to ...`), not a silent refusal.
+L3. A release build with its feed baked in (`WORMHOLE_UPDATE_URL` set when the FFI was built): Settings → Updates → Check now against the
+    real feed, Install, Restart Now with a command running (**expect** the question), Restart When Idle then Don't Restart, and switch the
+    channel to Unstable and back after an Unstable install (**expect** the note under the status). A security release shows the severity line
+    and its GHSA links, which open in the browser.
+L4. Replace the running bundle from outside (`brew upgrade --cask wormhole-terminal`, or copy a newer `Wormhole.app` over it) while it runs.
+    **Expect** Settings → Updates to say the new version is installed and the ready chip to appear in the window in front within a minute.
+L5. With two windows open, wait for the ready chip, switch windows, close it with its ×, switch back. **Expect** it to follow the window in
+    front, and to stay closed in every window for that version.
+L6. On a Mac whose default terminal is still the old codename's app (bundle id `dev.hyperficial.andromeda`) and a build that opens the real data
+    folder: the first launch takes the role over (X15; the Swift app refuses any folder but `Wormhole-swift*` today, so this cannot be tried yet).
+L7. With VoiceOver on, open Help → Session Hosts and move over a card. **Expect** it read as a button with the host's standing, id and note; Return or
+    Space opens and folds it.

@@ -7,27 +7,34 @@
 //! is held: only these methods do, and only the person's sheet reaches them.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::SyncSender;
-use std::sync::{Arc, Mutex};
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, Mutex, Weak};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+use wormhole_core::config::{AgentAccess, Config};
 use wormhole_core::ipc::Decision;
 use wormhole_core::ipc::access::{
     CapSet, Capability, Full, Grants, Kind, Need, Pending, Queue, Resolved, Scope, Scopes, agent_word,
 };
-use wormhole_core::ipc::control::{Error, ErrorCode, Reason, Reply};
+use wormhole_core::ipc::control::{ASK_WAIT_S, Error, ErrorCode, Reason, Reply};
 use wormhole_core::platform::codesign::SignerKind;
 use wormhole_core::platform::{paths, process};
 use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 use wormhole_core::storage::store::{AgentGrantRow, Store};
+use wormhole_text::keys::{
+    SETTINGS_AGENTS_ACCESS_ASK, SETTINGS_AGENTS_ACCESS_OFF, SETTINGS_AGENTS_ACCESS_OPEN,
+};
+use wormhole_text::text;
 
 mod approvals;
+mod modes;
 
 pub use approvals::{AccessApprovalRecord, AccessHow};
 
 use super::access_records::{
-    AccessAnswer, AccessCapability, AccessHeldRecord, AccessKindRecord, AccessProgramRecord,
-    AccessQuestionRecord, AccessSignerKind,
+    AccessAnswer, AccessCapability, AccessHeldRecord, AccessKindRecord, AccessModeRecord,
+    AccessProgramRecord, AccessQuestionRecord, AccessSignerKind,
 };
 use super::common::{AuxError, AuxListener, Waker, locked, resolve_data_dir};
 
@@ -49,6 +56,12 @@ pub struct AccessDesk {
     /// The profile this desk holds approvals for: a request is judged by the desk of the window it reaches.
     profile: ProfilePaths,
     waker: Waker,
+    /// The mode in force, and a widening nobody in Wormhole made (`modes`).
+    modes: Mutex<modes::Modes>,
+    /// This desk, for the threads that time its questions out.
+    me: Weak<Self>,
+    /// How long a question waits, in milliseconds: a minute, shorter in a test.
+    wait_ms: AtomicU64,
 }
 
 #[uniffi::export]
@@ -65,20 +78,72 @@ impl AccessDesk {
             Some(id) => root.profile(&ProfileId::parse(&id).map_err(AuxError::failed)?),
             None => root.default_profile(),
         };
-        Ok(Arc::new(Self {
+        Ok(Arc::new_cyclic(|me| Self {
             inner: Mutex::new(Inner::default()),
             profile_dir: paths.dir().to_path_buf(),
             profile: paths,
             waker: Waker::new(listener),
+            modes: Mutex::default(),
+            me: me.clone(),
+            wait_ms: AtomicU64::new(ASK_WAIT_S * 1000),
         }))
     }
 
     /// The question to put on screen now: the first not shown, and only when none is. Re-arms the wake.
     pub fn next_question(&self) -> Option<AccessQuestionRecord> {
         self.waker.rearm();
-        let mut inner = locked(&self.inner);
-        let pending = inner.queue.next_to_show()?;
-        Some(self.record_of(pending))
+        let record = {
+            let mut inner = locked(&self.inner);
+            let pending = inner.queue.next_to_show()?;
+            self.record_of(pending)
+        };
+        // A question nobody answers is no after a minute, and the sheet goes (the next wake finds it gone).
+        let id = record.id;
+        self.after_wait(move |desk| desk.time_out(id));
+        Some(record)
+    }
+
+    /// Whether question `id` is still waiting for the person: false once it was answered, withdrawn or timed out.
+    pub fn is_waiting(&self, id: u64) -> bool {
+        locked(&self.inner).queue.iter().any(|pending| pending.id == id)
+    }
+
+    /// The question about a mode that was widened outside Wormhole, when one waits to be put on screen (it comes
+    /// before the questions of programs). Re-arms the wake.
+    pub fn next_mode_question(&self) -> Option<AccessModeRecord> {
+        self.waker.rearm();
+        let change = locked(&self.modes).next_to_ask()?;
+        let token = change.token;
+        // Not answered is not kept.
+        self.after_wait(move |desk| desk.answer_mode(token, false));
+        let word = |mode: AgentAccess| {
+            text(match mode {
+                AgentAccess::Off => SETTINGS_AGENTS_ACCESS_OFF,
+                AgentAccess::Ask => SETTINGS_AGENTS_ACCESS_ASK,
+                AgentAccess::Open => SETTINGS_AGENTS_ACCESS_OPEN,
+            })
+            .to_string()
+        };
+        Some(AccessModeRecord { token, previous: word(change.previous), requested: word(change.requested) })
+    }
+
+    /// Whether the mode question `token` is still waiting for the person.
+    pub fn is_waiting_mode(&self, token: u64) -> bool {
+        locked(&self.modes).is_waiting(token)
+    }
+
+    /// The person's answer to the mode question `token`: keep the widened mode, or put the earlier one back in the
+    /// file (that write is the person's own edit, with nothing to ask). An answer to another question does nothing.
+    pub fn answer_mode(&self, token: u64, keep: bool) {
+        let Some(change) = locked(&self.modes).pending(token) else { return };
+        if !keep {
+            // Written while the question still waits: a look in between would find the wider mode in the file with nothing
+            // pending, and ask again.
+            let mut config = Config::load_for(&self.profile);
+            config.update(|settings| settings.agent_access = change.previous);
+        }
+        locked(&self.modes).answered(token, keep);
+        self.waker.notify();
     }
 
     /// Settles question `id` with the person's answer: what it means is recorded, every request that waited
@@ -155,6 +220,49 @@ impl AccessDesk {
 impl AccessDesk {
     pub(crate) fn profile(&self) -> &ProfilePaths {
         &self.profile
+    }
+
+    /// The mode in force for this profile when its settings say `want`: that, unless it is a widening nobody in
+    /// Wormhole made, which keeps the earlier mode and asks the person (`modes`).
+    pub(crate) fn mode_in_force(&self, want: AgentAccess) -> AgentAccess {
+        let edits = crate::settings::edits::count(self.profile.dir());
+        let (mode, asked) = locked(&self.modes).reconcile(want, edits);
+        if asked {
+            tracing::warn!(
+                "agent access was widened outside Wormhole to {}: asking whether to keep it",
+                want.word()
+            );
+            self.waker.notify();
+        }
+        mode
+    }
+
+    /// Question `id` was not answered in time: no, and not remembered.
+    fn time_out(&self, id: u64) {
+        let Some(pending) = locked(&self.inner).queue.take(id) else { return };
+        let label = pending.resolved.label.clone();
+        pending.answer(|| Decision::Refuse(timed_out(&label)));
+        self.waker.notify();
+    }
+
+    /// A question waits this long from now on, not a minute.
+    #[cfg(test)]
+    pub(crate) fn wait_only(&self, wait: Duration) {
+        self.wait_ms.store(u64::try_from(wait.as_millis()).unwrap_or(u64::MAX), Ordering::Relaxed);
+    }
+
+    /// Runs `then` on a thread of its own once the wait is over.
+    fn after_wait(&self, then: impl FnOnce(&Self) + Send + 'static) {
+        let (desk, wait) = (self.me.clone(), Duration::from_millis(self.wait_ms.load(Ordering::Relaxed)));
+        let spawned = std::thread::Builder::new().name("access-wait".into()).spawn(move || {
+            std::thread::sleep(wait);
+            if let Some(desk) = desk.upgrade() {
+                then(&desk);
+            }
+        });
+        if let Err(err) = spawned {
+            tracing::warn!("a question will not time out: {err}");
+        }
     }
 
     /// Queues a question for `resolved` (or joins the one its program has open); `waiter` hears the decision.
@@ -323,6 +431,15 @@ fn declined_terminal(label: &str, terminal: i64) -> Reply {
         format!("the user did not allow {label} to use terminal {terminal}, which it did not open: do not retry; tell the user what you wanted to do there and ask them"),
     )
     .because(Reason::Declined)
+    .into()
+}
+
+fn timed_out(label: &str) -> Reply {
+    Error::new(
+        ErrorCode::NotAllowed,
+        format!("nobody answered the question about {label} in Wormhole within a minute; it counts as no, and is not remembered"),
+    )
+    .because(Reason::AskTimedOut)
     .into()
 }
 

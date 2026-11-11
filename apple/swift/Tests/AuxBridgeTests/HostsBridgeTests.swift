@@ -25,8 +25,7 @@ final class HostsBridgeTests: XCTestCase {
     }
 
     func testAnEmptyFolderHasNoCardsAndAStaleHostCanBeForgotten() async throws {
-        let backend = try FFIHostsBackend(dataDir: scratch.data)
-        backend.setPersistentTerminals(true)
+        let backend = try FFIHostsBackend(dataDir: scratch.data) { ([], true) }
         var report = await backend.report()
         XCTAssertTrue(report.cards.isEmpty)
         XCTAssertTrue(report.flagOn)

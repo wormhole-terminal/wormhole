@@ -38,7 +38,7 @@ public struct AuxWindowsSpecimen: View {
                 StatusBadge(text: AuxText.hostsStale, color: tokens.textMuted)
             }
             ForEach(HostsSamples.report.cards.prefix(2)) { card in
-                HostCardView(card: card, copied: false, copy: {}, end: {}, forget: {})
+                HostCardView(card: card, open: false, toggle: {}, copied: false, copy: {}, end: {}, forget: {})
             }
         }
         .allowsHitTesting(false)

@@ -19,9 +19,16 @@ use wormhole_core::update::{
 
 use super::common::{AuxError, AuxListener, Waker, locked, resolve_data_dir};
 use super::update_records::{
-    UpdateChannelNote, UpdateChannelRecord, UpdatePhaseRecord, UpdateReleaseRecord, UpdateSetup,
-    UpdateStateRecord,
+    UpdateAdvisoryRecord, UpdateChannelNote, UpdateChannelRecord, UpdatePhaseRecord, UpdateReleaseRecord,
+    UpdateReleaseSetup, UpdateSecurityRecord, UpdateSetup, UpdateStateRecord,
 };
+use wormhole_core::update::{Launched, Severity};
+use wormhole_text::keys::{
+    SETTINGS_UPDATES_FIXES_A_SECURITY_ISSUE, SETTINGS_UPDATES_FIXES_CRITICAL, SETTINGS_UPDATES_FIXES_HIGH,
+    SETTINGS_UPDATES_FIXES_LOW, SETTINGS_UPDATES_FIXES_MEDIUM, settings_updates_unstable_removed,
+    settings_updates_unstable_stays,
+};
+use wormhole_text::text;
 
 /// Progress wakes at most this often (the download reads in 64 KiB chunks).
 const PROGRESS_EVERY: std::time::Duration = std::time::Duration::from_millis(100);
@@ -93,7 +100,84 @@ fn release_record(release: &Release) -> UpdateReleaseRecord {
         notes: release.notes.clone(),
         published: release.pub_date.clone(),
         is_security: release.is_security_update(),
+        security: release.security.as_ref().map(|security| UpdateSecurityRecord {
+            danger: matches!(security.severity, Severity::Critical | Severity::High),
+            line: text(match security.severity {
+                Severity::Critical => SETTINGS_UPDATES_FIXES_CRITICAL,
+                Severity::High => SETTINGS_UPDATES_FIXES_HIGH,
+                Severity::Medium => SETTINGS_UPDATES_FIXES_MEDIUM,
+                Severity::Low => SETTINGS_UPDATES_FIXES_LOW,
+                Severity::Unknown => SETTINGS_UPDATES_FIXES_A_SECURITY_ISSUE,
+            })
+            .to_string(),
+            advisories: security
+                .advisories
+                .iter()
+                // The id has passed the feed's strict format check, so it can't carry a path or a query.
+                .map(|id| UpdateAdvisoryRecord { id: id.to_uppercase(), url: format!("{ADVISORIES}{id}") })
+                .collect(),
+        }),
     }
+}
+
+/// What a change of channel did to the Unstable build it left, in the page's words: it was removed before it replaced anything, or it
+/// stays installed (`settings_window/sections/updates.rs`).
+pub(super) fn note_words(version: &str, stays_installed: bool) -> String {
+    if stays_installed { settings_updates_unstable_stays(version) } else { settings_updates_unstable_removed(version) }.to_string()
+}
+
+/// Where GitHub shows an advisory (`settings_window/sections/updates.rs` `advisory_url`).
+const ADVISORIES: &str = "https://github.com/wormhole-terminal/wormhole/security/advisories/";
+/// The releases the download server redirects to (`.github/workflows/release.yml`).
+const GITHUB_RELEASES: &str = "https://github.com/wormhole-terminal/wormhole/releases";
+/// How often the bundle this run started from is looked at: the GPUI app's tick does it once a minute.
+const BUNDLE_LOOK: std::time::Duration = std::time::Duration::from_secs(60);
+
+/// What a release build of the app knows about its updates, as the GPUI app bakes it in (`update::feed_config`): the feed
+/// from the build's `WORMHOLE_UPDATE_URL`, the minisign key, the team id and the fallback. `None` for a build made
+/// without a feed (a dev build), which does not update itself.
+#[uniffi::export]
+pub fn update_release_setup() -> Option<UpdateReleaseSetup> {
+    release_setup(option_env!("WORMHOLE_UPDATE_URL"), option_env!("WORMHOLE_TEAM_ID"))
+}
+
+pub(super) fn release_setup(url: Option<&str>, team: Option<&str>) -> Option<UpdateReleaseSetup> {
+    Some(UpdateReleaseSetup {
+        base_url: url.filter(|url| !url.is_empty())?.to_string(),
+        public_key: include_str!("../../../../packaging/updater.pub").to_string(),
+        team_id: team.filter(|id| !id.is_empty()).map(str::to_string),
+        fallback_url: GITHUB_RELEASES.to_string(),
+    })
+}
+
+/// Once a minute (the GPUI app's tick): whether the bundle this run started from was replaced on disk (Homebrew, another
+/// copy). Then the app is as an in-app install leaves it, `Installed`, so Settings and the chip offer the restart. On a
+/// thread of its own: the look is file system calls that a slow volume could hang. Ends with the engine.
+fn watch_bundle(shared: &Arc<Shared>, launched: Launched) {
+    let shared = Arc::downgrade(shared);
+    let spawned = std::thread::Builder::new().name("wormhole-ffi-update-bundle".into()).spawn(move || {
+        loop {
+            std::thread::sleep(BUNDLE_LOOK);
+            let Some(shared) = shared.upgrade() else { return };
+            note_replaced(&shared, launched.replaced());
+        }
+    });
+    if let Err(err) = spawned {
+        tracing::warn!("a replaced bundle will not be noticed: {err}");
+    }
+}
+
+/// A look at the bundle found `replaced`: the phase becomes `Installed`, unless an install is on its way or done.
+fn note_replaced(shared: &Shared, replaced: Option<update::Replaced>) {
+    let Some(replaced) = replaced else { return };
+    let mut state = locked(&shared.state);
+    if matches!(state.phase, Phase::Installed(_) | Phase::Downloading) {
+        return;
+    }
+    tracing::info!(version = %replaced.version, "the app bundle was replaced while running");
+    state.phase = Phase::Installed(replaced.version);
+    drop(state);
+    shared.waker.notify();
 }
 
 #[uniffi::export]
@@ -117,7 +201,8 @@ impl UpdateEngine {
         {
             tracing::warn!("saving update schedule: {err:#}");
         }
-        Ok(Arc::new(Self {
+        let launched = Launched::capture(&setup.current_version);
+        let engine = Arc::new(Self {
             shared: Arc::new(Shared {
                 bundle: setup.app_bundle.map(PathBuf::from),
                 schedule_file,
@@ -137,7 +222,11 @@ impl UpdateEngine {
                 auto_install: AtomicBool::new(true),
                 waker: Waker::new(listener),
             }),
-        }))
+        });
+        if let Some(launched) = launched {
+            watch_bundle(&engine.shared, launched);
+        }
+        Ok(engine)
     }
 
     /// What the window shows now; the next change wakes again.
@@ -162,10 +251,11 @@ impl UpdateEngine {
             phase,
             channel: record_channel(state.channel),
             last_checked: locked(&shared.schedule).last_check,
-            channel_note: state
-                .note
-                .clone()
-                .map(|(version, stays_installed)| UpdateChannelNote { version, stays_installed }),
+            channel_note: state.note.clone().map(|(version, stays_installed)| UpdateChannelNote {
+                words: note_words(&version, stays_installed),
+                version,
+                stays_installed,
+            }),
         }
     }
 
@@ -308,6 +398,14 @@ impl UpdateEngine {
             set_phase(&self.shared, Phase::Failed(format!("Couldn't restart: {err}")));
             AuxError::failed(err)
         })
+    }
+}
+
+#[cfg(test)]
+impl UpdateEngine {
+    /// What a look at the bundle that finds version `version` there does, without the file system.
+    pub(crate) fn note_replaced_for_test(&self, version: &str) {
+        note_replaced(&self.shared, Some(update::Replaced { version: version.to_string() }));
     }
 }
 

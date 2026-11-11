@@ -12,6 +12,7 @@ use wormhole_core::ipc::control::structure::{launch_check, size_check};
 use wormhole_core::ipc::control::{
     Error, ErrorCode, Limited, Opened, Reason, Reply, SplitMade, SplitSpec, writes_off,
 };
+use wormhole_core::terminal::default_terminal;
 use wormhole_core::workspace::{Action, Event, Refusal};
 
 use super::joined::open_beside;
@@ -86,6 +87,42 @@ pub(super) fn new_terminal(
         }
         None => Reply::error(ErrorCode::Failed, "the terminal could not be made"),
     }
+}
+
+/// Something macOS asked Wormhole to open (a double-clicked `.command`, Open With, a folder dropped on the Dock icon,
+/// `open -a Wormhole <folder>`): a terminal for each `file://` URL in window `window` (else the first), a folder as it
+/// is and a script run in its folder (core's `default_terminal`). The person opened it themselves, so it needs no
+/// access and takes none of the control line's budget. How many terminals it made.
+pub(crate) fn open_from_system(core: &Arc<Core>, urls: &[String], window: Option<i64>) -> u32 {
+    let target = window.and_then(|id| core.share_of_window(id)).unwrap_or_else(|| core.shared.clone());
+    let mut made = 0;
+    for url in urls {
+        let Some(path) = default_terminal::file_path(url) else {
+            tracing::warn!(url, "asked to open something that isn't a local file");
+            continue;
+        };
+        let Some(opened) =
+            path.metadata().ok().and_then(|meta| default_terminal::Opened::of(&path, meta.is_dir()))
+        else {
+            tracing::warn!(path = %path.display(), "asked to open a file that can't be read");
+            continue;
+        };
+        let folder = opened.folder().to_string_lossy().into_owned();
+        if let Err(error) = launch_check(Some(&folder), opened.line()) {
+            tracing::warn!(path = %path.display(), ?error, "asked to open something a terminal can't start in");
+            continue;
+        }
+        let Some((terminal, _)) = open(&target, Action::NewTerminal, Some(folder)) else {
+            tracing::warn!(path = %path.display(), "no room for a terminal to open it in");
+            continue;
+        };
+        if let Some(line) = opened.line() {
+            run_first(core, terminal, line.to_string());
+        }
+        tracing::info!(terminal, script = opened.line().is_some(), "opened from the system");
+        made += 1;
+    }
+    made
 }
 
 /// `split`: a new terminal beside the target, joined into its split (made if it stood alone), to its right or

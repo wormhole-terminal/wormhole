@@ -60,6 +60,15 @@ pub struct AccessQuestionRecord {
     pub can_be_remembered: bool,
 }
 
+/// The question about a mode widened outside Wormhole: the words of the mode that stays in force and of the one asked for.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct AccessModeRecord {
+    /// Tells this question from an earlier one when it is answered.
+    pub token: u64,
+    pub previous: String,
+    pub requested: String,
+}
+
 /// The buttons that settle a question (`sheet::Button` of the GPUI app, without the mode-change pair).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
 pub enum AccessAnswer {

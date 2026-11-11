@@ -32,7 +32,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// Every window of every profile, in the order they were made; the ones commands act on are `shown`.
     var sessions: [WindowSession] = []
     /// The window that was in front last: what commands act on while none is the key window (a test instance never has one).
-    var lastFront: WindowSession?
+    var lastFront: WindowSession? { didSet { if lastFront !== oldValue { updateFollower?.keepOffered() } } }
     /// Open folder… in a test instance, which shows no panel: what a chosen folder does, until `open-folder` gives one.
     var pendingFolder: ((String) -> Void)?
     /// Set while the app quits, so the windows that go with it are saved, not forgotten.
@@ -48,6 +48,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// Layers the settings of the terminal in front's project over the person's (real windows only).
     var projectSettings: AnyObject?
     var hooks: HookHost?
+    /// Files and folders macOS asked this app to open that are still waiting for the windows and the socket (`SystemOpen.swift`).
+    var systemOpens: [URL] = []
     /// The updater's follower: the schedule, the chip that says an update is ready, Restart When Idle (a run with a feed only).
     var updateFollower: UpdateFollower?
     var ambient: AmbientController?
@@ -101,6 +103,8 @@ final class AppController: NSObject, NSApplicationDelegate {
         let opened = dataDirectory.appendingPathComponent("opened.txt")
         if options.background { ExternalOpen.divert(to: opened) }
         PlatformSetup.install(options, launchLog: options.background ? opened : nil)
+        // Before anything opens a file in the data folder: a folder from before the rename is moved (never in an experiment folder).
+        LegacyLaunch.moveDataFolder(dataDirectory)
         windowsHost = try WindowsHost.make(options)
         profileHosts[windowsHost.profile] = windowsHost
         super.init()

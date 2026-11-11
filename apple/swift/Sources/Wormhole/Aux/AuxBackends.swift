@@ -9,6 +9,8 @@ import Foundation
 import PlatformModel
 import PlatformUI
 import SettingsModel
+import WorkspaceBridge
+import WorkspaceModel
 
 #if WITH_UNIFFI
     import AuxBridge
@@ -33,18 +35,12 @@ struct AuxBackends {
         #if WITH_UNIFFI
             if real {
                 do {
-                    let backend = try AuxBridge.makeHostsBackend()
-                    // The window knows which terminals hold a host; the folder does not.
-                    let attached = app.sessions.flatMap { session in
-                        session.hub.state.sections.flatMap(\.rows).compactMap { row in
-                            session.hub.store.hosting(of: row.id)?.hostID.map {
-                                (hostID: $0, window: session.id, title: row.terminal.title)
-                            }
-                        }
+                    // The windows know which terminals hold a host and how each connection stands; the folder does not. Read at each
+                    // look, so a terminal attached or ended later shows the right standing.
+                    return try AuxBridge.makeHostsBackend { [weak app] in
+                        guard let app else { return ([], false) }
+                        return (app.hostAttachments(), app.profileFlags.on(profile: app.windowsHost.profile).contains("persistent_terminals"))
                     }
-                    backend.setAttachments(attached)
-                    backend.setPersistentTerminals(app.hub.store.hosting(of: app.hub.state.selected ?? 0) != nil)
-                    return backend
                 } catch { fallback("session hosts", error) } // text: names the part in a stderr line
             }
         #endif
@@ -80,20 +76,40 @@ struct AuxBackends {
         return BundledLicenseSource()
     }
 
-    func updates() -> any UpdateBackend {
-        #if WITH_UNIFFI
-            if real, let feed = app.options.updateFeedURL, let key = publicKey() {
-                let info = AppInfo.from(bundle: .main)
-                var setup = FFIUpdateBackend.Setup(
-                    baseURL: feed, publicKey: key, currentVersion: info.version, bundleID: Isolation.bundleIdentifier)
+    #if WITH_UNIFFI
+        /// Where and what to update. A fixture names its own feed and key (`--update-feed`, `--update-key`, `--update-bundle`: they
+        /// are what the tests use); a release build has its feed, key, team and fallback baked in when it was built, the way the GPUI app
+        /// has them (`update::feed_config`), and its channel is Settings'. A test instance never takes the baked feed: it would ask a real
+        /// server (and be counted); a dev build has none.
+        func updateSetup() -> FFIUpdateBackend.Setup? {
+            guard real else { return nil }
+            let info = AppInfo.from(bundle: .main)
+            if let feed = app.options.updateFeedURL, let key = publicKey() {
+                var setup = FFIUpdateBackend.Setup(baseURL: feed, publicKey: key, currentVersion: info.version, bundleID: Isolation.bundleIdentifier)
                 if app.options.updateKeyFile != nil || app.options.updateBundle != nil {
                     // A fixture: its own key and a bundle in the data folder, which no one has code-signed.
                     setup.appBundle = scratchBundle()
                     setup.verifyCodesign = false
                 }
+                return setup
+            }
+            guard app.policy.touchesSystem, let release = updateReleaseSetup() else { return nil }
+            var setup = FFIUpdateBackend.Setup(baseURL: release.baseUrl, publicKey: release.publicKey, currentVersion: info.version, bundleID: Isolation.bundleIdentifier)
+            setup.teamID = release.teamId
+            setup.fallbackURL = release.fallbackUrl
+            if Bundle.main.bundleURL.pathExtension == "app" { setup.appBundle = Bundle.main.bundleURL }
+            setup.channel = app.settingsModel.backend.values["update_channel"]?.string == "unstable" ? .preview : .stable
+            return setup
+        }
+    #endif
+
+    func updates() -> any UpdateBackend {
+        #if WITH_UNIFFI
+            if let setup = updateSetup() {
                 let hooks = FFIUpdateBackend.Hooks(
                     runningTerminals: { [weak app] in app?.runningTerminals ?? [] }, terminate: { [weak app] in app?.terminateUnattended() },
-                    whenIdle: { [weak app] restart in app?.updateFollower?.restartWhenIdle(restart) ?? restart() })
+                    whenIdle: { [weak app] restart in app?.updateFollower?.restartWhenIdle(restart) ?? restart() },
+                    cancelWhenIdle: { [weak app] in app?.updateFollower?.cancelRestartWhenIdle() })
                 do { return try AuxBridge.makeUpdateBackend(setup: setup, hooks: hooks) } catch { fallback("updates", error) }
             }
         #endif
@@ -150,3 +166,37 @@ struct AuxBackends {
         return !FileManager.default.fileExists(atPath: FirstRunBackend.marker(in: app.dataDirectory).path)
     }
 }
+
+#if WITH_UNIFFI
+    extension AppController {
+        /// The terminals of every window that hold a session host, with how their connection stands and, where a host that runs
+        /// cannot be shown, why.
+        func hostAttachments() -> [HostAttachmentRecord] {
+            sessions.flatMap { session in
+                let core = session.hub.store.hooks as? RustWorkspaceBackend
+                return session.hub.state.sections.flatMap(\.rows).compactMap { row -> HostAttachmentRecord? in
+                    guard let hostID = session.hub.store.hosting(of: row.id)?.hostID else { return nil }
+                    var why: HostUnavailableKind?
+                    if case .unavailable(let kind)? = session.hub.store.hostProblem(of: row.id) { why = kind.record }
+                    return HostAttachmentRecord(
+                        hostId: hostID, window: Int64(session.id), title: row.terminal.title, link: core?.hostLink(of: row.id),
+                        unavailable: why, unavailableDetail: nil)
+                }
+            }
+        }
+    }
+
+    extension HostProblem.Why {
+        var record: HostUnavailableKind {
+            switch self {
+            case .refused: .refused
+            case .tooOld: .tooOld
+            case .tooNew: .tooNew
+            case .busy: .busy
+            case .timedOut: .timedOut
+            case .unreachable: .unreachable
+            case .failed: .failed
+            }
+        }
+    }
+#endif

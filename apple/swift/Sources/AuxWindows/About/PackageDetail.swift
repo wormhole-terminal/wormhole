@@ -9,6 +9,7 @@ struct PackageDetail: View {
     let package: LicenseList.Package
     let texts: [String]
     @Environment(\.tokens) private var tokens
+    @Environment(\.codeFont) private var codeFont
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -20,7 +21,7 @@ struct PackageDetail: View {
                         Text(AuxText.licenseNoFile).font(TextRole.body.font).foregroundStyle(tokens.textMuted)
                     }
                     ForEach(Array(texts.enumerated()), id: \.offset) { _, text in
-                        Text(text).font(.system(size: TextRole.caption.size, design: .monospaced)).textSelection(.enabled)
+                        Text(text).font(codeFont.font(TextRole.caption.size)).textSelection(.enabled)
                     }
                 }
                 .padding(Space._6)

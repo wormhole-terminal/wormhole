@@ -47,8 +47,8 @@ pub use self::events::{HookError, HookEvent};
 use self::tap::Publisher;
 pub(crate) use self::tap::Tap;
 pub use self::welcome::{
-    WelcomeDemoRow, WelcomeDemoState, WelcomePlan, welcome_demo_label, welcome_demo_next_ms,
-    welcome_demo_rows, welcome_demo_title,
+    WelcomeDemoRow, WelcomeDemoState, WelcomeDock, WelcomePlan, welcome_demo_label, welcome_demo_next_ms,
+    welcome_demo_rows, welcome_demo_title, welcome_dock,
 };
 use crate::aux_backends::{AccessDesk, AuxError};
 use crate::files_panel::UsageService;
@@ -175,6 +175,12 @@ impl HookServer {
         self.core.settings_changed(&profile);
         // The `probes` flag, the output-folds flag and "Never hide lines" are read again with them.
         crate::probes::reload(&self.core);
+    }
+
+    /// macOS asked Wormhole to open these `file://` URLs (`application(_:open:)`): a terminal each in window `window`, a
+    /// script run in its folder. How many terminals were made.
+    pub fn open_from_system(&self, urls: Vec<String>, window: Option<i64>) -> u32 {
+        control::open_from_system(&self.core, &urls, window)
     }
 
     /// Stop serving: the socket is removed, the lock given up, the streams closed. Explicit: a Swift `deinit`

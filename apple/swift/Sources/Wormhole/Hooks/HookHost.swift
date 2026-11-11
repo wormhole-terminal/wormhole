@@ -40,6 +40,10 @@
 
         func stop() { handle.stop() }
 
+        /// macOS asked to open these files and folders: a terminal each in window `window` (`SystemOpen.swift`).
+        @discardableResult
+        func openFromSystem(_ urls: [URL], in window: Int) -> Int { Int(handle.openFromSystem(urls: urls.map(\.absoluteString), window: Int64(window))) }
+
         /// Settings → Agent access → Revoke: the approval of `profile`'s desk is taken back and the streams it let in end.
         func revokeApproval(_ number: UInt64, stored: Bool, profile: String) {
             if stored { handle.revokeStoredApproval(profile: profile, number) } else { handle.revokeApproval(profile: profile, number) }
@@ -62,7 +66,7 @@
 
         private func perform(_ action: HookAction) {
             switch action {
-            case .activate: if app.policy.touchesSystem { NSApp.activate() }
+            case .activate: app.activateFromSecondLaunch()
             case .front(let terminal): app.show(terminal: Int(terminal))
             case .closeAsked(let terminal):
                 app.closeTerminal(Int(terminal), fromCommandLine: true) { [weak self] in self?.handle.closeQuestionOver() }
@@ -109,6 +113,7 @@
         func settingsChanged(profile: String) {}
         func revokeApproval(_ number: UInt64, stored: Bool, profile: String) {}
         func stop() {}
+        @discardableResult func openFromSystem(_ urls: [URL], in window: Int) -> Int { 0 }
     }
 
     extension AppController {

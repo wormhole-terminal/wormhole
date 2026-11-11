@@ -51,6 +51,7 @@ public final class AccessSheet {
 
     /// Takes the sheet away without an answer.
     public func withdraw() {
+        PendingQuestions.current?.withdraw(title: display.title)
         guard let window, window.attachedSheet === alert.window else { return }
         window.endSheet(alert.window, returnCode: .cancel)
     }

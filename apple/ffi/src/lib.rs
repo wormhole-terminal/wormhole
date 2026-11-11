@@ -38,6 +38,7 @@ mod interaction;
 mod isolation;
 pub mod keymap;
 mod launch;
+mod legacy;
 mod live_resize;
 mod minimap;
 mod notes_text;
@@ -118,8 +119,9 @@ pub use git::{
 };
 pub use git::{GitDiffNotes, GitProblemWords, GitSideNote, git_problem};
 pub use hook_server::{
-    HookError, HookEvent, HookListener, HookServer, WelcomeDemoRow, WelcomeDemoState, WelcomePlan,
-    cli_exit_code, welcome_demo_label, welcome_demo_next_ms, welcome_demo_rows, welcome_demo_title,
+    HookError, HookEvent, HookListener, HookServer, WelcomeDemoRow, WelcomeDemoState, WelcomeDock,
+    WelcomePlan, cli_exit_code, welcome_demo_label, welcome_demo_next_ms, welcome_demo_rows,
+    welcome_demo_title, welcome_dock,
 };
 pub use hosting::{
     HostUnavailableKind, HostedStart, HostedTerminals, HostingError, HostingProgram, LaunchPlan, OrphanHost,

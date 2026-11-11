@@ -127,6 +127,23 @@ pub struct WelcomePlan {
     pub import_home: Option<String>,
 }
 
+/// Where a hand-over's ship docks in the terminal's grid: the middle of the chevron (row and column in cells from the grid's
+/// top left, a cell's middle being `n + 0.5`) and how tall it is in rows. Core's cells, which the welcome program draws its mark
+/// and logo in, so the app can aim.
+#[derive(Debug, Clone, Copy, PartialEq, uniffi::Record)]
+pub struct WelcomeDock {
+    pub row: f32,
+    pub col: f32,
+    pub rows: f32,
+}
+
+/// The dock of `handover` (`cursor`, `portal` or `logo`); none for Portal (no ship) or a word that is not one.
+#[uniffi::export]
+pub fn welcome_dock(handover: String) -> Option<WelcomeDock> {
+    let dock = wormhole_core::onboarding::welcome::dock(Handover::parse(&handover)?)?;
+    Some(WelcomeDock { row: dock.row, col: dock.col, rows: dock.rows })
+}
+
 #[uniffi::export]
 impl HookServer {
     /// A welcome starts in terminal `tab` (`handover`: `cursor`, `portal` or `logo`): its door and its run, and the

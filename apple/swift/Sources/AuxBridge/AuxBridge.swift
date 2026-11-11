@@ -14,7 +14,9 @@ public enum AuxBridge {
     }
 
     @MainActor
-    public static func makeHostsBackend(dataDir: URL? = nil) throws -> FFIHostsBackend { try FFIHostsBackend(dataDir: dataDir) }
+    public static func makeHostsBackend(dataDir: URL? = nil, facts: FFIHostsBackend.Facts? = nil) throws -> FFIHostsBackend {
+        try facts.map { try FFIHostsBackend(dataDir: dataDir, facts: $0) } ?? FFIHostsBackend(dataDir: dataDir)
+    }
 
     @MainActor
     public static func makeTrustBackend(root: URL, profile: String? = nil, authenticator: any Authenticating) throws -> FFITrustBackend {

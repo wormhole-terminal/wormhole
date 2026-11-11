@@ -25,6 +25,8 @@ public final class NoticeCenter {
     public var onOpenLogs: (() -> Void)?
     /// A click on a warning that offers something ("Restart").
     public var onAct: ((Notice) -> Void)?
+    /// The × (or a click that only dismisses) closed the notice on show.
+    public var onDismissed: ((Notice) -> Void)?
     /// The window's Reduce Motion, set by the host view: it picks the way out, which the rules need the length of.
     public var reduceMotion = false
 
@@ -56,7 +58,10 @@ public final class NoticeCenter {
         else { dismiss() }
     }
 
-    public func dismiss() { apply(rules.dismiss(now: now(), leave: leave)) }
+    public func dismiss() {
+        if let shown { onDismissed?(shown) }
+        apply(rules.dismiss(now: now(), leave: leave))
+    }
     public func withdraw() { apply(rules.withdraw(now: now(), leave: leave)) }
     public var isClickable: Bool { rules.clickable }
 

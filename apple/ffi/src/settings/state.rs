@@ -15,6 +15,8 @@ use super::values::{schema_keys, schema_values};
 
 pub(crate) struct State {
     config: Config,
+    /// The profile's folder: what `edits` counts Settings' changes by.
+    dir: std::path::PathBuf,
     /// The active terminal's project settings, already limited to what a project may change.
     overrides: Option<Map<String, Value>>,
     /// What shows: the file's settings with `overrides` on top.
@@ -35,7 +37,14 @@ impl State {
     pub(crate) fn load(paths: &ProfilePaths) -> Self {
         let config = Config::load_for(paths);
         let effective = config.settings.clone();
-        Self { config, overrides: None, effective, project_keys: Vec::new(), revision: 0 }
+        Self {
+            config,
+            dir: paths.dir().to_path_buf(),
+            overrides: None,
+            effective,
+            project_keys: Vec::new(),
+            revision: 0,
+        }
     }
 
     pub(crate) fn revision(&self) -> u64 {
@@ -79,6 +88,7 @@ impl State {
         let before = self.config.settings.clone();
         self.config.import_theme(source)?;
         if self.config.settings != before {
+            super::edits::note(&self.dir);
             self.refresh();
             self.revision += 1;
         }
@@ -98,6 +108,7 @@ impl State {
             return false;
         }
         self.config.update(|settings| *settings = next);
+        super::edits::note(&self.dir);
         self.refresh();
         self.revision += 1;
         true

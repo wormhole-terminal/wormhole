@@ -38,6 +38,14 @@ public final class FFIAccessBackend: AccessBackend {
 
     public func changes() -> AsyncStream<Void> { hub.stream() }
 
+    public func nextModeQuestion() -> ModeQuestion? {
+        desk.nextModeQuestion().map { ModeQuestion(token: $0.token, previous: $0.previous, requested: $0.requested) }
+    }
+
+    public func isWaitingMode(_ token: UInt64) -> Bool { desk.isWaitingMode(token: token) }
+    public func answerMode(_ token: UInt64, keep: Bool) { desk.answerMode(token: token, keep: keep) }
+    public func isWaiting(_ id: UInt64) -> Bool { desk.isWaiting(id: id) }
+
     public func answer(_ id: UInt64, _ button: AccessButton) {
         let answer: AccessAnswer? =
             switch button {

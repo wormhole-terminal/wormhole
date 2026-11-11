@@ -186,3 +186,15 @@ fn how_much_to_show_writes_only_what_differs_and_asks_swift_to_move_the_panel() 
     let state = ask(&f, tab, &token, json!({"kind": "state"}));
     assert_eq!(state["result"]["shown"]["panel_open"], false, "the next state says so");
 }
+
+#[test]
+fn the_ship_is_aimed_at_the_cells_the_program_draws_its_mark_and_logo_in() {
+    use wormhole_core::onboarding::welcome::{LOGO_DOCK, MARK_CELL, MARK_DOCK};
+    let cursor = crate::welcome_dock("cursor".into()).expect("the cursor lands");
+    assert_eq!((cursor.row, cursor.col, cursor.rows), (MARK_DOCK.row, MARK_DOCK.col, MARK_DOCK.rows));
+    assert_eq!((cursor.row as usize, cursor.col as usize), MARK_CELL, "on the cell of the `>`");
+    let logo = crate::welcome_dock("logo".into()).expect("the logo lands");
+    assert_eq!((logo.row, logo.col, logo.rows), (LOGO_DOCK.row, LOGO_DOCK.col, LOGO_DOCK.rows));
+    assert_eq!(crate::welcome_dock("portal".into()), None, "no ship, no dock");
+    assert_eq!(crate::welcome_dock("sideways".into()), None);
+}

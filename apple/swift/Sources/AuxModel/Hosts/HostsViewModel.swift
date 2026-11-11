@@ -13,6 +13,8 @@ public final class HostsViewModel {
 
     public private(set) var report: HostsReport?
     public private(set) var copied: Copied?
+    /// The hosts whose cards are opened, by id: a card starts folded.
+    public private(set) var open: Set<String> = []
     @ObservationIgnored public let backend: any HostsBackend
     @ObservationIgnored private let write: (String) -> Void
     @ObservationIgnored private let slowLook: Duration
@@ -48,6 +50,11 @@ public final class HostsViewModel {
     public func refresh() async {
         let next = await backend.report()
         if next != report { report = next }
+    }
+
+    /// Opens a host's card, or folds it.
+    public func toggle(_ id: String) {
+        if open.contains(id) { open.remove(id) } else { open.insert(id) }
     }
 
     public func copy(_ what: Copied) {

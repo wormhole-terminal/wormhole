@@ -16,13 +16,16 @@ public final class FFIUpdateBackend: UpdateBackend {
         public var terminate: @MainActor () -> Void
         /// Runs `restart` once every terminal has been idle for a while (`update::restart`); the default runs it now.
         public var whenIdle: @MainActor (_ restart: @escaping @MainActor () -> Void) -> Void
+        /// Calls off the wait `whenIdle` started.
+        public var cancelWhenIdle: @MainActor () -> Void
 
         public init(
             runningTerminals: @escaping @MainActor () -> [RunningTerminal] = { [] },
             terminate: @escaping @MainActor () -> Void,
-            whenIdle: @escaping @MainActor (_ restart: @escaping @MainActor () -> Void) -> Void = { $0() }
+            whenIdle: @escaping @MainActor (_ restart: @escaping @MainActor () -> Void) -> Void = { $0() },
+            cancelWhenIdle: @escaping @MainActor () -> Void = {}
         ) {
-            (self.runningTerminals, self.terminate, self.whenIdle) = (runningTerminals, terminate, whenIdle)
+            (self.runningTerminals, self.terminate, self.whenIdle, self.cancelWhenIdle) = (runningTerminals, terminate, whenIdle, cancelWhenIdle)
         }
     }
 
@@ -59,6 +62,8 @@ public final class FFIUpdateBackend: UpdateBackend {
 
     public private(set) var phase: UpdatePhase = .idle
     public private(set) var lastChecked: Date?
+    public private(set) var channelNote: String?
+    public private(set) var restartPending = false
     public var channel: UpdateChannel {
         get { snapshotChannel }
         set {
@@ -127,6 +132,7 @@ public final class FFIUpdateBackend: UpdateBackend {
     public func restart(whenIdle: Bool) {
         let relaunch: @MainActor () -> Void = { [weak self] in
             guard let self else { return }
+            restartPending = false
             do {
                 try engine.restart()
                 hooks.terminate()
@@ -134,7 +140,13 @@ public final class FFIUpdateBackend: UpdateBackend {
                 apply(engine.state())
             }
         }
-        if whenIdle { hooks.whenIdle(relaunch) } else { relaunch() }
+        // At once from the button of a wait that is on (no second question: it was asked), or after the wait.
+        if whenIdle { restartPending = true; hooks.whenIdle(relaunch) } else { hooks.cancelWhenIdle(); relaunch() }
+    }
+
+    public func cancelRestartWhenIdle() {
+        restartPending = false
+        hooks.cancelWhenIdle()
     }
 
     public func runningTerminals() -> [RunningTerminal] { hooks.runningTerminals() }
@@ -162,8 +174,11 @@ public final class FFIUpdateBackend: UpdateBackend {
         let next = state.phase.value
         snapshotChannel = state.channel.value
         lastChecked = state.lastChecked.map { Date(timeIntervalSince1970: TimeInterval($0)) }
-        if next != phase {
-            phase = next
+        let note = state.channelNote?.words
+        // What the person was waiting for is gone with the phase it belonged to.
+        if case .installed = next {} else { restartPending = false }
+        if next != phase || note != channelNote {
+            (phase, channelNote) = (next, note)
             publish()
         }
     }
@@ -189,7 +204,12 @@ extension UpdatePhaseRecord {
             .available(
                 Release(
                     version: release.version, notes: release.notes,
-                    published: release.published.flatMap { try? Date($0, strategy: .iso8601) }, isSecurity: release.isSecurity))
+                    published: release.published.flatMap { try? Date($0, strategy: .iso8601) }, isSecurity: release.isSecurity,
+                    security: release.security.map { security in
+                        Security(
+                            danger: security.danger, line: security.line,
+                            advisories: security.advisories.compactMap { advisory in URL(string: advisory.url).map { .init(id: advisory.id, url: $0) } })
+                    }))
         case .unsupported(let reason): .unsupported(reason)
         case .downloading(let received, let expected): .downloading(received: Int64(received), expected: Int64(expected))
         case .installed(let version): .installed(version: version)

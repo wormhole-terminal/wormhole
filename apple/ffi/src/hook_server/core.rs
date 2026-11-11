@@ -41,14 +41,23 @@ impl Seat {
     /// The profile's settings, as they were a moment ago at most.
     pub(crate) fn settings(&self) -> Arc<Settings> {
         let mut held = self.settings.lock().unwrap_or_else(PoisonError::into_inner);
-        if let Some((read, settings)) = held.as_ref()
-            && read.elapsed() < SETTINGS_TTL
-        {
-            return settings.clone();
+        let read = match held.as_ref() {
+            Some((read, settings)) if read.elapsed() < SETTINGS_TTL => settings.clone(),
+            _ => {
+                let settings = Arc::new(Config::load_for(&self.profile).settings);
+                *held = Some((Instant::now(), settings.clone()));
+                settings
+            }
+        };
+        drop(held);
+        // The mode in force, not the file's: a widening nobody in Wormhole made waits for the person's answer.
+        if !read.feature_enabled(FeatureFlag::Automation) {
+            return read;
         }
-        let settings = Arc::new(Config::load_for(&self.profile).settings);
-        *held = Some((Instant::now(), settings.clone()));
-        settings
+        match self.desk.mode_in_force(read.agent_access) {
+            mode if mode == read.agent_access => read,
+            mode => Arc::new(Settings { agent_access: mode, ..(*read).clone() }),
+        }
     }
 
     /// What names an approval for the bus: whether it is stored, the profile (30 bits of its name's hash) and

@@ -84,7 +84,10 @@ fn approvals_are_kept_by_the_desk_of_the_profile_and_revoked_there() {
     assert!(!f.server.revoke_approval("default".into(), held), "Default's desk holds no such approval");
     assert!(f.server.revoke_approval("work".into(), held));
     assert!(work_desk.held().is_empty());
-    // Work's mode follows its own file: changed to open, its next request is let in.
+    // Work's mode follows its own file: changed to open in Settings (an edit from outside would be held back and asked about,
+    // see `a_mode_widened_outside_wormhole_is_held_back_until_the_person_keeps_it`), its next request is let in.
+    let work = wormhole_core::storage::paths::ProfileId::parse("work").expect("an id");
+    crate::settings::edits::note(root.profile(&work).dir());
     write_mode(&root, "work", "open");
     f.server.settings_changed("work".into());
     assert_eq!(type_into(&f, work_terminal)["ok"], true);

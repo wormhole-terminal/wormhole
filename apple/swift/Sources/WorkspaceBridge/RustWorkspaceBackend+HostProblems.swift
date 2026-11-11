@@ -20,6 +20,9 @@ extension RustWorkspaceBackend {
         return terminal.hostNotResponding() == nil ? nil : .notResponding
     }
 
+    /// How the terminal's connection to its session host stands, for the Session Hosts window; nil for a terminal not in a host.
+    public func hostLink(of id: TerminalID) -> HostLinkRecord? { core.terminal(id: Int64(id))?.hostLink() }
+
     public func hosting(of id: TerminalID) -> HostingState? {
         guard let hosted else { return nil }
         if book.connecting[id] != nil { return .connecting }

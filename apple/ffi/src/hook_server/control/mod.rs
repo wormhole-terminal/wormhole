@@ -29,6 +29,8 @@ use wormhole_core::ipc::control::{
 };
 use wormhole_core::ipc::{Answer, Peer};
 
+pub(super) use open::open_from_system;
+
 use super::core::Core;
 use super::drive::{announcement, drive_of};
 use super::gate::{Gate, gate, own_opened, sweep};

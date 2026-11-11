@@ -8,6 +8,8 @@ import Observation
 public final class UpdateViewModel {
     public private(set) var phase: UpdatePhase
     public private(set) var lastChecked: Date?
+    public private(set) var channelNote: String?
+    public private(set) var restartPending = false
     public var channel: UpdateChannel { didSet { backend.channel = channel } }
     @ObservationIgnored public let backend: any UpdateBackend
     @ObservationIgnored private var follow: Task<Void, Never>?
@@ -17,6 +19,7 @@ public final class UpdateViewModel {
         phase = backend.phase
         lastChecked = backend.lastChecked
         channel = backend.channel
+        (channelNote, restartPending) = (backend.channelNote, backend.restartPending)
     }
 
     /// Follows the backend until `stop`: every phase it reports replaces `phase`.
@@ -27,6 +30,7 @@ public final class UpdateViewModel {
                 guard let self else { return }
                 phase = next
                 lastChecked = backend.lastChecked
+                (channelNote, restartPending) = (backend.channelNote, backend.restartPending)
             }
         }
     }
@@ -40,7 +44,16 @@ public final class UpdateViewModel {
     /// The sheet before restarting, or `nil` when nothing would end and the restart needs no question.
     public var restartQuestion: Question? { RestartQuestion.question(backend.runningTerminals()) }
 
-    public func restart(whenIdle: Bool) { backend.restart(whenIdle: whenIdle) }
+    public func restart(whenIdle: Bool) {
+        backend.restart(whenIdle: whenIdle)
+        restartPending = backend.restartPending
+    }
+
+    /// "Don't restart": the wait for idle terminals is called off.
+    public func cancelRestart() {
+        backend.cancelRestartWhenIdle()
+        restartPending = backend.restartPending
+    }
 
     /// "Checked just now." and so on; "Not checked yet." before the first check.
     public func checkedLine(now: Date = Date()) -> String {

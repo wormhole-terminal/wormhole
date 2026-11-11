@@ -290,3 +290,34 @@ fn doctor_says_where_the_caller_stands() {
     assert_eq!(facts["caller"]["terminal"], id);
     assert_eq!(facts["caller"]["verified"], false, "said, not found by the process tree");
 }
+
+#[test]
+fn what_the_system_opens_gets_a_terminal_a_script_running_in_its_folder() {
+    let f = fixture("open");
+    let _first = f.terminal();
+    let scripts = f.dir.join("My Scripts");
+    std::fs::create_dir_all(&scripts).expect("a folder");
+    let script = scripts.join("it's here.command");
+    std::fs::write(&script, "echo hi\n").expect("a script");
+    let url = |path: &std::path::Path| format!("file://{}", path.display().to_string().replace(' ', "%20"));
+    let urls = vec![
+        url(&scripts),
+        url(&script),
+        "https://example.com/x".to_string(),
+        url(&f.dir.join("gone.command")),
+    ];
+    // The folder and the script open a terminal each; a web address and a file that is gone are refused.
+    assert_eq!(f.server.open_from_system(urls, Some(1)), 2);
+    let events = f.workspace.drain();
+    let folders: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            WorkspaceEvent::Opened { cwd, .. } => cwd.clone(),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(folders, [scripts.display().to_string(), scripts.display().to_string()]);
+    // A control line's budget is not spent: a person's double-click is not a script's request.
+    let many = vec![url(&scripts); 8];
+    assert_eq!(f.server.open_from_system(many, None), 8);
+}

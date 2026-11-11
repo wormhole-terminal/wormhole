@@ -152,6 +152,23 @@ final class ModelTests: XCTestCase {
         XCTAssertEqual(UpdateViewModel.fraction(received: 5, expected: 20), 0.25)
     }
 
+    func testAHostCardStartsFoldedAndKeepsWhatIsWrongInView() async {
+        let model = HostsViewModel(backend: SampleHostsBackend()) { _ in }
+        await model.refresh()
+        let cards = model.report!.cards
+        XCTAssertTrue(model.open.isEmpty, "a card starts folded")
+        model.toggle(cards[0].id)
+        XCTAssertEqual(model.open, [cards[0].id])
+        model.toggle(cards[0].id)
+        XCTAssertTrue(model.open.isEmpty)
+        // The folded card shows its program and every fact that is a warning or a danger, and nothing else.
+        let card = HostCard(
+            id: "h-1", standing: .attached, note: "Window 1",
+            facts: [HostFact(.program, "zsh"), HostFact(.version, "1.2 (this app is 1.3)", tone: .warning), HostFact(.socket, "/tmp/s", tone: .muted)])
+        XCTAssertEqual(card.program, "zsh")
+        XCTAssertEqual(card.problems.map(\.field), [.version])
+    }
+
     func testHostsCopyEndAndForget() async {
         let backend = SampleHostsBackend()
         var pasted: [String] = []

@@ -7,13 +7,15 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::hosting::HostUnavailableKind;
 use wormhole_core::config::profile::ProfileList;
 use wormhole_core::ipc::host_binary::{HostProgram, host_program};
 use wormhole_core::ipc::hosts::report::{Answer, AppFacts, Attachment, HostRow, Inputs, Report, Standing};
-use wormhole_core::ipc::hosts::{self, Survey};
+use wormhole_core::ipc::hosts::{self, Survey, Unavailable};
 use wormhole_core::platform::watch::{self as os_watch, Watch};
 use wormhole_core::storage::paths::DataRoot;
 use wormhole_core::storage::store::Store;
+use wormhole_term::client::{LinkMode, LinkStats};
 use wormhole_text::keys::{HOSTS_UNKNOWN, hosts_protocol_minor, hosts_version_differs};
 use wormhole_text::text;
 
@@ -25,12 +27,87 @@ const ANSWER_WITHIN: Duration = Duration::from_millis(400);
 /// How long ending a host waits for it to hang up (`hosts_window/mod.rs`).
 const END_WAIT: Duration = Duration::from_secs(5);
 
-/// A terminal of this app that runs in a host.
+/// A terminal of this app that runs in a host, and how its connection stands.
 #[derive(Debug, Clone, uniffi::Record)]
 pub struct HostAttachmentRecord {
     pub host_id: String,
     pub window: i64,
     pub title: String,
+    /// `None` for a terminal whose connection is not up yet.
+    pub link: Option<HostLinkRecord>,
+    /// Why the terminal cannot show the host, when it could not attach to one that runs.
+    pub unavailable: Option<HostUnavailableKind>,
+    /// The English of the error behind `unavailable`, for the log and the report.
+    pub unavailable_detail: Option<String>,
+}
+
+/// What the stream of a connection to a host is asked for (`wormhole_term::client::LinkMode`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum HostLinkMode {
+    Headless,
+    Raw,
+    Sync,
+}
+
+/// How a terminal's connection to its host stands (`wormhole_term::client::LinkStats`), for the Session Hosts window.
+#[derive(Debug, Clone, Copy, PartialEq, uniffi::Record)]
+pub struct HostLinkRecord {
+    pub mode: HostLinkMode,
+    pub bytes_in: u64,
+    pub bytes_out: u64,
+    pub frames_in: u64,
+    pub frames_out: u64,
+    pub detached: bool,
+    pub lost: bool,
+    pub ended: bool,
+    /// Seconds since anything last came from the host.
+    pub quiet_secs: f64,
+    /// Seconds a ping has gone unanswered, once it has for long enough.
+    pub not_responding_secs: Option<f64>,
+}
+
+impl From<LinkStats> for HostLinkRecord {
+    fn from(stats: LinkStats) -> Self {
+        Self {
+            mode: match stats.mode {
+                LinkMode::Headless => HostLinkMode::Headless,
+                LinkMode::Raw => HostLinkMode::Raw,
+                LinkMode::Sync => HostLinkMode::Sync,
+            },
+            bytes_in: stats.bytes_in,
+            bytes_out: stats.bytes_out,
+            frames_in: stats.frames_in,
+            frames_out: stats.frames_out,
+            detached: stats.detached,
+            lost: stats.lost,
+            ended: stats.ended,
+            quiet_secs: stats.quiet_for.as_secs_f64(),
+            not_responding_secs: stats.not_responding_for.map(|silent| silent.as_secs_f64()),
+        }
+    }
+}
+
+impl From<HostLinkRecord> for LinkStats {
+    fn from(record: HostLinkRecord) -> Self {
+        Self {
+            mode: match record.mode {
+                HostLinkMode::Headless => LinkMode::Headless,
+                HostLinkMode::Raw => LinkMode::Raw,
+                HostLinkMode::Sync => LinkMode::Sync,
+            },
+            bytes_in: record.bytes_in,
+            bytes_out: record.bytes_out,
+            frames_in: record.frames_in,
+            frames_out: record.frames_out,
+            detached: record.detached,
+            lost: record.lost,
+            ended: record.ended,
+            quiet_for: Duration::from_secs_f64(record.quiet_secs.max(0.0)),
+            not_responding_for: record
+                .not_responding_secs
+                .map(|silent| Duration::from_secs_f64(silent.max(0.0))),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -52,6 +129,10 @@ pub enum HostFieldRecord {
     Started,
     Answer,
     Link,
+    /// How long ago the host last answered (a connection that is pinged).
+    Heard,
+    /// How long a connection that is not pinged has been quiet.
+    Quiet,
     Folder,
     Socket,
     Meta,
@@ -190,8 +271,11 @@ impl HostsDesk {
                     host_id: a.host_id,
                     window: a.window,
                     title: a.title,
-                    link: None,
-                    unavailable: None,
+                    link: a.link.map(LinkStats::from),
+                    unavailable: a.unavailable.map(|kind| Unavailable {
+                        kind: kind.into(),
+                        detail: a.unavailable_detail.unwrap_or_default(),
+                    }),
                 })
                 .collect(),
             named: self.named_hosts(),
@@ -284,8 +368,23 @@ fn card_of(row: &HostRow, app: &AppFacts) -> HostCardRecord {
             },
         ),
     ];
-    if matches!(row.standing, Standing::Attached { .. }) {
-        facts.push(fact(F::Link, words::no_link(), Normal));
+    if row.link.is_some() || matches!(row.standing, Standing::Attached { .. }) {
+        let bad_link = row.link.is_some_and(|l| l.lost || l.not_responding_for.is_some());
+        facts.push(fact(
+            F::Link,
+            row.unavailable
+                .as_ref()
+                .map_or_else(|| words::link(row.link.as_ref()), |u| words::unavailable_text(u.kind)),
+            if bad_link || row.unavailable.is_some() { Danger } else { Normal },
+        ));
+    }
+    if let Some(link) = row.link.filter(|l| !l.detached && !l.ended) {
+        // A link on screen is pinged, so the last answer is news; one that is not only knows how long it has been quiet.
+        facts.push(if link.mode == LinkMode::Headless {
+            fact(F::Quiet, words::quiet_text(link.quiet_for), Normal)
+        } else {
+            fact(F::Heard, words::ago_text(link.quiet_for), Normal)
+        });
     }
     facts.push(fact(F::Folder, path(&row.cwd), Normal));
     facts.push(fact(F::Socket, path(&row.socket), Muted));

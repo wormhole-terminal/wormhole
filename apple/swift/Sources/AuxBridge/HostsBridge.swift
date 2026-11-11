@@ -8,23 +8,25 @@ import WormholeBindings
 
 @MainActor
 public final class FFIHostsBackend: HostsBackend {
+    /// What only the app's windows know, read at each look: the terminals that hold a host (with how their connection stands) and
+    /// whether Persistent terminals is on.
+    public typealias Facts = @MainActor () -> (attachments: [HostAttachmentRecord], persistentTerminals: Bool)
+
     private let desk: HostsDesk
     private let hub = WakeHub()
+    private let facts: Facts
 
     /// `dataDir`: a folder named `Wormhole-swift*` (tests), or `nil` for the app's own, which must be one.
-    public init(dataDir: URL? = nil) throws {
+    public init(dataDir: URL? = nil, facts: @escaping Facts = { ([], false) }) throws {
         desk = try HostsDesk(dataDir: dataDir?.path, listener: hub)
+        self.facts = facts
     }
-
-    /// The terminals of the app's windows that hold a host (the window knows; the folder does not).
-    public func setAttachments(_ attachments: [(hostID: String, window: Int, title: String)]) {
-        desk.setAttachments(attachments: attachments.map { .init(hostId: $0.hostID, window: Int64($0.window), title: $0.title) })
-    }
-
-    public func setPersistentTerminals(_ on: Bool) { desk.setPersistentTerminals(on: on) }
 
     public func report() async -> HostsReport {
         let desk = desk
+        let now = facts()
+        desk.setAttachments(attachments: now.attachments)
+        desk.setPersistentTerminals(on: now.persistentTerminals)
         let record = await Task.detached { desk.report() }.value
         return record.value
     }
@@ -88,6 +90,8 @@ extension HostFactRecord {
             case .started: .started
             case .answer: .answer
             case .link: .link
+            case .heard: .heard
+            case .quiet: .quiet
             case .folder: .folder
             case .socket: .socket
             case .meta: .meta

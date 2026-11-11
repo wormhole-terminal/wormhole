@@ -48,6 +48,11 @@ public final class HookServerHandle {
         server.revokeStoredApproval(profile: profile, id: id)
     }
 
+    /// macOS asked to open these `file://` URLs: a terminal each in window `window`, a script run in its folder (core's
+    /// `default_terminal` decides). How many terminals were made.
+    @discardableResult
+    public func openFromSystem(urls: [String], window: Int64) -> UInt32 { server.openFromSystem(urls: urls, window: window) }
+
     /// Another profile's desk: what the requests reaching that profile's windows are judged by.
     public func addDesk(_ desk: AccessDesk) { server.addDesk(desk: desk) }
 

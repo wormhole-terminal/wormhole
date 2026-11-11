@@ -65,7 +65,7 @@ fn install_downloads_verifies_and_swaps_the_scratch_bundle_only() {
 
 #[test]
 fn an_archive_signed_by_another_key_is_refused_and_nothing_is_swapped() {
-    let published = publish(Offer { signer_is_trusted: false, preview: None });
+    let published = publish(Offer { signer_is_trusted: false, ..Offer::default() });
     published.engine.check(true);
     wait_for(&published, |s| offered(s).is_some());
     published.engine.install("0.2.0".into()).expect("started");
@@ -96,7 +96,7 @@ fn skipping_quiets_automatic_checks_but_a_manual_one_still_shows_it() {
 
 #[test]
 fn the_preview_channel_reads_its_own_feed_and_takes_the_newer() {
-    let published = publish(Offer { signer_is_trusted: true, preview: Some("0.3.0-dev.1") });
+    let published = publish(Offer { signer_is_trusted: true, preview: Some("0.3.0-dev.1"), security: None });
     published.engine.check(true);
     wait_for(&published, |s| offered(s).as_deref() == Some("0.2.0"));
     // Switching asks the new channel at once: the person just made a choice about updates.
@@ -167,4 +167,58 @@ fn with_auto_update_on_a_check_goes_straight_to_installed() {
     });
     assert_eq!(state.phase, UpdatePhaseRecord::Installed { version: "0.2.0".into() }, "{state:?}");
     assert_eq!(marker_of(&published.bundle), "#!/bin/sh\necho new\n");
+}
+
+#[test]
+fn a_security_update_says_what_it_fixes_and_where_the_advisories_are() {
+    let published = publish(Offer {
+        security: Some(
+            serde_json::json!({"severity": "high", "advisories": ["ghsa-2222-3333-4444", "../../x"]}),
+        ),
+        ..Offer::default()
+    });
+    published.engine.check(true);
+    let state = wait_for(&published, |s| offered(s).is_some());
+    let UpdatePhaseRecord::Available { release } = state.phase else { panic!("offered") };
+    assert!(release.is_security);
+    let security = release.security.expect("a security line");
+    assert!(security.danger, "high reads as danger");
+    assert_eq!(security.line, "Fixes a high-severity security issue.");
+    // A malformed id never reaches a link.
+    assert_eq!(security.advisories.len(), 1);
+    assert_eq!(security.advisories[0].id, "GHSA-2222-3333-4444");
+    assert_eq!(
+        security.advisories[0].url,
+        "https://github.com/wormhole-terminal/wormhole/security/advisories/ghsa-2222-3333-4444"
+    );
+}
+
+#[test]
+fn a_channel_switch_says_what_happened_to_the_build_it_leaves() {
+    use crate::aux_backends::updater::note_words;
+    let stays = note_words("0.3.0-dev.1", true);
+    assert!(stays.contains("0.3.0-dev.1") && stays.contains("installed"), "{stays}");
+    let removed = note_words("0.3.0-dev.1", false);
+    assert!(removed.contains("0.3.0-dev.1") && removed.contains("removed"), "{removed}");
+    assert_ne!(stays, removed);
+}
+
+#[test]
+fn a_bundle_replaced_while_running_is_installed_and_waits_for_a_restart() {
+    let published = publish(Offer::default());
+    published.engine.note_replaced_for_test("0.2.0");
+    assert_eq!(published.engine.state().phase, UpdatePhaseRecord::Installed { version: "0.2.0".into() });
+}
+
+#[test]
+fn a_release_build_has_its_feed_key_and_fallback_baked_in_and_a_dev_build_has_none() {
+    assert_eq!(crate::aux_backends::updater::release_setup(None, None), None);
+    assert_eq!(crate::aux_backends::updater::release_setup(Some(""), None), None);
+    let setup =
+        crate::aux_backends::updater::release_setup(Some("https://downloads.example"), Some("TEAM123"))
+            .expect("a feed");
+    assert_eq!(setup.base_url, "https://downloads.example");
+    assert_eq!(setup.team_id.as_deref(), Some("TEAM123"));
+    assert!(setup.public_key.contains("untrusted comment"), "the minisign key of packaging/updater.pub");
+    assert!(setup.fallback_url.ends_with("/releases"));
 }

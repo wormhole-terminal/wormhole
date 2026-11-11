@@ -5,11 +5,18 @@
 //   `ambient-run <row>` runs what choosing a row of the menu bar extra, the Dock or the quick panel does.
 //   `hotkey` says what the global key is (spec, action, held off, error, what the menus show); `hotkey-press` presses it (what
 //   the key would do is said, and done); `hotkey-pause on|off` is the Settings recorder holding it off.
+//   `open-url <file URL>...` is what macOS does for a double-clicked `.command`, Open With or a folder on the Dock icon; `second-launch
+//   [hide]` a second launch's Activate; `welcome-dock [cursor|logo]` where the welcome's ship docks; `launches` what the instance
+//   would have opened (an advisory link in the browser, say).
 
+import AppKit
 import AuxWindows
 import DesignSystem
 import PlatformModel
 import PlatformUI
+#if WITH_UNIFFI
+    import WormholeBindings
+#endif
 
 extension AppController {
     /// For the state dump: the question held, when this is a test instance.
@@ -53,6 +60,19 @@ extension AppController {
             guard Pasteboard.isDiverted else { reply("error: this instance uses the system clipboard"); return true }
             Pasteboard.setText(argument.replacingOccurrences(of: "\\n", with: "\n").replacingOccurrences(of: "\\e", with: "\u{1b}"))
             reply("pasteboard-set")
+        case "welcome-dock":
+            // Where the welcome's ship docks now (`welcome-dock [cursor|logo]`): core's cell in the grid of the terminal in front, as a
+            // point of the window and the size the landing gives the logo, to compare with a `shot` of the program's `>`.
+            #if WITH_UNIFFI
+                let word = argument.isEmpty ? "cursor" : argument
+                guard let dock = welcomeDock(handover: word), let (point, height) = aux.chevron(of: dock), let landing = aux.landing(of: dock) else {
+                    reply("error: welcome-dock cursor|logo, with a terminal in front")
+                    return true
+                }
+                reply("welcome-dock \(word) cell=(row \(dock.row), col \(dock.col)) chevron=(\(point.x), \(point.y)) height=\(height) landing=\(landing)")
+            #else
+                reply("error: the core is not linked")
+            #endif
         case "hotkey":
             guard let key = hotkey else { reply("error: no hotkey in this instance"); return true }
             reply("hotkey spec=\(key.applied ?? "-") action=\(key.action) paused=\(key.paused) error=\(key.error ?? "-") shown=\(key.shown ?? "-")")
@@ -85,6 +105,18 @@ extension AppController {
             guard let command else { reply("error: ambient-run new-terminal|new-window|open-tab <id>|reply <id> <text>|jump-to-waiting|open-project <path>|run-action <root> <id>"); return true }
             run(ambient: command)
             reply("ambient-run \(argument)")
+        case "open-url":
+            // What macOS does for a double-clicked `.command`, Open With or a folder on the Dock icon: `application(_:open:)`.
+            let urls = argument.split(separator: " ").compactMap { URL(string: String($0)) }
+            guard !urls.isEmpty else { reply("error: open-url <file URL>..."); return true }
+            application(NSApp, open: urls)
+            reply("open-url \(urls.count)")
+        case "second-launch":
+            // A second launch of this data folder asks the first to come forward (`second-launch hide` has the windows out of
+            // sight first, as when none is open).
+            if argument == "hide" { shown.forEach { $0.window?.orderOut(nil) } }
+            activateFromSecondLaunch()
+            reply("second-launch windows=\(shown.filter { $0.window?.isVisible == true }.count)")
         default: return false
         }
         return true

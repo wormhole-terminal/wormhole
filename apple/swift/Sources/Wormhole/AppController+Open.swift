@@ -13,6 +13,7 @@ import WorkspaceModel
 
 extension AppController {
     func open() throws {
+        LegacyLaunch.afterLaunch(dataDirectory: dataDirectory, policy: policy)
         applyLookOptions()
         configureThemes()
         // Settings and the theme reach the terminals before the first one is drawn.
@@ -33,6 +34,7 @@ extension AppController {
             self.devctl = devctl
         }
         if options.onboarding || aux.isFirstRun { aux.showFirstRun() }
+        openWhatSystemAsked()
         if let seconds = options.idleSeconds { scheduleIdleReport(after: seconds) }
     }
 

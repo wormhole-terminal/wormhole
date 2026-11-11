@@ -20,8 +20,8 @@ mod tests;
 
 pub use access::{AccessApprovalRecord, AccessDesk, AccessHow};
 pub use access_records::{
-    AccessAnswer, AccessCapability, AccessHeldRecord, AccessKindRecord, AccessProgramRecord,
-    AccessQuestionRecord, AccessSignerKind,
+    AccessAnswer, AccessCapability, AccessHeldRecord, AccessKindRecord, AccessModeRecord,
+    AccessProgramRecord, AccessQuestionRecord, AccessSignerKind,
 };
 pub(crate) use common::resolve_data_dir;
 pub use common::{AuxError, AuxListener};
@@ -29,8 +29,8 @@ pub use first_run::{
     AgentScanRecord, FirstRun, FoundAgentRecord, HookState, LookRecord, PlaceKindRecord, PlaceRecord,
 };
 pub use hosts::{
-    HostAttachmentRecord, HostCardRecord, HostFactRecord, HostFieldRecord, HostProgramKind,
-    HostStandingRecord, HostToneRecord, HostsDesk, HostsReportRecord,
+    HostAttachmentRecord, HostCardRecord, HostFactRecord, HostFieldRecord, HostLinkMode, HostLinkRecord,
+    HostProgramKind, HostStandingRecord, HostToneRecord, HostsDesk, HostsReportRecord,
 };
 pub use imports::{
     ImportFoundRecord, ImportRowRecord, import_apply, import_brought_words, import_scan, import_theme_file,
@@ -43,7 +43,7 @@ pub use tailor::{
 };
 pub use trust::{ReviewLineRecord, ReviewStatusRecord, TrustDesk, TrustReviewRecord};
 pub use update_records::{
-    UpdateChannelNote, UpdateChannelRecord, UpdatePhaseRecord, UpdateReleaseRecord, UpdateSetup,
-    UpdateStateRecord,
+    UpdateAdvisoryRecord, UpdateChannelNote, UpdateChannelRecord, UpdatePhaseRecord, UpdateReleaseRecord,
+    UpdateReleaseSetup, UpdateSecurityRecord, UpdateSetup, UpdateStateRecord,
 };
-pub use updater::UpdateEngine;
+pub use updater::{UpdateEngine, update_release_setup};

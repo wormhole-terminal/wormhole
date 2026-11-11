@@ -23,7 +23,8 @@ struct HostsView: View {
                         LazyVStack(spacing: Space._3) {
                             ForEach(report.cards) { card in
                                 HostCardView(
-                                    card: card, copied: model.copied == .host(card.id), copy: { model.copy(.host(card.id)) },
+                                    card: card, open: model.open.contains(card.id), toggle: { model.toggle(card.id) },
+                                    copied: model.copied == .host(card.id), copy: { model.copy(.host(card.id)) },
                                     end: { ask(toEnd: card.id) }, forget: { model.forget(card.id) })
                             }
                         }

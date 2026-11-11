@@ -62,6 +62,13 @@ extension AuxText {
     public static var hostFieldStarted: String { tr("hosts-field-started", "Started") }
     public static var hostFieldAnswer: String { tr("hosts-field-answer", "Answers") }
     public static var hostFieldLink: String { tr("hosts-field-link", "Connection") }
+    /// A fact that is wrong, under the host's row while it is folded.
+    public static func hostProblem(field: String, value: String) -> String { tr("hosts-problem", ["field": .text(field), "value": .text(value)], fallback: "\(field): \(value)") }
+    public static func hostRowLabel(standing: String, id: String, note: String) -> String {
+        tr("hosts-row-label", ["standing": .text(standing), "id": .text(id), "note": .text(note)], fallback: "\(standing): \(id), \(note)")
+    }
+    public static var hostFieldHeard: String { tr("hosts-field-heard", "Last heard") }
+    public static var hostFieldQuiet: String { tr("hosts-field-quiet", "Quiet for") }
     public static var hostFieldFolder: String { tr("hosts-field-folder", "Folder") }
     public static var hostFieldSocket: String { tr("hosts-field-socket", "Socket") }
     public static var hostFieldMeta: String { tr("hosts-field-meta", "Meta file") }

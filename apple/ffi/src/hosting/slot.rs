@@ -72,6 +72,13 @@ impl Terminal {
         stats.not_responding_for.filter(|_| attached).map(|silent| silent.as_secs_f64())
     }
 
+    /// How the connection to the host stands, for the Session Hosts window; `None` for a terminal in the app's own process and
+    /// for one whose connection is not up.
+    pub fn host_link(&self) -> Option<crate::aux_backends::HostLinkRecord> {
+        self.host.as_ref()?;
+        self.with_pty(Pty::link_stats).flatten().map(Into::into)
+    }
+
     /// On screen (fed a repaint, then the stream) or not (headless: the screen keeps what it last showed).
     /// Nothing for a terminal in the app's own process.
     pub fn set_visible(&self, visible: bool) {

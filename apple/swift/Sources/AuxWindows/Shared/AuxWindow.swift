@@ -20,13 +20,15 @@ public final class AuxWindowController: NSWindowController {
     private static var open: [String: AuxWindowController] = [:]
     private let key: String
 
-    /// Brings the window of `key` forward if it is open, else makes it. `content` builds the page once.
+    /// Brings the window of `key` forward if it is open, else makes it. `content` builds the page once; `rebuilds` says the window that
+    /// is open shows something else (another project's commands) and takes the new page.
     @discardableResult
     static func show<Content: View>(
         key: String, title: String, size: CGSize, minSize: CGSize? = nil, resizable: Bool = true,
-        closesOnEscape: Bool = true, @ViewBuilder content: () -> Content
+        closesOnEscape: Bool = true, rebuilds: Bool = false, @ViewBuilder content: () -> Content
     ) -> AuxWindowController {
         if let existing = open[key] {
+            if rebuilds { existing.window?.contentView = Self.hosting(content().themed()) }
             existing.showWindow(nil)
             return existing
         }
@@ -51,9 +53,7 @@ public final class AuxWindowController: NSWindowController {
         window.titlebarAppearsTransparent = true
         window.isReleasedWhenClosed = false
         if let minSize { window.minSize = minSize }
-        let hosting = NSHostingView(rootView: page)
-        hosting.sizingOptions = []
-        window.contentView = hosting
+        window.contentView = Self.hosting(page)
         window.center()
         super.init(window: window)
         NotificationCenter.default.addObserver(
@@ -61,6 +61,12 @@ public final class AuxWindowController: NSWindowController {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self.map { Self.open[$0.key] = nil } }
         }
+    }
+
+    private static func hosting<Page: View>(_ page: Page) -> NSHostingView<Page> {
+        let hosting = NSHostingView(rootView: page)
+        hosting.sizingOptions = []
+        return hosting
     }
 
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError("not decoded") }

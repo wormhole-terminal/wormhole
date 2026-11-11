@@ -21,6 +21,10 @@ final class UpdateFollower {
     private var following: Task<Void, Never>?
     /// The version whose chip is up, so one install says it once.
     private var told: String?
+    /// The version whose chip was closed: quiet until a newer one is installed (the whole app's, not one window's).
+    private var dismissed: String?
+    /// The window the chip is in: it moves to the one in front (`update/prompt.rs` `keep_offered`).
+    private weak var offeredIn: WindowSession?
     /// "Restart When Idle" was chosen: what restarts, once the terminals have been idle long enough.
     private var pending: (@MainActor () -> Void)?
     private var watch = IdleWatch()
@@ -37,15 +41,40 @@ final class UpdateFollower {
     private func phase(_ phase: UpdatePhase) {
         switch phase {
         // The core installs what an automatic check finds, as auto_update says (and not again a version that failed).
-        case .installed(let version) where told != version:
+        case .installed(let version):
             told = version
-            app.hub.notices.post(.warned(.updateReady(version: version)))
-        case .installed: break
+            keepOffered()
         default:
             // Whatever the chip was about is gone (a channel change called the install off).
-            if told != nil { told = nil; app.sessions.forEach { $0.hub.notices.withdraw() } }
+            if told != nil { told = nil; offeredIn = nil; app.sessions.forEach { $0.hub.notices.withdraw() } }
             pending = nil
         }
+    }
+
+    /// While an update waits and its chip was not closed, the window in front has it: where it was, it goes. A closed chip is closed for
+    /// the version, so a window coming forward does not show it again; a newer version is another chip.
+    func keepOffered() {
+        guard let version = told, dismissed != version, let front = app.shown.first(where: { $0 === app.lastFront }) ?? app.shown.first,
+            offeredIn !== front
+        else { return }
+        offeredIn?.hub.notices.withdraw()
+        offeredIn = front
+        front.hub.notices.post(.warned(.updateReady(version: version)))
+    }
+
+    /// The chip's × closed it: for this version, in every window.
+    func closed(_ version: String) {
+        dismissed = version
+        offeredIn = nil
+        app.sessions.forEach { $0.hub.notices.withdraw() }
+    }
+
+    func use(channel: UpdateChannel) { backend.channel = channel }
+
+    /// "Don't restart": the wait for idle terminals is over, the update stays installed.
+    func cancelRestartWhenIdle() {
+        pending = nil
+        looks += 1
     }
 
     /// A click on the chip, or Restart in Settings: at once when nothing would end, else the question first.
@@ -89,7 +118,7 @@ final class UpdateFollower {
 
 extension AppController {
     func startUpdates() {
-        guard options.updateFeedURL != nil else { return }
+        guard aux.hasUpdater else { return }
         let follower = UpdateFollower(app: self, backend: aux.updateBackend())
         updateFollower = follower
         follower.start()

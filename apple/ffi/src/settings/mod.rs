@@ -5,6 +5,7 @@
 //! rows are drawn from is `settings_dump`; the rules in all of it are `wormhole-core`'s.
 
 mod agents;
+pub(crate) mod edits;
 mod error;
 mod flags;
 mod fonts_follow;

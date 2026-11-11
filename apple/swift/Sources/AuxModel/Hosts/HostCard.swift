@@ -6,7 +6,7 @@ import Foundation
 
 public struct HostFact: Equatable, Sendable, Identifiable {
     public enum Field: CaseIterable, Sendable {
-        case hostPid, shellPid, program, memory, version, protocolRange, started, answer, link, folder, socket, meta
+        case hostPid, shellPid, program, memory, version, protocolRange, started, answer, link, heard, quiet, folder, socket, meta
 
         public var label: String {
             switch self {
@@ -19,6 +19,8 @@ public struct HostFact: Equatable, Sendable, Identifiable {
             case .started: AuxText.hostFieldStarted
             case .answer: AuxText.hostFieldAnswer
             case .link: AuxText.hostFieldLink
+            case .heard: AuxText.hostFieldHeard
+            case .quiet: AuxText.hostFieldQuiet
             case .folder: AuxText.hostFieldFolder
             case .socket: AuxText.hostFieldSocket
             case .meta: AuxText.hostFieldMeta
@@ -80,6 +82,12 @@ public struct HostCard: Equatable, Sendable, Identifiable {
         (self.id, self.standing, self.note, self.facts) = (id, standing, note, facts)
         (self.attachedTitle, self.needsAttention) = (attachedTitle, needsAttention)
     }
+
+    /// The program in the terminal's foreground, for a folded card's second line.
+    public var program: String? { facts.first { $0.field == .program }.map(\.value) }
+
+    /// What is wrong stays on the card while it is folded.
+    public var problems: [HostFact] { facts.filter { $0.tone == .warning || $0.tone == .danger } }
 
     public var canEnd: Bool { standing.isLive }
     public var canForget: Bool { standing == .stale }

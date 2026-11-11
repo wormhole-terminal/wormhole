@@ -45,6 +45,13 @@ extension AuxText {
     public static var restartWhenIdleButton: String { tr("aux-updates-restart-when-idle", "Restart when idle") }
     public static func available(_ version: String) -> String { tr("update-available", ["version": .text(version)], fallback: "Wormhole \(version) is available.") }
     public static func ready(_ version: String) -> String { tr("update-ready", ["version": .text(version)], fallback: "Wormhole \(version) is ready. Restart to use it.") }
+    public static var dontRestart: String { tr("settings-updates-dont-restart", "Don\u{2019}t restart") }
+    public static func installedWaits(_ version: String) -> String {
+        tr("settings-updates-installed-waits", ["version": .text(version)], fallback: "Version \(version) is installed. Restarts when your terminals are idle.")
+    }
+    public static func securityAvailable(_ version: String) -> String {
+        tr("settings-updates-security-available", ["version": .text(version)], fallback: "Security update available: Wormhole \(version).")
+    }
     public static var securityUpdate: String { tr("update-security", "Security update") }
     public static var releaseNotes: String { tr("update-release-notes", "What\u{2019}s new") }
     public static var noNotes: String { tr("update-no-notes", "This release has no notes.") }

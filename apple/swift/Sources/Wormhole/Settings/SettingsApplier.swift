@@ -93,6 +93,7 @@ final class SettingsApplier {
         }
         if changed("code_font_family", "code_font_size", "font_family") || fontsMoved {
             app.look.codeFont = PanelSettings.codeFont(values, folderRevision: folder.revision)
+            ThemeStore.shared.codeFont = app.look.codeFont
         }
         if changed(
             "changes_tree", "group_untracked", "diff_split", "diff_wrap", "tab_width", "size_units", "worktree_base",
@@ -100,7 +101,8 @@ final class SettingsApplier {
         {
             PanelSettings.apply(values, to: app.shown.map(\.hub))
         }
-        if changed("auto_update", "anonymous_count"), app.options.updateFeedURL != nil {
+        if changed("update_channel") { app.updateFollower?.use(channel: values["update_channel"]?.string == "unstable" ? .preview : .stable) }
+        if changed("auto_update", "anonymous_count"), app.aux.hasUpdater {
             app.aux.updateBackend().apply(
                 autoUpdate: values["auto_update"]?.bool ?? true, anonymousCount: values["anonymous_count"]?.bool ?? true)
         }

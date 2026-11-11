@@ -29,6 +29,7 @@ private struct Themed: ViewModifier {
             .environment(\.tokens, store.tokens)
             .environment(\.reduceMotion, store.reduceMotion)
             .environment(\.iconAnimations, store.iconAnimations)
+            .environment(\.codeFont, store.codeFont)
             // Native controls (menus, scrollers, text fields) follow the theme's light or dark, not only macOS's.
             .preferredColorScheme(store.appearance.colorScheme)
     }

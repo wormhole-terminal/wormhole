@@ -35,8 +35,9 @@ final class AuxController {
 
     /// The project of the terminal in front, when the core found one.
     func showTrust() {
-        let backend = backends.trust(root: app.hub.panel.project.state?.root, profile: app.front.windows.profile)
-        TrustWindow.show(backend: ReloadingTrust(backend) { [weak app] in app?.hub.panel.project.reload() })
+        let root = app.hub.panel.project.state?.root
+        let backend = backends.trust(root: root, profile: app.front.windows.profile)
+        TrustWindow.show(backend: ReloadingTrust(backend) { [weak app] in app?.hub.panel.project.reload() }, root: root)
     }
 
     /// The one updater the Updates window and the Settings page share.
@@ -44,6 +45,15 @@ final class AuxController {
         let backend = updates ?? backends.updates()
         updates = backend
         return backend
+    }
+
+    /// Whether this run has an updater (a feed from the build or a fixture's), so the schedule and the chip follow it.
+    var hasUpdater: Bool {
+        #if WITH_UNIFFI
+            backends.updateSetup() != nil
+        #else
+            false
+        #endif
     }
 
     func showUpdates() { UpdateWindow.show(backend: updateBackend(), version: AppInfo.from(bundle: .main).version) }
@@ -54,12 +64,19 @@ final class AuxController {
         let id = profile ?? app.windowsHost.profile
         guard access[id] == nil, let backend = backends.access(profile: id) else { return }
         accessBackends[id] = backend
-        let driver = AccessDriver(backend: backend) { [weak app] in app?.window }
+        let driver = AccessDriver(backend: backend) { [weak self] in self?.window(ofProfile: id) }
         access[id] = driver
         driver.start()
         #if WITH_UNIFFI
             if let desk = (backend as? FFIAccessBackend)?.desk { app.hooks?.addDesk(desk) }
         #endif
+    }
+
+    /// The window a question of `profile` goes on: the one in front if it is of that profile, else any shown one of it
+    /// (`agent_access/ask.rs` `window_for`); nil when none is open.
+    private func window(ofProfile profile: String) -> NSWindow? {
+        let own = app.shown.filter { $0.windows.profile == profile }
+        return (own.first { $0.window?.isKeyWindow == true } ?? own.first { $0 === app.lastFront } ?? own.first)?.window
     }
 
     /// A sample of the question, for the control folder's `access`: nothing real asks until the control socket serves one.

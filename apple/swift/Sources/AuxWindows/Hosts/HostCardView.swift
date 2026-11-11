@@ -7,6 +7,9 @@ import SwiftUI
 
 struct HostCardView: View {
     let card: HostCard
+    /// Opened (all its facts), else folded (the badge, the note, the id and program, and only what is wrong).
+    let open: Bool
+    let toggle: () -> Void
     let copied: Bool
     let copy: () -> Void
     let end: () -> Void
@@ -19,10 +22,12 @@ struct HostCardView: View {
     var body: some View {
         AuxCard(edge: card.needsAttention ? tokens.statusWarning : nil) {
             VStack(alignment: .leading, spacing: Space._2) {
-                HStack(spacing: Space._3) {
-                    StatusBadge(text: card.standing.label, color: color)
-                    Text(card.id).font(TextRole.body.font.weight(.semibold))
-                    Text(card.note).font(TextRole.label.font).foregroundStyle(tokens.textMuted).lineLimit(1)
+                HStack(alignment: .top, spacing: Space._3) {
+                    // A tab stop and a button for VoiceOver: ↩ and Space open and close it as a click does.
+                    Button(action: toggle) { head }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(AuxText.hostRowLabel(standing: card.standing.label, id: card.id, note: card.note))
+                        .accessibilityAddTraits(.isButton)
                     Spacer(minLength: 0)
                     Button(copied ? AuxText.hostsCopied : AuxText.hostsCopy, action: copy).secondaryAction().controlSize(.small)
                     if card.canEnd {
@@ -31,20 +36,44 @@ struct HostCardView: View {
                         Button(AuxText.hostsForget, action: forget).secondaryAction().controlSize(.small)
                     }
                 }
-                Grid(alignment: .topLeading, horizontalSpacing: Space._2, verticalSpacing: Space._1) {
-                    ForEach(rows, id: \.first?.id) { row in
-                        GridRow {
-                            ForEach(row) { fact in
-                                label(fact)
-                                value(fact).gridCellColumns(row.count == 1 ? 3 : 1)
+                if open {
+                    Grid(alignment: .topLeading, horizontalSpacing: Space._2, verticalSpacing: Space._1) {
+                        ForEach(rows, id: \.first?.id) { row in
+                            GridRow {
+                                ForEach(row) { fact in
+                                    label(fact)
+                                    value(fact).gridCellColumns(row.count == 1 ? 3 : 1)
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(card.text)
+        .motion(Motion.layout, value: open)
+    }
+
+    /// The part that opens and folds the card: the disclosure, the badge, the note, the id and the program, and what is wrong.
+    private var head: some View {
+        VStack(alignment: .leading, spacing: Space._1) {
+            HStack(spacing: Space._3) {
+                Image(Icon.disclosure).rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(tokens.textMuted).accessibilityHidden(true)
+                StatusBadge(text: card.standing.label, color: color)
+                Text(card.note).font(TextRole.body.font.weight(.medium)).lineLimit(1)
+            }
+            HStack(spacing: Space._3) {
+                Text(card.id).font(TextRole.label.font.weight(.regular))
+                if let program = card.program { Text(program).lineLimit(1) }
+            }
+            .font(TextRole.label.font.weight(.regular)).foregroundStyle(tokens.textMuted).padding(.leading, Space._6)
+            if !open {
+                ForEach(card.problems) { fact in
+                    Text(AuxText.hostProblem(field: fact.field.label, value: fact.value)).lineLimit(1)
+                        .font(TextRole.label.font.weight(.regular)).foregroundStyle(tone(fact.tone)).padding(.leading, Space._6)
+                }
+            }
+        }
+        .contentShape(Rectangle())
     }
 
     /// Wide facts take a row to themselves; the rest sit two to a row.

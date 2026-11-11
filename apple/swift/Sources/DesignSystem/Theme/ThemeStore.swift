@@ -29,6 +29,9 @@ public final class ThemeStore {
     public var reduceMotion = false
     /// The Animate icons setting, for every window's icons (`\.iconAnimations`, set by Settings).
     public var iconAnimations = true
+    /// The code font from Settings → Fonts, for the windows that show code or program text without a workspace around them
+    /// (the licenses, the project commands): `.themed()` puts it in the environment.
+    public var codeFont = CodeFont()
     /// The Borders setting: the lines of `border`, `card.edge` and `settings.divider` are drawn (`ui.line`); Increase
     /// Contrast keeps them whatever it says, as in the GPUI app.
     public var showsBorders = true { didSet { if showsBorders != oldValue { refresh() } } }

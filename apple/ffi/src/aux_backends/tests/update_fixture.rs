@@ -75,9 +75,17 @@ fn archive(version: &str) -> Vec<u8> {
 }
 
 /// A feed's JSON for `version` with the asset `body` signed as `signature` says.
-fn feed(base: &str, version: &str, body: &[u8], signature: &str, notes: &str) -> String {
+fn feed(
+    base: &str,
+    version: &str,
+    body: &[u8],
+    signature: &str,
+    notes: &str,
+    security: Option<serde_json::Value>,
+) -> String {
     let platform = wormhole_core::update::current_platform();
     serde_json::json!({
+        "security": security,
         "version": version,
         "pub_date": "2026-10-01T12:00:00Z",
         "notes": notes,
@@ -103,11 +111,13 @@ pub(super) struct Published {
 pub(super) struct Offer {
     pub(super) signer_is_trusted: bool,
     pub(super) preview: Option<&'static str>,
+    /// The feed's `security` key for the stable release.
+    pub(super) security: Option<serde_json::Value>,
 }
 
 impl Default for Offer {
     fn default() -> Self {
-        Self { signer_is_trusted: true, preview: None }
+        Self { signer_is_trusted: true, preview: None, security: None }
     }
 }
 
@@ -125,10 +135,10 @@ pub(super) fn publish(offer: Offer) -> Published {
     routes.insert(ARCHIVE_PATH.into(), body.clone());
     routes.insert(
         "/stable/latest.json".into(),
-        feed(&base, "0.2.0", &body, &signature, "New stuff").into_bytes(),
+        feed(&base, "0.2.0", &body, &signature, "New stuff", offer.security).into_bytes(),
     );
     if let Some(version) = offer.preview {
-        let preview = feed(&base, version, &body, &signature, "A build of main");
+        let preview = feed(&base, version, &body, &signature, "A build of main", None);
         routes.insert("/unstable/latest.json".into(), preview.into_bytes());
     }
     std::thread::spawn(move || {

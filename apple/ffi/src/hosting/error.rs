@@ -28,6 +28,20 @@ impl From<UnavailableKind> for HostUnavailableKind {
     }
 }
 
+impl From<HostUnavailableKind> for UnavailableKind {
+    fn from(kind: HostUnavailableKind) -> Self {
+        match kind {
+            HostUnavailableKind::Refused => Self::Refused,
+            HostUnavailableKind::TooOld => Self::TooOld,
+            HostUnavailableKind::TooNew => Self::TooNew,
+            HostUnavailableKind::Busy => Self::Busy,
+            HostUnavailableKind::TimedOut => Self::TimedOut,
+            HostUnavailableKind::Unreachable => Self::Unreachable,
+            HostUnavailableKind::Failed => Self::Failed,
+        }
+    }
+}
+
 /// The cases Swift tells apart: `Gone` and `Unavailable` are an attach's two meanings in core
 /// (`ipc::hosts::AttachFailure`): a host that is not there lets its terminal come back as a new shell;
 /// one that runs and cannot be shown keeps its terminal's place and says why.

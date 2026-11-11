@@ -49,6 +49,14 @@ final class AccessBridgeTests: XCTestCase {
         XCTAssertEqual(unnamed.request(of: about).terminal, .init(name: "12"))
     }
 
+    func testAModeQuestionNeedsAWideningNobodyInWormholeMade() throws {
+        let backend = try FFIAccessBackend(dataDir: scratch.data)
+        XCTAssertNil(backend.nextModeQuestion(), "nothing was widened")
+        XCTAssertFalse(backend.isWaitingMode(1))
+        backend.answerMode(1, keep: true)
+        XCTAssertFalse(backend.isWaiting(7), "no such question")
+    }
+
     func testAFolderOutsideTheExperimentIsRefused() {
         XCTAssertThrowsError(try FFIAccessBackend(dataDir: URL(fileURLWithPath: "/Users/someone/Library/Application Support/Wormhole")))
     }

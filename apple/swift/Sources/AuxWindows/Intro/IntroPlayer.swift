@@ -28,6 +28,9 @@ public final class IntroPlayer {
     public private(set) var progress: Progress?
     /// Where the page's logo is in the window: its middle's x and y and its side, points from the top left.
     @ObservationIgnored public var landing: SIMD3<Float>?
+    /// Where the ship docks when the target is not a page's logo but a cell of the terminal's grid: asked each frame, so a window that
+    /// moves or resizes is followed (`landing` is the answer while it has none).
+    @ObservationIgnored public var landingSource: (@MainActor () -> SIMD3<Float>?)?
     /// Called once when a run finishes or is replaced.
     @ObservationIgnored public var onFinish: (() -> Void)?
 
@@ -70,7 +73,7 @@ public final class IntroPlayer {
             style: style, colors: colors, start: options.start, lights: options.lights && style != .glow,
             ship: options.handover?.ship ?? true, immersive: options.immersive)
         do {
-            let overlay = try IntroOverlay(over: window, setup: setup, landing: { [weak self] in self?.landing })
+            let overlay = try IntroOverlay(over: window, setup: setup, landing: { [weak self] in self?.landingSource?() ?? self?.landing })
             run = Run(overlay: overlay, style: style, start: options.start) { [weak self] in self?.tick($0) }
             progress = Progress(style: style, seconds: 0, start: options.start, skipped: false)
         } catch {
