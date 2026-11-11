@@ -8,6 +8,7 @@ use fluent_bundle::FluentArgs;
 use crate::args::Arg;
 use crate::catalog::Loaded;
 use crate::generated::files::LOCALES;
+use crate::generated::ids::IDS;
 use crate::key::Key;
 use crate::language::Language;
 
@@ -93,6 +94,14 @@ pub fn text_in(language: Language, key: Key) -> &'static str {
     load(language).plain(key.index())
 }
 
+/// Every message id with its text in `language`, in `Key` order (a `Key`'s index is a place in this list), loading
+/// the language first. A message with variables has no text here, only the empty string: it is formatted by its
+/// typed function. For a front end that holds the whole table once per language (one fetch, then an index).
+pub fn catalog(language: Language) -> impl ExactSizeIterator<Item = (&'static str, &'static str)> {
+    let loaded = load(language);
+    IDS.iter().enumerate().map(move |(index, id)| (*id, loaded.plain(index)))
+}
+
 /// Runs `body` with `language` as this thread's language, whatever the global one is. For tests,
 /// which share a process: nobody else sees the change.
 #[cfg(feature = "test-support")]
@@ -123,4 +132,27 @@ pub(crate) fn message(index: usize, args: &[(&'static str, Arg<'_>)]) -> String 
         .format(index, &named)
         .or_else(|| load(Language::ENGLISH).format(index, &named))
         .unwrap_or_default()
+}
+
+/// A variable's value for [`format`]: text, or a whole number (what a plural selects on).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Value<'a> {
+    Text(&'a str),
+    Whole(i64),
+}
+
+/// The message called `id` (`name` or `name.attribute`) with the named `args`, in the language in use or,
+/// where it lacks the message, English; `None` for an id no message has. For a front end that is not Rust (the
+/// Swift app): the typed functions of `keys/` are what Rust calls, and they end in the same formatter.
+pub fn format(id: &str, args: &[(&str, Value<'_>)]) -> Option<String> {
+    static BY_ID: OnceLock<std::collections::HashMap<&'static str, usize>> = OnceLock::new();
+    let index = *BY_ID.get_or_init(|| IDS.iter().enumerate().map(|(i, id)| (*id, i)).collect()).get(id)?;
+    let mut named = FluentArgs::with_capacity(args.len());
+    for (name, value) in args {
+        match value {
+            Value::Text(text) => named.set(*name, *text),
+            Value::Whole(number) => named.set(*name, *number),
+        }
+    }
+    current().format(index, &named).or_else(|| load(Language::ENGLISH).format(index, &named))
 }

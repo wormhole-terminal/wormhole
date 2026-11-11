@@ -88,6 +88,8 @@ settings-extensions-perm-notify = Show notifications
 # { $agent } is a coding agent the Probe defines, whose hook entries it may write.
 settings-extensions-perm-agents = Write the hook entries of its agent { $agent }
 settings-extensions-perm-code = Run code inside Wormhole
+# The `fold` permission: what a marker does to the terminal. Copy and find still see every line.
+settings-extensions-perm-fold = Hide finished command output behind a marker that says how many lines it hides
 # For the permissions a later version brings. { $key } names the permission and { $detail } says what.
 settings-extensions-perm-other = { $key }: { $detail }
 

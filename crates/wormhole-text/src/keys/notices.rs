@@ -47,45 +47,45 @@ pub const NOTICE_FAILED_RENAME_GONE: Key = Key::new(285);
 /// "Couldn't rename it"
 pub const NOTICE_FAILED_RENAME_FAILED: Key = Key::new(286);
 /// "Cleared here only: this session host is too old to forget it"
-pub const NOTICE_FAILED_HISTORY_KEPT_BY_HOST: Key = Key::new(287);
+pub const NOTICE_FAILED_HISTORY_KEPT_BY_HOST: Key = Key::new(288);
 /// "Not put at the prompt: part of it is concealed"
-pub const NOTICE_FAILED_PUT_CONCEALED: Key = Key::new(288);
+pub const NOTICE_FAILED_PUT_CONCEALED: Key = Key::new(289);
 /// "Not put at the prompt: part of it is in its background's color"
-pub const NOTICE_FAILED_PUT_SAME_COLOR: Key = Key::new(289);
+pub const NOTICE_FAILED_PUT_SAME_COLOR: Key = Key::new(290);
 /// "Not put at the prompt: it has characters you can't see"
-pub const NOTICE_FAILED_PUT_INVISIBLE: Key = Key::new(290);
+pub const NOTICE_FAILED_PUT_INVISIBLE: Key = Key::new(291);
 /// "Not put at the prompt: each line would run in this shell"
-pub const NOTICE_FAILED_PUT_LINES: Key = Key::new(291);
+pub const NOTICE_FAILED_PUT_LINES: Key = Key::new(292);
 /// "This terminal ends when Wormhole quits"
-pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(292);
+pub const NOTICE_WARNED_HOST_FALLBACK: Key = Key::new(293);
 /// "This terminal runs inside Wormhole and ends when it quits: the helper that keeps terminals running couldn't start."
-pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(293);
+pub const NOTICE_WARNED_HOST_FALLBACK_DETAIL: Key = Key::new(294);
 /// "Wormhole can't open a profile's data folder, so it saves nothing there"
-pub const NOTICE_WARNED_DATA_FOLDER: Key = Key::new(294);
+pub const NOTICE_WARNED_DATA_FOLDER: Key = Key::new(295);
 /// "Move Wormhole to Applications to keep terminals running when it quits"
-pub const NOTICE_WARNED_MOVE_TO_APPLICATIONS: Key = Key::new(296);
+pub const NOTICE_WARNED_MOVE_TO_APPLICATIONS: Key = Key::new(297);
 /// "Wormhole is running from a disk image or a temporary copy, so its terminals end when it quits. Move it to Applications, then open it from there."
-pub const NOTICE_WARNED_MOVE_TO_APPLICATIONS_DETAIL: Key = Key::new(297);
+pub const NOTICE_WARNED_MOVE_TO_APPLICATIONS_DETAIL: Key = Key::new(298);
 /// "Close"
-pub const NOTICE_CLOSE: Key = Key::new(299);
+pub const NOTICE_CLOSE: Key = Key::new(302);
 /// "More about this warning"
-pub const NOTICE_INFO: Key = Key::new(300);
+pub const NOTICE_INFO: Key = Key::new(303);
 /// "This terminal can't outlive Wormhole"
-pub const NOTICE_INFO_HOST_HEADING: Key = Key::new(301);
+pub const NOTICE_INFO_HOST_HEADING: Key = Key::new(304);
 /// "Wormhole normally keeps each terminal running in a small helper, so your work carries on after you quit Wormhole and is waiting when you open it again. The helper for this terminal couldn't start, so the terminal runs inside Wormhole instead and closes when Wormhole quits."
-pub const NOTICE_INFO_HOST_WHAT: Key = Key::new(302);
+pub const NOTICE_INFO_HOST_WHAT: Key = Key::new(305);
 /// "Other terminals that already run in a helper are not affected."
-pub const NOTICE_INFO_HOST_OTHERS: Key = Key::new(303);
+pub const NOTICE_INFO_HOST_OTHERS: Key = Key::new(306);
 /// "Finish what is running here before you quit. Each new terminal tries to start its helper again, and Wormhole says this once each time it starts."
-pub const NOTICE_INFO_HOST_TRY: Key = Key::new(304);
+pub const NOTICE_INFO_HOST_TRY: Key = Key::new(307);
 /// "What went wrong, if you want to report it:"
-pub const NOTICE_INFO_HOST_REASON: Key = Key::new(305);
+pub const NOTICE_INFO_HOST_REASON: Key = Key::new(308);
 /// "Open Logs Folder"
-pub const NOTICE_INFO_LOGS: Key = Key::new(306);
+pub const NOTICE_INFO_LOGS: Key = Key::new(309);
 /// "Copy reason"
-pub const NOTICE_INFO_COPY: Key = Key::new(307);
+pub const NOTICE_INFO_COPY: Key = Key::new(310);
 /// "Copied"
-pub const NOTICE_INFO_COPIED: Key = Key::new(308);
+pub const NOTICE_INFO_COPIED: Key = Key::new(311);
 
 /// ```text
 /// { $count ->
@@ -172,15 +172,36 @@ pub fn notice_driven_reading(name: &str) -> String {
 }
 
 /// ```text
+/// Couldn't find { $path } in this folder
+/// ```
+pub fn notice_failed_file_not_found(path: &str) -> String {
+    crate::active::message(287, &[("path", Arg::Str(path))])
+}
+
+/// ```text
 /// { -brand } can't open the data folder of the profile { $profile }, { $folder }, so that profile runs without saving anything: no windows, notes or settings are kept. { $error }
 /// ```
 pub fn notice_warned_data_folder_detail(profile: &str, folder: &str, error: &str) -> String {
-    crate::active::message(295, &[("profile", Arg::Str(profile)), ("folder", Arg::Str(folder)), ("error", Arg::Str(error))])
+    crate::active::message(296, &[("profile", Arg::Str(profile)), ("folder", Arg::Str(folder)), ("error", Arg::Str(error))])
 }
 
 /// ```text
 /// { -brand } { $version } is ready — Restart
 /// ```
 pub fn notice_warned_update_ready(version: &str) -> String {
-    crate::active::message(298, &[("version", Arg::Str(version))])
+    crate::active::message(299, &[("version", Arg::Str(version))])
+}
+
+/// ```text
+/// { $name } (extension): { $path } — Open
+/// ```
+pub fn notice_warned_probe_offer(name: &str, path: &str) -> String {
+    crate::active::message(300, &[("name", Arg::Str(name)), ("path", Arg::Str(path))])
+}
+
+/// ```text
+/// { $name } (extension): a hook failed three times in a minute and was paused
+/// ```
+pub fn notice_warned_probe_paused(name: &str) -> String {
+    crate::active::message(301, &[("name", Arg::Str(name))])
 }

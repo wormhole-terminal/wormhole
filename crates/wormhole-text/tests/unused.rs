@@ -81,6 +81,36 @@ fn used_text() -> String {
     text
 }
 
+/// The Swift app asks for a message by its Fluent id (`"studio-title"`, `"studio-title.tip"`): each id literal in
+/// `apple/swift/Sources` counts as a use of the constant or function it is generated as (`STUDIO_TITLE`).
+fn swift_used_text() -> String {
+    fn swift_files(dir: &Path, out: &mut Vec<PathBuf>) {
+        for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                swift_files(&path, out);
+            } else if path.extension().is_some_and(|ext| ext == "swift") {
+                out.push(path);
+            }
+        }
+    }
+    let mut files = Vec::new();
+    swift_files(&crates_dir().parent().expect("workspace").join("apple/swift/Sources"), &mut files);
+    let mut text = String::new();
+    for file in files {
+        for part in fs::read_to_string(&file).unwrap_or_default().split('"').skip(1).step_by(2) {
+            let is_id = part.contains('-')
+                && part.starts_with(|c: char| c.is_ascii_lowercase())
+                && part.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '.');
+            if is_id {
+                let name = part.replace(['-', '.'], "_");
+                text.push_str(&format!("{name} {}\n", name.to_uppercase()));
+            }
+        }
+    }
+    text
+}
+
 /// The names the generated `keys/` define: its constants (`pub const NAME: Key`) and functions (`pub fn name(`),
 /// not the helpers that are only there for tests.
 fn defined(keys: &str) -> Vec<String> {
@@ -104,7 +134,7 @@ fn every_message_is_asked_for_by_some_source() {
     let mut generated = Vec::new();
     sources(&keys_dir(), &mut generated);
     let keys: String = generated.iter().map(|file| fs::read_to_string(file).unwrap_or_default()).collect();
-    let used = used_text();
+    let used = used_text() + &swift_used_text();
     let words = identifiers(&used);
     let unused: Vec<String> =
         defined(&keys).into_iter().filter(|name| !words.contains(name.as_str())).collect();

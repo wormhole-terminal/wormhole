@@ -20,6 +20,10 @@ settings-terminal-minimap = Show minimap
     .description = The scrollback drawn small along the terminal's right edge. Click or drag it to scroll
     .keywords = overview scrollbar map outline
 
+settings-terminal-never-hide-lines = Never hide lines
+    .description = Show every line of output, whatever an extension or a fold would hide behind a marker. Off lets folds hide finished output; copying and finding always see every line
+    .keywords = fold folds hide hidden output lines marker collapse extension probe show all
+
 settings-terminal-split-gaps = Gaps between split terminals
     .description = Each terminal of a split is its own rounded surface, a small gap apart. Off joins them with a hairline
     .keywords = panes divider spacing rounded margin

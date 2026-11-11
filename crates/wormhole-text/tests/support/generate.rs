@@ -130,7 +130,8 @@ pub(crate) fn generate() -> Generated {
         "\n/// Every key, in the order of the files, for tests that walk them all.\npub const ALL: [Key; {}] = [",
         all_keys.len()
     );
-    push_wrapped(&mut facade, all_keys.iter().cloned(), 3);
+    // Eight to a line: the list is for tests to walk, and three to a line took the file past the size rule.
+    push_wrapped(&mut facade, all_keys.iter().cloned(), 8);
     facade.push_str("];\n");
     let functions: Vec<&Function> = areas.values().flat_map(|area| &area.functions).collect();
     facade.push_str(&render_samples(&functions));
