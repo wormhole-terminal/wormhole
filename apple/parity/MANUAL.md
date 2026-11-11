@@ -67,3 +67,20 @@ Send commands with `printf 'cmd\n' > /tmp/manual-ctl/cmd.tmp && mv /tmp/manual-c
     **Expect** a popover with the error's words, Open Logs Folder and Copy reason.
 17. Switch light and dark, then Reduce Transparency and Increase Contrast in System Settings, with the palette (⇧⌘P) and the sheet (⌥⌘/) open.
     **Expect** both to follow without a restart; the blur behind the window is the only thing a screenshot never shows.
+
+## Added in round S3 (platform lane)
+
+18. Edit menu: open it. **Expect** AppKit's own items under Edit as GPUI's `menus` lists them (Writing Tools ▸, AutoFill ▸, Start Dictation…,
+    Emoji & Symbols): a script's menu dump holds only the app's items, the system adds these.
+19. Right-click a group head in the sidebar. **Expect** one row of coloured dots (grey, blue, red, yellow, green, pink, purple, cyan, orange; the
+    group's own ticked) between Rename… and Other colour…/No colour, not a Colour submenu; clicking a dot sets it and closes the menu.
+    (`control right-click` lists the items; whether the palette row is drawn as dots is a SwiftUI menu's, seen only in a real menu.)
+20. Turn on the Folder picker flag, click in a terminal, press ⌘J. **Expect** the picker's card at the terminal's cursor cell (below the prompt
+    line when there is room), not at a fixed point; pick a folder: it is pasted at the cursor of THAT terminal; switch terminal with the picker open:
+    it closes. Open it twice from a folder you never `cd`'d into: the folder shows under Recent the second time.
+21. With VoiceOver on, open Settings → Fonts, open a font picker and press ↓: **Expect** it says the family it lands on. Rename a file in the Files
+    tab to a name that exists: **Expect** the chip and VoiceOver say "Not renamed: something with that name exists already".
+22. Copy a commit's hash from the History tab's menu, an object id from a binary diff's note, a setting's key with ⌘C in the palette and a folder path
+    with ⌃↩ ▸ Copy path. **Expect** the chip to say "Copied commit hash", "Copied object id", "Copied setting key", "Copied path".
+23. With Wormhole in front, finish three agents within ten seconds (see `evidence/s3-platform/PL03.txt`): **Expect** one "3 terminals finished" banner.
+    A needs-input banner is never grouped.
