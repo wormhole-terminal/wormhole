@@ -97,7 +97,14 @@ fn a_program_in_a_folded_group_is_asked_about_and_a_failed_command_is_not() {
     // A plain terminal whose last command failed: nothing runs.
     m.update_facts(4, |f| {
         f.status = Status::Failed;
-        f.failure = Some(Failure { code: 101, command: Some("cargo build".into()), at: 0 });
+        f.failure = Some(Failure {
+            serial: 1,
+            code: 101,
+            command: Some("cargo build".into()),
+            at: 0,
+            took: None,
+            last_line: None,
+        });
     });
     m.apply(Action::ToggleGroup(1));
     m.apply(Action::Search("no such row".into()));
