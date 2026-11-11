@@ -192,7 +192,7 @@ final class MappingTests: XCTestCase {
                     WormholeBindings.TerminalSummary(
                         id: 2, name: "api", number: nil, selected: false, pinned: false, state: .failed, since: 0, glyph: .failed, agent: nil,
                         message: nil, branch: nil, folder: "~/api", cwd: nil, command: nil, group: 7, groupName: "Web", split: nil,
-                        folded: true, agentHidden: false, forgetText: false, unread: false, bell: false)
+                        folded: true, agentHidden: false, forgetText: false, unread: false, bell: false, notice: 0)
                 ], counts: WormholeBindings.TerminalCounts(needsYou: 1, working: 2, finished: 3, failed: 4, quiet: 5)))
         XCTAssertEqual(all.terminals.first?.group, 7)
         XCTAssertTrue(all.terminals.first?.isFolded ?? false)
