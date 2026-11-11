@@ -4,6 +4,9 @@
 //! A link may run over several rows when a long line wraps, so the search
 //! covers the whole wrapped line around the point (a bounded number of rows,
 //! since this runs under the terminal's lock while the pointer moves).
+//!
+//! A Probe's text rules reach the same search through [`LineRules`]: the engine here knows no rules, only
+//! that something may ask the text of a line for a span.
 
 use std::ops::Range;
 use std::path::PathBuf;
@@ -27,6 +30,66 @@ pub struct Link {
     pub end: Point,
     /// A program's own hyperlink (OSC 8) rather than a URL found in the text.
     pub explicit: bool,
+    /// Made by a Probe's rule rather than by the program or the text: where it goes and who says so.
+    pub rule: Option<RuleLink>,
+}
+
+/// What a rule made of a link: `uri` is then its target as written (the address, or the path with its line
+/// and column when `file`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuleLink {
+    /// The Probe that said it.
+    pub owner: String,
+    pub hover: Option<String>,
+    /// A file to open in the editor, not an address.
+    pub file: bool,
+}
+
+/// What a rule set found at a place in a line of text.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuleHit {
+    /// The span, in bytes of the line.
+    pub range: Range<usize>,
+    /// The Probe whose rule found it.
+    pub owner: String,
+    /// The rule shortens or redacts the span, so there is text to reveal.
+    pub masked: bool,
+    /// When the real text shows again.
+    pub reveal: RevealWhen,
+    pub link: Option<RuleTarget>,
+    pub hover: Option<String>,
+}
+
+/// When a shortened or redacted text shows itself.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RevealWhen {
+    /// While the pointer is over it.
+    Hover,
+    /// While the pointer is over it and ⌥ is held.
+    Deliberate,
+    Never,
+}
+
+/// Where a rule's link goes.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum RuleTarget {
+    Url(String),
+    /// `path[:line[:col]]`, as the rule gave it.
+    Path(String),
+}
+
+/// A set of rules that can be asked what they make of a line: the app's, built from the Probes that are on.
+pub trait LineRules {
+    /// The span of `line`, one logical line, that holds byte `at`, when a rule matched there.
+    fn hit_at(&self, line: &str, at: usize) -> Option<RuleHit>;
+}
+
+/// A rule's span on the grid, with the cells it covers (`start..=end`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuleSpan {
+    pub start: Point,
+    pub end: Point,
+    pub hit: RuleHit,
 }
 
 impl Link {
@@ -62,16 +125,31 @@ impl<'a> Rows<'a> {
     }
 }
 
-/// The link at `point`: the program's hyperlink there, else a URL in the text around it.
-pub(super) fn link_at(screen: &Screen, point: Point) -> Option<Link> {
-    if point.line < screen.topmost_line() || point.line > screen.bottommost_line() {
-        return None;
-    }
-    if point.column.0 >= screen.columns() {
+/// The link at `point`: the program's hyperlink there, else a rule's link in the text around it, else a URL.
+pub(super) fn link_at(screen: &Screen, point: Point, rules: Option<&dyn LineRules>) -> Option<Link> {
+    if !on_grid(screen, point) {
         return None;
     }
     let mut rows = Rows::new(screen);
-    hyperlink_at(&mut rows, point).or_else(|| url_at(&mut rows, point))
+    hyperlink_at(&mut rows, point).or_else(|| {
+        let line = wrapped_line(&mut rows, point)?;
+        rules.and_then(|rules| rule_at(&line, rules)).and_then(rule_link).or_else(|| url_in(&line))
+    })
+}
+
+/// The rule's span at `point`, whatever it does (a link, a shortening): for the app to reveal what it hides.
+pub(super) fn rule_span_at(screen: &Screen, point: Point, rules: &dyn LineRules) -> Option<RuleSpan> {
+    if !on_grid(screen, point) {
+        return None;
+    }
+    let mut rows = Rows::new(screen);
+    rule_at(&wrapped_line(&mut rows, point)?, rules)
+}
+
+fn on_grid(screen: &Screen, point: Point) -> bool {
+    point.line >= screen.topmost_line()
+        && point.line <= screen.bottommost_line()
+        && point.column.0 < screen.columns()
 }
 
 /// The cells around `point` that carry the same OSC 8 hyperlink.
@@ -104,7 +182,13 @@ fn hyperlink_at(rows: &mut Rows, point: Point) -> Option<Link> {
         }
         end = next;
     }
-    (link.uri.len() <= MAX_URI_LEN).then(|| Link { uri: link.uri.to_string(), start, end, explicit: true })
+    (link.uri.len() <= MAX_URI_LEN).then(|| Link {
+        uri: link.uri.to_string(),
+        start,
+        end,
+        explicit: true,
+        rule: None,
+    })
 }
 
 /// The cell before `point` on the same wrapped line.
@@ -127,8 +211,26 @@ fn step_forward(rows: &mut Rows, point: Point) -> Option<Point> {
         .then_some(Point::new(Line(point.line.0 + 1), Column(0)))
 }
 
-/// A URL written in the text of the wrapped line around `point`.
-fn url_at(rows: &mut Rows, point: Point) -> Option<Link> {
+/// The text of the wrapped line around a point: each character with the cell it is in, and which one
+/// the point is.
+struct Wrapped {
+    chars: Vec<(char, Point)>,
+    at: usize,
+}
+
+impl Wrapped {
+    fn text(&self) -> Vec<char> {
+        self.chars.iter().map(|(c, _)| *c).collect()
+    }
+
+    /// The cells of the characters `range` covers.
+    fn cells(&self, range: Range<usize>) -> (Point, Point) {
+        (self.chars[range.start].1, self.chars[range.end - 1].1)
+    }
+}
+
+/// The wrapped line around `point` (at most [`MAX_WRAPPED_ROWS`] rows each way), if `point` is on a character.
+fn wrapped_line(rows: &mut Rows, point: Point) -> Option<Wrapped> {
     let (top, bottom) = (rows.screen.topmost_line(), rows.screen.bottommost_line());
     let mut first = point.line;
     for _ in 0..MAX_WRAPPED_ROWS {
@@ -158,15 +260,50 @@ fn url_at(rows: &mut Rows, point: Point) -> Option<Link> {
             chars.push((cell.c, Point::new(line, Column(col))));
         }
     }
-    let text: Vec<char> = chars.iter().map(|(c, _)| *c).collect();
     let at = chars.iter().position(|(_, p)| *p == point)?;
-    let range = find_urls(&text).into_iter().find(|range| range.contains(&at))?;
+    Some(Wrapped { chars, at })
+}
+
+/// A URL written in the text of the wrapped line.
+fn url_in(line: &Wrapped) -> Option<Link> {
+    let text = line.text();
+    let range = find_urls(&text).into_iter().find(|range| range.contains(&line.at))?;
     let uri: String = text[range.clone()].iter().collect();
-    (uri.len() <= MAX_URI_LEN).then(|| Link {
+    let (start, end) = line.cells(range);
+    (uri.len() <= MAX_URI_LEN).then_some(Link { uri, start, end, explicit: false, rule: None })
+}
+
+/// What `rules` make of the character under the point.
+fn rule_at(line: &Wrapped, rules: &dyn LineRules) -> Option<RuleSpan> {
+    let text: String = line.chars.iter().map(|(c, _)| *c).collect();
+    let byte_at: usize = line.chars[..line.at].iter().map(|(c, _)| c.len_utf8()).sum();
+    let hit = rules.hit_at(&text, byte_at).filter(|hit| hit.range.contains(&byte_at))?;
+    // The span in characters: the line's bytes counted back to the characters they belong to.
+    let (mut first, mut last, mut at) = (None, 0, 0);
+    for (ix, (c, _)) in line.chars.iter().enumerate() {
+        if at >= hit.range.start && at < hit.range.end {
+            first.get_or_insert(ix);
+            last = ix + 1;
+        }
+        at += c.len_utf8();
+    }
+    let (start, end) = line.cells(first?..last);
+    Some(RuleSpan { start, end, hit })
+}
+
+/// The link a rule's span makes, when it has a target short enough to hold.
+fn rule_link(span: RuleSpan) -> Option<Link> {
+    let RuleSpan { start, end, hit } = span;
+    let (uri, file) = match hit.link? {
+        RuleTarget::Url(uri) => (uri, false),
+        RuleTarget::Path(path) => (path, true),
+    };
+    (uri.len() <= MAX_URI_LEN).then_some(Link {
         uri,
-        start: chars[range.start].1,
-        end: chars[range.end - 1].1,
+        start,
+        end,
         explicit: false,
+        rule: Some(RuleLink { owner: hit.owner, hover: hit.hover, file }),
     })
 }
 
@@ -271,7 +408,7 @@ mod tests {
 
     use wormhole_vt::{Column, Line, Point};
 
-    use super::{Openable, find_urls, link_at};
+    use super::{Openable, find_urls, link_at as link_at_with};
     use crate::testing::TestTerm;
 
     fn urls(text: &str) -> Vec<String> {
@@ -323,6 +460,10 @@ mod tests {
         }
     }
 
+    fn link_at(screen: &crate::screen::Screen, point: Point) -> Option<super::Link> {
+        link_at_with(screen, point, None)
+    }
+
     fn term(cols: u16) -> TestTerm {
         TestTerm::new(cols, 4, 100)
     }
@@ -370,5 +511,62 @@ mod tests {
         assert_eq!(link_at(term.screen(), at(0, 0)), None);
         assert_eq!(link_at(term.screen(), at(3, 0)), None, "an empty row");
         assert_eq!(link_at(term.screen(), at(9, 0)), None, "off the grid");
+    }
+
+    /// The words that start with `ACME-`, as links to a ticket, and `secret` as a mask.
+    struct Words;
+
+    impl super::LineRules for Words {
+        fn hit_at(&self, line: &str, at: usize) -> Option<super::RuleHit> {
+            let mut start = 0;
+            for word in line.split(' ') {
+                let range = start..start + word.len();
+                start = range.end + 1;
+                if !range.contains(&at) {
+                    continue;
+                }
+                let link = word
+                    .starts_with("ACME-")
+                    .then(|| super::RuleTarget::Url(format!("https://jira.example/{word}")));
+                let masked = word == "secret";
+                return (link.is_some() || masked).then(|| super::RuleHit {
+                    range,
+                    owner: "acme".into(),
+                    masked,
+                    reveal: super::RevealWhen::Hover,
+                    link,
+                    hover: Some(format!("Open {word}")),
+                });
+            }
+            None
+        }
+    }
+
+    #[test]
+    fn a_rules_link_is_found_across_a_wrap_and_carries_who_made_it() {
+        let mut term = term(8);
+        feed(&mut term, b"see ACME-12345 ok");
+        let link = super::link_at(term.screen(), at(1, 1), Some(&Words)).expect("the rule's link");
+        assert_eq!(link.uri, "https://jira.example/ACME-12345");
+        assert_eq!((link.start, link.end), (at(0, 4), at(1, 5)), "the whole word, over both rows");
+        assert!(!link.explicit);
+        let rule = link.rule.expect("made by a rule");
+        assert_eq!(
+            (rule.owner.as_str(), rule.hover.as_deref(), rule.file),
+            ("acme", Some("Open ACME-12345"), false)
+        );
+        assert_eq!(super::link_at(term.screen(), at(0, 0), Some(&Words)), None, "outside the word");
+        assert_eq!(link_at(term.screen(), at(1, 1)), None, "without rules there is no link");
+    }
+
+    #[test]
+    fn a_span_that_only_masks_is_found_without_a_link() {
+        let mut term = term(40);
+        feed(&mut term, b"key secret end");
+        let span = super::rule_span_at(term.screen(), at(0, 6), &Words).expect("the span");
+        assert_eq!((span.start, span.end, span.hit.masked, span.hit.link), (at(0, 4), at(0, 9), true, None));
+        assert_eq!(link_at(term.screen(), at(0, 6)), None);
+        assert_eq!(super::link_at(term.screen(), at(0, 6), Some(&Words)), None, "a mask is no link");
+        assert!(super::rule_span_at(term.screen(), at(0, 0), &Words).is_none());
     }
 }

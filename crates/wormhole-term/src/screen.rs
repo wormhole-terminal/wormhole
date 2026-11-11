@@ -82,6 +82,8 @@ pub(crate) struct Screen {
     /// whose pins are out of reach then (the grids swap, and a handle can name another pin's slot).
     /// They are removed once the main screen shows again ([`Screen::reap`]).
     orphans: Vec<Pin>,
+    /// What the view hides of the history (`folds`): display only.
+    pub(super) folds: super::fold_set::FoldSet,
 }
 
 /// The next [`Screen::epoch`].
@@ -100,7 +102,13 @@ impl Screen {
             .identity("Wormhole", env!("CARGO_PKG_VERSION"))
             .cell_size(size.cell_width as u16, size.cell_height as u16)
             .build();
-        Self { term, hold: Hold::Off, epoch: EPOCHS.fetch_add(1, Ordering::Relaxed), orphans: Vec::new() }
+        Self {
+            term,
+            hold: Hold::Off,
+            epoch: EPOCHS.fetch_add(1, Ordering::Relaxed),
+            orphans: Vec::new(),
+            folds: Default::default(),
+        }
     }
 
     /// Forget what the engine queued for the program and for the app (replies, events, reports of the
@@ -232,11 +240,13 @@ impl Screen {
     }
 
     pub(crate) fn start_selection(&mut self, kind: SelectionType, point: Point, side: Side) {
+        self.fold_note_anchor(point);
         self.term.start_selection(kind, point, side);
     }
 
     /// Move the selection being dragged to `point` (nothing without one).
     pub(crate) fn update_selection(&mut self, point: Point, side: Side) {
+        let (point, side) = self.fold_snap(point, side);
         self.term.update_selection(point, side);
     }
 
@@ -380,6 +390,8 @@ impl Screen {
     pub(crate) fn resize(&mut self, size: GridSize) -> Vec<u8> {
         self.term.set_cell_size(size.cell_width as u16, size.cell_height as u16);
         self.term.resize(usize::from(size.cols), usize::from(size.rows));
+        // Rows pulled onto the screen by a taller one are the program's again: they cannot stay folded.
+        self.fold_validate();
         let replies = self.term.replies().to_vec();
         self.term.clear_replies();
         replies

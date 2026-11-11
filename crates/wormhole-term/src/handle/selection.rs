@@ -3,7 +3,7 @@
 use crate::Pty;
 use wormhole_vt::{Column, Line, Point, SelectionType, Side};
 
-use crate::{Link, images, links};
+use crate::{LineRules, Link, RuleSpan, images, links};
 
 impl Pty {
     /// Start a mouse selection at a grid point.
@@ -52,6 +52,17 @@ impl Pty {
 
     /// The link at a grid point: a program's hyperlink (OSC 8), else a URL in the text.
     pub fn link_at(&self, point: Point) -> Option<Link> {
-        links::link_at(&self.term.lock(), point)
+        links::link_at(&self.term.lock(), point, None)
+    }
+
+    /// [`link_at`](Self::link_at) with a Probe's rules asked too: a rule's link comes before a URL in the
+    /// text, and after the program's own hyperlink.
+    pub fn link_at_with(&self, point: Point, rules: &dyn LineRules) -> Option<Link> {
+        links::link_at(&self.term.lock(), point, Some(rules))
+    }
+
+    /// The span a rule found at a grid point, whatever it does (link or mask), to reveal what it hides.
+    pub fn rule_span_at(&self, point: Point, rules: &dyn LineRules) -> Option<RuleSpan> {
+        links::rule_span_at(&self.term.lock(), point, rules)
     }
 }

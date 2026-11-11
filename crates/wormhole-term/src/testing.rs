@@ -47,6 +47,31 @@ impl TestTerm {
         self.screen_mut().scroll_display(scroll);
     }
 
+    /// Fold grid lines `first..=last` as a finished block's output would be (see `folds`).
+    pub fn fold_lines(&mut self, first: i32, last: i32) -> Result<u64, crate::folds::Refused> {
+        let request = crate::folds::Request { finished: true, failed: false, owner: None };
+        self.screen_mut().fold_add(Line(first), Line(last), request)
+    }
+
+    /// [`fold_lines`](Self::fold_lines) as a Probe's hook would make it.
+    pub fn fold_lines_by(
+        &mut self,
+        first: i32,
+        last: i32,
+        probe: &str,
+    ) -> Result<u64, crate::folds::Refused> {
+        let owner =
+            crate::folds::FoldOwner { probe: probe.into(), name: probe.into(), label: "output".into() };
+        let request =
+            crate::folds::Request { finished: true, failed: false, owner: Some(std::sync::Arc::new(owner)) };
+        self.screen_mut().fold_add(Line(first), Line(last), request)
+    }
+
+    /// Open or close fold `id`.
+    pub fn toggle_fold(&mut self, id: u64) -> bool {
+        self.screen_mut().fold_toggle(id)
+    }
+
     pub fn clear_history(&mut self) {
         self.screen_mut().clear_history();
     }

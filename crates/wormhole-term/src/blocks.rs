@@ -152,6 +152,11 @@ impl Block {
     pub fn output_lines(&self) -> Option<(Line, Line)> {
         self.output.filter(|first| *first <= self.end).map(|first| (first, self.end))
     }
+
+    /// How many rows the output fills: a wrapped line counts each row it is drawn on. Zero when there is none.
+    pub fn output_rows(&self) -> u64 {
+        self.output_lines().map_or(0, |(first, last)| u64::try_from(last.0 - first.0 + 1).unwrap_or(0))
+    }
 }
 
 /// Every block on the grid, oldest first; none while a full-screen program has the screen.
@@ -446,6 +451,8 @@ pub(super) mod tests {
         assert!(found[1].state.failed());
         assert_eq!(found[2].state, BlockState::Prompt);
         assert_eq!(found[1].output_lines(), Some((Line(4), Line(4))), "the blank line after is nobody's");
+        let rows: Vec<u64> = found.iter().map(super::Block::output_rows).collect();
+        assert_eq!(rows, [2, 1, 0], "what `output_lines` of a hook counts");
         assert_eq!(lines_text(term.screen(), Line(1), Line(2)), "a.rs\nb.rs");
         // By a line in it, and by id.
         assert_eq!(block_at(term.screen(), Line(2), &log).map(|b| b.id), Some(1));

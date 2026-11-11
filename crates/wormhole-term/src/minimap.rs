@@ -100,6 +100,9 @@ pub struct MinimapSnapshot {
     pub cols: usize,
     /// The runs of each line shown, from [`MinimapGeometry::first`] on.
     pub lines: Vec<Vec<MinimapRun>>,
+    /// The collapsed folds as lines from the oldest one (first, last): the minimap draws the real lines
+    /// and marks where the view hides them.
+    pub folds: Vec<(usize, usize)>,
     /// Colors programs set at runtime (OSC 4/10/11), which the runs' cells refer to.
     pub colors: Colors,
     /// What the lines were read for: the output's revision, the geometry and the columns.
@@ -118,6 +121,8 @@ impl MinimapSnapshot {
             view_top: history - screen.display_offset().min(history),
         };
         self.geometry = geometry;
+        // Not part of what the copy was read for: a fold opens or closes without the output changing.
+        screen.fold_extents(&mut self.folds);
         if self.read_for == Some((revision, geometry, cols)) {
             return false;
         }

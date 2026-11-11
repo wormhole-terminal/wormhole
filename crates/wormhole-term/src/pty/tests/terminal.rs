@@ -98,3 +98,17 @@ fn input_given_before_the_program_reads_waits_for_it() {
     run.control.input(b"early\n".as_slice().into());
     run.wait_for("got:early");
 }
+
+#[test]
+#[cfg(target_os = "macos")]
+fn a_program_that_turns_echo_off_reads_as_a_secret_being_typed() {
+    // What `sudo` and `ssh` do before a password prompt, read back by the pid, as the folds do.
+    let script = "echo normal; sleep 0.3; stty -echo; echo quiet; sleep 0.5; stty echo; echo loud; sleep 5";
+    let run = run("/bin/sh", &["-c", script]);
+    run.wait_for("normal");
+    assert_eq!(crate::sys::process::echo_off(run.pid), Some(false));
+    run.wait_for("quiet");
+    assert_eq!(crate::sys::process::echo_off(run.pid), Some(true));
+    run.wait_for("loud");
+    assert_eq!(crate::sys::process::echo_off(run.pid), Some(false));
+}

@@ -113,6 +113,12 @@ pub fn tty(pid: u32) -> Option<u32> {
     os::tty(pid)
 }
 
+/// Whether the process's terminal has echo off: a program is reading a secret. `None` where the system cannot
+/// say.
+pub fn echo_off(pid: u32) -> Option<bool> {
+    os::echo_off(pid)
+}
+
 /// The processes in the group `pgid`.
 pub fn group_members(pgid: u32) -> Vec<u32> {
     os::group_members(pgid)
