@@ -10,7 +10,10 @@ final class StoreTests: XCTestCase {
         let store = WorkspaceStore(backend: MockWorkspaceBackend())
         var sample = MockWorkspace.state
         sample.panes = store.state.panes
+        // The every-terminal list is the backend's own: it names each terminal's group, a folded one's too.
+        sample.all = store.state.all
         XCTAssertEqual(store.state, sample)
+        XCTAssertEqual(store.state.all.first { $0.id == 1 }?.groupName, "Wormhole")
         XCTAssertEqual(store.state.panes.focused, 1, "the selected terminal fills the pane area")
         XCTAssertEqual(store.state.selected, 1)
         XCTAssertEqual(store.state.live.count, 13, "terminals folded away with their group still exist")
