@@ -61,13 +61,16 @@ import WormholeBindings
         #expect(parsed.hunks[0].header == "@@ -1 +1 @@" && parsed.hunks[0].lines == [DiffLine(kind: .added, newNumber: 1, text: "y", noNewline: true)])
         #expect(try GitDiff.binary(file: GitDiffFile(oldPath: nil, newPath: "b", hunks: []), sizes: nil).file().isBinary)
 
-        func failure(_ diff: GitDiff) -> String {
-            do { _ = try diff.file(); return "" } catch { return (error as? GitFailure)?.message ?? "" }
+        // The kinds with no lines arrive as a diff without hunks that carries core's words as its note.
+        func failure(_ diff: GitDiff) throws -> String {
+            let file = try diff.file()
+            #expect(file.hunks.isEmpty)
+            return file.note ?? ""
         }
-        #expect(failure(.lfs(summary: "1 KB → 2 KB · oid aaaaaa…")) == "Stored with Git LFS: 1 KB → 2 KB · oid aaaaaa…")
-        #expect(failure(.tooLarge(bytes: 9_000_000, title: "This diff is 9 MB", detail: "Loading it can take a few seconds.")) == "This diff is 9 MB. Loading it can take a few seconds.")
+        #expect(try failure(.lfs(summary: "1 KB → 2 KB · oid aaaaaa…")) == "Stored with Git LFS: 1 KB → 2 KB · oid aaaaaa…")
+        #expect(try failure(.tooLarge(bytes: 9_000_000, title: "This diff is 9 MB", detail: "Loading it can take a few seconds.")) == "This diff is 9 MB. Loading it can take a few seconds.")
         let newer = GitLogCommit(sha: "s", short: "s1", parent: nil, merge: false, author: "A", time: 0, subject: "newer", refs: [])
-        #expect(failure(.submodule(label: "1 new commit", note: nil, ahead: [newer], behind: [])) == "1 new commit\n+ s1 newer")
+        #expect(try failure(.submodule(label: "1 new commit", note: nil, ahead: [newer], behind: [])) == "1 new commit\n+ s1 newer")
     }
 
     @Test func rustErrorsBecomeThePanelsFailure() {
