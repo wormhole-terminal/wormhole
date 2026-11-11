@@ -1,0 +1,164 @@
+// The fonts a terminal draws with and the cell they imply. The fonts are created at `points * scale`, so a glyph's
+// outline is measured at the size it is drawn; the cell is the core's (`CellRule`, the GPUI app's rule) and keeps its
+// fractional width (16.8 px for JetBrains Mono 14 pt at 2x), so the grid holds the columns GPUI's does and every glyph
+// sits at its cell's own position (the atlas keeps quarter-pixel variants for that, as GPUI's does).
+
+import CoreGraphics
+import CoreText
+import Foundation
+import TerminalCore
+
+/// The four faces a cell can ask for: SGR 1 and SGR 3 pick one.
+enum FontStyle: Int, CaseIterable {
+    case regular = 0
+    case bold
+    case italic
+    case boldItalic
+
+    init(bold: Bool, italic: Bool) {
+        self = bold ? (italic ? .boldItalic : .bold) : (italic ? .italic : .regular)
+    }
+}
+
+struct CellMetrics: Equatable {
+    /// Device pixels, unrounded: cell `c` spans `c * width` to `(c + 1) * width`.
+    var width: Double
+    var height: Int
+    /// From the top of the cell to the baseline.
+    var baseline: Int
+    /// The top of an underline, from the top of the cell; and its thickness.
+    var underlineTop: Int
+    var lineThickness: Int
+    /// The top of a strikethrough, from the top of the cell.
+    var strikeTop: Int
+
+    /// Where column `c`'s left edge lands on whole pixels: the nearest one, as GPUI's quads and block shapes fall.
+    func edge(_ column: Int) -> Int { Int((Double(column) * width).rounded()) }
+}
+
+/// GPUI's rounding of a point to a device pixel (`round_to_device_pixel`): halves go toward zero.
+func roundHalfTowardZero(_ value: Double) -> Int { Int((abs(value) - 0.5).rounded(.up)) * (value < 0 ? -1 : 1) }
+
+/// Where the four faces come from.
+public enum FontSpec: Sendable, Hashable {
+    /// An installed family; bold and italic are its symbolic-trait variants.
+    case system(family: String)
+    /// Four font files, registered for this process so CoreText also finds them for fallback.
+    case files(regular: URL, bold: URL, italic: URL, boldItalic: URL)
+
+    /// The bundled JetBrains Mono, from the folder that holds its four TTFs.
+    public static func jetBrainsMono(directory: URL) -> FontSpec {
+        .files(
+            regular: directory.appendingPathComponent("JetBrainsMono-Regular.ttf"),  // text: a font file name
+            bold: directory.appendingPathComponent("JetBrainsMono-Bold.ttf"),  // text: a font file name
+            italic: directory.appendingPathComponent("JetBrainsMono-Italic.ttf"),  // text: a font file name
+            boldItalic: directory.appendingPathComponent("JetBrainsMono-BoldItalic.ttf"))  // text: a font file name
+    }
+}
+
+final class FontSet {
+    let pointSize: CGFloat
+    let scale: CGFloat
+    let metrics: CellMetrics
+    /// The cell in points, as the core gave it.
+    let cell: TerminalCell
+
+    private var interned: [CTFont] = []
+    private var ids: [String: UInt16] = [:]
+
+    /// `settings.lineHeight` is a multiple of the font size (1.3 in the GPUI app); without it the font's own line.
+    init(settings: TerminalFontSettings, scale: CGFloat) {
+        pointSize = CGFloat(settings.pointSize)
+        self.scale = scale
+        let size = pointSize * scale
+        let lineHeight = settings.lineHeight.map { CGFloat($0) }
+        let plain: [CTFont]
+        switch settings.font {
+        case .system(let family):
+            let regular = CTFontCreateWithName(family as CFString, size, nil)
+            func variant(_ traits: CTFontSymbolicTraits) -> CTFont {
+                CTFontCreateCopyWithSymbolicTraits(regular, size, nil, traits, traits) ?? regular
+            }
+            plain = [regular, variant(.traitBold), variant(.traitItalic), variant(.traitBold.union(.traitItalic))]
+        case .files(let regular, let bold, let italic, let boldItalic):
+            plain = [regular, bold, italic, boldItalic].map { Self.load($0, size: size) }
+        }
+        let faces = plain.map { Self.configured($0, settings: settings, size: size) }
+        let regular = faces[0]
+        // `FontStyle`'s order: regular, bold, italic, bold italic. They are interned first, so a face's id is
+        // its style's raw value.
+        interned.append(contentsOf: faces)
+        for (index, font) in interned.enumerated() { ids[Self.key(font)] = UInt16(index) }
+
+        // GPUI's measurements: the advance of `m` and the font's ascent and descent, in points.
+        var glyph = CGGlyph(0)
+        var m: UniChar = 0x6D
+        CTFontGetGlyphsForCharacters(regular, &m, &glyph, 1)
+        var advance = CGSize.zero
+        CTFontGetAdvancesForGlyphs(regular, .default, &glyph, &advance, 1)
+        let ascent = CTFontGetAscent(regular) / scale, descent = CTFontGetDescent(regular) / scale
+        let factor = lineHeight ?? (ascent + descent + CTFontGetLeading(regular) / scale) / pointSize
+        let cell = CellRule.current.cell(
+            fontSize: Double(pointSize), lineHeight: Double(factor), advance: Double(advance.width / scale), ascent: Double(ascent),
+            descent: Double(descent))
+        self.cell = cell
+        let s = Double(scale)
+        let height = max(1, Int((cell.height * s).rounded()))
+        let thickness = max(1, Int((TerminalCell.line * s).rounded()))
+        metrics = CellMetrics(
+            width: max(1, cell.width * s), height: height, baseline: roundHalfTowardZero(cell.baseline * s),
+            underlineTop: min(height - thickness, roundHalfTowardZero(cell.underline * s)), lineThickness: thickness,
+            strikeTop: roundHalfTowardZero(cell.strike * s))
+    }
+
+    /// The face with the settings' OpenType features and fallback chain. Ligatures off turns `calt` and `liga`
+    /// off, as the GPUI app's `ligature_features` does: programming fonts form `=>` through contextual
+    /// alternates, others through standard ligatures. On, the font keeps its defaults.
+    private static func configured(_ font: CTFont, settings: TerminalFontSettings, size: CGFloat) -> CTFont {
+        var attributes: [CFString: Any] = [:]
+        if !settings.ligatures {
+            attributes[kCTFontFeatureSettingsAttribute] = ["calt", "liga"].map {
+                [kCTFontOpenTypeFeatureTag: $0, kCTFontOpenTypeFeatureValue: 0] as [CFString: Any]
+            }
+        }
+        if !settings.fallbacks.isEmpty {
+            attributes[kCTFontCascadeListAttribute] = settings.fallbacks.map {
+                CTFontDescriptorCreateWithNameAndSize($0 as CFString, size)
+            }
+        }
+        guard !attributes.isEmpty else { return font }
+        return CTFontCreateCopyWithAttributes(font, size, nil, CTFontDescriptorCreateWithAttributes(attributes as CFDictionary))
+    }
+
+    /// A font from a file, registered for the process so its name resolves (and fallback can find it).
+    private static func load(_ url: URL, size: CGFloat) -> CTFont {
+        CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+        if let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor], let first = descriptors.first {
+            return CTFontCreateWithFontDescriptor(first, size, nil)
+        }
+        FileHandle.standardError.write(Data("cannot load the font \(url.path); using Menlo\n".utf8))  // text: a diagnostic written to stderr
+        return CTFontCreateWithName("Menlo" as CFString, size, nil)  // text: a font family's name
+    }
+
+    func font(for style: FontStyle) -> CTFont { interned[style.rawValue] }
+    func font(id: UInt16) -> CTFont { interned[Int(id)] }
+
+    /// A small id for a font CoreText picked for a run (a fallback for CJK, emoji, symbols), for the atlas key.
+    func id(of font: CTFont) -> UInt16 {
+        let key = Self.key(font)
+        if let id = ids[key] { return id }
+        let id = UInt16(interned.count)
+        interned.append(font)
+        ids[key] = id
+        return id
+    }
+
+    private static func key(_ font: CTFont) -> String {
+        "\(CTFontCopyPostScriptName(font))@\(CTFontGetSize(font))"
+    }
+
+    /// Whether the font draws colour bitmaps or layers (Apple Color Emoji).
+    static func hasColorGlyphs(_ font: CTFont) -> Bool {
+        CTFontGetSymbolicTraits(font).contains(.traitColorGlyphs)
+    }
+}
