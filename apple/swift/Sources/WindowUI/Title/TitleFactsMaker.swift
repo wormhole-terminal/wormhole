@@ -1,0 +1,48 @@
+// The title row's facts for the selected terminal, gathered from the summary the window already has. The ports and the
+// pull request are what the core looked up (`TitleState`); the row hides a part with nothing to say.
+
+import Foundation
+import PanesModel
+import WordsModel
+import WorkspaceModel
+
+enum TitleFactsMaker {
+    static func facts(
+        for terminal: TerminalSummary, row: TitleRow, statusBarOn: Bool, gauge: GaugeFact? = nil, extras: TitleState? = nil,
+        home: String = NSHomeDirectory()
+    ) -> TitleFacts {
+        let shown = terminal.folder
+        let path = shown.map { ($0 as NSString).expandingTildeInPath }
+        return TitleFacts(
+            terminalID: terminal.id, folder: path, shownFolder: shown.map { abbreviated($0, home: home) },
+            activity: terminal.activity, agent: terminal.agent, label: terminal.title,
+            // The status bar says it when it is on (`TitlePart.terminalStatus`).
+            words: statusBarOn ? nil : terminal.activity.words,
+            branch: terminal.branch.map { .some($0) }, branchStatus: branchStatus(of: terminal), gauge: gauge,
+            ports: extras?.ports ?? [], pullRequest: extras?.pullRequest, row: row)
+    }
+
+    /// What git says of the branch (the core's feed): an unclean tree and how far it is from its upstream; nothing to say
+    /// draws nothing. Without a branch there is no status.
+    private static func branchStatus(of terminal: TerminalSummary) -> BranchStatus? {
+        guard terminal.branch != nil, terminal.isDirty || terminal.ahead > 0 || terminal.behind > 0 else { return nil }
+        return BranchStatus(dirty: terminal.isDirty, ahead: terminal.ahead, behind: terminal.behind)
+    }
+
+    private static func abbreviated(_ path: String, home: String) -> String {
+        path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
+    }
+}
+
+private extension Activity {
+    var words: String? {
+        switch self {
+        case .idle: nil
+        case .working: Words.text("window-state-working", fallback: "working")
+        case .needsInput: Words.text("window-state-needs-input", fallback: "needs input")
+        case .finished: Words.text("window-state-finished", fallback: "finished")
+        case .failed: Words.text("window-state-failed", fallback: "failed")
+        case .exited: Words.text("window-state-exited", fallback: "exited")
+        }
+    }
+}

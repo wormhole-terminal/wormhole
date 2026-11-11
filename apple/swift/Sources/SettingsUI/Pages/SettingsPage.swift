@@ -1,0 +1,40 @@
+// A section's page (`render_section`): its title and intro, the preview strip when it has a scene, then its
+// groups, each a card of rows. A row whose `visibleWhen` does not hold is not there, and a group left empty is
+// not either. The scroll view jumps to a row a search result named.
+
+import DesignSystem
+import SettingsModel
+import SwiftUI
+import WordsModel
+
+struct SettingsPage: View {
+    let model: SettingsModel
+    let section: SettingsSchema.Section
+
+    var body: some View {
+        PageScaffold(title: section.title, intro: section.intro, revealed: model.revealed, clearReveal: model.clearReveal, action: { HeaderAction(model: model, section: section.id) }) {
+            if let note = model.host.previewNote(section: section.id) {
+                Banner(kind: .info, text: note) { ActionButton(title: Words.text("settings-window-feature-flags", fallback: "Feature flags"), symbol: nil) { model.show("featureFlags") } }
+            }
+            // The file that does not read says why on Advanced, with a way to open it; on every other page that changes are not saved.
+            if section.id == "advanced", let broken = model.backend.banner() {
+                Banner(kind: .warning, text: broken) { ActionButton(title: SettingsText.open, symbol: nil, frameId: "banner.open") { model.host.perform(.openConfig) } }
+            } else if model.backend.unreadable {
+                Banner(kind: .warning, text: SettingsText.configUnreadable)
+            }
+            if section.id == "profile", let problem = model.host.profilesProblem() { Banner(kind: .warning, text: problem) }
+            if let problem = model.host.panelRecords().problem { Banner(kind: .danger, text: problem) }
+            if let scene = PreviewScene(section: section.id) { PreviewStrip(model: model, scene: scene) }
+            ForEach(Array(section.groups.enumerated()), id: \.offset) { _, group in
+                let rows = group.entries.filter { $0.isShown(values: model.values) && $0.control.layout != .strip }
+                if let bare = rows.first(where: { $0.control.layout == .bare }) {
+                    EntryRowView(model: model, entry: bare)
+                } else if !rows.isEmpty {
+                    SettingGroup(title: group.title, aside: group.aside, blurb: group.blurb) {
+                        ForEach(rows) { EntryRowView(model: model, entry: $0) }
+                    }
+                }
+            }
+        }
+    }
+}
