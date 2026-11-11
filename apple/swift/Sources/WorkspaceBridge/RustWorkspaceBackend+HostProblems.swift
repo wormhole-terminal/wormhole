@@ -21,10 +21,13 @@ extension RustWorkspaceBackend {
     }
 
     public func hosting(of id: TerminalID) -> HostingState? {
-        guard hosted != nil else { return nil }
+        guard let hosted else { return nil }
         if book.connecting[id] != nil { return .connecting }
         if let unavailable = book.unavailable[id] { return .unavailable(hostID: unavailable.host) }
-        return core.terminal(id: Int64(id)).map { HostingState($0.hosting()) } ?? .local
+        let state = core.terminal(id: Int64(id)).map { HostingState($0.hosting()) } ?? .local
+        // With Persistent terminals off a terminal in the app has no hosting state at all (the flag is asked as each
+        // terminal starts, so one that a host still holds keeps its own).
+        return state == .local && !hosted.enabled ? nil : state
     }
 
     /// "Try again": the host's own place is asked again, the pane blank until it answers.
