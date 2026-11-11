@@ -10,6 +10,8 @@ enum FieldKey: Equatable {
     case up, down, tab(forward: Bool), enter, escape
     /// ⌫ in an empty field, ⌘⌫ and ⌘C with nothing selected in the field (the result's own copy).
     case backspaceWhenEmpty, commandDelete, commandCopy
+    /// ⌘↩: the result in a new window.
+    case commandEnter
 }
 
 struct PaletteField: NSViewRepresentable {
@@ -31,6 +33,7 @@ struct PaletteField: NSViewRepresentable {
         field.cell?.isScrollable = true
         field.delegate = context.coordinator
         field.onCommandCopy = { [weak coordinator = context.coordinator] in coordinator?.parent.onKey(.commandCopy) ?? false }
+        field.onCommandEnter = { [weak coordinator = context.coordinator] in coordinator?.parent.onKey(.commandEnter) ?? false }
         return field
     }
 
@@ -84,15 +87,33 @@ final class FocusingField: NSTextField {
     var caretColor: NSColor = .labelColor
     /// ⌘C with nothing selected in the field: the owner may take it (a setting's key); true when it did.
     var onCommandCopy: () -> Bool = { false }
+    /// ⌘↩, which a field would take as a plain return.
+    var onCommandEnter: () -> Bool = { false }
+    private var monitor: Any?
 
-    override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        let copy = event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command && event.charactersIgnoringModifiers == "c"
-        if copy, currentEditor()?.selectedRange.length == 0, onCommandCopy() { return true }
-        return super.performKeyEquivalent(with: event)
+    /// The two ⌘ keys are taken before the window's key equivalents: the hosting view above does not pass them down to a
+    /// field, and the Edit menu's Copy would act on an empty selection.
+    private func hearCommandKeys() {
+        guard monitor == nil else { return }
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, event.window === self.window,
+                event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command
+            else { return event }
+            let taken =
+                (event.keyCode == 36 || event.keyCode == 76) ? self.onCommandEnter()
+                : event.charactersIgnoringModifiers == "c" && self.currentEditor()?.selectedRange.length == 0 ? self.onCommandCopy() : false
+            return taken ? nil : event
+        }
     }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        if window == nil {
+            monitor.map(NSEvent.removeMonitor)
+            monitor = nil
+        } else {
+            hearCommandKeys()
+        }
         DispatchQueue.main.async { [weak self] in self?.window?.makeFirstResponder(self) }
     }
 

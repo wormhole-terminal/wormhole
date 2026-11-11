@@ -1,0 +1,20 @@
+# wh run / wh blocks, --background Swift instance, zsh with OSC 133 marks in the order integration scripts send them (zdot/.zshrc: A before the prompt, B after it, C at preexec, D at precmd)
+> onboarding close
+onboarding close
+> new
+new
+$ Wormhole run --terminal 1 -- echo run-number-1 -> exit 0
+run-number-1
+exit 0 in 0.0s (block 21)
+$ Wormhole run --terminal 1 -- echo run-number-2 -> exit 0
+run-number-2
+exit 0 in 0.0s (block 22)
+$ Wormhole run --terminal 1 -- echo run-number-3 -> exit 0
+run-number-3
+exit 0 in 0.0s (block 23)
+$ Wormhole blocks --terminal 1 -> exit 0
+ID  STATE     EXIT  TOOK  COMMAND
+21  finished  0     0.0s  echo run-number-1
+22  finished  0     0.0s  echo run-number-2
+23  finished  0     0.0s  echo run-number-3
+24  prompt    -     -     

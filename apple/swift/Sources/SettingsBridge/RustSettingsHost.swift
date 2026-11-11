@@ -83,6 +83,12 @@ public final class RustSettingsHost: SettingsHost {
         }
     }
 
+    public func shellChoices() -> [ShellChoice] {
+        handle.shellChoices().map {
+            ShellChoice(key: $0.key, name: $0.name, commandLine: $0.commandLine, program: $0.program, arguments: $0.args, isDefault: $0.isDefault)
+        }
+    }
+
     public var fontRules: any FontRules { RustFontRules(fontsDir: handle.paths().fontsDir, bundledFiles: platform.bundledFonts()) }
     public func isDefaultTerminal() -> Bool? { platform.isDefaultTerminal() }
 

@@ -50,6 +50,19 @@ public protocol KeymapLists: Sendable {
     func sheet(hidden: [String], query: String) -> FilteredShortcuts
     /// How sections of these heights go into at most `count` columns.
     func columns(_ heights: [Int], _ count: Int) -> [Range<Int>]
+    /// Whether `query` finds a row of the sheet's that the keymap does not hold (a trusted project's key, given as glyphs).
+    func matches(_ query: String, label: String, key: String) -> ShortcutMatch?
+}
+
+extension KeymapLists {
+    /// Without the core, only the empty filter finds anything.
+    public func matches(_ query: String, label: String, key: String) -> ShortcutMatch? { query.isEmpty ? ShortcutMatch() : nil }
+}
+
+/// What a query found in one row: where it marked the label, as `Character` offsets.
+public struct ShortcutMatch: Sendable, Equatable {
+    public var hit: Range<Int>?
+    public init(hit: Range<Int>? = nil) { self.hit = hit }
 }
 
 /// The lists the palette and the sheet read: core's once installed, nothing before.
@@ -66,6 +79,10 @@ public enum ListedKeymap {
     }
 
     public static func columns(_ heights: [Int], _ count: Int) -> [Range<Int>] { installed.withLock { $0 }.columns(heights, count) }
+
+    public static func matches(_ query: String, label: String, key: String) -> ShortcutMatch? {
+        installed.withLock { $0 }.matches(query, label: label, key: key)
+    }
 
     private struct NoLists: KeymapLists {
         func actions(_ facts: ActionFacts) -> ActionList { ActionList() }

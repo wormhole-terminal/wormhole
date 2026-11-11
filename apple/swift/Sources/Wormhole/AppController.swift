@@ -3,6 +3,7 @@
 // each their own file and reach the window only through it.
 
 import AppKit
+import DesignSystem
 import AuxWindows
 import PanelUI
 import PlatformModel
@@ -32,6 +33,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     var sessions: [WindowSession] = []
     /// The window that was in front last: what commands act on while none is the key window (a test instance never has one).
     var lastFront: WindowSession?
+    /// Open folder… in a test instance, which shows no panel: what a chosen folder does, until `open-folder` gives one.
+    var pendingFolder: ((String) -> Void)?
     /// Set while the app quits, so the windows that go with it are saved, not forgotten.
     var terminating = false
     var devctl: DevCtl?
@@ -71,14 +74,18 @@ final class AppController: NSObject, NSApplicationDelegate {
     private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory)
     private(set) lazy var folderPicking = FolderPicking(app: self)
     private(set) lazy var router = ActionRouter(app: self)
+    private(set) lazy var recents = RecentProjects(dataDirectory: dataDirectory)
     private(set) lazy var aux = AuxController(app: self, dataDirectory: dataDirectory)
 
     init(options: Options, dataDirectory: URL) throws {
         self.options = options
         self.dataDirectory = dataDirectory
         policy = PlatformPolicy(background: options.background)
-        // A test instance never puts a question on the screen (it would bring a window forward): a driver answers it.
-        if options.background { PendingQuestions.current = PendingQuestions() }
+        // A test instance never puts a question on the screen (it would bring a window forward): the control folder answers it,
+        // so a `--background` instance without one has nobody to answer and shows its questions as any app does.
+        if options.background, options.devctl != nil { PendingQuestions.current = PendingQuestions() }
+        // And it never reads or replaces the person's clipboard: what it copies is a file in its data folder.
+        if options.background { Pasteboard.divert(to: dataDirectory.appendingPathComponent("pasteboard.txt")) }
         PlatformSetup.install(options)
         windowsHost = try WindowsHost.make(options)
         profileHosts[windowsHost.profile] = windowsHost

@@ -18,9 +18,12 @@ extension AuxController {
         introPlayer.play(style, over: window, options: options, colors: IntroColors(tokens: ThemeStore.shared.tokens))
     }
 
-    /// The welcome's start animation with its ship docking as `handover` has it. The terminal program that follows
-    /// it (`Wormhole welcome`) is not in the Swift app: the run ends on the window that is there.
-    func playWelcome(_ handover: Handover) { playIntro(handover.style, handover: handover) }
+    /// Play Welcome (Help ▸ Welcome, the palette, `welcome`): the start animation with its ship docking as `handover` has it, and
+    /// a new terminal that runs the welcome program (`AppController.openWelcomeTerminal`, the one entry to it).
+    func playWelcome(_ handover: Handover) {
+        playIntro(handover.style, handover: handover)
+        app.openWelcomeTerminal(handover)
+    }
 }
 
 extension AuxController {
@@ -49,5 +52,19 @@ extension AppController {
             return reply("error: \(command) takes \((command == "intro" ? IntroStyle.allCases.map(\.rawValue) : Handover.allCases.map(\.rawValue)).joined(separator: "|"))")
         }
         reply("\(command) \(argument)")
+    }
+}
+
+extension AppController {
+    /// The one entry point to the welcome's terminal side: a new terminal in the window in front that runs this app's own
+    /// `welcome` program in front of the shell the terminal would have run (core's `welcome_command`: `welcome -- <program> <args>`), as
+    /// GPUI's `open_welcome_session` does. The program itself (`Wormhole welcome`, core's `onboarding::welcome::run`) is
+    /// the settings and onboarding lane's.
+    func openWelcomeTerminal(_ handover: Handover) {
+        // The hand-over (which of Cursor, Portal, Logo the ship docks as) reaches the program through the app side of its token and
+        // plan (`Action::Welcome`), which is the settings lane's; the terminal only needs the program.
+        guard let exe = Bundle.main.executablePath else { return }
+        let shell = options.program ?? "/bin/zsh"
+        hub.send(.newTerminalRunning(program: exe, arguments: ["welcome", "--", shell]))
     }
 }

@@ -22,6 +22,10 @@ public struct PaletteView: View {
     @State var hovered: String?
     /// The actions as the window offered them when the palette opened (the core's list for this window).
     @State var actions: ActionList
+    /// The profiles when it opened, and what the settings index found for the query typed: both are looked up once, not on
+    /// every redraw (hovering a row redraws the palette).
+    @State var profiles: [PaletteProfile]
+    @State var hits: [PaletteSetting] = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     public init(
@@ -41,6 +45,7 @@ public struct PaletteView: View {
         self.dismiss = dismiss
         self.sources = sources
         _actions = State(initialValue: sources.actions())
+        _profiles = State(initialValue: sources.profiles())
         self.startsPresented = startsPresented
         let (scope, rest) = PaletteScope.parse(query)
         _scope = State(initialValue: scope)
@@ -51,17 +56,23 @@ public struct PaletteView: View {
 
     var motion: OverlayMotion { OverlayMotion(reduceMotion: reduceMotion) }
 
-    var rows: [PaletteRow] {
+    /// The rows at `now`, which the palette's own clock moves on every second while it is open (core `gather`).
+    func rows(now: Date) -> [PaletteRow] {
         let recent = RecentStore.shared.ids
         let commands = CommandCatalog.commands(
-            for: state, sources: sources, actions: actions, scope: scope, query: text, recent: recent)
-        return PaletteRows.rows(scope: scope, query: text, commands: commands, recent: recent, suggested: actions.suggested)
+            for: state, sources: sources, actions: actions, profiles: profiles, hits: hits, scope: scope, query: text, recent: recent, now: now)
+        return PaletteRows.rows(
+            scope: scope, query: text, commands: commands, recent: recent, suggested: actions.suggested, project: sources.project()?.name)
     }
 
     public var body: some View {
-        let rows = rows
+        TimelineView(.periodic(from: .now, by: 1)) { clock in content(now: clock.date) }
+    }
+
+    private func content(now: Date) -> some View {
+        let rows = rows(now: now)
         let selection = PaletteSelection.current(chosen: chosen, in: rows)
-        OverlayChrome(
+        return OverlayChrome(
             style: .palette, top: OverlayMetrics.paletteTop, startsPresented: startsPresented, dismiss: dismiss
         ) { context in
             card(rows: rows, selection: selection, context: context)
@@ -90,13 +101,15 @@ public struct PaletteView: View {
         .overlayCard()
         .animation(motion.resize, value: listHeight(rows, in: context.size))
         .onChange(of: text) { _, new in typed(new) }
+        .onChange(of: scope) { findSettings() }
+        .onAppear { findSettings() }
     }
 
     /// The list grows with its results up to what the window leaves under the search and scope rows.
     private func listHeight(_ rows: [PaletteRow], in window: CGSize) -> CGFloat {
         let room = min(OverlayMetrics.paletteMaxHeight, window.height - OverlayMetrics.paletteTop - OverlayMetrics.bottomMargin)
         let chrome = Metric.paletteSearchHeight + 2 * Metric.paletteRowHeight
-        let content = rows.reduce(OverlayMetrics.listBottom) { $0 + $1.height }
+        let content = rows.reduce(OverlayMetrics.listBottom) { $0 + $1.height(in: scope) }
         return min(content, max(room - chrome, Metric.paletteRowHeight))
     }
 }

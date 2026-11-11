@@ -2,6 +2,7 @@
 // seams so a check points them at a scratch folder and never touches the person's files or clipboard.
 
 import AppKit
+import DesignSystem
 import UniformTypeIdentifiers
 
 /// The Studio's two ways out for a theme as text, replaceable by a check.
@@ -29,7 +30,6 @@ public struct StudioOutputs {
             }
         },
         copy: { json in
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(json, forType: .string)
+            Pasteboard.setText(json)
         })
 }

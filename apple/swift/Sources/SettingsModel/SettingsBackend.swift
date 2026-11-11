@@ -35,6 +35,8 @@ public final class SettingsObservation: Sendable {
 @MainActor
 public protocol SettingsHost: AnyObject {
     func options(for source: OptionSource) -> [SettingOption]
+    /// The shells a terminal can start with, login shell first; none where there is no core.
+    func shellChoices() -> [ShellChoice]
     /// The font pickers' rules and sources: core's, or the same in Swift when there is no core.
     var fontRules: any FontRules { get }
     func perform(_ action: SettingsAction)
@@ -104,6 +106,7 @@ extension SettingsHost {
     public func shownSections() -> Set<String>? { nil }
     public func profileForm() -> ProfileForm? { nil }
     public func shellProfiles() -> [ShellLine] { [] }
+    public func shellChoices() -> [ShellChoice] { [] }
     public func worktreeCaption(base: String) -> String? { nil }
     public func isDefaultTerminal() -> Bool? { nil }
     public func othersHead(count: Int) -> String { "\(count) more agent\(count == 1 ? "" : "s") Wormhole recognises" }

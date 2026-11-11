@@ -2,6 +2,7 @@
 // the pointer, and what choosing one does. Its items are the keymap's own, so each runs the action of the same id.
 
 import AppKit
+import DesignSystem
 import PlatformModel
 import PlatformUI
 import TerminalMetal
@@ -11,7 +12,7 @@ extension AppController {
     /// The menu for terminal `id`, built as it is asked for so its facts are current.
     func terminalMenu(for id: TerminalID, in session: WindowSession? = nil) -> NSMenu? {
         var facts = TerminalMenuFacts()
-        facts.canPaste = NSPasteboard.general.string(forType: .string)?.isEmpty == false
+        facts.canPaste = Pasteboard.text()?.isEmpty == false
         facts.splitRight = router.table["splitRight"] != nil
         facts.splitDown = router.table["splitDown"] != nil
         let holder = session ?? self.session(holding: id) ?? front
@@ -26,6 +27,7 @@ extension AppController {
     /// A context menu's choice. Terminal menu kinds map onto actions; the others (rows, groups, paths) are the
     /// sidebar's and title row's own SwiftUI menus here, so nothing else arrives.
     func runContext(_ action: ContextAction) {
+        if let row = RowMenu.Kind.allCases.first(where: { $0.key == action.kind }) { return runRow(row, action) }
         guard let kind = TerminalMenu.Kind.allCases.first(where: { $0.key == action.kind }) else { return }
         switch kind {
         case .copy: router.run("copy")

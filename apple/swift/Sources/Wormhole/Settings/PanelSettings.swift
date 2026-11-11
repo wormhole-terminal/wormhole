@@ -2,6 +2,7 @@
 // wrapping (a click on the panel's own controls writes them back), the tab width, the units of a size, and the code font
 // (the terminal's family while none is named, `FontSlot::Code`).
 
+import DesignSystem
 import PanelModel
 import PanelUI
 import SettingsModel

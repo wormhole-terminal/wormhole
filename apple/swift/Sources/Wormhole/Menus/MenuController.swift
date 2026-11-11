@@ -37,9 +37,7 @@ final class MenuController {
 
     private func refresh() {
         let state = withObservationTracking {
-            app.hub.menuState(
-                look: app.look, isFullScreen: app.window?.styleMask.contains(.fullScreen) ?? false,
-                implemented: app.router.implemented, flagsOn: app.flagsOn(app.front))
+            app.menuState(for: app.hub)
         } onChange: { [weak self] in
             Task { @MainActor in self?.refresh() }
         }

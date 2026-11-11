@@ -7,6 +7,8 @@ import SwiftUI
 struct GroupLabel: View {
     let title: String
     let count: Int?
+    /// The trusted project's label wears a Trusted badge.
+    var trusted = false
     /// The label's side inset: a palette's, or none where a column of the sheet gives it room.
     var inset: CGFloat = Space._4
     @Environment(\.tokens) private var tokens
@@ -16,6 +18,7 @@ struct GroupLabel: View {
             Text(title)
                 .font(.system(size: TextRole.caption.size, weight: .semibold))
                 .foregroundStyle(tokens.textMuted)
+            if trusted { StatusBadge(text: "Trusted", color: tokens.statusSuccessText) }
             if let count {
                 Text(String(count))
                     .font(.system(size: TextRole.caption.size, weight: .medium))

@@ -133,7 +133,7 @@ pub use settings::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,
     ProbeSheetRecord, ProbesDesk, SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsFlagRow,
     SettingsHandle, SettingsHealth, SettingsHit, SettingsHookState, SettingsImportRow, SettingsListener,
-    SettingsOptionRow, SettingsPaths, SettingsProfileRow, SettingsSkillRow, SettingsSkillState,
+    SettingsOptionRow, SettingsPaths, SettingsProfileRow, SettingsSkillRow, SettingsSkillState, ShellChoiceRecord,
     SettingsTextSpan, ShortcutVerdict, check_shortcut, settings_agent_rows, settings_create_profile,
     settings_delete_profile, settings_import_rows, settings_mcp_command, settings_profiles,
     settings_schema_json, settings_set_agent_hooks, settings_set_skill, settings_skill_rows,

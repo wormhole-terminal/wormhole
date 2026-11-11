@@ -9,10 +9,9 @@ struct TitleRowMenu: View {
     let actions: TitleActions
 
     var body: some View {
-        Section(PanesText.showInTitleRow) {
-            ForEach(TitlePart.allCases.filter(\.hideable), id: \.self) { part in
-                Toggle(PanesText.partName(part), isOn: Binding(get: { row.shows(part) }, set: { actions.setPart(part, $0) }))
-            }
+        Text(PanesText.showInTitleRow)
+        ForEach(TitlePart.allCases.filter(\.hideable), id: \.self) { part in
+            Toggle(PanesText.partName(part), isOn: Binding(get: { row.shows(part) }, set: { actions.setPart(part, $0) }))
         }
         Divider()
         Button(PanesText.resetTitleRow, action: actions.resetRow).disabled(row.isDefault)

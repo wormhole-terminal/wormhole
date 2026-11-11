@@ -6,6 +6,7 @@
 // modifyOtherKeys), through `FrameSource.sendKey`.
 
 import AppKit
+import DesignSystem
 import TerminalCore
 
 extension MetalTerminalView {
@@ -52,11 +53,13 @@ extension MetalTerminalView {
     /// inserts them; an agent takes a dropped image by that pasted path).
     /// `replacingProgramSelection` (⌘V, not a drop): over a selection a full-screen program drew itself the paste replaces it.
     public func insert(from board: NSPasteboard, replacingProgramSelection: Bool = false) -> Bool {
-        if let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty,
+        // The clipboard is `Pasteboard`'s (a test instance's is a file); any other board is a drop's, or a script's own.
+        let general = board === NSPasteboard.general
+        if !(general && Pasteboard.isDiverted), let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty,
             let text = interaction?.droppedText(paths: urls.map(\.path))
         {
             source.paste(text)
-        } else if let text = board.string(forType: .string), !text.isEmpty {
+        } else if let text = general ? Pasteboard.text() : board.string(forType: .string), !text.isEmpty {
             // Only the real engine (`encodesKeys`) knows a program's own selection.
             if replacingProgramSelection, source.encodesKeys, let interaction { interaction.pasteClipboard(text) } else { source.paste(text) }
         } else {

@@ -3,6 +3,7 @@
 // keeps only the view's state. What was copied never goes into a notice, only how much.
 
 import AppKit
+import DesignSystem
 import Observation
 
 @MainActor @Observable
@@ -118,7 +119,6 @@ public final class BlockController {
     private func isFinished(_ state: BlockState) -> Bool { if case .finished = state { true } else { false } }
 
     public nonisolated static func writeToPasteboard(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        Pasteboard.setText(text)
     }
 }

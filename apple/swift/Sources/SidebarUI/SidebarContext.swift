@@ -27,6 +27,8 @@ struct SidebarContext {
     /// The group whose popover is open.
     let popover: GroupID?
     let openPopover: @MainActor (GroupID?) -> Void
+    /// Where each row stands in the window, for the menu ⌃↩ opens under it.
+    let frames: RowFrames
 
     struct GroupChoice: Identifiable {
         let id: GroupID
@@ -35,4 +37,9 @@ struct SidebarContext {
     }
 
     func group(of terminal: TerminalID) -> GroupChoice? { groups.first { $0.members.contains(terminal) } }
+}
+
+/// The rows' frames in the window, kept as they are laid out: read only when a key asks for one, so it is not observed.
+final class RowFrames {
+    var frames: [TerminalID: CGRect] = [:]
 }

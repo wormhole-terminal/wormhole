@@ -134,6 +134,9 @@ final class Injector {
         return "scrolled \(name(of: target))"
     }
 
+    /// A menu opened by a key (⌃↩ on a row), kept unshown like a right-click's.
+    func keep(_ menu: NSMenu) { self.menu = menu }
+
     /// What a right-click (or a Control-click) opens there, kept unshown; nil when no view there has a menu, and then the
     /// click is the view's own (a program that takes the mouse).
     func contextMenu(_ point: NSPoint, in window: NSWindow) -> NSMenu? {

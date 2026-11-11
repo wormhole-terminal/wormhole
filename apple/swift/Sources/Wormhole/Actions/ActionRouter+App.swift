@@ -16,7 +16,7 @@ extension ActionRouter {
             "sessionHosts": { [unowned self] in app.aux.showHosts() },
             "showIntro": { [unowned self] in app.aux.showOnboarding(firstRun: false) },
             "themeStudio": { [unowned self] in app.studio.show() },
-            "openFolder": { [unowned self] in app.folderPicking.openFolder() },
+            "openFolder": { [unowned self] in app.openFolder() },
             "showLogs": { [unowned self] in app.showLogs() },
             "quitAndEndAll": { [unowned self] in app.quit(endAll: true) },
         ]

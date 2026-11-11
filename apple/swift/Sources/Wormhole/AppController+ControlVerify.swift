@@ -50,8 +50,10 @@ extension AppController {
         let (scope, query) = PaletteScope.parse(argument)
         let sources = hub.actions.palette
         let actions = sources.actions()
-        let commands = CommandCatalog.commands(for: hub.state, sources: sources, actions: actions, scope: scope, query: query, recent: [])
-        let rows = PaletteRows.rows(scope: scope, query: query, commands: commands, suggested: actions.suggested)
+        let commands = CommandCatalog.commands(
+            for: hub.state, sources: sources, actions: actions, profiles: sources.profiles(), hits: sources.settings(query), scope: scope, query: query,
+            recent: [])
+        let rows = PaletteRows.rows(scope: scope, query: query, commands: commands, suggested: actions.suggested, project: sources.project()?.name)
         guard command == "palette-run" else { return reply(rows.map(Self.line).joined(separator: "\n")) }
         guard let found = rows.compactMap(\.result).first?.command else { return reply("palette-run nothing found") }
         if let id = found.appAction { router.run(ActionID(rawValue: id)) } else if let target = found.target { sources.reveal(target) } else if let action = found.action { hub.send(action) }
@@ -63,6 +65,7 @@ extension AppController {
         let terminals = ambientTerminals
         var snapshot = StatusSnapshot()
         snapshot.terminals = terminals
+        (snapshot.actions, snapshot.recent) = (ambientActions, ambientRecent)
         // What the menu bar item would be given (it is not made in a test instance): the settings' own.
         snapshot.icon = settingsModel.value("menu_bar_icon").string.flatMap(MenuBarIconMode.init(rawValue:)) ?? .statusCount
         snapshot.animate = settingsModel.value("menu_bar_animate").bool ?? false
@@ -70,13 +73,14 @@ extension AppController {
         let counts = AmbientCounts(of: terminals)
         return "icon \(status.icon)\n" + MenuDump.lines(status.menu, depth: 1) + "dock\n" + MenuDump.lines(DockMenu.build(terminals, now: Date()), depth: 1)
             + "badge needs_you=\(DockBadgeMode.needsYou.label(for: counts) ?? "none") needs_you_done=\(DockBadgeMode.needsYouDone.label(for: counts) ?? "none")\n"
-            + "quick\n" + QuickPanelRows.rows(terminals, [.newTerminal(cwd: nil)], query: query).map { "  \($0)" }.joined(separator: "\n")
+            + "quick\n" + QuickPanelRows.rows(terminals, ambientItems, query: query).map { "  \($0)" }.joined(separator: "\n")
     }
 
     private static func line(_ row: PaletteRow) -> String {
         switch row {
         case .label(let title, let count): "# \(title)\(count.map { " (\($0))" } ?? "")"
-        case .result(let r): "  \(r.command.title)\(r.command.detail.map { "  - \($0)" } ?? "")\(r.command.shortcut.map { "  [\($0.glyphs)]" } ?? "")  <\(r.command.id)>"
+        case .projectLabel(let title): "# \(title) [Trusted]"
+        case .result(let r): "  \(r.command.title)\(r.command.detail.map { "  - \($0)" } ?? "")\(r.command.second.map { "\n      \($0)" } ?? "")\(r.command.shortcut.map { "  [\($0.glyphs)]" } ?? "")  <\(r.command.id)>"
         case .note(let text): "  (\(text))"
         }
     }

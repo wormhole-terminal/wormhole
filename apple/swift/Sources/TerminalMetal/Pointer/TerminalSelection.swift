@@ -3,6 +3,7 @@
 // exists nothing is asked.
 
 import AppKit
+import DesignSystem
 import TerminalCore
 
 extension MetalTerminalView {
@@ -19,9 +20,7 @@ extension MetalTerminalView {
 
     @objc public func copy(_ sender: Any?) {
         guard let text = interaction?.selectionText() else { return }
-        let board = NSPasteboard.general
-        board.clearContents()
-        board.setString(text, forType: .string)
+        Pasteboard.setText(text)
         onCopied?(text)
     }
 
@@ -41,7 +40,7 @@ extension MetalTerminalView {
     public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
         switch item.action {
         case #selector(copy(_:)): hasSelection
-        case #selector(paste(_:)): NSPasteboard.general.canReadObject(forClasses: [NSString.self, NSURL.self], options: nil)
+        case #selector(paste(_:)): Pasteboard.canPaste
         default: true
         }
     }

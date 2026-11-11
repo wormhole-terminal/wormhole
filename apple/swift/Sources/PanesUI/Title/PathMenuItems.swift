@@ -11,11 +11,12 @@ struct PathMenuItems: View {
     let actions: TitleActions
 
     var body: some View {
-        Section(facts.shownFolder ?? "") {
-            Button(PanesText.openInFinder, action: actions.revealFolder)
-            Button(PanesText.copyPath, action: actions.copyPath)
-            Button(PanesText.insertIntoTerminal, action: actions.insertPath).disabled(!actions.canInsert)
-        }
+        // A heading is a line of text: a SwiftUI `Section` would add separators of its own above and below.
+        Text(facts.shownFolder ?? "")
+        Divider()
+        Button(PanesText.openInFinder, action: actions.revealFolder)
+        Button(PanesText.copyPath, action: actions.copyPath)
+        Button(PanesText.insertIntoTerminal, action: actions.insertPath).disabled(!actions.canInsert)
         if let folder = facts.folder {
             Divider()
             ForEach(PathChain.of(folder, bootVolume: bootVolumeName), id: \.path) { item in

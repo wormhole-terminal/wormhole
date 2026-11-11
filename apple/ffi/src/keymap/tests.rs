@@ -162,7 +162,7 @@ fn the_dump_of_the_bar_matches_the_state_it_was_given() {
 
 #[test]
 fn the_palette_lists_what_the_window_can_do_and_the_sheet_reads_the_table() {
-    use super::lists::{keymap_palette_actions, keymap_sheet, keymap_sheet_columns};
+    use super::lists::{keymap_palette_actions, keymap_sheet, keymap_sheet_columns, keymap_sheet_matches};
     let all = keymap_palette_actions(MenuStateRecord::default());
     assert!(all.actions.len() > 60, "{}", all.actions.len());
     let new = all.actions.iter().find(|a| a.id == "newTerminal").expect("New terminal");
@@ -182,6 +182,12 @@ fn the_palette_lists_what_the_window_can_do_and_the_sheet_reads_the_table() {
     assert!(found.sections.iter().flat_map(|s| &s.rows).any(|r| r.label.starts_with("Close terminal")));
     let marked = keymap_sheet(vec![], "split".into());
     assert!(marked.sections.iter().flat_map(|s| &s.rows).any(|r| r.label_hit.is_some()));
+    // A trusted project's own key is found by its label (marked) or by that very key, as the sheet's rows are.
+    let by_label = keymap_sheet_matches("tests".into(), "Run tests".into(), "⌃⌘T".into()).expect("label");
+    assert_eq!(by_label.label_hit.map(|r| (r.start, r.end)), Some((4, 9)));
+    assert!(keymap_sheet_matches("⌃⌘T".into(), "Run tests".into(), "⌃⌘T".into()).is_some());
+    assert!(keymap_sheet_matches("⌘W".into(), "Run tests".into(), "⌃⌘T".into()).is_none());
+    assert!(keymap_sheet_matches("tests".into(), "Run tests".into(), "no key".into()).is_none());
     let hidden = keymap_sheet(vec!["newNote".into()], "new note".into());
     assert_eq!(hidden.shown, 0);
     assert_eq!(

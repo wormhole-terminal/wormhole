@@ -31,8 +31,7 @@ final class SystemPanelHost: PanelHost {
     let homeFolder: String? = NSHomeDirectory()
 
     func copy(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        Pasteboard.setText(text)
     }
 
     func copyPath(_ path: String) {

@@ -3,6 +3,7 @@
 // hooks the pane's bar hangs on. A read is answered with the text or with nothing, whatever the person does.
 
 import AppKit
+import DesignSystem
 import TerminalCore
 
 extension MetalTerminalView {
@@ -25,8 +26,7 @@ extension MetalTerminalView {
         case .clipboardWrite(let text):
             // What the clipboard held goes to the engine first: ⌘V over the selection this copy came from pastes it.
             interaction?.programCopied(text, replacing: Self.pasteboardText.isEmpty ? nil : Self.pasteboardText)
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(text, forType: .string)
+            Pasteboard.setText(text)
             onProgramCopy?(text)
         case .clipboardRead: source.giveClipboard(Self.pasteboardText)
         case .clipboardAsk: onClipboardAsk?(source.foregroundProgram())
@@ -35,5 +35,5 @@ extension MetalTerminalView {
         }
     }
 
-    private static var pasteboardText: String { NSPasteboard.general.string(forType: .string) ?? "" }
+    private static var pasteboardText: String { Pasteboard.text() ?? "" }
 }

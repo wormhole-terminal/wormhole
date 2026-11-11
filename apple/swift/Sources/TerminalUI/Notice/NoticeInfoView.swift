@@ -53,8 +53,7 @@ struct NoticeInfoView: View {
     }
 
     private func copy(_ reason: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(reason, forType: .string)
+        Pasteboard.setText(reason)
         copied = true
         Task {
             try? await Task.sleep(for: Self.copiedFor)

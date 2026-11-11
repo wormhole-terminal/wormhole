@@ -11,7 +11,7 @@ import WorkspaceModel
     @Test func oneResultPerTerminalWithNumberKeys() {
         let terminals = CommandCatalog.commands(for: sample()).filter { $0.group == .terminals }
         #expect(terminals.map(\.title) == ["api server", "web", "notes"])
-        #expect(terminals.map(\.action) == [.select(1), .select(2), .select(3)])
+        #expect(terminals.map(\.target) == [.terminal(1), .terminal(2), .terminal(3)])
         #expect(terminals.map { $0.shortcut?.glyphs } == ["⌘1", "⌘2", "⌘3"])
         #expect(terminals[0].detail == "~/api")
         #expect(terminals[0].scopedDetail == "Window 1 · ~/api")
@@ -33,7 +33,7 @@ import WorkspaceModel
         let folders = CommandCatalog.commands(for: state).filter { $0.group == .folders }
         #expect(folders.map(\.title) == ["api"])
         #expect(folders[0].detail == "~ · 2 terminals")
-        #expect(folders[0].action == .select(1))
+        #expect(folders[0].target == .folder("~/api"))
     }
 
     @Test func actionsAreTheCoresListWithItsWordsKeysAndGroups() {

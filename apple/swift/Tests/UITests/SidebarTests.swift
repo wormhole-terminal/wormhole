@@ -102,7 +102,7 @@ final class SidebarMomentTests: XCTestCase {
         let section = try XCTUnwrap(SidebarFixture.state.sections.first { $0.head != nil })
         let context = SidebarContext(
             selected: nil, groups: [], send: { _ in }, renaming: nil, rename: { _ in }, shifts: [:], drag: .none,
-            everyTerminal: [], newInGroup: { _ in }, closeGroup: { _ in }, popover: nil, openPopover: { _ in })
+            everyTerminal: [], newInGroup: { _ in }, closeGroup: { _ in }, popover: nil, openPopover: { _ in }, frames: RowFrames())
         for id in ["wormhole.dark", "wormhole.light"] {
             let theme = try XCTUnwrap(ThemeLibrary.bundled.theme(id: id))
             try SidebarSnapshot.render(GroupPopover(head: try XCTUnwrap(section.head), rows: section.rows, context: context, close: {}), theme: theme, name: "moment-popover-\(id)", size: CGSize(width: 248, height: 140))

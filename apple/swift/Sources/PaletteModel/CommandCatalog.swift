@@ -50,10 +50,31 @@ public struct PaletteProfile: Sendable, Equatable {
 public enum CommandCatalog {
     public static func commands(
         for state: WorkspaceState, actions: ActionList = ActionList(), settings: [PaletteSetting] = [],
-        commits: [PaletteCommit] = [], profiles: [PaletteProfile] = []
+        commits: [PaletteCommit] = [], profiles: [PaletteProfile] = [], terminals: [PaletteTerminal] = [],
+        project: PaletteProject? = nil, shells: [PaletteShell] = [], recentFolders: [String] = [], now: Date = Date()
     ) -> [Command] {
-        self.actions(actions, for: state) + profileCommands(profiles) + settings.map(command) + commits.map(command)
-            + terminals(in: state) + folders(in: state)
+        let listed = terminals.isEmpty ? state.all.enumerated().map { PaletteTerminal($1, number: $0 < 9 ? $0 + 1 : nil) } : terminals
+        // The Actions group in core's order: the table's, the project's, the shells', the profiles'.
+        return self.actions(actions, for: state) + (project?.actions.map(command) ?? []) + shells.map(command)
+            + profileCommands(profiles) + settings.map(command) + commits.map(command) + self.terminals(listed, now: now)
+            + folders(of: listed, recent: recentFolders)
+    }
+
+    private static func command(_ action: PaletteProject.Action) -> Command {
+        var command = Command(
+            id: "project-\(action.id)", title: action.title, detail: action.detail, lead: .symbol("bolt"),
+            shortcut: action.key.flatMap { Shortcut(glyphs: $0) }, target: .projectAction(action.id))
+        command.detailIsCode = true
+        return command
+    }
+
+    /// A terminal with another shell: named like New terminal, found by what it runs too.
+    private static func command(_ shell: PaletteShell) -> Command {
+        var command = Command(
+            id: "shell-\(shell.key)", title: "New terminal: \(shell.name)", detail: shell.commandLine, lead: .symbol("plus"),
+            target: .newTerminalWith(shell.key), searchText: [shell.commandLine], section: .terminal)
+        command.detailIsCode = true
+        return command
     }
 
     /// With another profile to go to: a row to switch to each profile that is not shown, to open a window in each, and to
@@ -109,37 +130,29 @@ public enum CommandCatalog {
         return command
     }
 
-    private static func terminals(in state: WorkspaceState) -> [Command] {
-        state.all.enumerated().map { index, terminal in
-            let folder = terminal.folder
-            return Command(
-                id: "terminal-\(terminal.id)", title: terminal.title,
-                detail: doing(terminal), scopedDetail: (["Window 1"] + [folder].compactMap { $0 }).joined(separator: " · "),
-                group: .terminals, lead: .status(terminal.activity),
-                shortcut: index < 9 ? Shortcut(.command, String(index + 1)) : nil, action: .select(terminal.id),
-                isStrong: true, searchText: [terminal.folder, terminal.branch].compactMap { $0 })
-        }
-    }
-
-    /// What a terminal is doing, in the words of core's `terminal_detail`: a state worth saying, else its folder.
-    private static func doing(_ terminal: TerminalSummary) -> String? {
-        switch terminal.activity {
-        case .needsInput: "Needs input"
-        case .finished: "Finished"
-        case .failed: "Failed"
-        case .working, .idle, .exited: terminal.folder
+    private static func terminals(_ listed: [PaletteTerminal], now: Date) -> [Command] {
+        listed.map { item in
+            Command(
+                id: "terminal-\(item.id)", title: item.name, detail: item.detail(scoped: false, now: now),
+                scopedDetail: item.detail(scoped: true, now: now), second: item.question, group: .terminals,
+                lead: .status(item.activity), shortcut: item.number.map { Shortcut(.command, String($0)) },
+                target: .terminal(item.id), isStrong: true,
+                searchText: [item.folder, item.branch, item.command, item.who, item.message].compactMap { $0 })
         }
     }
 
     /// The folders terminals are in, with how many each holds. A folder that is a program, not a path, is not one.
-    private static func folders(in state: WorkspaceState) -> [Command] {
+    private static func folders(of listed: [PaletteTerminal], recent: [String]) -> [Command] {
         var order: [String] = []
         var counts: [String: Int] = [:]
-        for terminal in state.all {
-            guard let path = terminal.folder, path.hasPrefix("~") || path.hasPrefix("/") else { continue }
+        for item in listed {
+            guard let path = item.path, path.hasPrefix("~") || path.hasPrefix("/") else { continue }
             if counts[path] == nil { order.append(path) }
             counts[path, default: 0] += 1
         }
+        // The projects worked in lately that have no terminal now follow, with their parent only (core `gather`).
+        let idle = recent.map { ($0 as NSString).abbreviatingWithTildeInPath }.filter { counts[$0] == nil }
+        order += idle
         return order.map { path in
             let name = path.split(separator: "/").last.map(String.init) ?? path
             let parent = path.split(separator: "/").dropLast().joined(separator: "/")
@@ -147,9 +160,8 @@ public enum CommandCatalog {
             let origin = parent.isEmpty ? nil : (path.hasPrefix("/") ? "/" : "") + parent
             return Command(
                 id: "folder-\(path)", title: name,
-                detail: [origin, "\(count) terminal\(count == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " · "),
-                group: .folders, lead: .symbol("folder"),
-                action: state.all.first { $0.folder == path }.map { .select($0.id) })
+                detail: [origin, count == 0 ? nil : "\(count) terminal\(count == 1 ? "" : "s")"].compactMap { $0 }.joined(separator: " · "),
+                group: .folders, lead: .symbol("folder"), target: .folder(path))
         }
     }
 }

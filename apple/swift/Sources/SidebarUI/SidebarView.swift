@@ -26,6 +26,7 @@ public struct SidebarView: View {
     @State var keysLead = false
     @State var typed = TypedPrefix()
     @State var renaming: TerminalID?
+    @State var rowFrames = RowFrames()
     @State var popover: GroupID?
     @State var frames: [DropSlot: CGRect] = [:]
     @State var drag: LiveDrag?
@@ -83,6 +84,7 @@ public struct SidebarView: View {
         }
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { viewport = $0 }
         .onChange(of: search.requests) { revealSearch() }
+        .onChange(of: search.renames) { renaming = search.renaming }
         .onChange(of: search.keyboardRequests) { focused = true; keysLead = true }
         .onChange(of: state.search) { _, text in if searchText != text { searchText = text } }
         .onChange(of: searchText) { _, text in if text != state.search { send(.search(text)) } }
@@ -143,7 +145,8 @@ public struct SidebarView: View {
                 item: drag?.item, moved: { dragMoved($0, $1, sections) }, ended: { dragEnded($0, $1, sections) },
                 window: { dragWindow($0, $1) }),
             everyTerminal: state.all, newInGroup: { newInGroup($0) },
-            closeGroup: { closeGroup?($0) ?? send(.closeGroup($0)) }, popover: popover, openPopover: { popover = $0 })
+            closeGroup: { closeGroup?($0) ?? send(.closeGroup($0)) }, popover: popover, openPopover: { popover = $0 },
+            frames: rowFrames)
     }
 }
 

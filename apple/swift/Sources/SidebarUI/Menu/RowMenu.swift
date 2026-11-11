@@ -4,6 +4,7 @@
 // "Hide from Agents") sit where the GPUI menu has them. Every item is one of the core's actions.
 
 import AppKit
+import DesignSystem
 import SwiftUI
 import WorkspaceModel
 
@@ -35,15 +36,16 @@ struct RowMenu: View {
         Button(terminal.isPinned ? "Unpin" : "Pin to top") { context.send(.togglePin(id)) }
         Toggle("Don't keep this terminal's text", isOn: Binding(get: { terminal.forgetsText }, set: { context.send(.setForgetText(id, $0)) }))
             .disabled(!look.restoresText)
-        Toggle("Hide from Agents", isOn: Binding(get: { terminal.isAgentHidden }, set: { context.send(.setAgentHidden(id, $0)) }))
+        if look.offersAgentHide || terminal.isAgentHidden {
+            Toggle("Hide from Agents", isOn: Binding(get: { terminal.isAgentHidden }, set: { context.send(.setAgentHidden(id, $0)) }))
+        }
         Divider()
         let path = terminal.folder.map { NSString(string: $0).expandingTildeInPath }
         Button("Reveal in Finder") { if let path { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) } }
             .disabled(path == nil)
         Button("Copy path") {
             if let path {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(path, forType: .string)
+                Pasteboard.setText(path)
             }
         }
         .disabled(path == nil)

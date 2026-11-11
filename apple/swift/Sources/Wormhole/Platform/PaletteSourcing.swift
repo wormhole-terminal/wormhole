@@ -31,6 +31,10 @@ extension AppController {
             perform: { [weak self] in self?.router.run(ActionID(rawValue: $0)) },
             reveal: { [weak self, weak session] target in
                 switch target {
+                case .terminal(let id): self?.show(terminal: id)
+                case .folder(let path): self?.openProject((path as NSString).expandingTildeInPath)
+                case .projectAction(let id): self?.router.dispatch(.runProjectAction(id))
+                case .newTerminalWith(let key): self?.newTerminal(shellKey: key, in: session)
                 case .setting(let id):
                     self?.showSettings()
                     self?.settingsModel.reveal(id)
@@ -58,16 +62,22 @@ extension AppController {
             },
             copySettingKey: { [weak self] id in
                 guard let key = self?.settingsModel.schema.entry(id)?.entry.keys.first else { return }
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(key, forType: .string)
-            })
+                Pasteboard.setText(key)
+            },
+            terminals: { [weak self, weak session] in self?.paletteTerminals(own: session) ?? [] },
+            project: { [weak session] in session.flatMap { PaletteProject($0.hub.panel.project.state) } },
+            shells: { [weak self] in
+                self?.settingsModel.host.shellChoices().filter { !$0.isDefault }
+                    .map { PaletteShell(key: $0.key, name: $0.name, commandLine: $0.commandLine) } ?? []
+            },
+            recentFolders: { [weak self] in self?.recents.roots ?? [] },
+            openInNewWindow: { [weak self, weak session] in self?.openInNewWindow($0, from: session) },
+            closeTerminal: { [weak self] id in self?.session(holding: id)?.hub.send(.close(id)) })
     }
 
     /// The menus' facts about the window, as the palette's action list wants them: what is flipped, greyed or hidden.
     private func actionFacts(_ session: WindowSession) -> ActionFacts {
-        let state = session.hub.menuState(
-            look: look, isFullScreen: window?.styleMask.contains(.fullScreen) ?? false, implemented: router.implemented,
-            flagsOn: flagsOn(session))
+        let state = menuState(for: session.hub)
         return ActionFacts(
             off: state.off.map(\.rawValue), disabled: state.disabled.map(\.rawValue), hidden: state.hidden.map(\.rawValue),
             isSplit: state.split, isDebug: state.debug, isPersistent: state.persistent)

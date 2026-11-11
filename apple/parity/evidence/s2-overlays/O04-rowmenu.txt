@@ -1,0 +1,336 @@
+# keyboard row menu (⌃↩ path: control row-menu) in instance e (fixture-e.sh): every item picked once; rows/state read after
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Pin to top
+8. Don't keep this terminal's text
+9. Hide from Agents
+---
+10. Reveal in Finder
+11. Copy path
+> menu-pick Add terminal to new group
+picked Add terminal to new group
+> rows
+selected=3 live=[1, 2, 3] groups=1
+  row 1 "claude" needsInput number=1 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 1 of 3, Command 1"
+  row 2 "claude" working number=2 pinned=false folder=~ line="Working · <1m" trail=- split=0 spoken="claude, working, 2 of 3, Command 2"
+group 1 "Group 1" folded=false pinned=false count=1 alerts=0 spoken="Group 1, coloured blue, 1 terminal, expanded, 3 of 3"
+  row 3 "claude" idle number=3 pinned=false folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=0 spoken="claude, idle, selected, 1 of 1, Command 3"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group
+    - Group 1 [x]
+4. Remove from group
+5. Split right
+6. Close terminal
+---
+7. Show beside…
+    - claude
+    - claude
+8. Pin to top
+9. Don't keep this terminal's text
+10. Hide from Agents
+---
+11. Reveal in Finder
+12. Copy path
+> menu-pick Add terminal to group > Group 1
+picked Group 1
+> rows
+selected=3 live=[1, 2, 3] groups=1
+  row 1 "claude" needsInput number=1 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 1 of 3, Command 1"
+  row 2 "claude" working number=2 pinned=false folder=~ line="Working · <1m" trail=- split=0 spoken="claude, working, 2 of 3, Command 2"
+group 1 "Group 1" folded=false pinned=false count=1 alerts=0 spoken="Group 1, coloured blue, 1 terminal, expanded, 3 of 3"
+  row 3 "claude" idle number=3 pinned=false folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=0 spoken="claude, idle, selected, 1 of 1, Command 3"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group
+    - Group 1 [x]
+4. Remove from group
+5. Split right
+6. Close terminal
+---
+7. Show beside…
+    - claude
+    - claude
+8. Pin to top
+9. Don't keep this terminal's text
+10. Hide from Agents
+---
+11. Reveal in Finder
+12. Copy path
+> menu-pick Remove from group
+picked Remove from group
+> rows
+selected=3 live=[1, 2, 3] groups=0
+  row 1 "claude" needsInput number=1 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 1 of 3, Command 1"
+  row 2 "claude" working number=2 pinned=false folder=~ line="Working · <1m" trail=- split=0 spoken="claude, working, 2 of 3, Command 2"
+  row 3 "claude" idle number=3 pinned=false folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=0 spoken="claude, idle, selected, 3 of 3, Command 3"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Pin to top
+8. Don't keep this terminal's text
+9. Hide from Agents
+---
+10. Reveal in Finder
+11. Copy path
+> menu-pick Split right
+picked Split right
+> rows
+selected=4 live=[1, 2, 3, 4] groups=0
+  row 1 "claude" needsInput number=1 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 1 of 4, Command 1"
+  row 2 "claude" working number=2 pinned=false folder=~ line="Working · <1m" trail=- split=0 spoken="claude, working, 2 of 4, Command 2"
+  row 3 "claude" idle number=3 pinned=false folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:start spoken="claude, idle, in a split with 1 other, on screen, 3 of 4, Command 3"
+  row 4 "claude" idle number=4 pinned=false folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:end spoken="claude, idle, in a split with 1 other, selected, 4 of 4, Command 4"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Remove from split
+8. Pin to top
+9. Don't keep this terminal's text
+10. Hide from Agents
+---
+11. Reveal in Finder
+12. Copy path
+> menu-pick Pin to top
+picked Pin to top
+> rows
+selected=4 live=[1, 2, 3, 4] groups=0
+  row 3 "claude" idle number=1 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:start spoken="claude, idle, in a split with 1 other, on screen, 1 of 4, Command 1"
+  row 4 "claude" idle number=2 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:end spoken="claude, idle, in a split with 1 other, selected, 2 of 4, Command 2"
+  row 1 "claude" needsInput number=3 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 3 of 4, Command 3"
+  row 2 "claude" working number=4 pinned=false folder=~ line="Working · <1m" trail=- split=0 spoken="claude, working, 4 of 4, Command 4"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Remove from split
+8. Unpin
+9. Don't keep this terminal's text
+10. Hide from Agents
+---
+11. Reveal in Finder
+12. Copy path
+> menu-pick Don't keep this terminal's text
+saved-text-forgotten terminal=3 (nothing is saved)
+picked Don't keep this terminal's text
+> rows
+selected=4 live=[1, 2, 3, 4] groups=0
+  row 3 "claude" idle number=1 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:start spoken="claude, idle, in a split with 1 other, on screen, 1 of 4, Command 1"
+  row 4 "claude" idle number=2 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:end spoken="claude, idle, in a split with 1 other, selected, 2 of 4, Command 2"
+  row 1 "claude" needsInput number=3 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 3 of 4, Command 3"
+  row 2 "claude" working number=4 pinned=false folder=~ line="Working · <1m" trail=- split=0 spoken="claude, working, 4 of 4, Command 4"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Remove from split
+8. Unpin
+9. Don't keep this terminal's text [x]
+10. Hide from Agents
+---
+11. Reveal in Finder
+12. Copy path
+> menu-pick Hide from Agents
+picked Hide from Agents
+> rows
+selected=4 live=[1, 2, 3, 4] groups=0
+  row 3 "claude" idle number=1 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:start spoken="claude, idle, in a split with 1 other, on screen, 1 of 4, Command 1"
+  row 4 "claude" idle number=2 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:end spoken="claude, idle, in a split with 1 other, selected, 2 of 4, Command 2"
+  row 1 "claude" needsInput number=3 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 3 of 4, Command 3"
+  row 2 "claude" working number=4 pinned=false folder=~ line="Working · <1m" trail=- split=0 spoken="claude, working, 4 of 4, Command 4"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Remove from split
+8. Unpin
+9. Don't keep this terminal's text [x]
+10. Hide from Agents [x]
+---
+11. Reveal in Finder
+12. Copy path
+> menu-pick Copy path
+picked Copy path
+> rows
+selected=4 live=[1, 2, 3, 4] groups=0
+  row 3 "claude" idle number=1 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:start spoken="claude, idle, in a split with 1 other, on screen, 1 of 4, Command 1"
+  row 4 "claude" idle number=2 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:end spoken="claude, idle, in a split with 1 other, selected, 2 of 4, Command 2"
+  row 1 "claude" needsInput number=3 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 3 of 4, Command 3"
+  row 2 "claude" working number=4 pinned=false folder=~ line="Working · <1m" trail=- split=0 spoken="claude, working, 4 of 4, Command 4"
+> pasteboard
+pasteboard "/private/tmp/so-b/proj"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Remove from split
+8. Unpin
+9. Don't keep this terminal's text [x]
+10. Hide from Agents [x]
+---
+11. Reveal in Finder
+12. Copy path
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Remove from split
+8. Unpin
+9. Don't keep this terminal's text [x]
+10. Hide from Agents [x]
+---
+11. Reveal in Finder
+12. Copy path
+> menu-pick Remove from split
+picked Remove from split
+> rows
+selected=4 live=[1, 2, 3, 4] groups=0
+  row 3 "claude" idle number=1 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=0 spoken="claude, idle, 1 of 4, Command 1"
+  row 4 "claude" idle number=2 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=0 spoken="claude, idle, selected, 2 of 4, Command 2"
+  row 1 "claude" needsInput number=3 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 3 of 4, Command 3"
+  row 2 "claude" working number=4 pinned=false folder=~ line="Working · 1m" trail=- split=0 spoken="claude, working, 4 of 4, Command 4"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+    - claude
+7. Unpin
+8. Don't keep this terminal's text [x]
+9. Hide from Agents [x]
+---
+10. Reveal in Finder
+11. Copy path
+> menu-pick Show beside… > 1
+picked claude
+> rows
+selected=4 live=[1, 2, 3, 4] groups=0
+  row 3 "claude" idle number=1 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:start spoken="claude, idle, in a split with 1 other, on screen, 1 of 4, Command 1"
+  row 4 "claude" idle number=2 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=2:end spoken="claude, idle, in a split with 1 other, selected, 2 of 4, Command 2"
+  row 1 "claude" needsInput number=3 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 3 of 4, Command 3"
+  row 2 "claude" working number=4 pinned=false folder=~ line="Working · 1m" trail=- split=0 spoken="claude, working, 4 of 4, Command 4"
+> row-menu 3
+row-menu 3
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Remove from split
+8. Unpin
+9. Don't keep this terminal's text [x]
+10. Hide from Agents [x]
+---
+11. Reveal in Finder
+12. Copy path
+> menu-pick Rename…
+picked Rename…
+> wait-idle 500
+wait-idle failed: the window still changes after 500 ms
+> window-shot /tmp/so-e/rename.png
+window-shot /tmp/so-e/rename.png
+> key escape
+key escape focus=sidebar
+> row-menu 4
+row-menu 4
+1. Rename…
+2. Add terminal to new group
+3. Add terminal to group [off]
+4. Split right
+5. Close terminal
+---
+6. Show beside…
+    - claude
+    - claude
+7. Remove from split
+8. Unpin
+9. Don't keep this terminal's text
+10. Hide from Agents
+---
+11. Reveal in Finder
+12. Copy path
+> menu-pick Close terminal
+picked Close terminal
+> wait-idle 800
+wait-idle failed: the window still changes after 800 ms
+> question
+no question is up
+> rows
+selected=3 live=[1, 2, 3] groups=0
+  row 3 "claude" idle number=1 pinned=true folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=0 spoken="claude, idle, selected, 1 of 3, Command 1"
+  row 1 "claude" needsInput number=2 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 2 of 3, Command 2"
+  row 2 "claude" working number=3 pinned=false folder=~ line="Working · 1m" trail=- split=0 spoken="claude, working, 3 of 3, Command 3"

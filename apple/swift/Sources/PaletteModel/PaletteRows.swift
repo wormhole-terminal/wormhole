@@ -7,12 +7,15 @@ import WorkspaceModel
 
 public enum PaletteRow: Sendable, Equatable, Identifiable {
     case label(title: String, count: Int?)
+    /// The label over the trusted project's own actions, "Project · terminal/.wormhole", with its Trusted badge.
+    case projectLabel(String)
     case result(PaletteResult)
     case note(String)
 
     public var id: String {
         switch self {
         case .label(let title, _): "label-\(title)"
+        case .projectLabel(let title): "project-label-\(title)"
         case .result(let result): result.id
         case .note(let text): "note-\(text)"
         }
@@ -34,14 +37,15 @@ public enum PaletteRows {
     /// `query` is the words after any prefix. `recent` is the ids chosen before, newest first; `suggested` the action ids
     /// listed with nothing typed (the core's, for this window).
     public static func rows(
-        scope: PaletteScope, query: String, commands: [Command], recent: [String] = [], suggested: [String] = []
+        scope: PaletteScope, query: String, commands: [Command], recent: [String] = [], suggested: [String] = [],
+        project: String? = nil
     ) -> [PaletteRow] {
         let query = query.trimmingCharacters(in: .whitespaces)
         let rows =
             switch (scope, query.isEmpty) {
             case (.all, true): suggestions(commands, recent: recent, suggested: suggested)
             case (.terminals, true): terminalsByState(commands)
-            case (.actions, true): actionsBySection(commands)
+            case (.actions, true): actionsBySection(commands, project: project)
             case (.settings, true): recentSettings(commands, recent: recent)
             default: found(scope: scope, query: query, commands: commands)
             }
@@ -97,12 +101,16 @@ public enum PaletteRows {
         if case .status(let activity) = command.lead { activity } else { .idle }
     }
 
-    /// The Actions scope with nothing typed: the actions in their groups.
-    private static func actionsBySection(_ commands: [Command]) -> [PaletteRow] {
-        ActionSection.allCases.flatMap { section -> [PaletteRow] in
+    /// The Actions scope with nothing typed: the actions in their groups, the shells to open a terminal with at the end of
+    /// Terminal's, the trusted project's own between View and App (core `actions_by_section`).
+    private static func actionsBySection(_ commands: [Command], project: String?) -> [PaletteRow] {
+        func section(_ section: ActionSection) -> [PaletteRow] {
             let members = commands.filter { $0.group == .actions && $0.section == section }
             return members.isEmpty ? [] : [.label(title: section.title, count: nil)] + results(members)
         }
+        let projectActions = commands.filter { if case .projectAction? = $0.target { true } else { false } }
+        let ours: [PaletteRow] = projectActions.isEmpty ? [] : [.projectLabel(project.map { "Project · \($0)" } ?? "Project")] + results(projectActions)
+        return section(.terminal) + section(.view) + ours + section(.app) + section(.profiles)
     }
 
     /// A query, or a narrowed scope's whole list: every group that found something, in the palette's order,

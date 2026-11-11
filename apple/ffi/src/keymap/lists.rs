@@ -103,6 +103,24 @@ pub fn keymap_sheet(hidden: Vec<String>, query: String) -> SheetRecord {
     }
 }
 
+/// What the filter found in one row the sheet's own sections do not hold.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct SheetMatchRecord {
+    /// Where it matched the label, in bytes, to mark.
+    pub label_hit: Option<ByteRangeRecord>,
+}
+
+/// Whether `query` finds a row with this `label` and `key` (glyphs, "⌃⌘T"): a trusted project's own keys, which the sheet
+/// shows under its sections and filters by the same rule. `None` when it does not, or when `key` is no key.
+#[uniffi::export]
+pub fn keymap_sheet_matches(query: String, label: String, key: String) -> Option<SheetMatchRecord> {
+    let key = wormhole_core::keys::keyspec::KeySpec::from_glyphs(&key)?;
+    let hit = sheet::matches(&query, &label, std::slice::from_ref(&key))?;
+    Some(SheetMatchRecord {
+        label_hit: hit.label.map(|r| ByteRangeRecord { start: r.start as u32, end: r.end as u32 }),
+    })
+}
+
 /// How the sheet's sections of these `heights` go into at most `columns` columns, read down then across.
 #[uniffi::export]
 pub fn keymap_sheet_columns(heights: Vec<u32>, columns: u32) -> Vec<ByteRangeRecord> {

@@ -144,11 +144,19 @@ import Testing
     @Test @MainActor func theDriverMergesProvidersAsTheyAnswer() async throws {
         let driver = FolderPickerDriverProbe.make()
         driver.open()
-        try await Task.sleep(for: .milliseconds(200))
-        #expect(driver.model.lines.contains(.header("Recent")))
+        // The providers answer on their own threads: wait for what the test needs, not for a time that a busy machine overruns.
+        #expect(await Self.settles { driver.model.lines.contains(.header("Recent")) })
         driver.typed("pro")
-        try await Task.sleep(for: .milliseconds(200))
-        #expect(driver.model.answer.rows.map(\.label) == ["Projects"])
+        #expect(await Self.settles { driver.model.answer.rows.map(\.label) == ["Projects"] })
         #expect(driver.key(.tab) && driver.model.text == "Projects/")
+    }
+
+    /// Polls `condition` (on the main actor) until it holds; false after ten seconds, long past any answer.
+    @MainActor static func settles(_ condition: @MainActor () -> Bool) async -> Bool {
+        for _ in 0..<1000 {
+            if condition() { return true }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        return condition()
     }
 }

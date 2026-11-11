@@ -125,7 +125,7 @@ struct WindowBody: View {
         switch state.overlay {
         case .palette: PaletteView(state: state, send: send, sources: hub.actions.palette) { send(.showOverlay(nil)) }
         case .shortcuts:
-            ShortcutSheetView(hidden: hub.actions.palette.hiddenActions(), hotkey: hub.actions.palette.hotkey()) { send(.showOverlay(nil)) }
+            ShortcutSheetView(hidden: hub.actions.palette.hiddenActions(), hotkey: hub.actions.palette.hotkey(), project: hub.actions.palette.project()) { send(.showOverlay(nil)) }
         case nil: EmptyView()
         }
     }

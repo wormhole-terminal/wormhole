@@ -17,7 +17,7 @@ var targets: [Target] = [
     // The packed frame, the `FrameSource` seam and its synthetic implementation. Foundation only.
     .target(name: "TerminalCore", swiftSettings: hotLoopSettings),
     // The Metal view: CoreText, the glyph atlas, instanced quads, the display link, keyboard and IME.
-    .target(name: "TerminalMetal", dependencies: ["TerminalCore"], swiftSettings: hotLoopSettings),
+    .target(name: "TerminalMetal", dependencies: ["TerminalCore", "DesignSystem"], swiftSettings: hotLoopSettings),
     .testTarget(name: "TerminalCoreTests", dependencies: ["TerminalCore", "TerminalMetal"]),
 
     // The window around the terminal. Layers, lowest first; each depends only on the ones above it here.

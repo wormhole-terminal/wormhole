@@ -123,7 +123,7 @@ import WorkspaceModel
     }
 
     @Test func footerKeysFollowTheScope() {
-        #expect(PaletteFooter.hints(scope: .all).map(\.label) == ["move", "open", "scope"])
+        #expect(PaletteFooter.hints(scope: .all).map(\.label) == ["move", "open", "open in new window", "scope"])
         #expect(PaletteFooter.hints(scope: .terminals).map(\.keys) == ["↩", "⌘⌫"])
         #expect(PaletteFooter.trailing(scope: .all, query: "", rows: []) == .actionsHint)
         #expect(PaletteFooter.trailing(scope: .all, query: "x", rows: rows(.all, "e")) != .actionsHint)

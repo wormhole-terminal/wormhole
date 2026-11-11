@@ -1,0 +1,384 @@
+# PL02..PL06 up to the last AppKit call, instance e (fixture-e.sh: terminal 1 needs input, 2 works, 3 idle in the trusted project)
+> click 150 182
+click 150 182: down on PlatformGroupContainer, the gesture played to its release
+> wait-idle 1500
+
+> ambient
+wait-idle failed: the window still changes after 1500 ms
+icon StatusIcon(state: PlatformModel.ItemState.needsYou, mark: PlatformModel.StatusMark.needsYou, count: Optional("1"), tooltip: "Wormhole — 1 needs input · 1 working", animate: false)
+  # Needs input
+  claude  ⇥ now
+      Claude Code · Needs permission to run npm test
+  # Working
+  claude  ⇥ 0:06
+      Claude Code
+  ---
+  Other Terminals  ⇥ 1 ▸
+    claude
+        Claude Code
+  ---
+  New Terminal  ⌘T
+  Open Folder…  ⌘O
+  Projects ▸
+    # Recent
+    proj
+        /private/tmp/so-b/proj
+    # Actions · proj
+    Run tests
+    Open docs
+    ---
+    Open Folder…  ⌘O
+  ---
+  Show Wormhole
+  Jump to Next Waiting
+  Settings…  ⌘,
+  Check for Updates…
+  ---
+  Quit Wormhole  ⌘Q
+dock
+  # Needs input
+  claude   now
+  # Working
+  claude   now
+  ---
+  New Terminal
+  New Window
+badge needs_you=1 needs_you_done=1
+quick
+  label("Needs input", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 02:21:02 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Needs permission to run npm test"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("benjamin"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 02:21:04 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("benjamin"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp/so-b/proj")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "test", title: "Run tests")))
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "docs", title: "Open docs")))
+> ambient run
+icon StatusIcon(state: PlatformModel.ItemState.needsYou, mark: PlatformModel.StatusMark.needsYou, count: Optional("1"), tooltip: "Wormhole — 1 needs input · 1 working", animate: false)
+  # Needs input
+  claude  ⇥ now
+      Claude Code · Needs permission to run npm test
+  # Working
+  claude  ⇥ 0:07
+      Claude Code
+  ---
+  Other Terminals  ⇥ 1 ▸
+    claude
+        Claude Code
+  ---
+  New Terminal  ⌘T
+  Open Folder…  ⌘O
+  Projects ▸
+    # Recent
+    proj
+        /private/tmp/so-b/proj
+    # Actions · proj
+    Run tests
+    Open docs
+    ---
+    Open Folder…  ⌘O
+  ---
+  Show Wormhole
+  Jump to Next Waiting
+  Settings…  ⌘,
+  Check for Updates…
+  ---
+  Quit Wormhole  ⌘Q
+dock
+  # Needs input
+  claude   now
+  # Working
+  claude   now
+  ---
+  New Terminal
+  New Window
+badge needs_you=1 needs_you_done=1
+quick
+  label("Terminals", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 02:21:02 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Needs permission to run npm test"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("benjamin"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "test", title: "Run tests")))
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "docs", title: "Open docs")))
+> ambient
+icon StatusIcon(state: PlatformModel.ItemState.needsYou, mark: PlatformModel.StatusMark.needsYou, count: Optional("1"), tooltip: "Wormhole — 1 needs input · 1 working", animate: false)
+  # Needs input
+  claude  ⇥ now
+      Claude Code · Needs permission to run npm test
+  # Working
+  claude  ⇥ 0:18
+      Claude Code
+  ---
+  Other Terminals  ⇥ 1 ▸
+    claude
+        Claude Code
+  ---
+  New Terminal  ⌘T
+  Open Folder…  ⌘O
+  Projects ▸
+    # Recent
+    proj
+        /private/tmp/so-b/proj
+    # Actions · proj
+    Run tests
+    Open docs
+    ---
+    Open Folder…  ⌘O
+  ---
+  Show Wormhole
+  Jump to Next Waiting
+  Settings…  ⌘,
+  Check for Updates…
+  ---
+  Quit Wormhole  ⌘Q
+dock
+  # Needs input
+  claude   now
+  # Working
+  claude   now
+  ---
+  New Terminal
+  New Window
+badge needs_you=1 needs_you_done=1
+quick
+  label("Needs input", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 02:21:02 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Needs permission to run npm test"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("benjamin"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 02:21:04 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("benjamin"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp/so-b/proj")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "test", title: "Run tests")))
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "docs", title: "Open docs")))
+> ambient
+icon StatusIcon(state: PlatformModel.ItemState.needsYou, mark: PlatformModel.StatusMark.needsYou, count: Optional("1"), tooltip: "Wormhole — 1 needs input · 1 working", animate: false)
+  # Needs input
+  claude  ⇥ now
+      Claude Code · Needs permission to run npm test
+  # Working
+  claude  ⇥ 0:19
+      Claude Code
+  ---
+  Other Terminals  ⇥ 1 ▸
+    claude
+        Claude Code
+  ---
+  New Terminal  ⌘T
+  Open Folder…  ⌘O
+  Projects ▸
+    # Recent
+    proj
+        /private/tmp/so-b/proj
+    # Actions · proj
+    Run tests
+    Open docs
+    ---
+    Open Folder…  ⌘O
+  ---
+  Show Wormhole
+  Jump to Next Waiting
+  Settings…  ⌘,
+  Check for Updates…
+  ---
+  Quit Wormhole  ⌘Q
+dock
+  # Needs input
+  claude   now
+  # Working
+  claude   now
+  ---
+  New Terminal
+  New Window
+badge needs_you=1 needs_you_done=1
+quick
+  label("Needs input", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 02:21:02 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: Optional("Needs permission to run npm test"), command: nil, took: nil, exit: nil, changed: nil, folder: Optional("benjamin"), branch: nil))
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 02:21:04 +0000, source: PlatformModel.AmbientSource.agent, who: Optional("Claude Code"), message: nil, command: nil, took: nil, exit: nil, changed: nil, folder: Optional("benjamin"), branch: nil))
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp/so-b/proj")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "test", title: "Run tests")))
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "docs", title: "Open docs")))
+dock
+  # Needs input
+  claude   now
+  # Working
+  claude   now
+  ---
+  New Terminal
+  New Window
+badge needs_you=1 needs_you_done=1
+quick
+  label("Needs input", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 1, tab: 1, name: "claude", state: PlatformModel.AmbientState.needsYou, since: 2026-11-11 02:21:02 +0000, source: Platfor
+  label("Working", count: Optional(1))
+  terminal(PlatformModel.AmbientTerminal(session: 2, tab: 2, name: "claude", state: PlatformModel.AmbientState.working, since: 2026-11-11 02:21:04 +0000, source: Platform
+  label("Do", count: nil)
+  action(PlatformModel.QuickPanelDo.newTerminal(cwd: Optional("/private/tmp/so-b/proj")))
+  action(PlatformModel.QuickPanelDo.openFolder)
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "test", title: "Run tests")))
+  action(PlatformModel.QuickPanelDo.action(PlatformModel.StatusSnapshot.Action(project: "proj", root: "/private/tmp/so-b/proj", id: "docs", title: "Open docs")))
+> ambient-run reply 1 ok-from-the-quick-panel
+ambient-run reply 1 ok-from-the-quick-panel
+> wait-idle 800
+wait-idle failed: the window still changes after 800 ms
+> ambient-run run-action /private/tmp/so-b/proj test
+ambient-run run-action /private/tmp/so-b/proj test
+> wait-idle 2500
+
+> notice-log
+wormhole/tab/1 thread=wormhole/terminal/1 level=active sound=true category=wormhole.needs-you title=claude needs input body=Needs permission to run npm test
+> use-window 1
+use-window 1
+> rows
+selected=4 live=[1, 2, 3, 4] groups=0
+  row 1 "claude" needsInput number=1 pinned=false folder=~ line="Needs input · Needs permission to run npm test" trail=- split=0 spoken="claude, needs input, Needs permission to run npm test, 1 of 4, Command 1"
+  row 2 "claude" working number=2 pinned=false folder=~ line="Working · 4m" trail=- split=0 spoken="claude, working, 2 of 4, Command 2"
+  row 3 "claude" idle number=3 pinned=false folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=0 spoken="claude, idle, 3 of 4, Command 3"
+  row 4 "claude" idle number=4 pinned=false folder=/private/tmp/so-b/proj line="/private/tmp/so-b/proj" trail=- split=0 spoken="claude, idle, selected, 4 of 4, Command 4"
+> screen
+echo hello-from-action                                              
+echo hello-from-action                                              
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+> state
+grid=68x42 cell=17x36px scale=2.0 frames_drawn=2 ticks=4 wakes=1 pauses=2 busy_skips=0 blink_fires=0 link=paused words_shaped=2 word_hits=6 glyphs_rasterised=13 atlas_resets=0 terminals=4 selected=4 sidebar=true panel=true tab=changes window=94571 theme=wormhole.dark appearance=dark mode=dark opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transparency=false increase_contrast=false panes=4 focused=4 zoomed=none cover=none focus=sidebar question=none
+## quick panel / status item commands run through ambient-run: reply typed into terminal 1, the project's action ran in a new terminal 4 (its screen echoes the command)
+> use-window 1
+use-window 1
+> select 1
+select 1
+> wait-idle 500
+wait-idle failed: the window still changes after 500 ms
+> screen
+ok-from-the-quick-panel                                             
+ok-from-the-quick-panel                                             
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+> select 1
+select 1
+> wait-idle 500
+> screen
+ok-from-the-quick-panel                                             
+ok-from-the-quick-panel                                             
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+> screen
+ok-from-the-quick-panel                                             
+ok-from-the-quick-panel                                             
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+                                                                    

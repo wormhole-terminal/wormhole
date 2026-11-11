@@ -3,6 +3,7 @@
 // crisp.
 
 import CoreGraphics
+import DesignSystem
 
 struct DiffStyle {
     var code: CodeFont

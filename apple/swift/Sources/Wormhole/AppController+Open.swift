@@ -1,6 +1,7 @@
 // Opening the window and starting everything that goes with it.
 
 import AppKit
+import DesignSystem
 import PlatformUI
 import AuxModel
 import PlatformModel
@@ -63,11 +64,10 @@ extension AppController {
 
     /// Edit ▸ Copy on the terminal's selection says what it copied on the notice chip (never the text itself).
     func copySelection() {
-        let board = NSPasteboard.general
-        let before = board.changeCount
+        let before = Pasteboard.changeCount
         NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
-        guard window?.firstResponder is MetalTerminalView, board.changeCount != before,
-            let text = board.string(forType: .string)
+        guard window?.firstResponder is MetalTerminalView, Pasteboard.changeCount != before,
+            let text = Pasteboard.text()
         else { return }
         hub.notices.post(.copied(text: text))
     }

@@ -30,7 +30,7 @@ pub use agents::{SettingsAgentRow, SettingsHookState, settings_agent_rows, setti
 pub use error::SettingsError;
 pub use flags::SettingsFlagRow;
 pub use handle::{SettingsChangedRow, SettingsHandle, SettingsHealth, SettingsListener};
-pub use host::{SettingsOptionRow, SettingsPaths};
+pub use host::{SettingsOptionRow, SettingsPaths, ShellChoiceRecord};
 pub use import_review::{
     FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
     settings_import_review,

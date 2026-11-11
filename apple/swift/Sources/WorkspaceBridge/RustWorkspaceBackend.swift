@@ -94,13 +94,18 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     /// The folder the next terminal opened starts in, when the action named one (`newTerminalIn`): the core opens a terminal where
     /// the selected one is, and the folder is the program's to start in.
     private var folderOfNext: String?
+    /// The same for a program of its own (`newTerminalRunning`), kept by terminal so a start again runs it too.
+    private var programOfNext: (program: String, arguments: [String])?
+    var programs: [TerminalID: (program: String, arguments: [String])] = [:]
 
     public func apply(_ action: WorkspaceAction) -> WorkspaceModel.Refusal? {
         defer {
             folderOfNext = nil
+            programOfNext = nil
             syncVisibility()
         }
         if case .newTerminalIn(let folder) = action { folderOfNext = folder }
+        if case .newTerminalRunning(let program, let arguments) = action { programOfNext = (program, arguments) }
         return handle(core.apply(action: WormholeBindings.Action(action)))
     }
 
@@ -158,11 +163,13 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
             switch event {
             case .opened(let id, let cwd):
                 live.append(Int(id))
+                programs[Int(id)] = programOfNext
                 start(Int(id), in: folderOfNext ?? cwd)
             case .closed(let id):
                 live.removeAll { $0 == Int(id) }
                 book.forget(Int(id))
                 relays[Int(id)] = nil
+                programs[Int(id)] = nil
                 sources[Int(id)] = nil
                 failed[Int(id)] = nil
             case .adopted(let id): live.append(Int(id))

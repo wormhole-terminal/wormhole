@@ -18,6 +18,8 @@ final class AmbientController {
     private var listed: [AmbientTerminal] = []
     /// What the menu bar item shows and whether its working glyph types out (`menu_bar_icon`, `menu_bar_animate`).
     var iconMode = MenuBarIconMode.statusCount { didSet { if iconMode != oldValue { pushStatus() } } }
+    private var listedActions: [StatusSnapshot.Action] = []
+    private var listedRecent: [StatusSnapshot.Recent] = []
     var animatesIcon = false { didSet { if animatesIcon != oldValue { pushStatus() } } }
     private let quick: QuickPanelController
     unowned let app: AppController
@@ -27,7 +29,7 @@ final class AmbientController {
         self.app = app
         status = StatusItemController(policy: app.policy)
         dock = DockController(policy: app.policy)
-        quick = QuickPanelController { [weak app] in (app?.ambientTerminals ?? [], [.newTerminal(cwd: nil)]) }
+        quick = QuickPanelController { [weak app] in (app?.ambientTerminals ?? [], app?.ambientItems ?? []) }
         let route: (MenuCommand) -> Void = { [weak app] in app?.router.dispatch($0) }
         status.dispatcher.handler = route
         dock.dispatcher.handler = route
@@ -55,10 +57,10 @@ final class AmbientController {
 
     /// Puts the surfaces up for the terminals as they are, again whenever they change.
     private func follow() {
-        let terminals = withObservationTracking { app.ambientTerminals } onChange: { [weak self] in
+        let (terminals, actions, recent) = withObservationTracking { (app.ambientTerminals, app.ambientActions, app.ambientRecent) } onChange: { [weak self] in
             Task { @MainActor in self?.follow() }
         }
-        listed = terminals
+        (listed, listedActions, listedRecent) = (terminals, actions, recent)
         pushStatus()
         dock.update(terminals: terminals, badgeMode: badgeMode)
     }
@@ -66,6 +68,7 @@ final class AmbientController {
     private func pushStatus() {
         var snapshot = StatusSnapshot()
         snapshot.terminals = listed
+        (snapshot.actions, snapshot.recent) = (listedActions, listedRecent)
         snapshot.icon = iconMode
         snapshot.animate = animatesIcon
         status.update(snapshot)
@@ -73,21 +76,42 @@ final class AmbientController {
 }
 
 extension AppController {
+    /// The actions of the trusted project of the terminal in front (what the status item lists under its terminals).
+    var ambientActions: [StatusSnapshot.Action] {
+        guard let state = hub.panel.project.state else { return [] }
+        return state.actions.map { .init(project: state.name, root: state.root, id: $0.id, title: $0.title) }
+    }
+
+    /// The projects worked in lately, for the status item's list.
+    var ambientRecent: [StatusSnapshot.Recent] { recents.roots.map { .init(name: ($0 as NSString).lastPathComponent, path: $0) } }
+
+    /// What the quick panel's Do section offers: a new terminal where the one in front is, Open folder…, the project's actions.
+    var ambientItems: [QuickPanelDo] {
+        let folder = hub.state.all.first { $0.id == hub.state.selected }?.folder.map { ($0 as NSString).expandingTildeInPath }
+        return [.newTerminal(cwd: folder), .openFolder] + ambientActions.map(QuickPanelDo.action)
+    }
+
     /// Every terminal of every window as the ambient surfaces list them.
-    var ambientTerminals: [AmbientTerminal] {
-        sessions.flatMap { $0.hub.state.sections.flatMap(\.rows) }.map { row in
-            let terminal = row.terminal
-            return AmbientTerminal(
-                session: Int64(terminal.id), name: terminal.title, state: terminal.activity.ambient,
-                since: activityClock.since(terminal.id, terminal.activity), source: terminal.agent == nil ? .plain : .agent,
-                who: terminal.agent?.name, message: terminal.message, command: row.runningCommand,
-                folder: terminal.folder, branch: terminal.branch)
-        }
+    var ambientTerminals: [AmbientTerminal] { sessions.flatMap { $0.hub.state.sections.flatMap(\.rows) }.map(ambient) }
+
+    /// What the surfaces call a terminal's folder (core's `notify::Terminal.folder`): its name, "~" being the home folder's.
+    static func folderName(_ path: String) -> String {
+        let full = (path as NSString).expandingTildeInPath
+        return full == "/" ? "/" : (full as NSString).lastPathComponent
+    }
+
+    func ambient(_ row: SidebarRow) -> AmbientTerminal {
+        let terminal = row.terminal
+        return AmbientTerminal(
+            session: Int64(terminal.id), name: terminal.title, state: terminal.activity.ambient,
+            since: activityClock.since(terminal.id, terminal.activity), source: terminal.agent == nil ? .plain : .agent,
+            who: terminal.agent?.name, message: terminal.message, command: row.runningCommand,
+            folder: terminal.folder.map(Self.folderName), branch: terminal.branch)
     }
 }
 
-private extension Activity {
-    var ambient: AmbientState {
+extension Activity {
+    fileprivate var ambient: AmbientState {
         switch self {
         case .idle: .idle
         case .working: .working

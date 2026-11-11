@@ -136,7 +136,8 @@ fn within_scope(core: &Core, request: &Request, peer: &Peer, resolved: Resolved,
         desk.with_state(|_, scopes| scopes.readable(&resolved.identity, resolved.process, &own, visible))
     });
     let opener = opens(&request.action).then(|| resolved.identity.clone());
-    let driver = Some(driver_of(&resolved));
+    // Who is acting is the chip's to say, and only with the Notices feature on (the same rule as `driver_when_shown`).
+    let driver = core.settings().feature_enabled(FeatureFlag::Notices).then(|| driver_of(&resolved));
     Gate::Open(Admit { access, driver, opener, readable })
 }
 

@@ -45,17 +45,6 @@ final class FolderPicking {
         open()
     }
 
-    /// ⌘O: a terminal in a folder chosen in the system's panel.
-    func openFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.prompt = "Open"
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        app.hub.send(.newTerminalIn(url.path))
-    }
-
     /// The picker itself, over the terminal in front; a pick is pasted there.
     func open() {
         guard let window = app.window, let content = window.contentView else { return }

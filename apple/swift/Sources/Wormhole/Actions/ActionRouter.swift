@@ -43,9 +43,11 @@ final class ActionRouter {
         case .runProjectAction(let id):
             let project = app.hub.panel.project
             if let action = project.state?.actions.first(where: { $0.id == id }) { project.run(action) }
-        case .openRecent, .newTerminalWith:
-            // Recent folders and shells come with the core.
-            break
+        case .openRecent(let index):
+            if app.recents.roots.indices.contains(index) { app.openProject(app.recents.roots[index]) }
+        case .newTerminalWith(let index):
+            let shells = app.settingsModel.host.shellChoices()
+            if shells.indices.contains(index) { app.newTerminal(shellKey: shells[index].key) }
         }
     }
 }

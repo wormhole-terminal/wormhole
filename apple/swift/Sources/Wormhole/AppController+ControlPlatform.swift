@@ -7,6 +7,7 @@
 //   the key would do is said, and done); `hotkey-pause on|off` is the Settings recorder holding it off.
 
 import AuxWindows
+import DesignSystem
 import PlatformModel
 import PlatformUI
 
@@ -19,6 +20,28 @@ extension AppController {
         case "question":
             guard let pending = PendingQuestions.current else { reply("error: this instance shows its questions as sheets"); return true }
             reply(argument.isEmpty ? pending.summary : pending.answer(argument))
+        case "row-menu":
+            // ⌃↩ on a sidebar row, as the list's key handler calls it (`row-menu [terminal]`, the selected one by default): the
+            // menu is kept unshown for `menu` and `menu-pick`. The keys themselves never reach a SwiftUI list from outside.
+            guard let id = argument.isEmpty ? hub.state.selected : Int(argument), let session = session(holding: id) else {
+                reply("error: row-menu [terminal]")
+                return true
+            }
+            openRowMenu(id, at: .zero, in: session)
+            reply("row-menu \(id)\n" + (injector.menu.map(Self.rows) ?? "no menu"))
+        case "open-folder":
+            // Answers Open folder… (⌘O, the palette, the status item) as the system panel's choice would.
+            guard let pending = pendingFolder else { reply("error: no Open folder… is waiting"); return true }
+            pendingFolder = nil
+            pending(argument)
+            reply("open-folder \(argument)")
+        case "pasteboard":
+            // What the instance "copied": its clipboard is a file in its data folder, never the person's (`DesignSystem.Pasteboard`).
+            reply(Pasteboard.isDiverted ? (Pasteboard.text().map { "pasteboard \($0.debugDescription)" } ?? "pasteboard empty") : "error: this instance uses the system clipboard")
+        case "pasteboard-set":
+            guard Pasteboard.isDiverted else { reply("error: this instance uses the system clipboard"); return true }
+            Pasteboard.setText(argument.replacingOccurrences(of: "\\n", with: "\n").replacingOccurrences(of: "\\e", with: "\u{1b}"))
+            reply("pasteboard-set")
         case "hotkey":
             guard let key = hotkey else { reply("error: no hotkey in this instance"); return true }
             reply("hotkey spec=\(key.applied ?? "-") action=\(key.action) paused=\(key.paused) error=\(key.error ?? "-") shown=\(key.shown ?? "-")")

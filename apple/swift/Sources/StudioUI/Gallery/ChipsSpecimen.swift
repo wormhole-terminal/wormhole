@@ -6,12 +6,15 @@ import PanesUI
 import SwiftUI
 
 struct ChipsSpecimen: View {
+    @Environment(\.tokens) private var tokens
+
     var body: some View {
         VStack(alignment: .leading, spacing: Space._4) {
             TitleRowView(facts: TitleSamples.agent, backend: SampleOpenIn()).frame(height: Metric.titleRow)
             HStack(spacing: Space._4) {
                 CountBadge(1)
                 CountBadge(42)
+                StatusBadge(text: "Trusted", color: tokens.statusSuccessText)
                 KeyCap(text: "esc")
                 KeyCap(text: "⌘K")
                 KeyHintView(keys: "↩", label: "open")

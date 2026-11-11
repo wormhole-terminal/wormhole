@@ -1331,3 +1331,12 @@ UpdateEngine.setAutoUpdate(on:) / setAnonymousCount(on:)
 - `notice_data_folder_detail(profile, folder, error) -> String`: the data-folder warning's explanation in full.
 - `Interaction::clear_history() -> bool` (was `()`): the history will come back at the next attach, because the terminal's session host is too
   old to forget it; the app says so on the chip.
+
+## Round S2 (overlays): shells and a project's keys in the sheet
+
+- `SettingsHandle.shell_choices() -> [ShellChoiceRecord]` (`key`, `name`, `command_line`, `program`, `args`, `is_default`): core's
+  `terminal::shells::choices` of the effective settings, login shell first, each resolved to what starts it. The palette's and the menu's
+  "New terminal: fish" rows; `WorkspaceAction.newTerminalRunning(program:arguments:)` starts that program (Swift side only: the core's
+  `NewTerminal` opens the row, the bridge starts the program it was asked for).
+- `keymap_sheet_matches(query, label, key) -> SheetMatchRecord?`: core's `sheet::matches` for a row the keymap does not hold (a trusted
+  project's action and its key as glyphs): `None` when the query does not find it or `key` is no key; `label_hit` the bytes to mark.

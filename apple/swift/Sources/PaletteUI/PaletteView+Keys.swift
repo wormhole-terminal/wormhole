@@ -23,12 +23,12 @@ extension PaletteView {
         case .commandCopy:
             guard let selected, case .setting(let id)? = selected.target else { return false }
             sources.copySettingKey(id)
+        case .commandEnter:
+            guard let selected else { return false }
+            openInNewWindow(selected, context: context)
         case .commandDelete:
-            guard let selected, selected.group == .terminals, case .select(let id)? = selected.action else {
-                return false
-            }
-            send(.close(id))
-            context.close(nil)
+            guard let selected, selected.group == .terminals, case .terminal(let id)? = selected.target else { return false }
+            context.close { sources.closeTerminal(id) }
         }
         return true
     }
@@ -41,11 +41,29 @@ extension PaletteView {
     /// A prefix typed into an unnarrowed palette narrows it and leaves the field.
     func typed(_ input: String) {
         chosen = nil
+        defer { findSettings() }
         guard scope == .all else { return }
         let (found, rest) = PaletteScope.parse(input)
         guard found != .all else { return }
         scope = found
         text = rest
+    }
+
+    /// The settings the query finds, once per query or scope change.
+    func findSettings() {
+        let searching = scope == .all || scope == .settings
+        hits = searching && !text.trimmingCharacters(in: .whitespaces).isEmpty ? sources.settings(text) : []
+    }
+
+    /// ⌘↩: a new window where the result is. A setting, an action, a project's action, a shell and a profile are not places:
+    /// they run as ↩ does (core `run_in_new_window`).
+    func openInNewWindow(_ command: Command, context: OverlayContext) {
+        switch command.target {
+        case .terminal?, .folder?, .commit?:
+            RecentStore.shared.remember(command)
+            context.close { sources.openInNewWindow(command.target!) }
+        default: run(command, context: context)
+        }
     }
 
     /// Carries a result out. An action that opens an overlay waits for this one to be gone, or its own

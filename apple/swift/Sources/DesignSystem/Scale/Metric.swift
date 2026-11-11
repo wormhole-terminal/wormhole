@@ -44,4 +44,6 @@ public enum Metric {
     public static let paletteWidth: CGFloat = 600
     public static let paletteSearchHeight: CGFloat = 48
     public static let paletteRowHeight: CGFloat = 36
+    /// A result with a second line (`ROW_TWO_LINE_H`).
+    public static let paletteRowTwoLines: CGFloat = 44
 }

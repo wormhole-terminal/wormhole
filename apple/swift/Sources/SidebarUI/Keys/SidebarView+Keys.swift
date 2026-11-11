@@ -16,6 +16,11 @@ extension SidebarView {
         }
         keysLead = true
         let at = walk.index(of: cursor)
+        // ⌃↩: the menu of the row the keys are on (`view::focus`: the list's menu key).
+        if press.key == .return, press.modifiers.contains(.control), let at, case .row(let id) = walk.items[at].stop {
+            search.rowMenu(id, rowFrames.frames[id] ?? .zero)
+            return .handled
+        }
         let key: ListKey? = switch press.key {
         case .upArrow: press.modifiers.contains(.option) ? .first : .up
         case .downArrow: press.modifiers.contains(.option) ? .last : .down

@@ -127,6 +127,8 @@ final class SettingsApplier {
         if changed("density", "show_groups_as_cards", "fade_group_colors", "show_group_folders", "sidebar_notes", "sidebar_changes", "sidebar_changes_scope", "sidebar_status_dot", "sidebar_cmd_hints", "restore_terminal_text", "motion.status") {
             look.sidebar = SidebarSettingsMaker.appearance(values, current: look.sidebar)
         }
+        let automation = model.host.flags().contains { $0.key == "automation" && $0.on }
+        if look.sidebar.offersAgentHide != automation { look.sidebar.offersAgentHide = automation }
     }
 
     /// Zen mode started or ended: each window's row is the preset's, or the person's own again.

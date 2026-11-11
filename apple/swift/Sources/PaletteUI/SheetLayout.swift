@@ -19,7 +19,7 @@ struct SheetLayout: Equatable {
     private static let sectionGap = Space._4
     private static let bodyTop = Space._2
 
-    init(window: CGSize, sectionRows: [Int], filtering: Bool) {
+    init(window: CGSize, sectionRows: [Int], projectRows: Int = 0, filtering: Bool) {
         let margin = OverlayMetrics.sheetMargin
         let gap = OverlayMetrics.columnGap
         let widest = min(OverlayMetrics.sheetWidth, window.width - 2 * Metric.edgeInset)
@@ -39,7 +39,9 @@ struct SheetLayout: Equatable {
             let gaps = CGFloat(max(run.count - 1, 0)) * Self.sectionGap
             tallest = max(tallest, CGFloat(lines) * Metric.row + gaps)
         }
-        bodyHeight = Self.bodyTop + tallest + Space._4
+        // The project's block under them: its label row, then its keys across the same columns.
+        let block = projectRows == 0 ? 0 : Metric.paletteRowHeight + CGFloat((projectRows + columns - 1) / columns) * Metric.row + Space._4
+        bodyHeight = Self.bodyTop + tallest + Space._4 + block
         maxHeight = window.height - OverlayMetrics.sheetTop - OverlayMetrics.bottomMargin
     }
 

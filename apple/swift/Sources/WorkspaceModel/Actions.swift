@@ -12,6 +12,8 @@ public enum WorkspaceAction: Sendable, Equatable {
     case newTerminal
     /// A new terminal that starts in this folder (a worktree just made); selected like any other.
     case newTerminalIn(String)
+    /// A new terminal that runs this program, not the window's (New terminal: fish); selected like any other.
+    case newTerminalRunning(program: String, arguments: [String])
     case close(TerminalID)
     case rename(TerminalID, String)
     case togglePin(TerminalID)

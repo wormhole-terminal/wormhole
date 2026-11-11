@@ -6,10 +6,19 @@ import PaletteModel
 import SwiftUI
 
 extension PaletteRow {
-    /// A label is one line, a result or a note a palette row.
-    var height: CGFloat {
-        if case .label = self { Metric.row } else { Metric.paletteRowHeight }
+    /// A label is one line, a result or a note a palette row; a result that has a second line in this scope is taller.
+    func height(in scope: PaletteScope) -> CGFloat {
+        switch self {
+        case .label, .projectLabel: Metric.row
+        case .result(let result): result.hasSecondLine(in: scope) ? Metric.paletteRowTwoLines : Metric.paletteRowHeight
+        case .note: Metric.paletteRowHeight
+        }
     }
+}
+
+extension PaletteResult {
+    /// The agent's question shows under a terminal in the Terminals scope only (core `view.rs`).
+    func hasSecondLine(in scope: PaletteScope) -> Bool { scope == .terminals && command.second != nil }
 }
 
 struct ResultList: View {
@@ -30,6 +39,7 @@ struct ResultList: View {
                     ForEach(rows) { row in
                         switch row {
                         case .label(let title, let count): GroupLabel(title: title, count: count)
+                        case .projectLabel(let title): GroupLabel(title: title, count: nil, trusted: true)
                         case .result(let result): resultRow(result)
                         case .note(let text): note(text)
                         }

@@ -15,8 +15,7 @@ public enum HostsWindow {
         controller = AuxWindowController.show(key: "hosts", title: AuxText.hostsTitle, size: size, minSize: minSize) {
             HostsView(
                 model: HostsViewModel(backend: backend) { text in
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(text, forType: .string)
+                    Pasteboard.setText(text)
                 },
                 sheetWindow: { controller?.window }
             ).secondaryBackdrop(.hosts)

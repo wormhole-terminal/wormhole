@@ -1,5 +1,5 @@
 // The footer's words: the keys that work on what is selected, and a count or a hint at the right (core's
-// `command_palette/view.rs` `render_footer`). ⌘↩ (open in a new window) is left out until the palette opens one.
+// `command_palette/view.rs` `render_footer`).
 
 import Foundation
 
@@ -16,7 +16,7 @@ public enum PaletteFooter {
             case (.terminals, _): [("↩", "switch"), ("⌘⌫", "close terminal")]
             case (.actions, _): [("↩", "run"), ("⌫", "back to all")]
             case (_, .settings?): [("↑↓", "move"), ("↩", "open in Settings"), ("⌘C", "copy setting key")]
-            default: [("↑↓", "move"), ("↩", "open"), ("tab", "scope")]
+            default: [("↑↓", "move"), ("↩", "open"), ("⌘↩", "open in new window"), ("tab", "scope")]
             }
         return pairs.map { KeyHint(keys: $0.0, label: $0.1) }
     }

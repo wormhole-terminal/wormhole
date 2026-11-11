@@ -4,6 +4,7 @@
 
 import AppKit
 import PlatformModel
+import PlatformUI
 import WindowUI
 
 extension AppController {
@@ -11,7 +12,7 @@ extension AppController {
     func runKeys(command: String, argument: String) -> Bool {
         switch command {
         case "key": reply(sendKey(argument))
-        case "keys": reply("focus=\(hub.focus.detail)")
+        case "keys": reply("focus=\(hub.focus.detail) responder=\(window?.firstResponder.map { String(describing: type(of: $0)) } ?? "none")")
         case "hold-cmd", "release-cmd":
             // ⌘ pressed alone and kept down (the ⌘1-9 hints show after 250 ms), or let go: the modifier event the window's monitors see.
             let flags: NSEvent.ModifierFlags = command == "hold-cmd" ? .command : []
@@ -40,15 +41,36 @@ extension AppController {
         let named: [String: (UInt16, String)] = [
             "f6": (97, "\u{F709}"), "tab": (48, "\t"), "esc": (53, "\u{1B}"), "escape": (53, "\u{1B}"),
             "left": (123, "\u{F702}"), "right": (124, "\u{F703}"), "down": (125, "\u{F701}"), "up": (126, "\u{F700}"),
-            "return": (36, "\r"), "enter": (36, "\r"), "space": (49, " "),
+            "return": (36, "\r"), "enter": (36, "\r"), "space": (49, " "), "backspace": (51, "\u{7F}"), "delete": (51, "\u{7F}"),
         ]
-        guard let (code, text) = named[name] ?? name.first.flatMap({ Self.ansiKeys.firstIndex(of: $0) }).map({ (UInt16($0), name) }),
+        // "+" is the key of "=" on the ANSI layout, with the character "+".
+        guard let (code, text) = named[name] ?? name.first.flatMap({ Self.ansiKeys.firstIndex(of: $0) }).map({ (UInt16($0), name) })
+                ?? (name == "+" ? (UInt16(24), "+") : nil),
             name.count == 1 || named[name] != nil
         else { return "error: unknown key \(name)" }
         // The keyboard marks F-keys and arrows with the function flag.
         if text.unicodeScalars.first.map({ (0xF700...0xF70F).contains($0.value) }) == true { flags.insert(.function) }
-        if let id = menuAction(for: name, flags) {
-            router.run(id)
+        // ⌘C with nothing selected in a field is the overlay's own (the palette copies a setting's key): the view hierarchy takes
+        // it before the menu does, so it goes the real way. With a selection AppKit would write the person's clipboard.
+        let editor = window.firstResponder as? NSTextView
+        // ⌘⌫ in a field is the field's too (the palette's ⌘⌫ closes the terminal chosen); the line editor's key is the menu's only elsewhere.
+        let fieldCopy = flags == .command && editor != nil && ((name == "c" && editor?.selectedRange.length == 0) || name == "backspace")
+        // The key binding ⌘⌫ means for a field (delete to the line's start) is applied directly: the input method that would
+        // look it up is a really active app's.
+        if fieldCopy, name == "backspace", let editor {
+            editor.doCommand(by: #selector(NSResponder.deleteToBeginningOfLine(_:)))
+            return "key \(spec) -> deleteToBeginningOfLine focus=\(settled())"
+        }
+        if !fieldCopy, let id = menuAction(for: name, flags) {
+            // An action nothing in the table runs is AppKit's own (Edit ▸ Paste, Undo…): the menu would send it up the responder chain.
+            if router.table[id] == nil, let selector = StandardActions.selectors[.action(id)] {
+                // In a text field the system's own copy, cut and paste would use the person's clipboard.
+                let clipboard = [#selector(NSText.copy(_:)), #selector(NSText.cut(_:)), #selector(NSText.paste(_:))].contains(selector)
+                if clipboard, window.firstResponder is NSTextView { return "error: \(id.rawValue) in a text field would use the person's clipboard" }
+                InFront.during(window) { _ = NSApp.sendAction(selector, to: nil, from: nil) }
+            } else {
+                router.run(id)
+            }
             return "key \(spec) -> \(id.rawValue) focus=\(settled())"
         }
         press(code: code, characters: text, flags: flags, in: window)
@@ -95,7 +117,7 @@ extension AppController {
         if flags.contains(.control) { mods.insert(.control) }
         if flags.contains(.option) { mods.insert(.option) }
         let spec = KeySpec(mods, name == "esc" ? "escape" : name)
-        guard mods.contains(.command) || spec.isFunctionKey else { return nil }
+        guard mods.contains(.command) || spec.isFunctionKey || mods.isSuperset(of: [.control, .option]) else { return nil }
         return Keymap.shared.entries.first { $0.keys.contains { $0.sameKey(spec) } }?.id
     }
 }

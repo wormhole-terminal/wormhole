@@ -3,6 +3,8 @@
 // only gets the terminal's find when the sidebar does not have the keyboard.
 
 import Observation
+import CoreGraphics
+import WorkspaceModel
 
 @MainActor @Observable
 public final class SidebarSearch {
@@ -14,7 +16,19 @@ public final class SidebarSearch {
     /// Counts up with every F6 or ⇥ that comes to the list; the list answers by taking the keyboard.
     public private(set) var keyboardRequests = 0
 
+    /// ⌃↩ on a row: the window shows the row's menu at this frame (in the window's coordinates, from its top left), since a
+    /// SwiftUI `.contextMenu` cannot be opened from code.
+    @ObservationIgnored public var rowMenu: @MainActor (TerminalID, CGRect) -> Void = { _, _ in }
+    /// Counts up with every "Rename…" chosen outside the list (the keyboard's row menu); the list answers by starting the name.
+    public private(set) var renames = 0
+    public private(set) var renaming: TerminalID?
+
     public init() {}
+
+    public func rename(_ id: TerminalID) {
+        renaming = id
+        renames += 1
+    }
 
     /// F6 and ⇥ into the list (`view::focus`: the sidebar is one stop).
     public func requestKeyboard() { keyboardRequests += 1 }

@@ -185,8 +185,9 @@ extension RustWorkspaceBackend {
 
     func request(_ id: TerminalID, in folder: String?, old: String? = nil, text: String? = nil) -> HostedStart {
         let size = Self.startSize
+        let program = programs[id] ?? (setup.program, setup.arguments)
         return HostedStart(
-            tab: Int64(id), program: setup.program, args: setup.arguments, cwd: folder, cols: UInt16(size.cols),
+            tab: Int64(id), program: program.0, args: program.1, cwd: folder, cols: UInt16(size.cols),
             rows: UInt16(size.rows), cellWidth: size.cellWidth, cellHeight: size.cellHeight, oldHost: old, savedText: text)
     }
 }

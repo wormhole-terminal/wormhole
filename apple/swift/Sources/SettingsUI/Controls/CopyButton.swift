@@ -13,8 +13,7 @@ struct CopyButton: View {
 
     var body: some View {
         Button {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(text, forType: .string)
+            Pasteboard.setText(text)
             copied = true
             Task {
                 // one-shot: the check goes back to the copy symbol after a moment

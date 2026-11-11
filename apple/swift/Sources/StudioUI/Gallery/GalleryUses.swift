@@ -123,6 +123,7 @@ enum GalleryUses {
         "shadow",
         "sidebar.row.selected.text",
         "state.hover",
+        "status.success.text",
         "surface.elevated",
         "surface.overlay",
         "text.faint",

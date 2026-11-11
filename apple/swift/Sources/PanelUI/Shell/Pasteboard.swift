@@ -2,6 +2,7 @@
 // environment instead of touching NSPasteboard themselves.
 
 import AppKit
+import DesignSystem
 import SwiftUI
 
 typealias PanelCopy = @MainActor (String) -> Void
@@ -9,8 +10,7 @@ typealias PanelCopy = @MainActor (String) -> Void
 @MainActor
 enum PanelPasteboard {
     static func copy(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        Pasteboard.setText(text)
     }
 }
 

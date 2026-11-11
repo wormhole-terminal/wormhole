@@ -15,26 +15,44 @@ struct ResultRow: View {
     let selection: Namespace.ID
     let motion: OverlayMotion
     @Environment(\.tokens) private var tokens
+    @Environment(\.codeFont) private var codeFont
 
     private var command: Command { result.command }
     private var detail: String? { scope == .terminals ? command.scopedDetail ?? command.detail : command.detail }
 
+    private var muted: Color { isSelected ? tokens.listSelectedMuted : tokens.textMuted }
+    /// The agent's question, under the name, in the Terminals scope.
+    private var second: String? { result.hasSecondLine(in: scope) ? command.second : nil }
+
     var body: some View {
-        HStack(spacing: Space._2) {
-            lead
-            title
-            if let detail {
-                Text(detail)
-                    .font(.system(size: TextRole.caption.size))
-                    .foregroundStyle(isSelected ? tokens.listSelectedMuted : tokens.textMuted)
-                    .lineLimit(1)
-                    .layoutPriority(0)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: Space._2) {
+                lead
+                title
+                if let detail {
+                    Text(detail)
+                        .font(command.detailIsCode ? codeFont.font(TextRole.caption.size) : .system(size: TextRole.caption.size))
+                        .foregroundStyle(muted)
+                        .lineLimit(1)
+                        .layoutPriority(0)
+                }
+                Spacer(minLength: 0)
+                if let trailing = command.trailing {
+                    Text(trailing)
+                        .font(command.trailingIsCode ? codeFont.font(TextRole.caption.size) : .system(size: TextRole.caption.size))
+                        .foregroundStyle(muted).lineLimit(1)
+                }
+                // A setting says what ↩ does on the row that is chosen.
+                if isSelected, case .setting? = command.target { KeyCap(text: "↩") }
+                if let shortcut = command.shortcut { KeyCap(text: shortcut.glyphs) }
             }
-            Spacer(minLength: 0)
-            if let shortcut = command.shortcut { KeyCap(text: shortcut.glyphs) }
+            if let second {
+                Text(second).font(.system(size: TextRole.caption.size)).foregroundStyle(muted).lineLimit(1)
+                    .padding(.leading, Metric.lead + Space._2)
+            }
         }
         .padding(.horizontal, Space._4)
-        .frame(height: Metric.paletteRowHeight)
+        .frame(height: second == nil ? Metric.paletteRowHeight : Metric.paletteRowTwoLines)
         .foregroundStyle(isSelected ? tokens.listSelectedText : tokens.textPrimary)
         .background {
             if isSelected {
@@ -45,7 +63,7 @@ struct ResultRow: View {
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(Text([command.title, command.detail, spokenKey].compactMap { $0 }.joined(separator: ", ")))
+        .accessibilityLabel(Text([command.title, detail, second, spokenKey].compactMap { $0 }.joined(separator: ", ")))
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 

@@ -51,6 +51,16 @@ of the press (`Driving/Injector.swift`).
 | `quit-keep` | | quit, hosted terminals left running (the same as `quit`) |
 | `window-shot <path> [title]` | `window-shot /tmp/s.png Settings` | a window as drawn (GPUI's `settings-shot` is this with the Settings title) |
 
+Added by round S2 (overlays): `pasteboard` prints what the instance "copied" and `pasteboard-set <text>` sets what a paste finds: a
+`--background` instance's clipboard is a file in its data folder (`DesignSystem.Pasteboard`), never the person's, and every copy and paste
+site goes through it. `open-folder <path>` answers a pending Open folder… (⌘O, the palette, the status item), which a test instance
+shows no panel for. `row-menu [terminal]` is ⌃↩ on a sidebar row (SwiftUI's own key handling never receives a key from outside): the native
+menu is kept for `menu` and `menu-pick`. `key backspace|delete`, `key cmd-+` and the ⌃⌥ keys work; ⌘C and ⌘⌫ in a text field are the field's
+(the palette's own), and `key cmd-c|x|v` refuse in a field (the system's would use the person's clipboard). `keys` also names the
+first responder. A `--background` instance holds questions for the control folder only when it has one (`WORMHOLE_DEVCTL`). With
+`WORMHOLE_SHELL` set, core runs that program whatever shell a terminal asks for: use `--shell` to try New terminal: bash.
+`evidence/s2-overlays/` has the fixture (`fixture-e.sh`: three agent-named programs, a trusted project, hooks), `pair.py` and `menu-keys.py`.
+
 Landed by other lanes on `exp/swift`: `question`, `question confirm|cancel|also` (a background instance never shows a
 question sheet; the control folder answers it), `studio-out`, `intro`, `welcome`, `onboarding-step`, `tear-off`, `tear-off-at`,
 `profile-menu`, `minimise`, `place`, `hold-cmd`, `release-cmd`, `look-keys`. Injected clicks never need a sheet on screen.

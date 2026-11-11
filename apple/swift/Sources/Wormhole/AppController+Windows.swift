@@ -64,6 +64,9 @@ extension AppController {
             guard let session else { return }
             self?.answer($0, from: session)
         }
+        hub.sidebarSearch.rowMenu = { [weak self, weak session] id, frame in
+            if let session { self?.openRowMenu(id, at: frame, in: session) }
+        }
         hub.actions.terminalMenu = { [weak self, weak session] in self?.terminalMenu(for: $0, in: session) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
         hub.actions.palette = paletteSources(for: session)

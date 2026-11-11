@@ -55,6 +55,7 @@ struct TerminalRowView: View {
         .opacity(context.drag.lifts(.terminal(terminal.id)) ? DragLift.opacity : 1)
         .dragSource(.terminal(terminal.id), hooks: context.drag)
         .dropFrame(.row(terminal.id))
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { context.frames.frames[terminal.id] = $0 }
         .contextMenu { RowMenu(terminal: terminal, context: context) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(row.spoken)

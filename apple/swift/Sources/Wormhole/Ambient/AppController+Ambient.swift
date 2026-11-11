@@ -26,15 +26,19 @@ extension AppController {
         }
     }
 
+    /// ⌘O, the palette's Open folder… and the status item's: a terminal in a folder chosen in the system's panel, which is
+    /// shown without blocking. A test instance shows no panel: it waits for the control folder's `open-folder <path>`.
     func openFolder() {
+        let start: (String) -> Void = { [weak self] folder in self?.hub.send(.newTerminalIn(folder)) }
+        guard policy.touchesSystem else { return pendingFolder = start }
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = "Open"
-        panel.begin { [weak self] result in
+        panel.begin { result in
             guard result == .OK, let folder = panel.url?.path else { return }
-            MainActor.assumeIsolated { self?.hub.send(.newTerminalIn(folder)) }
+            MainActor.assumeIsolated { start(folder) }
         }
     }
 

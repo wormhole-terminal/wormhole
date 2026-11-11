@@ -37,5 +37,9 @@ struct CoreKeymapLists: KeymapLists {
         keymapSheetColumns(heights: heights.map(UInt32.init), columns: UInt32(count)).map { Int($0.start)..<Int($0.end) }
     }
 
+    func matches(_ query: String, label: String, key: String) -> ShortcutMatch? {
+        keymapSheetMatches(query: query, label: label, key: key).map { ShortcutMatch(hit: $0.labelHit.map { characters($0, in: label) }) }
+    }
+
     private static func shortcut(_ key: KeySpecRecord) -> Shortcut? { Shortcut(glyphs: keySpecGlyphs(key: key)) }
 }

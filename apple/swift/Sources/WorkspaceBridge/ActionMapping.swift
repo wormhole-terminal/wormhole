@@ -10,7 +10,7 @@ extension WormholeBindings.Action {
         case .select(let id): self = .select(Int64(id))
         case .selectStep(let delta): self = .selectStep(Int32(delta))
         case .selectNumber(let number): self = .selectNumber(UInt32(number))
-        case .newTerminal, .newTerminalIn: self = .newTerminal
+        case .newTerminal, .newTerminalIn, .newTerminalRunning: self = .newTerminal
         case .newTerminalInGroup(let group): self = .newTerminalInGroup(group)
         case .newTerminalInNewGroup: self = .newTerminalInNewGroup
         case .close(let id): self = .close(Int64(id))

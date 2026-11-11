@@ -4,6 +4,7 @@
 // keeps the click; Shift takes it back.
 
 import AppKit
+import DesignSystem
 import TerminalCore
 
 extension MetalTerminalView {
@@ -47,8 +48,7 @@ extension MetalTerminalView {
 
     /// Copy Link, from the menu.
     public func copyLink(address: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(address, forType: .string)
+        Pasteboard.setText(address)
         onCopied?(address)
     }
 }

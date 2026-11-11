@@ -1,0 +1,29 @@
+# Failed::CopyPath live: Files tab, right-click a file whose name holds a control character (touch badname), pick Copy path
+> right-click 1066 176
+menu:
+1. Reveal in Finder
+2. Copy Path
+---
+3. Rename…
+> menu-pick Copy path
+error: no item Copy path
+> notice chip
+chip shown=none sticky=false info=false detail=- bar=- hostNotice=-
+> pasteboard
+pasteboard empty
+> window-shot /tmp/so-e/copypath.png
+window-shot /tmp/so-e/copypath.png
+> right-click 1066 176
+menu:
+1. Reveal in Finder
+2. Copy Path
+---
+3. Rename…
+> menu-pick Copy Path
+picked Copy Path
+> notice chip
+chip shown=Not copied: the path has characters that would act when pasted sticky=false info=false detail=- bar=- hostNotice=-
+> pasteboard
+pasteboard empty
+> window-shot /tmp/so-e/copypath.png
+window-shot /tmp/so-e/copypath.png

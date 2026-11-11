@@ -41,6 +41,8 @@ public struct SidebarAppearance: Equatable {
     public var statusMotion: StatusMotion
     /// Terminal text is kept between launches (`restore_terminal_text`): while it is not, "Don't keep this terminal's text" is greyed.
     public var restoresText: Bool
+    /// "Hide from Agents" is in a row's menu: with the Automation feature on (or while the terminal is hidden, to show it again).
+    public var offersAgentHide = false
     /// Shows the ⌘1–9 keycaps whatever ⌘ is doing: for pictures and tests.
     public var forcesHints: Bool
     /// The row drawn as if the pointer were over it: for pictures and tests.

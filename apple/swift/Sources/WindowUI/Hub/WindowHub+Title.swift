@@ -2,6 +2,7 @@
 // folder, type the path at its prompt, open the Changes tab, split, and arrange the row's parts.
 
 import AppKit
+import DesignSystem
 import PanesModel
 import PanesUI
 import TerminalUI
@@ -14,8 +15,7 @@ extension WindowHub {
             revealFolder: { if let folder { NSWorkspace.shared.open(URL(fileURLWithPath: folder)) } },
             copyPath: { [unowned self] in
                 guard let folder else { return }
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(folder, forType: .string)
+                Pasteboard.setText(folder)
                 notices.post(.copied(.path))
             },
             insertPath: { [unowned self] in

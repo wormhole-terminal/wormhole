@@ -7,6 +7,7 @@ import SwiftUI
 
 struct SheetBody: View {
     let found: FilteredShortcuts
+    let project: ProjectKeys?
     let layout: SheetLayout
     @Environment(\.tokens) private var tokens
 
@@ -20,12 +21,15 @@ struct SheetBody: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
             ScrollView {
-                HStack(alignment: .top, spacing: OverlayMetrics.columnGap) {
-                    ForEach(Array(layout.runs.enumerated()), id: \.offset) { _, run in column(run) }
+                VStack(spacing: 0) {
+                    HStack(alignment: .top, spacing: OverlayMetrics.columnGap) {
+                        ForEach(Array(layout.runs.enumerated()), id: \.offset) { _, run in column(run) }
+                    }
+                    .padding(.top, Space._2)
+                    .padding(.bottom, Space._4)
+                    if let project, !project.rows.isEmpty { ProjectKeysBlock(keys: project, layout: layout) }
                 }
                 .padding(.horizontal, OverlayMetrics.sheetMargin)
-                .padding(.top, Space._2)
-                .padding(.bottom, Space._4)
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(height: min(layout.bodyHeight, layout.bodyRoom))

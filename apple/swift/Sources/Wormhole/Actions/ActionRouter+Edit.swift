@@ -13,10 +13,6 @@ extension ActionRouter {
         var hub: WindowHub { app.hub }
         var table: [ActionID: Handler] = [
             "clearBuffer": { [unowned self] in app.selectedView?.clearBuffer(nil) },
-            "newNote": {
-                hub.send(.showPanelTab(.notes))
-                hub.panel.notes.add(note: "")
-            },
             "hideFromAgents": {
                 guard let terminal = hub.state.all.first(where: { $0.id == hub.state.selected }) else { return }
                 hub.send(.setAgentHidden(terminal.id, !terminal.isAgentHidden))
@@ -43,5 +39,7 @@ extension ActionRouter {
     static let viewed: Set<ActionID> = [
         "lineStart", "lineEnd", "deleteLine", "moveItemUp", "moveItemDown", "saveTheme", "duplicateTheme",
         "switchProfile", "openWindowInProfile", "moveWindowToProfile",
+        // ⌃↩ on a sidebar row: the list opens the row's menu itself (`SidebarView+Keys`, `openRowMenu`).
+        "rowMenu",
     ]
 }
