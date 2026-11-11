@@ -21,10 +21,7 @@ struct ProjectHeadCard: View {
             .padding(.horizontal, PanelMetrics.inset).frame(height: Metric.band)
             .accessibilityElement(children: .combine)
             if state.asksForTrust { TrustNotice(store: store, state: state) }
-            // Notes sync reads and writes the repository's `notes.md`, so it waits for trust too (`notes_sync.rs`).
-            if state.status != .trusted, state.features.contains(where: { $0.feature == .notes && $0.on }) {
-                problem(panelText("project-notes-waits", "Notes sync: waits for the project to be trusted; its notes.md is neither read nor written until then"), color: tokens.statusDangerText)
-            }
+            // The notes sync says why it waits (untrusted) through the errors, as the hub's does (`notes_sync.rs`).
             ForEach(state.errors, id: \.self) { problem($0, color: tokens.statusDangerText) }
             ForEach(state.warnings, id: \.self) { problem($0, color: tokens.statusWarningText) }
         }

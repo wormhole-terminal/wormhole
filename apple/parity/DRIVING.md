@@ -39,7 +39,7 @@ of the press (`Driving/Injector.swift`).
 | `hover x y` / `hover-cmd x y` | `hover-cmd 389 51` | move the pointer there (with ⌘: a link underlines) |
 | `mouse-down x y` / `mouse-move x y` / `mouse-up x y` | `mouse-down 150 182` | a held drag, a line each, so a `window-shot` can catch it mid-way |
 | `drag x1 y1 x2 y2 [steps]` | `drag 351 400 300 400 10` | pressed, moved in steps a frame apart, released (reorder, column edges, window resize) |
-| `scroll x y dy` | `scroll 700 400 -400` | the wheel there, dy points down (negative up), in steps of 20 a frame apart |
+| `scroll x y dy [dx]` | `scroll 700 400 -400`, `scroll 700 400 0 600` | the wheel there, dy points down (negative up), dx right (negative left), in steps of 20 a frame apart |
 | `key <keystroke>` | `key shift-f6`, `key ctrl-c` | a key as the keyboard sends it (menu equivalents run their action) |
 | `text <text>` | `text Build` | typed into whatever has the keys, a key per character (a field being edited, the terminal) |
 | `pointer-window [title]` | `pointer-window Settings` | the window the pointer acts on (none: the workspace's in front) |
@@ -70,6 +70,12 @@ column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T1
 `keys-a11y-perf.txt`).
 
 ## Tips
+
+- A sheet over the window (the new-worktree sheet, an alert) is the window's own: `a11y` lists it (`Sheet "alert"` with its words) and
+  keys and text reach its field (`text feature-x`, `key return` makes a worktree), but a click is the main window's, and `key return`
+  does not dismiss an alert: restart the instance after one. `window-shot` does not draw a sheet (the window under it is dimmed).
+- Hover never shows in a background instance (the window is not active, so `onHover` does not fire): hover icons (a row's open icon, a
+  diff line's) are for a person to check.
 
 - A window behind others may get no display-link tick: send `frames 2` before a terminal `shot` that must show a change, and
   prefer `shot` (the terminal's own render) to `window-shot` for terminal content.

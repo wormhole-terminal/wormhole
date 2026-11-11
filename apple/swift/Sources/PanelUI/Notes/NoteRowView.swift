@@ -11,6 +11,9 @@ import SwiftUI
 
 struct NoteRowView: View {
     @Binding var note: Note
+    /// The note's id, kept apart: once the model swaps (another terminal's notes) or the note goes, the binding's index is stale
+    /// and reading `note` traps, so a blur after that must not touch it.
+    let noteID: Note.ID
     let store: NotesStore
     let send: () -> Void
     let delete: () -> Void
@@ -113,7 +116,7 @@ struct NoteRowView: View {
     }
 
     private func endWriting() {
-        guard editing else { return }
+        guard editing, store.model.notes.contains(where: { $0.id == noteID }) else { return }
         editing = false
         store.finishWriting(note)
     }

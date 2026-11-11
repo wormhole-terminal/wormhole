@@ -1362,3 +1362,18 @@ The first run as a program in a terminal (`Wormhole welcome`, core's `onboarding
   `Config::update` of the window's profile; the open window sees them by its file watch.
 - `HookEvent::WelcomeDemo { terminal, show }`, `WelcomeEnded { terminal }`, `WelcomeAskPermission`.
 - The example band's rows are core's: `welcome_demo_title()`, `welcome_demo_label()`, `welcome_demo_rows(elapsed_ms, still)`, `welcome_demo_next_ms(...)`.
+
+## Round S2 (panel B): worktree trust, logos, close stake, line to open
+
+All additive; the core decides, Swift asks.
+
+- `ProjectService.worktree_allowed(repo) -> String?` is `project::api::worktree_allowed`: a project at `repo` must be trusted with its
+  Settings on (`ProjectHub::enabled`), judged on the files as they are now; no project, or the Project feature off in the shown profile
+  (`FeatureMask`), no condition. The string is the refusal's sentence. `worktree_setup(repo) -> String?` is the trusted project's
+  `worktree.setup` under the same rule (nil when refused). Swift's `PanelBackendsFactory` no longer decides trust.
+- `UsageReportRecord` gains `name` (the card's name, `Agent::short_name`), `monogram` and `logo: AgentLogoRecord?` (the SVG path data
+  and `even_odd` of the registry's bundled logo, 24 pt box). No colour travels: the panel draws it in its muted one, as `style::agent_logo`.
+- `notes_close_stake(open_items) -> String?` is `view::notes::stake::discarded`: what the close question says of open notes and tasks
+  ("notes and tasks are discarded."); Swift puts "Its" or "Their" before it.
+- `GitDiffLine.open_line` is core's `lines_in_new_file` per hunk: the line of the new file a diff line's open icon opens the editor at
+  (a removed line: the nearest).

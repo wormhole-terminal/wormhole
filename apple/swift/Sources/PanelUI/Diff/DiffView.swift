@@ -105,7 +105,7 @@ public struct DiffView: View {
                         spans: Self.codeSpans(width: width, split: split, style: style), visible: room, scroll: style.scrollX, max: maxScroll)
                 }
             }
-            if rows.isEmpty, let diff, case .shown = session.phase, Self.hasNotes(diff) {
+            if let diff, case .shown = session.phase, Self.hasNotes(diff) {
                 columnNotes(diff.notes, split: split)
             } else if let note {
                 DiffNote(text: note)

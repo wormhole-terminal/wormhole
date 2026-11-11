@@ -47,6 +47,8 @@ public struct WorkspaceRootView: View {
         .background(FocusHolder(focus: hub.focus))
         // A new window starts with the keys in its terminal, as the GPUI app's does (SwiftUI would give them to the first list).
         .task { hub.focus.focusTerminal() }
+        // The project commands window approves through a desk of its own: coming back to the window shows what it did.
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in hub.panel.project.reload() }
         // The panel's tabs follow the selected terminal's folder whether or not the panel is on screen: the worktree sheet and the
         // diff in the terminal's place need it with the panel shut.
         .onChange(of: hub.state.selectedTerminal?.folder, initial: true) { _, folder in hub.panel.follow(folder: Self.expanded(folder)) }

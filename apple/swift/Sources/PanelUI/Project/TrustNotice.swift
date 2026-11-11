@@ -27,17 +27,23 @@ struct TrustNotice: View {
         .padding(.horizontal, PanelMetrics.inset).frame(minHeight: Metric.row)
     }
 
+    @ViewBuilder private func buttons(shown: Int) -> some View {
+        NoticeButton(title: store.approveTitle, primary: true, busy: store.approving, action: store.approve)
+        if shown < state.commands.count {
+            NoticeButton(title: panelText("project-view-all", "View all \(state.commands.count)\u{2026}"), action: store.viewAll)
+        }
+    }
+
     private var callout: some View {
         let notice = state.notice
         let shown = state.commands.count > ProjectState.linesMax ? ProjectState.linesShown : state.commands.count
         return Callout(kind: .warning, title: notice.title) {
             Text(notice.text).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
             if !state.commands.isEmpty { TrustLines(lines: Array(state.commands.prefix(shown))) }
-            HStack(spacing: PanelMetrics.gap) {
-                NoticeButton(title: store.approveTitle, primary: true, busy: store.approving, action: store.approve)
-                if shown < state.commands.count {
-                    NoticeButton(title: panelText("project-view-all", "View all \(state.commands.count)\u{2026}"), action: store.viewAll)
-                }
+            // Side by side while they fit; the long password wording stacks them rather than cutting a word.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: PanelMetrics.gap) { buttons(shown: shown) }
+                VStack(alignment: .leading, spacing: PanelMetrics.gap) { buttons(shown: shown) }
             }
         }
     }

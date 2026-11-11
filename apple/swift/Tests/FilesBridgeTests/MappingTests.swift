@@ -74,10 +74,12 @@ final class MappingTests: XCTestCase {
     func testUsageRecordsBecomeReports() {
         let report = UsageReport(
             UsageReportRecord(
-                agent: "claude", limits: [PlanLimitRecord(label: "5-hour limit", used: 25, resetsAt: 1_800_002_040)],
+                agent: "claude", name: "Claude", monogram: "CC", logo: AgentLogoRecord(paths: ["M0 0h24v24H0z"], evenOdd: true),
+                limits: [PlanLimitRecord(label: "5-hour limit", used: 25, resetsAt: 1_800_002_040)],
                 responseTokens: nil, updated: 1_800_000_000))
         XCTAssertEqual(report.limits, [PlanLimit(label: "5-hour limit", used: 25, resetsAt: 1_800_002_040)])
         XCTAssertEqual(report.limits[0].shown(now: 1_800_000_000).words, "25% \u{b7} resets 34m")
-        XCTAssertEqual(report.displayName, "Claude")
+        XCTAssertEqual(report.name, "Claude")
+        XCTAssertEqual(report.logo, AgentLogoShape(paths: ["M0 0h24v24H0z"], evenOdd: true), "the registry's drawing comes through, no colour")
     }
 }

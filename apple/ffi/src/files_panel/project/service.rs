@@ -9,9 +9,7 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 
-use wormhole_core::config::{Config, FeatureId, FeatureMask};
 use wormhole_core::project::{self as proj, Feature, ProjectFolder};
-use wormhole_core::storage::paths::DataRoot;
 
 use super::effects::{self, ProjectEffect};
 use super::hub::Hub;
@@ -49,24 +47,19 @@ impl ProjectService {
 }
 
 impl ProjectService {
-    pub(crate) fn worktree_refusal(&self, repo: &Path, folders_on: bool) -> Option<String> {
-        // With the project folders off `.wormhole/` isn't read at all, so a worktree carries no project settings.
-        if !folders_on {
-            return None;
-        }
+    pub(crate) fn worktree_refusal(&self, repo: &Path) -> Option<String> {
         let found = proj::find_project(repo)?;
         let snapshot = found.snapshot();
-        if self.lock().enabled(&snapshot, Feature::Settings) {
+        let mut hub = self.lock();
+        hub.reload_trust();
+        if hub.enabled(&snapshot, Feature::Settings) {
             return None;
         }
-        Some("Trust the project first: a terminal in its worktree would run with the project's settings".into())
+        Some(
+            "Trust the project first: a terminal in its worktree would run with the project's settings"
+                .into(),
+        )
     }
-}
-
-/// Whether the shown profile has the project-folder feature on (`project_folders_on`): its switch and its gate.
-fn project_folders_on() -> bool {
-    let paths = crate::profile::active_in(&DataRoot::current());
-    FeatureMask::resolve(&Config::load_for(&paths).settings).has(FeatureId::Project)
 }
 
 /// The project folder at `root` as given by Swift: a canonical path with a `.wormhole/` in it, else `None`.
@@ -168,20 +161,20 @@ impl ProjectService {
     }
 
     /// Why a worktree may not be made of `repo` (`project::api::worktree_allowed`): a project there must be trusted with
-    /// its Settings on, since the new terminal takes the project's env and shell; no project, no condition. `None`: it may.
+    /// its Settings on, since the new terminal takes the project's env and shell; no project, no condition. `None`: it may. Unlike the GPUI
+    /// app's, this does not look at the Project feature switch: the Swift panel reads and applies `.wormhole/` whatever it says.
     pub fn worktree_allowed(&self, repo: String) -> Option<String> {
-        self.worktree_refusal(Path::new(&repo), project_folders_on())
+        self.worktree_refusal(Path::new(&repo))
     }
 
     /// What a new worktree of `repo` runs first: its trusted project's `worktree.setup`, under the same conditions as
     /// [`Self::worktree_allowed`]; a project that is not trusted with its Settings on runs nothing.
     pub fn worktree_setup(&self, repo: String) -> Option<String> {
-        if !project_folders_on() {
-            return None;
-        }
         let found = proj::find_project(Path::new(&repo))?;
         let snapshot = found.snapshot();
-        if !self.lock().enabled(&snapshot, Feature::Settings) {
+        let mut hub = self.lock();
+        hub.reload_trust();
+        if !hub.enabled(&snapshot, Feature::Settings) {
             return None;
         }
         snapshot.config()?.worktree_setup.clone()
@@ -215,7 +208,9 @@ impl ProjectService {
         // Read here, so what is checked is what runs: the same snapshot gives the trust verdict and the
         // content, and a `git checkout` between the two cannot make them differ.
         let snapshot = folder.snapshot();
-        if let Some(reason) = self.lock().refusal(&snapshot, feature) {
+        let mut hub = self.lock();
+        hub.reload_trust();
+        if let Some(reason) = hub.refusal(&snapshot, feature) {
             return Err(ProjectFailure::refused(reason));
         }
         Ok((folder, snapshot))

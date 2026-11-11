@@ -1,0 +1,96 @@
+Round S wave 2, lane panel-b: what was driven in --background Swift instances (data dirs /tmp/Wormhole-swift-s2pb-*, HOME scratch, throwaway repos
+fx/repo (staged, unstaged, untracked, binary, mode, LFS, submodule, bigline.txt 9 MB patch just over the 8 MiB limit), fx/wt/repo, fx/proj (.wormhole)),
+commands of parity/DRIVING.md. GPUI captures: debug build of 7 Nov through scripts/devctl-instance.sh on a copy of the same repo, same 1500x900 window.
+
+## One Tab stop per section (key tab through the Changes tab: Changes band, Untracked band, then the sidebar)
+> key shift-cmd-e -> focus=panel-content, ring on the Changes band (tab-stop-1-changes.png)
+> key tab -> focus=panel-content, ring on the Untracked band (tab-stop-2-untracked.png)
+> key tab -> focus=sidebar   (two stops in this tab; PanelTests StopsAndStepTests covers enter(list:) past the last stop)
+
+## Files: the path head is the first row (a band, one stop). key alt-up puts the ring on it (files-head-stop-ring.png); space and return fold nothing
+(GPUI's panel_key sends a band's return to band_folds, so return does not open the menu there either: its comment says it does, the code does not).
+Files row menu through right-click, listed unshown: Open in > Zed [x] / Xcode / PhpStorm / RustRover / Finder, Reveal in Finder, Copy Path, ---, Rename..., --- (folder: Pin Folder): GPUI's outline.
+
+## Diff
+bigline.txt: 'This diff is 9 MB / 2,000 changed lines. Loading it can take a few seconds.' (load-diff-card.png); click Load diff (683 493) -> rows read (diff-long-lines-after-load.png).
+  Found by this: a line of 4,500 characters drew blank (SwiftUI Text wider than the largest layer); an unwrapped line now makes only the 400 characters around the scroll.
+> scroll 600 400 0 600 (new dx) -> numbers stay, code slides under the edge, left fade appears (bar and fades as GPUI's overflow_cue)
+Open diff of docs/staged-new.md, a second line appended while it was open -> '+2 -0', the new row, same place, no reading flash (diff-reread-in-place.png);
+  git rm -f of the file -> badge 'No longer changed', the diff stays (diff-no-longer-changed.png).
+Not driven: 'Out of date' (a failed re-read; StopsAndStepTests covers reread), the hover open icon on a line and on a row (hover never shows in a background instance).
+
+Esc cancelling a column drag (panel 550 pt, handle at x=951 in a 1500 pt window):
+> mouse-down 951 400 / mouse-move 920 400 / mouse-move 850 400
+> columns            panel=650.0     (dragged wider)
+> key escape
+> columns            panel=550.0     (back where the drag began)
+> mouse-move 800 400
+> columns            panel=550.0     (the button is still down: the drag is over, nothing moves)
+> mouse-up 800 400
+> columns            panel=550.0
+
+## Worktrees
+Worktrees driven end to end (instance w, panel hidden, throwaway repo fx/wt/repo, WORMHOLE_AUTH=allow, no copy action):
+> action newTerminalInWorktree ; text feature-y ; key return   -> worktree repo-worktrees/feature-y made by git, terminal 4 opened in it (rows)
+> close  -> question: "Its worktree feature-y at <folder> was made by Wormhole. Close keeps it; Close and Remove Worktree deletes its folder (the branch stays)."
+          buttons=0:Close | 1:Close and Remove Worktree | 2:Cancel
+> (an untracked file written into the worktree) question also  -> terminal closed, git refuses the removal, a11y: Sheet "alert" "Couldn't remove the worktree" with git's words,
+          shown with the panel hidden (log-alert-panel-hidden.txt)
+> clean worktree feature-z: close ; question also -> folder removed, branch stays (git branch --list shows feature-z)
+> clean worktree feature-z: close ; question also -> repo-worktrees/feature-z gone, branch feature-z stays, no alert
+
+Alert with the panel hidden (columns terminal=1150 panel=0), a11y:
+    Sheet "alert" [focused] [off] @620,349 260x202
+      StaticText = Couldn't remove the worktree @641,368 218x18
+      StaticText = /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0… @641,394 218x98
+      Button "OK" @635,506 230x30
+Untrusted project (fx/proj, never approved), action newTerminalInWorktree, a11y:
+    Sheet "alert" [focused] [off] @620,373 260x154
+      StaticText = Can’t make a worktree here @641,392 218x18
+      StaticText = Trust the project first: a terminal in its worktree would ru… @641,418 218x50
+      Button "OK" @635,482 230x30
+Approved through the Project commands window (WORMHOLE_AUTH=allow), same action: worktree proj-worktrees/trusted-wt made, terminal opened in it.
+
+## Project: Trust (approve with password) with WORMHOLE_AUTH_BIOMETRICS off (project-untrusted-password-wording.png); View all 9 opens the 'Project commands' window
+(windows: 'Project commands visible=true sheet=false', project-view-all-window.png); approving there writes trusted-projects.json and a fresh instance reads status=trusted.
+
+## Close question stake (sleep 300 running, a note and a step written)
+> close ; question -> detail=Its agent is still working. Still running: sleep 300. Closing ends them. Its notes and tasks are discarded.
+
+Notes sync for every terminal of a trusted project (instance p, three terminals in fx/proj, trusted, WORMHOLE_AUTH=allow):
+notes.md edited in an editor (a second note appended): select 1/2/3 then notes -> all three terminals read it back.
+task-add in terminal 1 -> notes.md written, terminals 2 and 3 follow. notes.md after:
+# Notes
+<!-- Synced with Wormhole. Tasks are "- [ ]" items under "## Next steps"; notes are separated by "---". -->
+
+## Next steps
+- [ ] Wire up the CLI
+- [x] Add greet() helper
+- [ ] step added in the app
+
+## Notes
+
+First note
+
+---
+
+Second note from the editor
+Untrusted: the Project tab says 'Notes sync: waits for the project to be trusted; ...' once, from the core (project-untrusted-password-wording.png).
+
+## Copy paths through the pasteboard seam (control pasteboard)
+> right-click 1235 120
+> menu-pick Copy Relative Path
+  picked Copy Relative Path
+> pasteboard
+  pasteboard "assets/blob.bin"
+> tab files
+> wait-idle 1500
+> right-click 1050 316
+> menu-pick Copy Path
+> pasteboard
+  pasteboard "assets/blob.bin"
+> pasteboard
+  pasteboard "/private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2pb/fx/repo-g/huge.txt"
+
+## Usage: agent on screen (a binary named claude), control usage-status with rate_limits -> the Usage tab: the registry's Claude logo in the muted colour, 42% and 88% pills (usage-claude-logo.png).
+## Pairs, dark and light, 1500x900, Swift left / GPUI right: pairs/pair-<dark|light>-<changes|diff|files|history|notes>.png

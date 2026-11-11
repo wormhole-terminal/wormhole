@@ -27,7 +27,7 @@ struct NotesCard: View {
                 ForEach($store.model.notes) { $note in
                     let ids = model.notes.map(\.id)
                     NoteRowView(
-                        note: $note, store: store, send: { store.send(note) }, delete: { model.notes.removeAll { $0.id == note.id } },
+                        note: $note, noteID: note.id, store: store, send: { store.send(note) }, delete: { model.notes.removeAll { $0.id == note.id } },
                         moveBy: { delta in
                             if let from = ids.firstIndex(of: note.id), let to = Reorder.step(from, delta, count: ids.count) { store.moveNote(from: from, to: to) }
                         })

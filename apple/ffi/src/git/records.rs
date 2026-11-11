@@ -3,8 +3,8 @@
 
 use wormhole_core::config::SizeUnits;
 use wormhole_core::git::{
-    ChangeKind, Commit, CommitRef, DIFF_HIGHLIGHT_MAX_LINES, DiffLine, FileChange, FileDiff, Hunk, LineKind, RefKind,
-    Submodule, lines_in_new_file,
+    ChangeKind, Commit, CommitRef, DIFF_HIGHLIGHT_MAX_LINES, DiffLine, FileChange, FileDiff, Hunk, LineKind,
+    RefKind, Submodule, lines_in_new_file,
 };
 
 use super::notes::GitDiffNotes;
@@ -60,7 +60,8 @@ impl GitChange {
             removed: file.removed,
             lfs: file.lfs,
             submodule: file.submodule.as_ref().map(|sub: &Submodule| sub.label(file.kind)),
-            submodule_enterable: file.submodule.as_ref().is_some_and(Submodule::checked_out) && file.kind != ChangeKind::Deleted,
+            submodule_enterable: file.submodule.as_ref().is_some_and(Submodule::checked_out)
+                && file.kind != ChangeKind::Deleted,
         }
     }
 }
@@ -189,7 +190,14 @@ impl GitDiffLine {
             LineKind::Added => GitLineKind::Added,
             LineKind::Removed => GitLineKind::Removed,
         };
-        Self { kind, old: line.old, new: line.new, text: line.text.clone(), no_newline: line.no_newline, open_line }
+        Self {
+            kind,
+            old: line.old,
+            new: line.new,
+            text: line.text.clone(),
+            no_newline: line.no_newline,
+            open_line,
+        }
     }
 }
 
@@ -233,8 +241,9 @@ impl GitDiffFile {
             new_path: (!diff.deleted_file).then(|| file.path.clone()),
             hunks: diff.hunks.iter().map(GitHunk::from).collect(),
             mode_change: diff.mode_change.as_ref().map(|(old, new)| format!("Mode {old} \u{2192} {new}")),
-            highlight_skipped: diff.hunks.iter().map(|hunk| hunk.lines.len()).sum::<usize>() > DIFF_HIGHLIGHT_MAX_LINES,
-            notes: if diff.hunks.is_empty() { super::notes::notes(diff, file.kind, units) } else { GitDiffNotes::default() },
+            highlight_skipped: diff.hunks.iter().map(|hunk| hunk.lines.len()).sum::<usize>()
+                > DIFF_HIGHLIGHT_MAX_LINES,
+            notes: super::notes::notes(diff, file.kind, units),
         }
     }
 }
