@@ -6,7 +6,7 @@ final class SchemaTests: XCTestCase {
 
     func testTheIndexHas18SectionsAndTheirRows() {
         XCTAssertEqual(schema.sections.count, 18)
-        XCTAssertEqual(schema.sections.flatMap(\.entries).count, 125)
+        XCTAssertEqual(schema.sections.flatMap(\.entries).count, 124)
         XCTAssertEqual(schema.section("terminal")?.title, "Terminal")
         XCTAssertEqual(schema.section("sessions")?.title, "Terminals & sidebar")
     }
