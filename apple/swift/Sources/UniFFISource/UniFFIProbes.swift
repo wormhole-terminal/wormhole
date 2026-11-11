@@ -11,6 +11,7 @@ final class UniFFIProbes: TerminalCore.TerminalProbes {
 
     var hasFolds: Bool { terminal.hasFolds() }
     func foldToggle(_ id: UInt64) -> Bool { terminal.foldToggle(id: id) }
+    func foldBlockOutput(_ block: UInt64) -> Bool { terminal.foldBlockOutput(block: block) }
     func foldShowAll() -> Int { Int(terminal.foldShowAll()) }
     func foldShownWords(lines: Int) -> String { terminal.foldShownWords(lines: UInt32(lines)) }
 

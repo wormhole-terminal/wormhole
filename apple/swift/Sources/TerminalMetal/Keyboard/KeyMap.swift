@@ -49,6 +49,17 @@ enum KeyMap {
 public enum OptionAsMeta: Sendable, Equatable {
     case off, left, right, both
 
+    /// The setting's name (`option_as_meta`: off, left, right, both).
+    public init?(setting name: String) {
+        switch name {
+        case "off": self = .off
+        case "left": self = .left
+        case "right": self = .right
+        case "both": self = .both
+        default: return nil
+        }
+    }
+
     /// The rule of core's `OptionAsMeta::is_meta`: when the side cannot be told (a synthetic event) any
     /// setting but off counts.
     func isMeta(left: Bool, right: Bool) -> Bool {

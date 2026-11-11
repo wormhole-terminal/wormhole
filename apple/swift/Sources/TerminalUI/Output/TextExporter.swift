@@ -21,9 +21,11 @@ public enum TextExporter {
 
     /// Shows the panel as a sheet on `window` (or modal without one); `completion` gets the file written, if any.
     public static func export(
-        _ text: String, title: String, over window: NSWindow?, completion: @escaping (URL?) -> Void = { _ in }
+        _ text: String, title: String, over window: NSWindow?, directory: URL? = nil, completion: @escaping (URL?) -> Void = { _ in }
     ) {
         let panel = NSSavePanel()
+        // A test instance starts in a folder of its own, never the person's Documents.
+        panel.directoryURL = directory
         panel.allowedContentTypes = [.plainText]
         panel.nameFieldStringValue = suggestedName(title: title)
         panel.canCreateDirectories = true

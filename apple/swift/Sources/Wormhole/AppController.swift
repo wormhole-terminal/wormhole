@@ -85,12 +85,12 @@ final class AppController: NSObject, NSApplicationDelegate {
         // so a `--background` instance without one has nobody to answer and shows its questions as any app does.
         if options.background, options.devctl != nil { PendingQuestions.current = PendingQuestions() }
         // And it never reads or replaces the person's clipboard: what it copies is a file in its data folder.
-        // Nor does it launch the person's browser, Finder or editor: what it would launch is a file there too.
-        if options.background {
-            Pasteboard.divert(to: dataDirectory.appendingPathComponent("pasteboard.txt"))
-            Launcher.divert(to: dataDirectory.appendingPathComponent("launches.txt"))
-        }
-        PlatformSetup.install(options)
+        if options.background { Pasteboard.divert(to: dataDirectory.appendingPathComponent("pasteboard.txt")) }
+        // Nor does it launch the person's browser, Finder or editor: what it would launch is a file there too (`opened.txt`),
+        // the core's launches (a file in an editor at a line) included.
+        let opened = dataDirectory.appendingPathComponent("opened.txt")
+        if options.background { ExternalOpen.divert(to: opened) }
+        PlatformSetup.install(options, launchLog: options.background ? opened : nil)
         windowsHost = try WindowsHost.make(options)
         profileHosts[windowsHost.profile] = windowsHost
         super.init()

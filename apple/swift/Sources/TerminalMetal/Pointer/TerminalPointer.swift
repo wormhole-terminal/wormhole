@@ -35,7 +35,8 @@ extension MetalTerminalView {
         if !openContextMenu(for: event) { press(.right, event) }
     }
 
-    public override func otherMouseDown(with event: NSEvent) { press(.middle, event) }
+    // Only the middle button is a button of the terminal's (`input.rs:375`): back and forward are not reported as one.
+    public override func otherMouseDown(with event: NSEvent) { if event.buttonNumber == 2 { press(.middle, event) } }
 
     private func press(_ button: PointerButton, _ event: NSEvent) {
         window?.makeFirstResponder(self)
@@ -43,7 +44,8 @@ extension MetalTerminalView {
         let point = location(event)
         pointer.lastPoint = point
         guard let interaction, let hit = cellGrid.hit(point) else { return }
-        if button == .left, event.modifierFlags.contains(.command), openLink(at: hit) { return }
+        // A link only where the pointer is over a cell, not in the pane's padding (`links.rs:204`).
+        if button == .left, event.modifierFlags.contains(.command), cellGrid.contains(point), openLink(at: hit) { return }
         if send(button, .press, hit, event) {
             pointer.reporting = button
             return
@@ -65,7 +67,7 @@ extension MetalTerminalView {
 
     public override func mouseDragged(with event: NSEvent) { drag(.left, event) }
     public override func rightMouseDragged(with event: NSEvent) { drag(.right, event) }
-    public override func otherMouseDragged(with event: NSEvent) { drag(.middle, event) }
+    public override func otherMouseDragged(with event: NSEvent) { if event.buttonNumber == 2 { drag(.middle, event) } }
 
     private func drag(_ button: PointerButton, _ event: NSEvent) {
         let point = location(event)
@@ -79,7 +81,7 @@ extension MetalTerminalView {
 
     public override func mouseUp(with event: NSEvent) { release(.left, event) }
     public override func rightMouseUp(with event: NSEvent) { release(.right, event) }
-    public override func otherMouseUp(with event: NSEvent) { release(.middle, event) }
+    public override func otherMouseUp(with event: NSEvent) { if event.buttonNumber == 2 { release(.middle, event) } }
 
     private func release(_ button: PointerButton, _ event: NSEvent) {
         if let held = pointer.reporting, held == button {

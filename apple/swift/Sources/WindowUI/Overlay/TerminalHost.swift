@@ -64,9 +64,16 @@ struct TerminalHost: NSViewRepresentable {
             super.layout()
             guard let view = subviews.first as? MetalTerminalView else { return }
             let grid = view.gridSize
-            let live = window?.inLiveResize ?? false
+            let live = (window?.inLiveResize ?? false) || LiveResizeDriving.simulated
             // After the update that caused this layout: the overlay is observed by the views being laid out.
             DispatchQueue.main.async { [overlay] in overlay.size.noteSize(cols: grid.cols, rows: grid.rows, live: live) }
         }
     }
+}
+
+/// The control folder's `live-resize-sim` steps the window as a drag does, which AppKit does not call a live resize: the size chip
+/// is told it is one while the script holds this.
+@MainActor
+public enum LiveResizeDriving {
+    public static var simulated = false
 }

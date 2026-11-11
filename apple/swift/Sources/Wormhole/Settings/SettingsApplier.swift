@@ -57,6 +57,11 @@ final class SettingsApplier {
                 bell: BellStyle(
                     sound: values["bell_sound"]?.bool ?? true, visual: values["bell_visual"]?.bool ?? true, dock: false))
         }
+        if changed("option_as_meta") {
+            let value = values["option_as_meta"]
+            let side = value?.bool.map { $0 ? "both" : "off" } ?? value?.string
+            app.terminalLook.use(optionAsMeta: side.flatMap(OptionAsMeta.init(setting:)) ?? .off)
+        }
         if changed("clipboard_read", "clipboard_write") {
             app.terminalLook.use(
                 clipboardRead: values["clipboard_read"]?.string.flatMap(ClipboardReadRule.init(rawValue:)) ?? .ask,

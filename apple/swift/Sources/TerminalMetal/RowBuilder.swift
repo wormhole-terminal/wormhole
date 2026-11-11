@@ -24,6 +24,8 @@ final class RowBuilder {
     private let scratch = UnsafeMutablePointer<UInt32>.allocate(capacity: WordCache.maxWordCells)
     /// The stem dilation of text in each palette slot (`GlyphRaster.level`), set by the scene with its palette.
     var levels: [UInt8] = []
+    /// The character under a block cursor takes the theme's cursor-text colour (else the cell's background), as `render/cursor.rs:85`.
+    var cursorTextSlot = false
 
     init(fonts: FontSet, atlas: GlyphAtlas, words: WordCache) {
         metrics = fonts.metrics
@@ -41,7 +43,7 @@ final class RowBuilder {
         var fg = cell.fg, bg = cell.bg
         if flags.contains(.inverse) { swap(&fg, &bg) }
         if underBlockCursor {
-            fg = bg
+            fg = cursorTextSlot ? PackedColor.cursorText : bg
             bg = PackedColor.cursor
         }
         if flags.contains(.hidden) { fg = bg }

@@ -121,7 +121,7 @@ pub use live_resize::{
     LiveResizeGate, ResizeStepRecord, SizeRecord, WindowFrameRecord, resize_settle, resize_settled_frame,
     resize_snapped,
 };
-pub use minimap::{MinimapGeometryRecord, MinimapRunRecord};
+pub use minimap::{MinimapFoldRecord, MinimapGeometryRecord, MinimapRunRecord};
 pub use open_file::{open_file_record_to, open_file_run, open_file_tooltip, repo_file_resolve};
 pub use probes::{ProbeStatusRecord, ResolvedFile};
 pub use profile::{ActiveProfile, active_profile};

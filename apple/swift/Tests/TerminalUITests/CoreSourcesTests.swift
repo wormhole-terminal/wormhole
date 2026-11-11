@@ -11,6 +11,7 @@ import Testing
         var scrolled: [Int] = []
         func minimapRead(fits: Int) -> MinimapRead { MinimapRead(total: 100, screen: 30, fits: fits, viewTop: 70, columns: 80, stamp: stamp) }
         func minimapLines() -> [[MinimapRun]] { fetches += 1; return [[MinimapRun(start: 0, end: 3, isText: true, cell: PackedCell())]] }
+        func minimapFolds() -> [ClosedRange<Int>] { [72...90] }
         func scroll(toDisplayOffset offset: Int) { scrolled.append(offset) }
     }
 
@@ -18,6 +19,7 @@ import Testing
         let fake = FakeMinimap()
         let minimap = CoreMinimap(terminal: { fake }, palette: { .spike })
         #expect(minimap.snapshot(fits: 50).lines.count == 1)
+        #expect(minimap.snapshot(fits: 50).folds == [72...90], "a collapsed fold is a tick, read with each snapshot")
         _ = minimap.snapshot(fits: 50)
         #expect(fake.fetches == 1)
         fake.stamp += 1

@@ -28,6 +28,11 @@ public final class FindModel {
 
     public var ticks: [Double] { isOpen ? searcher.ticks() : [] }
 
+    /// The selection's first non-blank line (a find does not cross line breaks): what ⌘F and the context menu's Find… start with.
+    public var selectionSeed: String? {
+        searcher.selectionText()?.split(whereSeparator: \.isNewline).first(where: { !$0.allSatisfy(\.isWhitespace) }).map(String.init)
+    }
+
     /// ⌘F: opens the bar; `seed` (the selection) replaces the query.
     public func open(seed: String? = nil) {
         let reopened = !isOpen
@@ -44,9 +49,7 @@ public final class FindModel {
 
     /// ⌘E: the selection's first non-blank line becomes the query; the keyboard stays where it is.
     public func useSelectionForFind() {
-        guard let line = searcher.selectionText()?.split(whereSeparator: \.isNewline)
-            .first(where: { !$0.allSatisfy(\.isWhitespace) }) else { return }
-        let seed = String(line)
+        guard let seed = selectionSeed else { return }
         if !isOpen { searcher.setActive(true) }
         isOpen = true
         if seed != text { text = seed; search(fresh: true) }

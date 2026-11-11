@@ -69,7 +69,8 @@ extension AppController {
                 if clipboard, window.firstResponder is NSTextView { return "error: \(id.rawValue) in a text field would use the person's clipboard" }
                 InFront.during(window) { _ = NSApp.sendAction(selector, to: nil, from: nil) }
             } else {
-                router.run(id)
+                // As a key of the active app: an action that goes up the responder chain (Copy) finds the window's first responder.
+                InFront.during(window) { router.run(id) }
             }
             return "key \(spec) -> \(id.rawValue) focus=\(settled())"
         }

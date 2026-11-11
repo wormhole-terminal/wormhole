@@ -43,6 +43,10 @@ final class UniFFIScrollback: TerminalFinding, TerminalBlocks, TerminalMinimap {
             columns: Int(read.columns), stamp: read.stamp)
     }
 
+    func minimapFolds() -> [ClosedRange<Int>] {
+        terminal.minimapFolds().map { Int($0.first)...Int($0.last) }
+    }
+
     func minimapLines() -> [[MinimapRun]] {
         terminal.minimapLines().map { runs in
             runs.map {

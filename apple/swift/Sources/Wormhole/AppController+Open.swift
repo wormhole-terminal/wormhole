@@ -62,13 +62,6 @@ extension AppController {
         NSWorkspace.shared.activateFileViewerSelecting([logs])
     }
 
-    /// Edit ▸ Copy on the terminal's selection says what it copied on the notice chip (never the text itself).
-    func copySelection() {
-        let before = Pasteboard.changeCount
-        NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
-        guard window?.firstResponder is MetalTerminalView, Pasteboard.changeCount != before,
-            let text = Pasteboard.text()
-        else { return }
-        hub.notices.post(.copied(text: text))
-    }
+    /// Edit ▸ Copy: the focused control's own; a terminal says what it copied on the notice chip (`onCopied`).
+    func copySelection() { NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil) }
 }

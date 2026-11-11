@@ -11,7 +11,8 @@ public enum Notice: Hashable, Sendable {
 
     public enum Copied: Hashable, Sendable {
         case lines(Int), characters(Int)
-        case programLines(Int), programCharacters(Int)
+        /// A program's write to the clipboard, with its name when it is known (`notice::program_copy`).
+        case programLines(Int, program: String? = nil), programCharacters(Int, program: String? = nil)
         case output(lines: Int)
         case command, path, error
     }
@@ -76,12 +77,12 @@ public enum Notice: Hashable, Sendable {
     }
 
     /// A copy of `text`: lines when it has several, else characters (`Copied::text`).
-    public static func copied(text: String, byProgram: Bool = false) -> Notice {
+    public static func copied(text: String, byProgram: Bool = false, program: String? = nil) -> Notice {
         let lines = text.split(omittingEmptySubsequences: false, whereSeparator: \.isNewline).count
         let trailing = text.hasSuffix("\n") ? 1 : 0
         let count = max(lines - trailing, 0)
-        if count <= 1 { return .copied(byProgram ? .programCharacters(text.count) : .characters(text.count)) }
-        return .copied(byProgram ? .programLines(count) : .lines(count))
+        if count <= 1 { return .copied(byProgram ? .programCharacters(text.count, program: program) : .characters(text.count)) }
+        return .copied(byProgram ? .programLines(count, program: program) : .lines(count))
     }
 
     public static func copiedOutput(_ text: String) -> Notice {

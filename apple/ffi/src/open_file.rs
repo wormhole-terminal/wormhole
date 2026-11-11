@@ -48,7 +48,7 @@ pub fn open_file_run(bundle: String, path: String, line: Option<u32>, app_folder
     run(&bundle, Path::new(&path), line, app_folder.as_deref().map(Path::new))
 }
 
-/// Where a test instance's launches are written instead of started (`DesignSystem.Launcher` writes its own there too).
+/// Where a test instance's launches are written instead of started (`DesignSystem.ExternalOpen` writes its own there too).
 static RECORD: Mutex<Option<PathBuf>> = Mutex::new(None);
 
 /// From now on a launch is a line appended to `file` (`run <program> <arguments>`) and nothing is started; `None` starts

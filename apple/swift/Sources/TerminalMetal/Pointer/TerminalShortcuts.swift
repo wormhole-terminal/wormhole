@@ -33,9 +33,17 @@ enum TerminalShortcut: Equatable {
 }
 
 extension MetalTerminalView {
+    /// What a focused terminal does with a ⌘ key: the table's, else the same key with ⌘ alone (⇧⌘V pastes) unless it is an app key
+    /// (`input.rs:105`).
+    private func shortcut(for event: NSEvent) -> TerminalShortcut? {
+        let characters = event.charactersIgnoringModifiers, flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if let exact = TerminalShortcut.of(characters: characters, keyCode: event.keyCode, flags: flags) { return exact }
+        guard flags.contains(.command), flags != .command, !isAppKey(characters ?? "", flags) else { return nil }
+        return TerminalShortcut.of(characters: characters, keyCode: event.keyCode, flags: .command)
+    }
+
     public override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard window?.firstResponder === self,
-            let shortcut = TerminalShortcut.of(characters: event.charactersIgnoringModifiers, keyCode: event.keyCode, flags: event.modifierFlags)
+        guard window?.firstResponder === self, let shortcut = shortcut(for: event)
         else { return super.performKeyEquivalent(with: event) }
         switch shortcut {
         case .copy: copy(nil)

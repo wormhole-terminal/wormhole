@@ -12,6 +12,8 @@ public final class TerminalViews {
     @ObservationIgnored private let make: @MainActor (TerminalID) -> MetalTerminalView?
     /// Moves when any view's grid changes, so what shows a size (the status bar) is drawn again.
     public private(set) var gridRevision = 0
+    /// The window's text zoom, in points over Settings' size: one for every terminal of the window, a new one adopting it.
+    @ObservationIgnored public internal(set) var zoom = 0.0
 
     /// `make` returns nil when a source cannot start; it reports why itself.
     public init(make: @escaping @MainActor (TerminalID) -> MetalTerminalView?) {
@@ -23,6 +25,7 @@ public final class TerminalViews {
         if let view = views[id] { return view }
         guard let view = make(id) else { return nil }
         view.onGridChange = { [weak self] in self?.gridRevision += 1 }
+        view.setZoom(zoom, animated: false)
         views[id] = view
         return view
     }
@@ -39,6 +42,9 @@ public final class TerminalViews {
             views.removeValue(forKey: id)?.shutdown()
         }
     }
+
+    /// The terminals that have a view.
+    var ids: [TerminalID] { Array(views.keys) }
 
     /// Every terminal's view that exists: settings that reach all of them (fonts, colours) walk it.
     public func forEach(_ body: (MetalTerminalView) -> Void) { views.values.forEach(body) }

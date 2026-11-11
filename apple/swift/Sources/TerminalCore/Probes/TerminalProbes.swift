@@ -21,6 +21,8 @@ public protocol TerminalProbes: AnyObject, Sendable {
     var hasFolds: Bool { get }
     /// The marker was clicked (or VoiceOver's Show): open or close fold `id`.
     func foldToggle(_ id: UInt64) -> Bool
+    /// Fold the output of finished command block `block` (the context menu's Fold Output). Whether a fold was made.
+    func foldBlockOutput(_ block: UInt64) -> Bool
     /// Open every fold; how many lines that showed (0: none was closed).
     func foldShowAll() -> Int
     /// What VoiceOver announces when `lines` lines were shown.

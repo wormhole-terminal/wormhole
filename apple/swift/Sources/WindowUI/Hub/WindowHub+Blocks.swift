@@ -23,6 +23,12 @@ extension WindowHub {
         overlay.redraw()
     }
 
+    /// The context menu's Fold Output on block `id`.
+    public func foldOutput(block id: UInt64?) {
+        guard let id else { return }
+        selectedOverlay?.foldOutput(block: id)
+    }
+
     /// What the context menu knows of the block under the pointer in terminal `id`: none where no command ran.
     public func contextBlock(in id: TerminalID) -> TerminalMenuFacts.Block? {
         guard let overlay = overlay(for: id), let row = terminals.existing(id)?.pointerRow,
@@ -30,7 +36,7 @@ extension WindowHub {
         else { return nil }
         return TerminalMenuFacts.Block(
             id: block.id, hasCommand: !block.command.isEmpty, hasOutput: block.outputLines != nil,
-            atPrompt: overlay.blocks.isAtPrompt)
+            atPrompt: overlay.blocks.isAtPrompt, canFold: foldsOn && block.outputLines != nil)
     }
 }
 

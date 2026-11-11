@@ -38,6 +38,8 @@ public final class WindowHub {
     /// Whether Open in and Reveal start other apps: a test instance only says it did (as the GPUI app's does), so a check
     /// never opens the person's editor or Finder.
     public var launchesApps = true
+    /// The Fold output feature is on (the context menu offers Fold Output).
+    public var foldsOn = false
     /// Esc ends a column drag in progress (the window body sets it): whether there was one.
     @ObservationIgnored var cancelColumnDrag: (() -> Bool)?
     /// The title row's parts as arranged (View ▸ Title Row, the row's own menu).

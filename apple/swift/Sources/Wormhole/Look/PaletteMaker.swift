@@ -23,6 +23,6 @@ enum PaletteMaker {
             ansi: theme.ansi.map(rgb), foreground: rgb(theme.foreground), background: rgb(theme.background),
             cursor: rgb(theme.cursor), selection: rgb(theme.selectionBackground),
             selectionText: theme.selectionForeground.map(rgb), find: find,
-            tones: tones.count == ProbeTone.allCases.count ? tones : nil)
+            tones: tones.count == ProbeTone.allCases.count ? tones : nil, cursorText: theme.cursorText.map(rgb))
     }
 }

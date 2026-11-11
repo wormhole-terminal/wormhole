@@ -68,7 +68,7 @@ extension WindowHub {
     public func find(_ step: FindStep) {
         guard let find = selectedOverlay?.find else { return }
         switch step {
-        case .open: find.open()
+        case .open: find.open(seed: find.selectionSeed)
         case .next: find.step(1)
         case .previous: find.step(-1)
         case .useSelection: find.useSelectionForFind()

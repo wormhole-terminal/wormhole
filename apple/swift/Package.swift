@@ -90,7 +90,7 @@ var targets: [Target] = [
     .target(name: "WordsModel"),
     // The macOS edge as plain values and pure logic: the keymap (core's table as data), the menu bar and context
     // menus, notifications, the ambient surfaces, the folder picker's model, Touch ID's protocol. Foundation only.
-    .target(name: "PlatformModel", resources: [.copy("Resources/keymap.json")]),
+    .target(name: "PlatformModel", dependencies: ["WordsModel"], resources: [.copy("Resources/keymap.json")]),
     // AppKit and UserNotifications around it: menus, hotkey, banners, status item, Dock, quick panel, picker panel.
     .target(name: "PlatformUI", dependencies: ["PlatformModel", "DesignSystem"]),
     .testTarget(name: "PlatformTests", dependencies: ["PlatformModel", "PlatformUI", "DesignSystem"]),

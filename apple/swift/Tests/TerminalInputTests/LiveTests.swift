@@ -77,7 +77,7 @@ final class LiveHarness {
         }
         live.view.copy(nil)
         #expect(NSPasteboard.general.string(forType: .string) == "llo wor")
-        #expect(live.view.hasSelection, "the spans came back after the frame")
+        #expect(live.view.canCopy, "the selection is there after the frame")
         live.drag(from: live.point(row: 0, column: 7), to: live.point(row: 0, column: 7), clicks: 2)
         live.view.copy(nil)
         #expect(NSPasteboard.general.string(forType: .string) == "world")

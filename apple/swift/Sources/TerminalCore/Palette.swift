@@ -5,7 +5,7 @@
 import Foundation
 
 public struct TerminalPalette: Sendable, Equatable {
-    public static let slotCount = 268
+    public static let slotCount = 269
 
     /// RGB, 0...255, in slot order.
     public private(set) var slots: [SIMD3<UInt8>]
@@ -17,6 +17,8 @@ public struct TerminalPalette: Sendable, Equatable {
     /// Text on selected cells; when the theme sets none (`keepsTextInSelection`) the cell's own colour stays.
     public var selectionForeground: SIMD3<UInt8> { slots[260] }
     public let keepsTextInSelection: Bool
+    /// The theme names a colour for the character under a block cursor (`PackedColor.cursorText`).
+    public let hasCursorText: Bool
     /// The current find match's fill and its text (slots the shader resolves), and the tint every other match
     /// lays over its cell's background (blended on the CPU: it is translucent).
     public var findCurrent: SIMD3<UInt8> { slots[261] }
@@ -48,7 +50,7 @@ public struct TerminalPalette: Sendable, Equatable {
     public init(
         ansi: [SIMD3<UInt8>], foreground: SIMD3<UInt8>, background: SIMD3<UInt8>, cursor: SIMD3<UInt8>,
         selection: SIMD3<UInt8>? = nil, selectionText: SIMD3<UInt8>? = nil, find: FindColors? = nil,
-        tones: [SIMD3<UInt8>]? = nil
+        tones: [SIMD3<UInt8>]? = nil, cursorText: SIMD3<UInt8>? = nil
     ) {
         precondition(ansi.count == 16)
         var table = ansi
@@ -73,6 +75,9 @@ public struct TerminalPalette: Sendable, Equatable {
         table.append(find.currentText)
         // Without the theme's tokens: the closest of its own colours (link blue, red, yellow, green, grey), as a bare theme does.
         table.append(contentsOf: tones ?? [4, 1, 3, 2, 8].map { ansi[$0] })
+        // The character inside a block cursor: the theme's colour, else the cell's own background (`hasCursorText`).
+        table.append(cursorText ?? background)
+        hasCursorText = cursorText != nil
         findMatch = find.match
         findMatchAlpha = find.matchAlpha
         keepsTextInSelection = selectionText == nil

@@ -26,7 +26,7 @@ public final class CoreMinimap: MinimapSource {
         if cached?.stamp != read.stamp { cached = (read.stamp, terminal.minimapLines()) }
         return MinimapSnapshot(
             geometry: MinimapGeometry(total: read.total, screen: read.screen, fits: read.fits, viewTop: read.viewTop),
-            columns: read.columns, lines: cached?.lines ?? [])
+            columns: read.columns, lines: cached?.lines ?? [], folds: terminal.minimapFolds())
     }
 
     public func scroll(toDisplayOffset offset: Int) { terminal()?.scroll(toDisplayOffset: offset) }

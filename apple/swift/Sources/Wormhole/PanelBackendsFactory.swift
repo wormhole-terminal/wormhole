@@ -50,8 +50,9 @@ enum PanelBackendsFactory {
             let project = backends.project
             let real = try? GitBridge.makeBackends(
                 worktreeAllowed: { await project.worktreeRefusal(of: $0) },
-                // A worktree was made: its folder gets a terminal, which first runs the trusted project's setup (its ports,
-                // `environment`, are not passed on yet).
+                // A worktree was made: its folder gets a terminal, which first runs the trusted project's setup. Its ports
+                // (`WORMHOLE_PORT`, `WORMHOLE_PORTS`) are in the shell's environment: the FFI's `spawn_options` reads them from the
+                // worktrees Wormhole made, for any terminal started in or under the folder (as the GPUI spawn hook does).
                 worktreeCreated: { made, _ in
                     let setup = await project.worktreeSetup(of: made.repo)
                     await MainActor.run { _ = store.send(.newTerminalIn(made.folder)) }

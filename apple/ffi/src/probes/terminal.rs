@@ -34,6 +34,12 @@ impl Terminal {
         self.with_pty(|pty| pty.fold_toggle(id)).unwrap_or(false)
     }
 
+    /// Fold the output of finished command block `block` (the context menu's Fold Output): the person's own fold, which only
+    /// what `wormhole_term::folds` allows becomes (the live screen never). Whether a fold was made.
+    pub fn fold_block_output(&self, block: u64) -> bool {
+        self.with_pty(|pty| pty.fold_block_output(block).is_ok()).unwrap_or(false)
+    }
+
     /// Edit → Show Hidden Lines: open every fold of this terminal. How many lines that showed (0: none was closed).
     pub fn fold_show_all(&self) -> u32 {
         let hidden: usize = self.with_snapshot(|snapshot| {

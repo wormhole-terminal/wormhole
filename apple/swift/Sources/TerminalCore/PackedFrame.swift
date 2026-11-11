@@ -86,6 +86,8 @@ public enum PackedColor {
     public static let findCurrentText: UInt32 = 262
     /// The first of the five slots of a Probe's tones (`ProbeTone`).
     public static let toneBase = 263
+    /// The character inside a block cursor, when the theme sets one (`TerminalPalette.hasCursorText`).
+    public static let cursorText: UInt32 = 268
     @inline(__always) public static func tone(_ tone: ProbeTone) -> UInt32 { UInt32(toneBase + tone.rawValue) }
 
     @inline(__always) public static func named(_ slot: Int) -> UInt32 { UInt32(slot) }

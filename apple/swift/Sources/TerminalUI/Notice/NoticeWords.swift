@@ -7,8 +7,8 @@ extension Notice {
             switch copied {
             case let .lines(n): L10n.noticeCopiedLines(n)
             case let .characters(n): L10n.noticeCopiedCharacters(n)
-            case let .programLines(n): L10n.noticeProgramLines(n)
-            case let .programCharacters(n): L10n.noticeProgramCharacters(n)
+            case let .programLines(n, program): L10n.noticeProgramLines(n, program)
+            case let .programCharacters(n, program): L10n.noticeProgramCharacters(n, program)
             case let .output(lines): L10n.noticeCopiedOutput(lines)
             case .command: L10n.noticeCopiedCommand
             case .path: L10n.noticeCopiedPath

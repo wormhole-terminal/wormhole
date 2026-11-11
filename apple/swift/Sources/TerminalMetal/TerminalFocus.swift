@@ -5,8 +5,11 @@
 import AppKit
 
 extension MetalTerminalView {
+    /// The view has the keyboard while its window is key and it is the first responder: one pane of a split, not all of them.
+    var hasFocus: Bool { window?.isKeyWindow == true && window?.firstResponder === self }
+
     @objc func keyStateChanged(_ note: Notification) {
-        renderer.setFocused(window?.isKeyWindow ?? false)
+        renderer.setFocused(hasFocus)
         reportOnScreen()
         if window?.isKeyWindow != true { endComposition() }
         reportFocus()
@@ -26,6 +29,7 @@ extension MetalTerminalView {
     public override func becomeFirstResponder() -> Bool {
         renderer.setFocused(true)
         reportFocus()
+        updateBlink(focused: true)
         requestRedraw()
         return true
     }
@@ -34,13 +38,14 @@ extension MetalTerminalView {
         endComposition()
         renderer.setFocused(false)
         reportFocus()
+        updateBlink(focused: false)
         requestRedraw()
         return true
     }
 
     /// The view has the keyboard while its window is key and it is the first responder.
     private func reportFocus() {
-        let focused = window?.isKeyWindow == true && window?.firstResponder === self
+        let focused = hasFocus
         guard focused != focusReported else { return }
         focusReported = focused
         interaction?.focusChanged(focused)

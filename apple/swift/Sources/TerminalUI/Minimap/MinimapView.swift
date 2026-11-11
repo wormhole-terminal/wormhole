@@ -12,10 +12,14 @@ public struct MinimapView: View {
     let source: MinimapSource
     /// Bumped by the host whenever the terminal printed or scrolled, so the snapshot is read again.
     let revision: Int
+    /// A press on it gives the terminal the keyboard (`render/minimap.rs:101`).
+    var onPress: () -> Void = {}
     @Environment(\.tokens) private var tokens
     @State private var grab: CGFloat?
 
-    public init(source: MinimapSource, revision: Int) { (self.source, self.revision) = (source, revision) }
+    public init(source: MinimapSource, revision: Int, onPress: @escaping () -> Void = {}) {
+        (self.source, self.revision, self.onPress) = (source, revision, onPress)
+    }
 
     public var body: some View {
         GeometryReader { proxy in
@@ -47,6 +51,14 @@ public struct MinimapView: View {
                 context.fill(Path(rect), with: .color(color(run)))
             }
         }
+        let top = snapshot.geometry.first, shown = snapshot.lines.count
+        for fold in snapshot.folds {
+            let (first, last) = (max(fold.lowerBound, top), min(fold.upperBound, top + shown - 1))
+            guard first <= last else { continue }
+            let tick = CGRect(x: 0, y: MinimapGeometry.linePitch * CGFloat(first - top), width: MinimapGeometry.linePitch,
+                              height: MinimapGeometry.linePitch * CGFloat(last - first + 1))
+            context.fill(Path(tick), with: .color(tokens.scrollbarThumb))
+        }
         guard snapshot.geometry.scrolls else { return }
         let slider = snapshot.geometry.slider
         context.fill(Path(CGRect(x: 0, y: slider.top, width: MinimapGeometry.width, height: slider.height)),
@@ -72,6 +84,7 @@ public struct MinimapView: View {
         DragGesture(minimumDistance: 0, coordinateSpace: .local)
             .onChanged { value in
                 if grab == nil {
+                    onPress()
                     let slider = g.slider
                     if (slider.top..<slider.top + slider.height).contains(value.startLocation.y) {
                         grab = value.startLocation.y - slider.top

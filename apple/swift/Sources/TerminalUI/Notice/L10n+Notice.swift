@@ -10,11 +10,17 @@ extension L10n {
     static func noticeCopiedOutput(_ n: Int) -> String {
         n == 1 ? tr("notice-copied-output-one", "Copied output, 1 line") : tr("notice-copied-output-other", "Copied output, \(n) lines")
     }
-    static func noticeProgramLines(_ n: Int) -> String {
-        n == 1 ? tr("notice-copied-program-lines-one", "A program copied 1 line") : tr("notice-copied-program-lines-other", "A program copied \(n) lines")
+    static func noticeProgramLines(_ n: Int, _ program: String?) -> String {
+        if let program {
+            return n == 1 ? tr("notice-copied-named-lines-one", "\(program) copied 1 line") : tr("notice-copied-named-lines-other", "\(program) copied \(n) lines")
+        }
+        return n == 1 ? tr("notice-copied-program-lines-one", "A program copied 1 line") : tr("notice-copied-program-lines-other", "A program copied \(n) lines")
     }
-    static func noticeProgramCharacters(_ n: Int) -> String {
-        n == 1 ? tr("notice-copied-program-characters-one", "A program copied 1 character") : tr("notice-copied-program-characters-other", "A program copied \(n) characters")
+    static func noticeProgramCharacters(_ n: Int, _ program: String?) -> String {
+        if let program {
+            return n == 1 ? tr("notice-copied-named-characters-one", "\(program) copied 1 character") : tr("notice-copied-named-characters-other", "\(program) copied \(n) characters")
+        }
+        return n == 1 ? tr("notice-copied-program-characters-one", "A program copied 1 character") : tr("notice-copied-program-characters-other", "A program copied \(n) characters")
     }
     static var noticeCopiedCommand: String { tr("notice-copied-command", "Copied command") }
     static var noticeCopiedPath: String { tr("notice-copied-path", "Copied path") }

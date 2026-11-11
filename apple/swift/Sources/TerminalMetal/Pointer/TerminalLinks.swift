@@ -12,9 +12,9 @@ public enum LinkOpener {
     @MainActor public static func system(_ target: OpenTarget) {
         switch target {
         case .url(let string):
-            if let url = URL(string: string) { Launcher.open(url) }
+            if let url = URL(string: string) { ExternalOpen.open(url) }
         case .reveal(let path):
-            Launcher.reveal([URL(fileURLWithPath: path)])
+            ExternalOpen.reveal([URL(fileURLWithPath: path)])
         case .refused:
             break
         }

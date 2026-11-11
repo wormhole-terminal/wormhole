@@ -13,7 +13,6 @@ extension MetalTerminalView {
         let spans = interaction.selectionSpans()
         renderer.setSelection(spans)
         selectionMayExist = !spans.isEmpty
-        hasSelection = selectionMayExist
     }
 
     // MARK: Edit menu actions (the responder chain finds these)
@@ -39,7 +38,7 @@ extension MetalTerminalView {
 
     public func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
         switch item.action {
-        case #selector(copy(_:)): hasSelection
+        case #selector(copy(_:)): canCopy
         case #selector(paste(_:)): Pasteboard.canPaste
         default: true
         }

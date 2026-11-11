@@ -21,6 +21,13 @@ extension TerminalOverlay {
         Self.announce(words)
     }
 
+    /// The context menu's Fold Output on block `id`; a refusal (the rules in `wormhole_term::folds`) is not shown.
+    func foldOutput(block id: UInt64) {
+        guard view?.source.probes?.foldBlockOutput(id) == true else { return }
+        view?.requestRedraw()
+        syncFolds()
+    }
+
     /// Edit ▸ Show Hidden Lines.
     func showHiddenLines() {
         guard let view else { return }

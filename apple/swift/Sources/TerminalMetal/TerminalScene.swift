@@ -49,6 +49,7 @@ final class TerminalScene {
 
     /// The blink phase and whether the window is key: both only change which rows are rebuilt.
     private(set) var cursorOn = true
+    private(set) var cursorHidden = false
     private(set) var focused = true
     private(set) var marked: MarkedText?
     /// The selection and the hovered link, per row; setting one rebuilds only the rows it changed on.
@@ -60,6 +61,7 @@ final class TerminalScene {
         self.text = text
         self.palette = palette
         text.builder.levels = Self.levels(palette)
+        text.builder.cursorTextSlot = palette.hasCursorText
     }
 
     /// The stem dilation of text in each palette slot: a palette whose levels differ rebuilds every row's glyphs.
@@ -127,6 +129,13 @@ final class TerminalScene {
         markCursorRow()
     }
 
+    /// The program ended: no cursor is drawn any more (`render/cursor.rs:66`).
+    func setCursorHidden(_ value: Bool) {
+        guard value != cursorHidden else { return }
+        cursorHidden = value
+        markCursorRow()
+    }
+
     func setFocused(_ value: Bool) {
         guard value != focused else { return }
         focused = value
@@ -150,6 +159,10 @@ final class TerminalScene {
     func setPalette(_ value: TerminalPalette) {
         guard value != palette else { return }
         palette = value
+        if text.builder.cursorTextSlot != value.hasCursorText {
+            text.builder.cursorTextSlot = value.hasCursorText
+            markCursorRow()
+        }
         let levels = Self.levels(value)
         if levels != text.builder.levels {
             text.builder.levels = levels
@@ -179,6 +192,7 @@ final class TerminalScene {
         guard context !== text else { return }
         text = context
         context.builder.levels = Self.levels(palette)
+        context.builder.cursorTextSlot = palette.hasCursorText
         markAllDirty()
         rebuildDirty()
         touch()
@@ -233,7 +247,7 @@ final class TerminalScene {
         dirty[row] = false
         let start = grid + row * columns
         var draw: CursorDraw?
-        if let cursor, cursor.row == row, cursorOn || !cursor.blinking {
+        if let cursor, cursor.row == row, !cursorHidden, cursorOn || !cursor.blinking {
             draw = CursorDraw(column: cursor.column, shape: cursor.shape, wide: cursor.wide, focused: focused)
         }
         let composing = marked != nil && cursor?.row == row && marked?.text.isEmpty == false

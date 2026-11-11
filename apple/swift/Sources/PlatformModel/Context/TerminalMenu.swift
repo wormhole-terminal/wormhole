@@ -3,6 +3,7 @@
 // menu shows what the menu bar does.
 
 import Foundation
+import WordsModel
 
 public struct TerminalMenuFacts: Sendable, Equatable {
     public struct Block: Sendable, Equatable {
@@ -11,8 +12,10 @@ public struct TerminalMenuFacts: Sendable, Equatable {
         public var hasOutput: Bool
         /// The shell waits at its prompt, which is when a command can be typed there.
         public var atPrompt: Bool
-        public init(id: UInt64, hasCommand: Bool, hasOutput: Bool, atPrompt: Bool) {
-            (self.id, self.hasCommand, self.hasOutput, self.atPrompt) = (id, hasCommand, hasOutput, atPrompt)
+        /// The Fold output feature is on and the block has output to fold.
+        public var canFold: Bool
+        public init(id: UInt64, hasCommand: Bool, hasOutput: Bool, atPrompt: Bool, canFold: Bool = false) {
+            (self.id, self.hasCommand, self.hasOutput, self.atPrompt, self.canFold) = (id, hasCommand, hasOutput, atPrompt, canFold)
         }
     }
 
@@ -27,39 +30,40 @@ public struct TerminalMenuFacts: Sendable, Equatable {
 
 public enum TerminalMenu {
     public enum Kind: String, Sendable, CaseIterable {
-        case openLink, copyLink, copy, paste, selectAll, find, copyCommand, copyOutput, putCommandAtPrompt
+        case openLink, copyLink, copy, paste, selectAll, find, copyCommand, copyOutput, putCommandAtPrompt, foldOutput
         case splitRight, splitDown, clear
         public var key: String { "terminal.\(rawValue)" }
     }
 
     public static func nodes(_ facts: TerminalMenuFacts, keymap: Keymap = .shared) -> [MenuNode] {
         var menu = ContextMenuList()
-        func item(_ title: String, _ kind: Kind, _ symbol: String, _ id: ActionID? = nil, enabled: Bool = true, argument: String? = nil, subject: Int64? = nil) {
-            menu.item(title, kind.key, subject: subject, argument: argument, enabled: enabled, icon: .symbol(symbol), key: id.flatMap(keymap.key))
+        func item(_ message: StaticString, _ english: String, _ kind: Kind, _ symbol: String, _ id: ActionID? = nil, enabled: Bool = true, argument: String? = nil, subject: Int64? = nil) {
+            menu.item(Words.text(message, fallback: english), kind.key, subject: subject, argument: argument, enabled: enabled, icon: .symbol(symbol), key: id.flatMap(keymap.key))
         }
         if let link = facts.link {
-            item("Open Link", .openLink, "safari", argument: link)
-            item("Copy Link", .copyLink, "link", argument: link)
+            item("terminal-menu-open-link", "Open Link", .openLink, "safari", argument: link)
+            item("terminal-menu-copy-link", "Copy Link", .copyLink, "link", argument: link)
         }
         menu.separator()
-        item("Copy", .copy, "doc.on.doc", "copy", enabled: facts.canCopy)
-        item("Paste", .paste, "doc.on.clipboard", "paste", enabled: facts.canPaste)
-        item("Select All", .selectAll, "selection.pin.in.out", "selectAll")
+        item("terminal-menu-copy", "Copy", .copy, "doc.on.doc", "copy", enabled: facts.canCopy)
+        item("terminal-menu-paste", "Paste", .paste, "doc.on.clipboard", "paste", enabled: facts.canPaste)
+        item("terminal-menu-select-all", "Select All", .selectAll, "selection.pin.in.out", "selectAll")
         menu.separator()
-        item("Find…", .find, "magnifyingglass", "find")
+        item("terminal-menu-find", "Find…", .find, "magnifyingglass", "find")
         if let block = facts.block {
             menu.separator()
             let subject = Int64(bitPattern: block.id)
-            item("Copy Command", .copyCommand, "terminal", "copyCommand", enabled: block.hasCommand, subject: subject)
-            item("Copy Output", .copyOutput, "text.alignleft", "copyOutput", enabled: block.hasOutput, subject: subject)
-            item("Put Command at Prompt", .putCommandAtPrompt, "arrow.turn.down.left", "rerunCommand",
+            item("terminal-menu-copy-command", "Copy Command", .copyCommand, "terminal", "copyCommand", enabled: block.hasCommand, subject: subject)
+            item("terminal-menu-copy-output", "Copy Output", .copyOutput, "text.alignleft", "copyOutput", enabled: block.hasOutput, subject: subject)
+            item("terminal-menu-put-command-at-prompt", "Put Command at Prompt", .putCommandAtPrompt, "arrow.turn.down.left", "rerunCommand",
                 enabled: block.hasCommand && block.atPrompt, subject: subject)
+            if block.canFold { item("terminal-menu-fold-output", "Fold Output", .foldOutput, "rectangle.compress.vertical", subject: subject) }
         }
         menu.separator()
-        item("Split Right", .splitRight, "rectangle.split.2x1", "splitRight", enabled: facts.splitRight)
-        item("Split Down", .splitDown, "rectangle.split.1x2", "splitDown", enabled: facts.splitDown)
+        item("terminal-menu-split-right", "Split Right", .splitRight, "rectangle.split.2x1", "splitRight", enabled: facts.splitRight)
+        item("terminal-menu-split-down", "Split Down", .splitDown, "rectangle.split.1x2", "splitDown", enabled: facts.splitDown)
         menu.separator()
-        item("Clear Buffer", .clear, "eraser", "clearBuffer")
+        item("terminal-menu-clear", "Clear Buffer", .clear, "eraser", "clearBuffer")
         return menu.finished
     }
 }

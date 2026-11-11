@@ -61,6 +61,7 @@ extension AppController {
             guard n.count == 4 else { return reply("error: select-cells ROW COL ROW COL") }
             view.select(from: (n[0], n[1]), to: (n[2], n[3]))
             reply("select-cells \(argument)")
+        case "size-chip": reply("size-chip " + hub.sizeChips.joined(separator: ", "))
         case "state": reply(state(view))
         case "geometry": reply(geometry(view))
         case "screen":
@@ -101,7 +102,7 @@ extension AppController {
             + "frames_drawn=\(stats.framesDrawn) ticks=\(stats.ticks) wakes=\(stats.wakes) pauses=\(stats.pauses) "
             + "busy_skips=\(stats.busySkips) blink_fires=\(stats.blinkFires) link=\(view.isLinkRunning ? "running" : "paused") "
             + "words_shaped=\(counters.wordsShaped) word_hits=\(counters.wordHits) glyphs_rasterised=\(counters.glyphsRasterised) "
-            + "atlas_resets=\(counters.atlasResets) "
+            + "atlas_resets=\(counters.atlasResets) meta=\(view.optionAsMeta) "
             + "terminals=\(shown.live.count) selected=\(shown.selected.map(String.init) ?? "none") "
             + "sidebar=\(shown.sidebarVisible) panel=\(shown.panelVisible) tab=\(shown.panelTab.rawValue) "
             + "window=\(window?.windowNumber ?? 0) " + lookState + " " + hub.paneState + " focus=\(hub.focus.detail)" + pendingQuestionState

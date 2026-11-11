@@ -56,6 +56,9 @@ import Testing
         #expect(Notice.copied(text: "one\ntwo\nthree\n") == .copied(.lines(3)))
         #expect(Notice.copied(text: "hello") == .copied(.characters(5)))
         #expect(Notice.copied(text: "hello", byProgram: true) == .copied(.programCharacters(5)))
+        #expect(Notice.copied(text: "hello", byProgram: true, program: "ssh").words == "ssh copied 5 characters")
+        #expect(Notice.copied(text: "a\nb", byProgram: true, program: "ssh").words == "ssh copied 2 lines")
+        #expect(Notice.copied(text: "hello", byProgram: true).words == "A program copied 5 characters")
         #expect(Notice.copiedOutput("a\nb") == .copied(.output(lines: 2)))
         #expect(Notice.copiedOutput("") == .copied(.output(lines: 1)))
     }

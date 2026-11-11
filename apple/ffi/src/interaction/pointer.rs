@@ -120,15 +120,15 @@ impl Terminal {
             if let Some(bytes) = mouse::encode(&input, mode) {
                 pty.write(bytes);
             }
-            if event.button == PointerButton::Left {
-                let mut selected = self.interaction.app_selection();
-                match action {
-                    mouse::MouseAction::Press => selected.pressed(event.row as usize),
-                    mouse::MouseAction::Release => {
-                        selected.released(event.row as usize, std::time::Instant::now())
-                    }
-                    mouse::MouseAction::Motion => {}
+            let mut selected = self.interaction.app_selection();
+            match (event.button, action) {
+                (PointerButton::Left, mouse::MouseAction::Press) => selected.pressed(event.row as usize),
+                (PointerButton::Left, mouse::MouseAction::Release) => {
+                    selected.released(event.row as usize, std::time::Instant::now())
                 }
+                // Another button's press ends the program's own selection too (`terminal_view/input.rs:313`).
+                (PointerButton::Middle | PointerButton::Right, mouse::MouseAction::Press) => selected.forget(),
+                _ => {}
             }
             true
         })

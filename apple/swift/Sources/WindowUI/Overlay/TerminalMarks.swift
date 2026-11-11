@@ -29,7 +29,7 @@ struct TerminalMarks: View {
             }
             if minimapShown {
                 // The pane's padding above and below, as the GPUI minimap sits (`render/minimap.rs`: top and bottom PADDING_Y).
-                MinimapView(source: overlay.minimap, revision: overlay.revision)
+                MinimapView(source: overlay.minimap, revision: overlay.revision) { overlay.view?.window?.makeFirstResponder(overlay.view) }
                     .padding(.vertical, MetalRenderer.padding)
                     .frame(maxHeight: .infinity)
                     .frame(maxWidth: .infinity, alignment: .trailing)

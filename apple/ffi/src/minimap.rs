@@ -51,8 +51,26 @@ pub struct MinimapRunRecord {
     pub flags: u32,
 }
 
+/// A collapsed fold as lines of the minimap's history, first to last (`render/minimap.rs:57`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct MinimapFoldRecord {
+    pub first: u32,
+    pub last: u32,
+}
+
 #[uniffi::export]
 impl Terminal {
+    /// The collapsed folds in the lines the last `minimap_geometry` read: a tick at their left edge.
+    pub fn minimap_folds(&self) -> Vec<MinimapFoldRecord> {
+        let state = self.minimap.state.lock().unwrap_or_else(PoisonError::into_inner);
+        state
+            .snapshot
+            .folds
+            .iter()
+            .map(|&(first, last)| MinimapFoldRecord { first: first as u32, last: last as u32 })
+            .collect()
+    }
+
     /// Bring the minimap's copy up to date for a minimap `fits` lines tall; cheap when nothing changed.
     pub fn minimap_geometry(&self, fits: u32) -> MinimapGeometryRecord {
         let mut state = self.minimap.state.lock().unwrap_or_else(PoisonError::into_inner);

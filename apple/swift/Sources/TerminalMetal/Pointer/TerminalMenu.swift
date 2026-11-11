@@ -25,7 +25,7 @@ extension MetalTerminalView {
     }
 
     /// There is a selection to copy.
-    public var canCopy: Bool { hasSelection }
+    public var canCopy: Bool { interaction?.selectionText()?.isEmpty == false }
 
     /// Puts the pointer over the middle of viewport cell (`row`, `column`), as a move there would: what the context menu offers
     /// for what is under it (a link, a command block) follows. For the control folder, which has no pointer to move.

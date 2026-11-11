@@ -140,6 +140,16 @@ import Testing
         #expect(row.command(1) == ContextAction("group.colour", subject: 3, argument: "1"))
     }
 
+    @Test func foldOutputIsOfferedOnlyOverABlockThatCanBeFolded() {
+        var facts = TerminalMenuFacts()
+        facts.block = .init(id: 4, hasCommand: true, hasOutput: true, atPrompt: true)
+        #expect(!lines(TerminalMenu.nodes(facts)).contains("Fold Output"))
+        facts.block?.canFold = true
+        let shown = lines(TerminalMenu.nodes(facts))
+        #expect(shown.contains("Fold Output"))
+        #expect(shown.firstRange(of: "Put Command at Prompt")!.lowerBound < shown.firstRange(of: "Fold Output")!.lowerBound)
+    }
+
     @Test func theTerminalMenuShowsTheKeysOfTheMenuBar() {
         var facts = TerminalMenuFacts()
         facts.canCopy = true

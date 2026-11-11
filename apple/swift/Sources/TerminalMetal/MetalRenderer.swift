@@ -248,6 +248,7 @@ public final class MetalRenderer {
     }
     public func setBlinkFaded(_ faded: Bool) { setBlinkFadedChanges(faded) }
     public func setFocused(_ focused: Bool) { scene.setFocused(focused); scene.rebuildDirty() }
+    public func setCursorHidden(_ hidden: Bool) { scene.setCursorHidden(hidden); scene.rebuildDirty() }
     func setMarked(_ marked: MarkedText?) {
         scene.setMarked(marked)
         scene.rebuildDirty()

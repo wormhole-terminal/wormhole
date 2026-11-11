@@ -9,9 +9,11 @@ public struct MinimapSnapshot: Equatable, Sendable {
     public var columns: Int
     /// The runs of each line shown, from `geometry.first` on.
     public var lines: [[MinimapRun]]
+    /// The collapsed output folds as lines from the oldest one: a tick at the left edge, as long as the lines the view folds into one marker.
+    public var folds: [ClosedRange<Int>]
 
-    public init(geometry: MinimapGeometry, columns: Int, lines: [[MinimapRun]]) {
-        (self.geometry, self.columns, self.lines) = (geometry, columns, lines)
+    public init(geometry: MinimapGeometry, columns: Int, lines: [[MinimapRun]], folds: [ClosedRange<Int>] = []) {
+        (self.geometry, self.columns, self.lines, self.folds) = (geometry, columns, lines, folds)
     }
 }
 

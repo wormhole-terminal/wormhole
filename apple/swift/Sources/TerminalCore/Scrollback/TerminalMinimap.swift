@@ -36,6 +36,8 @@ public protocol TerminalMinimap: AnyObject, Sendable {
     func minimapRead(fits: Int) -> MinimapRead
     /// The runs of each line shown, from the geometry's first line on.
     func minimapLines() -> [[MinimapRun]]
+    /// The collapsed folds as lines from the oldest one (first, last): the minimap marks each with a tick at its left edge.
+    func minimapFolds() -> [ClosedRange<Int>]
     /// Scrolls the view so it is `offset` lines into the history (0 the live screen).
     func scroll(toDisplayOffset offset: Int)
 }

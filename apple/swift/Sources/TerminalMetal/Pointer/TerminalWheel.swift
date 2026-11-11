@@ -8,6 +8,7 @@ import TerminalCore
 extension MetalTerminalView {
     public override func scrollWheel(with event: NSEvent) {
         guard let interaction else { return }
+        onInput?()
         let grid = cellGrid
         let precise = event.hasPreciseScrollingDeltas
         let lines = precise ? event.scrollingDeltaY / grid.cellHeight : event.scrollingDeltaY

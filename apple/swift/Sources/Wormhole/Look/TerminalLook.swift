@@ -6,6 +6,7 @@
 import AppKit
 import DesignSystem
 import Observation
+import PlatformModel
 import TerminalCore
 import TerminalMetal
 import WindowUI
@@ -19,8 +20,12 @@ final class TerminalLook {
     private(set) var bellColor = NSColor.systemOrange
     /// The glow's corners are the pane's (`radius_lg`, as `bell_edge`).
     private(set) var bellRadius: CGFloat = 8
+    /// The tint over a pane while files are dragged over it (`state.highlight`).
+    private(set) var dropTint = NSColor.controlAccentColor.withAlphaComponent(0.2)
     /// What a program may do with the clipboard (Settings → Clipboard): the core's defaults until Settings says.
     private(set) var clipboard: (read: ClipboardReadRule, write: Bool) = (.ask, true)
+    /// Which Option key types Meta (Settings → Terminal): none, as the core's default is.
+    private(set) var optionAsMeta = OptionAsMeta.off
     /// The terminals of every window, asked for when a change is to reach them.
     private let terminals: () -> [TerminalViews]
     private let themes: ThemeStore
@@ -44,6 +49,13 @@ final class TerminalLook {
         terminals().forEach { $0.forEach { $0.bell = bell } }
     }
 
+    /// `option_as_meta` from Settings, which also reads the boolean older config files have (`true` is both).
+    func use(optionAsMeta value: OptionAsMeta) {
+        guard value != optionAsMeta else { return }
+        optionAsMeta = value
+        terminals().forEach { $0.forEach { $0.optionAsMeta = value } }
+    }
+
     /// `clipboard_read` and `clipboard_write` from Settings.
     func use(clipboardRead read: ClipboardReadRule, write: Bool) {
         guard (read, write) != clipboard else { return }
@@ -61,10 +73,25 @@ final class TerminalLook {
             (bellColor, bellRadius) = (glow, radius)
             terminals().forEach { $0.forEach { ($0.bellColor, $0.bellCornerRadius) = (glow, radius) } }
         }
+        if let highlight = tokens.rgba(named: "state.highlight").map({ NSColor(red: $0.red, green: $0.green, blue: $0.blue, alpha: $0.alpha) }), highlight != dropTint {
+            dropTint = highlight
+            terminals().forEach { $0.forEach { $0.dropTint = highlight } }
+        }
         let next = PaletteMaker.palette(for: tokens)
         guard next != palette else { return }
         palette = next
         terminals().forEach { $0.forEach { $0.setPalette(next) } }
+    }
+
+    /// Whether the menus own this key: an entry of the app's scope has it (`keymap::action_for(key, Scope::App)`).
+    private static func isAppKey(_ name: String, _ flags: NSEvent.ModifierFlags) -> Bool {
+        var mods: KeyMods = []
+        if flags.contains(.shift) { mods.insert(.shift) }
+        if flags.contains(.command) { mods.insert(.command) }
+        if flags.contains(.control) { mods.insert(.control) }
+        if flags.contains(.option) { mods.insert(.option) }
+        let spec = KeySpec(mods, name.lowercased())
+        return Keymap.shared.entries.contains { $0.scope == .app && $0.keys.contains { $0.sameKey(spec) } }
     }
 
     /// A terminal that was just made.
@@ -72,6 +99,9 @@ final class TerminalLook {
         if let fonts { view.setFonts(fonts) }
         if let palette { view.setPalette(palette) }
         view.bell = bell
+        view.optionAsMeta = optionAsMeta
+        view.isAppKey = Self.isAppKey
+        view.dropTint = dropTint
         view.bellColor = bellColor
         view.bellCornerRadius = bellRadius
         view.setClipboardRules(read: clipboard.read, writeAllowed: clipboard.write)

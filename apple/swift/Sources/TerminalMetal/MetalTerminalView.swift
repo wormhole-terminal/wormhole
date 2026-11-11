@@ -33,6 +33,8 @@ public final class MetalTerminalView: NSView {
     public var onClipboardAskClosed: (() -> Void)?
     /// The pointer is over viewport row `row` of the grid (`nil`: it left, or is past the grid): block hover.
     public var onPointerRow: ((Int?) -> Void)?
+    /// Typing, a paste or the wheel: the view is not where the last ⌘↑ / ⌘↓ left it (the block cursor is forgotten).
+    public var onInput: (() -> Void)?
     /// Find's bar is open: the matches among the viewport rows are painted after each frame (`+Find`).
     public var findActive = false { didSet { if findActive != oldValue { refreshFound() } } }
     /// Width the grid leaves free on the right for the minimap, which takes the scroll bar's place (`+Minimap`).
@@ -44,7 +46,10 @@ public final class MetalTerminalView: NSView {
     public internal(set) var statistics = ViewStatistics()
     public var isLinkRunning: Bool { link.map { !$0.isPaused } ?? false }
     /// Which Option key sends ESC before the character.
-    public var optionAsMeta = OptionAsMeta.left
+    /// `option_as_meta` (Settings): off until the setting says otherwise, as the core's default is.
+    public var optionAsMeta = OptionAsMeta.off
+    /// Whether a ⌘ key (its name, its modifiers) is one the application's menus own: the terminal never takes those for its own.
+    public var isAppKey: (String, NSEvent.ModifierFlags) -> Bool = { _, _ in false }
     /// A grid of this size whatever the view's size (the measuring mode's 200 x 69).
     public var fixedGrid: (cols: Int, rows: Int)?
     /// How long a blinking cursor is on and off; `nil` keeps it steady (xterm's and macOS's own text cursor rate).
@@ -58,6 +63,9 @@ public final class MetalTerminalView: NSView {
     /// Which parts of the bell happen, and the colour and corner of its glow (the host's tokens).
     public var bell = BellStyle()
     public var bellColor = NSColor.systemOrange
+    /// The tint over the pane while files are dragged over it (the theme's `state.highlight`); the layer exists only while it shows.
+    public var dropTint = NSColor.controlAccentColor.withAlphaComponent(0.2)
+    var dropLayer: CALayer?
     public var bellCornerRadius: CGFloat = 8
 
     // Text zoom and fonts (see MetalTerminalView+Zoom).
@@ -97,7 +105,6 @@ public final class MetalTerminalView: NSView {
     var pointer = PointerState()
     /// A selection may exist: ask for its spans after each frame until one comes back empty.
     var selectionMayExist = false
-    var hasSelection = false
     /// Find's matches are painted (`refreshFound`).
     var foundShown = false
     /// A span shows its text under the pointer (`updateReveal`): the pointer's leaving must say so.
@@ -338,11 +345,23 @@ public final class MetalTerminalView: NSView {
             case .bell:
                 ringBell()
                 onBell?()
-            case .exited(let code): onExit?(code)
+            case .exited(let code):
+                renderer.setCursorHidden(true)
+                requestRedraw()
+                onExit?(code)
             case .clipboardWrite, .clipboardRead, .clipboardAsk, .clipboardAskClosed: handleClipboard(event)
             }
         }
+        if output { refreshPointerShape() }
         return output
+    }
+
+    /// A program turned mouse tracking on or off: the arrow and the I-beam trade places (`render/mod.rs:267`).
+    private func refreshPointerShape() {
+        let takes = interaction?.takesPointer ?? false
+        guard takes != pointer.programTakes else { return }
+        pointer.programTakes = takes
+        window?.invalidateCursorRects(for: self)
     }
 
     /// Fetch, build, draw: one frame, timed by phase (`FrameStats.swift` says what each is). With `force`,

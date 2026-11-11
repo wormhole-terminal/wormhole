@@ -13,9 +13,9 @@ extension AppController {
         guard let window = pointerWindow else { return false }
         func at(_ i: Int) -> NSPoint { injector.location(numbers[i], numbers[i + 1], in: window) }
         switch (command, numbers.count) {
-        case ("click", 2...), ("double-click", 2...):
+        case ("click", 2...), ("double-click", 2...), ("triple-click", 2...):
             var said = [String]()
-            for clicks in command == "click" ? [1] : [1, 2] {
+            for clicks in 1...(["click": 1, "double-click": 2][command] ?? 3) {
                 said.append(injector.press(at(0), in: window, clicks: clicks, flags: flags))
                 if injector.isPressed { said.append(injector.release(at(0), in: window, clicks: clicks, flags: flags)) }
                 await pause(30)

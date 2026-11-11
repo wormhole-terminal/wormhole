@@ -110,6 +110,11 @@ import TerminalCore
         #expect(name(36) == "enter" && name(76) == "enter" && name(51) == "backspace" && name(117) == "delete")
     }
 
+    @Test func theSettingsNamesAreTheModes() {
+        #expect(["off", "left", "right", "both"].map { OptionAsMeta(setting: $0) } == [.off, .left, .right, .both])
+        #expect(OptionAsMeta(setting: "true") == nil)
+    }
+
     @Test func optionIsMetaOnTheSideTheSettingNames() {
         func input(_ flags: UInt, _ mode: OptionAsMeta) -> KeyInput? {
             let event = NSEvent.keyEvent(

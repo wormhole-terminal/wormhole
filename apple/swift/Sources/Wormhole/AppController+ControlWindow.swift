@@ -108,6 +108,7 @@ extension AppController {
         }
         let from = window.frame.size, to = CGSize(width: width, height: height)
         controller.windowWillStartLiveResize(Notification(name: NSWindow.willStartLiveResizeNotification))
+        LiveResizeDriving.simulated = true
         Task { @MainActor in
             for step in 1...8 {
                 let t = Double(step) / 8
@@ -120,10 +121,12 @@ extension AppController {
                 window.contentView?.layoutSubtreeIfNeeded()
                 reply("step \(step) \(selectedView.map(geometry) ?? "")")
                 if step == 4 { reply(windowShot(to: words[2] + "-mid.png")) }
+                reply("chip " + hub.sizeChips.joined(separator: ", "))
                 try? await Task.sleep(for: .milliseconds(100))
             }
             try? await Task.sleep(for: .milliseconds(300))
             controller.windowDidEndLiveResize(Notification(name: NSWindow.didEndLiveResizeNotification))
+            LiveResizeDriving.simulated = false
             try? await Task.sleep(for: .milliseconds(300))
             reply(selectedView.map(geometry) ?? "")
             reply(windowShot(to: words[2] + "-end.png"))

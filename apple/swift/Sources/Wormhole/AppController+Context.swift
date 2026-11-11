@@ -20,6 +20,7 @@ extension AppController {
         let view = holder.hub.terminals.existing(id)
         facts.canCopy = view?.canCopy ?? false
         facts.link = view?.linkAddressUnderPointer
+        holder.hub.foldsOn = settingsModel.host.flags().contains { $0.key == "output_folds" && $0.on }
         facts.block = holder.hub.contextBlock(in: id)
         return contextMenus.menu(TerminalMenu.nodes(facts))
     }
@@ -30,8 +31,8 @@ extension AppController {
         if let row = RowMenu.Kind.allCases.first(where: { $0.key == action.kind }) { return runRow(row, action) }
         guard let kind = TerminalMenu.Kind.allCases.first(where: { $0.key == action.kind }) else { return }
         switch kind {
-        case .copy: router.run("copy")
-        case .paste: NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
+        case .copy: selectedView?.copy(nil)
+        case .paste: selectedView?.paste(nil)
         // The terminal the menu is over, not the responder chain (which has no key window in a background instance).
         case .selectAll: selectedView?.selectAll(nil)
         case .find: router.run("find")
@@ -44,7 +45,7 @@ extension AppController {
         case .copyLink:
             guard let address = action.argument else { return }
             selectedView?.copyLink(address: address)
-            hub.notices.post(.copied(text: address))
+        case .foldOutput: hub.foldOutput(block: action.subject.map(UInt64.init(bitPattern:)))
         case .clear: selectedView?.clearBuffer(nil)
         }
     }

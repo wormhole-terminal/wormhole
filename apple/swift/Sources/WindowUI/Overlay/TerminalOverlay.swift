@@ -49,6 +49,7 @@ final class TerminalOverlay {
             terminal: { [weak view] in view?.source.scrollback }, palette: { [weak view] in view?.renderer.palette ?? .spike })
         self.actions = actions
         view.onPointerRow = { [weak blocks] in blocks?.hover(row: $0) }
+        view.onInput = { [weak blocks] in blocks?.forgetCursor() }
         wireClipboard(view: view, notices: notices)
         view.onContentChanged = { [weak self] in self?.contentChanged() }
         // A fold's marker counts the matches inside it: read again when a search's results arrive, output or not.

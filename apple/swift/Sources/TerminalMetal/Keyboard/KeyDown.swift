@@ -28,6 +28,7 @@ extension MetalTerminalView {
     }
 
     func send(_ key: KeyInput) {
+        onInput?()
         holdCursor()
         if source.encodesKeys {
             _ = source.sendKey(key)
@@ -40,6 +41,7 @@ extension MetalTerminalView {
 
     /// Text that is not a key: a composed commit, a dead-key result, dictation. It goes in as typed.
     func type(_ text: String) {
+        onInput?()
         holdCursor()
         source.write(Data(text.utf8))
         requestRedraw()
@@ -53,6 +55,7 @@ extension MetalTerminalView {
     /// inserts them; an agent takes a dropped image by that pasted path).
     /// `replacingProgramSelection` (⌘V, not a drop): over a selection a full-screen program drew itself the paste replaces it.
     public func insert(from board: NSPasteboard, replacingProgramSelection: Bool = false) -> Bool {
+        onInput?()
         // The clipboard is `Pasteboard`'s (a test instance's is a file); any other board is a drop's, or a script's own.
         let general = board === NSPasteboard.general
         if !(general && Pasteboard.isDiverted), let urls = board.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL], !urls.isEmpty,
@@ -70,7 +73,27 @@ extension MetalTerminalView {
         return true
     }
 
-    public override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation { .copy }
+    public override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        showDropTint(true)
+        return .copy
+    }
 
-    public override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool { insert(from: sender.draggingPasteboard) }
+    public override func draggingExited(_ sender: (any NSDraggingInfo)?) { showDropTint(false) }
+    public override func draggingEnded(_ sender: any NSDraggingInfo) { showDropTint(false) }
+
+    public override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        showDropTint(false)
+        return insert(from: sender.draggingPasteboard)
+    }
+
+    /// A tint, not a border, so the grid keeps its size while files hover over it (`render/mod.rs:292`).
+    func showDropTint(_ on: Bool) {
+        guard on else { return dropLayer?.removeFromSuperlayer() ?? () }
+        let layer = dropLayer ?? CALayer()
+        layer.frame = bounds
+        layer.zPosition = 9
+        layer.backgroundColor = dropTint.cgColor
+        if layer.superlayer == nil { self.layer?.addSublayer(layer) }
+        dropLayer = layer
+    }
 }

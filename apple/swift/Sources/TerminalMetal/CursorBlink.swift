@@ -16,9 +16,10 @@ extension MetalTerminalView {
         updateBlink()
     }
 
-    func updateBlink() {
+    /// `focused` is given while the responder chain is changing (the view is not yet, or no longer, the first responder).
+    func updateBlink(focused: Bool? = nil) {
         updateTextBlink()
-        let blinking = renderer.scene.cursor?.blinking == true && window?.isKeyWindow == true && blinkInterval != nil && !reduceMotion
+        let blinking = renderer.scene.cursor?.blinking == true && (focused ?? hasFocus) && blinkInterval != nil && !reduceMotion
         if blinking {
             guard blinkItem == nil, let interval = blinkInterval else { return }
             let item = DispatchWorkItem { [weak self] in
