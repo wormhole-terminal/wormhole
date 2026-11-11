@@ -1,0 +1,43 @@
+# profile switch: agent-access desk and hook socket are re-made over the new profile
+> profile-new Work
+profile-new Work ok
+> profile-switch work
+> sessions
+window=1 profile=default visible=true front=true terminals=[1,2,3,4,5] selected=5 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off, 5:off]
+> hook
+error: usage hook <terminal> <agent> <event> [message]
+> profile-switch default
+profile-switch default now=default shown=[1] parked=[]
+> sessions
+window=1 profile=default visible=true front=true terminals=[1,2,3,4,5] selected=5 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off, 5:off]
+# app stderr:
+/tmp/Wormhole-swift-s-settings-a:
+bin
+cli-bin
+config.json
+import-home
+instance.lock
+profiles
+profiles.json
+scrollback.db
+scrollback.db-shm
+scrollback.db-wal
+wormhole.db
+wormhole.db-shm
+wormhole.db-wal
+
+/tmp/Wormhole-swift-s-settings-a/profiles:
+work
+> profile-switch work
+profile-switch work now=work shown=[2] parked=[1]
+> sessions
+window=1 profile=default visible=false front=false terminals=[1,2,3,4,5] selected=5 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off, 5:off]
+window=2 profile=work visible=true front=true terminals=[6] selected=6 frame=windowed 204,99 1320x820 hosting=[6:off]
+> get font_size
+font_size = number(14.0)
+> profile-switch default
+> sessions
+window=1 profile=default visible=false front=false terminals=[1,2,3,4,5] selected=5 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off, 5:off]
+window=2 profile=work visible=true front=true terminals=[6] selected=6 frame=windowed 204,99 1320x820 hosting=[6:off]
+# stderr:
+hooks: the socket is not served (Failed(reason: "this workspace already has a server")); agents' hooks will not arrive

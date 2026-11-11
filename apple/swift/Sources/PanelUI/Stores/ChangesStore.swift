@@ -13,7 +13,20 @@ public final class ChangesStore {
     public private(set) var phase = Phase.loading
     public private(set) var folder: String?
     public var compare: Rev?
-    public var layout = ChangeRows(tree: true)
+    /// The list's arrangement: tree and untracked grouping are the panel's preferences, the folds are this list's own.
+    public var layout: ChangeRows {
+        get {
+            var rows = arrangement
+            (rows.tree, rows.groupUntracked) = (preferences.changesTree, preferences.groupUntracked)
+            return rows
+        }
+        set {
+            arrangement = newValue
+            (preferences.changesTree, preferences.groupUntracked) = (newValue.tree, newValue.groupUntracked)
+        }
+    }
+    private var arrangement = ChangeRows()
+    public let preferences: PanelPreferences
     public private(set) var selection: ChangedFile.ID?
     public var review = Review()
     public let diff: DiffSession
@@ -24,10 +37,14 @@ public final class ChangesStore {
     @ObservationIgnored private weak var host: (any PanelHost)?
     @ObservationIgnored private var watch: Task<Void, Never>?
 
-    public init(git: any GitBackend, highlighter: any SyntaxHighlighting, host: (any PanelHost)? = nil) {
+    public init(
+        git: any GitBackend, highlighter: any SyntaxHighlighting, host: (any PanelHost)? = nil,
+        preferences: PanelPreferences = PanelPreferences()
+    ) {
         self.git = git
         self.host = host
-        diff = DiffSession(highlighter: highlighter)
+        self.preferences = preferences
+        diff = DiffSession(highlighter: highlighter, preferences: preferences)
     }
 
     /// The tab follows the terminal: a new folder starts again.

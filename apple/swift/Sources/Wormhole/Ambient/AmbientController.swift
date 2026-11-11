@@ -16,6 +16,9 @@ final class AmbientController {
     /// What the Dock badge counts (Settings → Notifications → Dock); set by `apply`.
     var badgeMode = DockBadgeMode.needsYou { didSet { if badgeMode != oldValue { dock.update(terminals: listed, badgeMode: badgeMode) } } }
     private var listed: [AmbientTerminal] = []
+    /// What the menu bar item shows and whether its working glyph types out (`menu_bar_icon`, `menu_bar_animate`).
+    var iconMode = MenuBarIconMode.statusCount { didSet { if iconMode != oldValue { pushStatus() } } }
+    var animatesIcon = false { didSet { if animatesIcon != oldValue { pushStatus() } } }
     /// The global key that raises the quick panel or the app, once Settings names one.
     var hotkey: GlobalHotkey?
     private let quick: QuickPanelController
@@ -65,11 +68,17 @@ final class AmbientController {
         let terminals = withObservationTracking { app.ambientTerminals } onChange: { [weak self] in
             Task { @MainActor in self?.follow() }
         }
-        var snapshot = StatusSnapshot()
-        snapshot.terminals = terminals
-        status.update(snapshot)
         listed = terminals
+        pushStatus()
         dock.update(terminals: terminals, badgeMode: badgeMode)
+    }
+
+    private func pushStatus() {
+        var snapshot = StatusSnapshot()
+        snapshot.terminals = listed
+        snapshot.icon = iconMode
+        snapshot.animate = animatesIcon
+        status.update(snapshot)
     }
 }
 

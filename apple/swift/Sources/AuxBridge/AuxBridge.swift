@@ -17,13 +17,13 @@ public enum AuxBridge {
     public static func makeHostsBackend(dataDir: URL? = nil) throws -> FFIHostsBackend { try FFIHostsBackend(dataDir: dataDir) }
 
     @MainActor
-    public static func makeTrustBackend(root: URL, authenticator: any Authenticating) throws -> FFITrustBackend {
-        try FFITrustBackend(root: root, authenticator: authenticator)
+    public static func makeTrustBackend(root: URL, profile: String? = nil, authenticator: any Authenticating) throws -> FFITrustBackend {
+        try FFITrustBackend(root: root, profile: profile, authenticator: authenticator)
     }
 
     @MainActor
-    public static func makeAccessBackend(resolver: FFIAccessBackend.Resolver = .init()) throws -> FFIAccessBackend {
-        try FFIAccessBackend(resolver: resolver)
+    public static func makeAccessBackend(profile: String? = nil, resolver: FFIAccessBackend.Resolver = .init()) throws -> FFIAccessBackend {
+        try FFIAccessBackend(profile: profile, resolver: resolver)
     }
 
     public static func makeLicenseSource() -> FFILicenseSource { FFILicenseSource() }

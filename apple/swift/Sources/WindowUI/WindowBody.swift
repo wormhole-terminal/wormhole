@@ -45,8 +45,8 @@ struct WindowBody: View {
             }
             .overlay(alignment: .top) {
                 WindowControls(
-                    facts: facts, sidebarOpen: sidebarWanted, sidebarShown: sidebarSlide.shown,
-                    panelOpen: panelFits, panelShown: panelSlide.shown,
+                    facts: facts, sidebarOpen: sidebarWanted, sidebarShown: look.iconAnimations ? sidebarSlide.shown : (sidebarWanted ? 1 : 0),
+                    panelOpen: panelFits, panelShown: look.iconAnimations ? panelSlide.shown : (panelFits ? 1 : 0),
                     panelWaiting: fit.panelWaiting && look.zen == nil, leaveZen: look.zen == nil ? nil : { hub.actions.perform("toggleZenMode") },
                     send: send)
             }

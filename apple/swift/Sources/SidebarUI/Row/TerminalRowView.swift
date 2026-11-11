@@ -41,7 +41,7 @@ struct TerminalRowView: View {
             if let part = row.splitMarks.bracket { SplitLine(part: part, x: inset + metrics.tile / 2) }
         }
         .overlay { if solo { shape.strokeBorder(isSelected ? tokens.sidebarRowSelected : tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) } }
-        .overlay { StatusWash(state: TileState(terminal), count: reduceMotion ? 0 : context.shifts[terminal.id] ?? 0, enabled: look.statusMotion == .wash, shape: shape) }
+        .overlay { StatusWash(state: tileState, count: reduceMotion ? 0 : context.shifts[terminal.id] ?? 0, enabled: look.statusMotion == .wash, shape: shape) }
         .overlay {
             if keyed == .row(terminal.id) {
                 RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
@@ -74,7 +74,7 @@ struct TerminalRowView: View {
 
     private var content: some View {
         HStack(spacing: metrics.tileGap) {
-            StatusTile(state: TileState(terminal), agent: terminal.agent, size: metrics.tile, phase: StatusTile.phase(of: terminal.id),
+            StatusTile(state: tileState, agent: terminal.agent, size: metrics.tile, phase: StatusTile.phase(of: terminal.id),
                        surface: isSelected ? tokens.sidebarRowSelected : tokens.sidebarBackground)
             RowLines(row: row, isSelected: isSelected, hovering: hovering, rename: rename)
         }
@@ -83,6 +83,9 @@ struct TerminalRowView: View {
         .frame(maxWidth: .infinity, minHeight: metrics.rowHeight, alignment: .leading)
         .contentShape(Rectangle())
     }
+
+    /// With Status dot off every tile is the quiet one (`row/tile.rs` `tile_parts`).
+    private var tileState: TileState { look.showsStatus ? TileState(terminal) : .shell }
 
     private var rename: RowRename? {
         context.renaming == terminal.id ? RowRename { name in

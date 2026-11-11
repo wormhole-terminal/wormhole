@@ -13,7 +13,8 @@ use std::time::{Instant, SystemTime};
 
 use wormhole_core::storage::paths::DataRoot;
 use wormhole_core::update::{
-    self, Held, OnSwitch, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus, UpdaterConfig,
+    self, Checked, Count, Held, OnSwitch, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus,
+    UpdaterConfig,
 };
 
 use super::common::{AuxError, AuxListener, Waker, locked, resolve_data_dir};
@@ -61,6 +62,9 @@ struct Shared {
     state: Mutex<State>,
     received: AtomicU64,
     expected: AtomicU64,
+    /// `anonymous_count` and `auto_update`, as Settings says now (both on until told).
+    counting: AtomicBool,
+    auto_install: AtomicBool,
     waker: Waker,
 }
 
@@ -106,7 +110,13 @@ impl UpdateEngine {
             Some(file) => PathBuf::from(file),
             None => DataRoot::new(resolve_data_dir(None)?).update_schedule_file(),
         };
-        let schedule = UpdateSchedule::load_shared(&schedule_file, || None);
+        let mut schedule = UpdateSchedule::load_shared(&schedule_file, || None);
+        // The wait before this copy is counted starts the first time a version that counts runs.
+        if schedule.start_count_grace(SystemTime::now())
+            && let Err(err) = schedule.save_shared(&schedule_file)
+        {
+            tracing::warn!("saving update schedule: {err:#}");
+        }
         Ok(Arc::new(Self {
             shared: Arc::new(Shared {
                 bundle: setup.app_bundle.map(PathBuf::from),
@@ -123,6 +133,8 @@ impl UpdateEngine {
                 config,
                 received: AtomicU64::new(0),
                 expected: AtomicU64::new(0),
+                counting: AtomicBool::new(true),
+                auto_install: AtomicBool::new(true),
                 waker: Waker::new(listener),
             }),
         }))
@@ -173,8 +185,15 @@ impl UpdateEngine {
         spawn("check", move || {
             let mut config = shared.config.clone();
             config.channel = locked(&shared.state).channel;
-            let result = update::check_counted(&config).map(|checked| checked.status);
-            finish_check(&shared, generation, manual, result);
+            // The anonymous count: the first check of a day and of a month says so, once the grace is over.
+            let count = if shared.counting.load(Ordering::Relaxed) {
+                locked(&shared.schedule).count_due(SystemTime::now())
+            } else {
+                None
+            };
+            config.count = count;
+            let result = update::check_counted(&config);
+            finish_check(&shared, generation, manual, count, result);
         });
     }
 
@@ -186,52 +205,17 @@ impl UpdateEngine {
             Phase::Available(release) if release.version.to_string() == version => (**release).clone(),
             _ => return Err(AuxError::failed(format!("version {version} is not on offer"))),
         };
-        let Some(bundle) = shared.bundle.clone() else { return Err(not_bundled(shared)) };
-        if let Err(err) = update::preflight(&bundle) {
-            set_phase(shared, Phase::Failed(err.to_string()));
-            return Ok(());
-        }
-        let called_off = Arc::new(AtomicBool::new(false));
-        shared.received.store(0, Ordering::Relaxed);
-        shared.expected.store(release.asset.size, Ordering::Relaxed);
-        {
-            let mut state = locked(&shared.state);
-            state.installing =
-                Some(Installing { version: release.version.clone(), called_off: Arc::clone(&called_off) });
-            state.phase = Phase::Downloading;
-        }
-        shared.waker.notify();
-        let shared = Arc::clone(&self.shared);
-        spawn("install", move || {
-            let mut last = Instant::now();
-            let result = update::download(&shared.config, &release, |done, _| {
-                shared.received.store(done, Ordering::Relaxed);
-                if last.elapsed() >= PROGRESS_EVERY {
-                    last = Instant::now();
-                    shared.waker.notify();
-                }
-            })
-            .and_then(|downloaded| update::install_unless(&shared.config, &downloaded, &bundle, &called_off));
-            // Called off by a change of channel: the person has moved on, so the result is not theirs.
-            if called_off.load(Ordering::Acquire) {
-                return;
-            }
-            let mut state = locked(&shared.state);
-            state.installing = None;
-            state.phase = match result {
-                Ok(()) => Phase::Installed(release.version.to_string()),
-                Err(err) => {
-                    tracing::error!("update failed: {err}");
-                    if !matches!(err, UpdateError::Network(_)) {
-                        state.failed_install = Some(release.version.clone());
-                    }
-                    Phase::Failed(err.to_string())
-                }
-            };
-            drop(state);
-            shared.waker.notify();
-        });
-        Ok(())
+        start_install(&self.shared, release)
+    }
+
+    /// Whether the settings let a check install what it finds by itself (`auto_update`).
+    pub fn set_auto_update(&self, on: bool) {
+        self.shared.auto_install.store(on, Ordering::Relaxed);
+    }
+
+    /// Whether a check carries the anonymous count (`anonymous_count`).
+    pub fn set_anonymous_count(&self, on: bool) {
+        self.shared.counting.store(on, Ordering::Relaxed);
     }
 
     /// Stays quiet about `version` from now on (a security update is never skipped).
@@ -322,6 +306,57 @@ impl UpdateEngine {
     }
 }
 
+/// Download, verify and swap in `release` (`install_update` of the GPUI app), on a thread of its own: by a person's
+/// click, or by a check itself while `auto_update` is on.
+fn start_install(shared: &Arc<Shared>, release: Release) -> Result<(), AuxError> {
+    let Some(bundle) = shared.bundle.clone() else { return Err(not_bundled(shared)) };
+    if let Err(err) = update::preflight(&bundle) {
+        set_phase(shared, Phase::Failed(err.to_string()));
+        return Ok(());
+    }
+    let called_off = Arc::new(AtomicBool::new(false));
+    shared.received.store(0, Ordering::Relaxed);
+    shared.expected.store(release.asset.size, Ordering::Relaxed);
+    {
+        let mut state = locked(&shared.state);
+        state.installing =
+            Some(Installing { version: release.version.clone(), called_off: Arc::clone(&called_off) });
+        state.phase = Phase::Downloading;
+    }
+    shared.waker.notify();
+    let shared = Arc::clone(shared);
+    spawn("install", move || {
+        let mut last = Instant::now();
+        let result = update::download(&shared.config, &release, |done, _| {
+            shared.received.store(done, Ordering::Relaxed);
+            if last.elapsed() >= PROGRESS_EVERY {
+                last = Instant::now();
+                shared.waker.notify();
+            }
+        })
+        .and_then(|downloaded| update::install_unless(&shared.config, &downloaded, &bundle, &called_off));
+        // Called off by a change of channel: the person has moved on, so the result is not theirs.
+        if called_off.load(Ordering::Acquire) {
+            return;
+        }
+        let mut state = locked(&shared.state);
+        state.installing = None;
+        state.phase = match result {
+            Ok(()) => Phase::Installed(release.version.to_string()),
+            Err(err) => {
+                tracing::error!("update failed: {err}");
+                if !matches!(err, UpdateError::Network(_)) {
+                    state.failed_install = Some(release.version.clone());
+                }
+                Phase::Failed(err.to_string())
+            }
+        };
+        drop(state);
+        shared.waker.notify();
+    });
+    Ok(())
+}
+
 /// A build that does not run from an app bundle has nothing to replace or reopen: said in the window too, so the
 /// button is not silent (the GPUI app says it for an install).
 fn not_bundled(shared: &Shared) -> AuxError {
@@ -342,18 +377,30 @@ fn set_phase(shared: &Shared, phase: Phase) {
 
 /// The check's answer as a phase (`finish_check` of the GPUI app): an automatic check says nothing when the
 /// version was skipped, and nothing of a failure.
-fn finish_check(shared: &Shared, generation: u64, manual: bool, result: Result<UpdateStatus, UpdateError>) {
+fn finish_check(
+    shared: &Arc<Shared>,
+    generation: u64,
+    manual: bool,
+    count: Option<Count>,
+    checked: Result<Checked, UpdateError>,
+) {
     if locked(&shared.state).generation != generation {
         return;
     }
     // Not after a network error: a laptop that launches before Wi-Fi is up tries again at the next chance.
-    if !matches!(result, Err(UpdateError::Network(_))) {
+    if !matches!(checked, Err(UpdateError::Network(_))) {
         let mut schedule = locked(&shared.schedule);
-        schedule.record_check(SystemTime::now());
+        let now = SystemTime::now();
+        schedule.record_check(now);
+        // Only a count that reached the download server: from the fallback's copy of the feed the day is counted later.
+        if let (Some(count), Ok(Checked { counted: true, .. })) = (count, &checked) {
+            schedule.record_count(count, now);
+        }
         if let Err(err) = schedule.save_shared(&shared.schedule_file) {
             tracing::warn!("saving update schedule: {err:#}");
         }
     }
+    let result = checked.map(|checked| checked.status);
     let quiet = match &result {
         Ok(status) if !manual => !locked(&shared.schedule).should_notify(status),
         _ => false,
@@ -364,7 +411,20 @@ fn finish_check(shared: &Shared, generation: u64, manual: bool, result: Result<U
         Ok(UpdateStatus::Unsupported { version, minimum_system_version }) => {
             Phase::Unsupported(format!("Version {version} needs macOS {minimum_system_version} or later."))
         }
-        Ok(UpdateStatus::Available(release)) => Phase::Available(Box::new(release)),
+        Ok(UpdateStatus::Available(release)) => {
+            // With auto_update on, a check installs what it finds (not again a version that failed to install, unless asked).
+            let failed_before = locked(&shared.state).failed_install.as_ref() == Some(&release.version);
+            if shared.auto_install.load(Ordering::Relaxed) && (manual || !failed_before) {
+                let version = release.version.to_string();
+                let on_offer = Phase::Available(Box::new(release.clone()));
+                locked(&shared.state).phase = on_offer;
+                if let Err(err) = start_install(shared, release) {
+                    tracing::warn!("automatic install of {version}: {err}");
+                }
+                return;
+            }
+            Phase::Available(Box::new(release))
+        }
         Err(err) => {
             tracing::warn!("update check failed: {err}");
             if manual { Phase::Failed(err.to_string()) } else { Phase::Idle }

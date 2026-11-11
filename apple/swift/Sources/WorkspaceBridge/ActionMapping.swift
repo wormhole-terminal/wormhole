@@ -77,6 +77,11 @@ extension WormholeBindings.Action {
         case .setFeature(let key, let on): .setFeature(feature: FeatureId(key), on: on)
         case .setTitleRow(let keys): .setTitleRow(keys.compactMap(WormholeBindings.TitlePart.init(key:)))
         case .setNumbersFollowList(let follow): .setNumbersFollowList(follow)
+        case .setChangeRules(let plain, let shared):
+            .setChangeRules(
+                ChangeRules(
+                    plain: plain == "any" ? PlainChanges.any : plain == "none" ? PlainChanges.none : PlainChanges.finishing,
+                    shared: shared == "none" ? SharedChanges.none : SharedChanges.each))
         default: .newTerminal
         }
     }

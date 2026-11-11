@@ -33,6 +33,8 @@ public final class RustSettingsHost: SettingsHost {
         public var projects: @MainActor () -> ProjectService? = { nil }
         /// Asked before a Probe that needs it is approved (Touch ID, or the password); nil: no Extensions page.
         public var owner: @MainActor () -> (any OwnerAuthenticator)? = { nil }
+        /// Whether the owner can be asked at all: `Authenticating.canAuthenticate`.
+        public var ownerAvailable: @MainActor @Sendable () -> Bool = { true }
         /// The folders of the open terminals, whose projects the Project folders page offers.
         public var projectFolders: @MainActor () -> [String] = { [] }
         /// A new terminal in a project's folder.
@@ -49,7 +51,8 @@ public final class RustSettingsHost: SettingsHost {
     public let probes: (any ProbesBackend)?
     /// Read on first use: the settings model is made before the first window, and the service is the window's.
     @ObservationIgnored public private(set) lazy var projects: (any ProjectsBackend)? = platform.projects().map {
-        RustProjectsBackend(service: $0, folders: platform.projectFolders, terminal: platform.openTerminal)
+        RustProjectsBackend(
+            service: $0, folders: platform.projectFolders, terminal: platform.openTerminal, ownerAvailable: platform.ownerAvailable)
     }
     /// Why the last hook install or removal failed (core's sentence); nil after one that worked.
     public internal(set) var failure: String?

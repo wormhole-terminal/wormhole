@@ -67,17 +67,18 @@ struct FileViewerBody: View {
     }
 }
 
-/// The text's lines with their numbers, the way the diff draws its rows: tabs at stops of four, colours from the spans.
+/// The text's lines with their numbers, the way the diff draws its rows: tabs at the tab width, colours from the spans.
 struct FileLines: View {
     let lines: [String]
     let spans: [[SyntaxSpan]]
     let path: String
     @Environment(\.tokens) private var tokens
     @Environment(\.codeFont) private var codeFont
+    @Environment(\.tabWidth) private var tabWidth
 
     var body: some View {
         let style = DiffStyle(code: codeFont, digits: String(lines.count).count, wrap: false, advance: codeFont.advance)
-        let code = DiffCode(tokens: tokens)
+        let code = DiffCode(tokens: tokens, tabWidth: tabWidth)
         ScrollView([.vertical, .horizontal]) {
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { index, line in

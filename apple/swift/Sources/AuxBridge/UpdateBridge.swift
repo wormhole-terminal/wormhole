@@ -72,6 +72,7 @@ public final class FFIUpdateBackend: UpdateBackend {
     private var snapshotChannel: UpdateChannel = .stable
     private var watchers: [UUID: AsyncStream<UpdatePhase>.Continuation] = [:]
     private var pump: Task<Void, Never>?
+    private var checks: Task<Void, Never>?
 
     public init(setup: Setup, hooks: Hooks) throws {
         let hub = WakeHub()
@@ -87,7 +88,10 @@ public final class FFIUpdateBackend: UpdateBackend {
         }
     }
 
-    deinit { pump?.cancel() }
+    deinit {
+        pump?.cancel()
+        checks?.cancel()
+    }
 
     public func phases() -> AsyncStream<UpdatePhase> {
         let key = UUID()
@@ -129,9 +133,24 @@ public final class FFIUpdateBackend: UpdateBackend {
 
     public func runningTerminals() -> [RunningTerminal] { hooks.runningTerminals() }
 
-    /// Seconds until the next automatic check is due; arm one timer for it.
-    public var nextCheckIn: Duration { .seconds(engine.nextCheckInSeconds()) }
-    public var dueAtLaunch: Bool { engine.dueAtLaunch() }
+    public func apply(autoUpdate: Bool, anonymousCount: Bool) {
+        engine.setAutoUpdate(on: autoUpdate)
+        engine.setAnonymousCount(on: anonymousCount)
+        guard autoUpdate != (checks != nil) else { return }
+        checks?.cancel()
+        checks = nil
+        guard autoUpdate else { return }
+        checks = Task { [weak self] in
+            // Automatic checks as the GPUI app's: one at launch when the last is not recent, then each time the six hours run out.
+            if self?.engine.dueAtLaunch() == true { self?.engine.check(manual: false) }
+            while let seconds = self?.engine.nextCheckInSeconds() {
+                // one-shot: the schedule's next check, armed again after each (a timer for six hours, not a poll)
+                try? await Task.sleep(for: .seconds(max(seconds, 60)))
+                guard !Task.isCancelled else { return }
+                self?.engine.check(manual: false)
+            }
+        }
+    }
 
     private func apply(_ state: UpdateStateRecord) {
         let next = state.phase.value

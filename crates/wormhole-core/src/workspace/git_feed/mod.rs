@@ -31,7 +31,7 @@ use super::facts::{Millis, TerminalFacts};
 use state::{GitState, Poll, Refreshed};
 
 /// The setting that decides what a row counts (Settings → Terminals & sidebar → Changed files).
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ChangeRules {
     /// Which programs in front make a plain terminal count as working.
     pub plain: PlainChanges,
@@ -110,6 +110,11 @@ impl GitFeed {
             watched: HashSet::new(),
             seen: true,
         }
+    }
+
+    /// The rules changed in Settings: what a plain terminal's work is, and what a shared file counts as.
+    pub fn set_rules(&mut self, rules: ChangeRules) {
+        self.rules = rules;
     }
 
     /// Terminal `id` is in `cwd` (or nowhere known).

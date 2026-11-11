@@ -37,6 +37,10 @@
             platform.projectFolders = { [weak app] in app?.hub.state.all.compactMap(\.folder) ?? [] }
             platform.openTerminal = { [weak app] in app?.hub.send(.newTerminalIn($0)) }
             // Owner authentication is Touch ID in a real run and WORMHOLE_AUTH's answer in a test instance.
+            platform.ownerAvailable = { [weak app] in
+                guard let policy = app?.policy else { return true }
+                return (policy.touchesSystem ? LocalAuthenticator() as any Authenticating : ScriptedAuthenticator()).canAuthenticate()
+            }
             platform.owner = { [weak app] in
                 guard let policy = app?.policy else { return nil }
                 return OwnerAuthentication(policy.touchesSystem ? LocalAuthenticator() : ScriptedAuthenticator())

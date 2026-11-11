@@ -7,7 +7,7 @@ import WorkspaceModel
 
 extension SidebarView {
     var statuses: [TerminalID: TileState] {
-        Dictionary(state.terminals.map { ($0.id, TileState($0)) }, uniquingKeysWith: { first, _ in first })
+        Dictionary(state.terminals.map { ($0.id, appearance.showsStatus ? TileState($0) : .shell) }, uniquingKeysWith: { first, _ in first })
     }
 
     func noteStatusChanges(from old: [TerminalID: TileState], to new: [TerminalID: TileState]) {

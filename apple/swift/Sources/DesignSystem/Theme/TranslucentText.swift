@@ -38,3 +38,16 @@ extension ThemeTokens {
         return ThemeTokens(terminal: terminal, metrics: metrics, ui: ui, syntax: syntax, translucent: translucent)
     }
 }
+
+extension ThemeTokens {
+    func with(_ font: InterfaceFont) -> ThemeTokens {
+        ThemeTokens(terminal: terminal, metrics: metrics.with(font), ui: ui, syntax: syntax, translucent: translucent)
+    }
+
+    /// The Borders setting off: the three tokens the GPUI app draws through `UiColors::line` become clear.
+    func withoutLines() -> ThemeTokens {
+        var ui = self.ui
+        for line in ["border", "card.edge", "settings.divider"] { ui[line] = RGBA(0, 0, 0, 0) }
+        return ThemeTokens(terminal: terminal, metrics: metrics, ui: ui, syntax: syntax, translucent: translucent)
+    }
+}

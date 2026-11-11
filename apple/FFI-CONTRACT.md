@@ -1262,3 +1262,26 @@ tearOffWindow(x:, y:, width:, height:, visible: TearRect) -> TearRect   // where
   application's window is on top (`covered`), and does what the core answers. All points are AppKit's global space (y up)
   except `tearOffWindow`'s, which are in one display's (from its top left, y down); the pointer lies at the new window's
   anchor (120, 90), kept inside the display's usable part.
+
+- Not done: a window in a profile other than the shown one (menu "Open Window in" switches, then opens one), "Move Window to".
+  Round S: the Trust window and, at launch, the Access desk follow the active profile; Imports apply through the settings handle (the
+  active profile's); Session Hosts are the data folder's (core's `hosts_dir`), shared by every profile; the Access desk is not remade by a live switch.
+
+## Settings consumers (`byte_size.rs`, `aux_backends/updater.rs`, workspace action, round S)
+
+Additive, contract version stays 2. What the settings pages say reaches the windows:
+
+```swift
+byteSize(bytes: UInt64, binary: Bool) -> String      // core's git::byte_size: "48.2 KB" or "47.1 KiB" (size_units)
+WorkspaceAction.setChangeRules(ChangeRules { plain: PlainChanges, shared: SharedChanges })
+                                                      // sidebar_changes_plain / sidebar_changes_shared: the model makes the rows' ±N again
+UpdateEngine.setAutoUpdate(on:) / setAnonymousCount(on:)
+                                                      // auto_update: a check installs what it finds; anonymous_count: the check carries
+                                                      // `Wormhole-Count` and the detailed user agent (first of a day / month, after the 24 h grace,
+                                                      // which now starts when the engine is made)
+```
+
+- `setNumbersFollowList` now also raises `Event::Chrome` (the chrome snapshot says which way they count).
+- The Access desk and the project Trust window are made for the active profile (`activeProfile().id`) when they are made. A live
+  profile switch does not remake the desk the hook socket holds (the workspace's server cannot be stopped and started again in one
+  run: "this workspace already has a server"), so after a switch the agent questions are still the launch profile's.

@@ -29,7 +29,7 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
         window.minSize = StudioMetrics.windowMin
         window.title = StudioWords.title
         window.setFrameAutosaveName("StudioWindow")
-        window.contentView = NSHostingView(rootView: StudioView(session: session, store: store))
+        window.contentView = NSHostingView(rootView: StudioView(session: session, store: store).secondaryBackdrop(.studio, store: store))
         window.delegate = self
         window.isReleasedWhenClosed = false
         session.window = window

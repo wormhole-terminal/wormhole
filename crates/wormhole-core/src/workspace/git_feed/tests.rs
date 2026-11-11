@@ -307,3 +307,19 @@ fn the_model_reads_folders_from_the_facts_and_puts_the_answers_back() {
     m.git_poll(5_000, start);
     assert!(m.git_roots().is_empty());
 }
+
+#[test]
+fn rules_set_while_running_decide_the_next_work() {
+    let editor = TerminalFacts { command: Some("vim main.rs".into()), ..TerminalFacts::default() };
+    let mut feed = GitFeed::new(ChangeRules::default());
+    assert!(!feed.working_of(&editor), "an editor is not a command that ends by itself");
+    feed.set_rules(ChangeRules { plain: crate::config::PlainChanges::Any, ..ChangeRules::default() });
+    assert!(feed.working_of(&editor));
+
+    // The same through the model: a rule that did not change is no action, one that did is kept.
+    let mut m = WorkspaceModel::new(ModelConfig::default());
+    let rules = ChangeRules { plain: crate::config::PlainChanges::None, ..ChangeRules::default() };
+    assert!(m.apply(Action::SetChangeRules(ChangeRules::default())).is_empty());
+    m.apply(Action::SetChangeRules(rules));
+    assert_eq!(m.cfg.changes, rules);
+}

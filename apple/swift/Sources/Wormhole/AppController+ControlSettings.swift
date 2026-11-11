@@ -17,6 +17,7 @@ extension AppController {
             else { reply("error: usage set key=<json value>"); return true }
             settingsModel.set(parts[0], value)
             reply("set \(parts[0]) -> \(settingsModel.value(parts[0]))\(settingsModel.backend.refusal.map { " refused: \($0)" } ?? "")")
+        case "look-keys": reply(settingsEffects)
         case "get": reply("\(argument) = \(settingsModel.value(argument))")
         case "settings-section":
             showSettings()

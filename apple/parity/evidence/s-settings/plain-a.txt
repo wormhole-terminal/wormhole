@@ -1,0 +1,6 @@
+# sidebar_changes_plain: files edited from outside while a command that ends by itself runs in a plain terminal
+> look-keys
+row_counts 3:number=1,pinned=true,changes=0,repo_files=3 1:number=2,pinned=false,changes=1,repo_files=3 2:number=3,pinned=false,changes=0,repo_files=3
+# now plain=none, second terminal (select 2), same kind of command and edit
+> look-keys
+row_counts 3:number=1,pinned=true,changes=0,repo_files=3 1:number=2,pinned=false,changes=2,repo_files=3 2:number=3,pinned=false,changes=0,repo_files=3

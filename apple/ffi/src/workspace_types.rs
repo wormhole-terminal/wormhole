@@ -3,19 +3,19 @@
 //! no copy to keep in step: a field added in core fails to compile here until it is added below.
 //! Only what holds a path (`Event`, `TerminalFacts`) has a hand-written twin, in `workspace.rs`.
 
-use wormhole_core::config::FeatureId;
 use wormhole_core::config::tab::TabId;
+use wormhole_core::config::{FeatureId, PlainChanges, SharedChanges};
 use wormhole_core::git::pr::{Checks, PrState, PullRequest, Review};
 use wormhole_core::view::layout::title_parts::TitlePart;
 use wormhole_core::view::layout::{Edge, PanelToggle, Stop};
 use wormhole_core::view::panes::{Axis, Direction, Preset, Zone};
 use wormhole_core::view::sidebar::{Bracket, GroupColor, Item, Landing, Part, RowState, Status, Urgency};
 use wormhole_core::workspace::{
-    Action, AgentInfo, CardRef, ChromeSnapshot, ColumnLimits, DividerInfo, DropPlan, EdgeDrag, GroupHead,
-    LayoutInfo, MemberTile, Over, Overlay, PaneRect, PanelTab, PanesSnapshot, PathFolder, PathStep,
-    PresetInfo, Refusal, Revisions, SecondLine, SidebarRow, SidebarSection, SidebarSnapshot, SplitInfo,
-    TerminalCounts, TerminalSummary, TerminalsSnapshot, TileGlyph, TitleSlot, TitleSnapshot, TitleTerminal,
-    Tone,
+    Action, AgentInfo, CardRef, ChangeRules, ChromeSnapshot, ColumnLimits, DividerInfo, DropPlan, EdgeDrag,
+    GroupHead, LayoutInfo, MemberTile, Over, Overlay, PaneRect, PanelTab, PanesSnapshot, PathFolder,
+    PathStep, PresetInfo, Refusal, Revisions, SecondLine, SidebarRow, SidebarSection, SidebarSnapshot,
+    SplitInfo, TerminalCounts, TerminalSummary, TerminalsSnapshot, TileGlyph, TitleSlot, TitleSnapshot,
+    TitleTerminal, Tone,
 };
 
 #[uniffi::remote(Enum)]
@@ -285,7 +285,27 @@ pub enum Action {
     ResetEdge(Edge),
     SetTitleRow(Vec<TitlePart>),
     SetNumbersFollowList(bool),
+    SetChangeRules(ChangeRules),
     SetFeature { feature: FeatureId, on: bool },
+}
+
+#[uniffi::remote(Enum)]
+pub enum PlainChanges {
+    Any,
+    None,
+    Finishing,
+}
+
+#[uniffi::remote(Enum)]
+pub enum SharedChanges {
+    Each,
+    None,
+}
+
+#[uniffi::remote(Record)]
+pub struct ChangeRules {
+    pub plain: PlainChanges,
+    pub shared: SharedChanges,
 }
 
 #[uniffi::remote(Record)]

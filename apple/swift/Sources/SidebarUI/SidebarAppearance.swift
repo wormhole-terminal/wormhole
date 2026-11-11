@@ -32,6 +32,12 @@ public struct SidebarAppearance: Equatable {
     /// The open notes and tasks, and the changed files, at the end of a row's first line (`sidebar_notes`, `sidebar_changes`).
     public var showsNotes: Bool
     public var showsChanges: Bool
+    /// Whose files the "±N" counts (`sidebar_changes_scope`).
+    public var changesScope: ChangesScope
+    /// The tile says what its terminal is doing; off, every tile is the quiet one (`sidebar_status_dot`).
+    public var showsStatus: Bool
+    /// ⌘ held on its own for a moment shows the ⌘1–9 keycaps (`sidebar_cmd_hints`).
+    public var showsCommandHints: Bool
     public var statusMotion: StatusMotion
     /// Terminal text is kept between launches (`restore_terminal_text`): while it is not, "Don't keep this terminal's text" is greyed.
     public var restoresText: Bool
@@ -43,6 +49,7 @@ public struct SidebarAppearance: Equatable {
     public init(
         density: SidebarDensity = .regular, cards: Bool = true, fadesGroupColours: Bool = false,
         showsGroupFolders: Bool = true, showsNotes: Bool = true, showsChanges: Bool = true,
+        changesScope: ChangesScope = .terminal, showsStatus: Bool = true, showsCommandHints: Bool = true,
         statusMotion: StatusMotion = .badgePop, restoresText: Bool = true, forcesHints: Bool = false, hovered: TerminalID? = nil
     ) {
         self.density = density
@@ -51,6 +58,9 @@ public struct SidebarAppearance: Equatable {
         self.showsGroupFolders = showsGroupFolders
         self.showsNotes = showsNotes
         self.showsChanges = showsChanges
+        self.changesScope = changesScope
+        self.showsStatus = showsStatus
+        self.showsCommandHints = showsCommandHints
         self.statusMotion = statusMotion
         self.restoresText = restoresText
         self.forcesHints = forcesHints

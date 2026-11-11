@@ -1,7 +1,8 @@
 // The theme picker block of Appearance (`theme_picker/`): a filter, then a grid of cards for the themes of each
 // appearance, the current pick of each marked. A card is the theme in miniature (its terminal colours and a band
 // with its name), so choosing is looking. Picking writes `theme` (dark) or `theme_light`; the window follows
-// through `ThemeSync`. Few cards show until "Show all".
+// through `ThemeSync`. Few cards show until "Show all". A theme hidden from the cards (`hidden_themes`: its menu's Hide
+// theme) is on no shelf unless it is a pick; "Hidden themes (n)" under the cards lists them, each with Show.
 
 import DesignSystem
 import SettingsModel
@@ -12,6 +13,7 @@ struct ThemeCards: View {
     let model: SettingsModel
     @State private var filter = ""
     @State private var showAll = false
+    @State private var hiddenOpen = false
     @Environment(\.tokens) private var tokens
 
     private static let collapsed = 4
@@ -26,8 +28,35 @@ struct ThemeCards: View {
                 .overlay(RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.inputBorder, lineWidth: tokens.metrics.borderWidth))
                 .frame(maxWidth: 320)
             ForEach(ThemeAppearance.allCases.reversed(), id: \.self) { appearance in section(appearance) }
+            if !hidden.isEmpty { hiddenList }
         }
         .padding(.vertical, Space._3)
+    }
+
+    private var hidden: [String] { model.value("hidden_themes").array?.compactMap(\.string) ?? [] }
+
+    private func isHidden(_ name: String) -> Bool { hidden.contains { $0.localizedCaseInsensitiveCompare(name) == .orderedSame } }
+
+    private func setHidden(_ name: String, _ on: Bool) {
+        let rest = hidden.filter { $0.localizedCaseInsensitiveCompare(name) != .orderedSame }
+        model.set("hidden_themes", .array((on ? rest + [name] : rest).map(JSONValue.string)))
+    }
+
+    /// The disclosure under the cards: a row per hidden theme with Show.
+    private var hiddenList: some View {
+        VStack(alignment: .leading, spacing: Space._2) {
+            LinkButton(title: Words.text("settings-appearance-hidden-themes", fallback: "Hidden themes (\(hidden.count))")
+                .replacingOccurrences(of: "{ $count }", with: "\(hidden.count)")) { hiddenOpen.toggle() }
+            if hiddenOpen {
+                ForEach(hidden, id: \.self) { name in
+                    HStack {
+                        Text(name).font(TextRole.body.font).foregroundStyle(tokens.textPrimary)
+                        Spacer()
+                        LinkButton(title: Words.text("settings-appearance-show-theme", fallback: "Show")) { setHidden(name, false) }
+                    }
+                }
+            }
+        }
     }
 
     private func section(_ appearance: ThemeAppearance) -> some View {
@@ -36,6 +65,7 @@ struct ThemeCards: View {
         // The current pick leads, so it is in view before "Show all".
         let all = ThemeLibrary.bundled.themes.filter {
             $0.appearance == appearance && (filter.isEmpty || $0.name.localizedCaseInsensitiveContains(filter))
+                && ($0.name == picked || !isHidden($0.name))
         }.sorted { ($0.name == picked ? 0 : 1) < ($1.name == picked ? 0 : 1) }
         let shown = showAll || !filter.isEmpty ? all : Array(all.prefix(Self.collapsed))
         return VStack(alignment: .leading, spacing: Space._2) {
@@ -49,6 +79,11 @@ struct ThemeCards: View {
             LazyVGrid(columns: columns, spacing: Space._3) {
                 ForEach(shown) { theme in
                     ThemeCard(theme: theme, isSelected: model.value(key).string == theme.name) { model.set(key, .string(theme.name)) }
+                        .contextMenu {
+                            if model.value(key).string != theme.name {
+                                Button(Words.text("settings-appearance-hide-theme", fallback: "Hide theme")) { setHidden(theme.name, true) }
+                            }
+                        }
                 }
             }
         }

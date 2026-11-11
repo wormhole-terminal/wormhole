@@ -13,6 +13,7 @@
 mod app_actions;
 mod aux_backends;
 mod blocks;
+mod byte_size;
 mod cli_tool;
 mod clipboard;
 mod contents;
@@ -62,6 +63,7 @@ pub use app_actions::{
 };
 pub use aux_backends::*;
 pub use blocks::{BlockRecord, BlockSpanRecord, BlockStatus, PutResult};
+pub use byte_size::byte_size;
 pub use cli_tool::{
     CliToolError, CliToolPathRecord, CliToolPathVerdict, CliToolRecord, CliToolState, cli_tool_install,
     cli_tool_keep_current, cli_tool_path_note, cli_tool_status, cli_tool_uninstall,

@@ -30,4 +30,6 @@ public struct CodeFont: Equatable, Sendable {
 
 extension EnvironmentValues {
     @Entry public var codeFont = CodeFont()
+    /// Columns a tab stands for in the diff and the viewer (`tab_width`).
+    @Entry public var tabWidth = 4
 }

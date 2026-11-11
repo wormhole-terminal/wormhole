@@ -12,6 +12,7 @@ import SettingsModel
 
 #if WITH_UNIFFI
     import AuxBridge
+    import WormholeBindings
 #endif
 
 @MainActor
@@ -22,6 +23,15 @@ struct AuxBackends {
 
     private var authenticator: any Authenticating {
         app.policy.touchesSystem ? LocalAuthenticator() : ScriptedAuthenticator()
+    }
+
+    /// The profile Wormhole is in: approvals and the project trust are its own, not the Default's (`nil`: the Default).
+    private var activeProfileID: String? {
+        #if WITH_UNIFFI
+            try? activeProfile().id
+        #else
+            nil
+        #endif
     }
 
     private func fallback(_ what: String, _ error: any Error) {
@@ -55,7 +65,7 @@ struct AuxBackends {
         #if WITH_UNIFFI
             if real, let root {
                 do {
-                    return try AuxBridge.makeTrustBackend(root: URL(fileURLWithPath: root), authenticator: authenticator)
+                    return try AuxBridge.makeTrustBackend(root: URL(fileURLWithPath: root), profile: activeProfileID, authenticator: authenticator)
                 } catch { fallback("project trust", error) }
             }
         #endif
@@ -65,7 +75,7 @@ struct AuxBackends {
     func access() -> (any AccessBackend)? {
         #if WITH_UNIFFI
             if real {
-                do { return try AuxBridge.makeAccessBackend() } catch { fallback("agent access", error) }
+                do { return try AuxBridge.makeAccessBackend(profile: activeProfileID) } catch { fallback("agent access", error) }
             }
         #endif
         return nil

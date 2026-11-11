@@ -80,4 +80,10 @@ public protocol ProjectsBackend: Sendable {
     func revoke(_ root: String) async
     /// A new terminal in the project's folder (what only the window can do).
     @MainActor func openTerminal(_ root: String)
+    /// Whether the owner can be asked at all (Touch ID or a login password); the page says so when not.
+    @MainActor var canApprove: Bool { get }
+}
+
+extension ProjectsBackend {
+    @MainActor public var canApprove: Bool { true }
 }

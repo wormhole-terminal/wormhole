@@ -39,7 +39,9 @@ extension ThemeStore {
         let base = shown?.theme ?? bundled ?? library.theme(id: library.defaultDark) ?? library.themes[0]
         let resolved = shown?.tokens ?? base.tokens(increaseContrast: increaseContrast)
         let seen = opaque ? nil : (shown != nil || atDefaultLook ? resolved.translucent : nil)
-        (theme, tokens) = (base, resolved.windowed(opacity: look.opacity, text: seen))
+        let windowed = resolved.windowed(opacity: look.opacity, text: seen)
+        let lined = showsBorders || increaseContrast ? windowed : windowed.withoutLines()
+        (theme, tokens) = (base, lined.with(interfaceFont))
         self.problem = problem
     }
 

@@ -10,6 +10,7 @@ struct RustProjectsBackend: ProjectsBackend {
     /// The folders of the open terminals, which the page offers the projects of.
     let folders: @MainActor @Sendable () -> [String]
     let terminal: @MainActor @Sendable (String) -> Void
+    let ownerAvailable: @MainActor @Sendable () -> Bool
 
     func defaults() async -> [ProjectDefault] { await run { $0.projectDefaults().map(RecordMapping.projectDefault) } }
     func trusted() async -> [ProjectChoice] { await run { $0.trustedProjects().map(RecordMapping.projectChoice) } }
@@ -34,6 +35,7 @@ struct RustProjectsBackend: ProjectsBackend {
     func trust(_ root: String) async { await run { _ = $0.approve(root: root) } }
     func revoke(_ root: String) async { await run { $0.revoke(root: root) } }
     @MainActor func openTerminal(_ root: String) { terminal(root) }
+    @MainActor var canApprove: Bool { ownerAvailable() }
 
     private func run<T: Sendable>(_ work: @escaping @Sendable (ProjectService) -> T) async -> T {
         let service = service

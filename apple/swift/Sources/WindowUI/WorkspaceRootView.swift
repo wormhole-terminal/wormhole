@@ -6,6 +6,7 @@
 
 import DesignSystem
 import PaletteUI
+import PanelUI
 import SwiftUI
 import WorkspaceModel
 
@@ -50,6 +51,8 @@ public struct WorkspaceRootView: View {
         .onKeyPress(keys: [.tab, .escape], phases: .down) { hub.focus.listKey($0) }
         .coordinateSpace(name: PaneSpace.name)
         .environment(look)
+        .environment(\.codeFont, look.codeFont)
+        .environment(\.tabWidth, hub.panel.preferences.tabWidth)
         .environment(hub.focus)
         .themed()
         .ignoresSafeArea()

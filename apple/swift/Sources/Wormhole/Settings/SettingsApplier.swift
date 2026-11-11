@@ -12,6 +12,7 @@ import SettingsUI
 import SidebarUI
 import TerminalCore
 import TerminalMetal
+import WorkspaceModel
 import WindowUI
 
 @MainActor
@@ -40,7 +41,7 @@ final class SettingsApplier {
     private func apply(_ values: [String: JSONValue]) {
         func changed(_ keys: String...) -> Bool { keys.contains { values[$0] != applied[$0] } }
         defer { applied = values }
-        if changed("theme", "theme_light", "theme_mode"), app.options.theme == nil, app.options.appearance == nil {
+        if changed("theme", "theme_light", "theme_mode", "theme_primary", "primary_color", "branch_color", "branch_color_custom", "borders", "ui_font_family", "ui_font_size", "settings_translucent", "studio_translucent", "hosts_translucent", "opacity", "blur"), app.options.theme == nil, app.options.appearance == nil {
             ThemeSync.apply(values)
         }
         if changed("font_family", "font_size", "line_height", "font_ligatures"), app.options.fontFamily == nil, app.options.pointSize == nil {
@@ -63,8 +64,17 @@ final class SettingsApplier {
             app.hooks?.settingsChanged()
             app.menus?.windowsChanged()
         }
+        if changed("code_font_family", "code_font_size", "font_family") { app.look.codeFont = PanelSettings.codeFont(values) }
+        if changed("changes_tree", "group_untracked", "diff_split", "diff_wrap", "tab_width", "size_units") {
+            PanelSettings.apply(values, to: app.shown.map(\.hub))
+        }
+        if changed("auto_update", "anonymous_count"), app.options.updateFeedURL != nil {
+            app.aux.updateBackend().apply(
+                autoUpdate: values["auto_update"]?.bool ?? true, anonymousCount: values["anonymous_count"]?.bool ?? true)
+        }
         if changed("title_row") { applyTitleRow(values, to: app.shown.map(\.hub)) }
         if changed("open_in") { applyOpenIn(values, to: app.shown.map(\.hub)) }
+        if changed("sidebar_numbers", "sidebar_changes_plain", "sidebar_changes_shared") { applySidebarRules(values, to: app.shown.map(\.hub)) }
     }
 
     /// A window made after the settings were applied takes what they said.
@@ -72,6 +82,21 @@ final class SettingsApplier {
         let values = model.backend.values
         applyTitleRow(values, to: [session.hub])
         if values["open_in"] != nil { applyOpenIn(values, to: [session.hub]) }
+        applySidebarRules(values, to: [session.hub])
+        PanelSettings.apply(values, to: [session.hub])
+        PanelSettings.link(session.hub, to: model)
+    }
+
+    /// What the core's workspace counts by: ⌘1–9 staying with their terminal or following the list as shown
+    /// (`sidebar_numbers`), and which work a row's ±N is made of (`sidebar_changes_plain`, `sidebar_changes_shared`).
+    private func applySidebarRules(_ values: [String: JSONValue], to hubs: [WindowHub]) {
+        let follow = values["sidebar_numbers"]?.string == "list"
+        let rules = WorkspaceAction.setChangeRules(
+            plain: values["sidebar_changes_plain"]?.string ?? "finishing", shared: values["sidebar_changes_shared"]?.string ?? "each")
+        for hub in hubs {
+            hub.send(.setNumbersFollowList(follow))
+            hub.send(rules)
+        }
     }
 
     private func applyOpenIn(_ values: [String: JSONValue], to hubs: [WindowHub]) {
@@ -87,10 +112,11 @@ final class SettingsApplier {
         if changed("status_bar"), !app.options.statusBar { look.statusBar = values["status_bar"]?.bool ?? false }
         if changed("smooth_resize") { look.smoothResize = values["smooth_resize"]?.bool ?? false }
         if changed("minimap") { look.minimap = values["minimap"]?.bool ?? false }
+        if changed("icon_animations") { look.iconAnimations = values["icon_animations"]?.bool ?? true }
         if changed("split_gaps") { look.splitGaps = values["split_gaps"]?.bool ?? look.splitGaps }
         if changed("column_dividers") { look.columnDividers = values["column_dividers"]?.bool ?? look.columnDividers }
         if changed("terminals_in") { look.tabsOnTop = values["terminals_in"]?.string == "tabs" }
-        if changed("density", "show_groups_as_cards", "fade_group_colors", "show_group_folders", "sidebar_notes", "sidebar_changes", "restore_terminal_text", "motion.status") {
+        if changed("density", "show_groups_as_cards", "fade_group_colors", "show_group_folders", "sidebar_notes", "sidebar_changes", "sidebar_changes_scope", "sidebar_status_dot", "sidebar_cmd_hints", "restore_terminal_text", "motion.status") {
             look.sidebar = SidebarSettingsMaker.appearance(values, current: look.sidebar)
         }
     }

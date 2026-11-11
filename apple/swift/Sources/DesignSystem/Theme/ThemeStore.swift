@@ -24,6 +24,13 @@ public final class ThemeStore {
     /// Every window opaque, as in the GPUI app: no surface lets the desktop through and the text stands as the
     /// opaque rules made it.
     public var reduceTransparency = false { didSet { refresh() } }
+    /// The Borders setting: the lines of `border`, `card.edge` and `settings.divider` are drawn (`ui.line`); Increase
+    /// Contrast keeps them whatever it says, as in the GPUI app.
+    public var showsBorders = true { didSet { if showsBorders != oldValue { refresh() } } }
+    /// The interface font picked in Settings → Fonts: every type role reads it through the tokens' metrics.
+    public var interfaceFont = InterfaceFont() { didSet { if interfaceFont != oldValue { refresh() } } }
+    /// "Also translucent" for the Settings, Studio and Session Hosts windows, and the main window's opacity and blur they borrow.
+    public var secondary = SecondaryLook()
     /// The folder of the person's theme files (read only). Needs a `resolver`.
     public var themesDirectory: URL? { didSet { reloadUserThemes() } }
     /// Rust's loader and token rules at run time; without one, user themes, colour picks and opacities other

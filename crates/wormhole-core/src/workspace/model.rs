@@ -239,6 +239,7 @@ impl WorkspaceModel {
                 self.emit(Event::Chrome);
             }
             Action::SetNumbersFollowList(follow) => self.set_numbers_follow_list(follow),
+            Action::SetChangeRules(rules) => self.set_change_rules(rules),
             Action::SetFeature { feature, on } => self.set_feature(feature, on),
             Action::Search(text) => self.search(text),
             Action::ShowOverlay(overlay) => self.chrome_change(|c| c.overlay = overlay),

@@ -1,0 +1,38 @@
+# update feed requests (local server) after launch with auto_update and anonymous_count on (defaults), schedule count_from in the past:
+GET /stable/latest.json UA=Wormhole-Updater/1.6.3 (stable; aarch64; macOS 27) COUNT=day, month
+> update
+update  phase=idle channel=stable
+> update
+update  phase=idle channel=stable
+> set auto_update=false
+set auto_update -> bool(false)
+> set anonymous_count=false
+set anonymous_count -> bool(false)
+> update check
+update check phase=failed("invalid update feed: invalid sha256 \"00\"") channel=stable
+> update
+update  phase=failed("invalid update feed: invalid sha256 \"00\"") channel=stable
+# feed log:
+GET /stable/latest.json UA=Wormhole-Updater/1.6.3 (stable; aarch64; macOS 27) COUNT=day, month
+GET /stable/latest.json UA=Wormhole-Updater/1.6.3 COUNT=None
+# fixture fixed (valid-looking sha256): auto_update off, then on
+> update check
+update check phase=failed("update signature check failed: malformed signature in feed: Invalid encoding in minisign data") channel=stable
+> update
+update  phase=failed("update signature check failed: malformed signature in feed: Invalid encoding in minisign data") channel=stable
+> set auto_update=true
+set auto_update -> bool(true)
+> update check
+update check phase=failed("update signature check failed: malformed signature in feed: Invalid encoding in minisign data") channel=stable
+> update
+update  phase=failed("update signature check failed: malformed signature in feed: Invalid encoding in minisign data") channel=stable
+# fixture with a well-formed (unsigned-by-the-key) minisig: auto_update on now
+> update check
+update check phase=failed("Wormhole isn\'t running from an app bundle.") channel=stable
+> update
+> set auto_update=false
+set auto_update -> bool(false)
+> update check
+update check phase=available(AuxModel.Release(version: "99.0.0", notes: "## Verification\n- a test release from the local feed", published: Optional(2026-11-08 12:00:00 +0000), isSecurity: false)) channel=stable
+> update
+update  phase=available(AuxModel.Release(version: "99.0.0", notes: "## Verification\n- a test release from the local feed", published: Optional(2026-11-08 12:00:00 +0000), isSecurity: false)) channel=stable

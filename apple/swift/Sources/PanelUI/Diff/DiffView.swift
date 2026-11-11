@@ -18,6 +18,7 @@ public struct DiffView: View {
     var showsHeader = true
     @Environment(\.tokens) private var tokens
     @Environment(\.codeFont) private var codeFont
+    @Environment(\.tabWidth) private var tabWidth
 
     init(
         file: ChangedFile, session: DiffSession, position: (index: Int, count: Int)? = nil,
@@ -59,7 +60,7 @@ public struct DiffView: View {
             ScrollView(session.wrap ? .vertical : [.vertical, .horizontal]) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                        DiffRowView(row: row, style: style, code: DiffCode(tokens: tokens), path: file.path, review: review)
+                        DiffRowView(row: row, style: style, code: DiffCode(tokens: tokens, tabWidth: tabWidth), path: file.path, review: review)
                     }
                 }
             }

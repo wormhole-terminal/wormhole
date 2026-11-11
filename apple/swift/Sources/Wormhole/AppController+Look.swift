@@ -65,4 +65,24 @@ extension AppController {
             + "opacity=\(look.opacity) blur=\(look.blur) glass=\(look.liquidGlass) status_bar=\(look.statusBar) "
             + "tabs=\(look.tabsOnTop) gaps=\(look.splitGaps) dividers=\(look.columnDividers) reduce_transparency=\(themes.reduceTransparency) increase_contrast=\(themes.increaseContrast)"
     }
+
+    /// What the settings of Settings → Appearance, Fonts, Terminals & sidebar and Git came to, as the windows hold them now:
+    /// the control folder's `look-keys`, which a check reads after it flipped a key.
+    var settingsEffects: String {
+        let tokens = themes.tokens
+        let panel = hub.panel.preferences
+        let sidebar = look.sidebar
+        let secondary = themes.secondary
+        return """
+            accent primary=\(tokens.rgba(named: "primary")?.hex ?? "-") branch=\(tokens.rgba(named: "git.branch")?.hex ?? "-") \
+            border=\(tokens.rgba(named: "border")?.hex ?? "-") card_edge=\(tokens.rgba(named: "card.edge")?.hex ?? "-")
+            interface_font family=\(tokens.metrics.uiFontFamily ?? "system") size=\(tokens.metrics.uiFontSize)
+            code_font family=\(look.codeFont.family ?? "system-mono") size=\(look.codeFont.size) tab_width=\(panel.tabWidth) binary_sizes=\(panel.binarySizes)
+            panel changes_tree=\(panel.changesTree) group_untracked=\(panel.groupUntracked) diff_split=\(panel.diffSplit) diff_wrap=\(panel.diffWrap)
+            icon_animations=\(look.iconAnimations)
+            sidebar scope=\(sidebar.changesScope.rawValue) status_dot=\(sidebar.showsStatus) cmd_hints=\(sidebar.showsCommandHints) numbers_follow_list=\(hub.state.layout?.numbersFollowList.description ?? "-")
+            secondary_windows settings=\(secondary.settings) studio=\(secondary.studio) hosts=\(secondary.hosts) opacity=\(secondary.opacity) blur=\(secondary.blur)
+            row_counts \(hub.state.sections.flatMap(\.rows).map { "\($0.terminal.id):number=\($0.number.map(String.init) ?? "-"),pinned=\($0.terminal.isPinned),changes=\($0.terminal.changeCount),repo_files=\($0.terminal.repoFiles.map(String.init) ?? "-")" }.joined(separator: " "))
+            """
+    }
 }

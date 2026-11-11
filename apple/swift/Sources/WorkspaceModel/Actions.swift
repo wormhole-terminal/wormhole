@@ -93,4 +93,6 @@ public enum WorkspaceAction: Sendable, Equatable {
     case setTitleRow([String])
     /// ⌘ numbers follow the list as shown (`true`), or stay with their terminal.
     case setNumbersFollowList(Bool)
+    /// What a row's ±N counts (`sidebar_changes_plain`: finishing, any or none; `sidebar_changes_shared`: each or none).
+    case setChangeRules(plain: String, shared: String)
 }

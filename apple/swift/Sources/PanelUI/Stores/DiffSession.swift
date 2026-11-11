@@ -13,12 +13,22 @@ public final class DiffSession {
     public private(set) var phase = Phase.idle
     /// Old against new in two columns (when there is room) and long lines wrapped: shared by the header and the
     /// rows, which the window draws apart when the diff covers the terminal.
-    public var split = true
-    public var wrap = true
+    public var split: Bool {
+        get { preferences.diffSplit }
+        set { preferences.diffSplit = newValue }
+    }
+    public var wrap: Bool {
+        get { preferences.diffWrap }
+        set { preferences.diffWrap = newValue }
+    }
+    public let preferences: PanelPreferences
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private let highlighter: any SyntaxHighlighting
 
-    public init(highlighter: any SyntaxHighlighting) { self.highlighter = highlighter }
+    public init(highlighter: any SyntaxHighlighting, preferences: PanelPreferences = PanelPreferences()) {
+        self.highlighter = highlighter
+        self.preferences = preferences
+    }
 
     public var parsed: DiffFile? { if case let .shown(diff) = phase { diff } else { nil } }
 

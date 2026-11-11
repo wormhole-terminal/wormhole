@@ -21,6 +21,12 @@ enum ProjectsText {
     static var trustedAside: String {
         Words.text("settings-projects-projects-allowed-to-run-commands", fallback: "Projects allowed to run commands")
     }
+    static var noApproval: String {
+        Words.text(
+            "settings-projects-approval-isnt-available-on-this-mac",
+            fallback: "Approval isn't available on this Mac (no Touch ID or login password), so projects can't be trusted.")
+    }
+    static var search: String { Words.text("settings-projects-search-projects", fallback: "Search projects") }
     static var none: String { Words.text("settings-projects-none-yet", fallback: "None yet.") }
     static var settings: String { Words.text("settings-projects-settings", fallback: "Settings") }
     static var revoke: String { Words.text("settings-projects-revoke", fallback: "Revoke") }

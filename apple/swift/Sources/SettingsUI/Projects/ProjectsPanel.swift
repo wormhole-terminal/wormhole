@@ -17,13 +17,17 @@ struct ProjectsPanel: View {
 
 private struct ProjectsBody: View {
     let projects: ProjectsModel
+    /// What the person typed to narrow the projects the select offers (`Search projects`).
+    @State private var search = ""
     /// The project select's width (the GPUI page's 360).
     private static let selectWidth: CGFloat = 360
+    private static let searchWidth: CGFloat = 160
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._6) {
             SettingGroup(title: ProjectsText.project) {
                 HStack {
+                    TextField(ProjectsText.search, text: $search).textFieldStyle(.roundedBorder).frame(width: Self.searchWidth)
                     OptionPicker(options: options, selected: .string(projects.selected ?? ""), label: ProjectsText.project, width: Self.selectWidth) {
                         pick($0.string)
                     }
@@ -45,7 +49,8 @@ private struct ProjectsBody: View {
 
     private var options: [SettingOption] {
         [SettingOption(value: .string(""), label: ProjectsText.allProjectsDefaults)]
-            + projects.known.map { SettingOption(value: .string($0.root), label: $0.name) }
+            + projects.known.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) || $0.root.localizedCaseInsensitiveContains(search) }
+            .map { SettingOption(value: .string($0.root), label: $0.name) }
     }
 
     private func pick(_ root: String?) { Task { await projects.select(root.flatMap { $0.isEmpty ? nil : $0 }) } }
@@ -79,5 +84,6 @@ private struct Defaults: View {
                 .frame(minHeight: SettingsMetric.rowMinHeight + Space._2)
             }
         }
+        if !projects.canApprove { Banner(kind: .warning, text: ProjectsText.noApproval) }
     }
 }

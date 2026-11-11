@@ -23,6 +23,7 @@ struct RowDetails: View {
     let isSelected: Bool
     @Environment(\.tokens) private var tokens
     @Environment(\.sidebarLook) private var look
+    @Environment(\.rowChanges) private var changes
 
     private var quiet: Color { isSelected ? tokens.sidebarRowSelectedMuted : tokens.textMuted }
     /// The size of the notes icon (`xsmall`): the pin's, so the two marks read as a set.
@@ -40,7 +41,7 @@ struct RowDetails: View {
                     Text("\(terminal.noteCount)")
                 }
             }
-            if look.showsChanges, terminal.changeCount > 0 { Text("±\(terminal.changeCount)") }
+            if look.showsChanges, let count = changes[terminal.id] { Text("±\(count)") }
         }
         .font(TextRole.caption.font.monospacedDigit())
         .foregroundStyle(quiet)

@@ -1,4 +1,4 @@
-// A line of code as the diff and the viewer draw it: tabs expanded to the tab width (4), then coloured with the theme's
+// A line of code as the diff and the viewer draw it: tabs expanded to the tab width (`tab_width`, 4), then coloured with the theme's
 // syntax tokens by the spans the highlighter made for the line. A line without spans, a language without a grammar or a
 // theme without a `syntax.*` entry is plain in `text.primary`.
 
@@ -8,10 +8,10 @@ import SwiftUI
 
 struct DiffCode {
     let tokens: ThemeTokens
-    static let tabWidth = 4
+    var tabWidth = 4
 
     func text(_ line: String, spans: [SyntaxSpan]) -> AttributedString {
-        let (expanded, columns) = Self.expandTabs(line)
+        let (expanded, columns) = expandTabs(line)
         var out = AttributedString(expanded)
         out.foregroundColor = tokens.textPrimary
         for span in spans {
@@ -27,7 +27,7 @@ struct DiffCode {
 
     /// The line with its tabs written as spaces to the next tab stop, and where each character of the original starts
     /// in it (one entry more, for the end), which is how the spans' offsets follow the expansion.
-    static func expandTabs(_ line: String) -> (text: String, columns: [Int]) {
+    func expandTabs(_ line: String) -> (text: String, columns: [Int]) {
         var out = "", column = 0
         var columns: [Int] = []
         for ch in line {

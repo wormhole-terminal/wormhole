@@ -13,6 +13,9 @@ public final class ProjectsModel {
     public private(set) var selected: String?
     public private(set) var page: ProjectPage?
 
+    /// Trusting a project needs the owner to answer; without a way to ask, the trusted list says it cannot be done.
+    public var canApprove: Bool { backend.canApprove }
+
     public init(backend: any ProjectsBackend) { self.backend = backend }
 
     public func refresh() async {

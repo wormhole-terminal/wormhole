@@ -16,6 +16,8 @@ public final class PanelController {
     public let usage: UsageStore
     public let worktrees: WorktreeStore
     public let host: any PanelHost
+    /// What Settings → Git says, shared by the tabs.
+    public let preferences = PanelPreferences()
     public let keyboard = PanelKeyboard()
     public private(set) var folder: String?
     /// A fixed clock (Unix seconds) for screenshots and tests; nil follows the real one.
@@ -26,8 +28,8 @@ public final class PanelController {
     ) {
         self.host = host
         self.tab = tab
-        changes = ChangesStore(git: backends.git, highlighter: backends.syntax, host: host)
-        history = HistoryStore(git: backends.git, highlighter: backends.syntax)
+        changes = ChangesStore(git: backends.git, highlighter: backends.syntax, host: host, preferences: preferences)
+        history = HistoryStore(git: backends.git, highlighter: backends.syntax, preferences: preferences)
         self.notes = NotesStore(model: notes, host: host)
         files = FilesStore(backend: backends.files, highlighter: backends.syntax, host: host)
         project = ProjectStore(backend: backends.project, host: host)

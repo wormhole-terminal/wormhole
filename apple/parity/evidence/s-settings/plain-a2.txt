@@ -1,0 +1,6 @@
+# clean repeat with plain=none on a new terminal (4), nothing else running; a file edited from outside during its sleep
+> look-keys
+row_counts 3:number=1,pinned=true,changes=0,repo_files=3 1:number=2,pinned=false,changes=2,repo_files=3 2:number=3,pinned=false,changes=0,repo_files=3 4:number=4,pinned=false,changes=0,repo_files=3
+# and plain=finishing on a new terminal (5)
+> look-keys
+row_counts 3:number=1,pinned=true,changes=0,repo_files=3 1:number=2,pinned=false,changes=2,repo_files=3 2:number=3,pinned=false,changes=0,repo_files=3 4:number=4,pinned=false,changes=0,repo_files=3 5:number=5,pinned=false,changes=1,repo_files=3

@@ -63,6 +63,9 @@ extension AppController {
         let terminals = ambientTerminals
         var snapshot = StatusSnapshot()
         snapshot.terminals = terminals
+        // What the menu bar item would be given (it is not made in a test instance): the settings' own.
+        snapshot.icon = settingsModel.value("menu_bar_icon").string.flatMap(MenuBarIconMode.init(rawValue:)) ?? .statusCount
+        snapshot.animate = settingsModel.value("menu_bar_animate").bool ?? false
         let status = StatusMenu.build(snapshot, now: Date())
         let counts = AmbientCounts(of: terminals)
         return "icon \(status.icon)\n" + MenuDump.lines(status.menu, depth: 1) + "dock\n" + MenuDump.lines(DockMenu.build(terminals, now: Date()), depth: 1)

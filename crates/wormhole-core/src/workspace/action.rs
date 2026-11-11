@@ -1,5 +1,6 @@
 //! Everything a person can do to the window: what a shell sends, and the model decides what it means.
 
+use super::git_feed::ChangeRules;
 use crate::config::FeatureId;
 use crate::config::tab::TabId;
 use crate::view::layout::Edge;
@@ -232,6 +233,8 @@ pub enum Action {
     SetTitleRow(Vec<TitlePart>),
     /// ⌘1 to ⌘9 count along the list as shown (`true`) or stay with their terminal (`false`).
     SetNumbersFollowList(bool),
+    /// What a row's ±N counts changed in Settings (Changed files: Plain terminals, Files changed at once).
+    SetChangeRules(ChangeRules),
     /// A feature was switched on or off in Settings: its panel tab comes or goes.
     SetFeature {
         feature: FeatureId,

@@ -36,6 +36,7 @@ public struct SettingsView: View {
         .onSubmit(of: .search) { if let first = model.hits.first { model.jump(to: first) } }
         // The theme enters the system's controls here: their tint (switch, slider, selection) and, in `themed`, light or dark.
         .tint(tokens.primary)
+        .secondaryBackdrop(.settings)
         .foregroundStyle(tokens.textPrimary)
         .environment(\.fontLibrary, fonts)
         .onKeyPress(.escape) { escape() }

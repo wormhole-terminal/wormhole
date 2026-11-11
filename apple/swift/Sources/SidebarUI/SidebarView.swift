@@ -114,7 +114,8 @@ public struct SidebarView: View {
         .overlay(alignment: .top) { if sections.isEmpty && searching { NothingFound() } }
         .environment(\.sidebarMetrics, SidebarMetrics(density: appearance.density, cards: appearance.cards))
         .environment(\.sidebarLook, appearance)
-        .environment(\.showsHints, appearance.forcesHints || hold.showing)
+        .environment(\.rowChanges, RowChanges.counts(sections, scope: appearance.changesScope))
+        .environment(\.showsHints, appearance.forcesHints || (appearance.showsCommandHints && hold.showing))
         .environment(\.keyedStop, focused && keysLead ? cursor : nil)
         .focusable()
         .focusEffectDisabled()

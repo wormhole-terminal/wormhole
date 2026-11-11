@@ -23,8 +23,14 @@ public enum FileContent: Equatable, Sendable {
 /// Why a rename was refused (`RenameError`): the field stays open and the notice says why.
 public enum RenameFailure: Error, Sendable { case name, exists, denied, gone, other }
 
-/// A byte count as the viewer writes it, "48.2 KB" (the app's `size_units` setting decides decimal or binary; decimal
-/// here, as Finder).
+/// A byte count as the viewer writes it, "48.2 KB" or, by the `size_units` setting, "47.1 KiB". The words are core's
+/// (`byte_size`, installed by the app with the FFI linked); Finder's alone without it.
+@MainActor
 public enum ByteSize {
-    public static func text(_ bytes: Int) -> String { bytes.formatted(.byteCount(style: .file)) }
+    public static var core: (@MainActor (UInt64, Bool) -> String)?
+    public static var binary = false
+
+    public static func text(_ bytes: Int) -> String {
+        core?(UInt64(max(bytes, 0)), binary) ?? bytes.formatted(.byteCount(style: .file))
+    }
 }

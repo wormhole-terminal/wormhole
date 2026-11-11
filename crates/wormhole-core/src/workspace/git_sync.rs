@@ -9,7 +9,7 @@ use crate::git::attribution::Snapshot;
 
 use super::event::Event;
 use super::facts::Millis;
-use super::git_feed::{GitJob, Wanted};
+use super::git_feed::{ChangeRules, GitJob, Wanted};
 use super::model::WorkspaceModel;
 
 impl WorkspaceModel {
@@ -93,6 +93,16 @@ impl WorkspaceModel {
         if moved {
             self.git_facts();
         }
+    }
+
+    /// The rules of Settings → Changed files moved: the counts are made again under them.
+    pub(super) fn set_change_rules(&mut self, rules: ChangeRules) {
+        if self.cfg.changes == rules {
+            return;
+        }
+        self.cfg.changes = rules;
+        self.git.set_rules(rules);
+        self.git_facts();
     }
 
     /// Put what the feed says into every terminal's facts; a change that shows is a `Listing`.

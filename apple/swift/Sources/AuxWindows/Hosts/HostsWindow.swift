@@ -2,6 +2,7 @@
 
 import AppKit
 import AuxModel
+import DesignSystem
 import SwiftUI
 
 @MainActor
@@ -17,7 +18,8 @@ public enum HostsWindow {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
                 },
-                sheetWindow: { controller?.window })
+                sheetWindow: { controller?.window }
+            ).secondaryBackdrop(.hosts)
         }
     }
 }

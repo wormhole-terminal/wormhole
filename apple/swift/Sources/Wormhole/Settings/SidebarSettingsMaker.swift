@@ -13,6 +13,9 @@ enum SidebarSettingsMaker {
         next.showsGroupFolders = values["show_group_folders"]?.bool ?? current.showsGroupFolders
         next.showsNotes = values["sidebar_notes"]?.bool ?? current.showsNotes
         next.showsChanges = values["sidebar_changes"]?.bool ?? current.showsChanges
+        next.changesScope = values["sidebar_changes_scope"]?.string.flatMap(ChangesScope.init(rawValue:)) ?? current.changesScope
+        next.showsStatus = values["sidebar_status_dot"]?.bool ?? current.showsStatus
+        next.showsCommandHints = values["sidebar_cmd_hints"]?.bool ?? current.showsCommandHints
         next.restoresText = values["restore_terminal_text"]?.bool ?? current.restoresText
         next.statusMotion = values["motion.status"]?.string.flatMap(statusMotion) ?? current.statusMotion
         return next

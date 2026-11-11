@@ -51,6 +51,8 @@ impl WorkspaceModel {
         if self.cfg.numbers != numbers {
             self.cfg.numbers = numbers;
             self.rearranged();
+            // The chrome snapshot says which way they count (`numbers_follow_list`).
+            self.emit(Event::Chrome);
         }
     }
 }

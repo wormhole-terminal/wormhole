@@ -24,9 +24,9 @@ public final class HistoryStore {
     @ObservationIgnored private let git: any GitBackend
     @ObservationIgnored private var watch: Task<Void, Never>?
 
-    public init(git: any GitBackend, highlighter: any SyntaxHighlighting) {
+    public init(git: any GitBackend, highlighter: any SyntaxHighlighting, preferences: PanelPreferences = PanelPreferences()) {
         self.git = git
-        diff = DiffSession(highlighter: highlighter)
+        diff = DiffSession(highlighter: highlighter, preferences: preferences)
     }
 
     public func follow(_ folder: String?) {

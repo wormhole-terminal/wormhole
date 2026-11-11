@@ -9,6 +9,8 @@ import SettingsModel
 extension AmbientController {
     func apply(_ values: [String: JSONValue], changed: (String...) -> Bool) {
         if changed("menu_bar") { status.item?.isVisible = values["menu_bar"]?.bool ?? true }
+        if changed("menu_bar_icon") { iconMode = values["menu_bar_icon"]?.string.flatMap(MenuBarIconMode.init(rawValue:)) ?? .statusCount }
+        if changed("menu_bar_animate") { animatesIcon = values["menu_bar_animate"]?.bool ?? false }
         if changed("dock_badge") { badgeMode = values["dock_badge"]?.string.flatMap(DockBadgeMode.init(rawValue:)) ?? .needsYou }
         if changed("hotkey", "hotkey_action") { setHotkey(values["hotkey"]?.string ?? "", action: values["hotkey_action"]?.string ?? "") }
     }
