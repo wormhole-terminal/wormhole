@@ -1,0 +1,28 @@
+// What the window needs to run its terminals in session hosts (persistent terminals). Nil in `WorkspaceSetup` keeps every
+// terminal in the app's process, as before.
+
+import Foundation
+
+public struct HostingSetup: Sendable {
+    /// The folder the saved terminals and the hosts live in; nil is the process's own (`WORMHOLE_DATA_DIR`).
+    public var dataDirectory: String?
+    /// A host program to start instead of the one beside the app (tests, development). The release library ignores core's
+    /// own `WORMHOLE_HOST_BIN`, so the variable is read here and handed over.
+    public var hostBinary: String?
+    /// The id the terminals' saved rows are kept under.
+    public var window: Int64
+    /// Whether this window asks for the hosts nobody names, to bring them into a Recovered group: one window of the app
+    /// does, or each would take the same hosts.
+    public var adoptsOrphans: Bool
+    /// The profile the window belongs to when it is not the one Wormhole is in (a window opened beside the shown profile's):
+    /// its terminals' rows are kept there. Nil is the profile Wormhole is in.
+    public var profile: String?
+
+    public init(
+        dataDirectory: String? = nil, hostBinary: String? = ProcessInfo.processInfo.environment["WORMHOLE_HOST_BIN"],  // text: an environment variable
+        window: Int64 = 1, adoptsOrphans: Bool = true, profile: String? = nil
+    ) {
+        (self.dataDirectory, self.hostBinary, self.window, self.adoptsOrphans, self.profile) =
+            (dataDirectory, hostBinary, window, adoptsOrphans, profile)
+    }
+}

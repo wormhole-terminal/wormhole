@@ -1,0 +1,57 @@
+// `StudioFiles` over the core: every rule about a theme file (its format and versions, a copy's base, ids, a pair, an
+// update) is `wormhole-core`'s, asked through `studio_files.rs` with the profile's themes folder.
+
+import Foundation
+import StudioModel
+import WormholeBindings
+
+public struct FfiStudioFiles: StudioFiles {
+    let directory: String
+
+    public init(directory: URL) { self.directory = directory.path }
+
+    public func read(_ text: String) throws -> StudioFileRead {
+        let read = try studioRead(text: text)
+        return StudioFileRead(version: Int(read.version), newer: read.newer, skipped: Int(read.skipped))
+    }
+
+    public func canonical(_ text: String) throws -> String { try studioCanonical(text: text) }
+
+    public func newTheme(dark: Bool, name: String) -> String { studioNewTheme(dark: dark, name: name) }
+
+    public func copyTheme(from: String, name: String) -> String? { studioCopyTheme(themesDir: directory, from: from, name: name) }
+
+    public func newID(name: String, itself: URL?) -> String { studioNewId(themesDir: directory, name: name, itself: itself?.path) }
+
+    public func convert(_ text: String, id: String) throws -> String { try studioConvert(themesDir: directory, text: text, id: id) }
+
+    public func addAppearance(_ text: String, dark: Bool, id: String) throws -> String {
+        try studioAddAppearance(themesDir: directory, text: text, dark: dark, id: id)
+    }
+
+    public func updateCheck(_ text: String, shown: String?) throws -> UpdateCheck {
+        let check = try studioUpdateCheck(themesDir: directory, text: text, shown: shown)
+        let state: UpdateCheck.State =
+            switch check.state {
+            case "missing": .missing
+            case "current": .current
+            case "changed": .changed
+            default: .none
+            }
+        return UpdateCheck(
+            state: state, from: check.from, date: check.date,
+            changes: check.changes.map { UpdateChange(key: $0.key, old: $0.old, new: $0.new, kept: $0.kept) })
+    }
+
+    public func updateApply(_ text: String, shown: String?) throws -> String { try studioUpdateApply(themesDir: directory, text: text, shown: shown) }
+
+    public func export(_ text: String, shown: String?) throws -> String { try studioExport(themesDir: directory, text: text, shown: shown) }
+
+    public func themeList() -> ThemeList {
+        let list = studioThemeList(themesDir: directory)
+        func choices(_ list: [StudioThemeChoice]) -> [ThemeChoice] { list.map { ThemeChoice(name: $0.name, value: $0.value) } }
+        return ThemeList(
+            own: choices(list.own),
+            builtins: list.builtins.map { ThemeFamily(name: $0.name, wormhole: $0.wormhole, choices: choices($0.choices)) })
+    }
+}
