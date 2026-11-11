@@ -78,7 +78,10 @@ final class SettingsApplier {
             app.menus?.windowsChanged()
         }
         if changed("code_font_family", "code_font_size", "font_family") { app.look.codeFont = PanelSettings.codeFont(values) }
-        if changed("changes_tree", "group_untracked", "diff_split", "diff_wrap", "tab_width", "size_units") {
+        if changed(
+            "changes_tree", "group_untracked", "diff_split", "diff_wrap", "tab_width", "size_units", "worktree_base",
+            "worktree_clone_build_folders")
+        {
             PanelSettings.apply(values, to: app.shown.map(\.hub))
         }
         if changed("auto_update", "anonymous_count"), app.options.updateFeedURL != nil {

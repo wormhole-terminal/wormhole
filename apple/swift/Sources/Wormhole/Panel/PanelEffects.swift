@@ -43,8 +43,8 @@
 
         private func open(_ spec: NewTerminal) {
             guard let hub else { return }
-            let id = existing(named: spec.name) ?? make(in: spec.cwd, named: spec.name)
-            guard let id else { return }
+            // Only what is not open: a terminal of that name is left alone, nothing typed into it, not selected.
+            guard existing(named: spec.name) == nil, let id = make(in: spec.cwd, named: spec.name) else { return }
             if spec.focus { hub.send(.select(id)) }
             if let run = spec.run, let view = hub.terminals.view(for: id) { view.source.write(Data((run + "\r").utf8)) }
         }
@@ -55,7 +55,10 @@
             switch place {
             case .current: id = hub.state.selected
             case .new(let cwd): id = make(in: cwd, named: nil)
-            case .named(let name, let cwd): id = existing(named: name) ?? make(in: cwd, named: name)
+            case .named(let name, let cwd):
+                id = existing(named: name) ?? make(in: cwd, named: name)
+                // The terminal it is typed into comes in front first.
+                if let id, id != hub.state.selected { hub.send(.select(id)) }
             }
             return id.flatMap { hub.terminals.view(for: $0) }
         }

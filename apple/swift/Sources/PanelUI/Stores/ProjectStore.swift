@@ -9,6 +9,7 @@ import WorkspaceModel
 @MainActor @Observable
 public final class ProjectStore {
     public private(set) var folder: String?
+    public private(set) var band: String?
     public private(set) var state: ProjectState?
     public private(set) var paint = FolderPaint.own
     public private(set) var loaded = false
@@ -24,9 +25,11 @@ public final class ProjectStore {
         self.host = host
     }
 
-    public func follow(_ folder: String?) {
-        guard folder != self.folder else { return }
-        self.folder = folder
+    /// `band`: the band's folder (the repository's root, else the folder), which the colour and Create are for;
+    /// the project is looked up from the folder itself.
+    public func follow(_ folder: String?, band: String? = nil) {
+        guard folder != self.folder || band != self.band else { return }
+        (self.folder, self.band) = (folder, band)
         (state, loaded, error) = (nil, false, nil)
         watch?.cancel()
         guard let folder else { return }
@@ -38,12 +41,12 @@ public final class ProjectStore {
 
     public func reload() {
         guard let folder else { return }
-        let backend = backend
+        let (backend, band) = (backend, band)
         Task {
             async let project = backend.project(at: folder)
-            async let colour = backend.folderPaint(of: folder)
+            async let colour = backend.folderPaint(of: band ?? folder)
             let (found, painted) = await (project, colour)
-            guard folder == self.folder else { return }
+            guard folder == self.folder, band == self.band else { return }
             (state, paint, loaded) = (found, painted, true)
         }
     }
@@ -104,6 +107,7 @@ public final class ProjectStore {
         Task {
             guard let text = await backend.text(ofPrompt: prompt.id, at: root) else { return }
             notes.add(note: text)
+            host?.show(tab: .notes)
         }
     }
 
@@ -114,7 +118,7 @@ public final class ProjectStore {
 
     /// Runs a backend call for the current folder, then reads the tab again (the file watch would too, a beat later).
     private func act(_ call: @escaping @Sendable (String, any ProjectBackend) async -> Void) {
-        guard let folder else { return }
+        guard let folder = band ?? folder else { return }
         let backend = backend
         Task {
             await call(folder, backend)

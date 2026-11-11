@@ -34,8 +34,10 @@ private struct PathMenu: ViewModifier {
             }
             Button(panelText("history-menu-copy-path", ["count": .whole(count)], count == 1 ? "Copy Path" : "Copy Paths")) { copy(paths.map(absolute)) }
             Button(panelText("history-menu-copy-relative-path", ["count": .whole(count)], count == 1 ? "Copy Relative Path" : "Copy Relative Paths")) { copy(paths) }
-            Divider()
-            Button(panelText("history-menu-file-history", ["count": .whole(count)], count == 1 ? "File History" : "History of These Files")) { history(paths) }
+            if host?.offers(tab: .history) ?? true {
+                Divider()
+                Button(panelText("history-menu-file-history", ["count": .whole(count)], count == 1 ? "File History" : "History of These Files")) { history(paths) }
+            }
         }
     }
 

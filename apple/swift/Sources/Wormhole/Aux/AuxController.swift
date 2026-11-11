@@ -35,7 +35,7 @@ final class AuxController {
 
     /// The project of the terminal in front, when the core found one.
     func showTrust() {
-        let backend = backends.trust(root: app.hub.panel.project.state?.root)
+        let backend = backends.trust(root: app.hub.panel.project.state?.root, profile: app.front.windows.profile)
         TrustWindow.show(backend: ReloadingTrust(backend) { [weak app] in app?.hub.panel.project.reload() })
     }
 

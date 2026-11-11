@@ -4,6 +4,7 @@
 import AppKit
 import Foundation
 import TerminalCore
+import WorkspaceModel
 
 extension WindowHub {
     func connect(_ host: SystemPanelHost) {
@@ -20,6 +21,8 @@ extension WindowHub {
         }
         host.terminal.say = { [unowned self] in notices.post($0) }
         host.terminal.showCommands = { [unowned self] in onShowProjectCommands?() }
+        host.terminal.showTab = { [unowned self] name in PanelTab(rawValue: name).map { send(.showPanelTab($0)) } }
+        host.terminal.offersTab = { [unowned self] name in panelTabs.contains { $0.rawValue == name } }
         host.terminal.apps = { [unowned self] in openIn.apps() }
         host.launches = { [unowned self] in launchesApps }
         host.terminal.focus = { [unowned self] in

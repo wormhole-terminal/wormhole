@@ -25,21 +25,47 @@ public final class HistoryStore {
     public let diff: DiffSession
     @ObservationIgnored private let git: any GitBackend
     @ObservationIgnored private var watch: Task<Void, Never>?
+    /// A diff is about to open here: the controller takes down what else covers the terminal.
+    @ObservationIgnored var opened: () -> Void = {}
 
     public init(git: any GitBackend, highlighter: any SyntaxHighlighting, preferences: PanelPreferences = PanelPreferences()) {
         self.git = git
         diff = DiffSession(highlighter: highlighter, preferences: preferences)
     }
 
-    public func follow(_ folder: String?) {
-        guard folder != self.folder else { return }
-        self.folder = folder
-        (rev, paths, expanded, details, detailsError, model) = (nil, [], nil, nil, nil, HistoryModel())
+    /// What belongs to one terminal and waits for it while another is shown (GPUI's `HistoryState` per session).
+    private struct Kept {
+        var rev: Rev?
+        var paths: [String] = []
+        var expanded: Commit.ID?
+    }
+    @ObservationIgnored private var kept: [Int: Kept] = [:]
+    @ObservationIgnored private var terminal: Int?
+
+    /// Another terminal brings its own picked rev, path filter and open commit; a `cd` keeps the picked rev.
+    public func follow(_ folder: String?, terminal: Int? = nil) {
+        let moved = terminal != self.terminal
+        guard moved || folder != self.folder else { return }
         close()
+        if moved {
+            if let old = self.terminal { kept[old] = Kept(rev: rev, paths: paths, expanded: expanded) }
+            let mine = terminal.flatMap { kept.removeValue(forKey: $0) } ?? Kept()
+            (rev, paths, expanded, self.terminal, cursor) = (mine.rev, mine.paths, mine.expanded, terminal, nil)
+        } else {
+            (paths, expanded) = ([], nil)
+        }
+        (details, detailsError) = (nil, nil)
+        guard folder != self.folder else {
+            refresh()
+            return readDetails()
+        }
+        self.folder = folder
+        model = HistoryModel()
         watch?.cancel()
         guard let folder else { return }
         phase = .loading
         refresh()
+        readDetails()
         watch = Task { [git, weak self] in
             for await _ in git.changes(in: folder) { self?.refresh() }
         }
@@ -52,9 +78,12 @@ public final class HistoryStore {
             guard await git.isRepository(folder) else { if folder == self.folder { phase = .notRepository }; return }
             do {
                 let log = try await git.log(in: folder, of: rev, paths: paths)
-                guard folder == self.folder, rev == self.rev else { return }
+                guard folder == self.folder, rev == self.rev, paths == self.paths else { return }
+                let moved = model != log
                 model = log
                 phase = .loaded
+                // A branch or tag may have moved onto the open commit: its block is read again, the old one staying meanwhile.
+                if moved, details != nil { readDetails() }
             } catch {
                 if folder == self.folder { phase = .failed((error as? GitFailure)?.message ?? panelText("history-unreadable", "The log can't be read.")) }
             }
@@ -67,12 +96,16 @@ public final class HistoryStore {
         details = nil
         guard expanded != sha else { return (expanded, detailsError) = (nil, nil) }
         (expanded, detailsError) = (sha, nil)
-        guard let folder else { return }
+        readDetails()
+    }
+
+    private func readDetails() {
+        guard let folder, let sha = expanded else { return }
         let git = git
         Task {
             do {
                 let full = try await git.details(of: sha, in: folder)
-                if expanded == sha { details = full }
+                if expanded == sha, folder == self.folder { details = full }
             } catch {
                 if expanded == sha { detailsError = (error as? GitFailure)?.message ?? panelText("history-details-unreadable", "The details can't be read.") }
             }
@@ -103,6 +136,8 @@ public final class HistoryStore {
     public func show(_ sha: String) {
         guard let commit = model.commits.first(where: { $0.sha.hasPrefix(sha.prefix(7)) }), expanded != commit.id else { return }
         toggle(commit.id)
+        // The list scrolls to the row the keys are on.
+        cursor = "commit-" + commit.id
     }
 
     public func pick(_ rev: Rev?) {
@@ -114,6 +149,9 @@ public final class HistoryStore {
 
     public func filter(by paths: [String]) {
         self.paths = paths
+        // The log is another list now: the open commit folds (`show_paths`).
+        (expanded, details, detailsError) = (nil, nil, nil)
+        close()
         refresh()
     }
 
@@ -123,6 +161,7 @@ public final class HistoryStore {
 
     /// Opens one file of the open commit in the diff.
     public func open(_ id: ChangedFile.ID?) {
+        if id != nil { opened() }
         selection = id
         guard let folder, let sha = expanded, let file = current else { return diff.close() }
         let git = git
@@ -132,7 +171,11 @@ public final class HistoryStore {
     public func close() { open(nil) }
 
     public func step(_ delta: Int) {
-        if let next = ListNavigation.move(in: files.map(\.id), from: selection, by: delta) { open(next) }
+        // Round the commit's files, as the Changes diff's arrows go.
+        let ids = files.map(\.id)
+        guard !ids.isEmpty else { return }
+        let at = selection.flatMap { ids.firstIndex(of: $0) } ?? (delta > 0 ? -1 : 0)
+        open(ids[((at + delta) % ids.count + ids.count) % ids.count])
     }
 
     public func loadRevs() {

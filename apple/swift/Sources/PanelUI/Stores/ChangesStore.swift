@@ -45,6 +45,8 @@ public final class ChangesStore {
     @ObservationIgnored private let git: any GitBackend
     @ObservationIgnored private weak var host: (any PanelHost)?
     @ObservationIgnored private var watch: Task<Void, Never>?
+    /// A diff is about to open here: the controller takes down what else covers the terminal.
+    @ObservationIgnored var opened: () -> Void = {}
 
     public init(
         git: any GitBackend, highlighter: any SyntaxHighlighting, host: (any PanelHost)? = nil,
@@ -56,14 +58,35 @@ public final class ChangesStore {
         diff = DiffSession(highlighter: highlighter, preferences: preferences)
     }
 
-    /// The tab follows the terminal: a new folder starts again.
-    public func follow(_ folder: String?) {
-        guard folder != self.folder else { return }
+    /// What belongs to one terminal and waits for it while another is shown (GPUI's `ChangesOf`, keyed by session).
+    private struct Kept {
+        var compare: Rev?
+        var arrangement = ChangeRows()
+        var marked: Set<String> = []
+        var review = Review()
+    }
+    @ObservationIgnored private var kept: [Int: Kept] = [:]
+    @ObservationIgnored private var terminal: Int?
+
+    /// The tab follows the terminal: another terminal brings its own compare branch, folds, marks and comments and
+    /// takes the open diff down; a new folder starts again.
+    public func follow(_ folder: String?, terminal: Int? = nil) {
+        let moved = terminal != self.terminal
+        guard moved || folder != self.folder else { return }
+        if moved {
+            if let old = self.terminal { kept[old] = Kept(compare: compare, arrangement: arrangement, marked: marked, review: review) }
+            let mine = terminal.flatMap { kept.removeValue(forKey: $0) } ?? Kept()
+            (compare, arrangement, marked, review) = (mine.compare, mine.arrangement, mine.marked, mine.review)
+            (self.terminal, cursor, anchor, copiedInstead) = (terminal, nil, nil, false)
+        } else {
+            compare = nil
+        }
+        close()
+        // The same folder under another terminal: the list is the same repository's, read for this one's branch.
+        guard folder != self.folder else { return refresh() }
         self.folder = folder
         files = []
-        compare = nil
         (compareMissing, refreshError) = (nil, nil)
-        close()
         watch?.cancel()
         guard let folder else { return }
         phase = .loading
@@ -104,7 +127,10 @@ public final class ChangesStore {
     public var position: (index: Int, count: Int)? { current.flatMap { file in order.firstIndex(of: file).map { ($0, order.count) } } }
 
     public func open(_ id: ChangedFile.ID?) {
-        if id != nil { marked = [] }
+        if id != nil {
+            marked = []
+            opened()
+        }
         selection = id
         guard let folder, let file = current else { return diff.close() }
         diff.open(file, stamp: stamp(of: file)) { [git, rev = compare] in
@@ -131,7 +157,11 @@ public final class ChangesStore {
     public func close() { open(nil) }
 
     public func step(_ delta: Int) {
-        if let next = ListNavigation.move(in: order.map(\.id), from: selection, by: delta) { open(next) }
+        // The header's arrows go round the list (`rem_euclid`); the list's own arrow keys stop at its ends.
+        let ids = order.map(\.id)
+        guard !ids.isEmpty else { return }
+        let at = selection.flatMap { ids.firstIndex(of: $0) } ?? (delta > 0 ? -1 : 0)
+        open(ids[((at + delta) % ids.count + ids.count) % ids.count])
     }
 
     /// Compare with a branch, tag or commit; nil goes back to the working tree against HEAD.

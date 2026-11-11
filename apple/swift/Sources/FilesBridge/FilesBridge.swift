@@ -38,19 +38,29 @@ public enum FilesBridge {
         RepoFiles.tooltip = { openFileTooltip(bundle: $0, app: $1, line: $2.map { UInt32(max($0, 0)) }) }
     }
 
+    private static func makeUsage() throws -> RustUsageBackend {
+        let relay = UsageRelay()
+        let service = try UsageService(listener: relay)
+        relay.attach(service)
+        return RustUsageBackend(service: service, relay: relay)
+    }
+
     /// - Parameters:
     ///   - authenticator: asked before a project is trusted (Touch ID or the password).
     ///   - effects: performs what a project's action, prompt or layout asks of the window, and says what was refused.
     ///   - profile: the window's own profile, whose database holds its notes (not the one Wormhole is in).
-    public static func makeBackends(authenticator: any Authenticating, effects: any PanelEffectPerforming, profile: String) throws -> PanelBackends {
+    ///   - usage: the app's one usage backend, which every window draws and the hook socket feeds (GPUI's app-wide
+    ///     entity); nil makes one.
+    public static func makeBackends(
+        authenticator: any Authenticating, effects: any PanelEffectPerforming, profile: String, usage: RustUsageBackend? = nil
+    ) throws -> PanelBackends {
         let project = try ProjectService(authenticator: OwnerAuthentication(authenticator))
-        let relay = UsageRelay()
-        let usage = try UsageService(listener: relay)
-        relay.attach(usage)
-        return PanelBackends(
+        // The window's own profile's trust store and switches, whatever profile Wormhole is in (`hub_of(profile)`).
+        _ = project.followProfile(profile: profile)
+        return try PanelBackends(
             files: RustFilesBackend(service: try FilesService()),
             project: RustProjectBackend(service: project, effects: effects, biometricsAvailable: authenticator.biometricsAvailable()),
-            usage: RustUsageBackend(service: usage, relay: relay),
+            usage: usage ?? Self.makeUsage(),
             notes: RustNotesPersistence(notes: try SessionNotesStore.forProfile(profile: profile), project: project))
     }
 }

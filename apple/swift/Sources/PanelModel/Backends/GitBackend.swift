@@ -44,3 +44,8 @@ extension GitBackend {
         ChangesResult(files: try await changes(in: folder, comparedWith: rev))
     }
 }
+
+extension GitBackend {
+    /// The repository root of `folder`, nil outside a repository (and from a backend that knows none).
+    public func root(of folder: String) async -> String? { nil }
+}

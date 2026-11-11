@@ -64,6 +64,7 @@ private struct RevList: View {
     @State private var query = ""
     @FocusState private var focused: Bool
     @Environment(\.tokens) private var tokens
+    @Environment(\.dismiss) private var dismiss
 
     private var matches: [Rev] {
         query.isEmpty ? revs : revs.filter { $0.name.localizedCaseInsensitiveContains(query) || $0.detail.localizedCaseInsensitiveContains(query) }
@@ -90,7 +91,8 @@ private struct RevList: View {
         .frame(width: 260, height: min(CGFloat(matches.count + 1) * Metric.row + Metric.control + 12, 320))
         .background(tokens.surfaceOverlay)
         .onAppear { focused = true }
-        .onExitCommand { choose(selected) }
+        // Esc only closes: picking again would fold the open commit and read the list anew.
+        .onExitCommand { dismiss() }
     }
 
     private func symbol(_ kind: Rev.Kind) -> String {

@@ -28,7 +28,7 @@ struct NoProjectCard: View {
     }
 
     private var target: String {
-        guard let folder = store.folder else { return panelText("project-no-folder", "This terminal's folder isn't known yet.") }
+        guard let folder = store.band ?? store.folder else { return panelText("project-no-folder", "This terminal's folder isn't known yet.") }
         let home = host?.homeFolder
         let shown = home.flatMap { folder.hasPrefix($0) ? "~" + folder.dropFirst($0.count) : nil } ?? folder
         return panelText("project-creates", ["folder": .text(shown)], "Creates \(shown)/.wormhole/")

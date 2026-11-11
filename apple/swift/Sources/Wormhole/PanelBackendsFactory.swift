@@ -26,6 +26,10 @@ enum PanelBackendsFactory {
         var usage: AnyObject?
     }
 
+    #if WITH_UNIFFI
+        private static var usage: RustUsageBackend?
+    #endif
+
     /// `effects` performs what the project asks of the window; it is given the hub once that exists.
     static func make(_ options: Options, store: WorkspaceStore, policy: PlatformPolicy, effects: AnyObject?, profile: String) -> Made {
         var made = Made()
@@ -39,7 +43,9 @@ enum PanelBackendsFactory {
             if let effects {
                 let authenticator: any Authenticating = policy.touchesSystem ? LocalAuthenticator() : ScriptedAuthenticator()
                 do {
-                    let files = try FilesBridge.makeBackends(authenticator: authenticator, effects: effects, profile: profile)
+                    let files = try FilesBridge.makeBackends(authenticator: authenticator, effects: effects, profile: profile, usage: usage)
+                    // The first window's is everyone's: a second window's tab moves with it, and it outlives that window.
+                    usage = files.usage
                     (backends.files, backends.project, backends.usage) = (files.files, files.project, files.usage)
                     made.notes = files.notes
                     made.usage = files.usage.service

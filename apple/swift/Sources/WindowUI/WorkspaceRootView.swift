@@ -53,7 +53,9 @@ public struct WorkspaceRootView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in hub.panel.project.reload() }
         // The panel's tabs follow the selected terminal's folder whether or not the panel is on screen: the worktree sheet and the
         // diff in the terminal's place need it with the panel shut.
-        .onChange(of: hub.state.selectedTerminal?.folder, initial: true) { _, folder in hub.panel.follow(folder: Self.expanded(folder)) }
+        .onChange(of: hub.state.selectedTerminal?.folder, initial: true) { _, _ in followTerminal() }
+        // What a tab keeps per terminal (compare branch, comments, open commit, tree) changes hands with the selection.
+        .onChange(of: hub.state.selected) { _, _ in followTerminal() }
         // ⇥ and Esc from the lists and fields of SwiftUI; the holder and the terminal take their own (`WindowFocus`).
         .onKeyPress(keys: [.tab, .escape], phases: .down) { hub.focus.listKey($0) }
         .coordinateSpace(name: PaneSpace.name)
@@ -66,6 +68,10 @@ public struct WorkspaceRootView: View {
         .themed()
         .worktreeSheets(hub.panel.worktrees)
         .ignoresSafeArea()
+    }
+
+    private func followTerminal() {
+        hub.panel.follow(folder: Self.expanded(hub.state.selectedTerminal?.folder), terminal: hub.state.selected)
     }
 
     /// The sidebar's folder is written with `~`; the panel reads real paths.

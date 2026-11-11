@@ -25,15 +25,6 @@ struct AuxBackends {
         app.policy.touchesSystem ? LocalAuthenticator() : ScriptedAuthenticator()
     }
 
-    /// The profile Wormhole is in: approvals and the project trust are its own, not the Default's (`nil`: the Default).
-    private var activeProfileID: String? {
-        #if WITH_UNIFFI
-            try? activeProfile().id
-        #else
-            nil
-        #endif
-    }
-
     private func fallback(_ what: String, _ error: any Error) {
         FileHandle.standardError.write(Data("\(what): the core's is not available (\(error)); using the sample\n".utf8)) // text: a line on stderr for whoever launched the app
     }
@@ -61,11 +52,12 @@ struct AuxBackends {
     }
 
     /// The project the selected terminal is in, when the core found one and this is a real window.
-    func trust(root: String?) -> any TrustBackend {
+    /// `profile`: the window's own, whose approvals the window's terminals run under (not the one Wormhole is in).
+    func trust(root: String?, profile: String) -> any TrustBackend {
         #if WITH_UNIFFI
             if real, let root {
                 do {
-                    return try AuxBridge.makeTrustBackend(root: URL(fileURLWithPath: root), profile: activeProfileID, authenticator: authenticator)
+                    return try AuxBridge.makeTrustBackend(root: URL(fileURLWithPath: root), profile: profile, authenticator: authenticator)
                 } catch { fallback("project trust", error) } // text: names the part in a stderr line
             }
         #endif

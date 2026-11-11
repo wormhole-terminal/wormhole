@@ -30,12 +30,13 @@ extension ChangesStore: PanelWalking {
 
     public func fold(_ row: WalkRow) { line(row).map(toggle) }
 
-    public func mark(_ row: WalkRow) { if case let .file(file, _, _) = line(row) { marked.insert(file.path) } }
+    public func mark(_ row: WalkRow) { if case let .file(file, _, _) = line(row), file.submodule == nil { marked.insert(file.path) } }
 
     /// A click on a file: ⌘ marks or unmarks it, ⇧ marks every file between the last one clicked and it, a plain click opens
     /// its diff (and drops the marks).
     public func click(_ file: ChangedFile, command: Bool, shift: Bool) {
-        if command {
+        // A submodule is never marked: ⌘-click opens it like any click.
+        if command, file.submodule == nil {
             if !marked.insert(file.path).inserted { marked.remove(file.path) }
             anchor = file.path
         } else if shift, let from = anchor, let a = order.firstIndex(where: { $0.path == from }), let b = order.firstIndex(of: file) {

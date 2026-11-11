@@ -117,7 +117,7 @@ public struct DiffView: View {
 
     /// What the icon on a line does: only for a file that is in the working tree now (a deleted one has nothing to open).
     private var lineOpen: LineOpen? {
-        guard opensLines, let root, let on = RepoFiles.resolve(root: root, relative: file.path), host?.editorName != nil, !session.gone else { return nil }
+        guard opensLines, let root, let on = RepoFiles.resolve(root: root, relative: file.path), host?.openTooltip(line: nil) != nil, !session.gone else { return nil }
         return LineOpen(
             words: { host?.openTooltip(line: $0) ?? "" }, action: { host?.open(on, line: $0) })
     }

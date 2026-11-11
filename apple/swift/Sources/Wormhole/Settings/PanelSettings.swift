@@ -23,6 +23,8 @@ enum PanelSettings {
             panel.diffWrap = values["diff_wrap"]?.bool ?? false
             panel.tabWidth = values["tab_width"]?.number.map { max(1, Int($0)) } ?? 4
             panel.binarySizes = values["size_units"]?.string == "binary"
+            hub.panel.worktrees.setOptions(
+                base: values["worktree_base"]?.string, cloneBuildFolders: values["worktree_clone_build_folders"]?.bool ?? false)
         }
     }
 

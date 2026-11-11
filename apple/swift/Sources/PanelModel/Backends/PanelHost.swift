@@ -49,6 +49,10 @@ public protocol PanelHost: AnyObject {
     func chooseFolder() async -> String?
     /// A short line for the notice chip and VoiceOver ("Path copied", "Renamed to a.rs").
     func notify(_ text: String)
+    /// Shows a tab of the panel (File History, a prompt copied into a note): the window's tab, and the panel with it.
+    func show(tab: PanelTab)
+    /// Whether the window offers that tab now (its feature is on).
+    func offers(tab: PanelTab) -> Bool
     /// "New terminal in worktree": the terminal the worktree was made for.
     func openTerminal(in folder: String, running command: String?)
 }
@@ -85,6 +89,8 @@ extension PanelHost {
     public func showProjectCommands() {}
     public func openTooltip(line: Int?) -> String? { editorName.map { Words.text("files-open-in-editor", ["editor": .text($0)], fallback: "Open in \($0)") } }
     public func exists(_ path: String) -> Bool { true }
+    public func show(tab: PanelTab) {}
+    public func offers(tab: PanelTab) -> Bool { true }
     /// Where there is no chip to refuse on: the copy, and VoiceOver's word for it.
     public func copyPath(_ path: String) {
         copy(path)

@@ -38,6 +38,12 @@ public final class WorktreeStore {
         self.folder = folder
     }
 
+    /// Settings → Terminal: where worktrees go and whether build folders are cloned into them.
+    public func setOptions(base: String?, cloneBuildFolders: Bool) {
+        backend.setOptions(base: base, cloneBuildFolders: cloneBuildFolders)
+        if asking { replan() }
+    }
+
     /// The worktree Wormhole made that `folder` is in, if any (the close question asks).
     public func made(at folder: String) async -> MadeWorktree? { await backend.made(at: folder) }
 

@@ -18,7 +18,7 @@ struct FileViewerBody: View {
         case let .text(text, size, truncated):
             if text.isEmpty { note(panelText("files-viewer-empty", "This file is empty.")) } else { lines(truncated: truncated, size: size) }
         case let .binary(size): panel(panelText("files-viewer-binary", ["size": .text(ByteSize.text(size))], "Binary file, \(ByteSize.text(size))"), actions: true)
-        case let .image(data, _): picture(data)
+        case .image: picture
         // A deleted file has nothing to open or show, nor has a link that leads out; the others might still be revealed.
         case let .unavailable(problem): panel(Self.words(problem), actions: problem != .gone && problem != .outside)
         }
@@ -53,12 +53,14 @@ struct FileViewerBody: View {
 
     private var absolute: String { store.root.map { store.join($0, path) } ?? path }
 
-    @ViewBuilder private func picture(_ data: Data) -> some View {
-        if let image = NSImage(data: data) {
-            Image(nsImage: image).resizable().scaledToFit().padding(Space._4).frame(maxWidth: .infinity, maxHeight: .infinity)
+    @ViewBuilder private var picture: some View {
+        switch store.picture {
+        case nil: note(panelText("files-reading", "Reading\u{2026}"))
+        case let .shown(image):
+            Image(decorative: image, scale: 1).resizable().scaledToFit().padding(Space._4).frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityLabel(path)
-        } else {
-            panel(panelText("files-viewer-image-failed", "This picture can't be shown."), actions: true)
+        case .tooLarge: panel(panelText("files-viewer-image-too-large", "This picture is too large to show."), actions: true)
+        case .unreadable: panel(panelText("files-viewer-image-failed", "This picture can't be shown."), actions: true)
         }
     }
 

@@ -47,10 +47,14 @@ struct FileViewerHeader: View {
                 .font(TextRole.body.font).lineLimit(1).truncationMode(.head).layoutPriority(-1)
             Spacer(minLength: 0)
             if let size = store.content.size { Text(ByteSize.text(size)).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize() }
-            if let editor = host?.editorName {
-                BandButton(symbol: "arrow.up.forward.square", label: panelText("files-open-in-editor", ["editor": .text(editor)], "Open in \(editor)"), inRow: true) { host?.open(absolute, line: nil) }
+            // Always there: with no editor known it is Finder showing the file (core's words say which).
+            if let open = host?.openTooltip(line: nil) {
+                BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) { host?.open(absolute, line: nil) }
             }
-            BandButton(symbol: "xmark", label: panelText("files-viewer-close", "Close file (esc)"), inRow: true, action: store.closeViewer)
+            BandButton(symbol: "xmark", label: panelText("files-viewer-close", "Close file (esc)"), inRow: true) {
+                store.closeViewer()
+                host?.focusTerminal()
+            }
         }
         .padding(.horizontal, inTitleRow ? 0 : PanelMetrics.inset)
         .frame(height: inTitleRow ? nil : 40)

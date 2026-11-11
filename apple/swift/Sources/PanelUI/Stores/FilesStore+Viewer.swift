@@ -5,6 +5,7 @@ import PanelModel
 
 extension FilesStore {
     public func view(_ path: String) {
+        opened()
         viewing = path
         content = .reading
         readViewed()
@@ -16,6 +17,7 @@ extension FilesStore {
         content = .reading
         lines = []
         spans = []
+        picture = nil
     }
 
     func readViewed() {
@@ -26,10 +28,16 @@ extension FilesStore {
             guard !Task.isCancelled, viewing == path, content != read else { return }
             // The text shows at once; its colours follow in a second job, which a newer read supersedes.
             var shown: [String] = []
-            if case let .text(text, _, _) = read { shown = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init) }
+            if case let .text(text, _, _) = read { shown = ViewedLines.cut(text) }
             lines = shown
             spans = []
+            picture = nil
             content = read
+            if case let .image(data, _) = read {
+                let decoded = await Task.detached { FilePicture.decode(data) }.value
+                if !Task.isCancelled, viewing == path { picture = decoded }
+                return
+            }
             guard !shown.isEmpty else { return }
             let coloured = await Task.detached { highlighter.highlight(path: path, lines: shown) }.value
             if !Task.isCancelled, viewing == path { spans = coloured }

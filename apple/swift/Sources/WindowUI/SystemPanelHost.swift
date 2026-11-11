@@ -27,6 +27,9 @@ final class SystemPanelHost: PanelHost {
         var say: (Notice) -> Void = { _ in }
         /// The window of everything the project would run.
         var showCommands: () -> Void = {}
+        /// The window's panel tab by name: show it, and whether it is offered.
+        var showTab: (String) -> Void = { _ in }
+        var offersTab: (String) -> Bool = { _ in true }
         /// The apps Open in lists.
         var apps: () -> [OpenInApp] = { [] }
     }
@@ -55,6 +58,7 @@ final class SystemPanelHost: PanelHost {
         }
         copy(path)
         notify(Words.text("files-spoken-path-copied", fallback: "Path copied"))
+        terminal.say(.copied(.path))
     }
 
     func reveal(_ path: String) {
@@ -62,12 +66,13 @@ final class SystemPanelHost: PanelHost {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
 
-    /// The core runs the app's own way of taking a line; a build without it opens the file in the default app.
+    /// The core runs the app's own way of taking a line. Finder, and an app that does not start, show the file: it
+    /// is never handed to its default app, which for `x.command` or a folder named `x.app` is to run it.
     func open(_ path: String, line: Int?) {
         guard let app = chosenApp() else { return }
         guard launches() else { return notify("Would open \(path) in \(app.name)") }  // text: a test instance's log of what it did not do
         let folder = NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundle)?.path
-        if !RepoFiles.opener(app.bundle, path, line, folder) { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
+        if app == .finder || !RepoFiles.opener(app.bundle, path, line, folder) { reveal(path) }
     }
 
     var openApps: [OpenApp] {
@@ -78,10 +83,12 @@ final class SystemPanelHost: PanelHost {
     func open(_ path: String, inBundle bundle: String) {
         guard launches() else { return notify("Would open \(path) in \(bundle)") }  // text: a test instance's log of what it did not do
         let folder = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle)?.path
-        if !RepoFiles.opener(bundle, path, nil, folder) { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
+        if !RepoFiles.opener(bundle, path, nil, folder) { reveal(path) }
     }
 
     func showProjectCommands() { terminal.showCommands() }
+    func show(tab: PanelModel.PanelTab) { terminal.showTab(tab.rawValue) }
+    func offers(tab: PanelModel.PanelTab) -> Bool { terminal.offersTab(tab.rawValue) }
 
     func openTooltip(line: Int?) -> String? { chosenApp().map { RepoFiles.tooltip($0.bundle, $0.name, line) } }
 

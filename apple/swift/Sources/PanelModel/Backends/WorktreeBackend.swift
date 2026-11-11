@@ -30,4 +30,10 @@ public protocol WorktreeBackend: Sendable {
     func made(at folder: String) async -> MadeWorktree?
     /// Removes the folder (the branch stays); refused while it has changes. The error is git's words.
     func remove(_ worktree: MadeWorktree) async -> String?
+    /// The settings `worktree_base` (as written, `~` and all) and `worktree_clone_build_folders`.
+    func setOptions(base: String?, cloneBuildFolders: Bool)
+}
+
+extension WorktreeBackend {
+    public func setOptions(base: String?, cloneBuildFolders: Bool) {}
 }

@@ -22,11 +22,15 @@ public final class FilesStore {
     /// The open file's text cut into lines, and the colours of each: made once when it is read.
     public internal(set) var lines: [String] = []
     public internal(set) var spans: [[SyntaxSpan]] = []
+    /// The open picture once decoded; nil while it is.
+    var picture: FilePicture?
     @ObservationIgnored let backend: any FilesBackend
     @ObservationIgnored let highlighter: any SyntaxHighlighting
     @ObservationIgnored weak var host: (any PanelHost)?
     @ObservationIgnored private var watch: Task<Void, Never>?
     @ObservationIgnored var reading: Task<Void, Never>?
+    /// A file is about to open in the viewer: the controller takes down what else covers the terminal.
+    @ObservationIgnored var opened: () -> Void = {}
 
     public init(backend: any FilesBackend, highlighter: any SyntaxHighlighting = LexerHighlighter(), host: (any PanelHost)? = nil) {
         self.backend = backend
@@ -39,8 +43,33 @@ public final class FilesStore {
     /// The walk's id of the path button.
     static let headID = "files-head"
 
-    /// The tree follows the terminal's folder; a folder chosen by hand stays until Follow Terminal.
-    public func follow(_ folder: String?) {
+    /// What belongs to one terminal and waits for it while another is shown: its tree with the folders opened, the
+    /// row selected and a folder chosen by hand (GPUI's tree per session).
+    private struct Kept {
+        var tree: FileTree
+        var selected: String?
+        var chosen: String?
+        var root: String?
+    }
+    @ObservationIgnored private var kept: [Int: Kept] = [:]
+    @ObservationIgnored private var terminal: Int?
+
+    /// The tree follows the terminal's folder; a folder chosen by hand stays until Follow Terminal. Another terminal
+    /// brings its own tree and takes the viewer and a rename down.
+    public func follow(_ folder: String?, terminal: Int? = nil) {
+        if terminal != self.terminal {
+            if let old = self.terminal { kept[old] = Kept(tree: tree, selected: selected, chosen: chosen, root: root) }
+            let mine = terminal.flatMap { kept.removeValue(forKey: $0) }
+            (self.terminal, terminalFolder, chosen) = (terminal, folder, mine?.chosen)
+            (renaming, renameError) = (nil, nil)
+            retarget()
+            // Its folders are open again and read afresh, unless the terminal moved meanwhile.
+            if let mine, mine.root == root {
+                (tree, selected, rows) = (mine.tree, mine.selected, mine.tree.rows)
+                reload()
+            }
+            return
+        }
         let changed = terminalFolder != folder
         terminalFolder = folder
         if chosen == nil, changed { retarget() }

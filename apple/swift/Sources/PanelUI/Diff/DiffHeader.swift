@@ -29,7 +29,7 @@ struct DiffHeader: View {
         HStack(spacing: PanelMetrics.gap) {
             BandButton(symbol: "chevron.left", label: panelText("diff-previous-file", "Previous file"), inRow: true) { step(-1) }
             BandButton(symbol: "chevron.right", label: panelText("diff-next-file", "Next file"), inRow: true) { step(1) }
-            if let position, splitFits {
+            if let position {
                 Text(panelText("diff-file-position", ["index": .whole(position.index + 1), "count": .whole(position.count)], "File \(String(position.index + 1)) of \(String(position.count))")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize()
             }
             // The path crumb: the file's icon, its folders quiet and its name loud. It gives way first, down to
@@ -50,7 +50,7 @@ struct DiffHeader: View {
                     .opacity(wrap ? 1 : 0.6)
             }
             // The file in the chosen editor, when it is on disk (a deleted file has nothing to open).
-            if let on = onDisk, let open = host?.openTooltip(line: nil), host?.editorName != nil {
+            if let on = onDisk, let open = host?.openTooltip(line: nil) {
                 BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) { host?.open(on, line: nil) }
             }
             if splitFits {
@@ -82,8 +82,11 @@ struct DiffHeader: View {
         if file.kind == .added || file.kind == .untracked { out.append((panelText("diff-badge-new", "New file"), tokens.statusSuccessText)) }
         if file.kind == .deleted { out.append((panelText("changes-kind-deleted", "Deleted"), tokens.statusDangerText)) }
         if file.kind == .renamed {
-            out.append((file.renamedFrom.map { panelText("diff-badge-renamed-from", ["path": .text($0)], "Renamed from \($0)") } ?? panelText("changes-kind-renamed", "Renamed"), tokens.primary))
+            // The old name whenever the old path is known, also for a move that kept the name.
+            let old = file.originalPath.map { $0.split(separator: "/").last.map(String.init) ?? $0 }
+            out.append((old.map { panelText("diff-badge-renamed-from", ["path": .text($0)], "Renamed from \($0)") } ?? panelText("changes-kind-renamed", "Renamed"), tokens.primary))
         }
+        if let words = file.submodule { out.append((words, tokens.textMuted)) }
         if gone { out.append((panelText("diff-badge-gone", "No longer changed"), tokens.textMuted)) }
         if diff?.isBinary == true { out.append((panelText("diff-badge-binary", "Binary"), tokens.textMuted)) }
         if file.lfs || diff?.isLFS == true { out.append(("LFS", tokens.textMuted)) } // text: Git LFS, a product name
