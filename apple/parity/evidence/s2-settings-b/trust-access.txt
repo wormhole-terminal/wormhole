@@ -1,0 +1,40 @@
+# A06: the project commands (trust) window, real project /tmp/s2b-proj, WORMHOLE_AUTH=allow answers the owner prompt
+- untrusted (Project tab, then the window):
+root=/private/tmp/s2b-proj status=untrusted asks=true commands=3 features=["actions=true", "notes=false"] acti
+- after the window's Trust button (the Project tab follows):
+root=/private/tmp/s2b-proj status=trusted asks=true commands=3 features=["actions=true", "notes=false"] action
+- actions.json edited after the approval:
+root=/private/tmp/s2b-proj status=changed asks=true commands=1 features=["actions=true", "notes=false"] action
+# A05: the agent access question, asked by a real control request (a script: Wormhole list, from this shell) in an instance whose mode is Ask
+no question is up
+title=Allow “claude” to control Wormhole?
+detail=It wants to run commands in terminals.
+
+Allowing lets this program read what terminals show, type into them, run commands and open windows. It can never close a terminal without asking you.
+buttons=0:Don’t Allow | 1:Allow for This Session | 2:Until Wormhole Quits (confirm=1 cancel=0)
+waiting=2
+- answer: Allow for This Session
+question answered Allow for This Session
+title=Allow scripts to control Wormhole?
+detail=It wants to type into terminals.
+
+Any program that is not a coding agent Wormhole knows counts as Scripts: a script, a tool, or a command you typed at your own prompt. Allowing it lets all of them in until Wormhole quits.
+buttons=0:Don’t Allow | 1:Until Wormhole Quits (confirm=1 cancel=0)
+waiting=1
+- the client says:
+Wormhole: waiting for your answer in Wormhole…
+title=Allow scripts to control Wormhole?
+detail=It wants to type into terminals.
+
+Any program that is not a coding agent Wormhole knows counts as Scripts: a script, a tool, or a command you typed at your own prompt. Allowing it lets all of them in until Wormhole quits.
+buttons=0:Don’t Allow | 1:Until Wormhole Quits (confirm=1 cancel=0)
+waiting=1
+- answer: Don't Allow (the second question is the Scripts one)
+question answered Don’t Allow
+Wormhole: waiting for your answer in Wormhole…
+Wormhole: the user did not allow Scripts to control Wormhole: do not retry; tell the user what you wanted to do and ask them (not_allowed, declined)
+
+# A05 / A06 against GPUI (source: crates/wormhole/src/agent_access/sheet.rs, trust_window.rs)
+- The sheet is the system's own alert on both sides (macOS draws it; a test instance holds the question, so no pixel capture exists on either side). Words, buttons, their order, the warnings, the facts block, the terminal question and the mode-change question follow sheet.rs line by line (AccessDisplay.of); the catalog keys are the same messages.
+- Differences: the facts block width is the alert's own column; the terminal question's folder is shown as the core gives it (GPUI: `~`-shortened by shown_path).
+- Trust window: header (folder/.wormhole, status badge), summary line, a line per command with what runs in its own colour, footer with the count and Trust; states untrusted, trusted and changed captured live (A06-trust-*.png); the Project tab followed the approval (fixed this wave: the window approves through a desk of its own and the tab did not re-read the trust store).

@@ -3,9 +3,8 @@
 //! the profile and the data folder. Swift opens a folder (Finder is the platform's) and lists the
 //! apps (`open_in` needs the system's list of installed ones).
 
-use wormhole_core::terminal::shells::{self, ShellKind};
+use wormhole_core::terminal::shells;
 use wormhole_core::theme::icon_theme;
-use wormhole_text::keys::settings_terminal_login_shell;
 
 use super::handle::SettingsHandle;
 
@@ -54,13 +53,8 @@ impl SettingsHandle {
         let choices = shells::choices(self.shared.lock().effective());
         choices
             .into_iter()
-            .map(|choice| SettingsOptionRow {
-                label: match choice.kind {
-                    ShellKind::Login => settings_terminal_login_shell(&choice.command_line),
-                    ShellKind::Profile | ShellKind::System => choice.command_line,
-                },
-                value: choice.key,
-            })
+            // The face is the shell's name ("zsh"), as the GPUI select's: what it runs is under the Shells row.
+            .map(|choice| SettingsOptionRow { label: choice.name, value: choice.key })
             .collect()
     }
 

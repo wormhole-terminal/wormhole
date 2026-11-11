@@ -20,7 +20,10 @@ struct ThemeCards: View {
     private struct Card: Identifiable {
         let theme: Theme
         let value: String
+        /// The file `theme` holds for it, when it was imported or saved from the Studio.
+        var path: String?
         var id: String { value }
+        func isPicked(_ picked: String?) -> Bool { picked == value || (path != nil && picked == path) }
     }
 
     private static let collapsed = 4
@@ -35,6 +38,7 @@ struct ThemeCards: View {
                 .overlay(RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.inputBorder, lineWidth: tokens.metrics.borderWidth))
                 .frame(maxWidth: 320)
             ForEach(ThemeAppearance.allCases.reversed(), id: \.self) { appearance in section(appearance) }
+            ImportThemeButton(model: model)
             if !hidden.isEmpty { hiddenList }
         }
         .padding(.vertical, Space._3)
@@ -73,12 +77,12 @@ struct ThemeCards: View {
         // The person's own themes follow the built-in ones (`catalog_in`).
         let store = ThemeStore.shared
         let yours = store.userThemes.filter { $0.appearance == appearance }.compactMap { summary in
-            store.userTheme(summary).map { Card(theme: $0, value: summary.id) }
+            store.userTheme(summary).map { Card(theme: $0, value: summary.id, path: summary.path) }
         }
         let all = (ThemeLibrary.bundled.themes.map { Card(theme: $0, value: $0.name) } + yours).filter {
             $0.theme.appearance == appearance && (filter.isEmpty || $0.theme.name.localizedCaseInsensitiveContains(filter))
-                && ($0.value == picked || !isHidden($0.theme.name))
-        }.sorted { ($0.value == picked ? 0 : 1) < ($1.value == picked ? 0 : 1) }
+                && ($0.isPicked(picked) || !isHidden($0.theme.name))
+        }.sorted { ($0.isPicked(picked) ? 0 : 1) < ($1.isPicked(picked) ? 0 : 1) }
         let shown = showAll || !filter.isEmpty ? all : Array(all.prefix(Self.collapsed))
         return VStack(alignment: .leading, spacing: Space._2) {
             HStack {
@@ -90,10 +94,15 @@ struct ThemeCards: View {
             }
             LazyVGrid(columns: columns, spacing: Space._3) {
                 ForEach(shown) { card in
-                    ThemeCard(theme: card.theme, isSelected: picked == card.value) { model.set(key, .string(card.value)) }
+                    ThemeCard(theme: card.theme, isSelected: card.isPicked(picked)) { model.set(key, .string(card.value)) }
                         .contextMenu {
-                            if picked != card.value {
+                            if !card.isPicked(picked) {
                                 Button(Words.text("settings-appearance-hide-theme", fallback: "Hide theme")) { setHidden(card.theme.name, true) }
+                            }
+                            if card.path != nil {
+                                Button(Words.text("settings-appearance-move-to-trash", fallback: "Move to Trash") + "…") {
+                                    ThemeFiles.trash(card.value, model: model)
+                                }
                             }
                         }
                 }

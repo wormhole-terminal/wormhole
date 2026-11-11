@@ -52,7 +52,8 @@ extension AuxController {
                 started = id
                 return hooks.handle.beginWelcome(
                     tab: Int64(id), handover: handover.rawValue, firstRun: firstRun, animates: animates,
-                    reduceMotion: reduceMotion, importHome: importHome, fonts: CoreTextFamilies())
+                    reduceMotion: reduceMotion, panelOpen: app.hub.state.panelVisible, importHome: importHome,
+                    fonts: CoreTextFamilies())
             }
             app.hub.send(.newTerminal)
             backend.welcomeToken = nil

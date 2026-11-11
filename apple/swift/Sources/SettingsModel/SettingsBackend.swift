@@ -83,6 +83,12 @@ public protocol SettingsHost: AnyObject {
     /// The shell profiles listed under the Shells row, and where worktrees go once a folder is named.
     func shellProfiles() -> [ShellLine]
     func worktreeCaption(base: String) -> String?
+    /// A theme file copied into the profile's themes folder and picked: core's reason when it is no theme, or nil.
+    func importTheme(path: String) -> String?
+    /// What the question before moving the user theme `value` to the Trash says (nil: it has no file), and the move itself
+    /// (the picks that name it go back to the defaults first and come back if it fails): whether it was done.
+    func themeTrashPlan(_ value: String) -> ThemeTrashQuestion?
+    func trashTheme(_ value: String) -> Bool
     /// The header an update check carries (what "What an update check sends" shows): nil without the core.
     func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String?
     /// "Sharing starts in about 24 hours, …" while this copy waits to be counted; nil once it is (or without the core).
@@ -115,6 +121,9 @@ extension SettingsHost {
     public func resetQuestion(count: Int) -> String { "Reset \(count) changed setting\(count == 1 ? "" : "s") to their default? Your terminals, notes and themes are kept." }
     public func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String? { nil }
     public func updateCountWait() -> String? { nil }
+    public func importTheme(path: String) -> String? { "Themes can't be imported in this build." }
+    public func themeTrashPlan(_ value: String) -> ThemeTrashQuestion? { nil }
+    public func trashTheme(_ value: String) -> Bool { false }
     public func saveProfile(_ form: ProfileForm) -> String? { Self.noProfiles }
     public func importReview(_ id: String) async -> ImportReview? { nil }
     public func applyImport(_ id: String, ticked: [Int], shown: Int) -> (text: String, failed: Bool) { (Self.noProfiles, true) }
@@ -122,6 +131,14 @@ extension SettingsHost {
     private static var noProfiles: String {
         String(localized: "settings-profile-unavailable", defaultValue: "Profiles are not available in this build.")
     }
+}
+
+/// The question before a theme the person imported goes to the Trash.
+public struct ThemeTrashQuestion: Sendable, Equatable {
+    public let message: String
+    public let detail: String
+
+    public init(message: String, detail: String) { (self.message, self.detail) = (message, detail) }
 }
 
 /// A shell profile of `config.json`: its name and what it runs.

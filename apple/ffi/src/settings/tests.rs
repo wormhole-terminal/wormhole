@@ -234,3 +234,48 @@ fn the_schema_the_rows_come_from_is_served() {
     assert_eq!(schema["format"], json!(1));
     assert!(schema["sections"].as_array().is_some_and(|sections| !sections.is_empty()));
 }
+
+#[cfg(test)]
+mod theme_files {
+    use std::sync::Arc;
+
+    use wormhole_core::storage::paths::{DataRoot, ProfileId};
+
+    use crate::settings::handle::{SettingsHandle, SettingsListener};
+
+    struct Quiet;
+    impl SettingsListener for Quiet {
+        fn wake(&self) {}
+    }
+
+    fn handle(data: &std::path::Path) -> Arc<SettingsHandle> {
+        SettingsHandle::open_at(&DataRoot::new(data), &ProfileId::default_profile(), Arc::new(Quiet))
+    }
+
+    /// An imported theme is among the profile's themes and picked; moving it to the Trash is planned with the pick
+    /// that names it, which goes back to the default first and comes back when the move fails.
+    #[test]
+    fn an_imported_theme_is_picked_and_its_trashing_resets_the_pick_and_can_put_it_back() {
+        crate::isolate_for_tests();
+        let data = tempfile::tempdir().expect("data dir");
+        let scratch = tempfile::tempdir().expect("scratch dir");
+        let file = scratch.path().join("Mine.json");
+        super::write_file(
+            &file,
+            "{ \"name\": \"Mine\", \"extends\": \"Nord\", \"ui\": { \"primary\": \"#ff6600\" } }",
+        );
+        let handle = handle(data.path());
+        handle.import_theme(file.to_string_lossy().into_owned()).expect("imported");
+        assert!(data.path().join("themes").join("Mine.json").is_file(), "copied into the profile folder");
+        let plan = handle.theme_trash_plan("Mine".into()).expect("a user theme");
+        assert!(plan.message.contains("Mine") && plan.dark && !plan.light, "{plan:?}");
+        assert!(plan.detail.contains("Wormhole Dark"), "{}", plan.detail);
+        let before = handle.reset_theme_picks("Mine".into());
+        assert!(handle.values().contains("\"theme\":\"Wormhole Dark\""), "{}", handle.values());
+        handle.restore_theme_picks(before);
+        assert!(!handle.values().contains("\"theme\":\"Wormhole Dark\""), "{}", handle.values());
+        assert!(handle.theme_trash_plan("Nord".into()).is_none(), "a built-in has no file");
+        let refused = handle.import_theme(scratch.path().join("nothing.json").to_string_lossy().into_owned());
+        assert!(refused.is_err());
+    }
+}

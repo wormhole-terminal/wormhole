@@ -47,6 +47,8 @@ pub enum HookEvent {
     /// A press turned a banner on, or said Allow, while macOS has not been asked: ask it, then tell
     /// `HookServer::set_notification_permission`.
     WelcomeAskPermission,
+    /// The welcome's "How much to show" walk opens (`open`) or closes the right panel of the window that holds `terminal`.
+    WelcomePanel { terminal: i64, open: bool },
 }
 
 /// Why the server did not start.

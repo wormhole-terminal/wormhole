@@ -40,6 +40,8 @@ public enum HookAction: Equatable, Sendable {
     case welcomeEnded(terminal: Int64)
     /// A press turned a banner on, or said Allow, and macOS has not been asked: ask, then `setNotificationPermission`.
     case welcomeAskPermission
+    /// The welcome's "How much to show" walk opens (`open`) or closes the right panel of the window that holds `terminal`.
+    case welcomePanel(terminal: Int64, open: Bool)
 }
 
 extension HookAction {
@@ -63,6 +65,7 @@ extension HookAction {
         case .welcomeDemo(let terminal, let show): self = .welcomeDemo(terminal: terminal, show: show)
         case .welcomeEnded(let terminal): self = .welcomeEnded(terminal: terminal)
         case .welcomeAskPermission: self = .welcomeAskPermission
+        case .welcomePanel(let terminal, let open): self = .welcomePanel(terminal: terminal, open: open)
         }
     }
 }

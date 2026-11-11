@@ -2,6 +2,7 @@
 //! the person, the agents found. The lists are the ones the intro window's Look step offers.
 
 use wormhole_core::config::Settings;
+use wormhole_core::config::presets::Shown;
 use wormhole_core::ipc::control::{LookFacts, NotifyFacts, PrimaryFact, ThemeFact, WelcomeState};
 use wormhole_core::onboarding::LOOK_THEMES;
 use wormhole_core::onboarding::intro::Handover;
@@ -115,9 +116,7 @@ pub(super) fn state(profile: &ProfilePaths, s: &Settings, run: &Run, notify: Not
         look: look(profile, s, run.imported.as_ref()),
         notify: Some(notify),
         agents: run.agents.clone(),
-        // "How much to show" changes the window's own panel, which this app's window does not report yet: the
-        // program shows that page as the tour does, read-only.
-        shown: None,
+        shown: Some(Shown::read(s, run.panel_open)),
         problem: run.problem.clone(),
     }
 }

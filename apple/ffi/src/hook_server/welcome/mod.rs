@@ -54,6 +54,8 @@ struct Run {
     first_run: bool,
     play: Play,
     reduce_motion: bool,
+    /// Whether the window's right panel is on screen, as the walk last left it (the program's answers move it).
+    panel_open: bool,
     /// The agents found; `None` until the search (off the dispatch thread) is done.
     agents: Option<AgentsFacts>,
     /// What went wrong with the last Install, until the next one that works.
@@ -119,6 +121,8 @@ pub struct WelcomePlan {
     /// The start animation is about to play around the window: the program waits for the ship to dock.
     pub animates: bool,
     pub reduce_motion: bool,
+    /// The right panel of the window is on screen now: what "How much to show" starts from.
+    pub panel_open: bool,
     /// Where an `import` looks for the other terminal's files (`None`: this Mac's own home).
     pub import_home: Option<String>,
 }
@@ -149,6 +153,7 @@ impl HookServer {
                 first_run: plan.first_run,
                 play,
                 reduce_motion: plan.reduce_motion,
+                panel_open: plan.panel_open,
                 agents: None,
                 problem: None,
                 imported: None,

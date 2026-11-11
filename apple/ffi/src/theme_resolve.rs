@@ -53,20 +53,23 @@ pub(crate) fn resolve(req: &Request<'_>) -> Result<String, String> {
     ))
 }
 
-/// The user's themes in a folder, as `[{"id", "name", "appearance"|null, "error"|null}]`.
+/// The user's themes in a folder, as `[{"id", "name", "path", "appearance"|null, "error"|null}]` (`path`: the file
+/// `settings.theme` holds when a theme was imported or saved from the Studio).
 pub(crate) fn list(dir: &Path) -> String {
     let themes = UserThemes::read(dir);
     let items = themes.themes.iter().map(|t| match themes.resolve(t) {
         Ok(tokens) => format!(
-            "{{\"id\": {}, \"name\": {}, \"appearance\": \"{}\", \"error\": null}}",
+            "{{\"id\": {}, \"name\": {}, \"path\": {}, \"appearance\": \"{}\", \"error\": null}}",
             string(&t.slug),
             string(&t.name),
+            string(&t.path.to_string_lossy()),
             appearance(&tokens)
         ),
         Err(err) => format!(
-            "{{\"id\": {}, \"name\": {}, \"appearance\": null, \"error\": {}}}",
+            "{{\"id\": {}, \"name\": {}, \"path\": {}, \"appearance\": null, \"error\": {}}}",
             string(&t.slug),
             string(&t.name),
+            string(&t.path.to_string_lossy()),
             string(&err)
         ),
     });

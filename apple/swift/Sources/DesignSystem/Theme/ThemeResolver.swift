@@ -25,6 +25,8 @@ public protocol ThemeResolving: Sendable {
 public struct ThemeSummary: Sendable, Equatable, Identifiable, Decodable {
     public let id: String
     public let name: String
+    /// The theme's file, which `theme` holds when it was imported or saved from the Studio.
+    public let path: String?
     public let appearance: ThemeAppearance?
     public let error: String?
 }

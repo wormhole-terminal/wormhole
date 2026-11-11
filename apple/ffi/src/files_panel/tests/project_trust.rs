@@ -154,3 +154,16 @@ fn a_root_that_leaves_the_project_is_not_one() {
         Err(ProjectFailure::NotFound { .. })
     ));
 }
+
+#[test]
+fn an_approval_given_through_another_desk_is_what_the_tab_says_next() {
+    // The project commands window approves through a desk of its own, over the same file.
+    let repo = Repo::new(&[("actions.json", RUN_TESTS)]);
+    let owner = Owner::answering([OwnerAnswer::Approved]);
+    let (data, tab) = service(&owner);
+    assert_eq!(status(&tab, &repo), TrustStatusRecord::Untrusted);
+    let window = crate::files_panel::ProjectService::in_dir(data.path(), owner.clone());
+    window.project(repo.root());
+    assert_eq!(window.approve(repo.root()), ApproveOutcome::Approved);
+    assert_eq!(status(&tab, &repo), TrustStatusRecord::Trusted);
+}

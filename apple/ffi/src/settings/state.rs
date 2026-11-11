@@ -74,6 +74,17 @@ impl State {
         self.replace(next)
     }
 
+    /// Copies a theme file into the profile's themes folder and selects it (core's `Config::import_theme`).
+    pub(crate) fn import_theme(&mut self, source: &std::path::Path) -> Result<(), String> {
+        let before = self.config.settings.clone();
+        self.config.import_theme(source)?;
+        if self.config.settings != before {
+            self.refresh();
+            self.revision += 1;
+        }
+        Ok(())
+    }
+
     /// Puts `keys` back at their defaults and saves. `Ok(false)` when they already were.
     pub(crate) fn reset(&mut self, keys: &[String]) -> bool {
         let keys: Vec<&str> = keys.iter().map(String::as_str).collect();

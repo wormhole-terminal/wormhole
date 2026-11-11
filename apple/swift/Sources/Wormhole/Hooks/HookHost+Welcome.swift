@@ -29,6 +29,12 @@
                 next: { seconds, still in welcomeDemoNextMs(elapsedMs: UInt64(seconds * 1000), still: still).map { Double($0) / 1000 } })
         }
 
+        /// "How much to show" opens or closes the right panel of the window the welcome's terminal is in, as its toggle does.
+        func welcomePanel(terminal: Int, open: Bool) {
+            guard let hub = app.session(holding: terminal)?.hub, hub.state.panelVisible != open else { return }
+            hub.send(.togglePanel)
+        }
+
         /// The welcome is over: the band goes and a start animation still playing is cut short.
         func welcomeEnded(terminal: Int) {
             app.sessions.forEach { if $0.hub.exampleBand?.owner == terminal { $0.hub.exampleBand = nil } }

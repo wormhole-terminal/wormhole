@@ -9,10 +9,11 @@ use std::sync::Arc;
 
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations::{self, State};
+use wormhole_core::config::presets::{Shown, TitleShown, ToolsShown};
 use wormhole_core::config::{Config, NotifySound, Settings};
 use wormhole_core::import::{self, Env, Proposed, Source};
 use wormhole_core::ipc::control::{
-    AgentFact, ErrorCode, HooksFact, ImportDone, NotifyFacts, PermissionFact, Reply, WelcomeOp,
+    AgentFact, ErrorCode, HooksFact, ImportDone, NotifyFacts, PermissionFact, Reply, ShownDone, WelcomeOp,
 };
 use wormhole_core::onboarding::ONBOARDED_KEY;
 use wormhole_core::storage::store::Store;
@@ -32,10 +33,7 @@ pub(super) fn answer(core: &Arc<Core>, tab: i64, op: WelcomeOp) -> Reply {
         WelcomeOp::SetNotify { needs_you, agent_done, sound, allow } => {
             set_notify(core, needs_you, agent_done, sound, allow)
         }
-        // This app's window does not report how much it shows (the state says so), so the program never sends it.
-        WelcomeOp::SetShown { .. } => {
-            Reply::error(ErrorCode::Unsupported, "this window can't change how much it shows from here")
-        }
+        WelcomeOp::SetShown { from, shown } => set_shown(core, tab, &from, &shown),
         WelcomeOp::InstallHooks { agent } => install(core, tab, agent),
         WelcomeOp::Demo { show } => demo(core, tab, show),
         WelcomeOp::Import { source } => import(core, tab, &source),
@@ -140,6 +138,28 @@ fn set_notify(
         core.ui.push(HookEvent::WelcomeAskPermission);
     }
     Reply::ok(serde_json::json!({}))
+}
+
+/// How much the window shows, from what the walk showed before the answer (`from`) to what it shows with it. Only the
+/// parts where the two differ are written, so what the person changed meanwhile is left as it is; an arrangement of
+/// one's own is accepted only as the one `from` already had. The right panel is the window's own: Swift is told to move it.
+fn set_shown(core: &Core, tab: i64, from: &Shown, shown: &Shown) -> Reply {
+    let own_title = matches!(shown.title, TitleShown::Own(_)) && shown.title != from.title;
+    let own_tools = matches!(shown.tools, ToolsShown::Own(_)) && shown.tools != from.tools;
+    if own_title || own_tools {
+        return Reply::error(ErrorCode::BadRequest, "an arrangement of one's own can only stay as it is");
+    }
+    if (Shown { panel_open: from.panel_open, ..shown.clone() }) != *from {
+        edit(core, |s| shown.apply_changes(from, s));
+    }
+    if shown.panel_open != from.panel_open {
+        if let Some(run) = core.welcomes().run_mut(tab) {
+            run.panel_open = shown.panel_open;
+        }
+        core.ui.push(HookEvent::WelcomePanel { terminal: tab, open: shown.panel_open });
+    }
+    let panel_open = core.welcomes().run(tab).map_or(shown.panel_open, |run| run.panel_open);
+    Reply::ok(ShownDone { panel_open })
 }
 
 fn install(core: &Core, tab: i64, agent: AgentId) -> Reply {

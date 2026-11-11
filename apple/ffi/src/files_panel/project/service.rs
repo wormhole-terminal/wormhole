@@ -65,6 +65,7 @@ impl ProjectService {
     pub fn project(&self, folder: String) -> Option<ProjectStateRecord> {
         let found = proj::find_project(Path::new(&folder))?;
         let mut hub = self.lock();
+        hub.reload_trust();
         let snapshot = hub.snapshot(&found);
         Some(state::build(&mut hub, &snapshot))
     }

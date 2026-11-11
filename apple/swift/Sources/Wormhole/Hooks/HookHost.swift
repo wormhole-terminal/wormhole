@@ -84,6 +84,7 @@
             case .welcomeDemo(let terminal, let show): welcomeDemo(terminal: Int(terminal), show: show)
             case .welcomeEnded(let terminal): welcomeEnded(terminal: Int(terminal))
             case .welcomeAskPermission: askNotificationPermission()
+            case .welcomePanel(let terminal, let open): welcomePanel(terminal: Int(terminal), open: open)
             }
         }
     }

@@ -19,6 +19,7 @@ mod search;
 mod shortcuts;
 mod skills;
 mod state;
+mod theme_files;
 
 mod values;
 mod watch;
@@ -56,6 +57,7 @@ pub use shortcuts::{ShortcutVerdict, check_shortcut};
 pub use skills::{
     SettingsSkillRow, SettingsSkillState, settings_mcp_command, settings_set_skill, settings_skill_rows,
 };
+pub use theme_files::ThemeTrashPlan;
 
 /// The settings schema (sections, groups, rows, control kinds and their words) as JSON: what the
 /// window is drawn from. It changes with the language and the build's flags, so a window asks again

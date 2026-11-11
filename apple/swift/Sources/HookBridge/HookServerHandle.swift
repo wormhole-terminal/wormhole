@@ -64,13 +64,14 @@ public final class HookServerHandle {
     /// environment alone, nil when none could be made (the terminal is then a plain one). `animates`: the start animation
     /// is about to play around the window. `importHome`: where an import reads the other terminal's files (nil: the Mac's home).
     public func beginWelcome(
-        tab: Int64, handover: String, firstRun: Bool, animates: Bool, reduceMotion: Bool, importHome: String?,
+        tab: Int64, handover: String, firstRun: Bool, animates: Bool, reduceMotion: Bool, panelOpen: Bool, importHome: String?,
         fonts: FontFamilyResolver
     ) -> String? {
         server.beginWelcome(
             tab: tab,
             plan: WelcomePlan(
-                handover: handover, firstRun: firstRun, animates: animates, reduceMotion: reduceMotion, importHome: importHome),
+                handover: handover, firstRun: firstRun, animates: animates, reduceMotion: reduceMotion, panelOpen: panelOpen,
+                importHome: importHome),
             fonts: fonts)
     }
 

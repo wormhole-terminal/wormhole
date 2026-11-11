@@ -1,0 +1,14 @@
+# user theme among the cards: imported through the scratch-file seam, trashed with the question held for the driver
+- click Import theme… (seam: /tmp/s2b-scratch/Mine.json)
+click 335 880: down on PlatformGroupContainer, the gesture played to its release
+Mine.json
+"theme": "/tmp/Wormhole-swift-s2b-g/themes/Mine.json"
+menu:
+1. Move to Trash…
+- right-click the Mine card, Move to Trash…:
+picked Move to Trash…
+no question is up
+- question confirm:
+question answered Move to Trash
+after: themes folder:
+"theme": "Wormhole Dark"

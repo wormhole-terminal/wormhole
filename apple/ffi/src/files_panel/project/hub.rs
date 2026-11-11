@@ -11,6 +11,8 @@ use wormhole_core::project::{
 };
 
 pub(super) struct Hub {
+    /// The profile folder the stores live in.
+    dir: PathBuf,
     pub(super) prefs: ProjectPrefs,
     pub(super) trust: TrustStore,
     pub(super) notes_bases: NotesBaseStore,
@@ -43,6 +45,7 @@ impl Hub {
             tracing::warn!("{problem}");
         }
         Self {
+            dir: dir.to_path_buf(),
             prefs,
             trust,
             notes_bases,
@@ -52,6 +55,16 @@ impl Hub {
             snapshots: HashMap::new(),
             approving: false,
             error: (!problems.is_empty()).then(|| problems.join("\n")),
+        }
+    }
+
+    /// The approvals as the file has them now: the project commands window approves through a desk of its own, and
+    /// the tab must say what it did.
+    pub(super) fn reload_trust(&mut self) {
+        let (trust, err) = TrustStore::load_or_recover(&self.dir);
+        match err {
+            Some(err) => tracing::warn!("trusted projects were not read again: {err}"),
+            None => self.trust = trust,
         }
     }
 

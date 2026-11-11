@@ -34,7 +34,10 @@ final class AuxController {
     func showHosts() { HostsWindow.show(backend: backends.hosts()) }
 
     /// The project of the terminal in front, when the core found one.
-    func showTrust() { TrustWindow.show(backend: backends.trust(root: app.hub.panel.project.state?.root)) }
+    func showTrust() {
+        let backend = backends.trust(root: app.hub.panel.project.state?.root)
+        TrustWindow.show(backend: ReloadingTrust(backend) { [weak app] in app?.hub.panel.project.reload() })
+    }
 
     /// The one updater the Updates window and the Settings page share.
     func updateBackend() -> any UpdateBackend {

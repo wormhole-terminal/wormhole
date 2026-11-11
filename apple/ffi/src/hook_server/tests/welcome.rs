@@ -32,6 +32,7 @@ fn welcome(f: &Fixture, import_home: Option<String>) -> (i64, String) {
                 first_run: true,
                 animates: false,
                 reduce_motion: false,
+                panel_open: true,
                 import_home,
             },
             Arc::new(NoFonts),
@@ -62,7 +63,7 @@ fn the_state_is_what_the_pages_are_made_of() {
     assert!(state["look"]["themes"].as_array().is_some_and(|themes| themes.len() >= 6), "{state}");
     assert!(state["look"]["primaries"].as_array().is_some_and(|colours| !colours.is_empty()), "{state}");
     assert!(state["notify"].is_object());
-    assert!(state.get("shown").is_none(), "this window reports nothing of how much it shows");
+    assert!(state["shown"].is_object(), "the window reports how much it shows: {state}");
     eventually("the agent scan", || {
         ask(&f, tab, &token, json!({"kind": "state"}))["result"]["agents"].is_object()
     });
@@ -167,4 +168,21 @@ fn a_first_run_closed_unfinished_counts_as_skipped_and_the_token_is_gone() {
     assert_eq!(ask(&f, tab, &token, json!({"kind": "state"}))["error"]["code"], "refused");
     let flag = Store::open_at(&f.dir).expect("store").meta(ONBOARDED_KEY).expect("meta");
     assert_eq!(flag.as_deref(), Some("1"));
+}
+
+#[test]
+fn how_much_to_show_writes_only_what_differs_and_asks_swift_to_move_the_panel() {
+    let f = fixture("open");
+    let (tab, token) = welcome(&f, None);
+    let state = ask(&f, tab, &token, json!({"kind": "state"}));
+    let from = state["result"]["shown"].clone();
+    assert_eq!(from["panel_open"], true);
+    let mut shown = from.clone();
+    shown["panel_open"] = json!(false);
+    f.events();
+    let reply = ask(&f, tab, &token, json!({"kind": "set_shown", "from": from, "shown": shown}));
+    assert_eq!(reply["result"]["panel_open"], false, "{reply}");
+    assert!(f.events().contains(&HookEvent::WelcomePanel { terminal: tab, open: false }));
+    let state = ask(&f, tab, &token, json!({"kind": "state"}));
+    assert_eq!(state["result"]["shown"]["panel_open"], false, "the next state says so");
 }
