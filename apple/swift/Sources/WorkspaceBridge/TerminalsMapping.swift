@@ -20,7 +20,8 @@ extension WorkspaceModel.TerminalSummary {
             id: Int(core.id), title: core.name, folder: core.folder, branch: core.branch, activity: Activity(core.state),
             isPinned: core.pinned, unread: core.unread, hasBell: core.bell, agent: core.agent.flatMap { AgentID(command: $0.key) },
             message: core.message, splitID: core.split.map(Int.init), isAgentHidden: core.agentHidden, forgetsText: core.forgetText,
-            group: core.group, groupName: core.groupName, isFolded: core.folded, glyph: WorkspaceModel.TileGlyph(core.glyph))
+            group: core.group, groupName: core.groupName, isFolded: core.folded, glyph: WorkspaceModel.TileGlyph(core.glyph),
+            command: core.command)
         since = core.since
         noticeSerial = core.notice
         runningCommand = core.command

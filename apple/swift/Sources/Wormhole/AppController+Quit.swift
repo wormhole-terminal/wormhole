@@ -38,19 +38,19 @@ extension AppController {
 
     /// What a restart would end, for the updater's question.
     var runningTerminals: [RunningTerminal] {
-        allRows.filter(\.runsSomething).map {
-            RunningTerminal(name: $0.terminal.title, agent: $0.terminal.agent?.name, status: $0.terminal.runStatus, program: $0.runningCommand)
+        allTerminals.filter(\.runsSomething).map {
+            RunningTerminal(name: $0.title, agent: $0.agent?.name, status: $0.runStatus, program: $0.command)
         }
     }
 
-    /// Every window's rows: quitting ends the terminals of all of them.
-    private var allRows: [SidebarRow] { sessions.flatMap { $0.hub.state.sections.flatMap(\.rows) } }
+    /// Every window's terminals, those folded away in a group too: quitting ends all of them, and the core's list has them all.
+    private var allTerminals: [TerminalSummary] { sessions.flatMap { $0.hub.state.all } }
 
     /// What the quit question is decided from, every window's terminals. A terminal whose session host cannot be shown counts
     /// as running (`needs_close_confirmation`); the terminals of a profile that is not shown run on out of sight, and the question
     /// names that profile with how many (`window::windows::quit_asking`).
     var quitFacts: QuitFacts {
-        let rows = sessions.flatMap { session in session.hub.state.sections.flatMap(\.rows).map { (session: session, row: $0) } }
+        let rows = sessions.flatMap { session in session.hub.state.all.map { (session: session, row: $0) } }
         let running = rows.filter { $0.row.runsSomething || hostUnavailable($0.row.id, in: $0.session) }
         let counts = HostedCounts(running: running.map(\.row.id), all: rows.map(\.row.id)) { id in
             self.session(holding: id)?.hub.store.hosting(of: id)
@@ -63,8 +63,8 @@ extension AppController {
             if let at = elsewhere.firstIndex(where: { $0.name == name }) { elsewhere[at].count += 1 } else { elsewhere.append((name, 1)) }
         }
         return QuitFacts(
-            running: running.map { StillRunning.Fact(status: $0.row.terminal.agentStatus, commandRunning: $0.row.runningCommand != nil) },
-            programs: running.compactMap { $0.row.runningCommand }, otherProfiles: elsewhere, hostedRunning: counts.hostedRunning,
+            running: running.map { StillRunning.Fact(status: $0.row.agentStatus, commandRunning: $0.row.command != nil) },
+            programs: running.compactMap { $0.row.command }, otherProfiles: elsewhere, hostedRunning: counts.hostedRunning,
             localRunning: counts.localRunning, anyHosted: counts.anyHosted)
     }
 
@@ -86,8 +86,8 @@ extension AppController {
     /// the command line asked to close (`wh close`) is always asked about: it never closes on a script's say (`CloseOrigin::Control`).
     func closeTerminal(_ id: TerminalID, in session: WindowSession? = nil, fromCommandLine: Bool = false, then done: @escaping () -> Void = {}) {
         let session = session ?? self.session(holding: id) ?? front
-        guard let row = session.hub.state.sections.flatMap(\.rows).first(where: { $0.id == id }) else { return done() }
-        let terminal = row.terminal
+        // From the core's list of every terminal: one folded away in a group has no row, and what is at stake is the core's fact.
+        guard let terminal = session.hub.state.all.first(where: { $0.id == id }) else { return done() }
         // A terminal whose host runs and cannot be shown: closing drops the row and with it the host's id, so ask first
         // whether the host ends with it or is left running (`window/host_close.rs`).
         if case .unavailable? = session.hub.store.hostProblem(of: id) {
@@ -95,14 +95,14 @@ extension AppController {
         }
         Task {
             let extra = await worktreeClose(of: [terminal], in: session, group: false)
-            guard row.runsSomething || fromCommandLine || extra != nil else {
+            guard terminal.runsSomething || fromCommandLine || extra != nil else {
                 finishClosing(id, in: session)
                 return done()
             }
-            var detail = row.runsSomething || fromCommandLine
+            var detail = terminal.runsSomething || fromCommandLine
                 ? CloseQuestions.session(
                     agent: terminal.agent?.name, stakes: Self.stakes(of: [terminal], in: session), status: terminal.runStatus,
-                    commandRunning: row.runningCommand != nil, programs: row.runningCommand.map { [$0] } ?? [])
+                    commandRunning: terminal.command != nil, programs: terminal.command.map { [$0] } ?? [])
                 : ""
             if fromCommandLine { detail += " " + AuxText.controlCloseAsked }
             if let extra { detail = detail.isEmpty ? extra.note : detail + " " + extra.note }
@@ -143,15 +143,16 @@ extension AppController {
         let session = session ?? front
         guard let section = session.hub.state.sections.first(where: { $0.head?.id == id }), let head = section.head else { return }
         // A folded group lists no rows: the core counts what works in it, and says all of it is to end.
-        let running = section.rows.filter(\.runsSomething)
+        let members = session.hub.state.all.filter { $0.group == id }
+        let running = members.filter(\.runsSomething)
         Task {
-            let extra = await worktreeClose(of: section.rows.map(\.terminal), in: session, group: true)
+            let extra = await worktreeClose(of: members, in: session, group: true)
             guard section.workingCount > 0 || !running.isEmpty || extra != nil else { return finishClosingGroup(id, in: session) }
             var detail = section.workingCount > 0 || !running.isEmpty
                 ? CloseQuestions.group(
-                    terminals: section.terminalCount,
-                    running: running.map { StillRunning.Fact(status: $0.terminal.agentStatus, commandRunning: $0.runningCommand != nil) },
-                    programs: running.compactMap(\.runningCommand), stakes: Self.stakes(of: section.rows.map(\.terminal), in: session))
+                    terminals: members.count,
+                    running: running.map { StillRunning.Fact(status: $0.agentStatus, commandRunning: $0.command != nil) },
+                    programs: running.compactMap(\.command), stakes: Self.stakes(of: section.rows.map(\.terminal), in: session))
                 : ""
             if let extra { detail = detail.isEmpty ? extra.note : detail + " " + extra.note }
             let question = Question(
@@ -167,13 +168,13 @@ extension AppController {
     }
 
     /// Closing a window while something runs in it: the question, and the window closes only on a yes.
-    func askToClose(_ session: WindowSession, running: [SidebarRow]) {
+    func askToClose(_ session: WindowSession, running: [TerminalSummary]) {
         let question = Question(
             title: "Close this window?",
             detail: CloseQuestions.window(
                 terminals: session.hub.state.live.count,
-                running: running.map { StillRunning.Fact(status: $0.terminal.agentStatus, commandRunning: $0.runningCommand != nil) },
-                programs: running.compactMap(\.runningCommand), stakes: Self.stakes(of: session.hub.state.sections.flatMap(\.rows).map(\.terminal), in: session)),
+                running: running.map { StillRunning.Fact(status: $0.agentStatus, commandRunning: $0.command != nil) },
+                programs: running.compactMap(\.command), stakes: Self.stakes(of: session.hub.state.sections.flatMap(\.rows).map(\.terminal), in: session)),
             confirm: "Close Window")
         Task {
             // `close()` does not ask the window again: the question was this.
@@ -200,14 +201,15 @@ extension AppController {
 }
 
 extension SidebarRow {
-    /// The command a shell runs, when the row's second line is one (the core words it).
+    /// The command a shell runs, when the row's second line is one (the core words it): for the ambient words only; what a
+    /// close or a quit would end is read from the core's own facts (`TerminalSummary.command`).
     var runningCommand: String? { secondLine.isCommand ? secondLine.text : nil }
-
-    /// An agent works or waits, or a command that ends by itself runs: closing this ends something.
-    var runsSomething: Bool { terminal.activity == .working || terminal.activity == .needsInput || runningCommand != nil }
 }
 
 extension TerminalSummary {
+    /// An agent works or waits, or a program runs in front: closing this ends something (`close_needs_confirmation`).
+    var runsSomething: Bool { activity == .working || activity == .needsInput || command != nil }
+
     /// What the quit question may call an agent's: the real status where an agent is in the terminal, else idle. Any command makes a
     /// terminal busy (its output is the signal), and `top` is not an agent: the question names what runs through the programs
     /// (`Session::agent_status`).

@@ -30,7 +30,7 @@ extension AppController {
             NSApp.terminate(nil)
             return false
         }
-        let running = session.hub.state.sections.flatMap(\.rows).filter(\.runsSomething)
+        let running = session.hub.state.all.filter(\.runsSomething)
         guard !running.isEmpty else { return true }
         askToClose(session, running: running)
         return false
