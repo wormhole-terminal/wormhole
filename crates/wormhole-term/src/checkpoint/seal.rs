@@ -7,7 +7,7 @@
 
 use ring::aead::{Aad, CHACHA20_POLY1305, LessSafeKey, NONCE_LEN, Nonce, UnboundKey};
 use ring::digest;
-use ring::rand::{SecureRandom, SystemRandom};
+use ring::rand::SystemRandom;
 use zeroize::Zeroizing;
 
 use super::FORMAT;
@@ -129,10 +129,10 @@ fn cipher(key: &Key) -> LessSafeKey {
 
 /// `screen` sealed for `binding` with a fresh random nonce.
 pub fn seal(key: &Key, binding: &Binding<'_>, screen: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    let mut nonce = [0u8; NONCE_LEN];
-    SystemRandom::new()
-        .fill(&mut nonce)
-        .map_err(|_| std::io::Error::other("the system has no random numbers"))?;
+    // Asked for whole, so no array of zeros exists that a failed fill could leave in use.
+    let nonce: [u8; NONCE_LEN] = ring::rand::generate(&SystemRandom::new())
+        .map_err(|_| std::io::Error::other("the system has no random numbers"))?
+        .expose();
     Ok(seal_with(key, binding, screen, nonce))
 }
 
