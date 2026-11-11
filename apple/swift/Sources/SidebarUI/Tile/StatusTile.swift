@@ -16,7 +16,7 @@ struct StatusTile: View {
     let surface: Color
     @Environment(\.tokens) private var tokens
     @Environment(\.sidebarLook) private var look
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     /// The monogram's letters as a share of the tile (`MONOGRAM_SHARE`).
     private static let monogram: CGFloat = 0.36

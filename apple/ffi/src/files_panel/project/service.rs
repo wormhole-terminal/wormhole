@@ -60,6 +60,16 @@ impl ProjectService {
         Ok(Self::in_dir(&profile::active_dir()?, authenticator))
     }
 
+    /// The window this belongs to moved to profile `profile` ("Move this window to..."): the switches, the trust and the
+    /// notes sync state are that profile's from here on, as the GPUI app's window reads its own profile's hub. False
+    /// (nothing changes) for a profile that is not in `profiles.json`.
+    pub fn follow_profile(&self, profile: String) -> bool {
+        let Some(dir) = profile::dir_of(&profile) else { return false };
+        *self.lock() = Hub::load(&dir);
+        self.changed();
+        true
+    }
+
     /// The project governing `folder` (a terminal's folder: the first `.wormhole/` above it, stopping
     /// at a repository's root), as the tab draws it; `None` where there is none.
     pub fn project(&self, folder: String) -> Option<ProjectStateRecord> {

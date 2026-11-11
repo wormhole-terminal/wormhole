@@ -11,17 +11,18 @@ extension WindowHub {
     /// The tab bar for the terminals as they are: the groups as sets, the loose terminals as the last one.
     var tabBar: TabBarModel {
         let state = state
-        // A folded group lists no rows, so its set is empty until it is opened in the sidebar.
+        // The bar has no folds: a folded group lists no rows in the sidebar, so its members come from `all`, which has every
+        // terminal in the list's order (`view::sidebar::tabs::tab_sets` takes the bands' members, folded ones too).
         let sets = TabSets.of(
-            groups: state.sections.compactMap { section in
-                section.head.map { TabSet(groupID: $0.id, label: $0.name, members: section.rows.map(\.id)) }
+            groups: state.groups.map { head in
+                TabSet(groupID: head.id, label: head.name, members: state.all.filter { $0.group == head.id }.map(\.id))
             },
-            loose: state.sections.filter { $0.head == nil }.flatMap(\.rows).map(\.id))
+            loose: state.all.filter { $0.group == nil }.map(\.id))
         let current = state.selected.flatMap { TabSets.current(sets, containing: $0) } ?? 0
         return TabBarModel.make(
             sets: sets, current: current, selected: state.selected,
             terminal: { id in
-                let terminal = state.terminals.first { $0.id == id }
+                let terminal = state.all.first { $0.id == id }
                 return TabItem(
                     id: id, name: terminal?.title ?? "", activity: terminal?.activity ?? .idle,
                     number: state.terminals.firstIndex { $0.id == id }.map { $0 + 1 })

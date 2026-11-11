@@ -304,15 +304,18 @@ fn a_window_moved_to_another_profile_is_saved_there_and_gone_from_here() {
     assert_eq!(in_work.saved().len(), 1);
 }
 
-/// The databases number their windows apart, so a window moved into a profile that has a saved window of the same id
-/// (or a terminal of the same id) stays where it is: nothing of the other profile is replaced or deleted.
-#[test]
-fn a_window_is_not_moved_over_a_saved_window_or_terminal_of_the_same_id() {
-    use wormhole_core::config::profile::{NewProfile, ProfileList, StartFrom};
-    use wormhole_core::storage::paths::DataRoot;
+/// Two profiles, Default (shown) and Work; `earlier` is what Work saved on its own, before the profiles shared one
+/// counter (its windows and terminals numbered from 1).
+struct Pair {
+    _dir: tempfile::TempDir,
+    root: wormhole_core::storage::paths::DataRoot,
+    work: String,
+}
 
+fn pair() -> Pair {
+    use wormhole_core::config::profile::{NewProfile, ProfileList, StartFrom};
     let dir = tempfile::tempdir().expect("temp dir");
-    let root = DataRoot::new(dir.path());
+    let root = wormhole_core::storage::paths::DataRoot::new(dir.path());
     let mut list = ProfileList::default();
     let work = list
         .create(
@@ -321,25 +324,175 @@ fn a_window_is_not_moved_over_a_saved_window_or_terminal_of_the_same_id() {
         )
         .expect("makes Work");
     list.save(&root).expect("saves the list");
-    // Work already has window 1 with terminals 1 and 2, saved by an earlier run.
-    {
-        let earlier = Windows::in_dir(root.profile(&work).dir()).expect("opens Work alone");
-        let ws = window(&earlier, 1);
-        ws.apply(Action::NewTerminal);
-        ws.apply(Action::NewTerminal);
-        assert!(earlier.save(1, ws, Some(frame(10.0))));
+    Pair { _dir: dir, root, work: work.as_str().to_owned() }
+}
+
+/// A window Work saved on its own: terminals `ids` in one split, in one group, with notes, a task, a pin, hidden from
+/// agents, and a file claimed.
+fn earlier_window(pair: &Pair, window: i64, ids: [i64; 2]) {
+    use wormhole_core::storage::store::{
+        ClaimRecord, NoteRecord, SessionRecord, SplitRecord, TaskRecord, WindowRecord,
+    };
+    use wormhole_core::view::panes::{Axis, TabPanes};
+    use wormhole_core::workspace::SavedLayout;
+
+    let earlier = Windows::in_dir(
+        pair.root.profile(&wormhole_core::storage::paths::ProfileId::parse(&pair.work).expect("id")).dir(),
+    )
+    .expect("opens Work alone");
+    let mut panes = TabPanes::single(ids[0]);
+    assert!(panes.split(Axis::Row, ids[1]));
+    let split = ids[1] + 100;
+    let mut layout = SavedLayout::default();
+    layout.sidebar.groups.create(&ids);
+    let session = |id: i64| SessionRecord {
+        split_id: Some(split),
+        notes: vec![NoteRecord { body: format!("note of {id}"), collapsed: false }],
+        tasks: vec![TaskRecord { text: format!("task of {id}"), done: true }],
+        pinned: true,
+        agent_hidden: true,
+        ..SessionRecord::new(id, Some(format!("t{id}")), Some("/tmp".into()))
+    };
+    let mut store = earlier.store_locked();
+    store
+        .save_window(&WindowRecord {
+            id: window,
+            layout: serde_json::to_string(&layout).ok(),
+            bounds: Some(wormhole_core::view::layout::frame::WindowFrame::from(frame(10.0)).to_json()),
+            sessions: ids.iter().map(|id| session(*id)).collect(),
+            splits: vec![SplitRecord { id: split, layout: Some(panes.to_json()) }],
+            ..Default::default()
+        })
+        .expect("saved");
+    let claims: Vec<ClaimRecord> = ids
+        .iter()
+        .map(|id| ClaimRecord { session_id: *id, root: "/repo".into(), path: format!("f{id}.rs") })
+        .collect();
+    store.save_claims(&ids, &claims).expect("claimed");
+}
+
+/// What `windows` holds of one saved window, as the database has it.
+fn saved_record(windows: &Windows, id: i64) -> Option<wormhole_core::storage::store::WindowRecord> {
+    windows.store_locked().load().expect("loads").into_iter().find(|w| w.id == id)
+}
+
+/// Work's window as it was saved, found again after a move renumbered it: whatever window of `windows` has `terminals`
+/// terminals and the frame at x 10.
+fn renumbered(windows: &Windows) -> wormhole_core::storage::store::WindowRecord {
+    let all = windows.store_locked().load().expect("loads");
+    let mut found = all.into_iter().filter(|w| {
+        w.bounds
+            .as_deref()
+            .and_then(wormhole_core::view::layout::frame::WindowFrame::from_json)
+            .is_some_and(|f| f.x == 10.0)
+    });
+    let record = found.next().expect("Work's window is still there");
+    assert!(found.next().is_none());
+    record
+}
+
+fn assert_whole(record: &wormhole_core::storage::store::WindowRecord, windows: &Windows) {
+    use wormhole_core::view::panes::TabPanes;
+    assert_eq!(record.sessions.len(), 2);
+    for session in &record.sessions {
+        // Named after the id it was saved with, which is not its id any more.
+        let old = &session.name.as_deref().expect("name")[1..];
+        assert_eq!(session.notes[0].body, format!("note of {old}"), "notes");
+        assert_eq!(
+            (session.tasks[0].text.as_str(), session.tasks[0].done),
+            (format!("task of {old}").as_str(), true)
+        );
+        assert!(session.pinned && session.agent_hidden, "flags");
+        assert_eq!(windows.store_locked().claims(&[session.id]).expect("claims").len(), 1, "claims follow");
     }
-    let in_default = open(dir.path());
-    let in_work = in_default.beside_in(&root, work.as_str()).expect("opens Work beside Default");
+    let split = &record.splits[0];
+    assert!(record.sessions.iter().all(|s| s.split_id == Some(split.id)));
+    let panes = TabPanes::from_json(split.layout.as_deref().expect("layout")).expect("reads");
+    let mut leaves = panes.tree().panes();
+    leaves.sort_unstable();
+    let mut ids: Vec<i64> = record.sessions.iter().map(|s| s.id).collect();
+    ids.sort_unstable();
+    assert_eq!(leaves, ids, "the split's panes are the renumbered terminals");
+    let layout: wormhole_core::workspace::SavedLayout =
+        serde_json::from_str(record.layout.as_deref().expect("layout")).expect("reads");
+    let mut members = layout.sidebar.groups.0[0].members.clone();
+    members.sort_unstable();
+    assert_eq!(members, ids, "and so are the group's members");
+}
+
+/// Moving a window into a profile whose saved window has the same window id: the profile's own window is given new ids
+/// (it is not running), nothing of it is lost, and the moving window keeps its ids and its terminals run on.
+#[test]
+fn a_window_moved_over_a_saved_window_of_the_same_id_renumbers_the_saved_one() {
+    let pair = pair();
+    earlier_window(&pair, 1, [1, 2]);
+    let in_default = open(pair.root.base());
+    let in_work = in_default.beside_in(&pair.root, &pair.work).expect("opens Work beside Default");
+    let ws = window(&in_default, 1);
+    let mine = opened(&ws.apply(Action::NewTerminal))[0];
+    assert!(in_default.save(1, ws.clone(), Some(frame(40.0))));
+
+    assert!(in_default.rehome(1, ws.clone(), None, in_work.clone()));
+    let work_windows = in_work.store_locked().load().expect("loads");
+    assert_eq!(work_windows.len(), 2, "Work has both");
+    assert!(
+        saved_record(&in_work, 1).is_some_and(|w| w.sessions.len() == 1 && w.sessions[0].id == mine),
+        "the mover keeps window 1"
+    );
+    let theirs = renumbered(&in_work);
+    assert!(theirs.id != 1 && theirs.sessions.iter().all(|s| s.id != 1 && s.id != 2 && s.id != mine));
+    assert_whole(&theirs, &in_work);
+    assert!(in_default.saved().is_empty(), "and it left Default");
+    let seat = ws.shared().windows().expect("among windows").0;
+    assert_eq!(seat.profile().id().as_str(), pair.work, "its requests are judged by Work from now on");
+
+    // And back: Default has nothing under its ids now.
+    assert!(in_work.rehome(1, ws.clone(), None, in_default.clone()));
+    assert_eq!(in_default.saved().len(), 1);
+    assert_eq!(in_work.saved().len(), 1, "Work's own window stays");
+    assert_whole(&renumbered(&in_work), &in_work);
+    assert_eq!(ws.shared().windows().expect("among windows").0.profile().id().as_str(), "default");
+}
+
+/// A terminal of the moving window with the id of a terminal in another saved window (the window ids differ): that
+/// window gets new ids, the moving terminal keeps its own.
+#[test]
+fn a_colliding_terminal_alone_renumbers_the_saved_window_that_has_it() {
+    let pair = pair();
+    let in_default = open(pair.root.base());
+    let ws = window(&in_default, 1);
+    let mine = opened(&ws.apply(Action::NewTerminal))[0];
+    assert_eq!(mine, 1);
+    assert!(in_default.save(1, ws.clone(), None));
+    earlier_window(&pair, 7, [1, 2]);
+    let in_work = in_default.beside_in(&pair.root, &pair.work).expect("opens Work beside Default");
+
+    assert!(in_default.rehome(1, ws, None, in_work.clone()));
+    assert!(saved_record(&in_work, 7).is_none(), "window 7 was renumbered");
+    assert!(saved_record(&in_work, 1).is_some_and(|w| w.sessions[0].id == 1));
+    let theirs = renumbered(&in_work);
+    assert!(theirs.id != 7 && theirs.sessions.iter().all(|s| s.id > 2));
+    assert_whole(&theirs, &in_work);
+}
+
+/// A window of the target that is open is not dormant: its ids are its own, so the move is refused and nothing changes.
+#[test]
+fn a_window_is_not_moved_over_an_open_window_of_the_same_id() {
+    let pair = pair();
+    let in_default = open(pair.root.base());
+    let in_work = in_default.beside_in(&pair.root, &pair.work).expect("opens Work beside Default");
+    let theirs = window(&in_work, 1);
+    theirs.apply(Action::NewTerminal);
+    assert!(in_work.save(1, theirs.clone(), Some(frame(10.0))));
     let ws = window(&in_default, 1);
     ws.apply(Action::NewTerminal);
     assert!(in_default.save(1, ws.clone(), Some(frame(40.0))));
 
-    assert!(!in_default.rehome(1, ws, None, in_work.clone()), "refused: window 1 is Work's");
-    let saved = in_work.saved();
-    assert_eq!((saved.len(), saved[0].id, saved[0].terminals), (1, 1, 2), "Work's window is as it was");
-    assert_eq!(saved[0].frame.map(|f| f.x), Some(10.0));
+    assert!(!in_default.rehome(1, ws.clone(), None, in_work.clone()), "refused: Work's window 1 is open");
+    assert_eq!(in_work.saved().len(), 1);
+    assert_eq!(in_work.saved()[0].frame.map(|f| f.x), Some(10.0));
     assert_eq!(in_default.saved().len(), 1, "and the moving window did not leave");
+    assert_eq!(ws.shared().windows().expect("among windows").0.profile().id().as_str(), "default");
 }
 
 /// A window of another profile keeps its notes in that profile's database (and not in the shown one's), so what is

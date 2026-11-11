@@ -11,7 +11,7 @@ public enum StatusKind: Sendable, Equatable {
 
 public struct StatusDot: View {
     public let kind: StatusKind
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     public init(_ kind: StatusKind) { self.kind = kind }
 

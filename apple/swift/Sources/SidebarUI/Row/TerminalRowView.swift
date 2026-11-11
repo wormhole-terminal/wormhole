@@ -18,7 +18,7 @@ struct TerminalRowView: View {
     @Environment(\.sidebarLook) private var look
     @Environment(\.showsHints) private var showsHints
     @Environment(\.keyedStop) private var keyed
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     private var terminal: TerminalSummary { row.terminal }
     private var inset: CGFloat { metrics.rowInset + (solo ? metrics.cardPad : 0) }

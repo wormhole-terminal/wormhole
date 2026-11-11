@@ -17,7 +17,7 @@ struct SidebarSearchField: View {
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
     @Environment(\.colorSchemeContrast) private var contrast
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     /// How much of the primary the focus ring shows (`FLAT_RING_ALPHA`), and how much wider than a select's it is
     /// (`RING_EXTRA`): a flat field has no outline to hide it in.

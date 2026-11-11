@@ -12,7 +12,7 @@ struct TileLight: View {
     /// A share of a turn, the terminal's own, so its tiles of every size turn together.
     let phase: Double
     @Environment(\.tokens) private var tokens
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     private var outer: CGFloat { size + 2 * TileGeometry.ringOut }
     private var round: CGFloat { size * TileGeometry.corner + TileGeometry.ringOut }

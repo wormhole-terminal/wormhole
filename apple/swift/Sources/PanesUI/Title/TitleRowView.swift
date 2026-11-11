@@ -15,7 +15,7 @@ public struct TitleRowView: View {
     let actions: TitleActions
     let backend: any OpenInBackend
     let icon: (OpenInApp) -> NSImage?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     public init(
         facts: TitleFacts, arrangement: TitleArrangement? = nil, fitting: any RowFitting = NaturalFit(),

@@ -25,6 +25,7 @@ public struct SidebarView: View {
     @FocusState var searchFocused: Bool
     @State var hold = CommandHoldMonitor()
     @State var cursor: SidebarStop?
+    @Environment(\.windowFront) private var windowFront
     @State var keysLead = false
     @State var typed = TypedPrefix()
     @State var renaming: TerminalID?
@@ -42,7 +43,7 @@ public struct SidebarView: View {
     @FocusState var focused: Bool
     @Environment(\.dropPlanner) var dropPlanner
     @Environment(\.terminalDrag) var terminalDrag
-    @Environment(\.accessibilityReduceMotion) var reduce
+    @Environment(\.reduceMotion) var reduce
     public init(
         state: WorkspaceState, appearance: SidebarAppearance = SidebarAppearance(),
         closeGroup: (@MainActor (GroupID) -> Void)? = nil, search: SidebarSearch = SidebarSearch(),
@@ -124,7 +125,7 @@ public struct SidebarView: View {
         .environment(\.sidebarLook, appearance)
         .environment(\.rowChanges, RowChanges.counts(sections, scope: appearance.changesScope))
         .environment(\.showsHints, appearance.forcesHints || (appearance.showsCommandHints && hold.showing))
-        .environment(\.keyedStop, focused && keysLead ? cursor : nil)
+        .environment(\.keyedStop, focused && keysLead && windowFront ? cursor : nil)
         .focusable()
         .focusEffectDisabled()
         .focused($focused)

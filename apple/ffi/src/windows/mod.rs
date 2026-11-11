@@ -5,6 +5,8 @@
 mod claims;
 mod frame;
 mod registry;
+mod rehome;
+mod reissue;
 mod tear_off;
 mod workspace_windows;
 

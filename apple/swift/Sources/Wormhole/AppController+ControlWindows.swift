@@ -36,6 +36,13 @@ extension AppController {
                 return true
             }
             guard moveToNewWindow(numbers, from: source) else { reply("error: nothing moved (this workspace cannot hand terminals over)"); return true }
+        case "full-screen", "window-zoom":
+            // `full-screen ID` and `window-zoom ID` do what the window's green light does (full screen, or zoom to the display).
+            guard let id = numbers.first, let window = sessions.first(where: { $0.id == id })?.window else {
+                reply("error: \(command) needs the id of a window")
+                return true
+            }
+            if command == "full-screen" { window.toggleFullScreen(nil) } else { window.zoom(nil) }
         case "minimise", "place":
             // `minimise ID` puts the window in the Dock; `place ID X Y W H` puts it there (the core's space: y down).
             guard let id = numbers.first, let window = sessions.first(where: { $0.id == id })?.window else {

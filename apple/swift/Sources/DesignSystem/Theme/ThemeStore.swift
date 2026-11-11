@@ -25,6 +25,8 @@ public final class ThemeStore {
     /// Every window opaque, as in the GPUI app: no surface lets the desktop through and the text stands as the
     /// opaque rules made it.
     public var reduceTransparency = false { didSet { refresh() } }
+    /// Reduce Motion: the chrome's animations hold still or fade (`\.reduceMotion`, set at each window's root by `.themed()`).
+    public var reduceMotion = false
     /// The Borders setting: the lines of `border`, `card.edge` and `settings.divider` are drawn (`ui.line`); Increase
     /// Contrast keeps them whatever it says, as in the GPUI app.
     public var showsBorders = true { didSet { if showsBorders != oldValue { refresh() } } }
@@ -60,10 +62,11 @@ public final class ThemeStore {
             self?.systemAppearance = snapshot.appearance
             self?.increaseContrast = snapshot.increaseContrast
             self?.reduceTransparency = snapshot.reduceTransparency
+            self?.reduceMotion = snapshot.reduceMotion
         }
         if let snapshot = look?.snapshot {
-            (systemAppearance, increaseContrast, reduceTransparency) =
-                (snapshot.appearance, snapshot.increaseContrast, snapshot.reduceTransparency)
+            (systemAppearance, increaseContrast, reduceTransparency, reduceMotion) =
+                (snapshot.appearance, snapshot.increaseContrast, snapshot.reduceTransparency, snapshot.reduceMotion)
         }
         refresh()
     }

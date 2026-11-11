@@ -1,0 +1,6 @@
+S09, a group folded in the sidebar while terminals are shown as tabs (instance /tmp/Wormhole-swift-s2wb-a, driven through the control folder):
+  group 1 (terminal 1 into a group), tabs on, fold 1, select 1  -> the tab bar shows the terminal of the folded group under the
+  switcher "Group 1" (S09-folded-group-tab.png). Before: the folded group listed no rows, its set was empty and the bar showed no tab.
+Cause: WindowHub.tabBar built the sets from the sidebar's rows; now from `state.all` (the core's TerminalsSnapshot, every terminal in list
+order with its group), as view::sidebar::tabs::tab_sets takes the bands' members, folded ones too ("the tab bar has no folds").
+Test: UITests WindowTests.aFoldedGroupKeepsItsTabsWhenTerminalsAreShownAsTabs.

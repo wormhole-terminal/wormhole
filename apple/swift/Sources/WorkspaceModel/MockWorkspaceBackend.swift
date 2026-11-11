@@ -27,6 +27,17 @@ public final class MockWorkspaceBackend: WorkspaceBackend {
     }
     public func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan? { nil }
 
+    /// Every terminal in list order with the group it is in, a folded group's too (as the core's `TerminalsSnapshot`).
+    public func terminals() -> TerminalsSnapshot {
+        TerminalsSnapshot(terminals: items.flatMap { item -> [TerminalSummary] in
+            switch item {
+            case .loose(let mock): [mock.terminal]
+            case .group(let head, let members):
+                members.map { var summary = $0.terminal; (summary.group, summary.groupName) = (head.id, head.name); return summary }
+            }
+        })
+    }
+
     public func sidebar() -> SidebarSnapshot {
         SidebarSnapshot(sections: MockWorkspace.sections(items, selected: selected), selected: selected)
     }

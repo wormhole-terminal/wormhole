@@ -18,7 +18,7 @@ struct PanelTabBar: View {
     var badges: [PanelTab: Int] = [:]
     @Namespace private var selection
     @Environment(\.chrome) private var colours
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     /// The quick spring the selection and the tabs' tint move on.
     static let spring = Animation.spring(Spring(mass: 1, stiffness: 400, damping: 30))

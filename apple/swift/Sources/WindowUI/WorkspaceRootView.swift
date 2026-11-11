@@ -18,7 +18,7 @@ public struct WorkspaceRootView: View {
     @State private var sidebarSlide: ColumnSlide
     @State private var panelSlide: ColumnSlide
     @State private var drag: DragState?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     /// A column being dragged: which, the pointer, what the readout says ("430 · max", "Close"), whether the column stays
     /// open at this pointer and how far the pointer is from the window's edge it hangs on.
@@ -54,6 +54,7 @@ public struct WorkspaceRootView: View {
         .environment(\.codeFont, look.codeFont)
         .environment(\.tabWidth, hub.panel.preferences.tabWidth)
         .environment(hub.focus)
+        .environment(\.windowFront, hub.focus.front)
         .themed()
         .ignoresSafeArea()
     }

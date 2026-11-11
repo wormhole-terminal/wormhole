@@ -52,7 +52,7 @@ impl Workspace {
         let workspace = Self::build(config, listener, Some(windows.ids()));
         // Set once, here: the workspace was made a moment ago. Before it is registered: whoever hears of the new window
         // (the control socket's publishers) reads its id.
-        let _ = workspace.shared().windows.set((windows.clone(), window));
+        workspace.shared().set_windows(windows.clone(), window);
         windows.register(window, workspace.shared());
         workspace
     }
@@ -61,12 +61,12 @@ impl Workspace {
     /// sessions, `opened` for every one, its groups, split panes, columns and selection. Nothing when the
     /// window has no record, or already has terminals.
     pub fn restore(&self) -> Vec<WorkspaceEvent> {
-        let Some((windows, window)) = self.shared().windows.get() else { return Vec::new() };
-        let Some(record) = windows.record_of(*window) else { return Vec::new() };
+        let Some((windows, window)) = self.shared().windows() else { return Vec::new() };
+        let Some(record) = windows.record_of(window) else { return Vec::new() };
         let mut events = self.shared().with_model(|model| model.restore(&record));
         // The files each terminal had changed come back with it, so its row counts them again.
         let ids: Vec<i64> = record.sessions.iter().map(|session| session.id).collect();
-        let claims = windows.claims_of(*window, &ids);
+        let claims = windows.claims_of(window, &ids);
         if !claims.is_empty() {
             events.extend(self.shared().with_model(|model| model.git_restore_claims(claims)));
         }

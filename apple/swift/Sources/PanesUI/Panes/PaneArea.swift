@@ -21,7 +21,7 @@ public struct PaneArea<Content: View>: View {
     let sidebarDrag: TerminalDragPointer?
     @ViewBuilder let content: (PaneID) -> Content
     @State var drop = PaneDropState()
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     public init(
         panes: PanesState, gaps: Bool, session: PaneDragSession, sidebarDrag: TerminalDragPointer? = nil,

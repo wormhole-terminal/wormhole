@@ -75,4 +75,22 @@ impl Windows {
         self.claims.written.lock().unwrap_or_else(PoisonError::into_inner).insert(window, rows.clone());
         rows
     }
+
+    /// `rows` as what is kept for window `window`'s terminals `ids` (a window moved into this profile, or renumbered here).
+    pub(super) fn put_claims(&self, window: i64, ids: &[i64], rows: Vec<ClaimRecord>) {
+        if !self.claims.keeps.load(Ordering::Relaxed) {
+            return;
+        }
+        match self.store_locked().save_claims(ids, &rows) {
+            Ok(()) => {
+                self.claims.written.lock().unwrap_or_else(PoisonError::into_inner).insert(window, rows);
+            }
+            Err(err) => tracing::warn!("keeping what the terminals changed failed: {err:#}"),
+        }
+    }
+
+    /// Window `window` left this database: what was written for it is no longer here.
+    pub(super) fn forget_written_claims(&self, window: i64) {
+        self.claims.written.lock().unwrap_or_else(PoisonError::into_inner).remove(&window);
+    }
 }

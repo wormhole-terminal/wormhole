@@ -125,7 +125,7 @@ impl Core {
     /// Every window's workspace state, the first (the one the server was started over) among them: reading and
     /// typing, hooks and notices reach the terminals of all of them.
     pub(crate) fn shares(&self) -> Vec<Arc<Shared>> {
-        let all = self.shared.windows.get().map(|(windows, _)| windows.shares()).unwrap_or_default();
+        let all = self.shared.windows().map(|(windows, _)| windows.shares()).unwrap_or_default();
         if all.is_empty() { vec![self.shared.clone()] } else { all }
     }
 
@@ -203,7 +203,7 @@ impl Core {
     /// The seat window `shared` is judged by: its profile's, else (no desk made for it, or a window of no
     /// registry) the server's own.
     pub(crate) fn seat_of_window(&self, shared: &Shared) -> Arc<Seat> {
-        let profile = shared.windows.get().map(|(windows, _)| windows.profile().id().clone());
+        let profile = shared.windows().map(|(windows, _)| windows.profile().id().clone());
         profile.and_then(|id| self.seat_of_profile(id.as_str())).unwrap_or_else(|| self.first_seat())
     }
 

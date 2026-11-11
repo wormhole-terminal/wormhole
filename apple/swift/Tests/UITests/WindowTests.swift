@@ -94,4 +94,14 @@ import WorkspaceModel
         #expect(made == 2)
         #expect(views.existing(1) == nil)
     }
+
+    /// The tab bar has no folds (`tab_sets`): a group folded in the sidebar, which lists none of its rows, keeps its tabs.
+    @Test func aFoldedGroupKeepsItsTabsWhenTerminalsAreShownAsTabs() {
+        let store = WorkspaceStore(backend: MockWorkspaceBackend(items: MockWorkspace.items, selected: 8))
+        let hub = WindowHub(store: store, terminals: TerminalViews { _ in nil })
+        #expect(hub.state.sections.first { $0.head?.id == 3 }?.rows.isEmpty == true, "Infra is folded: no rows")
+        let bar = hub.tabBar
+        #expect(bar.setLabel == "Infra" && bar.tabs.map(\.id) == [8, 9] && bar.tabs.map(\.name) == ["ssh build-mac", "terraform plan"])
+        #expect(bar.sets.first { $0.label == "Infra" }?.members == [8, 9])
+    }
 }

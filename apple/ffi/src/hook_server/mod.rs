@@ -110,7 +110,7 @@ impl HookServer {
         for window in core.shares() {
             core.attach(&window);
         }
-        if let Some((windows, _)) = core.shared.windows.get() {
+        if let Some((windows, _)) = core.shared.windows() {
             let weak = Arc::downgrade(&core);
             windows.on_register(move |window| {
                 if let Some(core) = weak.upgrade() {

@@ -29,7 +29,7 @@ public enum Motion {
 private struct MotionModifier<V: Equatable>: ViewModifier {
     let animation: Animation
     let value: V
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content.animation(reduceMotion ? Motion.fade : animation, value: value)
@@ -38,7 +38,7 @@ private struct MotionModifier<V: Equatable>: ViewModifier {
 
 private struct TransitionModifier: ViewModifier {
     let transition: AnyTransition
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content.transition(reduceMotion ? .opacity : transition)
@@ -47,7 +47,7 @@ private struct TransitionModifier: ViewModifier {
 
 private struct PressModifier: ViewModifier {
     let isPressed: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content

@@ -12,7 +12,7 @@ struct RightPanel: View {
     /// The tab before this one, for which side the new body comes from. It is set after the body that needs it
     /// was built, so while that body is built it still holds the tab that was left.
     @State private var before: PanelTab?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     static let contentIn = Animation.timingCurve(0.2, 0, 0, 1, duration: 0.14)
     static let contentSlide: CGFloat = 10

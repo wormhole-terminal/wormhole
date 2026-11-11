@@ -9,6 +9,7 @@ import PanesUI
 import WindowUI
 import WorkspaceModel
 #if WITH_UNIFFI
+    import FilesBridge
     import SettingsBridge
     import WormholeBindings
 #endif
@@ -117,6 +118,11 @@ extension AppController {
             }
             session.windows = target
             session.notes?.follow(profile: id)
+            // What the window reads of its profile follows: the trust its project actions run under and the usage meters
+            // (agent access is judged by the window's own profile in the core, which `rehome` told). The panel's
+            // backends were made for the profile it left.
+            (session.panelBackends.project as? RustProjectBackend)?.service.followProfile(profile: id)
+            (session.panelBackends.usage as? RustUsageBackend)?.service.followProfile(profile: id)
             session.saver?.windows = target.backend
             // Not left without a window: the profile Wormhole is in keeps one to type in.
             if windows(of: windowsHost.profile).isEmpty {

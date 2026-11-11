@@ -18,7 +18,7 @@ public struct TabBarView: View {
     let hints: Bool
     @State private var switcherOpen = false
     @Environment(\.tokens) private var tokens
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     public init(
         model: TabBarModel, profiles: [ProfileChoice] = [], profileActions: ProfileActions = ProfileActions(),

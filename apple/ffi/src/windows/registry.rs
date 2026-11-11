@@ -52,11 +52,11 @@ pub struct Windows {
     store: Mutex<Store>,
     /// The profile these windows belong to: a request is judged by the profile of the window it reaches.
     profile: ProfilePaths,
-    ids: IdCounter,
-    next_window: Arc<AtomicI64>,
+    pub(super) ids: IdCounter,
+    pub(super) next_window: Arc<AtomicI64>,
     /// Windows planned and not saved yet: what they start with (`Workspace::restore` reads it).
-    planned: Mutex<HashMap<i64, WindowRecord>>,
-    live: Arc<Mutex<Live>>,
+    pub(super) planned: Mutex<HashMap<i64, WindowRecord>>,
+    pub(super) live: Arc<Mutex<Live>>,
     /// The columns last written as the ones new windows start with.
     remembered: Mutex<Option<RememberedPanes>>,
     /// Told of every window made from now on (the control socket's event publishers).
@@ -65,10 +65,10 @@ pub struct Windows {
     pub(super) claims: super::claims::Claims,
 }
 
-type Live = Vec<(i64, Weak<Shared>)>;
+pub(super) type Live = Vec<(i64, Weak<Shared>)>;
 type OnRegister = Box<dyn Fn(&Arc<Shared>) + Send + Sync>;
 
-fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+pub(super) fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
@@ -239,7 +239,7 @@ impl Windows {
     }
 
     /// The record of `workspace` as window `window`, with the hosts and notes the database holds for it.
-    fn record_of_window(
+    pub(super) fn record_of_window(
         &self,
         store: &Store,
         window: i64,
@@ -262,7 +262,7 @@ impl Windows {
     }
 
     /// Write `record` into the database held by `store`, remembering its columns for new windows.
-    fn write(&self, mut store: MutexGuard<'_, Store>, window: i64, record: WindowRecord) -> bool {
+    pub(super) fn write(&self, mut store: MutexGuard<'_, Store>, window: i64, record: WindowRecord) -> bool {
         self.remember(&store, record.layout.as_deref());
         match store.save_window(&record) {
             Ok(()) => {
@@ -274,17 +274,6 @@ impl Windows {
                 false
             }
         }
-    }
-
-    /// Whether a saved window of this database has the id of `record` or of one of its terminals.
-    fn holds_ids_of(&self, record: &WindowRecord) -> bool {
-        let saved = locked(&self.store).load().unwrap_or_else(|err| {
-            tracing::warn!("reading the saved windows: {err:#}");
-            Vec::new()
-        });
-        saved.iter().any(|w| {
-            w.id == record.id || w.sessions.iter().any(|s| record.sessions.iter().any(|mine| mine.id == s.id))
-        })
     }
 
     /// Remember the columns of this window as the ones new windows start with, when they changed.
@@ -361,42 +350,6 @@ impl Windows {
         let ids: Vec<i64> = record.sessions.iter().map(|session| session.id).collect();
         self.keep_claims(&mut store, window, &workspace, &ids);
         self.write(store, window, record)
-    }
-
-    /// Window `window` goes to the profile `to` keeps ("Move this window to..."): its record is written into that
-    /// profile's database and removed from this one. Unlike `forget` it leaves the window among the live ones, since
-    /// the terminals go on running where they are. False when the write failed (nothing is removed then).
-    pub fn rehome(
-        &self,
-        window: i64,
-        workspace: Arc<Workspace>,
-        frame: Option<FrameRecord>,
-        to: Arc<Windows>,
-    ) -> bool {
-        if std::ptr::eq(self, &*to) {
-            return true;
-        }
-        // The notes and tasks are read where the window is now, before they are written into the other database.
-        let record = {
-            let store = locked(&self.store);
-            self.record_of_window(&store, window, &workspace, frame)
-        };
-        // The two databases number their windows and terminals apart: a record written under an id the other one already
-        // uses would replace that window and delete its terminals, notes and scrollback (`save_window`).
-        if to.holds_ids_of(&record) {
-            tracing::warn!(
-                "window {window} stays in its profile: the other one already has a window or terminal with its ids"
-            );
-            return false;
-        }
-        if !to.write(locked(&to.store), window, record) {
-            return false;
-        }
-        locked(&self.planned).remove(&window);
-        if let Err(err) = locked(&self.store).delete_window(window) {
-            tracing::warn!("removing window {window} from its old profile: {err:#}");
-        }
-        true
     }
 
     /// Which window is in front, so the next launch brings the same one forward.

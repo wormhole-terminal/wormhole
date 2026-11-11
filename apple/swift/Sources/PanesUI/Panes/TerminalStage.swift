@@ -9,7 +9,7 @@ import SwiftUI
 public struct TerminalStage<Panes: View, Cover: View>: View {
     let panes: Panes
     let cover: Cover?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     public init(@ViewBuilder panes: () -> Panes, cover: () -> Cover?) { (self.panes, self.cover) = (panes(), cover()) }
 
@@ -29,7 +29,7 @@ public struct TerminalStage<Panes: View, Cover: View>: View {
 public struct TitleSlot<Row: View, CoverTitle: View>: View {
     let row: Row
     let coverTitle: CoverTitle?
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.reduceMotion) private var reduceMotion
 
     public init(@ViewBuilder row: () -> Row, coverTitle: () -> CoverTitle?) { (self.row, self.coverTitle) = (row(), coverTitle()) }
 

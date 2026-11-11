@@ -28,6 +28,11 @@ public final class WindowFocus {
     /// The last input was a key and the window is in front: a ring shows (a click moves the focus without one).
     private(set) var keyboardDriven = false
     private(set) var windowKey = true
+    /// A check's stand-in for the window being in front (`window-front on|off`; nil follows the window): every ring hides in a
+    /// window that is not in front, so a shot can show it without taking the front from the app that has it.
+    var frontOverride: Bool?
+    /// A check's stand-in for macOS's Keyboard navigation (`keyboard-navigation on|off`; nil follows the system).
+    public static var keyboardNavigationOverride: Bool?
     @ObservationIgnored unowned let hub: WindowHub
     @ObservationIgnored weak var holder: FocusHolderView?
     @ObservationIgnored private var observers: [any NSObjectProtocol] = []
@@ -50,8 +55,16 @@ public final class WindowFocus {
 
     /// Whether `area`'s ring shows, on its `index`th stop where it has several.
     func ring(_ area: FocusArea, _ index: Int = 0) -> Bool {
-        holding && virtual == area && keyboardDriven && windowKey && cursor(area) == index
+        holding && virtual == area && keyboardDriven && front && cursor(area) == index
     }
+
+    /// Whether this window is in front as far as the rings go.
+    public var front: Bool { frontOverride ?? windowKey }
+
+    public func setFront(_ front: Bool?) { frontOverride = front }
+
+    /// macOS's Keyboard navigation: ⇥ reaches the title row's buttons too.
+    var keyboardNavigation: Bool { Self.keyboardNavigationOverride ?? NSApp.isFullKeyboardAccessEnabled }
 
     func cursor(_ area: FocusArea) -> Int {
         switch area {
@@ -77,7 +90,7 @@ public final class WindowFocus {
     /// How many ⇥ stops an area has: none while hidden; the title row's buttons only with macOS's Keyboard navigation on.
     private func stops(of area: FocusArea) -> Int {
         guard shown.contains(area) else { return 0 }
-        return area == .titleRow ? (NSApp.isFullKeyboardAccessEnabled ? titleButtons : 0) : 1
+        return area == .titleRow ? (keyboardNavigation ? titleButtons : 0) : 1
     }
 
     // MARK: moving

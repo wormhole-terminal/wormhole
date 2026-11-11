@@ -50,7 +50,7 @@ pub(super) fn new_window(core: &Arc<Core>, spec: &NewWindowSpec, from: Option<i6
     if let Err(reply) = core.budget(Limited::NewWindow, from) {
         return reply;
     }
-    let Some((windows, _)) = core.shared.windows.get() else {
+    let Some((windows, _)) = core.shared.windows() else {
         return Reply::error(
             ErrorCode::Unsupported,
             "this workspace is not one of several windows: use new-terminal",

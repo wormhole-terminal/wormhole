@@ -53,6 +53,15 @@ extension AppController {
         case "reduce-transparency", "increase-contrast":
             // The system's own switches are followed live; this stands in for them where a check cannot flip the setting.
             if command == "reduce-transparency" { on(&themes.reduceTransparency) } else { on(&themes.increaseContrast) }
+        case "reduce-motion":
+            // Stands in for the system's Reduce Motion (SwiftUI's own flag cannot be set): the chrome's animations hold still.
+            themes.reduceMotion = argument == "system" ? NSWorkspace.shared.accessibilityDisplayShouldReduceMotion : argument != "off"
+        case "keyboard-navigation":
+            // Stands in for macOS's Keyboard navigation: ⇥ then reaches the title row's buttons too (`system` follows macOS again).
+            WindowFocus.keyboardNavigationOverride = argument == "system" ? nil : argument != "off"
+        case "window-front":
+            // Says this window is in front (or not) as far as the focus rings go, without moving it.
+            front.hub.focus.setFront(argument == "system" ? nil : argument != "off")
         case "backdrop":
             // What is behind the window's surfaces: the effect views of its content, as AppKit holds them.
             reply(front.window.map(Self.backdropReport) ?? "no window")

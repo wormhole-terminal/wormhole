@@ -77,11 +77,16 @@ pub struct UsageService {
 }
 
 impl UsageService {
-    pub(crate) fn in_dir(dir: &Path, listener: Arc<dyn PanelListener>) -> Arc<Self> {
+    /// What the database in `dir` holds, and the database (`None` when it can't be opened).
+    fn load(dir: &Path) -> (Vec<Usage>, Option<Store>) {
         let store =
             Store::open_at(dir).inspect_err(|err| tracing::warn!("usage limits are not kept: {err:#}")).ok();
         let saved = store.as_ref().and_then(|store| store.meta(usage::STORE_KEY).ok().flatten());
-        let reports = saved.map(|json| usage::from_json(&json)).unwrap_or_default();
+        (saved.map(|json| usage::from_json(&json)).unwrap_or_default(), store)
+    }
+
+    pub(crate) fn in_dir(dir: &Path, listener: Arc<dyn PanelListener>) -> Arc<Self> {
+        let (reports, store) = Self::load(dir);
         Arc::new(Self { reports: Mutex::new(reports), store: Mutex::new(store), waker: Waker::new(listener) })
     }
 
@@ -107,6 +112,17 @@ impl UsageService {
     #[uniffi::constructor]
     pub fn new(listener: Arc<dyn PanelListener>) -> Result<Arc<Self>, FfiError> {
         Ok(Self::in_dir(&profile::active_dir()?, listener))
+    }
+
+    /// The window this belongs to moved to profile `profile` ("Move this window to..."): the reports are that profile's
+    /// from here on, read from its database. False (nothing changes) for a profile that is not in `profiles.json`.
+    pub fn follow_profile(&self, profile: String) -> bool {
+        let Some(dir) = profile::dir_of(&profile) else { return false };
+        let (reports, store) = Self::load(&dir);
+        *self.reports.lock().unwrap_or_else(PoisonError::into_inner) = reports;
+        *self.store.lock().unwrap_or_else(PoisonError::into_inner) = store;
+        self.waker.wake();
+        true
     }
 
     /// The latest report of each agent that has reported, in the order they first did.

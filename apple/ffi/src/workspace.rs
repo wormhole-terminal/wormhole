@@ -208,8 +208,9 @@ pub(crate) struct Shared {
     /// Who hears what happens to the terminals besides Swift: the control socket's event bus
     /// (`hook_server`). Set once, by the server.
     pub(crate) tap: OnceLock<Arc<dyn Tap>>,
-    /// The windows this one is among, and its id there (`workspace_windows`). Set once, by `Workspace::in_window`.
-    pub(crate) windows: OnceLock<(Arc<Windows>, i64)>,
+    /// The windows this one is among, and its id there (`workspace_windows`). Set by `Workspace::in_window`; a window moved to
+    /// another profile is among that profile's from then on (`Windows::rehome`).
+    windows: Mutex<Option<(Arc<Windows>, i64)>>,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -222,9 +223,18 @@ impl Shared {
         locked(&self.terminals).get(&id).cloned()
     }
 
+    /// The windows this one is among and its id there, `None` when it is not among several.
+    pub(crate) fn windows(&self) -> Option<(Arc<Windows>, i64)> {
+        locked(&self.windows).clone()
+    }
+
+    pub(crate) fn set_windows(&self, windows: Arc<Windows>, id: i64) {
+        *locked(&self.windows) = Some((windows, id));
+    }
+
     /// The id of the window this workspace is (1 when it is not among several).
     pub(crate) fn window_id(&self) -> i64 {
-        self.windows.get().map_or(1, |(_, id)| *id)
+        self.windows().map_or(1, |(_, id)| id)
     }
 
     /// Unregister terminal `id` without ending it (it is moving to another window).
@@ -532,7 +542,7 @@ impl Workspace {
             git: GitJobs::default(),
             extras: Extras::default(),
             tap: OnceLock::new(),
-            windows: OnceLock::new(),
+            windows: Mutex::new(None),
         });
         workspace_pump::spawn(&shared);
         Arc::new(Self { shared })

@@ -1,4 +1,4 @@
-// What macOS says about appearance, Increase Contrast and Reduce Transparency, and when it changes.
+// What macOS says about appearance, Increase Contrast, Reduce Transparency and Reduce Motion, and when it changes.
 // KVO on `effectiveAppearance` and the workspace's display-options notification: events, never polling.
 
 import AppKit
@@ -9,6 +9,7 @@ final class SystemLook {
         let appearance: ThemeAppearance
         let increaseContrast: Bool
         let reduceTransparency: Bool
+        let reduceMotion: Bool
     }
 
     var onChange: ((Snapshot) -> Void)?
@@ -37,7 +38,8 @@ final class SystemLook {
         return Snapshot(
             appearance: dark ? .dark : .light,
             increaseContrast: workspace.accessibilityDisplayShouldIncreaseContrast,
-            reduceTransparency: workspace.accessibilityDisplayShouldReduceTransparency)
+            reduceTransparency: workspace.accessibilityDisplayShouldReduceTransparency,
+            reduceMotion: workspace.accessibilityDisplayShouldReduceMotion)
     }
 
     private func notify() { onChange?(snapshot) }
