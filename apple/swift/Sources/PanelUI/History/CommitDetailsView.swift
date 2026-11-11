@@ -8,6 +8,7 @@ import AppKit
 import DesignSystem
 import PanelModel
 import SwiftUI
+import WordsModel
 
 struct CommitDetailsView: View {
     let commit: Commit
@@ -19,6 +20,8 @@ struct CommitDetailsView: View {
     let open: (String) -> Void
     @State private var whole = false
     @State private var width: CGFloat = 0
+    @State private var frame = CGRect.zero
+    @Environment(\.showKeyMenu) private var showKeyMenu
     @Environment(\.panelCopy) private var copy
     @Environment(\.panelHost) private var host
     @Environment(\.tokens) private var tokens
@@ -41,7 +44,29 @@ struct CommitDetailsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(details?.spoken ?? "\(commit.short), \(commit.subject), \(commit.author)")
-        .contextMenu { CommitCopies(commit: commit, store: store) }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0 }
+        .nativeContextMenu { menu() }
+        .onChange(of: store.detailsMenus) { showKeyMenu(menu(), frame) }
+    }
+
+    /// The block's menu (`history/menu.rs` `details_menu`): Show more or less when the message has more, the five copies,
+    /// then each parent the log lists.
+    private func menu() -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        if details != nil, store.compact(lineChars: max(CaptionMeasure.characters(in: width), 16))?.more == true {
+            menu.addItem(ActionMenuItem(whole ? panelText("history-show-less", "Show less") : panelText("history-show-more", "Show more")) { whole.toggle() })
+            menu.addItem(.separator())
+        }
+        for (what, title) in CommitCopies.titles {
+            menu.addItem(ActionMenuItem(title) { Task { if let text = await store.text(of: what, for: commit) { copy(text) } } })
+        }
+        let parents = details?.parents.filter { listed.contains($0.sha) } ?? []
+        if !parents.isEmpty { menu.addItem(.separator()) }
+        for parent in parents {
+            menu.addItem(ActionMenuItem(Words.text("history-menu-open-parent", fallback: "Open Parent \(parent.short)")) { open(parent.sha) })
+        }
+        return menu
     }
 
     @ViewBuilder private var message: some View {

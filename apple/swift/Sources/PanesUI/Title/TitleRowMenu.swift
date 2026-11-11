@@ -12,9 +12,10 @@ struct TitleRowMenu: View {
         Text(PanesText.showInTitleRow)
         ForEach(TitlePart.allCases.filter(\.hideable), id: \.self) { part in
             Toggle(PanesText.partName(part), isOn: Binding(get: { row.shows(part) }, set: { actions.setPart(part, $0) }))
+                .disabled(!actions.canEditRow)
         }
         Divider()
-        Button(PanesText.resetTitleRow, action: actions.resetRow).disabled(row.isDefault)
-        Button(PanesText.customizeTitleRow, action: actions.customizeRow)
+        Button(PanesText.resetTitleRow, action: actions.resetRow).disabled(row.isDefault || !actions.canEditRow)
+        Button(PanesText.customizeTitleRow, action: actions.customizeRow).disabled(!actions.canEditRow)
     }
 }

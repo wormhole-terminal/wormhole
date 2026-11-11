@@ -34,6 +34,7 @@ public enum FilesBridge {
         }
         ByteSize.core = { byteSize(bytes: $0, binary: $1) }
         RepoFiles.resolver = { repoFileResolve(root: $0, relative: $1) }
+        RepoFiles.knownApp = { openInKnown(bundle: $0) }
         RepoFiles.opener = { openFileRun(bundle: $0, path: $1, line: $2.map { UInt32(max($0, 0)) }, appFolder: $3) }
         RepoFiles.tooltip = { openFileTooltip(bundle: $0, app: $1, line: $2.map { UInt32(max($0, 0)) }) }
     }

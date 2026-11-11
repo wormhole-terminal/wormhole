@@ -74,6 +74,15 @@ extension AppController {
             if let session { self?.openGroupMenu(id, at: frame, in: session) }
         }
         hub.actions.groupMenu = { [weak self, weak session] id in session.flatMap { self?.groupMenu(id, in: $0) } }
+        hub.actions.revealSetting = { [weak self] in
+            self?.showSettings()
+            self?.settingsModel.reveal($0)
+        }
+        hub.actions.editsSettings = { [weak self, weak session] in session?.windows.profile == self?.windowsHost.profile }
+        hub.actions.showKeyMenu = { [weak self, weak session] menu, frame in
+            guard let self, policy.touchesSystem, let content = session?.window?.contentView else { self?.injector.keep(menu); return }
+            menu.popUp(positioning: nil, at: NSPoint(x: frame.minX, y: content.bounds.height - frame.maxY), in: content)
+        }
         hub.actions.terminalMenu = { [weak self, weak session] in self?.terminalMenu(for: $0, in: session) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
         hub.actions.palette = paletteSources(for: session)

@@ -3,6 +3,8 @@
 // the keys reach them. ⇥ and Esc are the same for every area (`tab`, `escape`).
 
 import AppKit
+import PanesModel
+import PanesUI
 import SwiftUI
 import TerminalMetal
 import WordsModel
@@ -19,6 +21,8 @@ extension WindowFocus {
     func holderKey(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask).subtracting(.function)
         switch event.keyCode {
+        // ⌃↩ on the title strip: the folder's path menu, or the row's own (`focus/menu.rs`).
+        case Key.returnKey where flags == .control && virtual == .tabs: return openStripMenu()
         case Key.escape where flags.isEmpty: return escape()
         case Key.tab where flags.subtracting(.shift).isEmpty:
             tab(flags.contains(.shift) ? -1 : 1)
@@ -36,12 +40,26 @@ extension WindowFocus {
         // A field keeps its own ⇥ and Esc, and the terminal's belong to its program (the hosting view hears them first).
         if holder?.window?.firstResponder is NSText || holder?.window?.firstResponder is MetalTerminalView { return .ignored }
         switch press.key {
+        // ⌃↩ in a panel list whose rows have no menu still takes the key, so it never reaches the terminal behind it.
+        case .return where press.modifiers == .control && current() == .panelContent: return .handled
         case .tab where press.modifiers.subtracting(.shift).isEmpty:
             tab(press.modifiers.contains(.shift) ? -1 : 1)
             return .handled
         case .escape where press.modifiers.isEmpty: return escape() ? .handled : .ignored
         default: return .ignored
         }
+    }
+
+    private func openStripMenu() -> Bool {
+        guard let terminal = hub.state.selectedTerminal, let holder else { return false }
+        let facts = TitleFactsMaker.facts(for: terminal, row: hub.titleRow, statusBarOn: layout.statusBar)
+        // Under the strip: the terminal's top edge, in the window's content from its top left.
+        let view = hub.terminals.existing(terminal.id)
+        let frame = view.map { $0.convert($0.bounds, to: nil) } ?? holder.convert(holder.bounds, to: nil)
+        let height = holder.window?.contentView?.bounds.height ?? 0
+        let under = CGRect(x: frame.minX, y: height - frame.maxY, width: frame.width, height: 0)
+        hub.actions.showKeyMenu(TitleKeyMenu.menu(facts: facts, actions: hub.titleActions(for: terminal)), under)
+        return true
     }
 
     private func along(_ delta: Int) -> Bool {

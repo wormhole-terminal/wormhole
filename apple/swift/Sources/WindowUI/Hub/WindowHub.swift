@@ -120,6 +120,12 @@ public struct HubActions {
     public var showTerminalsInSidebar: @MainActor () -> Void = {}
     /// A group's native menu, for a right-click on its card in the tab bar's switcher.
     public var groupMenu: @MainActor (GroupID) -> NSMenu? = { _ in nil }
+    /// Settings, open on the setting with this id (`RevealSetting`).
+    public var revealSetting: @MainActor (String) -> Void = { _ in }
+    /// Whether this window's profile is the one Settings shows: a window of another profile cannot arrange its title row.
+    public var editsSettings: @MainActor () -> Bool = { true }
+    /// A menu the keys opened (⌃↩), under `frame` (in the window's content, from its top left): shown, or kept in a test instance.
+    public var showKeyMenu: @MainActor (NSMenu, CGRect) -> Void = { _, _ in }
     /// The native context menu of a terminal's grid, built when it is asked for.
     public var terminalMenu: @MainActor (TerminalID) -> NSMenu? = { _ in nil }
     /// A keymap action by id (the palette's): the app's router runs it.

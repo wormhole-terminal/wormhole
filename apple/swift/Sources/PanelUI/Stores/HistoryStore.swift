@@ -19,6 +19,8 @@ public final class HistoryStore {
     /// Why the details could not be read.
     public private(set) var detailsError: String?
     public private(set) var selection: ChangedFile.ID?
+    /// Counts up with every ↩ on the open commit's details: the block answers with its menu.
+    public internal(set) var detailsMenus = 0
     /// The row the keys are on (`PanelWalking`).
     public var cursor: String?
     public private(set) var revs: [Rev] = []

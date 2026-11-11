@@ -11,7 +11,7 @@ import WorkspaceModel
 extension WindowHub {
     func titleActions(for terminal: TerminalSummary) -> TitleActions {
         let folder = terminal.folder.map { ($0 as NSString).expandingTildeInPath }
-        return TitleActions(
+        var title = TitleActions(
             revealFolder: { if let folder { ExternalOpen.open(URL(fileURLWithPath: folder)) } },
             copyPath: { [unowned self] in
                 guard let folder else { return }
@@ -27,8 +27,10 @@ extension WindowHub {
             canSplit: { [unowned self] in canSplit($0) },
             setPart: { [unowned self] in if !zenActive, titleRow.setShown($0, $1) { rowChanged() } },
             resetRow: { [unowned self] in if !zenActive { titleRow = .default; rowChanged() } },
-            customizeRow: { [unowned self] in actions.openSettings() },
+            customizeRow: { [unowned self] in actions.revealSetting("title-row") },
             canInsert: folder != nil)
+        title.canEditRow = !zenActive && actions.editsSettings()
+        return title
     }
 
     /// The row's parts changed: the core lists the row from them (which parts are at each end, where the chevrons go).

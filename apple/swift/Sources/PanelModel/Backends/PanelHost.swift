@@ -62,9 +62,13 @@ public struct OpenApp: Identifiable, Equatable, Sendable {
     public var bundle: String
     public var name: String
     public var isChosen: Bool
+    /// An editor Wormhole knows, or Finder: a file is offered only these, a folder every app (`may_open_in`).
+    public var isKnown: Bool
     public var id: String { bundle }
 
-    public init(bundle: String, name: String, isChosen: Bool) { (self.bundle, self.name, self.isChosen) = (bundle, name, isChosen) }
+    public init(bundle: String, name: String, isChosen: Bool, isKnown: Bool = true) {
+        (self.bundle, self.name, self.isChosen, self.isKnown) = (bundle, name, isChosen, isKnown)
+    }
 }
 
 /// What the panel could not do, for the chip (`view::notice::Failed`).

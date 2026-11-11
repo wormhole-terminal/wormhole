@@ -77,7 +77,7 @@ final class SystemPanelHost: PanelHost {
 
     var openApps: [OpenApp] {
         let chosen = chosenApp()
-        return terminal.apps().map { OpenApp(bundle: $0.bundle, name: $0.name, isChosen: $0 == chosen) }
+        return terminal.apps().map { OpenApp(bundle: $0.bundle, name: $0.name, isChosen: $0 == chosen, isKnown: RepoFiles.knownApp($0.bundle)) }
     }
 
     func open(_ path: String, inBundle bundle: String) {

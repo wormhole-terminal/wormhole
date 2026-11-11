@@ -17,12 +17,19 @@ struct CommitCopies: View {
     @Environment(\.panelCopy) private var copy
     @Environment(\.panelHost) private var host
 
+    /// The five copies in the menu's order, with their titles.
+    static var titles: [(CommitCopy, String)] {
+        [
+            (.hash, panelText("history-menu-copy-hash", "Copy Hash")),
+            (.shortHash, panelText("history-menu-copy-short-hash", "Copy Short Hash")),
+            (.message, panelText("history-menu-copy-message", "Copy Message")),
+            (.subject, panelText("history-menu-copy-subject", "Copy Subject")),
+            (.author, panelText("history-menu-copy-author", "Copy Author")),
+        ]
+    }
+
     var body: some View {
-        item(.hash, panelText("history-menu-copy-hash", "Copy Hash"))
-        item(.shortHash, panelText("history-menu-copy-short-hash", "Copy Short Hash"))
-        item(.message, panelText("history-menu-copy-message", "Copy Message"))
-        item(.subject, panelText("history-menu-copy-subject", "Copy Subject"))
-        item(.author, panelText("history-menu-copy-author", "Copy Author"))
+        ForEach(Self.titles, id: \.1) { what, title in item(what, title) }
     }
 
     private func item(_ what: CommitCopy, _ title: String) -> some View {

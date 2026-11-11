@@ -1,6 +1,7 @@
 // The menu of a row (`features/files/menus.rs`): open it in the editor, show it in Finder, copy its path, pin a folder
 // or take it off the pins, and Rename… which turns the name into a field.
 
+import AppKit
 import PanelModel
 import SwiftUI
 
@@ -30,11 +31,22 @@ struct FileRowMenu: View {
     /// The apps Open in lists, the chosen one checked; a link is not opened (it may lead anywhere), so its submenu is off.
     private var openIn: some View {
         Menu(panelText("files-row-open-in", "Open in")) {
-            ForEach(host?.openApps ?? []) { app in
-                Toggle(app.name, isOn: Binding(get: { app.isChosen }, set: { _ in host?.open(absolute, inBundle: app.bundle) }))
+            // A file is offered only the editors Wormhole knows (and Finder); a folder every app (`may_open_in`).
+            ForEach((host?.openApps ?? []).filter { row.isFolder || $0.isKnown }) { app in
+                Toggle(isOn: Binding(get: { app.isChosen }, set: { _ in host?.open(absolute, inBundle: app.bundle) })) {
+                    Label { Text(app.name) } icon: { if let icon = Self.icon(of: app.bundle) { Image(nsImage: icon) } }
+                }
             }
         }
         .disabled(row.kind == .link)
+    }
+
+    /// The app's own icon at menu size.
+    private static func icon(of bundle: String) -> NSImage? {
+        guard let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundle) else { return nil }
+        let icon = NSWorkspace.shared.icon(forFile: url.path)
+        icon.size = NSSize(width: 16, height: 16)
+        return icon
     }
 
     private var absolute: String { store.root.map { store.join($0, row.path) } ?? row.path }

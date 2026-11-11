@@ -192,11 +192,18 @@ final class MappingTests: XCTestCase {
                 terminals: [
                     WormholeBindings.TerminalSummary(
                         id: 2, name: "api", number: nil, selected: false, pinned: false, state: .failed, since: 0, glyph: .failed, agent: nil,
-                        message: nil, branch: nil, folder: "~/api", cwd: nil, command: nil, group: 7, groupName: "Web", split: nil,
+                        message: nil, branch: nil, folder: "~/api", cwd: nil, command: "claude", asksToClose: true, status: .attention,
+                        notes: 2, group: 7, groupName: "Web", split: nil,
                         folded: true, agentHidden: false, forgetText: false, unread: false, bell: false, notice: 0)
                 ], counts: WormholeBindings.TerminalCounts(needsYou: 1, working: 2, finished: 3, failed: 4, quiet: 5)))
         XCTAssertEqual(all.terminals.first?.group, 7)
         XCTAssertTrue(all.terminals.first?.isFolded ?? false)
+        // What the close and quit questions read of a terminal the sidebar lists no row for (its group is folded).
+        let folded = all.terminals.first
+        XCTAssertEqual(folded?.asksToClose, true)
+        XCTAssertEqual(folded?.command, "claude")
+        XCTAssertEqual(folded?.run, .attention)
+        XCTAssertEqual(folded?.noteCount, 2)
         XCTAssertEqual(all.counts, TerminalCounts(needsYou: 1, working: 2, finished: 3, failed: 4, quiet: 5))
     }
 

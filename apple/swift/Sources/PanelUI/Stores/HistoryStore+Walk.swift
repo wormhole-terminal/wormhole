@@ -20,7 +20,14 @@ extension HistoryStore: PanelWalking {
     public var following: Bool { selection != nil }
 
     public func press(_ row: WalkRow, space: Bool, following: Bool) {
-        if row.id.hasPrefix("file-") { open(String(row.id.dropFirst(5))) } else if row.id.hasPrefix("commit-"), !following { fold(row) }
+        if row.id.hasPrefix("file-") {
+            open(String(row.id.dropFirst(5)))
+        } else if row.id.hasPrefix("commit-"), !following {
+            fold(row)
+        } else if row.id.hasPrefix("details-"), !following {
+            // ↩ on the details: their menu under the row, the keyboard's way to the copies and the parents.
+            detailsMenus += 1
+        }
     }
 
     public func fold(_ row: WalkRow) {

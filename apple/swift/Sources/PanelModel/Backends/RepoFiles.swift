@@ -12,6 +12,9 @@ public enum RepoFiles {
         let full = root + "/" + relative
         return FileManager.default.fileExists(atPath: full) ? full : nil
     }
+    /// Whether the core knows the app as an editor (or Finder); the build without the core takes every app as one.
+    // why: written once at launch like `resolver`, read afterwards.
+    nonisolated(unsafe) public static var knownApp: @Sendable (_ bundle: String) -> Bool = { _ in true }
     /// Asks the app with this bundle identifier (found in `appFolder`) to open the file at the line.
     nonisolated(unsafe) public static var opener: @Sendable (_ bundle: String, _ path: String, _ line: Int?, _ appFolder: String?) -> Bool = { _, _, _, _ in false }
     nonisolated(unsafe) public static var tooltip: @Sendable (_ bundle: String, _ app: String, _ line: Int?) -> String = { _, app, _ in Words.text("files-open-in-editor", ["editor": .text(app)], fallback: "Open in \(app)") }

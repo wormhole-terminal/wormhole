@@ -29,6 +29,7 @@ struct RightPanel: View {
                 }
             PanelBody(tabName: tab.rawValue, controller: controller)
                 .id(tab)
+                .environment(\.showKeyMenu, hub.actions.showKeyMenu)
                 .transition(.asymmetric(insertion: arrival, removal: .identity))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()

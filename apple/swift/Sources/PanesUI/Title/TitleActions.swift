@@ -20,6 +20,9 @@ public struct TitleActions {
     public var customizeRow: () -> Void
     /// Whether the terminal has a shell to type into (an exited one has none).
     public var canInsert: Bool
+    /// Whether this window may arrange the row: not under Zen mode (the row on screen is Zen's) and not in a window of a
+    /// profile that is not the shown one (Settings shows the shown profile's).
+    public var canEditRow = true
 
     public init(
         revealFolder: @escaping () -> Void = {}, copyPath: @escaping () -> Void = {}, insertPath: @escaping () -> Void = {},
