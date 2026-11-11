@@ -135,6 +135,8 @@ pub enum ActionId {
     SelectOutput,
     CopyOutput,
     CopyCommand,
+    /// Edit → Show Hidden Lines: opens every fold in this terminal (only with the Fold output flag on).
+    ShowHiddenLines,
     /// "Put Command at Prompt": it once ran the command ("Rerun Command"), and the id stays so a
     /// key bound to it keeps working.
     RerunCommand,
@@ -351,6 +353,12 @@ const SYSTEM_KEYS: &[(&str, &str)] = &[
 static SYSTEM: LazyLock<Vec<(KeySpec, &'static str)>> = LazyLock::new(|| {
     SYSTEM_KEYS.iter().filter_map(|(text, what)| Some((KeySpec::from_glyphs(text)?, *what))).collect()
 });
+
+/// The keys macOS keeps for itself, each with what for ("⌘Space", "Spotlight"): for a front end that checks
+/// a key itself instead of asking [`uses`].
+pub fn system_keys() -> impl Iterator<Item = (&'static KeySpec, &'static str)> {
+    SYSTEM.iter().map(|(key, what)| (key, *what))
+}
 
 /// Who has a key already, for a conflict message ("⌘T is New Terminal") or a recorder's warning.
 #[derive(Debug, Clone, Copy, PartialEq)]

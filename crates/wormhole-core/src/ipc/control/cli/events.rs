@@ -161,7 +161,12 @@ fn describe(event: &Event, home: Option<&Path>, style: Style) -> (&'static str, 
                 .map_or_else(|| "(none)".to_string(), |f| for_terminal(&shorten(f, home)).into_owned()),
         ),
         Body::Bell => ("bell", String::new()),
-        Body::Block { block, phase, exit_code, took_ms, command } => {
+        Body::Git { branch, ahead, behind, dirty, untracked } => {
+            let branch =
+                branch.as_deref().map_or_else(|| "(detached)".to_string(), |b| for_terminal(b).into_owned());
+            ("git", format!("{branch}  ahead {ahead} behind {behind}  {dirty} changed {untracked} untracked"))
+        }
+        Body::Block { block, phase, exit_code, took_ms, command, .. } => {
             let mut out = match phase {
                 BlockPhase::Started => "started".to_string(),
                 BlockPhase::Finished | BlockPhase::Other => {
@@ -328,6 +333,7 @@ mod tests {
                 exit_code: Some(101),
                 took_ms: Some(3512),
                 command: Some("cargo test".into()),
+                output_lines: None,
             },
         );
         assert_eq!(
@@ -344,6 +350,7 @@ mod tests {
                 exit_code: None,
                 took_ms: None,
                 command: None,
+                output_lines: None,
             },
         );
         assert_eq!(after_time(line(&started, home, PLAIN)), "  #433    w1 t8     block     started  #58");
@@ -386,6 +393,7 @@ mod tests {
                 exit_code: None,
                 took_ms: None,
                 command: Some("echo \u{1b}[31m".into()),
+                output_lines: None,
             },
         );
         assert!(!line(&command, None, PLAIN).expect("a line").contains('\u{1b}'));

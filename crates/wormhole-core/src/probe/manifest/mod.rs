@@ -8,6 +8,7 @@
 //! Nothing here reads a file or knows a folder; it must not use `storage`, `project` or `config`.
 
 mod contrib;
+mod hooks;
 mod ids;
 
 use std::fmt;
@@ -19,6 +20,7 @@ pub use contrib::{
     Action, ActionKind, AgentDef, AgentStatus, CodeSlot, Command, Contributes, Cwd, FileContribution,
     KeepSpec, Look, Permissions, Reveal, Rule, RunIn, Side, StatusItem, TerminalAccess,
 };
+pub use hooks::{FoldTarget, Hook, HookAction, HookActionKind, HookEvent};
 pub use ids::{is_local_id, is_probe_id};
 
 use contrib::Unknown;
@@ -163,6 +165,12 @@ impl Manifest {
         }
         for (ix, item) in c.hovers.iter().enumerate() {
             add(format!("contributes.hovers[{ix}]"), &item.unknown);
+        }
+        for (ix, hook) in c.hooks.iter().enumerate() {
+            add(format!("contributes.hooks[{ix}]"), &hook.unknown);
+            for (jx, action) in hook.actions.iter().enumerate() {
+                add(format!("contributes.hooks[{ix}].do[{jx}]"), &action.unknown);
+            }
         }
         out
     }

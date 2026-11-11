@@ -1,0 +1,115 @@
+# A slow failed build notifies and sets the status item; a quick one does nothing.
+[[hook_case]]
+name  = "a slow failed build"
+hook  = "slow-build-failed"
+event = { terminal = 3, exit = 2, took_ms = 61000, folder_name = "acme" }
+[[hook_case.expect]]
+type  = "notify"
+title = "Build failed"
+body  = "61 s in acme"
+[[hook_case.expect]]
+type = "status"
+item = "build"
+text = "failed"
+tone = "danger"
+
+[[hook_case]]
+name  = "a quick failure is not news"
+hook  = "slow-build-failed"
+event = { terminal = 3, exit = 2, took_ms = 5000, folder_name = "acme" }
+
+[[hook_case]]
+name  = "a green build that went on for lines folds all but head and tail"
+hook  = "quiet-green-builds"
+event = { terminal = 3, exit = 0, output_lines = 120 }
+[[hook_case.expect]]
+type        = "fold"
+target      = "block-output"
+hidden_rows = 116
+label       = "build output"
+
+[[hook_case]]
+name  = "a short green build stays as it is"
+hook  = "quiet-green-builds"
+event = { terminal = 3, exit = 0, output_lines = 39 }
+
+[[hook_case]]
+name  = "a failing test highlights, and runs its command with the capture after the end-of-options marker"
+hook  = "test-failure"
+event = { terminal = 3, line_no = 17, line = "test result: FAILED tests::parse_ok in 3s" }
+[[hook_case.expect]]
+type = "highlight"
+tone = "danger"
+[[hook_case.expect]]
+type    = "run"
+command = "show-failure"
+argv    = ["git", "show", "--stat", "--end-of-options", "tests::parse_ok"]
+timeout = 10
+item    = "build"
+
+[[hook_case]]
+name  = "what the command printed feeds the status item"
+hook  = "test-failure"
+event = { terminal = 3, line = "FAILED tests::parse_ok" }
+result = { exit = 0, stdout = "3 failing\nmore\n" }
+[[hook_case.expect]]
+type = "highlight"
+[[hook_case.expect]]
+type = "run"
+[[hook_case.expect]]
+type = "status"
+item = "build"
+text = "3 failing"
+
+[[hook_case]]
+name  = "a command that failed shows it on the item and nothing else"
+hook  = "test-failure"
+event = { terminal = 3, line = "FAILED tests::parse_ok" }
+result = { exit = 2, stdout = "{\"status\":{\"text\":\"ignored\"}}" }
+[[hook_case.expect]]
+type = "highlight"
+[[hook_case.expect]]
+type = "run"
+[[hook_case.expect]]
+type = "status"
+item = "build"
+text = "failed (exit 2)"
+tone = "muted"
+
+[[hook_case]]
+name  = "a line without the word does not fire"
+hook  = "test-failure"
+event = { terminal = 3, line = "test result: ok. 4 passed" }
+
+[[hook_case]]
+name  = "a source location is offered, not opened"
+hook  = "source-location"
+event = { terminal = 3, line = "  --> src/main.rs:42:5" }
+[[hook_case.expect]]
+type = "open-path"
+path = "src/main.rs"
+line = 42
+
+[[hook_case]]
+name  = "an agent that needs you, in its own terminal"
+hook  = "agent-needs-you"
+event = { terminal = 1, status = "needs_you", was = "working", agent = "claude", message = "Allow Bash?", kind = "agent" }
+[[hook_case.expect]]
+type  = "notify"
+title = "claude needs you"
+body  = ""
+
+[[hook_case]]
+name  = "another agent is not one of the two"
+hook  = "agent-needs-you"
+event = { terminal = 1, status = "needs_you", was = "working", agent = "aider", kind = "agent" }
+
+[[hook_case]]
+name  = "a release branch with changes"
+hook  = "dirty-release"
+event = { terminal = 1, branch = "release/1.2", ahead = 1, behind = 0, dirty = 3 }
+[[hook_case.expect]]
+type    = "status"
+item    = "build"
+text    = "3 changed on release/1.2"
+tooltip = "1 ahead, 0 behind"

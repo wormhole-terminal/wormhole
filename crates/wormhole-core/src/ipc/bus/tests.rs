@@ -26,6 +26,7 @@ fn block(terminal: i64, command: &str) -> Event {
             exit_code: Some(0),
             took_ms: Some(5),
             command: Some(command.into()),
+            output_lines: None,
         },
     }
 }

@@ -56,6 +56,15 @@ pub fn reveal(text: &str) -> Cow<'_, str> {
     Cow::Owned(out)
 }
 
+/// Characters of a Probe's name or a file's name a marker, chip or notification says: both are text somebody
+/// else chose.
+pub const SHOWN: usize = 60;
+
+/// `text` as a chip says it: made visible ([`reveal`]) and cut to [`SHOWN`] characters.
+pub fn shown(text: &str) -> String {
+    reveal(text).chars().take(SHOWN).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

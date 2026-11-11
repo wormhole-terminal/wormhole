@@ -71,6 +71,8 @@ pub const APP_SETTINGS: &[&str] = &[
     // How large those two windows' text is: the person's own habit, never a project's.
     "settings_text_size",
     "status_bar",
+    // How the person's window is dragged: a habit of theirs, whatever project is in front.
+    "smooth_resize",
     "minimap",
     "split_gaps",
     "column_dividers",
@@ -145,6 +147,9 @@ pub const APP_SETTINGS: &[&str] = &[
     "worktree_base",
     // Cloning folders into a worktree is the person's choice: a repository must not turn it on.
     "worktree_clone_build_folders",
+    // Whether lines may be hidden behind a fold is the person's own choice: a repository must not hide
+    // output from them, nor decide it for them.
+    "never_hide_lines",
     // Which colour each folder wears is the person's too: a repository can tint its own title row
     // (`project_color`), not recolour the folders in everyone's windows.
     "folder_colors",

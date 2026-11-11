@@ -4,7 +4,7 @@ use std::fmt;
 
 use regex::{Regex, RegexBuilder, RegexSet, RegexSetBuilder};
 
-use crate::probe::manifest::{Manifest, Rule};
+use crate::probe::manifest::{Action, Manifest, Rule};
 use crate::probe::validate::{MAX_RULES, SIZE_LIMIT};
 
 /// A rule and the program that finds it.
@@ -15,6 +15,9 @@ pub struct CompiledRule {
     pub(super) regex: Regex,
     /// The `run` of the command a `command` action names, when it is there to read.
     pub(super) command_run: Option<Vec<String>>,
+    /// The id of the Probe the rule belongs to once rules of several are [combined](CompiledRules::combine);
+    /// empty before.
+    pub owner: String,
 }
 
 impl CompiledRule {
@@ -77,18 +80,31 @@ impl CompiledRules {
                 .and_then(|action| action.command.as_deref())
                 .and_then(|id| manifest.contributes.commands.iter().find(|command| command.id == id))
                 .and_then(|command| command.run.clone());
-            compiled.push(CompiledRule { rule: rule.clone(), regex, command_run });
+            compiled.push(CompiledRule { rule: rule.clone(), regex, command_run, owner: String::new() });
         }
-        // The programs are the prefilter's too; its limit is what all of them may take together.
-        let prefilter = (!compiled.is_empty())
-            .then(|| {
-                RegexSetBuilder::new(compiled.iter().map(|rule| rule.regex.as_str()))
-                    .size_limit(SIZE_LIMIT.saturating_mul(compiled.len()))
-                    .build()
-                    .ok()
-            })
-            .flatten();
+        let prefilter = prefilter(&compiled);
         Ok(Self { rules: compiled, prefilter })
+    }
+
+    /// The rules of several Probes as one set, each rule marked with its Probe (`owner`): the terminal runs
+    /// one pass over a line for all of them. Earlier Probes win a tie between spans, as earlier rules do.
+    pub fn combine(parts: impl IntoIterator<Item = (String, CompiledRules)>) -> Self {
+        let mut rules = Vec::new();
+        for (owner, part) in parts {
+            rules.extend(part.rules.into_iter().map(|rule| CompiledRule { owner: owner.clone(), ..rule }));
+        }
+        let prefilter = prefilter(&rules);
+        Self { rules, prefilter }
+    }
+
+    /// Take the action off every rule `allowed` says no to. The rule keeps its look and tone: a Probe whose
+    /// action the user did not grant still decorates.
+    pub fn restrict_actions(&mut self, allowed: impl Fn(&CompiledRule, &Action) -> bool) {
+        for rule in &mut self.rules {
+            if rule.rule.action.as_ref().is_some_and(|action| !allowed(rule, action)) {
+                rule.rule.action = None;
+            }
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -107,4 +123,17 @@ impl CompiledRules {
     pub fn iter(&self) -> impl Iterator<Item = &CompiledRule> {
         self.rules.iter()
     }
+}
+
+/// One pass over a line says which rules match somewhere in it. The programs are the set's too; its limit
+/// is what all of them may take together. `None` when there is nothing to match or it will not build.
+fn prefilter(rules: &[CompiledRule]) -> Option<RegexSet> {
+    (!rules.is_empty())
+        .then(|| {
+            RegexSetBuilder::new(rules.iter().map(|rule| rule.regex.as_str()))
+                .size_limit(SIZE_LIMIT.saturating_mul(rules.len()))
+                .build()
+                .ok()
+        })
+        .flatten()
 }

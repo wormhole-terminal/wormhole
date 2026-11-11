@@ -202,6 +202,9 @@ pub struct Settings {
     // Window and terminal
     /// The status bar along the bottom of every window (View → Show Status Bar).
     pub status_bar: bool,
+    /// How a window is dragged to another size. Off (the default), in whole cells of the terminal's grid; on,
+    /// freely, the grid reflowing to whole cells and the strip left over taking the terminal's background.
+    pub smooth_resize: bool,
     /// The minimap along every terminal's right edge (View → Show Minimap).
     pub minimap: bool,
     /// A small gap between the terminals of a split, each its own rounded surface; off joins them with
@@ -319,6 +322,9 @@ pub struct Settings {
     /// Whether a new worktree starts with copy-on-write clones of the main checkout's `node_modules`
     /// and `target` folders (macOS, APFS), so installs and builds start warm.
     pub worktree_clone_build_folders: bool,
+    /// Never hide lines: the view shows every line, whatever a fold would hide (the Fold output
+    /// feature), and nothing is folded while it is on. Applies at once, to every terminal.
+    pub never_hide_lines: bool,
 
     /// Features still behind a flag (see [`crate::config::features`]). The key is a [`FeatureFlag`]'s
     /// `key`, the value whether it is on. Only a development build, the Unstable channel or a Stable
@@ -394,6 +400,7 @@ impl Default for Settings {
             hidden_themes: Vec::new(),
             motion: MotionChoices::default(),
             status_bar: false,
+            smooth_resize: false,
             minimap: false,
             split_gaps: true,
             column_dividers: true,
@@ -435,6 +442,7 @@ impl Default for Settings {
             clipboard_write: ClipboardWrite::default(),
             worktree_base: String::new(),
             worktree_clone_build_folders: false,
+            never_hide_lines: false,
             feature_flags: BTreeMap::new(),
             features: BTreeMap::new(),
         }
@@ -476,9 +484,10 @@ impl Settings {
     }
 
     /// Whether the Live resize feature is on in this build: windows resize in steps of the terminal's cell,
-    /// and the program in it is told the size calmly while a window is dragged.
+    /// and the program in it is told the size calmly while a window is dragged. `smooth_resize` turns the
+    /// steps off; the Swift app has no flag and steps unless it is set.
     pub fn live_resize_on(&self) -> bool {
-        self.feature_enabled(FeatureFlag::LiveResize)
+        self.feature_enabled(FeatureFlag::LiveResize) && !self.smooth_resize
     }
 
     /// Whether the Motion feature is on in this build: the motions the design fixed, which have no choice

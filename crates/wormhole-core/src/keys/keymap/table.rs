@@ -225,6 +225,11 @@ pub(super) fn entries() -> Vec<Entry> {
         row(CopyOutput, "Copy Output", &[]).scope(Scope::Terminal),
         row(CopyCommand, "Copy Command", &[]).scope(Scope::Terminal),
         row(RerunCommand, "Put Command at Prompt", &[]).scope(Scope::Terminal),
+        // The keyboard's way to a marker, which a click opens: it opens every fold of this terminal.
+        row(ShowHiddenLines, "Show Hidden Lines", &[(ALT_CMD, "l")])
+            .scope(Scope::Terminal)
+            .flag("output_folds")
+            .not_in_palette(),
         // J for "jump": the picker walks the folders below the terminal's and inserts a path, it never cd's.
         // Hidden with its feature flag off (the window says which actions are).
         // The key works while a terminal has the keyboard: from the notes or a search field it is theirs.

@@ -1,6 +1,7 @@
 //! Running a fixture's cases: the matches found against the matches expected.
 
-use super::{Case, Expect, Fixture, FixtureError, fixtures};
+use super::{Case, Expect, Fixture, FixtureError, fixtures, hook_run};
+use crate::probe::hooks::CompiledHooks;
 use crate::probe::manifest::Look;
 use crate::probe::read::ProbeFolder;
 use crate::probe::rules::{CompiledRules, Match, matches, target};
@@ -43,29 +44,30 @@ impl TestReport {
     }
 }
 
-/// Run every case of every `tests/*.toml` of `folder` over `rules`.
-pub fn run(folder: &ProbeFolder, rules: &CompiledRules) -> TestReport {
+/// Run every case of every `tests/*.toml` of `folder`: rule cases over `rules`, hook cases over `hooks`.
+pub fn run(folder: &ProbeFolder, rules: &CompiledRules, hooks: &CompiledHooks) -> TestReport {
     let mut report = TestReport::default();
     for fixture in fixtures(folder) {
         match fixture {
-            Ok(fixture) => report.cases.extend(run_fixture(&fixture, rules)),
+            Ok(fixture) => report.cases.extend(run_fixture(&fixture, rules, hooks)),
             Err(err) => report.unreadable.push(err),
         }
     }
     report
 }
 
-fn run_fixture(fixture: &Fixture, rules: &CompiledRules) -> Vec<CaseReport> {
-    fixture
-        .cases
-        .iter()
-        .enumerate()
-        .map(|(ix, case)| CaseReport {
-            file: fixture.file.clone(),
-            name: case.name.clone().unwrap_or_else(|| format!("case {}", ix + 1)),
-            problems: run_case(case, rules),
-        })
-        .collect()
+fn run_fixture(fixture: &Fixture, rules: &CompiledRules, hooks: &CompiledHooks) -> Vec<CaseReport> {
+    let rule_cases = fixture.cases.iter().enumerate().map(|(ix, case)| CaseReport {
+        file: fixture.file.clone(),
+        name: case.name.clone().unwrap_or_else(|| format!("case {}", ix + 1)),
+        problems: run_case(case, rules),
+    });
+    let hook_cases = fixture.hook_cases.iter().enumerate().map(|(ix, case)| CaseReport {
+        file: fixture.file.clone(),
+        name: case.name.clone().unwrap_or_else(|| format!("hook case {}", ix + 1)),
+        problems: hook_run::run_case(case, hooks),
+    });
+    rule_cases.chain(hook_cases).collect()
 }
 
 /// A match as the case's fixture would spell it, in characters.
@@ -93,7 +95,7 @@ impl Found {
                 Some(crate::probe::rules::Target::Command { args, .. }) => Some(args.clone()),
                 _ => None,
             },
-            target: target.map(|target| target.text().to_string()),
+            target: target.map(|target| target.text().into_owned()),
         }
     }
 

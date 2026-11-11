@@ -21,6 +21,7 @@ pub mod feature_table;
 pub mod features;
 mod file;
 mod font_slots;
+pub mod picks;
 pub mod presets;
 pub mod profile;
 mod settings;

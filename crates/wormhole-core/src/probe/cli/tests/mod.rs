@@ -1,6 +1,7 @@
 //! The `probe` command line, end to end on real folders in temp dirs.
 
 mod args;
+mod hooks;
 mod new;
 mod test_verb;
 mod validate;

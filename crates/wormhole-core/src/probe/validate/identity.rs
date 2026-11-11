@@ -7,8 +7,9 @@ use semver::{Version, VersionReq};
 
 use super::Findings;
 use super::paths;
+use crate::probe::events::MAX_HOOKS;
 use crate::probe::hidden::has_hidden;
-use crate::probe::manifest::{API, CODE_API, Permissions, is_local_id, is_probe_id};
+use crate::probe::manifest::{API, CODE_API, Permissions, TerminalAccess, is_local_id, is_probe_id};
 use crate::probe::read::ProbeFolder;
 
 /// Contributions of each kind a Probe may have.
@@ -121,13 +122,14 @@ fn check_ids_and_caps(folder: &ProbeFolder, out: &mut Findings) {
         ("commands", c.commands.len(), MAX_COMMANDS, "too-many-commands"),
         ("status", c.status.len(), MAX_STATUS, "too-many-status"),
         ("agents", c.agents.len(), MAX_AGENTS, "too-many-agents"),
+        ("hooks", c.hooks.len(), MAX_HOOKS, "too-many-hooks"),
     ] {
         if count > max {
             out.error(code, format!("contributes.{kind}"), format!("{count} {kind}; a Probe may have {max}"));
         }
     }
     // A contribution's global id is `<probe id>/<local id>`; within a kind that must name one thing.
-    let kinds: [(&str, Vec<&str>); 8] = [
+    let kinds: [(&str, Vec<&str>); 9] = [
         ("rules", c.rules.iter().map(|x| x.id.as_str()).collect()),
         ("commands", c.commands.iter().map(|x| x.id.as_str()).collect()),
         ("status", c.status.iter().map(|x| x.id.as_str()).collect()),
@@ -136,6 +138,7 @@ fn check_ids_and_caps(folder: &ProbeFolder, out: &mut Findings) {
         ("icon_themes", c.icon_themes.iter().map(|x| x.id.as_str()).collect()),
         ("panels", c.panels.iter().map(|x| x.id.as_str()).collect()),
         ("hovers", c.hovers.iter().map(|x| x.id.as_str()).collect()),
+        ("hooks", c.hooks.iter().map(|x| x.id.as_str()).collect()),
     ];
     for (kind, ids) in kinds {
         let mut seen = BTreeSet::new();
@@ -159,8 +162,12 @@ fn check_ids_and_caps(folder: &ProbeFolder, out: &mut Findings) {
 }
 
 /// The `[permissions]` keys that only code (E2) can use, for the ones this Probe sets.
-fn code_keys(p: &Permissions) -> impl Iterator<Item = &'static str> {
-    [("terminal", !p.terminal.is_empty()), ("net", !p.net.is_empty()), ("fs", !p.fs.is_empty())]
+///
+/// A hook (E1) may read what a terminal shows, so `terminal = ["read"]` is not code's alone when the Probe
+/// has hooks; typing into a terminal is.
+fn code_keys(p: &Permissions, hooks: bool) -> impl Iterator<Item = &'static str> {
+    let terminal = if hooks { p.terminal.contains(&TerminalAccess::Write) } else { !p.terminal.is_empty() };
+    [("terminal", terminal), ("net", !p.net.is_empty()), ("fs", !p.fs.is_empty())]
         .into_iter()
         .filter_map(|(key, used)| used.then_some(key))
 }
@@ -171,7 +178,7 @@ fn check_needs_code(folder: &ProbeFolder, out: &mut Findings) {
     if m.probe.main.is_some() {
         return;
     }
-    for key in code_keys(&m.permissions) {
+    for key in code_keys(&m.permissions, !m.contributes.hooks.is_empty()) {
         out.error(
             "needs-code",
             format!("permissions.{key}"),

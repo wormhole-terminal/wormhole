@@ -119,3 +119,76 @@ fn positions_count_lines_and_characters() {
     assert_eq!(position("ab\ncd", 4), (2, 2));
     assert_eq!(position("é\nxé", 4), (2, 2));
 }
+
+const HOOKS: &str = include_str!("../../../tests/probes/ok/hooks/probe.toml");
+
+#[test]
+fn the_hooks_example_parses_without_a_warning_and_reads_back() {
+    let parsed = parse(HOOKS);
+    assert_eq!(parsed.warnings, []);
+    let m = parsed.manifest;
+    assert!(m.permissions.fold);
+    let hooks = &m.contributes.hooks;
+    assert_eq!(hooks.len(), 6);
+    assert_eq!(hooks[0].on, HookEvent::CommandFinished);
+    assert_eq!(hooks[0].matcher.get("took_ms").map(String::as_str), Some(">=60000"));
+    assert_eq!(
+        hooks[0].actions.iter().map(|a| a.kind).collect::<Vec<_>>(),
+        [HookActionKind::Notify, HookActionKind::Status]
+    );
+    assert_eq!(hooks[1].actions[0].target, Some(FoldTarget::BlockOutput));
+    assert_eq!(hooks[1].actions[0].keep_tail, Some(3));
+    assert!(hooks[5].matcher.contains_key("branch"));
+}
+
+#[test]
+fn a_hook_without_a_match_has_an_empty_one_and_the_names_read_as_they_are_spelt() {
+    let text = format!(
+        "{MINIMAL}[[contributes.hooks]]\nid = \"h\"\non = \"bell\"\ndo = [{{ type = \"notify\", title = \"t\" }}]\n"
+    );
+    let hook = parse(&text).manifest.contributes.hooks.remove(0);
+    assert!(hook.matcher.is_empty());
+    for event in HookEvent::ALL {
+        let text =
+            format!("{MINIMAL}[[contributes.hooks]]\nid = \"h\"\non = \"{}\"\ndo = []\n", event.name());
+        assert_eq!(parse(&text).manifest.contributes.hooks[0].on, event);
+    }
+    for kind in [
+        HookActionKind::Notify,
+        HookActionKind::Highlight,
+        HookActionKind::Fold,
+        HookActionKind::OpenPath,
+        HookActionKind::Run,
+        HookActionKind::Status,
+    ] {
+        let text = format!(
+            "{MINIMAL}[[contributes.hooks]]\nid = \"h\"\non = \"bell\"\ndo = [{{ type = \"{}\" }}]\n",
+            kind.name()
+        );
+        assert_eq!(parse(&text).manifest.contributes.hooks[0].actions[0].kind, kind);
+    }
+}
+
+#[test]
+fn what_a_hook_cannot_say_is_a_parse_error_naming_the_choices() {
+    for (hook, names) in [
+        ("on = \"command.done\"\ndo = []", "command.finished"),
+        ("on = \"bell\"\ndo = [{ type = \"block\" }]", "notify"),
+        ("on = \"bell\"\ndo = [{ type = \"fold\", target = \"all\" }]", "block-output"),
+        ("on = \"bell\"", "do"),
+        ("on = \"bell\"\nmatch = { exit = 0 }\ndo = []", "string"),
+    ] {
+        let err = Manifest::parse(&format!("{MINIMAL}[[contributes.hooks]]\nid = \"h\"\n{hook}\n"))
+            .expect_err(hook);
+        assert!(err.message.contains(names), "{hook}: {err}");
+    }
+}
+
+#[test]
+fn an_unknown_key_in_a_hook_or_an_action_is_a_warning_with_its_place() {
+    let text = format!(
+        "{MINIMAL}[[contributes.hooks]]\nid = \"h\"\non = \"bell\"\nwhen = \"x\"\ndo = [{{ type = \"notify\", title = \"t\", sound = \"x\" }}]\n"
+    );
+    let paths: Vec<_> = parse(&text).warnings.into_iter().map(|w| w.path).collect();
+    assert_eq!(paths, ["contributes.hooks[0].when", "contributes.hooks[0].do[0].sound"]);
+}

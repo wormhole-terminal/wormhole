@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use super::*;
+use crate::probe::hooks::CompiledHooks;
 use crate::probe::manifest::Manifest;
 use crate::probe::read::{MANIFEST_FILE, ProbeFile};
 use crate::probe::rules::CompiledRules;
@@ -36,7 +37,7 @@ fn folder(tests: &[(&str, &str)]) -> ProbeFolder {
 fn run_text(text: &str) -> TestReport {
     let folder = folder(&[("tests/t.toml", text)]);
     let rules = CompiledRules::compile(&folder.manifest).expect("compiles");
-    run(&folder, &rules)
+    run(&folder, &rules, &CompiledHooks::default())
 }
 
 const GOOD: &str = r#"

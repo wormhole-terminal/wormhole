@@ -42,6 +42,7 @@ pub mod hosts;
 mod instance;
 mod mcp;
 mod message;
+pub mod probe_feed;
 mod read_job;
 mod server;
 #[cfg(test)]
@@ -62,7 +63,7 @@ use crate::storage::paths::data_dir;
 
 pub use ask_job::{AskJob, Decision};
 pub use client::{Command, command, run_cli, run_status_line_cli};
-pub use instance::{Instance, InstanceLock, Served, acquire, start_server};
+pub use instance::{Instance, InstanceLock, Served, acquire, acquire_in, start_server};
 pub use message::Message;
 pub use read_job::ReadJob;
 pub use server::{ANCESTORS_MAX, Peer};
@@ -147,7 +148,7 @@ pub fn socket_path() -> PathBuf {
 /// where the system has one (macOS `$TMPDIR`), named the same by every build
 /// (unlike std's `DefaultHasher`). A path too long for a socket
 /// falls back to `/tmp` (`platform::socket::socket_in`, which the hosts' sockets follow too).
-fn socket_path_in(temp: &Path, data_dir: &Path) -> PathBuf {
+pub fn socket_path_in(temp: &Path, data_dir: &Path) -> PathBuf {
     let digest = Sha256::digest(data_dir.as_os_str().as_encoded_bytes());
     let uid = UserId::current();
     let name =

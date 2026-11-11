@@ -5,6 +5,7 @@ use super::Findings;
 use super::argv;
 use super::pattern::{self, CaptureHazard, Pattern};
 use super::template;
+use crate::probe::events::MAX_PATH_BYTES;
 use crate::probe::hidden::{has_hidden, is_hidden};
 use crate::probe::manifest::{Action, ActionKind, Command, KeepSpec, Look, Rule};
 use crate::probe::read::ProbeFolder;
@@ -142,6 +143,7 @@ fn check_action(
         ("url", action.url.is_some(), action.kind == ActionKind::OpenUrl),
         ("command", action.command.is_some(), action.kind == ActionKind::Command),
         ("text", action.text.is_some(), action.kind == ActionKind::Copy),
+        ("path", action.path.is_some(), action.kind == ActionKind::OpenPath),
     ] {
         if set && !used {
             out.error(
@@ -163,6 +165,28 @@ fn check_action(
                     "action-group",
                     out,
                 );
+            }
+        }
+        ActionKind::OpenPath => {
+            if let Some(path) = &action.path {
+                let at = action_at("path");
+                if path.len() > MAX_PATH_BYTES || path.contains("://") || path.chars().any(is_hidden) {
+                    out.error(
+                        "action-path",
+                        &at,
+                        format!(
+                            "a file's path, at most {MAX_PATH_BYTES} bytes and not a link: a link is an `open-url` action's"
+                        ),
+                    );
+                }
+                if path.split('/').any(|segment| segment == "..") {
+                    out.error(
+                        "action-path",
+                        &at,
+                        "has a `..` segment, which walks the path up out of where it was written",
+                    );
+                }
+                check_template_groups(path, groups, &at, "action-template", "action-group", out);
             }
         }
         ActionKind::OpenUrl => {
@@ -226,7 +250,12 @@ fn check_action(
 
 /// A rule's captures arrive in `command` as its `$n`. Every capture that does must exist, and be
 /// anchored (see [`Pattern::capture_hazard`]).
-fn check_command_target(command: &Command, pattern: Option<&Pattern>, path: &str, out: &mut Findings) {
+pub(super) fn check_command_target(
+    command: &Command,
+    pattern: Option<&Pattern>,
+    path: &str,
+    out: &mut Findings,
+) {
     let Some(pattern) = pattern else { return };
     let used: Vec<usize> = match &command.run {
         Some(run) => argv::captures_of(run),

@@ -3,6 +3,7 @@
 
 use super::Findings;
 use super::argv::{self, Where};
+use super::hooks;
 use crate::keys::keymap;
 use crate::keys::keyspec::KeySpec;
 use crate::probe::hidden::has_hidden;
@@ -89,15 +90,25 @@ fn check_command(folder: &ProbeFolder, command: &Command, ix: usize, has_code: b
             "a capture would reach the user's own shell in a new terminal, which is not safe until captures are quoted for it; use `in = \"background\"`",
         );
     }
-    let targeted =
-        folder.manifest.contributes.rules.iter().any(|rule| {
-            rule.action.as_ref().is_some_and(|a| a.command.as_deref() == Some(command.id.as_str()))
-        });
+    let id = Some(command.id.as_str());
+    let targeted = folder
+        .manifest
+        .contributes
+        .rules
+        .iter()
+        .any(|rule| rule.action.as_ref().is_some_and(|a| a.command.as_deref() == id))
+        || folder
+            .manifest
+            .contributes
+            .hooks
+            .iter()
+            .flat_map(|h| &h.actions)
+            .any(|a| a.command.as_deref() == id);
     if !targeted {
         out.warning(
             "command-capture-unbound",
             &path,
-            "uses `$n`, but no rule's action runs this command, so from the palette nothing fills it",
+            "uses `$n`, but no rule's action or hook runs this command, so from the palette nothing fills it",
         );
     }
 }
@@ -128,10 +139,10 @@ fn check_key(command: &Command, ix: usize, out: &mut Findings) -> Option<KeySpec
 fn check_status(folder: &ProbeFolder, item: &StatusItem, ix: usize, has_code: bool, out: &mut Findings) {
     let at = format!("contributes.status[{ix}]");
     match &item.run {
-        None if !has_code => out.error(
+        None if !has_code && !hooks::feeds_status(folder, &item.id) => out.error(
             "status-no-run",
             &at,
-            "has no `run`, so only code could feed it, and this Probe has no `main` (code is E2, not supported yet)",
+            "has no `run`, so only a hook's `status` action or code could feed it, and no hook does and this Probe has no `main` (code is E2, not supported yet)",
         ),
         None => {}
         Some(run) => argv::check(

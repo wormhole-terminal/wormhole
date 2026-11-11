@@ -23,6 +23,9 @@ pub(super) const TERMINAL: &[Group] = &[
             entry("minimap", SETTINGS_TERMINAL_MINIMAP, &["minimap"])
                 .with_description(SETTINGS_TERMINAL_MINIMAP_DESCRIPTION)
                 .with_keywords(SETTINGS_TERMINAL_MINIMAP_KEYWORDS),
+            entry("never-hide-lines", SETTINGS_TERMINAL_NEVER_HIDE_LINES, &["never_hide_lines"])
+                .with_description(SETTINGS_TERMINAL_NEVER_HIDE_LINES_DESCRIPTION)
+                .with_keywords(SETTINGS_TERMINAL_NEVER_HIDE_LINES_KEYWORDS),
             entry("split-gaps", SETTINGS_TERMINAL_SPLIT_GAPS, &["split_gaps"])
                 .with_description(SETTINGS_TERMINAL_SPLIT_GAPS_DESCRIPTION)
                 .with_keywords(SETTINGS_TERMINAL_SPLIT_GAPS_KEYWORDS),

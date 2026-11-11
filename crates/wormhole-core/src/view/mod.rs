@@ -4,7 +4,7 @@
 //! panel's tabs (`panel`), drag and drop order (`reorder`), shortened text (`elide`), the panels'
 //! caps and counts (`limits`), which animation each motion runs (`motion`), the notes and next steps
 //! of a terminal (`notes`), the notice chip's rules (`notice`), where a terminal torn off the window lands
-//! (`tear_off`), the title row's extras (`title_extras`) and the generic picker at the prompt (`picker`:
+//! (`tear_off`), a fold marker's words (`fold`), the title row's extras (`title_extras`) and the generic picker at the prompt (`picker`:
 //! a field, rows from providers, a ghost completion; the folder picker is `crate::folder_picker`).
 //!
 //! It uses only `theme` below it (and the plain values `storage` hands over, a folder's listing): never
@@ -13,6 +13,7 @@
 pub mod elide;
 pub mod file_tree;
 pub mod focus;
+pub mod fold;
 pub mod layout;
 pub mod limits;
 pub mod motion;
@@ -27,3 +28,4 @@ pub mod sidebar;
 pub mod spoken;
 pub mod tear_off;
 pub mod title_extras;
+pub mod visible;

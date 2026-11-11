@@ -215,7 +215,7 @@ fn stored_equals<T>(
     Ok(rows.next()?.is_none())
 }
 
-fn replace_notes(conn: &Connection, session_id: i64, notes: Vec<&NoteRecord>) -> Result<()> {
+pub(super) fn replace_notes(conn: &Connection, session_id: i64, notes: Vec<&NoteRecord>) -> Result<()> {
     let sql = "SELECT body, collapsed FROM notes WHERE session_id = ? ORDER BY position";
     let same = |row: &rusqlite::Row<'_>, note: &&NoteRecord| -> Result<bool> {
         Ok(row.get_ref(0)?.as_str()? == note.body && row.get::<_, bool>(1)? == note.collapsed)
@@ -234,7 +234,7 @@ fn replace_notes(conn: &Connection, session_id: i64, notes: Vec<&NoteRecord>) ->
     Ok(())
 }
 
-fn replace_tasks(conn: &Connection, session_id: i64, tasks: Vec<&TaskRecord>) -> Result<()> {
+pub(super) fn replace_tasks(conn: &Connection, session_id: i64, tasks: Vec<&TaskRecord>) -> Result<()> {
     let sql = "SELECT text, done FROM tasks WHERE session_id = ? ORDER BY position";
     let same = |row: &rusqlite::Row<'_>, task: &&TaskRecord| -> Result<bool> {
         Ok(row.get_ref(0)?.as_str()? == task.text && row.get::<_, bool>(1)? == task.done)

@@ -8,6 +8,7 @@ use super::Outcome;
 use super::output::{self, Out, count};
 use super::validate_cmd::{JSON_VERSION, unreadable};
 use crate::probe::fixture::{self, TESTS_DIR, TestReport};
+use crate::probe::hooks::CompiledHooks;
 use crate::probe::read::ProbeFolder;
 use crate::probe::rules::CompiledRules;
 use crate::probe::validate::{Finding, validate};
@@ -28,15 +29,20 @@ pub(super) fn run(dir: &Path, json: bool) -> Outcome {
         Ok(rules) => rules,
         Err(err) => return Outcome::fail(1, &err.to_string()),
     };
-    let tests = fixture::run(&folder, &rules);
+    let hooks = match CompiledHooks::compile(&folder.manifest) {
+        Ok(hooks) => hooks,
+        Err(err) => return Outcome::fail(1, &err.to_string()),
+    };
+    let tests = fixture::run(&folder, &rules, &hooks);
     let files = fixture::fixtures(&folder).len();
     // A rule nobody tests is a rule that can change without anyone noticing.
-    let untested = !rules.is_empty() && tests.cases.is_empty() && tests.unreadable.is_empty();
+    let untested =
+        !(rules.is_empty() && hooks.is_empty()) && tests.cases.is_empty() && tests.unreadable.is_empty();
     let ok = tests.is_ok() && !untested;
     let stdout = if json {
         output::json_line(&Json::of(&tests, ok, untested))
     } else {
-        render(&folder, &rules, &tests, files, untested)
+        render(&folder, (&rules, &hooks), &tests, files, untested)
     };
     Outcome::new(i32::from(!ok), stdout, String::new())
 }
@@ -71,21 +77,26 @@ fn refused(folder: &ProbeFolder, errors: &[&Finding], json: bool) -> Outcome {
 
 fn render(
     folder: &ProbeFolder,
-    rules: &CompiledRules,
+    (rules, hooks): (&CompiledRules, &CompiledHooks),
     tests: &TestReport,
     files: usize,
     untested: bool,
 ) -> String {
     let id = &folder.manifest.probe.id;
     let mut out = Out::default();
-    if rules.is_empty() && tests.cases.is_empty() && tests.unreadable.is_empty() {
+    if rules.is_empty() && hooks.is_empty() && tests.cases.is_empty() && tests.unreadable.is_empty() {
         out.line(&format!("{id} has no text rules, so there is nothing to test yet"));
         return out.finish();
     }
     if untested {
+        let what: Vec<String> = [(rules.len(), "rule", "rules"), (hooks.len(), "hook", "hooks")]
+            .into_iter()
+            .filter(|(n, ..)| *n > 0)
+            .map(|(n, one, many)| count(n, one, many))
+            .collect();
         out.line(&format!(
             "{id} has {} but no test cases: add cases to {TESTS_DIR}/*.toml (PROBE.md shows the format)",
-            count(rules.len(), "rule", "rules")
+            what.join(" and ")
         ));
         return out.finish();
     }

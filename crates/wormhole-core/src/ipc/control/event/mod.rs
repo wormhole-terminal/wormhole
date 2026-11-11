@@ -7,12 +7,14 @@
 //! ([`Notice`]: heartbeat, lagged, closed) carry no seq, since they are not events.
 
 mod filter;
+mod hook;
 mod topic;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 pub use filter::{EventFilter, EventsSpec, Subscribed, TERMINALS_MAX, WINDOWS_MAX};
+pub use hook::{Printed, hook_event, topics as hook_topics};
 pub use topic::{Topic, Topics};
 
 use super::{PROTOCOL_VERSION, TerminalState};
@@ -71,6 +73,22 @@ pub enum Body {
         /// The command line: terminal text, so only subscribers who may read the terminal get it.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         command: Option<String>,
+        /// How many rows the command's output filled, counted from the shell's marks when it finished: a
+        /// number, not text, so anyone who hears the event gets it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        output_lines: Option<u64>,
+    },
+    /// What git says of a terminal's folder changed: another branch, further from its upstream, files
+    /// edited or added. Told when the answer differs from the last one, never for the same one again.
+    Git {
+        /// The branch, or none for a detached HEAD: a name the repository chose, so terminal text.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        branch: Option<String>,
+        ahead: u32,
+        behind: u32,
+        /// Files with changes to tracked content.
+        dirty: u32,
+        untracked: u32,
     },
     /// A split was made or changed; empty `terminals` means it is gone.
     Split {
@@ -127,6 +145,7 @@ impl Body {
             Body::Folder { .. } => Topic::Folder,
             Body::Bell => Topic::Bell,
             Body::Block { .. } => Topic::Blocks,
+            Body::Git { .. } => Topic::Git,
             Body::Split { .. } => Topic::Splits,
             Body::TerminalOpened { .. }
             | Body::TerminalClosed
@@ -146,6 +165,7 @@ impl Body {
             Body::Folder { .. } => "folder",
             Body::Bell => "bell",
             Body::Block { .. } => "block",
+            Body::Git { .. } => "git",
             Body::Split { .. } => "split",
             Body::TerminalOpened { .. } => "terminal_opened",
             Body::TerminalClosed => "terminal_closed",
@@ -163,7 +183,7 @@ impl Event {
     /// Whether some of the event is terminal text, which only a subscriber who may read that
     /// terminal gets (the rest is what `list` tells anyone).
     pub fn has_gated_fields(&self) -> bool {
-        matches!(self.body, Body::Block { command: Some(_), .. })
+        matches!(self.body, Body::Block { command: Some(_), .. } | Body::Git { branch: Some(_), .. })
     }
 
     /// Whether the whole event is terminal text: it goes only to a subscriber who may read that
@@ -176,8 +196,10 @@ impl Event {
     #[must_use]
     pub fn without_gated_fields(&self) -> Event {
         let mut event = self.clone();
-        if let Body::Block { command, .. } = &mut event.body {
-            *command = None;
+        match &mut event.body {
+            Body::Block { command, .. } => *command = None,
+            Body::Git { branch, .. } => *branch = None,
+            _ => {}
         }
         event
     }
@@ -306,6 +328,7 @@ mod tests {
                             exit_code: Some(101),
                             took_ms: Some(3512),
                             command: Some("cargo test".into()),
+                            output_lines: None,
                         },
                     },
                 ),
@@ -451,6 +474,7 @@ mod tests {
                 exit_code: None,
                 took_ms: None,
                 command: Some("rm -rf /".into()),
+                output_lines: None,
             },
         };
         assert!(block.has_gated_fields());

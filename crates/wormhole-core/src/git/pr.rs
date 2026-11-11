@@ -27,7 +27,8 @@ use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use super::cmd::{GitError, Limit, run_bounded};
+use super::cmd::GitError;
+use super::{Limit, run_bounded};
 use crate::platform::process;
 
 /// What `gh` is given to reach a host and nothing more. Lower-case proxy variables are the ones

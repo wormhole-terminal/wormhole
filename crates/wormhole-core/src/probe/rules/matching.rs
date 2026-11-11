@@ -28,7 +28,7 @@ impl Match {
 }
 
 /// The part of `line` that is scanned: at most [`MAX_SCAN_BYTES`], cut at a character boundary.
-pub(super) fn scanned(line: &str) -> &str {
+pub fn scanned(line: &str) -> &str {
     if line.len() <= MAX_SCAN_BYTES {
         return line;
     }

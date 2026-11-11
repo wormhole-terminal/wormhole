@@ -59,6 +59,9 @@ pub enum Failed {
     /// Clear Buffer in a terminal whose session host is too old to forget its history: cleared here, and
     /// the host keeps it (it comes back at the next attach); ending the host is how to be rid of it.
     HistoryKeptByHost,
+    /// A file a Probe or its rule named was not found in the terminal's folder (or lies outside it, or
+    /// through a link that leaves it); the words hold the name, and come with the post.
+    FileNotFound,
     /// A finished command that was not put back at the prompt, because of what its text might do there.
     /// Not a copy, and it does not stay: it says what happened and goes.
     PutAtPrompt(Refused),
@@ -92,6 +95,12 @@ pub enum Warning {
     /// chip the person closed is not said again for the same version, but is for a newer one; the version
     /// itself is words, which come with the post.
     UpdateReady(u32),
+    /// A Probe's hook offers to open a file, and a click on the chip does. The number tells one offer from
+    /// the next; the Probe and the file are words, which come with the post.
+    ProbeOffer(u32),
+    /// A Probe's hook failed too often and was paused. The number tells one pause from the next; the words
+    /// name the Probe and come with the post.
+    ProbePaused(u32),
     /// A sticky message devctl made up (`notice sticky <text>`); the number tells one from another and the
     /// words come with the post. Nothing but devctl makes one.
     Test(u64),
@@ -183,7 +192,7 @@ impl Notice {
     /// A click on the capsule does what the words offer ([`super::Reaction::Act`]).
     #[must_use]
     pub fn has_action(self) -> bool {
-        matches!(self, Self::Warned(Warning::UpdateReady(_)))
+        matches!(self, Self::Warned(Warning::UpdateReady(_) | Warning::ProbeOffer(_)))
     }
 }
 

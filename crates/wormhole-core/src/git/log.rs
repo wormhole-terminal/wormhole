@@ -37,6 +37,23 @@ pub fn branches(root: &Path) -> Result<Vec<String>> {
     Ok(parse_branches(&String::from_utf8_lossy(&raw)))
 }
 
+/// How many tags [`tags`] lists: a repository can hold thousands, a picker shows the newest.
+pub const TAGS_SHOWN: usize = 200;
+
+/// The newest tags (by creation date, annotated or not), at most [`TAGS_SHOWN`], for "Compare with".
+pub fn tags(root: &Path) -> Result<Vec<String>> {
+    let raw = GitCmd::new(root)
+        .args(["for-each-ref", "--format=%(refname)", "--sort=-creatordate"])
+        .arg(format!("--count={TAGS_SHOWN}"))
+        .arg("refs/tags")
+        .run()?;
+    Ok(parse_tags(&String::from_utf8_lossy(&raw)))
+}
+
+pub(crate) fn parse_tags(text: &str) -> Vec<String> {
+    text.lines().filter_map(|line| line.trim().strip_prefix("refs/tags/")).map(str::to_string).collect()
+}
+
 pub(crate) fn parse_branches(text: &str) -> Vec<String> {
     let mut current = Vec::new();
     let mut rest = Vec::new();
@@ -160,6 +177,17 @@ mod tests {
         let text =
             " refs/heads/feature\n*refs/heads/main\n refs/remotes/origin/HEAD\n refs/remotes/origin/main\n";
         assert_eq!(parse_branches(text), vec!["main", "feature", "origin/main"]);
+    }
+
+    #[test]
+    fn lists_tags_newest_first_and_only_tags() {
+        assert_eq!(parse_tags("refs/tags/v2\nrefs/tags/v1\nrefs/heads/main\n"), vec!["v2", "v1"]);
+        use crate::git::testing::{git, repo_with};
+        let repo = repo_with(&[("a.txt", "a")]);
+        assert!(tags(repo.path()).expect("tags").is_empty());
+        git(repo.path(), &["tag", "v1"]);
+        git(repo.path(), &["tag", "-a", "-m", "second", "v2"]);
+        assert_eq!(tags(repo.path()).expect("tags").len(), 2);
     }
 
     #[test]

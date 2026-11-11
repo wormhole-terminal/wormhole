@@ -1,0 +1,66 @@
+[probe]
+id          = "hooks"
+name        = "Hooks"
+description = "Notices a slow failed build, folds a quiet green one and reacts to a failing test."
+author      = "Benny"
+version     = "0.1.0"
+wormhole    = ">=1.3"
+api         = 1
+
+[permissions]
+process  = ["git"]
+notify   = true
+fold     = true                        # Touch ID: a fold can hide parts of the terminals' output
+terminal = ["read"]                    # a capture and a branch name leave the matcher below
+
+[[contributes.commands]]               # a hook runs only commands in the background
+id    = "show-failure"
+title = "Show a failing test's commit"
+run   = ["git", "show", "--stat", "$1"]
+in    = "background"
+cwd   = "terminal"
+
+[[contributes.status]]                 # no `run`: the hooks below feed it
+id = "build"
+
+[[contributes.hooks]]
+id    = "slow-build-failed"
+on    = "command.finished"
+match = { exit = "!=0", took_ms = ">=60000" }       # ANDed, closed fields per event
+do    = [
+  { type = "notify", title = "Build failed", body = "{took_s} s in {folder_name}" },
+  { type = "status", item = "build", text = "failed", tone = "danger" },
+]
+
+[[contributes.hooks]]
+id    = "quiet-green-builds"
+on    = "command.finished"
+match = { exit = "0", output_lines = ">=40" }
+do    = [{ type = "fold", target = "block-output", keep_head = 1, keep_tail = 3, label = "build output" }]
+
+[[contributes.hooks]]
+id    = "test-failure"
+on    = "output.match"
+match = { pattern = '(?-u:\b)FAILED ([A-Za-z0-9_][A-Za-z0-9_.:-]{0,79})' }   # the capture cannot start with "-"
+do    = [
+  { type = "highlight", tone = "danger" },
+  { type = "run", command = "show-failure", item = "build" },  # the capture arrives as $1; its first line feeds `build`
+]
+
+[[contributes.hooks]]
+id    = "source-location"
+on    = "output.match"
+match = { pattern = '(?-u:\b)([A-Za-z0-9_./-]{1,200}\.rs):([0-9]{1,6})(?-u:\b)' }
+do    = [{ type = "open-path", path = "{1}", line = "{2}" }]
+
+[[contributes.hooks]]
+id    = "agent-needs-you"
+on    = "agent.status"
+match = { status = "needs_you", agent = "claude,codex", kind = "agent" }
+do    = [{ type = "notify", title = "{agent} needs you" }]
+
+[[contributes.hooks]]
+id    = "dirty-release"
+on    = "git.changed"
+match = { branch = "main,release/*", dirty = ">0" }
+do    = [{ type = "status", item = "build", text = "{dirty} changed on {branch}", tooltip = "{ahead} ahead, {behind} behind" }]
