@@ -23,7 +23,10 @@ struct TaskDraftRow: View {
             TextField(panelText("notes-step-placeholder", "Next step"), text: $text)
                 .textFieldStyle(.plain).font(TextRole.body.font).focused($focused)
                 .onSubmit {
-                    if text.trimmingCharacters(in: .whitespaces).isEmpty { return finish() }
+                    if text.trimmingCharacters(in: .whitespaces).isEmpty {
+                        finish()
+                        return leave()
+                    }
                     let value = text
                     text = ""
                     handedOver = true

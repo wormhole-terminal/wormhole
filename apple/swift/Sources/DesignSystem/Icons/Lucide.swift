@@ -7,6 +7,10 @@ public enum Lucide: Sendable, Hashable {
     case pin, link, note
     // The glyphs of the right panel's tabs and the branch chip.
     case gitCompare, gitBranch, gauge, folder, folderTree
+    // What the panel's views draw (`LucidePanelData.swift`, generated).
+    case chevronLeft, chevronRight, chevronDown, chevronsUpDown, x, plus, copy, check, refreshCw, slidersHorizontal, textWrap
+    case externalLink, inbox, file, fileText, filePlus, info, shield, shieldCheck, triangleAlert, arrowUpRight, arrowRight
+    case play, ellipsis, messageSquarePlus, ban
 }
 
 /// An icon stroked in the foreground colour, its line width scaled with the box as the SVG's is.
@@ -22,7 +26,7 @@ public struct LucideView: View {
         Canvas { canvas, area in
             let scale = area.width / Self.box
             var path = Path()
-            for d in Lucide.drawings[icon] ?? [] { path.addPath(SVGPath.path(d), transform: CGAffineTransform(scaleX: scale, y: scale)) }
+            for d in (Lucide.drawings[icon] ?? Lucide.panelDrawings[icon]) ?? [] { path.addPath(SVGPath.path(d), transform: CGAffineTransform(scaleX: scale, y: scale)) }
             canvas.stroke(path, with: .foreground,
                           style: StrokeStyle(lineWidth: Self.line * scale, lineCap: .round, lineJoin: .round))
         }

@@ -16,7 +16,7 @@ public struct StashPromptButton: View {
         Button {
             if controller.notes.stashPrompt() { controller.tab = .notes }
         } label: {
-            Image(systemName: "tray.and.arrow.down").font(.system(size: Metric.glyph, weight: .medium))
+            PanelIcon("tray.and.arrow.down", size: Metric.glyph)
                 .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
                 .frame(width: PanelMetrics.bandButton + 4, height: PanelMetrics.bandButton + 4)
                 .background(hovering ? tokens.bandHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))

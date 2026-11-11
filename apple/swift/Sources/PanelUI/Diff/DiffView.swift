@@ -36,8 +36,7 @@ public struct DiffView: View {
         GeometryReader { geometry in
             // The layout switch and "esc close" need room for two columns and lines to lay out: a binary file, an LFS
             // pointer or a submodule has none, and its card keeps only the ×.
-            let lines = session.parsed.map { !$0.isBinary && $0.note == nil } ?? true
-            let fits = geometry.size.width >= Self.splitMinWidth && lines
+            let fits = geometry.size.width >= Self.splitMinWidth && Self.hasLines(session)
             VStack(spacing: 0) {
                 if showsHeader {
                     DiffHeader(file: file, diff: session.parsed, position: position, splitFits: fits, split: $session.split, wrap: $session.wrap, step: step, close: close)
@@ -78,6 +77,9 @@ public struct DiffView: View {
         .id(file.id)
         .transition(.opacity)
     }
+
+    /// The diff has lines to lay out (not a binary file, an LFS pointer or a submodule): the layout switch is for them.
+    static func hasLines(_ session: DiffSession) -> Bool { session.parsed.map { !$0.isBinary && $0.note == nil } ?? true }
 
     /// What the longest line needs in an unwrapped diff: gutter, marker, its characters at the code font's advance
     /// (tabs expanded, the cap of `DiffCode.maxRowCharacters` applied) and the trailing pad; two columns in split.

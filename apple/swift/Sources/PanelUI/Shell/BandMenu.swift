@@ -15,8 +15,7 @@ struct BandMenu<Items: View>: View {
         Menu {
             items
         } label: {
-            Image(systemName: symbol)
-                .font(.system(size: PanelMetrics.bandGlyph, weight: .regular))
+            PanelIcon(symbol, size: PanelMetrics.bandGlyph)
                 .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
                 .frame(width: PanelMetrics.bandButton, height: PanelMetrics.bandButton)
                 .background(hovering ? tokens.bandHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))

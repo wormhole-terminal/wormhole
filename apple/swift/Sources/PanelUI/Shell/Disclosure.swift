@@ -10,8 +10,7 @@ struct Disclosure: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Image(systemName: "chevron.right")
-            .font(.system(size: 12, weight: .regular))
+        PanelIcon("chevron.right", size: 12)
             .foregroundStyle(tokens.textMuted)
             .rotationEffect(.degrees(collapsed ? 0 : 90))
             .animation(PanelMotion(reduced: reduceMotion).turn, value: collapsed)

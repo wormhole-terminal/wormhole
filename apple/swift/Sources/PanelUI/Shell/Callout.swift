@@ -18,7 +18,7 @@ struct Callout<Content: View>: View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radius, style: .continuous)
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(spacing: Space._2) {
-                Image(systemName: symbol).font(.system(size: Metric.glyph)).foregroundStyle(iconColour)
+                PanelIcon(symbol, size: Metric.glyph).foregroundStyle(iconColour)
                     .frame(width: Metric.lead, height: Metric.lead)
                 Text(title).font(TextRole.body.font.weight(.semibold)).foregroundStyle(tokens.textPrimary)
             }

@@ -17,8 +17,11 @@ public protocol PanelHost: AnyObject {
     /// Pastes `text` into the terminal's prompt without pressing return. False where the program in the terminal
     /// would run each line of a paste as a command: the text is not pasted then.
     func paste(_ text: String) -> Bool
-    /// Types `text` at the terminal's prompt (a next step, a note, a project prompt), for the person to read and send.
+    /// Puts `text` at the terminal's prompt as a paste (bracketed where the program asked for it: a next step, a note, a project
+    /// prompt), for the person to read and send.
     func send(_ text: String)
+    /// Presses return in the terminal: what ⌘⇧↵ does after it sent a note's text.
+    func submit()
     /// The text at the terminal's prompt, taken away (stash prompt into a note); nil when it is empty.
     func takePrompt() -> String?
     /// Gives the keys back to the terminal (esc from a viewer, after a paste).

@@ -94,8 +94,6 @@ private struct PanelTabButton: View {
                 CommitGlyph(color: colour)
             } else if let lucide = tab.lucide {
                 LucideView(icon: lucide, size: Chrome.glyph).foregroundStyle(colour)
-            } else {
-                Image(systemName: "doc.text").font(.system(size: Metric.glyph, weight: .medium)).foregroundStyle(colour)
             }
         }
         .frame(width: Chrome.iconTab, height: Chrome.iconTab)
@@ -108,15 +106,16 @@ extension PanelTab {
 
     var title: String { rawValue.capitalized }
 
-    /// Lucide's git-compare, gauge, folder and folder-tree, as the GPUI app's tabs draw them (history's commit glyph and notes'
-    /// file-text are drawn apart).
+    /// Lucide's git-compare, file-text, gauge, folder and folder-tree, as the GPUI app's tabs draw them (history's commit glyph
+    /// is drawn apart).
     var lucide: Lucide? {
         switch self {
         case .changes: .gitCompare
         case .usage: .gauge
         case .project: .folder
         case .files: .folderTree
-        case .notes, .history: nil
+        case .notes: .fileText
+        case .history: nil
         }
     }
 }

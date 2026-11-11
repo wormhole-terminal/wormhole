@@ -1,0 +1,178 @@
+Driven checks (round S rebased onto 2db10f471), a --background instance with the driving commands of parity/DRIVING.md; points are window points.
+Every block is one run; '>' lines are the commands, indented lines what the app answered.
+# tab strip clicks (points: changes 987, history 1055, notes 1087, project 1119, files 1151; y 19)
+> click 1055 19
+  click 1055 19: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+tab=history
+> click 1087 19
+  click 1087 19: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+tab=notes
+> click 1119 19
+  click 1119 19: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+tab=project
+> click 1151 19
+  click 1151 19: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+tab=files
+> click 987 19
+  click 987 19: down on NSHostingView<WorkspaceRootView>, the gesture played to its release
+tab=changes
+# usage has no tab (no agent): ctrl-cmd-4 stays
+> key ctrl-cmd-3
+  key ctrl-cmd-3 -> showNotes focus=terminal
+tab=notes
+> key ctrl-cmd-4
+  key ctrl-cmd-4 -> showUsage focus=terminal
+tab=changes
+> key ctrl-cmd-6
+  key ctrl-cmd-6 -> showFiles focus=terminal
+tab=files
+> key ctrl-cmd-5
+  key ctrl-cmd-5 -> showProject focus=terminal
+tab=project
+> key ctrl-cmd-2
+  key ctrl-cmd-2 -> showHistory focus=terminal
+tab=history
+> key ctrl-cmd-1
+  key ctrl-cmd-1 -> showChanges focus=terminal
+tab=changes
+# Changes: click a file row (blob.bin at 1050,120), then a folder row (docs 1050,148)
+> key ctrl-cmd-1
+  key ctrl-cmd-1 -> showChanges focus=terminal
+> click 1050 120
+  click 1050 120: down on PlatformGroupContainer, the gesture played to its release
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s-panel/cap/drv-diff-click.png
+  window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s-panel/cap/drv-diff-click.png
+> click 1050 148
+  click 1050 148: down on PlatformGroupContainer, the gesture played to its release
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s-panel/cap/drv-folder-click.png
+  window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s-panel/cap/drv-folder-click.png
+# right click a file row
+> right-click 1050 176
+  right-click 1050 176: no menu, the view took the click
+> menu-close
+  no menu
+# key esc closes the diff
+> click 1050 120
+  click 1050 120: down on PlatformGroupContainer, the gesture played to its rele
+> key escape
+  key escape focus=panel-content
+> state
+  grid=68x42 cell=17x36px scale=2.0 frames_drawn=98 ticks=60 wakes=29 pauses=9 b
+# right click on a file row (blob.bin) and on a folder row
+> right-click 1050 120
+  menu:
+  1. Reveal in Finder
+  ---
+  2. Copy Path
+  3. Copy Relative Path
+  ---
+  4. File History
+> menu-close
+  menu-close
+> right-click 1050 148
+  right-click 1050 148: no menu, the view took the click
+> menu-close
+  no menu
+# history: click a commit row, key down
+> key ctrl-cmd-2
+  key ctrl-cmd-2 -> showHistory focus=none
+> click 1070 140
+  click 1070 140: down on PlatformGroupContainer, the gesture played to its release
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-9245
+  window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-9245
+> key down
+  key down focus=panel-content +cover
+> state
+  grid=68x42 cell=17x36px scale=2.0 frames_drawn=98 ticks=60 wakes=29 pauses=9 busy_skips=0 blink_fi
+# Notes: + on the Notes band opens an editor, typed text, command-return sends the paragraph to the terminal, esc gives the keys back
+> key ctrl-cmd-3
+  key ctrl-cmd-3 -> showNotes focus=panel-content
+> click 1285 110
+  click 1285 110: down on PlatformGroupContainer, the gesture played to its release
+> text first paragraph line
+  text first paragraph line
+> key return
+  key return focus=panel-content
+> text second line
+  text second line
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s-panel/cap/drv-note-typing.png
+  window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s-panel/cap/drv-note-typing.png
+  benjamin@MacBook-Pro-von-Benjamin benjamin % cd /private/tmp/claude-
+  501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540
+  bddb46/scratchpad/s-panel/fx/repo                                   
+  benjamin@MacBook-Pro-von-Benjamin repo % first paragraph line       
+  zsh: command not found: first                                       
+  benjamin@MacBook-Pro-von-Benjamin repo % second line                
+> key escape
+  key escape focus=terminal
+> keys
+  focus=terminal
+> notes
+  notes=["first paragraph line\nsecond line"] steps=[]
+# a step: + on Next steps, type, return opens the next below, empty return ends
+> click 1285 62
+  click 1285 62: down on PlatformGroupContainer, the gesture played to its release
+> text Step one
+  text Step one
+> key return
+  key return focus=panel-content
+> text Step two
+  text Step two
+> key return
+  key return focus=panel-content
+> key return
+  key return focus=panel-content
+> notes
+  notes=["first paragraph line\nsecond line"] steps=["Step one:false", "Step two:false"]
+> keys
+  focus=panel-content
+# binary diff: only the x (no Split/Unified), via a click
+  window-shot /private/tmp/claude-501/-Users-benjamin-Projec
+  key escape focus=panel-content
+# Notes: command-return pastes the paragraph; steps keys
+  46/scratchpad/s-panel/fx/repo                                       
+  benjamin@MacBook-Pro-von-Benjamin repo %                            
+                                                                      
+                                                                      
+  focus=none
+> notes
+  notes=["first paragraph line\nsecond line"] steps=["Step one:false", "Step two:false", "Step one:false", "Step two:false"]
+# tab remembered per terminal: tab files here, a new terminal, its tab, back
+> key ctrl-cmd-6
+  key ctrl-cmd-6 -> showFiles focus=terminal
+> key cmd-t
+  key cmd-t -> newTerminal focus=terminal
+terminals=2 selected=2 
+tab=files
+selected=2
+tab=history
+selected=1
+tab=history
+# Files: click the src folder row, a file row opens the viewer, right-click a row, esc closes
+  window-shot /private/tmp/claude-501/-U
+> click 1060 120
+  click 1060 120: down on PlatformGroupContainer, the gesture played to its release
+> key escape
+  key escape focus=terminal
+> right-click 1060 148
+  menu:
+  1. Reveal in Finder
+  2. Copy Path
+  ---
+  3. Rename…
+> menu-close
+  menu-close
+# History: click a commit row, then the picker
+  window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s-panel/cap/drv-history-click.png
+> history-state
+  phase=loaded commits=162 branch=main open=b2f287a people=["Author=Dev 0 dev0@example.com\n2026-11-11 00:15 +01:00 · 1h ago", "Committer=Test User t@example.com\n2026-11-11 00:15 +01:00 · 1h ago"] pa
+# Project: click Trust (WORMHOLE_AUTH=cancel declines)
+> project-state
+  root=/private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s-panel/fx/proj status=untrusted asks=true comm
+
+Reading of the runs:
+ - strip clicks and ctrl-cmd-1..6 switch the tabs; ctrl-cmd-4 (Usage, no agent) falls to Changes as GPUI's show_tab does
+ - a Changes file row opens its diff in the title row, a folder row folds, esc closes; the file row's menu lists Reveal, Copy Path, Copy Relative Path, File History (Open in <editor> is missing: editorName is nil)
+ - the Notes editor takes typed text, command-return pastes the paragraph into the terminal, esc returns the keys (focus=terminal); steps: return opens the next below, a second return ends; notes and steps are kept across a restart
+ - the panel tab is the window's (as GPUI's right_tab), not per terminal: a second terminal shows the tab the first had
+ - a binary diff's header shows Binary and the x only (after the fix found by this run)

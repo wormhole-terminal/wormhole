@@ -20,7 +20,7 @@ struct FilesPathButton: View {
                 HStack(spacing: PanelMetrics.gap) {
                     FileIcon(kind: .folder(menu.shownName, open: false), tint: tokens.textMuted)
                     Text(menu.shownName).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
-                    Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold)).foregroundStyle(tokens.textMuted)
+                    PanelIcon("chevron.down", size: 9).foregroundStyle(tokens.textMuted)
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, PanelMetrics.inset).frame(height: Metric.band).frame(maxWidth: .infinity)

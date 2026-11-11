@@ -36,7 +36,7 @@ struct ProjectActionsCard: View {
             CardBand(title: panelText("project-actions", "Actions"), count: CountText.grouped(actions.count))
             ForEach(actions) { action in
                 TwoLineRow(title: action.title, detail: action.detail, action: { store.run(action) }) {
-                    Image(systemName: "play.fill").font(.system(size: 11)).foregroundStyle(tokens.primary)
+                    PanelIcon("play.fill", size: 11).foregroundStyle(tokens.primary)
                 } trailing: {
                     if let key = action.key { Text(key).font(TextRole.caption.font).foregroundStyle(tokens.textFaint) }
                 }
@@ -63,7 +63,7 @@ struct ProjectPromptsCard: View {
                         .init(symbol: "doc.badge.plus", label: panelText("project-prompt-note", "Copy into a new note")) { store.copyToNote(prompt, in: notes) },
                     ]
                 ) {
-                    Image(systemName: "doc.text").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
+                    PanelIcon("doc.text", size: Metric.glyph).foregroundStyle(tokens.textMuted)
                 }
             }
         }

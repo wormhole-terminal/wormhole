@@ -16,8 +16,7 @@ struct BandButton: View {
     var body: some View {
         let face = inRow ? PanelMetrics.rowButton : PanelMetrics.bandButton
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: inRow ? Metric.glyph : PanelMetrics.bandGlyph, weight: .regular))
+            PanelIcon(symbol, size: inRow ? Metric.glyph : PanelMetrics.bandGlyph)
                 .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
                 .frame(width: face, height: face)
                 .background(hovering ? tokens.bandHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))

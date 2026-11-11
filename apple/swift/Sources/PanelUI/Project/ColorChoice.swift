@@ -49,7 +49,7 @@ struct ColorChoice: View {
             shape.fill(color).frame(width: Self.dot, height: Self.dot).overlay { shape.strokeBorder(tokens.border, lineWidth: tokens.metrics.borderWidth) }
         } else {
             shape.strokeBorder(tokens.borderStrong, lineWidth: tokens.metrics.borderWidth).frame(width: Self.dot, height: Self.dot)
-                .overlay { Image(systemName: "nosign").font(.system(size: 10)).foregroundStyle(tokens.textMuted) }
+                .overlay { PanelIcon("nosign", size: 10).foregroundStyle(tokens.textMuted) }
         }
     }
 }

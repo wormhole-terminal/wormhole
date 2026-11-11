@@ -39,9 +39,9 @@ struct RevPicker: View {
     private var chip: some View {
         HStack(spacing: Space._1) {
             if !prefix.isEmpty { Text(prefix).foregroundStyle(tokens.textMuted) }
-            if selected != nil { Image(systemName: "arrow.triangle.branch").font(.system(size: 12)).foregroundStyle(tokens.gitBranch) }
+            if selected != nil { PanelIcon("arrow.triangle.branch", size: 12).foregroundStyle(tokens.gitBranch) }
             Text(selected?.title ?? headTitle).lineLimit(1).truncationMode(.tail).foregroundStyle(tokens.textPrimary)
-            Image(systemName: "chevron.up.chevron.down").font(.system(size: 10, weight: .medium)).foregroundStyle(tokens.textMuted)
+            PanelIcon("chevron.up.chevron.down", size: 10).foregroundStyle(tokens.textMuted)
         }
         .font(TextRole.caption.font.weight(.medium))
         .padding(.leading, Space._2).padding(.trailing, Space._1)
@@ -109,7 +109,7 @@ private struct RevList: View {
                 Text(title).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 if !detail.isEmpty { Text(detail).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1) }
                 Spacer(minLength: 0)
-                if checked { Image(systemName: "checkmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(tokens.primary) }
+                if checked { PanelIcon("checkmark", size: 11).foregroundStyle(tokens.primary) }
             }
             .padding(.horizontal, Space._2).frame(minHeight: Metric.row)
         }

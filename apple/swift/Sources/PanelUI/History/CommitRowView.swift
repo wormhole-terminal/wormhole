@@ -18,7 +18,7 @@ struct CommitRowView: View {
         PanelRow(selected: expanded, action: action) { _ in
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: PanelMetrics.gap) {
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .regular)).foregroundStyle(muted)
+                    PanelIcon("chevron.right", size: 12).foregroundStyle(muted)
                         .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: Metric.lead, height: Metric.lead)
                     Text(commit.subject)
                         .font(TextRole.body.font.weight(expanded ? .semibold : .regular))

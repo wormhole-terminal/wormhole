@@ -16,6 +16,7 @@ final class SystemPanelHost: PanelHost {
     struct Terminal {
         var paste: (String) -> Bool = { _ in false }
         var send: (String) -> Void = { _ in }
+        var submit: () -> Void = {}
         var takePrompt: () -> String? = { nil }
         var focus: () -> Void = {}
         var open: (String, String?) -> Void = { _, _ in }
@@ -46,6 +47,7 @@ final class SystemPanelHost: PanelHost {
 
     func paste(_ text: String) -> Bool { terminal.paste(text) }
     func send(_ text: String) { terminal.send(text) }
+    func submit() { terminal.submit() }
     func takePrompt() -> String? { terminal.takePrompt() }
     func focusTerminal() { terminal.focus() }
 

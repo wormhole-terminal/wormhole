@@ -26,6 +26,7 @@ public final class MockPanelHost: PanelHost {
         return true
     }
     public func send(_ text: String) { sent.append(text) }
+    public func submit() { sent.append("\r") }
     public func takePrompt() -> String? { defer { prompt = nil }; return prompt }
     public func focusTerminal() {}
     public func chooseFolder() async -> String? { folder }

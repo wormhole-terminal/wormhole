@@ -57,7 +57,7 @@ struct FileRowView: View {
     private func renamed(_ from: String) -> some View {
         HStack(spacing: Space._1) {
             Text(from).font(TextRole.caption.font).foregroundStyle(muted).lineLimit(1)
-            Image(systemName: "arrow.right").font(.system(size: 12)).foregroundStyle(muted)
+            PanelIcon("arrow.right", size: 12).foregroundStyle(muted)
         }
     }
 

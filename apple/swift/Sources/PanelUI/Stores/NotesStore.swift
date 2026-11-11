@@ -30,7 +30,8 @@ public final class NotesStore {
     /// ⌘↵ in a note or step: `text` goes to the prompt, and with ⇧ the program is told to run it.
     public func send(text: String, submit: Bool) {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        host?.send(submit ? text + "\r" : text)
+        host?.send(text.trimmingCharacters(in: .whitespacesAndNewlines))
+        if submit { host?.submit() }
     }
 
     /// Esc, or ↵ on an empty field: the person is done writing and the keys go back to the terminal.

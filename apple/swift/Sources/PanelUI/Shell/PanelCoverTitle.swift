@@ -39,7 +39,7 @@ public struct PanelCoverTitle: View {
             @Bindable var session = session
             GeometryReader { proxy in
                 DiffHeader(
-                    file: file, diff: session.parsed, position: position, splitFits: proxy.size.width >= DiffView.splitMinWidth,
+                    file: file, diff: session.parsed, position: position, splitFits: proxy.size.width >= DiffView.splitMinWidth && DiffView.hasLines(session),
                     split: $session.split, wrap: $session.wrap, step: step, close: close, inTitleRow: true)
                     .frame(maxHeight: .infinity)
             }

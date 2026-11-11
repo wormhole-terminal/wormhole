@@ -97,7 +97,7 @@ struct DiffLineView: View {
             .padding(.trailing, Space._2).frame(width: style.gutter, height: style.rowHeight, alignment: .trailing)
             .overlay(alignment: .leading) {
                 if hovering, review != nil, number != nil {
-                    Image(systemName: "text.bubble").font(.system(size: 10)).foregroundStyle(tokens.primary).padding(.leading, 2)
+                    PanelIcon("text.bubble", size: 10).foregroundStyle(tokens.primary).padding(.leading, 2)
                 }
             }
     }

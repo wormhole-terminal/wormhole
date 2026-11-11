@@ -38,7 +38,7 @@ struct FileViewerBody: View {
     /// A note in the middle of the card, with Open in… and Reveal under it when they have something to act on.
     private func panel(_ words: String, actions: Bool) -> some View {
         VStack(spacing: Space._3) {
-            Image(systemName: "doc").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
+            PanelIcon("doc", size: Metric.glyph).foregroundStyle(tokens.textMuted)
             Text(words).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).multilineTextAlignment(.center)
             if actions {
                 HStack(spacing: Space._2) {

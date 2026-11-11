@@ -7,7 +7,9 @@ import TerminalCore
 
 extension WindowHub {
     func connect(_ host: SystemPanelHost) {
-        host.terminal.send = { [unowned self] text in selectedSource?.write(Data(text.utf8)) }
+        // Pasted as the GPUI app does (`SendText`): brackets where the program asked, so an agent takes a note as text.
+        host.terminal.send = { [unowned self] text in selectedSource?.paste(text) }
+        host.terminal.submit = { [unowned self] in selectedSource?.write(Data("\r".utf8)) }
         host.terminal.takePrompt = { [unowned self] in selectedSource?.grabPrompt() }
         host.terminal.paste = { [unowned self] text in
             // A program without bracketed paste would run each line: the panel copies the text instead.

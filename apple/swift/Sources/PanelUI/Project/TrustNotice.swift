@@ -18,7 +18,7 @@ struct TrustNotice: View {
 
     private var trusted: some View {
         HStack(spacing: PanelMetrics.gap) {
-            Image(systemName: "checkmark.shield").font(.system(size: Metric.glyph)).foregroundStyle(tokens.statusSuccessText)
+            PanelIcon("checkmark.shield", size: Metric.glyph).foregroundStyle(tokens.statusSuccessText)
                 .frame(width: Metric.lead, height: Metric.lead)
             Text(state.trustedLine).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -17,7 +17,7 @@ struct CommitRefs: View {
                 case .tag: badge(ref.name, tokens.gitTag, tokens.gitTag.opacity(0.15))
                 case .branch:
                     HStack(spacing: Space._1) {
-                        Image(systemName: "arrow.triangle.branch").font(.system(size: 12))
+                        PanelIcon("arrow.triangle.branch", size: 12)
                         Text(ref.name).lineLimit(1)
                     }
                     .font(TextRole.caption.font.weight(.medium)).foregroundStyle(tokens.gitBranch)
