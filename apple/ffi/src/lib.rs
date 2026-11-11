@@ -33,8 +33,10 @@ mod inline_images;
 mod interaction;
 mod isolation;
 pub mod keymap;
+mod live_resize;
 mod minimap;
 pub mod notify;
+mod open_file;
 pub mod palette_search;
 mod probes;
 mod profile;
@@ -80,7 +82,7 @@ pub use files_panel::{
     ProjectSettingsRecord, ProjectStateRecord, RenameFailure, SessionNotesStore, TaskDocRecord, TaskSaved,
     TerminalPlace, TrustLineRecord, TrustStatusRecord, UsageReportRecord, UsageService,
 };
-pub use find::{FindOutcome, FoundSpan};
+pub use find::{FindOutcome, FoldWords, FoundSpan};
 pub use focus::{
     AreaStops, EscapeRung, EscapeState, FocusArea, FocusStop, ListItem, ListKey, ListMove, PresetShown,
     WindowPreset, focus_escape, focus_list_walk, focus_press_folds_band, focus_step, focus_tab_step,
@@ -106,7 +108,12 @@ pub use interaction::{
     CellSide, LinkHit, OpenTarget, PointerAction, PointerButton, PointerEvent, RowSpan, SelectionKind,
     WheelStep,
 };
+pub use live_resize::{
+    LiveResizeGate, ResizeStepRecord, SizeRecord, WindowFrameRecord, resize_settle, resize_settled_frame,
+    resize_snapped,
+};
 pub use minimap::{MinimapGeometryRecord, MinimapRunRecord};
+pub use open_file::open_file_run;
 pub use probes::{ProbeStatusRecord, ResolvedFile};
 pub use profile::{ActiveProfile, active_profile};
 pub use settings::{

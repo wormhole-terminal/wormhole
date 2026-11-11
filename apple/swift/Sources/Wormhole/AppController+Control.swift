@@ -44,6 +44,12 @@ extension AppController {
             // What a right-click on the selected terminal would show: each item's title, key and whether it is on.
             guard let id = hub.state.selected, let menu = terminalMenu(for: id) else { return reply("error: no menu") }
             reply(menu.items.map { $0.isSeparatorItem ? "---" : "\($0.title) [\($0.keyEquivalent == "" ? "-" : $0.keyEquivalent)\($0.isEnabled ? "" : " off")]" }.joined(separator: "\n"))
+        case "pointer":
+            // `pointer ROW COL`: the pointer rests over that cell, so `context-menu` offers what is under it (Open Link, a block's items).
+            let n = argument.split(separator: " ").compactMap { Int($0) }
+            guard n.count == 2 else { return reply("error: pointer ROW COL") }
+            view.placePointer(row: n[0], column: n[1])
+            reply("pointer \(argument)")
         case "block": reply(hub.blockTargetSummary)
         case "clipboard-answer":
             guard let choice = ["once": ClipboardChoice.once, "always": .always, "deny": .deny][argument] else { return reply("error: once, always or deny") }

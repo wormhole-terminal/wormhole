@@ -26,6 +26,10 @@ final class UniFFIScrollback: TerminalFinding, TerminalBlocks, TerminalMinimap {
         }
     }
 
+    func findFoldWords() -> [TerminalCore.FoldWords] {
+        terminal.findFoldWords().map { TerminalCore.FoldWords(row: Int($0.row), label: $0.label, spoken: $0.spoken) }
+    }
+
     func findTicks() -> [Double] { terminal.findTicks() }
     var findHasNewOutput: Bool { terminal.findHasNewOutput() }
     func findClear() { terminal.findClear() }

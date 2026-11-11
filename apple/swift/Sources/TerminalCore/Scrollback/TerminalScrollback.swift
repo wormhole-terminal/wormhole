@@ -13,6 +13,8 @@ public protocol TerminalFinding: AnyObject, Sendable {
     func findReveal(match index: Int)
     /// The matches on the viewport rows of the last frame, the current one flagged.
     func findSpans() -> [FindSpan]
+    /// The fold markers of the last frame as they read while a search is open (how many matches are inside each).
+    func findFoldWords() -> [FoldWords]
     /// Where the matches are along the scrollback, 0 at its top and 1 at the bottom of the screen.
     func findTicks() -> [Double]
     /// The program printed since the last search: its results may be stale.

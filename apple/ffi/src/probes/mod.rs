@@ -14,7 +14,7 @@ mod server;
 mod state;
 mod terminal;
 
-pub(crate) use marks::Marks;
+pub(crate) use marks::{Marks, words_of};
 pub(crate) use run::{Probes, approvals_changed, reload};
 pub use server::ProbeStatusRecord;
 pub(crate) use state::rules;

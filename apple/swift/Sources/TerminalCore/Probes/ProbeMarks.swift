@@ -69,6 +69,14 @@ public struct FoldMarker: Sendable, Equatable {
     }
 }
 
+/// A marker's words while a search is open, which count the matches inside the fold.
+public struct FoldWords: Sendable, Equatable {
+    public var row: Int
+    public var label: String
+    public var spoken: String
+    public init(row: Int, label: String, spoken: String) { (self.row, self.label, self.spoken) = (row, label, spoken) }
+}
+
 /// A fold's marker and the viewport row it stands on.
 public struct FoldMarkerRow: Sendable, Equatable {
     public var row: Int

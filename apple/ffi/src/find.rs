@@ -47,6 +47,14 @@ pub struct FindOutcome {
     pub nearest: Option<u32>,
 }
 
+/// A fold's marker as it reads while a search is open: the frame's words say nothing of matches.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct FoldWords {
+    pub row: u32,
+    pub label: String,
+    pub spoken: String,
+}
+
 /// A match on one viewport row of the last frame: its columns `first...=last`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
 pub struct FoundSpan {
@@ -100,7 +108,39 @@ impl Terminal {
         let (results, history, current) = self.snapshot_of_found();
         let Some(found) = current.and_then(|i| results.matches.get(i)) else { return };
         let now = self.with_snapshot(|snapshot| snapshot.history_size);
-        self.with_pty(|pty| pty.reveal(found.start.line - grown(now, history)));
+        let line = found.start.line - grown(now, history);
+        // A match inside a fold opens it, and stays open (as the GPUI app's `reveal_current` does).
+        self.with_pty(|pty| {
+            pty.fold_expand_at(line);
+            pty.reveal(line);
+        });
+    }
+
+    /// The markers of the last frame's rows with how many of the search's matches are inside each, for the rows that
+    /// have one; empty with no match or no marker in view (read the frame first).
+    pub fn find_fold_words(&self) -> Vec<FoldWords> {
+        let (results, history, _) = self.snapshot_of_found();
+        if results.matches.is_empty() {
+            return Vec::new();
+        }
+        self.with_snapshot(|snapshot| {
+            // What was at `line` now was at `line + grown` when searched.
+            let grown = grown(snapshot.history_size, history);
+            let matches = &results.matches;
+            snapshot
+                .rows()
+                .iter()
+                .enumerate()
+                .filter_map(|(row, shown)| {
+                    let fold = shown.fold()?;
+                    let (first, last) = (fold.first + grown, fold.last + grown);
+                    let inside = matches.partition_point(|m| m.start.line <= last)
+                        - matches.partition_point(|m| m.start.line < first);
+                    let words = crate::probes::words_of(fold, inside);
+                    Some(FoldWords { row: row as u32, label: words.label, spoken: words.spoken })
+                })
+                .collect()
+        })
     }
 
     /// The matches on each viewport row of the last frame, the current one flagged (read the frame first).

@@ -135,6 +135,12 @@ impl Marks {
     }
 }
 
+/// A fold's marker words, with `matches` of an open search inside it (`view::fold::marker_words`).
+pub(crate) fn words_of(fold: &wormhole_term::folds::FoldSpan, matches: usize) -> MarkerWords {
+    let owner = fold.owner.as_deref().map(|owner| (owner.name.as_str(), owner.label.as_str()));
+    marker_words(fold.hidden(), fold.expanded, owner, matches)
+}
+
 fn put_row(out: &mut Vec<u8>, row: usize, marks: &RowMarks) {
     for word in [row as u32, tone_word(marks.block), marks.spans.len() as u32] {
         out.extend_from_slice(&word.to_le_bytes());
@@ -167,8 +173,7 @@ fn folds_section(frame: &mut Vec<u8>, snapshot: &ScreenSnapshot, all: bool) -> b
     let mut count = 0u32;
     for (row, shown) in snapshot.rows().iter().enumerate() {
         let Some(fold) = shown.fold().filter(|_| all || shown.changed()) else { continue };
-        let owner = fold.owner.as_deref().map(|owner| (owner.name.as_str(), owner.label.as_str()));
-        let MarkerWords { label, spoken, tooltip } = marker_words(fold.hidden(), fold.expanded, owner, 0);
+        let MarkerWords { label, spoken, tooltip } = words_of(fold, 0);
         let flags = u32::from(fold.expanded) | u32::from(fold.failed) << 1;
         for word in [row as u32, fold.id as u32, (fold.id >> 32) as u32, fold.hidden() as u32, flags] {
             frame.extend_from_slice(&word.to_le_bytes());

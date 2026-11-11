@@ -1,13 +1,14 @@
-// Exact, cell-sized shapes for box drawing (U+2500...257F), block elements (U+2580...259F) and braille
-// (U+2800...28FF): drawn by the renderer so lines meet across cells whatever the font does at the edges.
-// Rounded corners are drawn square and the dashes are plain (what is not done is listed in the README).
+// Exact, cell-sized shapes for box drawing (U+2500...257F) and block elements (U+2580...259F): drawn by the renderer so
+// lines meet across cells whatever the font does at the edges. The rounded corners (U+256D...2570) and braille
+// (U+2800...28FF) are the font's, as in the GPUI app: its arcs and its small dots, which a square corner or a larger
+// dot would not match. The dashes are plain.
 
 import CoreGraphics
 import Foundation
 
 enum BoxDrawing {
     static func handles(_ scalar: UInt32) -> Bool {
-        (0x2500...0x259F).contains(scalar) || (0x2800...0x28FF).contains(scalar)
+        (0x2500...0x259F).contains(scalar) && !(0x256D...0x2570).contains(scalar)
     }
 
     /// The glyph as a cell-sized bitmap whose origin is the cell's top-left corner.
@@ -22,8 +23,7 @@ enum BoxDrawing {
             let canvas = Canvas(context: context, width: w, height: h)
             switch scalar {
             case 0x2500...0x257F: lines(scalar, canvas, light: max(1, Int((Double(w) / 8).rounded())))
-            case 0x2580...0x259F: blocks(scalar, canvas)
-            default: braille(scalar, canvas)
+            default: blocks(scalar, canvas)
             }
         }
         // The cell's top is `baseline` above the baseline.
@@ -69,21 +69,6 @@ enum BoxDrawing {
             if mask & 2 != 0 { c.fill(w / 2, 0, w, h / 2) }
             if mask & 4 != 0 { c.fill(0, h / 2, w / 2, h) }
             if mask & 8 != 0 { c.fill(w / 2, h / 2, w, h) }
-        }
-    }
-
-    // MARK: braille
-
-    private static func braille(_ scalar: UInt32, _ c: Canvas) {
-        let bits = Int(scalar - 0x2800)
-        // Dot bit -> (column, row): 1 2 3 are the left column's top three, 4 5 6 the right's, 7 and 8 the bottom pair.
-        let positions: [(Int, Int)] = [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (1, 2), (0, 3), (1, 3)]
-        let radius = max(1.0, min(Double(c.width) / 5.5, Double(c.height) / 10))
-        c.context.setShouldAntialias(true)
-        for (bit, (column, row)) in positions.enumerated() where bits & (1 << bit) != 0 {
-            let cx = Double(c.width) * (0.25 + 0.5 * Double(column))
-            let cy = Double(c.height) * (0.125 + 0.25 * Double(row))
-            c.context.fillEllipse(in: CGRect(x: cx - radius, y: cy - radius, width: radius * 2, height: radius * 2))
         }
     }
 

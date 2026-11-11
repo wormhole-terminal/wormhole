@@ -2,6 +2,7 @@
 // may be folded and where a path is (`probes/terminal.rs`); this relays the gesture and puts the answer on screen: the
 // editor Open in… names opens the file, or a chip says it is not in the terminal's folder.
 
+import AppKit
 import Foundation
 import TerminalCore
 import TerminalUI
@@ -35,7 +36,10 @@ extension WindowHub {
             let found = await Task.detached { probes.resolvePath(text) }.value
             guard let self else { return }
             if let path = found.path {
-                openIn.open(path, in: openIn.choice().app)
+                // The core says how the chosen app takes a line (VS Code's URL, Zed's command line, JetBrains' flag) and starts it.
+                let app = openIn.choice().app
+                let folder = NSWorkspace.shared.urlForApplication(withBundleIdentifier: app.bundle)?.path
+                if !probes.openFile(path: path, line: found.line, bundle: app.bundle, appFolder: folder) { openIn.open(path, in: app) }
             } else if let words = found.words {
                 notices.post(.failed(.fileNotFound(words: words)))
             }

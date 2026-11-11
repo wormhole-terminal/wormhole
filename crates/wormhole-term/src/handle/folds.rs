@@ -95,3 +95,24 @@ impl Pty {
         self.term.lock().fold_set_needs_you(needs_you);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::tests::{spawn, wait_until};
+
+    /// A shell is started as `sh -c`; `set -m` gives its foreground job a process group of its own, so the
+    /// `sleep` is a program in front of the shell, as a `sudo` or `ssh` at a prompt is.
+    fn echo_state(script: &str) -> bool {
+        let (pty, _events) = spawn("/bin/sh", &["-c", script]);
+        wait_until("the script's marker", || pty.screen_text().contains("ready"));
+        pty.secure_input()
+    }
+
+    #[test]
+    fn echo_off_is_a_secret_only_for_a_program_in_front_of_the_shell() {
+        // zsh's line editor and readline turn echo off at the prompt: no secret, or no fold would be made there.
+        assert!(!echo_state("stty -echo; echo ready; sleep 30"), "the shell holds the terminal");
+        assert!(echo_state("set -m; stty -echo; echo ready; sleep 30"), "a program reads with echo off");
+        assert!(!echo_state("set -m; echo ready; sleep 30"), "a program in front, echo on: nothing secret");
+    }
+}

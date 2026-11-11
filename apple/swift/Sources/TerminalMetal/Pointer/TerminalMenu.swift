@@ -26,6 +26,13 @@ extension MetalTerminalView {
     /// There is a selection to copy.
     public var canCopy: Bool { hasSelection }
 
+    /// Puts the pointer over the middle of viewport cell (`row`, `column`), as a move there would: what the context menu offers
+    /// for what is under it (a link, a command block) follows. For the control folder, which has no pointer to move.
+    public func placePointer(row: Int, column: Int) {
+        let grid = cellGrid
+        pointer.lastPoint = CGPoint(x: grid.origin + (CGFloat(column) + 0.5) * grid.cellWidth, y: grid.origin + (CGFloat(row) + 0.5) * grid.cellHeight)
+    }
+
     /// The address of the link under the pointer as of its last move or click.
     public var linkAddressUnderPointer: String? {
         guard let point = pointer.lastPoint, cellGrid.contains(point), let hit = cellGrid.hit(point) else { return nil }

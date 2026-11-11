@@ -30,4 +30,7 @@ public protocol TerminalProbes: AnyObject, Sendable {
     func setReveal(row: Int?, column: Int?, alt: Bool) -> Bool
     /// Looks at the disk: off the main thread.
     func resolvePath(_ text: String) -> ResolvedFile
+    /// Opens `path` in the app `bundle` at `line` as the core says that app takes one, and starts it (`appFolder`: where Launch
+    /// Services says the app is). Whether anything was started.
+    func openFile(path: String, line: Int?, bundle: String, appFolder: String?) -> Bool
 }

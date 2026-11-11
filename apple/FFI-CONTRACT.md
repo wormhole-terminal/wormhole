@@ -1285,3 +1285,19 @@ UpdateEngine.setAutoUpdate(on:) / setAnonymousCount(on:)
 - The Access desk and the project Trust window are made for the active profile (`activeProfile().id`) when they are made. A live
   profile switch does not remake the desk the hook socket holds (the workspace's server cannot be stopped and started again in one
   run: "this workspace already has a server"), so after a switch the agent questions are still the launch profile's.
+
+## Round S, terminal: live resize, opening a file at a line, find in folds (`live_resize.rs`, `open_file.rs`, `find.rs`)
+
+- **Live resize** (core `view::motion::live_resize`; Swift's mirror is deleted): `resize_snapped(proposed, from, spare, cell, least) -> SizeRecord`
+  (where a window dragged to `proposed` lands so the terminal's area keeps whole cells; the rule is `snapped`, new in core),
+  `resize_settle(spare, cell) -> SizeRecord?` (the strip a window off the grid gives up, never a whole cell),
+  `resize_settled_frame(window, strip, visible, held_left, held_top) -> WindowFrameRecord?` (`None` for a tiled or screen-filling
+  window; AppKit's space, `y` is the bottom edge) and the object `LiveResizeGate` with `step(live, differs) -> ResizeStepRecord { apply, wake_in_ms }`
+  (a size told during a drag at most every 100 ms, the last always). The gate reads its own clock. `TerminalCore.ResizeSteps` and `ResizeGate`
+  call them once `UniFFISource.installResizeRules()` has run; without it nothing snaps and every size is told at once.
+- **Open a file at a line**: `open_file_run(bundle, path, line, app_folder) -> bool`. The core picks the mechanism the app takes (`platform::open_file`:
+  VS Code's URL, Zed's and Sublime's command line, JetBrains' `--line`, a plain open, Finder's reveal), this builds the process the GPUI app starts
+  (`open -b`, `open -n -b … --args`, the app's own command line or the file alone when the app lacks it) and starts it, detached. Swift gives only
+  `app_folder` (Launch Services) and never spawns anything. `TerminalProbes.openFile` is the seam.
+- **Find and folds**: `Terminal.find_reveal` opens a fold that hides the match (as the GPUI find does, and it stays open); `Terminal.find_fold_words() -> [FoldWords { row, label, spoken }]`
+  gives the markers of the last frame as they read while a search is open (how many matches are inside each; empty with no match or no marker).

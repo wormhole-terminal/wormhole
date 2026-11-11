@@ -8,6 +8,7 @@ import PlatformModel
 
 #if WITH_UNIFFI
     import PlatformBridge
+    import UniFFISource
     import WordsBridge
 #endif
 
@@ -21,6 +22,7 @@ enum PlatformSetup {
             PlatformBridge.installKeymap()
             PlatformBridge.installPaletteMatcher()
             WordsBridge.install()
+            installResizeRules()
             CommandLineSetup.keepCurrent()
         #endif
     }

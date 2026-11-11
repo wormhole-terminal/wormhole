@@ -24,7 +24,7 @@ enum Stretch: UInt64 {
     /// The atlas key of a glyph of a font (`FontSet.id`) in this stretch.
     func key(font: UInt16, glyph: UInt16) -> UInt64 { rawValue << 32 | UInt64(font) << 16 | UInt64(glyph) }
 
-    /// The atlas key of a box-drawing, block or braille cell: past every font id.
+    /// The atlas key of a box-drawing or block cell: past every font id.
     func boxKey(_ scalar: UInt32) -> UInt64 { rawValue << 32 | 0xFFFF_0000 | UInt64(scalar & 0xFFFF) }
 }
 

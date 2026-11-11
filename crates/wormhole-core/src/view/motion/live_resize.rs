@@ -82,6 +82,27 @@ pub fn steps(cell: (f32, f32)) -> (f32, f32) {
     (width, cell.1.round().max(1.0))
 }
 
+/// The size a window dragged to `proposed` is held to, so the terminal's area keeps whole cells (a drag steps by a
+/// cell whatever the chrome around the grid measures): `spare` is the strip the area has beyond its grid, so each
+/// side moves by whole cells from where the grid ends, counted from `from` (the window's size where the drag began).
+/// Never under `least`, which it passes by whole cells. Used where the system's own steps ([`steps`]) cannot follow
+/// the cell, a window the Swift app's AppKit asks (`windowWillResize`) for every size of a drag.
+#[must_use]
+pub fn snapped(
+    proposed: (f32, f32),
+    from: (f32, f32),
+    spare: (f32, f32),
+    cell: (f32, f32),
+    least: (f32, f32),
+) -> (f32, f32) {
+    let axis = |proposed: f32, from: f32, spare: f32, cell: f32, least: f32| {
+        let cells = ((proposed - from + spare) / cell).round();
+        let size = from + cells * cell - spare;
+        if size < least { size + ((least - size) / cell).ceil() * cell } else { size }
+    };
+    (axis(proposed.0, from.0, spare.0, cell.0, least.0), axis(proposed.1, from.1, spare.1, cell.1, least.1))
+}
+
 /// How far the window is to be made smaller, in points across and down, so that it holds whole cells with no
 /// strip left over: `spare` is what the terminal's area has beyond its grid. `None` when nothing worth moving
 /// for is left, and never as much as a whole cell (that would be a column or a row less than the person
@@ -245,6 +266,16 @@ mod tests {
         assert_eq!(steps((7.8, 17.0)), (1.0, 17.0), "and 7.8 as 8");
         assert_eq!(steps((8.4287, 18.4)), (1.0, 18.0));
         assert_eq!(steps((0.2, 0.2)), (1.0, 1.0), "never less than a point");
+    }
+
+    #[test]
+    fn a_drag_steps_by_whole_cells_from_where_the_grid_ends() {
+        let (from, spare, cell, least) = ((1000.0, 700.0), (3.0, 5.0), (10.0, 20.0), (560.0, 400.0));
+        assert_eq!(snapped((1030.0, 690.0), from, spare, cell, least), (1027.0, 695.0));
+        assert_eq!(snapped(from, from, (0.0, 0.0), cell, least), from, "no move, no step");
+        let small = snapped((100.0, 100.0), from, (0.0, 0.0), cell, least);
+        assert!(small.0 >= least.0 && small.1 >= least.1, "never under the least size");
+        assert_eq!((small.0 - from.0) % cell.0, 0.0, "and it passes it by whole cells");
     }
 
     #[test]

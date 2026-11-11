@@ -1,0 +1,128 @@
+//! Opening one file in the app the person chose, at a line where that app can (`wormhole_core::platform::open_file`): the core
+//! decides which mechanism the app takes, this turns it into the process the GPUI app starts (`platform::apps::command`: `open`
+//! aimed at the app, or the command line the app brings) and starts it. Swift only says where the app is (Launch Services
+//! knows) and never spawns anything itself.
+
+use std::ffi::OsString;
+use std::path::Path;
+
+use wormhole_core::platform::open_file::{self, Launch};
+use wormhole_term::sys::process;
+
+/// The program and arguments for `launch` aimed at the app `bundle`, which lives in `app` when it is installed.
+fn command(bundle: &str, launch: Launch, app: Option<&Path>) -> (OsString, Vec<OsString>) {
+    let open = || OsString::from("/usr/bin/open");
+    let strings = |words: &[&str]| words.iter().map(OsString::from).collect::<Vec<_>>();
+    let in_app = |what: OsString| {
+        let mut args = strings(&["-b", bundle]);
+        args.push(what);
+        (open(), args)
+    };
+    match launch {
+        Launch::Open { path } => in_app(path.into_os_string()),
+        Launch::Url { url } => in_app(url.into()),
+        // Finder as the chosen app: `open -R`, like every other launch a process to start.
+        Launch::Reveal { path } => (open(), vec!["-R".into(), path.into_os_string()]),
+        Launch::Args { args } => {
+            let mut all = strings(&["-n", "-b", bundle, "--args"]);
+            all.extend(args.into_iter().map(OsString::from));
+            (open(), all)
+        }
+        Launch::Bundled { relative, arg } => {
+            match app.map(|app| app.join(relative)).filter(|program| program.is_file()) {
+                Some(program) => (program.into_os_string(), vec![arg.into()]),
+                // An older version of the app without it: the file, without the line.
+                None => in_app(arg.rsplit_once(':').map_or(arg.as_str(), |(path, _)| path).into()),
+            }
+        }
+    }
+}
+
+/// Open `path` (absolute, already found inside the repository) in the app with this bundle identifier at `line`, as the GPUI
+/// app does; `app_folder` is where Launch Services says the app is. Whether a process was started; nobody waits for it.
+#[uniffi::export]
+pub fn open_file_run(bundle: String, path: String, line: Option<u32>, app_folder: Option<String>) -> bool {
+    run(&bundle, Path::new(&path), line, app_folder.as_deref().map(Path::new))
+}
+
+fn run(bundle: &str, path: &Path, line: Option<u32>, app: Option<&Path>) -> bool {
+    let Some(launch) = open_file::launch(bundle, path, line) else { return false };
+    let (program, args) = command(bundle, launch, app);
+    let Ok(mut child) = process::command(program)
+        .args(args)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    else {
+        return false;
+    };
+    // Reaped by a thread of its own, so the child never lingers as a zombie.
+    std::thread::spawn(move || drop(child.wait()));
+    true
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use wormhole_core::storage::files::{LinkPolicy, write_atomic_executable};
+
+    use super::*;
+
+    fn words(bundle: &str, path: &str, line: Option<u32>, app: Option<&Path>) -> Vec<String> {
+        let launch = open_file::launch(bundle, Path::new(path), line).expect("absolute");
+        let (program, args) = command(bundle, launch, app);
+        std::iter::once(program).chain(args).map(|word| word.to_string_lossy().into_owned()).collect()
+    }
+
+    #[test]
+    fn each_app_is_asked_the_way_the_core_says() {
+        let file = "/repo/a b.rs";
+        assert_eq!(
+            words("com.microsoft.VSCode", file, Some(3), None),
+            ["/usr/bin/open", "-b", "com.microsoft.VSCode", "vscode://file/repo/a%20b.rs:3"]
+        );
+        assert_eq!(
+            words("com.jetbrains.rustrover", file, Some(3), None),
+            ["/usr/bin/open", "-n", "-b", "com.jetbrains.rustrover", "--args", "--line", "3", file]
+        );
+        assert_eq!(
+            words("com.apple.TextEdit", file, Some(3), None),
+            ["/usr/bin/open", "-b", "com.apple.TextEdit", file],
+            "an app with no way to take a line opens the file"
+        );
+        assert_eq!(words("com.apple.finder", file, None, None), ["/usr/bin/open", "-R", file]);
+        // Zed's command line is in its bundle; a version without it opens the file, without the line.
+        assert_eq!(words("dev.zed.Zed", file, Some(3), None), ["/usr/bin/open", "-b", "dev.zed.Zed", file]);
+    }
+
+    #[test]
+    fn the_apps_own_command_line_really_runs_with_the_line() {
+        let dir = tempfile::tempdir().expect("scratch folder");
+        let app = dir.path().join("Zed.app");
+        let program = app.join("Contents/MacOS/cli");
+        fs::create_dir_all(program.parent().expect("folder")).expect("bundle");
+        let out = dir.path().join("argument");
+        let script = format!("#!/bin/sh\nprintf '%s' \"$1\" > '{}'\n", out.display());
+        write_atomic_executable(&program, script.as_bytes(), LinkPolicy::Follow).expect("script");
+        assert_eq!(
+            words("dev.zed.Zed", "/repo/a.rs", Some(3), Some(&app)),
+            [program.to_str().expect("utf-8"), "/repo/a.rs:3"]
+        );
+        assert!(run("dev.zed.Zed", Path::new("/repo/a.rs"), Some(3), Some(&app)));
+        let mut written = String::new();
+        for _ in 0..500 {
+            written = fs::read_to_string(&out).unwrap_or_default();
+            if !written.is_empty() {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert_eq!(written, "/repo/a.rs:3");
+        assert!(
+            !run("dev.zed.Zed", Path::new("rel.rs"), None, Some(&app)),
+            "a relative path is never opened"
+        );
+    }
+}

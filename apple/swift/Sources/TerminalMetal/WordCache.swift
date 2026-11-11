@@ -113,7 +113,7 @@ final class WordCache {
         return (Int(record.glyphStart), Int(record.glyphCount))
     }
 
-    /// The atlas entry of an exact box-drawing, block or braille cell, made for the cell of a row of `stretch`.
+    /// The atlas entry of an exact box-drawing or block cell, made for the cell of a row of `stretch`.
     func boxEntry(_ scalar: UInt32, stretch: Stretch = .normal) -> Int32 {
         let key = stretch.boxKey(scalar)
         if let id = atlas.lookup(key) { return id }

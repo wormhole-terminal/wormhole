@@ -8,7 +8,16 @@ extension MetalTerminalView {
     /// The fold markers among the viewport rows, as the last frame carried them: the host draws them over the blank rows
     /// the grid leaves for them (a real, focusable, accessible element each).
     public var foldMarkers: [FoldMarkerRow] {
-        renderer.scene.markers.enumerated().compactMap { row, marker in marker.map { FoldMarkerRow(row: row, marker: $0) } }
+        let shown = renderer.scene.markers.enumerated().compactMap { row, marker in marker.map { FoldMarkerRow(row: row, marker: $0) } }
+        // While a search is open the markers count the matches inside them (Rust's words).
+        guard findActive, !shown.isEmpty, let words = source.scrollback?.findFoldWords(), !words.isEmpty else { return shown }
+        let byRow = Dictionary(words.map { ($0.row, $0) }, uniquingKeysWith: { first, _ in first })
+        return shown.map { entry in
+            guard let found = byRow[entry.row] else { return entry }
+            var marker = entry.marker
+            (marker.label, marker.spoken) = (found.label, found.spoken)
+            return FoldMarkerRow(row: entry.row, marker: marker)
+        }
     }
 
     /// The pointer is over `hit` (nil: it left), with Option as `alt`: a span a rule shortened or redacted shows its text

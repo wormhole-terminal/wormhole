@@ -22,4 +22,8 @@ final class UniFFIProbes: TerminalCore.TerminalProbes {
         let found = terminal.resolvePath(text: text)
         return TerminalCore.ResolvedFile(path: found.path, line: found.line.map(Int.init), words: found.words)
     }
+
+    func openFile(path: String, line: Int?, bundle: String, appFolder: String?) -> Bool {
+        openFileRun(bundle: bundle, path: path, line: line.map(UInt32.init), appFolder: appFolder)
+    }
 }

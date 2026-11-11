@@ -203,6 +203,17 @@ fn a_finished_blocks_output_folds_to_a_marker_that_opens_and_that_never_hide_lin
     assert!(text(7, label_len).ends_with("· build output"), "{}", text(7, label_len));
     assert!(terminal.has_folds());
 
+    // While a search is open the marker counts the matches inside the lines it hides.
+    let found = terminal.find_search("^[0-9]+$".into(), false, false, true);
+    assert!(found.count >= hidden, "every hidden line is a number: {found:?}");
+    let _ = terminal.frame();
+    let counted = terminal.find_fold_words();
+    assert_eq!(counted.len(), 1, "the one marker in view: {counted:?}");
+    assert!(
+        counted[0].label.contains("matches inside") && counted[0].spoken.contains("matches inside"),
+        "{counted:?}"
+    );
+
     // Opening shows the lines and says how many; closing again is the marker's own click.
     assert_eq!(terminal.fold_show_all(), hidden);
     // An open fold keeps its marker, above its own lines.
@@ -211,6 +222,11 @@ fn a_finished_blocks_output_folds_to_a_marker_that_opens_and_that_never_hide_lin
     assert_eq!(flags & 16, 16, "an open fold has a marker row: {flags}");
     assert_eq!(open[5] & 1, 1, "and says it is open: {open:?}");
     assert!(terminal.fold_toggle(fold_id), "closing it again is the marker's own click");
+    // Stepping to a match inside the closed fold opens it, as the GPUI app's find does.
+    terminal.find_reveal(found.count / 2);
+    terminal.scroll(200);
+    let (_, shown) = sections(&terminal.frame(), 80);
+    assert_eq!(shown[5] & 1, 1, "the match's fold is open: {shown:?}");
     assert!(terminal.fold_toggle(fold_id));
 
     // "Never hide lines": the view shows every line.

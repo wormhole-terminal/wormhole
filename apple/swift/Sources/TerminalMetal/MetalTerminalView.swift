@@ -77,7 +77,7 @@ public final class MetalTerminalView: NSView {
     var glowLayer: CALayer?
     var glowItem: DispatchWorkItem?
     /// When the program may next be told a size while the window is dragged, and the layout that comes when one held back is due.
-    var resizeGate = ResizeGate()
+    let resizeGate = ResizeGate()
     var resizeItem: DispatchWorkItem?
     /// The grid the program was last told (`syncSurface`).
     public private(set) var gridSize = GridSize(cols: 0, rows: 0) { didSet { if gridSize != oldValue { onGridChange?() } } }
@@ -250,7 +250,7 @@ public final class MetalTerminalView: NSView {
         // A window being dragged tells the program a size at most every 100 ms (the last one always, and once more when the
         // drag ends: `viewDidEndLiveResize`), as a full-screen program redraws everything for each size.
         if started {
-            let step = resizeGate.step(now: Date(), live: inLiveResize, differs: true)
+            let step = resizeGate.step(live: inLiveResize, differs: true)
             guard step.apply else {
                 if let wake = step.wakeIn {
                     resizeItem?.cancel()
