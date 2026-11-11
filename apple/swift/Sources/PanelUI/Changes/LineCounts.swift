@@ -12,8 +12,8 @@ struct LineCounts: View {
 
     var body: some View {
         HStack(spacing: Space._1) {
-            Text("+\(added)").foregroundStyle(tokens.diffAdded)
-            if removed > 0 { Text("\u{2212}\(removed)").foregroundStyle(tokens.diffRemoved) }
+            Text(verbatim: "+" + String(added)).foregroundStyle(tokens.diffAdded)
+            if removed > 0 { Text(verbatim: "\u{2212}" + String(removed)).foregroundStyle(tokens.diffRemoved) }
         }
         .font(TextRole.caption.font.monospacedDigit())
         .fixedSize()

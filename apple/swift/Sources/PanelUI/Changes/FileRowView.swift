@@ -13,6 +13,8 @@ struct FileRowView: View {
     var depth = 0
     var inTree = false
     var selected = false
+    /// Marked for the menu (⌘-click): the fill and the tint of a selected row, without being the open one.
+    var marked = false
     /// What the menu acts on (the marked files); the file alone by default. `onDisk` nil asks the disk.
     var menu: [String]?
     var onDisk: Bool?
@@ -23,7 +25,7 @@ struct FileRowView: View {
     @Environment(\.panelRoot) private var root
 
     var body: some View {
-        PanelRow(selected: selected, action: action) { hovering in
+        PanelRow(selected: selected, marked: marked, action: action) { hovering in
             HStack(spacing: PanelMetrics.gap) {
                 FileIcon(kind: .file(file.path), tint: muted)
                 if let from = file.renamedFrom { renamed(from) }
@@ -31,8 +33,8 @@ struct FileRowView: View {
                     PanelIcon("folder.badge.plus", size: 12).foregroundStyle(muted)
                 }
                 Text(file.name)
-                    .font(TextRole.body.font.weight(selected ? .semibold : .regular))
-                    .foregroundStyle(selected ? tokens.sidebarRowSelectedText : tokens.textPrimary)
+                    .font(TextRole.body.font.weight(lit ? .semibold : .regular))
+                    .foregroundStyle(lit ? tokens.sidebarRowSelectedText : tokens.textPrimary)
                     .lineLimit(1).truncationMode(.middle)
                     .frame(maxWidth: max(width, 1) * PanelMetrics.fileNameShare, alignment: .leading)
                     .fixedSize(horizontal: true, vertical: false)
@@ -63,7 +65,8 @@ struct FileRowView: View {
         .accessibilityLabel("\(file.name), \(file.kind.title)")
     }
 
-    private var muted: Color { selected ? tokens.sidebarRowSelectedMuted : tokens.textMuted }
+    private var lit: Bool { selected || marked }
+    private var muted: Color { lit ? tokens.sidebarRowSelectedMuted : tokens.textMuted }
 
     private func renamed(_ from: String) -> some View {
         HStack(spacing: Space._1) {

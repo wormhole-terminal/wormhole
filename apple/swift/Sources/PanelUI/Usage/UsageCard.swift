@@ -21,12 +21,12 @@ struct UsageCard: View {
             .padding(.horizontal, PanelMetrics.inset).frame(height: Metric.band)
             if !report.limits.isEmpty {
                 SectionLabel(panelText("usage-plan-limits", "Plan usage limits")).padding(.horizontal, PanelMetrics.inset).padding(.bottom, Space._1)
-                ForEach(report.limits, id: \.label) { LimitRow(limit: $0, now: now) }
+                ForEach(Array(report.limits.enumerated()), id: \.offset) { LimitRow(limit: $1, now: now) }
             }
             if let tokensCount = report.responseTokens {
                 VStack(alignment: .leading, spacing: Space._2) {
                     SectionLabel(panelText("usage-latest-response", "Latest model response"))
-                    Text(panelText("usage-tokens", "\(tokensCount.formatted()) tokens")).font(TextRole.body.font.monospacedDigit()).foregroundStyle(tokens.textPrimary)
+                    Text(panelText("usage-tokens", "\(String(tokensCount)) tokens")).font(TextRole.body.font.monospacedDigit()).foregroundStyle(tokens.textPrimary)
                     Text(panelText("usage-gemini-note", "Latest report across Gemini terminals. Plan limits are not reported."))
                         .font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                 }
@@ -38,7 +38,7 @@ struct UsageCard: View {
     }
 }
 
-/// "5-hour limit … 25% · resets 34m" over its gauge, which turns to the warning colour from 80 % and to the danger one at
+/// "5-hour limit … 25% · resets 34m" over its bar, which turns to the warning colour from 80 % and to the danger one at
 /// the limit.
 struct LimitRow: View {
     let limit: PlanLimit
@@ -53,8 +53,11 @@ struct LimitRow: View {
                 Spacer(minLength: 0)
                 Text(words).font(TextRole.caption.font.monospacedDigit()).foregroundStyle(tokens.textMuted)
             }
-            Gauge(value: share) { EmptyView() }
-                .gaugeStyle(.linearCapacity).tint(color(share))
+            // The bar is an 8 pt pill (gpui-component `Progress`, medium), the fill in the level's colour.
+            Capsule().fill(tokens.border).frame(height: 8)
+                .overlay(alignment: .leading) {
+                    GeometryReader { proxy in Capsule().fill(color(share)).frame(width: proxy.size.width * min(max(share, 0), 1)) }
+                }
         }
         .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._2)
         .accessibilityElement(children: .ignore)

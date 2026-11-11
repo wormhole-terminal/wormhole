@@ -1,0 +1,31 @@
+Round S wave 2, lane panel: what was driven in a --background Swift instance (HOME and data dir scratch, WORMHOLE_AUTH=cancel,
+fixture repo scratchpad/s2-panel/fx/repo: staged rename and add, unstaged, binary, mode change, LFS pointer, 28 MB patch, deleted,
+submodule with uncommitted changes, untracked). Commands are parity/DRIVING.md's; every line below was answered as shown.
+No copy action was driven (pasteboard rule): Copy Path, Copy error, review copy, Cmd-C are covered by entry-point tests only.
+
+Changes keyboard (core's focus_list_walk through the FFI):  key shift-cmd-e; key down x4 -> ring on the 4th row (d-keys1.png)
+  key left (open folder: folds, chevron turns), key down x3, key return -> opens the diff, "+cover"; key down -> the open diff follows
+  the cursor to the next file ("File 6 of 14", d-keys3.png). ⌥↓/⌥↑ first/last, space on a band fold, return on a band does nothing:
+  FilesBridgeTests/PanelWalkTests (real focusListWalk).
+Changes marks:  click 1060 120 cmd; click 1060 344 cmd; click 1060 372 shift -> blob.bin, README.md marked, none opened (d-marks.png)
+  right-click 1060 344 -> menu: 1. Copy Paths 2. Copy Relative Paths --- 3. History of These Files   (GPUI path_menu.rs outline)
+  right-click on one file -> Open in Zed / Reveal in Finder / --- / Copy Path / Copy Relative Path / --- / File History.
+History keyboard:  key ctrl-cmd-2; down x2; key right -> commit opens (details + file under it); down x3 walks details, file, next
+  commit (d-hist1.png).
+Notes keyboard:  down x2 -> first step, key space -> ticked (count 2 -> 1, struck through), down x3 -> second step, Notes band, note (d-notes1.png).
+Files keyboard:  right opens a folder, right again goes to its first entry, option-down / option-up last / first, return on a folder toggles (d-files1.png).
+Diff cards (click on the row, wait-idle, window-shot):
+  huge.txt   "This diff is 28.3 MB / 300,000 changed lines. Loading it can take a few seconds." + Load diff + Reveal in Finder (e-large.png).
+             Load diff itself was not pressed (300,000 lines would hold the instance).
+  model.bin  outlined LFS badge, "Stored in Git LFS" over the hatch, "12.3 MB -> 12.8 MB . oid bbbb21..." (e-lfs.png)
+  blob.bin   outlined Binary badge, "Binary file", "2 KB -> 3 KB" (e-binary.png)
+  mode.sh    badge "Mode 100644 -> 100755", one "No content changes" per column (e-mode.png)
+  main.rs    Deleted badge, Open in button in the header (e-deleted.png)
+GPUI pairs (debug build of 7 Nov, devctl-instance.sh, same repo): gpui-changes-dark.png against e-list.png / d-keys1.png,
+  gpui-diff-newfile-dark.png (note "New file" over the old column, hatched).
+Differences kept or named: the GPUI debug build of 7 Nov still draws filled status badges where its source (labels.rs status_badge)
+  and the Swift app draw them outlined; the Swift header can run out of room when a badge is long (Mode ...), the GPUI one elides the crumb.
+Fixed after looking: the count on a band wrapped to two lines ("1 / 0" for 10); line counts in rows were locale-grouped
+  ("+150.000"), GPUI writes them raw; marked rows had no fill (the fill is one matched shape).
+Not driven here: worktree sheet and close question (built and unit tested, see report), notes sync for other terminals, View all N,
+  Usage (needs an agent on screen), Open in submenu of Files (not built), per-section tab stops (not built).

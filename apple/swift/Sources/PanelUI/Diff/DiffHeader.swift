@@ -35,7 +35,8 @@ struct DiffHeader: View {
             crumb.lineLimit(1).truncationMode(.head).layoutPriority(-1).clipped()
             Spacer(minLength: 0)
             ForEach(badges, id: \.text) { badge in StatusBadge(text: badge.text, color: badge.color) }
-            if case let .counts(added, removed) = file.lines {
+            // Counts and the wrap button are for lines: not a binary file, an LFS pointer or a patch not loaded.
+            if case let .counts(added, removed) = file.lines, diff?.isLFS != true, diff?.isBinary != true, diff?.tooLarge == nil {
                 HStack(spacing: Space._1) {
                     Text("+\(CountText.grouped(added))").foregroundStyle(tokens.diffAdded)
                     Text("\u{2212}\(CountText.grouped(removed))").foregroundStyle(tokens.diffRemoved)

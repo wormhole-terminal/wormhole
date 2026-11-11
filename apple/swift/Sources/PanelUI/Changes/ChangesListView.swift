@@ -60,7 +60,8 @@ struct ChangesListView: View {
     @ViewBuilder private func rowView(_ row: ChangeRow) -> some View {
         switch row {
         case let .file(file, depth, inTree):
-            let selected = file.id == store.selection || store.marked.contains(file.path)
+            let selected = file.id == store.selection
+            let marked = store.marked.contains(file.path)
             let click = {
                 let flags = NSApp.currentEvent?.modifierFlags ?? []
                 store.click(file, command: flags.contains(.command), shift: flags.contains(.shift))
@@ -69,7 +70,7 @@ struct ChangesListView: View {
                 SubmoduleRowView(file: file, depth: depth, inTree: inTree, selected: selected, action: click)
             } else {
                 FileRowView(
-                    file: file, depth: depth, inTree: inTree, selected: selected, menu: store.menuPaths(for: file),
+                    file: file, depth: depth, inTree: inTree, selected: selected, marked: marked, menu: store.menuPaths(for: file),
                     onDisk: file.kind != .deleted, action: click)
             }
         case let .directory(_, path, label, depth, collapsed):

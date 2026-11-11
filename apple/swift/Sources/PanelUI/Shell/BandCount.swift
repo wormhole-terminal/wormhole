@@ -10,7 +10,7 @@ struct BandCount: View {
 
     var body: some View {
         Text(text)
-            .font(TextRole.caption.font.weight(.semibold).monospacedDigit())
+            .font(TextRole.caption.font.weight(.semibold).monospacedDigit()).lineLimit(1).fixedSize()
             .foregroundStyle(tokens.textPrimary)
             .padding(.horizontal, Space._1)
             .frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)

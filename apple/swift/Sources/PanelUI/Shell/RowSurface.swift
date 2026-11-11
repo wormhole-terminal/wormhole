@@ -13,18 +13,21 @@ extension EnvironmentValues {
 
 struct PanelRow<Content: View>: View {
     var selected = false
+    /// Filled like a selected row but not the one the fill slides to (a file marked for the menu: several may be).
+    var marked = false
     let action: () -> Void
     @ViewBuilder let content: (_ hovering: Bool) -> Content
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) { content(hovering) }
-            .buttonStyle(Surface(selected: selected, hovering: hovering))
+            .buttonStyle(Surface(selected: selected, marked: marked, hovering: hovering))
             .onHover { hovering = $0 }
     }
 
     private struct Surface: ButtonStyle {
         let selected: Bool
+        let marked: Bool
         let hovering: Bool
         @Environment(\.tokens) private var tokens
         @Environment(\.selectionSpace) private var space
@@ -35,7 +38,8 @@ struct PanelRow<Content: View>: View {
             configuration.label
                 .background {
                     ZStack {
-                        shape.fill(configuration.isPressed ? tokens.stateActive : hovering && !selected ? tokens.stateHover : .clear)
+                        shape.fill(configuration.isPressed ? tokens.stateActive : hovering && !selected && !marked ? tokens.stateHover : .clear)
+                        if marked && !selected { shape.fill(tokens.stateSelected) }
                         if selected {
                             if let space, !reduceMotion {
                                 shape.fill(tokens.stateSelected).matchedGeometryEffect(id: "selection", in: space)
