@@ -24,6 +24,8 @@ ICONS = {
     "chevronUp": "chevron-up", "settings": "settings", "palette": "palette", "archive": "archive", "commit": "git-commit-horizontal",
     # The find bar's (`style/find_bar.rs`).
     "search": "search", "caseSensitive": "case-sensitive", "wholeWord": "whole-word", "regex": "regex",
+    # The sidebar row's marks (`sidebar/row/face.rs`): hidden from agents, a worktree.
+    "lock": "lock", "gitFork": "git-fork",
 }
 
 

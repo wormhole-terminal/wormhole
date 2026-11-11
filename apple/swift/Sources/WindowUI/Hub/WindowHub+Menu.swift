@@ -1,5 +1,6 @@
 // The menu bar's view of this window: `MenuStateMaker`'s facts gathered from the hub and the window's look.
 
+import PanesModel
 import PlatformModel
 import WorkspaceModel
 
@@ -31,21 +32,16 @@ extension WindowHub {
         if let found { send(.select(found.id)) }
     }
 
-    /// ⌃⌥]/[ and ⌃⌥1–9: the first terminal of the group `offset` steps from the selected terminal's, or number `n`.
-    /// A folded group lists no rows, so it has none to go to until it is opened.
+    /// ⌃⌥1–9 and ⌃⌥]/[: the tab set with that number in the switcher's list, or the one a step from the selected terminal's
+    /// (Ungrouped last, folded groups included, empty ones passed over), in both layouts; it opens as the switcher opens it.
     public func selectGroup(number: Int) {
-        let groups = groupSections
-        guard groups.indices.contains(number - 1), let first = groups[number - 1].rows.first else { return }
-        send(.select(first.id))
+        if let at = TabSets.numbered(tabBar.sets, number) { openSet(at: at) }
     }
 
     public func selectGroup(step: Int) {
-        let groups = groupSections
-        guard !groups.isEmpty else { return }
-        let current = groups.firstIndex { $0.rows.contains { $0.id == state.selected } } ?? (step > 0 ? -1 : 0)
-        let next = (current + step + groups.count) % groups.count
-        if let first = groups[next].rows.first { send(.select(first.id)) }
+        let sets = tabBar.sets
+        guard let current = state.selected.flatMap({ TabSets.current(sets, containing: $0) }),
+              let at = TabSets.step(sets, from: current, forward: step > 0) else { return }
+        openSet(at: at)
     }
-
-    private var groupSections: [SidebarSection] { state.sections.filter { $0.head != nil } }
 }

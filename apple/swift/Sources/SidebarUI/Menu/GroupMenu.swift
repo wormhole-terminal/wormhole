@@ -15,7 +15,7 @@ struct GroupMenu: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Button(Words.text("sidebar-menu-rename", fallback: "Rename…")) { context.openPopover(head.id) }
+        Button(Words.text("sidebar-menu-rename", fallback: "Rename…")) { context.rename(.group(head.id)) }
         Divider()
         // The colours as one row of dots, as GPUI's menu draws them (`group_popover.rs`): each picks and closes the menu.
         ControlGroup {
@@ -49,12 +49,7 @@ struct GroupMenu: View {
         }
     }
 
-    /// The system's open panel for a folder; the group is pinned to what is chosen.
     @MainActor static func choose(for group: GroupID, send: @MainActor (WorkspaceAction) -> Void) {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.prompt = Words.text("files-choose-prompt", fallback: "Choose")
-        if panel.runModal() == .OK, let url = panel.url { send(.setGroupFolder(group, url.path)) }
+        GroupFolderPanel.choose(for: group, send: send)
     }
 }

@@ -34,8 +34,9 @@ public enum HookAction: Equatable, Sendable {
     /// The welcome program's sidebar step: the example band goes up in the sidebar of the window that holds `terminal` (`show`)
     /// or comes down. It is never a terminal.
     case welcomeDemo(terminal: Int64, show: Bool)
-    /// The welcome in `terminal` is over: the band goes and a start animation still playing is cut short.
-    case welcomeEnded(terminal: Int64)
+    /// The welcome in `terminal` is over: the band goes and a start animation still playing is cut short. `note`: a first run
+    /// ended on the primer (no coding agent), so the sidebar's "no agents" note comes up.
+    case welcomeEnded(terminal: Int64, note: Bool)
     /// A press turned a banner on, or said Allow, and macOS has not been asked: ask, then `setNotificationPermission`.
     case welcomeAskPermission
     /// The welcome's "How much to show" walk opens (`open`) or closes the right panel of the window that holds `terminal`.
@@ -60,7 +61,7 @@ extension HookAction {
         case .driven(let terminal, let typing, let agent): self = .driven(terminal: terminal, typing: typing, agent: agent)
         case .probesChanged: self = .probesChanged
         case .welcomeDemo(let terminal, let show): self = .welcomeDemo(terminal: terminal, show: show)
-        case .welcomeEnded(let terminal): self = .welcomeEnded(terminal: terminal)
+        case .welcomeEnded(let terminal, let note): self = .welcomeEnded(terminal: terminal, note: note)
         case .welcomeAskPermission: self = .welcomeAskPermission
         case .welcomePanel(let terminal, let open): self = .welcomePanel(terminal: terminal, open: open)
         }

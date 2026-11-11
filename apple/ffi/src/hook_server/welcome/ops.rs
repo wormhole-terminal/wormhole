@@ -37,7 +37,7 @@ pub(super) fn answer(core: &Arc<Core>, tab: i64, op: WelcomeOp) -> Reply {
         WelcomeOp::InstallHooks { agent } => install(core, tab, agent),
         WelcomeOp::Demo { show } => demo(core, tab, show),
         WelcomeOp::Import { source } => import(core, tab, &source),
-        WelcomeOp::Finish { skipped: _ } => finish(core, tab),
+        WelcomeOp::Finish { skipped } => finish(core, tab, skipped),
     }
 }
 
@@ -256,18 +256,19 @@ fn remember_imported_theme(core: &Core, tab: i64) {
 
 /// The welcome is over: remembered when it was the first run, the example band goes and the animation, if
 /// still playing, is cut short; the token opens nothing from now on.
-fn finish(core: &Core, tab: i64) -> Reply {
-    tracing::info!(tab, "the welcome finished");
-    let first_run = {
+fn finish(core: &Core, tab: i64, skipped: bool) -> Reply {
+    tracing::info!(tab, skipped, "the welcome finished");
+    let (first_run, primer) = {
         let mut welcomes = core.welcomes();
-        let first_run = welcomes.run(tab).is_some_and(|run| run.first_run);
+        let run = welcomes.run(tab);
+        let facts = (run.is_some_and(|run| run.first_run), run.is_some_and(|run| run.agents.as_ref().is_some_and(|a| a.found.is_empty())));
         welcomes.gates.finish(tab);
-        first_run
+        facts
     };
     if first_run {
         remember_first_run(core);
     }
-    core.ui.push(HookEvent::WelcomeEnded { terminal: tab });
+    core.ui.push(HookEvent::WelcomeEnded { terminal: tab, note: first_run && primer && !skipped });
     Reply::ok(serde_json::json!({}))
 }
 

@@ -372,6 +372,7 @@ pub struct SidebarRow {
     pub glyph: TileGlyph,
     pub agent_hidden: bool,
     pub forget_text: bool,
+    pub worktree: Option<String>,
 }
 
 #[uniffi::remote(Record)]

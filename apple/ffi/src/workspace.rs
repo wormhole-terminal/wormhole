@@ -431,6 +431,16 @@ impl Workspace {
         self.shared.with_model(|model| model.pane_drop_refusal(dragged, target, zone))
     }
 
+    /// Whether group `group`'s fence lets terminal `id` (and its split) in: the menus grey out a group that refuses.
+    pub fn group_admits(&self, group: u32, id: i64) -> bool {
+        self.shared.with_model(|model| model.admits(group, id))
+    }
+
+    /// The terminal last selected in `group` (`None`: the terminals in no group): what opening a tab set selects.
+    pub fn last_selected_in(&self, group: Option<u32>) -> Option<i64> {
+        self.shared.with_model(|model| model.last_selected_in(group))
+    }
+
     /// The folder to ask the person about before a terminal opens in a group with none, if there is
     /// one worth offering. Answer with `setGroupFolder` or `declineGroupFolder`.
     pub fn group_folder_offer(&self, group: u32) -> Option<String> {

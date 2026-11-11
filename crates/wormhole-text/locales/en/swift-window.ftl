@@ -2,19 +2,6 @@
 # the status bar, the window's accessibility words and the few labels the Settings window writes itself.
 # What the settings schema and the palette's rows say comes from the core, in these catalogs already.
 
-## The terminal list: search
-
-sidebar-search-placeholder = Search terminals
-sidebar-search-clear = Clear search
-sidebar-search-nothing = No terminal matches
-sidebar-search-hint = Return opens the first one, Escape ends the search
-
-# The count at the search field's end. { $found } and { $total } are whole numbers.
-sidebar-search-count = { $found } of { $total }
-
-# The same, for VoiceOver.
-sidebar-search-count-spoken = { $found } of { $total } terminals
-
 ## The terminal list: its rows and groups
 
 # VoiceOver's name for the list.
@@ -32,8 +19,28 @@ sidebar-mark-split-folders = In a split with terminals in other folders
 # The close button on a row: its tooltip and its VoiceOver name; the same words are the menu item and the action.
 sidebar-close-terminal = Close terminal
 
-# VoiceOver's name for the field a row's name is edited in.
-sidebar-rename-field = Terminal name
+# VoiceOver's name for the field a row's or a group's name is edited in.
+sidebar-rename-field = Name
+
+# The VoiceOver action on a group's head that opens its popover.
+sidebar-group-edit-action = Edit group
+
+# A row's tooltips: the mark of a terminal hidden from agents, in two lines.
+sidebar-hidden-from-agents = Hidden from agents
+sidebar-hidden-from-agents-detail = Programs that control Wormhole can't see it
+
+# The worktree mark's tooltip. { $name } is the worktree's name, { $repo } the repository's folder name.
+sidebar-worktree-of = { $name } · worktree of { $repo }
+
+## The note under the list while no coding agent is installed
+
+tip-no-agents-title = No coding agents yet
+tip-no-agents-body = Rows show the running command instead. Status glyphs still mark a busy terminal.
+tip-no-agents-settings = Coding agents settings
+tip-close = Close tip
+tip-closed = Tip closed
+tip-never = Don't show again
+tip-keep = Keep the tip for next time
 
 # The VoiceOver action on a row (the menu item has an ellipsis).
 sidebar-rename-action = Rename

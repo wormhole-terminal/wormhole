@@ -204,6 +204,10 @@ impl WorkspaceModel {
             ahead: facts.ahead,
             behind: facts.behind,
             repo_files: facts.repo_files.map(|n| n as u32),
+            worktree: self
+                .place_at(session.id)
+                .and_then(|place| place.linked_to)
+                .map(|main| main.to_string_lossy().into_owned()),
         }
     }
 

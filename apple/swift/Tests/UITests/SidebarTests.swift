@@ -86,7 +86,7 @@ final class SidebarMomentTests: XCTestCase {
 
     func testTheRowUnderThePointerShowsItsCloseAndAHalfTypedName() throws {
         try SidebarSnapshot.write(theme: "wormhole.dark", appearance: SidebarAppearance(hovered: 2), name: "moment-hover")
-        try SidebarSnapshot.write(theme: "wormhole.dark", name: "moment-rename", caught: .init(renaming: 2))
+        try SidebarSnapshot.write(theme: "wormhole.dark", name: "moment-rename", caught: .init(renaming: .terminal(2)))
         try SidebarSnapshot.write(theme: "wormhole.light", appearance: SidebarAppearance(hovered: 4), name: "moment-hover-light")
     }
 
@@ -101,12 +101,45 @@ final class SidebarMomentTests: XCTestCase {
     func testTheGroupPopoverAndMenuContents() throws {
         let section = try XCTUnwrap(SidebarFixture.state.sections.first { $0.head != nil })
         let context = SidebarContext(
-            selected: nil, groups: [], send: { _ in }, renaming: nil, rename: { _ in }, shifts: [:], drag: .none,
-            everyTerminal: [], newInGroup: { _ in }, closeGroup: { _ in }, popover: nil, openPopover: { _ in }, frames: RowFrames())
+            selected: nil, groups: [], send: { _ in }, open: { _ in }, renaming: nil, rename: { _ in }, shifts: [:], drag: .none,
+            everyTerminal: [], newGroup: { _ in }, newInGroup: { _ in }, hooks: SidebarHooks(), flash: nil, admits: { _, _ in true },
+            hasRoom: { _, _ in true }, popover: nil, openPopover: { _ in }, frames: RowFrames())
         for id in ["wormhole.dark", "wormhole.light"] {
             let theme = try XCTUnwrap(ThemeLibrary.bundled.theme(id: id))
-            try SidebarSnapshot.render(GroupPopover(head: try XCTUnwrap(section.head), rows: section.rows, context: context, close: {}), theme: theme, name: "moment-popover-\(id)", size: CGSize(width: 248, height: 140))
+            try SidebarSnapshot.render(GroupPopover(head: try XCTUnwrap(section.head), rows: section.rows, context: context, close: {}), theme: theme, name: "moment-popover-\(id)", size: CGSize(width: 248, height: 330))
         }
+    }
+
+    /// The "no agents" note and the line after its x, in both themes.
+    func testTheNoAgentsTipAndItsOfferRender() throws {
+        for id in ["wormhole.dark", "wormhole.light"] {
+            let theme = try XCTUnwrap(ThemeLibrary.bundled.theme(id: id))
+            for stage in [AgentsTip.note, .offer] {
+                try SidebarSnapshot.render(
+                    NoAgentsTip(stage: stage, openSettings: {}, close: {}, never: {}, keep: {}), theme: theme, name: "s3-tip-\(stage)-\(id)",
+                    size: CGSize(width: 350, height: stage == .note ? 130 : 44))
+            }
+        }
+    }
+
+    /// A running agent or command is killed by a close that skips the question: the row's x, the row menu and the accessibility
+    /// action all close through the window's hook, and only a list with no window sends the core's close at once.
+    @MainActor func testEveryCloseOfATerminalGoesThroughTheWindowsQuestion() {
+        var asked: [TerminalID] = []
+        var sent: [WorkspaceAction] = []
+        var hooks = SidebarHooks()
+        hooks.closeTerminal = { asked.append($0) }
+        func context(_ hooks: SidebarHooks) -> SidebarContext {
+            SidebarContext(
+                selected: nil, groups: [], send: { sent.append($0) }, open: { _ in }, renaming: nil, rename: { _ in }, shifts: [:], drag: .none,
+                everyTerminal: [], newGroup: { _ in }, newInGroup: { _ in }, hooks: hooks, flash: nil, admits: { _, _ in true },
+                hasRoom: { _, _ in true }, popover: nil, openPopover: { _ in }, frames: RowFrames())
+        }
+        context(hooks).closeTerminal(4)
+        XCTAssertEqual(asked, [4])
+        XCTAssertTrue(sent.isEmpty, "the core is not asked to close before the window has asked the person")
+        context(SidebarHooks()).closeTerminal(5)
+        XCTAssertEqual(sent, [.close(5)], "a list drawn alone has no question to ask")
     }
 
     func testEveryStatusMotionAndNoMotionRender() throws {

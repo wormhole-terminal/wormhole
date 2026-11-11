@@ -100,3 +100,16 @@ fn a_group_with_no_folder_is_offered_the_one_its_terminals_share() {
     m.apply(Action::SetGroupFolder { group: 1, folder: Some("/Users/me/site".into()) });
     assert_eq!(m.group_folder_offer(1), None, "it has one");
 }
+
+#[test]
+fn a_row_in_a_linked_worktree_names_the_main_tree_and_last_selected_follows_the_selection() {
+    let mut m = model_at(&["/work/app/src", "/work/app-wt/src"]);
+    let rows = m.sidebar_snapshot(0).sections.into_iter().flat_map(|s| s.rows).collect::<Vec<_>>();
+    assert_eq!(rows[0].worktree, None);
+    assert_eq!(rows[1].worktree.as_deref(), Some("/work/app"));
+    m.apply(Action::NewGroup { members: vec![1, 2] });
+    m.apply(Action::Select(2));
+    assert_eq!(m.last_selected_in(Some(1)), Some(2));
+    // Kept by where it was when selected: a tab set only takes it when it is still one of its terminals.
+    assert!(m.admits(1, 1));
+}

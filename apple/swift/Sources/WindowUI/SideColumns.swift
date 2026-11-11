@@ -15,13 +15,18 @@ struct SidebarColumn: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SidebarTitleRow(facts: facts, send: hub.send)
+            SidebarTitleRow(facts: facts, send: hub.send, menu: hub.newTerminalMenu)
             SidebarView(
-                state: hub.state, appearance: look.sidebar, closeGroup: { hub.actions.closeGroup($0) },
-                search: hub.sidebarSearch, band: hub.exampleBand, send: hub.send
+                state: hub.state, appearance: look.sidebar, hooks: hub.sidebarHooks, link: hub.sidebarLink,
+                band: hub.exampleBand, send: hub.send
             )
             .environment(\.dropPlanner, hub.store)
             .environment(\.terminalDrag, hub.terminalDrag)
+            // Gone once a terminal of the window runs an agent.
+            NoAgentsTip(
+                stage: hub.state.all.contains { $0.agent != nil } ? .off : hub.agentsTip,
+                openSettings: { hub.actions.openSettingsAt("agents") }, close: { hub.agentsTip = .offer },
+                never: { hub.actions.dismissAgentsTip(); hub.agentsTip = .off }, keep: { hub.agentsTip = .off })
         }
         .background { if !look.glassOn { look.surface(colours.sidebar) } }
     }

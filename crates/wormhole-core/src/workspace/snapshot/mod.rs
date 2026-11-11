@@ -86,6 +86,9 @@ pub struct SidebarRow {
     /// "Hide from Agents" and "Forget text" are on (the row menu's checks).
     pub agent_hidden: bool,
     pub forget_text: bool,
+    /// The main working tree of the repository the terminal's folder is a linked worktree of: the row's
+    /// worktree mark ("worktree of <repo>").
+    pub worktree: Option<String>,
 }
 
 /// A group's head.

@@ -49,7 +49,7 @@ public final class WindowFocus {
         case is FocusHolderView: return virtual
         default: break
         }
-        if hub.sidebarSearch.hasKeyboard { return .sidebar }
+        if hub.sidebarLink.hasKeyboard { return .sidebar }
         return hub.panel.keyboard.listFocused ? .panelContent : nil
     }
 
@@ -126,7 +126,7 @@ public final class WindowFocus {
         keyboardDriven = true
         switch stop.area {
         case .terminal: return focusTerminal()
-        case .sidebar: return swiftUI(hub.sidebarSearch.requestKeyboard)
+        case .sidebar: return swiftUI(hub.sidebarLink.requestKeyboard)
         case .panelContent where hub.panel.keyboard.lists > 0: return swiftUI { hub.panel.keyboard.request(stop: stop.index) }
         case .titleRow: titleIndex = min(stop.index, max(titleButtons - 1, 0))
         case .statusBar: statusIndex = min(statusIndex, max(hub.statusItems.count - 1, 0))

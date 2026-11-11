@@ -43,6 +43,22 @@ final class WorkspaceFFITests: XCTestCase {
         XCTAssertEqual(store.send(.select(99)), .unknown)
     }
 
+    func testATabSetOpensOnItsLastSelectedTerminalAndANewGroupMakesOne() {
+        let (store, _) = make()
+        (0..<3).forEach { _ in store.send(.newTerminal) }
+        store.send(.newGroup([1, 2]))
+        let group = store.state.groups[0].id
+        XCTAssertNil(store.lastSelected(in: group), "nothing was selected in it yet")
+        store.send(.select(2))
+        store.send(.select(3))
+        XCTAssertEqual(store.lastSelected(in: group), 2, "the group remembers the terminal last selected in it")
+        XCTAssertEqual(store.lastSelected(in: nil), 3, "and so do the terminals in no group")
+        XCTAssertTrue(store.groupAdmits(group, terminal: 3), "a group with no fence takes anything")
+        store.send(.newTerminalInNewGroup)
+        XCTAssertEqual(store.state.groups.count, 2, "the switcher's New group makes a group with a terminal in it")
+        XCTAssertEqual(store.state.selected, 4)
+    }
+
     func testASearchCutsTheListAndANewTerminalEndsIt() {
         let (store, _) = make()
         (0..<3).forEach { _ in store.send(.newTerminal) }

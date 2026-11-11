@@ -1,4 +1,4 @@
-// A terminal's name as a field in its row (`rename.rs`): the whole name selected, ↩ or a click elsewhere keeps what was
+// A terminal's (or a group's) name as a field in its row or head (`rename.rs`): the whole name selected, ↩ or a click elsewhere keeps what was
 // typed, ⎋ keeps the old name, and an empty name goes back to what runs in the terminal.
 
 import AppKit
@@ -13,6 +13,7 @@ struct RowRename {
 
 struct RenameField: View {
     let name: String
+    var font = TextRole.body.font.weight(.medium)
     let rename: RowRename
     @State private var text = ""
     @State private var done = false
@@ -22,7 +23,7 @@ struct RenameField: View {
     var body: some View {
         TextField("", text: $text)
             .textFieldStyle(.plain)
-            .font(TextRole.body.font.weight(.medium))
+            .font(font)
             .foregroundStyle(tokens.textPrimary)
             .focused($focused)
             .onSubmit { finish(text) }
@@ -34,7 +35,7 @@ struct RenameField: View {
                 // The whole name is selected, so typing replaces it.
                 DispatchQueue.main.async { NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: nil) }
             }
-            .accessibilityLabel(Words.text("sidebar-rename-field", fallback: "Terminal name"))
+            .accessibilityLabel(Words.text("sidebar-rename-field", fallback: "Name"))
     }
 
     /// The field ends once, whichever of ↩, ⎋ and losing the keyboard comes first.

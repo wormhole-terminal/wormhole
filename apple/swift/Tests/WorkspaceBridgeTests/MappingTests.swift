@@ -13,13 +13,14 @@ final class MappingTests: XCTestCase {
             changes: 3, notes: 2, secondLine: SecondLine(text: "cargo test", tone: .failed, mono: true, trail: "0:05"),
             split: split ?? SplitInfo(id: nil, bracket: nil, chain: false, onScreen: false, members: 0), position: 2, of: 5,
             spoken: "t\(id), idle, 2 of 5", repo: "/Users/ref/app", dirty: true, ahead: 2, behind: 1, repoFiles: 4,
-            glyph: .terminal(unread: true), agentHidden: true, forgetText: true)
+            glyph: .terminal(unread: true), agentHidden: true, forgetText: true, worktree: "/Users/ref/main")
     }
 
     func testARowCarriesTheCoresFactsAndWords() {
         let claude = AgentInfo(key: "claude", name: "Claude Code", shortName: "Claude")
         let mapped = WorkspaceModel.SidebarRow(row(7, state: .needsYou, agent: claude))
         XCTAssertEqual(mapped.id, 7)
+        XCTAssertEqual(mapped.terminal.worktreeOf, "/Users/ref/main", "the row's worktree mark")
         XCTAssertEqual(mapped.terminal.title, "t7")
         XCTAssertEqual(mapped.terminal.activity, .needsInput)
         XCTAssertEqual(mapped.terminal.agent, .claude)

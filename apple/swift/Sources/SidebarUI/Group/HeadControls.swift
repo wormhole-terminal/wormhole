@@ -3,6 +3,7 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 struct HeadChevron: View {
     let isFolded: Bool
@@ -23,9 +24,13 @@ struct HeadChevron: View {
 }
 
 struct HeadAddButton: View {
+    /// The group's name: the tooltip and the label say which group the terminal opens in.
+    let group: String
     let action: () -> Void
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
+
+    private var label: String { Words.text("sidebar-new-in-group", fallback: "New terminal in \(group)") }
 
     var body: some View {
         Button(action: action) {
@@ -36,7 +41,7 @@ struct HeadAddButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help("New terminal in group")
-        .accessibilityLabel("New terminal in group")
+        .help(label)
+        .accessibilityLabel(label)
     }
 }

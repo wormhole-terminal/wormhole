@@ -29,6 +29,14 @@ extension AppController {
             }
             openRowMenu(id, at: .zero, in: session)
             reply("row-menu \(id)\n" + (injector.menu.map(Self.rows) ?? "no menu"))
+        case "group-menu":
+            // ⌃↩ on a sidebar group's head (`group-menu <group>`), kept unshown like the row's.
+            guard let id = UInt32(argument), let session = sessions.first(where: { $0.hub.state.groups.contains { $0.id == id } }) else {
+                reply("error: group-menu <group>")
+                return true
+            }
+            openGroupMenu(id, at: .zero, in: session)
+            reply("group-menu \(id)\n" + (injector.menu.map(Self.rows) ?? "no menu"))
         case "open-folder":
             // Answers Open folder… (⌘O, the palette, the status item) as the system panel's choice would.
             guard let pending = pendingFolder else { reply("error: no Open folder… is waiting"); return true }

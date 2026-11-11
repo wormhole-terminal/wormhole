@@ -21,7 +21,7 @@ public final class WindowHub {
     public let notices = NoticeCenter()
     public let drag = PaneDragSession()
     /// ⌘F while the sidebar has the keyboard is its search's, else the terminal's find.
-    public let sidebarSearch = SidebarSearch()
+    public let sidebarLink = SidebarLink()
     /// Where the keyboard is among the window's areas, and where F6, ⇥ and Esc take it.
     @ObservationIgnored public private(set) lazy var focus = WindowFocus(hub: self)
     /// A terminal dragged out of the sidebar over the panes: the list reports it, the pane area takes the drop.
@@ -31,6 +31,8 @@ public final class WindowHub {
     public var actions = HubActions()
     /// The terminal welcome's example band in the sidebar, while the program's sidebar step is up (never a terminal).
     public var exampleBand: ExampleBand?
+    /// The sidebar's note after a first run without agents (`FirstRun::agents_note`).
+    public var agentsTip = AgentsTip.off
     /// A click on the chip that says an update is ready: the app restarts into it (asking first when that ends something).
     public var onRestartToUpdate: (() -> Void)?
     /// The Project tab's "View all N…": the app opens the window of the project's commands.
@@ -100,6 +102,13 @@ public struct HubActions {
     public var closeTerminal: @MainActor (TerminalID) -> Void = { _ in }
     /// Closing a group asks first when something works in it.
     public var closeGroup: @MainActor (GroupID) -> Void = { _ in }
+    /// "Don't show again" on the sidebar's note: kept for good, until Settings' Reset tips.
+    public var dismissAgentsTip: @MainActor () -> Void = {}
+    /// Settings at a page ("agents"), from the note's link.
+    public var openSettingsAt: @MainActor (String) -> Void = { _ in }
+    /// The shells a right-click of a + offers, and what choosing one does (the menu bar's New Terminal With ▸).
+    public var shells: @MainActor () -> [ShellOffer] = { [] }
+    public var newTerminalWith: @MainActor (String) -> Void = { _ in }
     /// The Show terminals in ▸ Sidebar choice (the tab bar's group switcher offers it).
     public var showTerminalsInSidebar: @MainActor () -> Void = {}
     /// The native context menu of a terminal's grid, built when it is asked for.

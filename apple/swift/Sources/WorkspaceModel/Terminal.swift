@@ -26,6 +26,8 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
     /// "Hide from Agents" and "Forget text" (the row menu's checks): the model keeps them, the shell enforces them.
     public var isAgentHidden: Bool
     public var forgetsText: Bool
+    /// The main working tree this terminal's folder is a linked worktree of (core `Place.linked_to`): the row's worktree mark.
+    public var worktreeOf: String?
     /// What git says of the terminal's folder (core `git_feed`): the repository's root, an unclean tree, how far the
     /// branch is from its upstream, the files the repository has changed.
     public var repo: String?
@@ -53,7 +55,7 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
         message: String? = nil, splitID: Int? = nil, noteCount: Int = 0, changeCount: Int = 0,
         isAgentHidden: Bool = false, forgetsText: Bool = false, repo: String? = nil, isDirty: Bool = false,
         ahead: Int = 0, behind: Int = 0, repoFiles: Int? = nil, group: GroupID? = nil, groupName: String? = nil,
-        isFolded: Bool = false, glyph: TileGlyph? = nil
+        isFolded: Bool = false, glyph: TileGlyph? = nil, worktreeOf: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -79,5 +81,6 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
         self.groupName = groupName
         self.isFolded = isFolded
         self.glyph = glyph
+        self.worktreeOf = worktreeOf
     }
 }

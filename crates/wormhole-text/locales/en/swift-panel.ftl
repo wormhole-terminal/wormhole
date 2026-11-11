@@ -383,6 +383,12 @@ tab-switcher-search = Go to group or terminal…
 tab-switcher-no-matches = No matches
 tab-switcher-no-terminals = No terminals
 tab-switcher-new-group = New group
+# The + on a group's card. { $group } is its name.
+tab-switcher-new-in-group = New terminal in { $group }
+# The switcher's footer. { $previous } and { $next } are the two keys.
+tab-switcher-keys-hint = { $previous } / { $next } previous, next group
+# The head over the shells in the menu of the +.
+tab-new-with = New terminal with
 tab-switcher-show-in-sidebar = Show all groups in the sidebar
 tab-switcher-ungrouped = Ungrouped
 

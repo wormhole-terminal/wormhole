@@ -62,7 +62,7 @@ impl WorkspaceModel {
 
     /// Whether terminal `id` (with its split) may be put in group `group`: one already in it may move
     /// within it, anything else must be inside the fence, when it has one.
-    pub(super) fn admits(&self, group: u32, id: i64) -> bool {
+    pub fn admits(&self, group: u32, id: i64) -> bool {
         self.sidebar.groups.group_of(id) == Some(group) || self.inside(group, id)
     }
 

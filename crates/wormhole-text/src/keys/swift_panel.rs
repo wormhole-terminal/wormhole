@@ -322,48 +322,50 @@ pub const TAB_SWITCHER_NO_MATCHES: Key = Key::new(1835);
 pub const TAB_SWITCHER_NO_TERMINALS: Key = Key::new(1836);
 /// "New group"
 pub const TAB_SWITCHER_NEW_GROUP: Key = Key::new(1837);
+/// "New terminal with"
+pub const TAB_NEW_WITH: Key = Key::new(1840);
 /// "Show all groups in the sidebar"
-pub const TAB_SWITCHER_SHOW_IN_SIDEBAR: Key = Key::new(1838);
+pub const TAB_SWITCHER_SHOW_IN_SIDEBAR: Key = Key::new(1841);
 /// "Ungrouped"
-pub const TAB_SWITCHER_UNGROUPED: Key = Key::new(1839);
+pub const TAB_SWITCHER_UNGROUPED: Key = Key::new(1842);
 /// "current"
-pub const TAB_SWITCHER_CARD_CURRENT: Key = Key::new(1842);
+pub const TAB_SWITCHER_CARD_CURRENT: Key = Key::new(1845);
 /// "needs you"
-pub const TAB_SWITCHER_CARD_ALERT: Key = Key::new(1843);
+pub const TAB_SWITCHER_CARD_ALERT: Key = Key::new(1846);
 /// "Switch Wormhole to"
-pub const PROFILE_MENU_SWITCH_TO: Key = Key::new(1845);
+pub const PROFILE_MENU_SWITCH_TO: Key = Key::new(1848);
 /// "Open a window in…"
-pub const PROFILE_MENU_OPEN_IN: Key = Key::new(1846);
+pub const PROFILE_MENU_OPEN_IN: Key = Key::new(1849);
 /// "Move this window to…"
-pub const PROFILE_MENU_MOVE_TO: Key = Key::new(1847);
+pub const PROFILE_MENU_MOVE_TO: Key = Key::new(1850);
 /// "New profile…"
-pub const PROFILE_MENU_NEW: Key = Key::new(1848);
+pub const PROFILE_MENU_NEW: Key = Key::new(1851);
 /// "Manage profiles…"
-pub const PROFILE_MENU_MANAGE: Key = Key::new(1849);
+pub const PROFILE_MENU_MANAGE: Key = Key::new(1852);
 /// "Settings…"
-pub const PROFILE_MENU_SETTINGS: Key = Key::new(1850);
+pub const PROFILE_MENU_SETTINGS: Key = Key::new(1853);
 /// "Insert into terminal"
-pub const TITLE_ROW_PATH_INSERT: Key = Key::new(1851);
+pub const TITLE_ROW_PATH_INSERT: Key = Key::new(1854);
 /// "detached"
-pub const TITLE_ROW_DETACHED: Key = Key::new(1853);
+pub const TITLE_ROW_DETACHED: Key = Key::new(1856);
 /// "Hidden from agents"
-pub const TITLE_ROW_HIDDEN_FROM_AGENTS: Key = Key::new(1856);
+pub const TITLE_ROW_HIDDEN_FROM_AGENTS: Key = Key::new(1859);
 /// "Open folder in"
-pub const TITLE_ROW_OPEN_IN_HEADER: Key = Key::new(1857);
+pub const TITLE_ROW_OPEN_IN_HEADER: Key = Key::new(1860);
 /// "Open in another app"
-pub const TITLE_ROW_OPEN_IN_ANOTHER: Key = Key::new(1858);
+pub const TITLE_ROW_OPEN_IN_ANOTHER: Key = Key::new(1861);
 /// "Split right (⌘D)"
-pub const TITLE_ROW_SPLIT_RIGHT: Key = Key::new(1861);
+pub const TITLE_ROW_SPLIT_RIGHT: Key = Key::new(1864);
 /// "Split down (⇧⌘D)"
-pub const TITLE_ROW_SPLIT_DOWN: Key = Key::new(1862);
+pub const TITLE_ROW_SPLIT_DOWN: Key = Key::new(1865);
 /// "Uncommitted changes"
-pub const TITLE_ROW_UNCOMMITTED: Key = Key::new(1863);
+pub const TITLE_ROW_UNCOMMITTED: Key = Key::new(1866);
 /// "Out of date"
-pub const DIFF_BADGE_OUT_OF_DATE: Key = Key::new(1869);
+pub const DIFF_BADGE_OUT_OF_DATE: Key = Key::new(1872);
 /// "No longer changed"
-pub const DIFF_BADGE_GONE: Key = Key::new(1870);
+pub const DIFF_BADGE_GONE: Key = Key::new(1873);
 /// "Trust (approve with password)"
-pub const PROJECT_TRUST_PASSWORD: Key = Key::new(1871);
+pub const PROJECT_TRUST_PASSWORD: Key = Key::new(1874);
 
 /// ```text
 /// Couldn't refresh: { $message }
@@ -693,13 +695,27 @@ pub fn tab_switcher_spoken_alert(group: &str) -> String {
 }
 
 /// ```text
+/// New terminal in { $group }
+/// ```
+pub fn tab_switcher_new_in_group(group: &str) -> String {
+    crate::active::message(1838, &[("group", Arg::Str(group))])
+}
+
+/// ```text
+/// { $previous } / { $next } previous, next group
+/// ```
+pub fn tab_switcher_keys_hint(previous: &str, next: &str) -> String {
+    crate::active::message(1839, &[("previous", Arg::Str(previous)), ("next", Arg::Str(next))])
+}
+
+/// ```text
 /// { $count ->
 ///     [one] group · 1 terminal
 ///    *[other] group · { $count } terminals
 /// }
 /// ```
 pub fn tab_switcher_group(count: i64) -> String {
-    crate::active::message(1840, &[("count", Arg::Int(count))])
+    crate::active::message(1843, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -709,49 +725,49 @@ pub fn tab_switcher_group(count: i64) -> String {
 /// }
 /// ```
 pub fn tab_switcher_card_terminals(count: i64) -> String {
-    crate::active::message(1841, &[("count", Arg::Int(count))])
+    crate::active::message(1844, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Profile { $name }, switch profile
 /// ```
 pub fn profile_chip_spoken(name: &str) -> String {
-    crate::active::message(1844, &[("name", Arg::Str(name))])
+    crate::active::message(1847, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Open folder { $shown } in Finder
 /// ```
 pub fn title_row_path_spoken_open(shown: &str) -> String {
-    crate::active::message(1852, &[("shown", Arg::Str(shown))])
+    crate::active::message(1855, &[("shown", Arg::Str(shown))])
 }
 
 /// ```text
 /// branch { $name }
 /// ```
 pub fn title_row_branch_spoken(name: &str) -> String {
-    crate::active::message(1854, &[("name", Arg::Str(name))])
+    crate::active::message(1857, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// A submodule: { $phrase }
 /// ```
 pub fn title_row_submodule(phrase: &str) -> String {
-    crate::active::message(1855, &[("phrase", Arg::Str(phrase))])
+    crate::active::message(1858, &[("phrase", Arg::Str(phrase))])
 }
 
 /// ```text
 /// Open folder in { $app }
 /// ```
 pub fn title_row_open_in_app(app: &str) -> String {
-    crate::active::message(1859, &[("app", Arg::Str(app))])
+    crate::active::message(1862, &[("app", Arg::Str(app))])
 }
 
 /// ```text
 /// { $missing } isn't installed. Open folder in { $app }
 /// ```
 pub fn title_row_open_in_missing(missing: &str, app: &str) -> String {
-    crate::active::message(1860, &[("missing", Arg::Str(missing)), ("app", Arg::Str(app))])
+    crate::active::message(1863, &[("missing", Arg::Str(missing)), ("app", Arg::Str(app))])
 }
 
 /// ```text
@@ -761,7 +777,7 @@ pub fn title_row_open_in_missing(missing: &str, app: &str) -> String {
 /// }
 /// ```
 pub fn title_row_ahead(count: i64, upstream: &str) -> String {
-    crate::active::message(1864, &[("count", Arg::Int(count)), ("upstream", Arg::Str(upstream))])
+    crate::active::message(1867, &[("count", Arg::Int(count)), ("upstream", Arg::Str(upstream))])
 }
 
 /// ```text
@@ -771,26 +787,26 @@ pub fn title_row_ahead(count: i64, upstream: &str) -> String {
 /// }
 /// ```
 pub fn title_row_behind(count: i64, upstream: &str) -> String {
-    crate::active::message(1865, &[("count", Arg::Int(count)), ("upstream", Arg::Str(upstream))])
+    crate::active::message(1868, &[("count", Arg::Int(count)), ("upstream", Arg::Str(upstream))])
 }
 
 /// ```text
 /// Open localhost:{ $port } in the browser
 /// ```
 pub fn title_row_port_open(port: &str) -> String {
-    crate::active::message(1866, &[("port", Arg::Str(port))])
+    crate::active::message(1869, &[("port", Arg::Str(port))])
 }
 
 /// ```text
 /// { $count } more listening: { $ports }
 /// ```
 pub fn title_row_ports_more(count: &str, ports: &str) -> String {
-    crate::active::message(1867, &[("count", Arg::Str(count)), ("ports", Arg::Str(ports))])
+    crate::active::message(1870, &[("count", Arg::Str(count)), ("ports", Arg::Str(ports))])
 }
 
 /// ```text
 /// { $percent }% of the context window used
 /// ```
 pub fn title_row_context_used(percent: &str) -> String {
-    crate::active::message(1868, &[("percent", Arg::Str(percent))])
+    crate::active::message(1871, &[("percent", Arg::Str(percent))])
 }

@@ -20,10 +20,13 @@ struct TerminalTabView: View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radius)
         HStack(spacing: Space._2) {
             TerminalTile(activity: tab.activity, size: TabMetrics.tile)
-            Text(tab.name).font(TextRole.label.font.weight(.medium))
-                .foregroundStyle(selected ? tokens.textPrimary : tokens.textMuted)
-                .lineLimit(1).fixedSize()
-                .frame(maxWidth: .infinity, alignment: .leading)
+            // The name takes the room the tab has (the keycap's included) and is cut by the fade, never pushing the keycap out.
+            Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay(alignment: .leading) {
+                    Text(tab.name).font(TextRole.label.font.weight(.medium))
+                        .foregroundStyle(selected ? tokens.textPrimary : tokens.textMuted)
+                        .lineLimit(1).fixedSize()
+                }
                 .mask { fade }
             if hints, let number = tab.number { keycap(number) }
         }

@@ -39,7 +39,7 @@ struct SidebarSectionView: View {
         }
         .dropFrame(.card(head.id))
         .popover(isPresented: popoverBinding(head.id), arrowEdge: .bottom) {
-            GroupPopover(head: head, rows: section.rows, context: context) { context.openPopover(nil) }
+            GroupPopover(head: head, rows: section.rows, context: context) { dismissPopover() }
         }
         .padding(.horizontal, metrics.cardMargin).padding(.bottom, metrics.cardGap)
         .animation(SidebarMotion.fold, value: head.isFolded)
@@ -67,6 +67,12 @@ struct SidebarSectionView: View {
     }
 
     private func popoverBinding(_ group: GroupID) -> Binding<Bool> {
-        Binding(get: { context.popover == group }, set: { if !$0 { context.openPopover(nil) } })
+        Binding(get: { context.popover == group }, set: { if !$0 { dismissPopover() } })
+    }
+
+    /// Closing the popover gives the keyboard back to the terminal (`group_popover.rs` `on_close`).
+    private func dismissPopover() {
+        context.openPopover(nil)
+        context.hooks.focusTerminal()
     }
 }

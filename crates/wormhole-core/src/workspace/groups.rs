@@ -133,6 +133,11 @@ impl WorkspaceModel {
         self.select_new(id);
     }
 
+    /// The terminal last selected in `group` (`None`: the terminals in no group), for opening a tab set on it.
+    pub fn last_selected_in(&self, group: Option<u32>) -> Option<i64> {
+        self.last_selected.get(&group).copied().filter(|&id| self.index_of(id).is_some())
+    }
+
     /// The folder to ask the person about before a terminal opens in `group`, `None` when there is
     /// nothing to ask: it has a folder, was asked and said no, is the Recovered group, or nothing in
     /// it points at a folder worth offering. Answer with `SetGroupFolder` (and `SetOnlyInFolder`) or

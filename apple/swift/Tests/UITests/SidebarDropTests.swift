@@ -103,4 +103,16 @@ final class SidebarDropTests: XCTestCase {
         let end = lines.mark(for: .move(.top(before: nil), leavesSplit: false, withMates: false), over: .tail, gap: gap)
         XCTAssertNotNil(end, "a landing at the end draws under the last card")
     }
+
+    /// A pane's header let go over the list: a line that takes it lands it; below the rows, or on a row that takes nothing, the
+    /// terminal leaves its split, unless it was let go beside a terminal of its own split.
+    func testAPaneHeaderLandsOrLeavesItsSplit() {
+        let row = DropOver.row(4, .middle)
+        XCTAssertEqual(PaneHeaderLanding.decide(over: row, planned: true, inSplit: true, onSameSplit: false), .drop(row))
+        XCTAssertEqual(PaneHeaderLanding.decide(over: .tail, planned: false, inSplit: true, onSameSplit: false), .leaveSplit)
+        XCTAssertEqual(PaneHeaderLanding.decide(over: nil, planned: false, inSplit: true, onSameSplit: false), .leaveSplit)
+        XCTAssertEqual(PaneHeaderLanding.decide(over: row, planned: false, inSplit: true, onSameSplit: true), .nothing, "beside its own")
+        XCTAssertEqual(PaneHeaderLanding.decide(over: row, planned: false, inSplit: true, onSameSplit: false), .leaveSplit)
+        XCTAssertEqual(PaneHeaderLanding.decide(over: nil, planned: false, inSplit: false, onSameSplit: false), .nothing)
+    }
 }

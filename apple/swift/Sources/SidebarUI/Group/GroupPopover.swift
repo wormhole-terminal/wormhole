@@ -1,6 +1,7 @@
 // The popover a group's name opens (`sidebar/group_popover.rs`): the name in a field, the colours as a row of swatches in
-// the theme's own hues (the swatch is the colour as the head's dot shows it), a picker for any other, and the actions.
-// ↩ keeps the name, a swatch or the picker colours the group at once, and ⎋ closes it.
+// the theme's own hues (the swatch is the colour as the head's dot shows it) led by the empty ring for none, a picker for
+// any other, the folder's items, and the actions. ↩ keeps the name, a swatch or the picker colours the group at once, and
+// ⎋ closes it; closing it gives the keyboard back to the terminal (the list does that, as it owns the popover).
 
 import DesignSystem
 import SwiftUI
@@ -20,13 +21,14 @@ struct GroupPopover: View {
     private static let width: CGFloat = 248
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space._3) {
+        VStack(alignment: .leading, spacing: Space._2) {
             TextField(Words.text("sidebar-popover-group-name", fallback: "Group name"), text: $name)
                 .textFieldStyle(.roundedBorder)
                 .focused($focused)
                 .onSubmit { commit(); close() }
                 .onKeyPress(.escape) { close(); return .handled }
             HStack(spacing: Space._2) {
+                noColour
                 ForEach(GroupColor.allCases, id: \.self) { colour in
                     Button { context.send(.setGroupColor(head.id, colour)) } label: { swatch(colour) }
                         .buttonStyle(.plain)
@@ -35,17 +37,38 @@ struct GroupPopover: View {
                 }
                 ColorPicker(Words.text("sidebar-popover-colour-other", fallback: "Other colour"), selection: custom, supportsOpacity: false).labelsHidden()
             }
-            HStack(spacing: Space._2) {
-                Button(head.isPinned ? Words.text("sidebar-unpin", fallback: "Unpin") : Words.text("sidebar-pin", fallback: "Pin")) { context.send(.setGroupPinned(head.id, !head.isPinned)); close() }
-                Button(Words.text("sidebar-menu-group-ungroup", fallback: "Ungroup")) { context.send(.ungroup(head.id)); close() }
-                Button(Words.text("sidebar-menu-group-close", fallback: "Close group"), role: .destructive) { context.closeGroup(head.id); close() }
+            Divider()
+            GroupFolderItems(head: head, context: context, close: close)
+            Divider()
+            item(Words.text("sidebar-menu-group-new-terminal", fallback: "New terminal in group")) { context.newInGroup(head.id) }
+            item(Words.text("sidebar-menu-group-ungroup", fallback: "Ungroup")) { context.send(.ungroup(head.id)) }
+            item(Words.text("sidebar-menu-group-close", fallback: "Close group")) { context.closeGroup(head.id) }
+            item(head.isPinned ? Words.text("sidebar-menu-group-unpin", fallback: "Unpin group") : Words.text("sidebar-menu-group-pin", fallback: "Pin group")) {
+                context.send(.setGroupPinned(head.id, !head.isPinned))
             }
-            .controlSize(.small)
+            item(Words.text("sidebar-menu-group-move-to-window", fallback: "Move group to new window")) { context.send(.moveGroupToWindow(head.id)) }
         }
         .padding(Space._3)
         .frame(width: Self.width)
         .onAppear { name = head.name; focused = true }
         .onDisappear(perform: commit)
+    }
+
+    /// An action of the popover: it runs, and the popover closes.
+    private func item(_ title: String, _ action: @escaping () -> Void) -> some View {
+        PopoverItem(title: title) { action(); close() }
+    }
+
+    /// The empty ring first among the swatches: it takes the colour away, and is ringed while the group has none.
+    private var noColour: some View {
+        Button { context.send(.setGroupColor(head.id, nil)) } label: {
+            Circle().strokeBorder(tokens.textMuted, lineWidth: tokens.metrics.borderWidth)
+                .frame(width: Self.swatch, height: Self.swatch)
+                .overlay { if head.color == nil && head.customColor == nil { Circle().strokeBorder(tokens.textPrimary, lineWidth: tokens.metrics.focusRingWidth) } }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Words.text("sidebar-menu-group-colour-none", fallback: "No colour"))
+        .accessibilityAddTraits(head.color == nil && head.customColor == nil ? .isSelected : [])
     }
 
     /// A colour picked freely: the group's own when it has one, else the theme's grey to start from; each pick is the core's

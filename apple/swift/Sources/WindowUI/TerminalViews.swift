@@ -10,6 +10,8 @@ import WorkspaceModel
 public final class TerminalViews {
     @ObservationIgnored private var views: [TerminalID: MetalTerminalView] = [:]
     @ObservationIgnored private let make: @MainActor (TerminalID) -> MetalTerminalView?
+    /// Space in the sidebar shows a terminal and keeps the keyboard in the list: the next view shown does not take it.
+    @ObservationIgnored private var keepsKeys = false
     /// Moves when any view's grid changes, so what shows a size (the status bar) is drawn again.
     public private(set) var gridRevision = 0
     /// The window's text zoom, in points over Settings' size: one for every terminal of the window, a new one adopting it.
@@ -32,6 +34,14 @@ public final class TerminalViews {
         view.setZoom(zoom, animated: false)
         views[id] = view
         return view
+    }
+
+    public func keepKeys() { keepsKeys = true }
+
+    /// Whether the terminal being shown takes the keyboard; asked once per terminal shown.
+    func takesKeys() -> Bool {
+        defer { keepsKeys = false }
+        return !keepsKeys
     }
 
     /// The view if it was made already; never starts a terminal.

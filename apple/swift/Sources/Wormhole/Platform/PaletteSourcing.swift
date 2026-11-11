@@ -74,7 +74,7 @@ extension AppController {
             recentFolders: { [weak self] in self?.recents.roots ?? [] },
             openInNewWindow: { [weak self, weak session] in self?.openInNewWindow($0, from: session) },
             // The one close entry point: it asks while something runs, and closes the window when it was the last terminal.
-            closeTerminal: { [weak self] id in self?.closeTerminal(id, in: self?.session(holding: id)) })
+            closeTerminal: { [weak self] id in self?.closeTerminal(id) })
     }
 
     /// The menus' facts about the window, as the palette's action list wants them: what is flipped, greyed or hidden.

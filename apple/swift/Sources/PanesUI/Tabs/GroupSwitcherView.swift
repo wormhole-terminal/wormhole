@@ -23,7 +23,10 @@ struct GroupSwitcherView: View {
                 .textFieldStyle(.roundedBorder).focused($searching)
                 .onSubmit { hits.first.map(go) }
             if query.trimmingCharacters(in: .whitespaces).isEmpty {
-                ForEach(model.cards) { card in SetCardView(card: card) { go(.set(card.id)) } }
+                ForEach(model.cards) { card in
+                    // A pinned group with nothing in it is somewhere to start a terminal: its card has a +.
+                    SetCardView(card: card, open: { go(.set(card.id)) }, add: card.pinned && card.count == 0 ? addAction(card) : nil)
+                }
                 Divider()
                 footer
             } else if hits.isEmpty {
@@ -39,9 +42,19 @@ struct GroupSwitcherView: View {
     }
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let keys = actions.groupKeys()
+        return VStack(alignment: .leading, spacing: 0) {
             footerButton("plus", PanesText.newGroup) { dismiss(); actions.newGroup() }
             footerButton("sidebar.left", PanesText.showGroupsInSidebar) { dismiss(); actions.showGroupsInSidebar() }
+            if !keys.hint.isEmpty {
+                HStack {
+                    Text(keys.hint)
+                    Spacer(minLength: Space._2)
+                    Text(keys.keys)
+                }
+                .font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                .padding(.horizontal, Space._2).padding(.top, Space._1)
+            }
         }
     }
 
@@ -70,6 +83,11 @@ struct GroupSwitcherView: View {
         .buttonStyle(.plain)
     }
 
+    private func addAction(_ card: SetCard) -> (() -> Void)? {
+        guard let group = model.sets[card.id].groupID else { return nil }
+        return { dismiss(); actions.newTerminal(group) }
+    }
+
     private func go(_ hit: TabSets.Hit) {
         dismiss()
         switch hit {
@@ -83,6 +101,7 @@ struct GroupSwitcherView: View {
 struct SetCardView: View {
     let card: SetCard
     let open: () -> Void
+    var add: (() -> Void)?
     @Environment(\.tokens) private var tokens
 
     /// How strong the open group's ring is: the primary at this share (`RING`).
@@ -96,6 +115,7 @@ struct SetCardView: View {
                     Text(card.label).font(TextRole.label.font).foregroundStyle(tokens.textPrimary)
                     if card.alert { Circle().fill(tokens.agentAttention).frame(width: Metric.statusDot - 2, height: Metric.statusDot - 2) }
                     Spacer(minLength: Space._2)
+                    if let add { IconButton(lucide: .plus, label: LocalizedStringKey(PanesText.newTerminalIn(card.label)), action: add) }
                     CountBadge(card.count)
                 }
                 if card.count == 0 {

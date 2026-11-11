@@ -15,7 +15,7 @@ extension ActionRouter {
             "toggleRightPanel": { if look.zen == nil { hub.send(.togglePanel) } },
             "toggleStatusBar": { if look.zen == nil { look.statusBar.toggle() } },
             "toggleZenMode": { [unowned self] in app.toggleZen() },
-            "toggleTerminalTabs": { look.tabsOnTop.toggle() },
+            "toggleTerminalTabs": { [unowned self] in app.settingsModel.backend.set("terminals_in", to: .string(look.tabsOnTop ? "sidebar" : "tabs")) },
             "focusNextArea": { hub.focus.step(1) },
             "focusPreviousArea": { hub.focus.step(-1) },
             "focusTerminalOrPanel": { hub.focus.toggleTerminalAndPanel() },
@@ -44,7 +44,7 @@ extension ActionRouter {
     func findActions() -> [ActionID: Handler] {
         var hub: WindowHub { app.hub }
         return [
-            "find": { if !hub.sidebarSearch.revealIfFocused() { hub.find(.open) } },
+            "find": { hub.find(.open) },
             "findNext": { hub.find(.next) },
             "findPrevious": { hub.find(.previous) },
             "useSelectionForFind": { hub.find(.useSelection) },

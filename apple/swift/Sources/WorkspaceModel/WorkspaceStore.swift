@@ -91,6 +91,12 @@ public final class WorkspaceStore {
     /// The folder to offer a group that has none before a terminal opens in it.
     public func groupFolderOffer(group: GroupID) -> String? { backend.groupFolderOffer(group: group) }
 
+    /// Whether the group's fence lets the terminal in (a menu greys the group that refuses).
+    public func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool { backend.groupAdmits(group, terminal: terminal) }
+
+    /// The terminal last selected in a group (nil: the ones in no group).
+    public func lastSelected(in group: GroupID?) -> TerminalID? { backend.lastSelected(in: group) }
+
     private func woke() {
         backend.drain()
         pull()

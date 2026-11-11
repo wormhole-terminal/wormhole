@@ -11,18 +11,20 @@ struct SecondLineView: View {
     let line: SecondLine
     let isSelected: Bool
     let rolls: Bool
+    /// Set when the line does not fit its room (the row's tooltip says it whole).
+    @Binding var cut: Bool
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         HStack(spacing: Space._2) {
             Text(line.text)
-                .font(line.isCommand ? .system(size: TextRole.caption.size, design: .monospaced)
-                    : TextRole.caption.font.weight(line.tone == .plain ? .medium : .regular))
+                .font(font)
                 .foregroundStyle(color)
                 .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .cutProbe(line.text, font: font, cut: $cut)
                 .id(rolls ? line.text : "")
                 .transition(.push(from: .bottom))
-            Spacer(minLength: 0)
             if let trail = line.trail {
                 Text(trail).font(TextRole.caption.font.monospacedDigit()).foregroundStyle(tokens.textFaint)
                     .lineLimit(1).fixedSize()
@@ -31,6 +33,11 @@ struct SecondLineView: View {
         .frame(height: RowGeometry.metaLine)
         .clipped()
         .animation(rolls ? SidebarMotion.fold : nil, value: line.text)
+    }
+
+    private var font: Font {
+        line.isCommand ? .system(size: TextRole.caption.size, design: .monospaced)
+            : TextRole.caption.font.weight(line.tone == .plain ? .medium : .regular)
     }
 
     private var color: Color {

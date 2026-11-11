@@ -82,7 +82,7 @@ enum SidebarSnapshot {
         ThemeStore.shared.increaseContrast = contrast
         let theme = try XCTUnwrap(library.theme(id: theme))
         return try render(
-            SidebarView(state: state, appearance: appearance, closeGroup: nil, caught: caught, send: { _ in }),
+            SidebarView(state: state, appearance: appearance, hooks: SidebarHooks(), caught: caught, send: { _ in }),
             theme: theme, contrast: contrast, name: name, size: size, settle: settle)
     }
 

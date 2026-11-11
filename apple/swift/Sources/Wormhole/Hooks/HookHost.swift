@@ -81,7 +81,7 @@
                 app.session(holding: Int(terminal))?.hub.driven(terminal: Int(terminal), typing: typing, agent: agent)
             case .probesChanged: probesChanged()
             case .welcomeDemo(let terminal, let show): welcomeDemo(terminal: Int(terminal), show: show)
-            case .welcomeEnded(let terminal): welcomeEnded(terminal: Int(terminal))
+            case .welcomeEnded(let terminal, let note): welcomeEnded(terminal: Int(terminal), note: note)
             case .welcomeAskPermission: askNotificationPermission()
             case .welcomePanel(let terminal, let open): welcomePanel(terminal: Int(terminal), open: open)
             }

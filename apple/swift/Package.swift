@@ -30,7 +30,7 @@ var targets: [Target] = [
     // theme's resolved tokens, written from `wormhole-core` by `apple/scripts/dump-themes.sh`.
     .target(name: "DesignSystem", dependencies: ["WordsModel"], resources: [.copy("Resources/themes.json")]),
     // The sidebar's list, rows and header.
-    .target(name: "SidebarUI", dependencies: ["WorkspaceModel", "DesignSystem", "WordsModel"]),
+    .target(name: "SidebarUI", dependencies: ["WorkspaceModel", "DesignSystem", "WordsModel", "PanesModel"]),
     // Title rows, status bar, right panel and the window that holds them with the terminal view.
     .target(
         name: "WindowUI",

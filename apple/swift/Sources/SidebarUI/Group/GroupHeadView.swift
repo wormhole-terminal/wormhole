@@ -2,7 +2,7 @@
 // the folder under it (after the name in Dense); a dot of the group's colour before the name where there is no card to wash;
 // at the right a chevron that turns when the group folds, a + under the pointer, and, folded, its terminals' tiles, their
 // count and a dot while one needs input or failed. A group with nothing in it says "No terminals". The whole head folds
-// and opens it; the name opens the group's popover.
+// and opens it; the name opens the group's popover (its folder shows as a tooltip) and turns into a field to rename it.
 
 import DesignSystem
 import SwiftUI
@@ -27,28 +27,28 @@ struct GroupHeadView: View {
     private var height: CGFloat { twoLines ? metrics.headTwoLineHeight : isEmpty ? metrics.emptyHeight : metrics.headHeight }
 
     var body: some View {
-        Button { context.send(.toggleGroup(head.id)) } label: {
-            HStack(spacing: Space._2) {
-                if !metrics.cards, let mark {
-                    Circle().fill(mark).frame(width: Metric.statusDot, height: Metric.statusDot)
-                }
-                label
-                Spacer(minLength: 0)
-                if head.isFolded { FoldedSummary(tiles: section.tiles, count: section.terminalCount, alert: section.alert).transition(.opacity) }
-                if hovering && !isEmpty { HeadAddButton { context.newInGroup(head.id) } }
-                if isEmpty {
-                    Text(Words.text("sidebar-group-empty", fallback: "No terminals")).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
-                    HeadAddButton { context.newInGroup(head.id) }
-                } else {
-                    HeadChevron(isFolded: head.isFolded)
-                }
+        HStack(spacing: Space._2) {
+            if !metrics.cards, let mark {
+                Circle().fill(mark).frame(width: Metric.statusDot, height: Metric.statusDot)
             }
-            .padding(.horizontal, metrics.rowInset)
-            .frame(maxWidth: .infinity, minHeight: height, alignment: .leading)
-            .contentShape(Rectangle())
+            label
+            Spacer(minLength: 0)
+            if head.isFolded { FoldedSummary(tiles: section.tiles, count: section.terminalCount, alert: section.alert).transition(.opacity) }
+            if hovering && !isEmpty { HeadAddButton(group: head.name) { context.newInGroup(head.id) } }
+            if isEmpty {
+                Text(Words.text("sidebar-group-empty", fallback: "No terminals")).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
+                HeadAddButton(group: head.name) { context.newInGroup(head.id) }
+            } else {
+                HeadChevron(isFolded: head.isFolded)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, metrics.rowInset)
+        .frame(maxWidth: .infinity, minHeight: height, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture { context.send(.toggleGroup(head.id)) }
         .onHover { hovering = $0 }
+        .ringWhileMenuOpen(hovering: hovering)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { context.frames.heads[head.id] = $0 }
         .overlay {
             if keyed == .group(head.id) {
                 RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
@@ -63,16 +63,36 @@ struct GroupHeadView: View {
         .accessibilityLabel(head.spoken)
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(Words.text("sidebar-group-head-hint", fallback: "Folds or opens the group"))
+        .accessibilityAction { context.send(.toggleGroup(head.id)) }
+        .accessibilityAction(named: Words.text("sidebar-group-edit-action", fallback: "Edit group")) { context.openPopover(head.id) }
+        .accessibilityAction(named: Words.text("sidebar-rename-action", fallback: "Rename")) { context.rename(.group(head.id)) }
     }
 
     @ViewBuilder private var label: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Space._1) {
-                Text(head.name).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                name
                 if head.isPinned { LucideView(icon: .pin, size: RowGeometry.pin).foregroundStyle(tokens.textFaint) }
                 if let folder, !twoLines { folderText(folder) }
             }
             if let folder, twoLines { folderText(folder) }
+        }
+    }
+
+    /// The name opens the popover (a click elsewhere on the head folds); renamed in place it is a field, and whatever ends it
+    /// (↩, ⎋ or a click elsewhere) gives the keyboard back to the terminal.
+    @ViewBuilder private var name: some View {
+        if context.renaming == .group(head.id) {
+            RenameField(name: head.name, font: TextRole.label.font, rename: RowRename { typed in
+                context.rename(nil)
+                if let typed { context.send(.renameGroup(head.id, typed)) }
+                context.hooks.focusTerminal()
+            })
+        } else {
+            Text(head.name).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                .contentShape(Rectangle())
+                .onTapGesture { context.openPopover(head.id) }
+                .help(head.folder ?? "")
         }
     }
 

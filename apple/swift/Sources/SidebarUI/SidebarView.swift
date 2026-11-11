@@ -1,6 +1,7 @@
 // The list of terminals (`sidebar/list.rs`): cards from the core's sections (`state.sections`), under the window's own title row (the
 // new-terminal button and the collapse button are the window's, as in the GPUI app). It draws and sends actions; it never
-// edits state. Keys: the list is one tab stop and keeps a cursor of its own (`SidebarWalk`); Return opens a terminal.
+// edits state. Keys: the list is one tab stop and keeps a cursor of its own (`SidebarWalk`); Return opens a terminal and
+// gives it the keyboard, Space only shows it. There is no search field: the GPUI list has none (⌘F is the terminal's Find).
 // It paints no fill of its own: the column's surface is the window's, at the window's opacity over the blur
 // (painting `sidebar.background` here as well hid the blur and read lighter than the GPUI app's).
 // It holds only what a view must: the keys' cursor, the name being typed and the drag in flight. The second lines' words
@@ -8,6 +9,7 @@
 
 import DesignSystem
 import SwiftUI
+import UniformTypeIdentifiers
 import WordsModel
 import WorkspaceModel
 
@@ -15,25 +17,26 @@ public struct SidebarView: View {
     public let state: WorkspaceState
     public let send: @MainActor (WorkspaceAction) -> Void
     public let appearance: SidebarAppearance
-    /// How the window answers closing a group (it asks first when something works in it); nil sends the close at once.
-    public let closeGroup: (@MainActor (GroupID) -> Void)?
-    /// What ⌘F asks of the list; the window keeps it, so it can tell whether the sidebar has the keyboard.
-    public let search: SidebarSearch
+    /// What the window answers: the close questions, the keyboard going back to the terminal.
+    public let hooks: SidebarHooks
+    /// What the window and the list say to each other (who has the keyboard, the keyboard's menus).
+    public let link: SidebarLink
     /// The terminal welcome's example band, after the list's own cards while the program's sidebar step is up.
     public let band: ExampleBand?
-    @State var searchText: String
-    @State var searchOpen = false
-    @FocusState var searchFocused: Bool
     @State var hold = CommandHoldMonitor()
     @State var cursor: SidebarStop?
     @Environment(\.windowFront) private var windowFront
     @State var keysLead = false
     @State var typed = TypedPrefix()
-    @State var renaming: TerminalID?
+    @State var renaming: SidebarRename?
+    @State var flash: (id: TerminalID, generation: Int)?
     @State var rowFrames = RowFrames()
     @State var popover: GroupID?
     @State var frames: [DropSlot: CGRect] = [:]
     @State var drag: LiveDrag?
+    /// Where a pane header dragged over the list would land (the list draws its mark), and which terminal it carries.
+    @State var paneAim: DropAim?
+    @State var paneDragReader = PaneHeaderDragReader()
     @State var shifts: [TerminalID: Int] = [:]
     /// The list's frame in the window, and where a drag's pointer stands in it: what tells a drag over the list from one
     /// that has left it for the panes.
@@ -47,26 +50,24 @@ public struct SidebarView: View {
     @Environment(\.reduceMotion) var reduce
     public init(
         state: WorkspaceState, appearance: SidebarAppearance = SidebarAppearance(),
-        closeGroup: (@MainActor (GroupID) -> Void)? = nil, search: SidebarSearch = SidebarSearch(),
+        hooks: SidebarHooks = SidebarHooks(), link: SidebarLink = SidebarLink(),
         band: ExampleBand? = nil, send: @escaping @MainActor (WorkspaceAction) -> Void
     ) {
-        self.init(state: state, appearance: appearance, closeGroup: closeGroup, search: search, band: band, caught: nil, send: send)
+        self.init(state: state, appearance: appearance, hooks: hooks, link: link, band: band, caught: nil, send: send)
     }
 
     /// A list caught mid-edit, for pictures and tests: a name half typed, a drag in flight, a group's popover open.
     /// The window starts every list at rest.
     init(
-        state: WorkspaceState, appearance: SidebarAppearance, closeGroup: (@MainActor (GroupID) -> Void)?,
-        search: SidebarSearch = SidebarSearch(), band: ExampleBand? = nil, caught: Caught?,
+        state: WorkspaceState, appearance: SidebarAppearance, hooks: SidebarHooks,
+        link: SidebarLink = SidebarLink(), band: ExampleBand? = nil, caught: Caught?,
         send: @escaping @MainActor (WorkspaceAction) -> Void
     ) {
         self.state = state
-        self.search = search
+        self.link = link
         self.band = band
-        _searchText = State(initialValue: state.search)
-        _searchOpen = State(initialValue: caught?.searchOpen ?? false)
         self.appearance = appearance
-        self.closeGroup = closeGroup
+        self.hooks = hooks
         self.send = send
         _renaming = State(initialValue: caught?.renaming)
         _drag = State(initialValue: caught?.drag)
@@ -74,27 +75,20 @@ public struct SidebarView: View {
     }
 
     struct Caught {
-        var renaming: TerminalID?
+        var renaming: SidebarRename?
         var drag: LiveDrag?
         var popover: GroupID?
-        var searchOpen = false
     }
 
     public var body: some View {
         let sections = state.sections
         let walk = SidebarWalk(sections)
         let context = context(sections)
-        VStack(spacing: 0) {
-            searchBar
-            list(sections, walk, context)
-        }
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { viewport = $0 }
-        .onChange(of: search.requests) { revealSearch() }
-        .onChange(of: search.renames) { renaming = search.renaming }
-        .onChange(of: search.keyboardRequests) { focused = true; keysLead = true }
-        .onChange(of: state.search) { _, text in if searchText != text { searchText = text } }
-        .onChange(of: searchText) { _, text in if text != state.search { send(.search(text)) } }
-        .onChange(of: focused || searchFocused, initial: true) { _, has in search.hasKeyboard = has }
+        list(sections, walk, context)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { viewport = $0 }
+            .onChange(of: link.requests) { answer(link.request) }
+            .onChange(of: link.keyboardRequests) { focused = true; keysLead = true }
+            .onChange(of: focused, initial: true) { _, has in link.hasKeyboard = has }
     }
 
     private func list(_ sections: [SidebarSection], _ walk: SidebarWalk, _ context: SidebarContext) -> some View {
@@ -107,21 +101,18 @@ public struct SidebarView: View {
                     if let band { ExampleBandView(band: band, context: context) }
                 }
                 .padding(.top, Space._1)
+                // At least the list's height, so a pane header can be let go below the rows (it leaves its split).
+                .frame(maxWidth: .infinity, minHeight: viewport.height, alignment: .top)
                 .animation(SidebarMotion.list, value: sections.flatMap { $0.rows.map(\.id) })
                 .coordinateSpace(.named(DragLift.space))
                 .onPreferenceChange(DropFrames.self) { frames = $0 }
+                .onDrop(of: [.plainText], delegate: paneHeaderDrop(sections))
                 .overlay(alignment: .topLeading) { dragLayer(sections) }
             }
             .scrollIndicators(.automatic)
-            // Rubber-banding even when the list fits: the pull is what shows the search.
-            .scrollBounceBehavior(.always, axes: .vertical)
-            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
-                peekSearch(at: offset)
-            }
             .onChange(of: cursor) { _, stop in if let stop { withAnimation(SidebarMotion.state) { proxy.scrollTo(stop) } } }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .overlay(alignment: .top) { if sections.isEmpty && searching { NothingFound() } }
         .environment(\.sidebarMetrics, SidebarMetrics(density: appearance.density, cards: appearance.cards))
         .environment(\.sidebarLook, appearance)
         .environment(\.rowChanges, RowChanges.counts(sections, scope: appearance.changesScope))
@@ -138,7 +129,6 @@ public struct SidebarView: View {
         .onDisappear { hold.stop() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Words.text("sidebar-list", fallback: "Terminals"))
-        .accessibilityAction(named: SidebarText.searchPlaceholder) { search.reveal() }
     }
 
     private func context(_ sections: [SidebarSection]) -> SidebarContext {
@@ -147,14 +137,28 @@ public struct SidebarView: View {
             groups: sections.compactMap { section in
                 section.head.map { SidebarContext.GroupChoice(id: $0.id, name: $0.name, members: section.rows.map(\.id)) }
             },
-            send: send, renaming: renaming, rename: { renaming = $0 }, shifts: shifts,
+            send: { act($0) }, open: { openTerminal($0) }, renaming: renaming, rename: { renaming = $0 }, shifts: shifts,
             drag: DragHooks(
                 item: drag?.item, moved: { dragMoved($0, $1, sections) }, ended: { dragEnded($0, $1, sections) },
                 window: { dragWindow($0, $1) }),
-            everyTerminal: state.all, newInGroup: { newInGroup($0) },
-            closeGroup: { closeGroup?($0) ?? send(.closeGroup($0)) }, popover: popover, openPopover: { popover = $0 },
-            frames: rowFrames)
+            everyTerminal: state.all, newGroup: { newGroup(for: $0) }, newInGroup: { newInGroup($0) },
+            hooks: hooks, flash: flash,
+            admits: { group, id in dropPlanner?.groupAdmits(group, terminal: id) ?? true },
+            hasRoom: { other, beside in dropPlanner?.paneDropRefusal(dragged: other, target: beside, zone: .right) == nil },
+            popover: popover, openPopover: { popover = $0 }, frames: rowFrames)
     }
+
+    /// An action of the list: a row that moves to another group flashes once, as it lands (`sidebar/groups.rs` `flash`).
+    func act(_ action: WorkspaceAction) {
+        switch action {
+        case .addToGroup(let id, _), .moveTerminal(let id, _, _, _): flashRow(id)
+        case .dropTerminal(let id, let over): if case .move? = dropPlanner?.dropPlan(dragged: id, over: over) { flashRow(id) }
+        default: break
+        }
+        send(action)
+    }
+
+    private func flashRow(_ id: TerminalID) { flash = (id, (flash?.generation ?? 0) + 1) }
 }
 
 /// Letters typed in the list: what was typed in the last second, so a name can be reached by its first letters.

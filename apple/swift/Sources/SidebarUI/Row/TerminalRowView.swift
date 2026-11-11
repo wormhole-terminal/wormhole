@@ -28,10 +28,10 @@ struct TerminalRowView: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Button { context.send(.select(terminal.id)) } label: { content }
+            Button { context.open(terminal.id) } label: { content }
                 .buttonStyle(.plain)
-            if hovering && !showsHints && context.renaming != terminal.id {
-                CloseButton(isSelected: isSelected) { context.send(.close(terminal.id)) }
+            if hovering && !showsHints && context.renaming != .terminal(terminal.id) {
+                CloseButton(isSelected: isSelected) { context.closeTerminal(terminal.id) }
                     .padding(.top, RowGeometry.closeTop).padding(.trailing, inset - (RowGeometry.closeBox - Metric.glyph) / 2)
                     .transition(.opacity)
             }
@@ -50,7 +50,9 @@ struct TerminalRowView: View {
                 RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
             }
         }
+        .overlay { if let flash = context.flash, flash.id == terminal.id { RowFlash(shape: shape).id(flash.generation) } }
         .contentShape(shape)
+        .ringWhileMenuOpen(hovering: hovering)
         .onHover { hovering = $0 }
         .onAppear { hovering = look.hovered == terminal.id }
         .animation(SidebarMotion.state, value: hovering)
@@ -63,10 +65,10 @@ struct TerminalRowView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(row.spoken)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
-        .accessibilityAction { context.send(.select(terminal.id)) }
+        .accessibilityAction { context.open(terminal.id) }
         .accessibilityAction(named: terminal.isPinned ? Words.text("sidebar-unpin", fallback: "Unpin") : Words.text("sidebar-pin", fallback: "Pin")) { context.send(.togglePin(terminal.id)) }
-        .accessibilityAction(named: Words.text("sidebar-rename-action", fallback: "Rename")) { context.rename(terminal.id) }
-        .accessibilityAction(named: Words.text("sidebar-close-terminal", fallback: "Close terminal")) { context.send(.close(terminal.id)) }
+        .accessibilityAction(named: Words.text("sidebar-rename-action", fallback: "Rename")) { context.rename(.terminal(terminal.id)) }
+        .accessibilityAction(named: Words.text("sidebar-close-terminal", fallback: "Close terminal")) { context.closeTerminal(terminal.id) }
     }
 
     /// The card's own fill when alone; the row's when it stands in a group's card (whose fill shows through).
@@ -91,10 +93,12 @@ struct TerminalRowView: View {
     /// With Status dot off every tile is the quiet one (`row/tile.rs` `tile_parts`).
     private var tileState: TileState { look.showsStatus ? TileState(terminal) : .shell }
 
+    /// A rename ends once (↩, ⎋ or a click elsewhere) and the keyboard goes back to the terminal (`SidebarEvent::Renamed`).
     private var rename: RowRename? {
-        context.renaming == terminal.id ? RowRename { name in
+        context.renaming == .terminal(terminal.id) ? RowRename { name in
             context.rename(nil)
             if let name { context.send(.rename(terminal.id, name)) }
+            context.hooks.focusTerminal()
         } : nil
     }
 }

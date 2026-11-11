@@ -13,6 +13,7 @@ public enum Lucide: Sendable, Hashable {
     case play, ellipsis, messageSquarePlus, ban
     case folderGit2, folderInput, squareTerminal, tag, chevronUp, settings, palette, archive, commit
     case search, caseSensitive, wholeWord, regex
+    case lock, gitFork
 }
 
 /// An icon stroked in the foreground colour, its line width scaled with the box as the SVG's is.

@@ -29,6 +29,7 @@ extension AppController {
     /// sidebar's and title row's own SwiftUI menus here, so nothing else arrives.
     func runContext(_ action: ContextAction) {
         if let row = RowMenu.Kind.allCases.first(where: { $0.key == action.kind }) { return runRow(row, action) }
+        if let group = GroupMenu.Kind.allCases.first(where: { $0.key == action.kind }) { return runGroup(group, action) }
         guard let kind = TerminalMenu.Kind.allCases.first(where: { $0.key == action.kind }) else { return }
         switch kind {
         case .copy: selectedView?.copy(nil)

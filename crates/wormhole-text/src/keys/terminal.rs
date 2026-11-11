@@ -7,57 +7,57 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Copy"
-pub const TERMINAL_MENU_COPY: Key = Key::new(2237);
+pub const TERMINAL_MENU_COPY: Key = Key::new(2245);
 /// "Paste"
-pub const TERMINAL_MENU_PASTE: Key = Key::new(2238);
+pub const TERMINAL_MENU_PASTE: Key = Key::new(2246);
 /// "Select All"
-pub const TERMINAL_MENU_SELECT_ALL: Key = Key::new(2239);
+pub const TERMINAL_MENU_SELECT_ALL: Key = Key::new(2247);
 /// "Find…"
-pub const TERMINAL_MENU_FIND: Key = Key::new(2240);
+pub const TERMINAL_MENU_FIND: Key = Key::new(2248);
 /// "Open Link"
-pub const TERMINAL_MENU_OPEN_LINK: Key = Key::new(2241);
+pub const TERMINAL_MENU_OPEN_LINK: Key = Key::new(2249);
 /// "Copy Link"
-pub const TERMINAL_MENU_COPY_LINK: Key = Key::new(2242);
+pub const TERMINAL_MENU_COPY_LINK: Key = Key::new(2250);
 /// "Copy Command"
-pub const TERMINAL_MENU_COPY_COMMAND: Key = Key::new(2243);
+pub const TERMINAL_MENU_COPY_COMMAND: Key = Key::new(2251);
 /// "Copy Output"
-pub const TERMINAL_MENU_COPY_OUTPUT: Key = Key::new(2244);
+pub const TERMINAL_MENU_COPY_OUTPUT: Key = Key::new(2252);
 /// "Put Command at Prompt"
-pub const TERMINAL_MENU_PUT_COMMAND_AT_PROMPT: Key = Key::new(2245);
+pub const TERMINAL_MENU_PUT_COMMAND_AT_PROMPT: Key = Key::new(2253);
 /// "Fold Output"
-pub const TERMINAL_MENU_FOLD_OUTPUT: Key = Key::new(2246);
+pub const TERMINAL_MENU_FOLD_OUTPUT: Key = Key::new(2254);
 /// "Split Right"
-pub const TERMINAL_MENU_SPLIT_RIGHT: Key = Key::new(2247);
+pub const TERMINAL_MENU_SPLIT_RIGHT: Key = Key::new(2255);
 /// "Split Down"
-pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(2248);
+pub const TERMINAL_MENU_SPLIT_DOWN: Key = Key::new(2256);
 /// "Clear Buffer"
-pub const TERMINAL_MENU_CLEAR: Key = Key::new(2249);
+pub const TERMINAL_MENU_CLEAR: Key = Key::new(2257);
 /// "A program"
-pub const TERMINAL_PROGRAM_UNNAMED: Key = Key::new(2250);
+pub const TERMINAL_PROGRAM_UNNAMED: Key = Key::new(2258);
 /// "Paused"
-pub const TERMINAL_PROGRESS_PAUSED: Key = Key::new(2253);
+pub const TERMINAL_PROGRESS_PAUSED: Key = Key::new(2261);
 /// "Error"
-pub const TERMINAL_PROGRESS_ERROR: Key = Key::new(2254);
+pub const TERMINAL_PROGRESS_ERROR: Key = Key::new(2262);
 
 /// ```text
 /// { $columns } × { $rows }
 /// ```
 pub fn terminal_size_readout(columns: &str, rows: &str) -> String {
-    crate::active::message(2236, &[("columns", Arg::Str(columns)), ("rows", Arg::Str(rows))])
+    crate::active::message(2244, &[("columns", Arg::Str(columns)), ("rows", Arg::Str(rows))])
 }
 
 /// ```text
 /// { $program } wants to read the clipboard
 /// ```
 pub fn terminal_clipboard_ask(program: &str) -> String {
-    crate::active::message(2251, &[("program", Arg::Str(program))])
+    crate::active::message(2259, &[("program", Arg::Str(program))])
 }
 
 /// ```text
 /// restored { $year }-{ $month }-{ $day } { $hour }:{ $minute }
 /// ```
 pub fn terminal_restored_at(year: &str, month: &str, day: &str, hour: &str, minute: &str) -> String {
-    crate::active::message(2252, &[("year", Arg::Str(year)), ("month", Arg::Str(month)), ("day", Arg::Str(day)), ("hour", Arg::Str(hour)), ("minute", Arg::Str(minute))])
+    crate::active::message(2260, &[("year", Arg::Str(year)), ("month", Arg::Str(month)), ("day", Arg::Str(day)), ("hour", Arg::Str(hour)), ("minute", Arg::Str(minute))])
 }
 
 /// ```text
@@ -67,28 +67,28 @@ pub fn terminal_restored_at(year: &str, month: &str, day: &str, hour: &str, minu
 /// }
 /// ```
 pub fn terminal_fold_hidden(count: i64) -> String {
-    crate::active::message(2255, &[("count", Arg::Int(count))])
+    crate::active::message(2263, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $line } · { $label }
 /// ```
 pub fn terminal_fold_labelled(line: &str, label: &str) -> String {
-    crate::active::message(2256, &[("line", Arg::Str(line)), ("label", Arg::Str(label))])
+    crate::active::message(2264, &[("line", Arg::Str(line)), ("label", Arg::Str(label))])
 }
 
 /// ```text
 /// { $line } by { $probe }, { $label }
 /// ```
 pub fn terminal_fold_spoken_by(line: &str, probe: &str, label: &str) -> String {
-    crate::active::message(2257, &[("line", Arg::Str(line)), ("probe", Arg::Str(probe)), ("label", Arg::Str(label))])
+    crate::active::message(2265, &[("line", Arg::Str(line)), ("probe", Arg::Str(probe)), ("label", Arg::Str(label))])
 }
 
 /// ```text
 /// Folded by { $probe }
 /// ```
 pub fn terminal_fold_tooltip_by(probe: &str) -> String {
-    crate::active::message(2258, &[("probe", Arg::Str(probe))])
+    crate::active::message(2266, &[("probe", Arg::Str(probe))])
 }
 
 /// ```text
@@ -98,14 +98,14 @@ pub fn terminal_fold_tooltip_by(probe: &str) -> String {
 /// }
 /// ```
 pub fn terminal_fold_matches(count: i64) -> String {
-    crate::active::message(2259, &[("count", Arg::Int(count))])
+    crate::active::message(2267, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $line } · { $matches }
 /// ```
 pub fn terminal_fold_with_matches(line: &str, matches: &str) -> String {
-    crate::active::message(2260, &[("line", Arg::Str(line)), ("matches", Arg::Str(matches))])
+    crate::active::message(2268, &[("line", Arg::Str(line)), ("matches", Arg::Str(matches))])
 }
 
 /// ```text
@@ -115,5 +115,5 @@ pub fn terminal_fold_with_matches(line: &str, matches: &str) -> String {
 /// }
 /// ```
 pub fn terminal_fold_shown(count: i64) -> String {
-    crate::active::message(2261, &[("count", Arg::Int(count))])
+    crate::active::message(2269, &[("count", Arg::Int(count))])
 }

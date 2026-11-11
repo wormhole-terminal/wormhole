@@ -3,6 +3,7 @@
 // saved of each and where each workspace comes from is the core's (`WindowsHost`).
 
 import AppKit
+import PanesUI
 import PlatformModel
 import WindowUI
 import WindowsModel
@@ -64,8 +65,11 @@ extension AppController {
             guard let session else { return }
             self?.answer($0, from: session)
         }
-        hub.sidebarSearch.rowMenu = { [weak self, weak session] id, frame in
+        hub.sidebarLink.rowMenu = { [weak self, weak session] id, frame in
             if let session { self?.openRowMenu(id, at: frame, in: session) }
+        }
+        hub.sidebarLink.groupMenu = { [weak self, weak session] id, frame in
+            if let session { self?.openGroupMenu(id, at: frame, in: session) }
         }
         hub.actions.terminalMenu = { [weak self, weak session] in self?.terminalMenu(for: $0, in: session) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
@@ -86,7 +90,16 @@ extension AppController {
             guard let self, let session else { return }
             tearChipMoved(id, to: point, in: session)
         }
-        hub.actions.showTerminalsInSidebar = { [weak self] in self?.look.tabsOnTop = false }
+        hub.actions.showTerminalsInSidebar = { [weak self] in self?.settingsModel.backend.set("terminals_in", to: .string("sidebar")) }
+        hub.actions.shells = { [weak self] in
+            (self?.settingsModel.host.shellChoices() ?? []).map { ShellOffer(key: $0.key, name: $0.name, isDefault: $0.isDefault) }
+        }
+        hub.actions.dismissAgentsTip = { [weak self] in self?.dismissAgentsTip() }
+        hub.actions.openSettingsAt = { [weak self] in
+            self?.showSettings()
+            self?.settingsController?.show(section: $0)
+        }
+        hub.actions.newTerminalWith = { [weak self, weak session] key in self?.newTerminal(shellKey: key, in: session) }
     }
 
     /// What the core asked of the shell that no snapshot carries. The Swift app saves no terminal text, so there is

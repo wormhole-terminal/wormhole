@@ -3,8 +3,6 @@
 // Reveal in Finder, Copy path; Show beside…, Remove from split and the two privacy checks ("Don't keep this terminal's text",
 // "Hide from Agents") sit where the GPUI menu has them. Every item is one of the core's actions.
 
-import AppKit
-import DesignSystem
 import SwiftUI
 import WordsModel
 import WorkspaceModel
@@ -17,12 +15,13 @@ struct RowMenu: View {
     var body: some View {
         let id = terminal.id
         let current = context.group(of: id)
-        Button(Words.text("sidebar-menu-rename", fallback: "Rename…")) { context.rename(id) }
-        Button(Words.text("sidebar-menu-add-to-new-group", fallback: "Add terminal to new group")) { context.send(.newGroup([id])) }
+        Button(Words.text("sidebar-menu-rename", fallback: "Rename…")) { context.rename(.terminal(id)) }
+        Button(Words.text("sidebar-menu-add-to-new-group", fallback: "Add terminal to new group")) { context.newGroup(id) }
         if !context.groups.isEmpty {
             Menu(Words.text("sidebar-menu-add-to-group", fallback: "Add terminal to group")) {
                 ForEach(context.groups) { group in
                     Toggle(group.name, isOn: Binding(get: { group.id == current?.id }, set: { _ in context.send(.addToGroup(id, group.id)) }))
+                        .disabled(!context.admits(group.id, id))
                 }
             }
         } else {
@@ -30,7 +29,7 @@ struct RowMenu: View {
         }
         if current != nil { Button(Words.text("sidebar-menu-remove-from-group", fallback: "Remove from group")) { context.send(.removeFromGroup(id)) } }
         Button(Words.text("sidebar-menu-split-right", fallback: "Split right")) { context.send(.splitRight(id)) }
-        Button(Words.text("sidebar-close-terminal", fallback: "Close terminal")) { context.send(.close(id)) }
+        Button(Words.text("sidebar-close-terminal", fallback: "Close terminal")) { context.closeTerminal(id) }
         Divider()
         besideMenu
         if terminal.splitID != nil { Button(Words.text("sidebar-menu-remove-from-split", fallback: "Remove from split")) { context.send(.leaveSplit(id)) } }
@@ -42,19 +41,18 @@ struct RowMenu: View {
         }
         Divider()
         let path = terminal.folder.map { NSString(string: $0).expandingTildeInPath }
-        Button(Words.text("files-row-reveal", fallback: "Reveal in Finder")) { if let path { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)]) } }
+        Button(Words.text("files-row-reveal", fallback: "Reveal in Finder")) { if let path { context.hooks.revealFolder(path) } }
             .disabled(path == nil)
-        Button(Words.text("title-row-path-copy", fallback: "Copy path")) {
-            if let path {
-                Pasteboard.setText(path)
-            }
-        }
-        .disabled(path == nil)
+        Button(Words.text("title-row-path-copy", fallback: "Copy path")) { if let path { context.hooks.copyPath(path) } }
+            .disabled(path == nil)
     }
 
-    /// The terminals that could show next to this one (not already in its split): the other joins it, on its right.
+    /// The terminals that could show next to this one (not already in its split, and the pane has room for): the other joins
+    /// it, on its right.
     @ViewBuilder private var besideMenu: some View {
-        let others = context.everyTerminal.filter { $0.id != terminal.id && ($0.splitID == nil || $0.splitID != terminal.splitID) }
+        let others = context.everyTerminal.filter {
+            $0.id != terminal.id && ($0.splitID == nil || $0.splitID != terminal.splitID) && context.hasRoom($0.id, terminal.id)
+        }
         if others.isEmpty {
             Menu(Words.text("sidebar-menu-show-beside", fallback: "Show beside…")) {}.disabled(true)
         } else {

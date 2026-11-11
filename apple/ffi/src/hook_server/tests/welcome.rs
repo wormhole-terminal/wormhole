@@ -150,7 +150,7 @@ fn finishing_is_remembered_and_the_token_opens_nothing_afterwards() {
     let (tab, token) = welcome(&f, None);
     f.events();
     assert_eq!(ask(&f, tab, &token, json!({"kind": "finish", "skipped": false}))["ok"], true);
-    assert!(f.events().contains(&HookEvent::WelcomeEnded { terminal: tab }));
+    assert!(f.events().contains(&HookEvent::WelcomeEnded { terminal: tab, note: false }));
     let flag = Store::open_at(&f.dir).expect("store").meta(ONBOARDED_KEY).expect("meta");
     assert_eq!(flag.as_deref(), Some("1"), "the first run is remembered");
     for op in [json!({"kind": "state"}), json!({"kind": "set_look", "ligatures": false})] {

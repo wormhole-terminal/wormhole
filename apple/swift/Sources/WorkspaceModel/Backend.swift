@@ -77,6 +77,10 @@ public protocol WorkspaceBackend: AnyObject {
     func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout?
     /// The folder to ask about before a terminal opens in a group that has none, when one is worth offering.
     func groupFolderOffer(group: GroupID) -> String?
+    /// Whether the group's fence lets the terminal (and its split) in: a group that refuses is greyed in the menus.
+    func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool
+    /// The terminal last selected in a group (nil: the terminals in no group): what opening a tab set selects.
+    func lastSelected(in group: GroupID?) -> TerminalID?
     /// The window came to the front or went behind (`active`) and whether it can be seen at all (`seen`): in front, what is
     /// on screen is looked at, so a finished result is spent and a bell heard.
     func setWindowState(active: Bool, seen: Bool)

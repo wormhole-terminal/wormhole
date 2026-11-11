@@ -40,8 +40,9 @@ pub enum HookEvent {
     /// The welcome program's sidebar step: put the example band in the sidebar of the window that holds `terminal`
     /// (`show`), or take it away. The band is never a terminal: not listed, not saved, not numbered, not selectable.
     WelcomeDemo { terminal: i64, show: bool },
-    /// The welcome in `terminal` is over: the example band goes and a start animation still playing is cut short.
-    WelcomeEnded { terminal: i64 },
+    /// The welcome in `terminal` is over: the example band goes and a start animation still playing is cut short. `note`: a
+    /// first run that was not skipped ended on the primer (no coding agent found), so the sidebar's "no agents" note comes up.
+    WelcomeEnded { terminal: i64, note: bool },
     /// A press turned a banner on, or said Allow, while macOS has not been asked: ask it, then tell
     /// `HookServer::set_notification_permission`.
     WelcomeAskPermission,

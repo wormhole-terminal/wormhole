@@ -26,7 +26,7 @@ struct TerminalHost: NSViewRepresentable {
 
     func updateNSView(_ host: Container, context: Context) {
         guard let wanted = views.view(for: id) else { return host.show(nil) }
-        host.show(wanted)
+        host.show(wanted, takesKeys: { views.takesKeys() })
         // The pane is painted at the window's opacity, as every surface is (`WindowLook.surface`).
         wanted.backgroundOpacity = Double(opacity)
     }
@@ -45,7 +45,7 @@ struct TerminalHost: NSViewRepresentable {
 
         @available(*, unavailable) required init?(coder: NSCoder) { fatalError("not decoded") }
 
-        func show(_ view: MetalTerminalView?) {
+        func show(_ view: MetalTerminalView?, takesKeys: () -> Bool = { true }) {
             guard subviews.first !== view else { return }
             subviews.forEach { $0.removeFromSuperview() }
             guard let view else { return }
@@ -54,8 +54,8 @@ struct TerminalHost: NSViewRepresentable {
             view.autoresizingMask = [.width, .height]
             view.contextMenu = { [weak self] in self?.contextMenu() }
             addSubview(view)
-            // The keys go to the terminal that was just shown, not to whatever had focus.
-            window?.makeFirstResponder(view)
+            // The keys go to the terminal that was just shown, not to whatever had focus (unless the sidebar's Space browses).
+            if takesKeys() { window?.makeFirstResponder(view) }
         }
 
         /// The terminal's right-click: the native menu of its grid.

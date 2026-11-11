@@ -104,4 +104,22 @@ import WorkspaceModel
         #expect(bar.setLabel == "Infra" && bar.tabs.map(\.id) == [8, 9] && bar.tabs.map(\.name) == ["ssh build-mac", "terraform plan"])
         #expect(bar.sets.first { $0.label == "Infra" }?.members == [8, 9])
     }
+
+    /// Space in the sidebar shows a terminal and keeps the keyboard in the list: the next terminal shown does not take the keys,
+    /// and only that one (↩ and a click give the terminal the keyboard).
+    @Test func spaceInTheListLeavesTheKeysOnlyForTheNextTerminalShown() {
+        let views = TerminalViews { _ in nil }
+        #expect(views.takesKeys())
+        views.keepKeys()
+        #expect(!views.takesKeys())
+        #expect(views.takesKeys())
+    }
+
+    /// The tab numbers are the core's ⌘ numbers, not positions: a terminal folded away in its group has none.
+    @Test func aTabNumberIsTheCoresNumber() {
+        let store = WorkspaceStore(backend: MockWorkspaceBackend(items: MockWorkspace.items, selected: 8))
+        let hub = WindowHub(store: store, terminals: TerminalViews { _ in nil })
+        let numbers = hub.tabBar.tabs.map(\.number)
+        #expect(numbers == [nil, nil], "Infra is folded: its terminals have no ⌘ number")
+    }
 }

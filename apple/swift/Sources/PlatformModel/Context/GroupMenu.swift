@@ -20,6 +20,8 @@ public struct GroupMenuFacts: Sendable, Equatable {
     public var chosen: Int?
     /// The group wears a colour of the person's own.
     public var custom = false
+    /// The group wears one of the named colours, which a menu with no dots of its own leaves unsaid.
+    public var coloured = false
     public var folder: String?
     public var onlyInFolder = false
 
@@ -45,9 +47,11 @@ public enum GroupMenu {
         item(Words.text("sidebar-menu-rename", fallback: "Rename…"), .rename)
         menu.separator()
         let swatches = facts.colours.map { SwatchRow.Swatch(name: $0.name, token: $0.token) }
-        menu.add(.swatches(SwatchRow(swatches: swatches, selected: facts.chosen) { ContextAction(Kind.colour.key, subject: group, argument: String($0)) }))
+        if !swatches.isEmpty {
+            menu.add(.swatches(SwatchRow(swatches: swatches, selected: facts.chosen) { ContextAction(Kind.colour.key, subject: group, argument: String($0)) }))
+        }
         item(Words.text("sidebar-menu-group-colour-other", fallback: "Other colour…"), .otherColour, checked: facts.custom)
-        item(noColour, .noColour, checked: facts.chosen == nil && !facts.custom)
+        item(noColour, .noColour, checked: facts.chosen == nil && !facts.custom && !facts.coloured)
         menu.separator()
         if let folder = facts.folder {
             menu.item(folder, Kind.setFolder.key, subject: group, enabled: false)

@@ -13,6 +13,8 @@ extension WorkspaceBackend {
     public func title() -> TitleState? { nil }
     public func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout? { nil }
     public func groupFolderOffer(group: GroupID) -> String? { nil }
+    public func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool { true }
+    public func lastSelected(in group: GroupID?) -> TerminalID? { nil }
     public func setWindowState(active: Bool, seen: Bool) {}
     public func settingsChanged() {}
     public func hosting(of id: TerminalID) -> HostingState? { nil }

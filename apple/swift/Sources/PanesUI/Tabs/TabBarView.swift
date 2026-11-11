@@ -43,6 +43,7 @@ public struct TabBarView: View {
                 }
                 tabs
                 IconButton(symbol: "plus", label: LocalizedStringKey(PanesText.newTerminal)) { actions.newTerminal(currentGroup) }
+                    .contextMenu { actions.newMenu() }
             }
             .padding(.horizontal, Metric.edgeInset)
             .frame(height: TabMetrics.height)
@@ -57,6 +58,7 @@ public struct TabBarView: View {
                     ForEach(model.tabs) { tab in
                         TerminalTabView(tab: tab, selected: tab.id == model.selected, hints: hints) { actions.close(tab.id) }
                             .onTapGesture { actions.select(tab.id) }
+                            .contextMenu { actions.tabMenu(tab.id) }
                             .id(tab.id)
                     }
                 }

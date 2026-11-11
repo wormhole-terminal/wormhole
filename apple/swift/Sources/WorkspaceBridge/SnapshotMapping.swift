@@ -50,7 +50,7 @@ extension WorkspaceModel.TerminalSummary {
             message: core.message, splitID: core.split.id.map(Int.init), noteCount: Int(core.notes),
             changeCount: Int(core.changes ?? 0), isAgentHidden: core.agentHidden, forgetsText: core.forgetText, repo: core.repo,
             isDirty: core.dirty, ahead: Int(core.ahead), behind: Int(core.behind), repoFiles: core.repoFiles.map(Int.init),
-            glyph: WorkspaceModel.TileGlyph(core.glyph))
+            glyph: WorkspaceModel.TileGlyph(core.glyph), worktreeOf: core.worktree)
     }
 }
 

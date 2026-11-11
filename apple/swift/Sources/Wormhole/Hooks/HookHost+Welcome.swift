@@ -35,10 +35,12 @@
             hub.send(.togglePanel)
         }
 
-        /// The welcome is over: the band goes and a start animation still playing is cut short.
-        func welcomeEnded(terminal: Int) {
+        /// The welcome is over: the band goes and a start animation still playing is cut short. A first run that ended on the
+        /// primer puts up the sidebar's "no agents" note in that window, unless it was closed for good.
+        func welcomeEnded(terminal: Int, note: Bool = false) {
             app.sessions.forEach { if $0.hub.exampleBand?.owner == terminal { $0.hub.exampleBand = nil } }
             app.aux.introPlayer.skip()
+            if note, !((try? noAgentsTipDismissed()) ?? false) { app.session(holding: terminal)?.hub.agentsTip = .note }
         }
 
         /// The terminal is closed: its band goes, and its welcome's token with it.

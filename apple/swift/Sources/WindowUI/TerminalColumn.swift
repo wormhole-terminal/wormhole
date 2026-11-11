@@ -9,6 +9,7 @@ import DesignSystem
 import PanelUI
 import PanesModel
 import PanesUI
+import SidebarUI
 import SwiftUI
 import TerminalUI
 
@@ -18,6 +19,10 @@ struct TerminalColumn: View {
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
     @Environment(WindowFocus.self) private var focus
+    @State private var hold = CommandHoldMonitor()
+
+    /// ⌘ held on its own shows the numbers on the tabs, as it does on the rows (`sidebar_cmd_hints`).
+    private var hints: Bool { look.sidebar.forcesHints || (look.sidebar.showsCommandHints && hold.showing) }
 
     var body: some View {
         let cover = hub.panel.cover
@@ -34,7 +39,7 @@ struct TerminalColumn: View {
             .frame(height: Chrome.titleHeight)
             .background(WindowDragArea())
 
-            if look.tabsOnTop { TabBarView(model: hub.tabBar, profiles: hub.actions.profiles(), profileActions: hub.actions.profile, actions: hub.tabActions) }
+            if look.tabsOnTop { TabBarView(model: hub.tabBar, profiles: hub.actions.profiles(), profileActions: hub.actions.profile, actions: hub.tabActions(appearance: look.sidebar), hints: hints) }
 
             TerminalStage {
                 TerminalPanes(hub: hub)
@@ -48,6 +53,8 @@ struct TerminalColumn: View {
             .padding([.horizontal, .bottom], Chrome.surfaceInset)
         }
         .background(look.surface(colours.terminal))
+        .onAppear { hold.start() }
+        .onDisappear { hold.stop() }
     }
 }
 

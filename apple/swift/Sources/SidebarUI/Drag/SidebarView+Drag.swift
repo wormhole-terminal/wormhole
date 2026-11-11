@@ -93,19 +93,21 @@ extension SidebarView {
         }
         if let aimed = aim(item, at: point, sections) {
             let joins = if case .row = aimed.mark { true } else { false }
-            withAnimation(joins ? SidebarMotion.joinSettle : SidebarMotion.list) { send(aimed.action) }
+            withAnimation(joins ? SidebarMotion.joinSettle : SidebarMotion.list) { act(aimed.action) }
         }
         drag = nil
     }
 
     /// The mark where the drop lands and the lifted item at the pointer.
     @ViewBuilder func dragLayer(_ sections: [SidebarSection]) -> some View {
-        if let drag {
+        if drag != nil || paneAim != nil {
             let lines = lines(sections)
             ZStack(alignment: .topLeading) {
-                if let mark = drag.aim?.mark { DropMarkView(mark: mark, lines: lines) }
-                DragGhost(terminal: ghostTerminal(drag.item), title: ghostTitle(drag.item))
-                    .fixedSize().position(x: drag.point.x, y: drag.point.y)
+                if let mark = (drag?.aim ?? paneAim)?.mark { DropMarkView(mark: mark, lines: lines) }
+                if let drag {
+                    DragGhost(terminal: ghostTerminal(drag.item), title: ghostTitle(drag.item))
+                        .fixedSize().position(x: drag.point.x, y: drag.point.y)
+                }
             }
             .transition(.opacity)
         }

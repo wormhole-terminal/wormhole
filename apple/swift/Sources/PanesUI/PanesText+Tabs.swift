@@ -5,6 +5,10 @@ import WordsModel
 
 extension PanesText {
     static var newTerminal: String { Words.text("tab-new", fallback: "New terminal") }
+    static var newTerminalWith: String { Words.text("tab-new-with", fallback: "New terminal with") }
+    static func newTerminalIn(_ group: String) -> String {
+        Words.text("tab-switcher-new-in-group", ["group": .text(group)], fallback: "New terminal in \(group)")
+    }
     static var closeTerminal: String { Words.text("tab-close", fallback: "Close terminal") }
     static func tabLabel(_ name: String, selected: Bool) -> String {
         selected

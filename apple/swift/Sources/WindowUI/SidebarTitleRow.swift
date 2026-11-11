@@ -11,6 +11,8 @@ import WorkspaceModel
 struct SidebarTitleRow: View {
     let facts: WindowFacts
     let send: @MainActor (WorkspaceAction) -> Void
+    /// "New terminal with ▸", under a right-click of the +.
+    let menu: AnyView
 
     var body: some View {
         HStack(spacing: 0) {
@@ -21,6 +23,7 @@ struct SidebarTitleRow: View {
             } action: {
                 send(.newTerminal)
             }
+            .contextMenu { menu }
         }
         .padding(.leading, facts.collapseX + Chrome.hit + Chrome.afterToggle)
         .padding(.trailing, Chrome.titleRowPad)

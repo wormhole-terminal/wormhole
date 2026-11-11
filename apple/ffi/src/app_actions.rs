@@ -2,7 +2,7 @@
 //! kinds of file the default terminal takes over (the system call that sets them is AppKit's, so Swift's).
 //! The rules and the store key are core's (`onboarding::DismissedTips`, `terminal::default_terminal`).
 
-use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips};
+use wormhole_core::onboarding::{DISMISSED_TIPS_KEY, DismissedTips, Tip};
 use wormhole_core::storage::store::Store;
 use wormhole_core::terminal::default_terminal::SCRIPT_TYPES;
 
@@ -29,6 +29,32 @@ pub fn dismissed_tips_count() -> Result<u32, FfiError> {
 pub fn reset_tips() -> Result<u32, FfiError> {
     isolation::require()?;
     reset_in(&Store::open().map_err(failed)?)
+}
+
+/// Whether the sidebar's "no agents" note was closed for good (`Don't show again`).
+#[uniffi::export]
+pub fn no_agents_tip_dismissed() -> Result<bool, FfiError> {
+    isolation::require()?;
+    tips_in(&Store::open().map_err(failed)?).map(|tips| tips.contains(Tip::NoAgents))
+}
+
+/// "Don't show again" on the sidebar's "no agents" note: kept in the store, until Settings → Reset tips.
+#[uniffi::export]
+pub fn dismiss_no_agents_tip() -> Result<(), FfiError> {
+    isolation::require()?;
+    dismiss_in(&Store::open().map_err(failed)?)
+}
+
+fn tips_in(store: &Store) -> Result<DismissedTips, FfiError> {
+    Ok(DismissedTips::parse(store.meta(DISMISSED_TIPS_KEY).map_err(failed)?.as_deref()))
+}
+
+fn dismiss_in(store: &Store) -> Result<(), FfiError> {
+    let mut tips = tips_in(store)?;
+    if tips.dismiss(Tip::NoAgents) {
+        store.set_meta(DISMISSED_TIPS_KEY, &tips.to_json()).map_err(failed)?;
+    }
+    Ok(())
 }
 
 fn count_in(store: &Store) -> Result<u32, FfiError> {
@@ -78,7 +104,8 @@ pub fn default_terminal_script_types() -> Vec<String> {
 mod tests {
     use wormhole_core::storage::store::Store;
 
-    use super::{count_in, reset_in};
+    use super::{count_in, dismiss_in, reset_in, tips_in};
+    use wormhole_core::onboarding::Tip;
 
     #[test]
     fn resetting_tips_forgets_the_closed_ones_and_says_how_many_there_were() {
@@ -91,5 +118,18 @@ mod tests {
         assert_eq!(count_in(&store).expect("count"), 0);
         // Nothing to reset: nothing written, nothing said.
         assert_eq!(reset_in(&store).expect("reset"), 0);
+    }
+
+    #[test]
+    fn dismissing_the_no_agents_tip_keeps_it_closed_until_the_tips_are_reset() {
+        let dir = tempfile::tempdir().expect("a temp dir");
+        let store = Store::open_at(dir.path()).expect("a database");
+        assert!(!tips_in(&store).expect("tips").contains(Tip::NoAgents));
+        dismiss_in(&store).expect("dismissed");
+        dismiss_in(&store).expect("twice changes nothing");
+        assert!(tips_in(&store).expect("tips").contains(Tip::NoAgents));
+        assert_eq!(count_in(&store).expect("count"), 1);
+        reset_in(&store).expect("reset");
+        assert!(!tips_in(&store).expect("tips").contains(Tip::NoAgents));
     }
 }

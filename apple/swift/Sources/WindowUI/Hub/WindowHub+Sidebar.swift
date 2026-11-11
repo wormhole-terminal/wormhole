@@ -1,13 +1,42 @@
-// The terminals as tabs when the person shows them there instead of in the sidebar. A group's own edits (rename, pin,
-// ungroup, close) are the core's actions, sent by the sidebar itself; the one with no core action yet, a group's colour,
-// is left out of its menu and popover (the window hands the sidebar no `GroupEdits`).
+// What the window gives the sidebar (its hooks), and the terminals as tabs when the person shows them there instead of in the
+// sidebar. A group's own edits (rename, pin, ungroup, close) are the core's actions, sent by the sidebar itself.
 
+import AppKit
+import DesignSystem
 import PanesModel
 import PanesUI
+import PlatformModel
 import SidebarUI
+import SwiftUI
+import WordsModel
 import WorkspaceModel
 
 extension WindowHub {
+    /// What the list asks of the window: the close questions, the keyboard going between the list and the terminal, and a
+    /// folder's copy (with the "Copied" notice) and reveal.
+    var sidebarHooks: SidebarHooks {
+        var hooks = SidebarHooks()
+        hooks.closeTerminal = { [unowned self] in actions.closeTerminal($0) }
+        hooks.closeGroup = { [unowned self] in actions.closeGroup($0) }
+        hooks.focusTerminal = { [unowned self] in focus.focusTerminal() }
+        hooks.browse = { [unowned self] in terminals.keepKeys() }
+        hooks.copyPath = { [unowned self] in copyFolder($0) }
+        hooks.revealFolder = { [unowned self] in revealFolder($0) }
+        return hooks
+    }
+
+    /// "Copy path": the folder is copied and the chip says so (as the title row's does).
+    public func copyFolder(_ path: String) {
+        Pasteboard.setText(path)
+        notices.post(.copied(.path))
+    }
+
+    /// "Reveal in Finder" (a test instance reveals nothing: `launchesApps`).
+    public func revealFolder(_ path: String) {
+        guard launchesApps else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+    }
+
     /// The tab bar for the terminals as they are: the groups as sets, the loose terminals as the last one.
     var tabBar: TabBarModel {
         let state = state
@@ -19,31 +48,60 @@ extension WindowHub {
             },
             loose: state.all.filter { $0.group == nil }.map(\.id))
         let current = state.selected.flatMap { TabSets.current(sets, containing: $0) } ?? 0
+        // A tab's number is the core's ⌘ number (stable per terminal; a terminal folded away has none).
+        let numbers = Dictionary(state.sections.flatMap(\.rows).compactMap { row in row.number.map { (row.id, $0) } }, uniquingKeysWith: { first, _ in first })
         return TabBarModel.make(
             sets: sets, current: current, selected: state.selected,
             terminal: { id in
                 let terminal = state.all.first { $0.id == id }
-                return TabItem(
-                    id: id, name: terminal?.title ?? "", activity: terminal?.activity ?? .idle,
-                    number: state.terminals.firstIndex { $0.id == id }.map { $0 + 1 })
+                return TabItem(id: id, name: terminal?.title ?? "", activity: terminal?.activity ?? .idle, number: numbers[id])
             },
             pinned: { set in state.groups.first { $0.id == set.groupID }?.isPinned ?? false })
     }
 
-    /// What the bar's controls do (the one-line forwards of `TabBarActions`).
-    var tabActions: TabBarActions {
+    /// The switcher's footer from the keymap (`switcher.rs`): "⌃⌥[ / ] previous, next group" and "⌃⌥1–9".
+    private static var groupKeyHints: (hint: String, keys: String) {
+        let keymap = Keymap.shared
+        guard let previous = keymap.key("previousGroup")?.glyphText, let next = keymap.key("nextGroup")?.glyphText,
+              let first = keymap.key(.group(1))?.glyphText else { return ("", "") }
+        let nextKey = next.last.map(String.init) ?? ""
+        let hint = Words.text(
+            "tab-switcher-keys-hint", ["previous": .text(previous), "next": .text(nextKey)], fallback: "\(previous) / \(nextKey) previous, next group")
+        return (hint, "\(first)–9")
+    }
+
+    /// "New terminal with ▸" under a right-click of a + (the title row's, the tab bar's).
+    var newTerminalMenu: AnyView {
+        AnyView(ShellsMenu(shells: actions.shells()) { [unowned self] in actions.newTerminalWith($0) })
+    }
+
+    /// What the bar's controls do (the one-line forwards of `TabBarActions`), with the menus of a tab and of the +.
+    func tabActions(appearance: SidebarAppearance) -> TabBarActions {
         TabBarActions(
             select: { [unowned self] in send(.select($0)) },
             close: { [unowned self] in actions.closeTerminal($0) },
             newTerminal: { [unowned self] group in send(group.map { .newTerminalInGroup($0) } ?? .newTerminal) },
-            openSet: { [unowned self] in openSet($0) },
-            newGroup: { [unowned self] in send(.newGroup([])) },
-            showGroupsInSidebar: { [unowned self] in actions.showTerminalsInSidebar() })
+            openSet: { [unowned self] in openSet(at: $0) },
+            newGroup: { [unowned self] in send(.newTerminalInNewGroup) },
+            showGroupsInSidebar: { [unowned self] in actions.showTerminalsInSidebar() },
+            tabMenu: { [unowned self] id in
+                AnyView(TerminalContextMenu(
+                    id: id, state: state, appearance: appearance, hooks: sidebarHooks, link: sidebarLink, planner: store, send: send))
+            },
+            newMenu: { [unowned self] in newTerminalMenu },
+            groupKeys: { Self.groupKeyHints })
     }
 
-    private func openSet(_ index: Int) {
-        let bar = tabBar
-        guard bar.sets.indices.contains(index), let first = bar.sets[index].members.first else { return }
-        send(.select(first))
+    /// Open a tab set: the terminal last selected in it, else its first; an empty group gets a new terminal
+    /// (`tab_bar.rs` `open_set`).
+    func openSet(at index: Int) {
+        let sets = tabBar.sets
+        guard sets.indices.contains(index) else { return }
+        let set = sets[index]
+        if let target = store.lastSelected(in: set.groupID).flatMap { set.members.contains($0) ? $0 : nil } ?? set.members.first {
+            send(.select(target))
+        } else if let group = set.groupID {
+            send(.newTerminalInGroup(group))
+        }
     }
 }

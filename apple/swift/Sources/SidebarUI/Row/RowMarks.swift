@@ -1,4 +1,4 @@
-// What sits after a terminal's name and at its first line's end (`row/face.rs`): the pin after the name; at the end the
+// What sits after a terminal's name and at its first line's end (`row/face.rs`): the pin, the lock and the worktree's fork after the name; at the end the
 // chain of a split whose other members are elsewhere, the open notes and tasks, and the files changed ("±N"). The
 // first line's end gives way to the × under the pointer, so these hide there.
 
@@ -7,13 +7,18 @@ import SwiftUI
 import WordsModel
 import WorkspaceModel
 
-struct PinMark: View {
+/// A small icon after the name: the pin, the lock of a terminal hidden from agents, the fork of a worktree. The last two
+/// say what they mean in a two-line tooltip (`row/face.rs`).
+struct RowMark: View {
+    let icon: Lucide
     let isSelected: Bool
+    var tip: String?
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        LucideView(icon: .pin, size: RowGeometry.pin)
+        LucideView(icon: icon, size: RowGeometry.pin)
             .foregroundStyle(isSelected ? tokens.sidebarRowSelectedMuted : tokens.textFaint)
+            .help(tip ?? "")
             .accessibilityHidden(true)
     }
 }

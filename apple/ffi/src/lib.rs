@@ -70,8 +70,8 @@ mod workspace_waited;
 mod workspace_watch;
 
 pub use app_actions::{
-    default_terminal_failed, default_terminal_script_types, dismissed_tips_count, profile_copy_option,
-    profile_delete_question, reset_tips,
+    default_terminal_failed, default_terminal_script_types, dismiss_no_agents_tip, dismissed_tips_count,
+    no_agents_tip_dismissed, profile_copy_option, profile_delete_question, reset_tips,
 };
 pub use aux_backends::*;
 pub use blocks::{BlockRecord, BlockSpanRecord, BlockStatus, PutResult};
