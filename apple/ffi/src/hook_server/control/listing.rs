@@ -114,14 +114,14 @@ fn standing(core: &Core, peer: &Peer) -> DoctorAccess {
         (AgentAccess::Ask, None) => Standing::NotAsked,
         (AgentAccess::Ask, Some(resolved)) => {
             let now = Instant::now();
-            let held = core.desk.with_state(|grants, _| {
+            let held = core.desk().with_state(|grants, _| {
                 grants.find(&resolved.identity, resolved.process).map(|held| held.scope)
             });
             match held {
                 Some(Scope::Session(_)) => Standing::Session,
                 Some(Scope::UntilQuit) => Standing::UntilQuit,
-                None if core.desk.stored_caps(&resolved.identity.key()).is_some() => Standing::Always,
-                None if core.desk.with_state(|grants, _| grants.cooling(&resolved.identity, now)) => {
+                None if core.desk().stored_caps(&resolved.identity.key()).is_some() => Standing::Always,
+                None if core.desk().with_state(|grants, _| grants.cooling(&resolved.identity, now)) => {
                     Standing::DeclinedRecently
                 }
                 None => Standing::NotAsked,

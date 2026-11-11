@@ -16,7 +16,7 @@ struct FontSearchField: View {
         HStack(spacing: Space._2) {
             Image(systemName: "magnifyingglass").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textFaint)
             TextField(FontWords.searchFonts, text: $model.query)
-                .textFieldStyle(.plain).font(TextRole.body.font).focused($focused)
+                .textFieldStyle(.plain).textRole(.body).focused($focused)
                 .autocorrectionDisabled()
                 .onKeyPress(keys: [.upArrow, .downArrow, .pageUp, .pageDown, .return, .escape], phases: [.down, .repeat], action: press)
             if !model.query.isEmpty {

@@ -37,6 +37,7 @@ public final class SampleUpdateBackend: UpdateBackend {
 
     public func check() async {
         set(.checking)
+        // one-shot: the sample's check takes a moment, as a real one does
         try? await Task.sleep(for: .milliseconds(400))
         lastChecked = Date()
         set(.available(Self.release))
@@ -45,6 +46,7 @@ public final class SampleUpdateBackend: UpdateBackend {
     public func install(_ release: Release) async {
         for step in 1...4 {
             set(.downloading(received: Int64(step) * 5_000_000, expected: 20_000_000))
+            // one-shot: the sample's download advances a step at a time
             try? await Task.sleep(for: .milliseconds(250))
         }
         set(.installed(version: release.version))

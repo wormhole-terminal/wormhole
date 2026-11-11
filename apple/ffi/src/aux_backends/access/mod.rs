@@ -18,7 +18,7 @@ use wormhole_core::ipc::access::{
 use wormhole_core::ipc::control::{Error, ErrorCode, Reason, Reply};
 use wormhole_core::platform::codesign::SignerKind;
 use wormhole_core::platform::{paths, process};
-use wormhole_core::storage::paths::{DataRoot, ProfileId};
+use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 use wormhole_core::storage::store::{AgentGrantRow, Store};
 
 mod approvals;
@@ -46,6 +46,8 @@ pub struct AccessDesk {
     inner: Mutex<Inner>,
     /// The profile's folder, where "Always" is stored.
     profile_dir: PathBuf,
+    /// The profile this desk holds approvals for: a request is judged by the desk of the window it reaches.
+    profile: ProfilePaths,
     waker: Waker,
 }
 
@@ -66,6 +68,7 @@ impl AccessDesk {
         Ok(Arc::new(Self {
             inner: Mutex::new(Inner::default()),
             profile_dir: paths.dir().to_path_buf(),
+            profile: paths,
             waker: Waker::new(listener),
         }))
     }
@@ -150,6 +153,10 @@ impl AccessDesk {
 }
 
 impl AccessDesk {
+    pub(crate) fn profile(&self) -> &ProfilePaths {
+        &self.profile
+    }
+
     /// Queues a question for `resolved` (or joins the one its program has open); `waiter` hears the decision.
     /// The control socket's gate calls this; the question's id.
     pub(crate) fn ask(

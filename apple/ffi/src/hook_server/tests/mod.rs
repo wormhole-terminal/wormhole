@@ -7,6 +7,7 @@ mod control;
 mod drive;
 mod hooks;
 mod probes;
+mod profiles;
 mod streams;
 mod support;
 mod windows;

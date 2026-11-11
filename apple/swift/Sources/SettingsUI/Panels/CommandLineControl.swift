@@ -25,13 +25,13 @@ struct CommandLineControl: View {
                     case .foreign: install(SettingsText.install).disabled(true)
                     }
                 }
-                Text(tool.headline).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                Text(tool.headline).textRole(.caption).foregroundStyle(tokens.textMuted)
                     .multilineTextAlignment(.trailing).frame(maxWidth: SettingsMetric.columnWidth / 2, alignment: .trailing)
                 if let note = tool.note { notice(note, color: tool.state == .foreign ? tokens.statusWarningText : tokens.textMuted) }
                 if tool.state == .installed { path(records.commandLinePath) }
             }
         } else {
-            Text(SettingsText.notBuilt).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textFaint)
+            Text(SettingsText.notBuilt).textRole(.label).foregroundStyle(tokens.textFaint)
         }
     }
 
@@ -51,7 +51,7 @@ struct CommandLineControl: View {
     }
 
     private func notice(_ text: String, color: Color) -> some View {
-        Text(text).font(.system(size: TextRole.caption.size)).foregroundStyle(color)
+        Text(text).textRole(.caption).foregroundStyle(color)
             .multilineTextAlignment(.trailing).frame(maxWidth: SettingsMetric.columnWidth / 2, alignment: .trailing)
             .fixedSize(horizontal: false, vertical: true)
     }

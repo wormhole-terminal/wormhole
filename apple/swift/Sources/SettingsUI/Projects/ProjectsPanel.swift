@@ -71,12 +71,12 @@ private struct Defaults: View {
         }
         SettingGroup(title: ProjectsText.trustedProjects, aside: ProjectsText.trustedAside) {
             if projects.trusted.isEmpty {
-                Text(ProjectsText.none).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textFaint).padding(.vertical, Space._3)
+                Text(ProjectsText.none).textRole(.body).foregroundStyle(tokens.textFaint).padding(.vertical, Space._3)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             ForEach(projects.trusted) { project in
                 HStack(spacing: Space._2) {
-                    Text(project.detail).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textPrimary)
+                    Text(project.detail).textRole(.body).foregroundStyle(tokens.textPrimary)
                         .lineLimit(1).truncationMode(.middle).frame(maxWidth: .infinity, alignment: .leading)
                     LinkButton(title: ProjectsText.settings) { Task { await projects.select(project.root) } }
                     LinkButton(title: ProjectsText.revoke) { Task { await projects.revoke(project.root) } }

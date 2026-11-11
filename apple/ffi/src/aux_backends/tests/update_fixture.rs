@@ -161,5 +161,7 @@ pub(super) fn publish(offer: Offer) -> Published {
         wakes.clone(),
     )
     .expect("an engine");
+    // The setting is on by default and the tests below ask for each step; the automatic one is its own test.
+    engine.set_auto_update(false);
     Published { engine, wakes, apps, bundle }
 }

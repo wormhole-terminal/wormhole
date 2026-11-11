@@ -34,13 +34,9 @@ final class UpdateFollower {
         }
     }
 
-    /// Settings → Updates → "Download and install updates by themselves".
-    private var autoUpdate: Bool { app.settingsModel.backend.values["auto_update"]?.bool ?? true }
-
     private func phase(_ phase: UpdatePhase) {
         switch phase {
-        // An automatic check that found a release downloads it unasked, as the setting says.
-        case .available(let release) where autoUpdate: Task { await backend.install(release) }
+        // The core installs what an automatic check finds, as auto_update says (and not again a version that failed).
         case .installed(let version) where told != version:
             told = version
             app.hub.notices.post(.warned(.updateReady(version: version)))
@@ -84,6 +80,7 @@ final class UpdateFollower {
         }
         guard idle else { return }
         Task { [weak self] in
+            // one-shot: the moment every terminal has been idle for idleFor, armed when one went idle
             try? await Task.sleep(for: .seconds(RestartIdle.idleFor))
             if self?.looks == generation { self?.look() }
         }

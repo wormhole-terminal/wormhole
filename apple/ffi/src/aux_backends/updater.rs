@@ -177,6 +177,11 @@ impl UpdateEngine {
             if matches!(state.phase, Phase::Checking | Phase::Downloading) {
                 return;
             }
+            // The schedule's own check leaves an offered or installed update as it is (GPUI's `schedule_check`):
+            // it would withdraw the chips, drop a pending Restart When Idle and fetch the same release again.
+            if !manual && matches!(state.phase, Phase::Available(_) | Phase::Installed(_)) {
+                return;
+            }
             state.phase = Phase::Checking;
             state.generation
         };
@@ -417,7 +422,14 @@ fn finish_check(
             if shared.auto_install.load(Ordering::Relaxed) && (manual || !failed_before) {
                 let version = release.version.to_string();
                 let on_offer = Phase::Available(Box::new(release.clone()));
-                locked(&shared.state).phase = on_offer;
+                {
+                    // A channel switched during the check called it off: what it found is the left channel's.
+                    let mut state = locked(&shared.state);
+                    if state.generation != generation {
+                        return;
+                    }
+                    state.phase = on_offer;
+                }
                 if let Err(err) = start_install(shared, release) {
                     tracing::warn!("automatic install of {version}: {err}");
                 }

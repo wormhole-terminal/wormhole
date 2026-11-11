@@ -39,6 +39,7 @@ public struct SettingsView: View {
         .secondaryBackdrop(.settings)
         .foregroundStyle(tokens.textPrimary)
         .environment(\.fontLibrary, fonts)
+        .environment(\.textScale, SettingsMetric.textScale(model.value("settings_text_size").string))
         .onKeyPress(.escape) { escape() }
         .onKeyPress(keys: [Self.f6], phases: .down) { cycle(backwards: $0.modifiers.contains(.shift)) }
         .onKeyPress(keys: ["f"], phases: .down) { unlockFlags($0) }

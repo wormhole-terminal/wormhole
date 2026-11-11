@@ -16,6 +16,7 @@ struct SettingRow<Control: View>: View {
     let onReset: () -> Void
     @ViewBuilder let control: Control
     @Environment(\.tokens) private var tokens
+    @Environment(\.textScale) private var textScale
     @State private var hovering = false
 
     var body: some View {
@@ -23,20 +24,20 @@ struct SettingRow<Control: View>: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: Space._2) {
                     if state.isChanged { ChangedDot() }
-                    MarkedText(text: label, range: state.found, font: .system(size: TextRole.body.size, weight: .medium))
+                    MarkedText(text: label, range: state.found, role: .body, weight: .medium)
                         .foregroundStyle(tokens.textPrimary)
                     if let context = state.context, !context.isEmpty {
-                        Text(context).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textFaint)
+                        Text(context).textRole(.caption).foregroundStyle(tokens.textFaint)
                     }
                     if !description.isEmpty, !visibleHint { InfoButton(text: description) }
                     if let key = state.configKey, hovering || state.configKey != nil {
-                        Text(key).font(.system(size: TextRole.caption.size, design: .monospaced))
+                        Text(key).textRole(.caption, design: .monospaced)
                             .foregroundStyle(tokens.textFaint).lineLimit(1)
                     }
                 }
-                .frame(minHeight: tall ? Metric.control : TextRole.body.size * 1.25 + 4)
+                .frame(minHeight: tall ? Metric.control : TextRole.body.size * textScale * 1.25 + 4)
                 if visibleHint, !description.isEmpty {
-                    MarkedText(text: description, range: state.foundDescription, font: .system(size: TextRole.caption.size))
+                    MarkedText(text: description, range: state.foundDescription, role: .caption)
                         .foregroundStyle(tokens.textMuted)
                 }
             }

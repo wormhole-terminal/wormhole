@@ -13,15 +13,19 @@ struct UpdateDetails: View {
     var body: some View {
         let counting = model.value("anonymous_count").bool ?? true
         let unstable = model.value("update_channel").string == "unstable"
-        let agent = model.host.updateUserAgent(version: SettingsText.appVersion, counting: counting, unstable: unstable)
+        // A copy waits a day before it is counted: until then a check sends what it always did (`updates.rs`).
+        let wait = counting ? model.host.updateCountWait() : nil
+        let sharing = counting && wait == nil
+        let agent = model.host.updateUserAgent(version: SettingsText.appVersion, counting: sharing, unstable: unstable)
         VStack(alignment: .leading, spacing: 0) {
+            if let wait { Banner(kind: .info, text: wait).padding(.bottom, Space._2) }
             part(
                 Words.text("settings-updates-count-every-check", fallback: "Every update check"),
-                counting
+                sharing
                     ? Words.text("settings-updates-count-every-check-counted", fallback: "The app version, requested update feed, update channel, chip type, and macOS major version.")
                     : Words.text("settings-updates-count-every-check-plain", fallback: "The app version and requested update feed."),
                 example: agent)
-            if counting {
+            if sharing {
                 part(
                     Words.text("settings-updates-count-first-check", fallback: "First check each day or month"),
                     Words.text("settings-updates-count-first-check-why", fallback: "The server uses a day or month flag to estimate active installations. Both flags can be sent together. Day and month boundaries use UTC."),
@@ -37,10 +41,10 @@ struct UpdateDetails: View {
 
     private func part(_ title: String, _ detail: String, example: String?) -> some View {
         VStack(alignment: .leading, spacing: Space._1) {
-            Text(title).font(.system(size: TextRole.label.size, weight: .medium)).foregroundStyle(tokens.textPrimary)
-            Text(detail).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
+            Text(title).textRole(.label, weight: .medium).foregroundStyle(tokens.textPrimary)
+            Text(detail).textRole(.body).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
             if let example {
-                Text(example).font(.system(size: TextRole.caption.size, design: .monospaced)).foregroundStyle(tokens.textMuted).textSelection(.enabled)
+                Text(example).textRole(.caption, design: .monospaced).foregroundStyle(tokens.textMuted).textSelection(.enabled)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

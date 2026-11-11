@@ -10,7 +10,7 @@ public struct TintChip: View {
     public init(_ text: String) { self.text = text }
 
     public var body: some View {
-        Text(text).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+        Text(text).textRole(.caption).foregroundStyle(tokens.textMuted)
             .padding(.horizontal, Space._2).frame(height: Metric.badgeHeight + Space._1)
             .background(tokens.chipTint, in: RoundedRectangle(cornerRadius: Radius.chip))
     }

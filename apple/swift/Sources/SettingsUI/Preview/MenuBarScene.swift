@@ -21,14 +21,14 @@ struct MenuBarScene: View {
         VStack(spacing: Space._2) {
             ForEach(Self.states, id: \.value) { state in
                 HStack(spacing: Space._3) {
-                    Text(state.label).font(.system(size: TextRole.label.size)).foregroundStyle(state.value == current ? t.primary : t.textMuted)
+                    Text(state.label).textRole(.label).foregroundStyle(state.value == current ? t.primary : t.textMuted)
                         .frame(width: 120, alignment: .trailing)
                     bar(t, icon: state.value, on: on).overlay(
                         RoundedRectangle(cornerRadius: t.metrics.radius).strokeBorder(state.value == current ? t.primary : .clear, lineWidth: 2))
                 }
             }
             if !on {
-                Text(Words.text("settings-menu-bar-off", fallback: "The menu bar item is off")).font(.system(size: TextRole.caption.size))
+                Text(Words.text("settings-menu-bar-off", fallback: "The menu bar item is off")).textRole(.caption)
                     .foregroundStyle(t.textMuted)
             }
         }

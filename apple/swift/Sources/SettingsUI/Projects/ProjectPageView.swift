@@ -18,7 +18,7 @@ struct ProjectPageView: View {
                 SettingGroup(title: ProjectsText.trust) { trustRow }
                 if !page.commands.isEmpty {
                     VStack(alignment: .leading, spacing: Space._1) {
-                        ForEach(page.commands, id: \.self) { Text($0).font(.system(size: TextRole.caption.size, design: .monospaced)) }
+                        ForEach(page.commands, id: \.self) { Text($0).textRole(.caption, design: .monospaced) }
                     }
                     .foregroundStyle(tokens.textPrimary).padding(Space._3).frame(maxWidth: .infinity, alignment: .leading)
                     .background(tokens.settingsGroup, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusLg))
@@ -53,10 +53,10 @@ struct ProjectPageView: View {
         HStack(spacing: Space._4) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: Space._2) {
-                    Text(ProjectsText.thisProject).font(.system(size: TextRole.body.size, weight: .medium)).foregroundStyle(tokens.textPrimary)
+                    Text(ProjectsText.thisProject).textRole(.body, weight: .medium).foregroundStyle(tokens.textPrimary)
                     StatusBadge(text: page.statusWord, color: color)
                 }
-                Text(page.detail).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                Text(page.detail).textRole(.caption).foregroundStyle(tokens.textMuted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if page.trust == .trusted {

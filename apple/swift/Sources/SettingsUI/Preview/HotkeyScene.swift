@@ -14,7 +14,7 @@ struct HotkeyScene: View {
         VStack(spacing: Space._3) {
             HStack(spacing: Space._1) {
                 ForEach(Array(KeySpecText.caps(spec).enumerated()), id: \.offset) { _, cap in
-                    Text(cap).font(.system(size: TextRole.heading.size, weight: .medium)).frame(minWidth: Metric.control + 8, minHeight: Metric.control + 8)
+                    Text(cap).textRole(.heading, weight: .medium).frame(minWidth: Metric.control + 8, minHeight: Metric.control + 8)
                         .background(t.controlSelected, in: RoundedRectangle(cornerRadius: t.metrics.radiusChip))
                 }
                 if spec.isEmpty { Text(SettingsText.recorderNone).foregroundStyle(t.textFaint) }
@@ -25,7 +25,7 @@ struct HotkeyScene: View {
                     ? Words.text("settings-hotkey-quick-panel", fallback: "Quick panel")
                     : Words.text("settings-hotkey-show-or-hide-wormhole", fallback: "Show or hide Wormhole"),
                 systemImage: opensPanel ? "rectangle.and.text.magnifyingglass" : "macwindow")
-                .font(.system(size: TextRole.body.size)).foregroundStyle(t.textPrimary)
+                .textRole(.body).foregroundStyle(t.textPrimary)
         }
         .foregroundStyle(t.textPrimary)
     }

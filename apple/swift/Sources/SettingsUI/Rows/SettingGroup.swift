@@ -18,16 +18,16 @@ struct SettingGroup<Rows: View, Accessory: View>: View {
         VStack(alignment: .leading, spacing: Space._2) {
             if !title.isEmpty || !aside.isEmpty {
                 HStack(alignment: .lastTextBaseline) {
-                    Text(title).font(TextRole.label.font).foregroundStyle(tokens.textMuted)
+                    Text(title).textRole(.label).foregroundStyle(tokens.textMuted)
                     Spacer(minLength: Space._4)
-                    Text(aside).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textFaint).lineLimit(1)
+                    Text(aside).textRole(.caption).foregroundStyle(tokens.textFaint).lineLimit(1)
                     accessory
                 }
                 .padding(.horizontal, Space._4)
                 .accessibilityAddTraits(.isHeader)
             }
             if !blurb.isEmpty {
-                Text(blurb).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                Text(blurb).textRole(.caption).foregroundStyle(tokens.textMuted)
                     .padding(.horizontal, Space._4)
             }
             // A hairline between the rows a builder produced, so a row never has to know its neighbours.

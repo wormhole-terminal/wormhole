@@ -1,6 +1,7 @@
 //! What the server's threads share: the workspace and the terminals it holds, the desk that asks the
 //! person, the bus the streams listen on, the budgets and the queue of what Swift is to do.
 
+use std::hash::{DefaultHasher, Hash as _, Hasher as _};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
@@ -23,12 +24,52 @@ use crate::workspace::{Shared, Workspace};
 /// switch the person turns off must take effect within a moment.
 const SETTINGS_TTL: Duration = Duration::from_secs(1);
 
+/// What a profile's requests are judged by: its settings and the approvals its desk holds. A profile is a trust
+/// domain (`agent-permissions.md`, section 9), so a request is judged by the profile of the window it reaches,
+/// never by the one that happens to be shown.
+pub(crate) struct Seat {
+    pub profile: ProfilePaths,
+    pub desk: Arc<AccessDesk>,
+    settings: Mutex<Option<(Instant, Arc<Settings>)>>,
+}
+
+impl Seat {
+    fn new(desk: Arc<AccessDesk>) -> Self {
+        Self { profile: desk.profile().clone(), desk, settings: Mutex::new(None) }
+    }
+
+    /// The profile's settings, as they were a moment ago at most.
+    pub(crate) fn settings(&self) -> Arc<Settings> {
+        let mut held = self.settings.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some((read, settings)) = held.as_ref()
+            && read.elapsed() < SETTINGS_TTL
+        {
+            return settings.clone();
+        }
+        let settings = Arc::new(Config::load_for(&self.profile).settings);
+        *held = Some((Instant::now(), settings.clone()));
+        settings
+    }
+
+    /// What names an approval for the bus: whether it is stored, the profile (30 bits of its name's hash) and
+    /// its id there, so two profiles' rows, and a row and a session approval, never share one.
+    pub(crate) fn holder(&self, stored: bool, id: u64) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.profile.id().hash(&mut hasher);
+        let scope = hasher.finish() & 0x3FFF_FFFF;
+        (u64::from(stored) << 63) | (scope << 32) | (id & 0xFFFF_FFFF)
+    }
+}
+
 pub(crate) struct Core {
     /// Kept so that the workspace's pump thread lives as long as the server: it stops with the object.
     _workspace: Arc<Workspace>,
     pub shared: Arc<Shared>,
     pub usage: Arc<UsageService>,
-    pub desk: Arc<AccessDesk>,
+    /// One per profile that has a desk; the first is the one the server started with (the fallback).
+    seats: Mutex<Vec<Arc<Seat>>>,
+    /// The seat of the request being answered: the dispatch thread answers one at a time, in order.
+    reached: Mutex<Option<Arc<Seat>>>,
     pub bus: Arc<Bus>,
     /// One publisher per window (the first is the one the server started over); `attach` adds the rest.
     publishers: Mutex<Vec<Arc<Publisher>>>,
@@ -36,10 +77,8 @@ pub(crate) struct Core {
     pub window: i64,
     pub ui: Ui,
     budgets: Mutex<RateLimits>,
-    profile: ProfilePaths,
     /// The data folder the server serves: where the Probes are.
     pub(crate) root: DataRoot,
-    settings: Mutex<Option<(Instant, Arc<Settings>)>>,
     /// Who was found behind a process lately, and what was read of programs (`gate`).
     pub(super) identities: Mutex<super::gate::Identities>,
     pub(super) signatures: Mutex<Signatures>,
@@ -56,7 +95,7 @@ impl Core {
         desk: Arc<AccessDesk>,
         bus: Arc<Bus>,
         publisher: Arc<Publisher>,
-        (root, profile): (DataRoot, ProfilePaths),
+        root: DataRoot,
         listener: Arc<dyn HookListener>,
     ) -> Arc<Self> {
         let shared = workspace.shared().clone();
@@ -65,15 +104,14 @@ impl Core {
             _workspace: workspace,
             shared,
             usage,
-            desk,
+            seats: Mutex::new(vec![Arc::new(Seat::new(desk))]),
+            reached: Mutex::new(None),
             bus,
             publishers: Mutex::new(vec![publisher]),
             window,
             ui: Ui::new(listener),
             budgets: Mutex::default(),
-            profile,
             root,
-            settings: Mutex::new(None),
             identities: Mutex::default(),
             signatures: Mutex::default(),
             close_question: AtomicBool::new(false),
@@ -142,24 +180,68 @@ impl Core {
         self.shares().into_iter().find(|shared| shared.peek_model(|model| model.ids().contains(&id)))
     }
 
-    /// The profile's settings, as they were a moment ago at most.
-    pub(crate) fn settings(&self) -> Arc<Settings> {
-        let mut held = self.settings.lock().unwrap_or_else(PoisonError::into_inner);
-        if let Some((read, settings)) = held.as_ref()
-            && read.elapsed() < SETTINGS_TTL
-        {
-            return settings.clone();
-        }
-        let settings = Arc::new(Config::load_for(&self.profile).settings);
-        *held = Some((Instant::now(), settings.clone()));
-        settings
+    /// Another profile's desk: what its windows' requests are judged by from now on.
+    pub(crate) fn add_desk(&self, desk: Arc<AccessDesk>) {
+        let mut seats = self.seats.lock().unwrap_or_else(PoisonError::into_inner);
+        seats.retain(|seat| seat.profile != *desk.profile());
+        seats.push(Arc::new(Seat::new(desk)));
     }
 
-    /// The settings changed: read them again at the next request, and end the streams that only "Allowed while
-    /// open" let read every terminal when the mode is something else now.
-    pub(crate) fn settings_changed(&self) {
-        *self.settings.lock().unwrap_or_else(PoisonError::into_inner) = None;
-        let settings = self.settings();
+    /// The seat of profile `id`, when it has one.
+    pub(crate) fn seat_of_profile(&self, id: &str) -> Option<Arc<Seat>> {
+        let seats = self.seats.lock().unwrap_or_else(PoisonError::into_inner);
+        seats.iter().find(|seat| seat.profile.id().as_str() == id).cloned()
+    }
+
+    pub(crate) fn seats(&self) -> Vec<Arc<Seat>> {
+        self.seats.lock().unwrap_or_else(PoisonError::into_inner).clone()
+    }
+
+    /// The seat window `shared` is judged by: its profile's, else (no desk made for it, or a window of no
+    /// registry) the server's own.
+    pub(crate) fn seat_of_window(&self, shared: &Shared) -> Arc<Seat> {
+        let profile = shared.windows.get().map(|(windows, _)| windows.profile().id().clone());
+        profile.and_then(|id| self.seat_of_profile(id.as_str())).unwrap_or_else(|| self.first_seat())
+    }
+
+    fn first_seat(&self) -> Arc<Seat> {
+        self.seats.lock().unwrap_or_else(PoisonError::into_inner)[0].clone()
+    }
+
+    /// Judge what comes next by `seat` until [`Self::done`]: the seat of the window the request reaches.
+    pub(crate) fn reaches(&self, seat: Arc<Seat>) {
+        *self.reached.lock().unwrap_or_else(PoisonError::into_inner) = Some(seat);
+    }
+
+    pub(crate) fn done(&self) {
+        *self.reached.lock().unwrap_or_else(PoisonError::into_inner) = None;
+    }
+
+    /// The seat in force: the request's while one is answered, else the shown profile's.
+    pub(crate) fn seat(&self) -> Arc<Seat> {
+        let reached = self.reached.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        reached.unwrap_or_else(|| {
+            let shown = crate::profile::active_in(&self.root);
+            self.seat_of_profile(shown.id().as_str()).unwrap_or_else(|| self.first_seat())
+        })
+    }
+
+    /// The settings in force (`seat`).
+    pub(crate) fn settings(&self) -> Arc<Settings> {
+        self.seat().settings()
+    }
+
+    /// The desk in force (`seat`).
+    pub(crate) fn desk(&self) -> Arc<AccessDesk> {
+        self.seat().desk.clone()
+    }
+
+    /// Profile `id`'s settings changed: read them again at the next request, and end the streams that only
+    /// "Allowed while open" let read every terminal when the mode is something else now.
+    pub(crate) fn settings_changed(&self, id: &str) {
+        let Some(seat) = self.seat_of_profile(id) else { return };
+        *seat.settings.lock().unwrap_or_else(PoisonError::into_inner) = None;
+        let settings = seat.settings();
         let reads_all =
             settings.feature_enabled(FeatureFlag::Automation) && settings.agent_access == AgentAccess::Open;
         if !reads_all {

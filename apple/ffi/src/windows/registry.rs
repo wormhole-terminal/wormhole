@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 
 use wormhole_core::config::profile::ProfileList;
-use wormhole_core::storage::paths::{DataRoot, ProfileId};
+use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 use wormhole_core::storage::store::{Store, WindowRecord, front_last};
 use wormhole_core::view::layout::frame::WindowFrame;
 use wormhole_core::view::layout::{REMEMBERED_PANES_KEY, RememberedPanes};
@@ -50,6 +50,8 @@ pub struct PlannedWindow {
 #[derive(uniffi::Object)]
 pub struct Windows {
     store: Mutex<Store>,
+    /// The profile these windows belong to: a request is judged by the profile of the window it reaches.
+    profile: ProfilePaths,
     ids: IdCounter,
     next_window: Arc<AtomicI64>,
     /// Windows planned and not saved yet: what they start with (`Workspace::restore` reads it).
@@ -73,9 +75,10 @@ impl Windows {
         Store::open_at(dir).map_err(|err| FfiError::Start { reason: format!("{err:#}") })
     }
 
-    fn over(store: Store, ids: IdCounter, next_window: Arc<AtomicI64>) -> Self {
+    fn over(store: Store, profile: ProfilePaths, ids: IdCounter, next_window: Arc<AtomicI64>) -> Self {
         Self {
             store: Mutex::new(store),
+            profile,
             ids,
             next_window,
             planned: Mutex::default(),
@@ -85,28 +88,44 @@ impl Windows {
         }
     }
 
+    /// The default profile of the data folder `dir`.
+    #[cfg(test)]
     pub(crate) fn in_dir(dir: &Path) -> Result<Arc<Self>, FfiError> {
-        let store = Self::open_store(dir)?;
-        let (terminal, window) =
-            store.next_ids().map_err(|err| FfiError::Start { reason: format!("{err:#}") })?;
-        Ok(Arc::new(Self::over(store, IdCounter::starting_at(terminal), Arc::new(AtomicI64::new(window)))))
+        Self::in_profile(DataRoot::new(dir).default_profile())
     }
 
-    pub(super) fn beside_in(&self, root: &DataRoot, profile: &str) -> Result<Arc<Self>, FfiError> {
+    pub(crate) fn in_profile(profile: ProfilePaths) -> Result<Arc<Self>, FfiError> {
+        let store = Self::open_store(profile.dir())?;
+        let (terminal, window) =
+            store.next_ids().map_err(|err| FfiError::Start { reason: format!("{err:#}") })?;
+        Ok(Arc::new(Self::over(
+            store,
+            profile,
+            IdCounter::starting_at(terminal),
+            Arc::new(AtomicI64::new(window)),
+        )))
+    }
+
+    pub(crate) fn profile(&self) -> &ProfilePaths {
+        &self.profile
+    }
+
+    pub(crate) fn beside_in(&self, root: &DataRoot, profile: &str) -> Result<Arc<Self>, FfiError> {
         let failed = |reason: String| FfiError::Start { reason };
         let id = ProfileId::parse(profile).map_err(|err| failed(err.to_string()))?;
         let (list, _) = ProfileList::load_or_recover(root);
         if list.get(&id).is_none() {
             return Err(failed(format!("no profile {id}")));
         }
-        let store = Self::open_store(root.profile(&id).dir())?;
+        let profile = root.profile(&id);
+        let store = Self::open_store(profile.dir())?;
         let (terminal, window) = store.next_ids().map_err(|err| failed(format!("{err:#}")))?;
         self.ids.keep_above(terminal.saturating_sub(1));
         self.next_window.fetch_max(window, Ordering::Relaxed);
         Ok(Arc::new(Self {
             live: self.live.clone(),
             on_register: self.on_register.clone(),
-            ..Self::over(store, self.ids.clone(), self.next_window.clone())
+            ..Self::over(store, profile, self.ids.clone(), self.next_window.clone())
         }))
     }
 
@@ -273,7 +292,7 @@ impl Windows {
     pub fn new() -> Result<Arc<Self>, FfiError> {
         isolation::require()?;
         let root = DataRoot::current();
-        let windows = Self::in_dir(profile::active_in(&root).dir())?;
+        let windows = Self::in_profile(profile::active_in(&root))?;
         // Past what every profile saved, so the ones opened `beside` this never meet an id again.
         let (terminal, window) = profile::first_free_ids(&root);
         windows.ids.keep_above(terminal.saturating_sub(1));

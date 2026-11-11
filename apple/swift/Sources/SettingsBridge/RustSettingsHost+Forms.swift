@@ -65,6 +65,8 @@ extension RustSettingsHost {
     public func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String? {
         settingsUpdateUserAgent(version: version, counting: counting, unstable: unstable)
     }
+
+    public func updateCountWait() -> String? { settingsUpdateCountWait() }
 }
 
 extension RecordMapping {

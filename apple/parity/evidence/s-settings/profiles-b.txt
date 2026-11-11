@@ -1,0 +1,18 @@
+# S2 live: a request is judged by the profile of the window it reaches (Default: agent_access open, Work: off; Default shown)
+> Wormhole send-text --terminal 1 (a window of Default)
+tab 1
+> Wormhole send-text --terminal 2 (a window of Work, parked)
+Wormhole: agent access is off: turn it on in Settings → Coding agents → Agent access (not_allowed, agent_access_off)
+> Wormhole doctor (no target: the shown profile's)
+Wormhole 0.0.0 answers (protocol 1; this command line speaks 1).
+Automation flag: on
+Agent access: open. You are Claude Code: everyone is allowed while Wormhole is open
+> after switching to Work
+Wormhole 0.0.0 answers (protocol 1; this command line speaks 1).
+Automation flag: on
+Agent access: off. You are Claude Code: agent access is off
+> terminal 2 (Work) after the switch
+Wormhole: agent access is off: turn it on in Settings → Coding agents → Agent access (not_allowed, agent_access_off)
+> terminal 1 (Default) after the switch
+tab 1
+# stderr of the app:

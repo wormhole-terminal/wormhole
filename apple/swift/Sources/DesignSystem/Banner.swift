@@ -21,7 +21,7 @@ public struct Banner<Actions: View>: View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radius)
         HStack(spacing: Space._3) {
             Image(systemName: symbol).font(.system(size: Metric.titleGlyph)).foregroundStyle(glyphColor)
-            Text(text).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textPrimary)
+            Text(text).textRole(.label, weight: .regular).foregroundStyle(tokens.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
             // The words give way, never the buttons' labels.
             actions.fixedSize()

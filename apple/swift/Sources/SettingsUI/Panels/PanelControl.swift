@@ -31,7 +31,7 @@ struct PanelControl: View {
                 .disabled(model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault ?? true)
         case "notify-permission": button(Words.text("settings-notifications-open-system", fallback: "Open System Settings"), Icon.settings.rawValue, .openNotificationSettings)
         case "notify-test": button(Words.text("settings-notifications-send-test", fallback: "Send test"), Icon.notifications.rawValue, .sendTestNotification)
-        default: Text(SettingsText.notBuilt).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textFaint)
+        default: Text(SettingsText.notBuilt).textRole(.label).foregroundStyle(tokens.textFaint)
         }
     }
 

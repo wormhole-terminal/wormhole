@@ -72,10 +72,10 @@ struct AuxBackends {
         return SampleTrustBackend()
     }
 
-    func access() -> (any AccessBackend)? {
+    func access(profile: String) -> (any AccessBackend)? {
         #if WITH_UNIFFI
             if real {
-                do { return try AuxBridge.makeAccessBackend(profile: activeProfileID) } catch { fallback("agent access", error) }
+                do { return try AuxBridge.makeAccessBackend(profile: profile) } catch { fallback("agent access", error) }
             }
         #endif
         return nil

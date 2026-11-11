@@ -105,6 +105,7 @@ enum GalleryUses {
         "status.success.text",
         "surface.overlay",
         "surface.window",
+        "text.faint",
         "text.muted",
         "text.primary",
     ]

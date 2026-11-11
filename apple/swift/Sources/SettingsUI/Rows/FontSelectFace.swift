@@ -11,15 +11,16 @@ struct FontSelectFace: View {
     let picker: FontPickerModel
     let resolved: String
     @Environment(\.tokens) private var tokens
+    @Environment(\.textScale) private var textScale
 
     var body: some View {
         HStack(spacing: Space._2) {
             if picker.isInherited, let label = picker.slot.inheritLabel {
                 Text(label).lineLimit(1)
-                Text(Self.shown(resolved)).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
+                Text(Self.shown(resolved)).textRole(.caption).foregroundStyle(tokens.textFaint)
                     .lineLimit(1).frame(maxWidth: .infinity, alignment: .trailing)
             } else {
-                Text(picker.selected).font(FontFace.font(picker.selected, size: TextRole.label.size)).lineLimit(1)
+                Text(picker.selected).font(FontFace.font(picker.selected, size: TextRole.label.size * textScale)).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if picker.selected == picker.library.rules.bundledFamily { TintChip(FontWords.bundled) }
             }

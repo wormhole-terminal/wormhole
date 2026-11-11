@@ -135,3 +135,36 @@ fn restart_needs_a_bundle_and_nothing_here_relaunches() {
     assert!(engine.install("0.2.0".into()).is_err());
     assert!(engine.next_check_in_seconds() == 0 && engine.due_at_launch(), "never checked: due now");
 }
+
+/// The schedule's own check leaves an update that is offered or installed as it is (GPUI's `schedule_check`): it would
+/// withdraw the chips, drop a pending Restart When Idle and fetch the same release again. A person's check still runs.
+#[test]
+fn an_automatic_check_leaves_an_offered_or_installed_update_alone() {
+    let published = publish(Offer::default());
+    published.engine.check(true);
+    wait_for(&published, |s| offered(s).is_some());
+    let before = published.engine.state();
+    published.engine.check(false);
+    assert_eq!(published.engine.state(), before, "still on offer, no check started");
+
+    published.engine.install("0.2.0".into()).expect("started");
+    wait_for(&published, |s| matches!(s.phase, UpdatePhaseRecord::Installed { .. }));
+    let before = published.engine.state();
+    published.engine.check(false);
+    assert_eq!(published.engine.state(), before, "installed stays installed");
+    published.engine.check(true);
+    assert_eq!(published.engine.state().phase, UpdatePhaseRecord::Checking, "a person's check runs");
+}
+
+/// With auto_update on, an automatic check installs what it finds, once, in the core alone (Swift does not decide).
+#[test]
+fn with_auto_update_on_a_check_goes_straight_to_installed() {
+    let published = publish(Offer::default());
+    published.engine.set_auto_update(true);
+    published.engine.check(false);
+    let state = wait_for(&published, |s| {
+        matches!(s.phase, UpdatePhaseRecord::Installed { .. } | UpdatePhaseRecord::Failed { .. })
+    });
+    assert_eq!(state.phase, UpdatePhaseRecord::Installed { version: "0.2.0".into() }, "{state:?}");
+    assert_eq!(marker_of(&published.bundle), "#!/bin/sh\necho new\n");
+}

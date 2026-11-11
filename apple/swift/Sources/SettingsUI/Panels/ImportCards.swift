@@ -33,9 +33,9 @@ struct ImportCards: View {
         VStack(alignment: .leading, spacing: Space._2) {
             Image(Icon.search).foregroundStyle(tokens.textMuted)
             Text(Words.text("settings-import-none", fallback: "No other terminal's settings found"))
-                .font(.system(size: TextRole.body.size, weight: .semibold))
+                .textRole(.body, weight: .semibold)
             Text(Words.text("settings-import-none-detail", fallback: "Wormhole looked for Ghostty, iTerm2, Terminal.app, Alacritty, kitty, WezTerm, Warp, Zed and VS Code in the places they keep their settings, and found none."))
-                .font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                .textRole(.caption).foregroundStyle(tokens.textMuted)
         }
         .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, Space._3)
         .accessibilityElement(children: .combine)
@@ -53,8 +53,8 @@ private struct ImportCard: View {
         VStack(alignment: .leading, spacing: Space._3) {
             Button { draft.toggle(record.id) } label: {
                 HStack(spacing: Space._2) {
-                    Text(record.app).font(.system(size: TextRole.body.size, weight: .semibold)).foregroundStyle(tokens.textPrimary)
-                    Text(record.summary).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                    Text(record.app).textRole(.body, weight: .semibold).foregroundStyle(tokens.textPrimary)
+                    Text(record.summary).textRole(.caption).foregroundStyle(tokens.textMuted)
                         .padding(.horizontal, Space._2).background(tokens.controlBackground, in: Capsule())
                     Spacer(minLength: 0)
                     Image(Icon.disclosure).rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(tokens.textMuted)
@@ -87,7 +87,7 @@ private struct ImportReviewView: View {
             label(Words.text("settings-import-take", fallback: "Brings over"))
             if review.items.isEmpty {
                 Text(Words.text("settings-import-nothing-to-take", fallback: "Nothing in these settings can be brought over."))
-                    .font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textMuted)
+                    .textRole(.body).foregroundStyle(tokens.textMuted)
             }
             ForEach(Array(review.items.enumerated()), id: \.offset) { index, item in row(index, item) }
             if !review.skipped.isEmpty {
@@ -95,7 +95,7 @@ private struct ImportReviewView: View {
                 ForEach(Array(review.skipped.enumerated()), id: \.offset) { _, skip in
                     VStack(alignment: .leading, spacing: Space._1) {
                         mono(skip.key).foregroundStyle(tokens.textMuted)
-                        Text(skip.reason).font(.system(size: TextRole.body.size))
+                        Text(skip.reason).textRole(.body)
                     }
                     .padding(.vertical, Space._1)
                     .accessibilityElement(children: .combine)
@@ -106,12 +106,12 @@ private struct ImportReviewView: View {
     }
 
     private func label(_ text: String) -> some View {
-        Text(text).font(.system(size: TextRole.caption.size, weight: .semibold)).foregroundStyle(tokens.textMuted)
+        Text(text).textRole(.caption, weight: .semibold).foregroundStyle(tokens.textMuted)
             .accessibilityAddTraits(.isHeader)
     }
 
     private func mono(_ text: String) -> some View {
-        Text(text).font(.system(size: TextRole.caption.size, design: .monospaced)).lineLimit(1).truncationMode(.middle)
+        Text(text).textRole(.caption, design: .monospaced).lineLimit(1).truncationMode(.middle)
     }
 
     /// One setting: its tick, name, what the other terminal says and what Wormhole would set. A shell command is taller:
@@ -124,17 +124,17 @@ private struct ImportReviewView: View {
                 mono(item.from).foregroundStyle(tokens.textMuted).frame(maxWidth: .infinity, alignment: .leading)
                 if item.command == nil {
                     Image(Icon.goTo).foregroundStyle(tokens.textFaint).accessibilityHidden(true)
-                    Text(item.value).font(.system(size: TextRole.body.size)).lineLimit(1)
+                    Text(item.value).textRole(.body).lineLimit(1)
                         .frame(width: SettingsMetric.importValueWidth, alignment: .leading)
                 }
             }
             if let command = item.command {
-                Text(command).font(.system(size: TextRole.caption.size, design: .monospaced))
+                Text(command).textRole(.caption, design: .monospaced)
                     .padding(.horizontal, Space._2).padding(.vertical, Space._1)
                     .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
                     .padding(.leading, Metric.control)
                 Label(Words.text("settings-import-runs-everywhere", fallback: "Wormhole would run this in every new terminal, so it isn't ticked until you tick it."), systemImage: "exclamationmark.triangle")
-                    .font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.statusWarningText).padding(.leading, Metric.control)
+                    .textRole(.caption).foregroundStyle(tokens.statusWarningText).padding(.leading, Metric.control)
             }
         }
         .frame(minHeight: Metric.row)
@@ -145,10 +145,10 @@ private struct ImportReviewView: View {
         return HStack(spacing: Space._3) {
             ActionButton(title: Words.text("settings-import-apply", fallback: "Import selected"), symbol: Icon.install.rawValue) { draft.apply(id) }
                 .disabled(selected == 0)
-            Text(host.importSelectedLine(selected: selected, total: review.items.count)).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+            Text(host.importSelectedLine(selected: selected, total: review.items.count)).textRole(.caption).foregroundStyle(tokens.textMuted)
             Spacer(minLength: 0)
             if let outcome = draft.outcome, outcome.id == id {
-                Text(outcome.text).font(.system(size: TextRole.body.size))
+                Text(outcome.text).textRole(.body)
                     .foregroundStyle(outcome.failed ? tokens.statusDangerText : tokens.statusSuccessText)
             }
         }

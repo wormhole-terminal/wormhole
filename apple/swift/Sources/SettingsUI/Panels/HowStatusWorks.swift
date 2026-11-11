@@ -27,7 +27,7 @@ struct HowStatusWorks: View {
                     "settings-agents-hooks-do-nothing-outside-wormhole-only",
                     fallback: "Hooks do nothing outside Wormhole, only add entries of their own, and a backup of every changed file is kept.")
             )
-            .font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+            .textRole(.caption).foregroundStyle(tokens.textMuted)
         }
         .padding(.vertical, Space._3)
     }
@@ -36,8 +36,8 @@ struct HowStatusWorks: View {
         HStack(alignment: .top, spacing: Space._2) {
             Image(systemName: icon).font(.system(size: Metric.glyph)).foregroundStyle(color).frame(width: Metric.lead, height: Metric.lead)
             VStack(alignment: .leading, spacing: 0) {
-                Text(title).font(.system(size: TextRole.body.size, weight: .medium)).foregroundStyle(tokens.textPrimary)
-                Text(text).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                Text(title).textRole(.body, weight: .medium).foregroundStyle(tokens.textPrimary)
+                Text(text).textRole(.caption).foregroundStyle(tokens.textMuted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

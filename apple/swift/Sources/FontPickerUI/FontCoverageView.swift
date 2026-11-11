@@ -11,7 +11,7 @@ struct FontCoverageView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
-            Text(FontWords.coverage).font(TextRole.caption.font.weight(.semibold)).foregroundStyle(Palette.textSecondary)
+            Text(FontWords.coverage).textRole(.caption, weight: .semibold).foregroundStyle(Palette.textSecondary)
             FlowLayout(spacing: Space._1) {
                 ForEach(GlyphGroup.all) { group in
                     CoverageChip(label: group.label, ok: coverage.drawn[group.id] ?? false, bad: FontWords.fallsBack)
@@ -39,7 +39,7 @@ private struct CoverageChip: View {
                 .font(.system(size: Metric.chevron + 2))
             Text(label).lineLimit(1)
         }
-        .font(TextRole.caption.font)
+        .textRole(.caption)
         .foregroundStyle(ok ? tokens.textPrimary : tokens.textFaint)
         .padding(.horizontal, Space._2).frame(height: Metric.badgeHeight + Space._1)
         .background(tokens.controlBackground, in: RoundedRectangle(cornerRadius: Radius.chip))

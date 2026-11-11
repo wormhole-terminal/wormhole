@@ -32,6 +32,9 @@ struct OnboardingView: View {
                 .entering(entrance.corner)
         }
         .auxPage(titleRow: false)
+        // The page is opaque over the whole window (`window_surfaces(cx, false)`: the window token at full alpha); the
+        // translucent token alone lets the window's own fill through, which read about 7 levels lighter.
+        .background { (tokens.rgba(named: "surface.window").map { RGBA($0.red, $0.green, $0.blue).color } ?? tokens.surfaceWindow).ignoresSafeArea() }
         .focusable().focused($focused).focusEffectDisabled()
         .onAppear { focused = true }
         .onTapGesture { if player.isEntering { player.skip() } }

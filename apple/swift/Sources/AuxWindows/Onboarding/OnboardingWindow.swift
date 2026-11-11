@@ -55,6 +55,7 @@ public final class OnboardingWindow {
         options.immersive = immersive
         player.play(.firstLaunch, over: window, options: options, colors: IntroColors(tokens: store.tokens))
         Task {
+            // one-shot: the intro's leaving motion ends, then the page is shown again
             try? await Task.sleep(for: .seconds(Double(IntroPlayer.leaving)))
             session.replay()
         }

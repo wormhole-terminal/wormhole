@@ -32,7 +32,7 @@ private struct UpdateStatus: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(spacing: Space._4) {
-                Text(status).font(.system(size: TextRole.body.size)).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
+                Text(status).textRole(.body).foregroundStyle(color).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 actions
             }
@@ -90,7 +90,7 @@ private struct UpdateStatus: View {
         return HStack(spacing: Space._2) {
             if let fraction {
                 ProgressView(value: fraction).tint(tokens.primary).frame(width: SettingsMetric.meterWidth)
-                Text("\(Int(fraction * 100)) %").font(.system(size: TextRole.caption.size)).monospacedDigit().foregroundStyle(tokens.textMuted)
+                Text("\(Int(fraction * 100)) %").textRole(.caption).monospacedDigit().foregroundStyle(tokens.textMuted)
             } else {
                 ProgressView().controlSize(.small)
             }
@@ -102,13 +102,13 @@ private struct UpdateStatus: View {
     /// What the release brings, a line each (the changelog's Markdown without its markers), under "What's new".
     private func notes(_ release: Release) -> some View {
         VStack(alignment: .leading, spacing: Space._1) {
-            Text("\(AuxText.releaseNotes) \(release.version)").font(.system(size: TextRole.caption.size, weight: .semibold)).foregroundStyle(tokens.textMuted)
+            Text("\(AuxText.releaseNotes) \(release.version)").textRole(.caption, weight: .semibold).foregroundStyle(tokens.textMuted)
             ForEach(Array(lines(release.notes).enumerated()), id: \.offset) { _, line in
                 HStack(alignment: .firstTextBaseline, spacing: Space._2) {
                     Text("–").foregroundStyle(tokens.textFaint)
                     Text(line).foregroundStyle(tokens.textMuted)
                 }
-                .font(.system(size: TextRole.body.size))
+                .textRole(.body)
             }
         }
         .padding(.vertical, Space._3)

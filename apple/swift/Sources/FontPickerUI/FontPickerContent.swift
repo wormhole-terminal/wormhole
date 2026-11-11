@@ -43,7 +43,7 @@ struct FontPickerContent: View {
     }
 
     private var statusLine: some View {
-        Text(model.status).font(TextRole.caption.font).foregroundStyle(tokens.textFaint).lineLimit(1)
+        Text(model.status).textRole(.caption).foregroundStyle(tokens.textFaint).lineLimit(1)
             .contentTransition(.numericText())
             .motion(Motion.selection, value: model.status)
     }

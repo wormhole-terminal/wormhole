@@ -13,7 +13,7 @@ struct StatusBadge: View {
     private static let tint = 0.15
 
     var body: some View {
-        Text(text).font(.system(size: TextRole.caption.size)).foregroundStyle(color)
+        Text(text).textRole(.caption).foregroundStyle(color)
             .padding(.horizontal, Space._2).frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)
             .background(color.opacity(Self.tint), in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
             .overlay {

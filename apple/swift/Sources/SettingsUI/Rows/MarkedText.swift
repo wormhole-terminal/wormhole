@@ -6,11 +6,12 @@ import SwiftUI
 struct MarkedText: View {
     let text: String
     let range: Range<Int>?
-    let font: Font
+    let role: TextRole
+    var weight: Font.Weight?
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Text(attributed).font(font)
+        Text(attributed).textRole(role, weight: weight)
     }
 
     private var attributed: AttributedString {

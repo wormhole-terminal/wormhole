@@ -13,7 +13,7 @@ struct ProfileChip: View {
 
     var body: some View {
         Text(letter)
-            .font(.system(size: TextRole.caption.size, weight: .bold)).foregroundStyle(tokens.textOnPrimary)
+            .textRole(.caption, weight: .bold).foregroundStyle(tokens.textOnPrimary)
             .frame(width: Metric.titleGlyph + 4, height: Metric.titleGlyph + 4)
             .background(GroupColor(key: color).map { $0.mark(tokens).color } ?? tokens.primary, in: Circle())
             .accessibilityHidden(true)

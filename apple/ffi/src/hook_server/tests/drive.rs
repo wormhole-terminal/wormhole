@@ -44,7 +44,7 @@ fn nothing_is_told_where_the_chip_is_off() {
     std::fs::File::create(DataRoot::new(&f.dir).default_profile().config_file())
         .and_then(|mut file| file.write_all(config.to_string().as_bytes()))
         .expect("config");
-    f.server.settings_changed();
+    f.server.settings_changed("default".into());
     let mut client = f.client();
     client.control(json!({"action": "send_text", "target": {"kind": "terminal", "id": id}, "text": "hi"}));
     assert_eq!(driven(f.events()), vec![]);

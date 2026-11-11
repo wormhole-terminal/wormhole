@@ -29,7 +29,7 @@ struct InfoButton: View {
             .buttonStyle(.borderless)
             .popover(isPresented: $open, arrowEdge: .bottom) {
                 Text(text)
-                    .font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textPrimary)
+                    .textRole(.label).foregroundStyle(tokens.textPrimary)
                     .frame(width: 280, alignment: .leading).padding(Space._3)
                     .environment(\.tokens, tokens)
             }

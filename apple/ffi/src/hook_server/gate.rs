@@ -49,11 +49,6 @@ pub(crate) enum Gate {
     Ask(AskJob),
 }
 
-/// What names an approval for the bus: one profile here, so the kind and the number do.
-pub(crate) fn holder(stored: bool, id: u64) -> u64 {
-    (u64::from(stored) << 63) | (id & !(1 << 63))
-}
-
 /// Whether `action` opens terminals (a terminal, a window, a split): those become the program's own.
 pub(crate) fn opens(action: &Action) -> bool {
     matches!(action, Action::NewTerminal { .. } | Action::NewWindow(_) | Action::Split(_))
@@ -62,7 +57,9 @@ pub(crate) fn opens(action: &Action) -> bool {
 /// Judge `request` from `peer`. With the Automation feature off nothing changes from the release: typing
 /// and opening go by `control_write`, and the actions of the feature answer `unsupported` themselves.
 pub(crate) fn gate(core: &Core, request: &Request, peer: &Peer) -> Gate {
-    let settings = core.settings();
+    let seat = core.seat();
+    let desk = &seat.desk;
+    let settings = seat.settings();
     if !settings.feature_enabled(FeatureFlag::Automation) {
         return Gate::Open(Admit {
             access: Access { read: false, write: settings.control_write, holder: None },
@@ -102,7 +99,7 @@ pub(crate) fn gate(core: &Core, request: &Request, peer: &Peer) -> Gate {
     };
     let now = Instant::now();
     let held = allowance(core, &resolved);
-    let cooling = core.desk.with_state(|grants, _| grants.cooling(&resolved.identity, now));
+    let cooling = desk.with_state(|grants, _| grants.cooling(&resolved.identity, now));
     match decide(mode, need, false, held, cooling) {
         Verdict::Allow(access) => within_scope(core, request, peer, resolved, access),
         Verdict::Refuse(error) => Gate::Reply(error.into()),
@@ -115,10 +112,11 @@ pub(crate) fn gate(core: &Core, request: &Request, peer: &Peer) -> Gate {
 /// time; a terminal hidden from agents is not a terminal here at all (it is not found, so there is nothing
 /// to ask about, and the handler says what it says for an id that does not exist).
 fn within_scope(core: &Core, request: &Request, peer: &Peer, resolved: Resolved, access: Access) -> Gate {
+    let desk = core.desk();
     let own = core.terminals_under(peer);
     let touched = touched(core, request, peer);
     let now = Instant::now();
-    let (out, cooling) = core.desk.with_state(|_, scopes| {
+    let (out, cooling) = desk.with_state(|_, scopes| {
         let out = scopes.out_of_scope(&resolved.identity, resolved.process, &own, &touched);
         let cooling = out.first().map(|&(terminal, _)| scopes.cooling(&resolved.identity, terminal, now));
         (out, cooling)
@@ -135,7 +133,7 @@ fn within_scope(core: &Core, request: &Request, peer: &Peer, resolved: Resolved,
         && Need::of(&request.action) == Need::Capability(Capability::Read);
     let readable = hears_output.then(|| {
         let visible = core.visible_ids(peer);
-        core.desk.with_state(|_, scopes| scopes.readable(&resolved.identity, resolved.process, &own, visible))
+        desk.with_state(|_, scopes| scopes.readable(&resolved.identity, resolved.process, &own, visible))
     });
     let opener = opens(&request.action).then(|| resolved.identity.clone());
     let driver = Some(driver_of(&resolved));
@@ -192,19 +190,22 @@ pub(crate) fn identify(core: &Core, peer: &Peer) -> Result<Resolved, Changed> {
 
 /// What covers `resolved`: an approval held in memory, else a stored one.
 pub(crate) fn allowance(core: &Core, resolved: &Resolved) -> Option<Allowance> {
-    let held = core.desk.with_state(|grants, _| {
+    let seat = core.seat();
+    let desk = &seat.desk;
+    let held = desk.with_state(|grants, _| {
         grants.find(&resolved.identity, resolved.process).map(|held| (held.caps, held.id))
     });
     if let Some((caps, id)) = held {
-        return Some(Allowance { caps, holder: Some(holder(false, id)) });
+        return Some(Allowance { caps, holder: Some(seat.holder(false, id)) });
     }
-    let caps = core.desk.stored_caps(&resolved.identity.key())?;
-    Some(Allowance { caps, holder: Some(holder(true, 0)) })
+    let caps = desk.stored_caps(&resolved.identity.key())?;
+    Some(Allowance { caps, holder: Some(seat.holder(true, 0)) })
 }
 
 /// Queue the question for `resolved`. A caller that waits (`ask`) is held until it is answered; one that
 /// cannot is refused at once, and the question stays, so that the next attempt finds the answer.
 fn ask_the_user(core: &Core, resolved: Resolved, need: Need, waits: bool, about: Option<i64>) -> Gate {
+    let desk = core.desk();
     let label = resolved.label.clone();
     let (waiter, job) = if waits {
         let (tx, job) = AskJob::channel();
@@ -212,7 +213,7 @@ fn ask_the_user(core: &Core, resolved: Resolved, need: Need, waits: bool, about:
     } else {
         (None, None)
     };
-    if core.desk.ask(resolved, need, about, waiter).is_err() {
+    if desk.ask(resolved, need, about, waiter).is_err() {
         return Gate::Reply(
             Error::new(ErrorCode::NotAllowed, "several questions are already waiting for the user")
                 .because(Reason::TooManyQuestions)
@@ -299,24 +300,27 @@ pub(crate) fn own_opened(core: &Core, owner: Identity, reply: &Reply) {
         .and_then(|result| result.get("terminal"))
         .and_then(serde_json::Value::as_i64);
     if let Some(terminal) = opened {
-        core.desk.with_state(|_, scopes| scopes.own(terminal, owner));
+        core.desk().with_state(|_, scopes| scopes.own(terminal, owner));
     }
 }
 
-/// Forget what is kept about terminals that are closed, and what a session allowed for programs that ended.
+/// Forget what is kept about terminals that are closed, and what a session allowed for programs that ended
+/// (every profile's desk).
 pub(crate) fn sweep(core: &Core) {
     let open: Vec<i64> =
         core.shares().iter().flat_map(|shared| shared.peek_model(|model| model.ids())).collect();
     let now = Instant::now();
-    let ended = core.desk.with_state(|grants, scopes| {
-        scopes.retain_open(&open);
-        let running = |process: ProcessRef| process::start_time(process.pid) == Some(process.started);
-        scopes.prune(now, running);
-        grants.prune(now, running)
-    });
-    // What a session allowed for a program that ended ends its streams too.
-    for id in ended {
-        core.bus.revoke_holder(holder(false, id));
+    for seat in core.seats() {
+        let ended = seat.desk.with_state(|grants, scopes| {
+            scopes.retain_open(&open);
+            let running = |process: ProcessRef| process::start_time(process.pid) == Some(process.started);
+            scopes.prune(now, running);
+            grants.prune(now, running)
+        });
+        // What a session allowed for a program that ended ends its streams too.
+        for id in ended {
+            core.bus.revoke_holder(seat.holder(false, id));
+        }
     }
 }
 

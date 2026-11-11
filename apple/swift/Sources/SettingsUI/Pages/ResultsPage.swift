@@ -37,9 +37,9 @@ private struct EscHint: View {
     @Environment(\.tokens) private var tokens
     var body: some View {
         HStack(spacing: Space._2) {
-            Text("esc").font(.system(size: TextRole.caption.size, weight: .medium)).padding(.horizontal, Space._1)
+            Text("esc").textRole(.caption, weight: .medium).padding(.horizontal, Space._1)
                 .background(tokens.controlBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
-            Text(SettingsText.escClears).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+            Text(SettingsText.escClears).textRole(.caption).foregroundStyle(tokens.textMuted)
         }
     }
 }

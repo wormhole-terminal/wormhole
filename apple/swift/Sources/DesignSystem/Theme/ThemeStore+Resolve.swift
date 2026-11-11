@@ -45,6 +45,15 @@ extension ThemeStore {
         self.problem = problem
     }
 
+    /// A user theme in its own colours at the default look, for a card of the theme picker; nil when it does not resolve.
+    public func userTheme(_ summary: ThemeSummary) -> Theme? {
+        guard let resolver else { return nil }
+        let request = ThemeRequest(
+            theme: summary.id, themesDirectory: themesDirectory, primary: "", branch: "", increaseContrast: false,
+            look: library.defaultLook)
+        return (try? ResolvedTheme(json: resolver.resolve(request)))?.theme
+    }
+
     /// Reads the themes folder again: a theme was saved or trashed there.
     public func reloadThemes() { reloadUserThemes() }
 

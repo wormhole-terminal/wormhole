@@ -35,7 +35,7 @@ struct ShortcutRecorder: View {
                 }
                 Spacer(minLength: 0)
             }
-            .font(.system(size: TextRole.label.size))
+            .textRole(.label)
             .padding(.horizontal, Space._2)
             .frame(width: SettingsMetric.controlWidth, height: Metric.control)
             .background(tokens.controlBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
@@ -94,7 +94,7 @@ private struct KeyCapView: View {
     @Environment(\.tokens) private var tokens
     var body: some View {
         Text(text)
-            .font(.system(size: TextRole.caption.size, weight: .medium))
+            .textRole(.caption, weight: .medium)
             .padding(.horizontal, Space._1)
             .frame(minWidth: Metric.keyCapMinWidth - 8, minHeight: Metric.keyCapHeight)
             .background(tokens.controlSelected, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))

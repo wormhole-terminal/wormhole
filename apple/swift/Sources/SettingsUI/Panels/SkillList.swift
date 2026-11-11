@@ -19,14 +19,14 @@ struct SkillList: View {
                     HStack(spacing: Space._3) {
                         Circle().fill(color(skill.state)).frame(width: Metric.statusDot, height: Metric.statusDot)
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(skill.name).font(.system(size: TextRole.body.size, weight: .medium)).foregroundStyle(tokens.textPrimary)
+                            Text(skill.name).textRole(.body, weight: .medium).foregroundStyle(tokens.textPrimary)
                             HStack(spacing: Space._1) {
                                 Text(skill.detail)
-                                Text(skill.shown).font(.system(size: TextRole.caption.size, design: .monospaced))
+                                Text(skill.shown).textRole(.caption, design: .monospaced)
                                     .padding(.horizontal, Space._1).lineLimit(1).truncationMode(.middle)
                                     .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
                             }
-                            .font(.system(size: TextRole.caption.size)).foregroundStyle(color(skill.state))
+                            .textRole(.caption).foregroundStyle(color(skill.state))
                         }
                         Spacer(minLength: Space._3)
                         actions(skill)
@@ -79,7 +79,7 @@ struct McpControl: View {
 
     var body: some View {
         HStack(spacing: Space._2) {
-            Text(command).font(.system(size: TextRole.caption.size, design: .monospaced)).foregroundStyle(tokens.textPrimary)
+            Text(command).textRole(.caption, design: .monospaced).foregroundStyle(tokens.textPrimary)
                 .fixedSize().padding(.horizontal, Space._2).frame(height: Metric.control)
                 .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
             CopyButton(title: SettingsText.copyCommand, text: command)

@@ -40,6 +40,14 @@ pub(crate) fn answer(core: &Arc<Core>, request: Request, peer: &Peer) -> Answer 
         return Answer::Reply(error);
     }
     sweep(core);
+    // Judged by the profile of the window it reaches; the dispatch thread answers one request at a time.
+    core.reaches(core.seat_reached(&request, peer));
+    let answer = answer_reached(core, request, peer);
+    core.done();
+    answer
+}
+
+fn answer_reached(core: &Arc<Core>, request: Request, peer: &Peer) -> Answer {
     match gate(core, &request, peer) {
         Gate::Open(admit) => {
             let drives = admit.driver.and_then(|driver| {

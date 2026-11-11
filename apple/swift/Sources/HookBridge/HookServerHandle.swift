@@ -40,14 +40,19 @@ public final class HookServerHandle {
 
     /// Take approval `id` back and end the streams it let in (use this, not `AccessDesk.revoke`, so they end).
     @discardableResult
-    public func revokeApproval(_ id: UInt64) -> Bool { server.revokeApproval(id: id) }
+    public func revokeApproval(profile: String, _ id: UInt64) -> Bool { server.revokeApproval(profile: profile, id: id) }
 
     /// Take stored approval `id` (a database row of `AccessDesk.approvals()`) back and end the streams it let in.
     @discardableResult
-    public func revokeStoredApproval(_ id: UInt64) -> Bool { server.revokeStoredApproval(id: id) }
+    public func revokeStoredApproval(profile: String, _ id: UInt64) -> Bool {
+        server.revokeStoredApproval(profile: profile, id: id)
+    }
 
-    /// The settings changed: the server reads the agent-access mode again.
-    public func settingsChanged() { server.settingsChanged() }
+    /// Another profile's desk: what the requests reaching that profile's windows are judged by.
+    public func addDesk(_ desk: AccessDesk) { server.addDesk(desk: desk) }
+
+    /// Profile `profile`'s settings changed: the server reads its agent-access mode again.
+    public func settingsChanged(profile: String) { server.settingsChanged(profile: profile) }
 
     /// The status items the Probes' hooks set (`HookAction.probesChanged` says to read them again).
     public func probeStatusItems() -> [ProbeStatusRecord] { server.probeStatusItems() }

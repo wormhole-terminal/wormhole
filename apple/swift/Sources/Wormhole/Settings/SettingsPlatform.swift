@@ -27,7 +27,9 @@
             }
             platform.approvals = { [weak app] in desk(of: app)?.approvals() ?? [] }
             platform.revokeApproval = { [weak app] number, stored in
-                if let hooks = app?.hooks { return hooks.revokeApproval(number, stored: stored) }
+                if let hooks = app?.hooks, let profile = app?.windowsHost.profile {
+                    return hooks.revokeApproval(number, stored: stored, profile: profile)
+                }
                 // No server (a second launch, an unlinked socket): the desk alone takes it back.
                 if stored { _ = desk(of: app)?.revokeStored(id: number) } else { _ = desk(of: app)?.revoke(id: number) }
             }

@@ -6,16 +6,19 @@
 use super::handle::SettingsHandle;
 use semver::Version;
 use std::path::Path;
+use std::time::SystemTime;
 use wormhole_core::config::settings_index::SectionId;
 use wormhole_core::platform::paths;
 use wormhole_core::terminal::shells::{self, ShellKind};
+use wormhole_core::storage::paths::DataRoot;
 use wormhole_core::update::{
-    UpdateChannel, counted_user_agent, current_platform, macos_version, plain_user_agent,
+    UpdateChannel, UpdateSchedule, counted_user_agent, current_platform, macos_version, plain_user_agent,
 };
 use wormhole_core::view::sidebar::display_path;
 use wormhole_text::keys::{
     settings_advanced_reset_question, settings_agents_others_head, settings_import_selected,
-    settings_terminal_worktree_base_under, settings_window_preview_feature_note,
+    settings_terminal_worktree_base_under, settings_updates_count_starts_in,
+    settings_window_preview_feature_note,
 };
 use wormhole_text::whole;
 
@@ -85,6 +88,16 @@ pub fn settings_update_user_agent(version: String, counting: bool, unstable: boo
     } else {
         plain_user_agent(&version)
     })
+}
+
+/// "Sharing starts in about 24 hours, with your next update check." while this copy waits to be counted (the day after
+/// a version that counts first ran: `UpdateSchedule::count_starts_in`), `None` once it is counted or before the wait began.
+#[uniffi::export]
+pub fn settings_update_count_wait() -> Option<String> {
+    crate::isolation::require().ok()?;
+    let file = DataRoot::current().update_schedule_file();
+    let left = UpdateSchedule::load_shared(&file, || None).count_starts_in(SystemTime::now())?;
+    Some(settings_updates_count_starts_in(whole(left.as_secs().div_ceil(3600))))
 }
 
 #[cfg(test)]

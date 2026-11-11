@@ -19,7 +19,7 @@ struct ProbeRowView: View {
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: Space._2) {
-                        Text(row.title).font(.system(size: TextRole.body.size, weight: .medium)).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                        Text(row.title).textRole(.body, weight: .medium).foregroundStyle(tokens.textPrimary).lineLimit(1)
                         StatusBadge(text: row.stateWord, color: color)
                     }
                     if !row.identity.isEmpty { caption(row.identity).lineLimit(1) }
@@ -57,7 +57,7 @@ struct ProbeRowView: View {
     }
 
     private func caption(_ text: String) -> some View {
-        Text(text).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+        Text(text).textRole(.caption).foregroundStyle(tokens.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
     }
 }

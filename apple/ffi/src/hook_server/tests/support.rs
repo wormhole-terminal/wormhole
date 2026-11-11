@@ -190,7 +190,7 @@ impl Fixture {
     }
 }
 
-fn opened(events: &[crate::WorkspaceEvent]) -> i64 {
+pub(super) fn opened(events: &[crate::WorkspaceEvent]) -> i64 {
     events
         .iter()
         .find_map(|event| match event {

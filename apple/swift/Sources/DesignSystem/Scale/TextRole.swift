@@ -45,18 +45,41 @@ public enum TextRole: CaseIterable, Sendable {
     public static let lineHeightRatio: CGFloat = 1.618_034
     @MainActor public var lineHeight: CGFloat { size * Self.lineHeightRatio }
 
-    /// The theme's interface font (`metrics.ui_font_family`), or the system font when it sets none.
-    @MainActor public var font: Font {
+    /// The theme's interface font (`metrics.ui_font_family`), or the system font when it sets none. `scale` is the
+    /// window's own text step (`textScale`); `weight` and `design` replace the role's.
+    @MainActor public func font(scale: CGFloat = 1, weight: Font.Weight? = nil, design: Font.Design? = nil) -> Font {
+        let size = size * scale
         if let family = ThemeStore.shared.tokens.metrics.uiFontFamily, family != Self.systemFont {
-            return .custom(family, size: size).weight(weight)
+            return .custom(family, size: size).weight(weight ?? self.weight)
         }
-        return .system(size: size, weight: weight)
+        return .system(size: size, weight: weight ?? self.weight, design: design ?? .default)
     }
+
+    @MainActor public var font: Font { font() }
 
     /// `SYSTEM_FONT`: what core's font settings call the system UI font.
     private static let systemFont = ".SystemUIFont"
 }
 
+extension EnvironmentValues {
+    /// How much a window grows its text: Settings' own step (`settings_text_size`), 1 everywhere else.
+    @Entry public var textScale: CGFloat = 1
+}
+
+private struct RoleFont: ViewModifier {
+    @Environment(\.textScale) private var scale
+    let role: TextRole
+    let weight: Font.Weight?
+    let design: Font.Design?
+
+    func body(content: Content) -> some View {
+        content.font(role.font(scale: scale, weight: weight, design: design))
+    }
+}
+
 extension View {
-    public func textRole(_ role: TextRole) -> some View { font(role.font) }
+    /// The role's font, at the window's text step.
+    public func textRole(_ role: TextRole, weight: Font.Weight? = nil, design: Font.Design? = nil) -> some View {
+        modifier(RoleFont(role: role, weight: weight, design: design))
+    }
 }

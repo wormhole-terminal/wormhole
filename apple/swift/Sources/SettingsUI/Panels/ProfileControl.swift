@@ -74,7 +74,7 @@ struct ProfileControl: View {
             ForEach(draft.form?.folders ?? [], id: \.self) { folder in
                 HStack(spacing: Space._2) {
                     Image(Icon.folder).foregroundStyle(tokens.textMuted)
-                    Text(folder).font(.system(size: TextRole.body.size)).lineLimit(1).truncationMode(.middle)
+                    Text(folder).textRole(.body).lineLimit(1).truncationMode(.middle)
                     Spacer(minLength: 0)
                     IconButton(symbol: Icon.remove.rawValue, label: LocalizedStringKey(Words.text("settings-profile-stop-opening-folder", fallback: "Stop opening this folder in the profile"))) {
                         draft.edit { $0.folders.removeAll { $0 == folder } }
@@ -90,14 +90,14 @@ struct ProfileControl: View {
 
     private var env: some View {
         TextEditor(text: text(\.env))
-            .scrollContentBackground(.hidden).font(.system(size: TextRole.body.size))
+            .scrollContentBackground(.hidden).textRole(.body)
             .padding(Space._1).frame(width: SettingsMetric.fieldBoxWidth, height: Metric.control * 2 + Space._2)
             .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
             .overlay(RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.inputBorder, lineWidth: tokens.metrics.borderWidth))
             .overlay(alignment: .topLeading) {
                 if (draft.form?.env ?? "").isEmpty {
                     Text(Words.text("settings-profile-name-value-one-per-line", fallback: "NAME=value, one per line"))
-                        .font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textFaint)
+                        .textRole(.body).foregroundStyle(tokens.textFaint)
                         .padding(.horizontal, Space._2 + Space._1).padding(.top, Space._1 + 1).allowsHitTesting(false)
                 }
             }
@@ -116,7 +116,7 @@ struct ProfileControl: View {
         VStack(alignment: .trailing, spacing: Space._2) {
             ForEach(Array((draft.form?.logins ?? []).enumerated()), id: \.offset) { index, login in
                 HStack(spacing: Space._2) {
-                    Text(login.name).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textMuted)
+                    Text(login.name).textRole(.body).foregroundStyle(tokens.textMuted)
                         .frame(width: SettingsMetric.agentLabelWidth, alignment: .leading)
                     InputField(
                         placeholder: login.placeholder,
@@ -140,7 +140,7 @@ struct ProfileControl: View {
     }
 
     private var problem: some View {
-        Text(draft.problem ?? "").font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.statusDangerText)
+        Text(draft.problem ?? "").textRole(.caption).foregroundStyle(tokens.statusDangerText)
             .frame(width: SettingsMetric.fieldBoxWidth, alignment: .trailing).fixedSize(horizontal: false, vertical: true)
     }
 }

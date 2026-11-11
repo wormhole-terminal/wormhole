@@ -19,7 +19,7 @@ struct PartsList: View {
         VStack(spacing: 0) {
             ForEach(Array(shown.enumerated()), id: \.element.value) { index, part in row(part, shown: true, index: index, count: shown.count) }
             if !hidden.isEmpty {
-                Text(Words.text("title-row-hidden", fallback: "Hidden")).font(.system(size: TextRole.caption.size, weight: .semibold))
+                Text(Words.text("title-row-hidden", fallback: "Hidden")).textRole(.caption, weight: .semibold)
                     .foregroundStyle(tokens.textMuted).frame(maxWidth: .infinity, alignment: .leading).padding(.top, Space._3)
                     .accessibilityAddTraits(.isHeader)
                 ForEach(hidden, id: \.value) { row($0, shown: false, index: 0, count: 0) }
@@ -31,7 +31,7 @@ struct PartsList: View {
     private func row(_ part: ControlSpec.TitlePart, shown: Bool, index: Int, count: Int) -> some View {
         HStack(spacing: Space._2) {
             if shown { Image(Icon.grip).foregroundStyle(tokens.textFaint).accessibilityHidden(true) }
-            Text(part.label).font(.system(size: TextRole.label.size)).foregroundStyle(shown ? tokens.textPrimary : tokens.textFaint)
+            Text(part.label).textRole(.label).foregroundStyle(shown ? tokens.textPrimary : tokens.textFaint)
             Spacer()
             if part.hideable { SettingToggle(label: part.label, isOn: shown) { toggle(part, on: $0) } }
         }

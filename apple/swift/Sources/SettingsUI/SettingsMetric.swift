@@ -38,6 +38,16 @@ enum SettingsMetric {
     static let stepperValueWidth: CGFloat = 56
     /// The changed-row dot (`MARK_DOT`).
     static let markDot: CGFloat = 6
+    /// What `settings_text_size` multiplies the window's text by (`style/text_scale.rs`: eighths, so the caption role lands on
+    /// 10.5, 12, 13.5 and 15 pt), for this window alone. The default is exactly 1. Heights fixed in points stay, as in GPUI.
+    static func textScale(_ step: String?) -> CGFloat {
+        switch step {
+        case "small": 0.875
+        case "large": 1.125
+        case "larger": 1.25
+        default: 1
+        }
+    }
     /// The preview strip's height, head and scene together (`preview_column.rs` `PREVIEW_H`), the stage's inset.
     static let previewHeight: CGFloat = 256
     static let stageInset: CGFloat = 8

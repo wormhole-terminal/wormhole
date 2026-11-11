@@ -106,7 +106,7 @@ fn probes_on(f: &Fixture) {
     let all: Vec<u32> = (0..sheet.permissions.len() as u32).collect();
     assert!(desk.needs_touch_id("demo".into(), all.clone()), "a fold is a Touch ID grant");
     assert_eq!(desk.approve("demo".into(), all), ProbeApprovalOutcome::Approved);
-    f.server.settings_changed();
+    f.server.settings_changed("default".into());
     eventually("the Probe loaded", || {
         f.events().contains(&HookEvent::ProbesChanged) && crate::probes::rules().0.is_some()
     });
@@ -236,7 +236,7 @@ fn a_finished_blocks_output_folds_to_a_marker_that_opens_and_that_never_hide_lin
         "feature_flags": { "automation": true, "probes": true, "output_folds": true }
     });
     write_file(&root.default_profile().config_file(), &config.to_string());
-    f.server.settings_changed();
+    f.server.settings_changed("default".into());
     eventually("every line shown", || {
         let (flags, _) = sections(&terminal.frame(), 80);
         flags & 16 == 0

@@ -14,6 +14,11 @@ struct LabelsSpecimen: View {
                 SectionLabel("Section label", isCollapsed: false)
                 SectionLabel("Folded section label", isCollapsed: true)
             }
+            // The line icons the panels draw (`LucideView`): stroked in the foreground, their width scaling with the box.
+            HStack(spacing: Space._3) {
+                ForEach([Lucide.pin, .link, .note, .check, .x], id: \.self) { LucideView(icon: $0, size: Metric.glyph) }
+            }
+            .foregroundStyle(tokens.textMuted)
             Text("Nothing here yet.").font(TextRole.body.font).foregroundStyle(tokens.textMuted)
             HStack(spacing: Space._2) {
                 Label("main", systemImage: "arrow.triangle.branch").font(TextRole.caption.font)

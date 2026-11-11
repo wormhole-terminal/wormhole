@@ -38,13 +38,16 @@
 
         func stop() { handle.stop() }
 
-        /// Settings → Agent access → Revoke: the approval is taken back and the streams it let in end.
-        func revokeApproval(_ number: UInt64, stored: Bool) {
-            if stored { handle.revokeStoredApproval(number) } else { handle.revokeApproval(number) }
+        /// Settings → Agent access → Revoke: the approval of `profile`'s desk is taken back and the streams it let in end.
+        func revokeApproval(_ number: UInt64, stored: Bool, profile: String) {
+            if stored { handle.revokeStoredApproval(profile: profile, number) } else { handle.revokeApproval(profile: profile, number) }
         }
 
-        /// Settings changed the agent-access mode: the server reads it again.
-        func settingsChanged() { handle.settingsChanged() }
+        /// A profile opened beside the first one: its windows' requests are judged by its own desk.
+        func addDesk(_ desk: AccessDesk) { handle.addDesk(desk) }
+
+        /// Settings changed profile `profile`'s agent-access mode: the server reads it again.
+        func settingsChanged(profile: String) { handle.settingsChanged(profile: profile) }
 
         /// What the Probes set changed: the status bar says it, and every terminal takes a frame (rules, tints and folds are
         /// in the frames).
@@ -98,8 +101,8 @@
     /// Without the core there is no socket to serve.
     @MainActor
     final class HookHost {
-        func settingsChanged() {}
-        func revokeApproval(_ number: UInt64, stored: Bool) {}
+        func settingsChanged(profile: String) {}
+        func revokeApproval(_ number: UInt64, stored: Bool, profile: String) {}
         func stop() {}
     }
 

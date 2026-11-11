@@ -68,7 +68,7 @@ final class SettingsApplier {
         if changed("jump_waiting_key") { app.bindJumpKey(values["jump_waiting_key"]?.string ?? "") }
         // The server also reads the Probes' flag, the folds' flag and "Never hide lines" again with them.
         if changed("agent_access", "control_write", "feature_flags", "never_hide_lines") {
-            app.hooks?.settingsChanged()
+            app.hooks?.settingsChanged(profile: app.windowsHost.profile)
             app.menus?.windowsChanged()
         }
         if changed("code_font_family", "code_font_size", "font_family") { app.look.codeFont = PanelSettings.codeFont(values) }

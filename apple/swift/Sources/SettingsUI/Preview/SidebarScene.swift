@@ -36,7 +36,7 @@ struct SidebarScene: View {
             ForEach(Self.densities.filter { !withAgents || $0.value == current }, id: \.value) { density in
                 let isCurrent = density.value == current
                 VStack(alignment: .leading, spacing: Space._1) {
-                    Text(density.label).font(.system(size: TextRole.label.size)).foregroundStyle(isCurrent ? t.primary : t.textMuted)
+                    Text(density.label).textRole(.label).foregroundStyle(isCurrent ? t.primary : t.textMuted)
                     cell(t, density, isCurrent)
                 }
                 .frame(maxWidth: .infinity)

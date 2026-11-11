@@ -31,11 +31,11 @@ struct AgentList: View {
                 AgentMark(text: agent.mark, size: Metric.tile)
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: Space._2) {
-                        Text(agent.name).font(.system(size: TextRole.body.size, weight: .medium)).foregroundStyle(tokens.textPrimary)
+                        Text(agent.name).textRole(.body, weight: .medium).foregroundStyle(tokens.textPrimary)
                         StatusBadge(text: badge(agent.state).text, color: badge(agent.state).color)
                     }
                     HStack(spacing: Space._1) {
-                        Text(agent.detail).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
+                        Text(agent.detail).textRole(.caption).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
                         if let path = agent.configPath {
                             IconButton(symbol: Icon.reveal.rawValue, label: LocalizedStringKey(Words.text("settings-agents-reveal-in-finder", fallback: "Reveal in Finder"))) {
                                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
@@ -48,7 +48,7 @@ struct AgentList: View {
                 if let hooks = agent.hooks { ActionButton(title: title(hooks), symbol: nil) { host.perform(hooks, agent: agent.id) } }
             }
             if let note = agent.note {
-                Text(note).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted).padding(.leading, Metric.tile + Space._3)
+                Text(note).textRole(.caption).foregroundStyle(tokens.textMuted).padding(.leading, Metric.tile + Space._3)
             }
         }
         .padding(.vertical, Space._2)
@@ -103,14 +103,14 @@ struct OtherAgents: View {
                         Image(Icon.disclosure).font(.system(size: Metric.chevron, weight: .bold)).rotationEffect(.degrees(open ? 90 : 0))
                             .frame(width: Metric.lead, height: Metric.control).foregroundStyle(tokens.textMuted)
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(host.othersHead(count: records.count)).font(.system(size: TextRole.body.size, weight: .medium)).foregroundStyle(tokens.textPrimary)
+                            Text(host.othersHead(count: records.count)).textRole(.body, weight: .medium).foregroundStyle(tokens.textPrimary)
                             if !open {
-                                Text(records.map(\.name).joined(separator: " · ")).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                                Text(records.map(\.name).joined(separator: " · ")).textRole(.caption).foregroundStyle(tokens.textMuted)
                                     .multilineTextAlignment(.leading)
                             }
                         }
                         Spacer(minLength: Space._2)
-                        Text(Words.text("settings-agents-not-on-path", fallback: "Not on PATH")).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textFaint)
+                        Text(Words.text("settings-agents-not-on-path", fallback: "Not on PATH")).textRole(.caption).foregroundStyle(tokens.textFaint)
                             .frame(height: Metric.control)
                     }
                     .padding(.vertical, Space._1).contentShape(Rectangle())
@@ -121,9 +121,9 @@ struct OtherAgents: View {
                     ForEach(records) { agent in
                         HStack(spacing: Space._3) {
                             AgentMark(text: agent.mark, size: Metric.tileMini)
-                            Text(agent.name).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textMuted)
+                            Text(agent.name).textRole(.body).foregroundStyle(tokens.textMuted)
                             Spacer(minLength: 0)
-                            Text(agent.detail).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textFaint)
+                            Text(agent.detail).textRole(.caption).foregroundStyle(tokens.textFaint)
                         }
                         .padding(.vertical, Space._1).padding(.leading, Metric.lead + Space._2)
                         .accessibilityElement(children: .combine)

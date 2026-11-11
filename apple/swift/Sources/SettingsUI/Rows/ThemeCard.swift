@@ -38,7 +38,7 @@ struct ThemeCard: View {
                 }
                 .frame(height: Self.sceneHeight)
                 HStack {
-                    Text(theme.name).font(.system(size: TextRole.label.size, weight: .medium)).lineLimit(1)
+                    Text(theme.name).textRole(.label, weight: .medium).lineLimit(1)
                         .foregroundStyle(isSelected ? own.primary : own.textPrimary)
                     Spacer(minLength: 0)
                     if isSelected { Image(Icon.check).font(.system(size: Metric.glyph, weight: .semibold)).foregroundStyle(own.primary) }

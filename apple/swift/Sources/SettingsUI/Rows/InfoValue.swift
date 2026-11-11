@@ -9,6 +9,6 @@ struct InfoValue: View {
 
     var body: some View {
         Text(name == "version" ? SettingsText.appVersion : "")
-            .font(.system(size: TextRole.body.size)).monospacedDigit().foregroundStyle(tokens.textMuted)
+            .textRole(.body).monospacedDigit().foregroundStyle(tokens.textMuted)
     }
 }

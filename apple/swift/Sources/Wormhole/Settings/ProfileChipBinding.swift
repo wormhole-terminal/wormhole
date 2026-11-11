@@ -66,6 +66,7 @@ extension AppController {
                 try (settingsModel.host as? RustSettingsHost)?.switchProfile(to: id)
                 profileHosts[id] = target
                 windowsHost = target
+                aux.startAccess(profile: id)
                 leaving.forEach { $0.parked = true }
                 let back = windows(of: id)
                 back.forEach { $0.parked = false }
@@ -144,6 +145,7 @@ extension AppController {
         if let known = profileHosts[id] { return known }
         guard let beside = windowsHost.beside, let made = try? beside(id) else { return nil }
         profileHosts[id] = made
+        aux.startAccess(profile: id)
         return made
     }
 

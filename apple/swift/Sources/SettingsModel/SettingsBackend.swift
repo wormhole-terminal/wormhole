@@ -83,6 +83,8 @@ public protocol SettingsHost: AnyObject {
     func worktreeCaption(base: String) -> String?
     /// The header an update check carries (what "What an update check sends" shows): nil without the core.
     func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String?
+    /// "Sharing starts in about 24 hours, …" while this copy waits to be counted; nil once it is (or without the core).
+    func updateCountWait() -> String?
 }
 
 extension SettingsHost {
@@ -109,6 +111,7 @@ extension SettingsHost {
     public func previewNote(section: String) -> String? { nil }
     public func resetQuestion(count: Int) -> String { "Reset \(count) changed setting\(count == 1 ? "" : "s") to their default? Your terminals, notes and themes are kept." }
     public func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String? { nil }
+    public func updateCountWait() -> String? { nil }
     public func saveProfile(_ form: ProfileForm) -> String? { Self.noProfiles }
     public func importReview(_ id: String) async -> ImportReview? { nil }
     public func applyImport(_ id: String, ticked: [Int], shown: Int) -> (text: String, failed: Bool) { (Self.noProfiles, true) }

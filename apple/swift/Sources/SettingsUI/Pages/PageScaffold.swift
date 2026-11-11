@@ -20,14 +20,14 @@ struct PageScaffold<Action: View, Content: View>: View {
                 VStack(alignment: .leading, spacing: Space._4) {
                     VStack(alignment: .leading, spacing: Space._1) {
                         HStack(spacing: Space._4) {
-                            Text(title).font(.system(size: TextRole.title.size, weight: .bold)).foregroundStyle(tokens.textPrimary)
+                            Text(title).textRole(.title, weight: .bold).foregroundStyle(tokens.textPrimary)
                                 .accessibilityAddTraits(.isHeader)
                             Spacer(minLength: 0)
                             action
                         }
                         .frame(height: Metric.titleRow)
                         if !intro.isEmpty {
-                            Text(intro).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textMuted)
+                            Text(intro).textRole(.body).foregroundStyle(tokens.textMuted)
                                 .frame(maxWidth: SettingsMetric.introWidth, alignment: .leading)
                         }
                     }
@@ -42,6 +42,7 @@ struct PageScaffold<Action: View, Content: View>: View {
             .task(id: revealed) {
                 guard let revealed else { return }
                 withAnimation(Motion.layout) { proxy.scrollTo(revealed, anchor: .center) }
+                // one-shot: the found row's highlight fades after 1.6 s
                 try? await Task.sleep(for: .seconds(1.6))
                 clearReveal()
             }

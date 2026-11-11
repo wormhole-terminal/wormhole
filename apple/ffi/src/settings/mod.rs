@@ -38,7 +38,7 @@ pub use import_review::{
 pub use imports::{SettingsImportRow, settings_import_rows};
 pub use page_text::{
     SettingsShellLine, settings_import_selected_line, settings_others_head, settings_preview_note,
-    settings_reset_question, settings_update_user_agent,
+    settings_reset_question, settings_update_count_wait, settings_update_user_agent,
 };
 pub use probes::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,

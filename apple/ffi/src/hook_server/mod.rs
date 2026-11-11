@@ -25,6 +25,7 @@ mod events;
 mod gate;
 mod messages;
 mod processes;
+mod reach;
 mod tap;
 mod terminals;
 mod views;
@@ -99,9 +100,7 @@ impl HookServer {
         if shared.tap.set(publisher.clone()).is_err() {
             return Err(HookError::Failed { reason: "this workspace already has a server".into() });
         }
-        let root = DataRoot::new(dir);
-        let profile = root.default_profile();
-        let core = Core::new(workspace, usage, access, bus, publisher, (root, profile), listener);
+        let core = Core::new(workspace, usage, access, bus, publisher, DataRoot::new(dir), listener);
         // Every other window's terminals are heard too, the ones that exist and the ones made later.
         for window in core.shares() {
             core.attach(&window);
@@ -137,30 +136,38 @@ impl HookServer {
         self.core.close_question.store(false, Ordering::Release);
     }
 
-    /// Take approval `id` back (`AccessDesk::revoke`, which this does) and end the streams it let in. Whether
-    /// there was one.
-    pub fn revoke_approval(&self, id: u64) -> bool {
-        let revoked = self.core.desk.revoke(id);
+    /// Another profile's desk (a profile's windows were opened beside the first's): what its windows' requests are judged
+    /// by, with its own mode, approvals and questions.
+    pub fn add_desk(&self, desk: Arc<AccessDesk>) {
+        self.core.add_desk(desk);
+    }
+
+    /// Take approval `id` of profile `profile`'s desk back (`AccessDesk::revoke`, which this does) and end the
+    /// streams it let in. Whether there was one.
+    pub fn revoke_approval(&self, profile: String, id: u64) -> bool {
+        let Some(seat) = self.core.seat_of_profile(&profile) else { return false };
+        let revoked = seat.desk.revoke(id);
         if revoked {
-            self.core.bus.revoke_holder(gate::holder(false, id));
+            self.core.bus.revoke_holder(seat.holder(false, id));
         }
         revoked
     }
 
-    /// Take stored approval `id` (a database row of `AccessDesk::approvals`) back and end the streams it let in.
-    /// Whether there was one.
-    pub fn revoke_stored_approval(&self, id: u64) -> bool {
-        let revoked = self.core.desk.revoke_stored(id);
+    /// Take stored approval `id` (a database row of `AccessDesk::approvals`) of profile `profile` back and end the
+    /// streams it let in. Whether there was one.
+    pub fn revoke_stored_approval(&self, profile: String, id: u64) -> bool {
+        let Some(seat) = self.core.seat_of_profile(&profile) else { return false };
+        let revoked = seat.desk.revoke_stored(id);
         if revoked {
-            self.core.bus.revoke_holder(gate::holder(true, id));
+            self.core.bus.revoke_holder(seat.holder(true, id));
         }
         revoked
     }
 
-    /// The settings changed: read them again, and end the streams that only the mode "Allowed while open" let
-    /// read every terminal when it is no longer that.
-    pub fn settings_changed(&self) {
-        self.core.settings_changed();
+    /// Profile `profile`'s settings changed: read them again, and end the streams that only the mode "Allowed
+    /// while open" let read every terminal when it is no longer that.
+    pub fn settings_changed(&self, profile: String) {
+        self.core.settings_changed(&profile);
         // The `probes` flag, the output-folds flag and "Never hide lines" are read again with them.
         crate::probes::reload(&self.core);
     }

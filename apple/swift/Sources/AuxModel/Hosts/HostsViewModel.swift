@@ -34,6 +34,7 @@ public final class HostsViewModel {
         poll = Task { [weak self, slowLook] in
             while !Task.isCancelled {
                 await self?.refresh()
+                // one-shot: the next look of the slow fallback behind the folder watch (a watch can drop events), armed after each look
                 try? await Task.sleep(for: slowLook)
             }
         }
@@ -59,6 +60,7 @@ public final class HostsViewModel {
         }
         copied = what
         Task { [weak self] in
+            // one-shot: "Copied" goes away after copiedFor
             try? await Task.sleep(for: Self.copiedFor)
             if self?.copied == what { self?.copied = nil }
         }

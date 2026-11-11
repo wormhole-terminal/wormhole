@@ -5,6 +5,9 @@
 import AppKit
 import AuxModel
 import AuxWindows
+#if WITH_UNIFFI
+    import AuxBridge
+#endif
 
 @MainActor
 final class AuxController {
@@ -13,9 +16,11 @@ final class AuxController {
     var onboarding: OnboardingWindow?
     /// The run Play Intro and Play Welcome start (one plays at a time).
     let introPlayer = IntroPlayer()
-    private var access: AccessDriver?
-    /// The core's agent-access desk behind the questions, shared with the hook socket; nil in the sample.
-    private(set) var accessBackend: (any AccessBackend)?
+    /// Each profile's agent-access questions, as sheets (a profile is its own trust domain: its desk, its approvals).
+    private var access: [String: AccessDriver] = [:]
+    private var accessBackends: [String: any AccessBackend] = [:]
+    /// The shown profile's agent-access desk, shared with the hook socket; nil in the sample.
+    var accessBackend: (any AccessBackend)? { accessBackends[app.windowsHost.profile] }
     unowned let app: AppController
     private var backends: AuxBackends { AuxBackends(app: app) }
 
@@ -40,12 +45,18 @@ final class AuxController {
 
     func showUpdates() { UpdateWindow.show(backend: updateBackend(), version: AppInfo.from(bundle: .main).version) }
 
-    /// Agents' questions (the control API's approval) as sheets on the window, one at a time, as they arrive.
-    func startAccess() {
-        guard access == nil, let backend = backends.access() else { return }
-        accessBackend = backend
-        access = AccessDriver(backend: backend) { [weak app] in app?.window }
-        access?.start()
+    /// Agents' questions (the control API's approval) as sheets on the window, one at a time, as they arrive: profile
+    /// `profile`'s (the shown one's by default), which the hook socket judges its windows' requests by from now on.
+    func startAccess(profile: String? = nil) {
+        let id = profile ?? app.windowsHost.profile
+        guard access[id] == nil, let backend = backends.access(profile: id) else { return }
+        accessBackends[id] = backend
+        let driver = AccessDriver(backend: backend) { [weak app] in app?.window }
+        access[id] = driver
+        driver.start()
+        #if WITH_UNIFFI
+            if let desk = (backend as? FFIAccessBackend)?.desk { app.hooks?.addDesk(desk) }
+        #endif
     }
 
     /// A sample of the question, for the control folder's `access`: nothing real asks until the control socket serves one.

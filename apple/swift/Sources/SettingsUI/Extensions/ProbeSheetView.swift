@@ -20,9 +20,9 @@ struct ProbeSheetView: View {
             VStack(alignment: .leading, spacing: Space._3) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Space._3) {
-                        Text(sheet.title).font(TextRole.heading.font).foregroundStyle(tokens.textPrimary)
+                        Text(sheet.title).textRole(.heading).foregroundStyle(tokens.textPrimary)
                         caption(sheet.identity)
-                        Text(sheet.description).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textPrimary)
+                        Text(sheet.description).textRole(.body).foregroundStyle(tokens.textPrimary)
                         if !sheet.since.isEmpty { since(sheet.since) }
                         SectionLabel(sheet.asksHeading)
                         VStack(spacing: 0) {
@@ -42,7 +42,7 @@ struct ProbeSheetView: View {
                 caption(sheet.filesFingerprint)
                 caption(open.needsTouchID ? ExtensionsText.confirmTouchID : ExtensionsText.confirmClick)
                 if let error = open.error {
-                    Text(error).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.statusDangerText)
+                    Text(error).textRole(.caption).foregroundStyle(tokens.statusDangerText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 HStack(spacing: Space._2) {
@@ -67,14 +67,14 @@ struct ProbeSheetView: View {
         VStack(alignment: .leading, spacing: Space._1) {
             SectionLabel(ExtensionsText.since)
             ForEach(Array(changes.enumerated()), id: \.offset) { _, change in
-                Text(change.text).font(.system(size: TextRole.body.size))
+                Text(change.text).textRole(.body)
                     .foregroundStyle(change.added ? tokens.statusWarningText : tokens.textPrimary)
             }
         }
     }
 
     private func caption(_ text: String) -> some View {
-        Text(text).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
+        Text(text).textRole(.caption).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -87,7 +87,7 @@ private struct PermissionRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._1) {
             HStack(spacing: Space._2) {
-                Text(permission.words).font(.system(size: TextRole.body.size)).foregroundStyle(tokens.textPrimary)
+                Text(permission.words).textRole(.body).foregroundStyle(tokens.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
                 if permission.touchID { StatusBadge(text: ExtensionsText.touchID, color: tokens.textMuted) }
                 SettingToggle(label: permission.words, isOn: open.granted.contains(permission.id)) { _ in
@@ -96,11 +96,11 @@ private struct PermissionRow: View {
                 .disabled(open.busy)
             }
             if let note = permission.programNote {
-                Text(note).font(.system(size: TextRole.caption.size))
+                Text(note).textRole(.caption)
                     .foregroundStyle(permission.programWarns ? tokens.statusDangerText : tokens.textMuted)
             }
             ForEach(permission.commands, id: \.self) { command in
-                Text(command).font(.system(size: TextRole.caption.size, design: .monospaced)).foregroundStyle(tokens.textPrimary)
+                Text(command).textRole(.caption, design: .monospaced).foregroundStyle(tokens.textPrimary)
                     .padding(.horizontal, Space._1)
                     .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
             }

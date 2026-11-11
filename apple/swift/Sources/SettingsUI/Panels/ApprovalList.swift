@@ -19,14 +19,14 @@ struct ApprovalList: View {
                 ForEach(records) { approval in
                     HStack(spacing: Space._3) {
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(approval.label).font(.system(size: TextRole.body.size, weight: .medium)).foregroundStyle(tokens.textPrimary)
-                            Text(approval.detail).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                            Text(approval.label).textRole(.body, weight: .medium).foregroundStyle(tokens.textPrimary)
+                            Text(approval.detail).textRole(.caption).foregroundStyle(tokens.textMuted)
                             if !approval.location.isEmpty {
-                                Text(approval.location).font(.system(size: TextRole.caption.size, design: .monospaced))
+                                Text(approval.location).textRole(.caption, design: .monospaced)
                                     .foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
                             }
                             if !approval.allowed.isEmpty {
-                                Text(approval.allowed.joined(separator: " · ")).font(.system(size: TextRole.caption.size))
+                                Text(approval.allowed.joined(separator: " · ")).textRole(.caption)
                                     .foregroundStyle(tokens.textFaint)
                             }
                         }

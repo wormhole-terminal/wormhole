@@ -34,9 +34,10 @@ TABLE: dict[str, tuple[str, int]] = {
     "DesignSystem": ("found", 0),
     "WindowsModel": ("model", 1), "PanelModel": ("model", 1), "PaletteModel": ("model", 1),
     "PanesModel": ("model", 1), "SettingsModel": ("model", 1), "PlatformModel": ("model", 1),
-    "AuxModel": ("model", 1), "StudioModel": ("model", 1),
+    "AuxModel": ("model", 1), "StudioModel": ("model", 1), "FontPickerModel": ("model", 0),
     "WormholeFFI": ("ffi", 0), "WormholeBindings": ("ffi", 1), "UniFFISource": ("ffi", 2),
-    "SidebarUI": ("ui", 1), "PanelUI": ("ui", 1), "PaletteUI": ("ui", 1), "PanesUI": ("ui", 1),
+    # Leaves other UI modules draw: the group colours (SidebarUI) and the font picker (FontPickerUI) use no other UI module.
+    "SidebarUI": ("ui", 0), "FontPickerUI": ("ui", 0), "PanelUI": ("ui", 1), "PaletteUI": ("ui", 1), "PanesUI": ("ui", 1),
     "SettingsUI": ("ui", 1), "PlatformUI": ("ui", 1), "AuxWindows": ("ui", 1), "TerminalUI": ("ui", 1),
     "TerminalMetal": ("ui", 1), "FileIconTheme": ("ui", 1),
     "StudioUI": ("ui", 2), "WindowUI": ("ui", 3),
@@ -47,7 +48,7 @@ TABLE: dict[str, tuple[str, int]] = {
 }
 USES = {
     "found": set(),
-    "model": {"found"},
+    "model": {"found", "model"},
     "ffi": {"found", "ffi"},
     "ui": {"found", "model", "ui"},
     "bridge": {"found", "model", "ffi", "bridge"},

@@ -14,8 +14,8 @@ struct PreviewStrip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(spacing: Space._2) {
-                Text(SettingsText.preview).font(TextRole.label.font).foregroundStyle(tokens.textMuted)
-                Text(scene.title).font(.system(size: TextRole.label.size)).foregroundStyle(tokens.textFaint)
+                Text(SettingsText.preview).textRole(.label).foregroundStyle(tokens.textMuted)
+                Text(scene.title).textRole(.label).foregroundStyle(tokens.textFaint)
             }
             .frame(height: Metric.control)
             .padding(.horizontal, Space._4)
@@ -26,7 +26,7 @@ struct PreviewStrip: View {
             .frame(height: SettingsMetric.previewHeight - Metric.control - Space._2)
             .clipShape(RoundedRectangle(cornerRadius: tokens.metrics.radiusLg))
             if let caption = scene.caption {
-                Text(caption).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                Text(caption).textRole(.caption).foregroundStyle(tokens.textMuted)
                     .lineLimit(1).padding(.horizontal, Space._4)
             }
         }

@@ -20,7 +20,7 @@ struct FontRowView: View {
                 label
                 Spacer(minLength: Space._2)
                 if showsMonospaceTag {
-                    Text(FontWords.monospaceTag).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
+                    Text(FontWords.monospaceTag).textRole(.caption).foregroundStyle(tokens.textFaint)
                 }
                 if model.isSelected(entry) {
                     Image(systemName: "checkmark").font(.system(size: Metric.glyph, weight: .semibold))
@@ -38,7 +38,7 @@ struct FontRowView: View {
     @ViewBuilder private var label: some View {
         switch entry {
         case .inherit(let text):
-            Text(text).font(.system(size: TextRole.heading.size)).foregroundStyle(tokens.textMuted).lineLimit(1)
+            Text(text).textRole(.heading).foregroundStyle(tokens.textMuted).lineLimit(1)
         case .family(let choice, _):
             let own = model.catalog.drawsOwnName(choice.name)
             Text(choice.name).font(own ? FontFace.font(choice.name, size: TextRole.heading.size) : .system(size: TextRole.heading.size))

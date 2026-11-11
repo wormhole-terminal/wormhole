@@ -44,7 +44,7 @@ struct PanelNote: View {
     let text: String
     @Environment(\.tokens) private var tokens
     var body: some View {
-        Text(text).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+        Text(text).textRole(.caption).foregroundStyle(tokens.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, Space._3)
     }
 }

@@ -22,7 +22,7 @@ struct ChangedPage: View {
         }) {
             if changed.isEmpty {
                 VStack(spacing: Space._1) {
-                    Text(SettingsText.noneChanged).font(.system(size: TextRole.heading.size, weight: .semibold))
+                    Text(SettingsText.noneChanged).textRole(.heading, weight: .semibold)
                     Text(SettingsText.noneChangedDetail).foregroundStyle(tokens.textMuted)
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, Space._6 * 2)

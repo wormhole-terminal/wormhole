@@ -16,7 +16,7 @@ struct NewProfileSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
-            Text(SettingsText.newProfileTitle).font(TextRole.heading.font).foregroundStyle(tokens.textPrimary)
+            Text(SettingsText.newProfileTitle).textRole(.heading).foregroundStyle(tokens.textPrimary)
             VStack(alignment: .leading, spacing: Space._1) {
                 label(SettingsText.profileName)
                 TextField(SettingsText.giveAName, text: $name).textFieldStyle(.roundedBorder).focused($focused).onSubmit(create)
@@ -29,10 +29,10 @@ struct NewProfileSheet: View {
                 }
                 .labelsHidden()
             }
-            Text(SettingsText.loginsNeverCopied).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+            Text(SettingsText.loginsNeverCopied).textRole(.caption).foregroundStyle(tokens.textMuted)
                 .fixedSize(horizontal: false, vertical: true)
             if let problem {
-                Text(problem).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.statusDangerText)
+                Text(problem).textRole(.caption).foregroundStyle(tokens.statusDangerText)
                     .fixedSize(horizontal: false, vertical: true)
             }
             HStack(spacing: Space._2) {
@@ -47,7 +47,7 @@ struct NewProfileSheet: View {
     }
 
     private func label(_ text: String) -> some View {
-        Text(text).font(.system(size: TextRole.caption.size, weight: .medium)).foregroundStyle(tokens.textMuted)
+        Text(text).textRole(.caption, weight: .medium).foregroundStyle(tokens.textMuted)
     }
 
     private func create() {

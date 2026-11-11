@@ -73,9 +73,9 @@ private struct ShellLines: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(lines, id: \.name) { line in
                 HStack(spacing: Space._3) {
-                    Text(line.name).font(.system(size: TextRole.body.size)).lineLimit(1)
+                    Text(line.name).textRole(.body).lineLimit(1)
                         .frame(width: SettingsMetric.shellNameWidth, alignment: .leading)
-                    Text(line.commandLine).font(.system(size: TextRole.caption.size, design: .monospaced))
+                    Text(line.commandLine).textRole(.caption, design: .monospaced)
                         .foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
                 }
                 .frame(height: Metric.control)

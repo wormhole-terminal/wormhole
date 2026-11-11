@@ -51,6 +51,6 @@ private struct FontEmptyNote: View {
             Text(text).foregroundStyle(tokens.textMuted)
             if hint { Text(FontWords.showAllHint).foregroundStyle(tokens.textFaint) }
         }
-        .font(TextRole.caption.font).padding(Space._2).frame(maxWidth: .infinity, alignment: .leading)
+        .textRole(.caption).padding(Space._2).frame(maxWidth: .infinity, alignment: .leading)
     }
 }
