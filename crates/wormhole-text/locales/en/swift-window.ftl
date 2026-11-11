@@ -61,7 +61,6 @@ sidebar-menu-show-beside = Show beside…
 
 ## A group's menu
 
-sidebar-menu-group-colour = Colour
 sidebar-menu-group-colour-other = Other colour…
 sidebar-menu-group-colour-none = No colour
 sidebar-menu-group-new-terminal = New terminal in group

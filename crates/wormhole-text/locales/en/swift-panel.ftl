@@ -222,7 +222,6 @@ project-refused = Not allowed: { $reason }
 # { $what } is what was not found, in the core's own words.
 project-not-found = Not found: { $what }
 
-project-notes-waits = Notes sync: waits for the project to be trusted; its notes.md is neither read nor written until then
 project-folder-color = Folder colour
 project-pick-colour = Pick a colour
 project-color-none = None
@@ -248,23 +247,6 @@ project-prompt-note = Copy into a new note
 project-layout = Terminal layout
 project-open-layout = Open terminals
 
-# The head of the list of lines a project would run, under its title.
-project-all-none = Nothing here would run.
-
-# { $count } is a whole number of lines.
-project-all-lines = { $count ->
-    [one] 1 line
-   *[other] { $count } lines
-}
-
-project-all-gone = This project is no longer open in a terminal.
-
-# The line under the sheet's title. { $name } is the project's folder name, { $status } how it stands.
-project-all-status = { $name }/.wormhole · { $status }
-
-project-status-trusted = trusted
-project-status-changed = changed since you trusted it
-project-status-untrusted = not trusted
 project-badge-trusted = trusted
 project-badge-changed = changed
 project-badge-untrusted = not trusted

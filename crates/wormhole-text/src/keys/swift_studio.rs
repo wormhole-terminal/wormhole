@@ -7,161 +7,161 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Save as a copy"
-pub const STUDIO_MENU_DUPLICATE_SHORT: Key = Key::new(1497);
+pub const STUDIO_MENU_DUPLICATE_SHORT: Key = Key::new(1869);
 /// "More ways to save"
-pub const STUDIO_SAVE_MORE: Key = Key::new(1498);
+pub const STUDIO_SAVE_MORE: Key = Key::new(1870);
 /// "Theme name"
-pub const STUDIO_NAME_FIELD: Key = Key::new(1499);
+pub const STUDIO_NAME_FIELD: Key = Key::new(1871);
 /// "Tokens"
-pub const STUDIO_LIST_LABEL: Key = Key::new(1500);
+pub const STUDIO_LIST_LABEL: Key = Key::new(1872);
 /// "Clear the filter"
-pub const STUDIO_FILTER_CLEAR: Key = Key::new(1501);
+pub const STUDIO_FILTER_CLEAR: Key = Key::new(1873);
 /// "Token editor"
-pub const STUDIO_EDITOR_LABEL: Key = Key::new(1502);
+pub const STUDIO_EDITOR_LABEL: Key = Key::new(1874);
 /// "From the terminal's palette. Typing a value overrides it."
-pub const STUDIO_RULE_PALETTE_SHORT: Key = Key::new(1503);
+pub const STUDIO_RULE_PALETTE_SHORT: Key = Key::new(1875);
 /// "A theme in use falls back to the default theme, and unsaved edits are dropped."
-pub const STUDIO_TRASH_DETAIL: Key = Key::new(1504);
+pub const STUDIO_TRASH_DETAIL: Key = Key::new(1876);
 /// "expanded"
-pub const STUDIO_BAND_EXPANDED: Key = Key::new(1505);
+pub const STUDIO_BAND_EXPANDED: Key = Key::new(1877);
 /// "collapsed"
-pub const STUDIO_BAND_COLLAPSED: Key = Key::new(1506);
+pub const STUDIO_BAND_COLLAPSED: Key = Key::new(1878);
 /// "falls short of a contrast minimum"
-pub const STUDIO_ROW_LOW_HINT: Key = Key::new(1508);
+pub const STUDIO_ROW_LOW_HINT: Key = Key::new(1880);
 /// "passes"
-pub const STUDIO_CONTRAST_PASSES: Key = Key::new(1509);
+pub const STUDIO_CONTRAST_PASSES: Key = Key::new(1881);
 /// "falls short"
-pub const STUDIO_CONTRAST_FALLS_SHORT: Key = Key::new(1510);
+pub const STUDIO_CONTRAST_FALLS_SHORT: Key = Key::new(1882);
 /// "A theme file is at most 256 KiB."
-pub const STUDIO_FOLDER_TOO_LARGE: Key = Key::new(1515);
+pub const STUDIO_FOLDER_TOO_LARGE: Key = Key::new(1887);
 /// "Gallery"
-pub const STUDIO_GALLERY_LABEL: Key = Key::new(1517);
+pub const STUDIO_GALLERY_LABEL: Key = Key::new(1889);
 /// "Show the part of the app"
-pub const STUDIO_GALLERY_AREAS: Key = Key::new(1518);
+pub const STUDIO_GALLERY_AREAS: Key = Key::new(1890);
 /// "uses the selected token"
-pub const STUDIO_GALLERY_USES_SELECTED: Key = Key::new(1519);
+pub const STUDIO_GALLERY_USES_SELECTED: Key = Key::new(1891);
 /// "Show the palette"
-pub const STUDIO_GALLERY_SHOW_PALETTE: Key = Key::new(1520);
+pub const STUDIO_GALLERY_SHOW_PALETTE: Key = Key::new(1892);
 /// "Show the shortcut sheet"
-pub const STUDIO_GALLERY_SHOW_SHEET: Key = Key::new(1521);
+pub const STUDIO_GALLERY_SHOW_SHEET: Key = Key::new(1893);
 /// "Custom"
-pub const SETTINGS_FONTS_SOURCE_CUSTOM: Key = Key::new(1522);
+pub const SETTINGS_FONTS_SOURCE_CUSTOM: Key = Key::new(1894);
 /// "Installed"
-pub const SETTINGS_FONTS_SOURCE_INSTALLED: Key = Key::new(1523);
+pub const SETTINGS_FONTS_SOURCE_INSTALLED: Key = Key::new(1895);
 /// "Recent"
-pub const SETTINGS_FONTS_RECENT: Key = Key::new(1524);
+pub const SETTINGS_FONTS_RECENT: Key = Key::new(1896);
 /// "monospace"
-pub const SETTINGS_FONTS_MONOSPACE_TAG: Key = Key::new(1525);
+pub const SETTINGS_FONTS_MONOSPACE_TAG: Key = Key::new(1897);
 /// "Show all fonts to include proportional ones"
-pub const SETTINGS_FONTS_SHOW_ALL_HINT: Key = Key::new(1527);
+pub const SETTINGS_FONTS_SHOW_ALL_HINT: Key = Key::new(1899);
 /// "Font list"
-pub const SETTINGS_FONTS_PICKER: Key = Key::new(1528);
+pub const SETTINGS_FONTS_PICKER: Key = Key::new(1900);
 /// "Preview"
-pub const SETTINGS_FONTS_PREVIEW: Key = Key::new(1529);
+pub const SETTINGS_FONTS_PREVIEW: Key = Key::new(1901);
 /// "Glyphs this font draws itself"
-pub const SETTINGS_FONTS_COVERAGE: Key = Key::new(1530);
+pub const SETTINGS_FONTS_COVERAGE: Key = Key::new(1902);
 /// "falls back to another font"
-pub const SETTINGS_FONTS_FALLS_BACK: Key = Key::new(1531);
+pub const SETTINGS_FONTS_FALLS_BACK: Key = Key::new(1903);
 /// "drawn by this font"
-pub const SETTINGS_FONTS_DRAWN: Key = Key::new(1532);
+pub const SETTINGS_FONTS_DRAWN: Key = Key::new(1904);
 /// "Box drawing"
-pub const SETTINGS_FONTS_BOX_DRAWING: Key = Key::new(1533);
+pub const SETTINGS_FONTS_BOX_DRAWING: Key = Key::new(1905);
 /// "Powerline"
-pub const SETTINGS_FONTS_POWERLINE: Key = Key::new(1534);
+pub const SETTINGS_FONTS_POWERLINE: Key = Key::new(1906);
 /// "Nerd icons"
-pub const SETTINGS_FONTS_NERD_ICONS: Key = Key::new(1535);
+pub const SETTINGS_FONTS_NERD_ICONS: Key = Key::new(1907);
 /// "Wide characters"
-pub const SETTINGS_FONTS_WIDE: Key = Key::new(1536);
+pub const SETTINGS_FONTS_WIDE: Key = Key::new(1908);
 /// "Bold"
-pub const SETTINGS_FONTS_BOLD: Key = Key::new(1537);
+pub const SETTINGS_FONTS_BOLD: Key = Key::new(1909);
 /// "Italic"
-pub const SETTINGS_FONTS_ITALIC: Key = Key::new(1538);
+pub const SETTINGS_FONTS_ITALIC: Key = Key::new(1910);
 /// "No bold face: bold text will be drawn heavier by the system"
-pub const SETTINGS_FONTS_NO_BOLD: Key = Key::new(1539);
+pub const SETTINGS_FONTS_NO_BOLD: Key = Key::new(1911);
 /// "No italic face: italic text will be slanted by the system"
-pub const SETTINGS_FONTS_NO_ITALIC: Key = Key::new(1540);
+pub const SETTINGS_FONTS_NO_ITALIC: Key = Key::new(1912);
 /// "Terminal"
-pub const TERMINAL_ACCESSIBILITY_LABEL: Key = Key::new(1541);
+pub const TERMINAL_ACCESSIBILITY_LABEL: Key = Key::new(1913);
 /// "Scrollback"
-pub const TERMINAL_ACCESSIBILITY_SCROLLBACK: Key = Key::new(1542);
+pub const TERMINAL_ACCESSIBILITY_SCROLLBACK: Key = Key::new(1914);
 /// "Select Output"
-pub const TERMINAL_MENU_SELECT_OUTPUT: Key = Key::new(1543);
+pub const TERMINAL_MENU_SELECT_OUTPUT: Key = Key::new(1915);
 /// "prompt"
-pub const SPOKEN_BLOCK_PROMPT: Key = Key::new(1545);
+pub const SPOKEN_BLOCK_PROMPT: Key = Key::new(1917);
 /// "running"
-pub const SPOKEN_BLOCK_RUNNING: Key = Key::new(1546);
+pub const SPOKEN_BLOCK_RUNNING: Key = Key::new(1918);
 /// "finished"
-pub const SPOKEN_BLOCK_FINISHED: Key = Key::new(1547);
+pub const SPOKEN_BLOCK_FINISHED: Key = Key::new(1919);
 /// "empty prompt"
-pub const SPOKEN_BLOCK_EMPTY: Key = Key::new(1548);
+pub const SPOKEN_BLOCK_EMPTY: Key = Key::new(1920);
 /// "Find"
-pub const TERMINAL_FIND_PLACEHOLDER: Key = Key::new(1550);
+pub const TERMINAL_FIND_PLACEHOLDER: Key = Key::new(1922);
 /// "Not a valid pattern"
-pub const TERMINAL_FIND_INVALID: Key = Key::new(1551);
+pub const TERMINAL_FIND_INVALID: Key = Key::new(1923);
 /// "No results"
-pub const TERMINAL_FIND_NO_RESULTS: Key = Key::new(1552);
+pub const TERMINAL_FIND_NO_RESULTS: Key = Key::new(1924);
 /// "Previous match (⇧⌘G)"
-pub const TERMINAL_FIND_PREVIOUS: Key = Key::new(1554);
+pub const TERMINAL_FIND_PREVIOUS: Key = Key::new(1926);
 /// "Next match (⌘G)"
-pub const TERMINAL_FIND_NEXT: Key = Key::new(1555);
+pub const TERMINAL_FIND_NEXT: Key = Key::new(1927);
 /// "Close find (esc)"
-pub const TERMINAL_FIND_CLOSE: Key = Key::new(1556);
+pub const TERMINAL_FIND_CLOSE: Key = Key::new(1928);
 /// "Match case"
-pub const TERMINAL_FIND_MATCH_CASE: Key = Key::new(1557);
+pub const TERMINAL_FIND_MATCH_CASE: Key = Key::new(1929);
 /// "Whole word"
-pub const TERMINAL_FIND_WHOLE_WORD: Key = Key::new(1558);
+pub const TERMINAL_FIND_WHOLE_WORD: Key = Key::new(1930);
 /// "Regular expression"
-pub const TERMINAL_FIND_REGEX: Key = Key::new(1559);
+pub const TERMINAL_FIND_REGEX: Key = Key::new(1931);
 /// "Minimap"
-pub const TERMINAL_MINIMAP: Key = Key::new(1560);
+pub const TERMINAL_MINIMAP: Key = Key::new(1932);
 /// "Terminal"
-pub const TERMINAL_EXPORT_DEFAULT_NAME: Key = Key::new(1562);
+pub const TERMINAL_EXPORT_DEFAULT_NAME: Key = Key::new(1934);
 /// "Allow once"
-pub const TERMINAL_CLIPBOARD_ONCE: Key = Key::new(1563);
+pub const TERMINAL_CLIPBOARD_ONCE: Key = Key::new(1935);
 /// "Give it the clipboard's text this time"
-pub const TERMINAL_CLIPBOARD_ONCE_HELP: Key = Key::new(1564);
+pub const TERMINAL_CLIPBOARD_ONCE_HELP: Key = Key::new(1936);
 /// "Always"
-pub const TERMINAL_CLIPBOARD_ALWAYS: Key = Key::new(1565);
+pub const TERMINAL_CLIPBOARD_ALWAYS: Key = Key::new(1937);
 /// "Always for this terminal"
-pub const TERMINAL_CLIPBOARD_ALWAYS_LONG: Key = Key::new(1566);
+pub const TERMINAL_CLIPBOARD_ALWAYS_LONG: Key = Key::new(1938);
 /// "Give it the clipboard whenever it asks, until this terminal closes"
-pub const TERMINAL_CLIPBOARD_ALWAYS_HELP: Key = Key::new(1567);
+pub const TERMINAL_CLIPBOARD_ALWAYS_HELP: Key = Key::new(1939);
 /// "Deny"
-pub const TERMINAL_CLIPBOARD_DENY: Key = Key::new(1568);
+pub const TERMINAL_CLIPBOARD_DENY: Key = Key::new(1940);
 /// "Give it nothing"
-pub const TERMINAL_CLIPBOARD_DENY_HELP: Key = Key::new(1569);
+pub const TERMINAL_CLIPBOARD_DENY_HELP: Key = Key::new(1941);
 /// "This terminal ended unexpectedly"
-pub const TERMINAL_EXITED_LOST: Key = Key::new(1570);
+pub const TERMINAL_EXITED_LOST: Key = Key::new(1942);
 /// "Restart"
-pub const TERMINAL_EXITED_RESTART: Key = Key::new(1573);
+pub const TERMINAL_EXITED_RESTART: Key = Key::new(1945);
 /// "Close terminal"
-pub const TERMINAL_EXITED_CLOSE: Key = Key::new(1574);
+pub const TERMINAL_EXITED_CLOSE: Key = Key::new(1946);
 /// "Dismiss"
-pub const TERMINAL_HOST_NOTICE_DISMISS: Key = Key::new(1575);
+pub const TERMINAL_HOST_NOTICE_DISMISS: Key = Key::new(1947);
 /// "Control"
-pub const KEYCAP_CONTROL: Key = Key::new(1576);
+pub const KEYCAP_CONTROL: Key = Key::new(1948);
 /// "Option"
-pub const KEYCAP_OPTION: Key = Key::new(1577);
+pub const KEYCAP_OPTION: Key = Key::new(1949);
 /// "Shift"
-pub const KEYCAP_SHIFT: Key = Key::new(1578);
+pub const KEYCAP_SHIFT: Key = Key::new(1950);
 /// "Command"
-pub const KEYCAP_COMMAND: Key = Key::new(1579);
+pub const KEYCAP_COMMAND: Key = Key::new(1951);
 /// "Up arrow"
-pub const KEYCAP_UP_ARROW: Key = Key::new(1580);
+pub const KEYCAP_UP_ARROW: Key = Key::new(1952);
 /// "Down arrow"
-pub const KEYCAP_DOWN_ARROW: Key = Key::new(1581);
+pub const KEYCAP_DOWN_ARROW: Key = Key::new(1953);
 /// "Left arrow"
-pub const KEYCAP_LEFT_ARROW: Key = Key::new(1582);
+pub const KEYCAP_LEFT_ARROW: Key = Key::new(1954);
 /// "Right arrow"
-pub const KEYCAP_RIGHT_ARROW: Key = Key::new(1583);
+pub const KEYCAP_RIGHT_ARROW: Key = Key::new(1955);
 /// "Delete"
-pub const KEYCAP_DELETE: Key = Key::new(1584);
+pub const KEYCAP_DELETE: Key = Key::new(1956);
 /// "Return"
-pub const KEYCAP_RETURN: Key = Key::new(1585);
+pub const KEYCAP_RETURN: Key = Key::new(1957);
 /// "Escape"
-pub const KEYCAP_ESCAPE: Key = Key::new(1586);
+pub const KEYCAP_ESCAPE: Key = Key::new(1958);
 /// "Tab"
-pub const KEYCAP_TAB: Key = Key::new(1587);
+pub const KEYCAP_TAB: Key = Key::new(1959);
 
 /// ```text
 /// { $count ->
@@ -170,89 +170,89 @@ pub const KEYCAP_TAB: Key = Key::new(1587);
 /// }
 /// ```
 pub fn studio_band_low_hint(count: i64) -> String {
-    crate::active::message(1507, &[("count", Arg::Int(count))])
+    crate::active::message(1879, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $ratio } to 1, minimum { $min }
 /// ```
 pub fn studio_contrast_ratio_spoken(ratio: &str, min: &str) -> String {
-    crate::active::message(1511, &[("ratio", Arg::Str(ratio)), ("min", Arg::Str(min))])
+    crate::active::message(1883, &[("ratio", Arg::Str(ratio)), ("min", Arg::Str(min))])
 }
 
 /// ```text
 /// Lighten to { $ratio }:1
 /// ```
 pub fn studio_contrast_fix_lighten(ratio: &str) -> String {
-    crate::active::message(1512, &[("ratio", Arg::Str(ratio))])
+    crate::active::message(1884, &[("ratio", Arg::Str(ratio))])
 }
 
 /// ```text
 /// Darken to { $ratio }:1
 /// ```
 pub fn studio_contrast_fix_darken(ratio: &str) -> String {
-    crate::active::message(1513, &[("ratio", Arg::Str(ratio))])
+    crate::active::message(1885, &[("ratio", Arg::Str(ratio))])
 }
 
 /// ```text
 /// Use readable({ $current }, …, { $ratio })
 /// ```
 pub fn studio_contrast_fix_readable(current: &str, ratio: &str) -> String {
-    crate::active::message(1514, &[("current", Arg::Str(current)), ("ratio", Arg::Str(ratio))])
+    crate::active::message(1886, &[("current", Arg::Str(current)), ("ratio", Arg::Str(ratio))])
 }
 
 /// ```text
 /// { $name } is a link, which is never followed.
 /// ```
 pub fn studio_folder_link(name: &str) -> String {
-    crate::active::message(1516, &[("name", Arg::Str(name))])
+    crate::active::message(1888, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// No font has these words in its name: “{ $query }”
 /// ```
 pub fn settings_fonts_no_matches(query: &str) -> String {
-    crate::active::message(1526, &[("query", Arg::Str(query))])
+    crate::active::message(1898, &[("query", Arg::Str(query))])
 }
 
 /// ```text
 /// exit { $code }
 /// ```
 pub fn terminal_block_exit(code: &str) -> String {
-    crate::active::message(1544, &[("code", Arg::Str(code))])
+    crate::active::message(1916, &[("code", Arg::Str(code))])
 }
 
 /// ```text
 /// failed with exit code { $code }
 /// ```
 pub fn spoken_block_failed(code: &str) -> String {
-    crate::active::message(1549, &[("code", Arg::Str(code))])
+    crate::active::message(1921, &[("code", Arg::Str(code))])
 }
 
 /// ```text
 /// { $at } of { $total }
 /// ```
 pub fn terminal_find_count(at: &str, total: &str) -> String {
-    crate::active::message(1553, &[("at", Arg::Str(at)), ("total", Arg::Str(total))])
+    crate::active::message(1925, &[("at", Arg::Str(at)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// line { $line } of { $total }
 /// ```
 pub fn terminal_minimap_value(line: &str, total: &str) -> String {
-    crate::active::message(1561, &[("line", Arg::Str(line)), ("total", Arg::Str(total))])
+    crate::active::message(1933, &[("line", Arg::Str(line)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// { $shell } exited
 /// ```
 pub fn terminal_exited(shell: &str) -> String {
-    crate::active::message(1571, &[("shell", Arg::Str(shell))])
+    crate::active::message(1943, &[("shell", Arg::Str(shell))])
 }
 
 /// ```text
 /// { $shell } exited with code { $code }
 /// ```
 pub fn terminal_exited_code(shell: &str, code: &str) -> String {
-    crate::active::message(1572, &[("shell", Arg::Str(shell)), ("code", Arg::Str(code))])
+    crate::active::message(1944, &[("shell", Arg::Str(shell)), ("code", Arg::Str(code))])
 }
