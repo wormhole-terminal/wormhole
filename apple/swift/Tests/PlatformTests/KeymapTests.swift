@@ -8,13 +8,13 @@ import Testing
     private func spec(_ glyphs: String) throws -> KeySpec { try #require(KeySpec(glyphs: glyphs)) }
 
     @Test func theTableIsCoresTable() {
-        // 113 actions plus the nine terminals and nine groups the loops add.
-        #expect(keymap.entries.count == 131)
-        #expect(keymap.entries.filter { !$0.id.rawValue.contains(".") }.count == 113)
-        #expect(Set(keymap.entries.map(\.id)).count == 131, "ids are unique")
+        // 114 actions plus the nine terminals and nine groups the loops add.
+        #expect(keymap.entries.count == 132)
+        #expect(keymap.entries.filter { !$0.id.rawValue.contains(".") }.count == 114)
+        #expect(Set(keymap.entries.map(\.id)).count == 132, "ids are unique")
         #expect(keymap.layout.count == 8)
         #expect(keymap.systemKeys.count == 19)
-        #expect(Set(keymap.entries.compactMap(\.flag)).count == 1, "the folder picker is the one flag")
+        #expect(Set(keymap.entries.compactMap(\.flag)).count == 2, "the folder picker and output folds are the flags")
     }
 
     @Test func rowsCarryTheirKeysAndFlags() throws {

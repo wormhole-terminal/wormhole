@@ -52,7 +52,8 @@ final class UpdateBridgeTests: XCTestCase {
         }
         Task { await backend.check() }
         await watcher.value
-        XCTAssertEqual(seen.first, .idle)
+        // The stream keeps only the newest phase, so on a busy machine the check may already have replaced `idle`.
+        XCTAssertTrue(seen.first == .idle || seen.first == .checking, "\(seen)")
         XCTAssertEqual(seen.last, .upToDate)
     }
 

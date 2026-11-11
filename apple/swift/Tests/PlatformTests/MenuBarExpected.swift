@@ -70,6 +70,8 @@ enum MenuBarExpected {
           Copy Output
           Copy Command
           Put Command at Prompt
+          ---
+          Show Hidden Lines  ⌥⌘L
         View
           Hide Sidebar  ⌃⌘S
           Hide Right Panel  ⌥⌘I

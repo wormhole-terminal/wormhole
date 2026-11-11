@@ -13,7 +13,7 @@ import WormholeBindings
         #expect(live.entries == dumped.entries)
         #expect(live.systemKeys.map(\.spec) == dumped.systemKeys.map(\.spec))
         #expect(live.systemKeys.map(\.what) == dumped.systemKeys.map(\.what))
-        #expect(live.entries.count == 131)
+        #expect(live.entries.count == 132)
     }
 
     @Test func menusFromCoreAreTheMenusFromTheDumpedLayout() {
