@@ -79,7 +79,10 @@ mod tests {
         let root = DataRoot::new(dir.path());
         let mut list = ProfileList::default();
         let work = list
-            .create(&root, NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults })
+            .create(
+                &root,
+                NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults },
+            )
             .expect("makes Work");
         list.save(&root).expect("saves the list");
         assert_eq!(dir_in(&root, work.as_str()), Some(root.profile(&work).dir().to_path_buf()));

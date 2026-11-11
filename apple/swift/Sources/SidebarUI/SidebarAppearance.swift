@@ -39,6 +39,9 @@ public struct SidebarAppearance: Equatable {
     /// ⌘ held on its own for a moment shows the ⌘1–9 keycaps (`sidebar_cmd_hints`).
     public var showsCommandHints: Bool
     public var statusMotion: StatusMotion
+    /// How a row comes and goes, and how a group folds (`motion.insert`, `motion.fold`: the core's names, its tables are `RowMotion`).
+    public var insertMotion: String
+    public var foldMotion: String
     /// Terminal text is kept between launches (`restore_terminal_text`): while it is not, "Don't keep this terminal's text" is greyed.
     public var restoresText: Bool
     /// "Hide from Agents" is in a row's menu: with the Automation feature on (or while the terminal is hidden, to show it again).
@@ -52,7 +55,7 @@ public struct SidebarAppearance: Equatable {
         density: SidebarDensity = .regular, cards: Bool = true, fadesGroupColours: Bool = false,
         showsGroupFolders: Bool = true, showsNotes: Bool = true, showsChanges: Bool = true,
         changesScope: ChangesScope = .terminal, showsStatus: Bool = true, showsCommandHints: Bool = true,
-        statusMotion: StatusMotion = .badgePop, restoresText: Bool = true, forcesHints: Bool = false, hovered: TerminalID? = nil
+        statusMotion: StatusMotion = .badgePop, insertMotion: String = "from-side", foldMotion: String = "tuck", restoresText: Bool = true, forcesHints: Bool = false, hovered: TerminalID? = nil
     ) {
         self.density = density
         self.cards = cards
@@ -64,6 +67,8 @@ public struct SidebarAppearance: Equatable {
         self.showsStatus = showsStatus
         self.showsCommandHints = showsCommandHints
         self.statusMotion = statusMotion
+        self.insertMotion = insertMotion
+        self.foldMotion = foldMotion
         self.restoresText = restoresText
         self.forcesHints = forcesHints
         self.hovered = hovered

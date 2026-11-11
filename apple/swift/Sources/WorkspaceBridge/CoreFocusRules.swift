@@ -67,6 +67,7 @@ public struct CoreFocusRules: FocusRules {
 public enum CoreWindowRules {
     public static func install() {
         Focus.install(CoreFocusRules())
+        RowMotion.install(CoreRowMotion.tables)
         let zen = windowPreset(preset: .zen)
         Zen.install(
             WindowShown(titleRow: zen.titleRow, statusBar: zen.statusBar, minimap: zen.minimap, columnDividers: zen.columnDividers))

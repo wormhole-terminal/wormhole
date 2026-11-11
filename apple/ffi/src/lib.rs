@@ -39,10 +39,10 @@ mod minimap;
 mod notes_text;
 pub mod notify;
 mod open_file;
-mod visible;
 pub mod palette_search;
 mod probes;
 mod profile;
+mod row_motion;
 mod settings;
 pub mod settings_dump;
 mod terminal;
@@ -51,6 +51,7 @@ mod theme_json;
 mod theme_resolve;
 mod themes;
 mod title_fit;
+mod visible;
 mod windows;
 pub mod words;
 mod workspace;
@@ -121,10 +122,12 @@ pub use live_resize::{
     resize_snapped,
 };
 pub use minimap::{MinimapGeometryRecord, MinimapRunRecord};
-pub use visible::{VisibleLine, VisibleMark, visible_line};
 pub use open_file::{open_file_run, open_file_tooltip, repo_file_resolve};
 pub use probes::{ProbeStatusRecord, ResolvedFile};
 pub use profile::{ActiveProfile, active_profile};
+pub use row_motion::{
+    RowMotionRecord, RowPoseRecord, fold_row_motion, fold_row_pose, insert_row_motion, insert_row_pose,
+};
 pub use settings::{
     FontFamilyResolver, SettingsImportDone, SettingsImportItem, SettingsImportReview, SettingsImportSkip,
     SettingsLoginField, SettingsProfileForm, SettingsShellLine, settings_import_review,
@@ -144,6 +147,7 @@ pub use settings::{
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
+pub use visible::{VisibleLine, VisibleMark, visible_line};
 pub use windows::{
     Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, TearGrow,
     TearLanding, TearPlaced, TearRect, TearWindow, WindowMinSize, Windows, cascade_frame, fit_frame,

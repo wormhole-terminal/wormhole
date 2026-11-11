@@ -1,4 +1,4 @@
-// The sidebar's list from Settings → Terminals & sidebar and Motion → Status.
+// The sidebar's list from Settings → Terminals & sidebar and Motion → Status, Insert and Fold.
 
 import SettingsModel
 import SidebarUI
@@ -18,6 +18,8 @@ enum SidebarSettingsMaker {
         next.showsCommandHints = values["sidebar_cmd_hints"]?.bool ?? current.showsCommandHints
         next.restoresText = values["restore_terminal_text"]?.bool ?? current.restoresText
         next.statusMotion = values["motion.status"]?.string.flatMap(statusMotion) ?? current.statusMotion
+        next.insertMotion = values["motion.insert"]?.string ?? current.insertMotion
+        next.foldMotion = values["motion.fold"]?.string ?? current.foldMotion
         return next
     }
 

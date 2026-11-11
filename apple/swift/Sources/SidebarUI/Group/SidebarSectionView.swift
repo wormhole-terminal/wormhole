@@ -12,6 +12,8 @@ struct SidebarSectionView: View {
     let context: SidebarContext
     @Environment(\.tokens) private var tokens
     @Environment(\.sidebarMetrics) private var metrics
+    @Environment(\.sidebarLook) private var look
+    @Environment(\.reduceMotion) private var reduceMotion
 
     var body: some View {
         if let head = section.head {
@@ -19,7 +21,7 @@ struct SidebarSectionView: View {
         } else {
             ForEach(Self.cards(of: section.rows), id: \.first?.id) { rows in
                 card(rows).padding(.horizontal, metrics.cardMargin).padding(.bottom, metrics.cardGap)
-                    .id(SidebarStop.row(rows[0].id)).transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+                    .id(SidebarStop.row(rows[0].id)).transition(.listRow(look.insertMotion, reduceMotion: reduceMotion))
             }
         }
     }
