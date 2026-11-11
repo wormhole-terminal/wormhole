@@ -48,6 +48,26 @@ pub fn text_set_language(tag: String) -> bool {
     Language::from_tag(&tag).map(set_language).is_some()
 }
 
+/// A variable of a message formatted by `text_format`: its name and a value, a whole number when `whole` is set (a
+/// plural selects on it) and `text` otherwise.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct TextArg {
+    pub name: String,
+    pub text: String,
+    pub whole: Option<i64>,
+}
+
+/// The message called `id` with `args` in the language in use, for a message with variables (the table holds none
+/// of those); nil for an id no message has.
+#[uniffi::export]
+pub fn text_format(id: String, args: Vec<TextArg>) -> Option<String> {
+    let values: Vec<(&str, wormhole_text::Value<'_>)> = args
+        .iter()
+        .map(|a| (a.name.as_str(), a.whole.map_or(wormhole_text::Value::Text(&a.text), wormhole_text::Value::Whole)))
+        .collect();
+    wormhole_text::format(&id, &values)
+}
+
 /// A hash of the id list, so a front end whose keys were generated from another list knows it is stale (FNV-1a,
 /// which is stable across builds, unlike `std`'s hasher).
 #[uniffi::export]

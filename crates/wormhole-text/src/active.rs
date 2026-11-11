@@ -133,3 +133,26 @@ pub(crate) fn message(index: usize, args: &[(&'static str, Arg<'_>)]) -> String 
         .or_else(|| load(Language::ENGLISH).format(index, &named))
         .unwrap_or_default()
 }
+
+/// A variable's value for [`format`]: text, or a whole number (what a plural selects on).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Value<'a> {
+    Text(&'a str),
+    Whole(i64),
+}
+
+/// The message called `id` (`name` or `name.attribute`) with the named `args`, in the language in use or,
+/// where it lacks the message, English; `None` for an id no message has. For a front end that is not Rust (the
+/// Swift app): the typed functions of `keys/` are what Rust calls, and they end in the same formatter.
+pub fn format(id: &str, args: &[(&str, Value<'_>)]) -> Option<String> {
+    static BY_ID: OnceLock<std::collections::HashMap<&'static str, usize>> = OnceLock::new();
+    let index = *BY_ID.get_or_init(|| IDS.iter().enumerate().map(|(i, id)| (*id, i)).collect()).get(id)?;
+    let mut named = FluentArgs::with_capacity(args.len());
+    for (name, value) in args {
+        match value {
+            Value::Text(text) => named.set(*name, *text),
+            Value::Whole(number) => named.set(*name, *number),
+        }
+    }
+    current().format(index, &named).or_else(|| load(Language::ENGLISH).format(index, &named))
+}

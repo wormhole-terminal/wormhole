@@ -34,4 +34,14 @@ import WordsModel
         #expect(Words.text("folder-picker-empty", fallback: "none") == "No folders")
         #expect(Words.text("no-such-message", fallback: "English") == "English")
     }
+
+    @Test func aMessageWithVariablesIsFormattedByRustInTheLanguageInUse() {
+        defer { Words.install(nil) }
+        let args: [String: WordValue] = ["folder": .text("src"), "group": .text("work")]
+        WordsBridge.install(tag: "en")
+        #expect(Words.text("sidebar-folder-ask-title", args, fallback: "x") == "Use “src” for “work”?")
+        WordsBridge.install(tag: "en-XA")
+        #expect(Words.text("sidebar-folder-ask-title", args, fallback: "x").contains("⟦"))
+        #expect(Words.text("no-such-message", args, fallback: "English") == "English")
+    }
 }

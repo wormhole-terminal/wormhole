@@ -1,3 +1,4 @@
+// text-file: editors' brand names, as in the core's EDITORS table
 // Open in… against the system: which of the editors Wormhole knows are installed (the system is asked by bundle
 // identifier), their icons, and opening a folder in one as when the person drags it onto the app. The table
 // mirrors `wormhole-core` `platform::open_in::EDITORS` and goes when that rule arrives through the FFI; the

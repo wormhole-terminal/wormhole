@@ -36,6 +36,15 @@ public final class WordTable: WordSource, Sendable {
         positions[id].map { texts[$0] }.flatMap { $0.isEmpty ? nil : $0 }
     }
 
+    public func format(_ id: String, _ args: [String: WordValue]) -> String? {
+        textFormat(id: id, args: args.map { name, value in
+            switch value {
+            case .text(let text): TextArg(name: name, text: text, whole: nil)
+            case .whole(let number): TextArg(name: name, text: "", whole: Int64(number))
+            }
+        })
+    }
+
     /// The text at a `Key`'s index.
     public subscript(index: Int) -> String { texts[index] }
 }

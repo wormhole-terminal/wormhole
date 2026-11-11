@@ -6,9 +6,21 @@
 import Foundation
 import Synchronization
 
+/// A variable of a message: text, or a whole number (what a plural selects on).
+public enum WordValue: Sendable, Equatable {
+    case text(String)
+    case whole(Int)
+}
+
 public protocol WordSource: Sendable {
     /// The text of the message called `id` in the language in use; nil when this source has none.
     func text(for id: String) -> String?
+    /// The message called `id` with its variables filled in; nil when this source cannot.
+    func format(_ id: String, _ args: [String: WordValue]) -> String?
+}
+
+public extension WordSource {
+    func format(_ id: String, _ args: [String: WordValue]) -> String? { nil }
 }
 
 public enum Words {
@@ -21,5 +33,12 @@ public enum Words {
     public static func text(_ id: StaticString, fallback: @autoclosure () -> String) -> String {
         let source = installed.withLock { $0 }
         return source?.text(for: String(describing: id)) ?? fallback()
+    }
+
+    /// A message with variables, named `args` as in its Fluent text (`{ $folder }` is `"folder"`); `fallback` is the
+    /// English with the values already in it.
+    public static func text(_ id: StaticString, _ args: [String: WordValue], fallback: @autoclosure () -> String) -> String {
+        let source = installed.withLock { $0 }
+        return source?.format(String(describing: id), args) ?? fallback()
     }
 }

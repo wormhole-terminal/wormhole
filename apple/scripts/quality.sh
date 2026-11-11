@@ -16,6 +16,8 @@ layers=$(py layers.py); rc=$?; [ $rc -ne 0 ] && status=1
 row layers "$([ $rc -eq 0 ] && echo ok || echo FAIL)" "$(echo "$layers" | tail -1)"
 gallery=$(py gallery.py); rc=$?; [ $rc -ne 0 ] && status=1
 row gallery "$([ $rc -eq 0 ] && echo ok || echo FAIL)" "$(echo "$gallery" | tail -1)"
+words=$(py words.py); rc=$?; [ $rc -ne 0 ] && status=1
+row words "$([ $rc -eq 0 ] && echo ok || echo FAIL)" "$(echo "$words" | tail -1)"
 parity=$(py parity.py --check); rc=$?; [ $rc -ne 0 ] && status=1
 row parity "$([ $rc -eq 0 ] && echo ok || echo FAIL)" "$(echo "$parity" | tail -1)"
 row size - "$(py parity.py --size | grep -E '^total|against' | head -2 | tr -s ' ' | paste -sd' ' -)"
@@ -28,6 +30,6 @@ if [ $guards -eq 1 ]; then
   row guards "$([ $rc -eq 0 ] && echo ok || echo FAIL)" "$(echo "$perf" | tail -1 | sed 's/^perf-guards: //')"
 fi
 if [ $status -ne 0 ]; then
-  echo; { echo "$rules"; echo "$layers"; echo "$gallery"; echo "$parity"; echo "$budgets"; echo "${perf:-}"; } | grep -vE '^(apple/ rules: ok|layers:|ok:|standards:)' | head -20
+  echo; { echo "$rules"; echo "$layers"; echo "$gallery"; echo "$words"; echo "$parity"; echo "$budgets"; echo "${perf:-}"; } | grep -vE '^(apple/ rules: ok|layers:|ok:|standards:)' | head -20
 fi
 exit $status
