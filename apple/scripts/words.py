@@ -40,7 +40,7 @@ SKIP_LINE = re.compile(
     r"Image\(systemName|NSImage\(systemSymbolName|\.id\(|^\s*case \"|\bcase \.\w+\(\"|#Preview"
 )
 # `name("some-fluent-id", ` : the line holds a seam call's id and the start of its English.
-SEAM_CALL = re.compile(r"""(?:\bWords\.text|\btext|\btr|\bword|\bL10n\.tr)\(\s*"([a-z][a-z0-9]*(?:-[a-z0-9]+)+(?:\.[a-z0-9-]+)?)"\s*,""")
+SEAM_CALL = re.compile(r"""(?:\bWords\.text|\btext|\btr|\bword|\bL10n\.tr|\bpanelText)\(\s*"([a-z][a-z0-9]*(?:-[a-z0-9]+)+(?:\.[a-z0-9-]+)?)"\s*,""")
 ID_ONLY = re.compile(r"""^[a-z][a-z0-9]*(?:-[a-z0-9]+)+(?:\.[a-z0-9-]+)?$""")
 LITERAL = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
 

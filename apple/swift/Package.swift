@@ -39,7 +39,7 @@ var targets: [Target] = [
             "TerminalMetal", "TerminalCore", "TerminalUI", "PanesModel", "PanesUI", "PlatformModel", "WindowsModel", "WordsModel",
         ]),
     // The right panel's tabs as plain values and pure logic: tasks, the diff parser, commits. Foundation only.
-    .target(name: "PanelModel", dependencies: ["WorkspaceModel"]),
+    .target(name: "PanelModel", dependencies: ["WorkspaceModel", "WordsModel"]),
     // The right panel's tab contents: Notes, Changes (with the diff), History, Files, Project and Usage.
     .target(name: "PanelUI", dependencies: ["PanelModel", "DesignSystem", "WorkspaceModel", "WordsModel"]),
     // The app's file icon theme (Catppuccin and Lucide SVGs in Zed's icon theme format) and its lookup, behind the
@@ -71,7 +71,7 @@ var targets: [Target] = [
     .testTarget(name: "FontPickerTests", dependencies: ["FontPickerModel", "FontPickerUI", "DesignSystem"]),
     // Splits and panes (the tree, its geometry, drops, presets), the title row's parts and fit rules and the
     // tab sets, as plain values. Foundation and the workspace model.
-    .target(name: "PanesModel", dependencies: ["WorkspaceModel"]),
+    .target(name: "PanesModel", dependencies: ["WorkspaceModel", "WordsModel"]),
     // The panes' area with headers, dividers and drop hints, the title row's pieces and the tab bar.
     .target(name: "PanesUI", dependencies: ["PanesModel", "WorkspaceModel", "DesignSystem", "WordsModel"]),
     .testTarget(name: "PanesTests", dependencies: ["PanesModel", "PanesUI", "WorkspaceModel", "DesignSystem"]),
@@ -151,7 +151,7 @@ if ffiLinked {
         // The mapping and the real workspace behind the store: an action through the FFI, a snapshot back.
         .testTarget(name: "WorkspaceBridgeTests", dependencies: ["WorkspaceBridge", "WorkspaceModel"]),
         // The panel's Files, Project, Usage and Notes backends over the Rust core (trust enforced in Rust).
-        .target(name: "FilesBridge", dependencies: ["PanelModel", "PlatformModel", "WorkspaceModel", "WormholeBindings"]),
+        .target(name: "FilesBridge", dependencies: ["PanelModel", "PlatformModel", "WordsModel", "WorkspaceModel", "WormholeBindings"]),
         .testTarget(name: "FilesBridgeTests", dependencies: ["FilesBridge", "PanelModel", "PlatformModel", "WormholeBindings", "WorkspaceModel"]),
         // The settings window over the Rust core: values, writes, search, shortcut rules, the agents, imports and
         // profiles. Replaces the mock backend and host.
@@ -169,7 +169,7 @@ if ffiLinked {
         "UniFFISource", "WorkspaceBridge", "WindowsBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge", "HookBridge",
     ]
     // The right panel's git over the Rust core: `GitBackend` and `WorktreeBackend` for the window to hand to the panel.
-    targets.append(.target(name: "GitBridge", dependencies: ["PanelModel", "WormholeBindings"]))
+    targets.append(.target(name: "GitBridge", dependencies: ["PanelModel", "WordsModel", "WormholeBindings"]))
     targets.append(.testTarget(name: "GitBridgeTests", dependencies: ["GitBridge", "PanelModel", "WormholeBindings"]))
     // The macOS edge's logic from core: the keymap and menu bar, the notification rules, the folder picker's
     // providers and the palette's search; and the interface's words.
