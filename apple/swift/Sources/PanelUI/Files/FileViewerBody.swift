@@ -14,12 +14,13 @@ struct FileViewerBody: View {
 
     var body: some View {
         switch store.content {
-        case .reading: centred(panelText("files-reading", "Reading\u{2026}"))
+        case .reading: note(panelText("files-reading", "Reading\u{2026}"))
         case let .text(text, size, truncated):
-            if text.isEmpty { centred(panelText("files-viewer-empty", "This file is empty.")) } else { lines(truncated: truncated, size: size) }
-        case let .binary(size): binary(size)
+            if text.isEmpty { note(panelText("files-viewer-empty", "This file is empty.")) } else { lines(truncated: truncated, size: size) }
+        case let .binary(size): panel(panelText("files-viewer-binary", "Binary file, \(ByteSize.text(size))"), actions: true)
         case let .image(data, _): picture(data)
-        case let .unavailable(problem): centred(Self.words(problem))
+        // A deleted file has nothing to open or show, nor has a link that leads out; the others might still be revealed.
+        case let .unavailable(problem): panel(Self.words(problem), actions: problem != .gone && problem != .outside)
         }
     }
 
@@ -34,24 +35,34 @@ struct FileViewerBody: View {
         }
     }
 
-    private func binary(_ size: Int) -> some View {
-        VStack(spacing: PanelMetrics.gap) {
-            Text(panelText("files-viewer-binary", "Binary file, \(ByteSize.text(size))")).font(TextRole.body.font).foregroundStyle(tokens.textMuted)
-            NoticeButton(title: panelText("files-viewer-open-in", "Open in\u{2026}")) { host?.open(store.root.map { store.join($0, path) } ?? path, line: nil) }
+    /// A note in the middle of the card, with Open in… and Reveal under it when they have something to act on.
+    private func panel(_ words: String, actions: Bool) -> some View {
+        VStack(spacing: Space._3) {
+            Image(systemName: "doc").font(.system(size: Metric.glyph)).foregroundStyle(tokens.textMuted)
+            Text(words).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).multilineTextAlignment(.center)
+            if actions {
+                HStack(spacing: Space._2) {
+                    NoticeButton(title: panelText("files-viewer-open-in", "Open in\u{2026}"), primary: true) { host?.open(absolute, line: nil) }
+                    NoticeButton(title: panelText("files-row-reveal", "Reveal in Finder")) { host?.reveal(absolute) }
+                }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(Space._4).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+    private var absolute: String { store.root.map { store.join($0, path) } ?? path }
 
     @ViewBuilder private func picture(_ data: Data) -> some View {
         if let image = NSImage(data: data) {
             Image(nsImage: image).resizable().scaledToFit().padding(Space._4).frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityLabel(path)
         } else {
-            centred(panelText("files-viewer-image-failed", "This picture can't be shown."))
+            panel(panelText("files-viewer-image-failed", "This picture can't be shown."), actions: true)
         }
     }
 
-    private func centred(_ text: String) -> some View {
+    /// A line of words in the middle of the card (reading, an empty file).
+    private func note(_ text: String) -> some View {
         Text(text).font(TextRole.body.font).foregroundStyle(tokens.textMuted).multilineTextAlignment(.center).padding(Space._4)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -93,5 +104,6 @@ struct FileLines: View {
             }
             .font(codeFont.font())
         }
+        .defaultScrollAnchor(.topLeading)
     }
 }

@@ -19,7 +19,7 @@ public struct PanelCoverView: View {
             case .historyDiff:
                 HistoryDiffPane(store: controller.history, headerInRow: true)
             case .file:
-                FileViewerView(store: controller.files)
+                FileViewerView(store: controller.files, showsHeader: false)
             case nil:
                 Color.clear
             }

@@ -1,6 +1,6 @@
 // The diff's header as the terminal's title row shows it while the diff covers the terminal (the GPUI app's title
 // row becomes the diff's header). The rows are `PanelCoverView`'s; both read one `DiffSession`, which keeps the layout
-// and wrapping they share. A file viewer has its header inside its cover, so it asks nothing of the title row.
+// and wrapping they share. A file's header is the viewer's own, drawn in the same place.
 
 import PanelModel
 import SwiftUI
@@ -11,7 +11,7 @@ public struct PanelCoverTitle: View {
     public init(controller: PanelController) { self.controller = controller }
 
     /// Whether the cover has a header for the title row to carry.
-    public static func carries(_ cover: PanelCover?) -> Bool { cover == .changesDiff || cover == .historyDiff }
+    public static func carries(_ cover: PanelCover?) -> Bool { cover != nil }
 
     public var body: some View {
         switch controller.cover {
@@ -21,7 +21,12 @@ public struct PanelCoverTitle: View {
         case .historyDiff:
             header(controller.history.current, session: controller.history.diff, position: controller.history.position,
                    step: controller.history.step, close: controller.history.close)
-        default:
+        case .file:
+            if let path = controller.files.viewing {
+                FileViewerHeader(store: controller.files, path: path, inTitleRow: true)
+                    .environment(\.panelHost, controller.host)
+            }
+        case nil:
             Color.clear
         }
     }

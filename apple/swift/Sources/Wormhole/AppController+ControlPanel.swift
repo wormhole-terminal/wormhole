@@ -4,9 +4,13 @@
 // `project-state` say what the tabs hold, `project-approve`, `project-feature <key> on|off`, `project-run <id>` and
 // `project-send <id>` are the Project tab's buttons.
 
+import Foundation
 import PanelModel
 import PanelUI
 import PlatformModel
+#if WITH_UNIFFI
+    import WormholeBindings
+#endif
 
 extension AppController {
     private func fail(_ message: String) -> Bool {
@@ -101,6 +105,13 @@ extension AppController {
                 guard let row = files.rows.first(where: { $0.path == argument }) else { return fail("files-rename-start: no row \(argument)") }
                 files.startRename(row)
             }
+        case "usage-status":
+            // Claude Code's status line input (its JSON) as its command would hand it to the app, for the Usage tab's gauges.
+            #if WITH_UNIFFI
+                guard let usage = panelUsage as? UsageService else { return fail("usage-status needs the real core") }
+                reply("usage-status recorded=\(usage.recordStatusLine(input: argument, now: Int64(Date().timeIntervalSince1970)))")
+            #endif
+            return true
         case "notices":
             reply("notices=\((notices?.logged ?? []).map { "\($0.title): \($0.body)" })")
             return true
