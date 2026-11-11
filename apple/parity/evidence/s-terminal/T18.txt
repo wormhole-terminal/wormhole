@@ -1,0 +1,7 @@
+# T18: live resize through the core. The steps (`resize_snapped`), the strip a window gives up (`resize_settle`, `resize_settled_frame`) and the
+# 100 ms gate (`LiveResizeGate`) are wormhole_core's `view::motion::live_resize`, called over the FFI; the Swift mirror is deleted.
+# Live --background instance (control `live-resize-sim 1103 701 <prefix>`: windowWillStartLiveResize, eight windowWillResize/setFrame steps, windowDidEndLiveResize).
+grid mode (default):   asked 1103x701 -> window ends 1100x702, grid 43x36, strip=0.0   (whole cells; rules from the core, installResizeRules)
+smooth_resize=true:    asked 1103x701 -> window ends 1103x701, grid 43x35, strip=17.0  (free resize, strip in the terminal's colour)
+Tests: wormhole-core live_resize (13, incl. the new `snapped` rule), wormhole-ffi live_resize::tests, TerminalInputTests.LiveResizeRulesTests (real FFI: snapped, settle, settled_frame, gate).
+NOT driven here: a real mouse drag (AppKit's live resize cannot be started from a script, `inLiveResize` stays false in the sim), the size chip during one.

@@ -1,0 +1,10 @@
+# T15: the terminal context menu over what is under the pointer. Live --background instance; `pointer ROW COL` (new control command) rests the pointer over a cell,
+# as a move there would (placePointer), then `context-menu` dumps the items the menu would show.
+screen: row 0 "see https://example.com/x here"
+> pointer 0 12
+> context-menu            Open Link / Copy Link, ---, Copy [off], Paste, Select All, ---, Find..., ---, Split Right, Split Down, ---, Clear Buffer
+screen: an OSC 133 block (printf of A/B/C/D marks) on rows 0..2, `block` says: target lines=0...2 output=1...2 command=echo hi
+> pointer 2 1
+> context-menu            Copy [off], Paste, Select All, ---, Find..., ---, Copy Command, Copy Output, Put Command at Prompt, ---, Split Right, Split Down, ---, Clear Buffer
+> pointer 6 1  (below the block)   -> no block items
+NOT driven: a real right-click or Control-click (NSMenu pop-up), choosing an item with the pointer; the native NSMenu look is not compared with GPUI's drawn one.

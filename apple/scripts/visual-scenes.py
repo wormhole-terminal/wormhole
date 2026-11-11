@@ -92,8 +92,11 @@ def images_scene():
     kitty = "".join(f"{ESC}_G{'a=T,f=100,c=12,r=4,q=2,' if i == 0 else ''}m={0 if i == len(pieces) - 1 else 1};{p}{ST}"
                     for i, p in enumerate(pieces))
     iterm = f"{ESC}]1337;File=inline=1;width=12;height=4;preserveAspectRatio=0:{base64.b64encode(png_rgb(48, 32)).decode()}\x07"
+    # Sixel: a red band over a blue one, 96 x 18 pixels (three sixel rows), the colours set by `#n;2;r;g;b` in percent.
+    sixel = f"{ESC}Pq#0;2;100;0;0#1;2;0;0;100#0" + "~" * 96 + "-#1" + "~" * 96 + "-#0" + "~" * 96 + f"{ST}"
     return "".join([ESC + "c", csi("?25l"), line(1, "kitty image, 12x4 cells below:"), at(2, 1), kitty,
-                    line(7, "iTerm2 image, 12x4 cells below:"), at(8, 1), iterm, line(13, "text after the images")])
+                    line(7, "iTerm2 image, 12x4 cells below:"), at(8, 1), iterm, line(13, "sixel image below:"), at(14, 1), sixel,
+                    line(19, "text after the images")])
 
 
 def blocks_scene():

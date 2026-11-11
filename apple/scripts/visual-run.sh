@@ -41,7 +41,8 @@ sleep 5
 g "onboarding close" "resize 1320 820" "reduce-transparency on" > /dev/null
 s "size 1320x820" "reduce-transparency on" "panel" > /dev/null
 # shellcheck disable=SC2054 # the commas are in the values visual-compare.py parses (`722,84`)
-GRID=(--origin 722,84 --size 1904,1548 --cell 17,36 --gpui-cell-w 16.8)
+# Swift's shot is the pane as drawn: its padding (4 pt, 8 px at scale 2: `MetalRenderer.padding`) around the grid, which GPUI's crop leaves out.
+GRID=(--origin 722,84 --size 1904,1548 --cell 17,36 --gpui-cell-w 16.8 --swift-origin 8,8)
 
 scene() { # <name> <prefix>: the scene in both, then a shot of each
   echo "$1" > "$scratch/run/gpui.fifo"; echo "$1" > "$scratch/run/swift.fifo"; sleep 1.5
@@ -55,6 +56,33 @@ for mode in dark light; do
     scene "$name" "g$mode"
     python3 "$here/visual-compare.py" compare "$mode-$name" "$ctl_g/g$mode-$name.png" "$ctl_s/g$mode-$name.png" --out "$out" "${GRID[@]}" > /dev/null
   done
+  # Find: the matches painted in the text; the bar is chrome (GPUI's is part of its view, Swift's an overlay), so the top four rows (with the bar's shadow) are left out and the bar is compared in a shot of the whole window.
+  echo scrollback > "$scratch/run/gpui.fifo"; echo scrollback > "$scratch/run/swift.fifo"; sleep 4
+  g "key cmd-f" > /dev/null; g "text line 18" > /dev/null; s "find line 18" > /dev/null; sleep 1
+  g "frames 2" > /dev/null; s "frames 2" > /dev/null
+  g "shot g$mode-find" > /dev/null; s "shot $ctl_s/g$mode-find.png" > /dev/null
+  python3 "$here/visual-compare.py" compare "$mode-find" "$ctl_g/g$mode-find.png" "$ctl_s/g$mode-find.png" --out "$out" --origin 722,228 --size 1904,1404 --cell 17,36 --gpui-cell-w 16.8 --swift-origin 8,152 > /dev/null
+  s "window-shot $ctl_s/g$mode-find-window.png" > /dev/null
+  python3 "$here/visual-compare.py" compare "$mode-find-bar" "$ctl_g/g$mode-find.png" "$ctl_s/g$mode-find-window.png" --out "$out" --origin 1750,84 --size 890,108 --cell 17,36 --swift-origin 1750,84 > /dev/null
+  g "key escape" > /dev/null; s "key esc" > /dev/null
+
+  # Increase Contrast on the text scene, then the minimap on the scrollback.
+  echo text > "$scratch/run/gpui.fifo"; echo text > "$scratch/run/swift.fifo"; sleep 1.5
+  g "increase-contrast on" > /dev/null; s "increase-contrast on" > /dev/null; sleep 1
+  g "frames 2" > /dev/null; s "frames 2" > /dev/null
+  g "shot g$mode-contrast" > /dev/null; s "shot $ctl_s/g$mode-contrast.png" > /dev/null
+  python3 "$here/visual-compare.py" compare "$mode-contrast" "$ctl_g/g$mode-contrast.png" "$ctl_s/g$mode-contrast.png" --out "$out" "${GRID[@]}" > /dev/null
+  g "increase-contrast off" > /dev/null; s "increase-contrast off" > /dev/null
+  g "set minimap=true" > /dev/null; s "set minimap=true" > /dev/null; sleep 1.5
+  echo scrollback > "$scratch/run/gpui.fifo"; echo scrollback > "$scratch/run/swift.fifo"; sleep 4
+  g "frames 2" > /dev/null; s "frames 2" > /dev/null
+  g "shot g$mode-minimap" > /dev/null; s "shot $ctl_s/g$mode-minimap.png" > /dev/null
+  python3 "$here/visual-compare.py" compare "$mode-minimap" "$ctl_g/g$mode-minimap.png" "$ctl_s/g$mode-minimap.png" --out "$out" "${GRID[@]}" > /dev/null
+  # The strip itself is a SwiftUI view over the Metal one, so it is compared in a shot of the whole window, at its right edge.
+  s "window-shot $ctl_s/g$mode-minimap-window.png" > /dev/null
+  python3 "$here/visual-compare.py" compare "$mode-minimap-strip" "$ctl_g/g$mode-minimap.png" "$ctl_s/g$mode-minimap-window.png" --out "$out" --origin 2400,84 --size 240,1548 --cell 17,36 --swift-origin 2400,84 > /dev/null
+  g "set minimap=false" > /dev/null; s "set minimap=false" > /dev/null
+
   # A selection from the left of row 3, column 5 to the right of row 5, column 20 (GPUI by the mouse at the same cells).
   echo text > "$scratch/run/gpui.fifo"; echo text > "$scratch/run/swift.fifo"; sleep 1.5
   g "mouse-down 396 87" > /dev/null; g "mouse-drag 470 105" > /dev/null; g "mouse-drag 529 123" > /dev/null; g "mouse-up 529 123" > /dev/null
@@ -62,6 +90,7 @@ for mode in dark light; do
   g "shot g$mode-selection" > /dev/null; s "shot $ctl_s/g$mode-selection.png" > /dev/null
   python3 "$here/visual-compare.py" compare "$mode-selection" "$ctl_g/g$mode-selection.png" "$ctl_s/g$mode-selection.png" --out "$out" "${GRID[@]}" > /dev/null
 
+  if [ -z "${SKIP_SETTINGS:-}" ]; then  # SKIP_SETTINGS=1: the terminal scenes only
   # Settings: GPUI's window set to the size Swift opens at (920 x 1084 pt), every page's first screen.
   g "settings-section appearance" > /dev/null; g "settings-resize 920 1084" > /dev/null
   s "settings-section appearance" > /dev/null; sleep 1
@@ -71,6 +100,7 @@ for mode in dark light; do
     g "settings-shot s$mode-$page" > /dev/null; s "window-shot $ctl_s/s$mode-$page.png Settings" > /dev/null
     python3 "$here/visual-compare.py" compare "settings-$mode-$page" "$ctl_g/s$mode-$page.png" "$ctl_s/s$mode-$page.png" --out "$out" > /dev/null
   done
+  fi
 done
 python3 "$here/visual-compare.py" table "$out"
 echo "sheets: $out/<scenario>.png (GPUI | Swift | difference)"

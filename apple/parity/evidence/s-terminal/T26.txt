@@ -1,0 +1,8 @@
+# T26: OSC 9;4 progress goes stale after 15 s without a renewal. Live run, --background Swift instance, WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-terminal-a,
+# WORMHOLE_SHELL=/bin/zsh, control folder. Polled once a second after the report; times are seconds since the report was typed.
+> type clear; printf '\033]9;4;1;70\a'\r        (a progress report: state 1, 70 %, never renewed)
+t+6s  row 1 ... working   line="Working · 70%"
+t+14s row 1 ... working
+t+16s row 1 ... idle      line="~"
+=> the bar is dropped by the core's one-shot deadline (15 s) and the row falls back to idle; before it, `rows` read
+   `working ... line="Working · 40%"` two seconds after a first report.

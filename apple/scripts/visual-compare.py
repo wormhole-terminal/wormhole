@@ -19,6 +19,9 @@ colour is within TOLERANCE levels per channel in both apps: the same fill, and t
 `pass` is the share of passing blocks; `fill` the share of blocks whose dominant colour agrees within 3 levels (solid
 areas: backgrounds, swatches, selection); `mad` the mean absolute difference per channel over all pixels, and `mad_blur`
 the same after a Gaussian blur of 1.5 px, which removes anti-aliasing and keeps shape, colour and placement.
+Blocks are judged on their interior, `--inset` pixels (default 1) in from each side: the two apps put a cell's edge on
+different device pixels (GPUI's 16.8 px cells alternate 16 and 17 px), which a stretch cannot undo; the GPUI crop is stretched
+with nearest-neighbour so no edge is blurred into its neighbour.
 Same = shift 0,0, pass >= 98 %, fill >= 99 %.
 """
 import argparse
@@ -90,13 +93,17 @@ def compare(args):
     crop_w = round(size[0] * args.gpui_cell_w / cell[0]) if args.gpui_cell_w else size[0]
     gpui = gpui_full[y : y + size[1], x : x + crop_w]
     if crop_w != size[0]:
-        gpui = np.asarray(Image.fromarray(gpui).resize(size, Image.BILINEAR))
+        gpui = np.asarray(Image.fromarray(gpui).resize(size, Image.NEAREST))
     gpui, swift = pair(gpui, swift_full[: size[1], : size[0]])
 
     diff = np.abs(gpui.astype(np.int16) - swift.astype(np.int16))
     blur = lambda a: np.asarray(Image.fromarray(a).filter(ImageFilter.GaussianBlur(1.5))).astype(np.int16)
     mad_blur = float(np.abs(blur(gpui) - blur(swift)).mean())
     ga, sa = blocks(gpui, cell), blocks(swift, cell)
+    # GPUI puts each cell's edge on a device pixel of its own (16.8 px cells alternate 16 and 17), so after the stretch an edge
+    # lands up to a pixel from Swift's: a block is judged on its interior, INSET pixels in from every side.
+    inset = args.inset
+    ga, sa = ga[:, :, inset : cell[1] - inset, inset : cell[0] - inset], sa[:, :, inset : cell[1] - inset, inset : cell[0] - inset]
     gm, sm = ga.reshape(*ga.shape[:2], -1, 3).mean(axis=2), sa.reshape(*sa.shape[:2], -1, 3).mean(axis=2)
     passing = np.abs(gm - sm).max(axis=2) <= TOLERANCE
     fill = np.abs(dominant(ga) - dominant(sa)).max(axis=2) <= 3
@@ -139,7 +146,7 @@ def main():
     c.add_argument("name"); c.add_argument("gpui"); c.add_argument("swift")
     c.add_argument("--out", required=True); c.add_argument("--origin", default="0,0"); c.add_argument("--size")
     c.add_argument("--cell", default="16,16"); c.add_argument("--search", type=int, default=0)
-    c.add_argument("--matte", default="128,128,128"); c.add_argument("--swift-origin", default="0,0"); c.add_argument("--gpui-cell-w", type=float)
+    c.add_argument("--inset", type=int, default=1); c.add_argument("--matte", default="128,128,128"); c.add_argument("--swift-origin", default="0,0"); c.add_argument("--gpui-cell-w", type=float)
     c.set_defaults(run=compare)
     t = sub.add_parser("table")
     t.add_argument("dir")

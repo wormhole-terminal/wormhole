@@ -73,4 +73,14 @@ size and scale in dark and light, shoots every Settings page at one window size,
 sheet per scenario (GPUI | Swift | difference) and a table. Swift draws text with CoreText and GPUI with its own glyph
 raster, so "the same" is defined per block (cell) by mean colour and dominant fill, not per pixel; the definition and
 its tolerances are the header of `visual-compare.py`. GPUI cells are fractional (16.8 px) and Swift's whole pixels
-(17), so the GPUI crop is stretched to Swift's cell width first; that difference is a finding, not noise.
+(17), so the GPUI crop is stretched (nearest-neighbour) to Swift's cell width first; that difference is a finding, not noise.
+
+Two things about the crops. The Swift shot is the pane as drawn, with its 4 pt padding (8 px at scale 2) around the grid, which the GPUI
+crop leaves out: `--swift-origin 8,8`. (Without it every row drifts and the text scene fell to 83 %: that was this harness, not the
+renderer.) And a block is judged on its interior, 1 px in from each side (`--inset`): GPUI puts each cell's edge on a device pixel of its own
+(16.8 px cells alternate 16 and 17), so after the stretch a colour edge lands up to a pixel from Swift's, which a 256-colour row
+turns into 72 failing blocks that are not a difference. The scenes: text (colours, styles, underline styles, wide and emoji cells, box,
+blocks, braille, ligatures, links), pad, the three cursors, images (kitty, iTerm2, Sixel), blocks (OSC 133 gutter), selection, find (the
+matches in the grid, and the bar in a shot of the whole window), Increase Contrast, and the minimap (the grid, and its strip in a shot of the
+whole window). `SKIP_SETTINGS=1` runs the terminal scenes only. Not compared (a person must look): the native scroll bar (an NSScroller,
+not in the Metal shot), the unfocused hollow cursor, a Cmd-hover underline, the context menu (native NSMenu).
