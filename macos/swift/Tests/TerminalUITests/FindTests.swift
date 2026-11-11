@@ -89,13 +89,20 @@ import Testing
         #expect(!model.isOpen && model.outcome.count == 0 && model.current == nil && model.ticks.isEmpty)
     }
 
-    @Test func printingSearchesAgainWithoutMovingTheCurrentMatch() async {
+    @Test(.timeLimit(.minutes(1))) func printingSearchesAgainWithoutMovingTheCurrentMatch() async {
         let (model, searching) = await open()
         model.step(1)
         searching.lines.append("   Compiling more")
         searching.hasNewOutput = true
-        model.outputChanged()
-        try? await Task.sleep(for: .milliseconds(320))
+        // The search after the wait says when it landed: a fixed time is lost on a machine whose main actor is busy
+        // with other suites (GitHub's runner took longer than 320 ms).
+        await withCheckedContinuation { landed in
+            model.onOutcome = {
+                model.onOutcome = nil
+                landed.resume()
+            }
+            model.outputChanged()
+        }
         searching.hasNewOutput = false
         #expect(model.outcome.count == 3)
         #expect(model.current == 0, "the current match stays where it was")

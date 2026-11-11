@@ -12,7 +12,9 @@ import WorkspaceModel
 @MainActor
 final class NotesCoordinator {
     private let persistence: any NotesPersisting
-    private unowned let hub: WindowHub
+    /// Held, not `unowned`: a merge in flight when the window closes still reads the hub after its `await`s (the hub
+    /// never names this coordinator, so nothing is kept alive in a circle).
+    private let hub: WindowHub
     private var shown: TerminalID?
     private var known: Set<TerminalID> = []
     private var saved = NotesModel()
@@ -79,8 +81,10 @@ final class NotesCoordinator {
     private func setSync(on: Bool) {
         guard on != (syncTimer != nil) else { return }
         syncTimer?.invalidate()
-        syncTimer = on ? Timer.scheduledTimer(withTimeInterval: Self.syncEvery, repeats: true) { [weak self] _ in
-            Task { @MainActor in await self?.sync() }
+        syncTimer = on ? Timer.scheduledTimer(withTimeInterval: Self.syncEvery, repeats: true) { [weak self] timer in
+            // The window is gone: the timer ends with it instead of firing for nobody.
+            guard let self else { return timer.invalidate() }
+            Task { @MainActor in await self.sync() }
         } : nil
     }
 
