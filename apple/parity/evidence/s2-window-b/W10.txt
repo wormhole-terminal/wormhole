@@ -1,0 +1,7 @@
+W10 glass, round S2 (window-b). GPUI (sidebar/glass.rs, platform/vibrancy.rs): one NSGlassEffectView per sidebar card and per terminal tab, clipped to the list and the tab row,
+over the window's blur; the tab's selected fill lies over its glass at 70 %.
+Swift now: the column no longer has an NSGlassEffectView. With the glass setting on (and neither Reduce Transparency nor Increase Contrast) each card (a group's, a loose
+terminal's) and each tab draws SwiftUI's glassEffect(.regular) in its own shape (DesignSystem `\.cardGlass`, set at the window's root from WindowLook.glassOn; CardSurface,
+TerminalRowView, TerminalTabView); the column has no fill of its own then, so the blur shows between the cards. `backdrop` in the instance: one NSVisualEffectView
+(hudWindow, behindWindow, active) and no NSGlassEffectView in the AppKit tree (SwiftUI's glass is its own layer). A window-shot with glass on shows the cards lighter over a translucent column.
+Not checkable by a script: what the glass looks like over a busy desktop on macOS 27, and the selected tab's 70 % fill over its glass (the Swift tab uses its fill as before). A person must look.
