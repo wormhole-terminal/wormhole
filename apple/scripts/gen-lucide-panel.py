@@ -22,6 +22,8 @@ ICONS = {
     "play": "play", "ellipsis": "ellipsis", "messageSquarePlus": "message-square-plus", "ban": "ban",
     "folderGit2": "folder-git-2", "folderInput": "folder-input", "squareTerminal": "square-terminal", "tag": "tag",
     "chevronUp": "chevron-up", "settings": "settings", "palette": "palette", "archive": "archive", "commit": "git-commit-horizontal",
+    # The split buttons' (`window/title`), whose half fills when the new pane opens (`style/icon_motion`).
+    "columns2": "columns-2", "rows2": "rows-2",
     # The find bar's (`style/find_bar.rs`).
     "search": "search", "caseSensitive": "case-sensitive", "wholeWord": "whole-word", "regex": "regex",
     # The sidebar row's marks (`sidebar/row/face.rs`): hidden from agents, a worktree.

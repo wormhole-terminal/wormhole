@@ -23,6 +23,7 @@ public struct Segmented<Value: Hashable>: View {
         }
         .padding(2).frame(height: Metric.titleControl)
         .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip + 2))
+        .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusChip + 2), \.borderStrong)
         .marked("segmented")
         .motion(Motion.selection, value: selection)
     }
@@ -35,6 +36,7 @@ public struct Segmented<Value: Hashable>: View {
                 .background {
                     if on {
                         RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).fill(tokens.chipSelected)
+                            .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusChip), \.borderStrong)
                             .matchedGeometryEffect(id: "segment", in: space)
                     }
                 }

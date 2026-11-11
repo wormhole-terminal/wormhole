@@ -19,6 +19,19 @@ struct ChromeSpecimen: View {
                 CountBadge(3)
                 CountBadge(1_234)
             }
+            // The icons that answer a click or a change with their own drawing (`IconMotion`), at rest: the + and the refresh
+            // and copy glyphs by their icon, the splits, the zoom button's swap and the right panel's tab glyphs.
+            HStack(spacing: Space._4) {
+                IconButton(lucide: .plus, label: "Add") {}
+                IconButton(lucide: .refreshCw, label: "Refresh") {}
+                IconButton(lucide: .copy, label: "Copy") {}
+                LucideView(icon: .columns2, size: Metric.titleGlyph).iconMotion(.newPane(.right), run: 0)
+                LucideView(icon: .rows2, size: Metric.titleGlyph).iconMotion(.newPane(.below), run: 0)
+                IconSwap(key: false) { _ in LucideView(icon: .chevronDown, size: Metric.glyph) }
+                LucideView(icon: .chevronDown, size: Metric.glyph).menuChevron(open: true)
+                ForEach([Lucide.gitCompare, .commit, .fileText, .gauge, .folder], id: \.self) { TabGlyph(icon: $0, size: Metric.glyph, run: 0) }
+            }
+            .foregroundStyle(tokens.textMuted)
             HStack(spacing: Space._4) {
                 ForEach([StatusKind.idle, .working, .attention, .done, .failed], id: \.self) { StatusDot($0) }
             }

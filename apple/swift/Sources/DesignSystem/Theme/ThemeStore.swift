@@ -27,6 +27,8 @@ public final class ThemeStore {
     public var reduceTransparency = false { didSet { refresh() } }
     /// Reduce Motion: the chrome's animations hold still or fade (`\.reduceMotion`, set at each window's root by `.themed()`).
     public var reduceMotion = false
+    /// The Animate icons setting, for every window's icons (`\.iconAnimations`, set by Settings).
+    public var iconAnimations = true
     /// The Borders setting: the lines of `border`, `card.edge` and `settings.divider` are drawn (`ui.line`); Increase
     /// Contrast keeps them whatever it says, as in the GPUI app.
     public var showsBorders = true { didSet { if showsBorders != oldValue { refresh() } } }

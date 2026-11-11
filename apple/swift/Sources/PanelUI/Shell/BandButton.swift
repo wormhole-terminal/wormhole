@@ -11,12 +11,17 @@ struct BandButton: View {
     var inRow = false
     let action: () -> Void
     @State private var hovering = false
+    private let run = IconRun()
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         let face = inRow ? PanelMetrics.rowButton : PanelMetrics.bandButton
-        Button(action: action) {
+        Button {
+            run.start()
+            action()
+        } label: {
             PanelIcon(symbol, size: inRow ? Metric.glyph : PanelMetrics.bandGlyph)
+                .iconMotion(IconMotion.of(symbol: symbol), run: run.count)
                 .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
                 .frame(width: face, height: face)
                 .background(hovering ? tokens.bandHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))

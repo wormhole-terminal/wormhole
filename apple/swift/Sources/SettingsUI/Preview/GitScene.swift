@@ -37,6 +37,7 @@ struct GitScene: View {
             }
             .frame(height: 112).frame(maxHeight: .infinity, alignment: .top)
             .clipShape(RoundedRectangle(cornerRadius: t.metrics.radius))
+            .contrastOutline(RoundedRectangle(cornerRadius: t.metrics.radius), \.cardEdge)
             .motion(Motion.layout, value: split)
         }
     }

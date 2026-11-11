@@ -28,13 +28,18 @@ struct HeadAddButton: View {
     let group: String
     let action: () -> Void
     @State private var hovering = false
+    private let run = IconRun()
     @Environment(\.tokens) private var tokens
 
     private var label: String { Words.text("sidebar-new-in-group", fallback: "New terminal in \(group)") }
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            run.start()
+            action()
+        } label: {
             GlyphView(glyph: .plus, size: Metric.titleGlyph)
+                .iconMotion(.quarter, run: run.count)
                 .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
                 .frame(width: Metric.titleControl, height: Metric.titleControl)
                 .background(hovering ? tokens.stateHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))

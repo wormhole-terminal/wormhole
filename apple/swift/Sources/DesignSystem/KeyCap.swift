@@ -24,11 +24,7 @@ public struct KeyCap: View {
             .padding(.horizontal, Space._1)
             .frame(minWidth: Metric.keyCapMinWidth, minHeight: height, maxHeight: height)
             .background(tokens.controlBackground, in: shape)
-            .overlay {
-                if ThemeStore.shared.increaseContrast {
-                    shape.strokeBorder(tokens.borderStrong, lineWidth: tokens.metrics.borderWidth)
-                }
-            }
+            .contrastOutline(shape, \.borderStrong)
             .marked("keycap")
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(KeyCapSpeech.words(text)))

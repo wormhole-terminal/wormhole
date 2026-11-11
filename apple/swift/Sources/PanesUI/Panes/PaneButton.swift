@@ -15,12 +15,11 @@ struct PaneButton: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: PaneMetrics.glyph, weight: .regular))
+            // Zoomed by the keys or by this button, the old corners shrink away as the new ones grow in.
+            IconSwap(key: symbol) { Image(systemName: $0).font(.system(size: PaneMetrics.glyph, weight: .regular)) }
                 .frame(width: PaneMetrics.button, height: PaneMetrics.button)
                 .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
                 .background(hovering ? tokens.bandHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
-                .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }

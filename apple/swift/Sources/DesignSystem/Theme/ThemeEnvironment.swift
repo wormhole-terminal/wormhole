@@ -9,6 +9,8 @@ extension EnvironmentValues {
     /// Reduce Motion as the store has it: macOS's, followed live, unless a check stood in for it (SwiftUI's own
     /// `accessibilityReduceMotion` cannot be set). Outside a `.themed()` tree: off.
     @Entry public var reduceMotion = false
+    /// The Animate icons setting (`icon_animations`): icons answer a click with their own drawing (`IconMotion`).
+    @Entry public var iconAnimations = true
     /// Whether the window is in front as far as the focus rings go: none shows in a window that is not (the window sets it).
     @Entry public var windowFront = true
     /// Liquid Glass behind each sidebar card and each tab, as the GPUI app puts it (`sidebar/glass.rs`), not behind the column.
@@ -26,6 +28,7 @@ private struct Themed: ViewModifier {
         content
             .environment(\.tokens, store.tokens)
             .environment(\.reduceMotion, store.reduceMotion)
+            .environment(\.iconAnimations, store.iconAnimations)
             // Native controls (menus, scrollers, text fields) follow the theme's light or dark, not only macOS's.
             .preferredColorScheme(store.appearance.colorScheme)
     }

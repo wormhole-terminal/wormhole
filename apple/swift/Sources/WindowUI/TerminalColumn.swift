@@ -37,6 +37,7 @@ struct TerminalColumn: View {
             .padding(.leading, pads.leading)
             .padding(.trailing, pads.trailing)
             .frame(height: Chrome.titleHeight)
+            .overlay { TitleTintLine(color: hub.state.selectedGroupColor) }
             .background(WindowDragArea())
 
             if look.tabsOnTop { TabBarView(model: hub.tabBar, profiles: hub.actions.profiles(), profileActions: hub.actions.profile, actions: hub.tabActions(appearance: look.sidebar), hints: hints) }

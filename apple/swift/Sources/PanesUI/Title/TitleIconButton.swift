@@ -7,14 +7,21 @@ import SwiftUI
 struct TitleIconButton<Glyph: View>: View {
     let label: String
     var enabled = true
+    /// What the glyph does to answer a click (the splits fill the half their new pane takes).
+    var motion: IconMotion?
     let action: () -> Void
     @ViewBuilder let glyph: () -> Glyph
     @State private var hovering = false
+    private let run = IconRun()
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            run.start()
+            action()
+        } label: {
             glyph()
+                .iconMotion(motion, run: run.count)
                 .frame(width: Metric.titleControl, height: Metric.titleControl)
                 .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
                 .background(hovering ? tokens.bandHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))

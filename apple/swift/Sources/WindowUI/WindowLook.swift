@@ -42,9 +42,12 @@ public final class WindowLook {
     public var splitGaps = true
     /// Terminals as tabs under the title row instead of the sidebar's list (Show terminals in ▸ Tabs).
     public var tabsOnTop = false
-    /// Icons play their own drawing changing, here the panel toggles' strip filling with its column (`icon_animations`, on by
-    /// default); off, the strip is full or empty as soon as the column is wanted or not.
-    public var iconAnimations = true
+    /// Icons play their own drawing changing (`icon_animations`, on by default; the one setting every window's icons read, `\.iconAnimations`),
+    /// here also the panel toggles' strip filling with its column; off, the strip is full or empty as soon as the column is wanted or not.
+    public var iconAnimations: Bool {
+        get { ThemeStore.shared.iconAnimations }
+        set { ThemeStore.shared.iconAnimations = newValue }
+    }
     /// What code is drawn in: the diff, the file viewer (`code_font_family`, else the terminal's; `code_font_size`).
     public var codeFont = CodeFont()
     /// The lines between the columns (the Column dividers setting).

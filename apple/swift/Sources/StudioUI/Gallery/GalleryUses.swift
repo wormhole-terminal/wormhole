@@ -142,8 +142,8 @@ enum GalleryUses {
         TokenUse(id: "banner", label: "banner", area: .settings, tokens: [
             "banner.danger.background", "banner.danger.border", "banner.info.background", "banner.info.border",
             "banner.success.background", "banner.success.border", "banner.warning.background",
-            "banner.warning.border", "metrics.border_width", "metrics.radius", "status.danger", "status.info",
-            "status.success", "status.warning", "text.primary",
+            "banner.warning.border", "metrics.radius", "status.danger", "status.info", "status.success",
+            "status.warning", "text.primary",
         ]),
         TokenUse(id: "palette.row", label: "palette result", area: .ambient, tokens: [
             "list.selected", "list.selected.muted", "list.selected.text", "primary", "state.hover", "text.muted",

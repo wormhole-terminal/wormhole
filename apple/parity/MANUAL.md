@@ -105,3 +105,33 @@ system panel. Start a normal (not `--background`) instance as in the setup above
 29. Put a Zed icon theme folder in the profile's `icon-themes/`, turn on the Icon themes feature flag and pick it under Settings → Appearance →
     File icon theme. **Expect** the Files tab and the Changes rows to draw its icons, "None" to draw the system's symbols, and the bundled
     Wormhole Icons again with the flag off.
+
+## Themes lane: icon motion
+
+What a `--background` instance cannot show: hover does not fire in it, a SwiftUI menu is never opened by an injected click, and a
+motion lasts a few frames. Settings → Appearance → Animate icons is on for all of these except steps 9 and 10. This section's steps
+are numbered on their own.
+
+1. Show terminals as tabs (Settings → Terminals & sidebar → Show terminals in ▸ Tabs) and click the **+** at the end of the strip.
+   **Expect** the + to turn a quarter (about a fifth of a second) and look the same after it.
+2. Hover a group head in the sidebar and click its **+** (New terminal in group). **Expect** the same quarter turn on the + as the new
+   terminal appears.
+3. In the right panel's Changes tab click the refresh icon in the band. **Expect** the arrows to go once round clockwise (half a second).
+4. Open a diff, hover a commit's detail or a diff note and click its copy icon. **Expect** the front sheet to fill, the icon to become a
+   check for about a second and then the copy icon to come back.
+5. Click Split right and Split down in the title row (with room for a half). **Expect** the right half (or the bottom half) of the icon's
+   frame to fill from the divider outward and let go, as the new pane opens.
+6. In a split press ⌘⇧↩ (or click the zoom button in a pane's header). **Expect** the corners icon to shrink away and the other one to grow in;
+   press the key again: the same, in reverse. The key and the button show it alike.
+7. Click the small chevron next to Open in…. **Expect** it to turn over to point up while the menu is open and back down when it closes
+   (also on Esc and on picking an app).
+8. Click each right-panel tab in turn (Changes, History, Notes, Usage, Project; Files has none). **Expect** the glyph of the tab you
+   switched to to play once: Changes' two circles fill one after the other, History's dot fills as its lines draw out from the ring, Notes'
+   lines are written, Usage's needle sweeps up and settles, Project's folder flashes full. None plays when the window opens or when the
+   panel slides back in.
+9. Turn Animate icons off (Settings → Appearance) and repeat 1 to 8. **Expect** no icon to animate, and the chevron of step 7 to flip
+   without turning; turn it on again and click nothing: **expect** nothing to play on its own.
+10. Turn Reduce Motion on in System Settings → Accessibility → Display and repeat 1 to 8. **Expect** the same as step 9.
+11. Turn Increase Contrast on (System Settings → Accessibility → Display), give a group a colour (its menu) and select a terminal in it.
+    **Expect** a 2 pt line in the group's colour along the bottom of the title row's rounded bar, and the Settings theme cards, the
+    segmented controls and the diff preview card to wear a visible outline.

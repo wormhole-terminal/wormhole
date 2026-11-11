@@ -41,11 +41,7 @@ struct SettingGroup<Rows: View, Accessory: View>: View {
             }
                 .padding(.horizontal, Space._4).padding(.vertical, Space._1)
                 .background(tokens.settingsGroup, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusLg))
-                .overlay {
-                    if ThemeStore.shared.increaseContrast {
-                        RoundedRectangle(cornerRadius: tokens.metrics.radiusLg).strokeBorder(tokens.cardEdge, lineWidth: tokens.metrics.borderWidth)
-                    }
-                }
+                .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusLg), \.cardEdge)
         }
     }
 }

@@ -61,6 +61,7 @@ private struct PanelTabButton: View {
     let namespace: Namespace.ID
     let action: @MainActor () -> Void
     @State private var hovering = false
+    private let run = IconRun()
     @Environment(\.chrome) private var colours
     @Environment(WindowFocus.self) private var focus
 
@@ -85,17 +86,15 @@ private struct PanelTabButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
+        // The glyph plays as its tab becomes the active one, never as the window opens or the panel comes back.
+        .onChange(of: isSelected) { _, now in if now { run.start() } }
         .help(tab.title)
     }
 
     @ViewBuilder private var glyph: some View {
         let colour = isSelected ? colours.selectedText : hovering ? colours.text : colours.muted
         Group {
-            if tab == .history {
-                CommitGlyph(color: colour)
-            } else if let lucide = tab.lucide {
-                LucideView(icon: lucide, size: Chrome.glyph).foregroundStyle(colour)
-            }
+            if let lucide = tab.lucide { TabGlyph(icon: lucide, size: Chrome.glyph, run: run.count).foregroundStyle(colour) }
         }
         .frame(width: Chrome.iconTab, height: Chrome.iconTab)
     }
@@ -107,8 +106,7 @@ extension PanelTab {
 
     var title: String { rawValue.capitalized }
 
-    /// Lucide's git-compare, file-text, gauge, folder and folder-tree, as the GPUI app's tabs draw them (history's commit glyph
-    /// is drawn apart).
+    /// Lucide's git-compare, git-commit-horizontal, file-text, gauge, folder and folder-tree, as the GPUI app's tabs draw them.
     var lucide: Lucide? {
         switch self {
         case .changes: .gitCompare
@@ -116,7 +114,7 @@ extension PanelTab {
         case .project: .folder
         case .files: .folderTree
         case .notes: .fileText
-        case .history: nil
+        case .history: .commit
         }
     }
 }

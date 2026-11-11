@@ -11,6 +11,9 @@ struct OpenInButtons: View {
     let backend: any OpenInBackend
     let icon: (OpenInApp) -> NSImage?
     @Environment(\.tokens) private var tokens
+    @State private var hovering = false
+    /// The chevron points up while its menu is open: AppKit says a menu is tracked, and the pointer over the chevron says whose.
+    @State private var menuOpen = false
 
     var body: some View {
         let open = OpenInMenu(folder: folder, backend: backend), choice = open.choice
@@ -30,8 +33,12 @@ struct OpenInButtons: View {
                 Image(systemName: "chevron.down").font(.system(size: Metric.chevron, weight: .semibold))
                     .frame(width: TitleMetrics.chevronWidth, height: Metric.titleControl)
                     .foregroundStyle(tokens.textMuted)
+                    .menuChevron(open: menuOpen)
             }
             .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+            .onHover { hovering = $0 }
+            .onReceive(NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification)) { _ in if hovering { menuOpen = true } }
+            .onReceive(NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification)) { _ in menuOpen = false }
             .frame(width: TitleMetrics.chevronWidth + TitleMetrics.afterChevron, alignment: .leading)
             .help(PanesText.openInAnother).accessibilityLabel(PanesText.openInAnother)
         }

@@ -29,7 +29,7 @@ public struct Banner<Actions: View>: View {
         .padding(.leading, Space._3).padding(.trailing, Space._2).padding(.vertical, Self.padY)
         .frame(minHeight: Self.minHeight)
         .background(fill, in: shape)
-        .overlay { if ThemeStore.shared.increaseContrast { shape.strokeBorder(border, lineWidth: tokens.metrics.borderWidth) } }
+        .contrastOutline(shape, color: border)
         .marked("banner")
         .accessibilityElement(children: .contain)
         .accessibilityLabel(text)

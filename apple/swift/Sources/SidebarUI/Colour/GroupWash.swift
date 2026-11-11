@@ -94,6 +94,18 @@ extension GroupColor {
     /// The colour as the head's dot and the menu show it.
     public func mark(_ tokens: ThemeTokens) -> RGBA { GroupWash.swatch(hue: hue, grey: self == .grey, tokens) }
 
+    /// The line that stands in for the group's colour under the title row while Increase Contrast is on (core's
+    /// `ProjectColor::from_color` then `line`): the colour kept in the lightness that reads as a colour (a black or a white
+    /// says nothing as a tint), then moved far enough from the window to be seen on it (`LINE_CONTRAST`, 3:1).
+    public func titleLine(_ tokens: ThemeTokens) -> RGBA {
+        let mark = mark(tokens)
+        let lightness = mark.oklab.l
+        let kept = min(max(lightness, 0.30), 0.88)
+        let tint = kept == lightness ? mark : mark.lightened(kept - lightness)
+        guard let window = tokens.rgba(named: "surface.window") else { return tint }
+        return tint.readable(on: window.withAlpha(1), ratio: GroupWash.markContrast)
+    }
+
     /// The colour its card is washed with.
     func wash(_ tokens: ThemeTokens) -> RGBA { GroupWash.tint(mark(tokens), tokens) }
 }

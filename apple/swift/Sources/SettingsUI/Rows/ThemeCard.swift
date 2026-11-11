@@ -47,6 +47,8 @@ struct ThemeCard: View {
             }
             .clipShape(shape)
             .overlay(shape.strokeBorder(isSelected ? own.primary : (hovering ? tokens.borderStrong : .clear), lineWidth: Self.ring))
+            // Increase Contrast: every card has its edge, the chosen one's is the ring above (`choice_card`).
+            .contrastOutline(shape, isSelected ? \.primary : \.cardEdge)
             .contentShape(shape)
         }
         .buttonStyle(.plain)

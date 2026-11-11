@@ -9,6 +9,7 @@ public struct IconButton: View {
     public let label: LocalizedStringKey
     public let action: () -> Void
     @State private var hovering = false
+    private let run = IconRun()
 
     public init(symbol: String, label: LocalizedStringKey, action: @escaping () -> Void) {
         self.symbol = symbol
@@ -22,9 +23,14 @@ public struct IconButton: View {
     }
 
     public var body: some View {
-        Button(action: action) {
+        Button {
+            run.start()
+            action()
+        } label: {
             Group {
-                if let lucide { LucideView(icon: lucide, size: Metric.glyph) } else { Image(systemName: symbol).font(.system(size: Metric.glyph, weight: .medium)) }
+                if let lucide { LucideView(icon: lucide, size: Metric.glyph).iconMotion(IconMotion.of(lucide), run: run.count) } else {
+                    Image(systemName: symbol).font(.system(size: Metric.glyph, weight: .medium)).iconMotion(IconMotion.of(symbol: symbol), run: run.count)
+                }
             }
             .frame(width: Metric.control, height: Metric.control)
         }

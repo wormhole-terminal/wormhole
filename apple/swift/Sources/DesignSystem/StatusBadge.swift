@@ -17,11 +17,7 @@ public struct StatusBadge: View {
         Text(text).textRole(.caption).foregroundStyle(color)
             .padding(.horizontal, Space._2).frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)
             .background(color.opacity(Self.tint), in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
-            .overlay {
-                if ThemeStore.shared.increaseContrast {
-                    RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).strokeBorder(color, lineWidth: tokens.metrics.borderWidth)
-                }
-            }
+            .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusChip), color: color)
             .fixedSize()
             .marked("badge")
     }
