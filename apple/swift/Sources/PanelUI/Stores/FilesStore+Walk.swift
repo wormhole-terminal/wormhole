@@ -5,10 +5,13 @@
 import PanelModel
 
 extension FilesStore: PanelWalking {
+    /// The path button (`Line::Head`) is the first row, a band, so it is the tab's one ⇥ stop with the entries under it.
     public var walkRows: [WalkRow] {
-        rows.filter(\.isEntry).map { row in
-            WalkRow(id: row.path, level: row.depth, isOpen: row.isFolder ? tree.isOpen(row.path) : nil, name: row.name)
-        }
+        guard root != nil else { return [] }
+        return [WalkRow(id: Self.headID, level: 0, isBand: true, name: pathMenu?.shownName ?? "")]
+            + rows.filter(\.isEntry).map { row in
+                WalkRow(id: row.path, level: 1 + row.depth, isOpen: row.isFolder ? tree.isOpen(row.path) : nil, name: row.name)
+            }
     }
 
     public var cursor: String? {
@@ -23,5 +26,5 @@ extension FilesStore: PanelWalking {
         click(entry)
     }
 
-    public func fold(_ row: WalkRow) { toggle(row.id) }
+    public func fold(_ row: WalkRow) { if row.id != Self.headID { toggle(row.id) } }
 }

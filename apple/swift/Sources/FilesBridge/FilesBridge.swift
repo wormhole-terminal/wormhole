@@ -23,6 +23,7 @@ public enum FilesBridge {
     @MainActor public static func installRules() {
         NoteRules.paragraphAt = { text, cursor in noteParagraphAt(text: text, cursor: UInt64(max(cursor, 0))) }
         NoteRules.title = { noteTitle(text: $0) }
+        NoteRules.closeStake = { notesCloseStake(openItems: UInt64(max($0, 0))) }
         VisibleRules.line = { text, tab in
             let line = visibleLine(text: text, tabWidth: UInt32(max(tab, 1)))
             return VisibleLine(text: line.text, offsets: line.offsets.map(Int.init), marks: line.marks.map { Int($0.start)..<Int($0.end) })
@@ -48,7 +49,7 @@ public enum FilesBridge {
         relay.attach(usage)
         return PanelBackends(
             files: RustFilesBackend(service: try FilesService()),
-            project: RustProjectBackend(service: project, effects: effects),
+            project: RustProjectBackend(service: project, effects: effects, biometricsAvailable: authenticator.biometricsAvailable()),
             usage: RustUsageBackend(service: usage, relay: relay),
             notes: RustNotesPersistence(notes: try SessionNotesStore.forProfile(profile: profile), project: project))
     }

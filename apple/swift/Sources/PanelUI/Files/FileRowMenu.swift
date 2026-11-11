@@ -10,13 +10,13 @@ struct FileRowMenu: View {
     @Environment(\.panelHost) private var host
 
     var body: some View {
-        if let editor = host?.editorName, !row.isFolder {
-            Button(panelText("files-row-open-in-editor", "Open in \(editor)")) { host?.open(absolute, line: nil) }
-        }
+        openIn
         Button(panelText("files-row-reveal", "Reveal in Finder")) { host?.reveal(absolute) }
         Button(panelText("files-row-copy-path", "Copy Path")) {
             host?.copyPath(absolute)
         }
+        Divider()
+        Button(panelText("files-row-rename", "Rename\u{2026}")) { store.startRename(row) }
         if row.isFolder {
             Divider()
             if store.isPinned(row.path) {
@@ -25,8 +25,16 @@ struct FileRowMenu: View {
                 Button(panelText("files-row-pin-folder", "Pin Folder")) { store.setPinned(row.path, true) }
             }
         }
-        Divider()
-        Button(panelText("files-row-rename", "Rename\u{2026}")) { store.startRename(row) }
+    }
+
+    /// The apps Open in lists, the chosen one checked; a link is not opened (it may lead anywhere), so its submenu is off.
+    private var openIn: some View {
+        Menu(panelText("files-row-open-in", "Open in")) {
+            ForEach(host?.openApps ?? []) { app in
+                Toggle(app.name, isOn: Binding(get: { app.isChosen }, set: { _ in host?.open(absolute, inBundle: app.bundle) }))
+            }
+        }
+        .disabled(row.kind == .link)
     }
 
     private var absolute: String { store.root.map { store.join($0, row.path) } ?? row.path }

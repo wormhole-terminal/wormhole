@@ -26,7 +26,7 @@ extension DiffLine {
             case .added: .added
             case .removed: .removed
             }
-        self.init(kind: kind, oldNumber: line.old.map(Int.init), newNumber: line.new.map(Int.init), text: line.text, noNewline: line.noNewline)
+        self.init(kind: kind, oldNumber: line.old.map(Int.init), newNumber: line.new.map(Int.init), text: line.text, noNewline: line.noNewline, openLine: line.openLine.map(Int.init))
     }
 }
 

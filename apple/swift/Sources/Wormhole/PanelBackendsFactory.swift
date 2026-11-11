@@ -34,16 +34,8 @@ enum PanelBackendsFactory {
         }
         #if WITH_UNIFFI
             guard options.isReal else { return made }
-            let project = backends.project
-            let real = try? GitBridge.makeBackends(
-                worktreeAllowed: { await refusal(making: $0, project: project) },
-                // A worktree was made: its folder gets a terminal (its ports, `environment`, are not passed on yet).
-                worktreeCreated: { made, _ in await MainActor.run { _ = store.send(.newTerminalIn(made.folder)) } })
-            if let real {
-                backends.git = real.git
-                backends.worktrees = real.worktrees
-            }
-            if let effects = effects as? PanelEffects {
+            let effects = effects as? PanelEffects
+            if let effects {
                 let authenticator: any Authenticating = policy.touchesSystem ? LocalAuthenticator() : ScriptedAuthenticator()
                 do {
                     let files = try FilesBridge.makeBackends(authenticator: authenticator, effects: effects, profile: profile)
@@ -54,17 +46,22 @@ enum PanelBackendsFactory {
                     FileHandle.standardError.write(Data("panel: files, project and usage are the sample (\(error))\n".utf8))
                 }
             }
+            // Whether a worktree may be made, and what it runs first, is the core's (the project's trust); git only makes it.
+            let project = backends.project
+            let real = try? GitBridge.makeBackends(
+                worktreeAllowed: { await project.worktreeRefusal(of: $0) },
+                // A worktree was made: its folder gets a terminal, which first runs the trusted project's setup (its ports,
+                // `environment`, are not passed on yet).
+                worktreeCreated: { made, _ in
+                    let setup = await project.worktreeSetup(of: made.repo)
+                    await MainActor.run { _ = store.send(.newTerminalIn(made.folder)) }
+                    if let setup { await effects?.perform([.type(setup, in: .current)]) }
+                })
+            if let real {
+                backends.git = real.git
+                backends.worktrees = real.worktrees
+            }
         #endif
         return made
-    }
-
-    /// Why a worktree may not be made of `folder`, or nil. Git knows nothing of trust, so the project's own state decides, as
-    /// the GPUI app's does: a folder with no `.wormhole/` is plain git and may; one whose project is not trusted may not, because
-    /// its settings and setup command would run in the new terminal.
-    nonisolated static func refusal(making folder: String, project: any ProjectBackend) async -> String? {
-        if let state = await project.project(at: folder), state.status != .trusted {
-            return "Worktrees are made only in a trusted project: approve this folder's project in the Project tab first."
-        }
-        return nil
     }
 }

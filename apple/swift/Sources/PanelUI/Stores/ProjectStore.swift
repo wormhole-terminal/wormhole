@@ -15,8 +15,6 @@ public final class ProjectStore {
     public private(set) var error: String?
     /// The project's trust waits for Touch ID or the password.
     public private(set) var approving = false
-    /// "View all N…": every line the project would run, in a sheet of its own.
-    public var showingAllLines = false
     @ObservationIgnored private let backend: any ProjectBackend
     @ObservationIgnored private weak var host: (any PanelHost)?
     @ObservationIgnored private var watch: Task<Void, Never>?
@@ -73,6 +71,16 @@ public final class ProjectStore {
             await MainActor.run { self?.approving = false }
         }
     }
+
+    /// The approve button's words: Touch ID where it is set up, else the password.
+    public var approveTitle: String {
+        approving ? panelText("project-waiting", "Waiting for approval\u{2026}")
+            : backend.biometricsAvailable ? panelText("project-trust", "Trust with Touch ID")
+            : panelText("project-trust-password", "Trust (approve with password)")
+    }
+
+    /// "View all N…": the window of every line the project would run, with the approval there.
+    public func viewAll() { host?.showProjectCommands() }
 
     public func revoke() {
         guard let root = state?.root else { return }

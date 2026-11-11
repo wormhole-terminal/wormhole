@@ -79,7 +79,7 @@ pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};
 pub use files_panel::{
     ApproveOutcome, DirectoryRecord, EntryRecord, FileContentRecord, FileEntryKind, FileProblem,
-    FilesFailure, FilesService, FolderPaintRecord, FolderWatch, NewTerminalRecord, NoteSaved, NotesDocRecord,
+    AgentLogoRecord, FilesFailure, FilesService, FolderPaintRecord, FolderWatch, NewTerminalRecord, NoteSaved, NotesDocRecord,
     NotesSaved, NotesSyncOutcome, OwnerAnswer, OwnerAuthenticator, PanelListener, PlanLimitRecord,
     ProjectActionRecord, ProjectChoiceRecord, ProjectDefaultRecord, ProjectEffect, ProjectFailure,
     ProjectFeatureRecord, ProjectFeatureRowRecord, ProjectPageRecord, ProjectPromptRecord, ProjectService,

@@ -1,7 +1,7 @@
 //! The notes' text rules from core (`view::notes::paragraphs`), for the Notes tab: which paragraph ⌘↵ sends and what
 //! a note's title says. Pure functions; nothing here touches a file or a terminal.
 
-use wormhole_core::view::notes::paragraphs;
+use wormhole_core::view::notes::{paragraphs, stake};
 
 /// The paragraph (the lines around the cursor up to the nearest blank lines) that holds the character at
 /// `cursor`, a count of UTF-8 bytes into `text`. Empty on a blank line: sending then sends nothing.
@@ -14,6 +14,13 @@ pub fn note_paragraph_at(text: String, cursor: u64) -> String {
 #[uniffi::export]
 pub fn note_title(text: String) -> Option<String> {
     paragraphs::note_title(&text)
+}
+
+/// What closing a terminal says of its `open_items` notes and tasks ("notes and tasks are discarded."), or nothing when none
+/// are open; the close question puts "Its" or "Their" before it.
+#[uniffi::export]
+pub fn notes_close_stake(open_items: u64) -> Option<String> {
+    stake::discarded(usize::try_from(open_items).unwrap_or(usize::MAX)).map(str::to_string)
 }
 
 #[cfg(test)]

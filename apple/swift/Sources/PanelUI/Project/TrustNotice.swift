@@ -1,6 +1,6 @@
 // Trust (`render_trust`): trusted, one quiet line with Revoke. Otherwise the amber callout: what the project wants to run,
 // each line in full with what runs in its own colour, and the one button that approves it, with Touch ID or the password.
-// A long list shows its first lines and "View all N…", which opens every line in a sheet of its own. A project with no
+// A long list shows its first lines and "View all N…", which opens every line in a window of its own. A project with no
 // command to list (only settings, say) gets the callout all the same, saying what trusting applies.
 
 import DesignSystem
@@ -34,9 +34,9 @@ struct TrustNotice: View {
             Text(notice.text).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
             if !state.commands.isEmpty { TrustLines(lines: Array(state.commands.prefix(shown))) }
             HStack(spacing: PanelMetrics.gap) {
-                NoticeButton(title: store.approving ? panelText("project-waiting", "Waiting for approval\u{2026}") : panelText("project-trust", "Trust with Touch ID"), primary: true, busy: store.approving, action: store.approve)
+                NoticeButton(title: store.approveTitle, primary: true, busy: store.approving, action: store.approve)
                 if shown < state.commands.count {
-                    NoticeButton(title: panelText("project-view-all", "View all \(state.commands.count)\u{2026}")) { store.showingAllLines = true }
+                    NoticeButton(title: panelText("project-view-all", "View all \(state.commands.count)\u{2026}"), action: store.viewAll)
                 }
             }
         }

@@ -7,13 +7,16 @@ public struct DiffLine: Hashable, Sendable {
     public var oldNumber: Int?
     public var newNumber: Int?
     public var text: String
+    /// The line of the new file the open icon opens the editor at: its own, or the nearest one for a removed line (core's rule).
+    public var openLine: Int?
     /// Git says the file ends without a newline after this line.
     public var noNewline = false
     /// The syntax colours of `text`, filled in by `DiffHighlighting`; empty until then.
     public var spans: [SyntaxSpan] = []
 
-    public init(kind: Kind, oldNumber: Int? = nil, newNumber: Int? = nil, text: String, noNewline: Bool = false) {
+    public init(kind: Kind, oldNumber: Int? = nil, newNumber: Int? = nil, text: String, noNewline: Bool = false, openLine: Int? = nil) {
         (self.kind, self.oldNumber, self.newNumber, self.text, self.noNewline) = (kind, oldNumber, newNumber, text, noNewline)
+        self.openLine = openLine ?? newNumber
     }
 }
 

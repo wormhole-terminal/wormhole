@@ -14,17 +14,24 @@ public struct DiffView: View {
     var step: (Int) -> Void = { _ in }
     var close: () -> Void = {}
     var review: DiffReview?
+    /// The diff is of the working tree (against HEAD or a branch): its lines have an icon that opens the file at them.
+    var opensLines = false
     /// False when the window draws the header itself, in the terminal's title row (`PanelCoverTitle`).
     var showsHeader = true
     @Environment(\.tokens) private var tokens
     @Environment(\.codeFont) private var codeFont
     @Environment(\.tabWidth) private var tabWidth
+    @Environment(\.panelHost) private var host
+    @Environment(\.panelRoot) private var root
+    /// How far the code is scrolled sideways, as the scroller says (clamped to what the longest line allows where it is used).
+    @State private var scrollX: CGFloat = 0
 
     init(
         file: ChangedFile, session: DiffSession, position: (index: Int, count: Int)? = nil,
         step: @escaping (Int) -> Void = { _ in }, close: @escaping () -> Void = {}, review: DiffReview? = nil,
-        showsHeader: Bool = true
+        opensLines: Bool = false, showsHeader: Bool = true
     ) {
+        self.opensLines = opensLines
         (self.file, self.session, self.position, self.step, self.close, self.review) = (file, session, position, step, close, review)
         self.showsHeader = showsHeader
     }
@@ -39,7 +46,7 @@ public struct DiffView: View {
             let fits = geometry.size.width >= Self.splitMinWidth && Self.hasLines(session)
             VStack(spacing: 0) {
                 if showsHeader {
-                    DiffHeader(file: file, diff: session.parsed, position: position, splitFits: fits, split: $session.split, wrap: $session.wrap, step: step, close: close)
+                    DiffHeader(file: file, diff: session.parsed, position: position, splitFits: fits, split: $session.split, wrap: $session.wrap, step: step, close: close, gone: session.gone, outOfDate: session.refreshError)
                     Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth)
                 }
                 content(split: session.split && fits, width: geometry.size.width)
@@ -64,24 +71,40 @@ public struct DiffView: View {
 
     @ViewBuilder private func lines(split: Bool, width: CGFloat) -> some View {
         let diff = session.parsed
-        let style = DiffStyle(code: codeFont, digits: diff.map(DiffRows.numberDigits) ?? 3, wrap: session.wrap, advance: codeFont.advance)
+        let base = DiffStyle(code: codeFont, digits: diff.map(DiffRows.numberDigits) ?? 3, wrap: session.wrap, advance: codeFont.advance)
         let rows = diff.map { split ? DiffRows.split($0) : DiffRows.unified($0) } ?? []
         let note = noteText(diff)
+        // Sideways scrolling is as far as the longest line is wider than its column (`render_diff_body`); the gutters stay put.
+        let columns = split ? 2 : 1
+        let room = width / CGFloat(columns) - base.gutter * CGFloat(split ? 1 : 2) - DiffStyle.marker
+        let textWidth = CGFloat(diff?.widest ?? 0) * base.advance
+        let maxScroll = session.wrap || rows.isEmpty ? 0 : max(0, textWidth + Self.codeEndRoom - room)
+        let style = base.scrolled(min(scrollX, maxScroll))
         ZStack {
             if rows.isEmpty { DiffHatch(rowHeight: style.rowHeight) }
             ScrollView(session.wrap ? .vertical : [.vertical, .horizontal]) {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                        DiffRowView(row: row, style: style, code: DiffCode(tokens: tokens, tabWidth: tabWidth), path: file.path, review: review)
+                        DiffRowView(row: row, style: style, code: DiffCode(tokens: tokens, tabWidth: tabWidth), path: file.path, review: review, open: lineOpen)
                     }
                 }
-                // Unwrapped lines scroll sideways, so the rows are as wide as the longest line needs (their bars are
-                // `maxWidth: .infinity`); never narrower than the card, so the bars of short rows reach its edge.
-                .frame(width: session.wrap ? width : max(width, Self.widest(diff, split: split, style: style)), alignment: .topLeading)
+                // The rows are as wide as the card and stay under the pointer while the scroller moves: only each line's code
+                // slides (`DiffStyle.scrollX`), so the numbers don't scroll away. The scroller's extent is what the longest line needs.
+                .frame(width: width)
+                .offset(x: style.scrollX)
+                .frame(width: width + maxScroll, alignment: .leading)
             }
+            .scrollIndicators(.hidden, axes: .horizontal)
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.x } action: { _, offset in scrollX = max(0, offset) }
             .defaultScrollAnchor(.topLeading)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .overlay { if split { Rectangle().fill(tokens.border).frame(width: tokens.metrics.borderWidth).frame(maxHeight: .infinity) } }
+            .overlay {
+                if maxScroll > 0, textWidth > room - Self.codeEndPad {
+                    OverflowCue(
+                        spans: Self.codeSpans(width: width, split: split, style: style), visible: room, scroll: style.scrollX, max: maxScroll)
+                }
+            }
             if rows.isEmpty, let diff, case .shown = session.phase, Self.hasNotes(diff) {
                 columnNotes(diff.notes, split: split)
             } else if let note {
@@ -90,6 +113,23 @@ public struct DiffView: View {
         }
         .id(file.id)
         .transition(.opacity)
+    }
+
+    /// What the icon on a line does: only for a file that is in the working tree now (a deleted one has nothing to open).
+    private var lineOpen: LineOpen? {
+        guard opensLines, let root, let on = RepoFiles.resolve(root: root, relative: file.path), host?.editorName != nil, !session.gone else { return nil }
+        return LineOpen(
+            words: { host?.openTooltip(line: $0) ?? "" }, action: { host?.open(on, line: $0) })
+    }
+
+    /// The room after the code in its column (`CODE_END_PAD`) and the margin scrolling allows past the longest line (24).
+    private static let codeEndPad: CGFloat = 12
+    private static let codeEndRoom: CGFloat = 24
+
+    /// Where each column's code is in the body (`code_spans`): after its gutter(s) and marker, to the column's right end.
+    private static func codeSpans(width: CGFloat, split: Bool, style: DiffStyle) -> [ClosedRange<CGFloat>] {
+        let inset = style.gutter + DiffStyle.marker
+        return split ? [inset...width / 2, (width / 2 + inset)...width] : [(inset + style.gutter)...width]
     }
 
     /// The diff has lines to lay out (not a binary file, an LFS pointer, a submodule or a patch too large): the layout switch is for them.
@@ -110,13 +150,6 @@ public struct DiffView: View {
         } else if let note = notes.unified {
             SideNoteView(note: note)
         }
-    }
-
-    /// What the longest line needs in an unwrapped diff: gutter, marker, its characters at the code font's advance and the
-    /// trailing pad; two columns in split. The longest line was measured when the diff was read.
-    private static func widest(_ diff: DiffFile?, split: Bool, style: DiffStyle) -> CGFloat {
-        let column = style.gutter * (split ? 1 : 2) + DiffStyle.marker + CGFloat(diff?.widest ?? 0) * style.advance + Space._3
-        return split ? column * 2 : column
     }
 
     private func noteText(_ diff: DiffFile?) -> String? {

@@ -35,16 +35,21 @@ public protocol Authenticating: Sendable {
 public struct ScriptedAuthenticator: Authenticating {
     public enum Answer: String, Sendable { case allow, deny, cancel }
     public var answer: Answer
+    /// What a Mac with Touch ID set up would say: it words the approve button.
+    public var biometrics: Bool
 
-    public init(answer: Answer) { self.answer = answer }
+    public init(answer: Answer, biometrics: Bool = false) { (self.answer, self.biometrics) = (answer, biometrics) }
 
-    /// From WORMHOLE_AUTH; a test instance without it cancels, so nothing ever prompts.
+    /// From WORMHOLE_AUTH; a test instance without it cancels, so nothing ever prompts. WORMHOLE_AUTH_BIOMETRICS=on says
+    /// Touch ID is there (a wording only: the answer is still WORMHOLE_AUTH's).
     public init(environment: [String: String] = ProcessInfo.processInfo.environment) {
-        self.init(answer: environment["WORMHOLE_AUTH"].flatMap(Answer.init(rawValue:)) ?? .cancel)
+        self.init(
+            answer: environment["WORMHOLE_AUTH"].flatMap(Answer.init(rawValue:)) ?? .cancel,
+            biometrics: environment["WORMHOLE_AUTH_BIOMETRICS"] == "on")
     }
 
     public func canAuthenticate() -> Bool { true }
-    public func biometricsAvailable() -> Bool { false }
+    public func biometricsAvailable() -> Bool { biometrics }
 
     public func authenticate(reason: String) async throws {
         switch answer {

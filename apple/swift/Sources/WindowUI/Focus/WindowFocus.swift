@@ -66,6 +66,15 @@ public final class WindowFocus {
     /// macOS's Keyboard navigation: ⇥ reaches the title row's buttons too.
     var keyboardNavigation: Bool { Self.keyboardNavigationOverride ?? NSApp.isFullKeyboardAccessEnabled }
 
+    /// The stop an area's keys are on, for ⇥.
+    private func cursor(of area: FocusArea) -> Int {
+        switch area {
+        case .titleRow: titleIndex
+        case .panelContent: hub.panel.keyboard.stopAt
+        default: 0
+        }
+    }
+
     func cursor(_ area: FocusArea) -> Int {
         switch area {
         case .titleRow: min(titleIndex, max(titleButtons - 1, 0))
@@ -90,7 +99,11 @@ public final class WindowFocus {
     /// How many ⇥ stops an area has: none while hidden; the title row's buttons only with macOS's Keyboard navigation on.
     private func stops(of area: FocusArea) -> Int {
         guard shown.contains(area) else { return 0 }
-        return area == .titleRow ? (keyboardNavigation ? titleButtons : 0) : 1
+        switch area {
+        case .titleRow: return keyboardNavigation ? titleButtons : 0
+        case .panelContent: return hub.panel.keyboard.stops
+        default: return 1
+        }
     }
 
     // MARK: moving
@@ -104,7 +117,7 @@ public final class WindowFocus {
 
     /// ⇥ (1) and ⇧⇥ (-1).
     func tab(_ delta: Int) {
-        let from = current().map { FocusStop($0, $0 == .titleRow ? titleIndex : 0) }
+        let from = current().map { FocusStop($0, cursor(of: $0)) }
         let counts = Dictionary(uniqueKeysWithValues: FocusArea.allCases.map { ($0, stops(of: $0)) })
         focus(Focus.rules.tabStep(from: from, delta: delta, stops: counts))
     }
@@ -114,7 +127,7 @@ public final class WindowFocus {
         switch stop.area {
         case .terminal: return focusTerminal()
         case .sidebar: return swiftUI(hub.sidebarSearch.requestKeyboard)
-        case .panelContent where hub.panel.keyboard.lists > 0: return swiftUI(hub.panel.keyboard.request)
+        case .panelContent where hub.panel.keyboard.lists > 0: return swiftUI { hub.panel.keyboard.request(stop: stop.index) }
         case .titleRow: titleIndex = min(stop.index, max(titleButtons - 1, 0))
         case .statusBar: statusIndex = min(statusIndex, max(hub.statusItems.count - 1, 0))
         case .tabs, .panelTabs, .panelContent: break
@@ -157,6 +170,7 @@ public final class WindowFocus {
     /// terminal. `true` when it took the key; the terminal's Esc is its program's, and a text field's is its own.
     @discardableResult
     func escape() -> Bool {
+        if hub.cancelColumnDrag?() == true { return true }
         if hub.state.overlay != nil || holder?.window?.firstResponder is NSText { return false }
         let area = current()
         let find = hub.selectedOverlay?.find

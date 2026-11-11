@@ -12,9 +12,22 @@ public final class RustProjectBackend: ProjectBackend, @unchecked Sendable {
     public let service: ProjectService
     private let effects: any PanelEffectPerforming
 
-    public init(service: ProjectService, effects: any PanelEffectPerforming) {
+    public let biometricsAvailable: Bool
+
+    public init(service: ProjectService, effects: any PanelEffectPerforming, biometricsAvailable: Bool) {
         self.service = service
         self.effects = effects
+        self.biometricsAvailable = biometricsAvailable
+    }
+
+    public func worktreeRefusal(of repo: String) async -> String? {
+        let service = service
+        return await offMain { service.worktreeAllowed(repo: repo) }
+    }
+
+    public func worktreeSetup(of repo: String) async -> String? {
+        let service = service
+        return await offMain { service.worktreeSetup(repo: repo) }
     }
 
     public func project(at folder: String) async -> ProjectState? {

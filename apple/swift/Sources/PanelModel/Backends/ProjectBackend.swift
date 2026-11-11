@@ -23,4 +23,16 @@ public protocol ProjectBackend: Sendable {
     func openLayout(at root: String) async
     /// Fires when the `.wormhole/` folder or the trust changed.
     func changes(at folder: String) -> AsyncStream<Void>
+    /// Whether Touch ID is set up, which words the approve button ("Trust with Touch ID", else "Trust (approve with password)").
+    var biometricsAvailable: Bool { get }
+    /// Why a worktree may not be made of `repo` (the core's rule: a project there must be trusted with its Settings on), or nil.
+    func worktreeRefusal(of repo: String) async -> String?
+    /// What a new worktree of `repo` runs first: its trusted project's `worktree.setup`.
+    func worktreeSetup(of repo: String) async -> String?
+}
+
+extension ProjectBackend {
+    public var biometricsAvailable: Bool { true }
+    public func worktreeRefusal(of repo: String) async -> String? { nil }
+    public func worktreeSetup(of repo: String) async -> String? { nil }
 }

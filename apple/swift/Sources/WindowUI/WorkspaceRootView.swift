@@ -47,6 +47,9 @@ public struct WorkspaceRootView: View {
         .background(FocusHolder(focus: hub.focus))
         // A new window starts with the keys in its terminal, as the GPUI app's does (SwiftUI would give them to the first list).
         .task { hub.focus.focusTerminal() }
+        // The panel's tabs follow the selected terminal's folder whether or not the panel is on screen: the worktree sheet and the
+        // diff in the terminal's place need it with the panel shut.
+        .onChange(of: hub.state.selectedTerminal?.folder, initial: true) { _, folder in hub.panel.follow(folder: Self.expanded(folder)) }
         // ⇥ and Esc from the lists and fields of SwiftUI; the holder and the terminal take their own (`WindowFocus`).
         .onKeyPress(keys: [.tab, .escape], phases: .down) { hub.focus.listKey($0) }
         .coordinateSpace(name: PaneSpace.name)
@@ -57,6 +60,13 @@ public struct WorkspaceRootView: View {
         .environment(\.windowFront, hub.focus.front)
         .environment(\.cardGlass, look.glassOn)
         .themed()
+        .worktreeSheets(hub.panel.worktrees)
         .ignoresSafeArea()
+    }
+
+    /// The sidebar's folder is written with `~`; the panel reads real paths.
+    private static func expanded(_ folder: String?) -> String? {
+        guard let folder else { return nil }
+        return folder == "~" ? NSHomeDirectory() : folder.hasPrefix("~/") ? NSHomeDirectory() + folder.dropFirst(1) : folder
     }
 }

@@ -36,6 +36,9 @@ public final class FilesStore {
 
     public var root: String? { chosen ?? terminalFolder }
 
+    /// The walk's id of the path button.
+    static let headID = "files-head"
+
     /// The tree follows the terminal's folder; a folder chosen by hand stays until Follow Terminal.
     public func follow(_ folder: String?) {
         let changed = terminalFolder != folder

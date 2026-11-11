@@ -11,6 +11,14 @@ struct DiffStyle {
     var wrap = true
     /// One glyph's advance in the code font, measured once by the view that makes the style.
     var advance: CGFloat
+    /// How far the code is scrolled sideways: the gutters stay put and each column's code moves under its edge.
+    var scrollX: CGFloat = 0
+
+    func scrolled(_ x: CGFloat) -> DiffStyle {
+        var style = self
+        style.scrollX = x
+        return style
+    }
 
     var fontSize: CGFloat { code.size }
     /// Roomy like an editor with generous spacing, so tinted rows read as bands rather than stripes.

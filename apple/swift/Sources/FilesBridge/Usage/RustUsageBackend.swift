@@ -44,7 +44,8 @@ public final class RustUsageBackend: UsageBackend, @unchecked Sendable {
 extension UsageReport {
     init(_ record: UsageReportRecord) {
         self.init(
-            agent: record.agent,
+            agent: record.agent, name: record.name, monogram: record.monogram,
+            logo: record.logo.map { AgentLogoShape(paths: $0.paths, evenOdd: $0.evenOdd) },
             limits: record.limits.map { PlanLimit(label: $0.label, used: $0.used, resetsAt: $0.resetsAt.map(Int.init)) },
             responseTokens: record.responseTokens.map(Int.init), updated: Int(record.updated))
     }

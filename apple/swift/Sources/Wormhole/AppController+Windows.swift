@@ -72,6 +72,8 @@ extension AppController {
         hub.actions.palette = paletteSources(for: session)
         hub.notices.chipOn = { [weak self, weak session] in session.flatMap { self?.noticesOn($0) } ?? true }
         hub.onRestartToUpdate = { [weak self] in self?.updateFollower?.requestRestart() }
+        hub.launchesApps = policy.touchesSystem
+        hub.onShowProjectCommands = { [weak self] in self?.aux.showTrust() }
         hub.notices.onOpenLogs = { [dataDirectory] in NSWorkspace.shared.open(dataDirectory.appendingPathComponent("logs")) }
         hub.actions.openSettings = { [weak self] in self?.showSettings() }
         hub.actions.profiles = profileList(for: session)

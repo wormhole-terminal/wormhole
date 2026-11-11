@@ -86,7 +86,7 @@ public final class ChangesStore {
                 marked.formIntersection(list.map(\.path))
                 (compareMissing, refreshError) = (result.compareMissing, nil)
                 phase = .loaded
-                if let open = selection, !list.contains(where: { $0.id == open }) { close() }
+                keepOpenDiffInStep()
             } catch {
                 let message = (error as? GitFailure)?.message ?? "git can't be read."
                 guard folder == self.folder else { return }
@@ -99,15 +99,33 @@ public final class ChangesStore {
     private func setPhase(_ new: Phase, _ folder: String) { if folder == self.folder { phase = new } }
 
     public var order: [ChangedFile] { layout.order(files) }
-    public var current: ChangedFile? { files.first { $0.id == selection } }
+    /// The open file: its entry in the list, or as it was last read once the list no longer has it (the diff stays, "No longer changed").
+    public var current: ChangedFile? { files.first { $0.id == selection } ?? (selection == nil ? nil : diff.file) }
     public var position: (index: Int, count: Int)? { current.flatMap { file in order.firstIndex(of: file).map { ($0, order.count) } } }
 
     public func open(_ id: ChangedFile.ID?) {
         if id != nil { marked = [] }
         selection = id
         guard let folder, let file = current else { return diff.close() }
-        let (git, rev) = (git, compare)
-        diff.open(file) { try await git.diff(of: file.path, in: folder, comparedWith: rev, loadAnyway: $0) }
+        diff.open(file, stamp: stamp(of: file)) { [git, rev = compare] in
+            try await git.diff(of: file.path, in: folder, comparedWith: rev, loadAnyway: $0)
+        }
+    }
+
+    /// The status was read again: an open diff follows its file. One the list no longer has stays with its badge; one whose entry
+    /// or file on disk changed is read again in place (`refresh_open_diff`).
+    private func keepOpenDiffInStep() {
+        guard let open = selection else { return }
+        guard let now = files.first(where: { $0.id == open }) else { return diff.markGone() }
+        let stamp = stamp(of: now)
+        guard diff.gone || now != diff.file || stamp != diff.stamp else { return }
+        diff.reread(now, stamp: stamp)
+    }
+
+    /// The file's size and time as the working tree has them now; nil in a comparison (its diff is against a revision, not the disk).
+    private func stamp(of file: ChangedFile) -> String? {
+        guard compare == nil, let folder, let path = RepoFiles.resolve(root: folder, relative: file.path) else { return nil }
+        return host?.stamp(of: path)
     }
 
     public func close() { open(nil) }

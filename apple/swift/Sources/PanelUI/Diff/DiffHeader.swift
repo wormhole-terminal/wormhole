@@ -16,6 +16,9 @@ struct DiffHeader: View {
     @Binding var wrap: Bool
     let step: (Int) -> Void
     let close: () -> Void
+    /// The file is no longer in the status ("No longer changed"); the last re-read failed ("Out of date", with why).
+    var gone = false
+    var outOfDate: String?
     /// In the terminal's title row the row gives the height and the insets.
     var inTitleRow = false
     @Environment(\.tokens) private var tokens
@@ -35,6 +38,7 @@ struct DiffHeader: View {
             crumb.lineLimit(1).truncationMode(.head).layoutPriority(-1).clipped()
             Spacer(minLength: 0)
             ForEach(badges, id: \.text) { badge in StatusBadge(text: badge.text, color: badge.color) }
+            if let outOfDate { StatusBadge(text: panelText("diff-badge-out-of-date", "Out of date"), color: tokens.statusWarningText).help(outOfDate) }
             // Counts and the wrap button are for lines: not a binary file, an LFS pointer or a patch not loaded.
             if case let .counts(added, removed) = file.lines, diff?.isLFS != true, diff?.isBinary != true, diff?.tooLarge == nil {
                 HStack(spacing: Space._1) {
@@ -80,6 +84,7 @@ struct DiffHeader: View {
         if file.kind == .renamed {
             out.append((file.renamedFrom.map { "Renamed from \($0)" } ?? "Renamed", tokens.primary))
         }
+        if gone { out.append((panelText("diff-badge-gone", "No longer changed"), tokens.textMuted)) }
         if diff?.isBinary == true { out.append(("Binary", tokens.textMuted)) }
         if file.lfs || diff?.isLFS == true { out.append(("LFS", tokens.textMuted)) }
         if let mode = diff?.modeChange { out.append((mode, tokens.textMuted)) }

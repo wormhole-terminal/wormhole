@@ -1,5 +1,5 @@
 // The content of whichever tab is chosen. The window owns the strip and the frame; this swaps what is inside with a short
-// cross-fade so changing tabs never cuts, and hosts the sheets the panel can raise (a new worktree, removing one).
+// cross-fade so changing tabs never cuts. (The worktree sheet and alerts are the window's, so they show with the panel shut.)
 
 import Foundation
 import PanelModel
@@ -28,6 +28,5 @@ public struct PanelContentView: View {
         .environment(\.panelRoot, controller.folder)
         .environment(\.showFileHistory, controller.showFileHistory)
         .environment(\.panelCopy, { [host = controller.host] in host.copy($0) })
-        .worktreeSheets(controller.worktrees)
     }
 }

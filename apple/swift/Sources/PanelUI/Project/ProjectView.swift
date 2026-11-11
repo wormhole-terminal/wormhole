@@ -29,9 +29,6 @@ public struct ProjectView: View {
                 NoProjectCard(store: store)
             }
         }
-        .sheet(isPresented: $store.showingAllLines) {
-            TrustLinesSheet(store: store) { store.showingAllLines = false }
-        }
     }
 
     private func enabled(_ feature: ProjectFeature, _ state: ProjectState) -> Bool {

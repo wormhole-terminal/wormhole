@@ -39,7 +39,7 @@ struct ChangesDiffPane: View {
         if let file = store.current {
             DiffView(
                 file: file, session: store.diff, position: store.position, step: store.step, close: store.close,
-                review: store.canReview ? reviewing(file) : nil, showsHeader: !headerInRow
+                review: store.canReview ? reviewing(file) : nil, opensLines: true, showsHeader: !headerInRow
             )
             .alert("Copied the comments instead", isPresented: .init(get: { store.copiedInstead }, set: { store.copiedInstead = $0 })) {
                 Button("OK") {}

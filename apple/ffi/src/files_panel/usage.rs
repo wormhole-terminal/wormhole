@@ -25,11 +25,37 @@ pub struct PlanLimitRecord {
     pub resets_at: Option<i64>,
 }
 
+/// An agent's bundled logo as the SVG's own path data in its 24 point box, for the panel to draw in its muted colour.
+#[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
+pub struct AgentLogoRecord {
+    pub paths: Vec<String>,
+    /// The SVG's `fill-rule="evenodd"`, which the holes of some logos need.
+    pub even_odd: bool,
+}
+
+impl AgentLogoRecord {
+    /// The logo behind the registry's asset key (`agent-icons/claude.svg`), read from the SVG core bundles.
+    fn of(key: &str) -> Option<Self> {
+        let svg = std::str::from_utf8(wormhole_core::agents::icon_bytes(key)?).ok()?;
+        let paths: Vec<String> = svg
+            .split("<path ")
+            .skip(1)
+            .filter_map(|tag| tag.split_once(" d=\"").or_else(|| tag.split_once("d=\"")))
+            .filter_map(|(_, rest)| rest.split_once('"').map(|(d, _)| d.to_string()))
+            .collect();
+        (!paths.is_empty()).then(|| Self { paths, even_odd: svg.contains("fill-rule=\"evenodd\"") })
+    }
+}
+
 /// What an agent last reported.
 #[derive(Clone, Debug, PartialEq, uniffi::Record)]
 pub struct UsageReportRecord {
     /// The agent's key (`claude`, `codex`, `gemini`, ...).
     pub agent: String,
+    /// The card's name for it ("Claude"), and the letters standing for it when it has no logo.
+    pub name: String,
+    pub monogram: String,
+    pub logo: Option<AgentLogoRecord>,
     pub limits: Vec<PlanLimitRecord>,
     /// Gemini reports the latest response's tokens instead of account limits.
     pub response_tokens: Option<u64>,
@@ -39,8 +65,12 @@ pub struct UsageReportRecord {
 
 impl From<&Usage> for UsageReportRecord {
     fn from(report: &Usage) -> Self {
+        let agent = wormhole_term::agents::agent(report.agent);
         Self {
             agent: agent_key(report.agent),
+            name: agent.short_name().to_string(),
+            monogram: agent.monogram.to_string(),
+            logo: agent.icon().and_then(AgentLogoRecord::of),
             limits: report
                 .plan_limits()
                 .into_iter()

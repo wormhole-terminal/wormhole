@@ -119,12 +119,12 @@ final class Injector {
         return "up on \(target)"
     }
 
-    /// The wheel over a point: `dy` points down (negative up), as a trackpad's precise deltas.
-    func scroll(_ point: NSPoint, in window: NSWindow, dy: Double) -> String {
+    /// The wheel over a point: `dy` points down (negative up) and `dx` points right (negative left), as a trackpad's precise deltas.
+    func scroll(_ point: NSPoint, in window: NSWindow, dy: Double, dx: Double = 0) -> String {
         guard let target = view(at: point, in: window) else { return "nothing at \(point)" }
         let screen = window.convertPoint(toScreen: point)
         let height = NSScreen.screens.first?.frame.height ?? 0
-        guard let cg = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 1, wheel1: Int32(-dy), wheel2: 0, wheel3: 0)
+        guard let cg = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2, wheel1: Int32(-dy), wheel2: Int32(-dx), wheel3: 0)
         else { return "error: no wheel event" }
         cg.location = CGPoint(x: screen.x, y: height - screen.y)
         cg.setIntegerValueField(.mouseEventWindowUnderMousePointer, value: Int64(window.windowNumber))

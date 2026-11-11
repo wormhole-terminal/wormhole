@@ -40,7 +40,8 @@ public struct PanelCoverTitle: View {
             GeometryReader { proxy in
                 DiffHeader(
                     file: file, diff: session.parsed, position: position, splitFits: proxy.size.width >= DiffView.splitMinWidth && DiffView.hasLines(session),
-                    split: $session.split, wrap: $session.wrap, step: step, close: close, inTitleRow: true)
+                    split: $session.split, wrap: $session.wrap, step: step, close: close, gone: session.gone, outOfDate: session.refreshError,
+                    inTitleRow: true)
                     .frame(maxHeight: .infinity)
             }
             .environment(\.panelHost, controller.host)

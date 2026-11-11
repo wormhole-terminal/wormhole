@@ -12,7 +12,7 @@ extension WindowBody {
         let width = isSidebar ? fit.sidebarWidth : fit.panelWidth
         return ColumnHandle(
             label: isSidebar ? "Resize sidebar" : "Resize panel", width: width,
-            drag: { move(edge, pointer: $0, window: window) },
+            drag: { move(edge, pointer: $0, window: window, from: width) },
             reset: { reset(edge) },
             step: { delta in set(edge, width: width + (isSidebar ? delta : -delta), window: window) }
         )
@@ -36,8 +36,14 @@ extension WindowBody {
         if edge == .sidebar { widths.sidebarWidth = width } else { widths.panelWidth = width }
     }
 
-    private func move(_ edge: PaneLayout.Edge, pointer: CGFloat?, window: CGFloat) {
-        guard let pointer else { return finish() }
+    private func move(_ edge: PaneLayout.Edge, pointer: CGFloat?, window: CGFloat, from width: CGFloat) {
+        guard let pointer else {
+            (dragBefore, dragCancelled) = (nil, false)
+            return finish()
+        }
+        // After Esc the button may still be down: the drag is over until it is let go.
+        guard !dragCancelled else { return }
+        if dragBefore == nil { dragBefore = DragBefore(edge: edge, width: width, widths: widths) }
         let extent = edge == .sidebar ? pointer : window - pointer
         let closing = edge == .sidebar ? "Hide" : "Close"
         if let answer = hub.store.edgeDrag(edge.column, extent: Double(extent)) {
@@ -54,6 +60,14 @@ extension WindowBody {
         local(edge, width: resize.width)
         drag = WorkspaceRootView.DragState(
             edge: edge, pointer: pointer, readout: resize.readout(closing: closing), open: resize.open, extent: extent)
+    }
+
+    /// Esc while a column is dragged: it goes back to where the drag began (`cancel_resize`). Whether a drag was going on.
+    func cancelDrag() -> Bool {
+        guard drag != nil, let before = dragBefore else { return false }
+        (dragCancelled, drag, dragBefore) = (true, nil, nil)
+        if state.layout != nil { send(.dragEdge(before.edge.column, extent: Double(before.width))) } else { widths = before.widths }
+        return true
     }
 
     private func finish() {

@@ -19,6 +19,9 @@ extension WindowHub {
             return true
         }
         host.terminal.say = { [unowned self] in notices.post($0) }
+        host.terminal.showCommands = { [unowned self] in onShowProjectCommands?() }
+        host.terminal.apps = { [unowned self] in openIn.apps() }
+        host.launches = { [unowned self] in launchesApps }
         host.terminal.focus = { [unowned self] in
             guard let id = state.selected, let view = terminals.existing(id) else { return }
             view.window?.makeFirstResponder(view)

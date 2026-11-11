@@ -5,7 +5,7 @@ import WorkspaceModel
 extension WindowHub {
     /// The panel's tabs on offer, in the bar's order: the core's (a feature that is off brings no tab; all six in the sample),
     /// less the ones their own rule hides (`TabDef::shown`): Usage without an agent on screen, Project without a folder.
-    var panelTabs: [PanelTab] {
+    public var panelTabs: [PanelTab] {
         (state.layout.map { $0.tabs.filter(\.enabled).map(\.tab) } ?? PanelTab.barOrder).filter(isShown)
     }
 

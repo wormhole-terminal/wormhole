@@ -32,5 +32,5 @@ pub use project::{
     ProjectService, ProjectSettingsRecord, ProjectStateRecord, TaskDocRecord, TerminalPlace, TrustLineRecord,
     TrustStatusRecord,
 };
-pub use usage::{PlanLimitRecord, UsageReportRecord, UsageService};
+pub use usage::{AgentLogoRecord, PlanLimitRecord, UsageReportRecord, UsageService};
 pub use watch::FolderWatch;

@@ -6,6 +6,7 @@ public struct DiffCell: Hashable, Sendable {
     public var old: Int?
     public var new: Int?
     public var text: String
+    public var openLine: Int?
     public var noNewline = false
     public var spans: [SyntaxSpan] = []
 }
@@ -59,7 +60,7 @@ public enum DiffRows {
     }
 
     private static func cell(_ line: DiffLine) -> DiffCell {
-        DiffCell(kind: line.kind, old: line.oldNumber, new: line.newNumber, text: line.text, noNewline: line.noNewline, spans: line.spans)
+        DiffCell(kind: line.kind, old: line.oldNumber, new: line.newNumber, text: line.text, openLine: line.openLine, noNewline: line.noNewline, spans: line.spans)
     }
 
     /// The longest line of the diff as drawn, capped at `limit + 1` (its elision mark). A line of plain printable ASCII is its

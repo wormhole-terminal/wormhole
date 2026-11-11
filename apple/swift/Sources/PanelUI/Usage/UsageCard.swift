@@ -13,8 +13,8 @@ struct UsageCard: View {
     var body: some View {
         PanelCard {
             HStack(spacing: PanelMetrics.gap) {
-                AgentMonogram(name: report.displayName)
-                Text(report.displayName).font(TextRole.body.font.weight(.semibold)).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                AgentMark(report: report)
+                Text(report.name).font(TextRole.body.font.weight(.semibold)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 Spacer(minLength: 0)
                 Text(UsageText.updated(report.updated, now: now)).font(TextRole.caption.font.monospacedDigit()).foregroundStyle(tokens.textMuted)
             }
@@ -34,7 +34,7 @@ struct UsageCard: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(report.displayName)
+        .accessibilityLabel(report.name)
     }
 }
 
@@ -74,16 +74,37 @@ struct LimitRow: View {
     }
 }
 
-/// An agent's tile: the first letter on the tile colours, until the brand logos come through the FFI with the registry.
-struct AgentMonogram: View {
-    let name: String
+/// An agent's mark (`style::agent_logo`): its bundled logo filled in the muted colour, or its letters in a rounded outline where
+/// it has none. The drawing and the letters are the registry's, through the core.
+struct AgentMark: View {
+    let report: UsageReport
+    private static let box: CGFloat = 24
+    /// A monogram's corner and letters as shares of its size (`MONOGRAM_CORNER`, `MONOGRAM_TEXT`).
+    private static let corner: CGFloat = 3 / 13
+    private static let letters: CGFloat = 7 / 13
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Text(String(name.prefix(1))).font(.system(size: 10, weight: .bold)).foregroundStyle(tokens.tileMark)
-            .frame(width: Metric.tileSmall, height: Metric.tileSmall)
-            .background(tokens.tileBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
-            .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radiusSm).strokeBorder(tokens.tileEdge, lineWidth: tokens.metrics.borderWidth) }
-            .accessibilityHidden(true)
+        Group {
+            if let logo = report.logo {
+                Canvas { canvas, area in
+                    let scale = area.width / Self.box
+                    var path = Path()
+                    for d in logo.paths { path.addPath(SVGPath.path(d), transform: CGAffineTransform(scaleX: scale, y: scale)) }
+                    canvas.fill(path, with: .foreground, style: FillStyle(eoFill: logo.evenOdd))
+                }
+            } else {
+                Text(report.monogram).font(.system(size: Metric.glyph * Self.letters, weight: .bold))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: Metric.glyph * Self.corner, style: .continuous)
+                            .strokeBorder(lineWidth: tokens.metrics.borderWidth)
+                    }
+            }
+        }
+        .foregroundStyle(tokens.textMuted)
+        .frame(width: Metric.glyph, height: Metric.glyph)
+        .frame(width: Metric.lead, height: Metric.lead)
+        .accessibilityHidden(true)
     }
 }

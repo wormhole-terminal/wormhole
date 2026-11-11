@@ -10,11 +10,19 @@ public protocol PanelHost: AnyObject {
     func reveal(_ path: String)
     /// Opens a file in the editor the person chose (`Open in`), at a line when given.
     func open(_ path: String, line: Int?)
+    /// The apps "Open in" lists (installed editors, Finder last), the chosen one marked; empty where the system lists none.
+    var openApps: [OpenApp] { get }
+    /// Opens a file or folder in that app (the menu's Open in submenu).
+    func open(_ path: String, inBundle bundle: String)
+    /// "View all N…": the window that lists everything the project would run, with the approval there.
+    func showProjectCommands()
     /// The name on the "Open in" button's tooltip ("Zed"), nil when none is known or the chosen app is Finder (whose "open"
     /// is the reveal, so no second item).
     var editorName: String? { get }
     /// The words of the open action for the chosen app, at a line where it can: "Open in Zed at line 12" (core's).
     func openTooltip(line: Int?) -> String?
+    /// The path's size and modification time as one word that differs when the file was written; nil when it is not there.
+    func stamp(of path: String) -> String?
     /// Whether something is at this absolute path now (a file the working tree no longer has cannot be opened).
     func exists(_ path: String) -> Bool
     /// The person's home folder, which shortens paths to `~`.
@@ -39,7 +47,21 @@ public protocol PanelHost: AnyObject {
     func openTerminal(in folder: String, running command: String?)
 }
 
+/// One app of the "Open in" submenu.
+public struct OpenApp: Identifiable, Equatable, Sendable {
+    public var bundle: String
+    public var name: String
+    public var isChosen: Bool
+    public var id: String { bundle }
+
+    public init(bundle: String, name: String, isChosen: Bool) { (self.bundle, self.name, self.isChosen) = (bundle, name, isChosen) }
+}
+
 extension PanelHost {
+    public func stamp(of path: String) -> String? { nil }
+    public var openApps: [OpenApp] { [] }
+    public func open(_ path: String, inBundle bundle: String) {}
+    public func showProjectCommands() {}
     public func openTooltip(line: Int?) -> String? { editorName.map { "Open in \($0)" } }
     public func exists(_ path: String) -> Bool { true }
     /// Where there is no chip to refuse on: the copy, and VoiceOver's word for it.

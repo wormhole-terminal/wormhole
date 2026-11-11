@@ -29,8 +29,21 @@ public struct PlanLimit: Hashable, Sendable {
     public static func level(of share: Double) -> Level { share >= 1 ? .danger : share >= 0.8 ? .warn : .normal }
 }
 
+/// An agent's bundled logo: the SVG's path data in its 24 point box (the core's registry holds it; nothing here is a brand colour,
+/// the panel draws it in its muted one).
+public struct AgentLogoShape: Hashable, Sendable {
+    public var paths: [String]
+    public var evenOdd: Bool
+
+    public init(paths: [String], evenOdd: Bool) { (self.paths, self.evenOdd) = (paths, evenOdd) }
+}
+
 public struct UsageReport: Identifiable, Hashable, Sendable {
     public var agent: String
+    /// The card's name for the agent ("Claude") and the letters that stand for it where it has no logo, from the registry.
+    public var name: String
+    public var monogram: String
+    public var logo: AgentLogoShape?
     public var limits: [PlanLimit]
     /// Gemini reports the latest response's tokens instead of account limits.
     public var responseTokens: Int?
@@ -38,8 +51,14 @@ public struct UsageReport: Identifiable, Hashable, Sendable {
 
     public var id: String { agent }
 
-    public init(agent: String, limits: [PlanLimit] = [], responseTokens: Int? = nil, updated: Int) {
+    public init(
+        agent: String, name: String? = nil, monogram: String? = nil, logo: AgentLogoShape? = nil, limits: [PlanLimit] = [],
+        responseTokens: Int? = nil, updated: Int
+    ) {
         self.agent = agent
+        self.name = name ?? agent.prefix(1).uppercased() + agent.dropFirst()
+        self.monogram = monogram ?? String(agent.prefix(2)).uppercased()
+        self.logo = logo
         self.limits = limits
         self.responseTokens = responseTokens
         self.updated = updated
@@ -64,17 +83,5 @@ public enum UsageText {
     /// When the numbers came: "Updated just now", "Updated 3m ago".
     public static func updated(_ updated: Int, now: Int) -> String {
         now - updated < 60 ? "Updated just now" : "Updated \(duration(now - updated)) ago"
-    }
-}
-
-extension UsageReport {
-    /// The agent as the card names it.
-    public var displayName: String {
-        switch agent {
-        case "claude": "Claude"
-        case "codex": "Codex"
-        case "gemini": "Gemini"
-        default: agent.prefix(1).uppercased() + agent.dropFirst()
-        }
     }
 }

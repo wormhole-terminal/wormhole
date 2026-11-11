@@ -167,3 +167,17 @@ fn an_approval_given_through_another_desk_is_what_the_tab_says_next() {
     assert_eq!(window.approve(repo.root()), ApproveOutcome::Approved);
     assert_eq!(status(&tab, &repo), TrustStatusRecord::Trusted);
 }
+
+#[test]
+fn a_worktree_of_a_project_needs_it_trusted_with_its_settings_on() {
+    let plain = tempfile::tempdir().expect("temp dir");
+    let owner = Owner::answering([OwnerAnswer::Approved]);
+    let (_data, service) = service(&owner);
+    let no_project = plain.path().to_path_buf();
+    assert_eq!(service.worktree_refusal(&no_project), None, "no project, no condition");
+    let repo = Repo::new(&[("config.json", r#"{"settings":{"worktree":{"setup":"npm ci"}}}"#)]);
+    assert!(service.worktree_refusal(&repo.path()).is_some(), "not trusted yet");
+    service.project(repo.root());
+    assert_eq!(service.approve(repo.root()), ApproveOutcome::Approved);
+    assert_eq!(service.worktree_refusal(&repo.path()), None, "trusted");
+}

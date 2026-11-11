@@ -4,7 +4,7 @@
 use wormhole_core::config::SizeUnits;
 use wormhole_core::git::{
     ChangeKind, Commit, CommitRef, DIFF_HIGHLIGHT_MAX_LINES, DiffLine, FileChange, FileDiff, Hunk, LineKind, RefKind,
-    Submodule,
+    Submodule, lines_in_new_file,
 };
 
 use super::notes::GitDiffNotes;
@@ -177,16 +177,19 @@ pub struct GitDiffLine {
     pub text: String,
     /// Git's "\ No newline at end of file" followed this line.
     pub no_newline: bool,
+    /// The line of the new file the line's open icon opens the editor at: its own, or for a removed line the nearest one
+    /// (`git::lines_in_new_file`); none when the hunk leaves no line.
+    pub open_line: Option<u32>,
 }
 
-impl From<&DiffLine> for GitDiffLine {
-    fn from(line: &DiffLine) -> Self {
+impl GitDiffLine {
+    fn of(line: &DiffLine, open_line: Option<u32>) -> Self {
         let kind = match line.kind {
             LineKind::Context => GitLineKind::Context,
             LineKind::Added => GitLineKind::Added,
             LineKind::Removed => GitLineKind::Removed,
         };
-        Self { kind, old: line.old, new: line.new, text: line.text.clone(), no_newline: line.no_newline }
+        Self { kind, old: line.old, new: line.new, text: line.text.clone(), no_newline: line.no_newline, open_line }
     }
 }
 
@@ -199,7 +202,9 @@ pub struct GitHunk {
 
 impl From<&Hunk> for GitHunk {
     fn from(hunk: &Hunk) -> Self {
-        Self { header: hunk.header.clone(), lines: hunk.lines.iter().map(GitDiffLine::from).collect() }
+        let open = lines_in_new_file(&hunk.lines);
+        let lines = hunk.lines.iter().zip(open).map(|(line, open)| GitDiffLine::of(line, open)).collect();
+        Self { header: hunk.header.clone(), lines }
     }
 }
 

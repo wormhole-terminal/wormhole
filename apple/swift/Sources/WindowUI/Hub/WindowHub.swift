@@ -33,6 +33,13 @@ public final class WindowHub {
     public var exampleBand: ExampleBand?
     /// A click on the chip that says an update is ready: the app restarts into it (asking first when that ends something).
     public var onRestartToUpdate: (() -> Void)?
+    /// The Project tab's "View all N…": the app opens the window of the project's commands.
+    public var onShowProjectCommands: (() -> Void)?
+    /// Whether Open in and Reveal start other apps: a test instance only says it did (as the GPUI app's does), so a check
+    /// never opens the person's editor or Finder.
+    public var launchesApps = true
+    /// Esc ends a column drag in progress (the window body sets it): whether there was one.
+    @ObservationIgnored var cancelColumnDrag: (() -> Bool)?
     /// The title row's parts as arranged (View ▸ Title Row, the row's own menu).
     public var titleRow = TitleRow.default
     /// Zen mode is on: the row is the preset's, and arranging it would change the person's own (`settings::zen`).

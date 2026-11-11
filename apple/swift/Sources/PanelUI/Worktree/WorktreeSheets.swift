@@ -6,7 +6,9 @@ import PanelModel
 import SwiftUI
 
 extension View {
-    func worktreeSheets(_ store: WorktreeStore) -> some View {
+    /// The worktree's sheet and alerts, on the window rather than the panel: a worktree closed away with the panel hidden still
+    /// says why it was not removed.
+    public func worktreeSheets(_ store: WorktreeStore) -> some View {
         modifier(WorktreeSheets(store: store))
     }
 }

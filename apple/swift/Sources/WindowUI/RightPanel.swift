@@ -19,8 +19,6 @@ struct RightPanel: View {
 
     private var tab: PanelTab { hub.state.panelTab }
     private var controller: PanelController { hub.panel }
-    /// The terminal's folder, which every tab of the panel follows.
-    private var folder: String? { hub.state.selectedTerminal?.folder }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -38,11 +36,7 @@ struct RightPanel: View {
         .animation(Self.contentIn, value: tab)
         .onChange(of: tab) { before = tab }
         .onChange(of: hub.panelTabs) { hub.leaveMissingTab() }
-        .onAppear {
-            before = tab
-            controller.follow(folder: expanded(folder))
-        }
-        .onChange(of: folder) { controller.follow(folder: expanded(folder)) }
+        .onAppear { before = tab }
     }
 
     /// The counts the strip shows, read from the stores so a change redraws the strip.
@@ -50,12 +44,6 @@ struct RightPanel: View {
         var out: [PanelTab: Int] = [:]
         if let count = controller.badge(for: .changes) { out[.changes] = count }
         return out
-    }
-
-    /// The sidebar's folder is written with `~`; the panel reads real paths.
-    private func expanded(_ folder: String?) -> String? {
-        guard let folder else { return nil }
-        return folder == "~" ? NSHomeDirectory() : folder.hasPrefix("~/") ? NSHomeDirectory() + folder.dropFirst(1) : folder
     }
 
     private var arrival: AnyTransition {

@@ -45,10 +45,12 @@ extension AppController {
             reply("drag \(argument): \(down), \(steps) steps, " + injector.release(to, in: window, flags: flags))
         case ("scroll", 3...):
             // In steps of at most 20 points, a frame apart, as a trackpad's scroll arrives (a long list's end is reached).
-            let total = numbers[2], count = max(1, Int((abs(total) / 20).rounded(.up)))
+            // An optional fourth number scrolls sideways: `scroll x y dy dx`.
+            let total = numbers[2], across = numbers.count > 3 ? numbers[3] : 0
+            let count = max(1, Int((max(abs(total), abs(across)) / 20).rounded(.up)))
             var said = ""
             for _ in 0..<count {
-                said = injector.scroll(at(0), in: window, dy: total / Double(count))
+                said = injector.scroll(at(0), in: window, dy: total / Double(count), dx: across / Double(count))
                 await pause(16)
             }
             reply("scroll \(argument): \(said) in \(count) steps")

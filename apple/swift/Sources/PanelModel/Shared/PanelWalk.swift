@@ -76,11 +76,29 @@ extension PanelWalking {
         return place(in: rows).flatMap { copy(rows[$0]) }
     }
 
-    /// The first or last row (⇥ into a list).
-    public func enter(last: Bool) {
+    /// The rows each ⇥ stop starts at (`panel_lists`): every band, and the first row when it is not one.
+    public var listStarts: [Int] {
         let rows = walkRows
-        guard cursor == nil || place(in: rows) == nil else { return }
-        cursor = (last ? rows.last : rows.first)?.id
+        var starts = rows.indices.filter { rows[$0].isBand }
+        if !rows.isEmpty, starts.first != 0 { starts.insert(0, at: 0) }
+        return starts
+    }
+
+    /// The ⇥ stop the cursor is in (the first one while it is nowhere).
+    public var listAt: Int {
+        let rows = walkRows
+        guard let at = place(in: rows) else { return 0 }
+        return listStarts.lastIndex { $0 <= at } ?? 0
+    }
+
+    /// ⇥ into the `index`th stop (past the last: the last): the cursor on its first row, unless it is already in that one.
+    public func enter(list index: Int) {
+        let rows = walkRows
+        let starts = listStarts
+        guard !starts.isEmpty else { return }
+        let stop = min(max(index, 0), starts.count - 1)
+        if place(in: rows) != nil, listAt == stop { return }
+        cursor = rows[starts[stop]].id
     }
 
     private func place(in rows: [WalkRow]) -> Int? { cursor.flatMap { id in rows.firstIndex { $0.id == id } } }

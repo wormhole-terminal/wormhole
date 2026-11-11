@@ -5,6 +5,7 @@
 import AppKit
 import AuxModel
 import AuxWindows
+import PanelModel
 import WorkspaceModel
 
 #if WITH_UNIFFI
@@ -100,7 +101,7 @@ extension AppController {
             }
             var detail = row.runsSomething || fromCommandLine
                 ? CloseQuestions.session(
-                    agent: terminal.agent?.name, stakes: [], status: terminal.runStatus,
+                    agent: terminal.agent?.name, stakes: Self.stakes(of: [terminal], in: session), status: terminal.runStatus,
                     commandRunning: row.runningCommand != nil, programs: row.runningCommand.map { [$0] } ?? [])
                 : ""
             if fromCommandLine { detail += " " + AuxText.controlCloseAsked }
@@ -150,7 +151,7 @@ extension AppController {
                 ? CloseQuestions.group(
                     terminals: section.terminalCount,
                     running: running.map { StillRunning.Fact(status: $0.terminal.agentStatus, commandRunning: $0.runningCommand != nil) },
-                    programs: running.compactMap(\.runningCommand), stakes: [])
+                    programs: running.compactMap(\.runningCommand), stakes: Self.stakes(of: section.rows.map(\.terminal), in: session))
                 : ""
             if let extra { detail = detail.isEmpty ? extra.note : detail + " " + extra.note }
             let question = Question(
@@ -172,12 +173,19 @@ extension AppController {
             detail: CloseQuestions.window(
                 terminals: session.hub.state.live.count,
                 running: running.map { StillRunning.Fact(status: $0.terminal.agentStatus, commandRunning: $0.runningCommand != nil) },
-                programs: running.compactMap(\.runningCommand), stakes: []),
+                programs: running.compactMap(\.runningCommand), stakes: Self.stakes(of: session.hub.state.sections.flatMap(\.rows).map(\.terminal), in: session)),
             confirm: "Close Window")
         Task {
             // `close()` does not ask the window again: the question was this.
             if case .confirm = await QuestionSheet(question).ask(in: session.window) { session.window?.close() }
         }
+    }
+
+    /// What closing these terminals discards of their notes and tasks, in the core's words, while the Notes tab is on
+    /// (`close_stakes`: each feature that is on says what it holds).
+    static func stakes(of terminals: [TerminalSummary], in session: WindowSession) -> [String] {
+        guard session.hub.panelTabs.contains(.notes) else { return [] }
+        return NoteRules.closeStake(terminals.reduce(0) { $0 + $1.noteCount }).map { [$0] } ?? []
     }
 
     private func finishClosingGroup(_ id: GroupID, in session: WindowSession) {

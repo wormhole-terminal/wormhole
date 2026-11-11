@@ -15,8 +15,17 @@ struct WindowBody: View {
     let panelSlide: ColumnSlide
     @Binding var drag: WorkspaceRootView.DragState?
     let animates: Bool
+    /// Where a column drag began, and whether Esc ended it (the pointer may still be down and moving).
+    @State var dragBefore: DragBefore?
+    @State var dragCancelled = false
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
+
+    struct DragBefore {
+        var edge: PaneLayout.Edge
+        var width: CGFloat
+        var widths: PaneLayout
+    }
 
     /// What decides whether a column slides: what is wanted, and whether the panel has room.
     private struct Intent: Equatable {
@@ -52,6 +61,7 @@ struct WindowBody: View {
             }
             // The status bar fades in and out (Reduce Motion cuts); the terminal resizes once, when it is gone.
             .animation(animates ? Motion.fade : nil, value: look.statusBar)
+            .onAppear { hub.cancelColumnDrag = { cancelDrag() } }
             .overlay { overlay }
             .overlay(alignment: .topLeading) {
                 if let drag { ResizeReadout(text: drag.readout, pointer: drag.pointer) }

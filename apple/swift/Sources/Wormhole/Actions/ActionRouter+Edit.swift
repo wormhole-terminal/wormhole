@@ -18,10 +18,7 @@ extension ActionRouter {
                 hub.send(.setAgentHidden(terminal.id, !terminal.isAgentHidden))
             },
             // A worktree needs a repository: the menu greys this where the terminal's folder is not in one.
-            "newTerminalInWorktree": {
-                hub.send(.showPanelTab(.changes))
-                hub.panel.worktrees.ask()
-            },
+            "newTerminalInWorktree": { hub.panel.worktrees.ask() },
             "insertFolderPath": { [unowned self] in app.folderPicking.insertPath() },
         ]
         for style in IntroStyle.onTrial {

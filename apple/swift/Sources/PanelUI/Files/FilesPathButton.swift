@@ -28,6 +28,7 @@ struct FilesPathButton: View {
                 .contentShape(Rectangle())
             }
             .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
+            .walkRow(FilesStore.headID)
             .onHover { hovering = $0 }
             .help(root)
             .accessibilityLabel(panelText("files-spoken-path-button", "\(menu.shownName), folder, opens the path menu"))

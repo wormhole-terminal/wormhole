@@ -26,6 +26,9 @@ fn claude_codes_status_line_becomes_the_plan_limits_and_is_kept_across_restarts(
         usage.reports(),
         vec![UsageReportRecord {
             agent: "claude".into(),
+            name: "Claude".into(),
+            monogram: "CC".into(),
+            logo: usage.reports()[0].logo.clone(),
             limits: vec![
                 PlanLimitRecord { label: "5-hour limit".into(), used: 25.0, resets_at: Some(1_800_002_040) },
                 PlanLimitRecord {

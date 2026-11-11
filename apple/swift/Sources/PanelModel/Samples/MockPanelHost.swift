@@ -20,6 +20,9 @@ public final class MockPanelHost: PanelHost {
     public func copy(_ text: String) { copied.append(text) }
     public func reveal(_ path: String) { revealed.append(path) }
     public func open(_ path: String, line: Int?) { opened.append(line.map { "\(path):\($0)" } ?? path) }
+    public func open(_ path: String, inBundle bundle: String) { opened.append("\(bundle) \(path)") }
+    public private(set) var commandsShown = 0
+    public func showProjectCommands() { commandsShown += 1 }
     public func paste(_ text: String) -> Bool {
         guard acceptsPaste else { return false }
         pasted.append(text)

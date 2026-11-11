@@ -38,9 +38,15 @@ struct SelectableListSplit<Top: View, Bottom: View>: View {
         .focusEffectDisabled()
         .simultaneousGesture(TapGesture().onEnded { focused = true })
         // The window's F6 and ⇥ ask the list for the keyboard; it tells the window when it has it.
-        .onChange(of: keyboard?.requests) { focused = true }
+        .onChange(of: keyboard?.requests) {
+            walker.enter(list: keyboard?.wanted ?? 0)
+            focused = true
+        }
         .onChange(of: focused) { _, now in keyboard?.focusChanged(now) }
-        .onAppear { keyboard?.appeared() }
+        .onAppear {
+            keyboard?.walker = walker
+            keyboard?.appeared()
+        }
         .onDisappear { keyboard?.disappeared(focused: focused) }
         .onKeyPress(phases: [.down, .repeat], action: handle)
         .onCopyCommand { walker.copyCursor().map { [NSItemProvider(object: $0 as NSString)] } ?? [] }
