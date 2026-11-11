@@ -25,11 +25,17 @@ import Foundation
 #endif
 
 extension AppController {
-    /// The Notices feature (its flag), in the profile shown: off, the notice chip is not drawn and the pane's bar says what matters.
-    var noticesOn: Bool {
+    /// The feature flags that are on for `session`'s window: its own profile's, whichever profile Wormhole is in.
+    func flagsOn(_ session: WindowSession) -> Set<String> {
         #if WITH_UNIFFI
-            for flag in (settingsModel.host as? RustSettingsHost)?.flags() ?? [] where flag.key == "notices" { return flag.on }
+            if options.isReal { return profileFlags.on(profile: session.windows.profile) }
         #endif
-        return true
+        return Set(settingsModel.host.flags().filter(\.on).map(\.key))
+    }
+
+    /// The Notices feature (its flag) in the window's profile: off, the notice chip is not drawn and the pane's bar says what matters.
+    func noticesOn(_ session: WindowSession) -> Bool {
+        let flags = flagsOn(session)
+        return flags.contains("notices") || !settingsModel.host.flags().contains { $0.key == "notices" }
     }
 }

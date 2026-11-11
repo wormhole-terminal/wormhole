@@ -17,8 +17,11 @@ enum SidebarMotion {
     static let state = Animation.snappy(duration: 0.18)
     /// A badge growing in past its size and settling, as the GPUI app's status change does.
     static let badge = Animation.spring(duration: 0.42, bounce: 0.5)
-    /// Rows arriving, leaving and changing order.
-    static let list = Animation.smooth(duration: 0.30)
+    /// Rows arriving, leaving, changing order and making room for a row that is moved: the core's quick spring
+    /// (`SpringSpec::SNAP`, 400/30, `view::motion::drag::ROOM`), a hint of overshoot, the same a dropped row settles on.
+    static let list = Animation.interpolatingSpring(mass: 1, stiffness: 400, damping: 30)
+    /// The rows after a drop that made a split: the soft spring (`SpringSpec::SOFT`, 170/26, `JOIN_SETTLE`).
+    static let joinSettle = Animation.interpolatingSpring(mass: 1, stiffness: 170, damping: 26)
     /// A light circling a working tile's edge, a turn (`TILE_ORBIT`), and the amber edge's breath (`TILE_BREATHE`).
     static let orbitTurn = 1.6
     static let breathe = 2.4

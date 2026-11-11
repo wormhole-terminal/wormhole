@@ -1,0 +1,253 @@
+# live run: --background Swift instance (exp/swift-s2-window), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s2-window-a, WORMHOLE_SHELL=/bin/zsh; every drag is a real pointer gesture injected through the window (mouse-down/move/up, drag)
+> new
+> new
+> new
+> new
+> rows
+new
+new
+new
+new
+selected=5 live=[1, 2, 3, 4, 5] groups=0
+  row 1 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, 1 of 5, Command 1"
+  row 2 "zsh" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="zsh, shell, nothing running, 2 of 5, Command 2"
+  row 3 "zsh" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="zsh, shell, nothing running, 3 of 5, Command 3"
+  row 4 "zsh" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="zsh, shell, nothing running, 4 of 5, Command 4"
+  row 5 "zsh" idle number=5 pinned=false folder=- line="Shell" trail=- split=0 spoken="zsh, shell, nothing running, selected, 5 of 5, Command 5"
+## reorder: terminal 4 (row y 240) dragged to the top
+> drag 150 240 150 48 12
+> wait-idle 1500
+> rows
+drag 150 240 150 48 12: down on PlatformGroupContainer, the gesture played to its release
+idle
+selected=5 live=[1, 2, 3, 4, 5] groups=0
+  row 4 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 1 of 5, Command 1"
+  row 1 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, 2 of 5, Command 2"
+  row 2 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 3 of 5, Command 3"
+  row 3 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 4 of 5, Command 4"
+  row 5 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=5 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, selected, 5 of 5, Command 5"
+## into a group
+> group 2
+> wait-idle 1500
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-group.png
+> rows
+newGroup([2]) ok
+idle
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-group.png
+selected=5 live=[1, 2, 3, 4, 5] groups=1
+  row 4 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 1 of 5, Command 1"
+  row 1 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, 2 of 5, Command 2"
+group 1 "Group 1" folded=false pinned=false count=1 alerts=0 spoken="Group 1, coloured blue, 1 terminal, expanded, 3 of 5"
+  row 2 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 1 of 1, Command 3"
+  row 3 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 4 of 5, Command 4"
+  row 5 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=5 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, selected, 5 of 5, Command 5"
+> mouse-down 150 285
+> mouse-move 160 270
+> mouse-move 150 200
+> mouse-move 150 181
+> after 1 window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-group-mid.png
+> wait-idle 200
+> mouse-up 150 181
+> wait-idle 1500
+> rows
+down on PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-group-mid.png
+wait-idle failed: the window still changes after 200 ms
+up on PlatformGroupContainer
+idle
+selected=5 live=[1, 2, 3, 4, 5] groups=1
+  row 4 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 1 of 4, Command 1"
+  row 1 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, 2 of 4, Command 2"
+group 1 "Group 1" folded=false pinned=false count=2 alerts=0 spoken="Group 1, coloured blue, 2 terminals, expanded, 3 of 4"
+  row 3 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 1 of 2, Command 3"
+  row 2 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 2 of 2, Command 4"
+  row 5 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=5 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, selected, 4 of 4, Command 5"
+## out of the group: terminal 3 dragged back to the list's tail
+> drag 150 223 150 420 12
+> wait-idle 1500
+> rows
+drag 150 223 150 420 12: down on PlatformGroupContainer, the gesture played to its release
+idle
+selected=5 live=[1, 2, 3, 4, 5] groups=1
+  row 4 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 1 of 5, Command 1"
+  row 1 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, 2 of 5, Command 2"
+group 1 "Group 1" folded=false pinned=false count=1 alerts=0 spoken="Group 1, coloured blue, 1 terminal, expanded, 3 of 5"
+  row 2 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 1 of 1, Command 3"
+  row 5 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, selected, 4 of 5, Command 4"
+  row 3 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=5 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 5 of 5, Command 5"
+## Esc mid-drag: terminal 4 lifted and carried to the tail, Esc, then the button goes up
+> mouse-down 150 66
+> mouse-move 160 90
+> mouse-move 150 300
+> mouse-move 150 400
+> after 1 window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-esc-mid.png
+> wait-idle 200
+> key escape
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-esc-after.png
+> mouse-up 150 400
+> wait-idle 1500
+> rows
+down on PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-esc-mid.png
+wait-idle failed: the window still changes after 200 ms
+key escape focus=terminal
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-esc-after.png
+up on PlatformGroupContainer
+## (after the Esc fix, fresh instance) Esc mid-drag: terminal 1 lifted and carried to the tail, Esc, the button still down and moving, then up
+> mouse-down 150 66
+> mouse-move 160 90
+> mouse-move 150 200
+> mouse-move 150 300
+> key escape
+> mouse-move 150 250
+> mouse-move 150 300
+> window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-esc-after.png
+> mouse-up 150 300
+> wait-idle 1500
+> rows
+down on PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+key escape focus=sidebar
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+window-shot /private/tmp/claude-501/-Users-benjamin-Projects-terminal/e0b38e0a-a3f5-44c8-b6a2-924540bddb46/scratchpad/s2w/m-esc-after.png
+up on PlatformGroupContainer
+idle
+selected=4 live=[1, 2, 3, 4] groups=0
+  row 1 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=1 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, 1 of 4, Command 1"
+  row 2 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 2 of 4, Command 2"
+  row 3 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, unread output, 3 of 4, Command 3"
+  row 4 "benjamin@MacBook-Pro-von-Benjamin:~" idle number=4 pinned=false folder=~ line="~" trail=- split=0 spoken="benjamin@MacBook-Pro-von-Benjamin:~, shell, nothing running, selected, 4 of 4, Command 4"
+## the Tear off flag off: the same drag out of the window does nothing (the chip is not shown either)
+> flags-unlock
+> set feature_flags={"tear_off":false,"unlocked":true}
+> wait-idle 1500
+> mouse-down 150 124
+> mouse-move 170 130
+> mouse-move 1250 300
+> mouse-move 1400 300
+> windows
+> mouse-up 1400 300
+> wait-idle 1200
+> windows
+> sessions
+flags-unlock unlocked=true nav=appearance,fonts,terminal,sessions,git,agents,import,notifications,menuBar,hotkey,updates,advanced,featureFlags
+set feature_flags -> object(["tear_off": SettingsModel.JSONValue.bool(false), "unlocked": SettingsModel.JSONValue.bool(true)])
+idle
+down on PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+Wormhole (Swift experiment) visible=true sheet=false
+up on PlatformGroupContainer
+idle
+Wormhole (Swift experiment) visible=true sheet=false
+window=1 profile=default visible=true front=true terminals=[1,2,3,4] selected=4 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off]
+## a window's last terminal dragged out to the desktop stays (window 2 has the one terminal)
+> set feature_flags={"unlocked":true}
+> wait-idle 1500
+> new-window
+> wait-idle 1500
+> use-window 2
+> pointer-window Wormhole (Swift experiment) 2
+> mouse-down 150 66
+> mouse-move 170 70
+> mouse-move 1250 300
+> mouse-move 1400 300
+> mouse-up 1400 300
+> wait-idle 1200
+> sessions
+set feature_flags -> object(["unlocked": SettingsModel.JSONValue.bool(true)])
+idle
+new-window
+idle
+use-window 2
+pointer-window Wormhole (Swift experiment) 2
+down on PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+up on PlatformGroupContainer
+idle
+window=1 profile=default visible=true front=false terminals=[1,2,3,4] selected=4 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off]
+window=2 profile=default visible=true front=true terminals=[5] selected=5 frame=windowed 230,125 1320x820 hosting=[5:off]
+## onto another window: window 2's terminal dragged out to the left, over the strip of window 1 that window 2 does not cover (real pointer path: the answer depends on whether another application's window covers that point of this Mac's screen)
+> mouse-down 150 66
+> mouse-move 120 70
+> mouse-move 30 300
+> mouse-move -15 400
+> mouse-up -15 400
+> wait-idle 1200
+> sessions
+down on PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+dragged PlatformGroupContainer
+up on PlatformGroupContainer
+idle
+window=1 profile=default visible=true front=false terminals=[1,2,3,4] selected=4 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off]
+window=2 profile=default visible=true front=true terminals=[5] selected=5 frame=windowed 230,125 1320x820 hosting=[5:off]
+## onto another window, with the covering of other applications taken out (tear-off-at: the release at a point of the primary display, nothing else on top)
+> tear-off-at 4 500 600
+> wait-idle 800
+> sessions
+> tear-off-at 5 100 1500
+> wait-idle 800
+> sessions
+tear-off-at 4 500 600
+idle
+window=1 profile=default visible=true front=false terminals=[1,2,3,4] selected=4 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off]
+window=2 profile=default visible=true front=true terminals=[5] selected=5 frame=windowed 230,125 1320x820 hosting=[5:off]
+tear-off-at 5 100 1500
+idle
+window=1 profile=default visible=true front=false terminals=[1,2,3,4] selected=4 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off]
+window=2 profile=default visible=true front=true terminals=[5] selected=5 frame=windowed 230,125 1320x820 hosting=[5:off]
+> use-window 1
+> tear-off-at 4 500 600
+> wait-idle 800
+> sessions
+> use-window 2
+> tear-off-at 5 100 1500
+> wait-idle 800
+> sessions
+use-window 1
+tear-off-at 4 500 600
+idle
+window=1 profile=default visible=true front=true terminals=[1,2,3,4] selected=4 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off]
+window=2 profile=default visible=true front=false terminals=[5] selected=5 frame=windowed 230,125 1320x820 hosting=[5:off]
+use-window 2
+tear-off-at 5 100 1500
+idle
+window=1 profile=default visible=true front=false terminals=[1,2,3,4] selected=4 frame=windowed 204,99 1320x820 hosting=[1:off, 2:off, 3:off, 4:off]
+window=2 profile=default visible=true front=true terminals=[5] selected=5 frame=windowed 230,125 1320x820 hosting=[5:off]
+## windows set apart (place), then a release over window 2's area from window 1
+> use-window 1
+> place 1 40 60 900 600
+> use-window 2
+> place 2 1000 300 700 500
+> use-window 1
+> wait-idle 800
+> tear-off-at 4 1300 500
+> wait-idle 800
+> sessions
+> tear-off-at 3 1900 100
+> wait-idle 800
+> sessions
+use-window 1
+place 1 40 60 900 600
+use-window 2
+place 2 1000 300 700 500
+use-window 1
+idle
+tear-off-at 4 1300 500
+> tear-off-at 4 1300 500   (the app took 2 s to settle; output read from the control folder afterwards)
+window=1 ... terminals=[1,2,3] frame=windowed 40,60 900x600
+window=2 ... terminals=[5,4] frame=windowed 1000,300 700x500   <- terminal 4 went into window 2, running

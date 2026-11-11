@@ -15,7 +15,7 @@ extension AppController {
         PaletteSources(
             actions: { [weak self, weak session] in
                 guard let self, let session else { return ActionList() }
-                return ListedKeymap.actions(self.actionFacts(session.hub))
+                return ListedKeymap.actions(self.actionFacts(session))
             },
             settings: { [weak self] in self?.settingsModel.find($0).compactMap { self?.paletteSetting($0.entry.id, match: $0) } ?? [] },
             setting: { [weak self] in self?.paletteSetting($0, match: nil) },
@@ -50,7 +50,7 @@ extension AppController {
             },
             hiddenActions: { [weak self, weak session] in
                 guard let self, let session else { return [] }
-                return self.actionFacts(session.hub).hidden
+                return self.actionFacts(session).hidden
             },
             hotkey: { [weak self] in
                 // The global key as `config.json` writes it; the sheet's footer writes it in Apple's notation.
@@ -64,10 +64,10 @@ extension AppController {
     }
 
     /// The menus' facts about the window, as the palette's action list wants them: what is flipped, greyed or hidden.
-    private func actionFacts(_ hub: WindowHub) -> ActionFacts {
-        let state = hub.menuState(
+    private func actionFacts(_ session: WindowSession) -> ActionFacts {
+        let state = session.hub.menuState(
             look: look, isFullScreen: window?.styleMask.contains(.fullScreen) ?? false, implemented: router.implemented,
-            flagsOn: Set(settingsModel.host.flags().filter(\.on).map(\.key)))
+            flagsOn: flagsOn(session))
         return ActionFacts(
             off: state.off.map(\.rawValue), disabled: state.disabled.map(\.rawValue), hidden: state.hidden.map(\.rawValue),
             isSplit: state.split, isDebug: state.debug, isPersistent: state.persistent)

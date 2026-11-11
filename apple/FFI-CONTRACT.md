@@ -1251,7 +1251,9 @@ func rehome(window: Int64, workspace: Workspace, frame: FrameRecord?, to: Window
     // "Move Window to": the record (terminals, notes, frame) is written into `to`'s database and removed from this one;
     // unlike `forget` the window stays among the live ones (its terminals run on). A profile moved to itself is true and nothing.
 tearOffLanding(stack: [TearWindow], x:, y:, source: Int64, covered: Bool) -> TearLanding   // .stay | .newWindow | .into(window)
-tearOffWindow(x:, y:, width:, height:, visible: TearRect) -> TearRect   // where the torn-off window opens (a display's own space)
+tearOffPlace(x:, y:, chip: TearRect, width:, height:, visible: TearRect) -> TearPlaced   // the same with the dragged chip (display space in, the window's own out)
+tearOffGrowMs() -> UInt32                                                      // how long the window takes to grow from its chip (280)
+tearOffGrow(chip: TearRect, width:, height:, radius:, elapsedMs: UInt32) -> TearGrow   // what shows of it then: rect, corners, content and face opacity, done
 ```
 
 - **Open Window in <profile>**: the shell asks `beside(profile)` for that profile's `Windows` once (kept) and plans, makes and
@@ -1260,7 +1262,7 @@ tearOffWindow(x:, y:, width:, height:, visible: TearRect) -> TearRect   // where
 - **Tear off** (`view::tear_off`): AppKit sends a drag's events to the window it began in, so the shell reads the app's windows
   front to back (`TearWindow`: its id when it shows this profile's terminals, else nil), the screens, and whether another
   application's window is on top (`covered`), and does what the core answers. All points are AppKit's global space (y up)
-  except `tearOffWindow`'s, which are in one display's (from its top left, y down); the pointer lies at the new window's
+  except `tearOffPlace`'s, which are in one display's (from its top left, y down); the pointer lies at the new window's
   anchor (120, 90), kept inside the display's usable part.
 
 - Not done: a window in a profile other than the shown one (menu "Open Window in" switches, then opens one), "Move Window to".

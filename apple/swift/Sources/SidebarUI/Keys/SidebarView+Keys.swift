@@ -7,9 +7,7 @@ import WorkspaceModel
 extension SidebarView {
     func handle(_ press: KeyPress, _ walk: SidebarWalk) -> KeyPress.Result {
         if press.key == .escape, drag != nil {
-            drag = nil
-            outside = false
-            terminalDrag?.leave()
+            cancelDrag()
             return .handled
         }
         if press.key == .escape, searching || searchOpen {

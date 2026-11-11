@@ -6,6 +6,7 @@ use std::time::Instant;
 
 use crate::git::RepoStatus;
 use crate::git::attribution::Snapshot;
+use crate::storage::store::ClaimRecord;
 
 use super::event::Event;
 use super::facts::Millis;
@@ -35,6 +36,19 @@ impl WorkspaceModel {
         snapshot: Option<Snapshot>,
     ) -> Vec<Event> {
         if self.git.finish_read(id, wanted, result, snapshot) {
+            self.git_facts();
+        }
+        self.out.take()
+    }
+
+    /// The files `ids` changed, as rows to keep with the window.
+    pub fn git_claims(&self, ids: &[i64]) -> Vec<ClaimRecord> {
+        self.git.claim_rows(ids)
+    }
+
+    /// The window came back with its files kept: the rows show them again.
+    pub fn git_restore_claims(&mut self, claims: Vec<ClaimRecord>) -> Vec<Event> {
+        if self.git.restore_claims(claims) {
             self.git_facts();
         }
         self.out.take()

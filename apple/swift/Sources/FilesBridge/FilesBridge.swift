@@ -40,7 +40,8 @@ public enum FilesBridge {
     /// - Parameters:
     ///   - authenticator: asked before a project is trusted (Touch ID or the password).
     ///   - effects: performs what a project's action, prompt or layout asks of the window, and says what was refused.
-    public static func makeBackends(authenticator: any Authenticating, effects: any PanelEffectPerforming) throws -> PanelBackends {
+    ///   - profile: the window's own profile, whose database holds its notes (not the one Wormhole is in).
+    public static func makeBackends(authenticator: any Authenticating, effects: any PanelEffectPerforming, profile: String) throws -> PanelBackends {
         let project = try ProjectService(authenticator: OwnerAuthentication(authenticator))
         let relay = UsageRelay()
         let usage = try UsageService(listener: relay)
@@ -49,6 +50,6 @@ public enum FilesBridge {
             files: RustFilesBackend(service: try FilesService()),
             project: RustProjectBackend(service: project, effects: effects),
             usage: RustUsageBackend(service: usage, relay: relay),
-            notes: RustNotesPersistence(notes: try SessionNotesStore(), project: project))
+            notes: RustNotesPersistence(notes: try SessionNotesStore.forProfile(profile: profile), project: project))
     }
 }

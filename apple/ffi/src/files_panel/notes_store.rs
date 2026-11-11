@@ -5,9 +5,11 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex, PoisonError};
 
+use wormhole_core::storage::paths::{DataRoot, ProfileId};
 use wormhole_core::storage::store::{NoteRecord, SessionNotes, Store, TaskRecord};
 
 use crate::error::FfiError;
+use crate::isolation;
 use crate::profile;
 
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
@@ -68,6 +70,11 @@ pub struct SessionNotesStore {
 }
 
 impl SessionNotesStore {
+    pub(crate) fn in_profile(root: &DataRoot, profile: &str) -> Result<Arc<Self>, FfiError> {
+        let id = ProfileId::parse(profile).map_err(|err| FfiError::Start { reason: err.to_string() })?;
+        Self::in_dir(root.profile(&id).dir())
+    }
+
     pub(crate) fn in_dir(dir: &Path) -> Result<Arc<Self>, FfiError> {
         let store = Store::open_at(dir).map_err(|err| FfiError::Start { reason: format!("{err:#}") })?;
         Ok(Arc::new(Self { store: Mutex::new(store) }))
@@ -80,6 +87,14 @@ impl SessionNotesStore {
     #[uniffi::constructor]
     pub fn new() -> Result<Arc<Self>, FfiError> {
         Self::in_dir(&profile::active_dir()?)
+    }
+
+    /// The notes of the profile `profile` (its id in `profiles.json`), which is where a window of that profile keeps
+    /// them whichever profile Wormhole is in.
+    #[uniffi::constructor]
+    pub fn for_profile(profile: String) -> Result<Arc<Self>, FfiError> {
+        isolation::require()?;
+        Self::in_profile(&DataRoot::current(), &profile)
     }
 
     /// What was saved for terminal `session` (nothing: empty).

@@ -26,7 +26,7 @@ enum PanelBackendsFactory {
     }
 
     /// `effects` performs what the project asks of the window; it is given the hub once that exists.
-    static func make(_ options: Options, store: WorkspaceStore, policy: PlatformPolicy, effects: AnyObject?) -> Made {
+    static func make(_ options: Options, store: WorkspaceStore, policy: PlatformPolicy, effects: AnyObject?, profile: String) -> Made {
         var made = Made()
         var backends: PanelUI.PanelBackends {
             get { made.backends }
@@ -46,7 +46,7 @@ enum PanelBackendsFactory {
             if let effects = effects as? PanelEffects {
                 let authenticator: any Authenticating = policy.touchesSystem ? LocalAuthenticator() : ScriptedAuthenticator()
                 do {
-                    let files = try FilesBridge.makeBackends(authenticator: authenticator, effects: effects)
+                    let files = try FilesBridge.makeBackends(authenticator: authenticator, effects: effects, profile: profile)
                     (backends.files, backends.project, backends.usage) = (files.files, files.project, files.usage)
                     made.notes = files.notes
                     made.usage = files.usage.service

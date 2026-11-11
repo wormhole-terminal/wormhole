@@ -21,6 +21,8 @@ final class WindowSession {
     /// What the right panel reads through (the core's where real).
     let panelBackends: PanelUI.PanelBackends
     var notes: NotesCoordinator?
+    /// The window is growing from the chip of the terminal torn off into it (`TearOff/`).
+    var grow: TearOffGrow?
     var controller: WorkspaceWindowController?
     var saver: WindowSaver?
     /// Out of sight with its terminals running: its profile is not the one Wormhole is in (`switchProfile`).

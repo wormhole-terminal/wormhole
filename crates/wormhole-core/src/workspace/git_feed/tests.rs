@@ -268,6 +268,35 @@ fn the_feed_reads_a_folder_once_and_what_a_working_terminal_changed_is_its_count
 }
 
 #[test]
+fn what_a_terminal_changed_is_kept_as_rows_and_comes_back_with_the_window() {
+    let start = Instant::now();
+    let later = |ms| start + Duration::from_millis(ms);
+    let mut feed = GitFeed::new(ChangeRules::default());
+    feed.folder(1, Some(Path::new("/repo")));
+    let jobs = feed.poll(0);
+    answer(&mut feed, jobs, &status(&["old.rs"]), later(0));
+    let working =
+        TerminalFacts { agent: Some(AgentId::Claude), status: Status::Busy, ..TerminalFacts::default() };
+    feed.track(1, &working, later(100));
+    let jobs = feed.poll(2_000);
+    answer(&mut feed, jobs, &status(&["old.rs", "new.rs", "also.rs"]), later(200));
+    let rows = feed.claim_rows(&[1, 2]);
+    let kept: Vec<_> = rows.iter().map(|r| (r.session_id, r.root.as_str(), r.path.as_str())).collect();
+    assert_eq!(
+        kept,
+        [(1, "/repo", "also.rs"), (1, "/repo", "new.rs")],
+        "terminal 1's files, sorted; 2 has none"
+    );
+
+    // A window coming back: the terminal has its files again, and a terminal already known keeps what it has.
+    let mut back = GitFeed::new(ChangeRules::default());
+    assert!(back.restore_claims(rows.clone()));
+    assert_eq!(back.claim_rows(&[1]), rows);
+    assert_eq!(back.facts_of(1).changes, Some(2));
+    assert!(!back.restore_claims(rows), "ignored for a terminal the model knows");
+}
+
+#[test]
 fn a_plain_terminal_works_by_the_setting() {
     let build = TerminalFacts { command: Some("cargo build".into()), ..TerminalFacts::default() };
     let editor = TerminalFacts { command: Some("vim main.rs".into()), ..TerminalFacts::default() };

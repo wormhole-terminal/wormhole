@@ -3,6 +3,7 @@
 //! hands them over as values; this decides. Every point is in AppKit's global space (y up) except `tear_off_window`'s,
 //! which are in the space of one display (from its top left, y down: `view::tear_off` module doc).
 
+use wormhole_core::view::motion::tear_off as grow;
 use wormhole_core::view::panes::Rect;
 use wormhole_core::view::tear_off::{Landing, Occupant, Placed, landing, place};
 
@@ -64,12 +65,66 @@ pub fn tear_off_landing(stack: Vec<TearWindow>, x: f32, y: f32, source: i64, cov
 /// sidebar's width and the title row's height, about). The GPUI app's `window/tear_off.rs` `ANCHOR`.
 const ANCHOR: (f32, f32) = (120.0, 90.0);
 
+/// A torn-off window as it opens: its bounds in the display's space and the dragged chip in the window's own.
+#[derive(Debug, Clone, Copy, PartialEq, uniffi::Record)]
+pub struct TearPlaced {
+    pub bounds: TearRect,
+    pub chip: TearRect,
+}
+
 /// The window of `width` by `height` that a terminal let go of at (`x`, `y`) of a display's own space opens as, kept
-/// inside that display's `visible` part (menu bar and Dock taken off) and made smaller where the display is.
+/// inside that display's `visible` part (menu bar and Dock taken off) and made smaller where the display is. `chip` is
+/// the dragged chip in the display's space; it comes back in the window's.
 #[uniffi::export]
-pub fn tear_off_window(x: f32, y: f32, width: f32, height: f32, visible: TearRect) -> TearRect {
-    let bounds = place((x, y), Rect::default(), (width, height), ANCHOR, visible.into()).bounds;
-    TearRect { x: bounds.x, y: bounds.y, w: bounds.w, h: bounds.h }
+pub fn tear_off_place(
+    x: f32,
+    y: f32,
+    chip: TearRect,
+    width: f32,
+    height: f32,
+    visible: TearRect,
+) -> TearPlaced {
+    let placed = place((x, y), chip.into(), (width, height), ANCHOR, visible.into());
+    let rect = |r: Rect| TearRect { x: r.x, y: r.y, w: r.w, h: r.h };
+    TearPlaced { bounds: rect(placed.bounds), chip: rect(placed.chip) }
+}
+
+/// What shows of a window growing from its chip (core `view::motion::tear_off::pose`), in the window's own space.
+#[derive(Debug, Clone, Copy, PartialEq, uniffi::Record)]
+pub struct TearGrow {
+    pub shown: TearRect,
+    pub radius: f32,
+    /// How much of the window's content shows (0 to 1).
+    pub content: f32,
+    /// How much of the chip's face (its tile and name) shows (1 to 0).
+    pub face: f32,
+    pub done: bool,
+}
+
+/// How long the window takes to grow, in milliseconds.
+#[uniffi::export]
+pub fn tear_off_grow_ms() -> u32 {
+    u32::try_from(grow::DURATION.as_millis()).unwrap_or(u32::MAX)
+}
+
+/// The window, whose content is `width` by `height` with corners `radius` round, `elapsed_ms` after it began to grow from `chip`.
+#[uniffi::export]
+pub fn tear_off_grow(chip: TearRect, width: f32, height: f32, radius: f32, elapsed_ms: u32) -> TearGrow {
+    let g = grow::pose(
+        chip.into(),
+        width,
+        height,
+        radius,
+        std::time::Duration::from_millis(u64::from(elapsed_ms)),
+    );
+    let s = g.shown;
+    TearGrow {
+        shown: TearRect { x: s.x, y: s.y, w: s.w, h: s.h },
+        radius: g.radius,
+        content: g.content,
+        face: g.face,
+        done: g.done,
+    }
 }
 
 #[cfg(test)]
@@ -97,13 +152,20 @@ mod tests {
 
     #[test]
     fn the_new_window_lies_under_the_pointer_inside_the_display() {
+        let chip = rect(508.0, 392.0, 160.0, 28.0);
         let tall = rect(0.0, 38.0, 1440.0, 1000.0);
-        assert_eq!(tear_off_window(500.0, 400.0, 900.0, 600.0, tall), rect(380.0, 310.0, 900.0, 600.0));
+        assert_eq!(
+            tear_off_place(500.0, 400.0, chip, 900.0, 600.0, tall).bounds,
+            rect(380.0, 310.0, 900.0, 600.0)
+        );
         let visible = rect(0.0, 38.0, 1440.0, 800.0);
         // Let go at the bottom right, the window comes back up and left.
-        assert_eq!(tear_off_window(1400.0, 830.0, 900.0, 600.0, visible), rect(540.0, 238.0, 900.0, 600.0));
         assert_eq!(
-            tear_off_window(500.0, 400.0, 2000.0, 2000.0, visible),
+            tear_off_place(1400.0, 830.0, chip, 900.0, 600.0, visible).bounds,
+            rect(540.0, 238.0, 900.0, 600.0)
+        );
+        assert_eq!(
+            tear_off_place(500.0, 400.0, chip, 2000.0, 2000.0, visible).bounds,
             visible,
             "never bigger than the display"
         );

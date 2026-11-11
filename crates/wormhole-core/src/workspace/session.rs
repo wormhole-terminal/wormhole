@@ -38,9 +38,15 @@ impl Session {
     /// The name: the person's, else the title its program set, the agent, the program in front or
     /// the shell (`names::process_name`), else "Terminal n".
     pub(super) fn name(&self) -> String {
-        if let Some(name) = &self.custom_name {
-            return name.clone();
+        match &self.custom_name {
+            Some(name) => name.clone(),
+            None => self.label(),
         }
+    }
+
+    /// What the terminal is called by what runs in it, whatever the person named it (the title row's last chip,
+    /// the GPUI app's `Pane::label`).
+    pub(super) fn label(&self) -> String {
         let facts = &self.facts;
         let agent = facts.agent.map(|id| crate::agents::agent(id).command);
         let named = names::process_name(&names::NameFacts {

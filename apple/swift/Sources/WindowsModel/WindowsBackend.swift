@@ -55,8 +55,14 @@ public protocol WindowsBackend: AnyObject {
     /// What letting go of a terminal at the global point `point` does, dragged out of window `source`. `covered`: another
     /// application's window is the front-most there.
     func tearOffLanding(over stack: [TearOffWindow], at point: CGPoint, from source: WindowID, covered: Bool) -> TearOffLanding
-    /// The window a terminal let go of at `point` (a display's own space) opens as, inside that display's `visible` part.
-    func tearOffWindow(at point: CGPoint, size: CGSize, visible: CGRect) -> CGRect
+    /// The window a terminal let go of at `point` (a display's own space) opens as, inside that display's `visible` part,
+    /// and `chip` (the dragged chip, in the same space) in that window's own.
+    func tearOffPlace(at point: CGPoint, chip: CGRect, size: CGSize, visible: CGRect) -> TearOffPlaced
+    /// How long a torn-off window takes to grow from its chip, and what shows of it `elapsed` after it began.
+    var tearOffGrowDuration: TimeInterval { get }
+    func tearOffGrow(chip: CGRect, size: CGSize, radius: CGFloat, elapsed: TimeInterval) -> TearOffPose
+    /// Whether the files each terminal changed are kept with the windows (`sidebar_changes_remember`).
+    func keepChanges(_ keep: Bool)
     /// The smallest window content: the sidebar beside a usable terminal.
     var minSize: CGSize { get }
 }

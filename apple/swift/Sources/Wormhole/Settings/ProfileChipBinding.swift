@@ -85,7 +85,7 @@ extension AppController {
                 devctl?.append("switch-profile \(id) failed: \(error)")
                 FileHandle.standardError.write(Data("profile: cannot switch to \(id) (\(error))\n".utf8))
                 // A profile whose data folder cannot be opened saves nothing: the chip says so and why.
-                hub.notices.post(.warned(.dataFolder), detail: NoticeReason.dataFolder(profile: id, folder: dataDirectory.path, error: "\(error)"))
+                hub.notices.post(.warned(.dataFolder), detail: NoticeReason.dataFolder(profile: id, folder: id == "default" ? dataDirectory.path : dataDirectory.appendingPathComponent("profiles/\(id)").path, error: "\(error)"))
             }
         #endif
     }
@@ -116,6 +116,7 @@ extension AppController {
                 return
             }
             session.windows = target
+            session.notes?.follow(profile: id)
             session.saver?.windows = target.backend
             // Not left without a window: the profile Wormhole is in keeps one to type in.
             if windows(of: windowsHost.profile).isEmpty {

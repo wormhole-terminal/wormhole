@@ -21,6 +21,7 @@ use std::time::Instant;
 
 use crate::config::{PlainChanges, SharedChanges};
 use crate::git::attribution::{Attribution, Kind, Snapshot};
+use crate::storage::store::ClaimRecord;
 use crate::view::sidebar::RowState;
 use crate::view::sidebar::command::ends_by_itself;
 
@@ -134,6 +135,37 @@ impl GitFeed {
     pub fn forget(&mut self, id: i64) -> bool {
         self.terminals.remove(&id);
         self.attribution.forget(id)
+    }
+
+    /// The files each of `ids` changed, one row per file, for keeping them with the window (`Store::save_claims`).
+    pub fn claim_rows(&self, ids: &[i64]) -> Vec<ClaimRecord> {
+        ids.iter()
+            .filter_map(|&id| self.attribution.claims_of(id).map(|(root, paths)| (id, root, paths)))
+            .flat_map(|(session_id, root, paths)| {
+                let root = root.to_string_lossy().into_owned();
+                let mut paths: Vec<_> = paths.iter().cloned().collect();
+                paths.sort();
+                paths.into_iter().map(move |path| ClaimRecord { session_id, root: root.clone(), path })
+            })
+            .collect()
+    }
+
+    /// Put back what was kept (a window restored): each terminal is taken to be in the repository its files are
+    /// in until its folder says otherwise. Whether any terminal has files again.
+    pub fn restore_claims(&mut self, claims: Vec<ClaimRecord>) -> bool {
+        let mut grouped: std::collections::BTreeMap<(i64, String), Vec<String>> = Default::default();
+        for claim in claims {
+            grouped.entry((claim.session_id, claim.root)).or_default().push(claim.path);
+        }
+        let mut restored = false;
+        for ((id, root), paths) in grouped {
+            if self.attribution.restore(id, Path::new(&root), paths) {
+                // Known to the feed from now on, so its facts carry the count before its first read.
+                self.terminals.entry(id).or_default();
+                restored = true;
+            }
+        }
+        restored
     }
 
     /// git was missing and may be there now (Retry, the window coming to the front).

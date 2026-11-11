@@ -29,7 +29,7 @@ extension AppController {
         let host = WorkspaceHost.make(options, windows: windowsHost, window: id, empty: empty)
         let factory = TerminalFactory(options: options, source: host.source)
         let effects = Self.makeEffects()
-        let panel = PanelBackendsFactory.make(options, store: host.store, policy: policy, effects: effects)
+        let panel = PanelBackendsFactory.make(options, store: host.store, policy: policy, effects: effects, profile: windowsHost.profile)
         let hub = WindowHub(store: host.store, terminals: TerminalViews { factory.make($0) }, panelBackends: panel.backends)
         let session = WindowSession(id: id, windows: windowsHost, hub: hub, factory: factory, effects: effects, usage: panel.usage, backends: panel.backends)
         #if WITH_UNIFFI
@@ -67,7 +67,7 @@ extension AppController {
         hub.actions.terminalMenu = { [weak self, weak session] in self?.terminalMenu(for: $0, in: session) }
         hub.actions.perform = { [weak self] in self?.router.run(ActionID(rawValue: $0)) }
         hub.actions.palette = paletteSources(for: session)
-        hub.notices.chipOn = { [weak self] in self?.noticesOn ?? true }
+        hub.notices.chipOn = { [weak self, weak session] in session.flatMap { self?.noticesOn($0) } ?? true }
         hub.onRestartToUpdate = { [weak self] in self?.updateFollower?.requestRestart() }
         hub.notices.onOpenLogs = { [dataDirectory] in NSWorkspace.shared.open(dataDirectory.appendingPathComponent("logs")) }
         hub.actions.openSettings = { [weak self] in self?.showSettings() }
@@ -76,6 +76,10 @@ extension AppController {
         hub.terminalDrag.tearOff = { [weak self, weak session] in
             guard let self, let session else { return false }
             return tearOffReleased($0, at: $1, from: session)
+        }
+        hub.terminalDrag.tracking = { [weak self, weak session] id, point in
+            guard let self, let session else { return }
+            tearChipMoved(id, to: point, in: session)
         }
         hub.actions.showTerminalsInSidebar = { [weak self] in self?.look.tabsOnTop = false }
     }

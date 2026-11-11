@@ -40,7 +40,7 @@ final class RealBackendTests: XCTestCase {
 
     private func backends(_ answer: ScriptedAuthenticator.Answer = .cancel) throws -> (PanelBackends, Recorder) {
         let recorder = Recorder()
-        return (try FilesBridge.makeBackends(authenticator: ScriptedAuthenticator(answer: answer), effects: recorder), recorder)
+        return (try FilesBridge.makeBackends(authenticator: ScriptedAuthenticator(answer: answer), effects: recorder, profile: "default"), recorder)
     }
 
     private func write(_ text: String, _ path: String) throws {
@@ -165,5 +165,19 @@ final class RealBackendTests: XCTestCase {
         XCTAssertEqual(back.notes.map(\.collapsed), [true])
         XCTAssertEqual(back.tasks.items.map(\.text), ["step"])
         XCTAssertEqual(backends.notes.load(session: 4243), NotesModel())
+    }
+
+    /// A window moved to another profile keeps its notes in that profile's database from then on.
+    func testNotesFollowTheProfileTheWindowIsMovedTo() throws {
+        let (backends, _) = try backends()
+        let model = NotesModel(notes: [Note(text: "typed in default")], tasks: TaskList([]))
+        XCTAssertTrue(backends.notes.save(session: 5151, model: model))
+        backends.notes.follow(profile: "elsewhere")
+        XCTAssertEqual(backends.notes.load(session: 5151), NotesModel(), "the other profile's database has nothing of it")
+        XCTAssertTrue(backends.notes.save(session: 5151, model: NotesModel(notes: [Note(text: "typed there")], tasks: TaskList([]))))
+        backends.notes.follow(profile: "default")
+        XCTAssertEqual(backends.notes.load(session: 5151).notes.map(\.text), ["typed in default"])
+        backends.notes.follow(profile: "elsewhere")
+        XCTAssertEqual(backends.notes.load(session: 5151).notes.map(\.text), ["typed there"])
     }
 }

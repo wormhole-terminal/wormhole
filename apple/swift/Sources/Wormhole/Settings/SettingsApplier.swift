@@ -79,6 +79,7 @@ final class SettingsApplier {
             app.aux.updateBackend().apply(
                 autoUpdate: values["auto_update"]?.bool ?? true, anonymousCount: values["anonymous_count"]?.bool ?? true)
         }
+        if changed("sidebar_changes_remember") { app.windowsHost.backend.keepChanges(values["sidebar_changes_remember"]?.bool ?? true) }
         if changed("title_row") { applyTitleRow(values, to: app.shown.map(\.hub)) }
         if changed("open_in") { applyOpenIn(values, to: app.shown.map(\.hub)) }
         if changed("sidebar_numbers", "sidebar_changes_plain", "sidebar_changes_shared") { applySidebarRules(values, to: app.shown.map(\.hub)) }

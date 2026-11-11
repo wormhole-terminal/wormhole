@@ -26,6 +26,8 @@ final class NotesCoordinator {
         self.hub = hub
     }
 
+    func follow(profile id: String) { persistence.follow(profile: id) }
+
     func start() {
         persistence.idsStart(at: (hub.state.all.map(\.id).max() ?? 0) + 1)
         follow()

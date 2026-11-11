@@ -35,6 +35,7 @@ public struct SidebarView: View {
     @State var viewport: CGRect = .zero
     @State var windowPoint: CGPoint = .zero
     @State var outside = false
+    @State var escape = DragEscape()
     @FocusState var focused: Bool
     @Environment(\.dropPlanner) var dropPlanner
     @Environment(\.terminalDrag) var terminalDrag

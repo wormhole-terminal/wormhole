@@ -119,7 +119,14 @@ final class WindowsFFITests: XCTestCase {
         XCTAssertEqual(landing(1300, 700), .newWindow, "the desktop")
         XCTAssertEqual(landing(600, 700, covered: true), .newWindow, "another application on top")
         let visible = CGRect(x: 0, y: 38, width: 1440, height: 1000)
-        let placed = windows.tearOffWindow(at: CGPoint(x: 500, y: 400), size: CGSize(width: 900, height: 600), visible: visible)
-        XCTAssertEqual(placed, CGRect(x: 380, y: 310, width: 900, height: 600), "the pointer lies at the new terminal's row")
+        let chip = CGRect(x: 508, y: 392, width: 160, height: 28)
+        let placed = windows.tearOffPlace(at: CGPoint(x: 500, y: 400), chip: chip, size: CGSize(width: 900, height: 600), visible: visible)
+        XCTAssertEqual(placed.bounds, CGRect(x: 380, y: 310, width: 900, height: 600), "the pointer lies at the new terminal's row")
+        XCTAssertEqual(placed.chip, CGRect(x: 128, y: 82, width: 160, height: 28), "and the chip stays under it")
+        let start = windows.tearOffGrow(chip: placed.chip, size: placed.bounds.size, radius: 10, elapsed: 0)
+        XCTAssertEqual(start.shown, placed.chip, "the window begins as its chip")
+        let end = windows.tearOffGrow(chip: placed.chip, size: placed.bounds.size, radius: 10, elapsed: windows.tearOffGrowDuration)
+        XCTAssertTrue(end.done)
+        XCTAssertEqual(end.shown, CGRect(origin: .zero, size: placed.bounds.size))
     }
 }

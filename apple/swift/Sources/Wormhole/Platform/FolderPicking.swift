@@ -39,7 +39,7 @@ final class FolderPicking {
     /// The key's and the menu's way in: only over the terminal that has the keyboard (a paste must not land in one the
     /// person is not in) and only with the Folder picker feature flag on.
     func insertPath() {
-        guard app.settingsModel.host.flags().contains(where: { $0.key == "folder_picker" && $0.on }),
+        guard app.flagsOn(app.front).contains("folder_picker"),
             let view = app.selectedView, view.window?.isKeyWindow == true, view.window?.firstResponder === view
         else { return }
         open()

@@ -6,6 +6,7 @@
 // would only move the window; it can still go into another window, and this one starts a new terminal.
 
 import AppKit
+import SidebarUI
 import WindowUI
 import WindowsModel
 import WorkspaceModel
@@ -14,19 +15,35 @@ extension AppController {
     /// The terminal was let go with the pointer at `windowPoint` (the window's own space, y down). True when that is outside
     /// its window and the window took it; false when it is inside, where the panes and the list decide.
     func tearOffReleased(_ terminal: TerminalID, at windowPoint: CGPoint, from session: WindowSession) -> Bool {
-        guard let window = session.window, let content = window.contentView else { return false }
-        let local = content.isFlipped ? windowPoint : CGPoint(x: windowPoint.x, y: content.bounds.height - windowPoint.y)
-        let global = window.convertPoint(toScreen: content.convert(local, to: nil))
-        guard !window.frame.contains(global) else { return false }
+        guard let window = session.window, let global = globalPoint(windowPoint, in: window), !window.frame.contains(global) else { return false }
         land(terminal, from: session, at: global)
+        tearChip.end()
         return true
+    }
+
+    /// The window's point (its own space, y down) in AppKit's global space (y up).
+    private func globalPoint(_ windowPoint: CGPoint, in window: NSWindow) -> CGPoint? {
+        guard let content = window.contentView else { return nil }
+        let local = content.isFlipped ? windowPoint : CGPoint(x: windowPoint.x, y: content.bounds.height - windowPoint.y)
+        return window.convertPoint(toScreen: content.convert(local, to: nil))
+    }
+
+    /// The pointer of a terminal's drag is at `windowPoint` (nil: the drag is over): outside its window the chip follows it.
+    func tearChipMoved(_ terminal: TerminalID, to windowPoint: CGPoint?, in session: WindowSession) {
+        guard let windowPoint, let window = session.window, let global = globalPoint(windowPoint, in: window),
+            !window.frame.contains(global), flagsOn(session).contains("tear_off"), !window.styleMask.contains(.fullScreen)
+        else { return windowPoint == nil ? tearChip.end() : tearChip.hide() }
+        let summary = session.hub.state.terminals.first { $0.id == terminal }
+        tearChip.show(
+            TearOffChipView(terminal: summary, title: summary?.title ?? "", appearance: look.sidebar), at: global,
+            touchesSystem: policy.touchesSystem)
     }
 
     /// What letting go of `terminal` at the global point `global` does. `covered` is whether another application's window is in
     /// front there; a script says it is not (nil: the system is asked).
     func land(_ terminal: TerminalID, from session: WindowSession, at global: CGPoint, covered: Bool? = nil) {
         // The feature's flag, and no outside in a window that is full screen (another Space lies there).
-        guard settingsModel.host.flags().contains(where: { $0.key == "tear_off" && $0.on }),
+        guard flagsOn(session).contains("tear_off"),
             session.window?.styleMask.contains(.fullScreen) != true
         else { return }
         let ours = Set(NSApp.windows.map(\.windowNumber))
@@ -53,9 +70,15 @@ extension AppController {
         let full = screen.frame, usable = screen.visibleFrame
         let visible = CGRect(x: usable.minX - full.minX, y: full.maxY - usable.maxY, width: usable.width, height: usable.height)
         let spot = CGPoint(x: global.x - full.minX, y: full.maxY - global.y)
-        let placed = session.windows.backend.tearOffWindow(at: spot, size: size, visible: visible)
-        let rect = NSRect(x: full.minX + placed.minX, y: full.maxY - placed.maxY, width: placed.width, height: placed.height)
+        // The chip's card as it was drawn, in the display's space: to the pointer's right and a little above it.
+        let card = tearChip.cardSize
+        let chip = CGRect(x: spot.x + TearOffChip.gap, y: spot.y - TearOffChip.rise, width: card.width, height: card.height)
+        let placed = session.windows.backend.tearOffPlace(at: spot, chip: chip, size: size, visible: visible)
+        let rect = NSRect(x: full.minX + placed.bounds.minX, y: full.maxY - placed.bounds.maxY, width: placed.bounds.width, height: placed.bounds.height)
         let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            growing = TearOffGrow.Start(chip: placed.chip, terminal: session.hub.state.terminals.first { $0.id == terminal })
+        }
         moveToNewWindow([terminal], from: session, at: WindowFrames.windowed(rect, on: number.map { UInt64($0.uint32Value) }))
     }
 

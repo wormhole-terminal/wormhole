@@ -55,8 +55,10 @@ extension AppController {
             self.session(holding: id)?.hub.store.hosting(of: id)
         }
         var elsewhere: [(name: String, count: Int)] = []
-        for (session, _) in running where session.windows.profile != windowsHost.profile {
-            let name = profileName(session.windows.profile)
+        // Out of sight only: a window of another profile that is open in front of the person is counted as any window.
+        let names = profileNames()
+        for (session, _) in running where session.parked {
+            let name = names[session.windows.profile] ?? session.windows.profile
             if let at = elsewhere.firstIndex(where: { $0.name == name }) { elsewhere[at].count += 1 } else { elsewhere.append((name, 1)) }
         }
         return QuitFacts(
@@ -69,12 +71,13 @@ extension AppController {
         if case .unavailable? = session.hub.store.hostProblem(of: id) { true } else { false }
     }
 
-    /// A profile's name as the person gave it, else its id.
-    private func profileName(_ id: String) -> String {
+    /// The profiles' names as the person gave them, by id (read once).
+    private func profileNames() -> [String: String] {
         #if WITH_UNIFFI
-            ((try? (settingsModel.host as? RustSettingsHost)?.profiles()) ?? []).first { $0.id == id }?.name ?? id
+            Dictionary(
+                ((try? (settingsModel.host as? RustSettingsHost)?.profiles()) ?? []).map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         #else
-            id
+            [:]
         #endif
     }
 

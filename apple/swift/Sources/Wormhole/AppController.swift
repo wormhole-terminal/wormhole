@@ -7,6 +7,9 @@ import AuxWindows
 import PanelUI
 import PlatformModel
 import SettingsModel
+#if WITH_UNIFFI
+    import SettingsBridge
+#endif
 import PlatformUI
 import SettingsUI
 import TerminalMetal
@@ -54,6 +57,13 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// The quit question's answer for the session hosts: end them with the app, or leave them running (the default).
     var endsHostsOnQuit = false
     let activityClock = ActivityClock()
+    /// The chip that follows a terminal dragged out of its window, and the growth the next window opens with (`TearOff/`).
+    let tearChip = TearOffChip()
+    var growing: TearOffGrow.Start?
+    #if WITH_UNIFFI
+        /// Feature switches read in a window's own profile (`flagsOn(_:)`).
+        let profileFlags = ProfileFlags()
+    #endif
     /// The fonts and colours every terminal is drawn with: Settings' and the theme's.
     private(set) lazy var terminalLook = TerminalLook(terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] })
     /// The settings the window follows, whether or not the Settings window is open: the core's when real.

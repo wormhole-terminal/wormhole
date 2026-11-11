@@ -63,11 +63,24 @@ public final class RustWindowsBackend: WindowsBackend {
         }
     }
 
-    public func tearOffWindow(at point: CGPoint, size: CGSize, visible: CGRect) -> CGRect {
-        let placed = WormholeBindings.tearOffWindow(
-            x: Float(point.x), y: Float(point.y), width: Float(size.width), height: Float(size.height), visible: visible.tearRect)
-        return CGRect(x: Double(placed.x), y: Double(placed.y), width: Double(placed.w), height: Double(placed.h))
+    public func tearOffPlace(at point: CGPoint, chip: CGRect, size: CGSize, visible: CGRect) -> TearOffPlaced {
+        let placed = WormholeBindings.tearOffPlace(
+            x: Float(point.x), y: Float(point.y), chip: chip.tearRect, width: Float(size.width), height: Float(size.height),
+            visible: visible.tearRect)
+        return TearOffPlaced(bounds: CGRect(placed.bounds), chip: CGRect(placed.chip))
     }
+
+    public var tearOffGrowDuration: TimeInterval { TimeInterval(tearOffGrowMs()) / 1000 }
+
+    public func tearOffGrow(chip: CGRect, size: CGSize, radius: CGFloat, elapsed: TimeInterval) -> TearOffPose {
+        let grown = WormholeBindings.tearOffGrow(
+            chip: chip.tearRect, width: Float(size.width), height: Float(size.height), radius: Float(radius),
+            elapsedMs: UInt32(max(0, elapsed * 1000)))
+        return TearOffPose(
+            shown: CGRect(grown.shown), radius: CGFloat(grown.radius), content: Double(grown.content), face: Double(grown.face), done: grown.done)
+    }
+
+    public func keepChanges(_ keep: Bool) { windows.setKeepsChanges(keeps: keep) }
 
     public func fit(_ frame: WindowFrame, on displays: [DisplayArea]) -> WindowFrame {
         WindowFrame(fitFrame(frame: frame.record, displays: displays.map(\.record)))
@@ -84,5 +97,6 @@ public final class RustWindowsBackend: WindowsBackend {
 }
 
 private extension CGRect {
+    init(_ r: TearRect) { self.init(x: Double(r.x), y: Double(r.y), width: Double(r.w), height: Double(r.h)) }
     var tearRect: TearRect { TearRect(x: Float(minX), y: Float(minY), w: Float(width), h: Float(height)) }
 }

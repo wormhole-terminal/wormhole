@@ -50,9 +50,18 @@ public final class MemoryWindows: WindowsBackend {
     }
 
     /// The pointer on the new terminal's row (the core's anchor), with no display to keep it inside.
-    public func tearOffWindow(at point: CGPoint, size: CGSize, visible: CGRect) -> CGRect {
-        CGRect(origin: CGPoint(x: point.x - 120, y: point.y - 90), size: size)
+    public func tearOffPlace(at point: CGPoint, chip: CGRect, size: CGSize, visible: CGRect) -> TearOffPlaced {
+        let bounds = CGRect(origin: CGPoint(x: point.x - 120, y: point.y - 90), size: size)
+        return TearOffPlaced(bounds: bounds, chip: chip.offsetBy(dx: -bounds.minX, dy: -bounds.minY))
     }
+
+    /// The sample's window just appears.
+    public var tearOffGrowDuration: TimeInterval { 0 }
+    public func tearOffGrow(chip: CGRect, size: CGSize, radius: CGFloat, elapsed: TimeInterval) -> TearOffPose {
+        TearOffPose(shown: CGRect(origin: .zero, size: size), radius: radius, content: 1, face: 0, done: true)
+    }
+
+    public func keepChanges(_ keep: Bool) {}
 
     public func fit(_ frame: WindowFrame, on displays: [DisplayArea]) -> WindowFrame { frame }
 

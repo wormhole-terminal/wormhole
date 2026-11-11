@@ -39,6 +39,7 @@ struct DropMarkView: View {
 struct DragGhost: View {
     let terminal: TerminalSummary?
     let title: String
+    var shadow = true
     @Environment(\.tokens) private var tokens
     @Environment(\.sidebarMetrics) private var metrics
 
@@ -53,7 +54,7 @@ struct DragGhost: View {
         .padding(.vertical, Space._1)
         .background(tokens.surfaceElevated, in: RoundedRectangle(cornerRadius: metrics.cardRadius))
         .overlay { RoundedRectangle(cornerRadius: metrics.cardRadius).strokeBorder(tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) }
-        .shadow(color: tokens.shadow, radius: Space._3, y: Space._1)
+        .shadow(color: shadow ? tokens.shadow : .clear, radius: Space._3, y: Space._1)
         .allowsHitTesting(false)
     }
 }

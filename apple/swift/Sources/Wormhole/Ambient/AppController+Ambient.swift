@@ -45,22 +45,23 @@ extension AppController {
     func runAction(root: String, id: String) {
         guard let terminal = terminal(in: root, shownProfileOnly: true), let holder = session(holding: terminal) else { return }
         show(terminal: terminal)
-        let project = holder.hub.panel.project
-        // The Project tab reads the folder of the terminal that was just brought forward: the action is in its state a moment later.
-        Task { @MainActor in
-            for _ in 0..<40 where project.state?.root != root { try? await Task.sleep(for: .milliseconds(50)) }
-            if let action = project.state?.actions.first(where: { $0.id == id }) { project.run(action) }
-        }
+        // Straight to the project's own backend, at the folder asked for: whatever the Project tab shows now is not
+        // consulted, and Rust refuses an untrusted project.
+        let backend = holder.panelBackends.project, folder = Self.resolved(root)
+        Task { await backend.run(action: id, at: folder) }
+    }
+
+    private static func resolved(_ path: String) -> String {
+        URL(fileURLWithPath: (path as NSString).expandingTildeInPath).resolvingSymlinksInPath().path
     }
 
     /// The terminal whose folder is `root` (the core words it `~`-shortened, and /tmp is /private/tmp), in any window or only the
     /// profile shown.
     private func terminal(in root: String, shownProfileOnly: Bool) -> TerminalID? {
-        func resolved(_ path: String) -> String { URL(fileURLWithPath: (path as NSString).expandingTildeInPath).resolvingSymlinksInPath().path }
-        let wanted = resolved(root)
+        let wanted = Self.resolved(root)
         for session in shownProfileOnly ? shown : sessions {
             for section in session.hub.state.sections {
-                if let row = section.rows.first(where: { $0.terminal.folder.map(resolved) == wanted }) { return row.id }
+                if let row = section.rows.first(where: { $0.terminal.folder.map(Self.resolved) == wanted }) { return row.id }
             }
         }
         return nil

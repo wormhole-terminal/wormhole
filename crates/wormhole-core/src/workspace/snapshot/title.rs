@@ -117,7 +117,8 @@ impl WorkspaceModel {
             revision,
             terminal: Some(TitleTerminal {
                 id: session.id,
-                name: session.name(),
+                // What runs in it, not the person's name for it (the GPUI row's last chip is `Pane::label`).
+                name: session.label(),
                 agent: facts.agent.map(super::sidebar::agent_info),
                 glyph: glyph_of(facts),
                 state: facts.row_state(),

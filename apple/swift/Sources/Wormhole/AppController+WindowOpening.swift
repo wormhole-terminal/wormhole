@@ -60,6 +60,13 @@ extension AppController {
         wire(controller, of: session)
         session.controller = controller
         if let frame, let window = controller.window { WindowFrames.place(frame, on: window) }
+        // A torn-off terminal's window grows from its chip: it starts as the chip, before it is shown.
+        if let start = growing, let window = controller.window {
+            growing = nil
+            session.grow = TearOffGrow(window: window, start: start, appearance: look.sidebar, backend: session.windows.backend) { [weak session] in
+                session?.grow = nil
+            }
+        }
         // The workspace's first word on the window: it is not in front yet (a test instance never is).
         controller.reportState()
         if activate { lastFront = session }
@@ -70,6 +77,7 @@ extension AppController {
             controller.showWindow(nil)
             NSApp.activate()
         }
+        session.grow?.run()
         if let frame, let window = controller.window {
             if frame.minimised { window.miniaturize(nil) }
             WindowFrames.settle(frame, on: window)

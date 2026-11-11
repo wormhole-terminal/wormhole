@@ -26,7 +26,13 @@ public final class TerminalDragPointer {
     /// true when the window took it, by opening a window of its own for it or giving it to another one.
     public var tearOff: (@MainActor (TerminalID, CGPoint) -> Bool)?
 
+    /// Told where the pointer is in the window's coordinates while a terminal row is dragged, wherever it goes (it may lie
+    /// outside the window), and with nil when the drag is over: the window follows it out with a chip of its own.
+    public var tracking: (@MainActor (TerminalID, CGPoint?) -> Void)?
+
     public init() {}
+
+    public func track(_ terminal: TerminalID, at point: CGPoint?) { tracking?(terminal, point) }
 
     public func move(_ terminal: TerminalID, to point: CGPoint) { over = Over(terminal: terminal, point: point) }
 

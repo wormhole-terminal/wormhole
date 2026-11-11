@@ -63,7 +63,13 @@ impl Workspace {
     pub fn restore(&self) -> Vec<WorkspaceEvent> {
         let Some((windows, window)) = self.shared().windows.get() else { return Vec::new() };
         let Some(record) = windows.record_of(*window) else { return Vec::new() };
-        let events = self.shared().with_model(|model| model.restore(&record));
+        let mut events = self.shared().with_model(|model| model.restore(&record));
+        // The files each terminal had changed come back with it, so its row counts them again.
+        let ids: Vec<i64> = record.sessions.iter().map(|session| session.id).collect();
+        let claims = windows.claims_of(*window, &ids);
+        if !claims.is_empty() {
+            events.extend(self.shared().with_model(|model| model.git_restore_claims(claims)));
+        }
         self.shared().pump.kick();
         self.shared().close_what_closed(events)
     }

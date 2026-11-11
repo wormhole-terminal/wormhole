@@ -61,6 +61,8 @@ pub struct Windows {
     remembered: Mutex<Option<RememberedPanes>>,
     /// Told of every window made from now on (the control socket's event publishers).
     on_register: Arc<Mutex<Option<OnRegister>>>,
+    /// The files the terminals changed, kept with the windows (`claims`).
+    pub(super) claims: super::claims::Claims,
 }
 
 type Live = Vec<(i64, Weak<Shared>)>;
@@ -85,7 +87,12 @@ impl Windows {
             live: Arc::default(),
             remembered: Mutex::default(),
             on_register: Arc::default(),
+            claims: super::claims::Claims::default(),
         }
+    }
+
+    pub(super) fn store_locked(&self) -> MutexGuard<'_, Store> {
+        locked(&self.store)
     }
 
     /// The default profile of the data folder `dir`.
@@ -269,6 +276,17 @@ impl Windows {
         }
     }
 
+    /// Whether a saved window of this database has the id of `record` or of one of its terminals.
+    fn holds_ids_of(&self, record: &WindowRecord) -> bool {
+        let saved = locked(&self.store).load().unwrap_or_else(|err| {
+            tracing::warn!("reading the saved windows: {err:#}");
+            Vec::new()
+        });
+        saved.iter().any(|w| {
+            w.id == record.id || w.sessions.iter().any(|s| record.sessions.iter().any(|mine| mine.id == s.id))
+        })
+    }
+
     /// Remember the columns of this window as the ones new windows start with, when they changed.
     fn remember(&self, store: &Store, layout: Option<&str>) {
         let Some(layout) = layout.and_then(|json| serde_json::from_str::<SavedLayout>(json).ok()) else {
@@ -338,8 +356,10 @@ impl Windows {
     /// with where the window is. Cheap when nothing changed: the rows already equal are not rewritten. False
     /// when the write failed.
     pub fn save(&self, window: i64, workspace: Arc<Workspace>, frame: Option<FrameRecord>) -> bool {
-        let store = locked(&self.store);
+        let mut store = locked(&self.store);
         let record = self.record_of_window(&store, window, &workspace, frame);
+        let ids: Vec<i64> = record.sessions.iter().map(|session| session.id).collect();
+        self.keep_claims(&mut store, window, &workspace, &ids);
         self.write(store, window, record)
     }
 
@@ -361,6 +381,14 @@ impl Windows {
             let store = locked(&self.store);
             self.record_of_window(&store, window, &workspace, frame)
         };
+        // The two databases number their windows and terminals apart: a record written under an id the other one already
+        // uses would replace that window and delete its terminals, notes and scrollback (`save_window`).
+        if to.holds_ids_of(&record) {
+            tracing::warn!(
+                "window {window} stays in its profile: the other one already has a window or terminal with its ids"
+            );
+            return false;
+        }
         if !to.write(locked(&to.store), window, record) {
             return false;
         }

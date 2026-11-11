@@ -50,6 +50,8 @@ extension SidebarView {
     }
 
     func dragMoved(_ item: DragItem, _ point: CGPoint, _ sections: [SidebarSection]) {
+        guard !escape.ended else { return }
+        escape.arm { cancelDrag() }
         outside = leftList(item, point)
         drag = LiveDrag(item: item, point: point, aim: outside ? nil : aim(item, at: point, sections))
         if case .terminal(let id) = item { if outside { terminalDrag?.move(id, to: windowPoint) } else { terminalDrag?.leave() } }
@@ -58,13 +60,27 @@ extension SidebarView {
     /// The pointer in the window's coordinates, as its second gesture reports it.
     func dragWindow(_ item: DragItem, _ point: CGPoint) {
         windowPoint = point
+        if case .terminal(let id) = item { terminalDrag?.track(id, at: point) }
         if outside, case .terminal(let id) = item { terminalDrag?.move(id, to: point) }
     }
 
+    /// Esc: the lifted row goes back, nothing is dropped, and the chip outside the window goes.
+    func cancelDrag() {
+        if case .terminal(let id)? = drag?.item { terminalDrag?.track(id, at: nil) }
+        drag = nil
+        outside = false
+        terminalDrag?.leave()
+        escape.disarm()
+    }
+
     func dragEnded(_ item: DragItem, _ point: CGPoint, _ sections: [SidebarSection]) {
+        defer { escape.finish() }
         // Esc ended it already.
         guard drag != nil else { return }
-        defer { outside = false }
+        defer {
+            outside = false
+            if case .terminal(let id) = item { terminalDrag?.track(id, at: nil) }
+        }
         // Let go outside the window, the window decides (a window of its own, another window's list, or nothing).
         if case .terminal(let id) = item, terminalDrag?.tearOff?(id, windowPoint) == true {
             drag = nil
@@ -75,7 +91,10 @@ extension SidebarView {
             drag = nil
             return
         }
-        if let action = aim(item, at: point, sections)?.action { withAnimation(SidebarMotion.list) { send(action) } }
+        if let aimed = aim(item, at: point, sections) {
+            let joins = if case .row = aimed.mark { true } else { false }
+            withAnimation(joins ? SidebarMotion.joinSettle : SidebarMotion.list) { send(aimed.action) }
+        }
         drag = nil
     }
 

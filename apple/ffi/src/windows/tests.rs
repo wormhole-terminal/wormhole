@@ -303,3 +303,120 @@ fn a_window_moved_to_another_profile_is_saved_there_and_gone_from_here() {
     assert!(in_work.rehome(1, ws, None, in_work.clone()));
     assert_eq!(in_work.saved().len(), 1);
 }
+
+/// The databases number their windows apart, so a window moved into a profile that has a saved window of the same id
+/// (or a terminal of the same id) stays where it is: nothing of the other profile is replaced or deleted.
+#[test]
+fn a_window_is_not_moved_over_a_saved_window_or_terminal_of_the_same_id() {
+    use wormhole_core::config::profile::{NewProfile, ProfileList, StartFrom};
+    use wormhole_core::storage::paths::DataRoot;
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = DataRoot::new(dir.path());
+    let mut list = ProfileList::default();
+    let work = list
+        .create(
+            &root,
+            NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults },
+        )
+        .expect("makes Work");
+    list.save(&root).expect("saves the list");
+    // Work already has window 1 with terminals 1 and 2, saved by an earlier run.
+    {
+        let earlier = Windows::in_dir(root.profile(&work).dir()).expect("opens Work alone");
+        let ws = window(&earlier, 1);
+        ws.apply(Action::NewTerminal);
+        ws.apply(Action::NewTerminal);
+        assert!(earlier.save(1, ws, Some(frame(10.0))));
+    }
+    let in_default = open(dir.path());
+    let in_work = in_default.beside_in(&root, work.as_str()).expect("opens Work beside Default");
+    let ws = window(&in_default, 1);
+    ws.apply(Action::NewTerminal);
+    assert!(in_default.save(1, ws.clone(), Some(frame(40.0))));
+
+    assert!(!in_default.rehome(1, ws, None, in_work.clone()), "refused: window 1 is Work's");
+    let saved = in_work.saved();
+    assert_eq!((saved.len(), saved[0].id, saved[0].terminals), (1, 1, 2), "Work's window is as it was");
+    assert_eq!(saved[0].frame.map(|f| f.x), Some(10.0));
+    assert_eq!(in_default.saved().len(), 1, "and the moving window did not leave");
+}
+
+/// A window of another profile keeps its notes in that profile's database (and not in the shown one's), so what is
+/// typed there is still there after a relaunch into it.
+#[test]
+fn the_notes_of_a_window_in_another_profile_are_kept_in_that_profiles_database() {
+    use wormhole_core::config::profile::{NewProfile, ProfileList, StartFrom};
+    use wormhole_core::storage::paths::DataRoot;
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let root = DataRoot::new(dir.path());
+    let mut list = ProfileList::default();
+    let work = list
+        .create(
+            &root,
+            NewProfile { name: "Work".into(), color: None, avatar: None, from: StartFrom::Defaults },
+        )
+        .expect("makes Work");
+    list.save(&root).expect("saves the list");
+    let id = {
+        let in_default = open(dir.path());
+        let in_work = in_default.beside_in(&root, work.as_str()).expect("opens Work beside Default");
+        let number = in_work.alloc_window_id();
+        let ws = window(&in_work, number);
+        let id = opened(&ws.apply(Action::NewTerminal))[0];
+        assert!(in_work.save(number, ws, None));
+        let notes = crate::SessionNotesStore::in_profile(&root, work.as_str()).expect("Work's notes");
+        let typed = crate::NotesSaved {
+            tasks: vec![crate::TaskSaved { text: "ship".into(), done: false }],
+            ..Default::default()
+        };
+        assert!(notes.save(id, typed));
+        id
+    };
+    let again = crate::SessionNotesStore::in_profile(&root, work.as_str()).expect("Work's notes");
+    assert_eq!(again.load(id).tasks.len(), 1, "kept where the window's profile is");
+    let shown = crate::SessionNotesStore::in_dir(dir.path()).expect("Default's notes");
+    assert!(shown.load(id).tasks.is_empty(), "and not in the profile Wormhole is in");
+    assert!(crate::SessionNotesStore::in_profile(&root, "not a profile!").is_err());
+}
+
+/// The files a terminal changed come back with it after a restart (`sidebar_changes_remember`): the row counts them
+/// again, saving the window does not lose them, and with the setting off they are deleted and not read.
+#[test]
+fn the_files_a_terminal_changed_are_kept_with_its_window() {
+    use wormhole_core::storage::store::{ClaimRecord, Store};
+
+    let dir = tempfile::tempdir().expect("temp dir");
+    let claim = |path: &str| ClaimRecord { session_id: 1, root: "/repo".into(), path: path.into() };
+    {
+        let windows = open(dir.path());
+        let ws = window(&windows, windows.alloc_window_id());
+        ws.apply(Action::NewTerminal);
+        assert!(windows.save(1, ws, None));
+    }
+    // What the last run kept (the attribution that fills it is core's, with its own test).
+    Store::open_at(dir.path())
+        .expect("store")
+        .save_claims(&[1], &[claim("a.rs"), claim("b.rs")])
+        .expect("kept");
+
+    let windows = open(dir.path());
+    let ws = window(&windows, 1);
+    ws.restore();
+    let changes = |ws: &Workspace| ws.sidebar().sections[0].rows[0].changes;
+    assert_eq!(changes(&ws), Some(2), "the row counts them again");
+    assert!(windows.save(1, ws.clone(), None));
+    let kept = |dir: &Path| Store::open_at(dir).expect("store").claims(&[1]).expect("rows").len();
+    assert_eq!(kept(dir.path()), 2, "a save that changes nothing keeps what was kept");
+
+    windows.set_keeps_changes(false);
+    assert!(windows.save(1, ws, None));
+    assert_eq!(kept(dir.path()), 0, "with the setting off they are deleted");
+    let off = open(dir.path());
+    off.set_keeps_changes(false);
+    Store::open_at(dir.path()).expect("store").save_claims(&[1], &[claim("c.rs")]).expect("kept");
+    let ws = window(&off, 1);
+    ws.restore();
+    assert_eq!(changes(&ws), None, "and not read back");
+}

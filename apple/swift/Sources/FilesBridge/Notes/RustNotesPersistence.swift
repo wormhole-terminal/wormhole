@@ -4,16 +4,24 @@
 // while the Notes tab is up.
 
 import Foundation
+import os
 import PanelModel
 import WormholeBindings
 
 public final class RustNotesPersistence: @unchecked Sendable {
-    private let notes: SessionNotesStore
+    private let store: OSAllocatedUnfairLock<SessionNotesStore>
     private let project: ProjectService
+    private var notes: SessionNotesStore { store.withLock { $0 } }
 
     init(notes: SessionNotesStore, project: ProjectService) {
-        self.notes = notes
+        store = OSAllocatedUnfairLock(initialState: notes)
         self.project = project
+    }
+
+    /// The window now belongs to profile `id` (it was moved there): its notes are that profile's from here on.
+    public func follow(profile id: String) {
+        guard let next = try? SessionNotesStore.forProfile(profile: id) else { return }
+        store.withLock { $0 = next }
     }
 
     /// What was saved for terminal `session`; empty for one never saved.

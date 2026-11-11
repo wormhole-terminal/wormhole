@@ -9,6 +9,8 @@ protocol NotesPersisting: AnyObject, Sendable {
     func sync(session: Int, root: String, model: NotesModel, editing: Bool) async -> NotesModel?
     func closed(session: Int)
     func idsStart(at firstFree: Int)
+    /// The window moved to profile `id`: its notes are kept there from now on.
+    func follow(profile id: String)
 }
 
 #if WITH_UNIFFI

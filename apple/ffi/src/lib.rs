@@ -141,9 +141,9 @@ pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use themes::{list_user_themes, resolve_theme};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
 pub use windows::{
-    Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, TearLanding,
-    TearRect, TearWindow, WindowMinSize, Windows, cascade_frame, fit_frame, tear_off_landing,
-    tear_off_window, window_min_size,
+    Departure, DisplayRecord, FrameKind, FrameRecord, PlannedWindow, SavedWindow, TakenOut, TearGrow,
+    TearLanding, TearPlaced, TearRect, TearWindow, WindowMinSize, Windows, cascade_frame, fit_frame,
+    tear_off_grow, tear_off_grow_ms, tear_off_landing, tear_off_place, window_min_size,
 };
 pub use workspace::{TerminalFactsRecord, Workspace, WorkspaceConfig, WorkspaceEvent, WorkspaceListener};
 pub use workspace_waited::Waited;
