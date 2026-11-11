@@ -31,7 +31,7 @@ struct FilesPathButton: View {
             .walkRow(FilesStore.headID)
             .onHover { hovering = $0 }
             .help(root)
-            .accessibilityLabel(panelText("files-spoken-path-button", "\(menu.shownName), folder, opens the path menu"))
+            .accessibilityLabel(panelText("files-spoken-path-button", ["name": .text(menu.shownName)], "\(menu.shownName), folder, opens the path menu"))
         }
     }
 
@@ -50,7 +50,7 @@ struct FilesPathButton: View {
             }
         }
         Divider()
-        Button(menu.isPinned ? panelText("files-menu-unpin", "Unpin \u{201c}\(menu.shownName)\u{201d}") : panelText("files-menu-pin", "Pin \u{201c}\(menu.shownName)\u{201d}")) {
+        Button(menu.isPinned ? panelText("files-menu-unpin", ["name": .text(menu.shownName)], "Unpin \u{201c}\(menu.shownName)\u{201d}") : panelText("files-menu-pin", ["name": .text(menu.shownName)], "Pin \u{201c}\(menu.shownName)\u{201d}")) {
             store.setPinned("", !menu.isPinned)
         }
         Button(panelText("files-menu-choose-folder", "Choose Folder\u{2026}"), action: store.chooseFolder)

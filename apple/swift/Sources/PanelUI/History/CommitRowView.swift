@@ -29,7 +29,7 @@ struct CommitRowView: View {
                 HStack(spacing: PanelMetrics.gap) {
                     Text(commit.short).font(.system(size: TextRole.caption.size, design: .monospaced))
                         .foregroundStyle(expanded ? tokens.sidebarRowSelectedText : tokens.primary)
-                    if commit.merge { Text("merge") }
+                    if commit.merge { Text(panelText("history-merge", "merge")) }
                     Text(commit.author).lineLimit(1)
                     Spacer(minLength: 0)
                     Text(Age.text(seconds: now - commit.time)).monospacedDigit()
@@ -43,7 +43,7 @@ struct CommitRowView: View {
         }
         .help(commit.subject)
         .accessibilityLabel("\(commit.subject), \(commit.short), \(commit.author)")
-        .accessibilityValue(expanded ? "open" : "folded")
+        .accessibilityValue(expanded ? panelText("panel-spoken-open", "open") : panelText("panel-spoken-folded", "folded"))
     }
 
     private var muted: Color { expanded ? tokens.sidebarRowSelectedMuted : tokens.textMuted }

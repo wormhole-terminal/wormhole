@@ -9,16 +9,16 @@ extension PanesText {
     static var copyPath: String { Words.text("title-row-path-copy", fallback: "Copy path") }
     static var copied: String { Words.text("title-row-path-copied", fallback: "Copied") }
     static var insertIntoTerminal: String { Words.text("title-row-path-insert", fallback: "Insert into terminal") }
-    static func openFolder(_ shown: String) -> String { Words.text("title-row-path-spoken-open", fallback: "Open folder \(shown) in Finder") }
+    static func openFolder(_ shown: String) -> String { Words.text("title-row-path-spoken-open", ["shown": .text(shown)], fallback: "Open folder \(shown) in Finder") }
     static var detached: String { Words.text("title-row-detached", fallback: "detached") }
-    static func branch(_ name: String) -> String { Words.text("title-row-branch-spoken", fallback: "branch \(name)") }
-    static func submodule(_ phrase: String) -> String { Words.text("title-row-submodule", fallback: "A submodule: \(phrase)") }
+    static func branch(_ name: String) -> String { Words.text("title-row-branch-spoken", ["name": .text(name)], fallback: "branch \(name)") }
+    static func submodule(_ phrase: String) -> String { Words.text("title-row-submodule", ["phrase": .text(phrase)], fallback: "A submodule: \(phrase)") }
     static var hiddenFromAgents: String { Words.text("title-row-hidden-from-agents", fallback: "Hidden from agents") }
     static var openFolderIn: String { Words.text("title-row-open-in-header", fallback: "Open folder in") }
     static var openInAnother: String { Words.text("title-row-open-in-another", fallback: "Open in another app") }
-    static func openFolderInApp(_ app: String) -> String { Words.text("title-row-open-in-app", fallback: "Open folder in \(app)") }
+    static func openFolderInApp(_ app: String) -> String { Words.text("title-row-open-in-app", ["app": .text(app)], fallback: "Open folder in \(app)") }
     static func appMissing(_ missing: String, _ app: String) -> String {
-        Words.text("title-row-open-in-missing", fallback: "\(missing) isn't installed. Open folder in \(app)")
+        Words.text("title-row-open-in-missing", ["missing": .text(missing), "app": .text(app)], fallback: "\(missing) isn't installed. Open folder in \(app)")
     }
     static var splitRightKey: String { Words.text("title-row-split-right", fallback: "Split right (⌘D)") }
     static var splitDownKey: String { Words.text("title-row-split-down", fallback: "Split down (⇧⌘D)") }

@@ -32,7 +32,7 @@ public struct PathMenuModel: Equatable, Sendable {
             let twin = pins.contains { $0 != pin && name($0) == name(pin) }
             let parent = pin.lastIndex(of: "/").map { String(pin[..<$0]) }.flatMap { $0.isEmpty ? nil : $0 }
             let shownParent = parent.map { folder in home.map { folder.replacingHome(with: $0) } ?? folder }
-            return Folder(path: pin, name: twin ? "\(name(pin)) \u{2014} \(shownParent ?? "")" : name(pin))
+            return Folder(path: pin, name: twin ? "\(name(pin)) \u{2014} \(shownParent ?? "")" : name(pin)) // text: a name and its parent folder, joined by a dash
         }
         isPinned = pins.contains(shown)
         canFollow = chosen

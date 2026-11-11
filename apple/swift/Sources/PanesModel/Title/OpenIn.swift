@@ -13,7 +13,7 @@ public struct OpenInApp: Sendable, Equatable, Hashable {
 
     public init(bundle: String, name: String, monogram: String) { (self.bundle, self.name, self.monogram) = (bundle, name, monogram) }
 
-    public static let finder = OpenInApp(bundle: "com.apple.finder", name: "Finder", monogram: "Fi")
+    public static let finder = OpenInApp(bundle: "com.apple.finder", name: "Finder", monogram: "Fi") // text: Apple's app name and the two letters standing for it
 }
 
 /// What a click on Open in… opens, and the name of the chosen app when it is not installed.

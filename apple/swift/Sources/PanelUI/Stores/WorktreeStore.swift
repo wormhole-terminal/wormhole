@@ -50,9 +50,9 @@ public final class WorktreeStore {
     /// The sheet's footnote under the branch field: the folder it would make, or why it can't.
     public var footnote: String? {
         switch plan {
-        case let .ready(_, folder): "Folder: \(shown(folder))"
+        case let .ready(_, folder): panelText("worktree-folder", ["folder": .text(shown(folder))], "Folder: \(shown(folder))")
         case let .refused(why): why
-        case nil: "Folder: <branch>"
+        case nil: panelText("worktree-folder-pending", "Folder: <branch>")
         }
     }
 
@@ -60,7 +60,7 @@ public final class WorktreeStore {
     public var canCreate: Bool { !branch.isEmpty && !busy }
 
     /// The repository's name, which the sheet's description names.
-    public var repositoryName: String { repository.map { ($0 as NSString).lastPathComponent } ?? "the repository" }
+    public var repositoryName: String { repository.map { ($0 as NSString).lastPathComponent } ?? panelText("worktree-this-repository", "the repository") }
 
     /// A path with the home folder as `~`.
     private func shown(_ path: String) -> String {

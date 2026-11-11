@@ -31,7 +31,7 @@ extension FilesStore {
                 renaming = nil
                 renameError = nil
                 rows = tree.rows
-                host?.notify("Renamed to \(new)")
+                host?.notify(panelText("files-spoken-renamed", ["name": .text(new)], "Renamed to \(new)"))
                 reload()
             case let .failure(failure):
                 renameError = Self.words(failure)

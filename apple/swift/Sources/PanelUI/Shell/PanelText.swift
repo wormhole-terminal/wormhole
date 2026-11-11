@@ -8,3 +8,8 @@ import WordsModel
 func panelText(_ key: StaticString, _ english: String.LocalizationValue) -> String {
     Words.text(key, fallback: String(localized: key, defaultValue: english))
 }
+
+/// The same for a message with variables, named as its Fluent text names them.
+func panelText(_ key: StaticString, _ args: [String: WordValue], _ english: String.LocalizationValue) -> String {
+    Words.text(key, args, fallback: String(localized: key, defaultValue: english))
+}

@@ -9,7 +9,7 @@ public struct NotesView: View {
     public init(store: NotesStore) { self.store = store }
 
     public var body: some View {
-        SelectableListSplit(hasDetail: false, label: "Notes", walker: store) {
+        SelectableListSplit(hasDetail: false, label: panelText("notes-list-label", "Notes"), walker: store) {
             PanelScroll {
                 StepsCard(store: store)
                 NotesCard(store: store)

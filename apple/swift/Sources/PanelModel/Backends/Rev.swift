@@ -1,5 +1,7 @@
 // What a branch picker lists: a branch, a tag, a commit to compare with, or the stashes (History only).
 
+import WordsModel
+
 public struct Rev: Hashable, Identifiable, Sendable {
     public enum Kind: String, Sendable { case branch, tag, commit, stashes }
 
@@ -23,7 +25,7 @@ public struct Rev: Hashable, Identifiable, Sendable {
     public var title: String {
         switch kind {
         case .commit: String(name.prefix(7))
-        case .stashes: "Stashes"
+        case .stashes: Words.text("history-stashes", fallback: "Stashes")
         default: name
         }
     }

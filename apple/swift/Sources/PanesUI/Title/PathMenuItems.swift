@@ -38,6 +38,6 @@ struct PathMenuItems: View {
 
     /// The name of the volume the system starts from ("Macintosh HD").
     private var bootVolumeName: String {
-        (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD"
+        (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD" // text: macOS's default name of the startup volume
     }
 }

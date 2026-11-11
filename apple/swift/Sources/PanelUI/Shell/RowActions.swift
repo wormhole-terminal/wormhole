@@ -10,8 +10,8 @@ struct RowActions: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            BandButton(symbol: "arrow.up.right", label: "Send to terminal", inRow: true, action: send)
-            BandButton(symbol: "xmark", label: "Delete", inRow: true, action: delete)
+            BandButton(symbol: "arrow.up.right", label: panelText("notes-send", "Send to terminal"), inRow: true, action: send)
+            BandButton(symbol: "xmark", label: panelText("notes-delete", "Delete"), inRow: true, action: delete)
         }
         .padding(.leading, PanelMetrics.gap)
     }

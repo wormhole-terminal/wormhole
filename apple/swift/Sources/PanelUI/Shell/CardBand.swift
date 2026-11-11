@@ -46,7 +46,7 @@ struct CardBand<Trailing: View>: View {
         .buttonStyle(.plain)
         .allowsHitTesting(folded != nil)
         .accessibilityLabel(spoken ?? title)
-        .accessibilityValue(folded.map { $0 ? "folded" : "open" } ?? "")
+        .accessibilityValue(folded.map { $0 ? panelText("panel-spoken-folded", "folded") : panelText("panel-spoken-open", "open") } ?? "")
     }
 }
 

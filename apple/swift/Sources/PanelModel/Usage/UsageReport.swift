@@ -1,6 +1,8 @@
 // What an agent last reported of its plan's limits (`wormhole_core::agents::usage`): how much of each limit window
 // is used and when it starts over. Times are Unix seconds and the caller passes `now`, so nothing here reads a clock.
 
+import WordsModel
+
 public struct PlanLimit: Hashable, Sendable {
     public var label: String
     /// 0 to 100.
@@ -19,10 +21,15 @@ public struct PlanLimit: Hashable, Sendable {
     /// The share used (0...1) and its words, "25% · resets 34m". A window that has reset since, which the numbers
     /// can't say anything of, reads "Awaiting update".
     public func shown(now: Int) -> (share: Double, words: String) {
-        if let resetsAt, resetsAt <= now { return (0, "Awaiting update") }
+        if let resetsAt, resetsAt <= now { return (0, Words.text("usage-awaiting", fallback: "Awaiting update")) }
         let clamped = min(max(used, 0), 100)
         var words = "\(Int(clamped.rounded()))%"
-        if let resetsAt { words += " \u{b7} resets \(UsageText.duration(resetsAt - now))" }
+        if let resetsAt {
+            let left = UsageText.duration(resetsAt - now)
+            words = Words.text(
+                "usage-limit-resets", ["percent": .whole(Int(clamped.rounded())), "left": .text(left)],
+                fallback: "\(Int(clamped.rounded()))% \u{b7} resets \(left)")
+        }
         return (clamped / 100, words)
     }
 
@@ -82,6 +89,8 @@ public enum UsageText {
 
     /// When the numbers came: "Updated just now", "Updated 3m ago".
     public static func updated(_ updated: Int, now: Int) -> String {
-        now - updated < 60 ? "Updated just now" : "Updated \(duration(now - updated)) ago"
+        now - updated < 60
+            ? Words.text("usage-updated-now", fallback: "Updated just now")
+            : Words.text("usage-updated-ago", ["age": .text(duration(now - updated))], fallback: "Updated \(duration(now - updated)) ago")
     }
 }

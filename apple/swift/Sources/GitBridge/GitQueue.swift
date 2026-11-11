@@ -3,6 +3,7 @@
 
 import Dispatch
 import PanelModel
+import WordsModel
 import WormholeBindings
 
 enum GitQueue {
@@ -24,7 +25,7 @@ enum GitQueue {
 
     static func failure(_ error: Error) -> GitFailure {
         switch error as? GitBackendError {
-        case .NotARepository?: GitFailure("Not a git repository")
+        case .NotARepository?: GitFailure(Words.text("git-not-a-repository", fallback: "Not a git repository"))
         case let .Failed(message)?: GitFailure(message)
         case let .NotIsolated(reason)?: GitFailure(reason)
         case nil: GitFailure("\(error)")

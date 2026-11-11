@@ -20,7 +20,7 @@ struct TaskDraftRow: View {
     var body: some View {
         HStack(spacing: PanelMetrics.gap) {
             TaskCheckbox(checked: false)
-            TextField(panelText("notes-step-placeholder", "Next step"), text: $text)
+            TextField(panelText("steps-placeholder", "Next step"), text: $text)
                 .textFieldStyle(.plain).font(TextRole.body.font).focused($focused)
                 .onSubmit {
                     if text.trimmingCharacters(in: .whitespaces).isEmpty {

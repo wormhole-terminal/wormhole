@@ -13,7 +13,7 @@ struct CommitRefs: View {
         HStack(spacing: Space._1) {
             ForEach(Array(refs.enumerated()), id: \.offset) { _, ref in
                 switch ref.kind {
-                case .head: StatusBadge(text: "HEAD", color: tokens.primary)
+                case .head: StatusBadge(text: "HEAD", color: tokens.primary) // text: HEAD is git's name for the current commit
                 case .tag: StatusBadge(text: ref.name, color: tokens.gitTag)
                 case .branch:
                     HStack(spacing: Space._1) {

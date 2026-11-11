@@ -2,6 +2,8 @@
 // folder tree whose chains of single folders read as "a/b/c". A section over `foldAbove` files starts folded
 // and says why under its head (`view::panel::section_folded`, `folded_note`).
 
+import WordsModel
+
 public struct ChangeRows: Sendable {
     public static let foldAbove = 200
 
@@ -51,14 +53,21 @@ public struct ChangeRows: Sendable {
     }
 
     static func foldedNote(_ paths: [String], untracked: Bool) -> String {
-        let why = "Folded because there are more than \(CountText.grouped(foldAbove))."
+        let why = Words.text("changes-folded", ["count": .text(CountText.grouped(foldAbove))], fallback: "Folded because there are more than \(CountText.grouped(foldAbove)).")
         var byFolder: [Substring: Int] = [:]
         for path in paths { if let top = path.split(separator: "/", maxSplits: 1).first, top.count != path.count { byFolder[top, default: 0] += 1 } }
         // The biggest folder, the first by name on a tie, so the note does not change between refreshes.
         guard let crowded = byFolder.max(by: { ($0.value, $1.key) < ($1.value, $0.key) }), crowded.value * 2 > paths.count
         else { return why }
-        let ignored = untracked ? ", which isn't ignored" : ""
-        return "\(CountText.grouped(crowded.value)) of them are in \(crowded.key)/\(ignored). \(why)"
+        let count = CountText.grouped(crowded.value)
+        guard untracked else {
+            return Words.text(
+                "changes-folded-crowded", ["count": .text(count), "folder": .text(String(crowded.key)), "why": .text(why)],
+                fallback: "\(count) of them are in \(crowded.key)/. \(why)")
+        }
+        return Words.text(
+            "changes-folded-crowded-untracked", ["count": .text(count), "folder": .text(String(crowded.key)), "why": .text(why)],
+            fallback: "\(count) of them are in \(crowded.key)/, which isn't ignored. \(why)")
     }
 
     private func appendTree(_ node: Node, prefix: String, depth: Int, group: ChangeGroup, into rows: inout [ChangeRow]) {

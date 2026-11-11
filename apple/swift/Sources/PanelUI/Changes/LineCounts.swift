@@ -28,8 +28,8 @@ struct FileLinesLabel: View {
     var body: some View {
         switch lines {
         case let .counts(added, removed): LineCounts(added: added, removed: removed)
-        case .binary: word("bin")
-        case .lfs: word("LFS")
+        case .binary: word(panelText("changes-badge-binary", "bin"))
+        case .lfs: word("LFS") // text: Git LFS, a product name
         case let .submodule(words): word(words)
         }
     }

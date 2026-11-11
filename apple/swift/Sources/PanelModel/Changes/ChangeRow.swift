@@ -1,11 +1,16 @@
 // One line of the Changes list, as `features/git/changes/rows.rs` builds it: a card head per section, folder
 // rows in tree mode, files, and the spacer that lets the last row scroll clear of the panel's edge.
 
+import WordsModel
+
 public enum ChangeGroup: String, Sendable {
     case all, changes, untracked
 
     /// Without grouping every file is a change.
-    public var title: String { self == .untracked ? "Untracked" : "Changes" }
+    public var title: String {
+        self == .untracked
+            ? Words.text("changes-group-untracked", fallback: "Untracked") : Words.text("changes-group-changes", fallback: "Changes")
+    }
 }
 
 public enum ChangeRow: Identifiable, Equatable, Sendable {

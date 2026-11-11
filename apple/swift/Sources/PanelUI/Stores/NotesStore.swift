@@ -70,7 +70,7 @@ public final class NotesStore {
     public func stashPrompt() -> Bool {
         guard let text = host?.takePrompt(), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
         add(note: text)
-        host?.notify("Prompt stashed in a new note")
+        host?.notify(panelText("notes-prompt-stashed", "Prompt stashed in a new note"))
         return true
     }
 

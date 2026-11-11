@@ -34,7 +34,7 @@ struct NoteRowView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(note.title)
-                .accessibilityValue(note.collapsed ? "folded" : "open")
+                .accessibilityValue(note.collapsed ? panelText("panel-spoken-folded", "folded") : panelText("panel-spoken-open", "open"))
                 Text(note.title).font(TextRole.body.font)
                     .foregroundStyle(editing ? tokens.textMuted : tokens.textPrimary)
                     .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
@@ -90,7 +90,7 @@ struct NoteRowView: View {
                     .mask(fade(cut))
                     .onTapGesture { open() }
                 if cut {
-                    Button("Show all · \(CountText.grouped(lines.count)) lines") { showAll = true }
+                    Button(panelText("notes-show-all", ["count": .text(CountText.grouped(lines.count))], "Show all · \(CountText.grouped(lines.count)) lines")) { showAll = true }
                         .buttonStyle(.plain).font(TextRole.body.font).foregroundStyle(tokens.primary).padding(.top, Space._1)
                 }
             }

@@ -27,13 +27,13 @@ struct FolderColorCard: View {
     @ViewBuilder private func choices(_ paint: FolderPaint) -> some View {
         Group {
             HStack(spacing: 0) {
-                ColorChoice(name: "None", color: nil, chosen: paint.chosen == nil && paint.custom == nil, enabled: paint.enabled) { store.setColor(nil) }
+                ColorChoice(name: panelText("project-color-none", "None"), color: nil, chosen: paint.chosen == nil && paint.custom == nil, enabled: paint.enabled) { store.setColor(nil) }
                 if let hex = paint.custom {
-                    ColorChoice(name: "Custom colour \(hex)", color: Color(hex: hex), chosen: true, enabled: false) {}
-                        .help("Custom colour \(hex), set in config.json")
+                    ColorChoice(name: panelText("project-color-custom", ["hex": .text(hex)], "Custom colour \(hex)"), color: Color(hex: hex), chosen: true, enabled: false) {}
+                        .help(panelText("project-color-custom-help", ["hex": .text(hex)], "Custom colour \(hex), set in config.json"))
                 }
                 ForEach(FolderColor.allCases, id: \.self) { name in
-                    ColorChoice(name: name.rawValue.capitalized, color: FolderTint.color(name, in: tokens), chosen: paint.chosen == name, enabled: paint.enabled) { store.setColor(name) }
+                    ColorChoice(name: name.word, color: FolderTint.color(name, in: tokens), chosen: paint.chosen == name, enabled: paint.enabled) { store.setColor(name) }
                 }
                 if paint.enabled { picker }
                 Spacer(minLength: 0)
@@ -53,6 +53,22 @@ struct FolderColorCard: View {
                 ColorPicker(panelText("project-pick-colour", "Pick a colour"), selection: $picked, supportsOpacity: false)
                     .padding(Space._3).onChange(of: picked) { _, color in store.setColor(hex: color.hexString) }
             }
+    }
+}
+
+extension FolderColor {
+    /// The colour's name for the help and the VoiceOver label.
+    fileprivate var word: String {
+        switch self {
+        case .red: panelText("project-color-red", "Red")
+        case .orange: panelText("project-color-orange", "Orange")
+        case .yellow: panelText("project-color-yellow", "Yellow")
+        case .green: panelText("project-color-green", "Green")
+        case .teal: panelText("project-color-teal", "Teal")
+        case .blue: panelText("project-color-blue", "Blue")
+        case .purple: panelText("project-color-purple", "Purple")
+        case .pink: panelText("project-color-pink", "Pink")
+        }
     }
 }
 

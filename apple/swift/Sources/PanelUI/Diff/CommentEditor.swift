@@ -24,7 +24,7 @@ struct CommentEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PanelMetrics.gap) {
-            Text(panelText("review-title", "Comment on \(place)")).font(TextRole.label.font).foregroundStyle(tokens.textPrimary)
+            Text(panelText("review-title", ["place": .text(place)], "Comment on \(place)")).font(TextRole.label.font).foregroundStyle(tokens.textPrimary)
             let code = at.code.trimmingCharacters(in: .whitespaces)
             if !code.isEmpty {
                 Text(code).font(codeFont.font(TextRole.caption.size)).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.tail)
@@ -46,7 +46,7 @@ struct CommentEditor: View {
                 Text(panelText("review-saves", "saves")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                 Spacer(minLength: 0)
                 if existing != nil { NoticeButton(title: panelText("review-remove", "Remove"), action: remove) }
-                NoticeButton(title: panelText("review-cancel", "Cancel"), action: cancel)
+                NoticeButton(title: panelText("dialog-cancel", "Cancel"), action: cancel)
                 NoticeButton(title: existing == nil ? panelText("review-add", "Add Comment") : panelText("review-save", "Save"), primary: true) { save(text) }
                     .keyboardShortcut(.return, modifiers: .command)
             }

@@ -2,6 +2,7 @@
 // list; the bar shows the selected terminal's set as tabs and the others one step away.
 
 import Foundation
+import WordsModel
 import WorkspaceModel
 
 public struct TabSet: Sendable, Equatable {
@@ -16,7 +17,7 @@ public struct TabSet: Sendable, Equatable {
 
 public enum TabSets {
     /// What the terminals in no group are called as a set.
-    public static let ungrouped = "Ungrouped"
+    public static var ungrouped: String { Words.text("tab-switcher-ungrouped", fallback: "Ungrouped") }
     /// How many sets a key reaches (⌃⌥1–9).
     public static let numbered = 9
 

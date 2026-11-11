@@ -88,7 +88,7 @@ public final class ChangesStore {
                 phase = .loaded
                 keepOpenDiffInStep()
             } catch {
-                let message = (error as? GitFailure)?.message ?? "git can't be read."
+                let message = (error as? GitFailure)?.message ?? panelText("git-unreadable", "git can't be read.")
                 guard folder == self.folder else { return }
                 // A list already shown stays under a red line; with none, the problem takes its place.
                 if phase == .loaded { refreshError = message } else { phase = .failed(message) }

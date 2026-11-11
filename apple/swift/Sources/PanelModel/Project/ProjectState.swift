@@ -3,6 +3,8 @@
 // The backend builds it from the files; every line of wording that depends on core's rules (the hint under a
 // switch) arrives already written.
 
+import WordsModel
+
 public enum TrustStatus: Sendable {
     case untrusted, trusted
     /// Was trusted, but the files changed since: approved again before use.
@@ -10,9 +12,9 @@ public enum TrustStatus: Sendable {
 
     public var badge: String {
         switch self {
-        case .trusted: "trusted"
-        case .changed: "changed"
-        case .untrusted: "not trusted"
+        case .trusted: Words.text("project-badge-trusted", fallback: "trusted")
+        case .changed: Words.text("project-badge-changed", fallback: "changed")
+        case .untrusted: Words.text("project-badge-untrusted", fallback: "not trusted")
         }
     }
 }
@@ -100,18 +102,39 @@ public struct ProjectState: Equatable, Sendable {
     /// list, what trusting applies.
     public var notice: (title: String, text: String) {
         let changed = status == .changed
-        let title = changed ? "Files changed since you trusted this project" : "Trust this project?"
+        let title = changed
+            ? Words.text("project-notice-changed-title", fallback: "Files changed since you trusted this project")
+            : Words.text("project-notice-untrusted-title", fallback: "Trust this project?")
         switch (changed, !commands.isEmpty) {
-        case (true, true): return (title, "Review what it would run now and approve again.")
-        case (true, false): return (title, "Trusting it applies \(applies). Review it and approve again.")
-        case (false, true): return (title, "It wants to run these commands. Nothing runs until you approve.")
-        case (false, false): return (title, "Trusting it applies \(applies). Nothing applies until you approve.")
+        case (true, true):
+            return (title, Words.text("project-notice-changed-commands", fallback: "Review what it would run now and approve again."))
+        case (true, false):
+            return (
+                title,
+                Words.text(
+                    "project-notice-changed-applies", ["applies": .text(applies)], fallback: "Trusting it applies \(applies). Review it and approve again.")
+            )
+        case (false, true):
+            return (
+                title,
+                Words.text(
+                    "project-notice-untrusted-commands", fallback: "It wants to run these commands. Nothing runs until you approve.")
+            )
+        case (false, false):
+            return (
+                title,
+                Words.text(
+                    "project-notice-untrusted-applies", ["applies": .text(applies)],
+                    fallback: "Trusting it applies \(applies). Nothing applies until you approve.")
+            )
         }
     }
 
     /// The quiet line of a trusted project.
     public var trustedLine: String {
-        commands.isEmpty ? "Applies \(applies)." : "Actions, the terminal layout and project env may run."
+        commands.isEmpty
+            ? Words.text("project-trusted-applies", ["applies": .text(applies)], fallback: "Applies \(applies).")
+            : Words.text("project-trusted-commands", fallback: "Actions, the terminal layout and project env may run.")
     }
 
     /// How many lines the notice shows in full; a longer list shows `shownLines` and "View all N…".

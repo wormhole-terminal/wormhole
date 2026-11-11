@@ -56,13 +56,13 @@ public struct DiffView: View {
         }
         .background(tokens.surfaceWindow)
         .onExitCommand(perform: close)
-        .accessibilityLabel("Diff of \(file.name)")
+        .accessibilityLabel(panelText("diff-spoken", ["name": .text(file.name)], "Diff of \(file.name)"))
     }
 
     @ViewBuilder private func content(split: Bool, width: CGFloat) -> some View {
         if let large = session.parsed?.tooLarge {
             TooLargeCard(
-                large: large, path: file.path, revealLabel: review != nil ? "Reveal in Finder" : "Reveal Current File in Finder",
+                large: large, path: file.path, revealLabel: review != nil ? panelText("history-menu-reveal", "Reveal in Finder") : panelText("diff-reveal-current", "Reveal Current File in Finder"),
                 load: session.loadAnyway)
         } else {
             lines(split: split, width: width)

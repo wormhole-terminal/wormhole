@@ -13,7 +13,7 @@ struct ProjectFeaturesCard: View {
 
     var body: some View {
         PanelCard {
-            CardBand(title: panelText("project-use", "Use from this project"))
+            CardBand(title: panelText("settings-projects-use-from-this-project", "Use from this project"))
             ForEach(state.features) { row in
                 TwoLineRow(title: row.feature.label, detail: row.hint, detailWarns: row.warns) {
                     PanelIcon(row.feature.symbol, size: Metric.glyph).foregroundStyle(tokens.textMuted)

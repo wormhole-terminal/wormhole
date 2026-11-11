@@ -17,7 +17,7 @@ struct FileViewerBody: View {
         case .reading: note(panelText("files-reading", "Reading\u{2026}"))
         case let .text(text, size, truncated):
             if text.isEmpty { note(panelText("files-viewer-empty", "This file is empty.")) } else { lines(truncated: truncated, size: size) }
-        case let .binary(size): panel(panelText("files-viewer-binary", "Binary file, \(ByteSize.text(size))"), actions: true)
+        case let .binary(size): panel(panelText("files-viewer-binary", ["size": .text(ByteSize.text(size))], "Binary file, \(ByteSize.text(size))"), actions: true)
         case let .image(data, _): picture(data)
         // A deleted file has nothing to open or show, nor has a link that leads out; the others might still be revealed.
         case let .unavailable(problem): panel(Self.words(problem), actions: problem != .gone && problem != .outside)
@@ -28,7 +28,8 @@ struct FileViewerBody: View {
         VStack(spacing: 0) {
             FileLines(lines: store.lines, spans: store.spans, path: path)
             if truncated {
-                Text(panelText("files-viewer-truncated", "Showing the first \(ByteSize.text(store.lines.reduce(0) { $0 + $1.utf8.count + 1 })) of \(ByteSize.text(size))"))
+                let shown = ByteSize.text(store.lines.reduce(0) { $0 + $1.utf8.count + 1 })
+                Text(panelText("files-viewer-truncated", ["shown": .text(shown), "size": .text(ByteSize.text(size))], "Showing the first \(shown) of \(ByteSize.text(size))"))
                     .font(TextRole.caption.font).foregroundStyle(tokens.textMuted).frame(maxWidth: .infinity).frame(height: Metric.row)
                     .overlay(alignment: .top) { Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth) }
             }

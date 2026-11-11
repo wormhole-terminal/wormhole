@@ -32,7 +32,7 @@ struct NewWorktreeSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
             Text(panelText("worktree-title", "New terminal in a new worktree")).font(TextRole.heading.font).foregroundStyle(tokens.textPrimary)
-            Text(panelText("worktree-about", "A worktree of \(store.repositoryName) on a branch of its own, in a folder of its own, so work there touches nothing in the repository's folder."))
+            Text(panelText("worktree-about", ["name": .text(store.repositoryName)], "A worktree of \(store.repositoryName) on a branch of its own, in a folder of its own, so work there touches nothing in the repository's folder."))
                 .font(TextRole.body.font).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: Space._1) {
                 Text(panelText("worktree-branch", "Branch (new, or one the repository has)")).font(TextRole.caption.font.weight(.medium)).foregroundStyle(tokens.textMuted)
@@ -46,7 +46,7 @@ struct NewWorktreeSheet: View {
                 KeyCap(text: "esc", height: Metric.titleControl)
                 Text(panelText("worktree-cancels", "cancels")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                 Spacer(minLength: 0)
-                NoticeButton(title: panelText("worktree-cancel", "Cancel")) { store.asking = false }.keyboardShortcut(.cancelAction)
+                NoticeButton(title: panelText("dialog-cancel", "Cancel")) { store.asking = false }.keyboardShortcut(.cancelAction)
                 NoticeButton(title: panelText("worktree-create", "Create"), primary: true, busy: !store.canCreate, action: store.create)
                     .keyboardShortcut(.defaultAction)
             }

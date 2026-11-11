@@ -57,8 +57,8 @@ struct DiffNote: View {
     static func text(for file: ChangedFile, diff: DiffFile?) -> String? {
         if let note = diff?.note { return note }
         guard diff?.hunks.isEmpty ?? true else { return nil }
-        if diff?.isBinary == true { return "Binary file" }
-        return file.kind == .added || file.kind == .untracked ? "Empty file" : "No content changes"
+        if diff?.isBinary == true { return panelText("diff-binary-file", "Binary file") }
+        return file.kind == .added || file.kind == .untracked ? panelText("diff-empty-file", "Empty file") : panelText("diff-no-content-changes", "No content changes")
     }
 }
 

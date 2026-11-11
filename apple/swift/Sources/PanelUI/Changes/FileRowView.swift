@@ -110,6 +110,6 @@ struct FolderRowView: View {
         }
         .pathMenu([path])
         .accessibilityLabel(label)
-        .accessibilityValue(collapsed ? "folded" : "open")
+        .accessibilityValue(collapsed ? panelText("panel-spoken-folded", "folded") : panelText("panel-spoken-open", "open"))
     }
 }

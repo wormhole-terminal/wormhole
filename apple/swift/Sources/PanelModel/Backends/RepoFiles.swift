@@ -4,6 +4,7 @@
 // tests, a stand-in answers: the path under its root, when something is there.
 
 import Foundation
+import WordsModel
 
 public enum RepoFiles {
     // why: written once on the main thread at launch, before any window reads them; every later access is a read.
@@ -13,7 +14,7 @@ public enum RepoFiles {
     }
     /// Asks the app with this bundle identifier (found in `appFolder`) to open the file at the line.
     nonisolated(unsafe) public static var opener: @Sendable (_ bundle: String, _ path: String, _ line: Int?, _ appFolder: String?) -> Bool = { _, _, _, _ in false }
-    nonisolated(unsafe) public static var tooltip: @Sendable (_ bundle: String, _ app: String, _ line: Int?) -> String = { _, app, _ in "Open in \(app)" }
+    nonisolated(unsafe) public static var tooltip: @Sendable (_ bundle: String, _ app: String, _ line: Int?) -> String = { _, app, _ in Words.text("files-open-in-editor", ["editor": .text(app)], fallback: "Open in \(app)") }
 
     /// Where `relative` is inside `root` now, or nil.
     public static func resolve(root: String, relative: String) -> String? { resolver(root, relative) }

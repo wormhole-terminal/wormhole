@@ -85,7 +85,7 @@ public final class DiffSession {
                 self?.refreshError = nil
             } catch {
                 guard !Task.isCancelled else { return }
-                let why = (error as? GitFailure)?.message ?? "The diff can't be read."
+                let why = (error as? GitFailure)?.message ?? panelText("diff-unreadable", "The diff can't be read.")
                 if inPlace, self?.parsed != nil { self?.refreshError = why } else { self?.phase = .failed(why) }
             }
         }

@@ -24,7 +24,7 @@ struct FileViewerView: View {
             .background(tokens.surfaceWindow)
             .onExitCommand(perform: store.closeViewer)
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(panelText("files-spoken-viewer", "\(path.split(separator: "/").last.map(String.init) ?? path), file viewer"))
+            .accessibilityLabel(panelText("files-spoken-viewer", ["name": .text(path.split(separator: "/").last.map(String.init) ?? path)], "\(path.split(separator: "/").last.map(String.init) ?? path), file viewer"))
         }
     }
 }
@@ -48,7 +48,7 @@ struct FileViewerHeader: View {
             Spacer(minLength: 0)
             if let size = store.content.size { Text(ByteSize.text(size)).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize() }
             if let editor = host?.editorName {
-                BandButton(symbol: "arrow.up.forward.square", label: panelText("files-viewer-open-in-editor", "Open in \(editor)"), inRow: true) { host?.open(absolute, line: nil) }
+                BandButton(symbol: "arrow.up.forward.square", label: panelText("files-open-in-editor", ["editor": .text(editor)], "Open in \(editor)"), inRow: true) { host?.open(absolute, line: nil) }
             }
             BandButton(symbol: "xmark", label: panelText("files-viewer-close", "Close file (esc)"), inRow: true, action: store.closeViewer)
         }

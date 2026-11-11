@@ -56,7 +56,7 @@ public final class HistoryStore {
                 model = log
                 phase = .loaded
             } catch {
-                if folder == self.folder { phase = .failed((error as? GitFailure)?.message ?? "The log can't be read.") }
+                if folder == self.folder { phase = .failed((error as? GitFailure)?.message ?? panelText("history-unreadable", "The log can't be read.")) }
             }
         }
     }
@@ -74,7 +74,7 @@ public final class HistoryStore {
                 let full = try await git.details(of: sha, in: folder)
                 if expanded == sha { details = full }
             } catch {
-                if expanded == sha { detailsError = (error as? GitFailure)?.message ?? "The details can't be read." }
+                if expanded == sha { detailsError = (error as? GitFailure)?.message ?? panelText("history-details-unreadable", "The details can't be read.") }
             }
         }
     }

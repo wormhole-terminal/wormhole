@@ -119,7 +119,7 @@ public final class FilesStore {
     }
 
     public var pathMenu: PathMenuModel? {
-        root.map { PathMenuModel(shown: $0, volume: "Macintosh HD", pins: pins, chosen: chosen != nil, home: host?.homeFolder) }
+        root.map { PathMenuModel(shown: $0, volume: "Macintosh HD", pins: pins, chosen: chosen != nil, home: host?.homeFolder) } // text: macOS's default name of the startup volume
     }
 
     func join(_ root: String, _ path: String) -> String { root == "/" ? "/" + path : root + "/" + path }

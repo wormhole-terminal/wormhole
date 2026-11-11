@@ -32,7 +32,7 @@ struct FileEntryRow: View {
                 .contextMenu { FileRowMenu(store: store, row: row) }
                 .help(row.label)
                 .accessibilityLabel(spoken)
-                .accessibilityValue({ if case let .folder(open) = row.kind { open ? "expanded" : "collapsed" } else { "" } }())
+                .accessibilityValue({ if case let .folder(open) = row.kind { open ? panelText("files-spoken-expanded", "expanded") : panelText("files-spoken-collapsed", "collapsed") } else { "" } }())
         }
     }
 
@@ -62,8 +62,8 @@ struct FileEntryRow: View {
 
     private var spoken: String {
         switch row.kind {
-        case let .folder(open): open ? panelText("files-spoken-folder-open", "\(row.label), folder, expanded") : panelText("files-spoken-folder-closed", "\(row.label), folder, collapsed")
-        case .link: panelText("files-spoken-link", "\(row.label), link")
+        case let .folder(open): open ? panelText("files-spoken-folder-open", ["name": .text(row.label)], "\(row.label), folder, expanded") : panelText("files-spoken-folder-closed", ["name": .text(row.label)], "\(row.label), folder, collapsed")
+        case .link: panelText("files-spoken-link", ["name": .text(row.label)], "\(row.label), link")
         default: row.label
         }
     }
@@ -79,7 +79,7 @@ struct FileEntryRow: View {
         switch row.kind {
         case .reading: panelText("files-reading", "Reading\u{2026}")
         case .empty: panelText("files-empty", "Empty folder")
-        case let .more(count, atLeast): atLeast ? panelText("files-more-at-least", "\(CountText.grouped(count))+ more") : panelText("files-more", "\(CountText.grouped(count)) more")
+        case let .more(count, atLeast): atLeast ? panelText("files-more-at-least", ["count": .text(CountText.grouped(count))], "\(CountText.grouped(count))+ more") : panelText("files-more", ["count": .text(CountText.grouped(count))], "\(CountText.grouped(count)) more")
         case .unreadable(.gone): panelText("files-folder-gone", "This folder is gone.")
         case .unreadable(.denied): panelText("files-folder-denied", "Wormhole isn't allowed to read this folder.")
         case .unreadable(.other): panelText("files-folder-unreadable", "This folder can't be read.")

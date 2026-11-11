@@ -2,6 +2,7 @@
 // window gathers once per frame from the session, git and the extras' lookups.
 
 import Foundation
+import WordsModel
 import WorkspaceModel
 
 /// The agent's model and how full its context window is (core `usage::Gauge`).
@@ -18,7 +19,9 @@ public struct GaugeFact: Sendable, Equatable {
 
     /// "Opus 4.5, 41% of the context window used".
     public var words: String {
-        let used = percent.map { "\($0)% of the context window used" }
+        let used = percent.map {
+            Words.text("title-row-context-used", ["percent": .whole($0)], fallback: "\($0)% of the context window used")
+        }
         return [model, used].compactMap { $0 }.joined(separator: ", ")
     }
 }

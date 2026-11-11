@@ -20,10 +20,10 @@ struct StepsCard: View {
         let open = model.tasks.remaining
         PanelCard {
             CardBand(
-                title: "Next steps", folded: model.tasks.items.isEmpty && !store.drafting ? nil : model.stepsCollapsed,
-                count: open > 0 ? CountText.grouped(open) : nil, spoken: "Next steps, \(open) open",
+                title: panelText("steps-title", "Next steps"), folded: model.tasks.items.isEmpty && !store.drafting ? nil : model.stepsCollapsed,
+                count: open > 0 ? CountText.grouped(open) : nil, spoken: panelText("steps-spoken", ["count": .whole(open)], "Next steps, \(String(open)) open"),
                 onToggle: { model.stepsCollapsed.toggle() },
-                add: ("Add next step", { model.stepsCollapsed = false; (store.draftAfter, store.drafting) = (nil, true) }))
+                add: (panelText("steps-add", "Add next step"), { model.stepsCollapsed = false; (store.draftAfter, store.drafting) = (nil, true) }))
                 .walkRow("band-steps")
             if !model.stepsCollapsed {
                 ForEach(model.tasks.rows(showDone: model.showDone)) { row in
@@ -80,7 +80,7 @@ private struct DoneFold: View {
         PanelRow(action: action) { _ in
             HStack(spacing: PanelMetrics.gap) {
                 Disclosure(collapsed: !open)
-                Text("\(CountText.grouped(count)) done").font(TextRole.body.font).foregroundStyle(tokens.textMuted)
+                Text(panelText("steps-done", ["count": .text(CountText.grouped(count))], "\(CountText.grouped(count)) done")).font(TextRole.body.font).foregroundStyle(tokens.textMuted)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, PanelMetrics.inset).frame(minHeight: Metric.row)

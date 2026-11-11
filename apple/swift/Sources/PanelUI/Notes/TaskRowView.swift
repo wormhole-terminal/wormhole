@@ -28,7 +28,7 @@ struct TaskRowView: View {
             Button(action: toggle) { TaskCheckbox(checked: task.done).contentShape(Rectangle()) }
                 .buttonStyle(.plain)
                 .accessibilityLabel(task.text)
-                .accessibilityValue(task.done ? "done" : "not done")
+                .accessibilityValue(task.done ? panelText("notes-task-done", "done") : panelText("notes-task-not-done", "not done"))
             label
             if hovering || editing { RowActions(send: send, delete: delete).transition(.opacity) }
         }

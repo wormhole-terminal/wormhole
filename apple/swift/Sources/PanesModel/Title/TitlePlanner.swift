@@ -3,6 +3,7 @@
 // what the width allows.
 
 import Foundation
+import WordsModel
 
 /// The type faces the row measures in: the label role (13) in regular or medium for the path and the name,
 /// the caption role (12) for words and chips.
@@ -67,7 +68,7 @@ public enum TitlePlanner {
             .compactMap { $0 }.reduce(0) { $0 + TitleMetrics.crumbGap + measure.width($1, .caption) }
         wants.chip = (drawn(.branch) ? facts.branch : nil).map { branch in
             ChipWidth(
-                natural: min(measure.width(branch ?? "detached", .captionMedium) + TitleMetrics.chipChrome, TitleMetrics.chipMax),
+                natural: min(measure.width(branch ?? Words.text("title-row-detached", fallback: "detached"), .captionMedium) + TitleMetrics.chipChrome, TitleMetrics.chipMax),
                 icon: TitleMetrics.chipIcon)
         }
         (wants.extras, wants.portsNarrower) = extras(facts, measure)

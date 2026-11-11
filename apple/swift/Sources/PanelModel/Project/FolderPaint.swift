@@ -2,6 +2,7 @@
 // a hex colour set by hand) is chosen, whose it is and where it is kept. The line under the row says which, and a
 // project that locks its colour shows the row dimmed.
 
+import WordsModel
 import WorkspaceModel
 
 public struct FolderPaint: Equatable, Sendable {
@@ -20,5 +21,7 @@ public struct FolderPaint: Equatable, Sendable {
     public var enabled: Bool { !locked }
 
     /// Where an own colour is kept: yours only.
-    public static let own = FolderPaint(note: "Marks this folder's band. Yours only: it isn't saved in the project.")
+    public static var own: FolderPaint {
+        FolderPaint(note: Words.text("project-color-own", fallback: "Marks this folder's band. Yours only: it isn't saved in the project."))
+    }
 }

@@ -139,7 +139,7 @@ struct CommitDetailsView: View {
 /// little under it so that what is cut or offered as "more" errs on the side of offering (GPUI `measure::caption_chars`).
 @MainActor private enum CaptionMeasure {
     static func characters(in width: CGFloat) -> Int {
-        let sample = "The quick brown fox jumps over"
+        let sample = "The quick brown fox jumps over" // text: a sample sentence that is measured, never shown
         let wide = sample.size(withAttributes: [.font: NSFont.systemFont(ofSize: TextRole.caption.size)]).width
         return Int(width / max(wide / CGFloat(sample.count), 1) * 0.95)
     }

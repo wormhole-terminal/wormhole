@@ -42,7 +42,7 @@ public struct SyntaxLanguage: Sendable {
 
     private static let rust = SyntaxLanguage(
         keywords: ["as", "async", "await", "break", "const", "continue", "crate", "dyn", "else", "enum", "extern", "fn", "for", "if", "impl", "in", "let", "loop", "match", "mod", "move", "mut", "pub", "ref", "return", "self", "static", "struct", "super", "trait", "type", "unsafe", "use", "where", "while"],
-        constants: ["true", "false", "None", "Some", "Ok", "Err"], rust: true)
+        constants: ["true", "false", "None", "Some", "Ok", "Err"], rust: true) // text: language keywords
     private static let swift = SyntaxLanguage(
         keywords: ["actor", "async", "await", "break", "case", "class", "continue", "default", "defer", "do", "else", "enum", "extension", "for", "func", "guard", "if", "import", "in", "init", "let", "private", "public", "internal", "return", "self", "static", "struct", "switch", "throw", "throws", "try", "var", "where", "while"],
         constants: ["true", "false", "nil"])
@@ -51,11 +51,11 @@ public struct SyntaxLanguage: Sendable {
         constants: ["true", "false", "null", "undefined"], singleQuotes: true)
     private static let python = SyntaxLanguage(
         keywords: ["and", "as", "assert", "async", "await", "class", "def", "elif", "else", "except", "finally", "for", "from", "if", "import", "in", "is", "lambda", "not", "or", "pass", "raise", "return", "try", "while", "with", "yield"],
-        constants: ["True", "False", "None"], lineComment: "#", blockComment: nil, singleQuotes: true, tripleQuotes: true)
+        constants: ["True", "False", "None"], lineComment: "#", blockComment: nil, singleQuotes: true, tripleQuotes: true) // text: language keywords
     private static let shell = SyntaxLanguage(
         keywords: ["case", "do", "done", "elif", "else", "esac", "fi", "for", "function", "if", "in", "then", "while", "def", "end", "class", "module"],
         constants: ["true", "false", "nil"], lineComment: "#", blockComment: nil, singleQuotes: true)
     private static let clike = SyntaxLanguage(
         keywords: ["break", "case", "class", "const", "continue", "default", "do", "else", "enum", "for", "func", "fun", "if", "import", "package", "private", "public", "return", "static", "struct", "switch", "typedef", "var", "val", "void", "while", "interface", "extends", "new"],
-        constants: ["true", "false", "null", "nil", "NULL"], singleQuotes: true)
+        constants: ["true", "false", "null", "nil", "NULL"], singleQuotes: true) // text: language keywords
 }

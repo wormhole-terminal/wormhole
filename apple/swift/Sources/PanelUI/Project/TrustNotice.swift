@@ -22,7 +22,7 @@ struct TrustNotice: View {
                 .frame(width: Metric.lead, height: Metric.lead)
             Text(state.trustedLine).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            NoticeButton(title: panelText("project-revoke", "Revoke trust"), action: store.revoke)
+            NoticeButton(title: panelText("settings-projects-revoke-trust", "Revoke trust"), action: store.revoke)
         }
         .padding(.horizontal, PanelMetrics.inset).frame(minHeight: Metric.row)
     }

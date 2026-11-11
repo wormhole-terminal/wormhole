@@ -25,8 +25,8 @@ struct ChangesListView: View {
     }
 
     @ViewBuilder private var loaded: some View {
-        if let message = store.refreshError { StatusLine(text: panelText("changes-refresh-failed", "Couldn't refresh: \(message.split(separator: "\n").first.map(String.init) ?? message)"), danger: true) }
-        if let branch = store.compareMissing { StatusLine(text: panelText("changes-compare-missing", "\(branch) no longer exists \u{00B7} showing vs HEAD"), danger: false) }
+        if let message = store.refreshError { StatusLine(text: panelText("changes-refresh-failed", ["message": .text(message.split(separator: "\n").first.map(String.init) ?? message)], "Couldn't refresh: \(message.split(separator: "\n").first.map(String.init) ?? message)"), danger: true) }
+        if let branch = store.compareMissing { StatusLine(text: panelText("changes-compare-missing", ["branch": .text(branch)], "\(branch) no longer exists \u{00B7} showing vs HEAD"), danger: false) }
         if store.files.isEmpty {
             PanelCard {
                 head(group: .all, count: 0, folded: false, first: true)
@@ -46,13 +46,13 @@ struct ChangesListView: View {
     private func head(group: ChangeGroup, count: Int, folded: Bool, first: Bool) -> some View {
         CardBand(
             title: group.title, folded: count > 0 ? folded : nil, count: count > 0 ? CountText.grouped(count) : nil,
-            spoken: "\(group.title), \(count) \(count == 1 ? "file" : "files")",
+            spoken: panelText("changes-group-spoken", ["group": .text(group.title), "count": .whole(count)], "\(group.title), \(count) \(count == 1 ? "file" : "files")"),
             onToggle: { store.layout.folds[group] = !folded }
         ) {
             if first {
-                RevPicker(prefix: "vs", selected: store.compare, revs: store.revs, headTitle: "HEAD", load: store.loadRevs, pick: store.setCompare)
+                RevPicker(prefix: panelText("changes-compare-versus", "vs"), selected: store.compare, revs: store.revs, headTitle: "HEAD", load: store.loadRevs, pick: store.setCompare) // text: HEAD is git's name for the current commit
                 ViewOptionsMenu(layout: $store.layout)
-                BandButton(symbol: "arrow.clockwise", label: "Refresh", action: store.refresh)
+                BandButton(symbol: "arrow.clockwise", label: panelText("changes-refresh", "Refresh"), action: store.refresh)
             }
         }
     }

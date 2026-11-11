@@ -1,6 +1,8 @@
 // What the panel asks of the window and the system: the clipboard, Finder, an editor, the terminal's prompt. Real
 // closures instead of stubs, in one protocol the window implements and tests replace.
 
+import WordsModel
+
 @MainActor
 public protocol PanelHost: AnyObject {
     func copy(_ text: String)
@@ -81,11 +83,11 @@ extension PanelHost {
     public var openApps: [OpenApp] { [] }
     public func open(_ path: String, inBundle bundle: String) {}
     public func showProjectCommands() {}
-    public func openTooltip(line: Int?) -> String? { editorName.map { "Open in \($0)" } }
+    public func openTooltip(line: Int?) -> String? { editorName.map { Words.text("files-open-in-editor", ["editor": .text($0)], fallback: "Open in \($0)") } }
     public func exists(_ path: String) -> Bool { true }
     /// Where there is no chip to refuse on: the copy, and VoiceOver's word for it.
     public func copyPath(_ path: String) {
         copy(path)
-        notify("Path copied")
+        notify(Words.text("files-spoken-path-copied", fallback: "Path copied"))
     }
 }

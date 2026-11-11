@@ -2,6 +2,7 @@
 // (the hint under a switch, what trusting applies) was written in Rust and is carried through as it is.
 
 import PanelModel
+import WordsModel
 import WormholeBindings
 import WorkspaceModel
 
@@ -43,8 +44,8 @@ extension ProjectFailure {
     /// What the notice chip says of a refused call: Rust's own words.
     var spoken: String {
         switch self {
-        case let .Refused(reason): "Not allowed: \(reason)"
-        case let .NotFound(what): "Not found: \(what)"
+        case let .Refused(reason): Words.text("project-refused", ["reason": .text(reason)], fallback: "Not allowed: \(reason)")
+        case let .NotFound(what): Words.text("project-not-found", ["what": .text(what)], fallback: "Not found: \(what)")
         case let .Failed(message): message
         }
     }

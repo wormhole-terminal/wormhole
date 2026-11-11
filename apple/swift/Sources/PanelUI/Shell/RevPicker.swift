@@ -12,7 +12,7 @@ struct RevPicker: View {
     var prefix = ""
     let selected: Rev?
     let revs: [Rev]
-    var headTitle = "HEAD"
+    var headTitle = "HEAD" // text: HEAD is git's name for the current commit
     let load: () -> Void
     let pick: (Rev?) -> Void
     @State private var open = false

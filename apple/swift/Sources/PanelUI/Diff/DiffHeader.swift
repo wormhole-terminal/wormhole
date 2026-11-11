@@ -27,10 +27,10 @@ struct DiffHeader: View {
 
     var body: some View {
         HStack(spacing: PanelMetrics.gap) {
-            BandButton(symbol: "chevron.left", label: "Previous file", inRow: true) { step(-1) }
-            BandButton(symbol: "chevron.right", label: "Next file", inRow: true) { step(1) }
+            BandButton(symbol: "chevron.left", label: panelText("diff-previous-file", "Previous file"), inRow: true) { step(-1) }
+            BandButton(symbol: "chevron.right", label: panelText("diff-next-file", "Next file"), inRow: true) { step(1) }
             if let position, splitFits {
-                Text("File \(position.index + 1) of \(position.count)").font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize()
+                Text(panelText("diff-file-position", ["index": .whole(position.index + 1), "count": .whole(position.count)], "File \(String(position.index + 1)) of \(String(position.count))")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize()
             }
             // The path crumb: the file's icon, its folders quiet and its name loud. It gives way first, down to
             // nothing, so the badges and controls at the end stay whole (the GPUI title row elides it the same way).
@@ -46,7 +46,7 @@ struct DiffHeader: View {
                     Text("\u{2212}\(CountText.grouped(removed))").foregroundStyle(tokens.diffRemoved)
                 }
                 .font(.system(size: TextRole.caption.size, design: .monospaced)).fixedSize()
-                BandButton(symbol: "text.append", label: "Wrap long lines", inRow: true) { wrap.toggle() }
+                BandButton(symbol: "text.append", label: panelText("diff-wrap-lines", "Wrap long lines"), inRow: true) { wrap.toggle() }
                     .opacity(wrap ? 1 : 0.6)
             }
             // The file in the chosen editor, when it is on disk (a deleted file has nothing to open).
@@ -54,15 +54,15 @@ struct DiffHeader: View {
                 BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) { host?.open(on, line: nil) }
             }
             if splitFits {
-                Segmented([("Split", true), ("Unified", false)], selection: $split)
+                Segmented([(panelText("diff-split", "Split"), true), (panelText("diff-unified", "Unified"), false)], selection: $split)
                 Button(action: close) {
                     HStack(spacing: Space._1) {
                         KeyCap(text: "esc", height: Metric.titleControl)
-                        Text("close").font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                        Text(panelText("diff-close", "close")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                     }.padding(.horizontal, Space._2).frame(height: Metric.hitMin).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityLabel("Close diff")
+                }.buttonStyle(.plain).accessibilityLabel(panelText("diff-close-spoken", "Close diff"))
             } else {
-                BandButton(symbol: "xmark", label: "Close diff (esc)", inRow: true, action: close)
+                BandButton(symbol: "xmark", label: panelText("diff-close-tooltip", "Close diff (esc)"), inRow: true, action: close)
             }
         }
         .padding(.horizontal, inTitleRow ? 0 : PanelMetrics.inset)
@@ -79,14 +79,14 @@ struct DiffHeader: View {
 
     private var badges: [(text: String, color: Color)] {
         var out: [(String, Color)] = []
-        if file.kind == .added || file.kind == .untracked { out.append(("New file", tokens.statusSuccessText)) }
-        if file.kind == .deleted { out.append(("Deleted", tokens.statusDangerText)) }
+        if file.kind == .added || file.kind == .untracked { out.append((panelText("diff-badge-new", "New file"), tokens.statusSuccessText)) }
+        if file.kind == .deleted { out.append((panelText("changes-kind-deleted", "Deleted"), tokens.statusDangerText)) }
         if file.kind == .renamed {
-            out.append((file.renamedFrom.map { "Renamed from \($0)" } ?? "Renamed", tokens.primary))
+            out.append((file.renamedFrom.map { panelText("diff-badge-renamed-from", ["path": .text($0)], "Renamed from \($0)") } ?? panelText("changes-kind-renamed", "Renamed"), tokens.primary))
         }
         if gone { out.append((panelText("diff-badge-gone", "No longer changed"), tokens.textMuted)) }
-        if diff?.isBinary == true { out.append(("Binary", tokens.textMuted)) }
-        if file.lfs || diff?.isLFS == true { out.append(("LFS", tokens.textMuted)) }
+        if diff?.isBinary == true { out.append((panelText("diff-badge-binary", "Binary"), tokens.textMuted)) }
+        if file.lfs || diff?.isLFS == true { out.append(("LFS", tokens.textMuted)) } // text: Git LFS, a product name
         if let mode = diff?.modeChange { out.append((mode, tokens.textMuted)) }
         if diff?.noHighlight == true { out.append((panelText("diff-badge-no-highlighting", "No highlighting"), tokens.textMuted)) }
         return out

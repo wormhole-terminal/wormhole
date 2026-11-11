@@ -18,9 +18,9 @@ struct NotesCard: View {
     var body: some View {
         PanelCard {
             CardBand(
-                title: "Notes", folded: model.notes.isEmpty ? nil : model.notesCollapsed,
+                title: panelText("notes-title", "Notes"), folded: model.notes.isEmpty ? nil : model.notesCollapsed,
                 count: model.filledNotes > 0 ? CountText.grouped(model.filledNotes) : nil,
-                spoken: "Notes, \(model.filledNotes) written", onToggle: { model.notesCollapsed.toggle() },
+                spoken: panelText("notes-spoken", ["count": .whole(model.filledNotes)], "Notes, \(String(model.filledNotes)) written"), onToggle: { model.notesCollapsed.toggle() },
                 add: (panelText("notes-new", "New note"), { store.newNote() }))
                 .walkRow("band-notes")
             if !model.notesCollapsed {

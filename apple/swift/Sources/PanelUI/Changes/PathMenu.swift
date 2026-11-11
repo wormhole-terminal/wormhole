@@ -32,10 +32,10 @@ private struct PathMenu: ViewModifier {
                 Button(panelText("history-menu-reveal", "Reveal in Finder")) { host?.reveal(resolved(path)) }.disabled(!there)
                 Divider()
             }
-            Button(count == 1 ? panelText("history-menu-copy-path", "Copy Path") : "Copy Paths") { copy(paths.map(absolute)) }
-            Button(count == 1 ? panelText("history-menu-copy-relative-path", "Copy Relative Path") : "Copy Relative Paths") { copy(paths) }
+            Button(panelText("history-menu-copy-path", ["count": .whole(count)], count == 1 ? "Copy Path" : "Copy Paths")) { copy(paths.map(absolute)) }
+            Button(panelText("history-menu-copy-relative-path", ["count": .whole(count)], count == 1 ? "Copy Relative Path" : "Copy Relative Paths")) { copy(paths) }
             Divider()
-            Button(count == 1 ? panelText("history-menu-file-history", "File History") : "History of These Files") { history(paths) }
+            Button(panelText("history-menu-file-history", ["count": .whole(count)], count == 1 ? "File History" : "History of These Files")) { history(paths) }
         }
     }
 

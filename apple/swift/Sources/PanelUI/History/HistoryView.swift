@@ -7,6 +7,7 @@ import DesignSystem
 import Foundation
 import PanelModel
 import SwiftUI
+import WordsModel
 
 public struct HistoryView: View {
     let store: HistoryStore
@@ -23,7 +24,7 @@ public struct HistoryView: View {
 
     public var body: some View {
         SelectableListSplit(
-            hasDetail: presentation == .panel && store.current != nil, label: "Commits", walker: store
+            hasDetail: presentation == .panel && store.current != nil, label: panelText("history-list-label", "Commits"), walker: store
         ) {
             HistoryListView(store: store, now: now).environment(\.selectionSpace, space)
         } bottom: {
@@ -54,11 +55,11 @@ struct HistoryListView: View {
         PanelScroll {
             PanelCard {
                 CardBand(
-                    title: "History", count: store.model.commits.isEmpty ? nil : CountText.grouped(store.model.commits.count),
-                    spoken: "History, \(store.model.commits.count) commits"
+                    title: panelText("history-title", "History"), count: store.model.commits.isEmpty ? nil : CountText.grouped(store.model.commits.count),
+                    spoken: panelText("history-spoken-list", ["count": .whole(store.model.commits.count)], "History, \(String(store.model.commits.count)) commits")
                 ) {
                     RevPicker(
-                        selected: store.rev, revs: store.revs, headTitle: "HEAD", load: store.loadRevs, pick: store.pick)
+                        selected: store.rev, revs: store.revs, headTitle: "HEAD", load: store.loadRevs, pick: store.pick) // text: HEAD is git's name for the current commit
                 }
                 if !store.paths.isEmpty { filterChip }
                 switch store.phase {
@@ -117,7 +118,10 @@ struct HistoryListView: View {
     /// "File History": the pill that limits the log (the file's name or "N paths") with an x, and the way back to every commit
     /// on a click (`history/view.rs`, tooltip "Show all commits").
     private var filterChip: some View {
-        let name = store.paths.count == 1 ? (store.paths[0].split(separator: "/").last.map(String.init) ?? store.paths[0]) : "\(store.paths.count) paths"
+        let first = store.paths[0].split(separator: "/").last.map(String.init) ?? store.paths[0]
+        let name = Words.text(
+            "history-filter", ["count": .whole(store.paths.count), "name": .text(first)],
+            fallback: store.paths.count == 1 ? first : "\(store.paths.count) paths")
         return HStack(spacing: PanelMetrics.gap) {
             Button { store.filter(by: []) } label: {
                 HStack(spacing: Space._1) {

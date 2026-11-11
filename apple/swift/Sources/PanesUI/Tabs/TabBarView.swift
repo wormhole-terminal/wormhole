@@ -42,7 +42,7 @@ public struct TabBarView: View {
                     rule
                 }
                 tabs
-                IconButton(symbol: "plus", label: "New terminal") { actions.newTerminal(currentGroup) }
+                IconButton(symbol: "plus", label: LocalizedStringKey(PanesText.newTerminal)) { actions.newTerminal(currentGroup) }
             }
             .padding(.horizontal, Metric.edgeInset)
             .frame(height: TabMetrics.height)

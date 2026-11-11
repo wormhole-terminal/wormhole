@@ -22,7 +22,7 @@ enum PanesText {
 
     /// "claude, ~/Projects/tube, pane 1 of 3, focused": a header's VoiceOver label (`spoken::pane`).
     static func paneLabel(_ name: String, folder: String?, position: Int, of: Int, focused: Bool) -> String {
-        let place = Words.text("pane-spoken-position", fallback: "pane \(position) of \(of)")
+        let place = Words.text("pane-spoken-position", ["position": .whole(position), "total": .whole(of)], fallback: "pane \(position) of \(of)")
         let state = Words.text("pane-spoken-focused", fallback: "focused")
         return [name, folder.flatMap { $0.isEmpty ? nil : $0 }, place, focused ? state : nil].compactMap { $0 }.joined(separator: ", ")
     }
@@ -34,10 +34,10 @@ enum PanesText {
         case (false, .right): Words.text("pane-drop-show-right", fallback: "Show on the right")
         case (false, .top): Words.text("pane-drop-show-above", fallback: "Show above")
         case (false, .bottom): Words.text("pane-drop-show-below", fallback: "Show below")
-        case (true, .left): Words.text("pane-drop-place-left", fallback: "Place left of \(target)")
-        case (true, .right): Words.text("pane-drop-place-right", fallback: "Place right of \(target)")
-        case (true, .top): Words.text("pane-drop-place-above", fallback: "Place above \(target)")
-        case (true, .bottom): Words.text("pane-drop-place-below", fallback: "Place below \(target)")
+        case (true, .left): Words.text("pane-drop-place-left", ["target": .text(target)], fallback: "Place left of \(target)")
+        case (true, .right): Words.text("pane-drop-place-right", ["target": .text(target)], fallback: "Place right of \(target)")
+        case (true, .top): Words.text("pane-drop-place-above", ["target": .text(target)], fallback: "Place above \(target)")
+        case (true, .bottom): Words.text("pane-drop-place-below", ["target": .text(target)], fallback: "Place below \(target)")
         }
     }
 }

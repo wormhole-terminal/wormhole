@@ -25,7 +25,7 @@ public struct GitProblem: Equatable, Sendable {
     // why: written once on the main thread at launch, before any window reads it; every later access is a read.
     nonisolated(unsafe) public static var rule: @Sendable (_ message: String, _ history: Bool) -> GitProblem = { message, _ in
         GitProblem(
-            headline: "Couldn't read this repository.",
+            headline: "Couldn't read this repository.", // text: the stand-in of core's own git::problem words, which the installed rule speaks
             detail: message.split(separator: "\n", omittingEmptySubsequences: false).first.map(String.init) ?? "", copy: message)
     }
 }

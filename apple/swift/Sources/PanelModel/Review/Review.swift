@@ -3,6 +3,8 @@
 // files, and `message` names each place, quotes the line and says what the person wrote. The quoted line comes from
 // a repository that may be anyone's, so the message carries no control characters at all.
 
+import WordsModel
+
 public enum LineSide: Sendable { case old, new }
 
 public struct ReviewComment: Hashable, Sendable {
@@ -20,7 +22,7 @@ public struct ReviewComment: Hashable, Sendable {
     /// "src/orders.rs:42", and for a removed line, which the file no longer has, "src/orders.rs:40 (removed line)".
     public var location: String {
         let place = "\(Review.printable(path, lines: false)):\(line)"
-        return side == .new ? place : place + " (removed line)"
+        return side == .new ? place : place + " (removed line)" // text: part of the message pasted to the agent, English like agent hook text
     }
 }
 
@@ -53,15 +55,19 @@ public struct Review: Equatable, Sendable {
     /// "1 comment", "3 comments on 2 files".
     public var summary: String {
         let files = Set(comments.map(\.path)).count
-        let count = comments.count == 1 ? "1 comment" : "\(comments.count) comments"
-        return files > 1 ? "\(count) on \(files) files" : count
+        let count = Words.text(
+            "review-summary", ["count": .whole(comments.count)], fallback: comments.count == 1 ? "1 comment" : "\(comments.count) comments")
+        return files > 1
+            ? Words.text(
+                "review-summary-files", ["comments": .text(count), "files": .whole(files)], fallback: "\(count) on \(files) files")
+            : count
     }
 
     /// The message for the agent: a line saying what follows, then each comment numbered with its place, the quoted
     /// line and its text. Nil without comments.
     public var message: String? {
         guard !comments.isEmpty else { return nil }
-        var out = "Review comments on your changes. Please address each one:\n"
+        var out = "Review comments on your changes. Please address each one:\n" // text: pasted to the agent's prompt, English like agent hook text
         for (index, comment) in comments.enumerated() {
             out += "\n\(index + 1). \(comment.location)\n"
             let quote = Self.quote(comment.code)

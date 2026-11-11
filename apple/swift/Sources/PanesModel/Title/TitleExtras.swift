@@ -2,6 +2,7 @@
 // status, the ports a terminal listens on, and the words of each for a tooltip and for VoiceOver.
 
 import Foundation
+import WordsModel
 
 /// A dot while the tree has uncommitted changes, and how far the branch is from its upstream. Only the
 /// departures are shown: a clean branch level with its upstream has no status.
@@ -21,9 +22,15 @@ public struct BranchStatus: Sendable, Equatable {
         let against = upstream.map { " \($0)" } ?? ""
         let commits = { (n: Int) in "\(n) \(n == 1 ? "commit" : "commits")" }
         return [
-            dirty ? "Uncommitted changes" : nil,
-            ahead > 0 ? "\(commits(ahead)) ahead of\(against)" : nil,
-            behind > 0 ? "\(commits(behind)) behind\(against)" : nil,
+            dirty ? Words.text("title-row-uncommitted", fallback: "Uncommitted changes") : nil,
+            ahead > 0
+                ? Words.text(
+                    "title-row-ahead", ["count": .whole(ahead), "upstream": .text(against)],
+                    fallback: "\(commits(ahead)) ahead of\(against)") : nil,
+            behind > 0
+                ? Words.text(
+                    "title-row-behind", ["count": .whole(behind), "upstream": .text(against)],
+                    fallback: "\(commits(behind)) behind\(against)") : nil,
         ].compactMap { $0 }.joined(separator: ", ")
     }
 }
@@ -39,8 +46,12 @@ public enum Ports {
     public static func label(_ port: UInt16) -> String { "localhost:\(port)" }
     /// Where a click on the chip goes: the program on this Mac, spoken to plainly.
     public static func url(_ port: UInt16) -> URL? { URL(string: "http://localhost:\(port)") }
-    public static func words(_ port: UInt16) -> String { "Open localhost:\(port) in the browser" }
+    public static func words(_ port: UInt16) -> String {
+        Words.text("title-row-port-open", ["port": .text(String(port))], fallback: "Open localhost:\(port) in the browser")
+    }
     public static func moreWords(_ more: [UInt16]) -> String {
-        "\(more.count) more listening: \(more.map(String.init).joined(separator: ", "))"
+        let ports = more.map(String.init).joined(separator: ", ")
+        return Words.text(
+            "title-row-ports-more", ["count": .whole(more.count), "ports": .text(ports)], fallback: "\(more.count) more listening: \(ports)")
     }
 }

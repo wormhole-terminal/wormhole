@@ -20,7 +20,7 @@ public struct ChangesView: View {
 
     public var body: some View {
         SelectableListSplit(
-            hasDetail: presentation == .panel && store.current != nil, label: "Changed files", walker: store
+            hasDetail: presentation == .panel && store.current != nil, label: panelText("changes-list-label", "Changed files"), walker: store
         ) {
             ChangesListView(store: store).environment(\.selectionSpace, space)
         } bottom: {
@@ -41,10 +41,10 @@ struct ChangesDiffPane: View {
                 file: file, session: store.diff, position: store.position, step: store.step, close: store.close,
                 review: store.canReview ? reviewing(file) : nil, opensLines: true, showsHeader: !headerInRow
             )
-            .alert("Copied the comments instead", isPresented: .init(get: { store.copiedInstead }, set: { store.copiedInstead = $0 })) {
-                Button("OK") {}
+            .alert(panelText("review-copied-instead", "Copied the comments instead"), isPresented: .init(get: { store.copiedInstead }, set: { store.copiedInstead = $0 })) {
+                Button(panelText("review-copied-instead-ok", "OK")) {}
             } message: {
-                Text("The program in this terminal would run each line of a paste as a command, so the comments are on the clipboard. Paste them into your agent's prompt.")
+                Text(panelText("review-copied-instead-detail", "The program in this terminal would run each line of a paste as a command, so the comments are on the clipboard. Paste them into your agent's prompt."))
             }
         }
     }

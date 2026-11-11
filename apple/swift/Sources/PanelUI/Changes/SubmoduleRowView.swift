@@ -30,7 +30,7 @@ struct SubmoduleRowView: View {
                 Spacer(minLength: 0)
                 Text(what).font(TextRole.caption.font).foregroundStyle(muted).lineLimit(1).truncationMode(.tail).layoutPriority(-2)
                 if hovering, file.submoduleEnterable, let root {
-                    BandButton(symbol: "terminal", label: panelText("submodule-enter", "Open a terminal in \(file.name)"), inRow: true) {
+                    BandButton(symbol: "terminal", label: panelText("submodule-enter", ["name": .text(file.name)], "Open a terminal in \(file.name)"), inRow: true) {
                         host?.openTerminal(in: root + "/" + file.path, running: nil)
                     }
                 }
@@ -41,7 +41,7 @@ struct SubmoduleRowView: View {
             .frame(minHeight: Metric.row)
         }
         .help("\(file.path)\n\(what)")
-        .accessibilityLabel("Submodule \(file.name), \(what)")
+        .accessibilityLabel(panelText("changes-spoken-submodule", ["name": .text(file.name), "what": .text(what)], "Submodule \(file.name), \(what)"))
     }
 
     private var muted: Color { selected ? tokens.sidebarRowSelectedMuted : tokens.textMuted }

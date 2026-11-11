@@ -15,7 +15,7 @@ public enum PathChain {
     public static func of(_ folder: String, bootVolume: String) -> [PathFolder] {
         let parts = folder.split(separator: "/").map(String.init)
         let rooted = folder.hasPrefix("/")
-        let volumeDepth = rooted && parts.count >= 2 && parts[0] == "Volumes" ? 2 : nil
+        let volumeDepth = rooted && parts.count >= 2 && parts[0] == "Volumes" ? 2 : nil // text: the /Volumes folder's own name
         var out: [PathFolder] = []
         var depth = parts.count
         while depth > 0 {

@@ -26,7 +26,7 @@ struct UsageCard: View {
             if let tokensCount = report.responseTokens {
                 VStack(alignment: .leading, spacing: Space._2) {
                     SectionLabel(panelText("usage-latest-response", "Latest model response"))
-                    Text(panelText("usage-tokens", "\(String(tokensCount)) tokens")).font(TextRole.body.font.monospacedDigit()).foregroundStyle(tokens.textPrimary)
+                    Text(panelText("usage-tokens", ["count": .whole(tokensCount)], "\(String(tokensCount)) tokens")).font(TextRole.body.font.monospacedDigit()).foregroundStyle(tokens.textPrimary)
                     Text(panelText("usage-gemini-note", "Latest report across Gemini terminals. Plan limits are not reported."))
                         .font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                 }
@@ -62,7 +62,7 @@ struct LimitRow: View {
         .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._2)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(limit.label), \(words)")
-        .accessibilityValue("\(Int(share * 100)) percent")
+        .accessibilityValue(panelText("usage-spoken-percent", ["percent": .whole(Int(share * 100))], "\(String(Int(share * 100))) percent"))
     }
 
     private func color(_ share: Double) -> Color {

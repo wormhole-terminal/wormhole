@@ -144,7 +144,7 @@ struct DiffLineView: View {
                 .lineLimit(style.wrap ? nil : 1)
                 .fixedSize(horizontal: !style.wrap, vertical: style.wrap)
             if cell.noNewline {
-                Text("no newline at end").font(TextRole.caption.font).foregroundStyle(tokens.diffLineNumber).fixedSize()
+                Text(panelText("diff-no-newline", "no newline at end")).font(TextRole.caption.font).foregroundStyle(tokens.diffLineNumber).fixedSize()
             }
         }
         .modifier(SidewaysCode(scrollX: style.wrap ? nil : style.scrollX - shown.start, height: style.rowHeight))
