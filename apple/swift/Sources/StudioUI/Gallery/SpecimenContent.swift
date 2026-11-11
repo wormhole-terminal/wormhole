@@ -5,6 +5,7 @@ import DesignSystem
 import AuxWindows
 import FontPickerUI
 import PanesUI
+import SettingsUI
 import SidebarUI
 import SwiftUI
 import WorkspaceModel
@@ -25,6 +26,11 @@ enum SpecimenContent {
         case "diff":
             ChangesSpecimen(opensFirst: true)
                 .frame(height: 520).clipped().allowsHitTesting(false)
+        case "project":
+            ProjectSpecimen().frame(height: 560).clipped().allowsHitTesting(false)
+        case "files":
+            FilesSpecimen().frame(height: 360).clipped().allowsHitTesting(false)
+        case "settings": SettingsSpecimen().allowsHitTesting(false)
         case "tiles": TilesSpecimen()
         case "find": FindSpecimen()
         case "panes": PaneSpecimen()
@@ -34,13 +40,13 @@ enum SpecimenContent {
         case "inputs": InputsSpecimen()
         case "menus": MenusSpecimen()
         case "windows": AuxWindowsSpecimen()
-        case "sketch": SketchSpecimen()
+        case "sketch": SketchSpecimen().marked("sketch")
         case "metrics": MetricsSpecimen()
         case "chrome": ChromeSpecimen()
-        case "shape": ShapeSpecimen()
         case "controls": ControlsSpecimen()
         case "palette": PaletteSpecimen()
-        case "fonts": FontPickerSpecimen().frame(width: FontPickerMetric.width, alignment: .leading).allowsHitTesting(false)
+        case "fonts": FontPickerSpecimen().frame(width: FontPickerMetric.width, alignment: .leading).allowsHitTesting(false).marked("fonts")
+        case "shape": ShapeSpecimen(context: context)
         case "terminal": TerminalSpecimen(context: context)
         case "code": CodeSpecimen(context: context)
         default: TypeSpecimen()

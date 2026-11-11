@@ -55,6 +55,7 @@ public struct DiffView: View {
             .animation(.snappy(duration: 0.16), value: review?.review.isEmpty)
         }
         .background(tokens.surfaceWindow)
+        .marked("diff")
         .onExitCommand(perform: close)
         .accessibilityLabel(panelText("diff-spoken", ["name": .text(file.name)], "Diff of \(file.name)"))
     }

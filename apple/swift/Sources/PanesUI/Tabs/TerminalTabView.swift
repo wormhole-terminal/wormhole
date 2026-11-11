@@ -36,6 +36,7 @@ struct TerminalTabView: View {
         .background(shape.fill(selected ? tokens.textPrimary.opacity(TabMetrics.openFill) : hovering ? tokens.stateHover : tokens.textPrimary.opacity(TabMetrics.closedFill)))
         .overlay(alignment: .trailing) { if hovering && !hints { closeButton } }
         .clipShape(shape)
+        .marked("title.tab")
         .contentShape(shape)
         .onHover { hovering = $0 }
         .motion(Motion.selection, value: selected)

@@ -16,6 +16,7 @@ struct ValueStepper: View {
                 .frame(width: SettingsMetric.stepperValueWidth, alignment: .trailing)
             Stepper(label, onIncrement: increase, onDecrement: decrease).labelsHidden()
         }
+        .marked("stepper")
         .accessibilityElement(children: .combine)
         .accessibilityLabel(label)
         .accessibilityValue(value)

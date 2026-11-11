@@ -60,6 +60,7 @@ struct FileRowView: View {
             .frame(minHeight: Metric.row)
             .onGeometryChange(for: CGFloat.self, of: { $0.size.width - PanelMetrics.inset * 2 }) { width = $0 }
         }
+        .marked("file.row")
         .help("\(file.path)\n\(file.about)")
         .pathMenu(menu ?? [file.path], onDisk: onDisk)
         .accessibilityLabel("\(file.name), \(file.kind.title)")

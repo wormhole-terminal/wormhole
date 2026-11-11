@@ -1,6 +1,7 @@
 // The one text field of the settings pages: the system's rounded field. It applies what was typed when it loses focus or
 // takes Return, as the GPUI fields do.
 
+import DesignSystem
 import SwiftUI
 
 struct InputField: View {
@@ -18,6 +19,7 @@ struct InputField: View {
             .onSubmit(onCommit)
             .onChange(of: focused) { _, now in if !now { onCommit() } }
             .frame(width: width)
+            .marked("input")
             .recordFrame(frameId)
     }
 }

@@ -29,6 +29,7 @@ public struct KeyCap: View {
                     shape.strokeBorder(tokens.borderStrong, lineWidth: tokens.metrics.borderWidth)
                 }
             }
+            .marked("keycap")
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(KeyCapSpeech.words(text)))
     }

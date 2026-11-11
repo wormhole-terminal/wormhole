@@ -26,6 +26,7 @@ struct BranchStatusMark: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .marked("title.extras")
         .help(status.words)
         .accessibilityLabel(status.words)
     }

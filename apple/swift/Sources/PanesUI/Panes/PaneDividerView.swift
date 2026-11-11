@@ -42,6 +42,7 @@ struct PaneDividerView: View {
             }
         }
         .frame(width: vertical ? thickness : nil, height: vertical ? nil : thickness)
+        .marked("column.divider")
         .contentShape(Rectangle())
         .pointerStyle(vertical ? .columnResize : .rowResize)
         .motion(Motion.press, value: look)

@@ -22,5 +22,6 @@ struct CodeSpecimen: View {
         }
         .padding(Space._3).frame(maxWidth: .infinity, alignment: .leading)
         .background(tokens.terminal.background.color, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
+        .marked("code")
     }
 }

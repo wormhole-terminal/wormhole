@@ -13,14 +13,14 @@ struct InputsSpecimen: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
-            TextField("A field", text: $text).textFieldStyle(.roundedBorder).frame(maxWidth: 220)
+            TextField("A field", text: $text).textFieldStyle(.roundedBorder).frame(maxWidth: 220).marked("input")
             HStack(spacing: Space._4) {
-                Toggle("Checkbox", isOn: .constant(false)).toggleStyle(.checkbox)
-                Toggle("Checked", isOn: $checked).toggleStyle(.checkbox)
+                Toggle("Checkbox", isOn: .constant(false)).toggleStyle(.checkbox).marked("checkbox")
+                Toggle("Checked", isOn: $checked).toggleStyle(.checkbox).marked("checkbox")
             }
             HStack(spacing: Space._4) {
-                Toggle("Switch", isOn: .constant(false)).toggleStyle(.switch)
-                Toggle("On", isOn: $on).toggleStyle(.switch)
+                Toggle("Switch", isOn: .constant(false)).toggleStyle(.switch).marked("switch")
+                Toggle("On", isOn: $on).toggleStyle(.switch).marked("switch")
             }
             Picker("", selection: $radio) { Text("Radio").tag(0); Text("Selected").tag(1) }
                 .pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden()

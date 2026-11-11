@@ -59,6 +59,7 @@ struct SettingRow<Control: View>: View {
         .frame(minHeight: SettingsMetric.rowMinHeight)
         .background(state.isRevealed ? tokens.findMatch.opacity(0.25) : .clear, in: RoundedRectangle(cornerRadius: Radius.row))
         .motion(Motion.layout, value: state.isRevealed)
+        .marked("setting.row")
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
         .contextMenu {

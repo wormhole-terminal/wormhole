@@ -30,6 +30,7 @@ struct SettingsNav: View {
             }
         }
         .listStyle(.sidebar)
+        .marked("settings.nav")
         .focused(focus, equals: .nav)
         // A page that comes or goes (the feature flags, unlocked with ⌃⌥⌘F) slides in or out; Reduce Motion cuts.
         .motion(Motion.layout, value: model.navSections.map(\.id))

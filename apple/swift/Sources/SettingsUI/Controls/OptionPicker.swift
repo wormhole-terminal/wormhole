@@ -1,6 +1,7 @@
 // The schema's choices as the system's pop-up button (many) or segmented control (a few, `segmented`). A value the list
 // lacks (a hand-written one) is shown as written rather than as an empty pop-up.
 
+import DesignSystem
 import SettingsModel
 import SwiftUI
 
@@ -21,6 +22,6 @@ struct OptionPicker: View {
             }
         }
         .labelsHidden()
-        if segmented { picker.pickerStyle(.segmented).fixedSize() } else { picker.pickerStyle(.menu).frame(width: width) }
+        if segmented { picker.pickerStyle(.segmented).fixedSize().marked("segmented") } else { picker.pickerStyle(.menu).frame(width: width).marked("select") }
     }
 }

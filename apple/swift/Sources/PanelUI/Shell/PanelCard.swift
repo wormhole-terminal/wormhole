@@ -14,6 +14,7 @@ struct PanelCard<Content: View>: View {
             .padding(PanelMetrics.cardPad)
             .background(tokens.card, in: shape)
             .overlay { shape.strokeBorder(tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) }
+            .marked("panel.card")
             .padding(.horizontal, PanelMetrics.cardMargin)
             .padding(.bottom, PanelMetrics.cardGap)
     }

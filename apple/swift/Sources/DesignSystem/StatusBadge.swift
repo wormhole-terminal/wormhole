@@ -23,5 +23,6 @@ public struct StatusBadge: View {
                 }
             }
             .fixedSize()
+            .marked("badge")
     }
 }

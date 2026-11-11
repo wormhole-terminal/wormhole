@@ -30,6 +30,7 @@ struct CardBand<Trailing: View>: View {
         .padding(.horizontal, PanelMetrics.inset)
         .frame(height: Metric.band)
         .background(hovering ? tokens.stateHover : .clear, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
+        .marked("panel.band")
         .onHover { hovering = $0 }
     }
 

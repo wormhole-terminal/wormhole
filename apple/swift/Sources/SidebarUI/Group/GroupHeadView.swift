@@ -53,6 +53,7 @@ struct GroupHeadView: View {
         .frame(maxWidth: .infinity, minHeight: height, alignment: .leading)
         .contentShape(Rectangle())
         .onTapGesture { context.send(.toggleGroup(head.id)) }
+        .marked("sidebar.band")
         .onHover { hovering = $0 }
         .ringWhileMenuOpen(hovering: hovering)
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { context.frames.heads[head.id] = $0 }

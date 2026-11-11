@@ -22,6 +22,7 @@ public struct StatusDot: View {
                 .motionTransition(.scale(scale: 0.4).combined(with: .opacity))
         }
         .frame(width: Metric.lead, height: Metric.lead)
+        .marked("status.glyph")
         .motion(Motion.selection, value: kind)
         // The row speaks the state in its own label; the glyph alone would be read twice.
         .accessibilityHidden(true)

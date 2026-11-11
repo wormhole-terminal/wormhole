@@ -15,10 +15,10 @@ struct ControlsSpecimen: View {
         VStack(alignment: .leading, spacing: Space._4) {
             HStack(spacing: Space._4) {
                 Slider(value: $level)
-                Stepper("\(amount)", value: $amount, in: 0...12)
+                Stepper("\(amount)", value: $amount, in: 0...12).marked("stepper")
             }
             Picker("", selection: $segment) { Text("One").tag(0); Text("Two").tag(1); Text("Three").tag(2) }
-                .pickerStyle(.segmented).labelsHidden()
+                .pickerStyle(.segmented).labelsHidden().marked("segmented")
             ProfileChip(choices: TabSamples.profiles)
             VStack(spacing: Space._2) {
                 Banner(kind: .info, text: "A banner says something quietly.")

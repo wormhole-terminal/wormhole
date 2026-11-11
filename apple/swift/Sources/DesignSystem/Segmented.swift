@@ -23,6 +23,7 @@ public struct Segmented<Value: Hashable>: View {
         }
         .padding(2).frame(height: Metric.titleControl)
         .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip + 2))
+        .marked("segmented")
         .motion(Motion.selection, value: selection)
     }
 

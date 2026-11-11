@@ -20,6 +20,7 @@ public struct CountBadge: View {
             // At least a square, so a lone digit sits in a circle-ish pill.
             .frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)
             .background(tokens.border, in: Capsule())
+            .marked("badge")
             // Digits roll to the new number instead of swapping.
             .contentTransition(.numericText(value: Double(count)))
             .motion(Motion.selection, value: count)

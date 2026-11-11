@@ -12,8 +12,8 @@ struct ButtonsSpecimen: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
             HStack(spacing: Space._2) {
-                Button("Primary") {}.buttonStyle(.borderedProminent)
-                Button("Button") {}.buttonStyle(.bordered)
+                Button("Primary") {}.buttonStyle(.borderedProminent).marked("button.primary")
+                Button("Button") {}.buttonStyle(.bordered).marked("button")
                 Button("Ghost") {}.buttonStyle(.plain)
                 Button("Link") {}.buttonStyle(.link).foregroundStyle(tokens.textLink)
                 Button("Danger", role: .destructive) {}.buttonStyle(.bordered)

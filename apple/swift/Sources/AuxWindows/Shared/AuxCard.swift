@@ -17,5 +17,6 @@ struct AuxCard<Content: View>: View {
                 RoundedRectangle(cornerRadius: tokens.metrics.radiusLg)
                     .strokeBorder(edge ?? tokens.border, lineWidth: tokens.metrics.borderWidth)
             }
+            .marked("card")
     }
 }

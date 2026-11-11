@@ -36,6 +36,7 @@ struct TerminalSpecimen: View {
             }
             .font(TextRole.body.font.monospaced()).padding(Space._3).frame(maxWidth: .infinity, alignment: .leading)
             .background(terminal.background.color, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
+            .marked("terminal")
             .accessibilityHidden(true)
         }
     }

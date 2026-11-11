@@ -29,5 +29,6 @@ struct ExtraChip: View {
         .background { if filled { shape.fill(tokens.stateActive) } }
         .overlay { if filled { shape.strokeBorder(tokens.border, lineWidth: tokens.metrics.borderWidth) } }
         .contentShape(shape)
+        .marked("neutral.chip")
     }
 }

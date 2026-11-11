@@ -13,5 +13,6 @@ public struct TintChip: View {
         Text(text).textRole(.caption).foregroundStyle(tokens.textMuted)
             .padding(.horizontal, Space._2).frame(height: Metric.badgeHeight + Space._1)
             .background(tokens.chipTint, in: RoundedRectangle(cornerRadius: Radius.chip))
+            .marked("tint.chip")
     }
 }

@@ -29,6 +29,7 @@ struct Callout<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(fill, in: shape)
         .overlay { if contrast == .increased { shape.strokeBorder(edge, lineWidth: tokens.metrics.borderWidth) } }
+        .marked("callout")
         .padding(.horizontal, PanelMetrics.inset - PanelMetrics.cardPad).padding(.vertical, Space._1)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(title)

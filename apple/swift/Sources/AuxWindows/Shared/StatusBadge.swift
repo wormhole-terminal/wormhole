@@ -20,5 +20,6 @@ struct StatusBadge: View {
                     .strokeBorder(color, lineWidth: tokens.metrics.borderWidth)
             }
             .fixedSize()
+            .marked("badge")
     }
 }

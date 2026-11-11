@@ -61,6 +61,7 @@ struct ResultRow: View {
                 Rectangle().fill(tokens.stateHover)
             }
         }
+        .marked("palette.row")
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text([command.title, detail, second, spokenKey].compactMap { $0 }.joined(separator: ", ")))

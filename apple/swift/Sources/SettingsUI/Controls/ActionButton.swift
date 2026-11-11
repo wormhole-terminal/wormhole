@@ -20,6 +20,7 @@ struct ActionButton: View {
             if let symbol { Label(title, systemImage: symbol).symbolEffect(.rotate, isActive: isSpinning && !reduceMotion) } else { Text(title) }
         }
         .buttonStyle(.bordered)
+        .marked("button")
         .recordFrame(frameId)
     }
 }

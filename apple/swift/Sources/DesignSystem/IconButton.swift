@@ -29,6 +29,7 @@ public struct IconButton: View {
             .frame(width: Metric.control, height: Metric.control)
         }
         .buttonStyle(IconButtonStyle(hovering: hovering))
+        .marked("icon.button")
         .onHover { hovering = $0 }
         .help(label)
         .accessibilityLabel(label)

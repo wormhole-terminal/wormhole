@@ -38,6 +38,7 @@ struct StatusTile: View {
                     .transition(grows ? .scale(scale: 0.01).combined(with: .opacity) : .opacity)
             }
             .frame(width: size, height: size)
+            .marked("status.tile")
             .animation(animation, value: state)
             .accessibilityHidden(true)
     }

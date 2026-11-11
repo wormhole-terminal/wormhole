@@ -28,6 +28,7 @@ struct BranchCrumb: View {
                     .frame(width: width, height: TitleMetrics.chipHeight, alignment: .leading)
                     .background(detached ? tokens.bannerWarningBackground : tokens.gitBranchBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
                     .clipped()
+                    .marked("branch.chip")
                     .contentTransition(.interpolate)
                 }
                 .buttonStyle(.plain)

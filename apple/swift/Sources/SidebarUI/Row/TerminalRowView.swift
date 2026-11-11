@@ -70,6 +70,7 @@ struct TerminalRowView: View {
         .contentShape(shape)
         .ringWhileMenuOpen(hovering: hovering)
         .statusNudge(context.shifts[terminal.id])
+        .marked("sidebar.row")
         .onHover { hovering = $0 }
         .onAppear { hovering = look.hovered == terminal.id }
         .animation(SidebarMotion.state, value: hovering)

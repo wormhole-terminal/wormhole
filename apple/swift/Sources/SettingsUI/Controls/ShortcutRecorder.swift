@@ -58,6 +58,7 @@ struct ShortcutRecorder: View {
                     .frame(width: Metric.controlSmall, height: Metric.controlSmall).padding(.trailing, Space._1)
             }
         }
+        .marked("recorder")
         .onChange(of: recording) { onRecording(recording) }
         .onDisappear { if recording { onRecording(false) } }
         .accessibilityLabel(label)

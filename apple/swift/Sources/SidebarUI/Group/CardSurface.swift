@@ -30,6 +30,7 @@ struct CardSurface<Content: View>: View {
                 }
                 .overlay { shape.strokeBorder(tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) }
                 .clipShape(shape)
+                .marked("sidebar.card")
         } else {
             content
         }

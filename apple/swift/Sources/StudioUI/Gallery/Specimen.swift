@@ -1,10 +1,9 @@
 // One section of the gallery page: a component of the design on sample data, in the live (previewed) theme,
-// with what it is and where it belongs. The tokens it draws with come from the sources themselves
-// (`GalleryUses`), so the selected token's outline and the editor's "Used by" are always what the views use.
-// The facts are plain data (the Studio's token knowledge reads them off the main actor); the view is
+// with what it is and where it belongs. What the selected token is drawn on is outlined on each element that draws
+// with it (`.marked`, which the views carry), and the elements' tokens come from the sources themselves
+// (`GalleryUses`), so the outline and the editor's "Used by" are always what the views use. The view is
 // `SpecimenContent`'s.
 
-import DesignSystem
 import StudioModel
 
 struct Specimen: Identifiable, Sendable {
@@ -16,13 +15,10 @@ struct Specimen: Identifiable, Sendable {
     /// The part of the app it belongs to (the gallery's filter); `nil` for the basics, listed under All only.
     let area: StudioArea?
     let column: Column
-    let tokens: [String]
 
-    init(_ id: String, _ title: String, _ detail: String, area: StudioArea?, column: Column, tokens: [String]) {
-        (self.id, self.title, self.detail, self.area, self.column, self.tokens) = (id, title, detail, area, column, tokens)
+    init(_ id: String, _ title: String, _ detail: String, area: StudioArea?, column: Column) {
+        (self.id, self.title, self.detail, self.area, self.column) = (id, title, detail, area, column)
     }
-
-    var use: TokenUse { TokenUse(id: id, label: title, area: area ?? .all, tokens: tokens) }
 }
 
 /// What a specimen is told: the token selected, and how to select another by clicking a swatch.

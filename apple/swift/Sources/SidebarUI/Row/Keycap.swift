@@ -21,5 +21,6 @@ struct Keycap: View {
             .background(tokens.controlBackground, in: shape)
             .overlay { if increased { shape.strokeBorder(tokens.borderStrong, lineWidth: tokens.metrics.borderWidth) } }
             .fixedSize()
+            .marked("keycap")
     }
 }

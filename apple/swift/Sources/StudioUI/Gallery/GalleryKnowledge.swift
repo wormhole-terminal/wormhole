@@ -11,5 +11,5 @@ public struct GalleryKnowledge: TokenKnowledge {
 
     public func rule(for token: String, appearance: ThemeAppearance) -> String? { rules.rule(for: token, appearance: appearance) }
 
-    public var uses: [TokenUse] { GalleryCatalog.specimens.map(\.use) }
+    public var uses: [TokenUse] { GalleryUses.elements }
 }

@@ -24,6 +24,7 @@ public struct FindBar: View {
         .padding(.leading, Space._2).padding(.trailing, Space._1)
         .frame(width: FindMetrics.barWidth, height: FindMetrics.barHeight)
         .floatingSurface()
+        .marked("find")
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.findPlaceholder)
         // Esc anywhere in the bar (a button focused) closes it, as in GPUI's focus ladder.

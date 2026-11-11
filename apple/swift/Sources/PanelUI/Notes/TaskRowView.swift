@@ -35,6 +35,7 @@ struct TaskRowView: View {
         .padding(.horizontal, PanelMetrics.inset)
         .frame(minHeight: Metric.row)
         .background(hovering || editing ? tokens.stateHover : .clear, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
+        .marked("panel.item")
         .onHover { hovering = $0 }
         .animation(motion.tick, value: task.done)
         .onChange(of: store.freshStep) { _, id in

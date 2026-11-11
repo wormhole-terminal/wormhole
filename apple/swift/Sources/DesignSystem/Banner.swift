@@ -30,6 +30,7 @@ public struct Banner<Actions: View>: View {
         .frame(minHeight: Self.minHeight)
         .background(fill, in: shape)
         .overlay { if ThemeStore.shared.increaseContrast { shape.strokeBorder(border, lineWidth: tokens.metrics.borderWidth) } }
+        .marked("banner")
         .accessibilityElement(children: .contain)
         .accessibilityLabel(text)
     }
