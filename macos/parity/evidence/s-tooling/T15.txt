@@ -1,0 +1,85 @@
+# live run, --background Swift instance (exp/swift-s-tooling), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-tooling-c; each '>' line is one control-folder batch
+# T15: the pointer moved under ⌘ over a link underlines it (T15-link.png, the terminal's own render), and the right-click menu at that cell has Open Link and Copy Link; a cell without a link has neither. Nothing is opened (Open Link would reach the system).
+> screen
+see https://example.com/x here                                            
+➜  ~                                                                      
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+                                                                          
+> bounds 389 51 1
+views: MetalTerminalView < Container < AppKitPlatformViewHost<PlatformViewRepresentableAdaptor<TerminalHost>> < _NSGraphicsView < NSHostingView<WorkspaceRootView> < NSThemeFrame
+TextArea "Terminal" = see https://example.com/x here⏎➜  ~⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎⏎… [focused] [off] @308,38 644x774
+> hover 600 300
+hover 600 300: over MetalTerminalView areas=4 owners=2
+> hover-cmd 389 51
+hover-cmd 389 51: over MetalTerminalView areas=4 owners=2
+> shot macos/parity/evidence/s-tooling/T15-link.png
+shot macos/parity/evidence/s-tooling/T15-link.png
+> right-click 389 51
+menu:
+1. Open Link
+2. Copy Link
+---
+3. Copy [c] [off]
+4. Paste [v]
+5. Select All [a]
+---
+6. Find… [f]
+---
+7. Split Right [d]
+8. Split Down [d]
+---
+9. Clear Buffer [k]
+> menu-close
+menu-close
+> right-click 700 400
+menu:
+1. Copy [c] [off]
+2. Paste [v]
+3. Select All [a]
+---
+4. Find… [f]
+---
+5. Split Right [d]
+6. Split Down [d]
+---
+7. Clear Buffer [k]
+> menu-close
+menu-close

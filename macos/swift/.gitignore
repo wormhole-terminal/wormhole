@@ -1,0 +1,5 @@
+# SwiftPM's build products, and what `macos/scripts/build-ffi.sh` links in when the FFI is wanted.
+.build/
+/WormholeFFI.xcframework
+/Sources/WormholeBindings/
+/out/

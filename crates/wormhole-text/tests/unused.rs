@@ -82,7 +82,7 @@ fn used_text() -> String {
 }
 
 /// The Swift app asks for a message by its Fluent id (`"studio-title"`, `"studio-title.tip"`): each id literal in
-/// `apple/swift/Sources` counts as a use of the constant or function it is generated as (`STUDIO_TITLE`).
+/// `macos/swift/Sources` counts as a use of the constant or function it is generated as (`STUDIO_TITLE`).
 fn swift_used_text() -> String {
     fn swift_files(dir: &Path, out: &mut Vec<PathBuf>) {
         for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
@@ -95,7 +95,7 @@ fn swift_used_text() -> String {
         }
     }
     let mut files = Vec::new();
-    swift_files(&crates_dir().parent().expect("workspace").join("apple/swift/Sources"), &mut files);
+    swift_files(&crates_dir().parent().expect("workspace").join("macos/swift/Sources"), &mut files);
     let mut text = String::new();
     for file in files {
         for part in fs::read_to_string(&file).unwrap_or_default().split('"').skip(1).step_by(2) {

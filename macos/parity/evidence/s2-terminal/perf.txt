@@ -1,0 +1,22 @@
+# Per-frame cost, round S wave 2. Release builds, background instances, this Mac under other lanes' builds (load 8-13: see the uptime lines).
+## Allocations per forced draw (`control perf-profile 2 <name>`, main thread, malloc_logger), now split by part (FrameSample.allocations)
+                         before (base e37f35179)        after (this lane)
+still screen, total      40                             24
+  fetch / apply / view   (not split; fetch ~10)         0 / 0 / 0
+  draw (assemble+encode) (~30)                          24  = Metal's own: command buffer, encoder, drawable, completion block
+flooded 42 rows (yes)    (not measured before)          75: fetch 19, apply 6, view 30.8 (scroller and overlay updates), draw 19.5
+What changed: a still screen's frame crosses the FFI as the number 0 (Terminal.prepare_frame/take_frame; the frame is packed into a kept buffer
+and compared with the last one that changed no row), so nothing is packed into a Vec, lowered or lifted; the render pass descriptor, the
+palette's floats and the completion handler are made once. The 24 left are Metal objects a draw cannot avoid while it draws; a still screen in
+the app does not draw at all (needsDraw is false), only perf-profile's forced draws do.
+## Guards (FrameWorkGuardTests, debug `swift test`): new anEmptyFrameAllocatesNothing (== 0); header-only frame 133 (budget 150 -> 140),
+24 changed rows 5706 = 238 a row (budget 270 -> 250). Rust: find_blocks a_still_screen_prepares_empty_frames.
+## Frame times (macos/scripts/perf-compare.sh --only warptunnel,matrix,flood-ascii,flood-truecolor, grid 200x69, ttystorm 1.x from Homebrew)
+workload          draw_avg ms before -> after   draw_max ms before -> after   main busy % before -> after
+warptunnel        0.34 -> 0.43                 0.62 -> 0.67                  4.7 -> 8.1
+matrix            1.26 -> 0.83                 6.21 -> 3.90                  20.8 -> 17.3
+flood-ascii       3.61 -> 2.38                 5.68 -> 4.05                  62.8 -> 65.5
+flood-truecolor   0.68 -> 0.59                 0.90 -> 0.72                  11.0 -> 12.7
+Results: scratchpad/s2-terminal/perf-tmp/wormhole-swift-perf/20261111-020246 (before) and 20261111-025816 (after). The machine was not quiet
+in either run (other lanes building), so differences under ~20 % are noise; the cell is now 16.8 px (the grid is the same 200x69), and glyphs
+are rasterised per quarter-pixel variant and dilation (more atlas entries on first use: 0 to 14 glyphs rasterised per 60-frame run, against 0 to 5 before).

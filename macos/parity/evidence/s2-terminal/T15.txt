@@ -1,0 +1,26 @@
+# T15 terminal context menu, live. Swift: release base-bin, WORMHOLE_SHELL=<feed script>, window 1320x820, dark. GPUI: debug devctl build, same feed script.
+# Feed: URL line, plain line, OSC 133 block (`echo hi` + 2 output lines), prompt. Points are window points; Swift cell 8.5x18 at (362,42), GPUI 8.4x18 at (361,42).
+# Menus listed with `right-click x y` (Swift: menu is read in the same batch) / `right-click` then, a batch later, `menu` (GPUI).
+## Swift
+> right-click 468 51   (over the URL)    : Open Link, Copy Link, ---, Copy [c] off, Paste [v], Select All [a], ---, Find... [f], ---, Split Right [d], Split Down [d], ---, Clear Buffer [k]
+> right-click 409 105  (block output)    : Copy off, Paste, Select All, ---, Find..., ---, Copy Command, Copy Output, Put Command at Prompt, ---, Split Right, Split Down, ---, Clear Buffer
+> right-click 409 69   (plain text)      : Copy off, Paste, Select All, ---, Find..., ---, Split Right, Split Down, ---, Clear Buffer
+## GPUI (`right-click`, next batch `menu`)
+URL:   Open Link, Copy Link, ---, Copy [off], Paste [off], Select All, ---, Find..., ---, Split Right, Split Down, ---, Clear Buffer
+block: Copy [off], Paste [off], Select All, ---, Find..., ---, Copy Command, Copy Output, Put Command at Prompt, ---, Split Right, Split Down, ---, Clear Buffer
+plain: Copy [off], Paste [off], Select All, ---, Find..., ---, Split Right, Split Down, ---, Clear Buffer
+=> same items, same order, same separators in all three spots. Differences: Swift's list shows each item's key (the NSMenu key equivalent); Paste is enabled in Swift
+   (AppController+Context.swift:14 reads NSPasteboard.general: the owner's clipboard has text) and [off] in GPUI (that instance's own state); neither was picked.
+## Items picked (each with a re-opened menu), same in both apps
+Put Command at Prompt (block menu): Swift `picked Put Command at Prompt`, screen row 5 "$ echo hi"  | GPUI the same, row 5 "$ echo hi" (typed at the prompt, cat's tty echo).
+Find...: Swift: the find bar opens ~1 s later (a batch that looks at once sees nothing; `key esc` before it goes to the terminal as ^[); focus is the bar's field (bounds: TextField [focused]).
+         GPUI: bar opens, field seeded with the selection's first line ("see https://example.com/x here", 1 of 1) after a Select All; Swift's field was empty (no selection existed, see below).
+Split Right: Swift panes=1,2 focused=2, rows 1,2 `split=3`, shot T15-swift-split-down.png (after the next pick). GPUI: split 3 members=[1,2] layout=TwoColumns focused=2. Same.
+Split Down (over the left pane): Swift panes=1,2,4 focused=4, left pane split into top (old) and bottom (new). GPUI: split 3 members=[1,2,3] panes=[1,2,4] focused=4, same layout (T15-gpui-split-down.png).
+Clear Buffer (500-line scrollback, then pick): Swift: top of history 1 -> 460 after (history erased, screen kept: 460.. shown). GPUI: top after = 460 (shot). Same.
+Select All: GPUI: whole grid highlighted (T15-select-all.png). SWIFT: NOTHING DRAWN, by menu pick and by `key cmd-a` (0 pixels of the selection colour (13,58,92)
+   in `shot` after frames 3/5 and waits; a `select-cells` or a mouse drag draws it: 66584 / 143833 px). selectAll(_) is TerminalSelection.swift:28 -> Terminal.select_all
+   (crates/wormhole-ffi/src/interaction/selection.rs:65); refreshSelection (TerminalSelection.swift:10) only runs after a frame is applied and select_all marks no new frame/snapshot:
+   likely the selection exists in the engine but the spans are read from the old snapshot. Not proven (no way to read the selection without Copy).
+## Not done (clipboard rule): Copy, Copy Link, Copy Command, Copy Output, Cmd-C and Paste were never picked. Pending the pasteboard seam: every Copy writes NSPasteboard.general
+   (TerminalClipboard.swift:28, TerminalSelection.swift:22, BlockController.swift:120, TerminalMenu.swift:50). Open Link not picked.

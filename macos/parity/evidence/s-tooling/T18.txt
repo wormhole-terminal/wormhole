@@ -1,0 +1,17 @@
+# live run, --background Swift instance (exp/swift-s-tooling), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-tooling-c; each '>' line is one control-folder batch
+# T18: the window's bottom-right corner dragged as a hand would. The press lands on the window frame (NSThemeFrame), whose own live-resize loop reads the queued moves and release: AppKit's real live resize, with its start and end
+# window server: z=16 of 17 front=Terminal
+> geometry
+window=(1320.0, 820.0) content=(1320.0, 820.0) view=(0.0, 0.0, 644.0, 774.0) live=false increments=(1.0, 1.0) drawable=(1288.0, 1548.0) grid=74x42 cell=17x36px pad=4.0 lastRowEnd=760.0 viewHeight=774.0 strip=10.0
+> bounds 1318 818 1
+views: NSThemeFrame
+ScrollArea [off] @960,38 360x782
+> drag 1318 818 1150 700 12
+drag 1318 818 1150 700 12: down on NSThemeFrame, the gesture played to its release
+> geometry
+window=(1162.0, 710.0) content=(1162.0, 710.0) view=(0.0, -0.09723521048169914, 492.0, 668.5) live=false increments=(1.0, 1.0) drawable=(984.0, 1337.0) grid=57x36 cell=17x36px pad=4.0 lastRowEnd=652.0 viewHeight=668.5 strip=12.5
+> window-shot macos/parity/evidence/s-tooling/T18-end.png
+window-shot macos/parity/evidence/s-tooling/T18-end.png
+> a11y said
+said Copied 5 characters
+# window server: z=16 of 17 front=Terminal

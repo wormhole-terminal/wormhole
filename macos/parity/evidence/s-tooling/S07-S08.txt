@@ -1,0 +1,28 @@
+# live run, --background Swift instance (exp/swift-s-tooling), WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-s-tooling-c; each '>' line is one control-folder batch
+# S07/S08: a sidebar row dragged by the pointer onto the right half of the shown terminal's pane: the drop hint mid-drag (S08-join-mid.png), then the split
+> rows
+selected=1 live=[1, 2, 3] groups=0
+  row 3 "wanderer@mac:~" idle number=1 pinned=true folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, unread output, 1 of 3, Command 1"
+  row 2 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, unread output, 2 of 3, Command 2"
+  row 1 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 3 of 3, Command 3"
+> mouse-down 150 124
+down on PlatformGroupContainer
+> mouse-move 200 130
+dragged PlatformGroupContainer
+> mouse-move 400 300
+dragged PlatformGroupContainer
+> mouse-move 700 350
+dragged PlatformGroupContainer
+> mouse-move 850 400
+dragged PlatformGroupContainer
+> window-shot macos/parity/evidence/s-tooling/S08-join-mid.png
+window-shot macos/parity/evidence/s-tooling/S08-join-mid.png
+> mouse-up 850 400
+up on PlatformGroupContainer
+> rows
+selected=1 live=[1, 2, 3] groups=0
+  row 3 "wanderer@mac:~" idle number=1 pinned=true folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, unread output, 1 of 3, Command 1"
+  row 2 "wanderer@mac:~" idle number=2 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, unread output, 2 of 3, Command 2"
+  row 1 "wanderer@mac:~" idle number=3 pinned=false folder=~ line="~" trail=- split=0 spoken="wanderer@mac:~, shell, nothing running, selected, 3 of 3, Command 3"
+> state
+grid=50x36 cell=17x36px scale=2.0 frames_drawn=191 ticks=105 wakes=31 pauses=20 busy_skips=0 blink_fires=0 link=paused words_shaped=2 word_hits=116 glyphs_rasterised=2 atlas_resets=0 terminals=3 selected=1 sidebar=true panel=true tab=changes window=90572 theme=wormhole.dark appearance=dark mode=system opacity=0.8 blur=true glass=false status_bar=false tabs=false gaps=true dividers=true reduce_transparency=false increase_contrast=false panes=1 focused=1 zoomed=none cover=none focus=sidebar

@@ -1,0 +1,18 @@
+## A1 launch with Inter in the fonts folder and font_family=Inter (Settings never opened)
+fonts=system(family: "Inter") size=16.0 line=1.3 ligatures=true view=16.0pt resolved=Inter
+text echo "Hamburgefonstiv illli WWW 0123"
+key return focus=terminal
+idle
+shot macos/parity/evidence/s3-themes-fonts/1-launch-inter.png
+## A2 Inter-Regular.ttf removed while running
+fonts=system(family: "Inter") size=16.0 line=1.3 ligatures=true view=16.0pt resolved=Helvetica
+idle
+shot macos/parity/evidence/s3-themes-fonts/2-removed-fallback.png
+## A3 Inter-Regular.ttf put back
+fonts=system(family: "Inter") size=16.0 line=1.3 ligatures=true view=16.0pt resolved=Inter
+idle
+shot macos/parity/evidence/s3-themes-fonts/3-added-inter.png
+## A4 the file replaced by Inter SemiBold bytes (same family, changed file)
+fonts=system(family: "Inter") size=16.0 line=1.3 ligatures=true view=16.0pt resolved=Inter
+idle
+shot macos/parity/evidence/s3-themes-fonts/4-replaced-semibold.png

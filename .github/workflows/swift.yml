@@ -1,13 +1,13 @@
 name: Swift app
 
-# The Swift experiment (apple/): its Rust library, a release build of the app and every Swift test, on a
+# The Swift experiment (macos/): its Rust library, a release build of the app and every Swift test, on a
 # GitHub runner instead of a developer's Mac. Pushes to exp/swift only, or by hand (Actions → Swift app →
 # Run workflow, or `gh workflow run "Swift app" --ref <branch>`). It uses no secret and publishes nothing.
 on:
   push:
     branches: [exp/swift]
     paths:
-      - "apple/**"
+      - "macos/**"
       - "crates/**"
       - "Cargo.lock"
       - "rust-toolchain.toml"
@@ -57,20 +57,20 @@ jobs:
           swift --version
           cargo --version
       - name: Rust library and bindings
-        run: apple/scripts/build-ffi.sh swift
+        run: macos/scripts/build-ffi.sh swift
       - name: Release build
-        working-directory: apple/swift
+        working-directory: macos/swift
         run: swift build -c release
       # The tests start real terminals: they make their own scratch data folders and refuse any other.
       - name: Tests
-        working-directory: apple/swift
+        working-directory: macos/swift
         run: |
           set -o pipefail
           swift test 2>&1 | tee "$RUNNER_TEMP/swift-test.log"
       # A compiler crash names no source line: build the module file by file and say which file it was in.
       - name: Where the compiler crashed, if it did
         if: failure()
-        working-directory: apple/swift
+        working-directory: macos/swift
         run: |
           swift build -c release --target TerminalUI -Xswiftc -no-whole-module-optimization > "$RUNNER_TEMP/narrow.log" 2>&1 || true
           grep -E "Program arguments" "$RUNNER_TEMP/narrow.log" | grep -oE "primary-file [^ ]+" | sort | uniq -c || true

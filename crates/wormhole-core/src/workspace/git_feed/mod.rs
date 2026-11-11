@@ -2,7 +2,7 @@
 //! dirty, how far it is from its upstream, the repository it is in and how many files the terminal
 //! itself changed. The rules are the app's `window/repo/` (state, jobs, polling) and
 //! `git::attribution`, as a sans-IO model: no git process, no file event, no thread. The shell
-//! (`apple/ffi`'s `GitJobs`) does the I/O the model asks for as [`GitJob`]s and hands the answers back,
+//! (`crates/wormhole-ffi`'s `GitJobs`) does the I/O the model asks for as [`GitJob`]s and hands the answers back,
 //! and follows the repositories' files, calling [`GitFeed::repo_changed`] when something in one
 //! changed: git is read when something happened, and the periods here are only the backstop.
 //!

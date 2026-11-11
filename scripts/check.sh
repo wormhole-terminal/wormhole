@@ -75,7 +75,7 @@ scope_of() {
     # Its own workspace, built and checked on its own (tools/bench/README.md).
     tools/bench/*) echo none ;;
     # The Swift UI experiment: its own workspace and packages, built and checked on their own.
-    apple/*) echo none ;;
+    macos/*) echo none ;;
     # The download server's counter, a Cloudflare Worker with its own tests (bun test there).
     tools/feed-counter/*) echo none ;;
     *) echo all ;;   # unknown: safer to run everything than to miss a test that reads it

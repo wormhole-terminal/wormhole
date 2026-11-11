@@ -1,7 +1,7 @@
 //! The window's state with no window: the terminals of one window, their groups, pins and splits,
 //! what the sidebar lists of them and what the person did (`Action`), as a sans-IO state machine.
 //!
-//! A shell (the GPUI app today, a Swift app through `apple/ffi`) feeds it what it learns of each
+//! A shell (the GPUI app today, a Swift app through `crates/wormhole-ffi`) feeds it what it learns of each
 //! terminal (`TerminalFacts`), tells it what a person did (`WorkspaceModel::apply`) and pulls what to
 //! draw (`snapshot`: plain records, revisioned) when told that something changed (`Event`). The model
 //! has no clock, thread, I/O or UI type of its own: a time is a [`Millis`] the shell reads, a new
