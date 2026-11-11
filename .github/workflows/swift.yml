@@ -1,0 +1,62 @@
+name: Swift app
+
+# The Swift experiment (apple/): its Rust library, a release build of the app and every Swift test, on a
+# GitHub runner instead of a developer's Mac. Pushes to exp/swift only, or by hand (Actions → Swift app →
+# Run workflow, or `gh workflow run "Swift app" --ref <branch>`). It uses no secret and publishes nothing.
+on:
+  push:
+    branches: [exp/swift]
+    paths:
+      - "apple/**"
+      - "crates/**"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".github/workflows/swift.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push replaces a run in progress: only the newest state of the branch is worth a runner.
+concurrency:
+  group: swift-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build-test:
+    name: Build and test
+    runs-on: macos-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The version, components and profile are rust-toolchain.toml's.
+      - name: Rust toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: "apple -> target"
+      - name: Versions
+        run: |
+          sw_vers
+          swift --version
+          cargo --version
+      - name: Rust library and bindings
+        run: apple/scripts/build-ffi.sh swift
+      - name: Release build
+        working-directory: apple/swift
+        run: swift build -c release
+      # The tests start real terminals: they make their own scratch data folders and refuse any other.
+      - name: Tests
+        working-directory: apple/swift
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee "$RUNNER_TEMP/swift-test.log"
+      - name: Failures, if any
+        if: failure()
+        run: grep -E "error:|recorded an issue|failed" "$RUNNER_TEMP/swift-test.log" | sort -u | head -80 || true
