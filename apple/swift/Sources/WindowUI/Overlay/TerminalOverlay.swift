@@ -2,6 +2,7 @@
 // the bars along the bottom (a program's question, a host's trouble, the shell that ended). One per terminal, made
 // with its view, so a terminal moved to another pane or hidden behind a diff keeps its search and its bar.
 
+import DesignSystem
 import Observation
 import TerminalCore
 import TerminalMetal

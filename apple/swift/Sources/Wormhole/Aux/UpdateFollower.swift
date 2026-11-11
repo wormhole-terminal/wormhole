@@ -19,7 +19,6 @@ final class UpdateFollower {
     private unowned let app: AppController
     private let backend: any UpdateBackend
     private var following: Task<Void, Never>?
-    private var timer: Task<Void, Never>?
     /// The version whose chip is up, so one install says it once.
     private var told: String?
     /// "Restart When Idle" was chosen: what restarts, once the terminals have been idle long enough.
@@ -33,25 +32,6 @@ final class UpdateFollower {
         following = Task { [weak self, backend] in
             for await phase in backend.phases() { self?.phase(phase) }
         }
-        scheduleChecks()
-    }
-
-    /// The first automatic check once the launch is over if one is due, then one a timer arms for the next.
-    private func scheduleChecks() {
-        #if WITH_UNIFFI
-            guard let real = backend as? FFIUpdateBackend else { return }
-            timer?.cancel()
-            timer = Task { [weak self] in
-                var wait = real.dueAtLaunch ? Duration.seconds(5) : real.nextCheckIn
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: max(wait, .seconds(1)))
-                    guard let self, !Task.isCancelled else { return }
-                    if autoUpdate, case .idle = backend.phase { real.checkAutomatically() }
-                    else if autoUpdate, case .upToDate = backend.phase { real.checkAutomatically() }
-                    wait = real.nextCheckIn
-                }
-            }
-        #endif
     }
 
     /// Settings → Updates → "Download and install updates by themselves".

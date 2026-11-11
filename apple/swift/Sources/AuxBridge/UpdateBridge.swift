@@ -148,12 +148,12 @@ public final class FFIUpdateBackend: UpdateBackend {
         guard autoUpdate else { return }
         checks = Task { [weak self] in
             // Automatic checks as the GPUI app's: one at launch when the last is not recent, then each time the six hours run out.
-            if self?.engine.dueAtLaunch() == true { self?.engine.check(manual: false) }
+            if self?.engine.dueAtLaunch() == true { self?.checkAutomatically() }
             while let seconds = self?.engine.nextCheckInSeconds() {
                 // one-shot: the schedule's next check, armed again after each (a timer for six hours, not a poll)
                 try? await Task.sleep(for: .seconds(max(seconds, 60)))
                 guard !Task.isCancelled else { return }
-                self?.engine.check(manual: false)
+                self?.checkAutomatically()
             }
         }
     }
