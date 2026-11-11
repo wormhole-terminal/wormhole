@@ -1,0 +1,48 @@
+# Hookdemo: a Probe for Wormhole. PROBE.md in this folder says how to work on it.
+[probe]
+id          = "hookdemo"
+name        = "Hookdemo"
+description = "The current git branch in the status bar."
+author      = "Your name"
+version     = "0.1.0"
+wormhole    = ">=1.6"
+api         = 1
+
+[permissions]
+process = ["git", "false"]
+notify = true
+
+# The first line the command prints is the item in the status bar. `git` runs read-only, through Wormhole.
+[[contributes.status]]
+id       = "branch"
+run      = ["git", "rev-parse", "--abbrev-ref", "HEAD"]
+cwd      = "terminal"   # only in a folder the shell has confirmed
+interval = 30           # seconds between runs, at least 5
+timeout  = 3            # seconds before the process is killed, at most 10
+side     = "right"
+
+# Hooks (H1): the bell rings a status item and a notification; a title offers a file; a failing command is paused.
+[[contributes.status]]
+id = "rang"
+
+[[contributes.commands]]
+id = "boom"
+title = "Boom"
+run = ["false"]
+in = "background"
+cwd = "probe"
+
+[[contributes.hooks]]
+id = "bell-status"
+on = "bell"
+do = [{ type = "status", item = "rang", text = "rang", tone = "warning" }, { type = "notify", title = "Bell", body = "terminal {terminal} rang" }]
+
+[[contributes.hooks]]
+id = "offer-readme"
+on = "title"
+do = [{ type = "open-path", path = "README.md" }]
+
+[[contributes.hooks]]
+id = "boom-on-bell"
+on = "bell"
+do = [{ type = "run", command = "boom" }]

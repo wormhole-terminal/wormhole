@@ -298,7 +298,8 @@ fn the_chrome_says_what_the_title_bar_and_menus_need() {
         },
     );
     let title = ws.title("Macintosh HD".into());
-    assert_eq!(title.terminal.as_ref().map(|t| t.name.as_str()), Some("api"));
+    // The last chip names what runs in the terminal (GPUI's `Pane::label`), not the person's name for it.
+    assert_eq!(title.terminal.as_ref().map(|t| t.name.as_str()), Some("zsh"));
     assert_eq!(title.path_menu.last().map(|f| f.name.as_str()), Some("Macintosh HD"));
     assert!(title.left.iter().any(|slot| slot.chevron_before));
 }

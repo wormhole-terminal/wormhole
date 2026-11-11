@@ -11,6 +11,8 @@ extension EnvironmentValues {
     @Entry public var reduceMotion = false
     /// Whether the window is in front as far as the focus rings go: none shows in a window that is not (the window sets it).
     @Entry public var windowFront = true
+    /// Liquid Glass behind each sidebar card and each tab, as the GPUI app puts it (`sidebar/glass.rs`), not behind the column.
+    @Entry public var cardGlass = false
 }
 
 extension ThemeLibrary {

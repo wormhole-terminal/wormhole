@@ -12,6 +12,7 @@ struct CardSurface<Content: View>: View {
     @Environment(\.tokens) private var tokens
     @Environment(\.sidebarMetrics) private var metrics
     @Environment(\.sidebarLook) private var look
+    @Environment(\.cardGlass) private var glass
 
     init(wash: Color? = nil, @ViewBuilder content: () -> Content) {
         self.wash = wash
@@ -24,7 +25,7 @@ struct CardSurface<Content: View>: View {
             content
                 .padding(metrics.cardPad + tokens.metrics.borderWidth)
                 .background {
-                    shape.fill(tokens.card)
+                    if glass { shape.fill(.clear).glassEffect(.regular, in: shape) } else { shape.fill(tokens.card) }
                     if let wash { shape.fill(washStyle(wash)) }
                 }
                 .overlay { shape.strokeBorder(tokens.cardEdge, lineWidth: tokens.metrics.borderWidth) }

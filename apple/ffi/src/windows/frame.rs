@@ -129,4 +129,14 @@ mod tests {
         let next = cascade_frame(frame(100.0), MAIN);
         assert_eq!((next.x, next.y, next.display), (126.0, 126.0, Some(1)));
     }
+
+    /// A window saved full screen or zoomed comes back as such, also when its display is gone and one in the Dock stays there.
+    #[test]
+    fn a_saved_full_screen_or_zoomed_window_keeps_its_kind_when_its_display_is_gone() {
+        for kind in [FrameKind::Fullscreen, FrameKind::Maximized] {
+            let lost = FrameRecord { kind, display: Some(2), minimised: true, ..frame(9000.0) };
+            let fitted = fit_frame(lost, vec![MAIN]);
+            assert_eq!((fitted.kind, fitted.minimised), (kind, true));
+        }
+    }
 }

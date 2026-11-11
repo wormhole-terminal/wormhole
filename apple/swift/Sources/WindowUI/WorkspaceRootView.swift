@@ -55,6 +55,7 @@ public struct WorkspaceRootView: View {
         .environment(\.tabWidth, hub.panel.preferences.tabWidth)
         .environment(hub.focus)
         .environment(\.windowFront, hub.focus.front)
+        .environment(\.cardGlass, look.glassOn)
         .themed()
         .ignoresSafeArea()
     }

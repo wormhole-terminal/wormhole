@@ -1,0 +1,4 @@
+W04 column handle drag (round S2, window-b), instance /tmp/Wormhole-swift-s2wb-c: `mouse-down 351 400`, `mouse-move 380 400`, `mouse-move 430 400`, window-shot mid-drag, `mouse-up`.
+Mid-drag the readout chip says "420 · max" (the core's edge-drag readout: the width and the rule that stopped it) and the sidebar is 420 wide;
+after the release the width stays and save-windows writes it: windows.layout sidebar_width 420.0 (sqlite3 of the instance's wormhole.db).
+Shot: W04-handle-drag-readout.png (left mid-drag with the chip, right after the release).

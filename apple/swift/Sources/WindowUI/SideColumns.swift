@@ -23,7 +23,7 @@ struct SidebarColumn: View {
             .environment(\.dropPlanner, hub.store)
             .environment(\.terminalDrag, hub.terminalDrag)
         }
-        .background { if look.glassOn { GlassBackground() } else { look.surface(colours.sidebar) } }
+        .background { if !look.glassOn { look.surface(colours.sidebar) } }
     }
 }
 

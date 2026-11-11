@@ -1,0 +1,10 @@
+W02 title row (round S2, window-b), driven in /tmp/Wormhole-swift-s2wb-a through the control folder.
+Path menu (right-click on the breadcrumb folder, `right-click 393 19`, read with `menu`), item by item against GPUI's window/title/path_menu.rs
+for a terminal in the home folder:
+  Swift:  "~" (header, disabled) | Open in Finder | Copy path | Insert into terminal | benjamin | Users | Macintosh HD
+  GPUI:   "# ~"                  | Open in Finder | Copy path | Insert into terminal | ben       | Users | Macintosh HD   (same chain, core path_menu::chain)
+Copy path: `menu-pick Copy path` then `pasteboard` prints "/Users/benjamin" (the instance's own pasteboard file, never the person's clipboard).
+Insert into terminal: picked, the folder's path is typed into the prompt.
+Not readable by a script: the path CARD (a click on the folder opens a SwiftUI popover: Open in Finder, Copy path; the words are the same catalog keys
+title-row-path-*) and the Open in... button's menu (a SwiftUI Menu: its items are the installed editors, read from NSWorkspace; not an NSMenu the
+control folder can list). A person must open both once and compare with GPUI.

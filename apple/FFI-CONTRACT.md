@@ -1261,8 +1261,14 @@ SessionNotesStore.forProfile(profile: String) throws -> SessionNotesStore   // a
 Windows.setKeepsChanges(keeps: Bool)   // `sidebar_changes_remember`: the files each terminal changed are saved with its window and restored
 ```
 
-- A window moved to another profile (`rehome`) is refused (false) when that profile already has a saved window with its id: the
-  databases number windows and terminals apart, and a write would replace that window and delete its terminals.
+- A window moved to another profile (`rehome`) goes with its notes, tasks, flags, kept changed files and (when the target keeps text) its
+  terminals' text, and is among the target's windows afterwards (hooks judge it by that profile). Ids are one counter for every profile
+  (GPUI's rule), so only a database written before that can hold a window, terminal or split with the same id: that dormant window is
+  renumbered from the shared counter (`windows/reissue.rs`); `rehome` is refused (false) only when it is open.
+- `ProjectService.follow_profile(profile)`, `UsageService.follow_profile(profile)` (false for an unknown profile): the window's trust
+  state and usage meters are those of the profile it was moved to.
+- `insert_row_motion/insert_row_pose`, `fold_row_motion/fold_row_pose` (`row_motion.rs`): the core's sidebar pose tables by the settings'
+  name (`motion.insert`, `motion.fold`): `RowMotionRecord { duration_ms, room_spring }`, `RowPoseRecord { opacity, dx, dy, clip }`.
 - **Open Window in <profile>**: the shell asks `beside(profile)` for that profile's `Windows` once (kept) and plans, makes and
   saves the window there with the ordinary calls; Wormhole stays in the shown profile (the odd window, as the GPUI app's
   `open_window_in_profile`). Its settings are the shown profile's (the workspace reads the active profile).

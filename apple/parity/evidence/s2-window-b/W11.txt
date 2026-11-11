@@ -1,0 +1,12 @@
+W11 Probe hook effects in the window (round S2, window-b). Fixture: `Wormhole probe new hookdemo --kind status` (the GPUI debug build's
+offline tool, WORMHOLE_DATA_DIR=a scratch folder with flags probes+unlocked), then three hooks added by hand (W11-fixture/probe.toml):
+bell -> status item "rang" (tone warning) + notify; title -> open-path README.md; bell -> run a declared command that fails.
+Instance /tmp/Wormhole-swift-s2wb-b (probes flag on, WORMHOLE_AUTH=allow, WORMHOLE_NOTIFY=log), `probe approve hookdemo`, then in the terminal
+`printf '\a'` and `printf '\033]0;hello\007'`:
+  - status item: `probes` prints status ["rang (Hookdemo)"]; the status bar shows "rang" in the warning tone (W11-offer-and-rang.png, bottom right)
+  - notification: `notices` prints ["Bell: terminal 1 rang"] (a background instance logs banners instead of showing them)
+  - offer chip: "Hookdemo (extension): README.md — Open" over the terminal (W11-offer-and-rang.png), dismissable
+  - paused chip: NOT reproduced live (a failing `run` hook did not reach the budget in 12 to 40 bells in a minute with this fixture);
+    core's dispatch tests cover the pause (probe/active/dispatch) and HookEvent::ProbePaused is mapped; the chip's look is the offer chip's.
+The scaffold of `probe new` has no hook kind: the hooks are written by hand (the older GPUI debug binary's validator rejects `hooks`; the app's
+core, which is newer, loads them).

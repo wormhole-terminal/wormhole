@@ -14,6 +14,7 @@ struct TerminalTabView: View {
     let close: () -> Void
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
+    @Environment(\.cardGlass) private var glass
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radius)
@@ -28,6 +29,7 @@ struct TerminalTabView: View {
         }
         .padding(.horizontal, Space._2)
         .frame(width: TabMetrics.width, height: TabMetrics.height)
+        .background { if glass { shape.fill(.clear).glassEffect(.regular, in: shape) } }
         .background(shape.fill(selected ? tokens.textPrimary.opacity(TabMetrics.openFill) : hovering ? tokens.stateHover : tokens.textPrimary.opacity(TabMetrics.closedFill)))
         .overlay(alignment: .trailing) { if hovering && !hints { closeButton } }
         .clipShape(shape)

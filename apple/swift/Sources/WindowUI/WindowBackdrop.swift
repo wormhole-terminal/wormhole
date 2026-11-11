@@ -42,15 +42,3 @@ private struct BlurMaterial: NSViewRepresentable {
 
     func updateNSView(_ view: NSVisualEffectView, context: Context) { followTheme(view) }
 }
-
-/// Liquid Glass behind a column (macOS 26): the system's own material, over the blur. It is drawn only while the look says glass is on
-/// (a setting, and neither Reduce Transparency nor Increase Contrast), so an opaque window never gets it.
-struct GlassBackground: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSGlassEffectView {
-        let view = NSGlassEffectView()
-        followTheme(view)
-        return view
-    }
-
-    func updateNSView(_ view: NSGlassEffectView, context: Context) { followTheme(view) }
-}

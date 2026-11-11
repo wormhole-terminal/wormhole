@@ -19,6 +19,7 @@ struct TerminalRowView: View {
     @Environment(\.showsHints) private var showsHints
     @Environment(\.keyedStop) private var keyed
     @Environment(\.reduceMotion) private var reduceMotion
+    @Environment(\.cardGlass) private var glass
 
     private var terminal: TerminalSummary { row.terminal }
     private var inset: CGFloat { metrics.rowInset + (solo ? metrics.cardPad : 0) }
@@ -37,6 +38,7 @@ struct TerminalRowView: View {
         // The card's hairline takes room of its own, as the GPUI card's border does: a lone card is 48 + 2 high.
         .padding(solo ? tokens.metrics.borderWidth : 0)
         .background {
+            if glass && solo { shape.fill(.clear).glassEffect(.regular, in: shape) }
             shape.fill(fill)
             if let part = row.splitMarks.bracket { SplitLine(part: part, x: inset + metrics.tile / 2) }
         }
@@ -70,7 +72,7 @@ struct TerminalRowView: View {
     private var fill: Color {
         if isSelected { return tokens.sidebarRowSelected }
         if hovering { return tokens.stateHover }
-        return solo ? tokens.card : .clear
+        return solo && !glass ? tokens.card : .clear
     }
 
     private var content: some View {
