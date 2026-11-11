@@ -145,7 +145,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
 
     /// What the system calls the startup volume ("Macintosh HD"), which the title row's path menu names the root with.
     private static let bootVolume =
-        (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD"
+        (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD"  // text: the fallback of the name macOS gives the startup volume
 
     public func dropPlan(dragged: TerminalID, over: DropOver) -> WorkspaceModel.DropPlan? {
         core.dropPlan(dragged: Int64(dragged), over: Over(over)).map(WorkspaceModel.DropPlan.init)

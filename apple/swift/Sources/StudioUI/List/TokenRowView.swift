@@ -37,7 +37,7 @@ struct TokenRowView: View {
         .padding(.horizontal, Space._2)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(name), \(value.text), \(origin == .yours ? StudioWords.originYours : StudioWords.originWorkedOut)")
-        .accessibilityHint(isLow ? "falls short of a contrast minimum" : "")
+        .accessibilityHint(isLow ? StudioWords.rowLow : "")
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 

@@ -1,6 +1,7 @@
 // What a theme's metrics shape: the four corner roles side by side, a hairline and a column divider at the
 // theme's widths, the focus ring, and a chip. A theme that rounds its chips into pills shows here first
 // (`gallery/shape.rs`).
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import SwiftUI

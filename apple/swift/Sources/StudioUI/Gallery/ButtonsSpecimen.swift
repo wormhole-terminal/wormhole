@@ -1,5 +1,6 @@
 // The button variants and sizes: the system's styles coloured by the theme (what a Settings page uses) and the
 // windows' own themed primary and secondary (`gallery/buttons.rs`).
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import AuxWindows
 import DesignSystem

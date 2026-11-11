@@ -40,7 +40,7 @@ enum TokenPath: Equatable {
     func isShared(group: String?) -> Bool {
         switch self {
         case .metric, .syntax: true
-        default: group == "Primary"
+        default: group == "Primary"  // text: a token group's name as core's catalog spells it, a key and not a label
         }
     }
 }

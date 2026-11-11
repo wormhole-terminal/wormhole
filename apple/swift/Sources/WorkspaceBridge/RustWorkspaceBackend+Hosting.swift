@@ -19,7 +19,7 @@ extension RustWorkspaceBackend {
             welcomeToken = nil
             do { register(id, try HostConnect.welcome(request(id, in: folder), token: token, relay), relay: relay) } catch {
                 failed[id] = "\(error)"
-                FileHandle.standardError.write(Data("terminal \(id): cannot start the welcome: \(error)\n".utf8))
+                FileHandle.standardError.write(Data("terminal \(id): cannot start the welcome: \(error)\n".utf8))  // text: a diagnostic written to stderr
             }
             return
         }
@@ -27,7 +27,7 @@ extension RustWorkspaceBackend {
             if needsApplications { told("move-to-applications", .moveToApplications) }
             do { register(id, try HostConnect.local(request(id, in: folder), relay), relay: relay) } catch {
                 failed[id] = "\(error)"
-                FileHandle.standardError.write(Data("terminal \(id): cannot start \(setup.program): \(error)\n".utf8))
+                FileHandle.standardError.write(Data("terminal \(id): cannot start \(setup.program): \(error)\n".utf8))  // text: a diagnostic written to stderr
             }
             return
         }
@@ -82,7 +82,7 @@ extension RustWorkspaceBackend {
         } else if let failure = done.failure {
             failed[id] = failure
             relays[id] = nil
-            FileHandle.standardError.write(Data("terminal \(id): cannot start \(setup.program): \(failure)\n".utf8))
+            FileHandle.standardError.write(Data("terminal \(id): cannot start \(setup.program): \(failure)\n".utf8))  // text: a diagnostic written to stderr
         }
         if book.restoring, book.connecting.isEmpty { finishRestore() }
         onNotice?(.hostChanged(id))

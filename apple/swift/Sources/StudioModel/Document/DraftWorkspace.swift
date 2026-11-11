@@ -15,7 +15,7 @@ public final class DraftWorkspace: Sendable {
     public init(resolver: any ThemeResolving, folder: any ThemeFolder, editing file: URL?, look: WindowLook) throws {
         self.resolver = resolver
         self.look = look
-        directory = FileManager.default.temporaryDirectory.appendingPathComponent("Wormhole-swift-studio-\(UUID().uuidString)")
+        directory = FileManager.default.temporaryDirectory.appendingPathComponent("Wormhole-swift-studio-\(UUID().uuidString)")  // text: a scratch folder name
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         for other in folder.files() where other != file {
             if let text = try? folder.read(other) {

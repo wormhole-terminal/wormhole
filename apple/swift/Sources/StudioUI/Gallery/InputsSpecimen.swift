@@ -1,4 +1,5 @@
 // Form controls in their states: a field, checkboxes, switches and radios (`gallery/inputs.rs`).
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import SwiftUI

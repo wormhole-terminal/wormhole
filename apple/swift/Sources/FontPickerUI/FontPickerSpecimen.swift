@@ -1,6 +1,7 @@
 // The open picker on sample data, for the Theme Studio's gallery: a library that already knows its families (the ones
 // every Mac has, plus the bundled one and a "custom" one so the groups show), CoreText for what the preview says, and
 // the keyboard left alone.
+// text-file: the demo catalog: font families, which are names and not interface words
 
 import DesignSystem
 import FontPickerModel

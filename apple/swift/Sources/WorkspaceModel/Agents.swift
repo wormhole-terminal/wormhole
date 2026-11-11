@@ -26,30 +26,30 @@ public enum AgentID: String, Sendable, CaseIterable {
     /// The agent's product name.
     public var name: String {
         switch self {
-        case .claude: "Claude Code"
-        case .codex: "Codex CLI"
-        case .gemini: "Gemini CLI"
-        case .copilot: "GitHub Copilot CLI"
-        case .cursor: "Cursor Agent"
-        case .openCode: "OpenCode"
-        case .aider: "Aider"
-        case .amp: "Amp"
-        case .goose: "Goose"
-        case .qwen: "Qwen Code"
-        case .crush: "Crush"
-        case .droid: "Factory Droid"
-        case .auggie: "Auggie"
-        case .kiro: "Kiro CLI"
-        case .cline: "Cline CLI"
-        case .pi: "Pi"
-        case .fm: "Foundation Models"
+        case .claude: "Claude Code"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .codex: "Codex CLI"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .gemini: "Gemini CLI"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .copilot: "GitHub Copilot CLI"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .cursor: "Cursor Agent"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .openCode: "OpenCode"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .aider: "Aider"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .amp: "Amp"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .goose: "Goose"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .qwen: "Qwen Code"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .crush: "Crush"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .droid: "Factory Droid"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .auggie: "Auggie"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .kiro: "Kiro CLI"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .cline: "Cline CLI"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .pi: "Pi"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
+        case .fm: "Foundation Models"  // text: an agent's product name, English as in the agent registry (wormhole-term agents/mod.rs)
         }
     }
 
     /// The name without what kind of program it is ("Claude" for Claude Code), where a line names the
     /// agent at work.
     public var shortName: String {
-        for kind in [" CLI", " Code", " Agent"] where name.hasSuffix(kind) {
+        for kind in [" CLI", " Code", " Agent"] where name.hasSuffix(kind) {  // text: the kinds of program a product name ends with, matched against the names above
             return String(name.dropLast(kind.count))
         }
         return name

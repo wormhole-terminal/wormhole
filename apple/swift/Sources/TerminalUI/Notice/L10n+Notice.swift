@@ -3,31 +3,25 @@ import WordsModel
 
 extension L10n {
     static func noticeCopiedLines(_ n: Int) -> String {
-        n == 1 ? tr("notice-copied-lines-one", "Copied 1 line") : tr("notice-copied-lines-other", "Copied \(n) lines")
+        tr("notice-copied-lines", ["count": .whole(n)], n == 1 ? "Copied 1 line" : "Copied \(n) lines")
     }
     static func noticeCopiedCharacters(_ n: Int) -> String {
-        n == 1 ? tr("notice-copied-characters-one", "Copied 1 character") : tr("notice-copied-characters-other", "Copied \(n) characters")
+        tr("notice-copied-characters", ["count": .whole(n)], n == 1 ? "Copied 1 character" : "Copied \(n) characters")
     }
     static func noticeCopiedOutput(_ n: Int) -> String {
-        n == 1 ? tr("notice-copied-output-one", "Copied output, 1 line") : tr("notice-copied-output-other", "Copied output, \(n) lines")
+        tr("notice-copied-output", ["count": .whole(n)], n == 1 ? "Copied output, 1 line" : "Copied output, \(n) lines")
     }
-    static func noticeProgramLines(_ n: Int, _ program: String?) -> String {
-        if let program {
-            return n == 1 ? tr("notice-copied-named-lines-one", "\(program) copied 1 line") : tr("notice-copied-named-lines-other", "\(program) copied \(n) lines")
-        }
-        return n == 1 ? tr("notice-copied-program-lines-one", "A program copied 1 line") : tr("notice-copied-program-lines-other", "A program copied \(n) lines")
+    static func noticeProgramLines(_ n: Int) -> String {
+        tr("notice-copied-program-lines", ["count": .whole(n)], n == 1 ? "A program copied 1 line" : "A program copied \(n) lines")
     }
-    static func noticeProgramCharacters(_ n: Int, _ program: String?) -> String {
-        if let program {
-            return n == 1 ? tr("notice-copied-named-characters-one", "\(program) copied 1 character") : tr("notice-copied-named-characters-other", "\(program) copied \(n) characters")
-        }
-        return n == 1 ? tr("notice-copied-program-characters-one", "A program copied 1 character") : tr("notice-copied-program-characters-other", "A program copied \(n) characters")
+    static func noticeProgramCharacters(_ n: Int) -> String {
+        tr("notice-copied-program-characters", ["count": .whole(n)], n == 1 ? "A program copied 1 character" : "A program copied \(n) characters")
     }
     static var noticeCopiedCommand: String { tr("notice-copied-command", "Copied command") }
     static var noticeCopiedPath: String { tr("notice-copied-path", "Copied path") }
     static var noticeCopiedError: String { tr("notice-copied-error", "Copied error") }
-    static func noticeTyping(_ name: String) -> String { tr("notice-driven-typing", "\(name) is typing") }
-    static func noticeReading(_ name: String) -> String { tr("notice-driven-reading", "\(name) is reading") }
+    static func noticeTyping(_ name: String) -> String { tr("notice-driven-typing", ["name": .text(name)], "\(name) is typing") }
+    static func noticeReading(_ name: String) -> String { tr("notice-driven-reading", ["name": .text(name)], "\(name) is reading") }
     static var noticeScriptTyping: String { tr("notice-driven-scripts-typing", "A script is typing") }
     static var noticeScriptReading: String { tr("notice-driven-scripts-reading", "A script is reading") }
     static var noticeFailedCopyPath: String { tr("notice-failed-copy-path", "Not copied: the path has characters that would act when pasted") }
@@ -39,7 +33,7 @@ extension L10n {
     static var noticeHostFallback: String { tr("notice-warned-host-fallback", "This terminal ends when Wormhole quits") }
     static var noticeDataFolder: String { tr("notice-warned-data-folder", "Wormhole can't open a profile's data folder, so it saves nothing there") }
     static var noticeMoveToApplications: String { tr("notice-warned-move-to-applications", "Move Wormhole to Applications to keep terminals running when it quits") }
-    static func noticeUpdateReady(_ version: String) -> String { tr("notice-warned-update-ready", "Wormhole \(version) is ready — Restart") }
+    static func noticeUpdateReady(_ version: String) -> String { tr("notice-warned-update-ready", ["version": .text(version)], "Wormhole \(version) is ready — Restart") }
     static var noticeInfoHostHeading: String { tr("notice-info-host-heading", "This terminal can't outlive Wormhole") }
     static var noticeInfoHostWhat: String {
         tr("notice-info-host-what", "Wormhole normally keeps each terminal running in a small helper, so your work carries on after you quit Wormhole and is waiting when you open it again. The helper for this terminal couldn't start, so the terminal runs inside Wormhole instead and closes when Wormhole quits.")

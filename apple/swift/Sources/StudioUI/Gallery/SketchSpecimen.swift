@@ -1,5 +1,6 @@
 // The first run's window sketch (`gallery/` has none of its own: it is the Look step's "How much to show" answers): the three
 // presets drawn by the real `WindowSketch`, the layout the core's.
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import AuxModel
 import AuxWindows

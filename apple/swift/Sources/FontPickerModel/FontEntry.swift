@@ -20,7 +20,7 @@ public enum FontEntry: Identifiable, Equatable, Sendable {
         switch self {
         case .inherit: "inherit"
         case .caption(let caption): "caption-\(caption)"
-        case .family(let choice, let group): "family-\(group.map { "\($0)" } ?? "list")-\(choice.name)"
+        case .family(let choice, let group): "family-\(group.map { "\($0)" } ?? "list")-\(choice.name)"  // text: an identifier, not shown
         }
     }
 

@@ -32,7 +32,7 @@ extension ContrastCheck {
         var terms: [String] = []
         for check in group {
             let translucent = (tokens.colorValue(of: check.bg)?.alpha ?? 1) < 1
-            let term = translucent && check.pair.underlay != "surface.window" ? "over(\(check.bg), \(check.pair.underlay))" : check.bg
+            let term = translucent && check.pair.underlay != "surface.window" ? "over(\(check.bg), \(check.pair.underlay))" : check.bg // text: a theme expression, not words
             if !terms.contains(term) { terms.append(term) }
         }
         let floor = group.map(\.min).max() ?? 0
@@ -41,11 +41,11 @@ extension ContrastCheck {
         let ratio = floor == floor.rounded() ? String(Int(floor)) : String(floor)
         let label: String
         if literal, let text = tokens.colorValue(of: token), let bg = tokens.colorValue(of: group[0].bg) {
-            label = "\(luminance(text) >= luminance(bg) ? "Lighten" : "Darken") to \(ratio):1"
+            label = luminance(text) >= luminance(bg) ? StudioText.lighten(ratio) : StudioText.darken(ratio)
         } else {
-            label = "Use readable(\(current.count > 24 ? String(current.prefix(23)) + "…" : current), …, \(ratio))"
+            label = StudioText.useReadable(current.count > 24 ? String(current.prefix(23)) + "…" : current, ratio)
         }
-        return ContrastFix(token: token, expression: "readable(\(current), \(terms.joined(separator: ", ")), \(ratio))", label: label)
+        return ContrastFix(token: token, expression: "readable(\(current), \(terms.joined(separator: ", ")), \(ratio))", label: label)  // text: a theme expression, not words
     }
 
 }

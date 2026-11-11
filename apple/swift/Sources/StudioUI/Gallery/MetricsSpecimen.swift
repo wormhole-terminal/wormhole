@@ -1,5 +1,6 @@
 // The design language's numbers: sizes, insets and motion, each with its value, so a constant that is not a
 // component still shows in the Studio (`gallery/metrics.rs`).
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import SwiftUI

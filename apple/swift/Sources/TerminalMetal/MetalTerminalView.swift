@@ -212,7 +212,7 @@ public final class MetalTerminalView: NSView {
                 }
             }
         } catch {
-            FileHandle.standardError.write(Data("source failed to start: \(error)\n".utf8))
+            FileHandle.standardError.write(Data("source failed to start: \(error)\n".utf8))  // text: a diagnostic written to stderr
         }
     }
 
@@ -377,7 +377,7 @@ public final class MetalTerminalView: NSView {
         let a1 = AllocationCounter.allocations
         var rebuilt = 0
         do { rebuilt = try renderer.apply(frame: data) } catch {
-            FileHandle.standardError.write(Data("bad frame: \(error)\n".utf8))
+            FileHandle.standardError.write(Data("bad frame: \(error)\n".utf8))  // text: a diagnostic written to stderr
         }
         let t2 = MonotonicClock.now()
         let a2 = AllocationCounter.allocations

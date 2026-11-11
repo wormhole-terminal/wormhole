@@ -7,7 +7,7 @@ enum ThemeFileNames {
     /// `Soltari Night` → `Soltari Night.json`; characters a file name can't hold are dropped.
     static func fileName(for name: String) -> String {
         let clean = name.filter { !"/:\\\0".contains($0) }.trimmingCharacters(in: .whitespaces.union(.init(charactersIn: ".")))
-        return (clean.isEmpty ? "Theme" : clean) + ".json"
+        return (clean.isEmpty ? StudioText.defaultName : clean) + ".json"
     }
 
     /// "Dusk copy", then "Dusk copy 2" and on while `taken`.

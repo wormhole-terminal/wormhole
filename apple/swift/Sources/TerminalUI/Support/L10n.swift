@@ -9,4 +9,7 @@ enum L10n {
     static func tr(_ key: StaticString, _ english: String.LocalizationValue) -> String {
         Words.text(key, fallback: String(localized: key, defaultValue: english))
     }
+    static func tr(_ key: StaticString, _ args: [String: WordValue], _ english: String.LocalizationValue) -> String {
+        Words.text(key, args, fallback: String(localized: key, defaultValue: english))
+    }
 }

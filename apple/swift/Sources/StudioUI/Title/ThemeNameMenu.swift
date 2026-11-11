@@ -14,9 +14,9 @@ struct ThemeNameMenu: View {
         let document = session.document
         Menu {
             if !session.userThemeNames.isEmpty {
-                Section("Your Themes") { ForEach(session.userThemeNames, id: \.self) { name in openButton(name) } }
+                Section(StudioWords.yourThemes) { ForEach(session.userThemeNames, id: \.self) { name in openButton(name) } }
             }
-            Section("Wormhole") { ForEach(session.builtInNames, id: \.self) { name in openButton(name) } }
+            Section(StudioWords.wormhole) { ForEach(session.builtInNames, id: \.self) { name in openButton(name) } }
             Divider()
             Button(StudioWords.rename) { session.renaming = true }
             Button(StudioWords.saveCopy) { session.saveCopy() }

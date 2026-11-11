@@ -1,7 +1,7 @@
 import Foundation
 
 extension L10n {
-    static func clipboardAsk(_ program: String) -> String { tr("terminal-clipboard-ask", "\(program) wants to read the clipboard") }
+    static func clipboardAsk(_ program: String) -> String { tr("terminal-clipboard-ask", ["program": .text(program)], "\(program) wants to read the clipboard") }
     static var programUnnamed: String { tr("terminal-program-unnamed", "A program") }
     static var clipboardOnce: String { tr("terminal-clipboard-once", "Allow once") }
     static var clipboardOnceHelp: String { tr("terminal-clipboard-once-help", "Give it the clipboard's text this time") }
@@ -16,7 +16,7 @@ extension L10n {
     static var hostsEnd: String { tr("hosts-unavailable-end", "End host") }
     static var hostsNotResponding: String { tr("hosts-not-responding", "Session host not responding") }
     static var hostsWait: String { tr("hosts-not-responding-wait", "Wait") }
-    static func hostsEndFailed(_ why: String) -> String { tr("hosts-end-failed", "Couldn’t end the session host: \(why)") }
+    static func hostsEndFailed(_ why: String) -> String { tr("hosts-end-failed", ["why": .text(why)], "Couldn’t end the session host: \(why)") }
     static func hostsUnavailable(_ kind: HostUnavailableKind) -> String {
         switch kind {
         case .refused: tr("hosts-unavailable-refused", "Session host unavailable: it does not accept this app")
@@ -30,8 +30,8 @@ extension L10n {
     }
 
     static var exitedLost: String { tr("terminal-exited-lost", "This terminal ended unexpectedly") }
-    static func exited(_ shell: String) -> String { tr("terminal-exited", "\(shell) exited") }
-    static func exitedWithCode(_ shell: String, _ code: Int) -> String { tr("terminal-exited-code", "\(shell) exited with code \(code)") }
+    static func exited(_ shell: String) -> String { tr("terminal-exited", ["shell": .text(shell)], "\(shell) exited") }
+    static func exitedWithCode(_ shell: String, _ code: Int) -> String { tr("terminal-exited-code", ["shell": .text(shell), "code": .whole(code)], "\(shell) exited with code \(code)") }
     static var restart: String { tr("terminal-exited-restart", "Restart") }
     static var closeTerminal: String { tr("terminal-exited-close", "Close terminal") }
     static var dismiss: String { tr("terminal-host-notice-dismiss", "Dismiss") }

@@ -29,8 +29,8 @@ struct ContrastSection: View {
                         RatioText(check: check)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("\(check.fg) \(StudioWords.contrastOn(check.bg)), \(check.passes ? "passes" : "falls short")")
-                    .accessibilityValue(String(format: "%.1f to 1, minimum %@", check.ratio, ratioText(check.min)))
+                    .accessibilityLabel("\(check.fg) \(StudioWords.contrastOn(check.bg)), \(check.passes ? StudioWords.passes : StudioWords.fallsShort)")
+                    .accessibilityValue(StudioWords.ratioSpoken(String(format: "%.1f", check.ratio), ratioText(check.min)))
                 }
             }
         }

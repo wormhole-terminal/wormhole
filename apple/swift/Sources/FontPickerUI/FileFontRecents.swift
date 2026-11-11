@@ -10,7 +10,7 @@ public final class FileFontRecents: FontRecents {
     private let bySlot: Mutex<[String: [String]]>
     private let file: URL?
 
-    public init(folder: URL? = ProcessInfo.processInfo.environment["WORMHOLE_DATA_DIR"].map { URL(fileURLWithPath: $0) }) {
+    public init(folder: URL? = ProcessInfo.processInfo.environment["WORMHOLE_DATA_DIR"].map { URL(fileURLWithPath: $0) }) {  // text: an environment variable
         file = folder?.appendingPathComponent("font-recents.json")
         let saved = file.flatMap { try? Data(contentsOf: $0) }.flatMap { try? JSONDecoder().decode([String: [String]].self, from: $0) }
         bySlot = Mutex(saved ?? [:])

@@ -2,6 +2,7 @@
 // `SidebarUI`, `PanelUI` and `PaletteUI` and the primitives of `DesignSystem`, then the colour basics. A component
 // added to those modules joins here (and in `SpecimenContent`), or the gallery stops showing every component, which
 // the GPUI app's Studio holds itself to.
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 enum GalleryCatalog {
     static let specimens: [Specimen] = [

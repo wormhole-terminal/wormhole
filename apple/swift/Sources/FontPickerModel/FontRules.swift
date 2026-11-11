@@ -20,7 +20,7 @@ public protocol FontRules: Sendable {
 /// `grouped_font_choices` in Swift: hidden families (a leading `.`) left out, every word of the query must be in
 /// the name, names starting with the query first, then alphabetical, each family once, and the groups in order.
 public struct LocalFontRules: FontRules {
-    public let bundledFamily = "JetBrains Mono"
+    public let bundledFamily = "JetBrains Mono"  // text: a font family's name
     public let bundledFiles: [URL]
     private let custom: CustomFonts
 

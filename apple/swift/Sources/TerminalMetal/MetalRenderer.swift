@@ -37,7 +37,7 @@ public struct RendererConfiguration: Sendable {
     }
 
     public init(
-        font: FontSpec = .system(family: "Menlo"), pointSize: Double = 13, lineHeight: Double? = nil, scale: Double = 2,
+        font: FontSpec = .system(family: "Menlo"), pointSize: Double = 13, lineHeight: Double? = nil, scale: Double = 2,  // text: a font family's name
         palette: TerminalPalette = .spike, ligatures: Bool = true
     ) {
         self.init(

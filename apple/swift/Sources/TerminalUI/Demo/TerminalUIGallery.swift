@@ -18,7 +18,7 @@ public struct TerminalUIGallery: View {
                     strip(.ask(program: "ssh"), exited: false)
                     strip(.hostUnavailable(.busy, endFailure: nil), exited: false)
                     strip(.hostNotResponding(endFailure: nil), exited: false)
-                    strip(.notice(.info, "A program copied 12 lines"), exited: true)
+                    strip(.notice(.info, "A program copied 12 lines"), exited: true)  // text: sample content of the demo gallery
                 }
             }
         }

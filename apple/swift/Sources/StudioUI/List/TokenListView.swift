@@ -40,7 +40,7 @@ struct TokenListView: View {
         .frame(width: StudioMetrics.listWidth)
         .background(tokens.surfacePanel)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Tokens")
+        .accessibilityLabel(StudioWords.tokenList)
     }
 
     @ViewBuilder private func band(_ group: TokenGroup, low: Set<String>) -> some View {

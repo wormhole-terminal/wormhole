@@ -39,7 +39,7 @@ enum GlyphRaster {
     }
 
     private static let smoothingAllowed: Bool = {
-        let value = CFPreferencesCopyAppValue("AppleFontSmoothing" as CFString, kCFPreferencesCurrentApplication)
+        let value = CFPreferencesCopyAppValue("AppleFontSmoothing" as CFString, kCFPreferencesCurrentApplication)  // text: a system preference key
         return (value as? NSNumber)?.intValue != 0
     }()
 

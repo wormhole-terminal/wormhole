@@ -18,7 +18,7 @@ public struct TerminalFontSettings: Sendable, Hashable {
     public var fallbacks: [String]
 
     public init(
-        font: FontSpec = .system(family: "Menlo"), pointSize: Double = 13, lineHeight: Double? = nil, ligatures: Bool = true,
+        font: FontSpec = .system(family: "Menlo"), pointSize: Double = 13, lineHeight: Double? = nil, ligatures: Bool = true,  // text: a font family's name
         fallbacks: [String] = []
     ) {
         self.font = font

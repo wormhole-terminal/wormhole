@@ -33,8 +33,8 @@ public enum NameCompletion {
 
     /// The name inside “…” of core's "Unknown token “primery” at 1:1.".
     public static func unknownName(in message: String) -> String? {
-        guard message.hasPrefix("Unknown token “"), let end = message.firstIndex(of: "”") else { return nil }
-        return String(message[message.index(message.startIndex, offsetBy: "Unknown token “".count)..<end])
+        guard message.hasPrefix("Unknown token “"), let end = message.firstIndex(of: "”") else { return nil }  // text: the start of core's error message, parsed and not shown
+        return String(message[message.index(message.startIndex, offsetBy: "Unknown token “".count)..<end])  // text: the start of core's error message, parsed and not shown
     }
 
     private static func distance(_ a: String, _ b: String) -> Int {

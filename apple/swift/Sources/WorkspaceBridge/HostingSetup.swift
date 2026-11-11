@@ -16,7 +16,7 @@ public struct HostingSetup: Sendable {
     public var adoptsOrphans: Bool
 
     public init(
-        dataDirectory: String? = nil, hostBinary: String? = ProcessInfo.processInfo.environment["WORMHOLE_HOST_BIN"],
+        dataDirectory: String? = nil, hostBinary: String? = ProcessInfo.processInfo.environment["WORMHOLE_HOST_BIN"],  // text: an environment variable
         window: Int64 = 1, adoptsOrphans: Bool = true
     ) {
         (self.dataDirectory, self.hostBinary, self.window, self.adoptsOrphans) = (dataDirectory, hostBinary, window, adoptsOrphans)

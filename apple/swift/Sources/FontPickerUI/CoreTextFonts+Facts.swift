@@ -32,7 +32,7 @@ extension CoreTextFonts {
                 }
             ] as CFDictionary)
         let plain = CTFontCreateCopyWithAttributes(font, 12, nil, off)
-        let text = "=> -> != == <= >= |> www"
+        let text = "=> -> != == <= >= |> www"  // text: a ligature probe, not words
         return Self.glyphs(text, font) != Self.glyphs(text, plain)
     }
 

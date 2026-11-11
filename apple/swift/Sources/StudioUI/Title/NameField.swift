@@ -19,6 +19,6 @@ struct NameField: View {
             .onExitCommand { session.renaming = false }
             .onChange(of: focused) { _, now in if !now, session.renaming { session.renaming = false } }
             .onAppear { text = session.document.name; focused = true }
-            .accessibilityLabel("Theme name")
+            .accessibilityLabel(StudioWords.nameField)
     }
 }

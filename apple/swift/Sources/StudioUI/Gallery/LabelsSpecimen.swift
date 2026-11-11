@@ -1,5 +1,6 @@
 // The text that heads or fills a panel: a title, a section label open and folded, an empty note, a toolbar of controls
 // and a selected tint with its count (`gallery/labels.rs`).
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import SwiftUI

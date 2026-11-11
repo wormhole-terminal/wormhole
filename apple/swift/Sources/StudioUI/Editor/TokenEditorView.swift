@@ -30,6 +30,6 @@ struct TokenEditorView: View {
         .background(tokens.surfacePanel)
         .hairline(.leading)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Token editor")
+        .accessibilityLabel(StudioWords.tokenEditor)
     }
 }

@@ -85,7 +85,7 @@ public struct Summary: Sendable {
     }
 
     public var line: String {
-        String(format: "avg=%.3fms p50=%.3fms p99=%.3fms max=%.3fms", mean, p50, p99, max)
+        String(format: "avg=%.3fms p50=%.3fms p99=%.3fms max=%.3fms", mean, p50, p99, max)  // text: a benchmark readout for the developer
     }
 }
 

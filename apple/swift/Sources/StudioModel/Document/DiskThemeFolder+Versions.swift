@@ -7,7 +7,7 @@ extension DiskThemeFolder {
     private static let stamp: DateFormatter = {
         let format = DateFormatter()
         format.locale = Locale(identifier: "en_US_POSIX")
-        format.timeZone = TimeZone(identifier: "UTC")
+        format.timeZone = TimeZone(identifier: "UTC")  // text: a time zone identifier
         format.dateFormat = "yyyy-MM-dd'T'HH-mm-ss"
         return format
     }()
@@ -45,7 +45,7 @@ extension DiskThemeFolder {
         let handWritten = (try? ThemeFile(parsing: previous))?.root["version"] == nil
         let pinned = handWritten && !existing.contains { $0.pinned }
         let base = Self.stamp.string(from: now)
-        let name = (0...).lazy.map { "\(base)\($0 > 0 ? "-\($0)" : "")\(pinned ? ".original" : "").json" }
+        let name = (0...).lazy.map { "\(base)\($0 > 0 ? "-\($0)" : "")\(pinned ? ".original" : "").json" }  // text: a file name
             .first { !FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path) } ?? base
         try previous.write(to: folder.appendingPathComponent(name), atomically: true, encoding: .utf8)
         let all = versions(of: file)

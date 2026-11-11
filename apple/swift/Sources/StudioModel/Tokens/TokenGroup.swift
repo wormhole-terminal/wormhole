@@ -23,9 +23,9 @@ public struct TokenGroup: Sendable, Equatable, Identifiable {
                 groups.append(TokenGroup(name: info.group, tokens: [info.name]))
             }
         }
-        groups.append(TokenGroup(name: "Terminal", tokens: terminalColors))
-        groups.append(TokenGroup(name: "Terminal ANSI", tokens: ansi))
-        groups.append(TokenGroup(name: "Syntax", tokens: syntaxRoots.map { "syntax.\($0)" }))
+        groups.append(TokenGroup(name: "Terminal", tokens: terminalColors))  // text: a band title, kept in English as in the GPUI Studio (studio/draft.rs)
+        groups.append(TokenGroup(name: "Terminal ANSI", tokens: ansi))  // text: a band title, kept in English as in the GPUI Studio (studio/draft.rs)
+        groups.append(TokenGroup(name: "Syntax", tokens: syntaxRoots.map { "syntax.\($0)" }))  // text: a band title, kept in English as in the GPUI Studio (studio/draft.rs)
         return groups
     }
 

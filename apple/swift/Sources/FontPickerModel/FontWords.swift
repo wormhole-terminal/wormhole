@@ -20,10 +20,10 @@ public enum FontWords {
         Words.text("settings-fonts-finding-monospace-fonts", fallback: "Finding monospace fonts…")
     }
     public static func count(_ n: Int) -> String {
-        Words.text("settings-fonts-count", fallback: n == 1 ? "1 font" : "\(n) fonts")
+        Words.text("settings-fonts-count", ["count": .whole(n)], fallback: n == 1 ? "1 font" : "\(n) fonts")
     }
     public static func noMatches(_ query: String) -> String {
-        Words.text("settings-fonts-no-matches", fallback: "No font has these words in its name: “\(query)”")
+        Words.text("settings-fonts-no-matches", ["query": .text(query)], fallback: "No font has these words in its name: “\(query)”")
     }
     public static var showAllHint: String {
         Words.text("settings-fonts-show-all-hint", fallback: "Show all fonts to include proportional ones")
@@ -37,7 +37,7 @@ public enum FontWords {
     public static var powerline: String { Words.text("settings-fonts-powerline", fallback: "Powerline") }
     public static var nerdIcons: String { Words.text("settings-fonts-nerd-icons", fallback: "Nerd icons") }
     public static var wide: String { Words.text("settings-fonts-wide", fallback: "Wide characters") }
-    public static var ligatures: String { Words.text("settings-fonts-ligatures", fallback: "Ligatures") }
+    public static var ligatures: String { Words.text("settings-fonts-font-ligatures", fallback: "Ligatures") }
     public static var bold: String { Words.text("settings-fonts-bold", fallback: "Bold") }
     public static var italic: String { Words.text("settings-fonts-italic", fallback: "Italic") }
     public static var noBold: String {

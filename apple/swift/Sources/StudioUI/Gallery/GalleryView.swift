@@ -31,7 +31,7 @@ struct GalleryView: View {
         .frame(maxWidth: .infinity)
         .background(tokens.surfaceWindow)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Gallery")
+        .accessibilityLabel(StudioWords.galleryLabel)
     }
 
     private func column(_ specimens: [Specimen], _ context: GalleryContext) -> some View {
@@ -56,12 +56,12 @@ struct AreaChips: View {
             if let uses { usesChip(uses) }
         }
         .padding(.horizontal, Space._4).padding(.vertical, Space._3)
-        .accessibilityLabel("Show the part of the app")
+        .accessibilityLabel(StudioWords.galleryAreas)
     }
 
     /// "◎ 7 uses of primary", or that nothing draws it directly (`header` in `gallery/view.rs`).
     private func usesChip(_ uses: (count: Int, token: String)) -> some View {
-        let words = uses.count == 0 ? "Nothing draws \(uses.token) directly" : "\(uses.count) \(uses.count == 1 ? "use" : "uses") of \(uses.token)"
+        let words = uses.count == 0 ? "Nothing draws \(uses.token) directly" : "\(uses.count) \(uses.count == 1 ? "use" : "uses") of \(uses.token)" // text: sample, as the GPUI gallery header (studio/gallery/view.rs)
         return Label(words, systemImage: "scope").font(TextRole.caption.font).lineLimit(1)
             .foregroundStyle(uses.count == 0 ? tokens.textFaint : tokens.textLink)
     }

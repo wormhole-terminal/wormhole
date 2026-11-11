@@ -57,13 +57,13 @@ extension MetalTerminalView {
     public func scriptedLink(row: Int, column: Int, click: Bool) -> String {
         let hit = CellHit(row: row, column: column, side: .left, x: 0, y: 0)
         updateLink(under: hit, command: true)
-        guard let link = pointer.link else { return "no link at \(row),\(column)" }
+        guard let link = pointer.link else { return "no link at \(row),\(column)" }  // text: devctl output, not interface text
         var asked: OpenTarget?
         let opener = linkOpener
         linkOpener = { asked = $0 }
         defer { linkOpener = opener }
         if click { _ = openLink(at: hit) }
-        return "link \(link.uri) explicit=\(link.isExplicit) file=\(link.isFile) readout=\(link.readout ?? "-") spans=\(link.spans.count) opens=\(asked.map { "\($0)" } ?? "not clicked")"
+        return "link \(link.uri) explicit=\(link.isExplicit) file=\(link.isFile) readout=\(link.readout ?? "-") spans=\(link.spans.count) opens=\(asked.map { "\($0)" } ?? "not clicked")"  // text: devctl output, not interface text
     }
 
     /// The pointer over the grid: a hand over a link, an arrow where a program has the mouse, else the text cursor.

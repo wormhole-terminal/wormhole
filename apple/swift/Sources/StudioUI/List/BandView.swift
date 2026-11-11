@@ -44,8 +44,8 @@ struct BandView: View {
         .disabled(!folds)
         .foregroundStyle(tokens.textPrimary)
         .accessibilityLabel(group.name)
-        .accessibilityValue(isOpen ? "expanded" : "collapsed")
-        .accessibilityHint(lowCount > 0 ? "\(lowCount) fall short of a contrast minimum" : "")
+        .accessibilityValue(isOpen ? StudioWords.bandExpanded : StudioWords.bandCollapsed)
+        .accessibilityHint(lowCount > 0 ? StudioWords.bandLow(lowCount) : "")
     }
 }
 

@@ -30,8 +30,8 @@ public enum ThemeFolderError: Error, Equatable, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .tooLarge: "a theme file is at most 256 KiB"
-        case .link(let name): "\(name) is a link, which is never followed"
+        case .tooLarge: StudioText.folderTooLarge
+        case .link(let name): StudioText.folderLink(name)
         }
     }
 }

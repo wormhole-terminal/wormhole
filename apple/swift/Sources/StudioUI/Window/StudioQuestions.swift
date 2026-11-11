@@ -12,7 +12,7 @@ enum StudioQuestions {
     static func unsaved(name: String, changes: Int, on window: NSWindow?) async -> Answer {
         let alert = NSAlert()
         alert.messageText = StudioWords.closeMessage(name)
-        alert.informativeText = changes == 1 ? "1 change. \(StudioWords.closeDetail)" : "\(changes) changes. \(StudioWords.closeDetail)"
+        alert.informativeText = StudioWords.closeDetail(changes)
         alert.addButton(withTitle: StudioWords.saveShort)
         alert.addButton(withTitle: StudioWords.dontSave)
         alert.addButton(withTitle: StudioWords.cancel)

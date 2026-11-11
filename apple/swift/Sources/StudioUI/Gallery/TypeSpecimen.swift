@@ -1,5 +1,6 @@
 // The type roles of the interface font at the theme's size (`gallery/typography.rs`): caption, label, body,
 // heading and title, in the three text strengths.
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import SwiftUI

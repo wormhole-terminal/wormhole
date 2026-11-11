@@ -29,6 +29,6 @@ struct SpecimenFrame: View {
         .foregroundStyle(tokens.textPrimary)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(specimen.title)
-        .accessibilityValue(outlined ? "uses the selected token" : "")
+        .accessibilityValue(outlined ? StudioWords.gallerySelected : "")
     }
 }

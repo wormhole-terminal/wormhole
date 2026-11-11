@@ -29,7 +29,7 @@ public struct ThemeLibrary: Sendable {
         let dump = try JSONDecoder().decode(Dump.self, from: json)
         guard dump.format == Self.formatVersion else {
             throw DecodingError.dataCorrupted(
-                .init(codingPath: [], debugDescription: "themes.json format \(dump.format), expected \(Self.formatVersion)"))
+                .init(codingPath: [], debugDescription: "themes.json format \(dump.format), expected \(Self.formatVersion)"))  // text: a developer diagnostic of a bundled file, never shown in the interface
         }
         themes = dump.themes.map(\.theme)
         defaultDark = dump.defaultDark

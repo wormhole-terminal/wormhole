@@ -6,8 +6,8 @@ import WordsModel
 
 enum StudioDescriptions {
     static func describe(_ token: String) -> String {
-        if let slot = token.dropPrefix("terminal.ansi.") { return Words.text("studio-describe-ansi", fallback: "Terminal palette color \(slot)") }
-        if let key = token.dropPrefix("syntax.") { return Words.text("studio-describe-syntax", fallback: "Code highlighting: \(key)") }
+        if let slot = token.dropPrefix("terminal.ansi.") { return Words.text("studio-describe-ansi", ["slot": .text(slot)], fallback: "Terminal palette color \(slot)") }
+        if let key = token.dropPrefix("syntax.") { return Words.text("studio-describe-syntax", ["key": .text(key)], fallback: "Code highlighting: \(key)") }
         switch token {
         case "terminal.background": return Words.text("studio-describe-background", fallback: "The terminal's background")
         case "terminal.foreground": return Words.text("studio-describe-foreground", fallback: "The terminal's text")

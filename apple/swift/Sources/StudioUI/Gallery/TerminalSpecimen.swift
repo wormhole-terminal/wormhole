@@ -1,5 +1,6 @@
 // The terminal's own colours: the sixteen palette slots (a click selects its token), and a few lines of text
 // with a selection and the cursor on the terminal's background (`gallery/terminal.rs`).
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import StudioModel

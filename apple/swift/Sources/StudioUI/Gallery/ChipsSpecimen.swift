@@ -1,5 +1,6 @@
 // The title row's chips as the row draws them (branch status, context, ports, a pull request), the count badge and
 // key caps beside them (`gallery/navigation.rs`).
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import PanesUI

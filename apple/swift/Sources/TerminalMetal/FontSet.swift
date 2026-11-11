@@ -49,10 +49,10 @@ public enum FontSpec: Sendable, Hashable {
     /// The bundled JetBrains Mono, from the folder that holds its four TTFs.
     public static func jetBrainsMono(directory: URL) -> FontSpec {
         .files(
-            regular: directory.appendingPathComponent("JetBrainsMono-Regular.ttf"),
-            bold: directory.appendingPathComponent("JetBrainsMono-Bold.ttf"),
-            italic: directory.appendingPathComponent("JetBrainsMono-Italic.ttf"),
-            boldItalic: directory.appendingPathComponent("JetBrainsMono-BoldItalic.ttf"))
+            regular: directory.appendingPathComponent("JetBrainsMono-Regular.ttf"),  // text: a font file name
+            bold: directory.appendingPathComponent("JetBrainsMono-Bold.ttf"),  // text: a font file name
+            italic: directory.appendingPathComponent("JetBrainsMono-Italic.ttf"),  // text: a font file name
+            boldItalic: directory.appendingPathComponent("JetBrainsMono-BoldItalic.ttf"))  // text: a font file name
     }
 }
 
@@ -136,8 +136,8 @@ final class FontSet {
         if let descriptors = CTFontManagerCreateFontDescriptorsFromURL(url as CFURL) as? [CTFontDescriptor], let first = descriptors.first {
             return CTFontCreateWithFontDescriptor(first, size, nil)
         }
-        FileHandle.standardError.write(Data("cannot load the font \(url.path); using Menlo\n".utf8))
-        return CTFontCreateWithName("Menlo" as CFString, size, nil)
+        FileHandle.standardError.write(Data("cannot load the font \(url.path); using Menlo\n".utf8))  // text: a diagnostic written to stderr
+        return CTFontCreateWithName("Menlo" as CFString, size, nil)  // text: a font family's name
     }
 
     func font(for style: FontStyle) -> CTFont { interned[style.rawValue] }

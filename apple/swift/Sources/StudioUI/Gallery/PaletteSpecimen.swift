@@ -15,8 +15,8 @@ struct PaletteSpecimen: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(spacing: Space._2) {
-                Button("Show the palette") { shown = shown == .palette ? .none : .palette }
-                Button("Show the shortcut sheet") { shown = shown == .sheet ? .none : .sheet }
+                Button(StudioWords.showPalette) { shown = shown == .palette ? .none : .palette }
+                Button(StudioWords.showSheet) { shown = shown == .sheet ? .none : .sheet }
                 Spacer(minLength: 0)
             }
             .buttonStyle(.bordered).controlSize(.small)

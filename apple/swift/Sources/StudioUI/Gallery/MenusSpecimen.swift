@@ -1,5 +1,6 @@
 // The select: a trigger in two widths, and the pop-up button a Settings row uses (`gallery/selects.rs`). The menu
 // itself is the system's, drawn when opened.
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import SwiftUI

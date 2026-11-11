@@ -1,5 +1,6 @@
 // Find in scrollback: the real bar over matches in terminal text, the current one solid, and the bar again with a
 // pattern that is not valid (`gallery/find.rs`). The bars are the terminal's own views, left to the sample searcher.
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import SwiftUI

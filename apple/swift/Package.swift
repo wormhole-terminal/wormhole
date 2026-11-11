@@ -17,7 +17,7 @@ var targets: [Target] = [
     // The packed frame, the `FrameSource` seam and its synthetic implementation. Foundation only.
     .target(name: "TerminalCore", swiftSettings: hotLoopSettings),
     // The Metal view: CoreText, the glyph atlas, instanced quads, the display link, keyboard and IME.
-    .target(name: "TerminalMetal", dependencies: ["TerminalCore", "DesignSystem"], swiftSettings: hotLoopSettings),
+    .target(name: "TerminalMetal", dependencies: ["TerminalCore", "DesignSystem", "WordsModel"], swiftSettings: hotLoopSettings),
     .testTarget(name: "TerminalCoreTests", dependencies: ["TerminalCore", "TerminalMetal"]),
 
     // The window around the terminal. Layers, lowest first; each depends only on the ones above it here.
@@ -28,7 +28,7 @@ var targets: [Target] = [
     .testTarget(name: "WindowsTests", dependencies: ["WindowsModel", "WorkspaceModel"]),
     // Tokens and shared components (SwiftUI). Knows nothing of terminals. `themes.json` is every bundled
     // theme's resolved tokens, written from `wormhole-core` by `apple/scripts/dump-themes.sh`.
-    .target(name: "DesignSystem", resources: [.copy("Resources/themes.json")]),
+    .target(name: "DesignSystem", dependencies: ["WordsModel"], resources: [.copy("Resources/themes.json")]),
     // The sidebar's list, rows and header.
     .target(name: "SidebarUI", dependencies: ["WorkspaceModel", "DesignSystem", "WordsModel"]),
     // Title rows, status bar, right panel and the window that holds them with the terminal view.

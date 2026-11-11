@@ -47,11 +47,11 @@ final class HostedSessions {
             case .found: return .on(HostedSessions(desk: desk, adoptsOrphans: setup.adoptsOrphans))
             case .disposableCopy: return .needsApplications
             case .missing:
-                FileHandle.standardError.write(Data("persistent terminals: no session host program beside the app\n".utf8))
+                FileHandle.standardError.write(Data("persistent terminals: no session host program beside the app\n".utf8))  // text: a diagnostic written to stderr
                 return .off
             }
         } catch {
-            FileHandle.standardError.write(Data("persistent terminals: \(error)\n".utf8))
+            FileHandle.standardError.write(Data("persistent terminals: \(error)\n".utf8))  // text: a diagnostic written to stderr
             return .off
         }
     }

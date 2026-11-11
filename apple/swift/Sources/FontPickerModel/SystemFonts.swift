@@ -32,7 +32,7 @@ public struct StubSystemFonts: SystemFonts {
     public func families() -> [String] { installed.keys.sorted() }
     public func traits(of families: [String]) -> [String: FontTraits] { installed.filter { families.contains($0.key) } }
     public func register(_ files: [URL]) {}
-    public func styles(of family: String) -> [String] { ["Regular", "Bold", "Italic", "Bold Italic"] }
+    public func styles(of family: String) -> [String] { ["Regular", "Bold", "Italic", "Bold Italic"] }  // text: font style names, as the fonts name them
     public func covers(_ family: String, _ scalars: [Unicode.Scalar]) -> Bool { covered.contains(family) }
     public func hasLigatures(_ family: String) -> Bool { joins.contains(family) }
 }

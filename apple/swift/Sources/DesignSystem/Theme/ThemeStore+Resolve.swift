@@ -28,10 +28,10 @@ extension ThemeStore {
                     let resolved = try ResolvedTheme(json: resolver.resolve(request)).theme
                     shown = (resolved, resolved.tokens())
                 } catch {
-                    problem = "theme \(reference): \(error)"
+                    problem = "theme \(reference): \(error)"  // text: a developer diagnostic: nothing in the interface shows ThemeStore.problem
                 }
             } else if bundled == nil {
-                problem = "theme \(reference) is not bundled and there is no resolver"
+                problem = "theme \(reference) is not bundled and there is no resolver"  // text: a developer diagnostic: nothing in the interface shows ThemeStore.problem
             }
         }
         // The dump: exact for a bundled theme at its default look. Without the resolver a pick, or an opacity

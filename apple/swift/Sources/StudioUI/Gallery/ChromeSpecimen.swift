@@ -1,5 +1,6 @@
 // The primitives of `DesignSystem` as the chrome draws them: icon buttons, count badges, every status glyph, a
 // section label folded and open, and a row in each state (`gallery/chrome.rs`).
+// text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
 import SwiftUI

@@ -22,7 +22,7 @@ struct SaveButton: View {
                 Button(StudioWords.copyJSON) { session.copyJSON() }
             } label: { EmptyView() }
             .menuIndicator(.visible).menuStyle(.borderlessButton).fixedSize()
-            .accessibilityLabel("More ways to save")
+            .accessibilityLabel(StudioWords.saveMore)
         }
         .buttonStyle(.bordered).controlSize(.small).tint(session.document.isDirty ? tokens.primary : nil)
     }

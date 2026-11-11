@@ -23,7 +23,7 @@ public final class GalleryModel {
     /// Puts every piece in the state a screenshot shows: find open with matches, a block hovered, a copy on the chip,
     /// the grid's size after a live resize.
     public func stage() async {
-        find.open(seed: "Compiling")
+        find.open(seed: "Compiling")  // text: sample content of the demo gallery
         find.step(1)
         controller.hover(row: 9)
         controller.perform(.copyOutput, on: blocks.block(id: 2))
