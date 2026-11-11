@@ -34,7 +34,6 @@ fn every_setting_is_either_for_projects_or_app_wide() {
         "hotkey",
         "menu_bar",
         "auto_update",
-        "anonymous_count",
         "update_channel",
         "notifications",
         "settings_translucent",

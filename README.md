@@ -119,14 +119,22 @@ the tests and how we write commits.
 
 ## Privacy
 
-Wormhole has no analytics, no crash reporting and no account, and your settings and terminal
-output stay on your Mac. In 1.3 an update check sends the app version and nothing else.
+Wormhole has no analytics, no telemetry, no crash reporting, no account and no ID, and your settings
+and terminal output stay on your Mac.
 
-From version 1.4, not released yet, a check also sends the update channel, Apple silicon or Intel
-and the macOS major version, and the first check each day and each month is marked, so we can count
-how many copies run. There is no ID, and the server keeps those counts, not your IP address: its code
-is in [tools/feed-counter](tools/feed-counter). Counting starts a day after 1.4 first runs, and
-Settings → Updates → Count this Mac anonymously shows what is sent and turns it off.
+The one request Wormhole itself makes is the update check. It asks Wormhole's download server for the
+newest version and says the app's name and its own version (`Wormhole-Updater/1.7.0`), nothing else;
+the server sends it on to GitHub, where the files are. A test in
+[`update/tests.rs`](crates/wormhole-core/src/update/tests.rs) lists every header a check carries.
+The download server counts the checks it gets by version and the website's downloads, and stores no
+IP address: its code is in [tools/feed-counter](tools/feed-counter). GitHub sees your IP address,
+as with any download. Settings → Updates → Privacy shows the header your copy sends.
+
+Versions 1.4 to 1.6 could say more with a check (the update channel, the chip, the macOS version, and
+whether it was the day's or the month's first), with a switch to turn that off. That is gone.
+
+The pull request mark in a terminal's title row asks the GitHub CLI (`gh`), if you have it installed
+and signed in, and only in a project you trust.
 
 ## Feedback
 

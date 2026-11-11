@@ -61,7 +61,6 @@ pub(super) fn test_config(current: &str, public_key: &str) -> UpdaterConfig {
         verify_codesign: false,
         team_id: None,
         max_download_size: DEFAULT_MAX_DOWNLOAD_SIZE,
-        count: None,
         fallback_url: None,
     }
 }
@@ -178,12 +177,17 @@ pub(super) fn serve(routes: HashMap<String, Vec<u8>>) -> String {
     serve_recording(routes).0
 }
 
-/// One request as the server saw it: its path, user agent and `Wormhole-Count` header.
+/// One request as the server saw it: its path and every header it carried.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct Seen {
     pub(super) path: String,
-    pub(super) user_agent: Option<String>,
-    pub(super) count: Option<String>,
+    pub(super) headers: Vec<(String, String)>,
+}
+
+impl Seen {
+    pub(super) fn header(&self, name: &str) -> Option<&str> {
+        self.headers.iter().find(|(n, _)| n.eq_ignore_ascii_case(name)).map(|(_, value)| value.as_str())
+    }
 }
 
 /// [`serve`], also keeping what each request sent.
@@ -194,14 +198,9 @@ pub(super) fn serve_recording(routes: HashMap<String, Vec<u8>>) -> (String, Arc<
     let log = Arc::clone(&seen);
     std::thread::spawn(move || {
         for request in server.incoming_requests() {
-            let header = |name: &'static str| {
-                request.headers().iter().find(|h| h.field.equiv(name)).map(|h| h.value.to_string())
-            };
-            let entry = Seen {
-                path: request.url().to_string(),
-                user_agent: header("User-Agent"),
-                count: header("Wormhole-Count"),
-            };
+            let headers =
+                request.headers().iter().map(|h| (h.field.to_string(), h.value.to_string())).collect();
+            let entry = Seen { path: request.url().to_string(), headers };
             log.lock().unwrap().push(entry);
             let response = match routes.get(request.url()) {
                 Some(body) => tiny_http::Response::from_data(body.clone()),

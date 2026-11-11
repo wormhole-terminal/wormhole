@@ -1,5 +1,5 @@
-// Privacy: what an update check sends (`updates.rs` `draw_count_details`), with the header this Mac would send for the
-// current sharing setting, built by core (`counted_user_agent`).
+// Privacy: what an update check sends (`updates.rs` `draw_check_details`), with the one header that says anything,
+// built by core (`update::user_agent`).
 
 import DesignSystem
 import SettingsModel
@@ -11,29 +11,18 @@ struct UpdateDetails: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        let counting = model.value("anonymous_count").bool ?? true
-        let unstable = model.value("update_channel").string == "unstable"
-        // A copy waits a day before it is counted: until then a check sends what it always did (`updates.rs`).
-        let wait = counting ? model.host.updateCountWait() : nil
-        let sharing = counting && wait == nil
-        let agent = model.host.updateUserAgent(version: SettingsText.appVersion, counting: sharing, unstable: unstable)
         VStack(alignment: .leading, spacing: 0) {
-            if let wait { Banner(kind: .info, text: wait).padding(.bottom, Space._2) }
             part(
-                Words.text("settings-updates-count-every-check", fallback: "Every update check"),
-                sharing
-                    ? Words.text("settings-updates-count-every-check-counted", fallback: "The app version, requested update feed, update channel, chip type, and macOS major version.")
-                    : Words.text("settings-updates-count-every-check-plain", fallback: "The app version and requested update feed."),
-                example: agent)
-            if sharing {
-                part(
-                    Words.text("settings-updates-count-first-check", fallback: "First check each day or month"),
-                    Words.text("settings-updates-count-first-check-why", fallback: "The server uses a day or month flag to estimate active installations. Both flags can be sent together. Day and month boundaries use UTC."),
-                    example: "Wormhole-Count: day, month")  // text: protocol, sent as is
-            }
+                Words.text("settings-updates-check-sends", fallback: "Every update check"),
+                Words.text("settings-updates-check-sends-what", fallback: "The app’s name and version, and which update feed it asks for. Nothing else about this Mac."),
+                example: model.host.updateUserAgent(version: SettingsText.appVersion))
             part(
-                Words.text("settings-updates-count-never", fallback: "IP address and private data"),
-                Words.text("settings-updates-count-never-what", fallback: "The download server sees your IP address. The update counter does not store it. Update requests exclude device IDs, account details, files, and terminal contents."),
+                Words.text("settings-updates-check-server", fallback: "The download server"),
+                Words.text("settings-updates-check-server-what", fallback: "Counts the requests it gets by app version, so we know which versions are in use. It stores no IP address and nothing that tells one Mac from another. GitHub, which serves the files, sees your IP address as with any download."),
+                example: nil)
+            part(
+                Words.text("settings-updates-check-never", fallback: "Never sent"),
+                Words.text("settings-updates-check-never-what", fallback: "Device IDs, account details, files and terminal contents."),
                 example: nil)
         }
         .accessibilityElement(children: .contain)

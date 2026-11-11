@@ -77,13 +77,13 @@ public protocol UpdateBackend: AnyObject {
     func cancelRestartWhenIdle()
     /// What a restart would cut off: the lines the restart sheet lists (empty: it restarts at once).
     func runningTerminals() -> [RunningTerminal]
-    /// `auto_update` (a check installs what it finds, and the app checks by itself) and `anonymous_count` (a check says it
-    /// is the day's and the month's first): from Settings, at launch and as they change. The sample has nothing to do.
-    func apply(autoUpdate: Bool, anonymousCount: Bool)
+    /// `auto_update` (a check installs what it finds, and the app checks by itself): from Settings, at launch and as it
+    /// changes. The sample has nothing to do.
+    func apply(autoUpdate: Bool)
 }
 
 extension UpdateBackend {
-    public func apply(autoUpdate: Bool, anonymousCount: Bool) {}
+    public func apply(autoUpdate: Bool) {}
     public var channelNote: String? { nil }
     public var restartPending: Bool { false }
     public func cancelRestartWhenIdle() {}

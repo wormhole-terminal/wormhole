@@ -59,8 +59,6 @@ pub const APP_SETTINGS: &[&str] = &[
     "hotkey",
     "menu_bar",
     "auto_update",
-    // Whether this Mac is counted: the person's, never a cloned repository's.
-    "anonymous_count",
     // Which builds the app installs, and whether config.json may turn unfinished features on: a
     // cloned repository must not be able to choose either.
     "update_channel",
@@ -174,6 +172,9 @@ pub(crate) const LEGACY_SETTINGS: &[&str] = &[
     "control_read",
     // The line under the title row went with the blurred lines it marked the edge of.
     "title_border",
+    // The switch of the anonymous count (1.4 to 1.6): nothing is counted by the app any more, so there is
+    // nothing to read it into. A file that turned it off keeps the line and hears no complaint.
+    "anonymous_count",
 ];
 
 /// Every key a settings file can have, sorted.

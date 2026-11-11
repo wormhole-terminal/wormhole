@@ -9,7 +9,6 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 
 use super::UpdateStatus;
-use super::count::{self, Count};
 
 /// Background re-check interval while the app stays open.
 pub(super) const CHECK_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
@@ -26,16 +25,6 @@ pub struct UpdateSchedule {
     /// A security update is never quiet, skipped or not.
     #[serde(default)]
     pub skipped_version: Option<Version>,
-    /// The UTC day and month (`count::periods`) the anonymous count last flagged, so each is
-    /// flagged once.
-    #[serde(default)]
-    pub counted_day: Option<u32>,
-    #[serde(default)]
-    pub counted_month: Option<u32>,
-    /// Unix seconds from which this copy is counted: [`count::GRACE`] after a version that counts
-    /// first ran ([`start_count_grace`](Self::start_count_grace)).
-    #[serde(default)]
-    pub count_from: Option<u64>,
 }
 
 impl UpdateSchedule {
@@ -76,44 +65,6 @@ impl UpdateSchedule {
     /// errors, so an offline launch retries on the next opportunity.
     pub fn record_check(&mut self, now: SystemTime) {
         self.last_check = Some(unix_secs(now));
-    }
-
-    /// Starts the wait before this copy is counted, the first time a version that counts runs.
-    /// True when it started now, so the caller saves the schedule.
-    pub fn start_count_grace(&mut self, now: SystemTime) -> bool {
-        if self.count_from.is_some() {
-            return false;
-        }
-        self.count_from = Some(unix_secs(now) + count::GRACE.as_secs());
-        true
-    }
-
-    /// How long until this copy is counted, `None` once it is (or before the wait started).
-    pub fn count_starts_in(&self, now: SystemTime) -> Option<Duration> {
-        let from = self.count_from?;
-        from.checked_sub(unix_secs(now)).filter(|&left| left > 0).map(Duration::from_secs)
-    }
-
-    /// Which periods a check now would be the first of, or `None` while this copy isn't counted yet
-    /// ([`start_count_grace`](Self::start_count_grace)). A clock that went backwards counts again,
-    /// which only adds one to a day.
-    pub fn count_due(&self, now: SystemTime) -> Option<Count> {
-        if self.count_from.is_none() || self.count_starts_in(now).is_some() {
-            return None;
-        }
-        let (day, month) = count::periods(now);
-        Some(Count { day: self.counted_day != Some(day), month: self.counted_month != Some(month) })
-    }
-
-    /// Call after a check that sent `count` reached the server, as [`record_check`](Self::record_check).
-    pub fn record_count(&mut self, count: Count, now: SystemTime) {
-        let (day, month) = count::periods(now);
-        if count.day {
-            self.counted_day = Some(day);
-        }
-        if count.month {
-            self.counted_month = Some(month);
-        }
     }
 
     pub fn skip(&mut self, version: &Version) {
@@ -219,41 +170,6 @@ mod tests {
     }
 
     #[test]
-    fn the_count_flags_each_utc_day_and_month_once() {
-        use crate::update::Count;
-
-        let mut s = UpdateSchedule::default();
-        // 2026-10-30 12:00 UTC, a day after the wait started: a first check is the first of both.
-        let oct30 = 1_793_361_600;
-        s.start_count_grace(at(oct30 - 86_400));
-        assert_eq!(s.count_due(at(oct30)), Some(Count { day: true, month: true }));
-        s.record_count(Count { day: true, month: true }, at(oct30));
-        assert_eq!(s.count_due(at(oct30 + 3600)), Some(Count::default()));
-        // The next day, still October.
-        let oct31 = oct30 + 86_400;
-        assert_eq!(s.count_due(at(oct31)), Some(Count { day: true, month: false }));
-        s.record_count(Count { day: true, month: false }, at(oct31));
-        // November.
-        assert_eq!(s.count_due(at(oct31 + 86_400)), Some(Count { day: true, month: true }));
-        // Only what was sent is recorded.
-        s.record_count(Count { day: false, month: true }, at(oct31 + 86_400));
-        assert_eq!(s.count_due(at(oct31 + 86_400)), Some(Count { day: true, month: false }));
-    }
-
-    #[test]
-    fn a_copy_is_counted_only_a_day_after_a_version_that_counts_first_ran() {
-        let mut s = UpdateSchedule::default();
-        assert_eq!(s.count_due(at(1_000_000)), None, "before the wait started");
-        assert!(s.start_count_grace(at(1_000_000)));
-        assert!(!s.start_count_grace(at(1_050_000)), "started once, not again at the next launch");
-        assert_eq!(s.count_due(at(1_000_000)), None);
-        assert_eq!(s.count_starts_in(at(1_000_000 + 3600)), Some(Duration::from_secs(23 * 3600)));
-        assert_eq!(s.count_due(at(1_000_000 + 86_399)), None);
-        assert_eq!(s.count_starts_in(at(1_000_000 + 86_400)), None);
-        assert!(s.count_due(at(1_000_000 + 86_400)).is_some());
-    }
-
-    #[test]
     fn round_trips_through_json() {
         let mut s = UpdateSchedule::default();
         s.record_check(at(42));
@@ -261,6 +177,9 @@ mod tests {
         let json = serde_json::to_string(&s).unwrap();
         assert_eq!(serde_json::from_str::<UpdateSchedule>(&json).unwrap(), s);
         assert_eq!(serde_json::from_str::<UpdateSchedule>("{}").unwrap(), UpdateSchedule::default());
+        // A file from 1.4 to 1.6, which kept the anonymous count's days here: read, and those fields dropped.
+        let old = r#"{"last_check":42,"counted_day":20757,"counted_month":24321,"count_from":1793000000}"#;
+        assert_eq!(serde_json::from_str::<UpdateSchedule>(old).unwrap().last_check, Some(42));
     }
 }
 

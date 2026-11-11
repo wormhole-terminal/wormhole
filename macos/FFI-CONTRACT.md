@@ -466,7 +466,7 @@ host 400 ms to answer, all at once. `AccessDesk.answer` settles under one mutex 
 - Link counters of a host (`LinkStats`) are the GPUI app's own terminals': a card of an attached host says "no connection
   counters" until the Swift workspace holds hosted terminals.
 - Not here: the control socket's gate that raises questions (only its Rust-side `ask`), the access modes and "Always" list in
-  Settings, the anonymous update count (off), watching the running bundle being replaced from outside.
+  Settings, watching the running bundle being replaced from outside.
 
 ## Frame
 
@@ -1094,7 +1094,7 @@ SettingsHandle.importApply(home:, source:, ticked: [UInt32], shown: UInt32, font
    // The write is core's own, so no wake follows: the caller reloads its values.
 
 // Sentences that carry a number or a header (page_text.rs), in the catalogs' words and plurals.
-func settingsUpdateUserAgent(version:, counting:, unstable:) -> String?    // core's counted_user_agent / plain_user_agent
+func settingsUpdateUserAgent(version:) -> String?    // core's update::user_agent: the app's name and version, all a check says
 func settingsOthersHead(count:), settingsImportSelectedLine(selected:, total:), settingsResetQuestion(count:), settingsPreviewNote(section:) -> String?
 ```
 
@@ -1302,10 +1302,8 @@ Additive, contract version stays 2. What the settings pages say reaches the wind
 byteSize(bytes: UInt64, binary: Bool) -> String      // core's git::byte_size: "48.2 KB" or "47.1 KiB" (size_units)
 WorkspaceAction.setChangeRules(ChangeRules { plain: PlainChanges, shared: SharedChanges })
                                                       // sidebar_changes_plain / sidebar_changes_shared: the model makes the rows' ±N again
-UpdateEngine.setAutoUpdate(on:) / setAnonymousCount(on:)
-                                                      // auto_update: a check installs what it finds; anonymous_count: the check carries
-                                                      // `Wormhole-Count` and the detailed user agent (first of a day / month, after the 24 h grace,
-                                                      // which now starts when the engine is made)
+UpdateEngine.setAutoUpdate(on:)                      // auto_update: a check installs what it finds. (`setAnonymousCount` is gone with
+                                                      // the count: a check says the app's name and version and nothing else.)
 ```
 
 - `setNumbersFollowList` now also raises `Event::Chrome` (the chrome snapshot says which way they count).

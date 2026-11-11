@@ -13,7 +13,7 @@ use std::time::{Instant, SystemTime};
 
 use wormhole_core::storage::paths::DataRoot;
 use wormhole_core::update::{
-    self, Checked, Count, Held, OnSwitch, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus,
+    self, Held, OnSwitch, Release, UpdateChannel, UpdateError, UpdateSchedule, UpdateStatus,
     UpdaterConfig,
 };
 
@@ -69,8 +69,7 @@ struct Shared {
     state: Mutex<State>,
     received: AtomicU64,
     expected: AtomicU64,
-    /// `anonymous_count` and `auto_update`, as Settings says now (both on until told).
-    counting: AtomicBool,
+    /// `auto_update`, as Settings says now (on until told).
     auto_install: AtomicBool,
     waker: Waker,
 }
@@ -194,13 +193,7 @@ impl UpdateEngine {
             Some(file) => PathBuf::from(file),
             None => DataRoot::new(resolve_data_dir(None)?).update_schedule_file(),
         };
-        let mut schedule = UpdateSchedule::load_shared(&schedule_file, || None);
-        // The wait before this copy is counted starts the first time a version that counts runs.
-        if schedule.start_count_grace(SystemTime::now())
-            && let Err(err) = schedule.save_shared(&schedule_file)
-        {
-            tracing::warn!("saving update schedule: {err:#}");
-        }
+        let schedule = UpdateSchedule::load_shared(&schedule_file, || None);
         let launched = Launched::capture(&setup.current_version);
         let engine = Arc::new(Self {
             shared: Arc::new(Shared {
@@ -218,7 +211,6 @@ impl UpdateEngine {
                 config,
                 received: AtomicU64::new(0),
                 expected: AtomicU64::new(0),
-                counting: AtomicBool::new(true),
                 auto_install: AtomicBool::new(true),
                 waker: Waker::new(listener),
             }),
@@ -280,15 +272,8 @@ impl UpdateEngine {
         spawn("check", move || {
             let mut config = shared.config.clone();
             config.channel = locked(&shared.state).channel;
-            // The anonymous count: the first check of a day and of a month says so, once the grace is over.
-            let count = if shared.counting.load(Ordering::Relaxed) {
-                locked(&shared.schedule).count_due(SystemTime::now())
-            } else {
-                None
-            };
-            config.count = count;
-            let result = update::check_counted(&config);
-            finish_check(&shared, generation, manual, count, result);
+            let result = update::check(&config);
+            finish_check(&shared, generation, manual, result);
         });
     }
 
@@ -306,11 +291,6 @@ impl UpdateEngine {
     /// Whether the settings let a check install what it finds by itself (`auto_update`).
     pub fn set_auto_update(&self, on: bool) {
         self.shared.auto_install.store(on, Ordering::Relaxed);
-    }
-
-    /// Whether a check carries the anonymous count (`anonymous_count`).
-    pub fn set_anonymous_count(&self, on: bool) {
-        self.shared.counting.store(on, Ordering::Relaxed);
     }
 
     /// Stays quiet about `version` from now on (a security update is never skipped).
@@ -480,30 +460,18 @@ fn set_phase(shared: &Shared, phase: Phase) {
 
 /// The check's answer as a phase (`finish_check` of the GPUI app): an automatic check says nothing when the
 /// version was skipped, and nothing of a failure.
-fn finish_check(
-    shared: &Arc<Shared>,
-    generation: u64,
-    manual: bool,
-    count: Option<Count>,
-    checked: Result<Checked, UpdateError>,
-) {
+fn finish_check(shared: &Arc<Shared>, generation: u64, manual: bool, result: Result<UpdateStatus, UpdateError>) {
     if locked(&shared.state).generation != generation {
         return;
     }
     // Not after a network error: a laptop that launches before Wi-Fi is up tries again at the next chance.
-    if !matches!(checked, Err(UpdateError::Network(_))) {
+    if !matches!(result, Err(UpdateError::Network(_))) {
         let mut schedule = locked(&shared.schedule);
-        let now = SystemTime::now();
-        schedule.record_check(now);
-        // Only a count that reached the download server: from the fallback's copy of the feed the day is counted later.
-        if let (Some(count), Ok(Checked { counted: true, .. })) = (count, &checked) {
-            schedule.record_count(count, now);
-        }
+        schedule.record_check(SystemTime::now());
         if let Err(err) = schedule.save_shared(&shared.schedule_file) {
             tracing::warn!("saving update schedule: {err:#}");
         }
     }
-    let result = checked.map(|checked| checked.status);
     let quiet = match &result {
         Ok(status) if !manual => !locked(&shared.schedule).should_notify(status),
         _ => false,

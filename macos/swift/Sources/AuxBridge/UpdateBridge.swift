@@ -151,9 +151,8 @@ public final class FFIUpdateBackend: UpdateBackend {
 
     public func runningTerminals() -> [RunningTerminal] { hooks.runningTerminals() }
 
-    public func apply(autoUpdate: Bool, anonymousCount: Bool) {
+    public func apply(autoUpdate: Bool) {
         engine.setAutoUpdate(on: autoUpdate)
-        engine.setAnonymousCount(on: anonymousCount)
         guard autoUpdate != (checks != nil) else { return }
         checks?.cancel()
         checks = nil

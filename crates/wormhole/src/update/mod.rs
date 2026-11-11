@@ -25,8 +25,8 @@ use std::time::{Duration, SystemTime};
 use gpui_kit::*;
 use wormhole_core::storage::store::Store;
 use wormhole_core::update::{
-    self, Checked, Count, DownloadedUpdate, Held, Launched, OnSwitch, Release, UpdateChannel, UpdateError,
-    UpdateSchedule, UpdateStatus, UpdaterConfig,
+    self, DownloadedUpdate, Held, Launched, OnSwitch, Release, UpdateChannel, UpdateError, UpdateSchedule,
+    UpdateStatus, UpdaterConfig,
 };
 
 use crate::app_state::app;
@@ -110,18 +110,10 @@ impl Updates {
     /// version from before profiles kept the schedule in the database, which seeds the file.
     pub fn new(schedule_file: Option<PathBuf>, store: Option<&Store>) -> Self {
         let legacy = || store.and_then(|s| s.meta(SCHEDULE_KEY).ok().flatten());
-        let mut schedule = match &schedule_file {
+        let schedule = match &schedule_file {
             Some(file) => UpdateSchedule::load_shared(file, legacy),
             None => legacy().and_then(|json| serde_json::from_str(&json).ok()).unwrap_or_default(),
         };
-        // A day before this copy is counted, from the first launch of a version that counts, so
-        // there is time to turn the count off (Settings → Updates).
-        if schedule.start_count_grace(SystemTime::now())
-            && let Some(file) = &schedule_file
-            && let Err(err) = schedule.save_shared(file)
-        {
-            tracing::warn!("saving update schedule: {err:#}");
-        }
         Self {
             config: feed_config(),
             schedule_file,
@@ -198,11 +190,6 @@ impl Updates {
     /// When the last check that reached the feed ended (Unix seconds).
     pub fn last_check(&self) -> Option<u64> {
         self.schedule.last_check
-    }
-
-    /// How long until this copy is counted, while it waits (`UpdateSchedule::count_starts_in`).
-    pub fn count_starts_in(&self) -> Option<Duration> {
-        self.schedule.count_starts_in(SystemTime::now())
     }
 }
 
@@ -317,7 +304,6 @@ pub(crate) fn watch_bundle(ticks: u64, cx: &mut App) {
 /// `manual`: the user asked, so show every result (even a skipped version).
 pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
     let channel = settings(cx).update_channel;
-    let counting = settings(cx).anonymous_count;
     let updates = cx.global_mut::<Updates>();
     let Some(mut config) = updates.config.clone() else {
         updates.phase = UpdatePhase::Failed("This is a development build; it doesn't update itself.".into());
@@ -328,14 +314,12 @@ pub(crate) fn check_for_updates(manual: bool, cx: &mut App) {
         return;
     }
     config.channel = channel;
-    config.count = if counting { updates.schedule.count_due(SystemTime::now()) } else { None };
-    let count = config.count;
     updates.phase = UpdatePhase::Checking;
     notify_settings(cx);
-    let check = cx.background_executor().spawn(async move { update::check_counted(&config) });
+    let check = cx.background_executor().spawn(async move { update::check(&config) });
     let task = cx.spawn(async move |cx| {
         let result = check.await;
-        cx.update(|cx| finish_check(result, manual, count, cx));
+        cx.update(|cx| finish_check(result, manual, cx));
     });
     cx.global_mut::<Updates>().task = Some(task);
 }
@@ -357,21 +341,11 @@ fn notify_settings(cx: &mut App) {
     }
 }
 
-/// `count`: what the check said for the anonymous count, recorded with the check so each day and
-/// month is flagged once.
-fn finish_check(result: Result<Checked, UpdateError>, manual: bool, count: Option<Count>, cx: &mut App) {
+fn finish_check(result: Result<UpdateStatus, UpdateError>, manual: bool, cx: &mut App) {
     if should_record(&result) {
-        let now = SystemTime::now();
-        let schedule = &mut cx.global_mut::<Updates>().schedule;
-        schedule.record_check(now);
-        // Only a count that reached the download server: from GitHub's copy of the feed, the day
-        // is counted at a later check.
-        if let (Some(count), Ok(Checked { counted: true, .. })) = (count, &result) {
-            schedule.record_count(count, now);
-        }
+        cx.global_mut::<Updates>().schedule.record_check(SystemTime::now());
         save_update_schedule(cx);
     }
-    let result = result.map(|checked| checked.status);
     let quiet = match &result {
         Ok(status) if !manual => !cx.global::<Updates>().schedule.should_notify(status),
         _ => false,

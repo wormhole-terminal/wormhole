@@ -187,7 +187,7 @@ group "Updates"
   blurb ""
   aside ""
 group "Privacy"
-  blurb "Update checks go to Wormhole’s download server, which redirects them to GitHub."
+  blurb "Wormhole has no analytics, telemetry or crash reports. The one request Wormhole itself makes is the update check, which goes to its download server and from there to GitHub."
   aside ""
 section Advanced
   title "Advanced"
@@ -679,14 +679,10 @@ entry Updates update-status
   label "Check for updates"
   description ""
   keywords "install restart release notes check skip"
-entry Updates anonymous-count
-  label "Share update statistics"
-  description "Share your chip type and macOS version, and include this installation in daily and monthly counts."
-  keywords "analytics telemetry privacy usage statistics count tracking"
-entry Updates count-details
+entry Updates check-details
   label "What an update check sends"
   description ""
-  keywords "privacy data sent user agent ip address"
+  keywords "privacy data sent user agent ip address analytics telemetry tracking statistics count"
 entry Advanced open-config
   label "Settings file"
   description "config.json: edits apply live"

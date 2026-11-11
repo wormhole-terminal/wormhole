@@ -129,7 +129,7 @@ fn by_id(id: &str, keys: &[&str]) -> Option<Value> {
             "steps": [5, 10, 30, 60, 120, 300] }),
         "hotkey" | "jump-waiting-key" => json!({ "kind": "recorder" }),
         "version" => json!({ "kind": "info", "info": "version" }),
-        "update-status" | "count-details" => panel(id),
+        "update-status" | "check-details" => panel(id),
         "open-config" => {
             action("openConfig", SETTINGS_ADVANCED_OPEN, "chevron.left.forwardslash.chevron.right")
         }

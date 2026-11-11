@@ -18,7 +18,6 @@
 
 mod archive;
 mod channel;
-mod count;
 mod download;
 mod feed;
 mod held;
@@ -38,10 +37,10 @@ use std::fmt;
 use std::path::PathBuf;
 
 pub use channel::UpdateChannel;
-pub use count::{Count, counted_user_agent, plain_user_agent};
 pub use download::{DownloadedUpdate, download};
-pub use feed::{Asset, Checked, Release, UpdateStatus, check, check_counted};
+pub use feed::{Asset, Release, UpdateStatus, check};
 pub use held::{Held, OnSwitch, on_channel_switch};
+pub use http::user_agent;
 pub(crate) use install::bundle_from_exe;
 pub use install::{current_app_bundle, install, install_unless, is_translocated, preflight, relaunch};
 pub use replaced::{Launched, Replaced};
@@ -79,12 +78,8 @@ pub struct UpdaterConfig {
     /// validly-signed-by-someone-else app can't be swapped in even if minisign were bypassed.
     pub team_id: Option<String>,
     pub max_download_size: u64,
-    /// The anonymous count (`count`): which periods this check is the first of, `None` when the
-    /// person turned the count off.
-    pub count: Option<Count>,
     /// A GitHub repository's `…/releases`, read when the feed at `base_url` doesn't answer, so
     /// updates keep coming if the download server is gone ([`UpdateChannel::github_feed_path`]).
-    /// It gets the version alone, never the count.
     pub fallback_url: Option<String>,
 }
 
@@ -109,7 +104,6 @@ impl UpdaterConfig {
             verify_codesign: true,
             team_id: None,
             max_download_size: DEFAULT_MAX_DOWNLOAD_SIZE,
-            count: None,
             fallback_url: None,
         }
     }

@@ -8,6 +8,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use semver::Version;
 use ureq::Agent;
 use ureq::tls::{RootCerts, TlsConfig, TlsProvider};
 
@@ -40,23 +41,28 @@ pub(crate) const FEED_TIMEOUT: Duration = Duration::from_secs(30);
 /// Archive downloads: generous enough for ~500 MB over a slow connection.
 pub(crate) const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(60 * 60);
 
+/// What every request of the updater says of itself, and all it says: the app's name and `version`. No
+/// other header is added, so a server sees this, the address it is asked for and where the request came from.
+pub fn user_agent(version: &Version) -> String {
+    format!("Wormhole-Updater/{version}")
+}
+
 pub(crate) fn get(
     url: &str,
     body_timeout: Duration,
 ) -> Result<ureq::http::Response<ureq::Body>, UpdateError> {
-    request(url, body_timeout, concat!("Wormhole-Updater/", env!("CARGO_PKG_VERSION")), &[])
+    request(url, body_timeout, concat!("Wormhole-Updater/", env!("CARGO_PKG_VERSION")))
 }
 
-/// A GET with its own user agent and extra headers: the feed's, which carry the anonymous count.
+/// A GET that names the version it is given: the feed's, asked by the version that runs (a Preview build's
+/// is not this crate's).
 pub(crate) fn request(
     url: &str,
     body_timeout: Duration,
     user_agent: &str,
-    headers: &[(&str, &str)],
 ) -> Result<ureq::http::Response<ureq::Body>, UpdateError> {
-    let mut request = agent(url, body_timeout, user_agent).get(url);
-    for (name, value) in headers {
-        request = request.header(*name, *value);
-    }
-    request.call().map_err(|e| UpdateError::Network(format!("GET {url}: {e}")))
+    agent(url, body_timeout, user_agent)
+        .get(url)
+        .call()
+        .map_err(|e| UpdateError::Network(format!("GET {url}: {e}")))
 }

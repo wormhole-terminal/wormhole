@@ -25,14 +25,10 @@ settings-updates-update-status = Check for updates
 ## Privacy
 
 settings-updates-group-privacy = Privacy
-    .blurb = Update checks go to { -brand }’s download server, which redirects them to GitHub.
+    .blurb = { -brand } has no analytics, telemetry or crash reports. The one request { -brand } itself makes is the update check, which goes to its download server and from there to GitHub.
 
-settings-updates-anonymous-count = Share update statistics
-    .description = Share your chip type and macOS version, and include this installation in daily and monthly counts.
-    .keywords = analytics telemetry privacy usage statistics count tracking
-
-settings-updates-count-details = What an update check sends
-    .keywords = privacy data sent user agent ip address
+settings-updates-check-details = What an update check sends
+    .keywords = privacy data sent user agent ip address analytics telemetry tracking statistics count
 
 ## settings_window/sections/updates.rs (labels, hints and notes drawn by this page's code)
 
@@ -53,20 +49,14 @@ settings-updates-dont-restart = Don't restart
 settings-updates-restart-now = Restart now
 settings-updates-check-now = Check now
 
-## settings_window/sections/updates.rs: what an update check sends (under "Share update statistics")
+## settings_window/sections/updates.rs: what an update check sends
 
-# In the first day after a version that counts first ran. { $count } is whole hours, 1 to 24.
-settings-updates-count-starts-in = { $count ->
-    [one] Sharing starts in about { $count } hour, with your next update check.
-   *[other] Sharing starts in about { $count } hours, with your next update check.
-}
-settings-updates-count-every-check = Every update check
-settings-updates-count-every-check-counted = The app version, requested update feed, update channel, chip type, and macOS major version.
-settings-updates-count-every-check-plain = The app version and requested update feed.
-settings-updates-count-first-check = First check each day or month
-settings-updates-count-first-check-why = The server uses a day or month flag to estimate active installations. Both flags can be sent together. Day and month boundaries use UTC.
-settings-updates-count-never = IP address and private data
-settings-updates-count-never-what = The download server sees your IP address. The update counter does not store it. Update requests exclude device IDs, account details, files, and terminal contents.
+settings-updates-check-sends = Every update check
+settings-updates-check-sends-what = The app’s name and version, and which update feed it asks for. Nothing else about this Mac.
+settings-updates-check-server = The download server
+settings-updates-check-server-what = Counts the requests it gets by app version, so we know which versions are in use. It stores no IP address and nothing that tells one Mac from another. GitHub, which serves the files, sees your IP address as with any download.
+settings-updates-check-never = Never sent
+settings-updates-check-never-what = Device IDs, account details, files and terminal contents.
 
 ## The status line: when it was last checked, what is available, what is installed
 

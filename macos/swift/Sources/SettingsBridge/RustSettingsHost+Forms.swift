@@ -72,11 +72,7 @@ extension RustSettingsHost {
         settingsImportSelectedLine(selected: UInt32(selected), total: UInt32(total))
     }
 
-    public func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String? {
-        settingsUpdateUserAgent(version: version, counting: counting, unstable: unstable)
-    }
-
-    public func updateCountWait() -> String? { settingsUpdateCountWait() }
+    public func updateUserAgent(version: String) -> String? { settingsUpdateUserAgent(version: version) }
 }
 
 extension RecordMapping {

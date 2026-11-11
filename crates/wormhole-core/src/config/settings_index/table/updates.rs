@@ -23,16 +23,11 @@ pub(super) const UPDATES: &[Group] = &[
                 .with_keywords(SETTINGS_UPDATES_UPDATE_STATUS_KEYWORDS),
         ],
     ),
-    // Why update checks are counted, the switch, and exactly what a check sends.
+    // Exactly what a check sends and what the download server does with it. There is nothing to switch.
     group(
         SETTINGS_UPDATES_GROUP_PRIVACY,
-        &[
-            entry("anonymous-count", SETTINGS_UPDATES_ANONYMOUS_COUNT, &["anonymous_count"])
-                .with_description(SETTINGS_UPDATES_ANONYMOUS_COUNT_DESCRIPTION)
-                .with_keywords(SETTINGS_UPDATES_ANONYMOUS_COUNT_KEYWORDS),
-            entry("count-details", SETTINGS_UPDATES_COUNT_DETAILS, &[])
-                .with_keywords(SETTINGS_UPDATES_COUNT_DETAILS_KEYWORDS),
-        ],
+        &[entry("check-details", SETTINGS_UPDATES_CHECK_DETAILS, &[])
+            .with_keywords(SETTINGS_UPDATES_CHECK_DETAILS_KEYWORDS)],
     )
     .with_blurb(SETTINGS_UPDATES_GROUP_PRIVACY_BLURB),
 ];

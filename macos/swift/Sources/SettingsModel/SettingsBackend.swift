@@ -110,9 +110,7 @@ public protocol SettingsHost: AnyObject {
     func themeTrashPlan(_ value: String) -> ThemeTrashQuestion?
     func trashTheme(_ value: String) -> Bool
     /// The header an update check carries (what "What an update check sends" shows): nil without the core.
-    func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String?
-    /// "Sharing starts in about 24 hours, …" while this copy waits to be counted; nil once it is (or without the core).
-    func updateCountWait() -> String?
+    func updateUserAgent(version: String) -> String?
 }
 
 extension SettingsHost {
@@ -159,8 +157,7 @@ extension SettingsHost {
             "settings-advanced-reset-question", ["count": .whole(count)],
             fallback: "Reset \(count) changed setting\(count == 1 ? "" : "s") to their default? Your terminals, notes and themes are kept.")
     }
-    public func updateUserAgent(version: String, counting: Bool, unstable: Bool) -> String? { nil }
-    public func updateCountWait() -> String? { nil }
+    public func updateUserAgent(version: String) -> String? { nil }
     public func importTheme(path: String) -> String? {
         Words.text("settings-import-theme-unavailable", fallback: "Themes can't be imported in this build.")
     }

@@ -26,7 +26,7 @@ struct PanelView: View {
         case "probes": ProbesPanel(model: model)
         case "projects": ProjectsPanel(model: model)
         case "update-status": UpdateStatusBlock()
-        case "count-details": UpdateDetails(model: model)
+        case "check-details": UpdateDetails(model: model)
         default: PanelNote(text: entry.description.isEmpty ? entry.label : entry.description)
         }
     }
@@ -36,7 +36,7 @@ extension ControlSpec {
     /// Panels that are one line of status at the right of a labelled row, not a block of records.
     var isRowPanel: Bool {
         guard case .panel(let name) = self else { return false }
-        return !["agentsInstalled", "agentsOther", "agentsHow", "agent-skills", "importFound", "count-details", "projects", "probes", "feature-flags", "agentAccessPrograms", "update-status"].contains(name)
+        return !["agentsInstalled", "agentsOther", "agentsHow", "agent-skills", "importFound", "check-details", "projects", "probes", "feature-flags", "agentAccessPrograms", "update-status"].contains(name)
     }
 }
 

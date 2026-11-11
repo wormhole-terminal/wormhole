@@ -17,12 +17,9 @@ use gpui_kit::component::button::ButtonVariants;
 use gpui_kit::component::progress::Progress;
 use gpui_kit::prelude::*;
 use gpui_kit::*;
-use wormhole_core::update::{
-    Release, Security, Severity, UpdateChannel, counted_user_agent, current_platform, macos_version,
-    plain_user_agent,
-};
+use wormhole_core::update::{Release, Security, Severity, UpdateChannel, user_agent};
 
-use crate::settings::{UiColors, settings};
+use crate::settings::UiColors;
 use crate::settings_window::registry::{Segment, Setting, toggle};
 use crate::settings_window::{SettingsWindow, ui};
 use crate::style::{self, TextRole};
@@ -46,30 +43,18 @@ pub(super) const SETTINGS: &[Setting] = &[
         |s, ix| s.update_channel = if ix == 1 { UpdateChannel::Unstable } else { UpdateChannel::Stable },
     ),
     Setting::block("update-status", draw_status),
-    toggle!("anonymous-count", anonymous_count),
-    Setting::block("count-details", draw_count_details),
+    Setting::block("check-details", draw_check_details),
 ];
 
-/// Privacy: what update checks send, with example headers for the current sharing setting.
-fn draw_count_details(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
-    // The version and the Mac don't change while the app runs; the system's version is read once.
-    static MAC: OnceLock<Option<(semver::Version, String, Option<semver::Version>)>> = OnceLock::new();
-    let mac = MAC.get_or_init(|| {
-        let version = semver::Version::parse(env!("CARGO_PKG_VERSION")).ok()?;
-        Some((version, current_platform(), macos_version()))
+/// Privacy: what an update check sends, with the one header that says anything, as this build sends it.
+fn draw_check_details(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> AnyElement {
+    // The version doesn't change while the app runs.
+    static AGENT: OnceLock<Option<SharedString>> = OnceLock::new();
+    let agent = AGENT.get_or_init(|| {
+        semver::Version::parse(env!("CARGO_PKG_VERSION")).ok().map(|v| user_agent(&v).into())
     });
     let ui = ui(cx);
     let (code, _) = crate::fonts::code_font(cx);
-    let (counting, channel) = (settings(cx).anonymous_count, settings(cx).update_channel);
-    let starts = counting.then(|| cx.global::<Updates>().count_starts_in()).flatten();
-    let sharing = counting && starts.is_none();
-    let agent = mac.as_ref().map(|(version, platform, system)| {
-        if sharing {
-            counted_user_agent(version, channel, platform, system.as_ref())
-        } else {
-            plain_user_agent(version)
-        }
-    });
     let row = |label: &'static str, details: &'static str, example: Option<SharedString>| {
         div()
             .flex()
@@ -83,33 +68,12 @@ fn draw_count_details(_: &SettingsWindow, cx: &mut Context<SettingsWindow>) -> A
             }))
             .into_any_element()
     };
-    let every = row(
-        text(SETTINGS_UPDATES_COUNT_EVERY_CHECK),
-        text(if sharing {
-            SETTINGS_UPDATES_COUNT_EVERY_CHECK_COUNTED
-        } else {
-            SETTINGS_UPDATES_COUNT_EVERY_CHECK_PLAIN
-        }),
-        agent.map(Into::into),
-    );
-    let first = sharing.then(|| {
-        row(
-            text(SETTINGS_UPDATES_COUNT_FIRST_CHECK),
-            text(SETTINGS_UPDATES_COUNT_FIRST_CHECK_WHY),
-            Some("Wormhole-Count: day, month".into()), // text: protocol, sent as is
-        )
-    });
-    let private = row(text(SETTINGS_UPDATES_COUNT_NEVER), text(SETTINGS_UPDATES_COUNT_NEVER_WHAT), None);
-    div()
-        .flex()
-        .flex_col()
-        .gap_2()
-        .children(starts.map(|left| {
-            let notice = settings_updates_count_starts_in(whole(left.as_secs().div_ceil(3600)));
-            style::banner(ui, style::BannerKind::Info, false, notice)
-        }))
-        .child(style::setting_group(ui, [every].into_iter().chain(first).chain([private])))
-        .into_any_element()
+    let rows = [
+        row(text(SETTINGS_UPDATES_CHECK_SENDS), text(SETTINGS_UPDATES_CHECK_SENDS_WHAT), agent.clone()),
+        row(text(SETTINGS_UPDATES_CHECK_SERVER), text(SETTINGS_UPDATES_CHECK_SERVER_WHAT), None),
+        row(text(SETTINGS_UPDATES_CHECK_NEVER), text(SETTINGS_UPDATES_CHECK_NEVER_WHAT), None),
+    ];
+    style::setting_group(ui, rows).into_any_element()
 }
 
 /// The meter of a download.

@@ -2459,32 +2459,19 @@
         },
         {
           "title": "Privacy",
-          "blurb": "Update checks go to Wormhole’s download server, which redirects them to GitHub.",
+          "blurb": "Wormhole has no analytics, telemetry or crash reports. The one request Wormhole itself makes is the update check, which goes to its download server and from there to GitHub.",
           "aside": "",
           "entries": [
             {
-              "id": "anonymous-count",
-              "label": "Share update statistics",
-              "description": "Share your chip type and macOS version, and include this installation in daily and monthly counts.",
-              "keywords": "analytics telemetry privacy usage statistics count tracking",
-              "keys": [
-                "anonymous_count"
-              ],
-              "visibleHint": false,
-              "control": {
-                "kind": "toggle"
-              }
-            },
-            {
-              "id": "count-details",
+              "id": "check-details",
               "label": "What an update check sends",
               "description": "",
-              "keywords": "privacy data sent user agent ip address",
+              "keywords": "privacy data sent user agent ip address analytics telemetry tracking statistics count",
               "keys": [],
               "visibleHint": false,
               "control": {
                 "kind": "panel",
-                "panel": "count-details"
+                "panel": "check-details"
               }
             }
           ]
@@ -2813,7 +2800,6 @@
     "jump_waiting_key": "alt-cmd-j",
     "auto_update": true,
     "update_channel": "stable",
-    "anonymous_count": true,
     "show_config_keys": false,
     "feature_flags": {}
   }

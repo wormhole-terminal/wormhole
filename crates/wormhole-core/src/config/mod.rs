@@ -665,6 +665,9 @@ mod tests {
         );
         let (_dir, path) = config_file(r#"{ "theme": "Nord", "$schema": "s" }"#);
         assert_eq!(Config::load_from(path.clone(), themes_dir(&path)).error, None);
+        // The anonymous count's switch of 1.4 to 1.6 is gone; a file that still has it is not told off.
+        let (_dir, path) = config_file(r#"{ "theme": "Nord", "anonymous_count": false }"#);
+        assert_eq!(Config::load_from(path.clone(), themes_dir(&path)).error, None);
         // Liquid Glass was a feature flag for a while and is a setting again.
         let (_dir, path) = config_file(r#"{ "liquid_glass": true }"#);
         assert_eq!(Config::load_from(path.clone(), themes_dir(&path)).error, None);

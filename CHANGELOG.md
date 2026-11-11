@@ -89,6 +89,15 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
   Settings → Advanced → Show config keys (`show_config_keys`, off by default) is on; a row's right-click menu still
   copies its key.
 
+### Removed
+
+- The anonymous count is gone, and with it Settings → Updates → Share update statistics (`anonymous_count`
+  in `config.json`; a file that still has the line is left alone). From 1.4 an update check could also say
+  the update channel, the chip, the macOS version and whether it was the day's or the month's first. Now a
+  check says the app's name and version and nothing else, as before 1.4, and Settings → Updates → Privacy
+  shows that one header. The download server counts the checks it gets by version and the website's
+  downloads, and stores no IP address.
+
 ### Fixed
 
 - The SQLite that Wormhole bundles for its database is now 3.54 (`libsqlite3-sys` 0.39), which closes

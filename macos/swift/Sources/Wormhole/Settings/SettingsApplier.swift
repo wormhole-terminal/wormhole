@@ -102,9 +102,8 @@ final class SettingsApplier {
             PanelSettings.apply(values, to: app.shown.map(\.hub))
         }
         if changed("update_channel") { app.updateFollower?.use(channel: values["update_channel"]?.string == "unstable" ? .preview : .stable) }
-        if changed("auto_update", "anonymous_count"), app.aux.hasUpdater {
-            app.aux.updateBackend().apply(
-                autoUpdate: values["auto_update"]?.bool ?? true, anonymousCount: values["anonymous_count"]?.bool ?? true)
+        if changed("auto_update"), app.aux.hasUpdater {
+            app.aux.updateBackend().apply(autoUpdate: values["auto_update"]?.bool ?? true)
         }
         if changed("sidebar_changes_remember") { app.windowsHost.backend.keepChanges(values["sidebar_changes_remember"]?.bool ?? true) }
         if changed("title_row") { applyTitleRow(values, to: app.shown.map(\.hub)) }
