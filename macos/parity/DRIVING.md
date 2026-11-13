@@ -112,6 +112,18 @@ the first reads `cmd` and writes `out.txt`; `cmd2`, `cmd3` … are the windows i
 | `delay <ms>` / `sync <token>` | `delay 300` | the rest of the batch waits; `sync` answers `sync <token>` once every line before it has run |
 | `control [--from <tab>] <words…>` | `control --from 3 list --json` | a request as `Wormhole <words…>` sends it, as from inside tab 3 (none: outside the app); the reply's JSON line. Reads, waits, runs and streams are not carried here (use the socket) |
 
+Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written without compiling, see TO-VERIFY.md):
+
+| Command | Example | Does |
+|---|---|---|
+| `note-seed [count] [lines]` / `note-toggle <n>` | `note-seed 50 12` | that many notes of that many lines (GPUI's text); fold or unfold the n-th note |
+| `task-seed [open] [done]` / `task-done <n>` | `task-seed 38 12` | that many next steps, the done ones spread among the open; tick or untick the n-th |
+| `send` / `send-submit` / `stash` | `send-submit` | the focused note (the walker's, else the newest) goes to the terminal (and Return); the prompt typed in an agent's box becomes a note |
+| `comment <text>` | `comment too long` | the comment dialog a click on a diff line opened: text set, saved, closed; says the review's summary (`1 comment`) |
+| `compare [branch]` / `picker [history\|compare] [query]` | `compare main` | the Changes tab compared with a branch (none or `HEAD` stops); the revisions the picker offers for the query, one a line |
+| `commit-details` / `commit-more` | `commit-details` | the open commit's block as text (`none` when none is open); Show more / Show less |
+| `project-init` | | the Project tab's Create project folder button for the terminal's folder (`creating <dir>/.wormhole`) |
+@@ROWS@@
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).

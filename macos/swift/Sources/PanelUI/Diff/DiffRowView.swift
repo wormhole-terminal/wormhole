@@ -89,7 +89,14 @@ struct DiffLineView: View {
         }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
-        .onTapGesture { if review != nil { editing = LineAt(cell) } }
+        .onTapGesture {
+            guard let review, let at = LineAt(cell) else { return }
+            editing = at
+            review.opened(ReviewComment(path: path, side: at.side, line: at.line, code: at.code, text: ""))
+        }
+        // Closed by any way (saved, removed, cancelled, or answered from the control folder): the dialog is no longer open.
+        .onChange(of: editing) { if editing == nil { review?.opened(nil) } }
+        .onChange(of: comment) { if editing != nil { editing = nil } }
         .popover(item: $editing, arrowEdge: .trailing) { at in
             CommentEditor(
                 place: ReviewComment(path: path, side: at.side, line: at.line, code: "", text: "").location, at: at, existing: comment,

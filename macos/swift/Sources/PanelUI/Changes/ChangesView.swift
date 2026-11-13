@@ -54,6 +54,6 @@ struct ChangesDiffPane: View {
     private func reviewing(_ file: ChangedFile) -> DiffReview {
         DiffReview(
             review: store.review, put: { store.review.put($0) }, clear: { store.review.clear() },
-            paste: store.pasteReview)
+            paste: store.pasteReview, opened: { store.commenting = $0 })
     }
 }

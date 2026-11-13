@@ -9,6 +9,8 @@ struct DiffReview {
     let put: (ReviewComment) -> Void
     let clear: () -> Void
     let paste: () -> Void
+    /// The comment dialog opened on a line, or closed (nil): the control folder's `comment` answers the one that is open.
+    var opened: (ReviewComment?) -> Void = { _ in }
 }
 
 /// A line a click comments on: which side it is on, its number there and its text. An added or unchanged line is

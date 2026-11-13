@@ -14,6 +14,8 @@ public final class HistoryStore {
     public private(set) var rev: Rev?
     public private(set) var paths: [String] = []
     public private(set) var expanded: Commit.ID?
+    /// The open commit's message is shown whole ("Show more"), not compact: the control folder's `commit-more` flips it too.
+    public var bodyWhole = false
     /// The opened commit's block as the core made it, once read (the log's rows carry the subject only).
     public private(set) var details: CommitDetails?
     /// Why the details could not be read.
@@ -110,6 +112,7 @@ public final class HistoryStore {
 
     /// Opens a commit, or closes it when it is the one open.
     public func toggle(_ sha: Commit.ID) {
+        bodyWhole = false
         close()
         (details, present) = (nil, nil)
         guard expanded != sha else { return (expanded, detailsError) = (nil, nil) }

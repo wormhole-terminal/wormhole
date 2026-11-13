@@ -22,6 +22,7 @@ extension AppController {
         if await runTooling(command: command, argument: argument) { return }
         if await runDevTools(command: command, argument: argument) { return }
         if await runFlow(command: command, argument: argument) { return }
+        if await runExtra(command: command, argument: argument) { return }
         run(command: line)
     }
 

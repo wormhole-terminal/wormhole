@@ -17,7 +17,7 @@ struct CommitDetailsView: View {
     /// The parents the log lists: only those can be opened from here.
     let listed: Set<String>
     let open: (String) -> Void
-    @State private var whole = false
+    private var whole: Bool { store.bodyWhole }
     @State private var width: CGFloat = 0
     @State private var frame = CGRect.zero
     @Environment(\.showKeyMenu) private var showKeyMenu
@@ -54,7 +54,7 @@ struct CommitDetailsView: View {
         let menu = NSMenu()
         menu.autoenablesItems = false
         if details != nil, store.compact(lineChars: max(CaptionMeasure.characters(in: width, tokens: tokens), 16))?.more == true {
-            menu.addItem(ActionMenuItem(whole ? panelText("history-show-less", "Show less") : panelText("history-show-more", "Show more")) { whole.toggle() })
+            menu.addItem(ActionMenuItem(whole ? panelText("history-show-less", "Show less") : panelText("history-show-more", "Show more")) { store.bodyWhole.toggle() })
             menu.addItem(.separator())
         }
         for (what, title) in CommitCopies.titles {
@@ -82,7 +82,7 @@ struct CommitDetailsView: View {
             } else if let text = compact?.text, !text.isEmpty {
                 line(text, tokens.textPrimary)
             }
-            if more { ShowMore(whole: whole) { whole.toggle() } }
+            if more { ShowMore(whole: whole) { store.bodyWhole.toggle() } }
         } else if let error {
             line(error, tokens.statusDangerText)
         } else {

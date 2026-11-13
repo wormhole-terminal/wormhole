@@ -40,6 +40,8 @@ public final class ChangesStore {
     public internal(set) var marked: Set<String> = []
     @ObservationIgnored var anchor: String?
     public var review = Review()
+    /// The line whose comment dialog is open (its text empty), for the control folder's `comment`.
+    public var commenting: ReviewComment?
     public let diff: DiffSession
     public private(set) var revs: [Rev] = []
     /// The picker's list is being read ("Loading branches…").
