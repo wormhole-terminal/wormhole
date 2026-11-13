@@ -13,8 +13,8 @@ pub enum HookEvent {
     CloseAsked { terminal: i64 },
     /// `wh new-terminal --worktree <branch>`: put the new-worktree question up, with `branch` filled in, for the
     /// repository `folder` is in. A worktree is never made on a script's say alone: it is made when the person
-    /// confirms, and the terminal opens in it then.
-    WorktreeAsked { folder: String, branch: String },
+    /// confirms, and the terminal opens in it then, typing `command` once its shell is ready when the request gave one.
+    WorktreeAsked { folder: String, branch: String, command: Option<String> },
     /// The status line of `terminal`'s agent (`agent`, its command: `claude`) says which model it runs and how
     /// much of its context window is used (0 to 100). Only a coding agent that reports it has one.
     Gauge { terminal: i64, agent: String, model: Option<String>, context: Option<f32> },

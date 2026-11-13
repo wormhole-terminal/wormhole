@@ -19,13 +19,8 @@ fn base(core: &Core) -> Option<PathBuf> {
 }
 
 pub(super) fn ask(core: &Arc<Core>, folder: Option<String>, branch: &str, command: Option<String>) -> Reply {
-    if command.is_some() {
-        // The terminal that opens after the question is answered is not this request's to type into.
-        return Reply::error(
-            ErrorCode::Unsupported,
-            "a command can't be run in a terminal that waits for a worktree to be confirmed",
-        );
-    }
+    // The command goes with the question (`HookEvent::WorktreeAsked`): the window types it into the terminal that opens
+    // once the person confirms, as the GPUI app's dialog does (`features/git/worktree/ask.rs`).
     let start = folder.map(PathBuf::from).or_else(|| {
         core.shared.peek_model(|model| model.selected().and_then(|id| model.facts(id)?.cwd.clone()))
     });
@@ -41,7 +36,7 @@ pub(super) fn ask(core: &Arc<Core>, folder: Option<String>, branch: &str, comman
         Ok(plan) => plan,
         Err(why) => return Error::new(ErrorCode::BadRequest, why).into(),
     };
-    core.ui.push(HookEvent::WorktreeAsked { folder: shown(&repo), branch: plan.branch.clone() });
+    core.ui.push(HookEvent::WorktreeAsked { folder: shown(&repo), branch: plan.branch.clone(), command });
     tracing::info!(branch = plan.branch, "control: the worktree question was asked");
     Reply::ok(Asked {
         asked: true,

@@ -57,6 +57,9 @@ public final class HookServerHandle {
     @discardableResult
     public func openFromSystem(urls: [String], window: Int64) -> UInt32 { server.openFromSystem(urls: urls, window: window) }
 
+    /// The window in front is `window` (`WindowSession.id`): `new-terminal` without `--window` opens there and `list` marks it.
+    public func setFrontWindow(_ window: Int64) { server.setFrontWindow(window: window) }
+
     /// Another profile's desk: what the requests reaching that profile's windows are judged by.
     public func addDesk(_ desk: AccessDesk) { server.addDesk(desk: desk) }
 

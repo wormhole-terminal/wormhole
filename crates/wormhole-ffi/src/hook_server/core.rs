@@ -2,7 +2,7 @@
 //! person, the bus the streams listen on, the budgets and the queue of what Swift is to do.
 
 use std::hash::{DefaultHasher, Hash as _, Hasher as _};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -90,6 +90,9 @@ pub(crate) struct Core {
     publishers: Mutex<Vec<Arc<Publisher>>>,
     /// The id of the window the server was started over, as `list` tells it.
     pub window: i64,
+    /// The window that is in front, as Swift last said (`HookServer::set_front_window`): what a request without a window
+    /// acts on and what `list` marks, as the GPUI app's front window. Starts as the first.
+    front: AtomicI64,
     pub ui: Ui,
     budgets: Mutex<RateLimits>,
     /// The data folder the server serves: where the Probes are.
@@ -126,6 +129,7 @@ impl Core {
             bus,
             publishers: Mutex::new(vec![publisher]),
             window,
+            front: AtomicI64::new(window),
             ui: Ui::new(listener),
             budgets: Mutex::default(),
             root,
@@ -179,8 +183,26 @@ impl Core {
         let windows =
             self.publishers().iter().flat_map(|publisher| read(publisher).windows).collect::<Vec<_>>();
         Listing {
-            windows: windows.into_iter().map(|w| WindowInfo { front: w.id == self.window, ..w }).collect(),
+            windows: windows
+                .into_iter()
+                .map(|w| WindowInfo { front: w.id == self.front_window(), ..w })
+                .collect(),
         }
+    }
+
+    /// The id of the window in front.
+    pub(crate) fn front_window(&self) -> i64 {
+        self.front.load(Ordering::Relaxed)
+    }
+
+    /// Swift says which window is in front now.
+    pub(crate) fn set_front_window(&self, id: i64) {
+        self.front.store(id, Ordering::Relaxed);
+    }
+
+    /// The window in front, else the first (while it is still being made or already gone).
+    pub(crate) fn front_share(&self) -> Arc<Shared> {
+        self.share_of_window(self.front_window()).unwrap_or_else(|| self.shared.clone())
     }
 
     /// Look at every window again soon (`Publisher::kick`).

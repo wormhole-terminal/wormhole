@@ -87,6 +87,24 @@ impl WorkspaceModel {
         self.select_id(id);
     }
 
+    /// Terminal `id` takes `percent` (1 to 99) of its split along the split's axis, out of its neighbour `beside` (the command
+    /// line's `split --size`, as the GPUI app's `control_split` does it with `TabPanes::set_share`). The share it ended
+    /// with in whole percent (held by the room, so it may differ), or `None`, with nothing changed, when the two are not
+    /// neighbours or the room cannot hold both. The events are the shell's to take.
+    pub fn set_split_share(&mut self, id: i64, beside: i64, percent: u8) -> (Option<u8>, Vec<Event>) {
+        let room = self.room();
+        let split = self.index_of(id).and_then(|ix| self.sessions[ix].split);
+        let Some(split) = split.and_then(|split| self.split_mut(split)) else {
+            return (None, Vec::new());
+        };
+        let share = split.layout.set_share(id, beside, f32::from(percent), room);
+        if share.is_some() {
+            self.emit(Event::Layout);
+        }
+        let applied = share.map(|share| share.round().clamp(1.0, 99.0) as u8);
+        (applied, self.out.take())
+    }
+
     /// Terminal `id` leaves its split and stands alone; the selection stays where it is.
     pub(super) fn leave_split(&mut self, id: i64) {
         match self.index_of(id) {

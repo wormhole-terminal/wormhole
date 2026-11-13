@@ -132,6 +132,11 @@ impl HookServer {
         self.socket.to_string_lossy().into_owned()
     }
 
+    /// The window in front is `window` now: `new-terminal` without `--window` opens there and `list` marks it.
+    pub fn set_front_window(&self, window: i64) {
+        self.core.set_front_window(window);
+    }
+
     /// What the server asks Swift to do, since the last drain; re-arms the wake.
     pub fn drain_events(&self) -> Vec<HookEvent> {
         self.core.ui.drain()

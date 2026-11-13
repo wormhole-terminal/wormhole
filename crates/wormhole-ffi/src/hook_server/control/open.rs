@@ -54,10 +54,10 @@ pub(super) fn new_terminal(
     if let Err(error) = launch_check(folder.as_deref(), command.as_deref()) {
         return error.into();
     }
-    // The window asked for; else the caller's own terminal's; else the first.
+    // The window asked for; else the front one (the GPUI app's rule, `cli.md`), whichever terminal the request came from.
     let target = match window {
         Some(id) => core.share_of_window(id),
-        None => from.and_then(|tab| core.owner_of(tab)).or_else(|| Some(core.shared.clone())),
+        None => Some(core.front_share()),
     };
     let Some(target) = target else {
         return Reply::error(ErrorCode::NotFound, format!("no window {}", window.unwrap_or_default()));
@@ -173,6 +173,12 @@ pub(super) fn split(
     if let Some(command) = spec.command.clone() {
         run_first(core, terminal, command);
     }
+    // `--size`: the new pane's share of the split, held by the room as a divider's drag is; the answer is what it got.
+    let size = spec.size.and_then(|percent| {
+        let (applied, events) = owner.with_model(|model| model.set_split_share(terminal, anchor, percent));
+        owner.post(events);
+        applied
+    });
     let split = core
         .listing()
         .windows
@@ -182,7 +188,7 @@ pub(super) fn split(
         .and_then(|t| t.split)
         .unwrap_or_default();
     tracing::info!(terminal, split, ?from, "control: a terminal was split off");
-    Reply::ok(SplitMade { window: owner.window_id(), split, terminal, folder: cwd, size: None })
+    Reply::ok(SplitMade { window: owner.window_id(), split, terminal, folder: cwd, size })
 }
 
 /// Do `action`, which makes a terminal: the id and folder it opened (`folder` in the place of the model's

@@ -18,6 +18,8 @@
     final class HookHost {
         let handle: HookServerHandle
         private var listening: Task<Void, Never>?
+        /// Tells the core which window is in front (`start`).
+        private var frontObserver: NSObjectProtocol?
         /// The task that tells the welcome what macOS says of banners (`HookHost+Welcome`).
         var permissionWatch: Task<Void, Never>?
         unowned let app: AppController
@@ -32,6 +34,13 @@
         }
 
         func start() {
+            // The window in front is what a control request without a window acts on (the core cannot see AppKit's key window).
+            frontObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] note in
+                MainActor.assumeIsolated {
+                    guard let self, let window = note.object as? NSWindow, let session = self.app.sessions.first(where: { $0.window === window }) else { return }
+                    self.handle.setFrontWindow(Int64(session.id))
+                }
+            }
             let actions = handle.actions
             listening = Task { [weak self] in
                 for await batch in actions { batch.forEach { self?.perform($0) } }
@@ -70,7 +79,7 @@
             case .front(let terminal): app.show(terminal: Int(terminal))
             case .closeAsked(let terminal):
                 app.closeTerminal(Int(terminal), fromCommandLine: true) { [weak self] in self?.handle.closeQuestionOver() }
-            case .worktreeAsked(let folder, let branch): app.hub.askWorktree(branch: branch, in: folder)
+            case .worktreeAsked(let folder, let branch, let command): app.hub.askWorktree(branch: branch, in: folder, command: command)
             case .gauge(let terminal, let agent, let model, let context):
                 // In the window that holds the terminal.
                 app.session(holding: Int(terminal))?.hub.gauges.tell(
