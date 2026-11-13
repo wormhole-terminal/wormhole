@@ -44,6 +44,9 @@ public final class LogNotifier: Notifying {
     public func remove(id: String) { log.removeAll { $0.id == id } }
     public func askPermission() {}
 
+    /// What the control folder's `notify-permission` says macOS said, to see the welcome's and Settings' page for each.
+    public func pretend(_ permission: NoticePermission) { self.permission = permission }
+
     /// What a click on the banner would send.
     public func respond(_ response: NoticeResponse) { continuation.yield(response) }
 }
