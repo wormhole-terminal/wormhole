@@ -28,21 +28,5 @@ public struct TerminalContextMenu: View {
         }
     }
 
-    private var context: SidebarContext {
-        SidebarContext(
-            selected: state.selected,
-            groups: state.groups.map { head in
-                SidebarContext.GroupChoice(id: head.id, name: head.name, members: state.all.filter { $0.group == head.id }.map(\.id))
-            },
-            send: send, open: { send(.select($0)) }, renaming: nil, rename: { if let what = $0 { link.ask(.rename(what)) } },
-            shifts: [:], drag: .none, everyTerminal: state.all,
-            newGroup: { id in
-                send(.newGroup([id]))
-                if let head = planner.state.sections.first(where: { $0.rows.contains { $0.id == id } })?.head { link.ask(.rename(.group(head.id))) }
-            },
-            newInGroup: { send(.newTerminalInGroup($0)) }, hooks: hooks, flash: nil,
-            admits: { planner.groupAdmits($0, terminal: $1) },
-            hasRoom: { planner.paneDropRefusal(dragged: $0, target: $1, zone: .right) == nil },
-            popover: nil, openPopover: { _ in }, frames: RowFrames())
-    }
+    private var context: SidebarContext { .away(state: state, hooks: hooks, link: link, planner: planner, send: send) }
 }

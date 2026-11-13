@@ -169,6 +169,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     public func groupFolderOffer(group: GroupID) -> String? { core.groupFolderOffer(group: group) }
     public func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool { core.groupAdmits(group: group, id: Int64(terminal)) }
     public func lastSelected(in group: GroupID?) -> TerminalID? { core.lastSelectedIn(group: group).map(Int.init) }
+    public func tabLabels(of ids: [TerminalID]) -> [String]? { core.tabLabels(ids: ids.map(Int64.init)) }
 
     /// What the core says happened: start the program of a terminal opened, forget one closed; a refusal is the answer.
     func handle(_ events: [WorkspaceEvent]) -> WorkspaceModel.Refusal? {

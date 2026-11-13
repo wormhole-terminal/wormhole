@@ -81,6 +81,9 @@ public protocol WorkspaceBackend: AnyObject {
     func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool
     /// The terminal last selected in a group (nil: the terminals in no group): what opening a tab set selects.
     func lastSelected(in group: GroupID?) -> TerminalID?
+    /// What VoiceOver hears for each of these terminals as the tabs of one set, in order (the core's words: name, state,
+    /// selection, "n of m"); nil in the sample, whose tabs say their name.
+    func tabLabels(of ids: [TerminalID]) -> [String]?
     /// The window came to the front or went behind (`active`) and whether it can be seen at all (`seen`): in front, what is
     /// on screen is looked at, so a finished result is spent and a bell heard.
     func setWindowState(active: Bool, seen: Bool)

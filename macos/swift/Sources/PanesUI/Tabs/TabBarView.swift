@@ -56,7 +56,7 @@ public struct TabBarView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Space._1) {
                     ForEach(model.tabs) { tab in
-                        TerminalTabView(tab: tab, selected: tab.id == model.selected, hints: hints) { actions.close(tab.id) }
+                        TerminalTabView(tab: tab, selected: tab.id == model.selected, hints: hints, tile: actions.tile?(tab.id, TabMetrics.tile)) { actions.close(tab.id) }
                             .onTapGesture { actions.select(tab.id) }
                             .contextMenu { actions.tabMenu(tab.id) }
                             .id(tab.id)

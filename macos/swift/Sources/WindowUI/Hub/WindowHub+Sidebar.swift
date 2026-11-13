@@ -51,13 +51,18 @@ extension WindowHub {
         let current = state.selected.flatMap { TabSets.current(sets, containing: $0) } ?? 0
         // A tab's number is the core's ⌘ number (stable per terminal; a terminal folded away has none).
         let numbers = Dictionary(state.sections.flatMap(\.rows).compactMap { row in row.number.map { (row.id, $0) } }, uniquingKeysWith: { first, _ in first })
-        return TabBarModel.make(
+        var bar = TabBarModel.make(
             sets: sets, current: current, selected: state.selected,
             terminal: { id in
                 let terminal = state.all.first { $0.id == id }
                 return TabItem(id: id, name: terminal?.title ?? "", activity: terminal?.activity ?? .idle, number: numbers[id])
             },
             pinned: { set in state.groups.first { $0.id == set.groupID }?.isPinned ?? false })
+        // What VoiceOver hears for each tab is the core's (`spoken::tab_label`): name, state, selection, "n of m".
+        if let spoken = store.tabLabels(of: bar.tabs.map(\.id)), spoken.count == bar.tabs.count {
+            for at in bar.tabs.indices where !spoken[at].isEmpty { bar.tabs[at].spoken = spoken[at] }
+        }
+        return bar
     }
 
     /// The switcher's footer from the keymap (`switcher.rs`): "⌃⌥[ / ] previous, next group" and "⌃⌥1–9".
@@ -92,6 +97,19 @@ extension WindowHub {
             newMenu: { [unowned self] in newTerminalMenu },
             groupKeys: { Self.groupKeyHints })
         bar.groupMenu = actions.groupMenu
+        // A tab's and a card's tiles are the rows' own (the agent's logo, the status light and badge).
+        bar.tile = { [unowned self] id, size in
+            AnyView(state.all.first { $0.id == id }.map { TerminalStatusTile(terminal: $0, size: size, appearance: appearance) })
+        }
+        bar.loudest = { [unowned self] ids in
+            TerminalStatusTile.loudestFirst(ids.compactMap { id in state.all.first { $0.id == id } }).map(\.id)
+        }
+        bar.cardWash = { [unowned self] group, tokens in state.groups.first { $0.id == group }?.cardWash(tokens)?.color }
+        bar.groupPopover = { [unowned self] group, close in
+            AnyView(GroupEditPopover(
+                group: group, state: state, appearance: appearance, hooks: sidebarHooks, link: sidebarLink, planner: store, send: send,
+                close: close))
+        }
         return bar
     }
 

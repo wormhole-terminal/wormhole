@@ -1,5 +1,5 @@
 // The popover the group switcher opens (RF-02 b): a search field ("Go to group or terminal…"), the groups
-// as folded cards (their tiles and count, the open one ringed, a pinned empty one saying "No terminals"),
+// as folded cards (their tiles and count on the group's wash, the open one ringed, a pinned empty one saying "No terminals"),
 // "Ungrouped" with its count, New group and "Show all groups in the sidebar". Typing lists the groups and
 // terminals that match and ↩ goes to the first.
 
@@ -25,8 +25,8 @@ struct GroupSwitcherView: View {
             if query.trimmingCharacters(in: .whitespaces).isEmpty {
                 ForEach(model.cards) { card in
                     // A pinned group with nothing in it is somewhere to start a terminal: its card has a +.
-                    SetCardView(card: card, open: { go(.set(card.id)) }, add: card.pinned && card.count == 0 ? addAction(card) : nil)
-                        .nativeContextMenu { model.sets.indices.contains(card.id) ? model.sets[card.id].groupID.flatMap(actions.groupMenu) : nil }
+                    SetCardView(card: card, set: model.sets[card.id], actions: actions, open: { go(.set(card.id)) }, add: card.pinned && card.count == 0 ? addAction(card) : nil)
+                        .nativeContextMenu { model.sets[card.id].groupID.flatMap(actions.groupMenu) }
                 }
                 Divider()
                 footer
@@ -98,39 +98,74 @@ struct GroupSwitcherView: View {
     }
 }
 
-/// A group's card: its name, its terminals as tiles and their count, ringed in the primary while it is open.
+/// A group's card: its name (which opens the group's popover), its terminals as tiles, loudest first, and their count, on
+/// the group's wash, ringed in the primary while it is open. A click anywhere else on it goes to the group.
 struct SetCardView: View {
     let card: SetCard
+    let set: TabSet
+    let actions: TabBarActions
     let open: () -> Void
     var add: (() -> Void)?
+    @State private var editing = false
     @Environment(\.tokens) private var tokens
 
     /// How strong the open group's ring is: the primary at this share (`RING`).
     private static let ring = 0.6
+    /// The most tiles a card shows.
+    private static let tiles = 8
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radiusLg)
-        Button(action: open) {
-            VStack(alignment: .leading, spacing: Space._1) {
-                HStack {
-                    Text(card.label).font(TextRole.label.font).foregroundStyle(tokens.textPrimary)
-                    if card.alert { Circle().fill(tokens.agentAttention).frame(width: Metric.statusDot - 2, height: Metric.statusDot - 2) }
-                    Spacer(minLength: Space._2)
-                    if let add { IconButton(lucide: .plus, label: LocalizedStringKey(PanesText.newTerminalIn(card.label)), action: add) }
-                    CountBadge(card.count)
-                }
-                if card.count == 0 {
-                    Text(card.pinned ? PanesText.noTerminals : "").font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
-                } else {
-                    HStack(spacing: 4) { ForEach(Array(card.activities.prefix(8).enumerated()), id: \.offset) { _, activity in TerminalTile(activity: activity, size: Metric.tileMini) } }
-                }
+        VStack(alignment: .leading, spacing: Space._1) {
+            HStack {
+                name
+                if card.alert { Circle().fill(tokens.agentAttention).frame(width: Metric.statusDot - 2, height: Metric.statusDot - 2) }
+                Spacer(minLength: Space._2)
+                if let add { IconButton(lucide: .plus, label: LocalizedStringKey(PanesText.newTerminalIn(card.label)), action: add) }
+                CountBadge(card.count)
             }
-            .padding(Space._2).frame(maxWidth: .infinity, alignment: .leading)
-            .background(tokens.card, in: shape)
-            .overlay { shape.strokeBorder(card.current ? tokens.primary.opacity(Self.ring) : tokens.cardEdge, lineWidth: card.current ? tokens.metrics.focusRingWidth : tokens.metrics.borderWidth) }
-            .contentShape(shape)
+            if card.count == 0 {
+                Text(card.pinned ? PanesText.noTerminals : "").font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+            } else {
+                HStack(spacing: 4) { memberTiles }
+            }
         }
-        .buttonStyle(.plain)
+        .padding(Space._2).frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            shape.fill(tokens.card)
+            if let wash = set.groupID.flatMap({ actions.cardWash($0, tokens) }) { shape.fill(wash) }
+        }
+        .overlay { shape.strokeBorder(card.current ? tokens.primary.opacity(Self.ring) : tokens.cardEdge, lineWidth: card.current ? tokens.metrics.focusRingWidth : tokens.metrics.borderWidth) }
+        .contentShape(shape)
+        .onTapGesture(perform: open)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(PanesText.cardLabel(card.label, count: card.count, current: card.current, alert: card.alert))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction(.default, open)
+        .accessibilityActions {
+            if let add { Button(PanesText.newTerminalIn(card.label), action: add) }
+            if set.groupID != nil, actions.groupPopover != nil { Button(PanesText.editGroup) { editing = true } }
+        }
+    }
+
+    /// The name opens the group's popover under it (`switcher.rs` `on_label`); "Ungrouped" has none.
+    @ViewBuilder private var name: some View {
+        let label = Text(card.label).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+        if let group = set.groupID, let popover = actions.groupPopover {
+            label.contentShape(Rectangle())
+                .onTapGesture { editing = true }
+                .popover(isPresented: $editing, arrowEdge: .bottom) { popover(group, { editing = false }) }
+        } else {
+            label
+        }
+    }
+
+    /// The members' tiles as the list's rows draw them, loudest first; the plain tiles where the window gives none.
+    @ViewBuilder private var memberTiles: some View {
+        if let tile = actions.tile {
+            ForEach(Array(actions.loudest(set.members).prefix(Self.tiles)), id: \.self) { tile($0, Metric.tileMini) }
+        } else {
+            ForEach(Array(card.activities.prefix(Self.tiles).enumerated()), id: \.offset) { _, activity in TerminalTile(activity: activity, size: Metric.tileMini) }
+        }
     }
 }

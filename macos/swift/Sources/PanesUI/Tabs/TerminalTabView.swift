@@ -1,5 +1,5 @@
 // A tab: a box of its own on the terminal's colour, the open one filled most, with no edge on either so
-// switching tabs moves nothing. Its tile, its name (one weight for every tab: a bolder one on the open tab
+// switching tabs moves nothing. Its tile (the row's own, with the agent's logo and the status mark, when the window gives one), its name (one weight for every tab: a bolder one on the open tab
 // would change how much of it fits), the ⌘N keycap while ⌘ is held, and a × on hover. A long name fades out
 // over its end rather than ending in an ellipsis.
 
@@ -11,6 +11,7 @@ struct TerminalTabView: View {
     let tab: TabItem
     let selected: Bool
     let hints: Bool
+    var tile: AnyView?
     let close: () -> Void
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
@@ -19,7 +20,7 @@ struct TerminalTabView: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radius)
         HStack(spacing: Space._2) {
-            TerminalTile(activity: tab.activity, size: TabMetrics.tile)
+            if let tile { tile } else { TerminalTile(activity: tab.activity, size: TabMetrics.tile) }
             // The name takes the room the tab has (the keycap's included) and is cut by the fade, never pushing the keycap out.
             Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay(alignment: .leading) {
@@ -41,7 +42,8 @@ struct TerminalTabView: View {
         .onHover { hovering = $0 }
         .motion(Motion.selection, value: selected)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(PanesText.tabLabel(tab.name, selected: selected))
+        // The core's words (name, state, selection, "n of m") where it gave them.
+        .accessibilityLabel(tab.spoken ?? PanesText.tabLabel(tab.name, selected: selected))
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 

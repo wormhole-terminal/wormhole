@@ -98,6 +98,9 @@ public final class WorkspaceStore {
     /// The terminal last selected in a group (nil: the ones in no group).
     public func lastSelected(in group: GroupID?) -> TerminalID? { backend.lastSelected(in: group) }
 
+    /// What VoiceOver hears for each tab of one set, in the bar's order; nil where no core words them.
+    public func tabLabels(of ids: [TerminalID]) -> [String]? { backend.tabLabels(of: ids) }
+
     private func woke() {
         backend.drain()
         pull()

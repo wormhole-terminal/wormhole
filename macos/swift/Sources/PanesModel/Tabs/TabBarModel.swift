@@ -10,9 +10,11 @@ public struct TabItem: Sendable, Equatable, Identifiable {
     public var activity: Activity
     /// The ⌘1–9 number while the hints show.
     public var number: Int?
+    /// What VoiceOver hears, in the core's words ("build, working, selected, 2 of 4"); nil says the name only.
+    public var spoken: String?
 
-    public init(id: TerminalID, name: String, activity: Activity = .idle, number: Int? = nil) {
-        (self.id, self.name, self.activity, self.number) = (id, name, activity, number)
+    public init(id: TerminalID, name: String, activity: Activity = .idle, number: Int? = nil, spoken: String? = nil) {
+        (self.id, self.name, self.activity, self.number, self.spoken) = (id, name, activity, number, spoken)
     }
 }
 

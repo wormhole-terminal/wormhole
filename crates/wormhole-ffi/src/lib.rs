@@ -68,6 +68,7 @@ mod workspace_feed;
 mod workspace_git;
 mod workspace_notices;
 mod workspace_pump;
+mod workspace_tabs;
 mod workspace_texts;
 mod workspace_types;
 mod workspace_waited;

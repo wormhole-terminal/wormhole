@@ -15,7 +15,10 @@ struct SidebarColumn: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SidebarTitleRow(facts: facts, send: hub.send, menu: hub.newTerminalMenu)
+            // The chip is the tab bar's while the terminals are shown as tabs.
+            SidebarTitleRow(
+                facts: facts, send: hub.send, menu: hub.newTerminalMenu,
+                profiles: look.tabsOnTop ? [] : hub.actions.profiles(), profileActions: hub.actions.profile)
             SidebarView(
                 state: hub.state, appearance: look.sidebar, hooks: hub.sidebarHooks, link: hub.sidebarLink,
                 band: hub.exampleBand, send: hub.send
