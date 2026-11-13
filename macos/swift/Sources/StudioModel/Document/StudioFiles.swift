@@ -87,6 +87,10 @@ public protocol StudioFiles: Sendable {
     /// The theme as Export, Copy JSON and a project's `theme.json` write it: the format every release reads.
     func export(_ text: String, shown: String?) throws -> String
     func themeList() -> ThemeList
+    /// What fits the word at the UTF-8 offset `caret` of `text`, typed for the token `target`: core's names and functions.
+    func completions(_ text: String, caret: Int, target: String) -> FieldCompletions?
+    /// The pairs the theme falls short on, each with core's fix (it wraps what the person typed).
+    func contrastIssues(_ text: String, shown: String?) throws -> [ContrastIssue]
 }
 
 /// What the Studio asks of the project of the terminal in front: a trusted project's theme is the one in effect

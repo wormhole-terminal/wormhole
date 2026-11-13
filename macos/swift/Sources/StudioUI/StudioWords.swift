@@ -58,6 +58,8 @@ enum StudioWords {
     static var opaque: String { text("studio-srgb-opaque", "sRGB · opaque") }
     static func alpha(_ percent: Int) -> String { text("studio-srgb-alpha", ["percent": .whole(percent)], "sRGB · \(percent)% alpha") }
     static var expressionPlaceholder: String { text("studio-expression-placeholder", "#hex or expression, e.g. primary / 15%") }
+    static var completionFunction: String { text("studio-completion-function", "function") }
+    static func contrastFollows(_ token: String) -> String { text("studio-contrast-follows", ["token": .text(token)], "Follows \(token): its fix clears this too.") }
     static var didYouMean: String { text("studio-did-you-mean", "Did you mean") }
     static func metricFollow(_ source: String, _ value: String) -> String { text("studio-metric-follow", ["source": .text(source), "value": .text(value)], "Follow \(source) (\(value) px)") }
     static var helpWidth: String { text("studio-metric-help-width", "A number of pixels. No color picker for metrics.") }

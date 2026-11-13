@@ -8,7 +8,7 @@ public struct ContrastPair: Sendable, Equatable {
     public let underlay: String
     public let min: Double
 
-    init(_ fg: String, _ bg: String, _ min: Double, underlay: String = "surface.window") {
+    public init(_ fg: String, _ bg: String, _ min: Double, underlay: String = "surface.window") {
         (self.fg, self.bg, self.underlay, self.min) = (fg, bg, underlay, min)
     }
 

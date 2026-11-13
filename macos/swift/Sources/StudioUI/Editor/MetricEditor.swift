@@ -48,9 +48,9 @@ struct MetricEditor: View {
             HStack(spacing: Space._2) {
                 CountBadge(3)
                 KeyCap(text: "⌘1")
-                Text("ui-unify").font(TextRole.caption.font).padding(.horizontal, Space._2).frame(height: Metric.badgeHeight)  // text-file: sample content, as the gallery's
+                Text("ui-unify").font(TextRole.caption.font).padding(.horizontal, Space._2).frame(height: Metric.badgeHeight)  // text: sample content, as the gallery's
                     .background(tokens.chipTint, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
-                StatusBadge(text: "trusted", color: tokens.statusSuccessText)  // text-file: sample content, as the gallery's
+                StatusBadge(text: "trusted", color: tokens.statusSuccessText)  // text: sample content, as the gallery's
             }
             .padding(Space._3)
             .overlay(RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.border))

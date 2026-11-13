@@ -188,3 +188,7 @@ keycap-return = Return
 keycap-escape = Escape
 keycap-tab = Tab
 studio-changed-dot = Changed
+
+
+# The faint word beside a function in the expression field's list of names (a colour says its group there).
+studio-completion-function = function

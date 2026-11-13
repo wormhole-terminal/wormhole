@@ -26,7 +26,11 @@ struct LowContrastCard: View {
                             RatioText(check: issue.check)
                         }
                         Text(StudioWords.contrastOn(issue.check.bg)).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
-                        if let fix = issue.fix { actions(for: issue, fix: fix) }
+                        if let fix = issue.fix {
+                            actions(for: issue, fix: fix)
+                        } else if let follows = issue.follows {
+                            Text(StudioWords.contrastFollows(follows)).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                        }
                     }
                 }
             }

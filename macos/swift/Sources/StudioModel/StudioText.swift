@@ -75,11 +75,6 @@ enum StudioText {
     static func notPixels(_ name: String, _ value: String) -> String {
         text("studio-not-pixels", ["name": .text(name), "value": .text(value)], "\(name): “\(value)” is not a number of pixels")
     }
-    static func lighten(_ ratio: String) -> String { text("studio-contrast-fix-lighten", ["ratio": .text(ratio)], "Lighten to \(ratio):1") }
-    static func darken(_ ratio: String) -> String { text("studio-contrast-fix-darken", ["ratio": .text(ratio)], "Darken to \(ratio):1") }
-    static func useReadable(_ current: String, _ ratio: String) -> String {
-        text("studio-contrast-fix-readable", ["current": .text(current), "ratio": .text(ratio)], "Use readable(\(current), …, \(ratio))")
-    }
     static var defaultName: String { text("studio-default-name", "Theme") }
     static var folderTooLarge: String { text("studio-folder-too-large", "A theme file is at most 256 KiB.") }
     static func folderLink(_ name: String) -> String { text("studio-folder-link", ["name": .text(name)], "\(name) is a link, which is never followed.") }

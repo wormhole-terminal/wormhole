@@ -54,4 +54,19 @@ public struct FfiStudioFiles: StudioFiles {
             own: choices(list.own),
             builtins: list.builtins.map { ThemeFamily(name: $0.name, wormhole: $0.wormhole, choices: choices($0.choices)) })
     }
+
+    public func completions(_ text: String, caret: Int, target: String) -> FieldCompletions? {
+        guard let found = studioCompletions(text: text, caret: UInt32(clamping: caret), target: target) else { return nil }
+        return FieldCompletions(
+            range: Int(found.start)..<Int(found.end),
+            items: found.items.map { FieldCompletion(label: $0.label, insert: $0.insert, function: $0.function) })
+    }
+
+    public func contrastIssues(_ text: String, shown: String?) throws -> [ContrastIssue] {
+        try studioContrastIssues(themesDir: directory, text: text, shown: shown).map { issue in
+            ContrastIssue(
+                check: ContrastCheck(fg: issue.fg, bg: issue.bg, underlay: issue.underlay, min: Double(issue.min), ratio: Double(issue.ratio)),
+                fix: issue.fix.map { ContrastFix(token: $0.token, expression: $0.expression, label: $0.label) }, follows: issue.follows)
+        }
+    }
 }

@@ -9,6 +9,13 @@ public struct ContrastCheck: Sendable, Equatable {
     public let pair: ContrastPair
     public let ratio: Double
 
+    public init(pair: ContrastPair, ratio: Double) { (self.pair, self.ratio) = (pair, ratio) }
+
+    /// A pair as core measured it.
+    public init(fg: String, bg: String, underlay: String, min: Double, ratio: Double) {
+        self.init(pair: ContrastPair(fg, bg, min, underlay: underlay), ratio: ratio)
+    }
+
     public var passes: Bool { ratio >= pair.min }
     public var fg: String { pair.fg }
     public var bg: String { pair.bg }

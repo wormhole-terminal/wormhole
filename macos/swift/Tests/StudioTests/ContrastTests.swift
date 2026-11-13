@@ -36,20 +36,6 @@ final class ContrastTests: XCTestCase {
         }
     }
 
-    func testAFailingPairComesWithAFixWrittenAsAnExpression() throws {
-        let theme = try XCTUnwrap(ThemeLibrary.bundled.theme(id: "nord"))
-        let weak = try XCTUnwrap(MockTokens.with(theme.tokens(), ["text.muted": RGBA(0.20, 0.22, 0.28)]))
-        let issues = ContrastCheck.issues(in: weak) { $0 == "text.muted" ? "#333847" : nil }
-        let issue = try XCTUnwrap(issues.first { $0.check.fg == "text.muted" && $0.check.bg == "surface.window" })
-        XCTAssertFalse(issue.check.passes)
-        let fix = try XCTUnwrap(issue.fix)
-        XCTAssertEqual(fix.token, "text.muted")
-        XCTAssertTrue(fix.expression.hasPrefix("readable(#333847, surface.window"), fix.expression)
-        XCTAssertTrue(fix.expression.hasSuffix(", 4.5)"), fix.expression)
-        XCTAssertEqual(fix.label, "Lighten to 4.5:1")
-        XCTAssertNil(ContrastCheck.issues(in: weak) { _ in nil }.first { $0.check.fg.hasPrefix("terminal.") }?.fix)
-    }
-
     func testTheTokensWithALowPairAreFoundForTheListsFilter() throws {
         let theme = try XCTUnwrap(ThemeLibrary.bundled.theme(id: "nord"))
         let weak = try XCTUnwrap(MockTokens.with(theme.tokens(), ["text.faint": RGBA(0.18, 0.2, 0.25)]))

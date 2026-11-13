@@ -341,7 +341,7 @@ fn own_layers(file: &ThemeFile, shown: Option<&str>) -> ThemeFile {
 }
 
 /// The file with the layers `shown` is made of folded into one theme, for resolving.
-fn folded(file: &ThemeFile, shown: Option<&str>) -> ThemeFile {
+pub(crate) fn folded(file: &ThemeFile, shown: Option<&str>) -> ThemeFile {
     if file.variants.is_empty() {
         return file.clone();
     }

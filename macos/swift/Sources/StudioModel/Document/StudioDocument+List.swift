@@ -61,7 +61,8 @@ extension StudioDocument {
     public func uses(of token: String) -> [TokenUse] { environment.knowledge.uses.filter { $0.draws(with: token) } }
 
     public var contrastIssues: [ContrastIssue] {
-        ContrastCheck.issues(in: tokens) { [self] in file.own($0, in: shown) ?? rule(for: $0) }
+        if let files = environment.files, let issues = try? files.contrastIssues(file.json(), shown: shown) { return issues }
+        return ContrastCheck.all(in: tokens).filter { !$0.passes }.map { ContrastIssue(check: $0) }
     }
 
     public func checks(of token: String) -> [ContrastCheck] { ContrastCheck.checks(of: token, in: tokens) }
@@ -73,6 +74,15 @@ extension StudioDocument {
 }
 
 extension StudioDocument {
+    /// What core offers at UTF-8 offset `caret` of `text` typed for `token`: nothing for a metric (a number) or without the core.
+    public func completions(_ text: String, caret: Int, for token: String) -> FieldCompletions? {
+        guard !token.hasPrefix("metrics.") else { return nil }
+        return environment.files?.completions(text, caret: caret, target: token)
+    }
+
+    /// The faint word beside a name in the list: its group in the token list.
+    public func groupName(of name: String) -> String? { group(of: name) }
+
     /// Every name an expression may refer to: for completion.
     public var expressionNames: [String] {
         groups.flatMap(\.tokens).filter { !$0.hasPrefix("metrics.") }

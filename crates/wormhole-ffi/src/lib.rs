@@ -60,9 +60,9 @@ mod terminal;
 pub mod theme_dump;
 mod theme_json;
 mod theme_resolve;
+mod studio_edit;
 mod studio_files;
 mod studio_folder;
-mod studio_edit;
 mod syntax;
 mod themes;
 mod title_fit;
@@ -191,8 +191,8 @@ pub use studio_folder::{
     studio_folder_versions, studio_folder_write,
 };
 pub use studio_edit::{
-    StudioCompletion, StudioCompletions, StudioContrastFix, StudioContrastIssue, StudioMetricUse,
-    studio_completions, studio_contrast_issues, studio_metric_preview,
+    StudioCompletion, StudioCompletions, StudioContrastFix, StudioContrastIssue, studio_completions,
+    studio_contrast_issues,
 };
 pub use themes::{list_user_themes, resolve_theme, resolve_theme_json, theme_files_stamp};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};

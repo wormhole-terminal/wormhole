@@ -76,12 +76,11 @@ final class ListTests: XCTestCase {
 final class CompletionTests: XCTestCase {
     private let names = ["primary", "primary.hover", "surface.window", "surface.panel", "text.primary"]
 
-    func testNamesBeginningWithTheWordBeingTyped() {
-        XCTAssertEqual(NameCompletion.suggestions(for: "mix(primary, surface.", among: names), ["surface.panel", "surface.window"])
-        XCTAssertEqual(NameCompletion.suggestions(for: "pri", among: names), ["primary", "primary.hover"])
-        XCTAssertEqual(NameCompletion.suggestions(for: "primary", among: names), [], "a name that is complete offers nothing")
-        XCTAssertEqual(NameCompletion.suggestions(for: "#12", among: names), [])
-        XCTAssertEqual(NameCompletion.completing("mix(primary, surface.", with: "surface.window"), "mix(primary, surface.window")
+    func testATakenCompletionReplacesTheWordTheCaretIsInAndLeavesTheCaretAfterIt() {
+        let offered = FieldCompletions(range: 13..<23, items: [FieldCompletion(label: "surface.window", insert: "surface.window", function: false)])
+        let taken = offered.taking(offered.items[0], in: "mix(primary, surface.wi")
+        XCTAssertEqual(taken.text, "mix(primary, surface.window")
+        XCTAssertEqual(taken.caret, 27)
     }
 
     func testTheClosestNameForAMistake() {
