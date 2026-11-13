@@ -1,7 +1,7 @@
 // A group's menu (`sidebar/group_popover.rs` `group_menu`), native: a right-click on the group's head or on its card in the
 // tab bar's switcher asks for it, and ⌃↩ on the head opens it under the head (`group_head.rs` `group_key_menu`). Its items
 // are `PlatformModel.GroupMenu`'s, the nine colours a row of dots in the hues the head's own dot has (from the theme's
-// palette, not from a token); "Other colour…" opens the popover. A test instance keeps a keyed menu for `menu` and
+// palette, not from a token); "Other colour…" opens the system's Colours window (the popover in a test instance, which shows no system panel). A test instance keeps a keyed menu for `menu` and
 // `menu-pick`, as the row's.
 
 import AppKit
@@ -52,7 +52,7 @@ extension AppController {
         case .colour:
             let colours = GroupColor.allCases
             if let at = action.argument.flatMap({ Int($0) }), colours.indices.contains(at) { hub.send(.setGroupColor(id, colours[at])) }
-        case .otherColour: hub.sidebarLink.ask(.popover(id))
+        case .otherColour: pickColour(of: id, in: hub)
         case .noColour: hub.send(.setGroupColor(id, nil))
         case .setFolder: GroupFolderPanel.choose(for: id, send: hub.send)
         case .clearFolder: hub.send(.setGroupFolder(id, nil))
@@ -62,6 +62,17 @@ extension AppController {
         case .close: hub.actions.closeGroup(id)
         case .togglePin: hub.send(.setGroupPinned(id, !(hub.state.groups.first { $0.id == id }?.isPinned ?? false)))
         case .moveToWindow: hub.send(.moveGroupToWindow(id))
+        }
+    }
+
+    /// "Other colour…": the Colours window on the colour the group shows (its own, else its named one, else mid grey:
+    /// `group_popover.rs` `START`), the group following each pick.
+    private func pickColour(of id: GroupID, in hub: WindowHub) {
+        guard policy.touchesSystem else { return hub.sidebarLink.ask(.popover(id)) }
+        let head = hub.state.groups.first { $0.id == id }
+        let start = head?.customColor.flatMap(NSColor.init(groupHex:)) ?? head?.color?.mark(themes.tokens).nsColor ?? NSColor(srgbRed: 0.5, green: 0.5, blue: 0.5, alpha: 1)
+        GroupColourPanel.open(start: start) { [weak hub] red, green, blue in
+            hub?.send(.setGroupCustomColor(id, red: red, green: green, blue: blue))
         }
     }
 }

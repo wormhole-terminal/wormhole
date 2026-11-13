@@ -27,9 +27,9 @@ struct SidebarSectionView: View {
     }
 
     private func groupCard(_ head: GroupHead) -> some View {
-        CardSurface(wash: head.color.map { $0.wash(tokens).color }) {
+        CardSurface(wash: head.wash(tokens)?.color) {
             VStack(spacing: 0) {
-                GroupHeadView(section: section, head: head, mark: head.color.map { $0.mark(tokens).color }, context: context)
+                GroupHeadView(section: section, head: head, mark: head.mark(tokens)?.color, context: context)
                     .id(SidebarStop.group(head.id))
                 GroupRows(section: section, head: head) { row in rowView(row, solo: false).id(SidebarStop.row(row.id)) }
             }
