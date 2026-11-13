@@ -54,11 +54,12 @@ final class TerminalOverlay {
                 notices.post(notice)
             },
             announce: Self.announce)
-        box.overlay = self
         (self.find, self.blocks, self.view) = (find, blocks, view)
         minimap = CoreMinimap(
             terminal: { [weak view] in view?.source.scrollback }, palette: { [weak view] in view?.renderer.palette ?? .spike })
         self.actions = actions
+        // Only now is every stored property set: the block controller's `say` reaches this overlay through the box.
+        box.overlay = self
         view.onPointerRow = { [weak blocks] in blocks?.hover(row: $0) }
         view.onInput = { [weak blocks] in blocks?.forgetCursor() }
         wireClipboard(view: view, notices: notices)
