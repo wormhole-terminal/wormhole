@@ -12,6 +12,7 @@ import PanesUI
 import SidebarUI
 import SwiftUI
 import TerminalUI
+import WorkspaceModel
 
 struct TerminalColumn: View {
     let hub: WindowHub
@@ -37,7 +38,10 @@ struct TerminalColumn: View {
             .padding(.leading, pads.leading)
             .padding(.trailing, pads.trailing)
             .frame(height: Chrome.titleHeight)
-            .overlay { TitleTintLine(color: hub.state.selectedGroupColor) }
+            // A group's colour (a named one or the person's own) tints the row: its soft parts step up to the text colour,
+            // and under Increase Contrast a line says the colour.
+            .environment(\.titleTinted, hub.state.selectedGroupHead.map { $0.color != nil || $0.customColor != nil } ?? false)
+            .overlay { TitleTintLine(group: hub.state.selectedGroupHead) }
             .background(WindowDragArea())
 
             if look.tabsOnTop { TabBarView(model: hub.tabBar, profiles: hub.actions.profiles(), profileActions: hub.actions.profile, actions: hub.tabActions(appearance: look.sidebar), hints: hints) }

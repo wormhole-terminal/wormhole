@@ -8,15 +8,16 @@ import SwiftUI
 import WorkspaceModel
 
 struct TitleTintLine: View {
-    let color: GroupColor?
+    /// The selected terminal's group: its colour is a name's or one of the person's own (`#rrggbb`).
+    let group: GroupHead?
     @Environment(\.tokens) private var tokens
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
 
     var body: some View {
-        if look.themes.increaseContrast, let color {
+        if look.themes.increaseContrast, let line = group?.titleLine(tokens) {
             Color.clear
-                .overlay(alignment: .bottom) { Rectangle().fill(color.titleLine(tokens).color).frame(height: Self.thickness) }
+                .overlay(alignment: .bottom) { Rectangle().fill(line.color).frame(height: Self.thickness) }
                 .clipShape(RoundedRectangle(cornerRadius: colours.radiusLarge))
                 .padding(.horizontal, TitleMetrics.barInset)
                 .padding(.vertical, TitleMetrics.barInset)

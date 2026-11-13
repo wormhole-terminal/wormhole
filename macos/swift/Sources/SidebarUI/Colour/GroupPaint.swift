@@ -15,6 +15,9 @@ extension GroupHead {
     /// The colour the group's card is washed with (at `GroupWash.peak`, or faded from it).
     public func wash(_ tokens: ThemeTokens) -> RGBA? { mark(tokens).map { GroupWash.tint($0, tokens) } }
 
+    /// The group's colour as the line under the title row (Increase Contrast): a named colour or the person's own.
+    public func titleLine(_ tokens: ThemeTokens) -> RGBA? { mark(tokens).map { GroupWash.titleLine($0, tokens) } }
+
     /// The wash as a card outside the list fills with it: the colour at the peak's strength.
     public func cardWash(_ tokens: ThemeTokens) -> RGBA? { wash(tokens).map { $0.withAlpha(GroupWash.peak) } }
 }

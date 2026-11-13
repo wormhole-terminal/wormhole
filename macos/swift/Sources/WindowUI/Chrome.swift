@@ -61,9 +61,10 @@ enum Chrome {
 }
 
 extension WorkspaceState {
-    /// The colour of the selected terminal's group, listed or folded away.
-    var selectedGroupColor: GroupColor? {
-        sections.first { $0.rows.contains { $0.id == selected } || $0.tiles.contains { $0.id == selected } }?.head?.color
+    /// The head of the selected terminal's group, listed or folded away: its colour (a named one, or the person's own)
+    /// is the title row's.
+    var selectedGroupHead: GroupHead? {
+        sections.first { $0.rows.contains { $0.id == selected } || $0.tiles.contains { $0.id == selected } }?.head
     }
 
     /// The row's own summary (it has the git and notes counts) when it is listed, else the all-terminals one of a folded group.
