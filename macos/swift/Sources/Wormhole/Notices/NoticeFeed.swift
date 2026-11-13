@@ -46,12 +46,9 @@
             Task { @MainActor in
                 switch system.permission {
                 case .notAsked, .checking:
-                    system.askPermission()
                     report(Words.text("settings-notifications-test-waiting", fallback: "Waiting for macOS. Answer its question and the test is sent"))
-                    // The question is answered when the permission stops being one of these two (or never, after a minute).
-                    for _ in 0..<240 where [.notAsked, .checking].contains(system.permission) {
-                        try? await Task.sleep(for: .milliseconds(250))
-                    }
+                    await system.askPermissionAndWait()
+                    // Still not allowed or refused after the question: it was dismissed.
                     if [.notAsked, .checking].contains(system.permission) {
                         return report(Words.text("settings-notifications-test-unanswered", fallback: "macOS did not turn notifications on. Turn Wormhole on in System Settings, then try again"))
                     }

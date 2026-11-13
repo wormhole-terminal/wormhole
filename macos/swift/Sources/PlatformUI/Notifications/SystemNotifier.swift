@@ -64,6 +64,13 @@ public final class SystemNotifier: Notifying {
         }
     }
 
+    /// Asks and waits for the person's answer (the test banner's press waits for it; the permission is read again after it).
+    public func askPermissionAndWait() async {
+        asked = true
+        _ = try? await center.requestAuthorization(options: [.alert, .sound])
+        await refresh()
+    }
+
     func refreshPermission() { Task { await refresh() } }
 
     private func refresh() async {
