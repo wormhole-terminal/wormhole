@@ -293,12 +293,14 @@ open-folder-prompt = Open
 
 # { $branch } is the worktree's branch, { $folder } its folder.
 worktree-close-one-dirty = Its worktree { $branch } at { $folder } was made by Wormhole. It has uncommitted changes, so it stays.
+# { $branch } is the worktree's branch, { $folder } its folder.
 worktree-close-one-clean = Its worktree { $branch } at { $folder } was made by Wormhole. Close keeps it; Close and Remove Worktree deletes its folder (the branch stays).
 worktree-close-remove-one = Close and Remove Worktree
 worktree-close-remove-many = Close and Remove Worktrees
 
 # { $names } lists each worktree as "<branch> at <folder>".
 worktree-close-group-lead-one = Wormhole made the worktree { $names }.
+# { $names } lists each worktree as "<branch> at <folder>".
 worktree-close-group-lead-many = Wormhole made the worktrees { $names }.
 worktree-close-group-none = They have changes or other terminals in them, so they stay.
 worktree-close-group-all = Close keeps them; Close and Remove Worktrees deletes their folders (the branches stay).

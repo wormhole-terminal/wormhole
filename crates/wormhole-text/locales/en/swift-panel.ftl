@@ -220,6 +220,7 @@ steps-placeholder = Next step
 # The band's VoiceOver label. { $count } is how many steps are open.
 steps-spoken = { $count ->
     [0] Next steps, none open
+    [one] Next steps, { $count } open
    *[other] Next steps, { $count } open
 }
 

@@ -258,7 +258,6 @@ window-focus-status-bar = Status bar, item { $position } of { $total }
 # A terminal's state in words, in the bar and in the title row.
 window-state-working = working
 window-state-needs-input = needs input
-window-state-finished = finished
 window-state-done = done
 window-state-failed = failed
 # { $code } is the failed command's exit code.
@@ -283,6 +282,7 @@ window-status-size-spoken = { $title }, terminal size { $size }
 
 # The tooltip of the profile tag in a window that is not in the profile Wormhole is in. { $profile } is the profile's name.
 window-status-profile-edge = This window is in { $profile }, not the profile Wormhole is in
+# The profile tag's VoiceOver label. { $profile } is the profile's name.
 window-status-profile-spoken = Window in profile { $profile }
 
 # The tooltip of the button that goes to a terminal waiting for an answer. { $first } is a terminal's name, { $rest } one or two more.

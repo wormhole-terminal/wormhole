@@ -9,3 +9,11 @@ use crate::key::Key;
 pub const CHANGES_VIEW_OPTIONS: Key = Key::new(51);
 /// "Group untracked files separately"
 pub const CHANGES_VIEW_GROUP_UNTRACKED: Key = Key::new(52);
+/// "Show files as"
+pub const CHANGES_VIEW_LAYOUT: Key = Key::new(53);
+/// "Tree"
+pub const CHANGES_VIEW_TREE: Key = Key::new(54);
+/// "List"
+pub const CHANGES_VIEW_LIST: Key = Key::new(55);
+/// "Group untracked files"
+pub const CHANGES_VIEW_GROUP: Key = Key::new(56);
