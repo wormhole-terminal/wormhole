@@ -79,6 +79,7 @@ public final class RustSettingsHost: SettingsHost {
         records = PanelRecords(
             agents: [], imports: [],
             profile: profile ?? ProfileRecord(name: "", startFolder: "~", gitName: "", gitEmail: ""))
+        records.agentsRead = false
         refreshAgents()
         refreshSkills()
         refreshImports()
@@ -154,11 +155,22 @@ public final class RustSettingsHost: SettingsHost {
         }
     }
 
-    /// Reads the agents and their hooks again (after an install, a removal, Rescan PATH).
+    public func perform(_ hooks: AgentRecord.HookAction, login: AgentLoginRecord) {
+        Task.detached {
+            let result = Result { try settingsSetLoginHooks(agent: login.agent, dir: login.dir, install: hooks != .remove) }
+            await MainActor.run {
+                self.problem(result.failure.map(SettingsFailure.sentence))
+                self.refreshAgents()
+            }
+        }
+    }
+
+    /// Reads the agents, their hooks and the profiles' logins again (after an install, a removal, Rescan PATH).
     public func refreshAgents() {
         Task.detached {
             let rows = settingsAgentRows().map(RecordMapping.agent)
-            await MainActor.run { self.records.agents = rows }
+            let logins = ((try? settingsAgentLogins()) ?? []).map(RecordMapping.login)
+            await MainActor.run { (self.records.agents, self.records.logins, self.records.agentsRead) = (rows, logins, true) }
         }
     }
 

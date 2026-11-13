@@ -55,6 +55,8 @@ public protocol SettingsHost: AnyObject {
     func panelRecords() -> PanelRecords
     /// Installs, repairs or removes the status hooks of the agent with this id (a row's button).
     func perform(_ hooks: AgentRecord.HookAction, agent id: String)
+    /// The same for a profile's login of an agent: the hooks in its folder.
+    func perform(_ hooks: AgentRecord.HookAction, login: AgentLoginRecord)
     /// Takes an approval back (a row's Revoke): the program is asked again, and what it started is closed.
     func revoke(_ approval: ApprovalRecord)
     /// Switches one capability of an approved program on or off, kept with the approval (the ticks of its row).
@@ -121,6 +123,7 @@ extension SettingsHost {
     public var fontRules: any FontRules { LocalFontRules() }
     /// A host that has no agents to set up (the mock) ignores the button.
     public func perform(_ hooks: AgentRecord.HookAction, agent id: String) {}
+    public func perform(_ hooks: AgentRecord.HookAction, login: AgentLoginRecord) {}
     /// A host that holds no approvals (the mock) has none to take back.
     public func revoke(_ approval: ApprovalRecord) {}
     public func setCapability(_ capability: ApprovalCapability, on: Bool, of approval: ApprovalRecord) {}

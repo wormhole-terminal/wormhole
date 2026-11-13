@@ -21,6 +21,17 @@ enum RecordMapping {
         }
     }
 
+    static func login(_ row: SettingsAgentLogin) -> AgentLoginRecord {
+        let (state, hooks): (AgentRecord.State, AgentRecord.HookAction?) =
+            switch row.hooks {
+            case .installed: (.ready, .remove)
+            case .partial: (.needsRepair, .repair)
+            case .notInstalled, .noHooks: (.statusFromOutput, .install)
+            case .unreadable: (.needsRepair, nil)
+            }
+        return AgentLoginRecord(agent: row.agent, dir: row.dir, shown: row.shown, line: row.line, state: state, hooks: hooks)
+    }
+
     static func imported(_ row: SettingsImportRow) -> ImportRecord {
         ImportRecord(id: row.id, app: row.app, summary: row.summary)
     }

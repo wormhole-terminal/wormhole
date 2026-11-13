@@ -10,6 +10,9 @@ import WordsModel
 
 struct AgentList: View {
     let records: [AgentRecord]
+    var logins: [AgentLoginRecord] = []
+    /// False until the first read lands: the list says it is looking instead of claiming there is nothing.
+    var read = true
     let host: any SettingsHost
     @Environment(\.tokens) private var tokens
 
@@ -19,7 +22,9 @@ struct AgentList: View {
                 if index > 0 { Rectangle().fill(tokens.settingsDivider).frame(height: tokens.metrics.borderWidth) }
                 row(agent)
             }
-            if records.isEmpty {
+            if records.isEmpty, !read {
+                PanelNote(text: Words.text("settings-agents-looking-for-agents", fallback: "Looking for agents…"))
+            } else if records.isEmpty {
                 PanelNote(text: Words.text("settings-agents-no-coding-agent-on-this-macs", fallback: "No coding agent on this Mac's PATH. Install Claude Code, Codex or one of the others below: Wormhole recognises it in any terminal, and offers its hooks here."))
             }
         }
@@ -50,9 +55,26 @@ struct AgentList: View {
             if let note = agent.note {
                 Text(note).textRole(.caption).foregroundStyle(tokens.textMuted).padding(.leading, Metric.tile + Space._3)
             }
+            // Each profile's own login of this agent: a second place for the hooks, with its own button.
+            ForEach(logins.filter { $0.agent == agent.id }) { login in loginRow(login) }
         }
         .padding(.vertical, Space._2)
         .frame(minHeight: SettingsMetric.rowMinHeight)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func loginRow(_ login: AgentLoginRecord) -> some View {
+        HStack(spacing: Space._2) {
+            Text(login.line).textRole(.caption).foregroundStyle(tokens.textMuted)
+            Text(login.shown).textRole(.caption, design: .monospaced).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
+                .padding(.horizontal, Space._1)
+                .background(tokens.controlBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
+            Spacer(minLength: 0)
+            if let hooks = login.hooks {
+                ActionButton(title: title(hooks), symbol: nil, frameId: "agent.login.\(login.id)") { host.perform(hooks, login: login) }
+            }
+        }
+        .padding(.leading, Metric.tile + Space._3)
         .accessibilityElement(children: .combine)
     }
 

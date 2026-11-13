@@ -15,7 +15,7 @@ struct PanelView: View {
     var body: some View {
         let records = model.host.panelRecords()
         switch name {
-        case "agentsInstalled": AgentList(records: records.agents.filter { $0.state != .notInstalled }, host: model.host)
+        case "agentsInstalled": AgentList(records: records.agents.filter { $0.state != .notInstalled }, logins: records.logins, read: records.agentsRead, host: model.host)
         case "agentsOther": OtherAgents(records: records.agents.filter { $0.state == .notInstalled }, host: model.host)
         case "agentsHow": HowStatusWorks()
         case "importFound": ImportCards(model: model)

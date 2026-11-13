@@ -4,6 +4,7 @@
 //! (`agents`), terminals to import from (`imports`) and the profiles (`profiles`). The schema the
 //! rows are drawn from is `settings_dump`; the rules in all of it are `wormhole-core`'s.
 
+mod agent_logins;
 mod agents;
 pub(crate) mod edits;
 mod error;
@@ -31,6 +32,7 @@ mod watch;
 #[cfg(test)]
 pub(crate) mod tests;
 
+pub use agent_logins::{SettingsAgentLogin, settings_agent_logins, settings_set_login_hooks};
 pub use agents::{SettingsAgentRow, SettingsHookState, settings_agent_rows, settings_set_agent_hooks};
 pub use error::SettingsError;
 pub use flags::SettingsFlagRow;
