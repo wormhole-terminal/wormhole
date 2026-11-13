@@ -12,6 +12,8 @@ public final class ChangesStore {
     public private(set) var files: [ChangedFile] = []
     public private(set) var phase = Phase.loading
     public private(set) var folder: String?
+    /// The repository's root, which the paths of `files` are relative to (the controller sets it).
+    @ObservationIgnored var root: String?
     public var compare: Rev?
     /// The branch the list compared with is gone and the list is against HEAD (an amber line over it).
     public private(set) var compareMissing: String?
@@ -87,9 +89,9 @@ public final class ChangesStore {
             let mine = terminal.flatMap { kept.removeValue(forKey: $0) } ?? Kept()
             (compare, arrangement, marked, review) = (mine.compare, mine.arrangement, mine.marked, mine.review)
             (self.terminal, cursor, anchor, copiedInstead) = (terminal, nil, nil, false)
-        } else {
-            compare = nil
         }
+        // The compare branch is the terminal's and survives a `cd` (only `setCompare` changes it); a branch the new folder
+        // lacks shows as `compareMissing`.
         close()
         // The same folder under another terminal: the list is the same repository's, read for this one's branch.
         guard folder != self.folder else { return refresh() }
@@ -163,7 +165,7 @@ public final class ChangesStore {
     /// The file's size and time as the working tree has them now: every diff here has the working tree as its new side, a
     /// comparison with a branch too.
     private func stamp(of file: ChangedFile) -> String? {
-        guard let folder, let path = RepoFiles.resolve(root: folder, relative: file.path) else { return nil }
+        guard let folder, let path = RepoFiles.resolve(root: root ?? folder, relative: file.path) else { return nil }
         return host?.stamp(of: path)
     }
 

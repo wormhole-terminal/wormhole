@@ -27,9 +27,9 @@ private struct PathMenu: ViewModifier {
             if count == 1, let path = paths.first {
                 let there = onDisk ?? host?.exists(absolute(path)) ?? true
                 if let open = host?.openTooltip(line: nil), host?.editorName != nil {
-                    Button(open) { host?.open(resolved(path), line: nil) }.disabled(!there)
+                    Button(open) { if let target = resolved(path) { host?.open(target, line: nil) } }.disabled(!there)
                 }
-                Button(panelText("history-menu-reveal", "Reveal in Finder")) { host?.reveal(resolved(path)) }.disabled(!there)
+                Button(panelText("history-menu-reveal", "Reveal in Finder")) { if let target = resolved(path) { host?.reveal(target) } }.disabled(!there)
                 Divider()
             }
             Button(panelText("history-menu-copy-path", ["count": .whole(count)], count == 1 ? "Copy Path" : "Copy Paths")) { copy(paths.map(absolute)) }
@@ -43,8 +43,9 @@ private struct PathMenu: ViewModifier {
 
     private func absolute(_ path: String) -> String { root.map { $0 + "/" + path } ?? path }
 
-    /// What is opened or revealed is the path as core resolved it inside the repository, never a link out of it.
-    private func resolved(_ path: String) -> String { root.flatMap { RepoFiles.resolve(root: $0, relative: path) } ?? absolute(path) }
+    /// What is opened or revealed is the path as core resolved it inside the repository, never a link out of it: a path core
+    /// refuses is not handed on at all.
+    private func resolved(_ path: String) -> String? { root.flatMap { RepoFiles.resolve(root: $0, relative: path) } }
 
     private func copy(_ lines: [String]) {
         if lines.count == 1 { host?.copyPath(lines[0]) } else {

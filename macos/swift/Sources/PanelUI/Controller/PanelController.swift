@@ -21,7 +21,8 @@ public final class PanelController {
     public let keyboard = PanelKeyboard()
     public private(set) var folder: String?
     @ObservationIgnored private var terminal: Int?
-    @ObservationIgnored private var root: String?
+    /// The repository root of `folder`, once git has said; git's paths are relative to it.
+    private var root: String?
     @ObservationIgnored private var roots: [String: String] = [:]
     @ObservationIgnored private let git: any GitBackend
     /// A fixed clock (Unix seconds) for screenshots and tests; nil follows the real one.
@@ -54,12 +55,18 @@ public final class PanelController {
         }
     }
 
+    /// The folder every path the git tabs hand out (Copy Path, Open, Reveal, a submodule's terminal, the diff's open icons) is
+    /// joined to: the repository's root, as git's paths are relative to it and not to the terminal's folder; the folder
+    /// itself until git has answered or outside a repository.
+    public var repoRoot: String? { root ?? folder }
+
     /// The terminal's folder changed (it `cd`ed, or another terminal was selected): every tab follows it.
     /// `terminal` is the selected terminal's id: what a tab keeps per terminal waits under it. `root` is the folder's
     /// repository root, else the folder: the band's folder, which the Files tree and the project's colour are of.
     private func settle(folder: String?, terminal: Int?, root: String?) {
         guard folder != self.folder || terminal != self.terminal || root != self.root else { return }
         (self.folder, self.terminal, self.root) = (folder, terminal, root)
+        changes.root = root ?? folder
         changes.follow(folder, terminal: terminal)
         history.follow(folder, terminal: terminal)
         files.follow(root ?? folder, terminal: terminal)
