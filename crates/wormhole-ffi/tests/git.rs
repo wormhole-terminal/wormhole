@@ -545,3 +545,34 @@ fn an_existing_branch_is_checked_out_and_the_base_setting_moves_the_folder() {
     assert_eq!(PathBuf::from(&made.folder), base_path.join(name).join("existing"));
     service.remove(made.folder).expect("removed");
 }
+
+/// Two windows of one profile each hold a service: what one makes the other's next write must not lose, and the two
+/// never hand out the same ports.
+#[test]
+fn two_services_of_one_profile_keep_each_others_worktrees_and_ports() {
+    let (_dir, folder) = repo_with(&[("a.txt", "a\n")]);
+    let (first, second) = (
+        WorktreeService::new(None, false).expect("isolated"),
+        WorktreeService::new(None, false).expect("isolated"),
+    );
+    // Both read the (empty) list before either writes.
+    assert!(!worktrees_of(&first).contains(&"two/a".to_string()));
+    assert!(!worktrees_of(&second).contains(&"two/b".to_string()));
+    let a = first.create("two/a".into(), folder.clone()).expect("created");
+    let b = second.create("two/b".into(), folder.clone()).expect("created");
+    for service in [&first, &second] {
+        let branches = worktrees_of(service);
+        assert!(
+            branches.contains(&"two/a".to_string()) && branches.contains(&"two/b".to_string()),
+            "{branches:?}"
+        );
+    }
+    let port = |w: &wormhole_ffi::GitWorktree| {
+        w.env.iter().find(|v| v.name == "WORMHOLE_PORT").map(|v| v.value.clone())
+    };
+    assert!(port(&a).is_some() && port(&a) != port(&b), "one block of ports each");
+    // The second forgets nothing of the first's when it removes its own.
+    second.remove(b.folder).expect("removed");
+    assert!(worktrees_of(&first).contains(&"two/a".to_string()));
+    first.remove(a.folder).expect("removed");
+}
