@@ -110,9 +110,14 @@ impl ProjectService {
     /// (nothing changes) for a profile that is not in `profiles.json`.
     pub fn follow_profile(&self, profile: String) -> bool {
         let Some(dir) = profile::dir_of(&profile) else { return false };
-        *self.lock() = Hub::load(&dir);
-        self.changed();
+        self.follow_dir(&dir);
         true
+    }
+
+    /// The stores of the profile folder `dir`, read in place of the ones in use (split off so a test needs no profile list).
+    pub(crate) fn follow_dir(&self, dir: &std::path::Path) {
+        *self.lock() = Hub::load(dir);
+        self.changed();
     }
 
     /// The window's Project feature is on or off (core's feature mask, which the window draws its tabs from). Off,

@@ -93,6 +93,22 @@ fn revoking_takes_trust_away_and_trust_survives_a_restart_of_the_service() {
 }
 
 #[test]
+fn trust_follows_a_window_to_the_profile_it_moved_to() {
+    let repo = Repo::new(&[("actions.json", RUN_TESTS)]);
+    let owner = Owner::answering([OwnerAnswer::Approved]);
+    let (home, service) = service(&owner);
+    let other = tempfile::tempdir().expect("other profile's folder");
+    service.project(repo.root());
+    assert_eq!(service.approve(repo.root()), ApproveOutcome::Approved);
+    assert!(runs(&service, &repo).is_ok());
+    service.follow_dir(other.path());
+    assert_eq!(status(&service, &repo), TrustStatusRecord::Untrusted, "the new profile never approved it");
+    assert!(runs(&service, &repo).is_err(), "so nothing runs under the old profile's approval");
+    service.follow_dir(home.path());
+    assert_eq!(status(&service, &repo), TrustStatusRecord::Trusted, "and back, the first profile's approval is its own");
+}
+
+#[test]
 fn a_link_out_of_the_project_is_never_read_so_it_can_neither_run_nor_be_trusted() {
     let outside = tempfile::tempdir().expect("temp dir");
     std::fs::write(outside.path().join("actions.json"), RUN_TESTS).expect("write");

@@ -132,8 +132,8 @@ extension AppController {
     /// (the odd window, as the GPUI app has it); the profile Wormhole is in gets its own window the same way.
     func openWindow(inProfile id: String) {
         #if WITH_UNIFFI
-            // The picked profile's own host: not the front window's (that is ⌘N's road, `openNewWindow`).
-            guard let target = id == windowsHost.profile ? windowsHost : hostBeside(id) else { return }
+            // The picked profile's own host (the shown one's too: `profileHosts` holds it), not the front window's: that is ⌘N's road.
+            guard let target = hostBeside(id) else { return }
             // Its own start folder (the profile's), not the one of the window in front.
             let planned = target.backend.plan(from: nil, folder: nil)
             openPlanned(window: planned.window, activate: true, in: target)
