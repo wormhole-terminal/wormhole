@@ -37,10 +37,7 @@ extension AppController {
         let session = WindowSession(id: id, windows: windowsHost, hub: hub, factory: factory, effects: effects, usage: panel.usage, backends: panel.backends)
         #if WITH_UNIFFI
             // The title row's order of giving way is the core's, wherever the core runs the window.
-            if options.isReal {
-                hub.rowFitting = CoreRowFitting()
-                hub.splitMotion = CoreSplitMotion()
-            }
+            if options.isReal { (hub.rowFitting, hub.splitMotion) = (CoreRowFitting(), CoreSplitMotion()) }
             (effects as? PanelEffects)?.hub = hub
             if options.isReal { (effects as? PanelEffects)?.log = { [weak self] in self?.devctl?.append($0) } }
         #endif
