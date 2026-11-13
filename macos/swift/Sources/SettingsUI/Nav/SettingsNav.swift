@@ -20,7 +20,7 @@ struct SettingsNav: View {
             groupRows
             // The developer page of every control, behind the `components` flag.
             if model.showsComponents {
-                Section { row(id: SettingsModel.componentsID, title: Words.text("settings-section-components", fallback: "Components")) }
+                Section { row(id: SettingsModel.componentsID, title: Words.text("settings-section-components", fallback: "Components"), badge: nil) }
             }
         }
         .listStyle(.sidebar)
