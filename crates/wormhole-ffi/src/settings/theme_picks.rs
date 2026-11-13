@@ -27,6 +27,20 @@ impl SettingsHandle {
         selects(&themes, &setting, Path::new(&path))
     }
 
+    /// Whether the theme picker leaves `value` (a theme as `theme` names it) out: core's rule, which counts a built-in's
+    /// name and slug as one theme.
+    pub fn theme_hidden(&self, value: String) -> bool {
+        self.shared.lock().effective().theme_hidden(&value)
+    }
+
+    /// Leaves `value` out of the theme picker, or brings it back (core's `Settings::set_theme_hidden`). Whether anything
+    /// changed.
+    pub fn set_theme_hidden(&self, value: String, hidden: bool) -> bool {
+        self.shared.lock().update(|s| {
+            s.set_theme_hidden(&value, hidden);
+        })
+    }
+
     /// A theme of the kind `dark` or light was chosen (`value`: what a pick holds): it is the pick the mode says a
     /// choice sets. Whether a pick changed.
     pub fn pick_theme(&self, value: String, dark: bool) -> bool {

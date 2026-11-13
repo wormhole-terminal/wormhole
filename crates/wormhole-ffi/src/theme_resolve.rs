@@ -62,25 +62,29 @@ pub(crate) fn resolve(req: &Request<'_>) -> Result<String, String> {
     ))
 }
 
-/// The user's themes in a folder, as `[{"id", "name", "path", "appearance"|null, "error"|null}]` (`path`: the file
-/// `settings.theme` holds when a theme was imported or saved from the Studio).
+/// The user's themes in a folder, as `[{"id", "name", "path", "appearance"|null, "error"|null, "newer"|null}]` (`path`:
+/// the file `settings.theme` holds when a theme was imported or saved from the Studio; `newer`: how many entries a
+/// file made with a newer Wormhole had that this one skipped, which the card warns of).
 pub(crate) fn list(dir: &Path) -> String {
     let themes = UserThemes::read(dir);
-    let items = themes.themes.iter().map(|t| match themes.resolve(t) {
-        Ok(tokens) => format!(
-            "{{\"id\": {}, \"name\": {}, \"path\": {}, \"appearance\": \"{}\", \"error\": null}}",
-            string(&t.slug),
-            string(&t.name),
-            string(&t.path.to_string_lossy()),
-            appearance(&tokens)
-        ),
-        Err(err) => format!(
-            "{{\"id\": {}, \"name\": {}, \"path\": {}, \"appearance\": null, \"error\": {}}}",
-            string(&t.slug),
-            string(&t.name),
-            string(&t.path.to_string_lossy()),
-            string(&err)
-        ),
+    let items = themes.themes.iter().map(|t| {
+        let newer = t.source().filter(|file| file.read.newer).map_or("null".to_string(), |file| file.read.skipped.to_string());
+        match themes.resolve(t) {
+            Ok(tokens) => format!(
+                "{{\"id\": {}, \"name\": {}, \"path\": {}, \"appearance\": \"{}\", \"error\": null, \"newer\": {newer}}}",
+                string(&t.slug),
+                string(&t.name),
+                string(&t.path.to_string_lossy()),
+                appearance(&tokens)
+            ),
+            Err(err) => format!(
+                "{{\"id\": {}, \"name\": {}, \"path\": {}, \"appearance\": null, \"error\": {}, \"newer\": {newer}}}",
+                string(&t.slug),
+                string(&t.name),
+                string(&t.path.to_string_lossy()),
+                string(&err)
+            ),
+        }
     });
     format!("[{}]", items.collect::<Vec<_>>().join(", "))
 }

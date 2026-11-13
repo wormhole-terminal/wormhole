@@ -111,6 +111,10 @@ public protocol SettingsHost: AnyObject {
     func importTheme(path: String) -> String?
     /// What the question before moving the user theme `value` to the Trash says (nil: it has no file), and the move itself
     /// (the picks that name it go back to the defaults first and come back if it fails): whether it was done.
+    /// Whether the picker leaves a theme out and the switch of it, by core's rule over the card's value (a built-in's name, a
+    /// file's path); nil / false where there is no core, and the caller works it out by name.
+    func themeHidden(_ value: String) -> Bool?
+    func setThemeHidden(_ value: String, hidden: Bool) -> Bool
     func themeTrashPlan(_ value: String) -> ThemeTrashQuestion?
     func trashTheme(_ value: String) -> Bool
     /// Whether the desktop would show sharp behind the text at this opacity without the blur (core's `Translucency::unsafe_without_blur`).
@@ -171,6 +175,8 @@ extension SettingsHost {
         Words.text("settings-import-theme-unavailable", fallback: "Themes can't be imported in this build.")
     }
     public func themeTrashPlan(_ value: String) -> ThemeTrashQuestion? { nil }
+    public func themeHidden(_ value: String) -> Bool? { nil }
+    public func setThemeHidden(_ value: String, hidden: Bool) -> Bool { false }
     public func trashTheme(_ value: String) -> Bool { false }
     public func saveProfile(_ form: ProfileForm) -> String? { Self.noProfiles }
     public func importReview(_ id: String) async -> ImportReview? { nil }

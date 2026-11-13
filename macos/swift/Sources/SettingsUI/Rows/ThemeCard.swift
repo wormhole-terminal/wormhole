@@ -3,12 +3,15 @@
 
 import DesignSystem
 import SwiftUI
+import WordsModel
 
 struct ThemeCard: View {
     let theme: Theme
     /// What the band says: the theme's name, or its family's where the shelf holds one version of it.
     var label: String?
     let isSelected: Bool
+    /// A theme file made with a newer Wormhole: how many values this version skipped; the band wears a warning mark.
+    var newer: Int?
     let action: () -> Void
     @Environment(\.tokens) private var tokens
     @State private var hovering = false
@@ -43,6 +46,10 @@ struct ThemeCard: View {
                     Text(label ?? theme.name).textRole(.label, weight: .medium).lineLimit(1)
                         .foregroundStyle(isSelected ? own.primary : own.textPrimary)
                     Spacer(minLength: 0)
+                    if let newer {
+                        let said = Words.text("settings-appearance-theme-newer", ["count": .whole(newer)], fallback: "Made with a newer Wormhole: \(newer) value\(newer == 1 ? " was" : "s were") skipped")
+                        Image(Icon.warning).font(.system(size: Metric.glyph)).foregroundStyle(tokens.statusWarning).help(said).accessibilityLabel(said)
+                    }
                     if isSelected { Image(Icon.check).font(.system(size: Metric.glyph, weight: .semibold)).foregroundStyle(own.primary) }
                 }
                 .padding(.horizontal, Space._3).frame(height: Metric.control + Space._1).background(own.surfacePanel)

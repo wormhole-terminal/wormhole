@@ -35,3 +35,12 @@ public struct ProjectSettingsMark: Sendable, Equatable {
         (self.name, self.folder, self.root, self.entries, self.note) = (name, folder, root, entries, note)
     }
 }
+
+/// The project whose theme the windows show while one of its terminals is in front.
+public struct ProjectThemeMark: Sendable, Equatable {
+    public let name: String
+    /// The project's folder, the key the Project folders page selects it by.
+    public let root: String
+
+    public init(name: String, root: String) { (self.name, self.root) = (name, root) }
+}

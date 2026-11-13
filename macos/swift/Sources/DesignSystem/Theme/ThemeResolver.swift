@@ -45,6 +45,8 @@ public struct ThemeSummary: Sendable, Equatable, Identifiable, Decodable {
     public let path: String?
     public let appearance: ThemeAppearance?
     public let error: String?
+    /// How many entries a file made with a newer Wormhole had that this version skipped; nil for a file that is not newer.
+    public let newer: Int?
 }
 
 /// The resolver's answer: one theme, already in the contrast and look asked for.

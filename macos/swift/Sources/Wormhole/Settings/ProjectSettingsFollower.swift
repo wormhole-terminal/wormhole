@@ -9,6 +9,7 @@
     import Foundation
     import Observation
     import SettingsBridge
+    import SettingsModel
     import WorkspaceModel
 
     @MainActor
@@ -55,6 +56,7 @@
         private func reload() {
             guard let folder else {
                 ThemeStore.shared.projectTheme = nil
+                app.settingsModel.projectTheme = nil
                 return host.follow(project: nil)
             }
             let path = expanded(folder)
@@ -66,6 +68,7 @@
                 host.follow(project: found)
                 // The project's theme colours the windows while one of its terminals is in front.
                 ThemeStore.shared.projectTheme = theme
+                app.settingsModel.projectTheme = theme == nil ? nil : ProjectThemeMark(name: found?.name ?? (path as NSString).lastPathComponent, root: path)
             }
         }
 

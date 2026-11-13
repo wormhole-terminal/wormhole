@@ -44,6 +44,8 @@ public final class SettingsModel {
     /// What macOS allows for notifications and what the last test came to; the app keeps it and `refreshNotify` reads it again.
     public var notifyStatus = NotifyStatus()
     @ObservationIgnored public var refreshNotify: (() -> Void)?
+    /// A trusted project's theme is in effect (the terminal in front is in it): the Appearance cards say whose it is.
+    public var projectTheme: ProjectThemeMark?
     /// Zen mode is on: the windows show less than these settings say, and a page with a row it overrides says so.
     public var zenOn = false
     /// Leaves Zen mode (the note's button).
