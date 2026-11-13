@@ -1,28 +1,15 @@
-//! What VoiceOver says for the right panel's tabs and the status bar's items, in the core's sentences
-//! (`view::spoken`): "Changes, 3 changed files", "Fix pile needs input, waiting 2 minutes", "2 terminals working".
+//! What VoiceOver says for the status bar's items, in the core's sentences (`view::spoken`): "Fix pile needs input,
+//! waiting 2 minutes", "2 terminals working". A panel tab's words are `panel_spoken`'s.
 
 use std::time::{Duration, Instant};
 
 use wormhole_core::view::layout::status_bar::{Activity, Counted, Entry, Summary};
-use wormhole_core::view::spoken::{PanelTab, panel_tab, status_attention, status_counted};
+use wormhole_core::view::spoken::{status_attention, status_counted};
 
 use crate::workspace::Workspace;
 
 #[uniffi::export]
 impl Workspace {
-    /// A right-panel tab as VoiceOver names it. `tab` is the tab's raw name (`notes`, `changes`, `history`, `usage`,
-    /// `project`, `files`); `open_steps` and `notes` are the Notes tab's counts, `files` the changed files when known.
-    pub fn spoken_panel_tab(&self, tab: String, open_steps: u32, notes: u32, files: Option<u32>) -> String {
-        panel_tab(match tab.as_str() {
-            "notes" => PanelTab::Notes { open_steps: open_steps as usize, notes: notes as usize },
-            "changes" => PanelTab::Changes { files: files.map(|n| n as usize) },
-            "history" => PanelTab::History,
-            "usage" => PanelTab::Usage,
-            "project" => PanelTab::Project,
-            _ => PanelTab::Files,
-        })
-    }
-
     /// The status bar's needs-you button: "<name> needs input, waiting 2 minutes". `since_ms` is the terminal summary's `since`.
     pub fn spoken_status_attention(&self, name: String, since_ms: u64) -> String {
         let now = Instant::now();

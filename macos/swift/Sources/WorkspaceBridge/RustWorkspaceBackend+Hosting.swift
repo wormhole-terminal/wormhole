@@ -187,10 +187,6 @@ extension RustWorkspaceBackend {
         return name.isEmpty ? nil : name
     }
 
-    public func spoken(panelTab: PanelTab, openSteps: Int, notes: Int, files: Int?) -> String? {
-        core.spokenPanelTab(tab: panelTab.rawValue, openSteps: UInt32(openSteps), notes: UInt32(notes), files: files.map { UInt32($0) })
-    }
-
     public func spoken(attention name: String, since: UInt64) -> String? { core.spokenStatusAttention(name: name, sinceMs: since) }
 
     public func spoken(count: Int, of activity: Activity) -> String? {

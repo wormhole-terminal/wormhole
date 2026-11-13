@@ -22,7 +22,6 @@ extension WorkspaceBackend {
     public func waited(since: UInt64) -> Waited? { nil }
     public func programName(of id: TerminalID) -> String? { nil }
     public func shellName(of id: TerminalID) -> String? { nil }
-    public func spoken(panelTab: PanelTab, openSteps: Int, notes: Int, files: Int?) -> String? { nil }
     public func spoken(attention name: String, since: UInt64) -> String? { nil }
     public func spoken(count: Int, of activity: Activity) -> String? { nil }
     public func hostProblem(of id: TerminalID) -> HostProblem? { nil }

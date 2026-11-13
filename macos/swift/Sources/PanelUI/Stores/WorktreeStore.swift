@@ -29,9 +29,6 @@ public final class WorktreeStore {
     public private(set) var busy = false
     /// An alert to show: a worktree that can't be made here, that git refused to make, or to remove.
     public var alert: Alert?
-    /// `wh new-terminal --worktree <branch> --command <cmd>`: typed into the terminal that opens once Create is pressed (the
-    /// panel's `create` takes it with it); nil for a sheet the person opened.
-    public var firstCommand: String?
 
     public struct Alert: Identifiable, Equatable {
         public let id = UUID()

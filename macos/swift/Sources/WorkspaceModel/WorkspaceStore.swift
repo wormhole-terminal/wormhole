@@ -50,9 +50,6 @@ public final class WorkspaceStore {
     public func programName(of id: TerminalID) -> String? { backend.programName(of: id) }
     public func shellName(of id: TerminalID) -> String? { backend.shellName(of: id) }
     /// The core's spoken sentences for VoiceOver (`Backend.spoken`).
-    public func spoken(panelTab: PanelTab, openSteps: Int, notes: Int, files: Int?) -> String? {
-        backend.spoken(panelTab: panelTab, openSteps: openSteps, notes: notes, files: files)
-    }
     public func spoken(attention name: String, since: UInt64) -> String? { backend.spoken(attention: name, since: since) }
     public func spoken(count: Int, of activity: Activity) -> String? { backend.spoken(count: count, of: activity) }
     /// What is wrong with terminal `id`'s session host, while something is (the bar over its pane).
