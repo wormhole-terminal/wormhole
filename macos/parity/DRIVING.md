@@ -127,6 +127,8 @@ Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written wi
 | `rename-edit <n>` | `rename-edit 2` | row n's name becomes a field, as Rename… in its menu makes it |
 | `folder-color [path] <name\|#rrggbb\|none>` | `folder-color ~/Projects/x teal` | colours the folder (the terminal's without a path) as the band's menu does; says `<colour> <folder>` |
 | `folder-picker open\|close\|type <text>\|tab\|right [mid]\|left [start\|mid]\|accept-ghost\|up\|down\|pageup\|pagedown\|enter\|pick\|forget\|click <line>\|crumb <n>\|scroll\|state` | `folder-picker type src/` | the folder picker (⌘J) over the terminal: open it (the Folder picker flag must be on), type into its field, press its keys, pick; `state` lists text, ghost, `busy`, crumbs, facts, lines (`> ` marks the selection) and the panel. The queries run off the main thread: ask `state` again while it says `busy true`. `scroll` is a no-op here |
+| `profiles` | `profiles` | the core's profile list (what Settings' Profile page reads, so it works with one profile), one a line: `* id "name" "colour"`, `*` for the one Wormhole is in |
+| `profile-open <id>` / `profile-move <id>` / `profile-delete <id>` | `profile-open work` | a window in that profile (the odd window when Wormhole is in another); the window in front goes there; delete as Settings does after its question (TEST: scratch data dir only) |
 @@ROWS@@
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;

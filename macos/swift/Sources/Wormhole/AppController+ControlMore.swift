@@ -8,6 +8,7 @@ extension AppController {
     func runExtra(command: String, argument: String) async -> Bool {
         if await runNotes(command: command, argument: argument) { return true }
         if await runSidebar(command: command, argument: argument) { return true }
+        if runProfiles(command: command, argument: argument) { return true }
         return false
     }
 }
