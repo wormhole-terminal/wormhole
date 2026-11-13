@@ -89,6 +89,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     var lastJumped: [Bool: Int64] = [:]
     /// The table's keys no menu item holds (`ExtraKeys`).
     private(set) lazy var extraKeys = ExtraKeys(app: self)
+    /// A project action's key, wherever the focus is in a window of the workspace (`ProjectKeys`).
+    private(set) lazy var projectKeys = ProjectKeys(app: self)
     private(set) lazy var recents = RecentProjects(dataDirectory: dataDirectory)
     /// SIGTERM as an event on the main queue (`quitOnSigterm`).
     var sigterm: DispatchSourceSignal?
@@ -148,6 +150,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         quitOnSigterm()
         extraKeys.start()
+        projectKeys.start()
         do {
             try open()
         } catch {

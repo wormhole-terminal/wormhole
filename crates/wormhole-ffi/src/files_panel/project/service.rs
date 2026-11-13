@@ -11,6 +11,7 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 
+use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::{self as proj, Feature, ProjectFolder};
 
 use super::effects::{self, ProjectEffect};
@@ -179,6 +180,17 @@ impl ProjectService {
             return Err(ProjectFailure::not_found(format!("action {id}")));
         }
         Ok(effects)
+    }
+
+    /// The id of the action of the project at `root` whose key is `glyphs` (Apple's notation: `\u{21E7}\u{2318}R`), asked of the
+    /// core at the moment of the key: `None` unless the project is enabled and trusted now with Actions on (the key is then
+    /// nobody's and goes on to the terminal), as the GPUI app's `action_for_key` answers.
+    pub fn action_for_key(&self, root: String, glyphs: String) -> Option<String> {
+        let pressed = KeySpec::from_glyphs(&glyphs)?;
+        let (_, snapshot) = self.fresh(&root, Feature::Actions).ok()?;
+        let action =
+            snapshot.actions().iter().find(|a| a.key_spec().is_some_and(|key| key.same_key(&pressed)))?;
+        Some(action.id.clone())
     }
 
     /// The effects of `layout.json`: the terminals to open. Refused unless Layout is on and trusted.

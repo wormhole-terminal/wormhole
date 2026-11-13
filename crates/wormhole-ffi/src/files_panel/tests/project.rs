@@ -140,3 +140,24 @@ fn a_projects_settings_go_to_settings_only_while_its_switch_and_trust_allow_them
     std::fs::create_dir(plain.path().join(".git")).expect("git");
     assert_eq!(service.settings_overrides(plain.path().to_string_lossy().into_owned()), None);
 }
+
+/// A window-level key asks the core each time: untrusted or switched off, the key is nobody's and the terminal hears it.
+#[test]
+fn an_actions_key_is_the_projects_only_while_it_is_trusted_and_on() {
+    let repo = Repo::new(&[(
+        "actions.json",
+        r#"[{"id": "test", "title": "Run tests", "type": "run", "command": "cargo test", "key": "cmd-ctrl-t"}]"#,
+    )]);
+    let (_data, service) = service(&Owner::answering([OwnerAnswer::Approved]));
+    let key = || service.action_for_key(repo.root(), "\u{2303}\u{2318}T".into());
+    service.project(repo.root());
+    assert_eq!(key(), None, "not trusted: the key goes on");
+    assert_eq!(service.approve(repo.root()), ApproveOutcome::Approved);
+    assert_eq!(key().as_deref(), Some("test"));
+    assert_eq!(service.action_for_key(repo.root(), "\u{2318}Y".into()), None, "another key is nobody's");
+    service.set_feature(repo.root(), "actions".into(), false).expect("switch");
+    assert_eq!(key(), None, "switched off: the key goes on");
+    service.revoke(repo.root());
+    service.set_feature(repo.root(), "actions".into(), true).expect("switch");
+    assert_eq!(key(), None, "trust taken back");
+}

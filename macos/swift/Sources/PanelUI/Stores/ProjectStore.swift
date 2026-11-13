@@ -98,6 +98,14 @@ public final class ProjectStore {
         act { _, backend in await backend.run(action: action.id, at: root) }
     }
 
+    /// Runs the action whose key is `glyphs` when the core says, now, that the project is trusted and has one; false: the key is
+    /// nobody's (nothing runs, and the window lets it through).
+    public func runAction(forKey glyphs: String) -> Bool {
+        guard let root = state?.root, let id = backend.actionID(forKey: glyphs, at: root) else { return false }
+        act { _, backend in await backend.run(action: id, at: root) }
+        return true
+    }
+
     public func send(_ prompt: ProjectPrompt) {
         guard let root = state?.root else { return }
         act { _, backend in await backend.send(prompt: prompt.id, at: root) }

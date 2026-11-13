@@ -17,6 +17,9 @@ public protocol ProjectBackend: Sendable {
     func approve(at root: String) async -> Bool
     func revoke(at root: String) async
     func run(action id: String, at root: String) async
+    /// The id of the action whose key is `glyphs` (`⇧⌘R`), asked of the core at the moment of the key: nil unless the project is
+    /// trusted and has Actions on right now (the key is then nobody's and goes on to the terminal).
+    func actionID(forKey glyphs: String, at root: String) -> String?
     func send(prompt id: String, at root: String) async
     /// A prompt's text, for copying it into a note.
     func text(ofPrompt id: String, at root: String) async -> String?
@@ -36,6 +39,7 @@ public protocol ProjectBackend: Sendable {
 
 extension ProjectBackend {
     public var biometricsAvailable: Bool { true }
+    public func actionID(forKey glyphs: String, at root: String) -> String? { nil }
     public func worktreeRefusal(of repo: String) async -> String? { nil }
     public func worktreeSetup(of repo: String) async -> String? { nil }
     public func problem() async -> String? { nil }

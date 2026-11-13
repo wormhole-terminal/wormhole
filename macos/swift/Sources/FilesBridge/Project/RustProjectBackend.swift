@@ -92,6 +92,8 @@ public final class RustProjectBackend: ProjectBackend, @unchecked Sendable {
         await perform { try service.runAction(root: root, id: id) }
     }
 
+    public func actionID(forKey glyphs: String, at root: String) -> String? { service.actionForKey(root: root, glyphs: glyphs) }
+
     public func send(prompt id: String, at root: String) async {
         let service = service
         await perform { try service.sendPrompt(root: root, id: id) }

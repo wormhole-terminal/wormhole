@@ -37,16 +37,21 @@
                     source.write(Data("\r".utf8))
                 }
             case .open(let url): NSWorkspace.shared.open(url)
-            case .openTerminals(let terminals): terminals.forEach(open)
+            case .openTerminals(let terminals):
+                // As GPUI's `open_terminals`: each is selected as it is made (a new terminal always is), then the last of those that
+                // ask for focus is selected again, so one made after it does not keep the selection.
+                let focused = terminals.compactMap { open($0) }.last
+                if let focused { hub?.send(.select(focused)) }
             }
         }
 
-        private func open(_ spec: NewTerminal) {
-            guard let hub else { return }
+        /// The terminal made for `spec`, when it asks for focus; nil for one left alone or one that does not ask.
+        private func open(_ spec: NewTerminal) -> TerminalID? {
+            guard let hub else { return nil }
             // Only what is not open: a terminal of that name is left alone, nothing typed into it, not selected.
-            guard existing(named: spec.name) == nil, let id = make(in: spec.cwd, named: spec.name) else { return }
-            if spec.focus { hub.send(.select(id)) }
+            guard existing(named: spec.name) == nil, let id = make(in: spec.cwd, named: spec.name) else { return nil }
             if let run = spec.run, let view = hub.terminals.view(for: id) { view.source.write(Data((run + "\r").utf8)) }
+            return spec.focus ? id : nil
         }
 
         /// The terminal's view, once there is one: a terminal made a moment ago has its view drawn a frame later, and what is
