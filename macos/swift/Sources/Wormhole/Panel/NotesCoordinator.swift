@@ -20,6 +20,9 @@ final class NotesCoordinator {
     private var saved = NotesModel()
     private var syncTimer: Timer?
     private var projectOn = true
+    private var syncing = false
+    /// Terminals handed to another window, whose merge in flight is still stored for them.
+    private var departed: Set<TerminalID> = []
     /// A folder's project root as last asked, so a window of many terminals asks each folder only now and then.
     private var roots: [String: (root: String?, at: Date)] = [:]
     private static let syncEvery: TimeInterval = 2
@@ -80,7 +83,10 @@ final class NotesCoordinator {
     }
 
     /// Terminals moving to another window are not closed: what was written for them goes with them, not away.
-    func departing(_ ids: [TerminalID]) { known.subtract(ids) }
+    func departing(_ ids: [TerminalID]) {
+        known.subtract(ids)
+        departed.formUnion(ids)
+    }
 
     private func forgetClosed() {
         let now = Set(hub.state.all.map(\.id))
@@ -107,33 +113,51 @@ final class NotesCoordinator {
     }
 
     func sync() async {
-        // Only a step or note of the terminal on show being written holds its merge back (`api.rs` `being_written`).
-        let editing = hub.panel.notes.isWriting
+        // A second run starting before the first lands would merge against what the first is still to write.
+        guard !syncing else { return }
+        syncing = true
+        defer { syncing = false }
         for terminal in hub.state.all {
             let id = terminal.id
             var found = id == shown ? hub.panel.project.state?.root : nil
             if found == nil { found = await root(of: terminal) }
-            guard let root = found else { continue }
-            if id == shown {
-                let sent = hub.panel.notes.model
-                guard let answered = await persistence.sync(session: id, root: root, model: sent, editing: editing), id == shown else { continue }
-                // A tick or a new step made while the merge ran (no editor open, so not "being written") is kept on top of it.
-                let now = hub.panel.notes.model
-                let merged = now == sent ? answered : NotesModel.rebase(merged: answered, sent: sent, now: now)
-                guard merged != now else { continue }
-                // Saved like an edit, at once: a merge left for the next edit is lost on quit, and the next launch
-                // then reads the stale database against the merged base as lines the person deleted.
-                hub.panel.notes.model = merged
-                saved = merged
-                persistence.save(session: id, model: merged)
-                tell(id, merged)
-            } else {
-                let model = persistence.load(session: id)
-                guard let merged = await persistence.sync(session: id, root: root, model: model, editing: false), merged != model else { continue }
-                persistence.save(session: id, model: merged)
-                tell(id, merged)
-            }
+            guard let root = found, hub.state.all.contains(where: { $0.id == id }) else { continue }
+            // Only a step or note of the terminal on show being written holds its merge back (`api.rs` `being_written`);
+            // read just before the merge is sent, after the awaits above.
+            let editing = id == shown && hub.panel.notes.isWriting
+            let sent = id == shown ? hub.panel.notes.model : persistence.load(session: id)
+            let answered = await persistence.sync(session: id, root: root, model: sent, editing: editing)
+            land(answered, sent: sent, for: id)
         }
+    }
+
+    /// The core has merged against `notes.md` and moved the terminal's merge base: the model kept for THAT terminal moves with
+    /// it, whichever terminal is shown now, or the next merge reads the lines the file gained as lines the person deleted.
+    private func land(_ answered: NotesModel?, sent: NotesModel, for id: TerminalID) {
+        guard hub.state.all.contains(where: { $0.id == id }) else {
+            // Closed during the merge: the base it just set goes again (a terminal that moved to another window keeps its notes,
+            // and the merge is stored for it).
+            if departed.contains(id) { store(answered, sent: sent, for: id) } else { persistence.closed(session: id) }
+            return
+        }
+        store(answered, sent: sent, for: id)
+    }
+
+    private func store(_ answered: NotesModel?, sent: NotesModel, for id: TerminalID) {
+        guard let answered else { return }
+        let showing = id == shown
+        // A tick or a new step made while the merge ran (no editor open, so not "being written") is kept on top of it.
+        let now = showing ? hub.panel.notes.model : persistence.load(session: id)
+        let merged = now == sent ? answered : NotesModel.rebase(merged: answered, sent: sent, now: now)
+        guard merged != now else { return }
+        // Saved like an edit, at once: a merge left for the next edit is lost on quit, and the next launch
+        // then reads the stale database against the merged base as lines the person deleted.
+        if showing {
+            hub.panel.notes.model = merged
+            saved = merged
+        }
+        persistence.save(session: id, model: merged)
+        if hub.state.all.contains(where: { $0.id == id }) { tell(id, merged) }
     }
 
     private func root(of terminal: TerminalSummary) async -> String? {
