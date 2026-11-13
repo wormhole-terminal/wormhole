@@ -56,6 +56,7 @@ mod recent_projects;
 mod row_motion;
 mod settings;
 pub mod settings_dump;
+mod split_opening;
 mod terminal;
 pub mod theme_dump;
 mod theme_json;
@@ -169,6 +170,11 @@ pub use settings::{
     settings_profile_save, settings_reset_question, settings_update_user_agent,
 };
 pub use settings::{ProjectListener, ProjectWatch, settings_watch_project};
+
+pub use split_opening::{
+    SplitFrameRecord, SplitOpeningRecord, SplitPlace, SplitRect, split_opening, split_opening_duration_ms,
+    split_opening_frame,
+};
 pub use settings::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,
     ProbeSheetRecord, ProbesDesk, SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsFlagRow,

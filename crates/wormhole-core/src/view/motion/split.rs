@@ -75,7 +75,7 @@ impl Opening {
             return None;
         }
         let rects_after = after.tree().rects(width, height);
-        let new_pane = rects_after.iter().find(|(id, _)| *id == new)?.1;
+        rects_after.iter().find(|(id, _)| *id == new)?;
         let rects_before = match before {
             Some(before) => before.tree().rects(width, height),
             // A pane that stood alone filled the area; it is the one that is not new.
@@ -84,12 +84,25 @@ impl Opening {
                 _ => return None,
             },
         };
+        Self::of_rects(&rects_before, &rects_after, new)
+    }
+
+    /// The same, from where each pane was and is (a window that holds the rectangles and not the trees): `rects_before` has the
+    /// panes that were there (a lone pane's is the whole area), `rects_after` those that are, `new` the one that came. The
+    /// caller says neither layout had a pane zoomed.
+    #[must_use]
+    pub fn of_rects(
+        rects_before: &[(PaneId, Rect)],
+        rects_after: &[(PaneId, Rect)],
+        new: PaneId,
+    ) -> Option<Self> {
+        let new_pane = rects_after.iter().find(|(id, _)| *id == new)?.1;
         if rects_after.len() != rects_before.len() + 1 {
             return None;
         }
         // Every pane that was there is where it was, but one: the one that gave up half of its room.
         let mut split = None;
-        for &(id, was) in &rects_before {
+        for &(id, was) in rects_before {
             let now = rects_after.iter().find(|(other, _)| *other == id)?.1;
             if !same(was, now) && split.replace((id, was, now)).is_some() {
                 return None;
@@ -218,6 +231,16 @@ mod tests {
         assert_eq!(opening.axis, Axis::Row);
         assert_eq!(opening.whole, Rect::new(500.0, 0.0, 500.0, 600.0));
         assert_eq!(opening.new_pane, Rect::new(750.0, 0.0, 250.0, 600.0));
+    }
+
+    #[test]
+    fn the_rectangles_alone_make_the_same_opening_as_the_layouts() {
+        let (after, opening) = lone_split(Axis::Row);
+        let now = after.tree().rects(AREA.0, AREA.1);
+        let was = [(1, Rect::new(0.0, 0.0, AREA.0, AREA.1))];
+        assert_eq!(Opening::of_rects(&was, &now, 2), Some(opening));
+        assert_eq!(Opening::of_rects(&was, &now, 9), None, "a pane that did not come");
+        assert_eq!(Opening::of_rects(&now, &now, 2), None, "nothing came");
     }
 
     #[test]
