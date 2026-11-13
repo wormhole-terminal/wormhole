@@ -9,11 +9,12 @@ import SwiftUI
 import WordsModel
 
 struct SettingsNav: View {
+    @Environment(\.tokens) private var tokens
     let model: SettingsModel
     var focus: FocusState<SettingsFocus?>.Binding
 
     var body: some View {
-        List(selection: Binding(get: { model.isSearching ? nil : model.selection }, set: { open($0) })) {
+        List(selection: Binding(get: { model.showsResults ? nil : model.selection }, set: { open($0) })) {
             Label {
                 Text(model.profile.form?.name ?? SettingsText.profileDefault)
             } icon: {
@@ -25,7 +26,7 @@ struct SettingsNav: View {
             row(id: SettingsModel.changedID, title: SettingsText.changedTitle, badge: model.isSearching || model.changedCount == 0 ? nil : "\(model.changedCount)")
             ForEach(groups, id: \.title) { group in
                 Section(group.title) {
-                    ForEach(group.sections) { section in row(id: section.id, title: section.title, badge: badge(section), dim: dims(section)) }
+                    ForEach(group.sections) { section in row(id: section.id, title: section.title, badge: badge(section), dim: dims(section), attention: attention(section)) }
                 }
             }
         }
@@ -39,13 +40,19 @@ struct SettingsNav: View {
 
     private func open(_ id: String?) {
         guard let id else { return }
-        model.query = ""
         model.show(id)
     }
 
-    private func row(id: String, title: String, badge: String?, dim: Bool = false) -> some View {
-        Label(title, systemImage: Icon(section: id).rawValue)
-            .symbolVariant(!model.isSearching && model.selection == id ? .fill : .none)
+    private func row(id: String, title: String, badge: String?, dim: Bool = false, attention: Bool = false) -> some View {
+        Label {
+            HStack(spacing: Space._2) {
+                Text(title)
+                if attention { Circle().fill(tokens.statusWarning).frame(width: SettingsMetric.markDot, height: SettingsMetric.markDot).accessibilityHidden(true) }
+            }
+        } icon: {
+            Image(systemName: Icon(section: id).rawValue)
+        }
+            .symbolVariant(!model.showsResults && model.selection == id ? .fill : .none)
             .badge(badge.map { Text($0) })
             .opacity(dim ? 0.5 : 1)
             .tag(id)
@@ -55,6 +62,13 @@ struct SettingsNav: View {
     private func badge(_ section: SettingsSchema.Section) -> String? {
         if model.isSearching { return model.hitCounts[section.id].map(String.init) }
         return section.preview ? SettingsText.previewTag : nil
+    }
+
+    /// Coding agents wears a mark while an installed agent's hooks (or a profile's login of it) are only partly there.
+    private func attention(_ section: SettingsSchema.Section) -> Bool {
+        guard !model.showsResults, section.id == "agents" else { return false }
+        let records = model.host.panelRecords()
+        return records.agents.contains { $0.state == .needsRepair } || records.logins.contains { $0.state == .needsRepair }
     }
 
     private func dims(_ section: SettingsSchema.Section) -> Bool { model.isSearching && model.hitCounts[section.id] == nil }

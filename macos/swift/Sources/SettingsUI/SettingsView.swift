@@ -61,7 +61,7 @@ public struct SettingsView: View {
     }
 
     @ViewBuilder private var page: some View {
-        if model.isSearching {
+        if model.showsResults {
             ResultsPage(model: model)
         } else if model.selection == SettingsModel.changedID {
             ChangedPage(model: model)

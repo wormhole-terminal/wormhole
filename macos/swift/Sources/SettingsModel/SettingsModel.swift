@@ -20,6 +20,8 @@ public final class SettingsModel {
     /// The open page: a section id or `changed`.
     public var selection: String
     public var query = ""
+    /// The query a section was opened under: the page shows that section, its matches still marked, until the query changes.
+    public private(set) var browsing: String?
     /// The New profile sheet is up, and the question before deleting the profile Wormhole is in.
     public var showsNewProfile = false
     /// The font an open font picker is looking at; the Fonts page's scene shows it instead of the settings' own.
@@ -128,6 +130,9 @@ public final class SettingsModel {
 
     public var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
+    /// The results list is the page: a search runs and no section was picked under it.
+    public var showsResults: Bool { isSearching && browsing != query }
+
     public var hits: [SearchHit] { isSearching ? searcher.search(query, values: values) : [] }
 
     /// What the settings index finds for `text` without touching the window's own search (the command palette's).
@@ -138,14 +143,17 @@ public final class SettingsModel {
 
     // MARK: Moving
 
+    /// Opens a page. Under a running search the page opens with the matches marked, until the search changes.
     public func show(_ section: String) {
         selection = section
         revealed = nil
+        browsing = isSearching ? query : nil
     }
 
     /// Opens the page of a search result and marks the row, as choosing it in the results list does.
     public func jump(to hit: SearchHit) {
         query = ""
+        browsing = nil
         selection = hit.section
         revealed = hit.entry.id
     }
@@ -154,6 +162,7 @@ public final class SettingsModel {
     public func reveal(_ id: String) {
         guard let found = schema.entry(id) else { return }
         query = ""
+        browsing = nil
         selection = found.section.id
         revealed = id
     }

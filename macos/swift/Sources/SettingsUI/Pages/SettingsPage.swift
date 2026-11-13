@@ -12,6 +12,8 @@ struct SettingsPage: View {
     let section: SettingsSchema.Section
 
     var body: some View {
+        // A section opened from a search keeps the matches marked until the search changes.
+        let marks = Dictionary(model.hits.map { ($0.entry.id, $0) }, uniquingKeysWith: { first, _ in first })
         PageScaffold(title: section.title, intro: section.intro, revealed: model.revealed, clearReveal: model.clearReveal, action: { HeaderAction(model: model, section: section.id) }) {
             if let note = model.host.previewNote(section: section.id) {
                 Banner(kind: .info, text: note) { ActionButton(title: Words.text("settings-window-feature-flags", fallback: "Feature flags"), symbol: nil) { model.show("featureFlags") } }
@@ -29,10 +31,10 @@ struct SettingsPage: View {
             ForEach(Array(section.groups.enumerated()), id: \.offset) { _, group in
                 let rows = group.entries.filter { $0.isShown(values: model.values) && $0.control.layout != .strip }
                 if let bare = rows.first(where: { $0.control.layout == .bare }) {
-                    EntryRowView(model: model, entry: bare)
+                    EntryRowView(model: model, entry: bare, found: marks[bare.id])
                 } else if !rows.isEmpty {
                     SettingGroup(title: group.title, aside: group.aside, blurb: group.blurb) {
-                        ForEach(rows) { EntryRowView(model: model, entry: $0) }
+                        ForEach(rows) { EntryRowView(model: model, entry: $0, found: marks[$0.id]) }
                     }
                 }
             }

@@ -36,6 +36,8 @@ enum SettingsMetric {
     static let meterWidth: CGFloat = 120
     /// A slider's value column (`STEPPER_VALUE_W`).
     static let stepperValueWidth: CGFloat = 56
+    /// The "Nothing matches" card's width (`NO_RESULTS_W`).
+    static let noResultsWidth: CGFloat = 420
     /// A colour swatch under the branch and primary colour rows.
     static let swatchSize: CGFloat = 20
     /// The changed-row dot (`MARK_DOT`).

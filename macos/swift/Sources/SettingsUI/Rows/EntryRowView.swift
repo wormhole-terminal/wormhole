@@ -30,8 +30,8 @@ struct EntryRowView: View {
             label: caption?.label ?? entry.label, description: projectNote ?? caption?.text ?? entry.description,
             visibleHint: entry.visibleHint || projectNote != nil || caption != nil,
             state: state,
-            tall: entry.control.layout == .tallRow, frameId: entry.id, keys: entry.keys, json: { model.host.copyJSON(keys: entry.keys) },
-            chip: RowExtras.chip(entry, model), below: RowExtras.below(entry, model), onReset: { model.reset(entry) }
+            tall: entry.control.layout == .tallRow, frameId: entry.id, keys: projectNote == nil ? entry.keys : [], json: { model.host.copyJSON(keys: entry.keys) },
+            chip: projectChip ?? RowExtras.chip(entry, model), below: RowExtras.below(entry, model), onReset: { model.reset(entry) }
         ) {
             EntryControl(model: model, entry: entry)
         }
@@ -43,6 +43,9 @@ struct EntryRowView: View {
         guard let project = model.host.panelRecords().project, project.entries.contains(entry.id) else { return nil }
         return project.note
     }
+
+    /// The project that sets this row, as the tag after its label (the row keeps neither key nor menu then).
+    private var projectChip: String? { projectNote == nil ? nil : model.host.panelRecords().project?.name }
 
     /// What a row says under its label, and in place of it where GPUI's `describe` changes the label too (the permission row).
     private var caption: Caption? {
@@ -74,7 +77,7 @@ struct EntryRowView: View {
     private var state: RowState {
         RowState(
             isChanged: model.isChanged(entry), resetAlways: resetAlways,
-            configKey: (model.value("show_config_keys").bool ?? false) ? entry.keys.first : nil,
+            configKey: (model.value("show_config_keys").bool ?? false) && projectNote == nil ? entry.keys.first : nil,
             found: found?.labelRange, foundDescription: found?.descriptionRange,
             isRevealed: model.revealed == entry.id, context: found?.group)
     }
