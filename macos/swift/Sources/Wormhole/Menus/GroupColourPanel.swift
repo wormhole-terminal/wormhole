@@ -3,6 +3,7 @@
 // group asked about is the one it colours; AppKit holds its target weakly, which is why the session is kept here.
 
 import AppKit
+import DesignSystem
 
 @MainActor
 final class GroupColourPanel: NSObject {
@@ -22,7 +23,8 @@ final class GroupColourPanel: NSObject {
         panel.color = start
         panel.setTarget(target)
         panel.setAction(#selector(changed(_:)))
-        panel.makeKeyAndOrderFront(nil)
+        // A test instance puts it behind the others and stays in the background (`TestInstance`).
+        TestInstance.bring(panel)
         session = target
     }
 

@@ -15,7 +15,7 @@ use wormhole_core::ipc::control::{
 use wormhole_core::terminal::default_terminal;
 use wormhole_core::workspace::{Action, Event, Refusal};
 
-use super::joined::open_beside;
+use super::joined::{open_beside, zone_of};
 use super::worktree;
 use super::{automation_off, not_found};
 use crate::hook_server::core::Core;
@@ -146,22 +146,17 @@ pub(super) fn split(
         return error.into();
     }
     let Some(anchor) = core.find(spec.target, peer) else { return not_found(spec.target) };
+    let Some(owner) = core.owner_of(anchor) else { return not_found(spec.target) };
+    // No room is a mistake that costs nothing: said before the budget is spent.
+    if !owner.peek_model(|model| model.split_fits(anchor, zone_of(spec.direction))) {
+        return no_room(&owner, anchor, spec.direction);
+    }
     if let Err(reply) = core.budget(Limited::NewTerminal, from) {
         return reply;
     }
-    let Some(owner) = core.owner_of(anchor) else { return not_found(spec.target) };
     let before = owner.peek_model(|model| model.selected());
     let Some((terminal, cwd)) = open_beside(&owner, anchor, spec.direction, spec.folder.clone()) else {
-        return Error::new(
-            ErrorCode::Refused,
-            format!(
-                "window {} has no room to split terminal {anchor} {}",
-                owner.window_id(),
-                spec.direction.word()
-            ),
-        )
-        .because(Reason::NoRoom)
-        .into();
+        return no_room(&owner, anchor, spec.direction);
     };
     // A split takes the selection in the model; the control line leaves it where it was unless asked.
     if !spec.select
@@ -189,6 +184,16 @@ pub(super) fn split(
         .unwrap_or_default();
     tracing::info!(terminal, split, ?from, "control: a terminal was split off");
     Reply::ok(SplitMade { window: owner.window_id(), split, terminal, folder: cwd, size })
+}
+
+/// The refusal of a split that would leave a pane under the minimum size.
+fn no_room(owner: &Shared, anchor: i64, side: wormhole_core::ipc::control::Side) -> Reply {
+    Error::new(
+        ErrorCode::Refused,
+        format!("window {} has no room to split terminal {anchor} {}", owner.window_id(), side.word()),
+    )
+    .because(Reason::NoRoom)
+    .into()
 }
 
 /// Do `action`, which makes a terminal: the id and folder it opened (`folder` in the place of the model's
