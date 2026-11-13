@@ -21,7 +21,7 @@ struct PanelView: View {
         case "importFound": ImportCards(model: model)
         case "agentAccessPrograms": ApprovalList(records: records.approvals, host: model.host)
         case "agentsHow": HowStatusWorks()
-        case "agent-skills": SkillList(records: records.skills, host: model.host)
+        case "agent-skills": SkillList(records: records.skills, agents: records.agents, read: records.agentsRead, host: model.host)
         case "feature-flags": FlagList(model: model)
         case "probes": ProbesPanel(model: model)
         case "projects": ProjectsPanel(model: model)
