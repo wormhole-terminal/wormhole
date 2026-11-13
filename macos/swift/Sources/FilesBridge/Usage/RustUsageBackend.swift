@@ -23,6 +23,10 @@ public final class RustUsageBackend: UsageBackend, @unchecked Sendable {
 
     public func changes() -> AsyncStream<Void> { relay.stream() }
 
+    public func nextChange(from date: Date) -> Duration? {
+        service.nextChange(nowMs: UInt64(max(date.timeIntervalSince1970 * 1000, 0))).map { .milliseconds($0) }
+    }
+
     /// Claude Code's status line input (its JSON as the command reads it from standard input).
     @discardableResult
     public func recordStatusLine(_ json: String, now: Date = Date()) -> Bool {

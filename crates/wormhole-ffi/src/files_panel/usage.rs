@@ -165,6 +165,15 @@ impl UsageService {
             .collect()
     }
 
+    /// Milliseconds from `now_ms` (since the Unix epoch) until a word the reports show reads differently ("resets 45s", "Updated
+    /// 3m ago"): the next second in a limit's last minute, else the next minute (core's `usage::next_change`). `None` when
+    /// none moves.
+    pub fn next_change(&self, now_ms: u64) -> Option<u64> {
+        let reports = self.reports.lock().unwrap_or_else(PoisonError::into_inner);
+        let wait = usage::next_change(&reports, std::time::Duration::from_millis(now_ms))?;
+        Some(u64::try_from(wait.as_millis()).unwrap_or(u64::MAX))
+    }
+
     /// Claude Code's status line input (its JSON, as the command reads it from standard input) at `now`
     /// (Unix seconds). False when it carries no limit (an API key, or before the session's first reply).
     pub fn record_status_line(&self, input: String, now: i64) -> bool {

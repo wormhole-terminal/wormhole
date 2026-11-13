@@ -1,6 +1,6 @@
 // The Usage tab (`features/usage/view.rs`): a card for each agent that has reported, or a note on how to get reports. The
-// words that move with time ("resets 34m", "Updated 3m ago") are made from `now`, which the timeline moves on at each
-// minute: the same as the app's next-change timer, since the words are in whole minutes.
+// words that move with time ("resets 34m", "Updated 3m ago") are made from `now`, which the store moves on at each word's
+// own boundary (core's `next_change`: every second in a limit's last minute, else each minute).
 
 import DesignSystem
 import Foundation
@@ -30,11 +30,11 @@ public struct UsageView: View {
                     .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._2).frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
-                TimelineView(.everyMinute) { timeline in
-                    let now = fixedNow ?? Int(timeline.date.timeIntervalSince1970)
-                    ForEach(store.reports) { report in UsageCard(report: report, now: now) }
-                }
+                let now = fixedNow ?? store.now
+                ForEach(store.reports) { report in UsageCard(report: report, now: now) }
             }
         }
+        // A fixed clock (a screenshot) does not tick.
+        .task { if fixedNow == nil { await store.keepTime() } }
     }
 }
