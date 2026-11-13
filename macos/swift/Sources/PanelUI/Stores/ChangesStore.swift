@@ -44,6 +44,8 @@ public final class ChangesStore {
     public private(set) var revs: [Rev] = []
     /// The picker's list is being read ("Loading branches…").
     public private(set) var revsLoading = false
+    /// The title row's branch chip asked for the "compare with" picker: it opens as soon as it is on screen.
+    public var pickerRequested = false
     /// The commit the list is against, and the one the open diff was read against: a diff is read again when it moves.
     @ObservationIgnored private var baseRev: String?
     @ObservationIgnored private var openBase: String?

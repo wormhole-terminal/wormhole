@@ -69,6 +69,7 @@ public final class WindowHub {
         connect(host)
         notices.onAct = { [unowned self] in noticeActed($0) }
         notices.onBar = { [unowned self] in sayInBar($0, detail: $1) }
+        actions.pickBranch = { [unowned self] in pickBranch(of: $0) }
         followGauges()
         followTabs()
     }

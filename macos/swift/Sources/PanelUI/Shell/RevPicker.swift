@@ -22,6 +22,9 @@ struct RevPicker: View {
     var scope: Int?
     let load: () -> Void
     let pick: (Rev?) -> Void
+    /// Something outside asked for the list (the title row's branch chip); it opens, then `answered` clears the request.
+    var requested = false
+    var answered: () -> Void = {}
     @State private var open = false
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
@@ -43,6 +46,12 @@ struct RevPicker: View {
                 }
             }
             .onChange(of: scope) { open = false }
+            .onChange(of: requested, initial: true) {
+                guard requested else { return }
+                open = true
+                load()
+                answered()
+            }
             .accessibilityLabel("\(prefix) \(selected?.title ?? headTitle)")
             .accessibilityHint(panelText("picker-hint", "Opens the list of branches"))
     }
