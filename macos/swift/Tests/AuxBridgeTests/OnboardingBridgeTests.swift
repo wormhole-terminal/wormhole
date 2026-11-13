@@ -83,7 +83,7 @@ final class OnboardingBridgeTests: XCTestCase {
         let project = try scratch.folder("api")
         try scratch.write(#"{"shell": "/bin/zsh", "env": {"A": "1"}}"#, to: "api/.wormhole/config.json")
         let backend = try backend(project: project)
-        XCTAssertEqual(backend.trustCard, TrustCard(name: "api", directory: ".wormhole", commands: 2, root: project))
+        XCTAssertEqual(backend.trustCard, TrustCard(name: "api", directory: ".wormhole", commands: 2, root: URL(fileURLWithPath: project.path)))
         XCTAssertNil(try self.backend().trustCard, "no project")
     }
 

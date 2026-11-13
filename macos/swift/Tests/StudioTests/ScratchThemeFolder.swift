@@ -30,8 +30,11 @@ struct ScratchThemeFolder: ThemeFolder {
     func versions(of file: URL) -> [SavedVersion] {
         let folder = versionsFolder(of: file)
         let names = ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []).sorted(by: >)
-        return names.enumerated().map { SavedVersion(url: folder.appendingPathComponent($1), saved: Date(timeIntervalSince1970: Double(names.count - $0)), pinned: false) }
+        return names.enumerated().map { SavedVersion(url: folder.appendingPathComponent($1), saved: Date(timeIntervalSince1970: Double(names.count - $0)), pinned: $1 == Self.first) }
     }
+
+    /// The first file kept stands in for the core's pinned original, so a document's rows have one to show.
+    private static let first = "0000.json"
 
     func readVersion(_ version: SavedVersion) throws -> String { try read(version.url) }
 
