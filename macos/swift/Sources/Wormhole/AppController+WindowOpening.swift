@@ -19,7 +19,7 @@ extension AppController {
             // One that was in the Dock opens behind, unfocused, and goes back there: it is never the one that comes forward,
             // which is the last of the others (`window/window_bounds.rs` `front_after_restore`).
             guard present(session, frame: frame, activate: frame?.minimised != true) else {
-                throw Options.UsageError(description: "no terminal source could start")
+                throw Options.UsageError(description: "no terminal source could start") // text: a stderr line
             }
         }
     }
@@ -54,7 +54,7 @@ extension AppController {
                 return CGSize(width: terminal.width + pad, height: terminal.height + pad + 62)
             }
         } ?? CGSize(width: 1320, height: 820)
-        let title = "Wormhole (Swift experiment)" + (sessions.first === session ? "" : " \(session.id)")
+        let title = "Wormhole (Swift experiment)" + (sessions.first === session ? "" : " \(session.id)") // text: a stderr line
         let controller = WorkspaceWindowController(
             title: title, contentSize: size, minSize: windowsHost.backend.minSize, content: WorkspaceRootView(hub: hub, dress: session.dress))
         wire(controller, of: session)

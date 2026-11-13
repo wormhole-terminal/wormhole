@@ -77,7 +77,7 @@ extension AppController {
         let chip = CGRect(x: spot.x + TearOffChip.gap, y: spot.y - TearOffChip.rise, width: card.width, height: card.height)
         let placed = session.windows.backend.tearOffPlace(at: spot, chip: chip, size: size, visible: visible)
         let rect = NSRect(x: full.minX + placed.bounds.minX, y: full.maxY - placed.bounds.maxY, width: placed.bounds.width, height: placed.bounds.height)
-        let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+        let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber // text: a stderr line
         if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
             growing = TearOffGrow.Start(chip: placed.chip, terminal: session.hub.state.terminals.first { $0.id == terminal })
         }

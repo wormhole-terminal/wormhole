@@ -7,3 +7,8 @@ changes-view-options = View options
 
 # The Changes view menu's checkable item: new files get their own section under the changes.
 changes-view-group-untracked = Group untracked files separately
+
+changes-view-layout = Show files as
+changes-view-tree = Tree
+changes-view-list = List
+changes-view-group = Group untracked files

@@ -33,7 +33,7 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
         window.titlebarAppearsTransparent = true
         window.minSize = StudioMetrics.windowMin
         window.title = StudioWords.title
-        window.setFrameAutosaveName("StudioWindow")
+        window.setFrameAutosaveName("StudioWindow") // text: an autosave name
         window.contentView = NSHostingView(rootView: StudioView(session: session, store: store, extras: extras).secondaryBackdrop(.studio, store: store))
         window.delegate = self
         window.isReleasedWhenClosed = false

@@ -149,7 +149,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         do {
             try open()
         } catch {
-            FileHandle.standardError.write(Data("cannot start: \(error)\n".utf8))
+            FileHandle.standardError.write(Data("cannot start: \(error)\n".utf8)) // text: a stderr line
             exit(1)
         }
     }

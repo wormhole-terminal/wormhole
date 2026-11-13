@@ -61,7 +61,7 @@ public final class HotkeyController {
         applied = spec
         guard Self.registers(spec, paused: paused) else { return }
         guard let parsed = try? KeySpec(parsing: spec) else {
-            error = "no key spec \(spec)"
+            error = "no key spec \(spec)" // text: a stderr line
             return
         }
         let candidate = GlobalHotkey(policy: policy) { [weak self] in self?.press() }
@@ -70,7 +70,7 @@ public final class HotkeyController {
             key = candidate
         } catch {
             self.error = "\(error)"
-            FileHandle.standardError.write(Data("hotkey \(spec): \(error)\n".utf8))
+            FileHandle.standardError.write(Data("hotkey \(spec): \(error)\n".utf8)) // text: a stderr line
         }
     }
 }

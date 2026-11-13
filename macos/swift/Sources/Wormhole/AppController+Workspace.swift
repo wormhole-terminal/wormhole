@@ -1,3 +1,4 @@
+// text-file: replies of the control folder and the idle check (dev tooling, English by design), not interface text
 // The workspace from the control folder, for a driver that has no pointer: the same actions a click or a key sends, and a
 // text dump of what the sidebar was given (the core's rows, words and numbers), so a script can check them.
 

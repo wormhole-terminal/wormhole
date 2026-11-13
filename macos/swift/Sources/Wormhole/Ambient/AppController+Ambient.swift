@@ -4,6 +4,7 @@
 // terminal, in a window of the profile shown.
 
 import AppKit
+import AuxModel
 import PanelModel
 import PlatformModel
 import WorkspaceModel
@@ -54,7 +55,7 @@ extension AppController {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "Open"
+        panel.prompt = AuxText.openFolderPrompt
         panel.begin { result in
             guard result == .OK, let folder = panel.url?.path else { return }
             MainActor.assumeIsolated { start(folder) }

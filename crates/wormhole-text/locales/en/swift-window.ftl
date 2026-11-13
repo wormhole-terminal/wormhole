@@ -238,6 +238,10 @@ window-tab-position = { $position } of { $total }
 window-focus-title-row = Title row, { $item }, button { $position } of { $total }
 window-focus-hide-sidebar = Hide sidebar
 window-focus-show-sidebar = Show sidebar
+window-hide-panel = Hide right panel
+window-show-panel = Show right panel
+# { $action } is "Hide right panel" or "Show right panel": the right panel wants room the sidebar can give.
+window-panel-waiting = { $action } · hides the sidebar to make room
 
 # { $title } is the selected terminal's name.
 window-focus-terminal = Terminal, { $title }
@@ -316,3 +320,6 @@ settings-import-theme-unavailable = Themes can't be imported in this build.
 settings-window-preview-density-regular = Regular
 settings-window-preview-density-compact = Compact
 settings-window-preview-density-dense = Dense
+
+# The + of a group head. { $group } is the group's name.
+sidebar-new-in-group = New terminal in { $group }

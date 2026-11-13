@@ -1,3 +1,4 @@
+// text-file: replies of the control folder and the idle check (dev tooling, English by design), not interface text
 // The app's windows, made: a session over its own workspace (the core's, with ids all windows share) and what a window asks
 // of the app. Putting one on the screen is `AppController+WindowOpening`, its end `AppController+WindowEnding`; what is
 // saved of each and where each workspace comes from is the core's (`WindowsHost`).

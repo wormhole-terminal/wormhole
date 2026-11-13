@@ -4,6 +4,7 @@
 // each worktree once, removable only without changes and without a terminal outside the group in it.
 
 import AppKit
+import AuxModel
 import PanelModel
 import WorkspaceModel
 
@@ -31,19 +32,19 @@ extension AppController {
         let shown = { (path: String) in path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path }
         guard group else {
             let dirty = !first.removable
-            let note = "Its worktree \(first.made.branch) at \(shown(first.made.folder)) was made by Wormhole. "
-                + (dirty ? "It has uncommitted changes, so it stays." : "Close keeps it; Close and Remove Worktree deletes its folder (the branch stays).")
-            return WorktreeClose(note: note, also: dirty ? nil : "Close and Remove Worktree", remove: dirty ? [] : [first.made])
+            let folder = shown(first.made.folder)
+            let note = dirty ? AuxText.worktreeDirty(branch: first.made.branch, folder: folder) : AuxText.worktreeClean(branch: first.made.branch, folder: folder)
+            return WorktreeClose(note: note, also: dirty ? nil : AuxText.worktreeRemoveOne, remove: dirty ? [] : [first.made])
         }
-        let names = found.map { "\($0.made.branch) at \(shown($0.made.folder))" }.joined(separator: ", ")
+        let names = found.map { AuxText.worktreeEntry(branch: $0.made.branch, folder: shown($0.made.folder)) }.joined(separator: ", ")
         let removable = found.filter(\.removable).map(\.made)
-        var note = "Wormhole made the \(found.count == 1 ? "worktree" : "worktrees") \(names). "
+        var note = AuxText.worktreeGroupLead(count: found.count, names: names) + " "
         switch (removable.count, found.count - removable.count) {
-        case (0, _): note += "They have changes or other terminals in them, so they stay."
-        case (_, 0): note += "Close keeps them; Close and Remove Worktrees deletes their folders (the branches stay)."
-        default: note += "Close keeps them; Close and Remove Worktrees deletes the folders without changes or other terminals (the branches stay)."
+        case (0, _): note += AuxText.worktreeGroupNone
+        case (_, 0): note += AuxText.worktreeGroupAll
+        default: note += AuxText.worktreeGroupSome
         }
-        return WorktreeClose(note: note, also: removable.isEmpty ? nil : "Close and Remove Worktrees", remove: removable)
+        return WorktreeClose(note: note, also: removable.isEmpty ? nil : AuxText.worktreeRemoveMany, remove: removable)
     }
 
     /// The sidebar writes a folder with `~`; the panel and git read real paths.

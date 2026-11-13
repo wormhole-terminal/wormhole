@@ -29,7 +29,7 @@ struct PanelControl: View {
         case "profile-delete":
             ActionButton(title: SettingsText.deleteProfile, symbol: Icon.trash.rawValue, isDestructive: true, frameId: "profile.delete") { deleteProfile() }
                 .disabled(model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault ?? true)
-        case "notify-permission": button(Words.text("settings-notifications-open-system", fallback: "Open System Settings"), Icon.settings.rawValue, .openNotificationSettings)
+        case "notify-permission": button(Words.text("settings-notifications-open-system-settings", fallback: "Open System Settings"), Icon.settings.rawValue, .openNotificationSettings)
         case "notify-test": button(Words.text("settings-notifications-send-test", fallback: "Send test"), Icon.notifications.rawValue, .sendTestNotification)
         default: Text(SettingsText.notBuilt).textRole(.label).foregroundStyle(tokens.textFaint)
         }

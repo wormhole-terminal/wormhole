@@ -17,14 +17,14 @@ struct ControlsSpecimen: View {
                 Slider(value: $level)
                 Stepper("\(amount)", value: $amount, in: 0...12).marked("stepper")
             }
-            Picker("", selection: $segment) { Text("One").tag(0); Text("Two").tag(1); Text("Three").tag(2) }
+            Picker("", selection: $segment) { Text("One").tag(0); Text("Two").tag(1); Text("Three").tag(2) } // text: the Studio gallery's specimen
                 .pickerStyle(.segmented).labelsHidden().marked("segmented")
             ProfileChip(choices: TabSamples.profiles)
             VStack(spacing: Space._2) {
-                Banner(kind: .info, text: "A banner says something quietly.")
-                Banner(kind: .warning, text: "This project asks to run commands.")
-                Banner(kind: .danger, text: "That did not work.")
-                Banner(kind: .success, text: "Saved.")
+                Banner(kind: .info, text: "A banner says something quietly.") // text: the Studio gallery's specimen
+                Banner(kind: .warning, text: "This project asks to run commands.") // text: the Studio gallery's specimen
+                Banner(kind: .danger, text: "That did not work.") // text: the Studio gallery's specimen
+                Banner(kind: .success, text: "Saved.") // text: the Studio gallery's specimen
             }
         }
         .tint(tokens.primary)

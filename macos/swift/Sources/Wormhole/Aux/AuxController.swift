@@ -91,7 +91,7 @@ final class AuxController {
     func showAccess() {
         let request = AccessRequest(
             label: "claude", capability: .run, kind: .developerID,
-            program: .init(path: "/usr/local/bin/claude", pid: 4242, signer: .init(kind: .developerID, subject: "Anthropic PBC")))
+            program: .init(path: "/usr/local/bin/claude", pid: 4242, signer: .init(kind: .developerID, subject: "Anthropic PBC"))) // text: a sample signer
         let sheet = AccessSheet(request)
         Task { _ = await sheet.ask(in: app.window) }
     }

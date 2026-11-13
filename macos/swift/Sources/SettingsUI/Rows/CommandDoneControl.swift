@@ -28,7 +28,7 @@ struct CommandDoneControl: View {
 
     static func words(_ seconds: Int) -> String {
         seconds >= 60
-            ? Words.text("settings-notifications-after-minutes", fallback: "\(seconds / 60) min")
-            : Words.text("settings-notifications-after-seconds", fallback: "\(seconds) s")
+            ? Words.text("settings-notifications-after-minutes", ["count": .whole(seconds / 60)], fallback: "\(seconds / 60) min")
+            : Words.text("settings-notifications-after-seconds", ["count": .whole(seconds)], fallback: "\(seconds) s")
     }
 }

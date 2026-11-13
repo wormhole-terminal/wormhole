@@ -32,7 +32,8 @@ SOURCES = APPLE / "swift" / "Sources"
 LOCALES = APPLE.parent / "crates" / "wormhole-text" / "locales" / "en"
 ALLOW = Path(__file__).with_name("words-allow.json")
 
-SKIP_PATH = re.compile(r"Control|Mock|Sample|Fixture|DevCtl|Driving|FramesRun|RenderPNG|Isolation|Options|UniFFISource|WormholeBindings")
+# Dev tooling only: the control folder's commands (`AppController+Control*`), never a `*Controller` or `*Controls` view.
+SKIP_PATH = re.compile(r"AppController\+Control|StudioLauncher\+Control|ControlSpec|Mock|Sample|Fixture|DevCtl|Driving|FramesRun|RenderPNG|Isolation|/Options(\+\w+)?\.swift|UniFFISource|WormholeBindings")
 # A line that is not a place for interface text: logs, assertions, imports, ids and keys of code.
 SKIP_LINE = re.compile(
     r"//\s*text:|\bprint\(|\bNSLog\(|assert|fatalError|precondition|XCTAssert|#error|\blog\w*\(|Logger|os_log|"
@@ -40,7 +41,7 @@ SKIP_LINE = re.compile(
     r"Image\(systemName|NSImage\(systemSymbolName|\.id\(|^\s*case \"|\bcase \.\w+\(\"|#Preview"
 )
 # `name("some-fluent-id", ` : the line holds a seam call's id and the start of its English.
-SEAM_CALL = re.compile(r"""(?:\bWords\.text|\btext|\btr|\bword|\bL10n\.tr|\bpanelText)\(\s*"([a-z][a-z0-9]*(?:-[a-z0-9]+)+(?:\.[a-z0-9-]+)?)"\s*,""")
+SEAM_CALL = re.compile(r"""(?:\bWords\.text|\bitem|\btext|\btr|\bword|\bL10n\.tr|\bpanelText)\(\s*"([a-z][a-z0-9]*(?:-[a-z0-9]+)+(?:\.[a-z0-9-]+)?)"\s*,""")
 ID_ONLY = re.compile(r"""^[a-z][a-z0-9]*(?:-[a-z0-9]+)+(?:\.[a-z0-9-]+)?$""")
 LITERAL = re.compile(r'"((?:[^"\\\n]|\\.)*)"')
 

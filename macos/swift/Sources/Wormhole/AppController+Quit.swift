@@ -110,7 +110,7 @@ extension AppController {
             if fromCommandLine { detail += " " + AuxText.controlCloseAsked }
             if let extra { detail = detail.isEmpty ? extra.note : detail + " " + extra.note }
             let question = Question(
-                title: CloseQuestions.sessionTitle(terminal.title), detail: detail, confirm: "Close", alsoButtons: extra?.also.map { [$0] } ?? [])
+                title: CloseQuestions.sessionTitle(terminal.title), detail: detail, confirm: AuxText.closeConfirmSession, alsoButtons: extra?.also.map { [$0] } ?? [])
             switch await QuestionSheet(question).ask(in: session.window) {
             case .confirm: finishClosing(id, in: session)
             case .also:
@@ -123,13 +123,7 @@ extension AppController {
     }
 
     private func askToEndHost(of terminal: TerminalSummary, in session: WindowSession, then done: @escaping () -> Void) {
-        let question = Question(
-            title: CloseQuestions.sessionTitle(terminal.title),
-            detail: String(
-                localized: "hosts-close-detail",
-                defaultValue: "Its session host is still running, but this app can’t show it. Ending the host ends the program in it; leaving it running keeps it in the Session Hosts window."),
-            confirm: String(localized: "hosts-close-end", defaultValue: "End the Host"),
-            alsoButtons: [String(localized: "hosts-close-leave", defaultValue: "Leave It Running")])
+        let question = CloseQuestions.unavailableHost(name: terminal.title)
         session.asking = true
         Task {
             defer { session.asking = false }
@@ -162,7 +156,7 @@ extension AppController {
                 : ""
             if let extra { detail = detail.isEmpty ? extra.note : detail + " " + extra.note }
             let question = Question(
-                title: CloseQuestions.groupTitle(head.name), detail: detail, confirm: "Close Group", alsoButtons: extra?.also.map { [$0] } ?? [])
+                title: CloseQuestions.groupTitle(head.name), detail: detail, confirm: AuxText.closeConfirmGroup, alsoButtons: extra?.also.map { [$0] } ?? [])
             switch await QuestionSheet(question).ask(in: session.window) {
             case .confirm: finishClosingGroup(id, in: session)
             case .also:
@@ -178,11 +172,11 @@ extension AppController {
         guard !session.asking else { return }
         let running = asking(in: session)
         let question = Question(
-            title: "Close this window?",
+            title: AuxText.closeWindowTitle,
             detail: CloseQuestions.window(
                 terminals: session.hub.state.live.count,
                 running: running.map(\.runningFact), programs: running.compactMap(\.command), stakes: Self.stakes(of: session.hub.state.all, in: session)),
-            confirm: "Close Window")
+            confirm: AuxText.closeConfirmWindow)
         session.asking = true
         Task {
             defer { session.asking = false }

@@ -1,3 +1,4 @@
+// text-file: replies of the control folder and the idle check (dev tooling, English by design), not interface text
 // The idle check, for `--idle <seconds>`.
 
 import AppKit

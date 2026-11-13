@@ -41,7 +41,7 @@ private struct FontRow: View {
             FontPicker(model: picker, look: look(size: size)) { FontSelectFace(picker: picker, resolved: Self.inherited(slot.slot, model)) }
                 .accessibilityLabel(entry.label)
             ValueStepper(
-                value: "\(Int(size)) pt", label: entry.label,
+                value: "\(Int(size)) pt", label: entry.label, // text: a unit
                 decrease: size > slot.min ? { model.set(entry.keys[1], .number(max(slot.min, size - 1))) } : nil,
                 increase: size < slot.max ? { model.set(entry.keys[1], .number(min(slot.max, size + 1))) } : nil)
         }

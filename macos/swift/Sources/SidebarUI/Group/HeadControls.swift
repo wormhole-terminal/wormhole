@@ -31,7 +31,7 @@ struct HeadAddButton: View {
     private let run = IconRun()
     @Environment(\.tokens) private var tokens
 
-    private var label: String { Words.text("sidebar-new-in-group", fallback: "New terminal in \(group)") }
+    private var label: String { Words.text("sidebar-new-in-group", ["group": .text(group)], fallback: "New terminal in \(group)") }
 
     var body: some View {
         Button {

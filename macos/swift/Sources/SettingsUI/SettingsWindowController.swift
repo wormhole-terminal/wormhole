@@ -28,7 +28,7 @@ public final class SettingsWindowController: NSWindowController {
         // The Settings window is never full screen (`forbid_fullscreen`).
         window.collectionBehavior.insert(.fullScreenNone)
         window.isReleasedWhenClosed = false
-        window.setFrameAutosaveName("WormholeSettings")
+        window.setFrameAutosaveName("WormholeSettings") // text: an autosave name
         super.init(window: window)
         window.contentView = NSHostingView(
             rootView: SettingsView(model: model) { [weak window] in window?.performClose(nil) }.environment(\.settingsUpdates, updates).themed(themeStore))
