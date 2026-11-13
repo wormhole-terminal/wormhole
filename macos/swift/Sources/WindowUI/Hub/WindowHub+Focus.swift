@@ -19,7 +19,7 @@ extension WindowHub {
     }
 
     /// A coding agent runs in one of the terminals of the shown split (the Usage tab's reason to exist).
-    private var agentOnScreen: Bool {
+    var agentOnScreen: Bool {
         let shown = Set(state.panes.shown.map(\.id)).union(state.selected.map { [$0] } ?? [])
         return state.all.contains { shown.contains($0.id) && $0.agent != nil }
     }

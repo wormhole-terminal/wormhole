@@ -10,12 +10,16 @@ extension WindowHub {
     public func menuState(look: WindowLook, isFullScreen: Bool, implemented: Set<ActionID>, flagsOn: Set<String> = []) -> MenuState {
         let panes = paneFacts
         let profiles = actions.profiles()
-        return MenuStateMaker.make(
+        var menu = MenuStateMaker.make(
             MenuFacts(
                 state: state, statusBar: look.ownStatusBar, tabsOnTop: look.tabsOnTop, isFullScreen: isFullScreen,
                 isSplit: panes.isSplit, isZoomed: panes.isZoomed, canSplitRight: canSplit(.row), canSplitDown: canSplit(.column), minimap: look.ownMinimap, zen: look.zen != nil,
                 implemented: implemented, flagsOn: flagsOn, hasFolds: selectedOverlay?.hasFolds ?? false,
                 profiles: profiles.map(\.name), currentProfile: profiles.firstIndex { $0.current }, windowProfile: profiles.firstIndex { $0.here }))
+        // The Usage tab's line goes with the tab (no agent on screen); the Project tab's needs a folder (`features/*/def.rs` `menu`).
+        if !agentOnScreen { menu.hidden.insert("showUsage") }
+        if state.selectedTerminal?.folder == nil { menu.disabled.insert("showProject") }
+        return menu
     }
 
     /// ⌘1–9: the terminal with this number in the list (the core numbers them).

@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
 use wormhole_core::config::features::{self, FeatureFlag};
+use wormhole_core::config::{FeatureId, FeatureMask};
 use wormhole_core::config::settings_index::SectionId;
 
 use super::error::SettingsError;
@@ -45,6 +46,13 @@ impl SettingsHandle {
                 default: mode.default_for(*flag),
             })
             .collect()
+    }
+
+    /// The keys of the features that are off in this profile (`FeatureMask`: the switch and the gate): the actions
+    /// tagged with them are left out of the menus, the palette and the shortcut sheet.
+    pub fn features_off(&self) -> Vec<String> {
+        let mask = FeatureMask::resolve(self.shared.lock().effective());
+        FeatureId::ALL.iter().filter(|id| !mask.has(**id)).map(|id| id.info().key.to_string()).collect()
     }
 
     /// Switches a flag. Going back to what the build does takes the entry out instead of writing a redundant one.

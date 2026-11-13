@@ -15,6 +15,12 @@ public final class ProfileFlags {
 
     public init() {}
 
+    /// The keys of the features that are off in `profile` (the core's feature mask: the switch and the gate).
+    public func featuresOff(profile: String) -> Set<String> {
+        if handles[profile] == nil { handles[profile] = try? SettingsHandle.open(profile: profile, listener: Silent()) }
+        return Set(handles[profile]?.featuresOff() ?? [])
+    }
+
     /// The keys of the flags that are on in `profile`; none where its settings cannot be read.
     public func on(profile: String) -> Set<String> {
         if handles[profile] == nil { handles[profile] = try? SettingsHandle.open(profile: profile, listener: Silent()) }
