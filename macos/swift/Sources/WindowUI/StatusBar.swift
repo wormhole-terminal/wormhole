@@ -31,6 +31,7 @@ struct StatusBar: View {
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
     @Environment(WindowFocus.self) private var focus
+    @Environment(\.reduceMotion) private var reduceMotion
 
     /// The gap between items: 14 from one's text to the next's, less the room each has round its text.
     private static let gap: CGFloat = 14 - 2 * Chrome.itemPad
@@ -104,7 +105,8 @@ struct StatusBar: View {
         .background { if !look.glassOn { look.surface(colours.sidebar) } }
         .overlay(alignment: .top) { if !look.glassOn { colours.rule.frame(height: colours.borderWidth) } }
         .marked("status.bar")
-        .animation(Motion.fade, value: summary)
+        // Without the Motion feature the bar's changes are cuts, as in GPUI (the counts roll only with it).
+        .animation(look.motionFeature ? Motion.fade : nil, value: summary)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Words.text("window-status-bar", fallback: "Status bar"))
     }
@@ -131,11 +133,11 @@ struct StatusBar: View {
 
     @ViewBuilder private func countLabel(_ count: StatusSummary.Count, words: Bool) -> some View {
         if words {
-            Text(count.words)
+            Text(count.words).statusRoll(count.number, on: look.motionFeature && !reduceMotion)
         } else {
             HStack(spacing: Space._1) {
                 StatusDot(count.activity.status)
-                Text("\(count.number)")
+                Text("\(count.number)").statusRoll(count.number, on: look.motionFeature && !reduceMotion)
             }
         }
     }
@@ -176,5 +178,14 @@ private struct WaitedWords: View {
                 try? await Task.sleep(for: shown.next)
                 if !Task.isCancelled { current = waited() }
             }
+    }
+}
+
+private extension View {
+    /// A count that turns over like a counter's digits when it changes (`window/status_rolls.rs`: 160 ms, the core's
+    /// `roll::DURATION`); a cut when `on` is false.
+    func statusRoll(_ number: Int, on: Bool) -> some View {
+        contentTransition(on ? .numericText(value: Double(number)) : .identity)
+            .animation(on ? .easeOut(duration: 0.16) : nil, value: number)
     }
 }
