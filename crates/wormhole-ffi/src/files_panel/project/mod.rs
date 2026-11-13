@@ -22,6 +22,7 @@ pub use records::{
     ProjectStateRecord, TrustLineRecord, TrustStatusRecord,
 };
 pub use service::ProjectService;
+pub(crate) use service::worktree_refusal_in;
 pub use settings_page::{
     ProjectChoiceRecord, ProjectDefaultRecord, ProjectFeatureRowRecord, ProjectPageRecord,
 };

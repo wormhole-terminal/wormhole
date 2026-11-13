@@ -102,6 +102,9 @@ pub(crate) struct Core {
     pub(super) signatures: Mutex<Signatures>,
     /// A close question is up (`close`): one at a time, until Swift says it is over.
     pub(super) close_question: AtomicBool,
+    /// A new-worktree sheet is up in a window (`new-terminal --worktree`): a second request is answered Failed instead of
+    /// resetting it, until Swift says the sheet is gone.
+    pub(super) worktree_question: AtomicBool,
     /// The Probes that are on and the feed their hooks hear (`probes`).
     pub(crate) probes: crate::probes::Probes,
     /// The terminal welcomes that run (`welcome`).
@@ -136,6 +139,7 @@ impl Core {
             identities: Mutex::default(),
             signatures: Mutex::default(),
             close_question: AtomicBool::new(false),
+            worktree_question: AtomicBool::new(false),
             probes: crate::probes::Probes::default(),
             welcome: Mutex::default(),
         })

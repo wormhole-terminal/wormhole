@@ -1,11 +1,14 @@
 //! `new-terminal --worktree <branch>`: the GPUI app opens its dialog for it (`features/git/worktree/ask.rs`);
 //! this app puts its own question up (`HookEvent::WorktreeAsked`), after core's plan says the branch is one git
 //! takes. Whether the project trusts a worktree is the window's to decide when the question comes up (git knows
-//! nothing of trust), and so is making it: the reply says only that the question was asked.
+//! nothing of trust), and so is making it: the reply says only that the question was asked. An untrusted project is
+//! refused here, as the GPUI app refuses it, and a sheet already up is answered Failed.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
+use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::git::worktree;
 use wormhole_core::git::{find_root, worktree_of};
 use wormhole_core::ipc::control::{Asked, Error, ErrorCode, Reply};
@@ -32,10 +35,21 @@ pub(super) fn ask(core: &Arc<Core>, folder: Option<String>, branch: &str, comman
             .into();
     };
     let repo: PathBuf = worktree_of(&root).unwrap_or(root);
+    // Trust is asked of the repository, never of the terminal's folder; with the project folders off nothing is.
+    let seat = core.seat();
+    if seat.settings().feature_enabled(FeatureFlag::ProjectFolders)
+        && let Some(why) = crate::files_panel::worktree_refusal_in(seat.profile.dir(), &repo)
+    {
+        return Error::new(ErrorCode::Refused, why).into();
+    }
     let plan = match worktree::plan(&repo, branch, base(core).as_deref()) {
         Ok(plan) => plan,
         Err(why) => return Error::new(ErrorCode::BadRequest, why).into(),
     };
+    if core.worktree_question.swap(true, Ordering::AcqRel) {
+        return Error::new(ErrorCode::Failed, "a worktree dialog is already up in that window").into();
+    }
+    let command = command.map(|command| command.trim().to_string()).filter(|command| !command.is_empty());
     core.ui.push(HookEvent::WorktreeAsked { folder: shown(&repo), branch: plan.branch.clone(), command });
     tracing::info!(branch = plan.branch, "control: the worktree question was asked");
     Reply::ok(Asked {

@@ -6,6 +6,7 @@
 //! approved), judged on a snapshot read at that moment and acted on from the same bytes. A Swift caller
 //! can ask for anything; it gets effects only for what trust allows, and `approve` asks the owner first.
 
+use std::ops::Not as _;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
@@ -60,6 +61,18 @@ impl ProjectService {
     }
 }
 
+/// The words of a refused worktree: one rule for the sheet (`ProjectService`) and the command line.
+const WORKTREE_REFUSAL: &str =
+    "Trust the project first: a terminal in its worktree would run with the project's settings";
+
+/// Why a worktree may not be made of `repo` for the profile whose stores are in `dir`, read from the files as they are now
+/// (the command line has no window's service to ask). The caller has already checked that the project folders feature is on.
+pub(crate) fn worktree_refusal_in(dir: &Path, repo: &Path) -> Option<String> {
+    let found = proj::find_project(repo)?;
+    let snapshot = found.snapshot();
+    Hub::load(dir).enabled(&snapshot, Feature::Settings).not().then(|| WORKTREE_REFUSAL.into())
+}
+
 impl ProjectService {
     pub(crate) fn worktree_refusal(&self, repo: &Path) -> Option<String> {
         // Off: the new terminal takes nothing from the project, so there is no condition.
@@ -73,10 +86,7 @@ impl ProjectService {
         if hub.enabled(&snapshot, Feature::Settings) {
             return None;
         }
-        Some(
-            "Trust the project first: a terminal in its worktree would run with the project's settings"
-                .into(),
-        )
+        Some(WORKTREE_REFUSAL.into())
     }
 }
 

@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use wormhole_core::git::worktree::{self, Worktree, Worktrees};
 use wormhole_core::git::{find_root, worktree_of};
+use wormhole_core::storage::paths::ProfilePaths;
 use wormhole_core::storage::store::Store;
 
 use super::error::GitBackendError;
@@ -55,6 +56,9 @@ struct State {
     clone_build_folders: bool,
     /// What the store holds under `worktree::STORE_KEY`, read once and written through.
     made: Option<Worktrees>,
+    /// The folder of the window's own profile, whose database remembers the worktrees (and so the ports); `None`
+    /// until a window says (the data folder's default).
+    profile: Option<PathBuf>,
 }
 
 #[derive(uniffi::Object)]
@@ -68,7 +72,7 @@ impl WorktreeService {
     #[uniffi::constructor]
     pub fn new(base: Option<String>, clone_build_folders: bool) -> Result<Arc<Self>, GitBackendError> {
         crate::isolation::require()?;
-        let state = State { base: base_of(base), clone_build_folders, made: None };
+        let state = State { base: base_of(base), clone_build_folders, made: None, profile: None };
         Ok(Arc::new(Self { state: Mutex::new(state) }))
     }
 
@@ -77,6 +81,24 @@ impl WorktreeService {
         let mut state = self.state();
         state.base = base_of(base);
         state.clone_build_folders = clone_build_folders;
+    }
+
+    /// The window moved to profile `profile` (or opened in it): the worktrees are that profile's from here on, as the GPUI
+    /// app keeps them per profile. False (nothing changes) for a profile that is not in `profiles.json`.
+    pub fn follow_profile(&self, profile: String) -> bool {
+        let Some(dir) = crate::profile::dir_of(&profile) else { return false };
+        let mut state = self.state();
+        if state.profile.as_deref() != Some(dir.as_path()) {
+            state.profile = Some(dir);
+            state.made = None;
+        }
+        true
+    }
+
+    /// The repository a worktree of `folder` is of: its main working tree (a terminal in a linked worktree makes
+    /// siblings of the same repository), and the folder whose project decides trust. `None` outside a repository.
+    pub fn repository(&self, folder: String) -> Option<String> {
+        repo_of(&folder).ok().map(|repo| repo.to_string_lossy().into_owned())
     }
 
     /// Why a worktree can't be made of `folder`: it is in no repository. `None` when it can.
@@ -173,14 +195,16 @@ impl WorktreeService {
 
     fn load(state: &mut State) -> &mut Worktrees {
         state.made.get_or_insert_with(|| {
-            let stored = Store::open().ok().and_then(|store| store.meta(worktree::STORE_KEY).ok().flatten());
+            let stored = open_store(state.profile.as_deref())
+                .ok()
+                .and_then(|store| store.meta(worktree::STORE_KEY).ok().flatten());
             stored.map(|json| Worktrees::from_json(&json)).unwrap_or_default()
         })
     }
 
     fn save(state: &State) {
         let Some(all) = &state.made else { return };
-        match Store::open() {
+        match open_store(state.profile.as_deref()) {
             Ok(store) => {
                 if let Err(err) = store.set_meta(worktree::STORE_KEY, &all.to_json()) {
                     tracing::warn!("remembering the worktrees: {err:#}");
@@ -194,15 +218,25 @@ impl WorktreeService {
 /// What a terminal started in `cwd` gets from the worktree Wormhole made there: its own ports (GPUI's spawn hook,
 /// `features/git/worktree/def.rs`). Read from the store as it is at the start, so every terminal of the app, local or
 /// hosted, asks the same place; nothing for a folder that is no worktree of Wormhole's.
-pub(crate) fn env_for(cwd: &Path) -> Vec<(String, String)> {
+pub(crate) fn env_for(cwd: &Path, profile: &ProfilePaths) -> Vec<(String, String)> {
     if crate::isolation::require().is_err() {
         return Vec::new();
     }
-    let stored = Store::open().ok().and_then(|store| store.meta(worktree::STORE_KEY).ok().flatten());
+    // The terminal's own profile's database, where that profile's windows remember the worktrees they made.
+    let stored =
+        Store::open_for(profile).ok().and_then(|store| store.meta(worktree::STORE_KEY).ok().flatten());
     let all = stored.map(|json| Worktrees::from_json(&json)).unwrap_or_default();
     all.find(cwd)
         .map(|made| made.env().into_iter().map(|(name, value)| (name.to_owned(), value)).collect())
         .unwrap_or_default()
+}
+
+/// The database of the profile in `dir`, the data folder's default when no window has said.
+fn open_store(dir: Option<&Path>) -> anyhow::Result<Store> {
+    match dir {
+        Some(dir) => Store::open_at(dir),
+        None => Store::open(),
+    }
 }
 
 /// `worktree_base` as a folder (`~` is the caller's to expand); empty puts worktrees beside the repository.

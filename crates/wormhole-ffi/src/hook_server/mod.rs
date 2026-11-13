@@ -147,6 +147,12 @@ impl HookServer {
         self.core.close_question.store(false, Ordering::Release);
     }
 
+    /// The new-worktree sheet came up (`up`) or went away, however it was opened: while it is up a command line's
+    /// `--worktree` request is answered Failed (the GPUI app's "a worktree dialog is already up").
+    pub fn worktree_sheet(&self, up: bool) {
+        self.core.worktree_question.store(up, Ordering::Release);
+    }
+
     /// Another profile's desk (a profile's windows were opened beside the first's): what its windows' requests are judged
     /// by, with its own mode, approvals and questions.
     pub fn add_desk(&self, desk: Arc<AccessDesk>) {

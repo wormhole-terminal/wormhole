@@ -27,8 +27,12 @@ pub(crate) fn options(root: &DataRoot, profile: &ProfilePaths, what: &HostedStar
     let cwd = what.cwd.as_deref().map(PathBuf::from).filter(|dir| dir.is_dir());
     let (project_env, project_shell) = project_adds(profile, &settings, cwd.as_deref()).unwrap_or_default();
     // A worktree Wormhole made gives its terminals their own ports (`git::worktree_env`); a trusted project's env goes on top.
-    let mut env: std::collections::BTreeMap<String, String> =
-        cwd.as_deref().map(crate::git::worktree_env).unwrap_or_default().into_iter().collect();
+    let mut env: std::collections::BTreeMap<String, String> = cwd
+        .as_deref()
+        .map(|cwd| crate::git::worktree_env(cwd, profile))
+        .unwrap_or_default()
+        .into_iter()
+        .collect();
     env.extend(project_env);
     let shell = match (&what.program, what.shell.as_deref()) {
         // A program asked for by name (`--shell`, the welcome's tour, a test) runs as it is, unless the terminal was
