@@ -24,9 +24,14 @@ struct FileViewerView: View {
             .background(tokens.surfaceWindow)
             .onExitCommand(perform: store.closeViewer)
             .accessibilityElement(children: .contain)
-            .accessibilityLabel(panelText("files-spoken-viewer", ["name": .text(path.split(separator: "/").last.map(String.init) ?? path)], "\(path.split(separator: "/").last.map(String.init) ?? path), file viewer"))
+            .accessibilityLabel(panelText("files-spoken-viewer", ["name": .text(Self.name(path))], "\(Self.name(path)), file viewer"))
         }
     }
+}
+
+extension FileViewerView {
+    /// The file's name as drawn (a name that is not text is a key, `DiskName`).
+    static func name(_ path: String) -> String { DiskName.shown(path.split(separator: "/").last.map(String.init) ?? path) }
 }
 
 struct FileViewerHeader: View {
@@ -38,8 +43,8 @@ struct FileViewerHeader: View {
     @Environment(\.panelHost) private var host
 
     var body: some View {
-        let name = path.split(separator: "/").last.map(String.init) ?? path
-        let folders = path.contains("/") ? String(path[..<path.lastIndex(of: "/")!]) + "/" : ""
+        let name = FileViewerView.name(path)
+        let folders = path.contains("/") ? DiskName.shown(String(path[..<path.lastIndex(of: "/")!])) + "/" : ""
         HStack(spacing: PanelMetrics.gap) {
             FileIcon(kind: .file(name), tint: tokens.textMuted)
             // The path as the diff's crumb draws it: folders quiet, the name loud, the head elided first. A button as the

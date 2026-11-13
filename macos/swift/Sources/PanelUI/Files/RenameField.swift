@@ -27,8 +27,9 @@ struct RenameField: View {
             if let error = store.renameError { Text(error).font(tokens.font(.caption)).foregroundStyle(tokens.statusDangerText) }
         }
         .onAppear {
-            draft = row.name
-            let stem = FileNames.stemLength(row.name, isFolder: row.isFolder)
+            // A name that is not text is typed over as it is drawn (`rename.rs`: the lossy name).
+            draft = DiskName.shown(row.name)
+            let stem = FileNames.stemLength(draft, isFolder: row.isFolder)
             selection = TextSelection(range: draft.startIndex..<draft.index(draft.startIndex, offsetBy: stem))
             focused = true
         }

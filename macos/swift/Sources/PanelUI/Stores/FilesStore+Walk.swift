@@ -10,7 +10,7 @@ extension FilesStore: PanelWalking {
         guard root != nil else { return [] }
         return [WalkRow(id: Self.headID, level: 0, isBand: true, name: pathMenu?.shownName ?? "")]
             + rows.filter(\.isEntry).map { row in
-                WalkRow(id: row.path, level: 1 + row.depth, isOpen: row.isFolder ? tree.isOpen(row.path) : nil, name: row.name)
+                WalkRow(id: row.path, level: 1 + row.depth, isOpen: row.isFolder ? tree.isOpen(row.path) : nil, name: row.label)
             }
     }
 

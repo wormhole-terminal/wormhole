@@ -19,7 +19,7 @@ public struct PathMenuModel: Equatable, Sendable {
     /// `volume` names `/` (the disk), `pins` are the pinned folders in the order they were made. Two pins of one
     /// name say where each is.
     public init(shown: String, volume: String, pins: [String], chosen: Bool, home: String? = nil) {
-        func name(_ path: String) -> String { path == "/" ? volume : path.split(separator: "/").last.map(String.init) ?? volume }
+        func name(_ path: String) -> String { path == "/" ? volume : path.split(separator: "/").last.map { DiskName.shown(String($0)) } ?? volume }
         var chain: [Folder] = []
         var path = shown
         while true {
@@ -31,7 +31,7 @@ public struct PathMenuModel: Equatable, Sendable {
         pinned = pins.map { pin in
             let twin = pins.contains { $0 != pin && name($0) == name(pin) }
             let parent = pin.lastIndex(of: "/").map { String(pin[..<$0]) }.flatMap { $0.isEmpty ? nil : $0 }
-            let shownParent = parent.map { folder in home.map { folder.replacingHome(with: $0) } ?? folder }
+            let shownParent = parent.map { folder in DiskName.shown(home.map { folder.replacingHome(with: $0) } ?? folder) }
             return Folder(path: pin, name: twin ? "\(name(pin)) \u{2014} \(shownParent ?? "")" : name(pin)) // text: a name and its parent folder, joined by a dash
         }
         isPinned = pins.contains(shown)

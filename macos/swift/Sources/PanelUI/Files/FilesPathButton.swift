@@ -30,7 +30,7 @@ struct FilesPathButton: View {
             .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
             .walkRow(FilesStore.headID)
             .onHover { hovering = $0 }
-            .help(root)
+            .help(DiskName.shown(root))
             .accessibilityLabel(panelText("files-spoken-path-button", ["name": .text(menu.shownName)], "\(menu.shownName), folder, opens the path menu"))
         }
     }
@@ -60,7 +60,7 @@ struct FilesPathButton: View {
     /// Finder's own icon for a folder, unless it is not on this Mac's disk (a share, another volume): asking the system for
     /// that icon would touch the share, so it gets the generic folder's.
     private func icon(_ path: String) -> NSImage {
-        let image = PathMenuModel.onBootVolume(path)
+        let image = PathMenuModel.onBootVolume(path) && !DiskName.isKey(path)
             ? NSWorkspace.shared.icon(forFile: path) : NSWorkspace.shared.icon(for: .folder)
         image.size = NSSize(width: 16, height: 16)
         return image

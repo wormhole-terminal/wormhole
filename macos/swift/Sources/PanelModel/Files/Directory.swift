@@ -5,7 +5,7 @@
 public struct DiskEntry: Hashable, Sendable {
     public enum Kind: Sendable { case folder, file, link }
 
-    /// The real name, what a path is made of.
+    /// The real name, what a path is made of; a key (`DiskName`) where the name is not text. Never drawn.
     public var name: String
     /// The name as drawn.
     public var label: String

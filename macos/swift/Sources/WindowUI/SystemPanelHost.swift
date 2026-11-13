@@ -63,7 +63,9 @@ final class SystemPanelHost: PanelHost {
 
     func reveal(_ path: String) {
         guard launches() else { return notify("Would reveal \(path)") }  // text: a test instance's log of what it did not do
-        NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
+        // A name that is not text comes as a key (`DiskName`): the URL is of its bytes, never of the text cut short.
+        guard let url = DiskName.url(path) else { return }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     /// The core runs the app's own way of taking a line. Finder, and an app that does not start, show the file: it

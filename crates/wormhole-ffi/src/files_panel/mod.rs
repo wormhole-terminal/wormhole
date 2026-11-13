@@ -11,6 +11,7 @@
 mod files;
 mod files_records;
 mod listener;
+pub(crate) mod names;
 mod notes_store;
 mod project;
 mod settings_edit;

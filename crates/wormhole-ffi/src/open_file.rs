@@ -41,11 +41,12 @@ fn command(bundle: &str, launch: Launch, app: Option<&Path>) -> (OsString, Vec<O
     }
 }
 
-/// Open `path` (absolute, already found inside the repository) in the app with this bundle identifier at `line`, as the GPUI
+/// Open `path` (absolute, already found inside the repository; a key of `files_panel::names` where it is not text) in the app with this bundle identifier at `line`, as the GPUI
 /// app does; `app_folder` is where Launch Services says the app is. Whether a process was started; nobody waits for it.
 #[uniffi::export]
 pub fn open_file_run(bundle: String, path: String, line: Option<u32>, app_folder: Option<String>) -> bool {
-    run(&bundle, Path::new(&path), line, app_folder.as_deref().map(Path::new))
+    let Some(path) = crate::files_panel::names::path(&path) else { return false };
+    run(&bundle, &path, line, app_folder.as_deref().map(Path::new))
 }
 
 /// Where a test instance's launches are written instead of started (`DesignSystem.ExternalOpen` writes its own there too).

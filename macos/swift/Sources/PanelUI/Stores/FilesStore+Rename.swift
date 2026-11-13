@@ -24,7 +24,7 @@ extension FilesStore {
         // untouched, which says what a usable name is.
         guard let root, let path = renaming, !renameBusy else { return }
         let new = name
-        guard new != path.split(separator: "/").last.map(String.init) else { return cancelRename() }
+        guard new != path.split(separator: "/").last.map({ DiskName.shown(String($0)) }) else { return cancelRename() }
         renameBusy = true
         Task {
             let answer = await backend.rename(path, to: new, in: root)
