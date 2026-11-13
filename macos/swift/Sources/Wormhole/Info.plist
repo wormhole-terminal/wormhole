@@ -79,5 +79,7 @@
 	<string>A program running in Wormhole wants to access files on a removable volume.</string>
 	<key>NSNetworkVolumesUsageDescription</key>
 	<string>A program running in Wormhole wants to access files on a network volume.</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Wormhole. All rights reserved.</string>
 </dict>
 </plist>

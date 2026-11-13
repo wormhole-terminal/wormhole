@@ -56,7 +56,12 @@ final class AuxController {
         #endif
     }
 
-    func showUpdates() { UpdateWindow.show(backend: updateBackend(), version: AppInfo.from(bundle: .main).version) }
+    /// Check for Updates…: the window, and a manual check started at once when nothing is in progress (`app/handlers.rs`).
+    func showUpdates() {
+        let backend = updateBackend()
+        UpdateWindow.show(backend: backend, version: AppInfo.from(bundle: .main).version)
+        if backend.phase == .idle || backend.phase == .upToDate { Task { await backend.check() } }
+    }
 
     /// Agents' questions (the control API's approval) as sheets on the window, one at a time, as they arrive: profile
     /// `profile`'s (the shown one's by default), which the hook socket judges its windows' requests by from now on.
@@ -94,6 +99,11 @@ final class AuxController {
     /// The first run shows the welcome by itself, once per data folder; `--onboarding` and Help ▸ Welcome show it
     /// again. A test instance keeps the effect above the window instead of taking the screen.
     func showOnboarding(firstRun: Bool) {
+        // Help ▸ Welcome while the page is up plays it again (`onboarding_host.rs`).
+        if let open = onboarding, open.isOpen, !firstRun {
+            open.replay()
+            return
+        }
         let window = OnboardingWindow(backend: backends.onboarding(firstRun: firstRun), firstRun: firstRun, immersive: !app.policy.background)
         onboarding = window
         window.show()

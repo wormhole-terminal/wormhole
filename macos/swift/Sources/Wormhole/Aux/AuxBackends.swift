@@ -212,12 +212,13 @@ struct AuxBackends {
         func hostAttachments() -> [HostAttachmentRecord] {
             sessions.flatMap { session in
                 let core = session.hub.store.hooks as? RustWorkspaceBackend
-                return session.hub.state.sections.flatMap(\.rows).compactMap { row -> HostAttachmentRecord? in
-                    guard let hostID = session.hub.store.hosting(of: row.id)?.hostID else { return nil }
+                // Every terminal of the window, those in folded groups or filtered out of the list too (`host_attachments`).
+                return session.hub.state.all.compactMap { terminal -> HostAttachmentRecord? in
+                    guard let hostID = session.hub.store.hosting(of: terminal.id)?.hostID else { return nil }
                     var why: HostUnavailableKind?
-                    if case .unavailable(let kind)? = session.hub.store.hostProblem(of: row.id) { why = kind.record }
+                    if case .unavailable(let kind)? = session.hub.store.hostProblem(of: terminal.id) { why = kind.record }
                     return HostAttachmentRecord(
-                        hostId: hostID, window: Int64(session.id), title: row.terminal.title, link: core?.hostLink(of: row.id),
+                        hostId: hostID, window: Int64(session.id), title: terminal.title, link: core?.hostLink(of: terminal.id),
                         unavailable: why, unavailableDetail: nil)
                 }
             }
