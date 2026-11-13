@@ -56,7 +56,7 @@ struct HistoryListView: View {
             PanelCard {
                 CardBand(
                     title: panelText("history-title", "History"), count: store.model.commits.isEmpty ? nil : CountText.grouped(store.model.commits.count),
-                    spoken: panelText("history-spoken-list", ["count": .whole(store.model.commits.count)], "History, \(String(store.model.commits.count)) commits")
+                    spoken: panelText("history-spoken-list", ["count": .whole(store.model.commits.count)], store.model.commits.isEmpty ? "History, no commits" : "History, \(store.model.commits.count) \(store.model.commits.count == 1 ? "commit" : "commits")")
                 ) {
                     RevPicker(
                         selected: store.rev, revs: store.revs, headTitle: "HEAD", // text: HEAD is git's name for the current commit

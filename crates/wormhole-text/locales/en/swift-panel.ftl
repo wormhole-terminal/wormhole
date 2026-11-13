@@ -59,6 +59,7 @@ changes-group-untracked = Untracked
 
 # A section's head, read out by VoiceOver. { $group } is its name, { $count } how many files it holds.
 changes-group-spoken = { $group }, { $count ->
+    [0] no files
     [one] 1 file
    *[other] { $count } files
 }
@@ -176,6 +177,7 @@ history-title = History
 
 # The head of the list, read out by VoiceOver. { $count } is how many commits.
 history-spoken-list = History, { $count ->
+    [0] no commits
     [one] 1 commit
    *[other] { $count } commits
 }
@@ -192,8 +194,12 @@ notes-list-label = Notes
 notes-title = Notes
 notes-new = New note
 
-# The band's VoiceOver label. { $count } is how many notes are written.
-notes-spoken = Notes, { $count } written
+# The band's VoiceOver label (the core's `section_band`: a zero is said). { $count } is how many notes are written.
+notes-spoken = { $count ->
+    [0] Notes, no notes
+    [one] Notes, 1 note
+   *[other] Notes, { $count } notes
+}
 
 # The editor's hint while it is empty.
 notes-placeholder = Write a note or a prompt draft…  ⌘↩ sends the paragraph under the cursor (or the selection); ⌘⇧↩ also submits.
@@ -212,7 +218,10 @@ steps-add = Add next step
 steps-placeholder = Next step
 
 # The band's VoiceOver label. { $count } is how many steps are open.
-steps-spoken = Next steps, { $count } open
+steps-spoken = { $count ->
+    [0] Next steps, none open
+   *[other] Next steps, { $count } open
+}
 
 # The fold of finished steps. { $count } is a number, already formatted.
 steps-done = { $count } done

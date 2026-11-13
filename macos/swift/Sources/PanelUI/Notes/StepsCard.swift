@@ -21,7 +21,7 @@ struct StepsCard: View {
         PanelCard {
             CardBand(
                 title: panelText("steps-title", "Next steps"), folded: model.tasks.items.isEmpty && !store.drafting ? nil : model.stepsCollapsed,
-                count: open > 0 ? CountText.grouped(open) : nil, spoken: panelText("steps-spoken", ["count": .whole(open)], "Next steps, \(String(open)) open"),
+                count: open > 0 ? CountText.grouped(open) : nil, spoken: panelText("steps-spoken", ["count": .whole(open)], open == 0 ? "Next steps, none open" : "Next steps, \(open) open"),
                 onToggle: { model.stepsCollapsed.toggle() },
                 add: (panelText("steps-add", "Add next step"), { model.stepsCollapsed = false; (store.draftAfter, store.drafting) = (nil, true) }))
                 .walkRow("band-steps")

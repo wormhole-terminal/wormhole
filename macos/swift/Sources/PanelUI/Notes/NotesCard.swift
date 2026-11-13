@@ -20,7 +20,7 @@ struct NotesCard: View {
             CardBand(
                 title: panelText("notes-title", "Notes"), folded: model.notes.isEmpty ? nil : model.notesCollapsed,
                 count: model.filledNotes > 0 ? CountText.grouped(model.filledNotes) : nil,
-                spoken: panelText("notes-spoken", ["count": .whole(model.filledNotes)], "Notes, \(String(model.filledNotes)) written"), onToggle: { model.notesCollapsed.toggle() },
+                spoken: panelText("notes-spoken", ["count": .whole(model.filledNotes)], model.filledNotes == 0 ? "Notes, no notes" : "Notes, \(model.filledNotes) \(model.filledNotes == 1 ? "note" : "notes")"), onToggle: { model.notesCollapsed.toggle() },
                 add: (panelText("notes-new", "New note"), { store.newNote() }))
                 .walkRow("band-notes")
             if !model.notesCollapsed {

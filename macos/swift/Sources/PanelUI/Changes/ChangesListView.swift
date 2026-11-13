@@ -46,7 +46,7 @@ struct ChangesListView: View {
     private func head(group: ChangeGroup, count: Int, folded: Bool, first: Bool) -> some View {
         CardBand(
             title: group.title, folded: count > 0 ? folded : nil, count: count > 0 ? CountText.grouped(count) : nil,
-            spoken: panelText("changes-group-spoken", ["group": .text(group.title), "count": .whole(count)], "\(group.title), \(count) \(count == 1 ? "file" : "files")"),
+            spoken: panelText("changes-group-spoken", ["group": .text(group.title), "count": .whole(count)], "\(group.title), \(count == 0 ? "no files" : "\(count) \(count == 1 ? "file" : "files")")"),
             onToggle: { store.layout.folds[group] = !folded }
         ) {
             if first {
