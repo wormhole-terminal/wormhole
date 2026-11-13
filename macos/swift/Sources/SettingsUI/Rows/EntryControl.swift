@@ -19,7 +19,7 @@ struct EntryControl: View {
         case .segmented(let options, let fallback, _):
             OptionPicker(options: options, selected: current(fallback), label: entry.label, segmented: true) { model.set(key, $0) }
         case .select(let options, let fallback):
-            OptionPicker(options: options, selected: current(fallback), label: entry.label) { model.set(key, $0) }
+            OptionPicker(options: options, selected: current(fallback), label: entry.label, unknown: { RowCaptions.handWritten(key, $0) }) { model.set(key, $0) }
         case .dynamicSelect(.openIn): OpenInControl(model: model, key: key, label: entry.label)
         case .dynamicSelect(let source):
             OptionPicker(options: model.host.options(for: source), selected: model.value(key), label: entry.label) {

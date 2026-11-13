@@ -13,6 +13,8 @@ enum RowCaptions {
         case "branch-color": branch(model)
         case "terminal-font": terminalFont(model)
         case "custom-fonts": customFonts(model)
+        case "open-in": gone(model, key: "open_in", options: model.host.options(for: .openIn), words: Words.text("settings-terminal-not-installed-the-title-row-opens", fallback: "Not installed: the title row opens it in another app"))
+        case "default-shell": gone(model, key: "default_shell", options: model.host.options(for: .shells), words: Words.text("settings-terminal-not-found-the-login-shell-runs", fallback: "Not found: the login shell runs instead"))
         default: nil
         }
     }
@@ -40,6 +42,24 @@ enum RowCaptions {
         guard Color(hex: picked) == nil else { return nil }
         let base = ThemeStore.shared.theme.tokens().rgba(named: "git.branch")?.hex ?? ""
         return Words.text("settings-appearance-branch-pick", ["color": .text(base)], fallback: "Pick a colour below · the theme's is \(base)")
+    }
+
+    /// A choice written in config.json that names nothing any more (an app that is gone, a shell profile taken out): the row says what
+    /// happens instead.
+    @MainActor private static func gone(_ model: SettingsModel, key: String, options: [SettingOption], words: String) -> String? {
+        let chosen = model.value(key).string ?? ""
+        return chosen.isEmpty || options.contains { $0.value == .string(chosen) } ? nil : words
+    }
+
+    /// A number set by hand in config.json that the list does not offer, in the list's own words ("75,000 lines", "300 MiB").
+    static func handWritten(_ key: String, _ value: JSONValue) -> String? {
+        guard let number = value.number else { return nil }
+        let grouped = Int(number).formatted(.number.locale(Locale(identifier: "en_US")))
+        switch key {
+        case "scrollback_lines": return Words.text("settings-terminal-scrollback-lines", ["count": .text(grouped)], fallback: "\(grouped) lines")
+        case "image_memory_mib": return Words.text("settings-terminal-image-memory-size", ["mib": .text(String(Int(number)))], fallback: "\(Int(number)) MiB")
+        default: return nil
+        }
     }
 
     /// "JetBrains Mono 14 pt · line height 1.30 · ligatures on".
