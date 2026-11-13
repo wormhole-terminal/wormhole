@@ -72,6 +72,7 @@ Added by wave 5 (dev tooling, GPUI devctl's remaining commands; written without 
 | `inspect` / `inspect on\|off` | `inspect on` | inspect mode (⇧⌥⌘I in a debug build): the Inspector panel opens beside the window and every element the design marks reports where it is |
 | `inspect x y [levels]` | `inspect 150 66 3` | pins the marked element at a point: its note (`File.swift:line  id`, the line of code in a debug build, `W×H · style`, `tokens: …`), then `levels - 1` parents |
 | `inspect parent` / `inspect pick` / `inspect copy` | `inspect copy` | walk out to the element it stands in; pick again (then `hover x y` highlights and `click x y` pins, as in GPUI); the panel's Copy (read it with `pasteboard`) |
+| `inspect nudge <property> <+\|->` / `inspect reset` | `inspect nudge padding x +` | debug builds: steps the scale value that part of the pinned element's style names (4 pt, a radius 2 pt), for the session; it shows wherever that value is used, and the note gets `change: padding x _1 → _2`. Reset takes every step back |
 | `detach` / `reattach` | `detach` | let go of the front window's hosted terminals, the views kept (`detached <n>`); attach them again as a launch does (their ids). `window-state` shows `detached(hostID:)` between |
 | `agents` | | the script in force, each approval (`approved stored\|memory:<id> <label> <how> caps=…`), how many questions wait and the one that is up with its buttons |
 | `agent-ask <deny\|session\|quit\|always>` | `agent-ask session` | answers the question that is up as that button does (a button it does not offer comes to Quit, else Deny); for the question about a changed mode, deny is Don't Keep |
@@ -89,7 +90,7 @@ Added by wave 5 (dev tooling, GPUI devctl's remaining commands; written without 
 A `studio-*` line that may ask (saving over a file, opening over unsaved edits) replies when it is done; answer its question with
 `question confirm|cancel` in a later batch. `perf-profile` now also prints draws per second, the Rust side's share of a fetch
 (snapshot, pack), where the window's terminals run, and the reader's bytes, speed and lock use: the last only from a bridge built
-with `--features perf-counters` (otherwise it says the reader was not counted). `agent-*` and `inspect` never reach the control
+with its `perf-counters` feature: `WORMHOLE_FFI_PERF_COUNTERS=1 macos/scripts/build-ffi.sh` (off by default; otherwise it says the reader was not counted). `agent-*` and `inspect` never reach the control
 socket: they are the control folder's alone.
 
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
