@@ -33,6 +33,8 @@ public protocol PanelWalking: AnyObject {
     func fold(_ row: WalkRow)
     /// What ⌘C puts on the clipboard for the row; nil when the tab copies nothing there.
     func copy(_ row: WalkRow) -> String?
+    /// What the notice chip says of that copy ("Copied commit hash"); nil: no chip.
+    var copiedAs: PanelCopied? { get }
     /// A row the keys moved over while ⇧ was held (a range being marked).
     func mark(_ row: WalkRow)
 }
@@ -40,6 +42,7 @@ public protocol PanelWalking: AnyObject {
 extension PanelWalking {
     public var following: Bool { false }
     public func copy(_ row: WalkRow) -> String? { nil }
+    public var copiedAs: PanelCopied? { nil }
     public func mark(_ row: WalkRow) {}
 
     /// A key that moves the keys' place; ⇧ marks the rows passed over.

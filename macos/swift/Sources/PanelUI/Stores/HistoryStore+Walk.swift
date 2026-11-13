@@ -35,4 +35,7 @@ extension HistoryStore: PanelWalking {
     }
 
     public func copy(_ row: WalkRow) -> String? { row.id.hasPrefix("commit-") ? String(row.id.dropFirst(7)) : nil }
+
+    /// ⌘C on a commit says "Copied" on the chip (`history/copy.rs`).
+    public var copiedAs: PanelCopied? { .commitHash }
 }
