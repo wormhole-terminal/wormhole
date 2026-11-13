@@ -71,6 +71,9 @@ public final class ChangesStore {
         var review = Review()
     }
     @ObservationIgnored private var kept: [Int: Kept] = [:]
+
+    /// The window's terminals now: what waited for one that is gone (closed, or moved to another window) goes with it.
+    public func keep(terminals: Set<Int>) { kept = kept.filter { terminals.contains($0.key) } }
     /// The terminal the tab shows: the picker closes when it changes.
     public private(set) var terminal: Int?
 

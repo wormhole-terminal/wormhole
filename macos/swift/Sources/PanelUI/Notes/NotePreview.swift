@@ -53,8 +53,8 @@ struct NotePreview: View {
     private var measures: some View {
         ZStack(alignment: .topLeading) {
             styled(text).fixedSize(horizontal: false, vertical: true).onGeometryChange(for: CGFloat.self, of: \.size.height) { full = $0 }
-            styled("A").fixedSize().onGeometryChange(for: CGFloat.self, of: \.size.height) { one = $0 }
-            styled("A\nA").fixedSize().onGeometryChange(for: CGFloat.self, of: \.size.height) { two = $0 }
+            styled("A").fixedSize().onGeometryChange(for: CGFloat.self, of: \.size.height) { one = $0 }  // text: a measuring line, never shown
+            styled("A\nA").fixedSize().onGeometryChange(for: CGFloat.self, of: \.size.height) { two = $0 }  // text: two measuring lines, never shown
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .hidden()

@@ -33,6 +33,13 @@ public final class FilesStore {
     @ObservationIgnored private var watch: Task<Void, Never>?
     @ObservationIgnored private(set) var isShown = true
     @ObservationIgnored var reading: Task<Void, Never>?
+    /// A pass over the folders is running, and something asked for another meanwhile.
+    @ObservationIgnored private var reloading = false
+    @ObservationIgnored private var reloadAgain = false
+    /// What each folder looked like from outside when the tree last listed it, and the open file when it was last
+    /// read (`FilesBackend.stamp`); nil where the backend cannot say.
+    @ObservationIgnored private var stamps: [String: String] = [:]
+    @ObservationIgnored var viewedStamp: String?
     /// A file is about to open in the viewer: the controller takes down what else covers the terminal.
     @ObservationIgnored var opened: () -> Void = {}
 
@@ -57,6 +64,9 @@ public final class FilesStore {
     }
     @ObservationIgnored private var kept: [Int: Kept] = [:]
     @ObservationIgnored private var terminal: Int?
+
+    /// The window's terminals now: what waited for one that is gone (closed, or moved to another window) goes with it.
+    public func keep(terminals: Set<Int>) { kept = kept.filter { terminals.contains($0.key) } }
 
     /// The tree follows the terminal's folder; a folder chosen by hand stays until Follow Terminal. Another terminal
     /// brings its own tree and takes the viewer and a rename down.
@@ -95,6 +105,7 @@ public final class FilesStore {
 
     private func retarget() {
         tree.clear()
+        stamps = [:]
         selected = nil
         closeViewer()
         rows = tree.rows
@@ -124,19 +135,34 @@ public final class FilesStore {
         watch = nil
     }
 
-    /// Reads the root and every open folder again, the ones above first.
+    /// Reads the root and every open folder again, the ones above first. One pass at a time whatever asks (the watch,
+    /// a folder opened, a rename): what is asked meanwhile is one more pass after it (`read.rs` `in_flight`). The open
+    /// file is read again only when it looks different from outside.
     public func reload() {
         guard let root, isShown || viewing != nil else { return }
+        guard !reloading else { reloadAgain = true; return }
+        reloading = true
         let backend = backend
         let wanted = tree.wanted
         Task {
             for folder in wanted {
+                // Before the listing, so a change during it shows as one next time. A folder that looks as it did when
+                // the tree last read it is not listed again.
+                let stamp = await backend.stamp(folder, in: root)
+                guard root == self.root else { break }
+                if let stamp, stamps[folder] == stamp, tree.isRead(folder) { continue }
                 let answer = await backend.list(folder, in: root)
-                guard root == self.root else { return }
+                guard root == self.root else { break }
+                stamps[folder] = stamp
                 if tree.set(folder, answer) { rows = tree.rows }
             }
+            reloading = false
+            let again = reloadAgain
+            reloadAgain = false
+            guard root == self.root else { return reload() }
             rows = tree.rows
-            if viewing != nil { readViewed() }
+            if viewing != nil { readViewed(onlyIfChanged: true) }
+            if again { reload() }
         }
     }
 

@@ -26,6 +26,7 @@ public final class PathCardHover {
         guard want != shown else { timer?.cancel(); timer = nil; return }
         timer?.cancel()
         timer = Task { [weak self] in
+            // one-shot: the rest before the card opens, or the grace before it closes.
             try? await Task.sleep(for: want ? Self.openDelay : Self.closeDelay)
             guard !Task.isCancelled, let self else { return }
             shown = overPath || overCard

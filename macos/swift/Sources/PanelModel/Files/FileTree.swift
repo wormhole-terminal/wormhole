@@ -21,6 +21,9 @@ public struct FileTree: Equatable, Sendable {
 
     public func isOpen(_ path: String) -> Bool { open.contains(path) }
 
+    /// Whether the tree holds an answer for the folder (its entries, or why it could not be read).
+    public func isRead(_ path: String) -> Bool { slots[path] != nil }
+
     public func entry(_ path: String) -> DiskEntry? {
         guard case let .ready(dir) = slots[Self.parent(path)] else { return nil }
         return dir.entries.first { $0.name == Self.leaf(path) }

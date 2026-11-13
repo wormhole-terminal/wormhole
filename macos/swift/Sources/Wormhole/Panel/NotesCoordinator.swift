@@ -84,6 +84,9 @@ final class NotesCoordinator {
         let now = Set(hub.state.all.map(\.id))
         for gone in known.subtracting(now) { persistence.closed(session: gone) }
         known = now
+        // A folder's project root is asked for its terminals: with the last of them gone it is not kept.
+        let folders = Set(hub.state.all.compactMap { AppController.expanded($0.folder) })
+        roots = roots.filter { folders.contains($0.key) }
     }
 
     /// The row's count of what is still open.

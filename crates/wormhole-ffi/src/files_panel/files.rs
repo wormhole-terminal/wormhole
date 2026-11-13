@@ -66,6 +66,15 @@ impl FilesService {
         Ok(DirectoryRecord::from(&Dir::from_listing(listing, ENTRY_CAP)))
     }
 
+    /// What the folder or file `path` below `root` looks like from outside (core's `stamp_below`: one `lstat`, never
+    /// through a link below the root), as a word that is the same until it changes: a folder's until an entry is
+    /// added, removed or renamed in it, a file's until it is written. `None` when nothing is there. Taken before a
+    /// read, an unchanged word means the read can be skipped.
+    pub fn stamp(&self, root: String, path: String) -> Option<String> {
+        let stamp = listing::stamp_below(&names::path(&root)?, &plain(&path)?).ok()?;
+        Some(format!("{stamp:?}"))
+    }
+
     /// The file `path` below `root` for the viewer: capped, never followed out of `root`.
     pub fn read(&self, root: String, path: String) -> FileContentRecord {
         match (names::path(&root), plain(&path)) {

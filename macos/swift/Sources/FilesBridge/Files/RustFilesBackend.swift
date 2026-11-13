@@ -18,6 +18,11 @@ public final class RustFilesBackend: FilesBackend, @unchecked Sendable {
         }
     }
 
+    public func stamp(_ path: String, in root: String) async -> String? {
+        let service = service
+        return await offMain { service.stamp(root: root, path: path) }
+    }
+
     public func read(_ path: String, in root: String) async -> FileContent {
         let service = service
         return await offMain { FileContent(service.read(root: root, path: path)) }

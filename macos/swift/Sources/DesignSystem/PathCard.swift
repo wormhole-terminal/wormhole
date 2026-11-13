@@ -62,6 +62,7 @@ public struct PathCard: View {
         button.action()
         copied = true
         Task {
+            // one-shot: "Copied" goes back to the button's own words after its moment.
             try? await Task.sleep(for: Self.copiedFor)
             copied = false
         }

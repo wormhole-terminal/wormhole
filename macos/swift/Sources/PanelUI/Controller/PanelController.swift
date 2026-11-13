@@ -67,6 +67,16 @@ public final class PanelController {
         worktrees.follow(folder)
     }
 
+    /// The window's terminals now. What a tab kept for a terminal that is gone (closed, or moved to another window) is
+    /// dropped, as the GPUI app's features do in `closed` and `left`, and so is each folder's root no terminal is in
+    /// any more (`folders`: the terminals' folders), which the Project tab's colour and Create are for.
+    public func keep(terminals: Set<Int>, folders: Set<String>) {
+        changes.keep(terminals: terminals)
+        history.keep(terminals: terminals)
+        files.keep(terminals: terminals)
+        roots = roots.filter { folders.contains($0.key) }
+    }
+
     /// The selected terminal and its folder. The band's folder is asked of git once per folder and remembered, so
     /// coming back to a terminal finds its tree at once.
     public func follow(folder: String?, terminal: Int? = nil) {

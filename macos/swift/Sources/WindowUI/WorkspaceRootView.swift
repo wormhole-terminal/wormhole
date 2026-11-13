@@ -86,7 +86,7 @@ public struct WorkspaceRootView: View {
     }
 
     /// The sidebar's folder is written with `~`; the panel reads real paths.
-    private static func expanded(_ folder: String?) -> String? {
+    static func expanded(_ folder: String?) -> String? {
         guard let folder else { return nil }
         return folder == "~" ? NSHomeDirectory() : folder.hasPrefix("~/") ? NSHomeDirectory() + folder.dropFirst(1) : folder
     }
