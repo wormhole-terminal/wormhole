@@ -70,6 +70,11 @@ struct EntryControl: View {
             symbol: state == true ? Icon.check.rawValue : icon
         ) { model.host.perform(.makeDefaultTerminal) }
         .disabled(state != false)
+        .help(state == true
+            ? Words.text("settings-terminal-to-change-it-pick-another-app", fallback: "To change it, pick another app for a .command file in Finder's Get Info")
+            : state == false
+                ? Words.text("settings-terminal-instead-of-terminal", fallback: "Instead of Terminal")
+                : Words.text("settings-terminal-default-only-app", fallback: "Only Wormhole.app can be the default terminal"))
     }
 
     /// Why the global hotkey set now does not work (`hotkey_problem`): macOS, the app or the shell has the keys (set by hand in

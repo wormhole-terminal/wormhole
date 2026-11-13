@@ -14,4 +14,13 @@ enum PreviewTheme {
         let theme = store.library.themes.first { $0.name == name } ?? store.theme
         return theme.tokens(increaseContrast: store.increaseContrast)
     }
+
+    /// The name of that theme, for the specimen's "<theme> colours".
+    static func name(_ model: SettingsModel) -> String {
+        let store = ThemeStore.shared
+        let mode = ThemeMode(rawValue: model.value("theme_mode").string ?? "") ?? .system
+        let dark = mode.appearance(system: store.systemAppearance) == .dark
+        let name = model.value(dark ? "theme" : "theme_light").string
+        return (store.library.themes.first { $0.name == name } ?? store.theme).name
+    }
 }
