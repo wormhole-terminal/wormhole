@@ -28,6 +28,8 @@ private struct ProjectsBody: View {
             SettingGroup(title: ProjectsText.project) {
                 HStack {
                     TextField(ProjectsText.search, text: $search).textFieldStyle(.roundedBorder).frame(width: Self.searchWidth).recordFrame("project.search")
+                        // Return takes the first project the search leaves (`projects.rs`).
+                        .onSubmit { if let root = options.dropFirst().first?.value.string { pick(root) } }
                     OptionPicker(options: options, selected: .string(projects.selected ?? ""), label: ProjectsText.project, width: Self.selectWidth) {
                         pick($0.string)
                     }
@@ -44,7 +46,15 @@ private struct ProjectsBody: View {
                 Defaults(projects: projects)
             }
         }
-        .task { await projects.refresh() }
+        // The page follows the Project tab and the disk about once a second while it shows, as the GPUI page does: a project
+        // trusted or edited elsewhere sends no event this page can hear.
+        .task {
+            await projects.refresh()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                await projects.refresh()
+            }
+        }
     }
 
     private var options: [SettingOption] {
