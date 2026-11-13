@@ -65,6 +65,7 @@
             guard let id else { return nil }
             for _ in 0..<20 {
                 if let view = hub.terminals.view(for: id) { return view }
+                // one-shot: the new terminal's view, which is drawn a frame after the terminal is made (bounded, a second)
                 try? await Task.sleep(for: .milliseconds(50))
             }
             return nil

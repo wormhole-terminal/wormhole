@@ -37,6 +37,7 @@ public final class UsageStore {
             let date = Date()
             now = Int(date.timeIntervalSince1970)
             let wait = backend.nextChange(from: date) ?? .seconds(60)
+            // one-shot: the next moment a word reads differently, which core says
             try? await Task.sleep(for: max(wait, .milliseconds(50)))
         }
     }

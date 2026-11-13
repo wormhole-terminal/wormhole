@@ -755,3 +755,41 @@ Written without compiling: expect compile errors.
 | X03 | Settings > Changed > Copy JSON with VoiceOver | Says "Copied" | `SettingsUI/Pages/ChangedPage.swift` |
 | X11 | `--background` instance: open the group colour panel | It goes behind the other windows, takes no focus | `Wormhole/Menus/GroupColourPanel.swift` |
 | not written | Rolling counts in the status bar | Left to the lane sidebar-window | n/a |
+
+## Lane panel, wave 6
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| P02, P03, P04 | TEST: in a repository, `cd` into a subfolder (`crates/x`), change a file there; in Changes use the row's menu (Copy Path, Open, Reveal), the open icon on a row, and open the diff | Copy Path copies `<repo root>/<path>`; Open and Reveal are enabled; the diff header's open button, the per-line icons and Reveal on the too-large card show; History's file menu the same | `PanelUI/Controller/PanelController.swift` `repoRoot` (set as `panelRoot` in `PanelContentView`, `PanelCoverView`, `PanelCoverTitle`), `Stores/ChangesStore.swift` `root` |
+| P02 | TEST: a file that is a link out of the repository (planted symlink) in the list | the row's open icon and the menu's Open and Reveal do nothing (no fallback to the unresolved path) | `Changes/PathMenu.swift` `resolved`, `Changes/FileRowView.swift` |
+| P02 | Open a submodule row in a subfolder; press its terminal button | a terminal opens in the submodule's folder under the repository root | `Changes/SubmoduleRowView.swift` (root now the repository's) |
+| P02 | Choose a compare branch, `cd` in the same terminal | the compare branch stays (an amber line if the new folder lacks it) | `Stores/ChangesStore.swift` `follow` |
+| P02 | Click the title row's branch chip (panel closed, and open on another tab) | Changes shows and the "compare with" list opens | `WindowUI/Hub/WindowHub+Branch.swift`, `PanelUI/Shell/RevPicker.swift` `requested`, `ChangesStore.pickerRequested` |
+| P03 | Open a diff, change Settings tab width | the sideways scroll extent follows the new width without reading the diff again | `Stores/DiffSession.swift` `retab`, `Stores/PanelPreferences.swift` |
+| P03 | Comment on a line whose text is over 160 characters with a combining mark or emoji; paste the review | the quote is cut at 160 Unicode scalars and trailing white space trimmed, as core's | `PanelModel/Review/Review.swift` `quote` |
+| P03 | Open a diff that is loading | it says "Loading diff…" | `PanelUI/Diff/DiffView.swift`, `swift-panel.ftl` `diff-reading` |
+| P04 | History: focus the list, press ⌘C on a commit | the hash is copied and the notice chip says it | `Shell/SelectableListSplit.swift`, `Stores/HistoryStore+Walk.swift` `copiedAs` |
+| P05 | TEST: Shell → New Terminal in New Worktree from a terminal inside a linked worktree of a repository whose `.wormhole/` is untrusted | refused with the trust message, asked of the main working tree's project; with project folders off nothing is asked | `GitBridge/RealWorktreeBackend.swift` `repository`; ffi `git/worktrees.rs` `repository` |
+| P05 | TEST: with a sheet up, revoke trust of the project (Project tab), press Create | the sheet stays up and says the trust message under the field | `PanelUI/Stores/WorktreeStore.swift` `create`, `footnote` |
+| P05 | TEST: `Wormhole new-terminal --worktree b --command "npm test"` (trusted project with `worktree.setup`) and Create | one terminal in the new folder gets `setup && npm test` pasted and run; with no setup only the command; no other terminal gets text | `ffi hook_server/control/worktree.rs`, `HookBridge/HookAction.swift`, `Wormhole/PanelBackendsFactory.swift`, `Wormhole/Panel/PanelEffects.swift` (`.new` waits for the view) |
+| P05 | TEST: the same command line in an untrusted project; and a second request while the sheet is up | Refused (exit code for refused) with the trust words; Failed "a worktree dialog is already up in that window", and the sheet is not reset | `ffi hook_server/control/worktree.rs`, `HookServer.worktree_sheet`, `WorktreeStore.sheetChanged`, `Wormhole/Hooks/HookHost.swift` |
+| P05 | TEST: two profiles; make a worktree in a window of the second, start a terminal in it | the worktree and ports are remembered in the second profile's database; its terminal gets `WORMHOLE_PORT`; the first profile has none of it | ffi `git/worktrees.rs` `follow_profile`, `env_for(cwd, profile)`, `launch.rs`; `GitBridge.makeBackends(profile:)`; `Settings/ProfileChipBinding.swift` |
+| P05 | Close a group that is folded, whose terminal is in a worktree Wormhole made; close a terminal whose neighbour is in `…/fix-login2` | the question lists the worktree; `…/fix-login2` does not count as inside `…/fix-login` | `Wormhole/AppController+WorktreeClose.swift` |
+| P01 | Press ⌃⌘4 with no agent on screen; look at View ▸ Show Usage / Show Project without a folder | nothing happens; Show Usage is hidden, Show Project greyed | `WindowUI/Hub/WindowHub.swift` `send`, `Menu/MenuStateMaker.swift` `offeredTabs` |
+| P01 | Under Zen mode press ⌃⌘3; leave Zen | the tab changed, the panel did not open; the panel shows that tab after Zen | core `Action::SetPanelTab`, `WindowHub.send` |
+| P01 | Restore a window whose saved tab is Usage with no agent | the tab leaves at once, panel open or not | `WindowUI/Hub/WindowHub.swift` `followTabs`, `WindowHub+Focus.swift` `leaveMissingTab` |
+| P01 | Click the panel button to close the panel while a note is being edited | the terminal has the keys | `WindowUI/WindowBody.swift` |
+| P01 | Hover a tab, the stash button, the Notes + | the tooltip names its key ("Changes (⌃⌘1)", "New note (⌥⌘N)") | `PanelTabBar.swift`, `PanelModel/Backends/PanelHost.swift` `keyed`, `StashPromptButton.swift`, `NotesCard.swift` |
+| P01 | VoiceOver on the strip | tab reads "Changes, 3 changed files", "Notes, 2 open next steps, 1 note", value "2 of 6", in a tab bar | `WindowUI/Hub/WindowHub+TabSpeech.swift`, ffi `panel_spoken.rs`, `FilesBridge.installRules` |
+| P01 | Switch Changes to Notes, then back | Notes slides in from the right (after Changes in the strip), Changes from the left | `WindowUI/RightPanel.swift` `arrival` |
+| P06 | TEST: with a trusted project and notes sync on, tick a step within the 2 s sync, repeatedly (add a line in `notes.md` at the same time) | the tick is kept, the file's new line arrives, no step is lost or ticked back | `PanelModel/Notes/NotesRebase.swift`, `Wormhole/Panel/NotesCoordinator.swift` `sync` |
+| P06 | Start a new step (draft row open), select another terminal | the draft row is gone | `NotesStore.leaveDraft`, `NotesCoordinator.changed` |
+| P07 | Files tab: focus the list, put the cursor on the path button, press Return or Space | the path menu opens under the button; with a file viewer up, walking onto the button does not | `Files/FilesPathButton.swift` `nsMenu`, `Stores/FilesStore+Walk.swift`, `PanelWalk.swift` `pressesBand` |
+| P08 | Layout with a terminal named `api` whose program title shows another name; and a terminal you renamed `api` | "Open terminals" opens nothing new for either; a terminal whose title is `api` but has no custom name does not block it | `Wormhole/Panel/PanelEffects.swift` `existing`; core `TerminalSummary.custom_name` |
+| P09 | Usage tab with a limit that resets in under a minute | "resets 45s" counts down each second; "Updated" changes at each report's minute; nothing runs while the tab is hidden | `PanelUI/Stores/UsageStore.swift` `keepTime`, ffi `files_panel/usage.rs` `next_change` |
+| P07 | NOT WRITTEN: a terminal whose own folder is not UTF-8 | - | the root comes from the workspace as text (a `Vec<u8>` path through the bridge is a wire change) |
+| P08 | NOT WRITTEN: an action's key as the window's wherever the focus is | - | needs a window-level key handler that asks the core's trust; a text field takes keys first (the lane said so) |
+| P09 | NOT WRITTEN: reports per profile | - | the one `UsageService` is the hook socket's; per-profile services need one socket service per profile |
+| P03 | NOT WRITTEN: the comment form as a dialog titled "Comment on <place>" with Add Comment / Save | - | a popover on the line (a design choice, not a missing behaviour) |
