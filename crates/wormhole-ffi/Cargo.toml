@@ -21,6 +21,9 @@ wormhole-term = { path = "../wormhole-term" }
 wormhole-text = { path = "../wormhole-text" }
 anyhow = "1"
 tracing = "0.1"
+# The log files and the panic record (`src/logging.rs`), as the app has them.
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
 semver = "1"
 uniffi = "0.32"
 thiserror = "2"

@@ -40,6 +40,7 @@ pub mod keymap;
 mod launch;
 mod legacy;
 mod live_resize;
+mod logging;
 mod minimap;
 mod motion_scenes;
 mod notes_text;
