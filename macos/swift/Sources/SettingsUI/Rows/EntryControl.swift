@@ -28,7 +28,7 @@ struct EntryControl: View {
         case .stepper(let spec):
             NumberStepper(model: model, key: key, label: entry.label, spec: spec)
         case .slider(let spec):
-            SettingSlider(spec: spec, value: model.value(key).number ?? spec.min, label: entry.label) {
+            SettingSlider(spec: spec, value: model.value(key).number ?? spec.min, label: entry.label, offWhenOpaque: entry.id == "opacity") {
                 model.set(key, .number($0))
             }
         case .checkboxes(let items):

@@ -45,7 +45,7 @@ enum RecordMapping {
     }
 
     static func option(_ row: SettingsOptionRow) -> SettingOption {
-        SettingOption(value: .string(row.value), label: row.label)
+        SettingOption(value: .string(row.value), label: row.label, detail: row.detail)
     }
 }
 

@@ -3,8 +3,9 @@
 //! the profile and the data folder. Swift opens a folder (Finder is the platform's) and lists the
 //! apps (`open_in` needs the system's list of installed ones).
 
-use wormhole_core::terminal::shells;
+use wormhole_core::terminal::shells::{self, ShellKind};
 use wormhole_core::theme::icon_theme;
+use wormhole_text::keys::settings_terminal_login_shell;
 
 use super::handle::SettingsHandle;
 
@@ -16,6 +17,8 @@ const NO_ICONS: &str = "None";
 pub struct SettingsOptionRow {
     pub value: String,
     pub label: String,
+    /// What the choice runs, shown under its name in the menu (the Default shell's); none for the other selects.
+    pub detail: Option<String>,
 }
 
 /// A shell a new terminal can run (`terminal::shells::choices`) with what starting it takes: the palette's and the menu's
@@ -53,8 +56,14 @@ impl SettingsHandle {
         let choices = shells::choices(self.shared.lock().effective());
         choices
             .into_iter()
-            // The face is the shell's name ("zsh"), as the GPUI select's: what it runs is under the Shells row.
-            .map(|choice| SettingsOptionRow { label: choice.name, value: choice.key })
+            // The face is the shell's name ("zsh"); under it in the menu, what it runs ("Login shell: /bin/zsh"), as the GPUI select's.
+            .map(|choice| {
+                let detail = match choice.kind {
+                    ShellKind::Login => settings_terminal_login_shell(&choice.command_line),
+                    ShellKind::Profile | ShellKind::System => choice.command_line,
+                };
+                SettingsOptionRow { label: choice.name, value: choice.key, detail: Some(detail) }
+            })
             .collect()
     }
 
@@ -86,7 +95,10 @@ impl SettingsHandle {
         names.extend(icon_theme::discover(&self.paths.icon_themes_dir()).into_iter().map(|(name, _)| name));
         names.dedup();
         names.push(NO_ICONS.into());
-        names.into_iter().map(|name| SettingsOptionRow { value: name.clone(), label: name }).collect()
+        names
+            .into_iter()
+            .map(|name| SettingsOptionRow { value: name.clone(), label: name, detail: None })
+            .collect()
     }
 
     /// Where the Open buttons go.

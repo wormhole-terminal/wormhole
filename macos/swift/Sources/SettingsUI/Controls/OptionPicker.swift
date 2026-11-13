@@ -18,12 +18,22 @@ struct OptionPicker: View {
     var body: some View {
         let known = options.contains { $0.value == selected } || selected == .null
         let shown = known ? options : options + [SettingOption(value: selected, label: unknown?(selected) ?? selected.string ?? "")]
+        if !segmented, shown.contains(where: { $0.detail != nil }) {
+            SubtitledPicker(options: shown, selected: selected, label: label, width: width, onSelect: onSelect).marked("select")
+        } else {
+            plain(shown)
+        }
+    }
+
+    private func plain(_ shown: [SettingOption]) -> some View {
         let picker = Picker(label, selection: Binding(get: { selected }, set: onSelect)) {
             ForEach(shown) { option in
                 if segmented, let icon = option.icon { Label(option.label, systemImage: icon).tag(option.value) } else { Text(option.label).tag(option.value) }
             }
         }
         .labelsHidden()
-        if segmented { picker.pickerStyle(.segmented).fixedSize().marked("segmented") } else { picker.pickerStyle(.menu).frame(width: width).marked("select") }
+        return Group {
+            if segmented { picker.pickerStyle(.segmented).fixedSize().marked("segmented") } else { picker.pickerStyle(.menu).frame(width: width).marked("select") }
+        }
     }
 }

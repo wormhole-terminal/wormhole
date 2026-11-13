@@ -5,10 +5,12 @@ public struct SettingOption: Sendable, Equatable, Identifiable, Decodable {
     public let label: String
     /// An SF Symbol, for the few segmented controls that carry one (Dark / Light / Match system).
     public let icon: String?
+    /// What the choice does, under its name in the menu (the Default shell's command line).
+    public let detail: String?
     public var id: JSONValue { value }
 
-    public init(value: JSONValue, label: String, icon: String? = nil) {
-        (self.value, self.label, self.icon) = (value, label, icon)
+    public init(value: JSONValue, label: String, icon: String? = nil, detail: String? = nil) {
+        (self.value, self.label, self.icon, self.detail) = (value, label, icon, detail)
     }
 }
 
