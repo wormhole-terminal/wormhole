@@ -142,6 +142,9 @@ extension AppController {
     func show(terminal id: TerminalID) {
         guard let holder = session(holding: id) else { return }
         holder.hub.send(.select(id))
-        if policy.touchesSystem { holder.window?.makeKeyAndOrderFront(nil) }
+        if policy.touchesSystem {
+            NSApp.activate()
+            holder.window?.makeKeyAndOrderFront(nil)
+        }
     }
 }

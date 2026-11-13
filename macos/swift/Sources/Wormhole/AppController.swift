@@ -83,6 +83,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory, project: { [unowned self] in StudioProjects.source(app: self) })
     private(set) lazy var folderPicking = FolderPicking(app: self)
     private(set) lazy var router = ActionRouter(app: self)
+    /// Where Go to Waiting (true) and Go to Finished (false) went last, so the next press goes on.
+    var lastJumped: [Bool: Int64] = [:]
     /// The table's keys no menu item holds (`ExtraKeys`).
     private(set) lazy var extraKeys = ExtraKeys(app: self)
     private(set) lazy var recents = RecentProjects(dataDirectory: dataDirectory)

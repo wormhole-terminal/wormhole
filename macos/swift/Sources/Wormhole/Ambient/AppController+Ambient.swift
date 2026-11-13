@@ -12,11 +12,13 @@ extension AppController {
     func run(ambient command: AmbientCommand) {
         switch command {
         case .showApp: if policy.touchesSystem { NSApp.activate() }
-        case .newTerminal: hub.send(.newTerminal)
+        case .newTerminal:
+            bringForward()
+            hub.send(.newTerminal)
         case .newWindow: openNewWindow()
         case .openTab(let tab): show(terminal: Int(tab))
         case .reply(let tab, let text): session(holding: Int(tab))?.hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
-        case .jumpToWaiting: hub.goTo(.needsInput)
+        case .jumpToWaiting: jump(toWaiting: true)
         case .openSettings: showSettings()
         case .checkForUpdates: aux.showUpdates()
         case .quit: NSApp.terminate(nil)
@@ -26,9 +28,26 @@ extension AppController {
         }
     }
 
+    /// Every command but the hotkey's and Quit brings Wormhole forward first (`status_item/mod.rs` `run_command`).
+    func bringForward() {
+        if policy.touchesSystem { NSApp.activate() }
+    }
+
+    /// ⌥⌘J and ⇧⌥⌘J: across every window, the terminal that has waited longest (or finished last); pressed again, the next
+    /// one (core's order, `notify::sections` and `next_waiting`). Its window comes forward. Nothing waiting: nothing happens.
+    func jump(toWaiting waiting: Bool) {
+        let terminals = ambientTerminals
+        let sections = AmbientSections(terminals)
+        let tabs = (waiting ? sections.needsYou : sections.finished).map { terminals[$0].tab }
+        guard let tab = AmbientSections.nextWaiting(tabs, after: lastJumped[waiting]) else { return }
+        lastJumped[waiting] = tab
+        show(terminal: Int(tab))
+    }
+
     /// ⌘O, the palette's Open folder… and the status item's: a terminal in a folder chosen in the system's panel, which is
     /// shown without blocking. A test instance shows no panel: it waits for the control folder's `open-folder <path>`.
     func openFolder() {
+        bringForward()
         let start: (String) -> Void = { [weak self] folder in self?.hub.send(.newTerminalIn(folder)) }
         guard policy.touchesSystem else { return pendingFolder = start }
         let panel = NSOpenPanel()
@@ -43,6 +62,7 @@ extension AppController {
     }
 
     func openProject(_ root: String) {
+        bringForward()
         if let id = terminal(in: root, shownProfileOnly: false) { show(terminal: id) } else { hub.send(.newTerminalIn(root)) }
     }
 
