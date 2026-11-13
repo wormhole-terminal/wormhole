@@ -44,7 +44,7 @@ enum AccessibilityDump {
     /// walked by its subviews so nothing under it is skipped.
     private static func children(of node: NSAccessibilityProtocol) -> [Any] {
         if let children = node.accessibilityChildren(), !children.isEmpty { return children }
-        if let ordered = node.accessibilityChildrenInNavigationOrder?(), !ordered.isEmpty { return ordered }
+        if let ordered = node.accessibilityChildrenInNavigationOrder(), !ordered.isEmpty { return ordered }
         return (node as? NSView)?.subviews ?? []
     }
 

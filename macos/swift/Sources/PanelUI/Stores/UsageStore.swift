@@ -41,7 +41,7 @@ public final class UsageStore {
             now = Int(date.timeIntervalSince1970)
             let wait = backend.nextChange(from: date) ?? .seconds(60)
             // one-shot: the next moment a word reads differently, which core says; a new report cuts it short
-            let sleeping = Task { try? await Task.sleep(for: max(wait, .milliseconds(50))) }
+            let sleeping = Task<Void, Never> { try? await Task.sleep(for: max(wait, .milliseconds(50))) }
             nap = sleeping
             await withTaskCancellationHandler { await sleeping.value } onCancel: { sleeping.cancel() }
         }

@@ -62,8 +62,6 @@ extension StudioDocument {
 
     public func revertToSaved() { _ = try? take(StudioText.undoRevert) { $0 = saved } }
 
-    public func groupName(of token: String) -> String? { group(of: token) }
-
     func group(of token: String) -> String? { TokenGroup.group(of: token, in: groups) }
 
     /// Applies `change` to a copy of the file and takes it when Rust resolves it; throws Rust's reason otherwise.

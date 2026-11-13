@@ -6,7 +6,7 @@ import WormholeBindings
 public struct CoreStatusRules: StatusRuling {
     public init() {}
 
-    public func counts(of terminals: [TerminalSummary]) -> StatusCounts {
+    public func counts(of terminals: [WorkspaceModel.TerminalSummary]) -> StatusCounts {
         let entries = terminals.map { StatusEntryRecord(kind: Self.kind($0.activity), sinceMs: $0.since) }
         let counted = statusCounts(entries: entries)
         return StatusCounts(
@@ -14,7 +14,7 @@ public struct CoreStatusRules: StatusRuling {
             rest: counted.rest.map { StatusCounts.Item(activity: Self.activity($0.kind), count: Int($0.count), terminal: Int($0.terminal)) })
     }
 
-    public func detail(windowWidth: Double) -> StatusBarDetail {
+    public func detail(windowWidth: Double) -> WorkspaceModel.StatusBarDetail {
         switch statusDetail(windowWidth: Float(windowWidth)) {
         case .lean: .lean
         case .numbers: .numbers
