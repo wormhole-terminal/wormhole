@@ -63,6 +63,8 @@ public final class MemoryWindows: WindowsBackend {
 
     public func keepChanges(_ keep: Bool) {}
 
+    public func windowAnimation(motion: Bool, reduceMotion: Bool, background: Bool, grows: Bool) -> WindowAnimation { .standard }
+
     public func fit(_ frame: WindowFrame, on displays: [DisplayArea]) -> WindowFrame { frame }
 
     /// The core's `WINDOW_MIN_*`, for the sample that runs without it.

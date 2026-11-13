@@ -97,6 +97,34 @@ pub fn window_min_size() -> WindowMinSize {
     WindowMinSize { width: WINDOW_MIN_WIDTH, height: WINDOW_MIN_HEIGHT }
 }
 
+/// How a terminal window opens and closes (core `view::motion::window_animation::Behaviour`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
+pub enum WindowAnimationKind {
+    /// AppKit's own, as for a window nobody asked anything of.
+    Standard,
+    /// The document window's scale and fade.
+    Document,
+    /// None: a cut.
+    Cut,
+}
+
+/// The animation a terminal window is given: the system's document one with the Motion feature on, none under Reduce
+/// Motion, the default for a test instance (background) and for a torn-off window, which grows from its chip.
+#[uniffi::export]
+pub fn window_animation(
+    motion: bool,
+    reduce_motion: bool,
+    background: bool,
+    grows: bool,
+) -> WindowAnimationKind {
+    use wormhole_core::view::motion::window_animation::{Behaviour, Facts, behaviour};
+    match behaviour(Facts { motion_feature: motion, reduce_motion, background, grows, platform: true }) {
+        Behaviour::Default => WindowAnimationKind::Standard,
+        Behaviour::System => WindowAnimationKind::Document,
+        Behaviour::Cut => WindowAnimationKind::Cut,
+    }
+}
+
 /// Where a window opened from `from` goes on `display`: a step down and to the right, or the corner.
 #[uniffi::export]
 pub fn cascade_frame(from: FrameRecord, display: DisplayRecord) -> FrameRecord {

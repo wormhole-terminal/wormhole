@@ -61,6 +61,7 @@ extension AppController {
             title: title, contentSize: size, minSize: windowsHost.backend.minSize, content: WorkspaceRootView(hub: hub, dress: session.dress))
         wire(controller, of: session)
         session.controller = controller
+        followWindow(session)
         if let frame, let window = controller.window { WindowFrames.place(frame, on: window) }
         // A torn-off terminal's window grows from its chip: it starts as the chip, before it is shown.
         if let start = growing, let window = controller.window {

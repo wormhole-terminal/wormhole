@@ -5,7 +5,9 @@ import SidebarUI
 import DesignSystem
 
 enum SidebarSettingsMaker {
-    static func appearance(_ values: [String: JSONValue], current: SidebarAppearance) -> SidebarAppearance {
+    /// `motion`: the Motion feature is on in the profile. Without it every motion is Classic whatever `config.json` holds
+    /// (core `motion_in_force`); with it a key that is absent is the core's default (Classic status, From side, Tuck).
+    static func appearance(_ values: [String: JSONValue], current: SidebarAppearance, motion: Bool) -> SidebarAppearance {
         var next = current
         next.density = values["density"]?.string.flatMap(SidebarDensity.init(rawValue:)) ?? current.density
         next.cards = values["show_groups_as_cards"]?.bool ?? current.cards
@@ -17,9 +19,9 @@ enum SidebarSettingsMaker {
         next.showsStatus = values["sidebar_status_dot"]?.bool ?? current.showsStatus
         next.showsCommandHints = values["sidebar_cmd_hints"]?.bool ?? current.showsCommandHints
         next.restoresText = values["restore_terminal_text"]?.bool ?? current.restoresText
-        next.statusMotion = values["motion.status"]?.string.flatMap(statusMotion) ?? current.statusMotion
-        next.insertMotion = values["motion.insert"]?.string ?? current.insertMotion
-        next.foldMotion = values["motion.fold"]?.string ?? current.foldMotion
+        next.statusMotion = motion ? values["motion.status"]?.string.flatMap(statusMotion) ?? .classic : .classic
+        next.insertMotion = motion ? values["motion.insert"]?.string ?? "from-side" : "classic"
+        next.foldMotion = motion ? values["motion.fold"]?.string ?? "tuck" : "classic"
         return next
     }
 

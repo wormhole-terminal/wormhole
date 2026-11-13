@@ -44,9 +44,11 @@ enum LookSettings {
         if changed("motion.column", "feature_flags") {
             look.columnMotion = motion ? values["motion.column"]?.string ?? "classic" : "classic"
         }
+        // Whether the Motion feature is on: what the window's open and close animation asks (`window_animation`).
+        if look.motionFeature != motion { look.motionFeature = motion }
         if changed("terminals_in") { look.tabsOnTop = values["terminals_in"]?.string == "tabs" }
-        if changed("density", "show_groups_as_cards", "fade_group_colors", "show_group_folders", "sidebar_notes", "sidebar_changes", "sidebar_changes_scope", "sidebar_status_dot", "sidebar_cmd_hints", "restore_terminal_text", "motion.status", "motion.insert", "motion.fold") {
-            look.sidebar = SidebarSettingsMaker.appearance(values, current: look.sidebar)
+        if changed("density", "show_groups_as_cards", "fade_group_colors", "show_group_folders", "sidebar_notes", "sidebar_changes", "sidebar_changes_scope", "sidebar_status_dot", "sidebar_cmd_hints", "restore_terminal_text", "motion.status", "motion.insert", "motion.fold", "feature_flags") {
+            look.sidebar = SidebarSettingsMaker.appearance(values, current: look.sidebar, motion: motion)
         }
         if look.sidebar.offersAgentHide != automation { look.sidebar.offersAgentHide = automation }
     }

@@ -52,6 +52,9 @@ public final class WindowLook {
     }
     /// How a side column slides in and out (`motion.column`: `classic`, `soft-spring`, `content-after`).
     public var columnMotion = "classic"
+    /// The Motion feature is on in this window's profile: the rows' and the status bar's motions, and the window's own
+    /// open and close, play only then (core `motion_in_force`, `window_animation`).
+    public var motionFeature = false
     /// What code is drawn in: the diff, the file viewer (`code_font_family`, else the terminal's; `code_font_size`).
     public var codeFont = CodeFont()
     /// The lines between the columns (the Column dividers setting).

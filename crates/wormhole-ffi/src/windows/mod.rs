@@ -11,7 +11,8 @@ mod tear_off;
 mod workspace_windows;
 
 pub use frame::{
-    DisplayRecord, FrameKind, FrameRecord, WindowMinSize, cascade_frame, fit_frame, window_min_size,
+    DisplayRecord, FrameKind, FrameRecord, WindowAnimationKind, WindowMinSize, cascade_frame, fit_frame,
+    window_animation, window_min_size,
 };
 pub use registry::{PlannedWindow, SavedWindow, Windows};
 pub use tear_off::{
