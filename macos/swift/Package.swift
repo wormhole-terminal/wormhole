@@ -168,6 +168,10 @@ if ffiLinked {
         // the executable's own command line (`hook`, `statusline`) for `main` to answer first.
         .target(name: "HookBridge", dependencies: ["WormholeBindings"]),
         .testTarget(name: "HookBridgeTests", dependencies: ["HookBridge", "WormholeBindings"]),
+        // The built app, started as a test instance on scratch folders and driven through its control folder: a person's
+        // scenarios asserted on what the app reports (`macos/parity/DRIVING.md`, "End-to-end tests"). It imports nothing of the app:
+        // it runs the `Wormhole` product that `swift build` and `swift test` make, and skips itself when that is not there.
+        .testTarget(name: "EndToEndTests"),
     ]
     appDependencies += [
         "UniFFISource", "WorkspaceBridge", "WindowsBridge", "GitBridge", "FilesBridge", "AuxBridge", "SettingsBridge", "PlatformBridge", "WordsBridge", "HookBridge", "StudioBridge",

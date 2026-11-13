@@ -1,0 +1,312 @@
+import Foundation
+import Synchronization
+import Testing
+
+/// Every end-to-end scenario is a test of this one suite, which runs them one at a time: an instance is a real app with real
+/// terminals. It skips itself, with the reason, when the app is not built (`swift build` with the bridge linked).
+@Suite(.serialized, .enabled(if: Instance.executable() != nil, "the Wormhole app is not built: run `swift build` in macos/swift with the bridge linked"))
+struct EndToEnd {}
+
+/// One run of the built app as a test instance (`--background`, scratch folders only), driven through its control folder
+/// (`macos/parity/DRIVING.md`). A batch of commands is done when the app answers the `sync` line written after each of them:
+/// the wait is on the output file's change events and a deadline, never a pause. `with` always ends what it started.
+@MainActor
+final class Instance {
+    enum Shell {
+        /// Typed text is echoed; nothing is ever executed.
+        case cat
+        /// `/bin/zsh -f`: a real shell without startup files, in the scratch `HOME`.
+        case zsh
+        /// A copy of `/bin/cat` named like an agent, so the terminal is taken for that agent.
+        case agent(String)
+    }
+
+    let scratch: Scratch
+    private let shell: Shell
+    private let label: String
+    private let program: URL
+    private var process: Process?
+    private let ended = Ending()
+    private var batches = 0
+    private var attached = false
+    private(set) var failed = false
+
+    private init(scratch: Scratch, shell: Shell, label: String, program: URL) {
+        (self.scratch, self.shell, self.label, self.program) = (scratch, shell, label, program)
+    }
+
+    /// The built app: `$WORMHOLE_E2E_APP`, else the package's `Wormhole` product beside the test bundle or in `.build`.
+    nonisolated static func executable() -> URL? {
+        let files = FileManager.default
+        if let path = ProcessInfo.processInfo.environment["WORMHOLE_E2E_APP"], files.isExecutableFile(atPath: path) { return URL(fileURLWithPath: path) }
+        var candidates = Bundle.allBundles.filter { $0.bundleURL.pathExtension == "xctest" }
+            .map { $0.bundleURL.deletingLastPathComponent().appendingPathComponent("Wormhole") }
+        // This file is macos/swift/Tests/EndToEndTests/Instance.swift.
+        let package = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        candidates += [".build/debug/Wormhole", ".build/release/Wormhole"].map { package.appendingPathComponent($0) }
+        return candidates.first { files.isExecutableFile(atPath: $0.path) }
+    }
+
+    /// Starts an instance, runs `body`, and ends the instance and removes its scratch folder, whatever `body` does.
+    static func with(
+        shell: Shell = .cat, label: String = #function, _ body: @MainActor (Instance) async throws -> Void
+    ) async throws {
+        guard let program = executable() else { throw ScratchError(description: "the Wormhole app is not built") }
+        let app = Instance(scratch: try Scratch(), shell: shell, label: label, program: program)
+        do {
+            try await app.start()
+            try await body(app)
+        } catch {
+            app.fail("\(error)")
+            await app.finish()
+            throw error
+        }
+        await app.finish()
+    }
+
+    // MARK: - Starting and ending
+
+    private func environment() throws -> [String: String] {
+        var environment = scratch.cleanEnvironment
+        let program: URL
+        switch shell {
+        case .cat: program = URL(fileURLWithPath: "/bin/cat")
+        case .agent(let name): program = try scratch.agentShell(named: name)
+        case .zsh:
+            program = scratch.bin.appendingPathComponent("zsh-f")
+            try Data("#!/bin/zsh\nexec /bin/zsh -f \"$@\"\n".utf8).write(to: program)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: program.path)
+        }
+        environment["WORMHOLE_DATA_DIR"] = scratch.data.path
+        environment["WORMHOLE_DEVCTL"] = scratch.control.path
+        environment["WORMHOLE_SHELL"] = program.path
+        environment["WORMHOLE_AUTH"] = "cancel"
+        environment["WORMHOLE_NOTIFY"] = "log"
+        environment["WORMHOLE_BACKGROUND"] = "1"
+        environment["WORMHOLE_AGENT_HOME"] = scratch.agentHome.path
+        environment["WORMHOLE_AGENT_PATH"] = ""
+        return environment
+    }
+
+    /// Launches the app on this scratch folder and waits until its window answers.
+    func start() async throws {
+        ended.reset()
+        if !FileManager.default.fileExists(atPath: outFile(1).path) { FileManager.default.createFile(atPath: outFile(1).path, contents: nil) }
+        let ended = ended
+        process = try Spawn.launch(
+            program, arguments: ["--background"], environment: try environment(), log: scratch.root.appendingPathComponent("app.log"),
+            onExit: { ended.finish($0) })
+        let said = await until("state", timeout: 40) { $0.contains("terminals=") }
+        expect(said.contains("terminals="), "the app did not come up with a window")
+    }
+
+    /// Quits as ⌘Q does without the question (the terminals' state is saved first) and starts the app again on the same folders.
+    func restart() async throws {
+        await quit(command: "quit")
+        try await start()
+    }
+
+    private func quit(command: String) async {
+        guard let process, !ended.isDone else { return }
+        try? Data((command + "\n").utf8).write(to: scratch.control.appendingPathComponent("cmd"))
+        if await waitForExit(timeout: 20) { return }
+        fail("the app did not end after `\(command)`: ending it by its pid")
+        kill(process.processIdentifier, SIGTERM)
+        if await waitForExit(timeout: 10) { return }
+        kill(process.processIdentifier, SIGKILL)
+        _ = await waitForExit(timeout: 10)
+    }
+
+    /// Ends the app (and any session host: End All Terminals), keeps a failure's files, removes the scratch folder.
+    func finish() async {
+        if !ended.isDone {
+            let hosts = (await send(["hosts-list"])).first ?? ""
+            expect(hosts.contains("no hosts"), "a session host was left running:\n\(hosts)")
+            await quit(command: "quit-end-all")
+        }
+        if failed { scratch.keepArtifacts(as: label.replacingOccurrences(of: "()", with: "")) }
+        scratch.remove()
+    }
+
+    // MARK: - Driving
+
+    func outFile(_ window: Int) -> URL { scratch.control.appendingPathComponent(window == 1 ? "out.txt" : "out\(window).txt") }
+
+    /// Runs the commands in order in the window's control file (`cmd`, `cmd2`…); the answer to each, in the same order.
+    @discardableResult
+    func send(_ commands: [String], window: Int = 1, timeout: TimeInterval = 30) async -> [String] {
+        batches += 1
+        let token = "e2e\(batches)"
+        let files = FileManager.default
+        let out = outFile(window)
+        if !files.fileExists(atPath: out.path) { files.createFile(atPath: out.path, contents: nil) }
+        let before = (try? Data(contentsOf: out).count) ?? 0
+        let marks = commands.indices.map { "sync \(token).\($0)" }
+        let batch = zip(commands, marks).flatMap { [$0, $1] }.joined(separator: "\n") + "\n"
+        let command = scratch.control.appendingPathComponent(window == 1 ? "cmd" : "cmd\(window)")
+        let staged = scratch.control.appendingPathComponent("cmd.tmp")
+        do {
+            try Data(batch.utf8).write(to: staged)
+            rename(staged.path, command.path)
+        } catch {
+            fail("cannot write the control file: \(error)")
+            return commands.map { _ in "" }
+        }
+        let last = marks.last ?? ""
+        let done = await watch(out, timeout: timeout) { Self.lines(of: out, after: before).contains(last) }
+        let lines = Self.lines(of: out, after: before)
+        if !done { fail("no answer to `\(commands.joined(separator: "; "))` in \(Int(timeout)) s (the app \(ended.isDone ? "has ended" : "is still running"))") }
+        var answers: [String] = [], current: [String] = []
+        for line in lines {
+            if marks.contains(line) {
+                answers.append(current.joined(separator: "\n"))
+                current = []
+            } else {
+                current.append(line)
+            }
+        }
+        answers.append(current.joined(separator: "\n"))
+        return Array(answers.prefix(commands.count)) + Array(repeating: "", count: max(0, commands.count - answers.count))
+    }
+
+    func reply(_ command: String, window: Int = 1) async -> String { (await send([command], window: window)).first ?? "" }
+
+    /// Asks again, a pause of the app's own (`delay`) between the asks, until the answer satisfies `done` or the deadline passes.
+    /// For facts nothing announces (an agent seen by its program's name, a repository read after a change).
+    @discardableResult
+    func until(_ command: String, window: Int = 1, timeout: TimeInterval = 20, _ done: (String) -> Bool) async -> String {
+        let start = Date()
+        var answer = ""
+        repeat {
+            answer = (await send([command, "delay 150"], window: window)).first ?? ""
+            if done(answer) { return answer }
+        } while Date().timeIntervalSince(start) < timeout && !ended.isDone
+        fail("timed out waiting on `\(command)`; the last answer was:\n\(answer)")
+        return answer
+    }
+
+    func rows(window: Int = 1) async -> Listing { Listing(await reply("rows", window: window)) }
+
+    // MARK: - Waiting
+
+    nonisolated private static func lines(of file: URL, after offset: Int) -> [String] {
+        guard let data = try? Data(contentsOf: file), data.count >= offset else { return [] }
+        return String(decoding: data.dropFirst(offset), as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+    }
+
+    /// Waits for `done` to hold, checking it when `url` changes (a file's write or a folder's entries) and once at the start;
+    /// false when the deadline passes first or the app has ended.
+    func watch(_ url: URL, timeout: TimeInterval, _ done: @escaping @Sendable () -> Bool) async -> Bool {
+        let descriptor = open(url.path, O_EVTONLY)
+        guard descriptor >= 0 else { return done() }
+        let (stream, events) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: descriptor, eventMask: [.write, .extend, .delete, .rename], queue: .global())
+        source.setEventHandler { events.yield() }
+        source.setCancelHandler { close(descriptor) }
+        source.resume()
+        let deadline = DispatchWorkItem { events.finish() }
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: deadline)
+        ended.onEnd { events.finish() }
+        defer {
+            source.cancel()
+            deadline.cancel()
+            ended.onEnd(nil)
+        }
+        events.yield()
+        for await _ in stream where done() { return true }
+        return done()
+    }
+
+    /// Waits until `url` is there (or, with `present` false, gone), watching its folder.
+    func waitFor(_ url: URL, present: Bool = true, timeout: TimeInterval = 20) async -> Bool {
+        await watch(url.deletingLastPathComponent(), timeout: timeout) { FileManager.default.fileExists(atPath: url.path) == present }
+    }
+
+    private func waitForExit(timeout: TimeInterval) async -> Bool {
+        let (stream, events) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let deadline = DispatchWorkItem { events.finish() }
+        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: deadline)
+        ended.onEnd { events.finish() }
+        defer {
+            deadline.cancel()
+            ended.onEnd(nil)
+        }
+        for await _ in stream {}
+        return ended.isDone
+    }
+
+    // MARK: - Checking
+
+    /// A failed check: recorded, with the control files and the app's output attached the first time.
+    func expect(_ ok: Bool, _ message: @autoclosure () -> String, sourceLocation: SourceLocation = #_sourceLocation) {
+        if !ok { fail(message(), sourceLocation: sourceLocation) }
+    }
+
+    func expect(_ text: String, contains needle: String, sourceLocation: SourceLocation = #_sourceLocation) {
+        expect(text.contains(needle), "expected \"\(needle)\" in:\n\(text)", sourceLocation: sourceLocation)
+    }
+
+    func fail(_ message: String, sourceLocation: SourceLocation = #_sourceLocation) {
+        failed = true
+        scratch.markFailed()
+        Issue.record(Comment(rawValue: message), sourceLocation: sourceLocation)
+        guard !attached else { return }
+        attached = true
+        let names = ((try? FileManager.default.contentsOfDirectory(atPath: scratch.control.path)) ?? []).filter { $0.hasPrefix("out") }.sorted()
+        for name in names {
+            if let text = try? String(contentsOf: scratch.control.appendingPathComponent(name), encoding: .utf8) {
+                Attachment.record(text, named: name, sourceLocation: sourceLocation)
+            }
+        }
+        if let log = try? String(contentsOf: scratch.root.appendingPathComponent("app.log"), encoding: .utf8) {
+            Attachment.record(log, named: "app.log", sourceLocation: sourceLocation)
+        }
+    }
+
+    // MARK: - The app's own hook client
+
+    /// `Wormhole hook --agent <agent> <event>` as an agent's hook script runs it, from terminal `terminal`: the exit status.
+    @discardableResult
+    func hook(agent: String, event: String, terminal: Int) throws -> Int32 {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: scratch.temp.path)) ?? []
+        guard let socket = names.first(where: { $0.hasPrefix("wormhole-") && $0.hasSuffix(".sock") }) else {
+            throw ScratchError(description: "the app serves no hook socket in \(scratch.temp.path)")
+        }
+        var environment = scratch.cleanEnvironment
+        environment["WORMHOLE_SOCKET"] = scratch.temp.appendingPathComponent(socket).path
+        environment["WORMHOLE_TAB_ID"] = String(terminal)
+        environment["WORMHOLE_DATA_DIR"] = scratch.data.path
+        return try Spawn.run(program.path, ["hook", "--agent", agent, event, "{}"], environment: environment).status
+    }
+}
+
+/// Whether the app has ended, told from the process's own queue.
+private final class Ending: Sendable {
+    private struct State {
+        var done = false
+        var wake: (@Sendable () -> Void)?
+    }
+    private let state = Mutex(State())
+
+    var isDone: Bool { state.withLock { $0.done } }
+
+    func reset() { state.withLock { $0 = State() } }
+
+    func finish(_ status: Int32) {
+        let wake = state.withLock { state -> (@Sendable () -> Void)? in
+            state.done = true
+            return state.wake
+        }
+        wake?()
+    }
+
+    /// What to do when the app ends (at once when it has already); nil forgets it.
+    func onEnd(_ wake: (@Sendable () -> Void)?) {
+        let now = state.withLock { state -> Bool in
+            state.wake = wake
+            return state.done && wake != nil
+        }
+        if now { wake?() }
+    }
+}
