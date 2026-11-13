@@ -25,7 +25,8 @@ enum GalleryUses {
         ]),
         TokenUse(id: "status.tile", label: "status tile", area: .sidebar, tokens: [
             "agent.attention", "agent.bell", "agent.done", "agent.working", "metrics.border_width", "primary",
-            "status.danger", "tile.background", "tile.edge", "tile.mark", "tile.mark.brand", "tile.sheen",
+            "status.danger", "surface.panel", "tile.background", "tile.edge", "tile.mark", "tile.mark.brand",
+            "tile.sheen",
         ]),
         TokenUse(id: "status.glyph", label: "status glyph", area: .sidebar, tokens: [
             "agent.attention", "agent.done", "agent.working", "status.danger", "text.faint",

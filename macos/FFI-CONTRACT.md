@@ -1466,3 +1466,10 @@ All additive; the core decides, Swift asks.
 - Motion preview (`motion_scenes.rs`): `insert_room_at(variant, entering, elapsed_ms)`, `fold_room_at(variant, entering, rows, elapsed_ms)`,
   `fold_summary_opacity(variant, rows, elapsed_ms)`, `column_motion_duration(variant, opening)` (ms) and `column_motion_pose(variant, opening,
   elapsed_ms) -> ColumnPoseRecord {shown, content}`: core's `view::motion::pose` for the Settings scenes, by the settings' names.
+
+
+## Wave 4, sidebar: a tab's spoken label (`workspace_tabs.rs`, additive)
+
+- `Workspace.tab_labels(ids) -> [String]`: what VoiceOver hears for each of `ids`, the tabs of one set in the bar's order, in core's
+  words (`view::sidebar::spoken::tab_label`: name, state, "selected", "n of m"). Always as long as `ids`; a terminal the window no
+  longer has gets an empty label. Another profile's settings need no new call: `SettingsHandle.open(profile:)` is opened per profile.
