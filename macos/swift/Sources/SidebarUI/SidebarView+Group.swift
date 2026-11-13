@@ -23,9 +23,12 @@ extension SidebarView {
     }
 
     func newInGroup(_ group: GroupID) {
-        if let dropPlanner {
-            GroupFolderQuestion.settle(group: group, name: state.groups.first { $0.id == group }?.name ?? "", planner: dropPlanner, send: send)
+        let name = state.groups.first { $0.id == group }?.name ?? ""
+        let send = send, planner = dropPlanner
+        // The question first (a test instance holds it for its control folder), the terminal after the answer, whatever it was.
+        Task { @MainActor in
+            if let planner { await GroupFolderQuestion.settle(group: group, name: name, planner: planner, send: send) }
+            send(.newTerminalInGroup(group))
         }
-        send(.newTerminalInGroup(group))
     }
 }

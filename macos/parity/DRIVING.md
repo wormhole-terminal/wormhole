@@ -123,6 +123,10 @@ Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written wi
 | `compare [branch]` / `picker [history\|compare] [query]` | `compare main` | the Changes tab compared with a branch (none or `HEAD` stops); the revisions the picker offers for the query, one a line |
 | `commit-details` / `commit-more` | `commit-details` | the open commit's block as text (`none` when none is open); Show more / Show less |
 | `project-init` | | the Project tab's Create project folder button for the terminal's folder (`creating <dir>/.wormhole`) |
+| `group-ask [use\|use only\|later]` | `group-ask use only` | the question a terminal opening in a group without a folder puts up (from the sidebar's +, the tab bar's +, an empty set or Ctrl-Opt-N; held for the control folder in a test instance): without an argument the folder, the group and how many terminals would leave; `use` is Use Folder, `use only` also ticks "Only keep terminals in this folder", `later` is Not Now. There is no Cancel; the terminal opens after the answer |
+| `rename-edit <n>` | `rename-edit 2` | row n's name becomes a field, as Rename… in its menu makes it |
+| `folder-color [path] <name\|#rrggbb\|none>` | `folder-color ~/Projects/x teal` | colours the folder (the terminal's without a path) as the band's menu does; says `<colour> <folder>` |
+| `folder-picker open\|close\|type <text>\|tab\|right [mid]\|left [start\|mid]\|accept-ghost\|up\|down\|pageup\|pagedown\|enter\|pick\|forget\|click <line>\|crumb <n>\|scroll\|state` | `folder-picker type src/` | the folder picker (⌘J) over the terminal: open it (the Folder picker flag must be on), type into its field, press its keys, pick; `state` lists text, ghost, `busy`, crumbs, facts, lines (`> ` marks the selection) and the panel. The queries run off the main thread: ask `state` again while it says `busy true`. `scroll` is a no-op here |
 @@ROWS@@
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;

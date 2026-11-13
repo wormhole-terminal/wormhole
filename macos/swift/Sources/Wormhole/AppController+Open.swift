@@ -32,6 +32,7 @@ extension AppController {
             let devctl = DevCtl(directory: directory) { [weak self] line, window in await self?.run(line: line, window: window) }
             try devctl.start()
             self.devctl = devctl
+            installGroupAsker()
         }
         if options.onboarding || aux.isFirstRun { aux.showFirstRun() }
         openWhatSystemAsked()

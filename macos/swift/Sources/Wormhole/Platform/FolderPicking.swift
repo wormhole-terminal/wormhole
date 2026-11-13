@@ -37,6 +37,11 @@ final class FolderPicking {
         #endif
     }
 
+    /// The open picker's driver and panel, for the control folder's `folder-picker` (nil while it is closed).
+    var driver: FolderPickerDriver? { controller.driver }
+    var panelFrame: CGRect? { controller.panel?.frame }
+    func close() { controller.close() }
+
     /// The key's and the menu's way in: only over the terminal that has the keyboard (a paste must not land in one the
     /// person is not in) and only with the Folder picker feature flag on.
     func insertPath() {

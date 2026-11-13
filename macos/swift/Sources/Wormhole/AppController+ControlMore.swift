@@ -7,6 +7,7 @@ extension AppController {
     /// False when `command` is not one of the families listed here.
     func runExtra(command: String, argument: String) async -> Bool {
         if await runNotes(command: command, argument: argument) { return true }
+        if await runSidebar(command: command, argument: argument) { return true }
         return false
     }
 }

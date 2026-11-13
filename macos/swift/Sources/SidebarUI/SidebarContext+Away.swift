@@ -23,8 +23,11 @@ extension SidebarContext {
             },
             newInGroup: { group in
                 // First the question about the group's folder, when the core has one to offer (as the head's + asks).
-                GroupFolderQuestion.settle(group: group, name: state.groups.first { $0.id == group }?.name ?? "", planner: planner, send: send)
-                send(.newTerminalInGroup(group))
+                let name = state.groups.first { $0.id == group }?.name ?? ""
+                Task { @MainActor in
+                    await GroupFolderQuestion.settle(group: group, name: name, planner: planner, send: send)
+                    send(.newTerminalInGroup(group))
+                }
             },
             hooks: hooks, flash: nil,
             admits: { planner.groupAdmits($0, terminal: $1) },
