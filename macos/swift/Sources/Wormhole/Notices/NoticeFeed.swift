@@ -23,6 +23,7 @@
         /// What came of the last "Send test" (the Notifications page shows it) and the task still waiting on macOS.
         var test = NotifyStatus.Test.idle
         var testTask: Task<Void, Never>?
+        private var focusObservers: [any NSObjectProtocol] = []
 
         init(app: AppController) {
             self.app = app
@@ -34,6 +35,7 @@
             coordinator.onSay = { text, urgent in Announcements.post(text, urgent: urgent) }
             coordinator.listen()
             follow()
+            lookOnFocus()
         }
 
         /// Whether "needs input" may go out Time Sensitive: the build is signed for it and the person allows it
@@ -63,11 +65,24 @@
             let tabs = withObservationTracking { app.noticeTabs } onChange: { [weak self] in
                 Task { @MainActor in self?.follow() }
             }
-            let selected = app.hub.state.selected.map(Int64.init)
+            look(tabs)
+        }
+
+        /// The rules' look: a terminal that is selected in the key window of an active app is seen (core's `Seen`), and its
+        /// banner goes; one that is not keeps it.
+        private func look(_ tabs: [NoticeTab]) {
             coordinator.look(tabs, settings: app.settingsNotice, appActive: NSApp.isActive, timeSensitive: timeSensitive)
-            // Looked at (`Event::Seen`): selected in the key window of an active app. A banner for it posted while Wormhole is in the
-            // background stays until the person comes back (the look that follows the window's focus then takes it down).
-            if let selected, NSApp.isActive, app.front.window?.isKeyWindow == true { coordinator.dismiss(tab: selected) }
+        }
+
+        /// The app coming forward and a window becoming key change who is looked at without changing any terminal, so each
+        /// is its own event (never a timer). The key window's own terminal is read after the notification, when it is key.
+        private func lookOnFocus() {
+            for name in [NSApplication.didBecomeActiveNotification, NSWindow.didBecomeKeyNotification] {
+                let token = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { if let self { self.look(self.app.noticeTabs) } }
+                }
+                focusObservers.append(token)
+            }
         }
     }
 
@@ -90,6 +105,8 @@
                 let holder = session(holding: Int(terminal.session))
                 tab.selected = holder?.hub.state.selected.map(Int64.init) == terminal.session
                 tab.key = holder?.window?.isKeyWindow ?? false
+                // Told by the settings of the profile the terminal's window is in, not the shown profile's.
+                tab.settings = holder.map { NoticeSettingsMaker.settings(settingsBackend(of: $0).values) }
                 return tab
             }
         }
