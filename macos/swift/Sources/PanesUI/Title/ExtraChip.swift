@@ -22,7 +22,7 @@ struct ExtraChip: View {
             }
             Text(text).lineLimit(1).fixedSize()
         }
-        .font(TextRole.caption.font.weight(.medium))
+        .font(tokens.font(.caption).weight(.medium))
         .foregroundStyle(filled ? tokens.textPrimary : tokens.textMuted)
         .padding(.horizontal, TitleMetrics.extraPad)
         .frame(height: TitleMetrics.chipHeight)

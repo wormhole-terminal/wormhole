@@ -23,7 +23,7 @@ struct CommitRefs: View {
                         PanelIcon("arrow.triangle.branch", size: 12)
                         Text(ref.name).lineLimit(1).fixedSize()
                     }
-                    .font(TextRole.caption.font.weight(.medium)).foregroundStyle(tokens.gitBranch)
+                    .font(tokens.font(.caption).weight(.medium)).foregroundStyle(tokens.gitBranch)
                     .padding(.leading, Space._1).padding(.trailing, Space._2).frame(height: 20)
                     .background(tokens.gitBranchBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
                 }

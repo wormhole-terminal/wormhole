@@ -15,7 +15,7 @@ struct GroupFolderItems: View {
 
     var body: some View {
         if let path = head.folder {
-            Text(path).font(TextRole.body.font).foregroundStyle(tokens.textDisabled).lineLimit(1).truncationMode(.head)
+            Text(path).font(tokens.font(.body)).foregroundStyle(tokens.textDisabled).lineLimit(1).truncationMode(.head)
                 .padding(.horizontal, Space._2)
         }
         PopoverItem(title: Words.text("sidebar-menu-group-set-folder", fallback: "Set folder…")) { GroupFolderPanel.choose(for: head.id, send: context.send); close() }
@@ -40,7 +40,7 @@ struct PopoverItem: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: Space._2) {
-                Text(title).font(TextRole.body.font).foregroundStyle(tokens.textPrimary)
+                Text(title).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary)
                 Spacer(minLength: 0)
                 if checked { LucideView(icon: .check, size: Metric.glyph).foregroundStyle(tokens.textPrimary) }
             }

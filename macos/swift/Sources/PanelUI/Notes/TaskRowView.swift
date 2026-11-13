@@ -51,7 +51,7 @@ struct TaskRowView: View {
     @ViewBuilder private var label: some View {
         if editing {
             TextField("", text: $draft)
-                .textFieldStyle(.plain).font(TextRole.body.font).focused($focused)
+                .textFieldStyle(.plain).font(tokens.font(.body)).focused($focused)
                 .onSubmit {
                     let empty = draft.trimmingCharacters(in: .whitespaces).isEmpty
                     finish(keep: true)
@@ -72,7 +72,7 @@ struct TaskRowView: View {
                 .reorderKeys(moveBy)
                 .onChange(of: focused) { _, now in if !now && editing { finish(keep: true) } }
         } else {
-            Text(task.text).font(TextRole.body.font)
+            Text(task.text).font(tokens.font(.body))
                 .foregroundStyle(task.done ? tokens.textMuted : tokens.textPrimary)
                 .strikethrough(task.done, color: tokens.textMuted)
                 .lineLimit(1).truncationMode(.tail)

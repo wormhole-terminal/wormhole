@@ -31,6 +31,7 @@ public struct Row<Content: View>: View {
 }
 
 private struct RowStyle: ButtonStyle {
+    @Environment(\.tokens) private var tokens
     let isSelected: Bool
     let hovering: Bool
     let selection: Namespace.ID
@@ -40,9 +41,9 @@ private struct RowStyle: ButtonStyle {
         return configuration.label
             .background {
                 ZStack {
-                    shape.fill(configuration.isPressed ? Palette.pressed : hovering ? Palette.hover : .clear)
+                    shape.fill(configuration.isPressed ? tokens.stateActive : hovering ? tokens.stateHover : .clear)
                     if isSelected {
-                        shape.fill(Palette.selected).matchedGeometryEffect(id: "selection", in: selection)
+                        shape.fill(tokens.sidebarRowSelected).matchedGeometryEffect(id: "selection", in: selection)
                     }
                 }
                 .motion(Motion.press, value: hovering)

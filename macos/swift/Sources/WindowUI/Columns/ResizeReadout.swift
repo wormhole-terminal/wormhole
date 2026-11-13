@@ -7,6 +7,7 @@ import SwiftUI
 /// The words beside the pointer while a column is dragged: its width, and why it stopped ("430 · max") or what
 /// letting go does ("Close").
 struct ResizeReadout: View {
+    @Environment(\.tokens) private var tokens
     let text: String
     let pointer: CGFloat
     let pointerY: CGFloat
@@ -14,7 +15,7 @@ struct ResizeReadout: View {
 
     var body: some View {
         Text(text)
-            .font(TextRole.caption.font.weight(.medium))
+            .font(tokens.font(.caption).weight(.medium))
             .monospacedDigit()
             .foregroundStyle(colours.tooltipText)
             .padding(.horizontal, Space._2)

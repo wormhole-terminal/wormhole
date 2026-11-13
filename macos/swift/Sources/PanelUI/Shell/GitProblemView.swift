@@ -19,9 +19,9 @@ struct GitProblemView: View {
         VStack(alignment: .leading, spacing: Space._2) {
             EmptyNote(text: problem.headline)
             if let hint = problem.hint {
-                Text(hint).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).padding(.horizontal, Space._3)
+                Text(hint).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).padding(.horizontal, Space._3)
             }
-            Text(problem.detail).font(codeFont.font(TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+            Text(problem.detail).font(codeFont.font(tokens.size(.caption))).foregroundStyle(tokens.textMuted)
                 .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(Space._2)
                 .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
                 .padding(.horizontal, Space._3)
@@ -35,7 +35,7 @@ struct GitProblemView: View {
 
     private func outlined(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(TextRole.caption.font).foregroundStyle(tokens.buttonText).padding(.horizontal, Space._2)
+            Text(title).font(tokens.font(.caption)).foregroundStyle(tokens.buttonText).padding(.horizontal, Space._2)
                 .frame(height: Self.buttonHeight)
                 .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.border, lineWidth: tokens.metrics.borderWidth) }
                 .contentShape(Rectangle())

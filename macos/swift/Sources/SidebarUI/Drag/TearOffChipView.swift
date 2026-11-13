@@ -12,9 +12,11 @@ public struct TearOffChipView: View {
     let appearance: SidebarAppearance
     /// Room around the chip for its shadow (a window of its own is cut at its edge).
     let bleed: Bool
+    /// The theme of the window the terminal was dragged out of (a window of another profile has its own).
+    let themes: ThemeStore
 
-    public init(terminal: TerminalSummary?, title: String, appearance: SidebarAppearance, bleed: Bool = true) {
-        (self.terminal, self.title, self.appearance, self.bleed) = (terminal, title, appearance, bleed)
+    public init(terminal: TerminalSummary?, title: String, appearance: SidebarAppearance, bleed: Bool = true, themes: ThemeStore = .shared) {
+        (self.terminal, self.title, self.appearance, self.bleed, self.themes) = (terminal, title, appearance, bleed, themes)
     }
 
     public var body: some View {
@@ -23,7 +25,7 @@ public struct TearOffChipView: View {
             .environment(\.sidebarMetrics, SidebarMetrics(density: appearance.density, cards: appearance.cards))
             .fixedSize()
             .padding(bleed ? Self.margin : 0)
-            .themed()
+            .themed(themes)
     }
 
     /// The widest the card gets (`style::drag_ghost` stops at 240): a longer name is cut.

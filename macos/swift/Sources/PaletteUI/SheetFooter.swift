@@ -35,7 +35,7 @@ struct SheetFooter: View {
                 Text(Words.text("palette-sheet-also", fallback: "Also in Help › Keyboard Shortcuts and the palette"))
             }
         }
-        .font(.system(size: TextRole.caption.size))
+        .font(.system(size: tokens.size(.caption)))
         .foregroundStyle(tokens.textMuted)
         .lineLimit(1)
         .padding(.horizontal, OverlayMetrics.sheetMargin)

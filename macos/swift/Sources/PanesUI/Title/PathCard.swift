@@ -17,7 +17,7 @@ struct PathCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._2) {
-            Text(path).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).textSelection(.enabled)
+            Text(path).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary).textSelection(.enabled)
                 .lineLimit(3).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: Space._1) {
                 ForEach(PathCardItem.allCases, id: \.self) { item in
@@ -35,7 +35,7 @@ struct PathCard: View {
 
     private func cardButton(_ symbol: String, _ label: String, enabled: Bool = true, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(label, systemImage: symbol).font(TextRole.caption.font).labelStyle(.titleAndIcon)
+            Label(label, systemImage: symbol).font(tokens.font(.caption)).labelStyle(.titleAndIcon)
         }
         .buttonStyle(.bordered).controlSize(.small).disabled(!enabled)
     }

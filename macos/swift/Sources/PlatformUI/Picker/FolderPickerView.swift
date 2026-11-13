@@ -11,6 +11,7 @@ import WordsModel
 public struct FolderPickerView: View {
     let driver: FolderPickerDriver
     @Environment(\.tokens) private var tokens
+    @Environment(\.reduceTransparency) private var reduceTransparency
     @State private var hovered: String?
 
     public init(driver: FolderPickerDriver) { self.driver = driver }
@@ -44,7 +45,7 @@ public struct FolderPickerView: View {
     @ViewBuilder private var surface: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radiusLg)
         // The theme store follows the system's Reduce Transparency, so a snapshot can set it too.
-        if ThemeStore.shared.reduceTransparency {
+        if reduceTransparency {
             shape.fill(tokens.surfaceElevated).overlay { shape.strokeBorder(tokens.borderStrong, lineWidth: tokens.metrics.borderWidth) }
         } else {
             shape.fill(.clear).glassEffect(.regular, in: shape)

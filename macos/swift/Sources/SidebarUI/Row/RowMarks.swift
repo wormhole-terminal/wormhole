@@ -49,7 +49,7 @@ struct RowDetails: View {
             }
             if look.showsChanges, let count = changes[terminal.id] { Text("±\(count)") }
         }
-        .font(TextRole.caption.font.monospacedDigit())
+        .font(tokens.font(.caption).monospacedDigit())
         .foregroundStyle(quiet)
         .lineLimit(1)
         .fixedSize()

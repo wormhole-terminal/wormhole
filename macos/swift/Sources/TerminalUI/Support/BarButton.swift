@@ -15,8 +15,8 @@ struct BarButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: Space._1) {
-                if let symbol { Image(systemName: symbol).font(.system(size: TextRole.caption.size)) }
-                Text(title).font(.system(size: TextRole.label.size))
+                if let symbol { Image(systemName: symbol).font(.system(size: tokens.size(.caption))) }
+                Text(title).font(.system(size: tokens.size(.label)))
             }
             .padding(.horizontal, Space._2)
             .frame(height: Metric.titleControl)

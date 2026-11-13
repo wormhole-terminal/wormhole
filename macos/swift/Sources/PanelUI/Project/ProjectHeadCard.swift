@@ -14,7 +14,7 @@ struct ProjectHeadCard: View {
         PanelCard {
             HStack(spacing: PanelMetrics.gap) {
                 FileIcon(kind: .folder("", open: false), tint: tokens.textMuted)
-                Text("\(state.name)/\(state.dir)").font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                Text("\(state.name)/\(state.dir)").font(tokens.font(.body)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 Spacer(minLength: 0)
                 StatusBadge(text: state.status.badge, color: badgeColor)
             }
@@ -37,7 +37,7 @@ struct ProjectHeadCard: View {
 
     /// A line about something the project couldn't load, in the danger colour; a warning is the warning colour.
     private func problem(_ text: String, color: Color) -> some View {
-        Text(text).font(TextRole.caption.font).foregroundStyle(color)
+        Text(text).font(tokens.font(.caption)).foregroundStyle(color)
             .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._1)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

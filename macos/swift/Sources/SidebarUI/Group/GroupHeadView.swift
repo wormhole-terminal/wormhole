@@ -43,7 +43,7 @@ struct GroupHeadView: View {
             if head.isFolded { FoldedSummary(tiles: section.tiles, count: section.terminalCount, alert: section.alert).transition(.opacity) }
             if hovering && !isEmpty { HeadAddButton(group: head.name) { context.newInGroup(head.id) } }
             if isEmpty {
-                Text(Words.text("sidebar-group-empty", fallback: "No terminals")).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
+                Text(Words.text("sidebar-group-empty", fallback: "No terminals")).font(tokens.font(.caption)).foregroundStyle(tokens.textFaint)
                 HeadAddButton(group: head.name) { context.newInGroup(head.id) }
             } else {
                 HeadChevron(isFolded: head.isFolded)
@@ -91,13 +91,13 @@ struct GroupHeadView: View {
     /// (↩, ⎋ or a click elsewhere) gives the keyboard back to the terminal.
     @ViewBuilder private var name: some View {
         if context.renaming == .group(head.id) {
-            RenameField(name: head.name, font: TextRole.label.font, rename: RowRename { typed in
+            RenameField(name: head.name, font: tokens.font(.label), rename: RowRename { typed in
                 context.rename(nil)
                 if let typed { context.send(.renameGroup(head.id, typed)) }
                 context.hooks.focusTerminal()
             })
         } else {
-            Text(head.name).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+            Text(head.name).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 .contentShape(Rectangle())
                 .onTapGesture { context.openPopover(head.id) }
                 .help(head.folder ?? "")
@@ -105,6 +105,6 @@ struct GroupHeadView: View {
     }
 
     private func folderText(_ folder: String) -> some View {
-        Text(folder).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.head)
+        Text(folder).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.head)
     }
 }

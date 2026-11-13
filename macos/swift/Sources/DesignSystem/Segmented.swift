@@ -30,7 +30,7 @@ public struct Segmented<Value: Hashable>: View {
 
     private func segment(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(title).font(TextRole.caption.font.weight(.medium)).lineLimit(1)
+            Text(title).font(tokens.font(.caption).weight(.medium)).lineLimit(1)
                 .foregroundStyle(on ? tokens.textOnSelected : tokens.textMuted)
                 .padding(.horizontal, Space._2).frame(maxHeight: .infinity)
                 .background {

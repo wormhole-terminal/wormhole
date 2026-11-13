@@ -20,7 +20,7 @@ struct TrustNotice: View {
         HStack(spacing: PanelMetrics.gap) {
             PanelIcon("checkmark.shield", size: Metric.glyph).foregroundStyle(tokens.statusSuccessText)
                 .frame(width: Metric.lead, height: Metric.lead)
-            Text(state.trustedLine).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(2)
+            Text(state.trustedLine).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
             NoticeButton(title: panelText("settings-projects-revoke-trust", "Revoke trust"), action: store.revoke)
         }
@@ -38,7 +38,7 @@ struct TrustNotice: View {
         let notice = state.notice
         let shown = state.commands.count > ProjectState.linesMax ? ProjectState.linesShown : state.commands.count
         return Callout(kind: .warning, title: notice.title) {
-            Text(notice.text).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+            Text(notice.text).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
             if !state.commands.isEmpty { TrustLines(lines: Array(state.commands.prefix(shown))) }
             // Side by side while they fit; the long password wording stacks them rather than cutting a word.
             ViewThatFits(in: .horizontal) {
@@ -59,7 +59,7 @@ struct TrustLines: View {
         VStack(alignment: .leading, spacing: Space._1) {
             ForEach(Array(lines.enumerated()), id: \.offset) { _, line in Text(attributed(line)).fixedSize(horizontal: false, vertical: true) }
         }
-        .font(codeFont.font(TextRole.caption.size))
+        .font(codeFont.font(tokens.size(.caption)))
         .padding(Space._2).frame(maxWidth: .infinity, alignment: .leading)
         .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
         .textSelection(.enabled)

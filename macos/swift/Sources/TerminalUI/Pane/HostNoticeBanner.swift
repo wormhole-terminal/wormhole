@@ -15,7 +15,7 @@ public struct HostNoticeBanner: View {
         Banner(kind: .warning, text: text) {
             Button(L10n.dismiss, action: actions.dismissHostNotice)
                 .buttonStyle(.plain)
-                .font(.system(size: TextRole.label.size))
+                .font(.system(size: tokens.size(.label)))
                 .foregroundStyle(tokens.textLink)
                 .padding(.horizontal, Space._2)
         }

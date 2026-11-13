@@ -82,7 +82,7 @@ private struct DoneFold: View {
         PanelRow(action: action) { _ in
             HStack(spacing: PanelMetrics.gap) {
                 Disclosure(collapsed: !open)
-                Text(panelText("steps-done", ["count": .text(CountText.grouped(count))], "\(CountText.grouped(count)) done")).font(TextRole.body.font).foregroundStyle(tokens.textMuted)
+                Text(panelText("steps-done", ["count": .text(CountText.grouped(count))], "\(CountText.grouped(count)) done")).font(tokens.font(.body)).foregroundStyle(tokens.textMuted)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, PanelMetrics.inset).frame(minHeight: Metric.row)

@@ -29,7 +29,7 @@ struct FileViewerBody: View {
             if truncated {
                 let shown = ByteSize.text(store.lines.reduce(0) { $0 + $1.utf8.count + 1 })
                 Text(panelText("files-viewer-truncated", ["shown": .text(shown), "size": .text(ByteSize.text(size))], "Showing the first \(shown) of \(ByteSize.text(size))"))
-                    .font(TextRole.caption.font).foregroundStyle(tokens.textMuted).frame(maxWidth: .infinity).frame(height: Metric.row)
+                    .font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).frame(maxWidth: .infinity).frame(height: Metric.row)
                     .overlay(alignment: .top) { Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth) }
             }
         }
@@ -39,7 +39,7 @@ struct FileViewerBody: View {
     private func panel(_ words: String, actions: Bool) -> some View {
         VStack(spacing: Space._3) {
             PanelIcon("doc", size: Metric.glyph).foregroundStyle(tokens.textMuted)
-            Text(words).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).multilineTextAlignment(.center)
+            Text(words).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary).multilineTextAlignment(.center)
             if actions {
                 HStack(spacing: Space._2) {
                     NoticeButton(title: panelText("files-viewer-open-in", "Open in\u{2026}"), primary: true) { store.openViewed() }
@@ -63,7 +63,7 @@ struct FileViewerBody: View {
 
     /// A line of words in the middle of the card (reading, an empty file).
     private func note(_ text: String) -> some View {
-        Text(text).font(TextRole.body.font).foregroundStyle(tokens.textMuted).multilineTextAlignment(.center).padding(Space._4)
+        Text(text).font(tokens.font(.body)).foregroundStyle(tokens.textMuted).multilineTextAlignment(.center).padding(Space._4)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

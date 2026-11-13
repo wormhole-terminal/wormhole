@@ -23,7 +23,7 @@ struct SubmoduleCard: View {
                         PanelIcon("arrow.right", size: 12)
                         Text(new)
                     }
-                    .font(codeFont.font(TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+                    .font(codeFont.font(tokens.size(.caption))).foregroundStyle(tokens.textMuted)
                     .padding(.horizontal, Space._4).padding(.vertical, Space._3)
                 }
                 if let note = commits.nothing { self.note(note) }
@@ -38,7 +38,7 @@ struct SubmoduleCard: View {
 
     /// A sentence in muted text.
     private func note(_ text: String) -> some View {
-        Text(text).font(TextRole.body.font).foregroundStyle(tokens.textMuted)
+        Text(text).font(tokens.font(.body)).foregroundStyle(tokens.textMuted)
             .padding(.horizontal, Space._4).padding(.vertical, Space._2)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -47,7 +47,7 @@ struct SubmoduleCard: View {
     @ViewBuilder private func section(_ title: String, _ listed: [Commit], total: Int, now: Int) -> some View {
         if !listed.isEmpty {
             HStack(spacing: Space._2) {
-                Text(title).textCase(.uppercase).font(TextRole.caption.font.weight(.semibold)).foregroundStyle(tokens.textMuted)
+                Text(title).textCase(.uppercase).font(tokens.font(.caption).weight(.semibold)).foregroundStyle(tokens.textMuted)
                 BandCount(text: CountText.grouped(total))
             }
             .padding(.horizontal, Space._4).padding(.top, Space._3).padding(.bottom, Space._1)
@@ -64,15 +64,15 @@ struct SubmoduleCard: View {
     /// One commit: its subject, and under it the short hash, the author and how long ago.
     private func row(_ commit: Commit, now: Int) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(commit.subject).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+            Text(commit.subject).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 .frame(height: PanelMetrics.nameLine)
             HStack(spacing: Space._2) {
-                Text(commit.short).font(codeFont.font(TextRole.caption.size)).foregroundStyle(tokens.primary).fixedSize()
+                Text(commit.short).font(codeFont.font(tokens.size(.caption))).foregroundStyle(tokens.primary).fixedSize()
                 Text(commit.author).lineLimit(1)
                 Spacer(minLength: 0)
                 Text(Age.text(seconds: now - commit.time)).monospacedDigit().fixedSize()
             }
-            .font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+            .font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
             .frame(height: PanelMetrics.metaLine)
         }
         .padding(.horizontal, Space._4).padding(.vertical, Space._1)

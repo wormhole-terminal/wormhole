@@ -79,7 +79,7 @@ struct ChangesListView: View {
         case let .directory(_, path, label, depth, collapsed):
             FolderRowView(label: label, path: path, depth: depth, collapsed: collapsed) { store.toggle(row) }
         case let .foldNote(text):
-            Text(text).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+            Text(text).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                 .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._2)
                 .frame(maxWidth: .infinity, alignment: .leading)
         case .band, .spacer: EmptyView()

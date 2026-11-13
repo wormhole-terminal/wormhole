@@ -63,7 +63,7 @@ extension AppController {
         // A torn-off terminal's window grows from its chip: it starts as the chip, before it is shown.
         if let start = growing, let window = controller.window {
             growing = nil
-            session.grow = TearOffGrow(window: window, start: start, appearance: session.dress.look.sidebar, backend: session.windows.backend) { [weak session] in
+            session.grow = TearOffGrow(window: window, start: start, appearance: session.dress.look.sidebar, themes: session.dress.look.themes, backend: session.windows.backend) { [weak session] in
                 session?.grow = nil
             }
         }

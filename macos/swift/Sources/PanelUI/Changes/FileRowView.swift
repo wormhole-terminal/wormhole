@@ -33,13 +33,13 @@ struct FileRowView: View {
                     PanelIcon("folder.badge.plus", size: 12).foregroundStyle(muted)
                 }
                 Text(file.name)
-                    .font(TextRole.body.font.weight(lit ? .semibold : .regular))
+                    .font(tokens.font(.body).weight(lit ? .semibold : .regular))
                     .foregroundStyle(lit ? tokens.sidebarRowSelectedText : tokens.textPrimary)
                     .lineLimit(1).truncationMode(.middle)
                     .frame(maxWidth: max(width, 1) * PanelMetrics.fileNameShare, alignment: .leading)
                     .fixedSize(horizontal: true, vertical: false)
                 if !inTree && !file.folder.isEmpty {
-                    Text(file.folder).font(TextRole.caption.font).foregroundStyle(muted)
+                    Text(file.folder).font(tokens.font(.caption)).foregroundStyle(muted)
                         .lineLimit(1).truncationMode(.head)
                 }
                 Spacer(minLength: 0)
@@ -51,7 +51,7 @@ struct FileRowView: View {
                 }
                 FileLinesLabel(lines: file.lines, muted: muted)
                 Text(file.kind.letter)
-                    .font(TextRole.caption.font.weight(.bold))
+                    .font(tokens.font(.caption).weight(.bold))
                     .foregroundStyle(letterColor)
                     .frame(width: PanelMetrics.kindLetter, alignment: .trailing)
             }
@@ -71,7 +71,7 @@ struct FileRowView: View {
 
     private func renamed(_ from: String) -> some View {
         HStack(spacing: Space._1) {
-            Text(from).font(TextRole.caption.font).foregroundStyle(muted).lineLimit(1)
+            Text(from).font(tokens.font(.caption)).foregroundStyle(muted).lineLimit(1)
             PanelIcon("arrow.right", size: 12).foregroundStyle(muted)
         }
     }
@@ -102,7 +102,7 @@ struct FolderRowView: View {
             HStack(spacing: PanelMetrics.gap) {
                 Disclosure(collapsed: collapsed)
                 FileIcon(kind: .folder(label, open: !collapsed), tint: tokens.textMuted)
-                Text(label).font(TextRole.body.font).foregroundStyle(tokens.textMuted).lineLimit(1)
+                Text(label).font(tokens.font(.body)).foregroundStyle(tokens.textMuted).lineLimit(1)
                 Spacer(minLength: 0)
             }
             .padding(.leading, PanelMetrics.inset + CGFloat(depth) * Metric.indent)

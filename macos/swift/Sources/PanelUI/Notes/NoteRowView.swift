@@ -35,7 +35,7 @@ struct NoteRowView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(note.title)
                 .accessibilityValue(note.collapsed ? panelText("panel-spoken-folded", "folded") : panelText("panel-spoken-open", "open"))
-                Text(note.title).font(TextRole.body.font)
+                Text(note.title).font(tokens.font(.body))
                     .foregroundStyle(editing ? tokens.textMuted : tokens.textPrimary)
                     .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
                     .onTapGesture { open() }
@@ -66,7 +66,7 @@ struct NoteRowView: View {
     @ViewBuilder private var bodyText: some View {
         let lines = note.body.split(separator: "\n", omittingEmptySubsequences: false)
         if editing {
-            TextEditor(text: $note.text, selection: $selection).font(TextRole.body.font).scrollContentBackground(.hidden)
+            TextEditor(text: $note.text, selection: $selection).font(tokens.font(.body)).scrollContentBackground(.hidden)
                 .focused($focused).frame(minHeight: PanelMetrics.noteLine * 3)
                 .overlay(alignment: .topLeading) { placeholder }
                 .onExitCommand { endWriting(); store.leave() }
@@ -88,14 +88,14 @@ struct NoteRowView: View {
             let cut = !showAll && lines.count > PanelMetrics.noteMaxLines
             VStack(alignment: .leading, spacing: 0) {
                 Text(lines.prefix(cut ? PanelMetrics.noteMaxLines : lines.count).joined(separator: "\n"))
-                    .font(TextRole.body.font).foregroundStyle(tokens.textPrimary)
+                    .font(tokens.font(.body)).foregroundStyle(tokens.textPrimary)
                     .lineSpacing(PanelMetrics.noteLineGap)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .mask(fade(cut))
                     .onTapGesture { open() }
                 if cut {
                     Button(panelText("notes-show-all", ["count": .text(CountText.grouped(lines.count))], "Show all · \(CountText.grouped(lines.count)) lines")) { showAll = true }
-                        .buttonStyle(.plain).font(TextRole.body.font).foregroundStyle(tokens.primary).padding(.top, Space._1)
+                        .buttonStyle(.plain).font(tokens.font(.body)).foregroundStyle(tokens.primary).padding(.top, Space._1)
                 }
             }
             .padding(.leading, PanelMetrics.inset + Metric.lead + PanelMetrics.gap).padding(.trailing, PanelMetrics.inset)
@@ -115,7 +115,7 @@ struct NoteRowView: View {
     @ViewBuilder private var placeholder: some View {
         if note.text.isEmpty {
             Text(panelText("notes-placeholder", "Write a note or a prompt draft\u{2026}  \u{2318}\u{21A9} sends the paragraph under the cursor (or the selection); \u{2318}\u{21E7}\u{21A9} also submits."))
-                .font(TextRole.body.font).foregroundStyle(tokens.textFaint).padding(.leading, 5).padding(.top, 0).allowsHitTesting(false)
+                .font(tokens.font(.body)).foregroundStyle(tokens.textFaint).padding(.leading, 5).padding(.top, 0).allowsHitTesting(false)
         }
     }
 

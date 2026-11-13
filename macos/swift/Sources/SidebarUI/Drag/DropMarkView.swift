@@ -48,7 +48,7 @@ struct DragGhost: View {
             if let terminal {
                 StatusTile(state: TileState(terminal), agent: terminal.agent, size: metrics.tile, phase: 0, surface: tokens.card)
             }
-            Text(title).font(TextRole.body.font.weight(.medium)).foregroundStyle(tokens.textPrimary).lineLimit(1)
+            Text(title).font(tokens.font(.body).weight(.medium)).foregroundStyle(tokens.textPrimary).lineLimit(1)
         }
         .padding(.horizontal, metrics.rowInset)
         .padding(.vertical, Space._1)

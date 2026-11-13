@@ -18,7 +18,7 @@ struct SideNoteView: View {
             chip(note.text)
             if let detail = note.detail {
                 HStack(spacing: Space._1) {
-                    Text(detail).font(TextRole.caption.font).monospacedDigit().foregroundStyle(tokens.textMuted).lineLimit(1)
+                    Text(detail).font(tokens.font(.caption)).monospacedDigit().foregroundStyle(tokens.textMuted).lineLimit(1)
                     // Beside the text, so the note stays where it is; it takes no room until the pointer is over the line.
                     if let oid = note.oid {
                         BandButton(symbol: "doc.on.doc", label: panelText("diff-copy-oid", "Copy object id"), inRow: true) {
@@ -34,7 +34,7 @@ struct SideNoteView: View {
     }
 
     private func chip(_ text: String) -> some View {
-        Text(text).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+        Text(text).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
             .padding(.horizontal, Space._2).padding(.vertical, Space._1)
             .background(tokens.surfaceWindow, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
             .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).strokeBorder(tokens.border, lineWidth: tokens.metrics.borderWidth) }
@@ -47,7 +47,7 @@ struct DiffNote: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Text(text).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+        Text(text).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
             .padding(.horizontal, Space._2).padding(.vertical, Space._1)
             .background(tokens.surfaceWindow, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
             .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).strokeBorder(tokens.border, lineWidth: tokens.metrics.borderWidth) }
@@ -75,8 +75,8 @@ struct TooLargeCard: View {
 
     var body: some View {
         VStack(spacing: Space._3) {
-            Text(large.title).font(TextRole.body.font).foregroundStyle(tokens.textPrimary)
-            Text(large.detail).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).multilineTextAlignment(.center)
+            Text(large.title).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary)
+            Text(large.detail).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).multilineTextAlignment(.center)
             HStack(spacing: Space._2) {
                 NoticeButton(title: panelText("diff-load-anyway", "Load diff"), primary: true, action: load)
                 if let resolved = root.flatMap({ RepoFiles.resolve(root: $0, relative: path) }) {

@@ -12,7 +12,7 @@ struct ReadoutPill<Content: View>: View {
 
     var body: some View {
         content
-            .font(.system(size: role.size))
+            .font(.system(size: tokens.size(role)))
             .monospacedDigit()
             .foregroundStyle(tokens.tooltipText)
             .lineLimit(1)

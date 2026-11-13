@@ -9,6 +9,8 @@ struct NoticeChip: View {
     let center: NoticeCenter
     @Environment(\.tokens) private var tokens
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    /// The same as the window's theme store has it (a check can stand in for the system's).
+    @Environment(\.reduceTransparency) private var storeReduceTransparency
 
     private typealias M = NoticeChipMetrics
 
@@ -20,7 +22,7 @@ struct NoticeChip: View {
                 .foregroundStyle(tokens.textMuted)
                 .accessibilityHidden(true)
             Text(notice.words)
-                .font(.system(size: TextRole.label.size))
+                .font(.system(size: tokens.size(.label)))
                 .foregroundStyle(tokens.textPrimary)
                 .lineLimit(1)
                 .contentTransition(.opacity)
@@ -45,7 +47,7 @@ struct NoticeChip: View {
     }
 
     @ViewBuilder private var surface: some View {
-        if reduceTransparency || ThemeStore.shared.reduceTransparency {
+        if reduceTransparency || storeReduceTransparency {
             Capsule().fill(tokens.surfaceElevated)
                 .overlay { Capsule().strokeBorder(tokens.borderStrong, lineWidth: tokens.metrics.borderWidth) }
         } else {

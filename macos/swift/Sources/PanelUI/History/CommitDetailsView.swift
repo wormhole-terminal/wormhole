@@ -28,7 +28,7 @@ struct CommitDetailsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PanelMetrics.gap) {
             HStack(alignment: .top, spacing: PanelMetrics.gap) {
-                Text(details?.subject ?? commit.subject).font(TextRole.body.font.weight(.semibold)).foregroundStyle(tokens.textPrimary)
+                Text(details?.subject ?? commit.subject).font(tokens.font(.body).weight(.semibold)).foregroundStyle(tokens.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 copyButton(panelText("history-copy-message", "Copy message"), .message)
             }
@@ -36,7 +36,7 @@ struct CommitDetailsView: View {
             if let details, !details.refs.isEmpty { refs(details) }
             facts
         }
-        .font(TextRole.caption.font)
+        .font(tokens.font(.caption))
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
         .padding(.leading, PanelMetrics.inset + Metric.indent).padding(.trailing, PanelMetrics.inset)
         .padding(.vertical, Space._2)
@@ -53,7 +53,7 @@ struct CommitDetailsView: View {
     private func menu() -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
-        if details != nil, store.compact(lineChars: max(CaptionMeasure.characters(in: width), 16))?.more == true {
+        if details != nil, store.compact(lineChars: max(CaptionMeasure.characters(in: width, tokens: tokens), 16))?.more == true {
             menu.addItem(ActionMenuItem(whole ? panelText("history-show-less", "Show less") : panelText("history-show-more", "Show more")) { whole.toggle() })
             menu.addItem(.separator())
         }
@@ -72,7 +72,7 @@ struct CommitDetailsView: View {
 
     @ViewBuilder private var message: some View {
         if let details {
-            let compact = store.compact(lineChars: max(CaptionMeasure.characters(in: width), 16))
+            let compact = store.compact(lineChars: max(CaptionMeasure.characters(in: width, tokens: tokens), 16))
             let more = compact?.more ?? false
             if whole {
                 if !details.whole.isEmpty { line(details.whole, tokens.textPrimary) }
@@ -106,7 +106,7 @@ struct CommitDetailsView: View {
                 CommitFact(label: panelText("history-author", "Author")) { Text(commit.author) }
             }
             CommitFact(label: panelText("history-commit", "Commit")) {
-                Text(commit.short).font(.system(size: TextRole.caption.size, design: .monospaced))
+                Text(commit.short).font(.system(size: tokens.size(.caption), design: .monospaced))
             } trailing: {
                 HStack(spacing: 0) {
                     copyButton(panelText("history-copy-hash", "Copy hash"), .hash)
@@ -124,7 +124,7 @@ struct CommitDetailsView: View {
         CommitFact(label: details.parentsLabel) {
             WrapLayout(spacing: PanelMetrics.gap) {
                 ForEach(details.parents, id: \.sha) { parent in
-                    let mono = Font.system(size: TextRole.caption.size, design: .monospaced)
+                    let mono = Font.system(size: tokens.size(.caption), design: .monospaced)
                     if listed.contains(parent.sha) {
                         Button(parent.short) { open(parent.sha) }.buttonStyle(.plain).font(mono).foregroundStyle(tokens.textLink)
                             .accessibilityLabel(parent.spoken)
@@ -160,10 +160,10 @@ struct CommitDetailsView: View {
 
 /// About how many characters of caption text fit in `width`: the width of a line of ordinary words, divided out, a
 /// little under it so that what is cut or offered as "more" errs on the side of offering (GPUI `measure::caption_chars`).
-@MainActor private enum CaptionMeasure {
-    static func characters(in width: CGFloat) -> Int {
+private enum CaptionMeasure {
+    static func characters(in width: CGFloat, tokens: ThemeTokens) -> Int {
         let sample = "The quick brown fox jumps over" // text: a sample sentence that is measured, never shown
-        let wide = sample.size(withAttributes: [.font: NSFont.systemFont(ofSize: TextRole.caption.size)]).width
+        let wide = sample.size(withAttributes: [.font: NSFont.systemFont(ofSize: tokens.size(.caption))]).width
         return Int(width / max(wide / CGFloat(sample.count), 1) * 0.95)
     }
 }

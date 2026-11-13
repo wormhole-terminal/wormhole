@@ -21,7 +21,7 @@ struct FoldedSummary: View {
                     .help(tile.name)
             }
             Text(CountBadge.label(count))
-                .font(TextRole.caption.font.weight(.semibold).monospacedDigit()).foregroundStyle(tokens.textPrimary)
+                .font(tokens.font(.caption).weight(.semibold).monospacedDigit()).foregroundStyle(tokens.textPrimary)
                 .padding(.horizontal, Space._1)
                 .frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)
                 .background(tokens.border, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))

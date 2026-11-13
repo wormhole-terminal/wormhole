@@ -19,7 +19,7 @@ struct SearchRow: View {
                 .accessibilityHidden(true)
             if scope != .all { chip }
             PaletteField(
-                text: $text, placeholder: scope.placeholder, size: TextRole.heading.size, textColor: tokens.textPrimary,
+                text: $text, placeholder: scope.placeholder, size: tokens.size(.heading), textColor: tokens.textPrimary,
                 placeholderColor: tokens.inputPlaceholder, caretColor: tokens.textPrimary, onKey: onKey)
                 .padding(.leading, Space._2)
             KeyCap(text: "esc")
@@ -32,7 +32,7 @@ struct SearchRow: View {
     /// `style::tint_chip`: the primary's tint with its text, the kind the palette is narrowed to.
     private var chip: some View {
         Text(scope.title)
-            .font(.system(size: TextRole.caption.size, weight: .medium))
+            .font(.system(size: tokens.size(.caption), weight: .medium))
             .foregroundStyle(tokens.sidebarRowSelectedText)
             .padding(.horizontal, Space._2)
             .frame(height: OverlayMetrics.chipHeight)

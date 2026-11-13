@@ -56,7 +56,7 @@ public struct ProfileChip: View {
             Menu { ProfileMenuItems(choices: choices, actions: actions) } label: {
                 HStack(spacing: Space._2) {
                     ProfileAvatar(choice: current, size: TabMetrics.avatar)
-                    Text(current.name).font(TextRole.label.font.weight(.medium)).foregroundStyle(tokens.textPrimary)
+                    Text(current.name).font(tokens.font(.label).weight(.medium)).foregroundStyle(tokens.textPrimary)
                         .lineLimit(1).frame(maxWidth: TabMetrics.chipName, alignment: .leading).fixedSize()
                     Image(systemName: "chevron.up.chevron.down").font(.system(size: Metric.chevron, weight: .semibold)).foregroundStyle(tokens.textMuted)
                 }
@@ -84,7 +84,7 @@ struct ProfileAvatar: View {
 
     var body: some View {
         Text(String(choice.letter).uppercased())
-            .font((size >= Self.bodyFrom ? TextRole.body : TextRole.caption).font.weight(.bold))
+            .font(tokens.font(size >= Self.bodyFrom ? .body : .caption).weight(.bold))
             .foregroundStyle(tokens.surfaceWindow)
             .frame(width: size, height: size)
             .background(choice.colour ?? tokens.primary, in: Circle())

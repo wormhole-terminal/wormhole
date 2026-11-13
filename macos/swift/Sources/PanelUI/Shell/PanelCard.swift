@@ -45,7 +45,7 @@ struct EmptyNote: View {
 
     var body: some View {
         Text(text)
-            .font(TextRole.body.font)
+            .font(tokens.font(.body))
             .foregroundStyle(tokens.textMuted)
             .padding(.horizontal, Space._3)
             .padding(.vertical, Space._2)

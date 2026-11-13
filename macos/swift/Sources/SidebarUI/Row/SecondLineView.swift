@@ -26,7 +26,7 @@ struct SecondLineView: View {
                 .id(rolls ? line.text : "")
                 .transition(.push(from: .bottom))
             if let trail = line.trail {
-                Text(trail).font(TextRole.caption.font.monospacedDigit()).foregroundStyle(tokens.textFaint)
+                Text(trail).font(tokens.font(.caption).monospacedDigit()).foregroundStyle(tokens.textFaint)
                     .lineLimit(1).fixedSize()
             }
         }
@@ -36,8 +36,8 @@ struct SecondLineView: View {
     }
 
     private var font: Font {
-        line.isCommand ? .system(size: TextRole.caption.size, design: .monospaced)
-            : TextRole.caption.font.weight(line.tone == .plain ? .medium : .regular)
+        line.isCommand ? .system(size: tokens.size(.caption), design: .monospaced)
+            : tokens.font(.caption).weight(line.tone == .plain ? .medium : .regular)
     }
 
     private var color: Color {

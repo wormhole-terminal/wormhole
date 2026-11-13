@@ -15,7 +15,7 @@ struct GroupSwitcherButton: View {
     var body: some View {
         Button { open.toggle() } label: {
             HStack(spacing: Space._2) {
-                Text(label).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                Text(label).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                     .frame(maxWidth: TabMetrics.switcherName, alignment: .leading).fixedSize()
                 Image(systemName: "chevron.up.chevron.down").font(.system(size: Metric.chevron, weight: .semibold))
                     .foregroundStyle(tokens.textMuted)

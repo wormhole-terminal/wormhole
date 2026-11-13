@@ -15,7 +15,7 @@ struct ProjectKeysBlock: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Space._2) {
                 Image(systemName: "folder").font(.system(size: Metric.glyph)).accessibilityHidden(true)
-                Text(Words.text("palette-sheet-project", ["project": .text(keys.name)], fallback: "This project · \(keys.name)")).font(.system(size: TextRole.label.size, weight: .medium))
+                Text(Words.text("palette-sheet-project", ["project": .text(keys.name)], fallback: "This project · \(keys.name)")).font(.system(size: tokens.size(.label), weight: .medium))
                 Spacer(minLength: 0)
                 StatusBadge(text: Words.text("settings-projects-trusted", fallback: "Trusted"), color: tokens.statusSuccessText)
             }

@@ -16,7 +16,7 @@ struct TerminalCrumb: View {
         HStack(spacing: TitleMetrics.crumbGap) {
             TerminalTile(activity: facts.activity, size: TitleMetrics.tile)
             AtMostWidth(width: plan.fit.name) {
-                Text(facts.label).font(TextRole.label.font.weight(.medium)).foregroundStyle(tokens.textPrimary)
+                Text(facts.label).font(tokens.font(.label).weight(.medium)).foregroundStyle(tokens.textPrimary)
                     .lineLimit(1).truncationMode(.tail)
                     .contentTransition(.interpolate)
             }
@@ -35,7 +35,7 @@ struct StatusWords: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Text(words).font(TextRole.caption.font).foregroundStyle(colour)
+        Text(words).font(tokens.font(.caption)).foregroundStyle(colour)
             .lineLimit(1).fixedSize()
             .transition(.opacity)
     }

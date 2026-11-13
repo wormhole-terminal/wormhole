@@ -10,6 +10,7 @@ import WordsModel
 import WorkspaceModel
 
 struct StatusBar: View {
+    @Environment(\.tokens) private var tokens
     let terminals: [TerminalSummary]
     /// The shown terminal, whose state and size end the bar; the size is its grid, "100×30", nil when none is drawn.
     let selected: TerminalSummary?
@@ -45,6 +46,9 @@ struct StatusBar: View {
                     Words.text(
                         "window-status-profile-edge", ["profile": .text(profile.name)],
                         fallback: "This window is in \(profile.name), not the profile Wormhole is in"))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(
+                    Words.text("window-status-profile-spoken", ["profile": .text(profile.name)], fallback: "Window in profile \(profile.name)"))
             }
             if let waiting = summary.attention {
                 Button { select(waiting.id) } label: {
@@ -87,7 +91,7 @@ struct StatusBar: View {
                             fallback: "\(program ?? selected.title), terminal size \(size)"))
             }
         }
-        .font(TextRole.caption.font.weight(.medium))
+        .font(tokens.font(.caption).weight(.medium))
         .monospacedDigit()
         .foregroundStyle(colours.muted)
         .padding(.horizontal, Chrome.edgeInset - Chrome.itemPad)

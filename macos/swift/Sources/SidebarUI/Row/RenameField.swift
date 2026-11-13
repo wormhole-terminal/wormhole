@@ -13,7 +13,7 @@ struct RowRename {
 
 struct RenameField: View {
     let name: String
-    var font = TextRole.body.font.weight(.medium)
+    var font = tokens.font(.body).weight(.medium)
     let rename: RowRename
     @State private var text = ""
     @State private var done = false

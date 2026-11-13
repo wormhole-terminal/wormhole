@@ -17,7 +17,7 @@ struct SheetHeader: View {
                 .foregroundStyle(tokens.textMuted)
                 .accessibilityHidden(true)
             Text(Words.text("palette-sheet-title", fallback: "Keyboard shortcuts"))
-                .font(.system(size: TextRole.heading.size, weight: .bold))
+                .font(.system(size: tokens.size(.heading), weight: .bold))
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
             filterField
@@ -37,7 +37,7 @@ struct SheetHeader: View {
                 .foregroundStyle(tokens.textMuted)
                 .accessibilityHidden(true)
             PaletteField(
-                text: $filter, placeholder: Words.text("palette-sheet-filter", fallback: "Filter shortcuts"), size: TextRole.label.size, textColor: tokens.textPrimary,
+                text: $filter, placeholder: Words.text("palette-sheet-filter", fallback: "Filter shortcuts"), size: tokens.size(.label), textColor: tokens.textPrimary,
                 placeholderColor: tokens.inputPlaceholder, caretColor: tokens.textPrimary, onKey: onKey)
                 .padding(.leading, Space._2)
         }

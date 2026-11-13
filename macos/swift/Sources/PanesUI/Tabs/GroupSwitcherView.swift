@@ -31,7 +31,7 @@ struct GroupSwitcherView: View {
                 Divider()
                 footer
             } else if hits.isEmpty {
-                Text(PanesText.noMatches).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                Text(PanesText.noMatches).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                     .frame(maxWidth: .infinity, minHeight: Metric.row, alignment: .leading).padding(.horizontal, Space._2)
             } else {
                 ForEach(Array(hits.enumerated()), id: \.offset) { _, hit in hitRow(hit) }
@@ -53,7 +53,7 @@ struct GroupSwitcherView: View {
                     Spacer(minLength: Space._2)
                     Text(keys.keys)
                 }
-                .font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                .font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                 .padding(.horizontal, Space._2).padding(.top, Space._1)
             }
         }
@@ -61,7 +61,7 @@ struct GroupSwitcherView: View {
 
     private func footerButton(_ symbol: String, _ label: String, _ run: @escaping () -> Void) -> some View {
         Button(action: run) {
-            Label(label, systemImage: symbol).font(TextRole.body.font).foregroundStyle(tokens.textPrimary)
+            Label(label, systemImage: symbol).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary)
                 .frame(maxWidth: .infinity, minHeight: Metric.row, alignment: .leading).contentShape(Rectangle())
         }
         .buttonStyle(.plain).padding(.horizontal, Space._2)
@@ -75,9 +75,9 @@ struct GroupSwitcherView: View {
             }
         return Button { go(hit) } label: {
             HStack {
-                Text(label).font(TextRole.body.font).foregroundStyle(tokens.textPrimary)
+                Text(label).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary)
                 Spacer(minLength: Space._2)
-                Text(note).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                Text(note).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
             }
             .frame(minHeight: Metric.row).padding(.horizontal, Space._2).contentShape(Rectangle())
         }
@@ -125,7 +125,7 @@ struct SetCardView: View {
                 CountBadge(card.count)
             }
             if card.count == 0 {
-                Text(card.pinned ? PanesText.noTerminals : "").font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                Text(card.pinned ? PanesText.noTerminals : "").font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
             } else {
                 HStack(spacing: 4) { memberTiles }
             }
@@ -151,7 +151,7 @@ struct SetCardView: View {
 
     /// The name opens the group's popover under it (`switcher.rs` `on_label`); "Ungrouped" has none.
     @ViewBuilder private var name: some View {
-        let label = Text(card.label).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+        let label = Text(card.label).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary).lineLimit(1)
         if let group = set.groupID, let popover = actions.groupPopover {
             label.contentShape(Rectangle())
                 .onTapGesture { editing = true }

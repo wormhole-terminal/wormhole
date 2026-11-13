@@ -277,6 +277,7 @@ window-status-size-spoken = { $title }, terminal size { $size }
 
 # The tooltip of the profile tag in a window that is not in the profile Wormhole is in. { $profile } is the profile's name.
 window-status-profile-edge = This window is in { $profile }, not the profile Wormhole is in
+window-status-profile-spoken = Window in profile { $profile }
 
 # The tooltip of the button that goes to a terminal waiting for an answer. { $first } is a terminal's name, { $rest } one or two more.
 window-attention-then = { $first }, then { $rest }

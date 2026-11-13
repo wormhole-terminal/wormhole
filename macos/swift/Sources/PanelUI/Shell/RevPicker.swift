@@ -54,7 +54,7 @@ struct RevPicker: View {
             Text(selected?.title ?? headTitle).lineLimit(1).truncationMode(.tail).foregroundStyle(tokens.textPrimary)
             PanelIcon("chevron.up.chevron.down", size: 10).foregroundStyle(tokens.textMuted)
         }
-        .font(TextRole.caption.font.weight(.medium))
+        .font(tokens.font(.caption).weight(.medium))
         .padding(.leading, Space._2).padding(.trailing, Space._1)
         .frame(height: 24).frame(maxWidth: 160)
         .background(hovering ? tokens.stateHover : .clear, in: shape)
@@ -85,7 +85,7 @@ private struct RevList: View {
     var body: some View {
         VStack(spacing: 0) {
             TextField(panelText("picker-search", "Search branches"), text: $query)
-                .textFieldStyle(.plain).font(TextRole.body.font).focused($focused)
+                .textFieldStyle(.plain).font(tokens.font(.body)).focused($focused)
                 .padding(.horizontal, Space._3).frame(height: Metric.control)
                 .onSubmit { if let first = matches.first { choose(first) } else if query.isEmpty { choose(nil) } }
             Rectangle().fill(tokens.divider).frame(height: tokens.metrics.dividerWidth)
@@ -101,7 +101,7 @@ private struct RevList: View {
             }
             if let hint {
                 Rectangle().fill(tokens.divider).frame(height: tokens.metrics.dividerWidth)
-                Text(hint).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(2)
+                Text(hint).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(2)
                     .padding(.horizontal, Space._3).frame(maxWidth: .infinity, minHeight: Metric.row, alignment: .leading)
             }
         }
@@ -125,8 +125,8 @@ private struct RevList: View {
         PanelRow(action: action) { _ in
             HStack(spacing: PanelMetrics.gap) {
                 PanelIcon(symbol, size: 12).foregroundStyle(tokens.textMuted).frame(width: Metric.lead)
-                Text(title).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
-                if !detail.isEmpty { Text(detail).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1) }
+                Text(title).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                if !detail.isEmpty { Text(detail).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(1) }
                 Spacer(minLength: 0)
                 if checked { PanelIcon("checkmark", size: 11).foregroundStyle(tokens.primary) }
             }

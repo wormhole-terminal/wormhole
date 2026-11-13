@@ -26,7 +26,7 @@ struct FolderCrumb: View {
                         Text(text.parents).foregroundStyle(tokens.textMuted)
                         Text(text.last).foregroundStyle(tokens.textPrimary).fontWeight(.medium)
                     }
-                    .font(TextRole.label.font.weight(.regular))
+                    .font(tokens.font(.label).weight(.regular))
                     .lineLimit(1).fixedSize()
                 }
             }

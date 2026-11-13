@@ -51,7 +51,7 @@ struct RowLines: View {
             RenameField(name: terminal.title, rename: rename)
         } else {
             NameText(
-                name: terminal.title, font: TextRole.body.font.weight(isSelected || terminal.unread ? .semibold : .medium),
+                name: terminal.title, font: tokens.font(.body).weight(isSelected || terminal.unread ? .semibold : .medium),
                 color: isSelected ? tokens.sidebarRowSelectedText : tokens.textPrimary, reserve: hovering ? RowGeometry.closeRoom : 0,
                 cut: $nameCut)
         }

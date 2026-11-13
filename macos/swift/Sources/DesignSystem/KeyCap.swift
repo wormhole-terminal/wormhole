@@ -16,7 +16,7 @@ public struct KeyCap: View {
     public var body: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radiusChip)
         Text(text)
-            .font(.system(size: TextRole.caption.size, weight: .medium))
+            .font(.system(size: tokens.size(.caption), weight: .medium))
             .monospacedDigit()
             .foregroundStyle(tokens.textPrimary)
             .lineLimit(1)
@@ -42,7 +42,7 @@ public struct KeyHintView: View {
     public var body: some View {
         HStack(spacing: Space._2) {
             KeyCap(text: keys)
-            Text(label).font(.system(size: TextRole.caption.size)).foregroundStyle(tokens.textMuted)
+            Text(label).font(.system(size: tokens.size(.caption))).foregroundStyle(tokens.textMuted)
         }
         .fixedSize()
     }

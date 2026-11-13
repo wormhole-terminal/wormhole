@@ -20,7 +20,7 @@ struct Callout<Content: View>: View {
             HStack(spacing: Space._2) {
                 PanelIcon(symbol, size: Metric.glyph).foregroundStyle(iconColour)
                     .frame(width: Metric.lead, height: Metric.lead)
-                Text(title).font(TextRole.body.font.weight(.semibold)).foregroundStyle(tokens.textPrimary)
+                Text(title).font(tokens.font(.body).weight(.semibold)).foregroundStyle(tokens.textPrimary)
             }
             // The body starts under the title: past the lead column and its gap (`CALLOUT_INDENT`).
             VStack(alignment: .leading, spacing: Space._2) { content }.padding(.leading, Metric.lead + Space._2)
@@ -78,7 +78,7 @@ struct NoticeButton: View {
 
     var body: some View {
         Button(action: action) {
-            Text(title).font(TextRole.caption.font.weight(.medium))
+            Text(title).font(tokens.font(.caption).weight(.medium))
                 .foregroundStyle(primary ? tokens.textOnPrimary : tokens.buttonText)
                 .padding(.horizontal, Space._3).frame(height: Metric.controlSmall + 2)
                 .background(primary ? tokens.primary : tokens.buttonBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))

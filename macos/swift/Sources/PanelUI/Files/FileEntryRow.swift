@@ -56,7 +56,7 @@ struct FileEntryRow: View {
     }
 
     private var name: some View {
-        Text(row.label).font(TextRole.body.font.weight(selected ? .semibold : .regular))
+        Text(row.label).font(tokens.font(.body).weight(selected ? .semibold : .regular))
             .foregroundStyle(selected ? tokens.sidebarRowSelectedText : tokens.textPrimary).lineLimit(1).truncationMode(.middle)
     }
 
@@ -70,7 +70,7 @@ struct FileEntryRow: View {
 
     /// A muted line about a folder: it is being read, empty, can't be read, or has more than is listed.
     private var note: some View {
-        Text(words).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+        Text(words).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
             .padding(.leading, indent(extra: 2)).padding(.trailing, PanelMetrics.inset)
             .frame(maxWidth: .infinity, minHeight: Metric.row, alignment: .leading)
     }

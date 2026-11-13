@@ -1,6 +1,10 @@
 // The four type roles of the GPUI app plus its label role (`style/scale.rs` `TextRole`): sizes are rems of
 // the interface font (the theme's `ui_font_size`, 13 pt by default, in its `ui_font_family` or the system
 // font), so at the default they are 12 / 13 / 14 / 16 / 20. Line height is GPUI's own ratio unless a row fixes it (`NAME_LINE`, `META_LINE`).
+//
+// A view reads a role through the tokens of its window (`tokens.size(.caption)`, `tokens.font(.body)`, `.textRole(.body)`):
+// a window of another profile than the one Wormhole is in has that profile's interface font. The role's own `size` and
+// `font` read the app's store, for the windows that are the app's (Settings, the Studio, the first run).
 
 import CoreText
 import SwiftUI
@@ -29,9 +33,9 @@ public enum TextRole: CaseIterable, Sendable {
     }
 
     /// Points at the theme's interface font size (13 by default: 12 / 13 / 14 / 16 / 20).
-    @MainActor public var size: CGFloat {
-        rems * ThemeStore.shared.tokens.metrics.uiFontSize * 16 / TextRole.defaultInterfaceSize
-    }
+    @MainActor public var size: CGFloat { size(in: ThemeStore.shared.tokens.metrics) }
+
+    func size(in metrics: ThemeMetrics) -> CGFloat { rems * metrics.uiFontSize * 16 / TextRole.defaultInterfaceSize }
 
     public var weight: Font.Weight {
         switch self {
@@ -49,11 +53,15 @@ public enum TextRole: CaseIterable, Sendable {
     /// The theme's interface font (`metrics.ui_font_family`), or the system font when it sets none. `scale` is the
     /// window's own text step (`textScale`); `weight` and `design` replace the role's.
     @MainActor public func font(scale: CGFloat = 1, weight: Font.Weight? = nil, design: Font.Design? = nil) -> Font {
-        let size = size * scale
+        font(in: ThemeStore.shared.tokens.metrics, scale: scale, weight: weight, design: design)
+    }
+
+    @MainActor func font(in metrics: ThemeMetrics, scale: CGFloat, weight: Font.Weight?, design: Font.Design?) -> Font {
+        let size = size(in: metrics) * scale
+        // Font files are registered for the whole process, so the app's count stands for every window's (a profile's
+        // own fonts folder moves it too).
         _ = ThemeStore.shared.fontFiles
-        if let family = ThemeStore.shared.tokens.metrics.uiFontFamily, family != Self.systemFont,
-            let face = CTFont.face(of: family, size: size)
-        {
+        if let family = metrics.uiFontFamily, family != Self.systemFont, let face = CTFont.face(of: family, size: size) {
             return Font(face).weight(weight ?? self.weight)
         }
         return .system(size: size, weight: weight ?? self.weight, design: design ?? .default)
@@ -70,14 +78,26 @@ extension EnvironmentValues {
     @Entry public var textScale: CGFloat = 1
 }
 
+extension ThemeTokens {
+    /// The role's points in this theme's interface font size.
+    public func size(_ role: TextRole) -> CGFloat { role.size(in: metrics) }
+    /// The role's line box (`TextRole.lineHeightRatio` of its size).
+    public func lineHeight(_ role: TextRole) -> CGFloat { size(role) * TextRole.lineHeightRatio }
+    /// The role's font in this theme's interface font, or the system font when it sets none.
+    @MainActor public func font(_ role: TextRole, scale: CGFloat = 1, weight: Font.Weight? = nil, design: Font.Design? = nil) -> Font {
+        role.font(in: metrics, scale: scale, weight: weight, design: design)
+    }
+}
+
 private struct RoleFont: ViewModifier {
     @Environment(\.textScale) private var scale
+    @Environment(\.tokens) private var tokens
     let role: TextRole
     let weight: Font.Weight?
     let design: Font.Design?
 
     func body(content: Content) -> some View {
-        content.font(role.font(scale: scale, weight: weight, design: design))
+        content.font(tokens.font(role, scale: scale, weight: weight, design: design))
     }
 }
 

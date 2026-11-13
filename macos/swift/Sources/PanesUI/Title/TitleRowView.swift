@@ -16,6 +16,7 @@ public struct TitleRowView: View {
     let backend: any OpenInBackend
     let icon: (OpenInApp) -> NSImage?
     @Environment(\.reduceMotion) private var reduceMotion
+    @Environment(\.tokens) private var tokens
 
     public init(
         facts: TitleFacts, arrangement: TitleArrangement? = nil, fitting: any RowFitting = NaturalFit(),
@@ -27,7 +28,7 @@ public struct TitleRowView: View {
 
     public var body: some View {
         GeometryReader { proxy in
-            let plan = TitlePlanner.plan(facts, arrangement, width: proxy.size.width, measure: TextMeasurer(), fitting: fitting)
+            let plan = TitlePlanner.plan(facts, arrangement, width: proxy.size.width, measure: TextMeasurer(tokens: tokens), fitting: fitting)
             HStack(spacing: 0) {
                 TitleEndView(end: plan.ends.left, plan: plan, actions: actions, backend: backend, icon: icon)
                 Spacer(minLength: 0)

@@ -24,26 +24,26 @@ struct CommentEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: PanelMetrics.gap) {
-            Text(panelText("review-title", ["place": .text(place)], "Comment on \(place)")).font(TextRole.label.font).foregroundStyle(tokens.textPrimary)
+            Text(panelText("review-title", ["place": .text(place)], "Comment on \(place)")).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary)
             let code = at.code.trimmingCharacters(in: .whitespaces)
             if !code.isEmpty {
-                Text(code).font(codeFont.font(TextRole.caption.size)).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.tail)
+                Text(code).font(codeFont.font(tokens.size(.caption))).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.tail)
                     .padding(.horizontal, Space._2).padding(.vertical, Space._1).frame(maxWidth: .infinity, alignment: .leading)
                     .background(tokens.stateActive, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
             }
-            TextEditor(text: $text).font(TextRole.body.font).scrollContentBackground(.hidden).focused($focused)
+            TextEditor(text: $text).font(tokens.font(.body)).scrollContentBackground(.hidden).focused($focused)
                 .frame(height: PanelMetrics.noteLine * 4).padding(Space._1)
                 .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
                 .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(focused ? tokens.inputBorderFocus : tokens.inputBorder, lineWidth: tokens.metrics.borderWidth) }
                 .overlay(alignment: .topLeading) {
                     if text.isEmpty {
-                        Text(panelText("review-placeholder", "What should the agent change here?")).font(TextRole.body.font)
+                        Text(panelText("review-placeholder", "What should the agent change here?")).font(tokens.font(.body))
                             .foregroundStyle(tokens.inputPlaceholder).padding(Space._2).allowsHitTesting(false)
                     }
                 }
             HStack(spacing: PanelMetrics.gap) {
                 KeyCap(text: "\u{2318}\u{21a9}", height: Metric.titleControl)
-                Text(panelText("review-saves", "saves")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                Text(panelText("review-saves", "saves")).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                 Spacer(minLength: 0)
                 if existing != nil { NoticeButton(title: panelText("review-remove", "Remove"), action: remove) }
                 NoticeButton(title: panelText("dialog-cancel", "Cancel"), action: cancel)

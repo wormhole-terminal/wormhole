@@ -7,13 +7,13 @@ import SwiftUI
 struct Keycap: View {
     let text: String
     @Environment(\.tokens) private var tokens
-    /// Increase Contrast is the system's setting, which the theme store follows.
-    private var increased: Bool { ThemeStore.shared.increaseContrast }
+    /// Increase Contrast is the system's setting, which the window's theme store follows.
+    @Environment(\.increaseContrast) private var increased
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radiusChip)
         Text(text)
-            .font(TextRole.caption.font.weight(.medium).monospacedDigit())
+            .font(tokens.font(.caption).weight(.medium).monospacedDigit())
             .foregroundStyle(tokens.textPrimary)
             .lineLimit(1)
             .padding(.horizontal, Space._1)

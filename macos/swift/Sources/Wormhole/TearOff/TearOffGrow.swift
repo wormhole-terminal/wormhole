@@ -39,7 +39,10 @@ final class TearOffGrow {
     private var onEnd: () -> Void
 
     /// Hides what would show the whole window (its shadow, its lights) and puts the first pose: the chip.
-    init?(window: NSWindow, start: Start, appearance: SidebarAppearance, backend: any WindowsBackend, onEnd: @escaping () -> Void = {}) {
+    init?(
+        window: NSWindow, start: Start, appearance: SidebarAppearance, themes: ThemeStore = .shared, backend: any WindowsBackend,
+        onEnd: @escaping () -> Void = {}
+    ) {
         guard let content = window.contentView else { return nil }
         (self.window, self.content, self.backend, self.start, self.onEnd) = (window, content, backend, start, onEnd)
         let first = backend.tearOffGrow(chip: start.chip, size: content.bounds.size, radius: Self.radius, elapsed: 0)
@@ -48,7 +51,7 @@ final class TearOffGrow {
         Self.lights(window, shown: false)
         content.wantsLayer = true
         content.layer?.mask = mask
-        let overlay = NSHostingView(rootView: GrowOverlay(pose: pose, start: start, appearance: appearance))
+        let overlay = NSHostingView(rootView: GrowOverlay(pose: pose, start: start, appearance: appearance, themes: themes))
         overlay.frame = content.bounds
         overlay.autoresizingMask = [.width, .height]
         content.addSubview(overlay)
@@ -103,21 +106,21 @@ private struct GrowOverlay: View {
     let pose: TearOffGrow.Pose
     let start: TearOffGrow.Start
     let appearance: SidebarAppearance
-    @Environment(\.tokens) private var tokens
+    let themes: ThemeStore
 
     var body: some View {
         let grow = pose.grow
         ZStack(alignment: .topLeading) {
             RoundedRectangle(cornerRadius: grow.radius)
-                .fill(tokens.surfaceElevated.opacity(1 - grow.content))
+                .fill(themes.tokens.surfaceElevated.opacity(1 - grow.content))
                 .frame(width: grow.shown.width, height: grow.shown.height)
                 .offset(x: grow.shown.minX, y: grow.shown.minY)
-            TearOffChipView(terminal: start.terminal, title: start.terminal?.title ?? "", appearance: appearance, bleed: false)
+            TearOffChipView(terminal: start.terminal, title: start.terminal?.title ?? "", appearance: appearance, bleed: false, themes: themes)
                 .opacity(grow.face)
                 .offset(x: grow.shown.minX, y: grow.shown.minY)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .allowsHitTesting(false)
-        .themed()
+        .themed(themes)
     }
 }

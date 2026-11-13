@@ -10,6 +10,7 @@ public enum StatusKind: Sendable, Equatable {
 }
 
 public struct StatusDot: View {
+    @Environment(\.tokens) private var tokens
     public let kind: StatusKind
     @Environment(\.reduceMotion) private var reduceMotion
 
@@ -33,26 +34,26 @@ public struct StatusDot: View {
     @ViewBuilder private var glyph: some View {
         switch kind {
         case .idle:
-            Circle().strokeBorder(Palette.textFaint, lineWidth: Metric.ring)
+            Circle().strokeBorder(tokens.textFaint, lineWidth: Metric.ring)
                 .frame(width: Metric.statusDot, height: Metric.statusDot)
         case .working:
             if reduceMotion {
-                dot.foregroundStyle(Palette.working)
+                dot.foregroundStyle(tokens.agentWorking)
             } else {
-                dot.foregroundStyle(Palette.working)
+                dot.foregroundStyle(tokens.agentWorking)
                     .phaseAnimator([1.0, 0.35]) { view, opacity in view.opacity(opacity) } animation: { _ in Motion.breath }
             }
         case .attention:
-            dot.foregroundStyle(Palette.attention).background { halo }
+            dot.foregroundStyle(tokens.agentAttention).background { halo }
         case .done:
-            Image(systemName: "checkmark.circle.fill").font(.system(size: Metric.glyph)).foregroundStyle(Palette.done)
+            Image(systemName: "checkmark.circle.fill").font(.system(size: Metric.glyph)).foregroundStyle(tokens.agentDone)
         case .failed:
-            Image(systemName: "xmark.circle.fill").font(.system(size: Metric.glyph)).foregroundStyle(Palette.danger)
+            Image(systemName: "xmark.circle.fill").font(.system(size: Metric.glyph)).foregroundStyle(tokens.statusDanger)
         }
     }
 
     @ViewBuilder private var halo: some View {
-        let ring = Circle().fill(Palette.attention.opacity(0.25)).padding(-Metric.statusHalo)
+        let ring = Circle().fill(tokens.agentAttention.opacity(0.25)).padding(-Metric.statusHalo)
         if reduceMotion {
             ring
         } else {

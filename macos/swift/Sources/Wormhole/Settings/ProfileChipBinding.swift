@@ -23,10 +23,12 @@ extension AppController {
         { [weak self, weak session] in
             #if WITH_UNIFFI
                 guard let self, let session, let rows = try? (self.settingsModel.host as? RustSettingsHost)?.profiles() else { return [] }
+                // A profile's colour as this window's own theme draws it (`odd_profile`: the tokens of the window's profile).
+                let tokens = session.dress.look.themes.tokens
                 return rows.map {
                     ProfileChoice(
                         id: $0.id, name: $0.name, letter: $0.name.first ?? "?",
-                        colour: GroupColor(key: $0.color).map { $0.mark(ThemeStore.shared.tokens).color }, current: $0.isActive,
+                        colour: GroupColor(key: $0.color).map { $0.mark(tokens).color }, current: $0.isActive,
                         here: $0.id == session.windows.profile)
                 }
             #else

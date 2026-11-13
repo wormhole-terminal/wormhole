@@ -24,7 +24,7 @@ struct TerminalTabView: View {
             // The name takes the room the tab has (the keycap's included) and is cut by the fade, never pushing the keycap out.
             Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay(alignment: .leading) {
-                    Text(tab.name).font(TextRole.label.font.weight(.medium))
+                    Text(tab.name).font(tokens.font(.label).weight(.medium))
                         .foregroundStyle(selected ? tokens.textPrimary : tokens.textMuted)
                         .lineLimit(1).fixedSize()
                 }
@@ -56,7 +56,7 @@ struct TerminalTabView: View {
     }
 
     private func keycap(_ number: Int) -> some View {
-        Text("⌘\(number)").font(TextRole.caption.font.weight(.medium)).foregroundStyle(tokens.textMuted)
+        Text("⌘\(number)").font(tokens.font(.caption).weight(.medium)).foregroundStyle(tokens.textMuted)
             .padding(.horizontal, Space._1).frame(minWidth: Metric.keyCapMinWidth - 8, minHeight: Metric.keyCapHeight)
             .background(tokens.border, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
     }

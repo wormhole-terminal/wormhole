@@ -27,10 +27,10 @@ struct TwoLineRow<Lead: View, Trailing: View>: View {
         let content = HStack(spacing: PanelMetrics.gap) {
             lead.frame(width: Metric.lead, height: Metric.lead)
             VStack(alignment: .leading, spacing: 0) {
-                Text(title).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                Text(title).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                     .frame(height: PanelMetrics.nameLine)
                 if let detail {
-                    Text(detail).font(TextRole.caption.font).foregroundStyle(detailWarns ? tokens.statusWarningText : tokens.textMuted)
+                    Text(detail).font(tokens.font(.caption)).foregroundStyle(detailWarns ? tokens.statusWarningText : tokens.textMuted)
                         .lineLimit(2).frame(minHeight: PanelMetrics.metaLine, alignment: .topLeading)
                 }
             }

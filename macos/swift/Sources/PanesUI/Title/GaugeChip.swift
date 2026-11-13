@@ -23,7 +23,7 @@ struct GaugeChip: View {
                 Text("\(percent)%").monospacedDigit()
             }
         }
-        .font(TextRole.caption.font.weight(.medium))
+        .font(tokens.font(.caption).weight(.medium))
         .foregroundStyle(tokens.textMuted)
         .padding(.horizontal, TitleMetrics.extraPad)
         .frame(height: TitleMetrics.chipHeight)

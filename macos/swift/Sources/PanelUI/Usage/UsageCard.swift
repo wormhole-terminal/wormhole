@@ -14,9 +14,9 @@ struct UsageCard: View {
         PanelCard {
             HStack(spacing: PanelMetrics.gap) {
                 AgentMark(report: report)
-                Text(report.name).font(TextRole.body.font.weight(.semibold)).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                Text(report.name).font(tokens.font(.body).weight(.semibold)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 Spacer(minLength: 0)
-                Text(UsageText.updated(report.updated, now: now)).font(TextRole.caption.font.monospacedDigit()).foregroundStyle(tokens.textMuted)
+                Text(UsageText.updated(report.updated, now: now)).font(tokens.font(.caption).monospacedDigit()).foregroundStyle(tokens.textMuted)
             }
             .padding(.horizontal, PanelMetrics.inset).frame(height: Metric.band)
             if !report.limits.isEmpty {
@@ -26,9 +26,9 @@ struct UsageCard: View {
             if let tokensCount = report.responseTokens {
                 VStack(alignment: .leading, spacing: Space._2) {
                     SectionLabel(panelText("usage-latest-response", "Latest model response"))
-                    Text(panelText("usage-tokens", ["count": .whole(tokensCount)], "\(String(tokensCount)) tokens")).font(TextRole.body.font.monospacedDigit()).foregroundStyle(tokens.textPrimary)
+                    Text(panelText("usage-tokens", ["count": .whole(tokensCount)], "\(String(tokensCount)) tokens")).font(tokens.font(.body).monospacedDigit()).foregroundStyle(tokens.textPrimary)
                     Text(panelText("usage-gemini-note", "Latest report across Gemini terminals. Plan limits are not reported."))
-                        .font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                        .font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                 }
                 .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._2).frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -49,9 +49,9 @@ struct LimitRow: View {
         let (share, words) = limit.shown(now: now)
         VStack(alignment: .leading, spacing: Space._2) {
             HStack(alignment: .firstTextBaseline, spacing: PanelMetrics.gap) {
-                Text(limit.label).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                Text(limit.label).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 Spacer(minLength: 0)
-                Text(words).font(TextRole.caption.font.monospacedDigit()).foregroundStyle(tokens.textMuted)
+                Text(words).font(tokens.font(.caption).monospacedDigit()).foregroundStyle(tokens.textMuted)
             }
             // The bar is an 8 pt pill (gpui-component `Progress`, medium), the fill in the level's colour.
             Capsule().fill(tokens.border).frame(height: 8)

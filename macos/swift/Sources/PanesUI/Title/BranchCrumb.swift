@@ -22,7 +22,7 @@ struct BranchCrumb: View {
                             .frame(width: TitleMetrics.extraIcon)
                         if showsText { Text(branch ?? PanesText.detached).lineLimit(1).truncationMode(.tail) }
                     }
-                    .font(TextRole.caption.font.weight(.medium))
+                    .font(tokens.font(.caption).weight(.medium))
                     .foregroundStyle(detached ? tokens.statusWarningText : tokens.gitBranch)
                     .padding(.leading, Space._1).padding(.trailing, showsText ? Space._2 : Space._1)
                     .frame(width: width, height: TitleMetrics.chipHeight, alignment: .leading)
@@ -34,7 +34,7 @@ struct BranchCrumb: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(PanesText.branch(branch ?? PanesText.detached))
                 if let whose = plan.facts.superproject, plan.fit.words {
-                    Text(whose).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                    Text(whose).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                         .lineLimit(1).fixedSize().padding(.leading, Space._2)
                         .help(PanesText.submodule(whose))
                 }

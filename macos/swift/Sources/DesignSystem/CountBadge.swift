@@ -14,7 +14,7 @@ public struct CountBadge: View {
 
     public var body: some View {
         Text(Self.label(count))
-            .font(TextRole.caption.font.weight(.semibold).monospacedDigit())
+            .font(tokens.font(.caption).weight(.semibold).monospacedDigit())
             .foregroundStyle(tokens.textPrimary)
             .padding(.horizontal, Space._1)
             // At least a square, so a lone digit sits in a circle-ish pill.

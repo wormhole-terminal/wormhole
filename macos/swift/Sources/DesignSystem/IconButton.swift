@@ -43,13 +43,14 @@ public struct IconButton: View {
 }
 
 private struct IconButtonStyle: ButtonStyle {
+    @Environment(\.tokens) private var tokens
     let hovering: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: Radius.row)
         return configuration.label
-            .foregroundStyle(hovering || configuration.isPressed ? Palette.textPrimary : Palette.textSecondary)
-            .background(configuration.isPressed ? Palette.pressed : hovering ? Palette.hover : .clear, in: shape)
+            .foregroundStyle(hovering || configuration.isPressed ? tokens.textPrimary : tokens.textMuted)
+            .background(configuration.isPressed ? tokens.stateActive : hovering ? tokens.stateHover : .clear, in: shape)
             .contentShape(shape)
             .pressed(configuration.isPressed)
             .motion(Motion.press, value: hovering)

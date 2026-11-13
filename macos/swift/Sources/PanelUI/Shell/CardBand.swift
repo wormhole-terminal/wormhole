@@ -38,7 +38,7 @@ struct CardBand<Trailing: View>: View {
         Button(action: onToggle) {
             HStack(spacing: PanelMetrics.gap) {
                 if let folded { Disclosure(collapsed: folded) }
-                Text(title).font(TextRole.label.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                Text(title).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 Spacer(minLength: 0)
             }
             .frame(maxHeight: .infinity)

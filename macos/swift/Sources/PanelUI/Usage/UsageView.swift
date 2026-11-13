@@ -26,7 +26,7 @@ public struct UsageView: View {
                         Text(panelText("usage-empty-1", "Claude and Codex plan limits, and Gemini response tokens, show here as you use them in Wormhole."))
                         Text(panelText("usage-empty-2", "Enable or update their integrations in Settings \u{2192} Coding agents. Plan limits need a supported subscription; API-key logins may not report them."))
                     }
-                    .font(TextRole.body.font).foregroundStyle(tokens.textMuted)
+                    .font(tokens.font(.body)).foregroundStyle(tokens.textMuted)
                     .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._2).frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {

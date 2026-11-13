@@ -41,7 +41,7 @@ struct FolderColorCard: View {
             // The first dot lines up with the panel's inset, inside its hit area.
             .padding(.horizontal, PanelMetrics.inset - (Metric.hitMin - ColorChoice.dot) / 2)
             .marked("folder.color")
-            Text(paint.note).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+            Text(paint.note).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                 .padding(.horizontal, PanelMetrics.inset).padding(.bottom, Space._2)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

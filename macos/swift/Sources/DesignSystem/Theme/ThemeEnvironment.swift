@@ -9,6 +9,10 @@ extension EnvironmentValues {
     /// Reduce Motion as the store has it: macOS's, followed live, unless a check stood in for it (SwiftUI's own
     /// `accessibilityReduceMotion` cannot be set). Outside a `.themed()` tree: off.
     @Entry public var reduceMotion = false
+    /// Increase Contrast and Reduce Transparency as the window's store has them (macOS's, unless a check stood in): a tint
+    /// alone is no edge under the first, and no surface lets the desktop through under the second.
+    @Entry public var increaseContrast = false
+    @Entry public var reduceTransparency = false
     /// The Animate icons setting (`icon_animations`): icons answer a click with their own drawing (`IconMotion`).
     @Entry public var iconAnimations = true
     /// Whether the window is in front as far as the focus rings go: none shows in a window that is not (the window sets it).
@@ -28,6 +32,8 @@ private struct Themed: ViewModifier {
         content
             .environment(\.tokens, store.tokens)
             .environment(\.reduceMotion, store.reduceMotion)
+            .environment(\.increaseContrast, store.increaseContrast)
+            .environment(\.reduceTransparency, store.reduceTransparency)
             .environment(\.iconAnimations, store.iconAnimations)
             .environment(\.codeFont, store.codeFont)
             // Native controls (menus, scrollers, text fields) follow the theme's light or dark, not only macOS's.

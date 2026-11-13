@@ -138,7 +138,7 @@ struct HistoryListView: View {
         return HStack(spacing: PanelMetrics.gap) {
             Button { store.filter(by: []) } label: {
                 HStack(spacing: Space._1) {
-                    Text(name).font(TextRole.caption.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                    Text(name).font(tokens.font(.caption)).foregroundStyle(tokens.textPrimary).lineLimit(1)
                     PanelIcon("xmark", size: 12).foregroundStyle(tokens.textMuted)
                 }
                 .padding(.horizontal, Space._2).frame(height: Metric.controlSmall)

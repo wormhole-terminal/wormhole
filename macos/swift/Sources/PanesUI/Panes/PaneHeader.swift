@@ -28,11 +28,11 @@ struct PaneHeader<Menu: View>: View {
             AtMostWidth(width: PaneMetrics.nameMax) { Text(info.title).lineLimit(1).truncationMode(.tail) }
                 .layoutPriority(1)
             Text(info.folder.map { Elide.front($0, PaneMetrics.folderMax) } ?? "")
-                .font(TextRole.caption.font.weight(.regular)).foregroundStyle(tokens.textFaint)
+                .font(tokens.font(.caption).weight(.regular)).foregroundStyle(tokens.textFaint)
                 .lineLimit(1).truncationMode(.head).frame(maxWidth: .infinity, alignment: .leading)
             buttons
         }
-        .font(TextRole.caption.font.weight(.medium))
+        .font(tokens.font(.caption).weight(.medium))
         .foregroundStyle(focused ? tokens.textPrimary : tokens.textMuted)
         .padding(.leading, gaps ? PaneMetrics.inset : Space._3)
         .padding(.trailing, Space._1)

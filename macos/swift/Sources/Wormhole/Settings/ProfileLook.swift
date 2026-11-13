@@ -65,7 +65,8 @@ final class ProfileLook {
         let folder = backend.fontFolder
         let fontsMoved = folder != appliedFolder
         defer { (applied, appliedFolder) = (values, folder) }
-        if fontsMoved { themes.fontFiles += 1 }
+        // The type roles read the app's count (`TextRole.font`): registered font files are the whole process's.
+        if fontsMoved { ThemeStore.shared.fontFiles += 1 }
         if LookSettings.themeMoved(values, since: applied) { ThemeSync.apply(values, to: themes) }
         themes.refreshIfThemeFilesChanged()
         if changed("font_family", "font_size", "line_height", "font_ligatures") || fontsMoved, app.options.fontFamily == nil, app.options.pointSize == nil {

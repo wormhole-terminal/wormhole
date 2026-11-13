@@ -17,7 +17,7 @@ struct PaletteFooterView: View {
             Spacer(minLength: 0)
             trailingText
         }
-        .font(.system(size: TextRole.caption.size))
+        .font(.system(size: tokens.size(.caption)))
         .foregroundStyle(tokens.textMuted)
         .padding(.horizontal, Space._4)
         .frame(height: Metric.paletteRowHeight)
@@ -31,7 +31,7 @@ struct PaletteFooterView: View {
         case .actionsHint:
             HStack(spacing: Space._1) {
                 Text(Words.text("palette-actions-hint-type", fallback: "Type"))
-                Text(">").font(.system(size: TextRole.caption.size, design: .monospaced)).foregroundStyle(tokens.textPrimary)
+                Text(">").font(.system(size: tokens.size(.caption), design: .monospaced)).foregroundStyle(tokens.textPrimary)
                 Text(Words.text("palette-actions-hint-for-actions", fallback: "for actions"))
             }
         case .none: EmptyView()

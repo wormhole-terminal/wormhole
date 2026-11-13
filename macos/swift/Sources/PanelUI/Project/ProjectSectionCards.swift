@@ -38,7 +38,7 @@ struct ProjectActionsCard: View {
                 TwoLineRow(title: action.title, detail: action.detail, action: { store.run(action) }) {
                     PanelIcon("play.fill", size: 11).foregroundStyle(tokens.primary)
                 } trailing: {
-                    if let key = action.key { Text(key).font(TextRole.caption.font).foregroundStyle(tokens.textFaint) }
+                    if let key = action.key { Text(key).font(tokens.font(.caption)).foregroundStyle(tokens.textFaint) }
                 }
                 .accessibilityLabel(action.title)
             }
@@ -79,7 +79,7 @@ struct ProjectLayoutCard: View {
         PanelCard {
             CardBand(title: panelText("project-layout", "Terminal layout"), count: CountText.grouped(names.count))
             HStack(spacing: PanelMetrics.gap) {
-                Text(names.joined(separator: " \u{b7} ")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1)
+                Text(names.joined(separator: " \u{b7} ")).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 NoticeButton(title: panelText("project-open-layout", "Open terminals"), primary: true, action: store.openLayout)
             }

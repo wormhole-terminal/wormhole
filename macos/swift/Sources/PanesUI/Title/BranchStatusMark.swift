@@ -20,7 +20,7 @@ struct BranchStatusMark: View {
                 if status.ahead > 0 { count("arrow.up", status.ahead) }
                 if status.behind > 0 { count("arrow.down", status.behind) }
             }
-            .font(TextRole.caption.font.weight(.medium))
+            .font(tokens.font(.caption).weight(.medium))
             .foregroundStyle(tokens.textMuted)
             .frame(height: TitleMetrics.chipHeight)
             .contentShape(Rectangle())

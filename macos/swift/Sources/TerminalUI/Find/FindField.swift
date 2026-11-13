@@ -18,7 +18,7 @@ struct FindField: View {
             // The setter is a closure, not the method itself: Swift 6.3's compiler crashes on the thunk for a method there.
             TextField(L10n.findPlaceholder, text: Binding(get: { model.text }, set: { model.setText($0) }), selection: $selection)
                 .textFieldStyle(.plain)
-                .font(.system(size: TextRole.body.size))
+                .font(.system(size: tokens.size(.body)))
                 .focused($focused)
                 .padding(.leading, FindMetrics.queryInset)
                 .onKeyPress(.return, phases: .down) { press in
@@ -27,7 +27,7 @@ struct FindField: View {
                 }
                 .onKeyPress(.escape) { onClose(); return .handled }
             Text(model.countText)
-                .font(.system(size: TextRole.caption.size)).monospacedDigit()
+                .font(.system(size: tokens.size(.caption))).monospacedDigit()
                 .foregroundStyle(model.countIsError ? tokens.statusDangerText : tokens.textMuted)
                 .lineLimit(1).frame(maxWidth: FindMetrics.countMaxWidth, alignment: .trailing)
                 .accessibilityLabel(model.countText)

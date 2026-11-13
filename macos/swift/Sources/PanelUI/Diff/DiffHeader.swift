@@ -32,9 +32,9 @@ struct DiffHeader: View {
             BandButton(symbol: "chevron.left", label: panelText("diff-previous-file", "Previous file"), inRow: true) { step(-1) }
             BandButton(symbol: "chevron.right", label: panelText("diff-next-file", "Next file"), inRow: true) { step(1) }
             if let position {
-                Text(panelText("diff-file-position", ["index": .whole(position.index + 1), "count": .whole(position.count)], "File \(String(position.index + 1)) of \(String(position.count))")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize()
+                Text(panelText("diff-file-position", ["index": .whole(position.index + 1), "count": .whole(position.count)], "File \(String(position.index + 1)) of \(String(position.count))")).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).fixedSize()
             }
-            if let commit { Text(commit).font(TextRole.caption.font).foregroundStyle(tokens.primary).fixedSize() }
+            if let commit { Text(commit).font(tokens.font(.caption)).foregroundStyle(tokens.primary).fixedSize() }
             // The path crumb: the file's icon, its folders quiet and its name loud. It gives way first, down to
             // nothing, so the badges and controls at the end stay whole (the GPUI title row elides it the same way).
             FileIcon(kind: .file(file.name), tint: tokens.textMuted)
@@ -48,7 +48,7 @@ struct DiffHeader: View {
                     Text("+\(CountText.grouped(added))").foregroundStyle(tokens.diffAdded)
                     Text("\u{2212}\(CountText.grouped(removed))").foregroundStyle(tokens.diffRemoved)
                 }
-                .font(.system(size: TextRole.caption.size, design: .monospaced)).fixedSize()
+                .font(.system(size: tokens.size(.caption), design: .monospaced)).fixedSize()
                 BandButton(symbol: "text.append", label: panelText("diff-wrap-lines", "Wrap long lines"), inRow: true) { wrap.toggle() }
                     .opacity(wrap ? 1 : 0.6)
             }
@@ -61,7 +61,7 @@ struct DiffHeader: View {
                 Button(action: close) {
                     HStack(spacing: Space._1) {
                         KeyCap(text: "esc", height: Metric.titleControl)
-                        Text(panelText("diff-close", "close")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                        Text(panelText("diff-close", "close")).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
                     }.padding(.horizontal, Space._2).frame(height: Metric.hitMin).contentShape(Rectangle())
                 }.buttonStyle(.plain).accessibilityLabel(panelText("diff-close-spoken", "Close diff"))
             } else {
@@ -77,7 +77,7 @@ struct DiffHeader: View {
     private var crumb: Text {
         let folders = file.path.split(separator: "/", omittingEmptySubsequences: false).dropLast().joined(separator: "/")
         let quiet = Text(folders.isEmpty ? "" : folders + "/").foregroundStyle(tokens.textMuted)
-        return Text("\(quiet)\(Text(file.name).foregroundStyle(tokens.textPrimary))").font(TextRole.body.font)
+        return Text("\(quiet)\(Text(file.name).foregroundStyle(tokens.textPrimary))").font(tokens.font(.body))
     }
 
     private var badges: [(text: String, color: Color)] {
@@ -106,7 +106,7 @@ struct StatusBadge: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Text(text).font(TextRole.caption.font).foregroundStyle(color).lineLimit(1).fixedSize()
+        Text(text).font(tokens.font(.caption)).foregroundStyle(color).lineLimit(1).fixedSize()
             .padding(.horizontal, Space._2).frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)
             .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).strokeBorder(color, lineWidth: tokens.metrics.borderWidth) }
     }

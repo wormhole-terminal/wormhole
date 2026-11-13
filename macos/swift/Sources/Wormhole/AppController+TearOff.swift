@@ -35,7 +35,9 @@ extension AppController {
         else { return windowPoint == nil ? tearChip.end() : tearChip.hide() }
         let summary = session.hub.state.terminals.first { $0.id == terminal }
         tearChip.show(
-            TearOffChipView(terminal: summary, title: summary?.title ?? "", appearance: look.sidebar), at: global,
+            TearOffChipView(
+                terminal: summary, title: summary?.title ?? "", appearance: session.dress.look.sidebar, themes: session.dress.look.themes),
+            at: global,
             touchesSystem: policy.touchesSystem)
     }
 

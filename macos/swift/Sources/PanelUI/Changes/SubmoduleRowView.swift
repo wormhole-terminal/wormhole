@@ -21,20 +21,20 @@ struct SubmoduleRowView: View {
         PanelRow(selected: selected, action: action) { hovering in
             HStack(spacing: PanelMetrics.gap) {
                 PanelIcon("folder.badge.gearshape", size: Metric.glyph).foregroundStyle(muted).frame(width: Metric.lead)
-                Text(file.name).font(TextRole.body.font.weight(selected ? .semibold : .regular))
+                Text(file.name).font(tokens.font(.body).weight(selected ? .semibold : .regular))
                     .foregroundStyle(selected ? tokens.sidebarRowSelectedText : tokens.textPrimary).lineLimit(1)
                 if !inTree && !file.folder.isEmpty {
-                    Text(file.folder).font(TextRole.caption.font).foregroundStyle(muted).lineLimit(1).truncationMode(.head)
+                    Text(file.folder).font(tokens.font(.caption)).foregroundStyle(muted).lineLimit(1).truncationMode(.head)
                         .layoutPriority(-1)
                 }
                 Spacer(minLength: 0)
-                Text(what).font(TextRole.caption.font).foregroundStyle(muted).lineLimit(1).truncationMode(.tail).layoutPriority(-2)
+                Text(what).font(tokens.font(.caption)).foregroundStyle(muted).lineLimit(1).truncationMode(.tail).layoutPriority(-2)
                 if hovering, file.submoduleEnterable, let root {
                     BandButton(symbol: "terminal", label: panelText("submodule-enter", ["name": .text(file.name)], "Open a terminal in \(file.name)"), inRow: true) {
                         host?.openTerminal(in: root + "/" + file.path, running: nil)
                     }
                 }
-                Text(file.kind.letter).font(TextRole.caption.font.weight(.bold)).foregroundStyle(letterColor)
+                Text(file.kind.letter).font(tokens.font(.caption).weight(.bold)).foregroundStyle(letterColor)
                     .frame(width: PanelMetrics.kindLetter, alignment: .trailing)
             }
             .padding(.leading, PanelMetrics.inset + CGFloat(depth) * Metric.indent).padding(.trailing, PanelMetrics.inset)

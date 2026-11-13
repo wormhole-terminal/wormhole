@@ -17,7 +17,7 @@ public struct TabCountBadge: View {
 
     public var body: some View {
         Text(count > 999 ? "999+" : "\(count)")
-            .font(TextRole.caption.font.weight(.semibold).monospacedDigit())
+            .font(tokens.font(.caption).weight(.semibold).monospacedDigit())
             .foregroundStyle(selected ? tokens.sidebarRowSelectedText : tokens.textPrimary)
             .padding(.horizontal, Space._1)
             .frame(minWidth: Metric.badgeHeight, minHeight: Metric.badgeHeight)

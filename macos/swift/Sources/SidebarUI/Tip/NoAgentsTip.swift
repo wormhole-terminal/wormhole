@@ -36,9 +36,9 @@ public struct NoAgentsTip: View {
         HStack(alignment: .top, spacing: Space._2) {
             sparkle(tokens.textMuted)
             VStack(alignment: .leading, spacing: Space._1) {
-                Text(Words.text("tip-no-agents-title", fallback: "No coding agents yet")).font(TextRole.label.font).foregroundStyle(tokens.textPrimary)
+                Text(Words.text("tip-no-agents-title", fallback: "No coding agents yet")).font(tokens.font(.label)).foregroundStyle(tokens.textPrimary)
                 Text(Words.text("tip-no-agents-body", fallback: "Rows show the running command instead. Status glyphs still mark a busy terminal."))
-                    .font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
+                    .font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
                 link(Words.text("tip-no-agents-settings", fallback: "Coding agents settings"), openSettings)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -51,7 +51,7 @@ public struct NoAgentsTip: View {
     private var offer: some View {
         HStack(spacing: Space._2) {
             sparkle(tokens.textFaint)
-            Text(Words.text("tip-closed", fallback: "Tip closed")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(1)
+            Text(Words.text("tip-closed", fallback: "Tip closed")).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             link(Words.text("tip-never", fallback: "Don't show again"), never)
             IconButton(lucide: .x, label: LocalizedStringKey(Words.text("tip-keep", fallback: "Keep the tip for next time")), action: keep)
@@ -65,7 +65,7 @@ public struct NoAgentsTip: View {
     }
 
     private func link(_ title: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(title).font(TextRole.caption.font).foregroundStyle(tokens.primary) }
+        Button(action: action) { Text(title).font(tokens.font(.caption)).foregroundStyle(tokens.primary) }
             .buttonStyle(.plain)
     }
 }
