@@ -15,7 +15,7 @@ import WorkspaceModel
 @MainActor
 final class ProfileLook {
     let profile: String
-    let look: WindowLook
+    let look: WindowUI.WindowLook
     var themes: ThemeStore { look.themes }
     private(set) lazy var terminalLook = TerminalLook(
         terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] }, themes: themes, sharesEngineColours: false)
@@ -29,7 +29,7 @@ final class ProfileLook {
 
     init(profile: String, app: AppController, backend: any SettingsBackend, themes: ThemeStore, featureOn: @escaping @MainActor (String) -> Bool) {
         (self.profile, self.app, self.backend, self.featureOn) = (profile, app, backend, featureOn)
-        look = WindowLook(themes: themes)
+        look = WindowUI.WindowLook(themes: themes)
         look.zen = app.look.zen
     }
 

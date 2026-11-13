@@ -29,7 +29,7 @@ enum LookSettings {
     /// alone; `automation`: the Automation feature is on in this profile (a row's menu offers "Hide from Agents");
     /// `motion`: the Motion feature is on in it.
     static func apply(
-        _ values: [String: JSONValue], to look: WindowLook, changed: (String...) -> Bool, keepsStatusBar: Bool, automation: Bool, motion: Bool
+        _ values: [String: JSONValue], to look: WindowUI.WindowLook, changed: (String...) -> Bool, keepsStatusBar: Bool, automation: Bool, motion: Bool
     ) {
         if changed("opacity"), let value = values["opacity"]?.number { look.opacity = min(max(value, 0.3), 1) }
         if changed("blur") { look.blur = values["blur"]?.bool ?? look.blur }
@@ -52,7 +52,7 @@ enum LookSettings {
     }
 
     /// The code font (`code_font_family`, else the terminal's), for the window and for its theme's own windows.
-    static func applyCodeFont(_ values: [String: JSONValue], folderRevision: Int, to look: WindowLook) {
+    static func applyCodeFont(_ values: [String: JSONValue], folderRevision: Int, to look: WindowUI.WindowLook) {
         look.codeFont = PanelSettings.codeFont(values, folderRevision: folderRevision)
         look.themes.codeFont = look.codeFont
     }
