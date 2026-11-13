@@ -68,6 +68,9 @@ final class SystemPanelHost: PanelHost {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
+    /// Quoted as the title row's card quotes a folder (`path_card.rs` `insert_text`).
+    func insertPath(_ path: String) { terminal.send(WindowHub.shellQuoted(path)) }
+
     /// The core runs the app's own way of taking a line. Finder, and an app that does not start, show the file: it
     /// is never handed to its default app, which for `x.command` or a folder named `x.app` is to run it.
     func open(_ path: String, line: Int?) {

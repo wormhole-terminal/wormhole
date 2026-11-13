@@ -493,3 +493,6 @@ diff-submodule-left-behind = Commits left behind
 
 # After the commits listed. { $count } is how many more there are, already written with its separators.
 diff-submodule-more = and { $count } more
+
+# The file's path in the title row while the viewer shows it, for VoiceOver. { $path } is the path below the folder.
+files-spoken-reveal-file = Reveal { $path } in Finder

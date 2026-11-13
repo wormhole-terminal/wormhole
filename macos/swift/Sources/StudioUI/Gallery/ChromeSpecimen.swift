@@ -45,6 +45,14 @@ struct ChromeSpecimen: View {
                 Row(isSelected: true, selection: selection, action: {}) { _ in rowLabel("The selected row") }
             }
             Noted("← a 22 pt × in its 28 pt hit area") { CloseHitSpecimen() }
+            // A path's hover card (the title row's folder, the file a viewer shows), as it stands in its popover.
+            PathCard(
+                path: "~/Projects/wormhole/crates/wormhole-core",
+                buttons: [
+                    PathCardButton(id: "open", symbol: "arrow.up.forward.app", title: "Open in Finder") {},
+                    PathCardButton(id: "copy", symbol: "doc.on.doc", title: "Copy path", copied: "Copied") {},
+                    PathCardButton(id: "insert", symbol: "text.insert", title: "Insert into terminal", enabled: false) {},
+                ], hover: PathCardHover())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

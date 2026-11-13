@@ -14,6 +14,8 @@ public protocol PanelHost: AnyObject {
     /// (it would act when pasted) and the notice chip says so (`files/open.rs` `copy_path`).
     func copyPath(_ path: String)
     func reveal(_ path: String)
+    /// Types the absolute path at the terminal's prompt as one word for a shell (the path card's Insert into terminal).
+    func insertPath(_ path: String)
     /// Opens a file in the editor the person chose (`Open in`), at a line when given.
     func open(_ path: String, line: Int?)
     /// The apps "Open in" lists (installed editors, Finder last), the chosen one marked; empty where the system lists none.
@@ -87,6 +89,7 @@ extension PanelHost {
     public func copy(_ text: String, as what: PanelCopied?) { copy(text) }
     /// Where there is no chip, nothing says it (VoiceOver is told through `notify` where the caller has words).
     public func failed(_ what: PanelFailed) {}
+    public func insertPath(_ path: String) {}
     public func stamp(of path: String) -> String? { nil }
     public var openApps: [OpenApp] { [] }
     public func open(_ path: String, inBundle bundle: String) {}
