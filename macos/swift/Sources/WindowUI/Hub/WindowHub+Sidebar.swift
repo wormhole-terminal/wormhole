@@ -141,8 +141,7 @@ extension WindowHub {
     func newTerminal(inGroup group: GroupID) {
         let name = state.groups.first { $0.id == group }?.name ?? ""
         Task { @MainActor in
-            await GroupFolderQuestion.settle(group: group, name: name, planner: store, send: send)
-            send(.newTerminalInGroup(group))
+            await GroupFolderQuestion.openTerminal(inGroup: group, name: name, planner: store, send: send)
         }
     }
 }

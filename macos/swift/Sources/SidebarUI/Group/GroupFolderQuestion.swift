@@ -1,7 +1,7 @@
 // The question a terminal opening in a group with no folder asks first (`group_folder.rs` `new_session_in_group`): use the
 // folder the core offered, or not now (never asked again for this group); closing the sheet is "Not Now", as in GPUI. The
 // box keeps only the terminals in the folder in the group, and says how many would leave. The core decides whether to offer;
-// a system alert asks. Every way a terminal is made in a group goes through `settle`.
+// a system alert asks. Every way a terminal is made in a group goes through `openTerminal`.
 
 import AppKit
 import WordsModel
@@ -16,19 +16,31 @@ public enum GroupFolderQuestion {
     /// What asks instead of the system alert: a test instance holds the question for its control folder (`group-ask`).
     @MainActor public static var asker: (@MainActor (Offer) async -> Answer)?
 
-    /// Asks about the folder the core offers for `group`, if it offers one, and sends the answer (`setGroupFolder` and
-    /// `setOnlyInFolder`, or `declineGroupFolder`). The caller then opens the terminal, whatever was answered.
-    @MainActor public static func settle(
-        group: GroupID, name: String, planner: WorkspaceStore, send: @MainActor (WorkspaceAction) -> Void
+    /// A terminal in `group` (`name` when the person pressed +), after the question about its folder when the core has one to
+    /// offer. A group that went while the question was up, or whose id a group of another name has since, is not touched and
+    /// the terminal opens loose, as the + would have without a group (`answer_group_folder`).
+    @MainActor public static func openTerminal(
+        inGroup group: GroupID, name: String, planner: WorkspaceStore?, send: @MainActor (WorkspaceAction) -> Void
     ) async {
-        guard let folder = planner.groupFolderOffer(group: group) else { return }
-        let leaving = planner.groupFolderLeaving(group: group, folder: folder)
-        switch await ask(folder: folder, group: name, leaving: leaving) {
-        case .use(let only):
-            send(.setGroupFolder(group, folder))
-            if only { send(.setOnlyInFolder(group, true)) }
-        case .decline: send(.declineGroupFolder(group))
+        guard let planner else { return send(.newTerminalInGroup(group)) }
+        if let folder = planner.groupFolderOffer(group: group) {
+            let leaving = planner.groupFolderLeaving(group: group, folder: folder)
+            let answer = await ask(folder: folder, group: name, leaving: leaving)
+            if stands(group, named: name, in: planner) {
+                switch answer {
+                case .use(let only):
+                    send(.setGroupFolder(group, folder))
+                    if only { send(.setOnlyInFolder(group, true)) }
+                case .decline: send(.declineGroupFolder(group))
+                }
+            }
         }
+        send(stands(group, named: name, in: planner) ? .newTerminalInGroup(group) : .newTerminal)
+    }
+
+    /// Whether `group` is still there under the name it was asked for by.
+    @MainActor private static func stands(_ group: GroupID, named name: String, in planner: WorkspaceStore) -> Bool {
+        planner.state.groups.first { $0.id == group }.map { $0.name == name } ?? false
     }
 
     /// The words of the question, for the alert and for whatever holds it instead.

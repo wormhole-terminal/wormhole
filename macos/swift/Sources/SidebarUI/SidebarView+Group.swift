@@ -27,8 +27,7 @@ extension SidebarView {
         let send = send, planner = dropPlanner
         // The question first (a test instance holds it for its control folder), the terminal after the answer, whatever it was.
         Task { @MainActor in
-            if let planner { await GroupFolderQuestion.settle(group: group, name: name, planner: planner, send: send) }
-            send(.newTerminalInGroup(group))
+            await GroupFolderQuestion.openTerminal(inGroup: group, name: name, planner: planner, send: send)
         }
     }
 }

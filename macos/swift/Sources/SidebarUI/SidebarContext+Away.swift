@@ -25,8 +25,7 @@ extension SidebarContext {
                 // First the question about the group's folder, when the core has one to offer (as the head's + asks).
                 let name = state.groups.first { $0.id == group }?.name ?? ""
                 Task { @MainActor in
-                    await GroupFolderQuestion.settle(group: group, name: name, planner: planner, send: send)
-                    send(.newTerminalInGroup(group))
+                    await GroupFolderQuestion.openTerminal(inGroup: group, name: name, planner: planner, send: send)
                 }
             },
             hooks: hooks, flash: nil,
