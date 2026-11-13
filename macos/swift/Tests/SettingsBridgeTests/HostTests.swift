@@ -88,7 +88,7 @@ final class HostListsTests: BridgeTestCase {
         var revoked: [(UInt64, Bool)] = []
         var platform = RustSettingsHost.Platform()
         platform.approvals = {
-            [AccessApprovalRecord(id: 7, stored: true, label: "Claude Code", how: .always, agent: "claude", detail: "For good", location: "~/bin", allowed: ["Read"])]
+            [AccessApprovalRecord(id: 7, stored: true, label: "Claude Code", how: .always, agent: "claude", detail: "For good", location: "~/bin", allowed: ["Read"], capabilities: [.read])]
         }
         platform.revokeApproval = { revoked.append(($0, $1)) }
         let host = try makeKit(platform: platform).host

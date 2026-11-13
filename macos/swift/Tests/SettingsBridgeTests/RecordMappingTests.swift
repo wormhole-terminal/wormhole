@@ -65,13 +65,13 @@ final class LiveRecordMappingTests: XCTestCase {
     func testAnApprovalKeepsWhetherItIsStoredAndTheProjectMarkNeedsARowItSets() {
         let held = AccessApprovalRecord(
             id: 3, stored: false, label: "Claude Code", how: .session, agent: "claude", detail: "While it runs",
-            location: "", allowed: ["Read"])
+            location: "", allowed: ["Read"], capabilities: [.read])
         let row = RecordMapping.approval(held)
         XCTAssertEqual(row.number, 3)
         XCTAssertFalse(row.isStored)
         XCTAssertEqual(row.id, "held-3")
         XCTAssertEqual(RecordMapping.approval(AccessApprovalRecord(
-            id: 3, stored: true, label: "x", how: .always, agent: nil, detail: "", location: "", allowed: [])).id, "stored-3")
+            id: 3, stored: true, label: "x", how: .always, agent: nil, detail: "", location: "", allowed: [], capabilities: [])).id, "stored-3")
 
         let project = ProjectSettingsRecord(name: "app", dir: ".wormhole", root: "/p/app", note: "Set by app/.wormhole/config.json", json: "{}")
         XCTAssertNil(RecordMapping.project(project, entries: []), "a project that sets no row marks none")

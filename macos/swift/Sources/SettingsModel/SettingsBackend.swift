@@ -57,6 +57,8 @@ public protocol SettingsHost: AnyObject {
     func perform(_ hooks: AgentRecord.HookAction, agent id: String)
     /// Takes an approval back (a row's Revoke): the program is asked again, and what it started is closed.
     func revoke(_ approval: ApprovalRecord)
+    /// Switches one capability of an approved program on or off, kept with the approval (the ticks of its row).
+    func setCapability(_ capability: ApprovalCapability, on: Bool, of approval: ApprovalRecord)
     /// Makes a profile, as a copy of `copyOf`'s settings or with the defaults, and deletes one (never Default). The
     /// reason it was refused, or nil.
     func makeProfile(name: String, copyOf: String?) -> String?
@@ -121,6 +123,7 @@ extension SettingsHost {
     public func perform(_ hooks: AgentRecord.HookAction, agent id: String) {}
     /// A host that holds no approvals (the mock) has none to take back.
     public func revoke(_ approval: ApprovalRecord) {}
+    public func setCapability(_ capability: ApprovalCapability, on: Bool, of approval: ApprovalRecord) {}
     public func makeProfile(name: String, copyOf: String?) -> String? { Self.noProfiles }
     public func windowOpened() {}
     public var probes: (any ProbesBackend)? { nil }

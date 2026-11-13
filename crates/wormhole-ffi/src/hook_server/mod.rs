@@ -181,6 +181,25 @@ impl HookServer {
         revoked
     }
 
+    /// Switch one capability of approval `id` of profile `profile`'s desk (`stored`: a database row of
+    /// `AccessDesk::approvals`) on or off, as the ticks of its row in Settings do. Taking one away ends the streams
+    /// that were started under the approval, which it may have let in. Whether the approval changed.
+    pub fn set_approval_capability(
+        &self,
+        profile: String,
+        id: u64,
+        stored: bool,
+        capability: crate::aux_backends::AccessCapability,
+        on: bool,
+    ) -> bool {
+        let Some(seat) = self.core.seat_of_profile(&profile) else { return false };
+        let changed = seat.desk.set_capability(id, stored, capability, on);
+        if changed && !on {
+            self.core.bus.revoke_holder(seat.holder(stored, id));
+        }
+        changed
+    }
+
     /// Profile `profile`'s settings changed: read them again, and end the streams that only the mode "Allowed
     /// while open" let read every terminal when it is no longer that.
     pub fn settings_changed(&self, profile: String) {

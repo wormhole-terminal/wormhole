@@ -55,6 +55,12 @@ public final class HookServerHandle {
         server.revokeStoredApproval(profile: profile, id: id)
     }
 
+    /// Switch one capability of approval `id` of profile `profile`'s desk on or off; taking one away ends the streams started under it.
+    @discardableResult
+    public func setApprovalCapability(profile: String, _ id: UInt64, stored: Bool, capability: AccessCapability, on: Bool) -> Bool {
+        server.setApprovalCapability(profile: profile, id: id, stored: stored, capability: capability, on: on)
+    }
+
     /// macOS asked to open these `file://` URLs: a terminal each in window `window`, a script run in its folder (core's
     /// `default_terminal` decides). How many terminals were made.
     @discardableResult

@@ -30,6 +30,9 @@ public final class RustSettingsHost: SettingsHost {
         /// Takes an approval back (`stored`: a database row; else one held in memory): the hook server ends the
         /// streams it let in, which only the app can reach.
         public var revokeApproval: @MainActor (_ number: UInt64, _ stored: Bool) -> Void = { _, _ in }
+        /// Switches one capability of an approval on or off (the ticks of its row): the hook server ends the streams that
+        /// were started under it when one is taken away.
+        public var setApprovalCapability: @MainActor (_ number: UInt64, _ stored: Bool, _ capability: AccessCapability, _ on: Bool) -> Void = { _, _, _, _ in }
         /// The project service the Project tab uses, so trust given in Settings is what the tab shows; nil: no Project folders page.
         public var projects: @MainActor () -> ProjectService? = { nil }
         /// Asked before a Probe that needs it is approved (Touch ID, or the password); nil: no Extensions page.

@@ -70,6 +70,11 @@
             if stored { handle.revokeStoredApproval(profile: profile, number) } else { handle.revokeApproval(profile: profile, number) }
         }
 
+        /// Settings → Agent access → a tick of an approved program's row.
+        func setApprovalCapability(_ number: UInt64, stored: Bool, capability: AccessCapability, on: Bool, profile: String) {
+            handle.setApprovalCapability(profile: profile, number, stored: stored, capability: capability, on: on)
+        }
+
         /// A profile opened beside the first one: its windows' requests are judged by its own desk.
         func addDesk(_ desk: AccessDesk) { handle.addDesk(desk) }
 

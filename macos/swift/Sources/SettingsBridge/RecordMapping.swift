@@ -65,7 +65,26 @@ extension RecordMapping {
     static func approval(_ row: AccessApprovalRecord) -> ApprovalRecord {
         ApprovalRecord(
             number: row.id, isStored: row.stored, label: row.label, detail: row.detail, location: row.location,
-            allowed: row.allowed, agent: row.agent)
+            allowed: row.allowed, agent: row.agent, capabilities: Set(row.capabilities.compactMap(capability)))
+    }
+
+    private static func capability(_ row: AccessCapability) -> ApprovalCapability? {
+        switch row {
+        case .read: .read
+        case .type: .type
+        case .run: .run
+        case .open: .open
+        case .close: nil
+        }
+    }
+
+    static func record(_ capability: ApprovalCapability) -> AccessCapability {
+        switch capability {
+        case .read: .read
+        case .type: .type
+        case .run: .run
+        case .open: .open
+        }
     }
 
     static func choice(_ row: SettingsProfileRow) -> ProfileChoice {
