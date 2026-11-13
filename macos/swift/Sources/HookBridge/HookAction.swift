@@ -11,9 +11,9 @@ public enum HookAction: Equatable, Sendable {
     /// `wh close`: ask the person whether to close `terminal` (as closing it by hand does), then call
     /// `HookServerHandle.closeQuestionOver()`. Nothing closes unless they say yes.
     case closeAsked(terminal: Int64)
-    /// `wh new-terminal --worktree <branch>`: put the new-worktree question up for the repository `folder` is in,
+    /// `wh new-terminal --worktree <branch>`: put the new-worktree question up in window `window` (the one the request reached) for the repository `folder` is in,
     /// with `branch` filled in. Nothing is made until the person confirms; `command` (`--command`) is then typed into the new terminal.
-    case worktreeAsked(folder: String, branch: String, command: String?)
+    case worktreeAsked(window: Int64, folder: String, branch: String, command: String?)
     /// The status line of `terminal`'s `agent` (its command, `claude`) says which model it runs and how much of its
     /// context window is used (0 to 100).
     case gauge(terminal: Int64, agent: String, model: String?, context: Double?)
@@ -49,7 +49,8 @@ extension HookAction {
         case .activate: self = .activate
         case .front(let terminal): self = .front(terminal: terminal)
         case .closeAsked(let terminal): self = .closeAsked(terminal: terminal)
-        case .worktreeAsked(let folder, let branch, let command): self = .worktreeAsked(folder: folder, branch: branch, command: command)
+        case .worktreeAsked(let window, let folder, let branch, let command):
+            self = .worktreeAsked(window: window, folder: folder, branch: branch, command: command)
         case .gauge(let terminal, let agent, let model, let context):
             self = .gauge(terminal: terminal, agent: agent, model: model, context: context.map(Double.init))
         case .newWindow(let window, let terminal, let folder, let activate):

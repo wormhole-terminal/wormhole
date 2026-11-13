@@ -67,7 +67,7 @@ pub(super) fn new_terminal(
     }
     // A worktree is never made on a script's say alone: the question is put up in the window instead.
     if let Some(branch) = worktree {
-        return worktree::ask(core, folder, &branch, command);
+        return worktree::ask(core, &target, folder, &branch, command);
     }
     let opened = open(&target, Action::NewTerminal, folder);
     match opened {

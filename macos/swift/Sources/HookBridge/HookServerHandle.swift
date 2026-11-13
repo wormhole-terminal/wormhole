@@ -42,8 +42,8 @@ public final class HookServerHandle {
     /// (the reply's one JSON line, or why the words were no request); a read, wait, run or stream is not carried here.
     public func controlLine(words: [String], from: String?) -> String { server.controlLine(words: words, from: from) }
 
-    /// The new-worktree sheet came up or went away: while it is up a second `--worktree` request is answered Failed.
-    public func worktreeSheet(up: Bool) { server.worktreeSheet(up: up) }
+    /// The new-worktree sheet of `window` came up or went away: while it is up a second `--worktree` request for that window is answered Failed.
+    public func worktreeSheet(window: Int64, up: Bool) { server.worktreeSheet(window: window, up: up) }
 
     /// `welcome-probe`: a welcome request as the first-run program sends it, from tab `from` (nil: from outside any).
     public func welcomeLine(from: String?, token: String, op: String) -> String { server.welcomeLine(from: from, token: token, opJson: op) }

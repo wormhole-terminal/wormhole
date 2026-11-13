@@ -1,6 +1,7 @@
 //! What the server's threads share: the workspace and the terminals it holds, the desk that asks the
 //! person, the bus the streams listen on, the budgets and the queue of what Swift is to do.
 
+use std::collections::HashSet;
 use std::hash::{DefaultHasher, Hash as _, Hasher as _};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -102,9 +103,10 @@ pub(crate) struct Core {
     pub(super) signatures: Mutex<Signatures>,
     /// A close question is up (`close`): one at a time, until Swift says it is over.
     pub(super) close_question: AtomicBool,
-    /// A new-worktree sheet is up in a window (`new-terminal --worktree`): a second request is answered Failed instead of
-    /// resetting it, until Swift says the sheet is gone.
-    pub(super) worktree_question: AtomicBool,
+    /// The windows with a new-worktree sheet up (`new-terminal --worktree`, or the menu): a second request for one of them
+    /// is answered Failed instead of resetting its sheet, until Swift says the sheet is gone. One window's sheet does not
+    /// refuse another window's request.
+    pub(super) worktree_question: Mutex<HashSet<i64>>,
     /// The Probes that are on and the feed their hooks hear (`probes`).
     pub(crate) probes: crate::probes::Probes,
     /// The terminal welcomes that run (`welcome`).
@@ -139,7 +141,7 @@ impl Core {
             identities: Mutex::default(),
             signatures: Mutex::default(),
             close_question: AtomicBool::new(false),
-            worktree_question: AtomicBool::new(false),
+            worktree_question: Mutex::default(),
             probes: crate::probes::Probes::default(),
             welcome: Mutex::default(),
         })

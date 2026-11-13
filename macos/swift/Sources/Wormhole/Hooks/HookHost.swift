@@ -77,6 +77,9 @@
             handle.setApprovalCapability(profile: profile, number, stored: stored, capability: capability, on: on)
         }
 
+        /// The new-worktree sheet of window `window` came up or went away, however it was opened.
+        func worktreeSheet(window: Int, up: Bool) { handle.worktreeSheet(window: Int64(window), up: up) }
+
         /// A profile opened beside the first one: its windows' requests are judged by its own desk.
         func addDesk(_ desk: AccessDesk) { handle.addDesk(desk) }
 
@@ -98,10 +101,10 @@
             case .front(let terminal): app.show(terminal: Int(terminal))
             case .closeAsked(let terminal):
                 app.closeTerminal(Int(terminal), fromCommandLine: true) { [weak self] in self?.handle.closeQuestionOver() }
-            case .worktreeAsked(let folder, let branch, let command):
-                // The sheet tells the control line when it is gone, so a second request is answered Failed while it is up.
-                app.hub.panel.worktrees.sheetChanged = { [weak self] up in self?.handle.worktreeSheet(up: up) }
-                app.hub.askWorktree(branch: branch, in: folder, command: command)
+            case .worktreeAsked(let window, let folder, let branch, let command):
+                // In the window the request reached (whose profile judged the trust), not the one in front. Each window's store
+                // tells the control line when its sheet is up or gone (`AppController+Windows`), so a second request is answered Failed.
+                (app.sessions.first { $0.id == Int(window) } ?? app.sessions.first)?.hub.askWorktree(branch: branch, in: folder, command: command)
             case .gauge(let terminal, let agent, let model, let context):
                 // In the window that holds the terminal.
                 app.session(holding: Int(terminal))?.hub.gauges.tell(
@@ -144,6 +147,7 @@
         func settingsChanged(profile: String) {}
         func revokeApproval(_ number: UInt64, stored: Bool, profile: String) {}
         func stop() {}
+        func worktreeSheet(window: Int, up: Bool) {}
         @discardableResult func openFromSystem(_ urls: [URL], in window: Int) -> Int { 0 }
     }
 

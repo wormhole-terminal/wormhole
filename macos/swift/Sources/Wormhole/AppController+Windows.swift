@@ -117,6 +117,12 @@ extension AppController {
             self?.showSettings()
             self?.settingsController?.show(section: $0)
         }
+        // A sheet opened from the menu counts as much as one a command-line request opened: the control line answers a second
+        // request for this window Failed while it is up.
+        hub.panel.worktrees.sheetChanged = { [weak self, weak session] up in
+            guard let session else { return }
+            self?.hooks?.worktreeSheet(window: session.id, up: up)
+        }
         hub.actions.newTerminalWith = { [weak self, weak session] key in self?.newTerminal(shellKey: key, in: session) }
     }
 

@@ -5,7 +5,7 @@ use serde_json::{Value, json};
 use wormhole_core::ipc::control::SEND_TEXT_MAX_BYTES;
 use wormhole_core::workspace::Action;
 
-use super::support::{eventually, fixture};
+use super::support::{Client, eventually, fixture};
 use crate::WorkspaceEvent;
 use crate::hook_server::HookEvent;
 
@@ -202,6 +202,42 @@ fn a_worktree_is_asked_for_in_the_window_and_never_made_by_the_request() {
         json!({"action": "new_terminal", "folder": repo.display().to_string(), "worktree": "bad name"}),
     );
     assert_eq!(code(&bad), "bad_request");
+}
+
+#[test]
+fn a_second_worktree_request_is_refused_only_for_the_window_whose_sheet_is_up() {
+    let f = fixture("open");
+    f.terminal();
+    let mut client = f.client();
+    f.events();
+    let repo = f.dir.join("repo");
+    std::fs::create_dir_all(&repo).expect("a folder");
+    let init = std::process::Command::new("git")
+        .args(["init", "--quiet"])
+        .arg(&repo)
+        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .env("GIT_CONFIG_SYSTEM", "/dev/null")
+        .status()
+        .expect("git runs");
+    assert!(init.success());
+    let ask = |client: &mut Client, window: Option<i64>| {
+        client.control(json!({"action": "new_terminal", "folder": repo.display().to_string(),
+                              "worktree": "fix/login", "window": window}))
+    };
+    let first = ask(&mut client, None);
+    assert_eq!(ok(&first)["asked"], true, "{first}");
+    let window = ok(&first)["window"].as_i64().expect("the window it reached");
+    assert!(
+        f.events().iter().any(|e| matches!(e, HookEvent::WorktreeAsked { window: w, .. } if *w == window)),
+        "the question names the window"
+    );
+    assert_eq!(code(&ask(&mut client, Some(window))), "failed", "a sheet is up in that window");
+    // A sheet opened from the menu counts the same, and another window's sheet closing frees only its own.
+    f.server.worktree_sheet(window + 1000, true);
+    f.server.worktree_sheet(window + 1000, false);
+    assert_eq!(code(&ask(&mut client, Some(window))), "failed");
+    f.server.worktree_sheet(window, false);
+    assert_eq!(ok(&ask(&mut client, Some(window)))["asked"], true);
 }
 
 #[test]
