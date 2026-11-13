@@ -1123,3 +1123,26 @@ Written without compiling: expect compile errors.
 | O05 | Clear Buffer (Cmd-K) in a terminal of a host older than protocol minor 2 | NOT A GAP: `clearHistory()` returns true there and `onHistoryKept` posts the notice; nothing new written. Needs an old host to see it | `TerminalMetal/Pointer/TerminalSelection.swift:34`, `TerminalOverlay+Clipboard.swift:23`, `interaction/pointer.rs` `clear_history` |
 | PL03 | NOT WRITTEN: a dev build without a bundle posting through the platform's script | - | dev only |
 | PL01 | NOT WRITTEN: Show Project greyed when project folders are off | - | the action is hidden by `featuresOff` in that case; the difference is not visible |
+
+## Lane settings-studio, wave 7
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| ST03 | TEST. Settings > Notifications with macOS "not asked": press Allow notifications, answer in the system prompt | the row leaves "Not asked yet" as soon as the answer is given (no reopening of the page); no polling | `Notices/NoticeFeed+Test.swift` `askPermission`, `Settings/SettingsPlatform.swift` |
+| ST03 | In a bundled app (not a test instance) press Send test with the permission denied by the system's add (or force an error) | the row says "macOS refused the notification: <the system's sentence>"; allowed: "Sent" only after the system took the request | `NoticeFeed+Test.swift` `finishTest`, `SystemNotifier.deliver`, `Notifying.deliver`, `NoticeCoordinator.deliverTest` |
+| ST03 hardening | TEST. `cargo test -p wormhole-ffi agent_logins` | a login folder under `WORMHOLE_AGENT_HOME` is written; `<home>/../real/.claude` and `<home>/link/.claude` (link out) are refused and nothing is written outside | `crates/wormhole-ffi/src/settings/agent_logins.rs` `resolved_within`, `tests` |
+| SD01 | Studio: select a metric (`metrics.radius`) | under the stepper a "Preview at N px" label, "n uses", and a sample row (count badge, key cap, chip, status badge) drawn with the draft | `StudioUI/Editor/MetricEditor.swift` `preview` |
+| SD01 | Studio: type `mix(pri` in a colour's field | a list with `primary...` colours and `mix(a, b, 30%)` functions marked "function"; Up/Down move, Tab/Return take the row and the caret goes after it, Esc closes the list before it closes the window; a finished name offers nothing | `StudioUI/Editor/ExpressionField.swift`, `StudioBridge/FfiStudioFiles.swift` `completions`, `studio_edit.rs` |
+| SD01 | Make `text.muted` too dark in a theme | the card lists the pair with core's fix (`readable(<what you typed>, ...)`); a token that only follows a failing one says "Follows X: its fix clears this too" | `StudioDocument+List.swift` `contrastIssues`, `LowContrastCard.swift`, `studio_edit.rs` |
+| SD01 | Open a pair (a theme with Light and Dark) | every token row has the appearance chip (both / light / dark); a click moves the value | `StudioUI/List/TokenRowView.swift`, `TokenListView.swift` |
+| SD01 | TEST. Save a theme twice in the Studio; Browse All Versions; `swift test --filter ThemeFilesFFITests` | the first text is kept as a version (a hand-written first file as the pinned original); the folder, caps and thinning are core's | `StudioBridge/FfiThemeFolder.swift`, `studio_folder.rs`, `ThemeFilesFFITests` |
+| SD02 | Studio gallery > Tiles | a flare and a nudge are drawn a third of the way through working to needs input; the other variants play on press; counts still cannot be held | `SidebarUI/Samples/TileStatesSample.swift`, `Tile/StatusPlay.swift` `statusCaught` |
+| SD02 | Studio gallery: scroll | specimens are built as they come near the viewport (LazyVStack); selection outline still follows | `StudioUI/Gallery/GalleryView.swift` |
+| ST02 | Reduce Transparency or Increase Contrast on; Appearance page | the opacity slider is off and its value faint, with the note | `SettingsUI/Controls/SettingSlider.swift` `offWhenOpaque` |
+| ST02 | Terminal page > Default shell | the menu shows each choice's command line under its name ("Login shell: /bin/zsh"); the button shows the name | `SettingsUI/Controls/SubtitledPicker.swift`, `host.rs` `shell_options` |
+| ST02/ST09 | Fonts page: open the Code font picker while the Terminal tab is shown, hover a family | the specimen switches to the Code tab and shows that family at the code size | `SettingsUI/Preview/FontsScene.swift`, `Rows/FontControl.swift`, `SettingsModel/FontPreview.swift` |
+| STX2 | Project folders page with a project selected: edit `<project>/.wormhole/config.json` by hand with the window in front | the page reads again within about a second, without the window coming forward | `project_watch.rs`, `ProjectsModel.select`, `RustProjectsBackend.follow` |
+| SD01 | Open the Studio, switch profile (chip) with it open, then Save as / list themes | the Studio's theme list, versions and saves use the new profile's themes folder (the open draft's own file stays where it was read) | `StudioLauncher.swift` `live`, `FfiThemeFolder(folder:)`, `FfiStudioFiles(folder:)` |
+| ST03 | NOT DONE: the permission row following a change made in System Settings while the page is up | nothing arrives (the notification centre has no change event); the page reads on open | - |

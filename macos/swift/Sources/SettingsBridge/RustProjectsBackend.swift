@@ -49,7 +49,7 @@ struct RustProjectsBackend: ProjectsBackend {
 }
 
 /// Hears `ProjectListener.changed()`, which Rust calls on a thread of its own, and passes it on.
-private final class ProjectChanges: ProjectListener, @unchecked Sendable {
+private final class ProjectChanges: ProjectListener, Sendable {
     private let onChange: @Sendable () -> Void
     init(_ onChange: @escaping @Sendable () -> Void) { self.onChange = onChange }
     func changed() { onChange() }

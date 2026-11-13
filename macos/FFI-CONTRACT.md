@@ -1515,3 +1515,59 @@ All additive; the core decides, Swift asks.
   default; it turns `wormhole-term`'s on); `available` says whether, and without it every number is 0. For `perf-profile` only.
 - `AccessDesk.grant_scripts(always) -> bool`: lets Scripts in until quit, or as a stored approval of the desk's profile. The control
   folder's `agent-grant` only; no request over the control socket reaches it.
+
+## Wave 6, settings page rules (`settings/page_rules.rs`, `settings/theme_picks.rs`, `settings/agent_logins.rs`, `aux_backends/access/approvals.rs`, `hook_server/mod.rs`; additive)
+
+- `settings_blur_unsafe(opacity: f32, blur: bool) -> bool`: core's `Translucency::unsafe_without_blur`: translucent without the blur, below the
+  opacity text can be judged at. The Appearance page warns under the Blur row while it holds (and offers "Turn on blur").
+- `SettingsHandle.show_title_part(part: String, shown: bool) -> bool`: shows or hides one part of the title row (`part` is its stored name,
+  e.g. `terminal_status`) through core's `Settings::show_title_part`: a part switched on takes its place among the shown ones. Whether the
+  list changed; false too for a name that is no part.
+- `SettingsHandle.theme_hidden(value) -> bool` and `set_theme_hidden(value, hidden) -> bool`: whether the theme picker leaves a theme out, and
+  leaves it out or brings it back (`Settings::theme_hidden` / `set_theme_hidden`). `value` is what a theme pick holds (a built-in's name or
+  slug, a user theme's id or file): core counts a built-in's name and slug as one theme, so the app that hid it and the one that reads it agree.
+  `set_theme_hidden` says whether anything changed.
+- `settings_agent_logins() -> [SettingsAgentLogin]` and `settings_set_login_hooks(agent, dir, install)`: every profile's login of an agent
+  (`agent` the command, `profile`, `dir` absolute, `shown`, `line`, `hooks: SettingsHookState`) and the one button that fits, through core's
+  `Spec::state_in` / `install_in` / `uninstall_in`. Both throw `FfiError::NotIsolated`-like `SettingsError` outside an isolated instance. Hooks
+  are written only under `WORMHOLE_AGENT_HOME`: unset, or equal to the real home, the call is refused. A login folder is judged by where it
+  **resolves**, not by how it is written: a `..` is refused outright, every link on the way is followed (the deepest part that exists is
+  canonicalised, the rest must be plain names), and the result must lie under the canonical `WORMHOLE_AGENT_HOME`; a link that leads nowhere is
+  refused too. What is written is the resolved folder. Tested with `..` and with a symbolic link out (`agent_logins.rs` `tests`).
+- `AccessDesk.set_capability(id: u64, stored: bool, capability: AccessCapability, on: bool) -> bool`: switches one capability of an approval
+  (`stored`: a database row of the profile's `wormhole.db`; else one held in memory) as the ticks of its row in Settings do. False for an unknown
+  id, for Close (never a tick) and for a profile with no database. Turning one on ends nothing.
+- `HookServer.set_approval_capability(profile, id, stored, capability, on) -> bool`: the same through the server, for the desk of `profile`. Taking
+  a capability away also ends every stream the approval let in (`revoke_holder`: broader than the one capability, the safe side); the stored
+  capabilities are read at decision time, so a change bites at the next request. No control-socket verb reaches either call: a terminal program
+  cannot tick a capability on.
+
+## Wave 7, Settings and Theme Studio (additive; one record gained a field)
+
+- `SettingsOptionRow.detail: Option<String>` (the one changed record): what a choice does, shown under its name in the menu. Filled by
+  `shell_options` (the Default shell select: "Login shell: /bin/zsh" for the login shell, the command line for a profile or a system shell);
+  `None` for the other selects. Swift draws a select that has any detail with the system pop-up button (`SubtitledPicker`: an `NSMenuItem`
+  subtitle).
+- `settings_watch_project(root: String, listener: ProjectListener) -> ProjectWatch`: follows the `.wormhole` folder (and the older `.andromeda`
+  one) of the project at `root` through core's `platform::watch`. `ProjectListener.changed()` is called on a thread of Rust's, once after a burst
+  of events has settled (about 100 ms) and when the system lost events; it must return at once. The watch lives as long as the returned object:
+  let it go to stop it. A folder that cannot be watched is followed by nothing (logged). The Project folders page keeps the watch on the selected
+  project and reads again on `changed`; its read when the window comes forward stays as the fallback.
+- `studio_folder_files(themes_dir) -> [String]`, `studio_folder_read(path) -> String`, `studio_folder_write(themes_dir, path, text)`,
+  `studio_folder_versions(themes_dir, path) -> [StudioSavedVersion]`, `studio_folder_read_version(path) -> String`: the Theme Studio's themes
+  folder through core. `files` lists the non-hidden `.json` / `.jsonc` files (core's `registry::fingerprint`), sorted by path. `read` is capped
+  at core's theme size (`MAX_THEME_BYTES`) and follows links as the GPUI Studio does. `write` keeps the file it replaces as a saved version first
+  (`saved_versions::keep_version_now`, thinned by `keep_policy`: every save of the last hour up to 120, then the newest of each hour for a day,
+  then of each day for 30 days; the first hand-written file is the pinned `.original`) and then writes atomically; a version that cannot be kept
+  is logged and does not stop the save. `versions` is newest first (`StudioSavedVersion {path, saved: i64 seconds, pinned}`) under the id of the
+  theme (its slug); `read_version` is capped and stays inside the version's own folder. Swift keeps no copy of the thinning, the naming or the
+  caps (`FfiThemeFolder`).
+- `studio_completions(text, caret: u32, target) -> StudioCompletions?`: core's expression completions for a value typed for the token `target`.
+  `caret` and the returned `start` / `end` are UTF-8 byte offsets; `items` are `{label, insert, function}` (best first, at most 8). None while the
+  caret is not after a name, for a `#` colour, a number, or a name that already exists (Return then applies it). Swift offers them under the field
+  with ↑ ↓, ⇥ and ↩ taking the row, Esc closing the list.
+- `studio_contrast_issues(themes_dir, text, shown: String?) -> [StudioContrastIssue]` (throws `FfiError::Theme`): the pairs the theme `text`
+  (the shown appearance of a pair) falls short on, each `{fg, bg, underlay, ratio, min, fix: {token, expression, label}?, follows: String?}`
+  from core's `contrast_issues`: the fix wraps what the person typed (`readable(<it>, <backgrounds>, <min>)`), follows tokens that merely name
+  a failing one (`follows`: that token's fix clears this pair too), spots cycles, and has none for the terminal palette's own pair. The Studio
+  applies a fix only when the person presses it.
