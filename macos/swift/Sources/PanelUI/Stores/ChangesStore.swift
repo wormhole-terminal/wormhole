@@ -46,8 +46,10 @@ public final class ChangesStore {
     public private(set) var revs: [Rev] = []
     /// The picker's list is being read ("Loading branches…").
     public private(set) var revsLoading = false
-    /// The title row's branch chip asked for the "compare with" picker: it opens as soon as it is on screen.
-    public var pickerRequested = false
+    /// The terminal whose branch chip asked for the "compare with" picker: it opens as soon as that terminal's list is on screen,
+    /// never for the terminal the tab still shows while it follows the selection.
+    public var pickerFor: Int?
+    public var pickerRequested: Bool { pickerFor != nil && pickerFor == terminal }
     /// The commit the list is against, and the one the open diff was read against: a diff is read again when it moves.
     @ObservationIgnored private var baseRev: String?
     @ObservationIgnored private var openBase: String?
@@ -93,6 +95,8 @@ public final class ChangesStore {
             let mine = terminal.flatMap { kept.removeValue(forKey: $0) } ?? Kept()
             (compare, arrangement, marked, review) = (mine.compare, mine.arrangement, mine.marked, mine.review)
             (self.terminal, cursor, anchor, copiedInstead) = (terminal, nil, nil, false)
+            // A request for another terminal than the one the tab came to is stale.
+            if pickerFor != terminal { pickerFor = nil }
         }
         // The compare branch is the terminal's and survives a `cd` (only `setCompare` changes it); a branch the new folder
         // lacks shows as `compareMissing`.
@@ -134,7 +138,12 @@ public final class ChangesStore {
         }
     }
 
-    private func setPhase(_ new: Phase, _ folder: String) { if folder == self.folder { phase = new } }
+    private func setPhase(_ new: Phase, _ folder: String) {
+        guard folder == self.folder else { return }
+        phase = new
+        // No list is coming up to show the picker in: the request ends instead of opening it at some later list.
+        if new == .notRepository { pickerFor = nil }
+    }
 
     public var order: [ChangedFile] { layout.order(files) }
     /// The open file: its entry in the list, or as it was last read once the list no longer has it (the diff stays, "No longer changed").

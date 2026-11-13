@@ -7,6 +7,6 @@ extension WindowHub {
         if state.selected != terminal { send(.select(terminal)) }
         send(.showPanelTab(.changes))
         // The picker opens when Changes is on screen: now, or as it comes up.
-        panel.changes.pickerRequested = true
+        panel.changes.pickerFor = terminal
     }
 }

@@ -54,7 +54,7 @@ struct ChangesListView: View {
                     headOption: panelText("picker-head-compare", "HEAD (uncommitted changes)"),
                     hint: panelText("picker-compare-hint", "Changes since this branch split off from it"), loading: store.revsLoading,
                     scope: store.terminal, load: store.loadRevs, pick: store.setCompare,
-                    requested: store.pickerRequested, answered: { store.pickerRequested = false })
+                    requested: store.pickerRequested, answered: { store.pickerFor = nil })
                 ViewOptionsMenu(layout: $store.layout)
                 BandButton(symbol: "arrow.clockwise", label: panelText("changes-refresh", "Refresh"), action: store.refresh)
             }
