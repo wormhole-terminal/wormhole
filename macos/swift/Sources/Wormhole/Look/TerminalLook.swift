@@ -102,6 +102,17 @@ final class TerminalLook {
         return Keymap.shared.entries.contains { $0.scope == .app && $0.keys.contains { $0.sameKey(spec) } }
     }
 
+    /// The action the table gives a key in the Terminal or Edit scope (`keymap::terminal_action`).
+    private static func terminalAction(_ name: String, _ flags: NSEvent.ModifierFlags) -> String? {
+        var mods: KeyMods = []
+        if flags.contains(.shift) { mods.insert(.shift) }
+        if flags.contains(.command) { mods.insert(.command) }
+        if flags.contains(.control) { mods.insert(.control) }
+        if flags.contains(.option) { mods.insert(.option) }
+        let spec = KeySpec(mods, name.lowercased())
+        return Keymap.shared.entries.first { ($0.scope == .terminal || $0.scope == .edit) && $0.isLive && $0.keys.contains { $0.sameKey(spec) } }?.id.rawValue
+    }
+
     /// A terminal that was just made.
     func dress(_ view: MetalTerminalView) {
         if let fonts { view.setFonts(fonts) }
@@ -109,6 +120,7 @@ final class TerminalLook {
         view.bell = bell
         view.optionAsMeta = optionAsMeta
         view.isAppKey = Self.isAppKey
+        view.terminalAction = Self.terminalAction
         view.dropTint = dropTint
         view.bellColor = bellColor
         view.bellCornerRadius = bellRadius

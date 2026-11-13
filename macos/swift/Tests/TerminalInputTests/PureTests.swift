@@ -79,22 +79,15 @@ import TerminalCore
 }
 
 @Suite struct ShortcutTests {
-    private func shortcut(_ characters: String, _ flags: NSEvent.ModifierFlags, code: UInt16 = 0) -> TerminalShortcut? {
-        TerminalShortcut.of(characters: characters, keyCode: code, flags: flags)
+    @Test func theTablesActionsAreTheTerminalsEffects() {
+        #expect(TerminalShortcut(action: "copy") == .copy && TerminalShortcut(action: "paste") == .paste)
+        #expect(TerminalShortcut(action: "selectAll") == .selectAll && TerminalShortcut(action: "clearBuffer") == .clear)
+        #expect(TerminalShortcut(action: "deleteLine") == .send([0x15]))
+        #expect(TerminalShortcut(action: "lineStart") == .send([0x01]) && TerminalShortcut(action: "lineEnd") == .send([0x05]))
     }
 
-    @Test func theTerminalsCommandKeys() {
-        #expect(shortcut("c", .command) == .copy && shortcut("c", [.command, .shift]) == .copy)
-        #expect(shortcut("v", .command) == .paste && shortcut("a", .command) == .selectAll && shortcut("k", .command) == .clear)
-        #expect(shortcut("\u{7F}", .command, code: 51) == .send([0x15]))
-        #expect(shortcut("\u{F702}", .command, code: 123) == .send([0x01]) && shortcut("\u{F703}", .command, code: 124) == .send([0x05]))
-    }
-
-    @Test func everythingElseIsTheApplications() {
-        #expect(shortcut("t", .command) == nil && shortcut("z", .command) == nil)
-        #expect(shortcut("a", [.command, .shift]) == nil, "⇧⌘A is an app key")
-        #expect(shortcut("c", [.command, .option]) == nil && shortcut("c", [.command, .control]) == nil)
-        #expect(shortcut("c", []) == nil, "no Command: a key for the program")
+    @Test func anyOtherActionIsTheApplications() {
+        #expect(TerminalShortcut(action: "newTerminal") == nil && TerminalShortcut(action: nil) == nil)
     }
 }
 

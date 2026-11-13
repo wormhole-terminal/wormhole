@@ -50,6 +50,9 @@ public final class MetalTerminalView: NSView {
     public var optionAsMeta = OptionAsMeta.off
     /// Whether a ⌘ key (its name, its modifiers) is one the application's menus own: the terminal never takes those for its own.
     public var isAppKey: (String, NSEvent.ModifierFlags) -> Bool = { _, _ in false }
+    /// The keymap's action id for a ⌘ key in the Terminal or Edit scope (its name, its modifiers), or nil: which keys the
+    /// terminal takes itself is the table's (`keymap::terminal_action`). Asked only for ⌘ keys, never for typing.
+    public var terminalAction: (String, NSEvent.ModifierFlags) -> String? = { _, _ in nil }
     /// A key the window takes before the terminal hears it (a project action's own key): asked with the key's name
     /// (`KeyMap`'s) and its modifiers for a ⌘ key and an F-key only; true when the window took it.
     public var claimKey: (String, NSEvent.ModifierFlags) -> Bool = { _, _ in false }

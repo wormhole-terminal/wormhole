@@ -1,6 +1,6 @@
-// The Command shortcuts that belong to the terminal, by the app's keymap (`keymap::terminal_action`): copy,
-// paste, select all, clear, and the three that edit the shell's line (as Terminal.app and iTerm2 do). The
-// rest of the Command keys are the application's menus.
+// The Command shortcuts that belong to the terminal, by the app's keymap (`keymap::terminal_action`, asked through
+// `terminalAction`): copy, paste, select all, clear, and the three that edit the shell's line (as Terminal.app and
+// iTerm2 do). The rest of the Command keys are the application's menus.
 
 import AppKit
 
@@ -9,24 +9,16 @@ enum TerminalShortcut: Equatable {
     /// Bytes for the shell's line editor: ⌘⌫ deletes the line (^U), ⌘← and ⌘→ jump (^A, ^E).
     case send([UInt8])
 
-    /// `keyCode` is the US-layout virtual key code, `characters` the key with no modifiers.
-    static func of(characters: String?, keyCode: UInt16, flags: NSEvent.ModifierFlags) -> TerminalShortcut? {
-        let flags = flags.intersection(.deviceIndependentFlagsMask)
-        guard flags.contains(.command), flags.isDisjoint(with: [.control, .option]) else { return nil }
-        // ⇧⌘C copies too (the app has always done so); every other shortcut is ⌘ alone, since ⇧⌘A and the
-        // like are the application's.
-        if characters?.lowercased() == "c", flags.subtracting(.shift) == .command { return .copy }
-        guard flags == .command else { return nil }
-        switch characters?.lowercased() {
-        case "v": return .paste
-        case "a": return .selectAll
-        case "k": return .clear
-        default: break
-        }
-        switch keyCode {
-        case 51: return .send([0x15])
-        case 123: return .send([0x01])
-        case 124: return .send([0x05])
+    /// What the keymap's action for the key does here (`platform_command`): the table says which keys, this the effect.
+    init?(action: String?) {
+        switch action {
+        case "copy": self = .copy
+        case "paste": self = .paste
+        case "selectAll": self = .selectAll
+        case "clearBuffer": self = .clear
+        case "deleteLine": self = .send([0x15])
+        case "lineStart": self = .send([0x01])
+        case "lineEnd": self = .send([0x05])
         default: return nil
         }
     }
@@ -36,10 +28,13 @@ extension MetalTerminalView {
     /// What a focused terminal does with a ⌘ key: the table's, else the same key with ⌘ alone (⇧⌘V pastes) unless it is an app key
     /// (`input.rs:105`).
     private func shortcut(for event: NSEvent) -> TerminalShortcut? {
-        let characters = event.charactersIgnoringModifiers, flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if let exact = TerminalShortcut.of(characters: characters, keyCode: event.keyCode, flags: flags) { return exact }
-        guard flags.contains(.command), flags != .command, !isAppKey(characters ?? "", flags) else { return nil }
-        return TerminalShortcut.of(characters: characters, keyCode: event.keyCode, flags: .command)
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard flags.contains(.command), flags.isDisjoint(with: [.control, .option]),
+            let name = KeyMap.input(from: event, optionAsMeta: optionAsMeta)?.key
+        else { return nil }
+        if let exact = TerminalShortcut(action: terminalAction(name, flags)) { return exact }
+        guard flags != .command, !isAppKey(name, flags) else { return nil }
+        return TerminalShortcut(action: terminalAction(name, .command))
     }
 
     /// Whether the window took the key before the terminal (`claim_window_key`): only a ⌘ key or an F-key is asked
