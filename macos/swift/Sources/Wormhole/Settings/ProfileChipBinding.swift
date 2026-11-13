@@ -129,11 +129,11 @@ extension AppController {
     private func windows(of id: String) -> [WindowSession] { sessions.filter { $0.windows.profile == id } }
 
     /// "Open Window in <profile>": a window in `id` beside the ones of the profile Wormhole is in, which stays where it is
-    /// (the odd window, as the GPUI app has it); in the profile Wormhole is in, a new window.
+    /// (the odd window, as the GPUI app has it); the profile Wormhole is in gets its own window the same way.
     func openWindow(inProfile id: String) {
         #if WITH_UNIFFI
-            guard id != windowsHost.profile else { return openNewWindow() }
-            guard let target = hostBeside(id) else { return }
+            // The picked profile's own host: not the front window's (that is ⌘N's road, `openNewWindow`).
+            guard let target = id == windowsHost.profile ? windowsHost : hostBeside(id) else { return }
             // Its own start folder (the profile's), not the one of the window in front.
             let planned = target.backend.plan(from: nil, folder: nil)
             openPlanned(window: planned.window, activate: true, in: target)

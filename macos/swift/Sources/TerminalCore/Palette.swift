@@ -7,6 +7,11 @@ import Foundation
 public struct TerminalPalette: Sendable, Equatable {
     public static let slotCount = 269
 
+    /// What the engine is told (`FrameSource.setEngineColors`): the indexed colours, the foreground, background and cursor, as 0xRRGGBB.
+    public var engineSlots: [UInt32] {
+        slots.prefix(Int(PackedColor.cursor) + 1).map { UInt32($0.x) << 16 | UInt32($0.y) << 8 | UInt32($0.z) }
+    }
+
     /// RGB, 0...255, in slot order.
     public private(set) var slots: [SIMD3<UInt8>]
 

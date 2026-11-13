@@ -41,6 +41,9 @@ final class TerminalFactory {
             } else {
                 source = try SourceFactory.make(options, size: GridSize(cols: 100, rows: 30))
             }
+            // Its colours before its view exists: a program that asks first is answered in this window's profile's colours,
+            // not the shown profile's that the engine starts with.
+            if let palette = look?.palette { source.setEngineColors(palette.engineSlots) }
             let view = try MetalTerminalView(source: source, configuration: configuration)
             view.fixedGrid = options.grid
             look?.dress(view)

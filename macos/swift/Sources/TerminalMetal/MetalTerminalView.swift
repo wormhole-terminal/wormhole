@@ -167,7 +167,7 @@ public final class MetalTerminalView: NSView {
     /// whichever profile its window is in (`share_palette` in the GPUI app's terminal view).
     public func setPalette(_ palette: TerminalPalette) {
         renderer.setPalette(palette)
-        source.setEngineColors(palette.slots.prefix(Int(PackedColor.cursor) + 1).map { UInt32($0.x) << 16 | UInt32($0.y) << 8 | UInt32($0.z) })
+        source.setEngineColors(palette.engineSlots)
         scroller.adapt(toBackground: palette.background)
         requestRedraw()
     }
