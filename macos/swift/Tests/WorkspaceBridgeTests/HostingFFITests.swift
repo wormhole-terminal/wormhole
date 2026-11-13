@@ -35,7 +35,9 @@ final class HostingFFITests: XCTestCase {
     }
 
     private func backend(hosting: Bool = true) -> RustWorkspaceBackend {
-        RustWorkspaceBackend(
+        // Each backend is a launch: the quit before it, in this same process, is over.
+        HostConnect.launched()
+        return RustWorkspaceBackend(
             setup: WorkspaceSetup(
                 program: "/bin/cat", home: "/Users/ref", hosting: hosting ? HostingSetup(hostBinary: host) : nil))
     }

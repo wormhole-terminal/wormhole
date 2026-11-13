@@ -46,6 +46,8 @@ enum HostConnect {
     /// actor, which may be gone by then (`hosted.rs` `kept_past_quit`).
     private static let quitting = Mutex(false)
     static func quit() { quitting.withLock { $0 = true } }
+    /// A launch after a quit in one process, which only a test has: its hosts are kept again.
+    static func launched() { quitting.withLock { $0 = false } }
 
     /// `ready`, let go of when the app quit while it was being made.
     private static func keptPastQuit(_ ready: Connected) -> Connected {

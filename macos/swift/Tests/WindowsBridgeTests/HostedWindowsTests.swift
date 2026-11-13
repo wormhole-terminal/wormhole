@@ -39,6 +39,8 @@ final class HostedWindowsTests: XCTestCase {
     }
 
     private func window(_ windows: RustWindowsBackend, _ id: Int, first: Bool) -> (WorkspaceStore, RustWorkspaceBackend) {
+        // Each window made is a launch's: the quit before it, in this same process, is over.
+        HostConnect.launched()
         let hosting = HostingSetup(hostBinary: host, window: Int64(id), adoptsOrphans: first)
         let backend = windows.workspace(window: id, setup: WorkspaceSetup(program: "/bin/cat", home: "/Users/ref", hosting: hosting))
         return (WorkspaceStore(backend: backend), backend)
