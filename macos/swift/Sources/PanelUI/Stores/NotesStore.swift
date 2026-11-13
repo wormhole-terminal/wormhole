@@ -46,6 +46,9 @@ public final class NotesStore {
         }
     }
 
+    /// Another terminal was selected: an open draft row stays with the one it was started in.
+    public func leaveDraft() { (drafting, draftAfter) = (false, nil) }
+
     /// A step or note of this terminal is being written: the notes.md merge waits for it (`api.rs` `being_written`).
     public var isWriting: Bool { drafting || !writers.isEmpty }
 

@@ -54,6 +54,8 @@ final class NotesCoordinator {
         if selected != shown {
             if let shown, hub.state.all.contains(where: { $0.id == shown }) { persistence.save(session: shown, model: hub.panel.notes.model) }
             shown = selected
+            // A draft step belongs to the terminal it was started in (`features/notes/def.rs` `selected`).
+            hub.panel.notes.leaveDraft()
             let loaded = selected.map { persistence.load(session: $0) } ?? NotesModel()
             saved = loaded
             if hub.panel.notes.model != loaded { hub.panel.notes.model = loaded }
@@ -113,9 +115,12 @@ final class NotesCoordinator {
             if found == nil { found = await root(of: terminal) }
             guard let root = found else { continue }
             if id == shown {
-                guard let merged = await persistence.sync(session: id, root: root, model: hub.panel.notes.model, editing: editing),
-                    id == shown, merged != hub.panel.notes.model
-                else { continue }
+                let sent = hub.panel.notes.model
+                guard let answered = await persistence.sync(session: id, root: root, model: sent, editing: editing), id == shown else { continue }
+                // A tick or a new step made while the merge ran (no editor open, so not "being written") is kept on top of it.
+                let now = hub.panel.notes.model
+                let merged = now == sent ? answered : NotesModel.rebase(merged: answered, sent: sent, now: now)
+                guard merged != now else { continue }
                 // Saved like an edit, at once: a merge left for the next edit is lost on quit, and the next launch
                 // then reads the stale database against the merged base as lines the person deleted.
                 hub.panel.notes.model = merged
