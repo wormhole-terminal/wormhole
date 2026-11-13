@@ -159,7 +159,11 @@ final class SettingsApplier {
         if changed("icon_animations") { look.iconAnimations = values["icon_animations"]?.bool ?? true }
         if changed("split_gaps") { look.splitGaps = values["split_gaps"]?.bool ?? look.splitGaps }
         if changed("column_dividers") { look.columnDividers = values["column_dividers"]?.bool ?? look.columnDividers }
-        if changed("motion.column") { look.columnMotion = values["motion.column"]?.string ?? "classic" }
+        // Without the Motion feature every column is Classic, whatever config.json holds (`motion_in_force`).
+        if changed("motion.column", "feature_flags") {
+            let motionOn = model.host.flags().contains { $0.key == "motion" && $0.on }
+            look.columnMotion = motionOn ? values["motion.column"]?.string ?? "classic" : "classic"
+        }
         if changed("terminals_in") { look.tabsOnTop = values["terminals_in"]?.string == "tabs" }
         if changed("density", "show_groups_as_cards", "fade_group_colors", "show_group_folders", "sidebar_notes", "sidebar_changes", "sidebar_changes_scope", "sidebar_status_dot", "sidebar_cmd_hints", "restore_terminal_text", "motion.status", "motion.insert", "motion.fold") {
             look.sidebar = SidebarSettingsMaker.appearance(values, current: look.sidebar)

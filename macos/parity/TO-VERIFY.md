@@ -410,6 +410,8 @@ Not written, and why:
 
 ## Lane panel-files, wave 4
 
+## Lane settings, wave 4
+
 Written without compiling: expect compile errors.
 
 | row | what to do | what must happen | where the code is |
@@ -435,4 +437,13 @@ Not written:
 - P06: the preview cut by wrapped lines with the two fading lines (needs text layout measured in the row; not done blind); a note's body still by Swift's copy of `note_body`, the cursor at the end on a title click, and ⌥⌘↑/↓ read off the keystroke.
 - P07: names that are not UTF-8 (the records carry text; needs the bytes or an index through every call); the path card on resting on the crumb; tree-sitter colours (counted under P03). The icon theme was already there (`FileIconSource.shared`).
 - P08: per-terminal kept state is still not dropped when a terminal closes; a folder's own colour (`Paint::Own`) is still read from the Default profile's settings; the action key is a menu key equivalent, not the GPUI app's check before the terminal sees the key. Already there before this wave: the project's theme, env and shell for new terminals, the window's own profile's trust.
+
+| ST02 | View ▸ Zen Mode, then Settings → Appearance, Terminal, Fonts | Appearance and Terminal carry the note "Zen mode is on, so the window shows less…" with Leave Zen mode; Fonts has none; the button ends Zen mode and the note goes | SettingsUI/Pages/ZenNote.swift, SettingsPage.swift, SettingsModel `zenOn`/`leaveZen`, Wormhole/Settings/ZenMode.swift, AppSettings.swift |
+| ST02/ST03 | Advanced → Show config keys on; move the pointer over a row; hold ⌥; click a key | The key shows only under the pointer, on every row while ⌥ is held (window in front), and while it says Copied; off, no key whatever is held; the row's menu works either way | SettingsUI/Rows/SettingRow.swift, RowState.swift (`\.optionHeld`), SettingsView.swift `onModifierKeysChanged` |
+| ST02 | Feature flag Motion on; Motion → The sidebar and panel hide or show: each choice, then toggle the sidebar and the panel; toggle back mid-slide | Classic 250/200 ms; Soft spring both ways on 170/26; Content after fades the column out (80 ms) before it goes and in after it begins to come; flag off: Classic whatever the file holds; Reduce Motion: cuts. Known difference: Content after fades the whole column with its surface (GPUI keeps the surface) | WindowUI/Columns/ColumnSlide.swift, WindowBody.swift, WindowLook `columnMotion`, SettingsApplier.swift |
+| ST02 | Settings → Motion (flag on), wide and at the window's least width; pick each option; Reduce Motion on | Four cells (two by two when narrow) loop every 4 s, each from core's poses; a pick restarts only its cell and rings it; Reduce Motion holds the first picture and stops the clock; captions are the rows' labels | SettingsUI/Preview/Motion/*.swift, PreviewScene.swift, PreviewStrip.swift, WorkspaceModel/RowMotion.swift, WorkspaceBridge/CoreRowMotion.swift, crates/wormhole-ffi/src/motion_scenes.rs |
+| ST02 | Appearance → theme cards, Show all; filter by a family's name | A family with one version on a shelf is named by the family ("Soltari"), with several by each version's name; the filter finds a card by either name | SettingsUI/Rows/ThemeCards.swift `label`, ThemeCard.swift |
+| ST02 | Not written: the Motion cells' own VoiceOver labels (the strip is one labelled group, as the other scenes); the ring following the row under the pointer or with an open menu (it follows the option changed last) | | |
+| ST02/ST03 | Found already written (not changed here, still to verify): Updates' Restart Now question, channel note, security line, bundle-replaced watch; the Shells list, worktree caption and "zsh" face; the Changed page's Copy as JSON ("Copied"); the "changes are not saved" banner; Reset tips disabling; the Terminals list scene's three densities | | UpdateStatus.swift, EntryRowView.swift, ChangedPage.swift, SettingsPage.swift, EntryControl.swift, SidebarScene.swift |
+| ST02/ST03 | Key audit (96 keys of the 14 pages against the Swift sources and the FFI): the one key without a consumer was `motion.column`, wired above; the terminal keys (scrollback_lines, default_shell, shells, image_memory_mib, allow_*) are read by the core at launch (`launch.rs`) | | macos/parity/punch-list.md row ST02 is out of date |
 
