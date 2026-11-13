@@ -20,11 +20,8 @@ public struct Note: Identifiable, Hashable, Sendable {
     /// Nothing but whitespace: such a note is thrown away when its writing ends.
     public var isBlank: Bool { text.allSatisfy(\.isWhitespace) }
 
-    /// The lines after the title, which show under it while the note is open.
-    public var body: String {
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).drop(while: { $0.isEmpty })
-        return lines.dropFirst().joined(separator: "\n").trimmingCharacters(in: .newlines)
-    }
+    /// What shows under the title while the note is open (core's `note_body`); empty for a note of one line.
+    public var body: String { NoteRules.body(text) ?? "" }
 }
 
 public struct NotesModel: Equatable, Sendable {

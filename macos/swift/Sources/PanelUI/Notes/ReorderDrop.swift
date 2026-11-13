@@ -56,12 +56,31 @@ extension View {
         modifier(Reorderable(id: id, ids: ids, dragging: dragging, move: move))
     }
 
-    /// ⌥⌘↑ and ⌥⌘↓ move the row being edited one place; `move` gets -1 or 1.
+    /// The keymap's keys that move the row being edited one place (⌥⌘↑ and ⌥⌘↓ unless changed); `move` gets -1 or 1.
+    /// Only a press with ⌘, ⌥ or ⌃ is asked about: typing never crosses to the core.
     func reorderKeys(_ move: @escaping (Int) -> Void) -> some View {
-        onKeyPress(keys: [.upArrow, .downArrow], phases: .down) { press in
-            guard press.modifiers == [.option, .command] else { return .ignored }
-            move(press.key == .upArrow ? -1 : 1)
+        onKeyPress(phases: .down) { press in
+            guard !press.modifiers.isDisjoint(with: [.command, .option, .control]), let key = coreKey(press.key),
+                let by = NoteRules.moveBy(key, coreMods(press.modifiers))
+            else { return .ignored }
+            move(by)
             return .handled
         }
     }
+}
+
+/// A pressed key by the core's name (`keyspec`): the arrows, else the key's own character.
+private func coreKey(_ key: KeyEquivalent) -> String? {
+    switch key {
+    case .upArrow: "up"
+    case .downArrow: "down"
+    case .leftArrow: "left"
+    case .rightArrow: "right"
+    default: key.character.isLetter || key.character.isNumber ? String(key.character).lowercased() : nil
+    }
+}
+
+/// The held modifiers as `KeyMods`' bits (⌃ 1, ⌥ 2, ⇧ 4, ⌘ 8).
+private func coreMods(_ mods: EventModifiers) -> Int {
+    (mods.contains(.control) ? 1 : 0) | (mods.contains(.option) ? 2 : 0) | (mods.contains(.shift) ? 4 : 0) | (mods.contains(.command) ? 8 : 0)
 }

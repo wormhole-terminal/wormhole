@@ -23,6 +23,17 @@ public enum FilesBridge {
     @MainActor public static func installRules() {
         NoteRules.paragraphAt = { text, cursor in noteParagraphAt(text: text, cursor: UInt64(max(cursor, 0))) }
         NoteRules.title = { noteTitle(text: $0) }
+        NoteRules.body = { noteBody(text: $0) }
+        NoteRules.cap = { lines, editing, showAll in
+            noteCap(lines: UInt64(max(lines, 0)), editing: editing, showAll: showAll).map { Int($0) }
+        }
+        NoteRules.moveBy = { key, mods in
+            switch noteItemKey(key: KeySpecRecord(mods: UInt8(truncatingIfNeeded: mods), key: key), empty: false) {
+            case .moveUp: -1
+            case .moveDown: 1
+            default: nil
+            }
+        }
         NoteRules.closeStake = { notesCloseStake(openItems: UInt64(max($0, 0))) }
         VisibleRules.line = { text, tab in
             let line = visibleLine(text: text, tabWidth: UInt32(max(tab, 1)))

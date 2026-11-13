@@ -38,7 +38,7 @@ struct NoteRowView: View {
                 Text(note.title).font(tokens.font(.body))
                     .foregroundStyle(editing ? tokens.textMuted : tokens.textPrimary)
                     .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-                    .onTapGesture { open() }
+                    .onTapGesture { open(toEnd: true) }
                 if hovering || editing { RowActions(send: send, delete: delete).transition(.opacity) }
             }
             .padding(.horizontal, PanelMetrics.inset)
@@ -64,7 +64,6 @@ struct NoteRowView: View {
     }
 
     @ViewBuilder private var bodyText: some View {
-        let lines = note.body.split(separator: "\n", omittingEmptySubsequences: false)
         if editing {
             TextEditor(text: $note.text, selection: $selection).font(tokens.font(.body)).scrollContentBackground(.hidden)
                 .focused($focused).frame(minHeight: PanelMetrics.noteLine * 3)
@@ -85,21 +84,9 @@ struct NoteRowView: View {
                 .onChange(of: focused) { _, now in if !now { endWriting() } }
                 .padding(.leading, PanelMetrics.inset + Metric.lead).padding(.trailing, PanelMetrics.inset - 5)
         } else if !note.body.isEmpty {
-            let cut = !showAll && lines.count > PanelMetrics.noteMaxLines
-            VStack(alignment: .leading, spacing: 0) {
-                Text(lines.prefix(cut ? PanelMetrics.noteMaxLines : lines.count).joined(separator: "\n"))
-                    .font(tokens.font(.body)).foregroundStyle(tokens.textPrimary)
-                    .lineSpacing(PanelMetrics.noteLineGap)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .mask(fade(cut))
-                    .onTapGesture { open() }
-                if cut {
-                    Button(panelText("notes-show-all", ["count": .text(CountText.grouped(lines.count))], "Show all · \(CountText.grouped(lines.count)) lines")) { showAll = true }
-                        .buttonStyle(.plain).font(tokens.font(.body)).foregroundStyle(tokens.primary).padding(.top, Space._1)
-                }
-            }
-            .padding(.leading, PanelMetrics.inset + Metric.lead + PanelMetrics.gap).padding(.trailing, PanelMetrics.inset)
-            .padding(.bottom, Space._2)
+            NotePreview(text: note.body, showAll: showAll, open: { open() }, expand: { showAll = true })
+                .padding(.leading, PanelMetrics.inset + Metric.lead + PanelMetrics.gap).padding(.trailing, PanelMetrics.inset)
+                .padding(.bottom, Space._2)
         }
     }
 
@@ -125,15 +112,11 @@ struct NoteRowView: View {
         store.finishWriting(note)
     }
 
-    /// The last two lines of a cut note fade out, the last one most.
-    private func fade(_ cut: Bool) -> some View {
-        LinearGradient(
-            stops: cut ? [.init(color: .black, location: 0.7), .init(color: .black.opacity(0.3), location: 1)] : [.init(color: .black, location: 0), .init(color: .black, location: 1)],
-            startPoint: .top, endPoint: .bottom)
-    }
-
-    private func open() {
+    /// Opens the note for writing. A click on the title (`toEnd`) puts the cursor at the end of its text
+    /// (`note_ops.rs` `open_note`); a click in the text, ⇧⌘E and a new note leave it where it is.
+    private func open(toEnd: Bool = false) {
         note.collapsed = false
+        if toEnd { selection = TextSelection(insertionPoint: note.text.endIndex) }
         editing = true
         focused = true
     }
