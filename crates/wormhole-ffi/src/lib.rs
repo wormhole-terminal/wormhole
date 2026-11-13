@@ -61,6 +61,8 @@ pub mod theme_dump;
 mod theme_json;
 mod theme_resolve;
 mod studio_files;
+mod studio_folder;
+mod studio_edit;
 mod syntax;
 mod themes;
 mod title_fit;
@@ -183,6 +185,14 @@ pub use studio_files::{
     studio_export, studio_export_dir, studio_key_table, studio_new_id, studio_new_theme, studio_read,
     studio_remember_export_dir, studio_theme_list, studio_token_in_both, studio_update_apply,
     studio_update_check,
+};
+pub use studio_folder::{
+    StudioSavedVersion, studio_folder_files, studio_folder_read, studio_folder_read_version,
+    studio_folder_versions, studio_folder_write,
+};
+pub use studio_edit::{
+    StudioCompletion, StudioCompletions, StudioContrastFix, StudioContrastIssue, StudioMetricUse,
+    studio_completions, studio_contrast_issues, studio_metric_preview,
 };
 pub use themes::{list_user_themes, resolve_theme, resolve_theme_json, theme_files_stamp};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};

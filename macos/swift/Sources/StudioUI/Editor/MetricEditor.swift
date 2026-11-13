@@ -32,6 +32,28 @@ struct MetricEditor: View {
             if let error = document.fieldError, error.token == token {
                 Text(error.message).font(TextRole.caption.font).foregroundStyle(tokens.statusDanger)
             }
+            preview(value)
+        }
+    }
+
+    /// What the metric shapes, drawn with the draft (the window previews it): the count badge, a key cap, a chip and a
+    /// status badge, and how many components draw with the token.
+    private func preview(_ value: Double) -> some View {
+        VStack(alignment: .leading, spacing: Space._2) {
+            HStack {
+                SectionLabel(StudioWords.metricPreview(StudioWords.px(NumberText.pixels(value))))
+                Spacer()
+                Text(StudioWords.metricUses(document.uses(of: token).count)).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
+            }
+            HStack(spacing: Space._2) {
+                CountBadge(3)
+                KeyCap(text: "⌘1")
+                Text("ui-unify").font(TextRole.caption.font).padding(.horizontal, Space._2).frame(height: Metric.badgeHeight)  // text-file: sample content, as the gallery's
+                    .background(tokens.chipTint, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
+                StatusBadge(text: "trusted", color: tokens.statusSuccessText)  // text-file: sample content, as the gallery's
+            }
+            .padding(Space._3)
+            .overlay(RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.border))
         }
     }
 

@@ -62,6 +62,8 @@ enum StudioWords {
     static func metricFollow(_ source: String, _ value: String) -> String { text("studio-metric-follow", ["source": .text(source), "value": .text(value)], "Follow \(source) (\(value) px)") }
     static var helpWidth: String { text("studio-metric-help-width", "A number of pixels. No color picker for metrics.") }
     static var helpRadius: String { text("studio-metric-help-radius", "A number of pixels; a radius above half the height is fully round. No color picker for metrics.") }
+    static func metricPreview(_ value: String) -> String { text("studio-metric-preview", ["value": .text(value)], "Preview at \(value)") }
+    static func metricUses(_ count: Int) -> String { text("studio-metric-uses", ["count": .whole(count)], count == 1 ? "1 use" : "\(count) uses") }
     static func px(_ value: String) -> String { text("studio-metric-px", ["value": .text(value)], "\(value) px") }
     static var ruleSetHere: String { text("studio-rule-set-here", "This theme sets it, so the rule isn't used; Reset goes back to the rule.") }
     static var ruleFixed: String { text("studio-rule-fixed", "A fixed value. Typing a value overrides it; Reset goes back to the rule.") }
