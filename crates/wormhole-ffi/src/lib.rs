@@ -46,6 +46,7 @@ mod notes_text;
 pub mod notify;
 mod open_file;
 pub mod palette_search;
+mod perf_counters;
 mod probes;
 mod profile;
 mod row_motion;
@@ -144,6 +145,7 @@ pub use live_resize::{
 };
 pub use minimap::{MinimapFoldRecord, MinimapGeometryRecord, MinimapRunRecord};
 pub use open_file::{open_file_record_to, open_file_run, open_file_tooltip, repo_file_resolve};
+pub use perf_counters::{PerfCounters, PerfLockUse, perf_counters_start, perf_counters_stop};
 pub use probes::{ProbeStatusRecord, ResolvedFile};
 pub use profile::{ActiveProfile, active_profile};
 pub use row_motion::{

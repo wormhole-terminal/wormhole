@@ -49,6 +49,11 @@ tree-sitter-toml-ng = "0.7"
 tree-sitter-typescript = "0.23"
 tree-sitter-yaml = "0.7"
 
+[features]
+# `perf-counters`: the terminal layer's reader and lock counters, for the Swift app's `perf-profile` (a build
+# made to measure turns it on; the shipped library never has it, and `perf-profile` then says the reader was not counted).
+perf-counters = ["wormhole-term/perf-counters"]
+
 [lints]
 workspace = true
 

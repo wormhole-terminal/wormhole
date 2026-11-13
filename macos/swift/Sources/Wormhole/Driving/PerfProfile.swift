@@ -15,10 +15,12 @@ enum PerfProfile {
         let json: String
     }
 
-    static func run(view: MetalTerminalView, seconds: Double) async -> Report {
+    /// `hosted` and `local`: where the window's terminals run (`PerfReading`).
+    static func run(view: MetalTerminalView, seconds: Double, hosted: Int = 0, local: Int = 0) async -> Report {
         var samples: [FrameSample] = [], allocations: [Int] = []
         let countersAtStart = view.renderer.counters
         _ = view.renderer.gpuTimes.take()
+        let reading = PerfReading(view: view, hosted: hosted, local: local)
         let end = MonotonicClock.now() + UInt64(max(0.1, seconds) * 1e9)
         while MonotonicClock.now() < end {
             let (sample, allocated) = AllocationCounter.counting { view.drawFrame(force: true) }
@@ -27,6 +29,8 @@ enum PerfProfile {
             // one-shot: the gap between two forced draws, as `frames` leaves one; the run ends at its deadline.
             try? await Task.sleep(for: .milliseconds(2))
         }
+        // The readers do not draw frames: their counters cover the whole run, the warm-up draws included.
+        let read = reading.stop(view: view, draws: samples.count)
         // The last command buffers complete on Metal's threads a moment later.
         // one-shot: the GPU's last completion handlers.
         try? await Task.sleep(for: .milliseconds(150))
@@ -49,7 +53,8 @@ enum PerfProfile {
             format: "\n  allocations per draw by part: fetch=%.1f apply=%.1f view=%.1f draw=%.1f", mean(parts.map(\.fetch)),
             mean(parts.map(\.apply)), mean(parts.map(\.view)), mean(parts.map(\.draw)))
         table += "\n  run: words_shaped=\(delta.wordsShaped) glyphs_rasterised=\(delta.glyphsRasterised) atlas_resets=\(delta.atlasResets)"
-        let json: [String: Any] = [
+        table += "\n" + read.lines
+        var json: [String: Any] = [
             "draws": samples.count, "seconds": seconds, "grid": "\(grid.cols)x\(grid.rows)",
             "spans_ms": Dictionary(uniqueKeysWithValues: spans.map { span in
                 let s = Summary(nanoseconds: span.1)
@@ -58,6 +63,7 @@ enum PerfProfile {
             "per_draw": ["rows_rebuilt": perDraw.rows, "changed_rows": perDraw.changed, "allocations": perDraw.allocations, "allocations_max": allocated.max() ?? 0],
             "run": ["words_shaped": delta.wordsShaped, "glyphs_rasterised": delta.glyphsRasterised, "atlas_resets": delta.atlasResets],
         ]
+        json.merge(read.json) { own, _ in own }
         let data = (try? JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])) ?? Data()
         return Report(table: table, json: String(decoding: data, as: UTF8.self))
     }
