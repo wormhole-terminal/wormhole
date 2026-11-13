@@ -11,6 +11,7 @@ public struct Row<Content: View>: View {
     public let action: () -> Void
     private let content: (Bool) -> Content
     @State private var hovering = false
+    @Environment(\.isEnabled) private var enabled
 
     public init(
         isSelected: Bool = false, selection: Namespace.ID, action: @escaping () -> Void,
@@ -24,8 +25,11 @@ public struct Row<Content: View>: View {
 
     public var body: some View {
         Button(action: action) { content(hovering).padding(.horizontal, Space._2) }
-            .buttonStyle(RowStyle(isSelected: isSelected, hovering: hovering, selection: selection))
+            .buttonStyle(RowStyle(isSelected: isSelected, hovering: hovering && enabled, selection: selection))
             .onHover { hovering = $0 }
+            // A row with nothing to do now is drawn held back, with no hover and no press; VoiceOver hears the selection.
+            .opacity(enabled ? 1 : 0.5)
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
             .motion(Motion.selection, value: isSelected)
     }
 }

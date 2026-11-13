@@ -923,3 +923,42 @@ Written without compiling: expect compile errors.
 | X12 | KEPT: `hosts` opens the Hosts window (GPUI's `hosts`, the session hosts as text, is `hosts-list`) | - | `AppController+ControlWindow.swift`, `Driving/AppController+ControlTooling.swift` |
 | X12 | KEPT: `front` is not written (a background instance must never take focus: `Driving/InFront.swift`, `window_open` rules); `notices` keeps its Swift meaning (the logged banners; GPUI's per-window chip listing is `notice chip`) | - | - |
 | X12 | KEPT, GPUI-only mechanisms with no Swift command: `paints`, `refresh` (GPUI's paint/cache counters), `scaling settle`/`reveal-test`, `grow-hold` (GPUI's resize animation and first-frame tricks), `scroller` (the system draws Swift's scroll bars), `a11y live`, `notice-material`, `settings-preview` | - | see the lines above |
+
+## Lane style, wave 7
+
+Written without compiling: expect compile errors.
+
+The comparison X01 never had: the GPUI app's shared components in `crates/wormhole/src/style/` against their Swift counterparts, by what a person can meet (states, parts, Reduce Motion / Increase Contrast / Reduce Transparency, accessibility). Looks (pixels) are not compared. "Done" is what this lane wrote; "left" is read and not written.
+
+| component | GPUI file | Swift file | what was missing / what is left |
+|---|---|---|---|
+| row | `controls.rs` `row`, `rows/` | `DesignSystem/Row.swift` | DONE: disabled (held back, no hover/press), selected trait for VoiceOver. LEFT: no `RingPlacement::Inside` keyboard ring in the shared row (callers draw their own: `SidebarUI/Row/RowRings.swift`); the ring modifier now exists (`keyboardFocusRing`) but the sidebar, panel and palette rows are not moved onto it (their owners' modules) |
+| icon button | `buttons.rs` `IconButton` | `DesignSystem/IconButton.swift` | DONE: disabled (faint, no hover/press), `selected(_:)` toggle (selected tint and text, VoiceOver selected). LEFT: `menu_chevron`, `with_drawing`, `in_row` 22 pt face, `narrow`, `flush_*`, active-filter dot and `strip` fills are drawn by their callers (`TitleIconButton`, `BandButton`, `RowActions`), not by the shared one |
+| row hover actions | `buttons.rs` `row_actions` | `PanelUI/Shell/RowActions.swift` | none found in DesignSystem; the panel's own. LEFT |
+| pill / chip | `controls.rs` `pill` | `TerminalUI/Notice/NoticeChip.swift`, `FontPickerUI/TintChip.swift`, `PanesUI/Title/*Crumb.swift` | two chips and the crumbs each draw their own fill; no shared chip with active, compact and hover states. LEFT (a shared `Chip` would move five callers in four modules) |
+| icon tab | `controls.rs` `icon_tab` | `WindowUI/PanelTabBar.swift` + `PanelUI/Shell/TabCountBadge.swift` | states, count, VoiceOver tab bar present; keyboard ring is the window's own `focusRing`. OK |
+| title tab / terminal tab | `controls.rs` `title_tab`, `tabs.rs` | `PanesUI/Tabs/TerminalTabView.swift` | states, close on hover, VoiceOver selected present. OK |
+| count badge | `labels.rs` `count_badge`, `selected_count_badge` | `DesignSystem/CountBadge.swift`, `PanelUI/Shell/TabCountBadge.swift` | the selected variant is a second type (`TabCountBadge`) not a state of the first. LEFT (one concept twice) |
+| status badge, section label, key cap, banner | `labels.rs`, `controls.rs` `keycap`, `banner` | `DesignSystem/StatusBadge.swift`, `SectionLabel.swift`, `KeyCap.swift`, `Banner.swift` | states match (no pointer states in GPUI); Increase Contrast outlines present; key cap speaks. OK |
+| segmented | `controls.rs` `segmented`, `segment` | `DesignSystem/Segmented.swift` | DONE: disabled opacity, the track as a VoiceOver container. |
+| text field | `text_field.rs` | `DesignSystem/FlatField.swift` (new), `SettingsUI/Controls/InputField.swift`, `PlatformUI/Shared/PanelField.swift`, `PaletteUI/PaletteField.swift` | WAS: settings used the system's rounded field (no `control.background` well, no hover, no primary ring, no Increase Contrast edge, no prefix/suffix/clear, no disabled). DONE: `FlatField` with all of them; `InputField` uses it. LEFT: `multiline` (the Rust `TextareaState`) has no Swift field yet (notes use `TextEditor`); the two panel fields (`NSTextField`, ring off on purpose, the panel draws its own) and the Studio's name/expression fields are not on `FlatField` |
+| focus ring | `controls.rs` `focus_ring`, `flat_ring` | `DesignSystem/FocusRing.swift` (new), `WindowUI/Focus/FocusRing.swift` | WAS: only WindowUI had one, in the window's chrome colours, so DesignSystem parts could not draw it. DONE: `keyboardFocusRing(_:radius:outset:)`, hidden in a window not in front (`windowFront`). LEFT: the other seven hand-drawn rings (SidebarUI x3, SettingsUI x3, StudioUI) are not moved onto it |
+| checkbox, switch, radio | `checkbox.rs`, `setting.rs` `toggle` | `SettingsUI/Controls/SettingToggle.swift` | the system's toggles (tint from the theme): GPUI's `checkbox.background/border/checked` tokens do not reach them. A state Swift cannot have without owning the drawing; written down, left |
+| button | `button.rs`, `buttons.rs` | `SettingsUI/Controls/ActionButton.swift`, `AuxWindows/Shared/AuxButtons.swift` | the system's bordered button: no `button.background`/`button.hover` tokens, no loading state, no Increase Contrast flat outline. LEFT (a `ButtonStyle` of the tokens is the next step; it moves ~40 callers) |
+| link button | `setting.rs` `link_button` | `SettingsUI/Controls/ActionButton.swift` `LinkButton` | no hover fill past the text; the system's link style. LEFT |
+| slider, stepper | `slider.rs`, `setting.rs` `stepper` | `SettingsUI/Controls/SettingSlider.swift`, `ValueStepper.swift` | slider disabled at half opacity not checked; LEFT for the verify wave |
+| choice card | `choice_card.rs` | `SettingsUI/Rows/ThemeCards.swift` | focus ring and chosen outline present there (own code). OK |
+| disclosure | `controls.rs` `disclosure` | `PanelUI/Shell/Disclosure.swift`, `DesignSystem/SectionLabel.swift` | Reduce Motion honoured. OK |
+| find bar | `find_bar.rs` | `TerminalUI/Find/FindBar.swift` | focused field outline; checked by the find lane |
+| tile (status tile) | `tile/` | `SidebarUI/Tile/*`, `PanesUI/Panes/TerminalTile.swift` | two tiles: `TerminalTile` (pane header's own fallback) and `StatusTile`; the window gives the real one through the seam. LEFT: `TerminalTile` is only the fallback (previews) |
+| menu and popover layers | `menu_layer.rs`, `popover_layer.rs` | AppKit menus and popovers (`NativeContextMenu`, `PopoverRecord`) | GPUI draws them; Swift uses the system's. Cannot have a GPUI-drawn menu: left on purpose |
+| X05 Reduce Motion consumers | `motion/` | `DesignSystem/Motion.swift` | every `motion`/`pressed`/`motionTransition` call falls back to a fade through one place; the 23 direct `reduceMotion` readers in SidebarUI/WindowUI/PanelUI were read: all gate by `!reduceMotion`. Not re-read against GPUI's list line by line. LEFT |
+| X02, X06 | theme files, legacy upgrades | n/a | audit caveats (version-1 theme files, one app-wide project theme, legacy upgrades) are product questions, not code: not touched |
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| X01 | Settings, any text field; click, Tab in, Tab out, type | flat well, hover lightens it, a soft primary ring while focused (solid ring plus edge under Increase Contrast), value applied on Return and on leaving | `DesignSystem/FlatField.swift`, `SettingsUI/Controls/InputField.swift` |
+| X01 | Studio gallery, Inputs | four fields: rest, focused ring, cleanable with a prefix and the x (clears, VoiceOver says Clear), disabled | `StudioUI/Gallery/InputsSpecimen.swift` |
+| X01 | Studio gallery, Chrome | icon buttons: one selected (tint, VoiceOver selected), one disabled (faint, no hover) | `StudioUI/Gallery/ChromeSpecimen.swift`, `DesignSystem/IconButton.swift` |
+| X01 | any `Row` inside `.disabled(true)` | held back, no hover or press fill | `DesignSystem/Row.swift` |
+| X01 | the tile seam: tab, group card, pane header, title row, status bar | the row's own status tile shows; no `AnyView` (count 19) | `WindowUI/Hub/WindowHub+Tiles.swift`, `PanesUI/*`, `Package.swift` (PanesUI depends on SidebarUI) |

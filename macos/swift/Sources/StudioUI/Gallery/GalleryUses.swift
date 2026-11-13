@@ -75,7 +75,8 @@ enum GalleryUses {
             "text.on_primary", "text.primary",
         ]),
         TokenUse(id: "icon.button", label: "icon button", area: .chrome, tokens: [
-            "state.active", "state.hover", "text.muted", "text.primary",
+            "sidebar.row.selected.text", "state.active", "state.hover", "state.selected", "text.faint", "text.muted",
+            "text.primary",
         ]),
         TokenUse(id: "icon.tab", label: "icon tab", area: .panel, tokens: [
             "band.hover", "border", "metrics.radius", "metrics.radius_chip", "sidebar.row.selected.text",

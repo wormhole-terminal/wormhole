@@ -26,6 +26,9 @@ struct ChromeSpecimen: View {
                 IconButton(lucide: .plus, label: "Add") {}
                 IconButton(lucide: .refreshCw, label: "Refresh") {}
                 IconButton(lucide: .copy, label: "Copy") {}
+                // The toggle that is on, and the one with nothing to do now (`IconButton::marked`, `::disabled`).
+                IconButton(lucide: .plus, label: "On") {}.selected(true)
+                IconButton(lucide: .plus, label: "Unavailable") {}.disabled(true)
                 LucideView(icon: .columns2, size: Metric.titleGlyph).iconMotion(.newPane(.right), run: 0)
                 LucideView(icon: .rows2, size: Metric.titleGlyph).iconMotion(.newPane(.below), run: 0)
                 IconSwap(key: false) { _ in LucideView(icon: .chevronDown, size: Metric.glyph) }

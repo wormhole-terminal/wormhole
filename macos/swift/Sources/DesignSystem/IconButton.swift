@@ -8,7 +8,10 @@ public struct IconButton: View {
     public var lucide: Lucide?
     public let label: LocalizedStringKey
     public let action: () -> Void
+    /// A pressed toggle or an active filter (`IconButton::marked`): the selected tint and its text colour.
+    public var isSelected = false
     @State private var hovering = false
+    @Environment(\.isEnabled) private var enabled
     private let run = IconRun()
     /// Where the view that asked for it was built, for inspect mode.
     let file: StaticString
@@ -26,6 +29,13 @@ public struct IconButton: View {
         self.lucide = lucide
     }
 
+    /// This button as a toggle that is on while `on`: it takes the selected tint and says so to VoiceOver.
+    public func selected(_ on: Bool) -> IconButton {
+        var copy = self
+        copy.isSelected = on
+        return copy
+    }
+
     public var body: some View {
         Button {
             run.start()
@@ -38,25 +48,32 @@ public struct IconButton: View {
             }
             .frame(width: Metric.control, height: Metric.control)
         }
-        .buttonStyle(IconButtonStyle(hovering: hovering))
+        .buttonStyle(IconButtonStyle(hovering: hovering && enabled, selected: isSelected))
         .marked("icon.button", style: "size control · radius row · glyph glyph", file: file, line: line)  // text: inspect mode's note, in the scales' names
         .onHover { hovering = $0 }
         .help(label)
         .accessibilityLabel(label)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
 private struct IconButtonStyle: ButtonStyle {
     @Environment(\.tokens) private var tokens
     let hovering: Bool
+    let selected: Bool
+    @Environment(\.isEnabled) private var enabled
 
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: Radius.row)
+        // Nothing to do now (an Undo with no step): the faint colour, no hover and no press (`IconButton::disabled`).
+        let pressed = enabled && configuration.isPressed
+        let text = !enabled ? tokens.textFaint : selected ? tokens.sidebarRowSelectedText : hovering || pressed ? tokens.textPrimary : tokens.textMuted
+        let fill = selected && !pressed ? tokens.stateSelected : pressed ? tokens.stateActive : hovering ? tokens.stateHover : .clear
         return configuration.label
-            .foregroundStyle(hovering || configuration.isPressed ? tokens.textPrimary : tokens.textMuted)
-            .background(configuration.isPressed ? tokens.stateActive : hovering ? tokens.stateHover : .clear, in: shape)
+            .foregroundStyle(text)
+            .background(fill, in: shape)
             .contentShape(shape)
-            .pressed(configuration.isPressed)
+            .pressed(pressed)
             .motion(Motion.press, value: hovering)
     }
 }

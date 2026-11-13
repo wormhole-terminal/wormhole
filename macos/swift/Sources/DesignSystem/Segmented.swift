@@ -9,6 +9,7 @@ public struct Segmented<Value: Hashable>: View {
     let options: [(title: String, value: Value)]
     @Binding var selection: Value
     @Environment(\.tokens) private var tokens
+    @Environment(\.isEnabled) private var enabled
     @Namespace private var space
     /// Where the view that asked for it was built, for inspect mode.
     let file: StaticString
@@ -30,6 +31,9 @@ public struct Segmented<Value: Hashable>: View {
         .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusChip + 2), \.borderStrong)
         .marked("segmented", style: "height titleControl · padding x _2 · radius chip · text caption", file: file, line: line)  // text: inspect mode's note, in the scales' names
         .motion(Motion.selection, value: selection)
+        // Held back while disabled (`slider`'s disabled opacity); the track is one control to VoiceOver, each segment a button in it.
+        .opacity(enabled ? 1 : 0.5)
+        .accessibilityElement(children: .contain)
     }
 
     private func segment(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
