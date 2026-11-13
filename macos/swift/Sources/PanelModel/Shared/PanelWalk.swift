@@ -31,6 +31,8 @@ public protocol PanelWalking: AnyObject {
     func press(_ row: WalkRow, space: Bool, following: Bool)
     /// → or ← on a row that folds.
     func fold(_ row: WalkRow)
+    /// A band that ↩ presses rather than folds (Files' path button opens its menu).
+    func pressesBand(_ row: WalkRow) -> Bool
     /// What ⌘C puts on the clipboard for the row; nil when the tab copies nothing there.
     func copy(_ row: WalkRow) -> String?
     /// What the notice chip says of that copy ("Copied commit hash"); nil: no chip.
@@ -41,6 +43,7 @@ public protocol PanelWalking: AnyObject {
 
 extension PanelWalking {
     public var following: Bool { false }
+    public func pressesBand(_ row: WalkRow) -> Bool { false }
     public func copy(_ row: WalkRow) -> String? { nil }
     public var copiedAs: PanelCopied? { nil }
     public func mark(_ row: WalkRow) {}
@@ -61,7 +64,7 @@ extension PanelWalking {
         let rows = walkRows
         guard let at = place(in: rows) else { return }
         if rows[at].isBand {
-            if Focus.rules.pressFoldsBand(space: space) { fold(rows[at]) }
+            if pressesBand(rows[at]) { press(rows[at], space: space, following: false) } else if Focus.rules.pressFoldsBand(space: space) { fold(rows[at]) }
         } else {
             press(rows[at], space: space, following: false)
         }

@@ -21,6 +21,8 @@ extension FilesStore: PanelWalking {
 
     public var following: Bool { viewing != nil }
 
+    public func pressesBand(_ row: WalkRow) -> Bool { row.id == Self.headID }
+
     public func press(_ row: WalkRow, space: Bool, following: Bool) {
         // The path button: ↩ opens its menu (not while the keys only moved onto it with the viewer up).
         if row.id == Self.headID {
