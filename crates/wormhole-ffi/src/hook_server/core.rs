@@ -31,6 +31,8 @@ pub(crate) struct Seat {
     pub profile: ProfilePaths,
     pub desk: Arc<AccessDesk>,
     settings: Mutex<Option<(Instant, Arc<Settings>)>>,
+    /// The mode last settled (`None` inside: Automation off), to act on a change of it once (`Core::settings_changed`).
+    applied: Mutex<Option<Option<AgentAccess>>>,
 }
 
 impl Seat {
@@ -39,7 +41,7 @@ impl Seat {
         // first request, and also while the Automation flag is off, so a widening made together with turning the
         // flag on is still asked about.
         desk.mode_in_force(Config::load_for(desk.profile()).settings.agent_access);
-        Self { profile: desk.profile().clone(), desk, settings: Mutex::new(None) }
+        Self { profile: desk.profile().clone(), desk, settings: Mutex::new(None), applied: Mutex::new(None) }
     }
 
     /// The profile's settings, as they were a moment ago at most.
@@ -262,6 +264,25 @@ impl Core {
             settings.feature_enabled(FeatureFlag::Automation) && settings.agent_access == AgentAccess::Open;
         if !reads_all {
             self.bus.revoke_reads();
+        }
+        // What the mode means for what waits and what is open (`agent_access/ask.rs` `settle_mode`), once per change.
+        let mode = settings.feature_enabled(FeatureFlag::Automation).then_some(settings.agent_access);
+        if seat.applied.lock().unwrap_or_else(PoisonError::into_inner).replace(mode) == Some(mode) {
+            return;
+        }
+        match mode {
+            Some(AgentAccess::Ask) => {}
+            Some(AgentAccess::Open) => seat.desk.settle_questions(mode),
+            Some(AgentAccess::Off) | None => {
+                let (held, stored) = seat.desk.approval_ids();
+                for id in held {
+                    self.bus.revoke_holder(seat.holder(false, id));
+                }
+                for id in stored {
+                    self.bus.revoke_holder(seat.holder(true, id));
+                }
+                seat.desk.settle_questions(mode);
+            }
         }
     }
 

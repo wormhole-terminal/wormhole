@@ -63,11 +63,32 @@ struct AuxBackends {
     func access(profile: String) -> (any AccessBackend)? {
         #if WITH_UNIFFI
             if real {
-                do { return try AuxBridge.makeAccessBackend(profile: profile) } catch { fallback("agent access", error) } // text: names the part in a stderr line
+                do { return try AuxBridge.makeAccessBackend(profile: profile, resolver: accessResolver()) } catch { fallback("agent access", error) } // text: names the part in a stderr line
             }
         #endif
         return nil
     }
+
+    #if WITH_UNIFFI
+        /// What only the windows know for the agent access sheet: a terminal's row title and folder (any window's), and the
+        /// terminal a program runs in, by the core's walk up the process tree (`sheet.rs` `terminal_display`, `terminal_of`).
+        private func accessResolver() -> FFIAccessBackend.Resolver {
+            FFIAccessBackend.Resolver(
+                terminal: { [weak app] id in
+                    app?.sessions.lazy.compactMap { $0.hub.state.all.first { Int64($0.id) == id } }.first
+                        .map { .init(name: $0.title, folder: $0.folder) }
+                },
+                terminalOf: { [weak app] pid in
+                    guard let app else { return nil }
+                    for session in app.sessions {
+                        guard let core = (session.hub.store.hooks as? RustWorkspaceBackend)?.core, let id = core.terminalRunning(pid: pid)
+                        else { continue }
+                        if let found = session.hub.state.all.first(where: { Int64($0.id) == id }) { return found.title }
+                    }
+                    return nil
+                })
+        }
+    #endif
 
     func licenses() -> any LicenseSource {
         #if WITH_UNIFFI

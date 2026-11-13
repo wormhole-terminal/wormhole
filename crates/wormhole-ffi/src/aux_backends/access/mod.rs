@@ -238,6 +238,31 @@ impl AccessDesk {
         mode
     }
 
+    /// What a mode that changed means for the questions waiting here (`agent_access/ask.rs` `settle_mode`): Off, or the
+    /// Automation flag off (`None`), refuses every one with `agent_access_off`; Allowed while open lets every one in at once
+    /// (there is nothing left to ask). Asking keeps them. The sheet on the screen goes with its question.
+    pub(crate) fn settle_questions(&self, mode: Option<AgentAccess>) {
+        let waiting = locked(&self.inner).queue.take_scope(SCOPE);
+        for pending in waiting {
+            match mode {
+                Some(AgentAccess::Open) => pending.answer(|| Decision::Retry),
+                _ => pending.answer(|| Decision::Refuse(access_off())),
+            }
+        }
+        self.waker.notify();
+    }
+
+    /// The ids of the approvals in force for a while and of the stored ones, which a mode of Off ends the streams of.
+    pub(crate) fn approval_ids(&self) -> (Vec<u64>, Vec<u64>) {
+        let held = locked(&self.inner).grants.held().iter().map(|held| held.id).collect();
+        let stored = Store::open_at(&self.profile_dir)
+            .ok()
+            .and_then(|store| store.agent_grants().ok())
+            .map(|rows| rows.into_iter().filter_map(|row| u64::try_from(row.id).ok()).collect())
+            .unwrap_or_default();
+        (held, stored)
+    }
+
     /// Question `id` was not answered in time: no, and not remembered.
     fn time_out(&self, id: u64) {
         let Some(pending) = locked(&self.inner).queue.take(id) else { return };
@@ -433,6 +458,13 @@ fn declined_terminal(label: &str, terminal: i64) -> Reply {
     )
     .because(Reason::Declined)
     .into()
+}
+
+/// Access was switched off while the question was open (`agent_access/ask.rs`).
+fn access_off() -> Reply {
+    Error::new(ErrorCode::NotAllowed, "agent access was switched off while the question was open")
+        .because(Reason::AgentAccessOff)
+        .into()
 }
 
 fn timed_out(label: &str) -> Reply {

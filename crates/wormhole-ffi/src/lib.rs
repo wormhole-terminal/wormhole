@@ -65,6 +65,7 @@ mod window_ops;
 mod windows;
 pub mod words;
 mod workspace;
+mod workspace_access;
 mod workspace_extras;
 mod workspace_feed;
 mod workspace_git;
