@@ -36,7 +36,6 @@ struct RightPanel: View {
         }
         .animation(Self.contentIn, value: tab)
         .onChange(of: tab) { before = tab }
-        .onChange(of: hub.panelTabs) { hub.leaveMissingTab() }
         .onAppear { before = tab }
     }
 

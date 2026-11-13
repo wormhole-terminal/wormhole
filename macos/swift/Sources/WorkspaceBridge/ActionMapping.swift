@@ -69,6 +69,7 @@ extension WormholeBindings.Action {
         case .toggleSidebar: .toggleSidebar
         case .togglePanel: .togglePanel
         case .showPanelTab(let tab): .showPanelTab(TabId(tab))
+        case .setPanelTab(let tab): .setPanelTab(TabId(tab))
         case .search(let text): .search(text)
         case .showOverlay(let overlay): .showOverlay(overlay.map(WormholeBindings.Overlay.init))
         case .setWindowWidth(let width): .setWindowWidth(Float(width))

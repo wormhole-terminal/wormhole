@@ -229,6 +229,7 @@ impl WorkspaceModel {
                 });
             }
             Action::ShowPanelTab(tab) => self.show_panel_tab(tab),
+            Action::SetPanelTab(tab) => self.set_panel_tab(tab),
             Action::SetWindowWidth(width) => self.chrome_change(|c| c.window_width = width.max(0.0)),
             Action::DragEdge { edge, extent } => self.chrome_change(|c| {
                 let width = c.width();

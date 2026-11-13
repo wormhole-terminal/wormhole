@@ -70,6 +70,21 @@ public final class WindowHub {
         notices.onAct = { [unowned self] in noticeActed($0) }
         notices.onBar = { [unowned self] in sayInBar($0, detail: $1) }
         followGauges()
+        followTabs()
+    }
+
+    /// The tab on show leaves when it is no longer offered, panel open or not, and also for a layout restored with one that
+    /// is not (the GPUI app does it on the window's tick, `panel.rs`).
+    private func followTabs() {
+        withObservationTracking {
+            _ = (panelTabs, state.panelTab)
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.leaveMissingTab()
+                self?.followTabs()
+            }
+        }
+        leaveMissingTab()
     }
 
     /// A gauge goes once the shell has its terminal back, so the agent's next run starts without the last one's numbers.
@@ -97,10 +112,12 @@ public final class WindowHub {
             _ = store.send(action)
             return
         }
-        // A tab that is not on offer (Usage without an agent) is gone, as in the GPUI app's `show_tab`.
-        let shown = panelTabs.contains(tab) ? tab : .changes
-        if shown == .usage, state.panelTab != .usage { tabBeforeUsage = state.panelTab }
-        _ = store.send(.showPanelTab(shown))
+        // A tab that is not on offer (Usage without an agent, a feature that is off) does nothing: its action is bound only while
+        // the tab is offered (`bind_features`).
+        guard panelTabs.contains(tab) else { return }
+        if tab == .usage, state.panelTab != .usage { tabBeforeUsage = state.panelTab }
+        // Zen mode keeps the panel off the screen: the tab changes for when it comes back, and the panel is not revealed.
+        _ = store.send(zenActive ? .setPanelTab(tab) : .showPanelTab(tab))
     }
 }
 

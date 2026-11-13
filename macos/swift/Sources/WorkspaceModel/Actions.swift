@@ -83,6 +83,8 @@ public enum WorkspaceAction: Sendable, Equatable {
     case toggleSidebar
     case togglePanel
     case showPanelTab(PanelTab)
+    /// The tab alone, the panel left as it is (Zen mode keeps it off the screen).
+    case setPanelTab(PanelTab)
     case search(String)
     case showOverlay(Overlay?)
     /// The window's width, from which the core fits the three columns (zero: nothing is refused for want of room).

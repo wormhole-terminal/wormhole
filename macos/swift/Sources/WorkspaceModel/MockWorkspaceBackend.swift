@@ -56,6 +56,7 @@ public final class MockWorkspaceBackend: WorkspaceBackend {
         case .toggleSidebar: window.sidebarVisible.toggle(); count.chrome += 1; return nil
         case .togglePanel: window.panelVisible.toggle(); count.chrome += 1; return nil
         case .showPanelTab(let tab): (window.panelTab, window.panelVisible) = (tab, true); count.chrome += 1; return nil
+        case .setPanelTab(let tab): window.panelTab = tab; count.chrome += 1; return nil
         case .search(let text): window.search = text; count.chrome += 1; return nil
         case .showOverlay(let overlay): window.overlay = overlay; count.chrome += 1; return nil
         default: return .unchanged

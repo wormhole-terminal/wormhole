@@ -278,6 +278,7 @@ pub enum Action {
     ToggleSidebar,
     TogglePanel,
     ShowPanelTab(TabId),
+    SetPanelTab(TabId),
     Search(String),
     ShowOverlay(Option<Overlay>),
     SetPaneArea { width: f32, height: f32 },

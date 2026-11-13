@@ -26,8 +26,11 @@ extension WindowHub {
 
     /// The tab on show went away (the agent left, the folder is unknown): back to the tab before Usage, else Changes.
     func leaveMissingTab() {
-        guard !panelTabs.contains(state.panelTab) else { return }
-        send(.showPanelTab(tabBeforeUsage ?? .changes))
+        let tabs = panelTabs
+        guard !tabs.isEmpty, !tabs.contains(state.panelTab) else { return }
+        let back = [tabBeforeUsage, .changes].compactMap { $0 }.first(where: tabs.contains) ?? tabs[0]
+        // The tab alone: leaving one never opens the panel.
+        _ = store.send(.setPanelTab(back))
     }
 
     /// The status bar's items the keys walk: the terminal that needs you, then each count's first terminal.

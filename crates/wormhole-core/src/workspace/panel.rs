@@ -32,6 +32,14 @@ impl WorkspaceModel {
         });
     }
 
+    /// The tab changes and the panel stays as it is.
+    pub(super) fn set_panel_tab(&mut self, tab: TabId) {
+        if !self.tab_enabled(tab) {
+            return self.emit(Event::Refused(Refusal::Unchanged));
+        }
+        self.chrome_change(|chrome| chrome.panel_tab = tab);
+    }
+
     /// A feature was switched on or off. The open tab falls back when its feature went.
     pub(super) fn set_feature(&mut self, feature: FeatureId, on: bool) {
         let mask: FeatureMask = self.cfg.features.with(feature, on);
