@@ -75,6 +75,7 @@ struct GroupSwitcherView: View {
             }
         return Button { go(hit) } label: {
             HStack {
+                hitMark(hit)
                 Text(label).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary)
                 Spacer(minLength: Space._2)
                 Text(note).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
@@ -82,6 +83,17 @@ struct GroupSwitcherView: View {
             .frame(minHeight: Metric.row).padding(.horizontal, Space._2).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    /// A terminal's own tile before its name, a group's colour dot before its (`switcher.rs`).
+    @ViewBuilder private func hitMark(_ hit: TabSets.Hit) -> some View {
+        switch hit {
+        case .terminal(let id, _):
+            if let tile = actions.tile?(id, TabMetrics.tile) { tile }
+        case .set(let at):
+            let colour = model.sets[at].groupID.flatMap { actions.cardWash($0, tokens) }
+            Circle().fill(colour?.opacity(1) ?? tokens.textFaint).frame(width: Metric.statusDot, height: Metric.statusDot)
+        }
     }
 
     private func addAction(_ card: SetCard) -> (() -> Void)? {
@@ -119,7 +131,7 @@ struct SetCardView: View {
         VStack(alignment: .leading, spacing: Space._1) {
             HStack {
                 name
-                if card.alert { Circle().fill(tokens.agentAttention).frame(width: Metric.statusDot - 2, height: Metric.statusDot - 2) }
+                if card.alert { Circle().fill(card.alertKind == .failed ? tokens.statusDanger : tokens.agentAttention).frame(width: Metric.statusDot - 2, height: Metric.statusDot - 2) }
                 Spacer(minLength: Space._2)
                 if let add { IconButton(lucide: .plus, label: LocalizedStringKey(PanesText.newTerminalIn(card.label)), action: add) }
                 CountBadge(card.count)

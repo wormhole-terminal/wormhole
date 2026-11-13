@@ -2,6 +2,7 @@
 // `switcher.rs`), with the agent's logo and the status light and badge, at the size the place asks for.
 
 import DesignSystem
+import PanesModel
 import SwiftUI
 import WorkspaceModel
 
@@ -21,6 +22,15 @@ public struct TerminalStatusTile: View {
             state: appearance.showsStatus ? TileState(terminal) : .shell, agent: terminal.agent, size: size,
             phase: StatusTile.phase(of: terminal.id), surface: tokens.surfacePanel)
             .environment(\.sidebarLook, appearance)
+    }
+
+    /// What the terminal's tile calls for, by its urgency: needs you (amber) or failed (red), as the switcher's dots say.
+    public static func alert(of terminal: TerminalSummary) -> TabAlert {
+        switch TileState(terminal) {
+        case .needsYou: .attention
+        case .failed: .failed
+        case .working, .bell, .unread, .running, .done, .shell: .none
+        }
     }
 
     /// The terminals as a card lists their tiles: the loudest first (`TileState` is in the core's `Urgency` order), the

@@ -55,7 +55,10 @@ extension WindowHub {
             sets: sets, current: current, selected: state.selected,
             terminal: { id in
                 let terminal = state.all.first { $0.id == id }
-                return TabItem(id: id, name: terminal?.title ?? "", activity: terminal?.activity ?? .idle, number: numbers[id])
+                var item = TabItem(id: id, name: terminal?.title ?? "", activity: terminal?.activity ?? .idle, number: numbers[id])
+                // Decided by the tile's urgency, as the row shows it, not by the activity.
+                item.alert = terminal.map(TerminalStatusTile.alert(of:))
+                return item
             },
             pinned: { set in state.groups.first { $0.id == set.groupID }?.isPinned ?? false })
         // What VoiceOver hears for each tab is the core's (`spoken::tab_label`): name, state, selection, "n of m".
@@ -84,7 +87,11 @@ extension WindowHub {
     /// What the bar's controls do (the one-line forwards of `TabBarActions`), with the menus of a tab and of the +.
     func tabActions(appearance: SidebarAppearance) -> TabBarActions {
         var bar = TabBarActions(
-            select: { [unowned self] in send(.select($0)) },
+            // A click on a tab gives that terminal the keyboard (`Activate`, `sidebar_host.rs`), as a click on the row does.
+            select: { [unowned self] in
+                send(.select($0))
+                focus.focusTerminal()
+            },
             close: { [unowned self] in actions.closeTerminal($0) },
             newTerminal: { [unowned self] group in
                 if let group { newTerminal(inGroup: group) } else { send(.newTerminal) }

@@ -35,7 +35,7 @@ public struct TabBarView: View {
                     rule
                 }
                 if model.showsSwitcher {
-                    GroupSwitcherButton(label: model.setLabel, alert: model.alert, open: $switcherOpen)
+                    GroupSwitcherButton(label: model.setLabel, alert: model.alert, alertKind: model.alertKind, open: $switcherOpen)
                         .popover(isPresented: $switcherOpen, arrowEdge: .bottom) {
                             GroupSwitcherView(model: model, actions: actions) { switcherOpen = false }
                         }
