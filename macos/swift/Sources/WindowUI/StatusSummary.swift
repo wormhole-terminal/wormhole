@@ -1,6 +1,6 @@
-// What the status bar counts, ported from `view::layout::status_bar` (`Summary`, `Detail`): the terminal that
-// needs you first (its own button), then the rest as counts in the bar's order, and how much of it fits the
-// window's width. The model does not time how long a terminal has waited, so the button has no "2m" yet.
+// What the status bar shows of the core's counts (`view::layout::status_bar`: `StatusRules`): the terminal that needs you
+// first (its own button), then the rest as counts in the bar's order, and how much of it fits the window's width. The
+// rules are the core's; the words, the localized tooltip and the glyphs are this window's.
 
 import CoreGraphics
 import WordsModel
@@ -28,20 +28,8 @@ struct StatusSummary: Equatable {
         }
     }
 
-    /// How much the bar says at a window's width: the words go below `wordsMin`, the size below `sizeMin`.
-    enum Detail: Comparable {
-        case lean, numbers, words
-
-        static let wordsMin: CGFloat = 1100
-        static let sizeMin: CGFloat = 720
-
-        init(windowWidth: CGFloat) {
-            self = windowWidth < Self.sizeMin ? .lean : windowWidth < Self.wordsMin ? .numbers : .words
-        }
-
-        var words: Bool { self == .words }
-        var size: Bool { self >= .numbers }
-    }
+    /// How much the bar says at a window's width (the core's rule).
+    typealias Detail = StatusBarDetail
 
     /// The terminal the button is for, and the counts after it.
     var attention: TerminalSummary?
@@ -71,20 +59,26 @@ struct StatusSummary: Equatable {
     }
 
     init(_ terminals: [TerminalSummary]) {
-        let waiting = terminals.filter { $0.activity == .needsInput }
-        // The one that has waited longest (core `Summary::of`: stable, so equal starts keep the list's order).
-        let longest = waiting.enumerated().sorted { ($0.element.since ?? .max, $0.offset) < ($1.element.since ?? .max, $1.offset) }.map(\.element)
-        attention = longest.first
-        waitingNames = longest.map(\.title)
-        rest = [(Activity.needsInput, Array(longest.dropFirst())),
-            (.working, terminals.filter { $0.activity == .working }),
-            (.finished, terminals.filter { $0.activity == .finished }),
-            (.failed, terminals.filter { $0.activity == .failed })]
-            .compactMap { activity, group in group.first.map { Count(activity: activity, number: group.count, first: $0.id) } }
+        // The core says who waits longest and what is counted; the words are this window's.
+        let counts = StatusRules.rules.counts(of: terminals)
+        let waiting = counts.needsYou.compactMap { terminals.indices.contains($0) ? terminals[$0] : nil }
+        attention = waiting.first
+        waitingNames = waiting.map(\.title)
+        rest = counts.rest.compactMap { item in
+            terminals.indices.contains(item.terminal)
+                ? Count(activity: item.activity, number: item.count, first: terminals[item.terminal].id) : nil
+        }
     }
 
     var isEmpty: Bool { attention == nil && rest.isEmpty }
 
     /// What a click on each item goes to, in the bar's order (the keys walk them).
     var items: [TerminalID] { (attention.map { [$0.id] } ?? []) + rest.map(\.first) }
+}
+
+extension StatusBarDetail {
+    init(windowWidth: CGFloat) { self = StatusRules.rules.detail(windowWidth: Double(windowWidth)) }
+
+    var words: Bool { self == .words }
+    var size: Bool { self >= .numbers }
 }

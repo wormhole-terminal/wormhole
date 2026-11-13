@@ -64,6 +64,8 @@ mod theme_resolve;
 mod studio_edit;
 mod studio_files;
 mod studio_folder;
+
+mod status_counts;
 mod syntax;
 mod tab_sets;
 mod themes;
@@ -190,6 +192,10 @@ pub use settings::{
 pub use split_opening::{
     SplitFrameRecord, SplitOpeningRecord, SplitPlace, SplitRect, split_opening, split_opening_duration_ms,
     split_opening_frame,
+};
+pub use status_counts::{
+    StatusBarDetail, StatusCountKind, StatusCountRecord, StatusCountsRecord, StatusEntryRecord, status_counts,
+    status_detail,
 };
 pub use tab_sets::{
     TabHitRecord, TabNameRecord, TabSetRecord, tab_sets_current, tab_sets_numbered, tab_sets_search, tab_sets_step,

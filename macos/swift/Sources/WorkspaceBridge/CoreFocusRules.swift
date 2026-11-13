@@ -70,6 +70,7 @@ public enum CoreWindowRules {
         Focus.install(CoreFocusRules())
         RowMotion.install(CoreRowMotion.tables)
         TabSets.install(CoreTabSetRules())
+        StatusRules.install(CoreStatusRules())
         let zen = windowPreset(preset: .zen)
         Zen.install(
             WindowShown(titleRow: zen.titleRow, statusBar: zen.statusBar, minimap: zen.minimap, columnDividers: zen.columnDividers))
