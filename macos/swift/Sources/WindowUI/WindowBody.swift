@@ -84,8 +84,8 @@ struct WindowBody: View {
                 old, new in
                 let wantedChanged = old.sidebar != new.sidebar || old.panelWanted != new.panelWanted
                 let animated = animates && wantedChanged && drag == nil
-                sidebarSlide.set(open: new.sidebar, animated: animated)
-                panelSlide.set(open: new.panelWanted && new.panelFits, animated: animated)
+                sidebarSlide.set(open: new.sidebar, animated: animated, motion: look.columnMotion)
+                panelSlide.set(open: new.panelWanted && new.panelFits, animated: animated, motion: look.columnMotion)
             }
         }
     }
@@ -112,12 +112,14 @@ struct WindowBody: View {
                 .frame(width: sidebarWidth)
                 .frame(width: frames.sidebarVisible, alignment: .leading)
                 .clipped()
+                .opacity(sidebarSlide.content)
                 .reachable(sidebarShown > 0)
 
             PanelColumn(hub: hub)
                 .frame(width: panelWidth)
                 .frame(width: frames.panelVisible, alignment: .trailing)
                 .clipped()
+                .opacity(panelSlide.content)
                 .reachable(panelShown > 0)
                 .frame(width: window, alignment: .trailing)
 

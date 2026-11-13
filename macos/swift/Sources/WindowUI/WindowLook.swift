@@ -48,6 +48,8 @@ public final class WindowLook {
         get { ThemeStore.shared.iconAnimations }
         set { ThemeStore.shared.iconAnimations = newValue }
     }
+    /// How a side column slides in and out (`motion.column`: `classic`, `soft-spring`, `content-after`).
+    public var columnMotion = "classic"
     /// What code is drawn in: the diff, the file viewer (`code_font_family`, else the terminal's; `code_font_size`).
     public var codeFont = CodeFont()
     /// The lines between the columns (the Column dividers setting).
