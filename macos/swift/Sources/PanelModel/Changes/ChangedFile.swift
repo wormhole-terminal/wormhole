@@ -31,19 +31,24 @@ public struct ChangedFile: Identifiable, Hashable, Sendable {
         self.submoduleEnterable = submoduleEnterable
     }
 
+    /// A nested repository, which git lists as "dir/": drawn as a folder, named without its slash (`file_line.rs`).
+    public var isFolder: Bool { path.hasSuffix("/") }
+
     public var name: String { path.split(separator: "/").last.map(String.init) ?? path }
 
     /// The folder without its trailing slash, as the row shows it beside the name; empty at the root.
     public var folder: String {
-        guard let slash = path.lastIndex(of: "/") else { return "" }
-        return String(path[..<slash])
+        let whole = isFolder ? path.dropLast() : path[...]
+        guard let slash = whole.lastIndex(of: "/") else { return "" }
+        return String(whole[..<slash])
     }
 
-    /// What the row says of the lines: counts, "bin", "LFS" or a submodule's words.
-    public enum Lines: Equatable, Sendable { case counts(added: Int, removed: Int), binary, lfs, submodule(String) }
+    /// What the row says of the lines: counts, "bin", "LFS", a submodule's words, or nothing for a folder.
+    public enum Lines: Equatable, Sendable { case counts(added: Int, removed: Int), binary, lfs, submodule(String), folder }
 
     public var lines: Lines {
         if let submodule { return .submodule(submodule) }
+        if isFolder { return .folder }
         if lfs { return .lfs }
         guard let added else { return .binary }
         return .counts(added: added, removed: removed ?? 0)
@@ -68,6 +73,7 @@ public struct ChangedFile: Identifiable, Hashable, Sendable {
             : kind.title
         let counts: String
         switch lines {
+        case .folder: return first
         case let .submodule(words): counts = words
         case .lfs: counts = "LFS" // text: Git LFS, a product name
         case .binary: counts = Words.text("changes-counts-binary", fallback: "binary")

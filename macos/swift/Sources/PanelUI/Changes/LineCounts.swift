@@ -31,6 +31,7 @@ struct FileLinesLabel: View {
         case .binary: word(panelText("changes-badge-binary", "bin"))
         case .lfs: word("LFS") // text: Git LFS, a product name
         case let .submodule(words): word(words)
+        case .folder: EmptyView()
         }
     }
 

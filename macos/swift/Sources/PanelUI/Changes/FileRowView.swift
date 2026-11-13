@@ -27,7 +27,7 @@ struct FileRowView: View {
     var body: some View {
         PanelRow(selected: selected, marked: marked, action: action) { hovering in
             HStack(spacing: PanelMetrics.gap) {
-                FileIcon(kind: .file(file.path), tint: muted)
+                FileIcon(kind: file.isFolder ? .folder(file.name, open: false) : .file(file.path), tint: muted)
                 if let from = file.renamedFrom { renamed(from) }
                 if file.moved {
                     PanelIcon("folder.badge.plus", size: 12).foregroundStyle(muted)
