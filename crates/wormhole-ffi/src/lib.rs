@@ -41,6 +41,7 @@ mod launch;
 mod legacy;
 mod live_resize;
 mod minimap;
+mod motion_scenes;
 mod notes_text;
 pub mod notify;
 mod open_file;

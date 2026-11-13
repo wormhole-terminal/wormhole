@@ -29,6 +29,9 @@ public struct StatusPose: Sendable, Equatable {
     public var flareReach, flareStrength: Double
     /// How far the row is moved sideways (points).
     public var dx: Double
+    /// The tile's own parts, for a picture drawn from the pose alone (Settings → Motion): how much of the old status's badge
+    /// still shows, the new badge's opacity and size, the card's wash and how far the second line has rolled to the new words.
+    public var leaving = 0.0, badgeOpacity = 1.0, badgeScale = 1.0, wash = 0.0, roll = 1.0
     public static let rest = StatusPose(flareReach: 0, flareStrength: 0, dx: 0)
     public init(flareReach: Double, flareStrength: Double, dx: Double) { (self.flareReach, self.flareStrength, self.dx) = (flareReach, flareStrength, dx) }
 }
@@ -38,6 +41,15 @@ public struct RowMotionTables: Sendable {
     /// the `motion.status` choice, and where it stands `t` of the way through.
     public var statusSeconds: @Sendable (_ variant: String, _ from: Int, _ to: Int) -> Double = { _, _, _ in 0 }
     public var statusPose: @Sendable (_ variant: String, _ from: Int, _ to: Int, _ t: Double) -> StatusPose = { _, _, _, _ in .rest }
+
+    /// Settings → Motion's scenes (`motion_scenes.rs`): the room a coming or going row leaves the rows around it and a group's
+    /// rows leave the lines below (0...1, `seconds` after the motion began), a folded group's summary, and a side column's
+    /// length and pose (`motion.column`). Without the core everything stands at its rest.
+    public var insertRoom: @Sendable (_ variant: String, _ entering: Bool, _ seconds: Double) -> Double = { _, entering, _ in entering ? 1 : 0 }
+    public var foldRoom: @Sendable (_ variant: String, _ entering: Bool, _ rows: Int, _ seconds: Double) -> Double = { _, entering, _, _ in entering ? 1 : 0 }
+    public var foldSummary: @Sendable (_ variant: String, _ rows: Int, _ seconds: Double) -> Double = { _, _, _ in 1 }
+    public var columnSeconds: @Sendable (_ variant: String, _ opening: Bool) -> Double = { _, _ in 0 }
+    public var columnPose: @Sendable (_ variant: String, _ opening: Bool, _ seconds: Double) -> (shown: Double, content: Double) = { _, opening, _ in (opening ? 1 : 0, 1) }
 
     public var insertPlan: @Sendable (_ variant: String, _ entering: Bool) -> RowMotionPlan
     public var insertPose: @Sendable (_ variant: String, _ entering: Bool, _ t: Double) -> RowPose

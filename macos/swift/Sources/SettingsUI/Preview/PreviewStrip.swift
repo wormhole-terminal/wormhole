@@ -38,6 +38,7 @@ struct PreviewStrip: View {
         switch scene {
         case .window: WindowScene(model: model)
         case .fonts: FontsScene(model: model)
+        case .motion: MotionScene(model: model)
         case .sidebar: SidebarScene(model: model, withAgents: false)
         case .agents: SidebarScene(model: model, withAgents: true)
         case .notifications: NotificationsScene(model: model)

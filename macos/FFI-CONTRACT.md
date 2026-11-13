@@ -1458,3 +1458,6 @@ All additive; the core decides, Swift asks.
   (the menu: yours once, built-ins by family), `studio_key_table()` and `studio_token_in_both(name)` (core's `token_scope`).
 - `IconThemeHandle.open(user_dir, name)` is `icon_theme::theme_named` for dark and light ("None": no icons): `file(path, dark)` and
   `folder(name, open, dark)` answer where the SVG is (a user file's path, or the bundled key `wormhole-icons/...`), `renders_in_colour()`.
+- Motion preview (`motion_scenes.rs`): `insert_room_at(variant, entering, elapsed_ms)`, `fold_room_at(variant, entering, rows, elapsed_ms)`,
+  `fold_summary_opacity(variant, rows, elapsed_ms)`, `column_motion_duration(variant, opening)` (ms) and `column_motion_pose(variant, opening,
+  elapsed_ms) -> ColumnPoseRecord {shown, content}`: core's `view::motion::pose` for the Settings scenes, by the settings' names.

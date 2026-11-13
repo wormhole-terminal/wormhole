@@ -18,7 +18,18 @@ enum CoreRowMotion {
         tables.statusSeconds = { Double(statusMotionDuration(variant: $0, from: UInt8($1), to: UInt8($2))) / 1000 }
         tables.statusPose = {
             let pose = statusMotionPose(variant: $0, from: UInt8($1), to: UInt8($2), t: Float($3))
-            return StatusPose(flareReach: Double(pose.flareReach), flareStrength: Double(pose.flareStrength), dx: Double(pose.dx))
+            var status = StatusPose(flareReach: Double(pose.flareReach), flareStrength: Double(pose.flareStrength), dx: Double(pose.dx))
+            (status.leaving, status.badgeOpacity, status.badgeScale) = (Double(pose.leaving), Double(pose.badgeOpacity), Double(pose.badgeScale))
+            (status.wash, status.roll) = (Double(pose.wash), Double(pose.roll))
+            return status
+        }
+        tables.insertRoom = { Double(insertRoomAt(variant: $0, entering: $1, elapsedMs: Float($2 * 1000))) }
+        tables.foldRoom = { Double(foldRoomAt(variant: $0, entering: $1, rows: UInt32($2), elapsedMs: Float($3 * 1000))) }
+        tables.foldSummary = { Double(foldSummaryOpacity(variant: $0, rows: UInt32($1), elapsedMs: Float($2 * 1000))) }
+        tables.columnSeconds = { Double(columnMotionDuration(variant: $0, opening: $1)) / 1000 }
+        tables.columnPose = {
+            let pose = columnMotionPose(variant: $0, opening: $1, elapsedMs: Float($2 * 1000))
+            return (Double(pose.shown), Double(pose.content))
         }
         return tables
     }()
