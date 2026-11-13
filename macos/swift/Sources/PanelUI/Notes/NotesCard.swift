@@ -9,6 +9,7 @@ struct NotesCard: View {
     @Bindable var store: NotesStore
     @State private var dragging: UUID?
     @Environment(\.panelMotion) private var motion
+    @Environment(\.panelHost) private var host
 
     private var model: NotesModel {
         get { store.model }
@@ -21,7 +22,7 @@ struct NotesCard: View {
                 title: panelText("notes-title", "Notes"), folded: model.notes.isEmpty ? nil : model.notesCollapsed,
                 count: model.filledNotes > 0 ? CountText.grouped(model.filledNotes) : nil,
                 spoken: panelText("notes-spoken", ["count": .whole(model.filledNotes)], model.filledNotes == 0 ? "Notes, no notes" : "Notes, \(model.filledNotes) \(model.filledNotes == 1 ? "note" : "notes")"), onToggle: { model.notesCollapsed.toggle() },
-                add: (panelText("notes-new", "New note"), { store.newNote() }))
+                add: (host?.keyed(panelText("notes-new", "New note"), action: "newNote") ?? panelText("notes-new", "New note"), { store.newNote() }))
                 .walkRow("band-notes")
             if !model.notesCollapsed {
                 ForEach($store.model.notes) { $note in

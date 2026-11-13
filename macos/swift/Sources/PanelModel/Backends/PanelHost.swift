@@ -5,6 +5,8 @@ import WordsModel
 
 @MainActor
 public protocol PanelHost: AnyObject {
+    /// A tooltip that names the key of keymap action `action` ("New note (⌥⌘N)"): the keymap's, which lives above the panel.
+    func keyed(_ words: String, action: String) -> String
     func copy(_ text: String)
     /// A copy that says what it was on the notice chip ("Copied commit hash"); where there is no chip it is a plain copy.
     func copy(_ text: String, as what: PanelCopied?)
@@ -86,6 +88,7 @@ public enum PanelCopied: Sendable {
 }
 
 extension PanelHost {
+    public func keyed(_ words: String, action: String) -> String { words }
     public func copy(_ text: String, as what: PanelCopied?) { copy(text) }
     /// Where there is no chip, nothing says it (VoiceOver is told through `notify` where the caller has words).
     public func failed(_ what: PanelFailed) {}

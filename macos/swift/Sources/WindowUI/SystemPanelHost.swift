@@ -6,6 +6,7 @@ import AppKit
 import DesignSystem
 import PanelModel
 import PanesModel
+import PlatformModel
 import TerminalUI
 import WordsModel
 
@@ -38,6 +39,8 @@ final class SystemPanelHost: PanelHost {
     var chosenApp: () -> OpenInApp? = { nil }
     var editorName: String? { chosenApp().flatMap { $0 == .finder ? nil : $0.name } }
     let homeFolder: String? = NSHomeDirectory()
+
+    func keyed(_ words: String, action: String) -> String { Keymap.shared.withKey(words, ActionID(rawValue: action)) }
 
     func copy(_ text: String) {
         Pasteboard.setText(text)

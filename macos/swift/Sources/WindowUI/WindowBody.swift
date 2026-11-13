@@ -58,7 +58,11 @@ struct WindowBody: View {
                     facts: facts, sidebarOpen: sidebarWanted, sidebarShown: look.iconAnimations ? sidebarSlide.shown : (sidebarWanted ? 1 : 0),
                     panelOpen: panelFits, panelShown: look.iconAnimations ? panelSlide.shown : (panelFits ? 1 : 0),
                     panelWaiting: fit.panelWaiting && look.zen == nil, leaveZen: look.zen == nil ? nil : { hub.actions.perform("toggleZenMode") },
-                    send: send)
+                    send: { action in
+                        send(action)
+                        // A panel the button closed had the keys in a note or a list: the terminal takes them (`toggle_notes`).
+                        if case .togglePanel = action, !hub.state.panelVisible { hub.focus.focusTerminal() }
+                    })
             }
             // The status bar fades in and out (Reduce Motion cuts); the terminal resizes once, when it is gone.
             .animation(animates ? Motion.fade : nil, value: look.statusBar)

@@ -17,8 +17,9 @@ struct PanelTabBar: View {
     let select: @MainActor (PanelTab) -> Void
     /// The counts on the tabs that have one (the changed files, the agents that reported).
     var badges: [PanelTab: Int] = [:]
-    /// What VoiceOver says of a tab, in the core's words ("Changes, 3 changed files"); nil falls back to its title.
-    var spokenTab: (PanelTab) -> String? = { _ in nil }
+    /// What VoiceOver says of a tab, with its counts (core's words), and its tooltip, which names its key.
+    var spoken: (PanelTab) -> String = { $0.title }
+    var tip: (PanelTab) -> String = { $0.title }
     @Namespace private var selection
     @Environment(\.chrome) private var colours
     @Environment(\.reduceMotion) private var reduceMotion
@@ -29,10 +30,10 @@ struct PanelTabBar: View {
     var body: some View {
         HStack(spacing: Chrome.tabGap) {
             ForEach(Array(tabs.enumerated()), id: \.element) { position, candidate in
-                PanelTabButton(tab: candidate, isSelected: candidate == tab, badge: badges[candidate], namespace: selection) { select(candidate) }
+                PanelTabButton(tab: candidate, isSelected: candidate == tab, badge: badges[candidate], tip: tip(candidate), namespace: selection) { select(candidate) }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(spokenTab(candidate) ?? candidate.title)
-                    .accessibilityValue(spoken(candidate, position: position))
+                    .accessibilityLabel(spoken(candidate))
+                    .accessibilityValue(place(position))
                     .accessibilityAddTraits(candidate == tab ? [.isButton, .isSelected] : .isButton)
             }
             Spacer(minLength: 0)
@@ -44,15 +45,15 @@ struct PanelTabBar: View {
         .frame(height: Chrome.titleHeight)
         .background(WindowDragArea())
         .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isTabBar)
         .accessibilityLabel(Words.text("window-panel", fallback: "Right panel"))
     }
 }
 
 extension PanelTabBar {
-    /// "2 of 6", and the count where the tab has one ("Changes: 3 files" is the tab's own label's business).
-    fileprivate func spoken(_ tab: PanelTab, position: Int) -> String {
-        let place = Words.text("window-tab-position", ["position": .whole(position + 1), "total": .whole(tabs.count)], fallback: "\(position + 1) of \(tabs.count)")
-        return badges[tab].map { "\(place), \($0)" } ?? place
+    /// "2 of 6": the tab's place in the list (its counts are in its own words, `spoken`).
+    fileprivate func place(_ position: Int) -> String {
+        Words.text("window-tab-position", ["position": .whole(position + 1), "total": .whole(tabs.count)], fallback: "\(position + 1) of \(tabs.count)")
     }
 }
 
@@ -60,6 +61,7 @@ private struct PanelTabButton: View {
     let tab: PanelTab
     let isSelected: Bool
     let badge: Int?
+    let tip: String
     let namespace: Namespace.ID
     let action: @MainActor () -> Void
     @State private var hovering = false
@@ -91,7 +93,7 @@ private struct PanelTabButton: View {
         .onHover { hovering = $0 }
         // The glyph plays as its tab becomes the active one, never as the window opens or the panel comes back.
         .onChange(of: isSelected) { _, now in if now { run.start() } }
-        .help(tab.title)
+        .help(tip)
     }
 
     @ViewBuilder private var glyph: some View {

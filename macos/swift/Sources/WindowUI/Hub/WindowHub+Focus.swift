@@ -28,7 +28,7 @@ extension WindowHub {
     func leaveMissingTab() {
         let tabs = panelTabs
         guard !tabs.isEmpty, !tabs.contains(state.panelTab) else { return }
-        let back = [tabBeforeUsage, .changes].compactMap { $0 }.first(where: tabs.contains) ?? tabs[0]
+        let back = [tabBeforeUsage, WorkspaceModel.PanelTab.changes].compactMap { $0 }.first(where: tabs.contains) ?? tabs[0]
         // The tab alone: leaving one never opens the panel.
         _ = store.send(.setPanelTab(back))
     }

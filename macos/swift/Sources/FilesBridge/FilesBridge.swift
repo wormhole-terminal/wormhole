@@ -43,6 +43,9 @@ public enum FilesBridge {
             let words = gitProblem(message: message, history: history)
             return GitProblem(headline: words.headline, hint: words.hint, detail: words.detail, copy: words.copy)
         }
+        TabSpeech.tab = { name, files, steps, notes in
+            panelTabSpoken(tab: name, files: files.map { UInt32(max($0, 0)) }, openSteps: UInt32(max(steps, 0)), notes: UInt32(max(notes, 0)))
+        }
         ByteSize.core = { byteSize(bytes: $0, binary: $1) }
         RepoFiles.resolver = { repoFileResolve(root: $0, relative: $1) }
         RepoFiles.knownApp = { openInKnown(bundle: $0) }
