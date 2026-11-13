@@ -1,5 +1,6 @@
 // Every block on the grid, for the control folder's `blocks` and `block <n>` (GPUI's `devctl_blocks`): the ids come
 // from the engine's prompt marks, walked up from the bottom, so the list is the engine's, not a copy kept here.
+// text-file: the control folder's listing (dev tooling, English by design), not interface text
 
 import Foundation
 import TerminalCore
