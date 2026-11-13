@@ -19,6 +19,10 @@ extension WindowHub {
         // The Usage tab's line goes with the tab (no agent on screen); the Project tab's needs a folder (`features/*/def.rs` `menu`).
         if !agentOnScreen { menu.hidden.insert("showUsage") }
         if state.selectedTerminal?.folder == nil { menu.disabled.insert("showProject") }
+        // ⌥⌘↑ and ⌥⌘↓ are Select Pane in a terminal and Move Item in a list (`table.rs`: Terminal and List scopes). The menu would
+        // take the key before a row's own handler does, so while a list or a note's editor holds the keyboard the two pane items
+        // are off and the key reaches the row, as GPUI's focus scope decides.
+        if panel.keyboard.listFocused || panel.notes.isWriting { menu.disabled.formUnion(["focusPaneUp", "focusPaneDown"]) }
         return menu
     }
 
