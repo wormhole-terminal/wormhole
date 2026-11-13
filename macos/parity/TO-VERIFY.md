@@ -793,3 +793,44 @@ Written without compiling: expect compile errors.
 | P08 | NOT WRITTEN: an action's key as the window's wherever the focus is | - | needs a window-level key handler that asks the core's trust; a text field takes keys first (the lane said so) |
 | P09 | NOT WRITTEN: reports per profile | - | the one `UsageService` is the hook socket's; per-profile services need one socket service per profile |
 | P03 | NOT WRITTEN: the comment form as a dialog titled "Comment on <place>" with Add Comment / Save | - | a popover on the line (a design choice, not a missing behaviour) |
+
+## Lane sidebar-window, wave 6
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| W02 | A terminal hidden from agents (row menu): look at the title row | a lock after its name, tooltip "Hidden from agents" | `TitleFactsMaker` (`hiddenFromAgents: terminal.isAgentHidden`) |
+| W02 | Terminal in a submodule folder; one in a repo on a detached HEAD (`git checkout --detach`) | "in <parent>" after the branch chip (while the row has room); an amber "detached" chip instead of no chip | core `TitleTerminal.superproject`/`detached` (`workspace/snapshot/title.rs`), `GitFacts.superproject`, `TitleMapping.swift`, `TitleFactsMaker.branch(of:extras:)` |
+| W02 | Status bar off; an agent working for 4 minutes, one done, a failed command (`false`) | "working · 4m", "done · 3m", "failed · exit 1" after the name; the minute moves by itself (one timer, no poll); with the bar on the row says nothing | `StateWords.swift`, `CentreTitle` (`TerminalColumn.swift`), `selectedTerminal` merges `since` from `all` (`Chrome.swift`) |
+| W03 | Same with the status bar on: the state item at its end | "failed · exit 1" for a failure with a code, "working · 4m" (the time was missing before: the row has no `since`) | `StatusBar.stateText` |
+| W02 | Terminal with an agent (claude) | the title row's tile, each pane header's tile and the status bar's attention button show the agent's logo with the status light, as the row does | `WindowHub+Tiles.swift`, `TitleActions.tile`, `PaneActions.tile`, `StatusBar.tile` |
+| W02 | Drag a file from Finder onto the title row | the terminal under it gets the path typed (escaped, with a space) and the keys; the row tints while the file hovers | `TitleFileDrop.swift`, `MetalTerminalView.insertDropped` |
+| W02 | Exited terminal, open the path menu / hover card | "Insert into terminal" is off only for an exited one, on otherwise | `WindowHub+Title.swift` `canInsert` |
+| W03 | View ▸ Show Status Bar (and the key), quit, relaunch; also open Settings meanwhile | the bar's state is the `status_bar` setting: it survives the relaunch and the Settings switch follows | `ActionRouter+View.swift`, `settingsBackend(of:)` in `ProfileLooks.swift` |
+| W12 | Window of profile B in front: View ▸ Show Status Bar | B's `config.json` gets `status_bar`; B's windows follow, A's do not | `settingsBackend(of:)`, `ProfileLook.backend` |
+| W05 | Window of profile B in front: ⌘N | the new window is a window of profile B (not the shown profile) | `AppController+WindowOpening.swift` `openNewWindow` |
+| W09 | Select another terminal / rename one / a program sets a title; open the Window menu, ⌘`, Mission Control | the window is named after the selected terminal and follows it | `AppController+WindowFacts.swift` |
+| W09 | Motion feature on: open and close a window; then Reduce Motion on; then a torn-off window; then a test instance | the system's document animation; a cut; the window's own growth (default behaviour); default | `AppController+WindowFacts.swift`, FFI `window_animation`, `WindowsBackend.windowAnimation` |
+| S08 | Release build (Motion feature off) with `motion.status`, `motion.insert`, `motion.fold` set in config.json | rows, status and fold are cuts (Classic), as GPUI; with the feature on and the keys absent: Classic status, From side, Tuck | `SidebarSettingsMaker.appearance(…, motion:)`, `LookSettings.apply` |
+| S08 | Motion on: drag a row down and up the list | the lines it passes step aside on the quick spring and a gap opens where it would land; the dragged row leaves the list; no drop line is drawn; Esc and letting go settle everything; a drop on a row's middle (join) moves nothing | `ListRoom.swift`, `DropFrame`, `SidebarView+Drag.swift` `aim`, FFI `room_pushes`. TEST (visual): rows are pushed inside their own layout box, so the drop still lands on the right line |
+| S07 | Motion on: rest the pointer on the line between a row's top quarter and middle | the part does not flip back and forth; with Motion off the parts are cut at the plain quarter edges | `DropLines.over(at:held:part:)`, FFI `drop_part_at`, `SidebarAppearance.motionInForce` |
+| S08 | A terminal closed or made inside a group's card (insert pose set to Reveal, From side, Soft spring) | the row plays the pose in the card as one in no group does | `GroupRows.swift` |
+| S08 | Make a split (⌘D or drop a row on another's middle) a while after launch | the bracket line fades in down the two rows in 160 ms (first row's stretch first); at launch and after a restore it is simply there; Reduce Motion cuts | `SplitLine.swift`, FFI `bracket_draw_ms`, `bracket_share` |
+| S08 | Motion on, status bar on: an agent starts working while another finishes | the counts turn over like a counter (160 ms); with Motion off or Reduce Motion they just change | `StatusBar.statusRoll` |
+| S03 | Press + on a group with no folder whose terminals are in a project folder; tick the box | the alert has Use Folder / Not Now and a box "Only keep terminals in this folder"; with terminals elsewhere the detail says how many would leave; Esc is Not Now; with the box ticked those terminals leave the group; Not Now is remembered; the terminal opens either way. TEST (data loss: terminals leave the group) | `GroupFolderQuestion.swift`, FFI `group_folder_leaving`, core `WorkspaceModel::members_leaving` |
+| S09 | Same question from the tab bar's +, from an empty pinned set opened in the switcher and by Ctrl-Opt-N on it | the question is asked before the terminal opens | `WindowHub+Sidebar.swift` `newTerminal(inGroup:)` |
+| S09 | Another group has a terminal that needs you, then one that failed | the dot on the switcher button and the card is amber for needs-you (louder) and red for a failure; a plain terminal with a bell does not make a dot | `TabAlert`, `TabItem.alert`, `TerminalStatusTile.alert(of:)` |
+| S09 | Switcher search: type a terminal's name and a group's name | the terminal's hit carries its tile, the group's a colour dot | `GroupSwitcherView.hitMark` |
+| S09 | Click a tab, then type | the keys are in that terminal | `WindowHub+Sidebar.swift` `tabActions` |
+| S01 | Fold the group of the selected terminal, F6 into the list | the keys are on the group's head, the first arrow moves from there | `SidebarView.enter` |
+| S10 | First run, no coding agent on the Mac, end the intro window on "Ready when you are" with Start | the sidebar's no-agents note is up (unless closed for good) | `OnboardingWindow.onEnded`, `AppController.showNoAgentsTip` |
+| W11 | Edit a Probe's `probe.toml` behind the app's back, wait a minute | the Probes are read again | `HookHost.start` (one timer a minute), `HookServerHandle.reloadProbes` |
+| W01 | Open the pane menu; look at tooltips of Zoom and Close; change a key in Settings | the menu items and the tooltips show the keymap's keys now | `WindowHub+PaneKeys.swift`, `PaneActions.shortcut/keyText` |
+| W03 | Hover the attention button; change "Go to waiting" key | the tooltip ends with the key the keymap has now, nothing when it has none | `StatusSummary.attentionTooltip(jumpKey:)` |
+| W08 | Close a group whose worktree has a terminal in a folded group | the worktree is named as shared, so not removable | `AppController+WorktreeClose.swift` (`state.all`) |
+| W12 | Window of profile B: Notes preview | note text is in B's interface font | `NotePreview.swift` |
+| X04 | Tab strip focused (←, →) | steps between the tabs shown (the set's), a folded group's too | `WindowFocus+Keys.swift` `walkTerminals` |
+| S01/S02 | NOT REAL: `RenameField.font` is already `Font?` (nil is the row's own), so nothing reads `tokens` in a default value | - | `SidebarUI/Row/RenameField.swift:16` |
+| W01 | NOT WRITTEN: the split's opening motion (new pane slides in on the spring, the old terminal keeps its grid's size until the end and is resized once). It needs the core's `split::Opening::of` over two layouts exported through the FFI, and a pane host that holds a terminal at a fixed size while its box changes; writing that blind would risk a resize storm on the PTY | - | `PaneArea.swift` still animates the layout as a whole (`Motion.layout`) |
+| W09/S10 | NOT WRITTEN: the terminal welcome's ending already raised the note; the intro window's is now too (above) | - | - |
