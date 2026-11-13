@@ -56,10 +56,12 @@ final class AuxController {
         #endif
     }
 
-    /// Check for Updates…: the window, and a manual check started at once when nothing is in progress (`app/handlers.rs`).
+    /// Check for Updates…: Settings on its Updates page, and a manual check started at once when nothing is in progress (`app/handlers.rs`).
     func showUpdates() {
+        // Settings' Updates page, as GPUI's handler opens it, then the check.
+        app.showSettings()
+        app.settingsController?.show(section: "updates")
         let backend = updateBackend()
-        UpdateWindow.show(backend: backend, version: AppInfo.from(bundle: .main).version)
         if backend.phase == .idle || backend.phase == .upToDate { Task { await backend.check() } }
     }
 

@@ -143,7 +143,7 @@ update-no-notes = This release has no notes.
 update-failed = The update failed: { $why }
 
 # Shown by a build that has no update feed to ask.
-update-no-feed = This build has no update feed. Start it with --update-feed <url> to check one.
+update-no-feed = This is a development build; it doesn't update itself.
 
 ## The project trust window
 

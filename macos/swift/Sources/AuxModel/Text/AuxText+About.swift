@@ -59,5 +59,5 @@ extension AuxText {
 
     public static func version(_ number: String) -> String { tr("about-version", ["version": .text(number)], fallback: "Version \(number)") }
     public static var debugBuild: String { tr("about-debug-build", "(debug build)") }
-    public static var noUpdateFeed: String { tr("update-no-feed", "This build has no update feed. Start it with --update-feed <url> to check one.") }
+    public static var noUpdateFeed: String { tr("update-no-feed", "This is a development build; it doesn't update itself.") }
 }
