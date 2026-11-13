@@ -7,6 +7,7 @@
 //     Row(isSelected: selected, selection: space) {
 //     184×44 · padding x _2 · radius row
 //     tokens: sidebar.row.selected, state.hover, text.primary
+//     change: padding x _2 → _3
 //
 // The line of code is read from the checkout a debug build was made from; a release build has no such path in it.
 
@@ -22,6 +23,8 @@ enum InspectNote {
         note += "\n  \(summary(of: element))"
         let tokens = tokens(of: element.site.id)
         if !tokens.isEmpty { note += "\n  tokens: \(tokens.joined(separator: ", "))" }
+        let changes = InspectNudge.changes(of: element.site.style)
+        if !changes.isEmpty { note += "\n  change: \(changes.joined(separator: "; "))" }
         return note
     }
 

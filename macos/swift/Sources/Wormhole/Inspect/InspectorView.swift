@@ -41,7 +41,7 @@ struct InspectorView: View {
                         .help("Copy a note with the location and what it is drawn with")
                 }
             }
-            Text(inspector.picking ? "Hover to highlight, click to pin, scroll for the parent." : "Pinned. Copy the note, or pick again.")
+            Text(inspector.picking ? "Hover to highlight, click to pin, scroll for the parent." : "Pinned. Nudge values below, then copy the note.")
                 .textRole(.caption).foregroundStyle(tokens.textMuted)
         }
     }
@@ -63,6 +63,27 @@ struct InspectorView: View {
             row("size", String(format: "%.0f × %.0f", element.frame.width, element.frame.height))
             row("style", element.site.style.isEmpty ? "–" : element.site.style)
             row("parents", "\(inspector.chain.count - inspector.level - 1)")
+        }
+        let parts = InspectNudge.parts(of: element.site.style)
+        if !parts.isEmpty {
+            VStack(alignment: .leading, spacing: Space._1) {
+                SectionLabel("Nudge")
+                ForEach(parts, id: \.key) { part in
+                    HStack(spacing: Space._1) {
+                        row(part.property, InspectNudge.shown(part))
+                        IconButton(symbol: "minus", label: "Less") { InspectNudge.step(part, by: -1) }
+                        IconButton(symbol: "plus", label: "More") { InspectNudge.step(part, by: 1) }
+                    }
+                }
+                let changes = InspectNudge.changes(of: element.site.style)
+                if !changes.isEmpty {
+                    HStack(alignment: .firstTextBaseline, spacing: Space._2) {
+                        Text("change: " + changes.joined(separator: "; ")).textRole(.caption).frame(maxWidth: .infinity, alignment: .leading)
+                        Button("Reset") { InspectNudge.reset() }.controlSize(.small)
+                    }
+                }
+                Text("A step moves the scale's value: everything that uses it follows.").textRole(.caption).foregroundStyle(tokens.textMuted)
+            }
         }
         let drawn = InspectNote.tokens(of: element.site.id)
         if !drawn.isEmpty {

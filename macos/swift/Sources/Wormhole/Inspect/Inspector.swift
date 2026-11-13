@@ -4,8 +4,8 @@
 // is styled in the design system's terms, with the tokens it is drawn with. Hovering highlights, a click pins, the wheel
 // walks out to the parents; Copy puts the note on the clipboard, to paste into a request.
 //
-// The elements are the ones the design marks (`.marked`, `DesignSystem/Inspect`). Their values cannot be nudged live as
-// GPUI's can: SwiftUI keeps no style of an element to change from outside, and `Space`, `Metric` and `Radius` are constants.
+// The elements are the ones the design marks (`.marked`, `DesignSystem/Inspect`). In a debug build the scale values an
+// element's style names can be nudged (`InspectNudge`): the step shows wherever that value is used, and the note says it.
 
 import AppKit
 import DesignSystem
@@ -120,6 +120,15 @@ final class Inspector {
         guard level + 1 < chain.count else { return false }
         level += 1
         if let window = highlight.window { light(in: window) }
+        return true
+    }
+
+    /// Steps the part of the shown element's style called `property` (`padding x`) up or down; false when it has none
+    /// that can be stepped. The outline keeps the frame of the pick: pick again to see the element's new one.
+    @discardableResult
+    func nudge(_ property: String, by direction: CGFloat) -> Bool {
+        guard let shown, let part = InspectNudge.parts(of: shown.site.style).first(where: { $0.property == property }) else { return false }
+        InspectNudge.step(part, by: direction)
         return true
     }
 

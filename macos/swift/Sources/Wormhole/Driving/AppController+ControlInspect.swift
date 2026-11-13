@@ -2,6 +2,7 @@
 // The control folder's `inspect` (GPUI's devctl has `inspect`, and `hover x y` / `click x y` highlight and pin while it is
 // on): inspect mode from a script. `inspect` toggles it, `inspect on|off` sets it, `inspect X Y [levels]` pins the element
 // at a point and prints its note and its parents, `inspect parent` walks out one, `inspect pick` picks again and
+// `inspect nudge <property> <+|->` steps a value of its style and `inspect reset` takes every step back (debug builds),
 // `inspect copy` is the panel's Copy (a test instance's clipboard is its own file: read it with `pasteboard`).
 
 import AppKit
@@ -31,10 +32,21 @@ extension AppController {
             reply(inspector.picking ? "inspect picking" : "error: inspect mode is off (inspect on)")
         case ("inspect", "parent"):
             reply(inspector.walkOut() ? inspector.note ?? "" : "error: no parent (the outermost marked element, or nothing picked)")
+        case ("inspect", "nudge"):
+            // `inspect nudge padding x +`: the stepper of that part of the pinned element's style, as the panel's − and +.
+            guard words.count >= 3, let direction = ["+": CGFloat(1), "-": -1][words[words.count - 1]] else {
+                reply("error: inspect nudge <property> <+|->")
+                return true
+            }
+            let property = words[1..<(words.count - 1)].joined(separator: " ")
+            reply(inspector.nudge(property, by: direction) ? inspector.note ?? "" : "error: the pinned element has no \(property) to step (a debug build, and a part of its style that names a scale value)")
+        case ("inspect", "reset"):
+            InspectNudge.reset()
+            reply("inspect reset\n" + (inspector.note ?? ""))
         case ("inspect", "copy"):
             reply(inspector.copy().map { "inspect copied\n\($0)" } ?? "error: nothing is picked (inspect X Y)")
         case ("inspect", _):
-            guard numbers.count >= 2, let target = drivenWindow ?? window else { reply("error: inspect [on|off|pick|parent|copy|X Y [levels]]"); return true }
+            guard numbers.count >= 2, let target = drivenWindow ?? window else { reply("error: inspect [on|off|pick|parent|copy|nudge <property> <+|->|reset|X Y [levels]]"); return true }
             // Asked of a window that was not being inspected: the elements report themselves once they are laid out again.
             if !inspector.isOpen {
                 inspector.open(beside: window)
