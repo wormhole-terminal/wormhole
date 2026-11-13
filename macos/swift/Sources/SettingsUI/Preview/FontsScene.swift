@@ -29,6 +29,8 @@ struct FontsScene: View {
                 Text(Words.text("settings-appearance-group-interface", fallback: "Interface")).tag("interface")
             }
             .labelsHidden().pickerStyle(.segmented).fixedSize()
+            // A font looked at in a slot's picker shows in that slot's tab, with its size and line height.
+            .onChange(of: model.fontPreview?.slot) { _, picked in if let picked { slot = picked } }
             VStack(alignment: .leading, spacing: max(0, size * (height - 1.2))) {
                 Text("$ cargo test --release").foregroundStyle(t.terminal.foreground.color) // text: sample terminal output
                 Text("test result: ok. 412 passed").foregroundStyle(t.terminal.ansi[2].color) // text: sample terminal output

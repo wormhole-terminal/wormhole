@@ -48,7 +48,7 @@ private struct FontRow: View {
         // The page's scene shows the font being looked at in the open picker, and goes back when it closes.
         .onAppear { SettingsFontPickers.register(slot.slot, picker) }
         .onChange(of: picker.isOpen ? picker.previewFamily : nil) { _, family in
-            model.fontPreview = family.map { FontPreview(family: $0, size: size) }
+            model.fontPreview = family.map { FontPreview(slot: slot.slot, family: $0, size: size) }
         }
     }
 

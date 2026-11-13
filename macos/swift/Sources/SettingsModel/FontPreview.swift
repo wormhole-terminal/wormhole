@@ -2,7 +2,9 @@
 // list the same way): a family and the size of the slot it would be set in.
 
 public struct FontPreview: Equatable, Sendable {
+    /// The slot being picked (`terminal`, `code`, `interface`): the specimen switches to it.
+    public let slot: String
     public let family: String
     public let size: Double
-    public init(family: String, size: Double) { (self.family, self.size) = (family, size) }
+    public init(slot: String, family: String, size: Double) { (self.slot, self.family, self.size) = (slot, family, size) }
 }
