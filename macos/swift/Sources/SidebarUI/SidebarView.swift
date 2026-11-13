@@ -36,6 +36,8 @@ public struct SidebarView: View {
     @State var drag: LiveDrag?
     /// Where a pane header dragged over the list would land (the list draws its mark), and which terminal it carries.
     @State var paneAim: DropAim?
+    /// When this list was first drawn (a split's bracket drawn in later is one just made).
+    @State var shownAt = Date()
     @State var paneDragReader = PaneHeaderDragReader()
     @State var shifts: [TerminalID: StatusShift] = [:]
     /// The list's frame in the window, and where a drag's pointer stands in it: what tells a drag over the list from one
@@ -115,6 +117,8 @@ public struct SidebarView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environment(\.sidebarMetrics, SidebarMetrics(density: appearance.density, cards: appearance.cards))
         .environment(\.sidebarLook, appearance)
+        .environment(\.listRoom, drag?.aim?.room ?? ListRoom())
+        .environment(\.listShownAt, shownAt)
         .environment(\.rowChanges, RowChanges.counts(sections, scope: appearance.changesScope))
         .environment(\.showsHints, appearance.forcesHints || (appearance.showsCommandHints && hold.showing))
         .environment(\.keyedStop, focused && keysLead && windowFront ? cursor : nil)

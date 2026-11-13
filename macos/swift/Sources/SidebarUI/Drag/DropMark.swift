@@ -16,6 +16,8 @@ enum DropMark: Equatable {
 struct DropAim: Equatable {
     var action: WorkspaceAction
     var mark: DropMark?
+    /// The lines that step aside for the drop, with the Motion feature on.
+    var room = ListRoom()
 
     /// What the pointer was over, as the action names it.
     var over: DropOver? {

@@ -3,6 +3,7 @@
 // Status. The window passes it in; the defaults are the shipping app's (`settings` defaults).
 
 import DesignSystem
+import Foundation
 import SwiftUI
 import WorkspaceModel
 
@@ -88,6 +89,8 @@ extension EnvironmentValues {
     @Entry var sidebarLook = SidebarAppearance()
     /// The ⌘N keycaps are showing (⌘ held on its own for a moment).
     @Entry var showsHints = false
+    /// When the list was first drawn: a split's bracket that appears long after is one just made.
+    @Entry var listShownAt = Date()
     /// The stop the keys are on, while the list has the keyboard: it wears the focus ring.
     @Entry var keyedStop: SidebarStop?
 }

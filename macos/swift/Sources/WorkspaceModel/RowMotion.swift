@@ -51,6 +51,14 @@ public struct RowMotionTables: Sendable {
     public var columnSeconds: @Sendable (_ variant: String, _ opening: Bool) -> Double = { _, _ in 0 }
     public var columnPose: @Sendable (_ variant: String, _ opening: Bool, _ seconds: Double) -> (shown: Double, content: Double) = { _, opening, _ in (opening ? 1 : 0, 1) }
 
+    /// How long a split's bracket takes to draw down its rows, and how much of a stretch drawn from `from` to `to` of that time shows
+    /// `t` of the way through (`view::motion::drag`). Without the core the bracket is there at once.
+    public var bracketSeconds: @Sendable () -> Double = { 0 }
+    public var bracketShare: @Sendable (_ t: Double, _ from: Double, _ to: Double) -> Double = { _, _, _ in 1 }
+    /// How far each line (by its index) steps aside to open a gap before line `slot` for the dragged lines `run` (core
+    /// `room::make_room`; down is positive). Without the core nothing moves.
+    public var roomPushes: @Sendable (_ lines: [(top: Double, height: Double)], _ run: Range<Int>, _ slot: Int) -> [Int: Double] = { _, _, _ in [:] }
+
     public var insertPlan: @Sendable (_ variant: String, _ entering: Bool) -> RowMotionPlan
     public var insertPose: @Sendable (_ variant: String, _ entering: Bool, _ t: Double) -> RowPose
     public var foldPlan: @Sendable (_ variant: String, _ entering: Bool, _ rows: Int) -> RowMotionPlan

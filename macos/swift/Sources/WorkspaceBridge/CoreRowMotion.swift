@@ -26,6 +26,13 @@ enum CoreRowMotion {
         tables.insertRoom = { Double(insertRoomAt(variant: $0, entering: $1, elapsedMs: Float($2 * 1000))) }
         tables.foldRoom = { Double(foldRoomAt(variant: $0, entering: $1, rows: UInt32($2), elapsedMs: Float($3 * 1000))) }
         tables.foldSummary = { Double(foldSummaryOpacity(variant: $0, rows: UInt32($1), elapsedMs: Float($2 * 1000))) }
+        tables.bracketSeconds = { Double(bracketDrawMs()) / 1000 }
+        tables.bracketShare = { Double(bracketShare(t: Float($0), from: Float($1), to: Float($2))) }
+        tables.roomPushes = { lines, run, slot in
+            let records = lines.map { RoomLine(top: Float($0.top), height: Float($0.height)) }
+            let pushes = roomPushes(lines: records, runStart: UInt32(run.lowerBound), runEnd: UInt32(run.upperBound), slot: UInt32(slot))
+            return Dictionary(pushes.map { (Int($0.line), Double($0.by)) }, uniquingKeysWith: { first, _ in first })
+        }
         tables.columnSeconds = { Double(columnMotionDuration(variant: $0, opening: $1)) / 1000 }
         tables.columnPose = {
             let pose = columnMotionPose(variant: $0, opening: $1, elapsedMs: Float($2 * 1000))

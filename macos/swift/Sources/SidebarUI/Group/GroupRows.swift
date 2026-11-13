@@ -41,7 +41,8 @@ struct GroupRows<Row: View>: View {
                             ?? tables.foldPose(variant, false, going ?? 1, index, count)
                     })
                 } else {
-                    row(item)
+                    // A row coming into or going from the card plays the chosen `motion.insert` pose, as one in no group does.
+                    row(item).transition(.listRow(look.insertMotion, reduceMotion: reduceMotion))
                 }
             }
         }
