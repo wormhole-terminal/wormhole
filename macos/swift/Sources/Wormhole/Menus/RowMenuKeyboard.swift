@@ -16,8 +16,10 @@ extension AppController {
         var facts = RowMenuFacts(id: Int64(id))
         facts.pinned = terminal.isPinned
         facts.forgetText = terminal.forgetsText
-        facts.agentHide = look.sidebar.offersAgentHide || terminal.isAgentHidden ? terminal.isAgentHidden : nil
-        facts.restoring = look.sidebar.restoresText
+        // The window's own profile's switches.
+        let sidebar = session.dress.look.sidebar
+        facts.agentHide = sidebar.offersAgentHide || terminal.isAgentHidden ? terminal.isAgentHidden : nil
+        facts.restoring = sidebar.restoresText
         facts.inSplit = terminal.splitID != nil
         facts.cwd = terminal.folder.map { ($0 as NSString).expandingTildeInPath }
         let current = hub.state.sections.first { $0.rows.contains { $0.id == id } }?.head?.id

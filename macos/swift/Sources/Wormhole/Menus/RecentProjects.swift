@@ -34,7 +34,7 @@ extension AppController {
     /// project actions (the core lists them only for a trusted project) and the shells New Terminal With offers.
     func menuState(for hub: WindowHub) -> MenuState {
         var state = hub.menuState(
-            look: look, isFullScreen: window?.styleMask.contains(.fullScreen) ?? false, implemented: router.implemented,
+            look: sessions.first { $0.hub === hub }?.dress.look ?? look, isFullScreen: window?.styleMask.contains(.fullScreen) ?? false, implemented: router.implemented,
             // The flags of the window's own profile, which is not always the shown one.
             flagsOn: sessions.first { $0.hub === hub }.map(flagsOn) ?? Set(settingsModel.host.flags().filter(\.on).map(\.key)))
         if let root = hub.panel.project.state?.root { recents.remember(root) }

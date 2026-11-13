@@ -15,6 +15,8 @@ final class WindowSession {
     var windows: WindowsHost
     let hub: WindowHub
     let factory: TerminalFactory
+    /// What the window is drawn with: its own profile's look and theme (`dressForProfile`).
+    let dress = WindowDress()
     /// What the project's actions ask of this window, and the core's usage service (real windows only).
     let panelEffects: AnyObject?
     let panelUsage: AnyObject?

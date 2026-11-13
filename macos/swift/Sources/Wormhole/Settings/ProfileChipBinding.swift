@@ -112,6 +112,7 @@ extension AppController {
                 session.window?.close()
             }
             profileHosts[id] = nil
+            profileLooks[id] = nil
             if lastFront == nil || !sessions.contains(where: { $0 === lastFront }) { lastFront = shown.last }
             menus?.windowsChanged()
         #endif
@@ -158,6 +159,8 @@ extension AppController {
                 openPlanned(window: planned.window, activate: false)
             }
             session.hub.actions.profiles = profileList(for: session)
+            // Its settings, theme and fonts are the ones of the profile it is in now.
+            dressForProfile(session)
             menus?.windowsChanged()
         #endif
     }

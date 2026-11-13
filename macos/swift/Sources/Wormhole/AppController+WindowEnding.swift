@@ -61,6 +61,7 @@ extension AppController {
         session.hub.terminals.shutdown()
         session.windows.backend.forget(session.id)
         sessions.removeAll { $0 === session }
+        dropUnusedProfileLooks()
         if lastFront === session { lastFront = shown.last }
         menus?.windowsChanged()
     }

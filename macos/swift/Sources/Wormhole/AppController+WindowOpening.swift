@@ -56,14 +56,14 @@ extension AppController {
         } ?? CGSize(width: 1320, height: 820)
         let title = "Wormhole (Swift experiment)" + (sessions.first === session ? "" : " \(session.id)")
         let controller = WorkspaceWindowController(
-            title: title, contentSize: size, minSize: windowsHost.backend.minSize, content: WorkspaceRootView(hub: hub, look: look))
+            title: title, contentSize: size, minSize: windowsHost.backend.minSize, content: WorkspaceRootView(hub: hub, dress: session.dress))
         wire(controller, of: session)
         session.controller = controller
         if let frame, let window = controller.window { WindowFrames.place(frame, on: window) }
         // A torn-off terminal's window grows from its chip: it starts as the chip, before it is shown.
         if let start = growing, let window = controller.window {
             growing = nil
-            session.grow = TearOffGrow(window: window, start: start, appearance: look.sidebar, backend: session.windows.backend) { [weak session] in
+            session.grow = TearOffGrow(window: window, start: start, appearance: session.dress.look.sidebar, backend: session.windows.backend) { [weak session] in
                 session?.grow = nil
             }
         }
@@ -97,7 +97,7 @@ extension AppController {
             return self?.shouldClose(session) ?? true
         }
         controller.gridFacts = { [weak session] in session?.hub.gridFacts }
-        controller.snapsToGrid = { [weak self] in !(self?.look.smoothResize ?? false) }
+        controller.snapsToGrid = { [weak session] in !(session?.dress.look.smoothResize ?? false) }
         controller.onState = { [weak self, weak session] active, seen in
             guard let session else { return }
             session.hub.store.windowState(active: active, seen: seen)

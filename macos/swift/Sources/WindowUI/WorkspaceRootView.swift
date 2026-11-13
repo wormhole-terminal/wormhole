@@ -12,7 +12,7 @@ import WorkspaceModel
 
 public struct WorkspaceRootView: View {
     let hub: WindowHub
-    let look: WindowLook
+    let dress: WindowDress
     @State private var widths = PaneLayout()
     @State private var facts = WindowFacts()
     @State private var sidebarSlide: ColumnSlide
@@ -32,14 +32,18 @@ public struct WorkspaceRootView: View {
         var extent: CGFloat
     }
 
-    public init(hub: WindowHub, look: WindowLook = WindowLook()) {
+    public init(hub: WindowHub, look: WindowLook = WindowLook()) { self.init(hub: hub, dress: WindowDress(look)) }
+
+    /// A window whose look can change under it (it follows the profile the window is in).
+    public init(hub: WindowHub, dress: WindowDress) {
         self.hub = hub
-        self.look = look
+        self.dress = dress
         _sidebarSlide = State(initialValue: ColumnSlide(open: hub.state.sidebarVisible))
         _panelSlide = State(initialValue: ColumnSlide(open: hub.state.panelVisible))
     }
 
     public var body: some View {
+        let look = dress.look
         WindowBody(
             hub: hub, widths: $widths, facts: facts,
             sidebarSlide: sidebarSlide, panelSlide: panelSlide, drag: $drag, animates: !reduceMotion
@@ -67,7 +71,8 @@ public struct WorkspaceRootView: View {
         .environment(hub.focus)
         .environment(\.windowFront, hub.focus.front)
         .environment(\.cardGlass, look.glassOn)
-        .themed()
+        // The window's own profile's theme, which is the app's one store for a window of the profile Wormhole is in.
+        .themed(look.themes)
         .worktreeSheets(hub.panel.worktrees)
         .ignoresSafeArea()
     }

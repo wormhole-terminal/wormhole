@@ -40,8 +40,9 @@ extension AppController {
             (effects as? PanelEffects)?.hub = hub
             if options.isReal { (effects as? PanelEffects)?.log = { [weak self] in self?.devctl?.append($0) } }
         #endif
-        factory.look = terminalLook
-        settingsApplier?.dress(session)
+        // Before it is dressed: the registry tells the app's own windows from another profile's by their look.
+        sessions.append(session)
+        dressForProfile(session)
         connect(session)
         followCloseDot(of: session)
         if let persistence = panel.notes {
@@ -49,7 +50,6 @@ extension AppController {
             session.notes?.start()
         }
         session.saver = WindowSaver(session: session, windows: windowsHost.backend)
-        sessions.append(session)
         return session
     }
 

@@ -11,9 +11,10 @@ struct TitleTintLine: View {
     let color: GroupColor?
     @Environment(\.tokens) private var tokens
     @Environment(\.chrome) private var colours
+    @Environment(WindowLook.self) private var look
 
     var body: some View {
-        if ThemeStore.shared.increaseContrast, let color {
+        if look.themes.increaseContrast, let color {
             Color.clear
                 .overlay(alignment: .bottom) { Rectangle().fill(color.titleLine(tokens).color).frame(height: Self.thickness) }
                 .clipShape(RoundedRectangle(cornerRadius: colours.radiusLarge))

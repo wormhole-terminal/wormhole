@@ -72,7 +72,9 @@ final class AppController: NSObject, NSApplicationDelegate {
         let profileFlags = ProfileFlags()
     #endif
     /// The fonts and colours every terminal is drawn with: Settings' and the theme's.
-    private(set) lazy var terminalLook = TerminalLook(terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] })
+    private(set) lazy var terminalLook = TerminalLook(terminals: { [weak self] in self?.ownSessions.map(\.hub.terminals) ?? [] })
+    /// The looks of the other profiles with a window open, by profile (`profileLook(for:)`).
+    var profileLooks: [String: ProfileLook] = [:]
     /// The settings the window follows, whether or not the Settings window is open: the core's when real.
     lazy var settingsModel = AppSettings.makeModel(app: self)
     private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory, project: { [unowned self] in StudioProjects.source(app: self) })
