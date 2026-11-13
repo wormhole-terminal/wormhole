@@ -31,7 +31,10 @@ struct PartsList: View {
     private func row(_ part: ControlSpec.TitlePart, shown: Bool, index: Int, count: Int) -> some View {
         HStack(spacing: Space._2) {
             if shown { Image(Icon.grip).foregroundStyle(tokens.textFaint).accessibilityHidden(true) }
-            Text(part.label).textRole(.label).foregroundStyle(shown ? tokens.textPrimary : tokens.textFaint)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(part.label).textRole(.label).foregroundStyle(shown ? tokens.textPrimary : tokens.textFaint)
+                if let note = note(part) { Text(note).textRole(.caption).foregroundStyle(tokens.textMuted) }
+            }
             Spacer()
             if part.hideable { SettingToggle(label: part.label, isOn: shown) { toggle(part, on: $0) } }
         }
@@ -48,6 +51,16 @@ struct PartsList: View {
         .accessibilityAction(named: Words.text("title-row-move-down", fallback: "Move down")) { if shown, index < count - 1 { move(from: index, to: index + 1) } }
     }
 
+    /// What a part says about itself: what the flexible space does, and that the status bar shows the terminal's status while on.
+    private func note(_ part: ControlSpec.TitlePart) -> String? {
+        switch part.value {
+        case "space": Words.text("title-row-part-space.description", fallback: "Parts above it sit at the left, parts below it at the right")
+        case "terminal_status" where model.value("status_bar").bool ?? false:
+            Words.text("title-row-status-in-bar", fallback: "The status bar shows it while it's on")
+        default: nil
+        }
+    }
+
     /// The stored parts, in order.
     private var order: [String] { (model.value(key).array ?? []).compactMap(\.string) }
 
@@ -60,6 +73,8 @@ struct PartsList: View {
 
     /// A part switched off leaves the list; one switched on takes its default place among the shown ones.
     private func toggle(_ part: ControlSpec.TitlePart, on: Bool) {
+        // Core's rule (`Settings::show_title_part`) where there is a core; the same place worked out here where there is none.
+        if model.host.showTitlePart(part.value, shown: on) { return }
         var shown = order
         if on {
             // After the nearest shown part that comes before it by default, else first (`TitleRow::show`).

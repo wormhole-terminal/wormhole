@@ -74,6 +74,12 @@ extension RustSettingsHost {
 
     public func updateUserAgent(version: String) -> String? { settingsUpdateUserAgent(version: version) }
 
+    public func showTitlePart(_ part: String, shown: Bool) -> Bool {
+        let done = handle.showTitlePart(part: part, shown: shown)
+        if done { backend.reload() }
+        return done
+    }
+
     public func blurIsUnsafe(opacity: Double, blur: Bool) -> Bool { settingsBlurUnsafe(opacity: Float(opacity), blur: blur) }
 }
 

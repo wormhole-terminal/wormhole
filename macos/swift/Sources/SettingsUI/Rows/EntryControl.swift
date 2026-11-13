@@ -48,7 +48,11 @@ struct EntryControl: View {
         case .action(.makeDefaultTerminal, let label, let icon): defaultTerminal(label, icon)
         case .action(.resetAll, let label, let icon): ResetAllButton(model: model, label: label, icon: icon)
         case .action(.resetTips, let label, let icon):
-            ActionButton(title: label, symbol: icon, frameId: "reset-tips") { model.host.perform(.resetTips) }.disabled(model.host.dismissedTips == 0)
+            let none = model.host.dismissedTips == 0
+            ActionButton(title: label, symbol: icon, frameId: "reset-tips") { model.host.perform(.resetTips) }.disabled(none)
+                .help(none
+                    ? Words.text("settings-advanced-no-tip-was-closed-for-good", fallback: "No tip was closed for good")
+                    : Words.text("settings-advanced-they-show-again-where-they-belong", fallback: "They show again where they belong"))
         case .action(let action, let label, let icon):
             ActionButton(title: label, symbol: icon) { model.host.perform(action) }
         case .info(let name): InfoValue(name: name)

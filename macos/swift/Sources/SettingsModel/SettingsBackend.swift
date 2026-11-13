@@ -115,6 +115,9 @@ public protocol SettingsHost: AnyObject {
     /// file's path); nil / false where there is no core, and the caller works it out by name.
     func themeHidden(_ value: String) -> Bool?
     func setThemeHidden(_ value: String, hidden: Bool) -> Bool
+    /// Shows or hides a title row part by core's rule (`Settings::show_title_part`); false where there is no core: the page then
+    /// works the place out itself.
+    func showTitlePart(_ part: String, shown: Bool) -> Bool
     func themeTrashPlan(_ value: String) -> ThemeTrashQuestion?
     func trashTheme(_ value: String) -> Bool
     /// Whether the desktop would show sharp behind the text at this opacity without the blur (core's `Translucency::unsafe_without_blur`).
@@ -176,6 +179,7 @@ extension SettingsHost {
     }
     public func themeTrashPlan(_ value: String) -> ThemeTrashQuestion? { nil }
     public func themeHidden(_ value: String) -> Bool? { nil }
+    public func showTitlePart(_ part: String, shown: Bool) -> Bool { false }
     public func setThemeHidden(_ value: String, hidden: Bool) -> Bool { false }
     public func trashTheme(_ value: String) -> Bool { false }
     public func saveProfile(_ form: ProfileForm) -> String? { Self.noProfiles }
