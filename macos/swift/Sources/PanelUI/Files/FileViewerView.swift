@@ -42,14 +42,23 @@ struct FileViewerHeader: View {
         let folders = path.contains("/") ? String(path[..<path.lastIndex(of: "/")!]) + "/" : ""
         HStack(spacing: PanelMetrics.gap) {
             FileIcon(kind: .file(name), tint: tokens.textMuted)
-            // The path as the diff's crumb draws it: folders quiet, the name loud, the head elided first.
-            Text("\(Text(folders).foregroundStyle(tokens.textMuted))\(Text(name).foregroundStyle(tokens.textPrimary))")
-                .font(TextRole.body.font).lineLimit(1).truncationMode(.head).layoutPriority(-1)
+            // The path as the diff's crumb draws it: folders quiet, the name loud, the head elided first. A button as the
+            // title row's crumb is (`title/breadcrumb.rs`): a click shows the file in Finder, a right-click its menu.
+            Button(action: store.revealViewed) {
+                Text("\(Text(folders).foregroundStyle(tokens.textMuted))\(Text(name).foregroundStyle(tokens.textPrimary))")
+                    .font(TextRole.body.font).lineLimit(1).truncationMode(.head)
+            }
+            .buttonStyle(.plain).layoutPriority(-1)
+            .help(panelText("files-row-reveal", "Reveal in Finder"))
+            .contextMenu {
+                Button(panelText("files-row-reveal", "Reveal in Finder"), action: store.revealViewed)
+                Button(panelText("files-row-copy-path", "Copy Path")) { host?.copyPath(absolute) }
+            }
             Spacer(minLength: 0)
             if let size = store.content.size { Text(ByteSize.text(size)).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize() }
             // Always there: with no editor known it is Finder showing the file (core's words say which).
             if let open = host?.openTooltip(line: nil) {
-                BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) { host?.open(absolute, line: nil) }
+                BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) { store.openViewed() }
             }
             BandButton(symbol: "xmark", label: panelText("files-viewer-close", "Close file (esc)"), inRow: true) {
                 store.closeViewer()

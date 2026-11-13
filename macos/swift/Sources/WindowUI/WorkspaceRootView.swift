@@ -56,6 +56,8 @@ public struct WorkspaceRootView: View {
         .onChange(of: hub.state.selectedTerminal?.folder, initial: true) { _, _ in followTerminal() }
         // What a tab keeps per terminal (compare branch, comments, open commit, tree) changes hands with the selection.
         .onChange(of: hub.state.selected) { _, _ in followTerminal() }
+        // Nothing of a folder is listed or watched while the Files tab is hidden or its feature is off.
+        .onChange(of: filesShown, initial: true) { _, now in hub.panel.files.setShown(now) }
         // ⇥ and Esc from the lists and fields of SwiftUI; the holder and the terminal take their own (`WindowFocus`).
         .onKeyPress(keys: [.tab, .escape], phases: .down) { hub.focus.listKey($0) }
         .coordinateSpace(name: PaneSpace.name)
@@ -68,6 +70,10 @@ public struct WorkspaceRootView: View {
         .themed()
         .worktreeSheets(hub.panel.worktrees)
         .ignoresSafeArea()
+    }
+
+    private var filesShown: Bool {
+        hub.state.panelVisible && hub.state.panelTab == .files && hub.panelTabs.contains(.files)
     }
 
     private func followTerminal() {

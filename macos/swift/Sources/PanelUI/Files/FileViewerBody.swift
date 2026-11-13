@@ -10,7 +10,6 @@ struct FileViewerBody: View {
     let store: FilesStore
     let path: String
     @Environment(\.tokens) private var tokens
-    @Environment(\.panelHost) private var host
 
     var body: some View {
         switch store.content {
@@ -43,15 +42,13 @@ struct FileViewerBody: View {
             Text(words).font(TextRole.body.font).foregroundStyle(tokens.textPrimary).multilineTextAlignment(.center)
             if actions {
                 HStack(spacing: Space._2) {
-                    NoticeButton(title: panelText("files-viewer-open-in", "Open in\u{2026}"), primary: true) { host?.open(absolute, line: nil) }
-                    NoticeButton(title: panelText("files-row-reveal", "Reveal in Finder")) { host?.reveal(absolute) }
+                    NoticeButton(title: panelText("files-viewer-open-in", "Open in\u{2026}"), primary: true) { store.openViewed() }
+                    NoticeButton(title: panelText("files-row-reveal", "Reveal in Finder")) { store.revealViewed() }
                 }
             }
         }
         .padding(Space._4).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-
-    private var absolute: String { store.root.map { store.join($0, path) } ?? path }
 
     @ViewBuilder private var picture: some View {
         switch store.picture {
@@ -89,6 +86,8 @@ struct FileLines: View {
     @Environment(\.tokens) private var tokens
     @Environment(\.codeFont) private var codeFont
     @Environment(\.tabWidth) private var tabWidth
+    /// How far the code is scrolled sideways: the numbers are moved back by as much, so they stay put (`card.rs`).
+    @State private var across: CGFloat = 0
 
     var body: some View {
         let style = DiffStyle(code: codeFont, digits: String(lines.count).count, wrap: false, advance: codeFont.advance)
@@ -99,6 +98,7 @@ struct FileLines: View {
                     HStack(spacing: 0) {
                         Text("\(index + 1)").foregroundStyle(tokens.diffLineNumber).padding(.trailing, Space._2)
                             .frame(width: style.gutter, height: style.rowHeight, alignment: .trailing)
+                            .background(tokens.surfaceWindow).offset(x: across).zIndex(1)
                         Text(code.text(line, spans: index < spans.count ? spans[index] : [])).fixedSize()
                             .padding(.trailing, Space._6)
                     }
@@ -108,5 +108,6 @@ struct FileLines: View {
             .font(codeFont.font())
         }
         .defaultScrollAnchor(.topLeading)
+        .onScrollGeometryChange(for: CGFloat.self) { max($0.contentOffset.x, 0) } action: { _, now in across = now }
     }
 }

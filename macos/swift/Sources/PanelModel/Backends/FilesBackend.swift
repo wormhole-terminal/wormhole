@@ -8,6 +8,9 @@ public protocol FilesBackend: Sendable {
     func read(_ path: String, in root: String) async -> FileContent
     /// Renames `path` to `name` in its own folder; refuses a name that can't be one and anything that exists.
     func rename(_ path: String, to name: String, in root: String) async -> Result<Void, RenameFailure>
+    /// The real path of the file (`folder`: the folder) at `path`, every link resolved, for handing it to another app; nil
+    /// when it is gone, is not of that kind any more or leads out of `root`.
+    func resolve(_ path: String, in root: String, folder: Bool) async -> String?
     func pins() async -> [String]
     func setPinned(_ folder: String, _ pinned: Bool) async
     /// Fires when something under `root` changed. The OS thread only marks; the store debounces.

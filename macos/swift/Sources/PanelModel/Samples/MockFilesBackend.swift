@@ -39,6 +39,8 @@ public actor MockFilesBackend: FilesBackend {
         return .success(())
     }
 
+    public func resolve(_ path: String, in root: String, folder: Bool) async -> String? { root + "/" + path }
+
     public func pins() async -> [String] { pinned }
 
     public func setPinned(_ folder: String, _ on: Bool) async {

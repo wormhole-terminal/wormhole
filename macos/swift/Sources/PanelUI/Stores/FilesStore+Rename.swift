@@ -13,21 +13,33 @@ extension FilesStore {
     }
 
     public func cancelRename() {
+        // While the rename runs the field stays: losing the keys then must not take it down (`rename.rs` `busy`).
+        guard !renameBusy else { return }
         renaming = nil
         renameError = nil
     }
 
     public func commitRename(to name: String) {
-        guard let root, let path = renaming else { return }
-        let new = name.trimmingCharacters(in: .whitespaces)
+        // One rename at a time: a second return would rename what is gone by then. What was typed goes to the core
+        // untouched, which says what a usable name is.
+        guard let root, let path = renaming, !renameBusy else { return }
+        let new = name
         guard new != path.split(separator: "/").last.map(String.init) else { return cancelRename() }
+        renameBusy = true
         Task {
-            switch await backend.rename(path, to: new, in: root) {
+            let answer = await backend.rename(path, to: new, in: root)
+            renameBusy = false
+            guard root == self.root else { return }
+            switch answer {
             case .success:
                 let to = FileTree.parent(path).isEmpty ? new : FileTree.parent(path) + "/" + new
+                // The selection and the open file follow, also from inside a renamed folder.
+                func moved(_ old: String) -> String {
+                    old == path ? to : old.hasPrefix(path + "/") ? to + old.dropFirst(path.count) : old
+                }
                 tree.renamed(path, to: to)
-                if selected == path { selected = to }
-                if viewing == path { viewing = to }
+                selected = selected.map(moved)
+                viewing = viewing.map(moved)
                 renaming = nil
                 renameError = nil
                 rows = tree.rows

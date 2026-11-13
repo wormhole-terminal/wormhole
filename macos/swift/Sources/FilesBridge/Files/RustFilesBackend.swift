@@ -30,6 +30,14 @@ public final class RustFilesBackend: FilesBackend, @unchecked Sendable {
         }
     }
 
+    public func resolve(_ path: String, in root: String, folder: Bool) async -> String? {
+        let service = service
+        return await offMain { service.resolve(root: root, path: path, folder: folder) }
+    }
+
+    /// The window's own profile, whose settings hold its pins; false for a profile the list does not have.
+    @discardableResult public func followProfile(_ profile: String) -> Bool { service.followProfile(profile: profile) }
+
     public func pins() async -> [String] {
         let service = service
         return await offMain { service.pins() }

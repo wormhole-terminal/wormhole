@@ -12,7 +12,7 @@ struct FileRowMenu: View {
 
     var body: some View {
         openIn
-        Button(panelText("files-row-reveal", "Reveal in Finder")) { host?.reveal(absolute) }
+        Button(panelText("files-row-reveal", "Reveal in Finder")) { store.reveal(row) }
         Button(panelText("files-row-copy-path", "Copy Path")) {
             host?.copyPath(absolute)
         }
@@ -33,7 +33,7 @@ struct FileRowMenu: View {
         Menu(panelText("files-row-open-in", "Open in")) {
             // A file is offered only the editors Wormhole knows (and Finder); a folder every app (`may_open_in`).
             ForEach((host?.openApps ?? []).filter { row.isFolder || $0.isKnown }) { app in
-                Toggle(isOn: Binding(get: { app.isChosen }, set: { _ in host?.open(absolute, inBundle: app.bundle) })) {
+                Toggle(isOn: Binding(get: { app.isChosen }, set: { _ in store.open(row, inBundle: app.bundle) })) {
                     Label { Text(app.name) } icon: { if let icon = Self.icon(of: app.bundle) { Image(nsImage: icon) } }
                 }
             }

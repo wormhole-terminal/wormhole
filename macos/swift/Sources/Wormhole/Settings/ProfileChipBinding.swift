@@ -150,6 +150,7 @@ extension AppController {
             // backends were made for the profile it left.
             (session.panelBackends.project as? RustProjectBackend)?.service.followProfile(profile: id)
             (session.panelBackends.usage as? RustUsageBackend)?.service.followProfile(profile: id)
+            (session.panelBackends.files as? RustFilesBackend)?.followProfile(id)
             session.saver?.windows = target.backend
             // Not left without a window: the profile Wormhole is in keeps one to type in.
             if windows(of: windowsHost.profile).isEmpty {

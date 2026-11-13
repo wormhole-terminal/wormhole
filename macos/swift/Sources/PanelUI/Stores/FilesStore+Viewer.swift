@@ -18,6 +18,8 @@ extension FilesStore {
         lines = []
         spans = []
         picture = nil
+        // The file was what kept a hidden tab reading.
+        if !isShown { stopReading() }
     }
 
     func readViewed() {

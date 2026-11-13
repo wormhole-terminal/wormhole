@@ -58,8 +58,11 @@ public enum FilesBridge {
         let project = try ProjectService(authenticator: OwnerAuthentication(authenticator))
         // The window's own profile's trust store and switches, whatever profile Wormhole is in (`hub_of(profile)`).
         _ = project.followProfile(profile: profile)
+        let files = RustFilesBackend(service: try FilesService())
+        // Its pins too are the window's own profile's (`features/files/pins.rs`).
+        files.followProfile(profile)
         return try PanelBackends(
-            files: RustFilesBackend(service: try FilesService()),
+            files: files,
             project: RustProjectBackend(service: project, effects: effects, biometricsAvailable: authenticator.biometricsAvailable()),
             usage: usage ?? Self.makeUsage(),
             notes: RustNotesPersistence(notes: try SessionNotesStore.forProfile(profile: profile), project: project))

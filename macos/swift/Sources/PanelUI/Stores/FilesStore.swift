@@ -20,6 +20,8 @@ public final class FilesStore {
     /// The row whose name is a field now, and why the last rename was refused.
     public internal(set) var renaming: String?
     public internal(set) var renameError: String?
+    /// A rename is on its way to the disk: the field neither commits again nor closes until it is back.
+    @ObservationIgnored var renameBusy = false
     /// The open file's text cut into lines, and the colours of each: made once when it is read.
     public internal(set) var lines: [String] = []
     public internal(set) var spans: [[SyntaxSpan]] = []
@@ -29,6 +31,7 @@ public final class FilesStore {
     @ObservationIgnored let highlighter: any SyntaxHighlighting
     @ObservationIgnored weak var host: (any PanelHost)?
     @ObservationIgnored private var watch: Task<Void, Never>?
+    @ObservationIgnored private(set) var isShown = true
     @ObservationIgnored var reading: Task<Void, Never>?
     /// A file is about to open in the viewer: the controller takes down what else covers the terminal.
     @ObservationIgnored var opened: () -> Void = {}
@@ -95,18 +98,35 @@ public final class FilesStore {
         selected = nil
         closeViewer()
         rows = tree.rows
-        watch?.cancel()
+        stopReading()
+        startReading()
+    }
+
+    /// Whether the tab is on screen (the window says; true where nobody does: previews, tests). Hidden, or with the
+    /// feature off, nothing is listed or watched (`features/files/read.rs`), but for a file left open over the terminal.
+    public func setShown(_ on: Bool) {
+        guard on != isShown else { return }
+        isShown = on
+        if on { startReading() } else if viewing == nil { stopReading() }
+    }
+
+    private func startReading() {
+        guard isShown, watch == nil, let root else { return }
         Task { pins = await backend.pins() }
-        guard let root else { return }
         reload()
         watch = Task { [backend, weak self] in
             for await _ in backend.changes(in: root) { self?.reload() }
         }
     }
 
+    func stopReading() {
+        watch?.cancel()
+        watch = nil
+    }
+
     /// Reads the root and every open folder again, the ones above first.
     public func reload() {
-        guard let root else { return }
+        guard let root, isShown || viewing != nil else { return }
         let backend = backend
         let wanted = tree.wanted
         Task {
