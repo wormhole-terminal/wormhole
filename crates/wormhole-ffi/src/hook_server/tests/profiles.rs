@@ -92,3 +92,22 @@ fn approvals_are_kept_by_the_desk_of_the_profile_and_revoked_there() {
     f.server.settings_changed("work".into());
     assert_eq!(type_into(&f, work_terminal)["ok"], true);
 }
+
+#[test]
+fn a_mode_change_in_one_profile_settles_its_own_waiting_questions_and_leaves_the_other_profiles_alone() {
+    let f = fixture_of_windows("ask");
+    let default_terminal = f.terminal();
+    let (work_desk, work_terminal) = work_window(&f, "ask");
+    let root = DataRoot::new(&f.dir);
+    assert_eq!(type_into(&f, default_terminal)["error"]["reason"], "approval_needed");
+    assert_eq!(type_into(&f, work_terminal)["error"]["reason"], "approval_needed");
+    assert_eq!((f.desk.waiting(), work_desk.waiting()), (1, 1));
+    // Work is turned off in Settings: its question is refused when the server is told, Default's still waits.
+    let work = wormhole_core::storage::paths::ProfileId::parse("work").expect("an id");
+    crate::settings::edits::note(root.profile(&work).dir());
+    write_mode(&root, "work", "off");
+    f.server.settings_changed("work".into());
+    assert_eq!((f.desk.waiting(), work_desk.waiting()), (1, 0));
+    assert_eq!(type_into(&f, work_terminal)["error"]["reason"], "agent_access_off");
+    assert_eq!(type_into(&f, default_terminal)["error"]["reason"], "approval_needed");
+}

@@ -80,6 +80,8 @@ final class ProfileLook {
         if changed("code_font_family", "code_font_size", "font_family") || fontsMoved {
             LookSettings.applyCodeFont(values, folderRevision: folder.revision, to: look)
         }
+        // Agent access settles in this profile too (a file edit of its `config.json` is its own event).
+        if changed("agent_access", "control_write", "feature_flags", "never_hide_lines") { app.hooks?.settingsChanged(profile: profile) }
         let hubs = sessions.map(\.hub)
         if changed(
             "changes_tree", "group_untracked", "diff_split", "diff_wrap", "tab_width", "size_units", "worktree_base",
