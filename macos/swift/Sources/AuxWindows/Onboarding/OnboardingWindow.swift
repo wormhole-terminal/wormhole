@@ -14,6 +14,9 @@ public final class OnboardingWindow {
     public let player: IntroPlayer
     private var controller: AuxWindowController?
     private let immersive: Bool
+    /// The window ended (finished or skipped): `primer` is true when a first run ended on "Ready when you are", the machine
+    /// having no coding agent (the sidebar then puts up its note).
+    public var onEnded: ((_ primer: Bool) -> Void)?
 
     /// `immersive` false keeps the effect just above the window (a test instance kept behind other apps).
     public init(backend: any OnboardingBackend, firstRun: Bool, immersive: Bool = true, player: IntroPlayer = IntroPlayer()) {
@@ -21,8 +24,10 @@ public final class OnboardingWindow {
         self.player = player
         self.immersive = immersive
         session.onEnd = { [weak self] folder, firstRun in
+            let primer = firstRun && self?.session.step == .primer
             backend.finish(folder: folder, firstRun: firstRun)
             self?.close()
+            self?.onEnded?(primer)
         }
     }
 

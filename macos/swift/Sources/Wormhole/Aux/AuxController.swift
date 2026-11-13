@@ -106,6 +106,7 @@ final class AuxController {
         }
         let window = OnboardingWindow(backend: backends.onboarding(firstRun: firstRun), firstRun: firstRun, immersive: !app.policy.background)
         onboarding = window
+        window.onEnded = { [weak self] primer in if primer { self?.app.showNoAgentsTip() } }
         window.show()
     }
 
