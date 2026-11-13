@@ -35,7 +35,7 @@ extension AppController {
     private static let ansiKeys = Array("asdfhgzxcv\u{0}bqweryt123465=97-80]ou[ip\u{0}lj'k;\\,/nm.")
 
     /// `[shift-|cmd-|ctrl-|alt-]…key`, the key a name (`f6`, `tab`, `esc`, `left`, `return`, `space`) or one character.
-    private func sendKey(_ spec: String) -> String {
+    func sendKey(_ spec: String) -> String {
         var parts = spec.lowercased().split(separator: "-", omittingEmptySubsequences: false).map(String.init)
         if parts.last == "" { parts.removeLast(); parts[parts.count - 1] += "-" }
         guard let name = parts.last, let window = keyTarget else { return "error: key needs a spec like shift-f6" }

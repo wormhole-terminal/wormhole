@@ -45,6 +45,9 @@ public final class HookServerHandle {
     /// The new-worktree sheet came up or went away: while it is up a second `--worktree` request is answered Failed.
     public func worktreeSheet(up: Bool) { server.worktreeSheet(up: up) }
 
+    /// `welcome-probe`: a welcome request as the first-run program sends it, from tab `from` (nil: from outside any).
+    public func welcomeLine(from: String?, token: String, op: String) -> String { server.welcomeLine(from: from, token: token, opJson: op) }
+
     /// Take approval `id` back and end the streams it let in (use this, not `AccessDesk.revoke`, so they end).
     @discardableResult
     public func revokeApproval(profile: String, _ id: UInt64) -> Bool { server.revokeApproval(profile: profile, id: id) }

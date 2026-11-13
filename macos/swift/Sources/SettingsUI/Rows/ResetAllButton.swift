@@ -19,7 +19,13 @@ struct ResetAllButton: View {
                 : Words.text("settings-advanced-asks-first", fallback: "Asks first"))
     }
 
-    private func ask(_ count: Int) {
+    private func ask(_ count: Int) { SettingsActions.askReset(model, label: label, count: count) }
+}
+
+/// What the Settings window's buttons do, for the control folder's driver to press the same way.
+public enum SettingsActions {
+    /// Advanced → Reset all settings: the question first, which says how many go back; the settings go back only on a yes.
+    @MainActor public static func askReset(_ model: SettingsModel, label: String, count: Int) {
         Task {
             let reset = Words.text("settings-advanced-reset", fallback: "Reset")
             if await SettingsQuestion.confirm(title: label, detail: model.host.resetQuestion(count: count), confirm: reset) { model.resetAll() }

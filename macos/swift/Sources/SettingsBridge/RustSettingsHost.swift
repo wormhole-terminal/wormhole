@@ -55,7 +55,9 @@ public final class RustSettingsHost: SettingsHost {
     /// Told when core changed settings by itself (Reset all), so the model does not wait for a wake.
     let backend: RustSettingsBackend
     let platform: Platform
-    let importHome: String?
+    /// Where the Import page looks for other terminals' settings: the Mac's home, or (`WORMHOLE_IMPORT_HOME`, the control folder's
+    /// `import-scan`) a folder standing in for it.
+    public var importHome: String?
     var records: PanelRecords
     public let probes: (any ProbesBackend)?
     /// Read on first use: the settings model is made before the first window, and the service is the window's.

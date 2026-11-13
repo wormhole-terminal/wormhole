@@ -4,7 +4,7 @@
 //! client prints with `--json`. Test tooling: the app's own control folder is the only caller.
 
 use wormhole_core::ipc::control::printable::json_line;
-use wormhole_core::ipc::control::{Parsed, Request, help, help_json, parse};
+use wormhole_core::ipc::control::{Action, Parsed, Request, WelcomeOp, help, help_json, parse};
 use wormhole_core::ipc::{Answer, Peer};
 use wormhole_core::platform::paths;
 
@@ -23,13 +23,26 @@ impl HookServer {
             Ok(Parsed::HelpJson) => return help_json(),
             Err(mistake) => return format!("error: {mistake}"),
         };
-        let request = Request::new(cli.action, from);
-        match super::control::answer(&self.core, request, &Peer::default()) {
-            Answer::Reply(reply) => json_line(&reply),
-            Answer::Read(_) => "not carried here: a read goes over the socket".into(),
-            Answer::Wait(_) => "not carried here: a wait or run goes over the socket".into(),
-            Answer::Stream { reply, .. } => format!("{} (the stream is not carried here)", json_line(&reply)),
-            Answer::Ask(_) => "not carried here: the request waits for the person's approval".into(),
+        reply_line(self, Request::new(cli.action, from))
+    }
+
+    /// A welcome request as the first-run program sends it (the control folder's `welcome-probe`): `token` is the
+    /// one in a welcome terminal's environment, `op_json` the request's operation as JSON, `from` the tab it comes from.
+    pub fn welcome_line(&self, from: Option<String>, token: String, op_json: String) -> String {
+        match serde_json::from_str::<WelcomeOp>(&op_json) {
+            Ok(op) => reply_line(self, Request::new(Action::Welcome { token, op }, from)),
+            Err(mistake) => format!("error: the operation is not JSON the welcome speaks: {mistake}"),
         }
+    }
+}
+
+/// The handler's answer as the one line a client prints.
+fn reply_line(server: &HookServer, request: Request) -> String {
+    match super::control::answer(&server.core, request, &Peer::default()) {
+        Answer::Reply(reply) => json_line(&reply),
+        Answer::Read(_) => "not carried here: a read goes over the socket".into(),
+        Answer::Wait(_) => "not carried here: a wait or run goes over the socket".into(),
+        Answer::Stream { reply, .. } => format!("{} (the stream is not carried here)", json_line(&reply)),
+        Answer::Ask(_) => "not carried here: the request waits for the person's approval".into(),
     }
 }

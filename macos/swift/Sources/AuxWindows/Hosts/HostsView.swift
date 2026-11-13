@@ -11,6 +11,7 @@ struct HostsView: View {
     let model: HostsViewModel
     let sheetWindow: () -> NSWindow?
     @Environment(\.tokens) private var tokens
+    @State private var position = ScrollPosition()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -32,6 +33,8 @@ struct HostsView: View {
                         .motion(Motion.layout, value: report.cards.map(\.id))
                     }
                 }
+                .scrollPosition($position)
+                .onChange(of: model.scrollRequest?.serial) { if let request = model.scrollRequest { position.scrollTo(y: request.offset) } }
             } else {
                 note(AuxText.hostsLoading)
             }

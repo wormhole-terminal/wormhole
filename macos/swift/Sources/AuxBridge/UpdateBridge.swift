@@ -183,6 +183,13 @@ public final class FFIUpdateBackend: UpdateBackend {
     }
 
     private func publish() { for continuation in watchers.values { continuation.yield(phase) } }
+
+    /// The control folder's `update-installed`: the phase a finished install leaves (Restart, or with `pending` the wait for idle
+    /// terminals), without an install. The next change the engine reports replaces it.
+    public func pretend(installed version: String, pending: Bool) {
+        (phase, restartPending) = (.installed(version: version), pending)
+        publish()
+    }
 }
 
 extension UpdateChannel {
