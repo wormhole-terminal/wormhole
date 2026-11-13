@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 
 use serde_json::{Value, json};
 use wormhole_core::config::features::{self, FeatureFlag};
-use wormhole_core::config::{FeatureId, FeatureMask};
 use wormhole_core::config::settings_index::SectionId;
+use wormhole_core::config::{FeatureId, FeatureMask};
 
 use super::error::SettingsError;
 use super::handle::SettingsHandle;
