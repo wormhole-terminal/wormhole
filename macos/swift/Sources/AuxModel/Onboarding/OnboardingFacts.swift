@@ -24,9 +24,11 @@ public struct TrustCard: Equatable, Sendable {
     public var directory: String
     public var commands: Int
     public var approving: Bool
+    /// The project's root: what "Trust with Touch ID…" asks about (no card without one).
+    public var root: URL?
 
-    public init(name: String, directory: String, commands: Int, approving: Bool = false) {
-        (self.name, self.directory, self.commands, self.approving) = (name, directory, commands, approving)
+    public init(name: String, directory: String, commands: Int, approving: Bool = false, root: URL? = nil) {
+        (self.name, self.directory, self.commands, self.approving, self.root) = (name, directory, commands, approving, root)
     }
 }
 
@@ -41,6 +43,8 @@ public protocol OnboardingBackend: AnyObject {
     /// The trust card for the project the intro is about now: the folder picked in the first step, else the front terminal's
     /// project (`onboarding/mod.rs` `trust_root`). A backend with one fixed card answers it.
     func trustCard(for folder: URL?) -> TrustCard?
+    /// Calls `changed` when the card changes by itself: the approval is asked for, or was given (the card then goes).
+    func observeTrust(_ changed: @escaping @MainActor () -> Void)
     /// Whether Notes is on in the window's profile: the primer's words and its "Jot a note" line follow it.
     var notesOn: Bool { get }
     /// What the person's keys are, for the words that name them ("⌘,"): Settings, the palette.
@@ -70,6 +74,7 @@ public protocol OnboardingBackend: AnyObject {
 extension OnboardingBackend {
     public var notesOn: Bool { true }
     public func trustCard(for folder: URL?) -> TrustCard? { trustCard }
+    public func observeTrust(_ changed: @escaping @MainActor () -> Void) {}
     /// A backend without the core has no walk.
     public func tailor() -> (any TailorWalking)? { nil }
     /// Nothing behind to follow the walk.

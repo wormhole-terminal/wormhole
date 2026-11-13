@@ -92,6 +92,13 @@ impl FirstRun {
         }))
     }
 
+    /// The project a picked folder belongs to, as the trust card shows it (`FirstRun::trust_root`): the folder's nearest
+    /// project, found by core's rule; `None` for a folder that is in none.
+    pub fn project_root(&self, folder: String) -> Option<String> {
+        wormhole_core::project::find_project(std::path::Path::new(&folder))
+            .map(|found| found.root.to_string_lossy().into_owned())
+    }
+
     /// The folders the first step lists: the recent roots that exist, then Home, Desktop, Documents and
     /// Developer when there is one, under `home` (the person's, when `None`).
     pub fn places(&self, home: Option<String>, recents: Vec<String>) -> Vec<PlaceRecord> {

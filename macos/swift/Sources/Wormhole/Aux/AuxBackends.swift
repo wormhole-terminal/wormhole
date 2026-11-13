@@ -180,7 +180,9 @@ struct AuxBackends {
                             if !((try? noAgentsTipDismissed()) ?? false) { app?.hub.agentsTip = .note }
                         },
                         // Notes on in the window's own profile: the primer's words and its "Jot a note" line follow it.
-                        notesOn: { [weak app] in app.map { !$0.featuresOff($0.front).contains("notes") } ?? true }
+                        notesOn: { [weak app] in app.map { !$0.featuresOff($0.front).contains("notes") } ?? true },
+                        // The project is trusted as the window's own profile, which is not always the shown one.
+                        profile: { [weak app] in app?.front.windows.profile }
                     ) { [weak app] folder, firstRun in
                         // The untouched first terminal gives way to one in the folder, only while it is the window's only one and is
                         // not there already (`window/onboarding_host.rs`).

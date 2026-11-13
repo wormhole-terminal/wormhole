@@ -15,6 +15,8 @@ public final class OnboardingSession {
     public private(set) var places: [Place]
     /// "Later" was pressed on the folder's trust.
     public private(set) var trustLater = false
+    /// Counts the card's own changes (approval asked for or given), which the view reads through `trustCard`.
+    private var trustRevision = 0
     /// What went wrong writing an agent's hooks.
     public private(set) var problem: String?
     /// The first run, or a replay of the intro, which changes nothing.
@@ -30,11 +32,15 @@ public final class OnboardingSession {
         self.firstRun = firstRun
         flow = firstRun ? OnboardingFlow(agentsFound: true) : .replay()
         places = backend.places()
+        backend.observeTrust { [weak self] in self?.trustRevision += 1 }
     }
 
     public var step: OnboardingStep { flow.step }
     public var preferences: OnboardingPreferences { backend.preferences }
-    public var trustCard: TrustCard? { trustLater ? nil : backend.trustCard(for: flow.folder) }
+    public var trustCard: TrustCard? {
+        _ = trustRevision
+        return trustLater ? nil : backend.trustCard(for: flow.folder)
+    }
 
     /// Looks for agents off the main thread, then lets the third step follow what was found.
     public func scan() async {

@@ -6,7 +6,7 @@ import Foundation
 @MainActor
 public final class SampleOnboardingBackend: OnboardingBackend {
     public let preferences = OnboardingPreferences()
-    public var trustCard: TrustCard? = TrustCard(name: "terminal", directory: ".wormhole", commands: 2)
+    public var trustCard: TrustCard? = TrustCard(name: "terminal", directory: ".wormhole", commands: 2, root: URL(fileURLWithPath: "/Users/you/Projects/terminal"))
     public let settingsKeys = "\u{2318},"
     public var agents: [FoundAgent]
     public var others: Int

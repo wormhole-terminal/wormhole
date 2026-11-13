@@ -83,7 +83,25 @@ final class OnboardingBridgeTests: XCTestCase {
         let project = try scratch.folder("api")
         try scratch.write(#"{"shell": "/bin/zsh", "env": {"A": "1"}}"#, to: "api/.wormhole/config.json")
         let backend = try backend(project: project)
-        XCTAssertEqual(backend.trustCard, TrustCard(name: "api", directory: ".wormhole", commands: 2))
+        XCTAssertEqual(backend.trustCard, TrustCard(name: "api", directory: ".wormhole", commands: 2, root: project))
         XCTAssertNil(try self.backend().trustCard, "no project")
+    }
+
+    func testTheTrustCardWaitsWhileApprovingAndGoesOnceTheProjectIsTrusted() async throws {
+        let project = try scratch.folder("api")
+        try scratch.write(#"{"shell": "/bin/zsh", "env": {"A": "1"}}"#, to: "api/.wormhole/config.json")
+        let backend = try backend()
+        var changes = 0
+        let done = expectation(description: "approved")
+        backend.observeTrust {
+            changes += 1
+            if changes == 2 { done.fulfill() }
+        }
+        XCTAssertEqual(backend.trustCard(for: project)?.approving, false)
+        backend.trust(project)
+        XCTAssertEqual(backend.trustCard(for: project)?.approving, true, "waiting for the approval")
+        await fulfillment(of: [done], timeout: 5)
+        XCTAssertNil(backend.trustCard(for: project), "trusted: the card goes")
+        XCTAssertNil(backend.trustCard(for: nil), "no folder picked and no terminal in a project: no card")
     }
 }
