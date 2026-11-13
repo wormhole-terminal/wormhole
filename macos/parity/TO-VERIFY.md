@@ -410,12 +410,6 @@ Not written, and why:
 
 ## Lane panel-files, wave 4
 
-## Lane settings, wave 4
-
-## Lane panel-git, wave 4
-
-## Lane sidebar, wave 4
-
 Written without compiling: expect compile errors.
 
 | row | what to do | what must happen | where the code is |
@@ -442,6 +436,12 @@ Not written:
 - P07: names that are not UTF-8 (the records carry text; needs the bytes or an index through every call); the path card on resting on the crumb; tree-sitter colours (counted under P03). The icon theme was already there (`FileIconSource.shared`).
 - P08: per-terminal kept state is still not dropped when a terminal closes; a folder's own colour (`Paint::Own`) is still read from the Default profile's settings; the action key is a menu key equivalent, not the GPUI app's check before the terminal sees the key. Already there before this wave: the project's theme, env and shell for new terminals, the window's own profile's trust.
 
+## Lane settings, wave 4
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
 | ST02 | View ▸ Zen Mode, then Settings → Appearance, Terminal, Fonts | Appearance and Terminal carry the note "Zen mode is on, so the window shows less…" with Leave Zen mode; Fonts has none; the button ends Zen mode and the note goes | SettingsUI/Pages/ZenNote.swift, SettingsPage.swift, SettingsModel `zenOn`/`leaveZen`, Wormhole/Settings/ZenMode.swift, AppSettings.swift |
 | ST02/ST03 | Advanced → Show config keys on; move the pointer over a row; hold ⌥; click a key | The key shows only under the pointer, on every row while ⌥ is held (window in front), and while it says Copied; off, no key whatever is held; the row's menu works either way | SettingsUI/Rows/SettingRow.swift, RowState.swift (`\.optionHeld`), SettingsView.swift `onModifierKeysChanged` |
 | ST02 | Feature flag Motion on; Motion → The sidebar and panel hide or show: each choice, then toggle the sidebar and the panel; toggle back mid-slide | Classic 250/200 ms; Soft spring both ways on 170/26; Content after fades the column out (80 ms) before it goes and in after it begins to come; flag off: Classic whatever the file holds; Reduce Motion: cuts. Known difference: Content after fades the whole column with its surface (GPUI keeps the surface) | WindowUI/Columns/ColumnSlide.swift, WindowBody.swift, WindowLook `columnMotion`, SettingsApplier.swift |
@@ -451,6 +451,12 @@ Not written:
 | ST02/ST03 | Found already written (not changed here, still to verify): Updates' Restart Now question, channel note, security line, bundle-replaced watch; the Shells list, worktree caption and "zsh" face; the Changed page's Copy as JSON ("Copied"); the "changes are not saved" banner; Reset tips disabling; the Terminals list scene's three densities | | UpdateStatus.swift, EntryRowView.swift, ChangedPage.swift, SettingsPage.swift, EntryControl.swift, SidebarScene.swift |
 | ST02/ST03 | Key audit (96 keys of the 14 pages against the Swift sources and the FFI): the one key without a consumer was `motion.column`, wired above; the terminal keys (scrollback_lines, default_shell, shells, image_memory_mib, allow_*) are read by the core at launch (`launch.rs`) | | macos/parity/punch-list.md row ST02 is out of date |
 
+## Lane panel-git, wave 4
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
 | P04 | filter History to a file (File History) or pick another branch, then pick a commit in the palette that the shown log does not list | the filter chip goes, the log goes back to HEAD when the commit is not on the picked branch (always from Stashes), the commit is open with details and files, its row scrolled to. TEST: `is_on` gives false for a hash git does not know | `PanelUI/Stores/HistoryStore.swift reveal`, `Wormhole/Platform/PaletteSourcing.swift`, `PaletteSourcing+Listed.swift`, `ffi/src/git/asked.rs is_on` |
 | P04 | leave History showing with a commit a few minutes old | "3m" becomes "4m" on the minute without touching anything; no timer runs with the tab hidden or the log empty | `PanelUI/History/HistoryView.swift .task`, `HistoryStore.nextAgeChange/tick`, `ffi/src/git/asked.rs git_next_age_change` |
 | P04 | open a commit with many branches and tags, and a merge, in a narrow panel | ref chips and parent links wrap onto more lines, names whole, "+N" last | `PanelUI/Shell/WrapLayout.swift`, `History/CommitRefs.swift`, `CommitDetailsView.swift parents` |
@@ -471,6 +477,12 @@ Not written:
 - Already there before this wave (the audit's list was older than the code): History's copy notices, Copy error's chip, the details menu and ↩ on its row, Esc in the picker.
 - Two tests were only kept in step with the changed wire (`Tests/GitBridgeTests/MappingTests.swift`, `crates/wormhole-ffi/tests/git.rs`); none was written.
 
+## Lane sidebar, wave 4
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
 | S03 | Right-click a group's head (or Ctrl-Return on it), "Other colour…", drag in the Colours window (a visible instance: a background one opens the popover instead) | the system's Colours window opens on the colour the group shows (its own, else its named one, else mid grey); the group follows every step of the drag; "Other colour…" is ticked afterwards | `Wormhole/Menus/GroupColourPanel.swift`, `GroupMenuKeyboard.swift` `pickColour` |
 | S03 | Give a group a colour of its own (the popover's picker or the Colours window): black in a dark theme, white in a light one, a mid colour | the card is washed in it and, with cards off, the head's dot shows it; the card's text still reads (the wash moves in lightness only as far as contrast needs; nothing caps the choice) | `SidebarUI/Colour/GroupPaint.swift`, `Group/SidebarSectionView.swift` |
 | S09 | Tabs mode, a terminal running an agent (a `/bin/cat` copy named `claude`) that works, needs input, finishes | its tab's tile is the row's own: the agent's logo on its colour, the light, the badge; with Status dot off every tile is quiet | `SidebarUI/Tile/TerminalStatusTile.swift`, `PanesUI/Tabs/TerminalTabView.swift`, `WindowUI/Hub/WindowHub+Sidebar.swift` `tabActions` |
@@ -491,8 +503,6 @@ Not written:
 | S03 | NOT WRITTEN: the title row's tint line under Increase Contrast and the title tint for a group with a colour of its own (`selectedGroupColor` is a named colour only) | - | `WindowUI/TitleTintLine.swift`, `Chrome.swift` |
 
 ## Lane profile, wave 5
-
-## Lane panel-rest, wave 5
 
 Written without compiling: expect compile errors.
 
@@ -586,6 +596,12 @@ own on the same grammar crates instead (`crates/wormhole-ffi/src/syntax`), follo
 - `crates/wormhole-ffi/Cargo.lock` was resolved with `cargo metadata` (twice: the second after pinning `tree-sitter-md` and
   `tree-sitter-swift` to the app's versions). It has `tree-sitter-language` 0.1.9 where the app's lock has 0.1.8.
 
+## Lane panel-rest, wave 5
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
 | P06 | Open a note whose text under the title is one long paragraph that wraps to more than 12 lines in the panel; one of 12 short lines that do not wrap; drag the panel wider and narrower | cut at 12 lines as wrapped (the core's `note_cap`), the last two at 0.65 and 0.3, "Show all · N lines" with N the wrapped count; the short one is whole; the count follows the width. A cut text ends in the system's ellipsis (the line limit), which GPUI does not draw | `PanelUI/Notes/NotePreview.swift`, `ffi/src/notes_text.rs note_cap` |
 | P06 | A note whose first line is spaces only, then a title, blank lines, a body | the body under the title is the core's `note_body` (the blank lines around it gone), a note of one line shows it once | `NoteRules.body`, `NotesModel.swift Note.body`, `notes_text.rs note_body` |
 | P06 | Click a note's title; click in its text; ⇧⌘E | the title click opens it with the cursor at the end of its text; the others leave the cursor where it was. No core rule exists for this (GPUI computes the editor position in `note_ops.rs show_note`); it is the text's end index | `NoteRowView.swift open(toEnd:)` |
