@@ -10,7 +10,7 @@ import WorkspaceModel
 
 extension WindowHub {
     var paneActions: PaneActions {
-        PaneActions(
+        var made = PaneActions(
             close: { [unowned self] in actions.closeTerminal($0) },
             split: { [unowned self] in split($0) },
             canSplit: { [unowned self] in canSplit($0) },
@@ -22,6 +22,8 @@ extension WindowHub {
             drop: { [unowned self] in drop($0, on: $1, zone: $2) },
             refusal: { [unowned self] in store.paneDropRefusal(dragged: $0.id, target: $1, zone: $2) },
             areaChanged: { [unowned self] in store.setPaneArea(width: $0.width, height: $0.height) })
+        made.splitMotion = splitMotion
+        return made
     }
 
     /// ⌘D / ⇧⌘D, the split buttons and the pane menu: a new terminal beside the selected one, along `axis`.

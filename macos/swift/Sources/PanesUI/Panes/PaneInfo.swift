@@ -42,6 +42,8 @@ public struct PaneActions {
     /// as a tooltip says it ("⇧⌘↩"); nil when it has none. Without the window's keymap the menu and tooltips show no key.
     public var shortcut: (String) -> KeyboardShortcut? = { _ in nil }
     public var keyText: (String) -> String? = { _ in nil }
+    /// The core's rule for a split's opening motion; nil (the sample) draws a split as it lands.
+    public var splitMotion: (any SplitMotion)?
 
     public init(
         close: @escaping (PaneID) -> Void = { _ in }, split: @escaping (SplitAxis) -> Void = { _ in },

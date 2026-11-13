@@ -8,8 +8,8 @@ import SwiftUI
 
 extension WindowHub {
     /// The pane verbs with the keymap's keys in the menu's items and the header's tooltips.
-    func paneActions(keys keymap: Keymap = .shared, appearance: SidebarAppearance) -> PaneActions {
-        var actions = paneActions(appearance: appearance)
+    func paneActionsWithKeys(keys keymap: Keymap = .shared, appearance: SidebarAppearance) -> PaneActions {
+        var actions = paneActionsWithTiles(appearance: appearance)
         actions.keyText = { keymap.key(ActionID(rawValue: $0))?.glyphText }
         actions.shortcut = { keymap.key(ActionID(rawValue: $0)).flatMap(Self.shortcut(for:)) }
         return actions

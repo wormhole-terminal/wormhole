@@ -16,7 +16,7 @@ extension WindowHub {
     }
 
     /// The pane verbs with the row's own tile in each header.
-    func paneActions(appearance: SidebarAppearance) -> PaneActions {
+    func paneActionsWithTiles(appearance: SidebarAppearance) -> PaneActions {
         var actions = paneActions
         actions.tile = tileMaker(appearance: appearance)
         return actions

@@ -50,6 +50,8 @@ public final class WindowHub {
     public var zenActive = false
     /// The title row's order of giving way: the core's where the FFI is linked, else every part at its natural width.
     public var rowFitting: any RowFitting = NaturalFit()
+    /// The core's rule for a split's opening motion, where the FFI is linked; without it a split lands at once.
+    public var splitMotion: (any SplitMotion)?
     /// The right panel's state over the backends the app hands in (the core's git where the FFI is linked, else the
     /// sample). An opened diff or file is laid over the terminals (`.terminalArea`, hosted by `TerminalColumn`).
     public let panel: PanelController
