@@ -77,6 +77,17 @@ final class IntroOverlayTests: XCTestCase {
         XCTAssertEqual(window.alphaValue, 1)
     }
 
+    /// Whether a display link of the main screen ticks within a third of a second.
+    private func screenLinkTicks() async -> Bool {
+        guard let screen = NSScreen.main else { return false }
+        let probe = TickProbe()
+        let link = screen.displayLink(target: probe, selector: #selector(TickProbe.tick(_:)))
+        link.add(to: .main, forMode: .common)
+        defer { link.invalidate() }
+        try? await Task.sleep(for: .milliseconds(300))
+        return probe.ticks > 0
+    }
+
     /// The still glow on the real display link, over a window that sits far off any screen (so nothing is seen):
     /// it ticks, finishes on its own and calls back once.
     func testTheGlowRunsOnTheDisplayLinkAndFinishes() async throws {
@@ -84,6 +95,10 @@ final class IntroOverlayTests: XCTestCase {
         window.setFrameOrigin(NSPoint(x: -30000, y: -30000))
         window.orderBack(nil)
         defer { window.orderOut(nil) }
+        // A runner's display does not always drive a display link (the test failed there one run in a few with a
+        // progress of 0.0): where the screen's own link does not tick, the player's cannot, and that says nothing of it.
+        let ticks = await screenLinkTicks()
+        try XCTSkipUnless(ticks, "no display link ticks on this screen")
         let player = IntroPlayer(reduceMotion: { true })
         var finished = 0
         player.onFinish = { finished += 1 }
@@ -96,4 +111,10 @@ final class IntroOverlayTests: XCTestCase {
         XCTAssertNil(player.progress, "the run is over")
         XCTAssertEqual(finished, 1)
     }
+}
+
+/// Counts a display link's ticks.
+private final class TickProbe: NSObject {
+    var ticks = 0
+    @objc func tick(_ link: CADisplayLink) { ticks += 1 }
 }
