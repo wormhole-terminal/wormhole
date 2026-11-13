@@ -44,6 +44,7 @@
                     case .checking, .notAsked: break
                     default: return finishTest(name: name, settings: settings)
                     }
+                    // one-shot: macOS's answer to the permission question, which the notifier gives no event for
                     try? await Task.sleep(for: .milliseconds(500))
                     if Task.isCancelled { return }
                 }

@@ -29,6 +29,10 @@ struct SettingsNav: View {
                     ForEach(group.sections) { section in row(id: section.id, title: section.title, badge: badge(section), dim: dims(section), attention: attention(section)) }
                 }
             }
+            // The developer page of every control, behind the `components` flag.
+            if model.showsComponents {
+                Section { row(id: SettingsModel.componentsID, title: Words.text("settings-section-components", fallback: "Components")) }
+            }
         }
         .listStyle(.sidebar)
         .marked("settings.nav")

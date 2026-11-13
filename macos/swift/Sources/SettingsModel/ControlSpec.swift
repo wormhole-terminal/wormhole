@@ -43,6 +43,10 @@ public enum ControlSpec: Sendable, Equatable {
         public let format: Format
         public let ticks: [Double]
 
+        public init(min: Double, max: Double, step: Double, format: Format, ticks: [Double]) {
+            (self.min, self.max, self.step, self.format, self.ticks) = (min, max, step, format, ticks)
+        }
+
         public func format(_ value: Double) -> String {
             switch format {
             case .percent: "\(Int((value * 100).rounded())) %"

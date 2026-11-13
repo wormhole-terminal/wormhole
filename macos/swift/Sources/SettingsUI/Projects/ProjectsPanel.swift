@@ -22,6 +22,7 @@ private struct ProjectsBody: View {
     /// The project select's width (the GPUI page's 360).
     private static let selectWidth: CGFloat = 360
     private static let searchWidth: CGFloat = 160
+    @Environment(\.appearsActive) private var appearsActive
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space._6) {
@@ -46,15 +47,11 @@ private struct ProjectsBody: View {
                 Defaults(projects: projects)
             }
         }
-        // The page follows the Project tab and the disk about once a second while it shows, as the GPUI page does: a project
-        // trusted or edited elsewhere sends no event this page can hear.
-        .task {
-            await projects.refresh()
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
-                await projects.refresh()
-            }
-        }
+        .task { await projects.refresh() }
+        // A project trusted or edited elsewhere (the Project tab, the disk) sends this page no event: it reads again whenever the
+        // window comes forward, which is where a person goes to see it. GPUI's page also reads about once a second; an idle window
+        // here sleeps until something happens.
+        .onChange(of: appearsActive) { _, active in if active { Task { await projects.refresh() } } }
     }
 
     private var options: [SettingOption] {

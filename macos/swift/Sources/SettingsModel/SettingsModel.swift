@@ -9,6 +9,8 @@ import Observation
 public final class SettingsModel {
     /// The page Changed shows is not a section of the schema: it lists the others' rows.
     public static let changedID = "changed"
+    /// The Components page is not in the schema either: it is drawn from the controls themselves.
+    public static let componentsID = "components"
 
     public let schema: SettingsSchema
     public let backend: any SettingsBackend
@@ -128,6 +130,12 @@ public final class SettingsModel {
         _ = values
         let shown = host.shownSections()
         return schema.sections.filter { $0.id != "profile" && $0.id != Self.changedID && shown?.contains($0.id) ?? true }
+    }
+
+    /// The Components page is on for this build and these settings (the `components` feature flag): a developer page in the nav.
+    public var showsComponents: Bool {
+        _ = values
+        return host.shownSections()?.contains(Self.componentsID) ?? false
     }
 
     public var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }

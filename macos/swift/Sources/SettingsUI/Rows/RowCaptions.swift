@@ -67,10 +67,9 @@ enum RowCaptions {
         let family = model.value("font_family").string.flatMap { $0.isEmpty ? nil : $0 } ?? "JetBrains Mono" // text: the bundled family's name
         let size = String(format: "%.0f", model.value("font_size").number ?? 14)
         let line = String(format: "%.2f", model.value("line_height").number ?? 1.3)
-        let args: [String: WordValue] = ["family": .text(family), "size": .text(size), "line_height": .text(line)]
         return (model.value("font_ligatures").bool ?? true)
-            ? Words.text("settings-terminal-font-summary-ligatures-on", args, fallback: "\(family) \(size) pt · line height \(line) · ligatures on")
-            : Words.text("settings-terminal-font-summary-ligatures-off", args, fallback: "\(family) \(size) pt · line height \(line) · ligatures off")
+            ? Words.text("settings-terminal-font-summary-ligatures-on", ["family": .text(family), "size": .text(size), "line_height": .text(line)], fallback: "\(family) \(size) pt · line height \(line) · ligatures on")
+            : Words.text("settings-terminal-font-summary-ligatures-off", ["family": .text(family), "size": .text(size), "line_height": .text(line)], fallback: "\(family) \(size) pt · line height \(line) · ligatures off")
     }
 
     /// "2 families found: Berkeley Mono, Monaspace Neon", or "None yet: …".

@@ -50,7 +50,8 @@ public struct SettingsView: View {
         .onKeyPress(keys: ["f"], phases: .down) { unlockFlags($0) }
         // Locking the feature flags while their page is open takes the page away with its row.
         .onChange(of: model.navSections.map(\.id)) { _, ids in
-            if !ids.contains(model.selection), model.selection != "profile", model.selection != SettingsModel.changedID, let first = ids.first {
+            if !ids.contains(model.selection), model.selection != "profile", model.selection != SettingsModel.changedID,
+                !(model.selection == SettingsModel.componentsID && model.showsComponents), let first = ids.first {
                 model.show(first)
             }
         }
@@ -65,6 +66,8 @@ public struct SettingsView: View {
             ResultsPage(model: model)
         } else if model.selection == SettingsModel.changedID {
             ChangedPage(model: model)
+        } else if model.selection == SettingsModel.componentsID, model.showsComponents {
+            ComponentsPage()
         } else if let section = model.schema.section(model.selection) {
             SettingsPage(model: model, section: section)
         }
