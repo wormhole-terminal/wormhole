@@ -19,6 +19,15 @@ public enum TitleKeyMenu {
         return menu
     }
 
+    /// The folder's own menu, as a right-click on the folder opens it (the control folder's `path-menu`): `shown` is the folder as the
+    /// row writes it, `folder` its absolute path.
+    public static func pathMenu(folder: String, shown: String, actions: TitleActions) -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        path(folder, shown: shown, actions, into: menu)
+        return menu
+    }
+
     private static func path(_ folder: String, shown: String, _ actions: TitleActions, into menu: NSMenu) {
         menu.addItem(.sectionHeader(title: shown))
         menu.addItem(.separator())

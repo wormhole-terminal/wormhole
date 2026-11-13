@@ -11,6 +11,7 @@ extension AppController {
         if runProfiles(command: command, argument: argument) { return true }
         if runNotices(command: command, argument: argument) { return true }
         if await runPages(command: command, argument: argument) { return true }
+        if runMenus(command: command, argument: argument) { return true }
         return false
     }
 }

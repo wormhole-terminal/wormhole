@@ -47,4 +47,20 @@ final class MenuController {
 
     /// The bar as text, one item per line with its key and marks (the control folder's `menus`).
     func dump() -> String { MenuDump.text(provider.menus(for: shown)) }
+
+    /// Whether the bar's item for `id` is on for the window in front; nil when no menu has one (the control folder's `available`).
+    func availability(of id: ActionID) -> Bool? {
+        func search(_ nodes: [MenuNode]) -> Bool? {
+            for node in nodes {
+                switch node {
+                case .item(let item) where item.command == .action(id): return item.enabled
+                case .submenu(_, let inner, _, _): if let found = search(inner) { return found }
+                default: continue
+                }
+            }
+            return nil
+        }
+        for menu in provider.menus(for: shown) { if let found = search(menu.items) { return found } }
+        return nil
+    }
 }

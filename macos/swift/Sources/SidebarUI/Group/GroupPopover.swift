@@ -40,18 +40,56 @@ struct GroupPopover: View {
             Divider()
             GroupFolderItems(head: head, context: context, close: close)
             Divider()
-            item(Words.text("sidebar-menu-group-new-terminal", fallback: "New terminal in group")) { context.newInGroup(head.id) }
-            item(Words.text("sidebar-menu-group-ungroup", fallback: "Ungroup")) { context.send(.ungroup(head.id)) }
-            item(Words.text("sidebar-menu-group-close", fallback: "Close group")) { context.closeGroup(head.id) }
-            item(head.isPinned ? Words.text("sidebar-menu-group-unpin", fallback: "Unpin group") : Words.text("sidebar-menu-group-pin", fallback: "Pin group")) {
-                context.send(.setGroupPinned(head.id, !head.isPinned))
-            }
-            item(Words.text("sidebar-menu-group-move-to-window", fallback: "Move group to new window")) { context.send(.moveGroupToWindow(head.id)) }
+            ForEach(Array(actions.enumerated()), id: \.offset) { _, action in item(action.title, action.run) }
         }
         .padding(Space._3)
         .frame(width: Self.width)
-        .onAppear { name = head.name; focused = true }
-        .onDisappear(perform: commit)
+        .onAppear { name = head.name; focused = true; record() }
+        .onChange(of: name) { record() }
+        .onChange(of: head.color) { record() }
+        .onDisappear { commit(); PopoverRecord.set(nil) }
+    }
+
+    /// The actions under the folder's items: each runs, and the popover closes.
+    private var actions: [(title: String, run: () -> Void)] {
+        [
+            (Words.text("sidebar-menu-group-new-terminal", fallback: "New terminal in group"), { context.newInGroup(head.id) }),
+            (Words.text("sidebar-menu-group-ungroup", fallback: "Ungroup"), { context.send(.ungroup(head.id)) }),
+            (Words.text("sidebar-menu-group-close", fallback: "Close group"), { context.closeGroup(head.id) }),
+            (head.isPinned ? Words.text("sidebar-menu-group-unpin", fallback: "Unpin group") : Words.text("sidebar-menu-group-pin", fallback: "Pin group"),
+             { context.send(.setGroupPinned(head.id, !head.isPinned)) }),
+            (Words.text("sidebar-menu-group-move-to-window", fallback: "Move group to new window"), { context.send(.moveGroupToWindow(head.id)) }),
+        ]
+    }
+
+    /// What the control folder reads and presses while this popover is open (`PopoverRecord`): the closures are the views' own.
+    private func record() {
+        let none = Words.text("sidebar-menu-group-colour-none", fallback: "No colour")
+        let names = [none] + GroupColor.allCases.map { $0.rawValue.capitalized }
+        let selected = head.customColor == nil ? (head.color.flatMap { GroupColor.allCases.firstIndex(of: $0) }.map { $0 + 1 } ?? 0) : nil
+        var lines = [
+            PopoverRecord.Row(.field(text: name, focused: focused), Words.text("sidebar-popover-group-name", fallback: "Group name")),
+            PopoverRecord.Row(.colours(names: names, selected: selected, custom: head.customColor != nil), ""),
+        ]
+        lines += actions.map { action in PopoverRecord.Row(.action, action.title, press: { action.run(); close() }) }
+        let head = head, context = context
+        PopoverRecord.set(PopoverRecord.Open(
+            rows: lines, type: { name = $0 },
+            key: { key in
+                guard ["enter", "escape"].contains(key) else { return false }
+                if key == "enter" { commit() }
+                close()
+                return true
+            },
+            colour: { choice in
+                if choice.lowercased() == "none" || choice == none { context.send(.setGroupColor(head.id, nil)); return true }
+                if let colour = GroupColor.allCases.first(where: { $0.rawValue == choice.lowercased() }) { context.send(.setGroupColor(head.id, colour)); return true }
+                guard choice.hasPrefix("#"), choice.count == 7, let (red, green, blue) = Color(hex: choice)?.rgb8 else { return false }
+                context.send(.setGroupCustomColor(head.id, red: red, green: green, blue: blue))
+                return true
+            },
+            close: { close() },
+            view: AnyView(GroupPopover(head: head, rows: rows, context: context, close: close))))
     }
 
     /// An action of the popover: it runs, and the popover closes.
