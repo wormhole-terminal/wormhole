@@ -4,6 +4,7 @@
 
 #if WITH_UNIFFI
     import PlatformModel
+    import PlatformUI
     import SettingsModel
 
     extension NoticeFeed {
@@ -37,19 +38,20 @@
             publishStatus()
             testTask = Task { @MainActor [weak self] in
                 guard let self else { return }
-                if case .notAsked = notifier.permission { notifier.askPermission() }
-                // macOS answers its question when the person does: look twice a second for half a minute.
-                for _ in 0..<60 {
-                    switch notifier.permission {
-                    case .checking, .notAsked: break
-                    default: return finishTest(name: name, settings: settings)
+                // macOS is asked first when it was not, and its answer is waited for: the notifier awaits it, nothing polls.
+                if let system = notifier as? SystemNotifier {
+                    switch system.permission {
+                    case .notAsked, .checking: await system.askPermissionAndWait()
+                    default: break
                     }
-                    // one-shot: macOS's answer to the permission question, which the notifier gives no event for
-                    try? await Task.sleep(for: .milliseconds(500))
-                    if Task.isCancelled { return }
                 }
-                test = .unanswered
-                publishStatus()
+                if Task.isCancelled { return }
+                switch notifier.permission {
+                case .checking, .notAsked:
+                    test = .unanswered
+                    publishStatus()
+                default: finishTest(name: name, settings: settings)
+                }
             }
         }
 

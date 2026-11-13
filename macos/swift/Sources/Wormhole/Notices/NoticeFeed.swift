@@ -17,7 +17,7 @@
 
     @MainActor
     final class NoticeFeed {
-        private let coordinator: NoticeCoordinator
+        let coordinator: NoticeCoordinator
         let notifier: any Notifying
         unowned let app: AppController
         /// What came of the last "Send test" (the Notifications page shows it) and the task still waiting on macOS.
@@ -40,34 +40,9 @@
         /// (`notifications::time_sensitive`).
         private var timeSensitive: Bool { (notifier as? SystemNotifier)?.deliversTimeSensitive ?? false }
 
-        /// "Send test" never ends silent (`notifications/test_banner.rs`): macOS is asked first when it was not, and `report`
-        /// says what happened: off in System Settings, never answered, or handed to the centre.
-        func sendTest(name: String, settings: NoticeSettings, report: @escaping @MainActor (String) -> Void) {
-            guard let system = notifier as? SystemNotifier else {
-                coordinator.sendTest(name: name, settings: settings)
-                return
-            }
-            Task { @MainActor in
-                switch system.permission {
-                case .notAsked, .checking:
-                    report(Words.text("settings-notifications-test-waiting", fallback: "Waiting for macOS. Answer its question and the test is sent"))
-                    await system.askPermissionAndWait()
-                    // Still not allowed or refused after the question: it was dismissed.
-                    if [.notAsked, .checking].contains(system.permission) {
-                        return report(Words.text("settings-notifications-test-unanswered", fallback: "macOS did not turn notifications on. Turn Wormhole on in System Settings, then try again"))
-                    }
-                    deliver(name, settings, system, report)
-                default: deliver(name, settings, system, report)
-                }
-            }
-        }
-
-        private func deliver(_ name: String, _ settings: NoticeSettings, _ system: SystemNotifier, _ report: @MainActor (String) -> Void) {
-            if case .denied = system.permission {
-                return report(Words.text("settings-notifications-test-denied", fallback: "Off in System Settings. Turn Wormhole on there, then try again"))
-            }
+        /// The test banner itself; `runTest` (`NoticeFeed+Test`) asks macOS first and says what came of it.
+        func sendTest(name: String, settings: NoticeSettings) {
             coordinator.sendTest(name: name, settings: settings, timeSensitive: timeSensitive)
-            report(Words.text("settings-notifications-test-sent", fallback: "Sent. No banner? Check Focus, and the alert style in System Settings"))
         }
 
         /// A Probe's hook asks for a notification: one thread per Probe, its name (with "extension") as the subtitle.
@@ -189,7 +164,7 @@
     @MainActor
     final class NoticeFeed {
         init(app: AppController) {}
-        func sendTest(name: String, settings: NoticeSettings, report: @escaping @MainActor (String) -> Void) {}
+        func sendTest(name: String, settings: NoticeSettings) {}
         func respond(_ response: NoticeResponse) {}
         var logged: [Notice] { [] }
     }

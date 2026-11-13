@@ -129,7 +129,7 @@ extension AppController {
             #endif
             return true
         case "notice-test":
-            notices?.sendTest(name: "Wormhole", settings: settingsNotice) { _ in }
+            notices?.sendTest(name: "Wormhole", settings: settingsNotice)
         default: return false
         }
         reply("\(command) \(argument)")

@@ -118,6 +118,7 @@ enum GalleryUses {
             "chip.tint", "metrics.radius_chip", "text.muted",
         ]),
         TokenUse(id: "settings.nav", label: "settings nav", area: .settings, tokens: [
+            "status.warning",
         ]),
         TokenUse(id: "setting.row", label: "setting row", area: .settings, tokens: [
             "find.match", "status.success.text", "text.faint", "text.muted", "text.primary",
