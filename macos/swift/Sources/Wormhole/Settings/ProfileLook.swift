@@ -20,7 +20,7 @@ final class ProfileLook {
     private(set) lazy var terminalLook = TerminalLook(
         terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] }, themes: themes, sharesEngineColours: false)
     private unowned let app: AppController
-    private let backend: any SettingsBackend
+    let backend: any SettingsBackend
     /// Whether a feature (by its flag's key) is on in this profile.
     private let featureOn: @MainActor (String) -> Bool
     private var observation: SettingsObservation?

@@ -18,7 +18,12 @@ extension ActionRouter {
                 // A panel that closed had the keys in a note or a list: the terminal takes them (`toggle_notes`).
                 if !hub.state.panelVisible { hub.focus.focusTerminal() }
             },
-            "toggleStatusBar": { if look.zen == nil { look.statusBar.toggle() } },
+            // The setting itself, in the front window's own profile (Settings and the menu are one switch, kept across launches).
+            "toggleStatusBar": { [unowned self] in
+                let session = app.front
+                guard session.dress.look.zen == nil else { return }
+                app.settingsBackend(of: session).set("status_bar", to: .bool(!session.dress.look.statusBar))
+            },
             "toggleZenMode": { [unowned self] in app.toggleZen() },
             "toggleTerminalTabs": { [unowned self] in app.settingsModel.backend.set("terminals_in", to: .string(look.tabsOnTop ? "sidebar" : "tabs")) },
             "focusNextArea": { hub.focus.step(1) },

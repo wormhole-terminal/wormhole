@@ -4,6 +4,7 @@
 
 import DesignSystem
 import Foundation
+import SettingsModel
 import WindowUI
 import WorkspaceModel
 
@@ -34,6 +35,11 @@ extension AppController {
         #else
             return nil
         #endif
+    }
+
+    /// The settings a window reads and writes: its own profile's, whichever profile Wormhole is in.
+    func settingsBackend(of session: WindowSession) -> any SettingsBackend {
+        profileLook(for: session.windows.profile)?.backend ?? settingsModel.backend
     }
 
     /// Dress `session` for the profile it is in (as it is made, and again after it moved to another profile).

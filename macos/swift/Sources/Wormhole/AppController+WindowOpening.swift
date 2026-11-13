@@ -26,8 +26,10 @@ extension AppController {
 
     /// A window with nothing but a new terminal, laid out like the one in front, a step from it (⌘N, the Dock's menu).
     func openNewWindow(folder: String? = nil) {
-        let planned = windowsHost.backend.plan(from: front.hub.store.source, folder: folder)
-        openPlanned(window: planned.window, activate: true)
+        // In the profile of the window in front, an odd one too (`new_window_in`: `self.profile`), not the shown profile.
+        let windows = front.windows
+        let planned = windows.backend.plan(from: front.hub.store.source, folder: folder)
+        openPlanned(window: planned.window, activate: true, in: windows)
     }
 
     /// The window the core planned (`plan`, or `wh new-window`): its workspace is filled from the plan. It opens a step
