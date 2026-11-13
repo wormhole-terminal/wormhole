@@ -24,6 +24,9 @@ struct StatusBar: View {
     let windowWidth: CGFloat
     /// How long ago a terminal got into its state, in the core's words (nil in the sample).
     var waited: (UInt64) -> Waited? = { _ in nil }
+    /// The core's spoken sentences for the needs-you button and the counts ("2 terminals working"); nil without a core.
+    var spokenAttention: (String, UInt64) -> String? = { _, _ in nil }
+    var spokenCount: (Int, Activity) -> String? = { _, _ in nil }
     let select: @MainActor (TerminalID) -> Void
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
@@ -64,6 +67,7 @@ struct StatusBar: View {
                     }
                 }
                 .buttonStyle(StatusItemStyle(tint: colours.attentionTint))
+                .accessibilityLabel(waiting.since.flatMap { spokenAttention(waiting.title, $0) } ?? waiting.title)
                 .help(summary.attentionTooltip ?? "")
                 .focusRing(focus.ring(.statusBar, 0), radius: colours.radius)
             }
@@ -72,6 +76,7 @@ struct StatusBar: View {
                     if index > 0 && detail.words { Text("·").foregroundStyle(colours.faint) }
                     Button { select(count.first) } label: { countLabel(count, words: detail.words) }
                         .buttonStyle(StatusItemStyle())
+                        .accessibilityLabel(spokenCount(count.number, count.activity) ?? count.words)
                         .focusRing(focus.ring(.statusBar, index + (summary.attention == nil ? 0 : 1)), radius: colours.radius)
                 }
             }

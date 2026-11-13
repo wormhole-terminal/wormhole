@@ -91,6 +91,11 @@ public protocol WorkspaceBackend: AnyObject {
     func hosting(of id: TerminalID) -> HostingState?
     /// How long ago a terminal's `since` was, as the status bar says it; nil in the sample (no clock of the core's).
     func waited(since: UInt64) -> Waited?
+    /// The core's spoken sentences (VoiceOver): a right-panel tab ("Changes, 3 changed files"), the needs-you button
+    /// ("Fix pile needs input, waiting 2 minutes") and a count of the bar ("2 terminals working"); nil in the sample.
+    func spoken(panelTab: PanelTab, openSteps: Int, notes: Int, files: Int?) -> String?
+    func spoken(attention name: String, since: UInt64) -> String?
+    func spoken(count: Int, of activity: Activity) -> String?
     /// What runs in terminal `id`, whatever title it set: the agent, the running command or the shell (nil in the sample).
     func programName(of id: TerminalID) -> String?
     /// The program terminal `id` started with ("fish"), for its exited bar (nil in the sample).

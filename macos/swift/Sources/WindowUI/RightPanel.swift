@@ -22,7 +22,7 @@ struct RightPanel: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PanelTabBar(tab: tab, tabs: hub.panelTabs, select: { hub.send(.showPanelTab($0)) }, badges: badges)
+            PanelTabBar(tab: tab, tabs: hub.panelTabs, select: { hub.send(.showPanelTab($0)) }, badges: badges, spokenTab: spokenTab)
                 // The Notes tab's one action sits in the strip beside the panel toggle (`stash_button`).
                 .overlay(alignment: .trailing) {
                     if tab == .notes { StashPromptButton(controller: controller).padding(.trailing, Chrome.panelToggleSlot) }
@@ -45,6 +45,13 @@ struct RightPanel: View {
         var out: [PanelTab: Int] = [:]
         if let count = controller.badge(for: .changes) { out[.changes] = count }
         return out
+    }
+
+    /// The tab's name with its count, as the core says it: the Notes tab's open steps and notes, Changes' files (nil outside a repository).
+    private func spokenTab(_ tab: PanelTab) -> String? {
+        hub.store.spoken(
+            panelTab: tab, openSteps: controller.notes.model.tasks.remaining, notes: controller.notes.model.filledNotes,
+            files: controller.changes.phase == .loaded ? controller.changes.files.count : nil)
     }
 
     private var arrival: AnyTransition {

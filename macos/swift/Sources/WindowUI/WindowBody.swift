@@ -161,7 +161,9 @@ struct WindowBody: View {
             program: state.selected.flatMap { hub.store.programName(of: $0) }, profile: hub.actions.windowProfile?(),
             size: grid.map { "\($0.cols)×\($0.rows)" },
             hosting: state.selected.flatMap { hub.store.hosting(of: $0) }, windowWidth: window,
-            waited: { hub.store.waited(since: $0) }
+            waited: { hub.store.waited(since: $0) },
+            spokenAttention: { hub.store.spoken(attention: $0, since: $1) },
+            spokenCount: { hub.store.spoken(count: $0, of: $1) }
         ) { hub.actions.showTerminal?($0) ?? send(.select($0)) }
     }
 }

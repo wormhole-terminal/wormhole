@@ -187,6 +187,24 @@ extension RustWorkspaceBackend {
         return name.isEmpty ? nil : name
     }
 
+    public func spoken(panelTab: PanelTab, openSteps: Int, notes: Int, files: Int?) -> String? {
+        core.spokenPanelTab(tab: panelTab.rawValue, openSteps: UInt32(openSteps), notes: UInt32(notes), files: files.map { UInt32($0) })
+    }
+
+    public func spoken(attention name: String, since: UInt64) -> String? { core.spokenStatusAttention(name: name, sinceMs: since) }
+
+    public func spoken(count: Int, of activity: Activity) -> String? {
+        let kind: String
+        switch activity {
+        case .working: kind = "working"
+        case .needsInput: kind = "needs"
+        case .finished: kind = "done"
+        case .failed: kind = "failed"
+        case .idle, .exited: kind = "quiet"
+        }
+        return core.spokenStatusCount(activity: kind, count: UInt32(count))
+    }
+
     public func waited(since: UInt64) -> WorkspaceModel.Waited? {
         let waited = core.waited(sinceMs: since)
         return WorkspaceModel.Waited(words: waited.words, next: .milliseconds(waited.nextInMs))

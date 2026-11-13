@@ -17,6 +17,8 @@ struct PanelTabBar: View {
     let select: @MainActor (PanelTab) -> Void
     /// The counts on the tabs that have one (the changed files, the agents that reported).
     var badges: [PanelTab: Int] = [:]
+    /// What VoiceOver says of a tab, in the core's words ("Changes, 3 changed files"); nil falls back to its title.
+    var spokenTab: (PanelTab) -> String? = { _ in nil }
     @Namespace private var selection
     @Environment(\.chrome) private var colours
     @Environment(\.reduceMotion) private var reduceMotion
@@ -29,7 +31,7 @@ struct PanelTabBar: View {
             ForEach(Array(tabs.enumerated()), id: \.element) { position, candidate in
                 PanelTabButton(tab: candidate, isSelected: candidate == tab, badge: badges[candidate], namespace: selection) { select(candidate) }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(candidate.title)
+                    .accessibilityLabel(spokenTab(candidate) ?? candidate.title)
                     .accessibilityValue(spoken(candidate, position: position))
                     .accessibilityAddTraits(candidate == tab ? [.isButton, .isSelected] : .isButton)
             }
