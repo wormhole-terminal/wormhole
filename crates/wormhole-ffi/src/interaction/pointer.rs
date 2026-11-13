@@ -1,7 +1,7 @@
 //! The pointer, the wheel, paste and focus, for a program that asked for them and for the view.
 
 use wormhole_term::input::{self, mouse};
-use wormhole_term::types::{Modes, Scroll};
+use wormhole_term::types::Modes;
 
 use crate::events::Touch;
 use crate::terminal::Terminal;
