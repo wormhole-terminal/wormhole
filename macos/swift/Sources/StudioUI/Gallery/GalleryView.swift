@@ -21,7 +21,7 @@ struct GalleryView<Extras: View>: View {
         VStack(spacing: 0) {
             AreaChips(area: $document.filter.area, uses: document.selected.map { (document.uses(of: $0).count, $0) })
             ScrollView {
-                VStack(alignment: .leading, spacing: Space._6) {
+                LazyVStack(alignment: .leading, spacing: Space._6) {
                     HStack(alignment: .top, spacing: StudioMetrics.galleryGap) {
                         column(shown.filter { $0.column == .left }, context)
                         column(shown.filter { $0.column == .right }, context)
@@ -39,8 +39,9 @@ struct GalleryView<Extras: View>: View {
         .accessibilityLabel(StudioWords.galleryLabel)
     }
 
+    /// Lazy, so a wheel tick builds the specimens near the viewport and not all thirty-two (`gallery/layout.rs`).
     private func column(_ specimens: [Specimen], _ context: GalleryContext) -> some View {
-        VStack(alignment: .leading, spacing: Space._6) {
+        LazyVStack(alignment: .leading, spacing: Space._6) {
             ForEach(specimens) { SpecimenFrame(specimen: $0, context: context, extras: extras) }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)

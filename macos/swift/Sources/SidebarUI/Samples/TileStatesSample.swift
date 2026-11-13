@@ -1,7 +1,7 @@
 // The list's own tile in every state, for the Theme Studio's gallery (`studio/gallery/tiles.rs` `tile_states`): a plain
 // terminal's states, an agent's, and the agent's again on a selected row, where the badge is cut out in the row's colour.
 // Under them one tile whose status changes when asked, played by the status motion in use (`StatusTile`'s own change and
-// the flare): the Swift tile cannot be held part-way through a change, so the change is played, not caught mid-way.
+// the flare): a flare and a nudge are also held a third of the way through (the core's pose table at that time); the other variants play.
 
 import DesignSystem
 import SwiftUI
@@ -31,7 +31,27 @@ public struct TileStatesSpecimen: View {
                 .padding(Space._1)
                 .background(tokens.sidebarRowSelected, in: RoundedRectangle(cornerRadius: metrics.rowRadius))
             change
+            caught
         }
+    }
+
+    /// The two motions that add something on top of a tile, each held a third of the way through working to needs input
+    /// (`status_changes`): the ring on its way out, the row's nudge. The others (a cross-fade, a pop, a wash, a roll) are
+    /// the system's transitions, which cannot be held part-way; they play above.
+    private var caught: some View {
+        HStack(spacing: Space._6) {
+            ForEach([StatusMotion.flare, .nudge], id: \.self) { motion in
+                VStack(spacing: Space._2) {
+                    StatusTile(state: .needsYou, agent: .claude, size: metrics.tile, phase: 0, surface: tokens.surfacePanel)
+                        .statusCaught(
+                            StatusShift(count: 1, from: .working, to: .needsYou), variant: motion,
+                            tile: motion == .flare ? metrics.tile : nil, at: 1.0 / 3.0)
+                    Text(motion.coreName).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                }
+            }
+        }
+        .padding(Space._3)
+        .allowsHitTesting(false)
     }
 
     private func line(_ states: [TileState], agent: AgentID?, surface: Color) -> some View {
