@@ -1,7 +1,8 @@
 // The theme picker block of Appearance (`theme_picker/`): a filter, then a grid of cards for the themes of each
 // appearance, the current pick of each marked. A card is the theme in miniature (its terminal colours and a band
 // with its name), so choosing is looking. Picking writes `theme` (dark) or `theme_light`; the window follows
-// through `ThemeSync`. Few cards show until "Show all". A theme hidden from the cards (`hidden_themes`: its menu's Hide
+// through `ThemeSync`. A theme that ships several versions has a card per version, on the shelf of its kind: named by the
+// family where the shelf holds one version of it, else by the version's own name. Few cards show until "Show all". A theme hidden from the cards (`hidden_themes`: its menu's Hide
 // theme) is on no shelf unless it is a pick; "Hidden themes (n)" under the cards lists them, each with Show.
 
 import DesignSystem
@@ -46,6 +47,19 @@ struct ThemeCards: View {
 
     private var hidden: [String] { model.value("hidden_themes").array?.compactMap(\.string) ?? [] }
 
+    /// What a card's band says (`theme_picker` `labels`): the family's name when the family has one version of the card's
+    /// kind (its shelf then holds only that one), else the version's own name ("Soltari Dim").
+    private func label(_ theme: Theme) -> String {
+        guard let family = theme.family else { return theme.name }
+        let ofKind = ThemeLibrary.bundled.themes.filter { $0.family?.name == family.name && $0.appearance == theme.appearance }
+        return ofKind.count == 1 ? family.name : theme.name
+    }
+
+    /// The filter box looks in a card's own name and its family's.
+    private func matches(_ theme: Theme) -> Bool {
+        filter.isEmpty || theme.name.localizedCaseInsensitiveContains(filter) || theme.family?.name.localizedCaseInsensitiveContains(filter) == true
+    }
+
     private func isHidden(_ name: String) -> Bool { hidden.contains { $0.localizedCaseInsensitiveCompare(name) == .orderedSame } }
 
     private func setHidden(_ name: String, _ on: Bool) {
@@ -82,7 +96,7 @@ struct ThemeCards: View {
             store.userTheme(summary).map { Card(theme: $0, value: summary.id, path: summary.path) }
         }
         let all = (ThemeLibrary.bundled.themes.map { Card(theme: $0, value: $0.name) } + yours).filter {
-            $0.theme.appearance == appearance && (filter.isEmpty || $0.theme.name.localizedCaseInsensitiveContains(filter))
+            $0.theme.appearance == appearance && matches($0.theme)
                 && ($0.isPicked(picked) || !isHidden($0.theme.name))
         }.sorted { ($0.isPicked(picked) ? 0 : 1) < ($1.isPicked(picked) ? 0 : 1) }
         let shown = showAll || !filter.isEmpty ? all : Array(all.prefix(Self.collapsed))
@@ -103,7 +117,7 @@ struct ThemeCards: View {
             }
             LazyVGrid(columns: columns, spacing: Space._3) {
                 ForEach(shown) { card in
-                    ThemeCard(theme: card.theme, isSelected: card.isPicked(picked)) { model.set(key, .string(card.value)) }
+                    ThemeCard(theme: card.theme, label: label(card.theme), isSelected: card.isPicked(picked)) { model.set(key, .string(card.value)) }
                         .contextMenu {
                             if !card.isPicked(picked) {
                                 Button(Words.text("settings-appearance-hide-theme", fallback: "Hide theme")) { setHidden(card.theme.name, true) }

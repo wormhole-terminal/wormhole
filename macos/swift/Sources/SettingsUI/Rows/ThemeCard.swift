@@ -6,6 +6,8 @@ import SwiftUI
 
 struct ThemeCard: View {
     let theme: Theme
+    /// What the band says: the theme's name, or its family's where the shelf holds one version of it.
+    var label: String?
     let isSelected: Bool
     let action: () -> Void
     @Environment(\.tokens) private var tokens
@@ -38,7 +40,7 @@ struct ThemeCard: View {
                 }
                 .frame(height: Self.sceneHeight)
                 HStack {
-                    Text(theme.name).textRole(.label, weight: .medium).lineLimit(1)
+                    Text(label ?? theme.name).textRole(.label, weight: .medium).lineLimit(1)
                         .foregroundStyle(isSelected ? own.primary : own.textPrimary)
                     Spacer(minLength: 0)
                     if isSelected { Image(Icon.check).font(.system(size: Metric.glyph, weight: .semibold)).foregroundStyle(own.primary) }
@@ -54,7 +56,7 @@ struct ThemeCard: View {
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
         .motion(Motion.press, value: hovering)
-        .accessibilityLabel(theme.name)
+        .accessibilityLabel(label ?? theme.name)
         .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
