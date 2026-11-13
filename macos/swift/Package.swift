@@ -73,7 +73,7 @@ var targets: [Target] = [
     // tab sets, as plain values. Foundation and the workspace model.
     .target(name: "PanesModel", dependencies: ["WorkspaceModel", "WordsModel"]),
     // The panes' area with headers, dividers and drop hints, the title row's pieces and the tab bar.
-    .target(name: "PanesUI", dependencies: ["PanesModel", "WorkspaceModel", "DesignSystem", "WordsModel"]),
+    .target(name: "PanesUI", dependencies: ["PanesModel", "WorkspaceModel", "DesignSystem", "WordsModel", "SidebarUI"]),
     .testTarget(name: "PanesTests", dependencies: ["PanesModel", "PanesUI", "WorkspaceModel", "DesignSystem"]),
     // The secondary windows' data as plain values and pure logic: the intro's timing and ship, the first-run
     // steps, licenses, updates, session hosts, agent access, trust and the close questions. Foundation only.

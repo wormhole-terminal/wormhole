@@ -6,6 +6,7 @@
 import DesignSystem
 import PlatformModel
 import PanesUI
+import SidebarUI
 import SwiftUI
 import WordsModel
 import WorkspaceModel
@@ -29,7 +30,7 @@ struct StatusBar: View {
     var spokenAttention: (String, UInt64) -> String? = { _, _ in nil }
     var spokenCount: (Int, Activity) -> String? = { _, _ in nil }
     /// A terminal's tile as its row draws it (the agent's logo, the status light), for the attention button; nil draws the dot.
-    var tile: ((TerminalID, CGFloat) -> AnyView)?
+    var tile: ((TerminalID, CGFloat) -> TerminalStatusTile?)?
     let select: @MainActor (TerminalID) -> Void
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
@@ -60,7 +61,7 @@ struct StatusBar: View {
             if let waiting = summary.attention {
                 Button { select(waiting.id) } label: {
                     HStack(spacing: Space._1) {
-                        if let tile { tile(waiting.id, Chrome.statusTile) } else { StatusDot(.attention) }
+                        if let mark = tile?(waiting.id, Chrome.statusTile) { mark } else { StatusDot(.attention) }
                         Text(waiting.title).lineLimit(1)
                         if let since = waiting.since, let waited = waited(since) {
                             WaitedWords(prefix: detail.words ? Words.text("window-state-needs-input", fallback: "needs input") + " · " : "", first: waited, waited: { self.waited(since) })

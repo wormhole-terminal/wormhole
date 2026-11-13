@@ -8,10 +8,10 @@ import WorkspaceModel
 
 extension WindowHub {
     /// The tile of terminal `id` at `size`; draws nothing for a terminal the window does not list.
-    func tileMaker(appearance: SidebarAppearance) -> (TerminalID, CGFloat) -> AnyView {
+    func tileMaker(appearance: SidebarAppearance) -> (TerminalID, CGFloat) -> TerminalStatusTile? {
         { [unowned self] id, size in
-            guard let terminal = state.all.first(where: { $0.id == id }) else { return AnyView(EmptyView()) }
-            return AnyView(TerminalStatusTile(terminal: terminal, size: size, appearance: appearance))
+            guard let terminal = state.all.first(where: { $0.id == id }) else { return nil }
+            return TerminalStatusTile(terminal: terminal, size: size, appearance: appearance)
         }
     }
 

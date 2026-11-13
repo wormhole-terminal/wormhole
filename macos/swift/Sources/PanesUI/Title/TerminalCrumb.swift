@@ -4,13 +4,14 @@
 
 import DesignSystem
 import PanesModel
+import SidebarUI
 import SwiftUI
 import WorkspaceModel
 
 struct TerminalCrumb: View {
     let plan: TitlePlan
     /// The row's own tile (the agent's logo with its live status), when the window gives one.
-    var tile: AnyView?
+    var tile: TerminalStatusTile?
     @Environment(\.tokens) private var tokens
 
     var body: some View {

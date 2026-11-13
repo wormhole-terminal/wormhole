@@ -2,6 +2,7 @@
 
 import DesignSystem
 import PanesModel
+import SidebarUI
 import SwiftUI
 import WorkspaceModel
 
@@ -23,7 +24,7 @@ public struct TabBarActions {
     public var groupMenu: @MainActor (GroupID) -> NSMenu? = { _ in nil }
     /// A terminal's tile as its row in the list draws it (the agent's logo, the status light and badge), at this size
     /// (`tab_bar.rs` `tile_for`); nil draws the plain tile with the state's dot.
-    public var tile: ((TerminalID, CGFloat) -> AnyView)?
+    public var tile: ((TerminalID, CGFloat) -> TerminalStatusTile?)?
     /// A set's terminals in the order a card shows their tiles: the loudest first.
     public var loudest: ([TerminalID]) -> [TerminalID] = { $0 }
     /// What a group's colour washes its card with in the switcher, in this theme; nil for a group with none.

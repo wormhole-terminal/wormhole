@@ -5,6 +5,7 @@
 
 import DesignSystem
 import PanesModel
+import SidebarUI
 import SwiftUI
 import WorkspaceModel
 
@@ -19,7 +20,7 @@ struct PaneHeader<Menu: View>: View {
     let focus: () -> Void
     let zoom: () -> Void
     let close: () -> Void
-    var tile: AnyView?
+    var tile: TerminalStatusTile?
     /// The keys the keymap has for Zoom and Close, said in their tooltips.
     var zoomKey: String?
     var closeKey: String?

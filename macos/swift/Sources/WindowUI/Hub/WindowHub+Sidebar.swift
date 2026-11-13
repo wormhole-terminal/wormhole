@@ -108,7 +108,7 @@ extension WindowHub {
         bar.groupMenu = actions.groupMenu
         // A tab's and a card's tiles are the rows' own (the agent's logo, the status light and badge).
         bar.tile = { [unowned self] id, size in
-            AnyView(state.all.first { $0.id == id }.map { TerminalStatusTile(terminal: $0, size: size, appearance: appearance) })
+            state.all.first { $0.id == id }.map { TerminalStatusTile(terminal: $0, size: size, appearance: appearance) }
         }
         bar.loudest = { [unowned self] ids in
             TerminalStatusTile.loudestFirst(ids.compactMap { id in state.all.first { $0.id == id } }).map(\.id)

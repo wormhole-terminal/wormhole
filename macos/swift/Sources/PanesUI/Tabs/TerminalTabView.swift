@@ -5,13 +5,14 @@
 
 import DesignSystem
 import PanesModel
+import SidebarUI
 import SwiftUI
 
 struct TerminalTabView: View {
     let tab: TabItem
     let selected: Bool
     let hints: Bool
-    var tile: AnyView?
+    var tile: TerminalStatusTile?
     let close: () -> Void
     @State private var hovering = false
     @Environment(\.tokens) private var tokens

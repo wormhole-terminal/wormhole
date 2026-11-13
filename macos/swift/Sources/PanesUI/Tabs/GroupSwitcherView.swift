@@ -176,7 +176,7 @@ struct SetCardView: View {
     /// The members' tiles as the list's rows draw them, loudest first; the plain tiles where the window gives none.
     @ViewBuilder private var memberTiles: some View {
         if let tile = actions.tile {
-            ForEach(Array(actions.loudest(set.members).prefix(Self.tiles)), id: \.self) { tile($0, Metric.tileMini) }
+            ForEach(Array(actions.loudest(set.members).prefix(Self.tiles)), id: \.self) { id in if let mini = tile(id, Metric.tileMini) { mini } }
         } else {
             ForEach(Array(card.activities.prefix(Self.tiles).enumerated()), id: \.offset) { _, activity in TerminalTile(activity: activity, size: Metric.tileMini) }
         }
