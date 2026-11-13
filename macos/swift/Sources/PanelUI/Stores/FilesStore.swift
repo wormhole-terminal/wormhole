@@ -14,6 +14,8 @@ public final class FilesStore {
     public private(set) var terminalFolder: String?
     public private(set) var chosen: String?
     public internal(set) var selected: String?
+    /// ↩ on the path button asked for its menu (`Line::Head` in `press_row`): the button opens it under itself.
+    public internal(set) var pathMenuRequests = 0
     public internal(set) var pins: [String] = []
     public internal(set) var viewing: String?
     public internal(set) var content = FileContent.reading

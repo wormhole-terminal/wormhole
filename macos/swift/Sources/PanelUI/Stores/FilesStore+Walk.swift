@@ -22,6 +22,11 @@ extension FilesStore: PanelWalking {
     public var following: Bool { viewing != nil }
 
     public func press(_ row: WalkRow, space: Bool, following: Bool) {
+        // The path button: ↩ opens its menu (not while the keys only moved onto it with the viewer up).
+        if row.id == Self.headID {
+            if !following { pathMenuRequests += 1 }
+            return
+        }
         guard let entry = rows.first(where: { $0.path == row.id }), !following || entry.kind == .file else { return }
         click(entry)
     }

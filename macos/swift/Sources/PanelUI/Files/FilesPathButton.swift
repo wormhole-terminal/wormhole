@@ -10,6 +10,8 @@ import SwiftUI
 struct FilesPathButton: View {
     let store: FilesStore
     @State private var hovering = false
+    @State private var frame = CGRect.zero
+    @Environment(\.showKeyMenu) private var showKeyMenu
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -29,6 +31,8 @@ struct FilesPathButton: View {
             }
             .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
             .walkRow(FilesStore.headID)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0 }
+            .onChange(of: store.pathMenuRequests) { showKeyMenu(nsMenu(menu), frame) }
             .onHover { hovering = $0 }
             .help(DiskName.shown(root))
             .accessibilityLabel(panelText("files-spoken-path-button", ["name": .text(menu.shownName)], "\(menu.shownName), folder, opens the path menu"))
@@ -55,6 +59,31 @@ struct FilesPathButton: View {
         }
         Button(panelText("files-menu-choose-folder", "Choose Folder\u{2026}"), action: store.chooseFolder)
         if menu.canFollow { Button(panelText("files-menu-follow-terminal", "Follow Terminal"), action: store.followTerminal) }
+    }
+
+    /// The same menu as AppKit's, for ↩ on the button: a SwiftUI `Menu` opens only by a click.
+    private func nsMenu(_ menu: PathMenuModel) -> NSMenu {
+        let out = NSMenu()
+        out.autoenablesItems = false
+        func add(_ title: String, path: String? = nil, checked: Bool = false, run: @escaping () -> Void) {
+            let item = ActionMenuItem(title, checked: checked, run: run)
+            if let path { item.image = icon(path) }
+            out.addItem(item)
+        }
+        for (index, folder) in menu.folders.enumerated() {
+            add(folder.name, path: folder.path, checked: index == 0) { if index > 0 { store.choose(folder.path) } }
+        }
+        if !menu.pinned.isEmpty {
+            out.addItem(.separator())
+            for pin in menu.pinned { add(pin.name, path: pin.path) { store.choose(pin.path) } }
+        }
+        out.addItem(.separator())
+        add(menu.isPinned ? panelText("files-menu-unpin", ["name": .text(menu.shownName)], "Unpin \u{201c}\(menu.shownName)\u{201d}") : panelText("files-menu-pin", ["name": .text(menu.shownName)], "Pin \u{201c}\(menu.shownName)\u{201d}")) {
+            store.setPinned("", !menu.isPinned)
+        }
+        add(panelText("files-menu-choose-folder", "Choose Folder\u{2026}")) { store.chooseFolder() }
+        if menu.canFollow { add(panelText("files-menu-follow-terminal", "Follow Terminal")) { store.followTerminal() } }
+        return out
     }
 
     /// Finder's own icon for a folder, unless it is not on this Mac's disk (a share, another volume): asking the system for
