@@ -71,7 +71,7 @@ extension WorkspaceState {
 
     /// The row's own summary (it has the git and notes counts) when it is listed, else the all-terminals one of a folded group.
     /// The row has no `since` (when it got into its state): that comes from the all-terminals one.
-    var selectedTerminal: TerminalSummary? {
+    public var selectedTerminal: TerminalSummary? {
         guard var row = terminals.first(where: { $0.id == selected }) else { return all.first { $0.id == selected } }
         row.since = row.since ?? all.first { $0.id == selected }?.since
         return row

@@ -5,6 +5,7 @@
 
 #if WITH_UNIFFI
     import AppKit
+    import TerminalCore
     import TerminalMetal
     import UniFFISource
     import WormholeBindings

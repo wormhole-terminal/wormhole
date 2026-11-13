@@ -16,28 +16,28 @@ final class ExtraKeys {
     func start() {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            MainActor.assumeIsolated { self?.handle(event) ?? event }
+            MainActor.assumeIsolated { self?.runs(event) ?? false } ? nil : event
         }
     }
 
-    /// nil when the key was this table's to run.
-    private func handle(_ event: NSEvent) -> NSEvent? {
+    /// True when the key was this table's to run.
+    private func runs(_ event: NSEvent) -> Bool {
         // Only a window of the workspace: a sheet, Settings or the Studio read their own keys.
         guard !event.isARepeat, let window = event.window, let session = app.sessions.first(where: { $0.window === window }),
             let spec = Self.spec(of: event)
-        else { return event }
+        else { return false }
         let keymap = Keymap.shared
         let inMenus = Self.menuActions(keymap.layout)
         guard let entry = keymap.entries.first(where: { $0.isLive && $0.keys.contains { $0.sameKey(spec) } }),
             entry.scope == .app, app.router.implemented.contains(entry.id)
-        else { return event }
+        else { return false }
         // The first key of an action in a menu is that item's key equivalent: AppKit runs it, with its enabled state.
-        if inMenus.contains(entry.id), entry.keys.first?.sameKey(spec) == true { return event }
+        if inMenus.contains(entry.id), entry.keys.first?.sameKey(spec) == true { return false }
         // What the menus hide (its feature is off in this window's profile) or grey, a key does not run either.
         let state = app.menuState(for: session.hub)
-        guard !state.hidden.contains(entry.id), !state.disabled.contains(entry.id) else { return event }
+        guard !state.hidden.contains(entry.id), !state.disabled.contains(entry.id) else { return false }
         app.router.run(entry.id)
-        return nil
+        return true
     }
 
     /// The key press as the table writes it: ⌘ or ⌃⌥ held (the keys a text field never takes), a one-character key.

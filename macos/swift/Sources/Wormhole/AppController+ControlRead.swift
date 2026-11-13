@@ -32,7 +32,7 @@ extension AppController {
             reply("layout \(argument)")
         case "shells":
             // key, name, what it runs, `default` on the default: the keys `new-shell` takes (`-` is the login shell).
-            reply(settingsModel.backend.shellChoices().map { "\($0.key.isEmpty ? "-" : $0.key)\t\($0.name)\t\($0.commandLine)\($0.isDefault ? "\tdefault" : "")" }.joined(separator: "\n"))
+            reply(settingsModel.host.shellChoices().map { "\($0.key.isEmpty ? "-" : $0.key)\t\($0.name)\t\($0.commandLine)\($0.isDefault ? "\tdefault" : "")" }.joined(separator: "\n"))
         case "zen":
             switch argument {
             case "": break

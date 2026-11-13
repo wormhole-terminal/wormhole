@@ -13,7 +13,7 @@ private final class StandInDrag: NSObject, NSDraggingInfo {
     private let location: NSPoint
     private weak var window: NSWindow?
 
-    init(path: String, at location: NSPoint, in window: NSWindow) {
+    @MainActor init(path: String, at location: NSPoint, in window: NSWindow) {
         draggingPasteboard = NSPasteboard.withUniqueName()
         draggingPasteboard.writeObjects([URL(fileURLWithPath: path) as NSURL])
         (self.location, self.window) = (location, window)
@@ -32,7 +32,7 @@ private final class StandInDrag: NSObject, NSDraggingInfo {
     var springLoadingHighlight: NSSpringLoadingHighlight { .none }
     func resetSpringLoading() {}
     func slideDraggedImage(to screenPoint: NSPoint) {}
-    func namesOfPromisedFilesDropped(atDestination dropDestination: URL) -> [String]? { nil }
+    override func namesOfPromisedFilesDropped(atDestination dropDestination: URL) -> [String]? { nil }
 
     func enumerateDraggingItems(
         options enumOpts: NSDraggingItemEnumerationOptions = [], for view: NSView?, classes classArray: [AnyClass],
@@ -52,7 +52,9 @@ extension AppController {
             guard words.count == 3, let x = Double(words[0]), let y = Double(words[1]), let window else { reply("error: drag <x> <y> <path>"); return true }
             let point = injector.location(x, y, in: window)
             // The nearest view up from the one under the point that takes drags (a terminal registers for files and text).
-            let target = sequence(first: injector.view(at: point, in: window), next: { $0?.superview }).first { !$0.registeredDraggedTypes.isEmpty }
+            let target = injector.view(at: point, in: window).flatMap { under in
+                sequence(first: under, next: { $0.superview }).first { !$0.registeredDraggedTypes.isEmpty }
+            }
             guard let target else { reply("drag \(argument): nothing under the point takes a drop"); return true }
             let info = StandInDrag(path: words[2], at: point, in: window)
             if let (previous, old) = Hovering.over { previous.draggingExited(old) }

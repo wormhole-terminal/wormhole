@@ -38,8 +38,10 @@
         func start() {
             // The window in front is what a control request without a window acts on (the core cannot see AppKit's key window).
             frontObserver = NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] note in
+                // Which window, as a value: the notification itself does not cross to the main actor.
+                let key = (note.object as? NSWindow).map(ObjectIdentifier.init)
                 MainActor.assumeIsolated {
-                    guard let self, let window = note.object as? NSWindow, let session = self.app.sessions.first(where: { $0.window === window }) else { return }
+                    guard let self, let key, let session = self.app.sessions.first(where: { $0.window.map(ObjectIdentifier.init) == key }) else { return }
                     self.handle.setFrontWindow(Int64(session.id))
                 }
             }
