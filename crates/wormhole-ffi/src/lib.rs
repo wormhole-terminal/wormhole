@@ -175,6 +175,7 @@ pub use split_opening::{
     SplitFrameRecord, SplitOpeningRecord, SplitPlace, SplitRect, split_opening, split_opening_duration_ms,
     split_opening_frame,
 };
+
 pub use settings::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,
     ProbeSheetRecord, ProbesDesk, SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsFlagRow,
@@ -184,6 +185,10 @@ pub use settings::{
     settings_agent_rows, settings_create_profile, settings_delete_profile, settings_import_rows,
     settings_mcp_command, settings_profiles, settings_schema_json, settings_set_agent_hooks,
     settings_set_skill, settings_skill_rows, settings_switch_profile,
+};
+pub use split_opening::{
+    SplitFrameRecord, SplitOpeningRecord, SplitPlace, SplitRect, split_opening, split_opening_duration_ms,
+    split_opening_frame,
 };
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use studio_files::{
