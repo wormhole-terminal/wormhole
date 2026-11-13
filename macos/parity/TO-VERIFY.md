@@ -834,3 +834,47 @@ Written without compiling: expect compile errors.
 | S01/S02 | NOT REAL: `RenameField.font` is already `Font?` (nil is the row's own), so nothing reads `tokens` in a default value | - | `SidebarUI/Row/RenameField.swift:16` |
 | W01 | NOT WRITTEN: the split's opening motion (new pane slides in on the spring, the old terminal keeps its grid's size until the end and is resized once). It needs the core's `split::Opening::of` over two layouts exported through the FFI, and a pane host that holds a terminal at a fixed size while its box changes; writing that blind would risk a resize storm on the PTY | - | `PaneArea.swift` still animates the layout as a whole (`Motion.layout`) |
 | W09/S10 | NOT WRITTEN: the terminal welcome's ending already raised the note; the intro window's is now too (above) | - | - |
+
+## Lane settings-studio, wave 6
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| ST03 | TEST. Set `"notifications": false` with `notify_bell: true` in config.json, open Settings > Notifications | every kind switch reads off; turning one on writes it and sets `notifications` true; turning the last kind off sets it false | `crates/wormhole-ffi/src/settings/state.rs` (`values`, `set_many`, `NOTIFY_KINDS`) |
+| ST03 | Open Notifications in a test instance | the permission row says "Outside the app bundle" with its hint and no button; no real permission prompt | `SettingsUI/Panels/NotifyControl.swift`, `Wormhole/Notices/NoticeFeed+Test.swift` |
+| ST03 | TEST. In a real bundle press Allow notifications, then Send test | macOS asks once; the test row says Waiting, then Sent, or Denied / Unanswered with Open System Settings beside it | `NoticeFeed+Test.swift` (`runTest`, `publishStatus`), `SettingsPlatform.swift` |
+| ST03 | NOT DONE: the test row's "refused with the error" state | the state exists (`NotifyStatus.Test.refused`) but nothing sets it: `SystemNotifier.post` only logs a failure | `PlatformUI/Notifications/SystemNotifier.swift:49` |
+| ST03 | Turn "Needs input" row on a Developer ID build | a Time Sensitive chip and the plain description otherwise | `RowExtras.chip`, `RowCaptions`/`EntryRowView.caption`, `Notifying.deliversTimeSensitive` |
+| SD01 | TEST. Switch to a second profile, open View > Theme Studio, save a theme | the theme file lands in that profile's `themes` folder, and the list shows that folder's themes | `Wormhole/Platform/StudioLauncher.swift` (`themesFolder`), `AppController.swift:80` |
+| SD01 | Switch profile while the Studio is open | NOT handled: the open Studio keeps the folder it opened with; reopen it | `StudioLauncher.show` |
+| ST02 | Appearance > Branch colour > Custom | swatches of the theme's ANSI colours and a colour well; a pick writes `branch_color_custom` and keeps Custom; the row says "Pick a colour below" until one is picked | `SettingsUI/Rows/RowExtras.swift` (`BranchSwatches`), `RowCaptions.branch` |
+| ST02 | Turn blur off and opacity to 80 % | a warning under Blur with "Turn on blur" (hidden while a project sets blur) | `RowExtras.swift` (`BlurWarning`), `settingsBlurUnsafe` |
+| ST02 | Turn on Reduce Transparency or Increase Contrast | the opacity slider is off with the note; Liquid Glass (if on) says why it shows no glass; Liquid Glass wears a Beta chip | `EntryControl.swift`, `RowExtras.swift` |
+| ST02 | Appearance > Primary colour, theme's own off | description says "Yours · #hex" / "Pick a colour below"; swatches of the theme's colours under the row | `RowCaptions.primary`, `RowExtras.swift` (`PrimarySwatches`) |
+| ST02 | Terminal > Terminal font; Fonts > Custom fonts | "JetBrains Mono 14 pt · line height 1.30 · ligatures on" under the font row; "N families found: …" or "None yet" | `RowCaptions.swift` |
+| ST02 | config.json with `scrollback_lines: 75000`, `default_shell` naming a missing profile, `open_in` naming a removed app | "75,000 lines"; the shell row says "Not found: the login shell runs instead"; the app row says "Not installed: …" | `OptionPicker.unknown`, `RowCaptions.gone` |
+| ST02 | Title row list | the flexible space says what it does; Terminal status says the status bar shows it while the bar is on; switching a part on goes through core's `show_title_part` | `PartsList.swift`, `settings/page_rules.rs` |
+| ST02 | Fonts specimen | tabs Terminal / Code / Interface at each slot's family and size (line height 1.4 outside Terminal) and a facts line | `SettingsUI/Preview/FontsScene.swift` |
+| ST02 | Hover Make default terminal | tooltip by state | `EntryControl.swift` |
+| ST03 | TEST. Agent access > a stored approval: untick Run | the tick is kept in the database (`agent_grants.caps`), streams started under it end, the row stays ticked/unticked after a reopen | `crates/wormhole-ffi/src/aux_backends/access/approvals.rs` (`set_capability`), `hook_server/mod.rs` (`set_approval_capability`), `ApprovalList.swift` |
+| ST03 | TEST. Coding agents with a profile that has a login folder for an agent (inside `WORMHOLE_AGENT_HOME`) | a line "<profile> profile · Status hooks on in <folder>" under the agent with Install / Repair / Remove; a folder outside `WORMHOLE_AGENT_HOME` is refused | `crates/wormhole-ffi/src/settings/agent_logins.rs`, `AgentList.swift` |
+| ST03 | Open Coding agents right after the window opens | "Looking for agents…" until the first read lands | `AgentList.swift`, `PanelRecords.agentsRead` |
+| ST03 | Advanced > Reset tips | tooltip says whether a tip was closed for good | `EntryControl.swift` |
+| ST01 | Search for something that does not exist | a card with "Nothing matches …", the config.json sentence, Open config.json and Clear search | `SettingsUI/Pages/ResultsPage.swift` (`NothingMatches`) |
+| ST01 | Search, then pick a section in the nav or "Open <section>" | the section opens with its matches still marked; typing in the search brings the results back | `SettingsModel.swift` (`browsing`, `showsResults`), `SettingsPage.swift`, `SettingsNav.swift` |
+| ST01 | Hook one agent partly (remove an event by hand) | the nav's Coding agents shows a warning dot | `SettingsNav.attention` |
+| ST01 | Open a project that sets a row | the row carries the project's name as a chip, shows no config key or menu, and its swatches/buttons are held back | `EntryRowView.swift` |
+| SD03 | Appearance > theme cards under Dark, Light, Match system | one shelf under Dark or Light, two under Match system; four to a row | `ThemeCards.swift` |
+| SD03 | A user theme file with an unknown key (made with a newer Wormhole) | its card wears a warning mark with "n values were skipped" | `crates/wormhole-ffi/src/theme_resolve.rs` (`list`: `newer`), `ThemeCard.swift` |
+| SD03 | In a trusted project with its own theme | a notice over the cards naming the project, with Project settings | `ThemeCards.projectNotice`, `ProjectSettingsFollower.swift` |
+| SD03 | TEST. Hide a theme (card menu) in Swift, then open the GPUI app on the same profile | the GPUI picker also hides it: `hidden_themes` holds the card's value, by core's rule | `settings/theme_picks.rs` (`theme_hidden`, `set_theme_hidden`), `ThemeCards.swift` |
+| SD03 | Filter themes; arrow keys on a card | placeholder "Filter 60 themes"; "No themes match the filter." when none; arrows, Home and End walk the shelf | `ThemeCards.swift` |
+| SD03 | Hidden themes (n) open | each name has Dark or Light beside it | `ThemeCards.kind(ofHidden:)` |
+| STX1 | Flip two Probe switches quickly | the second waits while the first is read | `ProbesModel.swift` (`pending`), `ProbeRowView.swift` |
+| STX2 | Trust a project from the Project tab, then come back to Settings > Project folders | the page reads again when the window comes forward (not every second) | `ProjectsPanel.swift` |
+| STX2 | Type in the project search, press Return | the first project left is opened | `ProjectsPanel.swift` |
+| STX3 | Turn the "Settings components" flag on | a Components page in the nav with the real controls on sample state; nothing is saved | `SettingsUI/Pages/ComponentsPage.swift`, `SettingsNav.swift`, `SettingsModel.showsComponents` |
+| STX3 | Open Coding agents skills before the first read | no "none found" note until the read lands; each row has the agent's tile | `SkillList.swift` |
+| SD01 | NOT DONE: expression completions from core, core's contrast fixes, metric preview, per-row appearance chip, `DiskThemeFolder`/`VersionPolicy` copies | unchanged | Studio files named in the audit |
+| SD02 | NOT DONE: half-turned status tiles, tooltip/dialog uses, core's `TOKEN_USES`, lazy gallery | unchanged (by construction or speed, see the audit) | `StudioUI/Gallery` |
