@@ -174,11 +174,6 @@ pub use settings::{
 };
 pub use settings::{ProjectListener, ProjectWatch, settings_watch_project};
 
-pub use split_opening::{
-    SplitFrameRecord, SplitOpeningRecord, SplitPlace, SplitRect, split_opening, split_opening_duration_ms,
-    split_opening_frame,
-};
-
 pub use settings::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,
     ProbeSheetRecord, ProbesDesk, SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsFlagRow,
