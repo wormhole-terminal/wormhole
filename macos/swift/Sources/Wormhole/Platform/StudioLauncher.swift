@@ -27,8 +27,9 @@ final class StudioLauncher {
 
     init(
         dataDirectory: URL, themesFolder: (@MainActor () -> URL)? = nil,
-        project: @escaping @MainActor () -> (any StudioProject)? = { nil }
+        project: @escaping @MainActor () -> (any StudioProject)? = { nil }, keyChanged: @escaping @MainActor () -> Void = {}
     ) {
+        controller.onKeyChange = keyChanged
         self.themesFolder = themesFolder ?? { dataDirectory.appendingPathComponent("themes") }
         self.project = project
     }
@@ -36,6 +37,13 @@ final class StudioLauncher {
     var document: StudioDocument? { controller.document }
     var session: StudioSession? { controller.activeSession }
     var isOpen: Bool { controller.isOpen }
+
+    /// What the Edit menu's Undo and Redo name while the Studio is the key window: its draft's own steps (`publish_edit_titles`);
+    /// nil in any other window.
+    var editTitles: (undo: String?, redo: String?)? {
+        guard controller.isKey, let document = controller.document else { return nil }
+        return (document.undoLabel, document.redoLabel)
+    }
 
     /// The menu's Save theme and Duplicate, Export JSON and Copy JSON.
     func saveTheme() async { await controller.saveTheme() }

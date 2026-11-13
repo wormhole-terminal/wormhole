@@ -46,6 +46,12 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
 
     public var isOpen: Bool { window != nil }
 
+    /// Whether the Studio is the key window, and the app hearing that it became or stopped being it (the Edit menu's words follow).
+    public var isKey: Bool { window?.isKeyWindow == true }
+    public var onKeyChange: (@MainActor () -> Void)?
+    public func windowDidBecomeKey(_ notification: Notification) { onKeyChange?() }
+    public func windowDidResignKey(_ notification: Notification) { onKeyChange?() }
+
     /// Closes the window as the red light does: unsaved edits are asked about first (⌥⌘, with the Studio open).
     public func close() { window?.performClose(nil) }
 

@@ -82,7 +82,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     lazy var settingsModel = AppSettings.makeModel(app: self)
     private(set) lazy var studio = StudioLauncher(
         dataDirectory: dataDirectory, themesFolder: { [unowned self] in self.themes.themesDirectory ?? self.dataDirectory.appendingPathComponent("themes") },
-        project: { [unowned self] in StudioProjects.source(app: self) })
+        project: { [unowned self] in StudioProjects.source(app: self) },
+        keyChanged: { [unowned self] in self.menus?.windowsChanged() })
     private(set) lazy var folderPicking = FolderPicking(app: self)
     private(set) lazy var router = ActionRouter(app: self)
     /// Where Go to Waiting (true) and Go to Finished (false) went last, so the next press goes on.

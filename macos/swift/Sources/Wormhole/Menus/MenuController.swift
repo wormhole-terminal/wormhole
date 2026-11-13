@@ -37,7 +37,10 @@ final class MenuController {
 
     private func refresh() {
         let state = withObservationTracking {
-            app.menuState(for: app.hub)
+            var state = app.menuState(for: app.hub)
+            // A window with a history of its own (the Theme Studio) names what Undo and Redo would do in it.
+            if let titles = app.studio.editTitles { (state.undo, state.redo) = titles }
+            return state
         } onChange: { [weak self] in
             Task { @MainActor in self?.refresh() }
         }
