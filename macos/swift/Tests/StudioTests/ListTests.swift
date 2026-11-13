@@ -49,20 +49,6 @@ final class ListTests: XCTestCase {
             .contains("checkbox.checked"))
     }
 
-    func testTheVersionPolicyThinsByAge() {
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        func ago(_ seconds: Double) -> Date { now.addingTimeInterval(-seconds) }
-        let saves: [(Date, Bool)] = [
-            (ago(300), false), (ago(1200), false), (ago(3 * 3600 + 600), false), (ago(3 * 3600 + 300), false),
-            (ago(5 * 3600), false), (ago(2 * 86_400), false), (ago(40 * 86_400), false), (ago(400 * 86_400), true),
-        ]
-        let keep = VersionPolicy.keep(saves, now: now)
-        XCTAssertEqual(Array(keep[..<5]), [true, true, false, true, true])
-        XCTAssertTrue(keep[5])
-        XCTAssertEqual(Array(keep[6...]), [false, true], "too old goes, the pinned original stays")
-        XCTAssertEqual(VersionPolicy.keep((0..<300).map { (ago(Double($0)), false) }, now: now).filter { $0 }.count, 120)
-    }
-
     func testFileNames() {
         XCTAssertEqual(ThemeFileNames.fileName(for: "Soltari / Night"), "Soltari  Night.json")
         XCTAssertEqual(ThemeFileNames.exportName("Tokyo Night Custom"), "tokyo-night-custom.json")

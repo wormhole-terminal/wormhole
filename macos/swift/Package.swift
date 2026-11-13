@@ -157,7 +157,7 @@ if ffiLinked {
         // profiles. Replaces the mock backend and host.
         .target(name: "SettingsBridge", dependencies: ["SettingsModel", "FontPickerModel", "DesignSystem", "WormholeBindings"]),
         // The Theme Studio's theme file rules from the core: formats, copies, pairs, updates (`StudioFiles`).
-        .target(name: "StudioBridge", dependencies: ["StudioModel", "WormholeBindings"]),
+        .target(name: "StudioBridge", dependencies: ["StudioModel", "DesignSystem", "WormholeBindings"]),
         .testTarget(name: "SettingsBridgeTests", dependencies: ["SettingsBridge", "SettingsModel", "FontPickerModel", "WormholeBindings"]),
         // The auxiliary windows' backends (update, session hosts, project trust, agent access, first run, licenses).
         .target(name: "AuxBridge", dependencies: ["AuxModel", "PlatformModel", "WormholeBindings"]),

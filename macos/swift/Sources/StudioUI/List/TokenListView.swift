@@ -57,7 +57,8 @@ struct TokenListView: View {
             ForEach(group.tokens, id: \.self) { token in
                 TokenRowView(
                     name: token, value: document.row(for: token), isSelected: document.selected == token, isLow: low.contains(token),
-                    isChanged: document.isChanged(token), origin: document.origin(of: token), baseFrom: document.update.from, selection: selection
+                    isChanged: document.isChanged(token), origin: document.origin(of: token), baseFrom: document.update.from,
+                    reach: document.file.isPair ? ReachChip(document: document, token: token) : nil, selection: selection
                 ) { document.selected = token }
                 .id(token)
             }

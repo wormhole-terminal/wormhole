@@ -33,8 +33,32 @@ final class ThemeFilesFFITests: XCTestCase {
 
     private func environment() -> StudioEnvironment {
         StudioEnvironment(
-            resolver: FfiThemeResolver(), folder: DiskThemeFolder(directory: folder), knowledge: GalleryKnowledge(),
+            resolver: FfiThemeResolver(), folder: FfiThemeFolder(directory: folder), knowledge: GalleryKnowledge(),
             files: FfiStudioFiles(directory: folder))
+    }
+
+    // MARK: The folder and the editor's help, through core
+
+    func testASaveKeepsWhatItReplacedAsAVersionAndCoreReadsItBack() throws {
+        let themes = FfiThemeFolder(directory: folder)
+        let file = folder.appendingPathComponent("Mine.json")
+        let before = try themes.read(file)
+        try themes.write("{ \"name\": \"Mine\" }\n", to: file)
+        let kept = try XCTUnwrap(themes.versions(of: file).first)
+        XCTAssertTrue(kept.pinned, "a file written by hand is kept as the pinned original")
+        XCTAssertEqual(try themes.readVersion(kept), before)
+        XCTAssertEqual(themes.files().map(\.lastPathComponent), ["Mine.json"])
+    }
+
+    func testCoreOffersFunctionsAndNamesAtTheCaretAndFixesAPairThatFallsShort() throws {
+        let files = FfiStudioFiles(directory: folder)
+        let found = try XCTUnwrap(files.completions("mix(pri", caret: 7, target: "primary.hover"))
+        XCTAssertEqual(found.range, 4..<7)
+        XCTAssertTrue(found.items.contains { $0.label == "primary" && !$0.function })
+        XCTAssertNil(files.completions("primary", caret: 7, target: "primary.hover"), "a finished name offers nothing")
+        let weak = "{ \"name\": \"Weak\", \"extends\": \"Nord\", \"ui\": { \"text.muted\": \"#333847\" } }"
+        let issue = try XCTUnwrap(files.contrastIssues(weak, shown: nil).first { $0.check.fg == "text.muted" })
+        XCTAssertTrue(try XCTUnwrap(issue.fix).expression.hasPrefix("readable(#333847"))
     }
 
     // MARK: Picks (audit gap 7)

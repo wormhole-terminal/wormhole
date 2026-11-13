@@ -63,7 +63,7 @@ final class StudioLauncher {
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)
             SketchSource.preset = { WindowSketches.blocks(preset: $0, width: $1) }
             let environment = StudioEnvironment(
-                resolver: FfiThemeResolver(), folder: DiskThemeFolder(directory: themes), knowledge: GalleryKnowledge(),
+                resolver: FfiThemeResolver(), folder: FfiThemeFolder(directory: themes), knowledge: GalleryKnowledge(),
                 files: FfiStudioFiles(directory: themes), project: project(),
                 exportFolder: ExportFolder(
                     recall: { studioExportDir().map { URL(fileURLWithPath: $0) } },
