@@ -1,10 +1,11 @@
 // Colours a diff's lines. A hunk is read as the two files it lies between: the old side is its context and removed
 // lines, the new side its context and added lines, each run through the highlighter in order, so a block comment or a
-// string that spans lines is read the way the file reads it. A context line takes the new side's colours.
+// string that spans lines is read the way the file reads it. A context line takes the new side's colours. A diff the core
+// coloured from the whole files (every real one) is left alone: this is for the sample's diffs.
 
 public enum DiffHighlighting {
     public static func apply(to file: inout DiffFile, with highlighter: some SyntaxHighlighting) {
-        guard !file.isBinary, !file.noHighlight else { return }
+        guard !file.isBinary, !file.noHighlight, !file.coloredByCore else { return }
         let path = file.path
         for h in file.hunks.indices {
             let lines = file.hunks[h].lines

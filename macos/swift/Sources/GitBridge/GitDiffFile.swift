@@ -5,6 +5,9 @@
 import PanelModel
 import WormholeBindings
 
+/// The names of the keys a line's runs count by (`syntax_keys`), asked of the core once.
+private let keyNames: [String] = syntaxKeys()
+
 extension DiffFile {
     init(_ file: GitDiffFile, isBinary: Bool = false) {
         let hunks = file.hunks.map { hunk in
@@ -13,6 +16,8 @@ extension DiffFile {
         self.init(oldPath: file.oldPath, newPath: file.newPath, isBinary: isBinary, hunks: hunks)
         modeChange = file.modeChange
         noHighlight = file.highlightSkipped
+        // The lines came with the colours the core read from the whole files: nothing colours them again.
+        coloredByCore = true
         let note = { (note: GitSideNote?) in note.map { SideNote(text: $0.text, detail: $0.detail, oid: $0.oid) } }
         notes = DiffNotes(split: file.notes.split.map(note), unified: note(file.notes.unified))
     }
@@ -27,6 +32,10 @@ extension DiffLine {
             case .removed: .removed
             }
         self.init(kind: kind, oldNumber: line.old.map(Int.init), newNumber: line.new.map(Int.init), text: line.text, noNewline: line.noNewline, openLine: line.openLine.map(Int.init))
+        spans = SyntaxSpan.inCharacters(
+            line.spans.compactMap { run -> (range: Range<Int>, key: String)? in
+                Int(run.key) < keyNames.count ? (range: Int(run.start)..<Int(run.end), key: keyNames[Int(run.key)]) : nil
+            }, of: line.text)
     }
 }
 

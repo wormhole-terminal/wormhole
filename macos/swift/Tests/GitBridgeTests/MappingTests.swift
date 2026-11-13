@@ -55,7 +55,7 @@ import WormholeBindings
     }
 
     @Test func aTextDiffIsCoresParsedHunksAndTheOtherKindsSayWhyInCoresWords() throws {
-        let line = GitDiffLine(kind: .added, old: nil, new: 1, text: "y", noNewline: true, openLine: 1)
+        let line = GitDiffLine(kind: .added, old: nil, new: 1, text: "y", noNewline: true, openLine: 1, spans: [])
         let file = GitDiffFile(oldPath: "a", newPath: "a", hunks: [GitHunk(header: "@@ -1 +1 @@", lines: [line])], modeChange: nil, highlightSkipped: false, notes: GitDiffNotes(split: [], unified: nil))
         let parsed = try GitDiff.text(file: file).file()
         #expect(parsed.hunks[0].header == "@@ -1 +1 @@" && parsed.hunks[0].lines == [DiffLine(kind: .added, newNumber: 1, text: "y", noNewline: true)])

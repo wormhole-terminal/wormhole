@@ -39,6 +39,8 @@ enum PanelBackendsFactory {
         }
         #if WITH_UNIFFI
             guard options.isReal else { return made }
+            // The viewer's colours are the core's (tree-sitter); a diff's lines arrive coloured.
+            backends.syntax = CoreSyntaxHighlighter()
             let effects = effects as? PanelEffects
             if let effects {
                 let authenticator: any Authenticating = policy.touchesSystem ? LocalAuthenticator() : ScriptedAuthenticator()

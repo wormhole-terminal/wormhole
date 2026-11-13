@@ -11,7 +11,7 @@ public struct DiffLine: Hashable, Sendable {
     public var openLine: Int?
     /// Git says the file ends without a newline after this line.
     public var noNewline = false
-    /// The syntax colours of `text`, filled in by `DiffHighlighting`; empty until then.
+    /// The syntax colours of `text`: the core's when the diff came from it, else filled in by `DiffHighlighting`.
     public var spans: [SyntaxSpan] = []
 
     public init(kind: Kind, oldNumber: Int? = nil, newNumber: Int? = nil, text: String, noNewline: Bool = false, openLine: Int? = nil) {
@@ -69,6 +69,8 @@ public struct DiffFile: Hashable, Sendable {
     public var modeChange: String?
     /// More lines than core colours: shown plain, with the badge "No highlighting".
     public var noHighlight = false
+    /// The lines' spans are the core's, read from the whole old and new file: `DiffHighlighting` leaves them as they are.
+    public var coloredByCore = false
     public var isLFS = false
     /// The longest line as drawn, in characters (tabs and marks spelled out, capped): measured once when the diff is read, so
     /// an unwrapped layout never measures lines again.

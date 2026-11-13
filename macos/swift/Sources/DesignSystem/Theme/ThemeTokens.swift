@@ -22,8 +22,11 @@ public struct ThemeTokens: Sendable, Equatable {
     /// A token by its Rust name; magenta for a name that doesn't exist.
     public func color(named name: String) -> Color { (ui[name] ?? Self.missing).color }
 
-    /// The colour of a syntax key (`keyword`, `string`); an unknown key falls back to `variable`, as in Rust.
-    public func syntaxStyle(_ key: String) -> SyntaxStyle? { syntax[key] ?? syntax["variable"] }
+    /// The colour of a syntax key (`keyword`, `string`). A key the theme does not style takes its first segment's
+    /// (`tag.doctype` is `tag`, as the GPUI app's syntax theme resolves it), and an unknown one falls back to `variable`, as in Rust.
+    public func syntaxStyle(_ key: String) -> SyntaxStyle? {
+        syntax[key] ?? key.split(separator: ".").first.flatMap { syntax[String($0)] } ?? syntax["variable"]
+    }
 
     /// Every UI token name, sorted: what the Studio and tests walk.
     public var names: [String] { ui.keys.sorted() }
