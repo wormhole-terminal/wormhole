@@ -6,6 +6,7 @@
 import Foundation
 import PlatformModel
 import UserNotifications
+import WordsModel
 
 @MainActor
 public final class SystemNotifier: Notifying {
@@ -47,7 +48,7 @@ public final class SystemNotifier: Notifying {
         // The same identifier replaces a terminal's earlier notification; a nil trigger delivers now.
         let request = UNNotificationRequest(identifier: notice.id, content: NoticeContent.content(notice), trigger: nil)
         center.add(request) { error in
-            if let error { NSLog("posting a notification failed: \(error.localizedDescription)") }
+            if let error { AppLog.log("error", "posting a notification failed: \(error.localizedDescription)") }
         }
     }
 

@@ -25,9 +25,19 @@ final class HookBridgeTests: XCTestCase {
         try config.write(to: data.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
         // The library refuses to touch anything but the experiment's own folder.
         setenv("WORMHOLE_DATA_DIR", data.path, 1)
+        // Every hook client these tests start reads the agent's home (the usage lookup of `--agent codex` reads under
+        // `$CODEX_HOME`): a scratch one, so no test reads or writes under the owner's real home.
+        let agentHome = root.appendingPathComponent("agent-home")
+        try FileManager.default.createDirectory(at: agentHome, withIntermediateDirectories: true)
+        setenv("WORMHOLE_AGENT_HOME", agentHome.path, 1)
+        setenv("CODEX_HOME", agentHome.appendingPathComponent(".codex").path, 1)
+        setenv("CLAUDE_CONFIG_DIR", agentHome.appendingPathComponent(".claude").path, 1)
     }
 
-    override func tearDown() async throws { try? FileManager.default.removeItem(at: root) }
+    override func tearDown() async throws {
+        for name in ["WORMHOLE_AGENT_HOME", "CODEX_HOME", "CLAUDE_CONFIG_DIR"] { unsetenv(name) }
+        try? FileManager.default.removeItem(at: root)
+    }
 
     private func makeServer() throws -> (Workspace, HookServerHandle) {
         let workspace = Workspace(

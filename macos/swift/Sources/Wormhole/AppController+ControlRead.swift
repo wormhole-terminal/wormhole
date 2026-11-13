@@ -47,11 +47,19 @@ extension AppController {
             hub.send(.newTerminalIn(NSString(string: argument).expandingTildeInPath))
             reply("new \(argument)")
         case "new-shell":
-            // `new-shell <key>`: a terminal running the shell the key names (`shells` lists the keys). A folder is not taken: the
-            // action starts where the app starts a plain new terminal.
-            let words = argument.split(separator: " ").map(String.init)
-            guard words.count == 1 else { reply("error: expected <key> (`shells` lists the keys; `-` is the login shell)"); return true }
-            hub.send(.newTerminalWithShell(words[0] == "-" ? "" : words[0]))
+            // `new-shell <key> [dir]`: a terminal running the shell the key names (`shells` lists the keys), in `dir` (`~/` is
+            // the home folder) or where the selected one is.
+            let parts = argument.split(separator: " ", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+            guard let first = parts.first, !first.isEmpty else {
+                reply("error: expected <key> [dir] (`shells` lists the keys; `-` is the login shell)")
+                return true
+            }
+            let key = first == "-" ? "" : first
+            if parts.count == 2, !parts[1].isEmpty {
+                hub.send(.newTerminalWithShellIn(key: key, folder: NSString(string: parts[1]).expandingTildeInPath))
+            } else {
+                hub.send(.newTerminalWithShell(key))
+            }
             reply("new-shell \(argument)")
         case "close" where Int(argument) != nil:
             // `close <n>`: row n closes at once, without the question the × asks (a no-argument `close` is the selected one's).

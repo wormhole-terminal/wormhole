@@ -2,6 +2,7 @@
 // GPUI app's `app/logging.rs`), and the app's own lines go into the same daily files through `log`.
 
 import Foundation
+import WordsModel
 
 #if WITH_UNIFFI
     import WormholeBindings
@@ -14,6 +15,8 @@ enum LaunchLogging {
         #if WITH_UNIFFI
             _ = loggingStart()
             makeDataDirPrivate()
+            // The modules below the app log through `AppLog`; their lines land in the same files.
+            AppLog.install { level, message in logLine(level: level, message: message) }
         #endif
     }
 

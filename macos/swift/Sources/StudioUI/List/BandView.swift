@@ -5,6 +5,7 @@
 import DesignSystem
 import StudioModel
 import SwiftUI
+import WordsModel
 
 struct BandView: View {
     let group: TokenGroup
@@ -67,6 +68,6 @@ struct ChangedDot: View {
 
     var body: some View {
         Circle().fill(tokens.primary).frame(width: Metric.statusDot / 2, height: Metric.statusDot / 2)
-            .accessibilityLabel("changed")
+            .accessibilityLabel(Words.text("studio-changed-dot", fallback: "Changed"))
     }
 }

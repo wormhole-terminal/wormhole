@@ -4,8 +4,8 @@
 
 import AppKit
 import DesignSystem
-import OSLog
 import TerminalCore
+import WordsModel
 
 /// How a link is opened; the system's by default, replaced in tests.
 public enum LinkOpener {
@@ -20,8 +20,6 @@ public enum LinkOpener {
         }
     }
 }
-
-private let log = Logger(subsystem: "app.getwormhole.terminal.swift", category: "links")
 
 extension MetalTerminalView {
     /// The pointer moved, or Command went down or up: underline the link under it while Command is held.
@@ -46,7 +44,7 @@ extension MetalTerminalView {
         let target = interaction.openTarget(for: link.uri)
         if target == .refused {
             // The scheme only: the rest of a link can be private.
-            log.info("a terminal link wasn't opened: \(link.uri.split(separator: ":").first.map(String.init) ?? "", privacy: .public) is not a kind that is allowed")
+            AppLog.log("info", "a terminal link wasn't opened: \(link.uri.split(separator: ":").first.map(String.init) ?? "") is not a kind that is allowed")
         }
         linkOpener(target)
         return true

@@ -1,0 +1,20 @@
+{
+  "format": "wormhole-perf",
+  "format_version": 1,
+  "measured": null,
+  "machine": null,
+  "note": "Empty skeleton: it needs one measuring run (macos/scripts/perf-compare.sh) on the machine before it holds numbers. Same shape as tools/bench/baselines/<machine>.json.",
+  "workloads": {
+    "warptunnel": { "draw_avg_ms": null, "draw_max_ms": null, "main_busy_pct": null },
+    "matrix": { "draw_avg_ms": null, "draw_max_ms": null, "main_busy_pct": null },
+    "flood-ascii": { "draw_avg_ms": null, "draw_max_ms": null, "main_busy_pct": null },
+    "flood-truecolor": { "draw_avg_ms": null, "draw_max_ms": null, "main_busy_pct": null }
+  },
+  "throughput": {
+    "tests": {
+      "logflood": { "mbps": null },
+      "colorflood": { "mbps": null },
+      "cursorstorm": { "mbps": null }
+    }
+  }
+}

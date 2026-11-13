@@ -203,6 +203,7 @@ public final class WindowFocus {
         let area = current()
         let find = hub.selectedOverlay?.find
         let detail = hub.panel.cover != nil || find?.isOpen == true
+        // `popup` is false as in GPUI (`window/focus/mod.rs`): a native menu is modal, so no key reaches here while one is open.
         switch Focus.rules.escape(terminal: area == .terminal, popup: false, detail: detail) {
         case .toShell, .closePopup:
             return false

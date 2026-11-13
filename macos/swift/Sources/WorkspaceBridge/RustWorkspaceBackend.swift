@@ -117,6 +117,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
             syncVisibility()
         }
         if case .newTerminalIn(let folder) = action { folderOfNext = folder }
+        if case .newTerminalWithShellIn(_, let folder) = action { folderOfNext = folder }
         if case .newTerminalRunning(let program, let arguments) = action { programOfNext = (program, arguments) }
         return handle(core.apply(action: WormholeBindings.Action(action)))
     }

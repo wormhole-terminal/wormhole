@@ -187,3 +187,4 @@ keycap-delete = Delete
 keycap-return = Return
 keycap-escape = Escape
 keycap-tab = Tab
+studio-changed-dot = Changed

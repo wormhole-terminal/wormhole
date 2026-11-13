@@ -93,7 +93,10 @@ extension AppController {
             } catch {
                 devctl?.append("switch-profile \(id) failed: \(error)") // text: a line for a test driver
                 FileHandle.standardError.write(Data("profile: cannot switch to \(id) (\(error))\n".utf8)) // text: a line on stderr for whoever launched the app
-                // A profile whose data folder cannot be opened saves nothing: the chip says so and why.
+                // A profile whose data folder cannot be opened saves nothing: the log and the chip say so and why (GPUI's
+                // `data_folder::record`).
+                let folder = id == "default" ? dataDirectory.path : dataDirectory.appendingPathComponent("profiles/\(id)").path
+                LaunchLogging.log("error", "persistence disabled: profile \(id), folder \(folder): \(error)")
                 hub.notices.post(.warned(.dataFolder), detail: NoticeReason.dataFolder(profile: id, folder: id == "default" ? dataDirectory.path : dataDirectory.appendingPathComponent("profiles/\(id)").path, error: "\(error)"))
             }
         #endif

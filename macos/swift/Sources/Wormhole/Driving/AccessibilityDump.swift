@@ -1,6 +1,6 @@
 // What VoiceOver gets, read in the process through the same NSAccessibility protocol an assistive app's requests
 // arrive at: AppKit's views answer it directly and SwiftUI builds its nodes when they are first asked for, as they
-// are for VoiceOver. One element a line, indented by depth: role, label, value and states; the groups that are not
+// are for VoiceOver (so SwiftUI's part of the tree is in it: the hosting views' children). One element a line, indented by depth: role, label, value and states; the groups that are not
 // elements themselves are walked through and not printed, as VoiceOver passes over them.
 
 import AppKit
@@ -36,7 +36,16 @@ enum AccessibilityDump {
             depth += 1
         }
         guard depth < maxDepth else { return lines.append(String(repeating: "  ", count: depth) + "(deeper not shown)") }
-        for child in node.accessibilityChildren() ?? [] { walk(child, depth: depth, window: window, into: &lines) }
+        for child in children(of: node) { walk(child, depth: depth, window: window, into: &lines) }
+    }
+
+    /// A node's children as AppKit's accessibility API gives them. A SwiftUI hosting view vends its nodes through
+    /// `accessibilityChildren`, or through the navigation order when that is empty; a view that answers neither is
+    /// walked by its subviews so nothing under it is skipped.
+    private static func children(of node: NSAccessibilityProtocol) -> [Any] {
+        if let children = node.accessibilityChildren(), !children.isEmpty { return children }
+        if let ordered = node.accessibilityChildrenInNavigationOrder?(), !ordered.isEmpty { return ordered }
+        return (node as? NSView)?.subviews ?? []
     }
 
     /// `role[/subrole] "label" = value (help) [focused] [off] @x,y wxh` (the frame in the window's points, from its top left).

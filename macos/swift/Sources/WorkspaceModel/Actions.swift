@@ -17,6 +17,8 @@ public enum WorkspaceAction: Sendable, Equatable {
     /// A new terminal that runs the shell this key names (core `terminal::shells`: "" the login shell, a profile's name,
     /// a program's path), which it keeps across a restart of its shell and a relaunch (New Terminal with ▸ fish).
     case newTerminalWithShell(String)
+    /// The same, starting in this folder (devctl's `new-shell <key> <dir>`).
+    case newTerminalWithShellIn(key: String, folder: String)
     case close(TerminalID)
     case rename(TerminalID, String)
     case togglePin(TerminalID)

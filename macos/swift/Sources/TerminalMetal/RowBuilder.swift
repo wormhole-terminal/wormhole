@@ -189,6 +189,18 @@ final class RowBuilder {
             let flags = CellFlags(rawValue: cell.flags)
             let (fg, bg) = colors(cell, flags, underBlockCursor: covered(column))
 
+            // The cell keeps its own background under the block cursor, so at an edge it still runs on into the
+            // padding beside the cursor (GPUI paints the cursor apart from the cell backgrounds).
+            if covered(column) {
+                let own = colors(cell, flags, underBlockCursor: false).bg
+                if own != PackedColor.background {
+                    let x = Float(column) * cellWidth
+                    let right = (column + 1 >= columns && stretch != Stretch.normal) ? layout.gridRight : x + cellWidth
+                    geometry.backgrounds.append(
+                        SolidInstance(x: x, y: top, width: right - x, height: cellHeight, color: own, style: 0))
+                }
+            }
+
             // Background: runs of one colour; the default needs no quad (the pass clears to it).
             if bg != PackedColor.background {
                 if backgroundStart >= 0, bg == backgroundColor {

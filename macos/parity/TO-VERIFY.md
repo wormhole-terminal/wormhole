@@ -962,3 +962,22 @@ The comparison X01 never had: the GPUI app's shared components in `crates/wormho
 | X01 | Studio gallery, Chrome | icon buttons: one selected (tint, VoiceOver selected), one disabled (faint, no hover) | `StudioUI/Gallery/ChromeSpecimen.swift`, `DesignSystem/IconButton.swift` |
 | X01 | any `Row` inside `.disabled(true)` | held back, no hover or press fill | `DesignSystem/Row.swift` |
 | X01 | the tile seam: tab, group card, pane header, title row, status bar | the row's own status tile shows; no `AnyView` (count 19) | `WindowUI/Hub/WindowHub+Tiles.swift`, `PanesUI/*`, `Package.swift` (PanesUI depends on SidebarUI) |
+
+## Lane crosscut, wave 7
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| X-test TEST | run HookBridgeTests with `HOME` watched | every hook client reads and writes under the test's scratch `agent-home` (`WORMHOLE_AGENT_HOME`, `CODEX_HOME`, `CLAUDE_CONFIG_DIR`), nothing under the real home | `Tests/HookBridgeTests/HookBridgeTests.swift` `setUpWithError` |
+| T01 | block cursor at column 0 / last column / row 0 on a coloured full-screen background | the cell's own background still runs into the padding beside the cursor, no notch of the clear colour | `TerminalMetal/RowBuilder.swift` (quad before the cursor's) |
+| X04 | Esc with a menu open | unchanged: GPUI passes `popup: false` too (`window/focus/mod.rs:202`), nothing to wire | `WindowUI/Focus/WindowFocus.swift` |
+| X08 | `Wormhole --json list` | "unknown command" exit 2 as GPUI's; not a launch | `Wormhole/main.swift` |
+| X12 | `new-shell <key> <dir>` | the terminal starts in `<dir>` (`~/` expanded) with the shell the key names | `AppController+ControlRead.swift`, `WorkspaceAction.newTerminalWithShellIn` |
+| X12 | `a11y` | SwiftUI's nodes appear under the hosting views (children, else navigation order, else subviews) | `Driving/AccessibilityDump.swift` `children(of:)` |
+| X12 | launch, then look in `<data>/logs` | the Swift side's lines (Dock, notifier, links, profile data folder) are in the daily file, target `swift` | `WordsModel/AppLog.swift`, `Platform/LaunchLogging.swift` |
+| X12 | switch to a profile whose folder cannot be opened | an error line "persistence disabled" in the log, and the chip as before | `Settings/ProfileChipBinding.swift` |
+| X10 | `swift test --filter TerminalCoreTests` | the cursor blink flip rebuilds at most its row and shapes nothing; a repeat flip costs 0 | `FrameWorkGuardTests.swift` |
+| X10 | one run of `macos/scripts/perf-compare.sh` | fill `macos/tools/baselines/swift-perf.json` (all numbers are null today) | `macos/tools/baselines/swift-perf.json` |
+| X03 | Settings > Changed > Copy JSON with VoiceOver | "Copied" is said once | `SettingsUI/Pages/ChangedPage.swift` |
+| X07 | VoiceOver on the Studio's changed dot | says "Changed" from the catalog | `StudioUI/List/BandView.swift`, `swift-studio.ftl` |

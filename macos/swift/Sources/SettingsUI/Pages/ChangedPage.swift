@@ -33,7 +33,6 @@ private struct ChangedSummary: View {
                 ActionButton(title: copied ? SettingsText.copied : SettingsText.copyJSON, symbol: Icon.copy.rawValue, frameId: "changed.copy") {
                     Pasteboard.setText(copy())
                     Announcements.post(SettingsText.copied)
-                    Announcements.post(SettingsText.copied)
                     copied = true
                 }
                 .task(id: copied) {

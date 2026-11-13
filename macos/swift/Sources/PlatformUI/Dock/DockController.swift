@@ -5,6 +5,7 @@
 
 import AppKit
 import PlatformModel
+import WordsModel
 
 @MainActor
 public final class DockController {
@@ -41,7 +42,7 @@ public final class DockController {
     /// A test instance has no Dock icon and no place in ⌘⇥.
     public func hideIconIfBackground() {
         guard !policy.touchesSystem else { return }
-        if !NSApp.setActivationPolicy(.accessory) { NSLog("background mode: could not drop the Dock icon") }
+        if !NSApp.setActivationPolicy(.accessory) { AppLog.log("error", "background mode: could not drop the Dock icon") }
     }
 
     /// Puts the badge and the menu up for the terminals as they are now.
