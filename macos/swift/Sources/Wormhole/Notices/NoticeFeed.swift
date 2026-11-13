@@ -10,6 +10,7 @@
     import PlatformBridge
     import PlatformModel
     import PlatformUI
+    import WordsModel
     import WorkspaceBridge
     import WormholeBindings
 
@@ -31,7 +32,42 @@
             follow()
         }
 
-        func sendTest(name: String, settings: NoticeSettings) { coordinator.sendTest(name: name, settings: settings) }
+        /// Whether "needs input" may go out Time Sensitive: the build is signed for it and the person allows it
+        /// (`notifications::time_sensitive`).
+        private var timeSensitive: Bool { (notifier as? SystemNotifier)?.deliversTimeSensitive ?? false }
+
+        /// "Send test" never ends silent (`notifications/test_banner.rs`): macOS is asked first when it was not, and `report`
+        /// says what happened: off in System Settings, never answered, or handed to the centre.
+        func sendTest(name: String, settings: NoticeSettings, report: @escaping @MainActor (String) -> Void) {
+            guard let system = notifier as? SystemNotifier else {
+                coordinator.sendTest(name: name, settings: settings)
+                return
+            }
+            Task { @MainActor in
+                switch system.permission {
+                case .notAsked, .checking:
+                    system.askPermission()
+                    report(Words.text("settings-notifications-test-waiting", fallback: "Waiting for macOS. Answer its question and the test is sent"))
+                    // The question is answered when the permission stops being one of these two (or never, after a minute).
+                    for _ in 0..<240 where [.notAsked, .checking].contains(system.permission) {
+                        try? await Task.sleep(for: .milliseconds(250))
+                    }
+                    if [.notAsked, .checking].contains(system.permission) {
+                        return report(Words.text("settings-notifications-test-unanswered", fallback: "macOS did not turn notifications on. Turn Wormhole on in System Settings, then try again"))
+                    }
+                    deliver(name, settings, system, report)
+                default: deliver(name, settings, system, report)
+                }
+            }
+        }
+
+        private func deliver(_ name: String, _ settings: NoticeSettings, _ system: SystemNotifier, _ report: @MainActor (String) -> Void) {
+            if case .denied = system.permission {
+                return report(Words.text("settings-notifications-test-denied", fallback: "Off in System Settings. Turn Wormhole on there, then try again"))
+            }
+            coordinator.sendTest(name: name, settings: settings, timeSensitive: timeSensitive)
+            report(Words.text("settings-notifications-test-sent", fallback: "Sent. No banner? Check Focus, and the alert style in System Settings"))
+        }
 
         /// A Probe's hook asks for a notification: one thread per Probe, its name (with "extension") as the subtitle.
         func post(probe: String, subtitle: String, title: String, body: String) {
@@ -52,8 +88,10 @@
                 Task { @MainActor in self?.follow() }
             }
             let selected = app.hub.state.selected.map(Int64.init)
-            coordinator.look(tabs, settings: app.settingsNotice, appActive: NSApp.isActive)
-            if let selected { coordinator.dismiss(tab: selected) }
+            coordinator.look(tabs, settings: app.settingsNotice, appActive: NSApp.isActive, timeSensitive: timeSensitive)
+            // Looked at (`Event::Seen`): selected in the key window of an active app. A banner for it posted while Wormhole is in the
+            // background stays until the person comes back (the look that follows the window's focus then takes it down).
+            if let selected, NSApp.isActive, app.front.window?.isKeyWindow == true { coordinator.dismiss(tab: selected) }
         }
     }
 
@@ -150,7 +188,7 @@
     @MainActor
     final class NoticeFeed {
         init(app: AppController) {}
-        func sendTest(name: String, settings: NoticeSettings) {}
+        func sendTest(name: String, settings: NoticeSettings, report: @escaping @MainActor (String) -> Void) {}
         func respond(_ response: NoticeResponse) {}
         var logged: [Notice] { [] }
     }

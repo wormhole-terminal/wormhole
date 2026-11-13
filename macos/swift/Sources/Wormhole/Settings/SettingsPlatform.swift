@@ -68,7 +68,8 @@
             let host = settingsModel.host as? RustSettingsHost
             switch action {
             case .checkForUpdates: aux.showUpdates()
-            case .sendTestNotification: notices?.sendTest(name: AuxText.brand, settings: settingsNotice)
+            case .sendTestNotification:
+                notices?.sendTest(name: AuxText.brand, settings: settingsNotice) { host?.problem($0) }
             case .openNotificationSettings: open("x-apple.systempreferences:com.apple.Notifications-Settings.extension")
             // The system's list of apps that start programs without the first-run malware check (Privacy & Security).
             case .openDeveloperTools: open("x-apple.systempreferences:com.apple.preference.security?Privacy_DevTools")
