@@ -36,15 +36,6 @@ studio-contrast-falls-short = falls short
 # What VoiceOver says of a contrast check's value. { $ratio } is the contrast, { $min } the minimum.
 studio-contrast-ratio-spoken = { $ratio } to 1, minimum { $min }
 
-# The suggested fix of a contrast problem. { $ratio } is the minimum ratio, e.g. 4.5.
-studio-contrast-fix-lighten = Lighten to { $ratio }:1
-
-# The same, for a text that is lighter than its background. { $ratio } is the minimum ratio, e.g. 4.5.
-studio-contrast-fix-darken = Darken to { $ratio }:1
-
-# { $current } is the value now (cut when long), { $ratio } the minimum ratio.
-studio-contrast-fix-readable = Use readable({ $current }, …, { $ratio })
-
 ## Theme Studio: theme files
 
 studio-folder-too-large = A theme file is at most 256 KiB.

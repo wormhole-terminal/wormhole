@@ -80,7 +80,7 @@ pub const UPDATE_SECURITY: Key = Key::new(1550);
 pub const UPDATE_RELEASE_NOTES: Key = Key::new(1551);
 /// "This release has no notes."
 pub const UPDATE_NO_NOTES: Key = Key::new(1552);
-/// "This build has no update feed. Start it with --update-feed <url> to check one."
+/// "This is a development build; it doesn't update itself."
 pub const UPDATE_NO_FEED: Key = Key::new(1554);
 /// "Project commands"
 pub const TRUST_WINDOW_TITLE: Key = Key::new(1555);
