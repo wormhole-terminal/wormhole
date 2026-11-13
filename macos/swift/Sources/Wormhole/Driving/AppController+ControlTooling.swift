@@ -5,6 +5,7 @@
 import AppKit
 import DesignSystem
 import TerminalMetal
+import WorkspaceModel
 
 extension AppController {
     /// One control line: the pointer's and the tools' first (they may take time), then the commands that act at once.
@@ -12,8 +13,11 @@ extension AppController {
         let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
         let command = parts.first ?? "", argument = parts.count > 1 ? parts[1] : ""
         window?.contentView?.layoutSubtreeIfNeeded()
+        // While inspect mode picks, `hover` and `click` are the inspector's (they highlight and pin), as in GPUI's devctl.
+        if await runInspect(command: command, argument: argument) { return }
         if await runPointer(command: command, argument: argument) { return }
         if await runTooling(command: command, argument: argument) { return }
+        if await runDevTools(command: command, argument: argument) { return }
         run(command: line)
     }
 
@@ -24,7 +28,9 @@ extension AppController {
             let words = argument.split(separator: " ").map(String.init)
             guard let view = selectedView, let devctl else { reply("error: no terminal is shown"); return true }
             let seconds = words.first.flatMap(Double.init) ?? 5
-            let report = await PerfProfile.run(view: view, seconds: seconds)
+            // Where the window's terminals run decides what the reader's numbers mean (a hosted one is parsed twice).
+            let hosted = hub.state.live.filter { hub.store.hosting(of: $0)?.hostID != nil }.count
+            let report = await PerfProfile.run(view: view, seconds: seconds, hosted: hosted, local: hub.state.live.count - hosted)
             let name = words.count > 1 ? words[1] : "perf-profile"
             devctl.append(report.json, to: "\(name).json")
             devctl.append(report.table, to: "\(name).txt")

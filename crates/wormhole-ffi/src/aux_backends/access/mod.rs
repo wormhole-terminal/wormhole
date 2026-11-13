@@ -29,6 +29,7 @@ use wormhole_text::text;
 
 mod approvals;
 mod modes;
+mod scripted;
 
 pub use approvals::{AccessApprovalRecord, AccessHow};
 

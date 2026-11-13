@@ -14,6 +14,10 @@ final class AccessDriver {
     private let window: @MainActor () -> NSWindow?
     private var showing: (sheet: AccessSheet, stillWaiting: () -> Bool)?
     private var watching: Task<Void, Never>?
+    /// The question that is up: a program's, or the one about a mode widened outside the app (`AccessDriver+Scripted`).
+    var asked: AccessQuestion?
+    var askedMode: ModeQuestion?
+    var answers: any AccessBackend { backend }
 
     init(backend: any AccessBackend, window: @escaping @MainActor () -> NSWindow?) {
         self.backend = backend
@@ -32,10 +36,14 @@ final class AccessDriver {
         if let showing, !showing.stillWaiting() { showing.sheet.withdraw() }
         guard showing == nil else { return }
         if let change = backend.nextModeQuestion() {
+            askedMode = change
             ask(AccessSheet(AccessDisplay.modeChanged(previous: change.previous, requested: change.requested)), waiting: { [backend] in backend.isWaitingMode(change.token) }) {
                 [backend] button in backend.answerMode(change.token, keep: button == .keep)
             }
         } else if let question = backend.next() {
+            // A test instance's script answers at once, with no sheet (`agent-script`).
+            if let wish = Self.script { return backend.answer(question.id, Self.offered(AccessDisplay.of(question.request).buttons, wish: wish)) }
+            asked = question
             ask(AccessSheet(question.request), waiting: { [backend] in backend.isWaiting(question.id) }) { [backend] button in
                 if let button { backend.answer(question.id, button) } else { backend.withdraw(question.id) }
             }
@@ -49,6 +57,7 @@ final class AccessDriver {
             let button = window() == nil ? nil : await sheet.ask(in: window())
             settle(button)
             showing = nil
+            (asked, askedMode) = (nil, nil)
             present()
         }
     }

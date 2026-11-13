@@ -72,6 +72,9 @@ final class AuxController {
         #endif
     }
 
+    /// The shown profile's question driver, for the control folder's `agent-ask`.
+    var accessDriver: AccessDriver? { access[app.windowsHost.profile] }
+
     /// The window a question of `profile` goes on: the one in front if it is of that profile, else any shown one of it
     /// (`agent_access/ask.rs` `window_for`); nil when none is open.
     private func window(ofProfile profile: String) -> NSWindow? {
