@@ -2,6 +2,7 @@
 // a stuck one takes seconds), so never on the main actor. The pane is blank until it is done, as in the GPUI app.
 
 import Foundation
+import Synchronization
 import UniFFISource
 import WorkspaceModel
 import WormholeBindings
@@ -27,7 +28,7 @@ enum HostConnect {
     ) -> Connected {
         if let host {
             do {
-                return Connected(terminal: try desk.attach(hostId: host, what: what, visible: visible, listener: relay), attached: true)
+                return keptPastQuit(Connected(terminal: try desk.attach(hostId: host, what: what, visible: visible, listener: relay), attached: true))
             } catch HostingError.Unavailable(_, let kind, _) {
                 return Connected(unavailable: (HostProblem.Why(kind), host))
             } catch HostingError.Gone {
@@ -35,10 +36,21 @@ enum HostConnect {
             } catch { return Connected(failure: "\(error)") }
         }
         do {
-            return Connected(terminal: try desk.start(what: what, listener: relay))
+            return keptPastQuit(Connected(terminal: try desk.start(what: what, listener: relay)))
         } catch HostingError.Start(let reason), HostingError.NoProgram(let reason) {
             do { return Connected(terminal: try local(what, relay), fallback: reason) } catch { return Connected(failure: "\(error)") }
         } catch { return Connected(failure: "\(error)") }
+    }
+
+    /// Set when the app quits: a host that was being made then is let go of by the thread that made it, not by the main
+    /// actor, which may be gone by then (`hosted.rs` `kept_past_quit`).
+    private static let quitting = Mutex(false)
+    static func quit() { quitting.withLock { $0 = true } }
+
+    /// `ready`, let go of when the app quit while it was being made.
+    private static func keptPastQuit(_ ready: Connected) -> Connected {
+        if quitting.withLock({ $0 }) { _ = ready.terminal?.detach() }
+        return ready
     }
 
     /// The same program in the app's own process.

@@ -161,6 +161,7 @@ extension RustWorkspaceBackend {
     /// screens are saved for a host that will not be there.
     public func finishQuit(endHosts: Bool) {
         book.quitting = true
+        HostConnect.quit()
         book.saver?.cancel()
         // The terminals in the app's own process end with it: what they show is kept for the next launch.
         _ = core.saveTexts()
