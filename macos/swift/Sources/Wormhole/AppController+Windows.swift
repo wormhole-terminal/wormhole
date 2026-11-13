@@ -57,6 +57,9 @@ extension AppController {
     func connect(_ session: WindowSession) {
         let hub = session.hub
         hub.shell = session.factory.shellName
+        session.factory.claimKey = { [weak self, weak hub] key, flags in
+            hub.map { self?.claimProjectKey(key, flags, in: $0) ?? false } ?? false
+        }
         session.factory.onExit = { [weak self, weak hub] id, code in
             hub?.noteExit(of: id, code: code)
             self?.devctl?.append("exited terminal=\(id) code=\(code.map(String.init) ?? "unknown")")

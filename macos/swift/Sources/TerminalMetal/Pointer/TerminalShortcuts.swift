@@ -42,9 +42,20 @@ extension MetalTerminalView {
         return TerminalShortcut.of(characters: characters, keyCode: event.keyCode, flags: .command)
     }
 
+    /// Whether the window took the key before the terminal (`claim_window_key`): only a ⌘ key or an F-key is asked
+    /// about, so typing never gets this far.
+    func windowClaims(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown, let key = KeyMap.input(from: event, optionAsMeta: optionAsMeta) else { return false }
+        let function = key.key.hasPrefix("f") && Int(key.key.dropFirst()) != nil
+        guard key.platform || function else { return false }
+        return claimKey(key.key, event.modifierFlags.intersection(.deviceIndependentFlagsMask))
+    }
+
     public override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard window?.firstResponder === self, let shortcut = shortcut(for: event)
-        else { return super.performKeyEquivalent(with: event) }
+        guard window?.firstResponder === self else { return super.performKeyEquivalent(with: event) }
+        // The window's key first: a project action's key wins over the terminal's own ⌘ keys and over the menus.
+        if windowClaims(event) { return true }
+        guard let shortcut = shortcut(for: event) else { return super.performKeyEquivalent(with: event) }
         switch shortcut {
         case .copy: copy(nil)
         case .paste: paste(nil)

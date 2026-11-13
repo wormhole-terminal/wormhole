@@ -12,6 +12,8 @@ final class TerminalFactory {
     private let options: Options
     private var configuration: RendererConfiguration?
     var onExit: (TerminalID, Int32?) -> Void = { _, _ in }
+    /// A key the window takes before its terminals hear it (`MetalTerminalView.claimKey`); set once the window exists.
+    var claimKey: (String, NSEvent.ModifierFlags) -> Bool = { _, _ in false }
     /// The fonts and colours a new terminal starts with (Settings and the theme); set once the window exists.
     var look: TerminalLook?
     /// The source of a terminal that the core's workspace runs; nil means the mock sources.
@@ -47,6 +49,7 @@ final class TerminalFactory {
                 WindowOps.attach(view, raises: !options.background)
             #endif
             view.onExit = { [weak self] in self?.onExit(id, $0) }
+            view.claimKey = { [weak self] in self?.claimKey($0, $1) ?? false }
             return view
         } catch {
             FileHandle.standardError.write(Data("terminal \(id): cannot start: \(error)\n".utf8)) // text: a line on stderr for whoever launched the app

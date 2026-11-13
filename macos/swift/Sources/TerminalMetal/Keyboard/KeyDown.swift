@@ -11,6 +11,9 @@ import TerminalCore
 
 extension MetalTerminalView {
     public override func keyDown(with event: NSEvent) {
+        // An F-key that is the window's (a project action's) never reaches the program; a ⌘ key was asked about as a
+        // key equivalent already.
+        if !event.modifierFlags.contains(.command), windowClaims(event) { return }
         guard let key = KeyMap.input(from: event, optionAsMeta: optionAsMeta), !key.platform else {
             super.keyDown(with: event)
             return
