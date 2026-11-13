@@ -19,6 +19,7 @@ final class NotesCoordinator {
     private var known: Set<TerminalID> = []
     private var saved = NotesModel()
     private var syncTimer: Timer?
+    private var projectOn = true
     /// A folder's project root as last asked, so a window of many terminals asks each folder only now and then.
     private var roots: [String: (root: String?, at: Date)] = [:]
     private static let syncEvery: TimeInterval = 2
@@ -37,7 +38,7 @@ final class NotesCoordinator {
 
     private func follow() {
         withObservationTracking {
-            _ = (hub.state.selected, hub.state.all.count, hub.panel.notes.model, hub.panel.tab, hub.state.panelVisible)
+            _ = (hub.state.selected, hub.state.all.count, hub.panel.notes.model, hub.panel.tab, hub.state.panelVisible, hub.state.layout)
         } onChange: { [weak self] in
             Task { @MainActor in
                 self?.changed()
@@ -61,7 +62,19 @@ final class NotesCoordinator {
             persistence.save(session: shown, model: saved)
             tell(shown, saved)
         }
-        setSync(on: !hub.state.all.isEmpty)
+        // The core's Project service is told whether project folders are on for this window; off, it reads and writes
+        // no `.wormhole/`. The sync needs the notes on as well (`project/notes_sync.rs`).
+        let project = offers(.project)
+        if project != projectOn {
+            projectOn = project
+            persistence.projectFeature(on: project)
+        }
+        setSync(on: project && offers(.notes) && !hub.state.all.isEmpty)
+    }
+
+    /// Whether the feature behind `tab` is on for this window (core's feature mask, which the tabs are drawn from).
+    private func offers(_ tab: WorkspaceModel.PanelTab) -> Bool {
+        hub.state.layout.map { $0.tabs.contains { $0.tab == tab && $0.enabled } } ?? true
     }
 
     /// Terminals moving to another window are not closed: what was written for them goes with them, not away.
@@ -89,7 +102,8 @@ final class NotesCoordinator {
     }
 
     func sync() async {
-        let editing = NSApp?.keyWindow?.firstResponder is NSTextView
+        // Only a step or note of the terminal on show being written holds its merge back (`api.rs` `being_written`).
+        let editing = hub.panel.notes.isWriting
         for terminal in hub.state.all {
             let id = terminal.id
             var found = id == shown ? hub.panel.project.state?.root : nil

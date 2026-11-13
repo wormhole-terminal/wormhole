@@ -63,7 +63,9 @@ extension StepsCard {
                 if let made = store.model.tasks.add(text, after: after) { store.draftAfter = made.id }
             },
             discard: { store.drafting = false },
-            leave: store.leave
+            leave: store.leave,
+            send: { text, submit in store.send(text: text, submit: submit) },
+            backOut: store.backOutOfDraft
         )
         .id(store.draftAfter)
         .transition(motion.row)

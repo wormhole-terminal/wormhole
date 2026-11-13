@@ -17,6 +17,9 @@ public final class NotesStore {
     /// A new, empty step is being written, and where: after this step, or at the end when nil (↵ in a step opens the next one below).
     public var draftAfter: PanelTask.ID?
     public var drafting = false
+    /// The steps and notes whose editor is open, and the note last written in (⇧⌘E comes back to it).
+    @ObservationIgnored private var writers: Set<UUID> = []
+    @ObservationIgnored private var lastNote: Note.ID?
     @ObservationIgnored private weak var host: (any PanelHost)?
 
     public init(model: NotesModel = NotesModel(), host: (any PanelHost)? = nil) {
@@ -41,6 +44,35 @@ public final class NotesStore {
             try? await Task.sleep(for: .milliseconds(120))
             host?.submit()
         }
+    }
+
+    /// A step or note of this terminal is being written: the notes.md merge waits for it (`api.rs` `being_written`).
+    public var isWriting: Bool { drafting || !writers.isEmpty }
+
+    /// A step's or a note's editor opened or closed.
+    public func setWriting(_ id: UUID, _ on: Bool, note: Bool = false) {
+        if on { writers.insert(id) } else { writers.remove(id) }
+        if on, note { lastNote = id }
+    }
+
+    /// ⇧⌘E from the terminal: the note last worked on takes the keys, else the first, else a new one
+    /// (`note_ops.rs` `focus_in`).
+    public func focusIn() {
+        model.notesCollapsed = false
+        if let lastNote, model.notes.contains(where: { $0.id == lastNote }) {
+            freshNote = lastNote
+        } else if let first = model.notes.first {
+            freshNote = first.id
+        } else {
+            newNote()
+        }
+    }
+
+    /// Backspace in the empty step being written: it is dropped, and the step above it opens (or the keys go back).
+    public func backOutOfDraft() {
+        let above = draftAfter ?? model.tasks.items.last?.id
+        drafting = false
+        if let above { freshStep = above } else { leave() }
     }
 
     /// Esc, or ↵ on an empty field: the person is done writing and the keys go back to the terminal.

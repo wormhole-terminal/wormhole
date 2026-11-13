@@ -11,6 +11,12 @@ protocol NotesPersisting: AnyObject, Sendable {
     func idsStart(at firstFree: Int)
     /// The window moved to profile `id`: its notes are kept there from now on.
     func follow(profile id: String)
+    /// Project folders are on or off for the window: off, the core reads and writes no `.wormhole/`.
+    func projectFeature(on: Bool)
+}
+
+extension NotesPersisting {
+    func projectFeature(on: Bool) {}
 }
 
 #if WITH_UNIFFI

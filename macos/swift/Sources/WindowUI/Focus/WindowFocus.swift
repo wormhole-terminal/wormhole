@@ -5,6 +5,7 @@
 
 import AppKit
 import Observation
+import PanelUI
 import SidebarUI
 import TerminalMetal
 import WorkspaceModel
@@ -140,9 +141,17 @@ public final class WindowFocus {
         announce()
     }
 
-    /// ⇧⌘E: from anywhere to the terminal, and from the terminal to the panel's list.
+    /// ⇧⌘E: from anywhere to the terminal, and from the terminal to the notes while they are on (the note being worked
+    /// on, else the first, else a new one, with the Notes tab and the panel shown: `window/shortcuts.rs`), else to the
+    /// panel's list.
     public func toggleTerminalAndPanel() {
-        if current() != .terminal { focusTerminal() } else if layout.panel { focus(FocusStop(.panelContent)) }
+        if current() != .terminal { return focusTerminal() }
+        if hub.panelTabs.contains(.notes) {
+            hub.send(.showPanelTab(.notes))
+            swiftUI { hub.panel.notes.focusIn() }
+        } else if layout.panel {
+            focus(FocusStop(.panelContent))
+        }
     }
 
     /// A list of SwiftUI takes the keyboard when asked, but only from the window's own view: the holder or the terminal

@@ -30,7 +30,10 @@ struct TaskRowView: View {
                 .accessibilityLabel(task.text)
                 .accessibilityValue(task.done ? panelText("notes-task-done", "done") : panelText("notes-task-not-done", "not done"))
             label
-            if hovering || editing { RowActions(send: send, delete: delete).transition(.opacity) }
+            // While its editor is open the row's Send sends what is typed, not the words saved before (`task_rows.rs`).
+            if hovering || editing {
+                RowActions(send: { if editing { store.send(text: draft, submit: false) } else { send() } }, delete: delete).transition(.opacity)
+            }
         }
         .padding(.horizontal, PanelMetrics.inset)
         .frame(minHeight: Metric.row)
@@ -38,6 +41,8 @@ struct TaskRowView: View {
         .marked("panel.item")
         .onHover { hovering = $0 }
         .animation(motion.tick, value: task.done)
+        .onChange(of: editing) { _, now in store.setWriting(task.id, now) }
+        .onDisappear { store.setWriting(task.id, false) }
         .onChange(of: store.freshStep) { _, id in
             if id == task.id { edit(); store.consumeFreshStep() }
         }

@@ -12,7 +12,11 @@ extension WindowHub {
         // Pasted as the GPUI app does (`SendText`): brackets where the program asked, so an agent takes a note as text.
         host.terminal.send = { [unowned self] text in selectedSource?.paste(text) }
         host.terminal.submit = { [unowned self] in selectedSource?.write(Data("\r".utf8)) }
-        host.terminal.takePrompt = { [unowned self] in selectedSource?.grabPrompt() }
+        // The terminal's selection first, else what is typed in the agent's input box (`TerminalView::grab_prompt`).
+        host.terminal.takePrompt = { [unowned self] in
+            let selection = selectedSource?.interaction?.selectionText()
+            return selection.flatMap { $0.isEmpty ? nil : $0 } ?? selectedSource?.grabPrompt()
+        }
         host.terminal.paste = { [unowned self] text in
             // A program without bracketed paste would run each line: the panel copies the text instead.
             guard let source = selectedSource, source.takesPasteAsText else { return false }

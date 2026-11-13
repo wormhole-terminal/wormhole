@@ -41,6 +41,10 @@ public final class RustNotesPersistence: @unchecked Sendable {
         return model.applying(outcome)
     }
 
+    /// Project folders are on or off for the window (core's feature mask): off, the service reads no `.wormhole/` for
+    /// effect and writes none (no overrides, actions, worktree setup, notes.md).
+    public func projectFeature(on: Bool) { project.setProjectFeatureOn(on: on) }
+
     /// The terminal was closed: the base it merged against goes with it.
     public func closed(session: Int) { project.notesSessionClosed(session: Int64(session)) }
 

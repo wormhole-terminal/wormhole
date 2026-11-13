@@ -49,6 +49,10 @@ struct NoteRowView: View {
         .onHover { hovering = $0 }
         .animation(motion.fold, value: note.collapsed)
         .animation(motion.fold, value: showAll)
+        // Folded and opened again, a long note is cut again (`note_ops.rs` `toggle_note`).
+        .onChange(of: note.collapsed) { _, folded in if folded { showAll = false } }
+        .onChange(of: editing) { _, now in store.setWriting(noteID, now, note: true) }
+        .onDisappear { store.setWriting(noteID, false) }
         .onAppear(perform: openIfFresh)
         .onChange(of: store.freshNote) { openIfFresh() }
     }

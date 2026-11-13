@@ -40,5 +40,5 @@ public struct NotesModel: Equatable, Sendable {
     }
 
     /// Notes with something in them: the band's count.
-    public var filledNotes: Int { notes.filter { !$0.text.isEmpty }.count }
+    public var filledNotes: Int { notes.filter { !$0.isBlank }.count }
 }
