@@ -390,6 +390,12 @@ first in natural order, labels cleaned of control and bidi characters, cut at co
 `watch(root, listener) -> FolderWatch`. Paths are relative to `root` and plain (no `..`, not absolute); a link is
 never walked through, a file link out of `root` reads `outside`, a rename goes through no link and replaces nothing.
 Pins are `files_pinned` in `config.json`, each edit through a fresh read of the file.
+Wave 4 (written, not compiled): `followProfile(profile) -> Bool` (the pins are that profile's `config.json` from then
+on; Default until told), `resolve(root, path, folder) -> String?` (the real path of a file or folder for handing to
+another app: nil when gone, not of that kind, or out of `root` by a link). `ProjectService`:
+`setProjectFeatureOn(on)` (off: no overrides, theme, actions, layout, worktree condition or setup, notes.md sync;
+a folder's colour is the person's own), `problem() -> String?` (the hub's own error), and `ProjectStateRecord.dir`
+(`.wormhole` or `.andromeda`).
 
 **`FolderWatch`**: FSEvents on a local volume, plus a timer thread as the fallback (2 s without a stream, 30 s with
 one). `PanelListener.wake()` is called at most once between two `drain()`s (same rules as `TerminalListener`); the
