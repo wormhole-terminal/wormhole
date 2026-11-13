@@ -63,7 +63,7 @@ enum RowCaptions {
     }
 
     /// "JetBrains Mono 14 pt · line height 1.30 · ligatures on".
-    private static func terminalFont(_ model: SettingsModel) -> String {
+    @MainActor private static func terminalFont(_ model: SettingsModel) -> String {
         let family = model.value("font_family").string.flatMap { $0.isEmpty ? nil : $0 } ?? "JetBrains Mono" // text: the bundled family's name
         let size = String(format: "%.0f", model.value("font_size").number ?? 14)
         let line = String(format: "%.2f", model.value("line_height").number ?? 1.3)

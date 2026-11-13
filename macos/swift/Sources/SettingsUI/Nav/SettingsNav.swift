@@ -15,20 +15,9 @@ struct SettingsNav: View {
 
     var body: some View {
         List(selection: Binding(get: { model.showsResults ? nil : model.selection }, set: { open($0) })) {
-            Label {
-                Text(model.profile.form?.name ?? SettingsText.profileDefault)
-            } icon: {
-                ProfileChip(letter: model.profile.form?.letter ?? "D", color: model.profile.form?.color ?? "blue")
-            }
-            .tag("profile")
-            .accessibilityLabel(Words.text("settings-section-profile", fallback: "Profile"))
-            .accessibilityValue(model.profile.form?.name ?? SettingsText.profileDefault)
-            row(id: SettingsModel.changedID, title: SettingsText.changedTitle, badge: model.isSearching || model.changedCount == 0 ? nil : "\(model.changedCount)")
-            ForEach(groups, id: \.title) { group in
-                Section(group.title) {
-                    ForEach(group.sections) { section in row(id: section.id, title: section.title, badge: badge(section), dim: dims(section), attention: attention(section)) }
-                }
-            }
+            profileRow
+            row(id: SettingsModel.changedID, title: SettingsText.changedTitle, badge: changedBadge)
+            groupRows
             // The developer page of every control, behind the `components` flag.
             if model.showsComponents {
                 Section { row(id: SettingsModel.componentsID, title: Words.text("settings-section-components", fallback: "Components")) }
@@ -40,6 +29,32 @@ struct SettingsNav: View {
         // A page that comes or goes (the feature flags, unlocked with ⌃⌥⌘F) slides in or out; Reduce Motion cuts.
         .motion(Motion.layout, value: model.navSections.map(\.id))
         .accessibilityLabel(SettingsText.settings)
+    }
+
+    // The list's parts as properties of their own: as one expression the body is more than the type checker gets through.
+    private var profileName: String { model.profile.form?.name ?? SettingsText.profileDefault }
+
+    private var changedBadge: String? { model.isSearching || model.changedCount == 0 ? nil : "\(model.changedCount)" }
+
+    private var profileRow: some View {
+        Label {
+            Text(profileName)
+        } icon: {
+            ProfileChip(letter: model.profile.form?.letter ?? "D", color: model.profile.form?.color ?? "blue")
+        }
+        .tag("profile")
+        .accessibilityLabel(Words.text("settings-section-profile", fallback: "Profile"))
+        .accessibilityValue(profileName)
+    }
+
+    private var groupRows: some View {
+        ForEach(groups, id: \.title) { group in
+            Section(group.title) {
+                ForEach(group.sections) { section in
+                    row(id: section.id, title: section.title, badge: badge(section), dim: dims(section), attention: attention(section))
+                }
+            }
+        }
     }
 
     private func open(_ id: String?) {

@@ -94,7 +94,7 @@ private struct GlassNote: View {
 }
 
 /// The theme's own colours in the order GPUI offers them, each once, then the colour already chosen when it is none of them.
-func offeredSwatches(ansi order: [Int], skip: String?, chosen: String?) -> [String] {
+@MainActor func offeredSwatches(ansi order: [Int], skip: String?, chosen: String?) -> [String] {
     let palette = ThemeStore.shared.theme.tokens().terminal.ansi
     var colors: [String] = []
     for hex in order.compactMap({ palette.indices.contains($0) ? palette[$0].hexOpaque : nil }) + (chosen.map { [$0] } ?? []) {
