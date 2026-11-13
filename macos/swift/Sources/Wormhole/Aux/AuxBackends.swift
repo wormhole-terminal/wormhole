@@ -56,6 +56,8 @@ struct AuxBackends {
                     return try AuxBridge.makeTrustBackend(root: URL(fileURLWithPath: root), profile: profile, authenticator: authenticator)
                 } catch { fallback("project trust", error) } // text: names the part in a stderr line
             }
+            // A real window with no project: it says so, rather than showing a sample's commands.
+            if real, root == nil { return ClosedProjectTrust() }
         #endif
         return SampleTrustBackend()
     }

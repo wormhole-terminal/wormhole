@@ -62,3 +62,17 @@ public protocol TrustBackend: AnyObject {
     func approve() async
     var biometricsAvailable: Bool { get }
 }
+
+/// The window for a project that is not open in any terminal now: it says so and offers nothing to approve
+/// (`features/project/trust_window.rs` `Shown::of`).
+@MainActor
+public final class ClosedProjectTrust: TrustBackend {
+    private let name: String
+    public init(name: String = "") { self.name = name }
+    public func review() -> TrustReview {
+        TrustReview(name: name, directory: "", status: .untrusted, lines: [], problem: AuxText.trustClosed)
+    }
+    public func changes() -> AsyncStream<Void> { AsyncStream { _ in } }
+    public func approve() async {}
+    public var biometricsAvailable: Bool { false }
+}

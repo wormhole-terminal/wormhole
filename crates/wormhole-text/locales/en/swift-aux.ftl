@@ -148,6 +148,7 @@ update-no-feed = This build has no update feed. Start it with --update-feed <url
 ## The project trust window
 
 trust-window-title = Project commands
+trust-window-closed = This project is no longer open in a terminal.
 trust-badge-trusted = trusted
 trust-badge-changed = changed
 trust-badge-not = not trusted

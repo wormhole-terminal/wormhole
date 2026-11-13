@@ -102,9 +102,9 @@ final class FolderPicking {
             PlatformBridge.storeRecents(json)
         }
 
-        /// Records each terminal's folder as it changes.
+        /// Records each terminal's folder as it changes: every window's, folded groups included (every folder change is a visit).
         private func follow() {
-            let terminals = withObservationTracking { app.hub.state.terminals.map { ($0.id, $0.folder) } } onChange: { [weak self] in
+            let terminals = withObservationTracking { app.sessions.flatMap { $0.hub.state.all }.map { ($0.id, $0.folder) } } onChange: { [weak self] in
                 Task { @MainActor in self?.follow() }
             }
             // Kept only while the flag is on; the first change with it off forgets what it learned.

@@ -19,8 +19,10 @@ extension AppController {
             },
             settings: { [weak self] in self?.settingsModel.find($0).compactMap { self?.paletteSetting($0.entry.id, match: $0) } ?? [] },
             setting: { [weak self] in self?.paletteSetting($0, match: nil) },
-            commits: { [weak session] in
-                (session?.hub.panel.history.model.commits ?? []).map {
+            commits: { [weak self, weak session] in
+                // With History off there is nowhere to show a commit (`command_palette/mod.rs` `load_commits`).
+                guard let self, let session, !self.featuresOff(session).contains("history") else { return [] }
+                return session.hub.panel.history.model.commits.map {
                     PaletteCommit(sha: $0.sha, short: $0.short, subject: $0.subject, author: $0.author)
                 }
             },
