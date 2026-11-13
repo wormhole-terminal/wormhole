@@ -83,6 +83,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory, project: { [unowned self] in StudioProjects.source(app: self) })
     private(set) lazy var folderPicking = FolderPicking(app: self)
     private(set) lazy var router = ActionRouter(app: self)
+    /// The table's keys no menu item holds (`ExtraKeys`).
+    private(set) lazy var extraKeys = ExtraKeys(app: self)
     private(set) lazy var recents = RecentProjects(dataDirectory: dataDirectory)
     /// SIGTERM as an event on the main queue (`quitOnSigterm`).
     var sigterm: DispatchSourceSignal?
@@ -139,6 +141,7 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         quitOnSigterm()
+        extraKeys.start()
         do {
             try open()
         } catch {
