@@ -86,7 +86,7 @@ extension AppController {
         guard let open = PopoverRecord.open, let folder = options.devctl else { return "error: no popover is open" }
         let name = argument.isEmpty ? "popover" : argument
         guard name.allSatisfy({ $0.isLetter || $0.isNumber || "._-".contains($0) }) else { return "error: a name takes letters, digits, . _ and - only" }
-        let host = NSHostingView(rootView: open.view.themed())
+        let host = open.host()
         host.frame = NSRect(origin: .zero, size: host.fittingSize)
         host.layoutSubtreeIfNeeded()
         guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds), let png = { () -> Data? in
@@ -113,7 +113,9 @@ extension AppController {
         RealPopover.shown?.performClose(nil)
         let popover = NSPopover()
         popover.behavior = .applicationDefined
-        popover.contentViewController = NSHostingController(rootView: record.view.themed())
+        let controller = NSViewController()
+        controller.view = record.host()
+        popover.contentViewController = controller
         popover.show(relativeTo: NSRect(x: 0, y: content.bounds.height - 1, width: 1, height: 1), of: content, preferredEdge: .minY)
         RealPopover.shown = popover
         return "popover-real"

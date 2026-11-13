@@ -4,6 +4,7 @@
 // pressing each does. GPUI's recorder does the same for its popovers. Nothing here draws or decides; the closures are the ones the
 // view's own buttons run.
 
+import AppKit
 import SwiftUI
 
 @MainActor
@@ -36,14 +37,14 @@ public enum PopoverRecord {
         /// A colour by name, or `#rrggbb`; false for one it does not know.
         public var colour: @MainActor (String) -> Bool
         public var close: @MainActor () -> Void
-        /// The same content, for drawing it to a picture or showing it in a popover of AppKit's own.
-        public var view: AnyView
+        /// The same content in a hosting view of its own, for drawing it to a picture or showing it in a popover of AppKit's own.
+        public var host: @MainActor () -> NSView
 
         public init(
             rows: [Row], type: @escaping @MainActor (String) -> Void, key: @escaping @MainActor (String) -> Bool,
-            colour: @escaping @MainActor (String) -> Bool, close: @escaping @MainActor () -> Void, view: AnyView
+            colour: @escaping @MainActor (String) -> Bool, close: @escaping @MainActor () -> Void, host: @escaping @MainActor () -> NSView
         ) {
-            (self.rows, self.type, self.key, self.colour, self.close, self.view) = (rows, type, key, colour, close, view)
+            (self.rows, self.type, self.key, self.colour, self.close, self.host) = (rows, type, key, colour, close, host)
         }
     }
 

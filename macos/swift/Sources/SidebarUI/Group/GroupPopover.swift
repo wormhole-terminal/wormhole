@@ -89,7 +89,7 @@ struct GroupPopover: View {
                 return true
             },
             close: { close() },
-            view: AnyView(GroupPopover(head: head, rows: rows, context: context, close: close))))
+            host: { NSHostingView(rootView: GroupPopover(head: head, rows: rows, context: context, close: close).themed()) }))
     }
 
     /// An action of the popover: it runs, and the popover closes.
