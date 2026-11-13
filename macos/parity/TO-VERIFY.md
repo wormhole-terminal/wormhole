@@ -412,6 +412,8 @@ Not written, and why:
 
 ## Lane settings, wave 4
 
+## Lane panel-git, wave 4
+
 Written without compiling: expect compile errors.
 
 | row | what to do | what must happen | where the code is |
@@ -446,4 +448,24 @@ Not written:
 | ST02 | Not written: the Motion cells' own VoiceOver labels (the strip is one labelled group, as the other scenes); the ring following the row under the pointer or with an open menu (it follows the option changed last) | | |
 | ST02/ST03 | Found already written (not changed here, still to verify): Updates' Restart Now question, channel note, security line, bundle-replaced watch; the Shells list, worktree caption and "zsh" face; the Changed page's Copy as JSON ("Copied"); the "changes are not saved" banner; Reset tips disabling; the Terminals list scene's three densities | | UpdateStatus.swift, EntryRowView.swift, ChangedPage.swift, SettingsPage.swift, EntryControl.swift, SidebarScene.swift |
 | ST02/ST03 | Key audit (96 keys of the 14 pages against the Swift sources and the FFI): the one key without a consumer was `motion.column`, wired above; the terminal keys (scrollback_lines, default_shell, shells, image_memory_mib, allow_*) are read by the core at launch (`launch.rs`) | | macos/parity/punch-list.md row ST02 is out of date |
+
+| P04 | filter History to a file (File History) or pick another branch, then pick a commit in the palette that the shown log does not list | the filter chip goes, the log goes back to HEAD when the commit is not on the picked branch (always from Stashes), the commit is open with details and files, its row scrolled to. TEST: `is_on` gives false for a hash git does not know | `PanelUI/Stores/HistoryStore.swift reveal`, `Wormhole/Platform/PaletteSourcing.swift`, `PaletteSourcing+Listed.swift`, `ffi/src/git/asked.rs is_on` |
+| P04 | leave History showing with a commit a few minutes old | "3m" becomes "4m" on the minute without touching anything; no timer runs with the tab hidden or the log empty | `PanelUI/History/HistoryView.swift .task`, `HistoryStore.nextAgeChange/tick`, `ffi/src/git/asked.rs git_next_age_change` |
+| P04 | open a commit with many branches and tags, and a merge, in a narrow panel | ref chips and parent links wrap onto more lines, names whole, "+N" last | `PanelUI/Shell/WrapLayout.swift`, `History/CommitRefs.swift`, `CommitDetailsView.swift parents` |
+| P04 | open an old commit one of whose files was deleted since; hover its files | the open icon only on files that are regular files in the working tree now; none past the first 2,000. TEST (hostile input): a path with `..`, or a link leading out of the repository, is not present | `HistoryStore.present`, `HistoryView.swift details`, `ffi/src/git/asked.rs present_files` |
+| P04 | move a tag or branch onto the open commit from another terminal | its ref chips update (the log's refs are compared, not only the ids) | `HistoryStore.refresh sameRefs` |
+| P04, P02 | open either picker | the first choice reads "HEAD (current branch)" (History) or "HEAD (uncommitted changes)" (Changes); "Loading branches…" under the list until it is in; Changes then says "Changes since this branch split off from it"; selecting another terminal closes the picker | `PanelUI/Shell/RevPicker.swift`, `ChangesStore.loadRevs`, `HistoryStore.loadRevs` |
+| P04 | a pull request whose checks are running finishes them (title row shows the PR part) | the first terminal on that branch gets "Checks passed on #N" / "Checks failed on #N" with the branch as body, through the notification rules (as `wh notify`) | `ffi/src/workspace_extras.rs tell_checks_settled`, `core/src/workspace/extras.rs first_on_branch` |
+| P04 | TEST (trust): a window in a second profile, the project trusted only in the Default profile (and the reverse) | `gh` is started only where the window's own profile trusts the project and has project folders on | `ffi/src/workspace_extras.rs profile_of, approved` |
+| P03 | from History open a file's diff | the commit's short hash follows "File N of M" in the primary, also in the title row's header | `PanelUI/Diff/DiffHeader.swift commit`, `PanelCoverTitle.swift` |
+| P03 | open the diff of a submodule whose pointer moved forward by a few commits, back by some, by more than 200; one not checked out; one with uncommitted changes inside | "abc1234 → def5678" in the code font, "New commits" / "Commits left behind" each with its total, a two-line row per commit (subject; hash, author, age), "and N more", core's sentence when nothing is listed and what is inside; the body scrolls. TEST (wire): `GitDiff::Submodule { label, card }` | `PanelUI/Diff/SubmoduleCard.swift`, `PanelModel/Diff/SubmoduleCommits.swift`, `GitBridge/GitDiffFile.swift`, `ffi/src/git/service.rs submodule_diff`, `records.rs GitSubmoduleCard` |
+| P03 | compare with a branch, open a diff, edit the file so its counts stay the same; then fetch so the merge-base moves | the open diff is read again both times | `ChangesStore.stamp(of:)`, `keepOpenDiffInStep`, `GitStatus.base_rev` |
+| P03 | "Load diff" on a very large patch, unwrapped, scroll sideways | no walk over the lines per scroll step: the rows of both layouts are cut once when the diff is read | `PanelUI/Stores/DiffSession.swift DiffBuilt`, `Diff/DiffView.swift lines` |
+| P02 | a repository with an untracked folder that is itself a repository (git lists "vendor/lib/") | a folder icon, the name "lib", its parent "vendor" as the folder, no "+0" or "bin" | `PanelModel/Changes/ChangedFile.swift isFolder, folder, lines`, `PanelUI/Changes/FileRowView.swift`, `LineCounts.swift` |
+| P07, P02 | a terminal in a subfolder of a repository | the Files tree and the project's colour are the repository root's: `GitBackend.root(of:)` was only an extension method, so a call through `any GitBackend` always gave nil; it is a requirement now. Check that nothing relied on the nil | `PanelModel/Backends/GitBackend.swift`, `PanelUI/Controller/PanelController.swift follow` |
+
+Not written:
+- P03 syntax colours from tree-sitter: the parser and its grammars are in the app crate (`crates/wormhole/src/syntax`, with GPUI); bringing them under the bridge is a dependency change that has to be built to be right. The Swift lexer stays.
+- Already there before this wave (the audit's list was older than the code): History's copy notices, Copy error's chip, the details menu and ↩ on its row, Esc in the picker.
+- Two tests were only kept in step with the changed wire (`Tests/GitBridgeTests/MappingTests.swift`, `crates/wormhole-ffi/tests/git.rs`); none was written.
 
