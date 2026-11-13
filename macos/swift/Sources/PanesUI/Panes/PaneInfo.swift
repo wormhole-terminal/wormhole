@@ -37,6 +37,10 @@ public struct PaneActions {
     public var areaChanged: (CGSize) -> Void
     /// A pane's tile as the terminal's row in the list draws it (the agent's logo, the status light); nil draws the plain tile.
     public var tile: ((PaneID, CGFloat) -> AnyView)?
+    /// The key the keymap has now for an action (`splitRight`, `splitDown`, `zoomPane`, `closeTerminal`), as a menu item binds it and
+    /// as a tooltip says it ("⇧⌘↩"); nil when it has none. Without the window's keymap the menu and tooltips show no key.
+    public var shortcut: (String) -> KeyboardShortcut? = { _ in nil }
+    public var keyText: (String) -> String? = { _ in nil }
 
     public init(
         close: @escaping (PaneID) -> Void = { _ in }, split: @escaping (SplitAxis) -> Void = { _ in },

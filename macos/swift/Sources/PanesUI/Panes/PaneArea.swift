@@ -70,7 +70,7 @@ public struct PaneArea<Content: View>: View {
                     info: info(id), focused: focused, gaps: gaps, zoomed: zoomed == id, dragged: dragged,
                     position: (order.firstIndex(of: id) ?? 0) + 1, of: order.count,
                     focus: { actions.focus(id) }, zoom: { toggleZoom(id) }, close: { actions.close(id) },
-                    tile: actions.tile?(id, PaneMetrics.tile)
+                    tile: actions.tile?(id, PaneMetrics.tile), zoomKey: actions.keyText("zoomPane"), closeKey: actions.keyText("closeTerminal")
                 ) {
                     PaneMenuItems(id: id, panes: panes, actions: actions)
                 }

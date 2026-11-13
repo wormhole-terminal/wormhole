@@ -20,6 +20,9 @@ struct PaneHeader<Menu: View>: View {
     let zoom: () -> Void
     let close: () -> Void
     var tile: AnyView?
+    /// The keys the keymap has for Zoom and Close, said in their tooltips.
+    var zoomKey: String?
+    var closeKey: String?
     @ViewBuilder let menu: () -> Menu
     @Environment(\.tokens) private var tokens
 
@@ -61,7 +64,7 @@ struct PaneHeader<Menu: View>: View {
 
     private var zoomButton: some View {
         PaneButton(symbol: zoomed ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right",
-                   label: zoomed ? PanesText.unzoom : PanesText.zoom, key: "⇧⌘↩", action: zoom)
+                   label: zoomed ? PanesText.unzoom : PanesText.zoom, key: zoomKey, action: zoom)
     }
 
     private var moreButton: some View {
@@ -74,7 +77,7 @@ struct PaneHeader<Menu: View>: View {
         .help(PanesText.paneMenu).accessibilityLabel(PanesText.paneMenu)
     }
 
-    private var closeButton: some View { PaneButton(symbol: "xmark", label: PanesText.closePane, key: "⌘W", action: close) }
+    private var closeButton: some View { PaneButton(symbol: "xmark", label: PanesText.closePane, key: closeKey, action: close) }
 
     /// Without gaps a hairline under every header and the primary line under the focused one; with gaps the
     /// pane's own outline says which has the keyboard (`PaneFrame`).

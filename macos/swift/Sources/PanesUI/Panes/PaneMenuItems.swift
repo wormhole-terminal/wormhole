@@ -11,19 +11,19 @@ struct PaneMenuItems: View {
 
     var body: some View {
         Button(PanesText.splitRight) { act { actions.split(.row) } }
-            .keyboardShortcut("d", modifiers: .command)
+            .keyboardShortcut(actions.shortcut("splitRight"))
             .disabled(!actions.canSplit(.row))
         Button(PanesText.splitDown) { act { actions.split(.column) } }
-            .keyboardShortcut("d", modifiers: [.command, .shift])
+            .keyboardShortcut(actions.shortcut("splitDown"))
             .disabled(!actions.canSplit(.column))
         Button(panes.zoomed == id ? PanesText.unzoom : PanesText.zoom) { act(actions.toggleZoom) }
-            .keyboardShortcut(.return, modifiers: [.command, .shift])
+            .keyboardShortcut(actions.shortcut("zoomPane"))
             .disabled(!panes.isSplit)
         Button(PanesText.leaveSplit) { act { actions.leaveSplit(id) } }
             .disabled(!panes.isSplit)
         Divider()
         Button(PanesText.closePane) { act { actions.close(id) } }
-            .keyboardShortcut("w", modifiers: .command)
+            .keyboardShortcut(actions.shortcut("closeTerminal"))
     }
 
     /// The pane the menu belongs to takes the keyboard first, as it does when it is clicked.
