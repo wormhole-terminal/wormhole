@@ -32,7 +32,7 @@ public struct RealGitBackend: GitBackend {
 
     public func changesResult(in folder: String, comparedWith rev: Rev?) async throws -> ChangesResult {
         let state = try await state(in: folder, comparedWith: rev)
-        return ChangesResult(files: state.files, compareMissing: state.compareMissing)
+        return ChangesResult(files: state.files, compareMissing: state.compareMissing, baseRev: state.baseRev)
     }
 
     public func diff(of path: String, in folder: String, comparedWith rev: Rev?, loadAnyway: Bool) async throws -> DiffFile {
@@ -66,4 +66,18 @@ public struct RealGitBackend: GitBackend {
     }
 
     public func changes(in folder: String) -> AsyncStream<Void> { RepoChanges.stream(git: git, folder: folder) }
+
+    public func isOn(_ sha: String, rev: Rev, in folder: String) async -> Bool {
+        await GitQueue.run { [git] in git.isOn(folder: folder, sha: sha, rev: GitRev(rev)) }
+    }
+
+    /// A disk look per path, inside the repository only (core's `resolve_within`): off the main thread.
+    public func presentFiles(_ paths: [String], in folder: String) async -> Set<String>? {
+        Set(await GitQueue.run { [git] in git.presentFiles(folder: folder, paths: paths) })
+    }
+
+    /// Core's rule and no git: cheap enough to ask where the timer is armed.
+    public func nextAgeChange(of times: [Int]) -> Duration? {
+        gitNextAgeChange(times: times.map(Int64.init)).map { .milliseconds(Int64(clamping: $0)) }
+    }
 }

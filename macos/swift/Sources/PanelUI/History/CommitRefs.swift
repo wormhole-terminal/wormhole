@@ -7,10 +7,13 @@ import SwiftUI
 
 struct CommitRefs: View {
     let refs: [(kind: RefKind, name: String)]
+    /// "+3" after the refs shown, when the commit has more.
+    var more: String?
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        HStack(spacing: Space._1) {
+        // Onto more lines in a narrow panel, each name whole.
+        WrapLayout(spacing: Space._1) {
             ForEach(Array(refs.enumerated()), id: \.offset) { _, ref in
                 switch ref.kind {
                 case .head: StatusBadge(text: "HEAD", color: tokens.primary) // text: HEAD is git's name for the current commit
@@ -18,14 +21,15 @@ struct CommitRefs: View {
                 case .branch:
                     HStack(spacing: Space._1) {
                         PanelIcon("arrow.triangle.branch", size: 12)
-                        Text(ref.name).lineLimit(1)
+                        Text(ref.name).lineLimit(1).fixedSize()
                     }
                     .font(TextRole.caption.font.weight(.medium)).foregroundStyle(tokens.gitBranch)
                     .padding(.leading, Space._1).padding(.trailing, Space._2).frame(height: 20)
                     .background(tokens.gitBranchBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
                 }
             }
-            Spacer(minLength: 0)
+            if let more { Text(more).foregroundStyle(tokens.textMuted) }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

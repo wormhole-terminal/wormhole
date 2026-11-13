@@ -40,6 +40,11 @@ public final class ChangesStore {
     public var review = Review()
     public let diff: DiffSession
     public private(set) var revs: [Rev] = []
+    /// The picker's list is being read ("Loading branches…").
+    public private(set) var revsLoading = false
+    /// The commit the list is against, and the one the open diff was read against: a diff is read again when it moves.
+    @ObservationIgnored private var baseRev: String?
+    @ObservationIgnored private var openBase: String?
     /// The comments could not be pasted (the program would run each line): they went to the clipboard instead.
     public var copiedInstead = false
     @ObservationIgnored private let git: any GitBackend
@@ -66,7 +71,8 @@ public final class ChangesStore {
         var review = Review()
     }
     @ObservationIgnored private var kept: [Int: Kept] = [:]
-    @ObservationIgnored private var terminal: Int?
+    /// The terminal the tab shows: the picker closes when it changes.
+    public private(set) var terminal: Int?
 
     /// The tab follows the terminal: another terminal brings its own compare branch, folds, marks and comments and
     /// takes the open diff down; a new folder starts again.
@@ -107,7 +113,7 @@ public final class ChangesStore {
                 guard folder == self.folder, rev == compare else { return }
                 files = list
                 marked.formIntersection(list.map(\.path))
-                (compareMissing, refreshError) = (result.compareMissing, nil)
+                (compareMissing, refreshError, baseRev) = (result.compareMissing, nil, result.baseRev)
                 phase = .loaded
                 keepOpenDiffInStep()
             } catch {
@@ -133,24 +139,28 @@ public final class ChangesStore {
         }
         selection = id
         guard let folder, let file = current else { return diff.close() }
+        openBase = baseRev
         diff.open(file, stamp: stamp(of: file)) { [git, rev = compare] in
             try await git.diff(of: file.path, in: folder, comparedWith: rev, loadAnyway: $0)
         }
     }
 
     /// The status was read again: an open diff follows its file. One the list no longer has stays with its badge; one whose entry
-    /// or file on disk changed is read again in place (`refresh_open_diff`).
+    /// or file on disk changed is read again in place (`refresh_open_diff`), and so is one whose base moved (the merge-base of
+    /// a compared branch, HEAD after a commit).
     private func keepOpenDiffInStep() {
         guard let open = selection else { return }
         guard let now = files.first(where: { $0.id == open }) else { return diff.markGone() }
         let stamp = stamp(of: now)
-        guard diff.gone || now != diff.file || stamp != diff.stamp else { return }
+        guard diff.gone || now != diff.file || stamp != diff.stamp || baseRev != openBase else { return }
+        openBase = baseRev
         diff.reread(now, stamp: stamp)
     }
 
-    /// The file's size and time as the working tree has them now; nil in a comparison (its diff is against a revision, not the disk).
+    /// The file's size and time as the working tree has them now: every diff here has the working tree as its new side, a
+    /// comparison with a branch too.
     private func stamp(of file: ChangedFile) -> String? {
-        guard compare == nil, let folder, let path = RepoFiles.resolve(root: folder, relative: file.path) else { return nil }
+        guard let folder, let path = RepoFiles.resolve(root: folder, relative: file.path) else { return nil }
         return host?.stamp(of: path)
     }
 
@@ -174,7 +184,12 @@ public final class ChangesStore {
     /// The branches the picker lists, asked for when it opens.
     public func loadRevs() {
         guard let folder else { return }
-        Task { revs = (try? await git.revs(in: folder, forHistory: false)) ?? [] }
+        (revs, revsLoading) = ([], true)
+        Task {
+            let listed = (try? await git.revs(in: folder, forHistory: false)) ?? []
+            guard folder == self.folder else { return }
+            (revs, revsLoading) = (listed, false)
+        }
     }
 
     /// Comments are made only on a diff against the working tree, whose lines are the ones the agent edits.

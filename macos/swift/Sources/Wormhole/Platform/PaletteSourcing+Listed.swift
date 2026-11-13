@@ -45,13 +45,13 @@ extension AppController {
         case .commit(let sha):
             guard let repo = hub.state.all.first(where: { $0.id == hub.state.selected })?.repo else { return }
             openNewWindow(folder: repo)
-            // The window opens a step later and is then the one in front; History lists its commits once git has answered.
+            // The window opens a step later and is then the one in front; History follows its folder once git has answered.
             Task { @MainActor [weak self] in
                 for _ in 0..<40 {
                     try? await Task.sleep(for: .milliseconds(50))
-                    guard let opened = self?.sessions.last?.hub, opened.panel.history.model.commits.contains(where: { $0.sha == sha }) else { continue }
+                    guard let opened = self?.sessions.last?.hub, opened.panel.history.phase == .loaded else { continue }
                     opened.send(.showPanelTab(.history))
-                    opened.panel.history.show(sha)
+                    opened.panel.history.reveal(sha)
                     return
                 }
             }

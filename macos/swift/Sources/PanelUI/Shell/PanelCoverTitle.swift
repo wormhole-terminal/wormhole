@@ -20,7 +20,7 @@ public struct PanelCoverTitle: View {
                    step: controller.changes.step, close: controller.changes.close)
         case .historyDiff:
             header(controller.history.current, session: controller.history.diff, position: controller.history.position,
-                   step: controller.history.step, close: controller.history.close)
+                   step: controller.history.step, close: controller.history.close, commit: controller.history.shortOpen)
         case .file:
             if let path = controller.files.viewing {
                 FileViewerHeader(store: controller.files, path: path, inTitleRow: true)
@@ -33,7 +33,7 @@ public struct PanelCoverTitle: View {
 
     @ViewBuilder private func header(
         _ file: ChangedFile?, session: DiffSession, position: (index: Int, count: Int)?,
-        step: @escaping (Int) -> Void, close: @escaping () -> Void
+        step: @escaping (Int) -> Void, close: @escaping () -> Void, commit: String? = nil
     ) -> some View {
         if let file {
             @Bindable var session = session
@@ -41,7 +41,7 @@ public struct PanelCoverTitle: View {
                 DiffHeader(
                     file: file, diff: session.parsed, position: position, splitFits: proxy.size.width >= DiffView.splitMinWidth && DiffView.hasLines(session),
                     split: $session.split, wrap: $session.wrap, step: step, close: controller.closeCover, gone: session.gone, outOfDate: session.refreshError,
-                    inTitleRow: true)
+                    commit: commit, inTitleRow: true)
                     .frame(maxHeight: .infinity)
             }
             .environment(\.panelHost, controller.host)

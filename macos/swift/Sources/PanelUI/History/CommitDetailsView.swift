@@ -95,10 +95,7 @@ struct CommitDetailsView: View {
     }
 
     private func refs(_ details: CommitDetails) -> some View {
-        HStack(spacing: Space._1) {
-            CommitRefs(refs: details.refs)
-            if let more = details.refsMore { Text(more).foregroundStyle(tokens.textMuted) }
-        }
+        CommitRefs(refs: details.refs, more: details.refsMore)
     }
 
     private var facts: some View {
@@ -125,7 +122,7 @@ struct CommitDetailsView: View {
 
     private func parents(_ details: CommitDetails) -> some View {
         CommitFact(label: details.parentsLabel) {
-            HStack(spacing: PanelMetrics.gap) {
+            WrapLayout(spacing: PanelMetrics.gap) {
                 ForEach(details.parents, id: \.sha) { parent in
                     let mono = Font.system(size: TextRole.caption.size, design: .monospaced)
                     if listed.contains(parent.sha) {

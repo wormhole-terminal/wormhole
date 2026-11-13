@@ -13,6 +13,13 @@ struct RevPicker: View {
     let selected: Rev?
     let revs: [Rev]
     var headTitle = "HEAD" // text: HEAD is git's name for the current commit
+    /// The list's first row in words ("HEAD (current branch)"); the chip keeps the short title.
+    var headOption: String?
+    /// A line under the list saying what picking does; while the list is read it says so instead.
+    var hint: String?
+    var loading = false
+    /// The terminal the picker belongs to: it closes when another is selected.
+    var scope: Int?
     let load: () -> Void
     let pick: (Rev?) -> Void
     @State private var open = false
@@ -27,11 +34,15 @@ struct RevPicker: View {
             .buttonStyle(.plain)
             .onHover { hovering = $0 }
             .popover(isPresented: $open, arrowEdge: .bottom) {
-                RevList(selected: selected, revs: revs, headTitle: headTitle) { rev in
+                RevList(
+                    selected: selected, revs: revs, headTitle: headOption ?? headTitle,
+                    hint: loading ? panelText("picker-loading", "Loading branches\u{2026}") : hint
+                ) { rev in
                     open = false
                     pick(rev)
                 }
             }
+            .onChange(of: scope) { open = false }
             .accessibilityLabel("\(prefix) \(selected?.title ?? headTitle)")
             .accessibilityHint(panelText("picker-hint", "Opens the list of branches"))
     }
@@ -60,6 +71,7 @@ private struct RevList: View {
     let selected: Rev?
     let revs: [Rev]
     let headTitle: String
+    let hint: String?
     let choose: (Rev?) -> Void
     @State private var query = ""
     @FocusState private var focused: Bool
@@ -87,8 +99,13 @@ private struct RevList: View {
                 }
                 .padding(Space._1)
             }
+            if let hint {
+                Rectangle().fill(tokens.divider).frame(height: tokens.metrics.dividerWidth)
+                Text(hint).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).lineLimit(2)
+                    .padding(.horizontal, Space._3).frame(maxWidth: .infinity, minHeight: Metric.row, alignment: .leading)
+            }
         }
-        .frame(width: 260, height: min(CGFloat(matches.count + 1) * Metric.row + Metric.control + 12, 320))
+        .frame(width: 260, height: min(CGFloat(matches.count + 1) * Metric.row + Metric.control + 12, 320) + (hint == nil ? 0 : Metric.row))
         .background(tokens.surfaceOverlay)
         .onAppear { focused = true }
         // Esc only closes: picking again would fold the open commit and read the list anew.

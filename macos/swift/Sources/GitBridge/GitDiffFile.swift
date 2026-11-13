@@ -1,6 +1,6 @@
 // A file's diff as the panel takes it: core's parsed hunks as `DiffFile`. Core decides what a diff is (text, binary,
 // a Git LFS pointer, too large to load unasked, a submodule); the cases that have no lines arrive
-// as a `DiffFile` with no lines and core's own words in `note`, which the card shows over the hatch.
+// as a `DiffFile` with no lines and core's own words (the column notes, the too-large card, a submodule's commits).
 
 import PanelModel
 import WormholeBindings
@@ -43,9 +43,12 @@ extension GitDiff {
             var large = DiffFile()
             large.tooLarge = TooLarge(title: title, detail: detail)
             return large
-        case let .submodule(label, note, ahead, behind):
-            let commits = (ahead.map { "+ \($0.short) \($0.subject)" } + behind.map { "\u{2212} \($0.short) \($0.subject)" })
-            return DiffFile(note: ([label, note].compactMap { $0 } + commits).joined(separator: "\n"))
+        case let .submodule(_, card):
+            var module = DiffFile()
+            module.submodule = SubmoduleCommits(
+                old: card.old, new: card.new, nothing: card.nothing, inside: card.inside, ahead: card.ahead.map(Commit.init),
+                behind: card.behind.map(Commit.init), aheadTotal: Int(card.aheadTotal), behindTotal: Int(card.behindTotal))
+            return module
         }
     }
 }

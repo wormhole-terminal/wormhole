@@ -50,7 +50,10 @@ struct ChangesListView: View {
             onToggle: { store.layout.folds[group] = !folded }
         ) {
             if first {
-                RevPicker(prefix: panelText("changes-compare-versus", "vs"), selected: store.compare, revs: store.revs, headTitle: "HEAD", load: store.loadRevs, pick: store.setCompare) // text: HEAD is git's name for the current commit
+                RevPicker(prefix: panelText("changes-compare-versus", "vs"), selected: store.compare, revs: store.revs, headTitle: "HEAD", // text: HEAD is git's name for the current commit
+                    headOption: panelText("picker-head-compare", "HEAD (uncommitted changes)"),
+                    hint: panelText("picker-compare-hint", "Changes since this branch split off from it"), loading: store.revsLoading,
+                    scope: store.terminal, load: store.loadRevs, pick: store.setCompare)
                 ViewOptionsMenu(layout: $store.layout)
                 BandButton(symbol: "arrow.clockwise", label: panelText("changes-refresh", "Refresh"), action: store.refresh)
             }

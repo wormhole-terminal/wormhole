@@ -29,14 +29,29 @@ public protocol GitBackend: Sendable {
     func revs(in folder: String, forHistory: Bool) async throws -> [Rev]
     /// Fires when something that matters to `git status` changed (the debounced watch of `git/watch`).
     func changes(in folder: String) -> AsyncStream<Void>
+    /// The repository root of `folder`, nil outside a repository. A requirement, so a call through `any GitBackend`
+    /// reaches the real backend and not the default below.
+    func root(of folder: String) async -> String?
+    /// Whether commit `sha` is on `rev`: the palette's commit keeps the History tab's branch when it is.
+    func isOn(_ sha: String, rev: Rev, in folder: String) async -> Bool
+    /// The ones of `paths` that are regular files in the working tree now (the open icon is for those); nil from a
+    /// backend that does not look, and the row then goes by the kind of change.
+    func presentFiles(_ paths: [String], in folder: String) async -> Set<String>?
+    /// How long until the earliest of `times` (Unix seconds) has an age that reads differently; nil when nothing
+    /// will (no times, or a backend with a fixed clock).
+    func nextAgeChange(of times: [Int]) -> Duration?
 }
 
-/// What a status read gave: the files, and the compared branch's name when it was deleted.
+/// What a status read gave: the files, the compared branch's name when it was deleted, and the commit the list is
+/// against (HEAD, or the merge-base with the compared branch), which an open diff is read again for when it moves.
 public struct ChangesResult: Sendable {
     public var files: [ChangedFile]
     public var compareMissing: String?
+    public var baseRev: String?
 
-    public init(files: [ChangedFile], compareMissing: String? = nil) { (self.files, self.compareMissing) = (files, compareMissing) }
+    public init(files: [ChangedFile], compareMissing: String? = nil, baseRev: String? = nil) {
+        (self.files, self.compareMissing, self.baseRev) = (files, compareMissing, baseRev)
+    }
 }
 
 extension GitBackend {
@@ -48,4 +63,9 @@ extension GitBackend {
 extension GitBackend {
     /// The repository root of `folder`, nil outside a repository (and from a backend that knows none).
     public func root(of folder: String) async -> String? { nil }
+
+    /// A backend that cannot ask says yes, so the branch stays.
+    public func isOn(_ sha: String, rev: Rev, in folder: String) async -> Bool { true }
+    public func presentFiles(_ paths: [String], in folder: String) async -> Set<String>? { nil }
+    public func nextAgeChange(of times: [Int]) -> Duration? { nil }
 }

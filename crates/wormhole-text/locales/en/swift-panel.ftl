@@ -19,6 +19,18 @@ picker-hint = Opens the list of branches
 picker-search = Search branches
 picker-none = Nothing matches.
 
+# Under the picker's list while the repository's branches are being read.
+picker-loading = Loading branches…
+
+# Under the list of the Changes tab's picker: what comparing with a branch shows.
+picker-compare-hint = Changes since this branch split off from it
+
+# The picker's first choice in Changes: no branch, the working tree against HEAD (git's name for the current commit).
+picker-head-compare = HEAD (uncommitted changes)
+
+# The picker's first choice in History: the log of the branch that is checked out.
+picker-head-history = HEAD (current branch)
+
 ## What a band or a row says it is, to VoiceOver
 
 panel-spoken-folded = folded
@@ -472,3 +484,12 @@ title-row-context-used = { $percent }% of the context window used
 diff-badge-out-of-date = Out of date
 diff-badge-gone = No longer changed
 project-trust-password = Trust (approve with password)
+
+# A submodule's diff card: the heading over the commits the pointer moved forward over.
+diff-submodule-new-commits = New commits
+
+# The heading over the commits the pointer no longer includes (it went back, or to another line of history).
+diff-submodule-left-behind = Commits left behind
+
+# After the commits listed. { $count } is how many more there are, already written with its separators.
+diff-submodule-more = and { $count } more

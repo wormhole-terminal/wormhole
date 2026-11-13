@@ -63,6 +63,8 @@ public struct DiffFile: Hashable, Sendable {
     public var note: String?
     public var notes = DiffNotes()
     public var tooLarge: TooLarge?
+    /// A submodule's card in place of lines: the commits between the two the parent records.
+    public var submodule: SubmoduleCommits?
     /// "Mode 100644 → 100755" when only the mode changed or besides the lines.
     public var modeChange: String?
     /// More lines than core colours: shown plain, with the badge "No highlighting".

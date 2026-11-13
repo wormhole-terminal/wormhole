@@ -24,6 +24,13 @@ public final class HistoryStore {
     /// The row the keys are on (`PanelWalking`).
     public var cursor: String?
     public private(set) var revs: [Rev] = []
+    /// The picker's list is being read ("Loading branches…").
+    public private(set) var revsLoading = false
+    /// The open commit's files that are regular files in the working tree now: only those have the open icon. Nil until
+    /// the disk was asked (and from a backend that does not look).
+    public private(set) var present: Set<String>?
+    /// Unix seconds when the ages last read differently; nil until the first tick (the view's own clock then).
+    public private(set) var clock: Int?
     public let diff: DiffSession
     @ObservationIgnored private let git: any GitBackend
     @ObservationIgnored private var watch: Task<Void, Never>?
@@ -42,7 +49,8 @@ public final class HistoryStore {
         var expanded: Commit.ID?
     }
     @ObservationIgnored private var kept: [Int: Kept] = [:]
-    @ObservationIgnored private var terminal: Int?
+    /// The terminal the tab shows: the picker closes when it changes.
+    public private(set) var terminal: Int?
 
     /// Another terminal brings its own picked rev, path filter and open commit; a `cd` keeps the picked rev.
     public func follow(_ folder: String?, terminal: Int? = nil) {
@@ -56,7 +64,7 @@ public final class HistoryStore {
         } else {
             (paths, expanded) = ([], nil)
         }
-        (details, detailsError) = (nil, nil)
+        (details, detailsError, present) = (nil, nil, nil)
         guard folder != self.folder else {
             refresh()
             return readDetails()
@@ -81,7 +89,8 @@ public final class HistoryStore {
             do {
                 let log = try await git.log(in: folder, of: rev, paths: paths)
                 guard folder == self.folder, rev == self.rev, paths == self.paths else { return }
-                let moved = model != log
+                // The ids compare the commits; a branch or tag that moved changes only their refs.
+                let moved = model != log || !Self.sameRefs(model.commits, log.commits)
                 model = log
                 phase = .loaded
                 // A branch or tag may have moved onto the open commit: its block is read again, the old one staying meanwhile.
@@ -92,10 +101,14 @@ public final class HistoryStore {
         }
     }
 
+    private static func sameRefs(_ old: [Commit], _ new: [Commit]) -> Bool {
+        old.count == new.count && zip(old, new).allSatisfy { $0.refs.elementsEqual($1.refs) { $0.kind == $1.kind && $0.name == $1.name } }
+    }
+
     /// Opens a commit, or closes it when it is the one open.
     public func toggle(_ sha: Commit.ID) {
         close()
-        details = nil
+        (details, present) = (nil, nil)
         guard expanded != sha else { return (expanded, detailsError) = (nil, nil) }
         (expanded, detailsError) = (sha, nil)
         readDetails()
@@ -107,7 +120,10 @@ public final class HistoryStore {
         Task {
             do {
                 let full = try await git.details(of: sha, in: folder)
-                if expanded == sha, folder == self.folder { details = full }
+                guard expanded == sha, folder == self.folder else { return }
+                details = full
+                let there = await git.presentFiles(full.files.map(\.path), in: folder)
+                if expanded == sha, folder == self.folder { present = there }
             } catch {
                 if expanded == sha { detailsError = (error as? GitFailure)?.message ?? panelText("history-details-unreadable", "The details can't be read.") }
             }
@@ -142,6 +158,33 @@ public final class HistoryStore {
         cursor = "commit-" + commit.id
     }
 
+    /// Shows the commit the palette found (`reveal_commit`): the path filter is cleared (it is shown even if it touched
+    /// none of the paths), the log goes back to HEAD when the commit is not on the branch shown (always from the
+    /// stashes), and the commit is opened with its details read even before the log lists it.
+    public func reveal(_ sha: String) {
+        guard let folder else { return }
+        let (git, rev) = (git, rev)
+        Task {
+            var onBranch = true
+            if let rev { onBranch = await git.isOn(sha, rev: rev, in: folder) }
+            guard folder == self.folder, rev == self.rev else { return }
+            if !onBranch { self.rev = nil }
+            paths = []
+            close()
+            (expanded, details, detailsError, present) = (sha, nil, nil, nil)
+            // The list scrolls to the row the keys are on.
+            cursor = "commit-" + sha
+            refresh()
+            readDetails()
+        }
+    }
+
+    /// How long until an age in the log reads differently (core's `next_age_change`); nil with no commits.
+    public func nextAgeChange() -> Duration? { git.nextAgeChange(of: model.commits.map(\.time)) }
+
+    /// An age turned over: the rows are drawn with the time as it is now.
+    public func tick(now: Int) { clock = now }
+
     public func pick(_ rev: Rev?) {
         self.rev = rev
         (expanded, details, detailsError) = (nil, nil, nil)
@@ -157,6 +200,8 @@ public final class HistoryStore {
         refresh()
     }
 
+    /// The open commit's short hash: the diff's header says which commit its file is of.
+    public var shortOpen: String? { expanded.map { String($0.prefix(7)) } }
     public var files: [ChangedFile] { details?.files ?? [] }
     public var current: ChangedFile? { files.first { $0.id == selection } }
     public var position: (index: Int, count: Int)? { current.flatMap { file in files.firstIndex(of: file).map { ($0, files.count) } } }
@@ -182,6 +227,11 @@ public final class HistoryStore {
 
     public func loadRevs() {
         guard let folder else { return }
-        Task { revs = (try? await git.revs(in: folder, forHistory: true)) ?? [] }
+        (revs, revsLoading) = ([], true)
+        Task {
+            let listed = (try? await git.revs(in: folder, forHistory: true)) ?? []
+            guard folder == self.folder else { return }
+            (revs, revsLoading) = (listed, false)
+        }
     }
 }

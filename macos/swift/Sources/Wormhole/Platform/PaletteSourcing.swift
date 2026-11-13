@@ -49,7 +49,8 @@ extension AppController {
                     self?.router.dispatch(menu)
                 case .commit(let sha):
                     session?.hub.send(.showPanelTab(.history))
-                    session?.hub.panel.history.show(sha)
+                    // Also a commit the loaded log does not list (a filtered log, another branch): History goes to it.
+                    session?.hub.panel.history.reveal(sha)
                 }
             },
             hiddenActions: { [weak self, weak session] in

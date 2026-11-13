@@ -18,6 +18,8 @@ public struct DiffView: View {
     var opensLines = false
     /// False when the window draws the header itself, in the terminal's title row (`PanelCoverTitle`).
     var showsHeader = true
+    /// From History: the commit's short hash for the header.
+    var commit: String?
     @Environment(\.tokens) private var tokens
     @Environment(\.codeFont) private var codeFont
     @Environment(\.tabWidth) private var tabWidth
@@ -29,8 +31,9 @@ public struct DiffView: View {
     init(
         file: ChangedFile, session: DiffSession, position: (index: Int, count: Int)? = nil,
         step: @escaping (Int) -> Void = { _ in }, close: @escaping () -> Void = {}, review: DiffReview? = nil,
-        opensLines: Bool = false, showsHeader: Bool = true
+        opensLines: Bool = false, showsHeader: Bool = true, commit: String? = nil
     ) {
+        self.commit = commit
         self.opensLines = opensLines
         (self.file, self.session, self.position, self.step, self.close, self.review) = (file, session, position, step, close, review)
         self.showsHeader = showsHeader
@@ -46,7 +49,7 @@ public struct DiffView: View {
             let fits = geometry.size.width >= Self.splitMinWidth && Self.hasLines(session)
             VStack(spacing: 0) {
                 if showsHeader {
-                    DiffHeader(file: file, diff: session.parsed, position: position, splitFits: fits, split: $session.split, wrap: $session.wrap, step: step, close: close, gone: session.gone, outOfDate: session.refreshError)
+                    DiffHeader(file: file, diff: session.parsed, position: position, splitFits: fits, split: $session.split, wrap: $session.wrap, step: step, close: close, gone: session.gone, outOfDate: session.refreshError, commit: commit)
                     Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth)
                 }
                 content(split: session.split && fits, width: geometry.size.width)
@@ -65,6 +68,8 @@ public struct DiffView: View {
             TooLargeCard(
                 large: large, path: file.path, revealLabel: review != nil ? panelText("history-menu-reveal", "Reveal in Finder") : panelText("diff-reveal-current", "Reveal Current File in Finder"),
                 load: session.loadAnyway)
+        } else if let commits = session.parsed?.submodule {
+            SubmoduleCard(commits: commits)
         } else {
             lines(split: split, width: width)
         }
@@ -72,8 +77,10 @@ public struct DiffView: View {
 
     @ViewBuilder private func lines(split: Bool, width: CGFloat) -> some View {
         let diff = session.parsed
-        let base = DiffStyle(code: codeFont, digits: diff.map(DiffRows.numberDigits) ?? 3, wrap: session.wrap, advance: codeFont.advance)
-        let rows = diff.map { split ? DiffRows.split($0) : DiffRows.unified($0) } ?? []
+        // The rows were cut when the diff was read: nothing here walks its lines again.
+        let built = diff == nil ? nil : session.built
+        let base = DiffStyle(code: codeFont, digits: built?.digits ?? 3, wrap: session.wrap, advance: codeFont.advance)
+        let rows = (split ? built?.split : built?.unified) ?? []
         let note = noteText(diff)
         // Sideways scrolling is as far as the longest line is wider than its column (`render_diff_body`); the gutters stay put.
         let columns = split ? 2 : 1
@@ -135,7 +142,7 @@ public struct DiffView: View {
 
     /// The diff has lines to lay out (not a binary file, an LFS pointer, a submodule or a patch too large): the layout switch is for them.
     static func hasLines(_ session: DiffSession) -> Bool {
-        session.parsed.map { !$0.isBinary && $0.note == nil && !$0.isLFS && $0.tooLarge == nil } ?? true
+        session.parsed.map { !$0.isBinary && $0.note == nil && !$0.isLFS && $0.tooLarge == nil && $0.submodule == nil } ?? true
     }
 
     private static func hasNotes(_ diff: DiffFile) -> Bool { diff.notes.unified != nil || diff.notes.split.contains { $0 != nil } }

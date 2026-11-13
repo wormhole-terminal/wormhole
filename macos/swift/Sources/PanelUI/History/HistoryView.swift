@@ -40,7 +40,7 @@ struct HistoryDiffPane: View {
 
     var body: some View {
         if let file = store.current {
-            DiffView(file: file, session: store.diff, position: store.position, step: store.step, close: store.close, showsHeader: !headerInRow)
+            DiffView(file: file, session: store.diff, position: store.position, step: store.step, close: store.close, showsHeader: !headerInRow, commit: store.shortOpen)
         }
     }
 }
@@ -59,7 +59,9 @@ struct HistoryListView: View {
                     spoken: panelText("history-spoken-list", ["count": .whole(store.model.commits.count)], "History, \(String(store.model.commits.count)) commits")
                 ) {
                     RevPicker(
-                        selected: store.rev, revs: store.revs, headTitle: "HEAD", load: store.loadRevs, pick: store.pick) // text: HEAD is git's name for the current commit
+                        selected: store.rev, revs: store.revs, headTitle: "HEAD", // text: HEAD is git's name for the current commit
+                        headOption: panelText("picker-head-history", "HEAD (current branch)"), loading: store.revsLoading,
+                        scope: store.terminal, load: store.loadRevs, pick: store.pick)
                 }
                 if !store.paths.isEmpty { filterChip }
                 switch store.phase {
@@ -70,14 +72,24 @@ struct HistoryListView: View {
                 }
             }
         }
+        // The ages are drawn again when the next one reads differently ("12m" to "13m"), only while the tab shows.
+        .task(id: [store.clock ?? 0, store.model.commits.count, store.model.commits.first?.time ?? 0]) {
+            guard let wait = store.nextAgeChange() else { return }
+            // one-shot: the moment the earliest age in the log changes (core's `next_age_change`)
+            try? await Task.sleep(for: wait)
+            if !Task.isCancelled { store.tick(now: Int(Date().timeIntervalSince1970)) }
+        }
     }
+
+    /// The time the ages are counted from: the tab's, or the last tick's once an age turned over.
+    private var shownNow: Int { store.clock.map { max($0, now) } ?? now }
 
     @ViewBuilder private var commits: some View {
         if store.model.commits.isEmpty {
             EmptyView()
         } else {
             ForEach(store.model.commits) { commit in
-                CommitRowView(commit: commit, now: now, expanded: commit.id == store.expanded) {
+                CommitRowView(commit: commit, now: shownNow, expanded: commit.id == store.expanded) {
                     withAnimation(motion.fold) { store.toggle(commit.id) }
                 }
                 .commitMenu(commit, store: store)
@@ -100,7 +112,8 @@ struct HistoryListView: View {
                         SubmoduleRowView(file: file, depth: 1, selected: file.id == store.selection) { store.open(file.id) }
                             .walkRow("file-" + file.id)
                     } else {
-                        FileRowView(file: file, depth: 1, selected: file.id == store.selection) { store.open(file.id) }
+                        // The open icon only for a file that is in the working tree now (`present_files`).
+                        FileRowView(file: file, depth: 1, selected: file.id == store.selection, onDisk: store.present.map { $0.contains(file.path) }) { store.open(file.id) }
                             .walkRow("file-" + file.id)
                     }
                 }

@@ -19,6 +19,8 @@ struct DiffHeader: View {
     /// The file is no longer in the status ("No longer changed"); the last re-read failed ("Out of date", with why).
     var gone = false
     var outOfDate: String?
+    /// From History: the commit's short hash, after "File N of M" in the primary.
+    var commit: String?
     /// In the terminal's title row the row gives the height and the insets.
     var inTitleRow = false
     @Environment(\.tokens) private var tokens
@@ -32,6 +34,7 @@ struct DiffHeader: View {
             if let position {
                 Text(panelText("diff-file-position", ["index": .whole(position.index + 1), "count": .whole(position.count)], "File \(String(position.index + 1)) of \(String(position.count))")).font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize()
             }
+            if let commit { Text(commit).font(TextRole.caption.font).foregroundStyle(tokens.primary).fixedSize() }
             // The path crumb: the file's icon, its folders quiet and its name loud. It gives way first, down to
             // nothing, so the badges and controls at the end stay whole (the GPUI title row elides it the same way).
             FileIcon(kind: .file(file.name), tint: tokens.textMuted)

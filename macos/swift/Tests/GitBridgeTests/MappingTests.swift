@@ -76,7 +76,9 @@ import WormholeBindings
         let large = try GitDiff.tooLarge(bytes: 9_000_000, title: "This diff is 9 MB", detail: "Loading it can take a few seconds.").file()
         #expect(large.tooLarge == TooLarge(title: "This diff is 9 MB", detail: "Loading it can take a few seconds."))
         let newer = GitLogCommit(sha: "s", short: "s1", parent: nil, merge: false, author: "A", time: 0, subject: "newer", refs: [])
-        #expect(try failure(.submodule(label: "1 new commit", note: nil, ahead: [newer], behind: [])) == "1 new commit\n+ s1 newer")
+        let card = GitSubmoduleCard(old: "aaaaaaa", new: "bbbbbbb", nothing: nil, inside: nil, ahead: [newer], behind: [], aheadTotal: 1, behindTotal: 0)
+        let module = try GitDiff.submodule(label: "1 new commit", card: card).file()
+        #expect(module.hunks.isEmpty && module.submodule?.ahead.first?.subject == "newer" && module.submodule?.aheadTotal == 1)
     }
 
     @Test func rustErrorsBecomeThePanelsFailure() {
