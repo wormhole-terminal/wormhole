@@ -53,7 +53,7 @@ public final class DiffSession {
 
     /// `tab_width` changed: the widest line is measured again, so the sideways extent follows the tabs the rows draw.
     private func retab() {
-        guard case .shown(var diff) = phase else { return }
+        guard case .shown(let shown) = phase, var diff = shown else { return }
         diff.widest = DiffRows.widest(diff, tabWidth: preferences.tabWidth)
         phase = .shown(diff)
     }
