@@ -3,6 +3,7 @@
 // What may be opened is the seam's `openTarget`; the system opens it.
 
 import AppKit
+import AppLogging
 import DesignSystem
 import TerminalCore
 import WordsModel

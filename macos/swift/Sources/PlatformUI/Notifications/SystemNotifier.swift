@@ -3,6 +3,7 @@
 // Open / Reply… / Show Changes buttons. The centre aborts a process that isn't an app bundle, so it is never
 // touched without one, nor in a test instance: `make` returns the log notifier there.
 
+import AppLogging
 import Foundation
 import PlatformModel
 import UserNotifications

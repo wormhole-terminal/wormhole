@@ -20,7 +20,6 @@ extension AuxText {
     }
     public static var licensesUnreadable: String { tr("licenses-unreadable", "The list of licenses could not be read.") }
 
-    public static var updatesTitle: String { tr("settings-section-updates", "Updates") }
     public static var updatesIntro: String { tr("settings-section-updates.intro", "Signed releases, checked in the background.") }
     public static var updatesVersion: String { tr("settings-updates-version", "Version") }
     public static var updatesChannel: String { tr("settings-updates-update-channel", "Channel") }

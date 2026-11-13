@@ -4,6 +4,7 @@
 // read from `badge` and `bounces`, and its icon is dropped (an accessory app has none and takes no place in ⌘⇥).
 
 import AppKit
+import AppLogging
 import PlatformModel
 import WordsModel
 

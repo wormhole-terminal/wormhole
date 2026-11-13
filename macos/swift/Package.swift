@@ -17,7 +17,7 @@ var targets: [Target] = [
     // The packed frame, the `FrameSource` seam and its synthetic implementation. Foundation only.
     .target(name: "TerminalCore", swiftSettings: hotLoopSettings),
     // The Metal view: CoreText, the glyph atlas, instanced quads, the display link, keyboard and IME.
-    .target(name: "TerminalMetal", dependencies: ["TerminalCore", "DesignSystem", "WordsModel"], swiftSettings: hotLoopSettings),
+    .target(name: "TerminalMetal", dependencies: ["TerminalCore", "DesignSystem", "WordsModel", "AppLogging"], swiftSettings: hotLoopSettings),
     .testTarget(name: "TerminalCoreTests", dependencies: ["TerminalCore", "TerminalMetal"]),
 
     // The window around the terminal. Layers, lowest first; each depends only on the ones above it here.
@@ -88,11 +88,13 @@ var targets: [Target] = [
     .testTarget(name: "WorkspaceModelTests", dependencies: ["WorkspaceModel"]),
     // The seam for the interface's words (`wormhole-text`'s ids and tables behind it, when linked). Foundation only.
     .target(name: "WordsModel"),
+    // The seam for the app's own log lines: the modules below the app write through it into the core's log files. Foundation only.
+    .target(name: "AppLogging"),
     // The macOS edge as plain values and pure logic: the keymap (core's table as data), the menu bar and context
     // menus, notifications, the ambient surfaces, the folder picker's model, Touch ID's protocol. Foundation only.
     .target(name: "PlatformModel", dependencies: ["WordsModel"], resources: [.copy("Resources/keymap.json")]),
     // AppKit and UserNotifications around it: menus, hotkey, banners, status item, Dock, quick panel, picker panel.
-    .target(name: "PlatformUI", dependencies: ["PlatformModel", "DesignSystem", "WordsModel"]),
+    .target(name: "PlatformUI", dependencies: ["PlatformModel", "DesignSystem", "WordsModel", "AppLogging"]),
     .testTarget(name: "PlatformTests", dependencies: ["PlatformModel", "PlatformUI", "DesignSystem"]),
     // The Theme Studio's logic: a theme file as a draft, resolved by Rust, with undo, contrast and versions.
     .target(name: "StudioModel", dependencies: ["DesignSystem", "WordsModel"]),
@@ -107,7 +109,7 @@ var targets: [Target] = [
 var appDependencies: [Target.Dependency] = [
     "TerminalCore", "TerminalMetal", "WorkspaceModel", "WindowsModel", "WindowUI", "SettingsModel", "SettingsUI", "DesignSystem",
     "PanesModel", "PanesUI", "PanelModel", "PlatformModel", "PlatformUI", "AuxModel", "AuxWindows", "TerminalUI",
-    "PaletteModel", "PanelModel", "PanelUI", "StudioModel", "StudioUI", "SidebarUI", "PanesModel", "WordsModel", "FileIconTheme", "FontPickerModel",
+    "PaletteModel", "PanelModel", "PanelUI", "StudioModel", "StudioUI", "SidebarUI", "PanesModel", "WordsModel", "FileIconTheme", "FontPickerModel", "AppLogging",
 ]
 // The view's input: pointer, selection, links, keyboard and input method, on the mock and (when the FFI is
 // linked) on the real engine.

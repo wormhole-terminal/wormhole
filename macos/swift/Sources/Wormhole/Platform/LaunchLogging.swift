@@ -2,7 +2,7 @@
 // GPUI app's `app/logging.rs`), and the app's own lines go into the same daily files through `log`.
 
 import Foundation
-import WordsModel
+import AppLogging
 
 #if WITH_UNIFFI
     import WormholeBindings

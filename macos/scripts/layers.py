@@ -6,7 +6,7 @@
 
 The table below is the rule (swift/STANDARDS.md, "Layers"). Each target has a kind and a rank:
 
-  found   WorkspaceModel, WordsModel, TerminalCore, DesignSystem: use no module of the package;
+  found   WorkspaceModel, WordsModel, AppLogging, TerminalCore, DesignSystem: use no module of the package;
   model   the `...Model` modules: plain values and pure logic; use `found`;
   ffi     the generated bindings and UniFFISource: the Rust seam; use `found`;
   ui      feature UI and TerminalMetal: use `found`, `model` and a `ui` of a lower rank;
@@ -31,7 +31,7 @@ SWIFT = Path(__file__).resolve().parent.parent / "swift"
 # name: (kind, rank)
 TABLE: dict[str, tuple[str, int]] = {
     "WorkspaceModel": ("found", 0), "WordsModel": ("found", 0), "TerminalCore": ("found", 0),
-    "DesignSystem": ("found", 0),
+    "DesignSystem": ("found", 0), "AppLogging": ("found", 0),
     "WindowsModel": ("model", 1), "PanelModel": ("model", 1), "PaletteModel": ("model", 1),
     "PanesModel": ("model", 1), "SettingsModel": ("model", 1), "PlatformModel": ("model", 1),
     "AuxModel": ("model", 1), "StudioModel": ("model", 1), "FontPickerModel": ("model", 0),

@@ -1,4 +1,4 @@
-// The seam for the app's own log lines, beside the words' seam because every module already depends on this one. The
+// The seam for the app's own log lines, a module of its own that the ones that log depend on. The
 // app installs a sink at launch (`LaunchLogging`: the core's daily files); a module without one (a test, a build without
 // the core) loses the line, as `Words` falls back to English.
 
