@@ -96,6 +96,10 @@ final class HookBridgeTests: XCTestCase {
         defer { handle.stop() }
         let id = try agentTerminal(workspace, named: "codex")
         _ = workspace.apply(action: .newTerminal)  // another terminal is in front
+        // The agent is seen first, as in the test above: a hook that comes before its program is seen is undone when it is.
+        for _ in 0..<500 where workspace.sidebar().sections.flatMap(\.rows).first(where: { $0.id == id })?.agent == nil {
+            try await Task.sleep(for: .milliseconds(20))
+        }
         setenv("WORMHOLE_SOCKET", handle.socketPath, 1)
         setenv("WORMHOLE_TAB_ID", String(id), 1)
         defer { unsetenv("WORMHOLE_SOCKET"); unsetenv("WORMHOLE_TAB_ID") }
