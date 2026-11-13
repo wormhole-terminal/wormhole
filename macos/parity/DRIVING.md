@@ -182,3 +182,37 @@ column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T1
   position on screen (`NSEvent.mouseLocation` stays the real pointer's).
 - **The input method's own UI** (marked text, the candidate window): `text` applies the key bindings directly.
 - **Signed bundle behaviour** (update install, Time Sensitive entitlement).
+
+## End-to-end tests
+
+`macos/swift/Tests/EndToEndTests` is the first suite that uses the app instead of its parts: twelve short scenarios a person would do
+(a first window, new/select/rename/close, splits, groups and tabs, the palette, Settings, the right panel, notes, quit and come back,
+a worktree, an agent's status, two windows), each asserted on what the app reports through this control folder, never on pixels. One
+`Instance` (`Instance.swift`) starts the built `Wormhole` with `--background` on a scratch folder, sends a batch (a `sync <token>`
+after every command says it is done: the wait is on the output file's change events and a deadline, never a pause), and always ends
+what it started (`quit-end-all`, by its own pid if that does not answer) and removes the folder.
+
+Run them where the bridge is linked (`macos/scripts/build-ffi.sh swift`, then in `macos/swift`):
+
+```sh
+swift test --filter EndToEndTests               # builds the app too; WORMHOLE_E2E_APP=<path> runs another build of it
+swift test --filter EndToEndTests/firstWindow   # one scenario
+```
+
+The suite skips itself, saying why, when no `Wormhole` is built. A failure attaches the control files and the app's output to the
+test's result; with `WORMHOLE_E2E_ARTIFACTS=<folder>` set (CI does) it also copies them, with `config.json` and the logs, there before
+the scratch folder goes. `swift.yml` runs the suite as a step of its own after the other tests and uploads that folder on failure.
+
+To add one: a test in `extension EndToEnd` (one file per theme, `@MainActor`), `try await Instance.with { app in … }` (a shell
+other than `/bin/cat`: `shell: .zsh` or `.agent("codex")`), commands through `app.send([...])`, `app.reply("…")`, `app.rows()`, and
+`app.until("command") { reply in … }` for a fact nothing announces (it asks again with the app's own `delay` between asks and a
+deadline). Read the command's real reply in its `AppController+Control*.swift` before asserting on it, and ask for a command that does
+not exist instead of inventing one (the right panel's Changes has no listing of files yet). A repository comes from
+`app.scratch.repository(…)`, a second window's files are `cmd2` and `out2.txt` (`app.send([...], window: 2)`).
+
+What they may never touch: the person's data folder, `HOME`, agent home, clipboard, Trash, notifications, Touch ID, git repositories,
+browser or editor, and the keyboard focus. The harness gives the app an environment of its own (no inherited variable): the data
+folder is `Wormhole-swift-e2e` inside `/tmp/wh-e2e-<id>`, `HOME`, `TMPDIR` and `WORMHOLE_AGENT_HOME` are folders in it,
+`WORMHOLE_AUTH=cancel`, `WORMHOLE_NOTIFY=log`, `WORMHOLE_AGENT_PATH=` empty, git without the person's config. A test never passes a
+real path to the app, never spawns a program itself (`Spawn.swift` is the one place `rules.py` allows a `Process`, marked
+`// process:`), and never sets the app's isolation variables by hand.
