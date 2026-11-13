@@ -61,6 +61,7 @@ studio-gallery-areas = Show the part of the app
 studio-gallery-uses-selected = uses the selected token
 studio-gallery-show-palette = Show the palette
 studio-gallery-show-sheet = Show the shortcut sheet
+studio-gallery-show-quick-panel = Show the quick panel
 
 ## The font picker
 

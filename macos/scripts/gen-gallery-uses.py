@@ -7,8 +7,8 @@ views really use.
 
 A component is one of core's `TOKEN_USES` (ELEMENTS): its label and area are core's, its tokens those of the Swift source files that
 draw it, or core's own list for a control that is the system's. A token is found as an accessor of the generated `ThemeTokens`
-(`tokens.sidebarRowSelected`), a `Palette` reader (which names the accessor it forwards to), a `named: "x"` string,
-or a corner and rule role (`Radius.card`, `Rule.border`). `--check` changes nothing and fails when the file is stale.
+(`tokens.sidebarRowSelected`), a `Palette` reader (which names the accessor it forwards to), in the window's own files a
+`ChromeColours` reader (`colours.bandHover`, the same way), a `named: "x"` string, or a corner and rule role (`Radius.card`, `Rule.border`). `--check` changes nothing and fails when the file is stale.
 """
 import re
 import sys
@@ -27,6 +27,7 @@ ELEMENTS = {
     "sidebar.band": ["SidebarUI/Group/GroupHeadView.swift", "SidebarUI/Group/HeadControls.swift", "SidebarUI/Group/FoldedSummary.swift"],
     "status.tile": ["SidebarUI/Tile/*"],
     "status.glyph": ["DesignSystem/StatusDot.swift"],
+    "status.bar": ["WindowUI/StatusBar.swift"],
     "folder.color": ["PanelUI/Project/ColorChoice.swift", "PanelUI/Project/FolderColorCard.swift"],
     "branch.chip": ["PanesUI/Title/BranchCrumb.swift"],
     "panel.card": ["PanelUI/Shell/PanelCard.swift"],
@@ -37,6 +38,7 @@ ELEMENTS = {
     "diff": ["PanelUI/Diff/Diff*"],
     "callout": ["PanelUI/Shell/Callout.swift"],
     "icon.button": ["DesignSystem/IconButton.swift"],
+    "icon.tab": ["WindowUI/PanelTabBar.swift", "PanelUI/Shell/TabCountBadge.swift"],
     "title.tab": ["PanesUI/Tabs/TerminalTabView.swift"],
     "keycap": ["DesignSystem/KeyCap.swift", "SidebarUI/Row/Keycap.swift"],
     "badge": ["DesignSystem/CountBadge.swift", "DesignSystem/StatusBadge.swift", "AuxWindows/Shared/StatusBadge.swift"],
@@ -60,6 +62,9 @@ ELEMENTS = {
     "checkbox": [],
     "banner": ["DesignSystem/Banner.swift"],
     "palette.row": ["PaletteUI/ResultRow.swift"],
+    "readout": ["WindowUI/Columns/ResizeReadout.swift", "TerminalUI/Scaling/SizeReadoutChip.swift", "TerminalUI/Support/ReadoutPill.swift"],
+    "readout.block": ["TerminalUI/Blocks/BlockReadout.swift", "TerminalUI/Support/ReadoutPill.swift"],
+    "resize.handle": ["WindowUI/Columns/ColumnHandle.swift"],
     "terminal": [],
     "code": [],
 }
@@ -86,8 +91,18 @@ def accessors() -> dict[str, str]:
     return table
 
 
-def tokens_of(text: str, table: dict[str, str]) -> set[str]:
+def chrome(table: dict[str, str]) -> dict[str, str]:
+    """The window's `ChromeColours` readers: name -> token, each a one-line forward to a token or a metric."""
+    text = (SWIFT / "WindowUI/ChromeColours.swift").read_text()
+    out = {name: table[accessor] for name, accessor in re.findall(r"var (\w+): Color \{ tokens\.(\w+) \}", text) if accessor in table}
+    for name, metric in re.findall(r"var (\w+): CGFloat \{ tokens\.metrics\.(\w+) \}", text):
+        out[name] = "metrics." + re.sub(r"(?<!^)([A-Z])", r"_\1", metric).lower()
+    return out
+
+
+def tokens_of(text: str, table: dict[str, str], colours: dict[str, str]) -> set[str]:
     found = {table[m] for m in re.findall(r"\b(?:tokens|Palette|ui)\.(\w+)", text) if m in table}
+    found |= {colours[m] for m in re.findall(r"\bcolours\.(\w+)", text) if m in colours}
     found |= set(re.findall(r'(?:named|rgba\(named): "([a-z_.0-9]+)"', text))
     found |= {token for role, token in ROLES.items() if role in text}
     # The theme's metrics read through `tokens.metrics.radiusLg`: the token is `metrics.radius_lg`.
@@ -105,7 +120,8 @@ def core_uses() -> dict[str, tuple[str, str, list[str]]]:
 
 def swift_tokens(patterns: list[str], table: dict[str, str]) -> set[str]:
     files = sorted(p for p in SWIFT.glob("*/**/*.swift") if any(fnmatch(str(p.relative_to(SWIFT)), g) for g in patterns))
-    return set().union(*(tokens_of(f.read_text(), table) for f in files))
+    colours = chrome(table)
+    return set().union(*(tokens_of(f.read_text(), table, colours if f.relative_to(SWIFT).parts[0] == "WindowUI" else {}) for f in files))
 
 
 def main() -> int:

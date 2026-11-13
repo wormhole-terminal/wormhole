@@ -30,6 +30,7 @@ public struct BlockReadout: View {
                 .padding(.leading, Space._2).padding(.trailing, Space._1)
                 .frame(height: Metric.control)
             }
+            .marked("readout.block")
             .onHover { controller.readoutHovered = $0 }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(BlockWording.readout(state) ?? "")

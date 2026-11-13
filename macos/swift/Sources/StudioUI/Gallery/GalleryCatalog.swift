@@ -7,6 +7,8 @@
 enum GalleryCatalog {
     static let specimens: [Specimen] = [
         Specimen("sidebar", "Sidebar", "bands, rows in every state, glyphs", area: .sidebar, column: .left),
+        Specimen("statusbar", "Status bar", "the terminal that needs you, the counts, the state and the size, wide and narrow", area: .sidebar, column: .both),
+        Specimen("icontabs", "Icon tabs", "the right panel's tabs, the active one with its count", area: .panel, column: .right),
         Specimen("notes", "Notes and tasks", "a note, the steps, the checkboxes", area: .panel, column: .right),
         Specimen("changes", "Changes", "section bands, files, counts", area: .panel, column: .right),
         Specimen("history", "History", "commits, refs, the open one", area: .panel, column: .right),
@@ -16,7 +18,7 @@ enum GalleryCatalog {
         Specimen("chrome", "Chrome", "icon buttons, badges, status glyphs, rows", area: .chrome, column: .left),
         Specimen("tiles", "Tiles and tabs", "status tiles at three sizes, the tab bar", area: .sidebar, column: .left),
         Specimen("find", "Find", "the find bar, matches and the current one", area: .chrome, column: .left),
-        Specimen("panes", "Panes", "pane headers, focused and not, and the dividers", area: .chrome, column: .left),
+        Specimen("panes", "Panes", "pane headers, focused and not, the dividers, a pane as a terminal is dragged over it", area: .chrome, column: .left),
         Specimen("chips", "Tabs and chips", "the title row's chips, badges, key caps", area: .chrome, column: .left),
         Specimen("labels", "Labels", "titles, section labels, empty notes, toolbars", area: .chrome, column: .left),
         Specimen("shape", "Shape", "radii, the focus ring, everything chip-shaped", area: .chrome, column: .left),
@@ -27,7 +29,8 @@ enum GalleryCatalog {
         Specimen("menus", "Menus", "the select and the pop-up button", area: .settings, column: .right),
         Specimen("windows", "Windows", "the secondary windows' cards, badges and buttons", area: .ambient, column: .both),
         Specimen("sketch", "Window sketch", "the first run's 'How much to show' presets, Zen to Everything", area: .ambient, column: .both),
-        Specimen("palette", "Command palette", "the quick panel and the shortcut sheet, on the scrim", area: .ambient, column: .both),
+        Specimen("palette", "Command palette", "the palette and the shortcut sheet on the scrim, the menu bar's quick panel", area: .ambient, column: .both),
+        Specimen("readouts", "Readouts", "a resize handle and its width, the grid's size, a command block", area: .ambient, column: .both),
         Specimen("fonts", "Font picker", "search, the families in their own faces, the preview and what the font draws", area: .settings, column: .right),
         Specimen("terminal", "Terminal", "16 ANSI, text, selection, cursor", area: nil, column: .left),
         Specimen("code", "Code", "every syntax colour on the terminal's background", area: nil, column: .right),

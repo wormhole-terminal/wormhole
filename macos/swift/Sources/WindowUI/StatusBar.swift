@@ -94,6 +94,7 @@ struct StatusBar: View {
         .frame(height: Chrome.statusHeight)
         .background { if !look.glassOn { look.surface(colours.sidebar) } }
         .overlay(alignment: .top) { if !look.glassOn { colours.rule.frame(height: colours.borderWidth) } }
+        .marked("status.bar")
         .animation(Motion.fade, value: summary)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Words.text("window-status-bar", fallback: "Status bar"))

@@ -121,6 +121,7 @@ enum StudioWords {
     static var gallerySelected: String { text("studio-gallery-uses-selected", "uses the selected token") }
     static var showPalette: String { text("studio-gallery-show-palette", "Show the palette") }
     static var showSheet: String { text("studio-gallery-show-sheet", "Show the shortcut sheet") }
+    static var showQuickPanel: String { text("studio-gallery-show-quick-panel", "Show the quick panel") }
 
     // The theme menu, the title row's marks and the update sheet.
     static var menuThisProject: String { text("studio-menu-this-project", "This Project") }

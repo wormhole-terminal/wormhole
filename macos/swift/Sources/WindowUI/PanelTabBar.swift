@@ -85,6 +85,7 @@ private struct PanelTabButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .marked("icon.tab")
         .onHover { hovering = $0 }
         // The glyph plays as its tab becomes the active one, never as the window opens or the panel comes back.
         .onChange(of: isSelected) { _, now in if now { run.start() } }

@@ -30,6 +30,10 @@ enum GalleryUses {
         TokenUse(id: "status.glyph", label: "status glyph", area: .sidebar, tokens: [
             "agent.attention", "agent.done", "agent.working", "status.danger", "text.faint",
         ]),
+        TokenUse(id: "status.bar", label: "status bar", area: .sidebar, tokens: [
+            "agent.attention.text", "agent.attention.tint", "band.hover", "border", "metrics.border_width",
+            "metrics.radius", "primary", "sidebar.background", "text.faint", "text.muted",
+        ]),
         TokenUse(id: "folder.color", label: "folder colour", area: .sidebar, tokens: [
             "band.hover", "border", "border.strong", "metrics.border_width", "metrics.radius", "metrics.radius_sm",
             "text.muted", "text.primary",
@@ -71,6 +75,10 @@ enum GalleryUses {
         ]),
         TokenUse(id: "icon.button", label: "icon button", area: .chrome, tokens: [
             "state.active", "state.hover", "text.muted", "text.primary",
+        ]),
+        TokenUse(id: "icon.tab", label: "icon tab", area: .panel, tokens: [
+            "band.hover", "border", "metrics.radius", "metrics.radius_chip", "sidebar.row.selected.text",
+            "state.selected", "state.selected.inset", "text.muted", "text.primary",
         ]),
         TokenUse(id: "title.tab", label: "title tab", area: .chrome, tokens: [
             "border", "metrics.radius", "metrics.radius_chip", "state.hover", "text.muted", "text.primary",
@@ -150,6 +158,15 @@ enum GalleryUses {
         TokenUse(id: "palette.row", label: "palette result", area: .ambient, tokens: [
             "list.selected", "list.selected.muted", "list.selected.text", "primary", "state.hover", "text.muted",
             "text.primary",
+        ]),
+        TokenUse(id: "readout", label: "resize readout", area: .ambient, tokens: [
+            "metrics.radius", "metrics.radius_chip", "tooltip.background", "tooltip.text",
+        ]),
+        TokenUse(id: "readout.block", label: "command block readout", area: .ambient, tokens: [
+            "metrics.radius", "tooltip.background", "tooltip.danger", "tooltip.success", "tooltip.text",
+        ]),
+        TokenUse(id: "resize.handle", label: "resize handle", area: .ambient, tokens: [
+            "metrics.border_width", "resize.handle.active", "resize.handle.hover",
         ]),
         TokenUse(id: "terminal", label: "terminal", area: .all, tokens: [
             "state.highlight", "surface.window", "terminal.*",

@@ -28,6 +28,7 @@ struct ColumnHandle: View {
             // The line takes `resize.handle.hover` after a short rest and `resize.handle.active` while it is dragged.
             .overlay { if hot || dragging { Rectangle().fill(dragging ? tokens.resizeHandleActive : tokens.resizeHandleHover).frame(width: tokens.metrics.borderWidth) } }
             .frame(width: Chrome.resizeHandle)
+            .marked("resize.handle")
             .contentShape(Rectangle())
             .pointerStyle(.columnResize)
             .onHover { inside in
@@ -66,26 +67,4 @@ struct ColumnHandle: View {
 /// The window's own coordinate space, which drags are measured in.
 enum PaneSpace {
     static let name = "window-panes"
-}
-
-/// The words beside the pointer while a column is dragged: its width, and why it stopped ("430 · max") or what
-/// letting go does ("Close").
-struct ResizeReadout: View {
-    let text: String
-    let pointer: CGFloat
-    let pointerY: CGFloat
-    @Environment(\.chrome) private var colours
-
-    var body: some View {
-        Text(text)
-            .font(TextRole.caption.font.weight(.medium))
-            .monospacedDigit()
-            .foregroundStyle(colours.tooltipText)
-            .padding(.horizontal, Space._2)
-            .frame(height: Chrome.hit - Space._1)
-            .background(colours.tooltip, in: RoundedRectangle(cornerRadius: colours.radius))
-            .offset(x: pointer + Space._2, y: pointerY - Space._2)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
 }

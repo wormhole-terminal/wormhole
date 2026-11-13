@@ -30,6 +30,8 @@ enum SpecimenContent {
             ProjectSpecimen().frame(height: 560).clipped().allowsHitTesting(false)
         case "files":
             FilesSpecimen().frame(height: 360).clipped().allowsHitTesting(false)
+        case "statusbar", "icontabs": ExtraSpecimen(id: id)
+        case "readouts": ReadoutsSpecimen()
         case "settings": SettingsSpecimen().allowsHitTesting(false)
         case "tiles": TilesSpecimen()
         case "find": FindSpecimen()

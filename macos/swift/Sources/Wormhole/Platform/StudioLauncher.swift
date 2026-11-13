@@ -6,6 +6,7 @@ import DesignSystem
 import Foundation
 import StudioModel
 import StudioUI
+import WindowUI
 
 #if WITH_UNIFFI
     import AuxBridge
@@ -44,6 +45,8 @@ final class StudioLauncher {
     }
 
     func show(store: ThemeStore = .shared) {
+        // The window's own chrome in the gallery: the Studio is a layer below the window and is handed its specimens.
+        GalleryExtras.view = { WindowSpecimens.view(for: $0) }
         #if WITH_UNIFFI
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)
             SketchSource.preset = { WindowSketches.blocks(preset: $0, width: $1) }

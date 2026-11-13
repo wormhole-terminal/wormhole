@@ -369,3 +369,42 @@ Unfinished or not built in this lane:
 | A07 | TEST: start with `agent_access` "ask" and the Automation flag off; while running, edit config.json to turn the flag on and set `agent_access` "open" in one write; make a request | the earlier mode stays in force and the keep-it question is put | `crates/wormhole-ffi/src/hook_server/core.rs` `Seat::new` |
 | T20 | Persistent terminals off: `control hosts` for a terminal in the app | no hosting state (`off`), and the Session Hosts badge is off | `WorkspaceBridge/RustWorkspaceBackend+HostProblems.swift` `hosting(of:)` |
 | A01 | build with Xcode 26 on a clean checkout, play any intro | the intro draws (its shader files are in the bundle) | `macos/scripts/build-ffi.sh` (copies `Resources/shader`) |
+
+## Lane studio, wave 4
+
+Written without compiling: expect compile errors.
+
+The gallery against GPUI's (`crates/wormhole/src/studio/gallery/mod.rs` `SPECIMENS`, 21 specimens; core `TOKEN_USES`, 49 uses).
+Before: 27 Swift specimens, 40 of the 49 uses marked. GPUI specimens or parts with no Swift specimen: the status bar (in
+Sidebar), the icon tabs (in Right panel and Tabs and chips), the quick panel, the resize handle with its readout, the size
+readout and the block readout (all four in Notifications), the pane drop zones and the dragged divider (in Panes). Uses not
+marked: `status.bar`, `icon.tab`, `readout`, `readout.block`, `resize.handle`, `tooltip`, `menu`, `dialog`, `scrollbar`.
+GPUI's outline and "Used by" come from one table (`Env::mark` over `TOKEN_USES`); a mark has no click of its own (only the
+swatches select a token), and Swift does the same through `.marked(id)` and the generated `GalleryUses`.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| SD02 | Open Theme Studio, area All or Sidebar | A "Status bar" specimen under the columns: the real bar twice (wide with words, narrow with glyphs and counts), the waiting terminal's button, the state and "120×40" at the end; clicks do nothing | `WindowUI/WindowSpecimens.swift` (`StatusBarSample`, `SampleWindow`), `StudioUI/Gallery/GalleryExtras.swift`, `Wormhole/Platform/StudioLauncher.swift` (sets `GalleryExtras.view`) |
+| SD02 | Area Panel | An "Icon tabs" specimen: the right panel's six tabs, Changes selected with 3, Usage with 2 | `WindowSpecimens.view(for: "icontabs")`, `WindowUI/PanelTabBar.swift` |
+| SD02 | Area Ambient, "Readouts" | A divider line with a handle that lights after the pointer rests on it and turns active while dragged (nothing moves); beside it "430 · max", "350" and "Close" on the tooltip fill; a "120 × 40" size chip that stays whole (no fade, no clock running); block readouts "exit 0 · 380ms"-like, a red exit 101 and one without a code, each with Copy output that does nothing | `StudioUI/Gallery/ReadoutsSpecimen.swift`, `WindowUI/Columns/ResizeReadout.swift` (moved out of `ColumnHandle.swift`), `TerminalUI/Scaling/SizeReadoutChip.swift` (`held`) |
+| SD02 | Area Ambient, "Command palette", press "Show the quick panel" | The menu bar's quick panel on its card: search row with ⇧⌘Space, a waiting agent, a working, a failed and an idle terminal, New terminal and Open folder, the footer's hints; Esc or a chosen row closes it, typing narrows the rows; the Studio's own fields keep the keyboard until the button is pressed | `StudioUI/Gallery/PaletteSpecimen.swift` (`quick`), `Package.swift` (StudioUI now uses PlatformModel and PlatformUI) |
+| SD02 | Area Chrome, "Panes" | Under the two headers a third divider in the active colour, then a pane with the right side lit ("Show on the right"-like pill) and the other three sides as dashed hints | `PanesUI/Samples/PaneSpecimen.swift` (`dropZones`) |
+| SD02 | Select `tooltip.background`, then `resize.handle.active`, `agent.attention.tint`, `state.selected` in the token list | The dashed outline goes round the readouts; the handle; the status bars; the icon tabs (each tab) and whatever else draws it. The editor's "Used by" lists "resize readout", "command block readout", "resize handle", "status bar", "icon tab" | `.marked("status.bar")` `WindowUI/StatusBar.swift`, `"icon.tab"` `PanelTabBar.swift`, `"resize.handle"` `ColumnHandle.swift`, `"readout"` `ResizeReadout.swift` and `SizeReadoutChip.swift`, `"readout.block"` `TerminalUI/Blocks/BlockReadout.swift`; `macos/scripts/gen-gallery-uses.py` (five ids, `chrome()` reads `ChromeColours`) |
+| SD02 | In a real window with the Studio closed: drag a column edge, resize the window, hover a finished block, look at the status bar and panel tabs | Nothing new is drawn round them (the marks are empty outside the gallery) and the size chip still fades after 700 ms | the same marks; `SizeReadoutChip(model:held:)` defaults to false |
+| SD02 | `python3 -I macos/scripts/gallery.py` | ok; GalleryUses.swift lists 47 components | `StudioUI/Gallery/GalleryUses.swift` (regenerated) |
+
+Not written, and why:
+
+| row | what | why |
+|---|---|---|
+| SD02 | `tooltip` specimen and mark | The Swift app has no tooltip of its own: every one is the system's (`.help`), which the theme does not colour. `tooltip.background`/`tooltip.text` are shown by the readouts |
+| SD02 | `menu` specimen and mark (the select's opened menu with its search row) | Selects and menus are the system's (`Picker`, `NSMenu`); the Menus specimen shows the triggers. No themed menu view exists to show |
+| SD02 | `dialog` specimen and mark (the close question on its scrim) | The Studio's and the window's questions are `NSAlert` sheets (`StudioQuestions.swift`). The SwiftUI sheets on `surface.overlay` (new profile, probe, worktree) need their own stores and are not GPUI's dialog |
+| SD02 | `scrollbar` specimen and mark | Lists scroll with the system's scrollers; `scrollbar.thumb` is drawn only by the minimap and the diff's overflow cue, which GPUI's gallery does not show under this use |
+| SD02 | Windows: first-run sheet's card with step dots, About, Licenses list | `AuxWindowsSpecimen` shows the hosts' cards, badges and buttons only; the other windows' views take their models (not compared part by part in this wave) |
+| SD02 | Tiles and tabs: the status change caught mid-way per variant, counts half turned (`rolling_number`), the tile on a selected row | No Swift rolling number exists; the status change (`SidebarUI/Tile/StatusPlay.swift`) has no way to be held at a point in time |
+| SD02 | Chrome: the hit area drawn round a small glyph, the context meter and agent gauge, row-end buttons pulled out | No Swift view of these names (`hit_area`, `context_meter`, `agent_gauge`); not searched further |
+| SD02 | Tabs and chips: path crumb, drag ghost and lifted card, "Used by" chip, split mark; Sidebar: the drop rows (row target, drop line), chain mark | Not added: the sidebar's drag views (`SidebarUI/Drag`) are internal and driven by a live drag; no path crumb view found |
+| SD02 | The specimens the window draws are empty in `StudioTests` and previews | Only the app sets `GalleryExtras.view`; the snapshot test sees the titles with nothing under them |
+| SD02 | TEST | none: no data, trust or wire format touched |
+
