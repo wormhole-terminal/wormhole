@@ -55,5 +55,5 @@ struct NewWorktreeSheet: View {
         .onAppear { focused = true }
     }
 
-    private var isRefusal: Bool { if case .refused = store.plan { true } else { false } }
+    private var isRefusal: Bool { if store.error != nil { return true }; if case .refused = store.plan { return true }; return false }
 }

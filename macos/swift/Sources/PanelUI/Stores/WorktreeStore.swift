@@ -68,6 +68,8 @@ public final class WorktreeStore {
 
     /// The sheet's footnote under the branch field: the folder it would make, or why it can't.
     public var footnote: String? {
+        // A refusal at Create (trust revoked while the sheet was up) is said here, the sheet staying up.
+        if let error { return error }
         switch plan {
         case let .ready(_, folder): panelText("worktree-folder", ["folder": .text(shown(folder))], "Folder: \(shown(folder))")
         case let .refused(why): why
