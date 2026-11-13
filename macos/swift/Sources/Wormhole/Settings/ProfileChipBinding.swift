@@ -154,6 +154,8 @@ extension AppController {
             (session.panelBackends.project as? RustProjectBackend)?.service.followProfile(profile: id)
             (session.panelBackends.usage as? RustUsageBackend)?.service.followProfile(profile: id)
             (session.panelBackends.files as? RustFilesBackend)?.followProfile(id)
+            // The worktrees a window makes, and their ports, are remembered in its own profile's database.
+            session.panelBackends.worktrees.followProfile(id)
             session.saver?.windows = target.backend
             // Not left without a window: the profile Wormhole is in keeps one to type in.
             if windows(of: windowsHost.profile).isEmpty {
