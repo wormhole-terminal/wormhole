@@ -16,6 +16,7 @@ struct SettingsPage: View {
             if let note = model.host.previewNote(section: section.id) {
                 Banner(kind: .info, text: note) { ActionButton(title: Words.text("settings-window-feature-flags", fallback: "Feature flags"), symbol: nil) { model.show("featureFlags") } }
             }
+            if model.zenOn, ZenNote.affects(section) { ZenNote(leave: { model.leaveZen?() }) }
             // The file that does not read says why on Advanced, with a way to open it; on every other page that changes are not saved.
             if section.id == "advanced", let broken = model.backend.banner() {
                 Banner(kind: .warning, text: broken) { ActionButton(title: SettingsText.open, symbol: nil, frameId: "banner.open") { model.host.perform(.openConfig) } }

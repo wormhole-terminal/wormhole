@@ -39,6 +39,10 @@ public final class SettingsModel {
     /// Opens the Theme Studio (the button beside Import theme).
     @ObservationIgnored public var openStudio: (() -> Void)?
     @ObservationIgnored public var hotkeyError: (() -> String?)?
+    /// Zen mode is on: the windows show less than these settings say, and a page with a row it overrides says so.
+    public var zenOn = false
+    /// Leaves Zen mode (the note's button).
+    @ObservationIgnored public var leaveZen: (() -> Void)?
 
     public init(
         schema: SettingsSchema = .bundled, backend: any SettingsBackend, host: any SettingsHost,

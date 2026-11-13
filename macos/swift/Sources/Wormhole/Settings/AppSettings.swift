@@ -21,6 +21,7 @@ enum AppSettings {
         model.onRecording = { [weak app] in app?.hotkey?.pause($0) }
         model.openStudio = { [weak app] in app?.studio.show() }
         model.hotkeyError = { [weak app] in app?.hotkey?.error }
+        model.leaveZen = { [weak app] in app?.setZen(false) }
         return model
     }
 
