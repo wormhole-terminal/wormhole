@@ -15,6 +15,12 @@ public protocol Notifying: AnyObject {
     func remove(id: String)
     /// Asks the system for permission (macOS prompts only while it hasn't been decided), then reads it again.
     func askPermission()
+    /// "Needs input" can be delivered as Time Sensitive: signed for it and allowed by the person. Never in a log.
+    var deliversTimeSensitive: Bool { get }
+}
+
+extension Notifying {
+    public var deliversTimeSensitive: Bool { false }
 }
 
 /// A test instance's notifier: keeps what would have been posted, as devctl's `notify-log` shows it, and posts

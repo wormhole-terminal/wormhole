@@ -23,7 +23,7 @@ public enum SettingsAction: String, Sendable, Decodable {
     case makeDefaultTerminal, resetAll, resetTips
     /// A page's header buttons, which the schema has no row for.
     case rescanAgents, scanImports
-    case openNotificationSettings, sendTestNotification, checkForUpdates
+    case openNotificationSettings, sendTestNotification, askNotifications, checkForUpdates
     /// The Command line tool row's buttons.
     case installCommandLine, uninstallCommandLine
 }

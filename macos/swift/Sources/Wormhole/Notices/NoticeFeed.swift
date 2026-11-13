@@ -10,6 +10,7 @@
     import PlatformBridge
     import PlatformModel
     import PlatformUI
+    import SettingsModel
     import WordsModel
     import WorkspaceBridge
     import WormholeBindings
@@ -18,7 +19,10 @@
     final class NoticeFeed {
         private let coordinator: NoticeCoordinator
         let notifier: any Notifying
-        private unowned let app: AppController
+        unowned let app: AppController
+        /// What came of the last "Send test" (the Notifications page shows it) and the task still waiting on macOS.
+        var test = NotifyStatus.Test.idle
+        var testTask: Task<Void, Never>?
 
         init(app: AppController) {
             self.app = app

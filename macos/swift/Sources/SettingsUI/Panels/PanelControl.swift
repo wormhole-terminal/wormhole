@@ -29,8 +29,7 @@ struct PanelControl: View {
         case "profile-delete":
             ActionButton(title: SettingsText.deleteProfile, symbol: Icon.trash.rawValue, isDestructive: true, frameId: "profile.delete") { deleteProfile() }
                 .disabled(model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault ?? true)
-        case "notify-permission": button(Words.text("settings-notifications-open-system-settings", fallback: "Open System Settings"), Icon.settings.rawValue, .openNotificationSettings)
-        case "notify-test": button(Words.text("settings-notifications-send-test", fallback: "Send test"), Icon.notifications.rawValue, .sendTestNotification)
+        case "notify-permission", "notify-test": NotifyControl(model: model, name: name)
         default: Text(SettingsText.notBuilt).textRole(.label).foregroundStyle(tokens.textFaint)
         }
     }
@@ -43,9 +42,4 @@ struct PanelControl: View {
             _ = model.host.removeProfile(profile.id)
         }
     }
-
-    private func button(_ title: String, _ symbol: String, _ action: SettingsAction, danger: Bool = false) -> some View {
-        ActionButton(title: title, symbol: symbol, isDestructive: danger) { model.host.perform(action) }
-    }
-
 }

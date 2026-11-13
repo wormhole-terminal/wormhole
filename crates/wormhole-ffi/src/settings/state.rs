@@ -13,6 +13,10 @@ use wormhole_core::storage::paths::ProfilePaths;
 
 use super::values::{schema_keys, schema_values};
 
+/// The notification kinds' keys: the switches that `Settings::change_notify_kind` keeps in step with `notifications`.
+const NOTIFY_KINDS: [&str; 5] =
+    ["notify_needs_you", "notify_agent_done", "notify_command_done", "notify_command_failed", "notify_bell"];
+
 pub(crate) struct State {
     config: Config,
     /// The profile's folder: what `edits` counts Settings' changes by.
@@ -53,7 +57,16 @@ impl State {
 
     /// Every schema key with its effective value (the project's where it overrides).
     pub(crate) fn values(&self) -> Map<String, Value> {
-        schema_values(&self.effective)
+        let mut values = schema_values(&self.effective);
+        // A kind reads through the master switch (`notify_kind_on`), as the GPUI page does: with `notifications`
+        // off every kind shows off.
+        for key in NOTIFY_KINDS {
+            if let Some(Value::Bool(on)) = values.get(key) {
+                let shown = self.effective.notify_kind_on(*on);
+                values.insert(key.to_string(), Value::Bool(shown));
+            }
+        }
+        values
     }
 
     /// The effective settings, for what needs the typed value (search's visibility, the shell list).
@@ -71,6 +84,10 @@ impl State {
         let mut next = self.config.settings.clone();
         for (key, value) in writes {
             next = settings_index::set(&next, &key, value)?;
+            // Turning a kind on turns the master on, turning the last one off turns it off (core's rule).
+            if NOTIFY_KINDS.contains(&key.as_str()) {
+                next.change_notify_kind(|_| {});
+            }
         }
         Ok(self.replace(next))
     }
