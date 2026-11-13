@@ -67,7 +67,7 @@ public final class WorktreeStore {
     public var footnote: String? {
         // A refusal at Create (trust revoked while the sheet was up) is said here, the sheet staying up.
         if let error { return error }
-        switch plan {
+        return switch plan {
         case let .ready(_, folder): panelText("worktree-folder", ["folder": .text(shown(folder))], "Folder: \(shown(folder))")
         case let .refused(why): why
         case nil: panelText("worktree-folder-pending", "Folder: <branch>")
