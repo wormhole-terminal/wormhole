@@ -78,6 +78,9 @@ pub struct GitStatus {
     pub behind: u32,
     /// The compared branch no longer exists: the files are against HEAD and the panel says so.
     pub compare_missing: Option<String>,
+    /// The commit the list is against: HEAD, or the merge-base with the compared revision. An open diff is
+    /// read again when it moves.
+    pub base_rev: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Enum)]
@@ -260,5 +263,22 @@ pub enum GitDiff {
     /// More than core loads unasked: its two lines of wording and the size. Ask again with `load_anyway`.
     TooLarge { bytes: Option<u64>, title: String, detail: String },
     /// A submodule: what moved, and the commits between (its own repository's, newest first).
-    Submodule { label: String, note: Option<String>, ahead: Vec<GitLogCommit>, behind: Vec<GitLogCommit> },
+    Submodule { label: String, card: GitSubmoduleCard },
+}
+
+/// What the diff card shows for a submodule in place of lines (GPUI's `diff/submodule.rs`): the two commits
+/// the pointer moved between, the commits on each side with how many there are in all, and core's sentences
+/// for why there is nothing to list or what is inside the folder.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct GitSubmoduleCard {
+    /// The short hashes the pointer was at and is at, when both are known and differ.
+    pub old: Option<String>,
+    pub new: Option<String>,
+    pub nothing: Option<String>,
+    pub inside: Option<String>,
+    /// Newest first, at most `COMMITS_SHOWN`; the totals say how many there are.
+    pub ahead: Vec<GitLogCommit>,
+    pub behind: Vec<GitLogCommit>,
+    pub ahead_total: u32,
+    pub behind_total: u32,
 }

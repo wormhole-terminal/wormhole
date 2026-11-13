@@ -32,6 +32,14 @@ impl WorkspaceModel {
         branches
     }
 
+    /// The first terminal on `branch`: where a pull request's finished checks are told.
+    pub fn first_on_branch(&self, branch: &Branch) -> Option<i64> {
+        self.sessions
+            .iter()
+            .find(|s| branch_of(s.facts.repo.clone(), &s.facts.branch).as_ref() == Some(branch))
+            .map(|s| s.id)
+    }
+
     /// The ports terminal `id`'s programs listen on, lowest first, as the last look found them.
     pub fn set_ports(&mut self, id: i64, ports: Vec<u16>) -> Vec<Event> {
         let before = self.ports.get(&id).cloned().unwrap_or_default();

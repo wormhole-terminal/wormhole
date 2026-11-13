@@ -679,6 +679,9 @@ func compactMessage(folder, sha, lineChars) -> GitCompact?         // the compac
 func commitDiff(folder, sha, path, loadAnyway) -> GitDiff
 func revs(folder, forHistory: Bool) -> [GitRev]    // branches (current first), 200 newest tags, 10 commits, stashes
 func setBinaryUnits(binary: Bool)                  // `size_units`
+func isOn(folder, sha, rev: GitRev) -> Bool        // merge-base --is-ancestor; false for the stashes and when git can't say
+func presentFiles(folder, paths) -> [String]       // the regular files inside the repository now (first 2,000 looked at)
+gitNextAgeChange(times: [Int64]) -> UInt64?        // ms until the earliest age reads differently (core's `next_age_change`)
 
 // GitWatch: one thread per watch; listener.changed() once per debounced burst (150 ms quiet, 1 s cap, 1 s gap)
 GitWatch.start(folder, listener: GitListener) throws -> GitWatch;  isLive();  stop()   // drop also stops
@@ -696,8 +699,10 @@ func remove(folder) throws                              // only one Wormhole mad
   `oldPath` (nil: a new file), `newPath` (nil: deleted) and `hunks` of `GitHunk{header, lines: [GitDiffLine{kind,
   old, new, text, noNewline}]}`, so Swift parses no diff text. Whole files are not read for highlighting (Swift's
   lexer colours the lines). `GitDiff` cases: `text(file)`, `binary(file, sizes)`, `lfs(summary)`, `tooLarge(bytes,
-  title, detail)` (ask again with `loadAnyway`), `submodule(label, note, ahead, behind)`: the last three have no
-  lines, and the words are core's (`diff_text`, `Submodule::label`).
+  title, detail)` (ask again with `loadAnyway`), `submodule(label, card)`: the last three have no
+  lines, and the words are core's (`diff_text`, `Submodule::label`). `GitSubmoduleCard` is the card's body: `old`/`new`
+  short hashes when the pointer moved, `nothing` and `inside` (core's sentences), `ahead`/`behind` (capped) with
+  `aheadTotal`/`behindTotal`. `GitStatus.baseRev` is the commit the list is against (an open diff is re-read when it moves).
 - **An opened commit is finished by core.** `commitDetails` returns `GitCommitDetails`: the subject, VoiceOver's
   words, the raw `message` and `authorLine` (what the copies put on the clipboard), `people` (author, committer when
   it differs, co-authors) as `GitFact{label, spans: [GitSpan{text, tone}]}`, parents and refs capped with their

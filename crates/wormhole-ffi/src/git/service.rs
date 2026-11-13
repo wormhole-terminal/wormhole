@@ -14,7 +14,9 @@ use wormhole_core::git::{
 };
 
 use super::error::GitBackendError;
-use super::records::{GitChange, GitDiff, GitDiffFile, GitLog, GitLogCommit, GitRev, GitRevKind, GitStatus};
+use super::records::{
+    GitChange, GitDiff, GitDiffFile, GitLog, GitLogCommit, GitRev, GitRevKind, GitStatus, GitSubmoduleCard,
+};
 use super::shown::{GitCommitDetails, GitCompact, Message};
 
 /// Recent commits the revision picker offers to compare with.
@@ -91,6 +93,7 @@ impl Git {
             ahead: status.upstream.as_ref().map_or(0, |up| up.ahead),
             behind: status.upstream.as_ref().map_or(0, |up| up.behind),
             compare_missing: status.compare_missing.clone(),
+            base_rev: status.base_rev.clone(),
         };
         self.kept()
             .listings
@@ -297,18 +300,35 @@ impl Git {
 
 fn submodule_diff(root: &Path, file: &FileChange, sub: &git::Submodule) -> Result<GitDiff, GitBackendError> {
     let log = git::submodule_log(root, &file.path, sub).map_err(|err| GitBackendError::of(&err))?;
-    let (ahead, behind) = match &log.range {
-        Range::Commits { ahead, behind, .. } => {
-            (ahead.iter().map(GitLogCommit::from).collect(), behind.iter().map(GitLogCommit::from).collect())
-        }
-        _ => (Vec::new(), Vec::new()),
+    let count = |total: usize| u32::try_from(total).unwrap_or(u32::MAX);
+    let (ahead, behind, ahead_total, behind_total) = match &log.range {
+        Range::Commits { ahead, behind, ahead_total, behind_total } => (
+            ahead.iter().map(GitLogCommit::from).collect(),
+            behind.iter().map(GitLogCommit::from).collect(),
+            count(*ahead_total),
+            count(*behind_total),
+        ),
+        _ => (Vec::new(), Vec::new(), 0, 0),
     };
-    let note = [log.nothing_to_list(), sub.inside_note()].into_iter().flatten().collect::<Vec<_>>().join(" ");
+    // Which commit to which, only when the pointer moved.
+    let (old, new) = match (&log.old, &log.new) {
+        (Some(old), Some(new)) if old != new => {
+            (Some(git::short(old).to_string()), Some(git::short(new).to_string()))
+        }
+        _ => (None, None),
+    };
     Ok(GitDiff::Submodule {
         label: sub.label(file.kind),
-        note: (!note.is_empty()).then_some(note),
-        ahead,
-        behind,
+        card: GitSubmoduleCard {
+            old,
+            new,
+            nothing: log.nothing_to_list(),
+            inside: sub.inside_note(),
+            ahead,
+            behind,
+            ahead_total,
+            behind_total,
+        },
     })
 }
 
@@ -331,6 +351,6 @@ fn now() -> i64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)
 }
 
-fn root_of(folder: &str) -> Result<PathBuf, GitBackendError> {
+pub(super) fn root_of(folder: &str) -> Result<PathBuf, GitBackendError> {
     find_root(Path::new(folder)).ok_or(GitBackendError::NotARepository)
 }

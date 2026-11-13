@@ -15,7 +15,8 @@ use wormhole_core::config::Config;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::git::pr::{self, Branch, PrCache};
 use wormhole_core::project::{ProjectFolder, TrustStatus, TrustStore};
-use wormhole_core::storage::paths::DataRoot;
+use wormhole_core::storage::paths::{DataRoot, ProfilePaths};
+use wormhole_core::workspace::StatusEvent;
 use wormhole_term::listening_ports;
 
 use crate::workspace::Shared;
@@ -88,7 +89,7 @@ fn pull_requests(shared: &Arc<Shared>) -> Option<Duration> {
     }
     for branch in branches {
         let now = Instant::now();
-        if !locked(&shared.extras.cache).is_due(&branch, now) || !approved(&branch.root) {
+        if !locked(&shared.extras.cache).is_due(&branch, now) || !approved(shared, &branch.root) {
             continue;
         }
         if !locked(&shared.extras.cache).begin(&branch, now) {
@@ -100,13 +101,16 @@ fn pull_requests(shared: &Arc<Shared>) -> Option<Duration> {
             let branch = branch.clone();
             move || {
                 let found = pr::pull_request(&branch.root);
-                let known = {
+                let (settled, known) = {
                     let mut cache = locked(&shared.extras.cache);
-                    cache.finish(&branch, found, Instant::now());
-                    cache.get(&branch).cloned()
+                    let settled = cache.finish(&branch, found, Instant::now());
+                    (settled, cache.get(&branch).cloned())
                 };
-                let events = shared.with_model(|model| model.set_pull_request(branch, known));
+                let events = shared.with_model(|model| model.set_pull_request(branch.clone(), known));
                 shared.post(events);
+                if let Some(settled) = settled {
+                    tell_checks_settled(&shared, &branch, &settled);
+                }
             }
         });
         if spawned.is_err() {
@@ -116,11 +120,29 @@ fn pull_requests(shared: &Arc<Shared>) -> Option<Duration> {
     Some(PULL_REQUESTS_EVERY)
 }
 
+/// A pull request's checks finished: the first terminal on its branch tells it the way a program's own
+/// notification is told (`Wormhole notify`'s path), so the notification settings and the sidebar's
+/// needs-you rules apply as they do to those (GPUI's `tell_checks_settled`).
+fn tell_checks_settled(shared: &Shared, branch: &Branch, settled: &pr::Settled) {
+    let Some(id) = shared.peek_model(|model| model.first_on_branch(branch)) else { return };
+    let (title, body) = settled.notification(&branch.name);
+    shared.feed(id, StatusEvent::ControlNotice { title, body });
+}
+
+/// The profile the window is in: its trust store and config decide, the data folder's default where the
+/// workspace is in no window (tests).
+fn profile_of(shared: &Shared) -> Option<ProfilePaths> {
+    if let Some((windows, _)) = shared.windows() {
+        return Some(windows.profile().clone());
+    }
+    let dir = crate::aux_backends::resolve_data_dir(None).ok()?;
+    Some(DataRoot::new(dir).default_profile())
+}
+
 /// Whether `gh` may be started for the repository at `root`: the project folders feature is on and its
-/// `.wormhole/` content is approved (`ProjectHub::trusted`), the profile being the data folder's default.
-fn approved(root: &Path) -> bool {
-    let Ok(dir) = crate::aux_backends::resolve_data_dir(None) else { return false };
-    let profile = DataRoot::new(dir).default_profile();
+/// `.wormhole/` content is approved (`ProjectHub::trusted`), both in the window's profile.
+fn approved(shared: &Shared, root: &Path) -> bool {
+    let Some(profile) = profile_of(shared) else { return false };
     if !Config::load_for(&profile).settings.feature_enabled(FeatureFlag::ProjectFolders) {
         return false;
     }

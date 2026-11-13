@@ -118,7 +118,9 @@ pub use git::{
     GitRef, GitRefKind, GitRev, GitRevKind, GitSpan, GitStatus, GitTone, GitWatch, GitWorktree,
     GitWorktreePlan, WorktreeService,
 };
-pub use git::{GitDiffNotes, GitProblemWords, GitSideNote, git_problem};
+pub use git::{
+    GitDiffNotes, GitProblemWords, GitSideNote, GitSubmoduleCard, git_next_age_change, git_problem,
+};
 pub use hook_server::{
     HookError, HookEvent, HookListener, HookServer, WelcomeDemoRow, WelcomeDemoState, WelcomeDock,
     WelcomePlan, cli_exit_code, welcome_demo_label, welcome_demo_next_ms, welcome_demo_rows,

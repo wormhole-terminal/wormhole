@@ -390,9 +390,9 @@ fn a_submodule_is_a_row_in_core_s_words_and_a_diff_of_its_commits() {
     let row = status.files.iter().find(|f| f.path == "vendor").expect("the submodule");
     assert_eq!(row.submodule.as_deref(), Some("1 new commit"));
     match git_obj.diff(folder, "vendor".into(), None, false).expect("diff") {
-        GitDiff::Submodule { label, ahead, .. } => {
+        GitDiff::Submodule { label, card } => {
             assert_eq!(label, "1 new commit");
-            assert_eq!(ahead.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["newer"]);
+            assert_eq!(card.ahead.iter().map(|c| c.subject.as_str()).collect::<Vec<_>>(), ["newer"]);
         }
         other => panic!("{other:?}"),
     }
