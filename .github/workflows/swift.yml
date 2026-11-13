@@ -1,9 +1,9 @@
 name: Swift app
 
-# The Swift app (macos/, with its bridge crate crates/wormhole-ffi): the Rust library, a release build of the app
-# and every Swift test, on a GitHub runner instead of a developer's Mac. Pushes to main that reach it, or by hand
+# The Swift app (macos/, with its bridge crate crates/wormhole-ffi): the Rust library, a release build of the app,
+# every Swift test and the end-to-end suite, on a GitHub runner instead of a developer's Mac. Pushes to main that reach it, or by hand
 # (Actions → Swift app → Run workflow, or `gh workflow run "Swift app" --ref <branch>`). It uses no secret and
-# publishes nothing, and no other workflow waits for it: the app that ships is the CI workflow's.
+# publishes nothing (a failed end-to-end run keeps its logs as a run artifact for a week), and no other workflow waits for it: the app that ships is the CI workflow's.
 on:
   push:
     branches: [main]
@@ -33,7 +33,7 @@ jobs:
     # The app is developed with Xcode 27; the runner has Xcode 26 (Swift 6.3), which the package says it builds
     # with. There is no macOS 27 runner yet (a job asking for one stays queued).
     runs-on: macos-latest
-    timeout-minutes: 75
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -62,12 +62,41 @@ jobs:
       - name: Release build
         working-directory: macos/swift
         run: swift build -c release
-      # The tests start real terminals: they make their own scratch data folders and refuse any other.
+      # The hosting tests start a real session host and skip without one: the host binary where they look for it (a debug
+      # build in the bridge's own target folder).
+      - name: Session host for the hosting tests
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/crates/wormhole-ffi/target
+        run: cargo build -p wormhole-host
+      # The tests start real terminals: they make their own scratch data folders and refuse any other. The end-to-end
+      # suite is the next step's.
       - name: Tests
         working-directory: macos/swift
         run: |
           set -o pipefail
-          swift test 2>&1 | tee "$RUNNER_TEMP/swift-test.log"
+          swift test --skip EndToEndTests 2>&1 | tee "$RUNNER_TEMP/swift-test.log"
+      # The built app as a background test instance on scratch folders, driven through its control folder
+      # (macos/parity/DRIVING.md, "End-to-end tests"). It never takes the focus, touches the clipboard, Trash, browser or
+      # editor, or reads a real home; a failure leaves its control files, log and config.json in the artifact below.
+      - name: End-to-end tests
+        working-directory: macos/swift
+        timeout-minutes: 25
+        env:
+          WORMHOLE_E2E_ARTIFACTS: ${{ runner.temp }}/e2e-artifacts
+        run: |
+          set -o pipefail
+          mkdir -p "$WORMHOLE_E2E_ARTIFACTS"
+          swift test --filter EndToEndTests 2>&1 | tee "$RUNNER_TEMP/swift-e2e.log"
+      - name: End-to-end files, if it failed
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: swift-e2e
+          path: |
+            ${{ runner.temp }}/e2e-artifacts
+            ${{ runner.temp }}/swift-e2e.log
+          if-no-files-found: ignore
+          retention-days: 7
       # A compiler crash names no source line: build the module file by file and say which file it was in.
       - name: Where the compiler crashed, if it did
         if: failure()
@@ -78,4 +107,4 @@ jobs:
           grep -E "While |error:" "$RUNNER_TEMP/narrow.log" | sort -u | head -20 || true
       - name: Failures, if any
         if: failure()
-        run: grep -E "error:|recorded an issue|failed" "$RUNNER_TEMP/swift-test.log" | sort -u | head -80 || true
+        run: grep -E "error:|recorded an issue|failed" "$RUNNER_TEMP/swift-test.log" "$RUNNER_TEMP/swift-e2e.log" 2> /dev/null | sort -u | head -80 || true
