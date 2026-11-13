@@ -20,6 +20,8 @@ struct SolidInstance {
     static let dashed: UInt32 = 2
     static let curly: UInt32 = 3
     static let dimBit: UInt32 = 1 << 8
+    /// Bit 9: a background that stays inside the grid (the block cursor), where the others at an edge run on into the padding.
+    static let fixedBit: UInt32 = 1 << 9
 }
 
 /// A glyph from the atlas: where to put it and what to sample. 32 bytes.

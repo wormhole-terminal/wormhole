@@ -81,6 +81,13 @@ public final class MetalRenderer {
         var dim: Float = 0.66
         /// What blinking text is multiplied by: 1 in the clock's on half, `blinkFaded` in the off half.
         var blink: Float = 1
+        /// Added to every position: the padding, while the viewport is the whole pane (the backgrounds' draw).
+        var origin: SIMD2<Float> = .zero
+        /// The grid's right and bottom edge in pixels, which an edge cell's background runs on from.
+        var gridEnd: SIMD2<Float> = .zero
+        /// 1 while the backgrounds are drawn: edge cells take the padding (`render/paint.rs`, Ghostty's padding-color extend).
+        var extend: Float = 0
+        var spare: Float = 0
     }
 
     private struct Slot {
@@ -378,7 +385,8 @@ public final class MetalRenderer {
     ) {
         let slot = slots[index]
         images.prepare(in: buffer)
-        // The padding is left clear (the clear colour is the terminal's background) and the grid is drawn in what is left.
+        // The grid is drawn in what the padding leaves; the padding itself is the clear colour (the terminal's background),
+        // under the edge cells' backgrounds, which run on into it.
         let size = CGSize(width: full.width - CGFloat(2 * inset), height: full.height - CGFloat(2 * inset))
         var uniforms = Uniforms(viewport: SIMD2(Float(size.width), Float(size.height)))
         if blinkFaded { uniforms.blink = Self.blinkFadedFactor }
@@ -395,7 +403,22 @@ public final class MetalRenderer {
         encoder.setRenderPipelineState(solidPipeline)
         encoder.setVertexBuffer(slot.solids, offset: 0, index: 0)
         if counts.backgrounds > 0 {
+            // The edge cells' colour runs on into the padding: this draw's viewport is the whole pane, the grid shifted by
+            // the padding in the shader, so the same instances are drawn in the same pass.
+            if inset > 0 {
+                var whole = uniforms
+                whole.viewport = SIMD2(Float(full.width), Float(full.height))
+                whole.origin = SIMD2(Float(inset), Float(inset))
+                whole.gridEnd = SIMD2(Float(gridPixels.width), Float(gridPixels.height))
+                whole.extend = 1
+                encoder.setViewport(MTLViewport(originX: 0, originY: 0, width: full.width, height: full.height, znear: 0, zfar: 1))
+                encoder.setVertexBytes(&whole, length: MemoryLayout<Uniforms>.size, index: 1)
+            }
             encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4, instanceCount: counts.backgrounds)
+            if inset > 0 {
+                encoder.setViewport(MTLViewport(originX: Double(inset), originY: Double(inset), width: size.width, height: size.height, znear: 0, zfar: 1))
+                encoder.setVertexBytes(&uniforms, length: MemoryLayout<Uniforms>.size, index: 1)
+            }
         }
         images.encode(.belowText, into: encoder, size: extent, surface: surface)
         if counts.glyphs > 0 {

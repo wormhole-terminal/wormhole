@@ -93,8 +93,10 @@ final class RowBuilder {
             // A colour that runs to the last column a sized row shows runs on to the grid's edge, as on a normal row.
             let x = Float(backgroundStart) * cellWidth
             let right = (end >= columns && stretch != Stretch.normal) ? layout.gridRight : Float(end) * cellWidth
+            // The block cursor stays in its cell; any other colour at an edge runs on into the padding in the shader.
+            let style = backgroundColor == PackedColor.cursor ? SolidInstance.fixedBit : 0
             geometry.backgrounds.append(
-                SolidInstance(x: x, y: top, width: right - x, height: cellHeight, color: backgroundColor, style: 0))
+                SolidInstance(x: x, y: top, width: right - x, height: cellHeight, color: backgroundColor, style: style))
             backgroundStart = -1
         }
         func flushDecoration(_ end: Int) {
