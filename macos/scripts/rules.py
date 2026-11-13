@@ -13,8 +13,9 @@ Rules, each with the reason it exists:
   no-polling     no Timer.scheduledTimer / Timer.publish / Task.sleep in the Swift sources: an idle
                  window sleeps until an event (events.md); the measuring tool (ffi-bench) is exempt, and a call with
                  a `// one-shot: <what it waits for>` comment on its line or the two above is a deadline, not polling;
-  no-process     the Swift sources never spawn a process (everything goes through the seam), except where a
-                 `// process: <what it runs>` comment on the line or the two above says why (the end-to-end harness).
+  no-process     the Swift sources never spawn a process (everything goes through the seam). The one exception is the
+                 end-to-end tests' harness (`Tests/EndToEndTests`), where a `// process: <what it runs>` comment on
+                 the line or the two above says what is started; the comment excuses nothing anywhere else.
 
 Generated and built files (dist/, target/, .build/, the links build-ffi.sh makes) are skipped.
 Exit status 1 and a line per violation when a rule is broken.
@@ -77,7 +78,8 @@ def main() -> int:
                     problems.append(f"no-polling: {rel}:{number}: {line.strip()}")
                 # A `// process: <what it runs>` comment on the line or the two above marks the one place that starts a program
                 # on purpose (the end-to-end tests' harness: the app under test, git for its throwaway repository).
-                if PROCESS.search(code) and not any("process:" in l for l in swift_lines[max(0, number - 3) : number]):
+                marked = "EndToEndTests" in rel.parts and any("process:" in l for l in swift_lines[max(0, number - 3) : number])
+                if PROCESS.search(code) and not marked:
                     problems.append(f"no-process: {rel}:{number}: {line.strip()}")
 
     for manifest in sorted((REPO / "crates").glob("*/Cargo.toml")) + [REPO / "Cargo.toml"]:
