@@ -290,6 +290,9 @@ public final class MetalRenderer {
             atlasResets: text.atlasResets)
     }
 
+    /// The inline pictures the last frame placed (the control folder's `images`).
+    public var imagePlacements: [ImagePlacement] { images.placements }
+
     /// The cursor's cell, if shown, for the input method's candidate window.
     public var cursorCell: (row: Int, column: Int)? { scene.cursor.map { ($0.row, $0.column) } }
     public var gridSize: (cols: Int, rows: Int) { (scene.columns, scene.rows) }

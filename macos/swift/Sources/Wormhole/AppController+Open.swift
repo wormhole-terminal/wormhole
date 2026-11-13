@@ -29,7 +29,7 @@ extension AppController {
         applier.applyAmbient()
         startRealParts()
         if let directory = options.devctl {
-            let devctl = DevCtl(directory: directory) { [weak self] line in await self?.run(line: line) }
+            let devctl = DevCtl(directory: directory) { [weak self] line, window in await self?.run(line: line, window: window) }
             try devctl.start()
             self.devctl = devctl
         }

@@ -22,7 +22,7 @@ public final class BlockController {
     /// How far back the view was when the jump landed: a different offset later means the person scrolled or typed.
     @ObservationIgnored private var cursorOffset = 0
 
-    @ObservationIgnored private let source: CommandBlocks
+    @ObservationIgnored let source: CommandBlocks
     @ObservationIgnored private let say: (Notice) -> Void
     @ObservationIgnored private let announce: (String) -> Void
     @ObservationIgnored private let write: (String) -> Void

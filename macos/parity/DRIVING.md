@@ -93,6 +93,25 @@ A `studio-*` line that may ask (saving over a file, opening over unsaved edits) 
 with its `perf-counters` feature: `WORMHOLE_FFI_PERF_COUNTERS=1 macos/scripts/build-ffi.sh` (off by default; otherwise it says the reader was not counted). `agent-*` and `inspect` never reach the control
 socket: they are the control folder's alone.
 
+Added by wave 6 (dev tooling; written without compiling, see TO-VERIFY.md): **each window has its own control files**, as in GPUI:
+the first reads `cmd` and writes `out.txt`; `cmd2`, `cmd3` … are the windows in the order they were opened, answered in `out2.txt`,
+`out3.txt` … A line of `cmd<n>` acts on that window, keys included (`key`, `keys`, `text`, `state`, the window commands).
+
+| Command | Example | Does |
+|---|---|---|
+| `blocks` | `blocks` | the selected terminal's command blocks, oldest first, one a line: `n: lines a..=b output c..=d \| state \| command` |
+| `block <n> <select\|copy-output\|copy-command\|to-prompt\|fold>` | `block 2 copy-output` | the Edit menu's action on the n-th block of `blocks` (`block` alone still says which block the menu would act on) |
+| `images` | `images` | the pictures the last frame placed: a total, then each picture (key, size, bytes or `decoding`) and its placements |
+| `pane-bar` | `pane-bar` | what the bar and banner over the selected terminal say (a clipboard question, a notice, a host's trouble), or `none` |
+| `panes` | `panes` | the shown split's panes (`pane id x y w h [focused] [zoomed]`) and dividers, and the layout in force |
+| `layout <columns\|rows\|grid\|single>` | `layout grid` | View ▸ Layout |
+| `shells` / `new-shell <key>` / `new <dir>` | `new-shell fish` | the shells on offer (`-` is the login shell); a terminal running one; a terminal in a folder (`~/` expands) |
+| `close <n>` / `agent-hide <n> [on\|off]` | `close 2` | row n (1-based, as the sidebar lists) closed at once, without the question; Hide from Agents |
+| `zen [on\|off\|toggle]` | `zen on` | Zen mode (nothing saved); says whether it is on |
+| `files` / `files-root <abs path>` / `files-follow` / `files-pin <abs path>` / `files-rename <path> <name>` | `files-root /tmp/x` | the Files tab as text (`v` open folder, `>` closed, `~` link, `*` selected) and what its path menu, pins and rename do |
+| `delay <ms>` / `sync <token>` | `delay 300` | the rest of the batch waits; `sync` answers `sync <token>` once every line before it has run |
+| `control [--from <tab>] <words…>` | `control --from 3 list --json` | a request as `Wormhole <words…>` sends it, as from inside tab 3 (none: outside the app); the reply's JSON line. Reads, waits, runs and streams are not carried here (use the socket) |
+
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).

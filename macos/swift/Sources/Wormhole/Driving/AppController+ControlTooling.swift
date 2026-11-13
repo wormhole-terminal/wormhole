@@ -9,7 +9,10 @@ import WorkspaceModel
 
 extension AppController {
     /// One control line: the pointer's and the tools' first (they may take time), then the commands that act at once.
-    func run(line: String) async {
+    func run(line: String, window number: Int? = nil) async {
+        // A line of `cmd<n>` is for the n-th window: it acts on that one and answers in `out<n>.txt`, keys included.
+        commandWindow = number
+        defer { commandWindow = nil }
         let parts = line.split(separator: " ", maxSplits: 1).map(String.init)
         let command = parts.first ?? "", argument = parts.count > 1 ? parts[1] : ""
         window?.contentView?.layoutSubtreeIfNeeded()
@@ -18,6 +21,7 @@ extension AppController {
         if await runPointer(command: command, argument: argument) { return }
         if await runTooling(command: command, argument: argument) { return }
         if await runDevTools(command: command, argument: argument) { return }
+        if await runFlow(command: command, argument: argument) { return }
         run(command: line)
     }
 

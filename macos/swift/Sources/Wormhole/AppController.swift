@@ -38,6 +38,9 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// Set while the app quits, so the windows that go with it are saved, not forgotten.
     var terminating = false
     var devctl: DevCtl?
+    /// The window (1-based, in the order they were made) whose control file a line came from (`cmd2`): the window commands
+    /// act on and the file `reply` writes to, for as long as that line runs. `nil` for `cmd`.
+    var commandWindow: Int?
     /// The control folder's pointer: what it pressed, the tracking areas it is in, the menu it found.
     let injector = Injector()
     var settingsController: SettingsWindowController?
@@ -120,6 +123,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// The window commands act on: the key one, else the one that was in front last, else the first.
     var front: WindowSession {
         let shown = shown
+        if let n = commandWindow, shown.indices.contains(n - 1) { return shown[n - 1] }
         return shown.first { $0.window?.isKeyWindow == true } ?? shown.first { $0 === lastFront } ?? shown[0]
     }
     var hub: WindowHub { front.hub }

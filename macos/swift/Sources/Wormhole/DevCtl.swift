@@ -10,12 +10,13 @@ import Foundation
 @MainActor
 final class DevCtl {
     private let directory: URL
-    private let handler: @MainActor (String) async -> Void
+    /// A line and the window it is for: `nil` for `cmd` (the window commands act on), n for `cmd<n>` (the n-th window opened).
+    private let handler: @MainActor (String, Int?) async -> Void
     private var source: DispatchSourceFileSystemObject?
-    private var queued: [String] = []
+    private var queued: [(window: Int?, line: String)] = []
     private var running = false
 
-    init(directory: URL, handler: @escaping @MainActor (String) async -> Void) {
+    init(directory: URL, handler: @escaping @MainActor (String, Int?) async -> Void) {
         self.directory = directory
         self.handler = handler
     }
@@ -35,15 +36,29 @@ final class DevCtl {
     }
 
     private func drain() {
-        let command = directory.appendingPathComponent("cmd")
-        guard let data = try? Data(contentsOf: command) else { return }
-        try? FileManager.default.removeItem(at: command)
-        queued += String(decoding: data, as: UTF8.self).split(whereSeparator: \.isNewline)
-            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-        guard !running else { return }
+        // `cmd` is the window commands act on; `cmd2`, `cmd3` … are the windows opened after the first, each with its `out<n>.txt`
+        // (GPUI's devctl names its windows the same way). A `cmd.tmp` being written is not one of them.
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        let numbered = names.compactMap { name -> (String, Int)? in
+            guard name.hasPrefix("cmd"), let n = Int(name.dropFirst(3)), n > 0 else { return nil }
+            return (name, n)
+        }.sorted { $0.1 < $1.1 }
+        var took = false
+        for (name, window) in [("cmd", nil)] + numbered.map({ ($0.0, Optional($0.1)) }) {
+            let command = directory.appendingPathComponent(name)
+            guard let data = try? Data(contentsOf: command) else { continue }
+            try? FileManager.default.removeItem(at: command)
+            took = true
+            queued += String(decoding: data, as: UTF8.self).split(whereSeparator: \.isNewline)
+                .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.map { (window, $0) }
+        }
+        guard took, !running else { return }
         running = true
         Task { @MainActor in
-            while !queued.isEmpty { await handler(queued.removeFirst()) }
+            while !queued.isEmpty {
+                let next = queued.removeFirst()
+                await handler(next.line, next.window)
+            }
             running = false
         }
     }

@@ -18,6 +18,7 @@
 //! [`HookEvent`] behind one coalesced `wake()`, as the workspace's own events are.
 
 mod control;
+mod control_line;
 mod core;
 mod dispatch;
 mod drive;

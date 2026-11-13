@@ -15,7 +15,7 @@ extension AppController {
         let argument = parts.count > 1 ? parts[1] : ""
         // A window behind others is not drawn; the commands that read it want what the last change made.
         window?.contentView?.layoutSubtreeIfNeeded()
-        if runLook(command: command, argument: argument) || runWindow(command: command, argument: argument) || runWindows(command: command, argument: argument)
+        if runRead(command: command, argument: argument) || runFiles(command: command, argument: argument) || runLook(command: command, argument: argument) || runWindow(command: command, argument: argument) || runWindows(command: command, argument: argument)
             || runWorkspace(command: command, argument: argument) || runSettings(command: command, argument: argument) || runPanel(command: command, argument: argument) || runCore(command: command, argument: argument)
             || runScripted(command: command, argument: argument) || runVerify(command: command, argument: argument)
             || runKeys(command: command, argument: argument) || runPlatform(command: command, argument: argument)
@@ -81,7 +81,7 @@ extension AppController {
         }
     }
 
-    func reply(_ text: String) { devctl?.append(text) }
+    func reply(_ text: String) { devctl?.append(text, to: commandWindow.map { "out\($0).txt" } ?? "out.txt") }
 
     /// What decides the grid, in points: the window, the view, the layer's drawable (px), and where the last grid row ends.
     func geometry(_ view: MetalTerminalView) -> String {

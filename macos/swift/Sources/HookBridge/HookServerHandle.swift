@@ -38,6 +38,10 @@ public final class HookServerHandle {
     /// The question a `.closeAsked` put to the person was answered (yes or no): another may be asked.
     public func closeQuestionOver() { server.closeQuestionOver() }
 
+    /// The control folder's `control [--from <tab>] <words…>`: the words as `Wormhole <words…>` would send them, answered at once
+    /// (the reply's one JSON line, or why the words were no request); a read, wait, run or stream is not carried here.
+    public func controlLine(words: [String], from: String?) -> String { server.controlLine(words: words, from: from) }
+
     /// Take approval `id` back and end the streams it let in (use this, not `AccessDesk.revoke`, so they end).
     @discardableResult
     public func revokeApproval(profile: String, _ id: UInt64) -> Bool { server.revokeApproval(profile: profile, id: id) }
