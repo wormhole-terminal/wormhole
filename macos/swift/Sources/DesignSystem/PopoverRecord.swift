@@ -54,14 +54,14 @@ public enum PopoverRecord {
     /// The rows one a line, as GPUI's `popover` prints them: `# heading`, `field "name" (focused)`, `colours: Grey | Blue [x] | … | custom`,
     /// `- action`.
     public static var listing: String {
-        guard let open else { return "no popover" }
+        guard let open else { return "no popover" } // text: control state line
         return open.rows.map { row -> String in
             switch row.kind {
-            case .heading: "# \(row.title)"
-            case .field(let text, let focused): "field \(text.debugDescription) (\(row.title))\(focused ? " (focused)" : "")"
+            case .heading: "# \(row.title)" // text: control state line
+            case .field(let text, let focused): "field \(text.debugDescription) (\(row.title))\(focused ? " (focused)" : "")" // text: control state line
             case .colours(let names, let selected, let custom):
-                "colours: " + (names.enumerated().map { $0.offset == selected ? "\($0.element) [x]" : $0.element } + ["custom\(custom ? " [x]" : "")"]).joined(separator: " | ")
-            case .action: "- \(row.title)"
+                "colours: " + (names.enumerated().map { $0.offset == selected ? "\($0.element) [x]" : $0.element } + ["custom\(custom ? " [x]" : "")"]).joined(separator: " | ") // text: control state line
+            case .action: "- \(row.title)" // text: control state line
             }
         }.joined(separator: "\n")
     }

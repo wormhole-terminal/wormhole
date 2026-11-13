@@ -149,7 +149,8 @@ Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written wi
 | `popover` / `popover-press <title>` / `popover-close` | `popover-press Ungroup` | the open popover (the group's name popover; the folder's hover card is `path-card`): its rows one a line (`field "Group name" (focused)`, `colours: No colour \| Red [x] \| … \| custom`, `- action`); press an action by its title as a click does; close it |
 | `popover-type <text>` / `popover-key <enter\|escape>` / `popover-colour <name\|none\|#rrggbb>` | `popover-type Build` | type into its field (replacing what is there); ↩ keeps and closes, ⎋ closes (the Swift popover keeps the name either way, as its own close does); colour the group by name or hex |
 | `popover-native [name]` / `popover-real` / `popover-real-close` | `popover-native card` | the open popover's content drawn to `<ctl>/<name>.png` as AppKit lays it out; opened for real as an `NSPopover` at the window's top left, and closed |
-@@ROWS@@
+| `drag <x> <y> <path>` / `drag-end` | `drag 600 400 /tmp/a.png` | a file hovering over the window at a point, as from Finder: the terminal there tints (`window-shot` in a later batch shows it); `drag-end` abandons it. The drop is `drop-files <path>` (pastes the paths as a drop does). GPUI's `drop <x> <y>` keeps its Swift meaning (a sidebar drop, see `drop`/`plan`) |
+| `close-window` | `close-window` | the window the command acts on closes as its red button does: it asks first while something runs (a test instance holds the question: `question confirm`), and the last window ends the app |
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).
