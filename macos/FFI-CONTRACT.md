@@ -396,6 +396,16 @@ another app: nil when gone, not of that kind, or out of `root` by a link). `Proj
 `setProjectFeatureOn(on)` (off: no overrides, theme, actions, layout, worktree condition or setup, notes.md sync;
 a folder's colour is the person's own), `problem() -> String?` (the hub's own error), and `ProjectStateRecord.dir`
 (`.wormhole` or `.andromeda`).
+Wave 5 (written, not compiled). File names: a name that is not UTF-8 crosses as a key (`files_panel::names`): its
+text as it is, each other byte as a NUL and the byte's two hex digits. `EntryRecord.name`, `rename`'s result,
+`resolve`'s result and `pins()` may be keys; `root`, `folder`, `path` and `setPinned`'s folder are read back from
+them, and so is `open_file_run`'s `path`; a key that does not read back answers as gone. A key is never drawn (the
+label is) and never becomes a Swift path: `PanelModel.DiskName` makes the file URL of its bytes.
+`FilesService.stamp(root, path) -> String?` (core's `stamp_below`, one lstat: the same word until the folder's
+entries or the file change; nil when nothing is there). A folder's own colour (`folderPaint`, `setFolderColor`) is
+read and written in the `config.json` of the profile whose stores the `ProjectService` holds. Notes' rules:
+`note_body(text) -> String?`, `note_cap(lines, editing, show_all) -> u64?`, `note_item_key(key, empty) ->
+ItemKeyRecord?` (`leave|deleteEmpty|moveUp|moveDown`, core's `item_key` over the keymap's list scope).
 
 **`FolderWatch`**: FSEvents on a local volume, plus a timer thread as the fallback (2 s without a stream, 30 s with
 one). `PanelListener.wake()` is called at most once between two `drain()`s (same rules as `TerminalListener`); the
