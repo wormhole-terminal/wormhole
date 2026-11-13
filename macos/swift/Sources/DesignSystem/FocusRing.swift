@@ -12,6 +12,32 @@ extension View {
     }
 }
 
+extension View {
+    /// The soft ring of a flat field or well (`flat_ring`): the input's focus colour at half strength, a point wider than the
+    /// system ring because a field has no outline to hide it in; solid under Increase Contrast. Round the control, outside it.
+    public func flatFocusRing(_ shown: Bool, radius: CGFloat) -> some View { modifier(FlatFocusRing(shown: shown, radius: radius)) }
+}
+
+private struct FlatFocusRing: ViewModifier {
+    let shown: Bool
+    let radius: CGFloat
+    @Environment(\.tokens) private var tokens
+    @Environment(\.increaseContrast) private var increased
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            if shown {
+                let width = tokens.metrics.focusRingWidth + 1
+                RoundedRectangle(cornerRadius: radius + width, style: .continuous)
+                    .strokeBorder(tokens.inputBorderFocus.opacity(increased ? 1 : 0.5), lineWidth: width)
+                    .padding(-width)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+}
+
 private struct KeyboardFocusRing: ViewModifier {
     let shown: Bool
     let radius: CGFloat

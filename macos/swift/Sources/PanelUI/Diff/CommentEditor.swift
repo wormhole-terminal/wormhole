@@ -15,6 +15,7 @@ struct CommentEditor: View {
     @State private var text: String
     @FocusState private var focused: Bool
     @Environment(\.tokens) private var tokens
+    @Environment(\.isEnabled) private var enabled
     @Environment(\.codeFont) private var codeFont
 
     init(place: String, at: LineAt, existing: ReviewComment?, save: @escaping (String) -> Void, remove: @escaping () -> Void, cancel: @escaping () -> Void) {
@@ -34,7 +35,9 @@ struct CommentEditor: View {
             TextEditor(text: $text).font(tokens.font(.body)).scrollContentBackground(.hidden).focused($focused)
                 .frame(height: PanelMetrics.noteLine * 4).padding(Space._1)
                 .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
-                .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(focused ? tokens.inputBorderFocus : tokens.inputBorder, lineWidth: tokens.metrics.borderWidth) }
+                .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radius).strokeBorder(tokens.inputBorder, lineWidth: tokens.metrics.borderWidth) }
+                .flatFocusRing(focused && enabled, radius: tokens.metrics.radius)
+                .opacity(enabled ? 1 : 0.5)
                 .overlay(alignment: .topLeading) {
                     if text.isEmpty {
                         Text(panelText("review-placeholder", "What should the agent change here?")).font(tokens.font(.body))

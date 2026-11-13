@@ -73,7 +73,7 @@ private struct PanelTabButton: View {
         Button(action: action) {
             HStack(spacing: Space._1) {
                 glyph
-                if let badge { TabCountBadge(count: badge, selected: isSelected) }
+                if let badge { CountBadge(badge, selected: isSelected) }
             }
             .padding(.horizontal, badge == nil ? 0 : Space._2)
             .frame(minWidth: Chrome.iconTab, minHeight: Chrome.iconTab)

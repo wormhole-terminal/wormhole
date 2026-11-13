@@ -29,7 +29,7 @@ struct GroupSwitcherButton: View {
                     Circle().fill(alertKind == .failed ? tokens.statusDanger : tokens.agentAttention).frame(width: Metric.statusDot - 2, height: Metric.statusDot - 2)
                         .padding(TabMetrics.alertRing)
                         .background(tokens.surfacePanel, in: Circle())
-                        .transition(.scale.combined(with: .opacity))
+                        .motionTransition(.scale.combined(with: .opacity))
                 }
             }
             .contentShape(Rectangle())

@@ -38,7 +38,7 @@ ELEMENTS = {
     "diff": ["PanelUI/Diff/Diff*"],
     "callout": ["PanelUI/Shell/Callout.swift"],
     "icon.button": ["DesignSystem/IconButton.swift"],
-    "icon.tab": ["WindowUI/PanelTabBar.swift", "PanelUI/Shell/TabCountBadge.swift"],
+    "icon.tab": ["WindowUI/PanelTabBar.swift"],
     "title.tab": ["PanesUI/Tabs/TerminalTabView.swift"],
     "keycap": ["DesignSystem/KeyCap.swift", "SidebarUI/Row/Keycap.swift"],
     "badge": ["DesignSystem/CountBadge.swift", "DesignSystem/StatusBadge.swift", "AuxWindows/Shared/StatusBadge.swift"],

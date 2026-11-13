@@ -22,9 +22,6 @@ public struct FlatField<Prefix: View, Suffix: View>: View {
     @Environment(\.isEnabled) private var enabled
     @Environment(\.increaseContrast) private var increased
 
-    /// How much of the primary the ring shows (`FLAT_RING_ALPHA`); Increase Contrast shows all of it.
-    private static var ringAlpha: Double { 0.5 }
-
     public init(
         _ placeholder: String, text: Binding<String>, cleanable: Bool = false, clearLabel: String = "",
         showFocus: Bool? = nil, onCommit: (() -> Void)? = nil, @ViewBuilder prefix: () -> Prefix, @ViewBuilder suffix: () -> Suffix
@@ -53,24 +50,10 @@ public struct FlatField<Prefix: View, Suffix: View>: View {
         .frame(minHeight: Metric.control)
         .background(isFocused || !enabled || !hovering ? tokens.controlBackground : tokens.controlHover, in: shape)
         .overlay { if increased && !isFocused { shape.strokeBorder(tokens.inputBorder, lineWidth: tokens.metrics.borderWidth) } }
-        .overlay { ring(shown: isFocused) }
+        .flatFocusRing(isFocused, radius: tokens.metrics.radius)
         .contentShape(shape)
         .onHover { hovering = $0 }
         .marked("input", style: "height control · padding x _2 · radius control · text body")  // text: inspect mode's note, in the scales' names
-    }
-
-    /// Round the well, one point wider than a select's ring (a field has no outline to hide it in).
-    private func ring(shown: Bool) -> some View {
-        let width = tokens.metrics.focusRingWidth + 1
-        return Group {
-            if shown {
-                RoundedRectangle(cornerRadius: tokens.metrics.radius + width, style: .continuous)
-                    .strokeBorder(tokens.inputBorderFocus.opacity(increased ? 1 : Self.ringAlpha), lineWidth: width)
-                    .padding(-width)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-            }
-        }
     }
 
     private var clearButton: some View {

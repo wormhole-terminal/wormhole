@@ -23,6 +23,13 @@ struct ChipsSpecimen: View {
                 KeyCap(text: "⌘K")
                 KeyHintView(keys: "↩", label: "open")
             }
+            // The shared chip in its states: rest, selected, outlined, disabled (`style::pill`, `neutral_chip`).
+            HStack(spacing: Space._2) {
+                Chip(fill: tokens.controlBackground, text: tokens.textMuted, height: Metric.titleControl) { Text("Rest").textRole(.caption) }
+                Chip(fill: nil, text: tokens.textMuted, selected: true, height: Metric.titleControl) { Text("Selected").textRole(.caption) }
+                Chip(fill: tokens.stateActive, text: tokens.textPrimary, outline: tokens.border, height: Metric.titleControl) { Text("Outlined").textRole(.caption) }
+                Chip(fill: tokens.controlBackground, text: tokens.textMuted, height: Metric.titleControl) { Text("Disabled").textRole(.caption) }.disabled(true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .allowsHitTesting(false)

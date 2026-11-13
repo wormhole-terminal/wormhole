@@ -43,8 +43,6 @@ struct RowChip: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
-        Text(text).textRole(.caption, weight: .medium).foregroundStyle(tokens.textMuted)
-            .padding(.horizontal, Space._1)
-            .background(tokens.controlBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
+        Chip(fill: tokens.controlBackground, text: tokens.textMuted, leading: Space._1) { Text(text).textRole(.caption, weight: .medium) }
     }
 }

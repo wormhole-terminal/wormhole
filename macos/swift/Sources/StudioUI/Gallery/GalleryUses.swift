@@ -19,9 +19,8 @@ enum GalleryUses {
             "card", "card.edge", "metrics.border_width",
         ]),
         TokenUse(id: "sidebar.band", label: "group head", area: .sidebar, tokens: [
-            "agent.attention", "border", "border.focus", "metrics.focus_ring_width", "metrics.radius_chip",
-            "metrics.radius_sm", "sidebar.background", "state.hover", "status.danger", "text.faint", "text.muted",
-            "text.primary",
+            "agent.attention", "border", "metrics.radius_chip", "metrics.radius_sm", "sidebar.background",
+            "state.hover", "status.danger", "text.faint", "text.muted", "text.primary",
         ]),
         TokenUse(id: "status.tile", label: "status tile", area: .sidebar, tokens: [
             "agent.attention", "agent.bell", "agent.done", "agent.working", "metrics.border_width", "primary",
@@ -40,8 +39,7 @@ enum GalleryUses {
             "text.muted", "text.primary",
         ]),
         TokenUse(id: "branch.chip", label: "branch chip", area: .sidebar, tokens: [
-            "banner.warning.background", "git.branch", "git.branch.background", "metrics.radius_chip",
-            "status.warning.text", "text.muted",
+            "banner.warning.background", "git.branch", "git.branch.background", "status.warning.text", "text.muted",
         ]),
         TokenUse(id: "panel.card", label: "panel card", area: .panel, tokens: [
             "card", "card.edge", "metrics.border_width", "text.muted",
@@ -59,8 +57,8 @@ enum GalleryUses {
             "status.danger.text", "status.success.text", "status.warning.text", "text.muted", "text.primary",
         ]),
         TokenUse(id: "commit.row", label: "commit row", area: .panel, tokens: [
-            "git.branch", "git.branch.background", "git.tag", "metrics.radius_chip", "primary",
-            "sidebar.row.selected.muted", "sidebar.row.selected.text", "text.muted", "text.primary",
+            "git.branch", "git.branch.background", "git.tag", "primary", "sidebar.row.selected.muted",
+            "sidebar.row.selected.text", "text.muted", "text.primary",
         ]),
         TokenUse(id: "diff", label: "diff view", area: .panel, tokens: [
             "border", "diff.added", "diff.added.background", "diff.filler", "diff.hunk.background", "diff.hunk.text",
@@ -79,8 +77,8 @@ enum GalleryUses {
             "text.primary",
         ]),
         TokenUse(id: "icon.tab", label: "icon tab", area: .panel, tokens: [
-            "band.hover", "border", "metrics.radius", "metrics.radius_chip", "sidebar.row.selected.text",
-            "state.selected", "state.selected.inset", "text.muted", "text.primary",
+            "band.hover", "metrics.radius", "sidebar.row.selected.text", "state.selected", "text.muted",
+            "text.primary",
         ]),
         TokenUse(id: "title.tab", label: "title tab", area: .chrome, tokens: [
             "border", "metrics.radius", "metrics.radius_chip", "state.hover", "text.muted", "text.primary",
@@ -90,10 +88,11 @@ enum GalleryUses {
             "text.primary",
         ]),
         TokenUse(id: "badge", label: "count badge", area: .chrome, tokens: [
-            "border", "metrics.border_width", "metrics.radius_chip", "text.primary",
+            "border", "metrics.border_width", "metrics.radius_chip", "sidebar.row.selected.text",
+            "state.selected.inset", "text.primary",
         ]),
         TokenUse(id: "neutral.chip", label: "neutral chip", area: .chrome, tokens: [
-            "border", "metrics.border_width", "metrics.radius_chip", "state.active", "text.muted", "text.primary",
+            "border", "state.active", "text.muted", "text.primary",
         ]),
         TokenUse(id: "title.extras", label: "title row extras", area: .chrome, tokens: [
             "status.warning", "text.muted",
@@ -116,7 +115,7 @@ enum GalleryUses {
             "text.muted", "text.primary",
         ]),
         TokenUse(id: "tint.chip", label: "tint chip", area: .settings, tokens: [
-            "chip.tint", "metrics.radius_chip", "text.muted",
+            "chip.tint", "text.muted",
         ]),
         TokenUse(id: "settings.nav", label: "settings nav", area: .settings, tokens: [
             "status.warning",

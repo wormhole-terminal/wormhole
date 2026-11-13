@@ -19,13 +19,13 @@ struct CommitRefs: View {
                 case .head: StatusBadge(text: "HEAD", color: tokens.primary) // text: HEAD is git's name for the current commit
                 case .tag: StatusBadge(text: ref.name, color: tokens.gitTag)
                 case .branch:
-                    HStack(spacing: Space._1) {
-                        PanelIcon("arrow.triangle.branch", size: 12)
-                        Text(ref.name).lineLimit(1).fixedSize()
+                    Chip(fill: tokens.gitBranchBackground, text: tokens.gitBranch, height: 20, leading: Space._1, trailing: Space._2) {
+                        HStack(spacing: Space._1) {
+                            PanelIcon("arrow.triangle.branch", size: 12)
+                            Text(ref.name).lineLimit(1).fixedSize()
+                        }
+                        .font(tokens.font(.caption).weight(.medium))
                     }
-                    .font(tokens.font(.caption).weight(.medium)).foregroundStyle(tokens.gitBranch)
-                    .padding(.leading, Space._1).padding(.trailing, Space._2).frame(height: 20)
-                    .background(tokens.gitBranchBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
                 }
             }
             if let more { Text(more).foregroundStyle(tokens.textMuted) }

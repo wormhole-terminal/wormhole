@@ -27,7 +27,7 @@ struct RowLines: View {
             HStack(spacing: Space._2) {
                 name
                 if terminal.isPinned {
-                    RowMark(icon: .pin, isSelected: isSelected).transition(.scale(scale: 0.4).combined(with: .opacity))
+                    RowMark(icon: .pin, isSelected: isSelected).motionTransition(.scale(scale: 0.4).combined(with: .opacity))
                 }
                 if terminal.isAgentHidden { RowMark(icon: .lock, isSelected: isSelected, tip: SidebarText.hiddenFromAgents) }
                 if let main = terminal.worktreeOf {
@@ -42,8 +42,8 @@ struct RowLines: View {
             }
         }
         .help(nameCut || detailCut ? SidebarText.cut(terminal.title, place: terminal.folder, detail: row.secondLine.text) : "")
-        .animation(SidebarMotion.hint, value: showsHints)
-        .animation(SidebarMotion.state, value: terminal.activity)
+        .motion(SidebarMotion.hint, value: showsHints)
+        .motion(SidebarMotion.state, value: terminal.activity)
     }
 
     @ViewBuilder private var name: some View {

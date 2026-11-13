@@ -105,7 +105,7 @@ extension SidebarView {
         }
         if let aimed = aim(item, at: point, sections) {
             let joins = if case .row = aimed.mark { true } else { false }
-            withAnimation(joins ? SidebarMotion.joinSettle : SidebarMotion.list) { act(aimed.action) }
+            withAnimation(reduce ? Motion.fade : joins ? SidebarMotion.joinSettle : SidebarMotion.list) { act(aimed.action) }
         }
         drag = nil
     }

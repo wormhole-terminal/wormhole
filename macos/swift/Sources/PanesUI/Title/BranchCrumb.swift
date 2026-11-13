@@ -23,10 +23,8 @@ struct BranchCrumb: View {
                         if showsText { Text(branch ?? PanesText.detached).lineLimit(1).truncationMode(.tail) }
                     }
                     .font(tokens.font(.caption).weight(.medium))
-                    .foregroundStyle(detached ? tokens.statusWarningText : tokens.gitBranch)
-                    .padding(.leading, Space._1).padding(.trailing, showsText ? Space._2 : Space._1)
-                    .frame(width: width, height: TitleMetrics.chipHeight, alignment: .leading)
-                    .background(detached ? tokens.bannerWarningBackground : tokens.gitBranchBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
+                    .modifier(BranchChip(detached: detached, showsText: showsText, height: TitleMetrics.chipHeight))
+                    .frame(width: width, alignment: .leading)
                     .clipped()
                     .marked("branch.chip")
                     .contentTransition(.interpolate)
@@ -40,5 +38,21 @@ struct BranchCrumb: View {
                 }
             }
         }
+    }
+}
+
+/// The branch chip's own colours and padding on the shared chip (the branch colour, or the warning one while detached).
+private struct BranchChip: ViewModifier {
+    let detached: Bool
+    let showsText: Bool
+    let height: CGFloat
+    @Environment(\.tokens) private var tokens
+
+    func body(content: Content) -> some View {
+        Chip(
+            fill: detached ? tokens.bannerWarningBackground : tokens.gitBranchBackground,
+            text: detached ? tokens.statusWarningText : tokens.gitBranch, height: height, leading: Space._1,
+            trailing: showsText ? Space._2 : Space._1
+        ) { content }
     }
 }

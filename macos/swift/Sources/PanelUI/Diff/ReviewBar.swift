@@ -19,6 +19,6 @@ struct ReviewBar: View {
         .padding(.leading, Space._4).padding(.trailing, Space._3)
         .frame(height: 40)
         .overlay(alignment: .top) { Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth) }
-        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .motionTransition(.move(edge: .bottom).combined(with: .opacity))
     }
 }

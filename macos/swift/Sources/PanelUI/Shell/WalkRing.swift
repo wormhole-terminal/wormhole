@@ -17,14 +17,8 @@ extension View {
 private struct WalkRing: ViewModifier {
     let id: String
     @Environment(\.walkCursor) private var cursor
-    @Environment(\.tokens) private var tokens
 
     func body(content: Content) -> some View {
-        content.overlay {
-            if cursor == id {
-                RoundedRectangle(cornerRadius: Radius.row, style: .continuous)
-                    .strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth).allowsHitTesting(false)
-            }
-        }
+        content.keyboardFocusRing(cursor == id, radius: Radius.row)
     }
 }

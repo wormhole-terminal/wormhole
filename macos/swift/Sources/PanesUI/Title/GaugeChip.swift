@@ -41,6 +41,6 @@ struct GaugeChip: View {
             }
             .frame(width: TitleMetrics.meter, height: Self.meterHeight)
             .clipShape(shape)
-            .animation(Motion.selection, value: share)
+            .motion(Motion.selection, value: share)
     }
 }

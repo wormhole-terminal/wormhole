@@ -14,6 +14,7 @@ struct SecondLineView: View {
     /// Set when the line does not fit its room (the row's tooltip says it whole).
     @Binding var cut: Bool
     @Environment(\.tokens) private var tokens
+    @Environment(\.reduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: Space._2) {
@@ -23,7 +24,7 @@ struct SecondLineView: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .cutProbe(line.text, font: font, cut: $cut)
-                .id(rolls ? line.text : "")
+                .id(rolling ? line.text : "")
                 .transition(.push(from: .bottom))
             if let trail = line.trail {
                 Text(trail).font(tokens.font(.caption).monospacedDigit()).foregroundStyle(tokens.textFaint)
@@ -32,8 +33,11 @@ struct SecondLineView: View {
         }
         .frame(height: RowGeometry.metaLine)
         .clipped()
-        .animation(rolls ? SidebarMotion.fold : nil, value: line.text)
+        .animation(rolling ? SidebarMotion.fold : nil, value: line.text)
     }
+
+    /// The line rolls (the old words up out of the clip) only where motion is wanted.
+    private var rolling: Bool { rolls && !reduceMotion }
 
     private var font: Font {
         line.isCommand ? .system(size: tokens.size(.caption), design: .monospaced)

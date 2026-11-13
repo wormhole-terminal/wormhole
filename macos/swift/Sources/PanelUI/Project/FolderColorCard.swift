@@ -21,7 +21,7 @@ struct FolderColorCard: View {
             CardBand(title: panelText("project-folder-color", "Folder colour"), folded: folded, onToggle: { folded.toggle() })
             if !folded { choices(paint) }
         }
-        .animation(.snappy(duration: 0.16), value: folded)
+        .motion(.snappy(duration: 0.16), value: folded)
     }
 
     @ViewBuilder private func choices(_ paint: FolderPaint) -> some View {

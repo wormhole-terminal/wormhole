@@ -164,8 +164,13 @@ enum FolderPanel {
 private struct CommitOnBlur: ViewModifier {
     let commit: () -> Void
     @FocusState private var focused: Bool
+    @Environment(\.tokens) private var tokens
+    @Environment(\.isEnabled) private var enabled
 
+    /// The multi-line well wears the flat field's ring while it has the keys and is held back when disabled.
     func body(content: Content) -> some View {
         content.focused($focused).onChange(of: focused) { _, now in if !now { commit() } }
+            .flatFocusRing(focused && enabled, radius: tokens.metrics.radius)
+            .opacity(enabled ? 1 : 0.5)
     }
 }

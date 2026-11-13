@@ -45,6 +45,6 @@ public struct TerminalTile: View {
     private func dot(_ colour: Color) -> some View {
         Circle().fill(colour).frame(width: size * 0.36, height: size * 0.36)
             .overlay { Circle().strokeBorder(tokens.surfaceWindow, lineWidth: 1.5) }
-            .transition(.scale.combined(with: .opacity))
+            .motionTransition(.scale.combined(with: .opacity))
     }
 }

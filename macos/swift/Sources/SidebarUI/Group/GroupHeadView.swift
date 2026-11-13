@@ -57,11 +57,7 @@ struct GroupHeadView: View {
         .onHover { hovering = $0 }
         .ringWhileMenuOpen(hovering: hovering)
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { context.frames.heads[head.id] = $0 }
-        .overlay {
-            if keyed == .group(head.id) {
-                RoundedRectangle(cornerRadius: Radius.row).strokeBorder(tokens.borderFocus, lineWidth: tokens.metrics.focusRingWidth)
-            }
-        }
+        .keyboardFocusRing(keyed == .group(head.id), radius: Radius.row)
         .animation(summaryAnimation, value: head.isFolded)
         .opacity(context.drag.lifts(.group(head.id)) ? DragLift.opacity : 1)
         .dragSource(.group(head.id), hooks: context.drag)
