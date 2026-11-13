@@ -81,9 +81,11 @@ public struct Review: Equatable, Sendable {
     }
 
     private static func quote(_ code: String) -> String {
-        let code = printable(code, lines: false).trimmingCharacters(in: .whitespaces)
-        guard code.count > quoteMax else { return code }
-        return code.prefix(quoteMax).trimmingCharacters(in: .whitespaces) + "\u{2026}"
+        // As core cuts it: all white space trimmed, and 160 `char`s (Unicode scalars), not grapheme clusters.
+        let code = printable(code, lines: false).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard code.unicodeScalars.count > quoteMax else { return code }
+        let cut = String(String.UnicodeScalarView(code.unicodeScalars.prefix(quoteMax)))
+        return cut.trimmingCharacters(in: .whitespacesAndNewlines) + "\u{2026}"
     }
 
     /// `text` without control characters (escape sequences, the bell, a carriage return a terminal would act on); a

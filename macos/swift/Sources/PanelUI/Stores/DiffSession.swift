@@ -48,6 +48,14 @@ public final class DiffSession {
     public init(highlighter: any SyntaxHighlighting, preferences: PanelPreferences = PanelPreferences()) {
         self.highlighter = highlighter
         self.preferences = preferences
+        preferences.tabObservers.append { [weak self] in self?.retab() }
+    }
+
+    /// `tab_width` changed: the widest line is measured again, so the sideways extent follows the tabs the rows draw.
+    private func retab() {
+        guard case .shown(var diff) = phase else { return }
+        diff.widest = DiffRows.widest(diff, tabWidth: preferences.tabWidth)
+        phase = .shown(diff)
     }
 
     public var parsed: DiffFile? { if case let .shown(diff) = phase { diff } else { nil } }

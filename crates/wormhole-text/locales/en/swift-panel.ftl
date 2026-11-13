@@ -108,7 +108,7 @@ review-copied-instead-detail = The program in this terminal would run each line 
 # Read out by VoiceOver. { $name } is the file's name.
 diff-spoken = Diff of { $name }
 
-diff-reading = Reading the diff…
+diff-reading = Loading diff…
 diff-unreadable = The diff can't be read.
 diff-previous-file = Previous file
 diff-next-file = Next file

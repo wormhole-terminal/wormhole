@@ -162,7 +162,7 @@ public struct DiffView: View {
 
     private func noteText(_ diff: DiffFile?) -> String? {
         switch session.phase {
-        case .loading, .idle: panelText("diff-reading", "Reading the diff\u{2026}")
+        case .loading, .idle: panelText("diff-reading", "Loading diff\u{2026}")
         case let .failed(why): why
         case .shown: diff.flatMap { Self.hasNotes($0) ? nil : DiffNote.text(for: file, diff: $0) }
         }
