@@ -27,10 +27,11 @@ struct EntryRowView: View {
 
     private var row: some View {
         SettingRow(
-            label: entry.label, description: projectNote ?? caption ?? entry.description,
+            label: caption?.label ?? entry.label, description: projectNote ?? caption?.text ?? entry.description,
             visibleHint: entry.visibleHint || projectNote != nil || caption != nil,
             state: state,
-            tall: entry.control.layout == .tallRow, frameId: entry.id, keys: entry.keys, json: { model.host.copyJSON(keys: entry.keys) }, onReset: { model.reset(entry) }
+            tall: entry.control.layout == .tallRow, frameId: entry.id, keys: entry.keys, json: { model.host.copyJSON(keys: entry.keys) },
+            chip: RowExtras.chip(entry, model), below: RowExtras.below(entry, model), onReset: { model.reset(entry) }
         ) {
             EntryControl(model: model, entry: entry)
         }
@@ -43,15 +44,30 @@ struct EntryRowView: View {
         return project.note
     }
 
-    /// What a profile row says under its label (`describe`): where the start folder's folders open, and why Default stays.
-    private var caption: String? {
+    /// What a row says under its label, and in place of it where GPUI's `describe` changes the label too (the permission row).
+    private var caption: Caption? {
         switch entry.id {
-        case "profile-start": model.profile.form?.startCaption
-        case "worktree-base": model.host.worktreeCaption(base: model.value("worktree_base").string ?? "")
+        case "profile-start": return Caption(model.profile.form?.startCaption)
+        case "worktree-base": return Caption(model.host.worktreeCaption(base: model.value("worktree_base").string ?? ""))
         case "profile-delete":
-            model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault == true
-                ? Words.text("settings-profile-the-default-profile-stays-it-holds", fallback: "The Default profile stays: it holds the data Wormhole always had.") : nil
-        default: nil
+            guard model.host.panelRecords().profiles.first(where: \.isActive)?.isDefault == true else { return nil }
+            return Caption(Words.text("settings-profile-the-default-profile-stays-it-holds", fallback: "The Default profile stays: it holds the data Wormhole always had."))
+        case "notify-permission":
+            let said = NotifyText.permission(model.notifyStatus.permission)
+            return Caption(said.hint, label: said.title)
+        case "notify-test": return Caption(NotifyText.test(model.notifyStatus.test))
+        case "notify-needs-you": return Caption(NotifyText.needsYou(timeSensitive: model.notifyStatus.timeSensitive))
+        default: return Caption(RowCaptions.text(entry, model))
+        }
+    }
+
+    private struct Caption {
+        let text: String
+        var label: String?
+
+        init?(_ text: String?, label: String? = nil) {
+            guard let text else { return nil }
+            (self.text, self.label) = (text, label)
         }
     }
 

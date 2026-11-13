@@ -36,3 +36,15 @@ struct InfoButton: View {
             .accessibilityHidden(true)
     }
 }
+
+/// A small tag after a row's label (`style::chip`): "Time Sensitive", "Beta".
+struct RowChip: View {
+    let text: String
+    @Environment(\.tokens) private var tokens
+
+    var body: some View {
+        Text(text).textRole(.caption, weight: .medium).foregroundStyle(tokens.textMuted)
+            .padding(.horizontal, Space._1)
+            .background(tokens.controlBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
+    }
+}

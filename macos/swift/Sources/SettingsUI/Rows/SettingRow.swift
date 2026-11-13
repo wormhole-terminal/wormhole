@@ -18,6 +18,9 @@ struct SettingRow<Control: View>: View {
     /// The row's config keys and its "Copy as JSON" (the row's menu, and a click on the key shown by Show config keys).
     var keys: [String] = []
     var json: () -> String = { "{}" }
+    /// A tag after the label ("Time Sensitive", "Beta") and what sits under the row (a warning, a note, colour picks).
+    var chip: String?
+    var below: AnyView?
     let onReset: () -> Void
     @ViewBuilder let control: Control
     @Environment(\.tokens) private var tokens
@@ -36,6 +39,7 @@ struct SettingRow<Control: View>: View {
                     if let context = state.context, !context.isEmpty {
                         Text(context).textRole(.caption).foregroundStyle(tokens.textFaint)
                     }
+                    if let chip { RowChip(text: chip) }
                     if !description.isEmpty, !visibleHint { InfoButton(text: description) }
                     // Hidden, not removed: the row does not move when the key shows, and VoiceOver keeps its button.
                     if let key = state.configKey { keyButton(key).opacity(hovering || optionHeld || copiedKey ? 1 : 0) }
@@ -45,6 +49,7 @@ struct SettingRow<Control: View>: View {
                     MarkedText(text: description, range: state.foundDescription, role: .caption)
                         .foregroundStyle(tokens.textMuted)
                 }
+                if let below { below }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: Space._2) {

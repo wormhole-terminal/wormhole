@@ -13,6 +13,7 @@ mod handle;
 mod host;
 mod import_review;
 mod imports;
+mod page_rules;
 mod page_text;
 mod probes;
 mod profile_edit;

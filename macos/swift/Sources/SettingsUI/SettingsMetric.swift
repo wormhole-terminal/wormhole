@@ -36,6 +36,8 @@ enum SettingsMetric {
     static let meterWidth: CGFloat = 120
     /// A slider's value column (`STEPPER_VALUE_W`).
     static let stepperValueWidth: CGFloat = 56
+    /// A colour swatch under the branch and primary colour rows.
+    static let swatchSize: CGFloat = 20
     /// The changed-row dot (`MARK_DOT`).
     static let markDot: CGFloat = 6
     /// What `settings_text_size` multiplies the window's text by (`style/text_scale.rs`: eighths, so the caption role lands on

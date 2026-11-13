@@ -109,6 +109,8 @@ public protocol SettingsHost: AnyObject {
     /// (the picks that name it go back to the defaults first and come back if it fails): whether it was done.
     func themeTrashPlan(_ value: String) -> ThemeTrashQuestion?
     func trashTheme(_ value: String) -> Bool
+    /// Whether the desktop would show sharp behind the text at this opacity without the blur (core's `Translucency::unsafe_without_blur`).
+    func blurIsUnsafe(opacity: Double, blur: Bool) -> Bool
     /// The header an update check carries (what "What an update check sends" shows): nil without the core.
     func updateUserAgent(version: String) -> String?
 }
@@ -158,6 +160,7 @@ extension SettingsHost {
             fallback: "Reset \(count) changed setting\(count == 1 ? "" : "s") to their default? Your terminals, notes and themes are kept.")
     }
     public func updateUserAgent(version: String) -> String? { nil }
+    public func blurIsUnsafe(opacity: Double, blur: Bool) -> Bool { !blur && opacity < 0.95 }
     public func importTheme(path: String) -> String? {
         Words.text("settings-import-theme-unavailable", fallback: "Themes can't be imported in this build.")
     }
