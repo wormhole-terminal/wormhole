@@ -80,7 +80,9 @@ final class AppController: NSObject, NSApplicationDelegate {
     var profileLooks: [String: ProfileLook] = [:]
     /// The settings the window follows, whether or not the Settings window is open: the core's when real.
     lazy var settingsModel = AppSettings.makeModel(app: self)
-    private(set) lazy var studio = StudioLauncher(dataDirectory: dataDirectory, project: { [unowned self] in StudioProjects.source(app: self) })
+    private(set) lazy var studio = StudioLauncher(
+        dataDirectory: dataDirectory, themesFolder: { [unowned self] in self.themes.themesDirectory ?? self.dataDirectory.appendingPathComponent("themes") },
+        project: { [unowned self] in StudioProjects.source(app: self) })
     private(set) lazy var folderPicking = FolderPicking(app: self)
     private(set) lazy var router = ActionRouter(app: self)
     /// Where Go to Waiting (true) and Go to Finished (false) went last, so the next press goes on.

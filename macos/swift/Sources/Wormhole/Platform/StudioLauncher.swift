@@ -19,12 +19,17 @@ import WindowUI
 @MainActor
 final class StudioLauncher {
     private let controller = StudioWindowController()
-    private let themes: URL
+    /// The themes folder of the profile Wormhole is in, asked each time the Studio opens (a profile switch moves it): what the
+    /// live theme reads its user themes from (`ThemeStore.themesDirectory`), else the data folder's own.
+    private let themesFolder: @MainActor () -> URL
     /// The project of the terminal in front (a trusted project's theme is the one in effect while one of its terminals is).
     private let project: @MainActor () -> (any StudioProject)?
 
-    init(dataDirectory: URL, project: @escaping @MainActor () -> (any StudioProject)? = { nil }) {
-        themes = dataDirectory.appendingPathComponent("themes")
+    init(
+        dataDirectory: URL, themesFolder: (@MainActor () -> URL)? = nil,
+        project: @escaping @MainActor () -> (any StudioProject)? = { nil }
+    ) {
+        self.themesFolder = themesFolder ?? { dataDirectory.appendingPathComponent("themes") }
         self.project = project
     }
 
@@ -46,6 +51,7 @@ final class StudioLauncher {
 
     func show(store: ThemeStore = .shared) {
         #if WITH_UNIFFI
+            let themes = themesFolder()
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)
             SketchSource.preset = { WindowSketches.blocks(preset: $0, width: $1) }
             let environment = StudioEnvironment(
