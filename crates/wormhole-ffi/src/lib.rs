@@ -65,6 +65,7 @@ mod studio_edit;
 mod studio_files;
 mod studio_folder;
 mod syntax;
+mod tab_sets;
 mod themes;
 mod title_fit;
 mod visible;
@@ -189,6 +190,9 @@ pub use settings::{
 pub use split_opening::{
     SplitFrameRecord, SplitOpeningRecord, SplitPlace, SplitRect, split_opening, split_opening_duration_ms,
     split_opening_frame,
+};
+pub use tab_sets::{
+    TabHitRecord, TabNameRecord, TabSetRecord, tab_sets_current, tab_sets_numbered, tab_sets_search, tab_sets_step,
 };
 pub use terminal::{FrameTiming, KeyPress, Terminal};
 pub use studio_files::{

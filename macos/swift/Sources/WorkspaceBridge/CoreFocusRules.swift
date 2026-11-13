@@ -1,6 +1,7 @@
 // The focus rules asked of the core (`focus*` functions, `view::focus`): the window holds the real focus and the facts,
 // the core answers where it goes next. The two enums share names, so the core's are written out in full.
 
+import PanesModel
 import WorkspaceModel
 import WormholeBindings
 
@@ -68,6 +69,7 @@ public enum CoreWindowRules {
     public static func install() {
         Focus.install(CoreFocusRules())
         RowMotion.install(CoreRowMotion.tables)
+        TabSets.install(CoreTabSetRules())
         let zen = windowPreset(preset: .zen)
         Zen.install(
             WindowShown(titleRow: zen.titleRow, statusBar: zen.statusBar, minimap: zen.minimap, columnDividers: zen.columnDividers))

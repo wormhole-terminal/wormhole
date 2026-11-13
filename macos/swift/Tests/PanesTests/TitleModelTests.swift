@@ -65,19 +65,10 @@ import PanesModel
         #expect(Ports.moreWords([8080, 9229]) == "2 more listening: 8080, 9229")
     }
 
-    @Test func tabSetsStepWrapAndSearch() {
-        let sets = [
-            TabSet(groupID: 1, label: "A", members: [0]), TabSet(groupID: 4, label: "Docs", members: []),
-            TabSet(groupID: 2, label: "B", members: [1, 2]), TabSet(groupID: nil, label: TabSets.ungrouped, members: [3]),
-        ]
-        #expect(TabSets.step(sets, from: 0, forward: true) == 2 && TabSets.step(sets, from: 3, forward: true) == 0)
-        #expect(TabSets.step(sets, from: 0, forward: false) == 3)
-        #expect(TabSets.step([sets[0]], from: 0, forward: true) == nil)
-        #expect(TabSets.current(sets, containing: 2) == 2 && TabSets.current(sets, containing: 9) == nil)
-        #expect(TabSets.numbered(sets, 4) == 3 && TabSets.numbered(sets, 5) == nil && TabSets.numbered(sets, 0) == nil)
-        let names = ["zero", "docs reader", "two", "three"]
-        #expect(TabSets.search(sets, "doc", name: { names[$0] }) == [.set(1), .terminal(1, set: 2)])
-        #expect(TabSets.search(sets, "  ", name: { names[$0] }).isEmpty)
-        #expect(TabSets.of(groups: [sets[0]], loose: [4]).last?.label == "Ungrouped")
+    /// Stepping, numbering and search are the core's (`WorkspaceBridgeTests` ask it); the list of sets is assembled here.
+    @Test func tabSetsAreTheGroupsThenTheLooseTerminals() {
+        let group = TabSet(groupID: 1, label: "A", members: [0])
+        #expect(TabSets.of(groups: [group], loose: [4]).last?.label == "Ungrouped")
+        #expect(TabSets.of(groups: [group], loose: []) == [group], "no loose terminal, no Ungrouped set")
     }
 }

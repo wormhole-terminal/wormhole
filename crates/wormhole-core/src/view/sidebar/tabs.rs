@@ -94,7 +94,7 @@ pub fn loudest_member(set: &TabSet, urgency: impl Fn(usize) -> Urgency) -> Optio
 pub enum Hit {
     /// The set at this index of `tab_sets`.
     Set(usize),
-    /// The terminal at this session index, in the set at `.1`.
+    /// The set at `.0` of `tab_sets`, and the terminal at this session index `.1` in it.
     Terminal(usize, usize),
 }
 
