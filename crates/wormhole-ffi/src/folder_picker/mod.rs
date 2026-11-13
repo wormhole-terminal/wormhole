@@ -46,18 +46,21 @@ impl PickerJob {
 /// list of one is the other's.
 const RECENTS_KEY: &str = "recent_folders";
 
-/// The recent folders the data folder's database holds, as `recents_json()` writes them (nil for none or no database).
+/// The recent folders profile `profile`'s database holds, as `recents_json()` writes them (nil for none, no database or an
+/// unknown profile): one list per profile, as in the GPUI app.
 #[uniffi::export]
-pub fn folder_recents_load() -> Option<String> {
-    crate::isolation::require().ok()?;
-    wormhole_core::storage::store::Store::open().ok()?.meta(RECENTS_KEY).ok().flatten()
+pub fn folder_recents_load(profile: String) -> Option<String> {
+    let dir = crate::profile::dir_of(&profile)?;
+    wormhole_core::storage::store::Store::open_at(&dir).ok()?.meta(RECENTS_KEY).ok().flatten()
 }
 
-/// Keeps `json` (what `recents_json()` wrote) as the data folder's recent folders. False when it could not be kept.
+/// Keeps `json` (what `recents_json()` wrote) as profile `profile`'s recent folders. False when it could not be kept.
 #[uniffi::export]
-pub fn folder_recents_save(json: String) -> bool {
-    crate::isolation::require().is_ok()
-        && wormhole_core::storage::store::Store::open().is_ok_and(|store| store.set_meta(RECENTS_KEY, &json).is_ok())
+pub fn folder_recents_save(json: String, profile: String) -> bool {
+    crate::profile::dir_of(&profile).is_some_and(|dir| {
+        wormhole_core::storage::store::Store::open_at(&dir)
+            .is_ok_and(|store| store.set_meta(RECENTS_KEY, &json).is_ok())
+    })
 }
 
 /// The providers and decorators of one picker, and the recent folders they share.

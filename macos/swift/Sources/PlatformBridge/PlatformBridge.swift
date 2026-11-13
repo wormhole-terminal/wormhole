@@ -34,11 +34,19 @@ public enum PlatformBridge {
         CoreFolders(recentsJSON: recentsJSON, recentTitle: recentTitle)
     }
 
-    /// The recent folders kept in the data folder's database (the GPUI app's own `recent_folders` row).
-    public static func storedRecents() -> String? { folderRecentsLoad() }
+    /// The recent folders kept in profile `profile`'s database (the GPUI app's own `recent_folders` row).
+    public static func storedRecents(profile: String) -> String? { folderRecentsLoad(profile: profile) }
 
     @discardableResult
-    public static func storeRecents(_ json: String) -> Bool { folderRecentsSave(json: json) }
+    public static func storeRecents(_ json: String, profile: String) -> Bool { folderRecentsSave(json: json, profile: profile) }
+
+    /// The projects profile `profile` worked in lately, most recent first (its database's `recent_projects` row).
+    public static func recentProjects(profile: String) -> [String] { recentProjectsLoad(profile: profile) }
+
+    /// `root` was just worked in: it leads the profile's list, which is kept; the list as it is now.
+    public static func rememberRecentProject(_ root: String, profile: String) -> [String] {
+        recentProjectsRemember(profile: profile, root: root)
+    }
 
     /// Makes core's fuzzy matcher and keymap lists (the palette's actions, the shortcut sheet) the palette's.
     public static func installPaletteMatcher() {

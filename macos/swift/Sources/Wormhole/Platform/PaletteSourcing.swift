@@ -74,7 +74,7 @@ extension AppController {
                 self?.settingsModel.host.shellChoices().filter { !$0.isDefault }
                     .map { PaletteShell(key: $0.key, name: $0.name, commandLine: $0.commandLine) } ?? []
             },
-            recentFolders: { [weak self] in self?.recents.roots ?? [] },
+            recentFolders: { [weak self, weak session] in self?.recents.roots(of: session?.windows.profile ?? self?.windowsHost.profile ?? "") ?? [] },
             openInNewWindow: { [weak self, weak session] in self?.openInNewWindow($0, from: session) },
             // The one close entry point: it asks while something runs, and closes the window when it was the last terminal.
             closeTerminal: { [weak self] id in self?.closeTerminal(id) })

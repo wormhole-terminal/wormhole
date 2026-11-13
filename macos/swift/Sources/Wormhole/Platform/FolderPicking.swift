@@ -21,19 +21,17 @@ final class FolderPicking {
     private let controller: FolderPickerController
     private unowned let app: AppController
     private var visited: [TerminalID: String] = [:]
-    private var clearedWhileOff = false
     #if WITH_UNIFFI
-        private var folders: CoreFolders?
+        /// Each profile's recent folders, loaded the first time one is needed (one list per profile, as GPUI keeps them).
+        private var folders: [String: CoreFolders] = [:]
+        private var clearedWhileOff: Set<String> = []
     #endif
 
     init(app: AppController) {
         self.app = app
         controller = FolderPickerController(policy: app.policy)
         #if WITH_UNIFFI
-            if app.options.isReal {
-                folders = PlatformBridge.makeFolders(recentsJSON: PlatformBridge.storedRecents())
-                follow()
-            }
+            if app.options.isReal { follow() }
         #endif
     }
 
@@ -63,11 +61,12 @@ final class FolderPicking {
         func fromTop(_ frame: CGRect) -> CGRect { CGRect(x: frame.minX, y: content.bounds.height - frame.maxY, width: frame.width, height: frame.height) }
         let pane = view.map { fromTop($0.convert($0.bounds, to: nil)) } ?? content.bounds
         let cursor = view?.cursorFrameInWindow.map(fromTop) ?? CGRect(x: pane.minX, y: pane.maxY - 20, width: 10, height: 20)
-        visit(cwd)
-        let (providers, decorators) = sources()
+        let profile = app.front.windows.profile
+        visit(cwd, profile: profile)
+        let (providers, decorators) = sources(profile: profile)
         controller.open(
             over: window, pane: pane, cursor: cursor, context: PickerContext(cwd: cwd), providers: providers, decorators: decorators,
-            onPick: { [weak view] path in view?.source.paste(path) }, onForget: { [weak self] path in self?.forget(path) })
+            onPick: { [weak view] path in view?.source.paste(path) }, onForget: { [weak self] path in self?.forget(path, profile: profile) })
         closeWhenSelectionMoves(from: opened)
     }
 
@@ -80,54 +79,68 @@ final class FolderPicking {
         }
     }
 
-    private func sources() -> ([any FolderProviding], [any FolderDecorating]) {
+    private func sources(profile: String) -> ([any FolderProviding], [any FolderDecorating]) {
         #if WITH_UNIFFI
-            if let folders { return (folders.providers, folders.decorators) }
+            if let folders = recents(of: profile) { return (folders.providers, folders.decorators) }
         #endif
         return ([MockFolders.sample], [MockFolders.sample])
     }
 
     /// The folder of the terminal the picker opens over counts as a visit (a terminal started there never said so).
-    private func visit(_ folder: String) {
+    private func visit(_ folder: String, profile: String) {
         #if WITH_UNIFFI
-            if folders?.recordVisit(folder) == true { save() }
+            if recents(of: profile)?.recordVisit(folder) == true { save(profile) }
         #endif
     }
 
-    private func forget(_ path: String) {
+    private func forget(_ path: String, profile: String) {
         #if WITH_UNIFFI
-            folders?.forget(path)
-            save()
+            recents(of: profile)?.forget(path)
+            save(profile)
         #endif
     }
 
     #if WITH_UNIFFI
-        private func save() {
-            guard let json = folders?.recentsJSON() else { return }
-            PlatformBridge.storeRecents(json)
+        /// `profile`'s list, read from its database once (nil for a sample).
+        private func recents(of profile: String) -> CoreFolders? {
+            guard app.options.isReal else { return nil }
+            if let known = folders[profile] { return known }
+            let made = PlatformBridge.makeFolders(recentsJSON: PlatformBridge.storedRecents(profile: profile))
+            folders[profile] = made
+            return made
         }
 
-        /// Records each terminal's folder as it changes: every window's, folded groups included (every folder change is a visit).
+        private func save(_ profile: String) {
+            guard let json = folders[profile]?.recentsJSON() else { return }
+            PlatformBridge.storeRecents(json, profile: profile)
+        }
+
+        /// Records each terminal's folder as it changes, in the list of the profile of the window that holds it: every window's,
+        /// folded groups included (every folder change is a visit).
         private func follow() {
-            let terminals = withObservationTracking { app.sessions.flatMap { $0.hub.state.all }.map { ($0.id, $0.folder) } } onChange: { [weak self] in
+            let found = withObservationTracking {
+                app.sessions.map { ($0, $0.windows.profile, $0.hub.state.all.map { ($0.id, $0.folder) }) }
+            } onChange: { [weak self] in
                 Task { @MainActor in self?.follow() }
             }
-            // Kept only while the flag is on; the first change with it off forgets what it learned.
-            guard app.flagsOn(app.front).contains("folder_picker") else {
-                if !clearedWhileOff, terminals.contains(where: { $0.1 != nil }) {
-                    clearedWhileOff = true
-                    folders?.clear()
-                    save()
+            var changed: Set<String> = []
+            for (session, profile, terminals) in found {
+                // Kept only while the flag is on in that profile; the first change with it off forgets what it learned.
+                guard app.flagsOn(session).contains("folder_picker") else {
+                    if !clearedWhileOff.contains(profile), terminals.contains(where: { $0.1 != nil }) {
+                        clearedWhileOff.insert(profile)
+                        recents(of: profile)?.clear()
+                        save(profile)
+                    }
+                    continue
                 }
-                return
+                for (id, folder) in terminals {
+                    guard let folder, visited[id] != folder else { continue }
+                    visited[id] = folder
+                    if recents(of: profile)?.recordVisit((folder as NSString).expandingTildeInPath) == true { changed.insert(profile) }
+                }
             }
-            var changed = false
-            for (id, folder) in terminals {
-                guard let folder, visited[id] != folder else { continue }
-                visited[id] = folder
-                changed = folders?.recordVisit((folder as NSString).expandingTildeInPath) == true || changed
-            }
-            if changed { save() }
+            changed.forEach(save)
         }
     #endif
 }

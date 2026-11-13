@@ -52,6 +52,7 @@ mod panel_spoken;
 mod perf_counters;
 mod probes;
 mod profile;
+mod recent_projects;
 mod row_motion;
 mod settings;
 pub mod settings_dump;

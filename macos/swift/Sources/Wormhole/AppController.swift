@@ -91,7 +91,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     private(set) lazy var extraKeys = ExtraKeys(app: self)
     /// A project action's key, wherever the focus is in a window of the workspace (`ProjectKeys`).
     private(set) lazy var projectKeys = ProjectKeys(app: self)
-    private(set) lazy var recents = RecentProjects(dataDirectory: dataDirectory)
+    private(set) lazy var recents = RecentProjects(real: options.isReal)
     /// SIGTERM as an event on the main queue (`quitOnSigterm`).
     var sigterm: DispatchSourceSignal?
     private(set) lazy var aux = AuxController(app: self, dataDirectory: dataDirectory)

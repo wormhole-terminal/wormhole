@@ -166,7 +166,7 @@ struct AuxBackends {
                 do {
                     return try FFIOnboardingBackend(
                         preferences: preferences, settingsKeys: "\u{2318},",
-                        recents: { [weak app] in (app?.recents.roots ?? []).map { URL(fileURLWithPath: $0) } },
+                        recents: { [weak app] in (app.map { $0.recents.roots(of: $0.front.windows.profile) } ?? []).map { URL(fileURLWithPath: $0) } },
                         agentHome: home, dataDir: app.dataDirectory, authenticator: authenticator,
                         // "How much to show" opens or closes the right panel of the window behind (the window's own, so not a setting).
                         panel: (
