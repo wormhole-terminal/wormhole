@@ -981,3 +981,23 @@ Written without compiling: expect compile errors.
 | X10 | one run of `macos/scripts/perf-compare.sh` | fill `macos/tools/baselines/swift-perf.json` (all numbers are null today) | `macos/tools/baselines/swift-perf.json` |
 | X03 | Settings > Changed > Copy JSON with VoiceOver | "Copied" is said once | `SettingsUI/Pages/ChangedPage.swift` |
 | X07 | VoiceOver on the Studio's changed dot | says "Changed" from the catalog | `StudioUI/List/BandView.swift`, `swift-studio.ftl` |
+
+## Lane panel, wave 7
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| P06 TEST | Notes sync in flight for terminal A (merge returns a line from notes.md), select terminal B before it lands | the merged model is saved for A (database), B's notes are not touched, no line of notes.md is later read as deleted | `Wormhole/Panel/NotesCoordinator.swift` `land`/`store`; test `NotesMergeSavedTests.aMergeForATerminalSwitchedAwayDuringItIsStoredForThatTerminal` |
+| P06 TEST | Close a terminal while its merge is in flight; move one to another window meanwhile | closed: its base is dropped again and nothing is saved; moved: the merge is stored for it | `NotesCoordinator.land`, `departed` |
+| P06 | Two ticks of the 2 s timer overlap a slow merge | the second run returns at once (`syncing`) | `NotesCoordinator.sync` |
+| P05 TEST | Two windows of one profile make a worktree each, then remove one | both records and distinct ports remain; neither window's list loses the other's | `crates/wormhole-ffi/src/git/worktrees.rs` `update`; test `two_services_of_one_profile_keep_each_others_worktrees_and_ports` |
+| P05 TEST | `Wormhole new-terminal --worktree x` twice for one window, then for another | second for the same window: Failed; another window: asked. A sheet opened from the menu also refuses a request for its window | `hook_server/control/worktree.rs`, `core.rs` `worktree_question`, `AppController+Windows.swift` `sheetChanged`; test `a_second_worktree_request_is_refused_only_for_the_window_whose_sheet_is_up` |
+| P05 | `new-terminal --worktree x --window 2` with window 1 in front | the sheet comes up in window 2, trust judged by window 2's profile | `HookHost.perform(.worktreeAsked)`, `control/worktree.rs` |
+| P08 | Layout with terminals where the first has `focus` and later ones do not | the first with focus is selected at the end, not the last made | `Panel/PanelEffects.swift` `.openTerminals` |
+| P08 TEST | A project action with a key, focus in a text field, the sidebar or the panel | the key runs the action; with the project untrusted or Actions off the key goes on | `Panel/ProjectActionKeys.swift` `ProjectKeys`; FFI `ProjectService.action_for_key`; test `an_actions_key_is_the_projects_only_while_it_is_trusted_and_on` |
+| P02 | Click the branch chip of a pane that is not selected; click it in a folder that is no repository | picker opens for that pane's terminal only; in a non-repository the request ends and no picker pops later | `ChangesStore.pickerFor`, `WindowHub+Branch.swift` |
+| P09 | Two windows in two profiles; an agent reports | the report is added to the profile Wormhole is in; each window draws its own profile's; moving a window changes only that window's meters | `usage.rs` `profile_reports`, `RustUsageBackend.bound/follow/setShown` |
+| P09 | A report that puts a limit into its last minute while the Usage tab is up | the words go per second at once, not up to 60 s later | `UsageStore.keepTime`, `nap` |
+| P07 | Terminal in a folder whose name is not UTF-8 | NOT DONE: folders are `String` in every layer |  |
+| P01 | VoiceOver on a tab | NOT DONE: SwiftUI has no per-tab trait; the position "n of 6" is said |  |
