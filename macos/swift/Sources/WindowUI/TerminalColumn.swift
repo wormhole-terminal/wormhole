@@ -28,7 +28,7 @@ struct TerminalColumn: View {
     var body: some View {
         let cover = hub.panel.cover
         VStack(spacing: 0) {
-            TitleSlot {
+            PanesUI.TitleSlot {
                 CentreTitle(hub: hub)
             } coverTitle: {
                 PanelCoverTitle.carries(cover) ? PanelCoverTitle(controller: hub.panel) : nil

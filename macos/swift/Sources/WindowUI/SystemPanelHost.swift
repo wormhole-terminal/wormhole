@@ -25,7 +25,7 @@ final class SystemPanelHost: PanelHost {
         var focus: () -> Void = {}
         var open: (String, String?) -> Void = { _, _ in }
         /// The chip of the window says `notice`.
-        var say: (Notice) -> Void = { _ in }
+        var say: (TerminalUI.Notice) -> Void = { _ in }
         /// The window of everything the project would run.
         var showCommands: () -> Void = {}
         /// The window's panel tab by name: show it, and whether it is offered.
@@ -56,7 +56,7 @@ final class SystemPanelHost: PanelHost {
 
     func copyPath(_ path: String) {
         guard !path.unicodeScalars.contains(where: { $0.properties.generalCategory == .control }) else {
-            notify(Notice.failed(.copyPath).words)
+            notify(TerminalUI.Notice.failed(.copyPath).words)
             return terminal.say(.failed(.copyPath))
         }
         copy(path)
@@ -133,7 +133,7 @@ final class SystemPanelHost: PanelHost {
 
 extension PanelCopied {
     /// What the chip says for a copy from the panel.
-    var notice: Notice.Copied {
+    var notice: TerminalUI.Notice.Copied {
         switch self {
         case .error: .error
         case .objectId: .objectId
@@ -148,7 +148,7 @@ extension PanelCopied {
 }
 
 extension PanelFailed {
-    var notice: Notice.Failed {
+    var notice: TerminalUI.Notice.Failed {
         switch self {
         case .copyCommit: .copyCommit
         case .renameName: .renameName
