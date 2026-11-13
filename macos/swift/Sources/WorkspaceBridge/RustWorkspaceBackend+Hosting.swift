@@ -87,7 +87,7 @@ extension RustWorkspaceBackend {
             terminal.setVisible(visible: Set(core.shown().map(Int.init)).contains(id))
         } else if let unavailable = done.unavailable {
             let quiet = unavailable.why.isTransient && book.retried.insert(id).inserted
-            book.unavailable[id] = (unavailable.why, unavailable.host, !quiet)
+            book.unavailable[id] = (unavailable.why, unavailable.host, unavailable.detail, !quiet)
             if quiet { retryAfter(id) }
         } else if let failure = done.failure {
             failed[id] = failure

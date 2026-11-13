@@ -11,7 +11,7 @@ import WormholeBindings
 struct Connected: Sendable {
     var terminal: Terminal?
     /// The host runs and cannot be shown: the terminal keeps its place and the bar says why.
-    var unavailable: (why: HostProblem.Why, host: String)?
+    var unavailable: (why: HostProblem.Why, host: String, detail: String)?
     /// No host would start, so the program runs in the app, which ends with it (`WorkspaceNotice.hostFallback`).
     var fallback: String?
     /// Nothing started.
@@ -29,8 +29,8 @@ enum HostConnect {
         if let host {
             do {
                 return keptPastQuit(Connected(terminal: try desk.attach(hostId: host, what: what, visible: visible, listener: relay), attached: true))
-            } catch HostingError.Unavailable(_, let kind, _) {
-                return Connected(unavailable: (HostProblem.Why(kind), host))
+            } catch HostingError.Unavailable(let reason, let kind, _) {
+                return Connected(unavailable: (HostProblem.Why(kind), host, reason))
             } catch HostingError.Gone {
                 // Its program went with its host: a new terminal where it was.
             } catch { return Connected(failure: "\(error)") }

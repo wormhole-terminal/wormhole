@@ -9,7 +9,7 @@ struct HostBook {
     var tokens = 0
     /// Terminals whose host runs and could not be shown: they keep its id and say why (`shown`: the bar is up; not while
     /// the one quiet second try is still to come).
-    var unavailable: [TerminalID: (why: HostProblem.Why, host: String, shown: Bool)] = [:]
+    var unavailable: [TerminalID: (why: HostProblem.Why, host: String, detail: String, shown: Bool)] = [:]
     /// An attach that failed in a way that may pass is tried once more before the bar shows.
     var retried: Set<TerminalID> = []
     /// The launch's terminals are still connecting: the saved rows of the last run are forgotten when the last is.

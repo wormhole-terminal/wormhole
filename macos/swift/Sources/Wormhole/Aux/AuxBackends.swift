@@ -223,7 +223,7 @@ struct AuxBackends {
                     if case .unavailable(let kind)? = session.hub.store.hostProblem(of: terminal.id) { why = kind.record }
                     return HostAttachmentRecord(
                         hostId: hostID, window: Int64(session.id), title: terminal.title, link: core?.hostLink(of: terminal.id),
-                        unavailable: why, unavailableDetail: nil)
+                        unavailable: why, unavailableDetail: core?.unavailableDetail(of: terminal.id))
                 }
             }
         }
