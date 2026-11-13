@@ -39,8 +39,10 @@ struct FolderStep: View {
             dropZone
         }
         .dropDestination(for: URL.self) { urls, _ in
-            guard let folder = urls.first(where: \.hasDirectoryPath) else { return false }
-            session.pick(folder)
+            // A file dropped on the step picks the folder it is in (`onboarding/mod.rs`).
+            guard let dropped = urls.first else { return false }
+            let isFolder = (try? dropped.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? dropped.hasDirectoryPath
+            session.pick(isFolder ? dropped : dropped.deletingLastPathComponent())
             return true
         } isTargeted: { dropTargeted = $0 }
     }

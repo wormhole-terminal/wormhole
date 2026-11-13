@@ -16,7 +16,15 @@ public final class FFIOnboardingBackend: OnboardingBackend {
     public private(set) var trustCard: TrustCard?
 
     private let run: FirstRun
-    private let trustDesk: TrustDesk?
+    private var trustDesk: TrustDesk?
+    /// The folder `trustDesk` reads, to make a new one only when the project the intro is about changes.
+    private var trustRoot: String?
+    private let frontProject: () -> URL?
+    /// The last scan found no agent: the third step is the primer, and Start on it leaves the sidebar's note.
+    private var primer = false
+    private let onPrimer: () -> Void
+    private let notesFeature: () -> Bool
+    public var notesOn: Bool { notesFeature() }
     private let authenticator: any Authenticating
     private let recents: () -> [URL]
     private let dataDir: URL?
@@ -30,6 +38,8 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         preferences: OnboardingPreferences, settingsKeys: String, project: URL? = nil, recents: @escaping () -> [URL] = { [] },
         agentHome: URL? = nil, dataDir: URL? = nil, authenticator: any Authenticating,
         panel: (get: () -> Bool, set: (Bool) -> Void) = ({ false }, { _ in }),
+        frontProject: @escaping () -> URL? = { nil }, onPrimer: @escaping () -> Void = {},
+        notesOn: @escaping () -> Bool = { true },
         onFinish: @escaping (_ folder: URL?, _ firstRun: Bool) -> Void
     ) throws {
         run = try FirstRun(agentHome: agentHome?.path, dataDir: dataDir?.path)
@@ -40,8 +50,10 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         self.dataDir = dataDir
         windowPanel = panel
         self.onFinish = onFinish
+        (self.frontProject, self.onPrimer, notesFeature) = (frontProject, onPrimer, notesOn)
         let wakes = hub
         trustDesk = try project.map { try TrustDesk(root: $0.path, profile: nil, dataDir: dataDir?.path, listener: wakes) }
+        trustRoot = project?.path
         trustCard = trustDesk.flatMap(Self.card)
         preferences.onChange = { [weak self] in self?.writeLook() }
     }
@@ -49,12 +61,25 @@ public final class FFIOnboardingBackend: OnboardingBackend {
     public func scanAgents() async -> (found: [FoundAgent], others: Int) {
         let run = run
         let scan = await Task.detached { run.scanAgents() }.value
+        primer = scan.found.isEmpty
         return (scan.found.map(\.value), Int(scan.others))
     }
 
     public func installHooks(agent: String) async throws -> FoundAgent {
         let run = run
         return try await Task.detached { try run.installHooks(id: agent).value }.value
+    }
+
+    /// The card of the folder picked, else of the front terminal's project: its desk is made when that project changes, so the
+    /// card follows the pick (and `trust` approves the project the card showed).
+    public func trustCard(for folder: URL?) -> TrustCard? {
+        guard let root = (folder ?? frontProject())?.path else { return trustCard }
+        if root != trustRoot {
+            trustRoot = root
+            trustDesk = try? TrustDesk(root: root, profile: nil, dataDir: dataDir?.path, listener: hub)
+            trustCard = trustDesk.flatMap(Self.card)
+        }
+        return trustCard
     }
 
     public func trust(_ folder: URL) {
@@ -87,7 +112,10 @@ public final class FFIOnboardingBackend: OnboardingBackend {
 
     public func finish(folder: URL?, firstRun: Bool) {
         // A replay of the intro changes nothing.
-        if firstRun { try? run.finish() }
+        if firstRun {
+            try? run.finish()
+            if primer { onPrimer() }
+        }
         onFinish(folder, firstRun)
     }
 

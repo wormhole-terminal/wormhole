@@ -258,10 +258,12 @@ onboarding-primer-title = Ready when you are
 onboarding-primer-intro = { -brand } didn’t find a coding agent on this Mac. Nothing here depends on one.
 onboarding-use-as-terminal = Use { -brand } as a terminal
 onboarding-use-as-terminal-detail = The git panel works in any shell.
+onboarding-use-as-terminal-detail-notes = Notes, next steps and the git panel work in any shell.
 onboarding-things-to-try = Things to try first
 onboarding-try-jump = Jump to anything
 onboarding-try-shortcuts = See every shortcut
 onboarding-try-changes = Show what changed in git
+onboarding-try-note = Jot a note for this folder
 onboarding-try-panels = Hide the side panels
 
 # { $count } is a whole number of other agents.

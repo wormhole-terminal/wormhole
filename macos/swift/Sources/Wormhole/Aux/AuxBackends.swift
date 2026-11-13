@@ -163,15 +163,32 @@ struct AuxBackends {
                 let home = ProcessInfo.processInfo.environment["WORMHOLE_AGENT_HOME"].map { URL(fileURLWithPath: $0) } // text: an environment variable
                 do {
                     return try FFIOnboardingBackend(
-                        preferences: preferences, settingsKeys: "\u{2318},", agentHome: home, dataDir: app.dataDirectory,
-                        authenticator: authenticator,
+                        preferences: preferences, settingsKeys: "\u{2318},",
+                        recents: { [weak app] in (app?.recents.roots ?? []).map { URL(fileURLWithPath: $0) } },
+                        agentHome: home, dataDir: app.dataDirectory, authenticator: authenticator,
                         // "How much to show" opens or closes the right panel of the window behind (the window's own, so not a setting).
                         panel: (
                             { [weak app] in app?.hub.state.panelVisible ?? false },
                             { [weak app] open in if let app, app.hub.state.panelVisible != open { app.hub.send(.togglePanel) } }
-                        )
-                    ) { [weak app] folder, _ in
-                        if let folder { app?.hub.send(.newTerminalIn(folder.path)) }
+                        ),
+                        // The project the trust card is about when no folder was picked: the front terminal's.
+                        frontProject: { [weak app] in app?.hub.panel.project.state.map { URL(fileURLWithPath: $0.root) } },
+                        // The primer's Start leaves the sidebar's "no agents" note, unless it was closed for good.
+                        onPrimer: { [weak app] in
+                            if !((try? noAgentsTipDismissed()) ?? false) { app?.hub.agentsTip = .note }
+                        },
+                        // Notes on in the window's own profile: the primer's words and its "Jot a note" line follow it.
+                        notesOn: { [weak app] in app.map { !$0.featuresOff($0.front).contains("notes") } ?? true }
+                    ) { [weak app] folder, firstRun in
+                        // The untouched first terminal gives way to one in the folder, only while it is the window's only one and is
+                        // not there already (`window/onboarding_host.rs`).
+                        guard firstRun, let app, let folder else { return }
+                        let hub = app.hub
+                        guard hub.state.all.count == 1, let first = hub.state.all.first else { return }
+                        let there = first.folder.map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath).standardizedFileURL }
+                        guard there != folder.standardizedFileURL else { return }
+                        hub.send(.newTerminalIn(folder.path))
+                        app.closeTerminal(first.id)
                     }
                 } catch { fallback("welcome", error) }
             }

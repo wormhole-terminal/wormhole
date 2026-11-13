@@ -99,6 +99,10 @@ extension AuxText {
     public static var useAsTerminalDetail: String {
         tr("onboarding-use-as-terminal-detail", "The git panel works in any shell.")
     }
+    public static var useAsTerminalDetailNotes: String {
+        tr("onboarding-use-as-terminal-detail-notes", "Notes, next steps and the git panel work in any shell.")
+    }
+    public static var tryNote: String { tr("onboarding-try-note", "Jot a note for this folder") }
     public static var thingsToTry: String { tr("onboarding-things-to-try", "Things to try first") }
     public static var tryJump: String { tr("onboarding-try-jump", "Jump to anything") }
     public static var tryShortcuts: String { tr("onboarding-try-shortcuts", "See every shortcut") }

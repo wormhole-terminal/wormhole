@@ -38,6 +38,11 @@ public protocol OnboardingBackend: AnyObject {
     var preferences: OnboardingPreferences { get }
     /// The trust card of the project the intro is about, if it has one to show.
     var trustCard: TrustCard? { get }
+    /// The trust card for the project the intro is about now: the folder picked in the first step, else the front terminal's
+    /// project (`onboarding/mod.rs` `trust_root`). A backend with one fixed card answers it.
+    func trustCard(for folder: URL?) -> TrustCard?
+    /// Whether Notes is on in the window's profile: the primer's words and its "Jot a note" line follow it.
+    var notesOn: Bool { get }
     /// What the person's keys are, for the words that name them ("⌘,"): Settings, the palette.
     var settingsKeys: String { get }
     /// Agents on PATH and the ones recognised but not found (their count), scanned off the main thread.
@@ -63,6 +68,8 @@ public protocol OnboardingBackend: AnyObject {
 }
 
 extension OnboardingBackend {
+    public var notesOn: Bool { true }
+    public func trustCard(for folder: URL?) -> TrustCard? { trustCard }
     /// A backend without the core has no walk.
     public func tailor() -> (any TailorWalking)? { nil }
     /// Nothing behind to follow the walk.

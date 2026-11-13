@@ -34,7 +34,7 @@ public final class OnboardingSession {
 
     public var step: OnboardingStep { flow.step }
     public var preferences: OnboardingPreferences { backend.preferences }
-    public var trustCard: TrustCard? { trustLater ? nil : backend.trustCard }
+    public var trustCard: TrustCard? { trustLater ? nil : backend.trustCard(for: flow.folder) }
 
     /// Looks for agents off the main thread, then lets the third step follow what was found.
     public func scan() async {
