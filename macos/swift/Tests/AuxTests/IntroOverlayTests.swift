@@ -1,5 +1,6 @@
 import AppKit
 import DesignSystem
+import QuartzCore
 import SwiftUI
 import XCTest
 @testable import AuxModel
