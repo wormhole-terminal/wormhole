@@ -75,6 +75,8 @@ extension AppController {
                 try (settingsModel.host as? RustSettingsHost)?.switchProfile(to: id)
                 profileHosts[id] = target
                 windowsHost = target
+                // What agents report goes to the profile Wormhole is in; each window still draws its own profile's.
+                (sessions.first?.panelBackends.usage as? RustUsageBackend)?.setShown(profile: id)
                 aux.startAccess(profile: id)
                 leaving.forEach { $0.parked = true }
                 let back = windows(of: id)
@@ -155,7 +157,7 @@ extension AppController {
             // (agent access is judged by the window's own profile in the core, which `rehome` told). The panel's
             // backends were made for the profile it left.
             (session.panelBackends.project as? RustProjectBackend)?.service.followProfile(profile: id)
-            (session.panelBackends.usage as? RustUsageBackend)?.service.followProfile(profile: id)
+            (session.panelBackends.usage as? RustUsageBackend)?.follow(profile: id)
             (session.panelBackends.files as? RustFilesBackend)?.followProfile(id)
             // The worktrees a window makes, and their ports, are remembered in its own profile's database.
             session.panelBackends.worktrees.followProfile(id)

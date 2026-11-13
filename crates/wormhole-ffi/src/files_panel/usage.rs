@@ -3,7 +3,8 @@
 //! line command `rate_limits`; Codex and Gemini arrive through their hooks. The reports are the account's,
 //! not a terminal's: the latest report of an agent wins.
 
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use serde_json::Value;
@@ -97,41 +98,62 @@ fn agent_of(key: &str) -> Option<AgentId> {
     serde_json::from_value(Value::String(key.to_string())).ok()
 }
 
-/// The reports, the database they are kept in and the wake for Swift.
+/// One profile's reports and the database they are kept in.
+struct Kept {
+    reports: Vec<Usage>,
+    /// `None` when the database can't be opened: the reports are then kept for this run only.
+    store: Option<Store>,
+}
+
+/// The reports of every profile the app has been in, the profile reports are added to, and the wake for Swift. As in the GPUI
+/// app (`features/usage/state.rs`), what an agent reports is added to the profile Wormhole is in (`follow_profile`), and a
+/// window reads its own profile's reports (`profile_reports`).
 #[derive(uniffi::Object)]
 pub struct UsageService {
-    reports: Mutex<Vec<Usage>>,
-    /// `None` when the database can't be opened: the reports are then kept for this run only.
-    store: Mutex<Option<Store>>,
+    profiles: Mutex<HashMap<PathBuf, Kept>>,
+    /// The folder of the profile Wormhole is in: where a report goes.
+    shown: Mutex<PathBuf>,
     waker: Waker,
 }
 
 impl UsageService {
     /// What the database in `dir` holds, and the database (`None` when it can't be opened).
-    fn load(dir: &Path) -> (Vec<Usage>, Option<Store>) {
+    fn load(dir: &Path) -> Kept {
         let store =
             Store::open_at(dir).inspect_err(|err| tracing::warn!("usage limits are not kept: {err:#}")).ok();
         let saved = store.as_ref().and_then(|store| store.meta(usage::STORE_KEY).ok().flatten());
-        (saved.map(|json| usage::from_json(&json)).unwrap_or_default(), store)
+        Kept { reports: saved.map(|json| usage::from_json(&json)).unwrap_or_default(), store }
     }
 
     pub(crate) fn in_dir(dir: &Path, listener: Arc<dyn PanelListener>) -> Arc<Self> {
-        let (reports, store) = Self::load(dir);
-        Arc::new(Self { reports: Mutex::new(reports), store: Mutex::new(store), waker: Waker::new(listener) })
+        Arc::new(Self {
+            profiles: Mutex::new(HashMap::new()),
+            shown: Mutex::new(dir.to_path_buf()),
+            waker: Waker::new(listener),
+        })
     }
 
-    /// Keeps `report` as its agent's latest, saves it and wakes Swift.
+    /// Runs `read` on the reports of the profile in `dir`, loaded the first time it is asked for: what is in memory after that is
+    /// the truth (a report whose write failed stays).
+    fn with<R>(&self, dir: &Path, read: impl FnOnce(&mut Kept) -> R) -> R {
+        let mut all = self.profiles.lock().unwrap_or_else(PoisonError::into_inner);
+        read(all.entry(dir.to_path_buf()).or_insert_with(|| Self::load(dir)))
+    }
+
+    fn shown(&self) -> PathBuf {
+        self.shown.lock().unwrap_or_else(PoisonError::into_inner).clone()
+    }
+
+    /// Keeps `report` as its agent's latest in the shown profile's reports, saves it there and wakes Swift.
     pub(crate) fn record(&self, report: Usage) {
-        let json = {
-            let mut all = self.reports.lock().unwrap_or_else(PoisonError::into_inner);
-            usage::record(&mut all, report);
-            usage::to_json(&all)
-        };
-        if let Some(store) = self.store.lock().unwrap_or_else(PoisonError::into_inner).as_ref()
-            && let Err(err) = store.set_meta(usage::STORE_KEY, &json)
-        {
-            tracing::warn!("remembering the usage limits: {err:#}");
-        }
+        self.with(&self.shown(), |kept| {
+            usage::record(&mut kept.reports, report);
+            if let Some(store) = &kept.store
+                && let Err(err) = store.set_meta(usage::STORE_KEY, &usage::to_json(&kept.reports))
+            {
+                tracing::warn!("remembering the usage limits: {err:#}");
+            }
+        });
         self.waker.wake();
     }
 }
@@ -144,34 +166,35 @@ impl UsageService {
         Ok(Self::in_dir(&profile::active_dir()?, listener))
     }
 
-    /// The window this belongs to moved to profile `profile` ("Move this window to..."): the reports are that profile's
-    /// from here on, read from its database. False (nothing changes) for a profile that is not in `profiles.json`.
+    /// Wormhole went into profile `profile` ("Profile > ..."): what agents report is added to that profile's reports from now
+    /// on. False (nothing changes) for a profile that is not in `profiles.json`.
     pub fn follow_profile(&self, profile: String) -> bool {
         let Some(dir) = profile::dir_of(&profile) else { return false };
-        let (reports, store) = Self::load(&dir);
-        *self.reports.lock().unwrap_or_else(PoisonError::into_inner) = reports;
-        *self.store.lock().unwrap_or_else(PoisonError::into_inner) = store;
-        self.waker.wake();
+        *self.shown.lock().unwrap_or_else(PoisonError::into_inner) = dir;
         true
     }
 
-    /// The latest report of each agent that has reported, in the order they first did.
+    /// The latest report of each agent that has reported to the profile Wormhole is in, in the order they first did.
     pub fn reports(&self) -> Vec<UsageReportRecord> {
-        self.reports
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .iter()
-            .map(UsageReportRecord::from)
-            .collect()
+        self.with(&self.shown(), |kept| kept.reports.iter().map(UsageReportRecord::from).collect())
+    }
+
+    /// The same for the window's own profile (`None` for a profile that is not in `profiles.json`).
+    pub fn profile_reports(&self, profile: String) -> Option<Vec<UsageReportRecord>> {
+        let dir = profile::dir_of(&profile)?;
+        Some(self.with(&dir, |kept| kept.reports.iter().map(UsageReportRecord::from).collect()))
     }
 
     /// Milliseconds from `now_ms` (since the Unix epoch) until a word the reports show reads differently ("resets 45s", "Updated
     /// 3m ago"): the next second in a limit's last minute, else the next minute (core's `usage::next_change`). `None` when
     /// none moves.
     pub fn next_change(&self, now_ms: u64) -> Option<u64> {
-        let reports = self.reports.lock().unwrap_or_else(PoisonError::into_inner);
-        let wait = usage::next_change(&reports, std::time::Duration::from_millis(now_ms))?;
-        Some(u64::try_from(wait.as_millis()).unwrap_or(u64::MAX))
+        self.next_change_in(&self.shown(), now_ms)
+    }
+
+    /// The same for the window's own profile's reports.
+    pub fn profile_next_change(&self, profile: String, now_ms: u64) -> Option<u64> {
+        self.next_change_in(&profile::dir_of(&profile)?, now_ms)
     }
 
     /// Claude Code's status line input (its JSON, as the command reads it from standard input) at `now`
@@ -216,5 +239,13 @@ impl UsageService {
     /// Swift read the reports: the next report wakes again.
     pub fn drain(&self) {
         self.waker.rearm();
+    }
+}
+
+impl UsageService {
+    fn next_change_in(&self, dir: &Path, now_ms: u64) -> Option<u64> {
+        let wait = self
+            .with(dir, |kept| usage::next_change(&kept.reports, std::time::Duration::from_millis(now_ms)))?;
+        Some(u64::try_from(wait.as_millis()).unwrap_or(u64::MAX))
     }
 }

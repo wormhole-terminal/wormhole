@@ -78,7 +78,7 @@ public enum FilesBridge {
         return try PanelBackends(
             files: files,
             project: RustProjectBackend(service: project, effects: effects, biometricsAvailable: authenticator.biometricsAvailable()),
-            usage: usage ?? Self.makeUsage(),
+            usage: try usage?.bound(to: profile) ?? Self.makeUsage().bound(to: profile),
             notes: RustNotesPersistence(notes: try SessionNotesStore.forProfile(profile: profile), project: project))
     }
 }

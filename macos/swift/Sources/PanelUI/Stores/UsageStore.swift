@@ -12,6 +12,8 @@ public final class UsageStore {
     public private(set) var now = Int(Date().timeIntervalSince1970)
     @ObservationIgnored private let backend: any UsageBackend
     @ObservationIgnored private var watch: Task<Void, Never>?
+    /// The clock's wait until the next word changes: a new report ends it, since the wait was chosen from the old reports.
+    @ObservationIgnored private var nap: Task<Void, Never>?
 
     public init(backend: any UsageBackend) {
         self.backend = backend
@@ -26,6 +28,7 @@ public final class UsageStore {
         Task {
             reports = await backend.reports()
             now = Int(Date().timeIntervalSince1970)
+            nap?.cancel()
         }
     }
 
@@ -37,8 +40,10 @@ public final class UsageStore {
             let date = Date()
             now = Int(date.timeIntervalSince1970)
             let wait = backend.nextChange(from: date) ?? .seconds(60)
-            // one-shot: the next moment a word reads differently, which core says
-            try? await Task.sleep(for: max(wait, .milliseconds(50)))
+            // one-shot: the next moment a word reads differently, which core says; a new report cuts it short
+            let sleeping = Task { try? await Task.sleep(for: max(wait, .milliseconds(50))) }
+            nap = sleeping
+            await withTaskCancellationHandler { await sleeping.value } onCancel: { sleeping.cancel() }
         }
     }
 }

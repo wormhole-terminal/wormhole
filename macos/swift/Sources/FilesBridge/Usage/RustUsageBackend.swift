@@ -3,6 +3,7 @@
 // host hands what arrives to `recordStatusLine`, `recordHook` and `recordReport`.
 
 import Foundation
+import os
 import PanelModel
 import WormholeBindings
 
@@ -10,21 +11,38 @@ public final class RustUsageBackend: UsageBackend, @unchecked Sendable {
     /// The core's service, shared with the hook socket that hands it the agents' reports.
     public let service: UsageService
     private let relay: UsageRelay
+    /// The profile this window's meters are of (reports are kept per profile); nil reads the profile Wormhole is in.
+    private let profile: OSAllocatedUnfairLock<String?>
 
-    init(service: UsageService, relay: UsageRelay) {
+    init(service: UsageService, relay: UsageRelay, profile: String? = nil) {
         self.service = service
         self.relay = relay
+        self.profile = OSAllocatedUnfairLock(initialState: profile)
     }
 
+    /// A backend over the same service for a window of `profile`: the app has one service, each window its own profile's reports.
+    public func bound(to profile: String) -> RustUsageBackend { RustUsageBackend(service: service, relay: relay, profile: profile) }
+
+    /// The window moved to `profile`: its meters are that profile's from now on.
+    public func follow(profile id: String) {
+        profile.withLock { $0 = id }
+        relay.wake()
+    }
+
+    /// Wormhole went into `profile`: what agents report is added to that profile's reports.
+    public func setShown(profile id: String) { _ = service.followProfile(profile: id) }
+
     public func reports() async -> [UsageReport] {
-        let service = service
-        return await offMain { service.reports().map(UsageReport.init) }
+        let (service, mine) = (service, profile.withLock { $0 })
+        return await offMain { (mine.flatMap { service.profileReports(profile: $0) } ?? service.reports()).map(UsageReport.init) }
     }
 
     public func changes() -> AsyncStream<Void> { relay.stream() }
 
     public func nextChange(from date: Date) -> Duration? {
-        service.nextChange(nowMs: UInt64(max(date.timeIntervalSince1970 * 1000, 0))).map { .milliseconds($0) }
+        let now = UInt64(max(date.timeIntervalSince1970 * 1000, 0))
+        let wait = profile.withLock { $0 }.map { service.profileNextChange(profile: $0, nowMs: now) } ?? service.nextChange(nowMs: now)
+        return wait.map { .milliseconds($0) }
     }
 
     /// Claude Code's status line input (its JSON as the command reads it from standard input).
