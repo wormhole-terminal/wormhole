@@ -23,7 +23,7 @@ final class ExtraKeys {
     /// nil when the key was this table's to run.
     private func handle(_ event: NSEvent) -> NSEvent? {
         // Only a window of the workspace: a sheet, Settings or the Studio read their own keys.
-        guard !event.isARepeat, let window = event.window, app.sessions.contains(where: { $0.window === window }),
+        guard !event.isARepeat, let window = event.window, let session = app.sessions.first(where: { $0.window === window }),
             let spec = Self.spec(of: event)
         else { return event }
         let keymap = Keymap.shared
@@ -33,6 +33,9 @@ final class ExtraKeys {
         else { return event }
         // The first key of an action in a menu is that item's key equivalent: AppKit runs it, with its enabled state.
         if inMenus.contains(entry.id), entry.keys.first?.sameKey(spec) == true { return event }
+        // What the menus hide (its feature is off in this window's profile) or grey, a key does not run either.
+        let state = app.menuState(for: session.hub)
+        guard !state.hidden.contains(entry.id), !state.disabled.contains(entry.id) else { return event }
         app.router.run(entry.id)
         return nil
     }
