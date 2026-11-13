@@ -168,6 +168,7 @@ pub use settings::{
     settings_import_selected_line, settings_others_head, settings_preview_note, settings_profile_form,
     settings_profile_save, settings_reset_question, settings_update_user_agent,
 };
+pub use settings::{ProjectListener, ProjectWatch, settings_watch_project};
 pub use settings::{
     ProbeApprovalOutcome, ProbeChangeRecord, ProbeListRecord, ProbePermissionRecord, ProbeRowRecord,
     ProbeSheetRecord, ProbesDesk, SettingsAgentRow, SettingsChangedRow, SettingsError, SettingsFlagRow,

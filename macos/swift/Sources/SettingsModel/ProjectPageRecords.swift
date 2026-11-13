@@ -82,8 +82,13 @@ public protocol ProjectsBackend: Sendable {
     @MainActor func openTerminal(_ root: String)
     /// Whether the owner can be asked at all (Touch ID or a login password); the page says so when not.
     @MainActor var canApprove: Bool { get }
+    /// Calls `changed` once whenever the files of the project's `.wormhole` folder change, until the returned token is let go
+    /// (the core's watch; a change arrives as an event, never by looking again and again).
+    func follow(_ root: String, changed: @escaping @Sendable () -> Void) -> AnyObject?
 }
 
 extension ProjectsBackend {
     @MainActor public var canApprove: Bool { true }
+    /// Nothing follows the folder by default (a backend with no watch): the page reads when the window comes forward.
+    public func follow(_ root: String, changed: @escaping @Sendable () -> Void) -> AnyObject? { nil }
 }

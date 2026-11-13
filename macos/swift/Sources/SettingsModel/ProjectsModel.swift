@@ -12,6 +12,8 @@ public final class ProjectsModel {
     /// The project picked, `nil` for "All projects (defaults)".
     public private(set) var selected: String?
     public private(set) var page: ProjectPage?
+    /// The watch on the selected project's folder: a change of its files reads the page again.
+    private var following: AnyObject?
 
     /// Trusting a project needs the owner to answer; without a way to ask, the trusted list says it cannot be done.
     public var canApprove: Bool { backend.canApprove }
@@ -27,6 +29,9 @@ public final class ProjectsModel {
 
     public func select(_ root: String?) async {
         selected = root
+        following = root.flatMap { root in
+            backend.follow(root) { [weak self] in Task { @MainActor in await self?.refresh() } }
+        }
         await refresh()
     }
 

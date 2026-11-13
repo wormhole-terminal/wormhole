@@ -17,6 +17,7 @@ mod imports;
 mod page_rules;
 mod page_text;
 mod probes;
+mod project_watch;
 mod profile_edit;
 mod profiles;
 mod search;
@@ -58,6 +59,7 @@ pub use profiles::{
     SettingsProfileRow, settings_create_profile, settings_delete_profile, settings_profiles,
     settings_switch_profile,
 };
+pub use project_watch::{ProjectListener, ProjectWatch, settings_watch_project};
 pub use search::{SettingsHit, SettingsTextSpan};
 pub use shortcuts::{ShortcutVerdict, check_shortcut};
 pub use skills::{

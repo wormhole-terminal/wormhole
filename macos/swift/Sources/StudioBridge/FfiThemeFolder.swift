@@ -9,9 +9,13 @@ import StudioModel
 import WormholeBindings
 
 public struct FfiThemeFolder: ThemeFolder {
-    public let directory: URL
+    /// The themes folder, asked at each call: an open Studio follows a profile switch (GPUI's Studio reads its profile per call).
+    private let folder: @Sendable () -> URL
+    public var directory: URL { folder() }
 
-    public init(directory: URL) { self.directory = directory }
+    public init(directory: URL) { folder = { directory } }
+
+    public init(folder: @escaping @Sendable () -> URL) { self.folder = folder }
 
     public func files() -> [URL] { studioFolderFiles(themesDir: directory.path).map { URL(fileURLWithPath: $0) } }
 

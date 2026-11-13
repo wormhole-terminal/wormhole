@@ -37,8 +37,20 @@ struct RustProjectsBackend: ProjectsBackend {
     @MainActor func openTerminal(_ root: String) { terminal(root) }
     @MainActor var canApprove: Bool { ownerAvailable() }
 
+    /// The core's watch on the project's `.wormhole` folder; the token keeps it alive.
+    func follow(_ root: String, changed: @escaping @Sendable () -> Void) -> AnyObject? {
+        settingsWatchProject(root: (root as NSString).expandingTildeInPath, listener: ProjectChanges(changed))
+    }
+
     private func run<T: Sendable>(_ work: @escaping @Sendable (ProjectService) -> T) async -> T {
         let service = service
         return await Task.detached { work(service) }.value
     }
+}
+
+/// Hears `ProjectListener.changed()`, which Rust calls on a thread of its own, and passes it on.
+private final class ProjectChanges: ProjectListener, @unchecked Sendable {
+    private let onChange: @Sendable () -> Void
+    init(_ onChange: @escaping @Sendable () -> Void) { self.onChange = onChange }
+    func changed() { onChange() }
 }

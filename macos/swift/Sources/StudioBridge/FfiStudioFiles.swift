@@ -6,9 +6,13 @@ import StudioModel
 import WormholeBindings
 
 public struct FfiStudioFiles: StudioFiles {
-    let directory: String
+    /// The themes folder, asked at each call: an open Studio follows a profile switch.
+    let folder: @Sendable () -> URL
+    var directory: String { folder().path }
 
-    public init(directory: URL) { self.directory = directory.path }
+    public init(directory: URL) { folder = { directory } }
+
+    public init(folder: @escaping @Sendable () -> URL) { self.folder = folder }
 
     public func read(_ text: String) throws -> StudioFileRead {
         let read = try studioRead(text: text)

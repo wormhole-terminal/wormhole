@@ -48,9 +48,9 @@ private struct ProjectsBody: View {
             }
         }
         .task { await projects.refresh() }
-        // A project trusted or edited elsewhere (the Project tab, the disk) sends this page no event: it reads again whenever the
-        // window comes forward, which is where a person goes to see it. GPUI's page also reads about once a second; an idle window
-        // here sleeps until something happens.
+        // The project's own files reach the page as an event (the core's watch on its `.wormhole` folder, started by `select`). A
+        // trust given elsewhere (the Project tab) sends none, and a watch can drop events: the page also reads whenever the window
+        // comes forward, which is where a person goes to see it. An idle window sleeps until something happens.
         .onChange(of: appearsActive) { _, active in if active { Task { await projects.refresh() } } }
     }
 

@@ -61,10 +61,12 @@ final class StudioLauncher {
         #if WITH_UNIFFI
             let themes = themesFolder()
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)
+            // The folder is asked again at every call, so a profile switch moves an open Studio to the new profile's themes.
+            let live: @Sendable () -> URL = { [themesFolder] in MainActor.assumeIsolated { themesFolder() } }
             SketchSource.preset = { WindowSketches.blocks(preset: $0, width: $1) }
             let environment = StudioEnvironment(
-                resolver: FfiThemeResolver(), folder: FfiThemeFolder(directory: themes), knowledge: GalleryKnowledge(),
-                files: FfiStudioFiles(directory: themes), project: project(),
+                resolver: FfiThemeResolver(), folder: FfiThemeFolder(folder: live), knowledge: GalleryKnowledge(),
+                files: FfiStudioFiles(folder: live), project: project(),
                 exportFolder: ExportFolder(
                     recall: { studioExportDir().map { URL(fileURLWithPath: $0) } },
                     remember: { studioRememberExportDir(dir: $0.path) }))
