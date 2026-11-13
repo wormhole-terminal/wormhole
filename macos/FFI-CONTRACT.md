@@ -1506,3 +1506,12 @@ All additive; the core decides, Swift asks.
   not in the bridge, so those files can colour differently from the GPUI app in details.
 - Hostile input: the text is a repository's. Offsets are scalars and never leave their line; the cap, the two deadlines and the match
   limit bound a text made to be slow; a query that does not compile leaves its language plain (logged once).
+
+## Wave 5, dev tooling: reading counters and the Scripts grant (`perf_counters.rs`, `aux_backends/access/scripted.rs`, additive)
+
+- `perf_counters_start()` and `perf_counters_stop() -> PerfCounters`: the terminal layer's counters (`wormhole_term::perf`) between the
+  two, every terminal of the process together: `bytes`, `slices`, `parse_ns`, and `reader` / `ui` as `PerfLockUse` (`locks`, `wait_ns`,
+  `wait_max_ns`, `hold_ns`, `hold_max_ns`). They count only in a library built with the crate's `perf-counters` feature (off by
+  default; it turns `wormhole-term`'s on); `available` says whether, and without it every number is 0. For `perf-profile` only.
+- `AccessDesk.grant_scripts(always) -> bool`: lets Scripts in until quit, or as a stored approval of the desk's profile. The control
+  folder's `agent-grant` only; no request over the control socket reaches it.

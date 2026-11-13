@@ -65,6 +65,33 @@ Landed by other lanes on `exp/swift`: `question`, `question confirm|cancel|also`
 question sheet; the control folder answers it), `studio-out`, `intro`, `welcome`, `onboarding-step`, `tear-off`, `tear-off-at`,
 `profile-menu`, `minimise`, `place`, `hold-cmd`, `release-cmd`, `look-keys`. Injected clicks never need a sheet on screen.
 
+Added by wave 5 (dev tooling, GPUI devctl's remaining commands; written without compiling, see TO-VERIFY.md):
+
+| Command | Example | Does |
+|---|---|---|
+| `inspect` / `inspect on\|off` | `inspect on` | inspect mode (⇧⌥⌘I in a debug build): the Inspector panel opens beside the window and every element the design marks reports where it is |
+| `inspect x y [levels]` | `inspect 150 66 3` | pins the marked element at a point: its note (`File.swift:line  id`, the line of code in a debug build, `W×H · style`, `tokens: …`), then `levels - 1` parents |
+| `inspect parent` / `inspect pick` / `inspect copy` | `inspect copy` | walk out to the element it stands in; pick again (then `hover x y` highlights and `click x y` pins, as in GPUI); the panel's Copy (read it with `pasteboard`) |
+| `detach` / `reattach` | `detach` | let go of the front window's hosted terminals, the views kept (`detached <n>`); attach them again as a launch does (their ids). `window-state` shows `detached(hostID:)` between |
+| `agents` | | the script in force, each approval (`approved stored\|memory:<id> <label> <how> caps=…`), how many questions wait and the one that is up with its buttons |
+| `agent-ask <deny\|session\|quit\|always>` | `agent-ask session` | answers the question that is up as that button does (a button it does not offer comes to Quit, else Deny); for the question about a changed mode, deny is Don't Keep |
+| `agent-script <hold\|deny\|session\|quit\|always>` | `agent-script quit` | what answers programs' questions from now on, with no sheet; `hold` leaves them for `agent-ask` |
+| `agent-grant scripts [quit\|always]` | `agent-grant scripts` | lets Scripts in, as an answer to its question does (until quit, or stored for the profile) |
+| `menubar-icons [prefix]` | `menubar-icons bar` | the status item's glyph in its nine states as `<ctl>/<prefix>-<state>.tiff` (a background instance has no status item to look at) |
+| `studio-select <token>` / `studio-set <value>` / `studio-type <text>` | `studio-set #ff8800` | select a token; put a value in its field with Return (`ok=`, `field=` the refusal); type without Return (what the field says) |
+| `studio-save [name]` / `studio-rename <name>` / `studio-undo` / `studio-redo` / `studio-revert` / `studio-use` | `studio-save Mine` | ⌘S (a name first for a copy without a file); the title row's and Edit menu's verbs |
+| `studio-filter <all\|yours\|base\|low> [text]` / `studio-area <area>` | `studio-filter low` | what the token list shows; the gallery's part of the app |
+| `studio-appearance light\|dark` / `studio-add-appearance [light\|dark]` / `studio-chip [token]` | `studio-chip primary` | the appearance of a pair being edited; add the one it lacks; move a value between both appearances and this one |
+| `studio-update-from [apply\|cancel]` / `studio-versions [select <n>\|restore [<n>]\|close]` | `studio-versions select 1` | the Update from sheet; the saves behind the file (row 0 is the file now): preview one in every window, restore one as unsaved edits |
+| `studio-menu [save\|duplicate\|json\|project]` / `studio-theme-menu` / `studio-open own:<stem>\|builtin:<name>\|from:<name>\|new\|project` | `studio-open builtin:Nord` | the Save menu's entries (`json` writes `<data dir>/studio-out/pasteboard.txt`); what the theme menu offers; choose in it |
+| `studio-resize <w> <h>` / `studio-scroll <y>` / `studio-shot <name>` / `studio-frames <n> [scroll]` | `studio-shot s1` | the Studio window: its size, the wheel over the gallery, `<ctl>/<name>.png`, n timed draws to `frames.txt` |
+
+A `studio-*` line that may ask (saving over a file, opening over unsaved edits) replies when it is done; answer its question with
+`question confirm|cancel` in a later batch. `perf-profile` now also prints draws per second, the Rust side's share of a fetch
+(snapshot, pack), where the window's terminals run, and the reader's bytes, speed and lock use: the last only from a bridge built
+with `--features perf-counters` (otherwise it says the reader was not counted). `agent-*` and `inspect` never reach the control
+socket: they are the control folder's alone.
+
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).
