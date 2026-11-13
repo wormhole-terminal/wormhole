@@ -14,6 +14,8 @@ public struct SettingsView: View {
     let onClose: () -> Void
     @FocusState private var focus: SettingsFocus?
     @State private var fonts: FontLibrary
+    @State private var optionHeld = false
+    @Environment(\.appearsActive) private var appearsActive
     @Environment(\.tokens) private var tokens
     private static let f6 = KeyEquivalent(Character(UnicodeScalar(UInt32(NSF6FunctionKey)) ?? " "))
 
@@ -40,6 +42,9 @@ public struct SettingsView: View {
         .foregroundStyle(tokens.textPrimary)
         .environment(\.fontLibrary, fonts)
         .environment(\.textScale, SettingsMetric.textScale(model.value("settings_text_size").string))
+        // ⌥ shows every row's config key; only in the window in front, so a key let go elsewhere cannot leave them shown.
+        .environment(\.optionHeld, optionHeld && appearsActive)
+        .onModifierKeysChanged(mask: .option) { _, held in optionHeld = held.contains(.option) }
         .onKeyPress(.escape) { escape() }
         .onKeyPress(keys: [Self.f6], phases: .down) { cycle(backwards: $0.modifiers.contains(.shift)) }
         .onKeyPress(keys: ["f"], phases: .down) { unlockFlags($0) }

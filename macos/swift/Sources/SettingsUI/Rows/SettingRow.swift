@@ -24,6 +24,7 @@ struct SettingRow<Control: View>: View {
     @Environment(\.textScale) private var textScale
     @State private var hovering = false
     @State private var copiedKey = false
+    @Environment(\.optionHeld) private var optionHeld
 
     var body: some View {
         HStack(alignment: tall ? .top : .center, spacing: Space._4) {
@@ -36,7 +37,8 @@ struct SettingRow<Control: View>: View {
                         Text(context).textRole(.caption).foregroundStyle(tokens.textFaint)
                     }
                     if !description.isEmpty, !visibleHint { InfoButton(text: description) }
-                    if let key = state.configKey { keyButton(key) }
+                    // Hidden, not removed: the row does not move when the key shows, and VoiceOver keeps its button.
+                    if let key = state.configKey { keyButton(key).opacity(hovering || optionHeld || copiedKey ? 1 : 0) }
                 }
                 .frame(minHeight: tall ? Metric.control : TextRole.body.size * textScale * 1.25 + 4)
                 if visibleHint, !description.isEmpty {
