@@ -697,8 +697,8 @@ func remove(folder) throws                              // only one Wormhole mad
 
 - **Diff = core's parsed hunks.** Core parses once (caps, binary, LFS, too-large rules); `GitDiffFile` carries
   `oldPath` (nil: a new file), `newPath` (nil: deleted) and `hunks` of `GitHunk{header, lines: [GitDiffLine{kind,
-  old, new, text, noNewline}]}`, so Swift parses no diff text. Whole files are not read for highlighting (Swift's
-  lexer colours the lines). `GitDiff` cases: `text(file)`, `binary(file, sizes)`, `lfs(summary)`, `tooLarge(bytes,
+  old, new, text, noNewline, openLine, spans}]}`, so Swift parses no diff text. Core reads the whole files under its own limits
+  as the source of each line's `spans` ("Wave 5, syntax colours" below). `GitDiff` cases: `text(file)`, `binary(file, sizes)`, `lfs(summary)`, `tooLarge(bytes,
   title, detail)` (ask again with `loadAnyway`), `submodule(label, card)`: the last three have no
   lines, and the words are core's (`diff_text`, `Submodule::label`). `GitSubmoduleCard` is the card's body: `old`/`new`
   short hashes when the pointer moved, `nothing` and `inside` (core's sentences), `ahead`/`behind` (capped) with
@@ -1476,3 +1476,23 @@ All additive; the core decides, Swift asks.
 - `Workspace.tab_labels(ids) -> [String]`: what VoiceOver hears for each of `ids`, the tabs of one set in the bar's order, in core's
   words (`view::sidebar::spoken::tab_label`: name, state, "selected", "n of m"). Always as long as `ids`; a terminal the window no
   longer has gets an empty label. Another profile's settings need no new call: `SettingsHandle.open(profile:)` is opened per profile.
+
+
+## Wave 5, syntax colours (`syntax/`, `git/colors.rs`, additive but one field)
+
+- `syntax_lines(text, path) -> [[SyntaxRun]]?`: the colours of `text` read as the language the extension of `path` names, one list per
+  line (cut at every line feed), from a tree-sitter parse of the whole text. `SyntaxRun {start, end, key}`: `start..end` in unicode
+  scalars of the line, `key` an index into `syntax_keys() -> [String]` (asked once; the names are the theme's `syntax.<key>` tokens, the
+  set the GPUI app's syntax theme resolves a capture to: its own name, else its first segment, else none). `nil`: no grammar for the
+  file (nothing is parsed), a text over 4 MiB, or a parse or query over 2 s. Blocking; for a background thread. A later capture covers an
+  earlier one, so the runs of a line never overlap and are in order; a line is coloured for its first 5,000 scalars.
+- `GitDiffLine.spans: [SyntaxRun]` (the one changed record): filled by `Git.diff` and `Git.commit_diff` from the whole old and new file
+  (a removed line from the old one, any other from the new one, the old one when there is no new), which core reads under its own
+  limits (`DiffLimits`: not for a diff over 20,000 lines, not a side over 4 MiB). Empty when the file has no grammar or no longer has the
+  line's text at its number. Swift colours no diff line itself.
+- The grammars are the GPUI app's sixteen and JSON, chosen as it chooses (`rs`, `ts`, `tsx`, `js`, `py`, `go`, `sh`/`bash`, `toml`,
+  `yaml`/`yml`, `md`/`mdx`, `css`/`scss`, `html`, `c`, `cpp`, `java`, `swift`, `json`/`jsonc`, as written). The queries are each grammar
+  crate's own: GPUI Kit's own queries (Rust, Go, JavaScript, TypeScript, HTML, JSON, Markdown) and its languages inside languages are
+  not in the bridge, so those files can colour differently from the GPUI app in details.
+- Hostile input: the text is a repository's. Offsets are scalars and never leave their line; the cap, the two deadlines and the match
+  limit bound a text made to be slow; a query that does not compile leaves its language plain (logged once).

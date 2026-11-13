@@ -546,3 +546,36 @@ Not written, and why:
 | SD02 | TEST | none: no data, trust or wire format touched |
 
 Least sure to compile: `DragSample.swift` (the internal `SidebarView` init, `LiveDrag`/`DropAim` values, and the line's place worked out from `SidebarMetrics` rather than measured: it may sit a point or two off the gap); the generic chain (`StudioWindowController.show<Extras>` with a `@ViewBuilder` closure returning `WindowSpecimens.view`'s opaque type, and `SpecimenContent.view`'s non-escaping `@MainActor` closure); `keyboardShortcut(keys ? … : nil)` in `StepCard.swift` and `FolderStep.swift`.
+
+## Lane syntax, wave 5
+
+Written without compiling: expect compile errors.
+
+The brief's premise did not hold: `crates/wormhole/src/syntax` has no parser. It is a cache over GPUI Kit's `SyntaxHighlighter`
+(`gpui-component` 0.8, third party), whose parse, grammars' queries and injections are written on GPUI's own types (`HighlightStyle`,
+`SharedString`, its rope and sum tree). There is no plain part to `git mv`, so nothing was moved and the GPUI app is untouched (no
+file under `crates/wormhole`, `crates/wormhole-core` or the root `Cargo.toml`/`Cargo.lock` changed). The bridge got an engine of its
+own on the same grammar crates instead (`crates/wormhole-ffi/src/syntax`), following GPUI Kit's rules.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| P03 | open the diff of a changed `.rs`, `.py`, `.ts`, `.go`, `.toml`, `.c` file | keywords, strings, comments, types, functions in the theme's `syntax.*` colours, the same on both sides of a split; a block comment or string that starts above the hunk is coloured (the whole file is parsed, not the hunk) | `ffi/src/syntax/engine.rs paint`, `ffi/src/git/colors.rs`, `records.rs GitDiffLine.spans`, `GitBridge/GitDiffFile.swift`, `PanelModel/Syntax/CoreSpans.swift` |
+| P03 | a removed line, an added line, a context line; a deleted file; a new file | removed from the old file's parse, the others from the new one (the old one for a deleted file) | `ffi/src/git/colors.rs line` |
+| P03 | a diff of `notes.txt`, `Makefile`, `a.h`, `a.kt` | plain, as in the GPUI app (no grammar: nothing parsed); the Swift lexer no longer colours real diffs | `ffi/src/syntax/language.rs of`, `PanelModel/Diff/DiffHighlighting.swift` |
+| P03 | a diff over 20,000 lines; a side over 4 MiB | "No highlighting" and plain lines; the big side plain, the other coloured | `ffi/src/git/service.rs file_diff` (core's `DiffLimits`), `records.rs highlight_skipped` |
+| P03 | edit the file while its diff is open, before it is read again | a line whose text the file no longer has at its number is plain, never coloured by another line's colours | `engine.rs line_of` |
+| P03, P07 | open a `.rs`, `.json`, `.md`, `.swift`, `.html` file in the Files viewer; then a 50,000-line one | text at once, colours a moment later, scrolling never parses; no beach ball | `FilesBridge/Support/CoreSyntaxHighlighter.swift`, `PanelUI/Stores/FilesStore+Viewer.swift` (unchanged), `Wormhole/PanelBackendsFactory.swift` |
+| P03 | TEST (hostile input): lines with a combining mark after a control, a bidi override, an emoji with joiners, `\r` inside, a 2-million-character line, a 5 MiB file, nesting 10,000 deep, a file that is not what its extension says | no crash, no offset outside its line, colours only in the first 5,000 characters, over the cap plain; a parse or query over 2 s gives plain | `engine.rs spans`, `paint`, `MAX_TEXT_BYTES`, `BUDGET`, `MATCH_LIMIT`; `CoreSpans.swift inCharacters` |
+| P03 | TEST (wire): `GitDiffLine` gained `spans`; `SyntaxRun.key` indexes `syntax_keys()` | Swift and Rust agree on the key table's order; a key out of range is dropped | `ffi/src/syntax/mod.rs`, `GitDiffFile.swift keyNames` |
+| P03 | a theme that styles `tag` but not `tag.doctype` | the doctype takes `tag`'s colour (first segment), not `variable`'s | `DesignSystem/Theme/ThemeTokens.swift syntaxStyle` |
+| P03 | compare the same Rust, TypeScript, Go, HTML, JSON and Markdown file in both apps | colours can differ in details: the GPUI app uses GPUI Kit's own queries for these seven and colours a language inside another (a fenced block, `<script>`, `<style>`); the bridge uses the grammar crates' queries and leaves an embedded language plain. Swift files are coloured here and not in the GPUI app (GPUI Kit has no query for Swift) | `ffi/src/syntax/language.rs` |
+| P03 | first diff of a TypeScript or TSX file | coloured: JavaScript's query and TypeScript's compile as one against the TypeScript grammar; if they do not, the log says "syntax query for typescript" and only TypeScript's own captures colour | `engine.rs compile` |
+
+- Not written, needs the owner's decision: making the two apps colour identically. Either the bridge's engine takes GPUI Kit's query
+  files (Apache-2.0 text copied into this repository, with its notice) and its injections (about 900 lines there), or the GPUI app moves
+  onto the bridge's engine (it then becomes a leaf crate beside `wormhole-text`; changes what the shipping app colours), or the bridge
+  links GPUI Kit (GPUI inside the Swift app). Until then P03 stays 0.5 in `built.csv`.
+- Not written: a cache of parsed texts (the GPUI app keeps 32). A diff read again parses both sides again, off the main actor
+  (about 50 ms per 10,000 lines); the compiled query is kept per language.
+- `crates/wormhole-ffi/Cargo.lock` was resolved with `cargo metadata` (twice: the second after pinning `tree-sitter-md` and
+  `tree-sitter-swift` to the app's versions). It has `tree-sitter-language` 0.1.9 where the app's lock has 0.1.8.
