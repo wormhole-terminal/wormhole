@@ -35,7 +35,7 @@ final class MappingTests: XCTestCase {
 
     func testAProjectStateCarriesRustsWordingAndDropsASwitchItDoesNotKnow() {
         let record = ProjectStateRecord(
-            root: "/work/app", status: .changed, commands: [TrustLineRecord(what: "action t:", runs: "make", note: "(current)")],
+            root: "/work/app", dir: "/work/app/.wormhole", status: .changed, commands: [TrustLineRecord(what: "action t:", runs: "make", note: "(current)")],
             applies: "its settings in config.json", asksForTrust: true,
             features: [
                 ProjectFeatureRecord(key: "actions", on: true, hint: "Needs trust before it takes effect", warns: true),
