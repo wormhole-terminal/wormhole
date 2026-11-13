@@ -40,13 +40,13 @@ struct NotePreview: View {
                 .onTapGesture(perform: open)
             if cap != nil {
                 Button(panelText("notes-show-all", ["count": .text(CountText.grouped(lines))], "Show all · \(CountText.grouped(lines)) lines"), action: expand)
-                    .buttonStyle(.plain).font(TextRole.body.font).foregroundStyle(tokens.primary).padding(.top, Space._1)
+                    .buttonStyle(.plain).font(tokens.font(.body)).foregroundStyle(tokens.primary).padding(.top, Space._1)
             }
         }
     }
 
     private func styled(_ text: String) -> some View {
-        Text(verbatim: text).font(TextRole.body.font).lineSpacing(PanelMetrics.noteLineGap)
+        Text(verbatim: text).font(tokens.font(.body)).lineSpacing(PanelMetrics.noteLineGap)
     }
 
     /// The same text unseen: whole at this width, and one and two lines of it, each reporting its height.
