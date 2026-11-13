@@ -24,6 +24,7 @@ extension UniFFIScrollback {
 
     var displayOffset: Int { Int(terminal.displayOffset()) }
     var bottommostLine: Int { Int(terminal.bottommostLine()) }
+    var topLine: Int { Int(terminal.topLine()) }
     func scrollLineToTop(_ line: Int) { terminal.scrollLineToTop(line: Int32(clamping: line)) }
     func scrollToBottom() { terminal.scrollToBottom() }
 

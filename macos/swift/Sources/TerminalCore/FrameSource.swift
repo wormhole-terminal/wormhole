@@ -98,6 +98,8 @@ public protocol FrameSource: AnyObject, Sendable {
     func resize(_ size: GridSize)
     /// Scroll the view by `lines` (positive: back into history).
     func scroll(lines: Int)
+    /// Scroll by `rows` rows as shown, a closed fold counting as one (a drag past the edge).
+    func scrollRows(_ rows: Int)
 
     /// The terminal's text for Print and Export Text As: the screen, or with `history` everything the terminal keeps
     /// (soft-wrapped rows joined); `nil` when the source has none.
@@ -142,6 +144,7 @@ extension FrameSource {
         write(Data(text.replacingOccurrences(of: "\r\n", with: "\r").replacingOccurrences(of: "\n", with: "\r").utf8))
     }
     public func scroll(lines: Int) {}
+    public func scrollRows(_ rows: Int) { scroll(lines: rows) }
     public func inlineImage(key: UInt32) -> InlineImage? { nil }
     public func plainText(history: Bool) -> String? { nil }
     public func grabPrompt() -> String? { nil }

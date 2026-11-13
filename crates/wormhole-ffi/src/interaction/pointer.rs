@@ -194,7 +194,7 @@ impl Terminal {
                 };
                 pty.write(key.repeat(lines.unsigned_abs() as usize));
             } else if lines != 0 {
-                pty.scroll(Scroll::Delta(lines));
+                pty.scroll_rows(lines);
             }
         });
     }

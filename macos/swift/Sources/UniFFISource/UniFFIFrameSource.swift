@@ -192,6 +192,8 @@ public final class UniFFIFrameSource: FrameSource {
 
     public func scroll(lines: Int) { current?.scroll(lines: Int32(clamping: lines)) }
 
+    public func scrollRows(_ rows: Int) { current?.scrollRows(rows: Int32(clamping: rows)) }
+
     public func paste(_ text: String) { current?.paste(text: text) }
 
     public func plainText(history: Bool) -> String? { current?.contents(scope: history ? .everything : .screen) }

@@ -293,6 +293,13 @@ impl Terminal {
         }
     }
 
+    /// Scroll by `rows` rows as they are shown, a closed fold being one row (`Pty::scroll_rows`): a drag's autoscroll.
+    pub fn scroll_rows(&self, rows: i32) {
+        if let Some(pty) = self.pty.read().unwrap_or_else(PoisonError::into_inner).as_ref() {
+            pty.scroll_rows(rows);
+        }
+    }
+
     /// Back to the live screen.
     pub fn scroll_to_bottom(&self) {
         if let Some(pty) = self.pty.read().unwrap_or_else(PoisonError::into_inner).as_ref() {

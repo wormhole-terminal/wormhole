@@ -102,7 +102,7 @@ public final class BlockController {
         // the top), else the live prompt, else the top of the view (strictly: a prompt on the top row is passed).
         let from: Int? = if let cursor, let block = source.block(id: cursor) { block.start }
             else if atBottom { source.promptLine(from: source.bottommostLine + 1, direction: .up) }
-            else { -source.displayOffset }
+            else { source.topLine }
         guard let from else { return }
         if let line = source.promptLine(from: from, direction: direction) {
             source.scrollLineToTop(line)

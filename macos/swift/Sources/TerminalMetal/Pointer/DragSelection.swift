@@ -11,7 +11,7 @@ extension MetalTerminalView {
         guard let interaction else { return }
         let grid = cellGrid
         let lines = grid.dragScroll(point)
-        if let lines, lines != 0 { source.scroll(lines: lines) }
+        if let lines, lines != 0 { source.scrollRows(lines) }
         if let hit = grid.hit(point) { interaction.selectionUpdate(row: hit.row, column: hit.column, side: hit.side) }
         requestRedraw()
         pointer.autoscroll?.cancel()
