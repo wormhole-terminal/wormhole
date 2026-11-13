@@ -85,6 +85,23 @@ impl WorkspaceModel {
         }
     }
 
+    /// How many of `group`'s terminals a group keeping only the terminals in `folder` would let go (a split's panes each
+    /// count): the folder question says it before the box is ticked. 0 when there is no disk to ask.
+    pub fn members_leaving(&self, group: u32, folder: &Path) -> usize {
+        let Some(ground) = self.cfg.ground.as_deref() else { return 0 };
+        let Some(real) = ground.real_folder(folder) else { return 0 };
+        let fence = Fence::new(real, |folder| ground.repo_of(folder));
+        self.sidebar
+            .groups
+            .members_outside(
+                group,
+                &fence,
+                |id| self.place_at(id),
+                |id| self.index_of(id).and_then(|ix| self.sessions[ix].split),
+            )
+            .len()
+    }
+
     /// Take the terminals out of `group` that it, keeping only its folder's, lets go: the ones in
     /// another folder (a split goes whole when none of its panes is in it). How many left.
     pub(super) fn keep_to_folder(&mut self, group: u32) -> usize {

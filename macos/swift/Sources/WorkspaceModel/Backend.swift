@@ -77,6 +77,8 @@ public protocol WorkspaceBackend: AnyObject {
     func edgeDrag(_ edge: ColumnEdge, extent: Double) -> EdgeDragReadout?
     /// The folder to ask about before a terminal opens in a group that has none, when one is worth offering.
     func groupFolderOffer(group: GroupID) -> String?
+    /// How many of the group's terminals would leave it if it kept only the terminals in `folder` (the question's count).
+    func groupFolderLeaving(group: GroupID, folder: String) -> Int
     /// Whether the group's fence lets the terminal (and its split) in: a group that refuses is greyed in the menus.
     func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool
     /// The terminal last selected in a group (nil: the terminals in no group): what opening a tab set selects.

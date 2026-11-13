@@ -86,7 +86,9 @@ extension WindowHub {
         var bar = TabBarActions(
             select: { [unowned self] in send(.select($0)) },
             close: { [unowned self] in actions.closeTerminal($0) },
-            newTerminal: { [unowned self] group in send(group.map { .newTerminalInGroup($0) } ?? .newTerminal) },
+            newTerminal: { [unowned self] group in
+                if let group { newTerminal(inGroup: group) } else { send(.newTerminal) }
+            },
             openSet: { [unowned self] in openSet(at: $0) },
             newGroup: { [unowned self] in send(.newTerminalInNewGroup) },
             showGroupsInSidebar: { [unowned self] in actions.showTerminalsInSidebar() },
@@ -123,7 +125,14 @@ extension WindowHub {
         if let target = store.lastSelected(in: set.groupID).flatMap { set.members.contains($0) ? $0 : nil } ?? set.members.first {
             send(.select(target))
         } else if let group = set.groupID {
-            send(.newTerminalInGroup(group))
+            newTerminal(inGroup: group)
         }
+    }
+
+    /// A terminal in `group` from the tab bar's + or an empty set opened (also the keys' Ctrl-Opt-N): the group's folder is
+    /// asked about first, as the sidebar's + does (`group_folder.rs` `new_session_in_group`: every way a terminal is made in a group).
+    func newTerminal(inGroup group: GroupID) {
+        GroupFolderQuestion.settle(group: group, name: state.groups.first { $0.id == group }?.name ?? "", planner: store, send: send)
+        send(.newTerminalInGroup(group))
     }
 }

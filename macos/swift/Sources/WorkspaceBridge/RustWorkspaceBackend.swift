@@ -167,6 +167,7 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     }
 
     public func groupFolderOffer(group: GroupID) -> String? { core.groupFolderOffer(group: group) }
+    public func groupFolderLeaving(group: GroupID, folder: String) -> Int { Int(core.groupFolderLeaving(group: group, folder: folder)) }
     public func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool { core.groupAdmits(group: group, id: Int64(terminal)) }
     public func lastSelected(in group: GroupID?) -> TerminalID? { core.lastSelectedIn(group: group).map(Int.init) }
     public func tabLabels(of ids: [TerminalID]) -> [String]? { core.tabLabels(ids: ids.map(Int64.init)) }

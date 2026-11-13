@@ -23,13 +23,7 @@ extension SidebarContext {
             },
             newInGroup: { group in
                 // First the question about the group's folder, when the core has one to offer (as the head's + asks).
-                if let folder = planner.groupFolderOffer(group: group) {
-                    switch GroupFolderQuestion.ask(folder: folder, group: state.groups.first { $0.id == group }?.name ?? "") {
-                    case .use: send(.setGroupFolder(group, folder))
-                    case .decline: send(.declineGroupFolder(group))
-                    case .cancel: return
-                    }
-                }
+                GroupFolderQuestion.settle(group: group, name: state.groups.first { $0.id == group }?.name ?? "", planner: planner, send: send)
                 send(.newTerminalInGroup(group))
             },
             hooks: hooks, flash: nil,

@@ -96,6 +96,9 @@ public final class WorkspaceStore {
     /// The folder to offer a group that has none before a terminal opens in it.
     public func groupFolderOffer(group: GroupID) -> String? { backend.groupFolderOffer(group: group) }
 
+    /// How many of the group's terminals would leave it if it kept only `folder`'s.
+    public func groupFolderLeaving(group: GroupID, folder: String) -> Int { backend.groupFolderLeaving(group: group, folder: folder) }
+
     /// Whether the group's fence lets the terminal in (a menu greys the group that refuses).
     public func groupAdmits(_ group: GroupID, terminal: TerminalID) -> Bool { backend.groupAdmits(group, terminal: terminal) }
 

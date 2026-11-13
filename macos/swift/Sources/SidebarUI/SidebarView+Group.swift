@@ -23,13 +23,8 @@ extension SidebarView {
     }
 
     func newInGroup(_ group: GroupID) {
-        if let folder = dropPlanner?.groupFolderOffer(group: group) {
-            let name = state.groups.first { $0.id == group }?.name ?? ""
-            switch GroupFolderQuestion.ask(folder: folder, group: name) {
-            case .use: send(.setGroupFolder(group, folder))
-            case .decline: send(.declineGroupFolder(group))
-            case .cancel: return
-            }
+        if let dropPlanner {
+            GroupFolderQuestion.settle(group: group, name: state.groups.first { $0.id == group }?.name ?? "", planner: dropPlanner, send: send)
         }
         send(.newTerminalInGroup(group))
     }

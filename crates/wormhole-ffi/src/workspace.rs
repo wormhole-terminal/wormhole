@@ -450,6 +450,11 @@ impl Workspace {
         })
     }
 
+    /// How many of `group`'s terminals would leave it if it kept only the terminals in `folder`: the folder question's count.
+    pub fn group_folder_leaving(&self, group: u32, folder: String) -> u32 {
+        self.shared.with_model(|model| model.members_leaving(group, std::path::Path::new(&folder)) as u32)
+    }
+
     /// An agent's hook event for terminal `id` (what `WORMHOLE_TAB_ID` names): `agent` is its command
     /// ("claude"), `event` as the hook script spells it (`Stop`, `Notification:permission_prompt`,
     /// `PostToolUse:wakes=b7`), `message` the words it carries. What the event means for the status is
