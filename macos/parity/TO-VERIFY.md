@@ -16,7 +16,7 @@ Already run in this lane before fast mode (transcripts were not kept, the lines 
 |---|---|---|---|
 | T07 | real keyboard: Settings → Terminal → Option as Meta off, then Left; type Option-2, Option-L (an @ or | layout) and Option-B in a shell | off: the Option characters are typed; left: only the left Option makes Meta (ESC b); the setting works without a restart. Also the old boolean `true` in config.json reads as both | `Wormhole/Look/TerminalLook.swift use(optionAsMeta:)`, `Settings/SettingsApplier.swift`, `TerminalMetal/Keyboard/KeyMap.swift OptionAsMeta(setting:)` |
 | T07 | NEW: ⇧⌘V, ⌥⌘C in a terminal | paste and copy, as ⌘V / ⌘C, unless the key is an app key (⇧⌘E etc. stay the menus') | `TerminalMetal/Pointer/TerminalShortcuts.swift shortcut(for:)`, `TerminalLook.isAppKey` |
-| T07 | NOT BUILT: ⌘K should also erase the terminal's saved text (GPUI `window/panes/mod.rs:83`) | after ⌘K and a crash restore, the cleared lines do not come back | needs the store's clear_scrollback over the FFI |
+| T07 | BUILT (wave 3, T30): ⌘K also erases the terminal's saved text at once (`Touch::Cleared` to `erase_saved_text`) | after ⌘K and a crash restore, the cleared lines do not come back | ffi `interaction/pointer.rs` `clear_history`, `workspace_texts.rs` `erase_saved_text` |
 | T03 | Run `printf '\e[5 q'`, switch to another pane or the sidebar (F6) | the blinking stops in the pane without keys, the cursor is hollow; back in the pane it blinks again; Reduce Motion keeps it steady | `TerminalMetal/CursorBlink.swift updateBlink(focused:)`, `TerminalFocus.swift hasFocus` |
 | T03 | a theme with a cursorText colour (Tokyo Night, Catppuccin), block cursor over a letter | the letter is drawn in the theme's cursor-text colour; a theme without one keeps the cell's background | `TerminalCore/Palette.swift` slot 268, `RowBuilder.colors` |
 | T03 | NOT BUILT here: OSC 12 cursor colour (engine lane's override table) | | |
@@ -110,8 +110,8 @@ answers, mode 2031 on a theme switch, CSI 13/14/18/19 t reports): run them again
 | T31 | a script reporting OSC 7501 status (`brew`-like); make it ask and finish | banners, the status item and the quick panel name the program, not a plain terminal | `NoticeFeed.namedByReports`, `noticeTabs` |
 | T31 | `wh notify --title A --body B` from a terminal, while looking at it and with notifications off | no banner while looked at or off; otherwise one in the caller's words; the row's status does not change | ffi `hook_server/control/listing.rs` |
 
-Known unfinished: the minimap still draws theme colours where a program set its own (T10's file); the exited bar's shell name is
-still `--shell`'s or "zsh" (`TerminalFactory.shellName`), not the core's name for the program the terminal ran.
+Known unfinished: none of the two this line once named. The minimap does draw the colours a program set (it reads the drawn
+palette, `TerminalOverlay` `CoreMinimap` palette from `MetalRenderer`); the exited bar's shell name is now the core's per terminal (wave 6).
 
 ## Settings lane (s3-settings): ST01, ST02, ST03, ST09, STX1, STX2, STX3, PL02
 
@@ -652,3 +652,19 @@ Least sure to compile: `DesignSystem/Inspect/Inspection.swift` with `TokenMark.s
 | X12 | NOT WRITTEN: `agent-hide <n>` (not in this lane's list), and `studio-frames … tick` (SwiftUI's animations are not stepped from outside) | - | `hideFromAgents` is the menu's action; `studio-frames` times plain draws and `scroll` |
 | X12 | Read `macos/scripts/build-ffi.sh` with and without `WORMHOLE_FFI_PERF_COUNTERS=1` (`bash -x`, in the verification wave) | with it cargo gets `--features perf-counters`, without it no feature argument at all (the empty array expands to nothing under `set -u`) | `macos/scripts/build-ffi.sh` |
 | X12 | NOT WRITTEN: `shape` and `images` as spans of their own (the Swift renderer has no such parts: it has `fetch/apply/assemble/encode/wait/cpu/gpu` and counts words shaped) | - | cannot exist |
+
+## Lane terminal, wave 6
+Written without compiling: expect compile errors.
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| T16 | open a terminal with "New terminal: fish" (or a project shell), then `exit` | the exited bar says "fish exited", not "zsh exited" | ffi `workspace_waited.rs` `shell_name`, `TerminalOverlay.exited(shell:)`, `TerminalPanes.swift` |
+| T16 | chip off; program copies (OSC 52) while its clipboard question or a host bar is up | the notice shows after the question/bar goes, until its 4 s are up | `TerminalOverlay.sayInBar`, `askEnded` |
+| T16 | chip off; a copy by a program in pane B while pane A is selected | the notice is in B's bar, not A's | `TerminalOverlay` `say` closure, `WindowHub+BarNotice.swift` |
+| T25 | close a fold in view, wheel and drag past the edge | the view moves one shown row per step, a closed fold being one | ffi `pointer.rs` `scroll_wheel`, `terminal.rs` `scroll_rows`, `DragSelection.swift` |
+| T25 | scroll up with a fold above the view's top, ⌘↑ | goes to the prompt above the top row as drawn | ffi `blocks.rs` `top_line`, `BlockController.jumpPrompt` |
+| T29 | program sends `CSI 8;30;100 t` then `CSI 8;40;120 t` (or a maximise) at once | the second is worked out from 30x100, not the old size; Forget on maximise/full screen | `Wormhole/Platform/WindowOps.swift` `asked` |
+| T01 | `vim` with a coloured background, or any program painting the edge cells | the colour runs into the 4 pt padding on all four sides; the block cursor at an edge does not | `MetalRenderer.encode`, `Shaders.swift` `solid_vertex`, `RowBuilder.flushBackground` |
+| T07 | ⌘C ⌘V ⌘A ⌘K ⌘⌫ ⌘← ⌘→ in a terminal; rebind one in Settings | each does what it did; a rebound key follows the table | `TerminalShortcuts.swift`, `TerminalLook.terminalAction` |
+| TEST T20 | restore after restart on, relaunch so a terminal restarts from a checkpoint, quit within 10 s of the start | the old checkpoint is removed only when the new host's reads, and not after 10 s of silence | ffi `hosting/checkpoints.rs` `start` |
+| TEST T20 | quit while a host is still starting | the new host is let go of (detached), not ended with the app | `HostConnect.swift` `keptPastQuit` |
+| T19 | none written: constants, bell, answered, settle, title gate and marks read equal to GPUI's | | core `workspace/status/` |
