@@ -138,6 +138,7 @@ struct SetCardView: View {
         .overlay { shape.strokeBorder(card.current ? tokens.primary.opacity(Self.ring) : tokens.cardEdge, lineWidth: card.current ? tokens.metrics.focusRingWidth : tokens.metrics.borderWidth) }
         .contentShape(shape)
         .onTapGesture(perform: open)
+        .onChange(of: actions.renameAsk?.count) { if let group = set.groupID, group == actions.renameAsk?.group { editing = true } }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(PanesText.cardLabel(card.label, count: card.count, current: card.current, alert: card.alert))
         .accessibilityAddTraits(.isButton)

@@ -30,6 +30,9 @@ public struct TabBarActions {
     public var cardWash: (GroupID, ThemeTokens) -> Color? = { _, _ in nil }
     /// The popover a card's name opens (the group's own, as its head's name does), given how to close it.
     public var groupPopover: ((GroupID, @escaping () -> Void) -> AnyView)?
+    /// "Rename…" of a group's menu while the list is not on screen: the group, and a count that moves with each ask. Its
+    /// card opens the popover, whose name is a field.
+    public var renameAsk: (group: GroupID, count: Int)?
 
     public init(
         select: @escaping (TerminalID) -> Void = { _ in }, close: @escaping (TerminalID) -> Void = { _ in },

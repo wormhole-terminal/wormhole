@@ -105,6 +105,7 @@ extension WindowHub {
             TerminalStatusTile.loudestFirst(ids.compactMap { id in state.all.first { $0.id == id } }).map(\.id)
         }
         bar.cardWash = { [unowned self] group, tokens in state.groups.first { $0.id == group }?.cardWash(tokens)?.color }
+        if case .rename(.group(let group))? = sidebarLink.request { bar.renameAsk = (group, sidebarLink.requests) }
         bar.groupPopover = { [unowned self] group, close in
             AnyView(GroupEditPopover(
                 group: group, state: state, appearance: appearance, hooks: sidebarHooks, link: sidebarLink, planner: store, send: send,
