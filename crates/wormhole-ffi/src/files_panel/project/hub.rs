@@ -31,6 +31,11 @@ pub(super) struct Hub {
 }
 
 impl Hub {
+    /// The profile folder the stores live in.
+    pub(super) fn dir(&self) -> &Path {
+        &self.dir
+    }
+
     pub(super) fn load(dir: &Path) -> Self {
         let mut problems = Vec::new();
         let (prefs, err) = ProjectPrefs::load_or_recover(dir);

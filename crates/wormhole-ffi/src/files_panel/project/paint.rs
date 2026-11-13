@@ -1,16 +1,18 @@
 //! A folder's colour, where it lives and who may change it: in the project's `config.json` as
 //! `project_color` when the project that governs the folder has one (shared with everyone who uses it),
 //! else the person's own in `config.json` (`folder_colors`), which never reaches a repository. A project
-//! that locks its colour, or whose file can't be read, is never edited.
+//! that locks its colour, or whose file can't be read, is never edited. The person's own is in the settings of
+//! the window's own profile (the one whose stores the service holds), as the GPUI app's window reads its own.
 
 use std::path::Path;
 
 use wormhole_core::config::Config;
 use wormhole_core::project::{self as proj, Feature, ProjectColorChoice, ProjectFolder};
+use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 
 use super::records::{FolderPaintRecord, ProjectFailure};
 use super::service::ProjectService;
-use crate::files_panel::settings_edit::update_settings;
+use crate::files_panel::settings_edit::update_settings_of;
 
 /// Where a folder's colour lives, and what it is now.
 enum Paint {
@@ -54,6 +56,22 @@ impl Paint {
 }
 
 impl ProjectService {
+    /// The files of the profile whose stores the service holds: the window's own. A folder that is no profile's
+    /// (a test's) reads the Default profile's settings.
+    fn own_profile(&self) -> ProfilePaths {
+        let root = DataRoot::current();
+        let hub = self.lock();
+        let named = hub
+            .dir()
+            .strip_prefix(root.profiles_dir())
+            .ok()
+            .and_then(|rest| rest.to_str())
+            .and_then(|name| ProfileId::parse(name).ok())
+            .map(|id| root.profile(&id))
+            .filter(|paths| paths.dir() == hub.dir());
+        named.unwrap_or_else(|| root.default_profile())
+    }
+
     fn paint_of(&self, folder: &Path) -> Paint {
         // With project folders off the colour is the person's own: nothing is written into a project.
         if !self.off()
@@ -72,7 +90,7 @@ impl ProjectService {
                 };
             }
         }
-        Paint::Own(Config::load().settings.folder_color_choice(folder))
+        Paint::Own(Config::load_for(&self.own_profile()).settings.folder_color_choice(folder))
     }
 }
 
@@ -106,7 +124,9 @@ impl ProjectService {
         match self.paint_of(folder) {
             Paint::Own(current) => {
                 if current != choice {
-                    update_settings(|settings| settings.set_folder_color_choice(folder, choice));
+                    update_settings_of(&self.own_profile(), |settings| {
+                        settings.set_folder_color_choice(folder, choice)
+                    });
                 }
             }
             Paint::Project { locked: true, .. } => {
