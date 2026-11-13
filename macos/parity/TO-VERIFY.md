@@ -551,6 +551,10 @@ Least sure to compile: `DragSample.swift` (the internal `SidebarView` init, `Liv
 
 Written without compiling: expect compile errors.
 
+The owner's call, 2026-11-13: the bridge's own engine stays as it is (the Swift app replaces the GPUI app at 2.0, so it
+becomes the only one). Whether Rust, Go, JS, TS, HTML, JSON and Markdown need GPUI Kit's queries and injections to look as
+today is judged in the looks pass, side by side; P03 counts as built.
+
 The brief's premise did not hold: `crates/wormhole/src/syntax` has no parser. It is a cache over GPUI Kit's `SyntaxHighlighter`
 (`gpui-component` 0.8, third party), whose parse, grammars' queries and injections are written on GPUI's own types (`HighlightStyle`,
 `SharedString`, its rope and sum tree). There is no plain part to `git mv`, so nothing was moved and the GPUI app is untouched (no
