@@ -58,6 +58,8 @@ enum Chrome {
     static let statusSeparator: CGFloat = 12
     /// The terminal's status tile in the title row.
     static let titleTile: CGFloat = 18
+    /// The attention button's tile in the status bar.
+    static let statusTile: CGFloat = 16
 }
 
 extension WorkspaceState {

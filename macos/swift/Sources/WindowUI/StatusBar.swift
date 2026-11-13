@@ -4,6 +4,7 @@
 // window the words go and the counts keep a glyph, in a narrower one the size goes too (`StatusSummary.Detail`).
 
 import DesignSystem
+import PlatformModel
 import PanesUI
 import SwiftUI
 import WordsModel
@@ -27,6 +28,8 @@ struct StatusBar: View {
     /// The core's spoken sentences for the needs-you button and the counts ("2 terminals working"); nil without a core.
     var spokenAttention: (String, UInt64) -> String? = { _, _ in nil }
     var spokenCount: (Int, Activity) -> String? = { _, _ in nil }
+    /// A terminal's tile as its row draws it (the agent's logo, the status light), for the attention button; nil draws the dot.
+    var tile: ((TerminalID, CGFloat) -> AnyView)?
     let select: @MainActor (TerminalID) -> Void
     @Environment(\.chrome) private var colours
     @Environment(WindowLook.self) private var look
@@ -57,7 +60,7 @@ struct StatusBar: View {
             if let waiting = summary.attention {
                 Button { select(waiting.id) } label: {
                     HStack(spacing: Space._1) {
-                        StatusDot(.attention)
+                        if let tile { tile(waiting.id, Chrome.statusTile) } else { StatusDot(.attention) }
                         Text(waiting.title).lineLimit(1)
                         if let since = waiting.since, let waited = waited(since) {
                             WaitedWords(prefix: detail.words ? Words.text("window-state-needs-input", fallback: "needs input") + " · " : "", first: waited, waited: { self.waited(since) })
@@ -69,7 +72,7 @@ struct StatusBar: View {
                 }
                 .buttonStyle(StatusItemStyle(tint: colours.attentionTint))
                 .accessibilityLabel(waiting.since.flatMap { spokenAttention(waiting.title, $0) } ?? waiting.title)
-                .help(summary.attentionTooltip ?? "")
+                .help(summary.attentionTooltip(jumpKey: Keymap.shared.key(.goToWaiting)?.glyphText) ?? "")
                 .focusRing(focus.ring(.statusBar, 0), radius: colours.radius)
             }
             HStack(spacing: 0) {

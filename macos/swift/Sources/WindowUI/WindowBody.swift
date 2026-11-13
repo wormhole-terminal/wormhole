@@ -167,7 +167,8 @@ struct WindowBody: View {
             hosting: state.selected.flatMap { hub.store.hosting(of: $0) }, windowWidth: window,
             waited: { hub.store.waited(since: $0) },
             spokenAttention: { hub.store.spoken(attention: $0, since: $1) },
-            spokenCount: { hub.store.spoken(count: $0, of: $1) }
+            spokenCount: { hub.store.spoken(count: $0, of: $1) },
+            tile: hub.tileMaker(appearance: look.sidebar)
         ) { hub.actions.showTerminal?($0) ?? send(.select($0)) }
     }
 }

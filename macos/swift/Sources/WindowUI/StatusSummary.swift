@@ -49,8 +49,8 @@ struct StatusSummary: Equatable {
     /// Who needs input, longest waiting first.
     var waitingNames: [String] = []
 
-    /// "a, then b, c and 2 more · go to the first" (core `needs_you_tooltip`), with the jump key after it.
-    var attentionTooltip: String? {
+    /// "a, then b, c and 2 more · go to the first" (core `needs_you_tooltip`), with the jump key (the keymap's now) after it.
+    func attentionTooltip(jumpKey: String?) -> String? {
         guard let first = waitingNames.first else { return nil }
         let others = waitingNames.dropFirst().prefix(2)
         var names = first
@@ -66,7 +66,8 @@ struct StatusSummary: Equatable {
             waitingNames.count == 1
             ? Words.text("window-attention-go-there", ["names": .text(names)], fallback: "\(names) · go there")
             : Words.text("window-attention-go-first", ["names": .text(names)], fallback: "\(names) · go to the first")
-        return go + " (⌃⌘↓)"
+        // The key the jump has now (`status_bar.rs`); none when it has none.
+        return jumpKey.map { go + " (\($0))" } ?? go
     }
 
     init(_ terminals: [TerminalSummary]) {
