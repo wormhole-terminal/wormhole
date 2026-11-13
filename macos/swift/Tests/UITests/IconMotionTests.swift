@@ -136,7 +136,7 @@ final class IconMotionTests: XCTestCase {
                 let window = try XCTUnwrap(tokens.rgba(named: "surface.window")).withAlpha(1)
                 for color in GroupColor.allCases {
                     XCTAssertGreaterThanOrEqual(
-                        RGBA.contrast(color.titleLine(tokens), window), 3.0 - 0.02, "\(theme.id) \(color) contrast \(contrast)")
+                        RGBA.contrast(GroupWash.titleLine(color.mark(tokens), tokens), window), 3.0 - 0.02, "\(theme.id) \(color) contrast \(contrast)")
                 }
             }
         }
