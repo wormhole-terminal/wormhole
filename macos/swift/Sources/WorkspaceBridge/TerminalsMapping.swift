@@ -22,6 +22,7 @@ extension WorkspaceModel.TerminalSummary {
             message: core.message, splitID: core.split.map(Int.init), noteCount: Int(core.notes), isAgentHidden: core.agentHidden, forgetsText: core.forgetText,
             group: core.group, groupName: core.groupName, isFolded: core.folded, glyph: WorkspaceModel.TileGlyph(core.glyph),
             command: core.command)
+        customName = core.customName
         since = core.since
         noticeSerial = core.notice
         runningCommand = core.command

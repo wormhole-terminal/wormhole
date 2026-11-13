@@ -71,7 +71,8 @@
         }
 
         private func existing(named name: String) -> TerminalID? {
-            hub?.state.all.first { $0.title == name }?.id
+            // By the name the terminal was given (the layout's, or the person's), not by the title its program shows.
+            hub?.state.all.first { $0.customName == name }?.id
         }
 
         private func make(in cwd: String?, named name: String?) -> TerminalID? {

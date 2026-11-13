@@ -531,6 +531,7 @@ pub struct ChromeSnapshot {
 pub struct TerminalSummary {
     pub id: i64,
     pub name: String,
+    pub custom_name: Option<String>,
     pub number: Option<u32>,
     pub selected: bool,
     pub pinned: bool,

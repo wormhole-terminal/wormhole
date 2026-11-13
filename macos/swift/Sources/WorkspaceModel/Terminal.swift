@@ -52,6 +52,8 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
     /// The serial of its latest notification in its own words (0: none): a new one is news for the notifications even
     /// when nothing else of it moved.
     public var noticeSerial: UInt64 = 0
+    /// The name the person (or a project's layout) gave it, which the program's name never changes; nil when it has none.
+    public var customName: String?
     /// The program in front of the shell, as the core spells it, while one is (nil in the sample).
     public var runningCommand: String?
     /// Closing it asks first: the core's rule (`workspace::asks_before_closing`), never derived here.
