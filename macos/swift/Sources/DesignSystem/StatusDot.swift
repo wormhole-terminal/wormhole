@@ -14,7 +14,11 @@ public struct StatusDot: View {
     public let kind: StatusKind
     @Environment(\.reduceMotion) private var reduceMotion
 
-    public init(_ kind: StatusKind) { self.kind = kind }
+    /// Where the view that asked for it was built, for inspect mode.
+    let file: StaticString
+    let line: UInt
+
+    public init(_ kind: StatusKind, file: StaticString = #fileID, line: UInt = #line) { (self.kind, self.file, self.line) = (kind, file, line) }
 
     public var body: some View {
         ZStack {
@@ -23,7 +27,7 @@ public struct StatusDot: View {
                 .motionTransition(.scale(scale: 0.4).combined(with: .opacity))
         }
         .frame(width: Metric.lead, height: Metric.lead)
-        .marked("status.glyph")
+        .marked("status.glyph", style: "size lead · dot statusDot · ring ring", file: file, line: line)  // text: inspect mode's note, in the scales' names
         .motion(Motion.selection, value: kind)
         // The row speaks the state in its own label; the glyph alone would be read twice.
         .accessibilityHidden(true)

@@ -10,15 +10,19 @@ public struct IconButton: View {
     public let action: () -> Void
     @State private var hovering = false
     private let run = IconRun()
+    /// Where the view that asked for it was built, for inspect mode.
+    let file: StaticString
+    let line: UInt
 
-    public init(symbol: String, label: LocalizedStringKey, action: @escaping () -> Void) {
+    public init(symbol: String, label: LocalizedStringKey, file: StaticString = #fileID, line: UInt = #line, action: @escaping () -> Void) {
         self.symbol = symbol
         self.label = label
         self.action = action
+        (self.file, self.line) = (file, line)
     }
 
-    public init(lucide: Lucide, label: LocalizedStringKey, action: @escaping () -> Void) {
-        self.init(symbol: "", label: label, action: action)
+    public init(lucide: Lucide, label: LocalizedStringKey, file: StaticString = #fileID, line: UInt = #line, action: @escaping () -> Void) {
+        self.init(symbol: "", label: label, file: file, line: line, action: action)
         self.lucide = lucide
     }
 
@@ -35,7 +39,7 @@ public struct IconButton: View {
             .frame(width: Metric.control, height: Metric.control)
         }
         .buttonStyle(IconButtonStyle(hovering: hovering))
-        .marked("icon.button")
+        .marked("icon.button", style: "size control · radius row · glyph glyph", file: file, line: line)  // text: inspect mode's note, in the scales' names
         .onHover { hovering = $0 }
         .help(label)
         .accessibilityLabel(label)

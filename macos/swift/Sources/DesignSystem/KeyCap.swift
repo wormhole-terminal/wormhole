@@ -10,8 +10,14 @@ public struct KeyCap: View {
     let height: CGFloat
     @Environment(\.tokens) private var tokens
 
+    /// Where the view that asked for it was built, for inspect mode.
+    let file: StaticString
+    let line: UInt
+
     /// `height` is the key cap's own unless a title row's control height is wanted.
-    public init(text: String, height: CGFloat = Metric.keyCapHeight) { (self.text, self.height) = (text, height) }
+    public init(text: String, height: CGFloat = Metric.keyCapHeight, file: StaticString = #fileID, line: UInt = #line) {
+        (self.text, self.height, self.file, self.line) = (text, height, file, line)
+    }
 
     public var body: some View {
         let shape = RoundedRectangle(cornerRadius: tokens.metrics.radiusChip)
@@ -25,7 +31,7 @@ public struct KeyCap: View {
             .frame(minWidth: Metric.keyCapMinWidth, minHeight: height, maxHeight: height)
             .background(tokens.controlBackground, in: shape)
             .contrastOutline(shape, \.borderStrong)
-            .marked("keycap")
+            .marked("keycap", style: "padding x _1 · height keyCapHeight · min width keyCapMinWidth · radius chip · text caption", file: file, line: line)  // text: inspect mode's note, in the scales' names
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(KeyCapSpeech.words(text)))
     }

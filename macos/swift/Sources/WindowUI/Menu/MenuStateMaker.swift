@@ -61,6 +61,10 @@ enum MenuStateMaker {
         menu.split = facts.isSplit
         // Quit and End All Terminals and Session Hosts are for persistent terminals (`persistent_only`).
         menu.persistent = facts.flagsOn.contains("persistent_terminals")
+        // The Developer menu (Inspector) is a debug build's.
+        #if DEBUG
+            menu.debug = true
+        #endif
 
         menu.disabled.formUnion(keymap.entries.filter { $0.isLive && !facts.implemented.contains($0.id) }.map(\.id))
         if selected == nil { menu.disabled.formUnion(["closeTerminal", "pinTerminal", "splitRight", "splitDown"]) }

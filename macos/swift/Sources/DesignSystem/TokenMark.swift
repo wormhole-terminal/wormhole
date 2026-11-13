@@ -2,6 +2,8 @@
 // edit shows where it lands (`Env::mark`, `style::uses_outline`). A view that is a component of the design names itself
 // with `.marked("sidebar.row")`, the id core's `TOKEN_USES` gives that component; the Studio's gallery puts the ids of what
 // the selected token is drawn on into the environment, and everywhere else the set is empty and the mark draws nothing.
+// The same call is what inspect mode knows an element by: it records where the element was built (`InspectSite`), and
+// while the inspector is on the element reports its frame (`Inspect/Inspection.swift`).
 
 import SwiftUI
 
@@ -25,12 +27,17 @@ extension EnvironmentValues {
 }
 
 extension View {
-    /// Outlines this view while the Studio's selected token is drawn on the component `id` names.
-    public func marked(_ id: String) -> some View { modifier(TokenMark(id: id)) }
+    /// Outlines this view while the Studio's selected token is drawn on the component `id` names, and names it for
+    /// inspect mode: built at `file`:`line` (the caller's; a shared component passes its own caller's on), with `style`
+    /// saying its spacing, radius and text in the scales' names.
+    public func marked(_ id: String, style: String = "", file: StaticString = #fileID, line: UInt = #line) -> some View {
+        modifier(TokenMark(site: InspectSite(id: id, style: style, file: file, line: line)))
+    }
 }
 
 private struct TokenMark: ViewModifier {
-    let id: String
+    let site: InspectSite
+    private var id: String { site.id }
     @Environment(\.tokenMarks) private var marks
     @Environment(\.tokens) private var tokens
 
@@ -50,5 +57,7 @@ private struct TokenMark: ViewModifier {
                     .accessibilityLabel(marks.spoken)
             }
         }
+        // Inspect mode: where this element is. Nothing while it is off.
+        .background { if Inspection.shared.isOn { InspectProbe(site: site).accessibilityHidden(true) } }
     }
 }

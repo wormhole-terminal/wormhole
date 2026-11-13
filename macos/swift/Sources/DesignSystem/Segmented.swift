@@ -10,9 +10,13 @@ public struct Segmented<Value: Hashable>: View {
     @Binding var selection: Value
     @Environment(\.tokens) private var tokens
     @Namespace private var space
+    /// Where the view that asked for it was built, for inspect mode.
+    let file: StaticString
+    let line: UInt
 
-    public init(_ options: [(title: String, value: Value)], selection: Binding<Value>) {
+    public init(_ options: [(title: String, value: Value)], selection: Binding<Value>, file: StaticString = #fileID, line: UInt = #line) {
         (self.options, _selection) = (options, selection)
+        (self.file, self.line) = (file, line)
     }
 
     public var body: some View {
@@ -24,7 +28,7 @@ public struct Segmented<Value: Hashable>: View {
         .padding(2).frame(height: Metric.titleControl)
         .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip + 2))
         .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusChip + 2), \.borderStrong)
-        .marked("segmented")
+        .marked("segmented", style: "height titleControl · padding x _2 · radius chip · text caption", file: file, line: line)  // text: inspect mode's note, in the scales' names
         .motion(Motion.selection, value: selection)
     }
 

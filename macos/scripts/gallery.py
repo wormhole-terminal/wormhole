@@ -13,7 +13,8 @@ from pathlib import Path
 
 SOURCES = Path(__file__).resolve().parents[1] / "swift/Sources"
 VIEW = re.compile(r"^public struct (\w+)(?:<[^>]*>)?\s*:\s*View", re.M)
-MARK = re.compile(r'\.marked\("([^"]+)"\)')
+# The id is the first argument; inspect mode's `style:`, `file:` and `line:` may follow it.
+MARK = re.compile(r'\.marked\("([^"]+)"[,)]')
 LISTED = re.compile(r'TokenUse\(id: "([^"]+)"')
 
 
