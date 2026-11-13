@@ -48,6 +48,8 @@ public struct SidebarAppearance: Equatable {
     public var foldMotion: String
     /// Terminal text is kept between launches (`restore_terminal_text`): while it is not, "Don't keep this terminal's text" is greyed.
     public var restoresText: Bool
+    /// The Motion feature is on: a drag's line edges are held by the part the pointer came from (core `motion_in_force`).
+    public var motionInForce = false
     /// "Hide from Agents" is in a row's menu: with the Automation feature on (or while the terminal is hidden, to show it again).
     public var offersAgentHide = false
     /// Shows the ⌘1–9 keycaps whatever ⌘ is doing: for pictures and tests.

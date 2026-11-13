@@ -62,11 +62,20 @@ struct DropLines {
         return (line, (y - line.frame.minY) / max(line.frame.height, 1))
     }
 
-    /// What the pointer at `y` is over.
-    func over(at y: CGFloat) -> DropOver? {
+    /// What the pointer at `y` is over. `held` is what it was over a moment ago and `part` the core's edges (`Part::at_from`):
+    /// on the same line the part stays until the pointer is past the edge, so one resting on it does not flip a drop.
+    func over(
+        at y: CGFloat, held: DropOver? = nil, part place: (Double, DropPart?) -> DropPart = { fraction, _ in DropPart(fraction: fraction) }
+    ) -> DropOver? {
         guard let (line, fraction) = line(at: y) else { return nil }
         if y > line.frame.maxY { return line.card == lastCard ? .tail : .after(line.card) }
-        let part = DropPart(fraction: fraction)
+        let before: DropPart? =
+            switch (held, line.kind) {
+            case (.row(let id, let part)?, .row(let row)) where id == row: part
+            case (.head(let group, let part)?, .head(let head)) where group == head: part
+            default: nil
+            }
+        let part = place(Double(fraction), before)
         switch line.kind {
         case .head(let group): return .head(group, part)
         case .row(let id): return .row(id, part)

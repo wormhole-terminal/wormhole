@@ -9,6 +9,7 @@ enum SidebarSettingsMaker {
     /// (core `motion_in_force`); with it a key that is absent is the core's default (Classic status, From side, Tuck).
     static func appearance(_ values: [String: JSONValue], current: SidebarAppearance, motion: Bool) -> SidebarAppearance {
         var next = current
+        next.motionInForce = motion
         next.density = values["density"]?.string.flatMap(SidebarDensity.init(rawValue:)) ?? current.density
         next.cards = values["show_groups_as_cards"]?.bool ?? current.cards
         next.fadesGroupColours = values["fade_group_colors"]?.bool ?? current.fadesGroupColours

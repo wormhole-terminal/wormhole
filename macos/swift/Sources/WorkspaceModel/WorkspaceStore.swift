@@ -87,6 +87,9 @@ public final class WorkspaceStore {
     /// What dropping a terminal here would do, for the line shown while it is still held.
     public func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan? { backend.dropPlan(dragged: dragged, over: over) }
 
+    /// Which part of a line the pointer is over (the core's edges, held by hysteresis while `previous` is given).
+    public func dropPart(fraction: Double, previous: DropPart?) -> DropPart { backend.dropPart(fraction: fraction, previous: previous) }
+
     /// Where dropping a group here would put it, for the line shown while it is still held.
     public func groupDropPlan(group: GroupID, over: DropOver) -> Landing? { backend.groupDropPlan(group: group, over: over) }
 

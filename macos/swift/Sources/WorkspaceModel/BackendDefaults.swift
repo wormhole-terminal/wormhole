@@ -4,6 +4,7 @@ import Foundation
 
 extension WorkspaceBackend {
     public func groupDropPlan(group: GroupID, over: DropOver) -> Landing? { nil }
+    public func dropPart(fraction: Double, previous: DropPart?) -> DropPart { DropPart(fraction: fraction) }
     /// Without a core's list of every terminal, the rows the sidebar lists are all there are.
     public func terminals() -> TerminalsSnapshot {
         TerminalsSnapshot(terminals: sidebar().sections.flatMap(\.rows).map(\.terminal))

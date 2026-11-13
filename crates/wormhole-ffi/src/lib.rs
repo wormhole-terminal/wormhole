@@ -18,6 +18,7 @@ mod cell;
 mod cli_tool;
 mod clipboard;
 mod contents;
+mod drop_part;
 mod engine_look;
 mod error;
 mod events;
@@ -96,6 +97,7 @@ pub use cli_tool::{
     cli_tool_keep_current, cli_tool_path_note, cli_tool_status, cli_tool_uninstall,
 };
 pub use contents::ContentsScope;
+pub use drop_part::drop_part_at;
 pub use engine_look::set_terminal_colors;
 pub use error::FfiError;
 pub use events::{TermEvent, TerminalListener};

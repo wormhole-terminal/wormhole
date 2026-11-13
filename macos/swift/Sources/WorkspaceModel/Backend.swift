@@ -67,6 +67,9 @@ public protocol WorkspaceBackend: AnyObject {
     func paneDropRefusal(dragged: TerminalID, target: TerminalID, zone: Zone) -> Refusal?
     /// What dropping `dragged` on `over` would do; nil when nothing would change. Pure: nothing moves.
     func dropPlan(dragged: TerminalID, over: DropOver) -> DropPlan?
+    /// The part of a line the pointer `fraction` of the way down it is over, held by the edge it came from while `previous` is
+    /// given (core `Part::at_from`).
+    func dropPart(fraction: Double, previous: DropPart?) -> DropPart
     /// Where a dragged group would land on `over`; nil when nothing would change. Pure.
     func groupDropPlan(group: GroupID, over: DropOver) -> Landing?
     /// Every terminal, folded ones too, with the status counts.

@@ -16,6 +16,14 @@ enum DropMark: Equatable {
 struct DropAim: Equatable {
     var action: WorkspaceAction
     var mark: DropMark?
+
+    /// What the pointer was over, as the action names it.
+    var over: DropOver? {
+        switch action {
+        case .dropTerminal(_, let over), .dropGroup(_, let over): over
+        default: nil
+        }
+    }
 }
 
 extension DropLines {

@@ -123,12 +123,23 @@ public struct SidebarView: View {
         .focused($focused)
         .onKeyPress(phases: [.down, .repeat]) { press in handle(press, walk) }
         .simultaneousGesture(TapGesture().onEnded { keysLead = false })
-        .onChange(of: focused) { _, now in if now && cursor == nil { cursor = state.selected.map(SidebarStop.row) ?? walk.items.first?.stop } }
+        .onChange(of: focused) { _, now in if now { enter(walk) } }
         .onChange(of: statuses) { old, new in noteStatusChanges(from: old, to: new) }
         .onAppear { hold.start() }
         .onDisappear { hold.stop() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Words.text("sidebar-list", fallback: "Terminals"))
+    }
+
+    /// Coming into the list (F6, ⇥): the keys go back where they were, or onto the selected terminal (its group's head while it is
+    /// folded away, which the walk does not hold), or the first item (`sidebar/keys.rs` `enter`).
+    func enter(_ walk: SidebarWalk) {
+        let stops = Set(walk.items.map(\.stop))
+        if let cursor, stops.contains(cursor) { return }
+        let selected = state.selected
+        let group = selected.flatMap { id in state.all.first { $0.id == id }?.group }
+        cursor = [selected.map(SidebarStop.row), group.map(SidebarStop.group)].compactMap { $0 }.first { stops.contains($0) }
+            ?? walk.items.first?.stop
     }
 
     func context(_ sections: [SidebarSection]) -> SidebarContext {

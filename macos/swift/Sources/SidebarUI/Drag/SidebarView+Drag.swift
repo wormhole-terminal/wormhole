@@ -31,7 +31,10 @@ extension SidebarView {
 
     func aim(_ item: DragItem, at point: CGPoint, _ sections: [SidebarSection]) -> DropAim? {
         let lines = lines(sections)
-        guard let over = lines.over(at: point.y) else { return nil }
+        // The edges between parts are held by the part the pointer was over, with the Motion feature on (`edge_memory`).
+        let held: DropOver? = appearance.motionInForce ? drag?.aim.flatMap(\.over) : nil
+        guard let over = lines.over(at: point.y, held: held, part: { dropPlanner?.dropPart(fraction: $0, previous: $1) ?? DropPart(fraction: $0) })
+        else { return nil }
         let gap = SidebarMetrics(density: appearance.density, cards: appearance.cards).cardGap
         switch item {
         case .terminal(let id):

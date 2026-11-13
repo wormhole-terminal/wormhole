@@ -154,6 +154,14 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
     private static let bootVolume =
         (try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeNameKey]).volumeName) ?? "Macintosh HD"  // text: the fallback of the name macOS gives the startup volume
 
+    public func dropPart(fraction: Double, previous: DropPart?) -> DropPart {
+        switch dropPartAt(fraction: Float(fraction), previous: previous.map(WormholeBindings.Part.init)) {
+        case .top: .top
+        case .middle: .middle
+        case .bottom: .bottom
+        }
+    }
+
     public func dropPlan(dragged: TerminalID, over: DropOver) -> WorkspaceModel.DropPlan? {
         core.dropPlan(dragged: Int64(dragged), over: Over(over)).map(WorkspaceModel.DropPlan.init)
     }
