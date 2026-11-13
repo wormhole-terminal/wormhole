@@ -50,19 +50,33 @@
                 case .checking, .notAsked:
                     test = .unanswered
                     publishStatus()
-                default: finishTest(name: name, settings: settings)
+                default: await finishTest(name: name, settings: settings)
                 }
             }
         }
 
-        private func finishTest(name: String, settings: NoticeSettings) {
+        /// "Allow notifications": macOS is asked, and the row is read again once the person has answered.
+        func askPermission() {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let system = notifier as? SystemNotifier { await system.askPermissionAndWait() } else { notifier.askPermission() }
+                publishStatus()
+            }
+        }
+
+        private func finishTest(name: String, settings: NoticeSettings) async {
             if case .denied = notifier.permission {
                 test = .denied
-            } else {
-                sendTest(name: name, settings: settings)
-                test = .sent
+                publishStatus()
+                return
             }
-            publishStatus()
+            do {
+                try await deliverTest(name: name, settings: settings)
+                test = .sent
+            } catch {
+                test = .refused(error.localizedDescription)
+            }
+            if !Task.isCancelled { publishStatus() }
         }
     }
 #endif

@@ -47,6 +47,11 @@
             coordinator.sendTest(name: name, settings: settings, timeSensitive: timeSensitive)
         }
 
+        /// The test banner, throwing the system's refusal (`NoticeFeed+Test` shows it on the row).
+        func deliverTest(name: String, settings: NoticeSettings) async throws {
+            try await coordinator.deliverTest(name: name, settings: settings, timeSensitive: timeSensitive)
+        }
+
         /// A Probe's hook asks for a notification: one thread per Probe, its name (with "extension") as the subtitle.
         func post(probe: String, subtitle: String, title: String, body: String) {
             let id = "wormhole/probe/\(probe)"

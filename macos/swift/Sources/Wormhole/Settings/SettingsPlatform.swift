@@ -76,9 +76,7 @@
             switch action {
             case .checkForUpdates: aux.showUpdates()
             case .sendTestNotification: notices?.runTest(name: AuxText.brand, settings: settingsNotice)
-            case .askNotifications:
-                notices?.notifier.askPermission()
-                notices?.publishStatus()
+            case .askNotifications: notices?.askPermission()
             case .openNotificationSettings: open("x-apple.systempreferences:com.apple.Notifications-Settings.extension")
             // The system's list of apps that start programs without the first-run malware check (Privacy & Security).
             case .openDeveloperTools: open("x-apple.systempreferences:com.apple.preference.security?Privacy_DevTools")

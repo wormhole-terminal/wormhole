@@ -45,11 +45,19 @@ public final class SystemNotifier: Notifying {
 
     public func post(_ notice: Notice) {
         if !asked { askPermission() }
-        // The same identifier replaces a terminal's earlier notification; a nil trigger delivers now.
-        let request = UNNotificationRequest(identifier: notice.id, content: NoticeContent.content(notice), trigger: nil)
-        center.add(request) { error in
+        center.add(request(for: notice)) { error in
             if let error { AppLog.log("error", "posting a notification failed: \(error.localizedDescription)") }
         }
+    }
+
+    public func deliver(_ notice: Notice) async throws {
+        if !asked { askPermission() }
+        try await center.add(request(for: notice))
+    }
+
+    /// The same identifier replaces a terminal's earlier notification; a nil trigger delivers now.
+    private func request(for notice: Notice) -> UNNotificationRequest {
+        UNNotificationRequest(identifier: notice.id, content: NoticeContent.content(notice), trigger: nil)
     }
 
     public func remove(id: String) {

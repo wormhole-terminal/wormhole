@@ -11,6 +11,8 @@ public protocol Notifying: AnyObject {
     var responses: AsyncStream<NoticeResponse> { get }
     /// Posts `notice`; the same id replaces a terminal's earlier one.
     func post(_ notice: Notice)
+    /// Posts `notice` and says what the system answered: throws its error, as the Settings test row shows it.
+    func deliver(_ notice: Notice) async throws
     /// Takes down a notification, pending or delivered.
     func remove(id: String)
     /// Asks the system for permission (macOS prompts only while it hasn't been decided), then reads it again.
@@ -21,6 +23,7 @@ public protocol Notifying: AnyObject {
 
 extension Notifying {
     public var deliversTimeSensitive: Bool { false }
+    public func deliver(_ notice: Notice) async throws { post(notice) }
 }
 
 /// A test instance's notifier: keeps what would have been posted, as devctl's `notify-log` shows it, and posts
