@@ -69,6 +69,9 @@ public final class HookServerHandle {
     /// Profile `profile`'s settings changed: the server reads its agent-access mode again.
     public func settingsChanged(profile: String) { server.settingsChanged(profile: profile) }
 
+    /// The Probes that are on are read again (core `probes::reload`): the backstop for edits behind the app's back.
+    public func reloadProbes() { server.reloadProbes() }
+
     /// The status items the Probes' hooks set (`HookAction.probesChanged` says to read them again).
     public func probeStatusItems() -> [ProbeStatusRecord] { server.probeStatusItems() }
 

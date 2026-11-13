@@ -20,6 +20,8 @@
         private var listening: Task<Void, Never>?
         /// Tells the core which window is in front (`start`).
         private var frontObserver: NSObjectProtocol?
+        /// The Probes are read again about once a minute, the backstop for what changes behind the app's back.
+        private var probeBackstop: Task<Void, Never>?
         /// The task that tells the welcome what macOS says of banners (`HookHost+Welcome`).
         var permissionWatch: Task<Void, Never>?
         unowned let app: AppController
@@ -45,9 +47,18 @@
             listening = Task { [weak self] in
                 for await batch in actions { batch.forEach { self?.perform($0) } }
             }
+            probeBackstop = Task { [weak self] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(60))
+                    self?.handle.reloadProbes()
+                }
+            }
         }
 
-        func stop() { handle.stop() }
+        func stop() {
+            probeBackstop?.cancel()
+            handle.stop()
+        }
 
         /// macOS asked to open these files and folders: a terminal each in window `window` (`SystemOpen.swift`).
         @discardableResult
