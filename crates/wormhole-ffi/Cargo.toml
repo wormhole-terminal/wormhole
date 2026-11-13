@@ -28,6 +28,26 @@ thiserror = "2"
 smol = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
+# Syntax colours for the diff and the Files viewer (`src/syntax`): the parser and the app's grammars, each at the
+# version the app's `Cargo.lock` has through GPUI Kit, so the two apps read a file with the same grammar (the two
+# pinned ones have a newer patch release the app's lock does not have yet: follow the app's lock).
+tree-sitter = "0.26"
+tree-sitter-bash = "0.23"
+tree-sitter-c = "0.24"
+tree-sitter-cpp = "0.23"
+tree-sitter-css = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-html = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-json = "0.24"
+tree-sitter-md = "=0.5.3"
+tree-sitter-python = "0.23"
+tree-sitter-rust = "0.24"
+tree-sitter-swift = "=0.7.3"
+tree-sitter-toml-ng = "0.7"
+tree-sitter-typescript = "0.23"
+tree-sitter-yaml = "0.7"
 
 [lints]
 workspace = true

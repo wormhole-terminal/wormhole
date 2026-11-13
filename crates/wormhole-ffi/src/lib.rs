@@ -56,6 +56,7 @@ pub mod theme_dump;
 mod theme_json;
 mod theme_resolve;
 mod studio_files;
+mod syntax;
 mod themes;
 mod title_fit;
 mod visible;
@@ -175,6 +176,7 @@ pub use studio_files::{
 };
 pub use themes::{list_user_themes, resolve_theme, resolve_theme_json, theme_files_stamp};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};
+pub use syntax::{SyntaxRun, syntax_keys, syntax_lines};
 pub use visible::{VisibleLine, VisibleMark, visible_line};
 pub use window_ops::{
     ExtentRecord, FullscreenRecord, MaximizeRecord, PaneSizeRecord, ScreenRect, WindowFrameGoal,

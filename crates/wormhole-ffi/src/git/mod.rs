@@ -4,6 +4,7 @@
 //! burst of file events (`FFI-CONTRACT.md`, "Git").
 
 mod asked;
+mod colors;
 mod error;
 mod notes;
 mod problem;

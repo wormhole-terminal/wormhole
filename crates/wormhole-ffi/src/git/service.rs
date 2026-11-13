@@ -268,12 +268,11 @@ impl Git {
         if let Some(sub) = &file.submodule {
             return submodule_diff(root, file, sub);
         }
-        // Rows are not coloured here (Swift's lexer does that from the text), so core is told to leave the
-        // whole files unread: no highlighting source, one `git show` less per side.
+        // Core's own limits: the whole files are read as the source of the rows' colours (`records::GitDiffFile::of`),
+        // unless the diff is too long to colour or a side is too big.
         let limits = DiffLimits {
             max_patch_bytes: if load_anyway { u64::MAX } else { DIFF_ASK_BYTES },
-            max_highlight_lines: 0,
-            max_text_bytes: 0,
+            ..DiffLimits::LOAD_ANYWAY
         };
         let diff =
             git::diff_with_limits(root, file, &spec, &limits).map_err(|err| GitBackendError::of(&err))?;
