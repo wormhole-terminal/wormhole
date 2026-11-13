@@ -732,3 +732,26 @@ Written without compiling: expect compile errors.
 | O03 | A terminal changes folder in a second window or a folded group | the folder counts as a visit | `Platform/FolderPicking.swift` |
 | A04 | NOT WRITTEN: an unavailable host's card carries the error's detail | - | `HostProblem.unavailable` carries only the kind: the error text of `HostingError.Unavailable` is dropped in `HostConnect.swift` and would have to travel through `Connected`, the book and `HostProblem` |
 | PL01 | NOT WRITTEN: Undo/Redo titles of a window with its own history (Studio), Open Recent per profile (also O01, O03), an event announced by its terminal's profile's settings (PL03), the palette's commits as HEAD's log rather than History's | - | each is its own data or model change (a per-profile store, a Studio menu writer, `NoticeSettings` per profile, a git log call) |
+
+## Lane crosscut, wave 6
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| logging | Start a test instance (`WORMHOLE_DATA_DIR=<scratch>/Wormhole-swift-x`), run a minute, `WORMHOLE_LOG=debug` once | `<data>/logs/wormhole.<date>.log` exists (owner-only folder), holds the core's `tracing` lines; level follows `WORMHOLE_LOG`; Help > Show Logs opens a folder with a file in it; never the real data folder | `crates/wormhole-ffi/src/logging.rs`, `Wormhole/Platform/LaunchLogging.swift`, `AppController.swift` (init) |
+| logging | Force a panic on a Rust thread (a test build) | `<data>/logs/last-panic.txt` holds the report, written before the abort | `logging.rs` `install_panic_hook` |
+| logging | New dependencies `tracing-subscriber`, `tracing-appender` in `crates/wormhole-ffi/Cargo.toml` | The ffi workspace's own `Cargo.lock` needs updating by the first build (offline it fails): check the lock diff | `crates/wormhole-ffi/Cargo.toml` |
+| TEST data folder | Put a file with mode 0644 and a folder 0755 in a scratch `Wormhole-swift-x` folder, launch | Both become owner-only a moment after launch (no hang on a big folder: it runs on its own thread) | `logging.rs` `make_data_dir_private`, `LaunchLogging.start` |
+| X08 | `Wormhole split --size 30` on a terminal with room, then with `--size 99` in a small window | The new pane has about 30 % and the reply's `size` says what it got (clamped); a split without room is refused `no_room` and the budget is not spent | `hook_server/control/open.rs` `split`, core `workspace/splits.rs` `set_split_share`, `split_fits` |
+| X08 | Two windows, the second one in front; `Wormhole new-terminal` from a terminal of the first; `list` | The terminal opens in the front window; `list` marks the front window `front`; `new-window` copies the front window | `hook_server/core.rs` `front_share`, `mod.rs` `set_front_window`, `Hooks/HookHost.swift` (didBecomeKey) |
+| X08 TEST | `Wormhole new-terminal --worktree fix/x --command "echo hi"` | The worktree question comes up (no `unsupported` any more); the command travels in the event (`HookAction.worktreeAsked(command:)`) into `WorktreeStore.firstCommand`. NOT BUILT: typing it into the terminal after Create is the panel lane's side | `control/worktree.rs`, `HookBridge/HookAction.swift`, `WindowHub+Worktree.swift`, `WorktreeStore.swift` |
+| X07 | `python3 -I macos/scripts/words.py` | 0 literals, 0 unknown ids, 0 variable mismatches; `*Controller` and `*Controls` files are read now | `macos/scripts/words.py` `SKIP_PATH`, `AuxText+Questions.swift`, `swift-aux.ftl`, `swift-window.ftl`, `changes.ftl` |
+| X07 | Run with `WORMHOLE_LANGUAGE=en-XA`, close a window / group / terminal that runs something; toggle sidebar and panel; the open-folder panel | The questions, buttons, toggle labels and tooltips, the open panel's button are pseudo-language | `AppController+Quit.swift`, `+WorktreeClose.swift`, `WindowControls.swift`, `+Ambient.swift` |
+| X07 | Settings > Notifications > the "after" stepper | Says "2 min" / "30 s" through the catalog (the count was not passed before) | `SettingsUI/Rows/CommandDoneControl.swift` |
+| X03 | VoiceOver on the panel's tab bar (or `a11y`) | A tab says "Changes, 3 changed files", "Notes, 2 open next steps, 1 note", "Changes, no changes"; the value stays "2 of 6" | `WindowUI/PanelTabBar.swift`, `RightPanel.swift`, `workspace_spoken.rs` |
+| X03 | VoiceOver on the status bar's needs-you button and counts | "Fix pile needs input, waiting 2 minutes", "2 terminals working", "1 terminal finished" | `WindowUI/StatusBar.swift`, `WindowBody.swift`, `workspace_spoken.rs` |
+| X03 | VoiceOver on an empty Notes, Next steps, History band and an empty Changes group | "Notes, no notes", "Next steps, none open", "History, no commits", "<group>, no files" | `swift-panel.ftl`, `NotesCard.swift`, `StepsCard.swift`, `HistoryView.swift`, `ChangesListView.swift` |
+| X03 | Settings > Changed > Copy JSON with VoiceOver | Says "Copied" | `SettingsUI/Pages/ChangedPage.swift` |
+| X11 | `--background` instance: open the group colour panel | It goes behind the other windows, takes no focus | `Wormhole/Menus/GroupColourPanel.swift` |
+| not written | Rolling counts in the status bar | Left to the lane sidebar-window | n/a |
