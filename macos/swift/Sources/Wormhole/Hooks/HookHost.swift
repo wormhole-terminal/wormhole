@@ -49,6 +49,7 @@
             }
             probeBackstop = Task { [weak self] in
                 while !Task.isCancelled {
+                    // one-shot: the minute after which the Probes are read again (the backstop of a watch that missed an edit)
                     try? await Task.sleep(for: .seconds(60))
                     self?.handle.reloadProbes()
                 }

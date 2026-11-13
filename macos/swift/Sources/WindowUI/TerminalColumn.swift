@@ -83,6 +83,7 @@ private struct CentreTitle: View {
                 .modifier(TitleFileDrop { hub.terminals.existing(terminal.id)?.insertDropped($0) })
                 .task(id: waited) {
                     guard !look.statusBar, let waited, let since = terminal.since else { return }
+                    // one-shot: the moment the words ("working · 4m") next read differently, as the core says
                     try? await Task.sleep(for: waited.next)
                     if !Task.isCancelled, let fresh = hub.store.waited(since: since) { aged = (since, fresh) }
                 }
