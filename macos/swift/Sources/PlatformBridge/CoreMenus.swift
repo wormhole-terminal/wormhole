@@ -7,7 +7,27 @@ import WormholeBindings
 
 struct CoreMenus: MenuProviding {
     func menus(for state: MenuState) -> [Menu] {
-        keymapMenus(state: state.record).map { Menu(title: $0.title, items: $0.items.map(MenuNode.init)) }
+        // The core lists a project action by its title; its own key (`actions.json` `key`) goes on its item here, so the
+        // key runs it from the window in front (`app/handlers.rs` `claim_window_key`).
+        let keys = Dictionary(
+            state.projectActions.compactMap { action in action.key.map { (action.id, $0) } }, uniquingKeysWith: { first, _ in first })
+        return keymapMenus(state: state.record).map { menu in
+            Menu(title: menu.title, items: menu.items.map { MenuNode($0).keyed(by: keys) })
+        }
+    }
+}
+
+extension MenuNode {
+    /// This node with each project action's item carrying its key.
+    fileprivate func keyed(by keys: [String: KeySpec]) -> MenuNode {
+        switch self {
+        case .item(var item):
+            if case .runProjectAction(let id) = item.command, let key = keys[id] { item.key = key }
+            return .item(item)
+        case let .submenu(title, items, enabled, trailing):
+            return .submenu(title: title, items: items.map { $0.keyed(by: keys) }, enabled: enabled, trailing: trailing)
+        default: return self
+        }
     }
 }
 

@@ -14,7 +14,7 @@ struct ProjectHeadCard: View {
         PanelCard {
             HStack(spacing: PanelMetrics.gap) {
                 FileIcon(kind: .folder("", open: false), tint: tokens.textMuted)
-                Text("\(state.name)/.wormhole").font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
+                Text("\(state.name)/\(state.dir)").font(TextRole.body.font).foregroundStyle(tokens.textPrimary).lineLimit(1)
                 Spacer(minLength: 0)
                 StatusBadge(text: state.status.badge, color: badgeColor)
             }

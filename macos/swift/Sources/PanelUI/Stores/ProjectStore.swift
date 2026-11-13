@@ -14,6 +14,8 @@ public final class ProjectStore {
     public private(set) var paint = FolderPaint.own
     public private(set) var loaded = false
     public private(set) var error: String?
+    /// What went wrong with the person's own stores, said where there is no project too.
+    public private(set) var problem: String?
     /// The project's trust waits for Touch ID or the password.
     public private(set) var approving = false
     @ObservationIgnored private let backend: any ProjectBackend
@@ -45,9 +47,10 @@ public final class ProjectStore {
         Task {
             async let project = backend.project(at: folder)
             async let colour = backend.folderPaint(of: band ?? folder)
-            let (found, painted) = await (project, colour)
+            async let stores = backend.problem()
+            let (found, painted, wrong) = await (project, colour, stores)
             guard folder == self.folder, band == self.band else { return }
-            (state, paint, loaded) = (found, painted, true)
+            (state, paint, loaded, problem) = (found, painted, true, wrong)
         }
     }
 

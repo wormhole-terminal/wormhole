@@ -7,6 +7,7 @@
 //! can ask for anything; it gets effects only for what trust allows, and `approve` asks the owner first.
 
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
 
 use wormhole_core::project::{self as proj, Feature, ProjectFolder};
@@ -27,12 +28,25 @@ pub struct ProjectService {
     pub(super) auth: Arc<dyn OwnerAuthenticator>,
     /// The watches Swift holds, which hear of what the service itself changed (trust, a switch, a colour).
     watches: Mutex<Vec<Weak<FolderWatch>>>,
+    /// The Project feature is off for the window (its flag, or the person's switch): no `.wormhole/` is read
+    /// for effect or written (the GPUI app's `project_folders_on`).
+    off: AtomicBool,
 }
 
 impl ProjectService {
     /// A service over the stores in `dir`.
     pub(crate) fn in_dir(dir: &Path, auth: Arc<dyn OwnerAuthenticator>) -> Arc<Self> {
-        Arc::new(Self { hub: Mutex::new(Hub::load(dir)), auth, watches: Mutex::new(Vec::new()) })
+        Arc::new(Self {
+            hub: Mutex::new(Hub::load(dir)),
+            auth,
+            watches: Mutex::new(Vec::new()),
+            off: AtomicBool::new(false),
+        })
+    }
+
+    /// Whether the Project feature is off for the window: asked first by everything that would act on a project.
+    pub(super) fn off(&self) -> bool {
+        self.off.load(Ordering::Relaxed)
     }
 
     pub(super) fn lock(&self) -> MutexGuard<'_, Hub> {
@@ -48,6 +62,10 @@ impl ProjectService {
 
 impl ProjectService {
     pub(crate) fn worktree_refusal(&self, repo: &Path) -> Option<String> {
+        // Off: the new terminal takes nothing from the project, so there is no condition.
+        if self.off() {
+            return None;
+        }
         let found = proj::find_project(repo)?;
         let snapshot = found.snapshot();
         let mut hub = self.lock();
@@ -86,6 +104,16 @@ impl ProjectService {
         true
     }
 
+    /// The window's Project feature is on or off (core's feature mask, which the window draws its tabs from). Off,
+    /// nothing reads a `.wormhole/` for effect or writes one: no settings or theme laid over, no action, layout or
+    /// prompt, no worktree condition or setup, no notes.md sync, and a folder's colour is the person's own. On
+    /// until told otherwise.
+    pub fn set_project_feature_on(&self, on: bool) {
+        if self.off.swap(!on, Ordering::Relaxed) == on {
+            self.changed();
+        }
+    }
+
     /// The project governing `folder` (a terminal's folder: the first `.wormhole/` above it, stopping
     /// at a repository's root), as the tab draws it; `None` where there is none.
     pub fn project(&self, folder: String) -> Option<ProjectStateRecord> {
@@ -94,6 +122,12 @@ impl ProjectService {
         hub.reload_trust();
         let snapshot = hub.snapshot(&found);
         Some(state::build(&mut hub, &snapshot))
+    }
+
+    /// What went wrong with the person's own stores (preferences or approvals reset, a save that failed), which
+    /// the tab says where there is no project too (`panel.rs` `render_no_project`); `None` when nothing did.
+    pub fn problem(&self) -> Option<String> {
+        self.lock().error.clone()
     }
 
     /// Switches `feature` (`settings`, `theme`, `actions`, `prompts`, `layout`, `notes`) on or off for
@@ -161,8 +195,8 @@ impl ProjectService {
     }
 
     /// Why a worktree may not be made of `repo` (`project::api::worktree_allowed`): a project there must be trusted with
-    /// its Settings on, since the new terminal takes the project's env and shell; no project, no condition. `None`: it may. Unlike the GPUI
-    /// app's, this does not look at the Project feature switch: the Swift panel reads and applies `.wormhole/` whatever it says.
+    /// its Settings on, since the new terminal takes the project's env and shell; no project, no condition. `None`: it may, as
+    /// it does with the Project feature off (`set_project_feature_on`).
     pub fn worktree_allowed(&self, repo: String) -> Option<String> {
         self.worktree_refusal(Path::new(&repo))
     }
@@ -170,6 +204,9 @@ impl ProjectService {
     /// What a new worktree of `repo` runs first: its trusted project's `worktree.setup`, under the same conditions as
     /// [`Self::worktree_allowed`]; a project that is not trusted with its Settings on runs nothing.
     pub fn worktree_setup(&self, repo: String) -> Option<String> {
+        if self.off() {
+            return None;
+        }
         let found = proj::find_project(Path::new(&repo))?;
         let snapshot = found.snapshot();
         let mut hub = self.lock();
@@ -204,6 +241,9 @@ impl ProjectService {
         root: &str,
         feature: Feature,
     ) -> Result<(ProjectFolder, proj::ProjectSnapshot), ProjectFailure> {
+        if self.off() {
+            return Err(ProjectFailure::refused("project folders are switched off"));
+        }
         let folder = open(root).ok_or_else(|| ProjectFailure::not_found(root))?;
         // Read here, so what is checked is what runs: the same snapshot gives the trust verdict and the
         // content, and a `git checkout` between the two cannot make them differ.

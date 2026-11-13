@@ -30,6 +30,9 @@ pub struct ProjectSettingsRecord {
 impl ProjectService {
     /// The project of `folder` (a terminal's) and its settings; `None` where there is no project.
     pub fn settings_overrides(&self, folder: String) -> Option<ProjectSettingsRecord> {
+        if self.off() {
+            return None;
+        }
         let found = proj::find_project(Path::new(&folder))?;
         let mut hub = self.lock();
         let snapshot = hub.snapshot(&found);

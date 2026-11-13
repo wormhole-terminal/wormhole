@@ -15,6 +15,9 @@ impl ProjectService {
     /// there and the person has it on; a theme is harmless, so core asks no trust); `None` otherwise. Hand it to
     /// `resolve_theme_json`.
     pub fn theme_overlay(&self, folder: String) -> Option<String> {
+        if self.off() {
+            return None;
+        }
         let found = proj::find_project(Path::new(&folder))?;
         let mut hub = self.lock();
         hub.reload_trust();

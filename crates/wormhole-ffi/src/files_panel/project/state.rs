@@ -1,7 +1,9 @@
 //! The Project tab's state, made from a snapshot of the folder, the person's switches and the trust
 //! store: the wording is the app's (`features/project/panel.rs`), written once here.
 
-use wormhole_core::project::{Action, ActionKind, Feature, ProjectSnapshot, TrustStatus, trust_applies};
+use wormhole_core::project::{
+    Action, ActionKind, Feature, ProjectSnapshot, TrustStatus, dir_name_at, trust_applies,
+};
 
 use super::hub::Hub;
 use super::records::{
@@ -80,6 +82,7 @@ pub(super) fn build(hub: &mut Hub, snapshot: &ProjectSnapshot) -> ProjectStateRe
         .chain(notes_error)
         .collect();
     ProjectStateRecord {
+        dir: dir_name_at(&root),
         root: root.to_string_lossy().into_owned(),
         status: status.into(),
         commands,

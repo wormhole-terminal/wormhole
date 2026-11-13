@@ -72,6 +72,10 @@ impl ProjectService {
         local: NotesDocRecord,
         editing: bool,
     ) -> NotesSyncOutcome {
+        // With project folders off no notes.md is read or written.
+        if self.off() {
+            return NotesSyncOutcome::default();
+        }
         let Some(folder) = open(&root) else { return NotesSyncOutcome::default() };
         let local = NotesDoc::from(local);
         let mut hub = self.lock();

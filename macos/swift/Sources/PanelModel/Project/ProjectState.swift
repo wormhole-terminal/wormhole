@@ -86,6 +86,8 @@ public struct ProjectState: Equatable, Sendable {
     public var layout: [String]
     public var errors: [String]
     public var warnings: [String]
+    /// The project folder's name on disk: an older project's is `.andromeda`.
+    public var dir = ".wormhole"
 
     public init(
         root: String, status: TrustStatus, commands: [TrustLine] = [], applies: String = "", asksForTrust: Bool = false,

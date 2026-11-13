@@ -19,6 +19,7 @@ extension ProjectState {
             actions: record.actions.map { ProjectAction(id: $0.id, title: $0.title, detail: $0.detail, key: $0.key) },
             prompts: record.prompts.map { ProjectPrompt(id: $0.id, title: $0.title, detail: $0.detail) },
             layout: record.layout, errors: record.errors, warnings: record.warnings)
+        dir = record.dir
     }
 }
 

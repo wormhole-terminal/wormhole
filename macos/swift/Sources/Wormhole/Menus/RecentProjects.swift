@@ -40,7 +40,10 @@ extension AppController {
         if let root = hub.panel.project.state?.root { recents.remember(root) }
         state.recent = recents.names
         state.shells = settingsModel.host.shellChoices().map(\.name)
-        state.projectActions = (hub.panel.project.state?.actions ?? []).map { .init(id: $0.id, title: $0.title) }
+        state.projectActions = (hub.panel.project.state?.actions ?? []).map {
+            // Its key as the core wrote it for the row ("⌃⌘T"); the core lists an action only while it may run.
+            .init(id: $0.id, title: $0.title, key: $0.key.flatMap { KeySpec(glyphs: $0) })
+        }
         return state
     }
 }

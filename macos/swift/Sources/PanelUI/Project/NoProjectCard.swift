@@ -20,6 +20,10 @@ struct NoProjectCard: View {
                     Text(target).font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
                 }
                 if let error = store.error { Text(error).font(TextRole.caption.font).foregroundStyle(tokens.statusDangerText) }
+                // The hub's own problems (stores reset, a failed save) show here as in the project's head (`panel.rs`).
+                if let problem = store.problem, problem != store.error {
+                    Text(problem).font(TextRole.caption.font).foregroundStyle(tokens.statusDangerText)
+                }
             }
             .font(TextRole.body.font).foregroundStyle(tokens.textMuted)
             .padding(.horizontal, PanelMetrics.inset).padding(.vertical, Space._2)

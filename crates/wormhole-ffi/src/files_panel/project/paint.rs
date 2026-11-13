@@ -55,7 +55,10 @@ impl Paint {
 
 impl ProjectService {
     fn paint_of(&self, folder: &Path) -> Paint {
-        if let Some(found) = proj::find_project(folder) {
+        // With project folders off the colour is the person's own: nothing is written into a project.
+        if !self.off()
+            && let Some(found) = proj::find_project(folder)
+        {
             let mut hub = self.lock();
             let snapshot = hub.snapshot(&found);
             if snapshot.has(Feature::Settings) {

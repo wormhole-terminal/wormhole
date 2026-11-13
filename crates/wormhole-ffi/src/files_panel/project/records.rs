@@ -70,6 +70,8 @@ pub struct ProjectPromptRecord {
 #[derive(Clone, Debug, PartialEq, Eq, uniffi::Record)]
 pub struct ProjectStateRecord {
     pub root: String,
+    /// The project folder's name on disk: `.wormhole`, or an older project's `.andromeda`.
+    pub dir: String,
     pub status: TrustStatusRecord,
     pub commands: Vec<TrustLineRecord>,
     pub applies: String,
