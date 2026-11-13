@@ -509,3 +509,40 @@ Not written, and why:
 - W12: a terminal starts with the colours of the profile Wormhole is in (the spawn options) and gets its window's when its view dresses it, before its program can ask; a B terminal with no view is told A's changes.
 - W12: a font file that comes or goes in B's fonts folder moves the app's count (`ThemeStore.shared.fontFiles`), so every window's text is laid out once more, not only B's.
 
+## Lane studio, wave 5
+
+Written without compiling: expect compile errors.
+
+What wave 4 left of the gallery (its "Not written" table above), finished. Every specimen is the app's own view on sample
+data; where the Swift app has no view of its own the system's control stands in the gallery with a line saying so.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| SD02 | Open Theme Studio, area All: Status bar, Icon tabs, Readouts' handle | The three specimens of the window's module are drawn as before (nothing empty) | `StudioView<Extras>`, `GalleryView<Extras>`, `SpecimenFrame`, `SpecimenContent.view(for:context:extras:)`, `ReadoutsSpecimen<Handle>` (StudioUI); `StudioWindowController.show(theme:environment:store:extras:)`; `StudioLauncher.show` passes `{ WindowSpecimens.view(for: $0) }` (`@ViewBuilder`, `some View`) |
+| SD02 | `python3 -I macos/scripts/standards.py` | No any-view for `WindowSpecimens.swift`; `GalleryExtras.swift` is gone (any-view 19 to 14 in all) | the same |
+| SD02 | `swift test --filter StudioTests`, previews | They build with `StudioView(session:store:)` (`Extras == EmptyView`): the window's three specimens are empty there by construction, because the test target has no window module to build them; only the titles show | `StudioView.swift` (the `EmptyView` init), `Tests/StudioTests/StudioSnapshot.swift` (unchanged) |
+| SD02 | Area Sidebar, "Tiles and tabs" | Under the three sizes: the list's own tile for a plain terminal (quiet, running, bell, unread, failed), for an agent with its logo (quiet, working with the light, needs input, done, failed) and the agent's again on the selected row's tint. A tile with "Play a status change": each press goes working to needs input or back, played by the status motion in use (badge pop by default; the flare only where Settings chose it and the core's tables are there). Two count badges and "Turn the counts over": the digits roll (12 to 13, 19 to 20) | `SidebarUI/Samples/TileStatesSample.swift`, `StudioUI/Gallery/TilesSpecimen.swift` |
+| SD02 | Area Sidebar, "Drag and drop" | Two short lists of three terminals. Left: "sidebar polish" outlined in the primary, the dragged "diff perf" as the compact chip on its lower edge. Right: a 2 pt line in the gap under the first card, the dragged row as a lifted card with a shadow under it, its row dimmed where it stood. Under them the chain mark (a link glyph) before a notes count. Nothing answers a click | `SidebarUI/Samples/DragSample.swift` (the internal `SidebarView(…caught:)`), `RowMarksSample.swift` (`ChainMarkSpecimen`), `StudioUI/Gallery/DropsSpecimen.swift` |
+| SD02 | Area Chrome, "Chrome", last line | The row's × in a 28 pt outlined square (hover: its fill and the system tooltip), and the × on the selected row's tint | `RowMarksSample.swift` (`CloseHitSpecimen`), `ChromeSpecimen.swift` |
+| SD02 | Area Chrome, "Tabs and chips" | A second title row with the long path as the folder crumb writes it (parents muted), the pull request and ports as far as the width allows; then three gauges: "Opus 4.5" 41 % with a primary meter, 82 % with a warning meter, 96 % without a model | `ChipsSpecimen.swift`, `PanesUI/Samples/GaugeSpecimen.swift` |
+| SD02 | Area Ambient, "Windows" | Under the host cards: the first run's card (Step 1 of 3, Skip setup, "Where do you work?", the folder rows, Back, three dots with the first a bar, Continue in the primary, not dimmed), then Licenses (three package rows, the first selected, "3 packages", the package's head and two license texts in the code font), then "Show About Wormhole" with the line that About is the system's panel; the button opens the standard About panel | `AuxWindows/Shared/WindowPartsSpecimens.swift`, `AuxModel/Samples/SampleLicenses.swift`, `StudioUI/Gallery/WindowsSpecimen.swift` |
+| SD02 | With the Studio in front and the Windows specimen on the page: press Return, press ⌘O | Neither reaches the specimen's card (no step change, no folder chosen): the card's keys are off in a picture (`stepKeys`) | `StepCard.swift` (`StepFooter`), `FolderStep.swift`, `WindowPartsSpecimens.swift` |
+| SD02 | First run for real (a fresh data dir, or Replay intro): Return on a step, ⌘O on the folder step | As before: Return continues, ⌘O opens the folder panel (`stepKeys` is true by default) | the same |
+| SD02 | Area Settings, "System controls" | Four parts, each with a muted line saying macOS draws it and a theme does not change it: a label whose tooltip appears on hover; "Open a menu" (a system menu with a destructive item); "Show a question" (the system's alert as a sheet on the Studio, Save / Don't save / Cancel, none does anything); a short list with the system's scroll bar | `StudioUI/Gallery/SystemSpecimen.swift`, `StudioWords.swift` |
+| SD02 | Area Settings, "Menus" | Under the three triggers the rev picker's opened list: a search row, HEAD, main with a check, a branch, a tag, a commit with its subject, on `surface.overlay`. The search box does not take the keyboard from the Studio | `PanelUI/Shell/RevListSpecimen.swift`, `RevPicker.swift` (`RevList` internal, `takesKeys`) |
+| SD02 | Changes or History in a real window: open the "vs" picker | As before: the popover opens with the search box focused | `RevPicker.swift` |
+| SD02 | Select `surface.overlay`, then `scrollbar.thumb` in the token list | The outline goes round the rev list (and "Used by" lists "menu"); round the diff's overflow bar where the Diff specimen's code runs past its column ("Used by" lists "scrollbar") | `.marked("menu")` `RevPicker.swift`, `.marked("scrollbar")` `PanelUI/Diff/OverflowCue.swift`, `gen-gallery-uses.py` |
+| SD02 | `python3 -I macos/scripts/gallery.py` | ok; GalleryUses.swift lists 49 components | `GalleryUses.swift` (regenerated) |
+
+Not written, and why:
+
+| row | what | why |
+|---|---|---|
+| SD02 | `tooltip` and `dialog` marks ("Used by") | The Swift app draws neither: tooltips are `.help`, questions `NSAlert`. A mark on the system's control would claim a token it does not draw. `tooltip.*` is outlined on the readouts; the sheets on `surface.overlay` (new profile, probe, worktree) are forms with stores of their own, not GPUI's dialog |
+| SD02 | The status change caught a third of the way per variant | `StatusTile` changes by SwiftUI transitions and the flare by a private animatable; neither can be held at a time. The change is played on a press instead, by the motion in use |
+| SD02 | Counts caught half turned | No rolling number of the app's own: `CountBadge` uses the system's numeric transition. The counts turn on a press |
+| SD02 | Row-end buttons pulled out (`flush_left`/`flush_right`) | The Swift app has no such helper: its title rows place their buttons by their own insets, so there is no component to show |
+| SD02 | About as a themed card | About is the system's standard panel in the Swift app (`AboutPanel`); shown by its button and note |
+| SD02 | TEST | none: no data, trust or wire format touched |
+
+Least sure to compile: `DragSample.swift` (the internal `SidebarView` init, `LiveDrag`/`DropAim` values, and the line's place worked out from `SidebarMetrics` rather than measured: it may sit a point or two off the gap); the generic chain (`StudioWindowController.show<Extras>` with a `@ViewBuilder` closure returning `WindowSpecimens.view`'s opaque type, and `SpecimenContent.view`'s non-escaping `@MainActor` closure); `keyboardShortcut(keys ? … : nil)` in `StepCard.swift` and `FolderStep.swift`.
