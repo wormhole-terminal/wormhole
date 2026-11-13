@@ -8,11 +8,8 @@ import TerminalUI
 extension WindowHub {
     func sayInBar(_ notice: Notice, detail: String?) {
         guard let overlay = selectedOverlay else { return }
+        if overlay.sayInBar(notice) { return }
         switch notice {
-        case .copied(.programLines), .copied(.programCharacters), .copied(.namedLines), .copied(.namedCharacters): overlay.sayInBar(.info, notice.words)
-        case .failed(.putAtPrompt):
-            overlay.sayInBar(.warning, notice.words)
-            TerminalOverlay.announce(notice.words)
         case .warned(.hostFallback), .warned(.dataFolder), .warned(.moveToApplications):
             overlay.bars.hostNotice = detail ?? notice.words
         default: break
@@ -27,4 +24,19 @@ extension WindowHub {
     }
 
     public var selectedHostNotice: String? { selectedOverlay?.bars.hostNotice }
+}
+
+extension TerminalOverlay {
+    /// The notices said in the terminal they are about, in its own bar (`say_in_bar`); false for any other kind.
+    func sayInBar(_ notice: Notice) -> Bool {
+        switch notice {
+        case .copied(.programLines), .copied(.programCharacters), .copied(.namedLines), .copied(.namedCharacters):
+            sayInBar(.info, notice.words)
+        case .failed(.putAtPrompt):
+            sayInBar(.warning, notice.words)
+            Self.announce(notice.words)
+        default: return false
+        }
+        return true
+    }
 }

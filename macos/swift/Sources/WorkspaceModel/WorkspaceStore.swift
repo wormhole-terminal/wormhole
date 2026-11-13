@@ -48,6 +48,7 @@ public final class WorkspaceStore {
     /// How long ago `since` was (`TerminalSummary.since`), in words.
     public func waited(since: UInt64) -> Waited? { backend.waited(since: since) }
     public func programName(of id: TerminalID) -> String? { backend.programName(of: id) }
+    public func shellName(of id: TerminalID) -> String? { backend.shellName(of: id) }
     /// What is wrong with terminal `id`'s session host, while something is (the bar over its pane).
     public func hostProblem(of id: TerminalID) -> HostProblem? { backend.hostProblem(of: id) }
     public func reconnect(_ id: TerminalID) { backend.reconnect(id) }

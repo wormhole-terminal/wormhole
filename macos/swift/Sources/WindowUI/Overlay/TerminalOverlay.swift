@@ -26,24 +26,35 @@ final class TerminalOverlay {
     let size = SizeReadoutModel()
     var bars = PaneOverlayState()
     var exitCode: Int?
+    /// What this terminal ran (`shell_name`), for the exited bar; nil falls back to the window's.
+    var shell: String?
     /// The shell ended because its session host went away with it (the exited bar says so).
     var hostLost = false
     /// "Wait" was pressed on the bar for a host that does not answer: it stays away until the host answers again.
     var waiting = false
     /// What the bar says of the session host; a program's clipboard question goes over it and gives it back.
     private var hostBar: PaneBar?
+    /// The notice said in the bar, kept while a question or a host's trouble is in front of it.
+    private var note: PaneBar?
     /// Why ending the host from its bar failed, until something else happens.
     var endFailure: String?
     /// The bars' buttons, over the window's own actions.
     @ObservationIgnored let actions: BarActions
 
     init(view: MetalTerminalView, actions: BarActions, notices: NoticeCenter) {
+        let box = WeakOverlay()
         let find = FindModel(searcher: ScreenSearching(view: view))
         let blocks = BlockController(
             source: CoreBlocks(
                 terminal: { [weak view] in view?.source.scrollback },
                 palette: { [weak view] in view?.renderer.palette.slots.map(Self.rgb) ?? [] }),
-            say: { notices.post($0) }, announce: Self.announce)
+            // A notice a terminal's own action makes is said in that terminal's bar (`say_in_bar`), not the selected one's.
+            say: { notice in
+                if !notices.chipOn(), box.overlay?.sayInBar(notice) == true { return }
+                notices.post(notice)
+            },
+            announce: Self.announce)
+        box.overlay = self
         (self.find, self.blocks, self.view) = (find, blocks, view)
         minimap = CoreMinimap(
             terminal: { [weak view] in view?.source.scrollback }, palette: { [weak view] in view?.renderer.palette ?? .spike })
@@ -65,8 +76,9 @@ final class TerminalOverlay {
         find.outputChanged()
     }
 
-    func exited(code: Int32?, hostLost: Bool) {
+    func exited(code: Int32?, hostLost: Bool, shell: String?) {
         exitCode = code.map(Int.init)
+        self.shell = shell
         self.hostLost = hostLost
         bars.exited = true
     }
@@ -82,22 +94,25 @@ final class TerminalOverlay {
         askEnded()
     }
 
-    /// What the chip would have said, in the bar for a few seconds (`say_in_bar`), unless a question or a host's trouble holds it.
+    /// What the chip would have said, in the bar for a few seconds (`say_in_bar`). A question or a host's trouble holds
+    /// it behind them: it shows when they go, until its few seconds are up (`pane_bar`).
     func sayInBar(_ kind: BannerKind, _ text: String) {
-        guard bars.bar == nil else { return }
         let bar = PaneBar.notice(kind, text)
-        bars.bar = bar
+        note = bar
+        if bars.bar == nil { bars.bar = bar }
         Task { [weak self] in
             // one-shot: the bar's few seconds (`say_in_bar`), then it goes unless something else took it.
             try? await Task.sleep(for: .seconds(4))
-            if self?.bars.bar == bar { self?.bars.bar = nil }
+            guard let self, note == bar else { return }
+            note = nil
+            if bars.bar == bar { bars.bar = nil }
         }
     }
 
-    /// No program's question is up (or none now): the bar is the host's trouble, if there is any.
+    /// No program's question is up (or none now): the bar is the host's trouble, else the notice kept behind them.
     func askEnded() {
         if case .ask? = bars.bar { return }
-        bars.bar = hostBar
+        bars.bar = hostBar ?? note
     }
 }
 
@@ -137,3 +152,6 @@ final class BarActions: PaneBarActions {
     func closeTerminal() { onClose() }
     func dismissHostNotice() { onDismissHostNotice() }
 }
+
+/// The overlay a closure made in its own `init` is for, set at the end of it.
+@MainActor private final class WeakOverlay { weak var overlay: TerminalOverlay? }

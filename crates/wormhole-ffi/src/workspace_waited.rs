@@ -25,6 +25,12 @@ impl Workspace {
         Waited { words: elapsed(waited), next_in_ms: next.as_millis() as u64 }
     }
 
+    /// The program terminal `id` started with ("fish"): what its exited bar names (`shell_name`, core's rule, kept per terminal).
+    /// Empty for a terminal the workspace does not have.
+    pub fn shell_name(&self, id: i64) -> String {
+        self.shared().peek_model(|model| model.facts(id).map(|facts| facts.shell.clone()).unwrap_or_default())
+    }
+
     /// What runs in terminal `id`, whatever title it set: the agent, the running command or the shell (`names::program_name`,
     /// the status bar's size item: "zsh · 90×40"). Empty for a terminal the workspace does not have.
     pub fn program_name(&self, id: i64) -> String {

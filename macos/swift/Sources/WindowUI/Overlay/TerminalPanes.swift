@@ -58,7 +58,7 @@ struct TerminalSurface: View {
                     }
                     SizeReadoutChip(model: overlay.size)
                     PaneOverlays(
-                        state: overlay.bars, shell: hub.shell, exitCode: overlay.exitCode, hostLost: overlay.hostLost,
+                        state: overlay.bars, shell: overlay.shell ?? hub.shell, exitCode: overlay.exitCode, hostLost: overlay.hostLost,
                         gridWidth: proxy.size.width - minimap - 2 * MetalRenderer.padding, trailingInset: minimap, actions: overlay.actions)
                 }
             }
