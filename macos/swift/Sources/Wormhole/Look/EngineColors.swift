@@ -1,6 +1,6 @@
-// The palette the terminals are drawn with, told to the engine (`set_terminal_colors`): it answers programs' colour
-// queries (OSC 4, 10, 11, 12) and `CSI ? 996 n` with it, and tells the programs that asked (mode 2031) when the theme
-// turns light or dark. Every live terminal hears at once, and the ones started later get it at spawn.
+// The palette of the profile Wormhole is in, told to the engine (`set_terminal_colors`): what a terminal starts with and
+// answers programs' colour queries with (OSC 4, 10, 11, 12, `CSI ? 996 n`, mode 2031) until its view tells it the colours
+// it is drawn in (`MetalTerminalView.setPalette`, `Terminal.set_colors`), which a window of another profile needs.
 
 #if WITH_UNIFFI
     import TerminalCore

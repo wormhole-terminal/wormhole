@@ -3,6 +3,11 @@
 //! and cursor) and whether the theme is light or dark (`CSI ? 996 n`, and mode 2031's reports when it changes).
 //! Swift tells it the colours it draws with whenever the theme changes; a terminal started later gets them in its
 //! spawn options (`launch`), every live one at once. The engine keeps what a program set itself on top.
+//!
+//! A terminal's view may tell it the colours it is drawn in itself (`Terminal::set_colors`, as each GPUI terminal
+//! view shares its own window's palette): a window of another profile than the one Wormhole is in draws that
+//! profile's theme, and a program is answered with what it is drawn in. Such a terminal no longer hears the look
+//! of all.
 
 use std::sync::{Arc, Mutex, PoisonError, RwLock, Weak};
 
@@ -39,11 +44,7 @@ pub(crate) fn follow(terminal: &Arc<Terminal>) {
 /// colours again does nothing.
 #[uniffi::export]
 pub fn set_terminal_colors(slots: Vec<u32>) {
-    let mut colors = Box::new([Rgb::default(); COLOR_COUNT]);
-    for (slot, value) in colors.iter_mut().zip(&slots) {
-        *slot = Rgb { r: (value >> 16) as u8, g: (value >> 8) as u8, b: *value as u8 };
-    }
-    let look = EngineLook { scheme: scheme_of(colors[COLOR_COUNT - 2]), colors };
+    let look = look_of(&slots);
     {
         let mut current = LOOK.write().unwrap_or_else(PoisonError::into_inner);
         if current.as_ref() == Some(&look) {
@@ -54,11 +55,40 @@ pub fn set_terminal_colors(slots: Vec<u32>) {
     let live: Vec<Arc<Terminal>> =
         TERMINALS.lock().unwrap_or_else(PoisonError::into_inner).iter().filter_map(Weak::upgrade).collect();
     for terminal in live {
-        terminal.with_pty(|pty| {
+        terminal.tell(&look);
+    }
+}
+
+#[uniffi::export]
+impl Terminal {
+    /// The colours this terminal is drawn with, `slots` as `set_terminal_colors` takes them: its programs are
+    /// answered with these, and told (mode 2031) when they turn light or dark. From now on the look of all no
+    /// longer reaches it: whoever draws it tells it every change.
+    pub fn set_colors(&self, slots: Vec<u32>) {
+        TERMINALS
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .retain(|known| !std::ptr::eq(known.as_ptr(), self));
+        self.tell(&look_of(&slots));
+    }
+}
+
+impl Terminal {
+    fn tell(&self, look: &EngineLook) {
+        self.with_pty(|pty| {
             pty.set_default_colors(&look.colors);
             pty.set_color_scheme(look.scheme);
         });
     }
+}
+
+/// `slots` as the engine's table, with the scheme its background gives.
+fn look_of(slots: &[u32]) -> EngineLook {
+    let mut colors = Box::new([Rgb::default(); COLOR_COUNT]);
+    for (slot, value) in colors.iter_mut().zip(slots) {
+        *slot = Rgb { r: (value >> 16) as u8, g: (value >> 8) as u8, b: *value as u8 };
+    }
+    EngineLook { scheme: scheme_of(colors[COLOR_COUNT - 2]), colors }
 }
 
 /// Light or dark by the background's luma (Rec. 601 weights in thousandths; half of 255,000 is the middle), as the

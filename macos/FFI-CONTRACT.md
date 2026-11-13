@@ -1419,6 +1419,9 @@ All additive; the core decides, Swift asks.
   background, cursor) as drawn; the scheme is light by the background's luma (the GPUI palette's rule). Every live terminal is told at
   once (`set_default_colors`, `set_color_scheme`: OSC 4/10/11/12 queries, `CSI ? 996 n` and mode 2031 reports), later ones at spawn.
   Swift calls it whenever its palette changes. Telling the same colours again does nothing.
+  `Terminal.set_colors(slots)` (the same slots) tells one terminal the colours it is drawn in: from then on only that call reaches it,
+  never the free function. Every terminal's view calls it with its palette (the GPUI view's `share_palette`), so a terminal in a window
+  of another profile answers with that profile's theme; the free function is what a terminal starts with and has until a view dresses it.
 - **Frame layout 2**: after the fold markers, with header flag bit 5 (32), the colours programs set: a count, then `(slot, 0xRRGGBB)`
   word pairs, the whole table as it is now (count 0: all the theme's again). Sent when it changed and with every full frame while any is
   set; a frame without it leaves the table as it was. The renderer draws its palette with these over it: cells, the background behind the

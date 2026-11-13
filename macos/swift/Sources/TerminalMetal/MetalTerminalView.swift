@@ -156,9 +156,12 @@ public final class MetalTerminalView: NSView {
     }
     private var metalLayer: CAMetalLayer? { layer as? CAMetalLayer }
 
-    /// A new theme's colours: the renderer's palette, and the scroll bar drawn for the new background.
+    /// A new theme's colours: the renderer's palette, and the scroll bar drawn for the new background. The engine hears
+    /// them too, so a program that asks (OSC 4, 10, 11, 12) is answered with the colours this terminal is drawn in,
+    /// whichever profile its window is in (`share_palette` in the GPUI app's terminal view).
     public func setPalette(_ palette: TerminalPalette) {
         renderer.setPalette(palette)
+        source.setEngineColors(palette.slots.prefix(Int(PackedColor.cursor) + 1).map { UInt32($0.x) << 16 | UInt32($0.y) << 8 | UInt32($0.z) })
         scroller.adapt(toBackground: palette.background)
         requestRedraw()
     }

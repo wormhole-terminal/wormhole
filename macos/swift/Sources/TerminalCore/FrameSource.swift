@@ -120,6 +120,9 @@ public protocol FrameSource: AnyObject, Sendable {
     /// Folds and Probe marks, when the source has them (the real engine).
     var probes: (any TerminalProbes)? { get }
 
+    /// The colours the terminal is drawn with, for the engine to answer programs' colour queries with (OSC 4, 10, 11, 12,
+    /// `CSI ? 996 n`, mode 2031): `0xRRGGBB`, the 256 indexed ones, then foreground, background and cursor.
+    func setEngineColors(_ slots: [UInt32])
     /// What programs may do with the clipboard (OSC 52): Settings' `clipboard_read` and `clipboard_write`.
     func setClipboardRules(read: ClipboardReadRule, writeAllowed: Bool)
     /// The terminal is shown where the person can see it: the only state in which a read is asked about.
@@ -146,6 +149,7 @@ extension FrameSource {
     public var interaction: (any TerminalInteraction)? { nil }
     public var scrollback: (any TerminalScrollback)? { nil }
     public var probes: (any TerminalProbes)? { nil }
+    public func setEngineColors(_ slots: [UInt32]) {}
     public func setClipboardRules(read: ClipboardReadRule, writeAllowed: Bool) {}
     public func setOnScreen(_ onScreen: Bool) {}
     public func giveClipboard(_ text: String) {}

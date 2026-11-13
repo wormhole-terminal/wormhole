@@ -29,7 +29,8 @@ final class TerminalLook {
     /// The terminals of every window, asked for when a change is to reach them.
     private let terminals: () -> [TerminalViews]
     private let themes: ThemeStore
-    /// The engine keeps one palette for every terminal's colour queries: only the look of the profile Wormhole is in tells it.
+    /// Each terminal's view tells the engine the colours it is drawn in (`MetalTerminalView.setPalette`); the engine also
+    /// keeps one palette for a terminal no view has dressed yet, and only the look of the profile Wormhole is in tells it that.
     private let sharesEngineColours: Bool
 
     init(terminals: @escaping () -> [TerminalViews], themes: ThemeStore = .shared, sharesEngineColours: Bool = true) {
@@ -85,9 +86,7 @@ final class TerminalLook {
         palette = next
         terminals().forEach { $0.forEach { $0.setPalette(next) } }
         #if WITH_UNIFFI
-            // The engine answers programs' colour queries (OSC 4, 10, 11, 12) and `CSI ? 996 n` with what is drawn, and
-            // tells the programs that asked (mode 2031) when the theme turns light or dark: every live terminal and the
-            // ones started later.
+            // What a terminal starts with, and has until a view dresses it: the views above told the engine their own.
             if sharesEngineColours { EngineColors.share(next) }
         #endif
     }
