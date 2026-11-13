@@ -112,7 +112,7 @@ import Testing
         let root = try Repo.make()
         defer { Repo.cleanup(root) }
         let opened = Opened()
-        let backends = try Repo.backends(created: { made, environment in await opened.add(made, environment) })
+        let backends = try Repo.backends(created: { made, environment, _ in await opened.add(made, environment) })
         let worktrees = backends.worktrees
         let folder = root.path
 
@@ -125,7 +125,7 @@ import Testing
         let refused = await worktrees.plan(branch: "no spaces", repo: folder)
         #expect(refused == .refused("A branch name can't contain spaces"))
 
-        let creation = await worktrees.create(branch: "fix/login", repo: folder)
+        let creation = await worktrees.create(branch: "fix/login", repo: folder, command: nil)
         #expect(creation == nil)
         defer { try? FileManager.default.removeItem(atPath: expected) }
         let made = try #require(await worktrees.made(at: expected))
@@ -145,7 +145,7 @@ import Testing
 
         // A project that is not trusted: nothing is written.
         let blocked = try Repo.backends(allowed: { _ in "Trust the project first" }).worktrees
-        let (why, refusal) = await (blocked.problem(making: folder), blocked.create(branch: "other", repo: folder))
+        let (why, refusal) = await (blocked.problem(making: folder), blocked.create(branch: "other", repo: folder, command: nil))
         #expect(why == "Trust the project first" && refusal == "Trust the project first")
         #expect(!FileManager.default.fileExists(atPath: root.deletingLastPathComponent().appendingPathComponent("\(name)-worktrees/other").path))
     }

@@ -15,16 +15,18 @@ public enum GitBridge {
     ///   - worktreeAllowed: why a worktree may not be made of a folder (the project is not trusted), or nil.
     ///     Required: git does not know about project trust, so nothing is written unless the window says so.
     ///   - worktreeCreated: where the window opens the terminal for a worktree that was just made.
+    ///   - profile: the window's own profile, whose database remembers the worktrees and their ports (nil: the data folder's).
     ///   - worktreeBase: the setting `worktree_base` (`~` already expanded); nil puts them beside the repository.
     ///   - binarySizeUnits: the setting `size_units`: KiB rather than KB in a diff's words.
     public static func makeBackends(
         worktreeAllowed: @escaping RealWorktreeBackend.Allowed,
-        worktreeCreated: @escaping RealWorktreeBackend.Created = { _, _ in },
-        worktreeBase: String? = nil, cloneBuildFolders: Bool = false, binarySizeUnits: Bool = false
+        worktreeCreated: @escaping RealWorktreeBackend.Created = { _, _, _ in },
+        profile: String? = nil, worktreeBase: String? = nil, cloneBuildFolders: Bool = false, binarySizeUnits: Bool = false
     ) throws -> GitBackends {
         let git = try Git()
         git.setBinaryUnits(binary: binarySizeUnits)
         let service = try WorktreeService(base: worktreeBase, cloneBuildFolders: cloneBuildFolders)
+        if let profile { _ = service.followProfile(profile: profile) }
         return GitBackends(
             git: RealGitBackend(git),
             worktrees: RealWorktreeBackend(service, allowed: worktreeAllowed, created: worktreeCreated))

@@ -27,9 +27,9 @@
 
         private func perform(_ effect: PanelEffect) async {
             switch effect {
-            case .type(let command, let place): terminal(for: place)?.source.write(Data((command + "\r").utf8))
+            case .type(let command, let place): await terminal(for: place)?.source.write(Data((command + "\r").utf8))
             case .paste(let text, let submit, let place):
-                guard let source = terminal(for: place)?.source else { return }
+                guard let source = await terminal(for: place)?.source else { return }
                 source.paste(text)
                 if submit {
                     // The program takes the paste first; Return a moment later is what the person would press.
@@ -49,7 +49,9 @@
             if let run = spec.run, let view = hub.terminals.view(for: id) { view.source.write(Data((run + "\r").utf8)) }
         }
 
-        private func terminal(for place: EffectPlace) -> MetalTerminalView? {
+        /// The terminal's view, once there is one: a terminal made a moment ago has its view drawn a frame later, and what is
+        /// typed into it waits for that (up to a second) instead of going nowhere.
+        private func terminal(for place: EffectPlace) async -> MetalTerminalView? {
             guard let hub else { return nil }
             let id: TerminalID?
             switch place {
@@ -60,7 +62,12 @@
                 // The terminal it is typed into comes in front first.
                 if let id, id != hub.state.selected { hub.send(.select(id)) }
             }
-            return id.flatMap { hub.terminals.view(for: $0) }
+            guard let id else { return nil }
+            for _ in 0..<20 {
+                if let view = hub.terminals.view(for: id) { return view }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            return nil
         }
 
         private func existing(named name: String) -> TerminalID? {

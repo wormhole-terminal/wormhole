@@ -79,7 +79,10 @@
             case .front(let terminal): app.show(terminal: Int(terminal))
             case .closeAsked(let terminal):
                 app.closeTerminal(Int(terminal), fromCommandLine: true) { [weak self] in self?.handle.closeQuestionOver() }
-            case .worktreeAsked(let folder, let branch, let command): app.hub.askWorktree(branch: branch, in: folder, command: command)
+            case .worktreeAsked(let folder, let branch, let command):
+                // The sheet tells the control line when it is gone, so a second request is answered Failed while it is up.
+                app.hub.panel.worktrees.sheetChanged = { [weak self] up in self?.handle.worktreeSheet(up: up) }
+                app.hub.askWorktree(branch: branch, in: folder, command: command)
             case .gauge(let terminal, let agent, let model, let context):
                 // In the window that holds the terminal.
                 app.session(holding: Int(terminal))?.hub.gauges.tell(

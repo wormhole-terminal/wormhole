@@ -16,6 +16,10 @@ import WorkspaceModel
     import GitBridge
 #endif
 
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
+}
+
 @MainActor
 enum PanelBackendsFactory {
     /// The backends, and where the Notes tab keeps its text (nil: nowhere, as in the sample).
@@ -62,12 +66,20 @@ enum PanelBackendsFactory {
                 // A worktree was made: its folder gets a terminal, which first runs the trusted project's setup. Its ports
                 // (`WORMHOLE_PORT`, `WORMHOLE_PORTS`) are in the shell's environment: the FFI's `spawn_options` reads them from the
                 // worktrees Wormhole made, for any terminal started in or under the folder (as the GPUI spawn hook does).
-                worktreeCreated: { made, _ in
+                worktreeCreated: { made, _, command in
                     let setup = await project.worktreeSetup(of: made.repo)
-                    await MainActor.run { _ = store.send(.newTerminalIn(made.folder)) }
-                    // Pasted (bracketed) and submitted into the terminal just made for it, as one line whatever it holds.
-                    if let setup { await effects?.perform([.paste(setup, submit: true, in: .current)]) }
-                })
+                    // The project's setup first, then what was asked for, as one line: the command starts once the setup has
+                    // finished and only if it worked (`setup && command`), as the GPUI app does.
+                    let command = command?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+                    let line = [setup, command].compactMap { $0 }.joined(separator: " && ").nilIfEmpty
+                    guard let line else {
+                        await MainActor.run { _ = store.send(.newTerminalIn(made.folder)) }
+                        return
+                    }
+                    // Pasted (bracketed) and submitted into the terminal made for it (`.new` waits for its view), as one line
+                    // whatever it holds, not into whichever terminal is selected by then.
+                    await effects?.perform([.paste(line, submit: true, in: .new(cwd: made.folder))])
+                }, profile: profile)
             if let real {
                 backends.git = real.git
                 backends.worktrees = real.worktrees

@@ -18,13 +18,14 @@ struct WorktreeClose {
 extension AppController {
     /// What closing `terminals` adds to the question, or nil when none of them is in a worktree Wormhole made.
     func worktreeClose(of terminals: [TerminalSummary], in session: WindowSession, group: Bool) async -> WorktreeClose? {
-        let outside = session.hub.state.sections.flatMap(\.rows).map(\.terminal).filter { other in !terminals.contains { $0.id == other.id } }
+        // Every terminal of the window, the ones in a folded group too (`state.all`, not the rows the list shows).
+        let outside = session.hub.state.all.filter { other in !terminals.contains { $0.id == other.id } }
         var found: [(made: MadeWorktree, removable: Bool)] = []
         for terminal in terminals {
             guard let folder = Self.expanded(terminal.folder), let made = await session.hub.panel.worktrees.made(at: folder),
                 !found.contains(where: { $0.made.folder == made.folder })
             else { continue }
-            let shared = outside.contains { Self.expanded($0.folder).map { $0.hasPrefix(made.folder) } ?? false }
+            let shared = outside.contains { Self.expanded($0.folder).map { Self.inside($0, made.folder) } ?? false }
             found.append((made, !terminal.isDirty && (!group || !shared)))
         }
         guard let first = found.first else { return nil }
@@ -45,6 +46,11 @@ extension AppController {
         default: note += AuxText.worktreeGroupSome
         }
         return WorktreeClose(note: note, also: removable.isEmpty ? nil : AuxText.worktreeRemoveMany, remove: removable)
+    }
+
+    /// Whether `path` is the folder or under it, by whole path components: `…/fix-login2` is not inside `…/fix-login`.
+    static func inside(_ path: String, _ folder: String) -> Bool {
+        path == folder || path.hasPrefix(folder.hasSuffix("/") ? folder : folder + "/")
     }
 
     /// The sidebar writes a folder with `~`; the panel and git read real paths.

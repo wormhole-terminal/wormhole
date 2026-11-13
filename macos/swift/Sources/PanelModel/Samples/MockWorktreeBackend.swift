@@ -24,7 +24,7 @@ public actor MockWorktreeBackend: WorktreeBackend {
         return .ready(branch: branch, folder: "/\(parent)/\(name)-worktrees/\(branch.replacingOccurrences(of: "/", with: "-"))")
     }
 
-    public func create(branch typed: String, repo folder: String) async -> String? {
+    public func create(branch typed: String, repo folder: String, command: String?) async -> String? {
         if let refusal { return refusal }
         created.append(typed)
         return nil
