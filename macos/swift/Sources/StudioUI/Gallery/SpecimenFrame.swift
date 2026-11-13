@@ -5,9 +5,10 @@ import DesignSystem
 import StudioModel
 import SwiftUI
 
-struct SpecimenFrame: View {
+struct SpecimenFrame<Extras: View>: View {
     let specimen: Specimen
     let context: GalleryContext
+    let extras: @MainActor (String) -> Extras
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -16,7 +17,7 @@ struct SpecimenFrame: View {
                 Text(specimen.title).textCase(.uppercase).font(TextRole.caption.font.weight(.semibold)).foregroundStyle(tokens.textMuted).fixedSize()
                 Text(specimen.detail).font(TextRole.caption.font).foregroundStyle(tokens.textFaint).lineLimit(1)
             }
-            SpecimenContent.view(for: specimen.id, context: context).padding(Space._2)
+            SpecimenContent.view(for: specimen.id, context: context, extras: extras).padding(Space._2)
         }
         .foregroundStyle(tokens.textPrimary)
         .accessibilityElement(children: .contain)

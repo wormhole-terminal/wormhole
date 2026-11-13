@@ -150,6 +150,10 @@ enum GalleryUses {
         TokenUse(id: "checkbox", label: "checkbox", area: .settings, tokens: [
             "checkbox.background", "checkbox.border", "checkbox.checked", "metrics.radius_sm", "text.on_primary",
         ]),
+        TokenUse(id: "menu", label: "menu", area: .settings, tokens: [
+            "border.strong", "divider", "git.branch", "metrics.border_width", "metrics.divider_width",
+            "metrics.radius", "primary", "state.hover", "surface.overlay", "text.muted", "text.primary",
+        ]),
         TokenUse(id: "banner", label: "banner", area: .settings, tokens: [
             "banner.danger.background", "banner.danger.border", "banner.info.background", "banner.info.border",
             "banner.success.background", "banner.success.border", "banner.warning.background",
@@ -168,6 +172,9 @@ enum GalleryUses {
         ]),
         TokenUse(id: "resize.handle", label: "resize handle", area: .ambient, tokens: [
             "metrics.border_width", "resize.handle.active", "resize.handle.hover",
+        ]),
+        TokenUse(id: "scrollbar", label: "scrollbar", area: .settings, tokens: [
+            "scrollbar.thumb", "state.hover", "surface.window",
         ]),
         TokenUse(id: "terminal", label: "terminal", area: .all, tokens: [
             "state.highlight", "surface.window", "terminal.*",

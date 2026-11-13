@@ -45,8 +45,6 @@ final class StudioLauncher {
     }
 
     func show(store: ThemeStore = .shared) {
-        // The window's own chrome in the gallery: the Studio is a layer below the window and is handed its specimens.
-        GalleryExtras.view = { WindowSpecimens.view(for: $0) }
         #if WITH_UNIFFI
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)
             SketchSource.preset = { WindowSketches.blocks(preset: $0, width: $1) }
@@ -57,7 +55,8 @@ final class StudioLauncher {
                     recall: { studioExportDir().map { URL(fileURLWithPath: $0) } },
                     remember: { studioRememberExportDir(dir: $0.path) }))
             do {
-                try controller.show(theme: store.theme.name, environment: environment, store: store)
+                // The window's own chrome in the gallery: the Studio is a layer below the window and is handed its specimens.
+                try controller.show(theme: store.theme.name, environment: environment, store: store) { WindowSpecimens.view(for: $0) }
             } catch {
                 FileHandle.standardError.write(Data("theme studio: \(error)\n".utf8))  // text: a log line
             }

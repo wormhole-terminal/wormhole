@@ -67,11 +67,13 @@ struct RevPicker: View {
 }
 
 /// The popover's content: the search box and the list under it, grouped by what each ref is.
-private struct RevList: View {
+struct RevList: View {
     let selected: Rev?
     let revs: [Rev]
     let headTitle: String
     let hint: String?
+    /// The search box takes the keyboard as the list opens; the Studio's specimen leaves it where it is.
+    var takesKeys = true
     let choose: (Rev?) -> Void
     @State private var query = ""
     @FocusState private var focused: Bool
@@ -107,7 +109,8 @@ private struct RevList: View {
         }
         .frame(width: 260, height: min(CGFloat(matches.count + 1) * Metric.row + Metric.control + 12, 320) + (hint == nil ? 0 : Metric.row))
         .background(tokens.surfaceOverlay)
-        .onAppear { focused = true }
+        .marked("menu")
+        .onAppear { focused = takesKeys }
         // Esc only closes: picking again would fold the open commit and read the list anew.
         .onExitCommand { dismiss() }
     }

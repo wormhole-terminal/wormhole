@@ -1,5 +1,6 @@
 // What each specimen shows: the real views of the modules on sample data, never interactive (a specimen is for
 // looking at, and a click inside one must not act on the sample), except the swatches that select their token.
+// `extras` draws the specimens of the window's own module, which this one cannot name.
 
 import DesignSystem
 import AuxWindows
@@ -12,7 +13,7 @@ import WorkspaceModel
 
 @MainActor
 enum SpecimenContent {
-    @ViewBuilder static func view(for id: String, context: GalleryContext) -> some View {
+    @ViewBuilder static func view<Extras: View>(for id: String, context: GalleryContext, extras: @MainActor (String) -> Extras) -> some View {
         switch id {
         case "sidebar":
             SidebarView(state: MockWorkspace.state, send: { _ in }).frame(height: 560).clipped().allowsHitTesting(false)
@@ -30,8 +31,8 @@ enum SpecimenContent {
             ProjectSpecimen().frame(height: 560).clipped().allowsHitTesting(false)
         case "files":
             FilesSpecimen().frame(height: 360).clipped().allowsHitTesting(false)
-        case "statusbar", "icontabs": ExtraSpecimen(id: id)
-        case "readouts": ReadoutsSpecimen()
+        case "statusbar", "icontabs": extras(id).frame(maxWidth: .infinity, alignment: .leading)
+        case "readouts": ReadoutsSpecimen(handle: extras("resize"))
         case "settings": SettingsSpecimen().allowsHitTesting(false)
         case "tiles": TilesSpecimen()
         case "find": FindSpecimen()
@@ -41,7 +42,9 @@ enum SpecimenContent {
         case "buttons": ButtonsSpecimen()
         case "inputs": InputsSpecimen()
         case "menus": MenusSpecimen()
-        case "windows": AuxWindowsSpecimen()
+        case "windows": WindowsSpecimen()
+        case "drops": DropsSpecimen()
+        case "system": SystemSpecimen()
         case "sketch": SketchSpecimen().marked("sketch")
         case "metrics": MetricsSpecimen()
         case "chrome": ChromeSpecimen()

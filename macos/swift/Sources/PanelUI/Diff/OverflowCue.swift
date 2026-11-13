@@ -45,6 +45,7 @@ struct OverflowCue: View {
             Spacer(minLength: 0)
             Capsule().fill(tokens.stateHover).frame(width: track, height: Self.barHeight)
                 .overlay(alignment: .leading) { Capsule().fill(tokens.scrollbarThumb).frame(width: thumb).offset(x: thumbAt) }
+                .marked("scrollbar")
                 .padding(.bottom, Self.barBottom)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading).padding(.leading, span.lowerBound)

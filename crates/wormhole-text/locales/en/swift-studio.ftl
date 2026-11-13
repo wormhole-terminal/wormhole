@@ -62,6 +62,20 @@ studio-gallery-uses-selected = uses the selected token
 studio-gallery-show-palette = Show the palette
 studio-gallery-show-sheet = Show the shortcut sheet
 studio-gallery-show-quick-panel = Show the quick panel
+studio-gallery-turn-count = Turn the counts over
+studio-gallery-play-status = Play a status change
+
+# Under a control of the gallery that macOS draws, not the theme.
+studio-gallery-system-tooltip = macOS draws tooltips; a theme does not change them.
+studio-gallery-tooltip-here = Rest the pointer here
+studio-gallery-tooltip-sample = A tooltip explains a control
+studio-gallery-system-menu = macOS draws menus; a theme does not change them.
+studio-gallery-show-menu = Open a menu
+studio-gallery-system-dialog = macOS draws questions as its own alerts; a theme does not change them.
+studio-gallery-show-dialog = Show a question
+studio-gallery-system-scrollbar = macOS draws the scroll bars; a theme does not change them.
+studio-gallery-system-about = About Wormhole is the system’s own panel; a theme does not change it.
+studio-gallery-show-about = Show About Wormhole
 
 ## The font picker
 

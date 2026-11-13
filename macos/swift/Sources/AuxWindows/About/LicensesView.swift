@@ -75,7 +75,7 @@ struct LicensesView: View {
     }
 }
 
-private struct PackageRow: View {
+struct PackageRow: View {
     let package: LicenseList.Package
     let selected: Bool
     @Environment(\.tokens) private var tokens

@@ -60,11 +60,13 @@ ELEMENTS = {
     "button.primary": [],
     "input": [],
     "checkbox": [],
+    "menu": ["PanelUI/Shell/RevPicker.swift"],
     "banner": ["DesignSystem/Banner.swift"],
     "palette.row": ["PaletteUI/ResultRow.swift"],
     "readout": ["WindowUI/Columns/ResizeReadout.swift", "TerminalUI/Scaling/SizeReadoutChip.swift", "TerminalUI/Support/ReadoutPill.swift"],
     "readout.block": ["TerminalUI/Blocks/BlockReadout.swift", "TerminalUI/Support/ReadoutPill.swift"],
     "resize.handle": ["WindowUI/Columns/ColumnHandle.swift"],
+    "scrollbar": ["PanelUI/Diff/OverflowCue.swift"],
     "terminal": [],
     "code": [],
 }

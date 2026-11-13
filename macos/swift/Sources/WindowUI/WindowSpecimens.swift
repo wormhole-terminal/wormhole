@@ -1,6 +1,6 @@
 // The window's own chrome on sample data, for the Theme Studio's gallery: the status bar, the right panel's icon tabs and a
 // column's resize handle with its readout, drawn by the views the window uses. The Studio is a layer below the window and
-// cannot name them, so the app hands these to its gallery (`GalleryExtras`).
+// cannot name them, so the app hands these to its gallery (`StudioWindowController.show`'s `extras`).
 // text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
@@ -11,13 +11,13 @@ import WorkspaceModel
 
 @MainActor
 public enum WindowSpecimens {
-    /// The specimen `id` names, or nil for one that is not the window's.
-    public static func view(for id: String) -> AnyView? {
+    /// The specimen `id` names; nothing for one that is not the window's.
+    @ViewBuilder public static func view(for id: String) -> some View {
         switch id {
-        case "statusbar": AnyView(SampleWindow { StatusBarSample() })
-        case "icontabs": AnyView(SampleWindow { PanelTabBar(tab: .changes, select: { _ in }, badges: [.changes: 3, .usage: 2]) })
-        case "resize": AnyView(ResizeSample())
-        default: nil
+        case "statusbar": SampleWindow { StatusBarSample() }
+        case "icontabs": SampleWindow { PanelTabBar(tab: .changes, select: { _ in }, badges: [.changes: 3, .usage: 2]) }
+        case "resize": ResizeSample()
+        default: EmptyView()
         }
     }
 }

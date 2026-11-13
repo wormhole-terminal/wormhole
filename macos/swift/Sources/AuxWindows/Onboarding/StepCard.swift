@@ -44,6 +44,7 @@ struct StepCard<Body: View>: View {
 private struct StepFooter: View {
     let session: OnboardingSession
     @Environment(\.tokens) private var tokens
+    @Environment(\.stepKeys) private var keys
 
     var body: some View {
         let step = session.step
@@ -61,7 +62,7 @@ private struct StepFooter: View {
                 .motion(Motion.selection, value: step.number)
                 .accessibilityHidden(true)
                 Button(step.isLast ? AuxText.start : AuxText.next) { session.send(step.isLast ? .start : .continue) }
-                    .primaryAction().keyboardShortcut(.defaultAction)
+                    .primaryAction().keyboardShortcut(keys ? KeyboardShortcut.defaultAction : nil)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .padding(.horizontal, Space._6)

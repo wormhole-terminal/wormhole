@@ -1,8 +1,9 @@
 // The primitives of `DesignSystem` as the chrome draws them: icon buttons, count badges, every status glyph, a
-// section label folded and open, and a row in each state (`gallery/chrome.rs`).
+// section label folded and open, a row in each state, and the row's × in the room that takes its click (`gallery/chrome.rs`).
 // text-file: sample content of the Theme Studio gallery; the GPUI gallery shows its specimens untranslated too (studio/gallery)
 
 import DesignSystem
+import SidebarUI
 import SwiftUI
 
 struct ChromeSpecimen: View {
@@ -43,6 +44,7 @@ struct ChromeSpecimen: View {
                 Row(isSelected: false, selection: selection, action: {}) { _ in rowLabel("A row") }
                 Row(isSelected: true, selection: selection, action: {}) { _ in rowLabel("The selected row") }
             }
+            Noted("← a 22 pt × in its 28 pt hit area") { CloseHitSpecimen() }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

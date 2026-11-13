@@ -122,6 +122,17 @@ enum StudioWords {
     static var showPalette: String { text("studio-gallery-show-palette", "Show the palette") }
     static var showSheet: String { text("studio-gallery-show-sheet", "Show the shortcut sheet") }
     static var showQuickPanel: String { text("studio-gallery-show-quick-panel", "Show the quick panel") }
+    static var turnCount: String { text("studio-gallery-turn-count", "Turn the counts over") }
+    static var systemTooltip: String { text("studio-gallery-system-tooltip", "macOS draws tooltips; a theme does not change them.") }
+    static var tooltipHere: String { text("studio-gallery-tooltip-here", "Rest the pointer here") }
+    static var tooltipSample: String { text("studio-gallery-tooltip-sample", "A tooltip explains a control") }
+    static var systemMenu: String { text("studio-gallery-system-menu", "macOS draws menus; a theme does not change them.") }
+    static var showMenu: String { text("studio-gallery-show-menu", "Open a menu") }
+    static var systemDialog: String { text("studio-gallery-system-dialog", "macOS draws questions as its own alerts; a theme does not change them.") }
+    static var showDialog: String { text("studio-gallery-show-dialog", "Show a question") }
+    static var systemScrollbar: String { text("studio-gallery-system-scrollbar", "macOS draws the scroll bars; a theme does not change them.") }
+    static var systemAbout: String { text("studio-gallery-system-about", "About Wormhole is the system\u{2019}s own panel; a theme does not change it.") }
+    static var showAbout: String { text("studio-gallery-show-about", "Show About Wormhole") }
 
     // The theme menu, the title row's marks and the update sheet.
     static var menuThisProject: String { text("studio-menu-this-project", "This Project") }

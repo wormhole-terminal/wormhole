@@ -11,6 +11,7 @@ struct FolderStep: View {
     @Namespace private var selection
     @Environment(\.tokens) private var tokens
     @State private var dropTargeted = false
+    @Environment(\.stepKeys) private var keys
 
     var body: some View {
         let picked = session.flow.folder
@@ -30,7 +31,7 @@ struct FolderStep: View {
                 }
                 .padding(.vertical, Space._2)
             }
-            .keyboardShortcut("o", modifiers: .command)
+            .keyboardShortcut(keys ? KeyboardShortcut("o", modifiers: .command) : nil)
             let recents = session.places.filter { $0.kind == .recent }
             if !recents.isEmpty { label(AuxText.recents); ForEach(recents) { place(rowFor: $0, picked: picked) } }
             label(AuxText.places)

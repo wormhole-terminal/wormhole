@@ -15,8 +15,12 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
     /// The panel and pasteboard of Export JSON and Copy JSON; a check replaces them with a scratch folder's.
     public var outputs = StudioOutputs.system { didSet { session?.outputs = outputs } }
 
-    /// Opens the Studio on `theme` (what is in use), or brings the open one forward.
-    public func show(theme: String, environment: StudioEnvironment, store: ThemeStore = .shared) throws {
+    /// Opens the Studio on `theme` (what is in use), or brings the open one forward. `extras` draws the gallery's specimens
+    /// of the modules above this one, by id (the window's status bar, icon tabs and resize handle).
+    public func show<Extras: View>(
+        theme: String, environment: StudioEnvironment, store: ThemeStore = .shared,
+        @ViewBuilder extras: @escaping @MainActor (String) -> Extras
+    ) throws {
         if let window {
             TestInstance.bring(window)
             return
@@ -30,7 +34,7 @@ public final class StudioWindowController: NSObject, NSWindowDelegate {
         window.minSize = StudioMetrics.windowMin
         window.title = StudioWords.title
         window.setFrameAutosaveName("StudioWindow")
-        window.contentView = NSHostingView(rootView: StudioView(session: session, store: store).secondaryBackdrop(.studio, store: store))
+        window.contentView = NSHostingView(rootView: StudioView(session: session, store: store, extras: extras).secondaryBackdrop(.studio, store: store))
         window.delegate = self
         window.isReleasedWhenClosed = false
         session.window = window

@@ -1,13 +1,16 @@
 // The gallery, in the middle: every component on the live draft in two columns, which a filter narrows to one
 // part of the app (and which narrows the token list too). What the selected token is drawn on is outlined
 // (`studio/gallery/view.rs`). Left-column and right-column specimens stand side by side; the wide ones under both.
+// The specimens of a module above this one (the window's status bar, icon tabs and resize handle) are `Extras`: whoever
+// opens the Studio builds them by id, and a test or preview that passes none shows those titles with nothing under them.
 
 import DesignSystem
 import StudioModel
 import SwiftUI
 
-struct GalleryView: View {
+struct GalleryView<Extras: View>: View {
     @Bindable var document: StudioDocument
+    let extras: @MainActor (String) -> Extras
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -38,7 +41,7 @@ struct GalleryView: View {
 
     private func column(_ specimens: [Specimen], _ context: GalleryContext) -> some View {
         VStack(alignment: .leading, spacing: Space._6) {
-            ForEach(specimens) { SpecimenFrame(specimen: $0, context: context) }
+            ForEach(specimens) { SpecimenFrame(specimen: $0, context: context, extras: extras) }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }
