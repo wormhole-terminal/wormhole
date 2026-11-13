@@ -60,6 +60,12 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
     public var asksToClose = false
     /// Its status as told or detected, for a question's words; a finished, failed or ended one is `.idle` there.
     public var run: RunState = .idle
+    /// The exit code of the command that failed, while its failure is the terminal's state (core `SidebarRow.failure_code`).
+    public var failureCode: Int32?
+    /// For a terminal in a submodule, whose it is ("in terminal"), and whether its repository has no branch (a detached
+    /// HEAD): the title row's facts (core `TitleTerminal`).
+    public var superproject: String?
+    public var detached = false
 
     public init(
         id: TerminalID, title: String, folder: String? = nil, branch: String? = nil, activity: Activity = .idle,

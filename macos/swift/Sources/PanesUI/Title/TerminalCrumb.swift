@@ -9,12 +9,14 @@ import WorkspaceModel
 
 struct TerminalCrumb: View {
     let plan: TitlePlan
+    /// The row's own tile (the agent's logo with its live status), when the window gives one.
+    var tile: AnyView?
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         let facts = plan.facts
         HStack(spacing: TitleMetrics.crumbGap) {
-            TerminalTile(activity: facts.activity, size: TitleMetrics.tile)
+            if let tile { tile } else { TerminalTile(activity: facts.activity, size: TitleMetrics.tile) }
             AtMostWidth(width: plan.fit.name) {
                 Text(facts.label).font(tokens.font(.label).weight(.medium)).foregroundStyle(tokens.textPrimary)
                     .lineLimit(1).truncationMode(.tail)

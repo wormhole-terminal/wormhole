@@ -19,12 +19,13 @@ struct PaneHeader<Menu: View>: View {
     let focus: () -> Void
     let zoom: () -> Void
     let close: () -> Void
+    var tile: AnyView?
     @ViewBuilder let menu: () -> Menu
     @Environment(\.tokens) private var tokens
 
     var body: some View {
         HStack(spacing: Space._2) {
-            TerminalTile(activity: info.activity)
+            if let tile { tile } else { TerminalTile(activity: info.activity) }
             AtMostWidth(width: PaneMetrics.nameMax) { Text(info.title).lineLimit(1).truncationMode(.tail) }
                 .layoutPriority(1)
             Text(info.folder.map { Elide.front($0, PaneMetrics.folderMax) } ?? "")

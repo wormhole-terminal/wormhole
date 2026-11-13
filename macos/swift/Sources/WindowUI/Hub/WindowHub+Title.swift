@@ -28,7 +28,7 @@ extension WindowHub {
             setPart: { [unowned self] in if !zenActive, titleRow.setShown($0, $1) { rowChanged() } },
             resetRow: { [unowned self] in if !zenActive { titleRow = .default; rowChanged() } },
             customizeRow: { [unowned self] in actions.revealSetting("title-row") },
-            canInsert: folder != nil)
+            canInsert: terminal.activity != .exited)
         title.canEditRow = !zenActive && actions.editsSettings()
         return title
     }

@@ -67,15 +67,25 @@ struct TerminalColumn: View {
 private struct CentreTitle: View {
     let hub: WindowHub
     @Environment(WindowLook.self) private var look
+    /// How long the terminal has been in its state, as the core says it; read again when the words would read differently.
+    @State private var aged: (since: UInt64, waited: Waited)?
 
     var body: some View {
         if let terminal = hub.state.selectedTerminal {
+            let first = terminal.since.flatMap { hub.store.waited(since: $0) }
+            let waited = aged.flatMap { $0.since == terminal.since ? $0.waited : nil } ?? first
             let facts = TitleFactsMaker.facts(
                 for: terminal, row: hub.titleRow, statusBarOn: look.statusBar, gauge: hub.gauges.gauge(for: terminal),
-                extras: hub.state.title)
+                extras: hub.state.title, waited: waited)
             TitleRowView(
                 facts: facts, arrangement: hub.state.title.map { TitleArrangement($0, facts: facts) }, fitting: hub.rowFitting,
-                actions: hub.titleActions(for: terminal), backend: hub.openIn, icon: SystemOpenIn.icon)
+                actions: hub.titleActions(for: terminal, appearance: look.sidebar), backend: hub.openIn, icon: SystemOpenIn.icon)
+                .modifier(TitleFileDrop { hub.terminals.existing(terminal.id)?.insertDropped($0) })
+                .task(id: waited) {
+                    guard !look.statusBar, let waited, let since = terminal.since else { return }
+                    try? await Task.sleep(for: waited.next)
+                    if !Task.isCancelled, let fresh = hub.store.waited(since: since) { aged = (since, fresh) }
+                }
         } else {
             Color.clear
         }

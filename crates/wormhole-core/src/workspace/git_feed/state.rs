@@ -27,6 +27,8 @@ pub struct Repo {
     pub behind: u32,
     /// How many files are changed in the repository.
     pub files: usize,
+    /// For a submodule, whose it is ("in terminal"): the title row says it after the branch.
+    pub superproject: Option<String>,
 }
 
 impl From<&RepoStatus> for Repo {
@@ -39,6 +41,7 @@ impl From<&RepoStatus> for Repo {
             ahead: upstream.map_or(0, |upstream| upstream.ahead),
             behind: upstream.map_or(0, |upstream| upstream.behind),
             files: status.files.len(),
+            superproject: status.superproject.as_ref().map(|parent| parent.phrase()),
         }
     }
 }

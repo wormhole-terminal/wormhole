@@ -261,6 +261,8 @@ window-state-needs-input = needs input
 window-state-finished = finished
 window-state-done = done
 window-state-failed = failed
+# { $code } is the failed command's exit code.
+window-state-failed-exit = failed · exit { $code }
 window-state-exited = exited
 
 # The counts. { $count } is a whole number of terminals.

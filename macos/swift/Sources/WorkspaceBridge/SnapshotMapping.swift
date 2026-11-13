@@ -51,6 +51,7 @@ extension WorkspaceModel.TerminalSummary {
             changeCount: Int(core.changes ?? 0), isAgentHidden: core.agentHidden, forgetsText: core.forgetText, repo: core.repo,
             isDirty: core.dirty, ahead: Int(core.ahead), behind: Int(core.behind), repoFiles: core.repoFiles.map(Int.init),
             glyph: WorkspaceModel.TileGlyph(core.glyph), worktreeOf: core.worktree)
+        failureCode = core.failureCode
     }
 }
 

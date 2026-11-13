@@ -187,6 +187,7 @@ impl From<TerminalFactsRecord> for TerminalFacts {
             ahead: record.ahead,
             behind: record.behind,
             repo_files: record.repo_files.map(|n| n as usize),
+            superproject: None,
         }
     }
 }

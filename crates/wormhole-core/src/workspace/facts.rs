@@ -82,6 +82,8 @@ pub struct TerminalFacts {
     pub behind: u32,
     /// How many files are changed in the repository, whoever changed them.
     pub repo_files: Option<usize>,
+    /// For a submodule, whose it is ("in terminal").
+    pub superproject: Option<String>,
 }
 
 impl Default for TerminalFacts {
@@ -110,6 +112,7 @@ impl Default for TerminalFacts {
             ahead: 0,
             behind: 0,
             repo_files: None,
+            superproject: None,
         }
     }
 }

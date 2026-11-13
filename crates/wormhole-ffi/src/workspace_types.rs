@@ -592,6 +592,8 @@ pub struct TitleTerminal {
     pub folder: Option<String>,
     pub cwd: Option<String>,
     pub branch: Option<String>,
+    pub detached: bool,
+    pub superproject: Option<String>,
     pub message: Option<String>,
 }
 

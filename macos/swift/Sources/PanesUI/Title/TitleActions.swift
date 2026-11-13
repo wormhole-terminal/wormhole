@@ -2,6 +2,7 @@
 
 import Foundation
 import PanesModel
+import SwiftUI
 import WorkspaceModel
 
 public struct TitleActions {
@@ -23,6 +24,8 @@ public struct TitleActions {
     /// Whether this window may arrange the row: not under Zen mode (the row on screen is Zen's) and not in a window of a
     /// profile that is not the shown one (Settings shows the shown profile's).
     public var canEditRow = true
+    /// The terminal's tile as its row in the list draws it (the agent's logo, the status light); nil draws the plain tile.
+    public var tile: ((TerminalID, CGFloat) -> AnyView)?
 
     public init(
         revealFolder: @escaping () -> Void = {}, copyPath: @escaping () -> Void = {}, insertPath: @escaping () -> Void = {},

@@ -76,6 +76,16 @@ extension MetalTerminalView {
         return true
     }
 
+    /// Files dropped somewhere else that this terminal is the target of (the title row above it): their paths, as a drop on
+    /// the grid inserts them.
+    public func insertDropped(_ urls: [URL]) {
+        guard !urls.isEmpty, let text = interaction?.droppedText(paths: urls.map(\.path)) else { return }
+        onInput?()
+        source.paste(text)
+        window?.makeFirstResponder(self)
+        requestRedraw()
+    }
+
     public override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
         showDropTint(true)
         return .copy

@@ -111,7 +111,9 @@ struct StatusBar: View {
 
     /// "working · 4m", "done · 3m", "failed · 2m", "needs input", "exited": how long in whole minutes, as the title row says it.
     @ViewBuilder private func stateText(_ terminal: TerminalSummary, _ words: String) -> some View {
-        if [.working, .finished, .failed].contains(terminal.activity), let since = terminal.since, let first = waited(since) {
+        if terminal.activity == .failed, let code = terminal.failureCode {
+            Text(StateWords.failedExit(code))
+        } else if [.working, .finished, .failed].contains(terminal.activity), let since = terminal.since, let first = waited(since) {
             WaitedWords(prefix: words + " · ", first: first, waited: { self.waited(since) })
         } else {
             Text(words)
