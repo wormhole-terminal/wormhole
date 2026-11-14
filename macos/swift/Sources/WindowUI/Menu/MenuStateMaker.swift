@@ -97,9 +97,7 @@ enum MenuStateMaker {
         menu.hidden.formUnion(keymap.entries.filter { $0.flag.map { !facts.flagsOn.contains($0) } ?? false }.map(\.id))
         if !facts.hasFolds { menu.disabled.insert("showHiddenLines") }
         // Without blocks (no shell integration yet) their items are greyed, as GPUI binds them only then (`has_blocks`).
-        if !facts.hasBlocks {
-            menu.disabled.formUnion(["previousPrompt", "nextPrompt", "selectOutput", "copyOutput", "copyCommand", "rerunCommand"])
-        }
+        if !facts.hasBlocks { menu.disabled.formUnion(blockActions) }
 
         let numbered = SidebarNumbering.numbered(state)
         menu.terminals = numbered.map(\.title)
@@ -107,6 +105,9 @@ enum MenuStateMaker {
         (menu.profiles, menu.currentProfile, menu.windowProfile) = (facts.profiles, facts.currentProfile, facts.windowProfile)
         return menu
     }
+
+    /// Edit's command block items: they act on the blocks a shell's integration marks.
+    private static let blockActions: Set<ActionID> = ["previousPrompt", "nextPrompt", "selectOutput", "copyOutput", "copyCommand", "rerunCommand"]
 
     static func tabAction(_ tab: PanelTab) -> ActionID {
         switch tab {
