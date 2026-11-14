@@ -11,10 +11,13 @@ import SwiftUI
 @MainActor
 public final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     public let model: SettingsModel
+    /// The updater the Updates page draws from; nil in a build without one.
+    public let updates: UpdateViewModel?
     private var observation: SettingsObservation?
 
     public init(model: SettingsModel, updates: UpdateViewModel? = nil, themeStore: ThemeStore = .shared) {
         self.model = model
+        self.updates = updates
         let window = NSWindow(
             contentRect: NSRect(origin: .zero, size: SettingsMetric.windowSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],

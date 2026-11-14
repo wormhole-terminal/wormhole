@@ -80,13 +80,14 @@ final class Instance {
     /// the built session host (`hostProgram`), which writes that file itself, so the two are not given together.
     static func with(
         shell: Shell = .cat, auth: String = "cancel", config: String? = nil, hosts: Bool = false, agents: [String] = [], updater: Bool = false,
-        label: String = #function,
+        feed: String? = nil, label: String = #function,
         _ body: @MainActor (Instance) async throws -> Void
     ) async throws {
         guard let program = executable() else { throw ScratchError(description: "the Wormhole app is not built") }
         let app = Instance(scratch: try Scratch(), shell: shell, auth: auth, label: label, program: program)
         app.agents = agents
-        if updater { app.launchFlags = ["--update-feed", deadFeed] }
+        // `feed`: an updater that asks that address (a `FeedServer`'s, on this machine) instead of the dead one.
+        if let feed = feed ?? (updater ? deadFeed : nil) { app.launchFlags = ["--update-feed", feed] }
         // The default profile's files are the data folder's own.
         if let config {
             guard !hosts else {

@@ -19,6 +19,7 @@ extension AppController {
         if runChromeActs(command: command, argument: argument) { return true }
         if runPanelActs(command: command, argument: argument) { return true }
         if await runLooks(command: command, argument: argument) { return true }
+        if runUpdates(command: command) { return true }
         if runScrollback(command: command, argument: argument) { return true }
         return false
     }
