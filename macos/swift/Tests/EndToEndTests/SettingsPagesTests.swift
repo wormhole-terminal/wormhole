@@ -152,7 +152,8 @@ extension EndToEnd {
     @MainActor func fontPicker() async throws {
         try await Instance.with { app in
             await app.send(["settings-section fonts"])
-            let picker = await app.until("font-picker terminal Menlo") { $0.hasPrefix("font-picker terminal") }
+            // The families are read off the main actor: the picker lists them a moment after it opens.
+            let picker = await app.until("font-picker terminal Menlo") { (Instance.value("entries", in: $0).flatMap { Int($0) } ?? 0) > 0 }
             let entries = Instance.value("entries", in: picker).flatMap { Int($0) } ?? 0
             app.expect(entries > 0, "Menlo is found among the families:\n\(picker)")
             app.expect(await app.reply("font-picker nowhere"), contains: "error")
