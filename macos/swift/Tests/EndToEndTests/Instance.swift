@@ -144,6 +144,15 @@ final class Instance {
         await send(["size \(Self.window.width)x\(Self.window.height)"])
         let sized = await until("geometry") { $0.contains("content=\(size)") }
         expect(sized.contains("content=\(size)"), "the window did not take the size \(size):\n\(sized)")
+        // The panes have followed too: together they are as wide as the window less its two side columns, never the 304
+        // points a small display left them. A window that was resized but not laid out fails here, saying what it had.
+        let room = Double(Self.window.width) - 760
+        let laidOut: (String) -> Bool = { said in
+            said.split(separator: "\n").filter { $0.hasPrefix("pane ") }.map { $0.split(separator: " ").compactMap { Double($0) } }
+                .contains { $0.count >= 5 && $0[1] + $0[3] >= room }
+        }
+        let panes = await until("panes", laidOut)
+        if !laidOut(panes) { fail("the window took the size but its panes were not laid out:\n\(panes)\n\(await keysAndFrame())") }
     }
 
     /// Quits as ⌘Q does without the question (the terminals' state is saved first) and starts the app again on the same folders.

@@ -48,6 +48,10 @@ extension Instance {
         return text
     }
 
+    /// Where the window and the keys are, for a failure that typed keys did not arrive: `geometry` (the window, its content
+    /// and the terminal's own frame) and `keys` (the focus and the first responder).
+    func keysAndFrame() async -> String { (await send(["geometry", "keys"])).joined(separator: "\n") }
+
     /// The first `name=` value of a `state` line (`window=123`).
     static func value(_ name: String, in line: String) -> String? {
         guard let range = line.range(of: name + "=") else { return nil }

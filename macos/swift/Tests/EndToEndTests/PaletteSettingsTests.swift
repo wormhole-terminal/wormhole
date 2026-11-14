@@ -13,7 +13,7 @@ extension EndToEnd {
             // The window settles after each step (`wait-idle`) so the field has the keys before the text comes.
             await app.send(["palette", "wait-idle 5000", "text split right", "wait-idle 5000"] + Array(repeating: "key down", count: above) + ["key return"])
             let split = await app.until("panes") { Panes($0).isSplit }
-            app.expect(Panes(split).ids.count == 2, "Split Right ran from the palette:\n\(split)")
+            if Panes(split).ids.count != 2 { app.fail("Split Right did not run from the palette:\n\(split)\n\(await app.keysAndFrame())") }
         }
     }
 

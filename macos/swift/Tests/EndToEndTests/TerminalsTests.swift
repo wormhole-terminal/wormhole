@@ -10,7 +10,8 @@ extension EndToEnd {
             app.expect(first.selected == first.live.first, "the terminal is selected:\n\(first.text)")
             // Typed through the window as a key at a time, and written to the program: `cat` echoes both.
             await app.send(["text hello-wormhole", "type from-the-program\\n"])
-            await app.until("screen") { $0.contains("hello-wormhole") && $0.contains("from-the-program") }
+            let screen = await app.until("screen") { $0.contains("hello-wormhole") && $0.contains("from-the-program") }
+            if !screen.contains("hello-wormhole") { app.fail("the typed keys did not reach the terminal:\n\(await app.keysAndFrame())") }
         }
     }
 
