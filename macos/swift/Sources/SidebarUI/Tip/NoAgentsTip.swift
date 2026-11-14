@@ -42,7 +42,7 @@ public struct NoAgentsTip: View {
                 link(Words.text("tip-no-agents-settings", fallback: "Coding agents settings"), openSettings)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            IconButton(lucide: .x, label: LocalizedStringKey(Words.text("tip-close", fallback: "Close tip")), action: close)
+            IconButton(lucide: .x, label: Words.text("tip-close", fallback: "Close tip"), action: close)
         }
         .padding(.leading, Space._4).padding(.trailing, Space._2).padding(.vertical, Space._3)
         .overlay(alignment: .top) { Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth) }
@@ -54,7 +54,7 @@ public struct NoAgentsTip: View {
             Text(Words.text("tip-closed", fallback: "Tip closed")).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             link(Words.text("tip-never", fallback: "Don't show again"), never)
-            IconButton(lucide: .x, label: LocalizedStringKey(Words.text("tip-keep", fallback: "Keep the tip for next time")), action: keep)
+            IconButton(lucide: .x, label: Words.text("tip-keep", fallback: "Keep the tip for next time"), action: keep)
         }
         .padding(.leading, Space._4).padding(.trailing, Space._2).padding(.vertical, Space._1)
         .overlay(alignment: .top) { Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth) }

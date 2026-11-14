@@ -42,7 +42,7 @@ struct AgentList: View {
                     HStack(spacing: Space._1) {
                         Text(agent.detail).textRole(.caption).foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.middle)
                         if let path = agent.configPath {
-                            IconButton(symbol: Icon.reveal.rawValue, label: LocalizedStringKey(Words.text("settings-agents-reveal-in-finder", fallback: "Reveal in Finder"))) {
+                            IconButton(symbol: Icon.reveal.rawValue, label: Words.text("settings-agents-reveal-in-finder", fallback: "Reveal in Finder")) {
                                 ExternalOpen.reveal([URL(fileURLWithPath: path)])
                             }
                             .frame(width: Metric.controlSmall, height: Metric.controlSmall)

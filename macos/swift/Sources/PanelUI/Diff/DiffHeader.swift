@@ -49,8 +49,8 @@ struct DiffHeader: View {
                     Text("\u{2212}\(CountText.grouped(removed))").foregroundStyle(tokens.diffRemoved)
                 }
                 .font(.system(size: tokens.size(.caption), design: .monospaced)).fixedSize()
-                BandButton(symbol: "text.append", label: panelText("diff-wrap-lines", "Wrap long lines"), inRow: true) { wrap.toggle() }
-                    .opacity(wrap ? 1 : 0.6)
+                // A toggle in the selected tint while on, as GPUI's `icon_button(...).selected(wrap)`.
+                BandButton(symbol: "text.append", label: panelText("diff-wrap-lines", "Wrap long lines"), inRow: true, selected: wrap) { wrap.toggle() }
             }
             // The file in the chosen editor, when it is on disk (a deleted file has nothing to open).
             if let on = onDisk, let open = host?.openTooltip(line: nil) {

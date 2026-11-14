@@ -11,8 +11,7 @@ enum Chrome {
     static let statusHeight: CGFloat = 28
     /// The least size of anything clickable.
     static let hit: CGFloat = 28
-    /// A title row button's drawn face, and its glyph.
-    static let face: CGFloat = 24
+    /// A title row button's glyph (its 24 pt face is the shared `IconButton`'s `inTitleRow`).
     static let glyph: CGFloat = 16
     /// The one standard inset from a column's edge to its content.
     static let edgeInset: CGFloat = 12
@@ -47,11 +46,6 @@ enum Chrome {
     /// Room between breadcrumb parts, and a branch chip's height.
     static let crumbGap: CGFloat = 8
     static let chipHeight: CGFloat = 20
-    /// The dot that marks a panel wanted but hidden for room, how far in from its button's corner it sits,
-    /// and the ring of surface round it that keeps it apart from the glyph.
-    static let markDot: CGFloat = 6
-    static let markInset: CGFloat = 5
-    static let markRing: CGFloat = 2
     /// A status bar item: 22 tall with 4 round its text, and the hairline between groups.
     static let statusItem: CGFloat = 22
     static let itemPad: CGFloat = 4

@@ -133,7 +133,7 @@ struct SetCardView: View {
                 name
                 if card.alert { Circle().fill(card.alertKind == .failed ? tokens.statusDanger : tokens.agentAttention).frame(width: Metric.statusDot - 2, height: Metric.statusDot - 2) }
                 Spacer(minLength: Space._2)
-                if let add { IconButton(lucide: .plus, label: LocalizedStringKey(PanesText.newTerminalIn(card.label)), action: add) }
+                if let add { IconButton(lucide: .plus, label: PanesText.newTerminalIn(card.label), action: add) }
                 CountBadge(card.count)
             }
             if card.count == 0 {

@@ -15,7 +15,7 @@ struct HeaderAction: View {
         case "import": ActionButton(title: SettingsText.scanAgain, symbol: Icon.refresh.rawValue, frameId: "header.scan-again") { model.importDraft.reset(); model.host.perform(.scanImports) }
         case "extensions":
             if let probes = model.probesModel {
-                IconButton(symbol: Icon.refresh.rawValue, label: LocalizedStringKey(ExtensionsText.refresh)) { Task { await probes.refresh() } }
+                IconButton(symbol: Icon.refresh.rawValue, label: ExtensionsText.refresh) { Task { await probes.refresh() } }
             }
         case "profile": ActionButton(title: SettingsText.newProfile, symbol: Icon.add.rawValue, frameId: "header.new-profile") { model.showsNewProfile = true }
         default: EmptyView()

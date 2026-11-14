@@ -112,6 +112,7 @@ public struct SidebarView: View {
                 .overlay(alignment: .topLeading) { dragLayer(sections) }
             }
             .scrollIndicators(.automatic)
+            .scrollEdge()
             .onChange(of: cursor) { _, stop in if let stop { withAnimation(SidebarMotion.state) { proxy.scrollTo(stop) } } }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

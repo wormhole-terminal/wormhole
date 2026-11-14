@@ -14,7 +14,7 @@ struct ChromeSpecimen: View {
         VStack(alignment: .leading, spacing: Space._4) {
             HStack(spacing: Space._1) {
                 ForEach(["plus", "sidebar.left", "magnifyingglass", "gearshape", "xmark"], id: \.self) { symbol in
-                    IconButton(symbol: symbol, label: LocalizedStringKey(symbol)) {}
+                    IconButton(symbol: symbol, label: symbol) {}
                 }
                 Spacer(minLength: 0)
                 CountBadge(3)
@@ -36,6 +36,16 @@ struct ChromeSpecimen: View {
                 ForEach([Lucide.gitCompare, .commit, .fileText, .gauge, .folder], id: \.self) { TabGlyph(icon: $0, size: Metric.glyph, run: 0) }
             }
             .foregroundStyle(tokens.textMuted)
+            // The faces and parts the title rows, bands, rows and the find bar take from the one button (`IconButton` with its
+            // `IconButtonGlyph`): a title row's 24 pt face, a row's 22 pt face, a find option toggled on, an active filter's dot,
+            // the keyboard ring round the face, and a tooltip whose key VoiceOver does not read ("Split right", hint "Command D").
+            HStack(spacing: Space._4) {
+                IconButton(lucide: .columns2, label: "Split right (⌘D)") {}.inTitleRow()
+                IconButton(lucide: .copy, label: "Copy") {}.inRow()
+                IconButton(lucide: .caseSensitive, label: "Match case") {}.inRow().toggled(true)
+                IconButton(symbol: "line.3.horizontal.decrease", label: "Filter") {}.selected(true).dot(true)
+                IconButton(lucide: .plus, label: "Focused") {}.focusRing(true)
+            }
             HStack(spacing: Space._4) {
                 ForEach([StatusKind.idle, .working, .attention, .done, .failed], id: \.self) { StatusDot($0) }
             }

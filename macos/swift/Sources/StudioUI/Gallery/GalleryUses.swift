@@ -45,7 +45,7 @@ enum GalleryUses {
             "card", "card.edge", "metrics.border_width", "text.muted",
         ]),
         TokenUse(id: "panel.band", label: "section band", area: .panel, tokens: [
-            "band.hover", "metrics.radius_sm", "state.hover", "text.muted", "text.primary",
+            "state.hover", "text.muted", "text.primary",
         ]),
         TokenUse(id: "panel.item", label: "panel row", area: .panel, tokens: [
             "checkbox.background", "checkbox.border", "checkbox.checked", "metrics.border_width",
@@ -72,7 +72,8 @@ enum GalleryUses {
             "text.on_primary", "text.primary",
         ]),
         TokenUse(id: "icon.button", label: "icon button", area: .chrome, tokens: [
-            "sidebar.row.selected.text", "state.active", "state.hover", "state.selected", "text.faint", "text.muted",
+            "band.hover", "metrics.focus_ring_width", "metrics.radius", "primary", "sidebar.background",
+            "sidebar.row.selected.text", "state.active", "state.selected", "text.faint", "text.muted",
             "text.primary",
         ]),
         TokenUse(id: "icon.tab", label: "icon tab", area: .panel, tokens: [
@@ -100,7 +101,7 @@ enum GalleryUses {
             "border.focus", "metrics.focus_ring_width",
         ]),
         TokenUse(id: "segmented", label: "segmented control", area: .chrome, tokens: [
-            "chip.selected", "metrics.radius_chip", "state.hover", "text.muted", "text.on_selected",
+            "chip.selected", "metrics.radius_chip", "state.hover", "text.muted", "text.on_selected", "text.primary",
         ]),
         TokenUse(id: "card", label: "card", area: .chrome, tokens: [
             "border", "metrics.border_width", "metrics.radius_lg",
@@ -110,8 +111,7 @@ enum GalleryUses {
         ]),
         TokenUse(id: "find", label: "find in scrollback", area: .chrome, tokens: [
             "border", "border.focus", "find.match.current", "input.background", "metrics.border_width",
-            "metrics.radius", "metrics.radius_sm", "state.hover", "state.selected", "status.danger.text",
-            "text.muted", "text.primary",
+            "metrics.radius", "status.danger.text", "text.muted",
         ]),
         TokenUse(id: "tint.chip", label: "tint chip", area: .settings, tokens: [
             "chip.tint", "text.muted",

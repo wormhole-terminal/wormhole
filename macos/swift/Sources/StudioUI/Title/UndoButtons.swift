@@ -11,9 +11,9 @@ struct UndoButtons: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            IconButton(symbol: "arrow.uturn.backward", label: LocalizedStringKey(StudioWords.undo(document.undoLabel))) { document.undo() }
+            IconButton(symbol: "arrow.uturn.backward", label: StudioWords.undo(document.undoLabel)) { document.undo() }
                 .disabled(document.undoLabel == nil).keyboardShortcut("z", modifiers: .command)
-            IconButton(symbol: "arrow.uturn.forward", label: LocalizedStringKey(StudioWords.redo(document.redoLabel))) { document.redo() }
+            IconButton(symbol: "arrow.uturn.forward", label: StudioWords.redo(document.redoLabel)) { document.redo() }
                 .disabled(document.redoLabel == nil).keyboardShortcut("z", modifiers: [.command, .shift])
         }
     }

@@ -77,7 +77,7 @@ struct ProfileControl: View {
                     Image(Icon.folder).foregroundStyle(tokens.textMuted)
                     Text(folder).textRole(.body).lineLimit(1).truncationMode(.middle)
                     Spacer(minLength: 0)
-                    IconButton(symbol: Icon.remove.rawValue, label: LocalizedStringKey(Words.text("settings-profile-stop-opening-folder", fallback: "Stop opening this folder in the profile"))) {
+                    IconButton(symbol: Icon.remove.rawValue, label: Words.text("settings-profile-stop-opening-folder", fallback: "Stop opening this folder in the profile")) {
                         draft.edit { $0.folders.removeAll { $0 == folder } }
                     }
                 }
@@ -134,7 +134,7 @@ struct ProfileControl: View {
 
     /// The button that picks a folder for a field, as tall as the field beside it.
     private func chooser(_ picked: @escaping (String) -> Void) -> some View {
-        IconButton(symbol: Icon.folder.rawValue, label: LocalizedStringKey(Words.text("settings-profile-choose-a-folder", fallback: "Choose a folder"))) {
+        IconButton(symbol: Icon.folder.rawValue, label: Words.text("settings-profile-choose-a-folder", fallback: "Choose a folder")) {
             FolderPanel.choose(picked)
         }
         .frame(width: Metric.control, height: Metric.control)

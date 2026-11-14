@@ -33,6 +33,7 @@ struct PanelScroll<Content: View>: View {
                     .padding(.bottom, PanelMetrics.tail - PanelMetrics.cardGap)
             }
             .scrollIndicators(.automatic)
+            .scrollEdge()
             .onChange(of: cursor) { _, now in if let now { proxy.scrollTo(now) } }
         }
     }

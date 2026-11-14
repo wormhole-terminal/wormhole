@@ -15,7 +15,7 @@ struct ChangedDot: View {
 struct ResetArrow: View {
     let action: () -> Void
     var body: some View {
-        IconButton(symbol: Icon.reset.rawValue, label: LocalizedStringKey(SettingsText.reset), action: action)
+        IconButton(symbol: Icon.reset.rawValue, label: SettingsText.reset, action: action)
     }
 }
 

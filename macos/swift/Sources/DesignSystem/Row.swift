@@ -24,7 +24,8 @@ public struct Row<Content: View>: View {
     }
 
     public var body: some View {
-        Button(action: action) { content(hovering).padding(.horizontal, Space._2) }
+        // At least a row tall (`min_h(ROW_H)`); content that sets its own colour keeps it, the rest reads in the selection's.
+        Button(action: action) { content(hovering).padding(.horizontal, Space._2).frame(minHeight: Metric.row) }
             .buttonStyle(RowStyle(isSelected: isSelected, hovering: hovering && enabled, selection: selection))
             .onHover { hovering = $0 }
             // A row with nothing to do now is drawn held back, with no hover and no press; VoiceOver hears the selection.
@@ -43,9 +44,11 @@ private struct RowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         let shape = RoundedRectangle(cornerRadius: Radius.row)
         return configuration.label
+            .foregroundStyle(isSelected ? tokens.sidebarRowSelectedText : tokens.textPrimary)
             .background {
                 ZStack {
-                    shape.fill(configuration.isPressed ? tokens.stateActive : hovering ? tokens.stateHover : .clear)
+                    // No hover fill on the selected row: grey would swap the tint under text meant for it (`style::row`).
+                    shape.fill(configuration.isPressed ? tokens.stateActive : hovering && !isSelected ? tokens.stateHover : .clear)
                     if isSelected {
                         shape.fill(tokens.sidebarRowSelected).slidingSelection("selection", in: selection)
                     }

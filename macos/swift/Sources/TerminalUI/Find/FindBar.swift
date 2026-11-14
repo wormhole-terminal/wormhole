@@ -7,7 +7,6 @@ import SwiftUI
 public struct FindBar: View {
     let model: FindModel
     let onClose: () -> Void
-    @Environment(\.tokens) private var tokens
 
     public init(model: FindModel, onClose: @escaping () -> Void) {
         self.model = model
@@ -31,12 +30,9 @@ public struct FindBar: View {
         .onExitCommand(perform: onClose)
     }
 
-    /// Previous, next and close: GPUI's title-row icon buttons (`in_title_row`), a Lucide glyph in a 24 pt face.
+    /// Previous, next and close: GPUI's title-row icon buttons (`in_title_row`): the shared button's hover wash and colours,
+    /// and a VoiceOver name without the key its tooltip ends in.
     private func step(_ icon: Lucide, _ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { LucideView(icon: icon, size: FindMetrics.stepGlyph).frame(width: FindMetrics.hit, height: FindMetrics.hit) }
-            .buttonStyle(.plain)
-            .foregroundStyle(tokens.textMuted)
-            .help(label)
-            .accessibilityLabel(label)
+        IconButton(lucide: icon, label: label, action: action).inTitleRow()
     }
 }

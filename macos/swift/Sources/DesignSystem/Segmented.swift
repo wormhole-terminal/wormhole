@@ -37,9 +37,24 @@ public struct Segmented<Value: Hashable>: View {
     }
 
     private func segment(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Segment(title: title, on: on, space: space, action: action)
+    }
+}
+
+/// One segment: the chosen one filled like a selected chip; another's text turns primary under the pointer (`segment`).
+private struct Segment: View {
+    let title: String
+    let on: Bool
+    let space: Namespace.ID
+    let action: () -> Void
+    @State private var hovering = false
+    @Environment(\.tokens) private var tokens
+    @Environment(\.isEnabled) private var enabled
+
+    var body: some View {
         Button(action: action) {
             Text(title).font(tokens.font(.caption).weight(.medium)).lineLimit(1)
-                .foregroundStyle(on ? tokens.textOnSelected : tokens.textMuted)
+                .foregroundStyle(on ? tokens.textOnSelected : hovering && enabled ? tokens.textPrimary : tokens.textMuted)
                 .padding(.horizontal, Space._2).frame(maxHeight: .infinity)
                 .background {
                     if on {
@@ -51,6 +66,7 @@ public struct Segmented<Value: Hashable>: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { hovering = $0 }
         .accessibilityAddTraits(on ? .isSelected : [])
     }
 }

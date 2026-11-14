@@ -136,14 +136,14 @@ struct HistoryListView: View {
             "history-filter", ["count": .whole(store.paths.count), "name": .text(first)],
             fallback: store.paths.count == 1 ? first : "\(store.paths.count) paths")
         return HStack(spacing: PanelMetrics.gap) {
+            // GPUI's active compact pill (`style::pill(…, true, true)`): `chip.selected` with its text, no hover fill.
             Button { store.filter(by: []) } label: {
-                HStack(spacing: Space._1) {
-                    Text(name).font(tokens.font(.caption)).foregroundStyle(tokens.textPrimary).lineLimit(1)
-                    PanelIcon("xmark", size: 12).foregroundStyle(tokens.textMuted)
+                Chip(fill: nil, text: tokens.textMuted, selected: true, height: Metric.controlSmall) {
+                    HStack(spacing: Space._1) {
+                        Text(name).font(tokens.font(.caption)).lineLimit(1)
+                        PanelIcon("xmark", size: 12)
+                    }
                 }
-                .padding(.horizontal, Space._2).frame(height: Metric.controlSmall)
-                .overlay { RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).strokeBorder(tokens.border, lineWidth: tokens.metrics.borderWidth) }
-                .contentShape(Rectangle())
             }
             .buttonStyle(.plain).help(panelText("history-filter-clear", "Show all commits"))
             .accessibilityLabel(panelText("history-filter-clear", "Show all commits"))

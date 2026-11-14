@@ -18,9 +18,9 @@ struct OpenInButtons: View {
     var body: some View {
         let open = OpenInMenu(folder: folder, backend: backend), choice = open.choice
         HStack(spacing: 0) {
-            TitleIconButton(label: tooltip(choice), action: open.click) {
-                AppIcon(app: choice.app, image: icon(choice.app), size: Metric.titleGlyph)
-            }
+            // An app's own icon keeps its colours and has no motion of the glyph's (`with_drawing`).
+            IconButton(label: tooltip(choice), action: open.click) { _ in AppIcon(app: choice.app, image: icon(choice.app), size: Metric.titleGlyph) }
+                .inTitleRow()
             Menu {
                 Section(PanesText.openFolderIn) {
                     ForEach(open.items, id: \.app.bundle) { item in

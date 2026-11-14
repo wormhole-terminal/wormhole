@@ -22,7 +22,7 @@ public struct BlockReadout: View {
                         Text(L10n.blockExit(code)).foregroundStyle(code == 0 ? tokens.tooltipSuccess : tokens.tooltipDanger)
                     }
                     if let took { Text(code == nil ? BlockWording.took(took) : "· " + BlockWording.took(took)) }
-                    IconButton(lucide: .copy, label: LocalizedStringKey(L10n.blockCopyOutput)) {
+                    IconButton(lucide: .copy, label: L10n.blockCopyOutput) {
                         controller.perform(.copyOutput, on: controller.block(id: id))
                     }
                     .foregroundStyle(tokens.tooltipText)

@@ -10,12 +10,10 @@ struct SplitButtons: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            TitleIconButton(label: PanesText.splitRightKey, enabled: actions.canSplit(.row), motion: .newPane(.right), action: { actions.split(.row) }) {
-                LucideView(icon: .columns2, size: Metric.titleGlyph)
-            }
-            TitleIconButton(label: PanesText.splitDownKey, enabled: actions.canSplit(.column), motion: .newPane(.below), action: { actions.split(.column) }) {
-                LucideView(icon: .rows2, size: Metric.titleGlyph)
-            }
+            IconButton(label: PanesText.splitRightKey, action: { actions.split(.row) }) { _ in LucideView(icon: .columns2, size: Metric.titleGlyph) }
+                .inTitleRow().answering(.newPane(.right)).disabled(!actions.canSplit(.row))
+            IconButton(label: PanesText.splitDownKey, action: { actions.split(.column) }) { _ in LucideView(icon: .rows2, size: Metric.titleGlyph) }
+                .inTitleRow().answering(.newPane(.below)).disabled(!actions.canSplit(.column))
         }
     }
 }
