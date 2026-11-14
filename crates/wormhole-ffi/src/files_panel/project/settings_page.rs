@@ -5,6 +5,7 @@
 //! (`settings_window/sections/projects.rs`), written once here.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use wormhole_core::platform::paths;
 use wormhole_core::project::{
@@ -168,8 +169,21 @@ impl ProjectService {
     }
 
     /// The projects the person trusts, whether or not they are open anywhere.
+    /// Read from the file as it is now: a project may have been trusted or revoked elsewhere (`watch_trust`).
     pub fn trusted_projects(&self) -> Vec<ProjectChoiceRecord> {
-        self.lock().trust.list().into_iter().map(|trusted| choice(&trusted.root)).collect()
+        let mut hub = self.lock();
+        hub.reload_trust();
+        hub.trust.list().into_iter().map(|trusted| choice(&trusted.root)).collect()
+    }
+
+    /// Calls `listener` once whenever the profile's approvals change on disk, until the returned watch is let go: the
+    /// Project folders page hears a trust given or taken back in another window or by the command line.
+    pub fn watch_trust(
+        &self,
+        listener: Arc<dyn crate::settings::ProjectListener>,
+    ) -> Arc<crate::settings::ProjectWatch> {
+        let dir = self.lock().dir().to_path_buf();
+        crate::settings::project_watch::watch_approvals(&dir, listener)
     }
 
     /// The projects worth offering: the project of each of `folders` (the open terminals' and the recent ones),
@@ -194,6 +208,7 @@ impl ProjectService {
     pub fn project_page(&self, root: String) -> Option<ProjectPageRecord> {
         let folder = open(&root)?;
         let mut hub = self.lock();
+        hub.reload_trust();
         let snapshot = hub.snapshot(&folder);
         let status = hub.trust.status_of(&snapshot);
         let request = snapshot.trust_request();

@@ -27,6 +27,15 @@ public final class ProjectsModel {
         page = if let selected { await backend.page(selected) } else { nil }
     }
 
+    /// Reads the page again whenever the profile's approvals change on disk, for as long as the calling task runs (the
+    /// page's `.task`: it ends as the page goes). Returns at once where nothing can be followed.
+    public func followTrust() async {
+        let (changes, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        guard let token = backend.followTrust(changed: { continuation.yield() }) else { return }
+        for await _ in changes { await refresh() }
+        withExtendedLifetime(token) {}
+    }
+
     public func select(_ root: String?) async {
         selected = root
         following = root.flatMap { root in

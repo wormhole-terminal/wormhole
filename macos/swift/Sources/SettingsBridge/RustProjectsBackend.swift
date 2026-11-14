@@ -42,6 +42,11 @@ struct RustProjectsBackend: ProjectsBackend {
         settingsWatchProject(root: (root as NSString).expandingTildeInPath, listener: ProjectChanges(changed))
     }
 
+    /// The core's watch on the profile's approvals file; the token keeps it alive.
+    func followTrust(changed: @escaping @Sendable () -> Void) -> AnyObject? {
+        service.watchTrust(listener: ProjectChanges(changed))
+    }
+
     private func run<T: Sendable>(_ work: @escaping @Sendable (ProjectService) -> T) async -> T {
         let service = service
         return await Task.detached { work(service) }.value

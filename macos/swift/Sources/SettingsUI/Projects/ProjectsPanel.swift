@@ -47,10 +47,13 @@ private struct ProjectsBody: View {
                 Defaults(projects: projects)
             }
         }
-        .task { await projects.refresh() }
-        // The project's own files reach the page as an event (the core's watch on its `.wormhole` folder, started by `select`). A
-        // trust given elsewhere (the Project tab) sends none, and a watch can drop events: the page also reads whenever the window
-        // comes forward, which is where a person goes to see it. An idle window sleeps until something happens.
+        .task {
+            await projects.refresh()
+            await projects.followTrust()
+        }
+        // The project's own files reach the page as an event (the core's watch on its `.wormhole` folder, started by `select`), and
+        // so does a trust given or taken back elsewhere (the watch on the profile's approvals, while the page is shown). A watch
+        // can drop events: the page also reads whenever the window comes forward. An idle window sleeps until something happens.
         .onChange(of: appearsActive) { _, active in if active { Task { await projects.refresh() } } }
     }
 

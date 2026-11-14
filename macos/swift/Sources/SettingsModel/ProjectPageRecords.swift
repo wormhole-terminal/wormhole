@@ -85,10 +85,14 @@ public protocol ProjectsBackend: Sendable {
     /// Calls `changed` once whenever the files of the project's `.wormhole` folder change, until the returned token is let go
     /// (the core's watch; a change arrives as an event, never by looking again and again).
     func follow(_ root: String, changed: @escaping @Sendable () -> Void) -> AnyObject?
+    /// Calls `changed` once whenever the profile's approvals change on disk (a project trusted or revoked in another window,
+    /// the trust window or the command line), until the returned token is let go (the core's watch).
+    func followTrust(changed: @escaping @Sendable () -> Void) -> AnyObject?
 }
 
 extension ProjectsBackend {
     @MainActor public var canApprove: Bool { true }
     /// Nothing follows the folder by default (a backend with no watch): the page reads when the window comes forward.
     public func follow(_ root: String, changed: @escaping @Sendable () -> Void) -> AnyObject? { nil }
+    public func followTrust(changed: @escaping @Sendable () -> Void) -> AnyObject? { nil }
 }
