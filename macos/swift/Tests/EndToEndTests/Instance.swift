@@ -178,6 +178,14 @@ final class Instance {
         _ = await waitForExit(timeout: 10)
     }
 
+    /// Sends the app `signal` (`SIGTERM`: what logging out or `kill` sends) and waits for it to end; whether it did. `start` brings it
+    /// back on the same folders.
+    func signal(_ number: Int32, timeout: TimeInterval = 20) async -> Bool {
+        guard let process, !ended.isDone else { return false }
+        kill(process.processIdentifier, number)
+        return await waitForExit(timeout: timeout)
+    }
+
     /// Ends the app (and any session host: End All Terminals), checks that no host of its folder runs on, keeps a failure's
     /// files, removes the scratch folder.
     func finish() async {
