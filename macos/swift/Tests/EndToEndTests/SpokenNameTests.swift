@@ -5,7 +5,11 @@ extension EndToEnd {
     /// Read through `a11y`: the window's NSAccessibility tree, one element a line as `role "label" (help)`. A button whose
     /// tooltip ends in its key ("Next match (⌘G)") is named without it, as the GPUI app's `spoken_name` does; the key
     /// stays in the tooltip.
-    @Test("VoiceOver names the find bar's and the title row's buttons without the keys their tooltips end in")
+    // Disabled, not counted as passing: asked in the process, the tree has AppKit's views and none of SwiftUI's, so nothing
+    // here could fail. The assertions stay for the day the tree can be read.
+    @Test(
+        "VoiceOver names the find bar's and the title row's buttons without the keys their tooltips end in",
+        .disabled("the app's SwiftUI accessibility tree cannot be read in-process: needs a person, MANUAL.md"))
     @MainActor func spokenNames() async throws {
         try await Instance.with { app in
             await app.send(["find milk"])

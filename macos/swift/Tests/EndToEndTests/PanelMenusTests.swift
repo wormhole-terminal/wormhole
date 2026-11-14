@@ -37,7 +37,8 @@ extension EndToEnd {
             await app.flags(["notes_and_tasks": true])
             await app.send(["key ctrl-cmd-1"])
             await app.until("state") { $0.contains("tab=changes") }
-            app.expect(!(await app.reply("menus")).contains("Show Usage"), "no agent on screen: no Show Usage")
+            // The View menu lists the panel's tabs by their names (`Usage  ⌃⌘4`), as it does History.
+            app.expect(!(await app.reply("menus")).contains("Usage  ⌃⌘4"), "no agent on screen: the View menu has no Usage")
             await app.send(["key ctrl-cmd-4"])
             app.expect(await app.reply("state"), contains: "tab=changes")
 
