@@ -16,12 +16,16 @@
 //   `trust-state`                    what the open project commands window shows (`trust` opens it), or none
 //   `step-draft`                     Notes' Add next step: the draft row opens (`notes` says `draft=true`)
 //   `project-layout` / `project-note <prompt>`  the Project tab's Open terminals, a prompt's Copy into a new note
+//   `profile-chip [switch <n>]`      the profiles the chip is given (`HubActions.profiles`, what it draws: none while there is
+//                                    one): `profile-chip choices=<n>` then `choice <id> "<name>" [current] [here]`; `switch <n>` is
+//                                    its menu's n-th profile chosen (`ProfileActions.switchTo`, what the menu's row calls)
 
 import AppKit
 import AuxModel
 import AuxWindows
 import DesignSystem
 import PanelModel
+import PanesUI
 import SidebarUI
 import TerminalUI
 import WindowUI
@@ -52,6 +56,18 @@ extension AppController {
             hub.sidebarLink.ask(.popover(id))
             reply("group-popover \(id)")
         case "sidebar-tip": reply(sidebarTip(argument))
+        case "profile-chip":
+            let choices = hub.actions.profiles()
+            let words = argument.split(separator: " ").map(String.init)
+            if words.first == "switch" {
+                guard let n = words.dropFirst().first.flatMap({ Int($0) }), choices.indices.contains(n - 1) else { reply("error: profile-chip switch <n> of \(choices.count)"); return true }
+                hub.actions.profile.switchTo(choices[n - 1].id)
+                reply("profile-chip switch \(choices[n - 1].id)")
+                return true
+            }
+            reply((["profile-chip choices=\(choices.count)"] + choices.map {
+                Readout.line("choice", [$0.id], quoted: [$0.name], flags: [Readout.flag("current", $0.current), Readout.flag("here", $0.here)])
+            }).joined(separator: "\n"))
         case "plus-menu":
             let shells = hub.actions.shells()
             let words = argument.split(separator: " ", maxSplits: 1).map(String.init)
