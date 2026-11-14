@@ -81,16 +81,18 @@ extension EndToEnd {
     @Test("en-XA puts the interface's words, the core's and the app's, in the pseudo-language; English comes back")
     @MainActor func pseudoLanguage() async throws {
         try await Instance.with { app in
-            app.expect(!(await app.reply("shortcut-rows")).contains("⟦"), "English first")
+            // The palette's section titles are catalog words. The shortcut sheet's rows are not: they are the core keymap's own
+            // labels (`keys::keymap::sheet`), English in the GPUI app's sheet too, so they are no sign of the language.
+            app.expect(!(await app.reply("palette-rows show history")).contains("⟦"), "English first")
             app.expect(await app.reply("language en-XA"), contains: "language en-XA")
-            app.expect(await app.reply("shortcut-rows"), contains: "⟦")
+            app.expect(await app.reply("palette-rows show history"), contains: "⟦")
             // A question the app puts: its words come from the catalog too.
             let size = Self.number(await app.setting("font_size")) ?? 13
             await app.send(["set font_size=\(size + 1)", "settings-reset-confirm"])
             app.expect(await app.until("question") { $0.contains("title=") }, contains: "⟦")
             await app.send(["question cancel"])
             await app.send(["language en"])
-            app.expect(!(await app.reply("shortcut-rows")).contains("⟦"), "English again")
+            app.expect(!(await app.reply("palette-rows show history")).contains("⟦"), "English again")
         }
     }
 }
