@@ -1,6 +1,6 @@
 // Rust's "something changed" (`PanelListener.wake`, called on a Rust thread, at most once until the owner drains)
-// as the `AsyncStream<Void>` the panel's stores read. The stream coalesces: a flood of file events is one element
-// per `window`, then Rust is re-armed to wake again.
+// as the `AsyncStream<Void>` the panel's stores read. The stream coalesces: a flood of file events is one element at
+// once and one more per `window` while it lasts; Rust is re-armed with every wake, so nothing after a look goes untold.
 
 import Foundation
 import WormholeBindings
@@ -19,15 +19,42 @@ final class WakeRelay: PanelListener, @unchecked Sendable {
     private let lock = NSLock()
     private var handle: WatchHandle?
     private var finished = false
+    /// When the stream last got an element, and whether one is owed for wakes since.
+    private var lastYield: DispatchTime?
+    private var pending = false
 
     init(_ continuation: AsyncStream<Void>.Continuation, window: DispatchTimeInterval) {
         self.continuation = continuation
         self.window = window
     }
 
+    /// Rust is re-armed at once, so a change made after this wake is told too; what the stream gets is one element now and,
+    /// for the wakes that follow within `window`, one more when it ends. Re-armed only after the window, a change made
+    /// between the reader's look and the re-arm was never told: the tab read a file while it was being replaced and kept
+    /// what it read (a project's switch put back to its default stayed off in the Project tab).
     func wake() {
+        lock.lock()
+        let (current, now) = (handle, DispatchTime.now())
+        var later: DispatchTime?
+        let quiet = lastYield.map { now >= $0 + window } ?? true
+        if quiet {
+            lastYield = now
+        } else if !pending, let last = lastYield {
+            pending = true
+            later = last + window
+        }
+        lock.unlock()
+        current?.drain()
+        if quiet { continuation.yield() }
+        if let later { DispatchQueue.global(qos: .utility).asyncAfter(deadline: later) { [weak self] in self?.flush() } }
+    }
+
+    /// The window after an element ended and something changed in it: one element for all of it.
+    private func flush() {
+        lock.lock()
+        (pending, lastYield) = (false, .now())
+        lock.unlock()
         continuation.yield()
-        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + window) { [weak self] in self?.rearm() }
     }
 
     func attach(_ started: WatchHandle) {
@@ -46,13 +73,6 @@ final class WakeRelay: PanelListener, @unchecked Sendable {
         handle = nil
         lock.unlock()
         ended?.stop()
-    }
-
-    private func rearm() {
-        lock.lock()
-        let current = handle
-        lock.unlock()
-        current?.drain()
     }
 }
 

@@ -27,6 +27,32 @@ final class WakeStreamTests: XCTestCase {
         XCTAssertEqual(counter["stop"], 0)
     }
 
+    /// A change right after the reader looked (inside the window) is told when the window ends, not lost: the reader may
+    /// have read the file while it was being replaced.
+    func testAWakeInsideTheWindowIsAnElementOfItsOwn() async throws {
+        let held = LockedRelay()
+        let stream = WakeStream.make(window: .milliseconds(100)) { relay in
+            held.set(relay)
+            return WatchHandle(drain: {}, stop: {})
+        }
+        var iterator = stream.makeAsyncIterator()
+        let relay = try await held.waitForRelay()
+        relay.wake()
+        _ = await iterator.next()
+        relay.wake()
+        let second = Task { () -> Bool in
+            var iterator = iterator
+            return await iterator.next() != nil
+        }
+        let timeout = Task {
+            try await Task.sleep(for: .seconds(3))
+            second.cancel()
+        }
+        let told = await second.value
+        timeout.cancel()
+        XCTAssertTrue(told, "the second wake reaches the reader")
+    }
+
     func testEndingTheStreamStopsTheWatchEvenIfItStartedLate() async throws {
         let counter = Counter()
         let stream = WakeStream.make { _ in
