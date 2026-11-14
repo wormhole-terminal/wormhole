@@ -66,6 +66,8 @@ extension AppController {
         case "find": runFind(argument)
         case "diff": runDiff(argument)
         case "notice": reply(postNotice(argument)); return true
+        // `onboarding <welcome|folder|look|agents|primer|close>`, as the GPUI app's devctl: the intro window at that step, or closed.
+        case "onboarding" where !argument.isEmpty: aux.showOnboarding(step: argument)
         case "about", "licenses", "hosts", "trust", "access", "updates", "onboarding", "quick-panel": runAux(command)
         case "host":
             // What the bar's buttons do, for the selected terminal: retry, new, end, end-hard.
