@@ -236,8 +236,8 @@ final class ThemeFilesFFITests: XCTestCase {
     }
 }
 
-@MainActor
 /// The active profile's themes folder, which a profile switch changes under an open Studio.
+/// why: only the test's own thread writes and reads it; the folder's closures are `@Sendable`, so it is not the main actor's.
 private final class ActiveFolder: @unchecked Sendable {
     var url: URL
     init(_ url: URL) { self.url = url }
