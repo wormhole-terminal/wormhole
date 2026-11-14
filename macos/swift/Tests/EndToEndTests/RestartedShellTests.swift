@@ -1,9 +1,10 @@
 import Foundation
 import Testing
 
-/// A terminal whose shell ended, started again from its bar (Restart): it is the same terminal, with its note, in the app or
-/// in a new host of its own, and it is still there with its note at the next launch (TO-VERIFY line 1569). Read from the
-/// list, the notes' store, `sessions` and the hosts folder.
+/// A terminal whose shell ended, started again from its bar (Restart): it is the same terminal, back in its pane with the
+/// keys, its row idle again, with its note, in the app or in a new host of its own, and it is still there with its note at
+/// the next launch (TO-VERIFY line 1569). Read from the window's views (`bounds`), where the keys are (`keys`), the list,
+/// the notes' store, `sessions` and the hosts folder.
 extension EndToEnd {
     /// zsh told to exit, and the bar over the terminal once it says the shell ended.
     @MainActor private static func endShell(_ app: Instance, _ id: Int) async {
@@ -19,40 +20,37 @@ extension EndToEnd {
         await app.until("rows") { Listing($0).row(id)?.activity == "idle" }
     }
 
-    /// A line typed at the restarted terminal's shell, and its screen once a line of it starts with `word`. The screen is read
-    /// from frames forced on the terminal's view (`frames`): the view of a restarted terminal is not put back into its pane
-    /// (`restartedTerminalIsBackInItsPane` below), so nothing draws it by itself.
-    @MainActor private static func answer(_ app: Instance, to line: String, startingWith word: String) async -> String {
-        var screen = ""
-        let start = Date()
-        repeat {
-            if !(await app.send(["frames 3", "wait-idle 1500", "screen"]))[2].allSatisfy(\.isWhitespace) { break }
-        } while Date().timeIntervalSince(start) < 15
-        await app.shell(line)
-        repeat {
-            screen = (await app.send(["frames 2", "delay 200", "screen"]))[2]
-        } while !screen.split(separator: "\n").contains { $0.hasPrefix(word) } && Date().timeIntervalSince(start) < 30
-        app.expect(screen.split(separator: "\n").contains { $0.hasPrefix(word) }, "the new shell answered `\(line)`:\n\(screen)")
-        return screen
+    /// The number after `word` at the start of a line of the screen (`echo word$$` printed the shell's process id).
+    private static func process(_ word: String, in screen: String) -> String? {
+        screen.split(separator: "\n").first { $0.hasPrefix(word) }.map { $0.dropFirst(word.count).trimmingCharacters(in: .whitespaces) }
     }
 
-    @Test("Restart on an ended shell's bar: the same terminal runs a new shell, its row is idle again and it keeps its note, over a relaunch too")
-    @MainActor func restartedShellKeepsItsNote() async throws {
+    @Test("Restart on an ended shell's bar: the terminal is back in its pane with the keys, another shell answers, its row is idle and its note is kept, over a relaunch too")
+    @MainActor func restartedShellKeepsItsPaneKeysAndNote() async throws {
         try await Instance.with(shell: .zsh) { app in
             await app.flags(["notes_and_tasks": true])
-            guard let id = await app.live(1)?.first else { return }
+            guard let id = await app.live(1)?.first, let frame = await app.terminalFrames().first else { return app.fail("a terminal on screen") }
+            let middle = "\(Int(frame.midX)) \(Int(frame.midY))"
+            app.expect(await app.reply("bounds \(middle) 1"), contains: "MetalTerminalView")
+            // While the shell runs its bar offers no Restart.
             app.expect(await app.reply("pane-restart"), contains: "error")
             await app.send(["tab notes", "note-add survives the restart"])
             await app.until("notes") { $0.contains("survives the restart") }
+            // The keys back in the terminal (the note's field had them): a click on it.
+            await app.send(["click \(middle)"])
+            await app.until("keys") { $0.contains("focus=terminal") }
             await app.shell("echo shell-one-$$")
-            let first = await app.screen { $0.contains("\nshell-one-") || $0.hasPrefix("shell-one-") }
+            let first = Self.process("shell-one-", in: await app.screen { Self.process("shell-one-", in: $0) != nil })
 
             await Self.endShell(app, id)
             await Self.restart(app, id)
-            // A new shell (another process) in the same terminal.
-            let second = await Self.answer(app, to: "echo shell-two-$$", startingWith: "shell-two-")
-            let pid = { (screen: String, word: String) in screen.split(separator: "\n").first { $0.hasPrefix(word) }.map { $0.dropFirst(word.count).trimmingCharacters(in: .whitespaces) } }
-            app.expect(pid(first, "shell-one-") != nil && pid(second, "shell-two-") != nil && pid(first, "shell-one-") != pid(second, "shell-two-"), "another shell answers: \(String(describing: pid(first, "shell-one-"))) then \(String(describing: pid(second, "shell-two-")))")
+            // Its new view is the one under the pane's middle, and it has the keys the terminal had.
+            await app.until("bounds \(middle) 1") { $0.contains("MetalTerminalView") }
+            await app.until("keys") { $0.contains("focus=terminal") }
+            // Typed as the keyboard types, with nothing forced: another shell (another process) answers, and it is drawn.
+            await app.send(["text echo shell-two-$$", "key return"])
+            let second = Self.process("shell-two-", in: await app.screen { Self.process("shell-two-", in: $0) != nil })
+            app.expect(first != nil && second != nil && first != second, "another shell answers: \(String(describing: first)) then \(String(describing: second))")
             app.expect((await app.rows()).live == [id], "it is the same terminal")
             await app.send(["tab notes"])
             await app.until("notes") { $0.contains("survives the restart") }
@@ -66,14 +64,19 @@ extension EndToEnd {
     }
 
     @Test(
-        "Restart on a hosted terminal's ended shell: a new host of its own, the old one gone, the note kept; after a quit that keeps the hosts it is attached to that host with its note",
+        "Restart on a hosted terminal's ended shell: a new host of its own with the keys, the old one gone, the note kept; after a quit that keeps the hosts it is attached to that host with its note",
         .enabled(if: Instance.hostProgram() != nil, "no session host is built: cargo build -p wormhole-host"))
     @MainActor func restartedHostedShellKeepsItsNote() async throws {
         try await Instance.with(shell: .zsh, hosts: true) { app in
             await app.flags(["persistent_terminals": true, "notes_and_tasks": true])
-            guard let old = Instance.hostIDs(in: await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }).first, let id = await app.live(1)?.first else { return }
+            guard let old = Instance.hostIDs(in: await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }).first, let id = await app.live(1)?.first,
+                let frame = await app.terminalFrames().first
+            else { return }
             await app.send(["tab notes", "note-add survives the restart"])
             await app.until("notes") { $0.contains("survives the restart") }
+            // The keys back in the terminal (the note's field had them): a click on it.
+            await app.send(["click \(Int(frame.midX)) \(Int(frame.midY))"])
+            await app.until("keys") { $0.contains("focus=terminal") }
 
             await Self.endShell(app, id)
             await Self.restart(app, id)
@@ -82,7 +85,9 @@ extension EndToEnd {
             let folder = app.scratch.hostsFolder
             app.expect(await app.watch(folder, timeout: 15) { Set(Scratch.liveHosts(in: folder).keys) == Set(now) }, "only the new host runs: \(app.scratch.liveHosts()) for \(now)")
             app.expect((await app.rows()).live == [id], "it is the same terminal")
-            _ = await Self.answer(app, to: "echo in-the-new-host", startingWith: "in-the-new-host")
+            await app.until("keys") { $0.contains("focus=terminal") }
+            await app.send(["text echo in-the-new-host", "key return"])
+            await app.screen { $0.split(separator: "\n").contains { $0.hasPrefix("in-the-new-host") } }
             await app.send(["tab notes"])
             await app.until("notes") { $0.contains("survives the restart") }
 
@@ -98,53 +103,38 @@ extension EndToEnd {
         }
     }
 
-    // Disabled: the screen of a hosted terminal that was restarted does not come back whole. Before the quit the new shell's
-    // line is on its screen (read from the terminal's frames); after a quit that keeps the hosts and a launch the terminal is
-    // attached to the same host and shows a prompt only. A hosted terminal that was not restarted keeps its text over the same
-    // quit (`hostedTerminalOutlivesTheApp`). Probably the same cause as `restartedTerminalIsBackInItsPane`: the restarted
-    // terminal's view is never in its pane, so its host keeps the size it started with and is resized at the next attach.
-    // Not fixed here: saved terminals. The scenario asserts what a person expects: the text is still there.
+    // Disabled: a line is lost. A hosted shell restarted from its bar prints a line; after a quit that keeps the hosts and a
+    // launch the terminal is attached to the same host, the command's own line and the prompt are there (on the screen or
+    // just above it), and the line the command printed is gone. A hosted shell that was not restarted keeps every line over
+    // the same quit (seen with the same commands). Not fixed here: saved terminals. What differs for the restarted one is
+    // not traced; the shell redraws its prompt when the attach resizes it, and a host whose size was not the view's when
+    // the line was printed would explain a redraw one line too high.
     @Test(
-        "a restarted hosted terminal's text is still on its screen after a quit that keeps the hosts",
-        .disabled("after Restart and a quit that keeps the hosts the terminal comes back with a prompt only: see the comment"),
+        "a restarted hosted shell's last line is still there after a quit that keeps the hosts",
+        .disabled("after Restart in a host and a quit that keeps the hosts the line the shell printed last is gone: see the comment"),
         .enabled(if: Instance.hostProgram() != nil, "no session host is built: cargo build -p wormhole-host"))
     @MainActor func restartedHostedShellKeepsItsText() async throws {
         try await Instance.with(shell: .zsh, hosts: true) { app in
             await app.flags(["persistent_terminals": true])
-            guard await app.until("sessions", { Instance.hostIDs(in: $0).count == 1 }).isEmpty == false, let id = await app.live(1)?.first else { return }
+            await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
+            guard let id = await app.live(1)?.first else { return }
             await Self.endShell(app, id)
             await Self.restart(app, id)
-            _ = await Self.answer(app, to: "echo in-the-new-host", startingWith: "in-the-new-host")
+            await app.until("keys") { $0.contains("focus=terminal") }
+            await app.send(["text echo in-the-new-host", "key return"])
+            await app.screen { $0.split(separator: "\n").contains { $0.hasPrefix("in-the-new-host") } }
             await app.send(["save-windows"])
             await app.quit(command: "quit-keep")
             try await app.start()
             await app.until("rows") { Listing($0).live == [id] }
-            await app.screen { $0.split(separator: "\n").contains { $0.hasPrefix("in-the-new-host") } }
-        }
-    }
-
-    // Disabled: an app defect. After Restart the new terminal runs (it answers what is typed into it, its row is idle) but
-    // its view is not in the pane: the pane's container has no terminal view under it, the screen stays empty unless frames
-    // are forced, a click on the pane gives nothing the keys (`keys`: `focus=none responder=WorkspaceWindow`) and typed keys
-    // reach no terminal. The GPUI app makes a new pane in the old one's place and gives it the focus when it is the active
-    // one (`window/panes/mod.rs` `restart_pane`). Not fixed here: the pane's host and the window's focus are being worked on
-    // in another lane this round (`TerminalHost.swift`, `WindowFocus.swift`). The scenario asserts GPUI's behaviour.
-    @Test(
-        "after Restart the terminal is back in its pane: drawn there, with the keys, and typing reaches the new shell",
-        .disabled("the restarted terminal's view is not put back into its pane and gets no keys: see the comment"))
-    @MainActor func restartedTerminalIsBackInItsPane() async throws {
-        try await Instance.with(shell: .zsh) { app in
-            guard let id = await app.live(1)?.first, let frame = await app.terminalFrames().first else { return app.fail("a terminal on screen") }
-            let middle = "\(Int(frame.midX)) \(Int(frame.midY))"
-            app.expect(await app.reply("bounds \(middle) 1"), contains: "MetalTerminalView")
-            await Self.endShell(app, id)
-            await Self.restart(app, id)
-            // Its view is the one under the pane's middle again, and it has the keys.
-            await app.until("bounds \(middle) 1") { $0.contains("MetalTerminalView") }
-            await app.until("keys") { $0.contains("focus=terminal") }
-            // Typed as the keyboard types, with nothing forced: the new shell's answer is drawn.
-            await app.send(["text echo typed-after-restart", "key return"])
-            await app.screen { $0.split(separator: "\n").contains { $0.hasPrefix("typed-after-restart") } }
+            await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
+            // On the screen, or just above it where the shell's redraw after the attach pushed it.
+            var text = ""
+            let start = Date()
+            repeat {
+                text = (await app.send(["scroll 700 400 -600", "frames 2", "delay 150", "screen", "scroll 700 400 600"]))[3]
+            } while !text.split(separator: "\n").contains { $0.hasPrefix("in-the-new-host") } && Date().timeIntervalSince(start) < 15
+            app.expect(text.split(separator: "\n").contains { $0.hasPrefix("in-the-new-host") }, "the line from before the quit is still there:\n\(text)")
         }
     }
 }
