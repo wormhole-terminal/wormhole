@@ -1,17 +1,19 @@
 import Foundation
 import Synchronization
 
-/// The app's own command line (`Wormhole <words…>`) asking the instance through its socket, as an agent or a script would, left
-/// running while its request waits on the person's answer (the control folder's `agent-ask`). Its output goes to a file of the
-/// scratch folder; `finish` waits for its end on the process's own exit event and a deadline, never a pause.
+/// The app's own command line (`Wormhole <words…>`) asking the instance through its socket, as a script would, left running
+/// while its request waits on the person's answer (the control folder's `agent-ask`). It is started detached: a shell puts
+/// it in the background and exits, so its ancestors are that shell and launchd, never the test runner's own (a coding agent's
+/// session that runs the suite would otherwise be the requester the app names, rightly). Its output goes to a file of the
+/// scratch folder, its exit status to another when it ends; `finish` waits for that file and a deadline, never a pause.
 @MainActor
 final class Client {
-    private let process: Process
     private let log: URL
+    private let pidFile: URL
     private let state: ClientState
 
-    fileprivate init(process: Process, log: URL, state: ClientState) {
-        (self.process, self.log, self.state) = (process, log, state)
+    fileprivate init(log: URL, pidFile: URL, state: ClientState) {
+        (self.log, self.pidFile, self.state) = (log, pidFile, state)
     }
 
     var isRunning: Bool { !state.isDone }
@@ -31,7 +33,10 @@ final class Client {
         }
         for await _ in stream {}
         if let status = state.status { return status }
-        process.terminate()
+        // Still waiting: ended by the pid the shell wrote for it (it is no child of this process).
+        if let pid = (try? String(contentsOf: pidFile, encoding: .utf8)).flatMap({ pid_t($0.trimmingCharacters(in: .whitespacesAndNewlines)) }), pid > 1 {
+            kill(pid, SIGTERM)
+        }
         return nil
     }
 }
@@ -39,10 +44,27 @@ final class Client {
 extension Instance {
     /// `Wormhole <words…>` started against this instance, from inside terminal `terminal` (none: from outside the app's terminals).
     func cli(_ words: [String], terminal: Int? = nil) throws -> Client {
-        let log = scratch.root.appendingPathComponent("client-\(UUID().uuidString.prefix(6)).txt")
+        let name = "client-\(UUID().uuidString.prefix(6))"
+        let log = scratch.root.appendingPathComponent(name + ".txt")
+        let status = scratch.root.appendingPathComponent(name + ".status"), pidFile = scratch.root.appendingPathComponent(name + ".pid")
         let state = ClientState()
-        let process = try Spawn.start(program.path, words, environment: try clientEnvironment(terminal: terminal), log: log) { state.finish($0) }
-        return Client(process: process, log: log, state: state)
+        // The status file is moved into place whole, so the folder's change is the moment it can be read.
+        let folder = open(scratch.root.path, O_EVTONLY)
+        if folder >= 0 {
+            let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: folder, eventMask: .write, queue: .global())
+            source.setEventHandler { @Sendable in
+                guard let text = try? String(contentsOf: status, encoding: .utf8), let code = Int32(text.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
+                state.finish(code)
+                source.cancel()
+            }
+            source.setCancelHandler { @Sendable in close(folder) }
+            source.resume()
+        }
+        let detached = #"status=$1; pid=$2; shift 2; ( "$@" & echo $! > "$pid"; wait $!; echo $? > "$status.tmp"; mv "$status.tmp" "$status" ) </dev/null &"#
+        _ = try Spawn.start(
+            "/bin/sh", ["-c", detached, "sh", status.path, pidFile.path, program.path] + words, environment: try clientEnvironment(terminal: terminal),
+            log: log) { _ in }
+        return Client(log: log, pidFile: pidFile, state: state)
     }
 
     /// `Wormhole <words…>` run to its end: its status and what it printed.

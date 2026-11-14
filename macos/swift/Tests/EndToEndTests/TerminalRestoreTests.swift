@@ -57,7 +57,7 @@ extension EndToEnd {
         }
     }
 
-    @Test("a profile's environment and start folder reach the terminals it starts, with WORMHOLE_PROFILE")
+    @Test("a profile's environment reaches the terminals it starts, with WORMHOLE_PROFILE; ⌘T opens where the selected terminal is")
     @MainActor func profileEnvironment() async throws {
         try await Instance.with(shell: .zsh) { app in
             let start = app.scratch.home.appendingPathComponent("profile-start")
@@ -70,7 +70,10 @@ extension EndToEnd {
             await app.shell("echo env=$WH_E2E_PROFILE id=$WORMHOLE_PROFILE; pwd")
             let shown = await app.screen { $0.contains("env=from-profile") }
             app.expect(shown, contains: "id=default")
-            app.expect(shown, contains: "/profile-start")
+            // ⌘T opens where the selected terminal is (core `Workspace::start_folder`, as in the GPUI app): the profile's start
+            // folder is only for a terminal no folder was asked for (`apply_profile`), so this one is in the first one's folder.
+            app.expect(shown, contains: app.scratch.root.lastPathComponent + "/home ")
+            app.expect(!shown.contains("/profile-start"), "a new terminal beside one is not sent to the profile's start folder:\n\(shown)")
         }
     }
 }
