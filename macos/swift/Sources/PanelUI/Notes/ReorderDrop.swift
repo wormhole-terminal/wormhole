@@ -1,6 +1,7 @@
-// Dragging a next step or a note to another place in its list (`style::Reorder`, core `view::reorder`): the row under
-// the pointer shows a line on the edge the dragged one would land on, above when dragging up and below when dragging
-// down, and dropping moves it there. ⌥⌘↑ and ⌥⌘↓ do the same from the keyboard (`reorderKeys`).
+// Dragging a next step or a note to another place in its list (`style::Reorder`, core `view::reorder`): a row that can be
+// dragged shows a faint grip at its left edge under the pointer (`style::item_row`); the row under the pointer shows a
+// line on the edge the dragged one would land on, above when dragging up and below when dragging down, and dropping
+// moves it there. ⌥⌘↑ and ⌥⌘↓ do the same from the keyboard (`reorderKeys`).
 
 import DesignSystem
 import PanelModel
@@ -31,10 +32,20 @@ private struct Reorderable: ViewModifier {
     @Binding var dragging: UUID?
     let move: (Int, Int) -> Void
     @State private var target: UUID?
+    @State private var hovering = false
     @Environment(\.tokens) private var tokens
 
     func body(content: Content) -> some View {
         content
+            // The grip stands just outside the row's lead, as tall as its first line, and takes no clicks.
+            .overlay(alignment: .topLeading) {
+                if hovering {
+                    Image(Icon.grip).font(.system(size: tokens.size(.caption))).imageScale(.small).foregroundStyle(tokens.textFaint)
+                        .frame(width: Space._3, height: Metric.row).offset(x: -Space._1)
+                        .allowsHitTesting(false).accessibilityHidden(true)
+                }
+            }
+            .onHover { hovering = $0 }
             .overlay(alignment: edge == .above ? .top : .bottom) {
                 if target == id, edge != nil { Rectangle().fill(tokens.primary).frame(height: 2).padding(.horizontal, PanelMetrics.inset) }
             }
