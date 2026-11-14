@@ -6,10 +6,12 @@ extension EndToEnd {
     @MainActor func studio() async throws {
         try await Instance.with { app in
             // A theme of the person's own in the older format and with no id: its first save converts it.
-            try app.scratch.write(app.scratch.data, "themes/Mine.json", "{ \"name\": \"Mine\", \"extends\": \"Nord\" }\n")
+            // The themes folder is the active profile's, beside its `config.json`.
+            guard let profile = app.configFile()?.deletingLastPathComponent() else { return app.fail("the app has written no config.json yet") }
+            try app.scratch.write(profile, "themes/Mine.json", "{ \"name\": \"Mine\", \"extends\": \"Nord\" }\n")
             await app.send(["studio"])
             await app.until("state") { $0.contains("\nstudio dirty=") }
-            app.expect(await app.reply("studio-open own:Mine"), contains: "name=Mine")
+            app.expect(await app.late("studio-open own:Mine"), contains: "name=Mine")
 
             // Muted text too dark on Nord: core's one report marks the token (the Low count), the Low filter keeps it and
             // the card lists its pair.
@@ -25,7 +27,7 @@ extension EndToEnd {
 
             // Renamed and saved: the theme keeps the id it answered to, so the original kept by the save is still listed.
             await app.send(["studio-filter all", "studio-rename Dawn"])
-            let saved = await app.reply("studio-save")
+            let saved = await app.late("studio-save")
             app.expect(saved, contains: "name=Dawn")
             app.expect(saved, contains: "dirty=false")
             let versions = await app.reply("studio-versions")

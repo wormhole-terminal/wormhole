@@ -26,12 +26,30 @@ extension Instance {
     }
 
     /// The app's `config.json` (the active profile's, wherever the core keeps it under the data folder), nil before it is written.
-    func configText() -> String? {
+    func configFile() -> URL? {
         guard let walker = FileManager.default.enumerator(at: scratch.data, includingPropertiesForKeys: nil) else { return nil }
         for case let url as URL in walker where url.lastPathComponent == "config.json" && url.pathComponents.count - scratch.data.pathComponents.count <= 3 {
-            return try? String(contentsOf: url, encoding: .utf8)
+            return url
         }
         return nil
+    }
+
+    func configText() -> String? { configFile().flatMap { try? String(contentsOf: $0, encoding: .utf8) } }
+
+    /// A command that answers when it is done, beside the batch (the Studio's open, save and use may ask a question first):
+    /// its answer is the line that starts with the command and a colon, whenever it comes.
+    func late(_ command: String, timeout: TimeInterval = 20) async -> String {
+        let out = outFile(nil)
+        let before = (try? Data(contentsOf: out).count) ?? 0
+        await send([command])
+        let prefix = command + ": "
+        let answered: @Sendable () -> String? = {
+            guard let data = try? Data(contentsOf: out), data.count >= before else { return nil }
+            return String(decoding: data.dropFirst(before), as: UTF8.self).split(separator: "\n").first { $0.hasPrefix(prefix) }.map(String.init)
+        }
+        let came = await watch(out, timeout: timeout) { answered() != nil }
+        expect(came, "no answer to `\(command)` in \(Int(timeout)) s")
+        return answered() ?? ""
     }
 
     /// Waits (pausing by the app's own `delay`) until `config.json` satisfies `done`.

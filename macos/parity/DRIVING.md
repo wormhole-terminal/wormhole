@@ -218,6 +218,13 @@ not exist instead of inventing one. A repository comes from `app.scratch.reposit
 which acts on the window in front (the newest, once a second one is open); `app.send([...], window: 1)` writes `cmd1` and reads
 `out1.txt`, the first window's own, and `window: 2` the second's.
 
+Every instance gets one window size (`Instance.window`, 1600 x 900 points: 100 columns beside both side columns, and room to
+split), asked with `size` once the window answers and checked with `geometry`, so no scenario depends on the display it runs on:
+a size asked through the control folder holds where the screen is smaller than the window (AppKit would fit the window to the
+screen: on a 1024-point display the terminal was 304 points wide, a split was refused and text wrapped at 35 columns).
+The Studio's `studio-open`, `studio-save` and `studio-use` answer when they are done, beside the batch: read them with `app.late(…)`.
+`a11y` lists AppKit's views only, so a SwiftUI button's spoken name is a known issue there ("What still needs a person").
+
 What they may never touch: the person's data folder, `HOME`, agent home, clipboard, Trash, notifications, Touch ID, git repositories,
 browser or editor, and the keyboard focus. The harness gives the app an environment of its own (no inherited variable): the data
 folder is `Wormhole-swift-e2e` inside `/tmp/wh-e2e-<id>`, `HOME`, `TMPDIR` and `WORMHOLE_AGENT_HOME` are folders in it,

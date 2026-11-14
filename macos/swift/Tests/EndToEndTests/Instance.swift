@@ -106,7 +106,11 @@ final class Instance {
         return environment
     }
 
-    /// Launches the app on this scratch folder and waits until its window answers.
+    /// The window's content in points: both columns open leave the terminal 874 points, 100 columns at the default font,
+    /// and room to split it.
+    static let window = (width: 1600, height: 900)
+
+    /// Launches the app on this scratch folder, waits until its window answers and gives it the suite's size.
     func start() async throws {
         ended.reset()
         if !FileManager.default.fileExists(atPath: outFile(nil).path) { FileManager.default.createFile(atPath: outFile(nil).path, contents: nil) }
@@ -116,6 +120,12 @@ final class Instance {
             onExit: { ended.finish($0) })
         let said = await until("state", timeout: 40) { $0.contains("terminals=") }
         expect(said.contains("terminals="), "the app did not come up with a window")
+        // One window size for every run, whatever display it runs on (a runner's is smaller than the window): the app keeps
+        // a size asked through its control folder beyond the screen's edge. Checked, so a display that still decides fails here.
+        let size = "(\(Self.window.width).0, \(Self.window.height).0)"
+        await send(["size \(Self.window.width)x\(Self.window.height)"])
+        let sized = await until("geometry") { $0.contains("content=\(size)") }
+        expect(sized.contains("content=\(size)"), "the window did not take the size \(size):\n\(sized)")
     }
 
     /// Quits as ⌘Q does without the question (the terminals' state is saved first) and starts the app again on the same folders.
