@@ -77,6 +77,7 @@ extension AppController {
                 + "changes=\(details?.changes.spans.map(\.text).joined() ?? "-") files=\(history.files.map(\.path)) diff=\(hub.panel.history.diff.phase)")
             return true
         case "project-approve": hub.panel.project.approve()
+        case "project-revoke": hub.panel.project.revoke()
         case "project-feature":
             let words = argument.split(separator: " ").map(String.init)
             guard words.count == 2, let feature = ProjectFeature(rawValue: words[0]) else { return fail("project-feature <settings|theme|actions|prompts|layout|notes> on|off") }

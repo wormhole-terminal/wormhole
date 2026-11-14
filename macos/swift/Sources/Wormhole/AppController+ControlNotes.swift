@@ -65,6 +65,16 @@ extension AppController {
         case "commit-more":
             hub.panel.history.bodyWhole.toggle()
             reply("commit-more \(hub.panel.history.bodyWhole ? "whole" : "compact")")
+        case "notes-sync":
+            // One whole merge of the window's terminals with their projects' notes.md, now (what the timer runs); one already
+            // under way lands first.
+            guard let coordinator = front.notes else { reply("error: the window has no notes sync"); return true }
+            var ran = await coordinator.sync()
+            for _ in 0..<100 where !ran {
+                await pause(50)
+                ran = await coordinator.sync()
+            }
+            reply("notes-sync \(ran ? "done" : "busy")")
         case "project-init":
             let project = hub.panel.project
             // The folder the tab's button makes it in (a repository's root, as the GPUI app's `active_folder`), not the terminal's own.

@@ -116,15 +116,20 @@ final class NotesCoordinator {
         } : nil
     }
 
-    func sync() async {
+    /// One merge of every terminal; false when one was already under way (nothing more is done).
+    @discardableResult
+    func sync() async -> Bool {
         // A second run starting before the first lands would merge against what the first is still to write.
-        guard !syncing else { return }
+        guard !syncing else { return false }
         syncing = true
         defer { syncing = false }
         reread()
         for terminal in hub.state.all {
             let id = terminal.id
-            var found = id == shown ? hub.panel.project.state?.root : nil
+            // The project of the terminal's own folder: the panel's only while it reads that folder. Right after a switch the
+            // panel can still hold the terminal shown before, whose notes.md this terminal must never be merged with.
+            let panel = hub.panel.project
+            var found = id == shown && terminal.readPath != nil && panel.folder == terminal.readPath ? panel.state?.root : nil
             if found == nil { found = await root(of: terminal) }
             guard let root = found, hub.state.all.contains(where: { $0.id == id }) else { continue }
             // Only a step or note of the terminal on show being written holds its merge back (`api.rs` `being_written`);
@@ -134,6 +139,7 @@ final class NotesCoordinator {
             let answered = await persistence.sync(session: id, root: root, model: sent, editing: editing)
             land(answered, sent: sent, for: id)
         }
+        return true
     }
 
     /// The core has merged against `notes.md` and moved the terminal's merge base: the model kept for THAT terminal moves with
