@@ -36,7 +36,19 @@ final class TearOffGrow {
     private let mask = CAShapeLayer()
     private var timer: Timer?
     private var began = Date()
+    /// Where in its growth a held window stands (`hold`), in seconds of it.
+    private var held: TimeInterval?
     private var onEnd: () -> Void
+
+    /// The control folder's `grow-hold <t>`: every growing window stands at that point of its growth (0 the chip, 1 the
+    /// window) and stays, for a shot; nil (`grow-hold off`) lets it grow on from there (GPUI's `window::grow::hold`). Set it
+    /// before the tear-off to catch a window from its first frame.
+    static var hold: Double? {
+        didSet { for grow in growing.allObjects { grow.follow() } }
+    }
+
+    /// The windows growing now, for `hold`.
+    private static let growing = NSHashTable<TearOffGrow>.weakObjects()
 
     /// Hides what would show the whole window (its shadow, its lights) and puts the first pose: the chip.
     init?(
@@ -61,10 +73,29 @@ final class TearOffGrow {
     /// The window is on screen: the growth runs for the core's duration.
     func run() {
         began = Date()
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
+        Self.growing.add(self)
+        follow()
+    }
+
+    /// The growth's clock running, or the window stood at the held point with no clock (`hold`).
+    private func follow() {
+        timer?.invalidate()
+        timer = nil
+        if let hold = Self.hold {
+            let at = min(max(hold, 0), 1) * backend.tearOffGrowDuration
+            held = at
+            let frame = backend.tearOffGrow(chip: start.chip, size: content.bounds.size, radius: Self.radius, elapsed: at)
+            pose.grow = frame
+            apply(frame)
+            return
+        }
+        if let at = held { began = Date(timeIntervalSinceNow: -at) }
+        held = nil
+        let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
-        RunLoop.main.add(timer!, forMode: .common)
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
     }
 
     private func tick() {
@@ -84,6 +115,7 @@ final class TearOffGrow {
     private func finish() {
         timer?.invalidate()
         timer = nil
+        Self.growing.remove(self)
         content.layer?.mask = nil
         content.subviews.last(where: { $0 is NSHostingView<GrowOverlay> })?.removeFromSuperview()
         window.hasShadow = true

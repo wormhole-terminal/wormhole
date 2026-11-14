@@ -202,6 +202,13 @@ SwiftUI's `onKeyPress(.escape)` hears it, and the field's own Esc binding follow
 first sets `AXEnhancedUserInterface` and `AXManualAccessibility` on the application, as an assistive client would, so SwiftUI's
 hosting views may build their nodes (unverified: see "What still needs a person").
 
+Added by wave 11 (lane tooling; written without compiling, see TO-VERIFY.md), after GPUI's devctl:
+
+| Command | Does |
+|---|---|
+| `front` | the window the command acts on brought to the front with the keys for real (`NSApp.activate()`, `makeKeyAndOrderFront`), background mode or not: only for a check that needs the real key window outside an injected event (a field editor's own Esc), as it takes the front from the app in use; `window-front` says it without moving anything |
+| `grow-hold <t>` / `grow-hold off` | every window growing from a torn-off terminal's chip stands at that point of its growth (0 the chip, 1 the window) with no clock running, for a `window-shot`; `off` grows it on from there. Send it before the `tear-off` |
+
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).

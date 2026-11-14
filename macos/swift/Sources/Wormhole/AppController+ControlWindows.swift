@@ -1,5 +1,6 @@
 // The control folder's commands for several windows (`WORMHOLE_DEVCTL`): list them, open one, make another the one commands
-// act on, move terminals between windows, write the saved records now and read back what was saved.
+// act on, move terminals between windows, write the saved records now and read back what was saved; bring one to the front
+// for real (`front`) and hold a torn-off terminal's window part-way through its growth (`grow-hold <t>|off`).
 
 import AppKit
 import Foundation
@@ -85,6 +86,19 @@ extension AppController {
                 return true
             }
             land(numbers[0], from: source, at: CGPoint(x: CGFloat(numbers[1]), y: height - CGFloat(numbers[2])), covered: false)
+        case "front":
+            // The window the command acts on really brought to the front with the keys, background mode or not, as GPUI's
+            // `front`: only for a check that needs the real key window outside an injected event (a field editor's own Esc),
+            // since it takes the front from the app in use. `window-front` says it without moving anything.
+            NSApp.activate()
+            window?.makeKeyAndOrderFront(nil)
+        case "grow-hold":
+            // A window growing from a torn-off terminal's chip stands at that point of its growth and stays, for a shot.
+            guard argument == "off" || Double(argument) != nil else {
+                reply("error: grow-hold <0 to 1> | off")
+                return true
+            }
+            TearOffGrow.hold = Double(argument)
         case "save-windows":
             saveAllWindows()
         case "saved-windows":
