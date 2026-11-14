@@ -70,7 +70,12 @@ extension AppController {
         // among them; only what they leave goes on to the menu.
         // A key the keymap gives a view's own action (⌘← ⌘→ ⌘⌫ are the terminal's line editor: `ActionRouter.viewed`) goes the
         // keyboard's way, so the view's `performKeyEquivalent` has it before the menus, as a real key's does.
-        if !fieldCopy, window === self.window, let id = menuAction(for: name, flags), !ActionRouter.viewed.contains(id) {
+        // An action the window's menus leave out (its feature is off in the window's profile: `FeatureMask::hidden_actions`)
+        // has no item to answer the key: it goes the keyboard's way too, and is whoever's it is there (nobody's, for ⌥⌘S
+        // with Notes off).
+        if !fieldCopy, window === self.window, let id = menuAction(for: name, flags), !ActionRouter.viewed.contains(id),
+            !menuState(for: hub).hidden.contains(id)
+        {
             // An action nothing in the table runs is AppKit's own (Edit ▸ Paste, Undo…): the menu would send it up the responder chain.
             if router.table[id] == nil, let selector = StandardActions.selectors[.action(id)] {
                 // In a text field the system's own copy, cut and paste would use the person's clipboard.
