@@ -275,10 +275,24 @@ pub fn settings_appearance_trash_failed(name: &str) -> String {
 }
 
 /// ```text
+/// Hide { $name }
+/// ```
+pub fn settings_appearance_hide_named(name: &str) -> String {
+    crate::active::message(567, &[("name", Arg::Str(name))])
+}
+
+/// ```text
+/// Move { $name } to Trash
+/// ```
+pub fn settings_appearance_trash_named(name: &str) -> String {
+    crate::active::message(568, &[("name", Arg::Str(name))])
+}
+
+/// ```text
 /// Hidden themes ({ $count })
 /// ```
 pub fn settings_appearance_hidden_themes(count: &str) -> String {
-    crate::active::message(567, &[("count", Arg::Str(count))])
+    crate::active::message(569, &[("count", Arg::Str(count))])
 }
 
 /// ```text
@@ -288,5 +302,5 @@ pub fn settings_appearance_hidden_themes(count: &str) -> String {
 /// }
 /// ```
 pub fn settings_appearance_theme_newer(count: i64) -> String {
-    crate::active::message(568, &[("count", Arg::Int(count))])
+    crate::active::message(570, &[("count", Arg::Int(count))])
 }

@@ -7,333 +7,333 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Quit"
-pub const DIALOG_QUIT: Key = Key::new(1496);
+pub const DIALOG_QUIT: Key = Key::new(1498);
 /// "Quit and End All"
-pub const DIALOG_QUIT_END_ALL: Key = Key::new(1497);
+pub const DIALOG_QUIT_END_ALL: Key = Key::new(1499);
 /// "Quit Wormhole?"
-pub const DIALOG_QUIT_TITLE: Key = Key::new(1498);
+pub const DIALOG_QUIT_TITLE: Key = Key::new(1500);
 /// "Quit and End All Terminals?"
-pub const DIALOG_QUIT_END_ALL_TITLE: Key = Key::new(1499);
+pub const DIALOG_QUIT_END_ALL_TITLE: Key = Key::new(1501);
 /// "Keep terminals running in the background"
-pub const DIALOG_KEEP_RUNNING: Key = Key::new(1500);
+pub const DIALOG_KEEP_RUNNING: Key = Key::new(1502);
 /// "Its agent"
-pub const CLOSE_ITS_AGENT: Key = Key::new(1503);
+pub const CLOSE_ITS_AGENT: Key = Key::new(1505);
 /// "An agent is waiting for an answer."
-pub const CLOSE_AGENT_WAITING: Key = Key::new(1504);
+pub const CLOSE_AGENT_WAITING: Key = Key::new(1506);
 /// "An agent is still working."
-pub const CLOSE_AGENT_WORKING: Key = Key::new(1505);
+pub const CLOSE_AGENT_WORKING: Key = Key::new(1507);
 /// "A command is still running."
-pub const CLOSE_COMMAND_RUNNING: Key = Key::new(1506);
+pub const CLOSE_COMMAND_RUNNING: Key = Key::new(1508);
 /// "Its shell ends."
-pub const CLOSE_SHELL_ENDS: Key = Key::new(1510);
+pub const CLOSE_SHELL_ENDS: Key = Key::new(1512);
 /// "Closing ends the process."
-pub const CLOSE_ENDS_PROCESS: Key = Key::new(1511);
+pub const CLOSE_ENDS_PROCESS: Key = Key::new(1513);
 /// "Closing ends them."
-pub const CLOSE_ENDS_THEM: Key = Key::new(1512);
+pub const CLOSE_ENDS_THEM: Key = Key::new(1514);
 /// "The terminal in this window will end."
-pub const CLOSE_WINDOW_ONE: Key = Key::new(1513);
+pub const CLOSE_WINDOW_ONE: Key = Key::new(1515);
 /// "The terminal in this group will end."
-pub const CLOSE_GROUP_ONE: Key = Key::new(1515);
+pub const CLOSE_GROUP_ONE: Key = Key::new(1517);
 /// "Restart to Update?"
-pub const UPDATE_RESTART_TITLE: Key = Key::new(1520);
+pub const UPDATE_RESTART_TITLE: Key = Key::new(1522);
 /// "Restart"
-pub const UPDATE_RESTART: Key = Key::new(1521);
+pub const UPDATE_RESTART: Key = Key::new(1523);
 /// "Restart When Idle"
-pub const UPDATE_RESTART_WHEN_IDLE: Key = Key::new(1522);
+pub const UPDATE_RESTART_WHEN_IDLE: Key = Key::new(1524);
 /// "Later"
-pub const UPDATE_LATER: Key = Key::new(1523);
+pub const UPDATE_LATER: Key = Key::new(1525);
 /// "Your terminals come back after the restart, but what runs in them ends."
-pub const UPDATE_RESTART_NOTE: Key = Key::new(1524);
+pub const UPDATE_RESTART_NOTE: Key = Key::new(1526);
 /// "still working"
-pub const RESTART_STILL_WORKING: Key = Key::new(1527);
+pub const RESTART_STILL_WORKING: Key = Key::new(1529);
 /// "waiting for you"
-pub const RESTART_WAITING_FOR_YOU: Key = Key::new(1528);
+pub const RESTART_WAITING_FOR_YOU: Key = Key::new(1530);
 /// "a command is running"
-pub const RESTART_COMMAND_RUNNING: Key = Key::new(1529);
+pub const RESTART_COMMAND_RUNNING: Key = Key::new(1531);
 /// "About Wormhole"
-pub const ABOUT_TITLE: Key = Key::new(1530);
+pub const ABOUT_TITLE: Key = Key::new(1532);
 /// "(debug build)"
-pub const ABOUT_DEBUG_BUILD: Key = Key::new(1532);
+pub const ABOUT_DEBUG_BUILD: Key = Key::new(1534);
 /// "Licenses"
-pub const LICENSES_TITLE: Key = Key::new(1533);
+pub const LICENSES_TITLE: Key = Key::new(1535);
 /// "Search packages or licenses"
-pub const LICENSES_SEARCH: Key = Key::new(1534);
+pub const LICENSES_SEARCH: Key = Key::new(1536);
 /// "No package matches."
-pub const LICENSES_NO_MATCH: Key = Key::new(1535);
+pub const LICENSES_NO_MATCH: Key = Key::new(1537);
 /// "no license declared"
-pub const LICENSES_NONE: Key = Key::new(1536);
+pub const LICENSES_NONE: Key = Key::new(1538);
 /// "No license declared"
-pub const LICENSES_NO_LICENSE: Key = Key::new(1540);
+pub const LICENSES_NO_LICENSE: Key = Key::new(1542);
 /// "This package doesn’t include a license file. The license above is what its Cargo.toml declares; see the repository for the full text."
-pub const LICENSES_NO_FILE: Key = Key::new(1541);
+pub const LICENSES_NO_FILE: Key = Key::new(1543);
 /// "The list of licenses could not be read."
-pub const LICENSES_UNREADABLE: Key = Key::new(1542);
+pub const LICENSES_UNREADABLE: Key = Key::new(1544);
 /// "Preview"
-pub const AUX_UPDATES_PREVIEW: Key = Key::new(1543);
+pub const AUX_UPDATES_PREVIEW: Key = Key::new(1545);
 /// "Preview also gets a build of every change once it passes the tests, and shows the feature flags"
-pub const AUX_UPDATES_CHANNEL_DESCRIPTION: Key = Key::new(1544);
+pub const AUX_UPDATES_CHANNEL_DESCRIPTION: Key = Key::new(1546);
 /// "Restart when idle"
-pub const AUX_UPDATES_RESTART_WHEN_IDLE: Key = Key::new(1546);
+pub const AUX_UPDATES_RESTART_WHEN_IDLE: Key = Key::new(1548);
 /// "Security update"
-pub const UPDATE_SECURITY: Key = Key::new(1550);
+pub const UPDATE_SECURITY: Key = Key::new(1552);
 /// "What’s new"
-pub const UPDATE_RELEASE_NOTES: Key = Key::new(1551);
+pub const UPDATE_RELEASE_NOTES: Key = Key::new(1553);
 /// "This release has no notes."
-pub const UPDATE_NO_NOTES: Key = Key::new(1552);
+pub const UPDATE_NO_NOTES: Key = Key::new(1554);
 /// "This is a development build; it doesn't update itself."
-pub const UPDATE_NO_FEED: Key = Key::new(1554);
+pub const UPDATE_NO_FEED: Key = Key::new(1556);
 /// "Project commands"
-pub const TRUST_WINDOW_TITLE: Key = Key::new(1555);
+pub const TRUST_WINDOW_TITLE: Key = Key::new(1557);
 /// "This project is no longer open in a terminal."
-pub const TRUST_WINDOW_CLOSED: Key = Key::new(1556);
+pub const TRUST_WINDOW_CLOSED: Key = Key::new(1558);
 /// "trusted"
-pub const TRUST_BADGE_TRUSTED: Key = Key::new(1557);
+pub const TRUST_BADGE_TRUSTED: Key = Key::new(1559);
 /// "changed"
-pub const TRUST_BADGE_CHANGED: Key = Key::new(1558);
+pub const TRUST_BADGE_CHANGED: Key = Key::new(1560);
 /// "not trusted"
-pub const TRUST_BADGE_NOT: Key = Key::new(1559);
+pub const TRUST_BADGE_NOT: Key = Key::new(1561);
 /// "Trusted: actions, the terminal layout and project env may run."
-pub const TRUST_SUMMARY_TRUSTED: Key = Key::new(1560);
+pub const TRUST_SUMMARY_TRUSTED: Key = Key::new(1562);
 /// "Files changed since you trusted this project. Review what it would run now and approve again."
-pub const TRUST_SUMMARY_CHANGED: Key = Key::new(1561);
+pub const TRUST_SUMMARY_CHANGED: Key = Key::new(1563);
 /// "It wants to run these commands. Nothing runs until you approve."
-pub const TRUST_SUMMARY_UNTRUSTED: Key = Key::new(1562);
+pub const TRUST_SUMMARY_UNTRUSTED: Key = Key::new(1564);
 /// "Nothing here would run."
-pub const TRUST_NOTHING: Key = Key::new(1563);
+pub const TRUST_NOTHING: Key = Key::new(1565);
 /// "Trust with Touch ID"
-pub const TRUST_WITH_TOUCH_ID: Key = Key::new(1564);
+pub const TRUST_WITH_TOUCH_ID: Key = Key::new(1566);
 /// "Trust (approve with password)"
-pub const TRUST_WITH_PASSWORD: Key = Key::new(1565);
+pub const TRUST_WITH_PASSWORD: Key = Key::new(1567);
 /// "Worktrees are made only in a trusted project: approve this folder's project in the Project tab first."
-pub const TRUST_WORKTREE_REFUSED: Key = Key::new(1568);
+pub const TRUST_WORKTREE_REFUSED: Key = Key::new(1570);
 /// "Welcome to Wormhole"
-pub const ONBOARDING_DIALOG_LABEL: Key = Key::new(1569);
+pub const ONBOARDING_DIALOG_LABEL: Key = Key::new(1571);
 /// "A terminal for working with AI coding agents."
-pub const ONBOARDING_TAGLINE: Key = Key::new(1570);
+pub const ONBOARDING_TAGLINE: Key = Key::new(1572);
 /// "Which agent is working, which needs input, which is done."
-pub const ONBOARDING_SPECIMEN: Key = Key::new(1571);
+pub const ONBOARDING_SPECIMEN: Key = Key::new(1573);
 /// "Get started"
-pub const ONBOARDING_GET_STARTED: Key = Key::new(1572);
+pub const ONBOARDING_GET_STARTED: Key = Key::new(1574);
 /// "Back to Wormhole"
-pub const ONBOARDING_BACK_TO_WORMHOLE: Key = Key::new(1573);
+pub const ONBOARDING_BACK_TO_WORMHOLE: Key = Key::new(1575);
 /// "Skip intro"
-pub const ONBOARDING_SKIP_INTRO: Key = Key::new(1574);
+pub const ONBOARDING_SKIP_INTRO: Key = Key::new(1576);
 /// "Skip setup"
-pub const ONBOARDING_SKIP_SETUP: Key = Key::new(1575);
+pub const ONBOARDING_SKIP_SETUP: Key = Key::new(1577);
 /// "Replay intro"
-pub const ONBOARDING_REPLAY: Key = Key::new(1576);
+pub const ONBOARDING_REPLAY: Key = Key::new(1578);
 /// "continue"
-pub const ONBOARDING_HINT_CONTINUE: Key = Key::new(1577);
+pub const ONBOARDING_HINT_CONTINUE: Key = Key::new(1579);
 /// "skip"
-pub const ONBOARDING_HINT_SKIP: Key = Key::new(1578);
+pub const ONBOARDING_HINT_SKIP: Key = Key::new(1580);
 /// "Continue"
-pub const ONBOARDING_CONTINUE: Key = Key::new(1579);
+pub const ONBOARDING_CONTINUE: Key = Key::new(1581);
 /// "Start"
-pub const ONBOARDING_START: Key = Key::new(1580);
+pub const ONBOARDING_START: Key = Key::new(1582);
 /// "Where do you work?"
-pub const ONBOARDING_FOLDER_TITLE: Key = Key::new(1583);
+pub const ONBOARDING_FOLDER_TITLE: Key = Key::new(1585);
 /// "Wormhole is a terminal first. Pick a folder to start in; every terminal remembers its own."
-pub const ONBOARDING_FOLDER_INTRO: Key = Key::new(1584);
+pub const ONBOARDING_FOLDER_INTRO: Key = Key::new(1586);
 /// "Open folder…"
-pub const ONBOARDING_OPEN_FOLDER: Key = Key::new(1585);
+pub const ONBOARDING_OPEN_FOLDER: Key = Key::new(1587);
 /// "A terminal starts there; git changes, history and branch follow it."
-pub const ONBOARDING_OPEN_FOLDER_DETAIL: Key = Key::new(1586);
+pub const ONBOARDING_OPEN_FOLDER_DETAIL: Key = Key::new(1588);
 /// "Recents"
-pub const ONBOARDING_RECENTS: Key = Key::new(1588);
+pub const ONBOARDING_RECENTS: Key = Key::new(1590);
 /// "Places"
-pub const ONBOARDING_PLACES: Key = Key::new(1589);
+pub const ONBOARDING_PLACES: Key = Key::new(1591);
 /// "Or drop a folder here"
-pub const ONBOARDING_DROP_FOLDER: Key = Key::new(1590);
+pub const ONBOARDING_DROP_FOLDER: Key = Key::new(1592);
 /// "Home"
-pub const ONBOARDING_PLACE_HOME: Key = Key::new(1591);
+pub const ONBOARDING_PLACE_HOME: Key = Key::new(1593);
 /// "Desktop"
-pub const ONBOARDING_PLACE_DESKTOP: Key = Key::new(1592);
+pub const ONBOARDING_PLACE_DESKTOP: Key = Key::new(1594);
 /// "Documents"
-pub const ONBOARDING_PLACE_DOCUMENTS: Key = Key::new(1593);
+pub const ONBOARDING_PLACE_DOCUMENTS: Key = Key::new(1595);
 /// "Developer"
-pub const ONBOARDING_PLACE_DEVELOPER: Key = Key::new(1594);
+pub const ONBOARDING_PLACE_DEVELOPER: Key = Key::new(1596);
 /// "Start here"
-pub const ONBOARDING_PANEL_START_HERE: Key = Key::new(1595);
+pub const ONBOARDING_PANEL_START_HERE: Key = Key::new(1597);
 /// "Make it yours"
-pub const ONBOARDING_LOOK_TITLE: Key = Key::new(1596);
+pub const ONBOARDING_LOOK_TITLE: Key = Key::new(1598);
 /// "Primary colour"
-pub const ONBOARDING_PRIMARY: Key = Key::new(1598);
+pub const ONBOARDING_PRIMARY: Key = Key::new(1600);
 /// "Terminal font"
-pub const ONBOARDING_FONT: Key = Key::new(1599);
+pub const ONBOARDING_FONT: Key = Key::new(1601);
 /// "Import from Ghostty, iTerm2 or Alacritty…"
-pub const ONBOARDING_IMPORT_FROM: Key = Key::new(1600);
+pub const ONBOARDING_IMPORT_FROM: Key = Key::new(1602);
 /// "Import theme"
-pub const ONBOARDING_PANEL_IMPORT_THEME: Key = Key::new(1601);
+pub const ONBOARDING_PANEL_IMPORT_THEME: Key = Key::new(1603);
 /// "Hooks in"
-pub const ONBOARDING_HOOKS_IN: Key = Key::new(1603);
+pub const ONBOARDING_HOOKS_IN: Key = Key::new(1605);
 /// "Repair"
-pub const ONBOARDING_REPAIR: Key = Key::new(1604);
+pub const ONBOARDING_REPAIR: Key = Key::new(1606);
 /// "On PATH"
-pub const ONBOARDING_ON_PATH: Key = Key::new(1605);
+pub const ONBOARDING_ON_PATH: Key = Key::new(1607);
 /// "On PATH · status from its output"
-pub const ONBOARDING_ON_PATH_OUTPUT: Key = Key::new(1606);
+pub const ONBOARDING_ON_PATH_OUTPUT: Key = Key::new(1608);
 /// "Start installs nothing; only Install does. Hooks add entries of their own and back up what they change. Skip any agent: Settings › Coding agents adds or removes hooks later."
-pub const ONBOARDING_INSTALLS_NOTHING: Key = Key::new(1608);
+pub const ONBOARDING_INSTALLS_NOTHING: Key = Key::new(1610);
 /// "Notify me when a background terminal needs me or finishes"
-pub const ONBOARDING_NOTIFY: Key = Key::new(1609);
+pub const ONBOARDING_NOTIFY: Key = Key::new(1611);
 /// "Notify me when a long command in a background terminal finishes"
-pub const ONBOARDING_NOTIFY_COMMAND: Key = Key::new(1610);
+pub const ONBOARDING_NOTIFY_COMMAND: Key = Key::new(1612);
 /// "Nothing in it runs commands yet."
-pub const ONBOARDING_TRUST_WAITS_0: Key = Key::new(1612);
+pub const ONBOARDING_TRUST_WAITS_0: Key = Key::new(1614);
 /// "Its action runs a command, so it waits until you trust the folder."
-pub const ONBOARDING_TRUST_WAITS_1: Key = Key::new(1613);
+pub const ONBOARDING_TRUST_WAITS_1: Key = Key::new(1615);
 /// "Its theme and notes work now."
-pub const ONBOARDING_TRUST_WORKS_NOW: Key = Key::new(1615);
+pub const ONBOARDING_TRUST_WORKS_NOW: Key = Key::new(1617);
 /// "Later"
-pub const ONBOARDING_TRUST_LATER: Key = Key::new(1616);
+pub const ONBOARDING_TRUST_LATER: Key = Key::new(1618);
 /// "Ready when you are"
-pub const ONBOARDING_PRIMER_TITLE: Key = Key::new(1617);
+pub const ONBOARDING_PRIMER_TITLE: Key = Key::new(1619);
 /// "Wormhole didn’t find a coding agent on this Mac. Nothing here depends on one."
-pub const ONBOARDING_PRIMER_INTRO: Key = Key::new(1618);
+pub const ONBOARDING_PRIMER_INTRO: Key = Key::new(1620);
 /// "Use Wormhole as a terminal"
-pub const ONBOARDING_USE_AS_TERMINAL: Key = Key::new(1619);
+pub const ONBOARDING_USE_AS_TERMINAL: Key = Key::new(1621);
 /// "The git panel works in any shell."
-pub const ONBOARDING_USE_AS_TERMINAL_DETAIL: Key = Key::new(1620);
+pub const ONBOARDING_USE_AS_TERMINAL_DETAIL: Key = Key::new(1622);
 /// "Notes, next steps and the git panel work in any shell."
-pub const ONBOARDING_USE_AS_TERMINAL_DETAIL_NOTES: Key = Key::new(1621);
+pub const ONBOARDING_USE_AS_TERMINAL_DETAIL_NOTES: Key = Key::new(1623);
 /// "Things to try first"
-pub const ONBOARDING_THINGS_TO_TRY: Key = Key::new(1622);
+pub const ONBOARDING_THINGS_TO_TRY: Key = Key::new(1624);
 /// "Jump to anything"
-pub const ONBOARDING_TRY_JUMP: Key = Key::new(1623);
+pub const ONBOARDING_TRY_JUMP: Key = Key::new(1625);
 /// "See every shortcut"
-pub const ONBOARDING_TRY_SHORTCUTS: Key = Key::new(1624);
+pub const ONBOARDING_TRY_SHORTCUTS: Key = Key::new(1626);
 /// "Show what changed in git"
-pub const ONBOARDING_TRY_CHANGES: Key = Key::new(1625);
+pub const ONBOARDING_TRY_CHANGES: Key = Key::new(1627);
 /// "Jot a note for this folder"
-pub const ONBOARDING_TRY_NOTE: Key = Key::new(1626);
+pub const ONBOARDING_TRY_NOTE: Key = Key::new(1628);
 /// "Hide the side panels"
-pub const ONBOARDING_TRY_PANELS: Key = Key::new(1627);
+pub const ONBOARDING_TRY_PANELS: Key = Key::new(1629);
 /// "Emerge"
-pub const INTRO_STYLE_EMERGE: Key = Key::new(1629);
+pub const INTRO_STYLE_EMERGE: Key = Key::new(1631);
 /// "Edge Vortex"
-pub const INTRO_STYLE_VORTEX: Key = Key::new(1630);
+pub const INTRO_STYLE_VORTEX: Key = Key::new(1632);
 /// "Collapse"
-pub const INTRO_STYLE_COLLAPSE: Key = Key::new(1631);
+pub const INTRO_STYLE_COLLAPSE: Key = Key::new(1633);
 /// "FTL Jump"
-pub const INTRO_STYLE_FTL: Key = Key::new(1632);
+pub const INTRO_STYLE_FTL: Key = Key::new(1634);
 /// "Aurora"
-pub const INTRO_STYLE_AURORA: Key = Key::new(1633);
+pub const INTRO_STYLE_AURORA: Key = Key::new(1635);
 /// "Tentacles"
-pub const INTRO_STYLE_TENTACLES: Key = Key::new(1634);
+pub const INTRO_STYLE_TENTACLES: Key = Key::new(1636);
 /// "Voyage"
-pub const INTRO_STYLE_VOYAGE: Key = Key::new(1635);
+pub const INTRO_STYLE_VOYAGE: Key = Key::new(1637);
 /// "Glow"
-pub const INTRO_STYLE_GLOW: Key = Key::new(1636);
+pub const INTRO_STYLE_GLOW: Key = Key::new(1638);
 /// "Close"
-pub const CLOSE_CONFIRM_SESSION: Key = Key::new(1637);
+pub const CLOSE_CONFIRM_SESSION: Key = Key::new(1639);
 /// "Close Group"
-pub const CLOSE_CONFIRM_GROUP: Key = Key::new(1638);
+pub const CLOSE_CONFIRM_GROUP: Key = Key::new(1640);
 /// "Close this window?"
-pub const CLOSE_WINDOW_TITLE: Key = Key::new(1639);
+pub const CLOSE_WINDOW_TITLE: Key = Key::new(1641);
 /// "Close Window"
-pub const CLOSE_CONFIRM_WINDOW: Key = Key::new(1640);
+pub const CLOSE_CONFIRM_WINDOW: Key = Key::new(1642);
 /// "Open"
-pub const OPEN_FOLDER_PROMPT: Key = Key::new(1641);
+pub const OPEN_FOLDER_PROMPT: Key = Key::new(1643);
 /// "Close and Remove Worktree"
-pub const WORKTREE_CLOSE_REMOVE_ONE: Key = Key::new(1644);
+pub const WORKTREE_CLOSE_REMOVE_ONE: Key = Key::new(1646);
 /// "Close and Remove Worktrees"
-pub const WORKTREE_CLOSE_REMOVE_MANY: Key = Key::new(1645);
+pub const WORKTREE_CLOSE_REMOVE_MANY: Key = Key::new(1647);
 /// "They have changes or other terminals in them, so they stay."
-pub const WORKTREE_CLOSE_GROUP_NONE: Key = Key::new(1648);
+pub const WORKTREE_CLOSE_GROUP_NONE: Key = Key::new(1650);
 /// "Close keeps them; Close and Remove Worktrees deletes their folders (the branches stay)."
-pub const WORKTREE_CLOSE_GROUP_ALL: Key = Key::new(1649);
+pub const WORKTREE_CLOSE_GROUP_ALL: Key = Key::new(1651);
 /// "Close keeps them; Close and Remove Worktrees deletes the folders without changes or other terminals (the branches stay)."
-pub const WORKTREE_CLOSE_GROUP_SOME: Key = Key::new(1650);
+pub const WORKTREE_CLOSE_GROUP_SOME: Key = Key::new(1652);
 
 /// ```text
 /// Close “{ $name }”?
 /// ```
 pub fn close_session_title(name: &str) -> String {
-    crate::active::message(1501, &[("name", Arg::Str(name))])
+    crate::active::message(1503, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Close the group “{ $name }”?
 /// ```
 pub fn close_group_title(name: &str) -> String {
-    crate::active::message(1502, &[("name", Arg::Str(name))])
+    crate::active::message(1504, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Still running: { $list }.
 /// ```
 pub fn close_still_running(list: &str) -> String {
-    crate::active::message(1507, &[("list", Arg::Str(list))])
+    crate::active::message(1509, &[("list", Arg::Str(list))])
 }
 
 /// ```text
 /// { $who } is still working.
 /// ```
 pub fn close_is_working(who: &str) -> String {
-    crate::active::message(1508, &[("who", Arg::Str(who))])
+    crate::active::message(1510, &[("who", Arg::Str(who))])
 }
 
 /// ```text
 /// { $who } is waiting for an answer.
 /// ```
 pub fn close_is_waiting(who: &str) -> String {
-    crate::active::message(1509, &[("who", Arg::Str(who))])
+    crate::active::message(1511, &[("who", Arg::Str(who))])
 }
 
 /// ```text
 /// The { $count } terminals in this window will end.
 /// ```
 pub fn close_window_many(count: &str) -> String {
-    crate::active::message(1514, &[("count", Arg::Str(count))])
+    crate::active::message(1516, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// The { $count } terminals in this group will end.
 /// ```
 pub fn close_group_many(count: &str) -> String {
-    crate::active::message(1516, &[("count", Arg::Str(count))])
+    crate::active::message(1518, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Its { $stake }
 /// ```
 pub fn close_its_stake(stake: &str) -> String {
-    crate::active::message(1517, &[("stake", Arg::Str(stake))])
+    crate::active::message(1519, &[("stake", Arg::Str(stake))])
 }
 
 /// ```text
 /// Their { $stake }
 /// ```
 pub fn close_their_stake(stake: &str) -> String {
-    crate::active::message(1518, &[("stake", Arg::Str(stake))])
+    crate::active::message(1520, &[("stake", Arg::Str(stake))])
 }
 
 /// ```text
 /// and { $count } more
 /// ```
 pub fn close_and_more(count: &str) -> String {
-    crate::active::message(1519, &[("count", Arg::Str(count))])
+    crate::active::message(1521, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $agent } is working
 /// ```
 pub fn restart_agent_working(agent: &str) -> String {
-    crate::active::message(1525, &[("agent", Arg::Str(agent))])
+    crate::active::message(1527, &[("agent", Arg::Str(agent))])
 }
 
 /// ```text
 /// { $agent } is waiting for an answer
 /// ```
 pub fn restart_agent_waiting(agent: &str) -> String {
-    crate::active::message(1526, &[("agent", Arg::Str(agent))])
+    crate::active::message(1528, &[("agent", Arg::Str(agent))])
 }
 
 /// ```text
 /// Version { $version }
 /// ```
 pub fn about_version(version: &str) -> String {
-    crate::active::message(1531, &[("version", Arg::Str(version))])
+    crate::active::message(1533, &[("version", Arg::Str(version))])
 }
 
 /// ```text
@@ -343,56 +343,56 @@ pub fn about_version(version: &str) -> String {
 /// }
 /// ```
 pub fn licenses_count(total: i64) -> String {
-    crate::active::message(1537, &[("total", Arg::Int(total))])
+    crate::active::message(1539, &[("total", Arg::Int(total))])
 }
 
 /// ```text
 /// { $shown } of { $total } packages
 /// ```
 pub fn licenses_count_of(shown: &str, total: &str) -> String {
-    crate::active::message(1538, &[("shown", Arg::Str(shown)), ("total", Arg::Str(total))])
+    crate::active::message(1540, &[("shown", Arg::Str(shown)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// License: { $license }
 /// ```
 pub fn licenses_license(license: &str) -> String {
-    crate::active::message(1539, &[("license", Arg::Str(license))])
+    crate::active::message(1541, &[("license", Arg::Str(license))])
 }
 
 /// ```text
 /// Checked { $ago }.
 /// ```
 pub fn aux_updates_checked_ago(ago: &str) -> String {
-    crate::active::message(1545, &[("ago", Arg::Str(ago))])
+    crate::active::message(1547, &[("ago", Arg::Str(ago))])
 }
 
 /// ```text
 /// { $received } of { $expected }
 /// ```
 pub fn update_download_progress(received: &str, expected: &str) -> String {
-    crate::active::message(1547, &[("received", Arg::Str(received)), ("expected", Arg::Str(expected))])
+    crate::active::message(1549, &[("received", Arg::Str(received)), ("expected", Arg::Str(expected))])
 }
 
 /// ```text
 /// { -brand } { $version } is available.
 /// ```
 pub fn update_available(version: &str) -> String {
-    crate::active::message(1548, &[("version", Arg::Str(version))])
+    crate::active::message(1550, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// { -brand } { $version } is ready. Restart to use it.
 /// ```
 pub fn update_ready(version: &str) -> String {
-    crate::active::message(1549, &[("version", Arg::Str(version))])
+    crate::active::message(1551, &[("version", Arg::Str(version))])
 }
 
 /// ```text
 /// The update failed: { $why }
 /// ```
 pub fn update_failed(why: &str) -> String {
-    crate::active::message(1553, &[("why", Arg::Str(why))])
+    crate::active::message(1555, &[("why", Arg::Str(why))])
 }
 
 /// ```text
@@ -402,110 +402,110 @@ pub fn update_failed(why: &str) -> String {
 /// }
 /// ```
 pub fn trust_lines(count: i64) -> String {
-    crate::active::message(1566, &[("count", Arg::Int(count))])
+    crate::active::message(1568, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// trust the project folder “{ $folder }” and let it run commands
 /// ```
 pub fn trust_touch_id_reason(folder: &str) -> String {
-    crate::active::message(1567, &[("folder", Arg::Str(folder))])
+    crate::active::message(1569, &[("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// Step { $step } of { $total }
 /// ```
 pub fn onboarding_step_counter(step: &str, total: &str) -> String {
-    crate::active::message(1581, &[("step", Arg::Str(step)), ("total", Arg::Str(total))])
+    crate::active::message(1583, &[("step", Arg::Str(step)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// Step { $step } of { $total } · no agents found
 /// ```
 pub fn onboarding_step_counter_no_agents(step: &str, total: &str) -> String {
-    crate::active::message(1582, &[("step", Arg::Str(step)), ("total", Arg::Str(total))])
+    crate::active::message(1584, &[("step", Arg::Str(step)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// Starts in { $folder }
 /// ```
 pub fn onboarding_starts_in(folder: &str) -> String {
-    crate::active::message(1587, &[("folder", Arg::Str(folder))])
+    crate::active::message(1589, &[("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// Everything changes live, and all of it is in Settings ({ $keys }) later.
 /// ```
 pub fn onboarding_look_intro(keys: &str) -> String {
-    crate::active::message(1597, &[("keys", Arg::Str(keys))])
+    crate::active::message(1599, &[("keys", Arg::Str(keys))])
 }
 
 /// ```text
 /// Found { $count } on this Mac. Install status hooks for the ones you want; they report when an agent works, waits for you or is done.
 /// ```
 pub fn onboarding_agents_intro(count: &str) -> String {
-    crate::active::message(1602, &[("count", Arg::Str(count))])
+    crate::active::message(1604, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Not found on PATH · { $count } more recognised
 /// ```
 pub fn onboarding_not_found(count: &str) -> String {
-    crate::active::message(1607, &[("count", Arg::Str(count))])
+    crate::active::message(1609, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $name }/ has a { $dir }/ folder
 /// ```
 pub fn onboarding_trust_has(name: &str, dir: &str) -> String {
-    crate::active::message(1611, &[("name", Arg::Str(name)), ("dir", Arg::Str(dir))])
+    crate::active::message(1613, &[("name", Arg::Str(name)), ("dir", Arg::Str(dir))])
 }
 
 /// ```text
 /// Its actions run { $count } commands, so they wait until you trust the folder.
 /// ```
 pub fn onboarding_trust_waits_n(count: &str) -> String {
-    crate::active::message(1614, &[("count", Arg::Str(count))])
+    crate::active::message(1616, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// No coding agent found. Install Claude Code, Codex or one of { $count } others later and { -brand } recognises it in any terminal, then offers its hooks once.
 /// ```
 pub fn onboarding_no_agent(count: &str) -> String {
-    crate::active::message(1628, &[("count", Arg::Str(count))])
+    crate::active::message(1630, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Its worktree { $branch } at { $folder } was made by Wormhole. It has uncommitted changes, so it stays.
 /// ```
 pub fn worktree_close_one_dirty(branch: &str, folder: &str) -> String {
-    crate::active::message(1642, &[("branch", Arg::Str(branch)), ("folder", Arg::Str(folder))])
+    crate::active::message(1644, &[("branch", Arg::Str(branch)), ("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// Its worktree { $branch } at { $folder } was made by Wormhole. Close keeps it; Close and Remove Worktree deletes its folder (the branch stays).
 /// ```
 pub fn worktree_close_one_clean(branch: &str, folder: &str) -> String {
-    crate::active::message(1643, &[("branch", Arg::Str(branch)), ("folder", Arg::Str(folder))])
+    crate::active::message(1645, &[("branch", Arg::Str(branch)), ("folder", Arg::Str(folder))])
 }
 
 /// ```text
 /// Wormhole made the worktree { $names }.
 /// ```
 pub fn worktree_close_group_lead_one(names: &str) -> String {
-    crate::active::message(1646, &[("names", Arg::Str(names))])
+    crate::active::message(1648, &[("names", Arg::Str(names))])
 }
 
 /// ```text
 /// Wormhole made the worktrees { $names }.
 /// ```
 pub fn worktree_close_group_lead_many(names: &str) -> String {
-    crate::active::message(1647, &[("names", Arg::Str(names))])
+    crate::active::message(1649, &[("names", Arg::Str(names))])
 }
 
 /// ```text
 /// { $branch } at { $folder }
 /// ```
 pub fn worktree_close_entry(branch: &str, folder: &str) -> String {
-    crate::active::message(1651, &[("branch", Arg::Str(branch)), ("folder", Arg::Str(folder))])
+    crate::active::message(1653, &[("branch", Arg::Str(branch)), ("folder", Arg::Str(folder))])
 }

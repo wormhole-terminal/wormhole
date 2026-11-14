@@ -523,6 +523,8 @@ pub fn samples() -> Vec<(&'static str, String)> {
         ("settings-appearance-trash-light", settings_appearance_trash_light("Sample")),
         ("settings-appearance-trash-both", settings_appearance_trash_both("Sample", "Sample")),
         ("settings-appearance-trash-failed", settings_appearance_trash_failed("Sample")),
+        ("settings-appearance-hide-named", settings_appearance_hide_named("Sample")),
+        ("settings-appearance-trash-named", settings_appearance_trash_named("Sample")),
         ("settings-appearance-hidden-themes", settings_appearance_hidden_themes("Sample")),
         ("settings-appearance-theme-newer", settings_appearance_theme_newer(1)),
         ("settings-appearance-theme-newer", settings_appearance_theme_newer(5)),

@@ -7,191 +7,191 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "More ways to save"
-pub const STUDIO_SAVE_MORE: Key = Key::new(1971);
+pub const STUDIO_SAVE_MORE: Key = Key::new(1973);
 /// "Theme name"
-pub const STUDIO_NAME_FIELD: Key = Key::new(1972);
+pub const STUDIO_NAME_FIELD: Key = Key::new(1974);
 /// "Tokens"
-pub const STUDIO_LIST_LABEL: Key = Key::new(1973);
+pub const STUDIO_LIST_LABEL: Key = Key::new(1975);
 /// "Clear the filter"
-pub const STUDIO_FILTER_CLEAR: Key = Key::new(1974);
+pub const STUDIO_FILTER_CLEAR: Key = Key::new(1976);
 /// "Token editor"
-pub const STUDIO_EDITOR_LABEL: Key = Key::new(1975);
+pub const STUDIO_EDITOR_LABEL: Key = Key::new(1977);
 /// "From the terminal's palette. Typing a value overrides it."
-pub const STUDIO_RULE_PALETTE_SHORT: Key = Key::new(1976);
+pub const STUDIO_RULE_PALETTE_SHORT: Key = Key::new(1978);
 /// "A theme in use falls back to the default theme, and unsaved edits are dropped."
-pub const STUDIO_TRASH_DETAIL: Key = Key::new(1977);
+pub const STUDIO_TRASH_DETAIL: Key = Key::new(1979);
 /// "expanded"
-pub const STUDIO_BAND_EXPANDED: Key = Key::new(1978);
+pub const STUDIO_BAND_EXPANDED: Key = Key::new(1980);
 /// "collapsed"
-pub const STUDIO_BAND_COLLAPSED: Key = Key::new(1979);
+pub const STUDIO_BAND_COLLAPSED: Key = Key::new(1981);
 /// "falls short of a contrast minimum"
-pub const STUDIO_ROW_LOW_HINT: Key = Key::new(1981);
+pub const STUDIO_ROW_LOW_HINT: Key = Key::new(1983);
 /// "passes"
-pub const STUDIO_CONTRAST_PASSES: Key = Key::new(1982);
+pub const STUDIO_CONTRAST_PASSES: Key = Key::new(1984);
 /// "falls short"
-pub const STUDIO_CONTRAST_FALLS_SHORT: Key = Key::new(1983);
+pub const STUDIO_CONTRAST_FALLS_SHORT: Key = Key::new(1985);
 /// "A theme file is at most 256 KiB."
-pub const STUDIO_FOLDER_TOO_LARGE: Key = Key::new(1985);
+pub const STUDIO_FOLDER_TOO_LARGE: Key = Key::new(1987);
 /// "Gallery"
-pub const STUDIO_GALLERY_LABEL: Key = Key::new(1987);
+pub const STUDIO_GALLERY_LABEL: Key = Key::new(1989);
 /// "Show the part of the app"
-pub const STUDIO_GALLERY_AREAS: Key = Key::new(1988);
+pub const STUDIO_GALLERY_AREAS: Key = Key::new(1990);
 /// "uses the selected token"
-pub const STUDIO_GALLERY_USES_SELECTED: Key = Key::new(1989);
+pub const STUDIO_GALLERY_USES_SELECTED: Key = Key::new(1991);
 /// "Show the palette"
-pub const STUDIO_GALLERY_SHOW_PALETTE: Key = Key::new(1990);
+pub const STUDIO_GALLERY_SHOW_PALETTE: Key = Key::new(1992);
 /// "Show the shortcut sheet"
-pub const STUDIO_GALLERY_SHOW_SHEET: Key = Key::new(1991);
+pub const STUDIO_GALLERY_SHOW_SHEET: Key = Key::new(1993);
 /// "Show the quick panel"
-pub const STUDIO_GALLERY_SHOW_QUICK_PANEL: Key = Key::new(1992);
+pub const STUDIO_GALLERY_SHOW_QUICK_PANEL: Key = Key::new(1994);
 /// "Turn the counts over"
-pub const STUDIO_GALLERY_TURN_COUNT: Key = Key::new(1993);
+pub const STUDIO_GALLERY_TURN_COUNT: Key = Key::new(1995);
 /// "Play a status change"
-pub const STUDIO_GALLERY_PLAY_STATUS: Key = Key::new(1994);
+pub const STUDIO_GALLERY_PLAY_STATUS: Key = Key::new(1996);
 /// "A count turns over by the system’s own transition, which cannot be held half way: before and after."
-pub const STUDIO_GALLERY_COUNTS_BEFORE_AFTER: Key = Key::new(1995);
+pub const STUDIO_GALLERY_COUNTS_BEFORE_AFTER: Key = Key::new(1997);
 /// "macOS draws tooltips; a theme does not change them."
-pub const STUDIO_GALLERY_SYSTEM_TOOLTIP: Key = Key::new(1996);
+pub const STUDIO_GALLERY_SYSTEM_TOOLTIP: Key = Key::new(1998);
 /// "Rest the pointer here"
-pub const STUDIO_GALLERY_TOOLTIP_HERE: Key = Key::new(1997);
+pub const STUDIO_GALLERY_TOOLTIP_HERE: Key = Key::new(1999);
 /// "A tooltip explains a control"
-pub const STUDIO_GALLERY_TOOLTIP_SAMPLE: Key = Key::new(1998);
+pub const STUDIO_GALLERY_TOOLTIP_SAMPLE: Key = Key::new(2000);
 /// "macOS draws menus; a theme does not change them."
-pub const STUDIO_GALLERY_SYSTEM_MENU: Key = Key::new(1999);
+pub const STUDIO_GALLERY_SYSTEM_MENU: Key = Key::new(2001);
 /// "Open a menu"
-pub const STUDIO_GALLERY_SHOW_MENU: Key = Key::new(2000);
+pub const STUDIO_GALLERY_SHOW_MENU: Key = Key::new(2002);
 /// "macOS draws questions as its own alerts; a theme does not change them."
-pub const STUDIO_GALLERY_SYSTEM_DIALOG: Key = Key::new(2001);
+pub const STUDIO_GALLERY_SYSTEM_DIALOG: Key = Key::new(2003);
 /// "Show a question"
-pub const STUDIO_GALLERY_SHOW_DIALOG: Key = Key::new(2002);
+pub const STUDIO_GALLERY_SHOW_DIALOG: Key = Key::new(2004);
 /// "macOS draws the scroll bars; a theme does not change them."
-pub const STUDIO_GALLERY_SYSTEM_SCROLLBAR: Key = Key::new(2003);
+pub const STUDIO_GALLERY_SYSTEM_SCROLLBAR: Key = Key::new(2005);
 /// "About Wormhole is the system’s own panel; a theme does not change it."
-pub const STUDIO_GALLERY_SYSTEM_ABOUT: Key = Key::new(2004);
+pub const STUDIO_GALLERY_SYSTEM_ABOUT: Key = Key::new(2006);
 /// "Show About Wormhole"
-pub const STUDIO_GALLERY_SHOW_ABOUT: Key = Key::new(2005);
+pub const STUDIO_GALLERY_SHOW_ABOUT: Key = Key::new(2007);
 /// "Custom"
-pub const SETTINGS_FONTS_SOURCE_CUSTOM: Key = Key::new(2006);
+pub const SETTINGS_FONTS_SOURCE_CUSTOM: Key = Key::new(2008);
 /// "Installed"
-pub const SETTINGS_FONTS_SOURCE_INSTALLED: Key = Key::new(2007);
+pub const SETTINGS_FONTS_SOURCE_INSTALLED: Key = Key::new(2009);
 /// "Recent"
-pub const SETTINGS_FONTS_RECENT: Key = Key::new(2008);
+pub const SETTINGS_FONTS_RECENT: Key = Key::new(2010);
 /// "monospace"
-pub const SETTINGS_FONTS_MONOSPACE_TAG: Key = Key::new(2009);
+pub const SETTINGS_FONTS_MONOSPACE_TAG: Key = Key::new(2011);
 /// "Show all fonts to include proportional ones"
-pub const SETTINGS_FONTS_SHOW_ALL_HINT: Key = Key::new(2011);
+pub const SETTINGS_FONTS_SHOW_ALL_HINT: Key = Key::new(2013);
 /// "Font list"
-pub const SETTINGS_FONTS_PICKER: Key = Key::new(2012);
+pub const SETTINGS_FONTS_PICKER: Key = Key::new(2014);
 /// "Preview"
-pub const SETTINGS_FONTS_PREVIEW: Key = Key::new(2013);
+pub const SETTINGS_FONTS_PREVIEW: Key = Key::new(2015);
 /// "Glyphs this font draws itself"
-pub const SETTINGS_FONTS_COVERAGE: Key = Key::new(2014);
+pub const SETTINGS_FONTS_COVERAGE: Key = Key::new(2016);
 /// "falls back to another font"
-pub const SETTINGS_FONTS_FALLS_BACK: Key = Key::new(2015);
+pub const SETTINGS_FONTS_FALLS_BACK: Key = Key::new(2017);
 /// "drawn by this font"
-pub const SETTINGS_FONTS_DRAWN: Key = Key::new(2016);
+pub const SETTINGS_FONTS_DRAWN: Key = Key::new(2018);
 /// "Box drawing"
-pub const SETTINGS_FONTS_BOX_DRAWING: Key = Key::new(2017);
+pub const SETTINGS_FONTS_BOX_DRAWING: Key = Key::new(2019);
 /// "Powerline"
-pub const SETTINGS_FONTS_POWERLINE: Key = Key::new(2018);
+pub const SETTINGS_FONTS_POWERLINE: Key = Key::new(2020);
 /// "Nerd icons"
-pub const SETTINGS_FONTS_NERD_ICONS: Key = Key::new(2019);
+pub const SETTINGS_FONTS_NERD_ICONS: Key = Key::new(2021);
 /// "Wide characters"
-pub const SETTINGS_FONTS_WIDE: Key = Key::new(2020);
+pub const SETTINGS_FONTS_WIDE: Key = Key::new(2022);
 /// "Bold"
-pub const SETTINGS_FONTS_BOLD: Key = Key::new(2021);
+pub const SETTINGS_FONTS_BOLD: Key = Key::new(2023);
 /// "Italic"
-pub const SETTINGS_FONTS_ITALIC: Key = Key::new(2022);
+pub const SETTINGS_FONTS_ITALIC: Key = Key::new(2024);
 /// "No bold face: bold text will be drawn heavier by the system"
-pub const SETTINGS_FONTS_NO_BOLD: Key = Key::new(2023);
+pub const SETTINGS_FONTS_NO_BOLD: Key = Key::new(2025);
 /// "No italic face: italic text will be slanted by the system"
-pub const SETTINGS_FONTS_NO_ITALIC: Key = Key::new(2024);
+pub const SETTINGS_FONTS_NO_ITALIC: Key = Key::new(2026);
 /// "Terminal"
-pub const TERMINAL_ACCESSIBILITY_LABEL: Key = Key::new(2025);
+pub const TERMINAL_ACCESSIBILITY_LABEL: Key = Key::new(2027);
 /// "Scrollback"
-pub const TERMINAL_ACCESSIBILITY_SCROLLBACK: Key = Key::new(2026);
+pub const TERMINAL_ACCESSIBILITY_SCROLLBACK: Key = Key::new(2028);
 /// "Select Output"
-pub const TERMINAL_MENU_SELECT_OUTPUT: Key = Key::new(2027);
+pub const TERMINAL_MENU_SELECT_OUTPUT: Key = Key::new(2029);
 /// "prompt"
-pub const SPOKEN_BLOCK_PROMPT: Key = Key::new(2029);
+pub const SPOKEN_BLOCK_PROMPT: Key = Key::new(2031);
 /// "running"
-pub const SPOKEN_BLOCK_RUNNING: Key = Key::new(2030);
+pub const SPOKEN_BLOCK_RUNNING: Key = Key::new(2032);
 /// "finished"
-pub const SPOKEN_BLOCK_FINISHED: Key = Key::new(2031);
+pub const SPOKEN_BLOCK_FINISHED: Key = Key::new(2033);
 /// "empty prompt"
-pub const SPOKEN_BLOCK_EMPTY: Key = Key::new(2032);
+pub const SPOKEN_BLOCK_EMPTY: Key = Key::new(2034);
 /// "Find"
-pub const TERMINAL_FIND_PLACEHOLDER: Key = Key::new(2034);
+pub const TERMINAL_FIND_PLACEHOLDER: Key = Key::new(2036);
 /// "Not a valid pattern"
-pub const TERMINAL_FIND_INVALID: Key = Key::new(2035);
+pub const TERMINAL_FIND_INVALID: Key = Key::new(2037);
 /// "No results"
-pub const TERMINAL_FIND_NO_RESULTS: Key = Key::new(2036);
+pub const TERMINAL_FIND_NO_RESULTS: Key = Key::new(2038);
 /// "Previous match (⇧⌘G)"
-pub const TERMINAL_FIND_PREVIOUS: Key = Key::new(2038);
+pub const TERMINAL_FIND_PREVIOUS: Key = Key::new(2040);
 /// "Next match (⌘G)"
-pub const TERMINAL_FIND_NEXT: Key = Key::new(2039);
+pub const TERMINAL_FIND_NEXT: Key = Key::new(2041);
 /// "Close find (esc)"
-pub const TERMINAL_FIND_CLOSE: Key = Key::new(2040);
+pub const TERMINAL_FIND_CLOSE: Key = Key::new(2042);
 /// "Match case"
-pub const TERMINAL_FIND_MATCH_CASE: Key = Key::new(2041);
+pub const TERMINAL_FIND_MATCH_CASE: Key = Key::new(2043);
 /// "Whole word"
-pub const TERMINAL_FIND_WHOLE_WORD: Key = Key::new(2042);
+pub const TERMINAL_FIND_WHOLE_WORD: Key = Key::new(2044);
 /// "Regular expression"
-pub const TERMINAL_FIND_REGEX: Key = Key::new(2043);
+pub const TERMINAL_FIND_REGEX: Key = Key::new(2045);
 /// "Minimap"
-pub const TERMINAL_MINIMAP: Key = Key::new(2044);
+pub const TERMINAL_MINIMAP: Key = Key::new(2046);
 /// "Terminal"
-pub const TERMINAL_EXPORT_DEFAULT_NAME: Key = Key::new(2046);
+pub const TERMINAL_EXPORT_DEFAULT_NAME: Key = Key::new(2048);
 /// "Allow once"
-pub const TERMINAL_CLIPBOARD_ONCE: Key = Key::new(2047);
+pub const TERMINAL_CLIPBOARD_ONCE: Key = Key::new(2049);
 /// "Give it the clipboard's text this time"
-pub const TERMINAL_CLIPBOARD_ONCE_HELP: Key = Key::new(2048);
+pub const TERMINAL_CLIPBOARD_ONCE_HELP: Key = Key::new(2050);
 /// "Always"
-pub const TERMINAL_CLIPBOARD_ALWAYS: Key = Key::new(2049);
+pub const TERMINAL_CLIPBOARD_ALWAYS: Key = Key::new(2051);
 /// "Always for this terminal"
-pub const TERMINAL_CLIPBOARD_ALWAYS_LONG: Key = Key::new(2050);
+pub const TERMINAL_CLIPBOARD_ALWAYS_LONG: Key = Key::new(2052);
 /// "Give it the clipboard whenever it asks, until this terminal closes"
-pub const TERMINAL_CLIPBOARD_ALWAYS_HELP: Key = Key::new(2051);
+pub const TERMINAL_CLIPBOARD_ALWAYS_HELP: Key = Key::new(2053);
 /// "Deny"
-pub const TERMINAL_CLIPBOARD_DENY: Key = Key::new(2052);
+pub const TERMINAL_CLIPBOARD_DENY: Key = Key::new(2054);
 /// "Give it nothing"
-pub const TERMINAL_CLIPBOARD_DENY_HELP: Key = Key::new(2053);
+pub const TERMINAL_CLIPBOARD_DENY_HELP: Key = Key::new(2055);
 /// "This terminal ended unexpectedly"
-pub const TERMINAL_EXITED_LOST: Key = Key::new(2054);
+pub const TERMINAL_EXITED_LOST: Key = Key::new(2056);
 /// "Restart"
-pub const TERMINAL_EXITED_RESTART: Key = Key::new(2057);
+pub const TERMINAL_EXITED_RESTART: Key = Key::new(2059);
 /// "Close terminal"
-pub const TERMINAL_EXITED_CLOSE: Key = Key::new(2058);
+pub const TERMINAL_EXITED_CLOSE: Key = Key::new(2060);
 /// "Dismiss"
-pub const TERMINAL_HOST_NOTICE_DISMISS: Key = Key::new(2059);
+pub const TERMINAL_HOST_NOTICE_DISMISS: Key = Key::new(2061);
 /// "Control"
-pub const KEYCAP_CONTROL: Key = Key::new(2060);
+pub const KEYCAP_CONTROL: Key = Key::new(2062);
 /// "Option"
-pub const KEYCAP_OPTION: Key = Key::new(2061);
+pub const KEYCAP_OPTION: Key = Key::new(2063);
 /// "Shift"
-pub const KEYCAP_SHIFT: Key = Key::new(2062);
+pub const KEYCAP_SHIFT: Key = Key::new(2064);
 /// "Command"
-pub const KEYCAP_COMMAND: Key = Key::new(2063);
+pub const KEYCAP_COMMAND: Key = Key::new(2065);
 /// "Up arrow"
-pub const KEYCAP_UP_ARROW: Key = Key::new(2064);
+pub const KEYCAP_UP_ARROW: Key = Key::new(2066);
 /// "Down arrow"
-pub const KEYCAP_DOWN_ARROW: Key = Key::new(2065);
+pub const KEYCAP_DOWN_ARROW: Key = Key::new(2067);
 /// "Left arrow"
-pub const KEYCAP_LEFT_ARROW: Key = Key::new(2066);
+pub const KEYCAP_LEFT_ARROW: Key = Key::new(2068);
 /// "Right arrow"
-pub const KEYCAP_RIGHT_ARROW: Key = Key::new(2067);
+pub const KEYCAP_RIGHT_ARROW: Key = Key::new(2069);
 /// "Delete"
-pub const KEYCAP_DELETE: Key = Key::new(2068);
+pub const KEYCAP_DELETE: Key = Key::new(2070);
 /// "Return"
-pub const KEYCAP_RETURN: Key = Key::new(2069);
+pub const KEYCAP_RETURN: Key = Key::new(2071);
 /// "Escape"
-pub const KEYCAP_ESCAPE: Key = Key::new(2070);
+pub const KEYCAP_ESCAPE: Key = Key::new(2072);
 /// "Tab"
-pub const KEYCAP_TAB: Key = Key::new(2071);
+pub const KEYCAP_TAB: Key = Key::new(2073);
 /// "Changed"
-pub const STUDIO_CHANGED_DOT: Key = Key::new(2072);
+pub const STUDIO_CHANGED_DOT: Key = Key::new(2074);
 /// "function"
-pub const STUDIO_COMPLETION_FUNCTION: Key = Key::new(2073);
+pub const STUDIO_COMPLETION_FUNCTION: Key = Key::new(2075);
 
 /// ```text
 /// { $count ->
@@ -200,68 +200,68 @@ pub const STUDIO_COMPLETION_FUNCTION: Key = Key::new(2073);
 /// }
 /// ```
 pub fn studio_band_low_hint(count: i64) -> String {
-    crate::active::message(1980, &[("count", Arg::Int(count))])
+    crate::active::message(1982, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $ratio } to 1, minimum { $min }
 /// ```
 pub fn studio_contrast_ratio_spoken(ratio: &str, min: &str) -> String {
-    crate::active::message(1984, &[("ratio", Arg::Str(ratio)), ("min", Arg::Str(min))])
+    crate::active::message(1986, &[("ratio", Arg::Str(ratio)), ("min", Arg::Str(min))])
 }
 
 /// ```text
 /// { $name } is a link, which is never followed.
 /// ```
 pub fn studio_folder_link(name: &str) -> String {
-    crate::active::message(1986, &[("name", Arg::Str(name))])
+    crate::active::message(1988, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// No font has these words in its name: “{ $query }”
 /// ```
 pub fn settings_fonts_no_matches(query: &str) -> String {
-    crate::active::message(2010, &[("query", Arg::Str(query))])
+    crate::active::message(2012, &[("query", Arg::Str(query))])
 }
 
 /// ```text
 /// exit { $code }
 /// ```
 pub fn terminal_block_exit(code: &str) -> String {
-    crate::active::message(2028, &[("code", Arg::Str(code))])
+    crate::active::message(2030, &[("code", Arg::Str(code))])
 }
 
 /// ```text
 /// failed with exit code { $code }
 /// ```
 pub fn spoken_block_failed(code: &str) -> String {
-    crate::active::message(2033, &[("code", Arg::Str(code))])
+    crate::active::message(2035, &[("code", Arg::Str(code))])
 }
 
 /// ```text
 /// { $at } of { $total }
 /// ```
 pub fn terminal_find_count(at: &str, total: &str) -> String {
-    crate::active::message(2037, &[("at", Arg::Str(at)), ("total", Arg::Str(total))])
+    crate::active::message(2039, &[("at", Arg::Str(at)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// line { $line } of { $total }
 /// ```
 pub fn terminal_minimap_value(line: &str, total: &str) -> String {
-    crate::active::message(2045, &[("line", Arg::Str(line)), ("total", Arg::Str(total))])
+    crate::active::message(2047, &[("line", Arg::Str(line)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// { $shell } exited
 /// ```
 pub fn terminal_exited(shell: &str) -> String {
-    crate::active::message(2055, &[("shell", Arg::Str(shell))])
+    crate::active::message(2057, &[("shell", Arg::Str(shell))])
 }
 
 /// ```text
 /// { $shell } exited with code { $code }
 /// ```
 pub fn terminal_exited_code(shell: &str, code: &str) -> String {
-    crate::active::message(2056, &[("shell", Arg::Str(shell)), ("code", Arg::Str(code))])
+    crate::active::message(2058, &[("shell", Arg::Str(shell)), ("code", Arg::Str(code))])
 }

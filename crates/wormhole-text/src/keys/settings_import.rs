@@ -7,135 +7,135 @@ use crate::key::Key;
 use crate::args::Arg;
 
 /// "Import"
-pub const SETTINGS_SECTION_IMPORT: Key = Key::new(750);
+pub const SETTINGS_SECTION_IMPORT: Key = Key::new(752);
 /// "Bring your font, colours, shell and more over from the terminal you used before. Nothing changes until you choose what to import, and the other terminal's own files are never touched."
-pub const SETTINGS_SECTION_IMPORT_INTRO: Key = Key::new(751);
+pub const SETTINGS_SECTION_IMPORT_INTRO: Key = Key::new(753);
 /// "Found on this Mac"
-pub const SETTINGS_IMPORT_GROUP_FOUND: Key = Key::new(752);
+pub const SETTINGS_IMPORT_GROUP_FOUND: Key = Key::new(754);
 /// "Terminals found"
-pub const SETTINGS_IMPORT_FOUND: Key = Key::new(753);
+pub const SETTINGS_IMPORT_FOUND: Key = Key::new(755);
 /// "import migrate switch move settings config configuration ghostty iterm iterm2 terminal.app alacritty kitty wezterm warp zed vscode vs code font theme colours colors shell"
-pub const SETTINGS_IMPORT_FOUND_KEYWORDS: Key = Key::new(754);
+pub const SETTINGS_IMPORT_FOUND_KEYWORDS: Key = Key::new(756);
 /// "Scan again"
-pub const SETTINGS_IMPORT_SCAN_AGAIN: Key = Key::new(755);
+pub const SETTINGS_IMPORT_SCAN_AGAIN: Key = Key::new(757);
 /// "Looking for terminals…"
-pub const SETTINGS_IMPORT_SCANNING: Key = Key::new(756);
+pub const SETTINGS_IMPORT_SCANNING: Key = Key::new(758);
 /// "No other terminal's settings found"
-pub const SETTINGS_IMPORT_NONE: Key = Key::new(757);
+pub const SETTINGS_IMPORT_NONE: Key = Key::new(759);
 /// "Wormhole looked for Ghostty, iTerm2, Terminal.app, Alacritty, kitty, WezTerm, Warp, Zed and VS Code in the places they keep their settings, and found none."
-pub const SETTINGS_IMPORT_NONE_DETAIL: Key = Key::new(758);
+pub const SETTINGS_IMPORT_NONE_DETAIL: Key = Key::new(760);
 /// "Files read"
-pub const SETTINGS_IMPORT_FILES_READ: Key = Key::new(759);
+pub const SETTINGS_IMPORT_FILES_READ: Key = Key::new(761);
 /// "Brings over"
-pub const SETTINGS_IMPORT_TAKE: Key = Key::new(762);
+pub const SETTINGS_IMPORT_TAKE: Key = Key::new(764);
 /// "Doesn't carry over"
-pub const SETTINGS_IMPORT_LEAVE: Key = Key::new(763);
+pub const SETTINGS_IMPORT_LEAVE: Key = Key::new(765);
 /// "Nothing in these settings can be brought over."
-pub const SETTINGS_IMPORT_NOTHING_TO_TAKE: Key = Key::new(764);
+pub const SETTINGS_IMPORT_NOTHING_TO_TAKE: Key = Key::new(766);
 /// "Wormhole would run this in every new terminal, so it isn't ticked until you tick it."
-pub const SETTINGS_IMPORT_RUNS_EVERYWHERE: Key = Key::new(765);
+pub const SETTINGS_IMPORT_RUNS_EVERYWHERE: Key = Key::new(767);
 /// "Import selected"
-pub const SETTINGS_IMPORT_APPLY: Key = Key::new(767);
+pub const SETTINGS_IMPORT_APPLY: Key = Key::new(769);
 /// "Ghostty"
-pub const SETTINGS_IMPORT_TERMINAL_GHOSTTY: Key = Key::new(770);
+pub const SETTINGS_IMPORT_TERMINAL_GHOSTTY: Key = Key::new(772);
 /// "iTerm2"
-pub const SETTINGS_IMPORT_TERMINAL_ITERM2: Key = Key::new(771);
+pub const SETTINGS_IMPORT_TERMINAL_ITERM2: Key = Key::new(773);
 /// "Terminal.app"
-pub const SETTINGS_IMPORT_TERMINAL_TERMINAL_APP: Key = Key::new(772);
+pub const SETTINGS_IMPORT_TERMINAL_TERMINAL_APP: Key = Key::new(774);
 /// "Alacritty"
-pub const SETTINGS_IMPORT_TERMINAL_ALACRITTY: Key = Key::new(773);
+pub const SETTINGS_IMPORT_TERMINAL_ALACRITTY: Key = Key::new(775);
 /// "kitty"
-pub const SETTINGS_IMPORT_TERMINAL_KITTY: Key = Key::new(774);
+pub const SETTINGS_IMPORT_TERMINAL_KITTY: Key = Key::new(776);
 /// "WezTerm"
-pub const SETTINGS_IMPORT_TERMINAL_WEZTERM: Key = Key::new(775);
+pub const SETTINGS_IMPORT_TERMINAL_WEZTERM: Key = Key::new(777);
 /// "Warp"
-pub const SETTINGS_IMPORT_TERMINAL_WARP: Key = Key::new(776);
+pub const SETTINGS_IMPORT_TERMINAL_WARP: Key = Key::new(778);
 /// "Zed"
-pub const SETTINGS_IMPORT_TERMINAL_ZED: Key = Key::new(777);
+pub const SETTINGS_IMPORT_TERMINAL_ZED: Key = Key::new(779);
 /// "VS Code"
-pub const SETTINGS_IMPORT_TERMINAL_VSCODE: Key = Key::new(778);
+pub const SETTINGS_IMPORT_TERMINAL_VSCODE: Key = Key::new(780);
 /// "Font"
-pub const SETTINGS_IMPORT_SETTING_FONT_FAMILY: Key = Key::new(779);
+pub const SETTINGS_IMPORT_SETTING_FONT_FAMILY: Key = Key::new(781);
 /// "Font size"
-pub const SETTINGS_IMPORT_SETTING_FONT_SIZE: Key = Key::new(780);
+pub const SETTINGS_IMPORT_SETTING_FONT_SIZE: Key = Key::new(782);
 /// "Line height"
-pub const SETTINGS_IMPORT_SETTING_LINE_HEIGHT: Key = Key::new(781);
+pub const SETTINGS_IMPORT_SETTING_LINE_HEIGHT: Key = Key::new(783);
 /// "Ligatures"
-pub const SETTINGS_IMPORT_SETTING_LIGATURES: Key = Key::new(782);
+pub const SETTINGS_IMPORT_SETTING_LIGATURES: Key = Key::new(784);
 /// "Colours"
-pub const SETTINGS_IMPORT_SETTING_THEME: Key = Key::new(783);
+pub const SETTINGS_IMPORT_SETTING_THEME: Key = Key::new(785);
 /// "Colours, dark mode"
-pub const SETTINGS_IMPORT_SETTING_THEME_DARK: Key = Key::new(784);
+pub const SETTINGS_IMPORT_SETTING_THEME_DARK: Key = Key::new(786);
 /// "Colours, light mode"
-pub const SETTINGS_IMPORT_SETTING_THEME_LIGHT: Key = Key::new(785);
+pub const SETTINGS_IMPORT_SETTING_THEME_LIGHT: Key = Key::new(787);
 /// "Opacity"
-pub const SETTINGS_IMPORT_SETTING_OPACITY: Key = Key::new(786);
+pub const SETTINGS_IMPORT_SETTING_OPACITY: Key = Key::new(788);
 /// "Background blur"
-pub const SETTINGS_IMPORT_SETTING_BLUR: Key = Key::new(787);
+pub const SETTINGS_IMPORT_SETTING_BLUR: Key = Key::new(789);
 /// "Option as Meta"
-pub const SETTINGS_IMPORT_SETTING_OPTION_AS_META: Key = Key::new(788);
+pub const SETTINGS_IMPORT_SETTING_OPTION_AS_META: Key = Key::new(790);
 /// "Scrollback lines"
-pub const SETTINGS_IMPORT_SETTING_SCROLLBACK: Key = Key::new(789);
+pub const SETTINGS_IMPORT_SETTING_SCROLLBACK: Key = Key::new(791);
 /// "Bell sound"
-pub const SETTINGS_IMPORT_SETTING_BELL_SOUND: Key = Key::new(790);
+pub const SETTINGS_IMPORT_SETTING_BELL_SOUND: Key = Key::new(792);
 /// "Visual bell"
-pub const SETTINGS_IMPORT_SETTING_BELL_VISUAL: Key = Key::new(791);
+pub const SETTINGS_IMPORT_SETTING_BELL_VISUAL: Key = Key::new(793);
 /// "Shell"
-pub const SETTINGS_IMPORT_SETTING_DEFAULT_SHELL: Key = Key::new(792);
+pub const SETTINGS_IMPORT_SETTING_DEFAULT_SHELL: Key = Key::new(794);
 /// "Shell command"
-pub const SETTINGS_IMPORT_SETTING_SHELL_PROFILE: Key = Key::new(793);
+pub const SETTINGS_IMPORT_SETTING_SHELL_PROFILE: Key = Key::new(795);
 /// "On"
-pub const SETTINGS_IMPORT_VALUE_ON: Key = Key::new(794);
+pub const SETTINGS_IMPORT_VALUE_ON: Key = Key::new(796);
 /// "Off"
-pub const SETTINGS_IMPORT_VALUE_OFF: Key = Key::new(795);
+pub const SETTINGS_IMPORT_VALUE_OFF: Key = Key::new(797);
 /// "Left Option key"
-pub const SETTINGS_IMPORT_VALUE_META_LEFT: Key = Key::new(796);
+pub const SETTINGS_IMPORT_VALUE_META_LEFT: Key = Key::new(798);
 /// "Right Option key"
-pub const SETTINGS_IMPORT_VALUE_META_RIGHT: Key = Key::new(797);
+pub const SETTINGS_IMPORT_VALUE_META_RIGHT: Key = Key::new(799);
 /// "Both Option keys"
-pub const SETTINGS_IMPORT_VALUE_META_BOTH: Key = Key::new(798);
+pub const SETTINGS_IMPORT_VALUE_META_BOTH: Key = Key::new(800);
 /// "Wormhole has no setting for the cursor's shape yet."
-pub const SETTINGS_IMPORT_REASON_CURSOR_SHAPE: Key = Key::new(799);
+pub const SETTINGS_IMPORT_REASON_CURSOR_SHAPE: Key = Key::new(801);
 /// "Wormhole has no setting for a blinking cursor yet."
-pub const SETTINGS_IMPORT_REASON_CURSOR_BLINK: Key = Key::new(800);
+pub const SETTINGS_IMPORT_REASON_CURSOR_BLINK: Key = Key::new(802);
 /// "Wormhole has no setting for the space around the text yet."
-pub const SETTINGS_IMPORT_REASON_PADDING: Key = Key::new(801);
+pub const SETTINGS_IMPORT_REASON_PADDING: Key = Key::new(803);
 /// "Wormhole has no copy-on-select setting yet."
-pub const SETTINGS_IMPORT_REASON_COPY_ON_SELECT: Key = Key::new(802);
+pub const SETTINGS_IMPORT_REASON_COPY_ON_SELECT: Key = Key::new(804);
 /// "Wormhole has no setting for confirming before a terminal closes."
-pub const SETTINGS_IMPORT_REASON_CONFIRM_CLOSE: Key = Key::new(803);
+pub const SETTINGS_IMPORT_REASON_CONFIRM_CLOSE: Key = Key::new(805);
 /// "Wormhole has no setting for the folder a new terminal starts in."
-pub const SETTINGS_IMPORT_REASON_WORKING_DIRECTORY: Key = Key::new(804);
+pub const SETTINGS_IMPORT_REASON_WORKING_DIRECTORY: Key = Key::new(806);
 /// "Wormhole has no file for your own key bindings yet."
-pub const SETTINGS_IMPORT_REASON_KEYBINDING: Key = Key::new(805);
+pub const SETTINGS_IMPORT_REASON_KEYBINDING: Key = Key::new(807);
 /// "Environment variables are set per profile in Settings, not imported."
-pub const SETTINGS_IMPORT_REASON_ENVIRONMENT: Key = Key::new(806);
+pub const SETTINGS_IMPORT_REASON_ENVIRONMENT: Key = Key::new(808);
 /// "Wormhole has no separate bold or italic fonts, or a second font for other text."
-pub const SETTINGS_IMPORT_REASON_FONT_VARIANT: Key = Key::new(807);
+pub const SETTINGS_IMPORT_REASON_FONT_VARIANT: Key = Key::new(809);
 /// "Wormhole has no setting for letter spacing or cell width."
-pub const SETTINGS_IMPORT_REASON_CELL_WIDTH: Key = Key::new(808);
+pub const SETTINGS_IMPORT_REASON_CELL_WIDTH: Key = Key::new(810);
 /// "Wormhole has no such setting."
-pub const SETTINGS_IMPORT_REASON_OTHER: Key = Key::new(809);
+pub const SETTINGS_IMPORT_REASON_OTHER: Key = Key::new(811);
 /// "Wormhole can't show this value."
-pub const SETTINGS_IMPORT_REASON_UNSUPPORTED_VALUE: Key = Key::new(810);
+pub const SETTINGS_IMPORT_REASON_UNSUPPORTED_VALUE: Key = Key::new(812);
 /// "It's computed in Lua, which Wormhole never runs."
-pub const SETTINGS_IMPORT_REASON_DYNAMIC_LUA: Key = Key::new(811);
+pub const SETTINGS_IMPORT_REASON_DYNAMIC_LUA: Key = Key::new(813);
 /// "It runs a program, which an import never does."
-pub const SETTINGS_IMPORT_REASON_EXECUTES: Key = Key::new(812);
+pub const SETTINGS_IMPORT_REASON_EXECUTES: Key = Key::new(814);
 /// "The file couldn't be read: it's missing, too big or not valid."
-pub const SETTINGS_IMPORT_REASON_UNREADABLE: Key = Key::new(813);
+pub const SETTINGS_IMPORT_REASON_UNREADABLE: Key = Key::new(815);
 /// "A file that includes itself, so it was read once."
-pub const SETTINGS_IMPORT_REASON_INCLUDE_CYCLE: Key = Key::new(814);
+pub const SETTINGS_IMPORT_REASON_INCLUDE_CYCLE: Key = Key::new(816);
 /// "Files include each other too deep, or there are too many to read."
-pub const SETTINGS_IMPORT_REASON_INCLUDE_LIMIT: Key = Key::new(815);
+pub const SETTINGS_IMPORT_REASON_INCLUDE_LIMIT: Key = Key::new(817);
 /// "A settings file in a format that isn't read any more."
-pub const SETTINGS_IMPORT_REASON_OLD_FORMAT: Key = Key::new(816);
+pub const SETTINGS_IMPORT_REASON_OLD_FORMAT: Key = Key::new(818);
 /// "It's outside your home folder, or a link leads out of it, so it wasn't read."
-pub const SETTINGS_IMPORT_REASON_OUTSIDE_HOME: Key = Key::new(817);
+pub const SETTINGS_IMPORT_REASON_OUTSIDE_HOME: Key = Key::new(819);
 /// "It sets only some colours; a theme needs at least a background and a foreground."
-pub const SETTINGS_IMPORT_REASON_PARTIAL_PALETTE: Key = Key::new(818);
+pub const SETTINGS_IMPORT_REASON_PARTIAL_PALETTE: Key = Key::new(820);
 /// "Settings → Import brings them over."
-pub const SETTINGS_IMPORT_WELCOME_TOUR: Key = Key::new(825);
+pub const SETTINGS_IMPORT_WELCOME_TOUR: Key = Key::new(827);
 
 /// ```text
 /// { $count ->
@@ -144,21 +144,21 @@ pub const SETTINGS_IMPORT_WELCOME_TOUR: Key = Key::new(825);
 /// }
 /// ```
 pub fn settings_import_count(count: i64) -> String {
-    crate::active::message(760, &[("count", Arg::Int(count))])
+    crate::active::message(762, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $terminal }, { $count }
 /// ```
 pub fn settings_import_card_label(terminal: &str, count: &str) -> String {
-    crate::active::message(761, &[("terminal", Arg::Str(terminal)), ("count", Arg::Str(count))])
+    crate::active::message(763, &[("terminal", Arg::Str(terminal)), ("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $selected } of { $total } selected
 /// ```
 pub fn settings_import_selected(selected: &str, total: &str) -> String {
-    crate::active::message(766, &[("selected", Arg::Str(selected)), ("total", Arg::Str(total))])
+    crate::active::message(768, &[("selected", Arg::Str(selected)), ("total", Arg::Str(total))])
 }
 
 /// ```text
@@ -168,35 +168,35 @@ pub fn settings_import_selected(selected: &str, total: &str) -> String {
 /// }
 /// ```
 pub fn settings_import_summary(brought: i64, left: &str) -> String {
-    crate::active::message(768, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
+    crate::active::message(770, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
 }
 
 /// ```text
 /// Couldn't import: { $error }
 /// ```
 pub fn settings_import_failed(error: &str) -> String {
-    crate::active::message(769, &[("error", Arg::Str(error))])
+    crate::active::message(771, &[("error", Arg::Str(error))])
 }
 
 /// ```text
 /// The font { $font } isn't installed on this Mac.
 /// ```
 pub fn settings_import_reason_font_not_installed(font: &str) -> String {
-    crate::active::message(819, &[("font", Arg::Str(font))])
+    crate::active::message(821, &[("font", Arg::Str(font))])
 }
 
 /// ```text
 /// { $theme } is built into the other terminal, so its colours aren't in any file.
 /// ```
 pub fn settings_import_reason_built_in_theme(theme: &str) -> String {
-    crate::active::message(820, &[("theme", Arg::Str(theme))])
+    crate::active::message(822, &[("theme", Arg::Str(theme))])
 }
 
 /// ```text
 /// Use my { $terminal } settings
 /// ```
 pub fn settings_import_use_mine(terminal: &str) -> String {
-    crate::active::message(821, &[("terminal", Arg::Str(terminal))])
+    crate::active::message(823, &[("terminal", Arg::Str(terminal))])
 }
 
 /// ```text
@@ -206,7 +206,7 @@ pub fn settings_import_use_mine(terminal: &str) -> String {
 /// }
 /// ```
 pub fn settings_import_onboarding_summary(brought: i64, left: &str) -> String {
-    crate::active::message(822, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
+    crate::active::message(824, &[("brought", Arg::Int(brought)), ("left", Arg::Str(left))])
 }
 
 /// ```text
@@ -216,12 +216,12 @@ pub fn settings_import_onboarding_summary(brought: i64, left: &str) -> String {
 /// }
 /// ```
 pub fn settings_import_onboarding_all(brought: i64) -> String {
-    crate::active::message(823, &[("brought", Arg::Int(brought))])
+    crate::active::message(825, &[("brought", Arg::Int(brought))])
 }
 
 /// ```text
 /// Your { $terminal } settings were found.
 /// ```
 pub fn settings_import_welcome_found(terminal: &str) -> String {
-    crate::active::message(824, &[("terminal", Arg::Str(terminal))])
+    crate::active::message(826, &[("terminal", Arg::Str(terminal))])
 }
