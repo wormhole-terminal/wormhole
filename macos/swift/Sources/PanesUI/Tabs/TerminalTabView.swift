@@ -46,6 +46,8 @@ struct TerminalTabView: View {
         // The core's words (name, state, selection, "n of m") where it gave them.
         .accessibilityLabel(tab.spoken ?? PanesText.tabLabel(tab.name, selected: selected))
         .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
+        // The × shows only under the pointer, inside one element: VoiceOver reaches it as the tab's action.
+        .accessibilityAction(named: PanesText.closeTerminal, close)
     }
 
     /// The end of a name that does not fit fades out instead of ending in an ellipsis.

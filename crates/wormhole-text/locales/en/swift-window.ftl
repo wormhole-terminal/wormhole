@@ -25,6 +25,12 @@ sidebar-rename-field = Name
 # The VoiceOver action on a group's head that opens its popover.
 sidebar-group-edit-action = Edit group
 
+# VoiceOver's names for the buttons inside a group's head: the name, which opens the group's popover, and the chevron,
+# which folds the group or opens it (core's `edit_label`, `fold_label`). { $group } is the group's name.
+sidebar-group-edit-spoken = Edit group { $group }
+sidebar-group-fold-spoken = Fold group { $group }
+sidebar-group-unfold-spoken = Unfold group { $group }
+
 # A row's tooltips: the mark of a terminal hidden from agents, in two lines.
 sidebar-hidden-from-agents = Hidden from agents
 sidebar-hidden-from-agents-detail = Programs that control Wormhole can't see it

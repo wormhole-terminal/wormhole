@@ -1,5 +1,6 @@
-// The small controls at a group head's end: the chevron in its 20 box that turns when the group folds, and the + that
-// starts a terminal in the group (always shown on a pinned, empty group, else under the pointer).
+// The small controls at a group head's end: the chevron in its 20 box that turns when the group folds (a button of its own to
+// VoiceOver, as GPUI's chevron is), and the + that starts a terminal in the group (always shown on a pinned, empty group, else
+// under the pointer).
 
 import DesignSystem
 import SwiftUI
@@ -7,6 +8,9 @@ import WordsModel
 
 struct HeadChevron: View {
     let isFolded: Bool
+    /// "Fold group …" or "Unfold group …": what a press does. A click on the chevron is the head's own (it folds too).
+    let spoken: String
+    let toggle: () -> Void
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
 
@@ -19,7 +23,10 @@ struct HeadChevron: View {
             .background(hovering ? tokens.stateHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
             .onHover { hovering = $0 }
             .motion(SidebarMotion.state, value: hovering)
-            .accessibilityHidden(true)
+            .accessibilityElement()
+            .accessibilityLabel(spoken)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(.default, toggle)
     }
 }
 
