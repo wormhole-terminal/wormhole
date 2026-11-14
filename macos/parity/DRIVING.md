@@ -265,6 +265,22 @@ themselves (`Driving/AppController+ControlLooks.swift`), not from the model they
 | `profile-chip [switch <n>]` | the profiles the sidebar's (or tab bar's) chip is given, what it draws (none while there is one): `profile-chip choices=<n>`, then `choice <id> "<name>" [current] [here]`; `switch <n>` runs its menu's n-th profile row (`ProfileActions.switchTo`). The menu itself is AppKit's and stays a person's |
 | `marked [id]` | inspect mode on (`inspect on`): every element the design marks (`.marked(id)`) that the window's views built, `marked n=<count>` then `marked <id> <x> <y> <w> <h>` top to bottom (`status.tile`, `keycap`, `sidebar.row`, `sidebar.card`, `sidebar.band`, `profile.chip`, `title.tab`, `icon.button`, `badge`, and a row's `row.pin`, `row.lock`, `row.worktree`, `row.notes` and `row.changes`, marked by wave 12 (with the chip) so inspect mode finds them, …) |
 
+Added by wave 13 (lane fix): no new command; how `key` gets there, in two cases (`AppController+ControlKeys.swift`).
+
+- **A ⌘ or ⌃ key sent to a window that is not a workspace's** (Settings, the Studio: `pointer-window <title>`, `settings-record`).
+  The application asks the views of the window *it* holds for key whether such a key is theirs, and a test instance's window is
+  never that one: it asked the workspace's window in its place, and the key never reached the window it was sent to (a shortcut
+  recorder in Settings heard nothing). For such a window the driver walks the same order itself: the app's own key table (what its
+  monitor takes: `ExtraKeys.takes`), the window's views (`performKeyEquivalent`), then its first responder's `keyDown`. Every other
+  key, and every key of a workspace's window, still goes through `NSApp.sendEvent`.
+- **A key whose action the window's menus leave out** (its feature is off in the window's profile: ⌥⌘S with Notes off) goes the
+  keyboard's way instead of running the action's handler: the reply is `key <spec> focus=…`, without `-> <action>`.
+
+A new window's keys: the selected terminal takes them when its pane arrives in the window, whatever AppKit chose as the window came
+on screen (its first key view), and the focus holder is never that choice. On the macOS 26 runner the holder was, and every scenario
+that sent a key failed with `focus=title-row toggle-sidebar` from its first `state` on; if that line shows again there, the keys did
+not reach the terminal at launch and the scenario's own steps are not at fault.
+
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).
