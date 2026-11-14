@@ -34,24 +34,26 @@ struct StatusSummary: Equatable {
     /// The terminal the button is for, and the counts after it.
     var attention: TerminalSummary?
     var rest: [Count]
-    /// Who needs input, longest waiting first.
+    /// Who the tooltip names, longest waiting first, and how many more need input (the core's split, `needs_you_named`).
     var waitingNames: [String] = []
+    var waitingMore = 0
 
     /// "a, then b, c and 2 more · go to the first" (core `needs_you_tooltip`), with the jump key (the keymap's now) after it.
+    /// Who is named and how many are counted is the core's; the words are the catalog's.
     func attentionTooltip(jumpKey: String?) -> String? {
         guard let first = waitingNames.first else { return nil }
-        let others = waitingNames.dropFirst().prefix(2)
+        let others = waitingNames.dropFirst()
         var names = first
         if !others.isEmpty {
             let rest = others.joined(separator: ", ")
             names = Words.text("window-attention-then", ["first": .text(first), "rest": .text(rest)], fallback: "\(first), then \(rest)")
         }
-        if waitingNames.count > 3 {
-            let more = waitingNames.count - 3
+        if waitingMore > 0 {
+            let more = waitingMore
             names = Words.text("window-attention-more", ["names": .text(names), "count": .whole(more)], fallback: "\(names) and \(more) more")
         }
         let go =
-            waitingNames.count == 1
+            others.isEmpty
             ? Words.text("window-attention-go-there", ["names": .text(names)], fallback: "\(names) · go there")
             : Words.text("window-attention-go-first", ["names": .text(names)], fallback: "\(names) · go to the first")
         // The key the jump has now (`status_bar.rs`); none when it has none.
@@ -63,7 +65,8 @@ struct StatusSummary: Equatable {
         let counts = StatusRules.rules.counts(of: terminals)
         let waiting = counts.needsYou.compactMap { terminals.indices.contains($0) ? terminals[$0] : nil }
         attention = waiting.first
-        waitingNames = waiting.map(\.title)
+        waitingNames = waiting.prefix(counts.named).map(\.title)
+        waitingMore = counts.more
         rest = counts.rest.compactMap { item in
             terminals.indices.contains(item.terminal)
                 ? Count(activity: item.activity, number: item.count, first: terminals[item.terminal].id) : nil

@@ -63,6 +63,9 @@ pub struct StatusCountsRecord {
     pub needs_you: Vec<u32>,
     /// The counts after the button, in the bar's order.
     pub rest: Vec<StatusCountRecord>,
+    /// How many of `needs_you` the button's tooltip names, and how many it only counts ("and 2 more").
+    pub named: u32,
+    pub more: u32,
 }
 
 /// How much the bar says at a window's width.
@@ -94,7 +97,10 @@ pub fn status_counts(entries: Vec<StatusEntryRecord>) -> StatusCountsRecord {
         })
         .collect();
     let summary = Summary::of(&core);
+    let (named, more) = summary.needs_you_named();
     StatusCountsRecord {
+        named: index(named),
+        more: index(more),
         needs_you: summary.needs_you.iter().map(|&at| index(at)).collect(),
         rest: summary
             .rest()

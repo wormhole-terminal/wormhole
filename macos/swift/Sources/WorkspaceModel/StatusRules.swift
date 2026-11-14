@@ -30,8 +30,13 @@ public struct StatusCounts: Sendable, Equatable {
     public var needsYou: [Int]
     /// The counts after the button, in the bar's order.
     public var rest: [Item]
+    /// How many of `needsYou` the button's tooltip names, and how many it only counts ("and 2 more").
+    public var named: Int
+    public var more: Int
 
-    public init(needsYou: [Int] = [], rest: [Item] = []) { (self.needsYou, self.rest) = (needsYou, rest) }
+    public init(needsYou: [Int] = [], rest: [Item] = [], named: Int = 0, more: Int = 0) {
+        (self.needsYou, self.rest, self.named, self.more) = (needsYou, rest, named, more)
+    }
 }
 
 public protocol StatusRuling: Sendable {

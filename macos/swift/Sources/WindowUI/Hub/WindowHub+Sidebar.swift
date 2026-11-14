@@ -38,17 +38,21 @@ extension WindowHub {
         NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: path)])
     }
 
-    /// The tab bar for the terminals as they are: the groups as sets, the loose terminals as the last one.
+    /// The tab bar for the terminals as they are: the groups as sets, the loose terminals as the last one, as the core lists
+    /// them (`view::sidebar::tabs`), with the current set and the alerts it decides.
     var tabBar: TabBarModel {
         let state = state
-        // The bar has no folds: a folded group lists no rows in the sidebar, so its members come from `all`, which has every
-        // terminal in the list's order (`view::sidebar::tabs::tab_sets` takes the bands' members, folded ones too).
-        let sets = TabSets.of(
+        let facts = store.tabSets()
+        // Without the core (the sample) the window lists them itself: the groups' terminals from `all` (a folded group lists
+        // no rows in the sidebar, and the bar has no folds), then the loose ones.
+        let sets = facts.map { facts in
+            facts.sets.map { TabSet(groupID: $0.group, label: $0.group == nil ? TabSets.ungrouped : $0.label, members: $0.members) }
+        } ?? TabSets.of(
             groups: state.groups.map { head in
                 TabSet(groupID: head.id, label: head.name, members: state.all.filter { $0.group == head.id }.map(\.id))
             },
             loose: state.all.filter { $0.group == nil }.map(\.id))
-        let current = state.selected.flatMap { TabSets.current(sets, containing: $0) } ?? 0
+        let current = facts.map { $0.current ?? 0 } ?? state.selected.flatMap { TabSets.current(sets, containing: $0) } ?? 0
         // A tab's number is the core's ⌘ number (stable per terminal; a terminal folded away has none).
         let numbers = Dictionary(state.sections.flatMap(\.rows).compactMap { row in row.number.map { (row.id, $0) } }, uniquingKeysWith: { first, _ in first })
         var bar = TabBarModel.make(
@@ -60,7 +64,8 @@ extension WindowHub {
                 item.alert = terminal.map(TerminalStatusTile.alert(of:))
                 return item
             },
-            pinned: { set in state.groups.first { $0.id == set.groupID }?.isPinned ?? false })
+            pinned: { set in state.groups.first { $0.id == set.groupID }?.isPinned ?? false },
+            alerts: facts.map { facts in (sets: facts.sets.map { TabAlert($0.alert) }, others: TabAlert(facts.othersAlert)) })
         // What VoiceOver hears for each tab is the core's (`spoken::tab_label`): name, state, selection, "n of m".
         if let spoken = store.tabLabels(of: bar.tabs.map(\.id)), spoken.count == bar.tabs.count {
             for at in bar.tabs.indices where !spoken[at].isEmpty { bar.tabs[at].spoken = spoken[at] }

@@ -89,6 +89,8 @@ public protocol WorkspaceBackend: AnyObject {
     /// What VoiceOver hears for each of these terminals as the tabs of one set, in order (the core's words: name, state,
     /// selection, "n of m"); nil in the sample, whose tabs say their name.
     func tabLabels(of ids: [TerminalID]) -> [String]?
+    /// The tab bar's sets, the current one and their alerts, as the core lists them; nil in the sample.
+    func tabSets() -> TabSetFacts?
     /// The window came to the front or went behind (`active`) and whether it can be seen at all (`seen`): in front, what is
     /// on screen is looked at, so a finished result is spent and a bell heard.
     func setWindowState(active: Bool, seen: Bool)

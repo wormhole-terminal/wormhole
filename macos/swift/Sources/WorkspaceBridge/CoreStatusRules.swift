@@ -11,7 +11,8 @@ public struct CoreStatusRules: StatusRuling {
         let counted = statusCounts(entries: entries)
         return StatusCounts(
             needsYou: counted.needsYou.map(Int.init),
-            rest: counted.rest.map { StatusCounts.Item(activity: Self.activity($0.kind), count: Int($0.count), terminal: Int($0.terminal)) })
+            rest: counted.rest.map { StatusCounts.Item(activity: Self.activity($0.kind), count: Int($0.count), terminal: Int($0.terminal)) },
+            named: Int(counted.named), more: Int(counted.more))
     }
 
     public func detail(windowWidth: Double) -> WorkspaceModel.StatusBarDetail {

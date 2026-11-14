@@ -111,6 +111,9 @@ public final class WorkspaceStore {
     /// What VoiceOver hears for each tab of one set, in the bar's order; nil where no core words them.
     public func tabLabels(of ids: [TerminalID]) -> [String]? { backend.tabLabels(of: ids) }
 
+    /// The tab bar's sets as the core lists them; nil where there is no core (the sample).
+    public func tabSets() -> TabSetFacts? { backend.tabSets() }
+
     private func woke() {
         backend.drain()
         pull()
