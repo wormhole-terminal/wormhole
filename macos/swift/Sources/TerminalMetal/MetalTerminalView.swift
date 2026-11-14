@@ -102,6 +102,8 @@ public final class MetalTerminalView: NSView {
     /// Told when the grid the program has changed (the status bar's size reads it).
     public var onGridChange: (() -> Void)?
     private let wake = WakeRelay()
+    /// The pace of the drains made while no display link ticks for the view (`hearUnticked`).
+    private var unticked = DrainPace()
 
     // Input method state (see Keyboard/).
     var composition = MarkedTextModel()
@@ -184,6 +186,8 @@ public final class MetalTerminalView: NSView {
         if window == nil {
             invalidateLink()
             source.setOnScreen(false)
+            // What waited for a tick that no longer comes is heard from the run loop, not from inside this move.
+            DispatchQueue.main.async { [weak self] in MainActor.assumeIsolated { self?.hearUnticked() } }
             return
         }
         // `NSView.displayLink` follows the screen the view is on and (unlike CVDisplayLink) needs no setup
@@ -323,10 +327,27 @@ public final class MetalTerminalView: NSView {
     private func wakeOnMain() {
         statistics.wakes += 1
         link?.isPaused = false
-        // A window in the Dock gets no tick from its display link: what its program says meanwhile (a bell, a title, the
-        // request to come back out, XTWINOPS 1) is heard now, as the GPUI app hears a terminal it does not draw; the frame
-        // is drawn when the window is back.
-        if window?.isMiniaturized == true, handleEvents() { redrawRequested = true }
+        hearUnticked()
+    }
+
+    /// A window in the Dock gets no tick from its display link, and a view in no window (a terminal that is not the shown
+    /// one) has no link: what the program says meanwhile (a bell, a title, its exit, the request to come back out, XTWINOPS
+    /// 1) is heard without one, as the GPUI app hears a terminal it does not draw; the frame is drawn when it is back in
+    /// sight. Paced as a frame paces a view in sight (`DrainPace`): a program printing fast is one drain per interval.
+    private func hearUnticked() {
+        guard window == nil || window?.isMiniaturized == true else { return }
+        drainUnticked(unticked.woke())
+    }
+
+    private func drainUnticked(_ now: Bool) {
+        guard now else { return }
+        if handleEvents() { redrawRequested = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + DrainPace.interval) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.drainUnticked(self.unticked.elapsed())
+            }
+        }
     }
 
     public func requestRedraw() {
