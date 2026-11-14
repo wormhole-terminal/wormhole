@@ -30,18 +30,18 @@ extension AppController {
         switch command {
         case "settings-page": reply(SettingsPageReadout.text(settingsModel))
         case "theme-cards": reply(ThemeCardsReadout.text(settingsModel, filter: argument))
-        case "status-items": reply(hub.statusItems(look: look, width: window?.contentView?.bounds.width ?? 0))
-        case "tab-bar": reply(hub.tabBarListing(look: look))
-        case "tab-click": reply(hub.tabClick(argument, look: look).map { "error: \($0)" } ?? "tab-click \(argument)")
+        case "status-items": reply(hub.statusItems(look: windowLook, width: window?.contentView?.bounds.width ?? 0))
+        case "tab-bar": reply(hub.tabBarListing(look: windowLook))
+        case "tab-click": reply(hub.tabClick(argument, look: windowLook).map { "error: \($0)" } ?? "tab-click \(argument)")
         case "switcher":
             if argument == "open" {
                 hub.openSwitcher()
                 reply("switcher open")
             } else {
                 // No query: the search on screen (what the open switcher's field holds).
-                reply(hub.switcherListing(look: look, query: argument.isEmpty ? nil : argument))
+                reply(hub.switcherListing(look: windowLook, query: argument.isEmpty ? nil : argument))
             }
-        case "switcher-press": reply(hub.switcherPress(argument, look: look).map { "error: \($0)" } ?? "switcher-press \(argument)")
+        case "switcher-press": reply(hub.switcherPress(argument, look: windowLook).map { "error: \($0)" } ?? "switcher-press \(argument)")
         case "onboarding-state", "onboarding-pick", "onboarding-press": reply(onboarding(command, argument))
         default: return runPanelReadouts(command: command, argument: argument)
         }
