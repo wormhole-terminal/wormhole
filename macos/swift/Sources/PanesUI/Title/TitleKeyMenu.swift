@@ -19,6 +19,14 @@ public enum TitleKeyMenu {
         return menu
     }
 
+    /// The row's own menu, as a right-click on the row (not on its folder) opens it (the control folder's `title-menu`).
+    public static func rowMenu(_ row: TitleRow, actions: TitleActions) -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        self.row(row, actions, into: menu)
+        return menu
+    }
+
     /// The folder's own menu, as a right-click on the folder opens it (the control folder's `path-menu`): `shown` is the folder as the
     /// row writes it, `folder` its absolute path.
     public static func pathMenu(folder: String, shown: String, actions: TitleActions) -> NSMenu {
@@ -45,7 +53,8 @@ public enum TitleKeyMenu {
         }
     }
 
-    private static func row(_ row: TitleRow, _ actions: TitleActions, into menu: NSMenu) {
+    private static func row(_ shown: TitleRow, _ actions: TitleActions, into menu: NSMenu) {
+        let row = actions.ownRow() ?? shown
         menu.addItem(.sectionHeader(title: PanesText.showInTitleRow))
         for part in TitlePart.allCases where part.hideable {
             let shown = row.shows(part)

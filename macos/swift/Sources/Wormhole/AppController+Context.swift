@@ -37,6 +37,7 @@ extension AppController {
             self?.settingsModel.reveal($0)
         }
         hub.actions.editsSettings = { [weak self, weak session] in session?.windows.profile == self?.windowsHost.profile }
+        connectTitleRow(of: session)
         // A test instance keeps the menu for `menu` and `menu-pick` (it would hold the app in AppKit's tracking loop).
         hub.actions.showKeyMenu = { [weak self, weak session] menu, frame in
             guard let self, policy.touchesSystem, let content = session?.window?.contentView else { self?.injector.keep(menu); return }

@@ -149,6 +149,12 @@ public struct HubActions {
     public var revealSetting: @MainActor (String) -> Void = { _ in }
     /// Whether this window's profile is the one Settings shows: a window of another profile cannot arrange its title row.
     public var editsSettings: @MainActor () -> Bool = { true }
+    /// The title row's own menu writes the setting (`title_row`) of the window's own profile, as GPUI's does (`title/parts.rs`):
+    /// a part shown or hidden by the core's rule, and the row put back. Every window, Settings and the next launch follow.
+    public var showTitlePart: @MainActor (String, Bool) -> Void = { _, _ in }
+    public var resetTitleRow: @MainActor () -> Void = {}
+    /// The person's own row as the window's profile stores it, which the menu ticks under Zen mode (`settings_without_zen`).
+    public var ownTitleRow: @MainActor () -> [String]? = { nil }
     /// A menu the keys opened (⌃↩), under `frame` (in the window's content, from its top left): shown, or kept in a test instance.
     public var showKeyMenu: @MainActor (NSMenu, CGRect) -> Void = { _, _ in }
     /// The native context menu of a terminal's grid, built when it is asked for.

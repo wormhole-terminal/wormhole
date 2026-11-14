@@ -25,11 +25,17 @@ extension WindowHub {
             showChanges: { [unowned self] in send(.showPanelTab(.changes)) },
             split: { [unowned self] in split($0) },
             canSplit: { [unowned self] in canSplit($0) },
-            setPart: { [unowned self] in if !zenActive, titleRow.setShown($0, $1) { rowChanged() } },
-            resetRow: { [unowned self] in if !zenActive { titleRow = .default; rowChanged() } },
+            // The setting itself, not this window's row: the row changes when the setting comes back (`HubSettings.applyTitleRow`).
+            setPart: { [unowned self] in if !zenActive { actions.showTitlePart($0.rawValue, $1) } },
+            resetRow: { [unowned self] in if !zenActive { actions.resetTitleRow() } },
             customizeRow: { [unowned self] in actions.revealSetting("title-row") },
             canInsert: terminal.activity != .exited)
         title.canEditRow = !zenActive && actions.editsSettings()
+        // Under Zen mode the row on screen is Zen's: the menu ticks the person's own.
+        title.ownRow = { [unowned self] in
+            guard zenActive, let keys = actions.ownTitleRow() else { return nil }
+            return TitleRow(keys.compactMap(TitlePart.init(rawValue:)))
+        }
         return title
     }
 

@@ -26,7 +26,7 @@ extension AppController {
             themes.resolver = FfiThemeResolver()
             // The profile's own theme files, beside its `config.json`.
             themes.themesDirectory = URL(fileURLWithPath: kit.host.handle.paths().configFile).deletingLastPathComponent().appendingPathComponent("themes")
-            let made = ProfileLook(profile: id, app: self, backend: kit.backend, themes: themes) { [weak self] key in
+            let made = ProfileLook(profile: id, app: self, backend: kit.backend, host: kit.host, themes: themes) { [weak self] key in
                 self?.profileFlags.on(profile: id).contains(key) ?? false
             }
             profileLooks[id] = made

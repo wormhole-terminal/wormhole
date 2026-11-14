@@ -2,7 +2,8 @@
 // the view builds them and picks one through the same call the view's button makes. What leaves the app (an editor, the browser,
 // Finder) is recorded by `ExternalOpen` in a test instance and read with `launches` (`ControlPlatform`).
 //   `open-in` lists the Open in… button and its menu, `open-in click` presses the button, `open-in <n|name>` an item;
-//   `path-card [<n|name>]`, `ports [<n>]` (the chips, then the "+n" menu's) and `pull-request` likewise.
+//   `path-card [<n|name>]`, `ports [<n>]` (the chips, then the "+n" menu's) and `pull-request` likewise; `title-menu` keeps the row's
+//   own right-click menu for `menu` and `menu-pick`.
 
 import DesignSystem
 import Foundation
@@ -48,6 +49,13 @@ extension AppController {
             } else {
                 reply("error: ports [<n>|<name>]")
             }
+        case "title-menu":
+            // A right-click on the row (not on its folder): its own menu, the items the SwiftUI one has, kept for `menu` and
+            // `menu-pick`. The first line is the row on screen.
+            guard let actions = hub.selectedTitleActions else { reply("error: no terminal is shown"); return true }
+            let menu = TitleKeyMenu.rowMenu(hub.titleRow, actions: actions)
+            injector.keep(menu)
+            reply("title-menu row=\(hub.titleRow.parts.map(\.rawValue).joined(separator: ","))\n" + Self.rows(of: menu))
         case "pull-request":
             guard let pr = hub.state.title?.pullRequest else { reply("error: no pull request"); return true }
             TitleClicks.openPullRequest(pr)

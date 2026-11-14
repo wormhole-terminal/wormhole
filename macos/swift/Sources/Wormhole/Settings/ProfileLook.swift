@@ -21,14 +21,19 @@ final class ProfileLook {
         terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] }, themes: themes, engineProfile: { [profile = self.profile] in profile })
     private unowned let app: AppController
     let backend: any SettingsBackend
+    /// The profile's own settings host: core's rules over its settings (the title row's parts, `TitleRowSetting`).
+    let host: (any SettingsHost)?
     /// Whether a feature (by its flag's key) is on in this profile.
     private let featureOn: @MainActor (String) -> Bool
     private var observation: SettingsObservation?
     private var applied: [String: JSONValue] = [:]
     private var appliedFolder = FontFolderState()
 
-    init(profile: String, app: AppController, backend: any SettingsBackend, themes: ThemeStore, featureOn: @escaping @MainActor (String) -> Bool) {
-        (self.profile, self.app, self.backend, self.featureOn) = (profile, app, backend, featureOn)
+    init(
+        profile: String, app: AppController, backend: any SettingsBackend, host: (any SettingsHost)? = nil, themes: ThemeStore,
+        featureOn: @escaping @MainActor (String) -> Bool
+    ) {
+        (self.profile, self.app, self.backend, self.host, self.featureOn) = (profile, app, backend, host, featureOn)
         look = WindowUI.WindowLook(themes: themes)
         look.zen = app.look.zen
     }
