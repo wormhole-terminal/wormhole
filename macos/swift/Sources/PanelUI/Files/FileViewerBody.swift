@@ -12,23 +12,45 @@ struct FileViewerBody: View {
     @Environment(\.tokens) private var tokens
 
     var body: some View {
+        let card = Self.card(store)
         switch store.content {
-        case .reading: note(panelText("files-reading", "Reading\u{2026}"))
-        case let .text(text, size, truncated):
-            if text.isEmpty { note(panelText("files-viewer-empty", "This file is empty.")) } else { lines(truncated: truncated, size: size) }
-        case let .binary(size): panel(panelText("files-viewer-binary", ["size": .text(ByteSize.text(size))], "Binary file, \(ByteSize.text(size))"), actions: true)
-        case .image: picture
-        // A deleted file has nothing to open or show, nor has a link that leads out; the others might still be revealed.
-        case let .unavailable(problem): panel(Self.words(problem), actions: problem != .gone && problem != .outside)
+        case .reading: note(card.words ?? "")
+        case let .text(text, _, truncated):
+            if text.isEmpty { note(card.words ?? "") } else { lines(truncation: truncated ? card.words : nil) }
+        case .binary, .unavailable: panel(card.words ?? "", actions: card.buttons)
+        case .image: picture(card)
         }
     }
 
-    private func lines(truncated: Bool, size: Int) -> some View {
+    /// The card's words for what is open and whether Open in… and Reveal show under them (nil words: the lines or the picture
+    /// alone). Drawn here; the control folder's `files-viewer` reads it.
+    static func card(_ store: FilesStore) -> (words: String?, buttons: Bool) {
+        switch store.content {
+        case .reading: return (panelText("files-reading", "Reading\u{2026}"), false)
+        case let .text(text, size, truncated):
+            if text.isEmpty { return (panelText("files-viewer-empty", "This file is empty."), false) }
+            guard truncated else { return (nil, false) }
+            let shown = ByteSize.text(store.lines.reduce(0) { $0 + $1.utf8.count + 1 })
+            return (panelText("files-viewer-truncated", ["shown": .text(shown), "size": .text(ByteSize.text(size))], "Showing the first \(shown) of \(ByteSize.text(size))"), false)
+        case let .binary(size): return (panelText("files-viewer-binary", ["size": .text(ByteSize.text(size))], "Binary file, \(ByteSize.text(size))"), true)
+        case .image:
+            switch store.picture {
+            case nil: return (panelText("files-reading", "Reading\u{2026}"), false)
+            case .shown: return (nil, false)
+            case .tooLarge: return (panelText("files-viewer-image-too-large", "This picture is too large to show."), true)
+            case .unreadable: return (panelText("files-viewer-image-failed", "This picture can't be shown."), true)
+            }
+        // A deleted file has nothing to open or show, nor has a link that leads out; the others might still be revealed.
+        case let .unavailable(problem): return (words(problem), problem != .gone && problem != .outside)
+        }
+    }
+
+    /// The lines, and under them what a cut file says it shows (`truncation`).
+    private func lines(truncation: String?) -> some View {
         VStack(spacing: 0) {
             FileLines(lines: store.lines, spans: store.spans, path: path)
-            if truncated {
-                let shown = ByteSize.text(store.lines.reduce(0) { $0 + $1.utf8.count + 1 })
-                Text(panelText("files-viewer-truncated", ["shown": .text(shown), "size": .text(ByteSize.text(size))], "Showing the first \(shown) of \(ByteSize.text(size))"))
+            if let truncation {
+                Text(truncation)
                     .font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).frame(maxWidth: .infinity).frame(height: Metric.row)
                     .overlay(alignment: .top) { Rectangle().fill(tokens.border).frame(height: tokens.metrics.borderWidth) }
             }
@@ -50,14 +72,13 @@ struct FileViewerBody: View {
         .padding(Space._4).frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    @ViewBuilder private var picture: some View {
+    @ViewBuilder private func picture(_ card: (words: String?, buttons: Bool)) -> some View {
         switch store.picture {
-        case nil: note(panelText("files-reading", "Reading\u{2026}"))
+        case nil: note(card.words ?? "")
         case let .shown(image):
             Image(decorative: image, scale: 1).resizable().scaledToFit().padding(Space._4).frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityLabel(path)
-        case .tooLarge: panel(panelText("files-viewer-image-too-large", "This picture is too large to show."), actions: true)
-        case .unreadable: panel(panelText("files-viewer-image-failed", "This picture can't be shown."), actions: true)
+        case .tooLarge, .unreadable: panel(card.words ?? "", actions: card.buttons)
         }
     }
 
