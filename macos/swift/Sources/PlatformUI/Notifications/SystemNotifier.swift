@@ -83,6 +83,10 @@ public final class SystemNotifier: Notifying {
 
     func refreshPermission() { Task { await refresh() } }
 
+    /// Reads macOS's answer again: the centre sends no event when the person changes it in System Settings, so the app
+    /// coming forward, the Settings window becoming key and a test about to go out each ask (never a timer).
+    public func readPermission() async { await refresh() }
+
     private func refresh() async {
         let settings = await center.notificationSettings()
         permission =

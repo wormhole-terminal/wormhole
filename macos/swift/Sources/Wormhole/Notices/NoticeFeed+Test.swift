@@ -31,6 +31,17 @@
             }
         }
 
+        /// macOS's permission read again, then shown: the person may have changed it in System Settings since it was
+        /// last read, and the centre says nothing when they do. Called on events only (the app coming forward, the
+        /// Settings window becoming key, the Notifications page appearing).
+        func rereadPermission() {
+            guard let system = notifier as? SystemNotifier else { return publishStatus() }
+            Task { @MainActor [weak self] in
+                await system.readPermission()
+                self?.publishStatus()
+            }
+        }
+
         /// "Send test": the banner goes once macOS allows it; the row says waiting, sent, denied or unanswered.
         func runTest(name: String, settings: NoticeSettings) {
             testTask?.cancel()
@@ -39,7 +50,10 @@
             testTask = Task { @MainActor [weak self] in
                 guard let self else { return }
                 // macOS is asked first when it was not, and its answer is waited for: the notifier awaits it, nothing polls.
+                // It is read fresh first: a permission turned off since launch must say "denied", not "Sent".
                 if let system = notifier as? SystemNotifier {
+                    await system.readPermission()
+                    if Task.isCancelled { return }
                     switch system.permission {
                     case .notAsked, .checking: await system.askPermissionAndWait()
                     default: break

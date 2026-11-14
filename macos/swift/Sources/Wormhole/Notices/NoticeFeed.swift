@@ -81,10 +81,19 @@
 
         /// The app coming forward and a window becoming key change who is looked at without changing any terminal, so each
         /// is its own event (never a timer). The key window's own terminal is read after the notification, when it is key.
+        /// The same two events read macOS's permission again for the Notifications page (`rereadPermission`): the app
+        /// coming forward (back from System Settings) and the Settings window becoming key; the centre sends no event of
+        /// its own when the person changes it.
         private func lookOnFocus() {
             for name in [NSApplication.didBecomeActiveNotification, NSWindow.didBecomeKeyNotification] {
-                let token = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                    MainActor.assumeIsolated { if let self { self.look(self.app.noticeTabs) } }
+                let token = NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
+                    let window = note.object as? NSWindow
+                    MainActor.assumeIsolated {
+                        guard let self else { return }
+                        self.look(self.app.noticeTabs)
+                        let settingsKey = window != nil && window === self.app.settingsController?.window
+                        if name == NSApplication.didBecomeActiveNotification || settingsKey { self.rereadPermission() }
+                    }
                 }
                 focusObservers.append(token)
             }
