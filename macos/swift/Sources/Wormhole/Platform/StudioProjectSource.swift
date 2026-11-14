@@ -17,7 +17,7 @@
         private var folder: String? {
             let state = app.hub.state
             let row = state.terminals.first { $0.id == state.selected } ?? state.all.first { $0.id == state.selected }
-            return row?.folder.map { ($0 as NSString).expandingTildeInPath }
+            return row?.folder.map { HomeFolder.expanding($0) }
         }
 
         private var service: ProjectService? { (app.panelBackends.project as? RustProjectBackend)?.service }

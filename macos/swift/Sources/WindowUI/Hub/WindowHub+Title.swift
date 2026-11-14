@@ -10,7 +10,7 @@ import WorkspaceModel
 
 extension WindowHub {
     func titleActions(for terminal: TerminalSummary) -> TitleActions {
-        let folder = terminal.folder.map { ($0 as NSString).expandingTildeInPath }
+        let folder = terminal.folder.map { HomeFolder.expanding($0) }
         var title = TitleActions(
             revealFolder: { if let folder { ExternalOpen.open(URL(fileURLWithPath: folder)) } },
             copyPath: { [unowned self] in
@@ -49,7 +49,7 @@ extension WindowHub {
 
 extension WindowHub {
     /// The selected terminal's folder as the row's buttons use it (`~` expanded), nil without one.
-    public var selectedFolder: String? { state.selectedTerminal?.folder.map { ($0 as NSString).expandingTildeInPath } }
+    public var selectedFolder: String? { state.selectedTerminal?.folder.map { HomeFolder.expanding($0) } }
 
     /// Open in… for the selected terminal: what the button and its menu list and do.
     public var selectedOpenIn: OpenInMenu? { selectedFolder.map { OpenInMenu(folder: $0, backend: openIn) } }

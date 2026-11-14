@@ -4,6 +4,7 @@
 import Foundation
 import SettingsModel
 import WormholeBindings
+import WorkspaceModel
 
 struct RustProjectsBackend: ProjectsBackend {
     let service: ProjectService
@@ -16,7 +17,7 @@ struct RustProjectsBackend: ProjectsBackend {
     func trusted() async -> [ProjectChoice] { await run { $0.trustedProjects().map(RecordMapping.projectChoice) } }
 
     func known() async -> [ProjectChoice] {
-        let open = await folders().map { ($0 as NSString).expandingTildeInPath }
+        let open = await folders().map { HomeFolder.expanding($0) }
         return await run { $0.knownProjects(folders: open).map(RecordMapping.projectChoice) }
     }
 
@@ -39,7 +40,7 @@ struct RustProjectsBackend: ProjectsBackend {
 
     /// The core's watch on the project's `.wormhole` folder; the token keeps it alive.
     func follow(_ root: String, changed: @escaping @Sendable () -> Void) -> AnyObject? {
-        settingsWatchProject(root: (root as NSString).expandingTildeInPath, listener: ProjectChanges(changed))
+        settingsWatchProject(root: HomeFolder.expanding(root), listener: ProjectChanges(changed))
     }
 
     /// The core's watch on the profile's approvals file; the token keeps it alive.

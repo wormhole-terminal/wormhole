@@ -27,7 +27,7 @@ public struct WorkspaceSetup: Sendable {
     public var paneHeaderHeight: Double = 34
 
     public init(
-        program: String? = nil, arguments: [String] = [], profile: String? = nil, home: String? = NSHomeDirectory(),
+        program: String? = nil, arguments: [String] = [], profile: String? = nil, home: String? = HomeFolder.path,
         numbersFollowList: Bool = false, hosting: HostingSetup? = nil
     ) {
         (self.program, self.arguments, self.home, self.numbersFollowList) = (program, arguments, home, numbersFollowList)

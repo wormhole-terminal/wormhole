@@ -92,7 +92,7 @@ var targets: [Target] = [
     .target(name: "AppLogging"),
     // The macOS edge as plain values and pure logic: the keymap (core's table as data), the menu bar and context
     // menus, notifications, the ambient surfaces, the folder picker's model, Touch ID's protocol. Foundation only.
-    .target(name: "PlatformModel", dependencies: ["WordsModel"], resources: [.copy("Resources/keymap.json")]),
+    .target(name: "PlatformModel", dependencies: ["WordsModel", "WorkspaceModel"], resources: [.copy("Resources/keymap.json")]),
     // AppKit and UserNotifications around it: menus, hotkey, banners, status item, Dock, quick panel, picker panel.
     .target(name: "PlatformUI", dependencies: ["PlatformModel", "DesignSystem", "WordsModel", "AppLogging"]),
     .testTarget(name: "PlatformTests", dependencies: ["PlatformModel", "PlatformUI", "DesignSystem"]),
@@ -157,7 +157,7 @@ if ffiLinked {
         .testTarget(name: "FilesBridgeTests", dependencies: ["FilesBridge", "PanelModel", "PlatformModel", "WormholeBindings", "WorkspaceModel"]),
         // The settings window over the Rust core: values, writes, search, shortcut rules, the agents, imports and
         // profiles. Replaces the mock backend and host.
-        .target(name: "SettingsBridge", dependencies: ["SettingsModel", "FontPickerModel", "DesignSystem", "WormholeBindings"]),
+        .target(name: "SettingsBridge", dependencies: ["SettingsModel", "FontPickerModel", "DesignSystem", "WormholeBindings", "WorkspaceModel"]),
         // The Theme Studio's theme file rules from the core: formats, copies, pairs, updates (`StudioFiles`).
         .target(name: "StudioBridge", dependencies: ["StudioModel", "DesignSystem", "WormholeBindings"]),
         .testTarget(name: "SettingsBridgeTests", dependencies: ["SettingsBridge", "SettingsModel", "FontPickerModel", "WormholeBindings"]),

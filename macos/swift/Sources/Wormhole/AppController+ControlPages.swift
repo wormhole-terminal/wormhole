@@ -13,6 +13,7 @@ import Foundation
 import SettingsModel
 import SettingsUI
 import WordsModel
+import WorkspaceModel
 #if WITH_UNIFFI
     import AuxBridge
     import HookBridge
@@ -127,7 +128,7 @@ extension AppController {
     private func importScan(_ argument: String) async {
         #if WITH_UNIFFI
             guard let host = settingsModel.host as? RustSettingsHost else { return reply("error: import-scan needs the real core") }
-            host.importHome = argument.isEmpty ? nil : NSString(string: argument).expandingTildeInPath
+            host.importHome = argument.isEmpty ? nil : HomeFolder.expanding(argument)
             showSettings()
             settingsModel.show("import")
             settingsModel.importDraft.reset()

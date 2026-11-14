@@ -9,6 +9,7 @@ import PanesModel
 import PlatformModel
 import TerminalUI
 import WordsModel
+import WorkspaceModel
 
 @MainActor
 final class SystemPanelHost: PanelHost {
@@ -38,7 +39,7 @@ final class SystemPanelHost: PanelHost {
     /// The app the Open in button opens files in (the window's choice); Finder is a reveal, so it names no editor.
     var chosenApp: () -> OpenInApp? = { nil }
     var editorName: String? { chosenApp().flatMap { $0 == .finder ? nil : $0.name } }
-    let homeFolder: String? = NSHomeDirectory()
+    let homeFolder: String? = HomeFolder.path
 
     func keyed(_ words: String, action: String) -> String { Keymap.shared.withKey(words, ActionID(rawValue: action)) }
 

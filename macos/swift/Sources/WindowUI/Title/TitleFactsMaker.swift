@@ -9,10 +9,10 @@ import WorkspaceModel
 enum TitleFactsMaker {
     static func facts(
         for terminal: TerminalSummary, row: TitleRow, statusBarOn: Bool, gauge: GaugeFact? = nil, extras: TitleState? = nil,
-        waited: Waited? = nil, home: String = NSHomeDirectory()
+        waited: Waited? = nil, home: String = HomeFolder.path
     ) -> TitleFacts {
         let shown = terminal.folder
-        let path = shown.map { ($0 as NSString).expandingTildeInPath }
+        let path = shown.map { HomeFolder.expanding($0) }
         return TitleFacts(
             terminalID: terminal.id, folder: path, shownFolder: shown.map { abbreviated($0, home: home) },
             activity: terminal.activity, agent: terminal.agent, label: terminal.title,

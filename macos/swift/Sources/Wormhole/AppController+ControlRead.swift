@@ -44,7 +44,7 @@ extension AppController {
             reply("zen \(zenOn ? "on" : "off")")
         case "new" where !argument.isEmpty:
             // `new <dir>`: a terminal in that folder (`~/` is the home folder), as a worktree's new terminal opens.
-            hub.send(.newTerminalIn(NSString(string: argument).expandingTildeInPath))
+            hub.send(.newTerminalIn(HomeFolder.expanding(argument)))
             reply("new \(argument)")
         case "new-shell":
             // `new-shell <key> [dir]`: a terminal running the shell the key names (`shells` lists the keys), in `dir` (`~/` is
@@ -56,7 +56,7 @@ extension AppController {
             }
             let key = first == "-" ? "" : first
             if parts.count == 2, !parts[1].isEmpty {
-                hub.send(.newTerminalWithShellIn(key: key, folder: NSString(string: parts[1]).expandingTildeInPath))
+                hub.send(.newTerminalWithShellIn(key: key, folder: HomeFolder.expanding(parts[1])))
             } else {
                 hub.send(.newTerminalWithShell(key))
             }

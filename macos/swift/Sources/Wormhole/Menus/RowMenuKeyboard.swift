@@ -21,7 +21,7 @@ extension AppController {
         facts.agentHide = sidebar.offersAgentHide || terminal.isAgentHidden ? terminal.isAgentHidden : nil
         facts.restoring = sidebar.restoresText
         facts.inSplit = terminal.splitID != nil
-        facts.cwd = terminal.folder.map { ($0 as NSString).expandingTildeInPath }
+        facts.cwd = terminal.folder.map { HomeFolder.expanding($0) }
         let current = hub.state.sections.first { $0.rows.contains { $0.id == id } }?.head?.id
         facts.groups = hub.state.groups.map {
             .init(id: Int64($0.id), name: $0.name, current: $0.id == current, allowed: hub.store.groupAdmits($0.id, terminal: id))
@@ -56,8 +56,8 @@ extension AppController {
         case .togglePin: hub.send(.togglePin(id))
         case .toggleForgetText: hub.send(.setForgetText(id, !(terminal?.forgetsText ?? false)))
         case .toggleAgentHidden: hub.send(.setAgentHidden(id, !(terminal?.isAgentHidden ?? false)))
-        case .revealInFinder: if let path = terminal?.folder { hub.revealFolder((path as NSString).expandingTildeInPath) }
-        case .copyPath: if let path = terminal?.folder { hub.copyFolder((path as NSString).expandingTildeInPath) }
+        case .revealInFinder: if let path = terminal?.folder { hub.revealFolder(HomeFolder.expanding(path)) }
+        case .copyPath: if let path = terminal?.folder { hub.copyFolder(HomeFolder.expanding(path)) }
         }
     }
 }

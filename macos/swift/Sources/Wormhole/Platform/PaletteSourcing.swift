@@ -31,7 +31,7 @@ extension AppController {
             reveal: { [weak self, weak session] target in
                 switch target {
                 case .terminal(let id): self?.show(terminal: id)
-                case .folder(let path): self?.openProject((path as NSString).expandingTildeInPath)
+                case .folder(let path): self?.openProject(HomeFolder.expanding(path))
                 case .projectAction(let id): self?.router.dispatch(.runProjectAction(id))
                 case .newTerminalWith(let key): self?.newTerminal(shellKey: key, in: session)
                 case .setting(let id):
@@ -80,7 +80,7 @@ extension AppController {
                 // With History off there is nowhere to show a commit.
                 guard !self.featuresOff(session).contains("history") else { return commits.load(from: nil, folder: nil) }
                 let selected = session.hub.state.selected
-                let folder = session.hub.state.terminals.first { $0.id == selected }?.folder.map { ($0 as NSString).expandingTildeInPath }
+                let folder = session.hub.state.terminals.first { $0.id == selected }?.folder.map { HomeFolder.expanding($0) }
                 commits.load(from: session.panelBackends.git, folder: folder)
             })
     }

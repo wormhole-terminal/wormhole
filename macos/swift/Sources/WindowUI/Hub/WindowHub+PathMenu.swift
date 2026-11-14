@@ -3,11 +3,12 @@
 
 import AppKit
 import PanesUI
+import WorkspaceModel
 
 extension WindowHub {
     /// Nil when the selected terminal has no folder.
     public var selectedPathMenu: NSMenu? {
         guard let terminal = state.selectedTerminal, let folder = terminal.folder else { return nil }
-        return TitleKeyMenu.pathMenu(folder: (folder as NSString).expandingTildeInPath, shown: folder, actions: titleActions(for: terminal))
+        return TitleKeyMenu.pathMenu(folder: HomeFolder.expanding(folder), shown: folder, actions: titleActions(for: terminal))
     }
 }

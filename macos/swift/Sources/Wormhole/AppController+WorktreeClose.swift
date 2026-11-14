@@ -29,7 +29,7 @@ extension AppController {
             found.append((made, !terminal.isDirty && (!group || !shared)))
         }
         guard let first = found.first else { return nil }
-        let home = NSHomeDirectory()
+        let home = HomeFolder.path
         let shown = { (path: String) in path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path }
         guard group else {
             let dirty = !first.removable
@@ -56,6 +56,6 @@ extension AppController {
     /// The sidebar writes a folder with `~`; the panel and git read real paths.
     static func expanded(_ folder: String?) -> String? {
         guard let folder else { return nil }
-        return folder == "~" ? NSHomeDirectory() : folder.hasPrefix("~/") ? NSHomeDirectory() + folder.dropFirst(1) : folder
+        return folder == "~" ? HomeFolder.path : folder.hasPrefix("~/") ? HomeFolder.path + folder.dropFirst(1) : folder
     }
 }

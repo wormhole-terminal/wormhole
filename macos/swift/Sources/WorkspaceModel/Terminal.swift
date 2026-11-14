@@ -112,6 +112,6 @@ extension TerminalSummary {
     /// The folder the panel's tabs read (the Files tab, the git tabs, the project): the core's full path where the summary
     /// has it, else the drawn folder with its `~` written out (the sample's and the rows').
     public var readPath: String? {
-        path ?? folder.map { $0 == "~" || $0.hasPrefix("~/") ? NSHomeDirectory() + $0.dropFirst(1) : $0 }
+        path ?? folder.map { $0 == "~" || $0.hasPrefix("~/") ? HomeFolder.path + $0.dropFirst(1) : $0 }
     }
 }

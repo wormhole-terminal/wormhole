@@ -93,7 +93,7 @@ extension AppController {
 
     /// What the quick panel's Do section offers: a new terminal where the one in front is, Open folder…, the project's actions.
     var ambientItems: [QuickPanelDo] {
-        let folder = hub.state.all.first { $0.id == hub.state.selected }?.folder.map { ($0 as NSString).expandingTildeInPath }
+        let folder = hub.state.all.first { $0.id == hub.state.selected }?.folder.map { HomeFolder.expanding($0) }
         return [.newTerminal(cwd: folder), .openFolder] + ambientActions.map(QuickPanelDo.action)
     }
 
@@ -110,7 +110,7 @@ extension AppController {
 
     /// What the surfaces call a terminal's folder (core's `notify::Terminal.folder`): its name, "~" being the home folder's.
     static func folderName(_ path: String) -> String {
-        let full = (path as NSString).expandingTildeInPath
+        let full = HomeFolder.expanding(path)
         return full == "/" ? "/" : (full as NSString).lastPathComponent
     }
 

@@ -55,7 +55,7 @@ final class FolderPicking {
         // The terminal it opens over: a pick goes only there, and the picker closes when another comes in front.
         let view = app.selectedView
         let opened = app.hub.state.selected
-        let cwd = app.hub.state.terminals.first { $0.id == opened }?.folder.map { ($0 as NSString).expandingTildeInPath } ?? NSHomeDirectory()
+        let cwd = app.hub.state.terminals.first { $0.id == opened }?.folder.map { HomeFolder.expanding($0) } ?? HomeFolder.path
         // Window coordinates from the top left. The anchor is the cursor cell of the last frame; before one, the pane's
         // bottom left line (GPUI `folder_picker/mod.rs`).
         func fromTop(_ frame: CGRect) -> CGRect { CGRect(x: frame.minX, y: content.bounds.height - frame.maxY, width: frame.width, height: frame.height) }
@@ -137,7 +137,7 @@ final class FolderPicking {
                 for (id, folder) in terminals {
                     guard let folder, visited[id] != folder else { continue }
                     visited[id] = folder
-                    if recents(of: profile)?.recordVisit((folder as NSString).expandingTildeInPath) == true { changed.insert(profile) }
+                    if recents(of: profile)?.recordVisit(HomeFolder.expanding(folder)) == true { changed.insert(profile) }
                 }
             }
             changed.forEach(save)

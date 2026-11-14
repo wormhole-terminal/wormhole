@@ -189,7 +189,7 @@ struct AuxBackends {
                         guard firstRun, let app, let folder else { return }
                         let hub = app.hub
                         guard hub.state.all.count == 1, let first = hub.state.all.first else { return }
-                        let there = first.folder.map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath).standardizedFileURL }
+                        let there = first.folder.map { URL(fileURLWithPath: HomeFolder.expanding($0)).standardizedFileURL }
                         guard there != folder.standardizedFileURL else { return }
                         hub.send(.newTerminalIn(folder.path))
                         app.closeTerminal(first.id)

@@ -62,7 +62,7 @@ extension AppController {
     private func folderColor(_ argument: String) async {
         let words = argument.split(separator: " ").map(String.init)
         guard let name = words.last else { return reply("error: folder-color [path] <name|#rrggbb|none>") }
-        let path = words.count > 1 ? NSString(string: words.dropLast().joined(separator: " ")).expandingTildeInPath : hub.panel.project.folder
+        let path = words.count > 1 ? HomeFolder.expanding(words.dropLast().joined(separator: " ")) : hub.panel.project.target
         guard let folder = path, folder.hasPrefix("/") else { return reply("error: expected an absolute path, got \(path ?? "none")") }
         let backend = front.panelBackends.project
         if name == "none" {

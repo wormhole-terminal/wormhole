@@ -77,7 +77,7 @@ extension AppController {
     }
 
     private static func resolved(_ path: String) -> String {
-        URL(fileURLWithPath: (path as NSString).expandingTildeInPath).resolvingSymlinksInPath().path
+        URL(fileURLWithPath: HomeFolder.expanding(path)).resolvingSymlinksInPath().path
     }
 
     /// The terminal whose folder is `root` (the core words it `~`-shortened, and /tmp is /private/tmp), in any window or only the

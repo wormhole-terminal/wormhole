@@ -72,6 +72,6 @@
             }
         }
 
-        private func expanded(_ folder: String) -> String { (folder as NSString).expandingTildeInPath }
+        private func expanded(_ folder: String) -> String { HomeFolder.expanding(folder) }
     }
 #endif

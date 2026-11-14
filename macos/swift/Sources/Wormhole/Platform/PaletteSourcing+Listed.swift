@@ -37,7 +37,7 @@ extension AppController {
     /// ⌘↩: a new window, laid out like this one, with a terminal where the result is: a terminal's folder, a folder, a commit's
     /// repository with History on the commit there.
     func openInNewWindow(_ target: Command.Target, from session: WindowSession?) {
-        func expanded(_ path: String) -> String { (path as NSString).expandingTildeInPath }
+        func expanded(_ path: String) -> String { HomeFolder.expanding(path) }
         let hub = (session ?? front).hub
         switch target {
         case .terminal(let id): openNewWindow(folder: self.session(holding: id)?.hub.state.all.first { $0.id == id }?.folder.map(expanded))
