@@ -55,6 +55,7 @@ extension Instance {
 
     /// The window's terminals, oldest first, once there are `count` of them; nil (the failure recorded) when they never are, so a
     /// scenario stops instead of reading past the end of a list.
+    @discardableResult
     func live(_ count: Int, window: Int? = nil) async -> [Int]? {
         let ids = Listing(await until("rows", window: window) { Listing($0).live.count == count }).live
         return ids.count == count ? ids : nil

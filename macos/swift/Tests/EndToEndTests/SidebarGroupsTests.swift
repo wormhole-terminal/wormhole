@@ -86,7 +86,7 @@ extension EndToEnd {
         }
     }
 
-    @Test("⌃⌥] ⌃⌥[ and ⌃⌥1–9 go between groups (a folded one counts, the terminals in no group are last); folding twice at once settles")
+    @Test("⌃⌥] ⌃⌥[ and ⌃⌥1–9 go between groups (a folded one counts, no group is last, an empty pinned one gets a terminal); two folds settle")
     @MainActor func groupKeys() async throws {
         try await Instance.with { app in
             await app.send(["key cmd-t", "key cmd-t", "key cmd-t"])
@@ -127,6 +127,14 @@ extension EndToEnd {
             app.expect(menu, contains: "Close group")
             app.expect(!(await app.reply("menu-native")).contains("dots:"), "no colour dots in the keyboard's group menu")
             await app.send(["menu-close"])
+
+            // A pinned group left empty keeps its number, and its number key starts a terminal in it.
+            await app.send(["group-menu \(a)", "menu-pick Pin group"])
+            await app.until("rows") { Listing($0).groups.first { $0.id == a }?.pinned == true }
+            await app.send(["row-menu \(ids[1])", "menu-pick Remove from group"])
+            await app.until("rows") { Listing($0).groups.first { $0.id == a }?.count == 0 }
+            await app.send(["key ctrl-alt-1"])
+            await app.until("rows") { Listing($0).groups.first { $0.id == a }?.count == 1 }
         }
     }
 }

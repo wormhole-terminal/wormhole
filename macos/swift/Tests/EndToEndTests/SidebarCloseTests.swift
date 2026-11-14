@@ -82,8 +82,8 @@ extension EndToEnd {
             app.expect(await app.reply("quit-ask"), contains: "sleep")
             await app.send(["search"])
 
-            // From the command line closing always asks (`fromCommandLine`).
-            let said = await app.reply("control close \(sleeper)")
+            // From the command line (here from inside the first terminal) closing always asks (`fromCommandLine`).
+            let said = await app.reply("control --from \(three[0]) close --terminal \(sleeper)")
             app.expect(!said.hasPrefix("error"), "the request was taken: \(said)")
             app.expect(await app.asked(), contains: "sleep")
             await app.send(["question cancel"])
