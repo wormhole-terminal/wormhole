@@ -91,7 +91,7 @@ struct StatusBar: View {
                 separated { stateText(selected, words).foregroundStyle(selected.activity.stateColour(colours)) }
             }
             if let hosting, StatusHosting.words(hosting) != nil {
-                separated { StatusHostingItem(state: hosting, word: detail >= .numbers) }
+                separated { StatusHostingItem(state: hosting, word: StatusHosting.showsWord(detail)) }
             }
             if let selected, let size, detail.size {
                 separated { Text("\(program ?? selected.title) · \(size)") }
@@ -117,13 +117,19 @@ struct StatusBar: View {
 
     /// "working · 4m", "done · 3m", "failed · 2m", "needs input", "exited": how long in whole minutes, as the title row says it.
     @ViewBuilder private func stateText(_ terminal: TerminalSummary, _ words: String) -> some View {
-        if terminal.activity == .failed, let code = terminal.failureCode {
-            Text(StateWords.failedExit(code))
-        } else if [.working, .finished, .failed].contains(terminal.activity), let since = terminal.since, let first = waited(since) {
-            WaitedWords(prefix: words + " · ", first: first, waited: { self.waited(since) })
+        let said = Self.state(terminal, words)
+        if let since = said.since, let first = waited(since) {
+            WaitedWords(prefix: said.words + " · ", first: first, waited: { self.waited(since) })
         } else {
-            Text(words)
+            Text(said.words)
         }
+    }
+
+    /// The state item's words and the moment its " · 4m" counts from (nil: it has none): drawn here, read by `status-items`.
+    static func state(_ terminal: TerminalSummary, _ words: String) -> (words: String, since: UInt64?) {
+        if terminal.activity == .failed, let code = terminal.failureCode { return (StateWords.failedExit(code), nil) }
+        let counts = [.working, .finished, .failed].contains(terminal.activity)
+        return (words, counts ? terminal.since : nil)
     }
 
     /// An item read, not clicked, after a hairline.

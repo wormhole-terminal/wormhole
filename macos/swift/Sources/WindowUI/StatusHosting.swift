@@ -33,6 +33,9 @@ enum StatusHosting {
     /// Quiet when persistent, in the warning colour when not: the one a person would want to notice.
     static func isWarning(_ state: HostingState) -> Bool { !state.survivesQuit }
 
+    /// Whether the item says its word beside the icon at this width: below the counts' numbers it is the icon alone.
+    static func showsWord(_ detail: StatusSummary.Detail) -> Bool { detail >= .numbers }
+
     static func symbol(_ state: HostingState) -> String {
         if case .connecting = state { return "arrow.triangle.2.circlepath" }
         return state.survivesQuit ? "externaldrive" : "exclamationmark.triangle"

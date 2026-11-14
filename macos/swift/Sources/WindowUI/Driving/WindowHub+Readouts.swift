@@ -8,7 +8,7 @@
 //     attention 7 "api" words="needs input · 2m" tooltip="api, then web · go to the first (⌃⌘↓)" spoken="…"
 //     count working 2 first="4" words="2 working" spoken="2 terminals working"
 //     state "working · 4m"
-//     hosting "Persistent"
+//     hosting externaldrive "Persistent" tooltip="…"   (the word only where the bar writes it beside the icon)
 //     size "vim · 100×30"
 //     probe "…"
 
@@ -46,24 +46,20 @@ extension WindowHub {
             lines.append(Readout.line("count", ["\(count.activity)", String(count.number)], pairs: pairs))
         }
         if detail.size { for item in look.probeItems { lines.append(Readout.line("probe", quoted: [item.text], pairs: [("tooltip", item.tooltip)])) } }
-        if let selected, let words = selected.activity.stateWords { lines.append(Readout.line("state", quoted: [stateWords(selected, words)])) }
+        if let selected, let words = selected.activity.stateWords {
+            let said = StatusBar.state(selected, words)
+            lines.append(Readout.line("state", quoted: [said.since.flatMap { store.waited(since: $0) }.map { said.words + " · " + $0.words } ?? said.words]))
+        }
+        // The icon always; the word only where the bar writes it (`StatusHostingItem`).
         if let hosting = state.selected.flatMap({ store.hosting(of: $0) }), let said = StatusHosting.words(hosting) {
-            lines.append(Readout.line("hosting", quoted: [said.word], pairs: [("tooltip", said.sentence)]))
+            let word = StatusHosting.showsWord(detail) ? [said.word] : []
+            lines.append(Readout.line("hosting", [StatusHosting.symbol(hosting)], quoted: word, pairs: [("tooltip", said.sentence)]))
         }
         // The grid the program was told, as `WindowBody.statusBar` reads it.
         if let selected, detail.size, let grid = state.selected.flatMap({ terminals.existing($0) })?.gridSize {
             lines.append(Readout.line("size", quoted: ["\(store.programName(of: selected.id) ?? selected.title) · \(grid.cols)×\(grid.rows)"]))
         }
         return lines.joined(separator: "\n")
-    }
-
-    /// "working · 4m", "failed · exit 1", "needs input": `StatusBar.stateText`'s words.
-    private func stateWords(_ terminal: TerminalSummary, _ words: String) -> String {
-        if terminal.activity == .failed, let code = terminal.failureCode { return StateWords.failedExit(code) }
-        if [.working, .finished, .failed].contains(terminal.activity), let since = terminal.since, let waited = store.waited(since: since) {
-            return words + " · " + waited.words
-        }
-        return words
     }
 
     /// `tab-bar`: the bar the window shows over the terminal while the terminals are tabs.
