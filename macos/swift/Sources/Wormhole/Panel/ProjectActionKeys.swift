@@ -24,11 +24,18 @@ extension AppController {
     }
 
     func claimProjectKey(_ pressed: KeySpec, in hub: WindowHub) -> Bool {
-        guard pressed.mods.contains(.command) || pressed.isFunctionKey else { return false }
+        guard pressed.mods.contains(.command) || pressed.isFunctionKey, !hasActiveDialog(hub) else { return false }
         let project = hub.panel.project
         guard project.state?.actions.contains(where: { $0.key.flatMap { KeySpec(glyphs: $0) }?.sameKey(pressed) == true }) == true
         else { return false }
         return project.runAction(forKey: pressed.glyphText)
+    }
+
+    /// Something in the window asks first and the key is its (GPUI's `has_active_dialog`): the palette or the shortcut sheet
+    /// over the window, a sheet on it (a question, a worktree's), or a diff line's comment being written.
+    private func hasActiveDialog(_ hub: WindowHub) -> Bool {
+        hub.state.overlay != nil || hub.panel.changes.commenting != nil
+            || sessions.first(where: { $0.hub === hub })?.window?.attachedSheet != nil
     }
 }
 
