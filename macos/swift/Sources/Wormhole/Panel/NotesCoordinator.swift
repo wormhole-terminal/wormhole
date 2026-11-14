@@ -36,6 +36,9 @@ final class NotesCoordinator {
     /// terminal holds once that reads. The core's base was forgotten at once all the same, so a quit or a crash before then
     /// loses nothing (the next merge keeps both sides); laid, a line the file deleted in that merge stays deleted.
     private var unlanded: [TerminalID: (answered: NotesModel, sent: NotesModel)] = [:]
+    /// Counts the window's moves to another profile: a read of the database that began before one may be of the database
+    /// the window left, whose rows the move took out.
+    private var moves = 0
 
     init(persistence: any NotesPersisting, hub: WindowHub, merging: NotesMerging = NotesMerging(), syncEvery: TimeInterval? = 2) {
         self.syncEvery = syncEvery
@@ -47,6 +50,7 @@ final class NotesCoordinator {
     func follow(profile id: String) {
         // Another profile's database: what was read of the old one is not laid over it (the bases were forgotten).
         unlanded = [:]
+        moves += 1
         persistence.follow(profile: id)
     }
 
@@ -159,7 +163,12 @@ final class NotesCoordinator {
             merging.ids.insert(id)
             // A merge that could not be laid before is laid first, now that the terminal may read.
             if let waiting = unlanded.removeValue(forKey: id) { store(waiting.answered, sent: waiting.sent, for: id) }
-            guard let sent = await reading(id), hub.state.all.contains(where: { $0.id == id }) else {
+            // "Move Window to" may run while the database is read off the main actor: the move takes the window's rows out
+            // of the database it leaves (`windows/rehome.rs`) before `follow(profile:)` names the new one, so the read can
+            // give an empty list, which sent would read as the person having deleted every line. Whatever was read across
+            // a move is dropped; the next look reads where the window is now.
+            let moved = moves
+            guard let sent = await reading(id), moved == moves, hub.state.all.contains(where: { $0.id == id }) else {
                 merging.ids.remove(id)
                 continue
             }

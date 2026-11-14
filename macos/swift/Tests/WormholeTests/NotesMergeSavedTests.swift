@@ -17,6 +17,10 @@ struct NotesMergeSavedTests {
     final class Store: NotesPersisting, @unchecked Sendable {
         var saved: [Int: NotesModel] = [:]
         var unreadable: Set<Int> = []
+        /// The terminal whose read (off the main actor) waits for `resume`, and then finds its rows gone: a read that
+        /// falls inside "Move Window to", after the move took the window's rows out of this database.
+        var stalled: Int?
+        let resume = DispatchSemaphore(value: 0)
         /// What the merge answers for a terminal, given what was sent; nil: nothing changed.
         var answer: (Int, NotesModel) -> NotesModel? = { _, _ in nil }
         var sent: [Int: NotesModel] = [:]
@@ -27,6 +31,11 @@ struct NotesMergeSavedTests {
         var release: CheckedContinuation<Void, Never>?
 
         func read(session: Int) -> NotesModel? {
+            if session == stalled {
+                entered?.yield()
+                resume.wait()
+                return NotesModel()
+            }
             guard !unreadable.contains(session) else { return nil }
             guard let model = saved[session] else { return NotesModel() }
             var fresh = NotesModel(
@@ -247,6 +256,30 @@ struct NotesMergeSavedTests {
         #expect(Self.steps(persistence.sent[2]) == ["  build", "  new", "  added from outside"], "the next merge sends what was laid")
         await coordinator.sync()
         #expect(Self.steps(persistence.saved[2]) == ["  build", "  new", "  added from outside"], "laid once")
+    }
+
+    /// "Move Window to" while a terminal's notes are being read off the main actor: the rows have left the database the
+    /// read is of, so it gives an empty list. Sent, that reads as the person having deleted every line (against a base the
+    /// terminal has in the profile it moves into, notes.md loses them). It is not sent; the next look reads the new database.
+    @Test func aReadThatFellInsideAMoveToAnotherProfileIsNotSent() async {
+        let persistence = Store()
+        persistence.saved[2] = Self.model(steps: ["build", "ship"])
+        let (_, _, coordinator) = window(persistence)
+        persistence.stalled = 2
+        let entered = AsyncStream<Void>.makeStream()
+        persistence.entered = entered.continuation
+        let running = Task { await coordinator.sync() }
+        var inFlight = entered.stream.makeAsyncIterator()
+        _ = await inFlight.next()
+        // The move, whole, while the read waits: the window follows the database of the profile it went to.
+        coordinator.follow(profile: "work")
+        persistence.resume.signal()
+        _ = await running.value
+        #expect(persistence.sent[2] == nil, "what was read of the database the window left is not sent as every line deleted")
+        persistence.stalled = nil
+        await coordinator.sync()
+        #expect(Self.steps(persistence.sent[2]) == ["  build", "  ship"], "the next look reads where the window is now")
+        #expect(Self.steps(persistence.saved[2]) == ["  build", "  ship"])
     }
 
     /// The terminal on show could not be read: nothing is saved over it or merged, and once it can be read what was typed
