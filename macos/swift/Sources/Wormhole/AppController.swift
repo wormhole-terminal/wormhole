@@ -139,11 +139,14 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     /// The windows in sight: the profile Wormhole is in, and the odd ones opened in another (the rest are parked).
     var shown: [WindowSession] { sessions.filter { !$0.parked } }
-    /// The window commands act on: the key one, else the one that was in front last, else the first.
+    /// The window commands act on: the key one, else the one that was in front last, else the first. In the middle of a
+    /// profile switch none is in sight for a moment (the ones left are parked, the target's not yet up) while the new
+    /// profile's settings are already applied and the menu bar asks: then the first window there is, never an index
+    /// into an empty list (that ended the app on every switch into a profile without a window in sight).
     var front: WindowSession {
         let shown = shown
         if let n = commandWindow, shown.indices.contains(n - 1) { return shown[n - 1] }
-        return shown.first { $0.window?.isKeyWindow == true } ?? shown.first { $0 === lastFront } ?? shown[0]
+        return shown.first { $0.window?.isKeyWindow == true } ?? shown.first { $0 === lastFront } ?? shown.first ?? sessions[0]
     }
     var hub: WindowHub { front.hub }
     /// What the right panel reads through: the project backend is also Settings' source of what a project sets.
