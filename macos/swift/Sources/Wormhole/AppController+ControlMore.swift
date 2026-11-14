@@ -21,6 +21,7 @@ extension AppController {
         if await runLooks(command: command, argument: argument) { return true }
         if runUpdates(command: command) { return true }
         if runScrollback(command: command, argument: argument) { return true }
+        if runHostsWindow(command: command, argument: argument) { return true }
         return false
     }
 }
