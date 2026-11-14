@@ -19,6 +19,9 @@ final class Instance {
         case zsh
         /// A script named like an agent that only reads what is typed, so the terminal is taken for that agent.
         case agent(String)
+        /// No `WORMHOLE_SHELL`: the app runs what its settings and a terminal's choice say (`default_shell`, a shell picked
+        /// for one terminal, a trusted project's). A scenario with it names a system shell in `config` first.
+        case configured
     }
 
     let scratch: Scratch
@@ -107,18 +110,20 @@ final class Instance {
 
     private func environment() throws -> [String: String] {
         var environment = scratch.cleanEnvironment
-        let program: URL
+        let program: URL?
         switch shell {
         case .cat: program = URL(fileURLWithPath: "/bin/cat")
         case .agent(let name): program = try scratch.agentShell(named: name)
+        case .configured: program = nil
         case .zsh:
-            program = scratch.bin.appendingPathComponent("zsh-f")
-            try Data("#!/bin/zsh\nexec /bin/zsh -f \"$@\"\n".utf8).write(to: program)
-            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: program.path)
+            let zsh = scratch.bin.appendingPathComponent("zsh-f")
+            try Data("#!/bin/zsh\nexec /bin/zsh -f \"$@\"\n".utf8).write(to: zsh)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: zsh.path)
+            program = zsh
         }
         environment["WORMHOLE_DATA_DIR"] = scratch.data.path
         environment["WORMHOLE_DEVCTL"] = scratch.control.path
-        environment["WORMHOLE_SHELL"] = program.path
+        if let program { environment["WORMHOLE_SHELL"] = program.path }
         environment["WORMHOLE_AUTH"] = auth
         environment["WORMHOLE_NOTIFY"] = "log"
         environment["WORMHOLE_BACKGROUND"] = "1"

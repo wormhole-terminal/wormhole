@@ -16,6 +16,7 @@ extension AppController {
         if runReadouts(command: command, argument: argument) { return true }
         if await runSettingsPress(command: command, argument: argument) { return true }
         if runUsageRecents(command: command, argument: argument) { return true }
+        if runChromeActs(command: command, argument: argument) { return true }
         return false
     }
 }

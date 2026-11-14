@@ -17,6 +17,7 @@ import Foundation
 import PanesModel
 import PanesUI
 import PlatformModel
+import TerminalUI
 import WordsModel
 import WorkspaceModel
 
@@ -119,4 +120,9 @@ extension WindowHub {
         }
         return nil
     }
+}
+
+extension WindowHub {
+    /// The selected terminal's find bar (`find-state`).
+    public var selectedFind: FindModel? { selectedOverlay?.find }
 }

@@ -183,6 +183,12 @@ none of these; `status-bar` is the bar's switch, so its items are `status-items`
 | `recents [projects\|folders]` | the window's own profile: `recents projects profile="<id>" count="<n>"` then `project "<name>" path="<root>"` most recent first; `recents folders profile="<id>"` then `json <the list the database keeps>` |
 | `switcher open` / `switcher-press new-group\|sidebar\|card <n>\|add <n>` | the tab bar opens its group switcher (a counter the bar watches, `WindowHub.switcherAsk`: the popover is the bar's own); its New group, Show all groups in the sidebar, a card's click (`openSet`), a pinned empty card's +: `switcher-press <what>` or `error: …` |
 | `onboarding-press trust\|later\|theme <name>` | the trust card's Trust with Touch ID (answered by `WORMHOLE_AUTH`) and Later; a Look step card by its theme's name (`ThemeStore.setTheme`, the card's action). `onboarding-state` on the Look step adds `theme <id> "<name>" [current]` per card |
+| `find-state` | `find-state query="<q>" count="<the bar's count words>" <open\|closed> [case] [word] [regex]` |
+| `branch-chip [<terminal>\|state]` | the title row's branch chip for that terminal (`TitleActions.pickBranch`): `branch-chip <id>`; `state`: `branch-chip picker=<terminal\|->` (who the compare list is asked for) |
+| `group-popover <group>` | the group's popover in the list, as "Other colour…" opens it: `group-popover <id>`; `popover` then reads it |
+| `sidebar-tip [close\|never\|keep\|settings]` | `sidebar-tip <off\|note\|offer>` (off while an agent is on screen); the note's ×, Don't show again, the offer's ×, Coding agents settings |
+| `plus-menu [pick <key>]` | `plus-menu` then `<key\|-> "<name>" [default]` per shell (`HubActions.shells`); a pick opens a terminal with it: `plus-menu picked <key>` |
+| `comment-at <row>` / `review` | the comment dialog of the Changes diff's row (numbered as `diff-spans` numbers it), as a click on the line opens it: `comment-at <path>:<line>` (then `comment <text>`); `review` then the text a paste of the review would paste, or `review: none` |
 
 Also wave 9: `key cmd-left|cmd-right|cmd-backspace` (any key the keymap gives a view's own action, `ActionRouter.viewed`) goes the
 keyboard's way, to the terminal's `performKeyEquivalent` before the menus; `key esc` in a field goes through the window first, so
