@@ -104,7 +104,14 @@
             case .worktreeAsked(let window, let folder, let branch, let command):
                 // In the window the request reached (whose profile judged the trust), not the one in front. Each window's store
                 // tells the control line when its sheet is up or gone (`AppController+Windows`), so a second request is answered Failed.
-                (app.sessions.first { $0.id == Int(window) } ?? app.sessions.first)?.hub.askWorktree(branch: branch, in: folder, command: command)
+                guard let reached = app.sessions.first(where: { $0.id == Int(window) }) else {
+                    // That window is gone: the question goes to the first, whose sheet says when it is up, and the gone one's
+                    // mark is taken down, or nothing would ever take it down.
+                    worktreeSheet(window: Int(window), up: false)
+                    app.sessions.first?.hub.askWorktree(branch: branch, in: folder, command: command)
+                    return
+                }
+                reached.hub.askWorktree(branch: branch, in: folder, command: command)
             case .gauge(let terminal, let agent, let model, let context):
                 // In the window that holds the terminal.
                 app.session(holding: Int(terminal))?.hub.gauges.tell(
