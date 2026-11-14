@@ -1,8 +1,8 @@
 // The right panel's title row: its icon tabs (28 pt squares, 4 apart, as `icon_tab` draws them) from the 6 pt
 // pad, and room at the end for the panel toggle that floats over it. One selection shape sits under the tabs
 // and springs between them on the quick spring (400/30, `view::motion::tabs`), so a second switch mid-way
-// carries on from where the first was; Reduce Motion moves it at once. Each tab is a button for VoiceOver in
-// a tab list, and the arrow keys walk the list as one stop.
+// carries on from where the first was; Reduce Motion moves it at once. For VoiceOver the strip is a group of radio
+// buttons, one a tab, as AppKit's tab strip is, and the arrow keys walk the list as one stop.
 
 import DesignSystem
 import PanelUI
@@ -29,12 +29,8 @@ struct PanelTabBar: View {
 
     var body: some View {
         HStack(spacing: Chrome.tabGap) {
-            ForEach(Array(tabs.enumerated()), id: \.element) { position, candidate in
+            ForEach(tabs, id: \.self) { candidate in
                 PanelTabButton(tab: candidate, isSelected: candidate == tab, badge: badges[candidate], tip: tip(candidate), namespace: selection) { select(candidate) }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(spoken(candidate))
-                    .accessibilityValue(place(position))
-                    .accessibilityAddTraits(candidate == tab ? [.isButton, .isSelected] : .isButton)
             }
             Spacer(minLength: 0)
         }
@@ -44,9 +40,17 @@ struct PanelTabBar: View {
         .padding(.trailing, Chrome.panelToggleSlot)
         .frame(height: Chrome.titleHeight)
         .background(WindowDragArea())
-        .accessibilityElement(children: .contain)
+        // Each tab a tab, the shown one selected (GPUI's `Role::Tab` with `aria_selected`, `window/chrome.rs`): SwiftUI gives no
+        // element of its own that role on macOS, and a segmented picker is AppKit's radio group of them. Nothing drawn changes.
+        .accessibilityRepresentation {
+            Picker(Words.text("window-panel", fallback: "Right panel"), selection: Binding(get: { tab }, set: { select($0) })) {
+                ForEach(Array(tabs.enumerated()), id: \.element) { position, candidate in
+                    Text(spoken(candidate)).accessibilityValue(place(position)).tag(candidate)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
         .accessibilityAddTraits(.isTabBar)
-        .accessibilityLabel(Words.text("window-panel", fallback: "Right panel"))
     }
 }
 
