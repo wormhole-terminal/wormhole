@@ -24,7 +24,7 @@ extension EndToEnd {
             app.expect(dark["status_bar"] == "false", "the status bar is off as it comes: \(dark.text)")
 
             // The status bar's switch: written, and the window draws its bar.
-            await Self.click(app, "status-bar")
+            await app.clickSwitch("status-bar", key: "status_bar", becomes: true)
             _ = await app.waitForConfig { $0.range(of: #""status_bar"\s*:\s*true"#, options: .regularExpression) != nil }
             await app.until("window-look") { Readout($0).first("window-look")?["status_bar"] == "true" }
             await app.until("status-items") { Readout($0).first("status-items")?.has("shown") == true }
@@ -45,7 +45,7 @@ extension EndToEnd {
 
             // Icon animations off: the look the icons read says so.
             app.expect(await app.reply("look-keys"), contains: "icon_animations=true")
-            await Self.click(app, "icon-animations")
+            await app.clickSwitch("icon-animations", key: "icon_animations", becomes: false)
             await app.until("look-keys") { $0.contains("icon_animations=false") }
             _ = await app.waitForConfig { $0.range(of: #""icon_animations"\s*:\s*false"#, options: .regularExpression) != nil }
         }
@@ -59,9 +59,16 @@ extension EndToEnd {
             @MainActor func opened() async -> String { (await app.reply("launches")).replacingOccurrences(of: "/private/tmp", with: "/tmp") }
             app.expect(!(await opened()).contains("open "), "nothing was opened yet")
             for (row, place) in [("open-config", "\(data)/config.json"), ("open-data", data), ("open-logs", "\(data)/logs"), ("icon-themes-folder", "\(data)/icon-themes")] {
-                await Self.click(app, row)
-                let said = await app.until("launches") { $0.replacingOccurrences(of: "/private/tmp", with: "/tmp").split(separator: "\n").contains("open \(place)") }
-                app.expect(said.replacingOccurrences(of: "/private/tmp", with: "/tmp").split(separator: "\n").contains("open \(place)"), "\(row) asks for \(place):\n\(said)")
+                // Clicked again when the click missed: a page still scrolling to the row moves the button from under it (the
+                // driver's aim, `settledRow`), and a click that lands is recorded at once.
+                var said = ""
+                for _ in 0..<3 where !said.split(separator: "\n").contains("open \(place)") {
+                    await Self.click(app, row)
+                    for _ in 0..<12 where !said.split(separator: "\n").contains("open \(place)") {
+                        said = (await app.send(["delay 150", "launches"]))[1].replacingOccurrences(of: "/private/tmp", with: "/tmp")
+                    }
+                }
+                app.expect(said.split(separator: "\n").contains("open \(place)"), "\(row) asks for \(place):\n\(said)")
             }
         }
     }

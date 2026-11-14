@@ -61,10 +61,7 @@ extension EndToEnd {
 
             // On, by the switches of Settings → Terminal themselves, clicked: a terminal takes them when it starts.
             for (row, key) in [("title-report", "allow_title_report"), ("screen-checksum", "allow_screen_checksum")] {
-                await app.send(["settings-reveal \(row)"])
-                await app.settledRow(row)
-                await app.until("settings-press \(row)") { !$0.hasPrefix("error") }
-                await app.until("get \(key)") { $0.contains("true") }
+                await app.clickSwitch(row, key: key, becomes: true)
                 _ = await app.waitForConfig { $0.range(of: "\"\(key)\"\\s*:\\s*true", options: .regularExpression) != nil }
             }
             await app.send(["key cmd-t"])

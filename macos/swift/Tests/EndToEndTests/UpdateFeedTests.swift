@@ -32,17 +32,22 @@ extension EndToEnd {
         await app.send(["updates"])
         await app.until("settings-rows") { $0.contains("update-channel | ") }
         await app.until("update-status") { $0.contains("button update.check") }
-        await app.settledRow("auto-update")
-        await app.send(["settings-press auto-update"])
+        await app.clickSwitch("auto-update", key: "auto_update", becomes: false)
         _ = await app.waitForConfig { $0.range(of: #""auto_update"\s*:\s*false"#, options: .regularExpression) != nil }
-        await app.until("get auto_update") { $0.contains("false") }
     }
 
     /// A click on a segment of the page's Channel control (Stable on the left, Unstable on the right), until the setting says so.
     @MainActor private static func choose(_ app: Instance, channel: String) async {
-        await app.settledRow("update-channel")
-        await app.send(["settings-press update-channel at \(channel == "stable" ? 0.25 : 0.75)"])
-        await app.until("get update_channel") { $0.contains(channel) }
+        // Clicked again when a click missed (the page still moving): a click on the segment that is on changes nothing.
+        for _ in 0..<3 {
+            await app.settledRow("update-channel")
+            await app.send(["settings-press update-channel at \(channel == "stable" ? 0.25 : 0.75)"])
+            for _ in 0..<12 {
+                if (await app.setting("update_channel")).contains(channel) { return }
+                await app.send(["delay 150"])
+            }
+        }
+        app.fail("the \(channel) segment was clicked and the channel never became it")
     }
 
     /// A click on the page's Check Now, then the page once it is past the check and `done` holds.
@@ -119,9 +124,7 @@ extension EndToEnd {
 
             // Install updates automatically, on again: a check now installs what it finds instead of offering it. This build
             // runs from no app bundle, so there is nothing to replace: the page says so, and the archive is never asked for.
-            await app.settledRow("auto-update")
-            await app.send(["settings-press auto-update"])
-            await app.until("get auto_update") { $0.contains("true") }
+            await app.clickSwitch("auto-update", key: "auto_update", becomes: true)
             try Self.publish(Self.feed(version: "99.0.0", base: server.base), in: folder)
             let unbundled = await Self.check(app) { $0.first("update-status")?.has("failed") == true }
             app.expect(unbundled.first("update-status")?.label == "Wormhole isn't running from an app bundle.", "the install is refused, in words:\n\(unbundled.text)")
