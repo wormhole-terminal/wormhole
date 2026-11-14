@@ -1,4 +1,5 @@
 import Foundation
+import Testing
 
 /// Small things several scenarios do, over `Instance`'s own commands.
 extension Instance {
