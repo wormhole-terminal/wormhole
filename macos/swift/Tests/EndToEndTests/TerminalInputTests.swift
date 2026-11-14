@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 
@@ -98,7 +99,7 @@ extension EndToEnd {
     @Test("⌘+ zooms every terminal of the window, a new one takes the zoom, ⌘0 resets them all")
     @MainActor func textZoom() async throws {
         try await Instance.with { app in
-            func size(of terminal: Int) async -> String {
+            @MainActor func size(of terminal: Int) async -> String {
                 await app.send(["select \(terminal)"])
                 return Instance.value("view", in: await app.reply("fonts")) ?? "?"
             }

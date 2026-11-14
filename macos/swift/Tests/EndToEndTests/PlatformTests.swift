@@ -34,7 +34,7 @@ extension EndToEnd {
             await app.send(["key cmd-t", "type still-here\\n"])
             await app.until("rows") { Listing($0).live.count == 2 }
             await app.screen(showing: "still-here")
-            app.expect(await app.signal(SIGTERM), "the app ended on SIGTERM")
+            app.expect(await app.end(by: SIGTERM), "the app ended on SIGTERM")
             try await app.start()
             await app.until("rows") { Listing($0).live.count == 2 }
         }

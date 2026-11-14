@@ -156,7 +156,7 @@ extension EndToEnd {
     @MainActor func scrollbackSize() async throws {
         try await Instance.with(shell: .zsh) { app in
             /// The first number on the screen once the view is scrolled to the top of the history.
-            func top() async -> Int? {
+            @MainActor func top() async -> Int? {
                 await app.send(["scroll 100000", "delay 200"])
                 let screen = await app.reply("screen")
                 return screen.split(separator: "\n").lazy.compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }.first

@@ -55,7 +55,7 @@ extension EndToEnd {
     @MainActor func showBesideNeedsRoom() async throws {
         try await Instance.with { app in
             /// The terminals Show beside… offers for `id` (its submenu's items).
-            func beside(_ id: Int) async -> [String] {
+            @MainActor func beside(_ id: Int) async -> [String] {
                 let menu = await app.reply("row-menu \(id)")
                 await app.send(["menu-close"])
                 let lines = menu.split(separator: "\n").map(String.init)

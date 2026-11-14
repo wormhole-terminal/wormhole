@@ -9,7 +9,7 @@ extension EndToEnd {
     @MainActor func windowTitle() async throws {
         try await Instance.with { app in
             /// The workspace window's title (`windows`: `Title visible=… sheet=…`, the visible ones).
-            func title() async -> String {
+            @MainActor func title() async -> String {
                 let lines = (await app.reply("windows")).split(separator: "\n").filter { $0.contains(" visible=true") }
                 return lines.first.map { String($0[..<($0.range(of: " visible=")?.lowerBound ?? $0.endIndex)]) } ?? ""
             }

@@ -11,7 +11,7 @@ extension EndToEnd {
             try app.scratch.write(profile, "themes/Mine.json", "{ \"name\": \"Mine\", \"extends\": \"Nord\" }\n")
             await app.send(["studio"])
             await app.until("state") { $0.contains("\nstudio dirty=") }
-            app.expect(await app.late("studio-open own:Mine"), contains: "name=Mine")
+            app.expect(await app.later("studio-open own:Mine", answer: "studio-open own:Mine"), contains: "name=Mine")
 
             // Muted text too dark on Nord: core's one report marks the token (the Low count), the Low filter keeps it and
             // the card lists its pair.
@@ -27,7 +27,7 @@ extension EndToEnd {
 
             // Renamed and saved: the theme keeps the id it answered to, so the original kept by the save is still listed.
             await app.send(["studio-filter all", "studio-rename Dawn"])
-            let saved = await app.late("studio-save")
+            let saved = await app.later("studio-save", answer: "studio-save")
             app.expect(saved, contains: "name=Dawn")
             app.expect(saved, contains: "dirty=false")
             let versions = await app.reply("studio-versions")

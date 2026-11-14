@@ -153,14 +153,16 @@ final class Instance {
     }
 
     /// Ends the app by a signal, as a crash (`SIGKILL`: nothing is saved) or `kill <pid>` (`SIGTERM`: it quits as it decides),
-    /// and waits until it has ended. `start()` then launches it again on the same folders.
-    func end(by signal: Int32) async {
-        guard let process, !ended.isDone else { return }
+    /// and waits until it has ended: whether it did (it is then ended with `SIGKILL`). `start()` launches it again on the same folders.
+    @discardableResult
+    func end(by signal: Int32, timeout: TimeInterval = 20) async -> Bool {
+        guard let process, !ended.isDone else { return false }
         kill(process.processIdentifier, signal)
-        if await waitForExit(timeout: 20) { return }
+        if await waitForExit(timeout: timeout) { return true }
         fail("the app did not end on signal \(signal): ending it with SIGKILL")
         kill(process.processIdentifier, SIGKILL)
         _ = await waitForExit(timeout: 10)
+        return false
     }
 
     /// Sends `quit`, `quit-keep` or `quit-end-all` and waits until the app has ended (by its pid when it does not).
@@ -176,14 +178,6 @@ final class Instance {
         if await waitForExit(timeout: 10) { return }
         kill(process.processIdentifier, SIGKILL)
         _ = await waitForExit(timeout: 10)
-    }
-
-    /// Sends the app `signal` (`SIGTERM`: what logging out or `kill` sends) and waits for it to end; whether it did. `start` brings it
-    /// back on the same folders.
-    func signal(_ number: Int32, timeout: TimeInterval = 20) async -> Bool {
-        guard let process, !ended.isDone else { return false }
-        kill(process.processIdentifier, number)
-        return await waitForExit(timeout: timeout)
     }
 
     /// Ends the app (and any session host: End All Terminals), checks that no host of its folder runs on, keeps a failure's

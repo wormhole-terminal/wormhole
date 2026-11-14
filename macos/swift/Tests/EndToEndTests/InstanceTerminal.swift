@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 
@@ -70,18 +71,6 @@ extension Instance {
 
     /// The windows as `sessions` lists them, one line each (`window=<id> profile=<p> … front=<bool> terminals=[…] … frame=…`).
     func windowLines() async -> [String] { (await reply("sessions")).split(separator: "\n").map(String.init).filter { $0.hasPrefix("window=") } }
-
-    /// `get key` (`key = value`): the value as the settings model holds it.
-    func setting(_ key: String) async -> String {
-        let line = await reply("get \(key)")
-        return line.components(separatedBy: " = ").dropFirst().joined(separator: " = ")
-    }
-
-    /// Feature flags as the app reads them in any build: the map with `unlocked`, so a release build reads it too.
-    func flags(_ flags: [String: Bool]) async {
-        let pairs = (flags.map { "\"\($0.key)\":\($0.value)" } + ["\"unlocked\":true"]).joined(separator: ",")
-        await send(["set feature_flags={\(pairs)}"])
-    }
 
     /// A reply without the isolation marks Fluent puts around a number or a name (U+2068, U+2069), so words compare as read.
     static func plain(_ text: String) -> String { text.filter { $0 != "\u{2068}" && $0 != "\u{2069}" } }
