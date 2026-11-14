@@ -1,7 +1,8 @@
 // The list's own tile in every state, for the Theme Studio's gallery (`studio/gallery/tiles.rs` `tile_states`): a plain
 // terminal's states, an agent's, and the agent's again on a selected row, where the badge is cut out in the row's colour.
 // Under them one tile whose status changes when asked, played by the status motion in use (`StatusTile`'s own change and
-// the flare): a flare and a nudge are also held a third of the way through (the core's pose table at that time); the other variants play.
+// the flare): a flare and a nudge are also held a third of the way through (the core's pose table at that time); the other
+// variants are the system's transitions, which cannot be held part-way, so each is shown before and after, side by side.
 
 import DesignSystem
 import SwiftUI
@@ -32,7 +33,32 @@ public struct TileStatesSpecimen: View {
                 .background(tokens.sidebarRowSelected, in: RoundedRectangle(cornerRadius: metrics.rowRadius))
             change
             caught
+            beforeAfter
         }
+    }
+
+    /// The variants that cannot be held part-way (a cross-fade, a pop, a wash, a roll: the system's transitions), each as the
+    /// tile before the change and after it, with a caption that says why (`status_changes` catches them a third of the way).
+    private var beforeAfter: some View {
+        VStack(alignment: .leading, spacing: Space._2) {
+            Text(Words.text("studio-gallery-status-before-after", fallback: "These play the system’s own transitions, which cannot be held part-way: before and after."))
+                .font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: Space._6) {
+                ForEach([StatusMotion.crossfade, .badgePop, .wash, .lineRoll], id: \.self) { motion in
+                    VStack(spacing: Space._2) {
+                        HStack(spacing: Space._2) {
+                            StatusTile(state: .working, agent: .claude, size: metrics.tile, phase: 0, surface: tokens.surfacePanel)
+                            Image(systemName: "arrow.right").font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
+                                .accessibilityHidden(true)
+                            StatusTile(state: .needsYou, agent: .claude, size: metrics.tile, phase: 0, surface: tokens.surfacePanel)
+                        }
+                        Text(motion.coreName).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
+                    }
+                }
+            }
+        }
+        .padding(Space._3)
+        .allowsHitTesting(false)
     }
 
     /// The two motions that add something on top of a tile, each held a third of the way through working to needs input

@@ -127,6 +127,9 @@ enum StudioWords {
     static var showSheet: String { text("studio-gallery-show-sheet", "Show the shortcut sheet") }
     static var showQuickPanel: String { text("studio-gallery-show-quick-panel", "Show the quick panel") }
     static var turnCount: String { text("studio-gallery-turn-count", "Turn the counts over") }
+    static var countsBeforeAfter: String {
+        text("studio-gallery-counts-before-after", "A count turns over by the system’s own transition, which cannot be held half way: before and after.")
+    }
     static var systemTooltip: String { text("studio-gallery-system-tooltip", "macOS draws tooltips; a theme does not change them.") }
     static var tooltipHere: String { text("studio-gallery-tooltip-here", "Rest the pointer here") }
     static var tooltipSample: String { text("studio-gallery-tooltip-sample", "A tooltip explains a control") }
