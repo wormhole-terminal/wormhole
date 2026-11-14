@@ -42,7 +42,9 @@ struct TerminalHost: NSViewRepresentable {
         /// The terminal was shown before this container was in a window (a pane just made): it takes the keys on arrival.
         private var keysOnArrival = false
         /// Told when the container arrives in a window with a terminal waiting for the keys: the window gives them to the
-        /// selected terminal, which of several panes arriving together only it knows.
+        /// selected terminal, which of several panes arriving together only it knows. Whatever had them before, as a terminal
+        /// shown in the window takes them: a window's first terminal is shown before its pane is in the window, and the keys
+        /// were then left where AppKit put them as the window came on screen (its first key view).
         var arrived: @MainActor () -> Void = {}
 
         init(overlay: TerminalOverlay, menu: @escaping @MainActor () -> NSMenu?) {

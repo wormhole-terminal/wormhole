@@ -48,7 +48,7 @@ struct TerminalSurface: View {
                 ZStack(alignment: .topTrailing) {
                     TerminalHost(
                         views: hub.terminals, id: id, overlay: overlay, opacity: look.effectiveOpacity, menu: { hub.actions.terminalMenu(id) },
-                        arrived: { hub.focus.followSelection() })
+                        arrived: { hub.focus.focusTerminal() })
                     TerminalMarks(overlay: overlay, showsMinimap: look.minimap)
                     FoldMarkers(
                         markers: overlay.markers, geometry: overlay.blockGeometry ?? BlockGeometry(rows: 0, cellHeight: 0, gutter: 0),
