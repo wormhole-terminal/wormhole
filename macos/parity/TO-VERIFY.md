@@ -1927,30 +1927,35 @@ Read and left, with why:
 - X08 `events` order: subscribe, list (`listing_and_rebase`), then watch output, where GPUI watches output before it lists; the listing holds no output, and both start each terminal's output from its cursor before the reply, so no answer differs. Left.
 - X08 marking shell (`run` shows output only the first time, `blocks` empty): needs a run. Where to look: first whether the control line's `blocks` and `run` see the second prompt's mark at all (`ScreenReader::current_prompt` in `wormhole-term`, read through `Terminal::reader()` = `with_pty(Pty::reader)`): `run` takes `first = reader.current_prompt()` and waits for output after it (`hook_server/control/wait.rs`); if the second `current_prompt()` still returns the first block (the fixture's `precmd` prints `133;D` and `133;A` together, `PS1` carries `133;B`, `preexec` `133;C`: `InstanceTerminal.markPrompts`), the wait sees the first command's output as done. Then compare the devctl `blocks` (`hub.blocksListing`, the view's frame extras, `crates/wormhole-ffi/src/blocks.rs`) with the control line's (`ReadJob::blocks`): two readers of the same marks.
 
-## Lane settings, wave 12
+## Lane panel, wave 12
 
 Written without compiling: expect compile errors.
 
 | row | scenario | what it proves | reads what |
 |---|---|---|---|
-| ST02 | `SettingsWorkPagesTests/sidebarPageClicked` | Terminals & sidebar by clicks: Tabs (segment) puts both terminals in a shown bar; the change count off takes its scope/plain/shared/remember rows off the page, on brings them back; Repository takes plain and shared away; dot and ⌘ hints off; ⌘1–9 follow the list (a pinned terminal is ⌘1) | `get`, `config.json`, `tab-bar`, `settings-page`, `look-keys` (the sidebar's appearance, the core's chrome snapshot), `rows` |
-| ST02 | `SettingsWorkPagesTests/gitPageClicked` | Changes & diffs by clicks: Unified and Wrap reach the open diff's header; the stepper's up arrow widens a tabbed line; List, ungrouped untracked, MiB reach the panel's preferences | `diff-header` (split, wrap, widest), `look-keys` (panel preferences), `config.json` |
-| ST02 | `SettingsWorkPagesTests/terminalPageClicked` | Terminal by clicks: clipboard Deny keeps a program's OSC 52 copy off the clipboard, Allow lets the next on; Split gaps and Option as Meta (Both) reach the window and the terminal view | `pasteboard` (the instance's file), `screen`, `state` (gaps, meta), `config.json` |
-| STX2 | `ProjectFoldersPageTests/projectDefaultsFromThePage` | the page's "Prompts" default switch is written to `project-prefs.json` and an open project with no choice of its own follows (prompts gone, then back) | the profile's `project-prefs.json`, `project-state` |
-| STX2 | `ProjectFoldersPageTests/trustedListRevoke` | the trusted list's Revoke removes the approval and the open project goes untrusted with nothing else done; its action runs neither by name nor by its key afterwards | `settings-rows`, `trusted-projects.json`, `project-state`, `project-run`, `screen` |
-| STX2 | `ProjectFoldersPageTests/projectPageChoicesAndTrust` | the trusted row's Settings opens the project's page; Off then Default for Prompts (the person's override, then none); Revoke trust and Trust (answered by `WORMHOLE_AUTH=allow`) from the page | `project-state`, `project-prefs.json`, `trusted-projects.json`, `settings-rows` |
-| ST03 | `SettingsAppPagesTests/notificationsPageClicked` | Sound None, Dock bounce off, Needs input off, each clicked: what the core decides for a terminal needing input follows (sound, bounce, then nothing) | `notify-sim` (core rules over `settingsNotice`, the real feed's settings), `config.json` |
-| ST03 | `SettingsAppPagesTests/menuBarPageClicked` | the item off and Icon only are written; the icon the item is built from drops its count and dot. The item itself (`AmbientController`) is never made in a test instance: that it follows is a person's | `config.json`, `ambient` (StatusIcon from the setting) |
-| ST03 | `SettingsAppPagesTests/featureFlagsPageClicked` | the Preview group's Feature flags page: the Project folders switch writes the flag and its page comes and goes in the nav | `config.json`, `settings-page` nav |
-| X04 | `KeyboardStopsTests/tabStops` | ⇥/⇧⇥ in the core's order with the wrap; title-row buttons only with Keyboard navigation; ↩ presses toggle-sidebar | `key` replies, `keys`, `state` |
-| X04 | `KeyboardStopsTests/sidebarTypeAheadAndArrows` | type-ahead `g` + ↩ selects gamma; ↑ + ↩ selects beta | `rows` |
-| X04 | `KeyboardStopsTests/changesListArrows` | ↓ from the panel tabs into the Changes list, ↓ ↩ opens a file's diff, ↓/↑ carry the open diff along | `changes`, `diff-header` |
-| X07 | `PseudoLanguageTests/pseudoLanguageInPaletteAndSettings` | en-XA reaches the palette's action titles and the Terminal page's shell choices; English again after | `palette-rows`, `settings-page` |
+| P04 | `PullRequestTests/pullRequestOnlyInATrustedProject` | PR info: `gh` (a stand-in on the instance's own agent path, never the person's) is not started in an untrusted project; once trusted it runs in the repository with the fixed `pr view --json …` and a scrubbed environment; the chip carries core's words and a click opens its address; revoked, the chip goes | the stand-in's call log (folder, arguments, `GH_PROMPT_DISABLED`, `GH_PAGER`, no `GIT_CONFIG_GLOBAL`), `title` (`hub.state.title.pullRequest`, the row's facts), `pull-request` (the chip's click), `launches` |
+| P03 | `DiffLayoutTests/diffSplitAndUnified` | split by default where the terminal has room (three removed beside three added: 6 rows), the header's Unified (9 rows) writes `diff_split`, the setting switches it back, a 340 pt terminal lays it out in one column with no switch | `diff-drawn` (what `DiffView` decided from its width), `config.json`, `get diff_split` |
+| P03 | `DiffLayoutTests/binaryDiff` | a changed binary file: Binary badge, no counts, no rows, no switch, its card "Binary file" with old → new sizes | `diff-header`, `diff-drawn` |
+| P03 | `ReviewNotesTests/reviewPerTerminalEditRemovePaste` | review notes: each terminal's own, a line's comment replaced not added, Remove, Paste into Terminal into zsh's line editor (bracketed): pasted once, review emptied, diff closed, keys to the terminal | `review`, `screen`, `changes`, `keys` |
+| P03 | `ReviewNotesTests/reviewCopiedWhereAPasteWouldRun` | with `cat` (no bracketed paste) the review goes to the instance's clipboard and stays; Clear empties it | `review-paste`'s `copied-instead`, `pasteboard`, `review`, `screen` |
+| P02 | `ChangesListTests/changesTreeAndSections` | tree (single-folder chain `src/a` as one row, files under it), list (no folders), untracked apart or together, 201 untracked folded with core's note naming `new/` | `changes-rows` (`ChangeRows.build` cut into cards as the view does) |
+| P02 | `ChangesListTests/changesCountBadge` | the Changes badge counts the terminal's files while Notes is shown, VoiceOver's words carry the count, no badge with none | `panel-tabs` (`PanelController.badge`, `spokenTab`, what `RightPanel` draws) |
+| P02 | `ChangesListTests/changesSubmodule` | a submodule (local clone, `protocol.file.allow=always`) moved by a commit: its row's words and button, its diff one commit ahead, the button opens a terminal in it | `changes-rows`, `diff-header`'s `submodule` line, `rows` |
+| P06 | `NotesOrderTests/stepsAndNotesReordered` | a step and a note dropped elsewhere stand there and keep that order over a restart (the drag's gesture stays manual) | `notes` (the store, in the list's order) |
+| P06 | `NotesOrderTests/typedPromptStashed` | a typed, unsent `> …` line becomes a note without its marker; the terminal keeps the keys | `stash`, `notes`, `keys` |
+| T03 | `CursorTests/cursorShapesColourFocusAndExit` | DECSCUSR underline/blinking beam/steady block, OSC 12 colour and OSC 112 back to the theme's, the outline in the split pane without the keys, no cursor after `cat` exits | `cursor <id>` (`TerminalScene`'s cursor, phase, focus, hidden; the palette's cursor slot) |
+| T17, T18 | `ZoomGridTests/zoomOutAndGrowTellThePty` | ⌘- smaller text, larger grid, the PTY told; ⌘0 back; a shorter then taller window loses and regains rows, the PTY told each time | `fonts` (the view's point size), `state` grid, `stty size` in zsh |
+| T07 | `ModifyOtherKeysTests/modifyOtherKeysLevels` | `CSI > 4;2 m`: Ctrl+I is `CSI 27;5;105~`; level 1: Ctrl+I Tab again, Ctrl+, `CSI 27;5;44~`; off: no sequence | `screen` (cat's echo of the bytes the key became) |
 
-New command: `settings-press <id> at <x> [y]` (`Driving/AppController+ControlSettingsPress.swift`, DRIVING.md). Expected to fail as it
-stands: `pseudoLanguageInPaletteAndSettings`, whose palette reads the same `ListedKeymap` as the shortcut sheet
-(`Platform/PaletteSourcing.swift:19`) that stays English in the failing `DevTools/pseudoLanguage`; `language` installs the words
-only (`AppController+ControlVerify.swift:37`). The cause was not traced; left to the lane fixing that scenario.
-Not written: X15 (the app never runs the legacy upgrades: `Isolation.swift` accepts only `Wormhole-swift*` data folders), PL02's
-jump-key recording (`SettingsPages/shortcutRecorders`, failing, another agent's), Updates beyond "no feed", Profile/Appearance/Fonts rows
-beyond what the passing scenarios drive.
+App defects these scenarios are written to catch (GPUI's behaviour asserted; not fixed here):
+- `crates/wormhole-ffi/src/workspace_extras.rs:80-87`: the 60 s gate over the branch list is taken before `approved()`, so a project trusted after its terminal opened gets its pull request up to a minute later; GPUI asks on the next 400 ms tick (`crates/wormhole/src/window/title/extras.rs:195`). `pullRequestOnlyInATrustedProject` waits 20 s.
+- `crates/wormhole-core/src/workspace/extras.rs:66` (`pull_request_of`): the chip is shown from the cache whatever the trust now is; GPUI shows it only while the project is trusted (`window/title/extras.rs:82`, `:183`). The revoke step expects it gone.
+
+New in the app: `DiffSession.drawn` (set by `DiffView`), `DiffReadout.drawn`, `ChangesRowsReadout`, `SubmoduleRowView.enter` (the row's closure, now shared with `PanelController.enterSubmodule`), `MetalTerminalView.cursorReadout`, `WindowHub.spokenTab` public, the commands in `Driving/AppController+ControlPanelActs.swift` (DRIVING.md, wave 12).
+
+Left without a scenario, and why:
+- P07: its unproven words are pins and the pictures' viewer, both in failing scenarios another agent fixes.
+- P08: Touch ID is a person's; Create, Open terminals and the prompt note are failing scenarios another agent fixes; the security finding (approve re-reading the disk) needs the files to change between the window's read and the approval inside one call, which no person's act can time.
+- T03 blink phase: a background window is never key, and the Swift view blinks only in the key window (`TerminalFocus.hasFocus`), so the on/off flip needs a person (or `front`, which takes the keyboard focus).
+- T18 the 100 ms gate and the size chip during a live drag: AppKit's live resize, a person's.
+- T24: needs a Probe with link rules and a click into an editor; not written this wave.
