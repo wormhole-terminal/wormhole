@@ -37,6 +37,9 @@ extension EndToEnd {
             app.expect(await app.reply("state"), contains: "modal=versions")
             await app.send(["studio-versions close"])
             app.expect(await app.reply("state"), contains: "modal=-")
+            // The sheet is still on its way out when the flag says it is closed, and an app does not quit under a sheet:
+            // on a busy Mac the quit that ends the scenario met it. Its leaving is given a moment.
+            await app.send(["delay 800"])
         }
     }
 

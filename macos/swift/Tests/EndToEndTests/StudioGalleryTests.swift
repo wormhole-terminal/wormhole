@@ -72,18 +72,19 @@ extension EndToEnd {
             await app.send(["studio-area sidebar", "studio-select primary"])
             app.expect(await app.reply("studio-set \(Self.galleryMark)"), contains: "ok=true")
             // Primary's own outlines (it was the selected token) go a frame after it is let go: counted once they are gone,
-            // when two counts in a row are the same.
+            // when two counts in a row are as good as the same. Not exactly: the count moves by a few pixels between looks
+            // (4,136 to 4,148 were seen for the same picture), where an outline is hundreds.
             await app.send(["studio-select"])
-            var before = -1
+            var before = -1000
             await app.until("colour-count \(Self.galleryMark) \(Self.gallery)") { said in
                 defer { before = Self.pixels(said) }
-                return Self.pixels(said) == before
+                return abs(Self.pixels(said) - before) < 30
             }
             await app.send(["studio-select sidebar.row.selected"])
             let after = await app.until("colour-count \(Self.galleryMark) \(Self.gallery)") { Self.pixels($0) > before + 50 }
             app.expect(Self.pixels(after) > before + 50, "the rows the token is drawn on are outlined (\(before) pixels of the primary before):\n\(after)")
             await app.send(["studio-select"])
-            await app.until("colour-count \(Self.galleryMark) \(Self.gallery)") { Self.pixels($0) <= before }
+            await app.until("colour-count \(Self.galleryMark) \(Self.gallery)") { Self.pixels($0) <= before + 30 }
         }
     }
 
