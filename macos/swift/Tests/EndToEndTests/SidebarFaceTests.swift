@@ -34,7 +34,9 @@ extension EndToEnd {
             await app.send(["key cmd-t"])
             await app.until("rows") { Listing($0).live.count == 2 }
             await app.send(["inspect on"])
-            let tiles = Self.frames(await app.until("marked status.tile") { Self.frames($0).count == 2 })
+            // The rows' tiles, below the 38-point title row (which has the selected terminal's tile too).
+            let rowTiles: (String) -> [(id: String, rect: CGRect)] = { Self.frames($0).filter { $0.rect.minY >= 38 } }
+            let tiles = rowTiles(await app.until("marked status.tile") { rowTiles($0).count == 2 })
             guard tiles.count == 2 else { return }
             // The list keeps the order the terminals opened in: the agent's row is the upper one.
             let orange = await app.reply("colour-count #d97757 \(Self.region(tiles[0].rect))")

@@ -71,8 +71,14 @@ extension EndToEnd {
             // The outline is a dashed line in the primary round each element the token is drawn on (style/controls.rs:475).
             await app.send(["studio-area sidebar", "studio-select primary"])
             app.expect(await app.reply("studio-set \(Self.galleryMark)"), contains: "ok=true")
+            // Primary's own outlines (it was the selected token) go a frame after it is let go: counted once they are gone,
+            // when two counts in a row are the same.
             await app.send(["studio-select"])
-            let before = Self.pixels(await app.reply("colour-count \(Self.galleryMark) \(Self.gallery)"))
+            var before = -1
+            await app.until("colour-count \(Self.galleryMark) \(Self.gallery)") { said in
+                defer { before = Self.pixels(said) }
+                return Self.pixels(said) == before
+            }
             await app.send(["studio-select sidebar.row.selected"])
             let after = await app.until("colour-count \(Self.galleryMark) \(Self.gallery)") { Self.pixels($0) > before + 50 }
             app.expect(Self.pixels(after) > before + 50, "the rows the token is drawn on are outlined (\(before) pixels of the primary before):\n\(after)")

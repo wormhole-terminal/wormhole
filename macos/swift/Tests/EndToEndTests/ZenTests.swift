@@ -26,7 +26,9 @@ extension EndToEnd {
             // (wormhole-ffi focus.rs:295, the core's window preset).
             app.expect(await app.reply("zen on"), contains: "zen on")
             await app.until("marked") { Self.drawn($0, ids) == [false, false] }
-            app.expect(await app.reply("state"), contains: "panel=false")
+            // The person's own switch is kept while Zen draws no panel, so it is back as it was after (`window/layout`,
+            // `zen_tests.rs`: "the panel is as it was after"); what the window draws is what `marked` read above.
+            app.expect(await app.reply("state"), contains: "panel=true")
             app.expect((await app.reply("title-menu")).hasPrefix("title-menu row=terminal,space,splits"), "the title row under Zen")
 
             app.expect(await app.reply("zen off"), contains: "zen off")

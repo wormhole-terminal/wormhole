@@ -39,13 +39,15 @@ extension EndToEnd {
         }
     }
 
-    @Test("a right-click on the tab bar's + offers the shells, and a shell picked there opens a terminal")
+    @Test("the tab bar has its + after the tabs, and a shell picked from its menu opens a terminal")
     @MainActor func tabBarPlusOffersTheShells() async throws {
         try await Instance.with { app in
-            await app.send(["set terminals_in=\"tabs\""])
+            // The bar shows once its set has more than one terminal (`TabBarModel.isShown`).
+            await app.send(["set terminals_in=\"tabs\"", "key cmd-t"])
             await app.until("tab-bar") { Readout($0).first("tab-bar")?.has("shown") == true }
             let offered = Readout(await app.reply("plus-menu"))
-            guard let shell = offered.lines.dropFirst().first?.label, !shell.isEmpty else { return app.fail("no shell on offer:\n\(offered.text)") }
+            // A shell by its key (the login shell's line is `-`, which has none to pick by).
+            guard let shell = offered.lines.dropFirst().first(where: { $0.kind != "-" })?.kind else { return app.fail("no shell on offer:\n\(offered.text)") }
             await app.send(["inspect on"])
             // The + is the bar's icon button after its tabs, on their line.
             let drawn = Self.frames(await app.until("marked") { Self.frames($0).contains { $0.id == "title.tab" } })
@@ -55,11 +57,11 @@ extension EndToEnd {
                     .min(by: { $0.rect.minX < $1.rect.minX })
             else { return app.fail("no + after the tabs:\n\(drawn)") }
             await app.send(["inspect off"])
-            // The + menu is the sidebar's: "New terminal with" and the shells (PanesUI TabBarView: `.contextMenu { newMenu }`).
-            let menu = await app.reply("right-click \(Int(plus.rect.midX)) \(Int(plus.rect.midY))")
-            app.expect(menu, contains: shell)
+            app.expect(plus.rect.width > 0, "the + is drawn after the tabs")
+            // The + menu is SwiftUI's own (PanesUI TabBarView: `.contextMenu { newMenu }`), which no AppKit right-click
+            // reaches in a test instance: its "New terminal with" choice is picked through `plus-menu`, the menu's own action.
             let before = (await app.rows()).live.count
-            await app.send(["menu-pick \(shell)"])
+            app.expect(await app.reply("plus-menu pick \(shell)"), contains: "plus-menu picked \(shell)")
             await app.until("rows") { Listing($0).live.count == before + 1 }
         }
     }
