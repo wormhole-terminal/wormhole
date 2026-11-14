@@ -6,9 +6,11 @@
 //   `status-items`              the status bar's items at the window's width (whether or not the bar is on: `status-bar on`)
 //   `tab-bar` / `tab-click <n|+>`  the tab bar's tabs; a click on the n-th (from 1) or on its +
 //   `switcher [query]`          the group switcher's cards and footer, or what its search lists for `query`
+//   `switcher open` / `switcher-press new-group|sidebar|card <n>|add <n>`  open the bar's switcher; its buttons and cards
 //   `onboarding-state`          the first run's step, its card, buttons, places, agents, trust card and primer
 //   `onboarding-pick <path>`    a folder dropped on the folder step (`OnboardingSession.pick`)
-//   `onboarding-press back|main|skip`  the card's buttons (main: Continue, or Start on the last step)
+//   `onboarding-press back|main|skip|trust|later|theme <name>`  the card's buttons (main: Continue, or Start on the last
+//                               step), the trust card's, a Look step theme card
 //   `title-menu [pick <n|title>]`  the title row's right-click menu as items (`PanesUI.TitleMenuReadout`), and a choice in it
 // GPUI's devctl has none of these; `status-bar` is the bar's switch already (`AppController+Look`), so its items are
 // `status-items`. The right panel's are `AppController+ControlPanelReadouts`.
@@ -16,6 +18,7 @@
 import AppKit
 import AuxModel
 import AuxWindows
+import DesignSystem
 import Foundation
 import PanesUI
 import SettingsUI
@@ -31,7 +34,14 @@ extension AppController {
         case "status-items": reply(hub.statusItems(look: look, width: window?.contentView?.bounds.width ?? 0))
         case "tab-bar": reply(hub.tabBarListing(look: look))
         case "tab-click": reply(hub.tabClick(argument, look: look).map { "error: \($0)" } ?? "tab-click \(argument)")
-        case "switcher": reply(hub.switcherListing(look: look, query: argument))
+        case "switcher":
+            if argument == "open" {
+                hub.openSwitcher()
+                reply("switcher open")
+            } else {
+                reply(hub.switcherListing(look: look, query: argument))
+            }
+        case "switcher-press": reply(hub.switcherPress(argument, look: look).map { "error: \($0)" } ?? "switcher-press \(argument)")
         case "onboarding-state":
             guard let session = aux.onboarding?.session else { reply("error: the intro window is not open (`onboarding-step folder`)"); return true }
             reply(OnboardingReadout.text(session))
@@ -48,7 +58,19 @@ extension AppController {
             case "back": session.send(.back)
             case "main": session.send(session.step.isLast ? .start : .continue)
             case "skip": session.send(.skip)
-            default: reply("error: onboarding-press back|main|skip"); return true
+            // The trust card's buttons (`TrustCardView`): Trust with Touch ID (asked through the instance's `WORMHOLE_AUTH`) and Later.
+            case "trust":
+                guard let root = session.trustCard?.root else { reply("error: no trust card"); return true }
+                session.send(.trust(root))
+            case "later": session.laterOnTrust()
+            default:
+                // A Look step card by its theme's name (`LookStep`: the card's own action).
+                if argument.hasPrefix("theme "), let theme = ThemeStore.shared.library.themes.first(where: { $0.name == String(argument.dropFirst(6)) }) {
+                    ThemeStore.shared.setTheme(theme.id)
+                } else {
+                    reply("error: onboarding-press back|main|skip|trust|later|theme <name>")
+                    return true
+                }
             }
             reply("onboarding-press \(argument)")
         case "title-menu":

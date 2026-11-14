@@ -39,6 +39,7 @@ public struct TabBarView: View {
                         .popover(isPresented: $switcherOpen, arrowEdge: .bottom) {
                             GroupSwitcherView(model: model, actions: actions) { switcherOpen = false }
                         }
+                        .onChange(of: actions.switcherAsk) { switcherOpen = true }
                     rule
                 }
                 tabs

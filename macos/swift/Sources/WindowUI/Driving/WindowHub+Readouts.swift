@@ -93,3 +93,30 @@ extension WindowHub {
     /// `title-menu`: the selected terminal's title row menu as items (`TitleRowMenu`'s), nil without a terminal.
     public var titleMenuItems: [TitleMenuReadout.Item?]? { selectedTitleActions.map { TitleMenuReadout.items(row: titleRow, actions: $0) } }
 }
+
+extension WindowHub {
+    /// `switcher open`: the tab bar opens its group switcher, as a click on its button does (the bar must show it).
+    public func openSwitcher() { switcherAsk += 1 }
+
+    /// `switcher-press new-group|sidebar|card <n>|add <n>`: the switcher's footer buttons and a card (`GroupSwitcherView`'s
+    /// actions: New group, Show all groups in the sidebar, a card's click, a pinned empty card's +). Nil when done.
+    public func switcherPress(_ argument: String, look: WindowLook) -> String? {
+        let words = argument.split(separator: " ").map(String.init)
+        let bar = tabBar
+        let actions = tabActions(appearance: look.sidebar)
+        let index = words.count > 1 ? Int(words[1]) : nil
+        switch words.first {
+        case "new-group": actions.newGroup()
+        case "sidebar": actions.showGroupsInSidebar()
+        case "card":
+            guard let index, bar.cards.indices.contains(index) else { return "no card \(words.dropFirst().joined())" }
+            actions.openSet(index)
+        case "add":
+            guard let index, bar.sets.indices.contains(index), let group = bar.sets[index].groupID, bar.cards[index].pinned, bar.cards[index].count == 0
+            else { return "card \(words.dropFirst().joined()) has no +" }
+            actions.newTerminal(group)
+        default: return "switcher-press new-group|sidebar|card <n>|add <n>"
+        }
+        return nil
+    }
+}

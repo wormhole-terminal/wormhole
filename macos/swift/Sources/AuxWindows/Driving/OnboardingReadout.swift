@@ -11,6 +11,7 @@
 //     agent claude "Claude Code" hooks="installed"
 //     trust "api/ has a .wormhole/ folder" "Its theme and notes work now. …" button="Trust with Touch ID…" root="/…/api" approving
 //     primer "Jot a note for this folder" keys="⌥⌘N"
+//     theme tokyo-night "Tokyo Night" current
 //     problem "…"
 
 import AuxModel
@@ -63,7 +64,14 @@ public enum OnboardingReadout {
             for (thing, keys) in PrimerStep.things(notesOn: session.backend.notesOn) {
                 lines.append(Readout.line("primer", quoted: [thing], pairs: [("keys", keys.joined(separator: " "))]))
             }
-        case .welcome, .look: break
+        case .look:
+            // `LookStep`'s cards: the offered themes the library has, the one in use marked.
+            let store = ThemeStore.shared
+            for name in LookStep.offered {
+                guard let theme = store.library.themes.first(where: { $0.name == name }) else { continue }
+                lines.append(Readout.line("theme", [theme.id], quoted: [name], flags: [Readout.flag("current", theme.id == store.theme.id)]))
+            }
+        case .welcome: break
         }
         if let problem = session.problem { lines.append(Readout.line("problem", quoted: [problem])) }
         return lines.joined(separator: "\n")

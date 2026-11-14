@@ -34,6 +34,8 @@ public struct TabBarActions {
     /// "Rename…" of a group's menu while the list is not on screen: the group, and a count that moves with each ask. Its
     /// card opens the popover, whose name is a field.
     public var renameAsk: (group: GroupID, count: Int)?
+    /// Counts up with each ask to open the group switcher from outside the bar (the control folder's `switcher open`).
+    public var switcherAsk = 0
 
     public init(
         select: @escaping (TerminalID) -> Void = { _ in }, close: @escaping (TerminalID) -> Void = { _ in },

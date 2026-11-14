@@ -33,6 +33,8 @@ public final class WindowHub {
     public var exampleBand: ExampleBand?
     /// The sidebar's note after a first run without agents (`FirstRun::agents_note`).
     public var agentsTip = AgentsTip.off
+    /// Asks the tab bar to open its group switcher, each time it counts up (the control folder's `switcher open`).
+    public var switcherAsk = 0
     /// A click on the chip that says an update is ready: the app restarts into it (asking first when that ends something).
     public var onRestartToUpdate: (() -> Void)?
     /// The Project tab's "View all N…": the app opens the window of the project's commands.
