@@ -16,6 +16,8 @@ struct TerminalHost: NSViewRepresentable {
     /// The window's opacity (`WindowLook.effectiveOpacity`), passed in so a change of it updates the view.
     let opacity: CGFloat
     let menu: @MainActor () -> NSMenu?
+    /// False for the host of a start of the terminal that a Restart replaced: it is on its way out and takes no view.
+    var isCurrent: @MainActor () -> Bool = { true }
     /// A pane made after its terminal was shown is in the window now (`Container.arrived`).
     var arrived: @MainActor () -> Void = {}
 
@@ -28,6 +30,9 @@ struct TerminalHost: NSViewRepresentable {
     }
 
     func updateNSView(_ host: Container, context: Context) {
+        // After a Restart the old start's host is updated once more before it is taken down, after the new start's host
+        // has the new view: it would take that view along, and its removal would leave the pane empty.
+        guard isCurrent() else { return }
         guard let wanted = views.view(for: id) else { return host.show(nil) }
         host.show(wanted, takesKeys: { views.takesKeys() })
         // The pane is painted at the window's opacity, as every surface is (`WindowLook.surface`).

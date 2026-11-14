@@ -19,7 +19,7 @@ struct TerminalPanes: View {
             actions: hub.paneActionsWithKeys(keys: .shared, appearance: look.sidebar),
             info: { info($0, in: state) }
         ) { id in
-            TerminalSurface(hub: hub, id: id).id(hub.restarts[id, default: 0])
+            TerminalSurface(hub: hub, id: id, restart: hub.restarts[id, default: 0]).id(hub.restarts[id, default: 0])
         }
         .onChange(of: state.live, initial: true) { _, ids in
             hub.terminals.retain(only: Set(ids))
@@ -38,6 +38,9 @@ struct TerminalPanes: View {
 struct TerminalSurface: View {
     let hub: WindowHub
     let id: TerminalID
+    /// Which start of the terminal this surface was made for (`WindowHub.restarts`): after a Restart the surface of the
+    /// start before lives on for a moment beside the new one.
+    let restart: Int
     @Environment(WindowLook.self) private var look
 
     var body: some View {
@@ -48,6 +51,7 @@ struct TerminalSurface: View {
                 ZStack(alignment: .topTrailing) {
                     TerminalHost(
                         views: hub.terminals, id: id, overlay: overlay, opacity: look.effectiveOpacity, menu: { hub.actions.terminalMenu(id) },
+                        isCurrent: { hub.restarts[id, default: 0] == restart },
                         arrived: { hub.focus.focusTerminal() })
                     TerminalMarks(overlay: overlay, showsMinimap: look.minimap)
                     FoldMarkers(
