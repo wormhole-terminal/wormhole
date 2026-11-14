@@ -121,6 +121,7 @@ extension WindowHub {
         bar.cardWash = { [unowned self] group, tokens in state.groups.first { $0.id == group }?.cardWash(tokens)?.color }
         if case .rename(.group(let group))? = sidebarLink.request { bar.renameAsk = (group, sidebarLink.requests) }
         bar.switcherAsk = switcherAsk
+        bar.switcherShown = { [unowned self] in switcherOnScreen = $0 }
         bar.groupPopover = { [unowned self] group, close in
             AnyView(GroupEditPopover(
                 group: group, state: state, appearance: appearance, hooks: sidebarHooks, link: sidebarLink, planner: store, send: send,

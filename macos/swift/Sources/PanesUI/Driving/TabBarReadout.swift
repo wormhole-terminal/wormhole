@@ -6,7 +6,7 @@
 //     tab 4 "api" activity="working" number="2" alert="none" selected
 //     plus "New terminal"
 //
-//     switcher query="" placeholder="Go to group or terminal…"
+//     switcher query="" placeholder="Go to group or terminal…" open
 //     card 0 "Build" count="3" tiles="7,4,9" activities="needsInput,working,idle" alert="attention" current pinned add="New terminal in Build" spoken="Build, 3 terminals, current"
 //     empty 1 "No terminals"
 //     footer "New group" "Show all groups in the sidebar" keys="⌃⌥[ / ] previous, next group" range="⌃⌥1–9"
@@ -42,9 +42,13 @@ public enum TabBarReadout {
         model.sets.first { $0.members.contains { $0 == model.selected } }?.groupID
     }
 
-    /// `switcher [query]`: the popover's cards and footer, or with a query what its search lists.
-    public static func switcher(_ model: TabBarModel, actions: TabBarActions, query: String) -> String {
-        var lines = [Readout.line("switcher", pairs: [("query", query), ("placeholder", PanesText.switcherSearch)], flags: [Readout.flag("hidden", !model.showsSwitcher)])]
+    /// `switcher [query]`: the popover's cards and footer, or with a query what its search lists; `open` while it is on screen.
+    public static func switcher(_ model: TabBarModel, actions: TabBarActions, query: String, open: Bool) -> String {
+        var lines = [
+            Readout.line(
+                "switcher", pairs: [("query", query), ("placeholder", PanesText.switcherSearch)],
+                flags: [Readout.flag("hidden", !model.showsSwitcher), Readout.flag("open", open)])
+        ]
         if query.trimmingCharacters(in: .whitespaces).isEmpty {
             for card in model.cards {
                 let set = model.sets[card.id]

@@ -47,6 +47,11 @@ extension EndToEnd {
             let byGroup = Readout(await app.reply("switcher \(group.name)"))
             app.expect(byGroup.all("hit").contains { $0.words.first == "set" && $0["mark"] == "dot" }, "the group's hit a dot:\n\(byGroup.text)")
             app.expect(Readout(await app.reply("switcher zzqqxx")).first("none") != nil, "nothing matches")
+
+            // The switcher on screen: open, its own field's search (empty), its cards.
+            await app.send(["switcher open"])
+            let shown = Readout(await app.until("switcher") { Readout($0).first("switcher")?.has("open") == true })
+            app.expect(shown.first("switcher")?["query"] == "" && shown.all("card").count >= 2, "the open switcher, its field empty:\n\(shown.text)")
         }
     }
 

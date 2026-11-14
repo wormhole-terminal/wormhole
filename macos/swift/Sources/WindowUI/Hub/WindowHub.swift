@@ -35,6 +35,8 @@ public final class WindowHub {
     public var agentsTip = AgentsTip.off
     /// Asks the tab bar to open its group switcher, each time it counts up (the control folder's `switcher open`).
     public var switcherAsk = 0
+    /// What the group switcher's search field holds while the switcher is on screen; nil while it is not (`switcher`).
+    @ObservationIgnored public var switcherOnScreen: String?
     /// A click on the chip that says an update is ready: the app restarts into it (asking first when that ends something).
     public var onRestartToUpdate: (() -> Void)?
     /// The Project tab's "View all N…": the app opens the window of the project's commands.

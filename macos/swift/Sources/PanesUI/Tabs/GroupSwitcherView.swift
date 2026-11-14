@@ -41,7 +41,12 @@ struct GroupSwitcherView: View {
         }
         .padding(Space._2)
         .frame(width: TabMetrics.popoverWidth)
-        .onAppear { searching = true }
+        .onAppear {
+            searching = true
+            actions.switcherShown(query)
+        }
+        .onChange(of: query) { actions.switcherShown(query) }
+        .onDisappear { actions.switcherShown(nil) }
     }
 
     private var footer: some View {

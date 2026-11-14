@@ -36,6 +36,9 @@ public struct TabBarActions {
     public var renameAsk: (group: GroupID, count: Int)?
     /// Counts up with each ask to open the group switcher from outside the bar (the control folder's `switcher open`).
     public var switcherAsk = 0
+    /// The switcher tells the window what its search field holds while it is on screen, and nil when it goes (the control
+    /// folder's `switcher` reads what is shown, not a listing of its own).
+    public var switcherShown: @MainActor (String?) -> Void = { _ in }
 
     public init(
         select: @escaping (TerminalID) -> Void = { _ in }, close: @escaping (TerminalID) -> Void = { _ in },

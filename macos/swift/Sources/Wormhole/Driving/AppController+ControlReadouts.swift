@@ -5,7 +5,7 @@
 //   `theme-cards [filter]`      Appearance's theme cards, shelf by shelf, with the filter box holding `filter`
 //   `status-items`              the status bar's items at the window's width (whether or not the bar is on: `status-bar on`)
 //   `tab-bar` / `tab-click <n|+>`  the tab bar's tabs; a click on the n-th (from 1) or on its +
-//   `switcher [query]`          the group switcher's cards and footer, or what its search lists for `query`
+//   `switcher [query]`          the group switcher as shown (open or not, its field's search), or what its search lists for `query`
 //   `switcher open` / `switcher-press new-group|sidebar|card <n>|add <n>`  open the bar's switcher; its buttons and cards
 //   `onboarding-state`          the first run's step, its card, buttons, places, agents, trust card and primer
 //   `onboarding-pick <path>`    a folder dropped on the folder step (`OnboardingSession.pick`)
@@ -38,7 +38,8 @@ extension AppController {
                 hub.openSwitcher()
                 reply("switcher open")
             } else {
-                reply(hub.switcherListing(look: look, query: argument))
+                // No query: the search on screen (what the open switcher's field holds).
+                reply(hub.switcherListing(look: look, query: argument.isEmpty ? nil : argument))
             }
         case "switcher-press": reply(hub.switcherPress(argument, look: look).map { "error: \($0)" } ?? "switcher-press \(argument)")
         case "onboarding-state", "onboarding-pick", "onboarding-press": reply(onboarding(command, argument))

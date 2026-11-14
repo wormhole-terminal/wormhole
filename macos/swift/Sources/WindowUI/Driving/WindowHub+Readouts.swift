@@ -67,9 +67,11 @@ extension WindowHub {
         TabBarReadout.bar(tabBar) + "\n" + Readout.line("tabs", flags: [look.tabsOnTop ? "on-top" : "in-sidebar"])
     }
 
-    /// `switcher [query]`: what the group switcher's popover lists.
-    public func switcherListing(look: WindowLook, query: String) -> String {
-        TabBarReadout.switcher(tabBar, actions: tabActions(appearance: look.sidebar), query: query)
+    /// `switcher [query]`: what the group switcher's popover lists for the search on screen (nil: for what its field holds while
+    /// it is open, else an empty search), with whether it is open; a `query` asks what its search would list for that.
+    public func switcherListing(look: WindowLook, query: String?) -> String {
+        TabBarReadout.switcher(
+            tabBar, actions: tabActions(appearance: look.sidebar), query: query ?? switcherOnScreen ?? "", open: switcherOnScreen != nil)
     }
 
     /// `tab-click <n|+>`: the n-th tab (from 1) clicked, or the bar's +, as the bar's own actions do. Nil when done, else why not.
