@@ -5,8 +5,13 @@
 import Foundation
 import StudioUI
 
+#if WITH_UNIFFI
+    import WormholeBindings
+#endif
+
 extension AppController {
     /// `studio-out export|copy-json|save-theme|duplicate`; the files land in `<data dir>/studio-out` (`pasteboard.txt` is the copy).
+    /// `from=` is where the next export's save panel starts: the folder the last one went to, as the core remembers it.
     func runStudioOutputs(_ argument: String) {
         guard studio.isOpen else { return reply("error: the Studio is not open (`studio`)") }
         let folder = dataDirectory.appendingPathComponent("studio-out")
@@ -24,7 +29,16 @@ extension AppController {
             default: break
             }
             let files = (try? FileManager.default.contentsOfDirectory(atPath: folder.path))?.sorted() ?? []
-            reply("studio-out \(argument): notice=\(studio.document?.notice.map { "\($0)" } ?? "none") files=\(files) in \(folder.path)")
+            reply("studio-out \(argument): notice=\(studio.document?.notice.map { "\($0)" } ?? "none") files=\(files) in \(folder.path) from=\(Self.exportStart ?? "-")")
         }
+    }
+
+    /// The folder the core remembers for Export (`studio_export_dir`, what the Studio's save panel starts in).
+    private static var exportStart: String? {
+        #if WITH_UNIFFI
+            studioExportDir()
+        #else
+            nil
+        #endif
     }
 }
