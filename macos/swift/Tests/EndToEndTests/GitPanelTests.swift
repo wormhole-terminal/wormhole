@@ -91,6 +91,9 @@ extension EndToEnd {
             app.expect(await app.reply("commit-more"), contains: "commit-more whole")
             app.expect(await app.reply("commit-details"), contains: "message: whole")
             app.expect(await app.later("history-copy 1 subject", answer: "copy="), contains: "copy=third commit")
+            // A tag put on the open commit from outside: its refs are read again.
+            try app.scratch.git(repo, "tag", "v-e2e")
+            await app.until("commit-details") { $0.contains("v-e2e") }
             await app.send(["history-file 1"])
             app.expect(await app.until("history-state") { $0.contains("diff=shown") }, contains: "three.txt")
             await app.send(["history 0"])

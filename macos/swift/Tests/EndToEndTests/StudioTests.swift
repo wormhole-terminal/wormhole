@@ -35,4 +35,28 @@ extension EndToEnd {
             app.expect(versions, contains: "pinned")
         }
     }
+
+    @Test("a theme of one appearance becomes a pair, as one undo step; the Low filter and a pair's chip answer")
+    @MainActor func studioPair() async throws {
+        try await Instance.with { app in
+            await app.send(["studio"])
+            await app.until("studio-select") { !$0.hasPrefix("error") }
+            await app.later("studio-open new", answer: "studio-open new")
+            let single = await app.reply("studio-theme-menu")
+            app.expect(!single.contains("addable=-"), "a new theme has one appearance to add:\n\(single)")
+            app.expect(await app.reply("studio-add-appearance"), contains: "studio-add-appearance")
+            app.expect(await app.reply("studio-theme-menu"), contains: "addable=-")
+            app.expect(await app.reply("studio-add-appearance"), contains: "error: the theme has both appearances")
+            await app.send(["studio-undo"])
+            app.expect(!(await app.reply("studio-theme-menu")).contains("addable=-"), "undo takes the second appearance away")
+            await app.send(["studio-redo"])
+            app.expect(await app.reply("studio-theme-menu"), contains: "addable=-")
+
+            app.expect(await app.reply("studio-appearance light"), contains: "studio-appearance light")
+            app.expect(await app.reply("studio-chip primary"), contains: "place=")
+            let low = await app.reply("studio-filter low")
+            app.expect(Instance.value("shown", in: low) != nil, "the Low filter says how many it shows:\n\(low)")
+            app.expect(await app.reply("studio-filter all"), contains: "shown=")
+        }
+    }
 }

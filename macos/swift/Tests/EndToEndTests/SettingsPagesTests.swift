@@ -85,6 +85,10 @@ extension EndToEnd {
             let folder = app.scratch.data.appendingPathComponent("profiles/\(id)")
             app.expect(FileManager.default.fileExists(atPath: folder.path), "the profile's folder is made: \(folder.path)")
             await app.until("sessions") { $0.contains("profile=\(id) visible=true") }
+            // The Profile page's fields, committed as a blur commits them: the profile Wormhole is in takes them.
+            let fields = await app.reply("profile color=green git=Tester")
+            app.expect(fields, contains: "|green|")
+            app.expect(fields, contains: "problem=none")
 
             app.expect(await app.reply("profile-delete default"), contains: "error")
             await app.send(["profile-delete \(id)"])
@@ -161,6 +165,41 @@ extension EndToEnd {
             await app.send(["set notify_needs_you=true"])
             _ = await app.waitForConfig { $0.range(of: #""notifications"\s*:\s*true"#, options: .regularExpression) != nil }
             app.expect(await app.setting("notify_needs_you"), contains: "true")
+        }
+    }
+
+    /// All the terminal ids `sessions` lists, over every window.
+    static func allTerminals(_ sessions: String) -> Int {
+        sessions.split(separator: "\n").reduce(0) { total, line in
+            let ids = line.components(separatedBy: "terminals=[").dropFirst().first?.prefix { $0 != "]" } ?? ""
+            return total + ids.split(separator: ",").count
+        }
+    }
+
+    @Test("a Settings row's menu copies its key; ⌃⌥⌘F unlocks the feature flags; the app's keys work with Settings in front")
+    @MainActor func settingsRowMenuAndKeys() async throws {
+        try await Instance.with { app in
+            await app.send(["settings-reveal minimap"])
+            let page = await app.until("settings-rows") { $0.contains("minimap | ") }
+            let line = page.split(separator: "\n").first { $0.hasPrefix("minimap | ") }
+            let frame = line?.components(separatedBy: " | ").last?.split(separator: " ").compactMap { Double($0) } ?? []
+            app.expect(frame.count == 4, "the minimap row with its frame:\n\(page)")
+            guard frame.count == 4 else { return }
+            let menu = await app.send(["pointer-window Settings", "right-click \(Int(frame[0] + frame[2] / 2)) \(Int(frame[1] + frame[3] / 2))", "pointer-window"])
+            app.expect(menu[1], contains: "Copy Key")
+            app.expect(menu[1], contains: "Reset to Default")
+            app.expect(await app.reply("menu-pick Copy Key"), contains: "picked Copy Key")
+            app.expect(await app.reply("pasteboard"), contains: "minimap")
+
+            var unlocked = await app.reply("flags-unlock")
+            if unlocked.contains("unlocked=false") { unlocked = await app.reply("flags-unlock") }
+            app.expect(unlocked, contains: "featureFlags")
+            _ = await app.waitForConfig { $0.range(of: #""unlocked"\s*:\s*true"#, options: .regularExpression) != nil }
+
+            // ⇧⌘N with the Settings window taking the keys opens a terminal, as in the workspace window.
+            let before = Self.allTerminals(await app.reply("sessions"))
+            await app.send(["pointer-window Settings", "key shift-cmd-n", "pointer-window"])
+            await app.until("sessions") { Self.allTerminals($0) == before + 1 }
         }
     }
 }
