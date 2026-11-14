@@ -107,6 +107,8 @@ extension AppController {
                 settingsController = nil
                 if settingsOpen { showSettings() }
                 menus?.windowsChanged()
+                // The project of the terminal in front goes over the new profile's settings, by that profile's trust.
+                projectSettings?.follow()
             } catch {
                 devctl?.append("switch-profile \(id) failed: \(error)") // text: a line for a test driver
                 FileHandle.standardError.write(Data("profile: cannot switch to \(id) (\(error))\n".utf8)) // text: a line on stderr for whoever launched the app
@@ -138,6 +140,7 @@ extension AppController {
             followParkedAccess()
             if lastFront == nil || !sessions.contains(where: { $0 === lastFront }) { lastFront = shown.last }
             menus?.windowsChanged()
+            projectSettings?.follow()
         #endif
     }
 
@@ -187,6 +190,8 @@ extension AppController {
             // Its settings, theme and fonts are the ones of the profile it is in now.
             dressForProfile(session)
             menus?.windowsChanged()
+            // Its project no longer goes over the settings of the profile it left, or goes over the ones it came into.
+            projectSettings?.follow()
         #endif
     }
 

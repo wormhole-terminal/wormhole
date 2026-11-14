@@ -64,6 +64,9 @@ extension AppController {
         dropUnusedProfileLooks()
         if lastFront === session { lastFront = shown.last }
         menus?.windowsChanged()
+        #if WITH_UNIFFI
+            projectSettings?.follow()
+        #endif
     }
 
     /// Every window as it is, written now (a quit).

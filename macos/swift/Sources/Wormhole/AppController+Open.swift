@@ -58,7 +58,7 @@ extension AppController {
         startUpdates()
         #if WITH_UNIFFI
             let follower = ProjectSettingsFollower(app: self)
-            follower?.start()
+            follower.start()
             projectSettings = follower
         #endif
     }

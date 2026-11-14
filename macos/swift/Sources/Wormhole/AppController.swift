@@ -35,7 +35,15 @@ final class AppController: NSObject, NSApplicationDelegate {
         didSet { folderPicking.windowsChanged() }
     }
     /// The window that was in front last: what commands act on while none is the key window (a test instance never has one).
-    var lastFront: WindowSession? { didSet { if lastFront !== oldValue { updateFollower?.keepOffered() } } }
+    var lastFront: WindowSession? {
+        didSet {
+            guard lastFront !== oldValue else { return }
+            updateFollower?.keepOffered()
+            #if WITH_UNIFFI
+                projectSettings?.follow()
+            #endif
+        }
+    }
     /// Open folder… in a test instance, which shows no panel: what a chosen folder does, until `open-folder` gives one.
     var pendingFolder: ((String) -> Void)?
     /// Set while the app quits, so the windows that go with it are saved, not forgotten.
@@ -51,8 +59,6 @@ final class AppController: NSObject, NSApplicationDelegate {
     var notices: NoticeFeed?
     /// The quick panel driven without its window by the control folder (`quick-open`).
     var quickDriver: QuickPanelModel?
-    /// Layers the settings of the terminal in front's project over the person's (real windows only).
-    var projectSettings: AnyObject?
     var hooks: HookHost?
     /// Files and folders macOS asked this app to open that are still waiting for the windows and the socket (`SystemOpen.swift`).
     var systemOpens: [URL] = []
@@ -78,6 +84,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     #if WITH_UNIFFI
         /// Feature switches read in a window's own profile (`flagsOn(_:)`).
         let profileFlags = ProfileFlags()
+        /// Layers the settings of the terminal in front's project over the person's (real windows only).
+        var projectSettings: ProjectSettingsFollower?
     #endif
     /// The fonts and colours every terminal is drawn with: Settings' and the theme's.
     private(set) lazy var terminalLook = TerminalLook(
