@@ -293,7 +293,9 @@ struct NotesMergeSavedTests {
         persistence.saved[2] = Self.model(steps: ["build", "old"])
         let (_, _, coordinator) = window(persistence)
         persistence.unwritable = [2]
-        persistence.answer = { id, sent in
+        // `@Sendable`: the store's merge runs off the main actor, and a closure made here inside this one (`filter`'s) would
+        // otherwise be the main actor's, which the runtime checks when it is called: the test process ended there.
+        persistence.answer = { @Sendable id, sent in
             guard id == 2 else { return nil }
             // notes.md deleted "old" and gained "new".
             var merged = sent
