@@ -24,6 +24,9 @@ mod search;
 mod shortcuts;
 mod skills;
 mod state;
+/// For the access guard's tests, which change settings as the Settings window does.
+#[cfg(test)]
+pub(crate) use state::State;
 mod theme_files;
 mod theme_picks;
 

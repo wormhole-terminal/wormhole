@@ -105,7 +105,7 @@ impl State {
         let before = self.config.settings.clone();
         self.config.import_theme(source)?;
         if self.config.settings != before {
-            super::edits::note(&self.dir);
+            // No note for the access guard: an import changes the theme, never `agent_access`.
             self.refresh();
             self.revision += 1;
         }
@@ -124,8 +124,13 @@ impl State {
         if next == self.config.settings {
             return false;
         }
+        // Only a change of the mode itself is the person's edit of it: counting every write here let a widening made
+        // outside (a program writing `agent_access` into `config.json`) pass as theirs after any other setting changed.
+        let access_changed = next.agent_access != self.config.settings.agent_access;
         self.config.update(|settings| *settings = next);
-        super::edits::note(&self.dir);
+        if access_changed {
+            super::edits::note(&self.dir);
+        }
         self.refresh();
         self.revision += 1;
         true

@@ -143,6 +143,34 @@ fn narrowing_and_an_edit_made_in_settings_apply_at_once_and_ask_nothing() {
     assert!(f.desk.next_mode_question().is_none());
 }
 
+/// The person changes another setting in Settings; later something outside writes Open into `config.json`. The
+/// widening is not theirs: the earlier mode stays in force and the person is asked.
+#[test]
+fn an_edit_of_another_setting_does_not_let_a_widening_from_outside_through() {
+    let f = fixture("off");
+    let id = f.terminal();
+    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off", "the first look is the mode in force");
+    let mut settings = crate::settings::State::load(f.desk.profile());
+    assert!(settings.update(|s| s.font_size += 1.0), "the font size changed in Settings");
+    edit_mode_outside(&f, "open");
+    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off", "Off is still in force");
+    let question = f.desk.next_mode_question().expect("the person is asked about the widening");
+    assert!(f.desk.is_waiting_mode(question.token));
+}
+
+/// The mode widened in Settings itself is the person's: in force at once, nothing asked.
+#[test]
+fn a_widening_made_in_settings_applies_at_once() {
+    let f = fixture("off");
+    let id = f.terminal();
+    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off");
+    let mut settings = crate::settings::State::load(f.desk.profile());
+    assert!(settings.update(|s| s.agent_access = wormhole_core::config::AgentAccess::Open));
+    f.server.settings_changed(f.desk.profile().id().as_str().to_string());
+    assert_eq!(type_into(&f, id)["ok"], true, "Open, set in Settings, is in force");
+    assert!(f.desk.next_mode_question().is_none());
+}
+
 #[test]
 fn a_question_nobody_answers_is_a_no_and_the_sheet_goes() {
     let f = fixture("ask");
