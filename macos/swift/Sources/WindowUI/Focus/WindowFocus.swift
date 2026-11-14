@@ -251,8 +251,10 @@ public final class WindowFocus {
             hub.send(.showOverlay(nil))
             return true
         }
-        return event.type == .keyDown && event.keyCode == Key.escape && bare && window.firstResponder is MetalTerminalView
-            && escape()
+        // Also when nothing has the keys (the window is its own first responder): a diff or a file opened over the terminal
+        // takes the terminal's view out, and Esc must still close it (the GPUI app's ladder is the window's, whatever has focus).
+        return event.type == .keyDown && event.keyCode == Key.escape && bare
+            && (window.firstResponder is MetalTerminalView || window.firstResponder === window) && escape()
     }
 
     func detach() {
