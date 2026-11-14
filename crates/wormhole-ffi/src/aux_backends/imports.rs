@@ -93,7 +93,10 @@ pub fn import_apply(
         .cloned()
         .collect();
     let saved = import::save_themes(&profile.themes_dir(), &chosen).map_err(AuxError::failed)?;
-    Config::load_for(&profile).update(|settings| import::apply(settings, &found.proposal, &chosen, &saved));
+    // One update through the settings the app holds, as the GPUI app's import (`settings/import.rs:56`).
+    crate::settings::live::update(&profile, |settings| {
+        import::apply(settings, &found.proposal, &chosen, &saved);
+    });
     Ok(u32::try_from(chosen.len()).unwrap_or(u32::MAX))
 }
 

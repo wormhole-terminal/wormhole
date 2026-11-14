@@ -1,6 +1,7 @@
 //! The settings the app holds of each profile while it runs (every open [`SettingsHandle`](super::SettingsHandle)'s),
-//! so that a change made in Wormhole by something that is not a Settings control goes through them, as the GPUI app's
-//! goes through the profile's settings store (`settings::update_in`, `settings/profile.rs:182-198`). Written around
+//! so that a change made in Wormhole by something that is not a Settings control (Don't Keep, the first run's steps, an
+//! import, a pin, a folder's colour, the terminal welcome) goes through them, as the GPUI app's goes through the
+//! profile's settings store (`settings::update_settings` and `update_in`, `settings/profile.rs:182-198`). Written around
 //! them from a load of the file, such a change is undone by the next write of a handle that has not read the file
 //! again, and that load writes back every key as it read it, so a change of another key made in between is lost.
 
@@ -14,6 +15,10 @@ use super::handle::Shared;
 use super::state::State;
 
 static LIVE: Mutex<Vec<(PathBuf, Weak<Shared>)>> = Mutex::new(Vec::new());
+
+/// One change at a time where no handle holds the profile's settings: two writers that each read the file and then
+/// save (a pin and a folder colour) would each write a copy that lacks the other's change.
+static UNHELD: Mutex<()> = Mutex::new(());
 
 /// The folder as the key: the same profile, however its data folder was spelled.
 fn key(dir: &Path) -> PathBuf {
@@ -39,6 +44,7 @@ fn of(dir: &Path) -> Vec<Arc<Shared>> {
 pub(crate) fn update(profile: &ProfilePaths, change: impl FnOnce(&mut Settings)) {
     let live = of(profile.dir());
     let Some((first, others)) = live.split_first() else {
+        let _one_at_a_time = UNHELD.lock().unwrap_or_else(PoisonError::into_inner);
         State::load(profile).update(change);
         return;
     };

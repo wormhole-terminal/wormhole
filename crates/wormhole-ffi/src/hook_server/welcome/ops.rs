@@ -10,7 +10,7 @@ use std::sync::Arc;
 use wormhole_core::agents::AgentId;
 use wormhole_core::agents::integrations::{self, State};
 use wormhole_core::config::presets::{Shown, TitleShown, ToolsShown};
-use wormhole_core::config::{Config, NotifySound, Settings};
+use wormhole_core::config::{NotifySound, Settings};
 use wormhole_core::import::{self, Env, Proposed, Source};
 use wormhole_core::ipc::control::{
     AgentFact, ErrorCode, HooksFact, ImportDone, NotifyFacts, PermissionFact, Reply, ShownDone, WelcomeOp,
@@ -58,10 +58,12 @@ fn state(core: &Core, tab: i64) -> wormhole_core::ipc::control::WelcomeState {
     facts::state(&seat.profile, &settings, run, notify)
 }
 
-/// The shown profile's `config.json`, changed through core's settings (clamped and sanitised as every write is).
+/// The shown profile's `config.json`, changed through core's settings (clamped and sanitised as every write is) as
+/// the app holds them (`settings::live`; the GPUI app's answers go through its settings store,
+/// `onboarding/welcome/answers.rs:260,327`).
 fn edit(core: &Core, change: impl FnOnce(&mut Settings)) {
     let seat = core.seat();
-    Config::load_for(&seat.profile).update(change);
+    crate::settings::live::update(&seat.profile, change);
     core.settings_changed(seat.profile.id().as_str());
 }
 

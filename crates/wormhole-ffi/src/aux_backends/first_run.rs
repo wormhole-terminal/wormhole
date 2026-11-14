@@ -8,7 +8,6 @@ use std::sync::Arc;
 
 use wormhole_core::agents::integrations::{self, State};
 use wormhole_core::agents::{AGENTS, Agent, installed};
-use wormhole_core::config::Config;
 use wormhole_core::ipc::access::agent_word;
 use wormhole_core::onboarding::{self, ONBOARDED_KEY, PlaceKind};
 use wormhole_core::platform::paths;
@@ -152,10 +151,11 @@ impl FirstRun {
     }
 
     /// Writes what the Look and Agents steps chose into the Default profile's `config.json`, through core's
-    /// settings (clamped and sanitised as every write is).
+    /// settings (clamped and sanitised as every write is) as the app holds them (`settings::live`; the GPUI app's
+    /// steps write through its settings store, `onboarding/look_step.rs:64-72`).
     pub fn write_look(&self, look: LookRecord) {
         let profile = DataRoot::new(&self.data_dir).default_profile();
-        Config::load_for(&profile).update(|settings| {
+        crate::settings::live::update(&profile, |settings| {
             settings.choose_primary(look.primary.unwrap_or_default());
             settings.font_family = look.font_family;
             settings.font_size = look.font_size as f32;
