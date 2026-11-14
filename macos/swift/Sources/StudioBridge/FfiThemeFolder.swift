@@ -9,7 +9,8 @@ import StudioModel
 import WormholeBindings
 
 public struct FfiThemeFolder: ThemeFolder {
-    /// The themes folder, asked at each call: an open Studio follows a profile switch (GPUI's Studio reads its profile per call).
+    /// The themes folder, asked at each call: an open Studio's list and new saves follow a profile switch (GPUI's Studio
+    /// reads its profile per call); a file already open is written where it is (`home(of:)`).
     private let folder: @Sendable () -> URL
     public var directory: URL { folder() }
 
@@ -22,11 +23,11 @@ public struct FfiThemeFolder: ThemeFolder {
     public func read(_ file: URL) throws -> String { try studioFolderRead(path: file.path) }
 
     public func write(_ text: String, to file: URL) throws {
-        try studioFolderWrite(themesDir: directory.path, path: file.path, text: text)
+        try studioFolderWrite(themesDir: Self.home(of: file), path: file.path, text: text)
     }
 
     public func versions(of file: URL) -> [SavedVersion] {
-        studioFolderVersions(themesDir: directory.path, path: file.path).map {
+        studioFolderVersions(themesDir: Self.home(of: file), path: file.path).map {
             SavedVersion(url: URL(fileURLWithPath: $0.path), saved: Date(timeIntervalSince1970: TimeInterval($0.saved)), pinned: $0.pinned)
         }
     }
@@ -34,4 +35,8 @@ public struct FfiThemeFolder: ThemeFolder {
     public func readVersion(_ version: SavedVersion) throws -> String { try studioFolderReadVersion(path: version.url.path) }
 
     public func trash(_ file: URL) throws { try Trash.move(file) }
+
+    /// The themes folder a theme file belongs to: the one holding it. A draft opened before a profile switch is kept, as
+    /// in the GPUI Studio, and saved back to its own file; its earlier saves stay beside it, never in the profile switched to.
+    private static func home(of file: URL) -> String { file.deletingLastPathComponent().path }
 }

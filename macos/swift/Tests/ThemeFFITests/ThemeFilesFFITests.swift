@@ -171,6 +171,26 @@ final class ThemeFilesFFITests: XCTestCase {
         XCTAssertEqual(doc.versionRows().count, 2, "the file it replaced is kept")
     }
 
+    /// A profile switch under an open draft: the draft is kept (as in the GPUI Studio) and saved back to its own file;
+    /// nothing of it, not even the version its save keeps, lands in the folder of the profile switched to.
+    func testADraftOpenBeforeAProfileSwitchIsNeverSavedIntoTheOtherProfilesFolder() throws {
+        let other = FileManager.default.temporaryDirectory.appendingPathComponent("wh-theme-other-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: other) }
+        let active = ActiveFolder(folder)
+        let environment = StudioEnvironment(
+            resolver: FfiThemeResolver(), folder: FfiThemeFolder(folder: { active.url }), knowledge: GalleryKnowledge(),
+            files: FfiStudioFiles(folder: { active.url }))
+        let mine = folder.appendingPathComponent("Mine.json")
+        let doc = try StudioDocument.open(file: mine, environment: environment, store: store())
+        doc.set("primary", to: "#00aa44")
+        active.url = other
+        XCTAssertEqual(try doc.save(), mine)
+        XCTAssertTrue(try String(contentsOf: mine, encoding: .utf8).contains("#00aa44"))
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: other.path), [], "the other profile's folder stays empty")
+        XCTAssertEqual(doc.versionRows().count, 2, "the file it replaced is kept beside it and listed")
+    }
+
     func testASingleThemeBecomesAPairAndExportsOneAppearance() throws {
         let doc = try StudioDocument.open(theme: "Wormhole Dark", environment: environment(), store: store())
         XCTAssertEqual(doc.missingAppearance, .light)
@@ -217,6 +237,12 @@ final class ThemeFilesFFITests: XCTestCase {
 }
 
 @MainActor
+/// The active profile's themes folder, which a profile switch changes under an open Studio.
+private final class ActiveFolder: @unchecked Sendable {
+    var url: URL
+    init(_ url: URL) { self.url = url }
+}
+
 private final class RecordingPicks: ThemePicking {
     var saved: [(value: String, dark: Bool)] = []
     func pick(_ value: String, dark: Bool) {}
