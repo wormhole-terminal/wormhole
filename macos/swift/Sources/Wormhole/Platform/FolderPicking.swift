@@ -110,6 +110,9 @@ final class FolderPicking {
             return made
         }
 
+        /// `profile`'s recent folders as the database keeps them (the control folder's `recents folders`).
+        func recentFoldersJSON(of profile: String) -> String? { recents(of: profile)?.recentsJSON() }
+
         private func save(_ profile: String) {
             guard let json = folders[profile]?.recentsJSON() else { return }
             PlatformBridge.storeRecents(json, profile: profile)
