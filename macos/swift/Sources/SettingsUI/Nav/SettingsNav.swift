@@ -78,13 +78,18 @@ struct SettingsNav: View {
     }
 
     /// The Preview tag, or while a search runs the page's result count.
-    private func badge(_ section: SettingsSchema.Section) -> String? {
+    private func badge(_ section: SettingsSchema.Section) -> String? { Self.badge(section, model) }
+
+    static func badge(_ section: SettingsSchema.Section, _ model: SettingsModel) -> String? {
         if model.isSearching { return model.hitCounts[section.id].map(String.init) }
         return section.preview ? SettingsText.previewTag : nil
     }
 
     /// Coding agents wears a mark while an installed agent's hooks (or a profile's login of it) are only partly there.
-    private func attention(_ section: SettingsSchema.Section) -> Bool {
+    private func attention(_ section: SettingsSchema.Section) -> Bool { Self.attention(section, model) }
+
+    /// The same, for the control folder's `settings-page`.
+    static func attention(_ section: SettingsSchema.Section, _ model: SettingsModel) -> Bool {
         guard !model.showsResults, section.id == "agents" else { return false }
         let records = model.host.panelRecords()
         return records.agents.contains { $0.state == .needsRepair } || records.logins.contains { $0.state == .needsRepair }

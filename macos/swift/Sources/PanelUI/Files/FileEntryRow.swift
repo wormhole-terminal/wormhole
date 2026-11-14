@@ -30,6 +30,7 @@ struct FileEntryRow: View {
         } else {
             PanelRow(selected: selected, action: { store.click(row) }) { _ in content }
                 .contextMenu { FileRowMenu(store: store, row: row) }
+                .panelRowFrame("entry:\(row.path)")
                 .help(row.label)
                 .accessibilityLabel(spoken)
                 .accessibilityValue({ if case let .folder(open) = row.kind { open ? panelText("files-spoken-expanded", "expanded") : panelText("files-spoken-collapsed", "collapsed") } else { "" } }())

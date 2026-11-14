@@ -83,20 +83,26 @@ struct DiffHeader: View {
     }
 
     private var badges: [(text: String, color: Color)] {
-        var out: [(String, Color)] = []
-        if file.kind == .added || file.kind == .untracked { out.append((panelText("diff-badge-new", "New file"), tokens.statusSuccessText)) }
-        if file.kind == .deleted { out.append((panelText("changes-kind-deleted", "Deleted"), tokens.statusDangerText)) }
+        Self.badges(file: file, diff: diff, gone: gone).map { ($0.text, tokens[keyPath: $0.tone]) }
+    }
+
+    /// The badges' words in the header's order, each with the token it is drawn in (the control folder's `diff-header` reads
+    /// the same list).
+    static func badges(file: ChangedFile, diff: DiffFile?, gone: Bool) -> [(text: String, tone: KeyPath<ThemeTokens, Color>)] {
+        var out: [(String, KeyPath<ThemeTokens, Color>)] = []
+        if file.kind == .added || file.kind == .untracked { out.append((panelText("diff-badge-new", "New file"), \.statusSuccessText)) }
+        if file.kind == .deleted { out.append((panelText("changes-kind-deleted", "Deleted"), \.statusDangerText)) }
         if file.kind == .renamed {
             // The old name whenever the old path is known, also for a move that kept the name.
             let old = file.originalPath.map { $0.split(separator: "/").last.map(String.init) ?? $0 }
-            out.append((old.map { panelText("diff-badge-renamed-from", ["path": .text($0)], "Renamed from \($0)") } ?? panelText("changes-kind-renamed", "Renamed"), tokens.primary))
+            out.append((old.map { panelText("diff-badge-renamed-from", ["path": .text($0)], "Renamed from \($0)") } ?? panelText("changes-kind-renamed", "Renamed"), \.primary))
         }
-        if let words = file.submodule { out.append((words, tokens.textMuted)) }
-        if gone { out.append((panelText("diff-badge-gone", "No longer changed"), tokens.textMuted)) }
-        if diff?.isBinary == true { out.append((panelText("diff-badge-binary", "Binary"), tokens.textMuted)) }
-        if file.lfs || diff?.isLFS == true { out.append(("LFS", tokens.textMuted)) } // text: Git LFS, a product name
-        if let mode = diff?.modeChange { out.append((mode, tokens.textMuted)) }
-        if diff?.noHighlight == true { out.append((panelText("diff-badge-no-highlighting", "No highlighting"), tokens.textMuted)) }
+        if let words = file.submodule { out.append((words, \.textMuted)) }
+        if gone { out.append((panelText("diff-badge-gone", "No longer changed"), \.textMuted)) }
+        if diff?.isBinary == true { out.append((panelText("diff-badge-binary", "Binary"), \.textMuted)) }
+        if file.lfs || diff?.isLFS == true { out.append(("LFS", \.textMuted)) } // text: Git LFS, a product name
+        if let mode = diff?.modeChange { out.append((mode, \.textMuted)) }
+        if diff?.noHighlight == true { out.append((panelText("diff-badge-no-highlighting", "No highlighting"), \.textMuted)) }
         return out
     }
 }

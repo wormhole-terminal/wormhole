@@ -18,21 +18,12 @@ struct ThemeCards: View {
     @FocusState private var focusedCard: String?
     @Environment(\.tokens) private var tokens
 
-    /// A theme on a card and the value picking it writes (a built-in's name, a file's slug).
-    private struct Card: Identifiable {
-        let theme: Theme
-        let value: String
-        /// The file `theme` holds for it, when it was imported or saved from the Studio.
-        var path: String?
-        /// How many entries a file made with a newer Wormhole had that this version skipped.
-        var newer: Int?
-        /// What `hidden_themes` holds for it (core's `ThemeEntry::value`): a built-in's name, a file's path.
-        var hideValue: String { path ?? value }
-        var id: String { value }
-        func isPicked(_ picked: String?) -> Bool { picked == value || (path != nil && picked == path) }
-    }
+    private typealias Card = ThemeCardEntry
 
-    private static let collapsed = 4
+    /// What the shelves list, as `theme-cards` reads it too.
+    private var listing: ThemeShelves { ThemeShelves(model: model, filter: filter) }
+
+    private static let collapsed = ThemeShelves.collapsed
     /// Four to a row, as the GPUI shelves are (`COLUMNS`): the arrow keys walk by it.
     private static let columnCount = 4
     private let columns = Array(repeating: GridItem(.flexible(), spacing: Space._3), count: ThemeCards.columnCount)
@@ -57,16 +48,8 @@ struct ThemeCards: View {
         .padding(.vertical, Space._3)
     }
 
-    private var hidden: [String] { model.value("hidden_themes").array?.compactMap(\.string) ?? [] }
-
-    /// One shelf under Dark or Light, two under Match system (`shelves`).
-    private var shelves: [ThemeAppearance] {
-        switch model.value("theme_mode").string {
-        case "dark": [.dark]
-        case "light": [.light]
-        default: [.dark, .light]
-        }
-    }
+    private var hidden: [String] { listing.hidden }
+    private var shelves: [ThemeAppearance] { listing.shelves }
 
     private func projectNotice(_ project: ProjectThemeMark) -> some View {
         Banner(
@@ -80,31 +63,8 @@ struct ThemeCards: View {
         }
     }
 
-    /// "Filter 60 themes": how many there are to filter, the hidden ones apart.
-    private var filterPlaceholder: String {
-        let count = shelves.flatMap { cards(appearance: $0, filtered: false) }.count
-        return count == 0
-            ? Words.text("settings-appearance-filter-themes", fallback: "Filter themes")
-            : Words.text("settings-appearance-filter-themes-count", ["count": .whole(count)], fallback: "Filter \(count) theme\(count == 1 ? "" : "s")")
-    }
-
-    /// What a card's band says (`theme_picker` `labels`): the family's name when the family has one version of the card's
-    /// kind (its shelf then holds only that one), else the version's own name ("Soltari Dim").
-    private func label(_ theme: Theme) -> String {
-        guard let family = theme.family else { return theme.name }
-        let ofKind = ThemeLibrary.bundled.themes.filter { $0.family?.name == family.name && $0.appearance == theme.appearance }
-        return ofKind.count == 1 ? family.name : theme.name
-    }
-
-    /// The filter box looks in a card's own name and its family's.
-    private func matches(_ theme: Theme) -> Bool {
-        filter.isEmpty || theme.name.localizedCaseInsensitiveContains(filter) || theme.family?.name.localizedCaseInsensitiveContains(filter) == true
-    }
-
-    /// Whether the picker leaves the card out: core's rule over its value, by name where there is no core.
-    private func isHidden(_ card: Card) -> Bool {
-        model.host.themeHidden(card.hideValue) ?? hidden.contains { $0.localizedCaseInsensitiveCompare(card.theme.name) == .orderedSame }
-    }
+    private var filterPlaceholder: String { listing.filterPlaceholder }
+    private func label(_ theme: Theme) -> String { listing.label(theme) }
 
     private func setHidden(_ value: String, _ on: Bool) {
         if model.host.setThemeHidden(value, hidden: on) { return }
@@ -112,33 +72,8 @@ struct ThemeCards: View {
         model.set("hidden_themes", .array((on ? rest + [value] : rest).map(JSONValue.string)))
     }
 
-    /// The cards of one kind, the pick first: the built-in themes then the person's own (`catalog_in`), without the hidden
-    /// ones unless one is a pick, and narrowed by the filter box.
-    private func cards(appearance: ThemeAppearance, filtered: Bool = true) -> [Card] {
-        let picked = model.value(appearance == .dark ? "theme" : "theme_light").string
-        let store = ThemeStore.shared
-        let yours = store.userThemes.filter { $0.appearance == appearance }.compactMap { summary in
-            store.userTheme(summary).map { Card(theme: $0, value: summary.id, path: summary.path, newer: summary.newer) }
-        }
-        return (ThemeLibrary.bundled.themes.map { Card(theme: $0, value: $0.name) } + yours).filter {
-            $0.theme.appearance == appearance && (!filtered || matches($0.theme)) && ($0.isPicked(picked) || !isHidden($0))
-        }.sorted { ($0.isPicked(picked) ? 0 : 1) < ($1.isPicked(picked) ? 0 : 1) }
-    }
-
-    /// Dark or Light beside a hidden theme's name, from the card it is (none for a name no theme has any more).
-    private func kind(ofHidden value: String) -> (name: String, kind: String?) {
-        for appearance in ThemeAppearance.allCases {
-            let known = ThemeLibrary.bundled.themes.map { Card(theme: $0, value: $0.name) }
-                + ThemeStore.shared.userThemes.filter { $0.appearance == appearance }.compactMap { summary in
-                    ThemeStore.shared.userTheme(summary).map { Card(theme: $0, value: summary.id, path: summary.path) }
-                }
-            if let card = known.first(where: { $0.theme.appearance == appearance && ($0.hideValue == value || $0.theme.name.localizedCaseInsensitiveCompare(value) == .orderedSame) }) {
-                let kind = appearance == .dark ? Words.text("settings-appearance-dark", fallback: "Dark") : Words.text("settings-appearance-light", fallback: "Light")
-                return (label(card.theme), kind)
-            }
-        }
-        return (value, nil)
-    }
+    private func cards(appearance: ThemeAppearance, filtered: Bool = true) -> [Card] { listing.cards(appearance: appearance, filtered: filtered) }
+    private func kind(ofHidden value: String) -> (name: String, kind: String?) { listing.kind(ofHidden: value) }
 
     /// The disclosure under the cards: a row per hidden theme with Show.
     private var hiddenList: some View {

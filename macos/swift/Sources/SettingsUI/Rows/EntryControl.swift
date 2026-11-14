@@ -79,7 +79,10 @@ struct EntryControl: View {
 
     /// Why the global hotkey set now does not work (`hotkey_problem`): macOS, the app or the shell has the keys (set by hand in
     /// config.json: the recorder refuses them), or the system did not register it. The jump key has none.
-    private func shortcutProblem() -> String? {
+    private func shortcutProblem() -> String? { Self.shortcutProblem(key: key, model: model) }
+
+    /// The same, for the control folder's `settings-page`.
+    static func shortcutProblem(key: String, model: SettingsModel) -> String? {
         let spec = model.value(key).string ?? ""
         guard key == "hotkey", !spec.isEmpty else { return nil }
         if case .refused(let reason)? = model.shortcuts?.check(key: key, spec: spec) { return reason }

@@ -63,7 +63,11 @@ struct OnboardingView: View {
         }
     }
 
-    private var title: String {
+    private var title: String { Self.title(session) }
+    private var intro: String { Self.intro(session) }
+
+    /// The card's title and intro for the step (the control folder's `onboarding-state` reads them too).
+    static func title(_ session: OnboardingSession) -> String {
         switch session.step {
         case .folder: AuxText.folderTitle
         case .look: AuxText.lookTitle
@@ -73,7 +77,7 @@ struct OnboardingView: View {
         }
     }
 
-    private var intro: String {
+    static func intro(_ session: OnboardingSession) -> String {
         switch session.step {
         case .folder: AuxText.folderIntro
         case .look: AuxText.lookIntro(settingsKeys: session.backend.settingsKeys)

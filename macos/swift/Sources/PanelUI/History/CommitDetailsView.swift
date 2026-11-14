@@ -45,6 +45,7 @@ struct CommitDetailsView: View {
         .accessibilityLabel(details?.spoken ?? "\(commit.short), \(commit.subject), \(commit.author)")
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame = $0 }
         .nativeContextMenu { menu() }
+        .panelRowFrame("details")
         .onChange(of: store.detailsMenus) { showKeyMenu(menu(), frame) }
     }
 

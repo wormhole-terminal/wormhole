@@ -40,7 +40,9 @@ struct EntryRowView: View {
 
     /// "Set by <project>/.wormhole/config.json while one of its terminals is in front; yours is kept": the project of the
     /// terminal in front sets this row.
-    private var projectNote: String? {
+    private var projectNote: String? { Self.projectNote(entry, model) }
+
+    static func projectNote(_ entry: SettingsSchema.Entry, _ model: SettingsModel) -> String? {
         guard let project = model.host.panelRecords().project, project.entries.contains(entry.id) else { return nil }
         return project.note
     }
@@ -48,8 +50,11 @@ struct EntryRowView: View {
     /// The project that sets this row, as the tag after its label (the row keeps neither key nor menu then).
     private var projectChip: String? { projectNote == nil ? nil : model.host.panelRecords().project?.name }
 
+    private var caption: Caption? { Self.caption(entry, model) }
+
     /// What a row says under its label, and in place of it where GPUI's `describe` changes the label too (the permission row).
-    private var caption: Caption? {
+    /// The control folder's `settings-page` reads the same.
+    static func caption(_ entry: SettingsSchema.Entry, _ model: SettingsModel) -> Caption? {
         switch entry.id {
         case "profile-start": return Caption(model.profile.form?.startCaption)
         case "worktree-base": return Caption(model.host.worktreeCaption(base: model.value("worktree_base").string ?? ""))
@@ -65,7 +70,7 @@ struct EntryRowView: View {
         }
     }
 
-    private struct Caption {
+    struct Caption {
         let text: String
         var label: String?
 

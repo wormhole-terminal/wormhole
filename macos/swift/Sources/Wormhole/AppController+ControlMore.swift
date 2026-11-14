@@ -13,6 +13,7 @@ extension AppController {
         if await runPages(command: command, argument: argument) { return true }
         if runMenus(command: command, argument: argument) { return true }
         if runDrag(command: command, argument: argument) { return true }
+        if runReadouts(command: command, argument: argument) { return true }
         return false
     }
 }

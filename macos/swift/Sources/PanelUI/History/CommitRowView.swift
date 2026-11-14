@@ -46,6 +46,7 @@ struct CommitRowView: View {
             .frame(height: Metric.rowTwoLine)
         }
         .marked("commit.row")
+        .panelRowFrame("commit:\(commit.id)")
         .help(commit.subject)
         .accessibilityLabel("\(commit.subject), \(commit.short), \(commit.author)")
         .accessibilityValue(expanded ? panelText("panel-spoken-open", "open") : panelText("panel-spoken-folded", "folded"))
