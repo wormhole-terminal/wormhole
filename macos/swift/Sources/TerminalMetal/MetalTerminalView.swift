@@ -315,6 +315,10 @@ public final class MetalTerminalView: NSView {
     private func wakeOnMain() {
         statistics.wakes += 1
         link?.isPaused = false
+        // A window in the Dock gets no tick from its display link: what its program says meanwhile (a bell, a title, the
+        // request to come back out, XTWINOPS 1) is heard now, as the GPUI app hears a terminal it does not draw; the frame
+        // is drawn when the window is back.
+        if window?.isMiniaturized == true, handleEvents() { redrawRequested = true }
     }
 
     public func requestRedraw() {
