@@ -86,28 +86,39 @@ extension EndToEnd {
 
     @Test("a program's OSC 9 and 777 notices, a long command's finish and failure, and `Wormhole notify` are banners")
     @MainActor func programNotices() async throws {
-        try await Instance.with(shell: .zsh) { app in
+        // `Wormhole notify` at the end needs the Automation flag and agent access, as a person's config has them.
+        try await Instance.with(shell: .zsh, config: Self.access("open")) { app in
             await app.markPrompts()
-            let before = Listing(await app.reply("rows"))
-            guard let terminal = before.selected else { return app.fail("a terminal is selected") }
+            guard let terminal = Listing(await app.reply("rows")).selected else { return app.fail("a terminal is selected") }
+            // A terminal has one banner, which the next one about it replaces; and from the third banner within ten seconds
+            // on, the core posts one summary instead (`notify::Bursts`, `NOTIFY_BURST` 3 in `NOTIFY_BURST_WINDOW` 10 s, in
+            // the GPUI app too). So the banners come two at a time, a window apart.
+            let nextWindow = ["delay 10500"]
             await app.shell(#"printf '\e]9;hello-from-nine\a'"#)
             await app.until("notices") { $0.contains("hello-from-nine") }
             await app.shell(#"printf '\e]777;notify;Seven-Title;seven-body\a'"#)
             await app.until("notices") { $0.contains("Seven-Title: seven-body") }
-            // The same words again are a banner again.
+            await app.send(nextWindow, timeout: 30)
+            // The same words again are a banner again: another one takes their place first, then they are back.
+            await app.shell(#"printf '\e]9;in-between\a'"#)
+            await app.until("notices") { $0.contains("in-between") && !$0.contains("Seven-Title") }
             await app.shell(#"printf '\e]777;notify;Seven-Title;seven-body\a'"#)
-            await app.until("notices") { $0.components(separatedBy: "Seven-Title: seven-body").count == 3 }
+            await app.until("notices") { $0.contains("Seven-Title: seven-body") }
+            await app.send(nextWindow, timeout: 30)
 
-            // A command that runs longer than `notify_command_after` seconds says it finished, or failed, with its name.
-            await app.send(["set notify_command_after=2"])
-            await app.shell("/bin/sleep 3")
-            await app.until("notices", timeout: 30) { $0.contains("sleep") }
-            let finished = (await app.reply("notices")).components(separatedBy: "sleep").count
-            await app.shell("/bin/sleep 3; false")
-            await app.until("notices", timeout: 30) { $0.components(separatedBy: "sleep").count > finished }
+            // A command that runs longer than `notify_command_after` seconds (5, the least the setting takes) says it finished,
+            // or failed, with its name.
+            await app.send(["set notify_command_after=5", "set notify_command_done=true", "set notify_command_failed=true"])
+            await app.until("get notify_command_after") { $0.contains("5") }
+            await app.shell("/bin/sleep 6")
+            let finished = await app.until("notices", timeout: 30) { $0.contains("sleep") }
+            await app.shell("/bin/sleep 6; false")
+            await app.until("notices", timeout: 30) { $0.contains("sleep") && $0 != finished }
+            await app.send(nextWindow, timeout: 30)
 
             // `Wormhole notify` from inside the terminal: a banner in the caller's words; the row's state does not move.
-            let said = await app.reply("control --from \(terminal) notify --title Called-Title --body called-body")
+            let before = Listing(await app.reply("rows"))
+            let said = await app.reply("control --from \(terminal) notify --title Called-Title called-body")
             app.expect(!said.hasPrefix("error"), "the request was taken: \(said)")
             await app.until("notices") { $0.contains("Called-Title: called-body") }
             let after = Listing(await app.reply("rows"))
