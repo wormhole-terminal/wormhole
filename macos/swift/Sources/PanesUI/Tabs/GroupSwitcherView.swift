@@ -1,7 +1,8 @@
 // The popover the group switcher opens (RF-02 b): a search field ("Go to group or terminal…"), the groups
 // as folded cards (their tiles and count on the group's wash, the open one ringed, a pinned empty one saying "No terminals"),
 // "Ungrouped" with its count, New group and "Show all groups in the sidebar". Typing lists the groups and
-// terminals that match and ↩ goes to the first.
+// terminals that match and ↩ goes to the first. The rows and the two footer buttons are the shared `Row`: a hover fill
+// under the pointer, as GPUI's `popover_row`.
 
 import DesignSystem
 import PanesModel
@@ -14,6 +15,7 @@ struct GroupSwitcherView: View {
     let dismiss: () -> Void
     @State private var query = ""
     @FocusState private var searching: Bool
+    @Namespace private var rows
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -60,11 +62,10 @@ struct GroupSwitcherView: View {
     }
 
     private func footerButton(_ symbol: String, _ label: String, _ run: @escaping () -> Void) -> some View {
-        Button(action: run) {
+        Row(selection: rows, action: run) { _ in
             Label(label, systemImage: symbol).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: Metric.row, alignment: .leading).contentShape(Rectangle())
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .buttonStyle(.plain).padding(.horizontal, Space._2)
     }
 
     private func hitRow(_ hit: TabSets.Hit) -> some View {
@@ -73,16 +74,14 @@ struct GroupSwitcherView: View {
             case .set(let at): (model.sets[at].label, PanesText.groupNote(count: model.sets[at].members.count))
             case .terminal(let id, let at): (model.names[id] ?? "", model.sets[at].label)
             }
-        return Button { go(hit) } label: {
+        return Row(selection: rows, action: { go(hit) }) { _ in
             HStack {
                 hitMark(hit)
                 Text(label).font(tokens.font(.body)).foregroundStyle(tokens.textPrimary)
                 Spacer(minLength: Space._2)
                 Text(note).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted)
             }
-            .frame(minHeight: Metric.row).padding(.horizontal, Space._2).contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
     }
 
     /// A terminal's own tile before its name, a group's colour dot before its (`switcher.rs`).

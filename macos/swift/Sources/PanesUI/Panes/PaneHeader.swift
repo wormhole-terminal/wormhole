@@ -68,14 +68,9 @@ struct PaneHeader<Menu: View>: View {
                    label: zoomed ? PanesText.unzoom : PanesText.zoom, key: zoomKey, action: zoom)
     }
 
+    /// The pane menu (`icon_button(...).in_row()` with a menu): the shared button's face and hover round the menu.
     private var moreButton: some View {
-        SwiftUI.Menu(content: menu) {
-            Image(systemName: "ellipsis").font(.system(size: PaneMetrics.glyph))
-                .frame(width: PaneMetrics.button, height: PaneMetrics.button)
-        }
-        .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
-        .foregroundStyle(tokens.textMuted)
-        .help(PanesText.paneMenu).accessibilityLabel(PanesText.paneMenu)
+        IconMenuButton(symbol: "ellipsis", label: PanesText.paneMenu, items: menu).inRow()
     }
 
     private var closeButton: some View { PaneButton(symbol: "xmark", label: PanesText.closePane, key: closeKey, action: close) }

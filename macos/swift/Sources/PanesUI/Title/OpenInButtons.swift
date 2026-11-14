@@ -1,5 +1,6 @@
 // Open in…: a button with the chosen app's icon that opens the terminal's folder in it, and a narrow chevron
-// beside it that lists the other apps found on this Mac with the chosen one checked (`render_title_buttons`).
+// beside it that lists the other apps found on this Mac with the chosen one checked (`render_title_buttons`: the shared
+// button `narrow(CHEVRON_W)` with `menu_chevron`).
 
 import AppKit
 import DesignSystem
@@ -10,10 +11,6 @@ struct OpenInButtons: View {
     let folder: String
     let backend: any OpenInBackend
     let icon: (OpenInApp) -> NSImage?
-    @Environment(\.tokens) private var tokens
-    @State private var hovering = false
-    /// The chevron points up while its menu is open: AppKit says a menu is tracked, and the pointer over the chevron says whose.
-    @State private var menuOpen = false
 
     var body: some View {
         let open = OpenInMenu(folder: folder, backend: backend), choice = open.choice
@@ -21,7 +18,7 @@ struct OpenInButtons: View {
             // An app's own icon keeps its colours and has no motion of the glyph's (`with_drawing`).
             IconButton(label: tooltip(choice), action: open.click) { _ in AppIcon(app: choice.app, image: icon(choice.app), size: Metric.titleGlyph) }
                 .inTitleRow()
-            Menu {
+            IconMenuButton(lucide: .chevronDown, label: PanesText.openInAnother) {
                 Section(PanesText.openFolderIn) {
                     ForEach(open.items, id: \.app.bundle) { item in
                         Toggle(isOn: Binding(get: { item.checked }, set: { _ in open.pick(item.app) })) {
@@ -29,18 +26,10 @@ struct OpenInButtons: View {
                         }
                     }
                 }
-            } label: {
-                Image(systemName: "chevron.down").font(.system(size: Metric.chevron, weight: .semibold))
-                    .frame(width: TitleMetrics.chevronWidth, height: Metric.titleControl)
-                    .foregroundStyle(tokens.textMuted)
-                    .menuChevron(open: menuOpen)
             }
-            .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden)
-            .onHover { hovering = $0 }
-            .onReceive(NotificationCenter.default.publisher(for: NSMenu.didBeginTrackingNotification)) { _ in if hovering { menuOpen = true } }
-            .onReceive(NotificationCenter.default.publisher(for: NSMenu.didEndTrackingNotification)) { _ in menuOpen = false }
+            .narrow(TitleMetrics.chevronWidth)
+            .chevron()
             .frame(width: TitleMetrics.chevronWidth + TitleMetrics.afterChevron, alignment: .leading)
-            .help(PanesText.openInAnother).accessibilityLabel(PanesText.openInAnother)
         }
     }
 

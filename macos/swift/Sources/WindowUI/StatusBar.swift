@@ -147,7 +147,8 @@ struct StatusBar: View {
     }
 }
 
-/// An item of the bar: its metrics (22 pt tall, 4 round the text), the hover wash and the pressed one.
+/// An item of the bar: its metrics (22 pt tall, 4 round the text), the hover wash and the pressed one. It takes clicks across
+/// the bar's whole height (22 drawn, 28 hit: `status_item`) while laid out, and ringed, at its face's.
 private struct StatusItemStyle: ButtonStyle {
     /// A fill the item wears at rest: the needs-you button's attention tint.
     var tint: Color = .clear
@@ -166,9 +167,14 @@ private struct StatusItemStyle: ButtonStyle {
                 configuration.isPressed || hovering ? hover ?? colours.bandHover : tint,
                 in: RoundedRectangle(cornerRadius: radius ?? colours.radius)
             )
-            .onHover { hovering = $0 }
+            .padding(.vertical, Self.overhang)
             .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            .padding(.vertical, -Self.overhang)
     }
+
+    /// How far the hit reaches above and below the face: the rest of the bar's height.
+    private static var overhang: CGFloat { (Metric.statusBar - Chrome.statusItem) / 2 }
 }
 
 /// "needs input · 2m": the words move with time, so a one-shot timer, armed for the moment they next read differently,

@@ -12,7 +12,7 @@ extension RGBA {
     }
 
     /// WCAG contrast ratio, 1...21, symmetric. Alpha is ignored, so composite translucent colours with `over` first.
-    static func contrast(_ a: RGBA, _ b: RGBA) -> Double {
+    public static func contrast(_ a: RGBA, _ b: RGBA) -> Double {
         let (la, lb) = (a.luminance, b.luminance)
         return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
     }

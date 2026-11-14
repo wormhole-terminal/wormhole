@@ -50,7 +50,8 @@ public struct IconButton<Glyph: View>: View {
     /// This button as a toggle that is on while `on`: it takes the selected tint and says so to VoiceOver.
     public func selected(_ on: Bool) -> Self { with { $0.isSelected = on } }
 
-    /// A real toggle (the find bar's options): VoiceOver hears a toggle, on or off, where `selected` is a state of a button.
+    /// A real toggle (the find bar's options): VoiceOver hears AppKit's toggle button with its value, on or off (the role
+    /// `Toggle` with `.button` style has: a checkbox that is a toggle), where `selected` is a state of a button.
     public func toggled(_ on: Bool) -> Self { with { ($0.isSelected, $0.isToggle) = (on, true) } }
 
     /// The title rows' 24 pt face with a 16 pt glyph (`in_title_row`).
@@ -98,7 +99,33 @@ public struct IconButton<Glyph: View>: View {
         .onHover { hovering = $0 }
         .tooltipName(label, spoken: spokenName)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityAddTraits(isToggle ? .isToggle : [])
+        .modifier(ToggleSpeech(on: isToggle ? isSelected : nil, tooltip: label, spoken: spokenName) {
+            run.start()
+            action()
+        })
+    }
+}
+
+/// A toggle's accessibility: a real `Toggle` stands in for the button, so VoiceOver hears the toggle's role and its value
+/// ("Match case, off, toggle button") and Press flips it, as the find bar's options were before they were drawn.
+private struct ToggleSpeech: ViewModifier {
+    /// The toggle's state; nil leaves a plain button alone.
+    let on: Bool?
+    let tooltip: String
+    let spoken: String?
+    let flip: () -> Void
+
+    func body(content: Content) -> some View {
+        if let on {
+            let split = SpokenName.split(tooltip)
+            content.accessibilityRepresentation {
+                Toggle(isOn: Binding(get: { on }, set: { _ in flip() })) { Text(spoken ?? split.words) }
+                    .toggleStyle(.button)
+                    .accessibilityHint(split.key.map(KeyCapSpeech.words) ?? "")
+            }
+        } else {
+            content
+        }
     }
 }
 
@@ -185,10 +212,12 @@ private struct ActiveDot: View {
     }
 }
 
-/// `buttons.rs`: `MARK_INSET`, `MARK_RING`; `scale.rs`: `MARK_DOT`, `FOCUS_RING_OFFSET`.
+/// `buttons.rs`: `MARK_INSET`, `MARK_RING`, `NARROW_GLYPH` (a menu's chevron beside a button); `scale.rs`: `MARK_DOT`,
+/// `FOCUS_RING_OFFSET`.
 enum IconButtonMark {
     static let inset: CGFloat = 5
     static let ring: CGFloat = 2
     static let dot: CGFloat = 6
     static let ringOffset: CGFloat = 1
+    static let narrowGlyph: CGFloat = 12
 }
