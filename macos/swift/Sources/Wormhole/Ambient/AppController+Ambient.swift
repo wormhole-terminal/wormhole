@@ -18,7 +18,7 @@ extension AppController {
             hub.send(.newTerminal)
         case .newWindow: openNewWindow()
         case .openTab(let tab): show(terminal: Int(tab))
-        case .reply(let tab, let text): session(holding: Int(tab))?.hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
+        case .reply(let tab, let text): typeReply(text, into: tab)
         case .jumpToWaiting: jump(toWaiting: true)
         case .openSettings: showSettings()
         case .checkForUpdates: aux.showUpdates()

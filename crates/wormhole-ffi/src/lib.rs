@@ -82,6 +82,7 @@ mod workspace_feed;
 mod workspace_git;
 mod workspace_notices;
 mod workspace_pump;
+mod workspace_reply;
 mod workspace_spoken;
 mod workspace_tabs;
 mod workspace_texts;

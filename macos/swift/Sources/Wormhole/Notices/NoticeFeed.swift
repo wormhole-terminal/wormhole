@@ -154,8 +154,7 @@
                 show(terminal: Int(tab))
                 session(holding: Int(tab))?.hub.send(.showPanelTab(.changes))
                 NSApp.activate()
-            case .reply(let tab, let text):
-                session(holding: Int(tab))?.hub.terminals.existing(Int(tab))?.source.write(Data((text + "\r").utf8))
+            case .reply(let tab, let text): typeReply(text, into: tab)
             }
         }
     }
