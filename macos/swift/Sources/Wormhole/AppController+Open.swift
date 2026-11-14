@@ -36,6 +36,7 @@ extension AppController {
             try devctl.start()
             self.devctl = devctl
             installGroupAsker()
+            installStudioAsker()
         }
         if options.onboarding || aux.isFirstRun { aux.showFirstRun() }
         openWhatSystemAsked()

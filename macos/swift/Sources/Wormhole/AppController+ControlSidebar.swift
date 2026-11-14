@@ -11,6 +11,7 @@ import PanelModel
 import PlatformModel
 import PlatformUI
 import SidebarUI
+import StudioUI
 import WorkspaceModel
 
 extension AppController {
@@ -54,6 +55,23 @@ extension AppController {
             case .confirm: return .use(onlyInFolder: false)
             case .also(let place): return place == 0 ? .use(onlyInFolder: true) : .decline
             case .cancel: return .decline
+            }
+        }
+    }
+
+    /// The Studio's own questions (save over a file, unsaved edits, the Trash) are held for `question` too: left as the
+    /// system's sheets they stayed up on the Studio's window with nothing to answer them, and the instance could not quit.
+    /// The first button confirms, the last backs out, the ones between are `also`.
+    func installStudioAsker() {
+        guard PendingQuestions.current != nil else { return }
+        StudioQuestions.asker = { title, detail, buttons in
+            let question = Question(
+                title: title, detail: detail, confirm: buttons.first ?? "", alsoButtons: Array(buttons.dropFirst().dropLast()),
+                cancel: buttons.count > 1 ? buttons[buttons.count - 1] : "")
+            switch await QuestionSheet(question).ask(in: nil) {
+            case .confirm: return 0
+            case .also(let place): return place + 1
+            case .cancel: return max(0, buttons.count - 1)
             }
         }
     }

@@ -5,8 +5,12 @@
 import AppKit
 
 @MainActor
-enum StudioQuestions {
+public enum StudioQuestions {
     enum Answer { case save, discard, cancel }
+
+    /// What asks instead of the system's sheet: a test instance holds the question for its control folder (`question`), as it
+    /// holds every other. Given the question's words and its buttons in order, it answers the place of the one pressed.
+    public static var asker: (@MainActor (_ title: String, _ detail: String, _ buttons: [String]) async -> Int)?
 
     /// "Do you want to save the changes to “name”?": Save, Don't Save, Cancel.
     static func unsaved(name: String, changes: Int, opening next: String? = nil, on window: NSWindow?) async -> Answer {
@@ -55,6 +59,10 @@ enum StudioQuestions {
     }
 
     private static func run(_ alert: NSAlert, on window: NSWindow?) async -> NSApplication.ModalResponse {
+        if let asker {
+            let place = await asker(alert.messageText, alert.informativeText, alert.buttons.map(\.title))
+            return NSApplication.ModalResponse(rawValue: NSApplication.ModalResponse.alertFirstButtonReturn.rawValue + place)
+        }
         guard let window else { return alert.runModal() }
         return await alert.beginSheetModal(for: window)
     }
