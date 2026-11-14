@@ -4,6 +4,7 @@
 
 import AppKit
 import CoreText
+import DesignSystem
 import SwiftUI
 
 public enum FontFace {
@@ -16,12 +17,6 @@ public enum FontFace {
         }
         guard !ligatures else { return Font(font) }
         // As the terminal does (`ligature_features`): `calt` and `liga` off.
-        let off = CTFontDescriptorCreateWithAttributes(
-            [
-                kCTFontFeatureSettingsAttribute: ["calt", "liga"].map {
-                    [kCTFontOpenTypeFeatureTag: $0, kCTFontOpenTypeFeatureValue: 0] as [CFString: Any]
-                }
-            ] as CFDictionary)
-        return Font(CTFontCreateCopyWithAttributes(font, size, nil, off))
+        return Font(font.withoutLigatures())
     }
 }

@@ -116,4 +116,16 @@ extension CTFont {
         let font = CTFontCreateWithName(family as CFString, size, nil)
         return CTFontCopyFamilyName(font) as String == family ? font : nil
     }
+
+    /// The face with ligatures off, as core's `ligature_features` turns them off (`fonts.rs:210`): programming fonts join
+    /// `=>` and `!=` through contextual alternates (`calt`), others through standard ligatures (`liga`).
+    public func withoutLigatures() -> CTFont {
+        let off = CTFontDescriptorCreateWithAttributes(
+            [
+                kCTFontFeatureSettingsAttribute: ["calt", "liga"].map {
+                    [kCTFontOpenTypeFeatureTag: $0, kCTFontOpenTypeFeatureValue: 0] as [CFString: Any]
+                }
+            ] as CFDictionary)
+        return CTFontCreateCopyWithAttributes(self, CTFontGetSize(self), nil, off)
+    }
 }

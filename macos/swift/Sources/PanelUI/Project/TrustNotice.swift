@@ -59,7 +59,7 @@ struct TrustLines: View {
         VStack(alignment: .leading, spacing: Space._1) {
             ForEach(Array(lines.enumerated()), id: \.offset) { _, line in Text(attributed(line)).fixedSize(horizontal: false, vertical: true) }
         }
-        .font(codeFont.font(tokens.size(.caption)))
+        .font(codeFont.lineFont(tokens.size(.caption)))
         .padding(Space._2).frame(maxWidth: .infinity, alignment: .leading)
         .background(tokens.stateHover, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
         .textSelection(.enabled)

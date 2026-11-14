@@ -83,7 +83,7 @@ final class ProfileLook {
         LookSettings.apply(
             values, to: look, changed: changed, keepsStatusBar: app.options.statusBar, automation: featureOn("automation"),
             motion: featureOn("motion"))
-        if changed("code_font_family", "code_font_size", "font_family") || fontsMoved {
+        if changed("code_font_family", "code_font_size", "font_family", "font_ligatures") || fontsMoved {
             LookSettings.applyCodeFont(values, folderRevision: folder.revision, to: look)
         }
         // Agent access settles in this profile too (a file edit of its `config.json` is its own event).

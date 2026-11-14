@@ -21,7 +21,7 @@ struct GitProblemView: View {
             if let hint = problem.hint {
                 Text(hint).font(tokens.font(.caption)).foregroundStyle(tokens.textMuted).padding(.horizontal, Space._3)
             }
-            Text(problem.detail).font(codeFont.font(tokens.size(.caption))).foregroundStyle(tokens.textMuted)
+            Text(problem.detail).font(codeFont.lineFont(tokens.size(.caption))).foregroundStyle(tokens.textMuted)
                 .textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(Space._2)
                 .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
                 .padding(.horizontal, Space._3)

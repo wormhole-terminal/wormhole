@@ -81,7 +81,7 @@ final class SettingsApplier {
             app.hooks?.settingsChanged(profile: app.windowsHost.profile)
             app.menus?.windowsChanged()
         }
-        if changed("code_font_family", "code_font_size", "font_family") || fontsMoved {
+        if changed("code_font_family", "code_font_size", "font_family", "font_ligatures") || fontsMoved {
             LookSettings.applyCodeFont(values, folderRevision: folder.revision, to: app.look)
         }
         if changed(
