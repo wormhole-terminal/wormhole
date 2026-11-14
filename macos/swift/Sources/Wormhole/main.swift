@@ -8,12 +8,13 @@ import Foundation
 
 #if WITH_UNIFFI
     // The agents' hook scripts and a terminal's own `wh` run this executable (`$WORMHOLE_BIN hook …`): a command line is
-    // answered before anything of an app is set up. The app's own options (`--shell`, `--background`) start with a dash;
-    // the core would call them unknown commands. `--json` first is the core's too (GPUI hands it over, which answers
-    // "unknown command", exit 2), not a launch.
-    if let first = CommandLine.arguments.dropFirst().first, !first.hasPrefix("-") || first == "--json", let code = HookBridge.exitCodeIfCommandLine() {
-        exit(code)
-    }
+    // answered before anything of an app is set up. Which first word is a command line is the core's to say, as GPUI's
+    // `main.rs:63` asks it (`ipc::command`): `wh --help` and `wh -h` are the control line's usage there, not this app's.
+    // A word without a dash is always the core's (a verb, or an unknown command it refuses with exit 2); one with a dash
+    // that the core does not know is one of this app's own launch options (`--shell`, `--background`), which GPUI does
+    // not have, or a mistake `Options.parse` refuses with exit 2 as well (`--json` or `--version` first: never a launch).
+    let isCommandLine = CommandLine.arguments.dropFirst().first.map { !$0.hasPrefix("-") || HookBridge.isCommandLine() } ?? false
+    if isCommandLine, let code = HookBridge.exitCodeIfCommandLine() { exit(code) }
 #endif
 
 let arguments = Array(CommandLine.arguments.dropFirst())

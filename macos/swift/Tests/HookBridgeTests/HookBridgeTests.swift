@@ -70,6 +70,18 @@ final class HookBridgeTests: XCTestCase {
         XCTAssertEqual(HookBridge.exitCodeIfCommandLine(["Wormhole", "no-such-command"]), 2)
     }
 
+    /// `wh --help` is `exec <binary> --help`: the control line's usage (core `ipc/control/cli/mod.rs:82`), not the app's
+    /// launch options, which are the dashed words the core does not know.
+    func testAskingForTheUsageWithADashIsTheCoresAndALaunchOptionIsTheApps() {
+        for word in ["--help", "-h", "help", "list"] {
+            XCTAssertTrue(HookBridge.isCommandLine(["Wormhole", word]), word)
+        }
+        XCTAssertEqual(HookBridge.exitCodeIfCommandLine(["Wormhole", "--help"]), 0)
+        for words in [["Wormhole"], ["Wormhole", "--shell", "/bin/cat"], ["Wormhole", "--background"], ["Wormhole", "--version"], ["Wormhole", "--json", "list"]] {
+            XCTAssertFalse(HookBridge.isCommandLine(words), words.joined(separator: " "))
+        }
+    }
+
     func testTheShippedCommandLineTalksToTheSwiftApp() throws {
         let (workspace, handle) = try makeServer()
         defer { handle.stop() }

@@ -268,3 +268,12 @@ pub fn cli_exit_code(arguments: Vec<String>) -> Option<i32> {
         ipc::Command::App => None,
     }
 }
+
+/// Whether the command line is one the core answers itself (`ipc::command`: `hook`, `statusline`, `welcome`, a
+/// control verb, a leading `--help` or `-h` among them), which [`cli_exit_code`] then runs. The Swift app's
+/// `main` asks for a first word that starts with a dash, where its own launch options (`--shell`,
+/// `--background`) are: the core does not know those, and they start the app.
+#[uniffi::export]
+pub fn cli_is_command(arguments: Vec<String>) -> bool {
+    !matches!(ipc::command(&arguments), ipc::Command::App | ipc::Command::Unknown(_))
+}

@@ -141,7 +141,7 @@ pub use git::{
 };
 pub use hook_server::{
     HookError, HookEvent, HookListener, HookServer, WelcomeDemoRow, WelcomeDemoState, WelcomeDock,
-    WelcomePlan, cli_exit_code, welcome_demo_label, welcome_demo_next_ms, welcome_demo_rows,
+    WelcomePlan, cli_exit_code, cli_is_command, welcome_demo_label, welcome_demo_next_ms, welcome_demo_rows,
     welcome_demo_title, welcome_dock,
 };
 pub use hosting::{
