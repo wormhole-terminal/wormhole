@@ -149,7 +149,14 @@ impl AccessDesk {
             let previous = change.previous;
             crate::settings::live::update(&self.profile, |settings| settings.agent_access = previous);
         }
-        locked(&self.modes).answered(token, keep);
+        if locked(&self.modes).answered(token, keep).is_none() {
+            return;
+        }
+        // Kept, and it is Allowed while open: there is nothing left to ask, so what waits is let in, as the GPUI app's
+        // next tick does (`agent_access/ask.rs:434-443`).
+        if keep && change.requested == AgentAccess::Open {
+            self.settle_questions(Some(AgentAccess::Open));
+        }
         self.waker.notify();
     }
 

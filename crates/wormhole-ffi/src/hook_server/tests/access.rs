@@ -205,6 +205,40 @@ fn a_mode_narrowed_by_hand_while_automation_is_off_is_not_widened_back_unasked()
     assert!(f.desk.next_mode_question().is_some(), "the person is asked about Open");
 }
 
+/// Order: the file is widened Ask to Open outside; a program asks, and its question queues behind the one about the
+/// mode; the person clicks Keep. Allowed while open leaves nothing to ask: the program is let in.
+#[test]
+fn keeping_allowed_while_open_lets_in_what_waited() {
+    let f = fixture("ask");
+    let id = f.terminal();
+    edit_mode_outside(&f, "open");
+    let change = f.desk.next_mode_question().expect("the question about the change");
+    let mut client = f.client();
+    client.send(&json!({
+        "kind": "control", "version": 1, "ask": true,
+        "action": "send_text", "target": {"kind": "terminal", "id": id}, "text": "kept"
+    }));
+    eventually("the program's question", || f.desk.waiting() == 1);
+    f.desk.answer_mode(change.token, true);
+    let reply = client.line().expect("the answer");
+    assert_eq!(reply["ok"], true, "{reply}");
+    assert_eq!(f.desk.waiting(), 0, "nothing is left to ask");
+}
+
+/// Order: a program writes Open and asks, so the seat has read the file a moment ago; the person says Don't Keep,
+/// which puts the earlier mode back; the program asks again within that moment. The question does not come back.
+#[test]
+fn a_request_right_after_dont_keep_does_not_raise_the_question_again() {
+    let f = fixture("off");
+    let id = f.terminal();
+    edit_mode_outside(&f, "open");
+    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off", "held back");
+    let change = f.desk.next_mode_question().expect("the question about the change");
+    f.desk.answer_mode(change.token, false);
+    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off");
+    assert!(f.desk.next_mode_question().is_none(), "the file holds Off: nothing was widened");
+}
+
 /// Order: the Settings window has read the widened file; the person says Don't Keep; before that window has read
 /// the file again they change another setting in it. Both stand: the earlier mode and the other setting.
 #[test]
