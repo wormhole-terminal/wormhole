@@ -71,10 +71,10 @@ struct StatusBar: View {
                         }
                     }
                 }
-                .buttonStyle(StatusItemStyle(tint: colours.attentionTint))
+                .buttonStyle(StatusItemStyle(tint: colours.attentionTint, hover: colours.attentionHover, radius: colours.radiusChip))
                 .accessibilityLabel(waiting.since.flatMap { spokenAttention(waiting.title, $0) } ?? waiting.title)
                 .help(summary.attentionTooltip(jumpKey: Keymap.shared.key(.goToWaiting)?.glyphText) ?? "")
-                .focusRing(focus.ring(.statusBar, 0), radius: colours.radius)
+                .focusRing(focus.ring(.statusBar, 0), radius: colours.radiusChip)
             }
             HStack(spacing: 0) {
                 ForEach(Array(summary.rest.enumerated()), id: \.element.id) { index, count in
@@ -151,6 +151,10 @@ struct StatusBar: View {
 private struct StatusItemStyle: ButtonStyle {
     /// A fill the item wears at rest: the needs-you button's attention tint.
     var tint: Color = .clear
+    /// Its fill under the pointer and while pressed, where it is not the bar's `band.hover` (the needs-you button's
+    /// attention ring at 30 %), and its corners where they are not the control's (that button is a chip: `status_attention`).
+    var hover: Color?
+    var radius: CGFloat?
     @State private var hovering = false
     @Environment(\.chrome) private var colours
 
@@ -159,8 +163,8 @@ private struct StatusItemStyle: ButtonStyle {
             .padding(.horizontal, Chrome.itemPad)
             .frame(height: Chrome.statusItem)
             .background(
-                configuration.isPressed || hovering ? colours.bandHover : tint,
-                in: RoundedRectangle(cornerRadius: colours.radius)
+                configuration.isPressed || hovering ? hover ?? colours.bandHover : tint,
+                in: RoundedRectangle(cornerRadius: radius ?? colours.radius)
             )
             .onHover { hovering = $0 }
             .contentShape(Rectangle())

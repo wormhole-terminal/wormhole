@@ -36,6 +36,8 @@ struct ChromeColours {
     var dangerText: Color { tokens.statusDangerText }
     /// `agent.attention.tint`: the fill of the status bar's button for the terminal that needs you.
     var attentionTint: Color { tokens.agentAttentionTint }
+    /// The needs-you button under the pointer: the attention ring at `ATTENTION_HOVER` (30 %, `style/status.rs`).
+    var attentionHover: Color { tokens.agentAttentionRing.opacity(0.3) }
     var tooltip: Color { tokens.tooltipBackground }
     var tooltipText: Color { tokens.tooltipText }
     var primary: Color { tokens.primary }

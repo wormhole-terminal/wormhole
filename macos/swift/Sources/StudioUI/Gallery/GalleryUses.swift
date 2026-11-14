@@ -32,7 +32,7 @@ enum GalleryUses {
         ]),
         TokenUse(id: "status.bar", label: "status bar", area: .sidebar, tokens: [
             "agent.attention.text", "agent.attention.tint", "band.hover", "border", "metrics.border_width",
-            "metrics.radius", "primary", "sidebar.background", "text.faint", "text.muted",
+            "metrics.radius", "metrics.radius_chip", "primary", "sidebar.background", "text.faint", "text.muted",
         ]),
         TokenUse(id: "folder.color", label: "folder colour", area: .sidebar, tokens: [
             "band.hover", "border", "border.strong", "metrics.border_width", "metrics.radius", "metrics.radius_sm",
