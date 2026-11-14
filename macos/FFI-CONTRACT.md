@@ -1488,6 +1488,14 @@ All additive; the core decides, Swift asks.
 - `Workspace.tab_labels(ids) -> [String]`: what VoiceOver hears for each of `ids`, the tabs of one set in the bar's order, in core's
   words (`view::sidebar::spoken::tab_label`: name, state, "selected", "n of m"). Always as long as `ids`; a terminal the window no
   longer has gets an empty label. Another profile's settings need no new call: `SettingsHandle.open(profile:)` is opened per profile.
+- Wave 8: `Workspace.tab_sets() -> TabSetsView { sets: [TabSetView { group?, label, members, alert? }], current?, others_alert? }`:
+  the bar's sets as the core lists them (`tab_sets` over its own listing, folded groups with all their terminals, the loose ones
+  last with `group` nil and the English "Ungrouped", which the window words), the selected terminal's set, each set's loudest alert
+  and the closed switcher's dot (`others_need_you`). `status_counts` also says how many of those who need input the tooltip names
+  and how many it counts (`named`, `more`: `Summary::needs_you_named`).
+- Wave 8, persistent terminals: `HostedTerminals.finish(endHosts)` is the desk's quit (no process-wide flag): a start or an attach
+  that ends after it lets go of its host, or ends it with `endHosts`, which also waits (6 s at most) for those still under way
+  before it ends every live host of the folder.
 
 
 ## Wave 5, syntax colours (`syntax/`, `git/colors.rs`, additive but one field)
