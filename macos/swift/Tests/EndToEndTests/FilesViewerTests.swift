@@ -33,9 +33,11 @@ extension EndToEnd {
         return Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] + chunk("IHDR", header) + chunk("IEND", []))
     }
 
-    /// A real picture `width` wide, as ImageIO writes a PNG.
-    static func realPNG(width: Int, height: Int) -> Data? {
-        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+    /// A real picture `width` wide, as ImageIO writes a PNG (`gray`: one flat channel, which keeps a very large one small).
+    static func realPNG(width: Int, height: Int, gray: Bool = false) -> Data? {
+        let space = gray ? CGColorSpaceCreateDeviceGray() : CGColorSpaceCreateDeviceRGB()
+        let alpha = gray ? CGImageAlphaInfo.none : CGImageAlphaInfo.premultipliedLast
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: space, bitmapInfo: alpha.rawValue),
             let image = { context.setFillColor(red: 0.2, green: 0.4, blue: 0.8, alpha: 1); context.fill(CGRect(x: 0, y: 0, width: width, height: height)); return context.makeImage() }()
         else { return nil }
         let out = NSMutableData()
@@ -59,11 +61,15 @@ extension EndToEnd {
         }
     }
 
-    @Test("a large picture is drawn at most 4,096 px; one declaring 60000 x 60000 is too large; a broken one can't be shown (245)")
+    @Test("a large picture is drawn at most 4,096 px; one over a hundred million pixels is too large; a broken one can't be shown (245)")
     @MainActor func viewerPictures() async throws {
         try await Instance.with { app in
             let repo = try app.scratch.repository("pics-repo")
-            try Self.declaredPNG(width: 60_000, height: 60_000).write(to: repo.appendingPathComponent("huge.png"))
+            // The size is read from the header ImageIO accepts, so the picture is a real one, as in the GPUI app's own test
+            // (`platform/macos/image/tests.rs`): 100,010,000 pixels of one grey. A header alone is no picture to ImageIO.
+            let large = try #require(Self.realPNG(width: 10_001, height: 10_000, gray: true))
+            try large.write(to: repo.appendingPathComponent("huge.png"))
+            try Self.declaredPNG(width: 60_000, height: 60_000).write(to: repo.appendingPathComponent("declared.png"))
             try Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4]).write(to: repo.appendingPathComponent("broken.png"))
             if let wide = Self.realPNG(width: 5_000, height: 40) { try wide.write(to: repo.appendingPathComponent("wide.png")) }
             await app.terminal(in: repo)
@@ -74,6 +80,8 @@ extension EndToEnd {
             app.expect(huge.all("button").count == 2, "with Open in… and Reveal:\n\(huge.text)")
             let broken = await Self.viewer(app, "broken.png") { $0.first("note")?.label != "Reading…" }
             app.expect(broken.first("note")?.label.contains("can't be shown") == true || broken.first("files-viewer")?["kind"] == "binary", "not shown:\n\(broken.text)")
+            let declared = await Self.viewer(app, "declared.png") { $0.first("note")?.label != "Reading…" }
+            app.expect(declared.first("note")?.label.contains("can't be shown") == true && declared.first("picture") == nil, "a header alone is not drawn:\n\(declared.text)")
             let wide = await Self.viewer(app, "wide.png") { $0.first("picture") != nil }
             app.expect(Int(wide.first("picture")?["width"] ?? "") ?? 0 <= 4_096, "scaled down:\n\(wide.text)")
         }
