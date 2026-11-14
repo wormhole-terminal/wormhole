@@ -25,6 +25,8 @@ final class Instance {
     private let shell: Shell
     private let label: String
     private let program: URL
+    /// The session host the app is given (`Scratch.giveHosts`), nil for a run whose terminals stay in the app.
+    private var host: URL?
     private var process: Process?
     private let ended = Ending()
     private var batches = 0
@@ -47,12 +49,27 @@ final class Instance {
         return candidates.first { files.isExecutableFile(atPath: $0.path) }
     }
 
+    /// The built session host: `$WORMHOLE_E2E_HOST`, else the debug build in the bridge's own target folder, where the
+    /// workflow's "Session host for the hosting tests" puts it (`cargo build -p wormhole-host`).
+    nonisolated static func hostProgram() -> URL? {
+        let files = FileManager.default
+        if let path = ProcessInfo.processInfo.environment["WORMHOLE_E2E_HOST"], files.isExecutableFile(atPath: path) { return URL(fileURLWithPath: path) }
+        let package = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let built = package.appendingPathComponent("../../crates/wormhole-ffi/target/debug/wormhole-host").standardizedFileURL
+        return files.isExecutableFile(atPath: built.path) ? built : nil
+    }
+
     /// Starts an instance, runs `body`, and ends the instance and removes its scratch folder, whatever `body` does.
+    /// `hosts`: Persistent terminals on, with the built session host (`hostProgram`).
     static func with(
-        shell: Shell = .cat, label: String = #function, _ body: @MainActor (Instance) async throws -> Void
+        shell: Shell = .cat, hosts: Bool = false, label: String = #function, _ body: @MainActor (Instance) async throws -> Void
     ) async throws {
         guard let program = executable() else { throw ScratchError(description: "the Wormhole app is not built") }
         let app = Instance(scratch: try Scratch(), shell: shell, label: label, program: program)
+        if hosts {
+            guard let built = hostProgram() else { throw ScratchError(description: "no session host is built: cargo build -p wormhole-host") }
+            app.host = try app.scratch.giveHosts(from: built)
+        }
         do {
             try await app.start()
             try await body(app)
@@ -85,6 +102,7 @@ final class Instance {
         environment["WORMHOLE_BACKGROUND"] = "1"
         environment["WORMHOLE_AGENT_HOME"] = scratch.agentHome.path
         environment["WORMHOLE_AGENT_PATH"] = ""
+        if let host { environment["WORMHOLE_HOST_BIN"] = host.path }
         return environment
     }
 
@@ -106,7 +124,8 @@ final class Instance {
         try await start()
     }
 
-    private func quit(command: String) async {
+    /// Sends `quit`, `quit-keep` or `quit-end-all` and waits until the app has ended (by its pid when it does not).
+    func quit(command: String) async {
         guard let process, !ended.isDone else { return }
         // Staged and renamed, as every batch is: the app takes `cmd` the moment it appears, and an empty one is a lost command.
         let staged = scratch.control.appendingPathComponent("cmd.tmp")
@@ -120,13 +139,14 @@ final class Instance {
         _ = await waitForExit(timeout: 10)
     }
 
-    /// Ends the app (and any session host: End All Terminals), keeps a failure's files, removes the scratch folder.
+    /// Ends the app (and any session host: End All Terminals), checks that no host of its folder runs on, keeps a failure's
+    /// files, removes the scratch folder.
     func finish() async {
-        if !ended.isDone {
-            let hosts = (await send(["hosts-list"])).first ?? ""
-            expect(hosts.contains("no hosts"), "a session host was left running:\n\(hosts)")
-            await quit(command: "quit-end-all")
-        }
+        if !ended.isDone { await quit(command: "quit-end-all") }
+        let left = await hostsLeft()
+        expect(left.isEmpty, "a session host was left running after Quit and End All: \(left.keys.sorted())")
+        // Never left behind by a failed run: the hosts it started end with it.
+        for pid in left.values { kill(pid, SIGTERM) }
         if failed { scratch.keepArtifacts(as: label.replacingOccurrences(of: "()", with: "")) }
         scratch.remove()
     }
@@ -200,8 +220,8 @@ final class Instance {
     }
 
     /// Waits for `done` to hold, checking it when `url` changes (a file's write or a folder's entries) and once at the start;
-    /// false when the deadline passes first or the app has ended.
-    func watch(_ url: URL, timeout: TimeInterval, _ done: @escaping @Sendable () -> Bool) async -> Bool {
+    /// false when the deadline passes first or (unless `pastEnd`) the app has ended.
+    func watch(_ url: URL, timeout: TimeInterval, pastEnd: Bool = false, _ done: @escaping @Sendable () -> Bool) async -> Bool {
         let descriptor = open(url.path, O_EVTONLY)
         guard descriptor >= 0 else { return done() }
         let (stream, events) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
@@ -214,7 +234,7 @@ final class Instance {
         source.resume()
         let deadline = DispatchWorkItem { @Sendable in events.finish() }
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: deadline)
-        ended.onEnd { @Sendable in events.finish() }
+        if !pastEnd { ended.onEnd { @Sendable in events.finish() } }
         defer {
             source.cancel()
             deadline.cancel()
@@ -223,6 +243,15 @@ final class Instance {
         events.yield()
         for await _ in stream where done() { return true }
         return done()
+    }
+
+    /// The session hosts of this run's folder still running once the hosts folder has settled (a host that was asked to end
+    /// takes a moment, its shell's hang-up included).
+    func hostsLeft(timeout: TimeInterval = 10) async -> [String: pid_t] {
+        let folder = scratch.hostsFolder
+        guard FileManager.default.fileExists(atPath: folder.path) else { return [:] }
+        _ = await watch(folder, timeout: timeout, pastEnd: true) { Scratch.liveHosts(in: folder).isEmpty }
+        return Scratch.liveHosts(in: folder)
     }
 
     /// Waits until `url` is there (or, with `present` false, gone), watching its folder.

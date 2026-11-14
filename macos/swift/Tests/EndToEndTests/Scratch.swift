@@ -73,6 +73,36 @@ final class Scratch {
         return script
     }
 
+    /// Where the app's session hosts keep their sockets and meta files (core `ipc::hosts::hosts_dir`).
+    var hostsFolder: URL { data.appendingPathComponent("hosts") }
+
+    /// Persistent terminals for this run: the built session host linked into the scratch `bin` (the app is told where by
+    /// `WORMHOLE_HOST_BIN`, as `HostingSetup` reads it; the build's own folder is never touched) and the feature's flag on in
+    /// the scratch `config.json`. The link's path, for the app's environment.
+    func giveHosts(from built: URL) throws -> URL {
+        let link = bin.appendingPathComponent("wormhole-host")
+        if !FileManager.default.fileExists(atPath: link.path) { try FileManager.default.createSymbolicLink(at: link, withDestinationURL: built) }
+        try Data(#"{"feature_flags": {"unlocked": true, "persistent_terminals": true}}"#.utf8).write(to: data.appendingPathComponent("config.json"))
+        return link
+    }
+
+    /// The session hosts of `folder` whose process runs, by id: each host's meta file (`<id>.meta`) names its process
+    /// (`pid=`), which is asked whether it is alive. A host that died leaves its file and is not counted.
+    static func liveHosts(in folder: URL) -> [String: pid_t] {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        var live: [String: pid_t] = [:]
+        for name in names where name.hasSuffix(".meta") {
+            guard let text = try? String(contentsOf: folder.appendingPathComponent(name), encoding: .utf8),
+                let line = text.split(separator: "\n").first(where: { $0.hasPrefix("pid=") }),
+                let pid = pid_t(line.dropFirst(4)), pid > 0, kill(pid, 0) == 0
+            else { continue }
+            live[String(name.dropLast(5))] = pid
+        }
+        return live
+    }
+
+    func liveHosts() -> [String: pid_t] { Self.liveHosts(in: hostsFolder) }
+
     /// The text of the app's data folder file `name`, nil when it is not there.
     func dataFile(_ name: String) -> String? { try? String(contentsOf: data.appendingPathComponent(name), encoding: .utf8) }
 

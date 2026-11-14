@@ -191,7 +191,13 @@ column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T1
 a worktree, an agent's status, two windows, the Theme Studio's contrast and versions), each asserted on what the app reports through this control folder, never on pixels. One
 `Instance` (`Instance.swift`) starts the built `Wormhole` with `--background` on a scratch folder, sends a batch (a `sync <token>`
 after every command says it is done: the wait is on the output file's change events and a deadline, never a pause), and always ends
-what it started (`quit-end-all`, by its own pid if that does not answer) and removes the folder.
+what it started (`quit-end-all`, by its own pid if that does not answer), checks that no session host of its folder runs on (each
+host's `hosts/<id>.meta` names its process), and removes the folder.
+
+Persistent terminals: `Instance.with(hosts: true)` links the built session host into the scratch `bin` (the app is told where by
+`WORMHOLE_HOST_BIN`; the build's own folder is never touched) and turns the feature's flag on in the scratch `config.json`. The host is
+`$WORMHOLE_E2E_HOST`, else `crates/wormhole-ffi/target/debug/wormhole-host` (`cargo build -p wormhole-host` there, as `swift.yml`'s
+"Session host for the hosting tests" does); the hosting scenarios (`HostingTests.swift`) skip without it.
 
 Run them where the bridge is linked (`macos/scripts/build-ffi.sh swift`, then in `macos/swift`):
 

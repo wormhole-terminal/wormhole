@@ -30,7 +30,8 @@ extension WindowHub {
 
     /// `pane-bar`: what the bar over the selected terminal says (a program's question, a notice, a host's trouble), or `none`.
     public var paneBarSummary: String {
-        guard let bars = selectedOverlay?.bars else { return "none" } // text: control state line
+        guard let overlay = selectedOverlay else { return "none" } // text: control state line
+        let bars = overlay.bars
         var lines: [String] = []
         if let notice = bars.hostNotice { lines.append("banner \(notice)") } // text: control state line
         switch bars.bar {
@@ -40,7 +41,8 @@ extension WindowHub {
         case .hostNotResponding(let failure)?: lines.append("host-not-responding\(failure.map { " \($0)" } ?? "")") // text: control state line
         case nil: break
         }
-        if bars.exited { lines.append("exited") } // text: control state line
+        // The exited bar of a shell whose session host went away says so (`host_problem.rs`).
+        if bars.exited { lines.append(overlay.hostLost ? "exited host-lost" : "exited") } // text: control state line
         return lines.isEmpty ? "none" : lines.joined(separator: "\n") // text: control state line
     }
 

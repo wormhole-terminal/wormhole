@@ -62,8 +62,8 @@ jobs:
       - name: Release build
         working-directory: macos/swift
         run: swift build -c release
-      # The hosting tests start a real session host and skip without one: the host binary where they look for it (a debug
-      # build in the bridge's own target folder).
+      # The hosting tests and the end-to-end hosting scenarios start a real session host and skip without one: the host
+      # binary where they look for it (a debug build in the bridge's own target folder).
       - name: Session host for the hosting tests
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/crates/wormhole-ffi/target
