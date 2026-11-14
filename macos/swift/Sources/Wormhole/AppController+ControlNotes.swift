@@ -50,8 +50,7 @@ extension AppController {
         case "stash":
             reply(notes.stashPrompt() ? "stash: the prompt is in a new note" : "stash: nothing is typed at a prompt")
         case "comment":
-            // The comment being written (a click on a diff line, or `comment-at`): its text set (none: as it was typed), saved
-            // and closed.
+            // The comment being written (a click on a line, `comment-at`): its text set (none: as typed), saved and closed.
             let changes = hub.panel.changes
             guard changes.commenting != nil else { reply("error: no comment dialog is open"); return true }
             if !argument.isEmpty { changes.commenting?.text = argument }
