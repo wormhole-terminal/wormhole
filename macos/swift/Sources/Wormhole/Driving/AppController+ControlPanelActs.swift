@@ -29,7 +29,7 @@ extension AppController {
         case "panel-tabs":
             reply(hub.panelTabs.map { tab in
                 Readout.line(
-                    "tab", [tab.rawValue], pairs: [("badge", panel.badge(for: tab).map(String.init) ?? "-"), ("spoken", hub.spokenTab(named: tab.rawValue))],
+                    "tab", [tab.rawValue], pairs: [("badge", PanelModel.PanelTab(rawValue: tab.rawValue).flatMap { panel.badge(for: $0) }.map(String.init) ?? "-"), ("spoken", hub.spokenTab(named: tab.rawValue))],
                     flags: [Readout.flag("shown", tab == hub.state.panelTab)])
             }.joined(separator: "\n"))
         case "submodule-enter":
