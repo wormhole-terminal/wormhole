@@ -42,7 +42,11 @@ extension AppController {
         case "flags-unlock":
             // ⌃⌥⌘F in the window: unlocks the feature flags (and opens their page) or locks them again.
             let unlocked = settingsModel.host.toggleFlagsUnlocked()
-            if unlocked { settingsModel.show("featureFlags") }
+            // The key is pressed in the Settings window, so the window is there for the page it opens.
+            if unlocked {
+                showSettings()
+                settingsModel.show("featureFlags")
+            }
             reply("flags-unlock unlocked=\(unlocked) nav=\(settingsModel.navSections.map(\.id).joined(separator: ","))")
         case "settings-size":
             // A taller window shows more of a page in one `window-shot`.

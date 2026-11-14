@@ -58,10 +58,12 @@ public final class Inspection {
             .sorted { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }
     }
 
-    /// Every element of `window` that reported itself, wherever it is: what the window's views built and laid out.
+    /// Every element of `window` that reported itself and has a part in sight: what the window's views built, laid out
+    /// and left unclipped. A column that slid shut keeps its views where they were, clipped away (the panel under Zen mode):
+    /// they are not what the window draws.
     public func elements(in window: NSWindow) -> [InspectedElement] {
         probes.allObjects
-            .filter { $0.window === window && !$0.isHiddenOrHasHiddenAncestor }
+            .filter { $0.window === window && !$0.isHiddenOrHasHiddenAncestor && !$0.visibleRect.isEmpty }
             .compactMap { probe in probe.site.map { InspectedElement(site: $0, frame: probe.convert(probe.bounds, to: nil)) } }
     }
 }
