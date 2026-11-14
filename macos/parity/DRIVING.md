@@ -41,6 +41,7 @@ of the press (`Driving/Injector.swift`).
 | `drag x1 y1 x2 y2 [steps]` | `drag 351 400 300 400 10` | pressed, moved in steps a frame apart, released (reorder, column edges, window resize) |
 | `scroll x y dy [dx]` | `scroll 700 400 -400`, `scroll 700 400 0 600` | the wheel there, dy points down (negative up), dx right (negative left), in steps of 20 a frame apart |
 | `key <keystroke>` | `key shift-f6`, `key ctrl-c` | a key as the keyboard sends it (menu equivalents run their action) |
+| `key-held <keystroke>` | `key-held ctrl-cmd-t` | the key held: pressed, two of the keyboard's repeats (`isARepeat`), let go |
 | `text <text>` | `text Build` | typed into whatever has the keys, a key per character (a field being edited, the terminal) |
 | `pointer-window [title]` | `pointer-window Settings` | the window the pointer acts on (none: the workspace's in front) |
 | `bounds x y [levels]` | `bounds 700 400 2` | the views under a point, then the accessibility element there and its parents |

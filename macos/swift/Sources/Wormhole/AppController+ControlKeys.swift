@@ -12,6 +12,8 @@ extension AppController {
     func runKeys(command: String, argument: String) -> Bool {
         switch command {
         case "key": reply(sendKey(argument))
+        // The key held: pressed, then two of the keyboard's repeats (`isARepeat`), then let go.
+        case "key-held": reply(sendKey(argument, repeats: 2))
         case "keys": reply("focus=\(hub.focus.detail) responder=\(keyTarget?.firstResponder.map { String(describing: type(of: $0)) } ?? "none")")
         case "hold-cmd", "release-cmd":
             // ⌘ pressed alone and kept down (the ⌘1-9 hints show after 250 ms), or let go: the modifier event the window's monitors see.
@@ -35,7 +37,7 @@ extension AppController {
     private static let ansiKeys = Array("asdfhgzxcv\u{0}bqweryt123465=97-80]ou[ip\u{0}lj'k;\\,/nm.")
 
     /// `[shift-|cmd-|ctrl-|alt-]…key`, the key a name (`f6`, `tab`, `esc`, `left`, `return`, `space`) or one character.
-    func sendKey(_ spec: String) -> String {
+    func sendKey(_ spec: String, repeats: Int = 0) -> String {
         var parts = spec.lowercased().split(separator: "-", omittingEmptySubsequences: false).map(String.init)
         if parts.last == "" { parts.removeLast(); parts[parts.count - 1] += "-" }
         guard let name = parts.last, let window = keyTarget else { return "error: key needs a spec like shift-f6" }
@@ -81,7 +83,7 @@ extension AppController {
             }
             return "key \(spec) -> \(id.rawValue) focus=\(settled())"
         }
-        press(code: code, characters: text, flags: flags, in: window)
+        press(code: code, characters: text, flags: flags, in: window, repeats: repeats)
         return "key \(spec) focus=\(settled())"
     }
 
@@ -93,18 +95,21 @@ extension AppController {
     }
 
     /// A key down and up, through the application's own dispatch (its monitors, then the window's first responder).
-    private func press(code: UInt16, characters: String, flags: NSEvent.ModifierFlags, in window: NSWindow) {
+    private func press(code: UInt16, characters: String, flags: NSEvent.ModifierFlags, in window: NSWindow, repeats: Int = 0) {
         // Nothing in the workspace's window has the keys (its first responder is the window itself) and nothing covers the
         // terminal: the keys are the selected terminal's, as they are once a window has been in front. A window that never
         // really got on a screen (a hosted runner's session) never made it first responder.
         if window === self.window, window.firstResponder === window, hub.panel.cover == nil, let view = selectedView, view.window === window {
             window.makeFirstResponder(view)
         }
-        for type in [NSEvent.EventType.keyDown, .keyUp] {
+        var strokes: [(NSEvent.EventType, Bool)] = [(.keyDown, false)]
+        strokes += Array(repeating: (NSEvent.EventType.keyDown, true), count: repeats)
+        strokes.append((.keyUp, false))
+        for (type, isARepeat) in strokes {
             NSEvent.keyEvent(
                 with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
                 windowNumber: window.windowNumber, context: nil, characters: characters, charactersIgnoringModifiers: characters,
-                isARepeat: false, keyCode: code
+                isARepeat: isARepeat, keyCode: code
             ).map { event in
                 // A field being edited reads keys through the input method, which only a really active app has; the key
                 // bindings it would apply are applied directly (typing, Return, Esc, arrows), the rest go the usual way.
