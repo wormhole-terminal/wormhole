@@ -39,6 +39,6 @@ public struct TitleRowView: View {
             .animation(reduceMotion ? Motion.fade : Motion.selection, value: plan)
         }
         .frame(height: Metric.titleRow - 2 * TitleMetrics.barInset)
-        .contextMenu { TitleRowMenu(row: facts.row, actions: actions) }
+        .contextMenu { TitleMenuItems(entries: TitleMenuEntries.row(facts.row, actions)) }
     }
 }

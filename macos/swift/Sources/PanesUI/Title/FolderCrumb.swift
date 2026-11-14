@@ -45,7 +45,7 @@ struct FolderCrumb: View {
         .popover(isPresented: $card.shown, arrowEdge: .bottom) {
             PathCard(path: plan.facts.shownFolder ?? "", buttons: PathCardItem.allCases.map { $0.button(actions) }, hover: card)
         }
-        .contextMenu { PathMenuItems(facts: plan.facts, actions: actions) }
+        .contextMenu { TitleMenuItems(entries: TitleMenuEntries.path(plan.facts.folder, shown: plan.facts.shownFolder ?? "", actions)) }
         .accessibilityLabel(PanesText.openFolder(plan.facts.shownFolder ?? ""))
         .accessibilityAddTraits(.isButton)
     }
