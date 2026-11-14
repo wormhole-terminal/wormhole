@@ -62,6 +62,19 @@ final class Scratch {
         return done.output
     }
 
+    /// A `.wormhole/` project folder in `folder` with the given files (`actions.json`, `config.json`, `prompts/x.md`, …).
+    func project(_ folder: URL, files: [String: String]) throws {
+        for (path, text) in files { try write(folder, ".wormhole/" + path, text) }
+    }
+
+    /// An empty file whose name is the given bytes, which need not be UTF-8 (Swift's own file calls take text only).
+    func rawFile(in folder: URL, named bytes: [UInt8]) throws {
+        let path: [CChar] = (Array(folder.path.utf8) + [UInt8(ascii: "/")] + bytes + [0]).map { CChar(bitPattern: $0) }
+        let descriptor = open(path, O_CREAT | O_WRONLY, mode_t(0o644))
+        guard descriptor >= 0 else { throw ScratchError(description: "cannot make a file with a raw name in \(folder.path)") }
+        close(descriptor)
+    }
+
     /// A script named `name` that reads what is typed and runs nothing: a terminal whose program is it is taken for that agent
     /// (`sh codex` is Codex, as `HookBridgeTests` does it). Not a copy of `/bin/cat`: macOS ends a copied system binary at once.
     func agentShell(named name: String) throws -> URL {

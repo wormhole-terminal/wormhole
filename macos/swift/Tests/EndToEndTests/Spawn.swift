@@ -26,6 +26,29 @@ enum Spawn {
         return Finished(status: process.terminationStatus, output: String(decoding: data, as: UTF8.self))
     }
 
+    /// `executable` started with exactly `environment` and left running, its output in `log`; `onExit` is called once, on another
+    /// queue, with its status. For a client of the app that waits on a person's answer (an agent's request), which `run` would block on.
+    static func start(
+        _ executable: String, _ arguments: [String], environment: [String: String], log: URL, onExit: @escaping @Sendable (Int32) -> Void
+    ) throws -> Process {
+        FileManager.default.createFile(atPath: log.path, contents: nil, attributes: [.posixPermissions: 0o600])
+        let output = try FileHandle(forWritingTo: log)
+        // process: the app's own command line client, asking the instance under test through its socket
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.environment = environment
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = output
+        process.standardError = output
+        process.terminationHandler = { finished in
+            try? output.close()
+            onExit(finished.terminationStatus)
+        }
+        try process.run()
+        return process
+    }
+
     /// The app under test, running, its output in `log`. `onExit` is called once, on another queue, when it has ended.
     static func launch(
         _ executable: URL, arguments: [String], environment: [String: String], log: URL, onExit: @escaping @Sendable (Int32) -> Void

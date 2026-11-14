@@ -69,4 +69,55 @@ extension Instance {
         guard let range = line.range(of: name + "=") else { return nil }
         return String(line[range.upperBound...].prefix { $0 != " " && $0 != "\n" })
     }
+
+    /// Feature flags set as Settings → Feature flags sets them, with the map unlocked so a release build reads it too (a
+    /// development build has every flag on unless the map says otherwise). Waits until `config.json` holds them.
+    func flags(_ wanted: [String: Bool]) async {
+        let pairs = (["unlocked": true].merging(wanted) { $1 }).sorted { $0.key < $1.key }.map { "\"\($0.key)\":\($0.value)" }
+        await send(["set feature_flags={\(pairs.joined(separator: ","))}"])
+        _ = await waitForConfig { text in wanted.allSatisfy { text.range(of: "\"\($0.key)\"\\s*:\\s*\($0.value)", options: .regularExpression) != nil } }
+    }
+
+    /// A setting as `get` prints it: `bool(true)`, `number(14.0)`, `string("Nord")`.
+    func setting(_ key: String) async -> String {
+        let said = await reply("get \(key)")
+        return said.components(separatedBy: " = ").dropFirst().joined(separator: " = ")
+    }
+
+    /// A terminal in `folder`, selected, once the sidebar lists it beside the ones there were.
+    @discardableResult
+    func terminal(in folder: URL) async -> Listing {
+        let before = (await rows()).live.count
+        await send(["new \(folder.path)"])
+        return Listing(await until("rows") { Listing($0).live.count == before + 1 })
+    }
+
+    /// The selected terminal's screen once it shows `text`.
+    @discardableResult
+    func screen(showing text: String, timeout: TimeInterval = 20) async -> String {
+        await until("screen", timeout: timeout) { $0.contains(text) }
+    }
+
+    /// For a command that answers once its work is done, after its batch has moved on (`project …`, `update …`, `probe …`,
+    /// `studio-save`, `studio-out`): its answer, from the line that starts with `prefix` up to the next mark, once it is there.
+    @discardableResult
+    func later(_ command: String, answer prefix: String, window: Int? = nil, timeout: TimeInterval = 30) async -> String {
+        let out = outFile(window)
+        let before = (try? Data(contentsOf: out).count) ?? 0
+        await send([command], window: window)
+        let done = await watch(out, timeout: timeout) { Self.answer(in: out, after: before, startingWith: prefix) != nil }
+        let said = Self.answer(in: out, after: before, startingWith: prefix) ?? ""
+        if !done { fail("no answer starting \"\(prefix)\" to `\(command)` in \(Int(timeout)) s") }
+        return said
+    }
+
+    nonisolated static func answer(in file: URL, after offset: Int, startingWith prefix: String) -> String? {
+        guard let data = try? Data(contentsOf: file), data.count >= offset else { return nil }
+        let lines = String(decoding: data.dropFirst(offset), as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        guard let start = lines.firstIndex(where: { $0.hasPrefix(prefix) }) else { return nil }
+        return lines[start...].prefix { !$0.hasPrefix("sync e2e") }.joined(separator: "\n")
+    }
+
+    /// How many times `text` is on the selected terminal's screen now.
+    func count(_ text: String) async -> Int { (await reply("screen")).components(separatedBy: text).count - 1 }
 }

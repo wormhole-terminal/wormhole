@@ -27,7 +27,8 @@ final class Instance {
     /// a prompt either way.
     private let auth: String
     private let label: String
-    private let program: URL
+    /// The app itself: what `cli` runs as a client of the instance.
+    let program: URL
     /// The session host the app is given (`Scratch.giveHosts`), nil for a run whose terminals stay in the app.
     private var host: URL?
     private var process: Process?
@@ -62,14 +63,27 @@ final class Instance {
         return files.isExecutableFile(atPath: built.path) ? built : nil
     }
 
-    /// Starts an instance, runs `body`, and ends the instance and removes its scratch folder, whatever `body` does.
-    /// `hosts`: Persistent terminals on, with the built session host (`hostProgram`).
+    /// Starts an instance, runs `body`, and ends the instance and removes its scratch folder, whatever `body` does. `auth` is what
+    /// the owner's question answers (a project's trust, a Probe's approval); `config` is the text of the default profile's
+    /// `config.json` before the first launch (a flag or a mode the app reads at launch); `hosts`: Persistent terminals on, with
+    /// the built session host (`hostProgram`), which writes that file itself, so the two are not given together.
     static func with(
-        shell: Shell = .cat, auth: String = "cancel", hosts: Bool = false, label: String = #function,
+        shell: Shell = .cat, auth: String = "cancel", config: String? = nil, hosts: Bool = false, label: String = #function,
         _ body: @MainActor (Instance) async throws -> Void
     ) async throws {
         guard let program = executable() else { throw ScratchError(description: "the Wormhole app is not built") }
         let app = Instance(scratch: try Scratch(), shell: shell, auth: auth, label: label, program: program)
+        // The default profile's files are the data folder's own.
+        if let config {
+            guard !hosts else {
+                app.scratch.remove()
+                throw ScratchError(description: "`config` and `hosts` together: the hosts' flag is written into config.json, put it in `config`")
+            }
+            do { try Data(config.utf8).write(to: app.scratch.data.appendingPathComponent("config.json")) } catch {
+                app.scratch.remove()
+                throw error
+            }
+        }
         if hosts {
             guard let built = hostProgram() else { throw ScratchError(description: "no session host is built: cargo build -p wormhole-host") }
             app.host = try app.scratch.giveHosts(from: built)
@@ -330,15 +344,21 @@ final class Instance {
     /// `Wormhole hook --agent <agent> <event>` as an agent's hook script runs it, from terminal `terminal`: the exit status.
     @discardableResult
     func hook(agent: String, event: String, terminal: Int) throws -> Int32 {
+        try Spawn.run(program.path, ["hook", "--agent", agent, event, "{}"], environment: clientEnvironment(terminal: terminal)).status
+    }
+
+    /// What the app's own client is given to reach this instance: its socket, its data folder, and the terminal it runs in (none:
+    /// a program outside the app's terminals).
+    func clientEnvironment(terminal: Int?) throws -> [String: String] {
         let names = (try? FileManager.default.contentsOfDirectory(atPath: scratch.temp.path)) ?? []
         guard let socket = names.first(where: { $0.hasPrefix("wormhole-") && $0.hasSuffix(".sock") }) else {
             throw ScratchError(description: "the app serves no hook socket in \(scratch.temp.path)")
         }
         var environment = scratch.cleanEnvironment
         environment["WORMHOLE_SOCKET"] = scratch.temp.appendingPathComponent(socket).path
-        environment["WORMHOLE_TAB_ID"] = String(terminal)
         environment["WORMHOLE_DATA_DIR"] = scratch.data.path
-        return try Spawn.run(program.path, ["hook", "--agent", agent, event, "{}"], environment: environment).status
+        if let terminal { environment["WORMHOLE_TAB_ID"] = String(terminal) }
+        return environment
     }
 }
 
