@@ -77,9 +77,12 @@ public final class UpdateViewModel {
         }
     }
 
-    /// What a release brings, a line each: the changelog's Markdown without its list markers.
+    /// What a release brings, a line each: the changelog's Markdown without the list marker a line starts with (`updates.rs`
+    /// `draw_notes`). Only the start is cut: a line that ends in emphasis or a dash keeps its end.
     public static func noteLines(_ notes: String) -> [String] {
-        notes.split(separator: "\n").map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "-* ").union(.whitespaces)) }.filter { !$0.isEmpty }
+        notes.split(separator: "\n").map { line in
+            String(line.trimmingCharacters(in: .whitespaces).drop { $0 == "-" || $0 == "*" }).trimmingCharacters(in: .whitespaces)
+        }.filter { !$0.isEmpty }
     }
 
     /// Bytes as the download line says them ("5.0 MB of 20.0 MB"); `nil` while the size is unknown.
