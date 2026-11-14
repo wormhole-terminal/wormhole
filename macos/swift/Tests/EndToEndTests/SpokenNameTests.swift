@@ -9,8 +9,9 @@ extension EndToEnd {
     @MainActor func spokenNames() async throws {
         try await Instance.with { app in
             await app.send(["find milk"])
-            // The find field is AppKit's, so the tree has it once the bar is up.
-            let tree = await app.until("a11y") { $0.contains("TextField = milk") }
+            // The bar is up once the window's focus line says so (`keys`: `+find`).
+            await app.until("keys") { $0.contains("+find") }
+            let tree = await app.reply("a11y")
             // The buttons are SwiftUI's, and SwiftUI builds its accessibility nodes only for an assistive app: asked in the
             // process, the tree has none of them (DRIVING.md, "What still needs a person"). Kept as the check it is, and known
             // not to hold from here: it reports itself the day the tree does list them. The rule is `SpokenNameTests` in UITests.

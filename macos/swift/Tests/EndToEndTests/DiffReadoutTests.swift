@@ -50,6 +50,8 @@ extension EndToEnd {
     @MainActor func diffHeaderStepAndRename() async throws {
         try await Instance.with { app in
             let repo = try app.scratch.repository("step-repo", files: ["a/same.txt": "same\n", "b.txt": "b\n"])
+            // git does not make the folder a file moves into.
+            try FileManager.default.createDirectory(at: repo.appendingPathComponent("c"), withIntermediateDirectories: true)
             try app.scratch.git(repo, "mv", "a/same.txt", "c/same.txt")
             try app.scratch.write(repo, "b.txt", "b\nb\n")
             await app.terminal(in: repo)
