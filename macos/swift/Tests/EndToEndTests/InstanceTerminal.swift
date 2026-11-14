@@ -13,6 +13,14 @@ extension Instance {
     /// them first as text, `^[` for ESC), so a script makes the terminal read any sequence. Escapes are real characters here.
     func emit(_ bytes: String) async { await send(["type \(bytes)\\n"]) }
 
+    /// With `/bin/cat` for a shell: an empty screen with the cursor at its top, by the sequences a program clears with (ED 2,
+    /// CUP), which `cat` writes back. ⌘K is not that: it erases the history and sends ^L, which only a shell answers by
+    /// redrawing, so a `cat` screen keeps its lines (`Pty::clear_history`: "the screen stays", in the GPUI app too).
+    func clearScreen() async {
+        await emit("\u{1b}[2J\u{1b}[H")
+        await send(["wait-idle 2000"])
+    }
+
     /// ⌃U to the line discipline: what is typed (or a reply the terminal wrote to the program) and not yet sent is dropped.
     func discardLine() async { await send(["type \u{15}"]) }
 

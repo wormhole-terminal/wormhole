@@ -15,7 +15,7 @@ extension EndToEnd {
 
     /// Asks for the background (OSC 11) and gives the answer once it is on the screen.
     @MainActor private static func background(_ app: Instance) async -> String? {
-        await app.send(["key cmd-k"])
+        await app.clearScreen()
         await app.discardLine()
         await app.emit("\(esc)]11;?\(bel)")
         let shown = await app.screen { lastColour($0) != nil }
@@ -41,7 +41,7 @@ extension EndToEnd {
             await app.discardLine()
 
             // Mode 2031: the program hears the change unasked.
-            await app.send(["key cmd-k"])
+            await app.clearScreen()
             await app.emit("\(Self.esc)[?2031h")
             await app.send(["appearance dark"])
             await app.screen { $0.contains("997;1n") }
@@ -71,7 +71,7 @@ extension EndToEnd {
             await app.emit("\(e)[8;30;100t")
             await app.until("state") { Instance.value("grid", in: $0) == "100x30" }
             // CSI 18 t reports the size in cells.
-            await app.send(["key cmd-k"])
+            await app.clearScreen()
             await app.discardLine()
             await app.emit("\(e)[18t")
             await app.screen { $0.contains("8;30;100t") }
@@ -82,13 +82,13 @@ extension EndToEnd {
             await app.until("state") { Instance.value("grid", in: $0) == "120x40" }
 
             // CSI 13 t reports where the window is; CSI 3 t moves it, and the report follows.
-            await app.send(["key cmd-k"])
+            await app.clearScreen()
             await app.discardLine()
             await app.emit("\(e)[13t")
             let first = await app.screen { $0.contains("[3;") }
             await app.discardLine()
             await app.emit("\(e)[3;100;80t")
-            await app.send(["key cmd-k"])
+            await app.clearScreen()
             await app.discardLine()
             await app.emit("\(e)[13t")
             let moved = await app.screen { $0.contains("[3;") }

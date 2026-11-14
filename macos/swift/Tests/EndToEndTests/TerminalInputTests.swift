@@ -39,9 +39,10 @@ extension EndToEnd {
             let option = await app.pasteboard()
             app.expect(option.hasPrefix("copy-me-pleas"), "⌥⌘C copied the selection as ⌘C does: \(option)")
 
-            // ⌘K: Clear Buffer, the screen and the history.
+            // ⌘K: Clear Buffer erases the history and sends ^L for the shell to redraw (`clearBuffer`, as the GPUI app's
+            // `TerminalCommand::Clear`); `cat` is no shell, so the line discipline's echo of it is what shows it arrived.
             await app.send(["key cmd-k"])
-            await app.screen { !$0.contains("copy-me-please") && !$0.contains("pasted-by") }
+            await app.screen { $0.contains("^L") }
         }
     }
 
@@ -49,14 +50,11 @@ extension EndToEnd {
     @MainActor func optionOrControlFallsBackToCommand() async throws {
         try await Instance.with { app in
             // ⌥⌘K and ⌃⌘K are nobody's: Clear Buffer, as ⌘K (`input.rs` `platform_command`); they used to beep.
-            await app.emit("cleared-by-alt-cmd-k")
-            await app.screen { $0.contains("cleared-by-alt-cmd-k") }
+            // Clear Buffer sends ^L to the program (and erases the history); with `cat` the echo of it is what shows.
             await app.send(["key alt-cmd-k"])
-            await app.screen { !$0.contains("cleared-by-alt-cmd-k") }
-            await app.emit("cleared-by-ctrl-cmd-k")
-            await app.screen { $0.contains("cleared-by-ctrl-cmd-k") }
+            await app.screen { $0.components(separatedBy: "^L").count - 1 == 1 }
             await app.send(["key ctrl-cmd-k"])
-            await app.screen { !$0.contains("cleared-by-ctrl-cmd-k") }
+            await app.screen { $0.components(separatedBy: "^L").count - 1 == 2 }
             // ⌃⌘V pastes as ⌘V.
             await app.send(["pasteboard-set pasted-by-ctrl-cmd-v", "key ctrl-cmd-v"])
             await app.screen { $0.contains("pasted-by-ctrl-cmd-v") }
