@@ -18,6 +18,7 @@ extension AppController {
         if runUsageRecents(command: command, argument: argument) { return true }
         if runChromeActs(command: command, argument: argument) { return true }
         if runPanelActs(command: command, argument: argument) { return true }
+        if await runLooks(command: command, argument: argument) { return true }
         return false
     }
 }

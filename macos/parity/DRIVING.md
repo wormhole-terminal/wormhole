@@ -252,6 +252,15 @@ Added by wave 12, lane panel (the right panel's parts and the cursor; written wi
 | `task-move <from> <to>` / `note-move <from> <to>` | a step or a note dropped on another (1-based), the drop's own `move` (`NotesStore.moveTask`/`moveNote`, core `view::reorder::move_item`); the drag's gesture stays a person's |
 | `cursor [terminal]` | the cursor as that terminal's view draws it next (`MetalTerminalView.cursorReadout`, from what `TerminalScene` builds its row from): `cursor drawn=<block\|underline\|beam\|outline\|none> shape= blinking= on= focused= hidden= at=<row>,<col> colour=#rrggbb`, or `cursor none` |
 
+Added by wave 12 (lane chrome; written without compiling, see TO-VERIFY.md): what a window's views drew, read from the views
+themselves (`Driving/AppController+ControlLooks.swift`), not from the model they were given. Both act on the window
+`pointer-window` names (the Studio is `pointer-window Theme Studio`), else the workspace's in front.
+
+| Command | Does |
+|---|---|
+| `colour-count <#rrggbb> [x y w h] [click]` | the window drawn now (`cacheDisplay`, into sRGB): `colour-count <#hex> pixels=<n> box=<x>,<y>,<w>,<h>` (`box=-` with none), the pixels of that colour (within 4 of each channel, opaque) in the region (content points from the top left; none: the whole window) and the box round them in points; `click` then clicks at the box's centre as `click` does |
+| `marked [id]` | inspect mode on (`inspect on`): every element the design marks (`.marked(id)`) that the window's views built, `marked n=<count>` then `marked <id> <x> <y> <w> <h>` top to bottom (`status.tile`, `keycap`, `sidebar.row`, `sidebar.card`, `sidebar.band`, `count.badge`, `row.mark`, `profile.chip`, …) |
+
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).

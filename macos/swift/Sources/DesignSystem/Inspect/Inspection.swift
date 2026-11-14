@@ -57,6 +57,13 @@ public final class Inspection {
             .filter { $0.frame.contains(point) }
             .sorted { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }
     }
+
+    /// Every element of `window` that reported itself, wherever it is: what the window's views built and laid out.
+    public func elements(in window: NSWindow) -> [InspectedElement] {
+        probes.allObjects
+            .filter { $0.window === window && !$0.isHiddenOrHasHiddenAncestor }
+            .compactMap { probe in probe.site.map { InspectedElement(site: $0, frame: probe.convert(probe.bounds, to: nil)) } }
+    }
 }
 
 /// The empty view behind a marked element while inspect mode is on: it is where the element is.
