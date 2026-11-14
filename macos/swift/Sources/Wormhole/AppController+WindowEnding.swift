@@ -27,7 +27,7 @@ extension AppController {
     /// while something runs in it, and is forgotten once it closes.
     func shouldClose(_ session: WindowSession) -> Bool {
         guard shown.count > 1 else {
-            NSApp.terminate(nil)
+            terminateSoon()
             return false
         }
         guard !asking(in: session).isEmpty else { return true }

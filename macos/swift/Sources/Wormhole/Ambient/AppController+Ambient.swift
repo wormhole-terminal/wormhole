@@ -22,7 +22,7 @@ extension AppController {
         case .jumpToWaiting: jump(toWaiting: true)
         case .openSettings: showSettings()
         case .checkForUpdates: aux.showUpdates()
-        case .quit: NSApp.terminate(nil)
+        case .quit: terminateSoon()
         case .openFolder: openFolder()
         case .openProject(let path): openProject(path)
         case .runAction(let root, let id): runAction(root: root, id: id)

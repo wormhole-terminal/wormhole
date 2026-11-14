@@ -55,7 +55,16 @@ extension AppController {
 
     func quit(endAll: Bool) {
         endsAllOnQuit = endAll
-        NSApp.terminate(nil)
+        terminateSoon()
+    }
+
+    /// Asks AppKit to quit from the run loop, never from where it was asked for. When the answer is "later" (the question,
+    /// the hosts ending), AppKit waits for it in a run loop inside `terminate`, and a run loop run from within a job of the
+    /// main queue (a dispatch source's handler as the control folder's and SIGTERM's, a Task of the main actor) serves no
+    /// other: the Task that asks or ends the hosts would never start and the app would wait for ever. A block of the run
+    /// loop itself has no such limit.
+    func terminateSoon() {
+        RunLoop.main.perform(inModes: [.common]) { MainActor.assumeIsolated { NSApp.terminate(nil) } }
     }
 
     /// Quits without the question: the control folder's `quit` and the idle check run unattended. `endAll`: the hosts end
@@ -63,7 +72,7 @@ extension AppController {
     func terminateUnattended(endAll: Bool = false) {
         confirmsQuit = false
         endsHostsOnQuit = endAll
-        NSApp.terminate(nil)
+        terminateSoon()
     }
 
     /// What a restart would end, for the updater's question.
