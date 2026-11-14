@@ -107,6 +107,12 @@ extension EndToEnd {
             await app.until("history-state") { $0.contains("commits=3") }
             await app.send(["select \(a)"])
             await app.until("history-state") { $0.contains("commits=1") }
+
+            // The palette's commits are HEAD's log of the terminal's folder, whatever branch History shows; read when it opens.
+            await app.send(["palette", "wait-idle 5000", "key esc"])
+            await app.until("palette-rows #third") { $0.contains("third commit") }
+            await app.send(["set features={\"history\":false}", "palette", "wait-idle 5000", "key esc"])
+            await app.until("palette-rows #third") { !$0.contains("third commit") }
         }
     }
 }

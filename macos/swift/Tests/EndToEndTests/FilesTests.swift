@@ -57,6 +57,12 @@ extension EndToEnd {
             let root = Self.filesRoot(first)
             await app.send(["files-root \(repo.appendingPathComponent("docs").path)"])
             await app.until("files") { ($0.split(separator: "\n").first ?? "").contains("/docs (chosen)") }
+            // Another terminal has its own tree; the first keeps its chosen folder.
+            guard let a = (await app.rows()).selected else { return }
+            await app.terminal(in: repo)
+            await app.until("files") { $0.contains("pins-repo (following)") }
+            await app.send(["select \(a)"])
+            await app.until("files") { ($0.split(separator: "\n").first ?? "").contains("/docs (chosen)") }
             await app.send(["files-follow"])
             await app.until("files") { $0.contains("pins-repo (following)") }
 
