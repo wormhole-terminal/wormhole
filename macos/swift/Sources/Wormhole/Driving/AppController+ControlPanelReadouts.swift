@@ -3,6 +3,7 @@
 //   `changes-menu <n|path>`     right-click the n-th file of `changes` (or the file by path): its menu, kept for `menu-pick`
 //   `history-menu <n|details>`  right-click the n-th commit of the log, or the open commit's details block
 //   `files-row-menu <path>`     right-click a Files row by its path from the tree's root
+//   `files-viewer [from] [count]`  what the Files viewer shows (`PanelUI.FilesViewerReadout`)
 //   `diff-header`               what the open diff's header says (`PanelUI.DiffReadout`)
 //   `diff-step next|prev`       its arrows
 //   `diff-spans [from] [count]` the diff's rows with their colour runs by token
@@ -31,6 +32,9 @@ extension AppController {
         case "files-row-menu":
             guard !argument.isEmpty else { reply("error: files-row-menu <path from the tree's root>"); return true }
             reply(rightClickRow("entry:\(argument)"))
+        case "files-viewer":
+            let numbers = argument.split(separator: " ").compactMap { Int($0) }
+            reply(FilesViewerReadout.text(panel.files, from: numbers.first ?? 0, count: numbers.count > 1 ? numbers[1] : 20))
         case "diff-header": reply(DiffReadout.header(panel))
         case "diff-step": reply(DiffReadout.step(panel, argument).map { "error: \($0)" } ?? "diff-step \(argument)")
         case "diff-spans":
