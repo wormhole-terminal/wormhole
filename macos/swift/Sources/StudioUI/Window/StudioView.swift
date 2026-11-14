@@ -62,5 +62,8 @@ private struct StudioContent<Extras: View>: View {
         // Esc ends a rename first, and then closes the window (asking about unsaved edits as the red light does).
         .onExitCommand { if session.renaming { session.renaming = false } else { session.window?.performClose(nil) } }
         .onChange(of: ThemeStore.shared.shownPick) { document.refreshInUse() }
+        // Increase Contrast turned on or off in System Settings: the draft is resolved again for it, and its contrast report
+        // (the list's marks, the Low filter, the Contrast section, the card) is asked again with it (`tokens_of`).
+        .onChange(of: document.increaseContrast) { document.refresh() }
     }
 }
