@@ -94,8 +94,8 @@ with its `perf-counters` feature: `WORMHOLE_FFI_PERF_COUNTERS=1 macos/scripts/bu
 socket: they are the control folder's alone.
 
 Added by wave 6 (dev tooling; written without compiling, see TO-VERIFY.md): **each window has its own control files**, as in GPUI:
-the first reads `cmd` and writes `out.txt`; `cmd2`, `cmd3` … are the windows in the order they were opened, answered in `out2.txt`,
-`out3.txt` … A line of `cmd<n>` acts on that window, keys included (`key`, `keys`, `text`, `state`, the window commands).
+`cmd` acts on the window in front (the key one, else the one opened or used last) and is answered in `out.txt`; `cmd1`, `cmd2`,
+`cmd3` … are the windows in the order they were opened, whatever is in front, answered in `out1.txt`, `out2.txt` … A line of `cmd<n>` acts on that window, keys included (`key`, `keys`, `text`, `state`, the window commands).
 
 | Command | Example | Does |
 |---|---|---|
@@ -120,6 +120,7 @@ Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written wi
 | `task-seed [open] [done]` / `task-done <n>` | `task-seed 38 12` | that many next steps, the done ones spread among the open; tick or untick the n-th |
 | `send` / `send-submit` / `stash` | `send-submit` | the focused note (the walker's, else the newest) goes to the terminal (and Return); the prompt typed in an agent's box becomes a note |
 | `comment <text>` | `comment too long` | the comment dialog a click on a diff line opened: text set, saved, closed; says the review's summary (`1 comment`) |
+| `changes` | `changes` | the Changes tab on show (GPUI's `changes`) and what its store holds: `changes phase=loaded files=1 open=README.md diff=shown hunks=1`, then a line a file in the list's order, `  M README.md +1 -0` (the kind's letter, the path, lines added and removed, `-` where git counts none) |
 | `compare [branch]` / `picker [history\|compare] [query]` | `compare main` | the Changes tab compared with a branch (none or `HEAD` stops); the revisions the picker offers for the query, one a line |
 | `commit-details` / `commit-more` | `commit-details` | the open commit's block as text (`none` when none is open); Show more / Show less |
 | `project-init` | | the Project tab's Create project folder button for the terminal's folder (`creating <dir>/.wormhole`) |
@@ -207,8 +208,9 @@ To add one: a test in `extension EndToEnd` (one file per theme, `@MainActor`), `
 other than `/bin/cat`: `shell: .zsh` or `.agent("codex")`), commands through `app.send([...])`, `app.reply("…")`, `app.rows()`, and
 `app.until("command") { reply in … }` for a fact nothing announces (it asks again with the app's own `delay` between asks and a
 deadline). Read the command's real reply in its `AppController+Control*.swift` before asserting on it, and ask for a command that does
-not exist instead of inventing one (the right panel's Changes has no listing of files yet). A repository comes from
-`app.scratch.repository(…)`, a second window's files are `cmd2` and `out2.txt` (`app.send([...], window: 2)`).
+not exist instead of inventing one. A repository comes from `app.scratch.repository(…)`. Without `window:` a batch goes to `cmd`,
+which acts on the window in front (the newest, once a second one is open); `app.send([...], window: 1)` writes `cmd1` and reads
+`out1.txt`, the first window's own, and `window: 2` the second's.
 
 What they may never touch: the person's data folder, `HOME`, agent home, clipboard, Trash, notifications, Touch ID, git repositories,
 browser or editor, and the keyboard focus. The harness gives the app an environment of its own (no inherited variable): the data

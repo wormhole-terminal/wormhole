@@ -1,5 +1,6 @@
 // The control folder's commands for the right panel's own text: `note-add <text>` and `task-add <text>` as the Notes tab's
 // buttons do, and `notes` to say what the tab holds (so a check can see it was saved and loaded again). `history N`
+// `changes` shows the Changes tab (GPUI's `changes`) and says what its store holds: the files, their counts, the open diff. `history N`
 // opens the Nth commit of the log (0 folds it), `history-file N` the Nth file of that commit, `history-rev <name>` the branch picker, `history-copy N <what>`, `history-state` and
 // `project-state` say what the tabs hold, `project-approve`, `project-feature <key> on|off`, `project-run <id>` and
 // `project-send <id>` are the Project tab's buttons.
@@ -51,6 +52,22 @@ extension AppController {
             else { return fail("history-copy N hash|shortHash|message|subject|author") }
             let commit = history.model.commits[n - 1]
             Task { reply("copy=\(await history.text(of: what, for: commit) ?? "nil")") }
+            return true
+        case "changes":
+            // The Changes tab on show, and what its own store holds: a head line, then a line a file in the list's order.
+            hub.send(.showPanelTab(.changes))
+            hub.panel.tab = .changes
+            let changes = hub.panel.changes
+            let diff = switch changes.diff.phase {
+            case .idle: "idle"
+            case .loading: "loading"
+            case .shown(let file): "shown hunks=\(file?.hunks.count ?? 0)"
+            case .failed(let why): "failed(\(why))"
+            }
+            reply("changes phase=\(changes.phase) files=\(changes.files.count) open=\(changes.diff.file?.path ?? "-") diff=\(diff)")
+            for file in changes.files {
+                reply("  \(file.kind.letter) \(file.path) +\(file.added.map(String.init) ?? "-") -\(file.removed.map(String.init) ?? "-")")
+            }
             return true
         case "history-state":
             let history = hub.panel.history, details = history.details
