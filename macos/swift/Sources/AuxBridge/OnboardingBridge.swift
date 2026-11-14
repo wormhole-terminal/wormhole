@@ -235,7 +235,9 @@ public final class FFIOnboardingBackend: OnboardingBackend {
     /// The card of a project that has something to approve; none when it is trusted, empty or does not load.
     private func makeCard(_ desk: TrustDesk) -> TrustCard? {
         let review = desk.review()
-        guard review.status != .trusted, review.problem == nil, !review.lines.isEmpty, let trustRoot else { return nil }
+        // A project that runs no command yet has a card too, which says so (`features/project/api.rs` `trust_card`): none only
+        // for one that is trusted or cannot be read.
+        guard review.status != .trusted, review.problem == nil, let trustRoot else { return nil }
         return TrustCard(
             name: review.name, directory: review.directory, commands: review.lines.count, root: URL(fileURLWithPath: trustRoot))
     }
