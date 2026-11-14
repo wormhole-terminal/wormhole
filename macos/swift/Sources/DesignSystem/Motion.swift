@@ -36,6 +36,26 @@ private struct MotionModifier<V: Equatable>: ViewModifier {
     }
 }
 
+private struct TurnModifier<V: Equatable>: ViewModifier {
+    let animation: Animation
+    let value: V
+    @Environment(\.reduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.animation(reduceMotion ? nil : animation, value: value)
+    }
+}
+
+private struct SlideModifier: ViewModifier {
+    let id: String
+    let space: Namespace.ID
+    @Environment(\.reduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        if reduceMotion { content } else { content.matchedGeometryEffect(id: id, in: space) }
+    }
+}
+
 private struct TransitionModifier: ViewModifier {
     let transition: AnyTransition
     @Environment(\.reduceMotion) private var reduceMotion
@@ -60,6 +80,18 @@ extension View {
     /// `animation(_:value:)` that plays the short fade instead when Reduce Motion is on.
     public func motion<V: Equatable>(_ animation: Animation, value: V) -> some View {
         modifier(MotionModifier(animation: animation, value: value))
+    }
+
+    /// `animation(_:value:)` for a turn or a slide that has no fade of its own (a disclosure chevron, a selection moving
+    /// between segments): under Reduce Motion it swaps at once, as GPUI's `disclosure` does.
+    public func motionTurn<V: Equatable>(_ animation: Animation, value: V) -> some View {
+        modifier(TurnModifier(animation: animation, value: value))
+    }
+
+    /// A selection shape that slides from one place to the next (`matchedGeometryEffect`); under Reduce Motion it does not
+    /// travel, the old one fades out where it was and the new one in, as GPUI's selection fill does.
+    public func slidingSelection(_ id: String, in space: Namespace.ID) -> some View {
+        modifier(SlideModifier(id: id, space: space))
     }
 
     /// `transition(_:)` that is a plain fade when Reduce Motion is on.

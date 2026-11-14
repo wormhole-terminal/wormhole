@@ -23,8 +23,7 @@ struct BranchCrumb: View {
                         if showsText { Text(branch ?? PanesText.detached).lineLimit(1).truncationMode(.tail) }
                     }
                     .font(tokens.font(.caption).weight(.medium))
-                    .modifier(BranchChip(detached: detached, showsText: showsText, height: TitleMetrics.chipHeight))
-                    .frame(width: width, alignment: .leading)
+                    .modifier(BranchChip(detached: detached, showsText: showsText, width: width))
                     .clipped()
                     .marked("branch.chip")
                     .contentTransition(.interpolate)
@@ -45,13 +44,15 @@ struct BranchCrumb: View {
 private struct BranchChip: ViewModifier {
     let detached: Bool
     let showsText: Bool
-    let height: CGFloat
+    /// The width the title row planned for the chip: the wash fills all of it, as before the chip was shared.
+    let width: CGFloat
     @Environment(\.tokens) private var tokens
 
     func body(content: Content) -> some View {
         Chip(
             fill: detached ? tokens.bannerWarningBackground : tokens.gitBranchBackground,
-            text: detached ? tokens.statusWarningText : tokens.gitBranch, height: height, leading: Space._1,
+            text: detached ? tokens.statusWarningText : tokens.gitBranch, height: TitleMetrics.chipHeight, width: width,
+            leading: Space._1,
             trailing: showsText ? Space._2 : Space._1
         ) { content }
     }

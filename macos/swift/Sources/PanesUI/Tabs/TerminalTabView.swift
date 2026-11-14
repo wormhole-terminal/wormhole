@@ -56,11 +56,8 @@ struct TerminalTabView: View {
         }
     }
 
-    private func keycap(_ number: Int) -> some View {
-        Text("⌘\(number)").font(tokens.font(.caption).weight(.medium)).foregroundStyle(tokens.textMuted)
-            .padding(.horizontal, Space._1).frame(minWidth: Metric.keyCapMinWidth - 8, minHeight: Metric.keyCapHeight)
-            .background(tokens.border, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusChip))
-    }
+    /// The ⌘N hint while ⌘ is held: the shared key cap, as GPUI's tab draws `style::keycap`.
+    private func keycap(_ number: Int) -> some View { KeyCap(text: "⌘\(number)") }
 
     private var closeButton: some View {
         PaneButton(symbol: "xmark", label: PanesText.closeTerminal, action: close)

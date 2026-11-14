@@ -12,6 +12,8 @@ public struct Chip<Content: View>: View {
     let hoverFill: Color?
     let selected: Bool
     let height: CGFloat?
+    /// A planned width (the title row's fit gives the branch chip one): the fill spans it, the content sits at its start.
+    let width: CGFloat?
     let leading: CGFloat
     let trailing: CGFloat
     let content: Content
@@ -23,9 +25,10 @@ public struct Chip<Content: View>: View {
     /// `hoverFill`: what the fill becomes under the pointer (a chip that is clicked); `selected`: the active chip.
     public init(
         fill: Color?, text: Color, outline: Color? = nil, hoverFill: Color? = nil, selected: Bool = false, height: CGFloat? = nil,
-        leading: CGFloat = Space._2, trailing: CGFloat? = nil, @ViewBuilder content: () -> Content
+        width: CGFloat? = nil, leading: CGFloat = Space._2, trailing: CGFloat? = nil, @ViewBuilder content: () -> Content
     ) {
         (self.fill, self.text, self.outline, self.hoverFill, self.selected, self.height) = (fill, text, outline, hoverFill, selected, height)
+        self.width = width
         (self.leading, self.trailing) = (leading, trailing ?? leading)
         self.content = content()
     }
@@ -36,7 +39,7 @@ public struct Chip<Content: View>: View {
         content
             .foregroundStyle(!enabled ? tokens.textDisabled : selected ? tokens.textOnSelected : text)
             .padding(.leading, leading).padding(.trailing, trailing)
-            .frame(height: height)
+            .frame(width: width, height: height, alignment: .leading)
             .background { if let shown { shape.fill(shown) } }
             .overlay { if let outline { shape.strokeBorder(outline, lineWidth: tokens.metrics.borderWidth) } }
             .modifier(ChipContrast(shape: shape, filled: shown != nil && outline == nil))

@@ -23,7 +23,7 @@ struct CardBand<Trailing: View>: View {
             toggle
             HStack(spacing: Space._1) {
                 trailing
-                if let count { BandCount(text: count) }
+                if let count { CountBadge(text: count) }
                 if let add { BandButton(symbol: "plus", label: add.label, action: add.action) }
             }
         }

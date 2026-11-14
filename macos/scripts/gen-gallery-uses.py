@@ -31,7 +31,7 @@ ELEMENTS = {
     "folder.color": ["PanelUI/Project/ColorChoice.swift", "PanelUI/Project/FolderColorCard.swift"],
     "branch.chip": ["PanesUI/Title/BranchCrumb.swift"],
     "panel.card": ["PanelUI/Shell/PanelCard.swift"],
-    "panel.band": ["PanelUI/Shell/CardBand.swift", "PanelUI/Shell/BandButton.swift", "PanelUI/Shell/BandCount.swift", "PanelUI/Shell/Disclosure.swift"],
+    "panel.band": ["PanelUI/Shell/CardBand.swift", "PanelUI/Shell/BandButton.swift", "PanelUI/Shell/Disclosure.swift"],
     "panel.item": ["PanelUI/Notes/TaskRowView.swift", "PanelUI/Notes/TaskCheckbox.swift"],
     "file.row": ["PanelUI/Changes/FileRowView.swift", "PanelUI/Changes/LineCounts.swift"],
     "commit.row": ["PanelUI/History/CommitRowView.swift", "PanelUI/History/CommitRefs.swift"],

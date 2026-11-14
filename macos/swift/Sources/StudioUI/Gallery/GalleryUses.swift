@@ -19,8 +19,8 @@ enum GalleryUses {
             "card", "card.edge", "metrics.border_width",
         ]),
         TokenUse(id: "sidebar.band", label: "group head", area: .sidebar, tokens: [
-            "agent.attention", "border", "metrics.radius_chip", "metrics.radius_sm", "sidebar.background",
-            "state.hover", "status.danger", "text.faint", "text.muted", "text.primary",
+            "agent.attention", "metrics.radius_sm", "sidebar.background", "state.hover", "status.danger",
+            "text.faint", "text.muted", "text.primary",
         ]),
         TokenUse(id: "status.tile", label: "status tile", area: .sidebar, tokens: [
             "agent.attention", "agent.bell", "agent.done", "agent.working", "metrics.border_width", "primary",
@@ -45,8 +45,7 @@ enum GalleryUses {
             "card", "card.edge", "metrics.border_width", "text.muted",
         ]),
         TokenUse(id: "panel.band", label: "section band", area: .panel, tokens: [
-            "band.hover", "border", "metrics.radius_chip", "metrics.radius_sm", "state.hover", "text.muted",
-            "text.primary",
+            "band.hover", "metrics.radius_sm", "state.hover", "text.muted", "text.primary",
         ]),
         TokenUse(id: "panel.item", label: "panel row", area: .panel, tokens: [
             "checkbox.background", "checkbox.border", "checkbox.checked", "metrics.border_width",
@@ -81,7 +80,7 @@ enum GalleryUses {
             "text.primary",
         ]),
         TokenUse(id: "title.tab", label: "title tab", area: .chrome, tokens: [
-            "border", "metrics.radius", "metrics.radius_chip", "state.hover", "text.muted", "text.primary",
+            "metrics.radius", "state.hover", "text.muted", "text.primary",
         ]),
         TokenUse(id: "keycap", label: "key cap", area: .chrome, tokens: [
             "border.strong", "control.background", "metrics.border_width", "metrics.radius_chip", "text.muted",

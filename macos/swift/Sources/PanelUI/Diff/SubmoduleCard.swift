@@ -48,7 +48,7 @@ struct SubmoduleCard: View {
         if !listed.isEmpty {
             HStack(spacing: Space._2) {
                 Text(title).textCase(.uppercase).font(tokens.font(.caption).weight(.semibold)).foregroundStyle(tokens.textMuted)
-                BandCount(text: CountText.grouped(total))
+                CountBadge(text: CountText.grouped(total))
             }
             .padding(.horizontal, Space._4).padding(.top, Space._3).padding(.bottom, Space._1)
             .accessibilityElement(children: .ignore)

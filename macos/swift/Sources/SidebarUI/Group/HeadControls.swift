@@ -14,7 +14,7 @@ struct HeadChevron: View {
         GlyphView(glyph: .chevron, size: RowGeometry.chevron)
             .foregroundStyle(tokens.textMuted)
             .rotationEffect(.degrees(isFolded ? 0 : 90))
-            .motion(SidebarMotion.fold, value: isFolded)
+            .motionTurn(SidebarMotion.fold, value: isFolded)
             .frame(width: RowGeometry.chevronBox, height: RowGeometry.chevronBox)
             .background(hovering ? tokens.stateHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
             .onHover { hovering = $0 }

@@ -47,7 +47,7 @@ private struct RowStyle: ButtonStyle {
                 ZStack {
                     shape.fill(configuration.isPressed ? tokens.stateActive : hovering ? tokens.stateHover : .clear)
                     if isSelected {
-                        shape.fill(tokens.sidebarRowSelected).matchedGeometryEffect(id: "selection", in: selection)
+                        shape.fill(tokens.sidebarRowSelected).slidingSelection("selection", in: selection)
                     }
                 }
                 .motion(Motion.press, value: hovering)

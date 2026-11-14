@@ -45,7 +45,7 @@ public struct Segmented<Value: Hashable>: View {
                     if on {
                         RoundedRectangle(cornerRadius: tokens.metrics.radiusChip).fill(tokens.chipSelected)
                             .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusChip), \.borderStrong)
-                            .matchedGeometryEffect(id: "segment", in: space)
+                            .slidingSelection("segment", in: space)
                     }
                 }
                 .contentShape(Rectangle())
