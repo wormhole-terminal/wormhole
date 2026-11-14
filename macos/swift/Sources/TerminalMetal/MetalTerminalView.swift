@@ -109,7 +109,10 @@ public final class MetalTerminalView: NSView {
     var handledByInputMethod = false
 
     // Pointer, selection and scroller (see Pointer/, Scroller/).
-    var interaction: (any TerminalInteraction)?
+    /// The pointer's and the selection's way into the engine, asked of the source each time, as `scrollback` and `probes` are:
+    /// a terminal still being started in, or attached to, a session host has none when the view starts and gets one when
+    /// the host answers, and a terminal attached again is another object.
+    var interaction: (any TerminalInteraction)? { source.interaction }
     var pointer = PointerState()
     /// A selection may exist: ask for its spans after each frame until one comes back empty.
     var selectionMayExist = false
@@ -211,7 +214,6 @@ public final class MetalTerminalView: NSView {
         started = true
         let relay = wake
         do {
-            defer { interaction = source.interaction }
             try source.start(size: gridSize) { [weak self] in
                 // Any thread, no lock held: note the wake and hop. One hop per drain, however much output.
                 guard !relay.queued.exchange(true, ordering: .acquiringAndReleasing) else { return }
