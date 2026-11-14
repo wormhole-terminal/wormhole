@@ -69,16 +69,23 @@ extension EndToEnd {
             let put = items.firstIndex { $0.hasPrefix("Put Command at Prompt") }, fold = items.firstIndex { $0.hasPrefix("Fold Output") }
             app.expect(put != nil && fold == put.map { $0 + 1 }, "Fold Output comes right after Put Command at Prompt:\n\(menu)")
 
-            await app.send(["block \(block.number) fold"])
+            // Only lines in the history fold, the live screen never (`wormhole_term::folds`' `fold_limit`): a longer listing
+            // pushes the block off the screen, and the wheel brings its marker back into view.
+            await app.shell("/usr/bin/seq 1 160")
+            await app.until("blocks") { !Instance.blocks($0, running: "/usr/bin/seq 1 160").isEmpty }
+            await app.send(["block \(block.number) fold", "scroll 700 400 -4000"])
             let folded = await app.until("probes") { $0.contains("[closed]") }
             app.expect(Instance.plain(folded).contains("markers ["), "a marker for the folded output: \(folded)")
 
-            // Export Text As… writes into the instance's own exports folder (never the person's Documents), folded lines too.
-            let file = app.scratch.data.appendingPathComponent("exports/blocks-export.txt")
+            // Export Text As… starts in the instance's own exports folder (never the person's Documents) and is named after the
+            // terminal; the panel says which file it wrote, folded lines too.
+            let exports = app.scratch.data.appendingPathComponent("exports").path
             await app.send(["action exportText"])
             await app.until("windows") { $0.contains("sheet=true") }
-            await app.send(["sheet ok \(file.path)"])
-            app.expect(await app.waitFor(file), "the export was written: \(file.path)")
+            let said = (await app.send(["sheet ok", "delay 500"])).joined(separator: "\n")
+            let written = said.split(separator: "\n").first { $0.hasPrefix("export ") }.map { String($0.dropFirst("export ".count)) } ?? ""
+            let file = URL(fileURLWithPath: written)
+            app.expect(written.hasSuffix(".txt") && file.deletingLastPathComponent().resolvingSymlinksInPath().path == URL(fileURLWithPath: exports).resolvingSymlinksInPath().path, "the export went into \(exports): \(said)")
             let text = (try? String(contentsOf: file, encoding: .utf8)) ?? ""
             app.expect((101...112).allSatisfy { text.contains("\n\($0)\n") || text.hasPrefix("\($0)\n") }, "every line of the fold is in the export:\n\(text)")
         }
