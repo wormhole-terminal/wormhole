@@ -65,16 +65,7 @@ extension AppController {
         case "commit-more":
             hub.panel.history.bodyWhole.toggle()
             reply("commit-more \(hub.panel.history.bodyWhole ? "whole" : "compact")")
-        case "notes-sync":
-            // One whole merge of the window's terminals with their projects' notes.md, now (what the timer runs); one already
-            // under way lands first.
-            guard let coordinator = front.notes else { reply("error: the window has no notes sync"); return true }
-            var ran = await coordinator.sync()
-            for _ in 0..<100 where !ran {
-                await pause(50)
-                ran = await coordinator.sync()
-            }
-            reply("notes-sync \(ran ? "done" : "busy")")
+        case "notes-sync": reply(await syncNotesNow())
         case "project-init":
             let project = hub.panel.project
             // The folder the tab's button makes it in (a repository's root, as the GPUI app's `active_folder`), not the terminal's own.
@@ -84,6 +75,18 @@ extension AppController {
         default: return false
         }
         return true
+    }
+
+    /// `notes-sync`: one whole merge of the window's terminals with their projects' notes.md, now (what the timer runs); one
+    /// already under way lands first.
+    private func syncNotesNow() async -> String {
+        guard let coordinator = front.notes else { return "error: the window has no notes sync" }
+        var ran = await coordinator.sync()
+        for _ in 0..<100 where !ran {
+            await pause(50)
+            ran = await coordinator.sync()
+        }
+        return "notes-sync \(ran ? "done" : "busy")"
     }
 
     /// `picker [history|compare] <query>`: the revisions the picker offers for what is typed in its box, one a line.
