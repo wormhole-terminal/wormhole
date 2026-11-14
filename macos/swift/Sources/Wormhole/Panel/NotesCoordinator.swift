@@ -27,10 +27,13 @@ final class NotesCoordinator {
     /// A folder's project root as last asked, so a window of many terminals asks each folder only now and then.
     private var roots: [String: (root: String?, at: Date)] = [:]
     private static let syncEvery: TimeInterval = 2
+    /// The terminals whose merge is under way, the app's every window's (`NotesMerging.app`).
+    private let merging: NotesMerging
 
-    init(persistence: any NotesPersisting, hub: WindowHub) {
+    init(persistence: any NotesPersisting, hub: WindowHub, merging: NotesMerging = NotesMerging()) {
         self.persistence = persistence
         self.hub = hub
+        self.merging = merging
     }
 
     func follow(profile id: String) { persistence.follow(profile: id) }
@@ -54,6 +57,9 @@ final class NotesCoordinator {
 
     private func changed() {
         let selected = hub.state.selected
+        // What was typed while the shown terminal's notes could not be read is laid after them once they read, here as well as
+        // on the sync's tick: with the sync off (no project, notes off) a switch away would otherwise leave it unsaved.
+        reread()
         forgetClosed()
         if selected != shown {
             if let shown, unread != shown, hub.state.all.contains(where: { $0.id == shown }) {
@@ -135,9 +141,14 @@ final class NotesCoordinator {
             // Only a step or note of the terminal on show being written holds its merge back (`api.rs` `being_written`);
             // read just before the merge is sent, after the awaits above.
             let editing = id == shown && hub.panel.notes.isWriting
-            guard let sent = holding(id) else { continue }
+            // One merge of a terminal at a time in the process: one moved in from another window waits until the merge that
+            // window sent for it has landed (and forgotten the base it moved), or this one would send what it read of the
+            // terminal before against that base and read the file's new lines as deleted by the person.
+            guard !merging.ids.contains(id), let sent = holding(id) else { continue }
+            merging.ids.insert(id)
             let answered = await persistence.sync(session: id, root: root, model: sent, editing: editing)
             land(answered, sent: sent, for: id)
+            merging.ids.remove(id)
         }
         return true
     }
@@ -206,4 +217,12 @@ final class NotesCoordinator {
         roots[folder] = (root, Date())
         return root
     }
+}
+
+/// The terminals whose notes merge is under way. One set for every window of the app (`app`): a terminal's id is the
+/// process's and it is in one window at a time, so a window it moved to waits for the merge the window it left sent for it.
+@MainActor
+final class NotesMerging {
+    static let app = NotesMerging()
+    var ids: Set<TerminalID> = []
 }

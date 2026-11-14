@@ -50,7 +50,7 @@ extension AppController {
         connect(session)
         followCloseDot(of: session)
         if let persistence = panel.notes {
-            session.notes = NotesCoordinator(persistence: persistence, hub: hub)
+            session.notes = NotesCoordinator(persistence: persistence, hub: hub, merging: .app)
             session.notes?.start()
         }
         session.saver = WindowSaver(session: session, windows: windowsHost.backend)

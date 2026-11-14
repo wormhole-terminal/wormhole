@@ -60,10 +60,10 @@ struct NotesMergeSavedTests {
         model?.tasks.items.map { "\($0.done ? "x" : " ") \($0.text)" } ?? []
     }
 
-    private func window(_ persistence: Store) -> (WorkspaceStore, WindowHub, NotesCoordinator) {
+    private func window(_ persistence: Store, merging: NotesMerging = NotesMerging()) -> (WorkspaceStore, WindowHub, NotesCoordinator) {
         let store = WorkspaceStore(backend: MockWorkspaceBackend(selected: 1))
         let hub = WindowHub(store: store, terminals: TerminalViews { _ in nil })
-        let coordinator = NotesCoordinator(persistence: persistence, hub: hub)
+        let coordinator = NotesCoordinator(persistence: persistence, hub: hub, merging: merging)
         coordinator.start()
         return (store, hub, coordinator)
     }
@@ -255,5 +255,30 @@ struct NotesMergeSavedTests {
         }
         #expect(Self.steps(persistence.saved[2]) == ["  build"])
         #expect(persistence.closedSessions == [2])
+    }
+
+    /// A terminal moved into another window while the window it left still merges it: the window it came to does not send it
+    /// until that merge has landed, so it never merges what it read of it before against the base that merge just moved
+    /// (which would read the file's new lines as deleted by the person and take them out of notes.md).
+    @Test func aTerminalMovedInWaitsForTheMergeTheWindowItLeftSent() async {
+        let merging = NotesMerging()
+        let left = Store()
+        left.saved[2] = Self.model(steps: ["build"])
+        let (_, _, leaving) = window(left, merging: merging)
+        let arrived = Store()
+        arrived.saved[2] = Self.model(steps: ["build"])
+        let (_, _, receiving) = window(arrived, merging: merging)
+        left.held = 2
+        let entered = AsyncStream<Void>.makeStream()
+        left.entered = entered.continuation
+        let running = Task { await leaving.sync() }
+        var inFlight = entered.stream.makeAsyncIterator()
+        _ = await inFlight.next()
+        await receiving.sync()
+        #expect(arrived.sent[2] == nil, "not sent while the window it left merges it")
+        left.release?.resume()
+        await running.value
+        await receiving.sync()
+        #expect(arrived.sent[2] != nil, "sent once that merge has landed")
     }
 }
