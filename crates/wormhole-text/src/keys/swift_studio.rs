@@ -48,152 +48,150 @@ pub const STUDIO_GALLERY_SHOW_QUICK_PANEL: Key = Key::new(1992);
 pub const STUDIO_GALLERY_TURN_COUNT: Key = Key::new(1993);
 /// "Play a status change"
 pub const STUDIO_GALLERY_PLAY_STATUS: Key = Key::new(1994);
-/// "These play the system’s own transitions, which cannot be held part-way: before and after."
-pub const STUDIO_GALLERY_STATUS_BEFORE_AFTER: Key = Key::new(1995);
 /// "A count turns over by the system’s own transition, which cannot be held half way: before and after."
-pub const STUDIO_GALLERY_COUNTS_BEFORE_AFTER: Key = Key::new(1996);
+pub const STUDIO_GALLERY_COUNTS_BEFORE_AFTER: Key = Key::new(1995);
 /// "macOS draws tooltips; a theme does not change them."
-pub const STUDIO_GALLERY_SYSTEM_TOOLTIP: Key = Key::new(1997);
+pub const STUDIO_GALLERY_SYSTEM_TOOLTIP: Key = Key::new(1996);
 /// "Rest the pointer here"
-pub const STUDIO_GALLERY_TOOLTIP_HERE: Key = Key::new(1998);
+pub const STUDIO_GALLERY_TOOLTIP_HERE: Key = Key::new(1997);
 /// "A tooltip explains a control"
-pub const STUDIO_GALLERY_TOOLTIP_SAMPLE: Key = Key::new(1999);
+pub const STUDIO_GALLERY_TOOLTIP_SAMPLE: Key = Key::new(1998);
 /// "macOS draws menus; a theme does not change them."
-pub const STUDIO_GALLERY_SYSTEM_MENU: Key = Key::new(2000);
+pub const STUDIO_GALLERY_SYSTEM_MENU: Key = Key::new(1999);
 /// "Open a menu"
-pub const STUDIO_GALLERY_SHOW_MENU: Key = Key::new(2001);
+pub const STUDIO_GALLERY_SHOW_MENU: Key = Key::new(2000);
 /// "macOS draws questions as its own alerts; a theme does not change them."
-pub const STUDIO_GALLERY_SYSTEM_DIALOG: Key = Key::new(2002);
+pub const STUDIO_GALLERY_SYSTEM_DIALOG: Key = Key::new(2001);
 /// "Show a question"
-pub const STUDIO_GALLERY_SHOW_DIALOG: Key = Key::new(2003);
+pub const STUDIO_GALLERY_SHOW_DIALOG: Key = Key::new(2002);
 /// "macOS draws the scroll bars; a theme does not change them."
-pub const STUDIO_GALLERY_SYSTEM_SCROLLBAR: Key = Key::new(2004);
+pub const STUDIO_GALLERY_SYSTEM_SCROLLBAR: Key = Key::new(2003);
 /// "About Wormhole is the system’s own panel; a theme does not change it."
-pub const STUDIO_GALLERY_SYSTEM_ABOUT: Key = Key::new(2005);
+pub const STUDIO_GALLERY_SYSTEM_ABOUT: Key = Key::new(2004);
 /// "Show About Wormhole"
-pub const STUDIO_GALLERY_SHOW_ABOUT: Key = Key::new(2006);
+pub const STUDIO_GALLERY_SHOW_ABOUT: Key = Key::new(2005);
 /// "Custom"
-pub const SETTINGS_FONTS_SOURCE_CUSTOM: Key = Key::new(2007);
+pub const SETTINGS_FONTS_SOURCE_CUSTOM: Key = Key::new(2006);
 /// "Installed"
-pub const SETTINGS_FONTS_SOURCE_INSTALLED: Key = Key::new(2008);
+pub const SETTINGS_FONTS_SOURCE_INSTALLED: Key = Key::new(2007);
 /// "Recent"
-pub const SETTINGS_FONTS_RECENT: Key = Key::new(2009);
+pub const SETTINGS_FONTS_RECENT: Key = Key::new(2008);
 /// "monospace"
-pub const SETTINGS_FONTS_MONOSPACE_TAG: Key = Key::new(2010);
+pub const SETTINGS_FONTS_MONOSPACE_TAG: Key = Key::new(2009);
 /// "Show all fonts to include proportional ones"
-pub const SETTINGS_FONTS_SHOW_ALL_HINT: Key = Key::new(2012);
+pub const SETTINGS_FONTS_SHOW_ALL_HINT: Key = Key::new(2011);
 /// "Font list"
-pub const SETTINGS_FONTS_PICKER: Key = Key::new(2013);
+pub const SETTINGS_FONTS_PICKER: Key = Key::new(2012);
 /// "Preview"
-pub const SETTINGS_FONTS_PREVIEW: Key = Key::new(2014);
+pub const SETTINGS_FONTS_PREVIEW: Key = Key::new(2013);
 /// "Glyphs this font draws itself"
-pub const SETTINGS_FONTS_COVERAGE: Key = Key::new(2015);
+pub const SETTINGS_FONTS_COVERAGE: Key = Key::new(2014);
 /// "falls back to another font"
-pub const SETTINGS_FONTS_FALLS_BACK: Key = Key::new(2016);
+pub const SETTINGS_FONTS_FALLS_BACK: Key = Key::new(2015);
 /// "drawn by this font"
-pub const SETTINGS_FONTS_DRAWN: Key = Key::new(2017);
+pub const SETTINGS_FONTS_DRAWN: Key = Key::new(2016);
 /// "Box drawing"
-pub const SETTINGS_FONTS_BOX_DRAWING: Key = Key::new(2018);
+pub const SETTINGS_FONTS_BOX_DRAWING: Key = Key::new(2017);
 /// "Powerline"
-pub const SETTINGS_FONTS_POWERLINE: Key = Key::new(2019);
+pub const SETTINGS_FONTS_POWERLINE: Key = Key::new(2018);
 /// "Nerd icons"
-pub const SETTINGS_FONTS_NERD_ICONS: Key = Key::new(2020);
+pub const SETTINGS_FONTS_NERD_ICONS: Key = Key::new(2019);
 /// "Wide characters"
-pub const SETTINGS_FONTS_WIDE: Key = Key::new(2021);
+pub const SETTINGS_FONTS_WIDE: Key = Key::new(2020);
 /// "Bold"
-pub const SETTINGS_FONTS_BOLD: Key = Key::new(2022);
+pub const SETTINGS_FONTS_BOLD: Key = Key::new(2021);
 /// "Italic"
-pub const SETTINGS_FONTS_ITALIC: Key = Key::new(2023);
+pub const SETTINGS_FONTS_ITALIC: Key = Key::new(2022);
 /// "No bold face: bold text will be drawn heavier by the system"
-pub const SETTINGS_FONTS_NO_BOLD: Key = Key::new(2024);
+pub const SETTINGS_FONTS_NO_BOLD: Key = Key::new(2023);
 /// "No italic face: italic text will be slanted by the system"
-pub const SETTINGS_FONTS_NO_ITALIC: Key = Key::new(2025);
+pub const SETTINGS_FONTS_NO_ITALIC: Key = Key::new(2024);
 /// "Terminal"
-pub const TERMINAL_ACCESSIBILITY_LABEL: Key = Key::new(2026);
+pub const TERMINAL_ACCESSIBILITY_LABEL: Key = Key::new(2025);
 /// "Scrollback"
-pub const TERMINAL_ACCESSIBILITY_SCROLLBACK: Key = Key::new(2027);
+pub const TERMINAL_ACCESSIBILITY_SCROLLBACK: Key = Key::new(2026);
 /// "Select Output"
-pub const TERMINAL_MENU_SELECT_OUTPUT: Key = Key::new(2028);
+pub const TERMINAL_MENU_SELECT_OUTPUT: Key = Key::new(2027);
 /// "prompt"
-pub const SPOKEN_BLOCK_PROMPT: Key = Key::new(2030);
+pub const SPOKEN_BLOCK_PROMPT: Key = Key::new(2029);
 /// "running"
-pub const SPOKEN_BLOCK_RUNNING: Key = Key::new(2031);
+pub const SPOKEN_BLOCK_RUNNING: Key = Key::new(2030);
 /// "finished"
-pub const SPOKEN_BLOCK_FINISHED: Key = Key::new(2032);
+pub const SPOKEN_BLOCK_FINISHED: Key = Key::new(2031);
 /// "empty prompt"
-pub const SPOKEN_BLOCK_EMPTY: Key = Key::new(2033);
+pub const SPOKEN_BLOCK_EMPTY: Key = Key::new(2032);
 /// "Find"
-pub const TERMINAL_FIND_PLACEHOLDER: Key = Key::new(2035);
+pub const TERMINAL_FIND_PLACEHOLDER: Key = Key::new(2034);
 /// "Not a valid pattern"
-pub const TERMINAL_FIND_INVALID: Key = Key::new(2036);
+pub const TERMINAL_FIND_INVALID: Key = Key::new(2035);
 /// "No results"
-pub const TERMINAL_FIND_NO_RESULTS: Key = Key::new(2037);
+pub const TERMINAL_FIND_NO_RESULTS: Key = Key::new(2036);
 /// "Previous match (⇧⌘G)"
-pub const TERMINAL_FIND_PREVIOUS: Key = Key::new(2039);
+pub const TERMINAL_FIND_PREVIOUS: Key = Key::new(2038);
 /// "Next match (⌘G)"
-pub const TERMINAL_FIND_NEXT: Key = Key::new(2040);
+pub const TERMINAL_FIND_NEXT: Key = Key::new(2039);
 /// "Close find (esc)"
-pub const TERMINAL_FIND_CLOSE: Key = Key::new(2041);
+pub const TERMINAL_FIND_CLOSE: Key = Key::new(2040);
 /// "Match case"
-pub const TERMINAL_FIND_MATCH_CASE: Key = Key::new(2042);
+pub const TERMINAL_FIND_MATCH_CASE: Key = Key::new(2041);
 /// "Whole word"
-pub const TERMINAL_FIND_WHOLE_WORD: Key = Key::new(2043);
+pub const TERMINAL_FIND_WHOLE_WORD: Key = Key::new(2042);
 /// "Regular expression"
-pub const TERMINAL_FIND_REGEX: Key = Key::new(2044);
+pub const TERMINAL_FIND_REGEX: Key = Key::new(2043);
 /// "Minimap"
-pub const TERMINAL_MINIMAP: Key = Key::new(2045);
+pub const TERMINAL_MINIMAP: Key = Key::new(2044);
 /// "Terminal"
-pub const TERMINAL_EXPORT_DEFAULT_NAME: Key = Key::new(2047);
+pub const TERMINAL_EXPORT_DEFAULT_NAME: Key = Key::new(2046);
 /// "Allow once"
-pub const TERMINAL_CLIPBOARD_ONCE: Key = Key::new(2048);
+pub const TERMINAL_CLIPBOARD_ONCE: Key = Key::new(2047);
 /// "Give it the clipboard's text this time"
-pub const TERMINAL_CLIPBOARD_ONCE_HELP: Key = Key::new(2049);
+pub const TERMINAL_CLIPBOARD_ONCE_HELP: Key = Key::new(2048);
 /// "Always"
-pub const TERMINAL_CLIPBOARD_ALWAYS: Key = Key::new(2050);
+pub const TERMINAL_CLIPBOARD_ALWAYS: Key = Key::new(2049);
 /// "Always for this terminal"
-pub const TERMINAL_CLIPBOARD_ALWAYS_LONG: Key = Key::new(2051);
+pub const TERMINAL_CLIPBOARD_ALWAYS_LONG: Key = Key::new(2050);
 /// "Give it the clipboard whenever it asks, until this terminal closes"
-pub const TERMINAL_CLIPBOARD_ALWAYS_HELP: Key = Key::new(2052);
+pub const TERMINAL_CLIPBOARD_ALWAYS_HELP: Key = Key::new(2051);
 /// "Deny"
-pub const TERMINAL_CLIPBOARD_DENY: Key = Key::new(2053);
+pub const TERMINAL_CLIPBOARD_DENY: Key = Key::new(2052);
 /// "Give it nothing"
-pub const TERMINAL_CLIPBOARD_DENY_HELP: Key = Key::new(2054);
+pub const TERMINAL_CLIPBOARD_DENY_HELP: Key = Key::new(2053);
 /// "This terminal ended unexpectedly"
-pub const TERMINAL_EXITED_LOST: Key = Key::new(2055);
+pub const TERMINAL_EXITED_LOST: Key = Key::new(2054);
 /// "Restart"
-pub const TERMINAL_EXITED_RESTART: Key = Key::new(2058);
+pub const TERMINAL_EXITED_RESTART: Key = Key::new(2057);
 /// "Close terminal"
-pub const TERMINAL_EXITED_CLOSE: Key = Key::new(2059);
+pub const TERMINAL_EXITED_CLOSE: Key = Key::new(2058);
 /// "Dismiss"
-pub const TERMINAL_HOST_NOTICE_DISMISS: Key = Key::new(2060);
+pub const TERMINAL_HOST_NOTICE_DISMISS: Key = Key::new(2059);
 /// "Control"
-pub const KEYCAP_CONTROL: Key = Key::new(2061);
+pub const KEYCAP_CONTROL: Key = Key::new(2060);
 /// "Option"
-pub const KEYCAP_OPTION: Key = Key::new(2062);
+pub const KEYCAP_OPTION: Key = Key::new(2061);
 /// "Shift"
-pub const KEYCAP_SHIFT: Key = Key::new(2063);
+pub const KEYCAP_SHIFT: Key = Key::new(2062);
 /// "Command"
-pub const KEYCAP_COMMAND: Key = Key::new(2064);
+pub const KEYCAP_COMMAND: Key = Key::new(2063);
 /// "Up arrow"
-pub const KEYCAP_UP_ARROW: Key = Key::new(2065);
+pub const KEYCAP_UP_ARROW: Key = Key::new(2064);
 /// "Down arrow"
-pub const KEYCAP_DOWN_ARROW: Key = Key::new(2066);
+pub const KEYCAP_DOWN_ARROW: Key = Key::new(2065);
 /// "Left arrow"
-pub const KEYCAP_LEFT_ARROW: Key = Key::new(2067);
+pub const KEYCAP_LEFT_ARROW: Key = Key::new(2066);
 /// "Right arrow"
-pub const KEYCAP_RIGHT_ARROW: Key = Key::new(2068);
+pub const KEYCAP_RIGHT_ARROW: Key = Key::new(2067);
 /// "Delete"
-pub const KEYCAP_DELETE: Key = Key::new(2069);
+pub const KEYCAP_DELETE: Key = Key::new(2068);
 /// "Return"
-pub const KEYCAP_RETURN: Key = Key::new(2070);
+pub const KEYCAP_RETURN: Key = Key::new(2069);
 /// "Escape"
-pub const KEYCAP_ESCAPE: Key = Key::new(2071);
+pub const KEYCAP_ESCAPE: Key = Key::new(2070);
 /// "Tab"
-pub const KEYCAP_TAB: Key = Key::new(2072);
+pub const KEYCAP_TAB: Key = Key::new(2071);
 /// "Changed"
-pub const STUDIO_CHANGED_DOT: Key = Key::new(2073);
+pub const STUDIO_CHANGED_DOT: Key = Key::new(2072);
 /// "function"
-pub const STUDIO_COMPLETION_FUNCTION: Key = Key::new(2074);
+pub const STUDIO_COMPLETION_FUNCTION: Key = Key::new(2073);
 
 /// ```text
 /// { $count ->
@@ -223,47 +221,47 @@ pub fn studio_folder_link(name: &str) -> String {
 /// No font has these words in its name: “{ $query }”
 /// ```
 pub fn settings_fonts_no_matches(query: &str) -> String {
-    crate::active::message(2011, &[("query", Arg::Str(query))])
+    crate::active::message(2010, &[("query", Arg::Str(query))])
 }
 
 /// ```text
 /// exit { $code }
 /// ```
 pub fn terminal_block_exit(code: &str) -> String {
-    crate::active::message(2029, &[("code", Arg::Str(code))])
+    crate::active::message(2028, &[("code", Arg::Str(code))])
 }
 
 /// ```text
 /// failed with exit code { $code }
 /// ```
 pub fn spoken_block_failed(code: &str) -> String {
-    crate::active::message(2034, &[("code", Arg::Str(code))])
+    crate::active::message(2033, &[("code", Arg::Str(code))])
 }
 
 /// ```text
 /// { $at } of { $total }
 /// ```
 pub fn terminal_find_count(at: &str, total: &str) -> String {
-    crate::active::message(2038, &[("at", Arg::Str(at)), ("total", Arg::Str(total))])
+    crate::active::message(2037, &[("at", Arg::Str(at)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// line { $line } of { $total }
 /// ```
 pub fn terminal_minimap_value(line: &str, total: &str) -> String {
-    crate::active::message(2046, &[("line", Arg::Str(line)), ("total", Arg::Str(total))])
+    crate::active::message(2045, &[("line", Arg::Str(line)), ("total", Arg::Str(total))])
 }
 
 /// ```text
 /// { $shell } exited
 /// ```
 pub fn terminal_exited(shell: &str) -> String {
-    crate::active::message(2056, &[("shell", Arg::Str(shell))])
+    crate::active::message(2055, &[("shell", Arg::Str(shell))])
 }
 
 /// ```text
 /// { $shell } exited with code { $code }
 /// ```
 pub fn terminal_exited_code(shell: &str, code: &str) -> String {
-    crate::active::message(2057, &[("shell", Arg::Str(shell)), ("code", Arg::Str(code))])
+    crate::active::message(2056, &[("shell", Arg::Str(shell)), ("code", Arg::Str(code))])
 }

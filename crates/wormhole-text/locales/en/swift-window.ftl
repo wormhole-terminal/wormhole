@@ -28,7 +28,9 @@ sidebar-group-edit-action = Edit group
 # VoiceOver's names for the buttons inside a group's head: the name, which opens the group's popover, and the chevron,
 # which folds the group or opens it (core's `edit_label`, `fold_label`). { $group } is the group's name.
 sidebar-group-edit-spoken = Edit group { $group }
+# { $group } is the group's name.
 sidebar-group-fold-spoken = Fold group { $group }
+# { $group } is the group's name.
 sidebar-group-unfold-spoken = Unfold group { $group }
 
 # A row's tooltips: the mark of a terminal hidden from agents, in two lines.

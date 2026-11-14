@@ -120,8 +120,7 @@ fn the_windows_of_a_profile_merge_a_terminal_against_the_same_base() {
     // The file loses a step while the terminal moves to the other window, whose merge must know what was agreed: without
     // the base the step reads as added by the person and is written back.
     let before = notes_md(&repo);
-    let without: Vec<&str> =
-        before.lines().filter(|line| *line != "- [ ] mine").map(str::trim_end).collect();
+    let without: Vec<&str> = before.lines().filter(|line| *line != "- [ ] mine").map(str::trim_end).collect();
     repo.put("notes.md", &format!("{}\n", without.join("\n")));
     let out = second.sync_notes(1, repo.root(), agreed, false);
     let steps = out.apply.map(|doc| doc.tasks.into_iter().map(|t| t.text).collect::<Vec<_>>());

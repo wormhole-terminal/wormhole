@@ -55,8 +55,7 @@ studio-gallery-show-sheet = Show the shortcut sheet
 studio-gallery-show-quick-panel = Show the quick panel
 studio-gallery-turn-count = Turn the counts over
 studio-gallery-play-status = Play a status change
-# Over the status changes and the counts the gallery cannot hold part-way, shown as they are before and after.
-studio-gallery-status-before-after = These play the system’s own transitions, which cannot be held part-way: before and after.
+# Over the counts the gallery cannot hold part-way, shown as they are before and after.
 studio-gallery-counts-before-after = A count turns over by the system’s own transition, which cannot be held half way: before and after.
 
 # Under a control of the gallery that macOS draws, not the theme.

@@ -35,133 +35,131 @@ pub const PANEL_SPOKEN_FOLDED: Key = Key::new(1664);
 /// "open"
 pub const PANEL_SPOKEN_OPEN: Key = Key::new(1665);
 /// "expanded"
-pub const FILES_SPOKEN_EXPANDED: Key = Key::new(1666);
+pub const FILES_SPOKEN_EXPANDED: Key = Key::new(1667);
 /// "collapsed"
-pub const FILES_SPOKEN_COLLAPSED: Key = Key::new(1667);
+pub const FILES_SPOKEN_COLLAPSED: Key = Key::new(1668);
 /// "Changed files"
-pub const CHANGES_LIST_LABEL: Key = Key::new(1668);
+pub const CHANGES_LIST_LABEL: Key = Key::new(1669);
 /// "Reading git status…"
-pub const CHANGES_READING: Key = Key::new(1669);
+pub const CHANGES_READING: Key = Key::new(1670);
 /// "No changes. Working tree is clean."
-pub const CHANGES_CLEAN: Key = Key::new(1670);
+pub const CHANGES_CLEAN: Key = Key::new(1671);
 /// "Refresh"
-pub const CHANGES_REFRESH: Key = Key::new(1671);
+pub const CHANGES_REFRESH: Key = Key::new(1672);
 /// "vs"
-pub const CHANGES_COMPARE_VERSUS: Key = Key::new(1674);
+pub const CHANGES_COMPARE_VERSUS: Key = Key::new(1675);
 /// "Changes"
-pub const CHANGES_GROUP_CHANGES: Key = Key::new(1675);
+pub const CHANGES_GROUP_CHANGES: Key = Key::new(1676);
 /// "Untracked"
-pub const CHANGES_GROUP_UNTRACKED: Key = Key::new(1676);
+pub const CHANGES_GROUP_UNTRACKED: Key = Key::new(1677);
 /// "bin"
-pub const CHANGES_BADGE_BINARY: Key = Key::new(1678);
+pub const CHANGES_BADGE_BINARY: Key = Key::new(1679);
 /// "binary"
-pub const CHANGES_COUNTS_BINARY: Key = Key::new(1683);
+pub const CHANGES_COUNTS_BINARY: Key = Key::new(1684);
 /// "Modified"
-pub const CHANGES_KIND_MODIFIED: Key = Key::new(1684);
+pub const CHANGES_KIND_MODIFIED: Key = Key::new(1685);
 /// "Added"
-pub const CHANGES_KIND_ADDED: Key = Key::new(1685);
+pub const CHANGES_KIND_ADDED: Key = Key::new(1686);
 /// "Deleted"
-pub const CHANGES_KIND_DELETED: Key = Key::new(1686);
+pub const CHANGES_KIND_DELETED: Key = Key::new(1687);
 /// "Renamed"
-pub const CHANGES_KIND_RENAMED: Key = Key::new(1687);
+pub const CHANGES_KIND_RENAMED: Key = Key::new(1688);
 /// "Untracked"
-pub const CHANGES_KIND_UNTRACKED: Key = Key::new(1688);
+pub const CHANGES_KIND_UNTRACKED: Key = Key::new(1689);
 /// "Conflicted"
-pub const CHANGES_KIND_CONFLICTED: Key = Key::new(1689);
+pub const CHANGES_KIND_CONFLICTED: Key = Key::new(1690);
 /// "Copied the comments instead"
-pub const REVIEW_COPIED_INSTEAD: Key = Key::new(1692);
+pub const REVIEW_COPIED_INSTEAD: Key = Key::new(1693);
 /// "OK"
-pub const REVIEW_COPIED_INSTEAD_OK: Key = Key::new(1693);
+pub const REVIEW_COPIED_INSTEAD_OK: Key = Key::new(1694);
 /// "The program in this terminal would run each line of a paste as a command, so the comments are on the clipboard. Paste them into your agent's prompt."
-pub const REVIEW_COPIED_INSTEAD_DETAIL: Key = Key::new(1694);
+pub const REVIEW_COPIED_INSTEAD_DETAIL: Key = Key::new(1695);
 /// "Loading diff…"
-pub const DIFF_READING: Key = Key::new(1696);
+pub const DIFF_READING: Key = Key::new(1697);
 /// "The diff can't be read."
-pub const DIFF_UNREADABLE: Key = Key::new(1697);
+pub const DIFF_UNREADABLE: Key = Key::new(1698);
 /// "Previous file"
-pub const DIFF_PREVIOUS_FILE: Key = Key::new(1698);
+pub const DIFF_PREVIOUS_FILE: Key = Key::new(1699);
 /// "Next file"
-pub const DIFF_NEXT_FILE: Key = Key::new(1699);
+pub const DIFF_NEXT_FILE: Key = Key::new(1700);
 /// "Wrap long lines"
-pub const DIFF_WRAP_LINES: Key = Key::new(1701);
+pub const DIFF_WRAP_LINES: Key = Key::new(1702);
 /// "Split"
-pub const DIFF_SPLIT: Key = Key::new(1702);
+pub const DIFF_SPLIT: Key = Key::new(1703);
 /// "Unified"
-pub const DIFF_UNIFIED: Key = Key::new(1703);
+pub const DIFF_UNIFIED: Key = Key::new(1704);
 /// "close"
-pub const DIFF_CLOSE: Key = Key::new(1704);
+pub const DIFF_CLOSE: Key = Key::new(1705);
 /// "Close diff"
-pub const DIFF_CLOSE_SPOKEN: Key = Key::new(1705);
+pub const DIFF_CLOSE_SPOKEN: Key = Key::new(1706);
 /// "Close diff (esc)"
-pub const DIFF_CLOSE_TOOLTIP: Key = Key::new(1706);
+pub const DIFF_CLOSE_TOOLTIP: Key = Key::new(1707);
 /// "New file"
-pub const DIFF_BADGE_NEW: Key = Key::new(1707);
+pub const DIFF_BADGE_NEW: Key = Key::new(1708);
 /// "Binary"
-pub const DIFF_BADGE_BINARY: Key = Key::new(1709);
+pub const DIFF_BADGE_BINARY: Key = Key::new(1710);
 /// "No highlighting"
-pub const DIFF_BADGE_NO_HIGHLIGHTING: Key = Key::new(1710);
+pub const DIFF_BADGE_NO_HIGHLIGHTING: Key = Key::new(1711);
 /// "Copy object id"
-pub const DIFF_COPY_OID: Key = Key::new(1711);
+pub const DIFF_COPY_OID: Key = Key::new(1712);
 /// "Binary file"
-pub const DIFF_BINARY_FILE: Key = Key::new(1712);
+pub const DIFF_BINARY_FILE: Key = Key::new(1713);
 /// "Empty file"
-pub const DIFF_EMPTY_FILE: Key = Key::new(1713);
+pub const DIFF_EMPTY_FILE: Key = Key::new(1714);
 /// "No content changes"
-pub const DIFF_NO_CONTENT_CHANGES: Key = Key::new(1714);
+pub const DIFF_NO_CONTENT_CHANGES: Key = Key::new(1715);
 /// "Load diff"
-pub const DIFF_LOAD_ANYWAY: Key = Key::new(1715);
+pub const DIFF_LOAD_ANYWAY: Key = Key::new(1716);
 /// "no newline at end"
-pub const DIFF_NO_NEWLINE: Key = Key::new(1716);
+pub const DIFF_NO_NEWLINE: Key = Key::new(1717);
 /// "Reveal Current File in Finder"
-pub const DIFF_REVEAL_CURRENT: Key = Key::new(1717);
+pub const DIFF_REVEAL_CURRENT: Key = Key::new(1718);
 /// "What should the agent change here?"
-pub const REVIEW_PLACEHOLDER: Key = Key::new(1719);
+pub const REVIEW_PLACEHOLDER: Key = Key::new(1720);
 /// "saves"
-pub const REVIEW_SAVES: Key = Key::new(1720);
+pub const REVIEW_SAVES: Key = Key::new(1721);
 /// "Remove"
-pub const REVIEW_REMOVE: Key = Key::new(1721);
+pub const REVIEW_REMOVE: Key = Key::new(1722);
 /// "Add Comment"
-pub const REVIEW_ADD: Key = Key::new(1722);
+pub const REVIEW_ADD: Key = Key::new(1723);
 /// "Save"
-pub const REVIEW_SAVE: Key = Key::new(1723);
+pub const REVIEW_SAVE: Key = Key::new(1724);
 /// "Clear"
-pub const REVIEW_CLEAR: Key = Key::new(1724);
+pub const REVIEW_CLEAR: Key = Key::new(1725);
 /// "Paste into Terminal"
-pub const REVIEW_PASTE: Key = Key::new(1725);
+pub const REVIEW_PASTE: Key = Key::new(1726);
 /// "Paste the comments into the terminal's prompt, for you to send"
-pub const REVIEW_PASTE_HELP: Key = Key::new(1726);
+pub const REVIEW_PASTE_HELP: Key = Key::new(1727);
 /// "Files"
-pub const FILES_LIST_LABEL: Key = Key::new(1729);
+pub const FILES_LIST_LABEL: Key = Key::new(1730);
 /// "Commits"
-pub const HISTORY_LIST_LABEL: Key = Key::new(1731);
+pub const HISTORY_LIST_LABEL: Key = Key::new(1732);
 /// "History"
-pub const HISTORY_TITLE: Key = Key::new(1732);
+pub const HISTORY_TITLE: Key = Key::new(1733);
 /// "Reading history…"
-pub const HISTORY_READING: Key = Key::new(1734);
+pub const HISTORY_READING: Key = Key::new(1735);
 /// "No file changes."
-pub const HISTORY_NO_FILES: Key = Key::new(1735);
+pub const HISTORY_NO_FILES: Key = Key::new(1736);
 /// "Loading files…"
-pub const HISTORY_LOADING_FILES: Key = Key::new(1736);
+pub const HISTORY_LOADING_FILES: Key = Key::new(1737);
 /// "The log can't be read."
-pub const HISTORY_UNREADABLE: Key = Key::new(1737);
+pub const HISTORY_UNREADABLE: Key = Key::new(1738);
 /// "The details can't be read."
-pub const HISTORY_DETAILS_UNREADABLE: Key = Key::new(1738);
+pub const HISTORY_DETAILS_UNREADABLE: Key = Key::new(1739);
 /// "Notes"
-pub const NOTES_LIST_LABEL: Key = Key::new(1739);
+pub const NOTES_LIST_LABEL: Key = Key::new(1740);
 /// "Notes"
-pub const NOTES_TITLE: Key = Key::new(1740);
+pub const NOTES_TITLE: Key = Key::new(1741);
 /// "New note"
-pub const NOTES_NEW: Key = Key::new(1741);
+pub const NOTES_NEW: Key = Key::new(1742);
 /// "Write a note or a prompt draft…  ⌘↩ sends the paragraph under the cursor (or the selection); ⌘⇧↩ also submits."
-pub const NOTES_PLACEHOLDER: Key = Key::new(1743);
+pub const NOTES_PLACEHOLDER: Key = Key::new(1744);
 /// "Stash prompt into a new note"
-pub const NOTES_STASH_PROMPT: Key = Key::new(1745);
+pub const NOTES_STASH_PROMPT: Key = Key::new(1746);
 /// "Prompt stashed in a new note"
-pub const NOTES_PROMPT_STASHED: Key = Key::new(1746);
+pub const NOTES_PROMPT_STASHED: Key = Key::new(1747);
 /// "done"
-pub const NOTES_TASK_DONE: Key = Key::new(1747);
-/// "not done"
-pub const NOTES_TASK_NOT_DONE: Key = Key::new(1748);
+pub const NOTES_TASK_DONE: Key = Key::new(1748);
 /// "Send to terminal"
 pub const NOTES_SEND: Key = Key::new(1749);
 /// "Delete"
@@ -380,17 +378,24 @@ pub const DIFF_SUBMODULE_NEW_COMMITS: Key = Key::new(1896);
 pub const DIFF_SUBMODULE_LEFT_BEHIND: Key = Key::new(1897);
 
 /// ```text
+/// { $tooltip }, { $file }
+/// ```
+pub fn panel_spoken_open_file(tooltip: &str, file: &str) -> String {
+    crate::active::message(1666, &[("tooltip", Arg::Str(tooltip)), ("file", Arg::Str(file))])
+}
+
+/// ```text
 /// Couldn't refresh: { $message }
 /// ```
 pub fn changes_refresh_failed(message: &str) -> String {
-    crate::active::message(1672, &[("message", Arg::Str(message))])
+    crate::active::message(1673, &[("message", Arg::Str(message))])
 }
 
 /// ```text
 /// { $branch } no longer exists · showing vs HEAD
 /// ```
 pub fn changes_compare_missing(branch: &str) -> String {
-    crate::active::message(1673, &[("branch", Arg::Str(branch))])
+    crate::active::message(1674, &[("branch", Arg::Str(branch))])
 }
 
 /// ```text
@@ -401,77 +406,77 @@ pub fn changes_compare_missing(branch: &str) -> String {
 /// }
 /// ```
 pub fn changes_group_spoken(group: &str, count: i64) -> String {
-    crate::active::message(1677, &[("group", Arg::Str(group)), ("count", Arg::Int(count))])
+    crate::active::message(1678, &[("group", Arg::Str(group)), ("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Folded because there are more than { $count }.
 /// ```
 pub fn changes_folded(count: &str) -> String {
-    crate::active::message(1679, &[("count", Arg::Str(count))])
+    crate::active::message(1680, &[("count", Arg::Str(count))])
 }
 
 /// ```text
 /// { $count } of them are in { $folder }/. { $why }
 /// ```
 pub fn changes_folded_crowded(count: &str, folder: &str, why: &str) -> String {
-    crate::active::message(1680, &[("count", Arg::Str(count)), ("folder", Arg::Str(folder)), ("why", Arg::Str(why))])
+    crate::active::message(1681, &[("count", Arg::Str(count)), ("folder", Arg::Str(folder)), ("why", Arg::Str(why))])
 }
 
 /// ```text
 /// { $count } of them are in { $folder }/, which isn't ignored. { $why }
 /// ```
 pub fn changes_folded_crowded_untracked(count: &str, folder: &str, why: &str) -> String {
-    crate::active::message(1681, &[("count", Arg::Str(count)), ("folder", Arg::Str(folder)), ("why", Arg::Str(why))])
+    crate::active::message(1682, &[("count", Arg::Str(count)), ("folder", Arg::Str(folder)), ("why", Arg::Str(why))])
 }
 
 /// ```text
 /// { $kind } from { $path }
 /// ```
 pub fn changes_renamed_from(kind: &str, path: &str) -> String {
-    crate::active::message(1682, &[("kind", Arg::Str(kind)), ("path", Arg::Str(path))])
+    crate::active::message(1683, &[("kind", Arg::Str(kind)), ("path", Arg::Str(path))])
 }
 
 /// ```text
 /// Submodule { $name }, { $what }
 /// ```
 pub fn changes_spoken_submodule(name: &str, what: &str) -> String {
-    crate::active::message(1690, &[("name", Arg::Str(name)), ("what", Arg::Str(what))])
+    crate::active::message(1691, &[("name", Arg::Str(name)), ("what", Arg::Str(what))])
 }
 
 /// ```text
 /// Open a terminal in { $name }
 /// ```
 pub fn submodule_enter(name: &str) -> String {
-    crate::active::message(1691, &[("name", Arg::Str(name))])
+    crate::active::message(1692, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// Diff of { $name }
 /// ```
 pub fn diff_spoken(name: &str) -> String {
-    crate::active::message(1695, &[("name", Arg::Str(name))])
+    crate::active::message(1696, &[("name", Arg::Str(name))])
 }
 
 /// ```text
 /// File { $index } of { $count }
 /// ```
 pub fn diff_file_position(index: &str, count: &str) -> String {
-    crate::active::message(1700, &[("index", Arg::Str(index)), ("count", Arg::Str(count))])
+    crate::active::message(1701, &[("index", Arg::Str(index)), ("count", Arg::Str(count))])
 }
 
 /// ```text
 /// Renamed from { $path }
 /// ```
 pub fn diff_badge_renamed_from(path: &str) -> String {
-    crate::active::message(1708, &[("path", Arg::Str(path))])
+    crate::active::message(1709, &[("path", Arg::Str(path))])
 }
 
 /// ```text
 /// Comment on { $place }
 /// ```
 pub fn review_title(place: &str) -> String {
-    crate::active::message(1718, &[("place", Arg::Str(place))])
+    crate::active::message(1719, &[("place", Arg::Str(place))])
 }
 
 /// ```text
@@ -481,21 +486,21 @@ pub fn review_title(place: &str) -> String {
 /// }
 /// ```
 pub fn review_summary(count: i64) -> String {
-    crate::active::message(1727, &[("count", Arg::Int(count))])
+    crate::active::message(1728, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// { $comments } on { $files } files
 /// ```
 pub fn review_summary_files(comments: &str, files: &str) -> String {
-    crate::active::message(1728, &[("comments", Arg::Str(comments)), ("files", Arg::Str(files))])
+    crate::active::message(1729, &[("comments", Arg::Str(comments)), ("files", Arg::Str(files))])
 }
 
 /// ```text
 /// Open in { $editor }
 /// ```
 pub fn files_open_in_editor(editor: &str) -> String {
-    crate::active::message(1730, &[("editor", Arg::Str(editor))])
+    crate::active::message(1731, &[("editor", Arg::Str(editor))])
 }
 
 /// ```text
@@ -506,7 +511,7 @@ pub fn files_open_in_editor(editor: &str) -> String {
 /// }
 /// ```
 pub fn history_spoken_list(count: i64) -> String {
-    crate::active::message(1733, &[("count", Arg::Int(count))])
+    crate::active::message(1734, &[("count", Arg::Int(count))])
 }
 
 /// ```text
@@ -517,14 +522,14 @@ pub fn history_spoken_list(count: i64) -> String {
 /// }
 /// ```
 pub fn notes_spoken(count: i64) -> String {
-    crate::active::message(1742, &[("count", Arg::Int(count))])
+    crate::active::message(1743, &[("count", Arg::Int(count))])
 }
 
 /// ```text
 /// Show all · { $count } lines
 /// ```
 pub fn notes_show_all(count: &str) -> String {
-    crate::active::message(1744, &[("count", Arg::Str(count))])
+    crate::active::message(1745, &[("count", Arg::Str(count))])
 }
 
 /// ```text
