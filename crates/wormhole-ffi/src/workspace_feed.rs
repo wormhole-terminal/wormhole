@@ -28,6 +28,9 @@ pub(crate) fn attach(shared: &Arc<Shared>, id: i64, terminal: &Arc<Terminal>) {
     let feed =
         Arc::new(TerminalFeed { shared: Arc::downgrade(shared), id, terminal: Arc::downgrade(terminal) });
     terminal.set_feed(feed);
+    // In place of a program that ended (Restart on its bar): the row's status starts over with the new one.
+    let at = shared.now();
+    shared.post(shared.with_model(|model| model.started_again(id, at)));
     let shell = terminal.name().to_string();
     let events = shared.with_model(|model| model.update_facts(id, |facts| facts.shell = shell));
     shared.post(events);
