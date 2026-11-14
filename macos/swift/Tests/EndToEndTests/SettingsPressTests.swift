@@ -6,9 +6,11 @@ import Testing
 /// test notification's line, the nav's warning dot, a project's rows. TO-VERIFY.md lines 123, 133, 134, 135, 717, 755, 857,
 /// 858, 866, 867, 870, 943, 1145.
 extension EndToEnd {
-    /// Presses `id` once the page shows it (its frame recorded).
+    /// Presses `id` once the page shows it and it stands still: a page lays out and scrolls a moment after it is asked for,
+    /// and a press at the frame recorded before that lands beside the control (it did, about once in five passes).
     @MainActor static func press(_ app: Instance, _ id: String) async -> String {
-        await app.until("settings-press \(id)") { !$0.hasPrefix("error") }
+        _ = await app.settledRow(id)
+        return await app.until("settings-press \(id)") { !$0.hasPrefix("error") }
     }
 
     @Test("Changed → Copy as JSON puts the listed keys on the clipboard and says Copied once (123, 755, 943)")
