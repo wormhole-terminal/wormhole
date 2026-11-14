@@ -198,21 +198,37 @@ static STORE_LOCK: Mutex<()> = Mutex::new(());
 /// Runs `edit` on the worktrees the profile's database holds now and writes them back when it says it changed them.
 fn update<R>(profile: Option<&Path>, edit: impl FnOnce(&mut Worktrees) -> (R, bool)) -> R {
     let _held = STORE_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
-    let store = open_store(profile);
-    let stored = store.as_ref().ok().and_then(|store| store.meta(worktree::STORE_KEY).ok().flatten());
-    let mut all = stored.map(|json| Worktrees::from_json(&json)).unwrap_or_default();
-    let (result, changed) = edit(&mut all);
-    if changed {
-        match store {
-            Ok(store) => {
-                if let Err(err) = store.set_meta(worktree::STORE_KEY, &all.to_json()) {
-                    tracing::warn!("remembering the worktrees: {err:#}");
-                }
-            }
-            Err(err) => tracing::warn!("remembering the worktrees: {err:#}"),
-        }
+    let store = open_store(profile).map_err(|err| format!("{err:#}"));
+    let stored = store
+        .as_ref()
+        .map_err(Clone::clone)
+        .and_then(|store| store.meta(worktree::STORE_KEY).map_err(|err| format!("{err:#}")));
+    let (result, write) = edited(stored, edit);
+    if let (Some(all), Ok(store)) = (write, &store)
+        && let Err(err) = store.set_meta(worktree::STORE_KEY, &all.to_json())
+    {
+        tracing::warn!("remembering the worktrees: {err:#}");
     }
     result
+}
+
+/// `edit` run on what was read of the stored worktrees, and the list to write back: none when nothing changed, and none
+/// when the stored list could not be read. An error is not an empty list: written back, it would replace every worktree
+/// the profile remembers (their ports, what removing one may delete) with what this one edit made.
+fn edited<R>(
+    stored: Result<Option<String>, String>,
+    edit: impl FnOnce(&mut Worktrees) -> (R, bool),
+) -> (R, Option<Worktrees>) {
+    let readable = stored.as_ref().is_ok();
+    let mut all = match stored {
+        Ok(json) => json.map(|json| Worktrees::from_json(&json)).unwrap_or_default(),
+        Err(err) => {
+            tracing::warn!("reading the worktrees: {err}; nothing is written over them");
+            Worktrees::default()
+        }
+    };
+    let (result, changed) = edit(&mut all);
+    (result, (changed && readable).then_some(all))
 }
 
 /// What a terminal started in `cwd` gets from the worktree Wormhole made there: its own ports (GPUI's spawn hook,
@@ -260,4 +276,42 @@ pub(crate) fn base_of(base: Option<String>) -> Option<PathBuf> {
 fn repo_of(folder: &str) -> Result<PathBuf, String> {
     let root = find_root(Path::new(folder)).ok_or_else(|| format!("{folder} is not in a git repository"))?;
     Ok(worktree_of(&root).unwrap_or(root))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use wormhole_core::git::worktree::{Worktree, Worktrees};
+
+    use super::edited;
+
+    fn made(folder: &str) -> Worktree {
+        Worktree {
+            repo: PathBuf::from("/repo"),
+            branch: folder.to_owned(),
+            folder: PathBuf::from(folder),
+            port: Some(41000),
+            cloned: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn a_stored_list_that_cannot_be_read_is_never_written_over() {
+        let record = |all: &mut Worktrees| {
+            all.record(made("/repo-worktrees/new"));
+            ((), true)
+        };
+        let (_, write) = edited(Err("database is locked".to_owned()), record);
+        assert!(write.is_none(), "an error is not an empty list to write back");
+
+        let mut stored = Worktrees::default();
+        stored.record(made("/repo-worktrees/old"));
+        let (_, write) = edited(Ok(Some(stored.to_json())), record);
+        let folders: Vec<PathBuf> = write.expect("written").iter().map(|w| w.folder.clone()).collect();
+        assert_eq!(folders, [PathBuf::from("/repo-worktrees/old"), PathBuf::from("/repo-worktrees/new")]);
+
+        let (_, write) = edited(Ok(None), |_| ((), false));
+        assert!(write.is_none(), "nothing changed: nothing written");
+    }
 }
