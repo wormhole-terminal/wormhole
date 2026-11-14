@@ -66,7 +66,9 @@ extension AppController {
         }
         // In another window (`pointer-window Settings`) the key goes to that window's views first, as a person's would, a recorder's
         // among them; only what they leave goes on to the menu.
-        if !fieldCopy, window === self.window, let id = menuAction(for: name, flags) {
+        // A key the keymap gives a view's own action (⌘← ⌘→ ⌘⌫ are the terminal's line editor: `ActionRouter.viewed`) goes the
+        // keyboard's way, so the view's `performKeyEquivalent` has it before the menus, as a real key's does.
+        if !fieldCopy, window === self.window, let id = menuAction(for: name, flags), !ActionRouter.viewed.contains(id) {
             // An action nothing in the table runs is AppKit's own (Edit ▸ Paste, Undo…): the menu would send it up the responder chain.
             if router.table[id] == nil, let selector = StandardActions.selectors[.action(id)] {
                 // In a text field the system's own copy, cut and paste would use the person's clipboard.
@@ -107,6 +109,14 @@ extension AppController {
                 // A field being edited reads keys through the input method, which only a really active app has; the key
                 // bindings it would apply are applied directly (typing, Return, Esc, arrows), the rest go the usual way.
                 if let editor = window.firstResponder as? NSTextView, type == .keyDown, flags.isDisjoint(with: [.command, .control]) {
+                    // Esc goes the window's way first: SwiftUI's `onKeyPress(.escape)` on a field (a row's rename, the find bar)
+                    // hears the key there, never in the key binding. The binding (`cancelOperation:`) is applied after it only
+                    // while the field still has the keys (Esc did not end it), as it was before for every field.
+                    if code == 53 {
+                        InFront.during(window) { NSApp.sendEvent(event) }
+                        if window.firstResponder === editor { editor.interpretKeyEvents([event]) }
+                        return
+                    }
                     return editor.interpretKeyEvents([event])
                 }
                 InFront.during(window) { NSApp.sendEvent(event) }

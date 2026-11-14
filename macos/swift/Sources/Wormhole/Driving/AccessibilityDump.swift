@@ -11,6 +11,7 @@ enum AccessibilityDump {
     private static let maxDepth = 40
 
     static func tree(of window: NSWindow) -> String {
+        wakeSwiftUI(window)
         var lines: [String] = []
         walk(window, depth: 0, window: window, into: &lines)
         return lines.isEmpty ? "empty tree" : lines.joined(separator: "\n")
@@ -26,6 +27,26 @@ enum AccessibilityDump {
             element = node.accessibilityParent()
         }
         return lines.isEmpty ? "nothing at \(point)" : lines.joined(separator: "\n")
+    }
+
+    /// Whether the app was told an assistive client is reading it.
+    private static var told = false
+
+    /// SwiftUI's hosting views build their accessibility nodes once an assistive client reads the app; with none attached
+    /// (`a11y` in a test instance) they answer with AppKit's subviews only. An assistive client says it is there by setting
+    /// these attributes on the application element (VoiceOver sets the first; the second is what other screen readers set
+    /// for Chromium's apps): set here once, in process, as such a request would arrive, then the window gets a turn to lay
+    /// out so the hosting views can build their nodes before the walk. Whether SwiftUI listens to either is not documented:
+    /// if the dump still lacks its buttons, the switch it reads is the accessibility server's own, which no in-process
+    /// call sets.
+    private static func wakeSwiftUI(_ window: NSWindow) {
+        guard !told else { return }
+        told = true
+        for name in ["AXEnhancedUserInterface", "AXManualAccessibility"] {
+            NSApp.accessibilitySetValue(NSNumber(value: true), forAttribute: NSAccessibility.Attribute(rawValue: name))
+        }
+        window.contentView?.layoutSubtreeIfNeeded()
+        RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.2))
     }
 
     private static func walk(_ element: Any, depth: Int, window: NSWindow, into lines: inout [String]) {
