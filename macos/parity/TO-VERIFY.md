@@ -1556,3 +1556,40 @@ Found while reading the code for the assertions (the list promises it, the code 
   needs the real updater, which a test instance has only with a feed (line 908).
 - A command that answers from a task (`project …`, `update`, `probe`, `studio-save|use|menu|open`, `studio-do <session verb>`,
   `history-copy`, `studio-out`) writes its answer after the batch's `sync` marks: `reply` gives it to the wrong command. `later` waits for it.
+
+## Lane hosting, wave 9
+
+Written without compiling: expect compile errors.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| T20 TEST | `cargo test -p wormhole-ffi ending_at_quit_keeps_each_terminal_with_its_notes_tasks_and_text ending_a_terminal_that_stays_keeps_its_row` (real `wormhole-host`, scratch folder) | after `finish(true)` the hosted terminal's row is there with its name, note, task and saved text and no host; the next launch plans nothing to attach, a start draws the saved text and keeps name, note and task; `end_keeping_row` keeps the row | `ffi/src/hosting/desk.rs` (`finish`, `taken` `Fate::Ends`, `seed`, `finish_restore(listed)`), `registry.rs` (`unname_hosts`, `remember` keeps the stored row), `slot.rs` (`kept`, `persisted_host`, `end_keeping_row`), `windows/registry.rs record_of_window`, `hosting/tests/mod.rs`, `tests/support.rs` (`row`, `name_row`, `save_notes`) |
+| T20 TEST | `cargo test -p wormhole-ffi a_terminal_outlives_the_app ending_at_quit_ends_a_host_still_starting marking_the_quit_waits_for_nothing` | the old three still pass (no row names a host after End All; `finish_restore(vec![7])`); `mark` returns at once with a start under way and the fate is `Ends`; `quit(true)` returns when the start ends | `ffi/src/hosting/quit.rs` (`mark`, test), `hosting/tests/mod.rs` |
+| T20 TEST | `cargo build -p wormhole-host`, then `swift test --filter EndToEndTests/endAllKeepsTheTerminals` (and `/endAllLeavesNoHost`, `/hostedTerminalOutlivesTheApp`) | a hosted cat with a note and typed text, `quit-end-all`: no host left; started again: the same terminal id, its screen shows the text above `restored`, the Notes tab has the note, neither `sessions` nor `hosts-list` names the old host | `Tests/EndToEndTests/HostingTests.swift endAllKeepsTheTerminals`, `RustWorkspaceBackend+Hosting.swift` (`quitEndingHosts`, `beginQuit`: hosted text saved before the end) |
+| T20 | Persistent terminals on, a terminal with notes: Restart its shell (the exited bar's Restart, or a host that died then New) | the terminal starts again in a new host with its notes, tasks and name; the next launch has them too | `RustWorkspaceBackend+HostProblems.swift startAgain` (`endKeepingRow`), `RustWorkspaceBackend+Hosting.swift connected` (a start overtaken by a restart: `endKeepingRow`; by a close: `close`) |
+| T20 | Persistent terminals on, a saved terminal whose attach fails (`failure`) or whose start falls back to the app's process at launch, with notes | its row, notes and text stay after the launch's pruning | `RustWorkspaceBackend+Hosting.swift finishRestore` (`listed: live`), ffi `desk.rs finish_restore` |
+| T20 | Persistent terminals on, two windows, a host still starting (⌘T then at once Quit and End All Terminals; also with the quit question's box ticked); press ⌘Q again and type in a window during the wait | no window freezes: the windows draw and take keys while the hosts end; the second ⌘Q does nothing more; the app quits when they have; no `wormhole-host` of the folder is left; the next launch brings every terminal back with its text and notes, none attached | `AppController+Quit.swift` (`HostsEnd`, `goesNow`), `AppController.swift` (`hostsEnd`, `applicationWillTerminate` skips `finishQuit` after it), `AuxWindows/Questions/QuitFlow.swift` (`decide` returns whether to go now), `WorkspaceModel/Backend.swift quitEndingHosts`, ffi `desk.rs quitting` |
+| T20 | Log out (or `kill <pid>`) while Quit and End All waits for its hosts | the app ends once they have, the logout is not cancelled | `AppController+Quit.swift` (`.terminateLater` while `underWay`, then `reply(toApplicationShouldTerminate: true)`) |
+| W12 | Profiles A (dark theme) and B (light theme), A shown, no B window yet: Open Window in B whose saved terminal runs `printf '\e]11;?\a'; cat -v` at once | the answer is B's background, not the engine's default nor A's | `AppController+Windows.swift makeSession` (`profileLook(for:)` before `WorkspaceHost.make`) |
+| W12 | A shown with a terminal running a program that follows mode 2031 (or `printf '\e[?2031h'; cat -v`), switch to B (other theme), change B's theme, switch back | A's parked terminal reports nothing while hidden (no light/dark flip) and keeps A's colours; back in A its windows wear A's look again | `ProfileChipBinding.swift switchProfile` (`(leaving + back).forEach(dressForProfile)`), `ProfileLooks.swift` (`ownSessions` note) |
+| W12 | A shown; switch to B (other theme) whose saved window restores a terminal that asks OSC 11 at once | the answer is B's background, never A's | `ProfileChipBinding.swift switchProfile` (B's look made before the switch when it has no window), `Look/TerminalLook.swift shareEngineColours` (from the theme as it is now) |
+| T07 | A shell without integration (`/bin/cat`): ⌘↑ and ⌘↓ | no beep; nothing is typed; with integration (zsh, blocks), they jump between prompts as before | `TerminalMetal/Keyboard/KeyDown.swift takesGreyedPromptKey`, `WindowUI/Menu/MenuStateMaker.swift` (the six items stay greyed) |
+
+Who may remove a terminal's saved row (item 1's inventory), after this wave:
+- Asked by the person, kept: `Event::Closed` (⌘W, a group's or row's Close, `wh close` after its question, End host then
+  close) → ffi `workspace.rs close_what_closed` → `Terminal.close` → `HostSlot.closing` → `Registry.forget`; a window closed
+  (after its question) → `windowClosed` → views' `shutdown` → `close`, and `Windows.forget` → `Store.delete_window`; Delete
+  profile → `end(profile:)` (same two); the window saver's `Store.save_window` drops the sessions the model no longer lists
+  (closed, or moved to another window, which saves them there); a start overtaken by a close (`connected`, stale token, not
+  `live`) → `close`.
+- Not asked, now kept: Quit and End All (`finish(true)`: `forget_all` replaced by `unname_hosts`, `close` by `end_keeping_row`);
+  a start or attach that ends during that quit (`taken` `Fate::Ends`); Restart and the host bar's New (`startAgain`); a start
+  overtaken by a restart (`connected`, still `live`); the launch's pruning (`finish_restore`) for a failed attach, a start that
+  fell back to the app's process or failed (they are `listed`); a host that died (`Lost`: no close; its row stops naming it,
+  `persisted_host`); a hosted start writing its row (`remember` wiped the name, notes and tasks of a saved terminal: it now
+  writes the stored row with the host).
+- Left as it was: the dev-only idle check (`--idle`) stops the selected terminal's source (`AppController+Idle.swift`), which
+  forgets a hosted terminal's row; `finish_restore` still forgets a hosted row no listed terminal has (a workspace with no record
+  of its own opened the saved terminals under new ids).
+- W12 residue 4 (a window moved to another profile: terminals with no view stay under the old profile in the engine until a
+  view dresses them) was not worked.
