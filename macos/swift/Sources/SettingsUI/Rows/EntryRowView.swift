@@ -18,10 +18,11 @@ struct EntryRowView: View {
         case .block, .bare: BlockView(model: model, entry: entry)
         case .row, .tallRow:
             VStack(alignment: .leading, spacing: 0) {
-                row
+                // The id a search result's reveal scrolls to. On the row, not on this stack: a group lays its rows out as
+                // subviews (`SettingGroup`), which takes an id at a subview's root for its own and hides it from `scrollTo`.
+                row.id(entry.id)
                 if entry.id == "shells" { ShellLines(lines: model.host.shellProfiles()) }
             }
-            .id(entry.id)
         }
     }
 
