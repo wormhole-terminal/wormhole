@@ -6,9 +6,9 @@
 //! colours (`engine_look`); and the saved text a restored terminal starts above. Every start (local, hosted,
 //! attached, the welcome) takes its options from here, so an attach gives the engine what its start did.
 //!
-//! A program named in the request (`--shell`, the welcome's tour, tests) runs instead of the decided shell unless the
-//! terminal was opened with one of its own, and the engine's own `WORMHOLE_SHELL` (test instances) replaces everything
-//! in core `terminal::process`.
+//! A program named in the request (the welcome's tour, a test) runs as it is. A forced shell is never decided here: it
+//! is core's `WORMHOLE_SHELL` (`terminal::process::shell`, test instances), which replaces every choice, a terminal's
+//! own shell too, when the program starts; the Swift app's `--shell` sets that variable and means the same.
 
 use std::path::Path;
 
@@ -35,15 +35,15 @@ pub(crate) fn options(root: &DataRoot, profile: &ProfilePaths, what: &HostedStar
         .into_iter()
         .collect();
     env.extend(project_env);
-    let shell = match (&what.program, what.shell.as_deref()) {
-        // A program asked for by name (`--shell`, the welcome's tour, a test) runs as it is, unless the terminal was
-        // opened with a shell of its own.
-        (Some(program), None) => ShellCommand {
+    let shell = match &what.program {
+        // A program asked for by name (the welcome's tour, a test) runs as it is, whatever shell the terminal was opened
+        // with: no choice of a terminal's may stand in front of a program the app was told to run.
+        Some(program) => ShellCommand {
             name: shells::program_name(program).to_string(),
             program: program.clone(),
             args: what.args.clone(),
         },
-        (_, chosen) => shells::for_terminal(chosen, project_shell.as_deref(), &settings),
+        None => shells::for_terminal(what.shell.as_deref(), project_shell.as_deref(), &settings),
     };
     // This profile's colours, as its windows draw them: not the shown profile's (`engine_look`).
     let look = crate::engine_look::current(&profile.id().to_string());

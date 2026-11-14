@@ -44,8 +44,9 @@ pub struct HostedStart {
     /// The shell it was opened with (`Workspace::launch_facts`: a `terminal::shells` key); `None` lets the project,
     /// `default_shell` and the login shell decide (`launch`).
     pub shell: Option<String>,
-    /// A program to run instead of what the terminal would (`--shell`, the welcome's tour, tests), with its arguments,
-    /// unless `shell` names one; `None`: the shell `launch` decides.
+    /// A program to run instead of what the terminal would (the welcome's tour, tests), with its arguments, whatever
+    /// `shell` names; `None`: the shell `launch` decides. A forced shell (`WORMHOLE_SHELL`, the Swift app's `--shell`)
+    /// is core's and replaces either.
     pub program: Option<String>,
     pub args: Vec<String>,
     pub cwd: Option<String>,

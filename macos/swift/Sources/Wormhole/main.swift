@@ -25,6 +25,11 @@ if arguments.contains("-h") || arguments.contains("--help") {
 
 do {
     let options = try Options.parse(arguments, environment: ProcessInfo.processInfo.environment)
+    // `--shell` is `WORMHOLE_SHELL` given on the command line and means exactly what it means: the core reads the variable
+    // where it decides what a terminal runs and is called (core `terminal/process.rs:97`, `:166`), and it replaces every
+    // choice, a terminal's own shell too, so a `--shell /bin/cat` instance never runs a real shell. GPUI is given a forced
+    // shell as that variable only (`scripts/lib.sh:140`). Set here, before anything else runs: no thread reads it yet.
+    if let program = options.program { setenv("WORMHOLE_SHELL", program, 1) }  // text: an environment variable name
     let dataDirectory = try Isolation.require()
     Isolation.confineHomes(to: dataDirectory)
     switch options.mode {

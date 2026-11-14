@@ -1418,7 +1418,8 @@ All additive; the core decides, Swift asks.
 
 - **What a terminal runs** is decided in Rust (`launch.rs`), as the GPUI app's window does: `HostedStart` gains `shell: String?` (the
   key "New Terminal with ▸" chose, from `Workspace::launch_facts`), `profile: String?` (`None`: the one Wormhole is in) and `program`
-  becomes optional: a program named there runs as it is (`--shell`, the welcome's tour, tests) unless `shell` names one; without it the
+  becomes optional: a program named there runs as it is (the welcome's tour, tests), whatever `shell` names (wave 13: `--shell` is no
+  longer one of them, it sets core's `WORMHOLE_SHELL`, which replaces every choice); without it the
   shell is core `shells::for_terminal` (the terminal's own, a trusted project's (`ProjectHub::enabled`: project folders on, its Settings
   on, its files approved as they are now), `default_shell`, else the login shell with `-l`). The options carry the trusted project's
   `env`, then the profile's (`apply_profile`: environment, git identity, agent logins, `WORMHOLE_PROFILE`, start folder), Settings'

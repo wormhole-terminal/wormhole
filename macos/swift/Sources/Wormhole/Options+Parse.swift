@@ -12,7 +12,7 @@ extension Options {
           --mock <text|flood|noise|matrix|unicode|cursor|mixed>   synthetic output (default mixed)
           --mock-hz <n>        steps a second; 0 as fast as possible (default 60)
           --seed <n>           the mock's seed (default 1)
-          --shell <program>    every terminal runs this program instead of the login shell (WORMHOLE_SHELL)
+          --shell <program>    every terminal runs this program, whatever shell it was opened with (WORMHOLE_SHELL)
           --sample             the sample workspace and mock terminals instead of real ones
           --grid <COLSxROWS>   a fixed grid, the window sized to fit (WORMHOLE_SWIFT_GRID)
           --font <family>      an installed font instead of the bundled JetBrains Mono

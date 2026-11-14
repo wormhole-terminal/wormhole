@@ -69,7 +69,7 @@ fn options_of(root: &DataRoot, cwd: Option<&Path>) -> wormhole_core::terminal::S
 }
 
 #[test]
-fn the_terminal_s_own_shell_wins_then_default_shell_and_a_named_program_runs_as_it_is() {
+fn the_terminal_s_own_shell_wins_then_default_shell_and_a_named_program_runs_over_both() {
     let dir = scratch("shells");
     let root = DataRoot::new(dir.path());
     config(
@@ -92,10 +92,12 @@ fn the_terminal_s_own_shell_wins_then_default_shell_and_a_named_program_runs_as_
     let named = options(&root, &profile, &HostedStart { program: Some("/bin/cat".into()), ..request(None) });
     let named = named.shell.expect("a shell");
     assert_eq!((named.program.as_str(), named.args.len(), named.name.as_str()), ("/bin/cat", 0, "cat"));
-    // The terminal's own shell still wins over it (New Terminal with ▸ in a `--shell` run).
+    // It runs in a terminal opened with a shell of its own too (New Terminal with ▸): a named program is never
+    // replaced by a choice, so the bridge cannot hand core a real shell where the app asked for `cat`.
     let both =
         HostedStart { program: Some("/bin/cat".into()), shell: Some("fish-ish".into()), ..request(None) };
-    assert_eq!(options(&root, &profile, &both).shell.map(|s| s.program), Some("/bin/bash".into()));
+    let both = options(&root, &profile, &both).shell.expect("a shell");
+    assert_eq!((both.program.as_str(), both.args.len(), both.name.as_str()), ("/bin/cat", 0, "cat"));
 }
 
 #[test]
