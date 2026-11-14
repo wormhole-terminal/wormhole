@@ -257,6 +257,13 @@ public final class MetalTerminalView: NSView {
 
     /// Drawable size and grid size from the view's size. A change of grid goes to the source, which answers
     /// with a full frame of the new size.
+    /// The points the cells have: the bounds less the padding on every side and the scroller's or minimap's strip. What the
+    /// grid is fitted in, and what a window operation's sums take the window's own parts around the text from.
+    public var textArea: CGSize {
+        let padding = MetalRenderer.padding
+        return CGSize(width: bounds.width - scroller.gutterWidth - minimapWidth - 2 * padding, height: bounds.height - 2 * padding)
+    }
+
     func syncSurface() {
         let scale = CGFloat(renderer.scale)
         let pixels = CGSize(width: (bounds.width * scale).rounded(.down), height: (bounds.height * scale).rounded(.down))
@@ -274,8 +281,7 @@ public final class MetalTerminalView: NSView {
         // The padding is on every side, and the right one also keeps the scroller's or minimap's strip clear.
         // The cells the area holds, by the core's rule (the GPUI pane's): a screen pixel short of a whole cell still holds it,
         // as a window whose size AppKit rounds to pixels may be (GPUI's slack while a drag steps by cells, Swift's default).
-        let padding = MetalRenderer.padding
-        let area = (width: bounds.width - scroller.gutterWidth - minimapWidth - 2 * padding, height: bounds.height - 2 * padding)
+        let area = textArea
         let (cols, rows) = fixedGrid ?? renderer.grid(fittingPoints: Double(area.width), Double(area.height), slack: 1 / Double(scale))
         let cell = renderer.cell
         let size = GridSize(cols: cols, rows: rows, cellWidth: Float(cell.width), cellHeight: Float(cell.height))
