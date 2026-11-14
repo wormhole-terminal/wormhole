@@ -297,7 +297,7 @@ mod tests {
         keep_version(t, &version_id(&themes, &path, &before), old, NOW).unwrap();
         let id = save_id(&themes, "Dusk", Some(&path));
         assert_eq!(id, "mine", "the theme keeps the id it had, not one made from its new name");
-        let new = format!(r#"{{"version": 1, "id": "{id}", "name": "Dusk", "extends": "Nord"}}"#);
+        let new = format!(r#"{{"version": 1, "id": "{id}", "name": "Dusk"}}"#);
         files::write_atomic(&path, new.as_bytes(), LinkPolicy::Within(t)).unwrap();
         // Read again, as the versions sheet does after the save.
         let after = tokens::read_theme_file(&new).unwrap();
