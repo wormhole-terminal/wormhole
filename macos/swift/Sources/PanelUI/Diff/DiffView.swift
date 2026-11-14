@@ -56,6 +56,7 @@ public struct DiffView: View {
                 if let review, !review.review.isEmpty { ReviewBar(review: review) }
             }
             .motion(.snappy(duration: 0.16), value: review?.review.isEmpty)
+            .onChange(of: [session.split && fits, fits], initial: true) { _, now in session.drawn = (now[0], now[1]) }
         }
         .background(tokens.surfaceWindow)
         .marked("diff")

@@ -237,6 +237,21 @@ Added by wave 12 (lane settings; written without compiling, see TO-VERIFY.md):
 |---|---|
 | `settings-press <id> at <x> [y]` | the click of `settings-press` at those fractions (0 to 1) of the control's frame instead of its centre: a segment of a segmented control (`settings-control` lists one segment where the system's control is autosized, so a driver aims along it and reads the value back), a stepper's up arrow (`at 0.95 0.25`) |
 
+Added by wave 12, lane panel (the right panel's parts and the cursor; written without compiling, see TO-VERIFY.md),
+`Driving/AppController+ControlPanelActs.swift`:
+
+| Command | Does, and its reply |
+|---|---|
+| `changes-rows` | the Changes list as its view builds it (`ChangeRows.build` with the layout in force, cut into cards as `ChangesListView` cuts them): `changes-rows <tree\|list> <grouped\|together>`, a `band <changes\|untracked\|all> count="<n>" [folded]` per card, under it `note "<folded note>"`, `dir "<path>" label="<a/b>" depth="<n>" [collapsed]`, `file "<path>" depth="<n>" kind="<M\|A\|…>" [submodule="<words>"] [enter]` |
+| `panel-tabs` | the panel's strip: `tab <name> badge="<n\|->" spoken="<VoiceOver's words>" [shown]` a tab, from the functions `RightPanel` draws them with (`PanelController.badge`, `WindowHub.spokenTab`) |
+| `submodule-enter <path>` | a submodule row's "Open a terminal in …" button (`SubmoduleRowView.enter`, which the row calls): a terminal in its folder; `error:` for a row without the button |
+| `diff-drawn` | how `DiffView` laid the open diff out at its own width (`DiffSession.drawn`): `diff-drawn <split\|unified> rows="<rows of that list>" [switch]` (`switch`: the header had room for Split / Unified), then `note <old\|new\|whole> "<text>" detail="<sizes\|->"` per column note as `columnNotes` picks them |
+| `diff-layout split\|unified` | the header's Split / Unified switch (it writes `diff_split`); `error:` where the view had no room for it |
+| `review-paste` / `review-clear` | the review bar's Paste into Terminal and Clear (`ChangesStore.pasteReview`, the bar's clear): `<command> copied-instead=<bool>` (true: the program takes no paste as text, the review went to the clipboard); `error:` while no bar is shown |
+| `comment-remove` | the comment dialog's Remove (offered only for a line with a comment): the review's summary after it |
+| `task-move <from> <to>` / `note-move <from> <to>` | a step or a note dropped on another (1-based), the drop's own `move` (`NotesStore.moveTask`/`moveNote`, core `view::reorder::move_item`); the drag's gesture stays a person's |
+| `cursor [terminal]` | the cursor as that terminal's view draws it next (`MetalTerminalView.cursorReadout`, from what `TerminalScene` builds its row from): `cursor drawn=<block\|underline\|beam\|outline\|none> shape= blinking= on= focused= hidden= at=<row>,<col> colour=#rrggbb`, or `cursor none` |
+
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).

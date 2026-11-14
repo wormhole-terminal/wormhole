@@ -88,6 +88,28 @@ public enum DiffReadout {
         return lines.joined(separator: "\n")
     }
 
+    /// `diff-drawn`: how the view laid the open diff out (`DiffSession.drawn`, which `DiffView` sets from its own width): two
+    /// columns or one, how many rows that list has, whether the header had room for the Split/Unified switch, and the notes over
+    /// the columns that have no lines, as `columnNotes` picks them.
+    ///
+    ///     diff-drawn split rows="6" switch
+    ///     note whole "Binary file" detail="10 bytes → 20 bytes"
+    public static func drawn(_ panel: PanelController) -> String {
+        let session = open(panel).session
+        guard let drawn = session.drawn, let built = session.built, let diff = session.parsed else {
+            return Readout.line("diff-drawn", quoted: ["none"], pairs: [("phase", "\(session.phase)")])
+        }
+        var lines = [
+            Readout.line(
+                "diff-drawn", [drawn.split ? "split" : "unified"], pairs: [("rows", String((drawn.split ? built.split : built.unified).count))],
+                flags: [Readout.flag("switch", drawn.fits)])
+        ]
+        let notes: [(String, SideNote?)] =
+            drawn.split && diff.notes.split.count == 2 ? [("old", diff.notes.split[0]), ("new", diff.notes.split[1])] : [("whole", diff.notes.unified)]
+        for case let (side, note?) in notes { lines.append(Readout.line("note", [side], quoted: [note.text], pairs: [("detail", note.detail ?? "-")])) }
+        return lines.joined(separator: "\n")
+    }
+
     private static func line(_ index: Int, _ cell: DiffCell) -> String {
         let spans = cell.spans.map { "\($0.range.lowerBound)-\($0.range.upperBound):\($0.key)" }.joined(separator: ",")
         return Readout.line(

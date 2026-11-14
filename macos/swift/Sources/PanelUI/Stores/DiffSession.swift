@@ -41,6 +41,10 @@ public final class DiffSession {
         set { preferences.diffWrap = newValue }
     }
     public let preferences: PanelPreferences
+    /// What the diff view last laid out: two columns or one (split only where `split` asks and there is room and lines),
+    /// and whether it had room for the switch. The view's own decision, for the control folder's `diff-drawn`; nothing reads
+    /// it to draw.
+    @ObservationIgnored public internal(set) var drawn: (split: Bool, fits: Bool)?
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var reload: (@Sendable (Bool) async throws -> DiffFile)?
     @ObservationIgnored private let highlighter: any SyntaxHighlighting

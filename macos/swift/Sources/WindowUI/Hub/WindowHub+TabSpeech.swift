@@ -5,7 +5,7 @@ import PanelModel
 import PanelUI
 
 extension WindowHub {
-    func spokenTab(named name: String) -> String {
+    public func spokenTab(named name: String) -> String {
         let files = panel.changes.phase == .loaded ? panel.changes.files.count : nil
         let notes = panel.notes.model
         return TabSpeech.tab(name, files, notes.tasks.remaining, notes.filledNotes)

@@ -47,9 +47,12 @@ struct SubmoduleRowView: View {
     private var enterLabel: String { panelText("submodule-enter", ["name": .text(file.name)], "Open a terminal in \(file.name)") }
 
     /// A terminal in the submodule's folder, while it is checked out and not deleted (nil: the row has no button).
-    private var enter: (() -> Void)? {
+    private var enter: (() -> Void)? { Self.enter(file, root: root, host: host) }
+
+    /// The button's action for `file` in the repository at `root` (the control folder's `submodule-enter` presses it too).
+    static func enter(_ file: ChangedFile, root: String?, host: (any PanelHost)?) -> (() -> Void)? {
         guard file.submoduleEnterable, let root else { return nil }
-        let (host, folder) = (host, root + "/" + file.path)
+        let folder = root + "/" + file.path
         return { host?.openTerminal(in: folder, running: nil) }
     }
 

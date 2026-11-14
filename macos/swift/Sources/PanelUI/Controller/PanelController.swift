@@ -97,6 +97,14 @@ public final class PanelController {
     }
 
     
+    /// A Changes submodule row's "Open a terminal in …" button, as the row presses it (`SubmoduleRowView.enter`, with the root
+    /// and host the panel gives its rows). False when the list has no such row or the row has no button.
+    public func enterSubmodule(_ path: String) -> Bool {
+        guard let file = changes.files.first(where: { $0.path == path }), let enter = SubmoduleRowView.enter(file, root: repoRoot, host: host) else { return false }
+        enter()
+        return true
+    }
+
     /// File History: the log limited to the commits that touched these paths.
     public func showFileHistory(_ paths: [String]) {
         history.filter(by: paths)
