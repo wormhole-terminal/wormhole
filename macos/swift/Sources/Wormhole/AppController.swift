@@ -30,7 +30,10 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// Every profile opened since launch, by id: the ones parked keep their windows (their terminals running, out of sight).
     var profileHosts: [String: WindowsHost] = [:]
     /// Every window of every profile, in the order they were made; the ones commands act on are `shown`.
-    var sessions: [WindowSession] = []
+    /// The folder picker's recent folders follow every window's terminals from the first window on (`FolderPicking`).
+    var sessions: [WindowSession] = [] {
+        didSet { folderPicking.windowsChanged() }
+    }
     /// The window that was in front last: what commands act on while none is the key window (a test instance never has one).
     var lastFront: WindowSession? { didSet { if lastFront !== oldValue { updateFollower?.keepOffered() } } }
     /// Open folder… in a test instance, which shows no panel: what a chosen folder does, until `open-folder` gives one.

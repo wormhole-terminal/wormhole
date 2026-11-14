@@ -3,7 +3,8 @@
 // core's (typed paths, the fuzzy walk, recent folders by frecency, git branch badges) where the window is real and the
 // sample's elsewhere. Recent folders are kept in the profile's database (the `recent_folders` row GPUI keeps) while the
 // flag is on, and a visit is recorded when a terminal changes folder (an event of the workspace's state, never a poll) and
-// when the picker opens; with the flag off the stored list is cleared the first time a folder changes.
+// when the picker opens; with the flag off the stored list is cleared the first time a folder changes. The folders are
+// followed from the first window on, not from the picker's first use: GPUI records every folder change from launch.
 
 import AppKit
 import Observation
@@ -25,11 +26,17 @@ final class FolderPicking {
         /// Each profile's recent folders, loaded the first time one is needed (one list per profile, as GPUI keeps them).
         private var folders: [String: CoreFolders] = [:]
         private var clearedWhileOff: Set<String> = []
+        /// Which look at the windows is the one in force: an older one's change is not followed twice.
+        private var following = 0
     #endif
 
     init(app: AppController) {
         self.app = app
         controller = FolderPickerController(policy: app.policy)
+    }
+
+    /// The app's windows changed (one opened or closed): the terminals of those there are now are the ones followed.
+    func windowsChanged() {
         #if WITH_UNIFFI
             if app.options.isReal { follow() }
         #endif
@@ -121,10 +128,14 @@ final class FolderPicking {
         /// Records each terminal's folder as it changes, in the list of the profile of the window that holds it: every window's,
         /// folded groups included (every folder change is a visit).
         private func follow() {
+            following += 1
+            let mine = following
             let found = withObservationTracking {
                 app.sessions.map { ($0, $0.windows.profile, $0.hub.state.all.map { ($0.id, $0.folder) }) }
             } onChange: { [weak self] in
-                Task { @MainActor in self?.follow() }
+                Task { @MainActor in
+                    if let self, self.following == mine { self.follow() }
+                }
             }
             var changed: Set<String> = []
             for (session, profile, terminals) in found {
