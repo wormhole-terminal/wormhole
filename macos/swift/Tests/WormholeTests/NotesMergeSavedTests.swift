@@ -17,6 +17,8 @@ struct NotesMergeSavedTests {
     final class Store: NotesPersisting, @unchecked Sendable {
         var saved: [Int: NotesModel] = [:]
         var unreadable: Set<Int> = []
+        /// The terminals whose notes the database does not take: a save of one fails.
+        var unwritable: Set<Int> = []
         /// The terminal whose read (off the main actor) waits for `resume`, and then finds its rows gone: a read that
         /// falls inside "Move Window to", after the move took the window's rows out of this database.
         var stalled: Int?
@@ -46,6 +48,7 @@ struct NotesMergeSavedTests {
         }
 
         func save(session: Int, model: NotesModel) -> Bool {
+            guard !unwritable.contains(session) else { return false }
             saved[session] = model
             return true
         }
@@ -280,6 +283,31 @@ struct NotesMergeSavedTests {
         await coordinator.sync()
         #expect(Self.steps(persistence.sent[2]) == ["  build", "  ship"], "the next look reads where the window is now")
         #expect(Self.steps(persistence.saved[2]) == ["  build", "  ship"])
+    }
+
+    /// A merge whose save fails (the database does not take the write): the base the core moved is forgotten, since the
+    /// database still holds what was sent and against that base the file's new line would read as deleted by the person;
+    /// the answer is laid and saved at the next look, so the line the file deleted does not come back.
+    @Test func aMergeThatCouldNotBeSavedIsSavedAtTheNextLookAndItsBaseForgotten() async {
+        let persistence = Store()
+        persistence.saved[2] = Self.model(steps: ["build", "old"])
+        let (_, _, coordinator) = window(persistence)
+        persistence.unwritable = [2]
+        persistence.answer = { id, sent in
+            guard id == 2 else { return nil }
+            // notes.md deleted "old" and gained "new".
+            var merged = sent
+            merged.tasks = TaskList(sent.tasks.items.filter { $0.text != "old" } + [PanelTask(text: "new")])
+            return merged
+        }
+        await coordinator.sync()
+        #expect(Self.steps(persistence.saved[2]) == ["  build", "  old"], "the write failed")
+        #expect(persistence.closedSessions.contains(2), "its base is forgotten: the next merge keeps both sides")
+        persistence.unwritable = []
+        persistence.answer = { _, _ in nil }
+        await coordinator.sync()
+        #expect(Self.steps(persistence.saved[2]) == ["  build", "  new"], "laid and saved once the database takes it")
+        #expect(Self.steps(persistence.sent[2]) == ["  build", "  new"], "and the next merge sends what was laid")
     }
 
     /// The terminal on show could not be read: nothing is saved over it or merged, and once it can be read what was typed

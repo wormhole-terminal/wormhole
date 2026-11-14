@@ -218,7 +218,15 @@ final class NotesCoordinator {
             hub.panel.notes.model = merged
             saved = merged
         }
-        persistence.save(session: id, model: merged)
+        guard persistence.save(session: id, model: merged) else {
+            // Not written: the database still holds what was sent, and against the base the core just moved the next merge
+            // of a terminal read from it would take what this one brought from the file for lines the person deleted, and
+            // take them out of notes.md. The base goes, as for a terminal that cannot be read (the next merge keeps
+            // everything of both sides); a terminal not on show has its answer laid, and saved, again at the next look.
+            persistence.closed(session: id)
+            if !showing { unlanded[id] = (answered, sent) }
+            return
+        }
         if hub.state.all.contains(where: { $0.id == id }) { tell(id, merged) }
     }
 
