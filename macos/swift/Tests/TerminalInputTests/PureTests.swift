@@ -84,6 +84,7 @@ import TerminalCore
         #expect(TerminalShortcut(action: "selectAll") == .selectAll && TerminalShortcut(action: "clearBuffer") == .clear)
         #expect(TerminalShortcut(action: "deleteLine") == .send([0x15]))
         #expect(TerminalShortcut(action: "lineStart") == .send([0x01]) && TerminalShortcut(action: "lineEnd") == .send([0x05]))
+        #expect(TerminalShortcut(action: "previousPrompt") == .prompt(.up) && TerminalShortcut(action: "nextPrompt") == .prompt(.down))
     }
 
     @Test func anyOtherActionIsTheApplications() {

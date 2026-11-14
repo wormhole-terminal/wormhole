@@ -45,6 +45,24 @@ extension EndToEnd {
         }
     }
 
+    @Test("a ⌘ key with ⌥ or ⌃ that no row of the table uses does what the key with ⌘ alone does in the terminal")
+    @MainActor func optionOrControlFallsBackToCommand() async throws {
+        try await Instance.with { app in
+            // ⌥⌘K and ⌃⌘K are nobody's: Clear Buffer, as ⌘K (`input.rs` `platform_command`); they used to beep.
+            await app.emit("cleared-by-alt-cmd-k")
+            await app.screen { $0.contains("cleared-by-alt-cmd-k") }
+            await app.send(["key alt-cmd-k"])
+            await app.screen { !$0.contains("cleared-by-alt-cmd-k") }
+            await app.emit("cleared-by-ctrl-cmd-k")
+            await app.screen { $0.contains("cleared-by-ctrl-cmd-k") }
+            await app.send(["key ctrl-cmd-k"])
+            await app.screen { !$0.contains("cleared-by-ctrl-cmd-k") }
+            // ⌃⌘V pastes as ⌘V.
+            await app.send(["pasteboard-set pasted-by-ctrl-cmd-v", "key ctrl-cmd-v"])
+            await app.screen { $0.contains("pasted-by-ctrl-cmd-v") }
+        }
+    }
+
     @Test("Option as Meta follows the setting without a restart, and a synthetic Option key is Meta for left as for both")
     @MainActor func optionAsMeta() async throws {
         try await Instance.with { app in

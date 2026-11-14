@@ -1,13 +1,16 @@
 // The Command shortcuts that belong to the terminal, by the app's keymap (`keymap::terminal_action`, asked through
-// `terminalAction`): copy, paste, select all, clear, and the three that edit the shell's line (as Terminal.app and
-// iTerm2 do). The rest of the Command keys are the application's menus.
+// `terminalAction`): copy, paste, select all, clear, the three that edit the shell's line (as Terminal.app and iTerm2
+// do) and the jumps between prompts. The rest of the Command keys are the application's menus.
 
 import AppKit
+import TerminalCore
 
 enum TerminalShortcut: Equatable {
     case copy, paste, selectAll, clear
     /// Bytes for the shell's line editor: ⌘⌫ deletes the line (^U), ⌘← and ⌘→ jump (^A, ^E).
     case send([UInt8])
+    /// ⌘↑ / ⌘↓: the previous or next prompt; taken even without shell integration, where it finds none.
+    case prompt(PromptDirection)
 
     /// What the keymap's action for the key does here (`platform_command`): the table says which keys, this the effect.
     init?(action: String?) {
@@ -19,17 +22,19 @@ enum TerminalShortcut: Equatable {
         case "deleteLine": self = .send([0x15])
         case "lineStart": self = .send([0x01])
         case "lineEnd": self = .send([0x05])
+        case "previousPrompt": self = .prompt(.up)
+        case "nextPrompt": self = .prompt(.down)
         default: return nil
         }
     }
 }
 
 extension MetalTerminalView {
-    /// What a focused terminal does with a ⌘ key: the table's, else the same key with ⌘ alone (⇧⌘V pastes) unless it is an app key
-    /// (`input.rs:105`).
+    /// What a focused terminal does with a ⌘ key: the table's, else the same key with ⌘ alone (⇧⌘V and ⌥⌘C as ⌘V and ⌘C,
+    /// ⇧⌘↑ as ⌘↑) unless some row of the table uses the key (`platform_command`, `input.rs:105`).
     private func shortcut(for event: NSEvent) -> TerminalShortcut? {
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        // With ⌥ or ⌃ held too: the table is asked the same way (⌥⌘C copies, as in the GPUI app).
+        // The four modifiers only: caps lock or the function flag an arrow carries is not a different key.
+        let flags = event.modifierFlags.intersection([.command, .shift, .option, .control])
         guard flags.contains(.command), let name = KeyMap.input(from: event, optionAsMeta: optionAsMeta)?.key else { return nil }
         if let exact = TerminalShortcut(action: terminalAction(name, flags)) { return exact }
         guard flags != .command, !isAppKey(name, flags) else { return nil }
@@ -56,6 +61,7 @@ extension MetalTerminalView {
         case .selectAll: selectAll(nil)
         case .clear: clearBuffer(nil)
         case .send(let bytes): source.write(Data(bytes))
+        case .prompt(let direction): onPrompt(direction)
         }
         return true
     }

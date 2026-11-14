@@ -56,6 +56,8 @@ public final class MetalTerminalView: NSView {
     /// A key the window takes before the terminal hears it (a project action's own key): asked with the key's name
     /// (`KeyMap`'s) and its modifiers for a ⌘ key and an F-key only; true when the window took it.
     public var claimKey: (String, NSEvent.ModifierFlags) -> Bool = { _, _ in false }
+    /// ⌘↑ / ⌘↓ (and the keys that fall back to them): the window jumps this terminal to the previous or next prompt.
+    public var onPrompt: (PromptDirection) -> Void = { _ in }
     /// A grid of this size whatever the view's size (the measuring mode's 200 x 69).
     public var fixedGrid: (cols: Int, rows: Int)?
     /// How long a blinking cursor is on and off; `nil` keeps it steady (xterm's and macOS's own text cursor rate).

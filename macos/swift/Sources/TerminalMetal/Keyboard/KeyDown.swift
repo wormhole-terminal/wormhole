@@ -15,7 +15,7 @@ extension MetalTerminalView {
         // key equivalent already.
         if !event.modifierFlags.contains(.command), windowClaims(event) { return }
         guard let key = KeyMap.input(from: event, optionAsMeta: optionAsMeta), !key.platform else {
-            if !takesGreyedPromptKey(event) { super.keyDown(with: event) }
+            super.keyDown(with: event)
             return
         }
         if !composition.isActive, key.control || KeyMap.isNonText(key) || (key.alt && key.optionAsMeta) {
@@ -28,15 +28,6 @@ extension MetalTerminalView {
         pendingKey = nil
         // Nothing consumed it (a key the input system has no opinion about): the engine takes it as it is.
         if !handledByInputMethod { send(key) }
-    }
-
-    /// ⌘↑ / ⌘↓ while Edit's prompt items are greyed (no shell integration, so no blocks): the terminal's keys all the same,
-    /// taken and doing nothing, as GPUI's `platform_command` takes them (`jump_prompt` finds no prompt), never passed on to beep.
-    private func takesGreyedPromptKey(_ event: NSEvent) -> Bool {
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard let name = KeyMap.input(from: event, optionAsMeta: optionAsMeta)?.key else { return false }
-        guard let action = terminalAction(name, flags) else { return false }
-        return action == "previousPrompt" || action == "nextPrompt"
     }
 
     func send(_ key: KeyInput) {

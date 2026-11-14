@@ -98,7 +98,8 @@ final class TerminalLook {
         #endif
     }
 
-    /// Whether the menus own this key: an entry of the app's scope has it (`keymap::action_for(key, Scope::App)`).
+    /// Whether the table gives this key to anything: then a terminal does not take it as the same key with ⌘ alone
+    /// (`keymap::action_for(key, Scope::App)`).
     private static func isAppKey(_ name: String, _ flags: NSEvent.ModifierFlags) -> Bool {
         var mods: KeyMods = []
         if flags.contains(.shift) { mods.insert(.shift) }
@@ -106,7 +107,8 @@ final class TerminalLook {
         if flags.contains(.control) { mods.insert(.control) }
         if flags.contains(.option) { mods.insert(.option) }
         let spec = KeySpec(mods, name.lowercased())
-        return Keymap.shared.entries.contains { $0.scope == .app && $0.keys.contains { $0.sameKey(spec) } }
+        // Any row, whatever its scope (`action_for(key, App)`: App overlaps every scope).
+        return Keymap.shared.entries.contains { $0.keys.contains { $0.sameKey(spec) } }
     }
 
     /// The action the table gives a key in the Terminal or Edit scope (`keymap::terminal_action`).
