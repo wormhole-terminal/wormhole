@@ -62,7 +62,11 @@ final class StudioLauncher {
             let themes = themesFolder()
             try? FileManager.default.createDirectory(at: themes, withIntermediateDirectories: true)
             // The folder is asked again at every call, so a profile switch moves an open Studio to the new profile's themes.
-            let live: @Sendable () -> URL = { [themesFolder] in MainActor.assumeIsolated { themesFolder() } }
+            // Every caller asks from the main thread today; one from elsewhere waits for the main thread instead of trapping.
+            let live: @Sendable () -> URL = { [themesFolder] in
+                if Thread.isMainThread { return MainActor.assumeIsolated { themesFolder() } }
+                return DispatchQueue.main.sync { MainActor.assumeIsolated { themesFolder() } }
+            }
             SketchSource.preset = { WindowSketches.blocks(preset: $0, width: $1) }
             let environment = StudioEnvironment(
                 resolver: FfiThemeResolver(), folder: FfiThemeFolder(folder: live), knowledge: GalleryKnowledge(uses: FfiTokenUses.all()),
