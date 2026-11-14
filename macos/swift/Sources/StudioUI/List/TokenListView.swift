@@ -12,6 +12,7 @@ struct TokenListView: View {
     @State private var open: Set<String> = []
     @Namespace private var selection
     @Environment(\.tokens) private var tokens
+    @Environment(\.reduceMotion) private var reduceMotion
 
     var body: some View {
         let counts = document.counts
@@ -32,7 +33,8 @@ struct TokenListView: View {
                 .onChange(of: document.selected) { _, token in
                     guard let token else { return }
                     reveal(token)
-                    withAnimation(Motion.layout) { proxy.scrollTo(token, anchor: .center) }
+                    // Under Reduce Motion the list jumps to the token and a band opens at once.
+                    withAnimation(reduceMotion ? nil : Motion.layout) { proxy.scrollTo(token, anchor: .center) }
                 }
                 .onAppear { if let token = document.selected { reveal(token) } }
             }
@@ -51,7 +53,7 @@ struct TokenListView: View {
             group: group, size: size, isOpen: isOpen, folds: !filtering, lowCount: group.tokens.filter(low.contains).count,
             changed: group.tokens.contains(where: document.isChanged)
         ) {
-            withAnimation(Motion.layout) { if !open.insert(group.name).inserted { open.remove(group.name) } }
+            withAnimation(reduceMotion ? nil : Motion.layout) { if !open.insert(group.name).inserted { open.remove(group.name) } }
         }
         if isOpen {
             ForEach(group.tokens, id: \.self) { token in

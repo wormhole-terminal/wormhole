@@ -13,13 +13,17 @@ struct CommitRowView: View {
     let expanded: Bool
     let action: () -> Void
     @Environment(\.tokens) private var tokens
+    @Environment(\.panelMotion) private var motion
 
     var body: some View {
         PanelRow(selected: expanded, action: action) { _ in
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: PanelMetrics.gap) {
                     PanelIcon("chevron.right", size: 12).foregroundStyle(muted)
-                        .rotationEffect(.degrees(expanded ? 90 : 0)).frame(width: Metric.lead, height: Metric.lead)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                        // Turned with the fold the list plays; under Reduce Motion it swaps at once, as GPUI's chevron does.
+                        .motionTurn(motion.turn, value: expanded)
+                        .frame(width: Metric.lead, height: Metric.lead)
                     Text(commit.subject)
                         .font(tokens.font(.body).weight(expanded ? .semibold : .regular))
                         .foregroundStyle(expanded ? tokens.sidebarRowSelectedText : tokens.textPrimary)

@@ -30,7 +30,8 @@ struct GalleryView<Extras: View>: View {
                 }
                 .padding(Space._4)
                 .environment(\.tokenMarks, TokenMarks(drawn: drawn, spoken: StudioWords.gallerySelected))
-                .animation(Motion.layout, value: shown.map(\.id))
+                // The specimens a filter keeps close up; under Reduce Motion they stand where they land at once.
+                .motionTurn(Motion.layout, value: shown.map(\.id))
             }
         }
         .frame(maxWidth: .infinity)

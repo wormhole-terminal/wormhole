@@ -133,7 +133,7 @@ public struct PaneArea<Content: View>: View {
         .allowsHitTesting(shown)
         .accessibilityHidden(!shown)
         .zIndex(zoomed == id ? 1 : 0)
-        .transition(.opacity.combined(with: .scale(scale: 0.98)))
+        .motionTransition(.opacity.combined(with: .scale(scale: 0.98)))
     }
 
     private func toggleZoom(_ id: PaneID) {

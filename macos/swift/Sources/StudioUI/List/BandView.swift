@@ -26,7 +26,7 @@ struct BandView: View {
                     .rotationEffect(.degrees(isOpen ? 90 : 0))
                     .frame(width: Metric.lead)
                     .opacity(folds ? 1 : 0.4)
-                    .motion(Motion.layout, value: isOpen)
+                    .motionTurn(Motion.layout, value: isOpen)
                 Text(group.name).font(TextRole.label.font)
                 Spacer(minLength: 0)
                 if lowCount > 0 {

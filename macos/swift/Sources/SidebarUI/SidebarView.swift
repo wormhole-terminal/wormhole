@@ -105,7 +105,9 @@ public struct SidebarView: View {
                 .padding(.top, Space._1)
                 // At least the list's height, so a pane header can be let go below the rows (it leaves its split).
                 .frame(maxWidth: .infinity, minHeight: viewport.height, alignment: .top)
-                .animation(SidebarMotion.list, value: sections.flatMap { $0.rows.map(\.id) })
+                // Rows changing order slide on the core's spring; under Reduce Motion they stand in their new places at once
+                // (the row plan measures nothing then).
+                .motionTurn(SidebarMotion.list, value: sections.flatMap { $0.rows.map(\.id) })
                 .coordinateSpace(.named(DragLift.space))
                 .onPreferenceChange(DropFrames.self) { frames = $0 }
                 .onDrop(of: [.plainText], delegate: paneHeaderDrop(sections))
@@ -113,7 +115,7 @@ public struct SidebarView: View {
             }
             .scrollIndicators(.automatic)
             .scrollEdge()
-            .onChange(of: cursor) { _, stop in if let stop { withAnimation(SidebarMotion.state) { proxy.scrollTo(stop) } } }
+            .onChange(of: cursor) { _, stop in if let stop { withAnimation(reduce ? nil : SidebarMotion.state) { proxy.scrollTo(stop) } } }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environment(\.sidebarMetrics, SidebarMetrics(density: appearance.density, cards: appearance.cards))

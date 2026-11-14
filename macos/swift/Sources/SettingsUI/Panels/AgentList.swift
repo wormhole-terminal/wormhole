@@ -123,6 +123,7 @@ struct OtherAgents: View {
                 Button { open.toggle() } label: {
                     HStack(alignment: .top, spacing: Space._2) {
                         Image(Icon.disclosure).font(.system(size: Metric.chevron, weight: .bold)).rotationEffect(.degrees(open ? 90 : 0))
+                            .motionTurn(Motion.layout, value: open)
                             .frame(width: Metric.lead, height: Metric.control).foregroundStyle(tokens.textMuted)
                         VStack(alignment: .leading, spacing: 0) {
                             Text(host.othersHead(count: records.count)).textRole(.body, weight: .medium).foregroundStyle(tokens.textPrimary)

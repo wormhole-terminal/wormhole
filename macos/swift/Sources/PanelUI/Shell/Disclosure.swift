@@ -7,13 +7,13 @@ import SwiftUI
 struct Disclosure: View {
     let collapsed: Bool
     @Environment(\.tokens) private var tokens
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.panelMotion) private var motion
 
     var body: some View {
         PanelIcon("chevron.right", size: 12)
             .foregroundStyle(tokens.textMuted)
             .rotationEffect(.degrees(collapsed ? 0 : 90))
-            .animation(PanelMotion(reduced: reduceMotion).turn, value: collapsed)
+            .motionTurn(motion.turn, value: collapsed)
             .frame(width: Metric.lead, height: Metric.lead)
             .accessibilityHidden(true)
     }

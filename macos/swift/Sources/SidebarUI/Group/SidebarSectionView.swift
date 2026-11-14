@@ -39,8 +39,9 @@ struct SidebarSectionView: View {
             GroupPopover(head: head, rows: section.rows, context: context) { dismissPopover() }
         }
         .padding(.horizontal, metrics.cardMargin).padding(.bottom, metrics.cardGap)
-        // Under Classic the card closes on the timed curve; Drawer and Tuck close it by the rows' own height (`GroupRows`).
-        .animation(look.foldMotion == "classic" ? SidebarMotion.fold : nil, value: head.isFolded)
+        // Under Classic the card closes on the timed curve (a cut under Reduce Motion); Drawer and Tuck close it by the rows'
+        // own height (`GroupRows`).
+        .animation(look.foldMotion == "classic" && !reduceMotion ? SidebarMotion.fold : nil, value: head.isFolded)
     }
 
     /// One card per terminal in no group, but the members of a split that sit together in one.

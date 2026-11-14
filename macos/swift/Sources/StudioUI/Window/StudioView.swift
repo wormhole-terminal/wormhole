@@ -54,7 +54,8 @@ private struct StudioContent<Extras: View>: View {
         }
         .foregroundStyle(tokens.textPrimary)
         .background(tokens.surfaceWindow)
-        .animation(Motion.layout, value: document.notice)
+        // The notice row pushes the panes down; under Reduce Motion it is there at once.
+        .motionTurn(Motion.layout, value: document.notice)
         .sheet(isPresented: $showsVersions) { VersionsSheet(document: document) { showsVersions = false }.themed() }
         .sheet(isPresented: $session.showsUpdate) {
             UpdateSheet(check: document.update, apply: { session.applyUpdate() }, cancel: { session.showsUpdate = false }).themed()
