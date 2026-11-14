@@ -104,7 +104,8 @@ extension EndToEnd {
     @Test("Open terminals twice opens the layout once; the first with focus is selected; a prompt copied into a note shows Notes (224, 227, 790, 958)")
     @MainActor func projectLayoutAndPromptNote() async throws {
         try await Instance.with(auth: "allow") { app in
-            await app.flags(["project_folders": true])
+            // Notes is a feature behind its own flag: without it the window has no Notes tab to show.
+            await app.flags(["project_folders": true, "notes_and_tasks": true])
             let repo = try app.scratch.repository("layout-project")
             let layout = #"{"sessions": [{"name": "api", "run": "true", "focus": true}, {"name": "web", "run": "true"}]}"#
             try app.scratch.project(repo, files: ["layout.json": layout, "prompts/review.md": "# Review\nLook at it.\n"])
@@ -122,7 +123,8 @@ extension EndToEnd {
 
             await app.send(["project-note review"])
             await app.until("state") { $0.contains("tab=notes") }
-            app.expect(await app.until("notes") { $0.contains("Review") }, contains: "Look at it.")
+            // The note is the prompt's text; its heading is the prompt's name, not part of what is copied (`prompt_to_note`).
+            app.expect(await app.until("notes") { $0.contains("Look at it.") }, contains: #"notes=["Look at it."]"#)
         }
     }
 
