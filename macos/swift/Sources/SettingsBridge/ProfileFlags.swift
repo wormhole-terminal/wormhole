@@ -5,20 +5,13 @@
 import Foundation
 import WormholeBindings
 
-/// Hears a profile's handle wake (Rust calls it on a thread of its own) and hands it to the main actor.
-private final class Relay: SettingsListener, @unchecked Sendable {
-    private let profile: String
-    private let lock = NSLock()
-    private weak var flags: ProfileFlags?
+/// Hears a profile's handle wake, which Rust calls on a thread of its own, and passes it on.
+private final class Relay: SettingsListener {
+    private let woke: @Sendable () -> Void
 
-    init(profile: String) { self.profile = profile }
+    init(_ woke: @escaping @Sendable () -> Void) { self.woke = woke }
 
-    func attach(_ flags: ProfileFlags) { lock.withLock { self.flags = flags } }
-
-    func wake() {
-        let (target, profile) = (lock.withLock { flags }, profile)
-        DispatchQueue.main.async { MainActor.assumeIsolated { target?.woke(profile) } }
-    }
+    func wake() { woke() }
 }
 
 @MainActor
@@ -42,14 +35,15 @@ public final class ProfileFlags {
 
     private func handle(_ profile: String) -> SettingsHandle? {
         if handles[profile] == nil {
-            let relay = Relay(profile: profile)
-            relay.attach(self)
+            let relay = Relay { [weak self] in
+                DispatchQueue.main.async { MainActor.assumeIsolated { self?.woke(profile) } }
+            }
             handles[profile] = try? SettingsHandle.open(profile: profile, listener: relay)
         }
         return handles[profile]
     }
 
-    fileprivate func woke(_ profile: String) {
+    private func woke(_ profile: String) {
         _ = handles[profile]?.drain()
         changed?(profile)
     }
