@@ -82,4 +82,13 @@ final class NotesRebaseTests: XCTestCase {
         let merged = model(steps: [("build", false)])
         XCTAssertEqual(steps(NotesModel.rebase(merged: merged, sent: sent, now: now)), ["  build", "x ship"])
     }
+
+    func testAStepThePersonDeletedComesBackWhenTheFileTickedItMeanwhile() {
+        // The core's rule (`merge.rs`): deleting a step on one side removes it unless the other side changed it.
+        let sent = model(steps: [("build", false), ("ship", false), ("tell Ann", false)])
+        // Meanwhile the person deletes "ship" and "tell Ann"; the file ticks "ship" and leaves "tell Ann" as it was.
+        let now = model(steps: [("build", false)])
+        let merged = model(steps: [("build", false), ("ship", true), ("tell Ann", false)])
+        XCTAssertEqual(steps(NotesModel.rebase(merged: merged, sent: sent, now: now)), ["  build", "x ship"])
+    }
 }
