@@ -23,6 +23,9 @@ final class Instance {
 
     let scratch: Scratch
     private let shell: Shell
+    /// What the owner's approval answers (`WORMHOLE_AUTH`): `cancel`, or `allow` for a scenario that trusts a project. Never
+    /// a prompt either way.
+    private let auth: String
     private let label: String
     private let program: URL
     /// The session host the app is given (`Scratch.giveHosts`), nil for a run whose terminals stay in the app.
@@ -33,8 +36,8 @@ final class Instance {
     private var attached = false
     private(set) var failed = false
 
-    private init(scratch: Scratch, shell: Shell, label: String, program: URL) {
-        (self.scratch, self.shell, self.label, self.program) = (scratch, shell, label, program)
+    private init(scratch: Scratch, shell: Shell, auth: String, label: String, program: URL) {
+        (self.scratch, self.shell, self.auth, self.label, self.program) = (scratch, shell, auth, label, program)
     }
 
     /// The built app: `$WORMHOLE_E2E_APP`, else the package's `Wormhole` product beside the test bundle or in `.build`.
@@ -62,10 +65,11 @@ final class Instance {
     /// Starts an instance, runs `body`, and ends the instance and removes its scratch folder, whatever `body` does.
     /// `hosts`: Persistent terminals on, with the built session host (`hostProgram`).
     static func with(
-        shell: Shell = .cat, hosts: Bool = false, label: String = #function, _ body: @MainActor (Instance) async throws -> Void
+        shell: Shell = .cat, auth: String = "cancel", hosts: Bool = false, label: String = #function,
+        _ body: @MainActor (Instance) async throws -> Void
     ) async throws {
         guard let program = executable() else { throw ScratchError(description: "the Wormhole app is not built") }
-        let app = Instance(scratch: try Scratch(), shell: shell, label: label, program: program)
+        let app = Instance(scratch: try Scratch(), shell: shell, auth: auth, label: label, program: program)
         if hosts {
             guard let built = hostProgram() else { throw ScratchError(description: "no session host is built: cargo build -p wormhole-host") }
             app.host = try app.scratch.giveHosts(from: built)
@@ -97,7 +101,7 @@ final class Instance {
         environment["WORMHOLE_DATA_DIR"] = scratch.data.path
         environment["WORMHOLE_DEVCTL"] = scratch.control.path
         environment["WORMHOLE_SHELL"] = program.path
-        environment["WORMHOLE_AUTH"] = "cancel"
+        environment["WORMHOLE_AUTH"] = auth
         environment["WORMHOLE_NOTIFY"] = "log"
         environment["WORMHOLE_BACKGROUND"] = "1"
         environment["WORMHOLE_AGENT_HOME"] = scratch.agentHome.path

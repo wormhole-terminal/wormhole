@@ -21,8 +21,9 @@ final class NotesCoordinator {
     private var syncTimer: Timer?
     private var projectOn = true
     private var syncing = false
-    /// Terminals handed to another window, whose merge in flight is still stored for them.
-    private var departed: Set<TerminalID> = []
+    /// The terminal on show whose notes the database could not give: nothing of it is saved or merged until they are read
+    /// (an empty list saved or merged in their place reads as the person having deleted them all).
+    private var unread: TerminalID?
     /// A folder's project root as last asked, so a window of many terminals asks each folder only now and then.
     private var roots: [String: (root: String?, at: Date)] = [:]
     private static let syncEvery: TimeInterval = 2
@@ -55,14 +56,18 @@ final class NotesCoordinator {
         let selected = hub.state.selected
         forgetClosed()
         if selected != shown {
-            if let shown, hub.state.all.contains(where: { $0.id == shown }) { persistence.save(session: shown, model: hub.panel.notes.model) }
+            if let shown, unread != shown, hub.state.all.contains(where: { $0.id == shown }) {
+                persistence.save(session: shown, model: hub.panel.notes.model)
+            }
             shown = selected
             // A draft step belongs to the terminal it was started in (`features/notes/def.rs` `selected`).
             hub.panel.notes.leaveDraft()
-            let loaded = selected.map { persistence.load(session: $0) } ?? NotesModel()
+            let read: NotesModel? = if let selected { persistence.read(session: selected) } else { NotesModel() }
+            unread = read == nil ? selected : nil
+            let loaded = read ?? NotesModel()
             saved = loaded
             if hub.panel.notes.model != loaded { hub.panel.notes.model = loaded }
-        } else if let shown, hub.panel.notes.model != saved {
+        } else if let shown, unread != shown, hub.panel.notes.model != saved {
             saved = hub.panel.notes.model
             persistence.save(session: shown, model: saved)
             tell(shown, saved)
@@ -85,7 +90,6 @@ final class NotesCoordinator {
     /// Terminals moving to another window are not closed: what was written for them goes with them, not away.
     func departing(_ ids: [TerminalID]) {
         known.subtract(ids)
-        departed.formUnion(ids)
     }
 
     private func forgetClosed() {
@@ -117,6 +121,7 @@ final class NotesCoordinator {
         guard !syncing else { return }
         syncing = true
         defer { syncing = false }
+        reread()
         for terminal in hub.state.all {
             let id = terminal.id
             var found = id == shown ? hub.panel.project.state?.root : nil
@@ -125,7 +130,7 @@ final class NotesCoordinator {
             // Only a step or note of the terminal on show being written holds its merge back (`api.rs` `being_written`);
             // read just before the merge is sent, after the awaits above.
             let editing = id == shown && hub.panel.notes.isWriting
-            let sent = id == shown ? hub.panel.notes.model : persistence.load(session: id)
+            guard let sent = holding(id) else { continue }
             let answered = await persistence.sync(session: id, root: root, model: sent, editing: editing)
             land(answered, sent: sent, for: id)
         }
@@ -135,9 +140,11 @@ final class NotesCoordinator {
     /// it, whichever terminal is shown now, or the next merge reads the lines the file gained as lines the person deleted.
     private func land(_ answered: NotesModel?, sent: NotesModel, for id: TerminalID) {
         guard hub.state.all.contains(where: { $0.id == id }) else {
-            // Closed during the merge: the base it just set goes again (a terminal that moved to another window keeps its notes,
-            // and the merge is stored for it).
-            if departed.contains(id) { store(answered, sent: sent, for: id) } else { persistence.closed(session: id) }
+            // Closed during the merge: the base it just set goes again. Moved to another window: that window shows what it
+            // read of the terminal before this landed and saves it after the next edit, over anything stored here; with the
+            // base forgotten its next merge keeps everything of both sides, where this base would read the file's new lines
+            // as deleted by the person.
+            persistence.closed(session: id)
             return
         }
         store(answered, sent: sent, for: id)
@@ -146,8 +153,15 @@ final class NotesCoordinator {
     private func store(_ answered: NotesModel?, sent: NotesModel, for id: TerminalID) {
         guard let answered else { return }
         let showing = id == shown
-        // A tick or a new step made while the merge ran (no editor open, so not "being written") is kept on top of it.
-        let now = showing ? hub.panel.notes.model : persistence.load(session: id)
+        // What the person did while the merge ran (a tick, a step added, deleted or moved, a note rewritten) is kept on top
+        // of it, told apart by what the items say: a load from the database gives every item a new id.
+        guard let now = holding(id) else {
+            // What the terminal holds cannot be read, so the merge cannot be laid over it, and the base the core just moved
+            // would read whatever the merge brought as deleted by the person. Forgotten instead: the next merge keeps
+            // everything of both sides (the base goes as a closed terminal's does).
+            persistence.closed(session: id)
+            return
+        }
         let merged = now == sent ? answered : NotesModel.rebase(merged: answered, sent: sent, now: now)
         guard merged != now else { return }
         // Saved like an edit, at once: a merge left for the next edit is lost on quit, and the next launch
@@ -158,6 +172,25 @@ final class NotesCoordinator {
         }
         persistence.save(session: id, model: merged)
         if hub.state.all.contains(where: { $0.id == id }) { tell(id, merged) }
+    }
+
+    /// What terminal `id` holds now: on show, the panel's; else what was saved for it; nil when that cannot be read.
+    private func holding(_ id: TerminalID) -> NotesModel? {
+        guard id == shown else { return persistence.read(session: id) }
+        return unread == id ? nil : hub.panel.notes.model
+    }
+
+    /// The terminal on show could not be read when it was shown: read again, with what was typed since after what was saved.
+    private func reread() {
+        guard let id = unread, id == shown, let read = persistence.read(session: id) else { return }
+        unread = nil
+        let typed = hub.panel.notes.model
+        var model = read
+        model.tasks = TaskList(read.tasks.items + typed.tasks.items)
+        model.notes = read.notes + typed.notes
+        saved = read
+        // Saved as an edit is, when the change is seen (`changed`).
+        hub.panel.notes.model = model
     }
 
     private func root(of terminal: TerminalSummary) async -> String? {

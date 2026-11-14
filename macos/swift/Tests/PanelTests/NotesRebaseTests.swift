@@ -62,4 +62,24 @@ final class NotesRebaseTests: XCTestCase {
             NotesModel.rebase(merged: merged, sent: sent, now: now).notes.map(\.text),
             ["Ask Ann about the key", "Deploy on Friday", "A file's note"])
     }
+
+    func testAReorderDuringTheMergeIsKeptAndTheItemsKeepTheirIds() {
+        let sent = model(steps: [("a", false), ("b", false)], notes: ["one", "two"])
+        var now = sent
+        now.tasks.move(from: 1, to: 0)
+        now.notes.swapAt(0, 1)
+        let merged = model(steps: [("a", false), ("b", false), ("c", false)], notes: ["one", "two", "three"])
+        let result = NotesModel.rebase(merged: merged, sent: sent, now: now)
+        // The person's order; what the file added follows the item it follows in the file.
+        XCTAssertEqual(steps(result), ["  b", "  c", "  a"])
+        XCTAssertEqual(result.notes.map(\.text), ["two", "three", "one"])
+        XCTAssertEqual([result.tasks.items[0].id, result.tasks.items[2].id], now.tasks.items.map(\.id), "an editor stays on its row")
+    }
+
+    func testAStepTheFileRemovedStaysWhenThePersonTickedItMeanwhile() {
+        let sent = model(steps: [("build", false), ("ship", false)])
+        let now = model(steps: [("build", false), ("ship", true)])
+        let merged = model(steps: [("build", false)])
+        XCTAssertEqual(steps(NotesModel.rebase(merged: merged, sent: sent, now: now)), ["  build", "x ship"])
+    }
 }

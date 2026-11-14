@@ -228,6 +228,6 @@ The Studio's `studio-open`, `studio-save` and `studio-use` answer when they are 
 What they may never touch: the person's data folder, `HOME`, agent home, clipboard, Trash, notifications, Touch ID, git repositories,
 browser or editor, and the keyboard focus. The harness gives the app an environment of its own (no inherited variable): the data
 folder is `Wormhole-swift-e2e` inside `/tmp/wh-e2e-<id>`, `HOME`, `TMPDIR` and `WORMHOLE_AGENT_HOME` are folders in it,
-`WORMHOLE_AUTH=cancel`, `WORMHOLE_NOTIFY=log`, `WORMHOLE_AGENT_PATH=` empty, git without the person's config. A test never passes a
+`WORMHOLE_AUTH=cancel` (`Instance.with(auth: "allow")` for a scenario that trusts a project: answered, never prompted), `WORMHOLE_NOTIFY=log`, `WORMHOLE_AGENT_PATH=` empty, git without the person's config. A test never passes a
 real path to the app, never spawns a program itself (`Spawn.swift` is the one place `rules.py` allows a `Process`, marked
 `// process:`), and never sets the app's isolation variables by hand.

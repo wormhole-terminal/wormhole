@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 
 use wormhole_core::project::{
     Feature, NotesBaseStore, NotesFile, ProjectFolder, ProjectPrefs, ProjectSnapshot, TrustRequest,
@@ -15,7 +15,8 @@ pub(super) struct Hub {
     dir: PathBuf,
     pub(super) prefs: ProjectPrefs,
     pub(super) trust: TrustStore,
-    pub(super) notes_bases: NotesBaseStore,
+    /// The profile's, shared by every window of it (`shared_bases`).
+    notes_bases: Arc<Mutex<NotesBaseStore>>,
     pub(super) notes_files: HashMap<PathBuf, NotesFile>,
     /// Why a project's notes.md can't be synced right now, shown in the Project tab.
     pub(super) notes_errors: HashMap<PathBuf, String>,
@@ -42,10 +43,7 @@ impl Hub {
         problems.extend(err.map(|err| format!("Project preferences were reset: {err}")));
         let (trust, err) = TrustStore::load_or_recover(dir);
         problems.extend(err.map(|err| format!("Trusted projects were reset, approve them again: {err}")));
-        let (notes_bases, err) = NotesBaseStore::load_or_recover(dir);
-        if let Some(err) = err {
-            tracing::warn!("notes sync state: {err}");
-        }
+        let notes_bases = shared_bases(dir);
         for problem in &problems {
             tracing::warn!("{problem}");
         }
@@ -155,11 +153,34 @@ impl Hub {
         }
     }
 
+    /// The notes sync's merge bases, every window's of the profile.
+    pub(super) fn bases(&self) -> MutexGuard<'_, NotesBaseStore> {
+        self.notes_bases.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
     pub(super) fn save_notes_bases(&mut self) {
-        if self.notes_bases.is_dirty()
-            && let Err(err) = self.notes_bases.save()
+        let mut bases = self.bases();
+        if bases.is_dirty()
+            && let Err(err) = bases.save()
         {
             tracing::warn!("saving notes sync state: {err}");
         }
     }
+}
+
+/// The merge bases kept in profile folder `dir`: one store in the process for every window of that profile, as the GPUI app
+/// keeps one hub per profile. A copy per window wrote over the other windows' bases in `notes-sync.json` (the next launch
+/// then merged their terminals against stale ones), and a terminal moved to another window merged against none there.
+fn shared_bases(dir: &Path) -> Arc<Mutex<NotesBaseStore>> {
+    static BASES: LazyLock<Mutex<HashMap<PathBuf, Arc<Mutex<NotesBaseStore>>>>> =
+        LazyLock::new(Default::default);
+    let mut all = BASES.lock().unwrap_or_else(PoisonError::into_inner);
+    let store = all.entry(dir.to_path_buf()).or_insert_with(|| {
+        let (bases, err) = NotesBaseStore::load_or_recover(dir);
+        if let Some(err) = err {
+            tracing::warn!("notes sync state: {err}");
+        }
+        Arc::new(Mutex::new(bases))
+    });
+    Arc::clone(store)
 }

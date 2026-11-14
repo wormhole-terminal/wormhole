@@ -91,7 +91,7 @@ impl ProjectService {
             // Switched off: switching on merges both sides afresh. Waiting for trust keeps the base, so
             // what was deleted on either side before the wait stays deleted once the project is trusted.
             if !wanted {
-                hub.notes_bases.remove(session);
+                hub.bases().remove(session);
             }
             let told = hub.set_notes_error(&folder.root, (wanted).then(|| NEEDS_TRUST.to_string()));
             (NotesSyncOutcome::default(), told)
@@ -108,15 +108,18 @@ impl ProjectService {
     /// is given its id does not read as having deleted every note.
     pub fn notes_session_closed(&self, session: i64) {
         let mut hub = self.lock();
-        hub.notes_bases.remove(session);
+        hub.bases().remove(session);
         hub.save_notes_bases();
     }
 
     /// Ids from `first_free` on are handed out to new terminals from now on (call it at launch with one past
-    /// the highest id in use): bases left from terminals that are gone are forgotten.
+    /// the highest id in use): bases left from terminals that are gone are forgotten. The bases are the profile's,
+    /// every window's: a window's own highest id is not past another window's, so the app's counter decides once
+    /// there is one (the GPUI app's `ids_start_at(app.next_id())`).
     pub fn notes_ids_start_at(&self, first_free: i64) {
+        let first_free = crate::windows::next_terminal_id().map_or(first_free, |next| next.max(first_free));
         let mut hub = self.lock();
-        hub.notes_bases.forget_from(first_free);
+        hub.bases().forget_from(first_free);
         hub.save_notes_bases();
     }
 }
@@ -131,7 +134,7 @@ fn step(
     local: &NotesDoc,
     editing: bool,
 ) -> (NotesSyncOutcome, bool) {
-    let base = hub.notes_bases.get(session).cloned();
+    let base = hub.bases().get(session).cloned();
     let plan = match file.read() {
         (Ok(theirs), _) => {
             let empty = NotesDoc::default();
@@ -157,7 +160,7 @@ fn step(
         return (NotesSyncOutcome::default(), changed);
     }
     let told = hub.set_notes_error(root, None);
-    hub.notes_bases.set(session, NotesBase { root: root.to_path_buf(), doc: plan.base.doc.clone() });
+    hub.bases().set(session, NotesBase { root: root.to_path_buf(), doc: plan.base.doc.clone() });
     let outcome = match &plan.apply {
         Some(doc) => NotesSyncOutcome {
             apply: Some(NotesDocRecord::from(doc)),

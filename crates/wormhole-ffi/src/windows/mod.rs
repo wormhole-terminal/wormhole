@@ -14,6 +14,7 @@ pub use frame::{
     DisplayRecord, FrameKind, FrameRecord, WindowAnimationKind, WindowMinSize, cascade_frame, fit_frame,
     window_animation, window_min_size,
 };
+pub(crate) use registry::next_terminal_id;
 pub use registry::{PlannedWindow, SavedWindow, Windows};
 pub use tear_off::{
     TearGrow, TearLanding, TearPlaced, TearRect, TearWindow, tear_off_grow, tear_off_grow_ms,

@@ -13,7 +13,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicI64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock, PoisonError, Weak};
 
 use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 use wormhole_core::storage::store::{Store, WindowRecord, front_last};
@@ -25,6 +25,15 @@ use super::frame::FrameRecord;
 use crate::error::FfiError;
 use crate::workspace::{Shared, Workspace};
 use crate::{isolation, profile};
+
+/// The app's terminal ids, once its windows are made (`Windows::new`).
+static APP_IDS: OnceLock<IdCounter> = OnceLock::new();
+
+/// The first terminal id not handed out yet in the whole app, once its windows are made: every id below it may belong
+/// to a terminal of some window, every id from it on is new (the GPUI app's `AppState::next_id`).
+pub(crate) fn next_terminal_id() -> Option<i64> {
+    APP_IDS.get().map(IdCounter::peek)
+}
 
 /// A window saved at the last quit (or the last change), in the order to open them: the one that was in front
 /// last.
@@ -303,6 +312,8 @@ impl Windows {
         let (terminal, window) = profile::first_free_ids(&root);
         windows.ids.keep_above(terminal.saturating_sub(1));
         windows.next_window.fetch_max(window, Ordering::Relaxed);
+        // The app's one counter (the profiles beside it share it), for what must know which ids are still to come.
+        let _ = APP_IDS.set(windows.ids());
         Ok(windows)
     }
 

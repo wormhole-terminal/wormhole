@@ -104,3 +104,26 @@ fn a_notes_file_that_links_out_of_the_project_is_never_read() {
         "and is not overwritten"
     );
 }
+
+#[test]
+fn the_windows_of_a_profile_merge_a_terminal_against_the_same_base() {
+    let repo = Repo::new(&[("notes.md", "# Notes\n\n## Next steps\n\n- [ ] from the repo\n")]);
+    let owner = Owner::answering([OwnerAnswer::Approved]);
+    let (data, first) = service(&owner);
+    first.project(repo.root());
+    assert_eq!(first.approve(repo.root()), ApproveOutcome::Approved);
+    let second = crate::files_panel::ProjectService::in_dir(data.path(), owner.clone());
+    let agreed = first
+        .sync_notes(1, repo.root(), doc(&[("mine", false)], &[]), false)
+        .apply
+        .expect("the file's step comes in");
+    // The file loses a step while the terminal moves to the other window, whose merge must know what was agreed: without
+    // the base the step reads as added by the person and is written back.
+    let without: Vec<&str> =
+        notes_md(&repo).lines().filter(|line| *line != "- [ ] mine").map(str::trim_end).collect();
+    repo.put("notes.md", &format!("{}\n", without.join("\n")));
+    let out = second.sync_notes(1, repo.root(), agreed, false);
+    let steps = out.apply.map(|doc| doc.tasks.into_iter().map(|t| t.text).collect::<Vec<_>>());
+    assert_eq!(steps, Some(vec!["from the repo".to_string()]), "the file's deletion comes in");
+    assert!(!notes_md(&repo).contains("mine"), "and is not undone");
+}

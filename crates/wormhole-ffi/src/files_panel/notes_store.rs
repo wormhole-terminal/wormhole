@@ -97,14 +97,21 @@ impl SessionNotesStore {
         Self::in_profile(&DataRoot::current(), &profile)
     }
 
-    /// What was saved for terminal `session` (nothing: empty).
+    /// What was saved for terminal `session` (nothing: empty; unreadable: empty too, see `read`).
     pub fn load(&self, session: i64) -> NotesSaved {
+        self.read(session).unwrap_or_default()
+    }
+
+    /// What was saved for terminal `session` (nothing: empty), or `None` when the database could not be read. A
+    /// merge with notes.md must tell the two apart: sent as the terminal's notes, an empty list reads as the person
+    /// having deleted every line, and the merge deletes them from the file.
+    pub fn read(&self, session: i64) -> Option<NotesSaved> {
         let store = self.store.lock().unwrap_or_else(PoisonError::into_inner);
         store
             .load_session_notes(session)
             .inspect_err(|err| tracing::warn!("reading the notes of terminal {session}: {err:#}"))
-            .unwrap_or_default()
-            .into()
+            .ok()
+            .map(Into::into)
     }
 
     /// Replaces what is saved for terminal `session`. Rows already equal to what is given are not
