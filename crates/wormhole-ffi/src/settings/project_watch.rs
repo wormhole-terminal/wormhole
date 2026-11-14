@@ -41,7 +41,7 @@ pub fn settings_watch_project(root: String, listener: Arc<dyn ProjectListener>) 
 }
 
 /// Follows the approvals of the profile whose stores are in `dir` (`trusted-projects.json`): a project trusted or
-/// revoked elsewhere (another window, the trust window, the command line) reaches the page as an event.
+/// revoked elsewhere (another window, the trust window, another program) reaches the listener as an event.
 pub(crate) fn watch_approvals(dir: &Path, listener: Arc<dyn ProjectListener>) -> Arc<ProjectWatch> {
     let Ok(dir) = dir.canonicalize() else { return start(None, listener, |_| false) };
     let file = dir.join(TrustStore::FILE_NAME);

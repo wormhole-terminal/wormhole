@@ -6,6 +6,10 @@
 //! looks at the file's stamp first and reads it again when another program wrote it (the command line, the project
 //! commands window's desk).
 //!
+//! What another program wrote is also told: the approvals' file is followed for as long as the process holds the stores
+//! ([`ApprovalsChanged`]), so a project revoked from outside leaves every window's Project tab and title row as an event,
+//! as one revoked here does. Nothing acts on the telling alone: every gate reads the file itself.
+//!
 //! A project's `notes.md` has one lock in the process too ([`notes_file`]), held from its read to its write: two windows
 //! merging terminals of the same project take turns, and neither writes what it merged from a read the other's write
 //! made stale.
@@ -20,6 +24,9 @@ use wormhole_core::project::{
     TrustStatus, TrustStore,
 };
 use wormhole_core::storage::files::FileStamp;
+
+use crate::settings::project_watch::watch_approvals;
+use crate::settings::{ProjectListener, ProjectWatch};
 
 /// A store kept as a file in the profile folder.
 pub(super) trait Stored: Sized {
@@ -108,6 +115,19 @@ pub(super) struct Stores {
     pub(super) bases: Arc<Mutex<NotesBaseStore>>,
     /// What was wrong with the files when they were first read (set aside and started afresh), said in every window's tab.
     pub(super) problems: Option<String>,
+    /// Follows the approvals' file while the stores are held (see the module).
+    _approvals: Arc<ProjectWatch>,
+}
+
+/// The approvals' file changed: every window's Project tab reads its project again and every workspace judges its
+/// branches' pull requests now, as after a change made in this process. The tab's and the workspace's own slow looks
+/// stay as the fallback (a watch can fail, drop events, or sit on a volume that sends none).
+struct ApprovalsChanged;
+
+impl ProjectListener for ApprovalsChanged {
+    fn changed(&self) {
+        super::service::tell_every_tab();
+    }
 }
 
 /// The stores kept in profile folder `dir`: the same ones for every window of that profile, however the folder is named.
@@ -165,6 +185,7 @@ fn load(dir: &Path) -> Stores {
         trust: Arc::new(Mutex::new(OnDisk::new(dir, trust))),
         bases: Arc::new(Mutex::new(bases)),
         problems: (!problems.is_empty()).then(|| problems.join("\n")),
+        _approvals: watch_approvals(dir, Arc::new(ApprovalsChanged)),
     }
 }
 

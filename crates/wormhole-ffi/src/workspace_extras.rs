@@ -30,11 +30,12 @@ const PORTS_EVERY: Duration = Duration::from_secs(5);
 /// asked at once, as the set of branches moving shows.
 const PULL_REQUESTS_EVERY: Duration = Duration::from_secs(60);
 
-/// How many times a project's approvals (or its switches) changed in this process: the branches are judged again at
-/// the next look whenever it moved, not at the minute's end. A change made by another program waits for the minute.
+/// How many times a project's approvals (or its switches) changed, in this process or in the approvals' file (another
+/// program's write is told as an event: `files_panel::project::stores`): the branches are judged again at the next look
+/// whenever it moved, not at the minute's end. The minute is the fallback for a change no event told.
 static TRUST_CHANGES: AtomicU64 = AtomicU64::new(0);
 
-/// A project was trusted or revoked in this process: every workspace looks at its branches again now.
+/// A project was trusted or revoked: every workspace looks at its branches again now.
 pub(crate) fn trust_changed() {
     TRUST_CHANGES.fetch_add(1, Ordering::AcqRel);
     crate::workspace_pump::kick_every();
