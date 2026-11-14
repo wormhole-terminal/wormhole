@@ -5,7 +5,8 @@
 // `studio-appearance light|dark`, `studio-add-appearance [light|dark]`, `studio-chip [token]`, `studio-update-from
 // [apply|cancel]`, `studio-versions [select <n>|restore [<n>]|close]`, `studio-use`, `studio-menu [save|duplicate|json|project]`,
 // `studio-theme-menu`, `studio-open own:<stem>|builtin:<name>|from:<name>|new|project`, and the window's `studio-resize <w> <h>`,
-// `studio-scroll <y>`, `studio-shot <name>` and `studio-frames <n> [scroll]`. `studio-do` and `studio-out` stay as they are.
+// `studio-scroll <y>` (the gallery scrolled to y points from its top, as GPUI's), `studio-shot <name>` and `studio-frames <n>
+// [tick|scroll]`. `state` ends with the Studio's own line (`studioStateLine`). `studio-do` and `studio-out` stay as they are.
 //
 // What may ask a question (saving over a file, opening another theme over unsaved edits) runs beside the batch and replies
 // when it is done: the question is held for `question confirm|cancel`, which must be able to run meanwhile.
@@ -145,39 +146,67 @@ extension AppController {
             window.setContentSize(NSSize(width: numbers[0], height: numbers[1]))
             reply("studio-resize \(Int(content.bounds.width))x\(Int(content.bounds.height))")
         case "studio-scroll":
-            let total = numbers.first ?? 0, count = max(1, Int((abs(total) / 20).rounded(.up)))
+            // GPUI's sets the gallery's offset to y: the wheel turns by what is between where it is and there.
+            guard let scroller = galleryScroller(at: centre, in: window) else { reply("error: no gallery under the window's centre"); return true }
+            let total = max(0, numbers.first ?? 0) - Self.offset(of: scroller), count = max(1, Int((abs(total) / 20).rounded(.up)))
             var last = ""
             for _ in 0..<count {
                 last = injector.scroll(centre, in: window, dy: total / Double(count))
                 await pause(16)
             }
-            reply("studio-scroll \(Int(total)): \(last)")
+            reply("studio-scroll \(Int(numbers.first ?? 0)): \(last) at=\(Int(Self.offset(of: scroller)))")
         case "studio-shot":
             guard let folder = options.devctl else { reply("error: no control folder"); return true }
             let name = Self.fileName(words.first, default: "studio")
             reply(windowShot(to: folder.appendingPathComponent("\(name).png").path, titled: window.title))
         case "studio-frames":
-            // The window drawn n times, each timed, to `frames.txt`; with `scroll` a wheel tick over the gallery before each.
-            let frames = max(1, Int(numbers.first ?? 40)), scrolls = words.contains("scroll")
+            // The window drawn n times, each timed, to `frames.txt` in GPUI's words (`studio::devctl::frames`). `scroll`: a
+            // wheel tick of 40 points over the gallery before each; `tick`: each draw follows an animation's frame, which in
+            // SwiftUI is a layout of the window and a draw (GPUI notifies its gallery; SwiftUI evaluates again only what
+            // changed, and an animation changes no state); nothing: the window draws again.
+            let frames = max(1, Int(numbers.first ?? 40))
+            let mode = words.contains("scroll") ? "scroll" : words.contains("tick") ? "tick" : "rest"
             var took: [Double] = []
             for _ in 0..<frames {
-                if scrolls { _ = injector.scroll(centre, in: window, dy: 20) }
+                if mode == "scroll" { _ = injector.scroll(centre, in: window, dy: 40) }
                 let start = CFAbsoluteTimeGetCurrent()
+                if mode == "tick" {
+                    content.needsLayout = true
+                    content.layoutSubtreeIfNeeded()
+                }
                 content.needsDisplay = true
                 content.displayIfNeeded()
                 took.append((CFAbsoluteTimeGetCurrent() - start) * 1000)
                 await pause(2)
             }
-            let sorted = took.sorted()
+            // The first frames warm caches (shaped text, icons); the rest are reported.
+            let steady = took.dropFirst(min(3, took.count - 1))
             let line = String(
-                format: "studio-frames %ld%@: avg=%.3fms p50=%.3fms max=%.3fms", frames, scrolls ? " scroll" : "", took.reduce(0, +) / Double(frames),
-                sorted[frames / 2], sorted[frames - 1])
+                format: "studio-frames %@ n=%ld avg=%.2fms max=%.2fms first=%.2fms", mode, frames,
+                steady.reduce(0, +) / Double(steady.count), steady.max() ?? 0, took[0])
             devctl?.append(line, to: "frames.txt")
             reply(line)
         default:
             reply("error: no command \(command)")
         }
         return true
+    }
+
+    /// The scroll view the gallery is drawn in: the one round the view under `point` (the window's centre).
+    private func galleryScroller(at point: NSPoint, in window: NSWindow) -> NSScrollView? {
+        var view = injector.view(at: point, in: window)
+        while let at = view {
+            if let scroller = at as? NSScrollView { return scroller }
+            view = at.superview
+        }
+        return nil
+    }
+
+    /// How far down from its top a scroll view is scrolled, in points.
+    private static func offset(of scroller: NSScrollView) -> Double {
+        let clip = scroller.contentView
+        guard let document = scroller.documentView, !document.isFlipped else { return Double(clip.bounds.minY) }
+        return Double(document.bounds.height - clip.bounds.maxY)
     }
 
     /// A file name of the control folder: letters, digits, `.`, `_` and `-` only (GPUI's `file_name`), else the default.

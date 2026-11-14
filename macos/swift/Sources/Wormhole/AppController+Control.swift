@@ -106,6 +106,6 @@ extension AppController {
             + "atlas_resets=\(counters.atlasResets) meta=\(view.optionAsMeta) "
             + "terminals=\(shown.live.count) selected=\(shown.selected.map(String.init) ?? "none") "
             + "sidebar=\(shown.sidebarVisible) panel=\(shown.panelVisible) tab=\(shown.panelTab.rawValue) "
-            + "window=\(window?.windowNumber ?? 0) " + lookState + " " + hub.paneState + " focus=\(hub.focus.detail)" + pendingQuestionState
+            + "window=\(window?.windowNumber ?? 0) " + lookState + " " + hub.paneState + " focus=\(hub.focus.detail)" + pendingQuestionState + studioStateLine
     }
 }
