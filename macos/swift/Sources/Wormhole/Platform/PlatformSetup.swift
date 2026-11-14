@@ -25,14 +25,23 @@ enum PlatformSetup {
             recordLaunches(to: launchLog?.path)
             PlatformBridge.installKeymap()
             PlatformBridge.installPaletteMatcher()
-            // WORMHOLE_LANGUAGE=en-XA starts the instance in the pseudo-language, so every string built once shows it too.
-            WordsBridge.install(tag: ProcessInfo.processInfo.environment["WORMHOLE_LANGUAGE"])  // text: an environment variable name
+            WordsBridge.install(tag: launchLanguage(options, environment: ProcessInfo.processInfo.environment))
             FilesBridge.installRules()
             installResizeRules()
             installCellRules()
             installCellShapes()
             CommandLineSetup.keepCurrent()
         #endif
+    }
+
+    /// The language a launch asks for by name; nil is the system's list (core's `negotiate`, which never gives the
+    /// pseudo-language). GPUI takes a language by name from devctl alone, so a build without it cannot show `en-XA`
+    /// (`app/language.rs:7-8`, `devctl/language.rs:17`). Here devctl is the control folder (`WORMHOLE_DEVCTL`), whose
+    /// `language <tag>` is that command; `WORMHOLE_LANGUAGE` is its form at launch, so that every string built once shows the
+    /// language too, and is not read by an instance without a control folder.
+    static func launchLanguage(_ options: Options, environment: [String: String]) -> String? {
+        guard options.devctl != nil else { return nil }
+        return environment["WORMHOLE_LANGUAGE"].flatMap { $0.isEmpty ? nil : $0 }  // text: an environment variable name
     }
 
     /// The menu bar's rules: core's when real, the Swift port (over the dumped keymap) otherwise.

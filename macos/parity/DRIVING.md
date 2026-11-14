@@ -12,6 +12,9 @@ WORMHOLE_DATA_DIR=/tmp/Wormhole-swift-<x> WORMHOLE_SHELL=/bin/zsh WORMHOLE_AUTH=
 printf 'click 150 66\nrows\n' > <ctl>/cmd.tmp && mv <ctl>/cmd.tmp <ctl>/cmd     # results are appended to <ctl>/out.txt
 ```
 
+`WORMHOLE_LANGUAGE=en-XA` beside `WORMHOLE_DEVCTL` starts the instance in the pseudo-language (the `language` command at
+launch); without a control folder the variable is not read, as a GPUI build without devctl cannot show `en-XA`.
+
 Lines run in order. A line that takes time (`drag`, `scroll`, `wait-idle`, `perf-profile`) holds the rest of its batch and any
 batch written meanwhile. Points are the window content's, from its top left, in points (a `window-shot` at 1x). Persistent
 terminals need `flags-unlock`, `set feature_flags={"persistent_terminals":true,"unlocked":true}`, a restart and
