@@ -38,6 +38,9 @@ public final class FFIOnboardingBackend: OnboardingBackend {
     /// "Trust with Touch ID…" is waiting for the person: the card says so, and goes once the approval is given.
     private var approving = false
     private var cardChanged: (@MainActor () -> Void)?
+    /// Follows the desk the card is read from: an approval given or taken back elsewhere (another window, a hook, the CLI)
+    /// writes the profile's approvals, whose file the desk watches, and the card is read again (GPUI builds it every frame).
+    private var trustWakes: Task<Void, Never>?
 
     /// `preferences` start from the settings as they are; `project` is the folder the intro asks about, if it has
     /// a `.wormhole/` folder to trust. `onFinish` moves the first terminal to the folder picked.
@@ -65,7 +68,10 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         trustRoot = project?.path
         trustCard = trustDesk.flatMap(makeCard)
         preferences.onChange = { [weak self] in self?.writeLook() }
+        followTrust()
     }
+
+    deinit { trustWakes?.cancel() }
 
     public func scanAgents() async -> (found: [FoundAgent], others: Int) {
         let run = run
@@ -89,8 +95,28 @@ public final class FFIOnboardingBackend: OnboardingBackend {
             trustRoot = root
             trustDesk = try? TrustDesk(root: root, profile: profile(), dataDir: dataDir?.path, listener: hub)
             trustCard = trustDesk.flatMap(makeCard)
+            followTrust()
         }
         return cardNow
+    }
+
+    /// The card read again on every wake of the desk in use (its project folder or the profile's approvals changed); the
+    /// desk before it stops being followed.
+    private func followTrust() {
+        trustWakes?.cancel()
+        guard let desk = trustDesk else {
+            trustWakes = nil
+            return
+        }
+        let wakes = hub.stream(onFinish: { desk.unfollow() })
+        _ = desk.follow()
+        trustWakes = Task { @MainActor [weak self] in
+            for await _ in wakes {
+                guard let self, self.trustDesk === desk else { return }
+                trustCard = makeCard(desk)
+                cardChanged?()
+            }
+        }
     }
 
     /// The card as it is shown: waiting while the approval is asked for.
