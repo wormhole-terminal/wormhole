@@ -59,6 +59,9 @@ extension AppController {
         if let session = sessions.first(where: { $0.hub === hub }) {
             let off = featuresOff(session)
             state.hidden.formUnion(Keymap.shared.entries.filter { $0.feature.map(off.contains) ?? false }.map(\.id))
+            // Show Project also needs project folders on, as well as a folder (`features/project/def.rs` `menu`): its key
+            // does nothing while they are off.
+            if off.contains("project") { state.disabled.insert("showProject") }
         }
         // The window's own profile's list, which is not always the shown one.
         let profile = sessions.first { $0.hub === hub }?.windows.profile ?? windowsHost.profile
