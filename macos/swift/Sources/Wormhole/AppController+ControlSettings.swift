@@ -21,6 +21,10 @@ extension AppController {
             else { reply("error: usage set key=<json value>"); return true }
             settingsModel.set(parts[0], value)
             reply("set \(parts[0]) -> \(settingsModel.value(parts[0]))\(settingsModel.backend.refusal.map { " refused: \($0)" } ?? "")")
+        case "flags":
+            // The feature flags that are on as the window in front has them (its own profile's, read from the file a moment
+            // after `set` wrote it): what a driver waits on before it relies on a flag.
+            reply("flags on=" + flagsOn(front).sorted().joined(separator: ","))
         case "panel-pick":
             // The answer of the next open panel of Settings (Choose app…, a folder, Import theme…); a test instance shows none.
             PanelPick.answer(with: argument.isEmpty ? nil : URL(fileURLWithPath: argument))

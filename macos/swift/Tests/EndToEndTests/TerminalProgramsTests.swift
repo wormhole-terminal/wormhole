@@ -134,7 +134,10 @@ extension EndToEnd {
             await app.until("pane-bar") { $0.hasPrefix("notice") }
 
             // A program reading the clipboard is asked about first (`clipboard_read` is ask); a copy made meanwhile waits for it.
-            await app.send(["delay 4500"])
+            // A read is asked about only where the person can see the terminal (the key window: `ReadGate`, `reportOnScreen`),
+            // and a test instance's window is never key: `clipboard-front on` says it is. Without it the read is refused
+            // with an empty answer, which `cat` writes back as a copy of nothing.
+            await app.send(["delay 4500", "clipboard-front on"])
             await app.emit("\(e)]52;c;?\(b)")
             await app.until("pane-bar") { $0.hasPrefix("question") }
             await app.emit("\(e)]52;c;b2s=\(b)")

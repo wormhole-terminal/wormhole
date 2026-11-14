@@ -86,6 +86,11 @@ extension Instance {
         let pairs = (["unlocked": true].merging(wanted) { $1 }).sorted { $0.key < $1.key }.map { "\"\($0.key)\":\($0.value)" }
         await send(["set feature_flags={\(pairs.joined(separator: ","))}"])
         _ = await waitForConfig { text in wanted.allSatisfy { text.range(of: "\"\($0.key)\"\\s*:\\s*\($0.value)", options: .regularExpression) != nil } }
+        // And until the window has them: it reads its profile's flags from the file a moment after `set` wrote it.
+        await until("flags") { said in
+            let on = Set(said.dropFirst("flags on=".count).split(separator: ",").map(String.init))
+            return wanted.allSatisfy { on.contains($0.key) == $0.value }
+        }
     }
 
     /// A setting as `get` prints it: `bool(true)`, `number(14.0)`, `string("Nord")`.
