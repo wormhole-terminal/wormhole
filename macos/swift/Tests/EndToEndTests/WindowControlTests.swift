@@ -7,7 +7,8 @@ import Testing
 extension EndToEnd {
     @Test("keys sent to the first window act there while the second is in front; `new-terminal` and `list` from the command line")
     @MainActor func keysInTheirWindow() async throws {
-        try await Instance.with { app in
+        // The command line's verbs need the Automation flag and agent access, set before launch as a person's config has them.
+        try await Instance.with(config: Self.access("open")) { app in
             guard let first = await app.live(1)?.first else { return }
             await app.send(["new-window"])
             await app.until("sessions") { $0.split(separator: "\n").count == 2 }
@@ -34,7 +35,8 @@ extension EndToEnd {
 
     @Test("`Wormhole split --size 30` gives the new pane about 30 %; a split with no room is refused and changes nothing")
     @MainActor func splitFromCommandLine() async throws {
-        try await Instance.with { app in
+        // The command line's verbs need the Automation flag and agent access, set before launch as a person's config has them.
+        try await Instance.with(config: Self.access("open")) { app in
             guard let first = await app.live(1)?.first else { return }
             let said = await app.reply("control --from \(first) split --terminal \(first) --size 30")
             app.expect(said, contains: "size")
@@ -56,7 +58,8 @@ extension EndToEnd {
 
     @Test("`Wormhole new-terminal --worktree` asks for the worktree in the window, and Return makes it")
     @MainActor func worktreeFromCommandLine() async throws {
-        try await Instance.with(shell: .zsh) { app in
+        // The command line's verbs need the Automation flag and agent access, set before launch as a person's config has them.
+        try await Instance.with(shell: .zsh, config: Self.access("open")) { app in
             let repo = try app.scratch.repository()
             await app.send(["new \(repo.path)"])
             guard let two = await app.live(2) else { return }
