@@ -24,7 +24,8 @@ use crate::hosting::HostedStart;
 /// The options terminal `what` starts with, in profile `profile` of the data folder `root`.
 pub(crate) fn options(root: &DataRoot, profile: &ProfilePaths, what: &HostedStart) -> SpawnOptions {
     let settings = Config::load_for(profile).settings;
-    let cwd = what.cwd.as_deref().map(PathBuf::from).filter(|dir| dir.is_dir());
+    // The folder crosses the bridge as a key (`files_panel::names`): one whose name is not text starts there, not at home.
+    let cwd = what.cwd.as_deref().and_then(crate::files_panel::names::path).filter(|dir| dir.is_dir());
     let (project_env, project_shell) = project_adds(profile, &settings, cwd.as_deref()).unwrap_or_default();
     // A worktree Wormhole made gives its terminals their own ports (`git::worktree_env`); a trusted project's env goes on top.
     let mut env: std::collections::BTreeMap<String, String> = cwd
