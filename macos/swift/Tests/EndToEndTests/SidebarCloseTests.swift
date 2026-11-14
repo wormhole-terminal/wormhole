@@ -47,7 +47,8 @@ extension EndToEnd {
 
     @Test("a running command in a folded group: ⌘W, Close group, Close Window, ⌘Q and `Wormhole close` all ask and name it")
     @MainActor func closeInFoldedGroup() async throws {
-        try await Instance.with(shell: .zsh) { app in
+        // `Wormhole close` at the end needs the Automation flag and agent access, as a person's config has them.
+        try await Instance.with(shell: .zsh, config: Self.access("open")) { app in
             await app.send(["key cmd-t"])
             await app.until("rows") { Listing($0).live.count == 2 }
             await app.shell("/bin/sleep 300")
@@ -93,13 +94,22 @@ extension EndToEnd {
 
     @Test("an agent idle at its prompt makes ⌘W, Close Window and ⌘Q ask; a working one is said to be working")
     @MainActor func closeAgent() async throws {
-        try await Instance.with(shell: .agent("claude")) { app in
+        // The agent runs under a shell, as a person starts it: a terminal whose own program is the agent's has nothing
+        // running in front of its shell, and closing it asks nothing (core `asks_before_closing`).
+        try await Instance.with(shell: .zsh) { app in
+            let agent = try app.scratch.agentShell(named: "claude")
+            await app.shell(agent.path)
             await app.send(["key cmd-t"])
             await app.until("rows") { Listing($0).live.count == 2 }
+            await app.shell(agent.path)
             await Self.running("claude", in: app)
+            // Both terminals, the selected one too: the program in front is seen a moment after it starts.
+            await app.until("rows") { $0.split(separator: "\n").filter { $0.contains("row ") && $0.lowercased().contains("claude") }.count == 2 }
             await app.send(["key cmd-w"])
             let asked = Instance.plain(await app.asked())
-            app.expect(asked, contains: "Still running: claude")
+            // The stand-in agent is a script, so the program named is `sh <scratch>/bin/claude`.
+            app.expect(asked, contains: "Still running: ")
+            app.expect(asked, contains: "/bin/claude")
             await app.send(["question cancel"])
             await app.send(["close-window"])
             app.expect(await app.asked(), contains: "claude")
