@@ -89,17 +89,13 @@ extension AppController {
         return true
     }
 
-    /// The list's note after a first run without agents, as `SideColumns` shows it and wires its buttons.
+    /// The list's note after a first run without agents: the stage `SideColumns` draws and its buttons' own actions.
     private func sidebarTip(_ argument: String) -> String {
-        // An agent on screen takes the note away (`SideColumns`: `stage`).
-        let stage = hub.state.all.contains { $0.agent != nil } ? AgentsTip.off : hub.agentsTip
         switch argument {
-        case "": return "sidebar-tip \(stage)"
-        case "close": hub.agentsTip = .offer
-        case "never":
-            hub.actions.dismissAgentsTip()
-            hub.agentsTip = .off
-        case "keep": hub.agentsTip = .off
+        case "": return "sidebar-tip \(hub.agentsTipStage)"
+        case "close": hub.closeAgentsTip()
+        case "never": hub.neverAgentsTip()
+        case "keep": hub.keepAgentsTip()
         case "settings": hub.actions.openSettingsAt("agents")
         default: return "error: sidebar-tip [close|never|keep|settings]"
         }

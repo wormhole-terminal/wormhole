@@ -79,7 +79,7 @@ extension WindowHub {
         let bar = tabBar
         let actions = tabActions(appearance: look.sidebar)
         if target == "+" {
-            actions.newTerminal(TabBarReadout.currentGroup(bar))
+            actions.newTerminal(bar.currentGroup)
             return nil
         }
         guard let n = Int(target), bar.tabs.indices.contains(n - 1) else { return "no tab \(target) of \(bar.tabs.count)" }

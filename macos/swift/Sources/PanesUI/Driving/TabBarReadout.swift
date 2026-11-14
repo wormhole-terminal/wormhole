@@ -37,11 +37,6 @@ public enum TabBarReadout {
         return lines.joined(separator: "\n")
     }
 
-    /// The group a new terminal from the bar's + goes into: the selected terminal's (`TabBarView.currentGroup`).
-    public static func currentGroup(_ model: TabBarModel) -> GroupID? {
-        model.sets.first { $0.members.contains { $0 == model.selected } }?.groupID
-    }
-
     /// `switcher [query]`: the popover's cards and footer, or with a query what its search lists; `open` while it is on screen.
     public static func switcher(_ model: TabBarModel, actions: TabBarActions, query: String, open: Bool) -> String {
         var lines = [

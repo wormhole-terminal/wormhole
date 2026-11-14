@@ -43,7 +43,7 @@ public struct TabBarView: View {
                     rule
                 }
                 tabs
-                IconButton(symbol: "plus", label: PanesText.newTerminal) { actions.newTerminal(currentGroup) }
+                IconButton(symbol: "plus", label: PanesText.newTerminal) { actions.newTerminal(model.currentGroup) }
                     .contextMenu { actions.newMenu() }
             }
             .padding(.horizontal, Metric.edgeInset)
@@ -76,6 +76,4 @@ public struct TabBarView: View {
     private var rule: some View {
         Rectangle().fill(tokens.border).frame(width: tokens.metrics.borderWidth, height: TabMetrics.ruleHeight)
     }
-
-    private var currentGroup: GroupID? { model.sets.first { $0.members.contains { $0 == model.selected } }?.groupID }
 }

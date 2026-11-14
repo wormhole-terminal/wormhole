@@ -79,6 +79,9 @@ public struct TabBarModel: Sendable, Equatable {
     /// The bar shows once there is more than one set, or the current set has more than one terminal.
     public var isShown: Bool
 
+    /// The group a new terminal from the bar's + goes into: the selected terminal's (nil: none).
+    public var currentGroup: GroupID? { sets.first { $0.members.contains { $0 == selected } }?.groupID }
+
     /// The bar for `sets` (as the core lists them, `TabSetFacts`) with `current` the set the selected terminal is in.
     /// `alerts`: each set's alert and the closed switcher's dot as the core decides them (`others_need_you`); without the
     /// core (the sample) they come from the tabs' own.

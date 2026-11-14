@@ -25,11 +25,9 @@ struct SidebarColumn: View {
             )
             .environment(\.dropPlanner, hub.store)
             .environment(\.terminalDrag, hub.terminalDrag)
-            // Gone once a terminal of the window runs an agent.
             NoAgentsTip(
-                stage: hub.state.all.contains { $0.agent != nil } ? .off : hub.agentsTip,
-                openSettings: { hub.actions.openSettingsAt("agents") }, close: { hub.agentsTip = .offer },
-                never: { hub.actions.dismissAgentsTip(); hub.agentsTip = .off }, keep: { hub.agentsTip = .off })
+                stage: hub.agentsTipStage, openSettings: { hub.actions.openSettingsAt("agents") }, close: { hub.closeAgentsTip() },
+                never: { hub.neverAgentsTip() }, keep: { hub.keepAgentsTip() })
         }
         .background { if !look.glassOn { look.surface(colours.sidebar) } }
     }
