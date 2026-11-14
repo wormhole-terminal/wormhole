@@ -62,11 +62,15 @@ final class Scratch {
         return done.output
     }
 
-    /// A copy of `/bin/cat` named `name`: a terminal whose program is it is taken for that agent (CLAUDE.md, "Testing the UI safely").
+    /// A script named `name` that reads what is typed and runs nothing: a terminal whose program is it is taken for that agent
+    /// (`sh codex` is Codex, as `HookBridgeTests` does it). Not a copy of `/bin/cat`: macOS ends a copied system binary at once.
     func agentShell(named name: String) throws -> URL {
-        let copy = bin.appendingPathComponent(name)
-        if !FileManager.default.fileExists(atPath: copy.path) { try FileManager.default.copyItem(atPath: "/bin/cat", toPath: copy.path) }
-        return copy
+        let script = bin.appendingPathComponent(name)
+        if !FileManager.default.fileExists(atPath: script.path) {
+            try Data("#!/bin/sh\nwhile IFS= read -r line; do :; done\n".utf8).write(to: script)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+        }
+        return script
     }
 
     /// The text of the app's data folder file `name`, nil when it is not there.

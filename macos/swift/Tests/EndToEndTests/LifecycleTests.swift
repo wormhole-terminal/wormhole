@@ -63,21 +63,22 @@ extension EndToEnd {
         try await Instance.with { app in
             await app.send(["new-window"])
             await app.until("sessions") { $0.split(separator: "\n").count == 2 }
-            let first = await app.reply("state")
+            // `cmd` follows the window in front, which is the new one now: each window is asked through its own file.
+            let first = await app.reply("state", window: 1)
             let second = await app.reply("state", window: 2)
             let numbers = [Instance.value("window", in: first), Instance.value("window", in: second)]
             app.expect(numbers[0] != nil && numbers[0] != numbers[1], "each file answers for its own window: \(numbers)")
-            let one = await app.rows(), two = await app.rows(window: 2)
+            let one = await app.rows(window: 1), two = await app.rows(window: 2)
             app.expect(!one.live.isEmpty && !two.live.isEmpty && Set(one.live).isDisjoint(with: two.live), "own terminals:\n\(one.text)\n\(two.text)")
 
-            await app.send(["key cmd-t"])
-            let grown = await app.until("rows") { Listing($0).live.count == 2 }
+            await app.send(["key cmd-t"], window: 1)
+            let grown = await app.until("rows", window: 1) { Listing($0).live.count == 2 }
             guard let moving = Listing(grown).live.last else { return }
-            await app.send(["move-to-window \(moving)"])
+            await app.send(["move-to-window \(moving)"], window: 1)
             await app.until("sessions") { $0.split(separator: "\n").count == 3 }
             let third = await app.rows(window: 3)
             app.expect(third.live.count == 1, "the third window holds the moved terminal:\n\(third.text)")
-            app.expect(!(await app.rows()).live.contains(moving), "the first window let it go")
+            app.expect(!(await app.rows(window: 1)).live.contains(moving), "the first window let it go")
         }
     }
 }

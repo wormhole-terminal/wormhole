@@ -17,7 +17,7 @@ final class Instance {
         case cat
         /// `/bin/zsh -f`: a real shell without startup files, in the scratch `HOME`.
         case zsh
-        /// A copy of `/bin/cat` named like an agent, so the terminal is taken for that agent.
+        /// A script named like an agent that only reads what is typed, so the terminal is taken for that agent.
         case agent(String)
     }
 
@@ -91,7 +91,7 @@ final class Instance {
     /// Launches the app on this scratch folder and waits until its window answers.
     func start() async throws {
         ended.reset()
-        if !FileManager.default.fileExists(atPath: outFile(1).path) { FileManager.default.createFile(atPath: outFile(1).path, contents: nil) }
+        if !FileManager.default.fileExists(atPath: outFile(nil).path) { FileManager.default.createFile(atPath: outFile(nil).path, contents: nil) }
         let ended = ended
         process = try Spawn.launch(
             program, arguments: ["--background"], environment: try environment(), log: scratch.root.appendingPathComponent("app.log"),
@@ -108,7 +108,10 @@ final class Instance {
 
     private func quit(command: String) async {
         guard let process, !ended.isDone else { return }
-        try? Data((command + "\n").utf8).write(to: scratch.control.appendingPathComponent("cmd"))
+        // Staged and renamed, as every batch is: the app takes `cmd` the moment it appears, and an empty one is a lost command.
+        let staged = scratch.control.appendingPathComponent("cmd.tmp")
+        try? Data((command + "\n").utf8).write(to: staged)
+        rename(staged.path, scratch.control.appendingPathComponent("cmd").path)
         if await waitForExit(timeout: 20) { return }
         fail("the app did not end after `\(command)`: ending it by its pid")
         kill(process.processIdentifier, SIGTERM)
@@ -130,11 +133,13 @@ final class Instance {
 
     // MARK: - Driving
 
-    func outFile(_ window: Int) -> URL { scratch.control.appendingPathComponent(window == 1 ? "out.txt" : "out\(window).txt") }
+    /// `out.txt` answers `cmd`, which acts on the window in front (the last one opened or used, in a background instance);
+    /// `out<n>.txt` answers `cmd<n>`, which acts on the n-th window whatever is in front (`DevCtl.swift`, `AppController.front`).
+    func outFile(_ window: Int?) -> URL { scratch.control.appendingPathComponent(window.map { "out\($0).txt" } ?? "out.txt") }
 
-    /// Runs the commands in order in the window's control file (`cmd`, `cmd2`…); the answer to each, in the same order.
+    /// Runs the commands in order in the window's control file (`cmd`, or `cmd<n>` for the n-th window); the answer to each, in the same order.
     @discardableResult
-    func send(_ commands: [String], window: Int = 1, timeout: TimeInterval = 30) async -> [String] {
+    func send(_ commands: [String], window: Int? = nil, timeout: TimeInterval = 30) async -> [String] {
         batches += 1
         let token = "e2e\(batches)"
         let files = FileManager.default
@@ -143,7 +148,7 @@ final class Instance {
         let before = (try? Data(contentsOf: out).count) ?? 0
         let marks = commands.indices.map { "sync \(token).\($0)" }
         let batch = zip(commands, marks).flatMap { [$0, $1] }.joined(separator: "\n") + "\n"
-        let command = scratch.control.appendingPathComponent(window == 1 ? "cmd" : "cmd\(window)")
+        let command = scratch.control.appendingPathComponent(window.map { "cmd\($0)" } ?? "cmd")
         let staged = scratch.control.appendingPathComponent("cmd.tmp")
         do {
             try Data(batch.utf8).write(to: staged)
@@ -169,12 +174,12 @@ final class Instance {
         return Array(answers.prefix(commands.count)) + Array(repeating: "", count: max(0, commands.count - answers.count))
     }
 
-    func reply(_ command: String, window: Int = 1) async -> String { (await send([command], window: window)).first ?? "" }
+    func reply(_ command: String, window: Int? = nil) async -> String { (await send([command], window: window)).first ?? "" }
 
     /// Asks again, a pause of the app's own (`delay`) between the asks, until the answer satisfies `done` or the deadline passes.
     /// For facts nothing announces (an agent seen by its program's name, a repository read after a change).
     @discardableResult
-    func until(_ command: String, window: Int = 1, timeout: TimeInterval = 20, _ done: (String) -> Bool) async -> String {
+    func until(_ command: String, window: Int? = nil, timeout: TimeInterval = 20, _ done: (String) -> Bool) async -> String {
         let start = Date()
         var answer = ""
         repeat {
@@ -185,7 +190,7 @@ final class Instance {
         return answer
     }
 
-    func rows(window: Int = 1) async -> Listing { Listing(await reply("rows", window: window)) }
+    func rows(window: Int? = nil) async -> Listing { Listing(await reply("rows", window: window)) }
 
     // MARK: - Waiting
 
@@ -202,12 +207,14 @@ final class Instance {
         let (stream, events) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: descriptor, eventMask: [.write, .extend, .delete, .rename], queue: .global())
-        source.setEventHandler { events.yield() }
-        source.setCancelHandler { close(descriptor) }
+        // The handlers run on a global queue, not on the main actor this method is on: `@Sendable` says so (unsaid, the
+        // runtime's isolation check ends the test process).
+        source.setEventHandler { @Sendable in events.yield() }
+        source.setCancelHandler { @Sendable in close(descriptor) }
         source.resume()
-        let deadline = DispatchWorkItem { events.finish() }
+        let deadline = DispatchWorkItem { @Sendable in events.finish() }
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: deadline)
-        ended.onEnd { events.finish() }
+        ended.onEnd { @Sendable in events.finish() }
         defer {
             source.cancel()
             deadline.cancel()
@@ -225,9 +232,9 @@ final class Instance {
 
     private func waitForExit(timeout: TimeInterval) async -> Bool {
         let (stream, events) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
-        let deadline = DispatchWorkItem { events.finish() }
+        let deadline = DispatchWorkItem { @Sendable in events.finish() }
         DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: deadline)
-        ended.onEnd { events.finish() }
+        ended.onEnd { @Sendable in events.finish() }
         defer {
             deadline.cancel()
             ended.onEnd(nil)
