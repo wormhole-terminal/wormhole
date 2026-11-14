@@ -10,7 +10,7 @@
 //! terminal was opened with one of its own, and the engine's own `WORMHOLE_SHELL` (test instances) replaces everything
 //! in core `terminal::process`.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use wormhole_core::config::profile::ProfileList;
 use wormhole_core::config::{Config, FeatureId, FeatureMask, Settings};
