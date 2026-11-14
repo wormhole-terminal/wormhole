@@ -192,7 +192,9 @@ struct AuxBackends {
                         let there = first.folder.map { URL(fileURLWithPath: HomeFolder.expanding($0)).standardizedFileURL }
                         guard there != folder.standardizedFileURL else { return }
                         hub.send(.newTerminalIn(folder.path))
-                        app.closeTerminal(first.id)
+                        // Closed as the GPUI window closes it, without the question a terminal with a program asks: the
+                        // person has not touched it.
+                        app.finishClosing(first.id, in: app.front)
                     }
                 } catch { fallback("welcome", error) }
             }
