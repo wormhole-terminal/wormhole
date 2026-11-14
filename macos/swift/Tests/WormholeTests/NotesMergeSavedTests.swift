@@ -218,6 +218,36 @@ struct NotesMergeSavedTests {
         #expect(persistence.closedSessions.contains(2), "its base is forgotten")
     }
 
+    /// A merge that landed while the terminal could not be read is laid once it can, before its next merge is sent: the base
+    /// was forgotten at once (a crash first loses nothing), and a line the file deleted in that merge does not come back with
+    /// the union that follows.
+    @Test func aMergeThatCouldNotBeLaidIsLaidOnceTheTerminalReads() async {
+        let persistence = Store()
+        persistence.saved[2] = Self.model(steps: ["build", "old"])
+        let (_, _, coordinator) = window(persistence)
+        persistence.held = 2
+        persistence.answer = { id, sent in
+            guard id == 2 else { return nil }
+            // notes.md deleted "old" and gained "new".
+            var merged = sent
+            merged.tasks = TaskList(sent.tasks.items.filter { $0.text != "old" } + [PanelTask(text: "new")])
+            return merged
+        }
+        await syncHeld(coordinator, persistence) { persistence.unreadable.insert(2) }
+        #expect(Self.steps(persistence.saved[2]) == ["  build", "  old"], "nothing stored over what could not be read")
+        #expect(persistence.closedSessions.contains(2), "its base is forgotten at once")
+        persistence.held = nil
+        persistence.answer = { _, _ in nil }
+        persistence.unreadable = []
+        // Something the control folder's `task-add` wrote meanwhile is kept; the file's line follows the one it follows there.
+        persistence.saved[2]?.tasks.add("added from outside")
+        await coordinator.sync()
+        #expect(Self.steps(persistence.saved[2]) == ["  build", "  new", "  added from outside"])
+        #expect(Self.steps(persistence.sent[2]) == ["  build", "  new", "  added from outside"], "the next merge sends what was laid")
+        await coordinator.sync()
+        #expect(Self.steps(persistence.saved[2]) == ["  build", "  new", "  added from outside"], "laid once")
+    }
+
     /// The terminal on show could not be read: nothing is saved over it or merged, and once it can be read what was typed
     /// meanwhile comes after what was saved.
     @Test func theShownTerminalThatCannotBeReadComesBackWithWhatWasTyped() async {

@@ -1,7 +1,9 @@
 // The Notes tab's text per terminal: loaded when a terminal is shown, saved after each edit, forgotten with the terminal,
 // and the row's note count told to the workspace. Every terminal of the window, whatever tab is up, is merged with its trusted
 // project's `notes.md` every couple of seconds (`project/notes_sync.rs` runs on the tick for all of them): the file watch lives
-// in Rust, and this is its slow poll. A terminal that is not shown is merged from what was saved for it.
+// in Rust, and this is its slow poll. The GPUI app merges each terminal from the notes it holds in memory; here a terminal
+// that is not shown holds its notes in the database (the control folder's `task-add` and `note-add` write there too), so it
+// is merged from a read of the database each time, made off the main actor, and never from a copy that could be stale.
 
 import AppKit
 import Observation
@@ -29,6 +31,10 @@ final class NotesCoordinator {
     private static let syncEvery: TimeInterval = 2
     /// The terminals whose merge is under way, the app's every window's (`NotesMerging.app`).
     private let merging: NotesMerging
+    /// Merges that landed while the terminal's notes could not be read: the answer and what was sent, laid over what the
+    /// terminal holds once that reads. The core's base was forgotten at once all the same, so a quit or a crash before then
+    /// loses nothing (the next merge keeps both sides); laid, a line the file deleted in that merge stays deleted.
+    private var unlanded: [TerminalID: (answered: NotesModel, sent: NotesModel)] = [:]
 
     init(persistence: any NotesPersisting, hub: WindowHub, merging: NotesMerging = NotesMerging()) {
         self.persistence = persistence
@@ -36,7 +42,11 @@ final class NotesCoordinator {
         self.merging = merging
     }
 
-    func follow(profile id: String) { persistence.follow(profile: id) }
+    func follow(profile id: String) {
+        // Another profile's database: what was read of the old one is not laid over it (the bases were forgotten).
+        unlanded = [:]
+        persistence.follow(profile: id)
+    }
 
     func start() {
         persistence.idsStart(at: (hub.state.all.map(\.id).max() ?? 0) + 1)
@@ -96,12 +106,14 @@ final class NotesCoordinator {
     /// Terminals moving to another window are not closed: what was written for them goes with them, not away.
     func departing(_ ids: [TerminalID]) {
         known.subtract(ids)
+        for id in ids { unlanded[id] = nil }
     }
 
     private func forgetClosed() {
         let now = Set(hub.state.all.map(\.id))
         for gone in known.subtracting(now) { persistence.closed(session: gone) }
         known = now
+        unlanded = unlanded.filter { now.contains($0.key) }
         // A folder's project root is asked for its terminals: with the last of them gone it is not kept.
         let folders = Set(hub.state.all.compactMap(\.readPath))
         roots = roots.filter { folders.contains($0.key) }
@@ -138,14 +150,20 @@ final class NotesCoordinator {
             var found = id == shown && terminal.readPath != nil && panel.folder == terminal.readPath ? panel.state?.root : nil
             if found == nil { found = await root(of: terminal) }
             guard let root = found, hub.state.all.contains(where: { $0.id == id }) else { continue }
-            // Only a step or note of the terminal on show being written holds its merge back (`api.rs` `being_written`);
-            // read just before the merge is sent, after the awaits above.
-            let editing = id == shown && hub.panel.notes.isWriting
             // One merge of a terminal at a time in the process: one moved in from another window waits until the merge that
             // window sent for it has landed (and forgotten the base it moved), or this one would send what it read of the
             // terminal before against that base and read the file's new lines as deleted by the person.
-            guard !merging.ids.contains(id), let sent = holding(id) else { continue }
+            guard !merging.ids.contains(id) else { continue }
             merging.ids.insert(id)
+            // A merge that could not be laid before is laid first, now that the terminal may read.
+            if let waiting = unlanded.removeValue(forKey: id) { store(waiting.answered, sent: waiting.sent, for: id) }
+            guard let sent = await reading(id), hub.state.all.contains(where: { $0.id == id }) else {
+                merging.ids.remove(id)
+                continue
+            }
+            // Only a step or note of the terminal on show being written holds its merge back (`api.rs` `being_written`);
+            // read just before the merge is sent, after the awaits above.
+            let editing = id == shown && hub.panel.notes.isWriting
             let answered = await persistence.sync(session: id, root: root, model: sent, editing: editing)
             land(answered, sent: sent, for: id)
             merging.ids.remove(id)
@@ -174,9 +192,11 @@ final class NotesCoordinator {
         // of it, told apart by what the items say: a load from the database gives every item a new id.
         guard let now = holding(id) else {
             // What the terminal holds cannot be read, so the merge cannot be laid over it, and the base the core just moved
-            // would read whatever the merge brought as deleted by the person. Forgotten instead: the next merge keeps
-            // everything of both sides (the base goes as a closed terminal's does).
+            // would read whatever the merge brought as deleted by the person. Forgotten at once: the next merge keeps
+            // everything of both sides (the base goes as a closed terminal's does). The answer is kept to be laid once the
+            // terminal reads, so a line the file deleted in this merge does not come back with that union.
             persistence.closed(session: id)
+            unlanded[id] = (answered, sent)
             return
         }
         let merged = now == sent ? answered : NotesModel.rebase(merged: answered, sent: sent, now: now)
@@ -195,6 +215,14 @@ final class NotesCoordinator {
     private func holding(_ id: TerminalID) -> NotesModel? {
         guard id == shown else { return persistence.read(session: id) }
         return unread == id ? nil : hub.panel.notes.model
+    }
+
+    /// `holding`, for the merge to send, with the database read off the main actor. Shown by the time the read is back, the
+    /// terminal was loaded from that same database; what the person did since is kept by the landing (`store`).
+    private func reading(_ id: TerminalID) async -> NotesModel? {
+        guard id != shown else { return holding(id) }
+        let persistence = persistence
+        return await Task.detached { persistence.read(session: id) }.value
     }
 
     /// The terminal on show could not be read when it was shown: read again, with what was typed since after what was saved.
