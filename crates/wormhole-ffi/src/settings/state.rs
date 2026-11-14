@@ -124,13 +124,15 @@ impl State {
         if next == self.config.settings {
             return false;
         }
-        // Only a change of the mode itself is the person's edit of it: counting every write here let a widening made
-        // outside (a program writing `agent_access` into `config.json`) pass as theirs after any other setting changed.
-        // Counted before the file is written: the access guard follows the file and may look the moment it changes.
-        if next.agent_access != self.config.settings.agent_access {
-            super::edits::note(&self.dir);
+        // Only a change of the mode itself is the person's edit of it, and it is told with the mode they set: a write of
+        // another key, or of another mode, by something outside (a program writing `agent_access` into `config.json`)
+        // never passes as theirs.
+        if next.agent_access == self.config.settings.agent_access {
+            self.config.update(|settings| *settings = next);
+        } else {
+            let (config, mode) = (&mut self.config, next.agent_access);
+            super::edits::write(&self.dir, mode, || config.update(|settings| *settings = next));
         }
-        self.config.update(|settings| *settings = next);
         self.refresh();
         self.revision += 1;
         true

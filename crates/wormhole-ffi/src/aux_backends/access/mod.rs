@@ -228,11 +228,24 @@ impl AccessDesk {
         &self.profile
     }
 
-    /// The mode in force for this profile when its settings say `want`: that, unless it is a widening nobody in
-    /// Wormhole made, which keeps the earlier mode and asks the person (`modes`).
-    pub(crate) fn mode_in_force(&self, want: AgentAccess) -> AgentAccess {
-        let edits = crate::settings::edits::count(self.profile.dir());
-        let (mode, asked) = locked(&self.modes).reconcile(want, edits);
+    /// What a look at the profile's file is stamped with, taken before the file is read ([`Self::mode_in_force`]).
+    pub(crate) fn stamp(&self) -> u64 {
+        locked(&self.modes).stamp()
+    }
+
+    /// The mode in force with no look at the file; none before the first look.
+    pub(crate) fn mode_held(&self) -> Option<AgentAccess> {
+        locked(&self.modes).held()
+    }
+
+    /// The mode in force for this profile when its file, read after `stamp` was taken, says `want`: that, unless it
+    /// is a widening the person did not make in Settings, which keeps the earlier mode and, where `asks`, asks them
+    /// (`modes`). `None` when the read is too old to say: read the file and look again.
+    pub(crate) fn mode_in_force(&self, want: AgentAccess, stamp: u64, asks: bool) -> Option<AgentAccess> {
+        // Read after the file was: an edit Settings made is noted before its write, so a file that holds it is never
+        // looked at without it.
+        let edit = crate::settings::edits::last(self.profile.dir());
+        let (mode, asked) = locked(&self.modes).reconcile(modes::Look { want, edit, stamp, asks })?;
         if asked {
             tracing::warn!(
                 "agent access was widened outside Wormhole to {}: asking whether to keep it",
@@ -240,7 +253,7 @@ impl AccessDesk {
             );
             self.waker.notify();
         }
-        mode
+        Some(mode)
     }
 
     /// What a mode that changed means for the questions waiting here (`agent_access/ask.rs` `settle_mode`): Off, or the

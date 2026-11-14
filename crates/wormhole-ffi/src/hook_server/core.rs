@@ -26,19 +26,51 @@ use crate::workspace::{Shared, Workspace};
 /// switch the person turns off must take effect within a moment.
 const SETTINGS_TTL: Duration = Duration::from_secs(1);
 
+/// How many times a look at the mode is made again from a fresh read before the mode already in force is taken as it
+/// stands: a look is refused only while the mode moves under it, which an answer or an edit does once.
+const LOOKS: usize = 3;
+
 /// What a profile's requests are judged by: its settings and the approvals its desk holds. A profile is a trust
 /// domain (`agent-permissions.md`, section 9), so a request is judged by the profile of the window it reaches,
 /// never by the one that happens to be shown.
 pub(crate) struct Seat {
     pub profile: ProfilePaths,
     pub desk: Arc<AccessDesk>,
-    settings: Mutex<Option<(Instant, Arc<Settings>)>>,
+    /// The settings last read, when, and the desk's stamp from before that read (`AccessDesk::stamp`).
+    settings: Mutex<Option<(Instant, u64, Arc<Settings>)>>,
     /// The mode last settled (`None` inside: Automation off), to act on a change of it once (`Core::settings_changed`).
     applied: Mutex<Option<Option<AgentAccess>>>,
     /// Looks at the mode whenever the profile's `config.json` changes, held for its drop (the GPUI app looks on every
     /// tick): a widening is asked about when it is written, not at the next request, and not only when the Settings
-    /// store sees a value it did not have (Don't Keep writes the earlier mode behind that store).
+    /// store sees a value it did not have.
     _follower: crate::settings::watch::Follower,
+}
+
+/// The profile's settings as its file holds them now, with the desk's stamp from before the read.
+fn read(desk: &AccessDesk) -> (u64, Arc<Settings>) {
+    let stamp = desk.stamp();
+    (stamp, Arc::new(Config::load_for(desk.profile()).settings))
+}
+
+/// Looks at the mode with `settings`, read at `stamp`, reading the file again for as long as the desk says that read
+/// is too old (`AccessDesk::mode_in_force`): the settings the look was made from, their stamp, and the mode in force.
+/// While the Automation flag is off the look only follows the mode (what the person sets, what is narrowed) and asks
+/// nothing, so nothing done meanwhile counts for a widening made when the flag goes on.
+fn look(
+    desk: &AccessDesk,
+    mut stamp: u64,
+    mut settings: Arc<Settings>,
+) -> (u64, Arc<Settings>, AgentAccess) {
+    for _ in 0..LOOKS {
+        let asks = settings.feature_enabled(FeatureFlag::Automation);
+        if let Some(mode) = desk.mode_in_force(settings.agent_access, stamp, asks) {
+            return (stamp, settings, mode);
+        }
+        (stamp, settings) = read(desk);
+    }
+    // The mode kept moving: what is in force stands, and nothing is in force before a first look.
+    let mode = desk.mode_held().unwrap_or(AgentAccess::Off);
+    (stamp, settings, mode)
 }
 
 impl Seat {
@@ -46,14 +78,13 @@ impl Seat {
         // The mode at launch is what a later edit of `config.json` is measured against: looked at now, not at the
         // first request, and also while the Automation flag is off, so a widening made together with turning the
         // flag on is still asked about.
-        desk.mode_in_force(Config::load_for(desk.profile()).settings.agent_access);
+        let (stamp, settings) = read(&desk);
+        look(&desk, stamp, settings);
         let watched = Arc::downgrade(&desk);
         let follower = crate::settings::watch::Follower::start(desk.profile(), move || {
             let Some(desk) = watched.upgrade() else { return false };
-            let settings = Config::load_for(desk.profile()).settings;
-            if settings.feature_enabled(FeatureFlag::Automation) {
-                desk.mode_in_force(settings.agent_access);
-            }
+            let (stamp, settings) = read(&desk);
+            look(&desk, stamp, settings);
             true
         });
         Self {
@@ -65,26 +96,26 @@ impl Seat {
         }
     }
 
-    /// The profile's settings, as they were a moment ago at most.
+    /// The profile's settings, as they were a moment ago at most, with the mode in force in place of the file's.
     pub(crate) fn settings(&self) -> Arc<Settings> {
-        let mut held = self.settings.lock().unwrap_or_else(PoisonError::into_inner);
-        let read = match held.as_ref() {
-            Some((read, settings)) if read.elapsed() < SETTINGS_TTL => settings.clone(),
-            _ => {
-                let settings = Arc::new(Config::load_for(&self.profile).settings);
-                *held = Some((Instant::now(), settings.clone()));
-                settings
-            }
-        };
-        drop(held);
-        // The mode in force, not the file's: a widening nobody in Wormhole made waits for the person's answer.
-        if !read.feature_enabled(FeatureFlag::Automation) {
-            return read;
+        let held = self.settings.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        let kept = held
+            .filter(|(at, ..)| at.elapsed() < SETTINGS_TTL)
+            .map(|(_, stamp, settings)| (stamp, settings));
+        let (stamp, first) = kept.clone().unwrap_or_else(|| read(&self.desk));
+        // A read from before the mode last moved (Don't Keep put the earlier mode back, a hand edit narrowed it) is
+        // made again there, so the question about a widening never comes from what the file no longer holds.
+        let (stamp, settings, mode) = look(&self.desk, stamp, first);
+        if !kept.is_some_and(|(_, kept)| Arc::ptr_eq(&kept, &settings)) {
+            let fresh = Some((Instant::now(), stamp, settings.clone()));
+            *self.settings.lock().unwrap_or_else(PoisonError::into_inner) = fresh;
         }
-        match self.desk.mode_in_force(read.agent_access) {
-            mode if mode == read.agent_access => read,
-            mode => Arc::new(Settings { agent_access: mode, ..(*read).clone() }),
+        // The mode in force, not the file's: a widening nobody in Wormhole made waits for the person's answer. With the
+        // Automation flag off nobody is let in, whatever the mode.
+        if mode == settings.agent_access || !settings.feature_enabled(FeatureFlag::Automation) {
+            return settings;
         }
+        Arc::new(Settings { agent_access: mode, ..(*settings).clone() })
     }
 
     /// What names an approval for the bus: whether it is stored, the profile (30 bits of its name's hash) and
