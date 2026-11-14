@@ -104,7 +104,9 @@ extension EndToEnd {
     @Test("Reduce Transparency: the opacity slider is off with its note; Liquid Glass wears Beta (853, 1143)")
     @MainActor func settingsOpaqueSlider() async throws {
         try await Instance.with { app in
-            let before = await Self.page(app, "appearance") { $0.line("row", "opacity") != nil }
+            // The system's own switch is not the scenario's to assume: a hosted runner has Reduce Transparency on.
+            await app.send(["reduce-transparency off"])
+            let before = await Self.page(app, "appearance") { $0.line("row", "opacity")?.has("off") == false }
             app.expect(before.line("row", "opacity")?.has("off") == false, "the slider is on while the system is not opaque")
             if let glass = before.line("row", "liquid-glass") { app.expect(glass["chip"] == "Beta", "Liquid Glass wears Beta: \(glass.text)") }
             await app.send(["reduce-transparency on"])
