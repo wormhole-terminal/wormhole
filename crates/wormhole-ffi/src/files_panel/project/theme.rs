@@ -18,7 +18,6 @@ impl ProjectService {
         }
         let found = proj::find_project(&crate::files_panel::names::folder(&folder))?;
         let mut hub = self.lock();
-        hub.reload_trust();
         let snapshot = hub.snapshot(&found);
         if !hub.enabled(&snapshot, Feature::Theme) {
             return None;
@@ -32,14 +31,13 @@ impl ProjectService {
         let found = proj::find_project(&crate::files_panel::names::folder(&folder))
             .ok_or_else(|| ProjectFailure::not_found(folder.clone()))?;
         let mut hub = self.lock();
-        hub.reload_trust();
         let snapshot = hub.snapshot(&found);
-        if hub.trust.status_of(&snapshot) != TrustStatus::Trusted {
+        if hub.trust().status_of(&snapshot) != TrustStatus::Trusted {
             return Err(ProjectFailure::refused(
                 "Trust this project first (Project tab), then use the theme in it.",
             ));
         }
-        if !hub.prefs.enabled(&found.root, Feature::Theme) {
+        if !hub.prefs().enabled(&found.root, Feature::Theme) {
             return Err(ProjectFailure::refused("This project's theme is switched off (Project tab)."));
         }
         Ok(found.root.to_string_lossy().into_owned())

@@ -11,6 +11,7 @@ mod records;
 mod service;
 mod settings_page;
 mod state;
+mod stores;
 mod theme;
 mod trust;
 
@@ -26,4 +27,5 @@ pub(crate) use service::worktree_refusal_in;
 pub use settings_page::{
     ProjectChoiceRecord, ProjectDefaultRecord, ProjectFeatureRowRecord, ProjectPageRecord,
 };
+pub(crate) use stores::change_trust_in;
 pub use trust::{ApproveOutcome, OwnerAnswer, OwnerAuthenticator};

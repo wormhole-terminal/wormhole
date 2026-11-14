@@ -8,11 +8,12 @@
 
 use std::path::Path;
 
-use wormhole_core::project::{self as proj, Feature, NotesBase, NotesDoc, NotesFile, TaskItem};
+use wormhole_core::project::{self as proj, Feature, NotesBase, NotesDoc, NotesFile, TaskItem, TrustStatus};
 use wormhole_core::view::notes::paragraphs::note_slots;
 
 use super::hub::Hub;
 use super::service::{ProjectService, open};
+use super::stores;
 
 /// Why a project's notes.md does not sync while the person wants it to and the project is not trusted
 /// (shown in the Project tab after "Notes sync: ").
@@ -80,13 +81,18 @@ impl ProjectService {
         let local = NotesDoc::from(local);
         let mut hub = self.lock();
         let snapshot = hub.snapshot(&folder);
-        let wanted = hub.prefs.notes_sync(&folder.root, folder.has(Feature::Notes));
-        let (outcome, told) = if wanted && hub.trusted(&snapshot) {
-            let mut file =
-                hub.notes_files.remove(&folder.root).unwrap_or_else(|| NotesFile::new(folder.clone()));
-            let result = step(&mut hub, &mut file, session, &folder.root, &local, editing);
-            hub.notes_files.insert(folder.root.clone(), file);
-            result
+        // The profile's switch and approvals, held from here to the write: once another window has switched the sync off
+        // or revoked the project, the file is neither read nor written here. And the file's own lock, held from its read
+        // to its write: two windows merging terminals of this project take turns, each from what the other wrote.
+        let profile = hub.stores();
+        let prefs = stores::now(&profile.prefs);
+        let trust = stores::now(&profile.trust);
+        let wanted = prefs.notes_sync(&folder.root, folder.has(Feature::Notes));
+        let trusted = trust.status_of(&snapshot) == TrustStatus::Trusted;
+        let (outcome, told) = if wanted && trusted {
+            let file = stores::notes_file(&folder);
+            let mut file = stores::lock(&file);
+            step(&mut hub, &mut file, session, &folder.root, &local, editing)
         } else {
             // Switched off: switching on merges both sides afresh. Waiting for trust keeps the base, so
             // what was deleted on either side before the wait stays deleted once the project is trusted.
@@ -96,6 +102,7 @@ impl ProjectService {
             let told = hub.set_notes_error(&folder.root, (wanted).then(|| NEEDS_TRUST.to_string()));
             (NotesSyncOutcome::default(), told)
         };
+        drop((trust, prefs));
         hub.save_notes_bases();
         drop(hub);
         if told {

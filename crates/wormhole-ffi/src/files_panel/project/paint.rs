@@ -82,11 +82,12 @@ impl ProjectService {
             let snapshot = hub.snapshot(&found);
             if snapshot.has(Feature::Settings) {
                 let config = snapshot.config();
+                let shown = hub.prefs().enabled(snapshot.root(), Feature::Settings);
                 return Paint::Project {
                     root: found.root,
                     chosen: config.and_then(|config| config.color),
                     locked: config.is_some_and(|config| config.color_locked),
-                    shown: hub.prefs.enabled(snapshot.root(), Feature::Settings),
+                    shown,
                     unreadable: snapshot.config_error().is_some(),
                 };
             }

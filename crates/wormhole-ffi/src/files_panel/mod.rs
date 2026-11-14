@@ -25,7 +25,6 @@ pub use files_records::{
     DirectoryRecord, EntryRecord, FileContentRecord, FileEntryKind, FileProblem, FilesFailure, RenameFailure,
 };
 pub use listener::PanelListener;
-pub(crate) use project::worktree_refusal_in;
 pub use notes_store::{NoteSaved, NotesSaved, SessionNotesStore, TaskSaved};
 pub use project::{
     ApproveOutcome, FolderPaintRecord, NewTerminalRecord, NotesDocRecord, NotesSyncOutcome, OwnerAnswer,
@@ -34,5 +33,6 @@ pub use project::{
     ProjectService, ProjectSettingsRecord, ProjectStateRecord, TaskDocRecord, TerminalPlace, TrustLineRecord,
     TrustStatusRecord,
 };
+pub(crate) use project::{change_trust_in, worktree_refusal_in};
 pub use usage::{AgentLogoRecord, PlanLimitRecord, UsageReportRecord, UsageService};
 pub use watch::FolderWatch;

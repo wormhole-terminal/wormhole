@@ -72,8 +72,12 @@ impl ProjectService {
         hub.approving = false;
         let outcome = match answer {
             OwnerAnswer::Approved => {
-                // Exactly what was shown: if the files changed since, the project reads "changed".
-                hub.trust.trust_request(&request);
+                // Exactly what was shown: if the files changed since, the project reads "changed". Added to the
+                // approvals as they are now, so one taken back meanwhile, here or in any window, stays taken back.
+                hub.change_trust(|trust| {
+                    trust.trust_request(&request);
+                    true
+                });
                 tracing::info!(root = %request.root.display(), "project trusted");
                 ApproveOutcome::Approved
             }
@@ -83,18 +87,16 @@ impl ProjectService {
                 ApproveOutcome::Failed { message }
             }
         };
-        hub.save();
         drop(hub);
         self.changed();
         outcome
     }
 
-    /// Takes the approval of the project at `root` away.
+    /// Takes the approval of the project at `root` away: in the profile's one store, so every window of it refuses the
+    /// project's commands and stops its notes.md sync from the moment this returns.
     pub fn revoke(&self, root: String) {
-        let mut hub = self.lock();
-        hub.trust.revoke(&crate::files_panel::names::folder(&root));
-        hub.save();
-        drop(hub);
+        let root = crate::files_panel::names::folder(&root);
+        self.lock().change_trust(|trust| trust.revoke(&root));
         self.changed();
     }
 }

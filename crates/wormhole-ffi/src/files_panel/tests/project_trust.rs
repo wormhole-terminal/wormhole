@@ -105,7 +105,11 @@ fn trust_follows_a_window_to_the_profile_it_moved_to() {
     assert_eq!(status(&service, &repo), TrustStatusRecord::Untrusted, "the new profile never approved it");
     assert!(runs(&service, &repo).is_err(), "so nothing runs under the old profile's approval");
     service.follow_dir(home.path());
-    assert_eq!(status(&service, &repo), TrustStatusRecord::Trusted, "and back, the first profile's approval is its own");
+    assert_eq!(
+        status(&service, &repo),
+        TrustStatusRecord::Trusted,
+        "and back, the first profile's approval is its own"
+    );
 }
 
 #[test]

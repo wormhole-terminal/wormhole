@@ -131,6 +131,7 @@ impl ProjectService {
     /// A switch for each feature: whether projects use it unless they say otherwise.
     pub fn project_defaults(&self) -> Vec<ProjectDefaultRecord> {
         let hub = self.lock();
+        let prefs = hub.prefs();
         Feature::ALL
             .into_iter()
             .map(|feature| ProjectDefaultRecord {
@@ -141,17 +142,14 @@ impl ProjectService {
                 } else {
                     feature.description().to_string()
                 },
-                on: hub.prefs.default_enabled(feature),
+                on: prefs.default_enabled(feature),
             })
             .collect()
     }
 
     pub fn set_project_default(&self, feature: String, on: bool) -> Result<(), ProjectFailure> {
         let feature = Feature::from_key(&feature).ok_or_else(|| ProjectFailure::not_found(feature))?;
-        let mut hub = self.lock();
-        hub.prefs.set_default(feature, on);
-        hub.save();
-        drop(hub);
+        self.lock().change_prefs(|prefs| prefs.set_default(feature, on));
         self.changed();
         Ok(())
     }
@@ -160,10 +158,7 @@ impl ProjectService {
     pub fn clear_feature_choice(&self, root: String, feature: String) -> Result<(), ProjectFailure> {
         let feature = Feature::from_key(&feature).ok_or_else(|| ProjectFailure::not_found(feature))?;
         let folder = open(&root).ok_or_else(|| ProjectFailure::not_found(root))?;
-        let mut hub = self.lock();
-        hub.prefs.clear_override(&folder.root, feature);
-        hub.save();
-        drop(hub);
+        self.lock().change_prefs(|prefs| prefs.clear_override(&folder.root, feature));
         self.changed();
         Ok(())
     }
@@ -171,9 +166,8 @@ impl ProjectService {
     /// The projects the person trusts, whether or not they are open anywhere.
     /// Read from the file as it is now: a project may have been trusted or revoked elsewhere (`watch_trust`).
     pub fn trusted_projects(&self) -> Vec<ProjectChoiceRecord> {
-        let mut hub = self.lock();
-        hub.reload_trust();
-        hub.trust.list().into_iter().map(|trusted| choice(&trusted.root)).collect()
+        let hub = self.lock();
+        hub.trust().list().into_iter().map(|trusted| choice(&trusted.root)).collect()
     }
 
     /// Calls `listener` once whenever the profile's approvals change on disk, until the returned watch is let go: the
@@ -191,7 +185,7 @@ impl ProjectService {
     pub fn known_projects(&self, folders: Vec<String>) -> Vec<ProjectChoiceRecord> {
         let mut roots: Vec<PathBuf> = Vec::new();
         let trusted: Vec<PathBuf> =
-            self.lock().trust.list().into_iter().map(|trusted| trusted.root.clone()).collect();
+            self.lock().trust().list().into_iter().map(|trusted| trusted.root.clone()).collect();
         let candidates = folders
             .iter()
             .filter_map(|folder| find_project(Path::new(folder)).map(|found| found.root))
@@ -208,26 +202,26 @@ impl ProjectService {
     pub fn project_page(&self, root: String) -> Option<ProjectPageRecord> {
         let folder = open(&root)?;
         let mut hub = self.lock();
-        hub.reload_trust();
         let snapshot = hub.snapshot(&folder);
-        let status = hub.trust.status_of(&snapshot);
+        let status = hub.trust().status_of(&snapshot);
         let request = snapshot.trust_request();
         let has_commands = request.as_ref().is_some_and(|r| !r.commands.is_empty());
         let needing = snapshot.needing_trust();
+        let prefs = hub.prefs();
         let features = Feature::ALL
             .into_iter()
             .map(|feature| {
                 let standing = snapshot.standing(feature, status);
                 // Notes: with no notes.md nothing syncs unless the person switches it on, so "Default (on)"
                 // would say what does not happen.
-                let default_on = hub.prefs.default_enabled(feature)
-                    && (feature != Feature::Notes || snapshot.has(feature));
+                let default_on =
+                    prefs.default_enabled(feature) && (feature != Feature::Notes || snapshot.has(feature));
                 ProjectFeatureRowRecord {
                     key: feature.key().to_string(),
                     label: feature.label().to_string(),
                     description: feature_description(feature, standing),
                     faint: standing == FeatureStanding::Missing && feature != Feature::Notes,
-                    choice: hub.prefs.project_override(&folder.root, feature),
+                    choice: prefs.project_override(&folder.root, feature),
                     default_on,
                 }
             })

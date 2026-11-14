@@ -1,5 +1,6 @@
-//! The `ProjectService` object: the Project tab over core's `project` domain. One service holds the
-//! person's switches, the trust store and the notes sync state, as the app's hub does for a profile.
+//! The `ProjectService` object: the Project tab over core's `project` domain. One per window; the person's switches,
+//! the trust store and the notes sync state it reads and changes are its profile's, the same for every window of it
+//! (`stores`), as the app's hub is one per profile.
 //!
 //! Trust is enforced here, in Rust, and not left to the caller: an action, a prompt or the layout runs
 //! only through [`Hub::enabled`] (the file is there, the person has it on, the folder's content is
@@ -9,7 +10,7 @@
 use std::ops::Not as _;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError, Weak};
+use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError, Weak};
 
 use wormhole_core::keys::keyspec::KeySpec;
 use wormhole_core::project::{self as proj, Feature, ProjectFolder};
@@ -29,8 +30,6 @@ use crate::profile;
 pub struct ProjectService {
     hub: Mutex<Hub>,
     pub(super) auth: Arc<dyn OwnerAuthenticator>,
-    /// The watches Swift holds, which hear of what the service itself changed (trust, a switch, a colour).
-    watches: Mutex<Vec<Weak<FolderWatch>>>,
     /// The Project feature is off for the window (its flag, or the person's switch): no `.wormhole/` is read
     /// for effect or written (the GPUI app's `project_folders_on`).
     off: AtomicBool,
@@ -39,12 +38,7 @@ pub struct ProjectService {
 impl ProjectService {
     /// A service over the stores in `dir`.
     pub(crate) fn in_dir(dir: &Path, auth: Arc<dyn OwnerAuthenticator>) -> Arc<Self> {
-        Arc::new(Self {
-            hub: Mutex::new(Hub::load(dir)),
-            auth,
-            watches: Mutex::new(Vec::new()),
-            off: AtomicBool::new(false),
-        })
+        Arc::new(Self { hub: Mutex::new(Hub::load(dir)), auth, off: AtomicBool::new(false) })
     }
 
     /// Whether the Project feature is off for the window: asked first by everything that would act on a project.
@@ -56,12 +50,22 @@ impl ProjectService {
         self.hub.lock().unwrap_or_else(PoisonError::into_inner)
     }
 
-    /// Tells every watch of the service that something changed.
+    /// Tells every window's Project tab that something changed: what one window changes (trust, a switch, a colour) is
+    /// its profile's, which the other windows show too, as every GPUI window draws from the one hub.
     pub(super) fn changed(&self) {
-        let mut watches = self.watches.lock().unwrap_or_else(PoisonError::into_inner);
-        watches.retain(|watch| watch.upgrade().inspect(|watch| watch.poke()).is_some());
+        tell_every_tab();
     }
 }
+
+/// Tells every window's Project tab to read its project again.
+pub(super) fn tell_every_tab() {
+    let mut watches = WATCHES.lock().unwrap_or_else(PoisonError::into_inner);
+    watches.retain(|watch| watch.upgrade().inspect(|watch| watch.poke()).is_some());
+}
+
+/// The watches Swift holds for every service, which hear of what a service itself changed. A tab of another profile
+/// reads its own again and finds nothing changed.
+static WATCHES: LazyLock<Mutex<Vec<Weak<FolderWatch>>>> = LazyLock::new(Default::default);
 
 /// The words of a refused worktree: one rule for the sheet (`ProjectService`) and the command line.
 const WORKTREE_REFUSAL: &str =
@@ -83,9 +87,7 @@ impl ProjectService {
         }
         let found = proj::find_project(repo)?;
         let snapshot = found.snapshot();
-        let mut hub = self.lock();
-        hub.reload_trust();
-        if hub.enabled(&snapshot, Feature::Settings) {
+        if self.lock().enabled(&snapshot, Feature::Settings) {
             return None;
         }
         Some(WORKTREE_REFUSAL.into())
@@ -139,7 +141,6 @@ impl ProjectService {
     pub fn project(&self, folder: String) -> Option<ProjectStateRecord> {
         let found = proj::find_project(&names::folder(&folder))?;
         let mut hub = self.lock();
-        hub.reload_trust();
         let snapshot = hub.snapshot(&found);
         Some(state::build(&mut hub, &snapshot))
     }
@@ -155,10 +156,7 @@ impl ProjectService {
     pub fn set_feature(&self, root: String, feature: String, on: bool) -> Result<(), ProjectFailure> {
         let feature = Feature::from_key(&feature).ok_or_else(|| ProjectFailure::not_found(feature))?;
         let folder = open(&root).ok_or_else(|| ProjectFailure::not_found(root))?;
-        let mut hub = self.lock();
-        hub.prefs.set_enabled(&folder.root, feature, on);
-        hub.save();
-        drop(hub);
+        self.lock().change_prefs(|prefs| prefs.set_enabled(&folder.root, feature, on));
         self.changed();
         Ok(())
     }
@@ -240,9 +238,7 @@ impl ProjectService {
         }
         let found = proj::find_project(&names::folder(&repo))?;
         let snapshot = found.snapshot();
-        let mut hub = self.lock();
-        hub.reload_trust();
-        if !hub.enabled(&snapshot, Feature::Settings) {
+        if !self.lock().enabled(&snapshot, Feature::Settings) {
             return None;
         }
         snapshot.config()?.worktree_setup.clone()
@@ -261,7 +257,7 @@ impl ProjectService {
             }),
         };
         let watch = FolderWatch::start(root, listener, keep);
-        self.watches.lock().unwrap_or_else(PoisonError::into_inner).push(Arc::downgrade(&watch));
+        WATCHES.lock().unwrap_or_else(PoisonError::into_inner).push(Arc::downgrade(&watch));
         watch
     }
 }
@@ -280,9 +276,8 @@ impl ProjectService {
         // Read here, so what is checked is what runs: the same snapshot gives the trust verdict and the
         // content, and a `git checkout` between the two cannot make them differ.
         let snapshot = folder.snapshot();
-        let mut hub = self.lock();
-        hub.reload_trust();
-        if let Some(reason) = hub.refusal(&snapshot, feature) {
+        // The approvals and switches as the profile has them at this moment: revoked in another window, refused here.
+        if let Some(reason) = self.lock().refusal(&snapshot, feature) {
             return Err(ProjectFailure::refused(reason));
         }
         Ok((folder, snapshot))

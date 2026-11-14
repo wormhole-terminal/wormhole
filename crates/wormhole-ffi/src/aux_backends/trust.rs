@@ -131,19 +131,20 @@ impl TrustDesk {
         let request = locked(&self.held)
             .take()
             .ok_or_else(|| AuxError::failed("there is nothing reviewed to approve"))?;
-        let (mut store, _) = TrustStore::load_or_recover(&self.profile_dir);
-        store.trust_request(&request);
-        store.save().map_err(AuxError::failed)?;
+        // Under the profile's one lock, to the approvals as they are now: never a stale copy over another window's revoke.
+        crate::files_panel::change_trust_in(&self.profile_dir, |store| {
+            store.trust_request(&request);
+            true
+        })
+        .map_err(AuxError::failed)?;
         self.waker.notify();
         Ok(())
     }
 
     /// Takes the approval back.
     pub fn revoke(&self) -> Result<(), AuxError> {
-        let (mut store, _) = TrustStore::load_or_recover(&self.profile_dir);
-        if store.revoke(&self.root) {
-            store.save().map_err(AuxError::failed)?;
-        }
+        crate::files_panel::change_trust_in(&self.profile_dir, |store| store.revoke(&self.root))
+            .map_err(AuxError::failed)?;
         self.waker.notify();
         Ok(())
     }

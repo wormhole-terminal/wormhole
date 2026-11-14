@@ -10,6 +10,7 @@ mod project;
 mod project_notes;
 mod project_paint;
 mod project_trust;
+mod project_windows;
 mod usage;
 
 use std::fs;
