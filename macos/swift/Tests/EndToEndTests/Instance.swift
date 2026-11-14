@@ -33,6 +33,11 @@ final class Instance {
     /// Programs named like coding agents the app finds on its agent path (`WORMHOLE_AGENT_PATH`, a scratch folder of their
     /// own): empty, none is found, as on a Mac with no agent.
     private var agents: [String] = []
+    /// Launch flags besides `--background`.
+    private var launchFlags: [String] = []
+    /// A feed for `updater: true`: the core lets an update feed be plain HTTP only on this machine, and nothing listens on the
+    /// discard port, so the instance has its updater and no check ever leaves the Mac (or finds anything).
+    private static let deadFeed = "http://127.0.0.1:9/stable"
     /// The app itself: what `cli` runs as a client of the instance.
     let program: URL
     /// The session host the app is given (`Scratch.giveHosts`), nil for a run whose terminals stay in the app.
@@ -74,12 +79,14 @@ final class Instance {
     /// `config.json` before the first launch (a flag or a mode the app reads at launch); `hosts`: Persistent terminals on, with
     /// the built session host (`hostProgram`), which writes that file itself, so the two are not given together.
     static func with(
-        shell: Shell = .cat, auth: String = "cancel", config: String? = nil, hosts: Bool = false, agents: [String] = [], label: String = #function,
+        shell: Shell = .cat, auth: String = "cancel", config: String? = nil, hosts: Bool = false, agents: [String] = [], updater: Bool = false,
+        label: String = #function,
         _ body: @MainActor (Instance) async throws -> Void
     ) async throws {
         guard let program = executable() else { throw ScratchError(description: "the Wormhole app is not built") }
         let app = Instance(scratch: try Scratch(), shell: shell, auth: auth, label: label, program: program)
         app.agents = agents
+        if updater { app.launchFlags = ["--update-feed", deadFeed] }
         // The default profile's files are the data folder's own.
         if let config {
             guard !hosts else {
@@ -143,7 +150,7 @@ final class Instance {
         if !FileManager.default.fileExists(atPath: outFile(nil).path) { FileManager.default.createFile(atPath: outFile(nil).path, contents: nil) }
         let ended = ended
         process = try Spawn.launch(
-            program, arguments: ["--background"], environment: try environment(), log: scratch.root.appendingPathComponent("app.log"),
+            program, arguments: ["--background"] + launchFlags, environment: try environment(), log: scratch.root.appendingPathComponent("app.log"),
             onExit: { ended.finish($0) })
         let said = await until("state", timeout: 40) { $0.contains("terminals=") }
         expect(said.contains("terminals="), "the app did not come up with a window")

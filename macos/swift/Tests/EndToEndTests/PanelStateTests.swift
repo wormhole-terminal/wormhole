@@ -188,7 +188,8 @@ extension EndToEnd {
 
     @Test("Restart to update with a command running in a folded group asks, and names it (322)")
     @MainActor func restartAsksForFoldedRunning() async throws {
-        try await Instance.with(shell: .zsh) { app in
+        // Only an instance with an updater has a restart to ask about (`update-installed` pretends the install).
+        try await Instance.with(shell: .zsh, updater: true) { app in
             await app.shell("sleep 300")
             guard let first = (await app.rows()).live.first else { return }
             await app.send(["key cmd-t", "group \(first)"])
