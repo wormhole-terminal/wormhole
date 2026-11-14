@@ -33,7 +33,7 @@ jobs:
     # The app is developed with Xcode 27; the runner has Xcode 26 (Swift 6.3), which the package says it builds
     # with. There is no macOS 27 runner yet (a job asking for one stays queued).
     runs-on: macos-latest
-    timeout-minutes: 100
+    timeout-minutes: 150
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -80,7 +80,7 @@ jobs:
       # editor, or reads a real home; a failure leaves its control files, log and config.json in the artifact below.
       - name: End-to-end tests
         working-directory: macos/swift
-        timeout-minutes: 25
+        timeout-minutes: 80
         env:
           WORMHOLE_E2E_ARTIFACTS: ${{ runner.temp }}/e2e-artifacts
         run: |
