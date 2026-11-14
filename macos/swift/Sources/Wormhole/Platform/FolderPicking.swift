@@ -21,11 +21,10 @@ import WorkspaceModel
 final class FolderPicking {
     private let controller: FolderPickerController
     private unowned let app: AppController
-    private var visited: [TerminalID: String] = [:]
+    private var visits = FolderVisits()
     #if WITH_UNIFFI
         /// Each profile's recent folders, loaded the first time one is needed (one list per profile, as GPUI keeps them).
         private var folders: [String: CoreFolders] = [:]
-        private var clearedWhileOff: Set<String> = []
         /// Which look at the windows is the one in force: an older one's change is not followed twice.
         private var following = 0
     #endif
@@ -131,28 +130,23 @@ final class FolderPicking {
             following += 1
             let mine = following
             let found = withObservationTracking {
-                app.sessions.map { ($0, $0.windows.profile, $0.hub.state.all.map { ($0.id, $0.folder) }) }
+                app.sessions.map { ($0, $0.windows.profile, $0.hub.state.all.map { (terminal: $0.id, folder: $0.folder) }) }
             } onChange: { [weak self] in
                 Task { @MainActor in
                     if let self, self.following == mine { self.follow() }
                 }
             }
+            let outcome = visits.take(found.map { session, profile, terminals in
+                .init(profile: profile, recorded: app.flagsOn(session).contains("folder_picker"), folders: terminals)
+            })
+            // Kept only while the flag is on in a profile; the first change with it off forgets what it learned.
+            for profile in outcome.forget {
+                recents(of: profile)?.clear()
+                save(profile)
+            }
             var changed: Set<String> = []
-            for (session, profile, terminals) in found {
-                // Kept only while the flag is on in that profile; the first change with it off forgets what it learned.
-                guard app.flagsOn(session).contains("folder_picker") else {
-                    if !clearedWhileOff.contains(profile), terminals.contains(where: { $0.1 != nil }) {
-                        clearedWhileOff.insert(profile)
-                        recents(of: profile)?.clear()
-                        save(profile)
-                    }
-                    continue
-                }
-                for (id, folder) in terminals {
-                    guard let folder, visited[id] != folder else { continue }
-                    visited[id] = folder
-                    if recents(of: profile)?.recordVisit(HomeFolder.expanding(folder)) == true { changed.insert(profile) }
-                }
+            for visit in outcome.visits where recents(of: visit.profile)?.recordVisit(HomeFolder.expanding(visit.folder)) == true {
+                changed.insert(visit.profile)
             }
             changed.forEach(save)
         }
