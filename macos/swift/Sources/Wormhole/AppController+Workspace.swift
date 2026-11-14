@@ -38,6 +38,7 @@ extension AppController {
         case "number": with("number <n>") { .selectNumber($0) }
         case "search": send(.search(argument))
         case "drop", "plan": drop(command == "plan", argument)
+        case "group-drop", "group-plan": dropGroup(command == "group-plan", argument)
         default: return false
         }
         return true
@@ -72,6 +73,17 @@ extension AppController {
         }
         if planOnly { return reply("plan \(hub.store.dropPlan(dragged: id, over: target).map { "\($0)" } ?? "nothing") ") }
         send(.dropTerminal(id, over: target))
+    }
+
+    /// `group-drop <group> <over>` lets a group's head go there, as the end of its drag sends it (`SidebarView.dragEnded`);
+    /// `group-plan <group> <over>` only asks where it would land (nothing: it would not move).
+    private func dropGroup(_ planOnly: Bool, _ argument: String) {
+        let parts = argument.split(separator: " ")
+        guard parts.count == 2, let id = GroupID(String(parts[0])), let target = over(parts[1]) else {
+            return reply("error: usage group-drop|group-plan <group> row:<id>:<part> | head:<g>:<part> | after-loose:<id> | after-group:<g> | tail")
+        }
+        if planOnly { return reply("group-plan \(hub.store.groupDropPlan(group: id, over: target).map { "\($0)" } ?? "nothing")") }
+        send(.dropGroup(id, over: target))
     }
 
     /// The sidebar as the views were given it: one line per head and per row.

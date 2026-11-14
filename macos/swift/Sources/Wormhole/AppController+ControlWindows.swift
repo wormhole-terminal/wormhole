@@ -80,6 +80,24 @@ extension AppController {
             let point = CGPoint(x: CGFloat(numbers[1]), y: CGFloat(numbers[2]))
             reply("tear-off \(numbers[0]) took=\(source.hub.terminalDrag.tearOff?(numbers[0], point) == true)")
             return true
+        case "sidebar-let-go":
+            // A row dragged out of the list let go there, as the end of the list's drag does with the pointer outside it
+            // (`SidebarView.dragEnded`): the window is asked first whether it tears it off, else the pane area under the
+            // point lands it (`PaneArea.land`). The point is the window's (`X Y`), or `right-of <terminal>`: 20 points in from
+            // the right edge of that terminal's view, half way down, in its right drop band.
+            let words = argument.split(separator: " ").map(String.init)
+            guard numbers.count >= 2, let source = session(holding: numbers[0]), let point = letGoPoint(words, in: source) else {
+                reply("error: sidebar-let-go <id> <x> <y> | <id> right-of <terminal>")
+                return true
+            }
+            let drag = source.hub.terminalDrag
+            if drag.tearOff?(numbers[0], point) == true {
+                reply("sidebar-let-go \(numbers[0]) torn-off")
+            } else {
+                drag.release(numbers[0], at: point)
+                reply("sidebar-let-go \(numbers[0]) released at \(Int(point.x)),\(Int(point.y))")
+            }
+            return true
         case "tear-off-at":
             guard numbers.count == 3, let source = session(holding: numbers[0]), let height = NSScreen.screens.first?.frame.height else {
                 reply("error: \(command) needs a terminal id and a point")
@@ -123,6 +141,17 @@ extension AppController {
             }.joined(separator: ", ")
             return "window=\(session.id) profile=\(session.windows.profile) visible=\(session.window?.isVisible ?? false) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame) hosting=[\(hosts)]"
         }.joined(separator: "\n")
+    }
+
+    /// `<id> <x> <y>` as the window's point, or `<id> right-of <terminal>` worked out from that terminal's view.
+    private func letGoPoint(_ words: [String], in session: WindowSession) -> CGPoint? {
+        if words.count == 3, let x = Double(words[1]), let y = Double(words[2]) { return CGPoint(x: x, y: y) }
+        guard words.count == 3, words[1] == "right-of", let target = Int(words[2]), let view = session.hub.terminals.existing(target),
+            let content = view.window?.contentView
+        else { return nil }
+        let frame = content.convert(view.bounds, from: view)
+        let y = content.isFlipped ? frame.midY : content.bounds.height - frame.midY
+        return CGPoint(x: frame.maxX - 20, y: y)
     }
 
     private func describe(_ frame: WindowFrame) -> String {
