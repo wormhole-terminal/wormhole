@@ -29,9 +29,8 @@ extension MetalTerminalView {
     /// (`input.rs:105`).
     private func shortcut(for event: NSEvent) -> TerminalShortcut? {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags.contains(.command), flags.isDisjoint(with: [.control, .option]),
-            let name = KeyMap.input(from: event, optionAsMeta: optionAsMeta)?.key
-        else { return nil }
+        // With ⌥ or ⌃ held too: the table is asked the same way (⌥⌘C copies, as in the GPUI app).
+        guard flags.contains(.command), let name = KeyMap.input(from: event, optionAsMeta: optionAsMeta)?.key else { return nil }
         if let exact = TerminalShortcut(action: terminalAction(name, flags)) { return exact }
         guard flags != .command, !isAppKey(name, flags) else { return nil }
         return TerminalShortcut(action: terminalAction(name, .command))
