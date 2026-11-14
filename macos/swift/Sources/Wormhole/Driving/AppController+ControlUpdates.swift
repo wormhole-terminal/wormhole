@@ -6,6 +6,7 @@
 //   update-status <idle|checking|up-to-date|available|unsupported|downloading|installed|failed> "<the status line>"
 //       channel="<stable|preview>" [version="<the release offered or installed>"] [note="<what a channel change did>"] [pending] [security]
 //   button <id>              per button on the page, left to right
+//   security "<what it fixes>" advisories="<ids, comma-separated>" <danger|warning>      a security release's block
 //   notes "<line>"           per line under What's new, while a release is offered
 //   update-status none       a build without an updater (the page says so itself: `settings-page`)
 //   error: …                 Settings is not open
@@ -28,6 +29,7 @@ extension AppController {
         var pairs = [("channel", model.backend.channel == .stable ? "stable" : "preview")]
         var notes: [String] = []
         var security = false
+        var fixes: [String] = []
         let word: String
         switch model.phase {
         case .idle: word = "idle"
@@ -38,6 +40,8 @@ extension AppController {
             pairs.append(("version", release.version))
             notes = UpdateViewModel.noteLines(release.notes)
             security = release.isSecurity
+            // The block the page draws for a security release: its sentence and each advisory it links.
+            fixes = release.security.map { [Readout.line("security", quoted: [$0.line], pairs: [("advisories", $0.advisories.map(\.id).joined(separator: ","))], flags: [$0.danger ? "danger" : "warning"])] } ?? []
         case .unsupported: word = "unsupported"
         case .downloading: word = "downloading"
         case .installed(let version):
@@ -50,7 +54,7 @@ extension AppController {
             "update-status", [word], quoted: [model.statusLine], pairs: pairs,
             flags: [Readout.flag("pending", model.restartPending), Readout.flag("security", security)])
         let buttons = RowFrames.all.filter { $0.id.hasPrefix("update.") }.sorted { $0.frame.minX < $1.frame.minX }.map { Readout.line("button", [$0.id]) }
-        reply(([head] + buttons + notes.map { Readout.line("notes", quoted: [$0]) }).joined(separator: "\n"))
+        reply(([head] + buttons + fixes + notes.map { Readout.line("notes", quoted: [$0]) }).joined(separator: "\n"))
         return true
     }
 }

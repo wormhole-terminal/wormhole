@@ -213,4 +213,27 @@ extension EndToEnd {
             app.expect(await app.reply("notice chip", window: 1), contains: "shown=none")
         }
     }
+
+    @Test("a security release: the page says so with what it fixes and its advisories, offers Install and no Skip")
+    @MainActor func updateSecurityRelease() async throws {
+        let server = try FeedServer()
+        try await Instance.with(feed: server.base) { app in
+            let folder = app.scratch.root.appendingPathComponent("feed")
+            server.serve(folder)
+            await Self.openUpdates(app)
+            // The feed's (unsigned, so only advisory) security key: a severity, a well-formed advisory and one that is not.
+            var feed = (try JSONSerialization.jsonObject(with: Data(Self.feed(version: "99.0.0", base: server.base).utf8)) as? [String: Any]) ?? [:]
+            feed["security"] = ["severity": "high", "advisories": ["GHSA-2222-cccc-ffff", "not-an-advisory"]]
+            try Self.publish(String(decoding: try JSONSerialization.data(withJSONObject: feed), as: UTF8.self), in: folder)
+            let offered = await Self.check(app) { $0.first("update-status")?.has("available") == true }
+            app.expect(offered.first("update-status")?.label == "Security update available: Wormhole 99.0.0.", "the page says it is a security update:\n\(offered.text)")
+            app.expect(offered.first("update-status")?.has("security") == true, "marked as one:\n\(offered.text)")
+            // What it fixes, in the core's words for the severity, and the advisory that is one (the other is dropped).
+            let security = offered.first("security")
+            app.expect(security?.label.isEmpty == false && security?.has("danger") == true, "a high severity reads as danger, in words:\n\(offered.text)")
+            app.expect(security?["advisories"]?.lowercased() == "ghsa-2222-cccc-ffff", "the valid advisory is linked, the other dropped:\n\(offered.text)")
+            // A security update cannot be skipped: Install Update alone.
+            await app.until("update-status") { Readout($0).all("button").map(\.words) == [["update.install"]] }
+        }
+    }
 }
