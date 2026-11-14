@@ -71,7 +71,10 @@ extension AppController {
             // `question confirm|cancel`), and the last window ends the app instead (saved).
             guard let window else { reply("error: no window"); return true }
             reply("close-window \(front.id)")
-            window.performClose(nil)
+            // From the run loop, as a click comes, not from this command's job of the main queue: `performClose` waits a moment
+            // in a run loop of its own, a quit asked for meanwhile (the last window) would start inside it, and a run loop
+            // inside a main-queue job serves no other, so the quit's question would never be put.
+            RunLoop.main.perform(inModes: [.common]) { MainActor.assumeIsolated { window.performClose(nil) } }
         default: return false
         }
         return true
