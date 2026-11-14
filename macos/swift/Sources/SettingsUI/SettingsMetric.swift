@@ -16,6 +16,8 @@ enum SettingsMetric {
     static var windowMaxWidth: CGFloat { navWidth + columnWidth + 64 }
     /// The least a setting row is tall (`SETTING_ROW_MIN_H`).
     static let rowMinHeight: CGFloat = 40
+    /// How faint a disabled row's control is (`SET_ELSEWHERE_OPACITY`).
+    static let outOfReachOpacity: CGFloat = 0.55
     /// The width of a select, a slider and a shortcut recorder (`SELECT_W`, `SLIDER_W`, `RECORDER_W`).
     static let controlWidth: CGFloat = 200
     /// A shell profile's name column in the Shells list (`SHELL_NAME_W`).

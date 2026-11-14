@@ -27,12 +27,12 @@ struct ProjectPageView: View {
             }
             SettingGroup(title: ProjectsText.fromThisProject, blurb: ProjectsText.onlyForYou) {
                 ForEach(page.features) { feature in
-                    SettingRow(label: feature.label, description: feature.description, visibleHint: true, state: RowState(), frameId: "project.feature.\(feature.key)", onReset: {}) {
+                    // A feature whose file the project lacks is shown but out of reach (`SettingState::Disabled`).
+                    SettingRow(label: feature.label, description: feature.description, visibleHint: true, state: RowState(isDisabled: feature.faint), frameId: "project.feature.\(feature.key)", onReset: {}) {
                         OptionPicker(options: choices(feature), selected: encode(feature.choice), label: feature.label, segmented: true) { value in
                             Task { await projects.setChoice(feature.key, to: decode(value)) }
                         }
                     }
-                    .opacity(feature.faint ? 0.5 : 1)
                 }
             }
             if !page.problems.isEmpty {

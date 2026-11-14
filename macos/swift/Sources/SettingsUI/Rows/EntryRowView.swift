@@ -47,6 +47,12 @@ struct EntryRowView: View {
         return project.note
     }
 
+    /// The row shows the changed dot and the reset arrow: it differs from its default and no project sets it. A row a project
+    /// sets shows the project's chip instead, and its arrow would put back a value the project hides (`SettingState::Project`).
+    static func isChanged(_ entry: SettingsSchema.Entry, _ model: SettingsModel) -> Bool {
+        projectNote(entry, model) == nil && model.isChanged(entry)
+    }
+
     /// The project that sets this row, as the tag after its label (the row keeps neither key nor menu then).
     private var projectChip: String? { projectNote == nil ? nil : model.host.panelRecords().project?.name }
 
@@ -82,7 +88,7 @@ struct EntryRowView: View {
 
     private var state: RowState {
         RowState(
-            isChanged: model.isChanged(entry), resetAlways: resetAlways,
+            isChanged: Self.isChanged(entry, model), resetAlways: resetAlways,
             configKey: (model.value("show_config_keys").bool ?? false) && projectNote == nil ? entry.keys.first : nil,
             found: found?.labelRange, foundDescription: found?.descriptionRange,
             isRevealed: model.revealed == entry.id, context: found?.group)

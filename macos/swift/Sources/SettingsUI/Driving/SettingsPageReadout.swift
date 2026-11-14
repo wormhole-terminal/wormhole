@@ -86,7 +86,7 @@ public enum SettingsPageReadout {
             Readout.line(
                 "row", [entry.id], quoted: [caption?.label ?? entry.label], pairs: pairs,
                 flags: [
-                    Readout.flag("changed", model.isChanged(entry)), Readout.flag("off", isOff(entry, model)), Readout.flag("found", found),
+                    Readout.flag("changed", EntryRowView.isChanged(entry, model)), Readout.flag("off", isOff(entry, model)), Readout.flag("found", found),
                     Readout.flag("revealed", model.revealed == entry.id),
                 ])
         ]

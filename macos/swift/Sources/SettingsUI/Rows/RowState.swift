@@ -21,4 +21,7 @@ struct RowState {
     var isRevealed = false
     /// The group's name after the label, in a results list where rows of different groups sit together.
     var context: String?
+    /// Not available here (a project feature whose file the project lacks): the label and description faint, the control
+    /// held back and off, no key and no menu (`SettingState::Disabled`, `out_of_reach`).
+    var isDisabled = false
 }
