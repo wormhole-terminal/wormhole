@@ -191,3 +191,58 @@ fn a_project_in_a_folder_whose_name_is_not_text_is_found_and_approved_by_its_key
     assert_eq!(again, None, "a folder that is not there has no project");
     assert_eq!(service.project(state.root).map(|state| state.status), Some(TrustStatusRecord::Trusted));
 }
+
+/// Settings and the theme follow the terminal in front by its folder's key. A folder whose name is not text is read
+/// by its bytes; read by its name as text it would name a sibling a repository can plant (`caf\u{FFFD}` beside
+/// `caf\xE9`), whose settings, once the person trusted that one, would be laid over theirs.
+#[test]
+fn a_projects_settings_and_theme_are_read_by_the_key_of_a_folder_whose_name_is_not_text() {
+    use std::os::unix::ffi::OsStrExt as _;
+
+    use crate::files_panel::names;
+
+    let parent = tempfile::tempdir().expect("temp dir");
+    let folder = parent.path().join(std::ffi::OsStr::from_bytes(b"caf\xe9"));
+    // APFS and HFS+ refuse a name that is not UTF-8: on such a disk there is no such folder to read.
+    if std::fs::create_dir(&folder).is_err() {
+        return;
+    }
+    let planted = parent.path().join("caf\u{FFFD}");
+    for (dir, size, theme) in [(&folder, 20, "own"), (&planted, 30, "planted")] {
+        std::fs::create_dir_all(dir.join(".git")).expect("git");
+        super::write(&dir.join(".wormhole/config.json"), &format!(r#"{{"font_size": {size}}}"#));
+        super::write(&dir.join(".wormhole/theme.json"), &format!(r#"{{"name": "{theme}"}}"#));
+    }
+    let (_data, service) = service(&Owner::answering([OwnerAnswer::Approved, OwnerAnswer::Approved]));
+    let planted_root = planted.canonicalize().expect("canonical").to_string_lossy().into_owned();
+    assert_eq!(
+        service.approve(planted_root),
+        ApproveOutcome::Approved,
+        "the person trusted the other folder"
+    );
+
+    let key = names::path_key(&folder);
+    let found = service.settings_overrides(key.clone()).expect("found by the key of its bytes");
+    assert_eq!(
+        names::folder(&found.root),
+        folder.canonicalize().expect("canonical"),
+        "the root comes back as a key"
+    );
+    assert_eq!(
+        found.json, None,
+        "its own project is not trusted: nothing is laid over the person's settings"
+    );
+    let theme = service.theme_overlay(key.clone()).expect("its theme, which asks no trust");
+    assert!(theme.contains("own") && !theme.contains("planted"), "{theme}");
+
+    // What the drawn folder would have done: its U+FFFD names the planted one, trusted, and its settings.
+    let drawn = folder.to_string_lossy().into_owned();
+    let wrong =
+        service.settings_overrides(drawn).and_then(|found| found.json).expect("the planted one's settings");
+    assert!(wrong.contains("\"font_size\":30"), "{wrong}");
+
+    assert_eq!(service.approve(found.root), ApproveOutcome::Approved);
+    let json =
+        service.settings_overrides(key).and_then(|found| found.json).expect("its own settings, once trusted");
+    assert!(json.contains("\"font_size\":20"), "{json}");
+}

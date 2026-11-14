@@ -8,8 +8,10 @@
     import FilesBridge
     import Foundation
     import Observation
+    import PanelModel
     import SettingsBridge
     import SettingsModel
+    import WindowUI
     import WorkspaceModel
 
     @MainActor
@@ -41,17 +43,16 @@
             watching?.cancel()
             guard let selected else { return }
             // Its files and its trust: either may change what the project sets.
-            let changes = project.changes(at: expanded(selected))
+            let changes = project.changes(at: selected)
             watching = Task { [weak self] in
                 for await _ in changes { self?.reload() }
             }
         }
 
-        /// The folder of the terminal in front, as the core's rows show it.
-        private var selectedFolder: String? {
-            let state = app.hub.state
-            return (state.terminals.first { $0.id == state.selected } ?? state.all.first { $0.id == state.selected })?.folder
-        }
+        /// The folder of the terminal in front as the panel reads it: the core's full path, a key where a name is not
+        /// text. Never the drawn folder: `~`-shortened and with U+FFFD for every byte that is not text, it names no folder
+        /// there, or a planted sibling (`caf\u{FFFD}/.wormhole` beside `caf\xE9/`) whose settings would be laid over yours.
+        private var selectedFolder: String? { app.hub.state.selectedPath }
 
         private func reload() {
             guard let folder else {
@@ -59,19 +60,18 @@
                 app.settingsModel.projectTheme = nil
                 return host.follow(project: nil)
             }
-            let path = expanded(folder)
             Task {
-                let found = await project.settingsOverrides(at: path)
-                let theme = await project.themeOverlay(at: path)
+                let found = await project.settingsOverrides(at: folder)
+                let theme = await project.themeOverlay(at: folder)
                 // The terminal may have changed while the core read.
                 guard self.folder == folder else { return }
                 host.follow(project: found)
-                // The project's theme colours the windows while one of its terminals is in front.
+                // The project's theme colours the windows while one of its terminals is in front. The mark names the
+                // project's root as a key, which the Project folders page selects it by.
                 ThemeStore.shared.projectTheme = theme
-                app.settingsModel.projectTheme = theme == nil ? nil : ProjectThemeMark(name: found?.name ?? (path as NSString).lastPathComponent, root: path)
+                app.settingsModel.projectTheme = theme == nil ? nil
+                    : ProjectThemeMark(name: found?.name ?? DiskName.shown((folder as NSString).lastPathComponent), root: found?.root ?? folder)
             }
         }
-
-        private func expanded(_ folder: String) -> String { HomeFolder.expanding(folder) }
     }
 #endif
