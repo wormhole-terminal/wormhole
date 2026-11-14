@@ -5,6 +5,7 @@ use std::collections::HashSet;
 use std::hash::{DefaultHasher, Hash as _, Hasher as _};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::thread::ThreadId;
 use std::time::{Duration, Instant};
 
 use wormhole_core::config::features::FeatureFlag;
@@ -103,8 +104,10 @@ pub(crate) struct Core {
     pub usage: Arc<UsageService>,
     /// One per profile that has a desk; the first is the one the server started with (the fallback).
     seats: Mutex<Vec<Arc<Seat>>>,
-    /// The seat of the request being answered: the dispatch thread answers one at a time, in order.
-    reached: Mutex<Option<Arc<Seat>>>,
+    /// The seat of the request each thread is answering. The dispatch thread answers one at a time, in order, and a test
+    /// instance's control line is answered on the main thread meanwhile: kept by thread, neither is judged by the seat the
+    /// other reached, and a thread that answers nothing reads the shown profile's.
+    reached: Mutex<Vec<(ThreadId, Arc<Seat>)>>,
     pub bus: Arc<Bus>,
     /// One publisher per window (the first is the one the server started over); `attach` adds the rest.
     publishers: Mutex<Vec<Arc<Publisher>>>,
@@ -149,7 +152,7 @@ impl Core {
             shared,
             usage,
             seats: Mutex::new(vec![Arc::new(Seat::new(desk))]),
-            reached: Mutex::new(None),
+            reached: Mutex::new(Vec::new()),
             bus,
             publishers: Mutex::new(vec![publisher]),
             window,
@@ -273,18 +276,26 @@ impl Core {
         self.seats.lock().unwrap_or_else(PoisonError::into_inner)[0].clone()
     }
 
-    /// Judge what comes next by `seat` until [`Self::done`]: the seat of the window the request reaches.
+    /// Judge what this thread does next by `seat` until [`Self::done`]: the seat of the window the request reaches.
     pub(crate) fn reaches(&self, seat: Arc<Seat>) {
-        *self.reached.lock().unwrap_or_else(PoisonError::into_inner) = Some(seat);
+        let thread = std::thread::current().id();
+        let mut reached = self.reached.lock().unwrap_or_else(PoisonError::into_inner);
+        reached.retain(|(of, _)| *of != thread);
+        reached.push((thread, seat));
     }
 
     pub(crate) fn done(&self) {
-        *self.reached.lock().unwrap_or_else(PoisonError::into_inner) = None;
+        let thread = std::thread::current().id();
+        self.reached.lock().unwrap_or_else(PoisonError::into_inner).retain(|(of, _)| *of != thread);
     }
 
-    /// The seat in force: the request's while one is answered, else the shown profile's.
+    /// The seat in force on this thread: the request's while it answers one, else the shown profile's.
     pub(crate) fn seat(&self) -> Arc<Seat> {
-        let reached = self.reached.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        let thread = std::thread::current().id();
+        let reached = {
+            let reached = self.reached.lock().unwrap_or_else(PoisonError::into_inner);
+            reached.iter().find(|(of, _)| *of == thread).map(|(_, seat)| seat.clone())
+        };
         reached.unwrap_or_else(|| {
             let shown = crate::profile::active_in(&self.root);
             self.seat_of_profile(shown.id().as_str()).unwrap_or_else(|| self.first_seat())

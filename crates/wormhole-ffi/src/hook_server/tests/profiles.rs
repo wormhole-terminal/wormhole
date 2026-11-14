@@ -111,3 +111,28 @@ fn a_mode_change_in_one_profile_settles_its_own_waiting_questions_and_leaves_the
     assert_eq!(type_into(&f, work_terminal)["error"]["reason"], "agent_access_off");
     assert_eq!(type_into(&f, default_terminal)["error"]["reason"], "approval_needed");
 }
+
+#[test]
+fn a_request_is_judged_by_its_own_seat_while_another_thread_answers_one_for_another_profile() {
+    let f = fixture_of_windows("ask");
+    work_window(&f, "off");
+    let core = &f.server.core;
+    let work = core.seat_of_profile("work").expect("Work's seat");
+    let default = core.seat_of_profile("default").expect("Default's seat");
+    // The dispatch thread answers a request that reaches Work's window.
+    core.reaches(work.clone());
+    // Meanwhile another thread answers one for Default's (a test instance's control line, on the main thread).
+    std::thread::scope(|threads| {
+        threads.spawn(|| {
+            core.reaches(default.clone());
+            assert!(std::sync::Arc::ptr_eq(&core.seat(), &default));
+            core.done();
+        });
+    });
+    assert!(std::sync::Arc::ptr_eq(&core.seat(), &work), "Work's request is still judged by Work's seat");
+    core.done();
+    assert!(
+        std::sync::Arc::ptr_eq(&core.seat(), &default),
+        "answering nothing, the thread reads the shown profile's"
+    );
+}
