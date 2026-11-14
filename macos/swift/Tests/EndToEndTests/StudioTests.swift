@@ -59,4 +59,32 @@ extension EndToEnd {
             app.expect(await app.reply("studio-filter all"), contains: "shown=")
         }
     }
+
+    @Test("a hand-written theme is saved in the new format with its old text kept; one made by a newer Wormhole is never written")
+    @MainActor func studioOlderAndNewerFiles() async throws {
+        try await Instance.with { app in
+            let themes = app.scratch.data.appendingPathComponent("themes")
+            try app.scratch.write(themes, "Old.json", ##"{"name": "Old", "extends": "Nord", "ui": {"primary": "#ff0000"}}"##)
+            let newer = ##"{"version": 9, "name": "Newer", "extends": "Nord", "from_the_future": true, "ui": {"primary": "#00ff00"}}"##
+            try app.scratch.write(themes, "Newer.json", newer)
+            await app.send(["studio"])
+            await app.until("studio-select") { !$0.hasPrefix("error") }
+
+            app.expect(await app.later("studio-open own:Old", answer: "studio-open own:Old"), contains: "name=Old")
+            await app.send(["studio-select primary", "studio-set #ff0011"])
+            let converted = await app.later("studio-save", answer: "studio-save")
+            app.expect(converted, contains: "new theme format")
+            let old = (try? String(contentsOf: themes.appendingPathComponent("Old.json"), encoding: .utf8)) ?? ""
+            app.expect(old.contains("\"version\"") && old.lowercased().contains("ff0011"), "saved as version 1 with the edit:\n\(old)")
+            let versions = await app.reply("studio-versions")
+            app.expect((Instance.value("versions", in: versions).flatMap { Int($0) } ?? 0) >= 2, "the hand-written text is kept:\n\(versions)")
+
+            await app.later("studio-open own:Newer", answer: "studio-open own:Newer")
+            app.expect(await app.reply("studio-theme-menu"), contains: "newer=true")
+            await app.send(["studio-select primary", "studio-set #112233"])
+            await app.later("studio-save", answer: "studio-save")
+            let after = try? String(contentsOf: themes.appendingPathComponent("Newer.json"), encoding: .utf8)
+            app.expect(after == newer, "the newer file is untouched")
+        }
+    }
 }
