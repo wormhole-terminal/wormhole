@@ -116,6 +116,7 @@ final class SettingsApplier {
     /// A window made after the settings were applied takes what they said.
     func dress(_ session: WindowSession) {
         HubSettings.dress(session.hub, model.backend.values, zen: app.look.zen)
+        HubSettings.applyFeatures(off: app.featuresOff(session), to: session.hub)
         PanelSettings.link(session.hub, to: model)
     }
 

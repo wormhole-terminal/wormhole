@@ -53,6 +53,7 @@ final class ProfileLook {
     /// A window made in the profile, or moved into it, after its settings were applied.
     func dress(_ session: WindowSession) {
         HubSettings.dress(session.hub, backend.values, zen: look.zen)
+        HubSettings.applyFeatures(off: app.featuresOff(session), to: session.hub)
         // The panel's own switches are saved in the window's own profile.
         session.hub.panel.preferences.persist = { [backend] key, value in
             if backend.values[key]?.bool != value { backend.set(key, to: .bool(value)) }

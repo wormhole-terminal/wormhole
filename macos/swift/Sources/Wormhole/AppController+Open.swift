@@ -21,6 +21,9 @@ extension AppController {
         let applier = SettingsApplier(app: self, model: settingsModel)
         settingsApplier = applier
         applier.start()
+        #if WITH_UNIFFI
+            profileFlags.changed = { [weak self] in self?.featuresMoved(in: $0) }
+        #endif
         try openSavedWindows()
         menus = MenuController(app: self)
         menus?.start()

@@ -18,6 +18,11 @@ enum HubSettings {
         PanelSettings.apply(values, to: [hub])
     }
 
+    /// Which features the window's profile has on (`FeatureMask`): the core's workspace offers only their panel tabs.
+    static func applyFeatures(off: Set<String>, to hub: WindowHub) {
+        for feature in FeatureKey.allCases { hub.send(.setFeature(feature, !off.contains(feature.rawValue))) }
+    }
+
     /// What the core's workspace counts by: ⌘1–9 staying with their terminal or following the list as shown
     /// (`sidebar_numbers`), and which work a row's ±N is made of (`sidebar_changes_plain`, `sidebar_changes_shared`).
     static func applySidebarRules(_ values: [String: JSONValue], to hubs: [WindowHub]) {
