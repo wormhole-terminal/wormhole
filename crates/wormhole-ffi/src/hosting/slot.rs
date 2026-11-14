@@ -40,7 +40,11 @@ impl Terminal {
     pub(crate) fn persisted_host(&self) -> Option<String> {
         let slot = self.host.as_ref()?;
         let lost = self.with_pty(Pty::host_lost).unwrap_or(false);
-        wormhole_core::ipc::hosts::persisted_host(Some(&slot.id), lost, slot.kept.load(Ordering::Acquire))
+        wormhole_core::ipc::hosts::persisted_host(
+            Some(slot.id.as_str()),
+            lost,
+            slot.kept.load(Ordering::Acquire),
+        )
     }
 }
 
