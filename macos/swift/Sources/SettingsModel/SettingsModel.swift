@@ -50,6 +50,9 @@ public final class SettingsModel {
     public var projectTheme: ProjectThemeMark?
     /// Zen mode is on: the windows show less than these settings say, and a page with a row it overrides says so.
     public var zenOn = false
+    /// The Settings window is on screen (true where there is no window: a test, a specimen). The window is kept when it
+    /// closes, so a page's watches follow this, not the page's own life: they end when it closes and start when it opens.
+    public var windowShown = true
     /// Leaves Zen mode (the note's button).
     @ObservationIgnored public var leaveZen: (() -> Void)?
 

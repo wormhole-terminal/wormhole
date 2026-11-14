@@ -43,10 +43,15 @@ public final class OnboardingWindow {
             OnboardingView(session: session, player: player, replay: { [weak self] in self?.replay() })
         }
         self.controller = controller
+        // The trust card's watch runs while the window is up, and ends with it: the window is kept after it closes.
+        session.backend.watchesTrust(true)
         Task { await session.scan() }
         guard let window = controller.window else { return }
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak player] _ in
-            MainActor.assumeIsolated { player?.stop() }
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak player, weak session] _ in
+            MainActor.assumeIsolated {
+                player?.stop()
+                session?.backend.watchesTrust(false)
+            }
         }
         // First launch: the window was never shown, so it stays out of sight until the wormhole delivers it.
         var options = IntroOptions()

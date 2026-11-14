@@ -69,6 +69,9 @@ public protocol OnboardingBackend: AnyObject {
     func useImport(_ choice: ImportChoice) async throws -> String
     /// Shows the open panel for a theme file and imports it as the theme; whether one was.
     func importThemeFile() async -> Bool
+    /// The intro window opened (`true`) or closed: the trust card's watch on the project and the approvals runs only while the
+    /// card can be seen, and reads the card again when it starts.
+    func watchesTrust(_ on: Bool)
 }
 
 extension OnboardingBackend {
@@ -85,4 +88,6 @@ extension OnboardingBackend {
     public func useImport(_ choice: ImportChoice) async throws -> String { "" }
     /// No file is imported.
     public func importThemeFile() async -> Bool { false }
+    /// Nothing is watched.
+    public func watchesTrust(_ on: Bool) {}
 }

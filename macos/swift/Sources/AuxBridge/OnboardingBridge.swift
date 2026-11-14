@@ -119,6 +119,20 @@ public final class FFIOnboardingBackend: OnboardingBackend {
         }
     }
 
+    public func watchesTrust(_ on: Bool) {
+        guard on else {
+            // The stream's end lets go of the desk's watch (`unfollow`).
+            trustWakes?.cancel()
+            trustWakes = nil
+            return
+        }
+        guard trustWakes == nil, let desk = trustDesk else { return }
+        // What changed while nobody watched is read now.
+        trustCard = makeCard(desk)
+        cardChanged?()
+        followTrust()
+    }
+
     /// The card as it is shown: waiting while the approval is asked for.
     private var cardNow: TrustCard? {
         guard var card = trustCard else { return nil }

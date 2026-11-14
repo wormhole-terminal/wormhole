@@ -9,7 +9,7 @@ import SettingsModel
 import SwiftUI
 
 @MainActor
-public final class SettingsWindowController: NSWindowController {
+public final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     public let model: SettingsModel
     private var observation: SettingsObservation?
 
@@ -36,13 +36,18 @@ public final class SettingsWindowController: NSWindowController {
         observation = model.backend.observe { [weak model] in
             if let model { ThemeSync.apply(model.values, to: themeStore) }
         }
+        window.delegate = self
     }
+
+    /// Closed, the window is kept: what its pages watch ends now, and starts again in `show`.
+    public func windowWillClose(_ notification: Notification) { model.windowShown = false }
 
     @available(*, unavailable) public required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
     /// Opens the window (or brings it forward) on `section` when given.
     public func show(section: String? = nil) {
         if let section { model.show(section) }
+        model.windowShown = true
         model.host.windowOpened()
         model.profile.reload()
         TestInstance.bring(window)

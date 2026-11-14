@@ -11,12 +11,18 @@ struct ProjectsPanel: View {
     let model: SettingsModel
 
     var body: some View {
-        if let projects = model.projectsModel { ProjectsBody(projects: projects) } else { PanelNote(text: SettingsText.notBuilt) }
+        if let projects = model.projectsModel {
+            ProjectsBody(projects: projects, shown: model.windowShown)
+        } else {
+            PanelNote(text: SettingsText.notBuilt)
+        }
     }
 }
 
 private struct ProjectsBody: View {
     let projects: ProjectsModel
+    /// Whether the Settings window is on screen: the page's watches run only while it is.
+    let shown: Bool
     /// What the person typed to narrow the projects the select offers (`Search projects`).
     @State private var search = ""
     /// The project select's width (the GPUI page's 360).
@@ -47,13 +53,18 @@ private struct ProjectsBody: View {
                 Defaults(projects: projects)
             }
         }
-        .task {
+        // Started again when the window opens, ended when it closes (it is kept, so the page may stay alive behind it).
+        .task(id: shown) {
+            projects.watch(shown)
+            guard shown else { return }
             await projects.refresh()
             await projects.followTrust()
         }
+        .onDisappear { projects.watch(false) }
         // The project's own files reach the page as an event (the core's watch on its `.wormhole` folder, started by `select`), and
-        // so does a trust given or taken back elsewhere (the watch on the profile's approvals, while the page is shown). A watch
-        // can drop events: the page also reads whenever the window comes forward. An idle window sleeps until something happens.
+        // so does a trust given or taken back elsewhere (the watch on the profile's approvals, while the page is shown and its
+        // window open). A watch can drop events: the page also reads whenever the window comes forward. An idle window sleeps
+        // until something happens.
         .onChange(of: appearsActive) { _, active in if active { Task { await projects.refresh() } } }
     }
 

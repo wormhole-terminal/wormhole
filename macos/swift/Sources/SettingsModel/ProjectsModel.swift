@@ -38,10 +38,15 @@ public final class ProjectsModel {
 
     public func select(_ root: String?) async {
         selected = root
-        following = root.flatMap { root in
-            backend.follow(root) { [weak self] in Task { @MainActor in await self?.refresh() } }
-        }
+        watch(true)
         await refresh()
+    }
+
+    /// The page came on screen (`true`) or its window closed: the selected project's watch runs only while it can be seen.
+    public func watch(_ on: Bool) {
+        following = nil
+        guard on, let root = selected else { return }
+        following = backend.follow(root) { [weak self] in Task { @MainActor in await self?.refresh() } }
     }
 
     public func setDefault(_ key: String, on: Bool) async {
