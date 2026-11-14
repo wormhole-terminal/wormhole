@@ -13,12 +13,13 @@
 //   `review`                         what pasting the review would paste (`Review.message`), or `review: none`
 //   `title-words` / `exited-words`   what the title row says after the name, what the exited bar says ("fish exited"), or none
 //   `overlay`                        the palette or the shortcut sheet up over the window: `overlay <palette|shortcuts|none>`
-//   `trust-state`                    the project commands window's review of the project in front
+//   `trust-state`                    what the open project commands window shows (`trust` opens it), or none
 //   `step-draft`                     Notes' Add next step: the draft row opens (`notes` says `draft=true`)
 //   `project-layout` / `project-note <prompt>`  the Project tab's Open terminals, a prompt's Copy into a new note
 
 import AppKit
 import AuxModel
+import AuxWindows
 import DesignSystem
 import PanelModel
 import SidebarUI
@@ -68,9 +69,9 @@ extension AppController {
             (notes.draftAfter, notes.drafting) = (nil, true)
             reply("step-draft")
         case "trust-state":
-            // What the project commands window shows for the project in front (the backend `AuxController.showTrust` gives it):
-            // `trust-state <status> "<name>" summary="…" [problem="…"] lines="<n>"`.
-            let review = aux.backends.trust(root: hub.panel.project.state?.root, profile: front.windows.profile).review()
+            // What the open project commands window draws (its model's review, which follows the project's changes):
+            // `trust-state <status> "<name>" summary="…" [problem="…"] lines="<n>"`, or `trust-state none` while it is closed.
+            guard let review = TrustWindow.shown?.review else { reply("trust-state none"); return true }
             var pairs = [("summary", review.summary), ("lines", String(review.lines.count))]
             if let problem = review.problem { pairs.append(("problem", problem)) }
             reply(Readout.line("trust-state", ["\(review.status)"], quoted: [review.name], pairs: pairs))

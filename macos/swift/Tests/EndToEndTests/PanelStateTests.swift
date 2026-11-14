@@ -93,7 +93,10 @@ extension EndToEnd {
     @Test("the project commands window for no open project says so (730)")
     @MainActor func trustStateNoProject() async throws {
         try await Instance.with { app in
-            let said = Readout(await app.reply("trust-state"))
+            // Read off the open window, so nothing while it is closed.
+            app.expect(await app.reply("trust-state") == "trust-state none", "no window, no review")
+            await app.send(["trust"])
+            let said = Readout(await app.until("trust-state") { $0 != "trust-state none" })
             app.expect(said.first("trust-state")?["problem"] == "This project is no longer open in a terminal.", "the words:\n\(said.text)")
         }
     }
