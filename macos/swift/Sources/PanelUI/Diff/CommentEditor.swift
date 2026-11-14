@@ -1,4 +1,4 @@
-// The small editor a click on a diff line opens (`review.rs`'s dialog): the line quoted, a field for what the agent
+// The editor a click on a diff line opens, a sheet as `review.rs`'s dialog is: the line quoted, a field for what the agent
 // should change there, Remove for an old comment, Cancel and Add Comment (or Save). ⌘↩ saves, esc cancels.
 
 import DesignSystem

@@ -100,7 +100,9 @@ struct DiffLineView: View {
         // Closed by any way (saved, removed, cancelled, or answered from the control folder): the dialog is no longer open.
         .onChange(of: editing) { if editing == nil { review?.opened(nil) } }
         .onChange(of: comment) { if editing != nil { editing = nil } }
-        .popover(item: $editing, arrowEdge: .trailing) { at in
+        // A sheet on the window, as GPUI's comment dialog is (`diff/review.rs`): nothing else takes a click while it is up, so
+        // a click beside it never throws away what was written, and the row cannot scroll away from under it.
+        .sheet(item: $editing) { at in
             CommentEditor(
                 place: ReviewComment(path: path, side: at.side, line: at.line, code: "", text: "").location, at: at, existing: comment,
                 save: { text in
