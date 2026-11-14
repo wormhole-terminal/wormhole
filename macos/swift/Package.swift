@@ -197,7 +197,7 @@ if ffiLinked {
 targets.append(.testTarget(name: "TerminalInputTests", dependencies: inputTestDependencies, swiftSettings: inputTestSettings))
 
 // The app's own coordinators, which no module below it holds (what the notes.md merge saves).
-targets.append(.testTarget(name: "WormholeTests", dependencies: ["Wormhole", "WindowUI", "WorkspaceModel", "PanelModel", "PanelUI"]))
+targets.append(.testTarget(name: "WormholeTests", dependencies: ["Wormhole", "WindowUI", "WorkspaceModel", "PanelModel", "PanelUI", "SettingsModel"]))
 targets.append(
     .executableTarget(
         name: "Wormhole",

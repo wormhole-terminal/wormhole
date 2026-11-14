@@ -84,6 +84,8 @@ extension AppController {
                 if back.isEmpty { try openSavedWindows() } else { back.forEach(show) }
                 // After the windows exist: applying the settings reaches the shown ones (and the menus read the window in front).
                 followProfileSettings()
+                // The profile left keeps its terminals: a change of its agent access still settles (`ParkedAccess`).
+                followParkedAccess()
                 leaving.forEach { $0.window?.orderOut(nil) }
                 lastFront = shown.last
                 if policy.touchesSystem { front.window?.makeKeyAndOrderFront(nil) }
@@ -120,6 +122,7 @@ extension AppController {
             }
             profileHosts[id] = nil
             profileLooks[id] = nil
+            followParkedAccess()
             if lastFront == nil || !sessions.contains(where: { $0 === lastFront }) { lastFront = shown.last }
             menus?.windowsChanged()
         #endif

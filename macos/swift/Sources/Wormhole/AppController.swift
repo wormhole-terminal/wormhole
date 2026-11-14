@@ -78,6 +78,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     private(set) lazy var terminalLook = TerminalLook(terminals: { [weak self] in self?.ownSessions.map(\.hub.terminals) ?? [] })
     /// The looks of the other profiles with a window open, by profile (`profileLook(for:)`).
     var profileLooks: [String: ProfileLook] = [:]
+    /// The agent access of each parked profile nothing else follows (`ParkedAccess`).
+    var parkedAccess: [String: ParkedAccess] = [:]
     /// The settings the window follows, whether or not the Settings window is open: the core's when real.
     lazy var settingsModel = AppSettings.makeModel(app: self)
     private(set) lazy var studio = StudioLauncher(
