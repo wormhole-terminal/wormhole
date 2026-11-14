@@ -61,12 +61,15 @@ extension EndToEnd {
     @MainActor func windowOperations() async throws {
         try await Instance.with { app in
             let e = Self.esc
+            await app.send(["wait-idle 3000"])
             let before = Instance.value("grid", in: await app.reply("state"))
             await app.emit("\(e)[8;30;100t")
             await app.send(["delay 500"])
             app.expect(Instance.value("grid", in: await app.reply("state")) == before, "nothing resizes while window operations are off")
 
+            // `set` writes config.json; the app reads it back through its watcher a moment later.
             await app.send(["set allow_window_ops=true"])
+            await app.until("get allow_window_ops") { $0.contains("true") }
             await app.discardLine()
             await app.emit("\(e)[8;30;100t")
             await app.until("state") { Instance.value("grid", in: $0) == "100x30" }
