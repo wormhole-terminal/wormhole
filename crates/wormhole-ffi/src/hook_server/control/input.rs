@@ -58,6 +58,7 @@ pub(super) fn send_text(
         return Reply::error(ErrorCode::Failed, format!("tab {tab} could not be reached"));
     };
     terminal.paste(text.clone());
+    terminal.control_typed();
     if submit {
         // A thread for the pause: the paste is read first, and the dispatch thread has others to answer.
         let spawned = std::thread::Builder::new().name("wormhole-hook-submit".into()).spawn(move || {
@@ -104,6 +105,7 @@ pub(super) fn send_keys(
     if keys > 0 {
         // The echo is the person's typing, as far as the status heuristics go.
         core.shared.feed_quiet(tab, StatusEvent::Typed);
+        terminal.control_typed();
     }
     tracing::info!(tab, ?from, keys, "control: keys sent to a terminal");
     Reply::ok(KeysSent { tab, keys })

@@ -133,6 +133,7 @@ public final class UniFFIFrameSource: FrameSource {
             case .clipboardRead: events.append(.clipboardRead)
             case .clipboardAsk: events.append(.clipboardAsk)
             case .clipboardAskClosed: events.append(.clipboardAskClosed)
+            case .controlTyped: events.append(.controlTyped)
             // The bar over the pane says it; the view has nothing to draw.
             case .hostResponsiveness: responsiveness.withLock { $0 }?()
             case .windowOp(let op): windowOp.withLock { $0 }?(op)

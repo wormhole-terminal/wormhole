@@ -361,6 +361,10 @@ public final class MetalTerminalView: NSView {
                 requestRedraw()
                 onExit?(code)
             case .clipboardWrite, .clipboardRead, .clipboardAsk, .clipboardAskClosed: handleClipboard(event)
+            // As a key typed here: the jump between prompts is forgotten and the cursor holds still (GPUI's `send_strokes`).
+            case .controlTyped:
+                onInput?()
+                holdCursor()
             }
         }
         if output { refreshPointerShape() }

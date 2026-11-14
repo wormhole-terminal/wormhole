@@ -35,6 +35,8 @@ public enum TerminalEvent: Sendable, Equatable {
     case clipboardAsk
     /// The question went away unanswered (it timed out).
     case clipboardAskClosed
+    /// The control line typed into the terminal (`send-text`, `send-keys`, `run`): typing, as far as the view goes.
+    case controlTyped
 }
 
 /// A key press in the app's key vocabulary ("enter", "left", "f5", "a"), as `Terminal::send_key` takes it.

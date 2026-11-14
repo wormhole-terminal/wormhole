@@ -1088,7 +1088,9 @@ the object holds the engine's reply slot until every path out has answered it, w
 - Events (`TermEvent`, added at the end): `ClipboardWrite { text }` (a program set the clipboard and the setting allows
   it: Swift writes the pasteboard), `ClipboardRead` (let through: `clipboard_give(text)` answers the oldest one),
   `ClipboardAsk` (the person decides: `clipboard_answer(choice, text)`, `text` read only for a yes) and
-  `ClipboardAskClosed` (the question timed out after 30 s and counted as Deny).
+  `ClipboardAskClosed` (the question timed out after 30 s and counted as Deny). `ControlTyped` (wave 11): the control line
+  typed into the terminal (`send-text`, `send-keys`, `run`); the bridge has already forgotten the program's own selection, and
+  the view takes it as typing (its jump between prompts forgotten, the cursor held), as GPUI's `send_strokes`/`write_input`.
 - `foreground_program() -> Option<String>`: the program in front as the sidebar names it, cleaned and cut, who the
   question names; `None` when the shell holds the terminal.
 - `select_lines(first, last)` (blocks) now also brings the first line into view, as GPUI's Select Output does.

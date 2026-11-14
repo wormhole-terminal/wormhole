@@ -77,6 +77,9 @@ pub enum TermEvent {
     WindowOp {
         op: crate::window_ops::WindowOpRecord,
     },
+    /// The control line typed into the terminal (`send-text`, `send-keys`, `run`): the view takes it as typing, as the
+    /// GPUI app's does (its jump between prompts is forgotten, the cursor stops blinking for a moment).
+    ControlTyped,
 }
 
 /// Events waiting for a drain, and whether the listener was told.
