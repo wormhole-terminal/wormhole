@@ -1685,3 +1685,129 @@ Written without compiling: expect compile errors.
 | P07 | Same volume: a trusted project's action with a `cwd`, the layout, a worktree, Settings → Project folders | the folders come back as keys: Revoke on the Settings page takes the approval away; the worktree sheet and the close question draw the folder with U+FFFD. A terminal opened in such a folder starts in the home folder until `launch.rs:27` decodes keys (`names::folder`), which is the hosting lane's file: not touched here | `effects.rs key`, `git/worktrees.rs`, `settings_page.rs choice`, `WorktreeStore.swift shown`, `AppController+WorktreeClose.swift` |
 | P07 | TEST (hostile input). A repository with a trusted `caf\xE9/.wormhole` and a planted `caf\u{FFFD}/.wormhole` (FAT/exFAT): Theme Studio → Use in this project from a terminal in `caf\xE9` | theme.json is written into `caf\xE9/.wormhole`, never the planted one | `theme.rs write_theme` (writes into the folder `theme_project` passed) |
 | P07 | NOT DONE: Settings' "Show .wormhole in Finder" builds a URL from the page's root as text (a key for such a folder): SettingsUI cannot see `DiskName` (PanelModel) without a package change | - | `SettingsUI/Projects/ProjectPageView.swift:46` |
+
+## Lane commands, wave 9
+
+Written without compiling: expect compile errors.
+
+The read-outs the wave-8 lists waited for (DRIVING.md, "Added by wave 9", has each reply's shape), and scenarios over them. Every
+reply is `DesignSystem/Driving/Readout.swift`'s shape and `Tests/EndToEndTests/Readout.swift` parses it: a parse that finds nothing
+fails the scenario with the whole reply attached.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| X12 | `settings-section appearance`, `settings-page` | the page's banners, a row a line with its value and marks, captions, notes and swatches under it, the nav's badges and mark | `SettingsUI/Driving/SettingsPageReadout.swift`; `EntryRowView.caption`, `projectNote`, `EntryControl.shortcutProblem`, `SettingsNav.attention`/`badge` now static (the views call them) |
+| X12 | `theme-cards`, `theme-cards Nord` | the shelves of the mode, the cards with their band labels, the pick, a newer file's count, the hidden list; the views unchanged | `SettingsUI/Rows/ThemeShelves.swift` (moved out of `ThemeCards.swift`, which now reads it), `SettingsUI/Driving/ThemeCardsReadout.swift` |
+| X12 | `status-items` at 1600, 1000 points | the bar's items in its order; `detail` words, then numbers | `WindowUI/Driving/WindowHub+Readouts.swift` |
+| X12 | `set terminals_in="tabs"`, `tab-bar`, `tab-click 1`, `tab-click +`, `switcher`, `switcher <name>` | tabs with numbers; a click selects and gives the keys; + asks the group question; cards, footer, hits | `PanesUI/Driving/TabBarReadout.swift`, `WindowHub+Readouts.swift` |
+| X12 | `onboarding-step folder`, `onboarding-state`, `onboarding-pick <dir>`, `onboarding-press main` | the step, card, buttons, places, primer; the pick; Continue/Start | `AuxWindows/Driving/OnboardingReadout.swift`, `OnboardingView.title`/`intro` now static, `AppController+ControlReadouts.swift` |
+| X12 | in a repository: `tab changes`, `changes-menu 1`; `tab history`, `history-menu 1`, `history 1`, `history-menu details`; `tab files`, `files-row-menu README.md` | `menu:` and the row's items, kept for `menu-pick` | `PanelUI/Driving/PanelRowFrames.swift` (a frame recorder on `FileRowView`, `CommitRowView`, `CommitDetailsView`, `FileEntryRow`), `AppController+ControlPanelReadouts.swift`. Least sure: that `.global` is the window content's top left for the panel's rows (it is for Settings' `RowFrames`) |
+| X12 | `diff 1`, `diff-header`, `diff-step prev`, `diff-spans 0 40` | the header's words and badges; the arrows wrap; each line's colour runs by token | `PanelUI/Driving/DiffReadout.swift`; `DiffHeader.badges(file:diff:gone:)` now static, the view maps its tones to colours |
+| X12 | zsh: `text echo bc`, `key cmd-left`, `text x`, `key cmd-right`, `text z`, `key return` | `xecho bcz` was run (^A, ^E reached the line editor); `key cmd-backspace` kills the line | `AppController+ControlKeys.swift` `sendKey` (a `viewed` action goes the keyboard's way) |
+| X12 | `rename-edit 1`, `text x`, `key esc`; `key cmd-f`, `text abc`, `key esc` | the old name stays; Find closes | `AppController+ControlKeys.swift` `press` (Esc through the window first). Least sure: whether the field editor gets the event in a background instance; if not, the old binding still runs |
+| X12 | `a11y` | SwiftUI's controls in the dump (a sidebar row's spoken name) | `Driving/AccessibilityDump.swift` `wakeSwiftUI`. Unverified: SwiftUI may wait for the accessibility server's own switch, which no in-process call sets; then the scenario fails and the line stays a person's |
+
+Scenarios written (33, in `SettingsReadoutTests`, `ThemeCardsTests`, `OnboardingStateTests`, `StatusItemsTests`, `TabBarReadoutTests`,
+`PanelRowMenusTests`, `DiffReadoutTests`, `DriverKeysTests`), by the lines above they now cover: 127, 128, 148, 445, 845, 851, 852,
+853, 854, 855, 856, 865, 1143, 1144 (settings-page); 449, 868, 869, 871, 872, 873 (theme-cards); 723, 724, 725 (onboarding-state);
+196, 197, 198, 806, 1165 (status-items); 172, 176, 822, 824, 825 (tab-bar, switcher); 52, 235, 238, 333, 335 (row menus); 240, 241,
+468, 578, 579, 580, 581, 588 (diff); 166, 667 (driver keys); the `a11y` gap.
+
+Still waiting, with why: 717 (the test notification's outcome is the real centre's), 857 and 858 (the parts list's and the fonts
+specimen's inner words are not in the read-out), 866 (a partly hooked agent: needs an agent home fixture), 867, 870 (a trusted
+project that sets a row or a theme: `auth: "allow"` and a project fixture, not written), 1145 (hover), 722 and 1116 (the agents step
+never shows in a test instance: its agent search is empty, so the third step is the primer), 174 (the switcher's New group needs a
+press: none written), 491 and 492 (the card's popover), 195 (two windows' bars), 334 and 773 (keys on History's list), 766 (Reveal
+doing nothing has nothing to read), 469, 470, 582, 583, 586, 770 (submodule pointer moves, merge-base moves, an edit mid-read, the
+Files viewer, a theme fixture, a tab width change: written as none).
+
+### Lane commands, wave 9, second pass: family 1 (`settings-press`, the rest of `settings-page`)
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| X12 | `settings-section changed`, `settings-press changed.copy` | a click on the button: the clipboard file holds the JSON, `a11y said` has Copied once | `Driving/AppController+ControlSettingsPress.swift` |
+| X12 | `settings-press theme-card.<value> menu` | the card's menu (Hide theme, Move to Trash…) | `ThemeCards.swift` (`.recordFrame("theme-card.…")`), `OpenInControl.swift` (`open-in.choose`) |
+| X12 | `settings-page` on Appearance and Fonts | `part` lines under Title row; `specimen` and `preview` lines | `SettingsPageReadout.swift`; `PartsList.note`, `FontsScene.familyOf/sizeOf/facts` now static |
+| X12 | `Instance.with(agents: ["claude"])` | the app finds a `claude` on its agent path (`WORMHOLE_AGENT_PATH` is a scratch folder of scripts) | `Tests/EndToEndTests/Instance.swift`, `Scratch.agentPath` |
+
+Scenarios (`SettingsPressTests`, 8): 123, 133, 134, 135, 717, 755, 857, 858, 866, 867, 870, 943, 1145.
+
+### Family 2 (`title-menu`)
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| O04 | `title-menu`, `title-menu pick <n>`, under Zen | the items with checks; a pick runs the part's toggle; all off under Zen | `PanesUI/Driving/TitleMenuReadout.swift` (mirrors `TitleRowMenu`'s body: keep the two in step), `WindowHub+Readouts.titleMenuItems` |
+
+Scenarios (`TitleMenuTests`, 2): 330, 331.
+
+### Family 3 (`files-viewer`)
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| P07 | `files-open <path>`, `files-viewer` | the viewer's kind, lines, card words and buttons, picture size, lines with colours | `PanelUI/Driving/FilesViewerReadout.swift` (`FileViewerBody`'s cases, its words through the same ids) |
+
+Scenarios (`FilesViewerTests`, 4): 244, 245, 418, 583. Not covered: 246 (Open in an editor that is gone, a `x.command`: what Finder does is outside the app, and a test instance launches no app: `launchesApps`); 583's "no beach ball, scrolling never parses" is a timing a script does not see (the scenario checks the colours come and every line is there). Least sure: whether a 50,000-line file is cut by the viewer's size cap (then `lines` is lower and the line fails, not the app).
+
+### Family 4 (`usage`, `recents`)
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| P09 | `tab usage`, `usage-status <json>`, `usage` twice a second apart | the report and its limit's words, moving | `PanelUI/Driving/UsageReadout.swift` |
+| O03, PL01 | `recents projects`, `recents folders` (per window: `cmd<n>`) | each window's own profile's lists | `Driving/AppController+ControlUsageRecents.swift`, `FolderPicking.recentFoldersJSON` (new, inside the core's `#if`) |
+
+Scenarios (`UsageRecentsTests`, 5): 61, 73 (across a restart, not by reading the database row), 252 (the closing of the first window not checked), 732 (a second window; the folded group not checked), 791, 961, 962, 1114. Least sure: which window holds which profile after `profile-new` and `profile-open default` (961).
+
+### Family 5 (the switcher's presses and the card popover, the first run's Look and trust cards)
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| S09 | tabs mode: `switcher open`, `switcher-press new-group` | the popover opens; a terminal in a new group | `TabBarActions.switcherAsk`, `TabBarView` (`.onChange`), `WindowHub.switcherAsk`, `WindowHub+Readouts.switcherPress` |
+| A01 | `Instance.with(agents: ["claude"])`, a `.wormhole/` project picked, `onboarding-press main` twice, `onboarding-press trust\|later` | the agents step with the trust card of the project; cancel keeps it, Later takes it away; allowed, it goes | `AppController+ControlReadouts.swift` |
+
+Scenarios (`SwitcherOnboardingTests`, 5): 174, 276, 491 (the card popover's content, opened through Rename…: a click on the card's name has no position to aim at), 492, 722, 1116 (the profile part of 1116, "asked as the window's own profile", not checked).
+
+### Family 6, first part (small parts of the window, hosting, shells)
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| X12 | `find-state`, `branch-chip`, `group-popover`, `sidebar-tip`, `plus-menu`, `comment-at`, `review` | as DRIVING.md says | `Driving/AppController+ControlChromeActs.swift`, `WindowHub+Readouts.selectedFind` |
+| X12 | `Instance.with(shell: .configured)` | no `WORMHOLE_SHELL`: the app runs the shell its settings choose (a scenario names a system shell in `config`) | `Tests/EndToEndTests/Instance.swift` |
+
+Scenarios: `ChromeActsTests` (10): 27, 53, 138, 168, 169, 179, 181, 182, 195, 431, 769, 771, 827, 890, 960 (its second part, a pane that is not selected, not checked). `HostingMoreTests` (4): 105, 361, 637, 638, 729. `ShellChoiceTests` (5): 86, 87, 88, 90, 1157.
+
+### Family 6, second part (panel and window state)
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| X12 | the commands above | as DRIVING.md says | `AppController+ControlChromeActs.swift`, `PanelUI/Driving/PanelKeptReadout.swift` (`keptTerminals`, `isWatching` added in the three stores, `PanelController.roots` now `private(set)`), `WindowHub+Readouts.titleWords/exitedWords/overlayName`, `AppController+ControlStudioFamily` (`studio-complete`, caught there before the other families) |
+
+Scenarios (`PanelStateTests`, 14): 224, 227, 287 (the list's contents; its keys are SwiftUI's own), 318, 322, 325, 422, 425, 463, 612, 613, 660, 730, 770, 788, 790 (the plain-title half), 805, 936, 958, 1137.
+
+### Family 6, last part, and the totals
+
+Scenarios (`LastLinesTests`, 5): 58, 193, 194, 497, 682, 773, 1158 (the host rows read with the system's `sqlite3 -readonly` on the
+scratch database, through `Spawn.run`).
+
+Of the 165 lines the wave-8 lists said wait for a command or fixture (115 in e2e-b's, 50 in e2e-a's), 130 now have a scenario
+(93 and 37). The 35 still waiting, and what each needs:
+
+| lines | why it still waits | would a small fixture or command do it |
+|---|---|---|
+| 143, 357, 358, 360, 908 | core refuses a `file://` feed and `--update-feed` wants HTTPS, so no update scenario runs on a feed the test writes | no: a local HTTPS server needs a certificate the system trusts (the person's keychain), or a test-build seam in core that accepts a file feed: the owner's decision |
+| 56, 1120 | a host of an older wire version, or one that refuses | a session host built at an older version kept beside the harness: not buildable from this tree |
+| 319, 320 | a host that runs but cannot be shown; "Leave It Running" on a close (320's End All part is `endAllLeavesNoHost`) | yes for 320 (`question` with that button), not written |
+| 828 | a Probe edited behind the app, read again within a minute | yes (a Probe folder and `until` with a 70 s deadline), not written: slow |
+| 334 | ↩ on the open commit's row pops a real menu (`showKeyMenu`), which holds a background instance's run loop | a hook that keeps that menu for `menu` as `row-menu` does |
+| 246, 766 | a test instance launches nothing (`launchesApps`), so "opens nothing" cannot be told from refusing | no |
+| 767 | the submodule row's terminal button | a `changes-row-press <path> terminal` command |
+| 582 | an edit landing while a diff is read | timing a script does not control |
+| 586 | which colour a token draws in | the colour `syntaxStyle` resolves, in `diff-spans` |
+| 469, 470 | a submodule's pointer moved; a merge-base moved by a fetch | yes (`git submodule add` over the file protocol; a second repository as the remote), not written |
+| 54 | git unable to read one commit | yes (a corrupt object), not written |
+| 229 | an agent drawing Claude's input box for ⌥⌘S | an agent fixture that prints that box |
+| 248, 465 | the branch picker's first rows and Loading line are `RevPicker`'s own words | a read-out of `RevPicker` |
+| 860, 861 | a stored approval's ticks; a profile's login folder | a command for each (the Agent access and Profile pages' own controls) |
+| 294 | a Zed icon theme drawn on the rows | an icon theme fixture and a `files-icons` read-out |
+| 663, 664 | folds in the terminal, the top line as drawn | a `scroll-state` read-out |
+| 826, 833 | the list's cursor is the list's own SwiftUI state; `WindowFocus.detail` names no item for the list or the tabs | a cursor the list publishes |
+| 23, 24, 29, 35, 201, 829 | the pointer's shape, back/forward buttons, the minimap's ticks, the drop tint, a divider drag cancelled by Esc, the pane menu | one read-out or injection each (`pointer-shape`, `other-click`, `minimap`, `drag` with the tint in its reply, `panes` in window points, `pane-menu`) |

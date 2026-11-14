@@ -155,6 +155,33 @@ Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written wi
 | `popover-native [name]` / `popover-real` / `popover-real-close` | `popover-native card` | the open popover's content drawn to `<ctl>/<name>.png` as AppKit lays it out; opened for real as an `NSPopover` at the window's top left, and closed |
 | `drag <x> <y> <path>` / `drag-end` | `drag 600 400 /tmp/a.png` | a file hovering over the window at a point, as from Finder: the terminal there tints (`window-shot` in a later batch shows it); `drag-end` abandons it. The drop is `drop-files <path>` (pastes the paths as a drop does). GPUI's `drop <x> <y>` keeps its Swift meaning (a sidebar drop, see `drop`/`plan`) |
 | `close-window` | `close-window` | the window the command acts on closes as its red button does: it asks first while something runs (a test instance holds the question: `question confirm`), and the last window ends the app |
+Added by wave 9 (lane commands; written without compiling, see TO-VERIFY.md): **read-outs** of what a view holds, for the
+end-to-end tests. Each answers in one shape, `DesignSystem/Driving/Readout.swift` (`Readout.line`), which the tests' own
+`Tests/EndToEndTests/Readout.swift` parses: a line a thing, `kind word… "text"… key="value"… flag…`, a line under another
+indented by two spaces. A quoted text never holds a straight quote or a line break (written `”` and `⏎`). GPUI's devctl has
+none of these; `status-bar` is the bar's switch, so its items are `status-items`.
+
+| Command | Reply, line by line |
+|---|---|
+| `settings-page` | `settings-page <section\|results> "<title>" query="<q>"`; a `nav <id> [badge="<n>"] [attention] [dim]` per page of the nav; `banner <info\|warning\|danger> "<text>"` per banner over the page; `group "<title>"`; `row <id> "<label>" value="<words>" [chip="<tag>"] [project="<name>"] [group="<g>"] [changed] [off] [found] [revealed]` (on the Changed page and in results, every row); under a row: `caption "<text>"`, `note <info\|warning> "<text>" [button="<title>"]`, `swatches <#hex>… chosen="<#hex\|->" [well]`, `problem "<text>"` (a shortcut's), `option "<label>" "<detail>"` (a menu's subtitled choice) |
+| `theme-cards [filter]` | `theme-cards mode="<theme_mode>" filter="<f>" placeholder="Filter N themes"`; `project "<name>" "<notice>"`; per shelf `shelf <dark\|light> "In Dark Mode" total="<n>" collapsed="4"` and under it `card "<band label>" value="<value>" [newer="<n>"] [file="<path>"] [picked]`; `none "No themes match the filter."`; `hidden "<name>" kind="<Dark\|Light\|->" value="<value>"` |
+| `status-items` | `status-items detail="<words\|numbers\|lean>" width="<pt>" <shown\|hidden>`; `profile "<name>"`; `attention <id> "<title>" words="needs input · 2m" tooltip="…" [spoken="…"]`; `count <activity> <n> first="<id>" words="<2 working\|2>" [spoken="…"]`; `probe "<text>" tooltip="…"`; `state "<working · 4m>"`; `hosting "<word>" tooltip="…"`; `size "<program> · <cols>×<rows>"` (the bar's order; at any width, the bar on or off) |
+| `tab-bar` | `tab-bar set="<label>" alert="<none\|attention\|failed>" <shown\|hidden> [switcher]`; `tab <id> "<name>" activity="…" alert="…" [number="<n>"] [spoken="…"] [selected]`; `plus "New terminal"`; `tabs <on-top\|in-sidebar>` |
+| `tab-click <n\|+>` | `tab-click <n>` once the n-th tab (from 1) is clicked (its terminal selected and given the keys), `+` the bar's + (the group folder question first, as the sidebar's); `error: no tab <n> of <m>` |
+| `switcher [query]` | `switcher query="<q>" placeholder="…" [hidden]`; without a query `card <index> "<label>" count="<n>" tiles="<id,…>" activities="…" alert="…" spoken="…" [add="New terminal in <g>"] [current] [pinned] [group]`, `  empty <index> "No terminals"`, `footer "New group" "Show all groups in the sidebar" keys="⌃⌥[ / ] previous, next group" range="⌃⌥1–9"`; with one `hit <set\|terminal> <index\|id> "<label>" note="…" mark="<dot\|tile\|none>"` or `none "No matches"` |
+| `onboarding-state` | `onboarding-state <welcome\|folder\|look\|agents\|primer> number="<n>" folder="<~/…\|->" [first-run] [last]`; `card "<title>" "<intro>" counter="<n of 3>"`; `button <back\|main\|skip> "<title>"`; `place <recent\|place> "<name>" detail="<~/…>" [picked]`; `agent <id> "<name>" hooks="<…>"`; `agents "Looking for agents…"`; `trust "<has>" "<waits>" button="<title>" later="Later" root="<path>" [approving]`; `primer "<thing>" keys="<glyphs>"`; `problem "<text>"` (error: the intro window is not open) |
+| `onboarding-pick <path>` / `onboarding-press back\|main\|skip` | a folder dropped on the card (`onboarding-pick <path>`); the card's buttons (main: Continue, Start on the last step) |
+| `changes-menu <n\|path>` / `history-menu <n\|details>` / `files-row-menu <path>` | the menu a right-click on that row opens, found at the row's own frame and kept for `menu-pick`: `menu:` then `AppController.rows(of:)`'s lines (`n. title [key] [x] [off]`, `---`, a submenu's items indented). The row must be on screen (its tab shown): ask again until it answers `menu:`; `error: no row … on screen` before |
+| `diff-header` | `diff-header <changes\|history> "<path>" [position="<i> of <n>"] [commit="<short>"] [counts="+a −r"] [split] [wrap] [gone]` (`"none"` with no diff open); `badge "<words>"` per badge in the header's order; `out-of-date "<why>"`; `submodule old=… new=… ahead=… behind=… listed=… [nothing=…] [inside=…]` |
+| `diff-step next\|prev` | the header's arrows: `diff-step <dir>` |
+| `diff-spans [from] [count]` | `diff-spans unified rows="<n>" [colored-by-core] [no-highlight]` (or `diff-spans "none" phase=…`); then from row `from` (0) `count` rows (60): `hunk <row> "<@@ …>"`, `line <row> <context\|added\|removed> old="<n\|->" new="<n\|->" text="<line>" spans="<start>-<end>:<token>,…"` (Characters of the text; empty: plain) |
+
+Also wave 9: `key cmd-left|cmd-right|cmd-backspace` (any key the keymap gives a view's own action, `ActionRouter.viewed`) goes the
+keyboard's way, to the terminal's `performKeyEquivalent` before the menus; `key esc` in a field goes through the window first, so
+SwiftUI's `onKeyPress(.escape)` hears it, and the field's own Esc binding follows only while the field still has the keys; `a11y`
+first sets `AXEnhancedUserInterface` and `AXManualAccessibility` on the application, as an assistive client would, so SwiftUI's
+hosting views may build their nodes (unverified: see "What still needs a person").
+
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).
