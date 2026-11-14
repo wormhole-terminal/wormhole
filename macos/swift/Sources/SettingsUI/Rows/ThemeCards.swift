@@ -12,7 +12,6 @@ import WordsModel
 
 struct ThemeCards: View {
     let model: SettingsModel
-    @State private var filter = ""
     @State private var showAll = false
     @State private var hiddenOpen = false
     @FocusState private var focusedCard: String?
@@ -20,6 +19,8 @@ struct ThemeCards: View {
 
     private typealias Card = ThemeCardEntry
 
+    /// The filter box's text is the model's (`themeFilter`), so `theme-cards` reads the box itself.
+    private var filter: String { model.themeFilter }
     /// What the shelves list, as `theme-cards` reads it too.
     private var listing: ThemeShelves { ThemeShelves(model: model, filter: filter) }
 
@@ -31,7 +32,7 @@ struct ThemeCards: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space._3) {
             if let project = model.projectTheme { projectNotice(project) }
-            TextField(filterPlaceholder, text: $filter)
+            TextField(filterPlaceholder, text: Bindable(model).themeFilter)
                 .textFieldStyle(.plain).textRole(.body)
                 .padding(.horizontal, Space._3).frame(height: Metric.control)
                 .background(tokens.inputBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))

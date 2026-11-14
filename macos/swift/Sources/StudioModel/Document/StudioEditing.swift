@@ -11,6 +11,16 @@ public struct FieldCompletion: Sendable, Equatable {
     public init(label: String, insert: String, function: Bool) { (self.label, self.insert, self.function) = (label, insert, function) }
 }
 
+/// What a token's value field shows right now, as the field itself tells it (`ExpressionField`): its text and the list under
+/// it (empty: none is up). The control folder's `studio-complete` reads this, never a list worked out beside the field.
+public struct FieldOffer: Sendable, Equatable {
+    public var token: String
+    public var text: String
+    public var items: [FieldCompletion]
+
+    public init(token: String, text: String, items: [FieldCompletion]) { (self.token, self.text, self.items) = (token, text, items) }
+}
+
 public struct FieldCompletions: Sendable, Equatable {
     /// The UTF-8 offsets of the word the caret is in.
     public var range: Range<Int>

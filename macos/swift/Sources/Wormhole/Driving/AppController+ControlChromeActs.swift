@@ -100,12 +100,17 @@ extension AppController {
     }
 
     /// The list's note after a first run without agents: the stage `SideColumns` draws and its buttons' own actions.
-    /// `profile-chip [switch <n>]`: what the chip is given, or its menu's n-th profile chosen.
+    /// `profile-chip [switch <n>]`: the chip as its view decides it (`ProfileChoice.named(by:)`, what `ProfileChip` draws from:
+    /// the profile it names, or `hidden` while it draws none) and its menu's rows, or its menu's n-th profile chosen.
     private func profileChip(_ argument: String) -> String {
         let choices = hub.actions.profiles()
         let words = argument.split(separator: " ").map(String.init)
         guard words.first == "switch" else {
-            return (["profile-chip choices=\(choices.count)"] + choices.map {
+            let named = ProfileChoice.named(by: choices)
+            let head = Readout.line(
+                "profile-chip", pairs: [("choices", String(choices.count))] + (named.map { [("named", $0.name)] } ?? []),
+                flags: [Readout.flag("hidden", named == nil)])
+            return ([head] + choices.map {
                 Readout.line("choice", [$0.id], quoted: [$0.name], flags: [Readout.flag("current", $0.current), Readout.flag("here", $0.here)])
             }).joined(separator: "\n")
         }

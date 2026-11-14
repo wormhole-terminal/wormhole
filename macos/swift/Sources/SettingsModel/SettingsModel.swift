@@ -22,6 +22,10 @@ public final class SettingsModel {
     /// The open page: a section id or `changed`.
     public var selection: String
     public var query = ""
+    /// What the Appearance page's theme filter box holds. The window's, not the page's: it stays through a visit to another
+    /// page, as GPUI's does (`settings_window/mod.rs:177`, `sections/theme_picker/mod.rs:57`), and the control folder's
+    /// `theme-cards` reads the box the cards are narrowed by, not a filter of its own.
+    public var themeFilter = ""
     /// The query a section was opened under: the page shows that section, its matches still marked, until the query changes.
     public private(set) var browsing: String?
     /// The New profile sheet is up, and the question before deleting the profile Wormhole is in.

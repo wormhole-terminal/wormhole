@@ -2,7 +2,8 @@
 // The control folder's read-outs of what a view holds (`WORMHOLE_DEVCTL`), each the text of the view's own model in
 // `DesignSystem.Readout`'s shape (the end-to-end tests' `Readout.swift` parses it):
 //   `settings-page`             the Settings page on show: nav marks, banners, each row's label, value, marks and notes
-//   `theme-cards [filter]`      Appearance's theme cards, shelf by shelf, with the filter box holding `filter`
+//   `theme-cards`               Appearance's theme cards, shelf by shelf, narrowed by what the filter box holds
+//   `theme-filter [text]`       types `text` into the cards' filter box (nothing: clears it)
 //   `status-items`              the status bar's items at the window's width (whether or not the bar is on: `status-bar on`)
 //   `tab-bar` / `tab-click <n|+>`  the tab bar's tabs; a click on the n-th (from 1) or on its +
 //   `switcher [query]`          the group switcher as shown (open or not, its field's search), or what its search lists for `query`
@@ -29,7 +30,11 @@ extension AppController {
         let argument = argument.trimmingCharacters(in: .whitespaces)
         switch command {
         case "settings-page": reply(SettingsPageReadout.text(settingsModel))
-        case "theme-cards": reply(ThemeCardsReadout.text(settingsModel, filter: argument))
+        case "theme-cards": reply(ThemeCardsReadout.text(settingsModel))
+        case "theme-filter":
+            // The box's own binding: the cards on screen narrow, and `theme-cards` reads them.
+            settingsModel.themeFilter = argument
+            reply(Readout.line("theme-filter", quoted: [settingsModel.themeFilter]))
         case "status-items": reply(hub.statusItems(look: windowLook, width: window?.contentView?.bounds.width ?? 0))
         case "tab-bar": reply(hub.tabBarListing(look: windowLook))
         case "tab-click": reply(hub.tabClick(argument, look: windowLook).map { "error: \($0)" } ?? "tab-click \(argument)")

@@ -10,7 +10,6 @@ import SwiftUI
 struct ExpressionField: View {
     @Bindable var document: StudioDocument
     let token: String
-    @State private var text = ""
     @State private var selection: TextSelection?
     /// The row of the completion list the arrows are on, and whether Esc closed the list.
     @State private var highlighted = 0
@@ -23,7 +22,7 @@ struct ExpressionField: View {
         let suggestions = offered?.items ?? []
         let row = min(highlighted, max(suggestions.count - 1, 0))
         VStack(alignment: .leading, spacing: Space._1) {
-            TextField(StudioWords.expressionPlaceholder, text: $text, selection: $selection)
+            TextField(StudioWords.expressionPlaceholder, text: $document.fieldText, selection: $selection)
                 .textFieldStyle(.plain).codeFont().focused($focused)
                 .padding(.horizontal, Space._2).frame(height: Metric.control)
                 .background(tokens.inputBackground, in: shape)
@@ -50,6 +49,15 @@ struct ExpressionField: View {
         .onAppear(perform: load)
         .onChange(of: token) { load() }
         .onChange(of: document.file) { if !focused { load() } }
+        // What the field shows, told to the document: `studio-complete` reads the list that is up, not one of its own.
+        .onChange(of: FieldOffer(token: token, text: text, items: suggestions), initial: true) { _, shown in document.fieldOffer = shown }
+        .onDisappear { document.fieldOffer = nil }
+    }
+
+    /// The field's text is the document's (`fieldText`), so text typed from outside the view is typed here.
+    private var text: String {
+        get { document.fieldText }
+        nonmutating set { document.fieldText = newValue }
     }
 
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: tokens.metrics.radius) }
@@ -65,9 +73,10 @@ struct ExpressionField: View {
         document.validate(token, typing: "")
     }
 
-    /// The caret as a UTF-8 offset, which is how core counts: the end of the text while the field has no selection yet.
+    /// The caret as a UTF-8 offset, which is how core counts: the end of the text while the field has no selection yet, or
+    /// not the keys (a value loaded or typed from outside: no caret is in it, and a selection kept from before is another text's).
     private var caret: Int {
-        guard case let .selection(range)? = selection?.indices, range.upperBound <= text.endIndex else { return text.utf8.count }
+        guard focused, case let .selection(range)? = selection?.indices, range.upperBound <= text.endIndex else { return text.utf8.count }
         return text.utf8.distance(from: text.startIndex, to: range.upperBound)
     }
 

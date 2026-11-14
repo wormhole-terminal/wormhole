@@ -1,7 +1,7 @@
 import Foundation
 import Testing
 
-/// Appearance's theme cards read with `theme-cards [filter]` (`Readout`'s shape): the shelves the mode asks for, the filter and
+/// Appearance's theme cards read with `theme-cards` (`Readout`'s shape; `theme-filter` types into their box): the shelves the mode asks for, the filter and
 /// its placeholder, a newer file's mark, the hidden themes with their kind. TO-VERIFY.md lines 449, 868, 869, 871, 872, 873.
 extension EndToEnd {
     @Test("one shelf under Dark or Light, two under Match system; the filter finds a card by its name, says when none match (449, 868, 872)")
@@ -20,10 +20,18 @@ extension EndToEnd {
             app.expect(placeholder.hasPrefix("Filter") && placeholder.contains("\(cards.count)"), "the placeholder counts the cards:\n\(both.text)")
             app.expect(cards.filter { $0.has("picked") }.count == 2, "one pick a shelf, listed first:\n\(both.text)")
             guard let some = cards.first(where: { !$0.has("picked") }) else { return }
-            let filtered = Readout(await app.reply("theme-cards \(some.label)"))
+            // The filter is typed into the box (`theme-filter`); `theme-cards` reads what the box holds, never an argument.
+            await app.send(["theme-filter \(some.label)"])
+            let filtered = Readout(await app.until("theme-cards") { Readout($0).first("theme-cards")?["filter"] == some.label })
             app.expect(filtered.all("card").contains { $0.label == some.label }, "the filter finds \(some.label):\n\(filtered.text)")
-            let none = Readout(await app.reply("theme-cards zzqqxx"))
+            app.expect(filtered.all("card").count < cards.count, "the box narrows the shelves:\n\(filtered.text)")
+            await app.send(["theme-filter zzqqxx"])
+            let none = Readout(await app.until("theme-cards") { Readout($0).first("theme-cards")?["filter"] == "zzqqxx" })
             app.expect(none.first("none")?.label == "No themes match the filter.", "nothing matches:\n\(none.text)")
+            // Cleared, every card is back.
+            await app.send(["theme-filter"])
+            let cleared = Readout(await app.until("theme-cards") { Readout($0).first("theme-cards")?["filter"] == "" })
+            app.expect(cleared.all("card").count == cards.count, "the cleared box lists every card again:\n\(cleared.text)")
         }
     }
 

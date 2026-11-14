@@ -26,13 +26,7 @@ extension AppController {
         switch command {
         case "studio-select": document.selected = argument.isEmpty ? nil : argument
         case "studio-complete":
-            // The selected token's expression field with `argument` typed and the caret at its end: the completion list it shows
-            // (`document.completions`, as `ExpressionField` asks it), a line an item: `item "<label>" insert="…" group="…" [function]`.
-            guard let token = document.selected else { reply("error: no token is selected (studio-select <token>)"); return true }
-            let items = document.completions(argument, caret: argument.utf8.count, for: token)?.items ?? []
-            reply((["studio-complete \(argument) items=\(items.count)"] + items.map {
-                Readout.line("item", quoted: [$0.label], pairs: [("insert", $0.insert), ("group", document.groupName(of: $0.label) ?? "-")], flags: [Readout.flag("function", $0.function)])
-            }).joined(separator: "\n"))
+            reply(await studioComplete(argument, in: document))
             return true
         case "studio-set", "studio-type":
             // Into the selected token's field: `studio-set` presses Return (the draft takes it or the field says why not),
@@ -75,6 +69,29 @@ extension AppController {
         }
         reply(studioState(command, argument, said, session))
         return true
+    }
+
+    /// `studio-complete [text]`, the selected token's value field: `argument` typed into it (its own text; nothing: what it
+    /// holds), then the list the field itself shows under it, as it tells the document (`fieldOffer`), a line an item:
+    /// `item "<label>" insert="…" group="…" [function]`. Nothing is worked out here.
+    private func studioComplete(_ argument: String, in document: StudioDocument) async -> String {
+        guard let token = document.selected else { return "error: no token is selected (studio-select <token>)" }
+        let none = "error: no value field shows \(token) (a metric's editor has none, and the Studio's window must be open)"
+        // The field of that token first (a token just selected loads its value into it), then the text, then what it shows of it.
+        guard await studioField(document, { $0.token == token }) != nil else { return none }
+        if !argument.isEmpty { document.fieldText = argument }
+        let typed = document.fieldText
+        guard let offer = await studioField(document, { $0.token == token && $0.text == typed }) else { return none }
+        return (["studio-complete \(offer.text) items=\(offer.items.count)"] + offer.items.map {
+            Readout.line("item", quoted: [$0.label], pairs: [("insert", $0.insert), ("group", document.groupName(of: $0.label) ?? "-")], flags: [Readout.flag("function", $0.function)])
+        }).joined(separator: "\n")
+    }
+
+    /// What the value field tells it shows once `shows` holds of it: the field draws on the next frames, so this waits for it,
+    /// a second at most; nil when no field came to show that.
+    private func studioField(_ document: StudioDocument, _ shows: (FieldOffer) -> Bool) async -> FieldOffer? {
+        for _ in 0..<60 where document.fieldOffer.map(shows) != true { await pause(16) }
+        return document.fieldOffer.flatMap { shows($0) ? $0 : nil }
     }
 
     /// The Versions sheet opened (as Browse All Versions… does) and its list: the rows (row 0 is the file as it is now), a row

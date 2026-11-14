@@ -24,6 +24,14 @@ public struct ProfileChoice: Identifiable, Equatable, Sendable {
     }
 }
 
+extension ProfileChoice {
+    /// The profile a chip given `choices` names; nil draws no chip: only while there are two profiles or more to choose
+    /// between (`sidebar/profile_chip.rs:65`). `ProfileChip` draws from it, and the control folder's `profile-chip` reads it.
+    public static func named(by choices: [ProfileChoice]) -> ProfileChoice? {
+        choices.count > 1 ? choices.first(where: \.current) : nil
+    }
+}
+
 public struct ProfileActions {
     public var switchTo: (String) -> Void
     /// Nil leaves the entry out: a window in a profile of its own is not made yet.
@@ -53,8 +61,7 @@ public struct ProfileChip: View {
     public init(choices: [ProfileChoice], actions: ProfileActions = ProfileActions()) { (self.choices, self.actions) = (choices, actions) }
 
     public var body: some View {
-        // Only drawn while there are two profiles or more to choose between.
-        if choices.count > 1, let current = choices.first(where: \.current) {
+        if let current = ProfileChoice.named(by: choices) {
             Menu { ProfileMenuItems(choices: choices, actions: actions) } label: {
                 HStack(spacing: Space._2) {
                     ProfileAvatar(choice: current, size: TabMetrics.avatar)

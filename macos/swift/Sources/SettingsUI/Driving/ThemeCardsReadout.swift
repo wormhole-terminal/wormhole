@@ -1,6 +1,7 @@
 // text-file: the control folder's `theme-cards` (dev tooling), not interface text
-// Appearance's theme picker as text (`theme-cards [filter]`): what `ThemeCards` draws, read from `ThemeShelves`, the same
-// listing it draws from, with the filter box holding `filter`. The shape is `DesignSystem.Readout`'s:
+// Appearance's theme picker as text (`theme-cards`): what `ThemeCards` draws, read from `ThemeShelves`, the same listing it
+// draws from, narrowed by what the filter box holds (`SettingsModel.themeFilter`, the text field's own binding;
+// `theme-filter [text]` types into it). The shape is `DesignSystem.Readout`'s:
 //
 //     theme-cards mode="system" filter="" placeholder="Filter 60 themes"
 //     project "api" "This terminal shows api's theme. …"
@@ -15,7 +16,8 @@ import WordsModel
 
 @MainActor
 public enum ThemeCardsReadout {
-    public static func text(_ model: SettingsModel, filter: String) -> String {
+    public static func text(_ model: SettingsModel) -> String {
+        let filter = model.themeFilter
         let listing = ThemeShelves(model: model, filter: filter)
         var lines = [
             Readout.line(
