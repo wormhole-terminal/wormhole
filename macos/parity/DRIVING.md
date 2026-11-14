@@ -186,9 +186,9 @@ column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T1
 
 ## End-to-end tests
 
-`macos/swift/Tests/EndToEndTests` is the first suite that uses the app instead of its parts: twelve short scenarios a person would do
+`macos/swift/Tests/EndToEndTests` is the first suite that uses the app instead of its parts: short scenarios a person would do
 (a first window, new/select/rename/close, splits, groups and tabs, the palette, Settings, the right panel, notes, quit and come back,
-a worktree, an agent's status, two windows), each asserted on what the app reports through this control folder, never on pixels. One
+a worktree, an agent's status, two windows, the Theme Studio's contrast and versions), each asserted on what the app reports through this control folder, never on pixels. One
 `Instance` (`Instance.swift`) starts the built `Wormhole` with `--background` on a scratch folder, sends a batch (a `sync <token>`
 after every command says it is done: the wait is on the output file's change events and a deadline, never a pause), and always ends
 what it started (`quit-end-all`, by its own pid if that does not answer) and removes the folder.
