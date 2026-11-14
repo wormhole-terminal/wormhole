@@ -1595,3 +1595,6 @@ All additive; the core decides, Swift asks.
   metric's "n uses", the gallery header's count and the token list's area filter tell, as in the GPUI Studio (`FfiTokenUses`,
   `GalleryKnowledge(uses:)`). The gallery's outlines follow `GalleryUses.swift` instead, generated from what the Swift views really draw
   (`macos/scripts/gen-gallery-uses.py`).
+- `cli_is_command(arguments) -> bool` (wave 13): whether the core answers the command line itself (`ipc::command`: `hook`, `statusline`,
+  `welcome`, a control verb, a leading `--help` or `-h`). The Swift `main` asks it for a first word with a dash, so `wh --help` is the
+  control line's usage and the app keeps no list of verbs; `cli_exit_code` then runs it.
