@@ -220,6 +220,24 @@ mod tests {
         fn wake(&self) {}
     }
 
+    /// A real repository on `main` with one commit. The workspace's own git feed reads the terminal's folder once it
+    /// has one and writes what it finds into the terminal's facts: in a folder with an empty `.git` it finds no
+    /// repository and takes the branch away, and the row then has no branch to show a pull request for.
+    fn repository_on_main(dir: &Path) {
+        std::fs::write(dir.join("README.md"), "one\n").expect("a file");
+        for args in [&["init", "-q", "-b", "main"][..], &["add", "."], &["commit", "-q", "-m", "first"]] {
+            let status = wormhole_term::sys::process::command("git")
+                .current_dir(dir)
+                .args(["-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false"])
+                .args(args)
+                .env("GIT_CONFIG_GLOBAL", "/dev/null")
+                .env("GIT_CONFIG_NOSYSTEM", "1")
+                .status()
+                .expect("git runs");
+            assert!(status.success(), "git {args:?}");
+        }
+    }
+
     fn eventually(what: &str, mut done: impl FnMut() -> bool) {
         let deadline = Instant::now() + Duration::from_secs(10);
         while !done() {
@@ -234,7 +252,7 @@ mod tests {
     fn a_cached_pull_request_is_not_shown_once_its_project_is_revoked() {
         let data = tempfile::tempdir().expect("data dir");
         let repo = tempfile::tempdir().expect("repo");
-        std::fs::create_dir(repo.path().join(".git")).expect("git");
+        repository_on_main(repo.path());
         std::fs::create_dir(repo.path().join(".wormhole")).expect("project folder");
         let root = repo.path().canonicalize().expect("canonical");
         let windows = Windows::in_dir(data.path()).expect("windows");
@@ -352,7 +370,7 @@ mod tests {
     fn a_pull_request_is_not_shown_with_the_project_feature_switched_off() {
         let data = tempfile::tempdir().expect("data dir");
         let repo = tempfile::tempdir().expect("repo");
-        std::fs::create_dir(repo.path().join(".git")).expect("git");
+        repository_on_main(repo.path());
         std::fs::create_dir(repo.path().join(".wormhole")).expect("project folder");
         let root = repo.path().canonicalize().expect("canonical");
         let workspace = window_on_main(data.path(), &root, &root);
@@ -385,7 +403,7 @@ mod tests {
     fn the_terminals_nearest_project_decides_not_the_one_at_the_git_root() {
         let data = tempfile::tempdir().expect("data dir");
         let repo = tempfile::tempdir().expect("repo");
-        std::fs::create_dir(repo.path().join(".git")).expect("git");
+        repository_on_main(repo.path());
         std::fs::create_dir(repo.path().join(".wormhole")).expect("the root's project");
         std::fs::create_dir_all(repo.path().join("sub/.wormhole")).expect("sub's project");
         let root = repo.path().canonicalize().expect("canonical");
