@@ -3,6 +3,17 @@ import Foundation
 /// The one place the end-to-end tests start a program: the app under test, `git` for a throwaway repository and the app's own
 /// hook client. Nothing else in the suite may call `Process` (`macos/scripts/rules.py` allows it by the marker comments below).
 enum Spawn {
+    /// Whether process `pid` is alive and runs `program`: asked before a signal goes to a pid that was read from a file
+    /// rather than held as a child. A process that ended leaves its number free, and the next to get it may be anyone's,
+    /// the person's own among them; it is signalled only while it is the very program this harness started.
+    static func runs(_ pid: pid_t, program: URL) -> Bool {
+        guard pid > 1 else { return false }
+        var path = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        guard proc_pidpath(pid, &path, UInt32(path.count)) > 0 else { return false }
+        let running = URL(fileURLWithPath: String(cString: path)).resolvingSymlinksInPath().path
+        return running == program.resolvingSymlinksInPath().path
+    }
+
     struct Finished {
         var status: Int32
         var output: String

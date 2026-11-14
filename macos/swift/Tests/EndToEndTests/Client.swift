@@ -10,10 +10,12 @@ import Synchronization
 final class Client {
     private let log: URL
     private let pidFile: URL
+    /// The program the client is: what the process behind the pid file must still be to be signalled.
+    private let program: URL
     private let state: ClientState
 
-    fileprivate init(log: URL, pidFile: URL, state: ClientState) {
-        (self.log, self.pidFile, self.state) = (log, pidFile, state)
+    fileprivate init(log: URL, pidFile: URL, program: URL, state: ClientState) {
+        (self.log, self.pidFile, self.program, self.state) = (log, pidFile, program, state)
     }
 
     var isRunning: Bool { !state.isDone }
@@ -33,8 +35,11 @@ final class Client {
         }
         for await _ in stream {}
         if let status = state.status { return status }
-        // Still waiting: ended by the pid the shell wrote for it (it is no child of this process).
-        if let pid = (try? String(contentsOf: pidFile, encoding: .utf8)).flatMap({ pid_t($0.trimmingCharacters(in: .whitespacesAndNewlines)) }), pid > 1 {
+        // Still waiting: ended by the pid the shell wrote for it (it is no child of this process), and only while that
+        // process is still the client. One that ended between the deadline and here has given its number back.
+        if let pid = (try? String(contentsOf: pidFile, encoding: .utf8)).flatMap({ pid_t($0.trimmingCharacters(in: .whitespacesAndNewlines)) }),
+            Spawn.runs(pid, program: program)
+        {
             kill(pid, SIGTERM)
         }
         return nil
@@ -64,7 +69,7 @@ extension Instance {
         _ = try Spawn.start(
             "/bin/sh", ["-c", detached, "sh", status.path, pidFile.path, program.path] + words, environment: try clientEnvironment(terminal: terminal),
             log: log) { _ in }
-        return Client(log: log, pidFile: pidFile, state: state)
+        return Client(log: log, pidFile: pidFile, program: program, state: state)
     }
 
     /// `Wormhole <words…>` run to its end: its status and what it printed.

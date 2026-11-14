@@ -113,14 +113,17 @@ final class Scratch {
     }
 
     /// The session hosts of `folder` whose process runs, by id: each host's meta file (`<id>.meta`) names its process
-    /// (`pid=`), which is asked whether it is alive. A host that died leaves its file and is not counted.
+    /// (`pid=`), which is asked whether it is alive and still the session host the suite gives its instances. A host that
+    /// died leaves its file and is not counted, nor is whatever got its number since: these pids are signalled
+    /// (`Instance.finish`, the lost-host scenario), and a number read from a file may be anyone's by then.
     static func liveHosts(in folder: URL) -> [String: pid_t] {
+        guard let host = Instance.hostProgram() else { return [:] }
         let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
         var live: [String: pid_t] = [:]
         for name in names where name.hasSuffix(".meta") {
             guard let text = try? String(contentsOf: folder.appendingPathComponent(name), encoding: .utf8),
                 let line = text.split(separator: "\n").first(where: { $0.hasPrefix("pid=") }),
-                let pid = pid_t(line.dropFirst(4)), pid > 0, kill(pid, 0) == 0
+                let pid = pid_t(line.dropFirst(4)), Spawn.runs(pid, program: host)
             else { continue }
             live[String(name.dropLast(5))] = pid
         }
