@@ -77,15 +77,18 @@ impl<T: Stored> OnDisk<T> {
     }
 
     /// `change` made to what the file holds now, and saved when it says it changed something. Whether it did; a save that
-    /// failed leaves the change in the process (it holds until the app quits) and says why.
+    /// failed leaves the change in the process (it holds until the file changes or the app quits) and says why.
     pub(super) fn change(&mut self, change: impl FnOnce(&mut T) -> bool) -> Result<bool, ProjectError> {
         self.fresh();
         if !change(&mut self.value) {
             return Ok(false);
         }
-        // Read again at the next look, so a write another program made just after this one is never taken for this one.
-        self.known = false;
-        self.value.write().map(|()| true)
+        let saved = self.value.write();
+        // After a save: read again at the next look, so a write another program made just after this one is never taken
+        // for this one. After a failed one the file is as `fresh` found it, so the stamp still stands and the change
+        // holds here until the file changes: a revoke that could not be saved must not be read back as trusted.
+        self.known = saved.is_err();
+        saved.map(|()| true)
     }
 }
 
