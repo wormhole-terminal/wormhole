@@ -2,7 +2,7 @@
 // The control folder's `usage` (the Usage tab as its store holds it, `PanelUI.UsageReadout`) and `recents [projects|folders]`:
 // Open Recent's projects of the window's own profile (`RecentProjects`), or the folder picker's recent folders as that
 // profile's database keeps them (`FolderPicking`). Replies:
-//   recents projects profile="<id>" count="<n>"     then `project "<name>" path="<root>"` per root, most recent first
+//   recents projects profile="<id>" count="<n>"     then `project "<name as the menu shows it>" path="<root>"` per root, most recent first
 //   recents folders profile="<id>"                  then `json <the stored list>` (`folders: none` for a sample)
 
 import DesignSystem
@@ -25,9 +25,11 @@ extension AppController {
                 #endif
                 return true
             }
+            // Each root under the name Open Recent gives it (`RecentProjects.names`, what `menuState` hands the menu).
             let roots = recents.roots(of: profile)
+            let names = recents.names(of: profile)
             reply(([Readout.line("recents", ["projects"], pairs: [("profile", profile), ("count", String(roots.count))])]
-                + roots.map { Readout.line("project", quoted: [($0 as NSString).lastPathComponent], pairs: [("path", $0)]) }).joined(separator: "\n"))
+                + zip(names, roots).map { Readout.line("project", quoted: [$0], pairs: [("path", $1)]) }).joined(separator: "\n"))
         default: return false
         }
         return true
