@@ -63,7 +63,7 @@ extension EndToEnd {
             let e = Self.esc
             await app.send(["wait-idle 3000"])
             let before = Instance.value("grid", in: await app.reply("state"))
-            await app.emit("\(e)[8;30;100t")
+            await app.emit("\(e)[8;24;80t")
             await app.send(["delay 500"])
             app.expect(Instance.value("grid", in: await app.reply("state")) == before, "nothing resizes while window operations are off")
 
@@ -71,18 +71,24 @@ extension EndToEnd {
             await app.send(["set allow_window_ops=true"])
             await app.until("get allow_window_ops") { $0.contains("true") }
             await app.discardLine()
-            await app.emit("\(e)[8;30;100t")
-            await app.until("state") { Instance.value("grid", in: $0) == "100x30" }
+            // A terminal takes the switch when it starts (`SpawnOptions.allow_window_ops`, in the GPUI app too): the one
+            // that was open keeps refusing, a new one may act on the window.
+            await app.send(["key cmd-t"])
+            await app.until("rows") { Listing($0).live.count == 2 }
+            await app.emit("\(e)[8;24;80t")
+            await app.until("state") { Instance.value("grid", in: $0) == "80x24" }
+            // (80 x 24 and 90 x 28: sizes a window fits on any display the suite runs on with both side columns open; the
+            // core's frame for a resize stays on the screen.)
             // CSI 18 t reports the size in cells.
             await app.clearScreen()
             await app.discardLine()
             await app.emit("\(e)[18t")
-            await app.screen { $0.contains("8;30;100t") }
+            await app.screen { $0.contains("8;24;80t") }
             await app.discardLine()
 
             // Two resizes at once: the second is worked out from the first's size, not the old one.
-            await app.emit("\(e)[8;30;100t\(e)[8;40;120t")
-            await app.until("state") { Instance.value("grid", in: $0) == "120x40" }
+            await app.emit("\(e)[8;24;80t\(e)[8;28;90t")
+            await app.until("state") { Instance.value("grid", in: $0) == "90x28" }
 
             // CSI 13 t reports where the window is; CSI 3 t moves it, and the report follows.
             await app.clearScreen()
