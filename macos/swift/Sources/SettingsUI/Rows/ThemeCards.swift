@@ -120,6 +120,7 @@ struct ThemeCards: View {
                 ForEach(shown) { card in
                     ThemeCard(theme: card.theme, label: label(card.theme), isSelected: card.isPicked(picked), newer: card.newer) { model.set(key, .string(card.value)) }
                         .focused($focusedCard, equals: card.id)
+                        .recordFrame("theme-card.\(card.value)")
                         .contextMenu {
                             if !card.isPicked(picked) {
                                 Button(Words.text("settings-appearance-hide-theme", fallback: "Hide theme")) { setHidden(card.hideValue, true) }

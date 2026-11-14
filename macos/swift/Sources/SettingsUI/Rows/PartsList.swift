@@ -58,7 +58,10 @@ struct PartsList: View {
     }
 
     /// What a part says about itself: what the flexible space does, and that the status bar shows the terminal's status while on.
-    private func note(_ part: ControlSpec.TitlePart) -> String? {
+    private func note(_ part: ControlSpec.TitlePart) -> String? { Self.note(part, model) }
+
+    /// The same, for the control folder's `settings-page`.
+    static func note(_ part: ControlSpec.TitlePart, _ model: SettingsModel) -> String? {
         switch part.value {
         case "space": Words.text("title-row-part-space.description", fallback: "Parts above it sit at the left, parts below it at the right")
         case "terminal_status" where model.value("status_bar").bool ?? false:

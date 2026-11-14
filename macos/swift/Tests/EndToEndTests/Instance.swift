@@ -27,6 +27,9 @@ final class Instance {
     /// a prompt either way.
     private let auth: String
     private let label: String
+    /// Programs named like coding agents the app finds on its agent path (`WORMHOLE_AGENT_PATH`, a scratch folder of their
+    /// own): empty, none is found, as on a Mac with no agent.
+    private var agents: [String] = []
     /// The app itself: what `cli` runs as a client of the instance.
     let program: URL
     /// The session host the app is given (`Scratch.giveHosts`), nil for a run whose terminals stay in the app.
@@ -68,11 +71,12 @@ final class Instance {
     /// `config.json` before the first launch (a flag or a mode the app reads at launch); `hosts`: Persistent terminals on, with
     /// the built session host (`hostProgram`), which writes that file itself, so the two are not given together.
     static func with(
-        shell: Shell = .cat, auth: String = "cancel", config: String? = nil, hosts: Bool = false, label: String = #function,
+        shell: Shell = .cat, auth: String = "cancel", config: String? = nil, hosts: Bool = false, agents: [String] = [], label: String = #function,
         _ body: @MainActor (Instance) async throws -> Void
     ) async throws {
         guard let program = executable() else { throw ScratchError(description: "the Wormhole app is not built") }
         let app = Instance(scratch: try Scratch(), shell: shell, auth: auth, label: label, program: program)
+        app.agents = agents
         // The default profile's files are the data folder's own.
         if let config {
             guard !hosts else {
@@ -119,7 +123,7 @@ final class Instance {
         environment["WORMHOLE_NOTIFY"] = "log"
         environment["WORMHOLE_BACKGROUND"] = "1"
         environment["WORMHOLE_AGENT_HOME"] = scratch.agentHome.path
-        environment["WORMHOLE_AGENT_PATH"] = ""
+        environment["WORMHOLE_AGENT_PATH"] = agents.isEmpty ? "" : try scratch.agentPath(agents).path
         if let host { environment["WORMHOLE_HOST_BIN"] = host.path }
         return environment
     }

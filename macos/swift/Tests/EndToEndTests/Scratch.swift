@@ -86,6 +86,19 @@ final class Scratch {
         return script
     }
 
+    /// A folder holding a script for each name, the agent path of an instance that finds those agents installed (the scripts only
+    /// read what they are given, as `agentShell`'s do).
+    func agentPath(_ names: [String]) throws -> URL {
+        let folder = root.appendingPathComponent("agent-path")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        for name in names {
+            let script = folder.appendingPathComponent(name)
+            try Data("#!/bin/sh\nwhile IFS= read -r line; do :; done\n".utf8).write(to: script)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+        }
+        return folder
+    }
+
     /// Where the app's session hosts keep their sockets and meta files (core `ipc::hosts::hosts_dir`).
     var hostsFolder: URL { data.appendingPathComponent("hosts") }
 

@@ -14,6 +14,7 @@
 //       option "Login shell" "/bin/zsh"
 
 import DesignSystem
+import Foundation
 import SettingsModel
 import SwiftUI
 import WordsModel
@@ -43,6 +44,7 @@ public enum SettingsPageReadout {
         }
         guard let section else { return lines.joined(separator: "\n") }
         lines += banners(section, model)
+        if section.id == "fonts" { lines += specimen(model) }
         let found = Set(model.hits.map(\.entry.id))
         for group in section.groups {
             // `SettingsPage`: a row whose `visibleWhen` does not hold is not there, nor is the strip's scene.
@@ -96,6 +98,7 @@ public enum SettingsPageReadout {
         if case .recorder = entry.control, let problem = EntryControl.shortcutProblem(key: entry.keys.first ?? "", model: model) {
             lines.append(Readout.under("problem", quoted: [problem]))
         }
+        if case .partsList(let parts) = entry.control { lines += self.parts(parts, key: entry.keys.first ?? "", model) }
         for option in options(entry, model) where option.detail != nil {
             lines.append(Readout.under("option", quoted: [option.label, option.detail ?? ""]))
         }
@@ -168,6 +171,32 @@ public enum SettingsPageReadout {
             return [swatches(offeredSwatches(ansi: [5, 1, 3, 2, 6, 4], skip: nil, chosen: chosen), chosen, well: true)]
         default: return []
         }
+    }
+
+    /// The title row's parts as `PartsList` lists them: the shown ones in order, then the hidden ones, each with its note.
+    private static func parts(_ parts: [ControlSpec.TitlePart], key: String, _ model: SettingsModel) -> [String] {
+        let order = (model.value(key).array ?? []).compactMap(\.string)
+        let shown = order.compactMap { value in parts.first { $0.value == value } }
+        let hidden = parts.filter { part in !order.contains(part.value) }
+        return (shown + hidden).map { part in
+            Readout.under(
+                "part", [part.value], quoted: [part.label], pairs: PartsList.note(part, model).map { [("note", $0)] } ?? [],
+                flags: [order.contains(part.value) ? "shown" : "hidden", Readout.flag("hideable", part.hideable)])
+        }
+    }
+
+    /// The Fonts page's specimen (`FontsScene`): each tab's family, size and facts line, and the font a picker is looking at.
+    private static func specimen(_ model: SettingsModel) -> [String] {
+        var lines = ["terminal", "code", "interface"].map { slot in
+            let family = FontsScene.familyOf(slot, model), size = FontsScene.sizeOf(slot, model)
+            return Readout.line(
+                "specimen", [slot], quoted: [FontsScene.facts(family: family, size: size, theme: PreviewTheme.name(model), slot: slot, model: model)],
+                pairs: [("family", family), ("size", String(format: "%.0f", size))])
+        }
+        if let preview = model.fontPreview {
+            lines.append(Readout.line("preview", [preview.slot], pairs: [("family", preview.family), ("size", String(format: "%.0f", preview.size))]))
+        }
+        return lines
     }
 
     private static func swatches(_ colors: [String], _ chosen: String?, well: Bool = false) -> String {

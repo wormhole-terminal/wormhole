@@ -16,8 +16,8 @@ struct FontsScene: View {
 
     var body: some View {
         let t = PreviewTheme.tokens(model)
-        let family = model.fontPreview?.family ?? familyOf(slot)
-        let size = model.fontPreview?.size ?? sizeOf(slot)
+        let family = model.fontPreview?.family ?? Self.familyOf(slot, model)
+        let size = model.fontPreview?.size ?? Self.sizeOf(slot, model)
         // The terminal's own line height; the other slots are set at 1.4 (as GPUI's specimen is).
         let height = slot == "terminal" ? model.value("line_height").number ?? 1.3 : 1.4
         let font = FontFace.font(
@@ -42,13 +42,14 @@ struct FontsScene: View {
             .padding(Space._4)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(t.terminal.background.color, in: RoundedRectangle(cornerRadius: t.metrics.radius))
-            Text(facts(family: family, size: size, theme: PreviewTheme.name(model))).textRole(.caption)
+            Text(Self.facts(family: family, size: size, theme: PreviewTheme.name(model), slot: slot, model: model)).textRole(.caption)
                 .foregroundStyle(tokens.textMuted).lineLimit(1).truncationMode(.tail)
         }
     }
 
-    /// The slot's family: an empty code font follows the terminal's, an empty interface font is the system's.
-    private func familyOf(_ slot: String) -> String {
+    /// The slot's family: an empty code font follows the terminal's, an empty interface font is the system's. These three are the
+    /// control folder's `settings-page` specimen lines too.
+    static func familyOf(_ slot: String, _ model: SettingsModel) -> String {
         let terminal = model.value("font_family").string ?? ""
         switch slot {
         case "code": return model.value("code_font_family").string.flatMap { $0.isEmpty ? nil : $0 } ?? terminal
@@ -57,7 +58,7 @@ struct FontsScene: View {
         }
     }
 
-    private func sizeOf(_ slot: String) -> Double {
+    static func sizeOf(_ slot: String, _ model: SettingsModel) -> Double {
         switch slot {
         case "code": model.value("code_font_size").number ?? 13
         case "interface": model.value("ui_font_size").number ?? 13
@@ -66,7 +67,7 @@ struct FontsScene: View {
     }
 
     /// What the specimen is set in, on one line: the family and size, the terminal's line height, the ligatures, the theme.
-    private func facts(family: String, size: Double, theme: String) -> String {
+    static func facts(family: String, size: Double, theme: String, slot: String, model: SettingsModel) -> String {
         let shown = family == FontFace.system ? "System font" : (family.isEmpty ? "JetBrains Mono" : family) // text: the system font's name and the bundled family's
         var parts = [Words.text("settings-fonts-specimen-size", ["family": .text(shown), "size": .text(String(format: "%.0f", size))], fallback: "\(shown) \(String(format: "%.0f", size)) pt")]
         if slot == "terminal" {
