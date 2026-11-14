@@ -34,6 +34,8 @@ public enum DiffReadout {
         let diff = shown.session.parsed
         var pairs: [(String, String)] = []
         if let position = shown.position { pairs.append(("position", "\(position.index + 1) of \(position.count)")) }
+        // The longest line in columns at the tab width now: the sideways scroll's extent.
+        if let widest = diff?.widest { pairs.append(("widest", String(widest))) }
         if let commit = shown.commit { pairs.append(("commit", commit)) }
         // `DiffHeader`: the counts only for lines (not a binary file, an LFS pointer or a patch not loaded).
         if case let .counts(added, removed) = file.lines, diff?.isLFS != true, diff?.isBinary != true, diff?.tooLarge == nil {

@@ -23,7 +23,7 @@ public final class PanelController {
     @ObservationIgnored private var terminal: Int?
     /// The repository root of `folder`, once git has said; git's paths are relative to it.
     private var root: String?
-    @ObservationIgnored private var roots: [String: String] = [:]
+    @ObservationIgnored private(set) var roots: [String: String] = [:]
     @ObservationIgnored private let git: any GitBackend
     /// A fixed clock (Unix seconds) for screenshots and tests; nil follows the real one.
     public var now: Int?

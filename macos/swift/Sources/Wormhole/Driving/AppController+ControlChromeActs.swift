@@ -11,8 +11,14 @@
 //   `comment-at <row>`               the comment dialog of the diff's row `row` (as `diff-spans` numbers it) opened, as a click
 //                                    on the line opens it; `comment <text>` then saves it
 //   `review`                         what pasting the review would paste (`Review.message`), or `review: none`
+//   `title-words` / `exited-words`   what the title row says after the name, what the exited bar says ("fish exited"), or none
+//   `overlay`                        the palette or the shortcut sheet up over the window: `overlay <palette|shortcuts|none>`
+//   `trust-state`                    the project commands window's review of the project in front
+//   `step-draft`                     Notes' Add next step: the draft row opens (`notes` says `draft=true`)
+//   `project-layout` / `project-note <prompt>`  the Project tab's Open terminals, a prompt's Copy into a new note
 
 import AppKit
+import AuxModel
 import DesignSystem
 import PanelModel
 import SidebarUI
@@ -52,6 +58,31 @@ extension AppController {
             reply((["plus-menu"] + shells.map { Readout.line($0.key.isEmpty ? "-" : $0.key, quoted: [$0.name], flags: [Readout.flag("default", $0.isDefault)]) }).joined(separator: "\n"))
         case "comment-at": reply(commentAt(argument))
         case "review": reply(hub.panel.changes.review.message.map { "review\n" + $0 } ?? "review: none")
+        case "title-words": reply("title-words " + (hub.titleWords(look: look).map(Readout.quote) ?? "none"))
+        case "exited-words": reply("exited-words " + (hub.exitedWords.map(Readout.quote) ?? "none"))
+        case "overlay": reply("overlay \(hub.overlayName)")
+        case "step-draft":
+            // Notes' "Add next step": the draft row opens at the end of the steps (`StepsCard`'s button).
+            let notes = hub.panel.notes
+            notes.model.stepsCollapsed = false
+            (notes.draftAfter, notes.drafting) = (nil, true)
+            reply("step-draft")
+        case "trust-state":
+            // What the project commands window shows for the project in front (the backend `AuxController.showTrust` gives it):
+            // `trust-state <status> "<name>" summary="…" [problem="…"] lines="<n>"`.
+            let review = aux.backends.trust(root: hub.panel.project.state?.root, profile: front.windows.profile).review()
+            var pairs = [("summary", review.summary), ("lines", String(review.lines.count))]
+            if let problem = review.problem { pairs.append(("problem", problem)) }
+            reply(Readout.line("trust-state", ["\(review.status)"], quoted: [review.name], pairs: pairs))
+        case "project-layout":
+            // The Project tab's Open terminals (`ProjectStore.openLayout`).
+            hub.panel.project.openLayout()
+            reply("project-layout")
+        case "project-note":
+            // A prompt's Copy into a new note.
+            guard let prompt = hub.panel.project.state?.prompts.first(where: { $0.id == argument }) else { reply("error: no prompt \(argument)"); return true }
+            hub.panel.project.copyToNote(prompt, in: hub.panel.notes)
+            reply("project-note \(argument)")
         default: return false
         }
         return true

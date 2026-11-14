@@ -25,6 +25,15 @@ extension AppController {
         var said = ""
         switch command {
         case "studio-select": document.selected = argument.isEmpty ? nil : argument
+        case "studio-complete":
+            // The selected token's expression field with `argument` typed and the caret at its end: the completion list it shows
+            // (`document.completions`, as `ExpressionField` asks it), a line an item: `item "<label>" insert="…" group="…" [function]`.
+            guard let token = document.selected else { reply("error: no token is selected (studio-select <token>)"); return true }
+            let items = document.completions(argument, caret: argument.utf8.count, for: token)?.items ?? []
+            reply((["studio-complete \(argument) items=\(items.count)"] + items.map {
+                Readout.line("item", quoted: [$0.label], pairs: [("insert", $0.insert), ("group", document.groupName(of: $0.label) ?? "-")], flags: [Readout.flag("function", $0.function)])
+            }).joined(separator: "\n"))
+            return true
         case "studio-set", "studio-type":
             // Into the selected token's field: `studio-set` presses Return (the draft takes it or the field says why not),
             // `studio-type` only types (what the field says of it as it stands).

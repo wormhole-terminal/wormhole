@@ -58,7 +58,7 @@ extension AppController {
             reply(windowShot(to: words[0], titled: words.count > 1 ? words[1] : nil))
             return true
         case "windows":
-            reply(NSApp.windows.map { "\($0.title.isEmpty ? "(untitled)" : $0.title) visible=\($0.isVisible) sheet=\($0.attachedSheet != nil)" }.joined(separator: "\n"))
+            reply(NSApp.windows.map { "\($0.title.isEmpty ? "(untitled)" : $0.title) visible=\($0.isVisible) sheet=\($0.attachedSheet != nil) edited=\($0.isDocumentEdited)" }.joined(separator: "\n"))
             return true
         case "menus":
             reply(menus?.dump() ?? "no menus")

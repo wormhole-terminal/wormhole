@@ -189,6 +189,12 @@ none of these; `status-bar` is the bar's switch, so its items are `status-items`
 | `sidebar-tip [close\|never\|keep\|settings]` | `sidebar-tip <off\|note\|offer>` (off while an agent is on screen); the note's ×, Don't show again, the offer's ×, Coding agents settings |
 | `plus-menu [pick <key>]` | `plus-menu` then `<key\|-> "<name>" [default]` per shell (`HubActions.shells`); a pick opens a terminal with it: `plus-menu picked <key>` |
 | `comment-at <row>` / `review` | the comment dialog of the Changes diff's row (numbered as `diff-spans` numbers it), as a click on the line opens it: `comment-at <path>:<line>` (then `comment <text>`); `review` then the text a paste of the review would paste, or `review: none` |
+| `title-words` / `exited-words` / `overlay` | `title-words "<working · 4m>"` or `title-words none` (the bar on, or nothing to say); `exited-words "<fish exited>"` or `none`; `overlay <palette\|shortcuts\|none>` |
+| `trust-state` | `trust-state <trusted\|changed\|untrusted> "<project name>" summary="…" lines="<n>" [problem="…"]` (the project commands window's review of the project in front; none open: the closed-project words) |
+| `project-layout` / `project-note <prompt id>` / `step-draft` | the Project tab's Open terminals; a prompt's Copy into a new note; Notes' Add next step |
+| `panel-kept` | `panel-kept files="<ids>" changes="<ids>" history="<ids>" roots="<folders>" [watching] [shown]`: the terminals each store keeps a state for, the folders' repository roots, whether Files reads and watches |
+| `studio-complete <text>` | the selected token's expression field with `text` typed, caret at the end: `studio-complete <text> items=<n>` then `item "<label>" insert="…" group="…" [function]` |
+| additions | `project-state` ends with `dir=<.wormhole\|.andromeda> problem=<…\|->` (no project: `project=none loaded=… problem=…`); `history-state` ends with `present=[…]`; `notes` ends with `draft=<bool>`; `windows` lines end with `edited=<bool>`; `diff-header` has `widest="<columns>"` |
 
 Also wave 9: `key cmd-left|cmd-right|cmd-backspace` (any key the keymap gives a view's own action, `ActionRouter.viewed`) goes the
 keyboard's way, to the terminal's `performKeyEquivalent` before the menus; `key esc` in a field goes through the window first, so

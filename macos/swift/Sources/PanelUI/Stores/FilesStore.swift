@@ -33,6 +33,8 @@ public final class FilesStore {
     @ObservationIgnored let highlighter: any SyntaxHighlighting
     @ObservationIgnored weak var host: (any PanelHost)?
     @ObservationIgnored private var watch: Task<Void, Never>?
+    /// The tree reads and watches its folder now.
+    var isWatching: Bool { watch != nil }
     @ObservationIgnored private(set) var isShown = true
     @ObservationIgnored var reading: Task<Void, Never>?
     /// A pass over the folders is running, and something asked for another meanwhile.
@@ -65,6 +67,8 @@ public final class FilesStore {
         var root: String?
     }
     @ObservationIgnored private var kept: [Int: Kept] = [:]
+    /// The terminals something is kept for (the control folder's `panel-kept`).
+    var keptTerminals: [Int] { kept.keys.sorted() }
     @ObservationIgnored private var terminal: Int?
 
     /// The window's terminals now: what waited for one that is gone (closed, or moved to another window) goes with it.

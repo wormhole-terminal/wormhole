@@ -51,6 +51,8 @@ public final class HistoryStore {
         var expanded: Commit.ID?
     }
     @ObservationIgnored private var kept: [Int: Kept] = [:]
+    /// The terminals something is kept for (the control folder's `panel-kept`).
+    var keptTerminals: [Int] { kept.keys.sorted() }
 
     /// The window's terminals now: what waited for one that is gone (closed, or moved to another window) goes with it.
     public func keep(terminals: Set<Int>) { kept = kept.filter { terminals.contains($0.key) } }

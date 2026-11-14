@@ -126,3 +126,25 @@ extension WindowHub {
     /// The selected terminal's find bar (`find-state`).
     public var selectedFind: FindModel? { selectedOverlay?.find }
 }
+
+extension WindowHub {
+    /// `title-words`: what the title row says after the selected terminal's name ("working · 4m"), nil while the bar says it
+    /// or there is nothing to say (`TitleFactsMaker`, as `CentreTitle` asks it).
+    public func titleWords(look: WindowLook) -> String? {
+        guard let terminal = state.selectedTerminal else { return nil }
+        return TitleFactsMaker.facts(
+            for: terminal, row: titleRow, statusBarOn: look.statusBar, gauge: gauges.gauge(for: terminal), extras: state.title,
+            waited: terminal.since.flatMap { store.waited(since: $0) }
+        ).words
+    }
+
+    /// `exited-words`: what the selected pane's exited bar says first ("fish exited"), nil while it has none (`TerminalPanes`
+    /// hands `ExitedBar` the same shell, code and host).
+    public var exitedWords: String? {
+        guard let overlay = selectedOverlay, overlay.bars.exited else { return nil }
+        return ExitedBar(shell: overlay.shell ?? shell, exitCode: overlay.exitCode, hostLost: overlay.hostLost, actions: overlay.actions).words
+    }
+
+    /// `overlay`: the palette or the shortcut sheet over the window, or none.
+    public var overlayName: String { state.overlay.map { "\($0)" } ?? "none" }
+}

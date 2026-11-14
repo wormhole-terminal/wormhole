@@ -26,7 +26,7 @@ extension AppController {
         case "note-add": notes.add(note: argument)
         case "task-add": _ = notes.model.tasks.add(argument)
         case "notes":
-            reply("notes=\(notes.model.notes.map(\.text)) steps=\(notes.model.tasks.items.map { "\($0.text):\($0.done)" })")
+            reply("notes=\(notes.model.notes.map(\.text)) steps=\(notes.model.tasks.items.map { "\($0.text):\($0.done)" }) draft=\(notes.drafting)")
             return true
         case "history":
             hub.send(.showPanelTab(.history))
@@ -74,7 +74,9 @@ extension AppController {
             let history = hub.panel.history, details = history.details
             reply("phase=\(history.phase) commits=\(history.model.commits.count) branch=\(history.model.branch ?? "-") open=\(history.expanded.map { String($0.prefix(7)) } ?? "-") "
                 + "people=\(details?.people.map { "\($0.label)=\($0.spans.map(\.text).joined())" } ?? []) parents=\(details?.parents.map(\.short) ?? []) "
-                + "changes=\(details?.changes.spans.map(\.text).joined() ?? "-") files=\(history.files.map(\.path)) diff=\(hub.panel.history.diff.phase)")
+                + "changes=\(details?.changes.spans.map(\.text).joined() ?? "-") files=\(history.files.map(\.path)) diff=\(hub.panel.history.diff.phase)"
+                // The open commit's files that are regular files in the working tree now (the open icon's), wave 9.
+                + " present=\(history.present.map { $0.sorted() } ?? [])")
             return true
         case "project-approve": hub.panel.project.approve()
         case "project-revoke": hub.panel.project.revoke()
@@ -89,9 +91,10 @@ extension AppController {
             else { return fail("\(command): no such id \(argument)") }
         case "project-state":
             let project = hub.panel.project
-            guard let state = project.state else { reply("project=none loaded=\(project.loaded)"); return true }
+            // `problem=` and `dir=` (wave 9): the stores' reset note and the project folder's name on disk.
+            guard let state = project.state else { reply("project=none loaded=\(project.loaded) problem=\(project.problem ?? "-")"); return true }
             reply("root=\(state.root) status=\(state.status) asks=\(state.asksForTrust) commands=\(state.commands.count) features=\(state.features.map { "\($0.feature.rawValue)=\($0.on)" }) "
-                + "actions=\(state.actions.map(\.id)) prompts=\(state.prompts.map(\.id)) layout=\(state.layout) errors=\(state.errors)")
+                + "actions=\(state.actions.map(\.id)) prompts=\(state.prompts.map(\.id)) layout=\(state.layout) errors=\(state.errors) dir=\(state.dir) problem=\(project.problem ?? "-")")
             return true
         case "panel-option":
             // The settings the panel reads, set as the settings follower would: tree|group|split|wrap on|off, tabwidth N.
