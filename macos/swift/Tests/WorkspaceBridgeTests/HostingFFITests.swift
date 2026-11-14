@@ -25,19 +25,35 @@ final class HostingFFITests: XCTestCase {
         setenv("WORMHOLE_DATA_DIR", data, 1)
     }
 
+    /// The hosts this test saw its terminals in.
+    private var made: Set<String> = []
+
     override func tearDown() async throws {
         guard !data.isEmpty else { return }
-        // End All: whatever a failed test left running ends with the backend that attaches to it.
-        let last = backend()
-        last.restoreSaved()
-        last.finishQuit(endHosts: true)
+        // Every host this test started ends, through the bridge's own end call: those it saw, and any other live in its
+        // scratch folder (a failed test's). None may outlive the run.
+        if let desk = try? HostedTerminals(dataDir: nil, hostBinary: host, window: 1) {
+            for id in made.union(Self.live(desk)) { _ = await Task.detached { desk.endHost(hostId: id, hard: false) }.value }
+        }
+        if let after = try? HostedTerminals(dataDir: nil, hostBinary: host, window: 1) {
+            XCTAssertEqual(Self.live(after), [], "a host of this test is still running")
+        }
         try? FileManager.default.removeItem(atPath: data)
     }
 
+    /// The hosts that run in this test's folder: the saved terminals' that run, and the ones nobody names.
+    private static func live(_ desk: HostedTerminals) -> Set<String> {
+        guard let plan = try? desk.planAtLaunch() else { return [] }
+        return Set(plan.saved.filter(\.running).map(\.hostId) + plan.orphans.map(\.hostId))
+    }
+
+    /// Notes the hosts `store`'s terminals run in, for the tear-down.
+    private func note(_ store: WorkspaceStore) {
+        for id in store.state.live { if case .persistent(let host)? = store.hosting(of: id) { made.insert(host) } }
+    }
+
     private func backend(hosting: Bool = true) -> RustWorkspaceBackend {
-        // Each backend is a launch: the quit before it, in this same process, is over.
-        HostConnect.launched()
-        return RustWorkspaceBackend(
+        RustWorkspaceBackend(
             setup: WorkspaceSetup(
                 program: "/bin/cat", home: "/Users/ref", hosting: hosting ? HostingSetup(hostBinary: host) : nil))
     }
@@ -63,6 +79,7 @@ final class HostingFFITests: XCTestCase {
         // The host starts off the main actor, the pane blank meanwhile.
         XCTAssertEqual(store.hosting(of: 1), .connecting)
         try await wait("the host") { store.hosting(of: 1) != .connecting }
+        note(store)
         guard case .persistent(let hostID)? = store.hosting(of: 1) else { return XCTFail("not in a host") }
         first.core.terminal(id: 1)?.write(bytes: Data("remember-me\n".utf8))
         try await wait("the echo") { screen(first, 1).contains("remember-me") }
@@ -84,6 +101,7 @@ final class HostingFFITests: XCTestCase {
         // launch is offered the new host and not the old one.
         reopened.send(.close(id))
         try await wait("the fresh terminal's host") { reopened.state.live.allSatisfy { reopened.hosting(of: $0) != .connecting } }
+        note(reopened)
         let third = backend()
         let entries = third.hosted?.launchEntries() ?? []
         XCTAssertEqual(entries.count, 1)

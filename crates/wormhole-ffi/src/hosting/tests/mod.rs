@@ -3,6 +3,7 @@
 
 mod support;
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use wormhole_core::ipc::hosts;
@@ -133,6 +134,33 @@ fn gone_hosts_replay_and_unnamed_hosts_are_orphans() {
     desk.finish(true);
     drop(adopted);
     wait_for("the host to end", || fixture.live_hosts().is_empty());
+}
+
+/// Quit and End All while a host is still starting: that host ends too, and none is let go of and left running
+/// (`terminal_view/hosted.rs` `kept_past_quit`, with the end the person asked for). The quit is this desk's alone: a desk
+/// made after it in the same process starts and keeps its hosts as any does.
+#[test]
+fn ending_at_quit_ends_a_host_still_starting() {
+    let fixture = Fixture::new();
+    let desk = fixture.desk();
+    let starting = std::thread::spawn({
+        let (desk, request) = (Arc::clone(&desk), fixture.request(1));
+        move || desk.start(request, support::listener())
+    });
+    wait_for("the start to be under way", || desk.quit.under_way() > 0);
+    desk.finish(true);
+    let made = starting.join().expect("joins").expect("starts");
+    assert!(made.host_id().is_some(), "it started in a host");
+    wait_for("no host left", || fixture.live_hosts().is_empty());
+    assert!(fixture.desk().plan_at_launch().expect("plans").saved.is_empty(), "no row names it");
+    drop((made, desk));
+
+    let next = fixture.desk();
+    let terminal = next.start(fixture.request(2), support::listener()).expect("starts");
+    let host_id = terminal.host_id().expect("hosted");
+    assert_eq!(terminal.hosting(), TerminalHosting::Persistent { host_id: host_id.clone() });
+    next.finish(true);
+    wait_for("its host to end", || fixture.live_hosts().is_empty());
 }
 
 #[test]

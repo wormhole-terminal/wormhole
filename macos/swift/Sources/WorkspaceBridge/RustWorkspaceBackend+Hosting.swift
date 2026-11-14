@@ -74,10 +74,8 @@ extension RustWorkspaceBackend {
             return
         }
         book.connecting[id] = nil
-        if book.quitting {
-            _ = done.terminal?.detach()
-            return
-        }
+        // After the quit the desk let go of it or ended it (`HostedTerminals.finish`); a terminal in the app ends with it.
+        if book.quitting { return }
         if let fallback = done.fallback { told("host-fallback", .hostFallback(fallback)) }
         if let terminal = done.terminal {
             register(id, terminal, relay: relays[id])
@@ -161,7 +159,6 @@ extension RustWorkspaceBackend {
     /// screens are saved for a host that will not be there.
     public func finishQuit(endHosts: Bool) {
         book.quitting = true
-        HostConnect.quit()
         book.saver?.cancel()
         // The terminals in the app's own process end with it: what they show is kept for the next launch.
         _ = core.saveTexts()

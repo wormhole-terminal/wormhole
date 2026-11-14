@@ -1,6 +1,7 @@
 import Foundation
 import WindowsModel
 import WorkspaceModel
+import WormholeBindings
 import XCTest
 
 @testable import WindowsBridge
@@ -25,22 +26,33 @@ final class HostedWindowsTests: XCTestCase {
         setenv("WORMHOLE_DATA_DIR", data, 1)
     }
 
+    /// The hosts this test saw its terminals in.
+    private var made: Set<String> = []
+
     override func tearDown() async throws {
         guard !data.isEmpty else { return }
-        // End All: whatever a failed test left running ends with the window that attaches to it.
-        if let windows = try? RustWindowsBackend() {
-            for saved in windows.saved() {
-                let (store, _) = window(windows, saved.id, first: false)
-                store.restore()
-                store.finishQuit(endHosts: true)
-            }
+        // Every host this test started ends, through the bridge's own end call: those it saw, and any other live in its
+        // scratch folder (a failed test's). None may outlive the run. Nothing is restored here: a restore would start
+        // new hosts for the rows whose hosts are gone.
+        if let desk = try? HostedTerminals(dataDir: nil, hostBinary: host, window: 1) {
+            for id in made.union(live()) { _ = await Task.detached { desk.endHost(hostId: id, hard: false) }.value }
         }
+        XCTAssertEqual(live(), [], "a host of this test is still running")
         try? FileManager.default.removeItem(atPath: data)
     }
 
+    /// The hosts that run in this test's folder: the ones its two windows' saved terminals name, and the ones nobody names.
+    private func live() -> Set<String> {
+        var live: Set<String> = []
+        for window: Int64 in [1, 2] {
+            guard let desk = try? HostedTerminals(dataDir: nil, hostBinary: host, window: window), let plan = try? desk.planAtLaunch()
+            else { continue }
+            live.formUnion(plan.saved.filter(\.running).map(\.hostId) + plan.orphans.map(\.hostId))
+        }
+        return live
+    }
+
     private func window(_ windows: RustWindowsBackend, _ id: Int, first: Bool) -> (WorkspaceStore, RustWorkspaceBackend) {
-        // Each window made is a launch's: the quit before it, in this same process, is over.
-        HostConnect.launched()
         let hosting = HostingSetup(hostBinary: host, window: Int64(id), adoptsOrphans: first)
         let backend = windows.workspace(window: id, setup: WorkspaceSetup(program: "/bin/cat", home: "/Users/ref", hosting: hosting))
         return (WorkspaceStore(backend: backend), backend)
@@ -70,6 +82,7 @@ final class HostedWindowsTests: XCTestCase {
             for (store, id) in [(a, 1), (b, 2), (b, 3)] {
                 guard case .persistent(let host)? = store.hosting(of: id) else { return XCTFail("terminal \(id) is not in a host") }
                 hostOf[id] = host
+                made.insert(host)
             }
             XCTAssertTrue(windows.save(window: 1, workspace: aBackend, frame: nil))
             XCTAssertTrue(windows.save(window: 2, workspace: bBackend, frame: nil))

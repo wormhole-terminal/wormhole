@@ -2,7 +2,6 @@
 // a stuck one takes seconds), so never on the main actor. The pane is blank until it is done, as in the GPUI app.
 
 import Foundation
-import Synchronization
 import UniFFISource
 import WorkspaceModel
 import WormholeBindings
@@ -22,13 +21,14 @@ struct Connected: Sendable {
 
 enum HostConnect {
     /// `attach`: the host a saved terminal ran in, when it runs. A host that is gone, or none, starts a new one; one that
-    /// would not start leaves the program in the app.
+    /// would not start leaves the program in the app. One that comes up after the app quit is let go of, or ended, by the
+    /// desk itself (`HostedTerminals.finish`): the main actor may be gone by then.
     static func run(
         desk: HostedTerminals, what: HostedStart, attach host: String?, visible: Bool, relay: TerminalRelay
     ) -> Connected {
         if let host {
             do {
-                return keptPastQuit(Connected(terminal: try desk.attach(hostId: host, what: what, visible: visible, listener: relay), attached: true))
+                return Connected(terminal: try desk.attach(hostId: host, what: what, visible: visible, listener: relay), attached: true)
             } catch HostingError.Unavailable(let reason, let kind, _) {
                 return Connected(unavailable: (HostProblem.Why(kind), host, reason))
             } catch HostingError.Gone {
@@ -36,23 +36,10 @@ enum HostConnect {
             } catch { return Connected(failure: "\(error)") }
         }
         do {
-            return keptPastQuit(Connected(terminal: try desk.start(what: what, listener: relay)))
+            return Connected(terminal: try desk.start(what: what, listener: relay))
         } catch HostingError.Start(let reason), HostingError.NoProgram(let reason) {
             do { return Connected(terminal: try local(what, relay), fallback: reason) } catch { return Connected(failure: "\(error)") }
         } catch { return Connected(failure: "\(error)") }
-    }
-
-    /// Set when the app quits: a host that was being made then is let go of by the thread that made it, not by the main
-    /// actor, which may be gone by then (`hosted.rs` `kept_past_quit`).
-    private static let quitting = Mutex(false)
-    static func quit() { quitting.withLock { $0 = true } }
-    /// A launch after a quit in one process, which only a test has: its hosts are kept again.
-    static func launched() { quitting.withLock { $0 = false } }
-
-    /// `ready`, let go of when the app quit while it was being made.
-    private static func keptPastQuit(_ ready: Connected) -> Connected {
-        if quitting.withLock({ $0 }) { _ = ready.terminal?.detach() }
-        return ready
     }
 
     /// The same program in the app's own process.

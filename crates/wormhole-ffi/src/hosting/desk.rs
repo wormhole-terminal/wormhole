@@ -23,6 +23,7 @@ use wormhole_term::client::AttachError;
 use wormhole_term::client::{HostCommand, socket_of};
 
 use super::checkpoints::{self, Checkpoints};
+use super::quit::{Fate, QuitGate};
 use super::registry::Registry;
 use super::{HostSlot, HostingError, HostingProgram, LaunchPlan, OrphanHost, SavedTerminal, program};
 use crate::aux_backends::{AuxError, resolve_data_dir};
@@ -93,6 +94,8 @@ pub struct HostedTerminals {
     pub(super) made: Mutex<Vec<(i64, Weak<Terminal>)>>,
     /// The ids saved this run: what `finish_restore` keeps of the rows the last run left.
     saved_now: Mutex<HashSet<i64>>,
+    /// Whether the app quit, and the starts and attaches still under way then.
+    pub(super) quit: QuitGate,
 }
 
 #[uniffi::export]
@@ -126,6 +129,7 @@ impl HostedTerminals {
             orphans: Mutex::default(),
             made: Mutex::default(),
             saved_now: Mutex::default(),
+            quit: QuitGate::default(),
         }))
     }
 
@@ -217,6 +221,7 @@ impl HostedTerminals {
         what: HostedStart,
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Terminal>, HostingError> {
+        let _under_way = self.quit.begin();
         let HostProgram::Found(binary) = &self.program else {
             return Err(HostingError::NoProgram { reason: format!("{:?}", self.program()) });
         };
@@ -241,6 +246,7 @@ impl HostedTerminals {
         visible: bool,
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Terminal>, HostingError> {
+        let _under_way = self.quit.begin();
         let socket = match locked(&self.launch).restore(Some(&host_id)) {
             Restore::Attach(socket) => socket,
             // Not in the plan (a retry, or a host that came after): its own meta says where it listens.
@@ -268,6 +274,8 @@ impl HostedTerminals {
     /// The app is quitting. `end_hosts` (Quit and End All Terminals, or the box left ticked): every terminal
     /// ends with its host and no row names a host. Otherwise each is let go of and its program runs on.
     pub fn finish(&self, end_hosts: bool) {
+        // First: a start or an attach that ends after this lets go of its host, or ends it; ending waits for them.
+        self.quit.quit(end_hosts);
         let alive: Vec<Arc<Terminal>> =
             locked(&self.made).iter().filter_map(|(_, weak)| weak.upgrade()).collect();
         if end_hosts {
@@ -409,9 +417,19 @@ impl HostedTerminals {
         if let Some(key) = self.checkpoint_key(tab, &id) {
             self.checkpoints.start(&terminal, &id, key, restored_from);
         }
-        let mut made = locked(&self.made);
-        made.retain(|(_, weak)| weak.strong_count() > 0);
-        made.push((tab, Arc::downgrade(&terminal)));
+        {
+            let mut made = locked(&self.made);
+            made.retain(|(_, weak)| weak.strong_count() > 0);
+            made.push((tab, Arc::downgrade(&terminal)));
+        }
+        // Made after the app quit (counted in `made` first, so `finish` sees it when it quit after this): nobody takes it.
+        match self.quit.fate() {
+            Fate::Runs => {}
+            Fate::LetGo => {
+                terminal.detach();
+            }
+            Fate::Ends => terminal.close(),
+        }
         Ok(terminal)
     }
 }

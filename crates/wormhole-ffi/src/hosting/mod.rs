@@ -11,6 +11,7 @@
 //! - `registry`: which terminal runs in which host, in the profile's database;
 //! - `checkpoints`: terminals that come back after the Mac restarts (the sealed screen the host keeps);
 //! - `end`: ending a host from its terminal's bar;
+//! - `quit`: what a start or an attach still under way as the app quits does with its host;
 //! - `texts`: the screens saved each minute, which a terminal whose host is gone is drawn from;
 //! - `slot`: what a `Terminal` knows of its host, and its `detach`, `hosting`, `set_visible`;
 //! - `program`, `records`, `error`: the plain values that cross.
@@ -20,6 +21,7 @@ mod desk;
 mod end;
 mod error;
 mod program;
+mod quit;
 mod records;
 mod registry;
 mod shown;
