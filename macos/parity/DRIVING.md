@@ -293,6 +293,20 @@ on screen (its first key view), and the focus holder is never that choice. On th
 that sent a key failed with `focus=title-row toggle-sidebar` from its first `state` on; if that line shows again there, the keys did
 not reach the terminal at launch and the scenario's own steps are not at fault.
 
+Added by wave 13 (cover; compiled and run by the scenarios that use them):
+
+| Command | Does, and its reply |
+|---|---|
+| `update-status` | Settings → Updates as the open Settings window draws it (`Driving/AppController+ControlUpdates.swift`): `update-status <idle\|checking\|up-to-date\|available\|unsupported\|downloading\|installed\|failed> "<the status line>" channel="<stable\|preview>" [version="<offered or installed>"] [note="<what a channel change did>"] [pending] [security]` (the line is the page model's own `statusLine`, which the page writes; the channel is the updater's), a `button <id>` per button the page laid out, left to right (`update.check`, `update.skip`, `update.install`, `update.restart`, `update.keep`: click one with `settings-press <id>`; a button that left is listed until the page's change has run its course, so wait for the set), `notes "<line>"` per line under What's new. `update-status none` in a build without an updater; `error:` while Settings is closed |
+| `scrollback [terminal]` | `scrollback history=<lines> offset=<lines back> rows=<n>`: the history that terminal's view was last given, from the last frame's header, which its scroll bar is drawn from (`Driving/AppController+ControlScrollback.swift`); `scrollback none` before a first frame |
+| `hosts-window` / `hosts-forget <id>` | the Session Hosts window as its own model holds it (`HostsWindow.model`, what the cards are drawn from and what follows the hosts folder by itself; `hosts-list` asks the hosts anew instead): `hosts-window cards="<n>"`, a `card <id> <attached\|detached\|orphan\|stale> "<standing>" note="…" [open] [attention] [can-end] [can-forget]` per card and under it `fact <field> "<value>" [warning\|danger]` per fact (`hostPid`, `shellPid`, `program`, `link`, `socket`, …); `hosts-forget` is a stale card's Forget (`error:` for a card that has none) (`Driving/AppController+ControlHostsWindow.swift`) |
+| `window-look` | what the window the command acts on is drawn with, each from the thing that draws it: `window-look profile="<id>" theme="<name>" window="<#rrggbb>" status_bar="<bool>" font="<the selected terminal's pt>" terminal="<#rrggbb, its background as drawn>"` (`Driving/AppController+ControlWindowLook.swift`). `status-items`, `tab-bar`, `tab-click` and `switcher` are now built from that window's own look too (they took the app's, which is the shown profile's) |
+
+An instance with an updater that asks a feed of the scenario's own: `Instance.with(feed: server.base)` over a `FeedServer`
+(`Tests/EndToEndTests/FeedServer.swift`: a listener on `127.0.0.1` that serves the files of a folder in the scratch and keeps
+what was asked). With "Install updates automatically" on (the default) a check installs what it finds, which an instance
+that runs from no app bundle refuses in words: turn `auto_update` off to see an update offered.
+
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).
