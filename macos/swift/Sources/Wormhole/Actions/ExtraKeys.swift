@@ -22,12 +22,14 @@ final class ExtraKeys {
 
     /// True when the key was this table's to run.
     private func runs(_ event: NSEvent) -> Bool {
-        // A window of the app: GPUI's app-level bindings work from Settings, the Studio and a sheet too, so those take the key as
-        // the window in front would (a panel that cannot be main, like the quick panel, reads its own keys).
-        guard !event.isARepeat, let window = event.window, let spec = Self.spec(of: event) else { return false }
-        let own = window.sheetParent ?? window
-        guard let session = app.sessions.first(where: { $0.window === own })
-            ?? (own.canBecomeMain && !app.shown.isEmpty ? app.front : nil)
+        // A window of the app: GPUI's app-level bindings work from Settings and the Studio too, so those take the key as the
+        // window in front would (a panel that cannot be main, like the quick panel, reads its own keys). Not while a sheet is up
+        // (a question, a dialog): the key is the sheet's, as GPUI's `has_active_dialog` leaves it.
+        guard !event.isARepeat, let window = event.window, window.sheetParent == nil, window.attachedSheet == nil,
+            let spec = Self.spec(of: event)
+        else { return false }
+        guard let session = app.sessions.first(where: { $0.window === window })
+            ?? (window.canBecomeMain && !app.shown.isEmpty ? app.front : nil)
         else { return false }
         let keymap = Keymap.shared
         let inMenus = Self.menuActions(keymap.layout)
