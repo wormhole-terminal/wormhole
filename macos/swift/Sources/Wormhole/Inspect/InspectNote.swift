@@ -37,7 +37,7 @@ enum InspectNote {
     /// The tokens the component `id` is drawn with; none for an element the gallery's table does not have.
     static func tokens(of id: String) -> [String] { uses[id] ?? [] }
 
-    private static let uses = Dictionary(GalleryKnowledge().uses.map { ($0.id, $0.tokens) }, uniquingKeysWith: { first, _ in first })
+    private static let uses = Dictionary(GalleryKnowledge().drawn.map { ($0.id, $0.tokens) }, uniquingKeysWith: { first, _ in first })
 
     /// Source files by `#fileID`, split into lines.
     private static var sources: [String: [String]?] = [:]

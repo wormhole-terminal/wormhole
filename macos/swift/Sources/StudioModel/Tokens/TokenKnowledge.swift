@@ -7,11 +7,16 @@ import DesignSystem
 public protocol TokenKnowledge: Sendable {
     /// The rule that derives `token` when the theme doesn't set it, in themes.md's expression syntax.
     func rule(for token: String, appearance: ThemeAppearance) -> String?
-    /// The components and what they draw with (the gallery's specimens): who uses a token, and in which area.
+    /// The components and what they draw with, as core's `TOKEN_USES` lists them: what "Used by" names, what a metric's
+    /// "n uses" counts and what the token list's area filter keeps.
     var uses: [TokenUse] { get }
+    /// What the gallery's own views draw with, read from their sources: only what the gallery outlines.
+    var drawn: [TokenUse] { get }
 }
 
 extension TokenKnowledge {
+    public var drawn: [TokenUse] { uses }
+
     /// The syntax colours among `keys` that have a rule of their own; the rest follow one of them, so one value
     /// moves a whole family (`keyword.control` follows `keyword`).
     public func syntaxRoots(among keys: [String]) -> [String] {

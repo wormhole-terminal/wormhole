@@ -1574,3 +1574,8 @@ All additive; the core decides, Swift asks.
   has none for the terminal palette's own pair. The Studio asks once per change of the draft (`StudioDocument.contrast`) and the list's marks,
   the Low filter, the editor's Contrast section and the card all read that one answer; Swift keeps no pair table or ratio maths. The Studio
   applies a fix only when the person presses it.
+- `studio_token_uses() -> [StudioTokenUse]`: core's `TOKEN_USES` in its order, each `{id, label, area, tokens}` (`area` is `sidebar`, `panel`,
+  `chrome`, `settings`, `ambient`, or `all` for core's `Basics`; `terminal.*` / `syntax.*` stand for a family). What the Studio's "Used by", a
+  metric's "n uses", the gallery header's count and the token list's area filter tell, as in the GPUI Studio (`FfiTokenUses`,
+  `GalleryKnowledge(uses:)`). The gallery's outlines follow `GalleryUses.swift` instead, generated from what the Swift views really draw
+  (`macos/scripts/gen-gallery-uses.py`).

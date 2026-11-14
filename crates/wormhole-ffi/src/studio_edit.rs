@@ -1,12 +1,12 @@
 //! What the Theme Studio's editor asks of core while a value is typed and while a theme is read for contrast: the
 //! names and functions an expression offers at the caret (`theme::tokens::completions`), every contrast pair
-//! measured (`contrast_checks`) and the fixes for the pairs that fall short (`contrast_issues`). Core proposes,
-//! the Studio applies: nothing here changes a file.
+//! measured (`contrast_checks`), the fixes for the pairs that fall short (`contrast_issues`) and who draws with a
+//! token (`TOKEN_USES`, "Used by"). Core proposes, the Studio applies: nothing here changes a file.
 
 use std::path::Path;
 
 use wormhole_core::config::resolve_theme_file_in;
-use wormhole_core::theme::tokens::{completions, contrast_issues, read_theme_file};
+use wormhole_core::theme::tokens::{Area, TOKEN_USES, completions, contrast_issues, read_theme_file};
 
 use crate::error::FfiError;
 use crate::studio_files::folded;
@@ -134,4 +134,38 @@ pub fn studio_contrast(
         })
         .collect();
     Ok(StudioContrast { checks, issues })
+}
+
+/// A component of the design and the tokens it draws with (core's `TokenUse`): what "Used by" names, what a metric's
+/// "n uses" counts and what the token list's area filter keeps.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct StudioTokenUse {
+    pub id: String,
+    pub label: String,
+    /// The part of the app: `sidebar`, `panel`, `chrome`, `settings`, `ambient`, or `all` for what every part shows.
+    pub area: String,
+    /// UI tokens and `metrics.*`; `terminal.*` and `syntax.*` stand for every terminal or syntax colour.
+    pub tokens: Vec<String>,
+}
+
+/// Core's `TOKEN_USES`, in its order.
+#[uniffi::export]
+pub fn studio_token_uses() -> Vec<StudioTokenUse> {
+    TOKEN_USES
+        .iter()
+        .map(|u| StudioTokenUse {
+            id: u.id.into(),
+            label: u.label.into(),
+            area: match u.area {
+                Area::Sidebar => "sidebar",
+                Area::Panel => "panel",
+                Area::Chrome => "chrome",
+                Area::Settings => "settings",
+                Area::Ambient => "ambient",
+                Area::Basics => "all",
+            }
+            .into(),
+            tokens: u.tokens.iter().map(|t| (*t).to_string()).collect(),
+        })
+        .collect()
 }

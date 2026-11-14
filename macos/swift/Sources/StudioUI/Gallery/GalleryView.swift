@@ -17,7 +17,7 @@ struct GalleryView<Extras: View>: View {
         let area = document.filter.area
         let shown = GalleryCatalog.specimens.filter { area == .all || $0.area == area }
         let context = GalleryContext(selected: document.selected) { document.selected = $0 }
-        let drawn = Set(document.selected.map { document.uses(of: $0).map(\.id) } ?? [])
+        let drawn = Set(document.selected.map { document.drawn(with: $0).map(\.id) } ?? [])
         VStack(spacing: 0) {
             AreaChips(area: $document.filter.area, uses: document.selected.map { (document.uses(of: $0).count, $0) })
             ScrollView {

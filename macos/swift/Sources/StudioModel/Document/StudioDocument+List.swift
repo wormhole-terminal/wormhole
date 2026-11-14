@@ -59,7 +59,11 @@ extension StudioDocument {
         environment.library.catalog.first { $0.name == token }?.description
     }
 
+    /// What draws with `token` as core lists it (`uses_of`): "Used by" and a metric's count.
     public func uses(of token: String) -> [TokenUse] { environment.knowledge.uses.filter { $0.draws(with: token) } }
+
+    /// The gallery's components whose views really draw with `token`: what the gallery outlines.
+    public func drawn(with token: String) -> [TokenUse] { environment.knowledge.drawn.filter { $0.draws(with: token) } }
 
     public var contrastIssues: [ContrastIssue] { contrast.issues }
 

@@ -1,8 +1,8 @@
 // One section of the gallery page: a component of the design on sample data, in the live (previewed) theme,
 // with what it is and where it belongs. What the selected token is drawn on is outlined on each element that draws
 // with it (`.marked`, which the views carry), and the elements' tokens come from the sources themselves
-// (`GalleryUses`), so the outline and the editor's "Used by" are always what the views use. The view is
-// `SpecimenContent`'s.
+// (`GalleryUses`), so the outline is always what the views draw. The editor's "Used by" is core's `TOKEN_USES`, as
+// in the GPUI Studio. The view is `SpecimenContent`'s.
 
 import StudioModel
 

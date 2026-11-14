@@ -209,7 +209,7 @@ pub use studio_folder::{
 };
 pub use studio_edit::{
     StudioCompletion, StudioCompletions, StudioContrast, StudioContrastCheck, StudioContrastFix,
-    StudioContrastIssue, studio_completions, studio_contrast,
+    StudioContrastIssue, StudioTokenUse, studio_completions, studio_contrast, studio_token_uses,
 };
 pub use themes::{list_user_themes, resolve_theme, resolve_theme_json, theme_files_stamp};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};

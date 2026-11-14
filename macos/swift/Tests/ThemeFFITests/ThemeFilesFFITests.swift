@@ -66,6 +66,15 @@ final class ThemeFilesFFITests: XCTestCase {
         XCTAssertEqual(Set(report.checks.filter { !$0.passes }.map(\.fg)), report.lowTokens)
     }
 
+    func testUsedByIsCoresTableAndTheOutlinesAreWhatTheViewsDraw() {
+        let core = FfiTokenUses.all()
+        XCTAssertTrue(core.contains { $0.id == "dialog" }, "core lists the dialog, which macOS draws here")
+        let knowledge = GalleryKnowledge(uses: core)
+        XCTAssertEqual(knowledge.uses, core)
+        XCTAssertFalse(knowledge.drawn.contains { $0.id == "dialog" }, "the gallery outlines only what its views draw")
+        XCTAssertTrue(knowledge.drawn.first { $0.id == "neutral.chip" }?.draws(with: "metrics.radius_chip") == true, "the shared chip's corners")
+    }
+
     // MARK: Picks (audit gap 7)
 
     func testAUserThemePickedInTheConfigIsShownWhateverNamesIt() throws {

@@ -65,7 +65,7 @@ final class StudioLauncher {
             let live: @Sendable () -> URL = { [themesFolder] in MainActor.assumeIsolated { themesFolder() } }
             SketchSource.preset = { WindowSketches.blocks(preset: $0, width: $1) }
             let environment = StudioEnvironment(
-                resolver: FfiThemeResolver(), folder: FfiThemeFolder(folder: live), knowledge: GalleryKnowledge(),
+                resolver: FfiThemeResolver(), folder: FfiThemeFolder(folder: live), knowledge: GalleryKnowledge(uses: FfiTokenUses.all()),
                 files: FfiStudioFiles(folder: live), project: project(),
                 exportFolder: ExportFolder(
                     recall: { studioExportDir().map { URL(fileURLWithPath: $0) } },
