@@ -11,7 +11,10 @@ extension AppController {
             reply(hub.state.layout.map { "\($0)" } ?? "no layout from the core (sample)")
         case "title":
             let gauge = hub.state.all.first { $0.id == hub.state.selected }.flatMap { hub.gauges.gauge(for: $0) }
-            reply((hub.state.title.map { "\($0)" } ?? "no title from the core (sample)") + "\ngauge: \(gauge.map { "\($0)" } ?? "none")")
+            // The row's lock is drawn from the list's own summary of the selected terminal (`TitleFactsMaker`), which the core's
+            // title does not carry: said on a line of its own.
+            let hidden = hub.state.selectedTerminal?.isAgentHidden ?? false
+            reply((hub.state.title.map { "\($0)" } ?? "no title from the core (sample)") + "\ngauge: \(gauge.map { "\($0)" } ?? "none")\nhidden-from-agents: \(hidden)")
         case "counts":
             reply("\(hub.state.counts) all=\(hub.state.all.map { "\($0.id):\($0.activity)" })")
         case "hook":

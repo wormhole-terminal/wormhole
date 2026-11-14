@@ -95,7 +95,9 @@ extension AppController {
     private func pickerListing(_ argument: String) async -> String {
         let words = argument.split(separator: " ", maxSplits: 1).map(String.init)
         let history = words.first == "history"
-        let query = (history ? words.dropFirst() : words[...]).joined(separator: " ")
+        // `picker [history|compare] [query]`: the list's name is not part of what is looked for.
+        let named = history || words.first == "compare"
+        let query = (named ? words.dropFirst() : words[...]).joined(separator: " ")
         hub.send(.showPanelTab(history ? .history : .changes))
         let revs: () -> [Rev] = { history ? self.hub.panel.history.revs : self.hub.panel.changes.revs }
         let loading: () -> Bool = { history ? self.hub.panel.history.revsLoading : self.hub.panel.changes.revsLoading }

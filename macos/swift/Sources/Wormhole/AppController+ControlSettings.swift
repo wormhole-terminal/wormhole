@@ -129,6 +129,11 @@ extension AppController {
             settingsModel.importDraft.toggle(argument)
             reply("import-open open=\(settingsModel.importDraft.open ?? "none") reviews=\(settingsModel.importDraft.reviews.keys.sorted())")
         case "import-apply":
+            // The card's rows are read a moment after it opens; Apply is on the card only once they are there.
+            guard settingsModel.importDraft.reviews[argument] != nil else {
+                reply("error: \(argument)'s settings are not read yet (`import-open \(argument)` opens its card; ask again)")
+                return true
+            }
             settingsModel.importDraft.apply(argument)
             reply("import-apply \(settingsModel.importDraft.outcome?.text ?? "nothing")")
         case "probe-approve":

@@ -150,7 +150,12 @@ extension AppController {
         let point = injector.location(Double(row.frame.midX), Double(row.frame.midY), in: window)
         var said = [injector.press(point, in: window, clicks: 1, flags: [])]
         if injector.isPressed { said.append(injector.release(point, in: window, clicks: 1, flags: [])) }
-        await pause(60)
+        // The recorder takes the keys a turn or two after the click (its capture view is made, then made first responder): a
+        // key sent before that would go to the window and run a menu item. Waited for, and said when it never comes.
+        for _ in 0..<40 where !(window.firstResponder is any RecordsKeys) { await pause(50) }
+        guard window.firstResponder is any RecordsKeys else {
+            return reply("error: the click on \(id) did not start its recorder: " + said.joined(separator: ", "))
+        }
         // The keys go to the Settings window, as `pointer-window Settings` + `key` would send them.
         let before = injector.windowTitle
         injector.windowTitle = window.title
