@@ -29,9 +29,10 @@ public struct StatusPose: Sendable, Equatable {
     public var flareReach, flareStrength: Double
     /// How far the row is moved sideways (points).
     public var dx: Double
-    /// The tile's own parts, for a picture drawn from the pose alone (Settings → Motion): how much of the old status's badge
-    /// still shows, the new badge's opacity and size, the card's wash and how far the second line has rolled to the new words.
-    public var leaving = 0.0, badgeOpacity = 1.0, badgeScale = 1.0, wash = 0.0, roll = 1.0
+    /// The tile's own parts, for a picture drawn from the pose alone (Settings → Motion, the Studio's gallery): how much of the
+    /// old status's light and badge still shows, of the new one's light or edge (`ring`), the new badge's opacity and size, the
+    /// card's wash and how far the second line has rolled to the new words.
+    public var leaving = 0.0, ring = 1.0, badgeOpacity = 1.0, badgeScale = 1.0, wash = 0.0, roll = 1.0
     public static let rest = StatusPose(flareReach: 0, flareStrength: 0, dx: 0)
     public init(flareReach: Double, flareStrength: Double, dx: Double) { (self.flareReach, self.flareStrength, self.dx) = (flareReach, flareStrength, dx) }
 }

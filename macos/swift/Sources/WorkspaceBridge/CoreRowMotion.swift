@@ -20,7 +20,7 @@ enum CoreRowMotion {
             let pose = statusMotionPose(variant: $0, from: UInt8($1), to: UInt8($2), t: Float($3))
             var status = StatusPose(flareReach: Double(pose.flareReach), flareStrength: Double(pose.flareStrength), dx: Double(pose.dx))
             (status.leaving, status.badgeOpacity, status.badgeScale) = (Double(pose.leaving), Double(pose.badgeOpacity), Double(pose.badgeScale))
-            (status.wash, status.roll) = (Double(pose.wash), Double(pose.roll))
+            (status.wash, status.roll, status.ring) = (Double(pose.wash), Double(pose.roll), Double(pose.ring))
             return status
         }
         tables.insertRoom = { Double(insertRoomAt(variant: $0, entering: $1, elapsedMs: Float($2 * 1000))) }

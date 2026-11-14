@@ -1,8 +1,9 @@
 // The list's own tile in every state, for the Theme Studio's gallery (`studio/gallery/tiles.rs` `tile_states`): a plain
 // terminal's states, an agent's, and the agent's again on a selected row, where the badge is cut out in the row's colour.
 // Under them one tile whose status changes when asked, played by the status motion in use (`StatusTile`'s own change and
-// the flare): a flare and a nudge are also held a third of the way through (the core's pose table at that time); the other
-// variants are the system's transitions, which cannot be held part-way, so each is shown before and after, side by side.
+// the flare), and every variant but Classic (a cut) held a third of the way from working to needs input (`status_changes`):
+// each drawn from the core's pose table at that time (`pose::status`), part by part as the row has them: the old light and
+// badge on their way out, the new ones on their way in, the card's wash, the ring of a flare, a nudge, the line's roll.
 
 import DesignSystem
 import SwiftUI
@@ -33,51 +34,70 @@ public struct TileStatesSpecimen: View {
                 .background(tokens.sidebarRowSelected, in: RoundedRectangle(cornerRadius: metrics.rowRadius))
             change
             caught
-            beforeAfter
         }
     }
 
-    /// The variants that cannot be held part-way (a cross-fade, a pop, a wash, a roll: the system's transitions), each as the
-    /// tile before the change and after it, with a caption that says why (`status_changes` catches them a third of the way).
-    private var beforeAfter: some View {
-        VStack(alignment: .leading, spacing: Space._2) {
-            Text(Words.text("studio-gallery-status-before-after", fallback: "These play the system’s own transitions, which cannot be held part-way: before and after."))
-                .font(TextRole.caption.font).foregroundStyle(tokens.textMuted).fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: Space._6) {
-                ForEach([StatusMotion.crossfade, .badgePop, .wash, .lineRoll], id: \.self) { motion in
-                    VStack(spacing: Space._2) {
-                        HStack(spacing: Space._2) {
-                            StatusTile(state: .working, agent: .claude, size: metrics.tile, phase: 0, surface: tokens.surfacePanel)
-                            Image(systemName: "arrow.right").font(TextRole.caption.font).foregroundStyle(tokens.textFaint)
-                                .accessibilityHidden(true)
-                            StatusTile(state: .needsYou, agent: .claude, size: metrics.tile, phase: 0, surface: tokens.surfacePanel)
-                        }
-                        Text(motion.coreName).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
-                    }
-                }
-            }
-        }
-        .padding(Space._3)
-        .allowsHitTesting(false)
-    }
-
-    /// The two motions that add something on top of a tile, each held a third of the way through working to needs input
-    /// (`status_changes`): the ring on its way out, the row's nudge. The others (a cross-fade, a pop, a wash, a roll) are
-    /// the system's transitions, which cannot be held part-way; they play above.
+    /// The change from working to needs input a third of the way through each variant (Classic is a cut: nothing to catch).
+    /// A flare and a nudge add something to the tile already changed; the others are its parts and its card as the pose has them.
     private var caught: some View {
-        HStack(spacing: Space._6) {
-            ForEach([StatusMotion.flare, .nudge], id: \.self) { motion in
+        let shift = StatusShift(count: 1, from: .working, to: .needsYou)
+        return HStack(alignment: .top, spacing: Space._6) {
+            ForEach([StatusMotion.crossfade, .badgePop, .wash, .lineRoll, .flare, .nudge], id: \.self) { motion in
                 VStack(spacing: Space._2) {
-                    StatusTile(state: .needsYou, agent: .claude, size: metrics.tile, phase: 0, surface: tokens.surfacePanel)
-                        .statusCaught(
-                            StatusShift(count: 1, from: .working, to: .needsYou), variant: motion,
-                            tile: motion == .flare ? metrics.tile : nil, at: 1.0 / 3.0)
+                    switch motion {
+                    case .flare, .nudge:
+                        StatusTile(state: .needsYou, agent: .claude, size: metrics.tile, phase: 0, surface: tokens.surfacePanel)
+                            .statusCaught(shift, variant: motion, tile: motion == .flare ? metrics.tile : nil, at: Self.third)
+                            .padding(Space._2)
+                    default:
+                        posed(Self.pose(motion, shift))
+                    }
+                    if motion == .lineRoll { rolled(Self.pose(motion, shift).roll) }
                     Text(motion.coreName).font(TextRole.caption.font).foregroundStyle(tokens.textMuted)
                 }
             }
         }
         .padding(Space._3)
         .allowsHitTesting(false)
+    }
+
+    /// Where every specimen of a change is held: a third of the way (`ShiftClock::At(1.0 / 3.0)`).
+    private static let third = 1.0 / 3.0
+    /// How strong a wash is at its fullest (`WASH_TINT`, as the row's `StatusWash`).
+    private static let washTint = 0.16
+
+    private static func pose(_ motion: StatusMotion, _ shift: StatusShift) -> StatusPose {
+        RowMotion.tables?.statusPose(motion.coreName, shift.from.rawValue, shift.to.rawValue, third) ?? .rest
+    }
+
+    /// The tile caught in `pose`: the working light as far as it still shows, the needs-input edge and badge as far as they have
+    /// come (the badge at its size of the moment), and the card behind washed in the attention colour as strong as the pose says.
+    private func posed(_ pose: StatusPose) -> some View {
+        let size = metrics.tile
+        let surface = tokens.surfacePanel
+        return StatusTile(state: .shell, agent: .claude, size: size, phase: 0, surface: surface)
+            .overlay { TileLight(state: .working, size: size, phase: 0).opacity(pose.leaving) }
+            .overlay { TileLight(state: .needsYou, size: size, phase: 0).opacity(pose.ring) }
+            .overlay(alignment: .bottomTrailing) {
+                TileBadge(state: .needsYou, tile: size, surface: surface).scaleEffect(CGFloat(pose.badgeScale)).opacity(pose.badgeOpacity)
+            }
+            .padding(Space._2)
+            .background(tokens.agentAttention.opacity(Self.washTint * pose.wash), in: RoundedRectangle(cornerRadius: metrics.rowRadius))
+    }
+
+    /// The second line `roll` of the way from the old words to the new: the old ones going up out of the line, the new ones
+    /// coming in from below (`SecondLineView`'s roll).
+    private func rolled(_ roll: Double) -> some View {
+        let height = RowGeometry.metaLine
+        return ZStack(alignment: .leading) {
+            Text(Words.text("settings-menu-bar-preview-working", fallback: "Working")).foregroundStyle(tokens.textMuted)
+                .offset(y: -height * CGFloat(roll))
+            Text(Words.text("settings-menu-bar-preview-needs-input", fallback: "Needs input")).foregroundStyle(tokens.agentAttentionText)
+                .offset(y: height * CGFloat(1 - roll))
+        }
+        .font(TextRole.caption.font)
+        .frame(height: height)
+        .clipped()
     }
 
     private func line(_ states: [TileState], agent: AgentID?, surface: Color) -> some View {
