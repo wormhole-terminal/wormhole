@@ -66,10 +66,12 @@ extension EndToEnd {
             let one = Readout(await app.until("panel-tabs") { Readout($0).line("tab", "changes")?["badge"] == "1" })
             app.expect(Instance.plain(one.line("tab", "changes")?["spoken"] ?? "").contains("1"), "VoiceOver hears the count:\n\(one.text)")
 
-            await app.send(["tab notes"])
+            // History is the other tab: it needs no flag (Notes is a feature behind one).
+            await app.send(["tab history"])
+            await app.until("panel-tabs") { Readout($0).line("tab", "history")?.has("shown") == true }
             try app.scratch.write(repo, "b.txt", "b\nB\n")
             let two = Readout(await app.until("panel-tabs") { Readout($0).line("tab", "changes")?["badge"] == "2" })
-            app.expect(two.line("tab", "notes")?.has("shown") == true, "counted while Notes is shown:\n\(two.text)")
+            app.expect(two.line("tab", "history")?.has("shown") == true, "counted while History is shown:\n\(two.text)")
 
             try app.scratch.git(repo, "commit", "-q", "-am", "both")
             let none = Readout(await app.until("panel-tabs") { Readout($0).line("tab", "changes")?["badge"] == "-" })

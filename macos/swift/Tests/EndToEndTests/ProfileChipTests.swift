@@ -21,12 +21,13 @@ extension EndToEnd {
             app.expect(frame.minY < 40, "the chip is in the 38-point title row:\n\(chip)")
             let given = Readout(await app.reply("profile-chip"))
             app.expect(given.all("choice").count == 2, "both profiles on offer:\n\(given.text)")
-            app.expect(given.all("choice").first { $0.has("current") }?.label == "Default", "the chip names Default:\n\(given.text)")
-            guard let work = given.all("choice").firstIndex(where: { $0.label == "Work" }) else { return }
+            // Making a profile enters it (`DRIVING.md`, "Which window a command file reaches…"): the chip names Work.
+            app.expect(given.all("choice").first { $0.has("current") }?.label == "Work", "the chip names Work:\n\(given.text)")
+            guard let home = given.all("choice").firstIndex(where: { $0.label == "Default" }) else { return }
 
-            // The menu's row for Work runs Switch Profile (profile_chip.rs:172): Wormhole is in Work after it.
-            await app.send(["profile-chip switch \(work + 1)"])
-            await app.until("profiles") { $0.split(separator: "\n").contains { $0.hasPrefix("*") && $0.contains("\"Work\"") } }
+            // The menu's row for Default runs Switch Profile (profile_chip.rs:172): Wormhole is in Default after it.
+            await app.send(["profile-chip switch \(home + 1)"])
+            await app.until("profiles") { $0.split(separator: "\n").contains { $0.hasPrefix("*") && $0.contains("\"Default\"") } }
         }
     }
 }

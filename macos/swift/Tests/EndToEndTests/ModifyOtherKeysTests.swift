@@ -18,13 +18,14 @@ extension EndToEnd {
             await app.emit("\u{1b}[>4;1m")
             await app.send(["wait-idle 2000", "key ctrl-i", "key ctrl-,"])
             await app.screen(showing: "^[[27;5;44~")
-            app.expect(await app.count("^[[27;5;105~") == 1, "at level 1 Ctrl+I is Tab again")
+            // The line discipline erased level 2's sequence with the line (^U), so one on screen now would be level 1's.
+            app.expect(await app.count("^[[27;5;105~") == 0, "at level 1 Ctrl+I is Tab again")
 
             await app.discardLine()
             await app.emit("\u{1b}[>4m")
             await app.send(["wait-idle 2000", "key ctrl-,", "text off-mark"])
             await app.screen(showing: "off-mark")
-            app.expect(await app.count("^[[27;5;44~") == 1, "with the mode off Ctrl+, is no sequence")
+            app.expect(await app.count("^[[27;5;44~") == 0, "with the mode off Ctrl+, is no sequence")
         }
     }
 }
