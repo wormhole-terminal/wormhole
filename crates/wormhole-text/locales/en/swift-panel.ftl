@@ -35,6 +35,10 @@ picker-head-history = HEAD (current branch)
 
 panel-spoken-folded = folded
 panel-spoken-open = open
+
+# The open-in-editor icon on a file row or a diff line, so a list of them is not a list of identical buttons (core's
+# `spoken::open_file`). { $tooltip } is the icon's tooltip ("Open in Zed at line 12"), { $file } the file's name.
+panel-spoken-open-file = { $tooltip }, { $file }
 files-spoken-expanded = expanded
 files-spoken-collapsed = collapsed
 

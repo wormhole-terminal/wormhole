@@ -45,7 +45,7 @@ struct FileRowView: View {
                 Spacer(minLength: 0)
                 // The icon that opens the file in the chosen editor, over the row while the pointer is (a deleted file has none).
                 if hovering, onDisk ?? (file.kind != .deleted), let open = host?.openTooltip(line: nil) {
-                    BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) {
+                    BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true, spoken: BandButton.openFile(open, file: file.name)) {
                         // A path core refuses (a link out of the repository) is not handed on.
                         if let path = root.flatMap({ RepoFiles.resolve(root: $0, relative: file.path) }) { host?.open(path, line: nil) }
                     }

@@ -54,7 +54,9 @@ struct DiffHeader: View {
             }
             // The file in the chosen editor, when it is on disk (a deleted file has nothing to open).
             if let on = onDisk, let open = host?.openTooltip(line: nil) {
-                BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true) { host?.open(on, line: nil) }
+                BandButton(symbol: "arrow.up.forward.square", label: open, inRow: true, spoken: BandButton.openFile(open, file: file.name)) {
+                    host?.open(on, line: nil)
+                }
             }
             if splitFits {
                 Segmented([(panelText("diff-split", "Split"), true), (panelText("diff-unified", "Unified"), false)], selection: $split)

@@ -83,7 +83,10 @@ struct DiffLineView: View {
         }
         .overlay(alignment: .trailing) {
             if hovering, let open, let line = cell.openLine {
-                BandButton(symbol: "arrow.up.forward.square", label: open.words(line), inRow: true) { open.action(line) }
+                BandButton(
+                    symbol: "arrow.up.forward.square", label: open.words(line), inRow: true,
+                    spoken: BandButton.openFile(open.words(line), file: (path as NSString).lastPathComponent)
+                ) { open.action(line) }
                     .padding(.trailing, Space._3)
             }
         }

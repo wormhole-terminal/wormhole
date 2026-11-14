@@ -26,4 +26,10 @@ struct BandButton: View {
             // The hit box is wider than the face; the pull keeps the glyph, not the box, on the row's inset.
             .padding(.horizontal, -(Metric.hitMin - face) / 2)
     }
+
+    /// The open-in-editor icon's name where every file row and diff line has one (core's `spoken::open_file`): its tooltip
+    /// with the file's name after it, "Open in Zed at line 12, main.rs".
+    static func openFile(_ tooltip: String, file: String) -> String {
+        panelText("panel-spoken-open-file", ["tooltip": .text(tooltip), "file": .text(file)], "\(tooltip), \(file)")
+    }
 }
