@@ -152,7 +152,8 @@ extension EndToEnd {
 
     @Test("a shell picked for a terminal names itself on the exited bar (660)")
     @MainActor func exitedWordsNameTheShell() async throws {
-        try await Instance.with { app in
+        // Not under a forced shell: that one replaces a terminal's choice and gives the bar its own name (core `shell_name`).
+        try await Instance.with(shell: .configured, config: #"{"default_shell": "/bin/bash"}"#) { app in
             let shells = await app.reply("shells")
             guard let zsh = shells.split(separator: "\n").first(where: { $0.contains("zsh") })?.split(separator: "\t").first.map(String.init) else {
                 return app.fail("a zsh choice:\n\(shells)")

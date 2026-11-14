@@ -30,7 +30,9 @@ extension AppController {
         case "ingroup":
             guard numbers.count == 2 else { reply("error: usage ingroup <id> <group>"); break }
             send(.addToGroup(numbers[0], GroupID(numbers[1])))
-        case "newin": with("newin <group>") { .newTerminalInGroup(GroupID($0)) }
+        // As the sidebar's + in the group's header: the group's folder is asked about first when it has none to offer.
+        case "newin":
+            if let first = numbers.first { hub.newTerminal(inGroup: GroupID(first)) } else { reply("error: usage newin <group>") }
         case "groupwindow": with("groupwindow <group>") { .moveGroupToWindow(GroupID($0)) }
         case "step": with("step <delta>") { .selectStep($0) }
         case "number": with("number <n>") { .selectNumber($0) }

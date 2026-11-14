@@ -7,7 +7,9 @@ extension EndToEnd {
     @Test("a group's menu offers its colours as dots; a terminal opening in a folderless group asks first; a row's name is edited in place")
     @MainActor func groupTools() async throws {
         try await Instance.with { app in
-            guard let first = (await app.rows()).live.first else { return }
+            // The home folder is not one to offer a group (core `folder_to_ask_about`), so the group's terminal is in a repository.
+            let repo = try app.scratch.repository("group-repo")
+            guard let first = (await app.terminal(in: repo)).live.last else { return }
             await app.send(["group \(first)"])
             let grouped = Listing(await app.until("rows") { !Listing($0).groups.isEmpty })
             guard let group = grouped.groups.first?.id else { return }
@@ -23,9 +25,12 @@ extension EndToEnd {
             let asked = await app.until("group-ask") { $0.contains("title=") }
             app.expect(asked, contains: "buttons=")
             app.expect(await app.reply("group-ask later"), contains: "question answered")
-            await app.until("rows") { Listing($0).live.count == 2 }
+            await app.until("rows") { Listing($0).live.count == 3 }
 
-            await app.send(["rename-edit 1", "text Renamed-row", "key return"])
+            // The name is typed once the field is there and has the keys, as a person's would be.
+            await app.send(["rename-edit 1", "wait-idle 3000"])
+            await app.until("keys") { $0.contains("FieldEditor") }
+            await app.send(["text Renamed-row", "key return"])
             // The field may keep the old name before what is typed; the row's name ends with it.
             await app.until("rows") { $0.contains("Renamed-row\"") }
             app.expect(await app.reply("rename-edit 9"), contains: "error: no row 9")

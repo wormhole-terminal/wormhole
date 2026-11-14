@@ -36,9 +36,11 @@ extension EndToEnd {
         }
     }
 
-    @Test("with the shell forced to cat, a terminal of a chosen shell still runs that shell (90)")
+    // A forced shell (`WORMHOLE_SHELL`) replaces everything, a terminal's own choice too (core `terminal::process::shell`), so
+    // the choice is checked where the settings decide: bash is the default, and the terminal asked to run zsh runs zsh.
+    @Test("a terminal opened with a chosen shell runs that shell, not the default one (90)")
     @MainActor func forcedShellLeavesAChoice() async throws {
-        try await Instance.with { app in
+        try await Instance.with(shell: .configured, config: #"{"default_shell": "/bin/bash"}"#) { app in
             let shells = await app.reply("shells")
             guard let zsh = shells.split(separator: "\n").first(where: { $0.contains("zsh") })?.split(separator: "\t").first.map(String.init) else {
                 return app.fail("a zsh choice:\n\(shells)")

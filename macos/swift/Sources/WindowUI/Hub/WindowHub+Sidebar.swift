@@ -145,7 +145,7 @@ extension WindowHub {
 
     /// A terminal in `group` from the tab bar's + or an empty set opened (also the keys' Ctrl-Opt-N): the group's folder is
     /// asked about first, as the sidebar's + does (`group_folder.rs` `new_session_in_group`: every way a terminal is made in a group).
-    func newTerminal(inGroup group: GroupID) {
+    public func newTerminal(inGroup group: GroupID) {
         let name = state.groups.first { $0.id == group }?.name ?? ""
         Task { @MainActor in
             await GroupFolderQuestion.openTerminal(inGroup: group, name: name, planner: store, send: send)
