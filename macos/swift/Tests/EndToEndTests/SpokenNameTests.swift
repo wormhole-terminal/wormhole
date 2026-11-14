@@ -16,14 +16,9 @@ extension EndToEnd {
             // The bar is up once the window's focus line says so (`keys`: `+find`).
             await app.until("keys") { $0.contains("+find") }
             let tree = await app.reply("a11y")
-            // The buttons are SwiftUI's, and SwiftUI builds its accessibility nodes only for an assistive app: asked in the
-            // process, the tree has none of them (DRIVING.md, "What still needs a person"). Kept as the check it is, and known
-            // not to hold from here: it reports itself the day the tree does list them. The rule is `SpokenNameTests` in UITests.
-            withKnownIssue("a11y lists no SwiftUI control in a test instance: the buttons' names need VoiceOver or Accessibility Inspector") {
-                #expect(tree.contains("\"Next match\""))
-                #expect(tree.contains("\"Previous match\""))
-                #expect(tree.contains("\"Close find (esc)\""))
-            }
+            // The buttons are SwiftUI's: `a11y` reads their nodes too (by their accessibility methods, once the application was
+            // told an assistive client reads it). The rule is `SpokenNameTests` in UITests.
+            for name in ["\"Next match\"", "\"Previous match\"", "\"Close find (esc)\""] { app.expect(tree, contains: name) }
             for keyed in ["\"Previous match (⇧⌘G)\"", "\"Next match (⌘G)\""] {
                 app.expect(!tree.contains(keyed), "no button is named with its key, \(keyed):\n\(tree)")
             }

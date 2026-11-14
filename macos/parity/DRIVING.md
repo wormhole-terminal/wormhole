@@ -221,8 +221,8 @@ none of these; `status-bar` is the bar's switch, so its items are `status-items`
 Also wave 9: `key cmd-left|cmd-right|cmd-backspace` (any key the keymap gives a view's own action, `ActionRouter.viewed`) goes the
 keyboard's way, to the terminal's `performKeyEquivalent` before the menus; `key esc` in a field goes through the window first, so
 SwiftUI's `onKeyPress(.escape)` hears it, and the field's own Esc binding follows only while the field still has the keys; `a11y`
-first sets `AXEnhancedUserInterface` and `AXManualAccessibility` on the application, as an assistive client would, so SwiftUI's
-hosting views may build their nodes (unverified: see "What still needs a person").
+first sets `AXEnhancedUserInterface` on the application, as an assistive client would, so SwiftUI's hosting views build their
+nodes (wave 13 reads them: see there).
 
 Added by wave 11 (lane tooling; written without compiling, see TO-VERIFY.md), after GPUI's devctl:
 
@@ -276,6 +276,15 @@ Added by wave 13 (lane fix): no new command; how `key` gets there, in two cases 
 - **A key whose action the window's menus leave out** (its feature is off in the window's profile: ⌥⌘S with Notes off) goes the
   keyboard's way instead of running the action's handler: the reply is `key <spec> focus=…`, without `-> <action>`.
 
+- **A Settings control out of sight** (`settings-press`, `settings-record`): on a display shorter than the page (a hosted runner's)
+  a control low on the page is below the window. The driver turns the wheel over the page until the control's recorded frame is in
+  sight and presses where it is then; `settings-size WxH` makes the window small to try it.
+- **`a11y` lists SwiftUI's controls.** SwiftUI's accessibility nodes answer the accessibility methods without adopting AppKit's
+  `NSAccessibilityProtocol`, so the dump's cast to it dropped every one of them; each element is now read by its methods' names
+  (`Driving/AccessibilityDump.swift`), once the application was told an assistive client reads it (`AXEnhancedUserInterface`, set by
+  the first `a11y`). An element named by another (a picker's words beside its radio group: `accessibilityTitleUIElement`) is
+  printed with those words as its label, as VoiceOver names it. `bounds` reads the same way.
+
 A new window's keys: the selected terminal takes them when its pane arrives in the window, whatever AppKit chose as the window came
 on screen (its first key view), and the focus holder is never that choice. On the macOS 26 runner the holder was, and every scenario
 that sent a key failed with `focus=title-row toggle-sidebar` from its first `state` on; if that line shows again there, the keys did
@@ -301,10 +310,8 @@ column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T1
 
 ## What still needs a person
 
-- **VoiceOver and the SwiftUI accessibility tree.** SwiftUI builds its accessibility nodes only for an assistive app (an AX
-  client the system trusts); in-process asking, AppKit's own entry points and its request flags do not wake it, and an AX
-  client needs a Privacy grant no script has. `a11y` shows AppKit's part (window, buttons, the terminal's text area, any
-  NSView); the SwiftUI controls' labels need Accessibility Inspector or VoiceOver.
+- **VoiceOver itself.** `a11y` lists the tree VoiceOver gets, SwiftUI's controls included (wave 13: role, spoken name, value,
+  frame); what it says aloud while moving, its rotor and its own focus ring are heard and seen only with VoiceOver on.
 - **Shown menus and popovers**: `right-click` reads a menu without showing it; how AppKit draws it, and the menu bar, the
   status item, the Dock tile and the global hotkey (PL02, PL04 to PL06) are never made in a background instance.
 - **Notifications** (PL03): banners are logged, not shown.
@@ -352,7 +359,7 @@ split), asked with `size` once the window answers and checked with `geometry`, s
 a size asked through the control folder holds where the screen is smaller than the window (AppKit would fit the window to the
 screen: on a 1024-point display the terminal was 304 points wide, a split was refused and text wrapped at 35 columns).
 The Studio's `studio-open`, `studio-save` and `studio-use` answer when they are done, beside the batch: read them with `app.late(…)`.
-`a11y` lists AppKit's views only, so a SwiftUI button's spoken name is a known issue there ("What still needs a person").
+`a11y` lists SwiftUI's controls too (wave 13), so a button's or a row's spoken name is checked through it.
 
 Wave 8 (lane e2e-b) added: `Instance.with(auth: "allow", config: "<json>")` (what the owner's question answers, a `config.json`
 before the first launch), `app.cli([...])` and `app.cliRun([...])` (the app's own command line asking the instance through its
