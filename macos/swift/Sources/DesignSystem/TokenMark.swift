@@ -33,6 +33,12 @@ extension View {
     public func marked(_ id: String, style: String = "", file: StaticString = #fileID, line: UInt = #line) -> some View {
         modifier(TokenMark(site: InspectSite(id: id, style: style, file: file, line: line)))
     }
+
+    /// Names a part for inspect mode that is no component of the design (a row's pin, a banner's Dismiss): found by its
+    /// name where it was drawn, never outlined by the Studio, and not in the gallery's list, which `marked` ids must be.
+    public func inspectSite(_ id: String, file: StaticString = #fileID, line: UInt = #line) -> some View {
+        marked(id, file: file, line: line)
+    }
 }
 
 private struct TokenMark: ViewModifier {

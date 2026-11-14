@@ -68,7 +68,7 @@ public struct ProfileChip: View {
                 .contentShape(Rectangle())
             }
             .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-            .marked("profile.chip")
+            .inspectSite("profile.chip")
             .onHover { hovering = $0 }
             .accessibilityLabel(PanesText.profileChip(current.name))
         }

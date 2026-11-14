@@ -27,12 +27,12 @@ struct RowLines: View {
             HStack(spacing: Space._2) {
                 name
                 if terminal.isPinned {
-                    RowMark(icon: .pin, isSelected: isSelected).marked("row.pin").motionTransition(.scale(scale: 0.4).combined(with: .opacity))
+                    RowMark(icon: .pin, isSelected: isSelected).inspectSite("row.pin").motionTransition(.scale(scale: 0.4).combined(with: .opacity))
                 }
-                if terminal.isAgentHidden { RowMark(icon: .lock, isSelected: isSelected, tip: SidebarText.hiddenFromAgents).marked("row.lock") }
+                if terminal.isAgentHidden { RowMark(icon: .lock, isSelected: isSelected, tip: SidebarText.hiddenFromAgents).inspectSite("row.lock") }
                 if let main = terminal.worktreeOf {
                     RowMark(icon: .gitFork, isSelected: isSelected, tip: SidebarText.worktree(terminal.title, of: main, at: terminal.folder))
-                        .marked("row.worktree")
+                        .inspectSite("row.worktree")
                 }
                 Spacer(minLength: 0)
                 trail

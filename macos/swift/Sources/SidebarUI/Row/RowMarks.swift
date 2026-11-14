@@ -46,9 +46,9 @@ struct RowDetails: View {
                     LucideView(icon: .note, size: glyph)
                     Text("\(terminal.noteCount)")
                 }
-                .marked("row.notes")
+                .inspectSite("row.notes")
             }
-            if look.showsChanges, let count = changes[terminal.id] { Text("±\(count)").marked("row.changes") }
+            if look.showsChanges, let count = changes[terminal.id] { Text("±\(count)").inspectSite("row.changes") }
         }
         .font(tokens.font(.caption).monospacedDigit())
         .foregroundStyle(quiet)
