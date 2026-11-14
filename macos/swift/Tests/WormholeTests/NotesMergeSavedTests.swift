@@ -226,7 +226,8 @@ struct NotesMergeSavedTests {
         persistence.saved[2] = Self.model(steps: ["build", "old"])
         let (_, _, coordinator) = window(persistence)
         persistence.held = 2
-        persistence.answer = { id, sent in
+        // Not the main actor's: the held merge answers after its wait, off it (an isolated closure ends the test process there).
+        persistence.answer = { @Sendable id, sent in
             guard id == 2 else { return nil }
             // notes.md deleted "old" and gained "new".
             var merged = sent
