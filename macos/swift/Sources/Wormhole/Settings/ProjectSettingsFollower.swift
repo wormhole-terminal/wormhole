@@ -3,11 +3,22 @@
 // trust change, the core is asked what the project's `.wormhole/config.json` sets (only while its Settings switch is on
 // and it is trusted) and Settings shows those values over the person's, with the rows it sets marked.
 //
-// The Settings host is the one in force now, which a profile switch makes again (`followProfileSettings`,
-// `SettingsStore::swap_in` in `app_state/profiles.rs`), and the project is read through the project service of the
-// window in front, which judges it by that window's own profile (its trust and its switches).
+// They go over the settings of the profile Wormhole is in, so only a window of that profile puts any on, read through
+// that window's own project service (its profile's trust and switches): "a project another profile trusts does not
+// change the look and behaviour of this one" (`detect.rs:83-89`). The Settings host is the one in force now, which a
+// profile switch makes again (`followProfileSettings`).
 
 import Foundation
+
+/// Which window's project is laid over the shown profile's settings and theme.
+enum ProjectSettingsSource {
+    /// The window the person used last when it is of the profile Wormhole is in, else the one read before while it
+    /// still is, else none: never a window of another profile, in front or not. `profileInSight` is a window's profile
+    /// while it is open and in sight, nil for one closed or parked.
+    static func window<Window>(front: Window?, readBefore: Window?, shown: String, profileInSight: (Window) -> String?) -> Window? {
+        [front, readBefore].compactMap { $0 }.first { profileInSight($0) == shown }
+    }
+}
 
 #if WITH_UNIFFI
     import DesignSystem
@@ -34,7 +45,7 @@ import Foundation
 
         func start() { follow() }
 
-        /// The terminal in front of the window in front, again whenever it or its folder changes, and whenever the app
+        /// The terminal in front of the window to read, again whenever it or its folder changes, and whenever the app
         /// says the window in front, the profile Wormhole is in or a window's profile changed.
         func follow() {
             // The sample has no project and no settings of its own to layer.
@@ -64,11 +75,15 @@ import Foundation
             }
         }
 
-        /// The window the person used last.
-        private func source() -> WindowSession? { app.lastFront ?? app.shown.first }
+        private func source() -> WindowSession? {
+            let open = app.sessions
+            return ProjectSettingsSource.window(front: app.lastFront ?? app.shown.first, readBefore: window, shown: app.windowsHost.profile) { session in
+                open.contains { $0 === session } && !session.parked ? session.windows.profile : nil
+            }
+        }
 
         /// Whether what was read through `window` for `folder` may still be laid on `host`: the same window, terminal
-        /// and Settings as when the read began.
+        /// and Settings as when the read began, and the window still one of the profile Wormhole is in.
         private func stillReads(_ window: WindowSession, _ folder: String, on host: RustSettingsHost) -> Bool {
             self.window === window && self.folder == folder && self.host === host
                 && (app.settingsModel.host as? RustSettingsHost) === host && source() === window
