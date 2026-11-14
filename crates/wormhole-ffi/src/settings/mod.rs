@@ -1,5 +1,6 @@
 //! The Settings window's backend: one profile's settings (`handle`, over `state` and core's `Config`),
-//! the file watch behind its one wake (`watch`), search (`search`), shortcut checks (`shortcuts`), and
+//! the file watch behind its one wake (`watch`), the handles a change made elsewhere in Wormhole goes through
+//! (`live`), search (`search`), shortcut checks (`shortcuts`), and
 //! what the host pages list: select options and folders (`host`), the agents and their hooks
 //! (`agents`), terminals to import from (`imports`) and the profiles (`profiles`). The schema the
 //! rows are drawn from is `settings_dump`; the rules in all of it are `wormhole-core`'s.
@@ -14,6 +15,7 @@ mod handle;
 mod host;
 mod import_review;
 mod imports;
+pub(crate) mod live;
 mod page_rules;
 mod page_text;
 mod probes;

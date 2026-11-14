@@ -205,6 +205,29 @@ fn a_mode_narrowed_by_hand_while_automation_is_off_is_not_widened_back_unasked()
     assert!(f.desk.next_mode_question().is_some(), "the person is asked about Open");
 }
 
+/// Order: the Settings window has read the widened file; the person says Don't Keep; before that window has read
+/// the file again they change another setting in it. Both stand: the earlier mode and the other setting.
+#[test]
+fn dont_keep_goes_through_the_settings_the_app_holds() {
+    let f = fixture("off");
+    let root = wormhole_core::storage::paths::DataRoot::new(&f.dir);
+    let profile = wormhole_core::storage::paths::ProfileId::default_profile();
+    let handle = crate::settings::SettingsHandle::open_at(&root, &profile, f.wakes.clone());
+    edit_mode_outside(&f, "open");
+    eventually("Settings read the widened file", || {
+        let mut state = handle.shared.lock();
+        state.poll();
+        state.effective().agent_access == AgentAccess::Open
+    });
+    let change = f.desk.next_mode_question().expect("the question about the change");
+    f.desk.answer_mode(change.token, false);
+    handle.set("diff_wrap".into(), "true".into()).expect("sets");
+    assert_eq!(mode_in_file(&f), "off", "the next write of Settings kept the earlier mode");
+    assert!(handle.shared.lock().effective().diff_wrap, "and the other setting was written");
+    assert_eq!(type_into(&f, f.terminal())["error"]["reason"], "agent_access_off");
+    assert!(f.desk.next_mode_question().is_none());
+}
+
 /// The person changes another setting in Settings; later something outside writes Open into `config.json`. The
 /// widening is not theirs: the earlier mode stays in force and the person is asked.
 #[test]

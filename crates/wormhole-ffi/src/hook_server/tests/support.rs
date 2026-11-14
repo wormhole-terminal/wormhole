@@ -15,6 +15,7 @@ use wormhole_core::workspace::{Action, SidebarRow};
 use crate::aux_backends::{AccessDesk, AuxListener};
 use crate::files_panel::PanelListener;
 use crate::hook_server::{HookEvent, HookListener, HookServer};
+use crate::settings::SettingsListener;
 use crate::{
     Terminal, TerminalListener, UsageService, Windows, Workspace, WorkspaceConfig, WorkspaceListener,
 };
@@ -37,7 +38,14 @@ macro_rules! counts_wakes {
         }
     )*};
 }
-counts_wakes!(WorkspaceListener, TerminalListener, HookListener, AuxListener, PanelListener);
+counts_wakes!(
+    WorkspaceListener,
+    TerminalListener,
+    HookListener,
+    AuxListener,
+    PanelListener,
+    SettingsListener
+);
 
 pub(super) struct Fixture {
     pub(super) _root: tempfile::TempDir,

@@ -12,7 +12,7 @@ use std::sync::mpsc::SyncSender;
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use wormhole_core::config::{AgentAccess, Config};
+use wormhole_core::config::AgentAccess;
 use wormhole_core::ipc::Decision;
 use wormhole_core::ipc::access::{
     CapSet, Capability, Full, Grants, Kind, Need, Pending, Queue, Resolved, Scope, Scopes, agent_word,
@@ -144,9 +144,10 @@ impl AccessDesk {
         let Some(change) = locked(&self.modes).pending(token) else { return };
         if !keep {
             // Written while the question still waits: a look in between would find the wider mode in the file with nothing
-            // pending, and ask again.
-            let mut config = Config::load_for(&self.profile);
-            config.update(|settings| settings.agent_access = change.previous);
+            // pending, and ask again. Through the settings the app holds of the profile, as the GPUI app's goes through
+            // its settings store (`agent_access/change.rs:80`), never around them from a load of the file.
+            let previous = change.previous;
+            crate::settings::live::update(&self.profile, |settings| settings.agent_access = previous);
         }
         locked(&self.modes).answered(token, keep);
         self.waker.notify();
