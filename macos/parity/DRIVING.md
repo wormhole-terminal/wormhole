@@ -260,7 +260,7 @@ themselves (`Driving/AppController+ControlLooks.swift`), not from the model they
 |---|---|
 | `colour-count <#rrggbb> [x y w h] [click]` | the window drawn now (`cacheDisplay`, into sRGB): `colour-count <#hex> pixels=<n> box=<x>,<y>,<w>,<h>` (`box=-` with none), the pixels of that colour (within 4 of each channel, opaque) in the region (content points from the top left; none: the whole window) and the box round them in points; `click` then clicks at the box's centre as `click` does |
 | `studio-out …` (changed) | its reply ends with `from=<folder\|->`: where the next Export's save panel starts, the folder the core remembers (`studio_export_dir`) |
-| `marked [id]` | inspect mode on (`inspect on`): every element the design marks (`.marked(id)`) that the window's views built, `marked n=<count>` then `marked <id> <x> <y> <w> <h>` top to bottom (`status.tile`, `keycap`, `sidebar.row`, `sidebar.card`, `sidebar.band`, `count.badge`, `row.mark`, `profile.chip`, …) |
+| `marked [id]` | inspect mode on (`inspect on`): every element the design marks (`.marked(id)`) that the window's views built, `marked n=<count>` then `marked <id> <x> <y> <w> <h>` top to bottom (`status.tile`, `keycap`, `sidebar.row`, `sidebar.card`, `sidebar.band`, and a row's `row.pin`, `row.lock`, `row.worktree`, `row.notes` and `row.changes`, marked by wave 12 so inspect mode finds them, …) |
 
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
