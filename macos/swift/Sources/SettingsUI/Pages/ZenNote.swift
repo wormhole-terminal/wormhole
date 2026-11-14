@@ -18,13 +18,15 @@ struct ZenNote: View {
         section.groups.contains { group in group.entries.contains { overridden.contains($0.id) } }
     }
 
+    /// What the note says (the control folder's `settings-page` reads it through `PageBanner`).
+    static var text: String {
+        Words.text(
+            "zen-settings-note",
+            fallback: "Zen mode is on, so the window shows less than these settings say. They keep your own values and apply again when you leave it.")
+    }
+
     var body: some View {
-        Banner(
-            kind: .info,
-            text: Words.text(
-                "zen-settings-note",
-                fallback: "Zen mode is on, so the window shows less than these settings say. They keep your own values and apply again when you leave it.")
-        ) {
+        Banner(kind: PageBanner.zen.kind, text: Self.text) {
             ActionButton(title: Words.text("zen-settings-leave", fallback: "Leave Zen mode"), symbol: nil, frameId: "zen.leave", action: leave)
         }
     }

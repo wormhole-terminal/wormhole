@@ -56,21 +56,9 @@ public enum SettingsPageReadout {
         return lines.joined(separator: "\n")
     }
 
-    /// The banners over the groups, in `SettingsPage`'s order and on its conditions.
+    /// The banners over the groups, as `SettingsPage` draws them (`PageBanner`).
     private static func banners(_ section: SettingsSchema.Section, _ model: SettingsModel) -> [String] {
-        var said: [(String, String)] = []
-        if let note = model.host.previewNote(section: section.id) { said.append(("info", note)) }
-        if model.zenOn, ZenNote.affects(section) {
-            said.append(("info", Words.text("zen-settings-note", fallback: "Zen mode is on, so the window shows less than these settings say. They keep your own values and apply again when you leave it.")))
-        }
-        if section.id == "advanced", let broken = model.backend.banner() {
-            said.append(("warning", broken))
-        } else if model.backend.unreadable {
-            said.append(("warning", SettingsText.configUnreadable))
-        }
-        if section.id == "profile", let problem = model.host.profilesProblem() { said.append(("warning", problem)) }
-        if let problem = model.host.panelRecords().problem { said.append(("danger", problem)) }
-        return said.map { Readout.line("banner", [$0.0], quoted: [$0.1]) }
+        PageBanner.of(section, model).map { Readout.line("banner", ["\($0.kind)"], quoted: [$0.text]) }
     }
 
     /// A row as `EntryRowView` draws it: label, value, its marks, then what hangs under it.
