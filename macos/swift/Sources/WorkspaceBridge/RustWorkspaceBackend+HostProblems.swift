@@ -73,7 +73,8 @@ extension RustWorkspaceBackend {
         sources[id] = nil
         book.connecting[id] = nil
         book.unavailable[id] = nil
-        old?.close()
+        // Not a close: the terminal stays, with its row, notes, tasks and text.
+        old?.endKeepingRow()
         start(id, in: folder)
         onNotice?(.hostChanged(id))
     }

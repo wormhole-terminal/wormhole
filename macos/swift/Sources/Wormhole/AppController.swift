@@ -66,6 +66,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     var endsAllOnQuit = false
     /// The quit question's answer for the session hosts: end them with the app, or leave them running (the default).
     var endsHostsOnQuit = false
+    /// Quit and End All, once it began: the hosts end off the main thread, then the quit goes on (`AppController+Quit`).
+    var hostsEnd: HostsEnd?
     let activityClock = ActivityClock()
     /// The chip that follows a terminal dragged out of its window, and the growth the next window opens with (`TearOff/`).
     let tearChip = TearOffChip()
@@ -169,8 +171,8 @@ final class AppController: NSObject, NSApplicationDelegate {
         terminating = true
         saveAllWindows()
         hooks?.stop()
-        // Before the views go: a terminal let go of is not ended by its view closing.
-        sessions.forEach { $0.hub.store.finishQuit(endHosts: endsHostsOnQuit) }
+        // Before the views go: a terminal let go of is not ended by its view closing. Quit and End All did this already.
+        if hostsEnd == nil { sessions.forEach { $0.hub.store.finishQuit(endHosts: endsHostsOnQuit) } }
         sessions.forEach { $0.hub.terminals.shutdown() }
     }
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { ambient?.dockMenu() }

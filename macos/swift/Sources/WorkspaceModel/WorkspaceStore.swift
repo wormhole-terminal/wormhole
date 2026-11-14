@@ -62,6 +62,8 @@ public final class WorkspaceStore {
 
     /// The app is quitting (`WorkspaceBackend.finishQuit`).
     public func finishQuit(endHosts: Bool) { backend.finishQuit(endHosts: endHosts) }
+    /// Quit and End All, its seconds handed back (`WorkspaceBackend.quitEndingHosts`).
+    public func quitEndingHosts() -> (@Sendable () -> Void)? { backend.quitEndingHosts() }
     /// Fill this (empty) window from what it was saved with.
     public func restore() {
         backend.restore()

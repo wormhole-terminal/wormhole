@@ -257,11 +257,12 @@ impl Windows {
         let bounds = frame.map(|frame| WindowFrame::from(frame).to_json());
         let shared = workspace.shared();
         let mut record = shared.peek_model(|model| model.window_record(window, bounds));
-        // Which session host runs a terminal is the terminal's to say; a record without it would forget the hosts.
+        // Which session host runs a terminal is the terminal's to say; a record without it would forget the hosts. None
+        // once the host was lost or is ending while the terminal stays (Quit and End All).
         let mut unattached = Vec::new();
         for session in &mut record.sessions {
             match shared.terminal_of(session.id) {
-                Some(terminal) => session.host_id = terminal.host_id(),
+                Some(terminal) => session.host_id = terminal.persisted_host(),
                 None => unattached.push(session.id),
             }
         }

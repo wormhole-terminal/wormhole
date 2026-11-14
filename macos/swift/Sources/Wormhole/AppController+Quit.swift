@@ -12,15 +12,45 @@ import WorkspaceModel
     import SettingsBridge
 #endif
 
+/// Quit and End All's two steps: the hosts ending off the main thread, then the quit going on.
+enum HostsEnd { case underWay, over }
+
 extension AppController {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        switch hostsEnd {
+        case .over?: return .terminateNow
+        // A second ⌘Q (or the last window closed, or SIGTERM) while the hosts end: the answer to the first goes for it.
+        case .underWay?: return .terminateLater
+        case nil: break
+        }
         let endAll = endsAllOnQuit
         endsAllOnQuit = false
-        guard confirmsQuit else { return .terminateNow }
-        // The answer decides what happens to the session hosts when the app goes (`applicationWillTerminate`).
+        guard confirmsQuit else { return goesNow() ? .terminateNow : .terminateLater }
+        // The answer decides what happens to the session hosts when the app goes.
         return QuitFlow.shouldTerminate(facts: quitFacts, endAll: endAll, window: window) { [weak self] endHosts in
             self?.endsHostsOnQuit = endHosts
+            return self?.goesNow() ?? true
         }
+    }
+
+    /// Whether the app quits now. Quit and End All first ends every host, off the main thread so no window freezes while a
+    /// host still starting is waited for, and answers AppKit once they have (the GPUI app's `finish_quit`). The windows are
+    /// saved first; from then on nothing they start runs on.
+    private func goesNow() -> Bool {
+        guard endsHostsOnQuit else { return true }
+        hostsEnd = .underWay
+        terminating = true
+        saveAllWindows()
+        let ending = sessions.compactMap { $0.hub.store.quitEndingHosts() }
+        Task {
+            // One window after another: the first ends every host of the data folder, the others the ones still starting.
+            await Task.detached(priority: .userInitiated) { ending.forEach { $0() } }.value
+            hostsEnd = .over
+            NSApp.reply(toApplicationShouldTerminate: true)
+            // Only reached when AppKit was not waiting for that answer: the quit goes on all the same.
+            NSApp.terminate(nil)
+        }
+        return false
     }
 
     func quit(endAll: Bool) {

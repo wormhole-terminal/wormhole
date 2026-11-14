@@ -41,6 +41,35 @@ extension EndToEnd {
     }
 
     @Test(
+        "Quit and End All ends the hosts, not the terminals: the row, its note and its text come back without the old host",
+        .enabled(if: Instance.hostProgram() != nil, "no session host is built: cargo build -p wormhole-host"))
+    @MainActor func endAllKeepsTheTerminals() async throws {
+        try await Instance.with(hosts: true) { app in
+            let before = await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
+            guard let host = Instance.hostIDs(in: before).first, let id = await app.live(1)?.first else { return }
+            await app.send(["tab notes", "note-add remember the milk"])
+            await app.until("notes") { $0.contains("remember the milk") }
+            await app.emit("kept-after-end-all")
+            await app.screen { $0.contains("kept-after-end-all") }
+            await app.quit(command: "quit-end-all")
+            let left = await app.hostsLeft()
+            app.expect(left.isEmpty, "no host runs after Quit and End All: \(left.keys.sorted())")
+
+            try await app.start()
+            let rows = await app.until("rows") { Listing($0).live == [id] }
+            app.expect(Listing(rows).live == [id], "the terminal comes back under its id:\n\(rows)")
+            let screen = await app.screen { $0.contains("kept-after-end-all") }
+            app.expect(screen, contains: "restored")
+            await app.send(["tab notes"])
+            let notes = await app.until("notes") { $0.contains("remember the milk") }
+            app.expect(notes, contains: "remember the milk")
+            // It starts again in a host of its own; the one that ended is named nowhere.
+            app.expect(!(await app.reply("sessions")).contains(host), "no terminal names the host that ended")
+            app.expect(!(await app.reply("hosts-list")).contains(host), "the Session Hosts list does not name the host that ended")
+        }
+    }
+
+    @Test(
         "the Session Hosts list names a terminal's host, host-kill ends it, and a host that died shows its bar",
         .enabled(if: Instance.hostProgram() != nil, "no session host is built: cargo build -p wormhole-host"))
     @MainActor func hostsListKillAndDeath() async throws {

@@ -13,21 +13,34 @@ pub(crate) struct HostSlot {
     /// Let go of (`Terminal.detach`): closing the terminal afterwards leaves the program running and its
     /// saved row in place.
     detached: AtomicBool,
-    /// Called when the terminal is closed while still attached, which ends its program: the saved row
+    /// The host ends and the terminal stays (`Terminal.end_keeping_row`: Quit and End All, Restart): its saved row, with
+    /// its notes, tasks and text, is kept and no longer names the host (core `hosts::persisted_host`'s `ending`).
+    kept: AtomicBool,
+    /// Called when the terminal is closed on purpose while still attached, which ends its program: the saved row
     /// naming the host goes with it.
     on_end: Box<dyn Fn() + Send + Sync>,
 }
 
 impl HostSlot {
     pub(crate) fn new(id: String, on_end: impl Fn() + Send + Sync + 'static) -> Self {
-        Self { id, detached: AtomicBool::new(false), on_end: Box::new(on_end) }
+        Self { id, detached: AtomicBool::new(false), kept: AtomicBool::new(false), on_end: Box::new(on_end) }
     }
 
-    /// The terminal is being closed: if that ends the program, forget which host ran it.
+    /// The terminal is being closed: if the person closed it and that ends the program, forget its row.
     pub(crate) fn closing(&self) {
-        if !self.detached.load(Ordering::Acquire) {
+        if !self.detached.load(Ordering::Acquire) && !self.kept.load(Ordering::Acquire) {
             (self.on_end)();
         }
+    }
+}
+
+impl Terminal {
+    /// The host the terminal's saved row names (the GPUI app's `Session::persisted_host`): its own, unless the host was
+    /// lost or is ending while the terminal stays.
+    pub(crate) fn persisted_host(&self) -> Option<String> {
+        let slot = self.host.as_ref()?;
+        let lost = self.with_pty(Pty::host_lost).unwrap_or(false);
+        wormhole_core::ipc::hosts::persisted_host(Some(&slot.id), lost, slot.kept.load(Ordering::Acquire))
     }
 }
 
@@ -50,6 +63,17 @@ impl Terminal {
         } else {
             TerminalHosting::Persistent { host_id }
         }
+    }
+
+    /// End the program as `close` does, without forgetting the terminal: it stays in its window (Restart starts a new
+    /// program in its place) or comes back at the next launch (Quit and End All), its saved row kept with its notes,
+    /// tasks and text and naming no host. `close` is for a terminal the person closed. For a terminal in the app's own
+    /// process the two are the same.
+    pub fn end_keeping_row(&self) {
+        if let Some(slot) = &self.host {
+            slot.kept.store(true, Ordering::Release);
+        }
+        self.close();
     }
 
     /// Let go of the session host and leave the program running in it for the next attach; closing or

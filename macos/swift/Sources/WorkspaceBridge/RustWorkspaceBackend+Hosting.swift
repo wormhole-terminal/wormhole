@@ -69,8 +69,9 @@ extension RustWorkspaceBackend {
 
     private func connected(_ id: TerminalID, token: Int, _ done: Connected) {
         guard book.connecting[id] == token else {
-            // Closed or started again meanwhile: what started is nobody's (closing ends its host, as dropping a hosted `Pty` does).
-            done.terminal?.close()
+            // Closed meanwhile: what started is nobody's, and closing ends its host and forgets its row, as the person asked.
+            // Started again meanwhile: the terminal stays, so its row (notes, tasks, text) does too.
+            if live.contains(id) { done.terminal?.endKeepingRow() } else { done.terminal?.close() }
             return
         }
         book.connecting[id] = nil
@@ -97,10 +98,11 @@ extension RustWorkspaceBackend {
         onWake?()
     }
 
-    /// Every terminal of the launch has its host (or its bar): the rows the last run left under other ids are forgotten.
+    /// Every terminal of the launch has its host (or its bar): the rows the last run left under other ids are forgotten, never
+    /// one the window lists (an attach that failed, a program that fell back to the app's process keeps its notes and text).
     private func finishRestore() {
         book.restoring = false
-        try? hosted?.desk.finishRestore()
+        try? hosted?.desk.finishRestore(listed: live.map { Int64($0) })
     }
 
     /// The terminal's program is running: the workspace feeds its row from it, and the view that waited for it draws it.
@@ -155,16 +157,29 @@ extension RustWorkspaceBackend {
     /// Fill an empty window from its record (the protocol's `restore`).
     public func restore() { restoreSaved() }
 
-    /// `endHosts`: every terminal ends with its host. Otherwise each is let go of and its program runs on, after the
-    /// screens are saved for a host that will not be there.
+    /// `endHosts`: every host ends and the terminals stay, to start again above their text at the next launch. Otherwise each
+    /// is let go of and its program runs on. Either way the screens are saved first, for a host that will not be there.
     public func finishQuit(endHosts: Bool) {
+        beginQuit(endHosts: endHosts)?()
+    }
+
+    /// Quit and End All: what `finishQuit(endHosts: true)` does, its seconds (the hosts still starting, each host's end)
+    /// handed back to run off the main actor (`window/windows.rs` `finish_quit`).
+    public func quitEndingHosts() -> (@Sendable () -> Void)? { beginQuit(endHosts: true) }
+
+    /// The quit's main-actor part (nothing more starts or is saved here, the app's own terminals' text is kept, every start
+    /// from now on is let go of or ended), then what is left for the session hosts.
+    private func beginQuit(endHosts: Bool) -> (@Sendable () -> Void)? {
         book.quitting = true
         book.saver?.cancel()
         // The terminals in the app's own process end with it: what they show is kept for the next launch.
         _ = core.saveTexts()
-        guard let desk = hosted?.desk else { return }
-        if !endHosts { _ = desk.saveTexts() }
-        desk.finish(endHosts: endHosts)
+        guard let desk = hosted?.desk else { return nil }
+        desk.quitting(endHosts: endHosts)
+        return {
+            _ = desk.saveTexts()
+            desk.finish(endHosts: endHosts)
+        }
     }
 
     /// "Restore terminal text after restart" went off: the profile's saved texts go; it, Persistent terminals or Restore

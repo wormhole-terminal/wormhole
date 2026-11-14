@@ -9,18 +9,19 @@ import AuxModel
 public enum QuitFlow {
     /// Returns `.terminateNow` when no question is needed, else `.terminateLater` and asks on `window`.
     /// `decide(endHosts)` runs when the person confirms, before the app goes; `endAll` is "Quit and End All Terminals".
+    /// It returns whether the app goes now: false when the caller first ends the session hosts off the main thread and
+    /// then answers AppKit itself (`reply(toApplicationShouldTerminate: true)`).
     public static func shouldTerminate(
-        facts: QuitFacts, endAll: Bool = false, window: NSWindow?, decide: @escaping (_ endHosts: Bool) -> Void
+        facts: QuitFacts, endAll: Bool = false, window: NSWindow?, decide: @escaping (_ endHosts: Bool) -> Bool
     ) -> NSApplication.TerminateReply {
         guard let question = facts.question(endAll: endAll) else {
-            decide(endAll)
-            return .terminateNow
+            return decide(endAll) ? .terminateNow : .terminateLater
         }
         let sheet = QuestionSheet(question)
         Task {
             let answer = await sheet.ask(in: window)
-            if case .confirm = answer { decide(QuitFacts.endsHosts(endAll: endAll, answer: answer)) }
-            NSApp.reply(toApplicationShouldTerminate: { if case .confirm = answer { true } else { false } }())
+            guard case .confirm = answer else { return NSApp.reply(toApplicationShouldTerminate: false) }
+            if decide(QuitFacts.endsHosts(endAll: endAll, answer: answer)) { NSApp.reply(toApplicationShouldTerminate: true) }
         }
         return .terminateLater
     }

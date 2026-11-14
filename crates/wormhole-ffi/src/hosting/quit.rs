@@ -51,6 +51,11 @@ impl QuitGate {
         }
     }
 
+    /// The app is about to quit: from now on what is made is let go of, or ended with `end_hosts`. Waits for nothing.
+    pub(super) fn mark(&self, end_hosts: bool) {
+        self.lock().quit = Some(end_hosts);
+    }
+
     /// The app quits: from now on what is made is let go of, or ended with `end_hosts`, which also waits (a few seconds
     /// at most) for the starts and attaches under way.
     pub(super) fn quit(&self, end_hosts: bool) {
@@ -85,5 +90,38 @@ impl Drop for UnderWay<'_> {
         let mut state = self.0.lock();
         state.under_way = state.under_way.saturating_sub(1);
         self.0.settled.notify_all();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::{Duration, Instant};
+
+    use super::{Fate, QuitGate};
+
+    /// Quit and End All marks the quit on the main thread and waits off it: the mark returns at once with a start under
+    /// way, and what that start makes from then on ends; the wait returns once it is over.
+    #[test]
+    fn marking_the_quit_waits_for_nothing_and_settles_what_is_made() {
+        let gate = QuitGate::default();
+        assert_eq!(gate.fate(), Fate::Runs);
+        let under_way = gate.begin();
+        let marked = Instant::now();
+        gate.mark(true);
+        assert!(marked.elapsed() < Duration::from_secs(1), "the mark did not wait");
+        assert_eq!(gate.fate(), Fate::Ends);
+        std::thread::scope(|scope| {
+            scope.spawn(move || {
+                std::thread::sleep(Duration::from_millis(50));
+                drop(under_way);
+            });
+            let waited = Instant::now();
+            gate.quit(true);
+            assert!(
+                waited.elapsed() < Duration::from_secs(5),
+                "the wait ended with the start, not at its limit"
+            );
+        });
+        assert_eq!(gate.under_way(), 0);
     }
 }

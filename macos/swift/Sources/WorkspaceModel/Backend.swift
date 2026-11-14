@@ -118,6 +118,9 @@ public protocol WorkspaceBackend: AnyObject {
     /// The app is quitting: `endHosts` ends every terminal's host (Quit and End All Terminals), otherwise each is let go
     /// of and its program runs on.
     func finishQuit(endHosts: Bool)
+    /// Quit and End All: what `finishQuit(endHosts: true)` does, with the part that takes seconds (hosts still starting,
+    /// each host's end) handed back to run off the main actor; nil when there is none. Called once, then the app quits.
+    func quitEndingHosts() -> (@Sendable () -> Void)?
     /// The settings changed: what the core keeps of the terminals follows them (saved text erased when its setting went
     /// off, checkpoints stopped).
     func settingsChanged()

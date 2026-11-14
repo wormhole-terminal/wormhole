@@ -32,6 +32,7 @@ extension WorkspaceBackend {
     public func endHost(of id: TerminalID, hard: Bool, done: @escaping @MainActor (String?) -> Void) { done(nil) }
     public func startAgain(_ id: TerminalID) {}
     public func finishQuit(endHosts: Bool) {}
+    public func quitEndingHosts() -> (@Sendable () -> Void)? { nil }
     /// The sample saves nothing and runs no programs to hand over.
     public func restore() {}
     public func takeOut(_ ids: [TerminalID]) -> TerminalDeparture? { nil }
