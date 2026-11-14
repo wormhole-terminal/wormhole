@@ -10,13 +10,14 @@ struct FolderCrumb: View {
     let plan: TitlePlan
     let actions: TitleActions
     @State private var card = PathCardHover()
+    @State private var hovering = false
     @Environment(\.tokens) private var tokens
     @Environment(\.titleTinted) private var tinted
 
     var body: some View {
         // Under a group's tint the icon and the parents step up to the main text colour, so they keep their contrast
-        // on it (`breadcrumb.rs` `soft`).
-        let soft = tinted ? tokens.textPrimary : tokens.textMuted
+        // on it (`breadcrumb.rs` `soft`); under the pointer they all take it (`path_crumb`'s hover).
+        let soft = tinted || hovering ? tokens.textPrimary : tokens.textMuted
         let text: PathText? = if case .step(let ix) = plan.fit.path { plan.steps[ix].text } else { nil }
         Button {
             card.close()
@@ -37,7 +38,10 @@ struct FolderCrumb: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .onHover { card.hover(.path, $0) }
+        .onHover { inside in
+            hovering = inside
+            card.hover(.path, inside)
+        }
         .popover(isPresented: $card.shown, arrowEdge: .bottom) {
             PathCard(path: plan.facts.shownFolder ?? "", buttons: PathCardItem.allCases.map { $0.button(actions) }, hover: card)
         }

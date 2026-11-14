@@ -11,6 +11,8 @@ struct PartsList: View {
     let model: SettingsModel
     let key: String
     let parts: [ControlSpec.TitlePart]
+    /// The part under the pointer: its row takes the hover fill (`arrange_row`).
+    @State private var hovered: String?
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -39,7 +41,11 @@ struct PartsList: View {
             if part.hideable { SettingToggle(label: part.label, isOn: shown) { toggle(part, on: $0) } }
         }
         .frame(minHeight: Metric.control)
+        .background(hovered == part.value ? tokens.stateHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
         .contentShape(Rectangle())
+        .onHover { inside in
+            if inside { hovered = part.value } else if hovered == part.value { hovered = nil }
+        }
         .draggable(shown ? part.value : "") { Text(part.label).padding(Space._2).background(tokens.surfaceOverlay) }
         .dropDestination(for: String.self) { items, _ in
             guard shown, let from = items.first.flatMap(order.firstIndex(of:)) else { return false }

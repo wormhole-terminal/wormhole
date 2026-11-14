@@ -25,6 +25,8 @@ struct PreviewStrip: View {
             }
             .frame(height: SettingsMetric.previewHeight - Metric.control - Space._2)
             .clipShape(RoundedRectangle(cornerRadius: tokens.metrics.radiusLg))
+            // Under Increase Contrast, where a faint fill is no edge, the stage gets `card.edge` (`preview_frame`).
+            .contrastOutline(RoundedRectangle(cornerRadius: tokens.metrics.radiusLg), \.cardEdge)
             if let caption = scene.caption {
                 Text(caption).textRole(.caption).foregroundStyle(tokens.textMuted)
                     .lineLimit(1).padding(.horizontal, Space._4)

@@ -23,30 +23,18 @@ struct HeadChevron: View {
     }
 }
 
+/// The + of a group (`groups.rs`: `icon_button(...).in_row()`): the shared icon button on a row's 22 pt face, `band.hover`
+/// under the pointer, a quarter turn on a click.
 struct HeadAddButton: View {
     /// The group's name: the tooltip and the label say which group the terminal opens in.
     let group: String
     let action: () -> Void
-    @State private var hovering = false
-    private let run = IconRun()
-    @Environment(\.tokens) private var tokens
 
     private var label: String { Words.text("sidebar-new-in-group", ["group": .text(group)], fallback: "New terminal in \(group)") }
 
     var body: some View {
-        Button {
-            run.start()
-            action()
-        } label: {
-            GlyphView(glyph: .plus, size: Metric.titleGlyph)
-                .iconMotion(.quarter, run: run.count)
-                .foregroundStyle(hovering ? tokens.textPrimary : tokens.textMuted)
-                .frame(width: Metric.titleControl, height: Metric.titleControl)
-                .background(hovering ? tokens.stateHover : .clear, in: RoundedRectangle(cornerRadius: tokens.metrics.radiusSm))
-        }
-        .buttonStyle(.plain)
-        .onHover { hovering = $0 }
-        .help(label)
-        .accessibilityLabel(label)
+        IconButton(label: label, action: action) { _ in GlyphView(glyph: .plus, size: Metric.glyph) }
+            .inRow()
+            .answering(.quarter)
     }
 }
