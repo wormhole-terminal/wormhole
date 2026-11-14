@@ -144,9 +144,10 @@ extension AppController {
     /// `settings-record <id> [keys]`: a shortcut row's recorder started as a click on it starts it, then each key pressed into it.
     private func settingsRecord(_ argument: String) async {
         let words = argument.split(separator: " ").map(String.init)
-        guard let id = words.first, let row = RowFrames.all.first(where: { $0.id == id }), let window = settingsController?.window else {
+        guard let id = words.first, let window = settingsController?.window, let frame = await settingsFrame(id, in: window) else {
             return reply("error: settings-record <row id> [keys] (a shortcut row on show: `settings-rows`)")
         }
+        let row = (id: id, frame: frame)
         let point = injector.location(Double(row.frame.midX), Double(row.frame.midY), in: window)
         var said = [injector.press(point, in: window, clicks: 1, flags: [])]
         if injector.isPressed { said.append(injector.release(point, in: window, clicks: 1, flags: [])) }

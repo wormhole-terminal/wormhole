@@ -14,10 +14,11 @@ extension AppController {
     func runSettingsPress(command: String, argument: String) async -> Bool {
         guard command == "settings-press" else { return false }
         let words = argument.split(separator: " ").map(String.init)
-        guard let id = words.first, let window = settingsController?.window, let row = RowFrames.all.first(where: { $0.id == id }) else {
+        guard let id = words.first, let window = settingsController?.window, let frame = await settingsFrame(id, in: window) else {
             reply("error: settings-press <id> [menu | at <x> [y]] (a control on show: `settings-rows`)")
             return true
         }
+        let row = (id: id, frame: frame)
         // `at <x> [y]`: the click at those fractions of the control's frame instead of its centre, where a person aims at one
         // part of it: a segment of a segmented control (as wide as its words), a stepper's up or down arrow.
         var at = (x: 0.5, y: 0.5)
@@ -41,5 +42,26 @@ extension AppController {
         await pause(60)
         reply("settings-press \(id): " + said.joined(separator: ", "))
         return true
+    }
+
+    /// Where the Settings control recorded under `id` is, in the window's points from its top left, once it is in sight: a
+    /// control below or above what the page shows is scrolled to first, by the wheel, as a person does before pressing it.
+    /// On a small display the window is shorter than a page, and a press at the recorded frame landed outside the window.
+    /// Nil for an id that is not on the page.
+    func settingsFrame(_ id: String, in window: NSWindow) async -> CGRect? {
+        func recorded() -> CGRect? { RowFrames.all.first { $0.id == id }?.frame }
+        guard let content = window.contentView else { return recorded() }
+        // The title bar's strip at the top and a row's height at the bottom are left clear.
+        let sight = 60...(Double(content.bounds.height) - 30)
+        for _ in 0..<80 {
+            guard let frame = recorded() else { return nil }
+            let off = Double(frame.midY) < sight.lowerBound ? Double(frame.midY) - sight.lowerBound : Double(frame.midY) - sight.upperBound
+            if sight.contains(Double(frame.midY)) { return frame }
+            // The wheel over the page's own column, a step at a time: the frame is recorded again as the page moves.
+            let over = injector.location(Double(frame.midX), Double(content.bounds.height) / 2, in: window)
+            _ = injector.scroll(over, in: window, dy: max(-120, min(120, off)))
+            await pause(16)
+        }
+        return recorded()
     }
 }
