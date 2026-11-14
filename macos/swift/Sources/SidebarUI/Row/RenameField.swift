@@ -29,6 +29,8 @@ struct RenameField: View {
             .focused($focused)
             .onSubmit { finish(text) }
             .onKeyPress(.escape) { finish(nil); return .handled }
+            // The field editor turns ⎋ into cancelOperation before a key press is offered: this is where it arrives.
+            .onExitCommand { finish(nil) }
             .onChange(of: focused) { _, now in if !now { finish(text) } }
             .onAppear {
                 text = name
