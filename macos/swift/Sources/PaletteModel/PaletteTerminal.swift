@@ -13,6 +13,8 @@ public struct PaletteTerminal: Sendable {
     /// Its window as the title bar numbers it ("Window 2").
     public var window: Int
     public var activity: Activity
+    /// An agent or a program that reports tells its state (core's `Source::told`).
+    public var told: Bool
     public var number: Int?
     /// Where it is, `~`-shortened.
     public var path: String?
@@ -28,18 +30,21 @@ public struct PaletteTerminal: Sendable {
     public var elapsed: @Sendable (Date) -> String?
 
     public init(
-        id: TerminalID, name: String, window: Int, activity: Activity, number: Int? = nil, path: String? = nil, folder: String? = nil,
+        id: TerminalID, name: String, window: Int, activity: Activity, told: Bool = true, number: Int? = nil, path: String? = nil,
+        folder: String? = nil,
         branch: String? = nil, who: String? = nil, message: String? = nil, command: String? = nil, exit: Int? = nil,
         elapsed: @escaping @Sendable (Date) -> String? = { _ in nil }
     ) {
-        (self.id, self.name, self.window, self.activity, self.number, self.path, self.folder) = (id, name, window, activity, number, path, folder)
+        (self.id, self.name, self.window, self.activity, self.told, self.number) = (id, name, window, activity, told, number)
+        (self.path, self.folder) = (path, folder)
         (self.branch, self.who, self.message, self.command, self.exit, self.elapsed) = (branch, who, message, command, exit, elapsed)
     }
 
     /// A window's own terminals when nothing else says more (previews, tests): no clock, folder as the row has it.
     public init(_ summary: TerminalSummary, window: Int = 1, number: Int? = nil) {
         self.init(
-            id: summary.id, name: summary.title, window: window, activity: summary.activity, number: number, path: summary.folder,
+            id: summary.id, name: summary.title, window: window, activity: summary.activity, told: summary.agent != nil, number: number,
+            path: summary.folder,
             folder: summary.folder, branch: summary.branch, who: summary.agent?.name, message: summary.message)
     }
 

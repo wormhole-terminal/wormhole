@@ -1,5 +1,5 @@
-// A terminal's state as a glyph in the lead column. Shape as well as colour says what it is, so the
-// meaning survives colour blindness (the GPUI app's rule): ring, dot, haloed dot, check, cross.
+// A terminal's state as a glyph in the lead column (`style::StatusGlyph`). Shape as well as colour says what it is, so
+// the meaning survives colour blindness (the GPUI app's rule): ring, dot, haloed dot, check, cross, bell, terminal.
 // A change of state swaps the glyph with a small spring; working breathes and needs-input's halo swells,
 // both steady under Reduce Motion.
 
@@ -7,6 +7,12 @@ import SwiftUI
 
 public enum StatusKind: Sendable, Equatable {
     case idle, working, attention, done, failed
+    /// A command runs in a terminal nothing tells the state of: the working drawing, neutral (muted).
+    case running
+    /// A terminal nothing tells the state of rang its bell: an amber bell, until it is seen.
+    case bell
+    /// A bare shell at its prompt, nothing running: the terminal symbol, faint.
+    case shell
 }
 
 public struct StatusDot: View {
@@ -40,19 +46,28 @@ public struct StatusDot: View {
         case .idle:
             Circle().strokeBorder(tokens.textFaint, lineWidth: Metric.ring)
                 .frame(width: Metric.statusDot, height: Metric.statusDot)
-        case .working:
-            if reduceMotion {
-                dot.foregroundStyle(tokens.agentWorking)
-            } else {
-                dot.foregroundStyle(tokens.agentWorking)
-                    .phaseAnimator([1.0, 0.35]) { view, opacity in view.opacity(opacity) } animation: { _ in Motion.breath }
-            }
+        case .working: working(tokens.agentWorking)
+        case .running: working(tokens.textMuted)
         case .attention:
             dot.foregroundStyle(tokens.agentAttention).background { halo }
         case .done:
             Image(systemName: "checkmark.circle.fill").font(.system(size: Metric.glyph)).foregroundStyle(tokens.agentDone)
         case .failed:
             Image(systemName: "xmark.circle.fill").font(.system(size: Metric.glyph)).foregroundStyle(tokens.statusDanger)
+        case .bell:
+            Image(systemName: "bell.fill").font(.system(size: Metric.glyph - 3)).foregroundStyle(tokens.agentAttention)
+        case .shell:
+            Image(systemName: "terminal").font(.system(size: Metric.glyph - 3)).foregroundStyle(tokens.textFaint)
+        }
+    }
+
+    /// The working drawing: a dot that breathes, still under Reduce Motion.
+    @ViewBuilder private func working(_ colour: Color) -> some View {
+        if reduceMotion {
+            dot.foregroundStyle(colour)
+        } else {
+            dot.foregroundStyle(colour)
+                .phaseAnimator([1.0, 0.35]) { view, opacity in view.opacity(opacity) } animation: { _ in Motion.breath }
         }
     }
 

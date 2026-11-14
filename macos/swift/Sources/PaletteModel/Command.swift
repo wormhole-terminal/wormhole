@@ -7,7 +7,9 @@ import WorkspaceModel
 /// What stands in a result's lead column: a terminal's status, or an icon (an SF Symbol name).
 public enum Lead: Sendable, Equatable {
     case symbol(String)
-    case status(Activity)
+    /// `told`: an agent or a program that reports gives the state; without one a needs-input is a bell, working a
+    /// plain command and idle a bare shell (`StatusGlyph::of`).
+    case status(Activity, told: Bool)
 }
 
 /// The groups of the Actions scope with nothing typed (core `keymap::palette::Section`).

@@ -18,7 +18,7 @@ extension AppController {
                 let row = rows[terminal.id]
                 let ambient = ambient(terminal, running: terminal.runningCommand)
                 return PaletteTerminal(
-                    id: terminal.id, name: ambient.name, window: index + 1, activity: terminal.activity,
+                    id: terminal.id, name: ambient.name, window: index + 1, activity: terminal.activity, told: ambient.source.told,
                     number: session === own ? row?.number : nil, path: terminal.folder, folder: ambient.folder, branch: ambient.branch,
                     who: ambient.who, message: ambient.message, command: ambient.command, exit: ambient.exit,
                     elapsed: { [state = ambient.state, since = ambient.since] now in

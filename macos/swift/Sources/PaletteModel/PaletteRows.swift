@@ -103,7 +103,7 @@ public enum PaletteRows {
     }
 
     private static func activity(of command: Command) -> Activity {
-        if case .status(let activity) = command.lead { activity } else { .idle }
+        if case .status(let activity, _) = command.lead { activity } else { .idle }
     }
 
     /// The Actions scope with nothing typed: the actions in their groups, the shells to open a terminal with at the end of

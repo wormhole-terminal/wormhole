@@ -83,11 +83,7 @@ struct QuickPanelRowView: View {
 
     @ViewBuilder private var lead: some View {
         if let terminal {
-            if terminal.isBell {
-                Image(systemName: "bell.fill").font(.system(size: Metric.glyph - 3)).foregroundStyle(tokens.agentAttention)
-            } else {
-                StatusDot(StatusKind(terminal.state))
-            }
+            StatusDot(StatusKind(terminal))
         } else if case .action(let item) = row {
             Image(systemName: Self.symbol(item)).font(.system(size: Metric.glyph - 1, weight: .light))
         }
@@ -116,14 +112,18 @@ struct QuickPanelRowView: View {
 }
 
 extension StatusKind {
-    init(_ state: AmbientState) {
+    /// What an agent or a program that reports says, else a plain terminal's bell, command or bare prompt
+    /// (`StatusGlyph::of`).
+    init(_ terminal: AmbientTerminal) {
+        let told = terminal.source.told
         self =
-            switch state {
-            case .idle, .exited: .idle
-            case .working: .working
-            case .needsYou: .attention
+            switch terminal.state {
+            case .needsYou: told ? .attention : .bell
+            case .working: told ? .working : .running
             case .done: .done
             case .failed: .failed
+            case .idle: told ? .idle : .shell
+            case .exited: .idle
             }
     }
 }

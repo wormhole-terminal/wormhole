@@ -83,8 +83,8 @@ struct ResultRow: View {
             switch command.lead {
             case .symbol(let name):
                 Image(systemName: name).font(.system(size: Metric.glyph - 1, weight: .light)).accessibilityHidden(true)
-            case .status(let activity):
-                StatusDot(StatusKind(activity))
+            case .status(let activity, let told):
+                StatusDot(StatusKind(activity, told: told))
             }
         }
         .frame(width: Metric.lead, height: Metric.lead)
@@ -94,14 +94,17 @@ struct ResultRow: View {
 }
 
 extension StatusKind {
-    init(_ activity: Activity) {
+    /// What an agent or a program that reports says, else a plain terminal's bell, command or bare prompt
+    /// (`StatusGlyph::of`).
+    init(_ activity: Activity, told: Bool) {
         self =
             switch activity {
-            case .idle, .exited: .idle
-            case .working: .working
-            case .needsInput: .attention
+            case .needsInput: told ? .attention : .bell
+            case .working: told ? .working : .running
             case .finished: .done
             case .failed: .failed
+            case .idle: told ? .idle : .shell
+            case .exited: .idle
             }
     }
 }

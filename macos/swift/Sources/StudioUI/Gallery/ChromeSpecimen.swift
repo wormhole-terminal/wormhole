@@ -51,7 +51,7 @@ struct ChromeSpecimen: View {
                 IconMenuButton(lucide: .chevronDown, label: "Open in another app") { Button("Finder") {} }.narrow(16).chevron()
             }
             HStack(spacing: Space._4) {
-                ForEach([StatusKind.idle, .working, .attention, .done, .failed], id: \.self) { StatusDot($0) }
+                ForEach([StatusKind.idle, .shell, .working, .running, .attention, .bell, .done, .failed], id: \.self) { StatusDot($0) }
             }
             VStack(alignment: .leading, spacing: 0) {
                 SectionLabel("Open section", isCollapsed: false)
