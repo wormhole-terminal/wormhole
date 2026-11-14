@@ -63,7 +63,8 @@ extension NotesModel {
         // The person's list, in the person's order: what was added or rewritten meanwhile stays, the rest as `keep` says.
         var out: [(key: Key, item: Item)] = current.compactMap { entry in
             guard let was = before[entry.key] else { return entry }
-            return keep(theirs[entry.key], was, entry.item).map { (entry.key, $0) }
+            guard let kept = keep(theirs[entry.key], was, entry.item) else { return nil }
+            return (entry.key, kept)
         }
         // What the merge brought (the file's lines) goes after the item it follows in the answer while that is still there,
         // else before the first one after it that is, else at the end (lines appended to the file stay last). One that was
