@@ -57,10 +57,10 @@ fn a_kitty_picture_arrives_as_a_placement_and_its_pixels_by_key() {
     assert_eq!((image.width, image.height), (2, 1));
     assert_eq!(image.rgba, [255, 0, 0, 255, 0, 255, 0, 255]);
     assert!(terminal.inline_image(record[0] + 1000).is_none());
-    // Nothing changed since: the next frame says "as before" (no section), a full frame repeats it.
+    // Nothing changed since: a still screen's second frame is none at all (`pack_frame`), a full frame repeats the section.
     terminal.frame();
     let again = terminal.frame();
-    assert_eq!(word(&again, 20) & 2, 0);
+    assert!(again.is_empty(), "a still screen sends no frame");
     let full = terminal.full_frame();
     assert_eq!(word(&full, 20) & 2, 2);
     assert_eq!(word(&full, 44), 1);
