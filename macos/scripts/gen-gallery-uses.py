@@ -37,7 +37,7 @@ ELEMENTS = {
     "commit.row": ["PanelUI/History/CommitRowView.swift", "PanelUI/History/CommitRefs.swift"],
     "diff": ["PanelUI/Diff/Diff*"],
     "callout": ["PanelUI/Shell/Callout.swift"],
-    "icon.button": ["DesignSystem/IconButton.swift"],
+    "icon.button": ["DesignSystem/IconButton.swift", "DesignSystem/IconMenuButton.swift"],
     "icon.tab": ["WindowUI/PanelTabBar.swift"],
     "title.tab": ["PanesUI/Tabs/TerminalTabView.swift"],
     "keycap": ["DesignSystem/KeyCap.swift", "SidebarUI/Row/Keycap.swift"],
@@ -115,6 +115,11 @@ def tokens_of(text: str, table: dict[str, str], colours: dict[str, str]) -> set[
         found.add("metrics.radius_chip")
     if re.search(r"\bChip\([^{]*?\boutline:", text, re.S):
         found.add("metrics.border_width")
+    # The shared rings (DesignSystem/FocusRing.swift) draw in the focus colours at the focus ring's width.
+    if "keyboardFocusRing(" in text:
+        found |= {"border.focus", "metrics.focus_ring_width"}
+    if "flatFocusRing(" in text:
+        found |= {"input.border.focus", "metrics.focus_ring_width"}
     return found
 
 

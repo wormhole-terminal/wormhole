@@ -36,6 +36,8 @@ struct FindField: View {
         .padding(.leading, Space._2)
         .frame(height: Metric.control)
         .background(tokens.inputBackground, in: shape)
+        // The field's own edge, in the focus colour while it has the caret (`find_bar.rs` `outlined_always(ui.focus)`): an
+        // always-on outline, not the keyboard's ring, so a click shows it too.
         .overlay { shape.strokeBorder(focused ? tokens.borderFocus : tokens.border, lineWidth: tokens.metrics.borderWidth) }
         .onChange(of: model.focusRequest) { focus() }
         .onAppear { focus() }

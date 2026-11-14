@@ -102,6 +102,7 @@ struct GroupPopover: View {
         Button { context.send(.setGroupColor(head.id, nil)) } label: {
             Circle().strokeBorder(tokens.textMuted, lineWidth: tokens.metrics.borderWidth)
                 .frame(width: Self.swatch, height: Self.swatch)
+                // The chosen colour's mark (a selection, not the keyboard's ring: it shows in any window).
                 .overlay { if head.color == nil && head.customColor == nil { Circle().strokeBorder(tokens.textPrimary, lineWidth: tokens.metrics.focusRingWidth) } }
         }
         .buttonStyle(.plain)
@@ -123,6 +124,7 @@ struct GroupPopover: View {
     private func swatch(_ colour: GroupColor) -> some View {
         Circle().fill(colour.mark(tokens).color)
             .frame(width: Self.swatch, height: Self.swatch)
+            // The chosen colour's mark (a selection, not the keyboard's ring).
             .overlay { if head.color == colour { Circle().strokeBorder(tokens.textPrimary, lineWidth: tokens.metrics.focusRingWidth) } }
     }
 

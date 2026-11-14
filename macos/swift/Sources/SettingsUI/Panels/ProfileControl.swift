@@ -51,6 +51,7 @@ struct ProfileControl: View {
                     Button { draft.edit { $0.color = color.rawValue } } label: {
                         Circle().fill(color.mark(tokens).color).frame(width: Metric.glyph, height: Metric.glyph)
                             .overlay {
+                                // The chosen colour's mark (a selection, not the keyboard's ring).
                                 if draft.form?.color == color.rawValue {
                                     Circle().strokeBorder(tokens.textPrimary, lineWidth: tokens.metrics.focusRingWidth).padding(-Space._1)
                                 }

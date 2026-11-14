@@ -19,8 +19,8 @@ enum GalleryUses {
             "card", "card.edge", "metrics.border_width",
         ]),
         TokenUse(id: "sidebar.band", label: "group head", area: .sidebar, tokens: [
-            "agent.attention", "metrics.radius_sm", "sidebar.background", "state.hover", "status.danger",
-            "text.faint", "text.muted", "text.primary",
+            "agent.attention", "border.focus", "metrics.focus_ring_width", "metrics.radius_sm", "sidebar.background",
+            "state.hover", "status.danger", "text.faint", "text.muted", "text.primary",
         ]),
         TokenUse(id: "status.tile", label: "status tile", area: .sidebar, tokens: [
             "agent.attention", "agent.bell", "agent.done", "agent.working", "metrics.border_width", "primary",
@@ -73,9 +73,9 @@ enum GalleryUses {
             "text.on_primary", "text.primary",
         ]),
         TokenUse(id: "icon.button", label: "icon button", area: .chrome, tokens: [
-            "band.hover", "metrics.focus_ring_width", "metrics.radius", "primary", "sidebar.background",
-            "sidebar.row.selected.text", "state.active", "state.selected", "text.faint", "text.muted",
-            "text.primary",
+            "band.hover", "border.focus", "metrics.focus_ring_width", "metrics.radius", "primary",
+            "sidebar.background", "sidebar.row.selected.text", "state.active", "state.selected", "text.faint",
+            "text.muted", "text.primary",
         ]),
         TokenUse(id: "icon.tab", label: "icon tab", area: .panel, tokens: [
             "band.hover", "metrics.radius", "sidebar.row.selected.text", "state.selected", "text.muted",
@@ -102,7 +102,8 @@ enum GalleryUses {
             "border.focus", "metrics.focus_ring_width",
         ]),
         TokenUse(id: "segmented", label: "segmented control", area: .chrome, tokens: [
-            "chip.selected", "metrics.radius_chip", "state.hover", "text.muted", "text.on_selected", "text.primary",
+            "border.focus", "chip.selected", "metrics.focus_ring_width", "metrics.radius_chip", "state.hover",
+            "text.muted", "text.on_selected", "text.primary",
         ]),
         TokenUse(id: "card", label: "card", area: .chrome, tokens: [
             "border", "metrics.border_width", "metrics.radius_lg",

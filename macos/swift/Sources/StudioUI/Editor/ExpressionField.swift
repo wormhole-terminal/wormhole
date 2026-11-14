@@ -53,6 +53,8 @@ struct ExpressionField: View {
     }
 
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: tokens.metrics.radius) }
+    /// The field's own edge: red on an error, the input focus colour while it has the caret, else the input's (an always-on
+    /// outline, not the keyboard's ring).
     private var border: Color {
         document.fieldError?.token == token ? tokens.statusDanger : focused ? tokens.inputBorderFocus : tokens.inputBorder
     }

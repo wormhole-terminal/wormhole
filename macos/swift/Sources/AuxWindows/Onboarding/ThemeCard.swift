@@ -33,6 +33,7 @@ struct ThemeCard: View {
             }
             .frame(height: OnboardingMetrics.cardHeight)
             .clipShape(shape)
+            // The current theme's ring in the primary (a selection, not the keyboard's ring, which is the button's own).
             .overlay {
                 shape.strokeBorder(
                     current ? window.primary : window.borderStrong,

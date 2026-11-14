@@ -45,6 +45,10 @@ struct ChromeSpecimen: View {
                 IconButton(lucide: .caseSensitive, label: "Match case") {}.inRow().toggled(true)
                 IconButton(symbol: "line.3.horizontal.decrease", label: "Filter") {}.selected(true).dot(true)
                 IconButton(lucide: .plus, label: "Focused") {}.focusRing(true)
+                // A button that opens a menu (`IconMenuButton`): a row's "…" and a narrow chevron beside a button, which
+                // turns over while its menu is open (`narrow`, `menu_chevron`).
+                IconMenuButton(symbol: "ellipsis", label: "Pane menu") { Button("Close pane") {} }.inRow()
+                IconMenuButton(lucide: .chevronDown, label: "Open in another app") { Button("Finder") {} }.narrow(16).chevron()
             }
             HStack(spacing: Space._4) {
                 ForEach([StatusKind.idle, .working, .attention, .done, .failed], id: \.self) { StatusDot($0) }

@@ -36,7 +36,7 @@ struct ShapeSpecimen: View {
                 Rectangle().fill(tokens.divider).frame(width: max(metrics.dividerWidth, 0.0001), height: Metric.control)
                 Text("focus \(NumberFormat.points(metrics.focusRingWidth))").font(TextRole.caption.font)
                     .padding(.horizontal, Space._2).frame(height: Metric.control)
-                    .overlay(RoundedRectangle(cornerRadius: metrics.radius).strokeBorder(tokens.borderFocus, lineWidth: metrics.focusRingWidth))
+                    .keyboardFocusRing(true, radius: metrics.radius)
                     .marked("focus.ring")
                 Text("chip").font(TextRole.caption.font).padding(.horizontal, Space._2).frame(height: Metric.badgeHeight)
                     .background(tokens.chipTint, in: RoundedRectangle(cornerRadius: metrics.radiusChip))

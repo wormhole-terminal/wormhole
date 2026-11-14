@@ -43,6 +43,7 @@ struct ShortcutRecorder: View {
             .padding(.horizontal, Space._2)
             .frame(width: SettingsMetric.controlWidth, height: Metric.control)
             .background(tokens.controlBackground, in: RoundedRectangle(cornerRadius: tokens.metrics.radius))
+            // The field's edge while it records or refuses a key (a state of the recorder, not the keyboard's ring).
             .overlay {
                 RoundedRectangle(cornerRadius: tokens.metrics.radius)
                     .strokeBorder(rejected ? tokens.statusDanger : tokens.inputBorderFocus, lineWidth: recording || rejected ? tokens.metrics.focusRingWidth : 0)

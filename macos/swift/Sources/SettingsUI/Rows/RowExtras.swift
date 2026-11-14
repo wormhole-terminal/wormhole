@@ -172,6 +172,7 @@ struct SwatchRow<Extra: View>: View {
                         .fill(Color(hex: hex) ?? .clear)
                         .frame(width: SettingsMetric.swatchSize, height: SettingsMetric.swatchSize)
                         .overlay {
+                            // The chosen swatch's mark (a selection, not the keyboard's ring).
                             if hex == chosen {
                                 RoundedRectangle(cornerRadius: tokens.metrics.radiusSm).stroke(tokens.textPrimary, lineWidth: tokens.metrics.focusRingWidth)
                             }
