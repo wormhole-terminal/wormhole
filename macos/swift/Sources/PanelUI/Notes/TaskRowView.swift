@@ -27,8 +27,11 @@ struct TaskRowView: View {
         HStack(spacing: PanelMetrics.gap) {
             Button(action: toggle) { TaskCheckbox(checked: task.done).contentShape(Rectangle()) }
                 .buttonStyle(.plain)
-                .accessibilityLabel(task.text)
-                .accessibilityValue(task.done ? panelText("notes-task-done", "done") : panelText("notes-task-not-done", "not done"))
+                // A checkbox to VoiceOver, named by the step's words and checked once done (`style::checkbox`, `spoken`):
+                // a real checkbox stands in for the drawn box, and pressing it ticks the step.
+                .accessibilityRepresentation {
+                    Toggle(isOn: Binding(get: { task.done }, set: { _ in toggle() })) { Text(task.text) }.toggleStyle(.checkbox)
+                }
             label
             // While its editor is open the row's Send sends what is typed, not the words saved before (`task_rows.rs`).
             if hovering || editing {

@@ -214,7 +214,6 @@ notes-show-all = Show all · { $count } lines
 notes-stash-prompt = Stash prompt into a new note
 notes-prompt-stashed = Prompt stashed in a new note
 notes-task-done = done
-notes-task-not-done = not done
 notes-send = Send to terminal
 notes-delete = Delete
 steps-title = Next steps
