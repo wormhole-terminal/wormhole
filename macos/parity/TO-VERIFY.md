@@ -1613,3 +1613,53 @@ Written without compiling: expect compile errors.
 | A01 | Help ▸ Welcome on a project, close the intro window; touch `.wormhole/actions.json` or `trusted-projects.json` | the desk's watch ended with the window (no wake, no card read while it is closed); a new Welcome starts its own | `AuxWindows/Onboarding/OnboardingWindow.swift show` (`watchesTrust`), `AuxBridge/OnboardingBridge.swift watchesTrust`, `AuxModel/Onboarding/OnboardingFacts.swift` |
 | STX2 | Settings → Project folders, a project picked; close Settings; trust or revoke a project from elsewhere; open Settings again | while closed the approvals watch and the project's folder watch are off; on opening both start again and the page shows the change | `SettingsUI/SettingsWindowController.swift` (`windowWillClose`, `show`: `SettingsModel.windowShown`), `SettingsUI/Projects/ProjectsPanel.swift` (`task(id: shown)`, `onDisappear`), `SettingsModel/ProjectsModel.swift watch` |
 | O04 | NOT REAL: "Show beside…" in list order | `state.all` is core's `TerminalsSnapshot`, built in the listing's order, folded groups' terminals included (`workspace/snapshot/terminals.rs terminals_snapshot`), the same order GPUI's `session_order` gives (`Listing::order`) | `Menus/RowMenuKeyboard.swift`, `SidebarUI/Menu/RowMenu.swift` |
+
+## Lane style, wave 9
+
+Written without compiling: expect compile errors.
+
+X01, X03 and X05 against audit 6 (`audit6-crosscut.md`). The six lines of the wave 7 table the audit found incomplete or wrong
+(groups, panes, popover, profile, section, status) are corrected in place above, with buttons.rs and the focus ring line.
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| X03 | VoiceOver on: walk into a group's head in the sidebar (open, then folded), then a pinned empty group's | the head is a group named by the core's words; inside it "Edit group <name>" (opens the popover), "Fold group <name>" / "Unfold group <name>" (folds), "New terminal in <name>" (starts one); the + is there without the pointer while VoiceOver runs; the head's own action still folds, Edit group and Rename still in its actions | `SidebarUI/Group/GroupHeadView.swift`, `HeadControls.swift`; test `Tests/UITests/GroupHeadSpeechTests.swift` (skips itself if SwiftUI vends no nodes in the test process) |
+| X03 | VoiceOver on: a tab in the tab bar (tabs on top) | the tab's actions include "Close terminal", which closes it as the × does | `PanesUI/Tabs/TerminalTabView.swift` |
+| X03 | VoiceOver on: the find bar's Match case, Whole word, Regex; flip one with VO-Space | each is heard as a toggle button with its value (on / off, or selected / not selected as AppKit says it), the key in the hint; VO-Space flips it and the value changes | `DesignSystem/IconButton.swift` (`ToggleSpeech`), `TerminalUI/Find/FindToggle.swift` |
+| X03 | VoiceOver on: the diff's Split / Unified, the Studio's area filter and token filter | one radio group with a radio button per choice, the chosen one selected | `DesignSystem/Segmented.swift` |
+| X04 | Keyboard navigation on (System Settings): Tab to the diff's Split / Unified, then ← → ↑ ↓ Home End | one Tab stop, the ring round the track; the arrows pick the choice before or after, wrapping round; a click picks without taking the keyboard; the ring hides in a window behind | `DesignSystem/Segmented.swift` |
+| X03 | VoiceOver on: Changes tab, hover a file row's open-in-editor icon; a diff line's; the diff header's | the button's name is its tooltip and the file's name ("Open in Zed, main.rs") | `PanelUI/Shell/BandButton.swift` (`openFile`), `PanelUI/Changes/FileRowView.swift`, `PanelUI/Diff/DiffRowView.swift`, `DiffHeader.swift` |
+| X05 | Reduce Motion on (or devctl `reduce-motion on`): fold and open a right panel card, a file-tree folder, a commit in History, a Studio token band, an import card in Settings, "more agents" in Settings, a session host card | every chevron swaps at once, none turns; with Reduce Motion off each turns as before | `PanelUI/Shell/Disclosure.swift`, `PanelUI/History/CommitRowView.swift`, `StudioUI/List/BandView.swift`, `SettingsUI/Panels/ImportCards.swift`, `AgentList.swift`, `AuxWindows/Hosts/HostCardView.swift` |
+| X05 | devctl `reduce-motion on` with the system's off: open and fold panel cards, select another file in Changes, switch panel tabs | the panel follows the app's Reduce Motion now (it read only the system's): no turn, no slide of the selection, tab content fades in place | `PanelUI/Shell/PanelMotion.swift`, `RowSurface.swift` |
+| X05 | Reduce Motion on: search Settings and pick a result; pick a token in the Studio's gallery; walk the sidebar with the arrows past its edge; reorder or move a terminal in the sidebar; fold a group with fold motion Classic | the page, the token list and the sidebar jump to the row (no scroll animation); rows stand in their new places at once; the card closes at once | `SettingsUI/Pages/PageScaffold.swift`, `StudioUI/List/TokenListView.swift`, `SidebarUI/SidebarView.swift`, `SidebarUI/Group/SidebarSectionView.swift` |
+| X05 | Reduce Motion on: the Studio's gallery filter (area chips) and a Studio notice arriving; split a pane and close it | the specimens stand where they land at once, the notice row is there at once; a pane fades in and out without scaling | `StudioUI/Gallery/GalleryView.swift`, `StudioUI/Window/StudioView.swift`, `PanesUI/Panes/PaneArea.swift` |
+| X01 | split a terminal; hover each pane header's Zoom, "…" and ×, and a tab's × | 22 pt faces on 28 pt hits (a click just outside the face still lands), `band.hover` and `text.primary` under the pointer on all three, the "…" included; Zoom's corners still swap | `PanesUI/Panes/PaneButton.swift`, `PaneHeader.swift`, `DesignSystem/IconMenuButton.swift` |
+| X01 | hover Open in…'s chevron and open its menu | a 16 pt wide face as tall as the hit with `band.hover`, the glyph `text.primary` under the pointer, turned up while the menu is open, down again when it closes | `PanesUI/Title/OpenInButtons.swift`, `DesignSystem/IconMenuButton.swift` |
+| X01 | open the group switcher; hover New group and Show all groups, then type to list hits and hover one | each hit row and both footer buttons take the hover fill, the pressed fill while held | `PanesUI/Tabs/GroupSwitcherView.swift` |
+| X01 | two profiles, one coloured yellow or green (a light theme), one blue; look at the profile chip and its menu | on the light colour the letter turns black (or white) where the window's colour would not read; on blue it stays the window's colour; the profile's colour is never changed | `PanesUI/Tabs/ProfileChip.swift` (`ProfileAvatar`), `SidebarUI/Colour/OKLab.swift` |
+| X01 | status bar on: click a count just above or below its drawn face, hover there | the click opens it and the face washes, across the bar's 28 pt height | `WindowUI/StatusBar.swift` (`StatusItemStyle`); the hit reaches past the laid-out face by padding: check it really takes the clicks |
+| X01 | right-click a sidebar row, then a group head; move the window behind another while the menu is open; Increase Contrast on | the ring round the row or head while its menu is open, in Increase Contrast's width; none in a window behind | `SidebarUI/Row/RowRings.swift` |
+| X01 | Studio gallery, Chrome and Shape | a row's "…" menu button and a narrow chevron among the icon buttons; the focus ring specimen is the shared ring | `StudioUI/Gallery/ChromeSpecimen.swift`, `ShapeSpecimen.swift` |
+
+Checked and left, with why:
+- Places a parent hides its children (SidebarUI, PanesUI, PanelUI, WindowUI): a terminal row (`TerminalRowView`, `.ignore`) keeps its × as
+  its "Close terminal" action beside Pin and Rename; the group switcher's cards (`SetCardView`) keep their + and Edit group as actions;
+  the title crumb, gauge chip, status bar's profile, hosting and read-only items, the panel's submodule heading, usage rows and project
+  head hold nothing pressable; the panel tab strip is a segmented picker whose segments are the tabs. Every other `accessibilityHidden`
+  is a drawing (tile, glyph, mark, hatch, measuring text). The task box inside a task row is drawn; its row is the button (audit's X03
+  checkbox role is still open).
+- Animations left as they are: every `.transition(.opacity)` (a fade is what Reduce Motion asks for); the sidebar's row insert and fold
+  poses, status play, bracket draw, drag room and lift (each already cut or faded under Reduce Motion); the notice chip's 120 ms
+  crossfade on a swap (core's `SWAP`, the same in GPUI); the panel's own `.transition(motion.…)` and `motion.…` animations (opacity
+  under Reduce Motion); the palette's (`OverlayMotion`, nil under Reduce Motion); the window's column slide (`animates: !reduceMotion`);
+  the right panel's tab content (`arrival` is a fade under Reduce Motion); `IconMotion` (gated); the rolling status counts; the
+  Settings motion preview (shows motion on purpose and stills under Reduce Motion); `.motion(...)` callers (Motion's fade).
+- Palette details "always muted": NOT REAL. GPUI's command palette sets no `detail_color` (`command_palette/view.rs`); only the quick
+  panel colours its terminals' details by state, and the Swift quick panel already does (`QuickPanelRowView.swift` `detailColor`).
+- Hand-drawn strokes that are not keyboard rings, each now saying so where drawn: the colour marks in the group popover and the profile
+  form, the swatch mark in Settings, the shortcut recorder's recording edge, the onboarding theme card's current ring, the find field's and
+  the Studio expression field's own edges (GPUI's find field is `outlined_always(ui.focus)`, not `focus_ring`).
+- The Segmented control's keyboard ring has no gallery specimen of its own (the control has no way to show it without the keyboard);
+  `FlatField` stays in the gallery only (the owner's decision).
+- Still open from audit 6, not in this wave's order: `StatusDot`'s 9 kinds, a draggable note's grip, `row_keys` ⌃↩, the panel task box's
+  checkbox role, tint and neutral chip colours (a look).
