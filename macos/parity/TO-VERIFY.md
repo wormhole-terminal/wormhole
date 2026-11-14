@@ -1948,9 +1948,9 @@ Written without compiling: expect compile errors.
 | X07 | `PseudoLanguageTests/pseudoLanguageInPaletteAndSettings` | en-XA reaches the palette's action titles and the Terminal page's shell choices; English again after | `palette-rows`, `settings-page` |
 
 New command: `settings-press <id> at <x> [y]` (`Driving/AppController+ControlSettingsPress.swift`, DRIVING.md). Expected to fail as it
-stands: `pseudoLanguageInPaletteAndSettings` if the palette reads `Keymap.shared`'s titles, installed once at launch
-(`Platform/PlatformSetup.swift:26`, `PlatformBridge.installKeymap`) while `language` installs only the words
-(`AppController+ControlVerify.swift:37`), the same cause as the failing `DevTools/pseudoLanguage`; left to the lane fixing that one.
+stands: `pseudoLanguageInPaletteAndSettings`, whose palette reads the same `ListedKeymap` as the shortcut sheet
+(`Platform/PaletteSourcing.swift:19`) that stays English in the failing `DevTools/pseudoLanguage`; `language` installs the words
+only (`AppController+ControlVerify.swift:37`). The cause was not traced; left to the lane fixing that scenario.
 Not written: X15 (the app never runs the legacy upgrades: `Isolation.swift` accepts only `Wormhole-swift*` data folders), PL02's
 jump-key recording (`SettingsPages/shortcutRecorders`, failing, another agent's), Updates beyond "no feed", Profile/Appearance/Fonts rows
 beyond what the passing scenarios drive.
