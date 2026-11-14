@@ -132,8 +132,10 @@ impl EventQueue {
     fn push(&self, event: TermEvent) {
         {
             let mut pending = self.pending.lock().unwrap_or_else(PoisonError::into_inner);
-            // Output is "something is new", not a count: one is enough until it is drained.
-            if event == TermEvent::Output && pending.contains(&TermEvent::Output) {
+            // Output is "something is new", not a count: one is enough until it is drained. So is the control line's
+            // typing, which the view takes as "a key was typed here": a script that types at a terminal nobody
+            // drains (its view is in no window) would queue one for every request.
+            if matches!(event, TermEvent::Output | TermEvent::ControlTyped) && pending.contains(&event) {
                 return;
             }
             pending.push(event);
@@ -212,5 +214,24 @@ mod tests {
         assert_eq!(queue.drain(), [TermEvent::Output, TermEvent::Bell], "one Output for the flood");
         queue.push(TermEvent::Output);
         assert_eq!(listener.0.load(Ordering::SeqCst), 2, "the next event after a drain wakes again");
+    }
+
+    /// Order: a script sends text to a terminal whose view is in no window, request after request, and nothing
+    /// drains the queue meanwhile.
+    #[test]
+    fn typing_from_the_control_line_is_one_event_until_it_is_drained() {
+        let queue = EventQueue::new(Arc::new(Counting(AtomicUsize::new(0))));
+        for _ in 0..1000 {
+            queue.push_event(TermEvent::ControlTyped);
+        }
+        queue.push(TermEvent::Bell);
+        queue.push(TermEvent::Bell);
+        assert_eq!(
+            queue.drain(),
+            [TermEvent::ControlTyped, TermEvent::Bell, TermEvent::Bell],
+            "one for all the typing; a bell is counted"
+        );
+        queue.push_event(TermEvent::ControlTyped);
+        assert_eq!(queue.drain(), [TermEvent::ControlTyped], "typed again after the drain");
     }
 }

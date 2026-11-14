@@ -59,9 +59,12 @@ final class WakeRelay: PanelListener, @unchecked Sendable {
 
     func attach(_ started: WatchHandle) {
         lock.lock()
-        defer { lock.unlock() }
-        guard !finished else { return started.stop() }
-        handle = started
+        let ended = finished
+        if !ended { handle = started }
+        lock.unlock()
+        // Stopped with the lock let go, as `finish` does: `stop` waits for the watch's own thread to end, and that thread
+        // may be inside `wake`, waiting for this lock.
+        guard !ended else { return started.stop() }
         // A wake before the handle existed could not be re-armed.
         started.drain()
     }
