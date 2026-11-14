@@ -16,7 +16,8 @@ extension EndToEnd {
             let sheet = Self.shownShortcuts(await app.reply("shortcut-rows history"))
             app.expect(sheet > 0, "the sheet lists History")
 
-            await app.send(["set features={\"history\":false}"])
+            // The person's own feature switches are a map in config.json with no row in Settings: edited in the file.
+            try app.editConfig { $0["features"] = ["history": false] }
             await app.until("menus") { !$0.contains("History  ⌃⌘2") }
             app.expect(!(await app.reply("palette-rows show history")).contains("<action-showHistory>"), "the palette has no Show History")
             app.expect(Self.shownShortcuts(await app.reply("shortcut-rows history")) < sheet, "the sheet lists fewer rows for history")

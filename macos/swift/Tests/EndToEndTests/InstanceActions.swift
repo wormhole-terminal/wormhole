@@ -36,6 +36,15 @@ extension Instance {
 
     func configText() -> String? { configFile().flatMap { try? String(contentsOf: $0, encoding: .utf8) } }
 
+    /// `config.json` edited as a person edits the file (the app follows it): for keys Settings has no row for, such as
+    /// `features` (the person's own switches for the features they can do without), which `set` does not take.
+    func editConfig(_ change: (inout [String: Any]) -> Void) throws {
+        guard let file = configFile() else { throw ScratchError(description: "the app has written no config.json yet") }
+        var json = (try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any]) ?? [:]
+        change(&json)
+        try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]).write(to: file, options: .atomic)
+    }
+
     /// Waits (pausing by the app's own `delay`) until `config.json` satisfies `done`.
     func waitForConfig(timeout: TimeInterval = 15, _ done: (String) -> Bool) async -> String {
         let start = Date()
