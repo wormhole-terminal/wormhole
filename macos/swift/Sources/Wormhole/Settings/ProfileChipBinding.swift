@@ -82,15 +82,19 @@ extension AppController {
                 (sessions.first?.panelBackends.usage as? RustUsageBackend)?.setShown(profile: id)
                 aux.startAccess(profile: id)
                 leaving.forEach { $0.parked = true }
+                // Each window wears its own profile's look. The ones left put theirs on out of sight (their terminals keep their
+                // colours and light or dark, as GPUI's hidden windows read `settings_in(&self.profile)`) before the app's moves.
+                leaving.forEach(dressForProfile)
+                // The new profile's settings and theme, and the app's terminal look on its colours at once rather than a
+                // main-actor turn later: a window coming back (or opened from the saved ones) is dressed once, in its own
+                // profile's look, so its programs never hear the colours of the profile just left (a program with mode 2031 on
+                // would hear light and dark flip twice, and a frame could draw in the other theme).
+                followProfileSettings()
+                terminalLook.followThemeNow()
                 let back = windows(of: id)
                 back.forEach { $0.parked = false }
-                // Each window wears its own profile's look: the ones left keep theirs out of sight (their terminals keep their
-                // colours and light or dark, as GPUI's hidden windows read `settings_in(&self.profile)`), the ones back wear
-                // the app's again.
-                (leaving + back).forEach(dressForProfile)
+                back.forEach(dressForProfile)
                 if back.isEmpty { try openSavedWindows() } else { back.forEach(show) }
-                // After the windows exist: applying the settings reaches the shown ones (and the menus read the window in front).
-                followProfileSettings()
                 // The profile left keeps its terminals: a change of its agent access still settles (`ParkedAccess`).
                 followParkedAccess()
                 // The engine's colours for the profile now shown, whether or not its theme differs from the one left.

@@ -70,9 +70,16 @@ final class TerminalLook {
 
     /// Takes the theme's colours now and again whenever the theme changes (a pick, the appearance, the Studio's preview).
     func followTheme() {
-        let tokens = withObservationTracking { themes.tokens } onChange: { [weak self] in
+        take(withObservationTracking { themes.tokens } onChange: { [weak self] in
             Task { @MainActor in self?.followTheme() }
-        }
+        })
+    }
+
+    /// The theme's colours as they are now, without waiting for `followTheme`'s next turn: a profile switch moved the theme
+    /// and is about to dress windows in this look (the next turn then finds nothing new).
+    func followThemeNow() { take(themes.tokens) }
+
+    private func take(_ tokens: ThemeTokens) {
         let glow = NSColor(tokens.agentAttention), radius = CGFloat(tokens.metrics.radiusLg)
         if glow != bellColor || radius != bellRadius {
             (bellColor, bellRadius) = (glow, radius)
