@@ -39,7 +39,7 @@ impl WorkspaceModel {
         let loudest = |set: &TabSet| set.members.iter().map(|&ix| urgency(ix)).min().filter(|u| u.is_alert());
         let current = self.selected_index().and_then(|ix| tabs::current_set(&sets, ix));
         let at = current.unwrap_or(0);
-        let others_alert = tabs::others_need_you(&sets, at, &urgency)
+        let others_alert = tabs::others_need_you(&sets, at, urgency)
             .then(|| {
                 sets.iter().enumerate().filter(|&(ix, _)| ix != at).filter_map(|(_, set)| loudest(set)).min()
             })
