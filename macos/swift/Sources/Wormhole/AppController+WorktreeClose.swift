@@ -22,10 +22,12 @@ extension AppController {
         let outside = session.hub.state.all.filter { other in !terminals.contains { $0.id == other.id } }
         var found: [(made: MadeWorktree, removable: Bool)] = []
         for terminal in terminals {
-            guard let folder = Self.expanded(terminal.folder), let made = await session.hub.panel.worktrees.made(at: folder),
+            // The core's path (a key where a name is not text), as the worktree was recorded: never the drawn folder,
+            // whose U+FFFD names no folder there, or another.
+            guard let folder = terminal.readPath, let made = await session.hub.panel.worktrees.made(at: folder),
                 !found.contains(where: { $0.made.folder == made.folder })
             else { continue }
-            let shared = outside.contains { Self.expanded($0.folder).map { Self.inside($0, made.folder) } ?? false }
+            let shared = outside.contains { $0.readPath.map { Self.inside($0, made.folder) } ?? false }
             found.append((made, !terminal.isDirty && (!group || !shared)))
         }
         guard let first = found.first else { return nil }
@@ -55,11 +57,5 @@ extension AppController {
     /// Whether `path` is the folder or under it, by whole path components: `…/fix-login2` is not inside `…/fix-login`.
     static func inside(_ path: String, _ folder: String) -> Bool {
         path == folder || path.hasPrefix(folder.hasSuffix("/") ? folder : folder + "/")
-    }
-
-    /// The sidebar writes a folder with `~`; the panel and git read real paths.
-    static func expanded(_ folder: String?) -> String? {
-        guard let folder else { return nil }
-        return folder == "~" ? HomeFolder.path : folder.hasPrefix("~/") ? HomeFolder.path + folder.dropFirst(1) : folder
     }
 }
