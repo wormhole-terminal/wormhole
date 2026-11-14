@@ -123,7 +123,9 @@ Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written wi
 | `changes` | `changes` | the Changes tab on show (GPUI's `changes`) and what its store holds: `changes phase=loaded files=1 open=README.md diff=shown hunks=1`, then a line a file in the list's order, `  M README.md +1 -0` (the kind's letter, the path, lines added and removed, `-` where git counts none) |
 | `compare [branch]` / `picker [history\|compare] [query]` | `compare main` | the Changes tab compared with a branch (none or `HEAD` stops); the revisions the picker offers for the query, one a line |
 | `commit-details` / `commit-more` | `commit-details` | the open commit's block as text (`none` when none is open); Show more / Show less |
-| `project-init` | | the Project tab's Create project folder button for the terminal's folder (`creating <dir>/.wormhole`) |
+| `project-init` | | the Project tab's Create project folder button: the project is made in the folder the tab is for, a repository's root when the terminal is in one, and that folder is named (`creating <dir>/.wormhole`); `folder-color` without a path colours the same folder |
+| `onboarding <welcome\|folder\|look\|agents\|primer\|close>` | `onboarding look` | the intro window at that step, or closed, as the GPUI app's devctl (`onboarding-step` is the same; a bare `onboarding` is Help ▸ Welcome) |
+| `history <n>` | `history 1` | a click on the n-th commit of the log: it opens, and closes when it is the open one; `history 0` folds whatever is open |
 | `group-ask [use\|use only\|later]` | `group-ask use only` | the question a terminal opening in a group without a folder puts up (from the sidebar's +, the tab bar's +, an empty set or Ctrl-Opt-N; held for the control folder in a test instance): without an argument the folder, the group and how many terminals would leave; `use` is Use Folder, `use only` also ticks "Only keep terminals in this folder", `later` is Not Now. There is no Cancel; the terminal opens after the answer |
 | `rename-edit <n>` | `rename-edit 2` | row n's name becomes a field, as Rename… in its menu makes it |
 | `folder-color [path] <name\|#rrggbb\|none>` | `folder-color ~/Projects/x teal` | colours the folder (the terminal's without a path) as the band's menu does; says `<colour> <folder>` |
@@ -230,6 +232,11 @@ before the first launch), `app.cli([...])` and `app.cliRun([...])` (the app's ow
 socket, as an agent or a script would: `Client.swift`), `app.later(command, answer: prefix)` for a command that answers from a task
 after its batch's `sync` marks (`project …`, `update`, `probe`, `studio-save`, `studio-open`, `studio-menu`, `history-copy`,
 `studio-out`), `app.flags([...])`, `app.setting(key)`, `app.terminal(in:)`, `app.screen(showing:)` and `app.signal(SIGTERM)`.
+
+A terminal of a test instance starts in the scratch `HOME` and its `~` is that folder: the app writes a `~` out with the core's
+home (`HomeFolder`, `$HOME` first), so `rows` shows the scratch home's full path where `/tmp` and `/private/tmp` differ.
+After `size` the window is laid out at once, and a key sent while nothing in the workspace window has the keys goes to the
+selected terminal: a hosted runner's window gets no display cycle and never made the terminal its first responder.
 
 What they may never touch: the person's data folder, `HOME`, agent home, clipboard, Trash, notifications, Touch ID, git repositories,
 browser or editor, and the keyboard focus. The harness gives the app an environment of its own (no inherited variable): the data

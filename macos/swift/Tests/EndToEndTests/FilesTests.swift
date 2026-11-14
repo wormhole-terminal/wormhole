@@ -87,7 +87,9 @@ extension EndToEnd {
         }
     }
 
-    @Test("a file whose name is not UTF-8 is listed beside its neighbours with the replacement character")
+    @Test(
+        "a file whose name is not UTF-8 is listed beside its neighbours with the replacement character",
+        .disabled("waits for a fixture: a volume that takes a file name that is not UTF-8 (APFS, where the scratch folder is, refuses to make one)"))
     @MainActor func filesRawName() async throws {
         try await Instance.with { app in
             let folder = app.scratch.home.appendingPathComponent("raw-names")
