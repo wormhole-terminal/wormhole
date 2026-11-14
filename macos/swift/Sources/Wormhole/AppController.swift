@@ -79,8 +79,11 @@ final class AppController: NSObject, NSApplicationDelegate {
     /// The fonts and colours every terminal is drawn with: Settings' and the theme's.
     private(set) lazy var terminalLook = TerminalLook(
         terminals: { [weak self] in self?.ownSessions.map(\.hub.terminals) ?? [] }, engineProfile: { [weak self] in self?.windowsHost.profile })
-    /// The looks of the other profiles with a window open, by profile (`profileLook(for:)`).
-    var profileLooks: [String: ProfileLook] = [:]
+    /// The looks of the other profiles with a window open, by profile (`profileLook(for:)`). A look made or dropped changes
+    /// which parked profiles need a follower of their own (`followParkedAccess`), whatever made or dropped it.
+    var profileLooks: [String: ProfileLook] = [:] {
+        didSet { if Set(profileLooks.keys) != Set(oldValue.keys) { followParkedAccess() } }
+    }
     /// The agent access of each parked profile nothing else follows (`ParkedAccess`).
     var parkedAccess: [String: ParkedAccess] = [:]
     /// The settings the window follows, whether or not the Settings window is open: the core's when real.

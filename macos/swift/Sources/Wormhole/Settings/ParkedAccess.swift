@@ -17,6 +17,13 @@ final class ParkedAccess {
     /// The keys the hook server reads again (`SettingsApplier`, `ProfileLook`: the same four).
     static let keys = ["agent_access", "control_write", "feature_flags", "never_hide_lines"]
 
+    /// The profiles that need a follower of this kind: every profile with a window (in sight or parked) but the shown one,
+    /// which `SettingsApplier` follows, and those with a look of their own, which follows them. So each profile with
+    /// terminals has exactly one follower, whatever order its windows came and went in.
+    static func wanted(windows: [String], shown: String, looks: Set<String>) -> Set<String> {
+        Set(windows).subtracting(looks).subtracting([shown])
+    }
+
     let profile: String
     private let backend: any SettingsBackend
     private var applied: [JSONValue?]
@@ -37,11 +44,12 @@ final class ParkedAccess {
 }
 
 extension AppController {
-    /// Follows the agent access of every parked profile that nothing else follows, and stops following the ones that came
-    /// back or went. Called when the set can change: a profile switch, a profile ended.
+    /// Follows the agent access of every profile with windows that nothing else follows, and stops following the ones that
+    /// came back or went. Called whenever the set can change: a profile switch, a profile ended, a profile's look made or
+    /// dropped (a window of it opened or closed beside the shown ones: `profileLooks`' `didSet`).
     func followParkedAccess() {
-        let followed = Set(profileLooks.keys).union([windowsHost.profile])
-        let parked = Set(sessions.filter(\.parked).map(\.windows.profile)).subtracting(followed)
+        let parked = ParkedAccess.wanted(
+            windows: sessions.map(\.windows.profile), shown: windowsHost.profile, looks: Set(profileLooks.keys))
         for id in parkedAccess.keys where !parked.contains(id) { parkedAccess[id] = nil }
         #if WITH_UNIFFI
             guard options.isReal else { return }
