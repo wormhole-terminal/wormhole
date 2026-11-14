@@ -19,7 +19,7 @@ terminals need `flags-unlock`, `set feature_flags={"persistent_terminals":true,"
 
 ## How the pointer and keys get there
 
-Events are made in the process and given to the window (`NSWindow.sendEvent`, `NSApp.sendEvent` for keys), which routes them
+Events are made in the process and given to the window (`NSWindow.sendEvent`, `NSApp.sendEvent` for keys: see wave 13 for which window gets a key), which routes them
 as the window server's: hit testing, gesture recognizers, SwiftUI gestures, menus' key equivalents, the window's own event
 monitors. The real pointer, the real keyboard focus, the clipboard and the window's place behind other apps are untouched
 (the transcripts print the window's z-order and the front app before and after). A background app is never active, so while
@@ -265,14 +265,16 @@ themselves (`Driving/AppController+ControlLooks.swift`), not from the model they
 | `profile-chip [switch <n>]` | the profiles the sidebar's (or tab bar's) chip is given, what it draws (none while there is one): `profile-chip choices=<n>`, then `choice <id> "<name>" [current] [here]`; `switch <n>` runs its menu's n-th profile row (`ProfileActions.switchTo`). The menu itself is AppKit's and stays a person's |
 | `marked [id]` | inspect mode on (`inspect on`): every element the design marks (`.marked(id)`) that the window's views built, `marked n=<count>` then `marked <id> <x> <y> <w> <h>` top to bottom (`status.tile`, `keycap`, `sidebar.row`, `sidebar.card`, `sidebar.band`, `profile.chip`, `title.tab`, `icon.button`, `badge`, and a row's `row.pin`, `row.lock`, `row.worktree`, `row.notes` and `row.changes`, marked by wave 12 (with the chip) so inspect mode finds them, …) |
 
-Added by wave 13 (lane fix): no new command; how `key` gets there, in two cases (`AppController+ControlKeys.swift`).
+Added by wave 13 (lane fix): no new command; how `key` and `text` get there (`AppController+ControlKeys.swift`, `Driving/InFront.swift`).
 
-- **A ⌘ or ⌃ key sent to a window that is not a workspace's** (Settings, the Studio: `pointer-window <title>`, `settings-record`).
-  The application asks the views of the window *it* holds for key whether such a key is theirs, and a test instance's window is
-  never that one: it asked the workspace's window in its place, and the key never reached the window it was sent to (a shortcut
-  recorder in Settings heard nothing). For such a window the driver walks the same order itself: the app's own key table (what its
-  monitor takes: `ExtraKeys.takes`), the window's views (`performKeyEquivalent`), then its first responder's `keyDown`. Every other
-  key, and every key of a workspace's window, still goes through `NSApp.sendEvent`.
+- **A key goes to the window it was sent to.** The application hands a key to the window *it* holds for key, whatever the event
+  names and whatever `keyWindow` answers; in a test instance that is the first workspace window. So a key or typed text sent to
+  a second window (`cmd2`) was typed into the first window's terminal, and a ⌘ or ⌃ key sent to Settings or the Studio
+  (`pointer-window <title>`, `settings-record`) was asked of the workspace's views: a shortcut recorder in Settings heard nothing.
+  While a key is routed, the window the application picks now hands it on to the window it was sent to (its `sendEvent` and
+  `performKeyEquivalent`, replaced for that moment only, as `keyWindow` and `isKeyWindow` are): the app's monitors, the
+  application's order for a key (the views' `performKeyEquivalent`, the menus, `keyDown`) and the window's own dispatch run as
+  for a real key. What the pointer commands do is unchanged: they hand their events to the window themselves.
 - **A key whose action the window's menus leave out** (its feature is off in the window's profile: ⌥⌘S with Notes off) goes the
   keyboard's way instead of running the action's handler: the reply is `key <spec> focus=…`, without `-> <action>`.
 

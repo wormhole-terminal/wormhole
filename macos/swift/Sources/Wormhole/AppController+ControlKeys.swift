@@ -123,7 +123,7 @@ extension AppController {
                     // hears the key there, never in the key binding. The binding (`cancelOperation:`) is applied after it only
                     // while the field still has the keys (Esc did not end it), as it was before for every field.
                     if code == 53 {
-                        InFront.during(window) { NSApp.sendEvent(event) }
+                        route(event, to: window)
                         if window.firstResponder === editor { editor.interpretKeyEvents([event]) }
                         return
                     }
@@ -134,20 +134,10 @@ extension AppController {
         }
     }
 
-    /// One key event on its way to `window`. A ⌘ or ⌃ key is a key equivalent: AppKit asks the views of the window it holds
-    /// for key before anything else, and a test instance's window is never that one. It asked the workspace's window in its
-    /// place, so a key sent to Settings or the Studio never reached them (a shortcut recorder there heard nothing). For such a
-    /// window the same order is walked here: the app's own key table (what its monitor takes), the window's views
-    /// (`performKeyEquivalent`), then its first responder's `keyDown`. Every other key goes through the application.
+    /// One key event on its way to `window`, through the application: its monitors, then its own order for a key, with the
+    /// window it picks handing the key on to the one it was sent to (`InFront.during(_:key:)`).
     private func route(_ event: NSEvent, to window: NSWindow) {
-        let equivalent = event.type == .keyDown && !event.modifierFlags.isDisjoint(with: [.command, .control])
-        guard equivalent, !sessions.contains(where: { $0.window === window }) else {
-            return InFront.during(window) { NSApp.sendEvent(event) }
-        }
-        InFront.during(window) {
-            if extraKeys.takes(event) { return }
-            if !window.performKeyEquivalent(with: event) { window.sendEvent(event) }
-        }
+        InFront.during(window, key: true) { NSApp.sendEvent(event) }
     }
 
     /// Where the keys are once SwiftUI has acted on a request for focus, which it does on the next turn of the run loop.
