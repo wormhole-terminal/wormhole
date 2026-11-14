@@ -44,6 +44,30 @@ pub(crate) fn follow(terminal: &Arc<Terminal>, profile: &str) {
     terminals.push((profile.to_owned(), Arc::downgrade(terminal)));
 }
 
+/// The window holding `terminals` moved to profile `profile` (`Windows::rehome`): the ones that still hear a profile's
+/// look (no view tells them their colours yet) hear `profile`'s from now on, and are told it at once when it is known,
+/// so a program in one answers with the colours its window will draw it in. One a view dresses is left to that view,
+/// which is dressed again for where the window went.
+pub(crate) fn move_to(terminals: &[Arc<Terminal>], profile: &str) {
+    let moved: Vec<Arc<Terminal>> = {
+        let mut known = TERMINALS.lock().unwrap_or_else(PoisonError::into_inner);
+        known
+            .iter_mut()
+            .filter_map(|(of, weak)| {
+                let terminal =
+                    terminals.iter().find(|terminal| std::ptr::eq(weak.as_ptr(), Arc::as_ptr(terminal)))?;
+                *of = profile.to_owned();
+                Some(terminal.clone())
+            })
+            .collect()
+    };
+    if let Some(look) = current(profile) {
+        for terminal in moved {
+            terminal.tell(&look);
+        }
+    }
+}
+
 /// The colours profile `profile`'s terminals are drawn with: `slots` is the palette as `0xRRGGBB`, 256 indexed entries
 /// then the foreground, background and cursor (`COLOR_COUNT` of them; a shorter list leaves the rest black). The scheme
 /// is light when the background is (by its luma, what a program choosing its colours cares about). Telling the same
