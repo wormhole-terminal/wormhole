@@ -62,6 +62,17 @@ extension EndToEnd {
         }
     }
 
+    @Test("two splits at once (⌘D twice) settle into three panes, the newest with the keys")
+    @MainActor func splitTwiceAtOnce() async throws {
+        try await Instance.with { app in
+            await app.send(["key cmd-d", "key cmd-d"])
+            let three = Panes(await app.until("panes") { Panes($0).ids.count == 3 })
+            app.expect(three.isSplit && three.focused != nil, "three panes, one with the keys:\n\(three.ids)")
+            await app.send(["wait-idle 3000"])
+            app.expect(Panes(await app.reply("panes")).ids.count == 3, "nothing half-open after the motion")
+        }
+    }
+
     @Test("a full-screen window is saved as one and comes back full screen")
     @MainActor func fullScreenComesBack() async throws {
         try await Instance.with { app in

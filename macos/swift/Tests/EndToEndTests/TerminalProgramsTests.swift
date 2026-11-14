@@ -136,6 +136,22 @@ extension EndToEnd {
         }
     }
 
+    @Test("without the chip, a copy by a program in a pane that is not selected goes to that pane's bar")
+    @MainActor func copyInAnotherPane() async throws {
+        try await Instance.with(shell: .zsh) { app in
+            await app.flags(["notices": false])
+            guard let first = await app.live(1)?.first else { return }
+            await app.send(["key cmd-d"])
+            guard let two = await app.live(2), let second = two.first(where: { $0 != first }) else { return }
+            await app.shell(#"/bin/sleep 2; printf '\e]52;c;aGk=\a'"#)
+            await app.send(["select \(first)"])
+            await app.until("pasteboard") { $0 == "pasteboard \"hi\"" }
+            app.expect(!(await app.reply("pane-bar")).hasPrefix("notice"), "the selected pane's bar says nothing of it")
+            await app.send(["select \(second)"])
+            app.expect(await app.reply("pane-bar"), contains: "notice")
+        }
+    }
+
     @Test("a smaller scrollback setting holds for terminals opened after it; those opened before keep theirs")
     @MainActor func scrollbackSize() async throws {
         try await Instance.with(shell: .zsh) { app in

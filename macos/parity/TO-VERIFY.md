@@ -1300,3 +1300,118 @@ P06, every order of events a notes.md merge can meet, as the code now handles it
 | P07 | NOT DONE: the Settings window's project folders page, the recent projects menu, the trust window, a worktree's own folder and a new terminal opened in such a folder still carry the path as text | - | `settings_page.rs` roots, `RecentProjects.swift`, `AuxController.swift`, `git/worktrees.rs GitWorktree`, the workspace's `newTerminalIn` |
 | P01 | VoiceOver on the right panel's strip | each tab is read as a radio button (a tab) with its words and counts, "n of 6", the shown one selected; activating one shows it; nothing drawn changes | `WindowUI/PanelTabBar.swift accessibilityRepresentation` |
 | P05 | `wormhole --worktree` request whose window closed before it arrived | the question comes up in the first window; a second request to that window is still accepted once the sheet is gone | `Wormhole/Hooks/HookHost.swift` |
+
+## Lane e2e-a, wave 8
+
+Written without compiling and not run: expect compile errors and first-run failures. Scenarios for the rows T01 to T31 (not T20, the
+window-hosting lane's), S01 to S10, W01 to W12, X03, X04 and X08, in `macos/swift/Tests/EndToEndTests/` (`swift test --filter
+EndToEndTests/<name>`). Line numbers below are this file's, as it stood before this section. Harness additions: `Instance.end(by:)`
+(SIGKILL as a crash, SIGTERM as `kill`), `InstanceTerminal.swift` (`shell`, `emit` for bytes `/bin/cat` writes back, `discardLine`,
+`markPrompts` for OSC 133 blocks in `zsh -f`, `terminalFrames`/`cellPoint` from `a11y`, `asked`, `live(n)`, `flags`, `pasteboard`,
+`plain` without Fluent's isolation marks), `Listing` with a group's count and pinned, a row's pinned, `Panes` with each pane's size.
+
+| scenario | file | rows | lines of this file | count |
+|---|---|---|---|---|
+| copyAndPaste | TerminalInputTests | T04, T07, T15 | 18, 26, 30, 667 | 4 |
+| optionAsMeta | TerminalInputTests | T07 | 17 | 1 |
+| links | TerminalInputTests | T08, T15 | 25 | 1 |
+| textZoom | TerminalInputTests | T17 | 33 | 1 |
+| commandBlocks | TerminalBlocksTests | T13, T15 | 28 | 1 |
+| foldAndExport | TerminalBlocksTests | T15, T25 | 31, 37 | 2 |
+| programNotices | TerminalBlocksTests | T31 | 108, 109, 111 | 3 |
+| colourQueries | TerminalProgramsTests | T28 | 92, 93 | 2 |
+| windowOperations | TerminalProgramsTests | T29 | 95, 96, 97, 665 | 4 |
+| programClipboard | TerminalProgramsTests | T16 | 32, 57, 661 | 3 |
+| copyInAnotherPane | TerminalProgramsTests | T16 | 662 | 1 |
+| scrollbackSize | TerminalProgramsTests | T28 | 91 | 1 |
+| savedText | TerminalRestoreTests | T30 | 99, 102 | 2 |
+| textAfterCrash | TerminalRestoreTests | T07, T30 | 19, 100, 101, 500 | 4 |
+| profileEnvironment | TerminalRestoreTests | T27 | 85, 89 | 2 |
+| closeWhatRuns | SidebarCloseTests | S01, W08 | 158, 313, 317 | 3 |
+| closeInFoldedGroup | SidebarCloseTests | S01, W08 | 185, 314, 315 | 3 |
+| closeAgent | SidebarCloseTests | W08 | 312, 316 | 2 |
+| groupFolderQuestion | SidebarGroupsTests | S01, S03 | 163, 821 | 2 |
+| groupGoneBeforeTheAnswer | SidebarGroupsTests | S03 | 1163 | 1 |
+| groupKeys | SidebarGroupsTests | S03, S08, S09 | 167, 177, 208, 1164 | 4 |
+| rowMenu | SidebarRowsTests | S01 | 165 | 1 |
+| showBesideNeedsRoom | SidebarRowsTests | S01 | 164 | 1 |
+| renameInPlace | SidebarRowsTests | S02, S03 | 166, 168 | 2 |
+| windowTitle | WindowTests | W09 | 813 | 1 |
+| viewSwitchesSurvive | WindowTests | S09, W03 | 175, 810 | 2 |
+| quitBySignal | WindowTests | W08 | 321 | 1 |
+| splitTwiceAtOnce | WindowTests | W01 | 1162 | 1 |
+| fullScreenComesBack | WindowTests | W05 | 214 | 1 |
+| titleRowFacts | WindowTests | W02 | 803, 804, 809 | 3 |
+| keysInTheirWindow | WindowControlTests | X04, X08 | 212, 747 | 2 |
+| splitFromCommandLine | WindowControlTests | X08 | 746 | 1 |
+| worktreeFromCommandLine | WindowControlTests | X08 | 748 | 1 |
+| profileWindows | WindowControlTests | W05, W12 | 811, 812, 1156 | 3 |
+| listeningPort | WindowControlTests | W02 | 205 | 1 |
+| keyboardAreas | KeyboardTests | S06, X04 | 183, 211 | 2 |
+| terminalAccessibility | KeyboardTests | X03 | 63 | 1 |
+
+Covered in part (the rest is a person's or waits for a command): 17 (which Option key: a person), 30 (the menu in the alternate screen
+and in a hosted terminal), 63 (line ranges and the selection: VoiceOver), 85 (`$0` and the login shell: the harness's shell), 89 (the
+git identity is not read), 97 (14 t, 19 t, 11 t not asserted), 111 (looked at, notifications off: a background app never looks),
+166 and 168 (Esc and a blank name: an injected Esc never reaches SwiftUI's `onKeyPress`), 214 (the second display), 314 (⇧⌘W in a
+second window), 315 (the pane's ×), 316 (an agent beside a second program: one shell for every terminal of an instance), 667 (⌘⌫ ⌘← ⌘→
+and a rebound key: see the driver below), 1162 (a click on the header while the motion plays), 1164 (the switcher's search).
+
+What waits for a command or a harness change (b), most lines first:
+
+| needed | what it would give | lines waiting |
+|---|---|---|
+| a session host in the harness (`WORMHOLE_HOST_BIN`, the window-hosting lane's) | persistent terminals in a scenario | 105, 193, 194, 319, 320, 1158 |
+| `status-bar` | the bar's items: the attention button and its tooltip, the counts, the state words, the size item, at a width | 195, 196, 197, 198, 806, 1165 |
+| `switcher [open\|search <q>\|press <card>]` | the group switcher's cards, footer, search and its popover | 174, 176, 491, 492, 824 |
+| an instance whose `default_shell` and shell keys are honoured (the harness sets `WORMHOLE_SHELL`, and allows only cat and `zsh -f`) | which shell a terminal runs | 86, 87, 90 |
+| `WORMHOLE_AUTH=allow` as a harness option | trusting a project, approving a Probe | 88, 828, 1157 |
+| `tab-bar` (tabs, their ⌘ keycaps and alert dots) and `tab-click <n>` / its + | the tab bar without a pointer | 172, 822, 825 |
+| `plus-menu` | the + menu (New terminal with) of the title row and the sidebar | 179, 182 |
+| `sidebar-tip` | the sidebar's "No coding agents yet" note and its buttons | 181, 827 |
+| `scroll-state` (the top line as drawn, folds counted) | what the wheel and ⌘↑ do around a fold | 663, 664 |
+| a Changed page Copy JSON command | the button, then `a11y said` | 755, 943 |
+| the focus detail naming the list's and the tab strip's item | where the list cursor and the tab ring are | 826, 833 |
+| `pointer-shape x y` | the cursor a view sets | 23 |
+| `other-click x y <button>` | back/forward mouse buttons | 24 |
+| `find-state` | the find bar's query, count and options (⌘F's selection seed) | 27 |
+| `minimap` | the minimap's fold ticks; a press on it | 29 |
+| the drop tint in `drag`'s reply or `state` | the pane's tint while a file hovers | 35 |
+| `group-popover <id>` | open a group's popover (then `popover` reads it) | 169 |
+| `panes` in the window's points | a divider to drag and cancel with Esc | 201 |
+| the document-edited mark in `windows` | the close button's dot | 318 |
+| `update restart` without an installed update in a test instance | the restart question | 322 |
+| a panel switch command (diff split, wrap) | a B window's panel switch and its file | 497 |
+| the exited words in `pane-bar` | "fish exited" | 660 |
+| the centre title's state words (`title` has the facts, not the words) | "working · 4m" with the bar off | 805 |
+| `pane-menu` | the pane header's menu and its keys | 829 |
+| a command-line run of the app with a deadline (`Spawn.run` waits without one, and a wrong answer would launch a window) | `Wormhole --json list` | 936 |
+
+The driver itself: `key cmd-left|cmd-right|cmd-backspace` reach the router, which has no handler for the keymap's "viewed" actions
+(`lineStart`, `lineEnd`, `deleteLine`: `ActionRouter.viewed`), so nothing happens; the real app gives the key to the terminal's
+`performKeyEquivalent` first (`AppController+ControlKeys.swift` `sendKey`). And `key esc` into a field goes through `interpretKeyEvents`,
+which SwiftUI's `onKeyPress(.escape)` (`RenameField`, `FindField`) never hears.
+
+For a person (`MANUAL.md`, c): 20, 21, 34, 36, 64, 98, 106, 107, 159, 160, 161, 162, 170, 171, 173, 184, 199, 202, 203, 204, 206, 207,
+209, 486, 487, 488, 489, 490, 493, 494, 495, 496, 499, 511, 512, 513, 515, 516, 666, 752, 753, 754, 807, 808, 814, 815, 816, 817, 818,
+819, 820, 823, 830, 832, 934, 1160, 1161, 1167 (hover never shows in a background instance; looks, colours and motion; VoiceOver's own
+reading of SwiftUI; a real drag, panel, editor, Colours window or system setting; z-order and focus events a background window never
+gets).
+
+Stale or nothing to check (d): 22 (OSC 12 is built, line 93), 65 (built since, 755), 94 (FrameWorkGuardTests, a unit test), 178 (built
+since, 488 to 493), 180 (built since, 486), 200 (built since, 494 to 499), 210 (not built, the settings lane's), 212's wording (the
+driver limit is gone: `cmd<n>` sends keys to the n-th window; the line is covered), 501, 502, 503, 1166 (NOT WRITTEN / NOT DONE
+notes), 670 (none written), 834 (NOT REAL), 835 (written since, 1160), 836, 935 (nothing to wire).
+
+Scriptable but not written yet (w): 110 (needs an OSC 7501 fixture), 498 (Zen with an A and a B window), 514 and 1159 (a B window's
+colour answers: B's theme set in its own `config.json`), 831 (a worktree shared with a terminal in a folded group).
+
+Counts, of the 200 lines of these rows: 71 covered by a scenario (some in part, above), 58 for a person, 16 stale, 50 waiting for a
+command or a harness change, 5 scriptable and not written.
+
+Found while reading the code for the assertions:
+- ⌥⌘C does not copy (line 18 promises it): `TerminalMetal/Pointer/TerminalShortcuts.swift` `shortcut(for:)` refuses any ⌘ key that
+  has ⌥ or ⌃ before it asks the keymap or tries the key with ⌘ alone; GPUI's `platform_command` (`terminal_view/input.rs:105`) tries
+  the plain ⌘ key for any key that is not an app key, so ⌥⌘C copies there. `copyAndPaste` asserts it and is expected to fail.
+- Line 822's "Ctrl-Opt-N" (and the comment at `WindowUI/Hub/WindowHub+Sidebar.swift:139`) names a key that neither keymap has (no
+  ⌃⌥N row in `keymap/table.rs`): only an empty pinned set opened by ⌃⌥1–9 or the switcher reaches `newTerminal(inGroup:)`.

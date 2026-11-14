@@ -51,6 +51,27 @@ extension EndToEnd {
         }
     }
 
+    @Test("Show beside… lists a terminal only while the split has room for it")
+    @MainActor func showBesideNeedsRoom() async throws {
+        try await Instance.with { app in
+            /// The terminals Show beside… offers for `id` (its submenu's items).
+            func beside(_ id: Int) async -> [String] {
+                let menu = await app.reply("row-menu \(id)")
+                await app.send(["menu-close"])
+                let lines = menu.split(separator: "\n").map(String.init)
+                guard let at = lines.firstIndex(where: { $0.contains("Show beside…") }) else { return [] }
+                return Array(lines[(at + 1)...].prefix { $0.trimmingCharacters(in: .whitespaces).hasPrefix("- ") })
+            }
+            await app.send(["size 1400x900", "key cmd-d"])
+            await app.until("panes") { Panes($0).ids.count == 2 }
+            await app.send(["key cmd-t"])
+            guard let ids = await app.live(3) else { return }
+            app.expect(!(await beside(ids[0])).isEmpty, "with room, the lone terminal is offered beside the split")
+            await app.send(["size 360x260", "wait-idle 3000"])
+            app.expect((await beside(ids[0])).isEmpty, "without room, nothing is offered")
+        }
+    }
+
     @Test("a terminal's and a group's name edited in place: Return keeps what was typed, so does the keys going elsewhere")
     @MainActor func renameInPlace() async throws {
         try await Instance.with { app in
