@@ -124,8 +124,24 @@ extension AppController {
                     }
                     return editor.interpretKeyEvents([event])
                 }
-                InFront.during(window) { NSApp.sendEvent(event) }
+                route(event, to: window)
             }
+        }
+    }
+
+    /// One key event on its way to `window`. A ⌘ or ⌃ key is a key equivalent: AppKit asks the views of the window it holds
+    /// for key before anything else, and a test instance's window is never that one. It asked the workspace's window in its
+    /// place, so a key sent to Settings or the Studio never reached them (a shortcut recorder there heard nothing). For such a
+    /// window the same order is walked here: the app's own key table (what its monitor takes), the window's views
+    /// (`performKeyEquivalent`), then its first responder's `keyDown`. Every other key goes through the application.
+    private func route(_ event: NSEvent, to window: NSWindow) {
+        let equivalent = event.type == .keyDown && !event.modifierFlags.isDisjoint(with: [.command, .control])
+        guard equivalent, !sessions.contains(where: { $0.window === window }) else {
+            return InFront.during(window) { NSApp.sendEvent(event) }
+        }
+        InFront.during(window) {
+            if extraKeys.takes(event) { return }
+            if !window.performKeyEquivalent(with: event) { window.sendEvent(event) }
         }
     }
 

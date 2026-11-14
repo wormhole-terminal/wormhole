@@ -17,12 +17,12 @@ final class ExtraKeys {
     func start() {
         guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            MainActor.assumeIsolated { self?.runs(event) ?? false } ? nil : event
+            MainActor.assumeIsolated { self?.takes(event) ?? false } ? nil : event
         }
     }
 
-    /// True when the key was this table's to run.
-    private func runs(_ event: NSEvent) -> Bool {
+    /// True when the key was this table's to run, and ran. The monitor's whole answer, so the control folder's keys ask it too.
+    func takes(_ event: NSEvent) -> Bool {
         // A window of the app: GPUI's app-level bindings work from Settings and the Studio too, so those take the key as the
         // window in front would (a panel that cannot be main, like the quick panel, reads its own keys). Not while a sheet is up
         // (a question, a dialog): the key is the sheet's, as GPUI's `has_active_dialog` leaves it.
