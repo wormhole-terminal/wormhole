@@ -93,40 +93,54 @@ extension EndToEnd {
 
     @Test("a program's OSC 9 and 777 notices, a long command's finish and failure, and `Wormhole notify` are banners")
     @MainActor func programNotices() async throws {
-        // `Wormhole notify` at the end needs the Automation flag and agent access, as a person's config has them.
-        try await Instance.with(shell: .zsh, config: Self.access("open")) { app in
+        // As a release has it: Automation off and no agent access set. `notify` is one of the open actions (`access::caps`),
+        // and with Automation off the socket's gate lets a request in (`hook_server::gate`).
+        try await Instance.with(shell: .zsh) { app in
             await app.markPrompts()
             guard let terminal = Listing(await app.reply("rows")).selected else { return app.fail("a terminal is selected") }
+            let count = { Int((await app.reply("notice-count")).dropFirst("notice-count=".count)) ?? -1 }
             // A terminal has one banner, which the next one about it replaces; and from the third banner within ten seconds
-            // on, the core posts one summary instead (`notify::Bursts`, `NOTIFY_BURST` 3 in `NOTIFY_BURST_WINDOW` 10 s, in
-            // the GPUI app too). So the banners come two at a time, a window apart.
+            // on, the core posts one summary instead and takes the burst's own banners down (`notify::Bursts`, `NOTIFY_BURST`
+            // 3 in `NOTIFY_BURST_WINDOW` 10 s, in the GPUI app too).
             let nextWindow = ["delay 10500"]
             await app.shell(#"printf '\e]9;hello-from-nine\a'"#)
             await app.until("notices") { $0.contains("hello-from-nine") }
             await app.shell(#"printf '\e]777;notify;Seven-Title;seven-body\a'"#)
-            await app.until("notices") { $0.contains("Seven-Title: seven-body") }
+            await app.until("notices") { $0.contains("Seven-Title: seven-body") && !$0.contains("hello-from-nine") }
+            // The third in the window is the summary: under its own id, the terminal's banner gone.
+            await app.shell(#"printf '\e]9;third-of-three\a'"#)
+            let summary = await app.until("notice-log") { $0.contains("wormhole/summary ") }
+            app.expect(summary.split(separator: "\n").count == 1 && summary.contains("title=1 terminals "), "the burst is one summary and nothing beside it:\n\(summary)")
+            app.expect(!summary.contains("third-of-three") && !summary.contains("Seven-Title"), "the burst's own banners were taken down:\n\(summary)")
             await app.send(nextWindow, timeout: 30)
-            // The same words again are a banner again: another one takes their place first, then they are back.
-            await app.shell(#"printf '\e]9;in-between\a'"#)
-            await app.until("notices") { $0.contains("in-between") && !$0.contains("Seven-Title") }
+
+            // The same words again are a banner again, at once: the log holds it once, the count says it was posted twice.
             await app.shell(#"printf '\e]777;notify;Seven-Title;seven-body\a'"#)
             await app.until("notices") { $0.contains("Seven-Title: seven-body") }
+            let once = await count()
+            await app.shell(#"printf '\e]777;notify;Seven-Title;seven-body\a'"#)
+            await app.until("notice-count") { $0 == "notice-count=\(once + 1)" }
+            let twice = await app.reply("notice-log")
+            // A summary would have taken the terminal's own banner down.
+            app.expect(twice.components(separatedBy: "title=Seven-Title").count == 2, "the repeat is the terminal's one banner:\n\(twice)")
             await app.send(nextWindow, timeout: 30)
 
             // A command that runs longer than `notify_command_after` seconds (5, the least the setting takes) says it finished,
-            // or failed, with its name.
+            // or failed with its exit code, in the core's words (`notify::wording`).
             await app.send(["set notify_command_after=5", "set notify_command_done=true", "set notify_command_failed=true"])
             await app.until("get notify_command_after") { $0.contains("5") }
             await app.shell("/bin/sleep 6")
-            let finished = await app.until("notices", timeout: 30) { $0.contains("sleep") }
+            await app.until("notices", timeout: 30) { $0.contains("sleep 6 finished: ") }
             await app.shell("/bin/sleep 6; false")
-            await app.until("notices", timeout: 30) { $0.contains("sleep") && $0 != finished }
+            let failed = await app.until("notices", timeout: 30) { $0.contains(" failed · exit 1: ") }
+            app.expect(!failed.contains("sleep 6 finished"), "the failure took the finish's place: \(failed)")
             await app.send(nextWindow, timeout: 30)
 
-            // `Wormhole notify` from inside the terminal: a banner in the caller's words; the row's state does not move.
+            // `Wormhole notify` from inside the terminal, the program itself as a script would run it: a banner in the caller's
+            // words; the row's state does not move.
             let before = Listing(await app.reply("rows"))
-            let said = await app.reply("control --from \(terminal) notify --title Called-Title called-body")
-            app.expect(!said.hasPrefix("error"), "the request was taken: \(said)")
+            let ran = try await app.cliRun(["notify", "--title", "Called-Title", "called-body"], terminal: terminal)
+            app.expect(ran.status == 0, "the request was taken: \(String(describing: ran.status)) \(ran.output)")
             await app.until("notices") { $0.contains("Called-Title: called-body") }
             let after = Listing(await app.reply("rows"))
             app.expect(after.row(terminal)?.activity == before.row(terminal)?.activity, "the row's state is the same:\n\(before.text)\n\(after.text)")

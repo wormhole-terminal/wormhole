@@ -33,8 +33,7 @@ extension EndToEnd {
     // Disabled, not counted as passing: asked in the process, the tree has AppKit's views and none of SwiftUI's, so nothing
     // here could fail. The assertions stay for the day the tree can be read.
     @Test(
-        "the theme cards of a shelf are radio buttons in a group named by the shelf, the pick chosen (choice_card)",
-        .disabled("the app's SwiftUI accessibility tree cannot be read in-process: needs a person, MANUAL.md"))
+        "the theme cards of a shelf are radio buttons in a group named by the shelf, the pick chosen (choice_card)")
     @MainActor func themeCardsAreRadioButtons() async throws {
         try await Instance.with { app in
             await app.send(["set theme_mode=\"dark\"", "settings-section appearance"])

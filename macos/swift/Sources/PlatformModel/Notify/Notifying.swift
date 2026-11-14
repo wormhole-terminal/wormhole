@@ -31,6 +31,8 @@ extension Notifying {
 @MainActor
 public final class LogNotifier: Notifying {
     public private(set) var log: [Notice] = []
+    /// How many were posted in all: a banner posted again in the same words replaces itself in the log, and only this tells.
+    public private(set) var posted = 0
     public private(set) var permission: NoticePermission = .unavailable
     public let responses: AsyncStream<NoticeResponse>
     private let continuation: AsyncStream<NoticeResponse>.Continuation
@@ -42,6 +44,7 @@ public final class LogNotifier: Notifying {
     public func post(_ notice: Notice) {
         log.removeAll { $0.id == notice.id }
         log.append(notice)
+        posted += 1
     }
 
     public func remove(id: String) { log.removeAll { $0.id == id } }

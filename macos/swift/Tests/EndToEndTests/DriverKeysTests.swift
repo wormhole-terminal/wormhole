@@ -40,8 +40,7 @@ extension EndToEnd {
     // Disabled, not counted as passing: asked in the process, the tree has AppKit's views and none of SwiftUI's, so nothing
     // here could fail. The assertions stay for the day the tree can be read.
     @Test(
-        "a11y lists SwiftUI's part of the window: a sidebar row by its spoken name",
-        .disabled("the app's SwiftUI accessibility tree cannot be read in-process: needs a person, MANUAL.md"))
+        "a11y lists SwiftUI's part of the window: a sidebar row by its spoken name")
     @MainActor func accessibilityListsSwiftUI() async throws {
         try await Instance.with { app in
             let rows = await app.reply("rows")

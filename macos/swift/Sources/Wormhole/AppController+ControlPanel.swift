@@ -141,6 +141,10 @@ extension AppController {
             // Each banner as the centre would be handed it: id, thread, level, sound, category.
             reply((notices?.logged ?? []).map { "\($0.id) thread=\($0.thread) level=\($0.level) sound=\($0.sound) category=\($0.category.rawValue) title=\($0.title) body=\($0.body)" }.joined(separator: "\n"))
             return true
+        case "notice-count":
+            // Every banner handed over, the ones that replaced an earlier one of the same terminal too.
+            reply("notice-count=\(notices?.posted ?? 0)")
+            return true
         case "notice-respond":
             let words = argument.split(separator: " ", maxSplits: 2).map(String.init)
             guard words.count >= 2 else { return fail("notice-respond <banner id> <default|open|reply|show-changes> [reply text]") }

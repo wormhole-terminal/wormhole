@@ -64,6 +64,8 @@
 
         /// The banners a test instance logged instead of posting, for the control folder's `notices`.
         var logged: [Notice] { (notifier as? LogNotifier)?.log ?? [] }
+        /// How many banners the log was handed in all, for `notice-count`.
+        var posted: Int { (notifier as? LogNotifier)?.posted ?? 0 }
 
         /// A look at the terminals now, and again whenever the workspace's state changes.
         private func follow() {
@@ -198,5 +200,6 @@
         func sendTest(name: String, settings: NoticeSettings) {}
         func respond(_ response: NoticeResponse) {}
         var logged: [Notice] { [] }
+        var posted: Int { 0 }
     }
 #endif

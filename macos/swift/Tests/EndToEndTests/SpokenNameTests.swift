@@ -8,8 +8,7 @@ extension EndToEnd {
     // Disabled, not counted as passing: asked in the process, the tree has AppKit's views and none of SwiftUI's, so nothing
     // here could fail. The assertions stay for the day the tree can be read.
     @Test(
-        "VoiceOver names the find bar's and the title row's buttons without the keys their tooltips end in",
-        .disabled("the app's SwiftUI accessibility tree cannot be read in-process: needs a person, MANUAL.md"))
+        "VoiceOver names the find bar's and the title row's buttons without the keys their tooltips end in")
     @MainActor func spokenNames() async throws {
         try await Instance.with { app in
             await app.send(["find milk"])
