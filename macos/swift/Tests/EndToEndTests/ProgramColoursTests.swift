@@ -48,7 +48,7 @@ extension EndToEnd {
         }
     }
 
-    @Test("a program is told the window's title and a checksum of the screen only with their switches on, in a terminal started after")
+    @Test("a program is told the window's title and a checksum of the screen only with their switches in Settings clicked on, in a terminal started after")
     @MainActor func titleReportAndChecksumFollowTheirSwitches() async throws {
         try await Instance.with { app in
             let title = "\(Self.escape)[21t", checksum = "\(Self.escape)[1;1;1;1;1;1*y"
@@ -59,11 +59,14 @@ extension EndToEnd {
             let silent = await app.reply("screen")
             app.expect(!silent.contains("]l") && !silent.contains("P1!~"), "nothing is answered while the switches are off:\n\(silent)")
 
-            // On: a terminal takes them when it starts.
-            await app.send(["set allow_title_report=true", "set allow_screen_checksum=true"])
-            await app.until("get allow_title_report") { $0.contains("true") }
-            await app.until("get allow_screen_checksum") { $0.contains("true") }
-            _ = await app.waitForConfig { $0.contains("allow_screen_checksum") && $0.contains("allow_title_report") }
+            // On, by the switches of Settings → Terminal themselves, clicked: a terminal takes them when it starts.
+            for (row, key) in [("title-report", "allow_title_report"), ("screen-checksum", "allow_screen_checksum")] {
+                await app.send(["settings-reveal \(row)"])
+                await app.settledRow(row)
+                await app.until("settings-press \(row)") { !$0.hasPrefix("error") }
+                await app.until("get \(key)") { $0.contains("true") }
+                _ = await app.waitForConfig { $0.range(of: "\"\(key)\"\\s*:\\s*true", options: .regularExpression) != nil }
+            }
             await app.send(["key cmd-t"])
             await app.until("rows") { Listing($0).live.count == 2 }
             var answered = ""
