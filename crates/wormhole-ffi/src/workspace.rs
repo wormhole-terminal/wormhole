@@ -353,6 +353,11 @@ impl Workspace {
 
     /// Do what the person did. What changed comes back as events (see the module's note).
     pub fn apply(&self, action: Action) -> Vec<WorkspaceEvent> {
+        // The Project feature was switched: which pull requests may be asked for and shown is judged again in the round
+        // this starts, not at the minute's end (the GPUI app asks on every tick).
+        if matches!(action, Action::SetFeature { feature: wormhole_core::config::FeatureId::Project, .. }) {
+            crate::workspace_extras::judge_again(&self.shared);
+        }
         let events = self.shared.with_model(|model| model.apply(action));
         // Selecting looks at a terminal, which may ask for its programs' reports to be dropped; a new
         // or closed terminal and a new selection move what the pump waits for.
