@@ -239,6 +239,24 @@ fn a_request_right_after_dont_keep_does_not_raise_the_question_again() {
     assert!(f.desk.next_mode_question().is_none(), "the file holds Off: nothing was widened");
 }
 
+/// Order: a request reads the file while it holds Open, and the seat keeps that read for a moment; the person narrows
+/// the file to Ask by hand, and the profile's follower looks (here: the same look, made by hand); a request then comes
+/// within that moment, with the read from before. Open in that old read is no widening: nothing is asked. (The test
+/// above passes without the look's stamp, since Don't Keep is also an edit of the person's; this one needs it.)
+#[test]
+fn a_request_with_a_read_from_before_a_narrowing_by_hand_raises_no_question() {
+    let f = fixture("open");
+    let id = f.terminal();
+    assert_eq!(type_into(&f, id)["ok"], true, "Open: let in, and the seat holds its read of the file");
+    let file = f.desk.profile().config_file();
+    let narrowed =
+        json!({ "agent_access": "ask", "control_write": true, "feature_flags": { "automation": true } });
+    std::fs::write(file, narrowed.to_string()).expect("config.json");
+    assert_eq!(f.desk.mode_in_force(AgentAccess::Ask, f.desk.stamp(), true), Some(AgentAccess::Ask));
+    assert_eq!(type_into(&f, id)["error"]["reason"], "approval_needed", "Ask is in force");
+    assert!(f.desk.next_mode_question().is_none(), "the read from before the narrowing asked nothing");
+}
+
 /// Order: the Settings window has read the widened file; the person says Don't Keep; before that window has read
 /// the file again they change another setting in it. Both stand: the earlier mode and the other setting.
 #[test]
@@ -268,7 +286,11 @@ fn dont_keep_goes_through_the_settings_the_app_holds() {
 fn an_edit_of_another_setting_does_not_let_a_widening_from_outside_through() {
     let f = fixture("off");
     let id = f.terminal();
-    assert_eq!(type_into(&f, id)["error"]["reason"], "agent_access_off", "the first look is the mode in force");
+    assert_eq!(
+        type_into(&f, id)["error"]["reason"],
+        "agent_access_off",
+        "the first look is the mode in force"
+    );
     let mut settings = crate::settings::State::load(f.desk.profile());
     assert!(settings.update(|s| s.font_size += 1.0), "the font size changed in Settings");
     edit_mode_outside(&f, "open");
