@@ -1,14 +1,18 @@
 //! The theme's colours as the engine answers programs with them (`terminal_view/mod.rs` `share_palette` in the GPUI
 //! app): every palette entry a program may ask for (OSC 4 for 0–255, OSC 10/11/12 for the foreground, background
 //! and cursor) and whether the theme is light or dark (`CSI ? 996 n`, and mode 2031's reports when it changes).
-//! Swift tells it the colours it draws with whenever the theme changes; a terminal started later gets them in its
-//! spawn options (`launch`), every live one at once. The engine keeps what a program set itself on top.
+//! Swift tells it the colours each profile's terminals are drawn with whenever that profile's theme changes; a terminal
+//! started later gets its own profile's in its spawn options (`launch`), every live one of that profile at once. The
+//! engine keeps what a program set itself on top.
+//!
+//! One look per profile, as each GPUI window draws its own profile's palette: a window of another profile than the one
+//! Wormhole is in starts its terminals in its own profile's colours and they hear its theme's changes, never the shown
+//! profile's, so a program that asks at once (OSC 10/11) is answered with what it will be drawn in.
 //!
 //! A terminal's view may tell it the colours it is drawn in itself (`Terminal::set_colors`, as each GPUI terminal
-//! view shares its own window's palette): a window of another profile than the one Wormhole is in draws that
-//! profile's theme, and a program is answered with what it is drawn in. Such a terminal no longer hears the look
-//! of all.
+//! view shares its own window's palette): such a terminal no longer hears its profile's look.
 
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, PoisonError, RwLock, Weak};
 
 use wormhole_term::types::{COLOR_COUNT, ColorScheme, Rgb};
@@ -22,38 +26,45 @@ pub(crate) struct EngineLook {
     pub(crate) scheme: ColorScheme,
 }
 
-static LOOK: RwLock<Option<EngineLook>> = RwLock::new(None);
-/// Every terminal made, to tell a change to the live ones.
-static TERMINALS: Mutex<Vec<Weak<Terminal>>> = Mutex::new(Vec::new());
+/// Each profile's look, by the profile's id, once Swift has told it.
+static LOOKS: RwLock<BTreeMap<String, EngineLook>> = RwLock::new(BTreeMap::new());
+/// Every terminal made, with its profile, to tell a change to the live ones of that profile.
+static TERMINALS: Mutex<Vec<(String, Weak<Terminal>)>> = Mutex::new(Vec::new());
 
-/// What the theme in force says, once Swift has told it.
-pub(crate) fn current() -> Option<EngineLook> {
-    LOOK.read().unwrap_or_else(PoisonError::into_inner).clone()
+/// What profile `profile`'s theme says, once Swift has told it.
+pub(crate) fn current(profile: &str) -> Option<EngineLook> {
+    LOOKS.read().unwrap_or_else(PoisonError::into_inner).get(profile).cloned()
 }
 
-/// Terminal `terminal` hears of the theme's changes from now on (it started with the look of the moment).
-pub(crate) fn follow(terminal: &Arc<Terminal>) {
+/// Terminal `terminal` of profile `profile` hears of that profile's theme changes from now on (it started with the look
+/// of the moment).
+pub(crate) fn follow(terminal: &Arc<Terminal>, profile: &str) {
     let mut terminals = TERMINALS.lock().unwrap_or_else(PoisonError::into_inner);
-    terminals.retain(|known| known.strong_count() > 0);
-    terminals.push(Arc::downgrade(terminal));
+    terminals.retain(|(_, known)| known.strong_count() > 0);
+    terminals.push((profile.to_owned(), Arc::downgrade(terminal)));
 }
 
-/// The colours the terminals are drawn with: `slots` is the palette as `0xRRGGBB`, 256 indexed entries then the
-/// foreground, background and cursor (`COLOR_COUNT` of them; a shorter list leaves the rest black). The scheme is
-/// light when the background is (by its luma, what a program choosing its colours cares about). Telling the same
+/// The colours profile `profile`'s terminals are drawn with: `slots` is the palette as `0xRRGGBB`, 256 indexed entries
+/// then the foreground, background and cursor (`COLOR_COUNT` of them; a shorter list leaves the rest black). The scheme
+/// is light when the background is (by its luma, what a program choosing its colours cares about). Telling the same
 /// colours again does nothing.
 #[uniffi::export]
-pub fn set_terminal_colors(slots: Vec<u32>) {
+pub fn set_terminal_colors(profile: String, slots: Vec<u32>) {
     let look = look_of(&slots);
     {
-        let mut current = LOOK.write().unwrap_or_else(PoisonError::into_inner);
-        if current.as_ref() == Some(&look) {
+        let mut looks = LOOKS.write().unwrap_or_else(PoisonError::into_inner);
+        if looks.get(&profile) == Some(&look) {
             return;
         }
-        *current = Some(look.clone());
+        looks.insert(profile.clone(), look.clone());
     }
-    let live: Vec<Arc<Terminal>> =
-        TERMINALS.lock().unwrap_or_else(PoisonError::into_inner).iter().filter_map(Weak::upgrade).collect();
+    let live: Vec<Arc<Terminal>> = TERMINALS
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .iter()
+        .filter(|(of, _)| *of == profile)
+        .filter_map(|(_, terminal)| terminal.upgrade())
+        .collect();
     for terminal in live {
         terminal.tell(&look);
     }
@@ -62,13 +73,13 @@ pub fn set_terminal_colors(slots: Vec<u32>) {
 #[uniffi::export]
 impl Terminal {
     /// The colours this terminal is drawn with, `slots` as `set_terminal_colors` takes them: its programs are
-    /// answered with these, and told (mode 2031) when they turn light or dark. From now on the look of all no
+    /// answered with these, and told (mode 2031) when they turn light or dark. From now on its profile's look no
     /// longer reaches it: whoever draws it tells it every change.
     pub fn set_colors(&self, slots: Vec<u32>) {
         TERMINALS
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
-            .retain(|known| !std::ptr::eq(known.as_ptr(), self));
+            .retain(|(_, known)| !std::ptr::eq(known.as_ptr(), self));
         self.tell(&look_of(&slots));
     }
 }

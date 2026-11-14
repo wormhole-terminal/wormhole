@@ -44,7 +44,8 @@ pub(crate) fn options(root: &DataRoot, profile: &ProfilePaths, what: &HostedStar
         },
         (_, chosen) => shells::for_terminal(chosen, project_shell.as_deref(), &settings),
     };
-    let look = crate::engine_look::current();
+    // This profile's colours, as its windows draw them: not the shown profile's (`engine_look`).
+    let look = crate::engine_look::current(&profile.id().to_string());
     let mut options = SpawnOptions {
         cwd,
         tab_id: what.tab.to_string(),

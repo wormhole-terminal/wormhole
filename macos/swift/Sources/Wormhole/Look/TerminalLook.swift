@@ -30,13 +30,14 @@ final class TerminalLook {
     private let terminals: () -> [TerminalViews]
     private let themes: ThemeStore
     /// Each terminal's view tells the engine the colours it is drawn in (`MetalTerminalView.setPalette`); the engine also
-    /// keeps one palette for a terminal no view has dressed yet, and only the look of the profile Wormhole is in tells it that.
-    private let sharesEngineColours: Bool
+    /// keeps one palette per profile for a terminal no view has dressed yet, which this look tells for the profile it is
+    /// (asked each time: the app's own look is the shown profile's, whichever that is now).
+    private let engineProfile: () -> String?
 
-    init(terminals: @escaping () -> [TerminalViews], themes: ThemeStore = .shared, sharesEngineColours: Bool = true) {
+    init(terminals: @escaping () -> [TerminalViews], themes: ThemeStore = .shared, engineProfile: @escaping () -> String?) {
         self.terminals = terminals
         self.themes = themes
-        self.sharesEngineColours = sharesEngineColours
+        self.engineProfile = engineProfile
     }
 
     /// Fonts from Settings. Nothing is redrawn when they are the ones in use.
@@ -85,9 +86,14 @@ final class TerminalLook {
         guard next != palette else { return }
         palette = next
         terminals().forEach { $0.forEach { $0.setPalette(next) } }
+        shareEngineColours()
+    }
+
+    /// What a terminal of this look's profile starts with, and has until a view dresses it (the views above told the engine
+    /// their own). Told again when the shown profile changed: the colours may stay while the profile they are for does not.
+    func shareEngineColours() {
         #if WITH_UNIFFI
-            // What a terminal starts with, and has until a view dresses it: the views above told the engine their own.
-            if sharesEngineColours { EngineColors.share(next) }
+            if let palette, let profile = engineProfile() { EngineColors.share(palette, profile: profile) }
         #endif
     }
 

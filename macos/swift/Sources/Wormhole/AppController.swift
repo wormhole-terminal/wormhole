@@ -75,7 +75,8 @@ final class AppController: NSObject, NSApplicationDelegate {
         let profileFlags = ProfileFlags()
     #endif
     /// The fonts and colours every terminal is drawn with: Settings' and the theme's.
-    private(set) lazy var terminalLook = TerminalLook(terminals: { [weak self] in self?.ownSessions.map(\.hub.terminals) ?? [] })
+    private(set) lazy var terminalLook = TerminalLook(
+        terminals: { [weak self] in self?.ownSessions.map(\.hub.terminals) ?? [] }, engineProfile: { [weak self] in self?.windowsHost.profile })
     /// The looks of the other profiles with a window open, by profile (`profileLook(for:)`).
     var profileLooks: [String: ProfileLook] = [:]
     /// The agent access of each parked profile nothing else follows (`ParkedAccess`).

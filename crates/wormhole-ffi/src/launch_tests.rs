@@ -190,12 +190,14 @@ fn a_program_acts_on_the_window_only_when_settings_allow_it() {
             args: vec!["-c".into(), script.into()],
             ..request(None)
         };
-        let options = options(&root, &profile_in(&root, None), &what);
+        let profile = profile_in(&root, None);
+        let options = options(&root, &profile, &what);
         assert_eq!(options.allow_window_ops, allowed);
         let size = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
         let (pty, events) = wormhole_core::terminal::spawn(size, &options).expect("spawns");
         let terminal =
-            Terminal::from_parts(pty, events, &options, Arc::new(Quiet), None).expect("a terminal");
+            Terminal::from_parts(pty, events, &options, &profile.id().to_string(), Arc::new(Quiet), None)
+                .expect("a terminal");
         let (mut seen, deadline) = (Vec::new(), Instant::now() + Duration::from_secs(10));
         while !terminal.screen_text().split_whitespace().any(|word| word == "80" || word == "100") {
             assert!(Instant::now() < deadline, "timed out:\n{}", terminal.screen_text());
@@ -224,4 +226,79 @@ fn a_program_acts_on_the_window_only_when_settings_allow_it() {
             WindowOpRecord::Move { x: 10, y: 20 },
         ]
     );
+}
+
+/// Two profiles with different palettes: a terminal of each starts in its own profile's colours and answers a program's
+/// OSC 11 with them before any view has told it anything, and a change of one profile's theme reaches that profile's
+/// terminal alone (`engine_look`).
+#[test]
+fn each_profiles_terminal_answers_with_its_own_colours() {
+    use std::sync::Arc;
+
+    use wormhole_core::storage::paths::ProfileId;
+    use wormhole_term::types::COLOR_COUNT;
+
+    use crate::engine_look::set_terminal_colors;
+    use crate::events::TerminalListener;
+    use crate::terminal::Terminal;
+
+    struct Quiet;
+    impl TerminalListener for Quiet {
+        fn wake(&self) {}
+    }
+
+    // Only the background matters here: `grey` in each channel.
+    let palette = |grey: u32| {
+        let mut slots = vec![0; COLOR_COUNT];
+        slots[COLOR_COUNT - 2] = grey * 0x0001_0101;
+        slots
+    };
+    // Ids of their own: the looks are the process's, shared with the other tests.
+    let (a, b) = ("looks-test-a", "looks-test-b");
+    set_terminal_colors(a.into(), palette(0x22));
+    set_terminal_colors(b.into(), palette(0x77));
+
+    // Asks for the background, prints the answer without its escapes (`got]11;rgb:2222/2222/2222`), then again for
+    // each line typed.
+    let script = r#"while :; do stty raw -echo min 0 time 10; printf '\033]11;?\007'; r=$(dd bs=64 count=1 2>/dev/null); stty sane; printf 'got%s\n' "$(printf '%s' "$r" | tr -d '\033\007\\')"; IFS= read -r line; done"#;
+    let dir = scratch("looks");
+    let root = DataRoot::new(dir.path());
+    let start = |id: &str| {
+        let profile = root.profile(&ProfileId::parse(id).expect("an id"));
+        let what = HostedStart {
+            program: Some("/bin/sh".into()),
+            args: vec!["-c".into(), script.into()],
+            ..request(None)
+        };
+        let options = options(&root, &profile, &what);
+        let size = GridSize { cols: 80, rows: 24, cell_width: 8.0, cell_height: 16.0 };
+        let (pty, events) = wormhole_core::terminal::spawn(size, &options).expect("spawns");
+        Terminal::from_parts(pty, events, &options, id, Arc::new(Quiet), None).expect("a terminal")
+    };
+    let answers = |terminal: &Terminal, grey: &str, times: usize| {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        let want = format!("rgb:{grey}{grey}/");
+        while terminal.screen_text().matches(&want).count() < times {
+            assert!(Instant::now() < deadline, "never answered {want} {times}x:\n{}", terminal.screen_text());
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    };
+    let (first, second) = (start(a), start(b));
+    answers(&first, "22", 1);
+    answers(&second, "77", 1);
+
+    // Profile b's theme changes: its terminal answers with the new colours, a's keeps its own.
+    set_terminal_colors(b.into(), palette(0x44));
+    first.write(b"\n".to_vec());
+    second.write(b"\n".to_vec());
+    answers(&second, "44", 1);
+    answers(&first, "22", 2);
+    assert!(
+        !first.screen_text().contains("rgb:4444/"),
+        "a's terminal never hears b's theme:\n{}",
+        first.screen_text()
+    );
+    assert!(!first.screen_text().contains("rgb:7777/"), "nor b's first one:\n{}", first.screen_text());
+    first.close();
+    second.close();
 }

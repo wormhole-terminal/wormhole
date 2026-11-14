@@ -190,10 +190,10 @@ impl Terminal {
     ) -> Result<Arc<Self>, FfiError> {
         isolation::require()?;
         let size = what.size();
-        let options = Self::options_for(what);
+        let (options, profile) = Self::options_for(what);
         let (pty, pty_events) =
             spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
-        Self::from_parts(pty, pty_events, &options, listener, None)
+        Self::from_parts(pty, pty_events, &options, &profile, listener, None)
     }
 
     /// [`Self::start_planned`] for the first run's welcome: what the terminal would run starts through
@@ -208,12 +208,12 @@ impl Terminal {
     ) -> Result<Arc<Self>, FfiError> {
         isolation::require()?;
         let size = what.size();
-        let mut options = Self::options_for(what);
+        let (mut options, profile) = Self::options_for(what);
         options.welcome = true;
         options.env.insert(wormhole_core::onboarding::welcome::TOKEN_VAR.to_string(), token);
         let (pty, pty_events) =
             spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
-        Self::from_parts(pty, pty_events, &options, listener, None)
+        Self::from_parts(pty, pty_events, &options, &profile, listener, None)
     }
 
     /// The rows that changed since the last call, packed (`frame.rs` has the layout); every row
@@ -363,12 +363,13 @@ impl Terminal {
         listener: Arc<dyn TerminalListener>,
     ) -> Result<Arc<Self>, FfiError> {
         isolation::require()?;
-        let options = Self::options_for(Self::stand_in(tab_id.parse().unwrap_or(-1), program, args, cwd));
+        let (options, profile) =
+            Self::options_for(Self::stand_in(tab_id.parse().unwrap_or(-1), program, args, cwd));
         let options = SpawnOptions { tab_id, ..options };
         let size = GridSize { cols, rows, cell_width, cell_height };
         let (pty, pty_events) =
             spawn(size, &options).map_err(|e| FfiError::Start { reason: format!("{e:#}") })?;
-        Self::from_parts(pty, pty_events, &options, listener, None)
+        Self::from_parts(pty, pty_events, &options, &profile, listener, None)
     }
 
     /// A start of `program` standing in for the login shell, in the profile Wormhole is in.
@@ -389,18 +390,20 @@ impl Terminal {
         }
     }
 
-    /// The options `what` starts with in the app's own process (`launch`), in the profile it names.
-    fn options_for(what: HostedStart) -> SpawnOptions {
+    /// The options `what` starts with in the app's own process (`launch`), in the profile it names, and that profile's id.
+    fn options_for(what: HostedStart) -> (SpawnOptions, String) {
         let root = DataRoot::current();
         let profile = crate::launch::profile_in(&root, what.profile.as_deref());
-        crate::launch::options(&root, &profile, &what)
+        (crate::launch::options(&root, &profile, &what), profile.id().to_string())
     }
 
-    /// The object over a PTY that is running (local or hosted) and its events.
+    /// The object over a PTY that is running (local or hosted) and its events. `profile`: whose theme changes it hears
+    /// until a view tells it its own colours (`engine_look`).
     pub(crate) fn from_parts(
         pty: Pty,
         pty_events: wormhole_term::PtyEvents,
         options: &SpawnOptions,
+        profile: &str,
         listener: Arc<dyn TerminalListener>,
         host: Option<HostSlot>,
     ) -> Result<Arc<Self>, FfiError> {
@@ -426,7 +429,7 @@ impl Terminal {
             name,
             host,
         });
-        crate::engine_look::follow(&terminal);
+        crate::engine_look::follow(&terminal, profile);
         Ok(terminal)
     }
 

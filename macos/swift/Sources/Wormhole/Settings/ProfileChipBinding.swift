@@ -86,6 +86,8 @@ extension AppController {
                 followProfileSettings()
                 // The profile left keeps its terminals: a change of its agent access still settles (`ParkedAccess`).
                 followParkedAccess()
+                // The engine's colours for the profile now shown, whether or not its theme differs from the one left.
+                terminalLook.shareEngineColours()
                 leaving.forEach { $0.window?.orderOut(nil) }
                 lastFront = shown.last
                 if policy.touchesSystem { front.window?.makeKeyAndOrderFront(nil) }

@@ -411,8 +411,15 @@ impl HostedTerminals {
             }
             checkpoints.forget_later(closing_hosts.clone());
         });
-        let terminal = Terminal::from_parts(pty, events, options, listener, Some(slot))
-            .map_err(|e| HostingError::Start { reason: e.to_string() })?;
+        let terminal = Terminal::from_parts(
+            pty,
+            events,
+            options,
+            &self.profile().id().to_string(),
+            listener,
+            Some(slot),
+        )
+        .map_err(|e| HostingError::Start { reason: e.to_string() })?;
         self.remember(what, &id);
         if let Some(key) = self.checkpoint_key(tab, &id) {
             self.checkpoints.start(&terminal, &id, key, restored_from);

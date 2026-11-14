@@ -1425,10 +1425,12 @@ All additive; the core decides, Swift asks.
 - `Action::NewTerminalWithShell(key)`: a new terminal that keeps its shell key; saved in the window's record (`SessionRecord.shell`) and
   restored with it. `Workspace::launch_facts(id) -> LaunchFacts { shell, saved_text, profile }`: ask as the terminal starts; the saved
   text is given once.
-- **The theme's colours to the engine**: `set_terminal_colors(slots)` (free function), 259 `0xRRGGBB` (256 indexed, foreground,
-  background, cursor) as drawn; the scheme is light by the background's luma (the GPUI palette's rule). Every live terminal is told at
-  once (`set_default_colors`, `set_color_scheme`: OSC 4/10/11/12 queries, `CSI ? 996 n` and mode 2031 reports), later ones at spawn.
-  Swift calls it whenever its palette changes. Telling the same colours again does nothing.
+- **The theme's colours to the engine**: `set_terminal_colors(profile, slots)` (free function), one look per profile, 259
+  `0xRRGGBB` (256 indexed, foreground, background, cursor) as drawn; the scheme is light by the background's luma (the GPUI palette's
+  rule). Every live terminal of that profile is told at once (`set_default_colors`, `set_color_scheme`: OSC 4/10/11/12 queries,
+  `CSI ? 996 n` and mode 2031 reports), later ones at spawn (`launch` reads the look of the profile the terminal starts in). Swift calls
+  it whenever a profile's palette changes (each profile's `TerminalLook`) and for the shown profile after a switch. Telling the same
+  colours again does nothing.
   `Terminal.set_colors(slots)` (the same slots) tells one terminal the colours it is drawn in: from then on only that call reaches it,
   never the free function. Every terminal's view calls it with its palette (the GPUI view's `share_palette`), so a terminal in a window
   of another profile answers with that profile's theme; the free function is what a terminal starts with and has until a view dresses it.

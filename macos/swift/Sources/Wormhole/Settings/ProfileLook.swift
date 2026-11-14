@@ -18,7 +18,7 @@ final class ProfileLook {
     let look: WindowUI.WindowLook
     var themes: ThemeStore { look.themes }
     private(set) lazy var terminalLook = TerminalLook(
-        terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] }, themes: themes, sharesEngineColours: false)
+        terminals: { [weak self] in self?.sessions.map(\.hub.terminals) ?? [] }, themes: themes, engineProfile: { [profile = self.profile] in profile })
     private unowned let app: AppController
     let backend: any SettingsBackend
     /// Whether a feature (by its flag's key) is on in this profile.
