@@ -1,6 +1,7 @@
 // A submodule's row in Changes and under a commit (`features/git/submodule_row.rs`): the folder-with-a-repository icon, its name,
 // its folder, what changed in core's words, and a button that opens a terminal in its folder (only while it is checked out
-// and not deleted). It has no file menu: there is no file to open.
+// and not deleted). It has no file menu: there is no file to open. The button shows under the pointer, inside the row's own
+// button, so VoiceOver reaches it as the row's action ("Open a terminal in …"), as GPUI keeps its button in the tree.
 
 import DesignSystem
 import PanelModel
@@ -29,11 +30,7 @@ struct SubmoduleRowView: View {
                 }
                 Spacer(minLength: 0)
                 Text(what).font(tokens.font(.caption)).foregroundStyle(muted).lineLimit(1).truncationMode(.tail).layoutPriority(-2)
-                if hovering, file.submoduleEnterable, let root {
-                    BandButton(symbol: "terminal", label: panelText("submodule-enter", ["name": .text(file.name)], "Open a terminal in \(file.name)"), inRow: true) {
-                        host?.openTerminal(in: root + "/" + file.path, running: nil)
-                    }
-                }
+                if hovering, let enter { BandButton(symbol: "terminal", label: enterLabel, inRow: true, action: enter) }
                 Text(file.kind.letter).font(tokens.font(.caption).weight(.bold)).foregroundStyle(letterColor)
                     .frame(width: PanelMetrics.kindLetter, alignment: .trailing)
             }
@@ -42,6 +39,18 @@ struct SubmoduleRowView: View {
         }
         .help("\(file.path)\n\(what)")
         .accessibilityLabel(panelText("changes-spoken-submodule", ["name": .text(file.name), "what": .text(what)], "Submodule \(file.name), \(what)"))
+        .accessibilityActions {
+            if let enter { Button(enterLabel, action: enter) }
+        }
+    }
+
+    private var enterLabel: String { panelText("submodule-enter", ["name": .text(file.name)], "Open a terminal in \(file.name)") }
+
+    /// A terminal in the submodule's folder, while it is checked out and not deleted (nil: the row has no button).
+    private var enter: (() -> Void)? {
+        guard file.submoduleEnterable, let root else { return nil }
+        let (host, folder) = (host, root + "/" + file.path)
+        return { host?.openTerminal(in: folder, running: nil) }
     }
 
     private var muted: Color { selected ? tokens.sidebarRowSelectedMuted : tokens.textMuted }
