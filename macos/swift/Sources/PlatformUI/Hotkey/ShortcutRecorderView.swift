@@ -8,8 +8,9 @@ import DesignSystem
 import PlatformModel
 import WordsModel
 
+/// A recorder (`RecordsKeys`): first responder only while it records, and the app's key monitors leave its presses alone then.
 @MainActor
-public final class ShortcutRecorderView: NSView {
+public final class ShortcutRecorderView: NSView, RecordsKeys {
     public var shortcut: KeySpec? { didSet { needsDisplay = true; updateAccessibility() } }
     /// The action the field sets the key of, whose own key is no conflict (the jump key is Go to Waiting's).
     public var ownAction: ActionID?

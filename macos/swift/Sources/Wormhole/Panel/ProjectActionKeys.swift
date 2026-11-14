@@ -6,6 +6,7 @@
 // trusted, or whose Actions went off, lets the key through. The run itself goes through the core as well.
 
 import AppKit
+import DesignSystem
 import PanelModel
 import PanelUI
 import PlatformModel
@@ -55,8 +56,9 @@ final class ProjectKeys {
     }
 
     private func claims(_ event: NSEvent) -> Bool {
-        // Only a window of the workspace: a sheet, Settings or the Studio read their own keys.
-        guard !event.isARepeat, let window = event.window, let session = app.sessions.first(where: { $0.window === window }),
+        // Only a window of the workspace: a sheet, Settings or the Studio read their own keys; and never a press for a shortcut
+        // recorder (`RecordsKeys`), wherever one is.
+        guard !event.isARepeat, !event.goesToRecorder, let window = event.window, let session = app.sessions.first(where: { $0.window === window }),
             let pressed = Self.spec(of: event)
         else { return false }
         return app.claimProjectKey(pressed, in: session.hub)

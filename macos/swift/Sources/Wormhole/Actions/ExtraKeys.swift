@@ -4,6 +4,7 @@
 // (`Keymap.shared`) and runs the action through the router, as the menu would.
 
 import AppKit
+import DesignSystem
 import PlatformModel
 
 @MainActor
@@ -25,7 +26,8 @@ final class ExtraKeys {
         // A window of the app: GPUI's app-level bindings work from Settings and the Studio too, so those take the key as the
         // window in front would (a panel that cannot be main, like the quick panel, reads its own keys). Not while a sheet is up
         // (a question, a dialog): the key is the sheet's, as GPUI's `has_active_dialog` leaves it.
-        guard !event.isARepeat, let window = event.window, window.sheetParent == nil, window.attachedSheet == nil,
+        // Nor while a shortcut recorder has the keys: the press is its to record (`RecordsKeys`).
+        guard !event.isARepeat, !event.goesToRecorder, let window = event.window, window.sheetParent == nil, window.attachedSheet == nil,
             let spec = Self.spec(of: event)
         else { return false }
         guard let session = app.sessions.first(where: { $0.window === window })
