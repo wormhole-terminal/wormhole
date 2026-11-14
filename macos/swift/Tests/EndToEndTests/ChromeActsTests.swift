@@ -92,7 +92,7 @@ extension EndToEnd {
         }
     }
 
-    @Test("a comment on a changed line: saved once, the dialog gone; a long line's quote is cut at 160 scalars (771, 890)")
+    @Test("a comment on a changed line: its dialog a sheet on the window, saved once, the sheet gone; a long line's quote is cut at 160 scalars (771, 890)")
     @MainActor func commentOnLine() async throws {
         try await Instance.with { app in
             let long = String(repeating: "e\u{301}", count: 120) + " 🙂🙂🙂   "
@@ -104,7 +104,10 @@ extension EndToEnd {
             let spans = Readout(await app.until("diff-spans 0 40") { Readout($0).all("line").contains { $0.words.dropFirst().first == "added" } })
             guard let row = spans.all("line").first(where: { $0.words.dropFirst().first == "added" })?.words.first else { return }
             app.expect(await app.reply("comment-at \(row)"), contains: "comment-at a.txt:")
+            // What a person sees: the dialog is a sheet on the window (AppKit's own `attachedSheet`, not the panel's flag).
+            await app.until("windows") { $0.contains("sheet=true") }
             app.expect(await app.reply("comment hello"), contains: "1 comment")
+            await app.until("windows") { !$0.contains("sheet=true") }
             app.expect(await app.reply("comment again"), contains: "error: no comment dialog is open")
             let message = await app.reply("review")
             let quote = message.split(separator: "\n").first { $0.trimmingCharacters(in: .whitespaces).hasPrefix(">") }.map(String.init) ?? ""

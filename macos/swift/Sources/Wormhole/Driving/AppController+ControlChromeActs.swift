@@ -9,7 +9,7 @@
 //                                    buttons (`SideColumns`: × closes it to the offer, Don't show again, keep, Coding agents settings)
 //   `plus-menu [pick <key>]`         the + menu "New terminal with": `plus-menu` then `<key> "<name>" [default]` a line; a choice
 //   `comment-at <row>`               the comment dialog of the diff's row `row` (as `diff-spans` numbers it) opened, as a click
-//                                    on the line opens it; `comment <text>` then saves it
+//                                    on the line opens it (the sheet: `windows` says `sheet=true`); `comment <text>` then saves it
 //   `review`                         what pasting the review would paste (`Review.message`), or `review: none`
 //   `title-words` / `exited-words`   what the title row says after the name, what the exited bar says ("fish exited"), or none
 //   `overlay`                        the palette or the shortcut sheet up over the window: `overlay <palette|shortcuts|none>`
@@ -105,7 +105,10 @@ extension AppController {
         return "sidebar-tip \(argument)"
     }
 
-    /// The comment dialog of a row of the open Changes diff, with the comment already there if the line has one.
+    /// The comment dialog of a row of the open Changes diff, with the comment already there if the line has one. What a click on
+    /// the line does to the panel: `ChangesStore.commenting` is the one state that says "a comment is being written on line N
+    /// of file F", and the diff puts its sheet up from it (and takes it down when it goes nil). Whether the sheet is up is read
+    /// from the window (`windows` says `sheet=true`), never from this flag.
     private func commentAt(_ argument: String) -> String {
         let changes = hub.panel.changes
         guard let row = Int(argument), let file = changes.current, let rows = changes.diff.built?.unified, rows.indices.contains(row),

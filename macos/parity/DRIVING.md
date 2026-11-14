@@ -120,7 +120,7 @@ Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written wi
 | `note-seed [count] [lines]` / `note-toggle <n>` | `note-seed 50 12` | that many notes of that many lines (GPUI's text); fold or unfold the n-th note |
 | `task-seed [open] [done]` / `task-done <n>` | `task-seed 38 12` | that many next steps, the done ones spread among the open; tick or untick the n-th |
 | `send` / `send-submit` / `stash` | `send-submit` | the focused note (the walker's, else the newest) goes to the terminal (and Return); the prompt typed in an agent's box becomes a note |
-| `comment [text]` | `comment too long` | the comment dialog a click on a diff line opened: text set (none: what was typed in it), saved, closed; says the review's summary (`1 comment`) |
+| `comment [text]` | `comment too long` | the comment dialog a click on a diff line opened (a sheet on the window): text set (none: what was typed in it), saved, closed; says the review's summary (`1 comment`); `error: no comment dialog is open` while no sheet is up |
 | `changes` | `changes` | the Changes tab on show (GPUI's `changes`) and what its store holds: `changes phase=loaded files=1 open=README.md diff=shown hunks=1`, then a line a file in the list's order, `  M README.md +1 -0` (the kind's letter, the path, lines added and removed, `-` where git counts none) |
 | `compare [branch]` / `picker [history\|compare] [query]` | `compare main` | the Changes tab compared with a branch (none or `HEAD` stops); the revisions the picker offers for the query, one a line |
 | `commit-details` / `commit-more` | `commit-details` | the open commit's block as text (`none` when none is open); Show more / Show less |
@@ -188,7 +188,7 @@ none of these; `status-bar` is the bar's switch, so its items are `status-items`
 | `group-popover <group>` | the group's popover in the list, as "Other colour…" opens it: `group-popover <id>`; `popover` then reads it |
 | `sidebar-tip [close\|never\|keep\|settings]` | `sidebar-tip <off\|note\|offer>` (off while an agent is on screen); the note's ×, Don't show again, the offer's ×, Coding agents settings |
 | `plus-menu [pick <key>]` | `plus-menu` then `<key\|-> "<name>" [default]` per shell (`HubActions.shells`); a pick opens a terminal with it: `plus-menu picked <key>` |
-| `comment-at <row>` / `review` | the comment dialog of the Changes diff's row (numbered as `diff-spans` numbers it), as a click on the line opens it: `comment-at <path>:<line>` (then `comment <text>`); `review` then the text a paste of the review would paste, or `review: none` |
+| `comment-at <row>` / `review` | the comment dialog of the Changes diff's row (numbered as `diff-spans` numbers it), as a click on the line opens it (it sets `ChangesStore.commenting`, which the diff's sheet is put up from): `comment-at <path>:<line>`; the sheet is on screen once `windows` says `sheet=true` (then `comment <text>`); `review` then the text a paste of the review would paste, or `review: none` |
 | `title-words` / `exited-words` / `overlay` | `title-words "<working · 4m>"` or `title-words none` (the bar on, or nothing to say); `exited-words "<fish exited>"` or `none`; `overlay <palette\|shortcuts\|none>` |
 | `trust-state` | `trust-state <trusted\|changed\|untrusted> "<project name>" summary="…" lines="<n>" [problem="…"]` (the project commands window's review of the project in front; none open: the closed-project words) |
 | `project-layout` / `project-note <prompt id>` / `step-draft` | the Project tab's Open terminals; a prompt's Copy into a new note; Notes' Add next step |
