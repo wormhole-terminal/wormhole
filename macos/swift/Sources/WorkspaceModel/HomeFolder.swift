@@ -8,7 +8,7 @@ import Foundation
 public enum HomeFolder {
     /// The home folder's path.
     public static var path: String {
-        if let home = ProcessInfo.processInfo.environment["HOME"], !home.isEmpty { return home }
+        if let home = ProcessInfo.processInfo.environment["HOME"], !home.isEmpty { return home }  // text: an environment variable name
         return NSHomeDirectory()
     }
 

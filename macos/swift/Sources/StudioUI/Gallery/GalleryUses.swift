@@ -63,8 +63,8 @@ enum GalleryUses {
         TokenUse(id: "diff", label: "diff view", area: .panel, tokens: [
             "border", "diff.added", "diff.added.background", "diff.filler", "diff.hunk.background", "diff.hunk.text",
             "diff.line_number", "diff.removed", "diff.removed.background", "metrics.border_width",
-            "metrics.radius_chip", "primary", "status.danger.text", "status.success.text", "status.warning.text",
-            "surface.window", "syntax.*", "text.faint", "text.muted", "text.primary",
+            "metrics.radius_chip", "primary", "status.warning.text", "surface.window", "syntax.*", "text.faint",
+            "text.muted", "text.primary",
         ]),
         TokenUse(id: "callout", label: "callout", area: .panel, tokens: [
             "banner.danger.background", "banner.danger.border", "banner.info.background", "banner.info.border",
