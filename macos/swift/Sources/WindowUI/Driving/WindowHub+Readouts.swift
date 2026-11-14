@@ -88,3 +88,8 @@ extension WindowHub {
         return nil
     }
 }
+
+extension WindowHub {
+    /// `title-menu`: the selected terminal's title row menu as items (`TitleRowMenu`'s), nil without a terminal.
+    public var titleMenuItems: [TitleMenuReadout.Item?]? { selectedTitleActions.map { TitleMenuReadout.items(row: titleRow, actions: $0) } }
+}

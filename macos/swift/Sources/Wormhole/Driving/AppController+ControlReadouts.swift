@@ -9,6 +9,7 @@
 //   `onboarding-state`          the first run's step, its card, buttons, places, agents, trust card and primer
 //   `onboarding-pick <path>`    a folder dropped on the folder step (`OnboardingSession.pick`)
 //   `onboarding-press back|main|skip`  the card's buttons (main: Continue, or Start on the last step)
+//   `title-menu [pick <n|title>]`  the title row's right-click menu as items (`PanesUI.TitleMenuReadout`), and a choice in it
 // GPUI's devctl has none of these; `status-bar` is the bar's switch already (`AppController+Look`), so its items are
 // `status-items`. The right panel's are `AppController+ControlPanelReadouts`.
 
@@ -16,6 +17,7 @@ import AppKit
 import AuxModel
 import AuxWindows
 import Foundation
+import PanesUI
 import SettingsUI
 import WindowUI
 
@@ -49,6 +51,19 @@ extension AppController {
             default: reply("error: onboarding-press back|main|skip"); return true
             }
             reply("onboarding-press \(argument)")
+        case "title-menu":
+            // `title-menu` lists the row's menu as `menu` prints one; `title-menu pick <n|title>` chooses an item as a click does.
+            guard let items = hub.titleMenuItems else { reply("error: no terminal is shown"); return true }
+            let words = argument.split(separator: " ", maxSplits: 1).map(String.init)
+            guard words.first == "pick", words.count == 2 else { reply("title-menu\n" + TitleMenuReadout.text(items)); return true }
+            let listed = items.compactMap { $0 }
+            guard let item = Int(words[1]).flatMap({ listed.indices.contains($0 - 1) ? listed[$0 - 1] : nil }) ?? listed.first(where: { $0.title == words[1] }) else {
+                reply("error: no item \(words[1])")
+                return true
+            }
+            guard item.enabled else { reply("error: \(item.title) is off"); return true }
+            item.run()
+            reply("title-menu picked \(item.title)")
         default: return runPanelReadouts(command: command, argument: argument)
         }
         return true
