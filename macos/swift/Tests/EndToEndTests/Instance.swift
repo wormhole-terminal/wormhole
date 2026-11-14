@@ -138,6 +138,17 @@ final class Instance {
         try await start()
     }
 
+    /// Ends the app by a signal, as a crash (`SIGKILL`: nothing is saved) or `kill <pid>` (`SIGTERM`: it quits as it decides),
+    /// and waits until it has ended. `start()` then launches it again on the same folders.
+    func end(by signal: Int32) async {
+        guard let process, !ended.isDone else { return }
+        kill(process.processIdentifier, signal)
+        if await waitForExit(timeout: 20) { return }
+        fail("the app did not end on signal \(signal): ending it with SIGKILL")
+        kill(process.processIdentifier, SIGKILL)
+        _ = await waitForExit(timeout: 10)
+    }
+
     /// Sends `quit`, `quit-keep` or `quit-end-all` and waits until the app has ended (by its pid when it does not).
     func quit(command: String) async {
         guard let process, !ended.isDone else { return }

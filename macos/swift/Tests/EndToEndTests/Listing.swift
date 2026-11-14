@@ -12,12 +12,16 @@ struct Listing {
         var activity: String
         var number: Int?
         var folder: String
+        var pinned = false
     }
 
     struct Group {
         var id: Int
         var name: String
         var folded: Bool
+        var pinned = false
+        /// Its terminals, a folded group's too.
+        var count = 0
     }
 
     var selected: Int?
@@ -34,7 +38,10 @@ struct Listing {
                 selected = Self.value("selected=", in: line).flatMap { Int($0) }
                 live = Self.integers(in: Self.between("live=", and: " groups=", in: String(line)))
             } else if words.first == "group", words.count > 2, let id = Int(words[1]) {
-                groups.append(Group(id: id, name: Self.quoted(in: String(line)), folded: line.contains("folded=true")))
+                groups.append(
+                    Group(
+                        id: id, name: Self.quoted(in: String(line)), folded: line.contains("folded=true"), pinned: line.contains("pinned=true"),
+                        count: Self.value("count=", in: line).flatMap { Int($0) } ?? 0))
             } else if words.first == "row", words.count > 3, let id = Int(words[1]) {
                 // The activity is the word after the closing quote of the title.
                 let title = Self.quoted(in: String(line))
@@ -44,7 +51,7 @@ struct Listing {
                     Row(
                         id: id, title: title, activity: after.first ?? "",
                         number: Self.value("number=", in: Substring(rest)).flatMap { Int($0) },
-                        folder: Self.value("folder=", in: Substring(rest)) ?? ""))
+                        folder: Self.value("folder=", in: Substring(rest)) ?? "", pinned: rest.contains(" pinned=true ")))
             }
         }
     }
@@ -78,6 +85,8 @@ struct Panes {
     var isSplit = false
     var ids: [Int] = []
     var focused: Int?
+    /// Each pane's width and height, by id.
+    var sizes: [Int: (width: Double, height: Double)] = [:]
 
     init(_ text: String) {
         for line in text.split(separator: "\n") {
@@ -87,6 +96,7 @@ struct Panes {
             } else if words.first == "pane", words.count > 1, let id = Int(words[1]) {
                 ids.append(id)
                 if words.contains("focused") { focused = id }
+                if words.count > 5, let width = Double(words[4]), let height = Double(words[5]) { sizes[id] = (width, height) }
             }
         }
     }
