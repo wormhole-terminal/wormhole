@@ -9,7 +9,9 @@ extension EndToEnd {
     @MainActor func otherProfileWindowWearsItsOwnLook() async throws {
         try await Instance.with { app in
             let home = Readout(await app.reply("window-look")).first("window-look")
-            guard let homeTheme = home?["theme"], let homeFont = home?["font"], let homeTerminal = home?["terminal"] else { return app.fail("the first window's look") }
+            guard let homeTheme = home?["theme"], let homeFont = home?["font"], let homeTerminal = home?["terminal"], let homeWindow = home?["window"] else {
+                return app.fail("the first window's look")
+            }
 
             // The Work profile, with settings of its own: another theme, a larger terminal font, the status bar on.
             guard let work = await Self.newProfile(app, "Work") else { return app.fail("the Work profile") }
@@ -37,9 +39,12 @@ extension EndToEnd {
             app.expect(worn?["profile"] == work, "the window is Work's: \(worn?.text ?? "")")
             app.expect(worn?["status_bar"] == "true", "its status bar is on: \(worn?.text ?? "")")
             app.expect(worn?["terminal"] != homeTerminal, "its terminal has Work's background, not Default's \(homeTerminal): \(worn?.text ?? "")")
+            app.expect(worn?["window"]?.hasPrefix("#") == true && worn?["window"] != homeWindow, "its window colour is Work's theme's, not Default's \(homeWindow): \(worn?.text ?? "")")
             // The Default window beside it keeps Default's.
             let kept = Readout(await app.reply("window-look", window: mine)).first("window-look")
-            app.expect(kept?["theme"] == homeTheme && kept?["font"] == homeFont && kept?["terminal"] == homeTerminal && kept?["status_bar"] == "false", "Default's window is as it was: \(kept?.text ?? "")")
+            app.expect(
+                kept?["theme"] == homeTheme && kept?["font"] == homeFont && kept?["terminal"] == homeTerminal && kept?["window"] == homeWindow && kept?["status_bar"] == "false",
+                "Default's window is as it was: \(kept?.text ?? "")")
 
             // Each bar's profile tag names its own window's profile (the Work window's bar is on show; Default's is read as it would be drawn).
             let tag = Readout(await app.reply("status-items", window: other))

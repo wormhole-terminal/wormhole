@@ -3,7 +3,7 @@
 // so a window of another profile than the one Wormhole is in can be told from the others: the theme and the window colour of
 // the theme store its views are given (`WindowSession.dress`), the status bar's switch of its own look, and the selected
 // terminal's own point size and background (`MetalTerminalView`'s renderer). Replies:
-//   window-look profile="<id>" theme="<name>" window="<#rrggbb, the theme's background token>" status_bar="<true|false>"
+//   window-look profile="<id>" theme="<name>" window="<#rrggbb, the theme's `surface.window`>" status_bar="<true|false>"
 //       font="<pt>" terminal="<#rrggbb, the terminal's background>"       (`font` and `terminal` are `-` with no terminal shown)
 
 import DesignSystem
@@ -28,7 +28,7 @@ extension AppController {
         reply(Readout.line(
             "window-look",
             pairs: [
-                ("profile", session.windows.profile), ("theme", look.themes.theme.name), ("window", look.themes.tokens.rgba(named: "background")?.hex ?? "-"),
+                ("profile", session.windows.profile), ("theme", look.themes.theme.name), ("window", look.themes.tokens.rgba(named: "surface.window")?.hex ?? "-"),
                 ("status_bar", String(look.statusBar)), ("font", view.map { String($0.pointSize) } ?? "-"), ("terminal", terminal ?? "-"),
             ]))
         return true
