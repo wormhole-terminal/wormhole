@@ -1,7 +1,8 @@
 // A row's second line (`row/second_line.rs`): what the terminal has to report, else where it is, in the tone's colour
 // (amber asks, green is done, red failed), a command in the code font, and at its end a faint clock or "new output".
 // The words are the core's, read again by the store's one timer when they move with time.
-// Under LineRoll a changed line rolls up to its new words instead of cross-fading.
+// Under LineRoll a changed line rolls up to its new words instead of cross-fading; a change of tone rolls too, the same
+// words in their new colour (`face.rs`: the words or the tone differ).
 
 import DesignSystem
 import SwiftUI
@@ -24,7 +25,7 @@ struct SecondLineView: View {
                 .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .cutProbe(line.text, font: font, cut: $cut)
-                .id(rolling ? line.text : "")
+                .id(rolling ? rollKey : "")
                 .transition(.push(from: .bottom))
             if let trail = line.trail {
                 Text(trail).font(tokens.font(.caption).monospacedDigit()).foregroundStyle(tokens.textFaint)
@@ -33,11 +34,14 @@ struct SecondLineView: View {
         }
         .frame(height: RowGeometry.metaLine)
         .clipped()
-        .animation(rolling ? SidebarMotion.fold : nil, value: line.text)
+        .animation(rolling ? SidebarMotion.fold : nil, value: rollKey)
     }
 
     /// The line rolls (the old words up out of the clip) only where motion is wanted.
     private var rolling: Bool { rolls && !reduceMotion }
+
+    /// What a roll follows: the words and their tone.
+    private var rollKey: String { "\(line.tone)\n\(line.text)" }
 
     private var font: Font {
         line.isCommand ? .system(size: tokens.size(.caption), design: .monospaced)
