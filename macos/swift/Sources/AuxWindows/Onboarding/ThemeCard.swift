@@ -1,5 +1,6 @@
 // A theme as the Look step offers it: a sidebar strip and a terminal in the theme's own colours, its name and a
-// check on the current one (`look_step::theme_card`). Drawn from the theme's tokens, not the window's.
+// check on the current one (`look_step::theme_card`). Drawn from the theme's tokens, not the window's. The keyboard's place
+// is the shared ring (`focus_outline`); VoiceOver hears the step's radio group (`LookStep`).
 
 import DesignSystem
 import SwiftUI
@@ -10,6 +11,7 @@ struct ThemeCard: View {
     let action: () -> Void
     @Environment(\.tokens) private var window
     @State private var hovering = false
+    @FocusState private var focused: Bool
 
     /// The sidebar strip's share of the preview (`relative(0.3)`).
     private static let sidebarShare: CGFloat = 0.3
@@ -33,7 +35,7 @@ struct ThemeCard: View {
             }
             .frame(height: OnboardingMetrics.cardHeight)
             .clipShape(shape)
-            // The current theme's ring in the primary (a selection, not the keyboard's ring, which is the button's own).
+            // The current theme's ring in the primary (a selection, not the keyboard's ring, drawn round the button).
             .overlay {
                 shape.strokeBorder(
                     current ? window.primary : window.borderStrong,
@@ -42,9 +44,11 @@ struct ThemeCard: View {
             .opacity(hovering ? 0.92 : 1)
         }
         .buttonStyle(.plain)
+        .focused($focused)
+        .focusEffectDisabled()
+        .keyboardFocusRing(focused, radius: window.metrics.radius)
         .onHover { hovering = $0 }
         .accessibilityLabel(theme.name)
-        .accessibilityAddTraits(current ? .isSelected : [])
     }
 
     private func preview(_ tokens: ThemeTokens) -> some View {

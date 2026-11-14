@@ -192,6 +192,10 @@ settings-appearance-trash-edits = Its unsaved changes are lost.
 # { $name } is the theme.
 settings-appearance-trash-failed = “{ $name }” could not be moved to the Trash.
 settings-appearance-show-theme = Show
+# A theme card's menu as VoiceOver's actions on the shelf, which it hears as one radio group. { $name } is the theme.
+settings-appearance-hide-named = Hide { $name }
+# { $name } is the theme. The app adds the "…" (a question follows).
+settings-appearance-trash-named = Move { $name } to Trash
 
 # The disclosure under the theme cards that lists the hidden ones. { $count } is how many.
 settings-appearance-hidden-themes = Hidden themes ({ $count })

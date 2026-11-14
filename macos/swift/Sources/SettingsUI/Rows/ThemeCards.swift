@@ -101,12 +101,11 @@ struct ThemeCards: View {
         let picked = model.value(key).string
         let all = cards(appearance: appearance)
         let shown = showAll || !filter.isEmpty ? all : Array(all.prefix(Self.collapsed))
+        let heading = appearance == .dark
+            ? Words.text("settings-appearance-in-dark-mode", fallback: "In Dark Mode") : Words.text("settings-appearance-in-light-mode", fallback: "In Light Mode")
         return VStack(alignment: .leading, spacing: Space._2) {
             HStack {
-                Text(
-                    appearance == .dark
-                        ? Words.text("settings-appearance-in-dark-mode", fallback: "In Dark Mode") : Words.text("settings-appearance-in-light-mode", fallback: "In Light Mode")
-                ).textRole(.label).foregroundStyle(tokens.textMuted)
+                Text(heading).textRole(.label).foregroundStyle(tokens.textMuted)
                 Spacer()
                 if all.count > Self.collapsed, filter.isEmpty {
                     LinkButton(
@@ -118,7 +117,9 @@ struct ThemeCards: View {
             }
             LazyVGrid(columns: columns, spacing: Space._3) {
                 ForEach(shown) { card in
-                    ThemeCard(theme: card.theme, label: label(card.theme), isSelected: card.isPicked(picked), newer: card.newer) { model.set(key, .string(card.value)) }
+                    ThemeCard(theme: card.theme, label: label(card.theme), isSelected: card.isPicked(picked), newer: card.newer, focused: focusedCard == card.id) {
+                        model.set(key, .string(card.value))
+                    }
                         .focused($focusedCard, equals: card.id)
                         .recordFrame("theme-card.\(card.value)")
                         .contextMenu {
@@ -134,6 +135,25 @@ struct ThemeCards: View {
                 }
             }
             .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow, .home, .end]) { press in walk(press.key, in: shown) }
+            // A radio group named by the shelf, a radio button a card (`choice_card`); the cards' menus as its actions.
+            .radioGroupSpeech(heading, titles: shown.map { label($0.theme) }, selected: shown.firstIndex { $0.isPicked(picked) }) { index in
+                model.set(key, .string(shown[index].value))
+            }
+            .accessibilityActions { ForEach(shown) { card in menuActions(card, picked: picked) } }
+        }
+    }
+
+    /// A card's menu (Hide theme, Move to Trash…) as actions VoiceOver names with the theme, since the radio group stands in
+    /// for the cards and their menus.
+    @ViewBuilder private func menuActions(_ card: Card, picked: String?) -> some View {
+        let name = label(card.theme)
+        if !card.isPicked(picked) {
+            Button(Words.text("settings-appearance-hide-named", ["name": .text(name)], fallback: "Hide \(name)")) { setHidden(card.hideValue, true) }
+        }
+        if card.path != nil {
+            Button(Words.text("settings-appearance-trash-named", ["name": .text(name)], fallback: "Move \(name) to Trash") + "…") {
+                ThemeFiles.trash(card.value, model: model)
+            }
         }
     }
 

@@ -47,6 +47,8 @@ extension AuxText {
         tr("onboarding-look-intro", ["keys": .text(settingsKeys)], fallback: "Everything changes live, and all of it is in Settings (\(settingsKeys)) later.")
     }
     public static var primaryColour: String { tr("onboarding-primary", "Primary colour") }
+    /// The Look step's theme cards, as VoiceOver names their group (Settings' word).
+    public static var theme: String { tr("settings-appearance-theme", "Theme") }
     public static var terminalFont: String { tr("onboarding-font", "Terminal font") }
     /// The link under the theme cards (GPUI writes it as a literal in `look_step.rs`: it has no catalog message).
     public static var importFromOthers: String { tr("onboarding-import-from", "Import from Ghostty, iTerm2 or Alacritty\u{2026}") }

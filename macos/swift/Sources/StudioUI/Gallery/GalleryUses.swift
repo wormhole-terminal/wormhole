@@ -35,8 +35,8 @@ enum GalleryUses {
             "metrics.radius", "metrics.radius_chip", "primary", "sidebar.background", "text.faint", "text.muted",
         ]),
         TokenUse(id: "folder.color", label: "folder colour", area: .sidebar, tokens: [
-            "band.hover", "border", "border.strong", "metrics.border_width", "metrics.radius", "metrics.radius_sm",
-            "text.muted", "text.primary",
+            "band.hover", "border", "border.focus", "border.strong", "metrics.border_width",
+            "metrics.focus_ring_width", "metrics.radius", "metrics.radius_sm", "text.muted", "text.primary",
         ]),
         TokenUse(id: "branch.chip", label: "branch chip", area: .sidebar, tokens: [
             "banner.warning.background", "git.branch", "git.branch.background", "metrics.radius_chip",

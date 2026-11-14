@@ -1,5 +1,6 @@
 // One theme in miniature: a narrow sidebar band, five lines in the theme's ANSI colours on its terminal
-// background, and a band with its name. The current pick has the theme's own primary ring and a check.
+// background, and a band with its name. The current pick has the theme's own primary ring and a check. The keyboard's
+// place is the shared ring (`focus_outline`), not the system's; VoiceOver hears the shelf's radio group (`ThemeCards`).
 
 import DesignSystem
 import SwiftUI
@@ -12,6 +13,8 @@ struct ThemeCard: View {
     let isSelected: Bool
     /// A theme file made with a newer Wormhole: how many values this version skipped; the band wears a warning mark.
     var newer: Int?
+    /// The keyboard is on this card (the shelf's focus).
+    var focused = false
     let action: () -> Void
     @Environment(\.tokens) private var tokens
     @State private var hovering = false
@@ -61,9 +64,10 @@ struct ThemeCard: View {
             .contentShape(shape)
         }
         .buttonStyle(.plain)
+        .focusEffectDisabled()
+        .keyboardFocusRing(focused, radius: tokens.metrics.radiusLg)
         .onHover { hovering = $0 }
         .motion(Motion.press, value: hovering)
         .accessibilityLabel(label ?? theme.name)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
