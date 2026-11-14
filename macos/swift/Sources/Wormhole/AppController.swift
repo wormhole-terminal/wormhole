@@ -4,6 +4,7 @@
 
 import AppKit
 import DesignSystem
+import AuxModel
 import AuxWindows
 import PanelUI
 import PlatformModel
@@ -75,8 +76,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     var endsAllOnQuit = false
     /// The quit question's answer for the session hosts: end them with the app, or leave them running (the default).
     var endsHostsOnQuit = false
-    /// Quit and End All, once it began: the hosts end off the main thread, then the quit goes on (`AppController+Quit`).
-    var hostsEnd: HostsEnd?
+    /// How far a quit has got, once it asks or ends the hosts: a second request is absorbed by it (`AppController+Quit`).
+    var quitStage: QuitStage?
     let activityClock = ActivityClock()
     /// The chip that follows a terminal dragged out of its window, and the growth the next window opens with (`TearOff/`).
     let tearChip = TearOffChip()
@@ -191,7 +192,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         sessions.forEach { $0.notes?.flush() }
         hooks?.stop()
         // Before the views go: a terminal let go of is not ended by its view closing. Quit and End All did this already.
-        if hostsEnd == nil { sessions.forEach { $0.hub.store.finishQuit(endHosts: endsHostsOnQuit) } }
+        if quitStage != .endingHosts, quitStage != .hostsEnded { sessions.forEach { $0.hub.store.finishQuit(endHosts: endsHostsOnQuit) } }
         sessions.forEach { $0.hub.terminals.shutdown() }
     }
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { ambient?.dockMenu() }

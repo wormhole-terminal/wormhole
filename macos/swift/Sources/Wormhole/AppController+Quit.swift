@@ -12,25 +12,35 @@ import WorkspaceModel
     import SettingsBridge
 #endif
 
-/// Quit and End All's two steps: the hosts ending off the main thread, then the quit going on.
-enum HostsEnd { case underWay, over }
-
 extension AppController {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        switch hostsEnd {
-        case .over?: return .terminateNow
+        switch QuitStage.reply(during: quitStage, asks: confirmsQuit) {
+        case .now: return .terminateNow
         // A second ⌘Q (or the last window closed, or SIGTERM) while the hosts end: the answer to the first goes for it.
-        case .underWay?: return .terminateLater
-        case nil: break
+        case .later: return .terminateLater
+        // A second ⌘Q or the Dock's Quit while the question is up: that question is the one answered. Dropped, not made
+        // to wait: a second wait would need a second answer, and a second question sheet would queue behind the first.
+        case .absorbed: return .terminateCancel
+        case .decide: quitStage = nil
         }
         let endAll = endsAllOnQuit
         endsAllOnQuit = false
         guard confirmsQuit else { return goesNow() ? .terminateNow : .terminateLater }
         // The answer decides what happens to the session hosts when the app goes.
-        return QuitFlow.shouldTerminate(facts: quitFacts, endAll: endAll, window: window) { [weak self] endHosts in
-            self?.endsHostsOnQuit = endHosts
-            return self?.goesNow() ?? true
+        let reply = QuitFlow.shouldTerminate(
+            facts: quitFacts, endAll: endAll, window: window,
+            cancelled: { [weak self] in if self?.quitStage == .asking { self?.quitStage = nil } }
+        ) { [weak self] endHosts in
+            guard let self else { return true }
+            // A quit that went on without this answer (`kill`, the control folder) ends the hosts already, and answers AppKit.
+            if quitStage == .endingHosts || quitStage == .hostsEnded { return false }
+            quitStage = nil
+            endsHostsOnQuit = endHosts
+            return goesNow()
         }
+        // Later, and no host is ending: the question is up, and answers for every request until it is answered.
+        if reply == .terminateLater, quitStage == nil { quitStage = .asking }
+        return reply
     }
 
     /// Whether the app quits now. Quit and End All first ends every host, off the main thread so no window freezes while a
@@ -38,14 +48,14 @@ extension AppController {
     /// saved first; from then on nothing they start runs on.
     private func goesNow() -> Bool {
         guard endsHostsOnQuit else { return true }
-        hostsEnd = .underWay
+        quitStage = .endingHosts
         terminating = true
         saveAllWindows()
         let ending = sessions.compactMap { $0.hub.store.quitEndingHosts() }
         Task {
             // One window after another: the first ends every host of the data folder, the others the ones still starting.
             await Task.detached(priority: .userInitiated) { ending.forEach { $0() } }.value
-            hostsEnd = .over
+            quitStage = .hostsEnded
             NSApp.reply(toApplicationShouldTerminate: true)
             // Only reached when AppKit was not waiting for that answer: the quit goes on all the same.
             NSApp.terminate(nil)
@@ -54,6 +64,8 @@ extension AppController {
     }
 
     func quit(endAll: Bool) {
+        // A quit under way took its own answer about the hosts: this request changes nothing of it.
+        guard QuitStage.reply(during: quitStage, asks: confirmsQuit) == .decide else { return }
         endsAllOnQuit = endAll
         terminateSoon()
     }
@@ -62,9 +74,17 @@ extension AppController {
     /// the hosts ending), AppKit waits for it in a run loop inside `terminate`, and a run loop run from within a job of the
     /// main queue (a dispatch source's handler as the control folder's and SIGTERM's, a Task of the main actor) serves no
     /// other: the Task that asks or ends the hosts would never start and the app would wait for ever. A block of the run
-    /// loop itself has no such limit.
+    /// loop itself has no such limit. A quit that already asks or ends the hosts absorbs the request (`QuitStage`): AppKit
+    /// is not asked again.
     func terminateSoon() {
-        RunLoop.main.perform(inModes: [.common]) { MainActor.assumeIsolated { NSApp.terminate(nil) } }
+        RunLoop.main.perform(inModes: [.common]) {
+            MainActor.assumeIsolated {
+                switch QuitStage.reply(during: self.quitStage, asks: self.confirmsQuit) {
+                case .absorbed, .later: return
+                case .decide, .now: NSApp.terminate(nil)
+                }
+            }
+        }
     }
 
     /// Quits without the question: the control folder's `quit` and the idle check run unattended. `endAll`: the hosts end

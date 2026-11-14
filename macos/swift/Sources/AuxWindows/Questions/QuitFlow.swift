@@ -10,9 +10,11 @@ public enum QuitFlow {
     /// Returns `.terminateNow` when no question is needed, else `.terminateLater` and asks on `window`.
     /// `decide(endHosts)` runs when the person confirms, before the app goes; `endAll` is "Quit and End All Terminals".
     /// It returns whether the app goes now: false when the caller first ends the session hosts off the main thread and
-    /// then answers AppKit itself (`reply(toApplicationShouldTerminate: true)`).
+    /// then answers AppKit itself (`reply(toApplicationShouldTerminate: true)`). `cancelled` runs when the person says no,
+    /// before AppKit hears it: the quit is over, and the next request is a first one again.
     public static func shouldTerminate(
-        facts: QuitFacts, endAll: Bool = false, window: NSWindow?, decide: @escaping (_ endHosts: Bool) -> Bool
+        facts: QuitFacts, endAll: Bool = false, window: NSWindow?, cancelled: @escaping () -> Void = {},
+        decide: @escaping (_ endHosts: Bool) -> Bool
     ) -> NSApplication.TerminateReply {
         guard let question = facts.question(endAll: endAll) else {
             return decide(endAll) ? .terminateNow : .terminateLater
@@ -20,7 +22,10 @@ public enum QuitFlow {
         let sheet = QuestionSheet(question)
         Task {
             let answer = await sheet.ask(in: window)
-            guard case .confirm = answer else { return NSApp.reply(toApplicationShouldTerminate: false) }
+            guard case .confirm = answer else {
+                cancelled()
+                return NSApp.reply(toApplicationShouldTerminate: false)
+            }
             if decide(QuitFacts.endsHosts(endAll: endAll, answer: answer)) { NSApp.reply(toApplicationShouldTerminate: true) }
         }
         return .terminateLater
