@@ -85,18 +85,7 @@ extension AppController {
             // (`SidebarView.dragEnded`): the window is asked first whether it tears it off, else the pane area under the
             // point lands it (`PaneArea.land`). The point is the window's (`X Y`), or `right-of <terminal>`: 20 points in from
             // the right edge of that terminal's view, half way down, in its right drop band.
-            let words = argument.split(separator: " ").map(String.init)
-            guard numbers.count >= 2, let source = session(holding: numbers[0]), let point = letGoPoint(words, in: source) else {
-                reply("error: sidebar-let-go <id> <x> <y> | <id> right-of <terminal>")
-                return true
-            }
-            let drag = source.hub.terminalDrag
-            if drag.tearOff?(numbers[0], point) == true {
-                reply("sidebar-let-go \(numbers[0]) torn-off")
-            } else {
-                drag.release(numbers[0], at: point)
-                reply("sidebar-let-go \(numbers[0]) released at \(Int(point.x)),\(Int(point.y))")
-            }
+            reply(sidebarLetGo(argument.split(separator: " ").map(String.init)))
             return true
         case "tear-off-at":
             guard numbers.count == 3, let source = session(holding: numbers[0]), let height = NSScreen.screens.first?.frame.height else {
@@ -141,6 +130,17 @@ extension AppController {
             }.joined(separator: ", ")
             return "window=\(session.id) profile=\(session.windows.profile) visible=\(session.window?.isVisible ?? false) front=\(session === front) terminals=[\(ids)] selected=\(session.hub.state.selected.map(String.init) ?? "none") frame=\(frame) hosting=[\(hosts)]"
         }.joined(separator: "\n")
+    }
+
+    /// `sidebar-let-go`: torn off when the window takes it, else released over the panes.
+    private func sidebarLetGo(_ words: [String]) -> String {
+        guard let id = words.first.flatMap({ Int($0) }), let source = session(holding: id), let point = letGoPoint(words, in: source) else {
+            return "error: sidebar-let-go <id> <x> <y> | <id> right-of <terminal>"
+        }
+        let drag = source.hub.terminalDrag
+        if drag.tearOff?(id, point) == true { return "sidebar-let-go \(id) torn-off" }
+        drag.release(id, at: point)
+        return "sidebar-let-go \(id) released at \(Int(point.x)),\(Int(point.y))"
     }
 
     /// `<id> <x> <y>` as the window's point, or `<id> right-of <terminal>` worked out from that terminal's view.

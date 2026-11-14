@@ -56,18 +56,7 @@ extension AppController {
             hub.sidebarLink.ask(.popover(id))
             reply("group-popover \(id)")
         case "sidebar-tip": reply(sidebarTip(argument))
-        case "profile-chip":
-            let choices = hub.actions.profiles()
-            let words = argument.split(separator: " ").map(String.init)
-            if words.first == "switch" {
-                guard let n = words.dropFirst().first.flatMap({ Int($0) }), choices.indices.contains(n - 1) else { reply("error: profile-chip switch <n> of \(choices.count)"); return true }
-                hub.actions.profile.switchTo(choices[n - 1].id)
-                reply("profile-chip switch \(choices[n - 1].id)")
-                return true
-            }
-            reply((["profile-chip choices=\(choices.count)"] + choices.map {
-                Readout.line("choice", [$0.id], quoted: [$0.name], flags: [Readout.flag("current", $0.current), Readout.flag("here", $0.here)])
-            }).joined(separator: "\n"))
+        case "profile-chip": reply(profileChip(argument))
         case "plus-menu":
             let shells = hub.actions.shells()
             let words = argument.split(separator: " ", maxSplits: 1).map(String.init)
@@ -111,6 +100,20 @@ extension AppController {
     }
 
     /// The list's note after a first run without agents: the stage `SideColumns` draws and its buttons' own actions.
+    /// `profile-chip [switch <n>]`: what the chip is given, or its menu's n-th profile chosen.
+    private func profileChip(_ argument: String) -> String {
+        let choices = hub.actions.profiles()
+        let words = argument.split(separator: " ").map(String.init)
+        guard words.first == "switch" else {
+            return (["profile-chip choices=\(choices.count)"] + choices.map {
+                Readout.line("choice", [$0.id], quoted: [$0.name], flags: [Readout.flag("current", $0.current), Readout.flag("here", $0.here)])
+            }).joined(separator: "\n")
+        }
+        guard let n = words.dropFirst().first.flatMap({ Int($0) }), choices.indices.contains(n - 1) else { return "error: profile-chip switch <n> of \(choices.count)" }
+        hub.actions.profile.switchTo(choices[n - 1].id)
+        return "profile-chip switch \(choices[n - 1].id)"
+    }
+
     private func sidebarTip(_ argument: String) -> String {
         switch argument {
         case "": return "sidebar-tip \(hub.agentsTipStage)"
