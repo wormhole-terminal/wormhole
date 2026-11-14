@@ -1,6 +1,7 @@
 // What the Project folders page does: which project it shows (none: the defaults for all of them) and the records of
 // each, read again after anything that changes them.
 
+import Foundation
 import Observation
 
 @MainActor @Observable
@@ -64,6 +65,12 @@ public final class ProjectsModel {
         guard let selected else { return }
         await backend.trust(selected)
         await refresh()
+    }
+
+    /// The shown project's own folder, for "Show .wormhole in Finder".
+    public func projectFolder() async -> URL? {
+        guard let page else { return nil }
+        return await backend.projectFolder(page.root, dirName: page.dirName)
     }
 
     public func openTerminal() {

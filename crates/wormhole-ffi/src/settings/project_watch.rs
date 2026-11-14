@@ -32,7 +32,10 @@ pub struct ProjectWatch {
 /// cannot be watched is followed by nothing: the page then reads when its window comes forward.
 #[uniffi::export]
 pub fn settings_watch_project(root: String, listener: Arc<dyn ProjectListener>) -> Arc<ProjectWatch> {
-    let Ok(base) = PathBuf::from(root).canonicalize() else { return start(None, listener, |_| false) };
+    // The page names the project by a key of `files_panel::names` where its folder's name is not text.
+    let Ok(base) = crate::files_panel::names::folder(&root).canonicalize() else {
+        return start(None, listener, |_| false);
+    };
     let folders = [base.join(DIR_NAME), base.join(LEGACY_DIR_NAME)];
     start(Some(base), listener, move |path| folders.iter().any(|folder| path.starts_with(folder)))
 }

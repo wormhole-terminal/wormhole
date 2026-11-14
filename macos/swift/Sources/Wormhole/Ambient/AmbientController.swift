@@ -89,7 +89,7 @@ extension AppController {
     }
 
     /// The projects worked in lately, for the status item's list.
-    var ambientRecent: [StatusSnapshot.Recent] { recents.roots(of: windowsHost.profile).map { .init(name: ($0 as NSString).lastPathComponent, path: $0) } }
+    var ambientRecent: [StatusSnapshot.Recent] { recents.roots(of: windowsHost.profile).map { .init(name: RecentProjects.name($0), path: $0) } }
 
     /// What the quick panel's Do section offers: a new terminal where the one in front is, Open folder…, the project's actions.
     var ambientItems: [QuickPanelDo] {

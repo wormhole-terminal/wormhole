@@ -4,6 +4,7 @@
 //! (`ProjectPrefs`, `TrustStore`, `FeatureStanding`); the sentences are the GPUI page's
 //! (`settings_window/sections/projects.rs`), written once here.
 
+use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -252,6 +253,13 @@ impl ProjectService {
         })
     }
 
+    /// The project's own folder (`.wormhole`, or an older project's `.andromeda`) as the bytes of its path, for "Show
+    /// .wormhole in Finder": the page holds the root as a key of `names` where its name is not text, which Swift turns
+    /// into no file URL of its own. `None` when the folder has no project anymore.
+    pub fn project_dir_bytes(&self, root: String) -> Option<Vec<u8>> {
+        open(&root).map(|folder| folder.dir.as_os_str().as_bytes().to_vec())
+    }
+
     /// "<folder> has no .wormhole folder anymore", for a project the page was showing that lost it.
     pub fn missing_folder_note(&self, root: String) -> String {
         settings_projects_missing_folder(&root)
@@ -303,5 +311,31 @@ mod tests {
 
         std::fs::remove_dir_all(project.path().join(".wormhole")).expect("gone");
         assert!(service.project_page(root).is_none());
+    }
+
+    /// "Show .wormhole in Finder" for a project whose folder's name is not text: the page's root is a key, and the folder
+    /// comes back as the very bytes of its path; a key that does not read back names no folder.
+    #[test]
+    fn the_project_folder_of_a_root_whose_name_is_not_text_comes_back_as_its_bytes() {
+        use std::ffi::OsString;
+        use std::os::unix::ffi::{OsStrExt, OsStringExt};
+
+        let data = tempfile::tempdir().expect("data");
+        let scratch = tempfile::tempdir().expect("scratch");
+        let base = std::fs::canonicalize(scratch.path()).expect("canonical");
+        let mut name = base.as_os_str().as_bytes().to_vec();
+        name.extend_from_slice(b"/caf\xe9");
+        let root = std::path::PathBuf::from(OsString::from_vec(name));
+        let service = ProjectService::in_dir(data.path(), Arc::new(Never));
+        assert_eq!(service.project_dir_bytes("/tmp/caf\0zz".into()), None, "a key cut short names no folder");
+        // A volume that refuses such a name (APFS does) has nothing more to show; exFAT, FAT and SMB allow it.
+        if std::fs::create_dir_all(root.join(".wormhole")).is_err() {
+            return;
+        }
+        let key = crate::files_panel::names::path_key(&root);
+        let page = service.project_page(key.clone()).expect("the page reads the key");
+        assert_eq!(page.root, key);
+        let bytes = service.project_dir_bytes(key).expect("its folder");
+        assert_eq!(bytes, root.join(".wormhole").as_os_str().as_bytes());
     }
 }

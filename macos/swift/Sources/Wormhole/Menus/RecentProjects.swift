@@ -3,6 +3,7 @@
 // a terminal in front is in it. A window reads its own profile's list, whichever profile Wormhole is in.
 
 import Foundation
+import PanelModel
 import PlatformModel
 import WindowUI
 
@@ -43,8 +44,11 @@ final class RecentProjects {
         return true
     }
 
-    /// What Open Recent calls them: the folder's name.
-    func names(of profile: String) -> [String] { roots(of: profile).map { ($0 as NSString).lastPathComponent } }
+    /// What Open Recent calls them: the folder's name as it may be drawn (a root is a key where its name is not text).
+    func names(of profile: String) -> [String] { roots(of: profile).map(Self.name) }
+
+    /// A root's folder name as it may be drawn: the bytes that are not text read U+FFFD (`DiskName`).
+    static func name(_ root: String) -> String { DiskName.shown((root as NSString).lastPathComponent) }
 }
 
 extension AppController {

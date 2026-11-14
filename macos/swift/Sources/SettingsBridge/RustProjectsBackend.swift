@@ -48,6 +48,16 @@ struct RustProjectsBackend: ProjectsBackend {
         service.watchTrust(listener: ProjectChanges(changed))
     }
 
+    /// The folder as the core has its bytes (`project_dir_bytes`): a root whose name is not text comes as a key, which only
+    /// the core reads back.
+    func projectFolder(_ root: String, dirName: String) async -> URL? {
+        guard let bytes = await run({ $0.projectDirBytes(root: root) }) else { return nil }
+        let path = bytes.map { CChar(bitPattern: $0) } + [0]
+        return path.withUnsafeBufferPointer { buffer in
+            buffer.baseAddress.map { URL(fileURLWithFileSystemRepresentation: $0, isDirectory: true, relativeTo: nil) }
+        }
+    }
+
     private func run<T: Sendable>(_ work: @escaping @Sendable (ProjectService) -> T) async -> T {
         let service = service
         return await Task.detached { work(service) }.value

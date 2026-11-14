@@ -45,7 +45,8 @@
             // The Project folders page shares the Project tab's service, so trust given here is what the tab shows.
             // Asked while Settings is made, which can be before the first window exists.
             platform.projects = { [weak app] in (app?.sessions.first?.panelBackends.project as? RustProjectBackend)?.service }
-            platform.projectFolders = { [weak app] in app?.hub.state.all.compactMap(\.folder) ?? [] }
+            // The folders the panel reads (a key where a name is not text), not the drawn ones, which carry U+FFFD for it.
+            platform.projectFolders = { [weak app] in app?.hub.state.all.compactMap(\.readPath) ?? [] }
             platform.openTerminal = { [weak app] in app?.hub.send(.newTerminalIn($0)) }
             platform.profileCreated = { [weak app] in app?.switchProfile(to: $0) }
             platform.willDeleteProfile = { [weak app] in app?.end(profile: $0) }

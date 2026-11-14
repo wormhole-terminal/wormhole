@@ -6,6 +6,7 @@
     import FilesBridge
     import Foundation
     import StudioModel
+    import WindowUI
     import WormholeBindings
     import WorkspaceModel
 
@@ -13,12 +14,9 @@
     struct StudioProjectSource: StudioProject {
         let app: AppController
 
-        /// The folder of the terminal in front, as the core's rows show it (`~` expanded).
-        private var folder: String? {
-            let state = app.hub.state
-            let row = state.terminals.first { $0.id == state.selected } ?? state.all.first { $0.id == state.selected }
-            return row?.folder.map { HomeFolder.expanding($0) }
-        }
+        /// The folder of the terminal in front as the panel reads it: a key where a name is not text, never the drawn
+        /// folder, whose U+FFFD could name a planted sibling (`caf\u{FFFD}/.wormhole` beside `caf\xE9/`).
+        private var folder: String? { app.hub.state.selectedPath }
 
         private var service: ProjectService? { (app.panelBackends.project as? RustProjectBackend)?.service }
 

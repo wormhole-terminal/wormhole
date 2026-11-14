@@ -43,7 +43,8 @@ struct ProjectPageView: View {
             HStack(spacing: Space._2) {
                 ActionButton(title: ProjectsText.openTerminal, symbol: Icon.openTerminal.rawValue, frameId: "project.open-terminal") { projects.openTerminal() }
                 LinkButton(title: ProjectsText.showInFinder(page.dirName)) {
-                    ExternalOpen.open(URL(fileURLWithPath: page.root).appendingPathComponent(page.dirName))
+                    // The core makes the URL: the root is a key where the folder's name is not text.
+                    Task { if let folder = await projects.projectFolder() { ExternalOpen.open(folder) } }
                 }
             }
         }

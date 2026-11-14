@@ -41,7 +41,7 @@ pub trait WorkspaceListener: Send + Sync {
     fn wake(&self);
 }
 
-/// What the model tells Swift (core's `Event`, with the folder as text).
+/// What the model tells Swift (core's `Event`, with the folder as a key of `files_panel::names`).
 #[derive(Debug, Clone, PartialEq, uniffi::Enum)]
 pub enum WorkspaceEvent {
     /// A terminal was made: start a program for it (`Terminal.start`), then `register_terminal`.
@@ -87,9 +87,12 @@ pub enum WorkspaceEvent {
 
 impl From<Event> for WorkspaceEvent {
     fn from(event: Event) -> Self {
-        let text = |path: PathBuf| path.to_string_lossy().into_owned();
         match event {
-            Event::Opened { id, cwd } => Self::Opened { id, cwd: cwd.map(text) },
+            // A key of `files_panel::names` where a name is not text: the terminal starts in the very folder
+            // (`launch::options` reads it back), never one the text with U+FFFD happens to name.
+            Event::Opened { id, cwd } => {
+                Self::Opened { id, cwd: cwd.map(|cwd| crate::files_panel::names::path_key(&cwd)) }
+            }
             Event::Closed { id } => Self::Closed { id },
             Event::Adopted { id } => Self::Adopted { id },
             Event::Selected { id } => Self::Selected { id },
