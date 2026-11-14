@@ -10,7 +10,9 @@ use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::catalog::{ThemeEntry, catalog_in};
 use wormhole_core::theme::registry::ThemeSource as _;
 use wormhole_core::theme::registry::{ThemeId, UserThemes};
-use wormhole_core::theme::saved_versions::{SavedVersion, keep_version_now, list_versions, read_version};
+use wormhole_core::theme::saved_versions::{
+    SavedVersion, keep_version_now, list_versions, read_version, save_id, version_id,
+};
 use wormhole_core::theme::tokens::{
     BaseLayer, MAX_THEME_BYTES, ThemeFile, ThemeTokens, copy, read_theme_file, slug,
 };
@@ -214,17 +216,7 @@ pub(in crate::studio) fn selects_in(dir: &Path, setting: &str, path: &Path) -> b
 }
 
 fn new_id_in_profile(name: &str, itself: Option<&Path>) -> String {
-    let taken: Vec<String> = UserThemes::read(&dir())
-        .themes
-        .into_iter()
-        .filter(|t| Some(t.path.as_path()) != itself)
-        .map(|t| t.slug)
-        .collect();
-    let wanted = slug::derive_id(name);
-    std::iter::once(wanted.clone())
-        .chain((2..).map(|n| format!("{wanted}_{n}")))
-        .find(|id| !slug::is_reserved(id) && !taken.contains(id))
-        .unwrap_or(wanted)
+    save_id(&UserThemes::read(&dir()), name, itself)
 }
 
 fn convert_in_profile(file: &ThemeFile, id: &str) -> Result<ThemeFile, String> {
@@ -265,27 +257,16 @@ fn keep_old(themes: &Path, path: &Path, file: &ThemeFile) -> bool {
     let Ok(old) = files::read_to_string_capped(path, MAX_THEME_BYTES as u64, LinkPolicy::Follow) else {
         return false;
     };
-    let id = version_id(themes, path, file);
+    let id = version_id(&UserThemes::read(themes), path, file);
     if let Err(err) = keep_version_now(themes, &id, &old) {
         tracing::warn!("keeping the earlier {}: {err}", path.display());
     }
     has_comments(&old)
 }
 
-/// The id the earlier saves of the theme at `path` are kept under: its slug.
-fn version_id(themes: &Path, path: &Path, file: &ThemeFile) -> String {
-    UserThemes::read(themes)
-        .themes
-        .iter()
-        .find(|t| t.path == path && t.family.is_none())
-        .map(|t| t.slug.clone())
-        .or_else(|| file.id.clone())
-        .unwrap_or_else(|| slug::derive_id(file.name.as_deref().unwrap_or("theme")))
-}
-
 fn versions_in_profile(path: &Path, file: &ThemeFile) -> Vec<SavedVersion> {
     let dir = dir();
-    list_versions(&dir, &version_id(&dir, path, file))
+    list_versions(&dir, &version_id(&UserThemes::read(&dir), path, file))
 }
 
 fn read_version_of(version: &SavedVersion) -> Result<ThemeFile, String> {

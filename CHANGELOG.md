@@ -100,6 +100,9 @@ and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html) a
 
 ### Fixed
 
+- Renaming a theme of your own that had no `id` in its file and saving it in the Theme Studio no longer hides
+  its earlier saves from Versions (they were still on disk, under the old name). A saved theme now keeps the id
+  it had, and the save writes it into the file.
 - The SQLite that Wormhole bundles for its database is now 3.54 (`libsqlite3-sys` 0.39), which closes
   CVE-2026-119375: older versions could hand back stale memory when a database was opened beside a crafted
   write-ahead log. Wormhole only opens its own database in its data folder, so this needed a file placed

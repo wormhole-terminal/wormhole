@@ -11,6 +11,7 @@ use std::time::SystemTime;
 use wormhole_core::config::resolve_theme_file_in;
 use wormhole_core::theme::catalog::{ThemeEntry, cards, catalog_in};
 use wormhole_core::theme::registry::{ThemeId, ThemeSource as _, UserThemes};
+use wormhole_core::theme::saved_versions::save_id;
 use wormhole_core::theme::tokens::appearance::{self, as_variant_base, token_scope};
 use wormhole_core::theme::tokens::copy::{self, diff_base};
 use wormhole_core::theme::tokens::{
@@ -127,22 +128,12 @@ pub fn studio_copy_theme(themes_dir: String, from: String, name: String) -> Opti
     Some(write_v1(&file))
 }
 
-/// The id a theme called `name` gets: nobody else's and no built-in's. The file at `itself` (when it exists) is
-/// the theme itself, whose own id does not count against it.
+/// The id a theme called `name` is saved with (core's `saved_versions::save_id`): the file at `itself`, when it is
+/// one of the folder's themes, keeps the id it has whatever it is called now (a rename never leaves its earlier
+/// saves under an id it no longer has); otherwise one nobody else and no built-in has.
 #[uniffi::export]
 pub fn studio_new_id(themes_dir: String, name: String, itself: Option<String>) -> String {
-    let itself = itself.as_deref().map(Path::new);
-    let taken: Vec<String> = UserThemes::read(Path::new(&themes_dir))
-        .themes
-        .into_iter()
-        .filter(|t| Some(t.path.as_path()) != itself)
-        .map(|t| t.slug)
-        .collect();
-    let wanted = slug::derive_id(&name);
-    std::iter::once(wanted.clone())
-        .chain((2..).map(|n| format!("{wanted}_{n}")))
-        .find(|id| !slug::is_reserved(id) && !taken.contains(id))
-        .unwrap_or(wanted)
+    save_id(&UserThemes::read(Path::new(&themes_dir)), &name, itself.as_deref().map(Path::new))
 }
 
 /// A theme of the older format as one in the new, with `id`: its chain copied into the `base`, its own values on

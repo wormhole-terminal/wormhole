@@ -12,7 +12,8 @@ use std::path::{Path, PathBuf};
 use chrono::DateTime;
 
 use crate::storage::files::{self, LinkPolicy, listing};
-use crate::theme::tokens::{self, MAX_THEME_BYTES};
+use crate::theme::registry::UserThemes;
+use crate::theme::tokens::{self, MAX_THEME_BYTES, ThemeFile, slug};
 
 /// The folder in the themes folder that holds the saved versions.
 pub const VERSIONS_DIR: &str = ".versions";
@@ -31,6 +32,43 @@ pub struct SavedVersion {
     pub saved: i64,
     /// The original version 0 file: never thinned out.
     pub pinned: bool,
+}
+
+/// The id of the theme file at `path` among `themes`: the one its slugs were given (its stored
+/// id, else one made from its name, changed on a clash); for a file that ships several versions,
+/// the part before each version's `.`.
+pub fn file_id(themes: &UserThemes, path: &Path) -> Option<String> {
+    let theme = themes.themes.iter().find(|t| t.path == path)?;
+    Some(match theme.family {
+        Some(_) => theme.slug.split('.').next().unwrap_or(theme.slug.as_str()).to_string(),
+        None => theme.slug.clone(),
+    })
+}
+
+/// The id the earlier saves of the theme file at `path` are kept under: the file's id among
+/// `themes`, else `file`'s own, else one made from its name.
+pub fn version_id(themes: &UserThemes, path: &Path, file: &ThemeFile) -> String {
+    file_id(themes, path)
+        .or_else(|| file.id.clone())
+        .unwrap_or_else(|| slug::derive_id(file.name.as_deref().unwrap_or("theme")))
+}
+
+/// The id a theme called `name` is saved with. The file at `itself`, when it is one of `themes`,
+/// is the theme itself: it keeps the id it has, whatever it is called now, so a theme that had
+/// none stored (it answered to one made from its name) is not moved to a new id by a rename, and
+/// its earlier saves, kept under that id, stay listed. Otherwise one made from `name` that no
+/// other theme and no built-in has.
+pub fn save_id(themes: &UserThemes, name: &str, itself: Option<&Path>) -> String {
+    if let Some(own) = itself.and_then(|path| file_id(themes, path)) {
+        return own;
+    }
+    let taken: Vec<&str> =
+        themes.themes.iter().filter(|t| Some(t.path.as_path()) != itself).map(|t| t.slug.as_str()).collect();
+    let wanted = slug::derive_id(name);
+    std::iter::once(wanted.clone())
+        .chain((2..).map(|n| format!("{wanted}_{n}")))
+        .find(|id| !slug::is_reserved(id) && !taken.contains(&id.as_str()))
+        .unwrap_or(wanted)
 }
 
 /// Which of `saves` (a time, and whether it is pinned) to keep at time `now`, in the same
@@ -241,6 +279,33 @@ mod tests {
         thin(t, "a", NOW);
         assert!(old.exists(), "nothing outside the themes folder is touched");
         assert_eq!(std::fs::read_dir(elsewhere.path()).unwrap().count(), 1);
+    }
+
+    /// A theme with no id stored, renamed and saved (converted by that save, as both Studios do
+    /// with an older file): it keeps the id it answered to, so its pinned original stays listed.
+    #[test]
+    fn a_renamed_theme_without_an_id_keeps_its_earlier_saves() {
+        let dir = tempfile::tempdir().unwrap();
+        let t = dir.path();
+        let path = t.join("Mine.json");
+        let old = r#"{"name": "Mine", "extends": "Nord"}"#;
+        files::write_atomic(&path, old.as_bytes(), LinkPolicy::Within(t)).unwrap();
+        // The save: the file it replaces is kept, then the renamed theme is written with its id.
+        let themes = UserThemes::read(t);
+        let before = tokens::read_theme_file(old).unwrap();
+        assert_eq!(version_id(&themes, &path, &before), "mine");
+        keep_version(t, &version_id(&themes, &path, &before), old, NOW).unwrap();
+        let id = save_id(&themes, "Dusk", Some(&path));
+        assert_eq!(id, "mine", "the theme keeps the id it had, not one made from its new name");
+        let new = format!(r#"{{"version": 1, "id": "{id}", "name": "Dusk", "extends": "Nord"}}"#);
+        files::write_atomic(&path, new.as_bytes(), LinkPolicy::Within(t)).unwrap();
+        // Read again, as the versions sheet does after the save.
+        let after = tokens::read_theme_file(&new).unwrap();
+        let listed = list_versions(t, &version_id(&UserThemes::read(t), &path, &after));
+        assert_eq!(listed.len(), 1, "the original is still listed");
+        assert!(listed[0].pinned);
+        // A new theme still gets an id of its own, never another's.
+        assert_eq!(save_id(&UserThemes::read(t), "Mine", None), "mine_2");
     }
 
     #[test]

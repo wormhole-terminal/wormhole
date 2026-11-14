@@ -25,7 +25,10 @@ public struct FfiStudioFiles: StudioFiles {
 
     public func copyTheme(from: String, name: String) -> String? { studioCopyTheme(themesDir: directory, from: from, name: name) }
 
-    public func newID(name: String, itself: URL?) -> String { studioNewId(themesDir: directory, name: name, itself: itself?.path) }
+    /// A file of the person's keeps its own id, looked up in the folder that holds it (a draft open across a profile switch).
+    public func newID(name: String, itself: URL?) -> String {
+        studioNewId(themesDir: itself?.deletingLastPathComponent().path ?? directory, name: name, itself: itself?.path)
+    }
 
     public func convert(_ text: String, id: String) throws -> String { try studioConvert(themesDir: directory, text: text, id: id) }
 

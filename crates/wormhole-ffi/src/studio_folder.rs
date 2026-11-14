@@ -7,8 +7,10 @@ use std::path::{Path, PathBuf};
 
 use wormhole_core::storage::files::{self, LinkPolicy};
 use wormhole_core::theme::registry::{UserThemes, fingerprint};
-use wormhole_core::theme::saved_versions::{SavedVersion, keep_version_now, list_versions, read_version};
-use wormhole_core::theme::tokens::{MAX_THEME_BYTES, read_theme_file, slug};
+use wormhole_core::theme::saved_versions::{
+    self, SavedVersion, keep_version_now, list_versions, read_version,
+};
+use wormhole_core::theme::tokens::{MAX_THEME_BYTES, read_theme_file};
 
 use crate::error::FfiError;
 
@@ -48,18 +50,10 @@ pub fn studio_folder_read(path: String) -> Result<String, FfiError> {
         .map_err(|e| theme_error(e.to_string()))
 }
 
-/// The id the saves of the theme at `path` are kept under: its slug, else the file's own id, else one made from its name.
+/// The id the saves of the theme at `path` are kept under (core's `saved_versions::version_id`): its id among the
+/// folder's themes, else the file's own, else one made from its name.
 fn version_id(themes: &Path, path: &Path, text: &str) -> String {
-    let own = UserThemes::read(themes)
-        .themes
-        .iter()
-        .find(|t| t.path == path && t.family.is_none())
-        .map(|t| t.slug.clone());
-    own.or_else(|| {
-        let file = read_theme_file(text).ok()?;
-        Some(file.id.clone().unwrap_or_else(|| slug::derive_id(file.name.as_deref().unwrap_or("theme"))))
-    })
-    .unwrap_or_else(|| slug::derive_id("theme"))
+    saved_versions::version_id(&UserThemes::read(themes), path, &read_theme_file(text).unwrap_or_default())
 }
 
 /// Writes the theme atomically at `path`. The file it replaces is kept as a saved version first; a version that
@@ -121,5 +115,22 @@ mod tests {
             "{ \"name\": \"Dusk\" }"
         );
         assert_eq!(studio_folder_read(file).expect("reads"), "{ \"name\": \"Dusk\", \"primary\": \"#ff6600\" }");
+    }
+
+    /// A theme with no id, renamed and saved as the Swift Studio saves one (`newID` with the file itself): it keeps
+    /// the id it answered to, so the versions kept before the rename are still listed after it.
+    #[test]
+    fn a_renamed_theme_without_an_id_still_lists_its_versions() {
+        let dir = tempfile::tempdir().expect("scratch");
+        let themes = dir.path().to_string_lossy().into_owned();
+        let file = dir.path().join("Dusk.json").to_string_lossy().into_owned();
+        studio_folder_write(themes.clone(), file.clone(), "{ \"name\": \"Dusk\" }".into()).expect("first");
+        let id = crate::studio_files::studio_new_id(themes.clone(), "Dawn".into(), Some(file.clone()));
+        assert_eq!(id, "dusk", "the theme keeps its id, not one made from its new name");
+        let renamed = format!("{{ \"version\": 1, \"id\": \"{id}\", \"name\": \"Dawn\", \"extends\": \"Nord\" }}");
+        studio_folder_write(themes.clone(), file.clone(), renamed).expect("renamed");
+        let versions = studio_folder_versions(themes, file);
+        assert_eq!(versions.len(), 1, "the version kept before the rename is listed after it");
+        assert!(versions[0].pinned);
     }
 }
