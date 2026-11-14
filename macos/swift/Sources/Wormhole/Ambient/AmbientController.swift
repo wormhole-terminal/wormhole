@@ -65,7 +65,9 @@ final class AmbientController {
         dock.update(terminals: terminals, badgeMode: badgeMode)
     }
 
-    private func pushStatus() {
+    /// The status item's menu as things are now; also when a key it shows changed (`apply`, `bindJumpKey`), which no
+    /// terminal's change carries.
+    func pushStatus() {
         var snapshot = StatusSnapshot()
         snapshot.terminals = listed
         (snapshot.actions, snapshot.recent) = (listedActions, listedRecent)
