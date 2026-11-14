@@ -387,7 +387,10 @@ impl Workspace {
     /// Every terminal, those a folded group hides included, in the list's order: the palette, the
     /// status bar's counts and menus read it. Pull it when `revisions().terminals` moved.
     pub fn terminals(&self) -> TerminalsSnapshot {
-        self.shared.with_model(|model| model.terminals_snapshot())
+        self.shared.with_model(|model| {
+            let snapshot = model.terminals_snapshot();
+            crate::workspace_cwd::keyed(model, snapshot)
+        })
     }
 
     /// The selected terminal's title row: parts, chevrons, path steps to measure and the path menu.

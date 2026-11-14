@@ -13,6 +13,7 @@ use wormhole_core::storage::paths::ProfilePaths;
 use wormhole_core::storage::store::Store;
 
 use super::error::GitBackendError;
+use crate::files_panel::names;
 
 /// A worktree Wormhole made: of which repository (its main working tree), on which branch, where.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
@@ -150,7 +151,7 @@ impl WorktreeService {
         let profile = self.state().profile.clone();
         update(profile.as_deref(), |all| {
             let pruned = all.prune();
-            (all.find(Path::new(&folder)).map(GitWorktree::of), pruned)
+            (all.find(&names::folder(&folder)).map(GitWorktree::of), pruned)
         })
     }
 
@@ -164,7 +165,7 @@ impl WorktreeService {
 
     /// Whether the worktree at `folder` has changed or untracked files, which keep it from being removed.
     pub fn is_dirty(&self, folder: String) -> Result<bool, GitBackendError> {
-        worktree::is_dirty(Path::new(&folder)).map_err(|err| GitBackendError::of(&err))
+        worktree::is_dirty(&names::folder(&folder)).map_err(|err| GitBackendError::of(&err))
     }
 
     /// Remove the folder of a worktree Wormhole made (its branch stays). Refused for one it did not make,
@@ -172,7 +173,8 @@ impl WorktreeService {
     pub fn remove(&self, folder: String) -> Result<(), GitBackendError> {
         let profile = self.state().profile.clone();
         let recorded = update(profile.as_deref(), |all| {
-            (all.find(Path::new(&folder)).filter(|w| w.folder == Path::new(&folder)).cloned(), false)
+            let folder = names::folder(&folder);
+            (all.find(&folder).filter(|w| w.folder == folder).cloned(), false)
         });
         let Some(made) = recorded else {
             return Err(GitBackendError::failed(
@@ -274,7 +276,9 @@ pub(crate) fn base_of(base: Option<String>) -> Option<PathBuf> {
 /// The repository a worktree of `folder` is of: its main working tree, so a terminal in a worktree makes
 /// its siblings of the same repository.
 fn repo_of(folder: &str) -> Result<PathBuf, String> {
-    let root = find_root(Path::new(folder)).ok_or_else(|| format!("{folder} is not in a git repository"))?;
+    let folder = names::folder(folder);
+    let root =
+        find_root(&folder).ok_or_else(|| format!("{} is not in a git repository", folder.display()))?;
     Ok(worktree_of(&root).unwrap_or(root))
 }
 

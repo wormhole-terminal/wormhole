@@ -3,8 +3,6 @@
 //! rule (`features/project/detect.rs`): only while the project's Settings switch is on and trust allows it
 //! (core's `enabled`, the one rule every project action passes), and only when it sets something.
 
-use std::path::Path;
-
 use wormhole_core::project::{self as proj, Feature};
 use wormhole_text::keys::settings_window_set_by_project;
 
@@ -33,7 +31,7 @@ impl ProjectService {
         if self.off() {
             return None;
         }
-        let found = proj::find_project(Path::new(&folder))?;
+        let found = proj::find_project(&crate::files_panel::names::folder(&folder))?;
         let mut hub = self.lock();
         let snapshot = hub.snapshot(&found);
         let settings = hub

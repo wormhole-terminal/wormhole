@@ -97,7 +97,7 @@ final class NotesCoordinator {
         for gone in known.subtracting(now) { persistence.closed(session: gone) }
         known = now
         // A folder's project root is asked for its terminals: with the last of them gone it is not kept.
-        let folders = Set(hub.state.all.compactMap { AppController.expanded($0.folder) })
+        let folders = Set(hub.state.all.compactMap(\.readPath))
         roots = roots.filter { folders.contains($0.key) }
     }
 
@@ -194,7 +194,7 @@ final class NotesCoordinator {
     }
 
     private func root(of terminal: TerminalSummary) async -> String? {
-        guard let folder = AppController.expanded(terminal.folder) else { return nil }
+        guard let folder = terminal.readPath else { return nil }
         if let known = roots[folder], Date().timeIntervalSince(known.at) < 10 { return known.root }
         let root = await hub.panel.project.root(of: folder)
         roots[folder] = (root, Date())

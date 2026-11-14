@@ -34,6 +34,9 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
     /// The program running in front in the terminal (core `TerminalSummary.command`): what a close or a quit would end. Only the
     /// all-terminals list carries it; the rows' words say it too, but a close is decided from the core's facts.
     public var command: String?
+    /// The terminal's folder as the core has it, the full path (core `TerminalSummary.cwd`, only in the all-terminals list):
+    /// a folder whose name is not text arrives as a key of its bytes (`DiskName`), which the panel hands back to the core.
+    public var path: String?
     /// What git says of the terminal's folder (core `git_feed`): the repository's root, an unclean tree, how far the
     /// branch is from its upstream, the files the repository has changed.
     public var repo: String?
@@ -102,5 +105,13 @@ public struct TerminalSummary: Sendable, Equatable, Identifiable {
         self.glyph = glyph
         self.worktreeOf = worktreeOf
         self.command = command
+    }
+}
+
+extension TerminalSummary {
+    /// The folder the panel's tabs read (the Files tab, the git tabs, the project): the core's full path where the summary
+    /// has it, else the drawn folder with its `~` written out (the sample's and the rows').
+    public var readPath: String? {
+        path ?? folder.map { $0 == "~" || $0.hasPrefix("~/") ? NSHomeDirectory() + $0.dropFirst(1) : $0 }
     }
 }

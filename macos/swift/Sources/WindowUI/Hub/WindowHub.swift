@@ -98,7 +98,7 @@ public final class WindowHub {
             Task { @MainActor in self?.followGauges() }
         }
         gauges.forgetGone(all)
-        panel.keep(terminals: Set(all.map(\.id)), folders: Set(all.compactMap { WorkspaceRootView.expanded($0.folder) }))
+        panel.keep(terminals: Set(all.map(\.id)), folders: Set(all.compactMap(\.readPath)))
     }
 
     public var state: WorkspaceState { store.state }

@@ -26,6 +26,7 @@ extension WorkspaceModel.TerminalSummary {
         since = core.since
         noticeSerial = core.notice
         runningCommand = core.command
+        path = core.cwd
         asksToClose = core.asksToClose
         run = core.status == .busy ? .busy : core.status == .attention ? .attention : .idle
     }

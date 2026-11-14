@@ -161,3 +161,33 @@ fn an_actions_key_is_the_projects_only_while_it_is_trusted_and_on() {
     service.set_feature(repo.root(), "actions".into(), true).expect("switch");
     assert_eq!(key(), None, "trust taken back");
 }
+
+#[test]
+fn a_project_in_a_folder_whose_name_is_not_text_is_found_and_approved_by_its_key() {
+    use std::os::unix::ffi::OsStrExt as _;
+
+    use crate::files_panel::names;
+
+    let parent = tempfile::tempdir().expect("temp dir");
+    let folder = parent.path().join(std::ffi::OsStr::from_bytes(b"caf\xe9"));
+    // APFS and HFS+ refuse a name that is not UTF-8: on such a disk there is no such folder to read.
+    if std::fs::create_dir(&folder).is_err() {
+        return;
+    }
+    std::fs::create_dir(folder.join(".git")).expect("git");
+    super::write(&folder.join(".wormhole/config.json"), "{}");
+    let (_data, service) = service(&Owner::answering([OwnerAnswer::Approved]));
+    let key = names::path_key(&folder);
+    let state =
+        service.project(key).expect("found by the key of its bytes, not a text that names another folder");
+    assert_eq!(
+        names::folder(&state.root),
+        folder.canonicalize().expect("canonical"),
+        "the root is handed back as a key"
+    );
+    assert_eq!(service.approve(state.root.clone()), ApproveOutcome::Approved);
+    let again =
+        service.project(names::path_key(&folder.join("sub-that-is-not-there"))).map(|state| state.status);
+    assert_eq!(again, None, "a folder that is not there has no project");
+    assert_eq!(service.project(state.root).map(|state| state.status), Some(TrustStatusRecord::Trusted));
+}

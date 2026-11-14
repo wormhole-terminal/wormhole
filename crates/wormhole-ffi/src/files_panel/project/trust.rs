@@ -92,7 +92,7 @@ impl ProjectService {
     /// Takes the approval of the project at `root` away.
     pub fn revoke(&self, root: String) {
         let mut hub = self.lock();
-        hub.trust.revoke(std::path::Path::new(&root));
+        hub.trust.revoke(&crate::files_panel::names::folder(&root));
         hub.save();
         drop(hub);
         self.changed();

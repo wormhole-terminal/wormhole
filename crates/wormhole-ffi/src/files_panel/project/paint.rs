@@ -12,6 +12,7 @@ use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 
 use super::records::{FolderPaintRecord, ProjectFailure};
 use super::service::ProjectService;
+use crate::files_panel::names;
 use crate::files_panel::settings_edit::update_settings_of;
 
 /// Where a folder's colour lives, and what it is now.
@@ -98,7 +99,7 @@ impl ProjectService {
 impl ProjectService {
     /// What `folder`'s colour is, where it is kept and whether it may be changed.
     pub fn folder_paint(&self, folder: String) -> FolderPaintRecord {
-        let paint = self.paint_of(Path::new(&folder));
+        let paint = self.paint_of(&names::folder(&folder));
         let choice = paint.choice();
         FolderPaintRecord {
             chosen: choice.and_then(ProjectColorChoice::named).map(|name| name.key().to_string()),
@@ -120,7 +121,8 @@ impl ProjectService {
     pub fn set_folder_color(&self, folder: String, color: Option<String>) -> Result<(), ProjectFailure> {
         let choice =
             color.map(|text| ProjectColorChoice::parse(&text)).transpose().map_err(ProjectFailure::failed)?;
-        let folder = Path::new(&folder);
+        let folder = names::folder(&folder);
+        let folder = folder.as_path();
         match self.paint_of(folder) {
             Paint::Own(current) => {
                 if current != choice {

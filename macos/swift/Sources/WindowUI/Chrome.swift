@@ -70,4 +70,7 @@ extension WorkspaceState {
         row.since = row.since ?? all.first { $0.id == selected }?.since
         return row
     }
+
+    /// The folder the panel reads for the selected terminal: the all-terminals summary carries the full path (`readPath`).
+    public var selectedPath: String? { (all.first { $0.id == selected } ?? selectedTerminal)?.readPath }
 }

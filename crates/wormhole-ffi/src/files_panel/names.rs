@@ -60,3 +60,36 @@ pub(crate) fn path(key: &str) -> Option<PathBuf> {
 pub(crate) fn path_key(path: &Path) -> String {
     key(path.as_os_str())
 }
+
+/// The folder a key (or plain text) from Swift names: a terminal's folder, a repository's or a project's root, as
+/// `path_key` gave it. A key that is not one names a folder that is nowhere: no look at it, or above it, finds anything.
+pub(crate) fn folder(key: &str) -> PathBuf {
+    path(key).unwrap_or_else(|| PathBuf::from(NOWHERE))
+}
+
+/// A path no file can have (a NUL in it fails every system call) whose only folder above is the root.
+const NOWHERE: &str = "/\0";
+
+#[cfg(test)]
+mod tests {
+    use std::ffi::OsString;
+    use std::os::unix::ffi::{OsStrExt, OsStringExt};
+    use std::path::PathBuf;
+
+    use super::{NOWHERE, folder, path_key};
+
+    #[test]
+    fn a_folder_that_is_not_text_reads_back_as_its_bytes_and_a_broken_key_names_nowhere() {
+        let bytes = b"/tmp/caf\xe9/sub".to_vec();
+        let key = path_key(&PathBuf::from(OsString::from_vec(bytes.clone())));
+        assert!(key.contains('\0') && key.ends_with("/sub"), "{key:?}");
+        assert_eq!(folder(&key).as_os_str().as_bytes(), bytes.as_slice());
+        assert_eq!(folder("/tmp/plain"), PathBuf::from("/tmp/plain"));
+        // Hostile: a NUL that is not a byte over 0x7f in two hex digits (a slash smuggled in, a cut key).
+        for broken in ["/tmp/caf\0e", "/tmp/caf\0zz", "/tmp/\02f/etc"] {
+            let nowhere = folder(broken);
+            assert_eq!(nowhere, PathBuf::from(NOWHERE), "{broken:?}");
+            assert!(!nowhere.exists() && wormhole_core::git::find_root(&nowhere).is_none());
+        }
+    }
+}

@@ -21,6 +21,7 @@ use super::state;
 use super::trust::OwnerAuthenticator;
 use crate::error::FfiError;
 use crate::files_panel::listener::PanelListener;
+use crate::files_panel::names;
 use crate::files_panel::watch::FolderWatch;
 use crate::profile;
 
@@ -91,10 +92,11 @@ impl ProjectService {
     }
 }
 
-/// The project folder at `root` as given by Swift: a canonical path with a `.wormhole/` in it, else `None`.
+/// The project folder at `root` as given by Swift (a key of `names` where it is not text): a canonical path with a
+/// `.wormhole/` in it, else `None`.
 /// It does not walk up: only `project` finds a project from a terminal's folder.
 pub(super) fn open(root: &str) -> Option<ProjectFolder> {
-    ProjectFolder::open(&std::fs::canonicalize(root).ok()?)
+    ProjectFolder::open(&std::fs::canonicalize(names::folder(root)).ok()?)
 }
 
 impl ProjectService {
@@ -135,7 +137,7 @@ impl ProjectService {
     /// The project governing `folder` (a terminal's folder: the first `.wormhole/` above it, stopping
     /// at a repository's root), as the tab draws it; `None` where there is none.
     pub fn project(&self, folder: String) -> Option<ProjectStateRecord> {
-        let found = proj::find_project(Path::new(&folder))?;
+        let found = proj::find_project(&names::folder(&folder))?;
         let mut hub = self.lock();
         hub.reload_trust();
         let snapshot = hub.snapshot(&found);
@@ -164,10 +166,10 @@ impl ProjectService {
     /// Makes `folder/.wormhole/` with a `config.json` that sets nothing yet and an empty `notes.md`; it
     /// refuses to touch anything that is already there. Returns the new project's root.
     pub fn create_project(&self, folder: String) -> Result<String, ProjectFailure> {
-        let made = proj::init(Path::new(&folder));
+        let made = proj::init(&names::folder(&folder));
         // A second click, or another program, got there first: it is a project all the same.
         if let Err(err) = &made
-            && ProjectFolder::open(Path::new(&folder)).is_none()
+            && ProjectFolder::open(&names::folder(&folder)).is_none()
         {
             let failure = ProjectFailure::failed(err);
             self.lock().error = Some(format!("Couldn't create the project folder: {err}"));
@@ -227,7 +229,7 @@ impl ProjectService {
     /// its Settings on, since the new terminal takes the project's env and shell; no project, no condition. `None`: it may, as
     /// it does with the Project feature off (`set_project_feature_on`).
     pub fn worktree_allowed(&self, repo: String) -> Option<String> {
-        self.worktree_refusal(Path::new(&repo))
+        self.worktree_refusal(&names::folder(&repo))
     }
 
     /// What a new worktree of `repo` runs first: its trusted project's `worktree.setup`, under the same conditions as
@@ -236,7 +238,7 @@ impl ProjectService {
         if self.off() {
             return None;
         }
-        let found = proj::find_project(Path::new(&repo))?;
+        let found = proj::find_project(&names::folder(&repo))?;
         let snapshot = found.snapshot();
         let mut hub = self.lock();
         hub.reload_trust();
@@ -249,9 +251,10 @@ impl ProjectService {
     /// Follows the project folder of `folder` (its `.wormhole/`, or `folder` for one made later) and the
     /// service's own changes of trust and switches. See `FilesService::watch` for the rules.
     pub fn watch(&self, folder: String, listener: Arc<dyn PanelListener>) -> Arc<FolderWatch> {
-        let (root, keep): (_, fn(&Path) -> bool) = match proj::find_project(Path::new(&folder)) {
+        let folder = names::folder(&folder);
+        let (root, keep): (_, fn(&Path) -> bool) = match proj::find_project(&folder) {
             Some(found) => (found.dir, |_| true),
-            None => (folder.into(), |path| {
+            None => (folder, |path| {
                 path.components().any(|part| {
                     [proj::DIR_NAME, proj::LEGACY_DIR_NAME].iter().any(|n| part.as_os_str() == *n)
                 })

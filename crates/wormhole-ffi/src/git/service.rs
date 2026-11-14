@@ -18,6 +18,7 @@ use super::records::{
     GitChange, GitDiff, GitDiffFile, GitLog, GitLogCommit, GitRev, GitRevKind, GitStatus, GitSubmoduleCard,
 };
 use super::shown::{GitCommitDetails, GitCompact, Message};
+use crate::files_panel::names;
 
 /// Recent commits the revision picker offers to compare with.
 const RECENT_COMMITS: usize = 10;
@@ -67,13 +68,13 @@ impl Git {
 
     /// Whether `folder` is in a repository: a look for `.git`, no process, so it costs nothing to ask first.
     pub fn is_repository(&self, folder: String) -> bool {
-        find_root(Path::new(&folder)).is_some()
+        find_root(&names::folder(&folder)).is_some()
     }
 
     /// The repository root of `folder` (the band's folder: what the Files tree and the project's colour are of),
     /// `None` outside a repository. A look for `.git`, no process.
     pub fn repository_root(&self, folder: String) -> Option<String> {
-        find_root(Path::new(&folder)).map(|root| root.to_string_lossy().into_owned())
+        find_root(&names::folder(&folder)).map(|root| names::path_key(&root))
     }
 
     /// The status of the working tree, or what changed since the merge-base with `compare` (any branch, tag
@@ -81,7 +82,7 @@ impl Git {
     pub fn status(&self, folder: String, compare: Option<String>) -> Result<GitStatus, GitBackendError> {
         // Kept under the root `diff` finds the same way (`find_root`), not the real path git prints.
         let root = root_of(&folder)?;
-        let mut status = git::status(Path::new(&folder), compare.as_deref())
+        let mut status = git::status(&names::folder(&folder), compare.as_deref())
             .map_err(|err| GitBackendError::of(&err))?
             .ok_or(GitBackendError::NotARepository)?;
         git::annotate(&mut status);
@@ -285,7 +286,10 @@ impl Git {
                 detail: git::too_large_detail(lines),
             }
         } else if let Some(change) = &diff.lfs {
-            GitDiff::Lfs { file: GitDiffFile::of(file, &diff, units), summary: git::lfs_summary(change, units) }
+            GitDiff::Lfs {
+                file: GitDiffFile::of(file, &diff, units),
+                summary: git::lfs_summary(change, units),
+            }
         } else if diff.binary {
             GitDiff::Binary {
                 file: GitDiffFile::of(file, &diff, units),
@@ -351,5 +355,5 @@ fn now() -> i64 {
 }
 
 pub(super) fn root_of(folder: &str) -> Result<PathBuf, GitBackendError> {
-    find_root(Path::new(folder)).ok_or(GitBackendError::NotARepository)
+    find_root(&names::folder(folder)).ok_or(GitBackendError::NotARepository)
 }

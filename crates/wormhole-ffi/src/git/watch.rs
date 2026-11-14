@@ -5,7 +5,7 @@
 //! folder that is no repository yet) or is quiet for a long time, a slow poll calls it anyway, as core's
 //! rules ask of every watched fact: a watch can drop events.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, RwLock};
@@ -51,7 +51,8 @@ impl GitWatch {
     #[uniffi::constructor]
     pub fn start(folder: String, listener: Arc<dyn GitListener>) -> Result<Arc<Self>, GitBackendError> {
         crate::isolation::require()?;
-        let root = find_root(Path::new(&folder)).ok_or(GitBackendError::NotARepository)?;
+        let root =
+            find_root(&crate::files_panel::names::folder(&folder)).ok_or(GitBackendError::NotARepository)?;
         let (queue, inbox) = mpsc::channel();
         let live = Arc::new(AtomicBool::new(false));
         let worker = Worker { root, inbox, queue: queue.clone(), listener, live: live.clone() };

@@ -83,7 +83,7 @@ pub(super) fn build(hub: &mut Hub, snapshot: &ProjectSnapshot) -> ProjectStateRe
         .collect();
     ProjectStateRecord {
         dir: dir_name_at(&root),
-        root: root.to_string_lossy().into_owned(),
+        root: crate::files_panel::names::path_key(&root),
         status: status.into(),
         commands,
         applies,

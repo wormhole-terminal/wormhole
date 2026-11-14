@@ -2,8 +2,6 @@
 //! front (the GPUI app's `detect.rs` and the Studio's "Use in this project"), under the same gate every project
 //! action passes (`Hub::enabled`: the file is there, the person has it on, and trust where the feature needs it).
 
-use std::path::Path;
-
 use wormhole_core::project::{self as proj, Feature, TrustStatus};
 
 use super::records::ProjectFailure;
@@ -18,7 +16,7 @@ impl ProjectService {
         if self.off() {
             return None;
         }
-        let found = proj::find_project(Path::new(&folder))?;
+        let found = proj::find_project(&crate::files_panel::names::folder(&folder))?;
         let mut hub = self.lock();
         hub.reload_trust();
         let snapshot = hub.snapshot(&found);
@@ -31,7 +29,7 @@ impl ProjectService {
     /// Whether "Use in this project" may write to the project that governs `folder`, and the folder's root:
     /// the project is trusted and its theme is not switched off. The reason otherwise, in the person's words.
     pub fn theme_target(&self, folder: String) -> Result<String, ProjectFailure> {
-        let found = proj::find_project(Path::new(&folder))
+        let found = proj::find_project(&crate::files_panel::names::folder(&folder))
             .ok_or_else(|| ProjectFailure::not_found(folder.clone()))?;
         let mut hub = self.lock();
         hub.reload_trust();
@@ -86,7 +84,10 @@ mod tests {
         let root = std::fs::canonicalize(project.path()).expect("canonical").to_string_lossy().into_owned();
 
         // Not trusted: the theme is in effect all the same (the switch is on by default), but nothing may be written.
-        assert_eq!(service.theme_overlay(folder.clone()).as_deref(), Some(r#"{"name":"App","extends":"Nord"}"#));
+        assert_eq!(
+            service.theme_overlay(folder.clone()).as_deref(),
+            Some(r#"{"name":"App","extends":"Nord"}"#)
+        );
         assert!(matches!(service.theme_target(folder.clone()), Err(ProjectFailure::Refused { .. })));
         assert!(service.write_theme(folder.clone(), "{}".into()).is_err());
         assert_eq!(

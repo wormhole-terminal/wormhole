@@ -82,12 +82,6 @@ public struct WorkspaceRootView: View {
     }
 
     private func followTerminal() {
-        hub.panel.follow(folder: Self.expanded(hub.state.selectedTerminal?.folder), terminal: hub.state.selected)
-    }
-
-    /// The sidebar's folder is written with `~`; the panel reads real paths.
-    static func expanded(_ folder: String?) -> String? {
-        guard let folder else { return nil }
-        return folder == "~" ? NSHomeDirectory() : folder.hasPrefix("~/") ? NSHomeDirectory() + folder.dropFirst(1) : folder
+        hub.panel.follow(folder: hub.state.selectedPath, terminal: hub.state.selected)
     }
 }
