@@ -284,15 +284,15 @@ fn each_profiles_terminal_answers_with_its_own_colours() {
         }
     };
     let (first, second) = (start(a), start(b));
-    answers(&first, "22", 1);
-    answers(&second, "77", 1);
+    answers(first.as_ref(), "22", 1);
+    answers(second.as_ref(), "77", 1);
 
     // Profile b's theme changes: its terminal answers with the new colours, a's keeps its own.
     set_terminal_colors(b.into(), palette(0x44));
     first.write(b"\n".to_vec());
     second.write(b"\n".to_vec());
-    answers(&second, "44", 1);
-    answers(&first, "22", 2);
+    answers(second.as_ref(), "44", 1);
+    answers(first.as_ref(), "22", 2);
     assert!(
         !first.screen_text().contains("rgb:4444/"),
         "a's terminal never hears b's theme:\n{}",
