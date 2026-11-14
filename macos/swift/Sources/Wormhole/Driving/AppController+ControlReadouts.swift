@@ -8,10 +8,12 @@
 //   `switcher [query]`          the group switcher's cards and footer, or what its search lists for `query`
 //   `onboarding-state`          the first run's step, its card, buttons, places, agents, trust card and primer
 //   `onboarding-pick <path>`    a folder dropped on the folder step (`OnboardingSession.pick`)
+//   `onboarding-press back|main|skip`  the card's buttons (main: Continue, or Start on the last step)
 // GPUI's devctl has none of these; `status-bar` is the bar's switch already (`AppController+Look`), so its items are
 // `status-items`. The right panel's are `AppController+ControlPanelReadouts`.
 
 import AppKit
+import AuxModel
 import AuxWindows
 import Foundation
 import SettingsUI
@@ -36,6 +38,17 @@ extension AppController {
             guard argument.hasPrefix("/") else { reply("error: onboarding-pick <absolute path>"); return true }
             session.pick(URL(fileURLWithPath: argument))
             reply("onboarding-pick \(argument)")
+        case "onboarding-press":
+            // The card's buttons as `StepFooter` and `StepCard` send them: Back, the main one (Continue, or Start on the last
+            // step), Skip setup.
+            guard let session = aux.onboarding?.session else { reply("error: the intro window is not open (`onboarding-step folder`)"); return true }
+            switch argument {
+            case "back": session.send(.back)
+            case "main": session.send(session.step.isLast ? .start : .continue)
+            case "skip": session.send(.skip)
+            default: reply("error: onboarding-press back|main|skip"); return true
+            }
+            reply("onboarding-press \(argument)")
         default: return runPanelReadouts(command: command, argument: argument)
         }
         return true
