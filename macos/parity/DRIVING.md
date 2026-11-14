@@ -231,6 +231,12 @@ Added by wave 11 (lane tooling; written without compiling, see TO-VERIFY.md), af
 | `front` | the window the command acts on brought to the front with the keys for real (`NSApp.activate()`, `makeKeyAndOrderFront`), background mode or not: only for a check that needs the real key window outside an injected event (a field editor's own Esc), as it takes the front from the app in use; `window-front` says it without moving anything |
 | `grow-hold <t>` / `grow-hold off` | every window growing from a torn-off terminal's chip stands at that point of its growth (0 the chip, 1 the window) with no clock running, for a `window-shot`; `off` grows it on from there. Send it before the `tear-off` |
 
+Added by wave 12 (lane settings; written without compiling, see TO-VERIFY.md):
+
+| Command | Does |
+|---|---|
+| `settings-press <id> at <x> [y]` | the click of `settings-press` at those fractions (0 to 1) of the control's frame instead of its centre: a segment of a segmented control (`settings-control` lists one segment where the system's control is autosized, so a driver aims along it and reads the value back), a stepper's up arrow (`at 0.95 0.25`) |
+
 Proof runs: `macos/parity/evidence/s-tooling/` (`pointer.txt`: row click, sidebar drag reorder, a held drag shot mid-way,
 column edge, row context menu, rename typed into a SwiftUI field, the wheel; `T15.txt`; `T18.txt`; `hosts.txt`;
 `keys-a11y-perf.txt`).
