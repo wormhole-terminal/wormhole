@@ -127,6 +127,35 @@ fn only_a_trusted_project_sets_the_environment_and_the_shell() {
     assert!(options_of(&root, Some(&project)).env.get("PROJECT_FLAG").is_none());
 }
 
+/// A revoke that could not be saved holds for a terminal's start as it does for the panel: the approvals are the
+/// process's one store, never the file read again on its own, which still says trusted.
+#[test]
+fn a_revoke_that_could_not_be_saved_still_keeps_the_projects_environment_out() {
+    use std::os::unix::fs::PermissionsExt;
+    let dir = scratch("revoke-unsaved");
+    let root = DataRoot::new(dir.path());
+    let project = dir.path().join("app");
+    std::fs::create_dir_all(project.join(".wormhole")).expect("project folder");
+    std::fs::write(project.join(".wormhole/config.json"), r#"{"env": {"PROJECT_FLAG": "on"}}"#)
+        .expect("project config");
+    let profile = profile_in(&root, None);
+    let folder = ProjectFolder::open(&project.canonicalize().expect("canonical")).expect("a project");
+    let mut trust = TrustStore::load(profile.dir()).expect("trust store");
+    trust.trust(&folder);
+    trust.save().expect("saves");
+    assert_eq!(options_of(&root, Some(&project)).env.get("PROJECT_FLAG").map(String::as_str), Some("on"));
+
+    // The profile folder refuses the save: the file keeps the approval, the process takes it back.
+    std::fs::set_permissions(profile.dir(), std::fs::Permissions::from_mode(0o500)).expect("read-only");
+    let revoked = crate::files_panel::change_trust_in(profile.dir(), |store| store.revoke(&folder.root));
+    std::fs::set_permissions(profile.dir(), std::fs::Permissions::from_mode(0o700)).expect("writable again");
+    assert!(revoked.is_err(), "the save failed");
+    assert!(
+        options_of(&root, Some(&project)).env.get("PROJECT_FLAG").is_none(),
+        "revoked in the process: nothing of the project reaches a new terminal"
+    );
+}
+
 /// A real shell, started as the window starts it: the shell `default_shell` names as a login shell, the profile's
 /// environment and git identity, the tab's own variables a project cannot redirect, and the saved text above it.
 #[test]

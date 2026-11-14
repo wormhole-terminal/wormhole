@@ -14,7 +14,7 @@ use std::path::Path;
 
 use wormhole_core::config::profile::ProfileList;
 use wormhole_core::config::{Config, FeatureId, FeatureMask, Settings};
-use wormhole_core::project::{self as proj, Feature, ProjectPrefs, TrustStore};
+use wormhole_core::project::{self as proj, Feature};
 use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 use wormhole_core::terminal::SpawnOptions;
 use wormhole_core::terminal::shells::{self, ShellCommand};
@@ -81,8 +81,8 @@ pub(crate) fn profile_in(root: &DataRoot, id: Option<&str>) -> ProfilePaths {
 }
 
 /// A trusted project's environment and shell for a terminal starting in `cwd` (the app's `detect::spawn_options`):
-/// only with project folders on, its Settings switched on, and its files approved as they are now. Read from disk at
-/// the start, as what runs is decided; a store that does not read approves nothing.
+/// only with project folders on, its Settings switched on, and its files approved as they are now: the project's files read
+/// at the start, as what runs is decided, against the profile's one store of switches and approvals (`files_panel::allows_in`).
 fn project_adds(
     profile: &ProfilePaths,
     settings: &Settings,
@@ -93,11 +93,9 @@ fn project_adds(
     }
     let folder = proj::find_project(cwd?)?;
     let snapshot = folder.snapshot();
-    let prefs = ProjectPrefs::load(profile.dir()).ok()?;
-    let trust = TrustStore::load(profile.dir()).ok()?;
-    let enabled = snapshot.has(Feature::Settings)
-        && prefs.enabled(snapshot.root(), Feature::Settings)
-        && trust.allows_in(&snapshot, Feature::Settings);
+    // The profile's switches and approvals as the process holds them, every window's change in them (a revoke whose save
+    // failed included), never the files read again on their own.
+    let enabled = crate::files_panel::allows_in(profile.dir(), &snapshot, Feature::Settings);
     let config = snapshot.config().filter(|_| enabled)?.clone();
     Some((config.env, config.shell))
 }

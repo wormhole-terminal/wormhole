@@ -14,7 +14,7 @@ use std::time::{Duration, Instant};
 use wormhole_core::config::Config;
 use wormhole_core::config::features::FeatureFlag;
 use wormhole_core::git::pr::{self, Branch, PrCache};
-use wormhole_core::project::{ProjectFolder, TrustStatus, TrustStore};
+use wormhole_core::project::{ProjectFolder, TrustStatus};
 use wormhole_core::storage::paths::{DataRoot, ProfilePaths};
 use wormhole_core::workspace::StatusEvent;
 use wormhole_term::listening_ports;
@@ -147,6 +147,6 @@ fn approved(shared: &Shared, root: &Path) -> bool {
         return false;
     }
     let Some(folder) = ProjectFolder::open(root) else { return false };
-    let (store, _) = TrustStore::load_or_recover(profile.dir());
-    store.status_of(&folder.snapshot()) == TrustStatus::Trusted
+    // The profile's approvals as the process holds them (`files_panel::trust_status_in`), every window's revoke in them.
+    crate::files_panel::trust_status_in(profile.dir(), &folder.snapshot()) == TrustStatus::Trusted
 }

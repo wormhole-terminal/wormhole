@@ -27,5 +27,5 @@ pub(crate) use service::worktree_refusal_in;
 pub use settings_page::{
     ProjectChoiceRecord, ProjectDefaultRecord, ProjectFeatureRowRecord, ProjectPageRecord,
 };
-pub(crate) use stores::change_trust_in;
+pub(crate) use stores::{allows_in, change_trust_in, trust_status_in};
 pub use trust::{ApproveOutcome, OwnerAnswer, OwnerAuthenticator};

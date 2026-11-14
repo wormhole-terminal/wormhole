@@ -70,7 +70,9 @@ impl TrustDesk {
             None => data.default_profile(),
         };
         Ok(Arc::new(Self {
-            root: PathBuf::from(root),
+            // The panel hands the project's root as a key of `files_panel::names` where its name is not text: the very
+            // folder, never one its name as text happens to name.
+            root: crate::files_panel::names::folder(&root),
             profile_dir: paths.dir().to_path_buf(),
             shown: Mutex::new(None),
             held: Mutex::new(None),
@@ -96,8 +98,8 @@ impl TrustDesk {
             };
         };
         let snapshot = folder.snapshot();
-        let (store, _) = TrustStore::load_or_recover(&self.profile_dir);
-        let status = match store.status_of(&snapshot) {
+        // The approvals as the process holds them, the ones every window and the panel act by.
+        let status = match crate::files_panel::trust_status_in(&self.profile_dir, &snapshot) {
             TrustStatus::Trusted => ReviewStatusRecord::Trusted,
             TrustStatus::Changed => ReviewStatusRecord::Changed,
             TrustStatus::Untrusted => ReviewStatusRecord::Untrusted,

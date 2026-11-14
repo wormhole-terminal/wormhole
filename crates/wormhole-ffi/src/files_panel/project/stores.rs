@@ -16,7 +16,8 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 
 use wormhole_core::project::{
-    NotesBaseStore, NotesFile, ProjectError, ProjectFolder, ProjectPrefs, TrustStore,
+    Feature, NotesBaseStore, NotesFile, ProjectError, ProjectFolder, ProjectPrefs, ProjectSnapshot,
+    TrustStatus, TrustStore,
 };
 use wormhole_core::storage::files::FileStamp;
 
@@ -127,6 +128,23 @@ pub(crate) fn change_trust_in(
     let changed = lock(&trust).change(change);
     super::service::tell_every_tab();
     changed
+}
+
+/// Whether `feature` of `snapshot` may act for the profile whose stores are in `dir` (the file is there, the person has it
+/// on, the approvals allow it), as this process holds the switches and the approvals: the panel's one gate
+/// (`Hub::enabled`) for a caller that has no window's service (a terminal's start, `gh`). Never the file read on its own: a
+/// revoke whose save failed holds in the process (`OnDisk::change`), and a read of the file would trust the project again.
+/// The switches are locked before the approvals, as everywhere.
+pub(crate) fn allows_in(dir: &Path, snapshot: &ProjectSnapshot, feature: Feature) -> bool {
+    let stores = of_profile(dir);
+    snapshot.has(feature)
+        && now(&stores.prefs).enabled(snapshot.root(), feature)
+        && now(&stores.trust).allows_in(snapshot, feature)
+}
+
+/// Where `snapshot` stands against the approvals of the profile whose stores are in `dir`, as this process holds them.
+pub(crate) fn trust_status_in(dir: &Path, snapshot: &ProjectSnapshot) -> TrustStatus {
+    now(&of_profile(dir).trust).status_of(snapshot)
 }
 
 fn load(dir: &Path) -> Stores {

@@ -33,6 +33,6 @@ pub use project::{
     ProjectService, ProjectSettingsRecord, ProjectStateRecord, TaskDocRecord, TerminalPlace, TrustLineRecord,
     TrustStatusRecord,
 };
-pub(crate) use project::{change_trust_in, worktree_refusal_in};
+pub(crate) use project::{allows_in, change_trust_in, trust_status_in, worktree_refusal_in};
 pub use usage::{AgentLogoRecord, PlanLimitRecord, UsageReportRecord, UsageService};
 pub use watch::FolderWatch;

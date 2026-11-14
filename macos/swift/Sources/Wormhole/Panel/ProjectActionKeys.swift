@@ -24,11 +24,18 @@ extension AppController {
         return claimProjectKey(KeySpec(mods, key), in: hub)
     }
 
-    func claimProjectKey(_ pressed: KeySpec, in hub: WindowHub) -> Bool {
+    /// `repeated`: the key is held and this is one of its repeats, which is the action's too (it never reaches the terminal, a
+    /// field or a menu) but runs nothing again: one press, one run.
+    func claimProjectKey(_ pressed: KeySpec, in hub: WindowHub, repeated: Bool = false) -> Bool {
         guard pressed.mods.contains(.command) || pressed.isFunctionKey, !hasActiveDialog(hub) else { return false }
         let project = hub.panel.project
-        guard project.state?.actions.contains(where: { $0.key.flatMap { KeySpec(glyphs: $0) }?.sameKey(pressed) == true }) == true
+        // The actions of the project of the terminal that has the keys (`action_for_key` asks of the window's active
+        // terminal): the panel's list only while the panel reads that terminal's folder. It follows the selection a beat
+        // later, and in that beat its list is the terminal before's, whose action must not run here.
+        guard let folder = hub.state.selectedPath, project.folder == folder,
+            project.state?.actions.contains(where: { $0.key.flatMap { KeySpec(glyphs: $0) }?.sameKey(pressed) == true }) == true
         else { return false }
+        if repeated { return true }
         return project.runAction(forKey: pressed.glyphText)
     }
 
@@ -58,10 +65,11 @@ final class ProjectKeys {
     private func claims(_ event: NSEvent) -> Bool {
         // Only a window of the workspace: a sheet, Settings or the Studio read their own keys; and never a press for a shortcut
         // recorder (`RecordsKeys`), wherever one is.
-        guard !event.isARepeat, !event.goesToRecorder, let window = event.window, let session = app.sessions.first(where: { $0.window === window }),
+        guard !event.goesToRecorder, let window = event.window, let session = app.sessions.first(where: { $0.window === window }),
             let pressed = Self.spec(of: event)
         else { return false }
-        return app.claimProjectKey(pressed, in: session.hub)
+        // A held key's repeats are taken here too, before the terminal or a menu sees them, and run nothing.
+        return app.claimProjectKey(pressed, in: session.hub, repeated: event.isARepeat)
     }
 
     /// The press as the core names it: ⌘ held with a character, or an F-key.
