@@ -225,6 +225,15 @@ extension AppController {
 
     /// The new profile's settings and theme files, applied to the window as the launch's were.
     private func followProfileSettings() {
+        #if WITH_UNIFFI
+            // The fonts folder of the profile left goes from CoreText before the new one's comes (`fonts.rs:83-99`), and
+            // whatever drew in one of its families makes its fonts again (the count the type roles read).
+            if let left = settingsModel.backend as? RustSettingsBackend {
+                let had = !left.fontFolder.families.isEmpty
+                left.leaveFonts()
+                if had { ThemeStore.shared.fontFiles += 1 }
+            }
+        #endif
         settingsModel = AppSettings.makeModel(app: self)
         configureThemes()
         let applier = SettingsApplier(app: self, model: settingsModel)
