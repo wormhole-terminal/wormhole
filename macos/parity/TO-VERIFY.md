@@ -1255,3 +1255,48 @@ Written without compiling: expect compile errors.
 | S09 | Terminals in tabs: two groups (one folded) and loose terminals; a terminal of the other group needs input, another fails | the sets are the groups (the folded one with all its terminals) then Ungrouped (in the language's word); the switcher's dot is amber for needs-you, red when only a failure is elsewhere; each card's alert likewise | core `workspace/snapshot/tabs.rs` (`tab_sets_view`: `tab_sets`, `current_set`, `others_need_you`), ffi `workspace_tabs.rs tab_sets`, `WorkspaceBridge/TabSetsMapping.swift`, `WorkspaceModel/TabSetFacts.swift`, `WindowHub+Sidebar.swift tabBar`, `TabBarModel.make(alerts:)` |
 | W03 | Status bar with 1, 3 and 5 terminals needing input; hover the needs-you button | "a · go there"; "a, then b, c · go to the first"; "a, then b, c and 2 more · go to the first" (the names and the count are the core's `needs_you_named`) | core `view/layout/status_bar.rs` (`NEEDS_YOU_NAMED`, `Summary::needs_you_named`), ffi `status_counts.rs` (`named`, `more`), `CoreStatusRules.swift`, `WindowUI/StatusSummary.swift` |
 | S08 | Classic, Drawer and Tuck insert poses: + on a group's head; move a loose terminal into an open group | the new row plays the insert pose inside the card as a loose one does (read: `GroupRows`' `ForEach` owns the transition, keyed by the terminal's id, which does not change; entering a group is a removal from the loose card and an insertion in the group's rows) | `SidebarUI/Group/GroupRows.swift:45`, `Row/RowPoseTransition.swift` |
+
+## Lane panel, wave 8
+
+Written without compiling: expect compile errors.
+
+P06, every order of events a notes.md merge can meet, as the code now handles it (`NotesCoordinator.sync/land/store`, `NotesModel.rebase`,
+`NotesMapping.applying`; the core's base is set in `notes_sync.rs` `step`). "Stored" is the app's database, "base" the core's.
+
+| order of events | what happens | lost or doubled? | base against stored |
+|---|---|---|---|
+| shown, nothing done during the merge | the answer is applied as it comes: notes keep their ids by the core's slots, steps by their words | no | equal |
+| shown, a step ticked or unticked meanwhile | the person's tick wins; the file's own ticks and lines come in; a step the file removed stays when ticked meanwhile | no | stored = base + the tick, which the next merge writes to the file |
+| shown, a step or note added meanwhile | kept once, where it was put; the file's additions go after the item they follow in the file, else before the next one there, else last | no | the addition goes to the file next |
+| shown, a step or note deleted meanwhile | stays deleted (one the file kept is not brought back) | no | the deletion goes to the file next |
+| shown, steps or notes moved meanwhile | the person's order; the file's additions follow their item | no | the order goes to the file next (the core's merge follows the app's order) |
+| shown, a note rewritten meanwhile | the new words once; when the file rewrote the same note too, both versions stay (the core's rule for two edits), with two ids | no | in step after the next merge |
+| shown, an editor opened after the send | the model is replaced but every item keeps the id it has on screen, so the editor stays on its row; a note the file rewrote keeps its id (its text changes under the editor, as GPUI's backstop) | no | as above |
+| not shown | sent as read from the database, landed on a second read (all ids new): told apart by words and place among equals, nothing twice | no | equal |
+| switched away during the merge | the switch saved the panel's model; the merge lands on that, stored for that terminal; the one shown now is untouched | no | equal plus what the person did, sent next |
+| switched away and back | lands on the reloaded model (new ids): same rule | no | as above |
+| closed during the merge | the base it just set is forgotten; nothing stored | no | none |
+| moved to another window during the merge | nothing stored here (the other window shows what it read and would save over it); the base is forgotten (one store per profile now), so the other window's next merge keeps both sides | nothing lost; a line the file deleted in this one merge can come back once | none, then agreed afresh |
+| window moved to another profile during the merge | the merge lands on what the new profile's database holds (the move copied it), stored there; the new profile has no base for it (as GPUI after a move): the next merge keeps both sides; the old profile keeps a stale base, as GPUI | no | agreed afresh |
+| trust revoked | the core answers nothing, keeps the base | no | unchanged |
+| the database cannot be read (not shown) | not sent; at landing: nothing stored, base forgotten | no | agreed afresh |
+| the database cannot be read (shown) | the panel shows nothing, saves nothing, merges nothing; read again each sync, with what was typed meanwhile after what was saved | no | unchanged until read |
+| two items that say the same | told apart by their place among equals (the core's `match_exact`) | no | equal |
+| the file changes the same item | a tick both changed: the person's; words both changed: both kept | no | in step after the next merge |
+| two windows of one profile | one base store per profile folder in the process (was a copy per window, each writing the whole `notes-sync.json` over the other's); trimmed at a window's start from the app's id counter, not the window's own highest id | no | one store |
+
+| row | what to do | what must happen | where the code is |
+|---|---|---|---|
+| P06 | TEST. `swift test --filter NotesMergeSavedTests`, `--filter NotesRebaseTests`, `--filter NotesMappingTests` | all pass; the fake store makes every item anew on each read, as the real one | `Tests/WormholeTests/NotesMergeSavedTests.swift`, `Tests/PanelTests/NotesRebaseTests.swift`, `Tests/FilesBridgeTests/NotesMappingTests.swift` |
+| P06 | TEST. `cargo test -p wormhole-ffi the_windows_of_a_profile_merge_a_terminal_against_the_same_base` | passes: the second window's merge reads the file's deletion as the file's | `ffi/src/files_panel/project/hub.rs shared_bases`, `notes_sync.rs` |
+| P06 | TEST (e2e). `swift test --filter EndToEndTests/notesSync` | two terminals of a trusted project: a tick in one reaches notes.md and the other, a line added to the file reaches both, nothing twice | `Tests/EndToEndTests/NotesSyncTests.swift` (new `Instance.with(auth: "allow")`) |
+| P06 | Two windows of one profile, each with a terminal in one trusted project with a notes.md; edit notes in both; quit; delete a line from notes.md; launch | the deleted line stays deleted in both terminals (both bases were kept in `notes-sync.json`) | `hub.rs shared_bases`, `notes_ids_start_at` + `windows/registry.rs next_terminal_id` |
+| P06 | A step's editor open on the shown terminal while notes.md gains a line | the editor stays on its step | `NotesMapping.applying`, `NotesRebase.swift` |
+| P05 | TEST. `cargo test -p wormhole-ffi a_stored_list_that_cannot_be_read_is_never_written_over` | passes | `ffi/src/git/worktrees.rs edited` |
+| P08 | Trusted project with an action key (`cmd-ctrl-t`): open the palette and press the key; the shortcut sheet; the new-worktree sheet; a diff line's comment | nothing runs while any is up; with none up it runs | `Wormhole/Panel/ProjectActionKeys.swift hasActiveDialog` |
+| P02 | A terminal in a folder that is no repository, Changes read once; click its branch chip (where one shows) | no picker opens then or later when another list comes up | `WindowUI/Hub/WindowHub+Branch.swift` |
+| P07 | TEST (hostile input). `cargo test -p wormhole-ffi a_folder_that_is_not_text_reads_back_as_its_bytes`, `a_project_in_a_folder_whose_name_is_not_text` (the second does nothing on APFS/HFS+, which refuse such names: run it on Linux or a FAT/exFAT volume) | pass | `ffi/src/files_panel/names.rs folder`, `tests/project.rs` |
+| P07 | On a volume that allows a non-UTF-8 folder name (exFAT stick): a git repository with a `.wormhole/` in such a folder, a terminal `cd`'d into it | Files lists it, Changes and History read the repository, the Project tab finds the project and its trust, notes.md syncs; the row and title show U+FFFD | `ffi/src/workspace_cwd.rs`, `WorkspaceModel/Terminal.swift readPath`, `WindowUI/Chrome.swift selectedPath`, `git/service.rs`, `files_panel/project/*` |
+| P07 | NOT DONE: the Settings window's project folders page, the recent projects menu, the trust window, a worktree's own folder and a new terminal opened in such a folder still carry the path as text | - | `settings_page.rs` roots, `RecentProjects.swift`, `AuxController.swift`, `git/worktrees.rs GitWorktree`, the workspace's `newTerminalIn` |
+| P01 | VoiceOver on the right panel's strip | each tab is read as a radio button (a tab) with its words and counts, "n of 6", the shown one selected; activating one shows it; nothing drawn changes | `WindowUI/PanelTabBar.swift accessibilityRepresentation` |
+| P05 | `wormhole --worktree` request whose window closed before it arrived | the question comes up in the first window; a second request to that window is still accepted once the sheet is gone | `Wormhole/Hooks/HookHost.swift` |
