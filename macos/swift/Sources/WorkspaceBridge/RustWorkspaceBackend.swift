@@ -79,8 +79,10 @@ public final class RustWorkspaceBackend: WorkspaceBackend, AgentHookSink {
         case .off?, nil: (hosted, disposable) = (nil, nil)
         }
         let wake = WakeRelay()
+        // No start folder of the workspace's own: a terminal with no selected one to take a folder from is asked for none, so
+        // its profile's start folder applies, and the home without one (core `apply_profile`, `launch`), as in the GPUI app.
         let config = WorkspaceConfig(
-            home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: setup.home,
+            home: setup.home, numbersFollowList: setup.numbersFollowList, startFolder: nil,
             paneHeaderHeight: Float(setup.paneHeaderHeight))
         core = windows.map { Workspace.inWindow(windows: $0, window: Int64(window), config: config, listener: wake) }
             ?? Workspace(config: config, listener: wake)
