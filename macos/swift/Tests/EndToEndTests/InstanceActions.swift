@@ -48,6 +48,19 @@ extension Instance {
         return text
     }
 
+    /// A Settings row's line of `settings-rows` once the row is on show and stands still: the window opens and scrolls to a
+    /// revealed row a moment after it is asked to, so the line counts once two asks in a row give the same one.
+    @discardableResult
+    func settledRow(_ id: String) async -> String {
+        var last: Substring?
+        let page = await until("settings-rows") { rows in
+            let line = rows.split(separator: "\n").first { $0.hasPrefix(id + " | ") }
+            defer { last = line }
+            return line != nil && line == last
+        }
+        return page.split(separator: "\n").first { $0.hasPrefix(id + " | ") }.map(String.init) ?? ""
+    }
+
     /// Where the window and the keys are, for a failure that typed keys did not arrive: `geometry` (the window, its content
     /// and the terminal's own frame) and `keys` (the focus and the first responder).
     func keysAndFrame() async -> String { (await send(["geometry", "keys"])).joined(separator: "\n") }

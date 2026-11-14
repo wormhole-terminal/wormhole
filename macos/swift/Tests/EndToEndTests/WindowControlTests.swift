@@ -81,18 +81,22 @@ extension EndToEnd {
             let words = line.split(separator: " ").map(String.init)
             guard let id = words.first == "*" ? words.dropFirst().first : words.first else { return }
 
+            // Making a profile enters it (the Default one's window goes out of sight, a Work one comes): `profile-open` adds
+            // another window of it, and ⌘N in a Work window one more.
+            let work: (String) -> Int = { $0.components(separatedBy: "profile=\(id) ").count - 1 }
+            let entered = work(await app.until("sessions") { work($0) >= 1 })
             await app.send(["profile-open \(id)"])
-            await app.until("sessions") { $0.contains("profile=\(id) ") }
-            // The windows' own files: the one opened second is the Work one.
+            await app.until("sessions") { work($0) == entered + 1 }
+            // Among the windows in sight (all Work's now), the second.
             await app.send(["key cmd-n"], window: 2)
-            await app.until("sessions") { $0.components(separatedBy: "profile=\(id) ").count == 3 }
+            await app.until("sessions") { work($0) == entered + 2 }
 
-            let work = app.scratch.data.appendingPathComponent("profiles/\(id)/config.json")
+            let file = app.scratch.data.appendingPathComponent("profiles/\(id)/config.json")
             await app.send(["action toggleStatusBar"], window: 2)
-            let written = await app.watch(work.deletingLastPathComponent(), timeout: 15) {
-                ((try? String(contentsOf: work, encoding: .utf8)) ?? "").contains("\"status_bar\"")
+            let written = await app.watch(file.deletingLastPathComponent(), timeout: 15) {
+                ((try? String(contentsOf: file, encoding: .utf8)) ?? "").contains("\"status_bar\"")
             }
-            app.expect(written, "the Work profile's config.json has the switch: \(work.path)")
+            app.expect(written, "the Work profile's config.json has the switch: \(file.path)")
             app.expect(!(app.scratch.dataFile("config.json") ?? "").contains("\"status_bar\": true"), "nothing of it went to the Default profile's file")
         }
     }

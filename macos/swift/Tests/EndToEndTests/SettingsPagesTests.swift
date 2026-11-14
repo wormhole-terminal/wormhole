@@ -134,6 +134,7 @@ extension EndToEnd {
             let before = await app.setting("hotkey")
             await app.send(["settings-reveal hotkey"])
             await app.until("settings-rows") { $0.contains("hotkey | ") && $0.contains("jump-waiting-key | ") }
+            await app.settledRow("hotkey")
             await app.send(["settings-record hotkey shift-cmd-space"])
             let taken = await app.until("get hotkey") { $0 != "hotkey = \(before)" }
             app.expect(taken, contains: "space")
