@@ -228,7 +228,14 @@ mod tests {
         for args in [&["init", "-q", "-b", "main"][..], &["add", "."], &["commit", "-q", "-m", "first"]] {
             let status = wormhole_term::sys::process::command("git")
                 .current_dir(dir)
-                .args(["-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false"])
+                .args([
+                    "-c",
+                    "user.name=t",
+                    "-c",
+                    "user.email=t@example.invalid",
+                    "-c",
+                    "commit.gpgsign=false",
+                ])
                 .args(args)
                 .env("GIT_CONFIG_GLOBAL", "/dev/null")
                 .env("GIT_CONFIG_NOSYSTEM", "1")
