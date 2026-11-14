@@ -34,8 +34,10 @@ extension AppController {
         #if WITH_UNIFFI
             guard let backend = hub.store.hooks as? RustWorkspaceBackend else { return "error: this window is not the core's" }
             if command == "detach" { return "detached \(backend.detachHosts())" }
+            // The hosts attached to again, as the GPUI app's devctl names them (the terminals' ids are `sessions`' to say).
+            let hosts = Dictionary(hub.state.all.compactMap { terminal in hub.store.hosting(of: terminal.id)?.hostID.map { (terminal.id, $0) } }, uniquingKeysWith: { first, _ in first })
             let ids = backend.reattachHosts()
-            return ids.isEmpty ? "nothing to reattach" : ids.map(String.init).joined(separator: "\n")
+            return ids.isEmpty ? "nothing to reattach" : ids.map { hosts[$0] ?? String($0) }.joined(separator: "\n")
         #else
             return "error: \(command) needs the Rust library"
         #endif

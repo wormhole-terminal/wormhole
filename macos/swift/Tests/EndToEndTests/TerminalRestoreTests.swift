@@ -38,22 +38,34 @@ extension EndToEnd {
 
     @Test("after a minute's save a crash keeps the text, and ⌘K erases the saved copy at once")
     @MainActor func textAfterCrash() async throws {
-        try await Instance.with { app in
-            await app.emit("minute-marker")
+        // A real shell: ⌘K erases the history and sends ^L, which a shell answers by redrawing its prompt on a clear screen
+        // (`Pty::clear_history`: "the screen stays"; in the GPUI app too). `cat` only echoes the ^L, so its lines would stay.
+        try await Instance.with(shell: .zsh) { app in
+            await app.shell("echo minute-marker")
             await app.screen { $0.contains("minute-marker") }
             await app.send(["save-windows"])
             // The text is saved once a minute (`RustWorkspaceBackend.startSaving`): past one, the app ends as a crash would.
             await app.send(["delay 65000"], timeout: 90)
             await app.end(by: SIGKILL)
             try await app.start()
-            await app.screen { $0.contains("minute-marker") }
+            // The saved text comes back above the new shell's prompt: on the screen or, once the prompt has taken the
+            // screen, in the history a wheel reaches (`scroll`), so it is looked for scrolled all the way up too.
+            @MainActor func everything() async -> String {
+                let seen = await app.send(["screen", "scroll 500", "wait-idle 2000", "screen", "scroll -500"])
+                return seen[0] + "\n" + seen[3]
+            }
+            var back = ""
+            for _ in 0..<20 where !back.contains("minute-marker") { back = await everything() }
+            app.expect(back, contains: "minute-marker")
 
-            await app.send(["key cmd-k"])
-            await app.screen { !$0.contains("minute-marker") }
+            await app.send(["key cmd-k", "wait-idle 3000"])
+            var cleared = await everything()
+            for _ in 0..<20 where cleared.contains("minute-marker") { cleared = await everything() }
+            app.expect(!cleared.contains("minute-marker"), "⌘K erased the text:\n\(cleared)")
             await app.end(by: SIGKILL)
             try await app.start()
             await app.send(["wait-idle 3000"])
-            app.expect(!(await app.reply("screen")).contains("minute-marker"), "the cleared lines did not come back after the crash")
+            app.expect(!(await everything()).contains("minute-marker"), "the cleared lines did not come back after the crash")
         }
     }
 
