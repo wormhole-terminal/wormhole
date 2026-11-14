@@ -41,7 +41,7 @@ public struct PaneArea<Content: View>: View {
         GeometryReader { proxy in
             let size = proxy.size
             let origin = proxy.frame(in: .global).origin
-            let change = tracker.observe(panes, motion: actions.splitMotion, plays: playsMotion && !reduceMotion)
+            let change = tracker.observe(panes, motion: actions.splitMotion, plays: playsMotion && !reduceMotion, split: actions.splitCame())
             let playing = stillPlaying(change)
             TimelineView(.animation(paused: playing == nil)) { timeline in
                 let moment = playing.flatMap { now in

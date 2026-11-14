@@ -24,28 +24,45 @@ final class SplitOpeningTrackerTests: XCTestCase {
 
     func testASplitThatCameIsPlayedAndStandsUntilTheLayoutChanges() {
         let tracker = SplitOpeningTracker()
-        guard case .none = tracker.observe(lone, motion: Always(), plays: true) else { return XCTFail("the first layout is no change") }
-        guard case .plays(let first) = tracker.observe(two, motion: Always(), plays: true) else { return XCTFail("a pane came") }
-        guard case .plays(let again) = tracker.observe(two, motion: Always(), plays: true) else { return XCTFail("the same layout") }
+        guard case .none = tracker.observe(lone, motion: Always(), plays: true, split: nil) else { return XCTFail("the first layout is no change") }
+        guard case .plays(let first) = tracker.observe(two, motion: Always(), plays: true, split: 2) else { return XCTFail("a pane came") }
+        guard case .plays(let again) = tracker.observe(two, motion: Always(), plays: true, split: 2) else { return XCTFail("the same layout") }
         XCTAssertEqual(first, again, "drawn twice, one opening")
         XCTAssertEqual(first.new, 2)
-        guard case .none = tracker.observe(lone, motion: Always(), plays: true) else { return XCTFail("a pane left") }
+        guard case .none = tracker.observe(lone, motion: Always(), plays: true, split: 2) else { return XCTFail("a pane left") }
     }
 
     func testWithMotionOffTheSplitIsCutAndWithoutTheCoreNothingIsAsked() {
         let tracker = SplitOpeningTracker()
-        _ = tracker.observe(lone, motion: Always(), plays: false)
-        XCTAssertTrue(tracker.observe(two, motion: Always(), plays: false).isCut)
+        _ = tracker.observe(lone, motion: Always(), plays: false, split: nil)
+        XCTAssertTrue(tracker.observe(two, motion: Always(), plays: false, split: 2).isCut)
         let sample = SplitOpeningTracker()
-        _ = sample.observe(lone, motion: nil, plays: true)
-        guard case .none = sample.observe(two, motion: nil, plays: true) else { return XCTFail("no core, no opening") }
+        _ = sample.observe(lone, motion: nil, plays: true, split: nil)
+        guard case .none = sample.observe(two, motion: nil, plays: true, split: 2) else { return XCTFail("no core, no opening") }
+    }
+
+    /// GPUI plays the opening only for ⌘D and ⇧⌘D (`split_pane`): a pane that came by a drop on a pane's edge or a join from
+    /// the list lands at once, even where it took half a pane's room; and a split's pane that left and comes back is a drop.
+    func testOnlyThePaneASplitOpenedPlays() {
+        let tracker = SplitOpeningTracker()
+        _ = tracker.observe(lone, motion: Always(), plays: true, split: nil)
+        guard case .none = tracker.observe(two, motion: Always(), plays: true, split: nil) else { return XCTFail("a join is a cut") }
+        _ = tracker.observe(lone, motion: Always(), plays: true, split: nil)
+        guard case .none = tracker.observe(two, motion: Always(), plays: true, split: 7) else { return XCTFail("another split's pane") }
+        _ = tracker.observe(lone, motion: Always(), plays: true, split: 2)
+        guard case .none = tracker.observe(two, motion: Always(), plays: true, split: 2) else {
+            return XCTFail("the split's pane was weighed already: dropped back, it is a drop")
+        }
+        let fresh = SplitOpeningTracker()
+        _ = fresh.observe(lone, motion: Always(), plays: true, split: nil)
+        guard case .plays = fresh.observe(two, motion: Always(), plays: true, split: 2) else { return XCTFail("the split's own pane plays") }
     }
 
     func testAPaneZoomedIsNoOpening() {
         var zoomed = two
         zoomed.zoomed = 2
         let tracker = SplitOpeningTracker()
-        _ = tracker.observe(lone, motion: Always(), plays: true)
-        guard case .none = tracker.observe(zoomed, motion: Always(), plays: true) else { return XCTFail("a zoom is a cut") }
+        _ = tracker.observe(lone, motion: Always(), plays: true, split: nil)
+        guard case .none = tracker.observe(zoomed, motion: Always(), plays: true, split: 2) else { return XCTFail("a zoom is a cut") }
     }
 }

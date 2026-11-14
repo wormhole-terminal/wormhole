@@ -44,6 +44,8 @@ public struct PaneActions {
     public var keyText: (String) -> String? = { _ in nil }
     /// The core's rule for a split's opening motion; nil (the sample) draws a split as it lands.
     public var splitMotion: (any SplitMotion)?
+    /// The terminal the window's last split opened, if any: only its coming plays the opening (a drop or a join is a cut).
+    public var splitCame: () -> PaneID? = { nil }
 
     public init(
         close: @escaping (PaneID) -> Void = { _ in }, split: @escaping (SplitAxis) -> Void = { _ in },

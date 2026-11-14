@@ -23,7 +23,18 @@ extension WindowHub {
             refusal: { [unowned self] in store.paneDropRefusal(dragged: $0.id, target: $1, zone: $2) },
             areaChanged: { [unowned self] in store.setPaneArea(width: $0.width, height: $0.height) })
         made.splitMotion = splitMotion
+        made.splitCame = { [unowned self] in splitCame }
         return made
+    }
+
+    /// Whether `action` is a split that opens with the motion: ⌘D, ⇧⌘D, the split buttons, the pane, title and row menus all
+    /// send these. GPUI plays the opening only for them (`split_pane` -> `begin_opening`); a terminal dropped on a pane's
+    /// edge or joined from the list lands at once, whatever room it takes.
+    static func opensSplit(_ action: WorkspaceAction) -> Bool {
+        switch action {
+        case .splitRight, .splitDown: true
+        default: false
+        }
     }
 
     /// ⌘D / ⇧⌘D, the split buttons and the pane menu: a new terminal beside the selected one, along `axis`.

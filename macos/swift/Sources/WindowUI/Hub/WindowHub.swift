@@ -52,6 +52,8 @@ public final class WindowHub {
     public var rowFitting: any RowFitting = NaturalFit()
     /// The core's rule for a split's opening motion, where the FFI is linked; without it a split lands at once.
     public var splitMotion: (any SplitMotion)?
+    /// The terminal the last split opened (`opensSplit`): the one layout change the pane area plays the opening for.
+    @ObservationIgnored var splitCame: PaneID?
     /// The right panel's state over the backends the app hands in (the core's git where the FFI is linked, else the
     /// sample). An opened diff or file is laid over the terminals (`.terminalArea`, hosted by `TerminalColumn`).
     public let panel: PanelController
@@ -112,7 +114,9 @@ public final class WindowHub {
             return
         }
         guard case .showPanelTab(let tab) = action else {
+            let before = Self.opensSplit(action) ? Set(state.live) : nil
             _ = store.send(action)
+            if let before { splitCame = state.live.first { !before.contains($0) } }
             return
         }
         // A tab that is not on offer (Usage without an agent, a feature that is off) does nothing: its action is bound only while
