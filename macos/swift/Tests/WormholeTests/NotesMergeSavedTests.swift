@@ -63,7 +63,7 @@ struct NotesMergeSavedTests {
     private func window(_ persistence: Store, merging: NotesMerging = NotesMerging()) -> (WorkspaceStore, WindowHub, NotesCoordinator) {
         let store = WorkspaceStore(backend: MockWorkspaceBackend(selected: 1))
         let hub = WindowHub(store: store, terminals: TerminalViews { _ in nil })
-        let coordinator = NotesCoordinator(persistence: persistence, hub: hub, merging: merging)
+        let coordinator = NotesCoordinator(persistence: persistence, hub: hub, merging: merging, syncEvery: nil)
         coordinator.start()
         return (store, hub, coordinator)
     }
@@ -77,7 +77,7 @@ struct NotesMergeSavedTests {
         _ = await inFlight.next()
         meanwhile()
         persistence.release?.resume()
-        await running.value
+        _ = await running.value
     }
 
     @Test func aMergeIntoTheShownTerminalIsSavedAtOnce() async {
@@ -308,7 +308,7 @@ struct NotesMergeSavedTests {
         await receiving.sync()
         #expect(arrived.sent[2] == nil, "not sent while the window it left merges it")
         left.release?.resume()
-        await running.value
+        _ = await running.value
         await receiving.sync()
         #expect(arrived.sent[2] != nil, "sent once that merge has landed")
     }

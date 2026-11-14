@@ -28,7 +28,8 @@ final class NotesCoordinator {
     private var unread: TerminalID?
     /// A folder's project root as last asked, so a window of many terminals asks each folder only now and then.
     private var roots: [String: (root: String?, at: Date)] = [:]
-    private static let syncEvery: TimeInterval = 2
+    /// How often the sync runs by itself; nil: only when asked (tests, whose own `sync()` a tick under way would make a no-op).
+    private let syncEvery: TimeInterval?
     /// The terminals whose merge is under way, the app's every window's (`NotesMerging.app`).
     private let merging: NotesMerging
     /// Merges that landed while the terminal's notes could not be read: the answer and what was sent, laid over what the
@@ -36,7 +37,8 @@ final class NotesCoordinator {
     /// loses nothing (the next merge keeps both sides); laid, a line the file deleted in that merge stays deleted.
     private var unlanded: [TerminalID: (answered: NotesModel, sent: NotesModel)] = [:]
 
-    init(persistence: any NotesPersisting, hub: WindowHub, merging: NotesMerging = NotesMerging()) {
+    init(persistence: any NotesPersisting, hub: WindowHub, merging: NotesMerging = NotesMerging(), syncEvery: TimeInterval? = 2) {
+        self.syncEvery = syncEvery
         self.persistence = persistence
         self.hub = hub
         self.merging = merging
@@ -125,9 +127,9 @@ final class NotesCoordinator {
     }
 
     private func setSync(on: Bool) {
-        guard on != (syncTimer != nil) else { return }
+        guard let syncEvery, on != (syncTimer != nil) else { return }
         syncTimer?.invalidate()
-        syncTimer = on ? Timer.scheduledTimer(withTimeInterval: Self.syncEvery, repeats: true) { [weak self] timer in
+        syncTimer = on ? Timer.scheduledTimer(withTimeInterval: syncEvery, repeats: true) { [weak self] timer in
             // The window is gone: the timer ends with it instead of firing for nobody.
             guard let self else { return timer.invalidate() }
             Task { @MainActor in await self.sync() }
