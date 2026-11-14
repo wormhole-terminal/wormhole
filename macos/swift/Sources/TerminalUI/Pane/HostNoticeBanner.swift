@@ -18,6 +18,7 @@ public struct HostNoticeBanner: View {
                 .font(.system(size: tokens.size(.label)))
                 .foregroundStyle(tokens.textLink)
                 .padding(.horizontal, Space._2)
+                .marked("banner.dismiss")
         }
         .padding(.top, Space._2).padding(.horizontal, Space._4)
     }
