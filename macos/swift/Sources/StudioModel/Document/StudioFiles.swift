@@ -89,8 +89,9 @@ public protocol StudioFiles: Sendable {
     func themeList() -> ThemeList
     /// What fits the word at the UTF-8 offset `caret` of `text`, typed for the token `target`: core's names and functions.
     func completions(_ text: String, caret: Int, target: String) -> FieldCompletions?
-    /// The pairs the theme falls short on, each with core's fix (it wraps what the person typed).
-    func contrastIssues(_ text: String, shown: String?) throws -> [ContrastIssue]
+    /// Every contrast pair of the theme measured as the window shows it (Increase Contrast or not), and the ones that
+    /// fall short with core's fix (it wraps what the person typed).
+    func contrast(_ text: String, shown: String?, increaseContrast: Bool) throws -> ContrastReport
 }
 
 /// What the Studio asks of the project of the terminal in front: a trusted project's theme is the one in effect

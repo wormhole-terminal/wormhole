@@ -1,6 +1,6 @@
 // What the token list and the editor read from the document: the bands the filter keeps, each row's chip and
 // value, where a value comes from, the contrast pairs and what follows a token. Worked out from the resolved
-// tokens, so they are Rust's answers and the same ones the preview draws.
+// tokens and core's contrast report, so they are Rust's answers and the same ones the preview draws.
 
 import DesignSystem
 import Foundation
@@ -17,7 +17,8 @@ extension StudioDocument {
     /// Edited since the last save.
     public func isChanged(_ token: String) -> Bool { file.own(token, in: shown) != saved.own(token, in: shown) }
 
-    public var lowContrastTokens: Set<String> { ContrastCheck.lowTokens(in: tokens) }
+    /// The tokens whose text falls short somewhere, by core's check (the card's own pairs).
+    public var lowContrastTokens: Set<String> { contrast.lowTokens }
 
     public var visibleGroups: [TokenGroup] {
         let low = lowContrastTokens
@@ -60,12 +61,9 @@ extension StudioDocument {
 
     public func uses(of token: String) -> [TokenUse] { environment.knowledge.uses.filter { $0.draws(with: token) } }
 
-    public var contrastIssues: [ContrastIssue] {
-        if let files = environment.files, let issues = try? files.contrastIssues(file.json(), shown: shown) { return issues }
-        return ContrastCheck.all(in: tokens).filter { !$0.passes }.map { ContrastIssue(check: $0) }
-    }
+    public var contrastIssues: [ContrastIssue] { contrast.issues }
 
-    public func checks(of token: String) -> [ContrastCheck] { ContrastCheck.checks(of: token, in: tokens) }
+    public func checks(of token: String) -> [ContrastCheck] { contrast.checks(of: token) }
 
     /// Where a value of the shown version lives, for the chip of a pair.
     public func place(of token: String) -> ThemeFile.Place {

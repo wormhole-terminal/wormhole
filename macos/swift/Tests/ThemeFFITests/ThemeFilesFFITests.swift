@@ -57,8 +57,13 @@ final class ThemeFilesFFITests: XCTestCase {
         XCTAssertTrue(found.items.contains { $0.label == "primary" && !$0.function })
         XCTAssertNil(files.completions("primary", caret: 7, target: "primary.hover"), "a finished name offers nothing")
         let weak = "{ \"name\": \"Weak\", \"extends\": \"Nord\", \"ui\": { \"text.muted\": \"#333847\" } }"
-        let issue = try XCTUnwrap(files.contrastIssues(weak, shown: nil).first { $0.check.fg == "text.muted" })
+        let report = try files.contrast(weak, shown: nil, increaseContrast: false)
+        let issue = try XCTUnwrap(report.issues.first { $0.check.fg == "text.muted" })
         XCTAssertTrue(try XCTUnwrap(issue.fix).expression.hasPrefix("readable(#333847"))
+        // One answer: the row is marked and the editor's section lists the same pair, failing.
+        XCTAssertTrue(report.lowTokens.contains("text.muted"))
+        XCTAssertTrue(report.checks(of: "text.muted").contains { $0.bg == issue.check.bg && !$0.passes })
+        XCTAssertEqual(Set(report.checks.filter { !$0.passes }.map(\.fg)), report.lowTokens)
     }
 
     // MARK: Picks (audit gap 7)

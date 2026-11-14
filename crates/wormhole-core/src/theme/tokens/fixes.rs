@@ -61,6 +61,12 @@ impl ThemeTokens {
         })
     }
 
+    /// Every pair of [`CONTRAST_PAIRS`], measured, in its order (a pair naming a token the
+    /// theme lacks is left out): what the Swift Studio's list marks, filters and edits by.
+    pub fn contrast_checks(&self) -> Vec<ContrastCheck> {
+        CONTRAST_PAIRS.iter().filter_map(|p| self.measure(p)).collect()
+    }
+
     /// Every pair of [`CONTRAST_PAIRS`] that `name` is part of, as the text or as the
     /// background, measured as [`ThemeTokens::contrast_warnings`] measures them.
     pub fn contrast_checks_of(&self, name: &str) -> Vec<ContrastCheck> {
@@ -353,5 +359,28 @@ mod tests {
         assert!(fill.iter().all(|c| c.passes()), "{fill:?}");
         assert!(t.contrast_checks_of("not.a.token").is_empty());
         assert!(contrast_issues(&t, &BTreeMap::new()).is_empty());
+        assert_eq!(t.contrast_checks().len(), crate::theme::tokens::contrast::CONTRAST_PAIRS.len());
+    }
+
+    /// The failing checks are exactly the warnings: the list's marks and the card agree.
+    #[test]
+    fn the_failing_checks_are_the_warnings_and_the_issues() {
+        let file = draft("Tokyo Night", &[("primary", "#3d59a1"), ("text.faint", "#2a2b36")]);
+        let t = tokens(&file);
+        let failing: Vec<(String, String)> = t
+            .contrast_checks()
+            .into_iter()
+            .filter(|c| !c.passes())
+            .map(|c| (c.fg.to_string(), c.bg.to_string()))
+            .collect();
+        let warned: Vec<(String, String)> =
+            t.contrast_warnings().into_iter().map(|(f, b, _)| (f, b)).collect();
+        let issues: Vec<(String, String)> = contrast_issues(&t, &file.ui)
+            .into_iter()
+            .map(|i| (i.check.fg.to_string(), i.check.bg.to_string()))
+            .collect();
+        assert!(!failing.is_empty());
+        assert_eq!(failing, warned);
+        assert_eq!(failing, issues);
     }
 }

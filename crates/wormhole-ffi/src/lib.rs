@@ -208,8 +208,8 @@ pub use studio_folder::{
     studio_folder_versions, studio_folder_write,
 };
 pub use studio_edit::{
-    StudioCompletion, StudioCompletions, StudioContrastFix, StudioContrastIssue, studio_completions,
-    studio_contrast_issues,
+    StudioCompletion, StudioCompletions, StudioContrast, StudioContrastCheck, StudioContrastFix,
+    StudioContrastIssue, studio_completions, studio_contrast,
 };
 pub use themes::{list_user_themes, resolve_theme, resolve_theme_json, theme_files_stamp};
 pub use title_fit::{TitlePathShown, TitleRowFit, TitleRowWants, title_fit_row};

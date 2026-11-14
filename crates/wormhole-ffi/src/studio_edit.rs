@@ -1,6 +1,7 @@
 //! What the Theme Studio's editor asks of core while a value is typed and while a theme is read for contrast: the
-//! names and functions an expression offers at the caret (`theme::tokens::completions`) and the fixes for the pairs
-//! that fall short (`contrast_issues`). Core proposes, the Studio applies: nothing here changes a file.
+//! names and functions an expression offers at the caret (`theme::tokens::completions`), every contrast pair
+//! measured (`contrast_checks`) and the fixes for the pairs that fall short (`contrast_issues`). Core proposes,
+//! the Studio applies: nothing here changes a file.
 
 use std::path::Path;
 
@@ -54,6 +55,16 @@ pub struct StudioContrastFix {
     pub label: String,
 }
 
+/// One text-on-background pair of core's `CONTRAST_PAIRS`, measured as the window shows it.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct StudioContrastCheck {
+    pub fg: String,
+    pub bg: String,
+    pub underlay: String,
+    pub ratio: f32,
+    pub min: f32,
+}
+
 /// A pair that falls short, and what to do about it.
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct StudioContrastIssue {
@@ -68,19 +79,45 @@ pub struct StudioContrastIssue {
     pub follows: Option<String>,
 }
 
-/// The pairs of the theme `text` (the shown appearance of a pair) that fall short, each with core's fix, which wraps
-/// what the person typed rather than a resolved colour and follows tokens that merely name a failing one.
+/// Every pair measured and the ones that fall short, from one resolve: the list's marks, the Low filter, the
+/// editor's Contrast section and the card all read this, so they cannot disagree.
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct StudioContrast {
+    /// Every pair of `CONTRAST_PAIRS` the theme has the tokens for, in its order.
+    pub checks: Vec<StudioContrastCheck>,
+    /// The ones that fall short, in the same order, each with core's fix.
+    pub issues: Vec<StudioContrastIssue>,
+}
+
+/// The pairs of the theme `text` (the shown appearance of a pair), as Increase Contrast shows them when
+/// `increase_contrast`: every one measured (`contrast_checks`), and those that fall short with core's fix, which
+/// wraps what the person typed rather than a resolved colour and follows tokens that merely name a failing one.
 #[uniffi::export]
-pub fn studio_contrast_issues(
+pub fn studio_contrast(
     themes_dir: String,
     text: String,
     shown: Option<String>,
-) -> Result<Vec<StudioContrastIssue>, FfiError> {
+    increase_contrast: bool,
+) -> Result<StudioContrast, FfiError> {
     let file =
         folded(&read_theme_file(&text).map_err(|reason| FfiError::Theme { reason })?, shown.as_deref());
-    let tokens =
+    let mut tokens =
         resolve_theme_file_in(Path::new(&themes_dir), &file).map_err(|reason| FfiError::Theme { reason })?;
-    Ok(contrast_issues(&tokens, &file.ui)
+    if increase_contrast {
+        tokens = tokens.high_contrast();
+    }
+    let checks = tokens
+        .contrast_checks()
+        .into_iter()
+        .map(|c| StudioContrastCheck {
+            fg: c.fg.into(),
+            bg: c.bg.into(),
+            underlay: c.underlay.into(),
+            ratio: c.ratio,
+            min: c.min,
+        })
+        .collect();
+    let issues = contrast_issues(&tokens, &file.ui)
         .into_iter()
         .map(|issue| StudioContrastIssue {
             fg: issue.check.fg.into(),
@@ -95,5 +132,6 @@ pub fn studio_contrast_issues(
             }),
             follows: issue.follows.map(Into::into),
         })
-        .collect())
+        .collect();
+    Ok(StudioContrast { checks, issues })
 }

@@ -1566,8 +1566,11 @@ All additive; the core decides, Swift asks.
   `caret` and the returned `start` / `end` are UTF-8 byte offsets; `items` are `{label, insert, function}` (best first, at most 8). None while the
   caret is not after a name, for a `#` colour, a number, or a name that already exists (Return then applies it). Swift offers them under the field
   with ↑ ↓, ⇥ and ↩ taking the row, Esc closing the list.
-- `studio_contrast_issues(themes_dir, text, shown: String?) -> [StudioContrastIssue]` (throws `FfiError::Theme`): the pairs the theme `text`
-  (the shown appearance of a pair) falls short on, each `{fg, bg, underlay, ratio, min, fix: {token, expression, label}?, follows: String?}`
-  from core's `contrast_issues`: the fix wraps what the person typed (`readable(<it>, <backgrounds>, <min>)`), follows tokens that merely name
-  a failing one (`follows`: that token's fix clears this pair too), spots cycles, and has none for the terminal palette's own pair. The Studio
+- `studio_contrast(themes_dir, text, shown: String?, increase_contrast: bool) -> StudioContrast` (throws `FfiError::Theme`): the theme `text`
+  (the shown appearance of a pair), as Increase Contrast shows it when asked, measured once: `checks` is every pair of core's `CONTRAST_PAIRS`
+  (`contrast_checks`, `{fg, bg, underlay, ratio, min}`), `issues` the ones that fall short, each `{fg, bg, underlay, ratio, min, fix:
+  {token, expression, label}?, follows: String?}` from core's `contrast_issues`: the fix wraps what the person typed (`readable(<it>,
+  <backgrounds>, <min>)`), follows tokens that merely name a failing one (`follows`: that token's fix clears this pair too), spots cycles, and
+  has none for the terminal palette's own pair. The Studio asks once per change of the draft (`StudioDocument.contrast`) and the list's marks,
+  the Low filter, the editor's Contrast section and the card all read that one answer; Swift keeps no pair table or ratio maths. The Studio
   applies a fix only when the person presses it.

@@ -66,11 +66,16 @@ public struct FfiStudioFiles: StudioFiles {
             items: found.items.map { FieldCompletion(label: $0.label, insert: $0.insert, function: $0.function) })
     }
 
-    public func contrastIssues(_ text: String, shown: String?) throws -> [ContrastIssue] {
-        try studioContrastIssues(themesDir: directory, text: text, shown: shown).map { issue in
-            ContrastIssue(
-                check: ContrastCheck(fg: issue.fg, bg: issue.bg, underlay: issue.underlay, min: Double(issue.min), ratio: Double(issue.ratio)),
-                fix: issue.fix.map { ContrastFix(token: $0.token, expression: $0.expression, label: $0.label) }, follows: issue.follows)
-        }
+    public func contrast(_ text: String, shown: String?, increaseContrast: Bool) throws -> ContrastReport {
+        let found = try studioContrast(themesDir: directory, text: text, shown: shown, increaseContrast: increaseContrast)
+        return ContrastReport(
+            checks: found.checks.map {
+                ContrastCheck(fg: $0.fg, bg: $0.bg, underlay: $0.underlay, min: Double($0.min), ratio: Double($0.ratio))
+            },
+            issues: found.issues.map { issue in
+                ContrastIssue(
+                    check: ContrastCheck(fg: issue.fg, bg: issue.bg, underlay: issue.underlay, min: Double(issue.min), ratio: Double(issue.ratio)),
+                    fix: issue.fix.map { ContrastFix(token: $0.token, expression: $0.expression, label: $0.label) }, follows: issue.follows)
+            })
     }
 }
