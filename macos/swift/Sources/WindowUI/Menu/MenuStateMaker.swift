@@ -23,6 +23,8 @@ struct MenuFacts {
     var flagsOn: Set<String> = []
     /// The selected terminal has a fold: Show Hidden Lines has something to show.
     var hasFolds = false
+    /// The selected terminal's shell has integration: the command blocks' items have blocks to act on.
+    var hasBlocks = false
     /// The profiles' names, in the order of the list, and the one Wormhole is in.
     var profiles: [String] = []
     var currentProfile: Int?
@@ -94,6 +96,10 @@ enum MenuStateMaker {
         // Actions whose feature flag is off are not in the menus at all.
         menu.hidden.formUnion(keymap.entries.filter { $0.flag.map { !facts.flagsOn.contains($0) } ?? false }.map(\.id))
         if !facts.hasFolds { menu.disabled.insert("showHiddenLines") }
+        // Without blocks (no shell integration yet) their items are greyed, as GPUI binds them only then (`has_blocks`).
+        if !facts.hasBlocks {
+            menu.disabled.formUnion(["previousPrompt", "nextPrompt", "selectOutput", "copyOutput", "copyCommand", "rerunCommand"])
+        }
 
         let numbered = SidebarNumbering.numbered(state)
         menu.terminals = numbered.map(\.title)

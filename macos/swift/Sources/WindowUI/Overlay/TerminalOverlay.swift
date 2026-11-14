@@ -20,6 +20,8 @@ final class TerminalOverlay {
     /// The fold markers among the rows (`MetalTerminalView.foldMarkers`), and whether any fold exists: Edit ▸ Show Hidden Lines.
     var markers: [FoldMarkerRow] = []
     var hasFolds = false
+    /// The shell has shown its integration (a prompt mark arrived): the command blocks' items in Edit act (`has_blocks`).
+    var hasBlocks = false
     /// While ⌘ is held over a link a Probe's rule made: what it says (`LinkReadout`).
     var linkReadout: String?
     @ObservationIgnored private(set) weak var view: MetalTerminalView?

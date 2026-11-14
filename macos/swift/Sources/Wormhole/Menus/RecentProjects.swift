@@ -63,6 +63,8 @@ extension AppController {
             // does nothing while they are off.
             if off.contains("project") { state.disabled.insert("showProject") }
         }
+        // Terminals that outlive the app are the shown profile's switch, not the window's (`persistent_terminals_on`).
+        state.persistent = settingsModel.host.flags().contains { $0.key == "persistent_terminals" && $0.on }
         // The window's own profile's list, which is not always the shown one.
         let profile = sessions.first { $0.hub === hub }?.windows.profile ?? windowsHost.profile
         if let root = hub.panel.project.state?.root { recents.remember(root, profile: profile) }
