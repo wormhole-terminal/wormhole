@@ -68,6 +68,11 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     public func setContentSize(asked size: CGSize) {
         (window as? WorkspaceWindow)?.holdsAskedSize = true
         window?.setContentSize(size)
+        // Laid out and drawn here, not at the next display cycle: a window that is not really on a screen (a hosted
+        // runner's session) gets none, and the terminal kept the frame of the size before.
+        window?.contentView?.needsLayout = true
+        window?.contentView?.layoutSubtreeIfNeeded()
+        window?.displayIfNeeded()
     }
 
     public func windowShouldClose(_ sender: NSWindow) -> Bool { shouldClose?() ?? true }

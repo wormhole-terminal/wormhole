@@ -92,6 +92,12 @@ extension AppController {
 
     /// A key down and up, through the application's own dispatch (its monitors, then the window's first responder).
     private func press(code: UInt16, characters: String, flags: NSEvent.ModifierFlags, in window: NSWindow) {
+        // Nothing in the workspace's window has the keys (its first responder is the window itself) and nothing covers the
+        // terminal: the keys are the selected terminal's, as they are once a window has been in front. A window that never
+        // really got on a screen (a hosted runner's session) never made it first responder.
+        if window === self.window, window.firstResponder === window, hub.panel.cover == nil, let view = selectedView, view.window === window {
+            window.makeFirstResponder(view)
+        }
         for type in [NSEvent.EventType.keyDown, .keyUp] {
             NSEvent.keyEvent(
                 with: type, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
