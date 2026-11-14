@@ -225,6 +225,12 @@ screen: on a 1024-point display the terminal was 304 points wide, a split was re
 The Studio's `studio-open`, `studio-save` and `studio-use` answer when they are done, beside the batch: read them with `app.late(…)`.
 `a11y` lists AppKit's views only, so a SwiftUI button's spoken name is a known issue there ("What still needs a person").
 
+Wave 8 (lane e2e-b) added: `Instance.with(auth: "allow", config: "<json>")` (what the owner's question answers, a `config.json`
+before the first launch), `app.cli([...])` and `app.cliRun([...])` (the app's own command line asking the instance through its
+socket, as an agent or a script would: `Client.swift`), `app.later(command, answer: prefix)` for a command that answers from a task
+after its batch's `sync` marks (`project …`, `update`, `probe`, `studio-save`, `studio-open`, `studio-menu`, `history-copy`,
+`studio-out`), `app.flags([...])`, `app.setting(key)`, `app.terminal(in:)`, `app.screen(showing:)` and `app.signal(SIGTERM)`.
+
 What they may never touch: the person's data folder, `HOME`, agent home, clipboard, Trash, notifications, Touch ID, git repositories,
 browser or editor, and the keyboard focus. The harness gives the app an environment of its own (no inherited variable): the data
 folder is `Wormhole-swift-e2e` inside `/tmp/wh-e2e-<id>`, `HOME`, `TMPDIR` and `WORMHOLE_AGENT_HOME` are folders in it,

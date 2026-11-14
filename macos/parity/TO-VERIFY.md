@@ -1415,3 +1415,144 @@ Found while reading the code for the assertions:
   the plain ⌘ key for any key that is not an app key, so ⌥⌘C copies there. `copyAndPaste` asserts it and is expected to fail.
 - Line 822's "Ctrl-Opt-N" (and the comment at `WindowUI/Hub/WindowHub+Sidebar.swift:139`) names a key that neither keymap has (no
   ⌃⌥N row in `keymap/table.rs`): only an empty pinned set opened by ⌃⌥1–9 or the switcher reaches `newTerminal(inGroup:)`.
+
+## Lane e2e-b, wave 8
+
+Written without running: no scenario below has been run. The rows of this lane (P01 to P09, ST*, STX*, SD*, A*, O*, PL*, X07, X12
+to X15) were read line by line, 460 table lines in the sections above; each became a scenario's assertion, a line waiting for a
+command, a line for a person (MANUAL.md), a stale line, or none of these (a static check, a unit test, a note). The numbers below
+are this file's line numbers above this section. The notes merge (lines 228, 426, 787, 952 to 954) is the panel lane's scenario
+and is left to it.
+
+Harness added: `Instance.with(auth:config:)` (the owner's answer, a config.json before launch), `Instance.cli`/`cliRun`
+(`Client.swift`: the app's own command line as a client, waited on by its exit event), `later` (a command that answers after its
+batch: `project …`, `update`, `studio-save`, `history-copy`), `flags`, `setting`, `terminal(in:)`, `screen(showing:)`, `count`,
+`signal`, `Scratch.project`, `Scratch.rawFile`, `Spawn.start`.
+
+| scenario (`EndToEndTests/<file>`) | rows | lines | the list's lines |
+|---|---|---|---|
+| `untrustedProject` (ProjectTests) | P08, STX2 | 1 | 145 |
+| `trustedProject` (ProjectTests) | P08, STX2 | 2 | 222, 875 |
+| `actionKey` (ProjectTests) | P08 | 3 | 424, 615, 959 |
+| `projectFromASubfolder` (ProjectTests) | P07, P08, X12 | 4 | 226, 473, 893, 896 |
+| `projectTheme` (ProjectTests) | X14 | 1 | 293 |
+| `accessAsked` (AgentAccessTests) | A05, X12 | 2 | 639, 720 |
+| `accessRefused` (AgentAccessTests) | A05, X12 | 2 | 640, 719 |
+| `accessModes` (AgentAccessTests) | X12 | 1 | 692 |
+| `accessWidenedOutside` (AgentAccessTests) | A07, X12 | 3 | 352, 642, 721 |
+| `accessGrantedScripts` (AgentAccessTests) | X12 | 1 | 641 |
+| `settingsSavedAndReset` (SettingsPagesTests) | ST01, ST03, X12 | 4 | 122, 124, 139, 912 |
+| `settingsSearchAndReveal` (SettingsPagesTests) | ST01 | 1 | 864 |
+| `profiles` (SettingsPagesTests) | ST02, X12 | 4 | 130, 131, 132, 898 |
+| `commandLineTool` (SettingsPagesTests) | ST03, X12 | 2 | 141, 913 |
+| `importSettings` (SettingsPagesTests) | ST03, X12 | 2 | 140, 909 |
+| `shortcutRecorders` (SettingsPagesTests) | PL02, X12 | 3 | 147, 149, 911 |
+| `fontPicker` (SettingsPagesTests) | ST09, X12 | 2 | 144, 910 |
+| `notificationKinds` (SettingsPagesTests) | ST03 | 1 | 844 |
+| `settingsRowMenuAndKeys` (SettingsPagesTests) | ST01, STX3, PL02 | 3 | 125, 146, 1122 |
+| `studioThemes` (StudioTests) | SD01, X12 | 9 | 275, 279, 282, 283, 284, 291, 644, 645, 1140 |
+| `userThemeFile` (StudioTests) | SD03 | 2 | 273, 274 |
+| `studioPair` (StudioTests) | SD01 | 3 | 280, 1138, 1139 |
+| `studioOlderAndNewerFiles` (StudioTests) | SD01 | 2 | 278, 285 |
+| `filesRename` (FilesTests) | O05, P07 | 2 | 55, 243 |
+| `filesPinsAndMenus` (FilesTests) | O01, O05, P07, X12 | 5 | 59, 234, 247, 690, 916 |
+| `filesRawName` (FilesTests) | P07 | 1 | 609 |
+| `changesFromASubfolder` (GitPanelTests) | P01, P02, P03 | 4 | 239, 242, 472, 765 |
+| `compareFollowsEachTerminal` (GitPanelTests) | P02, P03, X12 | 3 | 232, 768, 891 |
+| `historyDetails` (GitPanelTests) | O01, P04, X12 | 6 | 233, 249, 464, 731, 892, 1118 |
+| `worktreePort` (WorktreeNotesTests) | P05 | 2 | 38, 250 |
+| `worktreeRefusedUntrusted` (WorktreeNotesTests) | P05 | 1 | 777 |
+| `notesTools` (WorktreeNotesTests) | P06, X12 | 3 | 230, 888, 889 |
+| `featureSwitchesAndMenus` (PanelMenusTests) | PL01, X12 | 3 | 48, 712, 917 |
+| `panelTabKeys` (PanelMenusTests) | PL01, P01 | 3 | 713, 780, 781 |
+| `overlaysGiveTheKeysBack` (PanelMenusTests) | O02 | 1 | 323 |
+| `openedFromTheSystem` (PlatformTests) | PL07, PL09 | 2 | 348, 351 |
+| `sigtermQuits` (PlatformTests) | PL09 | 1 | 350 |
+| `ambientRows` (PlatformTests) | PL04, PL05, PL06 | 2 | 49, 50 |
+| `noticesAndBanners` (PlatformTests) | X12 (O05, PL03) | 3 | 899, 900, 901 |
+| `hostsLicensesUpdates` (AuxWindowsTests) | A03, X12 | 3 | 903, 904, 1121 |
+| `firstRunAndWelcome` (AuxWindowsTests) | X12 (A01) | 2 | 906, 907 |
+| `toolingPictures` (AuxWindowsTests) | X12 | 2 | 643, 905 |
+| `controlFilesPerWindow` (DevToolsTests) | X12 | 4 | 680, 681, 691, 921 |
+| `readAndDriveByRow` (DevToolsTests) | X12 | 6 | 685, 686, 687, 688, 689, 937 |
+| `inspector` (DevToolsTests) | X12 | 1 | 635 |
+| `pseudoLanguage` (DevToolsTests) | X07 | 2 | 68, 750 |
+| `folderPicker` (FolderPickerTests) | O03, X12 | 2 | 60, 897 |
+| `groupTools` (GroupToolsTests) | O04, X12 | 4 | 326, 894, 895, 915 |
+
+Missing commands, and the lines that wait for each (most lines first):
+
+| what is missing | lines |
+|---|---|
+| `settings-page`: the page on show as text: its banners and notes (config.json unreadable, profiles rebuilt, Zen mode, the hotkey's conflict, the test row's status, the permission row), the rows' captions, swatches and enabled state, the nav's marks | 20: 127, 128, 148, 445, 717, 845, 851, 852, 853, 854, 855, 856, 857, 858, 865, 866, 867, 1143, 1144, 1145 |
+| `changes-menu <n>`, `history-menu <n>`, `files-row-menu <path>`: a panel row's context menu kept for `menu` and `menu-pick` (Copy Path, Open, Reveal, File History, Open in ▸, a commit's copies, ⌘C in a list) | 9: 52, 235, 238, 333, 334, 335, 766, 767, 773 |
+| `diff-spans <line>` (and the viewer's): a line's colour runs by token | 8: 578, 579, 580, 581, 582, 583, 586, 588 |
+| `theme-cards`: the Appearance page's cards (names, shelves, warning marks, the project notice, Hidden themes) and a card's menu | 7: 449, 868, 869, 870, 871, 872, 873 |
+| a session host in the harness (`WORMHOLE_HOST_BIN` beside the built app, Persistent terminals on, an older wire version): not a command, a fixture | 6: 56, 361, 637, 638, 729, 1120 |
+| `onboarding-state`: the first run's step, its trust card, Recents, the primer's lines, and a Look card's pick | 6: 276, 722, 723, 724, 725, 1116 |
+| `diff-header` and `diff-step next|prev`: what the diff's header says (File N of M, Renamed from, the commit's hash, a submodule's card) and its arrows; the sideways extent | 6: 240, 241, 468, 469, 470, 770 |
+| `settings-press <row id>`: a page's button pressed (Copy as JSON, Theme Studio, Import theme, Choose app…, Reset tips, Install/Repair/Remove hooks) | 5: 123, 133, 134, 135, 138 |
+| a feed the instance may be pointed at without the network: core's `check_url` refuses `file://` and `--update-feed` wants HTTPS, so no update scenario can run on a file the test writes | 5: 143, 357, 358, 360, 908 |
+| `project-layout` (the Project tab's Open terminals) and `project-prompt-note <id>` (Copy into a new note) | 4: 224, 227, 790, 958 |
+| `usage`: the Usage tab's meters, reset words and Updated line | 4: 252, 791, 961, 962 |
+| `files-viewer`: the viewer's lines, its picture's state, and its Open in / Reveal buttons | 4: 244, 245, 246, 418 |
+| `recents [folders|projects]`: the recent folders and projects a profile's database holds | 4: 61, 73, 732, 1114 |
+| `panel-kept`: what the Files, Changes and History stores keep per terminal, and whether Files reads and watches | 3: 422, 612, 613 |
+| `history-copy` that copies (the chip, the instance's pasteboard), not only says the text | 2: 53, 54 |
+| an agent fixture that draws a prompt box, for `stash` and ⌥⌘S | 2: 229, 431 |
+| `studio-complete <text>`: the expression field's completion list | 2: 287, 1137 |
+| `history-parent <n>` (a parent link) and the picker's own first rows (HEAD's words, Loading branches…) | 2: 248, 465 |
+| `branch-chip [pane]`: a click on the title row's branch chip | 2: 769, 960 |
+| `comment-at <file line>`: the comment dialog opened on a diff line by number (no click at a point) | 2: 771, 890 |
+| `title-menu`: the title row's own right-click menu | 2: 330, 331 |
+| `agent-caps <approval> <capability> on|off`: Agent access's per-approval ticks | 1: 860 |
+| `settings-records`: the Coding agents page's records (login folders, skills) | 1: 861 |
+| `trust-state`: the project commands window's text | 1: 730 |
+| whether the palette or the shortcut sheet is up, in `state` | 1: 325 |
+| `project-state` with the stores' problem and the folder's name (`.andromeda`) | 1: 425 |
+| `files-icons`: the icon each Files or Changes row draws | 1: 294 |
+| `history-state` saying which of the open commit's files are present (the open icon) | 1: 463 |
+| `notes` saying whether a draft step is open | 1: 788 |
+| `palette-key <keys>`: the palette's own keys on a row (⌘⌫ on a terminal, ⌘C on a setting) | 1: 58 |
+| a marking shell fixture (OSC 133) in the harness, for `blocks` | 1: 682 |
+
+For a person (MANUAL.md): 66, 69, 70, 129, 136, 137, 142, 150, 236, 237, 288, 289, 290, 324, 327, 349, 356, 359, 363, 371, 387,
+388, 389, 390, 391, 392, 393, 420, 421, 429, 430, 432, 446, 447, 448, 461, 462, 466, 467, 471, 533, 536, 537, 538, 539, 540, 541,
+542, 543, 544, 545, 546, 587, 605, 606, 607, 608, 610, 611, 631, 632, 633, 634, 646, 648, 715, 716, 726, 728, 751, 772, 783, 784,
+785, 786, 789, 846, 848, 859, 862, 863, 874, 878, 919, 920, 938, 944, 1112, 1117, 1119, 1133, 1134, 1136, 1141, 1142. Real
+banners, menus, the menu bar, the status item, the Dock, the hotkey against another app, signed bundles and their updates, Touch
+ID, VoiceOver, hover and the real pointer (SwiftUI pop-ups, reset arrows, path cards), animation and timing, and looks (gallery
+specimens, wrapping, fonts).
+
+Stale (a later section says what is true now): 51, 71, 126, 698, 699, 700, 701, 702, 703, 727, 733, 734, 847, 850, 879, 880. 51 is
+answered by 326 (a native menu); 71 and 727 by 1121 (Check for Updates opens Settings on Updates, the update window is deleted);
+126 by 446; 698 to 703 by the passes that wrote those commands; 733, 734, 847, 850, 879 and 880 by wave 7's lines.
+
+Not an app behaviour (a static check, a unit-test or cargo run, a build step, a note of something not written or kept): 67, 72,
+295, 296, 355, 394, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 450, 451, 452, 534, 535, 547, 553, 554, 555, 556, 557, 558,
+584, 585, 649, 650, 651, 652, 653, 654, 749, 792, 793, 794, 795, 902, 914, 922, 923, 924, 925, 963, 964, 1123, 1124, 1125, 1135,
+1148.
+
+A script could check them; not written in this wave (most need two profiles, a session host, a trusted project with a worktree
+setup, or a minute's wait): 223, 225, 231, 251, 277, 281, 286, 292, 328, 329, 332, 353, 354, 362, 369, 417, 419, 423, 427, 428,
+460, 614, 636, 647, 683, 684, 711, 714, 718, 774, 775, 776, 778, 779, 782, 849, 876, 877, 918, 939, 940, 955, 956, 957, 1113,
+1115, 1146, 1147.
+
+Counts: 460 lines. Covered by a scenario: 126. Waiting for a command or fixture: 115. For a person: 95. Stale: 16. Not an app
+behaviour: 54. The panel lane's: 6. Not written yet: 48. Scenarios: 48.
+
+Found while reading the code for the assertions (the list promises it, the code does otherwise):
+- `onboarding <step>` ignores its step: `runWindow` sends every `onboarding …` to `runAux("onboarding")`, which opens the intro at its first step,
+  and `onboarding close` opens it too. Only `onboarding-step <step>` walks (and closes). Line 906 and `onboarding-tailor`'s own error say
+  `onboarding look` (`AppController+ControlWindow.swift`, `AppController+ControlPages.swift`).
+- `project-init` says `creating <terminal's folder>/.wormhole` while the store makes it at the band, the repository's root, from a subfolder
+  (`AppController+ControlNotes.swift`, `ProjectStore.create`/`act`).
+- `folder-color` without a path colours the terminal's own folder (`project.folder`); the Project tab's pick colours the band (the
+  repository's root): from a subfolder the tool and the tab colour different folders (`AppController+ControlSidebar.swift folderColor`).
+- `history 1` a second time does not close the commit (line 892): only `history 0` or `history` alone closes it (`AppController+ControlPanel.swift`).
+- `control --from <tab> …` in Ask mode answers "not carried here" and drops the question (`control_line.rs` `Answer::Ask`): line 692's
+  "answer with agent-ask" has nothing to answer. The scenarios ask through the app's own command line instead (`Instance.cli`).
+- No update scenario can use a feed the test writes: `--update-feed` needs HTTPS and core's `check_url` refuses `file://`; `update-installed`
+  needs the real updater, which a test instance has only with a feed (line 908).
+- A command that answers from a task (`project …`, `update`, `probe`, `studio-save|use|menu|open`, `studio-do <session verb>`,
+  `history-copy`, `studio-out`) writes its answer after the batch's `sync` marks: `reply` gives it to the wrong command. `later` waits for it.
