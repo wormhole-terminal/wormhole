@@ -72,4 +72,28 @@ extension EndToEnd {
             }
         }
     }
+
+    @Test("Fonts by clicks: the ligatures switch reaches the terminals' font, and Open folder asks for the instance's fonts folder")
+    @MainActor func fontsPageClicked() async throws {
+        try await Instance.with { app in
+            // Ligatures are on as they come: the terminals' font says so, and the page's summary of it.
+            app.expect(await app.reply("fonts"), contains: "ligatures=true")
+            await app.clickSwitch("font-ligatures", key: "font_ligatures", becomes: false)
+            _ = await app.waitForConfig { $0.range(of: #""font_ligatures"\s*:\s*false"#, options: .regularExpression) != nil }
+            await app.until("fonts") { $0.contains("ligatures=false") }
+            await app.clickSwitch("font-ligatures", key: "font_ligatures", becomes: true)
+            await app.until("fonts") { $0.contains("ligatures=true") }
+
+            // Open folder: the instance's own fonts folder is asked for (recorded, nothing is opened).
+            let place = app.scratch.data.path.replacingOccurrences(of: "/private/tmp", with: "/tmp") + "/fonts"
+            var said = ""
+            for _ in 0..<3 where !said.split(separator: "\n").contains("open \(place)") {
+                await Self.click(app, "fonts-folder")
+                for _ in 0..<12 where !said.split(separator: "\n").contains("open \(place)") {
+                    said = (await app.send(["delay 150", "launches"]))[1].replacingOccurrences(of: "/private/tmp", with: "/tmp")
+                }
+            }
+            app.expect(said.split(separator: "\n").contains("open \(place)"), "Open folder asks for \(place):\n\(said)")
+        }
+    }
 }
