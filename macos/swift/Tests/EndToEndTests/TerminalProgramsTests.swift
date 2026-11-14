@@ -178,14 +178,16 @@ extension EndToEnd {
             await app.shell("/usr/bin/seq 1 5000")
             await app.screen(timeout: 30) { $0.contains("5000") }
             let newer = await top()
-            app.expect((newer ?? 0) > 3800 && (newer ?? 0) < 4200, "the oldest line kept is about 4000: \(newer.map(String.init) ?? "none")")
+            // The setting is a floor (wormhole-vt, `Builder::scrollback`): the grid frees whole pages, and three pages of
+            // slack (384 KiB, a few hundred lines at this width) make sure the thousand are there.
+            app.expect((newer ?? 0) > 3300 && (newer ?? 5000) <= 4001, "a thousand lines are kept and at most a few hundred more: \(newer.map(String.init) ?? "none")")
 
             guard let first = Listing(await app.reply("rows")).live.first else { return }
             await app.send(["select \(first)"])
             await app.shell("/usr/bin/seq 1 5000")
             await app.screen(timeout: 30) { $0.contains("5000") }
             let older = await top()
-            app.expect((older ?? 5000) < 3800, "the terminal opened before keeps its own size: \(older.map(String.init) ?? "none")")
+            app.expect((older ?? 5000) < 1000, "the terminal opened before keeps its own size: \(older.map(String.init) ?? "none")")
         }
     }
 }
