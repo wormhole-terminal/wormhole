@@ -20,10 +20,10 @@ extension AppController {
         case .current: "current"
         case .changed: "changed:\(document.update.changes.count)"
         }
-        // The Versions sheet is the window's own state and is not seen from here: only Update from is named.
+        // The sheet up over the Studio: Update from… or Versions (`modal_word`).
         return "\nstudio dirty=\(document.isDirty) asking=\(PendingQuestions.current != nil || session.renaming) subject=\(Self.subjectWord(document.subject)) "
             + "undo=\(document.undoDepth) redo=\(document.redoDepth) format=\(format) shown=\(document.shown ?? "-") update=\(update) "
-            + "modal=\(session.showsUpdate ? "update" : "-") inuse=\(document.inUse) \(Self.tokenWord(document))"
+            + "modal=\(session.showsUpdate ? "update" : session.showsVersions ? "versions" : "-") inuse=\(document.inUse) \(Self.tokenWord(document))"
     }
 
     /// `own:<file stem>`, `untitled:<from>` (spaces as `_`) or `project`, as GPUI's `Subject::word`.

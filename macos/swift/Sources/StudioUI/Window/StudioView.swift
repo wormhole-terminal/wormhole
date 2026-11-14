@@ -12,7 +12,6 @@ public struct StudioView<Extras: View>: View {
     @Bindable var session: StudioSession
     let store: ThemeStore
     let extras: @MainActor (String) -> Extras
-    @State private var showsVersions = false
     @Environment(\.tokens) private var tokens
 
     public init(session: StudioSession, store: ThemeStore = .shared, @ViewBuilder extras: @escaping @MainActor (String) -> Extras) {
@@ -22,7 +21,7 @@ public struct StudioView<Extras: View>: View {
     }
 
     public var body: some View {
-        StudioContent(session: session, showsVersions: $showsVersions, extras: extras)
+        StudioContent(session: session, showsVersions: $session.showsVersions, extras: extras)
             .environment(\.textScale, store.textScale)
             .themed(store)
     }

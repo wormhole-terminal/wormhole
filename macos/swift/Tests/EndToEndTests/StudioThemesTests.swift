@@ -32,6 +32,7 @@ extension EndToEnd {
             await app.later("studio-save", answer: "studio-save")
             let versions = await app.reply("studio-versions")
             app.expect((Instance.value("versions", in: versions).flatMap { Int($0) } ?? 0) >= 2, "the older save is listed:\n\(versions)")
+            await app.send(["studio-versions close"])
             app.expect((try? String(contentsOf: file, encoding: .utf8))?.lowercased().contains("ff8801") == true, "the file has the new value")
 
             // Copy JSON goes to the scratch folder's file, never the clipboard.

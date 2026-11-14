@@ -33,6 +33,10 @@ extension EndToEnd {
             let versions = await app.reply("studio-versions")
             app.expect(versions, contains: "versions=2")
             app.expect(versions, contains: "pinned")
+            // The Versions sheet is up over the Studio, and Done (`close`) takes it down.
+            app.expect(await app.reply("state"), contains: "modal=versions")
+            await app.send(["studio-versions close"])
+            app.expect(await app.reply("state"), contains: "modal=-")
         }
     }
 
@@ -78,6 +82,7 @@ extension EndToEnd {
             app.expect(old.contains("\"version\"") && old.lowercased().contains("ff0011"), "saved as version 1 with the edit:\n\(old)")
             let versions = await app.reply("studio-versions")
             app.expect((Instance.value("versions", in: versions).flatMap { Int($0) } ?? 0) >= 2, "the hand-written text is kept:\n\(versions)")
+            await app.send(["studio-versions close"])
 
             await app.later("studio-open own:Newer", answer: "studio-open own:Newer")
             app.expect(await app.reply("studio-theme-menu"), contains: "newer=true")

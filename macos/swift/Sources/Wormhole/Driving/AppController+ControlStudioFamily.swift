@@ -68,7 +68,7 @@ extension AppController {
             if argument == "cancel" { session.showsUpdate = false } else { session.askUpdate() }
             if argument == "apply" { session.applyUpdate() }
             said = " sheet=\(session.showsUpdate) update=\(document.update.state) changes=\(document.update.changes.count)"
-        case "studio-versions": said = studioVersions(words, document)
+        case "studio-versions": said = studioVersions(words, session)
         case "studio-theme-menu": _ = runStudioSession(["menu"]); return true
         case "studio-save", "studio-use", "studio-menu", "studio-open": return studioAsking(command, words, session)
         default: return await studioWindow(command, words, session)
@@ -77,9 +77,14 @@ extension AppController {
         return true
     }
 
-    /// The Versions list: the rows (row 0 is the file as it is now), a row previewed in every window as selecting it does,
-    /// a row restored as unsaved edits, or the preview back to the file as it is (closing the panel).
-    private func studioVersions(_ words: [String], _ document: StudioDocument) -> String {
+    /// The Versions sheet opened (as Browse All Versions… does) and its list: the rows (row 0 is the file as it is now), a row
+    /// previewed in every window as selecting it does, a row restored as unsaved edits, or closed as its Done does (the draft
+    /// back).
+    private func studioVersions(_ words: [String], _ session: StudioSession) -> String {
+        let document = session.document
+        // Browse All Versions… is off for a theme without a file of its own (`ThemeNameMenu`).
+        guard words.first == "close" || document.subject.url != nil else { return " error=the theme has no file" }
+        session.showsVersions = words.first != "close"
         let rows = document.versionRows()
         let index = words.count > 1 ? Int(words[1]) : nil
         switch words.first {
@@ -90,7 +95,7 @@ extension AppController {
             // Without a number: the newest save behind the file.
             guard rows.indices.contains(index ?? 1) else { return " error=no such row" }
             document.restore(rows[index ?? 1])
-        case "close": rows.first.map(document.preview)
+        case "close": document.refresh()
         default: break
         }
         return " versions=\(rows.count)\n" + rows.enumerated().map { "  \($0.offset): \($0.element.id?.lastPathComponent ?? "now") \($0.element.summary)\($0.element.pinned ? " pinned" : "")" }.joined(separator: "\n")
