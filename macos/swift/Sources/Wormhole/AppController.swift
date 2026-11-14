@@ -187,6 +187,8 @@ final class AppController: NSObject, NSApplicationDelegate {
         // Every window as it is, so the next launch brings them back; a window the person closed was forgotten already.
         terminating = true
         saveAllWindows()
+        // Notes a save did not take are written once more on the way out (`Workspace::persist`, `window/windows.rs:296`).
+        sessions.forEach { $0.notes?.flush() }
         hooks?.stop()
         // Before the views go: a terminal let go of is not ended by its view closing. Quit and End All did this already.
         if hostsEnd == nil { sessions.forEach { $0.hub.store.finishQuit(endHosts: endsHostsOnQuit) } }
