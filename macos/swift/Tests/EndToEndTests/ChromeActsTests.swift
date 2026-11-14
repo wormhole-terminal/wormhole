@@ -31,14 +31,18 @@ extension EndToEnd {
             guard let id = listing.selected else { return }
             await app.send(["tab notes", "branch-chip"])
             await app.until("state") { $0.contains("tab=changes") }
-            app.expect(await app.reply("branch-chip state"), contains: "picker=\(id)")
+            // The request stands while the list it opened is up, and ends with it.
+            await app.until("branch-chip state") { $0.contains("picker=\(id) list=open") }
+            await app.send(["key esc"])
+            await app.until("branch-chip state") { $0.contains("picker=- list=closed") }
 
             let plain = app.scratch.home.appendingPathComponent("not-a-repo")
             try FileManager.default.createDirectory(at: plain, withIntermediateDirectories: true)
             await app.terminal(in: plain)
             await app.until("changes") { $0.contains("notRepository") }
             await app.send(["branch-chip"])
-            await app.until("branch-chip state") { $0.contains("picker=-") }
+            let ended = await app.until("branch-chip state") { $0.contains("picker=-") }
+            app.expect(ended, contains: "list=closed")
         }
     }
 
@@ -173,7 +177,8 @@ extension EndToEnd {
             await app.send(["group \(first)"])
             guard let group = Listing(await app.until("rows") { !Listing($0).groups.isEmpty }).groups.first else { return }
             @MainActor func rename(_ keys: [String]) async -> String {
-                await app.send(["group-menu \(group.id)", "menu-pick Rename…", "wait-idle 3000"] + keys)
+                // The answer lands a turn after the key: the list is read once the window is idle again.
+                await app.send(["group-menu \(group.id)", "menu-pick Rename…", "wait-idle 3000"] + keys + ["delay 300", "wait-idle 3000"])
                 return Listing(await app.reply("rows")).groups.first { $0.id == group.id }?.name ?? ""
             }
             app.expect(await rename(["text thrown", "key esc"]) == group.name, "Esc keeps \(group.name)")

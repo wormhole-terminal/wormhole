@@ -22,35 +22,44 @@ struct RevPicker: View {
     var scope: Int?
     let load: () -> Void
     let pick: (Rev?) -> Void
-    /// Something outside asked for the list (the title row's branch chip); it opens, then `answered` clears the request.
+    /// Something outside asked for the list (the title row's branch chip); it is open while the request stands, and `answered` clears it when the list closes.
     var requested = false
     var answered: () -> Void = {}
     @State private var open = false
     @State private var hovering = false
     @Environment(\.tokens) private var tokens
 
+    /// The list is open while the person opened it or a request for it stands. The request is answered when the list
+    /// closes, not when it opens: the chip is built again as the tab comes up and its changes arrive, and a list opened
+    /// by the first one went with it.
+    private var shown: Binding<Bool> {
+        Binding(
+            get: { open || requested },
+            set: { now in
+                open = now
+                if !now, requested { answered() }
+            })
+    }
+
     var body: some View {
         Button {
-            open.toggle()
+            shown.wrappedValue.toggle()
             if open { load() }
         } label: { chip }
             .buttonStyle(.plain)
             .onHover { hovering = $0 }
-            .popover(isPresented: $open, arrowEdge: .bottom) {
+            .popover(isPresented: shown, arrowEdge: .bottom) {
                 RevList(
                     selected: selected, revs: revs, headTitle: headOption ?? headTitle,
                     hint: loading ? panelText("picker-loading", "Loading branches\u{2026}") : hint
                 ) { rev in
-                    open = false
+                    shown.wrappedValue = false
                     pick(rev)
                 }
             }
             .onChange(of: scope) { open = false }
             .onChange(of: requested, initial: true) {
-                guard requested else { return }
-                open = true
-                load()
-                answered()
+                if requested { load() }
             }
             .accessibilityLabel("\(prefix) \(selected?.title ?? headTitle)")
             .accessibilityHint(panelText("picker-hint", "Opens the list of branches"))

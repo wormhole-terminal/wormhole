@@ -3,7 +3,7 @@
 // model the part itself calls:
 //   `find-state`                     the find bar: `find-state open=<b> query="<q>" count="<words>" case=<b> word=<b> regex=<b>`
 //   `branch-chip [<terminal>|state]` the title row's branch chip clicked for that terminal (none: the selected one), as
-//                                    `TitleActions.pickBranch` does; `state` says `branch-chip picker=<terminal|->`
+//                                    `TitleActions.pickBranch` does; `state` says `branch-chip picker=<terminal|-> list=<open|closed>`
 //   `group-popover <group>`          the group's popover in the list, as "Other colour…" opens it (`popover` reads it)
 //   `sidebar-tip [close|never|keep|settings]`  the list's "No coding agents yet" note: `sidebar-tip <off|note|offer>`, and its
 //                                    buttons (`SideColumns`: × closes it to the offer, Don't show again, keep, Coding agents settings)
@@ -38,7 +38,12 @@ extension AppController {
                 "find-state", pairs: [("query", find.text), ("count", find.countText)],
                 flags: [find.isOpen ? "open" : "closed", Readout.flag("case", find.options.matchCase), Readout.flag("word", find.options.wholeWord), Readout.flag("regex", find.options.regex)]))
         case "branch-chip":
-            if argument == "state" { reply("branch-chip picker=\(hub.panel.changes.pickerFor.map(String.init) ?? "-")"); return true }
+            if argument == "state" {
+                // Who the list is asked for (until it closes), and whether a popover is open over the window.
+                let list = window?.childWindows?.contains { String(describing: type(of: $0)).contains("Popover") } == true
+                reply("branch-chip picker=\(hub.panel.changes.pickerFor.map(String.init) ?? "-") list=\(list ? "open" : "closed")")
+                return true
+            }
             guard let id = Int(argument) ?? hub.state.selected else { reply("error: no terminal"); return true }
             hub.actions.pickBranch(id)
             reply("branch-chip \(id)")
