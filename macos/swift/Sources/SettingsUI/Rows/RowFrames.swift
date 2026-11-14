@@ -21,14 +21,23 @@ extension View {
 
 private struct FrameRecorder: ViewModifier {
     let id: String?
+    /// The frame this view recorded: what it takes back when it goes.
+    @State private var recorded: CGRect?
+
     func body(content: Content) -> some View {
         content
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { if let id { RowFrames.set(id, $0) } }
-            .onDisappear { if let id { RowFrames.remove(id) } }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { frame in
+                guard let id else { return }
+                recorded = frame
+                RowFrames.set(id, frame)
+            }
+            .onDisappear { if let id, let recorded { RowFrames.remove(id, at: recorded) } }
     }
 }
 
 extension RowFrames {
     fileprivate static func set(_ id: String, _ frame: CGRect) { frames[id] = frame }
-    fileprivate static func remove(_ id: String) { frames[id] = nil }
+    /// Only the frame the leaving view recorded: a search result's row goes after the page's row of the same id has come, and
+    /// must not take that one's frame with it.
+    fileprivate static func remove(_ id: String, at frame: CGRect) { if frames[id] == frame { frames[id] = nil } }
 }
