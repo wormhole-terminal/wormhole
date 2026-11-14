@@ -1926,3 +1926,31 @@ Read and left, with why:
 - `studio-versions select <n>` previews the row but does not move the sheet's own selection (`VersionsSheet`'s `@State selected`).
 - X08 `events` order: subscribe, list (`listing_and_rebase`), then watch output, where GPUI watches output before it lists; the listing holds no output, and both start each terminal's output from its cursor before the reply, so no answer differs. Left.
 - X08 marking shell (`run` shows output only the first time, `blocks` empty): needs a run. Where to look: first whether the control line's `blocks` and `run` see the second prompt's mark at all (`ScreenReader::current_prompt` in `wormhole-term`, read through `Terminal::reader()` = `with_pty(Pty::reader)`): `run` takes `first = reader.current_prompt()` and waits for output after it (`hook_server/control/wait.rs`); if the second `current_prompt()` still returns the first block (the fixture's `precmd` prints `133;D` and `133;A` together, `PS1` carries `133;B`, `preexec` `133;C`: `InstanceTerminal.markPrompts`), the wait sees the first command's output as done. Then compare the devctl `blocks` (`hub.blocksListing`, the view's frame extras, `crates/wormhole-ffi/src/blocks.rs`) with the control line's (`ReadJob::blocks`): two readers of the same marks.
+
+## Lane settings, wave 12
+
+Written without compiling: expect compile errors.
+
+| row | scenario | what it proves | reads what |
+|---|---|---|---|
+| ST02 | `SettingsWorkPagesTests/sidebarPageClicked` | Terminals & sidebar by clicks: Tabs (segment) puts both terminals in a shown bar; the change count off takes its scope/plain/shared/remember rows off the page, on brings them back; Repository takes plain and shared away; dot and ⌘ hints off; ⌘1–9 follow the list (a pinned terminal is ⌘1) | `get`, `config.json`, `tab-bar`, `settings-page`, `look-keys` (the sidebar's appearance, the core's chrome snapshot), `rows` |
+| ST02 | `SettingsWorkPagesTests/gitPageClicked` | Changes & diffs by clicks: Unified and Wrap reach the open diff's header; the stepper's up arrow widens a tabbed line; List, ungrouped untracked, MiB reach the panel's preferences | `diff-header` (split, wrap, widest), `look-keys` (panel preferences), `config.json` |
+| ST02 | `SettingsWorkPagesTests/terminalPageClicked` | Terminal by clicks: clipboard Deny keeps a program's OSC 52 copy off the clipboard, Allow lets the next on; Split gaps and Option as Meta (Both) reach the window and the terminal view | `pasteboard` (the instance's file), `screen`, `state` (gaps, meta), `config.json` |
+| STX2 | `ProjectFoldersPageTests/projectDefaultsFromThePage` | the page's "Prompts" default switch is written to `project-prefs.json` and an open project with no choice of its own follows (prompts gone, then back) | the profile's `project-prefs.json`, `project-state` |
+| STX2 | `ProjectFoldersPageTests/trustedListRevoke` | the trusted list's Revoke removes the approval and the open project goes untrusted with nothing else done; its action runs neither by name nor by its key afterwards | `settings-rows`, `trusted-projects.json`, `project-state`, `project-run`, `screen` |
+| STX2 | `ProjectFoldersPageTests/projectPageChoicesAndTrust` | the trusted row's Settings opens the project's page; Off then Default for Prompts (the person's override, then none); Revoke trust and Trust (answered by `WORMHOLE_AUTH=allow`) from the page | `project-state`, `project-prefs.json`, `trusted-projects.json`, `settings-rows` |
+| ST03 | `SettingsAppPagesTests/notificationsPageClicked` | Sound None, Dock bounce off, Needs input off, each clicked: what the core decides for a terminal needing input follows (sound, bounce, then nothing) | `notify-sim` (core rules over `settingsNotice`, the real feed's settings), `config.json` |
+| ST03 | `SettingsAppPagesTests/menuBarPageClicked` | the item off and Icon only are written; the icon the item is built from drops its count and dot. The item itself (`AmbientController`) is never made in a test instance: that it follows is a person's | `config.json`, `ambient` (StatusIcon from the setting) |
+| ST03 | `SettingsAppPagesTests/featureFlagsPageClicked` | the Preview group's Feature flags page: the Project folders switch writes the flag and its page comes and goes in the nav | `config.json`, `settings-page` nav |
+| X04 | `KeyboardStopsTests/tabStops` | ⇥/⇧⇥ in the core's order with the wrap; title-row buttons only with Keyboard navigation; ↩ presses toggle-sidebar | `key` replies, `keys`, `state` |
+| X04 | `KeyboardStopsTests/sidebarTypeAheadAndArrows` | type-ahead `g` + ↩ selects gamma; ↑ + ↩ selects beta | `rows` |
+| X04 | `KeyboardStopsTests/changesListArrows` | ↓ from the panel tabs into the Changes list, ↓ ↩ opens a file's diff, ↓/↑ carry the open diff along | `changes`, `diff-header` |
+| X07 | `PseudoLanguageTests/pseudoLanguageInPaletteAndSettings` | en-XA reaches the palette's action titles and the Terminal page's shell choices; English again after | `palette-rows`, `settings-page` |
+
+New command: `settings-press <id> at <x> [y]` (`Driving/AppController+ControlSettingsPress.swift`, DRIVING.md). Expected to fail as it
+stands: `pseudoLanguageInPaletteAndSettings` if the palette reads `Keymap.shared`'s titles, installed once at launch
+(`Platform/PlatformSetup.swift:26`, `PlatformBridge.installKeymap`) while `language` installs only the words
+(`AppController+ControlVerify.swift:37`), the same cause as the failing `DevTools/pseudoLanguage`; left to the lane fixing that one.
+Not written: X15 (the app never runs the legacy upgrades: `Isolation.swift` accepts only `Wormhole-swift*` data folders), PL02's
+jump-key recording (`SettingsPages/shortcutRecorders`, failing, another agent's), Updates beyond "no feed", Profile/Appearance/Fonts rows
+beyond what the passing scenarios drive.
