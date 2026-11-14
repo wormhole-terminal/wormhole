@@ -69,6 +69,9 @@ extension AppController {
             let settingsOpen = settingsController?.window?.isVisible == true
             do {
                 let target = try profileHosts[id] ?? beside(id)
+                // Before its saved windows start their terminals: the engine knows the target's own colours (its look, made
+                // while it is not yet the shown one, tells them), not the ones of the profile being left.
+                if windows(of: id).isEmpty { _ = profileLook(for: id) }
                 // What a relaunch restores: the profile being left, as it is now. Windows opened in another profile stay in sight.
                 let leaving = windows(of: windowsHost.profile)
                 leaving.forEach { $0.saver?.saveNow() }
@@ -81,6 +84,10 @@ extension AppController {
                 leaving.forEach { $0.parked = true }
                 let back = windows(of: id)
                 back.forEach { $0.parked = false }
+                // Each window wears its own profile's look: the ones left keep theirs out of sight (their terminals keep their
+                // colours and light or dark, as GPUI's hidden windows read `settings_in(&self.profile)`), the ones back wear
+                // the app's again.
+                (leaving + back).forEach(dressForProfile)
                 if back.isEmpty { try openSavedWindows() } else { back.forEach(show) }
                 // After the windows exist: applying the settings reaches the shown ones (and the menus read the window in front).
                 followProfileSettings()

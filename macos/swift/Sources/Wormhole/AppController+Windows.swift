@@ -29,6 +29,9 @@ extension AppController {
     /// move into it). The window itself is `present`ed apart.
     func makeSession(window id: WindowID, empty: Bool = false, in windows: WindowsHost? = nil) -> WindowSession {
         let windowsHost = windows ?? self.windowsHost
+        // Before its terminals start: the engine knows the colours of the window's own profile (the first window of another
+        // profile in this run makes that profile's look, which tells them), so a program that asks at once is answered right.
+        _ = profileLook(for: windowsHost.profile)
         let host = WorkspaceHost.make(options, windows: windowsHost, window: id, empty: empty)
         let factory = TerminalFactory(options: options, source: host.source)
         let effects = Self.makeEffects()

@@ -62,7 +62,7 @@ extension AppController {
         for (id, own) in profileLooks where own.sessions.isEmpty { profileLooks[id] = nil }
     }
 
-    /// The windows that wear the app's own look: the ones of the profile Wormhole is in (and the parked ones of a
-    /// profile it left, out of sight until it comes back to it).
+    /// The windows that wear the app's own look: the ones of the profile Wormhole is in. The parked ones of a profile it
+    /// left wear that profile's look (`switchProfile`).
     var ownSessions: [WindowSession] { sessions.filter { $0.dress.look === look } }
 }

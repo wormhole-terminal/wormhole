@@ -91,9 +91,10 @@ final class TerminalLook {
 
     /// What a terminal of this look's profile starts with, and has until a view dresses it (the views above told the engine
     /// their own). Told again when the shown profile changed: the colours may stay while the profile they are for does not.
+    /// From the theme as it is now, not the palette last followed: right after a switch that is still the profile left's.
     func shareEngineColours() {
         #if WITH_UNIFFI
-            if let palette, let profile = engineProfile() { EngineColors.share(palette, profile: profile) }
+            if palette != nil, let profile = engineProfile() { EngineColors.share(PaletteMaker.palette(for: themes.tokens), profile: profile) }
         #endif
     }
 
