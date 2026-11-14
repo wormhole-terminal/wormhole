@@ -5,6 +5,10 @@
 //! for the person, its request waits on the channel the queue answers); Swift shows one at a time
 //! (`next_question`) and answers it (`answer`). Nothing a caller says counts, and no request can change what
 //! is held: only these methods do, and only the person's sheet reaches them.
+//!
+//! The desk and its questions are here; a mode widened outside Wormhole is `modes` (the rule) and `widening` (the
+//! desk's looks, the question and its answer), a question as the sheet shows it `record`, what a request that is
+//! not let in is told `replies`, the list in Settings `approvals`, the control folder's answers `scripted`.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -14,29 +18,22 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use wormhole_core::config::AgentAccess;
 use wormhole_core::ipc::Decision;
-use wormhole_core::ipc::access::{
-    CapSet, Capability, Full, Grants, Kind, Need, Pending, Queue, Resolved, Scope, Scopes, agent_word,
-};
-use wormhole_core::ipc::control::{ASK_WAIT_S, Error, ErrorCode, Reason, Reply};
-use wormhole_core::platform::codesign::SignerKind;
-use wormhole_core::platform::{paths, process};
+use wormhole_core::ipc::access::{CapSet, Full, Grants, Need, Queue, Resolved, Scope, Scopes};
+use wormhole_core::ipc::control::ASK_WAIT_S;
 use wormhole_core::storage::paths::{DataRoot, ProfileId, ProfilePaths};
 use wormhole_core::storage::store::{AgentGrantRow, Store};
-use wormhole_text::keys::{
-    SETTINGS_AGENTS_ACCESS_ASK, SETTINGS_AGENTS_ACCESS_OFF, SETTINGS_AGENTS_ACCESS_OPEN,
-};
-use wormhole_text::text;
 
 mod approvals;
 mod modes;
+mod record;
+mod replies;
 mod scripted;
+mod widening;
 
 pub use approvals::{AccessApprovalRecord, AccessHow};
+use replies::{access_off, declined, declined_terminal, not_answered, timed_out};
 
-use super::access_records::{
-    AccessAnswer, AccessCapability, AccessHeldRecord, AccessKindRecord, AccessModeRecord,
-    AccessProgramRecord, AccessQuestionRecord, AccessSignerKind,
-};
+use super::access_records::{AccessAnswer, AccessHeldRecord, AccessQuestionRecord};
 use super::common::{AuxError, AuxListener, Waker, locked, resolve_data_dir};
 
 /// The scope the one profile of this desk stands for (the app keeps one per profile).
@@ -109,55 +106,6 @@ impl AccessDesk {
         // As `is_waiting_mode`: the read the window makes while this question is up re-arms the wake.
         self.waker.rearm();
         locked(&self.inner).queue.iter().any(|pending| pending.id == id)
-    }
-
-    /// The question about a mode that was widened outside Wormhole, when one waits to be put on screen (it comes
-    /// before the questions of programs). Re-arms the wake.
-    pub fn next_mode_question(&self) -> Option<AccessModeRecord> {
-        self.waker.rearm();
-        let change = locked(&self.modes).next_to_ask()?;
-        let token = change.token;
-        // Not answered is not kept.
-        self.after_wait(move |desk| desk.answer_mode(token, false));
-        let word = |mode: AgentAccess| {
-            text(match mode {
-                AgentAccess::Off => SETTINGS_AGENTS_ACCESS_OFF,
-                AgentAccess::Ask => SETTINGS_AGENTS_ACCESS_ASK,
-                AgentAccess::Open => SETTINGS_AGENTS_ACCESS_OPEN,
-            })
-            .to_string()
-        };
-        Some(AccessModeRecord { token, previous: word(change.previous), requested: word(change.requested) })
-    }
-
-    /// Whether the mode question `token` is still waiting for the person.
-    pub fn is_waiting_mode(&self, token: u64) -> bool {
-        // A read after a wake, like taking the next question: while a question is up this is the only read the window
-        // makes, and without re-arming here the wake that says it was settled would never be sent.
-        self.waker.rearm();
-        locked(&self.modes).is_waiting(token)
-    }
-
-    /// The person's answer to the mode question `token`: keep the widened mode, or put the earlier one back in the
-    /// file (that write is the person's own edit, with nothing to ask). An answer to another question does nothing.
-    pub fn answer_mode(&self, token: u64, keep: bool) {
-        let Some(change) = locked(&self.modes).pending(token) else { return };
-        if !keep {
-            // Written while the question still waits: a look in between would find the wider mode in the file with nothing
-            // pending, and ask again. Through the settings the app holds of the profile, as the GPUI app's goes through
-            // its settings store (`agent_access/change.rs:80`), never around them from a load of the file.
-            let previous = change.previous;
-            crate::settings::live::update(&self.profile, |settings| settings.agent_access = previous);
-        }
-        if locked(&self.modes).answered(token, keep).is_none() {
-            return;
-        }
-        // Kept, and it is Allowed while open: there is nothing left to ask, so what waits is let in, as the GPUI app's
-        // next tick does (`agent_access/ask.rs:434-443`).
-        if keep && change.requested == AgentAccess::Open {
-            self.settle_questions(Some(AgentAccess::Open));
-        }
-        self.waker.notify();
     }
 
     /// Settles question `id` with the person's answer: what it means is recorded, every request that waited
@@ -234,34 +182,6 @@ impl AccessDesk {
 impl AccessDesk {
     pub(crate) fn profile(&self) -> &ProfilePaths {
         &self.profile
-    }
-
-    /// What a look at the profile's file is stamped with, taken before the file is read ([`Self::mode_in_force`]).
-    pub(crate) fn stamp(&self) -> u64 {
-        locked(&self.modes).stamp()
-    }
-
-    /// The mode in force with no look at the file; none before the first look.
-    pub(crate) fn mode_held(&self) -> Option<AgentAccess> {
-        locked(&self.modes).held()
-    }
-
-    /// The mode in force for this profile when its file, read after `stamp` was taken, says `want`: that, unless it
-    /// is a widening the person did not make in Settings, which keeps the earlier mode and, where `asks`, asks them
-    /// (`modes`). `None` when the read is too old to say: read the file and look again.
-    pub(crate) fn mode_in_force(&self, want: AgentAccess, stamp: u64, asks: bool) -> Option<AgentAccess> {
-        // Read after the file was: an edit Settings made is noted before its write, so a file that holds it is never
-        // looked at without it.
-        let edit = crate::settings::edits::last(self.profile.dir());
-        let (mode, asked) = locked(&self.modes).reconcile(modes::Look { want, edit, stamp, asks })?;
-        if asked {
-            tracing::warn!(
-                "agent access was widened outside Wormhole to {}: asking whether to keep it",
-                want.word()
-            );
-            self.waker.notify();
-        }
-        Some(mode)
     }
 
     /// What a mode that changed means for the questions waiting here (`agent_access/ask.rs` `settle_mode`): Off, or the
@@ -387,126 +307,10 @@ impl AccessDesk {
             }
         }
     }
-
-    fn record_of(&self, pending: &Pending) -> AccessQuestionRecord {
-        let resolved = &pending.resolved;
-        let capability = match pending.need {
-            Need::Capability(Capability::Read) => AccessCapability::Read,
-            Need::Capability(Capability::Type) => AccessCapability::Type,
-            Need::Capability(Capability::Run) => AccessCapability::Run,
-            Need::Capability(Capability::Open) => AccessCapability::Open,
-            Need::Capability(Capability::Close) | Need::Approved | Need::Nothing => AccessCapability::Close,
-        };
-        let kind = match resolved.identity.kind {
-            Kind::Scripts => AccessKindRecord::Scripts,
-            Kind::Script => AccessKindRecord::Script,
-            Kind::Unsigned => AccessKindRecord::Unsigned,
-            Kind::AdHoc => AccessKindRecord::AdHoc,
-            Kind::DeveloperId => AccessKindRecord::DeveloperId,
-            Kind::Apple => AccessKindRecord::Apple,
-        };
-        let program = resolved.program.as_ref().map(|program| AccessProgramRecord {
-            path: shown_path(&program.path),
-            pid: program.pid,
-            signer: match program.signature.kind {
-                SignerKind::DeveloperId => AccessSignerKind::DeveloperId,
-                SignerKind::AppleSystem => AccessSignerKind::AppleSystem,
-                SignerKind::AdHoc => AccessSignerKind::AdHoc,
-                SignerKind::Other => AccessSignerKind::Other,
-                SignerKind::Unsigned => AccessSignerKind::Unsigned,
-                SignerKind::Unreadable => AccessSignerKind::Unreadable,
-            },
-            subject: program.signature.subject.clone(),
-            team: program.signature.team_id.clone(),
-            interpreter: program.interpreter.clone(),
-            started_by: resolved.started_by.clone().or_else(|| parent_name(program.pid)),
-        });
-        AccessQuestionRecord {
-            id: pending.id,
-            label: resolved.label.clone(),
-            capability,
-            kind,
-            program,
-            about_terminal: pending.about,
-            unusual_signer: resolved.unusual_signer,
-            changed_since_allowed: self.changed_since_allowed(resolved),
-            elevated: resolved.elevated,
-            can_be_remembered: resolved.identity.can_be_remembered() && pending.about.is_none(),
-        }
-    }
-
-    /// Whether the same agent was allowed before as something else: another signer, another build, another
-    /// install (stored approvals only: what "for this session" allowed ended with the process).
-    fn changed_since_allowed(&self, resolved: &Resolved) -> bool {
-        let Some(agent) = resolved.identity.agent else { return false };
-        let key = resolved.identity.key();
-        let word = agent_word(agent);
-        stored_rows(&self.profile_dir)
-            .is_some_and(|rows| rows.iter().any(|r| r.key.agent == word && r.key != key))
-    }
 }
 
 fn stored_rows(profile_dir: &Path) -> Option<Vec<AgentGrantRow>> {
     // Not created by a look: a profile without a database has nothing stored.
     profile_dir.join("wormhole.db").is_file().then_some(())?;
     Store::open_at(profile_dir).ok()?.agent_grants().ok()
-}
-
-/// A path as the title row writes it: the home folder as `~`.
-fn shown_path(path: &Path) -> String {
-    match paths::home().as_deref().and_then(|home| path.strip_prefix(home).ok()) {
-        Some(rest) if rest.as_os_str().is_empty() => "~".to_string(),
-        Some(rest) => format!("~/{}", rest.display()),
-        None => path.display().to_string(),
-    }
-}
-
-/// The program that started `pid`, by name.
-fn parent_name(pid: u32) -> Option<String> {
-    let path = process::executable(process::parent(pid)?)?;
-    path.file_name().map(|name| name.to_string_lossy().into_owned())
-}
-
-// What a request that waited is told (`agent_access/ask.rs`): agents read these, so they say not to retry.
-fn declined(label: &str) -> Reply {
-    Error::new(
-        ErrorCode::NotAllowed,
-        format!("the user did not allow {label} to control Wormhole: do not retry; tell the user what you wanted to do and ask them"),
-    )
-    .because(Reason::Declined)
-    .into()
-}
-
-fn declined_terminal(label: &str, terminal: i64) -> Reply {
-    Error::new(
-        ErrorCode::NotAllowed,
-        format!("the user did not allow {label} to use terminal {terminal}, which it did not open: do not retry; tell the user what you wanted to do there and ask them"),
-    )
-    .because(Reason::Declined)
-    .into()
-}
-
-/// Access was switched off while the question was open (`agent_access/ask.rs`).
-fn access_off() -> Reply {
-    Error::new(ErrorCode::NotAllowed, "agent access was switched off while the question was open")
-        .because(Reason::AgentAccessOff)
-        .into()
-}
-
-fn timed_out(label: &str) -> Reply {
-    Error::new(
-        ErrorCode::NotAllowed,
-        format!("nobody answered the question about {label} in Wormhole within a minute; it counts as no, and is not remembered"),
-    )
-    .because(Reason::AskTimedOut)
-    .into()
-}
-
-fn not_answered(label: &str) -> Reply {
-    Error::new(
-        ErrorCode::NotAllowed,
-        format!("the question about {label} went away without an answer (its window closed, or none could be shown); it counts as no for now, and is not remembered"),
-    )
-    .because(Reason::NotAnswered)
-    .into()
 }
