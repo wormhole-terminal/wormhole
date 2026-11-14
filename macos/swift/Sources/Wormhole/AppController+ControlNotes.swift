@@ -67,7 +67,8 @@ extension AppController {
             reply("commit-more \(hub.panel.history.bodyWhole ? "whole" : "compact")")
         case "project-init":
             let project = hub.panel.project
-            guard let folder = project.folder else { reply("error: the terminal has no folder"); return true }
+            // The folder the tab's button makes it in (a repository's root, as the GPUI app's `active_folder`), not the terminal's own.
+            guard let folder = project.target else { reply("error: the terminal has no folder"); return true }
             project.create()
             reply("creating \(folder)/.wormhole")
         default: return false

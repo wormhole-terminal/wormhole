@@ -128,8 +128,11 @@ public final class ProjectStore {
     }
 
     /// Runs a backend call for the current folder, then reads the tab again (the file watch would too, a beat later).
+    /// The folder the tab's Create and its colour are for: the band's (the repository's root), else the terminal's.
+    public var target: String? { band ?? folder }
+
     private func act(_ call: @escaping @Sendable (String, any ProjectBackend) async -> Void) {
-        guard let folder = band ?? folder else { return }
+        guard let folder = target else { return }
         let backend = backend
         Task {
             await call(folder, backend)

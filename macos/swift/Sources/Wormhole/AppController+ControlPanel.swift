@@ -1,7 +1,7 @@
 // The control folder's commands for the right panel's own text: `note-add <text>` and `task-add <text>` as the Notes tab's
-// buttons do, and `notes` to say what the tab holds (so a check can see it was saved and loaded again). `history N`
+// buttons do, and `notes` to say what the tab holds (so a check can see it was saved and loaded again).
 // `changes` shows the Changes tab (GPUI's `changes`) and says what its store holds: the files, their counts, the open diff. `history N`
-// opens the Nth commit of the log (0 folds it), `history-file N` the Nth file of that commit, `history-rev <name>` the branch picker, `history-copy N <what>`, `history-state` and
+// is a click on the Nth commit of the log (it opens, or closes when it is the open one; 0 folds whatever is open), `history-file N` the Nth file of that commit, `history-rev <name>` the branch picker, `history-copy N <what>`, `history-state` and
 // `project-state` say what the tabs hold, `project-approve`, `project-feature <key> on|off`, `project-run <id>` and
 // `project-send <id>` are the Project tab's buttons.
 
@@ -31,8 +31,9 @@ extension AppController {
         case "history":
             hub.send(.showPanelTab(.history))
             let history = hub.panel.history
+            // As a click on the row (the GPUI app's `commit <n>`): it opens the commit, and closes it when it is the open one.
             if let n = Int(argument), n > 0, history.model.commits.indices.contains(n - 1) {
-                if history.expanded != history.model.commits[n - 1].id { history.toggle(history.model.commits[n - 1].id) }
+                history.toggle(history.model.commits[n - 1].id)
             } else if let open = history.expanded {
                 history.toggle(open)
             }
