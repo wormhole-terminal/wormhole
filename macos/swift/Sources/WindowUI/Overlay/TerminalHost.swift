@@ -16,11 +16,14 @@ struct TerminalHost: NSViewRepresentable {
     /// The window's opacity (`WindowLook.effectiveOpacity`), passed in so a change of it updates the view.
     let opacity: CGFloat
     let menu: @MainActor () -> NSMenu?
+    /// A pane made after its terminal was shown is in the window now (`Container.arrived`).
+    var arrived: @MainActor () -> Void = {}
 
     func makeNSView(context: Context) -> Container {
         let host = Container(overlay: overlay, menu: menu)
         host.setAccessibilityRole(.group)
         host.setAccessibilityLabel(Words.text("window-terminal", fallback: "Terminal"))
+        host.arrived = arrived
         return host
     }
 
@@ -36,6 +39,11 @@ struct TerminalHost: NSViewRepresentable {
     final class Container: NSView {
         private let overlay: TerminalOverlay
         private let contextMenu: @MainActor () -> NSMenu?
+        /// The terminal was shown before this container was in a window (a pane just made): it takes the keys on arrival.
+        private var keysOnArrival = false
+        /// Told when the container arrives in a window with a terminal waiting for the keys: the window gives them to the
+        /// selected terminal, which of several panes arriving together only it knows.
+        var arrived: @MainActor () -> Void = {}
 
         init(overlay: TerminalOverlay, menu: @escaping @MainActor () -> NSMenu?) {
             self.overlay = overlay
@@ -55,7 +63,15 @@ struct TerminalHost: NSViewRepresentable {
             view.contextMenu = { [weak self] in self?.contextMenu() }
             addSubview(view)
             // The keys go to the terminal that was just shown, not to whatever had focus (unless the sidebar's Space browses).
-            if takesKeys() { window?.makeFirstResponder(view) }
+            guard takesKeys() else { return }
+            if let window { window.makeFirstResponder(view) } else { keysOnArrival = true }
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard keysOnArrival, window != nil else { return }
+            keysOnArrival = false
+            arrived()
         }
 
         /// The terminal's right-click: the native menu of its grid.

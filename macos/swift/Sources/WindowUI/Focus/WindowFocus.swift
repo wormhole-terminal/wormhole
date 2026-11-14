@@ -181,6 +181,16 @@ public final class WindowFocus {
         focusTerminal()
     }
 
+    /// The selected terminal changed while a terminal had the keys (a split's new pane, a pane focused by its key): the
+    /// keys go with it. Nothing else moved them: a split made by ⌘D left them in the pane it was made from, so what was
+    /// typed next went to the terminal that was not selected. Keys in a list or a field stay where they are.
+    public func followSelection() {
+        guard let id = hub.state.selected, let view = hub.terminals.existing(id), let window = view.window,
+            let had = window.firstResponder as? MetalTerminalView, had !== view
+        else { return }
+        window.makeFirstResponder(view)
+    }
+
     /// The keyboard back to the terminal on screen: where it goes when a list, a strip or an editor lets go of it.
     public func focusTerminal() {
         guard let id = hub.state.selected, let view = hub.terminals.existing(id) else { return }

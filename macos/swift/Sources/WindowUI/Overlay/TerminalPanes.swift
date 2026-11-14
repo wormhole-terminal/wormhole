@@ -46,7 +46,9 @@ struct TerminalSurface: View {
             let minimap = look.minimap && overlay.hasScrollback ? MinimapGeometry.width : 0
             GeometryReader { proxy in
                 ZStack(alignment: .topTrailing) {
-                    TerminalHost(views: hub.terminals, id: id, overlay: overlay, opacity: look.effectiveOpacity) { hub.actions.terminalMenu(id) }
+                    TerminalHost(
+                        views: hub.terminals, id: id, overlay: overlay, opacity: look.effectiveOpacity, menu: { hub.actions.terminalMenu(id) },
+                        arrived: { hub.focus.followSelection() })
                     TerminalMarks(overlay: overlay, showsMinimap: look.minimap)
                     FoldMarkers(
                         markers: overlay.markers, geometry: overlay.blockGeometry ?? BlockGeometry(rows: 0, cellHeight: 0, gutter: 0),

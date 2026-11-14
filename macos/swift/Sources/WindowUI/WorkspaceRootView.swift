@@ -59,7 +59,10 @@ public struct WorkspaceRootView: View {
         // diff in the terminal's place need it with the panel shut.
         .onChange(of: hub.state.selectedTerminal?.folder, initial: true) { _, _ in followTerminal() }
         // What a tab keeps per terminal (compare branch, comments, open commit, tree) changes hands with the selection.
-        .onChange(of: hub.state.selected) { _, _ in followTerminal() }
+        .onChange(of: hub.state.selected) { _, _ in
+            followTerminal()
+            hub.focus.followSelection()
+        }
         // Nothing of a folder is listed or watched while the Files tab is hidden or its feature is off.
         .onChange(of: filesShown, initial: true) { _, now in hub.panel.files.setShown(now) }
         // ⇥ and Esc from the lists and fields of SwiftUI; the holder and the terminal take their own (`WindowFocus`).
