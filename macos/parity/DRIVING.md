@@ -120,7 +120,7 @@ Added by wave 6, second pass (dev tooling, GPUI's remaining commands; written wi
 | `note-seed [count] [lines]` / `note-toggle <n>` | `note-seed 50 12` | that many notes of that many lines (GPUI's text); fold or unfold the n-th note |
 | `task-seed [open] [done]` / `task-done <n>` | `task-seed 38 12` | that many next steps, the done ones spread among the open; tick or untick the n-th |
 | `send` / `send-submit` / `stash` | `send-submit` | the focused note (the walker's, else the newest) goes to the terminal (and Return); the prompt typed in an agent's box becomes a note |
-| `comment <text>` | `comment too long` | the comment dialog a click on a diff line opened: text set, saved, closed; says the review's summary (`1 comment`) |
+| `comment [text]` | `comment too long` | the comment dialog a click on a diff line opened: text set (none: what was typed in it), saved, closed; says the review's summary (`1 comment`) |
 | `changes` | `changes` | the Changes tab on show (GPUI's `changes`) and what its store holds: `changes phase=loaded files=1 open=README.md diff=shown hunks=1`, then a line a file in the list's order, `  M README.md +1 -0` (the kind's letter, the path, lines added and removed, `-` where git counts none) |
 | `compare [branch]` / `picker [history\|compare] [query]` | `compare main` | the Changes tab compared with a branch (none or `HEAD` stops); the revisions the picker offers for the query, one a line |
 | `commit-details` / `commit-more` | `commit-details` | the open commit's block as text (`none` when none is open); Show more / Show less |

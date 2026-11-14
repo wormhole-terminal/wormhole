@@ -19,6 +19,8 @@ struct ChangesSpecimen: View {
             store.refresh()
             if opensFirst { store.open(PanelSamples.files.first?.id) }
         }
+        // The window's in the app: here the specimen's, so a click on a line shows the editor.
+        .commentSheet(store)
     }
 }
 

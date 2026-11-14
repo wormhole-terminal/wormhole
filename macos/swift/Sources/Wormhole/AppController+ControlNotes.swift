@@ -50,11 +50,12 @@ extension AppController {
         case "stash":
             reply(notes.stashPrompt() ? "stash: the prompt is in a new note" : "stash: nothing is typed at a prompt")
         case "comment":
-            // The comment dialog that a click on a diff line opened: its text set, saved and closed.
+            // The comment being written (a click on a diff line, or `comment-at`): its text set (none: as it was typed), saved
+            // and closed.
             let changes = hub.panel.changes
-            guard let at = changes.commenting else { reply("error: no comment dialog is open"); return true }
-            changes.review.put(ReviewComment(path: at.path, side: at.side, line: at.line, code: at.code, text: argument))
-            changes.commenting = nil
+            guard changes.commenting != nil else { reply("error: no comment dialog is open"); return true }
+            if !argument.isEmpty { changes.commenting?.text = argument }
+            changes.saveComment()
             reply(changes.review.summary)
         case "compare":
             hub.panel.changes.setCompare(argument.isEmpty || argument == "HEAD" ? nil : Rev(name: argument))

@@ -64,6 +64,9 @@ public struct WorkspaceRootView: View {
         .onChange(of: filesShown, initial: true) { _, now in hub.panel.files.setShown(now) }
         // ⇥ and Esc from the lists and fields of SwiftUI; the holder and the terminal take their own (`WindowFocus`).
         .onKeyPress(keys: [.tab, .escape], phases: .down) { hub.focus.listKey($0) }
+        // A diff line's comment being written: the window's, so a reload of the diff under it leaves it up (`diff/review.rs`).
+        // Inside the window's environment, for its theme and code font.
+        .commentSheet(hub.panel.changes)
         .coordinateSpace(name: PaneSpace.name)
         .environment(look)
         .environment(\.codeFont, look.codeFont)

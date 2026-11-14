@@ -67,7 +67,6 @@ struct DiffLineView: View {
     let review: DiffReview?
     var open: LineOpen?
     @State private var hovering = false
-    @State private var editing: LineAt?
     @Environment(\.tokens) private var tokens
 
     var body: some View {
@@ -92,25 +91,10 @@ struct DiffLineView: View {
         }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
+        // The editor is the window's (`commentSheet`), held by the store: this row is in a lazy list a reload rebuilds.
         .onTapGesture {
             guard let review, let at = LineAt(cell) else { return }
-            editing = at
-            review.opened(ReviewComment(path: path, side: at.side, line: at.line, code: at.code, text: ""))
-        }
-        // Closed by any way (saved, removed, cancelled, or answered from the control folder): the dialog is no longer open.
-        .onChange(of: editing) { if editing == nil { review?.opened(nil) } }
-        .onChange(of: comment) { if editing != nil { editing = nil } }
-        // A sheet on the window, as GPUI's comment dialog is (`diff/review.rs`): nothing else takes a click while it is up, so
-        // a click beside it never throws away what was written, and the row cannot scroll away from under it.
-        .sheet(item: $editing) { at in
-            CommentEditor(
-                place: ReviewComment(path: path, side: at.side, line: at.line, code: "", text: "").location, at: at, existing: comment,
-                save: { text in
-                    review?.put(ReviewComment(path: path, side: at.side, line: at.line, code: at.code, text: text))
-                    editing = nil
-                },
-                remove: { review?.put(ReviewComment(path: path, side: at.side, line: at.line, code: "", text: "")); editing = nil },
-                cancel: { editing = nil })
+            review.comment(ReviewComment(path: path, side: at.side, line: at.line, code: at.code, text: comment?.text ?? ""))
         }
     }
 

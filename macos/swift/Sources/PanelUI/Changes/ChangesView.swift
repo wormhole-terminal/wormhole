@@ -53,7 +53,9 @@ struct ChangesDiffPane: View {
 
     private func reviewing(_ file: ChangedFile) -> DiffReview {
         DiffReview(
-            review: store.review, put: { store.review.put($0) }, clear: { store.review.clear() },
-            paste: store.pasteReview, opened: { store.commenting = $0 })
+            review: store.review, clear: { store.review.clear() },
+            paste: store.pasteReview,
+            // One at a time, as GPUI's `comment_on_line`: a second click while one is written changes nothing.
+            comment: { if store.commenting == nil { store.commenting = $0 } })
     }
 }

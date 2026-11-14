@@ -6,21 +6,18 @@ import PanelModel
 
 struct DiffReview {
     var review: Review
-    let put: (ReviewComment) -> Void
     let clear: () -> Void
     let paste: () -> Void
-    /// The comment dialog opened on a line, or closed (nil): the control folder's `comment` answers the one that is open.
-    var opened: (ReviewComment?) -> Void = { _ in }
+    /// Opens the comment editor on a line, with the comment it has: the store holds what is written (`commenting`).
+    var comment: (ReviewComment) -> Void = { _ in }
 }
 
 /// A line a click comments on: which side it is on, its number there and its text. An added or unchanged line is
 /// pinned by its number in the new file, a removed one by its number in the old.
-struct LineAt: Identifiable, Hashable {
+struct LineAt {
     let side: LineSide
     let line: Int
     let code: String
-
-    var id: String { "\(side)-\(line)" }
 
     init?(_ cell: DiffCell) {
         let removed = cell.kind == .removed

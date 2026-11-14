@@ -40,8 +40,17 @@ public final class ChangesStore {
     public internal(set) var marked: Set<String> = []
     @ObservationIgnored var anchor: String?
     public var review = Review()
-    /// The line whose comment dialog is open (its text empty), for the control folder's `comment`.
-    public var commenting: ReviewComment?
+    /// The comment being written on a diff line: its place, the line quoted, and the text typed so far, which the editor's
+    /// field edits in place. The one state the sheet is shown from (`commentSheet`, on the window). Held here, above the
+    /// diff's rows, a reload of the diff under it (an agent editing that file) neither closes it nor loses the text; the
+    /// comment stays on the line it was opened on, as GPUI's dialog does, even where the reload took that line away. The
+    /// control folder's `comment-at` opens it and `comment` saves it.
+    public var commenting: ReviewComment? {
+        didSet { if commenting == nil { commentingFor = nil } else if oldValue == nil { commentingFor = terminal } }
+    }
+    /// The terminal the comment is for: the one the tab showed when it was opened, whichever it shows when it is saved
+    /// (GPUI's `Commenting::session`).
+    @ObservationIgnored private var commentingFor: Int?
     public let diff: DiffSession
     public private(set) var revs: [Rev] = []
     /// The picker's list is being read ("Loading branches…").
@@ -210,6 +219,35 @@ public final class ChangesStore {
             guard folder == self.folder else { return }
             (revs, revsLoading) = (listed, false)
         }
+    }
+
+    /// Whether the line being commented on has a comment: the editor offers Save and Remove, else Add Comment.
+    public var commentingExisting: Bool {
+        guard let at = commenting else { return false }
+        let owner = commentingFor.flatMap { $0 == terminal ? nil : kept[$0]?.review } ?? review
+        return owner.on(at.path, at.side, at.line) != nil
+    }
+
+    /// The comment being written becomes its line's (an empty text removes the one there), and the editor closes.
+    public func saveComment() {
+        guard let comment = commenting else { return }
+        putComment(comment)
+        commenting = nil
+    }
+
+    /// The line's comment is removed, and the editor closes.
+    public func removeComment() {
+        guard var comment = commenting else { return }
+        (comment.code, comment.text) = ("", "")
+        putComment(comment)
+        commenting = nil
+    }
+
+    /// Into the review of the terminal the comment was opened for: kept aside if another is shown now, gone with it if it
+    /// closed meanwhile.
+    private func putComment(_ comment: ReviewComment) {
+        guard let owner = commentingFor, owner != terminal else { return review.put(comment) }
+        kept[owner]?.review.put(comment)
     }
 
     /// Comments are made only on a diff against the working tree, whose lines are the ones the agent edits.

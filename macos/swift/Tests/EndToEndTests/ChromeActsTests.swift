@@ -113,6 +113,29 @@ extension EndToEnd {
         }
     }
 
+    @Test("a comment being written stays up with what was typed while an agent's edit reloads the diff under it (P03)")
+    @MainActor func commentSurvivesReload() async throws {
+        try await Instance.with { app in
+            let repo = try app.scratch.repository("reload-repo", files: ["a.txt": "one\n"])
+            try app.scratch.write(repo, "a.txt", "one\ntwo\n")
+            await app.terminal(in: repo)
+            await app.until("changes") { $0.contains("phase=loaded") && $0.contains("a.txt") }
+            await app.send(["diff 1"])
+            let spans = Readout(await app.until("diff-spans 0 40") { Readout($0).all("line").contains { $0.words.dropFirst().first == "added" } })
+            guard let row = spans.all("line").first(where: { $0.words.dropFirst().first == "added" })?.words.first else { return }
+            app.expect(await app.reply("comment-at \(row)"), contains: "comment-at a.txt:")
+            await app.until("windows") { $0.contains("sheet=true") }
+            await app.send(["text keep this"])
+            // An agent edits the file: the diff is read again and its rows rebuilt, the commented line one further down.
+            try app.scratch.write(repo, "a.txt", "zero\none\ntwo\n")
+            await app.until("diff-spans 0 40") { $0.contains(#"text="zero""#) }
+            app.expect((await app.reply("windows")).contains("sheet=true"), "the editor is still up after the reload")
+            app.expect(await app.reply("comment"), contains: "1 comment")
+            app.expect(await app.reply("review"), contains: "keep this")
+            await app.until("windows") { !$0.contains("sheet=true") }
+        }
+    }
+
     @Test("a commit's Copy Hash puts the hash on the instance's clipboard and the chip says what was copied (53)")
     @MainActor func historyCopyChip() async throws {
         try await Instance.with { app in
