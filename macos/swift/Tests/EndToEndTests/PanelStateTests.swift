@@ -11,6 +11,8 @@ extension EndToEnd {
     @Test("what Files, Changes and History keep for a terminal goes when it closes; Files reads only while shown (422, 612, 613)")
     @MainActor func panelKeptPerTerminal() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["notes_and_tasks": true, "files": true])
             let repo = try app.scratch.repository("kept-repo")
             let first = await app.terminal(in: repo)
             guard let a = first.selected else { return }
@@ -60,6 +62,8 @@ extension EndToEnd {
     @Test("a draft step goes when another terminal is selected (788)")
     @MainActor func draftStepLeaves() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["notes_and_tasks": true])
             await app.send(["key cmd-t", "tab notes"])
             let two = Listing(await app.until("rows") { Listing($0).live.count == 2 })
             guard let other = two.live.first(where: { $0 != two.selected }) else { return }

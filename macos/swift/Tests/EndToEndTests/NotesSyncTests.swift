@@ -8,6 +8,8 @@ extension EndToEnd {
     @Test("two terminals of a trusted project: a step ticked in one and a line added to notes.md reach both and the file, once")
     @MainActor func notesSync() async throws {
         try await Instance.with(auth: "allow") { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["project_folders": true, "notes_and_tasks": true])
             let repo = try app.scratch.repository(
                 "project", files: [".wormhole/notes.md": "# Notes\n\n## Next steps\n\n- [ ] from the file\n", "README.md": "one\n"])
             let file = repo.appendingPathComponent(".wormhole/notes.md")

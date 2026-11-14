@@ -110,7 +110,7 @@ extension EndToEnd {
             let listed = await app.rows()
             let place = (listed.rows.firstIndex { $0.id == listed.selected } ?? 2) + 1
             await app.send(["agent-hide \(place) on"])
-            await app.until("title") { $0.contains("isAgentHidden: true") }
+            await app.until("title") { $0.contains("hidden-from-agents: true") }
 
             // A terminal whose program ended still has its folder, but nothing can be typed into it.
             let live = await app.path(menu: "Insert into terminal")

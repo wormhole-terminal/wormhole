@@ -107,7 +107,10 @@ extension EndToEnd {
             await app.terminal(in: repo)
             await app.send(["tab history"])
             let state = await app.until("history-state") { $0.contains("commits=2") }
-            await app.send(["history 1", "history-file 1"])
+            // The commit's files are listed a moment after it opens; one is clicked once it is there.
+            await app.send(["history 1"])
+            await app.until("commit-details") { $0.contains("subject:") }
+            await app.send(["history-file 1"])
             await app.until("history-state") { $0.contains("diff=shown") }
             let header = Readout(await app.until("diff-header") { Readout($0).first("diff-header")?["commit"] != nil })
             let short = header.first("diff-header")?["commit"] ?? ""

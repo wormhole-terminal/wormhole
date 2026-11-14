@@ -43,6 +43,8 @@ extension EndToEnd {
     @Test("notes and steps seeded, folded and ticked; a note goes to the terminal; nothing typed at a prompt is no stash")
     @MainActor func notesTools() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["notes_and_tasks": true])
             await app.send(["tab notes", "note-seed 3 6", "task-seed 3 1"])
             let seeded = await app.until("notes") { $0.contains("Step 4:") }
             app.expect(seeded.components(separatedBy: "Note ").count - 1 >= 3, "three notes:\n\(seeded)")

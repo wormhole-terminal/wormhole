@@ -29,7 +29,7 @@ extension EndToEnd {
             let repo = try app.scratch.repository("chip-repo")
             let listing = await app.terminal(in: repo)
             guard let id = listing.selected else { return }
-            await app.send(["tab notes", "branch-chip"])
+            await app.send(["tab history", "branch-chip"])
             await app.until("state") { $0.contains("tab=changes") }
             // The request stands while the list it opened is up, and ends with it.
             await app.until("branch-chip state") { $0.contains("picker=\(id) list=open") }
@@ -96,7 +96,7 @@ extension EndToEnd {
         }
     }
 
-    @Test("a comment on a changed line: its dialog a sheet on the window, saved once, the sheet gone; a long line's quote is cut at 160 scalars (771, 890)")
+    @Test("a comment on a changed line: its dialog a sheet on the window, saved once, the sheet gone; a long line's quote is its first 160 scalars and an ellipsis (771, 890)")
     @MainActor func commentOnLine() async throws {
         try await Instance.with { app in
             let long = String(repeating: "e\u{301}", count: 120) + " 🙂🙂🙂   "
@@ -116,7 +116,9 @@ extension EndToEnd {
             let message = await app.reply("review")
             let quote = message.split(separator: "\n").first { $0.trimmingCharacters(in: .whitespaces).hasPrefix(">") }.map(String.init) ?? ""
             let quoted = quote.trimmingCharacters(in: .whitespaces).dropFirst(2)
-            app.expect(quoted.unicodeScalars.count <= 160 && !quoted.hasSuffix(" "), "cut at 160 scalars, trimmed: \(quoted.unicodeScalars.count)\n\(message)")
+            // The core's cut (`git::review` `quote`): the line's first 160 scalars, trimmed at the end, then an ellipsis.
+            let kept = quoted.hasSuffix("…") ? quoted.dropLast() : quoted
+            app.expect(quoted.hasSuffix("…") && kept.unicodeScalars.count == 160 && !kept.hasSuffix(" "), "160 scalars of the line and an ellipsis: \(kept.unicodeScalars.count)\n\(message)")
         }
     }
 
@@ -191,6 +193,8 @@ extension EndToEnd {
     @Test("⌥⌘S with text selected in the terminal makes it a note and shows Notes (431)")
     @MainActor func stashSelection() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["notes_and_tasks": true])
             await app.send(["text stash-me", "key return"])
             let screen = await app.screen(showing: "stash-me")
             let lines = screen.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)

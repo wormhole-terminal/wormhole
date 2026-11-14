@@ -23,7 +23,10 @@ extension EndToEnd {
             let rows = await app.until("settings-rows") { $0.contains("font-terminal | ") }
             app.expect(!rows.contains("font-terminal.reset | "), "no reset arrow on a row the project sets:\n\(rows)")
             // The person's own value is kept: the arrow would have put it back.
-            app.expect(await app.setting("font_size"), contains: "23")
+            // What is in force is the project's; the person's own stays in their config.json.
+            app.expect(await app.setting("font_size"), contains: "19")
+            let own = app.configText() ?? ""
+            app.expect(own.range(of: #""font_size"\s*:\s*23"#, options: .regularExpression) != nil, "the person's 23 is still in config.json:\n\(own)")
         }
     }
 

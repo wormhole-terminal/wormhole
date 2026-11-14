@@ -121,7 +121,12 @@ extension EndToEnd {
     @MainActor func settingsProjectRows() async throws {
         try await Instance.with(auth: "allow") { app in
             let repo = try app.scratch.repository("sets-project")
-            try app.scratch.project(repo, files: ["config.json": #"{"font_size": 19, "theme": "Nord", "theme_light": "Nord"}"#])
+            // A project's theme is its own `theme.json`; `theme` is not a setting a project's config.json may change (core
+            // `PROJECT_SETTINGS`), so the picks named there are dropped.
+            try app.scratch.project(repo, files: [
+                "config.json": #"{"font_size": 19}"#,
+                "theme.json": ##"{"name": "Sets", "extends": "Nord", "ui": {"primary": "#123456"}}"##,
+            ])
             await app.flags(["project_folders": true])
             await app.terminal(in: repo)
             await app.send(["tab project"])

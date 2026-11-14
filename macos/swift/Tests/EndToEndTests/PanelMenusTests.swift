@@ -33,6 +33,8 @@ extension EndToEnd {
     @Test("the panel's tab keys: Usage does nothing without an agent; under Zen a tab key changes the tab and it shows after")
     @MainActor func panelTabKeys() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["notes_and_tasks": true])
             await app.send(["key ctrl-cmd-1"])
             await app.until("state") { $0.contains("tab=changes") }
             app.expect(!(await app.reply("menus")).contains("Show Usage"), "no agent on screen: no Show Usage")

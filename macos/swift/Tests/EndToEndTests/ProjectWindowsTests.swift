@@ -16,7 +16,7 @@ extension EndToEnd {
             let other = try app.scratch.repository("other-project")
             try app.scratch.project(other, files: ["actions.json": Self.sayAction])
             let file = repo.appendingPathComponent(".wormhole/notes.md")
-            await app.flags(["project_folders": true])
+            await app.flags(["project_folders": true, "notes_and_tasks": true])
             await app.send(["new-window"])
             await app.until("sessions") { $0.split(separator: "\n").count == 2 }
             guard await openTerminal(repo, in: 1, of: app) != nil, let shared = await openTerminal(repo, in: 2, of: app) else { return }

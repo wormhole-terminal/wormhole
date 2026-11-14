@@ -80,6 +80,29 @@ extension Instance {
     /// The windows as `sessions` lists them, one line each (`window=<id> profile=<p> … front=<bool> terminals=[…] … frame=…`).
     func windowLines() async -> [String] { (await reply("sessions")).split(separator: "\n").map(String.init).filter { $0.hasPrefix("window=") } }
 
+    /// The number `window:` takes for the first window in sight of `profile`: its place among the windows in sight, which is
+    /// what `cmd<n>` counts (`sessions` lists the parked ones too; `DRIVING.md`, "Which window a command file reaches").
+    func window(inProfile profile: String) async -> Int? {
+        (await windowLines()).filter { $0.contains("visible=true") }.firstIndex { $0.contains("profile=\(profile) ") }.map { $0 + 1 }
+    }
+
+    /// Feature flags for a profile other than the default one, written into its own `config.json` (the map unlocked, as
+    /// `flags` writes it); the window `window` of that profile is waited for until it has them.
+    func flags(_ wanted: [String: Bool], profile: String, window: Int? = nil) async throws {
+        let file = scratch.data.appendingPathComponent("profiles/\(profile)/config.json")
+        var json = (try? JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any]) ?? [:]
+        var map = json["feature_flags"] as? [String: Any] ?? [:]
+        map["unlocked"] = true
+        for (key, on) in wanted { map[key] = on }
+        json["feature_flags"] = map
+        try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]).write(to: file, options: .atomic)
+        await until("flags", window: window) { said in
+            let on = Set(said.dropFirst("flags on=".count).split(separator: ",").map(String.init))
+            return wanted.allSatisfy { on.contains($0.key) == $0.value }
+        }
+    }
+
     /// A reply without the isolation marks Fluent puts around a number or a name (U+2068, U+2069), so words compare as read.
     nonisolated static func plain(_ text: String) -> String { text.filter { $0 != "\u{2068}" && $0 != "\u{2069}" } }
 

@@ -121,11 +121,12 @@ extension EndToEnd {
             let settled = Listing(await app.until("rows") { Listing($0).groups.first { $0.id == a }?.folded == false })
             app.expect(settled.row(ids[1]) != nil, "the group's row is listed again:\n\(settled.text)")
 
-            // ⌃↩ on a group's head opens its menu; the colour dots are the right-click menu's and the popover's, not this one's.
+            // ⌃↩ on a group's head opens the menu a right-click opens, its row of colour dots included (`group_head.rs`: both
+            // call `open_group_menu`).
             let menu = await app.reply("group-menu \(a)")
             app.expect(menu, contains: "Rename…")
             app.expect(menu, contains: "Close group")
-            app.expect(!(await app.reply("menu-native")).contains("dots:"), "no colour dots in the keyboard's group menu")
+            app.expect(await app.reply("menu-native"), contains: "dots: 1. ")
             await app.send(["menu-close"])
 
             // A pinned group left empty keeps its number, and its number key starts a terminal in it.

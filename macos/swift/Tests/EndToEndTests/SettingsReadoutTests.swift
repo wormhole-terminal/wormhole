@@ -62,7 +62,10 @@ extension EndToEnd {
     @MainActor func settingsNotifyOutsideBundle() async throws {
         try await Instance.with { app in
             await app.send(["notify-permission outside"])
-            let page = await Self.page(app, "notifications") { $0.line("row", "notify-permission") != nil }
+            // The row asks the notification centre when the page shows ("Asking macOS…") and has its answer a moment later.
+            let page = await Self.page(app, "notifications") { page in
+                page.line("row", "notify-permission").map { !$0.label.hasPrefix("Asking") } ?? false
+            }
             let row = page.line("row", "notify-permission")
             app.expect(row?.label == "Outside the app bundle", "the row's label:\n\(page.text)")
             app.expect(page.under("row", "notify-permission").contains { $0.kind == "caption" }, "its hint under it:\n\(page.text)")

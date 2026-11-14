@@ -28,7 +28,10 @@ extension EndToEnd {
             await app.until("state") { $0.contains("tab=history") }
 
             // With History switched off the item is not offered.
-            await app.send(["set features={\"history\":false}", "tab changes"])
+            // The person's feature switches are a map in config.json that `set` does not take: edited in the file.
+            try app.editConfig { $0["features"] = ["history": false] }
+            await app.until("menus") { !$0.contains("History  ⌃⌘2") }
+            await app.send(["tab changes"])
             await app.until("changes-menu 1") { $0.hasPrefix("menu:") && !$0.contains("File History") }
             await app.send(["menu-close"])
         }
@@ -62,6 +65,8 @@ extension EndToEnd {
     @Test("a Files row's menu: Open in, Reveal, Copy Path, Rename…; a folder's adds Pin Folder (335)")
     @MainActor func filesRowMenu() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["files": true])
             let repo = try app.scratch.repository("files-menu", files: ["README.md": "one\n", "src/a.txt": "a\n"])
             await app.terminal(in: repo)
             await app.send(["tab files"])

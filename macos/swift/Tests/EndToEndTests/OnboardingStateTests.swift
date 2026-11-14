@@ -40,6 +40,8 @@ extension EndToEnd {
     @Test("with no agent on PATH the third step is the primer, its things to try with their keys, Jot a note with Notes on (724)")
     @MainActor func onboardingPrimer() async throws {
         try await Instance.with { app in
+            // Notes is behind its flag; the primer names it only where the window's profile has it on.
+            await app.flags(["notes_and_tasks": true])
             let state = await Self.onboarding(app, at: "primer")
             app.expect(state.first("onboarding-state")?.has("last") == true, "the primer is the last step:\n\(state.text)")
             app.expect(state.line("button", "main")?.label == "Start", "its main button starts:\n\(state.text)")

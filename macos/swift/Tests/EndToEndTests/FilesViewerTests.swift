@@ -49,6 +49,8 @@ extension EndToEnd {
     @Test("a CRLF file is one numbered line per line with no carriage return; an LF file ending in a newline has no empty last line (244)")
     @MainActor func viewerLineEnds() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["files": true])
             let repo = try app.scratch.repository("ends-repo", files: ["crlf.txt": "one\r\ntwo\r\nthree\r\n", "lf.txt": "a\nb\n"])
             await app.terminal(in: repo)
             await app.send(["tab files"])
@@ -64,6 +66,8 @@ extension EndToEnd {
     @Test("a large picture is drawn at most 4,096 px; one over a hundred million pixels is too large; a broken one can't be shown (245)")
     @MainActor func viewerPictures() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["files": true])
             let repo = try app.scratch.repository("pics-repo")
             // The size is read from the header ImageIO accepts, so the picture is a real one, as in the GPUI app's own test
             // (`platform/macos/image/tests.rs`): 100,010,000 pixels of one grey. A header alone is no picture to ImageIO.
@@ -90,6 +94,8 @@ extension EndToEnd {
     @Test("a link that leads out of the folder is not shown and offers neither Open in nor Reveal (418)")
     @MainActor func viewerLinkOut() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["files": true])
             let repo = try app.scratch.repository("link-repo")
             let outside = app.scratch.root.appendingPathComponent("outside.txt")
             try Data("secret\n".utf8).write(to: outside)
@@ -106,6 +112,8 @@ extension EndToEnd {
     @Test("a Rust file's text shows with its colours after it; a 50,000-line file shows every line (583)")
     @MainActor func viewerColoursAndLength() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["files": true])
             let long = (1...50_000).map { "line \($0)" }.joined(separator: "\n") + "\n"
             let repo = try app.scratch.repository("view-repo", files: ["lib.rs": "fn main() {\n    let x = \"hi\";\n}\n", "long.txt": long])
             await app.terminal(in: repo)

@@ -128,11 +128,23 @@ extension EndToEnd {
             let found = await app.until("project-state") { $0.contains("root=") }
             app.expect((Instance.value("root", in: found) ?? "").hasSuffix("/init-repo"), "found from the subfolder upwards:\n\(found)")
 
-            // A colour for the repository's folder is the profile's own, written to its config.json.
+            // The folder is a project now, so its colour is the project's own: `project_color` in its config.json, not the
+            // person's list in the profile's (`set_folder_choice`).
+            let projectConfig = made.appendingPathComponent("config.json")
+            @MainActor func projectSays(_ wanted: (String) -> Bool) async -> Bool {
+                for _ in 0..<60 {
+                    if wanted((try? String(contentsOf: projectConfig, encoding: .utf8)) ?? "") { return true }
+                    await app.send(["delay 100"])
+                }
+                return false
+            }
+            // A line of its own: the file Create writes has the key in a comment as an example.
+            let set = #"(?m)^\s*"project_color"\s*:\s*"teal""#
             app.expect(await app.reply("folder-color \(repo.path) teal"), contains: "teal")
-            _ = await app.waitForConfig { $0.contains("folder_colors") && $0.contains("init-repo") && $0.contains("teal") }
+            app.expect(await projectSays { $0.range(of: set, options: .regularExpression) != nil }, "the project's config.json holds the colour")
+            app.expect(!(app.configText() ?? "").contains("init-repo"), "the profile's own list does not")
             app.expect(await app.reply("folder-color \(repo.path) none"), contains: "no colour")
-            _ = await app.waitForConfig { !$0.contains("teal") }
+            app.expect(await projectSays { $0.range(of: set, options: .regularExpression) == nil }, "taken out again")
             app.expect(await app.reply("folder-color \(repo.path) zzz"), contains: "error:")
         }
     }

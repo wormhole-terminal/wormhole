@@ -36,8 +36,12 @@ extension EndToEnd {
             await app.until("rows") { Listing($0).live.count == 2 }
             app.expect(await app.reply("layout columns"), contains: "layout columns")
             await app.until("panes") { Panes($0).isSplit }
+            // The selected terminal stood alone, so the second column is a new terminal (core `apply_layout`: new terminals
+            // fill what is left); back to a single pane it leaves the split and stands alone, it is not closed.
+            await app.until("rows") { Listing($0).live.count == 3 }
             await app.send(["layout single"])
             await app.until("panes") { !Panes($0).isSplit }
+            app.expect((await app.rows()).live.count == 3, "the pane that left the split is still a terminal")
             app.expect(await app.reply("layout x"), contains: "error: expected columns|rows|grid|single")
 
             let shells = await app.reply("shells")
@@ -45,12 +49,12 @@ extension EndToEnd {
             let folder = app.scratch.home.appendingPathComponent("shell-here")
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             await app.send(["new-shell - \(folder.path)"])
-            let three = Listing(await app.until("rows") { Listing($0).live.count == 3 })
-            app.expect(three.rows.contains { $0.folder.hasSuffix("shell-here") }, "the new shell is in the folder:\n\(three.text)")
+            let four = Listing(await app.until("rows") { Listing($0).live.count == 4 })
+            app.expect(four.rows.contains { $0.folder.hasSuffix("shell-here") }, "the new shell is in the folder:\n\(four.text)")
 
             app.expect(await app.reply("close 9"), contains: "error: no row 9")
             app.expect(await app.reply("close 2"), contains: "close 2")
-            await app.until("rows") { Listing($0).live.count == 2 }
+            await app.until("rows") { Listing($0).live.count == 3 }
             app.expect((await app.reply("question")).contains("title=") == false, "closed by number without a question")
             app.expect(await app.reply("agent-hide 1"), contains: "agent-hide 1")
             app.expect(await app.reply("agent-hide x"), contains: "error")

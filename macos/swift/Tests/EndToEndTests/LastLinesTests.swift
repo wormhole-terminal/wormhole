@@ -61,12 +61,22 @@ extension EndToEnd {
         try await Instance.with(hosts: true) { app in
             await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
             let before = try Self.hostRows(app, profile: nil)
+            // The other profile first (making it enters it), with Persistent terminals on in its own config.json; then back, and
+            // the window in sight moves there (`DRIVING.md`, "Which window a command file reaches").
             guard let work = await Self.newProfile(app, "Work") else { return app.fail("the Work profile") }
-            await app.send(["profile-move \(work)"], window: 1)
-            await app.until("sessions") { $0.contains("profile=\(work) ") }
-            await app.send(["key cmd-t"], window: 1)
-            let hosted = await app.until("sessions") { Instance.hostIDs(in: $0).count == 2 }
-            guard let new = Instance.hostIDs(in: hosted).last else { return }
+            try await app.flags(["persistent_terminals": true], profile: work)
+            await app.send(["profile-switch default"])
+            await app.until("sessions") { $0.contains("profile=default visible=true") }
+            await app.send(["profile-move \(work)"])
+            // The hosts of the window that moved, read off its own line: the profile it left opens a window of its own again,
+            // whose terminal is hosted too and is none of this scenario's.
+            let movedHosts: (String) -> [String] = { said in
+                said.split(separator: "\n").filter { $0.contains("profile=\(work) ") && $0.contains("visible=true") }.flatMap { Instance.hostIDs(in: String($0)) }
+            }
+            let known = movedHosts(await app.until("sessions") { movedHosts($0).count == 1 })
+            await app.send(["key cmd-t"], window: await app.window(inProfile: work))
+            let hosted = await app.until("sessions") { movedHosts($0).count == 2 }
+            guard let new = movedHosts(hosted).first(where: { !known.contains($0) }) else { return }
             await app.send(["save-windows"])
             await app.until("delay 200") { _ in (try? Self.hostRows(app, profile: work))?.contains(new) == true }
             app.expect(!(try Self.hostRows(app, profile: nil)).contains(new), "the profile the window left has no row for it; it had \(before)")
@@ -76,18 +86,22 @@ extension EndToEnd {
     @Test("a panel switch flipped in a window of another profile is written to that profile's config.json, never the other's (497)")
     @MainActor func panelSwitchInOtherProfile() async throws {
         try await Instance.with { app in
+            // Back in the default profile, a window opened in Work is the window of another profile.
             guard let work = await Self.newProfile(app, "Work") else { return app.fail("the Work profile") }
+            await app.send(["profile-switch default"])
+            await app.until("sessions") { $0.contains("profile=default visible=true") }
             await app.send(["profile-open \(work)"])
-            await app.until("sessions") { $0.split(separator: "\n").count == 2 }
-            let sessions = await app.reply("sessions")
-            let window = sessions.split(separator: "\n").firstIndex { $0.contains("profile=\(work) ") }.map { $0 + 1 } ?? 2
-            await app.send(["panel-option split on"], window: window)
+            await app.until("sessions") { $0.split(separator: "\n").contains { $0.contains("profile=\(work) ") && $0.contains("visible=true") } }
+            guard let window = await app.window(inProfile: work) else { return app.fail("a Work window in sight:\n\(await app.reply("sessions"))") }
+            // Split diffs are on unless switched off, so the switch is flipped off: a value neither file has by itself.
+            let off = #""diff_split"\s*:\s*false"#
+            await app.send(["panel-option split off"], window: window)
             let file = app.scratch.data.appendingPathComponent("profiles/\(work)/config.json")
             let written = await app.watch(file.deletingLastPathComponent(), timeout: 15) {
-                ((try? String(contentsOf: file, encoding: .utf8)) ?? "").contains("\"diff_split\"")
+                ((try? String(contentsOf: file, encoding: .utf8)) ?? "").range(of: off, options: .regularExpression) != nil
             }
             app.expect(written, "the Work profile's file has the switch: \(file.path)")
-            app.expect(!(app.scratch.dataFile("config.json") ?? "").contains("\"diff_split\": true"), "the other profile's file does not")
+            app.expect((app.scratch.dataFile("config.json") ?? "").range(of: off, options: .regularExpression) == nil, "the other profile's file does not")
         }
     }
 }

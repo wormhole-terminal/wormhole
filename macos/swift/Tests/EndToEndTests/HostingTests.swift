@@ -45,6 +45,8 @@ extension EndToEnd {
         .enabled(if: Instance.hostProgram() != nil, "no session host is built: cargo build -p wormhole-host"))
     @MainActor func endAllKeepsTheTerminals() async throws {
         try await Instance.with(hosts: true) { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["persistent_terminals": true, "notes_and_tasks": true])
             let before = await app.until("sessions") { Instance.hostIDs(in: $0).count == 1 }
             guard let host = Instance.hostIDs(in: before).first, let id = await app.live(1)?.first else { return }
             await app.send(["tab notes", "note-add remember the milk"])

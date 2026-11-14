@@ -73,6 +73,12 @@ extension EndToEnd {
     @Test("a window with a trusted project moved to another profile reads untrusted there, trusted again back home (1157)")
     @MainActor func projectTrustFollowsWindow() async throws {
         try await Instance.with(auth: "allow") { app in
+            // The other profile first (making it enters it), with Project folders on in its own config.json; then back, so the
+            // window that moves is one in sight (`DRIVING.md`, "Which window a command file reaches").
+            guard let work = await Self.newProfile(app, "Work") else { return app.fail("the Work profile") }
+            try await app.flags(["project_folders": true], profile: work)
+            await app.send(["profile-switch default"])
+            await app.until("sessions") { $0.contains("profile=default visible=true") }
             await app.flags(["project_folders": true])
             let repo = try app.scratch.repository("move-project")
             try app.scratch.project(repo, files: ["config.json": #"{"font_size": 15}"#])
@@ -81,11 +87,20 @@ extension EndToEnd {
             await app.until("project-state") { $0.contains("root=") }
             await app.send(["project-approve"])
             await app.until("project-state") { $0.contains("status=trusted") }
-            guard let work = await Self.newProfile(app, "Work") else { return app.fail("the Work profile") }
-            await app.send(["profile-move \(work)"], window: 1)
-            await app.until("project-state", window: 1) { $0.contains("status=untrusted") }
-            await app.send(["profile-move default"], window: 1)
-            await app.until("project-state", window: 1) { $0.contains("status=trusted") }
+            await app.send(["profile-move \(work)"])
+            // The profile left opens a window of its own again; the one that moved is Work's window in sight.
+            await app.until("sessions") { $0.split(separator: "\n").contains { $0.contains("profile=\(work) ") && $0.contains("visible=true") } }
+            let moved = await app.window(inProfile: work)
+            await app.until("project-state", window: moved) { $0.contains("status=untrusted") }
+            await app.send(["profile-move default"], window: moved)
+            await app.until("sessions") { !$0.split(separator: "\n").contains { $0.contains("profile=\(work) ") && $0.contains("visible=true") } }
+            // Back home it is the window with the project's terminal: asked of each window in sight, one says trusted.
+            var trusted = false
+            for _ in 0..<40 where !trusted {
+                for window in 1...2 where (await app.reply("project-state", window: window)).contains("status=trusted") { trusted = true }
+                if !trusted { await app.send(["delay 250"]) }
+            }
+            app.expect(trusted, "the window reads trusted again in its own profile")
         }
     }
 }

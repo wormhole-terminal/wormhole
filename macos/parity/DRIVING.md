@@ -98,6 +98,25 @@ Added by wave 6 (dev tooling; written without compiling, see TO-VERIFY.md): **ea
 `cmd` acts on the window in front (the key one, else the one opened or used last) and is answered in `out.txt`; `cmd1`, `cmd2`,
 `cmd3` … are the windows in the order they were opened, whatever is in front, answered in `out1.txt`, `out2.txt` … A line of `cmd<n>` acts on that window, keys included (`key`, `keys`, `text`, `state`, the window commands).
 
+**Which window a command file reaches once there are profiles.** One rule: `cmd<n>` is the n-th window *in sight*, in the order they
+were opened, and `cmd` is the one of those in front. A window is in sight when its profile is the one Wormhole is in, or when it
+was opened in or moved to another profile while Wormhole stayed where it was (the odd window). The windows of a profile Wormhole
+left are parked: no command file reaches them until `profile-switch <id>` brings that profile back. `sessions` lists every window,
+parked ones too (`visible=false`), so a number for `cmd<n>` is a line's place among the `visible=true` lines, not among all of them.
+What the profile commands do to that:
+
+- `profile-new <name>` makes the profile and enters it, as Settings does: its one new window is in sight (`cmd`, `cmd1`), the
+  windows of the profile left are parked.
+- `profile-switch <id>` enters that profile: its windows are in sight again, the ones of the profile left are parked. An odd
+  window stays in sight through it.
+- `profile-open <id>` opens a window in that profile and leaves Wormhole where it is: the new window is in sight, last in the
+  order, and in front.
+- `profile-move <id>` moves the window the command file reaches to that profile; it stays in sight, at its place in the order.
+
+So a scenario about a window "in another profile" makes the profile, goes back with `profile-switch default`, and then opens
+(`profile-open`) or moves (`profile-move`) a window; a profile's own `config.json` is `profiles/<id>/config.json` in the data folder
+(`set` writes the one of the window the file reaches).
+
 | Command | Example | Does |
 |---|---|---|
 | `blocks` | `blocks` | the selected terminal's command blocks, oldest first, one a line: `n: lines a..=b output c..=d \| state \| command` |

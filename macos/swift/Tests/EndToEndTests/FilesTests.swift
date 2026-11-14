@@ -15,7 +15,7 @@ extension EndToEnd {
         try await Instance.with { app in
             let repo = try app.scratch.repository(
                 "files-repo", files: ["README.md": "one\n", "src/a.txt": "a\n", "src/c.txt": "c\n", "docs/b.md": "b\n"])
-            await app.flags(["files": true])
+            await app.flags(["files": true, "notes_and_tasks": true])
             await app.terminal(in: repo.appendingPathComponent("src"))
             let tree = await app.until("files") { $0.contains("src") && $0.contains("docs") }
             let head = tree.split(separator: "\n").first.map(String.init) ?? ""
@@ -57,6 +57,9 @@ extension EndToEnd {
             let root = Self.filesRoot(first)
             await app.send(["files-root \(repo.appendingPathComponent("docs").path)"])
             await app.until("files") { ($0.split(separator: "\n").first ?? "").contains("/docs (chosen)") }
+            // Follow Terminal is in the path menu only while a folder is chosen (`files/menus.rs` `path_menu`).
+            app.expect(await app.reply("files-menu"), contains: "Follow Terminal")
+            await app.send(["menu-close"])
             // Another terminal has its own tree; the first keeps its chosen folder.
             guard let a = (await app.rows()).selected else { return }
             await app.terminal(in: repo)
@@ -67,21 +70,23 @@ extension EndToEnd {
             await app.until("files") { $0.contains("pins-repo (following)") }
 
             await app.send(["files-pin \(root)/src"])
-            await app.until("files") { $0.contains("pinned=src") }
+            // The pins are listed by their paths, as the GPUI app's `files` lists them.
+            await app.until("files") { $0.contains("pinned=\(root)/src") }
             _ = await app.waitForConfig { $0.contains("files_pinned") && $0.contains("src") }
             // Renaming a pinned folder moves its pin to the new name.
             await app.send(["files-rename src source"])
             app.expect(await app.waitFor(repo.appendingPathComponent("source")), "renamed on disk")
-            await app.until("files") { $0.contains("pinned=source") }
+            await app.until("files") { $0.contains("pinned=\(root)/source") }
             await app.send(["files-pin \(root)/source"])
             await app.until("files") { $0.contains("pinned=-") }
 
             let menu = await app.reply("files-menu")
-            app.expect(menu, contains: "Follow")
+            app.expect(menu.contains("Choose Folder…") && !menu.contains("Follow Terminal"), "following: nothing to go back to:\n\(menu)")
             await app.send(["menu-close"])
+            // The title row's folder menu, in its own words (`title/path_menu.rs`: Copy path).
             let path = await app.reply("path-menu")
-            app.expect(path, contains: "Copy Path")
-            app.expect(await app.reply("menu-pick Copy Path"), contains: "picked Copy Path")
+            app.expect(path, contains: "Copy path")
+            app.expect(await app.reply("menu-pick Copy path"), contains: "picked Copy path")
             app.expect(await app.reply("pasteboard"), contains: "pins-repo")
             await app.until("notice chip") { $0.contains("Copied path") }
         }

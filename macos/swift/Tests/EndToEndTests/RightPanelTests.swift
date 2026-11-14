@@ -38,6 +38,8 @@ extension EndToEnd {
     @Test("a note and a step, ticked, are there after a restart on the same data folder")
     @MainActor func notes() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["notes_and_tasks": true])
             await app.send(["tab notes", "note-add remember the milk", "task-add write the tests", "task-done 1"])
             let said = await app.until("notes") { $0.contains("remember the milk") && $0.contains("write the tests:true") }
             app.expect(said, contains: "steps=")

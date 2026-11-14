@@ -10,6 +10,8 @@ extension EndToEnd {
     @Test("from a subfolder, Changes lists the repository's files by their whole path, a nested repository as a folder, and opens a diff")
     @MainActor func changesFromASubfolder() async throws {
         try await Instance.with { app in
+            // The panel's tabs are features behind their flags, which a window follows: on for what this scenario shows.
+            await app.flags(["notes_and_tasks": true])
             let repo = try app.scratch.repository("sub-repo", files: ["README.md": "one\n", "crates/x/lib.rs": "fn x() {}\n"])
             try app.scratch.write(repo, "crates/x/lib.rs", "fn x() {}\nfn y() {}\n")
             // An untracked folder that is a repository of its own: git lists it as one entry.
@@ -111,7 +113,10 @@ extension EndToEnd {
             // The palette's commits are HEAD's log of the terminal's folder, whatever branch History shows; read when it opens.
             await app.send(["palette", "wait-idle 5000", "key esc"])
             await app.until("palette-rows #third") { $0.contains("third commit") }
-            await app.send(["set features={\"history\":false}", "palette", "wait-idle 5000", "key esc"])
+            // The person's feature switches are a map in config.json that `set` does not take: edited in the file.
+            try app.editConfig { $0["features"] = ["history": false] }
+            await app.until("menus") { !$0.contains("History  ⌃⌘2") }
+            await app.send(["palette", "wait-idle 5000", "key esc"])
             await app.until("palette-rows #third") { !$0.contains("third commit") }
         }
     }
