@@ -57,10 +57,14 @@ impl ProjectService {
     }
 }
 
-/// Tells every window's Project tab to read its project again.
+/// Tells every window's Project tab to read its project again, and every workspace to judge its branches' pull
+/// requests against the approvals now.
 pub(super) fn tell_every_tab() {
-    let mut watches = WATCHES.lock().unwrap_or_else(PoisonError::into_inner);
-    watches.retain(|watch| watch.upgrade().inspect(|watch| watch.poke()).is_some());
+    {
+        let mut watches = WATCHES.lock().unwrap_or_else(PoisonError::into_inner);
+        watches.retain(|watch| watch.upgrade().inspect(|watch| watch.poke()).is_some());
+    }
+    crate::workspace_extras::trust_changed();
 }
 
 /// The watches Swift holds for every service, which hear of what a service itself changed. A tab of another profile

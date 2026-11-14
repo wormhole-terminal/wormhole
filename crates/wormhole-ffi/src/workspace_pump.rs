@@ -146,9 +146,20 @@ impl Pump {
     }
 }
 
+/// Every workspace's pump, for news that reaches them all and that no terminal's event carries (a project trusted or
+/// revoked: `workspace_extras::trust_changed`).
+static PUMPS: Mutex<Vec<Weak<Pump>>> = Mutex::new(Vec::new());
+
+/// Wakes every workspace's thread for a round.
+pub(crate) fn kick_every() {
+    let mut pumps = PUMPS.lock().unwrap_or_else(PoisonError::into_inner);
+    pumps.retain(|pump| pump.upgrade().inspect(|pump| pump.kick()).is_some());
+}
+
 /// Start the thread for `shared`.
 pub(crate) fn spawn(shared: &Arc<Shared>) {
     let (weak, pump): (Weak<Shared>, Arc<Pump>) = (Arc::downgrade(shared), shared.pump.clone());
+    PUMPS.lock().unwrap_or_else(PoisonError::into_inner).push(Arc::downgrade(&pump));
     let started = std::thread::Builder::new().name("wormhole-ffi-pump".into()).spawn(move || {
         loop {
             // The workspace is held for a round, never while asleep.

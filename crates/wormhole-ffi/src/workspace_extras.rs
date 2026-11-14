@@ -2,12 +2,14 @@
 //! `pull_request_branches`) is looked up here and handed back, as the GPUI app's `window/title/extras.rs`
 //! does. The rules are core's: the ports from the shell's process tree (`wormhole_term::listening_ports`),
 //! the pull request from `gh` (`git::pr`, its cache's deadlines), and `gh` only in a project the person
-//! trusts, since it reads the repository's own git configuration.
+//! trusts, since it reads the repository's own git configuration. What the row shows follows the trust as it is
+//! now: the model holds a branch's pull request only while its project is approved, and a trust changed in this
+//! process is looked at at once (GPUI's `shown_pull_request` over `session_pr_branch`, every tick).
 //!
 //! Nothing here sleeps: the pump asks `step` what is due and when the next look is.
 
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
@@ -28,12 +30,23 @@ const PORTS_EVERY: Duration = Duration::from_secs(5);
 /// asked at once, as the set of branches moving shows.
 const PULL_REQUESTS_EVERY: Duration = Duration::from_secs(60);
 
+/// How many times a project's approvals (or its switches) changed in this process: the branches are judged again at
+/// the next look whenever it moved, not at the minute's end. A change made by another program waits for the minute.
+static TRUST_CHANGES: AtomicU64 = AtomicU64::new(0);
+
+/// A project was trusted or revoked in this process: every workspace looks at its branches again now.
+pub(crate) fn trust_changed() {
+    TRUST_CHANGES.fetch_add(1, Ordering::AcqRel);
+    crate::workspace_pump::kick_every();
+}
+
 #[derive(Default)]
 pub(crate) struct Extras {
     ports_looked: Mutex<Option<(i64, Instant)>>,
     ports_busy: AtomicBool,
     cache: Mutex<PrCache>,
-    scanned: Mutex<Option<(Vec<Branch>, Instant)>>,
+    /// The branches last judged, at which count of trust changes, and when.
+    scanned: Mutex<Option<(Vec<Branch>, u64, Instant)>>,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -78,21 +91,26 @@ fn pull_requests(shared: &Arc<Shared>) -> Option<Duration> {
     if branches.is_empty() {
         return None;
     }
+    let told = TRUST_CHANGES.load(Ordering::Acquire);
     {
         let mut scanned = locked(&shared.extras.scanned);
         match scanned.as_ref() {
-            Some((seen, at)) if *seen == branches && at.elapsed() < PULL_REQUESTS_EVERY => {
+            Some((seen, seen_told, at))
+                if *seen == branches && *seen_told == told && at.elapsed() < PULL_REQUESTS_EVERY =>
+            {
                 return Some(PULL_REQUESTS_EVERY.saturating_sub(at.elapsed()));
             }
-            _ => *scanned = Some((branches.clone(), Instant::now())),
+            _ => *scanned = Some((branches.clone(), told, Instant::now())),
         }
     }
     for branch in branches {
-        let now = Instant::now();
-        if !locked(&shared.extras.cache).is_due(&branch, now) || !approved(shared, &branch.root) {
-            continue;
-        }
-        if !locked(&shared.extras.cache).begin(&branch, now) {
+        // Shown only while the project is approved: withheld once it is not, and what is known shown again at once
+        // when it is approved anew (the cache keeps it either way).
+        let trusted = approved(shared, &branch.root);
+        let known = if trusted { locked(&shared.extras.cache).get(&branch).cloned() } else { None };
+        let events = shared.with_model(|model| model.set_pull_request(branch.clone(), known));
+        shared.post(events);
+        if !trusted || !locked(&shared.extras.cache).begin(&branch, Instant::now()) {
             continue;
         }
         let shared = shared.clone();
@@ -106,6 +124,8 @@ fn pull_requests(shared: &Arc<Shared>) -> Option<Duration> {
                     let settled = cache.finish(&branch, found, Instant::now());
                     (settled, cache.get(&branch).cloned())
                 };
+                // Revoked while `gh` ran: the answer is kept, not shown.
+                let known = known.filter(|_| approved(&shared, &branch.root));
                 let events = shared.with_model(|model| model.set_pull_request(branch.clone(), known));
                 shared.post(events);
                 if let Some(settled) = settled {
@@ -149,4 +169,97 @@ fn approved(shared: &Shared, root: &Path) -> bool {
     let Some(folder) = ProjectFolder::open(root) else { return false };
     // The profile's approvals as the process holds them (`files_panel::trust_status_in`), every window's revoke in them.
     crate::files_panel::trust_status_in(profile.dir(), &folder.snapshot()) == TrustStatus::Trusted
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::disallowed_methods, reason = "the test makes its repository in a temp folder")]
+
+    use std::sync::Arc;
+    use std::time::{Duration, Instant};
+
+    use wormhole_core::git::pr::{Branch, PrState, PullRequest};
+    use wormhole_core::project::ProjectFolder;
+    use wormhole_core::workspace::Action;
+
+    use super::{locked, pull_requests};
+    use crate::{Windows, Workspace, WorkspaceConfig, WorkspaceListener};
+
+    struct Quiet;
+
+    impl WorkspaceListener for Quiet {
+        fn wake(&self) {}
+    }
+
+    fn eventually(what: &str, mut done: impl FnMut() -> bool) {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !done() {
+            assert!(Instant::now() < deadline, "timed out waiting for {what}");
+            std::thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    // GPUI: `window/title/extras.rs:183` `session_pr_branch` ends in `programs_approved`, so a revoked project's pull
+    // request is not shown, though the app's cache still holds it.
+    #[test]
+    fn a_cached_pull_request_is_not_shown_once_its_project_is_revoked() {
+        let data = tempfile::tempdir().expect("data dir");
+        let repo = tempfile::tempdir().expect("repo");
+        std::fs::create_dir(repo.path().join(".git")).expect("git");
+        std::fs::create_dir(repo.path().join(".wormhole")).expect("project folder");
+        let root = repo.path().canonicalize().expect("canonical");
+        let windows = Windows::in_dir(data.path()).expect("windows");
+        let profile = windows.profile().dir().to_path_buf();
+        let config = WorkspaceConfig {
+            home: None,
+            numbers_follow_list: true,
+            start_folder: None,
+            pane_header_height: 0.0,
+        };
+        let workspace = Workspace::in_window(windows, 1, config, Arc::new(Quiet));
+        let shared = workspace.shared();
+
+        let folder = ProjectFolder::open(&root).expect("a project");
+        crate::files_panel::change_trust_in(&profile, |trust| {
+            trust.trust(&folder);
+            true
+        })
+        .expect("trusted");
+        // `gh` answered a moment ago: nothing is due, so no lookup starts.
+        let branch = Branch { root: root.clone(), name: "main".into() };
+        let found = PullRequest {
+            number: 7,
+            url: "https://github.invalid/o/r/pull/7".into(),
+            state: PrState::Open,
+            draft: false,
+            checks: None,
+            review: None,
+        };
+        {
+            let mut cache = locked(&shared.extras.cache);
+            assert!(cache.begin(&branch, Instant::now()));
+            let _ = cache.finish(&branch, Ok(Some(found)), Instant::now());
+        }
+        workspace.apply(Action::NewTerminal);
+        let id = workspace.selected().expect("a terminal");
+        let _ = shared.with_model(|model| {
+            model.update_facts(id, |facts| {
+                facts.repo = Some(root.clone());
+                facts.branch = Some("main".into());
+            })
+        });
+        let shown = || {
+            pull_requests(shared);
+            workspace.title("Macintosh HD".into()).pull_request_words
+        };
+        eventually("the chip while trusted", || shown().is_some());
+
+        crate::files_panel::change_trust_in(&profile, |trust| trust.revoke(&root)).expect("revoked");
+        // Looked at straight after, well inside the minute between two looks: the revoke itself made it due.
+        eventually("no chip once revoked", || shown().is_none());
+        assert!(
+            locked(&shared.extras.cache).get(&branch).is_some(),
+            "the cache keeps the answer for a trust to come"
+        );
+    }
 }
