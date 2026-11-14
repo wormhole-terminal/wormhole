@@ -15,10 +15,13 @@ struct ChangesSpecimen: View {
     let opensFirst: Bool
 
     var body: some View {
-        ChangesView(store: store).task {
-            store.refresh()
-            if opensFirst { store.open(PanelSamples.files.first?.id) }
-        }
+        // The store reads nothing without a folder, so the specimen is of the sample project's: its list, and for the Diff
+        // specimen its first file's diff once the list is there (opened before, there is no file to open).
+        ChangesView(store: store)
+            .task { store.follow(PanelSamples.project.root) }
+            .onChange(of: store.phase, initial: true) {
+                if opensFirst, store.phase == .loaded, store.selection == nil { store.open(PanelSamples.files.first?.id) }
+            }
         // The window's in the app: here the specimen's, so a click on a line shows the editor.
         .commentSheet(store)
     }
@@ -26,7 +29,7 @@ struct ChangesSpecimen: View {
 
 struct HistorySpecimen: View {
     @State private var store = HistoryStore(git: MockGitBackend(), highlighter: LexerHighlighter())
-    var body: some View { HistoryView(store: store, now: PanelSamples.now).task { store.refresh() } }
+    var body: some View { HistoryView(store: store, now: PanelSamples.now).task { store.follow(PanelSamples.project.root) } }
 }
 
 /// The Project tab: the folder's colour, the trust callout over the commands, and the rows of what the project brings,
