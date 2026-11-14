@@ -77,8 +77,9 @@ extension EndToEnd {
             await app.until("rows") { Listing($0).live.count == 2 }
             await app.emit("\(e)[8;24;80t")
             await app.until("state") { Instance.value("grid", in: $0) == "80x24" }
-            // (80 x 24 and 90 x 28: sizes a window fits on any display the suite runs on with both side columns open; the
-            // core's frame for a resize stays on the screen.)
+            // (80 x 24 and 76 x 28: sizes a window fits on any display the suite runs on with both side columns open; the
+            // core's frame for a resize stays on the screen. The hosted runner's display is 1430 points wide: 80 columns is
+            // the most the two columns leave there, and 90 came out as 80.)
             // CSI 18 t reports the size in cells.
             await app.clearScreen()
             await app.discardLine()
@@ -87,8 +88,8 @@ extension EndToEnd {
             await app.discardLine()
 
             // Two resizes at once: the second is worked out from the first's size, not the old one.
-            await app.emit("\(e)[8;24;80t\(e)[8;28;90t")
-            await app.until("state") { Instance.value("grid", in: $0) == "90x28" }
+            await app.emit("\(e)[8;24;80t\(e)[8;28;76t")
+            await app.until("state") { Instance.value("grid", in: $0) == "76x28" }
 
             // CSI 13 t reports where the window is; CSI 3 t moves it, and the report follows.
             await app.clearScreen()
