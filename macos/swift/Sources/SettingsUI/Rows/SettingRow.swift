@@ -3,7 +3,10 @@
 // the control at the right edge, at least `rowMinHeight` tall. A changed row has a dot before the label and a
 // reset arrow (under the pointer, or always on the Changed page). The row has no hover fill of its own: the
 // control answers the pointer. VoiceOver reads the row as a group with the label and description.
+// A row with config keys has a menu (`style::row_keys`): Copy Key, Copy as JSON, Reset to Default, opened by a right click
+// or by ⌃↩ on any control of the row, since a pointer's menu reaches neither the keyboard nor VoiceOver.
 
+import AppKit
 import DesignSystem
 import SwiftUI
 
@@ -71,23 +74,46 @@ struct SettingRow<Control: View>: View {
         .onHover { hovering = $0 }
         .contextMenu {
             if !keys.isEmpty {
-                Button(SettingsText.copyKey) { Pasteboard.setText(keys.joined(separator: "\n")) }
-                Button(SettingsText.copyJSON) { Pasteboard.setText(json()) }
+                Button(SettingsText.copyKey) { copy(keys.joined(separator: "\n")) }
+                Button(SettingsText.copyJSON) { copy(json()) }
                 Divider()
                 Button(SettingsText.resetToDefault, action: onReset).disabled(!state.isChanged)
             }
+        }
+        // ⌃↩ on a control of the row: the same menu, where the pointer is, as `row_keys.rs` opens it.
+        .onKeyPress(.return, phases: .down) { press in
+            guard !keys.isEmpty, press.modifiers.subtracting(.capsLock) == .control else { return .ignored }
+            showMenu()
+            return .handled
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(label)
         .accessibilityHint(description)
     }
 
+    /// Puts `words` on the clipboard and says so: for a moment in the key's place, and to VoiceOver (`row_keys.rs` `copy`).
+    private func copy(_ words: String) {
+        Pasteboard.setText(words)
+        Announcements.post(SettingsText.copied)
+        copiedKey = true
+    }
+
+    /// The row's menu for ⌃↩. A test instance shows none: AppKit's menu loop would hold it.
+    private func showMenu() {
+        guard !TestInstance.isBackground else { return }
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        menu.addItem(ActionMenuItem(SettingsText.copyKey) { copy(keys.joined(separator: "\n")) })
+        menu.addItem(ActionMenuItem(SettingsText.copyJSON) { copy(json()) })
+        menu.addItem(.separator())
+        menu.addItem(ActionMenuItem(SettingsText.resetToDefault, enabled: state.isChanged, run: onReset))
+        menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+    }
+
     /// The key under Show config keys: a click copies the keys and says so for a moment.
     private func keyButton(_ key: String) -> some View {
         Button {
-            Pasteboard.setText(keys.joined(separator: "\n"))
-            Announcements.post(SettingsText.copied)
-            copiedKey = true
+            copy(keys.joined(separator: "\n"))
         } label: {
             Text(copiedKey ? SettingsText.copied : key).textRole(.caption, design: .monospaced)
                 .foregroundStyle(copiedKey ? tokens.statusSuccessText : tokens.textFaint).lineLimit(1)
