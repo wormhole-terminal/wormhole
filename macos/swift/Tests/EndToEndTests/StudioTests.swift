@@ -69,8 +69,6 @@ extension EndToEnd {
         try await Instance.with { app in
             let themes = app.scratch.data.appendingPathComponent("themes")
             try app.scratch.write(themes, "Old.json", ##"{"name": "Old", "extends": "Nord", "ui": {"primary": "#ff0000"}}"##)
-            let newer = ##"{"version": 9, "name": "Newer", "extends": "Nord", "from_the_future": true, "ui": {"primary": "#00ff00"}}"##
-            try app.scratch.write(themes, "Newer.json", newer)
             await app.send(["studio"])
             await app.until("studio-select") { !$0.hasPrefix("error") }
 
@@ -84,6 +82,11 @@ extension EndToEnd {
             app.expect((Instance.value("versions", in: versions).flatMap { Int($0) } ?? 0) >= 2, "the hand-written text is kept:\n\(versions)")
             await app.send(["studio-versions close"])
 
+            // A file a newer Wormhole made has this version's shape and more: the theme just saved in the new format, said
+            // to be version 9, with an entry this version does not know (a newer version is read as version 1, leniently;
+            // a hand-written `extends` under a version number is no theme at all).
+            let newer = Self.asNewer(old, from: "Old", to: "Newer")
+            try app.scratch.write(themes, "Newer.json", newer)
             await app.later("studio-open own:Newer", answer: "studio-open own:Newer")
             app.expect(await app.reply("studio-theme-menu"), contains: "newer=true")
             await app.send(["studio-select primary", "studio-set #112233"])

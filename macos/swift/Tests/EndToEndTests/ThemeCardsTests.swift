@@ -30,10 +30,13 @@ extension EndToEnd {
     @Test("a theme file made by a newer Wormhole wears its mark (869)")
     @MainActor func themeCardNewerMark() async throws {
         try await Instance.with { app in
-            let themes = app.scratch.data.appendingPathComponent("themes")
-            try app.scratch.write(themes, "Newer.json", ##"{"version": 9, "name": "Newer", "extends": "Nord", "from_the_future": true, "ui": {"primary": "#00ff00"}}"##)
-            let listed = Readout(await app.until("theme-cards Newer") { Readout($0).all("card").contains { $0.label == "Newer" } })
-            let card = listed.all("card").first { $0.label == "Newer" }
+            // A file a newer Wormhole made has this version's shape and more (a hand-written `extends` under a version
+            // number is no theme at all, so it gets no card).
+            try await Self.newerThemeFile(app, named: "Newer")
+            // The card is found by its file: what a card is called is the theme's own business.
+            let isNewer: (Readout.Line) -> Bool = { ($0["file"] ?? "").hasSuffix("/Newer.json") }
+            let listed = Readout(await app.until("theme-cards") { Readout($0).all("card").contains(where: isNewer) })
+            let card = listed.all("card").first(where: isNewer)
             app.expect(card?["newer"].flatMap { Int($0) }.map { $0 > 0 } == true, "the card says values were skipped:\n\(listed.text)")
         }
     }

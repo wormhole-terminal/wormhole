@@ -74,7 +74,7 @@ extension AppController {
     /// The window `pointer-window <title>` named: by its title, or `popover` for the one a popover (the font picker, a row's
     /// description) shows its content in, which has no title.
     var drivenWindow: NSWindow? {
-        injector.windowTitle.flatMap { title in
+        injector.target ?? injector.windowTitle.flatMap { title in
             NSApp.windows.first { title == "popover" ? String(describing: type(of: $0)).contains("Popover") : $0.title == title }
         }
     }

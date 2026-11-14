@@ -22,6 +22,8 @@ final class Injector {
     private(set) var menu: NSMenu?
     /// The window the pointer acts on by title (Settings, the Studio); nil is the workspace's in front.
     var windowTitle: String?
+    /// A window the keys go to whatever it is called (a Settings row's recorder): a title can be another window's too.
+    weak var target: NSWindow?
 
     /// A point given from the window content's top left, in points (as `window-shot` at 1x), in the window's own space.
     func location(_ x: Double, _ y: Double, in window: NSWindow) -> NSPoint {

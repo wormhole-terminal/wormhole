@@ -156,11 +156,10 @@ extension AppController {
         guard window.firstResponder is any RecordsKeys else {
             return reply("error: the click on \(id) did not start its recorder: " + said.joined(separator: ", "))
         }
-        // The keys go to the Settings window, as `pointer-window Settings` + `key` would send them.
-        let before = injector.windowTitle
-        injector.windowTitle = window.title
+        // The keys go to the Settings window itself: found by its title they went to whichever window has that title first.
+        injector.target = window
         for key in words.dropFirst() { said.append(sendKey(key)) }
-        injector.windowTitle = before
+        injector.target = nil
         reply("settings-record \(argument): " + said.joined(separator: ", "))
     }
 
