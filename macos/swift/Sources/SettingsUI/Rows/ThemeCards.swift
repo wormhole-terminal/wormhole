@@ -124,37 +124,43 @@ struct ThemeCards: View {
                         .focused($focusedCard, equals: card.id)
                         .recordFrame("theme-card.\(card.value)")
                         .contextMenu {
-                            if !card.isPicked(picked) {
-                                Button(Words.text("settings-appearance-hide-theme", fallback: "Hide theme")) { setHidden(card.hideValue, true) }
-                            }
-                            if card.path != nil {
-                                Button(Words.text("settings-appearance-move-to-trash", fallback: "Move to Trash") + "…") {
-                                    ThemeFiles.trash(card.value, model: model)
-                                }
-                            }
+                            ForEach(card.menu(picked: picked), id: \.self) { entry in Button(title(entry)) { run(entry, on: card) } }
                         }
                 }
             }
             .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow, .home, .end]) { press in walk(press.key, in: shown) }
-            // A radio group named by the shelf, a radio button a card (`choice_card`); the cards' menus as its actions.
-            .radioGroupSpeech(heading, titles: shown.map { label($0.theme) }, selected: shown.firstIndex { $0.isPicked(picked) }) { index in
+            // A radio group named by the shelf, a radio button a card (`choice_card`). A card's menu is its radio button's
+            // actions, inside the representation (GPUI's card offers Hide theme as a button of its own and the rest in its
+            // menu, `theme_picker/card.rs:147-180`); the same entries, named with the theme, stay on the shelf as a whole.
+            .radioGroupSpeech(
+                heading, titles: shown.map { label($0.theme) }, selected: shown.firstIndex { $0.isPicked(picked) },
+                actions: { index in shown[index].menu(picked: picked).map { entry in SpokenAction(title(entry)) { run(entry, on: shown[index]) } } }
+            ) { index in
                 model.set(key, .string(shown[index].value))
             }
-            .accessibilityActions { ForEach(shown) { card in menuActions(card, picked: picked) } }
+            .accessibilityActions {
+                ForEach(shown) { card in
+                    ForEach(card.menu(picked: picked), id: \.self) { entry in Button(title(entry, of: label(card.theme))) { run(entry, on: card) } }
+                }
+            }
         }
     }
 
-    /// A card's menu (Hide theme, Move to Trash…) as actions VoiceOver names with the theme, since the radio group stands in
-    /// for the cards and their menus.
-    @ViewBuilder private func menuActions(_ card: Card, picked: String?) -> some View {
-        let name = label(card.theme)
-        if !card.isPicked(picked) {
-            Button(Words.text("settings-appearance-hide-named", ["name": .text(name)], fallback: "Hide \(name)")) { setHidden(card.hideValue, true) }
+    private func run(_ entry: Card.MenuEntry, on card: Card) {
+        switch entry {
+        case .hide: setHidden(card.hideValue, true)
+        case .trash: ThemeFiles.trash(card.value, model: model)
         }
-        if card.path != nil {
-            Button(Words.text("settings-appearance-trash-named", ["name": .text(name)], fallback: "Move \(name) to Trash") + "…") {
-                ThemeFiles.trash(card.value, model: model)
-            }
+    }
+
+    /// A menu entry's words: the menu's own on the card ("Hide theme"), with the theme's name where the element they are on
+    /// stands for every card of the shelf ("Hide Nord").
+    private func title(_ entry: Card.MenuEntry, of name: String? = nil) -> String {
+        switch (entry, name) {
+        case (.hide, nil): Words.text("settings-appearance-hide-theme", fallback: "Hide theme")
+        case (.hide, let name?): Words.text("settings-appearance-hide-named", ["name": .text(name)], fallback: "Hide \(name)")
+        case (.trash, nil): Words.text("settings-appearance-move-to-trash", fallback: "Move to Trash") + "…"
+        case (.trash, let name?): Words.text("settings-appearance-trash-named", ["name": .text(name)], fallback: "Move \(name) to Trash") + "…"
         }
     }
 

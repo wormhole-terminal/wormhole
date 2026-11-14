@@ -19,6 +19,13 @@ struct ThemeCardEntry: Identifiable {
     var hideValue: String { path ?? value }
     var id: String { value }
     func isPicked(_ picked: String?) -> Bool { picked == value || (path != nil && picked == path) }
+
+    /// What the card's menu holds (`theme_picker/card.rs:84` `card_menu`): Hide theme unless the card is the pick, which
+    /// keeps its place, and Move to Trash… for a theme with a file. The right-click menu and VoiceOver's actions are both
+    /// made from it.
+    enum MenuEntry: Hashable { case hide, trash }
+
+    func menu(picked: String?) -> [MenuEntry] { (isPicked(picked) ? [] : [.hide]) + (path == nil ? [] : [.trash]) }
 }
 
 @MainActor

@@ -5,15 +5,30 @@
 
 import SwiftUI
 
+/// Something a drawn choice does besides being chosen (its right-click menu's entry), for VoiceOver's list of actions.
+public struct SpokenAction: Identifiable {
+    public let name: String
+    public let run: () -> Void
+    public var id: String { name }
+
+    public init(_ name: String, run: @escaping () -> Void) { (self.name, self.run) = (name, run) }
+}
+
 extension View {
     /// VoiceOver hears this view as a radio group named `label`, a radio button for each title, the one at `selected` chosen
-    /// (nil: none is). `pick` gets the index of the radio pressed; while not `enabled` the group is off.
+    /// (nil: none is). `pick` gets the index of the radio pressed; while not `enabled` the group is off. `actions` are what
+    /// the choice at an index does besides: they go on its radio button, inside the representation, because the radio
+    /// stands in for the drawn choice and whatever the drawn choice offers (its menu) is hidden with it.
     public func radioGroupSpeech(
-        _ label: String, titles: [String], selected: Int?, enabled: Bool = true, pick: @escaping (Int) -> Void
+        _ label: String, titles: [String], selected: Int?, enabled: Bool = true,
+        actions: @escaping (Int) -> [SpokenAction] = { _ in [] }, pick: @escaping (Int) -> Void
     ) -> some View {
         accessibilityRepresentation {
             Picker(label, selection: Binding(get: { selected }, set: { if let index = $0 { pick(index) } })) {
-                ForEach(titles.indices, id: \.self) { index in Text(titles[index]).tag(Optional(index)) }
+                ForEach(titles.indices, id: \.self) { index in
+                    Text(titles[index]).tag(Optional(index))
+                        .accessibilityActions { ForEach(actions(index)) { action in Button(action.name, action: action.run) } }
+                }
             }
             .pickerStyle(.radioGroup)
             .disabled(!enabled)
