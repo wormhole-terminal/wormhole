@@ -10,13 +10,14 @@ extension EndToEnd {
     @Test("History switched off leaves the menus, the palette and the shortcut sheet; Persistent terminals adds its menu items")
     @MainActor func featureSwitchesAndMenus() async throws {
         try await Instance.with { app in
-            app.expect(await app.reply("menus"), contains: "Show History")
+            // The View menu lists the panel's tabs by their names (`History  ⌃⌘2`); "Show History" is the palette's wording.
+            app.expect(await app.reply("menus"), contains: "History  ⌃⌘2")
             app.expect(await app.reply("palette-rows show history"), contains: "<action-showHistory>")
             let sheet = Self.shownShortcuts(await app.reply("shortcut-rows history"))
             app.expect(sheet > 0, "the sheet lists History")
 
             await app.send(["set features={\"history\":false}"])
-            await app.until("menus") { !$0.contains("Show History") }
+            await app.until("menus") { !$0.contains("History  ⌃⌘2") }
             app.expect(!(await app.reply("palette-rows show history")).contains("<action-showHistory>"), "the palette has no Show History")
             app.expect(Self.shownShortcuts(await app.reply("shortcut-rows history")) < sheet, "the sheet lists fewer rows for history")
 
