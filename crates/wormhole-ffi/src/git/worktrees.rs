@@ -15,7 +15,8 @@ use wormhole_core::storage::store::Store;
 use super::error::GitBackendError;
 use crate::files_panel::names;
 
-/// A worktree Wormhole made: of which repository (its main working tree), on which branch, where.
+/// A worktree Wormhole made: of which repository (its main working tree), on which branch, where. The folders are keys of
+/// `names` where they are not text (`DiskName` draws them), so they are handed back as the very folders.
 #[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
 pub struct GitWorktree {
     pub repo: String,
@@ -34,9 +35,9 @@ pub struct GitEnvVar {
 impl GitWorktree {
     fn of(made: &Worktree) -> Self {
         Self {
-            repo: made.repo.to_string_lossy().into_owned(),
+            repo: names::path_key(&made.repo),
             branch: made.branch.clone(),
-            folder: made.folder.to_string_lossy().into_owned(),
+            folder: names::path_key(&made.folder),
             env: made.env().into_iter().map(|(name, value)| GitEnvVar { name: name.into(), value }).collect(),
         }
     }
@@ -96,7 +97,7 @@ impl WorktreeService {
     /// The repository a worktree of `folder` is of: its main working tree (a terminal in a linked worktree makes
     /// siblings of the same repository), and the folder whose project decides trust. `None` outside a repository.
     pub fn repository(&self, folder: String) -> Option<String> {
-        repo_of(&folder).ok().map(|repo| repo.to_string_lossy().into_owned())
+        repo_of(&folder).ok().map(|repo| names::path_key(&repo))
     }
 
     /// Why a worktree can't be made of `folder`: it is in no repository. `None` when it can.
@@ -109,10 +110,7 @@ impl WorktreeService {
         let base = self.state().base.clone();
         let planned = repo_of(&folder).and_then(|repo| worktree::plan(&repo, &branch, base.as_deref()));
         match planned {
-            Ok(plan) => GitWorktreePlan::Ready {
-                branch: plan.branch,
-                folder: plan.folder.to_string_lossy().into_owned(),
-            },
+            Ok(plan) => GitWorktreePlan::Ready { branch: plan.branch, folder: names::path_key(&plan.folder) },
             Err(reason) => GitWorktreePlan::Refused { reason },
         }
     }

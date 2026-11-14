@@ -79,9 +79,11 @@ fn short(path: &Path) -> String {
     }
 }
 
+/// `root` is handed back to name the project (`project_page`, `revoke`): a key of `names` where it is not text, so a
+/// revoke from the page takes back the very project's approval, not one of a folder its name as text happens to name.
 fn choice(root: &Path) -> ProjectChoiceRecord {
     ProjectChoiceRecord {
-        root: root.to_string_lossy().into_owned(),
+        root: crate::files_panel::names::path_key(root),
         name: root.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
         detail: short(root),
     }
@@ -188,7 +190,9 @@ impl ProjectService {
             self.lock().trust().list().into_iter().map(|trusted| trusted.root.clone()).collect();
         let candidates = folders
             .iter()
-            .filter_map(|folder| find_project(Path::new(folder)).map(|found| found.root))
+            .filter_map(|folder| {
+                find_project(&crate::files_panel::names::folder(folder)).map(|found| found.root)
+            })
             .chain(trusted);
         for root in candidates {
             if !roots.contains(&root) && ProjectFolder::open(&root).is_some() {
@@ -232,7 +236,7 @@ impl ProjectService {
             TrustStatus::Untrusted => SETTINGS_PROJECTS_NOT_TRUSTED,
         };
         Some(ProjectPageRecord {
-            root: folder.root.to_string_lossy().into_owned(),
+            root: crate::files_panel::names::path_key(&folder.root),
             status: status.into(),
             status_word: text(status_word).to_string(),
             detail: trust_detail(status, has_commands, &needing),

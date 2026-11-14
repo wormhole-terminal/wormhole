@@ -78,10 +78,11 @@ public final class WorktreeStore {
     public var canCreate: Bool { !branch.isEmpty && !busy }
 
     /// The repository's name, which the sheet's description names.
-    public var repositoryName: String { repository.map { ($0 as NSString).lastPathComponent } ?? panelText("worktree-this-repository", "the repository") }
+    public var repositoryName: String { repository.map { (DiskName.shown($0) as NSString).lastPathComponent } ?? panelText("worktree-this-repository", "the repository") }
 
-    /// A path with the home folder as `~`.
-    private func shown(_ path: String) -> String {
+    /// A path with the home folder as `~`, a name that is not text with U+FFFD for its bytes (the core hands it as a key).
+    private func shown(_ key: String) -> String {
+        let path = DiskName.shown(key)
         guard let home = host?.homeFolder, path == home || path.hasPrefix(home + "/") else { return path }
         return "~" + path.dropFirst(home.count)
     }

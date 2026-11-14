@@ -45,12 +45,14 @@ pub enum ProjectEffect {
     OpenTerminals { terminals: Vec<NewTerminalRecord> },
 }
 
-fn text(path: PathBuf) -> String {
-    path.to_string_lossy().into_owned()
+/// A folder a terminal opens in, as Swift carries it: a key of `names` where it is not text, never the text with U+FFFD
+/// for its bytes, which could name a planted sibling (`caf\u{FFFD}/` beside `caf\xE9/`).
+fn key(path: PathBuf) -> String {
+    crate::files_panel::names::path_key(&path)
 }
 
 fn place(target: &Target, cwd: Option<PathBuf>) -> TerminalPlace {
-    let cwd = cwd.map(text);
+    let cwd = cwd.map(key);
     match target {
         Target::Current => TerminalPlace::Current,
         Target::NewSession => TerminalPlace::New { cwd },
@@ -119,7 +121,7 @@ pub(super) fn of_layout(folder: &ProjectFolder, snapshot: &ProjectSnapshot) -> V
         .iter()
         .map(|session| NewTerminalRecord {
             name: session.name.clone(),
-            cwd: text(folder.resolve_cwd(session.cwd.as_deref())),
+            cwd: key(folder.resolve_cwd(session.cwd.as_deref())),
             run: session.run.clone(),
             focus: session.focus,
         })

@@ -30,7 +30,11 @@ extension AppController {
         }
         guard let first = found.first else { return nil }
         let home = HomeFolder.path
-        let shown = { (path: String) in path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path }
+        // A folder whose name is not text comes as a key (`DiskName`): drawn with U+FFFD for its bytes.
+        let shown = { (key: String) in
+            let path = DiskName.shown(key)
+            return path.hasPrefix(home) ? "~" + path.dropFirst(home.count) : path
+        }
         guard group else {
             let dirty = !first.removable
             let folder = shown(first.made.folder)
