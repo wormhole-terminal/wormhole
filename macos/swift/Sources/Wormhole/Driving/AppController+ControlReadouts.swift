@@ -42,52 +42,55 @@ extension AppController {
                 reply(hub.switcherListing(look: look, query: argument))
             }
         case "switcher-press": reply(hub.switcherPress(argument, look: look).map { "error: \($0)" } ?? "switcher-press \(argument)")
-        case "onboarding-state":
-            guard let session = aux.onboarding?.session else { reply("error: the intro window is not open (`onboarding-step folder`)"); return true }
-            reply(OnboardingReadout.text(session))
-        case "onboarding-pick":
-            guard let session = aux.onboarding?.session else { reply("error: the intro window is not open (`onboarding-step folder`)"); return true }
-            guard argument.hasPrefix("/") else { reply("error: onboarding-pick <absolute path>"); return true }
-            session.pick(URL(fileURLWithPath: argument))
-            reply("onboarding-pick \(argument)")
-        case "onboarding-press":
-            // The card's buttons as `StepFooter` and `StepCard` send them: Back, the main one (Continue, or Start on the last
-            // step), Skip setup.
-            guard let session = aux.onboarding?.session else { reply("error: the intro window is not open (`onboarding-step folder`)"); return true }
-            switch argument {
-            case "back": session.send(.back)
-            case "main": session.send(session.step.isLast ? .start : .continue)
-            case "skip": session.send(.skip)
-            // The trust card's buttons (`TrustCardView`): Trust with Touch ID (asked through the instance's `WORMHOLE_AUTH`) and Later.
-            case "trust":
-                guard let root = session.trustCard?.root else { reply("error: no trust card"); return true }
-                session.send(.trust(root))
-            case "later": session.laterOnTrust()
-            default:
-                // A Look step card by its theme's name (`LookStep`: the card's own action).
-                if argument.hasPrefix("theme "), let theme = ThemeStore.shared.library.themes.first(where: { $0.name == String(argument.dropFirst(6)) }) {
-                    ThemeStore.shared.setTheme(theme.id)
-                } else {
-                    reply("error: onboarding-press back|main|skip|trust|later|theme <name>")
-                    return true
-                }
-            }
-            reply("onboarding-press \(argument)")
-        case "title-menu":
-            // `title-menu` lists the row's menu as `menu` prints one; `title-menu pick <n|title>` chooses an item as a click does.
-            guard let items = hub.titleMenuItems else { reply("error: no terminal is shown"); return true }
-            let words = argument.split(separator: " ", maxSplits: 1).map(String.init)
-            guard words.first == "pick", words.count == 2 else { reply("title-menu\n" + TitleMenuReadout.text(items)); return true }
-            let listed = items.compactMap { $0 }
-            guard let item = Int(words[1]).flatMap({ listed.indices.contains($0 - 1) ? listed[$0 - 1] : nil }) ?? listed.first(where: { $0.title == words[1] }) else {
-                reply("error: no item \(words[1])")
-                return true
-            }
-            guard item.enabled else { reply("error: \(item.title) is off"); return true }
-            item.run()
-            reply("title-menu picked \(item.title)")
+        case "onboarding-state", "onboarding-pick", "onboarding-press": reply(onboarding(command, argument))
+        case "title-menu": reply(titleMenu(argument))
         default: return runPanelReadouts(command: command, argument: argument)
         }
         return true
+    }
+
+    /// The first run's card: read, a folder dropped on it, its buttons (`StepFooter`, `StepCard`, `TrustCardView`, a Look card).
+    private func onboarding(_ command: String, _ argument: String) -> String {
+        guard let session = aux.onboarding?.session else { return "error: the intro window is not open (`onboarding-step folder`)" }
+        switch command {
+        case "onboarding-state": return OnboardingReadout.text(session)
+        case "onboarding-pick":
+            guard argument.hasPrefix("/") else { return "error: onboarding-pick <absolute path>" }
+            session.pick(URL(fileURLWithPath: argument))
+            return "onboarding-pick \(argument)"
+        default: break
+        }
+        switch argument {
+        case "back": session.send(.back)
+        // The main button: Continue, or Start on the last step.
+        case "main": session.send(session.step.isLast ? .start : .continue)
+        case "skip": session.send(.skip)
+        // Trust with Touch ID (asked through the instance's `WORMHOLE_AUTH`) and Later.
+        case "trust":
+            guard let root = session.trustCard?.root else { return "error: no trust card" }
+            session.send(.trust(root))
+        case "later": session.laterOnTrust()
+        default:
+            // A Look step card by its theme's name (`LookStep`: the card's own action).
+            guard argument.hasPrefix("theme "), let theme = ThemeStore.shared.library.themes.first(where: { $0.name == String(argument.dropFirst(6)) }) else {
+                return "error: onboarding-press back|main|skip|trust|later|theme <name>"
+            }
+            ThemeStore.shared.setTheme(theme.id)
+        }
+        return "onboarding-press \(argument)"
+    }
+
+    /// `title-menu` lists the row's menu as `menu` prints one; `title-menu pick <n|title>` chooses an item as a click does.
+    private func titleMenu(_ argument: String) -> String {
+        guard let items = hub.titleMenuItems else { return "error: no terminal is shown" }
+        let words = argument.split(separator: " ", maxSplits: 1).map(String.init)
+        guard words.first == "pick", words.count == 2 else { return "title-menu\n" + TitleMenuReadout.text(items) }
+        let listed = items.compactMap { $0 }
+        guard let item = Int(words[1]).flatMap({ listed.indices.contains($0 - 1) ? listed[$0 - 1] : nil }) ?? listed.first(where: { $0.title == words[1] }) else {
+            return "error: no item \(words[1])"
+        }
+        guard item.enabled else { return "error: \(item.title) is off" }
+        item.run()
+        return "title-menu picked \(item.title)"
     }
 }
