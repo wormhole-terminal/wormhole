@@ -127,7 +127,8 @@ mod tests {
         studio_folder_write(themes.clone(), file.clone(), "{ \"name\": \"Dusk\" }".into()).expect("first");
         let id = crate::studio_files::studio_new_id(themes.clone(), "Dawn".into(), Some(file.clone()));
         assert_eq!(id, "dusk", "the theme keeps its id, not one made from its new name");
-        let renamed = format!("{{ \"version\": 1, \"id\": \"{id}\", \"name\": \"Dawn\", \"extends\": \"Nord\" }}");
+        let renamed =
+            format!("{{ \"version\": 1, \"id\": \"{id}\", \"name\": \"Dawn\", \"extends\": \"Nord\" }}");
         studio_folder_write(themes.clone(), file.clone(), renamed).expect("renamed");
         let versions = studio_folder_versions(themes, file);
         assert_eq!(versions.len(), 1, "the version kept before the rename is listed after it");
