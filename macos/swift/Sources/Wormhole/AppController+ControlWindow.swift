@@ -30,7 +30,7 @@ extension AppController {
         case "size":
             let sides = argument.split(separator: "x").compactMap { Double($0) }
             guard sides.count == 2 else { reply("error: size is WIDTHxHEIGHT"); return true }
-            window?.setContentSize(CGSize(width: sides[0], height: sides[1]))
+            windowController?.setContentSize(asked: CGSize(width: sides[0], height: sides[1]))
         case "live-resize-sim": liveResizeSim(argument)
         case "split": hub.split(["down", "column"].contains(argument) ? .column : .row)
         case "edge":

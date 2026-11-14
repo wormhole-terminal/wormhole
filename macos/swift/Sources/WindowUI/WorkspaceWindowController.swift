@@ -6,6 +6,16 @@ import AppKit
 import SwiftUI
 import TerminalCore
 
+/// The workspace's window. A size the control folder asked for holds on a display smaller than it, where AppKit would fit
+/// the window to the screen: what a test instance shows must not depend on the display it happens to run on.
+private final class WorkspaceWindow: NSWindow {
+    var holdsAskedSize = false
+
+    override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect {
+        holdsAskedSize ? frameRect : super.constrainFrameRect(frameRect, to: screen)
+    }
+}
+
 @MainActor
 public final class WorkspaceWindowController: NSWindowController, NSWindowDelegate {
     /// Called once, when the window is closing, so the owner can shut down what it started.
@@ -28,7 +38,7 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     public private(set) var windowedFrame = NSRect.zero
 
     public init<Content: View>(title: String, contentSize: CGSize, minSize: CGSize, content: Content) {
-        let window = NSWindow(
+        let window = WorkspaceWindow(
             contentRect: NSRect(origin: .zero, size: contentSize),
             styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
             backing: .buffered, defer: false)
@@ -53,6 +63,12 @@ public final class WorkspaceWindowController: NSWindowController, NSWindowDelega
     }
 
     @available(*, unavailable) required init?(coder: NSCoder) { fatalError("not decoded") }
+
+    /// The control folder's `size`: the content gets exactly this size and keeps it, on a display smaller than it too.
+    public func setContentSize(asked size: CGSize) {
+        (window as? WorkspaceWindow)?.holdsAskedSize = true
+        window?.setContentSize(size)
+    }
 
     public func windowShouldClose(_ sender: NSWindow) -> Bool { shouldClose?() ?? true }
     public func windowWillClose(_ notification: Notification) { onClose?() }
