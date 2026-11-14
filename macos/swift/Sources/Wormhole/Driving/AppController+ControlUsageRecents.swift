@@ -6,6 +6,7 @@
 //   recents folders profile="<id>"                  then `json <the stored list>` (`folders: none` for a sample)
 
 import DesignSystem
+import Foundation
 import PanelUI
 
 extension AppController {

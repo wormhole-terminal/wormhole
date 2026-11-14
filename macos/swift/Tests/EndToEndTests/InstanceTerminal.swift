@@ -73,10 +73,10 @@ extension Instance {
     func windowLines() async -> [String] { (await reply("sessions")).split(separator: "\n").map(String.init).filter { $0.hasPrefix("window=") } }
 
     /// A reply without the isolation marks Fluent puts around a number or a name (U+2068, U+2069), so words compare as read.
-    static func plain(_ text: String) -> String { text.filter { $0 != "\u{2068}" && $0 != "\u{2069}" } }
+    nonisolated static func plain(_ text: String) -> String { text.filter { $0 != "\u{2068}" && $0 != "\u{2069}" } }
 
     /// The block listing's lines (`n: lines a..=b[ output c..=d] | state | command`) whose command is `command`.
-    static func blocks(_ listing: String, running command: String) -> [(number: Int, line: String)] {
+    nonisolated static func blocks(_ listing: String, running command: String) -> [(number: Int, line: String)] {
         listing.split(separator: "\n").compactMap { line in
             let parts = line.components(separatedBy: " | ")
             guard parts.count >= 3, parts.last?.trimmingCharacters(in: .whitespaces) == command, let number = Int(line.prefix { $0 != ":" }) else { return nil }
@@ -85,7 +85,7 @@ extension Instance {
     }
 
     /// The first line of the block's output (`output c..=d`), nil when it has none.
-    static func outputStart(_ line: String) -> Int? {
+    nonisolated static func outputStart(_ line: String) -> Int? {
         guard let range = line.range(of: " output ") else { return nil }
         return Int(line[range.upperBound...].prefix { $0.isNumber })
     }

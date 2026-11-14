@@ -146,7 +146,7 @@ extension EndToEnd {
             guard let first = (await app.rows()).live.first else { return }
             await app.send(["group \(first)"])
             guard let group = Listing(await app.until("rows") { !Listing($0).groups.isEmpty }).groups.first else { return }
-            func rename(_ keys: [String]) async -> String {
+            @MainActor func rename(_ keys: [String]) async -> String {
                 await app.send(["group-menu \(group.id)", "menu-pick Rename…", "wait-idle 3000"] + keys)
                 return Listing(await app.reply("rows")).groups.first { $0.id == group.id }?.name ?? ""
             }
