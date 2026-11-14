@@ -23,6 +23,7 @@ extension AppController {
         if runScrollback(command: command, argument: argument) { return true }
         if runHostsWindow(command: command, argument: argument) { return true }
         if runWindowLook(command: command) { return true }
+        if runFileIcon(command: command, argument: argument) { return true }
         return false
     }
 }
