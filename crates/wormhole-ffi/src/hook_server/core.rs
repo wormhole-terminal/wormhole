@@ -34,6 +34,10 @@ pub(crate) struct Seat {
     settings: Mutex<Option<(Instant, Arc<Settings>)>>,
     /// The mode last settled (`None` inside: Automation off), to act on a change of it once (`Core::settings_changed`).
     applied: Mutex<Option<Option<AgentAccess>>>,
+    /// Looks at the mode whenever the profile's `config.json` changes, held for its drop (the GPUI app looks on every
+    /// tick): a widening is asked about when it is written, not at the next request, and not only when the Settings
+    /// store sees a value it did not have (Don't Keep writes the earlier mode behind that store).
+    _follower: crate::settings::watch::Follower,
 }
 
 impl Seat {
@@ -42,7 +46,22 @@ impl Seat {
         // first request, and also while the Automation flag is off, so a widening made together with turning the
         // flag on is still asked about.
         desk.mode_in_force(Config::load_for(desk.profile()).settings.agent_access);
-        Self { profile: desk.profile().clone(), desk, settings: Mutex::new(None), applied: Mutex::new(None) }
+        let watched = Arc::downgrade(&desk);
+        let follower = crate::settings::watch::Follower::start(desk.profile(), move || {
+            let Some(desk) = watched.upgrade() else { return false };
+            let settings = Config::load_for(desk.profile()).settings;
+            if settings.feature_enabled(FeatureFlag::Automation) {
+                desk.mode_in_force(settings.agent_access);
+            }
+            true
+        });
+        Self {
+            profile: desk.profile().clone(),
+            desk,
+            settings: Mutex::new(None),
+            applied: Mutex::new(None),
+            _follower: follower,
+        }
     }
 
     /// The profile's settings, as they were a moment ago at most.

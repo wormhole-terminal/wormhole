@@ -97,7 +97,9 @@ extension EndToEnd {
             app.expect(await app.reply("control send-text --terminal \(first) too-early"), contains: "agent access is off")
             await app.send(["agent-ask deny"])
             _ = await app.waitForConfig { $0.range(of: #""agent_access"\s*:\s*"off""#, options: .regularExpression) != nil }
-            app.expect(!(await app.reply("agents")).contains("asking mode"), "the question went")
+            // The file is written before the desk tells the window the question is settled: the held question goes a moment later.
+            let gone = await app.until("agents") { !$0.contains("asking mode") }
+            app.expect(!gone.contains("asking mode"), "the question went")
 
             // Widened again and kept this time: the new mode is in force.
             try Self.access("open").write(to: file, atomically: true, encoding: .utf8)

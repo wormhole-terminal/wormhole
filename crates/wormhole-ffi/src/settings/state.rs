@@ -126,11 +126,11 @@ impl State {
         }
         // Only a change of the mode itself is the person's edit of it: counting every write here let a widening made
         // outside (a program writing `agent_access` into `config.json`) pass as theirs after any other setting changed.
-        let access_changed = next.agent_access != self.config.settings.agent_access;
-        self.config.update(|settings| *settings = next);
-        if access_changed {
+        // Counted before the file is written: the access guard follows the file and may look the moment it changes.
+        if next.agent_access != self.config.settings.agent_access {
             super::edits::note(&self.dir);
         }
+        self.config.update(|settings| *settings = next);
         self.refresh();
         self.revision += 1;
         true

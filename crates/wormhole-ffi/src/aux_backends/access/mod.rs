@@ -106,6 +106,8 @@ impl AccessDesk {
 
     /// Whether question `id` is still waiting for the person: false once it was answered, withdrawn or timed out.
     pub fn is_waiting(&self, id: u64) -> bool {
+        // As `is_waiting_mode`: the read the window makes while this question is up re-arms the wake.
+        self.waker.rearm();
         locked(&self.inner).queue.iter().any(|pending| pending.id == id)
     }
 
@@ -130,6 +132,9 @@ impl AccessDesk {
 
     /// Whether the mode question `token` is still waiting for the person.
     pub fn is_waiting_mode(&self, token: u64) -> bool {
+        // A read after a wake, like taking the next question: while a question is up this is the only read the window
+        // makes, and without re-arming here the wake that says it was settled would never be sent.
+        self.waker.rearm();
         locked(&self.modes).is_waiting(token)
     }
 
