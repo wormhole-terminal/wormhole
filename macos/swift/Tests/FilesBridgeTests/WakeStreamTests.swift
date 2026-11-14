@@ -44,12 +44,11 @@ final class WakeStreamTests: XCTestCase {
             var iterator = iterator
             return await iterator.next() != nil
         }
-        let timeout = Task {
-            try await Task.sleep(for: .seconds(3))
-            second.cancel()
-        }
+        // A deadline, so a wake that was lost fails the test instead of holding it.
+        let deadline = DispatchWorkItem { second.cancel() }
+        DispatchQueue.global().asyncAfter(deadline: .now() + 3, execute: deadline)
         let told = await second.value
-        timeout.cancel()
+        deadline.cancel()
         XCTAssertTrue(told, "the second wake reaches the reader")
     }
 
