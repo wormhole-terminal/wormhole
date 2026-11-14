@@ -1736,7 +1736,7 @@ Scenarios (`SettingsPressTests`, 8): 123, 133, 134, 135, 717, 755, 857, 858, 866
 
 | row | what to do | what must happen | where the code is |
 |---|---|---|---|
-| O04 | `title-menu`, `title-menu pick <n>`, under Zen | the items with checks; a pick runs the part's toggle; all off under Zen | `PanesUI/Driving/TitleMenuReadout.swift` (mirrors `TitleRowMenu`'s body: keep the two in step), `WindowHub+Readouts.titleMenuItems` |
+| O04 | `title-menu`, then `menu-pick <n>`, under Zen | the items with checks; a pick runs the part's toggle; all off under Zen | the menus lane's `title-menu` (`AppController+ControlTitle.swift`, the real menu from `TitleKeyMenu.rowMenu`); the copy of the menu this lane wrote first is removed |
 
 Scenarios (`TitleMenuTests`, 2): 330, 331.
 

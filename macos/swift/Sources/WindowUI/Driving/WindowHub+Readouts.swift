@@ -91,11 +91,6 @@ extension WindowHub {
 }
 
 extension WindowHub {
-    /// `title-menu`: the selected terminal's title row menu as items (`TitleRowMenu`'s), nil without a terminal.
-    public var titleMenuItems: [TitleMenuReadout.Item?]? { selectedTitleActions.map { TitleMenuReadout.items(row: titleRow, actions: $0) } }
-}
-
-extension WindowHub {
     /// `switcher open`: the tab bar opens its group switcher, as a click on its button does (the bar must show it).
     public func openSwitcher() { switcherAsk += 1 }
 

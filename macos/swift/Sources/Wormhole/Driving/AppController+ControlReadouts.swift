@@ -11,7 +11,6 @@
 //   `onboarding-pick <path>`    a folder dropped on the folder step (`OnboardingSession.pick`)
 //   `onboarding-press back|main|skip|trust|later|theme <name>`  the card's buttons (main: Continue, or Start on the last
 //                               step), the trust card's, a Look step theme card
-//   `title-menu [pick <n|title>]`  the title row's right-click menu as items (`PanesUI.TitleMenuReadout`), and a choice in it
 // GPUI's devctl has none of these; `status-bar` is the bar's switch already (`AppController+Look`), so its items are
 // `status-items`. The right panel's are `AppController+ControlPanelReadouts`.
 
@@ -43,7 +42,6 @@ extension AppController {
             }
         case "switcher-press": reply(hub.switcherPress(argument, look: look).map { "error: \($0)" } ?? "switcher-press \(argument)")
         case "onboarding-state", "onboarding-pick", "onboarding-press": reply(onboarding(command, argument))
-        case "title-menu": reply(titleMenu(argument))
         default: return runPanelReadouts(command: command, argument: argument)
         }
         return true
@@ -78,19 +76,5 @@ extension AppController {
             ThemeStore.shared.setTheme(theme.id)
         }
         return "onboarding-press \(argument)"
-    }
-
-    /// `title-menu` lists the row's menu as `menu` prints one; `title-menu pick <n|title>` chooses an item as a click does.
-    private func titleMenu(_ argument: String) -> String {
-        guard let items = hub.titleMenuItems else { return "error: no terminal is shown" }
-        let words = argument.split(separator: " ", maxSplits: 1).map(String.init)
-        guard words.first == "pick", words.count == 2 else { return "title-menu\n" + TitleMenuReadout.text(items) }
-        let listed = items.compactMap { $0 }
-        guard let item = Int(words[1]).flatMap({ listed.indices.contains($0 - 1) ? listed[$0 - 1] : nil }) ?? listed.first(where: { $0.title == words[1] }) else {
-            return "error: no item \(words[1])"
-        }
-        guard item.enabled else { return "error: \(item.title) is off" }
-        item.run()
-        return "title-menu picked \(item.title)"
     }
 }
