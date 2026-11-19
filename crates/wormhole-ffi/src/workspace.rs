@@ -224,9 +224,9 @@ pub(crate) struct Shared {
     windows: Mutex<Option<(Arc<Windows>, i64)>>,
     /// The texts of the terminals the window was restored with, until each starts (`workspace_texts`).
     pub(crate) restored_texts: crate::workspace_texts::RestoredTexts,
-    /// Terminals whose row a hook moved and that no pull of the list has read since, with when: the look at the process waits for
-    /// the pull (`Shared::unpulled`).
-    unpulled: Mutex<HashMap<i64, Instant>>,
+    /// Terminals whose row a hook moved and that the view has not yet read and looked at, with when and whether the list was pulled
+    /// since: the look at the process waits for the pull and then for the notification rules' look (`Shared::note_unpulled`).
+    unpulled: Mutex<HashMap<i64, (Instant, bool)>>,
 }
 
 fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
@@ -234,13 +234,18 @@ fn locked<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 }
 
 impl Shared {
-    /// A hook moved terminal `id`'s row (`moved`): until the list is pulled once, or `UNPULLED_FOR` has passed, the look at its process
-    /// waits. The notification rules compare looks at the rows, so a status that came and went between two never made its banner;
+    /// A hook moved terminal `id`'s row (`moved`): until the list is pulled and the rules have looked, or `UNPULLED_FOR` has passed,
+    /// the look at its process waits. The notification rules compare looks at the rows, so a status that came and went between two never made its banner;
     /// the GPUI app decides at the hook, on the thread that looks at the process too, so it cannot happen there.
     pub(crate) fn note_unpulled(&self, id: i64, moved: bool) {
         if moved {
-            locked(&self.unpulled).insert(id, Instant::now());
+            locked(&self.unpulled).insert(id, (Instant::now(), false));
         }
+    }
+
+    /// The notification rules looked at the terminals' facts: what a hook moved and the list has been pulled for is seen.
+    pub(crate) fn looked_at_facts(&self) {
+        locked(&self.unpulled).retain(|_, (_, pulled)| !*pulled);
     }
 
     /// Whether the look at terminal `id`'s process is to wait: a hook moved its row and the list has not been pulled since
@@ -248,7 +253,7 @@ impl Shared {
     pub(crate) fn waits_for_a_pull(&self, id: i64) -> bool {
         let mut unpulled = locked(&self.unpulled);
         match unpulled.get(&id) {
-            Some(since) if since.elapsed() < UNPULLED_FOR => true,
+            Some((since, _)) if since.elapsed() < UNPULLED_FOR => true,
             Some(_) => {
                 unpulled.remove(&id);
                 false
@@ -409,9 +414,10 @@ impl Workspace {
 
     /// [`Self::sidebar`] as it reads at `now_ms` on the workspace's clock (tests, previews).
     pub fn sidebar_at(&self, now_ms: u64) -> SidebarSnapshot {
-        // The pull that reads the rows: what a hook moved is read with them (the look at the process may hand it back from now on).
+        // The pull that reads the rows: what a hook moved is read with them. The notification rules' look, which reads the
+        // terminals' facts next (`notice_facts`), is what lets the look at the process hand it back.
         self.shared.with_model(|model| {
-            locked(&self.shared.unpulled).clear();
+            locked(&self.shared.unpulled).values_mut().for_each(|(_, pulled)| *pulled = true);
             model.sidebar_snapshot(now_ms)
         })
     }

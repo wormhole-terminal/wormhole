@@ -32,6 +32,8 @@ impl Workspace {
         let shared = self.shared();
         let ws_now = shared.now();
         let epoch_ms = shared.epoch.duration_since(UNIX_EPOCH).map_or(0, |since| since.as_millis() as u64);
+        // The rules' look: a hook's status that the list was pulled with is seen from here on.
+        shared.looked_at_facts();
         shared.peek_model(|model| {
             model
                 .ids()

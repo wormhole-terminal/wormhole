@@ -38,12 +38,16 @@ extension EndToEnd {
             guard let other = await Self.second(app) else { return app.fail("a second terminal") }
             let sent = try app.hook(agent: "codex", event: "PermissionRequest", terminal: other)
             app.expect(sent == 0, "the hook client was taken by the app (status \(sent))")
-            // Not dropped, not shown late: the row and the banner are there at the first answer.
-            let log = await app.until("notice-log") { $0.contains("codex needs input") }
-            app.expect(log, contains: "wormhole/tab/\(other)")
-            // `cat` is the shell and holds the terminal, and it is no agent: the look forgets what the hook said.
+            // Not dropped, not shown late: the banner is made (counted: it is retracted when the look hands the status back, so the
+            // log may be read after that).
+            let count = await app.until("notice-count") { $0 != "notice-count=0" }
+            app.expect(count, contains: "notice-count=1")
+            // `cat` is the shell and holds the terminal, and it is no agent: the look forgets what the hook said, and the banner for a
+            // status that is gone is taken away with it.
             let rows = await app.until("rows") { Listing($0).row(other)?.activity == "idle" }
             app.expect(Listing(rows).row(other)?.activity == "idle", "the look handed the status back:\n\(rows)")
+            let log = await app.until("notice-log") { !$0.contains("codex needs input") }
+            app.expect(!log.contains("codex needs input"), "its banner was retracted with the status:\n\(log)")
         }
     }
 }

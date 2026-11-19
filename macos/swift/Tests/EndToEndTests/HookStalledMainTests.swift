@@ -24,9 +24,11 @@ extension EndToEnd {
             app.expect(sent == 0, "the hook client was taken by the app (status \(sent))")
             _ = await stalled.value
 
-            // The pull that follows saw the status: the banner is made, whatever the look makes of the row after it.
-            let log = await app.until("notice-log", timeout: 10) { $0.contains("codex needs input") }
-            app.expect(log, contains: "wormhole/tab/\(other)")
+            // The pull that follows saw the status: the banner is made. It is retracted when the look hands the status back a
+            // moment later (the rules take a banner away when its terminal no longer needs the person), so what says it was made is
+            // the count of banners posted, not the log, which may be read after the retraction.
+            let count = await app.until("notice-count", timeout: 10) { $0 != "notice-count=0" }
+            app.expect(count, contains: "notice-count=1")
         }
     }
 }
