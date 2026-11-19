@@ -198,6 +198,9 @@ extension EndToEnd {
         // Only an instance with an updater has a restart to ask about (`update-installed` pretends the install).
         try await Instance.with(shell: .zsh, updater: true) { app in
             await app.shell("sleep 300")
+            // The app learns of the command from its look at the terminal's process, some moments after it was typed: the
+            // close button's dot says it knows. A restart asked for before that asks nothing, for nothing runs yet.
+            await app.until("windows") { $0.split(separator: "\n").contains { !$0.hasPrefix("(untitled)") && $0.contains("edited=true") } }
             guard let first = (await app.rows()).live.first else { return }
             await app.send(["key cmd-t", "group \(first)"])
             guard let group = Listing(await app.until("rows") { !Listing($0).groups.isEmpty }).groups.first else { return }
