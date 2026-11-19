@@ -13,7 +13,8 @@ extension EndToEnd {
             let waiting = try app.cli(["new-terminal"])
             await app.until("agents") { $0.contains("\nasking ") }
             // Nobody answers. It is still asked a good way in.
-            await app.send(["delay 30000"])
+            // In steps well inside one command's own wait.
+            for _ in 0..<6 { await app.send(["delay 5000"]) }
             app.expect(await app.reply("agents"), contains: "\nasking ")
             app.expect(waiting.isRunning, "the request still waits after half a minute")
 
